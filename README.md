@@ -1,6 +1,6 @@
 # reconciler
 
-as-is 상태와 to-be(목표) 상태를 비교해, 버전이 바뀔 때마다 정합성 작업을 만들어 실행·검증하는 시스템의 스키마와 샘플.
+as-is 상태와 to-be(목표) 상태를 비교해, 버전이 바뀔 때마다 정합성 작업을 만들어 실행·검증하는 시스템의 스키마와 운영 데이터.
 
 ## 엔티티
 
@@ -16,9 +16,8 @@ as-is 상태와 to-be(목표) 상태를 비교해, 버전이 바뀔 때마다 �
 schemas/
   to-be-model.schema.json           # ToBeModel JSON 스키마 (draft 2020-12)
   reconciliation-task.schema.json   # ReconciliationTask JSON 스키마 (draft 2020-12)
-samples/
-  to-be-models.json                 # ToBeModel 샘플 (배열)
-  reconciliation-tasks/             # task 샘플: to-be 모델(toBeModelId)별로 파일 분리
-    tbm_payment-api-prod.json
-    tbm_checkout-error-rate.json
+data/                               # 운영 데이터 (스킬이 런타임에 생성·기록, 초기엔 비어 있음)
+  to-be-models.json                 # ToBeModel (배열)
+  reconciliation-tasks/             # task: to-be 모델(toBeModelId)별로 파일 분리
+    <toBeModelId>.json
 ```
