@@ -1,0 +1,104 @@
+[
+  {
+    "id": "rct_20260711-0001",
+    "toBeModelId": "tbm_payment-api-prod",
+    "status": "succeeded",
+    "trigger": {
+      "detectedAt": "2026-07-11T10:05:00+09:00",
+      "changedSides": [
+        "to_be"
+      ],
+      "toBe": {
+        "previousVersion": "9f2c1ab0e4d67a8b9c0d1e2f3a4b5c6d7e8f9a0b:5d41402abc4b2a76b9719d911017c592aabbccdd",
+        "currentVersion": "c3d8e21f90ab5c7d4e12f6a8b0c9d3e5f7a1b2c4:7b8a9f01d2e3c4b5a697887766554433221100fe"
+      },
+      "asIs": {
+        "previousVersion": "12:ghcr.io/dlddu/payment-api:1.4.2",
+        "currentVersion": "12:ghcr.io/dlddu/payment-api:1.4.2"
+      }
+    },
+    "stateSummary": {
+      "asIs": "Deployment `payment/payment-api`는 revision 12, 이미지 `ghcr.io/dlddu/payment-api:1.4.2`, replicas 3/3으로 기동 중.",
+      "toBe": "main 커밋 `c3d8e21`에서 이미지 태그가 `1.5.0`으로 변경되고 memory 요청이 256Mi에서 384Mi로 상향됨.",
+      "gap": "이미지 태그(1.4.2 → 1.5.0)와 memory request(256Mi → 384Mi)가 불일치.",
+      "summarizedAt": "2026-07-11T10:05:40+09:00"
+    },
+    "assessment": {
+      "actionRequired": true,
+      "reason": "to-be 매니페스트 변경이 클러스터에 반영되지 않았고, 정의서의 '10분 이내 반영' 조건을 위반할 가능성이 있음.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-07-11T10:06:05+09:00"
+    },
+    "plan": {
+      "summary": "Flux kustomization을 강제 reconcile하여 새 매니페스트를 적용하고 rollout 완료를 확인한다.",
+      "riskLevel": "medium",
+      "steps": [
+        {
+          "seq": 1,
+          "action": "flux reconcile kustomization payment-api --with-source",
+          "expectedOutcome": "커밋 c3d8e21 기준 매니페스트 적용"
+        },
+        {
+          "seq": 2,
+          "action": "kubectl -n payment rollout status deployment/payment-api --timeout=180s",
+          "expectedOutcome": "새 ReplicaSet으로 rollout 성공"
+        }
+      ],
+      "plannedAt": "2026-07-11T10:06:30+09:00"
+    },
+    "review": {
+      "required": true,
+      "reason": "프로덕션 워크로드의 이미지 버전 변경이 포함됨.",
+      "status": "approved",
+      "reviewer": "dlddu",
+      "reviewedAt": "2026-07-11T10:15:00+09:00",
+      "comment": "1.5.0 릴리스 노트 확인. 진행해도 좋음."
+    },
+    "execution": {
+      "status": "succeeded",
+      "startedAt": "2026-07-11T10:15:10+09:00",
+      "finishedAt": "2026-07-11T10:18:42+09:00",
+      "entries": [
+        {
+          "stepSeq": 1,
+          "status": "succeeded",
+          "startedAt": "2026-07-11T10:15:10+09:00",
+          "finishedAt": "2026-07-11T10:16:20+09:00",
+          "log": "kustomization/payment-api reconciliation completed (revision main@sha1:c3d8e21f)"
+        },
+        {
+          "stepSeq": 2,
+          "status": "succeeded",
+          "startedAt": "2026-07-11T10:16:21+09:00",
+          "finishedAt": "2026-07-11T10:18:42+09:00",
+          "log": "deployment \"payment-api\" successfully rolled out"
+        }
+      ]
+    },
+    "verification": {
+      "status": "passed",
+      "converged": true,
+      "asIsVersionAfter": "13:ghcr.io/dlddu/payment-api:1.5.0",
+      "checks": [
+        {
+          "name": "이미지 태그 일치",
+          "status": "passed",
+          "detail": "ghcr.io/dlddu/payment-api:1.5.0"
+        },
+        {
+          "name": "memory request 일치",
+          "status": "passed",
+          "detail": "384Mi"
+        },
+        {
+          "name": "가용 replicas >= 3",
+          "status": "passed",
+          "detail": "3/3 available"
+        }
+      ],
+      "verifiedAt": "2026-07-11T10:19:10+09:00"
+    },
+    "createdAt": "2026-07-11T10:05:01+09:00",
+    "updatedAt": "2026-07-11T10:19:10+09:00"
+  }
+]

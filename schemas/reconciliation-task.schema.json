@@ -1,0 +1,369 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.dlddu.dev/reconciliation-task.schema.json",
+  "title": "ReconciliationTask",
+  "description": "as-is 또는 to-be의 버전 변경이 감지될 때마다 생성되는 작업 레코드. 요약 → 판단 → 계획 → (사용자 검토) → 실행 → 검증 순으로 필드가 채워진다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "toBeModelId",
+    "status",
+    "trigger",
+    "createdAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^rct_[a-z0-9][a-z0-9_-]*$"
+    },
+    "toBeModelId": {
+      "type": "string",
+      "description": "대상 ToBeModel의 id"
+    },
+    "status": {
+      "description": "작업 생명주기 상태",
+      "enum": [
+        "detected",
+        "assessing",
+        "no_action_needed",
+        "planning",
+        "awaiting_review",
+        "review_rejected",
+        "executing",
+        "verifying",
+        "succeeded",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "trigger": {
+      "type": "object",
+      "description": "작업을 생성시킨 버전 변경 정보",
+      "additionalProperties": false,
+      "required": [
+        "detectedAt",
+        "changedSides"
+      ],
+      "properties": {
+        "detectedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "changedSides": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "as_is",
+              "to_be"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "버전이 변경된 쪽"
+        },
+        "asIs": {
+          "$ref": "#/$defs/versionChange"
+        },
+        "toBe": {
+          "$ref": "#/$defs/versionChange"
+        }
+      }
+    },
+    "stateSummary": {
+      "type": "object",
+      "description": "as-is와 to-be 상태에 대한 요약",
+      "additionalProperties": false,
+      "required": [
+        "asIs",
+        "toBe"
+      ],
+      "properties": {
+        "asIs": {
+          "type": "string",
+          "contentMediaType": "text/markdown"
+        },
+        "toBe": {
+          "type": "string",
+          "contentMediaType": "text/markdown"
+        },
+        "gap": {
+          "type": "string",
+          "description": "두 상태의 차이 요약"
+        },
+        "summarizedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "description": "작업 필요 여부 판단 결과",
+      "additionalProperties": false,
+      "required": [
+        "actionRequired",
+        "reason"
+      ],
+      "properties": {
+        "actionRequired": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "assessedBy": {
+          "enum": [
+            "agent",
+            "human"
+          ]
+        },
+        "assessedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "description": "작업 계획 (assessment.actionRequired=true일 때 작성)",
+      "additionalProperties": false,
+      "required": [
+        "summary",
+        "steps"
+      ],
+      "properties": {
+        "summary": {
+          "type": "string"
+        },
+        "riskLevel": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "seq",
+              "action"
+            ],
+            "properties": {
+              "seq": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "action": {
+                "type": "string",
+                "description": "수행할 작업 설명 또는 명령"
+              },
+              "expectedOutcome": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "plannedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "description": "사용자 검토",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "status"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean",
+          "description": "사용자 검토 필요 여부"
+        },
+        "reason": {
+          "type": "string",
+          "description": "검토가 필요한(또는 불필요한) 이유"
+        },
+        "status": {
+          "description": "사용자 검토 진행 상태",
+          "enum": [
+            "not_required",
+            "pending",
+            "approved",
+            "rejected"
+          ]
+        },
+        "reviewer": {
+          "type": "string"
+        },
+        "reviewedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "comment": {
+          "type": "string"
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "description": "실행 내역",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "entries"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "running",
+            "succeeded",
+            "failed",
+            "aborted"
+          ]
+        },
+        "startedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "finishedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "stepSeq",
+              "status"
+            ],
+            "properties": {
+              "stepSeq": {
+                "type": "integer",
+                "description": "plan.steps의 seq 참조"
+              },
+              "status": {
+                "enum": [
+                  "succeeded",
+                  "failed",
+                  "skipped"
+                ]
+              },
+              "startedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "finishedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "log": {
+                "type": "string",
+                "description": "stdout/stderr 요약 또는 로그 링크"
+              }
+            }
+          }
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "description": "검증 결과",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pending",
+            "passed",
+            "failed",
+            "skipped"
+          ]
+        },
+        "converged": {
+          "type": "boolean",
+          "description": "실행 후 as-is가 to-be와 일치하는지"
+        },
+        "asIsVersionAfter": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "실행 후 재계산한 as-is 버전"
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "status"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "passed",
+                  "failed"
+                ]
+              },
+              "detail": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "verifiedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "versionChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "currentVersion"
+      ],
+      "properties": {
+        "previousVersion": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "변경 전 버전. 최초 관측이면 null."
+        },
+        "currentVersion": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

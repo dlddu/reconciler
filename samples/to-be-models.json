@@ -1,0 +1,111 @@
+[
+  {
+    "id": "tbm_payment-api-prod",
+    "metadata": {
+      "name": "payment-api 프로덕션 배포 정합성",
+      "description": "flux-cd-apps 레포의 매니페스트(to-be)와 k3s 클러스터의 실제 Deployment(as-is)를 일치시킨다.",
+      "owner": "platform-team",
+      "tags": [
+        "gitops",
+        "prod",
+        "payment"
+      ],
+      "labels": {
+        "env": "prod",
+        "service": "payment-api"
+      },
+      "createdAt": "2026-07-01T09:00:00+09:00",
+      "updatedAt": "2026-07-10T14:30:00+09:00"
+    },
+    "definition": "# payment-api 목표 상태\n\n- `main` 브랜치의 `apps/payment-api/` 매니페스트가 단일 진실 공급원(SSOT)이다.\n- 이미지는 `ghcr.io/dlddu/payment-api`이며 태그는 kustomization.yaml을 따른다.\n- replicas는 3 이상, 리소스 요청은 cpu 250m / memory 384Mi 이상을 유지한다.\n- 매니페스트 변경 후 10분 이내에 클러스터에 반영되어야 한다.\n",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/flux-cd-apps",
+        "ref": "main",
+        "subPath": "apps/payment-api"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "set -euo pipefail\nDIR=$(mktemp -d)\ngit clone -q --depth 1 --branch main https://github.com/dlddu/flux-cd-apps.git \"$DIR\"\nCOMMIT=$(git -C \"$DIR\" rev-parse HEAD)\nTREE=$(git -C \"$DIR\" rev-parse \"HEAD:apps/payment-api\")\necho \"${COMMIT}:${TREE}\"\n",
+        "timeoutSeconds": 120
+      },
+      "lastObservedVersion": "c3d8e21f90ab5c7d4e12f6a8b0c9d3e5f7a1b2c4:7b8a9f01d2e3c4b5a697887766554433221100fe",
+      "lastObservedAt": "2026-07-11T10:05:00+09:00"
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "kubernetes_deployment",
+        "cluster": "homelab-k3s",
+        "namespace": "payment",
+        "name": "payment-api"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "kubectl -n payment get deployment payment-api -o jsonpath='{.metadata.annotations.deployment\\.kubernetes\\.io/revision}:{.spec.template.spec.containers[0].image}'\n",
+        "timeoutSeconds": 30,
+        "env": {
+          "KUBECONFIG": "secretRef:homelab-kubeconfig"
+        }
+      },
+      "lastObservedVersion": "12:ghcr.io/dlddu/payment-api:1.4.2",
+      "lastObservedAt": "2026-07-11T10:05:00+09:00"
+    },
+    "checkPolicy": {
+      "intervalSeconds": 300,
+      "webhookEnabled": true
+    }
+  },
+  {
+    "id": "tbm_checkout-error-rate",
+    "metadata": {
+      "name": "checkout 5xx 에러율 정상 유지",
+      "description": "Datadog 모니터의 alert 발생(as-is 버전 변경)을 감지해 런북(to-be) 기준으로 대응 작업을 만든다.",
+      "owner": "dlddu",
+      "tags": [
+        "monitoring",
+        "checkout",
+        "datadog"
+      ],
+      "createdAt": "2026-06-20T11:00:00+09:00"
+    },
+    "definition": "# checkout 에러율 목표 상태\n\n- Datadog 모니터 `checkout 5xx rate`(id 34215907)가 OK 상태를 유지한다.\n- alert가 5분 이상 지속되면 `runbooks/checkout/`의 절차에 따라 원인 분석과 완화 조치를 수행한다.\n- 5분 미만의 일시적 스파이크는 기록만 남긴다.\n",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/runbooks",
+        "ref": "main",
+        "subPath": "checkout"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "set -euo pipefail\nDIR=$(mktemp -d)\ngit clone -q --depth 1 https://github.com/dlddu/runbooks.git \"$DIR\"\necho \"$(git -C \"$DIR\" rev-parse HEAD):$(git -C \"$DIR\" rev-parse HEAD:checkout)\"\n",
+        "timeoutSeconds": 120
+      },
+      "lastObservedVersion": "e4f5a6b7c8d90123456789abcdef0123456789ab:0123456789abcdef0123456789abcdef01234567",
+      "lastObservedAt": "2026-07-11T09:59:00+09:00"
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "monitor_alert",
+        "provider": "datadog",
+        "monitorId": "34215907"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "set -euo pipefail\ncurl -sf -H \"DD-API-KEY: ${DD_API_KEY}\" -H \"DD-APPLICATION-KEY: ${DD_APP_KEY}\" \\\n  \"https://api.datadoghq.com/api/v2/events?filter%5Bquery%5D=source%3Aalert%20monitor_id%3A34215907&page%5Blimit%5D=1&sort=-timestamp\" \\\n  | jq -r '.data[0].id // \"no-alert\"'\n",
+        "timeoutSeconds": 30,
+        "env": {
+          "DD_API_KEY": "secretRef:datadog-api-key",
+          "DD_APP_KEY": "secretRef:datadog-app-key"
+        }
+      },
+      "lastObservedVersion": "7729941830125596672",
+      "lastObservedAt": "2026-07-11T01:00:10+09:00"
+    },
+    "checkPolicy": {
+      "intervalSeconds": 60,
+      "webhookEnabled": false
+    }
+  }
+]
