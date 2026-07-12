@@ -46,5 +46,50 @@
     "checkPolicy": {
       "intervalSeconds": 3600
     }
+  },
+  {
+    "id": "tbm_kubernetes-dashboard-ac-e2e",
+    "metadata": {
+      "name": "kubernetes-dashboard AC ↔ e2e 1:1 매칭",
+      "description": "dlddu/kubernetes-dashboard에서 PRD의 AC(docs/product)와 e2e 테스트(e2e/*.spec.ts)가 서로 빠짐없이 대응되도록 유지한다. 자동화 공백(AC인데 e2e 없음)과 고아 스펙(AC 연결 없는 e2e)을 drift로 본다.",
+      "tags": [
+        "kubernetes-dashboard",
+        "ac",
+        "e2e",
+        "test-coverage",
+        "consistency"
+      ],
+      "createdAt": "2026-07-12T05:45:31Z"
+    },
+    "definition": "# kubernetes-dashboard AC ↔ e2e 테스트 1:1 매칭\n\n## 목표\n`dlddu/kubernetes-dashboard` 레포에서 **PRD의 모든 Acceptance Criteria(AC)** 와 **e2e 테스트(`e2e/*.spec.ts`)** 가 서로 빠짐없이 대응되도록 유지한다. AC인데 e2e가 없는 \"자동화 공백\"도, AC에 연결되지 않은 \"고아 e2e 스펙\"도 없어야 한다.\n\n## 무엇이 \"맞는 상태\"인가 (SSOT)\n- **AC 정의의 SSOT**는 `docs/product/prd-*.md`(10종)다. AC는 `<코드><번호>`(OV1, PD6, …)로 식별한다. 등록 시점 기준 53개.\n- **AC ↔ e2e 매핑의 SSOT**는 `docs/product/test-*.md`(10종)다. 각 시나리오가 `검증 AC:`로 AC를, `자동화:`로 대응 `e2e/*.spec.ts`(또는 ⚠️ 공백)를 가리킨다.\n- **e2e 구현**은 `e2e/*.spec.ts`(Playwright, 등록 시점 35개)다. 스펙 파일 자체는 AC 코드를 담지 않으며, 연결은 test 문서가 담당한다.\n- `docs/product/doc-tracker.md`는 매칭 상태(자동화 공백 목록)의 집계 뷰로, 실제 상태와 일치해야 한다.\n\n## 정합성 판정 기준 (이 대상에서 \"1:1\"의 의미)\n파일 단위 1:1이 아니라 **커버리지 단위의 상호 완전 대응**이다(한 스펙이 여러 AC를, 한 AC가 여러 스펙을 커버할 수 있음 — 기존 레포 관례).\n1. **모든 AC가 자동화됨**: 각 AC는 test-*.md의 최소 1개 시나리오로 커버되고, 그 시나리오의 `자동화:` 필드가 실제 존재하는 `e2e/*.spec.ts`를 가리켜야 한다. `⚠️ 공백`이 남아 있으면 drift.\n2. **고아 e2e 없음**: `e2e/`의 모든 `*.spec.ts`는 최소 1개 test-*.md 시나리오의 `자동화:` 필드에서 참조되어야 한다(`helpers/`·`k8s/`·`README.md` 제외). 참조되지 않는 스펙은 drift(문서 없는 검증 대상이 존재한다는 뜻).\n3. **집계 일치**: `doc-tracker.md`의 자동화 공백 목록·카운트가 1·2의 실제 상태와 일치해야 한다.\n\n**주의**: 기존 doc-tracker는 자동화 공백을 \"문서 체계 외부의 구현 백로그\"로 취급했으나, 이 모델의 등록 취지상 **자동화 공백 자체가 이 루프의 drift다**. 등록 시점에 알려진 공백: SC3, FX3·FX4·FX5·FX6, OV7, PD6, CM3(간접 커버), (보강 권장) AR4 — 첫 감지 task에서 다뤄질 대상.\n\n## 충돌 시 기본 방향\nAC(PRD)가 스펙이다. AC에 e2e가 없으면 **원칙적으로 e2e를 작성**한다(대응 test-*.md 시나리오의 `자동화:` 필드와 doc-tracker 갱신 포함). AC 없는 e2e가 나타나면, 의도된 동작이면 PRD/AC/test 문서를 갱신해 문서화하고, 아니면 스펙을 제거한다. 어느 쪽인지는 각 task에서 판단(planner)한다.\n\n## 추적 방식 (요약)\n- **to-be** = github `dlddu/kubernetes-dashboard` `docs/product` 하위 트리 해시(AC·매핑 문서가 바뀌면 이 값만 변함).\n- **as-is** = github `dlddu/kubernetes-dashboard` `e2e` 하위 트리 해시(e2e 스펙·헬퍼가 바뀌면 이 값만 변함).\n- 어느 한쪽 버전이 바뀌면 task가 생성되어 1:1 매칭을 재검증한다.\n\n## 범위 밖 / 비고\n- 단위 테스트(`main_test.go`, `frontend/` vitest)·`playwright.config.ts`·`Makefile.e2e`·CI 구성은 매칭 판정 대상이 아니다(e2e 실행 인프라는 별개 관심사).\n- AC 문구와 e2e 단언 내용의 의미적 일치(테스트가 AC를 \"제대로\" 검증하는가)는 task 단계의 판단 사항이며, 이 모델의 버전 추적은 변경 감지까지만 담당한다.\n- `docs/product/values.md` 변경도 to-be 버전을 바꿔 재검증을 트리거할 수 있다(노이즈로 판단되면 추후 to-be 범위를 `prd-*`·`test-*`로 축소 가능).",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/kubernetes-dashboard",
+        "ref": "main",
+        "subPath": "docs/product"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = AC 정의·매핑 문서. docs/product 하위 트리 해시만 사용 → 그 밖(앱 코드·e2e 등) 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/kubernetes-dashboard)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:docs/product\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/kubernetes-dashboard",
+        "ref": "main",
+        "subPath": "e2e"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = e2e 테스트 구현. e2e/ 하위 트리 해시만 사용 → 그 밖(문서·앱 코드 등) 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/kubernetes-dashboard)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:e2e\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "checkPolicy": {
+      "intervalSeconds": 3600
+    }
   }
 ]
