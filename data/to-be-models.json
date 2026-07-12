@@ -1,0 +1,46 @@
+[
+  {
+    "id": "tbm_feature-doc-docs-impl",
+    "metadata": {
+      "name": "feature-doc 제품 문서 ↔ 구현 정합성",
+      "description": "dlddu/feature-doc 모노레포에서 docs/(제품 문서: 가치→PRD→AC→테스트+UX)와 backend/·frontend/(구현) 사이의 정합성을 추적한다. 겹치는 영역의 불일치와 문서 없는 신규 구현만 drift로 본다(미구현 AC는 백로그).",
+      "tags": [
+        "feature-doc",
+        "docs",
+        "implementation",
+        "consistency",
+        "V4"
+      ],
+      "createdAt": "2026-07-12T03:27:55Z"
+    },
+    "definition": "# feature-doc 제품 문서 ↔ 구현 정합성\n\n## 목표\n`dlddu/feature-doc` 모노레포에서 **제품 문서(`docs/`)** 가 기술하는 의도된 동작과 **실제 구현(`backend/` axum · `frontend/` Vite+React)** 이 서로 어긋나지 않도록 유지한다. 이 레포의 제품 가치 **V4(코드와 일치하는 살아있는 문서)** 를 제품 자신의 레포에 적용하는 정합성 루프다.\n\n## 무엇이 \"맞는 상태\"인가 (SSOT)\n- **의도된 동작의 단일 소스(SSOT)** 는 `docs/` 다: 가치(`values.md`, V1~V8) → PRD(`prd/`, 4종) → Acceptance Criteria(23개) → 테스트 문서(`test/`), 그리고 UI 의도를 정의하는 `mockups/`·`wireframes/`·`design-system.md`.\n- **구현**은 `backend/`(자격증명 API·봉투 암호화·SQLite·정적 서빙·`/hello`)와 `frontend/`(S01 Credentials Setup 화면, 디자인 시스템 토큰)다.\n- 현재 구현은 **의도적으로 walking skeleton** 이다 — 23개 AC 중 S01 자격증명(주로 AC4.1~4.3 계열) 및 `/hello` 프로브만 실제로 구현되어 있고, 나머지는 아직 미구현이다.\n\n## 정합성 판정 기준 (이 대상에서 \"동일\"의 의미)\nwalking skeleton 특성상 \"모든 AC가 구현됨\"을 요구하지 않는다. 다음의 **겹치는 영역**에서만 어긋남(drift)을 본다:\n1. **구현된 동작 ↔ 문서**: 코드가 실제로 커버하는 AC/동작은, 그 AC와 대응 테스트 문서(`docs/test`)가 기술하는 바와 일치해야 한다. UI는 대응 목업/디자인 시스템과 일치해야 한다.\n2. **문서화되지 않은 구현 없음**: 코드에 존재하는 사용자 대면 동작은 문서에 반드시 표현되어 있어야 한다(구현했는데 문서에 없음 → drift).\n3. **이미 구현된 영역의 문서 모순 없음**: 문서가 이미 구현된 영역을 코드와 모순되게 기술하면 drift.\n\n**drift가 아님(명시)**: 문서에는 있으나 아직 구현되지 않은 AC는 로드맵/백로그이며 이 루프의 어긋남으로 취급하지 않는다(제품 자체 프로세스 및 `doc-tracker.md`가 추적). 이 루프는 \"문서 ↔ 구현이 겹치는 부분의 불일치\"와 \"문서 없는 신규 구현\"만 잡는다.\n\n## 충돌 시 기본 방향\n문서가 스펙(SSOT)이다. 구현이 어떤 AC와 어긋나면 **원칙적으로 코드를 AC에 맞춘다**. 단, 그 어긋남이 **의도된 동작 변경**이면 문서(PRD/AC/테스트/목업 + `doc-tracker.md`)를 갱신해 코드에 맞춘다. 어느 쪽인지는 각 task에서 판단(planner)한다.\n\n## 추적 방식 (요약)\n- **to-be** = github `dlddu/feature-doc` `docs/` 하위 트리 해시(문서만 바뀌면 이 값만 변함).\n- **as-is** = github `dlddu/feature-doc` `backend/`+`frontend/` 하위 트리 해시 조합(코드만 바뀌면 이 값만 변함).\n- 어느 한쪽 버전이 바뀌면 task가 생성되어 겹치는 영역의 정합성을 재검증한다.\n\n## 범위 밖 / 비고\n- `deploy/`(k8s 매니페스트)·`e2e/`·`scripts/`·`tools/`·`Dockerfile`은 \"구현 동작\"이 아니라 운영/검증 산출물이므로 as-is 범위에서 제외한다.\n- `docs/doc-tracker.md`는 문서 체계의 메타 상태 파일이다. 현재 to-be는 `docs/` 전체를 추적하므로 이 파일 변경도 재검증을 트리거할 수 있다(무해하나 노이즈로 느껴지면 to-be 범위를 `docs/prd`·`docs/test`·`docs/values.md`로 좁힐 수 있음).\n- 제품 소유자(Product Owner)는 현재 TBD다(`values.md`). owner는 지정되면 채운다.",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/feature-doc",
+        "ref": "main",
+        "subPath": "docs"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = 제품 문서. docs/ 하위 트리 해시만 사용 → docs 밖(코드 등) 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/feature-doc)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:docs\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/feature-doc",
+        "ref": "main"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = 실제 구현. backend/ + frontend/ 하위 트리 해시 조합.\n# → 이 두 디렉터리 밖 변경(docs/deploy/e2e 등)은 무시된다.\n# 런타임이 dataSource.repository(dlddu/feature-doc)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nb=\"$(git rev-parse \"HEAD:backend\")\"\nf=\"$(git rev-parse \"HEAD:frontend\")\"\nprintf 'backend:%s frontend:%s\\n' \"$b\" \"$f\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "checkPolicy": {
+      "intervalSeconds": 3600
+    }
+  }
+]
