@@ -67,7 +67,8 @@
           "expectedOutcome": "55 AC 완전 분류, flow→AC 유일성 성립(제품 flow 기준), 참조 무결성 0 오류, 예외/ENG/스모크 등재 정합. 자동화-가능-미작성분만 backlog로 잔존(후속)."
         }
       ],
-      "plannedAt": "2026-07-12T09:21:46Z"
+      "plannedAt": "2026-07-12T09:21:46Z",
+      "executionGuide": "## 실행 순서\n1. PR #153 (dlddu/dear-baby, `reconcile/rct_20260712-0001` → `main`) 리뷰. 변경: `docs/doc-tracker.md`(매핑 표+예외+backlog) + `e2e/maestro/` 헤더 10건 재선언 + `home-record-ctas.yaml` 삭제.\n2. CI(e2e/lint)가 있으면 통과 확인 — 새 flow 저작이 없어 기존 e2e 그린이 유지되어야 한다. `home-record-ctas` 삭제분은 `home-record-modal-entry`가 AC-007-06을 커버.\n3. squash merge. 병합 시 to-be(prd+tracker)·as-is(e2e 트리)가 모두 바뀌므로 재감지가 돌면 1:1 재검증된다.\n\n## 검증 방법 (수렴 판정)\n- **매핑 완전성**: `docs/doc-tracker.md`의 \"AC ↔ e2e flow 매핑\" 표가 55개 AC 전부를 ✅18/🟡12/⬜25로 분류(누락 0).\n- **flow→AC 유일성**: 최상위 제품 flow 18개가 각각 헤더에 정확히 1개 AC 선언(중복·묶음 0). `login`→ENG-003·`health`→스모크 예외. 확인: `for f in e2e/maestro/*.yaml; do grep -m1 -E '검증 대상|AC-[0-9]{3}|ENG-|스모크' \"$f\"; done`\n- **참조 무결성**: 매핑 표·헤더가 실재 flow/AC만 참조. 삭제된 `home-record-ctas`의 live 참조 0(변경이력 기록만). 확인: `grep -rn home-record-ctas docs/ e2e/` → 변경이력 1행만.\n- **예외/후속 명세**: 예외 12건 각 사유+대체검증, 후속 25건 각 목표 flow명+단정 존재.\n\n## 주의사항\n- **부분 수렴**: 이 task는 완전 1:1에 도달하지 않는다. 자동화-가능-미작성 AC 25건은 backlog로만 등재됨(예외 아님). `verification.converged`는 **false**로 두고, 남은 25건의 새 maestro flow 저작을 후속 task로 생성·핸드오프한다.\n- 헤더 재선언은 flow 실행 동작을 바꾸지 않는다(주석만). 묶음 flow는 여전히 부수 AC 화면을 경유하나 규칙 2(\"헤더 선언 대상만 계수\")상 정합.\n- 새 flow는 앱 구동·디바이스 픽스처(예: `EXPO_PUBLIC_E2E_AUDIO_FIXTURE`) 검증이 필요해 이 PR에서 제외했다 — 후속 task는 반드시 구동 검증 후 커밋.\n\n## 롤백\n- 미병합: 브랜치 삭제로 무영향.\n- 병합 후: PR revert. 문서+YAML 헤더 주석+그린 테스트 1건 삭제뿐이라 앱 런타임/CI 동작 불변(가역). `home-record-ctas` 복원이 필요하면 revert가 파일을 되살린다."
     },
     "preparation": {
       "prepared": true,
