@@ -19,12 +19,18 @@
       }
     },
     "createdAt": "2026-07-12T06:20:32Z",
-    "updatedAt": "2026-07-12T06:21:10Z",
+    "updatedAt": "2026-07-12T06:21:12Z",
     "stateSummary": {
       "asIs": "**관측 시각** 2026-07-12T06:21:10Z · **homelab-k3s-mcp@main** HEAD `ca1f28f`(2026-07-08) · **as-is 버전** `449cdb0`(tests/ 트리)\n\n### e2e 구성\n`tests/integration/` Python 통합 테스트 **7개 파일**(aws_config·dear_baby·github_app·grafana·opensearch·smoke·workload, `_helpers.py` 제외) + `tests/k8s/kind/` 픽스처 7개.\n\n### 케이스 구조·식별 가능성 (실측)\n- 파일들은 **도메인당 평면 스크립트**다: aws_config·dear_baby·smoke는 최상위 함수 0개, 나머지도 헬퍼 함수만 있고 AC 단위 케이스 함수가 없다(등록 시점 인지대로 \"파일당 하나의 실행 흐름\" 구조).\n- **인코드 AC 선언은 전체에서 1건**(workload.py:291 주석 `test-workload-logs.md S3 / AC3`)뿐 — 이름·docstring 기반 케이스↔AC 식별이 사실상 부재.\n- 파일 수준으로는 test 문서 자동화 필드가 통합 파일을 참조하나, 참조되는 파일은 전부 다중 AC 공유다: workload.py ≈11 AC, opensearch.py 9 AC, github_app.py 3, dear_baby.py 3, aws_config.py 2, grafana.py 2, smoke.py 3.",
       "toBe": "**관측 시각** 2026-07-12T06:21:10Z · **to-be 버전** `d31d38f`(docs/ 내 prd-*.md blob 목록 해시)\n\n### AC 전집 (SSOT: prd-*.md 15종)\n`### ACn:` 헤딩 **52개** — aws-config-get 3·dear-baby-reset-user 3·github-app-installation-token 4·grafana-token 4·namespace-list 1·opensearch-document-delete 5·opensearch-document-put 5·opensearch-search 4·ping 1·platform-auth-safety 8·pod-describe 3·workload-list 2·workload-logs 4·workload-restart 2·workload-scale 3. (doc-tracker 집계와 일치.)\n\n### 자동화 필드의 현재 선언 (test-*.md 15종)\n- 약 **31개 AC**의 자동화 필드가 통합 파일을 (파일 수준·공유로) 언급 — 전용 케이스 지목은 없음.\n- **17개 AC**는 자동화가 **Go 단위 테스트(`internal/server/mcp_test.go` 등)만** — 정의상 internal/ 단위 테스트는 e2e가 아니므로 e2e 공백에 해당(pod-describe AC1~3 전부, workload-restart/AC2, workload-scale/AC3, 각 도메인 AC3류 다수).\n- **자동화 부재/정적만 3~4건**: platform-auth-safety/AC1(❌ 없음)·AC2(❌ 없음)·AC4(🟡 k8s/deployment.yaml 정적 리뷰), grafana-token/AC4(간접·부분).",
       "gap": "정의의 1:1 세 규칙 모두 대규모 미충족으로 **유의미한 차이가 존재**한다: ① AC→e2e — 자신을 검증하는 전용 e2e 케이스를 가진 AC가 사실상 0/52(파일 수준 공유 참조만 존재, 17건은 단위 테스트만, 3~4건은 자동화 부재/정적), ② e2e→AC — 통합 파일 7개 전부가 다중 AC를 겸함(케이스 단위 분리 부재), ③ 식별 가능성 — 인코드 AC 선언 1건뿐이고 test 문서도 케이스가 아닌 파일을 가리킴. 이는 definition '초기 상태 주의'가 예고한 등록 시점 격차(coarse 스크립트 + Go 단위 혼합, strict 1:1 미성립)가 그대로 확인된 것으로 회귀는 아니다. platform-auth-safety/AC4(정적 매니페스트 검증 성격) 등은 definition이 예고한 e2e 예외 목록 개정 후보다.",
       "summarizedAt": "2026-07-12T06:21:10Z"
+    },
+    "assessment": {
+      "actionRequired": true,
+      "reason": "정의가 요구하는 AC↔e2e 1:1이 세 규칙 모두에서 구조적으로 미성립(전용 케이스 보유 AC 0/52, 통합 파일 7개 전부 다중 AC 공유, 인코드 식별 1건)이며, 정적 테스트·문서 구조라 자동 해소 가능성이 없어 지금 작업이 필요하다. definition이 첫 task로 예고한 범위와 일치: ① AC별 e2e 케이스 식별 규약 확정(케이스 함수 분리 + 이름/docstring의 AC 명시 또는 test 문서 자동화 필드의 케이스 경로 지목), ② e2e 공백 AC 보강 계획 — Go 단위만 있는 17건(pod-describe 3건 포함)과 자동화 부재/정적 3~4건(platform-auth-safety AC1·AC2·AC4, grafana-token AC4)이 우선 대상. e2e로 비현실적인 AC(예: platform-auth-safety/AC4의 정적 매니페스트 검증 성격)는 definition 예외 목록 개정을 함께 제안한다 — 규약·순서·예외 판단은 planner 몫.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-07-12T06:21:12Z"
     }
   }
 ]
