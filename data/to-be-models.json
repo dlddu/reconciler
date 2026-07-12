@@ -190,5 +190,49 @@
     "checkPolicy": {
       "intervalSeconds": 3600
     }
+  },
+  {
+    "id": "tbm_dear-baby-ac-e2e-1to1",
+    "metadata": {
+      "name": "dear-baby AC ↔ e2e flow 1:1 매칭",
+      "description": "dlddu/dear-baby에서 docs/prd/의 Acceptance Criteria와 e2e/maestro/의 Maestro flow가 완전 1:1(AC 1개 ↔ flow 파일 1개)로 유지되도록 추적한다. e2e 자동화가 곤란한 AC는 docs/doc-tracker.md 예외 목록으로 관리하며, 등재된 AC는 drift가 아니다.",
+      "tags": [
+        "dear-baby",
+        "ac",
+        "e2e",
+        "maestro",
+        "consistency"
+      ],
+      "createdAt": "2026-07-12T05:49:22Z"
+    },
+    "definition": "# dear-baby AC ↔ e2e flow 1:1 매칭\n\n## 목표\n`dlddu/dear-baby` 레포에서 **제품 Acceptance Criteria(`docs/prd/`의 `AC-NNN-NN`)** 와 **e2e flow(`e2e/maestro/*.yaml`)** 를 **완전 1:1**로 유지한다: 예외 목록에 등재되지 않은 모든 AC는 자신을 주검증하는 flow 파일을 정확히 1개 가지며, 모든 최상위 flow 파일은 정확히 1개의 AC를 주검증한다(또는 문서화된 비-AC 매핑).\n\n## 무엇이 \"맞는 상태\"인가 (SSOT)\n- **AC의 SSOT**는 `docs/prd/`다 (등록 시점: PRD-001~008, AC 55개, ID 체계 `AC-NNN-NN`).\n- **e2e flow**는 `e2e/maestro/` 최상위 `*.yaml`이다. `e2e/maestro/subflows/*.yaml`은 재사용 헬퍼로, 매칭 단위가 아니다.\n- **예외·매핑 등재의 SSOT**는 `docs/doc-tracker.md`의 \"e2e flow 매핑\" 섹션이다(기존 등재 규칙을 확장해 AC 예외 목록을 함께 둔다).\n\n## 1:1 매칭 규칙 (판정 기준)\n1. **AC → flow 유일**: 예외 목록에 없는 모든 AC는, 헤더 주석에 그 AC를 검증 대상으로 선언한 flow 파일을 **정확히 1개** 가진다. 0개면 누락, 2개 이상이면 중복 — 둘 다 drift.\n2. **flow → AC 유일**: 모든 최상위 flow 파일은 헤더 주석에 **정확히 1개**의 AC만 주검증 대상으로 선언한다. 여러 AC를 묶은 flow는 분리 대상(drift). 셋업 과정에서 다른 AC의 화면을 경유하는 것(예: 온보딩 subflow 경유)은 검증으로 세지 않는다 — 헤더에 선언된 검증 대상만 센다.\n3. **비-AC flow 허용 유형**: AC 대신 (a) 엔지니어링 노트(`ENG-XXX`, 예: `login.yaml`→ENG-003) 또는 (b) 스모크/인프라 예외(예: `health.yaml`)를 검증 대상으로 선언한 flow는 허용하되, `docs/doc-tracker.md` \"e2e flow 매핑\" 표에 등재되어야 한다. 셋 중 어디에도 매핑되지 않은 flow는 고아(drift).\n4. **AC 예외 목록**: e2e로 자동 검증이 곤란한 AC(예: 푸시 알림 실수신, 실물 책 제작·배송, AI 산출물 품질, 외부 OAuth 의존)는 `docs/doc-tracker.md`에 **AC별 사유와 대체 검증 수단**(수동 QA, 단위/통합 테스트 등)을 적어 등재한다. 등재된 AC는 flow가 없어도 drift가 아니다. 등재 없이 flow만 없는 AC는 drift.\n5. **참조 무결성**: flow가 존재하지 않는 AC를 참조하거나, 예외 목록이 존재하지 않는 AC를 등재하고 있으면 drift.\n\n## 충돌 시 기본 방향\n`docs/prd/`의 AC가 스펙(SSOT)이다. AC가 바뀌면 대응 flow를 갱신·분리·개명·삭제해 따라간다. flow가 AC에 없는 동작을 검증하고 있으면 — 제품 동작이면 AC를 신설하고, 엔지니어링 계약이면 엔지니어링 노트로, 배포 게이트면 스모크 예외로 재매핑한다. 어느 쪽인지는 각 task에서 판단한다(planner).\n\n## 추적 방식 (요약)\n- **to-be** = `docs/prd` 트리 해시 + `docs/doc-tracker.md` blob 해시 조합 (AC 집합이 바뀌거나 예외/매핑 등재가 바뀌면 변함).\n- **as-is** = `e2e` 트리 해시 (flow 추가·수정·삭제 시 변함).\n- 어느 한쪽 버전이 바뀌면 task가 생성되어 1:1 매칭을 재검증한다.\n\n## 초기 상태 메모 (등록 시점 2026-07-12)\n현재 매핑은 다대다이며 1:1이 아니다: AC 55개 vs 최상위 flow 21개. 묶음 flow 존재(예: `diary-list-multichild.yaml`→AC-008-01·02·03·10, `diary-list-empty.yaml`→AC-008-09·10), 중복 검증 존재(예: AC-007-06을 `home-record-ctas`·`home-record-modal-entry`·`home-voice-record` 3개 flow가 선언), PRD-001~005의 AC 약 25개는 flow가 전무하다. 첫 task는 (1) AC별 매핑 표와 예외 목록 확정, (2) 묶음 flow 분리·중복 정리, (3) 누락 AC의 flow 신설 또는 예외 등재를 다루게 된다 — 큰 초기 격차는 예상된 것이다.\n\n## 범위 밖 / 비고\n- 단위·통합 테스트(`app/`·`backend/`·`worker/` 내부)는 이 루프의 매칭 단위가 아니다(예외 목록의 \"대체 검증 수단\"으로 언급될 수는 있음).\n- `docs/tests/TEST-NNN` 문서 ↔ AC 정합은 제품 문서 체계(doc-tracker)가 관리하며 이 모델의 매칭 단위가 아니다. 단, TEST 문서가 flow 파일명을 참조하면 그 참조 무결성은 task에서 함께 점검할 수 있다.\n- `docs/doc-tracker.md`는 문서 체계 전반의 메타 파일이라 이 매칭과 무관한 변경(예: mockup 수 갱신)도 to-be 버전을 바꿔 재검증을 트리거할 수 있다 — 무해하며, 노이즈가 크면 예외 목록을 전용 파일로 분리해 to-be 범위를 좁힐 수 있다.\n",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/dear-baby",
+        "ref": "main"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = AC 집합(docs/prd) + 예외/매핑 등재(docs/doc-tracker.md).\n# docs/prd 밖 문서·코드 변경은 (doc-tracker.md 제외) 무시된다.\n# 런타임이 dataSource.repository(dlddu/dear-baby)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\np=\"$(git rev-parse \"HEAD:docs/prd\")\"\nt=\"$(git rev-parse \"HEAD:docs/doc-tracker.md\")\"\nprintf 'prd:%s tracker:%s\\n' \"$p\" \"$t\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/dear-baby",
+        "ref": "main",
+        "subPath": "e2e"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = 실제 e2e flow 집합. e2e/ 하위 트리 해시만 사용 → e2e 밖 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/dear-baby)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:e2e\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "checkPolicy": {
+      "intervalSeconds": 3600
+    }
   }
 ]
