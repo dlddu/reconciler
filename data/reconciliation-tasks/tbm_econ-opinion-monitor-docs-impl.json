@@ -2,7 +2,7 @@
   {
     "id": "rct_20260712-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "assessing",
+    "status": "planning",
     "trigger": {
       "detectedAt": "2026-07-12T06:27:19Z",
       "changedSides": [
@@ -19,7 +19,7 @@
       }
     },
     "createdAt": "2026-07-12T06:27:19Z",
-    "updatedAt": "2026-07-12T06:28:02Z",
+    "updatedAt": "2026-07-12T13:01:00Z",
     "stateSummary": {
       "asIs": "**관측 시각** 2026-07-12T06:28:00Z · **economic-opinion-trend-monitor@main** HEAD `a0b4aa9`(2026-07-02) · **as-is 버전** `contracts:3386e2d python:285a2eb go:88c344e web:bb4a0ab`\n\nREADME가 명시하는 **부트스트랩 골격** 상태 그대로다(\"기능 로직은 페이크/스텁으로 비어 있다\"):\n- **python/**: ingestion·analysis·aggregation 3개 배치 패키지 + core. 소스는 페이크(`sources.py` fake 마커), LLM은 `fake_llm.py`, 집계도 스텁 — 실데이터 수집·실LLM 분석·실집계 로직 부재.\n- **go/**: serving 서버가 스크린별 API 8개(`/api/health·dashboard·trend·compare·sentiment·fairness·trace·reprocess`) + SPA 정적 서빙을 노출. dashboard 등은 gold 리더(`h.lake`)를 경유해 Python→Gold→Go 경로가 골격 수준으로 관통하나, 코드 주석이 trace·reprocess는 더미 반환임을 명시.\n- **web/**: 앱 셸(Topbar·Sidebar·MapStrip) + 스크린은 `Dashboard.tsx` 스텁 1개뿐, 나머지 6개 경로(trend·compare·sentiment·fairness·trace·reprocess)는 `Placeholder.tsx` — 목업 7화면 중 1화면만 스텁.\n- **contracts/**: bronze JSON Schema + silver/gold Avro가 필드 doc에 AC 코드를 직접 참조(예: gold/axis_sentiment.avsc → AC3.3·3.4·3.6·2.5). silver의 `Sentiment` enum = positive·neutral·negative·mixed 4분류, `AnalysisStatus` = analyzed·low_confidence·unanalyzed로 미분석 상태 분리 — 표본 점검에서 PRD 의미와 모순 없음.",
       "toBe": "**관측 시각** 2026-07-12T06:28:00Z · **to-be 버전** `fa43c9a`(docs 트리)\n\n**SSOT = docs/**: 가치 5개(econ-opinion-monitor-values.md V1~V5) → PRD 3종(수집 `prd-ingestion` / 분석 `prd-analysis` / 정규화·집계·시각화 `prd-aggregation-viz`) → **AC 20개**(AC1.1~1.6 · AC2.1~2.6 · AC3.1~3.8, 실측 일치) → 테스트 문서 3종. UI 의도는 `mockups/` 7화면(dashboard·trend·compare·sentiment·fairness·trace·reprocess) + 인덱스, `design-system/`, `user-journeys`(J1~J5)가 정의. doc-tracker·design-tracker가 문서 체계 메타 상태 추적.",
@@ -31,6 +31,28 @@
       "reason": "2026-07-12 사용자 결정으로 개정된 definition에 따라 미구현 AC는 백로그가 아닌 drift이며, 실측 결과 20개 AC 전부가 페이크/스텁 뒤의 미구현 상태로 확인됐다. 정적 코드·문서 격차라 자동 해소 가능성이 없고(2026-07-02 이후 구현 커밋도 없음), 문서→구현 완전 수렴이 이 모델의 목표이므로 지금 작업이 필요하다. 격차가 20개 AC 전체(수집·분석·집계/시각화 3개 파이프라인 + 6개 화면)에 걸쳐 있어 한 번에 좁히기보다 definition이 예고한 대로 우선순위화·분할이 필요하다 — 예: 수집(AC1.x) 실소스부터 수직 슬라이스로 관통할지, 화면별로 갈지의 전략 선택과 순서는 planner 몫. 구현된 골격·contracts는 문서와 정합하므로 문서 갱신 방향의 작업은 현재 불필요하다.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-12T06:28:02Z"
+    },
+    "plan": {
+      "summary": "이번 task 스코프 = 20개 AC 전 미구현 격차의 수렴 로드맵(전략·슬라이스 순서) 확정 및 기록 — 제품 문서 의미·코드 동작은 바꾸지 않고 doc-tracker에 로드맵 절 1개를 추가하는 docs-only PR 1건. 전략은 '대시보드 경로 수직 슬라이스 먼저 → 이후 화면 단위 확장'. 근거: 메달리온 흐름(Bronze→Silver→Gold→Go 서빙→web)의 하드 의존성상 분석은 Bronze 없이·집계는 Silver 없이·어떤 화면도 Gold 없이 실데이터를 낼 수 없어 '화면부터'는 성립 불가(화면 1개도 파이프라인 없이는 실데이터 불가)이고, 가장 배선된 대시보드 경로로 척추를 종단 관통하면 스택 전체를 조기 검증(통합 리스크 조기 노출)하며 최우선 가치 V1의 진입 화면을 실동작으로 확보한다. 이후 화면은 한계 파이프라인 비용(작은 것 우선)·가치 우선순위(V1→V3→V2→V4→V5)·운영 의존성(reprocess 최후)으로 붙인다. 대안 비교: 층별 수평(AC1 전부→AC2 전부→AC3 전부)은 마지막까지 사용자 대면 검증 결과가 없어 통합 리스크를 은폐하므로 배제; 순수 화면별은 파이프라인 없이 실화면이 불가해 결국 '대시보드 수직 후 화면별'로 수렴하므로 본 전략에 포함됨. 이번 task에서 구현을 착수하지 않는 근거: 20개 AC는 3개 파이프라인+7개 화면 제품 본체 전부라 단일 task 범위가 아니고, definition이 우선순위·분할을 계획 단계 몫으로 명시(등록 시점 격차 절)한다 — 순서를 확정·기록하고 후속 reconciler task가 슬라이스 단위로 구현·검증한다. blind 대규모 구현은 검증 불가 리스크로 배제. contracts·골격이 문서와 정합(어긋남 0건)하므로 문서 갱신형 작업은 로드맵 기록 외 불필요. 문서 1개(.md)만 바뀌어 완전 가역(미머지 시 PR close, 머지 후 revert 1건)이며 프로덕션·데이터·트래픽 영향 없음. 이 로드맵은 제품 스펙이 아니라 정합성 실행 순서이고 docs/가 to-be SSOT라 병합 시 to-be 해시가 바뀌어 다음 감지 task를 트리거함(루프 설계 — 그 task는 슬라이스 2부터 이어받음).",
+      "riskLevel": "low",
+      "plannedAt": "2026-07-12T13:01:00Z",
+      "steps": [
+        {
+          "seq": 1,
+          "action": "econ 레포(dlddu/economic-opinion-trend-monitor) 브랜치 reconcile/rct_20260712-0001에서 docs/econ-opinion-monitor-doc-tracker.md에 '구현 수렴 로드맵 (reconciler 정합성 루프)' 절 신설 — 수직 슬라이스 전략 서술 + 슬라이스 표(1 본 task 로드맵 확정 ~ 10 reprocess 콘솔 + 마무리, 각 행에 범위·대상 AC·산출 계층/화면·근거) + 화면 순서 근거. 화면↔AC↔여정↔가치 매핑은 docs/mockups/econ-opinion-monitor-mockup-index.md를 SSOT로 참조.",
+          "expectedOutcome": "doc-tracker에 로드맵 절이 존재하고 슬라이스 1~10+마무리가 20개 AC(AC1.1~1.6·2.1~2.6·3.1~3.8)를 빠짐없이 대응(각 AC가 최소 1개 슬라이스에 등장)한다."
+        },
+        {
+          "seq": 2,
+          "action": "동 파일 '현재 상태 요약'에 문서↔구현 정합성 주석 1줄 추가(건강 상태 ✅는 문서 체계 연결만을 뜻하며 구현 정합성은 reconciler로 별도 추적·현재 20개 AC 전 미구현, 로드맵 참조) + '변경 이력'에 본 건 1행 추가.",
+          "expectedOutcome": "추적 문서가 '문서 완전=구현 완전'으로 오독되지 않고, 로드맵 등재가 변경 이력에 감사 기록으로 남는다."
+        },
+        {
+          "seq": 3,
+          "action": "정합성 검증: git diff --name-only가 docs/econ-opinion-monitor-doc-tracker.md 1개 파일만 건드리는지 확인(contracts/·python/·go/·web/·다른 docs 무변) + 로드맵 표의 대상 AC 합집합 == 20개 AC 대조.",
+          "expectedOutcome": "diff = doc-tracker 1개뿐이라 as-is 버전(contracts+python+go+web 트리 해시) 무변, 로드맵이 20개 AC 전수 포함, CI(build/lint/test/e2e)는 docs-only라 main 그린 유지."
+        }
+      ]
     }
   }
 ]
