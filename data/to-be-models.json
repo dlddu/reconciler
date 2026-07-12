@@ -140,5 +140,55 @@
     "checkPolicy": {
       "intervalSeconds": 3600
     }
+  },
+  {
+    "id": "tbm_claude-transcript-viewer-v2-ac-e2e-1to1",
+    "metadata": {
+      "name": "claude-transcript-viewer-v2 AC ↔ E2E 1:1 정합성",
+      "description": "dlddu/claude-transcript-viewer-v2에서 PRD의 Acceptance Criteria(25개)와 e2e/tests의 Playwright 스펙 파일(25개)이 양방향 파일 단위 1:1 매칭을 유지하도록 추적한다. AC(PRD)·매핑 선언(test 문서)이 to-be, 실제 스펙 전집이 as-is다. 1:N·N:1·고아 스펙·유령 매핑·decoy 스펙을 drift로 본다.",
+      "tags": [
+        "claude-transcript-viewer-v2",
+        "ac",
+        "e2e",
+        "1to1",
+        "test-mapping",
+        "docs"
+      ],
+      "createdAt": "2026-07-12T05:48:16Z"
+    },
+    "definition": "# claude-transcript-viewer-v2 AC ↔ E2E 1:1 정합성\n\n## 목표\n`dlddu/claude-transcript-viewer-v2` 레포에서 **Acceptance Criteria(AC)** 와 **E2E 스펙 파일**의 **양방향 파일 단위 1:1 매칭**(2026-07-09 달성, 현재 25:25)을 계속 유지한다. 어느 쪽이 변해도 다른 쪽과 매핑 선언 문서가 함께 동기화되어야 한다.\n\n## 무엇이 \"맞는 상태\"인가 (SSOT와 불변식)\n- **AC 전집**: `docs/transcript-viewer-prd-*.md`의 `### <PREFIX>-AC<N>: ...` 헤딩 전체. 현재 25개 = DP-AC1~4 · LC-AC1~5 · LK-AC1~4 · SL-AC1~6 · VW-AC1~6.\n- **스펙 전집**: `e2e/tests/` 하위 `*.spec.*` 파일 전체. 현재 25개. `e2e/tests/support/*.ts`는 공유 헬퍼로 스펙이 아니다. `docker-build.spec.ts`는 playwright.config.ts의 `testIgnore`로 Playwright 수집에서 빠지고 CI 전용 스텝(`pnpm tsx --test`)으로 실행되지만, 스펙 전집에는 포함된다(DP-AC1 소유).\n- **불변식(양방향 1:1)**: 모든 AC는 자신을 배타적으로 검증하는 전용 스펙 파일을 정확히 1개 소유하고, 모든 스펙 파일은 정확히 1개의 AC만 검증한다. 1:N = 0건, N:1 = 0건, 고아 스펙(대응 AC 없음) = 0건, 유령 매핑(문서에만 존재하는 스펙) = 0건.\n- **매핑 선언의 SSOT**: `docs/transcript-viewer-test-*.md` 각 시나리오의 \"구현\" 항목이 AC → 스펙 파일을 명시한다. 선언은 실제와 일치해야 한다 — 참조된 파일이 존재하고, 그 스펙이 해당 AC의 핵심 보장을 **실측 단정**해야 한다(존재/문자열 검사만 하거나 다른 픽스처로 흉내 내는 decoy 금지).\n\n## 유지 규칙 (doc-tracker에 성문화된 운영 규칙)\n- 새 E2E를 추가할 때는 먼저 어느 AC를 덮는지 정한다. 그 AC가 이미 스펙을 갖고 있으면 **새 파일을 만들지 말고 기존 파일에 describe를 더한다**. 덮을 AC가 없으면 그 테스트는 제품 가치가 아니므로 작성하지 않는다(지킬 가치라면 먼저 AC를 추가하고 매핑한다).\n- AC 문장이 복수 보장을 접속사로 묶고 있으면 **AC 분할 대신 스펙 병합**을 우선한다. 나중에 AC를 쪼개기로 하면 파일도 그 경계에서 다시 가른다.\n- 유닛/컴포넌트/백엔드 테스트는 이 매핑의 범위 밖이다(AC 문서에 매핑하지 않고 코드에 공존). 예외는 \"E2E 스위트가 초록불이어도 깨질 수 있어 그 테스트가 유일 검증\"인 sole-validator뿐이며, AC 문서에 ⚠️ 마커와 사유를 남긴다. 현재 예외 2건: LC-AC5(재시도 안전 삭제, `backend/s3_test.go` fault-injection) · LC-AC3(TTL 값·매니페스트 형태, `backend/s3_test.go`). 이 예외들도 1:1 계수에는 들어가지 않는다(둘 다 전용 E2E는 별도로 보유).\n\n## drift로 보는 것 / 보지 않는 것\n**drift**:\n- AC 추가·삭제·개명·분할·병합 후 스펙 전집/매핑 선언이 미동기.\n- 스펙 파일 추가·삭제·개명·분할·병합 후 PRD/테스트 문서가 미동기.\n- 테스트 문서의 \"구현\" 선언이 실제와 불일치(없는 파일 참조, 스펙이 다른 AC 영역을 단정, 한 스펙이 여러 AC를 덮음).\n- 스펙이 자기 AC의 핵심 보장을 실측 단정하지 않게 됨(decoy화, 전량 skip 등).\n\n**drift 아님**:\n- `e2e/fixtures/`·`e2e/tests/support/` 헬퍼·`playwright.config.ts`의 변경 자체(스펙 전집·수집 규칙을 실질적으로 바꾸지 않는 한).\n- 유닛/컴포넌트 테스트의 추가·변경(sole-validator 예외 규칙 위반이 아닌 한).\n- `docs/transcript-viewer-doc-tracker.md`·`transcript-viewer-values.md`의 부기·서술 갱신(AC 전집을 바꾸지 않으므로 추적 대상 밖).\n- 미구현 잔여(예: SL-AC1/AC2의 file_count)는 커버리지/백로그 사안이며 이 루프의 어긋남이 아니다 — 이 모델은 \"1:1 구조와 매핑의 정직성\"만 지킨다.\n\n## 충돌 시 기본 방향\nAC(PRD)가 제품 약속의 단위 = SSOT다. 스펙 전집이 AC 전집을 따르는 것이 원칙이다(고아 스펙은 삭제하거나, 지킬 가치면 AC를 먼저 추가). 단, 스펙 변화가 **의도된 제품 변경**의 반영이면 PRD/AC/테스트 문서(+doc-tracker)를 갱신해 문서를 코드에 맞춘다. 어느 쪽인지는 각 task에서 판단한다.\n\n## 추적 방식 (요약)\n- **to-be** = `docs/transcript-viewer-prd-*.md` + `docs/transcript-viewer-test-*.md`의 git blob 목록 해시. AC 정의나 매핑 선언이 바뀔 때만 변한다.\n- **as-is** = `e2e/tests/` 하위 `*.spec.*`의 git blob 목록 해시. 스펙 파일의 내용 변경·추가·삭제·개명이 있을 때만 변한다.\n- 어느 한쪽 버전이 바뀌면 task가 생성된다. 재검증 절차(권장): ① PRD에서 AC 헤딩 추출 ② 스펙 파일 목록 나열 ③ 테스트 문서의 \"구현\" 선언과 3자 대조(전단사 확인) ④ 변경된 스펙/AC의 내용이 실제로 그 AC를 단정하는지 확인.\n\n## 범위 밖 / 비고\n- 스펙 \"통과 여부\"(CI 그린)는 이 모델의 대상이 아니다(그건 CI가 지킨다). 여기서는 구조(전단사)와 매핑의 정직성만 본다.\n- 제품 소유자는 현재 TBD(고아 가치 4건은 doc-tracker가 추적).",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/claude-transcript-viewer-v2",
+        "ref": "main",
+        "subPath": "docs"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = AC 전집 + AC↔E2E 매핑 선언. docs/transcript-viewer-prd-*.md(AC 정의)와\n# docs/transcript-viewer-test-*.md(매핑 선언)의 git blob 목록을 해시한다.\n# → 이 파일들의 내용 변경·추가·삭제·개명만 버전을 바꾼다\n#   (values.md·doc-tracker.md 등 그 밖 docs/ 변경은 무시).\n# 런타임이 dataSource.repository(dlddu/claude-transcript-viewer-v2)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit ls-tree -r HEAD -- docs \\\n  | { grep -E 'docs/transcript-viewer-(prd|test)-[^/]+\\.md$' || true; } \\\n  | git hash-object --stdin\n",
+        "timeoutSeconds": 60
+      },
+      "lastObservedVersion": "d12c5fdf970bbda72b6e17d32f61b7e8daab6166",
+      "lastObservedAt": "2026-07-12T05:48:16Z"
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/claude-transcript-viewer-v2",
+        "ref": "main",
+        "subPath": "e2e/tests"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = 실제 E2E 스펙 전집. e2e/tests/ 하위 *.spec.* 파일들의 git blob 목록을 해시한다.\n# → 스펙 파일의 내용 변경·추가·삭제·개명·병합·분할만 버전을 바꾼다\n#   (e2e/fixtures/·tests/support/ 헬퍼·playwright.config.ts 변경은 무시).\n# docker-build.spec.ts처럼 Playwright testIgnore 대상이어도 스펙 전집에는 포함된다.\n# 런타임이 dataSource.repository(dlddu/claude-transcript-viewer-v2)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit ls-tree -r HEAD -- e2e/tests \\\n  | { grep -E '/[^/]+\\.spec\\.[A-Za-z0-9]+$' || true; } \\\n  | git hash-object --stdin\n",
+        "timeoutSeconds": 60
+      },
+      "lastObservedVersion": "68765441c4067974a4693ec4a68a30d4eaff05bc",
+      "lastObservedAt": "2026-07-12T05:48:16Z"
+    },
+    "checkPolicy": {
+      "intervalSeconds": 3600
+    }
   }
 ]
