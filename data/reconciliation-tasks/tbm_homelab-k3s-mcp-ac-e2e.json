@@ -2,7 +2,7 @@
   {
     "id": "rct_20260712-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "assessing",
+    "status": "planning",
     "trigger": {
       "detectedAt": "2026-07-12T06:20:32Z",
       "changedSides": [
@@ -31,6 +31,43 @@
       "reason": "정의가 요구하는 AC↔e2e 1:1이 세 규칙 모두에서 구조적으로 미성립(전용 케이스 보유 AC 0/52, 통합 파일 7개 전부 다중 AC 공유, 인코드 식별 1건)이며, 정적 테스트·문서 구조라 자동 해소 가능성이 없어 지금 작업이 필요하다. definition이 첫 task로 예고한 범위와 일치: ① AC별 e2e 케이스 식별 규약 확정(케이스 함수 분리 + 이름/docstring의 AC 명시 또는 test 문서 자동화 필드의 케이스 경로 지목), ② e2e 공백 AC 보강 계획 — Go 단위만 있는 17건(pod-describe 3건 포함)과 자동화 부재/정적 3~4건(platform-auth-safety AC1·AC2·AC4, grafana-token AC4)이 우선 대상. e2e로 비현실적인 AC(예: platform-auth-safety/AC4의 정적 매니페스트 검증 성격)는 definition 예외 목록 개정을 함께 제안한다 — 규약·순서·예외 판단은 planner 몫.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-12T06:21:12Z"
+    },
+    "plan": {
+      "summary": "스코프 = 규약 확정 + e2e 보강 계획 + 예외 제안(문서 기반). 이 모델은 to-be=docs/prd-*.md·as-is=tests/만 추적하고 doc-tracker.md는 어느 해시도 바꾸지 않는다. 완전 1:1(AC별 전용 e2e 케이스)은 평면 통합 스크립트 7개를 per-AC 케이스로 리팩터하고 e2e 공백 7건을 신설해야 하는데, kind 클러스터 실서버 CI라 여기서 구동·검증 불가 → blind 저작은 CI 리스크. 따라서 이 첫 PR은 tests/를 건드리지 않고 (a) reconciler 렌즈(통합 e2e만 인정, internal/ 단위 제외) AC↔e2e 레지스트리를 doc-tracker에 신설, (b) per-AC 케이스 식별 규약 명문화, (c) 52 AC 분류(통합 32·보강 7·예외 후보 13)와 보강 backlog·예외 후보 작성, (d) e2e 비현실 AC(파괴적 표기·미설정 거부·출력 비노출·정적 매니페스트 13건)의 모델 정의 예외 개정을 '제안'(초안 제공, 일방 적용 안 함)한다. 전용 per-AC 케이스 분리·신설(통합 리팩터)은 CI-검증 후속 task.",
+      "riskLevel": "low",
+      "steps": [
+        {
+          "seq": 1,
+          "action": "docs/doc-tracker.md의 '자동화 커버리지' 아래에 reconciler 렌즈 서브섹션을 신설한다. 렌즈 차이(reconciler는 tests/integration e2e만 인정, internal/ Go 단위는 제외 — 기존 '자동화 커버리지'가 🟢로 세는 다수 AC가 e2e 렌즈에선 공백)를 명시.",
+          "expectedOutcome": "기존 섹션을 덮지 않고 e2e 전용 렌즈 레지스트리가 추가됨. 렌즈 차이 명문화."
+        },
+        {
+          "seq": 2,
+          "action": "AC↔e2e 케이스 식별 규약을 명문화한다: 각 e2e 케이스는 이름+docstring으로 검증 AC 정확히 1개를 선언(예: test_<domain>_ac<n>_<slug>, docstring `AC: <domain>/ACn`), doc-tracker 레지스트리가 AC↔케이스 매핑 SSOT, test-*.md 자동화 필드는 케이스 경로 지목(케이스 신설 후).",
+          "expectedOutcome": "규칙 1·2·3 충족을 위한 케이스 식별 규약이 문서화됨."
+        },
+        {
+          "seq": 3,
+          "action": "52개 AC 레지스트리 표 작성 — 각 AC를 ✅ 통합 e2e(파일 수준, 32; 대응 tests/integration 파일 명시) / ⬜ e2e 보강 필요(7; e2e 가능 클러스터 동작) / 🚫 e2e 예외 후보(13; 메타데이터·출력·미설정·정적 매니페스트)로 분류.",
+          "expectedOutcome": "52 AC 전부가 세 상태 중 하나로 분류(누락 0). 통합 커버 AC는 대응 파일 명시."
+        },
+        {
+          "seq": 4,
+          "action": "⬜ e2e 보강 backlog(7) 작성: pod-describe/AC1·AC2·AC3(파드 describe 신규 e2e), platform-auth-safety/AC1(미인증 거부)·AC2(디스커버리 엔드포인트)·AC7(API 키 게이트)·AC8(env-게이팅 다중 구성) — 각 목표 통합 파일 + 단정 핵심 명시.",
+          "expectedOutcome": "e2e 가능·공백 7건 각각 목표 파일·단정이 명세되어 후속 task가 착수 가능."
+        },
+        {
+          "seq": 5,
+          "action": "🚫 e2e 예외 후보(13) 목록 작성 + 모델 정의 개정 제안: 파괴적 작업 표기 5(dear-baby/AC3·os-delete/AC3·os-put/AC3·workload-restart/AC2·workload-scale/AC3), 미설정 graceful 거부 6(aws-config/AC3·github/AC3·grafana/AC3·os-delete/AC5·os-put/AC5·os-search/AC4), 출력 비노출 1(grafana/AC4), 정적 매니페스트 1(platform/AC4). 각 사유+대체검증(Go 단위/정적 리뷰). to-be governance라 정의에 일방 적용하지 않고 붙여넣기용 초안으로 제안.",
+          "expectedOutcome": "예외 후보 13건 각 사유·대체검증 명시. 모델 정의(to-be-models.json) 예외 목록 개정 초안 제공 — 별도 ratify."
+        },
+        {
+          "seq": 6,
+          "action": "검증: (i) 레지스트리가 52 AC 전부 분류(누락 0), (ii) ✅ 32건이 실재 tests/integration 파일과 일치, (iii) 통합 파일 7개 다중 AC 공유 사실이 표에 드러남(rule 1/2 미충족은 후속 리팩터로 명시), (iv) backlog 7·예외 13 합 20 = 공백(17 단위+3 정적), (v) tests/ 미변경 확인. doc-tracker 변경은 to-be(prd)·as-is(tests) 해시 불변이라 재트리거 없음.",
+          "expectedOutcome": "52 AC 분류·파일 정합 확인, 공백 20건 backlog/예외로 완전 커버, tests/ 무변경. 규약·계획·예외 제안 문서 완결. converged=false(전용 케이스 리팩터는 후속)."
+        }
+      ],
+      "plannedAt": "2026-07-12T09:45:24Z"
     }
   }
 ]
