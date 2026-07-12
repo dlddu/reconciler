@@ -2,7 +2,7 @@
   {
     "id": "rct_20260712-0001",
     "toBeModelId": "tbm_dear-baby-ac-e2e-1to1",
-    "status": "assessing",
+    "status": "planning",
     "trigger": {
       "detectedAt": "2026-07-12T06:25:23Z",
       "changedSides": [
@@ -31,6 +31,43 @@
       "reason": "정의가 요구하는 완전 1:1에 크게 미달하는 구조적 drift가 확인됐다 — flow 없는 AC 36건(예외 등재 0건이라 전부 공백), 묶음 flow 5건, 중복 선언 AC 5건(AC-007-06은 4중), 선언 형식 위반 4건(TC ID·서술만). 정적 문서·flow 구조라 자동 해소 가능성이 없고, AC 예외 목록 부재로 '자동화 곤란 AC'조차 전부 공백으로 남는 상태여서 지금 작업이 필요하다. definition이 첫 task로 예고한 범위 그대로: ① AC별 매핑 표와 예외 목록 확정(푸시 실수신·실물 책 제작·AI 품질·OAuth 등 곤란 AC의 사유·대체 검증 등재 — 특히 PRD-001~005의 25건 중 상당수가 예외 후보), ② 묶음 flow 분리·중복 정리(AC-007-06 4중 우선), ③ 누락 AC의 flow 신설 또는 예외 등재, ④ TC-선언 flow 4건의 헤더를 AC ID 선언으로 정규화. 순서·예외 판단·파일명 규칙은 planner 몫.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-12T06:26:09Z"
+    },
+    "plan": {
+      "summary": "스코프 = 기반 확립 + 안전한 구조 정리(문서 + flow 헤더 + 중복 flow 1건 삭제). 완전 1:1이 요구하는 새 maestro flow 20개+ 저작은 앱 구동·디바이스 픽스처 검증이 필요해 blind 저작 시 CI 리스크가 크므로, 이 첫 PR은 검증 불가한 새 flow를 만들지 않고 (a) 매핑 표+예외 목록 확정, (b) TC-선언 헤더 4건 AC 정규화, (c) 중복·묶음을 헤더 단일-AC 재선언으로 정리(중복 트윈 home-record-ctas 삭제, home-voice-record→AC-001-01 재배치), (d) 곤란 AC 예외 등재로 ②③④와 ①의 예외분을 해소한다. 정리로 표면화되는 자동화-가능-미작성 AC는 목표 flow명·단정 내용과 함께 backlog로 명세하여 후속 task로 넘긴다. 변경은 docs + YAML 헤더 주석 + 그린 테스트 1건 삭제뿐이라 CI-무해·가역.",
+      "riskLevel": "low",
+      "steps": [
+        {
+          "seq": 1,
+          "action": "docs/doc-tracker.md의 'e2e flow 매핑' 섹션을 확장해 55개 AC ↔ flow 매핑 표를 신설한다. 각 AC를 (flow 보유 / 예외 등재 / 후속-미작성) 중 하나로 분류하고, flow 보유 AC는 대응 최상위 flow 파일명을 명시.",
+          "expectedOutcome": "매핑 표가 55개 AC를 빠짐없이 분류. 각 제품 flow가 정확히 1개 AC에 대응."
+        },
+        {
+          "seq": 2,
+          "action": "doc-tracker에 AC 예외 목록을 등재한다(사유+대체 검증 수단): AC-001-02(AI STT 품질→whisper 단위/수동 QA), AC-002-04·AC-006-05(푸시 발송→스케줄러 단위/수동 QA), AC-003-01·AC-003-04(AI 서사 품질→프롬프트 단위/수동 QA), AC-004-03(결제→샌드박스 통합/수동 QA), AC-004-04(실물 제작·배송→백엔드 상태 API 단위/수동 QA), AC-007-09(피드 노출 로직→셀렉터 단위 테스트).",
+          "expectedOutcome": "등재된 예외 AC는 flow 없어도 drift 아님. 각 항목에 사유·대체검증 명시."
+        },
+        {
+          "seq": 3,
+          "action": "TC ID·서술만 있던 flow 4건의 헤더에 '검증 대상: AC-...' 선언을 추가해 정규화: home-header-multichild→AC-007-02, home-header-notification-dot→AC-007-03, home-nav-5tabs→AC-007-10, onboarding-caseC→AC-006-04.",
+          "expectedOutcome": "4개 flow 모두 헤더에 단일 AC ID 선언 보유(형식 위반 0). 참조하는 AC는 실재."
+        },
+        {
+          "seq": 4,
+          "action": "중복·묶음을 헤더 단일-AC 재선언으로 정리(규칙 1·2): AC-007-06 4중 → home-record-modal-entry 단독으로 두고 중복 트윈 home-record-ctas.yaml 삭제; home-voice-record 헤더 → AC-001-01(녹음 시작/종료 회로)로 재배치; home-question-card-undecided → AC-007-04; diary-list-multichild → AC-008-01; diary-list-empty → AC-008-09; home-feed → AC-007-08. 각 flow 헤더가 정확히 1개 주검증 AC만 선언하게 한다.",
+          "expectedOutcome": "AC 중복 선언 0건, 다중-AC 묶음 헤더 0건. home-record-ctas 삭제로 AC-007-06는 modal-entry 단독. PRD-001은 voice-record로 첫 flow 확보."
+        },
+        {
+          "seq": 5,
+          "action": "정리로 표면화되는 자동화-가능-미작성 AC를 매핑 표에 backlog로 명세한다 — 목표 flow 파일명 + 단정할 핵심 내용 포함. 최소: AC-007-01(헤더 활성 아이 컨텍스트), AC-007-05(다른 질문 보기), AC-008-02(월 그룹)·AC-008-03(카드 칩)·AC-008-10(일기 헤더+네비), PRD-001 나머지(01·03·04·05)·PRD-005의 e2e 가능 항목 등.",
+          "expectedOutcome": "미작성 AC마다 후속 flow 스펙(파일명+단정)이 표에 존재. 후속 task가 그대로 착수 가능."
+        },
+        {
+          "seq": 6,
+          "action": "검증: (i) 매핑 표가 55개 AC 전부를 flow/예외/후속 중 하나로 분류, (ii) 모든 최상위 flow가 헤더에 정확히 1개 AC(또는 ENG-003/스모크 예외) 선언 — 중복 0·묶음 0, (iii) 참조 무결성(존재하는 flow·AC만 참조; 삭제된 record-ctas 잔존 참조 0), (iv) login→ENG-003·health→스모크 등재 유지. 새 flow 저작 없음 → 기존 e2e 그린 유지, record-ctas 삭제분은 modal-entry가 대체.",
+          "expectedOutcome": "55 AC 완전 분류, flow→AC 유일성 성립(제품 flow 기준), 참조 무결성 0 오류, 예외/ENG/스모크 등재 정합. 자동화-가능-미작성분만 backlog로 잔존(후속)."
+        }
+      ],
+      "plannedAt": "2026-07-12T09:21:46Z"
     }
   }
 ]
