@@ -2,7 +2,7 @@
   {
     "id": "rct_20260712-0001",
     "toBeModelId": "tbm_claude-transcript-viewer-v2-ac-e2e-1to1",
-    "status": "assessing",
+    "status": "planning",
     "trigger": {
       "detectedAt": "2026-07-12T06:14:07Z",
       "changedSides": [
@@ -30,6 +30,38 @@
       "reason": "트리거된 as-is 변경(#94)은 주석·제목·설정만 바꾼 추적성 정비로 그 자체는 조치 불필요(전단사 25:25 유지 확인). 그러나 재검증에서 확인된 지속 gap 2건은 정적 문서↔코드 상태라 자동 해소 가능성이 없어 지금 작업이 필요하다: (1) 불변식 ②(완전성) 위반 — SL-AC1/AC2의 file_count 보장이 구현·전용 스펙 단정 없이 잔여로 보류 중이며, definition이 \"잔여로 계속 보류는 수렴이 아니다\"라고 명시해 (a) file_count 구현 + 소유 스펙(session-list-api·session-list-order) 단정 추가 또는 (b) AC 문장에서 해당 보장 제거(문서·매핑 갱신) 중 하나로만 수렴 가능 — 방향 선택은 planner 몫. (2) prd-session-list.md SL-AC1(L26)·SL-AC2(L36) 검증 방법의 삭제된 e2e/tests/session-list.spec.ts 참조 2건 — 2026-07-09 스펙 분할 후 PRD 미동기로, 현존 분할 파일명으로 갱신 필요(경미, (1) 작업에 동봉 가능). 롤아웃 진행·일시적 alert 같은 자동 해소 요소가 없으므로 재확인 유예 대상이 아니다.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-12T06:15:53Z"
+    },
+    "plan": {
+      "summary": "잔여(SL-AC1/AC2 file_count)를 방향 (b)로 수렴 — file_count 보장을 AC에서 들어내 to-be 문서(prd/test)를 as-is 스펙에 맞춘다(스펙은 이미 file_count를 단정하지 않고 분할 완료). (a) 구현 대신 (b)를 택한 것은 사용자 결정(2026-07-12): file_count는 산출 방식 미결로 보류돼 있었고 제품 범위에서 제외하기로 함. 문서만 바뀌고 제품 코드·스펙·CI는 무변이라 완전 가역(브랜치 close 또는 revert). 동시에 item(2) 유령 참조 — prd의 삭제된 session-list.spec.ts 2건 — 을 현존 소유 스펙으로 교정한다. AC/스펙 개수는 불변이라 25:25 전단사는 유지된다.",
+      "riskLevel": "low",
+      "steps": [
+        {
+          "seq": 1,
+          "action": "prd-session-list.md에서 file_count 보장 제거: V1 달성 가치(L7)의 '파일 수(메인+서브에이전트)', SL-AC1의 '파일 수(file_count) 보류' 서브섹션, SL-AC2 설명의 보류 문구, 구현 현황의 file_count 문단.",
+          "expectedOutcome": "PRD에 file_count/파일 수/보류 언급 0건. SL-AC1/AC2는 세션 ID·업로드 시각만 보장."
+        },
+        {
+          "seq": 2,
+          "action": "prd-session-list.md 유령 스펙 참조 교정: SL-AC1 검증 방법의 e2e/tests/session-list.spec.ts → session-list-api.spec.ts, SL-AC2 검증 방법 → session-list-order.spec.ts.",
+          "expectedOutcome": "PRD가 삭제된 session-list.spec.ts를 더는 참조하지 않고 현존 소유 스펙을 가리킴(test 문서 선언과 일치)."
+        },
+        {
+          "seq": 3,
+          "action": "test-session-list.md에서 file_count 제외 문구 제거: 구현 상태 note(L6-8), 시나리오1 기대결과(L22)의 '(file_count는 범위 제외)', 시나리오2 기대결과(L31)의 '(파일 수 제외)'.",
+          "expectedOutcome": "test 문서에 file_count 제외/잔여 언급 0건. '구현' 매핑 선언(session-list-api/order)은 무변."
+        },
+        {
+          "seq": 4,
+          "action": "doc-tracker.md 갱신: '미검증 AC' 절의 🟡 잔여(file_count) 기록을 '2026-07-12 file_count 범위 제외 결정' 항목으로 전환하고, 현재 상태 요약(L7)·건강 상태(L9)·연결 매트릭스 V1/V2 행(L15-16)·주석(L20-21)의 file_count 잔여 문구를 제거. 2026-07-05/07-09 해소·분할 이력 기록은 과거 사실이므로 보존.",
+          "expectedOutcome": "doc-tracker에 열린 잔여 0건. SL-AC1~6은 잔여 없이 검증 완료로 표기되고, session.list.spec.ts는 이력 항목에만 남음."
+        },
+        {
+          "seq": 5,
+          "action": "검증: docs 전체 grep로 file_count/파일 수/보류/잔여(session-list 맥락) 잔존 0건 확인, PRD의 삭제 스펙 참조(session-list.spec.ts) 0건 확인, prd의 '### <PREFIX>-AC<N>' 헤딩 25개 ↔ e2e/tests/*.spec.* 25개 ↔ test 문서 '구현' 선언의 3자 전단사 정합 재확인.",
+          "expectedOutcome": "잔존 grep 0건, 25:25 전단사·매핑 정직성 유지, 스펙 무변으로 CI 영향 없음."
+        }
+      ],
+      "plannedAt": "2026-07-12T08:17:36Z"
     }
   }
 ]
