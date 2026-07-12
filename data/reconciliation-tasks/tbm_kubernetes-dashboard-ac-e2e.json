@@ -19,7 +19,7 @@
       }
     },
     "createdAt": "2026-07-12T06:18:19Z",
-    "updatedAt": "2026-07-12T11:45:00Z",
+    "updatedAt": "2026-07-12T12:05:00Z",
     "stateSummary": {
       "asIs": "**관측 시각** 2026-07-12T06:18:54Z · **kubernetes-dashboard@main** HEAD `9162e79`(2026-07-06) · **as-is 버전** `92de231`(e2e 트리)\n\n### 스펙 전집\n`e2e/` 최상위 `*.spec.ts` **35개**(`helpers/`·`k8s/`·`README.md` 제외).\n\n### test 문서 자동화 필드 기준 실측 매핑 (매핑 SSOT 대조)\n- **전용 스펙을 가진 AC(깨끗한 1:1)**: **11/53** — AR2·AR4·AR5·AR6·CM6·OV1·OV2·OV3·PD2·PD3·PD4 (예: OV1→overview-summary-cards, PD2→pod-logs, AR2→argo-submit).\n- **한 AC → 2개 파일(중복 커버)**: 9건 — AR7, CM5, CM7, FX7, ND3, PD1, PD5(pod-cleanup+pod-terminating), WL1, WL4.\n- **한 파일 → 2개 이상 AC(공유 스펙)**: 15건 — 최대 namespace-filter.spec.ts(CM5·CM7·OV6·PD1·WL1 5개), deployment-restart(WL1~4 4개), external-secrets(ES1~4), configmaps-tab(CF1~3), nodes-tab(ND1~3), secrets-tab(SC1·SC2·SC4), pods(CM3·PD1·PD7), polling-indicator(CM4·OV4·OV5) 등.\n- **고아 스펙(어느 AC에서도 미참조)**: 7건 — `debug-back-button`·`debug-context`·`debug-detail-view`·`debug-page-layout`·`debug-route`·`debug-toggle`(디버그 페이지 기능 — 대응 PRD/AC 자체가 없음)·`health.spec.ts`.\n- **유령 참조(문서가 가리키나 부재한 파일)**: 0건.",
       "toBe": "**관측 시각** 2026-07-12T06:18:54Z · **to-be 버전** `3f49630`(docs/product 트리)\n\n### AC 전집 (SSOT: prd-*.md 10종)\n**53개** — OV 7·ND 3·WL 4·PD 7·SC 4·CF 3·ES 4·AR 7·FX 7·CM 7. 헤딩 형식은 `### AC<n>:`(9개 파일)와 `### CF<n>:`(prd-configmaps.md)이 혼재.\n\n### 매핑 선언 (SSOT: test-*.md 10종의 자동화 필드)\n- 자동화 **공백 8건**: OV7·PD6·SC3·FX3·FX4·FX5·FX6(자동화 필드가 파일을 전혀 참조 안 함 7건) + CM3(⚠️ \"부분 공백\" — 전용 스펙 없음, pods.spec.ts 뷰포트 테스트로 간접 검증 명시).\n- AR4는 파일은 있으나 \"라이브 폴링 자동 갱신 직접 검증 보강 권장\" 주석 부착.\n\n### doc-tracker 집계 (규칙 ③ 대조)\nAC 53·테스트 문서 10·자동화 공백 8건(SC3, FX3~6, OV7, PD6, CM3)·(보강 권장) AR4 — **실측과 일치**. 단 doc-tracker는 공백을 \"문서 체계 외부의 구현 백로그\"로 🟢 처리하며, 1:N/N:1/고아 스펙 차원은 집계하지 않는다(스펙 수·고아 목록 미기재 — 허위 기재는 없음).",
@@ -33,64 +33,64 @@
       "assessedAt": "2026-07-12T06:19:15Z"
     },
     "plan": {
-      "summary": "테스트 코드(e2e/*.spec.ts)와 매핑 문서만 건드리는 무손실 재구조화로 53개 AC ↔ 스펙의 양방향 1:1을 확립한다 — 제품 코드 변경이 없어 완전 가역(PR revert)이고, CI가 스펙을 자동 수집(npx playwright test)하므로 파일 분할·병합·개명이 실행 파이프라인을 깨지 않기 때문에 이 경로를 택했다. 사용자 결정(2026-07-12) 3건을 반영한다: ① debug-* 고아 스펙 6개는 제거(문서화 대신), ② health.spec.ts는 e2e/smoke/로 이동해 CI 스모크는 유지하되 매칭 대상(e2e/ 최상위 *.spec.ts)에서 제외, ③ 자동화 공백의 신규 스펙 작성은 이번 task에서 제외하고 구조 정리를 먼저 한다(공백은 후속 task). 기존 커버리지는 테스트 유실 없이 AC 경계로 재배치한다: 공유 스펙 15건 분할, 중복 커버 9건 병합, 고아 7건 해소. 판단 2건: FX6은 기존 상세 페이지 describe들을 전용 파일(fluxcd-detail.spec.ts)로 모아 연결 처리하되 '라이브 폴링 직접 검증 보강 권장' 각주를 남긴다(AR4의 기존 선례와 동일 처리 — 상세 표시 검증은 실재하므로 decoy 아님). OV6은 실측 결과 오버뷰 스코프를 직접 단정하는 테스트가 없어(기존 namespace-filter 선언은 간접) 공백으로 정직하게 재분류한다. 결과: 연결 AC 45개 ↔ 전용 스펙 45개(전단사), 공백 원장 8건(OV6·OV7·PD6·SC3·FX3·FX4·FX5·CM3 — FX6 이탈, OV6 진입으로 총수 유지). 완전 수렴(53:53)은 아니므로 검증 단계에서 converged=false가 예상되며, 남은 공백 8건은 후속 task가 다룬다. AR4 라이브 폴링 보강은 drift가 아니므로 범위에서 제외한다(선택적 후속).",
+      "summary": "테스트 코드(e2e/*.spec.ts)와 매핑 문서만 건드리는 무손실 재구조화로 53개 AC ↔ 스펙의 양방향 1:1을 확립한다 — 제품 코드 변경이 없어 완전 가역(PR revert)이고, CI가 스펙을 자동 수집(npx playwright test, testDir './e2e' 재귀)하므로 파일 분할·병합·개명·재배치가 실행 파이프라인을 깨지 않기 때문에 이 경로를 택했다. 사용자 결정(2026-07-12) 3건 반영: ① debug-* 스펙 6개는 '삭제하지 말고 엔지니어링 문서로 분리·연결'(수정된 결정) — e2e/eng/ 하위로 이동하고 docs/product/eng-notes.md에 ENG-001(디버그 페이지 진단 계약)로 문서화, 각 스펙 헤더에 ENG-001 링크. ② health.spec.ts는 e2e/smoke/로 이동해 CI 스모크는 유지하되 매칭 대상에서 제외. ③ 자동화 공백의 신규 스펙 작성은 이번 task에서 제외(구조 정리 먼저, 공백은 후속 task). 매칭 대상은 'e2e/ 최상위 *.spec.ts'이므로 smoke/·eng/ 하위 스펙은 AC↔스펙 전단사에서 자연히 제외된다(고아 아님) — 즉 debug/health를 '삭제'하지 않고도 1:1이 성립한다. 기존 커버리지는 테스트 유실 없이 AC 경계로 재배치: 공유 스펙 15건 분할, 중복 커버 9건 병합. 판단 2건: FX6은 기존 상세 페이지 describe들을 전용 파일(fluxcd-detail.spec.ts)로 모아 연결하되 '라이브 폴링 직접 검증 보강 권장' 각주를 남긴다(AR4 선례와 동일; 상세 표시 검증은 실재하므로 decoy 아님). OV6은 실측 결과 오버뷰 스코프를 직접 단정하는 테스트가 없어 공백으로 정직하게 재분류한다. 결과: 연결 AC 45개 ↔ 전용 최상위 스펙 45개(전단사), 비-AC 스펙 = smoke/health 1 + eng/debug 6, 공백 원장 8건(OV6·OV7·PD6·SC3·FX3·FX4·FX5·CM3 — FX6 이탈·OV6 진입으로 총수 유지). 완전 수렴(53:53)은 아니므로 검증 단계에서 converged=false가 예상되며, 남은 공백 8건은 후속 task가 다룬다. 거버넌스 메모: 모델 정의는 현재 고아 스펙 해소를 'AC 신설 또는 제거' 두 갈래로만 규정하므로, '엔지니어링 노트(ENG)·스모크로 분류된 비-AC 스펙' 범주를 정의에 명문화하는 최소 개정을 to-be-modeler로 제안할 것(dear-baby 모델의 ENG/스모크 예외 선례와 동형). 이 개정은 최상위 매칭 스코프상 이미 성립하는 현 상태를 문서화하는 것으로 수렴 자체를 막지 않는다. AR4 라이브 폴링 보강은 drift가 아니라 범위에서 제외한다(선택적 후속).",
       "riskLevel": "medium",
       "plannedAt": "2026-07-12T11:45:00Z",
       "steps": [
         {
           "seq": 1,
-          "action": "고아 해소: debug-back-button·debug-context·debug-detail-view·debug-page-layout·debug-route·debug-toggle .spec.ts 6개 삭제(사용자 결정), health.spec.ts를 e2e/smoke/health.spec.ts로 git mv(CI 수집은 testDir './e2e' 재귀라 유지, 매칭 대상에선 제외).",
-          "expectedOutcome": "e2e/ 최상위 *.spec.ts 35→28개. npx playwright test --list에 smoke/health 테스트는 남아 있고 debug 테스트 제목만 사라짐(제거 제목 수 = 사전 캡처한 debug 테스트 수와 일치)."
+          "action": "비-AC 스펙 분리(삭제 아님): e2e/eng/·e2e/smoke/ 생성. debug-back-button·debug-context·debug-detail-view·debug-page-layout·debug-route·debug-toggle .spec.ts 6개를 git mv로 e2e/eng/로 이동하고, 각 헤더에 '// Engineering: ENG-001 (docs/product/eng-notes.md)' 링크 추가, helper 참조 3건(context·detail-view·page-layout)의 import 경로를 './helpers/debug-setup'→'../helpers/debug-setup'로 수정. health.spec.ts는 e2e/smoke/health.spec.ts로 git mv. helpers/debug-setup.ts는 유지(삭제하지 않음).",
+          "expectedOutcome": "e2e/ 최상위 *.spec.ts 35→28개. e2e/eng/에 debug 6개, e2e/smoke/에 health 1개. npx playwright test --list에 debug·smoke 테스트 제목이 그대로 남아 있음(유실 0). debug 스펙 import가 새 경로로 해석됨."
         },
         {
           "seq": 2,
-          "action": "상태 AC 전용 파일 8개 생성 및 common-ui-components.spec.ts 해체: nodes-data-states(ND3)·workloads-data-states(WL4)·pods-data-states(PD7)·secrets-data-states(SC4)·configmaps-data-states(CF3)·external-secrets-data-states(ES4)·argo-data-states(AR7)·fluxcd-data-states(FX7)를 만들고, common-ui-components의 탭별 LoadingSkeleton/ErrorRetry/EmptyState describe와 각 탭 스펙의 Loading/Empty/Error describe(pods·secrets·configmaps·external-secrets·argo-templates·argo-workflows·argo-workflow-detail·fluxcd 리스트 2종·nodes-tab)를 해당 파일로 이동한다. Overview 상태 describe는 overview-summary-cards(OV1)로 병합·중복 제거(OV 전용 상태 AC 없음).",
-          "expectedOutcome": "common-ui-components.spec.ts 삭제됨. 8개 상태 파일이 각각 1개 AC만 검증하며, 원본 파일들에서 상태 describe가 사라짐. --list 총 테스트 수는 step 1 이후와 동일(이동만, 유실 없음; OV1 병합 시 중복 제거분은 사전 명시)."
+          "action": "상태 AC 전용 파일 8개 생성 및 common-ui-components.spec.ts 해체: nodes-data-states(ND3)·workloads-data-states(WL4)·pods-data-states(PD7)·secrets-data-states(SC4)·configmaps-data-states(CF3)·external-secrets-data-states(ES4)·argo-data-states(AR7)·fluxcd-data-states(FX7)를 만들고, common-ui-components의 탭별 LoadingSkeleton/ErrorRetry/EmptyState describe와 각 탭 스펙의 Loading/Empty/Error describe(pods·secrets·configmaps·external-secrets·argo-templates·argo-workflows·argo-workflow-detail·fluxcd 리스트 2종·nodes-tab)를 해당 파일로 이동. Overview 상태 describe는 overview-summary-cards(OV1)로 병합·중복 제거(OV 전용 상태 AC 없음).",
+          "expectedOutcome": "common-ui-components.spec.ts 삭제됨(내용은 이동). 8개 상태 파일이 각각 1개 AC만 검증하며, 원본 파일들에서 상태 describe가 사라짐. --list 총 테스트 수는 step 1 이후와 동일(이동만; OV1 병합 중복 제거분은 사전 명시)."
         },
         {
           "seq": 3,
-          "action": "네임스페이스 계열 재배치: namespace-filter.spec.ts를 CM5 전용으로 좁힘(base·Edge Cases·ClusterStatus Integration 유지). 'URL Deep Link' describe + namespace-context-integration의 'persist after page refresh via URL param'을 common-namespace-deeplink.spec.ts(CM7)로 이동. namespace-context-integration의 CM5성 테스트(탭 간 셀렉터 지속·dropdown 닫힘·목록·선택 전환·Multi-Resource 셀렉터 지속)는 namespace-filter로, /pods·/workloads 스코프 데이터 필터링 테스트는 각각 pods.spec.ts(PD1)·workloads-list.spec.ts(WL1)로 분리 이식 후 원본 파일 삭제. bottom-tab-bar를 CM1 전용으로 좁힘(Tab Navigation·Mobile Layout·Accessibility): 'Overview Tab Badge'와 ns-integration 중 배지 갱신 테스트는 common-unhealthy-badge.spec.ts(CM2)로, 셀렉터 지속 테스트는 namespace-filter(CM5)로, pods 데이터 필터 테스트는 pods.spec.ts(PD1)로 이동.",
-          "expectedOutcome": "namespace-context-integration.spec.ts 삭제. namespace-filter=CM5, common-namespace-deeplink=CM7, bottom-tab-bar=CM1, common-unhealthy-badge=CM2가 각 1:1. 이동된 테스트 제목이 --list에서 새 파일 경로 아래 나타남."
+          "action": "네임스페이스 계열 재배치: namespace-filter.spec.ts를 CM5 전용으로 좁힘. 'URL Deep Link' + namespace-context-integration의 'persist after refresh via URL param'을 common-namespace-deeplink.spec.ts(CM7)로 이동. namespace-context-integration의 CM5성 테스트는 namespace-filter로, /pods·/workloads 스코프 데이터 필터링은 각각 pods.spec.ts(PD1)·workloads-list.spec.ts(WL1)로 분리 후 원본 파일 삭제. bottom-tab-bar를 CM1 전용으로 좁힘: 'Overview Tab Badge'와 배지 갱신 테스트는 common-unhealthy-badge.spec.ts(CM2)로, 셀렉터 지속은 namespace-filter(CM5)로, pods 데이터 필터는 pods.spec.ts(PD1)로 이동.",
+          "expectedOutcome": "namespace-context-integration.spec.ts 삭제(이동). namespace-filter=CM5, common-namespace-deeplink=CM7, bottom-tab-bar=CM1, common-unhealthy-badge=CM2 각 1:1."
         },
         {
           "seq": 4,
-          "action": "polling-indicator.spec.ts 3분할: CM4 전용으로 좁힘(기본 표시·Time Display Format·Accessibility·Responsive Design). 'Page Visibility'는 overview-auto-polling.spec.ts(OV4)로, 'Manual Refresh'는 overview-manual-refresh.spec.ts(OV5)로 이동.",
+          "action": "polling-indicator.spec.ts 3분할: CM4 전용으로 좁힘. 'Page Visibility'는 overview-auto-polling.spec.ts(OV4)로, 'Manual Refresh'는 overview-manual-refresh.spec.ts(OV5)로 이동.",
           "expectedOutcome": "3개 파일이 각각 CM4/OV4/OV5 1:1. 테스트 수 불변."
         },
         {
           "seq": 5,
-          "action": "workloads 분할: deployment-restart.spec.ts를 workloads-list.spec.ts(WL1: Deployment Card Display·Information Display + step 3의 workloads 스코프 테스트)로 개명·좁힘하고, workloads-restart.spec.ts(WL2: Restart Button·Execution·Accessibility)·workloads-restart-confirm.spec.ts(WL3: Restart Confirmation Dialog)를 분리 생성.",
-          "expectedOutcome": "WL1~WL4(step 2) 각 전용 파일 1개. deployment-restart.spec.ts는 사라짐."
+          "action": "workloads 분할: deployment-restart.spec.ts를 workloads-list.spec.ts(WL1)로 개명·좁힘, workloads-restart.spec.ts(WL2)·workloads-restart-confirm.spec.ts(WL3) 분리 생성.",
+          "expectedOutcome": "WL1~WL4(step 2) 각 전용 파일 1개. deployment-restart.spec.ts 사라짐."
         },
         {
           "seq": 6,
-          "action": "pods 계열 정리: pod-terminating.spec.ts 해체 — 'Pods Page'·'API Verification' describe는 pods.spec.ts(PD1)로, 'Unhealthy Pods' describe는 unhealthy-pod-preview.spec.ts(OV2)로 이동 후 파일 삭제. pods.spec.ts는 PD1 전용으로 유지(상태 describe는 step 2에서 이미 이탈). pod-cleanup.spec.ts(PD5)는 'Coexistence with Hide Completed Toggle' describe 포함 그대로 유지(cleanup 동작 단언이므로 PD5 소속; PD6은 공백 유지).",
-          "expectedOutcome": "pod-terminating.spec.ts 삭제, PD1·PD5·OV2 각 1:1. 테스트 수 불변."
+          "action": "pods 계열 정리: pod-terminating.spec.ts 해체 — 'Pods Page'·'API Verification'은 pods.spec.ts(PD1)로, 'Unhealthy Pods'는 unhealthy-pod-preview.spec.ts(OV2)로 이동 후 삭제. pod-cleanup.spec.ts(PD5)는 'Coexistence with Hide Completed Toggle' 포함 유지(PD6은 공백 유지).",
+          "expectedOutcome": "pod-terminating.spec.ts 삭제(이동). PD1·PD5·OV2 각 1:1."
         },
         {
           "seq": 7,
-          "action": "secrets·configmaps·external-secrets 분할: secrets-tab.spec.ts를 SC1 전용(Basic Rendering·Namespace Filtering·Secret Type Display)으로 좁히고 secrets-reveal.spec.ts(SC2: Accordion·Reveal/Hide·Multi-Accordion·TLS·Accessibility) 분리. configmaps-tab.spec.ts를 CF1 전용(Basic Rendering·Namespace Filtering)으로 좁히고 configmaps-accordion.spec.ts(CF2: Accordion·Multi-Accordion·Accessibility) 분리. external-secrets.spec.ts를 ES1 전용(목록 렌더링·Namespace Filtering·Tab Navigation·API describe)으로 좁히고 external-secrets-summary.spec.ts(ES2: Summary Cards)·external-secrets-card-status.spec.ts(ES3: 카드 필드·NotReady 사유 단언, Basic Rendering에서 추출) 분리.",
-          "expectedOutcome": "SC1·SC2·CF1·CF2·ES1·ES2·ES3 각 전용 파일 1개(상태 파일들은 step 2에서 생성됨). 테스트 수 불변."
+          "action": "secrets·configmaps·external-secrets 분할: secrets-tab→SC1 전용 + secrets-reveal(SC2). configmaps-tab→CF1 전용 + configmaps-accordion(CF2). external-secrets→ES1 전용 + external-secrets-summary(ES2) + external-secrets-card-status(ES3, Basic Rendering에서 카드 필드·NotReady 사유 단언 추출).",
+          "expectedOutcome": "SC1·SC2·CF1·CF2·ES1·ES2·ES3 각 전용 파일 1개. 테스트 수 불변."
         },
         {
           "seq": 8,
-          "action": "fluxcd detail 병합: fluxcd-gitrepositories·fluxcd-kustomizations 두 파일의 Detail 계열 describe(Navigation·Back Navigation·Spec Information·Status Information·Conditions·Condition Border Colors·Detail Error State)를 fluxcd-detail.spec.ts(FX6) 한 파일로 이동. 두 리스트 스펙은 FX1·FX2 전용(List Basic·Summary Cards·Status/Namespace Filtering·API describe)으로 좁힘. FX6에는 '라이브 폴링 자동 갱신 직접 검증 보강 권장' 헤더 각주를 남긴다(AR4 선례와 동일 처리).",
-          "expectedOutcome": "fluxcd-detail.spec.ts=FX6, 리스트 2종=FX1·FX2 각 1:1. 테스트 수 불변."
+          "action": "fluxcd detail 병합: 두 리스트 파일의 Detail 계열 describe를 fluxcd-detail.spec.ts(FX6)로, Reconcile을 fluxcd-reconcile.spec.ts(FX3)로, GitRepo 브랜치 계열을 fluxcd-branch-switch.spec.ts(FX5)로, Kustomization suspend/resume을 fluxcd-suspend-resume.spec.ts(FX4)로 이동. 두 리스트 스펙은 FX1·FX2 전용으로 좁힘. FX6 헤더에 '라이브 폴링 자동 갱신 직접 검증 보강 권장' 각주. (FX3·FX4·FX5는 실측 상 이미 스펙이 존재해 공백이 아니었으므로 전용 파일로 승격; test 문서 자동화 필드가 이를 반영하도록 step 10에서 갱신.)",
+          "expectedOutcome": "fluxcd-detail=FX6, reconcile=FX3, branch-switch=FX5, suspend-resume=FX4, 리스트 2종=FX1·FX2 각 1:1. 테스트 수 불변."
         },
         {
           "seq": 9,
-          "action": "전 스펙 파일(45개) 헤더 주석에 검증 대상 AC 코드를 1개씩 명시(예: '// AC: PD1 — prd-pods.md')하고, e2e/README.md가 파일 목록·규약을 언급하면 갱신한다. 파일명 규칙은 '서술형 kebab-case 유지 + 헤더 AC 주석 + test-*.md 자동화 필드가 매핑 SSOT'로 확정(대량 개명 회피).",
-          "expectedOutcome": "45개 파일 전부 헤더에 AC 코드 정확히 1개. grep로 기계 검증 가능."
+          "action": "전 최상위 스펙 파일(45개) 헤더에 '// Verifies: <AC> (prd 파일)' 1줄씩 명시, e2e/eng/·e2e/smoke/ 스펙은 각각 '// Engineering:'·'// Smoke:' 헤더 유지. e2e/README.md가 파일 목록·규약을 언급하면 갱신(최상위=AC 매칭, smoke/·eng/=비-AC 분류 설명 추가). 파일명 규칙은 '서술형 kebab-case + 헤더 AC 주석 + test-*.md 자동화 필드가 매핑 SSOT'로 확정.",
+          "expectedOutcome": "45개 최상위 파일 전부 헤더에 AC 코드 정확히 1개, eng/smoke 스펙은 비-AC 헤더. grep로 기계 검증 가능."
         },
         {
           "seq": 10,
-          "action": "문서 동기화: test-*.md 10종의 자동화 필드를 새 배치로 전면 갱신(AC당 파일 정확히 1개; 공백 8건은 ⚠️ 표기 — OV6 신규 공백 사유 '직접 검증 부재 실측 확인' 명기, FX6은 연결+보강 권장 각주). doc-tracker.md의 자동화 공백 목록을 OV6·OV7·PD6·SC3·FX3·FX4·FX5·CM3으로 갱신하고(FX6 이탈·OV6 진입), debug 스펙 제거·health 스모크 이동·1:1 재구조화를 변경 이력에 기록.",
-          "expectedOutcome": "test-*.md의 모든 자동화 필드가 실존 파일 1개를 가리키거나 ⚠️ 공백. doc-tracker 집계가 실측과 일치(모델 규칙 ③)."
+          "action": "문서 동기화: docs/product/eng-notes.md 신설(ENG-001 디버그 페이지 진단 계약 — 커버 스펙 6개 e2e/eng/*.spec.ts 열거, 사유='제품 AC가 아닌 엔지니어링 진단 UI'). test-*.md 10종의 자동화 필드를 새 배치로 전면 갱신(AC당 최상위 파일 정확히 1개; 공백 8건은 ⚠️ — OV6 신규 공백 사유 '직접 검증 부재 실측' 명기, FX6은 연결+보강 권장 각주, FX3·FX4·FX5는 전용 파일 연결로 공백 해제). doc-tracker.md 갱신: 자동화 공백 목록을 OV6·OV7·PD6·SC3·CM3(+FX 상세 폴링 잔여는 FX6 각주로) 체계로 재정리, '비-AC 스펙 분류' 섹션 신설(smoke/health, eng/debug→ENG-001), debug 분리·health 스모크 이동·1:1 재구조화를 변경 이력에 기록.",
+          "expectedOutcome": "test-*.md 모든 자동화 필드가 실존 최상위 파일 1개를 가리키거나 ⚠️ 공백. eng-notes.md·doc-tracker의 비-AC 분류가 실제 eng/·smoke/ 파일과 일치. doc-tracker 집계 = 실측(모델 규칙 ③)."
         },
         {
           "seq": 11,
-          "action": "정합성 최종 검증: (a) e2e/ 최상위 *.spec.ts 수 = 45, (b) test-*.md 자동화 필드에서 추출한 AC→파일 매핑이 전단사(1:N=0, N:1=0, 고아=0, 유령=0, 공백=8)임을 스크립트로 대조, (c) npx playwright test --list로 수집 성공·테스트 제목 diff가 '의도된 debug 제거분'과 정확히 일치(그 외 유실 0), (d) PR CI(E2E Tests with kind) 그린 확인.",
-          "expectedOutcome": "네 검증 모두 통과. 특히 CI e2e job이 main과 동일하게 그린."
+          "action": "정합성 최종 검증: (a) e2e/ 최상위 *.spec.ts 수 = 45, (b) test-*.md 자동화 필드에서 추출한 AC→파일 매핑이 전단사(1:N=0, N:1=0, 고아=0, 유령=0, 공백=8)이고 eng/·smoke/ 스펙은 매칭 집합에서 제외됨을 스크립트로 대조, (c) npx playwright test --list로 수집 성공·테스트 제목 diff가 0(유실 없음; 이번엔 debug도 이동만 했으므로 순증감 0), (d) PR CI(E2E Tests with kind) 그린 확인.",
+          "expectedOutcome": "네 검증 모두 통과. 특히 테스트 제목 집합이 main과 완전 동일(재배치만), CI e2e job이 main과 동일하게 그린."
         }
       ]
     }
