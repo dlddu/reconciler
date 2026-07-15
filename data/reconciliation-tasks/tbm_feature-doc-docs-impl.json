@@ -189,6 +189,38 @@
       "assessedBy": "agent",
       "assessedAt": "2026-07-15T06:18:00Z"
     },
-    "updatedAt": "2026-07-15T06:59:44Z"
+    "plan": {
+      "summary": "이 task 스코프 = AC1.1(저장소 연결·분석 트리거)의 백엔드 토대 = 로드맵 슬라이스 2를 2a(백엔드)/2b(S02·S03 화면)로 분할한 앞쪽 절반. 근거: (1) definition·assessment가 슬라이스 분할·순서를 planner 몫으로 명시. (2) AC1.1 검증(test/01 시나리오 1 step1-2 '분석 작업이 큐에 등록됨' + 시나리오 2 '접근 범위 밖 → 명확한 오류, 큐 미등록')의 실질은 백엔드 계약(접근 가능 repo 열거 · pre-flight 비용 추정 · App 설치 범위 검증 후 queued enqueue · 범위 밖 거부)이며, 이는 기존 4개 도메인 모듈(auth·github·llmkey·audit)과 그 stub-mode 통합테스트 패턴을 그대로 따라 CI(cargo test + kind e2e)가 실제로 게이트할 수 있다. (3) 코드베이스가 이 seam을 이미 예고(llmkey preflight 주석: 'the seam S03의 분석 시작 preflight will call', 'full per-call delegation lands with the analysis pipeline'). (4) 2b 화면은 병합·CI그린·테스트된 API 위에서 만들면 Playwright e2e(s01 패턴)로 확실히 검증된다. 접근 방식 선택: 코드를 문서에 맞춘다(definition '문서=SSOT, 미구현 AC는 구현 추가') — 미구현 AC이므로 문서 갱신이 아니라 구현 추가가 정방향. 큐 실행(워커)·파이프라인 단계는 이번에 넣지 않음(슬라이스 3=AC4.5·AC1.5, 슬라이스 4=AC1.2~1.4) — queued 행만 남기고 아무것도 실행하지 않는다. 산출물은 백엔드만 바꾸는 PR 1건(#8) — as-is=backend+frontend 해시 중 backend만 변경, docs(to-be) 무변으로 노이즈 없음. 완전 가역(draft PR close / revert 1건, 추가형 migration·모듈, 파괴적 변경 없음).",
+      "riskLevel": "medium",
+      "plannedAt": "2026-07-15T07:16:03Z",
+      "steps": [
+        {
+          "seq": 1,
+          "action": "backend/migrations/0003_analyses.sql 추가 — analyses 테이블(id, user_id FK, installation_id, repo_owner, repo_name, branch, status DEFAULT 'queued', est_llm_calls, est_cost_cents, created_at) + idx_analyses_user. 소유자 스코프(AC4.7), cost는 정수 cents.",
+          "expectedOutcome": "새 DB에서 0001~0003 순차 마이그레이션 성공, queued 분석 작업을 사용자별로 저장 가능."
+        },
+        {
+          "seq": 2,
+          "action": "backend/src/github_app.rs 확장 — pub struct RepoRef{owner,name,full_name,default_branch,size_kb} + pub async fn list_repositories(stub: 결정적 3-repo 세트 stub-account/{payments-api,checkout-web,notif-worker}; real: /installation/repositories 페이지네이션). 기존 repository_count(stub=3)와 개수 일치.",
+          "expectedOutcome": "설치가 접근 가능한 repo 목록을 열거. stub은 네트워크 없이 결정적, real은 App 설치 토큰으로 조회."
+        },
+        {
+          "seq": 3,
+          "action": "backend/src/analysis.rs 신설 — GET /api/repositories(접근 가능 repo), POST /api/analyses/preflight(URL 파싱·범위 확인·크기 기반 결정적 추정 files/llm calls/cost/duration; 범위 밖은 hasAccess:false로 오류 아님), POST /api/analyses(범위 검증 후 queued enqueue; App 미설치/범위 밖 → 400 명확 메시지 + 행 미삽입; 암묵 시작 없음), GET /api/analyses(홈 목록). CurrentUser·AppError·runtime sqlx 기존 관례 준수.",
+          "expectedOutcome": "AC1.1 enqueue 계약 성립 — in-scope 트리거 → 201 queued, out-of-scope → 400 & 큐 미등록(test 시나리오 2), pre-flight로 시작 전 비용 가시화(F2)."
+        },
+        {
+          "seq": 4,
+          "action": "backend/src/lib.rs — pub mod analysis; + build_router에 .merge(analysis::routes()) 추가(기존 /hello·auth·github·llmkey·audit·static fallback 뒤).",
+          "expectedOutcome": "신규 엔드포인트가 서빙되고 기존 라우트·정적 폴백은 불변."
+        },
+        {
+          "seq": 5,
+          "action": "backend/tests/analyses.rs 신설(stub 모드, github.rs 하네스 패턴) — 5개: 접근 repo 목록(3개), preflight 접근+양수 추정, preflight 범위 밖 hasAccess:false, 트리거→queued+홈목록 노출, 범위 밖 거부+COUNT(analyses)=0.",
+          "expectedOutcome": "cargo test로 enqueue 계약이 자동 검증되고, 범위 밖 요청이 행을 남기지 않음이 회귀 보호된다."
+        }
+      ]
+    },
+    "updatedAt": "2026-07-15T07:16:03Z"
   }
 ]
