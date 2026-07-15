@@ -1,121 +1,121 @@
 [
   {
-    "id": "rct_20260712-0001",
-    "toBeModelId": "tbm_kubernetes-dashboard-ac-e2e",
-    "status": "failed",
-    "trigger": {
-      "detectedAt": "2026-07-12T06:18:19Z",
-      "changedSides": [
+    "assessment" : {
+      "actionRequired" : true,
+      "assessedAt" : "2026-07-12T06:19:15Z",
+      "assessedBy" : "agent",
+      "reason" : "정의가 요구하는 파일 단위 양방향 1:1(53:53)에 크게 미달하는 구조적 drift가 확인됐다 — 공백 8건(OV7·PD6·SC3·FX3~6 + CM3 간접커버), 1:N 9건, N:1 15건, 고아 스펙 7건(debug-* 6건은 PRD/AC 자체가 없는 기능, health 1건), 깨끗한 1:1은 11/53. 정적 문서·스펙 구조라 자동 해소 가능성이 없고(진행 중 롤아웃·일시적 alert 아님), 방치하면 매핑 SSOT(test-*.md 자동화 필드)의 추적 가능성이 계속 훼손되므로 지금 작업이 필요하다. definition이 예고한 대로 첫 task는 상당한 규모의 분할·병합·신규 작성을 다룬다: ① 공유 스펙 15건을 AC 경계로 분할, ② 중복 커버 9건 병합, ③ 공백 8건 전용 스펙 신설(또는 CM3처럼 간접커버 정리), ④ 고아 7건은 PRD에 AC 신설(debug 페이지가 의도된 동작이면) 또는 스펙 제거 — 순서·우선순위·파일명 규칙 확정은 planner 몫. AR4의 '라이브 폴링 보강 권장'도 계획에 포함할지 planner가 판단한다."
+    },
+    "createdAt" : "2026-07-12T06:18:19Z",
+    "execution" : {
+      "entries" : [
+        {
+          "finishedAt" : "2026-07-12T12:22:54Z",
+          "log" : "선행 게이트(executionGuide 실행순서 1 · plan.step 11(d)) 실패로 병합 중단. PR #207 head 45639c8 'E2E Tests with kind' = failure, main 9162e79 동일 잡 = success. 제품 코드 무변경 재구조화인데 e2e 런타임이 회귀 → 무손실 전제 위반. 나머지 7개 체크(Go/Frontend/Integration Tests, Docker Build, Argo·FluxCD Fixture Validation, K8s Manifest Validation)는 모두 success, mergeable_state=unstable. planner 사전검증은 `npx playwright test --list`(수집: 626 tests/55 files, 유실 0)까지였고 실제 kind e2e 런타임은 CI에서 처음 돌아 실패 — 이동·분할 스펙의 상대경로/setup/fixture 참조가 런타임에 깨진 것으로 추정. 병합·머지 액션은 실행하지 않음(레포 무변경). 실패 잡: https://github.com/dlddu/kubernetes-dashboard/actions/runs/29191941788/job/86647976238",
+          "startedAt" : "2026-07-12T12:22:54Z",
+          "status" : "failed",
+          "stepSeq" : 11
+        }
+      ],
+      "finishedAt" : "2026-07-12T12:22:54Z",
+      "startedAt" : "2026-07-12T12:22:54Z",
+      "status" : "aborted"
+    },
+    "id" : "rct_20260712-0001",
+    "plan" : {
+      "executionGuide" : "# 실행 지침 — rct_20260712-0001 (AC↔e2e 스펙 1:1 재구조화)\n\n대상 PR: https://github.com/dlddu/kubernetes-dashboard/pull/207 (base `main`, head `reconcile/rct_20260712-0001`). 이 지침은 reconciler-work-executor가 이 PR을 실제로 반영·검증할 때 따른다.\n\n## 사전 전제\n- 이 변경은 **제품 코드 무변경**의 테스트/문서 재배치다. 런타임 영향 없음, 완전 가역.\n- 매핑 SSOT는 `docs/product/test-*.md`의 `자동화` 필드, 집계 뷰는 `docs/product/doc-tracker.md`. 매칭 대상은 `e2e/` **최상위 `*.spec.ts`만**이며 `e2e/eng/`·`e2e/smoke/` 하위는 제외.\n\n## 실행 순서 (why-order 포함)\n1. **CI 그린 확인 (선행 게이트).** PR의 `E2E Tests (kind)` 잡이 통과하는지 먼저 확인한다. 재배치만 했으므로 main과 동일하게 그린이어야 하며, 여기서 실패하면 그 자체가 회귀 신호다 → 병합 금지, 원인 분석. *다른 모든 단계보다 앞선다 — 실행 파이프라인이 스펙을 실제로 수집·통과하는지가 이 task의 무손실 전제를 담보한다.*\n2. **검토 확인 (필수).** 이 병합은 매핑 SSOT(test-*.md·doc-tracker)를 갱신하므로 사람 리뷰 승인이 있어야 한다. reconciler-work-executor의 4-1 판단에서 이 task는 \"검토 필요\"로 분류된다(코드 무변경이나 거버넌스 문서를 바꾸고, 비-AC 범주라는 새 분류를 도입하기 때문). 승인 없이는 4-3로 진행하지 않는다.\n3. **병합.** 승인 후 PR을 머지한다. Squash 권장(커밋 히스토리 단순화). *2 이후에만.*\n4. **병합 후 as-is 재수집.** 모델의 as-is 버전 스크립트는 `git rev-parse HEAD:e2e`(e2e 서브트리 해시)다. 병합으로 이 해시가 변하며, 이는 정상적인 수렴 이동이다. 재감지 시 to-be(53 AC)와 as-is(48 연결 스펙+5 공백+7 비-AC)의 차이를 다시 계산한다.\n\n## 단계별 검증 방법\n- **1단계 검증**: GitHub Actions에서 `E2E Tests (kind)` 잡 상태 = success. 로컬 재현 시 `npx playwright test`(kind 클러스터 필요) 또는 최소한 `npx playwright test --list`가 `626 tests in 55 files`를 수집하고 에러 0.\n- **3단계 검증(병합 직후)**: main에서 아래 3종을 재실행:\n  1. `npx playwright test --list | tail -1` → `Total: 626 tests in 55 files`.\n  2. 헤더 전단사: 각 `e2e/*.spec.ts` 첫 줄 `// Verifies: <AC>`가 정확히 1개, AC 코드 중복 0 (48개 distinct).\n  3. test-*.md 자동화 필드에서 추출한 AC→파일 매핑이 실제 파일과 1:1(1:N=0, N:1=0, 고아=0, 유령=0), 공백 5(OV6·OV7·PD6·SC3·CM3), eng/·smoke/ 제외.\n- **전체 수렴 검증(4-4)**: as-is 연결 스펙 48 = to-be 연결 AC 48이면 \"연결분 전단사\" 달성. 단, 전체 AC는 53이고 공백 5가 남으므로 **`converged=false`가 정상 결과**다(구조 정합은 달성, 커버리지 공백은 별건). 이 task의 성공 기준은 \"다대다→연결분 1:1 확립 + 공백의 정직한 원장화\"이지 53:53 완전 커버리지가 아니다.\n\n## 주의사항 / 롤백\n- **롤백 경로**: 병합 전이면 PR을 close하면 끝(무영향). 병합 후 문제가 드러나면 머지 커밋을 `git revert`한다 — 제품 코드가 없어 revert가 안전하고 런타임 영향이 없다.\n- **converged=false는 실패가 아니다**: 남은 공백 5건(OV6·OV7·PD6·SC3·CM3)은 이 task의 범위 밖(사용자 결정 ③: 구조 먼저, 공백은 후속). 실행 후 **후속 task로 \"공백 5건 e2e 신규 작성\"을 제안**한다.\n- **거버넌스/정의 개정 제안**: 이 task는 `e2e/eng/`(ENG-001)·`e2e/smoke/`라는 **비-AC 스펙 범주**를 도입했다. 현행 모델 정의는 고아 해소를 \"AC 신설 또는 제거\"로만 규정하므로, 이 범주를 정의에 명문화하는 **최소 개정을 reconciler-tobe-modeler로 제안**한다(dear-baby 모델의 ENG/스모크 예외 선례와 동형). 최상위 매칭 스코프상 현 상태는 이미 성립하므로 이 개정은 수렴을 막지 않으며 문서화 성격이다.\n- **FX6·AR4 보강(선택)**: FluxCD/Argo 상세의 \"라이브 폴링 자동 갱신 직접 검증\"은 현재 간접 커버다. drift는 아니므로 이 task 범위 밖이나, 후속 보강 권장 항목으로 남긴다.\n- **실측 발견 기록**: 등록 시 assessment의 \"공백 8\"은 부정확했다 — FX3·FX4·FX5·FX6은 모놀리식 `fluxcd-*` 스펙 내에 실재했고 문서에만 미선언이었다. 이번에 전용 파일로 승격해 연결했고, 대신 OV6를 공백으로 재분류해 실제 공백은 5다.",
+      "plannedAt" : "2026-07-12T11:45:00Z",
+      "riskLevel" : "medium",
+      "steps" : [
+        {
+          "action" : "비-AC 스펙 분리(삭제 아님): e2e/eng/·e2e/smoke/ 생성. debug-back-button·debug-context·debug-detail-view·debug-page-layout·debug-route·debug-toggle .spec.ts 6개를 git mv로 e2e/eng/로 이동하고, 각 헤더에 '// Engineering: ENG-001 (docs/product/eng-notes.md)' 링크 추가, helper 참조 3건(context·detail-view·page-layout)의 import 경로를 './helpers/debug-setup'→'../helpers/debug-setup'로 수정. health.spec.ts는 e2e/smoke/health.spec.ts로 git mv. helpers/debug-setup.ts는 유지(삭제하지 않음).",
+          "expectedOutcome" : "e2e/ 최상위 *.spec.ts 35→28개. e2e/eng/에 debug 6개, e2e/smoke/에 health 1개. npx playwright test --list에 debug·smoke 테스트 제목이 그대로 남아 있음(유실 0). debug 스펙 import가 새 경로로 해석됨.",
+          "seq" : 1
+        },
+        {
+          "action" : "상태 AC 전용 파일 8개 생성 및 common-ui-components.spec.ts 해체: nodes-data-states(ND3)·workloads-data-states(WL4)·pods-data-states(PD7)·secrets-data-states(SC4)·configmaps-data-states(CF3)·external-secrets-data-states(ES4)·argo-data-states(AR7)·fluxcd-data-states(FX7)를 만들고, common-ui-components의 탭별 LoadingSkeleton/ErrorRetry/EmptyState describe와 각 탭 스펙의 Loading/Empty/Error describe(pods·secrets·configmaps·external-secrets·argo-templates·argo-workflows·argo-workflow-detail·fluxcd 리스트 2종·nodes-tab)를 해당 파일로 이동. Overview 상태 describe는 overview-summary-cards(OV1)로 병합·중복 제거(OV 전용 상태 AC 없음).",
+          "expectedOutcome" : "common-ui-components.spec.ts 삭제됨(내용은 이동). 8개 상태 파일이 각각 1개 AC만 검증하며, 원본 파일들에서 상태 describe가 사라짐. --list 총 테스트 수는 step 1 이후와 동일(이동만; OV1 병합 중복 제거분은 사전 명시).",
+          "seq" : 2
+        },
+        {
+          "action" : "네임스페이스 계열 재배치: namespace-filter.spec.ts를 CM5 전용으로 좁힘. 'URL Deep Link' + namespace-context-integration의 'persist after refresh via URL param'을 common-namespace-deeplink.spec.ts(CM7)로 이동. namespace-context-integration의 CM5성 테스트는 namespace-filter로, /pods·/workloads 스코프 데이터 필터링은 각각 pods.spec.ts(PD1)·workloads-list.spec.ts(WL1)로 분리 후 원본 파일 삭제. bottom-tab-bar를 CM1 전용으로 좁힘: 'Overview Tab Badge'와 배지 갱신 테스트는 common-unhealthy-badge.spec.ts(CM2)로, 셀렉터 지속은 namespace-filter(CM5)로, pods 데이터 필터는 pods.spec.ts(PD1)로 이동.",
+          "expectedOutcome" : "namespace-context-integration.spec.ts 삭제(이동). namespace-filter=CM5, common-namespace-deeplink=CM7, bottom-tab-bar=CM1, common-unhealthy-badge=CM2 각 1:1.",
+          "seq" : 3
+        },
+        {
+          "action" : "polling-indicator.spec.ts 3분할: CM4 전용으로 좁힘. 'Page Visibility'는 overview-auto-polling.spec.ts(OV4)로, 'Manual Refresh'는 overview-manual-refresh.spec.ts(OV5)로 이동.",
+          "expectedOutcome" : "3개 파일이 각각 CM4/OV4/OV5 1:1. 테스트 수 불변.",
+          "seq" : 4
+        },
+        {
+          "action" : "workloads 분할: deployment-restart.spec.ts를 workloads-list.spec.ts(WL1)로 개명·좁힘, workloads-restart.spec.ts(WL2)·workloads-restart-confirm.spec.ts(WL3) 분리 생성.",
+          "expectedOutcome" : "WL1~WL4(step 2) 각 전용 파일 1개. deployment-restart.spec.ts 사라짐.",
+          "seq" : 5
+        },
+        {
+          "action" : "pods 계열 정리: pod-terminating.spec.ts 해체 — 'Pods Page'·'API Verification'은 pods.spec.ts(PD1)로, 'Unhealthy Pods'는 unhealthy-pod-preview.spec.ts(OV2)로 이동 후 삭제. pod-cleanup.spec.ts(PD5)는 'Coexistence with Hide Completed Toggle' 포함 유지(PD6은 공백 유지).",
+          "expectedOutcome" : "pod-terminating.spec.ts 삭제(이동). PD1·PD5·OV2 각 1:1.",
+          "seq" : 6
+        },
+        {
+          "action" : "secrets·configmaps·external-secrets 분할: secrets-tab→SC1 전용 + secrets-reveal(SC2). configmaps-tab→CF1 전용 + configmaps-accordion(CF2). external-secrets→ES1 전용 + external-secrets-summary(ES2) + external-secrets-card-status(ES3, Basic Rendering에서 카드 필드·NotReady 사유 단언 추출).",
+          "expectedOutcome" : "SC1·SC2·CF1·CF2·ES1·ES2·ES3 각 전용 파일 1개. 테스트 수 불변.",
+          "seq" : 7
+        },
+        {
+          "action" : "fluxcd detail 병합: 두 리스트 파일의 Detail 계열 describe를 fluxcd-detail.spec.ts(FX6)로, Reconcile을 fluxcd-reconcile.spec.ts(FX3)로, GitRepo 브랜치 계열을 fluxcd-branch-switch.spec.ts(FX5)로, Kustomization suspend/resume을 fluxcd-suspend-resume.spec.ts(FX4)로 이동. 두 리스트 스펙은 FX1·FX2 전용으로 좁힘. FX6 헤더에 '라이브 폴링 자동 갱신 직접 검증 보강 권장' 각주. (FX3·FX4·FX5는 실측 상 이미 스펙이 존재해 공백이 아니었으므로 전용 파일로 승격; test 문서 자동화 필드가 이를 반영하도록 step 10에서 갱신.)",
+          "expectedOutcome" : "fluxcd-detail=FX6, reconcile=FX3, branch-switch=FX5, suspend-resume=FX4, 리스트 2종=FX1·FX2 각 1:1. 테스트 수 불변.",
+          "seq" : 8
+        },
+        {
+          "action" : "전 최상위 스펙 파일(45개) 헤더에 '// Verifies: <AC> (prd 파일)' 1줄씩 명시, e2e/eng/·e2e/smoke/ 스펙은 각각 '// Engineering:'·'// Smoke:' 헤더 유지. e2e/README.md가 파일 목록·규약을 언급하면 갱신(최상위=AC 매칭, smoke/·eng/=비-AC 분류 설명 추가). 파일명 규칙은 '서술형 kebab-case + 헤더 AC 주석 + test-*.md 자동화 필드가 매핑 SSOT'로 확정.",
+          "expectedOutcome" : "45개 최상위 파일 전부 헤더에 AC 코드 정확히 1개, eng/smoke 스펙은 비-AC 헤더. grep로 기계 검증 가능.",
+          "seq" : 9
+        },
+        {
+          "action" : "문서 동기화: docs/product/eng-notes.md 신설(ENG-001 디버그 페이지 진단 계약 — 커버 스펙 6개 e2e/eng/*.spec.ts 열거, 사유='제품 AC가 아닌 엔지니어링 진단 UI'). test-*.md 10종의 자동화 필드를 새 배치로 전면 갱신(AC당 최상위 파일 정확히 1개; 공백 8건은 ⚠️ — OV6 신규 공백 사유 '직접 검증 부재 실측' 명기, FX6은 연결+보강 권장 각주, FX3·FX4·FX5는 전용 파일 연결로 공백 해제). doc-tracker.md 갱신: 자동화 공백 목록을 OV6·OV7·PD6·SC3·CM3(+FX 상세 폴링 잔여는 FX6 각주로) 체계로 재정리, '비-AC 스펙 분류' 섹션 신설(smoke/health, eng/debug→ENG-001), debug 분리·health 스모크 이동·1:1 재구조화를 변경 이력에 기록.",
+          "expectedOutcome" : "test-*.md 모든 자동화 필드가 실존 최상위 파일 1개를 가리키거나 ⚠️ 공백. eng-notes.md·doc-tracker의 비-AC 분류가 실제 eng/·smoke/ 파일과 일치. doc-tracker 집계 = 실측(모델 규칙 ③).",
+          "seq" : 10
+        },
+        {
+          "action" : "정합성 최종 검증: (a) e2e/ 최상위 *.spec.ts 수 = 45, (b) test-*.md 자동화 필드에서 추출한 AC→파일 매핑이 전단사(1:N=0, N:1=0, 고아=0, 유령=0, 공백=8)이고 eng/·smoke/ 스펙은 매칭 집합에서 제외됨을 스크립트로 대조, (c) npx playwright test --list로 수집 성공·테스트 제목 diff가 0(유실 없음; 이번엔 debug도 이동만 했으므로 순증감 0), (d) PR CI(E2E Tests with kind) 그린 확인.",
+          "expectedOutcome" : "네 검증 모두 통과. 특히 테스트 제목 집합이 main과 완전 동일(재배치만), CI e2e job이 main과 동일하게 그린.",
+          "seq" : 11
+        }
+      ],
+      "summary" : "테스트 코드(e2e/*.spec.ts)와 매핑 문서만 건드리는 무손실 재구조화로 53개 AC ↔ 스펙의 양방향 1:1을 확립한다 — 제품 코드 변경이 없어 완전 가역(PR revert)이고, CI가 스펙을 자동 수집(npx playwright test, testDir './e2e' 재귀)하므로 파일 분할·병합·개명·재배치가 실행 파이프라인을 깨지 않기 때문에 이 경로를 택했다. 사용자 결정(2026-07-12) 3건 반영: ① debug-* 스펙 6개는 '삭제하지 말고 엔지니어링 문서로 분리·연결'(수정된 결정) — e2e/eng/ 하위로 이동하고 docs/product/eng-notes.md에 ENG-001(디버그 페이지 진단 계약)로 문서화, 각 스펙 헤더에 ENG-001 링크. ② health.spec.ts는 e2e/smoke/로 이동해 CI 스모크는 유지하되 매칭 대상에서 제외. ③ 자동화 공백의 신규 스펙 작성은 이번 task에서 제외(구조 정리 먼저, 공백은 후속 task). 매칭 대상은 'e2e/ 최상위 *.spec.ts'이므로 smoke/·eng/ 하위 스펙은 AC↔스펙 전단사에서 자연히 제외된다(고아 아님) — 즉 debug/health를 '삭제'하지 않고도 1:1이 성립한다. 기존 커버리지는 테스트 유실 없이 AC 경계로 재배치: 공유 스펙 15건 분할, 중복 커버 9건 병합. 판단 2건: FX6은 기존 상세 페이지 describe들을 전용 파일(fluxcd-detail.spec.ts)로 모아 연결하되 '라이브 폴링 직접 검증 보강 권장' 각주를 남긴다(AR4 선례와 동일; 상세 표시 검증은 실재하므로 decoy 아님). OV6은 실측 결과 오버뷰 스코프를 직접 단정하는 테스트가 없어 공백으로 정직하게 재분류한다. 결과: 연결 AC 45개 ↔ 전용 최상위 스펙 45개(전단사), 비-AC 스펙 = smoke/health 1 + eng/debug 6, 공백 원장 8건(OV6·OV7·PD6·SC3·FX3·FX4·FX5·CM3 — FX6 이탈·OV6 진입으로 총수 유지). 완전 수렴(53:53)은 아니므로 검증 단계에서 converged=false가 예상되며, 남은 공백 8건은 후속 task가 다룬다. 거버넌스 메모: 모델 정의는 현재 고아 스펙 해소를 'AC 신설 또는 제거' 두 갈래로만 규정하므로, '엔지니어링 노트(ENG)·스모크로 분류된 비-AC 스펙' 범주를 정의에 명문화하는 최소 개정을 to-be-modeler로 제안할 것(dear-baby 모델의 ENG/스모크 예외 선례와 동형). 이 개정은 최상위 매칭 스코프상 이미 성립하는 현 상태를 문서화하는 것으로 수렴 자체를 막지 않는다. AR4 라이브 폴링 보강은 drift가 아니라 범위에서 제외한다(선택적 후속)."
+    },
+    "preparation" : {
+      "branch" : "reconcile/rct_20260712-0001",
+      "notes" : "무손실 재구조화 PR. 변경셋: 신규 25·삭제 4·수정 36·이동 7(git). e2e/ 최상위 48개 스펙 ↔ 48개 연결 AC 전단사, e2e/eng/ 6(ENG-001)·e2e/smoke/ 1 매칭 제외, 공백 5(OV6·OV7·PD6·SC3·CM3). 검증 완료: (1) `npx playwright test --list` = 626 tests/55 files, 재구조화 전후 테스트 제목 집합 동일(유실 0), (2) 헤더 기반 AC↔스펙 전단사 스크립트 통과(1:N·N:1·고아·유령·헤더불일치 0), (3) test-*.md 자동화 필드·doc-tracker 실측 일치. 미머지 상태 — reconciler-work-executor의 검토·승인 대기. FluxCD 상세(FX3~6)는 기존 모놀리식 스펙 내 실재 구현을 전용 파일로 승격(문서 미선언이었음), OV6는 직접 검증 부재로 공백 재분류 → 공백 8→5.",
+      "prepared" : true,
+      "preparedAt" : "2026-07-12T12:38:00Z",
+      "pullRequestUrl" : "https://github.com/dlddu/kubernetes-dashboard/pull/207",
+      "repository" : "dlddu/kubernetes-dashboard"
+    },
+    "stateSummary" : {
+      "asIs" : "**관측 시각** 2026-07-12T06:18:54Z · **kubernetes-dashboard@main** HEAD `9162e79`(2026-07-06) · **as-is 버전** `92de231`(e2e 트리)\n\n### 스펙 전집\n`e2e/` 최상위 `*.spec.ts` **35개**(`helpers/`·`k8s/`·`README.md` 제외).\n\n### test 문서 자동화 필드 기준 실측 매핑 (매핑 SSOT 대조)\n- **전용 스펙을 가진 AC(깨끗한 1:1)**: **11/53** — AR2·AR4·AR5·AR6·CM6·OV1·OV2·OV3·PD2·PD3·PD4 (예: OV1→overview-summary-cards, PD2→pod-logs, AR2→argo-submit).\n- **한 AC → 2개 파일(중복 커버)**: 9건 — AR7, CM5, CM7, FX7, ND3, PD1, PD5(pod-cleanup+pod-terminating), WL1, WL4.\n- **한 파일 → 2개 이상 AC(공유 스펙)**: 15건 — 최대 namespace-filter.spec.ts(CM5·CM7·OV6·PD1·WL1 5개), deployment-restart(WL1~4 4개), external-secrets(ES1~4), configmaps-tab(CF1~3), nodes-tab(ND1~3), secrets-tab(SC1·SC2·SC4), pods(CM3·PD1·PD7), polling-indicator(CM4·OV4·OV5) 등.\n- **고아 스펙(어느 AC에서도 미참조)**: 7건 — `debug-back-button`·`debug-context`·`debug-detail-view`·`debug-page-layout`·`debug-route`·`debug-toggle`(디버그 페이지 기능 — 대응 PRD/AC 자체가 없음)·`health.spec.ts`.\n- **유령 참조(문서가 가리키나 부재한 파일)**: 0건.",
+      "gap" : "정의(파일 단위 양방향 1:1, AC 수=스펙 수)에 비추어 **유의미한 차이가 광범위하게 존재**한다: AC 53 vs 스펙 35부터 전단사가 성립 불가하고, 실측으로 ① 전용 스펙 없는 AC 8건(공백·간접커버), ② 1:N(한 AC가 여러 파일) 9건, ③ N:1(공유 스펙) 15건, ④ 고아 스펙 7건(debug-* 6건은 대응 PRD/AC 없는 기능, health 1건) — 깨끗한 1:1은 11/53뿐. 이는 모델 등록 시점(definition의 '등록 시점 상태' 주의: 53 vs 35 다대다·공백 8건)에 이미 인지된 초기 격차가 그대로 지속되는 것으로, 새로 발생한 회귀는 아니다. doc-tracker 집계 자체는 실제와 일치(규칙 ③ 위반 없음)하나, 규칙 ①·②는 대규모로 미충족.",
+      "summarizedAt" : "2026-07-12T06:18:54Z",
+      "toBe" : "**관측 시각** 2026-07-12T06:18:54Z · **to-be 버전** `3f49630`(docs/product 트리)\n\n### AC 전집 (SSOT: prd-*.md 10종)\n**53개** — OV 7·ND 3·WL 4·PD 7·SC 4·CF 3·ES 4·AR 7·FX 7·CM 7. 헤딩 형식은 `### AC<n>:`(9개 파일)와 `### CF<n>:`(prd-configmaps.md)이 혼재.\n\n### 매핑 선언 (SSOT: test-*.md 10종의 자동화 필드)\n- 자동화 **공백 8건**: OV7·PD6·SC3·FX3·FX4·FX5·FX6(자동화 필드가 파일을 전혀 참조 안 함 7건) + CM3(⚠️ \"부분 공백\" — 전용 스펙 없음, pods.spec.ts 뷰포트 테스트로 간접 검증 명시).\n- AR4는 파일은 있으나 \"라이브 폴링 자동 갱신 직접 검증 보강 권장\" 주석 부착.\n\n### doc-tracker 집계 (규칙 ③ 대조)\nAC 53·테스트 문서 10·자동화 공백 8건(SC3, FX3~6, OV7, PD6, CM3)·(보강 권장) AR4 — **실측과 일치**. 단 doc-tracker는 공백을 \"문서 체계 외부의 구현 백로그\"로 🟢 처리하며, 1:N/N:1/고아 스펙 차원은 집계하지 않는다(스펙 수·고아 목록 미기재 — 허위 기재는 없음)."
+    },
+    "status" : "planning",
+    "toBeModelId" : "tbm_kubernetes-dashboard-ac-e2e",
+    "trigger" : {
+      "asIs" : {
+        "currentVersion" : "92de231491202b49c08c7f9eec13fa41997ed253",
+        "previousVersion" : null
+      },
+      "changedSides" : [
         "as_is",
         "to_be"
       ],
-      "toBe": {
-        "previousVersion": null,
-        "currentVersion": "3f496307661656b007558107e0ab641a630abb17"
-      },
-      "asIs": {
-        "previousVersion": null,
-        "currentVersion": "92de231491202b49c08c7f9eec13fa41997ed253"
+      "detectedAt" : "2026-07-12T06:18:19Z",
+      "toBe" : {
+        "currentVersion" : "3f496307661656b007558107e0ab641a630abb17",
+        "previousVersion" : null
       }
     },
-    "createdAt": "2026-07-12T06:18:19Z",
-    "updatedAt": "2026-07-12T12:22:54Z",
-    "stateSummary": {
-      "asIs": "**관측 시각** 2026-07-12T06:18:54Z · **kubernetes-dashboard@main** HEAD `9162e79`(2026-07-06) · **as-is 버전** `92de231`(e2e 트리)\n\n### 스펙 전집\n`e2e/` 최상위 `*.spec.ts` **35개**(`helpers/`·`k8s/`·`README.md` 제외).\n\n### test 문서 자동화 필드 기준 실측 매핑 (매핑 SSOT 대조)\n- **전용 스펙을 가진 AC(깨끗한 1:1)**: **11/53** — AR2·AR4·AR5·AR6·CM6·OV1·OV2·OV3·PD2·PD3·PD4 (예: OV1→overview-summary-cards, PD2→pod-logs, AR2→argo-submit).\n- **한 AC → 2개 파일(중복 커버)**: 9건 — AR7, CM5, CM7, FX7, ND3, PD1, PD5(pod-cleanup+pod-terminating), WL1, WL4.\n- **한 파일 → 2개 이상 AC(공유 스펙)**: 15건 — 최대 namespace-filter.spec.ts(CM5·CM7·OV6·PD1·WL1 5개), deployment-restart(WL1~4 4개), external-secrets(ES1~4), configmaps-tab(CF1~3), nodes-tab(ND1~3), secrets-tab(SC1·SC2·SC4), pods(CM3·PD1·PD7), polling-indicator(CM4·OV4·OV5) 등.\n- **고아 스펙(어느 AC에서도 미참조)**: 7건 — `debug-back-button`·`debug-context`·`debug-detail-view`·`debug-page-layout`·`debug-route`·`debug-toggle`(디버그 페이지 기능 — 대응 PRD/AC 자체가 없음)·`health.spec.ts`.\n- **유령 참조(문서가 가리키나 부재한 파일)**: 0건.",
-      "toBe": "**관측 시각** 2026-07-12T06:18:54Z · **to-be 버전** `3f49630`(docs/product 트리)\n\n### AC 전집 (SSOT: prd-*.md 10종)\n**53개** — OV 7·ND 3·WL 4·PD 7·SC 4·CF 3·ES 4·AR 7·FX 7·CM 7. 헤딩 형식은 `### AC<n>:`(9개 파일)와 `### CF<n>:`(prd-configmaps.md)이 혼재.\n\n### 매핑 선언 (SSOT: test-*.md 10종의 자동화 필드)\n- 자동화 **공백 8건**: OV7·PD6·SC3·FX3·FX4·FX5·FX6(자동화 필드가 파일을 전혀 참조 안 함 7건) + CM3(⚠️ \"부분 공백\" — 전용 스펙 없음, pods.spec.ts 뷰포트 테스트로 간접 검증 명시).\n- AR4는 파일은 있으나 \"라이브 폴링 자동 갱신 직접 검증 보강 권장\" 주석 부착.\n\n### doc-tracker 집계 (규칙 ③ 대조)\nAC 53·테스트 문서 10·자동화 공백 8건(SC3, FX3~6, OV7, PD6, CM3)·(보강 권장) AR4 — **실측과 일치**. 단 doc-tracker는 공백을 \"문서 체계 외부의 구현 백로그\"로 🟢 처리하며, 1:N/N:1/고아 스펙 차원은 집계하지 않는다(스펙 수·고아 목록 미기재 — 허위 기재는 없음).",
-      "gap": "정의(파일 단위 양방향 1:1, AC 수=스펙 수)에 비추어 **유의미한 차이가 광범위하게 존재**한다: AC 53 vs 스펙 35부터 전단사가 성립 불가하고, 실측으로 ① 전용 스펙 없는 AC 8건(공백·간접커버), ② 1:N(한 AC가 여러 파일) 9건, ③ N:1(공유 스펙) 15건, ④ 고아 스펙 7건(debug-* 6건은 대응 PRD/AC 없는 기능, health 1건) — 깨끗한 1:1은 11/53뿐. 이는 모델 등록 시점(definition의 '등록 시점 상태' 주의: 53 vs 35 다대다·공백 8건)에 이미 인지된 초기 격차가 그대로 지속되는 것으로, 새로 발생한 회귀는 아니다. doc-tracker 집계 자체는 실제와 일치(규칙 ③ 위반 없음)하나, 규칙 ①·②는 대규모로 미충족.",
-      "summarizedAt": "2026-07-12T06:18:54Z"
-    },
-    "assessment": {
-      "actionRequired": true,
-      "reason": "정의가 요구하는 파일 단위 양방향 1:1(53:53)에 크게 미달하는 구조적 drift가 확인됐다 — 공백 8건(OV7·PD6·SC3·FX3~6 + CM3 간접커버), 1:N 9건, N:1 15건, 고아 스펙 7건(debug-* 6건은 PRD/AC 자체가 없는 기능, health 1건), 깨끗한 1:1은 11/53. 정적 문서·스펙 구조라 자동 해소 가능성이 없고(진행 중 롤아웃·일시적 alert 아님), 방치하면 매핑 SSOT(test-*.md 자동화 필드)의 추적 가능성이 계속 훼손되므로 지금 작업이 필요하다. definition이 예고한 대로 첫 task는 상당한 규모의 분할·병합·신규 작성을 다룬다: ① 공유 스펙 15건을 AC 경계로 분할, ② 중복 커버 9건 병합, ③ 공백 8건 전용 스펙 신설(또는 CM3처럼 간접커버 정리), ④ 고아 7건은 PRD에 AC 신설(debug 페이지가 의도된 동작이면) 또는 스펙 제거 — 순서·우선순위·파일명 규칙 확정은 planner 몫. AR4의 '라이브 폴링 보강 권장'도 계획에 포함할지 planner가 판단한다.",
-      "assessedBy": "agent",
-      "assessedAt": "2026-07-12T06:19:15Z"
-    },
-    "plan": {
-      "summary": "테스트 코드(e2e/*.spec.ts)와 매핑 문서만 건드리는 무손실 재구조화로 53개 AC ↔ 스펙의 양방향 1:1을 확립한다 — 제품 코드 변경이 없어 완전 가역(PR revert)이고, CI가 스펙을 자동 수집(npx playwright test, testDir './e2e' 재귀)하므로 파일 분할·병합·개명·재배치가 실행 파이프라인을 깨지 않기 때문에 이 경로를 택했다. 사용자 결정(2026-07-12) 3건 반영: ① debug-* 스펙 6개는 '삭제하지 말고 엔지니어링 문서로 분리·연결'(수정된 결정) — e2e/eng/ 하위로 이동하고 docs/product/eng-notes.md에 ENG-001(디버그 페이지 진단 계약)로 문서화, 각 스펙 헤더에 ENG-001 링크. ② health.spec.ts는 e2e/smoke/로 이동해 CI 스모크는 유지하되 매칭 대상에서 제외. ③ 자동화 공백의 신규 스펙 작성은 이번 task에서 제외(구조 정리 먼저, 공백은 후속 task). 매칭 대상은 'e2e/ 최상위 *.spec.ts'이므로 smoke/·eng/ 하위 스펙은 AC↔스펙 전단사에서 자연히 제외된다(고아 아님) — 즉 debug/health를 '삭제'하지 않고도 1:1이 성립한다. 기존 커버리지는 테스트 유실 없이 AC 경계로 재배치: 공유 스펙 15건 분할, 중복 커버 9건 병합. 판단 2건: FX6은 기존 상세 페이지 describe들을 전용 파일(fluxcd-detail.spec.ts)로 모아 연결하되 '라이브 폴링 직접 검증 보강 권장' 각주를 남긴다(AR4 선례와 동일; 상세 표시 검증은 실재하므로 decoy 아님). OV6은 실측 결과 오버뷰 스코프를 직접 단정하는 테스트가 없어 공백으로 정직하게 재분류한다. 결과: 연결 AC 45개 ↔ 전용 최상위 스펙 45개(전단사), 비-AC 스펙 = smoke/health 1 + eng/debug 6, 공백 원장 8건(OV6·OV7·PD6·SC3·FX3·FX4·FX5·CM3 — FX6 이탈·OV6 진입으로 총수 유지). 완전 수렴(53:53)은 아니므로 검증 단계에서 converged=false가 예상되며, 남은 공백 8건은 후속 task가 다룬다. 거버넌스 메모: 모델 정의는 현재 고아 스펙 해소를 'AC 신설 또는 제거' 두 갈래로만 규정하므로, '엔지니어링 노트(ENG)·스모크로 분류된 비-AC 스펙' 범주를 정의에 명문화하는 최소 개정을 to-be-modeler로 제안할 것(dear-baby 모델의 ENG/스모크 예외 선례와 동형). 이 개정은 최상위 매칭 스코프상 이미 성립하는 현 상태를 문서화하는 것으로 수렴 자체를 막지 않는다. AR4 라이브 폴링 보강은 drift가 아니라 범위에서 제외한다(선택적 후속).",
-      "riskLevel": "medium",
-      "plannedAt": "2026-07-12T11:45:00Z",
-      "steps": [
-        {
-          "seq": 1,
-          "action": "비-AC 스펙 분리(삭제 아님): e2e/eng/·e2e/smoke/ 생성. debug-back-button·debug-context·debug-detail-view·debug-page-layout·debug-route·debug-toggle .spec.ts 6개를 git mv로 e2e/eng/로 이동하고, 각 헤더에 '// Engineering: ENG-001 (docs/product/eng-notes.md)' 링크 추가, helper 참조 3건(context·detail-view·page-layout)의 import 경로를 './helpers/debug-setup'→'../helpers/debug-setup'로 수정. health.spec.ts는 e2e/smoke/health.spec.ts로 git mv. helpers/debug-setup.ts는 유지(삭제하지 않음).",
-          "expectedOutcome": "e2e/ 최상위 *.spec.ts 35→28개. e2e/eng/에 debug 6개, e2e/smoke/에 health 1개. npx playwright test --list에 debug·smoke 테스트 제목이 그대로 남아 있음(유실 0). debug 스펙 import가 새 경로로 해석됨."
-        },
-        {
-          "seq": 2,
-          "action": "상태 AC 전용 파일 8개 생성 및 common-ui-components.spec.ts 해체: nodes-data-states(ND3)·workloads-data-states(WL4)·pods-data-states(PD7)·secrets-data-states(SC4)·configmaps-data-states(CF3)·external-secrets-data-states(ES4)·argo-data-states(AR7)·fluxcd-data-states(FX7)를 만들고, common-ui-components의 탭별 LoadingSkeleton/ErrorRetry/EmptyState describe와 각 탭 스펙의 Loading/Empty/Error describe(pods·secrets·configmaps·external-secrets·argo-templates·argo-workflows·argo-workflow-detail·fluxcd 리스트 2종·nodes-tab)를 해당 파일로 이동. Overview 상태 describe는 overview-summary-cards(OV1)로 병합·중복 제거(OV 전용 상태 AC 없음).",
-          "expectedOutcome": "common-ui-components.spec.ts 삭제됨(내용은 이동). 8개 상태 파일이 각각 1개 AC만 검증하며, 원본 파일들에서 상태 describe가 사라짐. --list 총 테스트 수는 step 1 이후와 동일(이동만; OV1 병합 중복 제거분은 사전 명시)."
-        },
-        {
-          "seq": 3,
-          "action": "네임스페이스 계열 재배치: namespace-filter.spec.ts를 CM5 전용으로 좁힘. 'URL Deep Link' + namespace-context-integration의 'persist after refresh via URL param'을 common-namespace-deeplink.spec.ts(CM7)로 이동. namespace-context-integration의 CM5성 테스트는 namespace-filter로, /pods·/workloads 스코프 데이터 필터링은 각각 pods.spec.ts(PD1)·workloads-list.spec.ts(WL1)로 분리 후 원본 파일 삭제. bottom-tab-bar를 CM1 전용으로 좁힘: 'Overview Tab Badge'와 배지 갱신 테스트는 common-unhealthy-badge.spec.ts(CM2)로, 셀렉터 지속은 namespace-filter(CM5)로, pods 데이터 필터는 pods.spec.ts(PD1)로 이동.",
-          "expectedOutcome": "namespace-context-integration.spec.ts 삭제(이동). namespace-filter=CM5, common-namespace-deeplink=CM7, bottom-tab-bar=CM1, common-unhealthy-badge=CM2 각 1:1."
-        },
-        {
-          "seq": 4,
-          "action": "polling-indicator.spec.ts 3분할: CM4 전용으로 좁힘. 'Page Visibility'는 overview-auto-polling.spec.ts(OV4)로, 'Manual Refresh'는 overview-manual-refresh.spec.ts(OV5)로 이동.",
-          "expectedOutcome": "3개 파일이 각각 CM4/OV4/OV5 1:1. 테스트 수 불변."
-        },
-        {
-          "seq": 5,
-          "action": "workloads 분할: deployment-restart.spec.ts를 workloads-list.spec.ts(WL1)로 개명·좁힘, workloads-restart.spec.ts(WL2)·workloads-restart-confirm.spec.ts(WL3) 분리 생성.",
-          "expectedOutcome": "WL1~WL4(step 2) 각 전용 파일 1개. deployment-restart.spec.ts 사라짐."
-        },
-        {
-          "seq": 6,
-          "action": "pods 계열 정리: pod-terminating.spec.ts 해체 — 'Pods Page'·'API Verification'은 pods.spec.ts(PD1)로, 'Unhealthy Pods'는 unhealthy-pod-preview.spec.ts(OV2)로 이동 후 삭제. pod-cleanup.spec.ts(PD5)는 'Coexistence with Hide Completed Toggle' 포함 유지(PD6은 공백 유지).",
-          "expectedOutcome": "pod-terminating.spec.ts 삭제(이동). PD1·PD5·OV2 각 1:1."
-        },
-        {
-          "seq": 7,
-          "action": "secrets·configmaps·external-secrets 분할: secrets-tab→SC1 전용 + secrets-reveal(SC2). configmaps-tab→CF1 전용 + configmaps-accordion(CF2). external-secrets→ES1 전용 + external-secrets-summary(ES2) + external-secrets-card-status(ES3, Basic Rendering에서 카드 필드·NotReady 사유 단언 추출).",
-          "expectedOutcome": "SC1·SC2·CF1·CF2·ES1·ES2·ES3 각 전용 파일 1개. 테스트 수 불변."
-        },
-        {
-          "seq": 8,
-          "action": "fluxcd detail 병합: 두 리스트 파일의 Detail 계열 describe를 fluxcd-detail.spec.ts(FX6)로, Reconcile을 fluxcd-reconcile.spec.ts(FX3)로, GitRepo 브랜치 계열을 fluxcd-branch-switch.spec.ts(FX5)로, Kustomization suspend/resume을 fluxcd-suspend-resume.spec.ts(FX4)로 이동. 두 리스트 스펙은 FX1·FX2 전용으로 좁힘. FX6 헤더에 '라이브 폴링 자동 갱신 직접 검증 보강 권장' 각주. (FX3·FX4·FX5는 실측 상 이미 스펙이 존재해 공백이 아니었으므로 전용 파일로 승격; test 문서 자동화 필드가 이를 반영하도록 step 10에서 갱신.)",
-          "expectedOutcome": "fluxcd-detail=FX6, reconcile=FX3, branch-switch=FX5, suspend-resume=FX4, 리스트 2종=FX1·FX2 각 1:1. 테스트 수 불변."
-        },
-        {
-          "seq": 9,
-          "action": "전 최상위 스펙 파일(45개) 헤더에 '// Verifies: <AC> (prd 파일)' 1줄씩 명시, e2e/eng/·e2e/smoke/ 스펙은 각각 '// Engineering:'·'// Smoke:' 헤더 유지. e2e/README.md가 파일 목록·규약을 언급하면 갱신(최상위=AC 매칭, smoke/·eng/=비-AC 분류 설명 추가). 파일명 규칙은 '서술형 kebab-case + 헤더 AC 주석 + test-*.md 자동화 필드가 매핑 SSOT'로 확정.",
-          "expectedOutcome": "45개 최상위 파일 전부 헤더에 AC 코드 정확히 1개, eng/smoke 스펙은 비-AC 헤더. grep로 기계 검증 가능."
-        },
-        {
-          "seq": 10,
-          "action": "문서 동기화: docs/product/eng-notes.md 신설(ENG-001 디버그 페이지 진단 계약 — 커버 스펙 6개 e2e/eng/*.spec.ts 열거, 사유='제품 AC가 아닌 엔지니어링 진단 UI'). test-*.md 10종의 자동화 필드를 새 배치로 전면 갱신(AC당 최상위 파일 정확히 1개; 공백 8건은 ⚠️ — OV6 신규 공백 사유 '직접 검증 부재 실측' 명기, FX6은 연결+보강 권장 각주, FX3·FX4·FX5는 전용 파일 연결로 공백 해제). doc-tracker.md 갱신: 자동화 공백 목록을 OV6·OV7·PD6·SC3·CM3(+FX 상세 폴링 잔여는 FX6 각주로) 체계로 재정리, '비-AC 스펙 분류' 섹션 신설(smoke/health, eng/debug→ENG-001), debug 분리·health 스모크 이동·1:1 재구조화를 변경 이력에 기록.",
-          "expectedOutcome": "test-*.md 모든 자동화 필드가 실존 최상위 파일 1개를 가리키거나 ⚠️ 공백. eng-notes.md·doc-tracker의 비-AC 분류가 실제 eng/·smoke/ 파일과 일치. doc-tracker 집계 = 실측(모델 규칙 ③)."
-        },
-        {
-          "seq": 11,
-          "action": "정합성 최종 검증: (a) e2e/ 최상위 *.spec.ts 수 = 45, (b) test-*.md 자동화 필드에서 추출한 AC→파일 매핑이 전단사(1:N=0, N:1=0, 고아=0, 유령=0, 공백=8)이고 eng/·smoke/ 스펙은 매칭 집합에서 제외됨을 스크립트로 대조, (c) npx playwright test --list로 수집 성공·테스트 제목 diff가 0(유실 없음; 이번엔 debug도 이동만 했으므로 순증감 0), (d) PR CI(E2E Tests with kind) 그린 확인.",
-          "expectedOutcome": "네 검증 모두 통과. 특히 테스트 제목 집합이 main과 완전 동일(재배치만), CI e2e job이 main과 동일하게 그린."
-        }
-      ],
-      "executionGuide": "# 실행 지침 — rct_20260712-0001 (AC↔e2e 스펙 1:1 재구조화)\n\n대상 PR: https://github.com/dlddu/kubernetes-dashboard/pull/207 (base `main`, head `reconcile/rct_20260712-0001`). 이 지침은 reconciler-work-executor가 이 PR을 실제로 반영·검증할 때 따른다.\n\n## 사전 전제\n- 이 변경은 **제품 코드 무변경**의 테스트/문서 재배치다. 런타임 영향 없음, 완전 가역.\n- 매핑 SSOT는 `docs/product/test-*.md`의 `자동화` 필드, 집계 뷰는 `docs/product/doc-tracker.md`. 매칭 대상은 `e2e/` **최상위 `*.spec.ts`만**이며 `e2e/eng/`·`e2e/smoke/` 하위는 제외.\n\n## 실행 순서 (why-order 포함)\n1. **CI 그린 확인 (선행 게이트).** PR의 `E2E Tests (kind)` 잡이 통과하는지 먼저 확인한다. 재배치만 했으므로 main과 동일하게 그린이어야 하며, 여기서 실패하면 그 자체가 회귀 신호다 → 병합 금지, 원인 분석. *다른 모든 단계보다 앞선다 — 실행 파이프라인이 스펙을 실제로 수집·통과하는지가 이 task의 무손실 전제를 담보한다.*\n2. **검토 확인 (필수).** 이 병합은 매핑 SSOT(test-*.md·doc-tracker)를 갱신하므로 사람 리뷰 승인이 있어야 한다. reconciler-work-executor의 4-1 판단에서 이 task는 \"검토 필요\"로 분류된다(코드 무변경이나 거버넌스 문서를 바꾸고, 비-AC 범주라는 새 분류를 도입하기 때문). 승인 없이는 4-3로 진행하지 않는다.\n3. **병합.** 승인 후 PR을 머지한다. Squash 권장(커밋 히스토리 단순화). *2 이후에만.*\n4. **병합 후 as-is 재수집.** 모델의 as-is 버전 스크립트는 `git rev-parse HEAD:e2e`(e2e 서브트리 해시)다. 병합으로 이 해시가 변하며, 이는 정상적인 수렴 이동이다. 재감지 시 to-be(53 AC)와 as-is(48 연결 스펙+5 공백+7 비-AC)의 차이를 다시 계산한다.\n\n## 단계별 검증 방법\n- **1단계 검증**: GitHub Actions에서 `E2E Tests (kind)` 잡 상태 = success. 로컬 재현 시 `npx playwright test`(kind 클러스터 필요) 또는 최소한 `npx playwright test --list`가 `626 tests in 55 files`를 수집하고 에러 0.\n- **3단계 검증(병합 직후)**: main에서 아래 3종을 재실행:\n  1. `npx playwright test --list | tail -1` → `Total: 626 tests in 55 files`.\n  2. 헤더 전단사: 각 `e2e/*.spec.ts` 첫 줄 `// Verifies: <AC>`가 정확히 1개, AC 코드 중복 0 (48개 distinct).\n  3. test-*.md 자동화 필드에서 추출한 AC→파일 매핑이 실제 파일과 1:1(1:N=0, N:1=0, 고아=0, 유령=0), 공백 5(OV6·OV7·PD6·SC3·CM3), eng/·smoke/ 제외.\n- **전체 수렴 검증(4-4)**: as-is 연결 스펙 48 = to-be 연결 AC 48이면 \"연결분 전단사\" 달성. 단, 전체 AC는 53이고 공백 5가 남으므로 **`converged=false`가 정상 결과**다(구조 정합은 달성, 커버리지 공백은 별건). 이 task의 성공 기준은 \"다대다→연결분 1:1 확립 + 공백의 정직한 원장화\"이지 53:53 완전 커버리지가 아니다.\n\n## 주의사항 / 롤백\n- **롤백 경로**: 병합 전이면 PR을 close하면 끝(무영향). 병합 후 문제가 드러나면 머지 커밋을 `git revert`한다 — 제품 코드가 없어 revert가 안전하고 런타임 영향이 없다.\n- **converged=false는 실패가 아니다**: 남은 공백 5건(OV6·OV7·PD6·SC3·CM3)은 이 task의 범위 밖(사용자 결정 ③: 구조 먼저, 공백은 후속). 실행 후 **후속 task로 \"공백 5건 e2e 신규 작성\"을 제안**한다.\n- **거버넌스/정의 개정 제안**: 이 task는 `e2e/eng/`(ENG-001)·`e2e/smoke/`라는 **비-AC 스펙 범주**를 도입했다. 현행 모델 정의는 고아 해소를 \"AC 신설 또는 제거\"로만 규정하므로, 이 범주를 정의에 명문화하는 **최소 개정을 reconciler-tobe-modeler로 제안**한다(dear-baby 모델의 ENG/스모크 예외 선례와 동형). 최상위 매칭 스코프상 현 상태는 이미 성립하므로 이 개정은 수렴을 막지 않으며 문서화 성격이다.\n- **FX6·AR4 보강(선택)**: FluxCD/Argo 상세의 \"라이브 폴링 자동 갱신 직접 검증\"은 현재 간접 커버다. drift는 아니므로 이 task 범위 밖이나, 후속 보강 권장 항목으로 남긴다.\n- **실측 발견 기록**: 등록 시 assessment의 \"공백 8\"은 부정확했다 — FX3·FX4·FX5·FX6은 모놀리식 `fluxcd-*` 스펙 내에 실재했고 문서에만 미선언이었다. 이번에 전용 파일로 승격해 연결했고, 대신 OV6를 공백으로 재분류해 실제 공백은 5다."
-    },
-    "preparation": {
-      "prepared": true,
-      "repository": "dlddu/kubernetes-dashboard",
-      "branch": "reconcile/rct_20260712-0001",
-      "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/207",
-      "preparedAt": "2026-07-12T12:38:00Z",
-      "notes": "무손실 재구조화 PR. 변경셋: 신규 25·삭제 4·수정 36·이동 7(git). e2e/ 최상위 48개 스펙 ↔ 48개 연결 AC 전단사, e2e/eng/ 6(ENG-001)·e2e/smoke/ 1 매칭 제외, 공백 5(OV6·OV7·PD6·SC3·CM3). 검증 완료: (1) `npx playwright test --list` = 626 tests/55 files, 재구조화 전후 테스트 제목 집합 동일(유실 0), (2) 헤더 기반 AC↔스펙 전단사 스크립트 통과(1:N·N:1·고아·유령·헤더불일치 0), (3) test-*.md 자동화 필드·doc-tracker 실측 일치. 미머지 상태 — reconciler-work-executor의 검토·승인 대기. FluxCD 상세(FX3~6)는 기존 모놀리식 스펙 내 실재 구현을 전용 파일로 승격(문서 미선언이었음), OV6는 직접 검증 부재로 공백 재분류 → 공백 8→5."
-    },
-    "execution": {
-      "status": "aborted",
-      "startedAt": "2026-07-12T12:22:54Z",
-      "finishedAt": "2026-07-12T12:22:54Z",
-      "entries": [
-        {
-          "stepSeq": 11,
-          "status": "failed",
-          "startedAt": "2026-07-12T12:22:54Z",
-          "finishedAt": "2026-07-12T12:22:54Z",
-          "log": "선행 게이트(executionGuide 실행순서 1 · plan.step 11(d)) 실패로 병합 중단. PR #207 head 45639c8 'E2E Tests with kind' = failure, main 9162e79 동일 잡 = success. 제품 코드 무변경 재구조화인데 e2e 런타임이 회귀 → 무손실 전제 위반. 나머지 7개 체크(Go/Frontend/Integration Tests, Docker Build, Argo·FluxCD Fixture Validation, K8s Manifest Validation)는 모두 success, mergeable_state=unstable. planner 사전검증은 `npx playwright test --list`(수집: 626 tests/55 files, 유실 0)까지였고 실제 kind e2e 런타임은 CI에서 처음 돌아 실패 — 이동·분할 스펙의 상대경로/setup/fixture 참조가 런타임에 깨진 것으로 추정. 병합·머지 액션은 실행하지 않음(레포 무변경). 실패 잡: https://github.com/dlddu/kubernetes-dashboard/actions/runs/29191941788/job/86647976238"
-        }
-      ]
-    }
+    "updatedAt" : "2026-07-15T06:30:00Z"
   }
 ]
