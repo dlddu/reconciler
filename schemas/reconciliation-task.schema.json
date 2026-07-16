@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.dlddu.dev/reconciliation-task.schema.json",
   "title": "ReconciliationTask",
-  "description": "as-is 또는 to-be의 버전 변경이 감지될 때마다 생성되는 작업 레코드. 요약 → 판단 → 계획 → (사용자 검토) → 실행 → 검증 순으로 필드가 채워진다.",
+  "description": "as-is 또는 to-be의 버전 변경이 감지될 때마다 생성되는 작업 레코드. 요약 → 판단까지는 최상위 필드에, 계획 → (사용자 검토) → 실행 → 검증은 attempts[] 항목(시도) 단위로 기록한다. 마지막 항목이 현재 시도다.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -126,6 +126,48 @@
         }
       }
     },
+    "attempts": {
+      "type": "array",
+      "description": "시도(attempt) 기록의 append-only 목록. planner가 계획할 때 항목을 끝에 덧붙이고, executor가 같은 항목에 review/execution/verification을 채운다. 마지막 항목이 현재 시도이며, 이전 항목은 수정하지 않는다.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "plan"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "이 시도가 시작된 이유. 재작업이면 직전 status(review_rejected/failed). 첫 시도는 생략."
+          },
+          "plan": {
+            "$ref": "#/$defs/plan"
+          },
+          "preparation": {
+            "$ref": "#/$defs/preparation"
+          },
+          "review": {
+            "$ref": "#/$defs/review"
+          },
+          "execution": {
+            "$ref": "#/$defs/execution"
+          },
+          "verification": {
+            "$ref": "#/$defs/verification"
+          }
+        }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
     "plan": {
       "type": "object",
       "description": "작업 계획 (assessment.actionRequired=true일 때 작성)",
@@ -186,12 +228,29 @@
       "description": "실행 스테이징(주로 PR) 준비 결과",
       "additionalProperties": false,
       "properties": {
-        "prepared": { "type": "boolean" },
-        "repository": { "type": "string", "description": "owner/repo" },
-        "branch": { "type": "string" },
-        "pullRequestUrl": { "type": ["string", "null"] },
-        "preparedAt": { "type": "string", "format": "date-time" },
-        "notes": { "type": "string" }
+        "prepared": {
+          "type": "boolean"
+        },
+        "repository": {
+          "type": "string",
+          "description": "owner/repo"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "pullRequestUrl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "preparedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "notes": {
+          "type": "string"
+        }
       }
     },
     "review": {
@@ -356,33 +415,6 @@
         }
       }
     },
-    "attempts": {
-      "type": "array",
-      "description": "지난 시도 스냅샷. 재계획 시 planner가 직전 plan/preparation/review/execution/verification을 여기로 옮긴다. 최신 시도는 항상 최상위 필드에만 있다.",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "archivedAt": { "type": "string", "format": "date-time" },
-          "reason": { "type": "string", "description": "재계획을 유발한 직전 status(보통 review_rejected/failed)" },
-          "plan": { "type": "object" },
-          "preparation": { "type": "object" },
-          "review": { "type": "object" },
-          "execution": { "type": "object" },
-          "verification": { "type": "object" }
-        }
-      }
-    },
-    "createdAt": {
-      "type": "string",
-      "format": "date-time"
-    },
-    "updatedAt": {
-      "type": "string",
-      "format": "date-time"
-    }
-  },
-  "$defs": {
     "versionChange": {
       "type": "object",
       "additionalProperties": false,

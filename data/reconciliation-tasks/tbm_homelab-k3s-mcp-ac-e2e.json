@@ -18,8 +18,6 @@
         "currentVersion": "449cdb08c2cc9b3814c07828807140bacd764d3e"
       }
     },
-    "createdAt": "2026-07-12T06:20:32Z",
-    "updatedAt": "2026-07-12T10:46:40Z",
     "stateSummary": {
       "asIs": "**관측 시각** 2026-07-12T06:21:10Z · **homelab-k3s-mcp@main** HEAD `ca1f28f`(2026-07-08) · **as-is 버전** `449cdb0`(tests/ 트리)\n\n### e2e 구성\n`tests/integration/` Python 통합 테스트 **7개 파일**(aws_config·dear_baby·github_app·grafana·opensearch·smoke·workload, `_helpers.py` 제외) + `tests/k8s/kind/` 픽스처 7개.\n\n### 케이스 구조·식별 가능성 (실측)\n- 파일들은 **도메인당 평면 스크립트**다: aws_config·dear_baby·smoke는 최상위 함수 0개, 나머지도 헬퍼 함수만 있고 AC 단위 케이스 함수가 없다(등록 시점 인지대로 \"파일당 하나의 실행 흐름\" 구조).\n- **인코드 AC 선언은 전체에서 1건**(workload.py:291 주석 `test-workload-logs.md S3 / AC3`)뿐 — 이름·docstring 기반 케이스↔AC 식별이 사실상 부재.\n- 파일 수준으로는 test 문서 자동화 필드가 통합 파일을 참조하나, 참조되는 파일은 전부 다중 AC 공유다: workload.py ≈11 AC, opensearch.py 9 AC, github_app.py 3, dear_baby.py 3, aws_config.py 2, grafana.py 2, smoke.py 3.",
       "toBe": "**관측 시각** 2026-07-12T06:21:10Z · **to-be 버전** `d31d38f`(docs/ 내 prd-*.md blob 목록 해시)\n\n### AC 전집 (SSOT: prd-*.md 15종)\n`### ACn:` 헤딩 **52개** — aws-config-get 3·dear-baby-reset-user 3·github-app-installation-token 4·grafana-token 4·namespace-list 1·opensearch-document-delete 5·opensearch-document-put 5·opensearch-search 4·ping 1·platform-auth-safety 8·pod-describe 3·workload-list 2·workload-logs 4·workload-restart 2·workload-scale 3. (doc-tracker 집계와 일치.)\n\n### 자동화 필드의 현재 선언 (test-*.md 15종)\n- 약 **31개 AC**의 자동화 필드가 통합 파일을 (파일 수준·공유로) 언급 — 전용 케이스 지목은 없음.\n- **17개 AC**는 자동화가 **Go 단위 테스트(`internal/server/mcp_test.go` 등)만** — 정의상 internal/ 단위 테스트는 e2e가 아니므로 e2e 공백에 해당(pod-describe AC1~3 전부, workload-restart/AC2, workload-scale/AC3, 각 도메인 AC3류 다수).\n- **자동화 부재/정적만 3~4건**: platform-auth-safety/AC1(❌ 없음)·AC2(❌ 없음)·AC4(🟡 k8s/deployment.yaml 정적 리뷰), grafana-token/AC4(간접·부분).",
@@ -32,59 +30,65 @@
       "assessedBy": "agent",
       "assessedAt": "2026-07-12T06:21:12Z"
     },
-    "plan": {
-      "summary": "스코프 = 규약 확정 + e2e 보강 계획 + 예외 제안(문서 기반). 이 모델은 to-be=docs/prd-*.md·as-is=tests/만 추적하고 doc-tracker.md는 어느 해시도 바꾸지 않는다. 완전 1:1(AC별 전용 e2e 케이스)은 평면 통합 스크립트 7개를 per-AC 케이스로 리팩터하고 e2e 공백 7건을 신설해야 하는데, kind 클러스터 실서버 CI라 여기서 구동·검증 불가 → blind 저작은 CI 리스크. 따라서 이 첫 PR은 tests/를 건드리지 않고 (a) reconciler 렌즈(통합 e2e만 인정, internal/ 단위 제외) AC↔e2e 레지스트리를 doc-tracker에 신설, (b) per-AC 케이스 식별 규약 명문화, (c) 52 AC 분류(통합 32·보강 7·예외 후보 13)와 보강 backlog·예외 후보 작성, (d) e2e 비현실 AC(파괴적 표기·미설정 거부·출력 비노출·정적 매니페스트 13건)의 모델 정의 예외 개정을 '제안'(초안 제공, 일방 적용 안 함)한다. 전용 per-AC 케이스 분리·신설(통합 리팩터)은 CI-검증 후속 task.",
-      "riskLevel": "low",
-      "steps": [
-        {
-          "seq": 1,
-          "action": "docs/doc-tracker.md의 '자동화 커버리지' 아래에 reconciler 렌즈 서브섹션을 신설한다. 렌즈 차이(reconciler는 tests/integration e2e만 인정, internal/ Go 단위는 제외 — 기존 '자동화 커버리지'가 🟢로 세는 다수 AC가 e2e 렌즈에선 공백)를 명시.",
-          "expectedOutcome": "기존 섹션을 덮지 않고 e2e 전용 렌즈 레지스트리가 추가됨. 렌즈 차이 명문화."
+    "attempts": [
+      {
+        "plan": {
+          "summary": "스코프 = 규약 확정 + e2e 보강 계획 + 예외 제안(문서 기반). 이 모델은 to-be=docs/prd-*.md·as-is=tests/만 추적하고 doc-tracker.md는 어느 해시도 바꾸지 않는다. 완전 1:1(AC별 전용 e2e 케이스)은 평면 통합 스크립트 7개를 per-AC 케이스로 리팩터하고 e2e 공백 7건을 신설해야 하는데, kind 클러스터 실서버 CI라 여기서 구동·검증 불가 → blind 저작은 CI 리스크. 따라서 이 첫 PR은 tests/를 건드리지 않고 (a) reconciler 렌즈(통합 e2e만 인정, internal/ 단위 제외) AC↔e2e 레지스트리를 doc-tracker에 신설, (b) per-AC 케이스 식별 규약 명문화, (c) 52 AC 분류(통합 32·보강 7·예외 후보 13)와 보강 backlog·예외 후보 작성, (d) e2e 비현실 AC(파괴적 표기·미설정 거부·출력 비노출·정적 매니페스트 13건)의 모델 정의 예외 개정을 '제안'(초안 제공, 일방 적용 안 함)한다. 전용 per-AC 케이스 분리·신설(통합 리팩터)은 CI-검증 후속 task.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "docs/doc-tracker.md의 '자동화 커버리지' 아래에 reconciler 렌즈 서브섹션을 신설한다. 렌즈 차이(reconciler는 tests/integration e2e만 인정, internal/ Go 단위는 제외 — 기존 '자동화 커버리지'가 🟢로 세는 다수 AC가 e2e 렌즈에선 공백)를 명시.",
+              "expectedOutcome": "기존 섹션을 덮지 않고 e2e 전용 렌즈 레지스트리가 추가됨. 렌즈 차이 명문화."
+            },
+            {
+              "seq": 2,
+              "action": "AC↔e2e 케이스 식별 규약을 명문화한다: 각 e2e 케이스는 이름+docstring으로 검증 AC 정확히 1개를 선언(예: test_<domain>_ac<n>_<slug>, docstring `AC: <domain>/ACn`), doc-tracker 레지스트리가 AC↔케이스 매핑 SSOT, test-*.md 자동화 필드는 케이스 경로 지목(케이스 신설 후).",
+              "expectedOutcome": "규칙 1·2·3 충족을 위한 케이스 식별 규약이 문서화됨."
+            },
+            {
+              "seq": 3,
+              "action": "52개 AC 레지스트리 표 작성 — 각 AC를 ✅ 통합 e2e(파일 수준, 32; 대응 tests/integration 파일 명시) / ⬜ e2e 보강 필요(7; e2e 가능 클러스터 동작) / 🚫 e2e 예외 후보(13; 메타데이터·출력·미설정·정적 매니페스트)로 분류.",
+              "expectedOutcome": "52 AC 전부가 세 상태 중 하나로 분류(누락 0). 통합 커버 AC는 대응 파일 명시."
+            },
+            {
+              "seq": 4,
+              "action": "⬜ e2e 보강 backlog(7) 작성: pod-describe/AC1·AC2·AC3(파드 describe 신규 e2e), platform-auth-safety/AC1(미인증 거부)·AC2(디스커버리 엔드포인트)·AC7(API 키 게이트)·AC8(env-게이팅 다중 구성) — 각 목표 통합 파일 + 단정 핵심 명시.",
+              "expectedOutcome": "e2e 가능·공백 7건 각각 목표 파일·단정이 명세되어 후속 task가 착수 가능."
+            },
+            {
+              "seq": 5,
+              "action": "🚫 e2e 예외 후보(13) 목록 작성 + 모델 정의 개정 제안: 파괴적 작업 표기 5(dear-baby/AC3·os-delete/AC3·os-put/AC3·workload-restart/AC2·workload-scale/AC3), 미설정 graceful 거부 6(aws-config/AC3·github/AC3·grafana/AC3·os-delete/AC5·os-put/AC5·os-search/AC4), 출력 비노출 1(grafana/AC4), 정적 매니페스트 1(platform/AC4). 각 사유+대체검증(Go 단위/정적 리뷰). to-be governance라 정의에 일방 적용하지 않고 붙여넣기용 초안으로 제안.",
+              "expectedOutcome": "예외 후보 13건 각 사유·대체검증 명시. 모델 정의(to-be-models.json) 예외 목록 개정 초안 제공 — 별도 ratify."
+            },
+            {
+              "seq": 6,
+              "action": "검증: (i) 레지스트리가 52 AC 전부 분류(누락 0), (ii) ✅ 32건이 실재 tests/integration 파일과 일치, (iii) 통합 파일 7개 다중 AC 공유 사실이 표에 드러남(rule 1/2 미충족은 후속 리팩터로 명시), (iv) backlog 7·예외 13 합 20 = 공백(17 단위+3 정적), (v) tests/ 미변경 확인. doc-tracker 변경은 to-be(prd)·as-is(tests) 해시 불변이라 재트리거 없음.",
+              "expectedOutcome": "52 AC 분류·파일 정합 확인, 공백 20건 backlog/예외로 완전 커버, tests/ 무변경. 규약·계획·예외 제안 문서 완결. converged=false(전용 케이스 리팩터는 후속)."
+            }
+          ],
+          "plannedAt": "2026-07-12T09:45:24Z",
+          "executionGuide": "## 실행 순서\n1. PR #31 (dlddu/homelab-k3s-mcp, `reconcile/rct_20260712-0001` → `main`) 리뷰. 변경은 `docs/doc-tracker.md` 단일 파일(레지스트리·규약·backlog·예외 제안).\n2. 머지. **doc-tracker.md는 to-be(`prd-*.md`)·as-is(`tests/`) 해시를 바꾸지 않으므로 재감지가 트리거되지 않는다** — 이 task는 병합만으로 종료 상태가 갱신되지 않으니 executor가 명시적으로 완료 처리한다.\n\n## 검증 방법 (이 task의 완결 기준 — 문서 산출물)\n- 레지스트리가 52 AC 전부를 ✅ 통합 e2e(32) / ⬜ 보강(7) / 🚫 예외 후보(13)로 분류(누락 0). 확인: doc-tracker \"AC 레지스트리 (52)\" 표 행 수 = 52.\n- ✅ 32건의 대응 파일이 실재 `tests/integration/*.py`와 일치(aws_config·dear_baby·github_app·grafana·opensearch·smoke·workload).\n- 통합 파일 7개가 다중 AC를 공유한다는 사실과 \"규칙 1·2 미충족 → per-AC 케이스 리팩터는 후속\"이 명문화됨.\n- backlog 7 + 예외 후보 13 = e2e 공백 20(단위-only 17 + 정적 3)과 일치.\n- `tests/` 무변경 확인: `git diff --stat main`에 `tests/` 파일 없음.\n\n## 주의사항 (converged 판정)\n- **converged=false**: 이 task는 규약·계획·예외 제안까지만 완결한다. AC별 전용 e2e 케이스(규칙 1·2)는 아직 없다. 아래 두 후속을 반드시 생성·핸드오프한다.\n  1. **테스트 리팩터/신설 task**: `tests/integration/`의 7개 평면 스크립트를 per-AC 케이스 함수로 분리(각 케이스 이름+docstring에 `AC: <domain>/ACn`) + ⬜ backlog 7건(pod-describe 3·platform auth 4) 신설. **kind 클러스터 CI에서 통합 테스트 그린 확인 후** 커밋. `test-*.md` 자동화 필드를 신설 케이스 경로로 갱신.\n  2. **모델 정의 예외 개정 task**(또는 tobe-modeler): 🚫 예외 후보 13건을 `to-be-models.json`의 `tbm_homelab-k3s-mcp-ac-e2e` definition 예외 목록에 반영. 반영 시 예외 AC는 \"e2e 없어도 drift 아님\"이 되어 잔여 공백이 backlog 7건으로 축소된다.\n- 예외 후보는 **제안**이다 — 정의에 반영 전에는 예외 AC도 e2e 공백으로 계수된다(레지스트리는 이를 🚫로 표시하되 정의 미반영 상태임을 명시).\n- 렌즈 유지: 리팩터 시에도 `internal/` Go 단위는 e2e가 아니다. 케이스는 `tests/integration/`에 둔다.\n\n## 롤백\n- 미병합: 브랜치 삭제로 무영향.\n- 병합 후: PR revert. 단일 문서 추가라 앱 런타임·CI·추적 해시에 영향 없음(완전 가역)."
         },
-        {
-          "seq": 2,
-          "action": "AC↔e2e 케이스 식별 규약을 명문화한다: 각 e2e 케이스는 이름+docstring으로 검증 AC 정확히 1개를 선언(예: test_<domain>_ac<n>_<slug>, docstring `AC: <domain>/ACn`), doc-tracker 레지스트리가 AC↔케이스 매핑 SSOT, test-*.md 자동화 필드는 케이스 경로 지목(케이스 신설 후).",
-          "expectedOutcome": "규칙 1·2·3 충족을 위한 케이스 식별 규약이 문서화됨."
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20260712-0001",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/31",
+          "preparedAt": "2026-07-12T09:48:36Z",
+          "notes": "규약 확정+보강 계획+예외 제안(문서 기반) 스코프. 변경: docs/doc-tracker.md 단일 파일에 reconciler 렌즈 서브섹션 신설(52 AC 분류 ✅통합32·⬜보강7·🚫예외후보13, per-AC 케이스 식별 규약, 보강 backlog 7, 예외 후보 13+대체검증, 모델 정의 예외 개정 제안). tests/ 미변경 → to-be(prd)·as-is(tests) 해시 불변, 재감지 트리거 없음, CI 무해. 전용 per-AC 케이스 리팩터·신설(kind CI 검증 필요)과 정의 예외 개정은 후속·ratify. 머지 미실행 — executor 검토·병합 대기."
         },
-        {
-          "seq": 3,
-          "action": "52개 AC 레지스트리 표 작성 — 각 AC를 ✅ 통합 e2e(파일 수준, 32; 대응 tests/integration 파일 명시) / ⬜ e2e 보강 필요(7; e2e 가능 클러스터 동작) / 🚫 e2e 예외 후보(13; 메타데이터·출력·미설정·정적 매니페스트)로 분류.",
-          "expectedOutcome": "52 AC 전부가 세 상태 중 하나로 분류(누락 0). 통합 커버 AC는 대응 파일 명시."
-        },
-        {
-          "seq": 4,
-          "action": "⬜ e2e 보강 backlog(7) 작성: pod-describe/AC1·AC2·AC3(파드 describe 신규 e2e), platform-auth-safety/AC1(미인증 거부)·AC2(디스커버리 엔드포인트)·AC7(API 키 게이트)·AC8(env-게이팅 다중 구성) — 각 목표 통합 파일 + 단정 핵심 명시.",
-          "expectedOutcome": "e2e 가능·공백 7건 각각 목표 파일·단정이 명세되어 후속 task가 착수 가능."
-        },
-        {
-          "seq": 5,
-          "action": "🚫 e2e 예외 후보(13) 목록 작성 + 모델 정의 개정 제안: 파괴적 작업 표기 5(dear-baby/AC3·os-delete/AC3·os-put/AC3·workload-restart/AC2·workload-scale/AC3), 미설정 graceful 거부 6(aws-config/AC3·github/AC3·grafana/AC3·os-delete/AC5·os-put/AC5·os-search/AC4), 출력 비노출 1(grafana/AC4), 정적 매니페스트 1(platform/AC4). 각 사유+대체검증(Go 단위/정적 리뷰). to-be governance라 정의에 일방 적용하지 않고 붙여넣기용 초안으로 제안.",
-          "expectedOutcome": "예외 후보 13건 각 사유·대체검증 명시. 모델 정의(to-be-models.json) 예외 목록 개정 초안 제공 — 별도 ratify."
-        },
-        {
-          "seq": 6,
-          "action": "검증: (i) 레지스트리가 52 AC 전부 분류(누락 0), (ii) ✅ 32건이 실재 tests/integration 파일과 일치, (iii) 통합 파일 7개 다중 AC 공유 사실이 표에 드러남(rule 1/2 미충족은 후속 리팩터로 명시), (iv) backlog 7·예외 13 합 20 = 공백(17 단위+3 정적), (v) tests/ 미변경 확인. doc-tracker 변경은 to-be(prd)·as-is(tests) 해시 불변이라 재트리거 없음.",
-          "expectedOutcome": "52 AC 분류·파일 정합 확인, 공백 20건 backlog/예외로 완전 커버, tests/ 무변경. 규약·계획·예외 제안 문서 완결. converged=false(전용 케이스 리팩터는 후속)."
+        "review": {
+          "required": true,
+          "status": "rejected",
+          "reason": "기술 위험은 낮다 — PR #31은 docs/doc-tracker.md 단일 파일 추가(+99)뿐이고 CI 4종(fmt+vet·unit·integration·docker build) 전부 그린, tests/·prd 미변경이라 추적 해시 불변·완전 가역이다. 그럼에도 검토가 필요한 이유: 산출물이 거버넌스 아티팩트다 — 52개 AC의 3분류(통합 32·보강 7·예외 후보 13), per-AC 케이스 식별 규약(후속 리팩터의 SSOT가 됨), 그리고 모델 정의 예외 개정 '제안'(13건)을 포함한다. 어떤 AC를 e2e 예외로 볼지·규약을 무엇으로 확정할지는 정의만으로 판단이 갈리는 정책 판단이며, 병합 즉시 이 표가 레지스트리 SSOT가 되므로 사람 승인 후 반영해야 한다. 또한 이 병합은 추적 해시를 바꾸지 않아 executor가 task를 명시적으로 종료 처리(converged=false)해야 하는 특수 케이스임도 승인 시점에 공유한다.",
+          "reviewer": "user",
+          "reviewedAt": "2026-07-12T10:42:51Z",
+          "comment": "거부 사유(사용자): AC-E2E 매핑 예외 항목 수정 필요 — PR #31이 등재한 🚫 예외 후보 13건의 항목 구성을 바꿔야 함. 재계획 시 사용자로부터 구체 항목(추가/제외/재분류)을 확인해 레지스트리·정의 개정 제안에 반영할 것."
         }
-      ],
-      "plannedAt": "2026-07-12T09:45:24Z",
-      "executionGuide": "## 실행 순서\n1. PR #31 (dlddu/homelab-k3s-mcp, `reconcile/rct_20260712-0001` → `main`) 리뷰. 변경은 `docs/doc-tracker.md` 단일 파일(레지스트리·규약·backlog·예외 제안).\n2. 머지. **doc-tracker.md는 to-be(`prd-*.md`)·as-is(`tests/`) 해시를 바꾸지 않으므로 재감지가 트리거되지 않는다** — 이 task는 병합만으로 종료 상태가 갱신되지 않으니 executor가 명시적으로 완료 처리한다.\n\n## 검증 방법 (이 task의 완결 기준 — 문서 산출물)\n- 레지스트리가 52 AC 전부를 ✅ 통합 e2e(32) / ⬜ 보강(7) / 🚫 예외 후보(13)로 분류(누락 0). 확인: doc-tracker \"AC 레지스트리 (52)\" 표 행 수 = 52.\n- ✅ 32건의 대응 파일이 실재 `tests/integration/*.py`와 일치(aws_config·dear_baby·github_app·grafana·opensearch·smoke·workload).\n- 통합 파일 7개가 다중 AC를 공유한다는 사실과 \"규칙 1·2 미충족 → per-AC 케이스 리팩터는 후속\"이 명문화됨.\n- backlog 7 + 예외 후보 13 = e2e 공백 20(단위-only 17 + 정적 3)과 일치.\n- `tests/` 무변경 확인: `git diff --stat main`에 `tests/` 파일 없음.\n\n## 주의사항 (converged 판정)\n- **converged=false**: 이 task는 규약·계획·예외 제안까지만 완결한다. AC별 전용 e2e 케이스(규칙 1·2)는 아직 없다. 아래 두 후속을 반드시 생성·핸드오프한다.\n  1. **테스트 리팩터/신설 task**: `tests/integration/`의 7개 평면 스크립트를 per-AC 케이스 함수로 분리(각 케이스 이름+docstring에 `AC: <domain>/ACn`) + ⬜ backlog 7건(pod-describe 3·platform auth 4) 신설. **kind 클러스터 CI에서 통합 테스트 그린 확인 후** 커밋. `test-*.md` 자동화 필드를 신설 케이스 경로로 갱신.\n  2. **모델 정의 예외 개정 task**(또는 tobe-modeler): 🚫 예외 후보 13건을 `to-be-models.json`의 `tbm_homelab-k3s-mcp-ac-e2e` definition 예외 목록에 반영. 반영 시 예외 AC는 \"e2e 없어도 drift 아님\"이 되어 잔여 공백이 backlog 7건으로 축소된다.\n- 예외 후보는 **제안**이다 — 정의에 반영 전에는 예외 AC도 e2e 공백으로 계수된다(레지스트리는 이를 🚫로 표시하되 정의 미반영 상태임을 명시).\n- 렌즈 유지: 리팩터 시에도 `internal/` Go 단위는 e2e가 아니다. 케이스는 `tests/integration/`에 둔다.\n\n## 롤백\n- 미병합: 브랜치 삭제로 무영향.\n- 병합 후: PR revert. 단일 문서 추가라 앱 런타임·CI·추적 해시에 영향 없음(완전 가역)."
-    },
-    "preparation": {
-      "prepared": true,
-      "repository": "dlddu/homelab-k3s-mcp",
-      "branch": "reconcile/rct_20260712-0001",
-      "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/31",
-      "preparedAt": "2026-07-12T09:48:36Z",
-      "notes": "규약 확정+보강 계획+예외 제안(문서 기반) 스코프. 변경: docs/doc-tracker.md 단일 파일에 reconciler 렌즈 서브섹션 신설(52 AC 분류 ✅통합32·⬜보강7·🚫예외후보13, per-AC 케이스 식별 규약, 보강 backlog 7, 예외 후보 13+대체검증, 모델 정의 예외 개정 제안). tests/ 미변경 → to-be(prd)·as-is(tests) 해시 불변, 재감지 트리거 없음, CI 무해. 전용 per-AC 케이스 리팩터·신설(kind CI 검증 필요)과 정의 예외 개정은 후속·ratify. 머지 미실행 — executor 검토·병합 대기."
-    },
-    "review": {
-      "required": true,
-      "status": "rejected",
-      "reason": "기술 위험은 낮다 — PR #31은 docs/doc-tracker.md 단일 파일 추가(+99)뿐이고 CI 4종(fmt+vet·unit·integration·docker build) 전부 그린, tests/·prd 미변경이라 추적 해시 불변·완전 가역이다. 그럼에도 검토가 필요한 이유: 산출물이 거버넌스 아티팩트다 — 52개 AC의 3분류(통합 32·보강 7·예외 후보 13), per-AC 케이스 식별 규약(후속 리팩터의 SSOT가 됨), 그리고 모델 정의 예외 개정 '제안'(13건)을 포함한다. 어떤 AC를 e2e 예외로 볼지·규약을 무엇으로 확정할지는 정의만으로 판단이 갈리는 정책 판단이며, 병합 즉시 이 표가 레지스트리 SSOT가 되므로 사람 승인 후 반영해야 한다. 또한 이 병합은 추적 해시를 바꾸지 않아 executor가 task를 명시적으로 종료 처리(converged=false)해야 하는 특수 케이스임도 승인 시점에 공유한다.",
-      "reviewer": "user",
-      "reviewedAt": "2026-07-12T10:42:51Z",
-      "comment": "거부 사유(사용자): AC-E2E 매핑 예외 항목 수정 필요 — PR #31이 등재한 🚫 예외 후보 13건의 항목 구성을 바꿔야 함. 재계획 시 사용자로부터 구체 항목(추가/제외/재분류)을 확인해 레지스트리·정의 개정 제안에 반영할 것."
-    }
+      }
+    ],
+    "createdAt": "2026-07-12T06:20:32Z",
+    "updatedAt": "2026-07-12T10:46:40Z"
   }
 ]

@@ -18,8 +18,6 @@
         "currentVersion": "92d433d4cde8f035ed99af689fb86d46a7239ade"
       }
     },
-    "createdAt": "2026-07-12T06:25:23Z",
-    "updatedAt": "2026-07-15T09:57:55Z",
     "stateSummary": {
       "asIs": "**관측 시각** 2026-07-12T06:26:08Z · **dear-baby@main** HEAD `3980a38`(2026-07-12T04:14Z) · **as-is 버전** `92d433d`(e2e 트리)\n\n### flow 전집\n`e2e/maestro/` 최상위 `*.yaml` **21개**(+`subflows/` 헬퍼, 매칭 단위 아님).\n\n### 헤더 선언 실측\n- **AC ID를 헤더에 선언한 flow 15개**: 단일 AC 10개(diary-delete-confirm→AC-008-06, diary-detail-and-back→04, diary-edit→05, diary-filter-by-child→08, diary-visibility-toggle→07, home-book-progress→AC-007-07, home-record-modal-entry→AC-007-06, home-voice-record→AC-007-06, onboarding-caseA→AC-006-02, onboarding-caseB→AC-006-03) + **다중 AC 묶음 5개**(diary-list-multichild→AC-008-01·02·03·10, home-question-card-undecided→AC-007-01·03·04·06, home-record-ctas→AC-007-01·03·04·06, diary-list-empty→AC-008-09·10, home-feed→AC-007-08·09).\n- **비-AC 선언 2개**: login.yaml→ENG-003(엔지니어링 노트), health.yaml(스모크) — 둘 다 doc-tracker \"e2e flow 매핑\" 표에 등재됨(실제와 일치).\n- **AC ID 무선언 4개**: home-header-multichild(헤더에 `PRD-007 TC-007-02-B`만), home-header-notification-dot(`TC-007-03`만), home-nav-5tabs(`TC-007-10`만), onboarding-caseC(서술만, Case C 진입 흐름 — 추정 AC-006-04). TC ID는 TEST-007에서 AC-007-02/03/10으로 역추적 가능하나 헤더의 AC 선언 규칙(규칙 1·2·등재 규칙) 형식은 미충족.\n\n### 중복 선언\n2개 이상 flow가 선언한 AC 5건 — **AC-007-06은 4개 flow**(question-card·record-ctas·record-modal-entry·voice-record), AC-007-01·03·04 각 2개, AC-008-10 2개.",
       "toBe": "**관측 시각** 2026-07-12T06:26:08Z · **to-be 버전** `prd:3e2ca11 tracker:73636f8`\n\n### AC 전집 (SSOT: docs/prd/ 8종)\n**55개** — PRD-001 5·PRD-002 4·PRD-003 4·PRD-004 4·PRD-005 8·PRD-006 10·PRD-007 10·PRD-008 10.\n\n### 예외·매핑 등재 (SSOT: docs/doc-tracker.md \"e2e flow 매핑\" 섹션)\n- 등재 규칙 존재: flow는 제품 AC / 엔지니어링 노트 / 예외(스모크·인프라) 중 하나에 매핑, 헤더 `검증 대상:` 주석 + 표 등재.\n- 현재 표에는 **비-AC 3행만** 등재(login→ENG-003, subflows/tester-login→헬퍼, health→스모크 예외).\n- **AC 예외 목록은 부재** — e2e 자동화 곤란 AC(푸시 실수신, 실물 책 제작·배송, AI 산출물 품질, 외부 OAuth 등)의 사유·대체 검증 수단 등재가 아직 없어, flow 없는 AC는 전부 공백으로 계수된다.\n- tracker 건강 요약(PRD 8·AC 55·고아 e2e 0건)은 자체 분류 기준으로는 실제와 일치.",
@@ -32,59 +30,65 @@
       "assessedBy": "agent",
       "assessedAt": "2026-07-12T06:26:09Z"
     },
-    "plan": {
-      "summary": "재계획(사용자 리뷰 거부 2건 반영). 스코프는 #153과 동일한 '기반 확립 + 안전한 구조 정리(문서 + flow 헤더 + flow 1건 교체)'이되 거부 사유를 해소한다. ① **예외 항목 재구성(12→7)** — 예외를 'Maestro e2e 로 본질적으로 구동 불가'한 것만으로 한정: 유지 7건(실푸시 AC-002-04·006-05, AI 산출 품질 003-01·005-08, 실결제 004-03, 실카메라 캡처 005-01·005-03 — 오디오와 달리 fixture 없음). e2e-able core 가 있는 5건은 후속 backlog 로 재분류(001-02 canned-transcript fixture / 003-04 결정적 편집 UI / 004-04 스텁 상태표시 / 007-09 공개·본인제외·비식별 단정 / 002-02 알고리즘 미확정 blocked). 사용자 확인 완료. ② **CI 결함 해소** — #153은 워크플로(e2e-android/ios)가 run_flow 로 호출하는 CI-green flow home-record-ctas 를 삭제해 PR head CI 가 깨졌다. 삭제 대상을 CI 미실행인 home-record-modal-entry 로 교정하고 ctas 를 AC-007-06 단독 소유로 유지 → 워크플로 무수정으로 해소(가장 안전, 미검증 flow first-run 리스크 없음). 결과 매핑 ✅18·🟡7·⬜30. 문서 + YAML 헤더 + flow 1건 교체뿐이라 CI-무해·완전 가역. 완전 1:1(새 flow 30건)은 앱 구동 검증이 필요해 후속 task.",
-      "riskLevel": "low",
-      "steps": [
-        {
-          "seq": 1,
-          "action": "docs/doc-tracker.md의 'e2e flow 매핑' 섹션을 확장해 55개 AC ↔ flow 매핑 표를 신설한다. 각 AC를 (flow 보유 / 예외 등재 / 후속-미작성) 중 하나로 분류하고, flow 보유 AC는 대응 최상위 flow 파일명을 명시.",
-          "expectedOutcome": "매핑 표가 55개 AC를 빠짐없이 분류. 각 제품 flow가 정확히 1개 AC에 대응."
+    "attempts": [
+      {
+        "plan": {
+          "summary": "재계획(사용자 리뷰 거부 2건 반영). 스코프는 #153과 동일한 '기반 확립 + 안전한 구조 정리(문서 + flow 헤더 + flow 1건 교체)'이되 거부 사유를 해소한다. ① **예외 항목 재구성(12→7)** — 예외를 'Maestro e2e 로 본질적으로 구동 불가'한 것만으로 한정: 유지 7건(실푸시 AC-002-04·006-05, AI 산출 품질 003-01·005-08, 실결제 004-03, 실카메라 캡처 005-01·005-03 — 오디오와 달리 fixture 없음). e2e-able core 가 있는 5건은 후속 backlog 로 재분류(001-02 canned-transcript fixture / 003-04 결정적 편집 UI / 004-04 스텁 상태표시 / 007-09 공개·본인제외·비식별 단정 / 002-02 알고리즘 미확정 blocked). 사용자 확인 완료. ② **CI 결함 해소** — #153은 워크플로(e2e-android/ios)가 run_flow 로 호출하는 CI-green flow home-record-ctas 를 삭제해 PR head CI 가 깨졌다. 삭제 대상을 CI 미실행인 home-record-modal-entry 로 교정하고 ctas 를 AC-007-06 단독 소유로 유지 → 워크플로 무수정으로 해소(가장 안전, 미검증 flow first-run 리스크 없음). 결과 매핑 ✅18·🟡7·⬜30. 문서 + YAML 헤더 + flow 1건 교체뿐이라 CI-무해·완전 가역. 완전 1:1(새 flow 30건)은 앱 구동 검증이 필요해 후속 task.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "docs/doc-tracker.md의 'e2e flow 매핑' 섹션을 확장해 55개 AC ↔ flow 매핑 표를 신설한다. 각 AC를 (flow 보유 / 예외 등재 / 후속-미작성) 중 하나로 분류하고, flow 보유 AC는 대응 최상위 flow 파일명을 명시.",
+              "expectedOutcome": "매핑 표가 55개 AC를 빠짐없이 분류. 각 제품 flow가 정확히 1개 AC에 대응."
+            },
+            {
+              "seq": 2,
+              "action": "doc-tracker AC 예외 목록을 12→7로 재정비한다(예외 = 본질적 e2e 구동 불가만; 사유+대체검증): AC-002-04·AC-006-05(푸시 실발송→스케줄러 단위/수동 QA), AC-003-01·AC-005-08(AI 산출 품질→프롬프트/연동 단위/수동 QA), AC-004-03(실결제→샌드박스 통합/수동 QA), AC-005-01·AC-005-03(실카메라 캡처, 오디오와 달리 maestro fixture 없음→핸들러 단위/수동 QA). 재분류 5건(001-02·003-04·004-04·007-09·002-02)은 step 5 backlog로 이동.",
+              "expectedOutcome": "예외 7건 각 '본질적 e2e 불가' 사유·대체검증 명시. 등재 예외는 flow 없어도 drift 아님. 반려 원인(과다 예외)이 해소된다."
+            },
+            {
+              "seq": 3,
+              "action": "TC ID·서술만 있던 flow 4건의 헤더에 '검증 대상: AC-...' 선언을 추가해 정규화: home-header-multichild→AC-007-02, home-header-notification-dot→AC-007-03, home-nav-5tabs→AC-007-10, onboarding-caseC→AC-006-04.",
+              "expectedOutcome": "4개 flow 모두 헤더에 단일 AC ID 선언 보유(형식 위반 0). 참조하는 AC는 실재."
+            },
+            {
+              "seq": 4,
+              "action": "중복·묶음을 헤더 단일-AC 재선언으로 정리(규칙 1·2) + CI 결함 해소: AC-007-06 4중 → home-record-ctas 단독 소유(main 버전 복원 후 헤더를 AC-007-06으로 재선언)로 두고 CI 미실행 트윈 home-record-modal-entry.yaml 삭제 — #153이 워크플로가 run_flow 로 호출하는 ctas 를 삭제해 CI 를 깨뜨린 결함을 교정한다(.github/workflows 무수정); home-voice-record 헤더 → AC-001-01 재배치(+007-06 참조를 ctas 로 정정); home-question-card-undecided → AC-007-04; diary-list-multichild → AC-008-01; diary-list-empty → AC-008-09; home-feed → AC-007-08(007-09 예외 표기 → 후속 flow 표기). 각 flow 헤더가 정확히 1개 주검증 AC만 선언하게 한다.",
+              "expectedOutcome": "AC 중복 선언 0건, 다중-AC 묶음 헤더 0건. AC-007-06 = home-record-ctas 단독(워크플로 실행 flow → CI 커버 유지). 삭제 대상(modal-entry)이 CI 미참조라 PR head CI 무영향. PRD-001은 voice-record로 첫 flow 확보."
+            },
+            {
+              "seq": 5,
+              "action": "정리로 표면화되는 자동화-가능-미작성 AC를 매핑 표에 backlog로 명세한다 — 목표 flow 파일명 + 단정할 핵심 내용 포함. 최소: AC-007-01(헤더 활성 아이 컨텍스트), AC-007-05(다른 질문 보기), AC-008-02(월 그룹)·AC-008-03(카드 칩)·AC-008-10(일기 헤더+네비), PRD-001 나머지(01·03·04·05)·PRD-005의 e2e 가능 항목 등.",
+              "expectedOutcome": "미작성 AC마다 후속 flow 스펙(파일명+단정)이 표에 존재. 후속 task가 그대로 착수 가능."
+            },
+            {
+              "seq": 6,
+              "action": "검증: (i) 매핑 표가 55개 AC 전부를 flow/예외/후속 중 하나로 분류(✅18·🟡7·⬜30), (ii) 모든 최상위 flow가 헤더에 정확히 1개 AC(또는 ENG-003/스모크 예외) 선언 — 중복 0·묶음 0, (iii) 참조 무결성(삭제된 modal-entry 잔존 live 참조 0, ctas 는 e2e-android/ios 두 워크플로에 등재 유지), (iv) login→ENG-003·health→스모크 등재 유지, (v) diff 가 docs/*.md + e2e/maestro/*.yaml 만(.github/workflows 무변). 새 flow 저작 없음 → 기존 e2e 그린 유지.",
+              "expectedOutcome": "55 AC 완전 분류, flow→AC 유일성 성립(제품 flow 기준), 참조 무결성 0 오류, 예외/ENG/스모크 등재 정합. 자동화-가능-미작성분만 backlog로 잔존(후속)."
+            }
+          ],
+          "plannedAt": "2026-07-15T09:20:00Z",
+          "executionGuide": "## 실행 순서\n1. PR #153 (dlddu/dear-baby, `reconcile/rct_20260712-0001` → `main`) 리뷰. 변경: `docs/doc-tracker.md`(매핑 표+예외+backlog) + `e2e/maestro/` 헤더 재선언 + `home-record-modal-entry.yaml` 삭제 + `home-record-ctas.yaml` 헤더(AC-007-06 단독). **`.github/workflows` 무변.**\n2. **CI 그린 확인** — 이전 거부의 핵심이 CI 결함(워크플로가 삭제된 flow 호출)이었다. 이번엔 삭제 flow(modal-entry)가 워크플로 미참조라 e2e-android·e2e-ios 가 그린이어야 한다. **레드면 머지 금지.** AC-007-06은 워크플로 실행 flow `home-record-ctas`가 커버.\n3. squash merge. 병합 시 to-be(prd+tracker)·as-is(e2e 트리)가 모두 바뀌므로 재감지가 돌면 1:1 재검증된다.\n\n## 검증 방법 (수렴 판정)\n- **매핑 완전성**: `docs/doc-tracker.md`의 \"AC ↔ e2e flow 매핑\" 표가 55개 AC 전부를 ✅18/🟡7/⬜30로 분류(누락 0).\n- **flow→AC 유일성**: 최상위 제품 flow 18개가 각각 헤더에 정확히 1개 AC 선언(중복·묶음 0). `login`→ENG-003·`health`→스모크 예외. 확인: `for f in e2e/maestro/*.yaml; do grep -m1 -E '검증 대상|AC-[0-9]{3}|ENG-|스모크' \"$f\"; done`\n- **참조 무결성**: 매핑 표·헤더가 실재 flow/AC만 참조. 삭제된 `home-record-modal-entry`의 live 참조 0(변경이력 기록만); `home-record-ctas`는 두 워크플로에 등재 유지. 확인: `grep -rn home-record-modal-entry docs/ e2e/ .github/` → 변경이력 1행만.\n- **예외/후속 명세**: 예외 7건 각 '본질적 e2e 불가' 사유+대체검증, 후속 30건 각 목표 flow명+단정 존재.\n- **diff 범위**: `git diff <머지 전>..main --name-only` = docs/*.md + e2e/maestro/*.yaml 만(.github/workflows·app 코드 무변).\n\n## 주의사항\n- **부분 수렴**: 이 task는 완전 1:1에 도달하지 않는다. 후속 backlog 30건(새 maestro flow)은 예외 아님. `verification.converged`는 **false**로 두고, 남은 30건의 새 maestro flow 저작을 후속 task로 생성·핸드오프한다.\n- 헤더 재선언은 flow 실행 동작을 바꾸지 않는다(주석만). 묶음 flow는 여전히 부수 AC 화면을 경유하나 규칙 2(\"헤더 선언 대상만 계수\")상 정합.\n- 새 flow는 앱 구동·디바이스 픽스처(예: `EXPO_PUBLIC_E2E_AUDIO_FIXTURE`) 검증이 필요해 이 PR에서 제외했다 — 후속 task는 반드시 구동 검증 후 커밋.\n\n## 롤백\n- 미병합: 브랜치 삭제로 무영향.\n- 병합 후: PR revert. 문서+YAML 헤더+flow 1건 교체(ctas 유지·modal-entry 삭제)뿐이라 앱 런타임/CI 동작 불변(가역). modal-entry 복원이 필요하면 revert가 파일을 되살린다."
         },
-        {
-          "seq": 2,
-          "action": "doc-tracker AC 예외 목록을 12→7로 재정비한다(예외 = 본질적 e2e 구동 불가만; 사유+대체검증): AC-002-04·AC-006-05(푸시 실발송→스케줄러 단위/수동 QA), AC-003-01·AC-005-08(AI 산출 품질→프롬프트/연동 단위/수동 QA), AC-004-03(실결제→샌드박스 통합/수동 QA), AC-005-01·AC-005-03(실카메라 캡처, 오디오와 달리 maestro fixture 없음→핸들러 단위/수동 QA). 재분류 5건(001-02·003-04·004-04·007-09·002-02)은 step 5 backlog로 이동.",
-          "expectedOutcome": "예외 7건 각 '본질적 e2e 불가' 사유·대체검증 명시. 등재 예외는 flow 없어도 drift 아님. 반려 원인(과다 예외)이 해소된다."
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/dear-baby",
+          "branch": "reconcile/rct_20260712-0001",
+          "pullRequestUrl": "https://github.com/dlddu/dear-baby/pull/153",
+          "preparedAt": "2026-07-15T09:20:00Z",
+          "notes": "재계획(rct_20260712-0001) — 사용자 거부 2건 반영해 PR #153 갱신(브랜치 reconcile/rct_20260712-0001 재사용, HEAD c983df8). ① 예외 12→7 재정비(예외=본질적 e2e 불가만; 001-02·003-04·004-04·007-09·002-02 를 후속 backlog 로 재분류). ② CI 결함 해소: 삭제 대상을 home-record-ctas→home-record-modal-entry 로 교정 — ctas 는 e2e-android/ios 워크플로가 run_flow 로 호출하는 CI-green flow 라 AC-007-06 단독으로 유지, modal-entry 는 CI 미실행이라 삭제 → .github/workflows 무수정으로 CI 결함 해소. 변경 파일: docs/doc-tracker.md(매핑 ✅18·🟡7·⬜30) + e2e/maestro 헤더 재선언 + home-record-modal-entry.yaml 삭제. PR #153 본문·재계획 코멘트 갱신 완료. 머지·CI 그린 확인은 executor 단계. 후속 backlog 30건(새 maestro flow)은 별도 task."
         },
-        {
-          "seq": 3,
-          "action": "TC ID·서술만 있던 flow 4건의 헤더에 '검증 대상: AC-...' 선언을 추가해 정규화: home-header-multichild→AC-007-02, home-header-notification-dot→AC-007-03, home-nav-5tabs→AC-007-10, onboarding-caseC→AC-006-04.",
-          "expectedOutcome": "4개 flow 모두 헤더에 단일 AC ID 선언 보유(형식 위반 0). 참조하는 AC는 실재."
-        },
-        {
-          "seq": 4,
-          "action": "중복·묶음을 헤더 단일-AC 재선언으로 정리(규칙 1·2) + CI 결함 해소: AC-007-06 4중 → home-record-ctas 단독 소유(main 버전 복원 후 헤더를 AC-007-06으로 재선언)로 두고 CI 미실행 트윈 home-record-modal-entry.yaml 삭제 — #153이 워크플로가 run_flow 로 호출하는 ctas 를 삭제해 CI 를 깨뜨린 결함을 교정한다(.github/workflows 무수정); home-voice-record 헤더 → AC-001-01 재배치(+007-06 참조를 ctas 로 정정); home-question-card-undecided → AC-007-04; diary-list-multichild → AC-008-01; diary-list-empty → AC-008-09; home-feed → AC-007-08(007-09 예외 표기 → 후속 flow 표기). 각 flow 헤더가 정확히 1개 주검증 AC만 선언하게 한다.",
-          "expectedOutcome": "AC 중복 선언 0건, 다중-AC 묶음 헤더 0건. AC-007-06 = home-record-ctas 단독(워크플로 실행 flow → CI 커버 유지). 삭제 대상(modal-entry)이 CI 미참조라 PR head CI 무영향. PRD-001은 voice-record로 첫 flow 확보."
-        },
-        {
-          "seq": 5,
-          "action": "정리로 표면화되는 자동화-가능-미작성 AC를 매핑 표에 backlog로 명세한다 — 목표 flow 파일명 + 단정할 핵심 내용 포함. 최소: AC-007-01(헤더 활성 아이 컨텍스트), AC-007-05(다른 질문 보기), AC-008-02(월 그룹)·AC-008-03(카드 칩)·AC-008-10(일기 헤더+네비), PRD-001 나머지(01·03·04·05)·PRD-005의 e2e 가능 항목 등.",
-          "expectedOutcome": "미작성 AC마다 후속 flow 스펙(파일명+단정)이 표에 존재. 후속 task가 그대로 착수 가능."
-        },
-        {
-          "seq": 6,
-          "action": "검증: (i) 매핑 표가 55개 AC 전부를 flow/예외/후속 중 하나로 분류(✅18·🟡7·⬜30), (ii) 모든 최상위 flow가 헤더에 정확히 1개 AC(또는 ENG-003/스모크 예외) 선언 — 중복 0·묶음 0, (iii) 참조 무결성(삭제된 modal-entry 잔존 live 참조 0, ctas 는 e2e-android/ios 두 워크플로에 등재 유지), (iv) login→ENG-003·health→스모크 등재 유지, (v) diff 가 docs/*.md + e2e/maestro/*.yaml 만(.github/workflows 무변). 새 flow 저작 없음 → 기존 e2e 그린 유지.",
-          "expectedOutcome": "55 AC 완전 분류, flow→AC 유일성 성립(제품 flow 기준), 참조 무결성 0 오류, 예외/ENG/스모크 등재 정합. 자동화-가능-미작성분만 backlog로 잔존(후속)."
+        "review": {
+          "required": true,
+          "status": "rejected",
+          "reason": "직전 사이클에서 사용자 검토 거부 이력이 있는 재계획 재시도다. 기술 위험 자체는 낮으나(docs 매핑 표+e2e 헤더 재선언+CI 미실행 flow 1건 삭제, revert 가역) 거부 사유 2건 — ① CI 결함(워크플로가 삭제 flow 호출): 삭제 대상을 home-record-ctas→home-record-modal-entry(CI 미참조)로 교정해 .github/workflows 무수정으로 해소, ② 예외 12→7 재정비 — 이 실제로 해소됐는지는 거부 당사자인 사용자가 확인해야 한다. e2e 테스트 자산 삭제 1건 포함이므로 사람 승인 게이트 유지. 사전 점검: PR #153 head c983df8, E2E(Android·iOS) 재실행 in_progress — 머지 전 그린 필수.",
+          "reviewer": "dlddu",
+          "reviewedAt": "2026-07-15T09:57:55Z",
+          "comment": "반려(사유 미기재)"
         }
-      ],
-      "plannedAt": "2026-07-15T09:20:00Z",
-      "executionGuide": "## 실행 순서\n1. PR #153 (dlddu/dear-baby, `reconcile/rct_20260712-0001` → `main`) 리뷰. 변경: `docs/doc-tracker.md`(매핑 표+예외+backlog) + `e2e/maestro/` 헤더 재선언 + `home-record-modal-entry.yaml` 삭제 + `home-record-ctas.yaml` 헤더(AC-007-06 단독). **`.github/workflows` 무변.**\n2. **CI 그린 확인** — 이전 거부의 핵심이 CI 결함(워크플로가 삭제된 flow 호출)이었다. 이번엔 삭제 flow(modal-entry)가 워크플로 미참조라 e2e-android·e2e-ios 가 그린이어야 한다. **레드면 머지 금지.** AC-007-06은 워크플로 실행 flow `home-record-ctas`가 커버.\n3. squash merge. 병합 시 to-be(prd+tracker)·as-is(e2e 트리)가 모두 바뀌므로 재감지가 돌면 1:1 재검증된다.\n\n## 검증 방법 (수렴 판정)\n- **매핑 완전성**: `docs/doc-tracker.md`의 \"AC ↔ e2e flow 매핑\" 표가 55개 AC 전부를 ✅18/🟡7/⬜30로 분류(누락 0).\n- **flow→AC 유일성**: 최상위 제품 flow 18개가 각각 헤더에 정확히 1개 AC 선언(중복·묶음 0). `login`→ENG-003·`health`→스모크 예외. 확인: `for f in e2e/maestro/*.yaml; do grep -m1 -E '검증 대상|AC-[0-9]{3}|ENG-|스모크' \"$f\"; done`\n- **참조 무결성**: 매핑 표·헤더가 실재 flow/AC만 참조. 삭제된 `home-record-modal-entry`의 live 참조 0(변경이력 기록만); `home-record-ctas`는 두 워크플로에 등재 유지. 확인: `grep -rn home-record-modal-entry docs/ e2e/ .github/` → 변경이력 1행만.\n- **예외/후속 명세**: 예외 7건 각 '본질적 e2e 불가' 사유+대체검증, 후속 30건 각 목표 flow명+단정 존재.\n- **diff 범위**: `git diff <머지 전>..main --name-only` = docs/*.md + e2e/maestro/*.yaml 만(.github/workflows·app 코드 무변).\n\n## 주의사항\n- **부분 수렴**: 이 task는 완전 1:1에 도달하지 않는다. 후속 backlog 30건(새 maestro flow)은 예외 아님. `verification.converged`는 **false**로 두고, 남은 30건의 새 maestro flow 저작을 후속 task로 생성·핸드오프한다.\n- 헤더 재선언은 flow 실행 동작을 바꾸지 않는다(주석만). 묶음 flow는 여전히 부수 AC 화면을 경유하나 규칙 2(\"헤더 선언 대상만 계수\")상 정합.\n- 새 flow는 앱 구동·디바이스 픽스처(예: `EXPO_PUBLIC_E2E_AUDIO_FIXTURE`) 검증이 필요해 이 PR에서 제외했다 — 후속 task는 반드시 구동 검증 후 커밋.\n\n## 롤백\n- 미병합: 브랜치 삭제로 무영향.\n- 병합 후: PR revert. 문서+YAML 헤더+flow 1건 교체(ctas 유지·modal-entry 삭제)뿐이라 앱 런타임/CI 동작 불변(가역). modal-entry 복원이 필요하면 revert가 파일을 되살린다."
-    },
-    "preparation": {
-      "prepared": true,
-      "repository": "dlddu/dear-baby",
-      "branch": "reconcile/rct_20260712-0001",
-      "pullRequestUrl": "https://github.com/dlddu/dear-baby/pull/153",
-      "preparedAt": "2026-07-15T09:20:00Z",
-      "notes": "재계획(rct_20260712-0001) — 사용자 거부 2건 반영해 PR #153 갱신(브랜치 reconcile/rct_20260712-0001 재사용, HEAD c983df8). ① 예외 12→7 재정비(예외=본질적 e2e 불가만; 001-02·003-04·004-04·007-09·002-02 를 후속 backlog 로 재분류). ② CI 결함 해소: 삭제 대상을 home-record-ctas→home-record-modal-entry 로 교정 — ctas 는 e2e-android/ios 워크플로가 run_flow 로 호출하는 CI-green flow 라 AC-007-06 단독으로 유지, modal-entry 는 CI 미실행이라 삭제 → .github/workflows 무수정으로 CI 결함 해소. 변경 파일: docs/doc-tracker.md(매핑 ✅18·🟡7·⬜30) + e2e/maestro 헤더 재선언 + home-record-modal-entry.yaml 삭제. PR #153 본문·재계획 코멘트 갱신 완료. 머지·CI 그린 확인은 executor 단계. 후속 backlog 30건(새 maestro flow)은 별도 task."
-    },
-    "review": {
-      "required": true,
-      "status": "rejected",
-      "reason": "직전 사이클에서 사용자 검토 거부 이력이 있는 재계획 재시도다. 기술 위험 자체는 낮으나(docs 매핑 표+e2e 헤더 재선언+CI 미실행 flow 1건 삭제, revert 가역) 거부 사유 2건 — ① CI 결함(워크플로가 삭제 flow 호출): 삭제 대상을 home-record-ctas→home-record-modal-entry(CI 미참조)로 교정해 .github/workflows 무수정으로 해소, ② 예외 12→7 재정비 — 이 실제로 해소됐는지는 거부 당사자인 사용자가 확인해야 한다. e2e 테스트 자산 삭제 1건 포함이므로 사람 승인 게이트 유지. 사전 점검: PR #153 head c983df8, E2E(Android·iOS) 재실행 in_progress — 머지 전 그린 필수.",
-      "reviewer": "dlddu",
-      "reviewedAt": "2026-07-15T09:57:55Z",
-      "comment": "반려(사유 미기재)"
-    }
+      }
+    ],
+    "createdAt": "2026-07-12T06:25:23Z",
+    "updatedAt": "2026-07-15T09:57:55Z"
   }
 ]

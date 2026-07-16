@@ -520,57 +520,62 @@
       sections += sec("판단", "assessment", abody);
     }
 
-    if (t.plan) {
-      var p = t.plan;
-      var steps = (p.steps || []).map(function (s) {
-        return "<li><b>#" + s.seq + "</b> " + escapeHtml(s.action) +
-          (s.expectedOutcome ? '<div class="muted small">→ ' + escapeHtml(s.expectedOutcome) + "</div>" : "") + "</li>";
-      }).join("");
-      var pbody =
-        (p.summary ? '<div class="prose">' + md(p.summary) + "</div>" : "") +
-        "<ol class=\"steps\">" + steps + "</ol>" +
-        '<div class="meta small muted">' + (p.riskLevel ? "risk: " + escapeHtml(p.riskLevel) + " · " : "") + fmtDate(p.plannedAt) + "</div>";
-      sections += sec("계획", "plan" + (p.riskLevel ? " · risk " + p.riskLevel : ""), pbody);
-    }
+    (t.attempts || []).forEach(function (at, ai, arr) {
+      var atag = arr.length > 1 ? " · 시도 " + (ai + 1) + "/" + arr.length : "";
 
-    if (t.review) {
-      var r = t.review;
-      var rbody =
-        '<div class="kv"><span>필요</span><span>' + (r.required ? "예" : "아니오") + "</span></div>" +
-        '<div class="kv"><span>상태</span><span>' + escapeHtml(r.status || "—") + "</span></div>" +
-        (r.reason ? '<div class="prose" style="margin-top:6px">' + md(r.reason) + "</div>" : "") +
-        (r.comment ? '<div class="prose" style="margin-top:6px">' + md(r.comment) + "</div>" : "") +
-        '<div class="meta small muted">' + (r.reviewer ? escapeHtml(r.reviewer) + " · " : "") + fmtDate(r.reviewedAt) + "</div>";
-      sections += sec("검토", "review · " + (r.status || ""), rbody);
-    }
+      if (at.plan) {
+        var p = at.plan;
+        var steps = (p.steps || []).map(function (s) {
+          return "<li><b>#" + s.seq + "</b> " + escapeHtml(s.action) +
+            (s.expectedOutcome ? '<div class="muted small">→ ' + escapeHtml(s.expectedOutcome) + "</div>" : "") + "</li>";
+        }).join("");
+        var pbody =
+          (p.summary ? '<div class="prose">' + md(p.summary) + "</div>" : "") +
+          "<ol class=\"steps\">" + steps + "</ol>" +
+          '<div class="meta small muted">' + (p.riskLevel ? "risk: " + escapeHtml(p.riskLevel) + " · " : "") + fmtDate(p.plannedAt) + "</div>";
+        sections += sec("계획" + atag, "plan" + (p.riskLevel ? " · risk " + p.riskLevel : "") +
+          (at.reason ? " · after " + escapeHtml(at.reason) : ""), pbody);
+      }
 
-    if (t.execution) {
-      var e = t.execution;
-      var entries = (e.entries || []).map(function (en) {
-        return "<li>step #" + en.stepSeq + " — <b>" + escapeHtml(en.status) + "</b>" +
-          (en.log ? '<div class="muted small">' + escapeHtml(en.log) + "</div>" : "") + "</li>";
-      }).join("");
-      var ebody =
-        '<div class="kv"><span>상태</span><span>' + escapeHtml(e.status || "—") + "</span></div>" +
-        (entries ? '<ul class="entries">' + entries + "</ul>" : "") +
-        '<div class="meta small muted">' + fmtDate(e.startedAt) + (e.finishedAt ? " → " + fmtDate(e.finishedAt) : "") + "</div>";
-      sections += sec("실행", "execution · " + (e.status || ""), ebody);
-    }
+      if (at.review) {
+        var r = at.review;
+        var rbody =
+          '<div class="kv"><span>필요</span><span>' + (r.required ? "예" : "아니오") + "</span></div>" +
+          '<div class="kv"><span>상태</span><span>' + escapeHtml(r.status || "—") + "</span></div>" +
+          (r.reason ? '<div class="prose" style="margin-top:6px">' + md(r.reason) + "</div>" : "") +
+          (r.comment ? '<div class="prose" style="margin-top:6px">' + md(r.comment) + "</div>" : "") +
+          '<div class="meta small muted">' + (r.reviewer ? escapeHtml(r.reviewer) + " · " : "") + fmtDate(r.reviewedAt) + "</div>";
+        sections += sec("검토" + atag, "review · " + (r.status || ""), rbody);
+      }
 
-    if (t.verification) {
-      var v = t.verification;
-      var checks = (v.checks || []).map(function (c) {
-        return "<li><b>" + escapeHtml(c.status) + "</b> — " + escapeHtml(c.name) +
-          (c.detail ? '<div class="muted small">' + escapeHtml(c.detail) + "</div>" : "") + "</li>";
-      }).join("");
-      var vbody =
-        '<div class="kv"><span>상태</span><span>' + escapeHtml(v.status || "—") + "</span></div>" +
-        (typeof v.converged === "boolean" ? '<div class="kv"><span>converged</span><span>' + (v.converged ? "true" : "false") + "</span></div>" : "") +
-        (v.asIsVersionAfter !== undefined ? '<div class="kv"><span>as-is 이후</span><span>' + fmtVersion(v.asIsVersionAfter) + "</span></div>" : "") +
-        (checks ? '<ol class="checks">' + checks + "</ol>" : "") +
-        '<div class="meta small muted">' + fmtDate(v.verifiedAt) + "</div>";
-      sections += sec("검증", "verification · " + (v.status || ""), vbody);
-    }
+      if (at.execution) {
+        var e = at.execution;
+        var entries = (e.entries || []).map(function (en) {
+          return "<li>step #" + en.stepSeq + " — <b>" + escapeHtml(en.status) + "</b>" +
+            (en.log ? '<div class="muted small">' + escapeHtml(en.log) + "</div>" : "") + "</li>";
+        }).join("");
+        var ebody =
+          '<div class="kv"><span>상태</span><span>' + escapeHtml(e.status || "—") + "</span></div>" +
+          (entries ? '<ul class="entries">' + entries + "</ul>" : "") +
+          '<div class="meta small muted">' + fmtDate(e.startedAt) + (e.finishedAt ? " → " + fmtDate(e.finishedAt) : "") + "</div>";
+        sections += sec("실행" + atag, "execution · " + (e.status || ""), ebody);
+      }
+
+      if (at.verification) {
+        var v = at.verification;
+        var checks = (v.checks || []).map(function (c) {
+          return "<li><b>" + escapeHtml(c.status) + "</b> — " + escapeHtml(c.name) +
+            (c.detail ? '<div class="muted small">' + escapeHtml(c.detail) + "</div>" : "") + "</li>";
+        }).join("");
+        var vbody =
+          '<div class="kv"><span>상태</span><span>' + escapeHtml(v.status || "—") + "</span></div>" +
+          (typeof v.converged === "boolean" ? '<div class="kv"><span>converged</span><span>' + (v.converged ? "true" : "false") + "</span></div>" : "") +
+          (v.asIsVersionAfter !== undefined ? '<div class="kv"><span>as-is 이후</span><span>' + fmtVersion(v.asIsVersionAfter) + "</span></div>" : "") +
+          (checks ? '<ol class="checks">' + checks + "</ol>" : "") +
+          '<div class="meta small muted">' + fmtDate(v.verifiedAt) + "</div>";
+        sections += sec("검증" + atag, "verification · " + (v.status || ""), vbody);
+      }
+    });
 
     return '<div class="task">' +
       '<div class="task-head">' + statusBadge(t.status) + ' <code class="task-id">' + escapeHtml(t.id) + "</code> " + actionPill +
