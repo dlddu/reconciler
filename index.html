@@ -137,6 +137,8 @@
   .tag { font-size: 11.5px; background: var(--accent-weak); color: var(--accent); border-radius: 6px; padding: 2px 8px; font-weight: 500; }
   .chip { font-size: 11px; border: 1px solid var(--border-strong); border-radius: 6px; padding: 1px 7px; color: var(--muted); background: var(--panel-2); }
   .chip.side { text-transform: uppercase; letter-spacing: .03em; }
+  a.chip.prchip { color: var(--accent); border-color: var(--accent); background: var(--accent-weak); font-weight: 600; text-decoration: none; }
+  a.chip.prchip:hover { text-decoration: underline; }
 
   .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; margin: 26px 0 10px; }
 
@@ -481,6 +483,34 @@
     return String(v).replace(/\b([0-9a-f]{7,40})\b/gi, function (m) { return m.slice(0, 7); });
   }
 
+  // ---------- PR link helpers (attempts[].preparation.pullRequestUrl) ----------
+  function prShortLabel(url) {
+    var m = String(url).match(/\/pull\/(\d+)(?:[/?#]|$)/);
+    return m ? "#" + m[1] : "링크";
+  }
+
+  function prFullLabel(url) {
+    var m = String(url).match(/github\.com\/([^\/]+\/[^\/]+)\/pull\/(\d+)/);
+    if (m) return m[1] + "#" + m[2];
+    return String(url).replace(/^https?:\/\//, "");
+  }
+
+  function fmtPrLink(url) {
+    if (!url) return '<span class="muted">없음 · 직접 액션</span>';
+    return '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" title="' + escapeHtml(url) + '">' +
+      escapeHtml(prFullLabel(url)) + " ↗</a>";
+  }
+
+  // 마지막(현재) 시도부터 거슬러 올라가 가장 최근 PR 링크를 찾는다.
+  function latestPrUrl(t) {
+    var arr = t.attempts || [];
+    for (var i = arr.length - 1; i >= 0; i--) {
+      var p = arr[i] && arr[i].preparation;
+      if (p && p.pullRequestUrl) return p.pullRequestUrl;
+    }
+    return null;
+  }
+
   function sec(title, sub, bodyHtml, open) {
     return '<details class="sec"' + (open ? " open" : "") + "><summary>" + escapeHtml(title) +
       (sub ? ' <span class="muted small">' + sub + "</span>" : "") + '</summary><div class="sec-body">' + bodyHtml + "</div></details>";
@@ -537,6 +567,26 @@
           (at.reason ? " · after " + escapeHtml(at.reason) : ""), pbody);
       }
 
+      if (at.preparation) {
+        var pp = at.preparation;
+        var repoUrl = pp.repository ? "https://github.com/" + pp.repository : null;
+        var branchUrl = repoUrl && pp.branch ? repoUrl + "/tree/" + pp.branch : null;
+        var ppbody =
+          '<div class="kv"><span>prepared</span><span>' +
+            (pp.prepared === true ? "true" : pp.prepared === false ? "false" : '<span class="muted">—</span>') + "</span></div>" +
+          (pp.repository ? '<div class="kv"><span>레포</span><span>' +
+            (repoUrl ? '<a href="' + escapeHtml(repoUrl) + '" target="_blank" rel="noopener">' + escapeHtml(pp.repository) + "</a>"
+                     : escapeHtml(pp.repository)) + "</span></div>" : "") +
+          (pp.branch ? '<div class="kv"><span>브랜치</span><span>' +
+            (branchUrl ? '<a href="' + escapeHtml(branchUrl) + '" target="_blank" rel="noopener"><code>' + escapeHtml(pp.branch) + "</code></a>"
+                       : "<code>" + escapeHtml(pp.branch) + "</code>") + "</span></div>" : "") +
+          '<div class="kv"><span>PR</span><span>' + fmtPrLink(pp.pullRequestUrl) + "</span></div>" +
+          (pp.notes ? '<div class="prose" style="margin-top:6px">' + md(pp.notes) + "</div>" : "") +
+          '<div class="meta small muted">' + fmtDate(pp.preparedAt) + "</div>";
+        sections += sec("준비" + atag, "preparation · " +
+          (pp.pullRequestUrl ? "PR " + prShortLabel(pp.pullRequestUrl) : "PR 없음"), ppbody);
+      }
+
       if (at.review) {
         var r = at.review;
         var rbody =
@@ -577,8 +627,13 @@
       }
     });
 
+    var prUrl = latestPrUrl(t);
+    var prChip = prUrl
+      ? ' <a class="chip prchip" href="' + escapeHtml(prUrl) + '" target="_blank" rel="noopener" title="' + escapeHtml(prUrl) + '">PR ' + escapeHtml(prShortLabel(prUrl)) + ' ↗</a>'
+      : "";
+
     return '<div class="task">' +
-      '<div class="task-head">' + statusBadge(t.status) + ' <code class="task-id">' + escapeHtml(t.id) + "</code> " + actionPill +
+      '<div class="task-head">' + statusBadge(t.status) + ' <code class="task-id">' + escapeHtml(t.id) + "</code> " + actionPill + prChip +
         '<span class="spacer"></span><span class="muted small">detected ' + fmtDate(trig.detectedAt) + "</span></div>" +
       '<div class="task-trigger">변경: ' + (sides || "—") + " " + fmtTriggerVersions(trig) + "</div>" +
       (sections ? '<div class="task-body">' + sections + "</div>" : "") +
