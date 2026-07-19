@@ -86,10 +86,50 @@
           "reviewedAt": "2026-07-15T09:57:55Z",
           "comment": "반려(사유 미기재)"
         }
+      },
+      {
+        "reason": "review_rejected — 사용자 반려 2회(2차는 사유 미기재). 사용자 확인 결과 반려 우려는 'CI 깨짐'이었고, 그 원인(워크플로가 run_flow로 호출하는 home-record-ctas 삭제)은 2차 재계획에서 이미 교정됨. 현재 PR #153 head의 E2E(Android·iOS)·CI Success 모두 green 실측 확인. 지시: 같은 계획으로 재진행. 이번 추가 작업은 재베이스뿐 — 2차 이후 main 전진(PR #154, PRD-009 draft)이 docs/doc-tracker.md를 건드려 PR이 충돌(dirty)이 되어 최신 main에 병합해 해소.",
+        "plan": {
+          "summary": "3차 계획(사용자 반려 2회 후, '계획 그대로 진행' 지시). 접근·스코프는 2차와 동일: '기반 확립 + 안전한 구조 정리' = 문서 AC↔flow 매핑 표+예외 목록 + e2e 헤더 재선언 + CI 미실행 트윈 home-record-modal-entry.yaml 1건 삭제. 반려 사유로 지목된 CI 결함은 이미 해소되어 PR #153 head에서 E2E(Android·iOS)·CI Success green 실측. 이번 유일한 신규 작업은 재베이스: 2차 계획 이후 main이 f4154a7로 전진(PR #154, PRD-009 draft 편입)하며 doc-tracker.md를 건드려 PR이 충돌(dirty) 상태가 됐고, 최신 main에 병합해 해소했다(doc-tracker 요약의 e2e 1:1 라인 유지 + PRD-009 draft ⚠️ 건강상태·AC 68 카운트를 병합 반영; e2e/maestro 변경과 'e2e flow 매핑' 섹션은 무영향). 결과 매핑 ✅18·🟡7·⬜30. 완전 1:1(새 flow 30건)은 앱 구동 검증이 필요해 후속 task. 문서+YAML 헤더+flow 1건 삭제뿐이라 CI-무해·완전 가역.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "docs/doc-tracker.md의 'e2e flow 매핑' 섹션을 확장해 55개 AC ↔ flow 매핑 표를 신설한다. 각 AC를 (flow 보유 / 예외 등재 / 후속-미작성) 중 하나로 분류하고, flow 보유 AC는 대응 최상위 flow 파일명을 명시.",
+              "expectedOutcome": "매핑 표가 55개 AC를 빠짐없이 분류. 각 제품 flow가 정확히 1개 AC에 대응."
+            },
+            {
+              "seq": 2,
+              "action": "doc-tracker AC 예외 목록을 12→7로 재정비한다(예외 = 본질적 e2e 구동 불가만; 사유+대체검증): AC-002-04·AC-006-05(푸시 실발송→스케줄러 단위/수동 QA), AC-003-01·AC-005-08(AI 산출 품질→프롬프트/연동 단위/수동 QA), AC-004-03(실결제→샌드박스 통합/수동 QA), AC-005-01·AC-005-03(실카메라 캡처, 오디오와 달리 maestro fixture 없음→핸들러 단위/수동 QA). 재분류 5건(001-02·003-04·004-04·007-09·002-02)은 step 5 backlog로 이동.",
+              "expectedOutcome": "예외 7건 각 '본질적 e2e 불가' 사유·대체검증 명시. 등재 예외는 flow 없어도 drift 아님. 반려 원인(과다 예외)이 해소된다."
+            },
+            {
+              "seq": 3,
+              "action": "TC ID·서술만 있던 flow 4건의 헤더에 '검증 대상: AC-...' 선언을 추가해 정규화: home-header-multichild→AC-007-02, home-header-notification-dot→AC-007-03, home-nav-5tabs→AC-007-10, onboarding-caseC→AC-006-04.",
+              "expectedOutcome": "4개 flow 모두 헤더에 단일 AC ID 선언 보유(형식 위반 0). 참조하는 AC는 실재."
+            },
+            {
+              "seq": 4,
+              "action": "중복·묶음을 헤더 단일-AC 재선언으로 정리(규칙 1·2) + CI 결함 해소: AC-007-06 4중 → home-record-ctas 단독 소유(main 버전 복원 후 헤더를 AC-007-06으로 재선언)로 두고 CI 미실행 트윈 home-record-modal-entry.yaml 삭제 — #153이 워크플로가 run_flow 로 호출하는 ctas 를 삭제해 CI 를 깨뜨린 결함을 교정한다(.github/workflows 무수정); home-voice-record 헤더 → AC-001-01 재배치(+007-06 참조를 ctas 로 정정); home-question-card-undecided → AC-007-04; diary-list-multichild → AC-008-01; diary-list-empty → AC-008-09; home-feed → AC-007-08(007-09 예외 표기 → 후속 flow 표기). 각 flow 헤더가 정확히 1개 주검증 AC만 선언하게 한다.",
+              "expectedOutcome": "AC 중복 선언 0건, 다중-AC 묶음 헤더 0건. AC-007-06 = home-record-ctas 단독(워크플로 실행 flow → CI 커버 유지). 삭제 대상(modal-entry)이 CI 미참조라 PR head CI 무영향. PRD-001은 voice-record로 첫 flow 확보."
+            },
+            {
+              "seq": 5,
+              "action": "정리로 표면화되는 자동화-가능-미작성 AC를 매핑 표에 backlog로 명세한다 — 목표 flow 파일명 + 단정할 핵심 내용 포함. 최소: AC-007-01(헤더 활성 아이 컨텍스트), AC-007-05(다른 질문 보기), AC-008-02(월 그룹)·AC-008-03(카드 칩)·AC-008-10(일기 헤더+네비), PRD-001 나머지(01·03·04·05)·PRD-005의 e2e 가능 항목 등.",
+              "expectedOutcome": "미작성 AC마다 후속 flow 스펙(파일명+단정)이 표에 존재. 후속 task가 그대로 착수 가능."
+            },
+            {
+              "seq": 6,
+              "action": "검증: (i) 매핑 표가 55개 AC 전부를 flow/예외/후속 중 하나로 분류(✅18·🟡7·⬜30), (ii) 모든 최상위 flow가 헤더에 정확히 1개 AC(또는 ENG-003/스모크 예외) 선언 — 중복 0·묶음 0, (iii) 참조 무결성(삭제된 modal-entry 잔존 live 참조 0, ctas 는 e2e-android/ios 두 워크플로에 등재 유지), (iv) login→ENG-003·health→스모크 등재 유지, (v) diff 가 docs/*.md + e2e/maestro/*.yaml 만(.github/workflows 무변). 새 flow 저작 없음 → 기존 e2e 그린 유지.",
+              "expectedOutcome": "55 AC 완전 분류, flow→AC 유일성 성립(제품 flow 기준), 참조 무결성 0 오류, 예외/ENG/스모크 등재 정합. 자동화-가능-미작성분만 backlog로 잔존(후속)."
+            }
+          ],
+          "plannedAt": "2026-07-19T02:03:40Z"
+        }
       }
     ],
     "createdAt": "2026-07-12T06:25:23Z",
-    "updatedAt": "2026-07-15T09:57:55Z"
+    "updatedAt": "2026-07-19T02:03:40Z"
   },
   {
     "id": "rct_20260719-0001",
