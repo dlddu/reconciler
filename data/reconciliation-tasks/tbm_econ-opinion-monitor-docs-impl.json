@@ -123,6 +123,41 @@
           "reviewedAt": "2026-07-19T04:37:08Z",
           "comment": "거부. AC와 e2e 테스트가 1:1로 매핑되어야 함. (실행자 부기: 현 로드맵 절은 슬라이스별 대상 AC만 정의하고 각 AC에 대응하는 e2e 테스트 1:1 매핑은 포함하지 않는다 — 재계획 시 로드맵에 AC↔e2e 1:1 매핑 원칙을 반영한 뒤 재검토 필요.)"
         }
+      },
+      {
+        "reason": "review_rejected — 사용자 검토 거부(2026-07-19T04:37:08Z). 거부 사유: 'AC와 e2e 테스트가 1:1로 매핑되어야 함.' 직전 로드맵(PR #4)은 슬라이스별 대상 AC만 정의하고 각 AC↔e2e 테스트 1:1 매핑을 포함하지 않았으며, 일부 AC(AC3.5=슬라이스4·5, AC3.4=슬라이스6·7 재사용 등)가 복수 슬라이스에 중복 등장했다. 재계획: 로드맵 절에 (1) AC↔e2e 1:1 매핑 원칙 명문화, (2) 20개 AC 전수를 20개 e2e 테스트 케이스에 1:1로 배정한 매핑표 추가, (3) 슬라이스별 대상 AC 중복 제거(각 AC는 정확히 한 슬라이스가 소유)로 반영. docs-only·기존 PR #4 브랜치 갱신 유지.",
+        "plan": {
+          "summary": "재계획 스코프 = 직전 반려 사유(로드맵에 AC↔e2e 1:1 매핑 부재·슬라이스 간 AC 중복) 해소. docs/econ-opinion-monitor-doc-tracker.md의 '구현 수렴 로드맵' 절을 개정해 (A) AC↔e2e 1:1 매핑 원칙(각 AC는 정확히 1개 e2e 테스트 케이스가 검증하고 그 역도 성립; 케이스는 test 문서 3종의 시나리오에서 파생, tests/e2e/specs/*.spec.ts에 위치)을 명문화하고, (B) 20개 AC 전수를 test 문서가 이미 정의한 20개 1:1 시나리오(6+6+8)에 대응하는 20개 e2e 테스트 케이스에 배정한 매핑표를 추가하며, (C) 슬라이스별 '대상 AC'의 중복·재사용 표기를 제거해 각 AC가 정확히 한 슬라이스에만 소속되도록 정리한다(trace·reprocess 화면 슬라이스는 신규 AC 소유 없음으로 명시). docs-only PR(기존 PR #4 브랜치 갱신), 코드·제품 스펙·타 문서 무변. 이 경로를 택한 근거: test 문서가 이미 AC:시나리오=1:1(20:20)이라 매핑은 창작이 아니라 기존 시나리오의 e2e 케이스 명시화이고, 대시보드 수직 슬라이스 순서 전략은 여전히 유효하므로 유지한다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #4 브랜치(reconcile/rct_20260712-0001)를 최신 main 위로 재동기화한 뒤, doc-tracker.md '구현 수렴 로드맵' 절에 'AC↔e2e 1:1 매핑 원칙' 소절을 추가한다: 각 AC는 정확히 1개 e2e 테스트 케이스가 검증(AC→e2e), 각 e2e 케이스는 정확히 1개 AC를 검증(e2e→AC), 케이스는 test 문서 3종(test-ingestion/analysis/aggregation-viz)의 시나리오에서 1:1로 파생되어 tests/e2e/specs/*.spec.ts에 구현된다.",
+              "expectedOutcome": "로드맵 절에 원칙 소절이 존재하고, 모델 정의의 판정 기준 및 리뷰어가 요구한 'AC↔e2e 1:1' 규율과 문언이 일치한다."
+            },
+            {
+              "seq": 2,
+              "action": "20개 AC → 20개 e2e 테스트 케이스 1:1 매핑표를 추가한다. 열=[AC | e2e 케이스(spec 파일::테스트 제목) | 파생 test 문서 시나리오 | 소유 슬라이스]. 매핑: AC1.1~1.6→ingestion.spec(6), AC2.1~2.6→analysis.spec(6), AC3.2·3.3→aggregation.spec, AC3.5→trend.spec, AC3.4·3.6→sentiment.spec, AC3.7→compare.spec, AC3.1·3.8→fairness.spec.",
+              "expectedOutcome": "표에 정확히 20행, AC 중복 0·e2e 케이스 중복 0, 20개 AC(AC1.1~1.6·2.1~2.6·3.1~3.8) 전수가 정확히 한 번씩 등장."
+            },
+            {
+              "seq": 3,
+              "action": "기존 슬라이스 표의 '대상 AC' 열에서 중복·재사용 표기를 제거한다: 슬라이스4=AC3.2·3.3(AC3.5 제거), 슬라이스5=AC3.5 전속, 슬라이스6=AC3.4·3.6('+AC2.5 노출' 삭제), 슬라이스7=AC3.7('+AC3.4 재사용' 삭제), 슬라이스8=AC3.1·3.8. 슬라이스9(trace)·10(reprocess)은 '신규 AC 소유 없음 — 기존 소유 슬라이스의 e2e 케이스가 검증, UI 표면만 추가'로 명시.",
+              "expectedOutcome": "슬라이스 표의 대상 AC 합집합=20 전수이고 각 AC가 정확히 한 슬라이스 행에만 등장(중복 0). 매핑표의 소유 슬라이스와 슬라이스 표가 상호 일치."
+            },
+            {
+              "seq": 4,
+              "action": "상단 요약의 로드맵 링크·문구를 유지하고, 변경 이력 표에 재계획 항목 1행을 추가한다(2026-07-20: AC↔e2e 1:1 매핑 원칙·20:20 매핑표 추가 + 슬라이스 대상 AC 중복 제거).",
+              "expectedOutcome": "변경 이력에 재계획 항목이 등재되고 상단 요약이 로드맵 절을 계속 가리킨다."
+            },
+            {
+              "seq": 5,
+              "action": "변경을 PR #4 브랜치에 커밋하고 force-with-lease로 푸시해 PR #4를 갱신한다. diff가 docs/econ-opinion-monitor-doc-tracker.md 1개 파일에 한정되고 코드 트리(contracts/·python/·go/·web/)·타 문서가 무변인지 확인한다.",
+              "expectedOutcome": "PR #4가 갱신되어 changed_files=1(docs/econ-opinion-monitor-doc-tracker.md), mergeable=true, as-is 코드 트리 해시 무변."
+            }
+          ],
+          "plannedAt": "2026-07-20T01:50:50+00:00"
+        }
       }
     ],
     "createdAt": "2026-07-12T06:27:19Z",
