@@ -340,5 +340,49 @@
     "checkPolicy": {
       "intervalSeconds": 3600
     }
+  },
+  {
+    "id": "tbm_dear-baby-docs-impl",
+    "metadata": {
+      "name": "dear-baby 제품 문서 ↔ 구현 정합성",
+      "description": "dlddu/dear-baby 레포에서 docs/(제품 문서: 가치→PRD→AC→테스트+여정·목업·디자인 시스템·엔지니어링 노트)와 app/·backend/·worker/(구현) 사이의 정합성을 추적한다. to-be는 확정 PRD(001~008)의 AC 55개가 모두 구현·검증되고 UI·엔지니어링 계약이 문서와 일치하는 상태이며, 미구현 AC·구현↔문서 불일치·문서 없는 구현을 모두 drift로 본다. draft PRD(009)는 확정 전까지 to-be에서 제외한다.",
+      "tags": [
+        "dear-baby",
+        "docs",
+        "implementation",
+        "consistency"
+      ],
+      "createdAt": "2026-07-20T09:04:07Z",
+      "updatedAt": "2026-07-20T09:04:07Z"
+    },
+    "definition": "# dear-baby 제품 문서 ↔ 구현 정합성\n\n## 목표\n`dlddu/dear-baby` 레포에서 **실제 구현(`app/` Expo/React Native 앱 · `backend/` Go API · `worker/` Go 워커)** 이 **제품 문서(`docs/`)** 가 기술하는 의도된 동작을 **전부 실현하고 서로 어긋나지 않는** 상태로 수렴시킨다.\n\n## 무엇이 \"맞는 상태\"인가 (to-be)\n- **의도된 동작의 단일 소스(SSOT)** 는 `docs/` 다: 가치(`values/product-values.md`, V-001~V-008) → PRD(`prd/`, PRD-001~009) → Acceptance Criteria(`AC-NNN-NN`) → 테스트 문서(`tests/`, TEST-001~008), UI 의도를 정의하는 `journeys/`(여정 6종)·`flows/`·`mockups/`(M-01~M-39)·`design-system/`, 구현 계약을 기술하는 `engineering/`(ENG 노트), 그리고 `glossary.md`.\n- **to-be(목표 상태)** 는 다음이 모두 성립하는 상태다:\n  1. **확정 PRD**(등록 시점: PRD-001~008)의 **모든 AC(등록 시점 55개)가 구현**되어 있고, 각 AC가 대응 테스트 문서(`docs/tests`)가 기술하는 대로 검증 가능하다.\n  2. UI가 대응 목업(`mockups/`)·사용자 여정·디자인 시스템 문서와 일치한다.\n  3. 구현이 엔지니어링 노트(`docs/engineering/`, 예: ENG-001 임신 주차 계산, ENG-003 클라이언트 로그인)가 기술하는 계약·프로세스와 일치한다.\n  4. 코드에 존재하는 모든 사용자 대면 동작이 문서에 표현되어 있다(문서 없는 구현 없음).\n- **draft PRD의 취급**: draft로 표시된 PRD(등록 시점: PRD-009 커뮤니티 탭, AC 13개)는 **확정 전까지 to-be에 포함하지 않는다**(구현 의무 없음). draft 해제·수정은 `docs/` 변경이므로 to-be 버전을 바꿔 재평가를 트리거한다.\n- 등록 시점 구현은 프로덕션 운영 중인 상태이나, 확정 AC 55개 중 어디까지가 구현·문서 일치인지의 **최초 gap 산정은 첫 감지 task의 몫**이다. 현재 구현 수준을 to-be로 낮춰 잡지 않는다.\n\n## drift 판정 기준\nas-is(구현)가 to-be(문서 전체)에 미달하거나 어긋나면 drift다:\n1. **미구현 AC**: 확정 PRD의 AC 중 구현되지 않은 것은 to-be 미달 gap이며 **drift다**. 백로그로 치부해 이 루프 밖으로 빼지 않는다. (무엇을 먼저 구현할지의 우선순위 판단은 각 task의 계획 단계 몫이다.)\n2. **구현 ↔ 문서 불일치**: 구현된 동작이 대응 AC·테스트 문서·목업·여정·디자인 시스템·엔지니어링 노트와 어긋나면 drift.\n3. **문서 없는 구현**: 코드에 존재하는 사용자 대면 동작이 문서에 없으면 drift.\n\n각 task는 직전 관측 대비 \"gap이 줄었는가 / 새 어긋남·문서 없는 구현이 생겼는가 / 문서 변경으로 to-be가 달라졌는가\"를 평가하되, 남은 gap 전체(미구현 AC 목록 포함)를 상태 요약에 유지한다.\n\n## 충돌 시 기본 방향\n문서가 스펙(SSOT)이다. 구현이 어떤 AC와 어긋나거나 미달이면 **원칙적으로 코드를 문서에 맞춘다**(미구현 AC → 구현을 추가한다). 단, 그 어긋남이 **의도된 동작 변경**이면 문서(PRD/AC/테스트/목업 + `docs/doc-tracker.md`)를 갱신해 코드에 맞춘다. 어느 쪽인지는 각 task에서 판단(planner)한다.\n\n## 추적 방식 (요약)\n- **to-be** = github `dlddu/dear-baby` `docs/` 하위 트리 해시(문서만 바뀌면 이 값만 변함).\n- **as-is** = github `dlddu/dear-baby` `app/`+`backend/`+`worker/` 하위 트리 해시 조합(구현 코드만 바뀌면 이 값만 변함).\n- 어느 한쪽 버전이 바뀌면 task가 생성되어 to-be 대비 as-is의 gap 전체(미구현 AC 포함)를 재검증한다.\n\n## 범위 밖 / 비고\n- `e2e/`(Maestro flow)·`k8s/`·`scripts/`·`docker-compose.yml`·`CLAUDE.md`는 \"구현 동작\"이 아니라 운영/검증 산출물이므로 as-is 범위에서 제외한다.\n- **AC ↔ e2e flow 1:1 매칭은 별도 모델 `tbm_dear-baby-ac-e2e-1to1`이 담당**한다. 이 모델은 flow 커버리지가 아니라 문서 ↔ 앱/백엔드/워커 구현의 일치를 본다.\n- docs 내부 계층 정합성(가치 정렬, AC↔TEST 커버리지, doc-tracker 집계)은 문서 체계 자체의 관심사로, 이 모델의 주 판정 대상이 아니다(단 task 수행 중 발견되면 함께 보고할 수 있다).\n- `docs/doc-tracker.md`·`docs/mockups/source/`(목업 소스 코드) 변경도 `docs/` 트리 해시를 바꿔 재검증을 트리거할 수 있다(무해하나 노이즈로 느껴지면 to-be 범위를 `docs/prd`·`docs/tests`·`docs/values` 중심으로 좁힐 수 있음).",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/dear-baby",
+        "ref": "main",
+        "subPath": "docs"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = 제품 문서. docs/ 하위 트리 해시만 사용 → docs 밖(코드 등) 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/dear-baby)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:docs\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/dear-baby",
+        "ref": "main"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = 실제 구현. app/ + backend/ + worker/ 하위 트리 해시 조합.\n# → 이 세 디렉터리 밖 변경(docs/e2e/k8s/scripts 등)은 무시된다.\n# 런타임이 dataSource.repository(dlddu/dear-baby)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\na=\"$(git rev-parse \"HEAD:app\")\"\nb=\"$(git rev-parse \"HEAD:backend\")\"\nw=\"$(git rev-parse \"HEAD:worker\")\"\nprintf 'app:%s backend:%s worker:%s\\n' \"$a\" \"$b\" \"$w\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "checkPolicy": {
+      "intervalSeconds": 3600
+    }
   }
 ]
