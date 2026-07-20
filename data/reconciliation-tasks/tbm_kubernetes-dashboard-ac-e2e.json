@@ -100,6 +100,46 @@
           "reviewedAt": "2026-07-19T03:30:36Z",
           "comment": "거부 — cluster-stateful 공존 예외(물리 파일 1:1 완화)를 도입하지 않는다. 대안 채택: FX3(reconcile)·FX4(suspend/resume) 변경 스펙이 FX2 리더가 관측하는 리소스가 아닌 전용 네임스페이스/리소스만 만지도록 픽스처를 격리해, 별도 파일 유지 + 엄격한 파일 단위 1:1을 지키는 방향으로 재계획할 것. 레이스 원인(파일 분리→병렬 실행→공유 클러스터 동시 변경)은 검토 과정에서 코드 수준으로 확인·공유됨. 재계획은 reconciler-work-planner 몫."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "검토 거부(cluster-stateful 공존 예외 반려) 반영 재계획: FX3(reconcile)·FX4(suspend/resume)를 별도 파일로 유지(엄격한 파일 단위 1:1)하되, FX2 목록 리더가 관측하지 않는 전용 픽스처(git-repo-mut·kust-mut-*, targetNamespace:default 없음)만 건드리도록 격리해 workers:4 파일 병렬 하의 공유 kind 클러스터 레이스를 근본 제거한다. 파일 재병합(공존)이 아니라 픽스처 격리를 택한 이유는 검토자 지시대로 정의의 물리 파일 1:1 예외를 도입하지 않기 위함이다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "공존(co-location) 커밋 d209169 revert — fluxcd-reconcile.spec.ts·fluxcd-suspend-resume.spec.ts를 별도 파일로 복원하고 fluxcd-kustomizations.spec.ts를 FX2 전용으로 되돌린다. test-fluxcd.md·doc-tracker.md의 '공존 예외' 문구도 원복.",
+              "expectedOutcome": "두 스펙 파일 재생성(재병합 헤더 제거), 엄격한 파일 단위 1:1 복원. 커밋 e173eb6."
+            },
+            {
+              "seq": 2,
+              "action": "전용 픽스처 test/fixtures/fluxcd-mut-fixtures.yaml 신설(GitRepository git-repo-mut + Kustomization kust-mut-reconcile·kust-mut-suspend·kust-mut-resume). 어느 것도 targetNamespace:default 없음. apply-all.sh에 apply + status subresource 패치 추가.",
+              "expectedOutcome": "YAML 4개 문서(1 GitRepository+3 Kustomization), targetNamespace 없음. CI 'FluxCD Fixture Validation' 잡 pass."
+            },
+            {
+              "seq": 3,
+              "action": "FX3/FX4 스펙의 실제 mutation 대상을 전용 리소스로 치환 — fluxcd-reconcile.spec.ts: flux-system→git-repo-mut, app-ready→kust-mut-reconcile; fluxcd-suspend-resume.spec.ts: app-ready→kust-mut-suspend, app-suspended→kust-mut-resume. non-existent-resource(404 테스트)는 무변경.",
+              "expectedOutcome": "두 스펙에서 app-ready/app-suspended/flux-system 참조 0건, 전용 리소스 참조 일치(reconcile 9 git-repo-mut/10 kust-mut-reconcile; suspend 14 kust-mut-suspend/11 kust-mut-resume). 테스트 수 무변경(reconcile 12, suspend-resume 13)."
+            },
+            {
+              "seq": 4,
+              "action": "docs(test-fluxcd.md·doc-tracker.md)에 격리 방식 명시 — FX3/FX4는 전용 픽스처만 건드려 FX2와 격리, 엄격한 파일 단위 1:1 유지, 공존 예외 없음.",
+              "expectedOutcome": "'전용 스펙 1:1: FX1~FX7' 유지 + 격리 주석 추가, 물리 파일 1:1 예외 문구 없음."
+            },
+            {
+              "seq": 5,
+              "action": "PR #207(draft)에 두 커밋(e173eb6 revert, dd2201a 격리) push해 E2E(kind) CI 재실행. 승인·머지 전 draft 유지.",
+              "expectedOutcome": "E2E Tests(kind) 잡 green — 강한 게이트. 이전 실패(레이스) 재현 안 됨."
+            },
+            {
+              "seq": 6,
+              "action": "[executor 단계] CI green + 사용자 승인 확인 후 PR #207 squash 머지. 병합 후 재감지로 수렴 확인.",
+              "expectedOutcome": "as-is e2e 서브트리 해시 이동, 연결 AC 48↔전용 스펙 48 유지, 물리 파일 1:1 예외 0. (커버리지 공백 5는 범위 밖 — converged=false 정상)"
+            }
+          ],
+          "plannedAt": "2026-07-20T13:21:00+09:00"
+        }
       }
     ],
     "createdAt": "2026-07-12T06:18:19Z",
