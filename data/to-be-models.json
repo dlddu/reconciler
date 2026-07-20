@@ -293,5 +293,52 @@
     "checkPolicy": {
       "intervalSeconds": 3600
     }
+  },
+  {
+    "id": "tbm_tessera-docs-impl",
+    "metadata": {
+      "name": "tessera 제품 문서 ↔ 구현 정합성",
+      "description": "dlddu/tessera(macOS Electron 윈도우 멀티플렉서)에서 docs/(제품 문서: 가치→PRD→AC 26개→테스트+여정+mockup+디자인 시스템)와 src/·test/(구현+자동화 테스트) 사이의 정합성을 추적한다. to-be는 26개 AC가 모두 구현·검증되고 UI가 목업·디자인 시스템과 일치하며 문서 없는 구현이 없는 상태(auto-update는 명시적 예외). 부분 구현인 현 상태는 as-is일 뿐 목표가 아니다.",
+      "tags": [
+        "tessera",
+        "docs",
+        "implementation",
+        "consistency"
+      ],
+      "createdAt": "2026-07-20T09:01:53Z"
+    },
+    "definition": "# tessera 제품 문서 ↔ 구현 정합성\n\n## 목표\n`dlddu/tessera` 레포(macOS Electron 윈도우 멀티플렉서)에서 **실제 구현(`src/`)과 자동화 테스트(`test/`)** 가 **제품 문서(`docs/`)** 가 기술하는 의도된 동작을 **전부 실현·검증하고 서로 어긋나지 않는** 상태로 수렴시킨다.\n\n## 무엇이 \"맞는 상태\"인가 (to-be)\n- **의도된 동작의 단일 소스(SSOT)** 는 `docs/` 다: 가치(`tessera-values.md`, V1~V4) → PRD(`tessera-prd-*.md` 4종) → Acceptance Criteria(26개: AC1.1~1.7, AC2.1~2.8, AC3.1~3.5, AC4.1~4.6) → 테스트 문서(`tessera-test-*.md`, T-1~T-4), 그리고 UI 의도를 정의하는 사용자 여정(`tessera-journey-*.md`·`tessera-user-journeys.md`, J1~J4 27단계)·mockup(`mockups/M-Jx-Sn.html` 27개 + 인덱스)·디자인 시스템(`design-system/`).\n- **to-be(목표 상태)** 는 다음이 모두 성립하는 상태다:\n  1. `docs/`의 **모든 AC(26개)가 구현**되어 있고, 각 AC가 대응 테스트 문서(T-1~T-4)가 기술하는 대로 자동화 테스트(`test/e2e`·`test/unit`)로 검증 가능하다.\n  2. UI가 대응 mockup·디자인 시스템(`tessera.css` 포함)과 일치한다.\n  3. 코드에 존재하는 모든 사용자 대면 동작이 문서에 표현되어 있다(문서 없는 구현 없음). **단 하나의 명시적 예외**: 앱 auto-update(`src/main/update/`, electron-updater)는 README가 선언한 대로 제품 가치(V1~V4) 밖 플랫폼 인프라이며, 의도적으로 `docs/` 범위 밖이다 — \"문서 없는 구현\" drift로 보지 않는다.\n  4. `docs/tessera-doc-tracker.md`의 상태 집계가 1~3의 실제 상태와 일치한다.\n- **부분 구현은 as-is다, to-be가 아니다.** 현재 구현은 J1(레이아웃) 중심 + 라이브 브라우저 pane(PRD-3 방향 A) + 커맨드 팔레트 수준의 부분 구현이며, 컨테이너 백엔드·브라우저 라우팅 방향 B(AC3.3~3.5)·상태 복원 로드 등은 스텁(`NotImplementedError`)이다. 이는 **현재 상태(as-is)의 기술일 뿐 목표가 아니다.** to-be를 현 구현 수준으로 낮춰 잡지 않는다.\n\n## drift 판정 기준\nas-is(구현+테스트)가 to-be(문서 전체)에 미달하거나 어긋나면 drift다:\n1. **미구현 AC**: 문서에 있으나 아직 구현되지 않은 AC는 to-be 미달 gap이며 **drift다**. 백로그로 치부해 이 루프 밖으로 빼지 않는다. (다만 무엇을 먼저 구현할지의 순서·우선순위 판단은 각 task의 계획 단계 몫이다.)\n2. **구현 ↔ 문서 불일치**: 구현·테스트된 동작이 대응 AC·테스트 문서·목업·디자인 시스템과 어긋나면 drift.\n3. **문서 없는 구현**: 코드에 존재하는 사용자 대면 동작이 문서에 없으면 drift(위의 auto-update 예외 제외).\n4. **doc-tracker 불일치**: `tessera-doc-tracker.md`의 집계·상태가 실제와 어긋나면 drift.\n\n모든 AC가 구현될 때까지 1번 gap은 지속 존재한다. 각 task는 직전 관측 대비 \"gap이 줄었는가 / 새 어긋남·문서 없는 구현이 생겼는가 / 문서 변경으로 to-be가 달라졌는가\"를 평가하되, 남은 gap 전체(미구현 AC 목록 포함)를 상태 요약에 유지한다.\n\n## 충돌 시 기본 방향\n문서가 스펙(SSOT)이다. 구현이 어떤 AC와 어긋나거나 미달이면 **원칙적으로 코드를 문서에 맞춘다**(미구현 AC → 구현을 추가한다). 단, 그 어긋남이 **의도된 동작 변경**이면 문서(PRD/AC/테스트/여정/목업/디자인 시스템 + `tessera-doc-tracker.md`)를 갱신해 코드에 맞춘다. 어느 쪽인지는 각 task에서 판단(planner)한다.\n\n## 추적 방식 (요약)\n- **to-be** = github `dlddu/tessera` `docs/` 하위 트리 해시(문서만 바뀌면 이 값만 변함).\n- **as-is** = github `dlddu/tessera` `src/`+`test/` 하위 트리 해시 조합(코드·자동화 테스트만 바뀌면 이 값만 변함).\n- 어느 한쪽 버전이 바뀌면 task가 생성되어 to-be 대비 as-is의 gap 전체(미구현 AC 포함)를 재검증한다.\n\n## 범위 밖 / 비고\n- `build/`(빌드 리소스)·루트 설정 파일(`electron-builder.yml`, `electron.vite.config.ts`, `playwright.config.ts`, `vitest.config.ts`, `tsconfig*`, `package*.json`, eslint 등)·`README.md`는 \"구현 동작\"이 아니라 빌드/실행/검증 인프라이므로 as-is 버전 범위에서 제외한다.\n- `src/main/update/`(auto-update)는 as-is 해시 범위(`src/`) 안에 있어 변경 시 재검증을 트리거하지만, 위 예외에 따라 \"문서 없는 구현\" drift로 판정하지 않는다(트리거는 무해한 노이즈).\n- `docs/tessera-doc-tracker.md`는 문서 체계의 메타 상태 파일로 to-be 해시에 포함된다. 이 파일만의 변경도 재검증을 트리거할 수 있다(집계 정합 확인 겸 무해).\n- 제품 소유자(Product Owner)는 현재 미확정이다(`tessera-values.md`·doc-tracker 🔴 위험 1건). owner는 지정되면 채운다. 제품명도 코드네임(Tessera) 상태다.\n",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/tessera",
+        "ref": "main",
+        "subPath": "docs"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = 제품 문서. docs/ 하위 트리 해시만 사용 → docs 밖(코드·테스트 등) 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/tessera)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:docs\"\n",
+        "timeoutSeconds": 60
+      },
+      "lastObservedVersion": null,
+      "lastObservedAt": null
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/tessera",
+        "ref": "main"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = 실제 구현 + 자동화 테스트. src/ + test/ 하위 트리 해시 조합.\n# → 이 두 디렉터리 밖 변경(docs·build·루트 설정 등)은 무시된다.\n# 런타임이 dataSource.repository(dlddu/tessera)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ns=\"$(git rev-parse \"HEAD:src\")\"\nt=\"$(git rev-parse \"HEAD:test\")\"\nprintf 'src:%s test:%s\\n' \"$s\" \"$t\"\n",
+        "timeoutSeconds": 60
+      },
+      "lastObservedVersion": null,
+      "lastObservedAt": null
+    },
+    "checkPolicy": {
+      "intervalSeconds": 3600
+    }
   }
 ]
