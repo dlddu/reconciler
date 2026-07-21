@@ -256,7 +256,8 @@
               "expectedOutcome": "CI green + 머지 시 as-is가 to-be의 파괴적 표기 5 AC 기준에 수렴(converged=true for these 5). 나머지 ⬜14는 미수렴으로 남아 후속 슬라이스 트리거."
             }
           ],
-          "plannedAt": "2026-07-21T01:11:06Z"
+          "plannedAt": "2026-07-21T01:11:06Z",
+          "executionGuide": "# 실행 지침 — rct_20260712-0001 파괴적 표기 e2e 슬라이스 (attempt 3)\n\n계획·준비 완료. 변경은 **draft PR #32**(dlddu/homelab-k3s-mcp)에 스테이징돼 있다. executor는 새 코드를 작성하지 않고 PR을 검증·머지·확인한다.\n\n## 순서 (의존성)\n1. **PR #32 diff 검토** — 5개 파일이 순수 additive인지 확인(기존 테스트/시나리오 삭제·변경 없음, 신규 케이스만 추가). 읽기 단계.\n2. **CI 대기·확인** — `integration-tests`(kind 실서버) 잡 green이 **핵심 게이트**. 이 잡이 `workload.py`·`dear_baby.py`·`opensearch.py`를 배포 서버 대상으로 실행하며 신규 5 케이스를 포함한다. blind Python 저작이라 여기서 실제 검증된다. `fmt + vet`·`unit tests`는 Go 변경이 없어 무영향(green 유지).\n3. **(CI green 후에만) ready 전환 + squash 머지** — 순서 중요: **CI green 전 머지 금지**.\n4. **머지 후 수렴 확인** — 아래 검증 방법.\n\n## 검증 방법\n- **단계 2 (CI)**: PR #32 Checks에서 `integration tests` = success. 로그에 신규 케이스 print 확인:\n  `workload_restart destructiveHint ok` / `workload_scale destructiveHint ok` /\n  `dear_baby_reset_user destructiveHint ok` /\n  `opensearch_document_put destructiveHint ok` / `opensearch_document_delete destructiveHint ok`.\n  어떤 도구가 destructiveHint를 광고하지 않으면 헬퍼가 실제값 포함 AssertionError로 잡을 fail시킨다.\n- **단계 4 (머지 후)**:\n  - `git rev-parse HEAD:tests` (as-is)가 이전 `449cdb08…`에서 **변경**됐는지(=e2e 추가 반영). 다음 감지 주기 신규 task 생성 예상 — 정상.\n  - `git ls-tree HEAD:docs | awk -F'\\t' '$2 ~ /^prd-.*\\.md$/' | git hash-object --stdin` (to-be)가 이전 `d31d38fc…`와 **동일**한지(prd 불변 → to-be 재트리거 없음).\n  - `docs/doc-tracker.md` 레지스트리: 파괴적 표기 5건 ✅, 합 52(✅37·⬜14·🚫1), backlog 14.\n- **converged 판정**: 이 슬라이스의 5 AC(파괴적 표기)는 CI green + 머지로 **수렴(✅)**. 정의의 전체 AC↔e2e 1:1은 미완(⬜14 잔존 + 통합 7파일 per-AC 리팩터 미착수)이라 **task 전체 converged=false**, 후속 슬라이스 필요.\n\n## 주의사항\n- **되돌릴 수 없는 지점**: squash 머지. 머지 전에는 브랜치/PR 폐기로 무비용 롤백. 머지 후 문제 시 revert PR.\n- **트래픽/데이터 영향 없음**: 신규 케이스는 파괴 동작(restart/scale/reset/put/delete)을 **실행하지 않고** `tools/list` 메타데이터(`destructiveHint`/`readOnlyHint`)만 단언한다. 파일 내 기존 파괴적 시나리오는 이번 변경과 무관(kind 픽스처 한정).\n- **사전 조건**: CI가 opensearch/dear-baby/workload 픽스처를 띄운 뒤 각 파일을 실행(ci.yml에 이미 존재). opensearch 도구는 opensearch 시크릿 배선 시에만 `tools/list`에 노출되므로 opensearch destructiveHint 케이스는 **opensearch.py 안**(배선 컨텍스트)에서 실행 — 이미 그렇게 배치.\n- **blind 저작 리스크**: 로컬에 kind/mcp SDK가 없어 planner가 실행 검증을 못 했다. `tool.annotations.destructiveHint`/`readOnlyHint`(mcp SDK >=1.13) 필드명·타입이 서버 `toolslist.go` JSON annotations의 SDK 파싱에 의존 — **CI가 이 가정을 검증한다.** CI red면 이 attempt는 수정 커밋으로 재작업(별도 재계획 진입 불필요, 동일 브랜치 push).\n- **범위 밖(후속 슬라이스)**: ⬜14 = 미설정 graceful 거부 6 · pod-describe 3 · platform AC1/AC2/AC7/AC8 · grafana AC4. 통합 7파일의 per-AC 케이스 리팩터(규칙 1·2 완전 충족)와 platform/AC4 🚫 예외 ratify도 후속. single in-flight 원칙상 이번엔 미착수.\n"
         },
         "preparation": {
           "prepared": true,
@@ -269,6 +270,6 @@
       }
     ],
     "createdAt": "2026-07-12T06:20:32Z",
-    "updatedAt": "2026-07-21T01:17:24Z"
+    "updatedAt": "2026-07-21T01:18:36Z"
   }
 ]
