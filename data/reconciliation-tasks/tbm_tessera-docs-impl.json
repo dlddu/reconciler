@@ -31,6 +31,47 @@
       "reason": "최초 관측 결과 26개 AC 중 완전 구현은 16개뿐이고, 6개가 완전 미구현/스텁(AC3.3·3.4 방향 B OAuth 콜백 포워딩·auth 루프, AC4.1·4.2·4.3·4.6 상태 복원 본체 — `surfaces:[]` 고정), 4개가 부분 구현(AC2.2·2.3 runProcess/getEnv·Claude 목업, AC2.6 stop/remove 부재, AC4.5 스켈레톤만 저장)이며, 여기에 구현↔문서 불일치 4건(doc-tracker '✅ 완전/미검증 0건' 과대 집계 ~9 AC, Claude 서피스 비동작 vs AC2.2/2.3 문구, 존재하지 않는 PRD-5 참조, AC2.6 생명주기 미이행)이 겹친다. 이 모델 definition은 미구현 AC를 백로그가 아닌 drift로 명시하고 to-be를 현 부분 구현 수준으로 낮추지 않는다. 격차는 정적 문서↔코드 격차라 자동 해소 가능성이 없고(롤아웃·일시 alert 아님) 재확인 유예가 부적합하므로 지금 작업이 필요하다. 작업 범위는 두 갈래다: ① 미구현/부분 AC 수렴 — PRD-4 상태 복원 본체(AC4.1~4.3·4.6)와 PRD-3 방향 B(AC3.3·3.4)가 가장 크고 AC2.6 생명주기·AC2.2/2.3 Claude/runProcess가 뒤따른다(어느 슬라이스부터·코드 구현 vs 문서 정합 중 무엇인지는 planner 판단; 정의 '충돌 시 기본 방향'은 코드를 문서에 맞춤이 원칙이나 Claude/PRD-5 참조는 의도된 축소일 수 있어 문서 갱신 후보). ② doc-tracker·AC 문구 정합 — tracker의 완료/검증 집계를 실제 스텁·부분 상태로 정정하고 PRD-5 dangling 참조·Claude 문구를 코드 실태에 맞출지 결정. auto-update는 정의상 예외라 대상 아님. status를 action_required로 두고 planner에 인계한다.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-21T01:12:42Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "거대한 26-AC gap 전체를 한 번에 좁히지 않고, 정의의 to-be 기준 ④(doc-tracker 집계 = 실제 상태)만 겨냥한 문서 단일 파일 슬라이스를 한다: docs/tessera-doc-tracker.md는 값→PRD→AC→테스트→목업 '문서 사슬'만 추적해 그 축에선 정직하지만(✅ 완전·미검증 0건은 사슬 연결을 뜻함) 구현·검증 축이 아예 없어 '26개 모두 T-1~T-4 커버'가 마치 전량 구현·검증된 것처럼 오독된다. 실측(src/·test/) 결과 26개 중 구현 16·부분 4·스텁 6이므로, 트래커에 구현·검증 축을 추가해 집계를 실제와 일치시킨다(criterion ④ 해소). AC 본문(to-be 요구)·문서 사슬(참)은 건드리지 않아 to-be를 낮추지 않으며 순수 마크다운 1파일 변경이라 가역적이다. 코드 슬라이스(PRD-4 복원 본체·PRD-3 방향 B 등)와 ClaudeSurface의 PRD-5 dangling 참조·AC2.2/2.3 문구 정합은 이번 범위 밖 — gap에 그대로 남긴다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "src/·test/ 실측으로 26개 AC의 구현 상태를 확정한다(planner가 이미 수행: NotImplementedError 사이트 registerBackendIpc runProcess/getEnv/lifecycle, BrowserRouter.forwardCallback, HostBackend/ContainerBackend runProcess/getEnv; shared/types/persistence.ts buildWorkspaceSnapshot의 surfaces:[]; SurfacePlaceholder '미구현'; ClaudeSurface 정적 목업).",
+              "expectedOutcome": "구현 16(AC1.1~1.7, AC2.1/2.4/2.5/2.7/2.8, AC3.1/3.2/3.5, AC4.4) · 부분 4(AC2.2/2.3/2.6, AC4.5) · 스텁 6(AC3.3/3.4, AC4.1/4.2/4.3/4.6)로 확정, 각 근거 파일·라인 확보."
+            },
+            {
+              "seq": 2,
+              "action": "docs/tessera-doc-tracker.md '현재 상태 요약'에 '### 구현·검증 상태 (as-is, 2026-07-21 실측)' 섹션을 신설: 구현 16/부분 4/스텁 6을 AC 번호·근거와 함께 표로 명시하고, 컨테이너 e2e(M-J2-*)가 TESSERA_CONTAINER_E2E 게이트로 기본 CI에서 skip됨을 주기.",
+              "expectedOutcome": "트래커에 구현·검증 축이 생겨 실측(16/4/6)과 집계가 일치."
+            },
+            {
+              "seq": 3,
+              "action": "'연결 매트릭스' 표의 '상태(✅ 완전)' 열이 문서 사슬 완결을 뜻함을 명확히 하고, 값별 구현 롤업 열을 추가(V1 완료 7/7 · V2 부분 5/8 · V3 부분 3/5 · V4 미구현 우세 1/6).",
+              "expectedOutcome": "매트릭스가 문서축·구현축을 분리 표기해 '✅ 완전'이 구현 완료로 오독되지 않음."
+            },
+            {
+              "seq": 4,
+              "action": "'🟢 미검증 AC (없음)' 위험 라인과 건강 상태/요약 blockquote를 개정: '26개 모두 커버'는 테스트 문서 시나리오 존재를 뜻하며 실제 자동화 검증과 구별됨을 명시하고, 구현 축 gap(부분 4·스텁 6, 자동화 검증 부재 10건)을 건강 상태에 반영.",
+              "expectedOutcome": "'미검증 없음'이 전량 검증으로 오독되지 않고, 건강 상태가 문서 사슬 완결+구현 부분이라는 실상을 반영."
+            },
+            {
+              "seq": 5,
+              "action": "'변경 이력' 표에 2026-07-21 정합 엔트리 추가(구현·검증 축 신설로 트래커 집계를 실측에 일치시킴). 남은 gap(코드 구현·PRD-5 dangling·AC 문구)은 범위 밖임을 이력에 명시.",
+              "expectedOutcome": "감사 이력에 이번 doc-tracker 정합 작업과 잔여 gap 범위가 기록됨."
+            },
+            {
+              "seq": 6,
+              "action": "dlddu/tessera에 브랜치 reconcile/rct_20260721-0001을 만들어 위 변경만 커밋하고, task id·gap 요약(criterion ④)·단계·검증 방법을 본문에 담아 draft PR을 연다(머지하지 않음).",
+              "expectedOutcome": "마크다운 단일 파일 draft PR 생성, CI(lint/build/test)가 코드 무변경으로 그린, executor 검토 대기."
+            }
+          ],
+          "plannedAt": "2026-07-21T04:05:57Z"
+        }
+      }
+    ]
   }
 ]
