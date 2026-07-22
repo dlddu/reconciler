@@ -357,6 +357,32 @@
       "reason": "이번 트리거(as_is e2e 92d433d→2ea7024 + to_be doc-tracker d67102b→2eb3616)는 이 모델 자신의 reconcile rct_20260712-0001(4차 재프레이밍, 사용자 승인, succeeded)의 산출 PR #153이 머지되며 발생했다. #153은 구조 drift(묶음 flow 5·AC-007-06 4중 중복·CI 미참조 트윈)를 정리해 매핑을 1:1 정합(중복0·묶음0·고아0·참조위반0)으로 만들었고 새 회귀는 없다(레포 실측 교차검증). 그러나 확정 55 AC 중 **37개가 여전히 검증 flow 미보유·예외 미등재** 상태로 정의 규칙 1·4상 drift다(등재된 영구 예외 0건; backlog는 예외 waiver가 아니다). 이 잔여 gap은 정적 문서↔테스트 격차라 자동 해소가 아니며, #153이 backlog로 명시적으로 남긴 다음 증분이다. 현재 이 모델에 열린 task 없음(직전 두 task 종료)이라 경쟁도 없다. 다음 slice: backlog 37건에 검증 flow를 신설하거나(원칙), e2e 자동화가 곤란한 AC(푸시 실수신·실물책·AI 산출 품질·외부 OAuth 등)는 사유+대체검증 수단과 함께 예외 등재한다 — 우선순위·분할과 MB-3~6 게이트 종속(7건)의 순서는 planner 몫. status를 action_required로 두고 planner에 인계한다.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-22T06:16:27Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "AC↔flow 1:1 잔여 gap(확정 55 AC 중 18 커버) 중 이번 계획은 최소 단위 1건만 좁힌다 — 구현 완료 화면과 이미 CI에서 통과 중인 Case A 서브플로우만 재사용해 blind 저작 CI 위험이 가장 낮은 AC-007-01(헤더 — 활성 아이 컨텍스트 표시)에 전용 e2e flow 파일 1개(home-header-active-child.yaml)를 신설하고 doc-tracker 매핑을 ⬜→✅(제품 flow 18→19·후속 37→36)로 갱신한다. 이 모델의 수렴 기준은 '헤더에 AC를 선언한 flow 파일 1개' 라는 파일 단위 1:1이며(형제 헤더 flow home-header-multichild·notification-dot·book-progress 등도 CI 미편입 ✅인 기존 선례), 앱 코드·CI run-list 무변경이라 가역적이고 위험이 낮다. AC-007-01의 구별 단정은 컨텍스트 라벨의 임산부 포맷([0-9]+주차 | D-[0-9]+, childLabel.ts formatPregnancyLabel)이며, 이는 카드 표시만 보는 AC-007-04 flow와 겹치지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "dlddu/dear-baby main에서 브랜치 reconcile/rct_20260722-0001 생성 후 e2e/maestro/home-header-active-child.yaml 신설. 헤더 주석에 '검증 대상: AC-007-01' 단독 선언. clearKeychain→launchApp(clearState)→subflows/tester-login.yaml→subflows/onboarding-q1-q2-caseA.yaml→subflows/onboarding-caseA-full.yaml로 홈 도착(모두 기존 통과 flow가 쓰는 검증된 경로). 단정: assertVisible id=home-header, id=home-header-name, 그리고 id=home-question-card-context 이면서 text 정규식 '[0-9]+주차|D-[0-9]+' (임산부 컨텍스트 포맷).",
+              "expectedOutcome": "새 flow 파일이 정확히 1개 AC(AC-007-01)를 선언하고, 신규 testID·신규 앱코드 없이 앱 컴포넌트(HomeHeader.tsx home-header/-name, HomeQuestionCard.tsx home-question-card-context)와 일치하는 selector만 사용. 컨텍스트 라벨 렌더는 동일 Case A 경로를 쓰는 home-question-card-undecided.yaml가 이미 CI에서 non-null로 통과시켜 검증됨."
+            },
+            {
+              "seq": 2,
+              "action": "docs/doc-tracker.md 갱신: (a) AC↔flow 매핑표 AC-007-01 행 '⬜ 후속'→'✅ `home-header-active-child.yaml`', (b) 카운트 ✅18→19·⬜37→36 를 요약(line23)·건강상태(line24)·매핑 서브헤더(line74, 2026-07-22 주석 추가) 세 곳에서 일치, (c) ⬜ 후속 backlog 헤딩 '(37건'→'(36건' 및 AC-007-01 backlog 불릿 제거, (d) 변경 이력에 2026-07-22 행 추가.",
+              "expectedOutcome": "doc-tracker 내부 카운트가 일관(제품 flow 19·후속 36·영구 예외 0). backlog 목록에서 AC-007-01 불릿이 사라지고 ⬜ 항목이 36건. 매핑표·요약·backlog가 서로 모순되지 않음."
+            },
+            {
+              "seq": 3,
+              "action": "변경을 커밋·푸시하고 dlddu/dear-baby에 draft PR을 연다(머지하지 않음). PR 본문에 task id, gap 요약, 계획 단계, 검증 방법(maestro 파싱/로컬 구동 또는 파일 단위 1:1 기준 + doc-tracker 정합)을 기재.",
+              "expectedOutcome": "draft PR이 열리고 기존 CI가 green — 추가된 것은 CI run-list에 편입되지 않은 maestro 파일 1개와 문서 편집뿐이라 curated e2e 서브셋·유닛 테스트에 영향 없음."
+            }
+          ],
+          "plannedAt": "2026-07-22T07:52:16Z"
+        }
+      }
+    ]
   }
 ]
