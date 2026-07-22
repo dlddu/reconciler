@@ -310,6 +310,37 @@
       "reason": "이번 트리거(to_be fa43c9a→29620ac)는 rct_20260712-0001(슬라이스1: 수렴 로드맵 docs-only, succeeded)의 산출 PR #4가 머지되며 발생한, **로드맵이 설계상 의도한 인계 지점**이다(로드맵 명시: '머지 시 다음 감지 task가 슬라이스 2부터 이어받음'). as-is 골격은 무변이라 정의 기준①의 20개 AC 전수 미구현 drift가 그대로 지속되며, 이는 정적 코드↔문서 격차라 자동 해소(롤아웃·일시 alert)가 아니다. 문서→구현 완전 수렴이 이 모델의 목표이고 미구현 AC를 백로그로 예외처리하지 않기로 한 개정 definition(2026-07-12)에 따라 지금 작업이 필요하다. 현재 이 모델에 열린 task가 없어(직전 두 task 모두 종료) 경쟁도 없다. 다음 증분은 로드맵 슬라이스2 — python 페이크 소스→실소스로 실 Bronze 산출(AC1.1~1.6, contracts/bronze 스키마 적합)이며, 20 AC를 한 번에 좁히지 않고 슬라이스 단위로 진행한다(우선순위·분해는 planner 몫). status를 action_required로 두고 planner에 인계한다.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-22T06:16:27Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "로드맵 슬라이스2(실수집→실 Bronze)의 안전한 첫 증분: python 수집 계층에 '실 소스' 메커니즘(주입형 전송 + stdlib RSS/Atom 파서)을 도입하고 오프라인 픽스처 단위테스트로 AC1.2~1.6을 검증한다. 스모크(test-cross)가 페이크 카탈로그의 특정 주제를 핀으로 박아두므로 기본 실행 경로는 페이크 그대로 두어 make test/e2e를 깨지 않고, 실 소스는 opt-in CLI(--source feed)로 도달 가능하게만 만든다. 전송을 주입해 프로덕션은 실 HTTP, 테스트는 픽스처로 동일 파싱 경로를 결정론적으로 태워 '페이크→실'을 넘되 blind로도 CI로 가역·검증 가능하게 한 접근이다(계약/codegen 무변 → gen-check 회피). 런타임 컷오버(기본 경로 전환 + 스모크 재작성)와 ingestion e2e Playwright 스펙은 다음 증분으로 분리.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "python/packages/ingestion/src/econ_ingestion/feeds.py 추가 — 실 RSS/Atom 피드 소스: Fetcher 프로토콜(주입형 전송)+http_fetcher(stdlib urllib), FeedConfig(소스별 axis/top-N 설정), stdlib xml.etree 파서 parse_feed, collect_feed(랭킹·top-N cap·본문/링크·메타데이터), run_feed_ingestion(URL 중복제거·소스별 실패 격리·재시도). contracts/bronze/news_item 스키마 적합 NewsItem 산출, contracts/·생성코드 무변.",
+              "expectedOutcome": "모듈이 stdlib만으로 임포트/동작. NewsItem 필수 필드 전부 채워진 Bronze dict 산출. codegen 산출물 불변이라 make gen-check 영향 없음."
+            },
+            {
+              "seq": 2,
+              "action": "픽스처 피드(kr_wire.rss.xml RSS 2.0 · us_markets.atom.xml Atom) + python/packages/ingestion/tests/test_feeds.py 추가 — 주입형 FakeFetcher로 오프라인 결정론 테스트 8건: AC1.2(top-N cap·조회수 랭킹), AC1.3(축 태깅), AC1.4(링크 항상 저장·본문 미확보 플래그), AC1.5(필수 메타데이터 완전성·cycle 식별), AC1.6(URL 중복제거·부분 실패 격리·재시도 횟수), 그리고 잘못된 축/limit 거부·malformed 피드 격리·링크 없는 엔트리 드롭.",
+              "expectedOutcome": "make test 의 test-py(pytest)에서 신규 8건 통과. 기존 test_sources(페이크) 2건도 그대로 통과."
+            },
+            {
+              "seq": 3,
+              "action": "cli.py에 opt-in 플래그 추가 — --source {fake,feed}(기본 fake), --feeds <config.json> ([{source_id,axis,feed_url,limit}]), --fetch-timeout. --source feed에서만 실 경로로 분기하고 --feeds 누락 시 명확히 에러. 기본 fake 경로와 stats 반환형은 그대로.",
+              "expectedOutcome": "인자 없는 기존 호출(스모크/데모 포함)은 페이크 그대로 → make test test-cross(smoke.sh) 및 kind e2e 무변. --source feed --feeds …는 실 피드로 Bronze 산출."
+            },
+            {
+              "seq": 4,
+              "action": "대상 레포에 위 변경을 담은 draft PR을 열어 스테이징(Step2). 실행 단계에서 executor가 CI(build: setup/gen-check/lint/test + e2e) 그린을 확인하고 리뷰 후 머지.",
+              "expectedOutcome": "PR CI 그린(python lint/test 포함, gen-check/e2e 무변으로 통과). 머지 시 as-is python 트리 해시가 바뀌어 실 수집 메커니즘이 구현·검증된 상태로 gap 감소(단, 기본 경로 컷오버·ingestion e2e는 미포함 — 다음 증분)."
+            }
+          ],
+          "plannedAt": "2026-07-22T10:16:31Z"
+        }
+      }
+    ]
   }
 ]
