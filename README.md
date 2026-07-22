@@ -21,8 +21,7 @@ data/                               # 운영 데이터 (스킬이 런타임에 �
   reconciliation-tasks/             # task: to-be 모델(toBeModelId)별로 파일 분리
     <toBeModelId>.json
 index.html                          # data/ 브라우징용 정적 웹페이지 (GitHub Pages)
-.nojekyll                           # 브랜치 배포로 되돌릴 때를 대비한 Jekyll 우회 (Actions 배포에선 불필요)
-.github/workflows/deploy-pages.yml  # Pages 배포 워크플로 (GitHub Actions 방식, path 필터)
+.nojekyll                           # Pages가 data/*.json을 그대로 서빙하도록 Jekyll 우회
 ```
 
 ## 데이터 브라우저 (GitHub Pages)
@@ -33,14 +32,8 @@ index.html                          # data/ 브라우징용 정적 웹페이지 
 외부 API·CDN이 필요 없다. 마크다운 정의 렌더링, 상태 배지, 검색, 라이트/다크
 테마, 원본 JSON 보기를 지원한다.
 
-- **배포 (GitHub Actions 방식)**: `.github/workflows/deploy-pages.yml`이 `main` 푸시 시
-  레포 루트 전체를 Pages 아티팩트로 올려 배포한다. **path 필터**가 걸려 있어
-  `index.html` · `data/**` · `schemas/**` · `.nojekyll` · 워크플로 파일이 바뀔 때만
-  실행되고, README 등 그 외 변경은 배포를 건너뛴다. 페이지는 `data/`를 상대경로로
-  읽으므로 아티팩트는 반드시 루트 기준이어야 한다.
-- **저장소 설정**: Settings → Pages → Build and deployment → Source를
-  **GitHub Actions**로 선택해야 위 워크플로가 배포할 수 있다
-  (*Deploy from a branch* 상태에선 배포 단계가 400으로 실패한다).
-  배포 후 `https://<owner>.github.io/<repo>/`.
+- **GitHub Pages 활성화**: 저장소 Settings → Pages → *Deploy from a branch* →
+  브랜치의 `/(root)` 선택. 페이지는 `data/`를 상대경로로 읽으므로 반드시
+  루트에서 서빙해야 한다(`/docs` 아님). 배포 후 `https://<owner>.github.io/<repo>/`.
 - **로컬 확인**: `python3 -m http.server` 실행 후 `http://localhost:8000/` 접속.
   `file://`로 직접 열면 브라우저 보안정책상 `data/`를 못 읽으니 서버로 열 것.
