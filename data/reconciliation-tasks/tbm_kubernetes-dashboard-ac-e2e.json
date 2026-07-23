@@ -266,6 +266,37 @@
       "assessedBy": "agent",
       "assessedAt": "2026-07-22T12:13:30Z",
       "reason": "정의의 파일 단위 양방향 1:1(#AC=#스펙, 53:53) 대비 5개 AC(OV6·OV7·PD6·SC3·CM3)가 전용 e2e 스펙이 없는 공백 = drift로 잔존한다(53 = 전용 스펙 48 + 공백 5). 나머지 48 AC는 전용 스펙과 깨끗한 전단사(48↔48, 공유·고아·1:N·유령 0)로 수렴했고, 등록 시점의 대규모 구조 drift(53:35, 공백 8·1:N 9·N:1 15·고아 7)는 reconcile #207(rct_20260712-0001, succeeded, converged=false)로 해소됐다. 남은 5개 공백은 정적 구조 gap이라 자동 해소(진행 중 롤아웃·5분 미만 일시 alert) 가능성이 없고, 방치하면 정의가 요구하는 AC=스펙 전단사가 계속 미달이므로 지금 작업이 필요하다. 작업 = 5개 전용 e2e 신규 작성(SC3 ESO 대상 Secret 삭제→재동기화 통합, OV6 오버뷰 네임스페이스 스코프, OV7 메트릭 서버 부재 폴백, PD6 완료 파드 숨김 토글, CM3 상단 바 전용 검증) + 각 test-*.md 자동화 필드·doc-tracker 갱신. FX6·AR4의 라이브 폴링 직접 검증 보강은 파일 단위 공백이 아니라 완전성 성격이므로 포함 여부는 planner 판단(직전 task도 AR4를 보강 권장으로만 취급). 공백 5건은 doc-tracker '다음 단계 제안'이 예고한 후속 task이며, doc-tracker 집계(53 AC = 48 전용 스펙 + 5 공백)가 raw 파일과 일치함을 독립 감사로 확인했다. → action_required로 전이, planner 인수인계."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "공백 5건(OV6·OV7·PD6·SC3·CM3) 중 가장 위험이 낮고 픽스처에 무의존한 CM3(상단 바·반응형 셸) 1건만 슬라이스로 닫는다. CM3는 앱 셸 전역 정적 마크업이라 클러스터 상태·픽스처와 무관하게 매 페이지 로드마다 렌더돼 결정적이다(SC3 ESO 클러스터 변경, OV7 metrics-server 부재 환경, OV6/PD6 특정 파드 픽스처보다 낮은 위험). 신규 전용 스펙 `e2e/top-bar.spec.ts`(헤더 주석 `// Verifies: CM3`)로 앱 타이틀·ClusterStatus(\"Cluster Connected\")·반응형 컨테이너 클래스(flex-col↔sm:flex-row)·모바일 세로↔데스크톱 가로 배치를 직접 단정하고, test-common.md 시나리오3 자동화 연결 + doc-tracker 공백 5→4·연결 AC 48→49 갱신. CI(playwright testDir=./e2e, `npx playwright test` 자동 발견)가 신규 스펙을 배포 대시보드에 대해 실행 = 객관적 게이트. **완료 기준(이 시도 범위)**: PR #208 병합 후 as-is 전용 스펙 48→49, CM3 공백 해소(연결 AC 49↔전용 스펙 49). **범위 밖(후속 재감지 task)**: 남은 공백 4건 OV6·OV7·PD6·SC3 + FX6·AR4 라이브 폴링 보강. to-be(53:53) 하향 없음.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #208(branch reconcile/rct_20260722-0001, base main)의 신규 `e2e/top-bar.spec.ts` + `docs/product/test-common.md` + `docs/product/doc-tracker.md` 3파일 스테이징 상태 확인.",
+              "expectedOutcome": "PR OPEN·draft·MERGEABLE, 정확히 3파일(신규 스펙 1 + 문서 2), base main과 충돌 없음."
+            },
+            {
+              "seq": 2,
+              "action": "E2E(kind) CI 실행 결과 확인 — `npx playwright test`가 `e2e/top-bar.spec.ts`를 자동 발견해 배포 대시보드에 대해 실행. 신규 5개 test(구조·클러스터 연결·반응형 클래스·모바일 스택·데스크톱 가로) 통과 + 기존 스펙 회귀 없음.",
+              "expectedOutcome": "\"E2E Tests with kind\" green. top-bar.spec.ts 5 passed, 전체 e2e 스위트 무회귀."
+            },
+            {
+              "seq": 3,
+              "action": "(사용자 승인 후 — 이 모델은 과거 review_rejected 이력, 엄격 리뷰어) PR #208 ready-for-review 전환 → squash merge.",
+              "expectedOutcome": "main에 병합, e2e 트리 hash 변경(재감지 트리거)."
+            },
+            {
+              "seq": 4,
+              "action": "병합 후 수렴 검증 — as-is e2e 전용 최상위 스펙 48→49, 자동화 공백 5→4(OV6·OV7·PD6·SC3). doc-tracker 집계 = raw 파일 상태 일치.",
+              "expectedOutcome": "연결 AC 49↔전용 스펙 49, CM3 공백 해소. 이 슬라이스 범위 기준 수렴(succeeded); 범위 밖 4 공백은 재감지가 새 task로 이음."
+            }
+          ],
+          "plannedAt": "2026-07-23T02:18:34Z"
+        }
+      }
+    ]
   }
 ]
