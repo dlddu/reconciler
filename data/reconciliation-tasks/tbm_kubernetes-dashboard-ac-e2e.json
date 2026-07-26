@@ -313,6 +313,41 @@
           "reviewedAt": "2026-07-25T02:34:30Z",
           "comment": "반려(버튼 선택: '반려 — FX 레이스 해소 선행 후 재계획'). E2E(kind) red 게이트 상태로는 병합 불가 — 실패는 CM3 산출물이 아닌 범위 밖 fluxcd-kustomizations.spec.ts:203(FX2 네임스페이스 필터링) 레이스이며, 샤딩 결정성으로 단순 재실행도 동일 실패 가능성이 큼. FX2 레이스 격리(#207의 FX3·FX4 전용 픽스처 격리와 동종 처방 또는 quarantine)를 선행 슬라이스로 해소한 뒤, 이 브랜치(reconcile/rct_20260722-0001, CM3 작업물 보존)의 CI green을 확인하고 재승인을 요청할 것. 재계획은 reconciler-work-planner 몫."
         }
+      },
+      {
+        "reason": "review_rejected — CM3 전용 e2e(PR #208) 반려. 반려는 CM3 산출물 결함이 아니라 범위 밖 FX2(`e2e/fluxcd-kustomizations.spec.ts:203` 네임스페이스 필터) 레이스로 E2E(kind) 게이트가 red인 것. 리뷰어(dlddu) 지시: FX2 레이스를 선행 해소하고 동일 브랜치(`reconcile/rct_20260722-0001`, CM3 보존)의 CI green 확인 후 재승인 요청 — 재계획은 planner 몫.",
+        "plan": {
+          "summary": "이번 시도 슬라이스 = **FX2 네임스페이스 필터 e2e 레이스 안정화**로 CM3 PR #208의 E2E(kind) 게이트를 결정적으로 green화(CM3 작업물 보존, 동일 브랜치). 근본원인: FX2가 `const filteredCount = await filteredCards.count()`로 필터 적용 직후의 비정착 union(dashboard-test 카드 + `apply-all.sh`가 `default`로 이관한 `backend-app` 카드)을 스냅샷 후 `nth(i)`로 순회 → `default` 카드가 탈착되는 순간 `nth(7)=\"default\"`로 실패. CM3 스펙 추가가 `workers:4` 샤드 순서를 바꿔 이 잠복 레이스를 결정적으로 재노출(감사: 3회 재시도 전부 동일 지점 실패, main base `404b8d9`에선 green). 접근: 테스트측을 리포 idiom `expect.poll`로 바꿔 필터가 정착(모든 visible 카드 namespace == dashboard-test)할 때까지 재시도. 대안 — #207 FX3/FX4 픽스처 격리는 mutation 유출 처방이라 여기의 정적 픽스처+테스트측 스냅샷 레이스에는 부적합; quarantine은 FX2를 게이트에서 제거해 커버리지 손실 → 둘 다 기각하고 커버리지 유지+결정성 확보의 테스트측 정착 대기 채택(가역: 단일 assert 블록 교체, revert 용이). **완료 기준**: PR #208 E2E(kind) 잡 green(FX2 포함 전 스펙 통과) & CM3 top-bar 스펙 계속 실행·통과. **범위 밖(후속)**: 나머지 자동화 공백 4건(OV6·OV7·PD6·SC3)은 별 슬라이스 — 이 시도로 닫지 않음.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포(dlddu/kubernetes-dashboard) `reconcile/rct_20260722-0001`를 job tmp에 클론·체크아웃하고, 실패 잡 로그로 FX2 실패 지점(line 237 `toHaveText('dashboard-test')` on `nth(7)`=`default`)과 `default` 카드 출처(`apply-all.sh`의 `backend-app`→`default` 이관)를 확정.",
+              "expectedOutcome": "실패가 CM3(top-bar)가 아니라 FX2 스냅샷 레이스임이 로그로 확정(3회 재시도 전부 동일 지점). 근본원인 = count()+nth() 비정착 스냅샷."
+            },
+            {
+              "seq": 2,
+              "action": "`e2e/fluxcd-kustomizations.spec.ts` FX2 테스트에서 `count()`+`nth()` 스냅샷 순회를 `expect.poll`로 교체 — 필터 후 `getByTestId('kustomization-card').getByTestId('kustomization-namespace').allTextContents()`가 >=1개이며 전부 `dashboard-test`가 될 때까지 최대 10s 재시도. 픽스처·앱 코드·다른 테스트 무변.",
+              "expectedOutcome": "assert 블록 1개만 교체(≈+29/−15줄). 괄호/중괄호 균형 확인. FX2는 게이트에 유지(커버리지 무변)."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/product/doc-tracker.md` changelog에 FX2 안정화 1행 추가(감사 기록).",
+              "expectedOutcome": "doc↔impl 이력 정합, 연결 AC 49↔전용 스펙 49 무변 기록."
+            },
+            {
+              "seq": 4,
+              "action": "브랜치에 커밋(author `dlddu <39251873+dlddu@users.noreply.github.com>`)·푸시 → PR #208 자동 갱신 + E2E(kind) 게이트 재실행.",
+              "expectedOutcome": "PR #208 head가 새 커밋으로 갱신되고 E2E 잡 재트리거(pending)."
+            },
+            {
+              "seq": 5,
+              "action": "[executor] E2E(kind) 잡 green 확인(FX2 포함) 후 사용자에게 재승인 요청. draft 해제·머지는 승인 후에만.",
+              "expectedOutcome": "E2E green → CM3+FX2 안정화 병합 가능 상태. 승인 없이는 머지 안 함."
+            }
+          ],
+          "plannedAt": "2026-07-26T08:12:23Z"
+        }
       }
     ]
   }
