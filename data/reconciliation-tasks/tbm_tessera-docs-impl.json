@@ -193,6 +193,42 @@
       "reason": "정적 문서↔코드 격차로 자동 해소 여지가 없고, definition(미구현 AC=drift)상 스텁 6+부분 4가 그대로 남아 있다. 다음 슬라이스 후보: 스텁/부분 AC의 증분 구현(V4 상태 복원 본체, 방향 B OAuth, AC2.6 생명주기) 또는 기준② 국소 교정(dangling PRD-5/J3 참조 정리, AC2.2/2.3 문구 정합) — 범위·순서는 planner 몫. 현재 이 모델에 다른 열린 task 없음.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-26T10:06:35Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "26-AC gap 전체를 한 번에 좁히지 않고, 정의의 criterion ②(구현↔문서 불일치) 잔여 항목 중 직전 slice(rct_20260721-0001)가 명시적으로 범위 밖에 남긴 'ClaudeSurface의 존재하지 않는 PRD-5/J3 참조'를 겨냥한 최소 슬라이스다. src/renderer/surfaces/ClaudeSurface.tsx의 JSDoc 주석이 라이브 Claude 세션을 실재하지 않는 'PRD-5 / J3'로 인용하는데(PRD는 layout·backend·browser-routing·state-restoration 4종뿐이라 PRD-5 부재, J3는 브라우저 라우팅 여정으로 Claude와 무관), 이는 코드가 존재하지 않는 문서를 인용하는 criterion ② dangling 참조다. 라이브 Claude 세션의 실제 스펙은 backend PRD의 AC2.2/AC2.3('Claude Code는 host/container 백엔드 위에서 실행')이므로, 주석을 그 실제 스펙 인용으로 교정한다(정의의 '코드를 문서(SSOT)에 맞춘다' 기본 방향). 동시에 doc-tracker의 '범위 밖' 노트(현 line 42)를 갱신하고 변경 이력을 추가해 criterion ④(트래커=실측)를 유지한다. **범위(완료 기준)**: src에서 dangling PRD-5/J3 참조 0건 + doc-tracker 노트·변경이력 정합. **범위 밖(gap 유지)**: AC2.2/2.3가 요구하는 라이브 Claude 세션 *구현*(정적 목업 ClaudeSurface → 실제 백엔드 세션)은 criterion ① 미구현 gap으로 후속 slice 대상이며 이 slice는 to-be를 낮추지 않는다. 순수 JSDoc 주석 1줄 + 마크다운 변경이라 렌더 출력·testid·타입·런타임 동작 불변이고 완전 가역적이다. eslint(react-hooks/react-refresh만, jsdoc 룰 없음)·vitest(renderToStaticMarkup 마크업만 단언)·tsc·build 어느 것도 주석 변경에 영향받지 않아 CI 그린 확실.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "src/·docs/ 실측으로 dangling 참조 범위를 확정(planner 이미 수행): `grep -rn PRD-5 src/`=ClaudeSurface.tsx:6 단일 사이트, PRD 파일은 4종만 존재(PRD-5 부재), J3=tessera-journey-browser-routing 여정(Claude 무관). backend PRD의 AC2.2/AC2.3이 'Claude Code는 host/container 백엔드에서 실행'을 스펙함을 확인.",
+              "expectedOutcome": "교정 대상 = 코드 1개 사이트(ClaudeSurface.tsx JSDoc) + doc-tracker 2개 지점(범위밖 노트·변경이력)으로 확정. 라이브 Claude 세션의 실제 스펙 = AC2.2/2.3(backend PRD)."
+            },
+            {
+              "seq": 2,
+              "action": "src/renderer/surfaces/ClaudeSurface.tsx JSDoc(현 6~7행)의 '(PRD-5 / J3)' 인용을 실제 스펙 'AC2.2/AC2.3 — tessera-prd-backend.md, host/container 백엔드 위 Claude Code 실행'으로 교정한다. 함수 본문·JSX·data-testid·표시 문자열은 일절 건드리지 않는다.",
+              "expectedOutcome": "코드↔문서 dangling 참조(criterion ②) 해소. 정적 목업이 자신의 라이브-동작 스펙(AC2.2/2.3)과 정적-표현 스펙(M-J1-S4)에 모두 올바르게 교차참조됨. 렌더 출력 불변으로 surfaces.test.ts·M-J1-S4.spec.ts 그대로 통과."
+            },
+            {
+              "seq": 3,
+              "action": "docs/tessera-doc-tracker.md의 '범위 밖(이번 정합에서 미해소, gap 유지)' 노트(현 line 42)를 갱신: 해소된 'PRD-5/J3 dangling 참조' 항목을 제거하고, 잔여를 'AC2.2/2.3가 요구하는 라이브 Claude 세션 구현(criterion ①, 위 ◐부분 행·다음 구현 우선순위에 이미 추적)'으로 재프레이밍한다.",
+              "expectedOutcome": "트래커가 실측과 일치(criterion ④ 유지). 남은 gap이 criterion ①(미구현)로 정확히 분류되고, 해소된 criterion ② 항목이 '범위 밖'에서 사라짐."
+            },
+            {
+              "seq": 4,
+              "action": "docs/tessera-doc-tracker.md '변경 이력' 표(4열: 날짜|설명|before|after)에 2026-07-27 엔트리를 추가한다: criterion ② 해소(ClaudeSurface의 존재하지 않는 PRD-5/J3 → 실제 스펙 AC2.2/2.3 인용), 주석만 변경(렌더·카운트 불변, to-be 미하향), AC2.2/2.3 라이브 세션 구현은 criterion ① gap으로 유지.",
+              "expectedOutcome": "감사 이력에 이번 정합 작업과 잔여 gap 범위가 기록됨. AC·mockup·구현 카운트(16/4/6) 불변."
+            },
+            {
+              "seq": 5,
+              "action": "dlddu/tessera에 브랜치 reconcile/rct_20260726-0001을 만들어 위 2개 파일 변경만 커밋(작성자 noreply)·푸시하고, task id·gap 요약(criterion ②)·계획 단계·검증 방법을 본문에 담아 draft PR을 연다(머지하지 않음).",
+              "expectedOutcome": "2파일 draft PR 생성. CI(typecheck·eslint·vitest·build)가 코드 동작 무변경으로 그린, executor 검토 대기."
+            }
+          ],
+          "plannedAt": "2026-07-27T10:33:01Z"
+        }
+      }
+    ]
   }
 ]
