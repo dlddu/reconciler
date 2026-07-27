@@ -393,6 +393,42 @@
       "reason": "정적 문서↔구현 격차로 자동 해소 여지가 없고, definition상 미구현 AC=drift(백로그 예외 불가)이므로 지금 작업이 필요하다. **주의: 이 모델에는 planner 재작업 대기 중인 rct_20260722-0001(review_rejected)이 이미 열려 있다** — 그 거절 코멘트가 예고한 '스펙 변경 시 재감지 새 트리거'가 바로 이 task다. 중복 계획을 피하기 위해 planner는 두 task를 한 계획 단위로 다뤄야 한다: 개정 스펙(AC1.4′ 관측·본문 분리, AC1.7 content-addressed 중복 제거) 기준으로 슬라이스2를 재설계하고(구 스펙 기준 draft PR #5의 재작업 또는 폐기 포함), 계획을 한쪽 task로 수렴시킨 뒤 다른 쪽은 적절히 종결(cancel 등)할 것.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-26T10:06:35Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "개정 Bronze 스펙(#6: AC1.4 관측·본문 분리 + AC1.7 content-addressed 본문 중복 제거·수정버전 보존)에 맞춰 슬라이스2(실 수집)를 재설계한다. #6이 이미 페이크 골격(sources.py)·계약(contracts/bronze news_item+news_body)·저장(storage.merge_records)을 새 형상에 정렬했으므로 남은 gap은 기준①(실 소스 부재)뿐이다. 따라서 실 RSS/Atom 피드 소스(feeds.py)를 개정 계약대로 재작성한다: collect_feed가 (NewsItem, body) 쌍을 내고 run_feed_ingestion이 (news_item, news_body, stats) 3-튜플을 반환해 sources.run_ingestion과 드롭인 동형이 되게 한다. NewsItem은 body_hash만 싣고 본문은 content-addressed news_body로 분리(AC1.4), 동일 본문(교차소스 전재 포함)은 해시로 1건만·수정 본문은 새 버전 키(AC1.7). 페이크를 기본으로 유지(--source feed opt-in)해 smoke/e2e·contracts/codegen 무변→gen-check 통과. 접근 근거: 거절된 rct_20260722-0001의 PR #5(구 pre-split 계약 기준 feeds.py)가 스펙 개정으로 stale해졌으므로 폐기하지 않고 개정 계약에 맞춰 재작성해 실 수집 증분을 살린다. === 완료 기준(이 시도의 성공 범위): (1) feeds.py가 개정 news_item/news_body 계약과 동형((items,bodies,stats)) 반환, (2) cli --source feed 분기가 news_body merge까지 태움(기본 fake 무변), (3) 오프라인 픽스처 단위테스트로 AC1.2~1.7 검증. === 범위 밖(후속 재감지가 새 task로 이음): 런타임 컷오버(기본 경로 전환+smoke 재작성), ingestion e2e Playwright 스펙, 실 LLM·실 대시보드. 수렴 판정은 모델 전체 to-be가 아니라 이 범위 기준으로 한다. === 중복 정리: 이 계획은 거절된 rct_20260722-0001을 대체하므로 그 task는 이 계획으로 단일 수렴시키고 cancel로 종결한다(detector 0726 지시).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "feeds.py를 개정 Bronze 계약으로 재작성: collect_feed→(NewsItem, body) 쌍 yield, NewsItem.body_hash=econ_core.domain.body_hash(body)(미확보 시 빈문자), run_feed_ingestion→(news_item dicts, news_body dicts, stats) 3-튜플(URL 중복 제거·실패 격리·재시도 유지, 본문은 run 내 해시 dedup). sources.run_ingestion과 동형.",
+              "expectedOutcome": "feeds.py import·타입 오류 없이 sources.py와 동일 반환 형상. NewsItem에 raw_text 미사용, body_hash 사용."
+            },
+            {
+              "seq": 2,
+              "action": "cli.py에 --source {fake|feed}/--feeds/--fetch-timeout 추가, feed 분기를 3-튜플 언팩 후 기존 write_records(news_item)+merge_records(news_body) 공유 경로로 태움. 기본 source=fake 유지.",
+              "expectedOutcome": "python -m econ_ingestion(기본 fake)가 news_item+news_body 둘 다 기록(로컬: 14 item/12 body). feed 분기도 동일 저장 경로."
+            },
+            {
+              "seq": 3,
+              "action": "test_feeds.py 재작성 + RSS/Atom 픽스처: AC1.2(top-N 랭킹)·1.3(axis 태깅)·1.4(링크·본문분리·미확보 빈해시)·1.5(provenance 메타)·1.6(URL중복·실패격리·재시도 3회)·1.7(content-addressed dedup·교차소스 전재 1건·수정버전 새 키) 오프라인 결정론 검증.",
+              "expectedOutcome": "11개 feed 테스트 통과, 기존 4개 source 테스트 회귀 없음."
+            },
+            {
+              "seq": 4,
+              "action": "CI 로컬 재현(blind 아님): CI-pinned ruff 0.15.18(aarch64) check+format --check, stdlib 하네스로 테스트 실행.",
+              "expectedOutcome": "ruff All checks passed + format clean(26 files), feed 11 + source 4 테스트 green."
+            },
+            {
+              "seq": 5,
+              "action": "대상 레포 dlddu/economic-opinion-trend-monitor에 브랜치 push + draft PR 생성. PR 본문에 task id·gap·계획단계·검증법·#5 대체 명시.",
+              "expectedOutcome": "draft PR 생성(#5 supersede), CI(build: gen-check/lint/test + e2e:kind) 트리거."
+            }
+          ],
+          "plannedAt": "2026-07-27T10:18:12Z"
+        }
+      }
+    ]
   }
 ]
