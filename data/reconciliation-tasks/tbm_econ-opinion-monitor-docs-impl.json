@@ -377,7 +377,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "changedSides": [
         "as_is",
@@ -400,7 +400,7 @@
       "summarizedAt": "2026-07-26T10:06:35Z"
     },
     "createdAt": "2026-07-26T10:06:35Z",
-    "updatedAt": "2026-07-27T23:43:18Z",
+    "updatedAt": "2026-07-27T23:43:51Z",
     "id": "rct_20260726-0001",
     "assessment": {
       "actionRequired": true,
@@ -500,6 +500,54 @@
               "log": "실행자 액션: PR #7 draft 해제(markPullRequestReadyForReview → isDraft:false, mergeStateStatus:CLEAN) 후 squash 머지. merge commit 9569ca33e756a4eab88d019c559f820e701c90d5 on main. 구 PR #5는 superseded로 열린 채 두었다(지침: 실행자 재개 금지, close는 리뷰어 몫)."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "contracts:b67b8ff3a7918b8df40e1a7866d3b920ad5d1abf python:70916743e2ccf883912578d18dcf1fe3b1994638 go:d44021489001cfb2be4f0a2c58e0145f7f719d17 web:bb4a0ab2923910e4fc7d6843834f60168d42310e",
+          "checks": [
+            {
+              "name": "pytest 실측 (계획이 지목한 진짜 게이트)",
+              "status": "passed",
+              "detail": "머지된 main(9569ca3)에서 python3 -m pytest packages -q → 25 passed. 내역: ingestion feed 11/11, ingestion source 4/4, 나머지 패키지 회귀 없음. planner는 stdlib 하네스로만 검증했었고 이번이 pytest 실측."
+            },
+            {
+              "name": "ruff 0.15.18 check + format --check",
+              "status": "passed",
+              "detail": "'All checks passed!' + '26 files already formatted'."
+            },
+            {
+              "name": "완료기준(1) feeds.py가 개정 news_item/news_body 계약과 동형",
+              "status": "passed",
+              "detail": "run_feed_ingestion → (items, bodies, stats) 3-튜플. 산출 news_item에 raw_text 없음·body_hash 보유, 모든 body_hash가 news_body 레코드로 해소됨(빈 해시 제외)."
+            },
+            {
+              "name": "완료기준(2) cli --source feed가 news_body merge까지 태움",
+              "status": "passed",
+              "detail": "오프라인 file:// 픽스처 2종으로 실행: news_item 4건 / news_body 3건, duplicates_skipped=1, failed_sources=[] — 교차 전재 본문이 content-addressed로 1건 dedup(AC1.7 동작 확인). 기본값은 fake 유지(--help 확인)."
+            },
+            {
+              "name": "완료기준(3) 오프라인 픽스처 단위테스트로 AC1.2~1.7 검증",
+              "status": "passed",
+              "detail": "test_feeds.py 11건 결정론 통과(랭킹·axis 태깅·링크/본문분리·provenance·URL중복·실패격리·재시도·content-addressed dedup)."
+            },
+            {
+              "name": "기본 경로(fake) 회귀 없음",
+              "status": "passed",
+              "detail": "python -m econ_ingestion --data <tmp> → news_item 14 / news_body 12, duplicates_skipped=2 — 계획이 명시한 기대값과 일치."
+            },
+            {
+              "name": "PR CI job 개별 결과 (직접 조회 불가 — 대체 검증)",
+              "status": "passed",
+              "detail": "이 GitHub App 설치에 checks:read/statuses 권한이 없어 build·e2e job 결과를 API로 읽지 못했다(403). 대신 머지 직전 GraphQL mergeStateStatus=CLEAN(필수 체크 미차단)을 확인하고, 머지된 main에서 pytest·ruff를 직접 실측해 게이트를 대체했다. contracts/codegen 무변경이라 gen-check 무영향."
+            },
+            {
+              "name": "잔여 gap (정보성 — 이 task 범위 밖)",
+              "status": "passed",
+              "detail": "모델 전체 to-be 대비 미구현 지속: 런타임 컷오버(기본 경로 fake→feed 전환+smoke 재작성), ingestion e2e Playwright 스펙, 실 LLM 분석·실 대시보드(AC2.x/AC3.x). 머지가 as-is python 트리 해시를 9c2ad36→7091674로 바꿨으므로 다음 감지 주기가 이 잔여 gap을 새 task로 잇는다. converged 판정에는 넣지 않는다."
+            }
+          ],
+          "verifiedAt": "2026-07-27T23:43:51Z"
         }
       }
     ]
