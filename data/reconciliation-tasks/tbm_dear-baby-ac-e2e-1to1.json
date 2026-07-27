@@ -490,6 +490,42 @@
       "reason": "정적 커버리지 gap 36건이 지속되고(그중 7건은 모킹 경계 MB-3~6 게이트), 예외 등재가 0이라 정의상 전부 drift다. 자동 해소 여지 없음. 다음 슬라이스는 tracker backlog 순서를 따르되 MB 비게이트 29건이 우선 후보 — 구체 선정은 planner 몫. 현재 이 모델에 다른 열린 task 없음.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-26T10:06:34Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "AC↔flow 1:1 잔여 gap(확정 55 AC 중 ✅19·⬜36)에서 이번 계획은 blind 저작 위험이 가장 낮은 1건만 좁힌다 — 이미 검증된 형제 flow(home-header-multichild·home-nav-5tabs·diary-list-multichild)의 Case B 서브플로우와 실재 확인된 셀렉터만 재조합해 AC-008-10(일기 탭 헤더 + 하단 네비게이션 바)에 전용 e2e flow 1개(diary-header-nav.yaml)를 신설하고 doc-tracker 매핑을 ⬜→✅(제품 flow 19→20·후속 36→35)로 갱신한다. 이 파일명·접근은 doc-tracker의 '후속 flow 계획' 목록이 이미 지정해 둔 backlog 항목이라 계획이 곧 기존 설계의 이행이다. 이 모델의 수렴 기준은 '헤더에 AC를 정확히 1개 선언한 flow 파일 1개'라는 파일 단위 1:1이며, 형제 헤더/네비 flow 6건(home-header-*·home-nav-5tabs·home-feed·home-book-progress)이 CI run-list 미편입 상태로 ✅인 확립된 선례를 따른다(e2e-ios/android.yml의 run_flow 목록은 명시적 큐레이션이라 미편입 flow는 실행되지 않는다 → 신규 미편입 flow 추가는 CI 중립: 아무 것도 이를 실행·파손하지 않음). 그래서 CI run-list·앱 코드는 건드리지 않는다. 완료 기준(범위): diary-header-nav.yaml이 헤더에 AC-008-10 단독 선언 + 검증 subflow만 재사용(신규 subflow 0) + TC-008-10-A/B 조건 단정 + doc-tracker 매핑/집계/변경이력 정합(✅20·⬜35·🟡0). 범위 밖(후속): 나머지 ⬜35(비-MB 게이트 28 + MB 게이트 7)와 AC-008-02/03 등 이미 파일명이 예약된 다른 backlog flow는 각각 실행이 만든 버전 변화의 재감지가 새 task로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "dlddu/dear-baby main(bd4ce3a)에서 브랜치 reconcile/rct_20260726-0001 생성 후 e2e/maestro/diary-header-nav.yaml 신설. 헤더 주석에 '검증 대상: AC-008-10 (일기 탭 헤더 + 하단 네비게이션 바) [TC-008-10-A/B]'를 단독 선언(규칙 1·2: 정확히 1개 AC). 셋업은 clearKeychain→launchApp(clearState)→'isn't responding' 가드→subflows/tester-login.yaml→subflows/onboarding-q1-q2-caseB.yaml→subflows/onboarding-caseB-full.yaml (home-header-multichild.yaml과 동일한 다자녀 Case B: 양육 2+다태 2=활성 4)로 홈 도착.",
+              "expectedOutcome": "신규 top-level flow 파일 1개 생성, 신규 subflow 0(3개 기존 재사용), 앱 코드 무변경. 헤더가 AC-008-10 단독 선언."
+            },
+            {
+              "seq": 2,
+              "action": "(TC-008-10-A 헤더 구성) 홈 도착 확인(assertVisible home-tab) 후 일기 탭 이동(tapOn id:tab-button-diary → assertVisible id:diary-tab). 일기 헤더 단정: assertVisible diary-header·diary-header-bell; assertNotVisible home-header-prev·home-header-next·home-header-name.",
+              "expectedOutcome": "다자녀임에도 일기 탭 헤더는 홈 헤더와 달리 좌우 아이 전환 화살표·아이 이름이 없고 '일기' 타이틀 헤더 + 알림 종만 노출(DiaryHeader.tsx 실재 testID로 검증)."
+            },
+            {
+              "seq": 3,
+              "action": "(TC-008-10-B 하단 네비) 하단 5탭 구성 단정: assertVisible tab-button-memoir·tab-button-community·tab-button-home·tab-button-diary·tab-button-settings, 현재 diary-tab 유지.",
+              "expectedOutcome": "5탭(자서전·커뮤니티·홈·일기·설정, _layout.tsx 실재 testID) 노출·현재 일기 탭. 선택 강조(coral) 색 단정은 Maestro 범위 밖이라 diary-tab 도착으로 대체(home-nav-5tabs 선례), 탭 순회 검증은 AC-007-10 소관이라 중복하지 않음."
+            },
+            {
+              "seq": 4,
+              "action": "docs/doc-tracker.md 갱신: (a) AC-008-10 매핑 행 ⬜ 후속 → ✅ `diary-header-nav.yaml`, (b) '후속 flow 계획' 목록에서 AC-008-10 bullet 제거(#156의 AC-007-01 제거 선례와 동일), (c) 집계 ✅19→20·⬜36→35(개요 2줄 + 매핑표 헤더 날짜/집계), (d) '변경 이력' 표에 2026-07-27 AC-008-10 행 1건 추가.",
+              "expectedOutcome": "집계=실측 정합(AC표 재집계 ✅20·⬜35·🟡0), doc-tracker.md 1파일만 변경, diary-header-nav.yaml 언급 2회(매핑행+이력행)로 backlog bullet 소거 확인."
+            },
+            {
+              "seq": 5,
+              "action": "브랜치를 dlddu/dear-baby에 push하고 base main으로 draft PR 생성(머지 안 함). PR 본문에 task id·gap 요약·계획 단계·검증 방법·CI 영향(무편입 maestro flow는 미실행)을 기술.",
+              "expectedOutcome": "draft PR 1건. CI는 frontend lint/typecheck 등 기존 job만 돌고(신규 미편입 maestro flow는 e2e run_flow 목록에 없어 실행되지 않음) 무영향으로 통과."
+            }
+          ],
+          "plannedAt": "2026-07-27T07:14:53Z"
+        }
+      }
+    ]
   }
 ]
