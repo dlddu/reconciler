@@ -1,7 +1,7 @@
 [
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "detected",
+    "status": "assessing",
     "trigger": {
       "detectedAt": "2026-07-29T11:31:23Z",
       "changedSides": [
@@ -19,6 +19,12 @@
     },
     "createdAt": "2026-07-29T11:31:23Z",
     "updatedAt": "2026-07-29T11:31:23Z",
-    "id": "rct_20260729-0001"
+    "id": "rct_20260729-0001",
+    "stateSummary": {
+      "asIs": "첫 관측(HEAD df6d8c8). 구현+인프라(control-plane/ data-plane/ web/ k8s/ deploy/ scripts/ .github/ Makefile). 운영 main.go가 REAL 어댑터 배선: client-go ClientOrchestrator(세션당 1:1 pod, 결정적 이름 + session-id 라벨; StubOrchestrator는 test-only, 미배선), ConfigMap resourceVersion-CAS + coordination Lease store(real-apiserver envtest 단일승자 검증), HTTP agent client, (CRIU_ENABLED 게이트) AgentCheckpointer + S3 checkpointstore. data-plane agent는 PTY-attach /bin/bash 하나 기동, /attach(ws)+/healthz+/write+/read(offset) 제공, /checkpoint+/restore가 in-pod criu dump/restore(스크롤백을 tar에 직렬화). web SPA: Sessions/NewSession/Workspace/Restore(Restore는 thaw 화면, stale console 없음). OpenAPI /api/v1는 read offset 비파괴·상태분기 read/write/switch, 제품 snapshot 엔드포인트 없음. 테스트: unit+integration+kind e2e(2-replica, MinIO, CRIU-on)+Playwright(J1/J3/J5)+envtest. **이번 변경:** 첫 관측(직전 baseline 없음) — 초기 상태 확립.",
+      "toBe": "docs/(SSOT, subtree c49d590). values V1~V6 → PRD 4종(architecture/lifecycle/state-api/shell-workload) → **15 AC**: A1 CP/DP 분리, A2 세션당 전용 pod 1개, A3 종료/스냅샷 시 회수; B1 60분 max-idle→CRIU 스냅샷+pod 회수, B2 접근 시 복원, B3 스냅샷/복원 무결성; C1 ConfigMap-CAS+Lease 원자 전이, C2 read 상태분기, C3 write 상태분기, C4 자유 switch; D1 pod당 PTY /bin/bash 1개, D2 write=shell stdin, D3 read=offset-cursor delta(offset=0 전체, 비파괴), D4 shell 프로세스 트리=보존 CRIU 상태, D5 idle=마지막 I/O. to-be = 15 AC 전부 구현 **AND 실제 자동 검증**(게이트 뒤 stub·TODO(policy)·의도적 skip은 충족 불인정), UI가 mockup/journey 일치, 인프라가 문서와 일치, 미문서 동작 없음.",
+      "gap": "구조 커버리지는 넓음(12/15 AC — A1/A2/A3-effect/C1/C2/C3/C4/D1/D2/D3/D5는 실구현·배선·active-path 자동검증). 그러나 lifecycle B-경로가 to-be 아님: AC-B1은 운영 idle→snapshot 트리거 부재(session.go:47 TODO(policy); test-only /snapshot 엔드포인트로만 구동), AC-B2/B3/D4 CRIU 복원은 코드는 있으나 execCriuEngine 런타임 seam 미검증으로 TestScenario4/TestDeferred_CRIUIntegrity가 skip, AC-A3 회수·AC-C2/C3 idle-branch 어서션은 하드 skip(TestDeferred_*). 부차: README가 read/write shell 매핑·CRIU를 'stubbed'로 기술해 doc-tracker(2026-07-03/04)·실제 코드와 모순.",
+      "summarizedAt": "2026-07-29T11:31:23Z"
+    }
   }
 ]
