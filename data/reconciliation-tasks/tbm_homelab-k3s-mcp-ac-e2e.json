@@ -391,6 +391,47 @@
       "reason": "정적 구조 gap으로 자동 해소 여지가 없고, 레지스트리 스스로 후속(⬜ 보강 backlog·per-AC 분리·예외 ratify)을 예고한 상태다. 다음 슬라이스 후보: ⬜ 14건 보강(backlog 순), ✅통합 32건의 per-AC 케이스 분리, platform AC4 예외의 definition 반영(모델 개정은 tobe-modeler 경유 — planner가 계획에 포함 가능). 현재 이 모델에 다른 열린 task 없음.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-26T10:06:33Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "grafana-token/AC4(발급자 토큰 비노출)을 배포 서버 tools/call 응답-내용을 단언하는 per-AC 전용 e2e 케이스로 승격해 1:1 매칭을 1건 전진(⬜14→13, ✅37→38, 전용 케이스 5→6). 접근 선택 근거: ⬜ 14 backlog 중 grafana AC4만 신규 픽스처·no-config 배포 변형·auth-enabled 변형·신규 파일이 전혀 필요 없다 — 이미 CI가 실행하는 grafana.py::run()의 통과 중인 grafana_token 호출을 재사용해, 응답 .env 페이로드에 서버측 GRAFANA_ISSUER_TOKEN(키·CI 픽스처 구성값 glsa_mock_issuer·발급자 접두 glsa_)이 부재하고 단명 read 토큰 glc_mock_…만 노출됨을 단언하는 출력-내용 케이스만 추가한다. 2026-07-21 파괴적 표기 5건 승격(PR #32)과 동형의 저위험 additive 슬라이스이며, 대상 값이 ci.yml 시크릿으로 실제 서버에 배선돼 있어 단언이 유의미한 회귀 가드가 된다(mock은 glc_mock_<name>만 반환, 발급자 bearer 미반향 — 확인함). 범위(완료 기준)=이 1개 AC의 전용 케이스 신설 + 문서(test-doc 자동화 필드·doc-tracker 레지스트리/카운트/이력) 반영, CI integration-tests의 grafana 스텝 그린. 범위 밖(후속, 재감지가 새 task로 개방)=나머지 ⬜13(platform AC1/AC2/AC7/AC8·pod-describe AC1~3·no-config graceful 거부 6 — 모두 신규 픽스처/배포 변형 필요), ✅통합 32건의 per-AC 케이스 분리, platform AC4 예외의 모델 definition ratify(tobe-modeler 경유).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "tests/integration/grafana.py에 per-AC 전용 케이스 async test_grafana_token_ac4_issuer_token_not_exposed(session) 신설 — docstring 첫 줄 'AC: grafana-token/AC4'. grafana_token 호출→parse_env_resource로 .env 텍스트 추출→(a) isError False, (b) structuredContent None, (c) 'GRAFANA_TOKEN=glc_mock_' 존재(발급된 실제 응답 앵커), (d) 'GRAFANA_ISSUER_TOKEN' 키 부재, (e) 구성값 'glsa_mock_issuer' 부재, (f) 발급자 접두 'glsa_' 부재.",
+              "expectedOutcome": "python3 -m py_compile 구문 검증 통과(로컬 확인 완료). tools/list 메타데이터가 아닌 tools/call 응답-내용 단언."
+            },
+            {
+              "seq": 2,
+              "action": "grafana.py::run()의 기존 AC1/AC2 검증 블록 끝(같은 open_session 세션 내부)에서 위 케이스를 호출하고 진행 마커('grafana_token issuer non-exposure ok') 출력.",
+              "expectedOutcome": "ci.yml 무변경으로 새 케이스가 integration-tests job의 'Validate grafana_token tool against mock' 스텝(python tests/integration/grafana.py, 8085)에서 자동 실행·게이트됨."
+            },
+            {
+              "seq": 3,
+              "action": "docs/test-grafana-token.md 시나리오4 자동화 필드를 '부분 — 추가 권장'에서 신설 케이스 경로(grafana.py::test_grafana_token_ac4_issuer_token_not_exposed)로 갱신.",
+              "expectedOutcome": "테스트 문서가 AC4의 실제 e2e 경로를 지목(규칙3 식별성 충족)."
+            },
+            {
+              "seq": 4,
+              "action": "docs/doc-tracker.md 갱신: 레지스트리 grafana-token/AC4 ⬜→✅ 전용 케이스, 헤더 카운트 ✅37(전용5)→✅38(전용6)·⬜14→13, ⬜ backlog 목록에서 grafana AC4 bullet 제거·heading (14)→(13), 변경이력 2026-07-29 행 추가.",
+              "expectedOutcome": "레지스트리 tally ✅38·⬜13·🚫1=52 정합(로컬 스크립트 검증 완료)."
+            },
+            {
+              "seq": 5,
+              "action": "CI integration-tests(kind) 그린 확인 — 특히 grafana 스텝 로그에 'grafana_token issuer non-exposure ok' 출력. 레드 시 실패 스텝 grep으로 내 grafana 케이스인지 무관 스텝(샤딩·픽스처 롤아웃 등)인지 구분.",
+              "expectedOutcome": "grafana 스텝 포함 integration-tests 전체 그린. lint/unit-tests는 Go 전용이라 무영향, docker job은 needs 게이트."
+            },
+            {
+              "seq": 6,
+              "action": "경미한 리뷰(문서 3파일 + tests/ additive, 프로덕션 코드 0, 파괴/부작용 0) 후 draft PR un-draft/merge.",
+              "expectedOutcome": "머지 시 as-is(tests/)·to-be(doc-tracker) 해시 동시 변경 → 재감지가 잔여 ⬜13·통합 per-AC 분리·platform AC4 ratify를 새 task로 개방."
+            }
+          ],
+          "plannedAt": "2026-07-29T10:36:14Z"
+        }
+      }
+    ]
   }
 ]
