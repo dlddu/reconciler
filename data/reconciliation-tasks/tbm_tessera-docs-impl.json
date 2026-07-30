@@ -362,6 +362,52 @@
       "reason": "diff 자체는 무반응 대상(benign, 주석 + tracker 장부, prior-flag criterion-② 항목 해소, 새 모순/미문서 동작 없음). 그러나 정의상 지속되는 criterion-① 미구현-AC gap(16/26; 4 부분 + 6 stub) 자체가 drift이며 자동 수렴 불가 — 자가 수렴 메커니즘 없는 정적 문서↔코드 미달. 구체 잔여: HostBackend/ContainerBackend runProcess+getEnv, BrowserRouter.forwardCallback, buildWorkspaceSnapshot surfaces:[] 전부 throw/stub. 다음 슬라이스는 planner 선택(V4 복원 본체 AC4.1-4.3/4.6, direction-B AC3.3/3.4, AC2.6 lifecycle, 또는 live Claude session AC2.2/2.3). 이 모델에 다른 열린 task 없음.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-29T11:31:23Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "AC4.1(백엔드 종료 시 편집기 상태 복원)만 슬라이스로 구현한다 — host 워크스페이스 편집기의 열린 파일·미저장 버퍼·커서/선택이 persist→재시작 복원 라운드트립을 통과하게 만든다. 이미 설계돼 있으나 항상 비어 있던 WorkspaceStateSnapshot.surfaces(현재 buildWorkspaceSnapshot이 무조건 [] 반환)를 실제 편집기 콘텐츠로 채우는 것이 핵심이며, AC4.4(브라우저 탭 URL 복원)가 확립한 캡처→직렬화→복원 패턴을 그대로 미러링한다. terminalCwdRegistry와 동형의 CodeMirror 비의존 모듈 레지스트리를 side-channel로 써서 (1) persist 시 라이브 CodeMirror 뷰에서 텍스트+주커서(anchor/head)를 캡처하고, (2) 부팅 시 로드된 surfaces를 seed해 편집기가 마운트에서 자기 페이로드를 집어 미저장 버퍼를 복원한다(loadedPathRef 세팅으로 디스크 재읽기가 미저장분을 덮지 않게 함). 편집 자체가 디바운스 저장을 트리거하도록 편집기 변경 알림을 autosave에 배선한다 — 현 autosave는 engine.subscribe(레이아웃 변경)에만 반응해, 레이아웃 변경 없이 편집만 하다 백엔드가 죽으면 미저장분이 저장되지 않기 때문. 스키마 버전 범프/마이그레이터는 불필요하다(모든 기존 스냅샷이 이미 surfaces:[]를 가지며 isRestorable는 surfaces를 검사하지 않는다). 접근 선택 근거: 이 슬라이스는 V4(1/6, 최대 gap)의 첫 실체이고 host-only라 비게이트 CI(vitest+playwright)로 객관 검증 가능하며(컨테이너 e2e 게이트 회피), 이후 AC4.2/4.3가 재사용할 surfaces 콘텐츠 기전을 확립한다. 롤백은 PR 되돌리기로 완전 가역(프로덕션/데이터/불가역 조작 없음). 완료 기준: host 편집기의 미저장 텍스트+커서/선택이 저장→복원되고, 순수 유닛 테스트(레지스트리 라운드트립 + buildWorkspaceSnapshot surfaces + 커서 clamp)와 비게이트 e2e(타이핑→재시작→텍스트 복원)가 CI에서 그린. 범위 밖(후속 재감지가 새 task로 잇는다): AC4.2 Claude 세션 복원·AC4.3 터미널 스크롤백 복원(같은 surfaces 기전 재사용)·AC4.6 재연결 충돌 처리·컨테이너 편집기 복원(현재 isRestorable의 backend.cwd 검사로 컨테이너 워크스페이스 자체가 복원 대상이 아님).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "src/shared/types/persistence.ts: buildWorkspaceSnapshot에 4번째 파라미터 surfaces: SurfaceStateEntry[] = [] 를 추가하고 하드코딩 surfaces:[]를 이 값으로 교체. 함수/파일 상단 doc 주석의 'content restore is out of scope, surfaces always empty' 문구를 갱신.",
+              "expectedOutcome": "3-인자 콜러(createWorkspace.ts)는 기본값으로 무변경 컴파일; 유닛 테스트에서 넘긴 surfaces가 스냅샷에 그대로 실리고 미지정 시 []."
+            },
+            {
+              "seq": 2,
+              "action": "src/renderer/surfaces/editorStateRegistry.ts 신설(terminalCwdRegistry 동형, CodeMirror/DOM 비의존): 키 `${workspaceId}\\u0000${tabId}`로 (a) capture getter register/forget + captureEditorStates(workspaceId)->SurfaceStateEntry[], (b) restore payload seedEditorRestore/takeEditorRestore, (c) 편집 변경 subscribeEditorChanges/notifyEditorChanged(workspaceId), (d) 커서 오프셋 clamp 헬퍼, (e) __resetEditorStateRegistry 테스트 훅. EditorContent={text,anchor,head} 타입 export.",
+              "expectedOutcome": "node vitest 환경에서 서브모듈 직접 import 가능(배럴 미경유); register→capture→seed→take 라운드트립이 원본과 동일 값 반환."
+            },
+            {
+              "seq": 3,
+              "action": "src/renderer/surfaces/EditorSurface.tsx: 뷰 생성 effect(마운트)에서 registerEditorState로 라이브 뷰 getter 등록하고 takeEditorRestore로 doc/selection 초기화(selection은 clamp된 {anchor,head}로 EditorState.create에 전달), 복원 시 loadedPathRef.current=pathRef.current 세팅 + scratchEmpty 해제; updateListener의 docChanged에서 notifyEditorChanged(workspaceId) 호출; cleanup에서 forgetEditorState.",
+              "expectedOutcome": "복원된 미저장 버퍼가 tab.path 파일읽기 effect에 덮이지 않고, 편집 시 workspace autosave가 트리거됨."
+            },
+            {
+              "seq": 4,
+              "action": "src/renderer/app/WorkspaceView.tsx: snapshotNow()가 buildWorkspaceSnapshot의 4번째 인자로 captureEditorStates(workspace.id) 전달; autosave effect에 subscribeEditorChanges(workspace.id, ()=>디바운스 save) 구독 추가 + cleanup에서 해제; 'Content is out of scope here' 주석 갱신.",
+              "expectedOutcome": "편집기 타이핑이 SAVE_DEBOUNCE_MS 후 '레이아웃 저장됨' 토스트를 내고 편집기 콘텐츠가 persist에 포함됨."
+            },
+            {
+              "seq": 5,
+              "action": "src/renderer/app/App.tsx: 부팅 복원 .then()에서 setWorkspaces 이전에 snapshots.forEach(s=>seedEditorRestore(s.workspace.id, s.surfaces ?? []))로 레지스트리 seed; content-out-of-scope 주석 갱신.",
+              "expectedOutcome": "복원 렌더에서 편집기가 마운트 시 자기 페이로드를 집어 미저장 버퍼/커서 복원."
+            },
+            {
+              "seq": 6,
+              "action": "테스트 추가: test/unit/editor-restore.test.ts(vitest, 서브모듈 직접 import) — 레지스트리 캡처/seed/take 라운드트립, buildWorkspaceSnapshot surfaces 통과/기본[], 커서 clamp 경계; test/e2e/editor-restore.spec.ts(playwright, 비게이트) — host 워크스페이스 편집기에 미저장 텍스트 타이핑→저장 토스트→같은 userData로 재시작→.cm-content 텍스트 복원 확인.",
+              "expectedOutcome": "vitest + 비게이트 playwright가 CI에서 그린(컨테이너 게이트 e2e와 무관)."
+            },
+            {
+              "seq": 7,
+              "action": "dlddu/tessera에 브랜치 reconcile/rct_20260729-0001로 위 변경을 커밋·푸시하고 draft PR 오픈(로컬 빌드 없이 작성, PR 본문·task preparation에 blind-authored 명시, CI를 객관 게이트로).",
+              "expectedOutcome": "draft PR 생성·CI 트리거; executor가 CI 그린 확인 후 검토/머지."
+            }
+          ],
+          "plannedAt": "2026-07-30T10:17:41Z"
+        }
+      }
+    ]
   }
 ]
