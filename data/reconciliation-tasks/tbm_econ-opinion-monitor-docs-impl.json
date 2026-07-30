@@ -579,6 +579,57 @@
       "reason": "definition상 미구현 AC=drift(백로그 예외 불가)이며 이번 변경 후에도 정적 문서↔구현 격차가 자동 해소되지 않고 대량 잔존(AC2.x·AC3.x 14개 + ingestion 슬라이스도 e2e 1:1·기본 소스·스케줄링 미완결). 이 diff는 직전 econ 슬라이스 흐름(rct_20260726-0001 succeeded)에 이은 실행 산출물성 asIs 변화이므로(슬라이스 착지 → 재감지 정상 흐름), planner가 (1) 잔여 ingestion 마감(기본 소스 전환·feeds 설정·AC1.1 배선·ingestion.spec 신설)과 (2) 후속 슬라이스(AC2.x·AC3.x)를 이어갈 차례. 이 모델에 다른 열린 task 없음.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-29T11:31:23Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "런타임 컷오버 슬라이스: 실 RSS/Atom 피드를 ingestion CLI의 기본 운영 소스로 전환하고 체크인된 기본 feed 목록을 추가해, opt-in이던 실 수집(AC1.2~1.7)을 기본 경로로 만든다. 직전 슬라이스(#7)가 feeds.py 실 소스를 얹었으나 기본은 fake·설정 미체크인이었던 잔여 gap을 닫는다. fake 카탈로그는 --source fake로 유지해 오프라인 스모크/테스트 결정성을 보존한다. 접근 근거: as-is 추적은 contracts/python/go/web 트리 해시이므로 python/를 바꾸는 컷오버라야 merge 후 재감지가 잔여 gap(e2e 1:1·AC1.1 CronJob·AC2.x·AC3.x)을 새 task로 확실히 잇는다 (tests/·deploy/만 건드리는 슬라이스는 as-is 무변이라 재감지가 안 열림). === 완료 기준(이 시도의 성공 범위): (1) CLI 기본 --source가 feed이고 --feeds 생략 시 동봉 default_feeds.json으로 폴백, (2) 3축(KR/US/GLOBAL) 유효한 기본 feed 목록 체크인, (3) 교차언어 스모크가 --source fake로 컷오버 후에도 오프라인·결정적, (4) CI(gen-check/lint/test) green. === 범위 밖(후속 재감지가 새 task로 이음): AC1.1 CronJob 매니페스트(deploy/), ingestion e2e 1:1 spec(tests/e2e), AC2.x analysis 실 LLM, AC3.x go/web. 수렴 판정은 모델 전체 to-be가 아니라 이 범위 기준으로 한다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "패키지 동봉 기본 feed 목록 default_feeds.json 신설 — KR/US/GLOBAL 3축 실 경제뉴스 RSS/Atom 큐레이션 스타터 목록([{source_id,axis,feed_url,limit}]).",
+              "expectedOutcome": "6개 엔트리·3축 모두 포함·JSON 유효. load_feed_configs로 파싱·검증 통과."
+            },
+            {
+              "seq": 2,
+              "action": "feeds.py에 default_feeds_path() 추가 — Path(__file__).with_name('default_feeds.json')로 작업 디렉터리 무관 resolve, 도달 불가 소스는 AC1.6 격리라는 주석 명시.",
+              "expectedOutcome": "default_feeds_path()가 동봉 파일 경로 반환·exists()."
+            },
+            {
+              "seq": 3,
+              "action": "cli.py 컷오버 — _build_parser() 추출, --source 기본값 fake→feed, --source feed에서 --feeds 생략 시 default_feeds_path() 폴백(기존 parser.error 제거), 모듈 docstring·help 갱신.",
+              "expectedOutcome": "_build_parser().parse_args([]).source=='feed'. --source fake는 그대로 동작. ast 파싱 OK, 라인 ≤100."
+            },
+            {
+              "seq": 4,
+              "action": "tests/smoke.sh를 --source fake로 고정(주석 포함) — 컷오버 후에도 교차언어 스모크가 오프라인·결정적으로 유지되게.",
+              "expectedOutcome": "smoke가 fake로 14 news_item 생성, Gold 서브젝트 단언 무변."
+            },
+            {
+              "seq": 5,
+              "action": "tests/test_default_feeds.py 신설(오프라인) — 기본 소스=feed, fake 잔존, 동봉 설정 유효·3축·source_id 유일 검증.",
+              "expectedOutcome": "신규 3 테스트 green, 기존 ingestion 테스트 회귀 없음."
+            },
+            {
+              "seq": 6,
+              "action": "README.md 최소 갱신 — ingestion 기본이 실 피드임을 반영(디렉터리 설명·quickstart는 --source fake 데모·범위 섹션), 문서↔코드 모순 방지.",
+              "expectedOutcome": "README가 실 피드 기본을 정확히 기술, 페이크 대체 문구 정정."
+            },
+            {
+              "seq": 7,
+              "action": "로컬 검증(blind 아님; 이 env는 uv/ruff/pytest 부재 → pytest.raises 셰임 + stdlib 하네스). ingestion/core/analysis/aggregation 단위 테스트 실행 + main() in-process 스모크(fake·file:// feed).",
+              "expectedOutcome": "단위 테스트 전부 green(신규 3 포함), main() fake=14/feed=4·본문 3·축·rank 정상, 라인 ≤100."
+            },
+            {
+              "seq": 8,
+              "action": "대상 레포 dlddu/economic-opinion-trend-monitor에 브랜치 push + draft PR 생성(task id·gap·범위·검증·주의사항 본문 포함).",
+              "expectedOutcome": "draft PR 생성, CI(build: gen-check/lint/test + e2e:kind) 트리거."
+            }
+          ],
+          "plannedAt": "2026-07-30T04:59:59Z"
+        }
+      }
+    ]
   }
 ]
