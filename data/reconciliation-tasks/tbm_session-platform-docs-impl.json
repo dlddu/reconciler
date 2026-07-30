@@ -31,6 +31,37 @@
       "reason": "정의 drift 기준 #1(미구현·미검증 AC는 drift; 게이트 뒤 stub·TODO(policy)·의도적 skip은 충족 불인정, 보류 예외 없음)에 따라 idle→snapshot 트리거(AC-B1)가 운영에 실제 부재하고 그 검증 테스트 및 AC-A3/C2/C3 idle-branch 테스트가 하드 skip이며 AC-B2/B3/D4가 미검증 CRIU 런타임에 skip-게이트돼 있어 문서↔구현 간 유의미(노이즈 아님) gap이다. 추가로 stale-README 'stubbed' 서술이 실제 코드와 모순. 해소에는 실제 작업 필요 — planner가 AC-B1 트리거 + CRIU 런타임 검증을 우선하고 README 정합을 결정할 차례. 이 모델의 첫 task(다른 열린 task 없음).",
       "assessedBy": "agent",
       "assessedAt": "2026-07-29T11:31:23Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "AC-B1 운영 idle→snapshot 트리거만 슬라이스로 구현한다: 대상 레포 dlddu/session-platform에 IdleReaper(주기 스캔 → 유휴≥session.MaxIdle 세션에 기존 Manager.Snapshot 재사용, lock·idempotent) + cmd/control-plane/main.go 배선(shutdown ctx goroutine, IDLE_SCAN_INTERVAL 기본 1m) + 경계 단위테스트(60m 동결 / 59m 비동결)를 담은 PR #15를 스테이징했다. 왜 이 방법: Snapshot(checkpoint→회수→상태전이) 머신러리가 이미 존재하고 테스트 전용 /snapshot 으로만 구동됐으므로, 그 메서드를 변경 없이 재사용하는 최소 배선 goroutine이 가장 작고 가역적인 경로다. 완료 기준(범위): go test ./internal/service/...(TestIdleReaperSnapshotsIdleSessions 두 서브테스트) 통과 + 기존 무회귀 + 배선/문서정합 확인 후 PR 머지. 범위 밖(후속 재감지): AC-B1 grace/override 정책, AC-B2/B3/D4 CRIU 런타임 검증(execCriuEngine seam), AC-A3/C2/C3 하드 skip TestDeferred_* 어서션·e2e TestDeferred_IdleToSnapshot 채우기, README 'stubbed' 서술 정합.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 PR #15(dlddu/session-platform) 리뷰. 신규 reaper.go, main.go 배선, reaper_test.go, self-consistency 주석(session.go/manager.go)·doc-tracker.md 확인. 핵심: reaper가 기존 Manager.Snapshot(lock·idempotent)을 그대로 재사용하는지, IdleFor(now)>=MaxIdle 경계, shutdown ctx로 goroutine 종료.",
+              "expectedOutcome": "리뷰어가 변경 범위(6 files, +205/-7)와 AC-B1 매핑을 확인하고, 트리거가 유휴 세션을 동결하는 운영 동작임을 인지·승인."
+            },
+            {
+              "seq": 2,
+              "action": "단위 테스트 실행: cd control-plane && go test ./internal/service/...  (전체는 make test-unit, lint 포함은 make test).",
+              "expectedOutcome": "TestIdleReaperSnapshotsIdleSessions 두 서브테스트 PASS(60m→snapshot+pod 회수, 59m→active 유지) + 기존 테스트 무회귀."
+            },
+            {
+              "seq": 3,
+              "action": "PR #15 머지(squash 권장). 머지가 as-is 해시를 바꿔 재감지를 트리거한다.",
+              "expectedOutcome": "main에 트리거·테스트·문서정합이 반영되고 브랜치가 정리됨."
+            },
+            {
+              "seq": 4,
+              "action": "수렴 판정(재검증): 아래 executionGuide의 '완료 기준'으로 이 슬라이스 수렴을 확인해 task를 succeeded로 닫는다. 범위 밖 잔여 gap은 재감지가 새 task로 잇는다.",
+              "expectedOutcome": "AC-B1 운영 트리거가 구현·검증됨으로 판정. B2/B3/D4·A3/C2/C3·README는 후속 task로 분리."
+            }
+          ],
+          "plannedAt": "2026-07-30T05:03:29Z"
+        }
+      }
+    ]
   }
 ]
