@@ -31,6 +31,37 @@
       "reason": "정의가 정책 문서 부재(to-be=absent)·기존 사용 grandfather 없이 전부 재검토(\"grandfather 없이 전부 재검토 대상\")·첫 task는 (1) docs/e2e-mocking-policy.md 신설과 (2) 83개 사이트 전부를 허용목록+주석 또는 제거로 판정임을 명시한다. 허용목록 ∅ 대 83개 라이브 미주석 인터셉트, 그리고 편의 모킹 확증(pods-hide-completed, argo-data-states) 상 gap은 실재하며 노이즈가 아님 — 지금 조치 필요. 이 모델의 첫 task(다른 열린 task 없음).",
       "assessedBy": "agent",
       "assessedAt": "2026-07-29T11:31:23Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "mock-policy 모델의 첫 slice. to-be SSOT인 docs/e2e-mocking-policy.md가 부재(absent)이므로 (1) 정책 문서를 신설하고 (2) 12개 spec 83개 인터셉트 중 카테고리 판정이 명백히 justified한 4개 핸들러(=4개 파일 전량)만 예외로 등재·주석한다. 나머지 8개 파일 72사이트(편의 데이터 모킹 다수 포함)는 후속 slice로 남긴다. 이 방향을 고른 이유: 정책 부재에서 예외를 최소·보수적으로만 인정하라는 모델 방향(‘애매하면 제거 쪽, 예외는 늘지 않는 방향’)에 부합하고, 코드 변경이 주석 4줄 + 신규 md뿐이라 런타임·테스트 동작 무영향(모든 후보 중 최저 blind-risk)이며, AC-e2e 형제 모델(tbm_kubernetes-dashboard-ac-e2e)이 앞으로 준수할 거버넌스 SSOT를 먼저 세운다. 완료 기준(이 slice): docs/e2e-mocking-policy.md 존재(4 카테고리 ERR/LAT/ABS/DES + 표기 규약 + 허용목록 4행) AND 등재된 4개 파일 각 page.route 핸들러에 // mock-exception 주석 부착 AND 허용목록 4행 ↔ 코드 주석 4개가 양방향 1:1(등재 4파일 한정) AND e2e 그린 유지. 범위 밖(후속, 재감지가 새 task로): 나머지 8개 파일(fluxcd-reconcile 16·argo-data-states 14·fluxcd-suspend-resume 12·fluxcd-data-states 12·fluxcd-detail 6·external-secrets-data-states 5·argo-submit 5·pods-hide-completed 2)의 인터셉트 판정·등재 또는 (편의모킹) 제거.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "docs/e2e-mocking-policy.md 신설. 내용: 목표(실 kind+fixture 기본, 인터셉트는 실환경 재현 불가한 경우+문서 등재 예외만), SSOT 정의, 허용 카테고리 4종(ERR/LAT/ABS/DES) 설명, 표기 규약(`// mock-exception: <CODE> — <사유>`), 허용목록 표(파일·API 패턴·카테고리·실환경 불가 사유) 4행, 그리고 별도 비규범 섹션으로 ‘미판정 인터셉트(후속)’ 8개 파일 목록. 카테고리·규약 문구는 모델 정의에서 그대로 가져온다.",
+              "expectedOutcome": "docs/e2e-mocking-policy.md 존재. 허용목록 표에 정확히 4행(argo-workflow-delete=ERR, argo-workflow-resubmit=ERR, overview-summary-cards=LAT, workloads-restart-confirm=LAT). 미판정 8개 파일은 허용목록이 아닌 후속 섹션에만 존재."
+            },
+            {
+              "seq": 2,
+              "action": "4개 spec의 각 page.route 등록 직전 줄에 `// mock-exception: <CODE> — <사유>` 주석 1줄씩 추가. (a) e2e/argo-workflow-delete.spec.ts:340 → ERR (DELETE시 500 주입해 삭제 실패 에러 다이얼로그 검증; 실클러스터가 요청시점 500을 내게 만들 수 없음). (b) e2e/argo-workflow-resubmit.spec.ts:279 → ERR (resubmit POST 500 주입). (c) e2e/overview-summary-cards.spec.ts:517 → LAT (**/api/** 3s 지연 continue로 로딩 스켈레톤/ARIA 관측; 후속 page.unroute는 같은 핸들러 해제). (d) e2e/workloads-restart-confirm.spec.ts:59 → LAT (restart 응답 2s 지연으로 ‘Restarting…’ 전이 상태 관측; 실 restart는 즉시 완료돼 관측 불가 + 실 재시작은 파괴적). 코드 로직·assertion 불변, 주석만 추가.",
+              "expectedOutcome": "각 파일 page.route 직전에 // mock-exception 1줄. `grep -rn 'mock-exception' e2e | wc -l` = 4. 4개 파일의 총 인터셉트(3+3+3+2=11 raw site)가 모두 등재 핸들러에 속함(잔여 미등재 인터셉트 0 in these 4 files)."
+            },
+            {
+              "seq": 3,
+              "action": "e2e/README.md에 짧은 ‘Network mocking policy’ 하위 섹션 추가 — docs/e2e-mocking-policy.md를 SSOT로 가리키고 `// mock-exception:` 규약을 한 줄로 안내(기존 AC↔spec 1:1·ENG-NNN 규약 문서화 방식과 동일 패턴). 규범 내용은 정책 문서에 두고 README는 포인터만.",
+              "expectedOutcome": "e2e/README.md가 정책 문서와 주석 규약을 가리킨다. 기존 문단 구조·내용 불변, 추가만."
+            },
+            {
+              "seq": 4,
+              "action": "검증(정적): (i) docs/e2e-mocking-policy.md 허용목록 4행 각각이 실제 코드의 // mock-exception 주석 사이트와 파일·카테고리 기준 1:1로 일치(양방향, 등재 4파일 한정). (ii) 4개 파일에 미등재(주석 없는) 인터셉트가 0. (iii) e2e(kind) 그린 — 주석은 동작 무변이므로 회귀 없음. red면 실패 spec 목록 grep해 내 4파일이 아니면 무관 flake로 판정.",
+              "expectedOutcome": "허용목록↔주석 4:4 일치, 4파일 미등재 인터셉트 0, e2e 그린. 실패 시 red spec이 내 4파일 밖이면 unrelated."
+            }
+          ],
+          "plannedAt": "2026-07-30T04:12:49Z"
+        }
+      }
+    ]
   }
 ]
