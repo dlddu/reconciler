@@ -545,6 +545,42 @@
       "assessedBy": "agent",
       "assessedAt": "2026-07-30T04:22:40Z"
     },
-    "updatedAt": "2026-07-30T04:22:40Z"
+    "updatedAt": "2026-07-30T04:22:40Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "pod_describe PRD의 3개 e2e 공백 AC(AC1 파드 상세 스냅샷 · AC2 대상 지정 방식 · AC3 이벤트 best-effort)를, CI가 이미 실행하는 tests/integration/workload.py::run()에 per-AC 전용 케이스로 추가해 닫는다 — 기존 `workload-fixture` 러닝 파드와 기존 CI 스텝(port 8081)을 재사용하므로 신규 파일·신규 픽스처·ci.yml 변경이 없다. 접근 근거: 이번 gap(⬜13)에서 가장 blind-risk가 낮은 additive 슬라이스 — 이미 PASS하는 CI 스텝+픽스처+완전 구현된 도구를 재사용하고, 배포 서버 pod_describe의 실제 structuredContent 형태(internal/k8s/types.go의 PodDescription json 태그 + internal/mcp/describe.go 렌더 + internal/mcp/mcp.go 핸들러로 검증)에만 단언한다. 대안(레지스트리가 제안한 신규 tests/integration/pod.py + 신규 CI 스텝)은 ci.yml 변경이 blind(kind 로컬 불가)라 배제; per-AC 케이스는 파일 위치가 아니라 이름+docstring이 AC를 선언하므로(규칙 3) workload.py 배치가 규약을 위반하지 않는다. 완료 기준(이 슬라이스 범위): pod-describe AC1·AC2·AC3 3건이 배포 서버 통합 e2e 전용 케이스를 가져 레지스트리에서 ✅ 전용 케이스로 승격(⬜13→10). 범위 밖(후속, 재감지가 새 task로 열림): platform auth-gate 4건(AC1/AC2/AC7/AC8 — kind 배포가 MCP_AUTH_DISABLED=1이라 auth-게이팅 배포 변형 필요) · no-config graceful 거부 6건(대상 시크릿만 뺀 배포 변형 필요) · platform/AC4 🚫 e2e 예외의 definition 비준.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "dlddu/homelab-k3s-mcp의 main에서 브랜치 reconcile/rct_20260730-0001 생성.",
+              "expectedOutcome": "main HEAD 기준 새 브랜치가 생성된다."
+            },
+            {
+              "seq": 2,
+              "action": "tests/integration/workload.py에 3개 async per-AC 케이스 함수 추가: test_pod_describe_ac1_snapshot(session)·test_pod_describe_ac2_target_resolution(session)·test_pod_describe_ac3_events_best_effort(session). 각 함수 docstring 첫 줄은 'AC: pod-describe/ACn'. run() 끝(destructiveHint 단언 뒤, 픽스처는 이미 replicas=1 Running)에서 세 함수를 호출. 단언은 검증된 형태에만: AC1=selector로 workload-fixture 파드 describe→structuredContent {namespace=='workload-test', name.startswith('workload-fixture-'), phase=='Running', containers[pause] {image에 'pause' 포함, ready is True, restart_count==0, state=='running'}, conditions는 비어있지 않은 list}, content[0].text에 'Name:'·'workload-test' 포함. AC2=selector 경로로 얻은 name으로 by-name describe가 같은 파드 반환, workload_kind=Deployment+workload_name=workload-fixture 경로도 같은 파드 반환, name+selector 동시 지정은 McpError('mutually exclusive'). AC3='events' 키가 structuredContent에 list로 존재(권한 있으므로 채워질 수 있으나 best-effort 계약상 항상 list로 present)하고 호출이 성공(isError False).",
+              "expectedOutcome": "workload.py에 3개 전용 케이스가 추가되고 run()에서 실행된다. 기존 케이스·픽스처·CI 스텝은 불변."
+            },
+            {
+              "seq": 3,
+              "action": "docs/doc-tracker.md 갱신: AC 레지스트리의 pod-describe/AC1·AC2·AC3 행을 ⬜ 보강 필요 → ✅ 전용 케이스 `workload.py::test_pod_describe_ac{1,2,3}_...`로 승격, 섹션 헤더 카운트 '✅ e2e 38(통합 32·전용 6)·⬜13·🚫1' → '✅ e2e 41(통합 32·전용 9)·⬜10·🚫1', ⬜ backlog에서 pod-describe 3개 불릿 제거, 변경 이력에 2026-07-30 행 추가.",
+              "expectedOutcome": "레지스트리가 3건 ✅ 승격·집계 재산정(41/10/1=52)되어 as-is(tests) 변화의 SSOT 반영과 일치한다. doc-tracker blob 변경 → 머지 후 재감지 트리거(잔여 ⬜10 후속 task)."
+            },
+            {
+              "seq": 4,
+              "action": "docs/test-pod-describe.md 자동화 필드 갱신: 시나리오 1/2/3의 자동화 항목에 신규 배포 서버 통합 e2e 케이스 경로(`tests/integration/workload.py::test_pod_describe_ac{1,2,3}_...`)를 기존 Go 단위 테스트 옆에 추가.",
+              "expectedOutcome": "테스트 문서 자동화 필드가 새 e2e 케이스를 지목한다(test-*.md는 to-be 해시 미포함이라 재감지 무트리거)."
+            },
+            {
+              "seq": 5,
+              "action": "브랜치 push 후 GitHub API로 draft PR 생성(머지하지 않음). PR 본문에 task id, gap 요약, 계획 단계, 검증 방법 기재.",
+              "expectedOutcome": "draft PR이 열리고 CI(integration-tests kind)가 트리거되어 새 케이스가 실서버에서 실행된다."
+            }
+          ],
+          "plannedAt": "2026-07-30T07:08:39Z"
+        }
+      }
+    ]
   }
 ]
