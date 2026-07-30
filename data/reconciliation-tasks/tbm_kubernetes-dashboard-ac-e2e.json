@@ -803,6 +803,46 @@
             }
           ]
         }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "직전 시도(attempts[0])는 자기 계획 범위(OV6·OV7·SC3 신설로 53:53 전단사)를 달성하지 못하고 failed로 종료했다. 두 근본 원인: ① SC3 스펙(e2e/secrets-delete-resync.spec.ts) 4~33행 docstring의 19행 백틱 글롭 `**/api/secrets**`에 든 '*/' 시퀀스가 블록 주석을 조기 종결→직후 백틱이 템플릿 리터럴을 EOF까지 개방(SyntaxError: Unterminated template 19:33)→CI E2E(kind) 수집 단계 red. ② PR 준비 후 main에 #210(형제 모델 tbm_kubernetes-dashboard-e2e-mock-policy)이 착지해 docs/e2e-mocking-policy.md(SSOT)가 활성 게이트가 됐고, PR의 신규 인터셉트 2건(OV7 GET /api/overview route.fulfill, SC3 /api/secrets route)이 정책이 요구하는 '// mock-exception:' 주석+허용목록 등재를 모두 결여→그대로 머지 시 형제 모델 즉시 drift. 재계획 접근: 두 원인을 각각 뿌리에서 제거하되, 착지한 모킹 정책과 정합하는 슬라이스로 범위를 재조정한다. (a) SC3 — 구문 결함을 고치고, 승인된 컨벤션(workloads-restart-confirm=허용목록 #4)대로 실 kind 클러스터의 실 fixture(dashboard-test/test-secret — SC1 secrets-tab·SC2 secrets-reveal가 이미 의존)로 목록을 조회하고 파괴적 DELETE /api/secrets/:ns/:name 만 인터셉트(가짜 200·실삭제 없음→순차 스위트 오염 없음, 삭제 후 실 refetch에 fixture 잔존=ESO 재생성 표현)하도록 리팩터한다. 이는 단일 정당 DES 예외로, 정책 허용목록에 DES 행 1개와 코드 mock-exception 주석 1개를 같은 PR에서 함께 추가해 형제 모델을 양방향 1:1로 유지한다. (b) OV6 — 모킹 없는 실클러스터 스펙(dashboard-test↔dashboard-empty 네임스페이스 전환→GET /api/overview?ns= 스코프 재조회 관측), 그대로 유지한다. (c) OV7 — 유일한 실현 수단이 GET /api/overview 응답 전체를 데이터-모킹(노드수 1/1·avgCpu 12.5%·avgMem 34.2% 등 조작)하는 것인데, 이는 정책의 '명시적 불허(목록·개수·상태 조합 고정 데이터 모킹)'에 해당하고 어떤 승인 카테고리(ERR/LAT/ABS/DES)에도 깨끗이 들지 않으며(metrics-server 부재는 외부-시스템 의존이 아니라 상주 컴포넌트의 부재라 ABS 문구에 안 맞음), 하필 정책이 '제거 대상'으로 명시한 pods-hide-completed/*-data-states 스타일을 그대로 답습한다. 게다가 프런트의 graceful 렌더 자체는 라이브-메트릭 렌더와 구분되지 않아(백엔드가 동형 응답을 냄) e2e 고유 가치도 낮고 백엔드 폴백은 handlers/overview_test.go가 유닛 커버한다. 정책의 '애매하면 제거·예외는 늘지 않는 방향' 원칙과 형제 모델의 직전(rct_20260729-0001, succeeded) 확정 방향에 정면으로 반하므로 이 슬라이스에서 제외한다. 완료 기준(범위): OV6·SC3 전용 스펙 2개가 실 fixture/정당 DES로 CI E2E(kind) green을 통과하고, doc-tracker.md·test-overview.md·test-secrets.md와 정책 허용목록이 서로 정합(연결 AC 50→52 ↔ 전용 스펙 50→52, 자동화 공백 3→1, 형제 모델 무drift)하면 이 task는 성공이다. 범위 밖(후속): OV7 전용 e2e(잔여 gap 1건)는 실행이 만든 버전 변화의 재감지가 새 task로 잇는다. 해소에는 (i) metrics-server 부재 kind 프로파일 신설로 실환경 재현, 또는 (ii) mock-policy 모델을 통해 이 데이터-모킹을 명시적 예외로 승인 — 둘 중 하나의 선결 설계 결정이 필요하며, 완전 53:53 전단사는 그 결정 이후 별도 슬라이스로 달성한다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "reconcile 브랜치(reconcile/rct_20260729-0001-ov6-ov7-sc3)를 origin/main(9622a97, #210 착지본) 위로 rebase해 docs/e2e-mocking-policy.md와 e2e/README.md 정책을 브랜치에 반영한다. 브랜치가 건드리는 문서 3파일·신규 스펙 3개는 #210이 건드린 정책/README/기존 4스펙과 비겹침이라 무충돌이 예상된다.",
+              "expectedOutcome": "브랜치 base=9622a97, docs/e2e-mocking-policy.md가 브랜치에 존재, rebase 충돌 0."
+            },
+            {
+              "seq": 2,
+              "action": "OV7 스펙 e2e/overview-metrics-fallback.spec.ts를 삭제한다(데이터-모킹 정책 위반·이 슬라이스 밖).",
+              "expectedOutcome": "파일 부재. 브랜치의 신규 인터셉트는 SC3 1건만 남는다(git diff origin/main로 확인)."
+            },
+            {
+              "seq": 3,
+              "action": "SC3 스펙 e2e/secrets-delete-resync.spec.ts를 재작성한다: (i) docstring에서 '*/'를 유발하는 백틱 글롭 표기를 제거해 구문 결함 해소, (ii) 목록 GET route.fulfill 제거→실 fixture 사용(page.goto('/secrets') 후 실 test-secret 관측), (iii) DELETE /api/secrets/:ns/:name 경로만 정규식으로 인터셉트하고(method DELETE 가드, 가짜 200, 비-DELETE는 route.continue) 등록 직전 줄에 `// mock-exception: DES — …` 주석을 단다.",
+              "expectedOutcome": "esbuild 로컬 파싱 clean(구문 결함 해소 재현), page.route 등록 1곳(DELETE 전용), 목록은 실 fixture 기반, mock-exception 주석 1개."
+            },
+            {
+              "seq": 4,
+              "action": "docs/e2e-mocking-policy.md 허용목록에 SC3 DES 행(#5: e2e/secrets-delete-resync.spec.ts | /api/secrets/:ns/:name (DELETE) | DES | 사유)을 추가한다.",
+              "expectedOutcome": "허용목록 5행, 코드의 `// mock-exception: DES` 주석과 1:1(주석↔행 양방향 대응)."
+            },
+            {
+              "seq": 5,
+              "action": "문서를 52:52로 정정한다: test-overview.md(OV6→전용 스펙 연결, OV7는 ⚠️공백 유지), test-secrets.md(SC3→전용 스펙 연결), doc-tracker.md(연결 AC 50→52·자동화 공백 1=OV7·헤더 건강상태·변경이력 행). 직전 브랜치의 '53:53·공백 0' 낙관 표기를 실제 상태로 되돌린다.",
+              "expectedOutcome": "세 문서가 실제 브랜치 상태(OV6·SC3 연결, OV7 잔여 공백 1)와 정합, 형제 모델 정책 문서와도 모순 없음."
+            },
+            {
+              "seq": 6,
+              "action": "브랜치를 단일 커밋(author 39251873+dlddu@users.noreply.github.com — 이메일 프라이버시)으로 amend·force-push해 PR #211을 갱신하고 CI(E2E Tests with kind 포함) 트리거를 확인한다. 머지는 하지 않는다(executor 몫).",
+              "expectedOutcome": "PR #211 head 갱신, CI 실행 시작. 구문 결함·정책 drift 제거로 이전에 red였던 수집·정책 게이트 통과 기대."
+            }
+          ],
+          "plannedAt": "2026-07-30T23:46:06Z"
+        }
       }
     ]
   }
