@@ -657,6 +657,37 @@
       "reason": "이 변경 자체는 benign/convergent이라 단독으로는 조치 불필요하나, 실행 슬라이스가 succeeded로 닫힌 뒤 재감지된 정상 흐름이고 잔여 gap이 남아 있다: 확정 AC 35개가 전용 flow 없이 영구예외 0건으로 등재돼 정의 규칙 1(AC→flow 유일 대응)·4(예외 등재) 위반이 지속된다. 자동 해소 경로 없음(진행 중 롤아웃·일시 alert 아님). planner가 다음 슬라이스(우선순위 후보 ~28 MB-비게이트 AC)를 집을 차례. 이 모델에 다른 열린 task 없음.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-29T11:31:23Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "AC↔flow 1:1 잔여 gap(확정 55 AC 중 ✅20·⬜35) 중 blind 저작 위험이 가장 낮은 1건만 좁힌다 — AC-007-05(오늘의 질문 카드 '다른 질문 보기'/회전) 전용 e2e flow home-question-reroll.yaml 신설. CI 실행 형제 home-question-card-undecided.yaml(AC-007-04)와 동일 Case A 셋업(tester-login·onboarding-q1-q2-caseA·onboarding-caseA-full)을 재사용하고, 회전 footer 인덱스 testID home-question-card-index 를 ASCII 'n/3'(1/3→2/3→3/3, 4번째 탭 무시, ◀ 2/3)로만 단정한다. 한국어 부분문자열 assertVisible 은 Android Maestro 에서 불안정(diary-list-multichild·ChildContextChip 소스 주석 근거)하므로 testID+ASCII 만 쓴다(내 선행 슬라이스 AC-007-01·AC-008-10 과 동일 원칙). 회전·상한 로직은 app/app/(tabs)/index.tsx handleNextQuestion/handlePrevQuestion 클램프 + getDailyQuestionTriplet(DAILY_QUESTION_SLOTS=3, 항상 3개)로 소스 확인됨. 범위(완료 기준)=AC-007-05 매핑 ⬜→✅ 1건의 파일단위 1:1 충족. 범위 밖=자정 초기화(TC-007-05 step6, 시간의존→e2e 밖 잔여=dailyQuestions 단위+수동 QA)·나머지 ⬜34 후속·앱 코드·CI run-list(형제 헤더/카드 flow처럼 curated 목록 무변경). 대안 AC-006-08(양방향 순환)은 impl(ActiveChildContext 모듈로 wrap)까지 확인했으나 활성 아이 구분에 한국어 이름 부분문자열이 불가피해 더 높은 flaky 위험이라 배제.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "dlddu/dear-baby 새 브랜치 reconcile/rct_20260729-0001 에 e2e/maestro/home-question-reroll.yaml 신설. 헤더 주석에 검증 대상 AC-007-05 단독 선언[TC-007-05], Case A 셋업 서브플로우 3개 재사용, 홈 도착 후 home-question-card·home-question-card-prev·home-question-card-next·home-question-card-index 노출 단정.",
+              "expectedOutcome": "최상위 flow 파일 1개 추가. 헤더가 정확히 1개 AC(AC-007-05)만 주검증 선언(규칙 2). 신규 subflow 0."
+            },
+            {
+              "seq": 2,
+              "action": "회전 동작을 ASCII 인덱스로 단정: home-question-card-index text '1/3' → tap home-question-card-next → '2/3' → tap next → '3/3' → tap next(상한, 무시) → '3/3' → tap home-question-card-prev → '2/3'. 모두 testID+ASCII, 한국어 부분문자열 미사용.",
+              "expectedOutcome": "회전 전진·상한(하루 3개)·역방향이 결정적 ASCII 단정으로 커버(TC-007-05 step 1-5). Android Maestro flaky 패턴 회피."
+            },
+            {
+              "seq": 3,
+              "action": "docs/doc-tracker.md 장부 갱신: AC-007-05 표 행 ⬜ 후속→✅ home-question-reroll.yaml; 매핑 섹션 기준선 ✅20·⬜35→✅21·⬜34 + '2026-07-30 AC-007-05 flow 신설' 추가; backlog 헤더 카운트(현재 stale 36→정정 34) 및 AC-007-05 bullet 제거; 상단 요약 제품 flow 20→21·후속 35→34; 변경이력 행 1건 추가.",
+              "expectedOutcome": "to-be 장부(prd+tracker)가 as-is(신 flow)와 일치. ✅21·⬜34·🚫0=55 카운트 자기일관. AC↔flow·flow↔AC 유일성 유지."
+            },
+            {
+              "seq": 4,
+              "action": "브랜치 push 후 draft PR 오픈(머지 안 함). PR 본문에 task id·gap·계획 단계·검증 방법 기재. CI 확인.",
+              "expectedOutcome": "PR URL 확보. e2e job 은 curated 14-flow 만 실행(신 flow 미포함)→main-identical green; app/무변경으로 deploy 스킵. red 시 실패 목록 grep — home-question-reroll 부재면 무관 flake."
+            }
+          ],
+          "plannedAt": "2026-07-30T02:39:34Z"
+        }
+      }
+    ]
   }
 ]
