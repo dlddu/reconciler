@@ -622,7 +622,7 @@
   },
   {
     "toBeModelId": "tbm_kubernetes-dashboard-ac-e2e",
-    "status": "verifying",
+    "status": "failed",
     "trigger": {
       "detectedAt": "2026-07-29T11:31:23Z",
       "changedSides": [
@@ -639,7 +639,7 @@
       }
     },
     "createdAt": "2026-07-29T11:31:23Z",
-    "updatedAt": "2026-07-30T23:07:26Z",
+    "updatedAt": "2026-07-30T23:08:17Z",
     "id": "rct_20260729-0001",
     "stateSummary": {
       "asIs": "현 e2e 구현(HEAD tree 87697b0e). `e2e/` 하위 `*.spec.ts` 57개 중 **in-scope 최상위 `e2e/*.spec.ts` 50개**(6개 `e2e/eng/debug-*.spec.ts`와 1개 `e2e/smoke/health.spec.ts`는 정의상 인프라/ENG-001로 제외). 50개 in-scope 스펙 각각이 test-*.md를 통해 정확히 1 AC에 대응하고 모든 참조 스펙이 실존 — **broken-ref 0, 최상위 orphan 0**. 신규: `e2e/pods-hide-completed.spec.ts`(138줄, PD6 완료파드 숨김 토글 검증 3개 테스트). `e2e/pods.spec.ts`는 test-pods 시나리오 2개가 인용하나 둘 다 단일 AC PD1 대응(여전히 1 스펙↔1 AC).\n\n**이번 변경:** asIs(e2e): 파일 +1개뿐 — `e2e/pods-hide-completed.spec.ts` 추가(PD6 전용 스펙, 138줄). toBe(docs/product): test-pods.md — PD6 자동화 ⚠️공백→`e2e/pods-hide-completed.spec.ts`, 커버리지 공백→없음; doc-tracker.md — gap 4→3(PD6 제거), connected AC 49→50/dedicated spec 49→50, 2026-07-27 변경 로그 1행. 양측이 PD6 해소 1건의 조율된 착지.",
@@ -767,6 +767,39 @@
               "startedAt": "2026-07-30T23:02:14Z",
               "finishedAt": "2026-07-30T23:07:26Z",
               "log": "머지 미수행 — executionGuide의 '머지 전 CI 그린 확인' 게이트 불충족(E2E red, seq 3 원인). 부가 요인: PR 준비(04:32) 후 main이 #210(형제 모델 mock-policy PR, 9622a979)으로 전진해 docs/e2e-mocking-policy.md가 착지 — 계획의 '정책 미착지라 기존 컨벤션 유지' 전제가 무효화됐고, OV7·SC3 신규 인터셉트 2건은 정책 필수 표기('// mock-exception:' 주석 + 허용목록 등재) 부재로 머지 시 형제 모델 즉시 drift. 임의 우회(PR 내용 수정 push) 금지 원칙에 따라 실행 중단, 재계획은 planner로 핸드오프."
+            }
+          ]
+        },
+        "verification": {
+          "status": "failed",
+          "converged": false,
+          "asIsVersionAfter": "0ffb5407b8e7e15114bb15bfc99d951111214d5f",
+          "verifiedAt": "2026-07-30T23:08:17Z",
+          "checks": [
+            {
+              "name": "머지 전 CI 게이트(E2E Tests with kind)",
+              "status": "failed",
+              "detail": "PR head 5d3c3baf에서 failure(04:33:03→04:37:21Z, 정상 ~13분 대비 조기 종료·test-results/ 미생성). 원인은 SC3 스펙 SyntaxError(수집 단계 실패). 나머지 7개 체크는 전원 success."
+            },
+            {
+              "name": "신규 스펙 3종 구문 검증(esbuild 로컬)",
+              "status": "failed",
+              "detail": "OV6·OV7 clean, SC3만 실패 — docstring 19행 인라인 코드 `**/api/secrets**`의 '*/'가 블록 주석 조기 종결 → 19:33 백틱이 템플릿 리터럴 개방, EOF까지 미종결(Unterminated template)."
+            },
+            {
+              "name": "브랜치 매핑 구조 감사(정보성)",
+              "status": "passed",
+              "detail": "PR 브랜치 기준 최상위 e2e/*.spec.ts 53개, AC 53개 전원 실존 전용 스펙 연결, 공유·중복·고아·broken-ref 0, doc-tracker 53↔53·공백 0 — 전단사 구조 자체는 정합. 결함은 SC3 파일 구문뿐."
+            },
+            {
+              "name": "착지한 모킹 정책과의 정합(OV7·SC3 인터셉트)",
+              "status": "failed",
+              "detail": "PR 준비 후 main에 #210(9622a979)으로 docs/e2e-mocking-policy.md 착지. 정책은 인터셉트 등록 직전 줄 '// mock-exception: <CODE> — 사유' 주석 + 허용목록 등재(양방향 1:1)를 요구하나, PR의 신규 인터셉트 2건(OV7 route.fulfill, SC3 route)에 둘 다 부재 → 이대로 머지 시 형제 모델 tbm_kubernetes-dashboard-e2e-mock-policy 즉시 drift. 계획의 '정책 미착지' 전제 무효화."
+            },
+            {
+              "name": "계획 범위(53:53 전단사) 본선 달성",
+              "status": "failed",
+              "detail": "머지 미수행으로 main 무변: docs/product 트리 010804d3(53 AC), 자동화 공백 3건(OV6·OV7·SC3) 지속, 연결 50↔50. as-is e2e 트리는 이 task와 무관하게 #210으로 87697b0e→0ffb5407 이동(주석 4행·README·정책 문서) — 다음 감지 주기 트리거 예상."
             }
           ]
         }
