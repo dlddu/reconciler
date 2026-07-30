@@ -652,6 +652,52 @@
       "reason": "정의가 엄격한 파일단위 전단사 AC=스펙(53:53)을 요구하나 현 상태는 50 connected↔50 dedicated로 3 AC 미커버(OV6 overview 네임스페이스 스코프 직접 어서션, OV7 metrics-server 부재 fallback, SC3 ESO resync). 이들은 자동 해소 경로 없는 정적 구조 gap(진행 롤아웃·일시 alert 아님)으로 방치 시 전단사 미달이 무기한 지속된다. 해소에는 전용 e2e 스펙 3개 신설 + 각 test-*.md 자동화 필드 + doc-tracker 갱신 필요. 직전 task가 예측한 후속(PD6 제외)과 동일. 이 모델에 다른 열린 task 없음.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-29T11:31:23Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "미커버 AC 3개(OV6 오버뷰 네임스페이스 스코프, OV7 metrics-server 부재 폴백, SC3 ESO 대상 Secret 삭제→재동기화)에 각각 전용 e2e 스펙 1개를 신설하고 test-overview.md·test-secrets.md의 자동화 필드와 doc-tracker.md 집계를 갱신해 AC↔스펙 파일 양방향 1:1을 50:50→53:53으로 완성한다. 기존 스펙 컨벤션(헤더 '// Verifies: <AC> (docs/product/prd-*.md) — sole dedicated e2e spec for this AC.', testid 셀렉터, 페이지 스코프 route-mock)을 그대로 따른다. 하네스 제약을 반영해 접근을 분기한다: OV6은 실 kind 클러스터에서 네임스페이스 전환→GET /api/overview?ns= 스코프 재조회를 관측(모킹 없음, dashboard-test↔dashboard-empty 픽스처 대비); OV7은 kind에 metrics-server가 설치돼 부재 분기를 실환경에서 재현할 수 없으므로 /api/overview를 폴백형(capacity-allocatable 기반) 응답으로 route-mock해 프런트가 4개 요약 카드를 수치%로 정상 렌더하고 에러/빈화면으로 떨어지지 않음을 단정(백엔드 폴백 계산 자체는 기존 handlers/overview_test.go가 커버); SC3은 ESO가 CRD만 있고 컨트롤러가 없어 실 재동기화가 하네스에서 일어나지 않으므로 기존 뮤테이션 스펙(workloads-restart-confirm) 컨벤션대로 DELETE /api/secrets/:ns/:name 를 route-mock해 삭제 확인 다이얼로그(대상 이름·네임스페이스·경고)→확인→DELETE 발행 트리거 흐름을 단정하고, 재동기화 재생성은 삭제 후 GET을 목으로 대체해 표현한다. 완료 기준(범위): 이 3개 전용 스펙 신설 + 3개 문서 갱신으로 이 모델의 to-be인 53:53 파일단위 전단사를 달성(자동화 공백 0). 범위 밖(후속/타모델): 실 ESO 컨트롤러 연동 통합 테스트와 metrics-server 실제 부재 백엔드 e2e는 별도 하네스 확장이 필요하며 이 전단사 모델의 to-be 조건이 아니다. OV7·SC3의 신규 route-mock 사이트는 형제 모델 tbm_kubernetes-dashboard-e2e-mock-policy(ABS/DES류 정당 예외에 해당)의 재감지 대상이 되므로 PR·지침에 명시해 조율한다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "e2e/overview-namespace-scope.spec.ts 신설(OV6). 오버뷰 진입 후 네임스페이스 셀렉터(getByRole('combobox',{name:/namespace/i}))로 dashboard-test 선택 → page.waitForRequest 로 GET /api/overview?ns=dashboard-test 스코프 재조회 관측, overview-tab·summary-cards-container 재렌더 확인. 이어 dashboard-empty 선택 시 스코프 재조회(?ns=dashboard-empty)와 비정상 파드 집계 차이를 대비 단정. 헤더에 '// Verifies: OV6 (docs/product/prd-overview.md) — sole dedicated e2e spec for this AC.' 기재. 모킹 없이 실 픽스처로 검증.",
+              "expectedOutcome": "네임스페이스 전환마다 ?ns= 가 붙은 오버뷰 재조회가 관측되고 화면이 스코프대로 재렌더됨을 실 클러스터에서 단정하는 OV6 전용 스펙 1개."
+            },
+            {
+              "seq": 2,
+              "action": "e2e/overview-metrics-fallback.spec.ts 신설(OV7). page.route('**/api/overview**', fulfill)로 metrics 불가 폴백형 OverviewResponse(avgCpuPercent·avgMemoryPercent가 capacity-allocatable 기반 수치, nodes.ready/total 존재, 에러 없음)를 주입 → 오버뷰가 4개 요약 카드를 수치%로 정상 렌더하고 summary-cards-error/빈화면이 아님을 단정. 헤더 '// Verifies: OV7 ...' + 하네스 노트(metrics-server가 kind에 상주해 부재 분기는 route-mock로 재현; 백엔드 폴백은 handlers/overview_test.go 커버) + '// mock-exception' 후보(ABS류) 주석 근거를 상단 docstring에 남김.",
+              "expectedOutcome": "metrics 부재 폴백 응답에서 오버뷰가 graceful 렌더(에러/빈화면 없음, 수치% 카드 4개)됨을 단정하는 OV7 전용 스펙 1개."
+            },
+            {
+              "seq": 3,
+              "action": "e2e/secrets-delete-resync.spec.ts 신설(SC3). /secrets 진입 → secret-accordion-test-secret 의 secret-delete-button 클릭 → delete-confirm-dialog 가 대상 이름(test-secret)·네임스페이스(dashboard-test)·'This action cannot be undone.' 경고 표시 확인 → page.route 로 DELETE /api/secrets/dashboard-test/test-secret 를 목(200)으로 가로채 요청 발행을 관측 → confirm-button(aria-busy) 클릭 → DELETE 요청 단정. 삭제 후 GET /api/secrets 목으로 동일 시크릿을 반환해 ESO 재동기화 재생성(아코디언 재등장)을 표현. Cancel 경로(다이얼로그 닫힘·요청 없음)도 포함. 헤더 '// Verifies: SC3 ...' + 하네스 노트(ESO 컨트롤러 부재→트리거만 실 앱 동작, 재동기화는 목 표현; DES류 뮤테이션 인터셉트).",
+              "expectedOutcome": "삭제 확인 다이얼로그→확인→DELETE /api/secrets/:ns/:name 트리거와 재동기화 재생성 표현을 단정하는 SC3 전용 스펙 1개."
+            },
+            {
+              "seq": 4,
+              "action": "docs/product/test-overview.md 갱신: 시나리오6(OV6) 자동화 필드 ⚠️공백 → 'e2e/overview-namespace-scope.spec.ts (OV6 전용)', 시나리오7(OV7) → 'e2e/overview-metrics-fallback.spec.ts (OV7 전용)'. 커버리지 요약의 '자동화 공백: OV6·OV7' 제거(연결됨에 추가).",
+              "expectedOutcome": "test-overview.md에서 OV6·OV7이 각 전용 스펙 파일 1개로 기계적 매핑됨."
+            },
+            {
+              "seq": 5,
+              "action": "docs/product/test-secrets.md 갱신: 시나리오3(SC3) 자동화 필드 ⚠️공백 → 'e2e/secrets-delete-resync.spec.ts (SC3 전용)'. 커버리지 요약 '자동화 공백: SC3' → '없음', 연결됨 목록에 SC3 추가.",
+              "expectedOutcome": "test-secrets.md에서 SC3이 전용 스펙 파일 1개로 매핑되고 공백 0."
+            },
+            {
+              "seq": 6,
+              "action": "docs/product/doc-tracker.md 갱신: 건강상태 줄의 '연결 AC 50↔전용 스펙 50'→'53↔53', '자동화 공백 3개(OV6·OV7·SC3)'→'공백 0'; 표의 OV 행 자동화공백 'OV6·OV7'→'—', SC 행 'SC3'→'—'; '자동화 공백' 절을 해소 처리; 변경 로그에 2026-07-30 행 추가(OV6·OV7·SC3 전용 e2e 신설, 공백 3→0, 연결 AC 50→53↔전용 스펙 50→53, 전단사 완성).",
+              "expectedOutcome": "doc-tracker 집계가 raw test-*.md 실제 상태(53↔53, 공백 0)와 정합."
+            },
+            {
+              "seq": 7,
+              "action": "위 6개 변경을 dlddu/kubernetes-dashboard 새 브랜치에 커밋하고 PR을 연다(머지 안 함). PR 본문에 task id, gap(50:50→53:53), 스펙별 접근·하네스 제약, 검증 방법(kind e2e 실행), 형제 모델 mock-policy 조율 노트를 기재. (Step 3-2 준비에서 수행)",
+              "expectedOutcome": "3개 신규 스펙 + 3개 문서 갱신을 담은 리뷰 가능한 PR 1개."
+            }
+          ],
+          "plannedAt": "2026-07-30T04:23:44Z"
+        }
+      }
+    ]
   }
 ]
