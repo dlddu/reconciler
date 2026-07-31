@@ -31,6 +31,37 @@
       "assessedBy": "agent",
       "assessedAt": "2026-07-30T04:22:40Z"
     },
-    "updatedAt": "2026-07-30T04:22:40Z"
+    "updatedAt": "2026-07-30T04:22:40Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "Baseline is a bootstrapped skeleton (0/33 ACs implemented, all it.todo, every backend method throws notImplemented). Rather than boil the ocean, implement the first pipeline stage — PRD-1 · PR 메타데이터 추출 (AC1-1..AC1-4) — as one self-contained, CI-verifiable slice: pure synchronous logic in the leaf `metadata` module, no DB/async/frontend, touching nothing near the two must-preserve invariants (AC6-5 merge/codebase-mutation boundary, tokens.css canonical design-token source). SCOPE / 완료 기준: this task succeeds when AC1-1..AC1-4 are implemented and their 6 test scenarios (docs/tests/metadata.md) pass in CI, with the AC6-5 regression seam in gap-detection.test.ts still green. OUT OF SCOPE (residual model gap → re-detected as new tasks, not counted as failure): PRD-2..PRD-7 (the remaining 29 ACs), wiring the GitHub adapter to actually populate inferenceSignals from the real API, and frontend/mockup/design-system alignment. Chosen because metadata is pipeline stage 1 (everything downstream keys off the extracted triple), it is the smallest independently-verifiable unit, and it is fully reversible (revert the PR).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "Implement metadataModule in backend/src/metadata/index.ts (AC1-1 classifyWorkType, AC1-2 identifyAuthor with bot->human inference + basis, AC1-3 identifyRepository normalized KB key, AC1-4 extract composing the triple). Add an optional, read-only `inferenceSignals` field to RawPullRequest in backend/src/adapters/github/index.ts for AC1-2. Turn the 4 it.todo stubs in backend/src/metadata/metadata.test.ts into real assertions for the 6 scenarios in docs/tests/metadata.md. [STAGED in PR #2]",
+              "expectedOutcome": "metadataModule methods no longer throw notImplemented; metadata.test.ts has 4 real specs; RawPullRequest gains a read-only optional field only (no mutating method added, AC6-5 boundary and tokens.css untouched)."
+            },
+            {
+              "seq": 2,
+              "action": "Confirm CI is green on PR #2 (dlddu/pr-review): pnpm -r lint / typecheck / test / build. Do not merge until all pass (code was authored without a local node toolchain, so CI is the objective gate).",
+              "expectedOutcome": "All CI jobs pass. The metadata (PRD-1) suite reports 4 passing tests (previously 4 pending); the AC6-5 boundary regression seam in gap-detection.test.ts stays green."
+            },
+            {
+              "seq": 3,
+              "action": "Merge PR #2 into main (review-only merge of the Lens repo itself — unrelated to the AC6-5 product boundary, which forbids the *product* from mutating reviewed codebases).",
+              "expectedOutcome": "main HEAD contains the PRD-1 implementation; the as-is backend subtree hash changes (was ebf8681...), which re-detection will observe."
+            },
+            {
+              "seq": 4,
+              "action": "Verify convergence against THIS slice's scope (not the whole model): AC1-1..AC1-4 implemented and their scenarios verified in CI, both invariants intact.",
+              "expectedOutcome": "4/33 ACs (AC1-1..AC1-4) implemented & verified; AC6-5 seam green; tokens.css unchanged. Residual 29 ACs remain out of scope and are picked up as new tasks when re-detection runs on the new as-is version."
+            }
+          ],
+          "plannedAt": "2026-07-31T00:19:55Z"
+        }
+      }
+    ]
   }
 ]
