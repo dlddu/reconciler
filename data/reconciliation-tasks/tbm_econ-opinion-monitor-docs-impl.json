@@ -554,7 +554,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-07-29T11:31:23Z",
       "changedSides": [
@@ -647,7 +647,7 @@
           "comment": "승인. 검토 과정에서 사용자가 실환경 영향을 3단계로 확인: (1) 수집 writer가 클러스터에 미배포 — deploy/overlays/prod에 CronJob 매니페스트 없음(prod kustomization 주석 'a future batch CronJob writes into the same claim'), (2) 배포된 econ-serving Deployment는 /data를 readOnly로 마운트하는 소비자이고 현재 replicas=0, (3) 싱크는 S3가 아니라 PVC(econ-serving-data, RWO 1Gi, 클러스터 기본 SC) — econ_core/storage.py는 로컬 FS 구현만 존재하고 원격 스토리지는 README 범위 밖. 따라서 기본값 컷오버가 머지 즉시 외부 피드 트래픽·데이터 적재를 유발하지 않음을 확인한 뒤 승인."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-08-01T08:12:00Z",
           "entries": [
             {
@@ -656,6 +656,47 @@
               "startedAt": "2026-08-01T08:10:00Z",
               "finishedAt": "2026-08-01T08:11:00Z",
               "log": "지침 순서1(PR CI 통과 확인): head a9771335 에서 워크플로 2건 모두 success — CI(build: checkout/Go/Node/uv/Install/Codegen is up to date/Lint/Test 전부 success, e2e: kind e2e success) run 30515293410, Image run 30515293446. mergeable=true, mergeable_state=clean."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-08-01T08:13:00Z",
+              "finishedAt": "2026-08-01T08:14:00Z",
+              "log": "지침 순서2(리뷰→draft 해제→merge): 사용자 승인 후 markPullRequestReadyForReview로 draft 해제(isDraft=false, mergeable=MERGEABLE), PR #8 squash merge 완료 → main 머지 커밋 12acd9c713e1986de95a6f6747c24ff4dc89b45c."
+            }
+          ],
+          "finishedAt": "2026-08-01T08:14:36Z"
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "contracts:b67b8ff3a7918b8df40e1a7866d3b920ad5d1abf python:801121719e524af99fb66df694b55a21e2b75563 go:d44021489001cfb2be4f0a2c58e0145f7f719d17 web:bb4a0ab2923910e4fc7d6843834f60168d42310e",
+          "verifiedAt": "2026-08-01T08:14:36Z",
+          "checks": [
+            {
+              "name": "완료기준(1) CLI 기본 --source=feed, --feeds 생략 시 동봉 목록 폴백",
+              "status": "passed",
+              "detail": "머지된 main(12acd9c)에서 _build_parser().parse_args([]) → source='feed', feeds=None(폴백 경로). default_feeds_path() 존재 확인."
+            },
+            {
+              "name": "완료기준(2) 3축 기본 feed 목록 체크인",
+              "status": "passed",
+              "detail": "default_feeds.json 6엔트리, axes={KR,US,GLOBAL}, source_id 유일성 만족."
+            },
+            {
+              "name": "완료기준(3) 교차언어 스모크 오프라인·결정적 유지",
+              "status": "passed",
+              "detail": "tests/smoke.sh:25가 --source fake로 고정됨. 머지 전 PR CI test 잡 green(스모크 포함)."
+            },
+            {
+              "name": "완료기준(4) CI green (gen-check/lint/test + e2e)",
+              "status": "passed",
+              "detail": "PR head a9771335: CI(build: Codegen is up to date·Lint·Test 전부 success, e2e: kind e2e success) + Image success. 머지 후 main(12acd9c) 재실행도 CI success·Image success."
+            },
+            {
+              "name": "[정보성] 범위 밖 잔여 gap",
+              "status": "passed",
+              "detail": "모델 전체 to-be 대비 잔여: AC1.1 CronJob 매니페스트(deploy/에 writer 없음, serving Deployment는 /data readOnly·현재 replicas=0), ingestion e2e 1:1 spec, AC2.x analysis 실 LLM, AC3.x go/web. 또한 default_feeds.json URL은 여전히 미검증 스타터 값 — 스케줄러 배선 전 도달성 큐레이션 필요. 이들은 이 시도의 converged 판정에 넣지 않으며 재감지가 후속 task로 잇는다."
             }
           ]
         }
