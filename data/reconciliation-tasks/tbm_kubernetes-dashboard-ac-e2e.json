@@ -622,7 +622,7 @@
   },
   {
     "toBeModelId": "tbm_kubernetes-dashboard-ac-e2e",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-07-29T11:31:23Z",
       "changedSides": [
@@ -639,7 +639,7 @@
       }
     },
     "createdAt": "2026-07-29T11:31:23Z",
-    "updatedAt": "2026-08-01T00:14:20Z",
+    "updatedAt": "2026-08-01T05:20:00Z",
     "id": "rct_20260729-0001",
     "stateSummary": {
       "asIs": "현 e2e 구현(HEAD tree 87697b0e). `e2e/` 하위 `*.spec.ts` 57개 중 **in-scope 최상위 `e2e/*.spec.ts` 50개**(6개 `e2e/eng/debug-*.spec.ts`와 1개 `e2e/smoke/health.spec.ts`는 정의상 인프라/ENG-001로 제외). 50개 in-scope 스펙 각각이 test-*.md를 통해 정확히 1 AC에 대응하고 모든 참조 스펙이 실존 — **broken-ref 0, 최상위 orphan 0**. 신규: `e2e/pods-hide-completed.spec.ts`(138줄, PD6 완료파드 숨김 토글 검증 3개 테스트). `e2e/pods.spec.ts`는 test-pods 시나리오 2개가 인용하나 둘 다 단일 AC PD1 대응(여전히 1 스펙↔1 AC).\n\n**이번 변경:** asIs(e2e): 파일 +1개뿐 — `e2e/pods-hide-completed.spec.ts` 추가(PD6 전용 스펙, 138줄). toBe(docs/product): test-pods.md — PD6 자동화 ⚠️공백→`e2e/pods-hide-completed.spec.ts`, 커버리지 공백→없음; doc-tracker.md — gap 4→3(PD6 제거), connected AC 49→50/dedicated spec 49→50, 2026-07-27 변경 로그 1행. 양측이 PD6 해소 1건의 조율된 착지.",
@@ -908,6 +908,11 @@
           "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/211",
           "preparedAt": "2026-08-01T01:10:00Z",
           "notes": "리뷰 반려(attempts[1])를 반영해 PR #211 브랜치를 재스테이징(force-push, head da0c012, author 39251873+dlddu@users.noreply.github.com=이메일 프라이버시). SC3를 mock→real dedicated fixture로 전환. 변경 7파일: (1) test/fixtures/secret-mut-fixtures.yaml 신설 — dashboard-test 전용 Secret 'secret-mut-delete'(SC3 real-delete 대상). fluxcd-mut-fixtures.yaml 격리 선례를 따름. (2) test/fixtures/apply-all.sh — 신규 fixture apply 라인 추가. (3) e2e/secrets-delete-resync.spec.ts 전면 재작성 — 인터셉트 0(page.route/route.fulfill/mock-exception 완전 제거), 실 DELETE /api/secrets/dashboard-test/secret-mut-delete를 waitForResponse로 관측하고 앱 refetch 후 대상 아코디언 toHaveCount(0) 소멸 단정. 3 테스트(다이얼로그·취소·확인후실삭제), 파괴 테스트 마지막(fullyParallel:false 파일 내 순차). 로컬 esbuild 0.28.1(aarch64) 파싱 clean — 직전 SyntaxError(Unterminated template) 재현 안 됨. (4) docs/e2e-mocking-policy.md 허용목록 DES 행 #5 제거 → 이 파일이 origin/main과 완전 동일(브랜치 diff 0), 신규 인터셉트 0 → 형제 모델 tbm_kubernetes-dashboard-e2e-mock-policy 무drift. (5) docs/product/doc-tracker.md — SC3 서술 real-fixture로 정정 + 2026-08-01 재작업 변경이력 행. (6~7) test-overview.md·test-secrets.md는 직전 브랜치 상태 유지(OV6 연결·SC3 연결). 머지하지 않음 — force-push로 CI 8개 체크 재트리거(E2E Tests with kind 포함 pending). SC1/SC2/SC4는 test-secret/tls-secret를 testid로 지목하고 '>= 2' 아코디언만 단정하므로 3번째 전용 fixture 실삭제에 무영향(레이스 없음). ESO 재동기화 재생성은 kind에 ESO 컨트롤러가 없어 하네스 밖(app 소유 실삭제까지만 검증). PR 본문·제목은 여전히 '53:53'로 stale이며 이번 세션에서 편집 불가(정책 게이트: 내가 이번에 연 PR 아님) — 정확한 서술(52:52·SC3 real fixture·OV7 제외)은 커밋 da0c012 메시지·docs·이 task 레코드에 있다. executor가 CI green 확인 후 머지, 가능하면 머지 전 PR 제목/본문 갱신."
+        },
+        "review": {
+          "required": true,
+          "reason": "실행 액션이 dlddu/kubernetes-dashboard main으로의 PR #211 머지 — 공용 레포 기본 브랜치를 바꾸고 as-is/to-be 양측 버전을 움직이는 공용 자산 변경이며 plan.riskLevel=medium이다. 결정적으로 이번 시도는 사용자가 직전 시도(attempts[1])에서 명시적으로 반려한 접근(SC3를 DELETE 인터셉트로 모킹)을 재작업한 것이므로, 반려 사유가 요구한 대로 '모킹 없이 별도 전용 fixture로 실제 삭제'가 구현됐는지는 반려한 당사자만 확정할 수 있다. 이 모델의 선례(rct_20260722·rct_20260726·본 task attempts[0..1])가 main 머지에 일관되게 사람 검토를 요구했고, executionGuide도 '반려 사유 반영 재검토'를 1번 단계로 지정한다.",
+          "status": "pending"
         }
       }
     ]
