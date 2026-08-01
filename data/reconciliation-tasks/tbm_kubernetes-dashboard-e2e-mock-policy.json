@@ -175,6 +175,42 @@
       "reason": "정책 SSOT가 landing(toBe absent→exists, PR #210 = 이 모델 첫 슬라이스 착지)한 지금, 정의의 준수 기준(allowlist ↔ 실제 코드 인터셉트 양방향 1:1)에 미등재 인터셉트 34건(8개 스펙: fluxcd-reconcile·fluxcd-suspend-resume·argo-data-states·fluxcd-data-states·fluxcd-detail·external-secrets-data-states·argo-submit·pods-hide-completed)이 미달로 잔존 = 구조적 drift. 이는 직전 슬라이스가 스코프를 정책문서+명백정당 4건으로 한정하고 나머지 8파일/72 site를 재감지→후속 task로 명시 이관한 항목(슬라이스→재감지→후속 정상 흐름)이며, 정적 gap이라 자동 해소 경로 없음. 이 모델에 다른 열린 task 없음. 다음 슬라이스: 8파일 인터셉트를 정책 기준으로 판정 — 편의성 데이터 모킹(pods-hide-completed 풀 목록 fulfill, *-data-states 목록·상태 맞추기)은 fixture/전용 네임스페이스로 제거, 정당 ERR/LAT/ABS/DES는 allowlist+주석 등재. 파일별 우선순위·판정은 planner 몫.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-31T23:35:04Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "e2e 모킹 정책(docs/e2e-mocking-policy.md) drift의 첫 후속 슬라이스. 미판정 8스펙 중 모든 page.route가 명백한 정당 예외(ERR=500 주입으로 에러/재시도 UI, LAT=지연 주입으로 로딩 스켈레톤; 모두 실 backend·fixture로 forward)인 FluxCD 2스펙만 골라 판정·정합화한다: fluxcd-detail.spec.ts(2 site, ERR·ERR)와 fluxcd-data-states.spec.ts(5 site, ERR×2·LAT×3), 총 7 site. 각 page.route 직전에 `// mock-exception: <CODE>` 주석을 달고 docs/e2e-mocking-policy.md 허용목록에 1:1 행(#5~#11)을 추가하며, 두 파일을 '미판정' 목록에서 뺀다. 주석·문서만 추가하는 코드 무행위변경이라 모델이 추적하는 인터셉트 지문이 불변(before==after 확인)이라 CI E2E(kind) green이 유지될 것으로 기대한다. 접근 선택 이유: 정책 랜딩 직후 첫 슬라이스는 '등재 패턴을 흠 없이 확립'하는 것이 가치가 크고, 무행위변경이라 blind 저작 위험이 최소다. 나머지 6스펙은 판정 성격이 달라(관측용 pass-through는 page.on 전환 제거, 성공경로 fulfill(200)은 continue로 tighten, pods-hide-completed 풀목록 fulfill은 전용 namespace fixture로 제거) 각각 별도 슬라이스로 남긴다. 완료 기준(범위): 이 2파일의 모든 page.route(7)가 주석+허용목록 행과 양방향 1:1이고(허용목록 4→11행), 두 파일이 미판정 목록에서 빠지며, CI E2E(kind)가 green. 범위 밖(후속): 나머지 6스펙(fluxcd-reconcile·argo-data-states·fluxcd-suspend-resume·external-secrets-data-states·argo-submit·pods-hide-completed)의 인터셉트는 병합 후 정책문서(to-be) 변경 재감지가 새 task로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "origin/main(9622a97) 위에 reconcile/rct_20260731-0001-mock-policy-fluxcd 브랜치 생성. fluxcd-detail.spec.ts·fluxcd-data-states.spec.ts의 page.route 등록 site 확정(grep).",
+              "expectedOutcome": "7개 등록 site 확인: fluxcd-detail L319·L816, fluxcd-data-states L11·L51·L103·L148·L156."
+            },
+            {
+              "seq": 2,
+              "action": "각 page.route 바로 윗줄에 `// mock-exception: <CODE> — <실환경 불가 사유>` 주석 삽입(들여쓰기 일치). 판정: fluxcd-detail 2건 ERR, fluxcd-data-states ERR×2(목록 500 실패)·LAT×3(로딩 스켈레톤 지연).",
+              "expectedOutcome": "주석 7개가 각각 대응 page.route 직전 줄에 위치, 카테고리 정확(ERR×4·LAT×3). e2e 전체 mock-exception 주석 4→11개."
+            },
+            {
+              "seq": 3,
+              "action": "docs/e2e-mocking-policy.md 허용목록에 행 #5~#11(파일·패턴·카테고리·사유) 추가하고, '미판정 인터셉트' 표에서 fluxcd-detail·fluxcd-data-states 제거 + 판정기준 prose 보강(ERR/LAT 등재 vs 데이터모킹/관측용 pass-through 제거).",
+              "expectedOutcome": "허용목록 11행 == 코드 mock-exception 주석 11개(양방향 1:1). 미판정 표 8→6파일."
+            },
+            {
+              "seq": 4,
+              "action": "검증: 모델 as-is versionScript의 인터셉트 지문을 편집 전/후 비교(불변이어야 무행위변경 입증). esbuild 0.28.1(aarch64)로 두 스펙 파싱.",
+              "expectedOutcome": "지문 BEFORE==AFTER(f257199…). esbuild parse 0 error(구문 clean)."
+            },
+            {
+              "seq": 5,
+              "action": "noreply(39251873+dlddu) author로 커밋, 브랜치 push, draft PR 생성(머지 안 함).",
+              "expectedOutcome": "PR #212 draft open, CI(E2E Tests with kind 포함) 트리거."
+            }
+          ],
+          "plannedAt": "2026-08-01T01:10:41Z"
+        }
+      }
+    ]
   }
 ]
