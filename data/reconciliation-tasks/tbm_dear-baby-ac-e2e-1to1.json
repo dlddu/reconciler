@@ -812,6 +812,47 @@
       "reason": "이 트리거는 이 모델의 직전 슬라이스(AC-007-05 전용 flow 신설)가 착지한 정상 흐름(슬라이스→재감지)이며 gap을 1 줄였으나(#160 로그인 subflow 리팩터는 커버리지 무영향의 테스트 인프라), 정의가 요구하는 AC↔e2e-flow 완전 1:1 대비 34개 확정 AC가 여전히 전용 flow 없이 남아 drift로 지속된다(구조적 1:1은 clean). 정적 구조 gap이라 자동 해소 경로 없음(진행 롤아웃·일시 alert 아님). 이 모델에 다른 열린 task 없음. 다음 슬라이스(미커버 AC 중 tracker backlog 우선순위 1건의 전용 flow 신설; MB-3~6 게이트 7건은 모킹 경계로 처리)가 필요 — 우선순위·범위는 planner 몫.",
       "assessedBy": "agent",
       "assessedAt": "2026-07-31T23:35:04Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "이 모델의 잔여 gap(확정 AC 55 중 34개가 전용 e2e flow 없이 ⬜ — 정적 구조 drift)에서 한 건을 슬라이스로 닫는다. 대상: AC-002-01(오늘의 질문 표시, PRD-002). 접근: 검증된 형제 flow(AC-007-04 home-question-card-undecided.yaml, AC-007-05 home-question-reroll.yaml)와 동일한 Case A 셋업(subflows tester-login-fast · onboarding-q1-q2-caseA · onboarding-caseA-full)을 그대로 재사용해 홈 질문 카드에 도착한 뒤, 새 전용 flow e2e/maestro/daily-question-display.yaml 을 신설해 AC-002-01 의 표시 조건을 기존 testID로 단정한다: home-question-card(카드 노출) · home-question-card-context(현재 임신 주차/D-day 컨텍스트) · home-question-card-question(오늘의 질문 본문 요소 노출). 이 flow 의 주검증 요소 home-question-card-question 은 기존 어떤 flow 도 단정하지 않아 AC-007-04(카드+CTA 구성) 와 명확히 구분된다 — repo 는 이미 같은 카드에 AC-007-04(표시)·AC-007-05(회전) 를 각각 별 flow 로 두는 선례가 있다(모델 규칙2: 헤더 선언 AC 1개, 셋업 경유는 미검증). 왜 이 접근인가: (a) 앱 코드·CI run-list 무변경의 순수 Maestro-YAML 추가라 직전 3개 green 슬라이스(AC-007-01·008-10·007-05)와 동일한 최저 CI 리스크 — 이 환경은 RN 앱을 로컬 빌드/실행할 수 없어 blind 저작이므로 기존 testID만 쓰는 순수 파일 추가가 가장 안전하다. (b) PRD-002 는 현재 커버 AC 0건이라 AC-002-01(표시)로 시작하는 것이 자연스럽다. (c) 되돌리기 쉬움(파일 1개 삭제). 완료 기준(범위): daily-question-display.yaml 이 헤더에 정확히 AC-002-01 을 선언하고 위 3 testID 를 단정하며, docs/doc-tracker.md 의 AC↔flow 매핑에서 AC-002-01 이 ⬜→✅(✅21→22·⬜34→33)로 갱신되고 변경 이력 행이 추가돼 파일 단위 1:1(중복·묶음·고아 0) 이 유지되고, 기존 CI run-list 스위트가 그대로 green 이면 이 task 는 성공이다. 범위 밖(후속): 나머지 33개 미커버 AC(외부 호출 경계 MB-3~6 게이트 7건 포함)는 ⬜ backlog 로 남아 재감지가 다음 슬라이스를 연다. AC-002-01 조건3 '짧은 안내 문구' 마이크로카피의 문구 내용과 질문 본문의 의미적 정확성은 e2e(요소 노출)로 판정하지 않고 dailyQuestions 단위 + 수동 QA 잔여다(Android Maestro 의 한글 부분문자열 매칭 불안정 → testID 노출만 단정하는 이 repo 컨벤션).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "dlddu/dear-baby 에 브랜치 reconcile/rct_20260731-0001-ac-002-01 생성(origin/main 기준).",
+              "expectedOutcome": "브랜치가 최신 main 위에 생성됨."
+            },
+            {
+              "seq": 2,
+              "action": "e2e/maestro/daily-question-display.yaml 신설 — 헤더에 '검증 대상: AC-002-01' 선언, clearKeychain/launchApp(clearState) + 'isn't responding' 가드 후 subflows tester-login-fast · onboarding-q1-q2-caseA · onboarding-caseA-full 재사용, 이어 assertVisible home-question-card · home-question-card-context · home-question-card-question. 형제 home-question-card-undecided.yaml 의 구조·주석 밀도를 그대로 따르고 한글 부분문자열 단정은 쓰지 않는다(testID 노출만).",
+              "expectedOutcome": "유효한 Maestro YAML 파일 1개 추가. 앱 코드·CI run-list 무변경. AC-007-04 와 겹치지 않는 주검증 요소는 home-question-card-question."
+            },
+            {
+              "seq": 3,
+              "action": "docs/doc-tracker.md 갱신 — (a) 매핑 표 AC-002-01 행을 '⬜ 후속'→'✅ `daily-question-display.yaml`', (b) '⬜ 후속 flow backlog' 목록에서 AC-002-01 항목 제거(34→33), (c) 섹션 카운트 요약 ✅21→22·⬜34→33(line 76 및 관련 요약 문구), (d) 변경 이력에 '2026-08-01 AC-002-01 flow 신설' 행 추가(reconciler rct_20260731-0001, 형제 카드 flow 와 동일 파일단위 1:1, 앱·run-list 무변경 명시).",
+              "expectedOutcome": "doc-tracker 가 실제 상태와 일치: AC-002-01 ✅, backlog 33, ✅22·⬜33·🟡0, 참조 무결성 유지."
+            },
+            {
+              "seq": 4,
+              "action": "변경을 커밋(author noreply)·푸시하고 dlddu/dear-baby 에 draft PR 을 연다. PR 본문에 task id·gap·슬라이스 범위·검증 방법(파일단위 1:1 + CI green)·범위밖(33 backlog) 기재.",
+              "expectedOutcome": "PR 생성(draft). CI(e2e-android/e2e-ios 기존 run-list + integration 등)가 재트리거되어 green 대기."
+            },
+            {
+              "seq": 5,
+              "action": "[executor] CI 전 체크 green 확인(기존 run-list 스위트 무영향) 후 사람 검토 판단 → 승인 시 머지.",
+              "expectedOutcome": "모든 체크 pass, PR 머지로 as-is(e2e 트리)·to-be(doc-tracker) 버전 이동."
+            },
+            {
+              "seq": 6,
+              "action": "[executor] 수렴 검증(계획 범위 기준): 머지 후 AC-002-01 이 전용 flow 1개를 갖고 doc-tracker 가 ✅22·⬜33 로 정합하며 파일단위 1:1(중복·묶음·고아 0) 유지되는지 확인. 잔여 33 backlog 는 재감지가 새 task 로 잇는다.",
+              "expectedOutcome": "AC-002-01 커버 확정, gap 1 감소(34→33), 형제 모델 무영향."
+            }
+          ],
+          "plannedAt": "2026-08-01T01:00:03Z"
+        }
+      }
+    ]
   }
 ]
