@@ -860,6 +860,46 @@
           "reviewedAt": "2026-08-01T00:14:20Z",
           "comment": "채팅 반려. SC3(e2e/secrets-delete-resync.spec.ts)를 DELETE 인터셉트(모킹)로 표현하는 접근을 반려 — 모킹하지 말고, 다른 테스트에 영향받지 않는 별도 전용 fixture(Secret)를 추가해 그 fixture를 대상으로 실제 삭제 흐름을 테스트하도록 재작업 요청. (원문: '반려. secret delete resync 이거 모킹하지 말고 다른 테스트에 영향 안받는 별도 fixture 추가해서 그걸로 테스트하도록 해줘')"
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "직전 시도(attempts[1])는 사용자 검토에서 반려됐다 — SC3(e2e/secrets-delete-resync.spec.ts)를 파괴적 DELETE 인터셉트(모킹)로 표현한 접근을 반려하고, '모킹하지 말고 다른 테스트에 영향 안 받는 별도 전용 fixture(Secret)를 추가해 그 fixture로 실제 삭제 흐름을 테스트'하도록 재작업 요청했다(원문: '반려. secret delete resync 이거 모킹하지 말고 다른 테스트에 영향 안받는 별도 fixture 추가해서 그걸로 테스트하도록 해줘'). 재계획은 SC3를 real-delete로 전환한다. (1) 전용 Secret fixture 'secret-mut-delete'(dashboard-test)를 신설한다 — 이 레포에 이미 확립된 동일 패턴(test/fixtures/fluxcd-mut-fixtures.yaml: 클러스터 변경 스펙 FX3/FX4를 읽기 리더가 관측하지 않는 전용 격리 fixture로 분리)을 그대로 따른다. SC1(secrets-tab)/SC2(secrets-reveal)/SC4(secrets-data-states) 리더는 test-secret/tls-secret를 testid로 지목하고 아코디언 수를 '>= 2'로만 단정하므로, 3번째 전용 fixture를 실제로 삭제해도 남은 2개(test-secret+tls-secret)로 항상 충족돼 타 스펙을 오염시키지 않는다. (2) secrets-delete-resync.spec.ts를 인터셉트 0으로 재작성한다 — page.route/route.fulfill/mock을 완전히 제거하고 실 백엔드(handlers/secrets.go의 clientset.CoreV1().Secrets().Delete)로 진짜 삭제한 뒤, 앱의 handleDeleteSuccess가 부르는 refresh() 재조회로 대상 아코디언이 실제로 사라짐을 단정한다. 3개 테스트(다이얼로그 대상 명명 · 취소 시 무삭제 · 확인 시 실삭제→소멸)를 선언 순서대로 두고 파괴적 확인 테스트를 마지막에 배치한다(playwright.config fullyParallel:false → 파일 내 테스트가 선언 순서로 순차 실행되므로 소비되는 단일 fixture가 안전; 파일 단위로만 워커 병렬). docstring에는 백틱 글롭이나 '*/' 시퀀스를 넣지 않아 직전 시도의 구문 결함(Unterminated template 19:33)을 뿌리에서 제거한다. (3) 직전 시도가 docs/e2e-mocking-policy.md 허용목록에 추가했던 SC3 DES 행 #5를 제거한다 → 브랜치의 신규 인터셉트가 0이 되어 형제 모델 tbm_kubernetes-dashboard-e2e-mock-policy가 origin/main과 동일(정책 drift 0)해진다. (4) docs/product/doc-tracker.md의 SC3 서술을 mock/DES #5 → real-fixture(무모킹)로 정정하고 2026-08-01 재작업 변경이력 행을 더한다. OV6(실 kind 클러스터·무모킹, 네임스페이스 스코프 재조회 관측)과 OV7 descope 슬라이스는 그대로 유지한다. 완료 기준(범위): OV6·SC3 전용 스펙 2개가 실 fixture로 CI 'E2E Tests with kind' green을 통과하고, AC↔스펙 파일 전단사가 50:50→52:52(자동화 공백 3→1=OV7 잔여), 형제 mock-policy 모델 무drift이면 이 task는 성공이다. 범위 밖(후속·재감지가 새 task로): ① OV7 전용 e2e(메트릭 서버 부재 폴백) — metrics-server 부재 kind 프로파일 또는 mock-policy 예외 승인 중 하나의 선결 결정 필요. ② SC3의 'ESO 재동기화 재생성' 단정 — kind 하네스가 ExternalSecret CRD만 설치하고 컨트롤러가 없어(scripts/kind-cluster.sh install_external_secrets_crds) 삭제 후 재생성을 실환경에서 재현할 수 없다. 이 슬라이스는 app이 소유한 '실제 삭제 발행 + 실제 제거'까지를 검증하고, 재생성 검증은 실 ESO 컨트롤러를 돌리는 하네스 확장이 선결이다. 대안으로 기존 mock 유지도 가능했으나 사용자가 명시적으로 반려했고, real-fixture 격리는 레포의 fluxcd-mut 선례와 정합하며 변경이 테스트+fixture+문서에 국한돼 가역적(앱·런타임·클러스터 무변)이라 이 경로를 택했다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "test/fixtures/secret-mut-fixtures.yaml 신설. dashboard-test 네임스페이스에 SC3 real-delete 전용 Secret 'secret-mut-delete'(Opaque, 몇 개 stringData 키) 1개만 정의. 파일 헤더 주석에 존재 이유(SC3가 실 DELETE를 발행·검증하며, 공유 test-secret를 지우면 ESO 컨트롤러 부재로 재생성되지 않아 SC1/SC2/SC4를 오염 → 반려된 mock 대신 전용 fixture 격리)와 fluxcd-mut-fixtures.yaml 선례, ESO CRD-only 하네스 제약을 명시.",
+              "expectedOutcome": "전용 fixture 파일 1개 존재. Secret 이름이 어떤 다른 스펙에도 참조되지 않는 disjoint 이름(secret-mut-delete). kubectl apply 가능한 유효 매니페스트."
+            },
+            {
+              "seq": 2,
+              "action": "test/fixtures/apply-all.sh의 '2. Apply secrets and configmaps' 섹션에서 secret.yaml apply 직후 'kubectl apply -f \"$SCRIPT_DIR/secret-mut-fixtures.yaml\"' 라인을 추가(간단한 설명 주석 포함).",
+              "expectedOutcome": "apply-all.sh가 secret-mut-delete를 dashboard-test에 생성. 나머지 fixture 순서·동작 무변."
+            },
+            {
+              "seq": 3,
+              "action": "e2e/secrets-delete-resync.spec.ts를 인터셉트 0으로 전면 재작성. (i) page.route/route.fulfill/interceptSecretDelete 등 모든 모킹 제거, mock-exception 주석 제거. (ii) 대상=secret-mut-delete(TARGET name/namespace=dashboard-test), testid 'secret-accordion-secret-mut-delete'. (iii) 3개 테스트: [a] 삭제 버튼→delete-confirm-dialog가 대상 이름·네임스페이스·'cannot be undone'·confirm/cancel 버튼 표시(무삭제) [b] cancel→다이얼로그 닫힘·아코디언 잔존(무삭제) [c] confirm→실 DELETE /api/secrets/dashboard-test/secret-mut-delete 발행을 waitForResponse로 관측하고 refresh() 후 아코디언 toHaveCount(0)로 실제 소멸 단정(파괴적, 선언 순서상 마지막). (iv) docstring에 백틱 글롭·'*/' 미포함(구문 결함 원인 제거). 헤더 '// Verifies: SC3 (docs/product/prd-secrets.md) — sole dedicated e2e spec for this AC.' 유지.",
+              "expectedOutcome": "파일 내 page.route/route.fulfill 0곳(grep 확인). 실 DELETE 대기 + 아코디언 toHaveCount(0) 단정. 로컬 esbuild(aarch64) 파싱 clean(직전 SyntaxError 재현 안 됨)."
+            },
+            {
+              "seq": 4,
+              "action": "docs/e2e-mocking-policy.md 허용목록에서 SC3 DES 행 #5(e2e/secrets-delete-resync.spec.ts | /api/secrets/:ns/:name (DELETE) | DES)를 제거해 origin/main 상태(행 1-4)로 환원.",
+              "expectedOutcome": "허용목록 4행(1-4)만, SC3 미등재. 브랜치가 origin/main 대비 이 파일에 추가한 diff 0 → 형제 모델 tbm_kubernetes-dashboard-e2e-mock-policy 무drift."
+            },
+            {
+              "seq": 5,
+              "action": "docs/product/doc-tracker.md의 SC3 서술을 정정: '자동화 공백' 절 SC3 항목과 2026-07-30 변경이력 행의 'DELETE만 인터셉트하는 정당 DES 예외·허용목록 #5 등재' 문구를 '전용 fixture(secret-mut-delete)를 실제 삭제하는 real-delete 스펙(모킹 없음); ESO 컨트롤러 부재로 재생성 단정은 하네스 밖'으로 교체하고, 2026-08-01 재작업 변경이력 행(리뷰 반려→SC3 mock→real dedicated fixture 전환) 추가. 전단사 52:52·공백 1(OV7) 숫자는 불변.",
+              "expectedOutcome": "doc-tracker가 SC3의 real-delete·무mock 실제와 정합하고, mock-policy 허용목록 행 수(4)와 모순 없음. 52:52/공백1 집계 유지."
+            },
+            {
+              "seq": 6,
+              "action": "위 5개 변경을 브랜치 reconcile/rct_20260729-0001-ov6-ov7-sc3에 단일 커밋(author 39251873+dlddu@users.noreply.github.com — 이메일 프라이버시, git -c 로 subcommand 앞에 지정)으로 amend·force-push해 PR #211을 갱신하고 CI(E2E Tests with kind 포함)를 재트리거한다. 머지는 하지 않는다(executor 몫). (Step 3-2 준비에서 수행)",
+              "expectedOutcome": "PR #211 head 갱신(force-push), 8개 체크 CI 실행 시작. 구문 결함·mock-policy drift 제거로 직전 red였던 E2E 수집·정책 게이트 통과 기대."
+            }
+          ],
+          "plannedAt": "2026-08-01T00:55:00Z"
+        }
       }
     ]
   },
