@@ -1062,6 +1062,32 @@
       "assessedAt": "2026-08-02T09:42:27Z"
     },
     "createdAt": "2026-08-02T09:42:27Z",
-    "updatedAt": "2026-08-02T09:55:32Z"
+    "updatedAt": "2026-08-02T10:06:43Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "OV7(메트릭 서버 부재 폴백)을 **영구 e2e 면제 예외로 비준**해 잔여 1건(52↔53)을 닫는다. 왜 신규 전용 스펙이 아니라 면제인가 — 두 실현 경로가 모두 부적합하기 때문: (a) 실환경 재현(metrics-server 부재 kind 프로파일)은 metrics-server가 kube-system의 단일 클러스터 컴포넌트라 spec 단위로 격리 불가(SC3의 네임스페이스 fixture와 결정적 차이) — 공유 kind 클러스터를 전역 변형하면 metrics 의존 spec(OV1 등)이 깨지고(playwright fullyParallel/workers:4), 회피하려면 별도 클러스터·대시보드·프로젝트를 신설해야 하는데 그 인프라 비용이 얻는 단정('화면 렌더·에러 없음')의 얕은 가치에 비해 과도. (b) 데이터-모킹은 `docs/e2e-mocking-policy.md`의 명시적 불허(데이터 모킹)이자 ERR/LAT/ABS/DES 어느 카테고리에도 해당 안 됨(폴백은 200 정상응답이라 ERR 아님, metrics-server는 kind 설치 가능이라 ABS 배제); 형제 mock-policy 모델에 drift를 더하고 2026-08-01 SC3 mock 반려 방향과 정면 배치. 대체 커버리지 확인 — 폴백 계산은 `handlers/overview_test.go`의 `TestCalculateResourceUsageFallback`(metricsMap=nil→capacity−allocatable, ~5%CPU/~12.5%mem)가 유닛으로 검증하고, AC7 PRD 검증 방법 자체가 백엔드 기준(`getMetricsClientSafe()` nil). 가역성 있는 저위험 경로를 택함(문서·모델 정의 변경뿐, 앱코드·클러스터·데이터 무변경, revert로 복구). 【범위(완료 기준)】OV7을 (1) reconciler ac-e2e 모델 `definition`과 (2) 대상 레포 SSOT 문서(test-overview.md·doc-tracker.md) 양쪽에서 비준 예외로 명기해, 다음 ac-e2e 재감지가 '전용 스펙 52 ↔ 필수 AC 52 + 면제 1(OV7) = 공백 0·전단사'로 수렴하게 만드는 것. 【범위 밖(후속)】metrics-server 부재 e2e 인프라 실구축(path a)은 하지 않음 — 향후 다른 목적으로 부재 프로파일이 도입되면 그때 실환경 e2e로 승격(재검토 트리거로 문서에 남김). 형제 tbm_kubernetes-dashboard-e2e-mock-policy는 건드리지 않음(신규 인터셉트 0). 【승인 필요】이 결정은 엄격 53:53 전단사 계약을 '52 필수 + 1 비준 면제'로 바꾸는 거버넌스 변경이라 executor 검토 게이트에서 사용자 승인을 받아야 하며, 사용자가 literal 53:53 e2e를 원하면 path a(부재 프로파일 슬라이스)로 재계획한다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "[reconciler] `data/to-be-models.json`의 `tbm_kubernetes-dashboard-ac-e2e` `definition`에 '비준된 e2e 면제 예외' 조항을 추가한다 — 규칙: 각 AC는 전용 스펙 정확히 1개, 단 아래 비준 예외는 전용 스펙을 면제하고 대체 커버리지로 인정한다. 예외목록: OV7(metrics-server 부재 폴백) — 사유: e2e 관측 구분상태 없음·전제조건(클러스터 단일 컴포넌트 부재) 비격리·데이터모킹 정책 불허, 대체 커버리지 `handlers/overview_test.go::TestCalculateResourceUsageFallback`. 정상상태 정의를 '전용 스펙 수 = 필수 AC 수 = (전체 AC − 비준 예외)'로 갱신(현재 52 = 53 − 1). reconciler-tobe-modeler 규약(`--schema` 검증·keyed upsert·개별 커밋)으로 편집한다.",
+              "expectedOutcome": "모델 정의가 OV7 면제와 '전용 스펙 52 ↔ 필수 AC 52' 정상상태를 명시. 이후 ac-e2e 재감지가 공백 0으로 수렴(OV7을 더는 drift로 보지 않음)."
+            },
+            {
+              "seq": 2,
+              "action": "[대상 레포 dlddu/kubernetes-dashboard] 준비된 draft PR을 검토·머지한다. 변경: `docs/product/test-overview.md` 시나리오7의 OV7 `자동화` 필드를 '⚠️ 공백'에서 '🟡 e2e 면제(비준 영구 예외)'로 바꾸고 사유·대체 유닛 커버·재검토 트리거를 기재; `커버리지 요약`의 'OV7 공백'을 'OV7 e2e 면제(유닛 커버)'로. `docs/product/doc-tracker.md`의 건강요약·PRD인덱스 OV행·'자동화 공백' 섹션·'다음 단계'·변경이력을 OV7 면제 비준으로 일관 갱신(공백 0, 비준 예외 1).",
+              "expectedOutcome": "대상 레포 SSOT 문서가 OV7을 비준 예외로 기록하고 공백 0을 반영. docs/product 트리 해시 변경 → ac-e2e to_be 재감지 트리거(수렴 확인용)."
+            },
+            {
+              "seq": 3,
+              "action": "[검증] (a) ac-e2e: 최상위 `e2e/*.spec.ts` 52개가 필수 AC 52개와 파일단위 전단사이고 OV7만 면제로 남는지 재확인(공유·중복·고아·broken 0). (b) 형제 mock-policy: 이번 변경으로 `e2e/**/*.ts` 인터셉트 지문이 불변인지(신규 page.route/fulfill 0) 확인 → mock-policy 모델 무drift. (c) 모델 정의가 스키마 검증 통과.",
+              "expectedOutcome": "ac-e2e가 이번 범위(52↔52+면제 1) 기준 수렴 → task succeeded 기준 충족. mock-policy 모델 영향 없음."
+            }
+          ],
+          "plannedAt": "2026-08-02T10:06:43Z"
+        }
+      }
+    ]
   }
 ]
