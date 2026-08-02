@@ -730,6 +730,47 @@
       "assessedAt": "2026-08-02T09:42:27Z"
     },
     "createdAt": "2026-08-02T09:42:27Z",
-    "updatedAt": "2026-08-02T09:42:27Z"
+    "updatedAt": "2026-08-02T09:42:27Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "analysis 슬라이스3 첫 증분(수집 #7 opt-in-first 패턴 미러링): 페이크 LLM 옆에 실 LLM 분석기를 opt-in(--analyzer llm)으로 얹는다 — 주입식 Completer Protocol + stdlib urllib HTTP 완성기(env: base_url/model/api_key, OpenAI-호환 chat completions)로 실 프롬프트 구성·JSON 응답 파싱 경로를 진짜로 구현하되 전송만 주입해 오프라인 테스트가 동일한 실 로직을 결정적으로 검증한다(ingestion Fetcher/픽스처와 동형). 기본 analyzer는 fake 유지 → 교차언어 스모크·CI가 오프라인·결정적. 접근 근거: contracts가 이미 Analysis 스키마를 정의하므로 contracts-free(gen-check 회피)·stdlib-only(shim로 로컬 검증)·가역(fake 기본 유지, 실은 opt-in)이며, python/ 트리를 바꾸므로 merge 후 재감지가 잔여(cutover·analysis.spec e2e·AC3.x)를 새 task로 확실히 잇는다. === 완료 기준(이 시도 성공 범위): (1) 실 LLM 분석기 모듈 신설 — 프롬프트 구성 + 4분류 sentiment(AC2.3)·다국가 target_countries(AC2.1)·정규화 narrative_subjects(AC2.2)·저신뢰/미분석 판정(AC2.5)·Bronze 추적키 보존(AC2.6)을 실제로 구현, (2) CLI --analyzer {fake,llm} 기본 fake, (3) 주입식 canned completer로 오프라인 단위테스트 green, (4) fake 기본 유지로 tests/smoke.sh 무변, (5) CI(gen-check/lint/test) green. === 범위 밖(후속 재감지가 새 task로 이음): llm을 기본 analyzer로 cutover(수집 #8 대응), analysis.spec e2e 1:1 6케이스(tests/e2e — as-is 추적 밖), AC3.x 서빙/집계, contracts 변경(불필요). 수렴 판정은 모델 전체 to-be가 아니라 이 범위 기준으로 한다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "python/packages/analysis/src/econ_analysis/llm.py 신설 — 주입식 Completer Protocol + http_completer(env ECON_LLM_BASE_URL/ECON_LLM_MODEL/ECON_LLM_API_KEY, stdlib urllib로 OpenAI-호환 chat/completions POST) + build_prompt(item, body)(엄격 JSON 요청) + parse_response(text)(robust JSON 파싱·sentiment enum 검증) + analyze_llm(item, body, completer, analyzer_version)(fake_llm.analyze와 동일 시그니처·출력 계약; 본문 없음→unanalyzed, 저신뢰 임계 공유, 추적키 보존).",
+              "expectedOutcome": "ast 파싱 OK, 라인 ≤100, analyze_llm이 econ_core.models.Analysis 반환. http_completer는 전송 계층만(오프라인 미실행)."
+            },
+            {
+              "seq": 2,
+              "action": "cli.py 컷 — _build_parser() 추출 + --analyzer {fake,llm}(기본 fake) 추가 + --analyzer-version 기본을 선택 analyzer 버전에 맞춤 + llm 경로는 env로 http_completer 구성해 analyze_llm 라우팅, fake 경로/출력 무변. 모듈 docstring·help 갱신.",
+              "expectedOutcome": "_build_parser().parse_args([]).analyzer=='fake'. --analyzer fake 동작 무변. --analyzer llm 라우팅 경로 존재. ast 파싱 OK, 라인 ≤100."
+            },
+            {
+              "seq": 3,
+              "action": "tests/test_llm.py 신설(오프라인, 주입 canned completer) — 정상 JSON→analyzed(sentiment/다국가/서술대상), 다국가+복수 대상 손실 없는 보존(AC2.1/2.4), 표기 변형 하나의 키 통합(AC2.2), 모호/저신뢰 응답→low_confidence, 파싱 실패→unanalyzed(AC2.5), 본문 없음→모델 미호출 unanalyzed(AC2.5), record_id/source_url 추적키 보존(AC2.6). test_fake_llm.py 무변.",
+              "expectedOutcome": "신규 테스트 green, 기존 ingestion/analysis/core 테스트 회귀 없음."
+            },
+            {
+              "seq": 4,
+              "action": "__init__.py docstring + README.md 범위/quickstart 최소 갱신 — analysis에 실 LLM 분석기 opt-in(--analyzer llm + env) 추가·fake 기본(오프라인)임을 반영, 문서↔코드 모순 방지(drift 기준 4·5).",
+              "expectedOutcome": "README가 실 analyzer opt-in·fake 기본을 정확히 기술. '실제 LLM 연동(페이크로 대체)' 문구가 opt-in 반영으로 정정."
+            },
+            {
+              "seq": 5,
+              "action": "로컬 검증(blind 아님) — uname -m(aarch64) 매칭 ruff 바이너리를 GitHub releases에서 받아 `ruff check .` + `ruff format --check .`를 python/에서 CI와 1:1 재현(필요시 --fix/format로 정리) + stdlib pytest.raises 셰임 + PYTHONPATH로 analysis/core/ingestion 단위테스트 오프라인 실행.",
+              "expectedOutcome": "ruff check/format-check clean, analysis 단위테스트(신규 test_llm 포함) all green, py_compile 통과."
+            },
+            {
+              "seq": 6,
+              "action": "대상 레포 dlddu/economic-opinion-trend-monitor에 reconcile 브랜치 push + draft PR 생성(본문: task id·gap 요약·이 슬라이스 범위·검증 방법·주의사항).",
+              "expectedOutcome": "draft PR 생성, CI(build: setup→gen-check→lint→test) 트리거. e2e(kind)는 이 PR과 무관(회귀 없어야)."
+            }
+          ],
+          "plannedAt": "2026-08-02T10:08:45Z"
+        }
+      }
+    ]
   }
 ]
