@@ -640,8 +640,11 @@
       "</div>";
   }
 
-  function latestTask(modelId) {
-    var arr = state.tasksByModel[modelId] || [];
+  function latestDisplayTask(modelId) {
+    // No-op detections should not mask the latest meaningful workflow status.
+    var arr = (state.tasksByModel[modelId] || []).filter(function (t) {
+      return t.status !== "no_action_needed";
+    });
     if (!arr.length) return null;
     return arr.slice().sort(function (a, b) {
       return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
@@ -666,9 +669,9 @@
     }
 
     list.innerHTML = models.map(function (m) {
-      var lt = latestTask(m.id);
+      var lt = latestDisplayTask(m.id);
       var meta = STATUS_META[lt && lt.status] || null;
-      var dot = meta ? '<span class="dot" style="background:' + meta.color + '" title="' + escapeHtml(lt.status) + '"></span>' : '<span class="dot" style="background:var(--border-strong)" title="작업 없음"></span>';
+      var dot = meta ? '<span class="dot" style="background:' + meta.color + '" title="' + escapeHtml(lt.status) + '"></span>' : '<span class="dot" style="background:var(--border-strong)" title="표시할 상태 없음"></span>';
       var count = (state.tasksByModel[m.id] || []).length;
       var tags = ((m.metadata && m.metadata.tags) || []).slice(0, 3).map(function (t) { return '<span class="tag">' + escapeHtml(t) + "</span>"; }).join(" ");
       return '<button class="model-item' + (m.id === state.selected ? " active" : "") + '" data-id="' + escapeHtml(m.id) + '">' +
