@@ -140,7 +140,7 @@
   {
     "id": "rct_20260805-0001",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-05T06:05:23Z",
       "changedSides": [
@@ -169,7 +169,7 @@
       "assessedAt": "2026-08-05T06:05:23Z"
     },
     "createdAt": "2026-08-05T06:05:23Z",
-    "updatedAt": "2026-08-05T11:11:39Z",
+    "updatedAt": "2026-08-05T11:12:46Z",
     "attempts": [
       {
         "plan": {
@@ -241,6 +241,44 @@
               "log": "executionGuide 순서대로 실행. (1) CI 확인: head 770648c의 check-run 10/10 success — e2e (kind + API + browser), control-plane/data-plane lint+unit, envtest, integration, web typecheck+build, 4개 image build 모두 green. e2e 잡 로그(actions/runs/30981214328/job/92225844596)에서 핵심 게이트 확인: '--- PASS: TestDeferred_RealPodReclaimed (2.21s)' — SKIP 아님. CRIU probe 'probe pod phase: Succeeded', 'ok github.com/dlddu/session-platform/control-plane/test 86.558s', 로그 내 FAIL 0건, Playwright 5 passed. (2) draft 해제(markPullRequestReadyForReview → isDraft:false) 후 mergeable_state=clean 확인하고 squash 머지 → main 020945e91dd1063d2148962da007d0c439dcd3dc. (3) 수렴 판정은 verification 참조."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:00d71fefe91e91cb472415efae841d26bf1307e5 data-plane:6f8b240ebe0caf20c70d239d6c70a1cba7afe841 web:71abb71069b571d7749383524b3ecf62fa4b66db k8s:d70f21662b7d1f1b3143fc73a4de3f25c5d339cf deploy:5380976cd4a3dabf08b6a584f1f9e6439ce35941 scripts:f726316ea06f359bed780885a36f5f7fd6d30926 github:0c3ded29b29a520fe4aa5d8d275ec38011d68963 makefile:4f337498ec665776fed331343a3a4964e2caa829",
+          "checks": [
+            {
+              "name": "e2e_realpodreclaimed_pass_not_skip",
+              "status": "passed",
+              "detail": "핵심 게이트 통과. e2e 잡(actions/runs/30981214328/job/92225844596, head 770648c) 로그: '--- PASS: TestDeferred_RealPodReclaimed (2.21s)'. SKIP 아님 — kind + CRIU-on + E2E_TEST_ENDPOINTS on 러너에서 skip 가드(no kube API / 404)에 걸리지 않고 실제 실행됨. 같은 스위트의 RealPodProvisioned(12.07s)·CRIUIntegrity(11.20s)·CrossReplicaAtomicity(19.40s)도 PASS."
+            },
+            {
+              "name": "no_regression_ci",
+              "status": "passed",
+              "detail": "PR head 770648c의 check-run 10/10 success: e2e(kind+API+browser), control-plane lint+unit, data-plane lint+unit, envtest(real-apiserver CAS/Lease), integration(happy path), web typecheck+build, 이미지 빌드 4종. e2e 로그에 FAIL 0건, 'ok github.com/dlddu/session-platform/control-plane/test 86.558s', Playwright '5 passed (30.2s)'."
+            },
+            {
+              "name": "criu_probe",
+              "status": "passed",
+              "detail": "e2e 잡 CRIU probe 스텝 '--- probe pod phase: Succeeded ---'. snapshot(=CRIU 체크포인트) 전제가 성립해 RealPodReclaimed의 동결 경로가 500 없이 진행됨."
+            },
+            {
+              "name": "docs_map_consistency",
+              "status": "passed",
+              "detail": "머지된 main(020945e)의 docs/test/e2e.md L76에 커버 표 AC-A3 행(세션 동결 시 Pod 오브젝트 삭제+자원 회수, architecture 시나리오 3) 추가, L98의 deferred 표 RealPodReclaimed 행은 취소선+'채움'으로 해소. RealPodProvisioned·CrossReplicaAtomicity 전례와 동일 형식 — 새 미커버 시드 추가 없음."
+            },
+            {
+              "name": "merged_to_main",
+              "status": "passed",
+              "detail": "PR #16 draft 해제(isDraft:false) 후 mergeable_state=clean 확인하고 squash 머지 → main 020945e91dd1063d2148962da007d0c439dcd3dc. 변경 범위는 계획대로 2 files(+85/-5), 제품·인프라 런타임 코드 불변(as-is 재계산에서 control-plane 트리만 88bc657→00d71fe로 변경, data-plane/web/k8s/deploy/scripts/.github/Makefile 동일)."
+            },
+            {
+              "name": "residual_gap_out_of_scope",
+              "status": "passed",
+              "detail": "정보성 — 이 슬라이스 범위 밖이라 converged 판정에 넣지 않음. e2e_deferred_test.go에 하드 skip 잔존: L218 TestDeferred_IdleToSnapshot(AC-B1 reaper e2e), L224 TestDeferred_SnapshotRestore, L306/L313 Read/WriteIdleAndSnapshotBranches(AC-C2/C3 — StateIdle 진입 트리거 부재). RealPodReclaimed 안의 L143/L158 skip은 하드 스킵이 아니라 환경 가드(kube API 없음 / E2E_TEST_ENDPOINTS off)로 RealPodProvisioned와 동일 패턴이며 CI에서는 걸리지 않았다. README 'stubbed'/'TODO(criu)' 서술 정합, AC-B1 grace/override TODO(policy)도 미해소. 이번 머지로 as-is(control-plane)와 to-be(docs 431c60b→87d0796)가 모두 변해 다음 감지 주기가 후속 task를 연다."
+            }
+          ],
+          "verifiedAt": "2026-08-05T11:12:46Z"
         }
       }
     ]
