@@ -169,6 +169,37 @@
       "assessedAt": "2026-08-05T06:05:23Z"
     },
     "createdAt": "2026-08-05T06:05:23Z",
-    "updatedAt": "2026-08-05T06:05:23Z"
+    "updatedAt": "2026-08-05T06:05:23Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "AC-A3(동결 시 자원 회수) e2e 자동검증 슬라이스: architecture 테스트 시나리오 3에 매핑된 하드-skip 플레이스홀더 TestDeferred_RealPodReclaimed(control-plane/test/e2e_deferred_test.go)를 채운다. #15의 idle 트리거 + 이미 반영된 실 client-go PodOrchestrator(RealPodProvisioned가 이미 검증)로 이 시드의 선결조건(terminate/snapshot 경로 + Pod 삭제·자원 회수 단언)이 충족됐다. 채운 테스트: 세션 생성(실 Pod) → 클러스터에 Pod 오브젝트 존재 확인 → test-only POST /snapshot 로 동결(엔드포인트 off=404면 skip, RealPodProvisioned/CRIUIntegrity와 동일 방어) → API가 state=snapshot·pod='' 보고 확인 → **클러스터 그라운드-트루스로 그 Pod 오브젝트가 삭제(회수)됐는지 폴링 단언**(RealPodProvisioned의 거울상; kube API 없으면 skip). 문서 map 정합을 위해 docs/test/e2e.md의 deferred 표에서 이 행을 커버 표로 옮긴다(RealPodProvisioned·CrossReplicaAtomicity 전례와 동일). 왜 이 경로: (a) #15로 갓 열린 미충족 AC 중 가장 작고 가역적이며 CI(kind e2e)로 검증되는 순수 테스트 추가 — 제품 코드 변경 없음이라 리스크 최소·블라인드 저작 안전; (b) 대안인 reaper 구동 e2e(TestDeferred_IdleToSnapshot)는 전역 background reaper라 공유 SUT에서 MAX_IDLE을 짧게 잡으면 다른 테스트 세션까지 동결시켜 불안정 → 이번 슬라이스에서 배제; (c) CRIUIntegrity가 API 수준 pod='' 는 이미 보지만 **실 Pod 오브젝트 삭제(클러스터 자원 회수)** 는 안 봐서 A3 그라운드-트루스는 실제 잔여 gap. 완료 기준(범위): CI e2e 잡에서 go test -tags=e2e 가 TestDeferred_RealPodReclaimed 를 skip 없이 통과(kind+CRIU-on 러너) + 기존 e2e/unit 무회귀 + e2e.md map이 코드와 일치. 범위 밖(후속 재감지): AC-B1 reaper e2e(IdleToSnapshot)·grace/override 정책(TODO(policy)), AC-C2/C3 idle-branch(StateIdle 도달 트리거 부재 — 문서 상태머신 active→idle→snapshot 중 idle 진입이 미구현), README 'stubbed'/'TODO(criu)' 서술 정합(문서↔구현, 실 AgentCheckpointer 존재).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 dlddu/session-platform에 브랜치 생성 후 control-plane/test/e2e_deferred_test.go의 TestDeferred_RealPodReclaimed 본문을 채운다: kubeClient(없으면 skip) → createSession(실 pod) → getPodEventually로 Pod 오브젝트 존재 확인 → POST /api/v1/sessions/{id}/snapshot(404면 E2E_TEST_ENDPOINTS off로 skip, 그 외 비-200이면 fatal) → 응답 state=snapshot·pod='' 확인 → 그 Pod 이름을 클러스터에서 폴링해 삭제(apierrors.IsNotFound) 또는 DeletionTimestamp!=nil(회수 진행) 확인. import에 apierrors \"k8s.io/apimachinery/pkg/api/errors\" 추가.",
+              "expectedOutcome": "하드 t.Skip 제거, 실 Pod 삭제(자원 회수) 그라운드-트루스 단언 포함. //go:build e2e 태그로 컴파일되며 gofmt/vet 클린."
+            },
+            {
+              "seq": 2,
+              "action": "docs/test/e2e.md 갱신: 'Deferred 시드 ↔ 문서 시나리오 매핑' 표의 TestDeferred_RealPodReclaimed 행을 해소(취소선+채움 표기)하고, '현재 커버되는 시나리오(active 경로)' 표에 AC-A3(architecture 시나리오 3: 동결 시 대상 Pod 삭제·자원 회수) 행을 추가한다. RealPodProvisioned/CrossReplicaAtomicity 전례와 동일한 형식.",
+              "expectedOutcome": "문서 map이 코드 상태와 일치(드리프트 #6 트래커 정합), 새 미커버 시드 추가 없음."
+            },
+            {
+              "seq": 3,
+              "action": "브랜치를 push하고 draft PR을 연다(머지하지 않음). PR 본문에 task id(rct_20260805-0001), AC-A3 gap 요약, architecture 시나리오 3 매핑, 검증 방법(CI e2e에서 skip 없이 통과), 범위 밖 후속을 명시. 이 저장소엔 Go 툴체인이 없어 테스트는 블라인드 저작이며 CI(kind e2e)로 검증한다.",
+              "expectedOutcome": "draft PR URL 확보. control-plane/** 변경이므로 .github/workflows/e2e.yml(kind + go test -tags=e2e + Playwright)이 PR에서 트리거됨."
+            },
+            {
+              "seq": 4,
+              "action": "(executor 단계) executionGuide의 완료 기준으로 수렴 판정: CI e2e 잡이 그린이고 TestDeferred_RealPodReclaimed가 skip 없이 통과하는지 확인 후 draft를 해제하고 PR 머지. 머지가 as-is 해시를 바꿔 재감지를 트리거한다.",
+              "expectedOutcome": "AC-A3가 kind e2e로 실 검증됨. task succeeded로 전이. 범위 밖 잔여 gap(B1 reaper e2e, C2/C3 idle-branch, README 정합)은 재감지가 새 task로 잇는다."
+            }
+          ],
+          "plannedAt": "2026-08-05T15:20:00+09:00"
+        }
+      }
+    ]
   }
 ]
