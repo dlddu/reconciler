@@ -918,6 +918,47 @@
       "assessedBy": "agent",
       "assessedAt": "2026-08-05T11:08:13Z"
     },
-    "createdAt": "2026-08-05T11:08:13Z"
+    "createdAt": "2026-08-05T11:08:13Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "이 모델의 신규 drift 중 참조 무결성 위반(규칙#5) 한 건을 슬라이스로 닫는다. 대상: e2e/maestro/home-feed.yaml. 이 flow 헤더는 검증 대상으로 AC-007-08(+참조 AC-007-09·TC-007-08/09·미존재 home-feed-exposure.yaml)을 선언하나, 2026-08-05 PRD-009 확정으로 AC-007-08은 AC-009-14(홈 '다른 엄마들의 기록' 섹션 — 이관 수용)로 이관되고 AC-007-09는 AC에서 분리돼 ENG-007·008·010 초안으로 이동했다 → 존재하지 않는 AC를 참조하는 dangling reference. 접근: flow 커맨드는 전혀 건드리지 않고 헤더 주석만 AC-009-14(+TC-009-14-A)로 재선언해 참조 무결성을 복구한다. to-be(docs/doc-tracker.md)는 이미 'AC-009-14 ↔ home-feed.yaml' 매핑을 ✅로 등재(line 150)하고 line 76에 '헤더 재선언은 e2e 측 후속 커밋 — reconciler drift로 관리'라 명시해 두었으므로, 이번 as-is 헤더 수정이 곧 그 후속이며 doc-tracker line 76의 미결 각주를 '완료'로 갱신해 to-be와 함께 착지시킨다. 왜 이 접근인가: (a) home-feed.yaml은 이미 AC-009-14의 표면(섹션 타이틀·최대 3카드·마스킹 표시명·공감수·'더보기'→커뮤니티)을 그대로 단정하므로 커맨드 변경 없이 헤더만 실체와 맞추면 된다 — 최저 리스크. (b) home-feed.yaml은 CI run-list(explicit run_flow, e2e-android/ios.yml) 미등재라 실행되지 않고 변경이 주석뿐이라 login-subflow 가드(check-login-subflows.sh: subflow/clearKeychain 라인 무변경)와도 무관 → CI green 무영향. (c) 되돌리기 쉬움(주석 원복). 완료 기준(범위): 머지 후 home-feed.yaml 헤더가 정확히 AC-009-14 1개를 선언하고 AC-007-08/09·TC-007-08/09 dangling 참조가 0이며, doc-tracker line 76 미결 각주가 해소돼 to-be(tracker의 ✅ 주장)와 실체 헤더가 정합하고, 파일단위 1:1(중복·묶음·고아 0)이 유지되며 기존 CI 스위트가 green이면 이 task는 성공이다(AC-009-14는 tracker 상 이미 ✅21에 집계돼 있어 카운트는 불변 — 이번 슬라이스는 그 ✅ 주장과 실제 헤더의 불일치를 해소하는 것이다). 범위 밖(후속): (i) 나머지 신규 미커버 확정 AC(AC-009-01~11·13, AC-001-06·07)는 전용 flow 신설이 필요하고 대부분 커뮤니티 탭 구현(tbm_dear-baby-docs-impl 소관) 이후라야 검증 가능 → ⬜ backlog로 남아 재감지가 다음 슬라이스를 연다. (ii) AC-009-14의 새 빈-상태 semantics(mock 제거 → 빈 카드+CTA, TC-009-14-B)는 앱 구현 변경이라 docs-impl 모델 소관 — 커뮤니티 피드 구현 후 이 flow의 mock 단정 재검토가 필요할 수 있다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "dlddu/dear-baby 에 브랜치 reconcile/rct_20260805-0001-home-feed-ac-009-14 를 origin/main 기준으로 생성한다.",
+              "expectedOutcome": "최신 main 위에 작업 브랜치가 생성된다."
+            },
+            {
+              "seq": 2,
+              "action": "e2e/maestro/home-feed.yaml 헤더 주석(3~7행)만 재작성: 검증 대상 AC-007-08 → AC-009-14(홈 '다른 엄마들의 기록' 섹션 — 카드 표시, 구 AC-007-08 이관 명시); 노출 로직 참조를 'AC-007-09 → home-feed-exposure.yaml' 에서 'AC 밖 — ENG-007·008·010(미확정 초안) 소관, 확정 시 ENG 매핑 재정의' 로 교체; TC-007-08/09 → TC-009-14-A(카드 표시+더보기→커뮤니티) 로 갱신하고 TC-009-14-B(빈 상태)는 커뮤니티 탭 구현 이후 범위임을 한 줄 주석. flow 커맨드(12~56행)·subflow 참조·clearKeychain/clearState 는 무변경.",
+              "expectedOutcome": "home-feed.yaml 이 존재하는 AC 정확히 1개(AC-009-14)만 검증 대상으로 선언하고, AC-007-08/09·TC-007-08/09·home-feed-exposure.yaml 등 dangling 참조가 0이 된다. flow 실행 동작은 동일."
+            },
+            {
+              "seq": 3,
+              "action": "docs/doc-tracker.md line 76 의 미결 각주 '(주: home-feed.yaml 헤더의 AC 재선언은 e2e 레포 측 후속 커밋 — reconciler drift로 관리)' 를 '(2026-08-05 reconciler rct_20260805-0001: home-feed.yaml 헤더 AC 재선언 완료 — AC-007-08/09·TC-007-08/09 → AC-009-14·TC-009-14-A, 참조 무결성 복구, flow 커맨드 무변경)' 로 갱신한다. 카운트(✅21·⬜47·🟡0)와 매핑표(line 150 AC-009-14 ✅ home-feed.yaml, line 124/125 이관 스텁)는 이미 목표 상태이므로 무변경.",
+              "expectedOutcome": "to-be(doc-tracker)의 미결 후속 각주가 해소되어 실체(헤더)와 정합한다. 매핑표·카운트는 이미 목표라 그대로 유지."
+            },
+            {
+              "seq": 4,
+              "action": "두 파일 변경을 author noreply(39251873+dlddu@users.noreply.github.com, git-level -c)로 커밋·푸시하고 dlddu/dear-baby 에 draft PR 을 연다. PR 본문에 task id, gap(참조 무결성 위반 — dangling AC-007-08/09), 슬라이스 범위, 검증 방법(참조 무결성 + 파일단위 1:1 + CI green), 범위 밖(신규 AC backlog + 빈상태 semantics) 을 적는다.",
+              "expectedOutcome": "draft PR 생성(머지 안 함). CI 가 재트리거되나 home-feed.yaml 은 run-list 미등재·주석 변경이라 기존 e2e/integration 스위트에 무영향(green 유지)."
+            },
+            {
+              "seq": 5,
+              "action": "[executor] gh pr checks 로 CI green 확인(home-feed.yaml 미실행이 정상) 후 검토 필요성 판단 → 승인 시 draft 해제·머지.",
+              "expectedOutcome": "모든 체크 pass. 머지로 as-is(e2e 트리 해시)와 to-be(doc-tracker blob)가 함께 이동."
+            },
+            {
+              "seq": 6,
+              "action": "[executor] 수렴 검증(계획 범위 기준): 머지된 main 에서 home-feed.yaml 헤더가 AC-009-14 정확히 1개 선언·dangling AC 참조 0, doc-tracker line 76 각주 해소, 파일단위 1:1(중복·묶음·고아 0) 유지를 확인.",
+              "expectedOutcome": "참조 무결성(규칙#5) 복구 확정 — home-feed.yaml 이 tracker 의 ✅(AC-009-14) 주장과 정합. 잔여 신규 AC backlog·빈상태 semantics 는 재감지/docs-impl 가 새 task 로 잇는다."
+            }
+          ],
+          "plannedAt": "2026-08-05T11:30:53Z"
+        }
+      }
+    ]
   }
 ]
