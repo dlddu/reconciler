@@ -1,7 +1,7 @@
 [
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-07-29T11:31:23Z",
       "changedSides": [
@@ -18,7 +18,7 @@
       }
     },
     "createdAt": "2026-07-29T11:31:23Z",
-    "updatedAt": "2026-08-05T05:53:58Z",
+    "updatedAt": "2026-08-05T05:55:12Z",
     "id": "rct_20260729-0001",
     "stateSummary": {
       "asIs": "첫 관측(HEAD df6d8c8). 구현+인프라(control-plane/ data-plane/ web/ k8s/ deploy/ scripts/ .github/ Makefile). 운영 main.go가 REAL 어댑터 배선: client-go ClientOrchestrator(세션당 1:1 pod, 결정적 이름 + session-id 라벨; StubOrchestrator는 test-only, 미배선), ConfigMap resourceVersion-CAS + coordination Lease store(real-apiserver envtest 단일승자 검증), HTTP agent client, (CRIU_ENABLED 게이트) AgentCheckpointer + S3 checkpointstore. data-plane agent는 PTY-attach /bin/bash 하나 기동, /attach(ws)+/healthz+/write+/read(offset) 제공, /checkpoint+/restore가 in-pod criu dump/restore(스크롤백을 tar에 직렬화). web SPA: Sessions/NewSession/Workspace/Restore(Restore는 thaw 화면, stale console 없음). OpenAPI /api/v1는 read offset 비파괴·상태분기 read/write/switch, 제품 snapshot 엔드포인트 없음. 테스트: unit+integration+kind e2e(2-replica, MinIO, CRIU-on)+Playwright(J1/J3/J5)+envtest. **이번 변경:** 첫 관측(직전 baseline 없음) — 초기 상태 확립.",
@@ -105,6 +105,34 @@
               "log": "PR #15 squash 머지 — merge commit 49ddc95f1047960b5432027c9efd57ed9384cd9f, merged:true. 머지가 as-is 해시를 바꿔 다음 감지 주기의 트리거가 된다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:88bc657bbc0d174a21609376b0510e0a280d0e15 data-plane:6f8b240ebe0caf20c70d239d6c70a1cba7afe841 web:71abb71069b571d7749383524b3ecf62fa4b66db k8s:d70f21662b7d1f1b3143fc73a4de3f25c5d339cf deploy:5380976cd4a3dabf08b6a584f1f9e6439ce35941 scripts:f726316ea06f359bed780885a36f5f7fd6d30926 github:0c3ded29b29a520fe4aa5d8d275ec38011d68963 makefile:4f337498ec665776fed331343a3a4964e2caa829",
+          "checks": [
+            {
+              "name": "unit_service_tests_on_main",
+              "status": "passed",
+              "detail": "머지된 main(49ddc95)에서 go test ./internal/service/... ok — TestIdleReaperSnapshotsIdleSessions 두 서브테스트(60m→snapshot+Pod 회수(AC-A3) / 59m 경계→active 유지) 포함. 실행 단계에서 control-plane·data-plane 전체 go test ./... 무회귀도 확인."
+            },
+            {
+              "name": "wiring_main_go",
+              "status": "passed",
+              "detail": "main.go:116 go reaper.Run(ctx) — signal.NotifyContext(SIGINT/SIGTERM) shutdown ctx로 구동, ctx.Done()에서 깨끗이 종료. IDLE_SCAN_INTERVAL 기본 1m(envDuration, 미설정/오파싱/비양수 시 1m 폴백) main.go:196."
+            },
+            {
+              "name": "docs_code_consistency",
+              "status": "passed",
+              "detail": "session.go TODO(policy)가 grace period·per-session override 잔여로 좁혀지고 service.IdleReaper(AC-B1) 참조 추가. doc-tracker.md AC-B1 항목이 '운영 트리거는 구현됨'으로 갱신."
+            },
+            {
+              "name": "residual_gap_informational",
+              "status": "passed",
+              "detail": "정보성(범위 밖, converged 판정 미포함): AC-B1 grace/override 정책, AC-B2/B3/D4 CRIU 런타임 검증(execCriuEngine seam, TestScenario4/TestDeferred_CRIUIntegrity skip), AC-A3 회수·AC-C2/C3 idle-branch 하드 skip(TestDeferred_*), README 'stubbed' 서술 정합. as-is 버전 변화(control-plane 4a01b00→88bc657)를 다음 감지 주기가 보고 후속 task를 연다."
+            }
+          ],
+          "verifiedAt": "2026-08-05T05:55:12Z"
         }
       }
     ]
