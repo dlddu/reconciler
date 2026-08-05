@@ -1,7 +1,7 @@
 [
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "detectedAt": "2026-07-29T11:31:23Z",
       "changedSides": [
@@ -18,7 +18,7 @@
       }
     },
     "createdAt": "2026-07-29T11:31:23Z",
-    "updatedAt": "2026-08-05T05:47:22Z",
+    "updatedAt": "2026-08-05T05:53:58Z",
     "id": "rct_20260729-0001",
     "stateSummary": {
       "asIs": "첫 관측(HEAD df6d8c8). 구현+인프라(control-plane/ data-plane/ web/ k8s/ deploy/ scripts/ .github/ Makefile). 운영 main.go가 REAL 어댑터 배선: client-go ClientOrchestrator(세션당 1:1 pod, 결정적 이름 + session-id 라벨; StubOrchestrator는 test-only, 미배선), ConfigMap resourceVersion-CAS + coordination Lease store(real-apiserver envtest 단일승자 검증), HTTP agent client, (CRIU_ENABLED 게이트) AgentCheckpointer + S3 checkpointstore. data-plane agent는 PTY-attach /bin/bash 하나 기동, /attach(ws)+/healthz+/write+/read(offset) 제공, /checkpoint+/restore가 in-pod criu dump/restore(스크롤백을 tar에 직렬화). web SPA: Sessions/NewSession/Workspace/Restore(Restore는 thaw 화면, stale console 없음). OpenAPI /api/v1는 read offset 비파괴·상태분기 read/write/switch, 제품 snapshot 엔드포인트 없음. 테스트: unit+integration+kind e2e(2-replica, MinIO, CRIU-on)+Playwright(J1/J3/J5)+envtest. **이번 변경:** 첫 관측(직전 baseline 없음) — 초기 상태 확립.",
@@ -77,6 +77,34 @@
           "reviewer": "dlddu",
           "reviewedAt": "2026-08-05T05:47:22Z",
           "comment": "승인 (chat)"
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-08-05T05:48:30Z",
+          "finishedAt": "2026-08-05T05:53:58Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-08-05T05:48:30Z",
+              "finishedAt": "2026-08-05T05:51:00Z",
+              "log": "PR #15 리뷰 완료(head bc6ee12, mergeable clean, 6 files +205/-7). 확인: reaper가 Manager.Snapshot 무변경 재사용(manager.go는 패키지 주석만 +3/-2), ScanOnce가 idle<maxIdle→skip으로 60m 동결/59m 유지 경계 구현, State==snapshot 선제 skip+Snapshot 멱등으로 스캔-스냅샷 사이 경쟁 안전, per-session 오류는 로그 후 계속(List 실패만 중단), main.go가 signal.NotifyContext(SIGINT/SIGTERM) ctx로 go reaper.Run(ctx) 배선, IDLE_SCAN_INTERVAL 기본 1m·미설정/오파싱/비양수 폴백(envDuration), session.go TODO(policy)가 grace/override 잔여로 축소, doc-tracker.md AC-B1 '운영 트리거는 구현됨' 갱신."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-08-05T05:51:00Z",
+              "finishedAt": "2026-08-05T05:53:30Z",
+              "log": "go1.24.5 설치 후 PR 브랜치에서 실행. go test ./internal/service/... PASS — TestIdleReaperSnapshotsIdleSessions 두 서브테스트(idle past MaxIdle→snapshot+pod 회수(AC-A3) / 59-minute boundary→active 유지) 명시 PASS. 무회귀: control-plane go test ./... 전부 ok(adapter/agent·checkpointstore·configmap·criu·api·service), data-plane go test ./... ok — make test-unit 동등 그린."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-08-05T05:53:30Z",
+              "finishedAt": "2026-08-05T05:54:30Z",
+              "log": "PR #15 squash 머지 — merge commit 49ddc95f1047960b5432027c9efd57ed9384cd9f, merged:true. 머지가 as-is 해시를 바꿔 다음 감지 주기의 트리거가 된다."
+            }
+          ]
         }
       }
     ]
