@@ -314,6 +314,37 @@
       "reason": "직전 rct_20260805-0001(succeeded)의 reconcile PR #16 머지가 control-plane(88bc657→00d71fe)과 docs(431c60b→87d0796)를 함께 바꿔 재감지된 post-reconcile 재트리거다. #16은 AC-A3 Pod-회수 e2e를 실검증해 그 슬라이스는 수렴(convergent −1)했으나, 15 AC 중 AC-B1(reaper-구동 idle→snapshot e2e, TestDeferred_IdleToSnapshot 하드 skip) + grace/override 정책(TODO(policy)), AC-C2/AC-C3(idle-branch read/write — StateIdle 진입 트리거 부재로 하드 skip), AC-B2(focused restore placeholder)가 실 런타임 자동검증 미충족이고, README의 'stubbed'/'TODO(criu)' 서술이 실 criu 어댑터·PR #12~#14 구현과 모순 — 정의 drift 기준 #1(미구현·미검증 AC는 drift; 게이트 뒤 stub·의도적 skip 충족 불인정, 2026-07-27 보류 예외 없음 결정)·#2/#5(문서↔구현 불일치)에 따라 유의미(노이즈 아님)한 gap이 안정적으로 지속한다. 롤아웃 진행 중·5분 미만 일시 alert 같은 자동 해소 성격이 아니라 안정적 잔여 gap이므로 재확인 유예가 아니라 실제 작업이 필요하다. 직전 두 task 모두 succeeded/terminal이고 다른 열린 task 없음 → 미점유 action_required로 넘겨 planner가 다음 슬라이스(AC-B1 idle-트리거 e2e+정책 / AC-C2·C3 idle-branch / AC-B2 focused restore / README 정합)를 우선순위화할 차례다.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-06T03:06:23Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "문서↔구현 정합(drift #2/#5·#6) 슬라이스 — CRIU 체크포인트/복원이 실제로는 구현·CI 검증됐는데도 문서가 여전히 '스텁/미검증/deferred skip'으로 서술하는 불일치를 바로잡는다. 그라운드 트루스: (a) 실 AgentCheckpointer(agent-driven in-pod CRIU, Enabled()=true, 유닛테스트)가 main.go에서 CRIU_ENABLED 게이트 뒤로 배선되고 deploy/ 오버레이가 그 게이트를 ON(+E2E_TEST_ENDPOINTS+MinIO)으로 켠다; (b) e2e CI 최신 run 30981214328(#16 PR, success)에서 CRIU 프로브 pod=Succeeded이고 TestDeferred_CRIUIntegrity가 SKIP 아닌 PASS(11.20s) → AC-B2/B3/D4 CRIU 왕복(복원→새 pod→상태 보존)이 실검증됨; (c) 코드에 TODO(criu) 마커 전무(grep 확인; TODO(policy)만 잔존); (d) 쉘 read/write→stdin/stdout은 실 agent HTTPClient 구현이라 e2e.md 커버 표(AC-D2/D3)에 이미 검증됨. 그런데 README는 'read/write·CRIU still stubbed', 'gated stub(CRIU later)', 'gated and stubbed', 'TODO(criu) marks the one remaining stubbed adapter', 'CRIU assertions remain seeded as documented skips'로, docs/test/e2e.md(SSOT)는 '충실도' 노트에서 'CRIU 인메모리 스텁·B-path 범위 밖'이라 하고 deferred 표에 통과 중인 TestDeferred_CRIUIntegrity를 skip으로 남겨둔다(#16이 RealPodReclaimed 행에 한 것과 동일한 #6 북키핑 지연). 이 두 문서를 실검증 현실에 맞춘다. 우선순위 근거: 더 높은 우선의 미검증 AC(AC-B1 reaper-구동 idle→snapshot e2e / AC-C2·C3 idle-branch read/write)는 모두 미구현 StateIdle 진입 트리거 + 미확정 TODO(policy)(idle→snapshot 트리거 타이밍, 제품 결정 필요)에 막혀 블라인드(Go 툴체인 부재)로 안전 착수 불가이고, AC-B2 focused restore(SnapshotRestore)는 CRIUIntegrity가 이미 커버하는 잉여다. 반면 이 문서 불일치는 시스템의 '검증된 능력'을 문서가 적극적으로 잘못 기술하는 실제 결함이며, 문서 전용이라 가역·저위험이고 e2e.md 편집이 to-be 해시를 움직여 루프가 깨끗이 재감지로 이어진다(README는 as-is 해시 밖). 완료 기준(범위): (1) docs/test/e2e.md에서 TestDeferred_CRIUIntegrity(B3) 행을 deferred→커버 표로 이동(#16 전례) + '충실도' 노트를 'e2e 오버레이는 CRIU ON, CRIU 왕복은 실검증 통과'로 정정 + B2/C2·C3 행 '막힌 이유'를 정확화(B2는 CRIUIntegrity가 커버; C2/C3는 snapshot 분기 커버·idle 분기만 잔여); (2) README의 위 5개 stale 서술을 실검증 현실로 정정하되 여전히 유예인 항목(idle→snapshot 트리거 타이밍 TODO(policy), reaper-구동 idle e2e·idle-branch)은 정확히 유예로 유지 — 과대서술 금지; (3) 정정 각 문장이 코드/CI 근거(run 30981214328 CRIUIntegrity PASS)와 일치. 범위 밖(후속 재감지): AC-B1 reaper idle→snapshot e2e·AC-C2/C3 idle-branch(미구현 StateIdle 트리거 + TODO(policy) 제품결정) / AC-B2 focused restore 잉여 시드 / criu-verification.md 헤더·doc-tracker.md 등 'CRIU 미검증' 상위 서술(대부분 integration TestScenario4의 런타임-게이트 skip을 정확히 기술 — e2e 경로만 과거형; 정밀 정정은 후속). 문서 전용이라 e2e.yml/ci.yml 코드 게이트 미트리거 → 검증은 사람이 정정문↔코드/CI 근거 대조로 한다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 dlddu/session-platform에 브랜치 생성 후 docs/test/e2e.md 정정: (a) '충실도' 노트(L13-19)의 'Checkpointer(CRIU)만 아직 인메모리 스텁 … B-path(idle→snapshot→restore)와 CRIU 단언은 범위 밖 … deferred 시드(skip)로 골격만'을 'e2e SUT 오버레이(deploy/)는 CRIU_ENABLED+E2E_TEST_ENDPOINTS+MinIO로 CRIU를 켜고, CRIU 왕복(snapshot→reclaim→restore→상태 보존)이 실 e2e 단언 TestDeferred_CRIUIntegrity(AC-B2/B3/D4)로 통과한다; 여전히 유예인 것은 reaper-구동 idle→snapshot(IdleToSnapshot, B1)과 read/write의 idle 분기(C2/C3 idle) — 미구현 idle 진입 트리거/미확정 TODO(policy)'로 정정. (b) Deferred 표의 TestDeferred_CRIUIntegrity(B3) 행을 취소선+'채움' 표기로 해소하고 '현재 커버되는 시나리오' 표에 CRIU 왕복 행(lifecycle 시나리오 3, AC-B2/B3/D4: CRIU-on 오버레이에서 마커·cwd·커서 보존 복원+새 pod) 추가 — RealPodReclaimed 전례 형식. (c) SnapshotRestore(B2) 행 '막힌 이유'를 'B2는 CRIUIntegrity가 커버; 이 시드는 focused restore-only 잉여 placeholder'로, ReadIdle/WriteIdle(C2/C3) 행을 'snapshot 분기는 CRIUIntegrity로 커버, idle 분기만 idle 트리거 대기'로 정확화.",
+              "expectedOutcome": "e2e.md 커버/deferred 맵이 코드+CI 상태(run 30981214328 CRIUIntegrity PASS)와 일치. 새 미커버 시드 추가 없음. to-be(docs) 하위 트리 해시 변경 → 머지 시 재감지 트리거."
+            },
+            {
+              "seq": 2,
+              "action": "README.md 정정: (a) bootstrap 블록쿼트의 'the read/write mapping onto the shell's stdin/stdout (J5-S2/S3) and CRIU checkpoint/restore are still stubbed behind their interfaces'를 '쉘 stdin/stdout read/write는 실 구현(AC-D2/D3, e2e 검증)이고 CRIU checkpoint/restore도 실 agent-driven in-pod 구현 — CRIU_ENABLED 게이트 뒤(프로덕션 기본 off, e2e 오버레이 on에서 왕복 실검증)'로 정정. (b) Layout의 'adapter/criu/ Checkpointer port + gated stub (CRIU later)'를 '실 agent-driven 어댑터 + 게이트-off no-op 스텁'으로. (c) Architecture Lifecycle bullet 'CRIU is gated (CRIU_ENABLED) and stubbed'를 '게이트(기본 off; on이면 실 agent-driven CRIU, e2e 검증)'로. (d) Architecture 마지막 문단 'TODO(criu) marks the one remaining stubbed adapter (CRIU checkpoint/restore)'는 그런 마커가 없으므로 삭제/정정 — TODO(policy)(idle→snapshot 트리거 타이밍) 서술만 정확하므로 유지. (e) Testing/E2E bullet 'the B-path (idle → snapshot → restore) and CRIU assertions remain seeded as documented skips'를 'CRIU 왕복(restore)·pod 회수(A3)는 CRIU-on 오버레이에서 실검증되는 e2e 단언이고, reaper-구동 idle→snapshot(IdleToSnapshot)·read/write idle 분기만 seeded skip으로 남는다'로 정정.",
+              "expectedOutcome": "README가 실 구현·CI 검증 상태와 일치, 여전히 유예인 항목은 정확히 유예로 표기(과대서술 없음). README는 as-is 해시 밖이라 해시 불변(재감지 트리거는 e2e.md가 담당)."
+            },
+            {
+              "seq": 3,
+              "action": "브랜치를 push하고 draft PR을 연다(머지하지 않음). PR 본문에 task id(rct_20260806-0001), 드리프트 요약(#2 impl↔doc, #5 문서 없는/어긋난 서술, #6 트래커 지연), 근거 CI run 링크(https://github.com/dlddu/session-platform/actions/runs/30981214328 — CRIU 프로브 Succeeded·TestDeferred_CRIUIntegrity PASS 11.20s), 변경 파일 2개(docs/test/e2e.md, README.md), 검증 방법(사람이 정정문↔코드/CI 대조; 문서 전용이라 e2e.yml 미트리거), 범위 밖 후속을 명시.",
+              "expectedOutcome": "draft PR URL 확보. docs/**·README.md만 변경이라 e2e.yml(path-filtered)·ci.yml 코드 잡 미트리거 — 리뷰가 게이트."
+            },
+            {
+              "seq": 4,
+              "action": "(executor 단계) 완료 기준으로 수렴 판정: 정정된 각 문장이 코드/CI 근거와 일치하는지 리뷰(특히 run 30981214328의 CRIUIntegrity PASS 재확인)하고, 여전히 유예인 항목(B1/C2/C3 idle, TODO(policy))이 과대서술되지 않았는지 확인 후 draft 해제·머지. e2e.md 변경이 to-be 해시를 바꿔 재감지를 트리거한다.",
+              "expectedOutcome": "문서↔구현 불일치(#2/#5/#6) 해소, task succeeded. 범위 밖 잔여(AC-B1 reaper e2e·C2/C3 idle-branch·criu-verification.md 헤더 등)는 재감지가 새 task로 잇는다."
+            }
+          ],
+          "plannedAt": "2026-08-06T03:36:56+00:00"
+        }
+      }
+    ]
   }
 ]
