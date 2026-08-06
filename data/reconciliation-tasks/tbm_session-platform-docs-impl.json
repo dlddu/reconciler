@@ -285,7 +285,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-06T03:06:23Z",
       "changedSides": [
@@ -392,9 +392,52 @@
               "log": "executor 실행: (1) 근거 재확인 — control-plane/internal/adapter/criu/agent_checkpointer.go:60 `Enabled() bool { return true }`; cmd/control-plane/main.go 기본 `NewStubCheckpointer(false)`이고 CRIU_ENABLED on일 때 `NewAgentCheckpointer` 주입(L74/L81, envBool 기본 false L194); deploy/kustomization.yaml이 env/2(CRIU_ENABLED)를 \"true\"로 replace + E2E_TEST_ENDPOINTS=1 + CHECKPOINT_S3_ENDPOINT=http://minio:9000; 코드 검색 결과 'TODO(criu' 잔존 파일은 README.md 1건뿐(=이 PR이 지우는 대상), control-plane/data-plane 코드엔 0건; CI run 30981214328 = e2e 워크플로 conclusion success. (2) 사용자 승인(dlddu, chat) 후 GraphQL markPullRequestReadyForReview로 draft 해제 → (3) PR #17 squash 머지 성공, merge commit 87382c07a00953aba7dd86977eb5969cb89fdcf1. 시크릿·토큰 미로깅."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:00d71fefe91e91cb472415efae841d26bf1307e5 data-plane:6f8b240ebe0caf20c70d239d6c70a1cba7afe841 web:71abb71069b571d7749383524b3ecf62fa4b66db k8s:d70f21662b7d1f1b3143fc73a4de3f25c5d339cf deploy:5380976cd4a3dabf08b6a584f1f9e6439ce35941 scripts:f726316ea06f359bed780885a36f5f7fd6d30926 github:0c3ded29b29a520fe4aa5d8d275ec38011d68963 makefile:4f337498ec665776fed331343a3a4964e2caa829",
+          "verifiedAt": "2026-08-06T21:48:34Z",
+          "checks": [
+            {
+              "name": "README 5개 stale 서술 제거",
+              "status": "passed",
+              "detail": "머지된 main(87382c0)에서 grep 'still stubbed|gated stub|gated and stubbed|TODO(criu|remain seeded as documented skips' → 0건. 코드 검색으로도 TODO(criu 마커는 control-plane/data-plane/docs 전역 0건(머지 전 유일 잔존처였던 README.md가 정정됨)."
+            },
+            {
+              "name": "e2e.md: CRIUIntegrity가 deferred→커버 표로 이동",
+              "status": "passed",
+              "detail": "L92 커버 표에 'CRIU 왕복 … TestDeferred_CRIUIntegrity, lifecycle 시나리오 3, CRIU-on 오버레이 | B2, B3, D4' 행 존재. L108 deferred 표 행은 취소선 + 채움 + 해소 사유로 전환(#16 RealPodReclaimed 전례와 동일 형식)."
+            },
+            {
+              "name": "e2e.md 충실도 노트가 CRIU를 '인메모리 스텁'으로 기술하지 않음",
+              "status": "passed",
+              "detail": "'인메모리 스텁' 문자열 0건. 노트(L14~18)가 '오버레이에서 게이트 ON(agent-driven in-pod CRIU + MinIO + test-only snapshot 트리거) → snapshot→pod 회수→복원→상태 보존 왕복 실 단언 검증'으로 정정됨."
+            },
+            {
+              "name": "유예 항목 과대서술 없음(B1 reaper idle→snapshot, C2/C3 idle 분기, TODO(policy))",
+              "status": "passed",
+              "detail": "e2e.md L18·L24가 '운영 idle→snapshot 트리거(reaper 타이밍 정책)는 아직 미확정(TODO(policy), AC-B1)', '아직 범위 밖 deferred 시드는 IdleToSnapshot(B1)과 read/write idle 분기(C2/C3)뿐'으로 유지. README L17~20·L118~119도 동일하게 유예로 표기. B2 행은 'CRIUIntegrity가 커버하는 focused restore-only 잉여 placeholder(비차단)'로 정확화. 'B-path 전부 검증됨' 류 서술 없음."
+            },
+            {
+              "name": "근거 대조(코드/CI 그라운드 트루스)",
+              "status": "passed",
+              "detail": "agent_checkpointer.go:60 Enabled()→true; main.go L74 기본 NewStubCheckpointer(false)·L81 CRIU_ENABLED on이면 NewAgentCheckpointer 주입·L194 envBool 기본 false; deploy/kustomization.yaml이 env/2(CRIU_ENABLED)→true + E2E_TEST_ENDPOINTS=1 + CHECKPOINT_S3_ENDPOINT=minio; CI run 30981214328(e2e 워크플로) conclusion=success. 정정문이 주장하는 사실과 일치."
+            },
+            {
+              "name": "머지 반영 확인",
+              "status": "passed",
+              "detail": "PR #17 draft 해제 후 squash 머지, main HEAD=87382c07a00953aba7dd86977eb5969cb89fdcf1. docs 서브트리(to-be) 87d0796→5628b99로 변경 → 다음 감지 주기 트리거. as-is 8개 서브트리 해시는 전부 불변(문서 전용 변경이라 코드·인프라 무영향) — 계획 예측과 일치."
+            },
+            {
+              "name": "[정보성] 모델 전체 잔여 gap(이번 범위 밖)",
+              "status": "passed",
+              "detail": "converged 판정에 넣지 않음. 잔여: e2e_deferred_test.go L218 IdleToSnapshot(AC-B1, idle 진입 트리거 부재)·L306/L313 Read/WriteIdleAndSnapshotBranches(AC-C2/C3 idle 분기)가 무조건 하드 skip으로 잔존, L224 SnapshotRestore(AC-B2)는 CRIUIntegrity 커버로 잉여 placeholder. TODO(policy) 3건(session.go:48, reaper.go:27, manager.go:11) 미확정. docs/criu-verification.md 헤더·doc-tracker.md의 상위 'CRIU 미검증' 서술은 별도 후속. 이들은 재감지가 새 task로 잇는다."
+            }
+          ]
         }
       }
     ],
-    "updatedAt": "2026-08-06T21:46:57Z"
+    "updatedAt": "2026-08-06T21:48:34Z"
   }
 ]
