@@ -462,6 +462,37 @@
       "assessedBy": "agent",
       "assessedAt": "2026-08-05T11:08:13Z"
     },
-    "createdAt": "2026-08-05T11:08:13Z"
+    "createdAt": "2026-08-05T11:08:13Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "PRD-009 커뮤니티 탭 확정 편입으로 검증대상 AC 13건이 app/backend/worker에 전무 구현 → 한 번에 다 구현할 수 없어 **백엔드 읽기 경로 한 조각**으로 슬라이스한다: `GET /v1/community/feed` (노출 풀 = 공개 기록 + 타인 작성 + 뷰어의 활성 subject kind 일치, 최신순, keyset 페이지네이션, 작성자명 마스킹). dear-baby backend(Go/chi/modernc-sqlite)의 기존 records.ListForUser keyset 패턴을 그대로 미러링해 추가만 하는 순수 read 경로라 기존 동작 무변경이고 PR revert로 가역적, 마이그레이션 0건(records 테이블 재사용). **완료 기준(이 task 성공)**: 이 엔드포인트가 CI green으로 머지되어 ENG-007(기본 정렬 최신순)·ENG-008(노출 풀: 공개·case 매칭·본문 텍스트)·ENG-009(페이지네이션)·ENG-010(본인 기록 제외)과 AC-009-01(공개 기록만·글쓰기 없음)·AC-009-10(이메일 local-part 마스킹 규칙: 5자+ → 앞3+***+뒤1, 4자- → 앞1+***)에 일치. **범위 밖(후속 재감지가 새 task로 잇는다)**: ENG-011 유사시기 가중 랭킹(AC-009-03), 좋아요/댓글 카운트·뮤테이션(AC-009-08/09), 신고(AC-009-11), 같은 질문 상호성 게이트(AC-009-05), ENG-012 소프트삭제 write 배선, 컨텐츠 타입 필터(AC-009-06), 앱 UI 전체(커뮤니티 탭 화면·피드 카드·홈 '다른 엄마들의 기록' 섹션 AC-009-02/13/14). **왜 이 슬라이스를 먼저**: 모든 다운스트림(피드 카드·홈 섹션·같은 질문 수집)이 이 read 계약에 의존하고, 데이터 모델 재사용으로 마이그레이션이 없어 가장 작고 가역적이며, 확정 ENG-012(삭제 마커) 이전에도 안전한 순수 조회다. 대안(앱 UI 우선/뮤테이션 포함 풀버티컬)은 이 계약 없이는 표시할 데이터가 없고 write-side 위험이 커 후순위.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "스테이징된 PR diff를 PRD-009 및 ENG-007·008·009·010·AC-009-01·10 계약과 슬라이스 범위 기준으로 검토한다. 특히 노출 풀 쿼리(WHERE r.visibility='public' AND rs.kind=viewerKind AND r.user_id!=viewer)가 비공개·본인·타 kind 기록을 유출하지 않는지(프라이버시), 기존 records 핸들러/스토어 동작이 무변경(순수 추가)인지 확인한다.",
+              "expectedOutcome": "diff가 계획과 일치하고 범위 이탈·기존 동작 변경·프라이버시 유출 경로가 없음을 확인."
+            },
+            {
+              "seq": 2,
+              "action": "PR CI의 backend-unit-tests 잡(= `go test ./...`)이 green인지 확인한다. 참고: 작성자가 CI 고정 툴체인 go1.24.7로 로컬 `go build ./...` + `go vet ./internal/app ./internal/records` + `go test ./...`를 모두 통과시켜 검증 완료(블라인드 아님). red면 브랜치에서 수정 후 green까지 반복한다.",
+              "expectedOutcome": "backend-unit-tests 통과(신규 community 피드 테스트 7종 + 기존 records 스위트 포함)."
+            },
+            {
+              "seq": 3,
+              "action": "PR을 main에 머지한다(draft 해제 후). 머지는 CI green 확인 뒤에만.",
+              "expectedOutcome": "`/v1/community/feed` 라우트가 main에 존재; as-is backend 하위 트리 해시가 전진해 재감지 baseline이 갱신됨."
+            },
+            {
+              "seq": 4,
+              "action": "범위 기준 수렴 검증: 엔드포인트가 공개+타인+kind일치 기록을 최신순·keyset 페이지네이션으로 반환하고 작성자명이 마스킹되는지(신규 유닛테스트 및 TEST-009-01·02·10 부분)를 확인한다. 범위 밖 잔여 gap(유사시기 가중·카운트·뮤테이션·같은 질문·앱 UI·나머지 AC)은 이 task로 닫지 않고 후속 재감지가 새 task로 잇는다.",
+              "expectedOutcome": "main에서 `go test ./...` green; 동작이 ENG-007/008/009/010 + AC-009-01/10-마스킹과 일치. 범위 밖 항목은 명시적으로 다음 슬라이스로 이월."
+            }
+          ],
+          "plannedAt": "2026-08-06T03:30:04Z"
+        }
+      }
+    ]
   }
 ]
