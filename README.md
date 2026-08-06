@@ -16,6 +16,10 @@ as-is 상태와 to-be(목표) 상태를 비교해, 버전이 바뀔 때마다 �
 schemas/
   to-be-model.schema.json           # ToBeModel JSON 스키마 (draft 2020-12)
   reconciliation-task.schema.json   # ReconciliationTask JSON 스키마 (draft 2020-12)
+templates/                          # 반복 등록되는 모델 유형의 표준 템플릿
+  README.md                         # 슬롯 규약·인스턴스화 절차
+  docs-impl.tbm.md                  # 제품 문서 ↔ 구현 정합성
+  ac-e2e.tbm.md                     # AC ↔ E2E 1:1 정합성
 data/                               # 운영 데이터 (스킬이 런타임에 생성·기록, 초기엔 비어 있음)
   to-be-models.json                 # ToBeModel (배열)
   reconciliation-tasks/             # task: to-be 모델(toBeModelId)별로 파일 분리
@@ -23,6 +27,13 @@ data/                               # 운영 데이터 (스킬이 런타임에 �
 index.html                          # data/ 브라우징용 정적 웹페이지 (GitHub Pages)
 .nojekyll                           # Pages가 data/*.json을 그대로 서빙하도록 Jekyll 우회
 ```
+
+## 모델 템플릿
+
+레포마다 반복 등록되는 두 정합성 유형 — **제품 문서 ↔ 구현**(docs-impl),
+**AC ↔ E2E 1:1**(ac-e2e) — 은 `templates/`의 템플릿으로 등록한다. 판정 기준·
+충돌 방향·추적 방식 같은 고정부는 템플릿이 유형의 SSOT이고, 새 대상 등록 시엔
+슬롯(레포·경로·AC 체계 등)만 채운다. 자세한 절차는 `templates/README.md`.
 
 ## 데이터 브라우저 (GitHub Pages)
 

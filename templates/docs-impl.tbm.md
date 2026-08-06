@@ -1,0 +1,127 @@
+# 템플릿: 제품 문서 ↔ 구현 정합성 (docs-impl)
+
+한 레포 안에서 **제품 문서(`docs/`: 가치 → PRD → AC → 테스트, + 여정·목업·
+디자인 시스템·엔지니어링 노트)** 가 기술하는 의도된 동작과 **실제 구현 코드**
+사이의 정합성을 추적하는 모델. 문서가 SSOT이고, 미구현 AC·구현↔문서 불일치·
+문서 없는 구현을 drift로 본다.
+
+## 슬롯 표
+
+대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다.
+
+| 슬롯 | 의미 | 예 (dear-baby) |
+|---|---|---|
+| `{{REPO}}` | owner/repo | `dlddu/dear-baby` |
+| `{{SLUG}}` | id·이름용 소문자 레포명 | `dear-baby` |
+| `{{PRODUCT_ONELINE}}` | 제품 한 줄 설명 | Expo 앱 + Go 백엔드의 육아 기록 서비스 |
+| `{{DOCS_PATH}}` | 제품 문서 루트 | `docs` |
+| `{{DOC_SYSTEM}}` | 문서 체계 요약: 가치→PRD→AC(ID 체계·개수)→테스트 + 실제 존재하는 부속(여정/목업/디자인 시스템/ENG 노트/glossary) | 가치(V-001~008) → PRD-001~009 → `AC-NNN-NN` 55개 → TEST-001~008, journeys·mockups·design-system·engineering |
+| `{{AC_SCOPE}}` | to-be에 포함되는 AC 범위(확정 PRD)와 개수 | 확정 PRD-001~008의 AC 55개 |
+| `{{IMPL_DESC}}` | 구현 디렉터리와 역할 | `app/` RN 앱 · `backend/` Go API · `worker/` Go 워커 |
+| `{{IMPL_PATHS}}` | as-is 버전 범위 디렉터리 목록 | `app`, `backend`, `worker` |
+| `{{OUT_OF_SCOPE}}` | as-is 범위에서 빼는 것(운영·검증·빌드 인프라)과 이유 | `e2e/`·`k8s/`·`scripts/`·compose·`CLAUDE.md` |
+| `{{TRACKER_PATH}}` | 문서 체계 상태 추적 파일 [선택] | `docs/doc-tracker.md` |
+| `{{IMPL_EXCEPTIONS}}` | "문서 없는 구현"의 명시적 예외 [선택] | (tessera의 auto-update처럼 제품 가치 밖 플랫폼 인프라) |
+| `{{DRAFT_POLICY}}` | draft PRD 취급 [선택] | draft PRD-009는 확정 전까지 to-be 제외 |
+| `{{INITIAL_STATE}}` | 등록 시점 구현 수준 한 줄 | 프로덕션 운영 중, 최초 gap 산정은 첫 task 몫 |
+| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
+
+## 모델 JSON 골격
+
+`definition`·`code`는 아래 본문/스크립트를 채워 넣는다(개행 이스케이프는
+`json.dump` 조립으로 해결 — `templates/README.md` 절차 참고).
+
+```json
+{
+  "id": "tbm_{{SLUG}}-docs-impl",
+  "metadata": {
+    "name": "{{SLUG}} 제품 문서 ↔ 구현 정합성",
+    "description": "{{REPO}}에서 {{DOCS_PATH}}/(제품 문서)와 {{IMPL_PATHS}}(구현) 사이의 정합성을 추적한다. to-be는 {{AC_SCOPE}}가 모두 구현·검증되고 UI·계약이 문서와 일치하며 문서 없는 구현이 없는 상태. 부분 구현인 현 상태는 as-is일 뿐 목표가 아니다.",
+    "tags": ["{{SLUG}}", "docs", "implementation", "consistency"],
+    "createdAt": "{{NOW_ISO}}"
+  },
+  "definition": "<definition 본문 템플릿을 채워 넣기>",
+  "toBe": {
+    "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "{{DOCS_PATH}}" },
+    "versionScript": { "runtime": "bash", "code": "<to-be 스크립트>", "timeoutSeconds": 60 }
+  },
+  "asIs": {
+    "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main" },
+    "versionScript": { "runtime": "bash", "code": "<as-is 스크립트>", "timeoutSeconds": 60 }
+  },
+  "checkPolicy": { "intervalSeconds": 3600 }
+}
+```
+
+- 구현 디렉터리가 **하나뿐이면** `asIs.dataSource`에 `"subPath": "{{IMPL_PATH}}"`를
+  넣고 as-is 스크립트를 단일 `rev-parse`로 줄인다.
+
+## versionScript
+
+**to-be** (제품 문서 트리 해시):
+
+```bash
+#!/usr/bin/env bash
+# to-be = 제품 문서. {{DOCS_PATH}}/ 하위 트리 해시만 사용 → docs 밖(코드 등) 변경은 무시된다.
+# 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
+set -euo pipefail
+git rev-parse "HEAD:{{DOCS_PATH}}"
+```
+
+**as-is** (구현 디렉터리 트리 해시 조합 — 디렉터리 수에 맞게 늘리거나 줄인다):
+
+```bash
+#!/usr/bin/env bash
+# as-is = 실제 구현. {{IMPL_PATHS}} 하위 트리 해시 조합.
+# → 이 디렉터리들 밖 변경({{OUT_OF_SCOPE}} 등)은 무시된다.
+# 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
+set -euo pipefail
+a="$(git rev-parse "HEAD:{{IMPL_PATH_1}}")"
+b="$(git rev-parse "HEAD:{{IMPL_PATH_2}}")"
+printf '{{IMPL_PATH_1}}:%s {{IMPL_PATH_2}}:%s\n' "$a" "$b"
+```
+
+## definition 본문 템플릿
+
+`[선택]` 표시 블록은 해당 없으면 통째로 삭제. `<!-- 지침 -->`은 모두 제거.
+
+```markdown
+# {{SLUG}} 제품 문서 ↔ 구현 정합성
+
+## 목표
+`{{REPO}}` 레포({{PRODUCT_ONELINE}})에서 **실제 구현({{IMPL_DESC}})** 이 **제품 문서(`{{DOCS_PATH}}/`)** 가 기술하는 의도된 동작을 **전부 실현·검증하고 서로 어긋나지 않는** 상태로 수렴시킨다.
+
+## 무엇이 "맞는 상태"인가 (to-be)
+- **의도된 동작의 단일 소스(SSOT)** 는 `{{DOCS_PATH}}/` 다: {{DOC_SYSTEM}}.
+- **to-be(목표 상태)** 는 다음이 모두 성립하는 상태다:
+  1. {{AC_SCOPE}}의 **모든 AC가 구현**되어 있고, 각 AC가 대응 테스트 문서가 기술하는 대로 검증 가능하다.
+  2. UI가 대응 목업·사용자 여정·디자인 시스템 문서와 일치한다. <!-- [선택] UI 문서가 없는 레포면 삭제 -->
+  3. 구현이 엔지니어링 노트가 기술하는 계약·프로세스와 일치한다. <!-- [선택] ENG 노트가 없으면 삭제 -->
+  4. 코드에 존재하는 모든 사용자 대면 동작이 문서에 표현되어 있다(문서 없는 구현 없음). {{IMPL_EXCEPTIONS}} <!-- [선택] 예외 없으면 슬롯 삭제. 있으면 "단 하나의 명시적 예외: ..." 형식으로 무엇이 왜 docs 범위 밖인지 명시 -->
+  5. `{{TRACKER_PATH}}`의 상태 집계가 1~4의 실제 상태와 일치한다. <!-- [선택] tracker 없으면 삭제 -->
+- **draft PRD의 취급**: {{DRAFT_POLICY}} <!-- [선택] draft 문서가 없으면 삭제. draft 해제·수정은 docs 변경이므로 to-be 버전을 바꿔 재평가를 트리거한다는 문장 포함 -->
+- **부분 구현은 as-is다, to-be가 아니다.** {{INITIAL_STATE}} to-be를 현 구현 수준으로 낮춰 잡지 않는다.
+
+## drift 판정 기준
+as-is(구현)가 to-be(문서 전체)에 미달하거나 어긋나면 drift다:
+1. **미구현 AC**: 문서에 있으나 구현되지 않은 AC는 to-be 미달 gap이며 **drift다**. 백로그로 치부해 이 루프 밖으로 빼지 않는다. (무엇을 먼저 구현할지의 우선순위 판단은 각 task의 계획 단계 몫이다.)
+2. **구현 ↔ 문서 불일치**: 구현된 동작이 대응 AC·테스트 문서·목업·여정·디자인 시스템·엔지니어링 노트와 어긋나면 drift.
+3. **문서 없는 구현**: 코드에 존재하는 사용자 대면 동작이 문서에 없으면 drift(명시된 예외 제외).
+4. **tracker 불일치**: `{{TRACKER_PATH}}`의 집계·상태가 실제와 어긋나면 drift. <!-- [선택] tracker 없으면 삭제 -->
+
+각 task는 직전 관측 대비 "gap이 줄었는가 / 새 어긋남·문서 없는 구현이 생겼는가 / 문서 변경으로 to-be가 달라졌는가"를 평가하되, 남은 gap 전체(미구현 AC 목록 포함)를 상태 요약에 유지한다.
+
+## 충돌 시 기본 방향
+문서가 스펙(SSOT)이다. 구현이 어떤 AC와 어긋나거나 미달이면 **원칙적으로 코드를 문서에 맞춘다**(미구현 AC → 구현을 추가한다). 단, 그 어긋남이 **의도된 동작 변경**이면 문서(PRD/AC/테스트/목업 등 + tracker)를 갱신해 코드에 맞춘다. 어느 쪽인지는 각 task에서 판단(planner)한다.
+
+## 추적 방식 (요약)
+- **to-be** = github `{{REPO}}` `{{DOCS_PATH}}/` 하위 트리 해시(문서만 바뀌면 이 값만 변함).
+- **as-is** = github `{{REPO}}` {{IMPL_PATHS}} 하위 트리 해시 조합(구현 코드만 바뀌면 이 값만 변함).
+- 어느 한쪽 버전이 바뀌면 task가 생성되어 to-be 대비 as-is의 gap 전체(미구현 AC 포함)를 재검증한다.
+
+## 범위 밖 / 비고
+- {{OUT_OF_SCOPE}}는 "구현 동작"이 아니라 운영/검증/빌드 인프라이므로 as-is 버전 범위에서 제외한다.
+- **AC ↔ E2E 1:1 매칭은 별도 모델 `tbm_{{SLUG}}-ac-e2e`가 담당**한다. 이 모델은 테스트 커버리지가 아니라 문서 ↔ 구현의 일치를 본다. <!-- [선택] 쌍 모델을 등록하지 않으면 삭제 -->
+- docs 내부 계층 정합성(가치 정렬, AC↔테스트 커버리지, tracker 집계 산출)은 문서 체계 자체의 관심사로, 이 모델의 주 판정 대상이 아니다(task 수행 중 발견되면 함께 보고할 수 있다).
+- <!-- 지침: 노이즈 비고 — tracker·목업 소스 등 이 매칭과 무관한 docs 변경도 to-be 해시를 바꿔 재검증을 트리거할 수 있음(무해), 노이즈가 크면 to-be 범위 축소 가능 — 을 대상에 맞게 1~2줄 작성 -->
+```
