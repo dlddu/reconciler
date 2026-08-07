@@ -944,6 +944,57 @@
       "assessedBy": "agent",
       "assessedAt": "2026-08-07T04:59:33Z"
     },
-    "updatedAt": "2026-08-07T06:25:00Z"
+    "updatedAt": "2026-08-07T06:30:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "잔여 gap 3축(⬜8 · 통합 파일 수준 커버 32 · platform/AC4 예외 비준) 중 축 (a)의 동질 부분집합인 '미설정 시 graceful 거부' 6건(aws-config-get/AC3 · github-app-installation-token/AC3 · grafana-token/AC3 · opensearch-search/AC4 · opensearch-document-put/AC5 · opensearch-document-delete/AC5)을 한 슬라이스로 닫는다. 접근: 레지스트리 backlog가 요구하는 '대상 시크릿만 뺀 no-config 배포 변형'을 새로 만들지 않고, 직전 슬라이스(#35)가 이미 CI에 올린 tests/k8s/kind/auth-fixture.yaml 을 그대로 재사용한다 — 그 변형은 자격증명 시크릿을 하나도 붙이지 않아(env 에 GITHUB_APP_CLIENT_ID · AWS_CONFIG_S3_BUCKET · GRAFANA_ISSUER_TOKEN · OPENSEARCH_ENDPOINT 전부 미설정) main.go 의 buildGitHubService/buildAWSService/buildGrafanaService/buildOpenSearchService 가 모두 NewUnavailable(\"\") 로 degrade 하는, 정의상 완전한 no-config 배포다. 즉 6건 전부를 하나의 이미 떠 있는 파드에서 관측할 수 있어 신규 픽스처 0개다. 단언 계약은 추측이 아니라 실측이다: Go 1.24.7 로 서버 바이너리를 빌드해 auth-fixture 와 동일한 env 형태(MCP_API_KEYS 만 세팅, 자격증명 4종 미설정, MCP_K8S_DISABLED=1)로 띄우고 6개 도구를 실제 호출해 응답을 확인했다 — 전부 JSON-RPC 성공 응답 안의 isError=true + content[0].text 가 '<도메인> unavailable: <미구성 사유>'(예 'aws config unavailable: aws config integration is not configured')이고, 호출 후에도 /healthz·/readyz 200 유지 + tools/list 14개 도구 그대로 광고 = AC 문언의 '서버 기동·다른 도구에 영향 없음'까지 관측 가능하다. 대안으로 도메인별 no-config 픽스처(또는 통합 no-config 파드)를 신설하는 길은 동일 관측을 위해 파드를 더 띄우는 비용만 늘어 배제했고, 기존 도메인 파일(aws_config.py 등)에 케이스를 넣는 길은 그 파일들이 자격증명이 배선된 주 배포(port 8084~8086)를 대상으로 돌아 no-config 를 관측할 수 없어 배제했다(그래서 신규 파일 + 전용 CI 스텝이 필요). 규칙 3 상 AC 를 선언하는 것은 파일 위치가 아니라 케이스 이름+docstring 이므로 no_config.py 배치는 규약 위반이 아니다. 완료 기준(이 시도의 범위): 위 6개 AC 가 각각 배포 서버 전용 per-AC e2e 케이스를 하나씩 가져 doc-tracker 레지스트리에서 ✅ 전용 케이스로 승격(✅43·⬜8·🚫1 → ✅49·⬜2·🚫1), 그리고 그 케이스들이 kind CI 에서 실제로 green. 범위 밖(후속, 재감지가 새 task 로 연다): platform-auth-safety/AC2(인증 디스커버리 — OIDC 발급자 mock 픽스처 필요) · AC8(인증 방식 구성 유연성 — 다중 인증 구성 전환 변형 필요) · ✅ 중 '통합' 파일 수준 커버 32건의 per-AC 케이스 분리 리팩터 · platform-auth-safety/AC4 🚫 e2e 예외의 모델 definition 비준(reconciler-tobe-modeler 소관, planner 권한 밖).",
+          "riskLevel": "low",
+          "plannedAt": "2026-08-07T06:30:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "dlddu/homelab-k3s-mcp 의 main(fdc56e1)에서 브랜치 reconcile/rct_20260807-0002 를 만든다.",
+              "expectedOutcome": "브랜치가 origin 에 존재하고 base 가 현재 main 과 같다."
+            },
+            {
+              "seq": 2,
+              "action": "tests/integration/no_config.py 를 신설한다. 자격증명이 배선되지 않은 배포(auth-fixture)를 대상으로 하는 6개 async per-AC 케이스: test_aws_config_get_ac3_unconfigured_refusal · test_github_app_installation_token_ac3_unconfigured_refusal · test_grafana_token_ac3_unconfigured_refusal · test_opensearch_search_ac4_unconfigured_refusal · test_opensearch_document_put_ac5_unconfigured_refusal · test_opensearch_document_delete_ac5_unconfigured_refusal. 각 함수 docstring 첫 줄은 규칙 3 형식 'AC: <domain>/ACn'. 공용 헬퍼 _assert_unavailable_refusal(session, tool, args, expected_text) 로 (a) result.isError is True, (b) content[0].text == 실측 문자열, (c) 직후 ping 호출이 'pong' 을 돌려줘 서버·다른 도구가 멀쩡함을 단언한다(AC 문언의 '서버 기동·다른 도구에 영향 없음'). run() 은 base_url()/wait_for_healthz 후 6개를 순차 실행하며, auth 가 켜진 변형이므로 open_session(url, headers={'Authorization': f'Bearer {API_KEY}'}) 로 연다.",
+              "expectedOutcome": "파일이 기존 tests/integration 스타일(from __future__ import annotations, _helpers 임포트, run() + __main__)을 따르고 py_compile 통과."
+            },
+            {
+              "seq": 3,
+              "action": "tests/k8s/kind/auth-fixture.yaml 의 헤더 주석에 '자격증명 시크릿 미부착' 상태가 이제 no_config.py 의 관측 대상(계약)이라는 문장을 추가한다. 매니페스트 필드는 한 글자도 바꾸지 않는다(주석만).",
+              "expectedOutcome": "kubectl apply 결과가 이전과 동일(주석 변경이라 리소스 스펙 불변). 이후 누군가 이 변형에 시크릿을 붙이면 안 된다는 의존성이 파일에 남는다."
+            },
+            {
+              "seq": 4,
+              "action": ".github/workflows/ci.yml 의 integration-tests 잡에 'Validate no-config graceful refusal against variant' 스텝 1개를 기존 'Validate auth gate against variant' 스텝 바로 뒤에 같은 패턴으로 추가한다: kubectl -n homelab-k3s-mcp-auth port-forward svc/homelab-k3s-mcp-auth 8088:80 → python tests/integration/no_config.py http://127.0.0.1:8088. 신규 배포·신규 대기 스텝은 없다(auth-variant rollout 대기를 이미 통과한 뒤 실행).",
+              "expectedOutcome": "포트 8088 은 기존 8080~8087 과 충돌하지 않고, 새 잡·새 롤아웃 대기 없이 스텝 하나만 늘어난다."
+            },
+            {
+              "seq": 5,
+              "action": "docs/doc-tracker.md 갱신: (a) AC 레지스트리 표의 해당 6행을 '⬜ 보강 필요' → '✅ 전용 케이스 `no_config.py::test_...`' 로 승격, (b) 섹션 헤더 카운트를 '✅ e2e 43 (통합 32 · 전용 케이스 11) · ⬜ e2e 보강 8 · 🚫 e2e 예외 1' → '✅ e2e 49 (통합 32 · 전용 케이스 17) · ⬜ e2e 보강 2 · 🚫 e2e 예외 1' 로, (c) ⬜ backlog 섹션의 '미설정 graceful 거부(6)' 블록을 완료 노트로 교체하고 헤더 (8)→(2), (d) 변경 이력에 2026-08-07 행 추가.",
+              "expectedOutcome": "레지스트리 표의 ⬜ 행이 정확히 2개(platform AC2·AC8)만 남고, 헤더 카운트와 표의 실제 계수가 일치."
+            },
+            {
+              "seq": 6,
+              "action": "docs/test-aws-config-get.md · test-github-app-installation-token.md · test-grafana-token.md · test-opensearch-search.md · test-opensearch-document-put.md · test-opensearch-document-delete.md 각각에서 해당 '미설정 시 graceful 거부' 시나리오의 자동화 필드에 신규 e2e 케이스 경로(tests/integration/no_config.py::test_...)를 기존 Go 단위 테스트 옆에 추가한다.",
+              "expectedOutcome": "규칙 3 의 두 번째 경로(테스트 문서 자동화 필드 → e2e 경로)도 6건 모두 채워진다."
+            },
+            {
+              "seq": 7,
+              "action": "로컬 검증(이 슬라이스는 blind 가 아니다): Go 1.24.7 dist 로 서버를 빌드해 auth-fixture 와 동일 env(MCP_API_KEYS=ci-e2e-key, 자격증명 4종 미설정, MCP_K8S_DISABLED=1)로 띄운 뒤, venv 에 tests/integration/requirements.txt 를 설치해 (a) 기존 auth.py 와 (b) 신규 no_config.py 를 그 서버에 대고 실제 실행한다.",
+              "expectedOutcome": "auth.py 가 여전히 green(하네스 동등성 확인)이고 no_config.py 6 케이스가 전부 green. 실패하면 push 전에 고친다."
+            },
+            {
+              "seq": 8,
+              "action": "브랜치를 push(gh 사용자 토큰 경로 — 설치 토큰은 Actions 를 기동하지 못한다)하고 GitHub API 로 draft PR 을 연다(머지하지 않는다). PR 본문에 task id, gap 요약, 계획 단계, 검증 방법, 로컬 검증 범위와 그 한계(kind 클러스터·port-forward·CI 스텝 배선은 로컬 재현 불가 → CI 가 객관 게이트)를 기재한다.",
+              "expectedOutcome": "draft PR 이 열리고 push 로 Actions 워크플로가 실제로 기동돼 체크가 달린다(설치 토큰 push 의 0-run 함정 회피)."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
