@@ -706,7 +706,7 @@
   {
     "id": "rct_20260802-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-02T09:42:27Z",
       "changedSides": [
@@ -730,7 +730,7 @@
       "assessedAt": "2026-08-02T09:42:27Z"
     },
     "createdAt": "2026-08-02T09:42:27Z",
-    "updatedAt": "2026-08-07T12:33:55Z",
+    "updatedAt": "2026-08-07T22:11:54Z",
     "attempts": [
       {
         "plan": {
@@ -927,9 +927,9 @@
           "comment": "승인 — 범위 제한 없이 executionGuide 전체(머지 → 등록 확인 → 수동 1회 스모크 → unsuspend → 예약 실행 관측) 진행 승인."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-08-07T12:24:30Z",
-          "finishedAt": null,
+          "finishedAt": "2026-08-07T22:00:30Z",
           "entries": [
             {
               "stepSeq": 9,
@@ -958,8 +958,87 @@
               "startedAt": "2026-08-07T12:33:00Z",
               "finishedAt": "2026-08-07T12:33:00Z",
               "log": "executionGuide 5·6단계(unsuspend, 예약 실행 관측) 미실행 — 4단계 게이트 미통과에 따른 의도적 보류. CronWorkflow는 suspend:true 상태로 클러스터에 남아 있으며 tick은 발생하지 않는다(외부 HTTP 트래픽 없음)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-08-07T21:26:32Z",
+              "finishedAt": "2026-08-07T21:26:53Z",
+              "log": "executionGuide 4단계(수동 1회 스모크) — 앞선 도구 공백을 사용자가 직접 제출로 메움. 사용자 보고를 argo-workflows 컨트롤러 로그로 교차 확인: workflow econ-batch-pipeline-28x5q가 21:26:32Z 'Updated phase -> Running', pod econ-batch-pipeline-28x5q-ingest-2209559074 생성, 21:26:53Z 'Updated phase Running -> Succeeded'(~21s, 재시도 0). 이로써 세 변수 모두 닫힘 — (1) 비공개 이미지 ghcr.io/dlddu/economic-opinion-trend-monitor-batch:latest pull 성공(ImagePullBackOff 없음, ghcr 시크릿이 신규 …-batch 패키지 접근 가능), (2) 데이터 볼륨 쓰기 가능, (3) 한 사이클 완주. 로그: bronze 170건 + 신규 body 117건(중복 0) 기록, cycle=2026-08-07T21:00(당시 UTC 정시와 일치), failed_sources=['treasury-press','imf-news','worldbank-news'] — 소스별 실패 격리로 사이클은 중단되지 않음(AC1.6 기대 동작). 참고: 21:12:33Z·21:12:36Z에도 사용자 제출 워크플로(econ-batch-pipeline-dzc6t/-bq664)가 있었다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-08-07T21:31:54Z",
+              "finishedAt": "2026-08-07T21:31:56Z",
+              "log": "executionGuide 5단계(unsuspend). kubectl patch가 아니라 git 변경으로 수행 — deploy/batch/cronworkflow-ingestion.yaml의 suspend: true → false 한 줄을 main에 직접 커밋(218dec6030ae), 커밋 메시지에 스모크 결과(Succeeded·~21s·이미지 pull·170 bronze·격리된 실패 소스 3건)를 기록. 21:31:56Z 컨트롤러 로그에 'Processing econ-monitor/econ-ingestion-hourly' + 'CronWorkflow ... added' 재등록이 찍혀 적용 확인(커밋 2초 뒤 — 동기화가 즉시 반응). ⚠ 정정: 그 커밋 메시지는 스모크 시각을 '12:26Z (21:26 KST)'로 적었으나 실제로는 21:26 UTC가 맞다 — 실행 세션의 시계가 대화 초반 기준으로 뒤처져 있어 생긴 오기입니다. main 이력은 다시 쓰지 않고 여기에 정정을 남긴다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-08-07T22:00:00Z",
+              "finishedAt": "2026-08-07T22:00:30Z",
+              "log": "executionGuide 6단계(예약 실행 1회 관측). 22:00:00.003Z 'Running econ-ingestion-hourly' → workflow econ-ingestion-hourly-1786140000 생성(스케줄 실행은 econ-ingestion-hourly-<epoch> 이름, 수동 제출은 econ-batch-pipeline-<suffix>로 구분됨) → pod econ-ingestion-hourly-1786140000-ingest-2562986288 → 22:00:30.396Z 'Updated phase Running -> Succeeded'(~30s, 재시도 0). 즉 정시 tick이 실제로 발생하고 완주했다. 또한 12:29Z 등록 이후 21:31Z unsuspend 전까지 econ-ingestion-hourly-* 스케줄 워크플로가 로그에 전혀 없어, suspend 착지가 '적용≠가동'을 실제로 보장했음이 함께 확인된다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "contracts:b67b8ff3a7918b8df40e1a7866d3b920ad5d1abf python:bf77a10eb715656a0ef5d107d1f942d6dd3c9d93 go:d44021489001cfb2be4f0a2c58e0145f7f719d17 web:bb4a0ab2923910e4fc7d6843834f60168d42310e deploy:781916043165ab21c57ec3f1be4fd39aa3d0ef10",
+          "checks": [
+            {
+              "name": "1. 배치가 Argo CronWorkflow + WorkflowTemplate + SA/Role/RoleBinding + 전용 PVC로 정의되고 prod에만 배선",
+              "status": "passed",
+              "detail": "계획 단계에서 arch 매칭 kustomize v5.7.1로 prod 빌드 10개 리소스 확인(재확인 불필요). 실행 단계가 추가로 실증: 컨트롤러가 WorkflowTemplate econ-batch-pipeline을 해석해 CronWorkflow를 등록했고, 그 템플릿으로 실제 파드가 떠 완주했다 — SA/RBAC(workflowtaskresults)와 PVC 바인딩이 실제로 동작했다는 뜻(권한 오류·PVC Pending이면 파드가 뜨지 못한다)."
+            },
+            {
+              "name": "2. 주기를 오버레이 패치로 변경 가능 + 문서화",
+              "status": "passed",
+              "detail": "deploy/overlays/prod/kustomization.yaml 주석의 JSON6902 /spec/schedule 예시 + README. 계획 단계 확인분."
+            },
+            {
+              "name": "3. 누락 보정·재시도 필드 명시",
+              "status": "passed",
+              "detail": "startingDeadlineSeconds: 1800, concurrencyPolicy: Forbid, 템플릿 retryStrategy{limit:3, Always}. 머지된 main의 매니페스트에서 직접 확인."
+            },
+            {
+              "name": "4. suspend 착지로 merge ≠ 가동",
+              "status": "passed",
+              "detail": "12:26Z 머지 → 12:29:23Z 등록. 21:31:54Z unsuspend 커밋 전까지 econ-ingestion-hourly-<epoch> 스케줄 워크플로가 컨트롤러 로그에 한 건도 없다(그 사이의 워크플로는 전부 사용자 수동 제출인 econ-batch-pipeline-*). 적용과 가동이 실제로 분리됐다."
+            },
+            {
+              "name": "5. base·e2e 출력 무변",
+              "status": "passed",
+              "detail": "계획 단계에서 kustomize build 전후 byte-identical 확인(재확인 불필요). 배치가 kind e2e로 유입되지 않는다."
+            },
+            {
+              "name": "6. 문서·코드의 수단 표현이 실제와 일치",
+              "status": "passed",
+              "detail": "계획 단계에서 'CronJob' 문자열 잔존 0 확인. 머지된 cronworkflow-ingestion.yaml 주석이 기술하는 동작(UTC 정시 파생 cycle id)이 실측과도 일치 — 21:26Z 실행이 cycle=2026-08-07T21:00을 냈다."
+            },
+            {
+              "name": "7. CI green (build / e2e / publish serving / publish batch)",
+              "status": "passed",
+              "detail": "계획 단계가 2026-08-07T06:30Z에 4개 체크 all pass로 확인한 기록에 의존. 실행 세션의 설치 토큰에는 checks/actions 권한이 없어 check-runs 직접 조회는 403이었고(권한 요청 시 422), 대신 머지 직전 PR #11이 mergeable=true·mergeable_state=clean이고 06:26Z 이후 신규 커밋이 없음을 확인해 갈음했다. 사후 실증: 그 브랜치에서 발행된 배치 이미지가 클러스터에서 실제로 pull·실행됐다."
+            },
+            {
+              "name": "8. 컨트롤러 등록 + 수동 1회 스모크 완주",
+              "status": "passed",
+              "detail": "등록: 12:29:23Z 'CronWorkflow econ-monitor/econ-ingestion-hourly added'(12:28:03Z 첫 처리의 WorkflowTemplate 미발견 SpecError는 같은 동기화 내 적용 순서 레이스로, 재처리에서 해소). 스모크: econ-batch-pipeline-28x5q 21:26:32→21:26:53Z Succeeded, bronze 170건·body 117건 기록."
+            },
+            {
+              "name": "9. 예약 실행 1회 관측",
+              "status": "passed",
+              "detail": "22:00:00Z tick → econ-ingestion-hourly-1786140000 → 22:00:30Z Succeeded(~30s, 재시도 0). AC1.1의 '정해진 주기로 자동 실행'이 실측으로 충족."
+            },
+            {
+              "name": "(정보) 계획 범위 밖 잔여 gap",
+              "status": "passed",
+              "detail": "수렴 판정에 넣지 않는 관측 사실. (a) AC2.x analysis는 여전히 fake_llm 기본, AC3.x serving은 go stub·web Placeholder — 14개 AC 미구현 유지. (b) PR #9(analysis 실 LLM opt-in, 반려 유지)·PR #10(CronJob 수단, 미채택 보존)은 열린 draft 그대로 미처리. (c) default_feeds.json의 3개 소스(treasury-press·imf-news·worldbank-news)가 매 사이클 실패 중 — 사이클은 격리되어 완주하나 실엔드포인트 운영 검증·튜닝이 후속 필요. (d) ingestion.spec e2e 1:1 AC1.1 케이스 미신설(tests/는 as-is 범위 밖). 이 실행이 python·deploy 트리 해시를 바꿨으므로 다음 감지 주기가 후속 task를 연다."
+            }
+          ],
+          "verifiedAt": "2026-08-07T22:11:54Z"
         }
       }
     ]
