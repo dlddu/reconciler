@@ -690,7 +690,7 @@
   {
     "id": "rct_20260807-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-07T01:36:32Z",
       "changedSides": [
@@ -719,7 +719,7 @@
       "assessedAt": "2026-08-07T01:36:32Z"
     },
     "createdAt": "2026-08-07T01:36:32Z",
-    "updatedAt": "2026-08-07T03:09:50Z",
+    "updatedAt": "2026-08-07T03:10:35Z",
     "attempts": [
       {
         "plan": {
@@ -843,6 +843,69 @@
               "startedAt": "2026-08-07T03:08:30Z",
               "finishedAt": "2026-08-07T03:09:45Z",
               "log": "draft PR #35는 planner가 준비. executor가 head a43bd5f의 CI run 31139679063 4잡(fmt+vet / unit tests / integration tests / docker build & push) 전부 success 확인 후 GraphQL markPullRequestReadyForReview로 un-draft → squash 머지(레포 관례). merge commit de915bacc31de13c553767c7be5a5d557579b9cc, PR #35 merged=true."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "f7328df58b5b18ec1d8b0d0c0c7697233988309c",
+          "verifiedAt": "2026-08-07T03:10:30Z",
+          "checks": [
+            {
+              "name": "인증 켠 배포 변형 기동 (auth-variant rollout)",
+              "status": "passed",
+              "detail": "CI run 31139679063 · integration tests 잡 92746735807의 step 24 'Apply auth-variant fixture' + step 33 'Wait for auth-variant rollout' 모두 success. executionGuide가 선행 조건으로 요구한 파드 기동 확인 — Red triage의 이미지/env/nodeSelector 시나리오 해당 없음."
+            },
+            {
+              "name": "e2e 케이스 실서버 통과 (platform-auth-safety/AC1)",
+              "status": "passed",
+              "detail": "step 41 'Validate auth gate against variant'(port 8087) 로그: '--- auth gate: unauthenticated /mcp (AC: platform-auth-safety/AC1) ---' → 'auth gate ok: unauthenticated /mcp -> 401 missing_token'. executionGuide 요구 1번 줄과 정확히 일치 — 무Authorization 요청이 게이트에서 401 missing_token으로 거부됨."
+            },
+            {
+              "name": "e2e 케이스 실서버 통과 (platform-auth-safety/AC7 · 부정)",
+              "status": "passed",
+              "detail": "같은 스텝 로그: '--- api key auth: unknown key rejected (AC: platform-auth-safety/AC7) ---' → 'api key auth ok: unknown key -> 401 invalid_token'. 잘못된 Bearer가 통과하는 회귀(Red triage의 '심각' 시나리오) 없음."
+            },
+            {
+              "name": "e2e 케이스 실서버 통과 (platform-auth-safety/AC7 · 긍정)",
+              "status": "passed",
+              "detail": "같은 스텝 로그: '--- api key auth: valid key authorizes (AC: platform-auth-safety/AC7) ---' → 'api key auth ok: valid key -> tools/list authorized'. open_session(headers=...)의 Authorization 전달이 실제로 동작 — Red triage가 우려한 mcp SDK 헤더 미지원 폴백(raw httpx) 불필요."
+            },
+            {
+              "name": "CI 4잡 green (PR head a43bd5f)",
+              "status": "passed",
+              "detail": "run 31139679063: fmt + vet / unit tests / integration tests / docker build & push 전부 success. Go 코드 미변경이므로 fmt+vet·unit tests 통과는 무회귀 신호. 머지 후 main(de915ba) push run 31143480879은 실행 중 — 동일 트리이고 완료 기준은 PR CI 관측으로 충족되므로 판정에 포함하지 않음."
+            },
+            {
+              "name": "기존 e2e 무회귀",
+              "status": "passed",
+              "detail": "integration tests 잡의 기존 검증 스텝 34~40(Smoke test / workload / dear_baby_reset_user / github_app_installation_token / aws_config_get / grafana_token / opensearch) 전부 success. _helpers.open_session의 headers 인자 추가가 하위호환임을 실증."
+            },
+            {
+              "name": "레지스트리 승격 2건 (⬜→✅ 전용 케이스)",
+              "status": "passed",
+              "detail": "머지된 main(de915ba)의 docs/doc-tracker.md L153 platform-auth-safety/AC1 = '✅ 전용 케이스 auth.py::test_platform_auth_safety_ac1_gate', L159 AC7 = '✅ 전용 케이스 auth.py::test_platform_auth_safety_ac7_api_key'. 케이스 함수 2개도 main의 tests/integration/auth.py L25/L51에 존재하며 docstring이 각 AC를 선언(규칙 3)."
+            },
+            {
+              "name": "레지스트리 집계 ✅43·⬜8·🚫1 (합 52)",
+              "status": "passed",
+              "detail": "헤더(L119) 'AC 레지스트리 (52) — ✅ e2e 43 (통합 32 · 전용 케이스 11) · ⬜ e2e 보강 8 · 🚫 e2e 예외 1'. 43+8+1=52. prd-*.md의 '### AC' 실측 52로 AC 집합 불변(레지스트리 bookkeeping만) 확인. 리뷰 사전조건 3항(집계 정합) 충족."
+            },
+            {
+              "name": "테스트 문서 자동화 필드 갱신",
+              "status": "passed",
+              "detail": "docs/test-platform-auth-safety.md 시나리오 1(L20)·시나리오 7(L80)이 tests/integration/auth.py::test_platform_auth_safety_ac1_gate·::test_platform_auth_safety_ac7_api_key를 지목. test-*.md는 to-be 해시 미포함이라 재감지 무트리거."
+            },
+            {
+              "name": "머지 반영 · 버전 변화",
+              "status": "passed",
+              "detail": "PR #35 squash merged → main de915bacc31de13c553767c7be5a5d557579b9cc. as-is(HEAD:tests) 1c57d5f2 → f7328df58b5b18ec1d8b0d0c0c7697233988309c, to-be(prd+doc-tracker blob 해시) 5159993c → 3aa752559ecc0b3bc49df8a900303146662b3b29. 모델 lastObservedVersion은 의도적으로 갱신하지 않음 — 다음 감지 주기의 트리거로 남긴다."
+            },
+            {
+              "name": "범위 밖 잔여 gap (정보성 · converged 판정 제외)",
+              "status": "passed",
+              "detail": "모델 전체로는 ⬜8이 남는다: platform-auth-safety AC2(디스커버리 — OAuth/OIDC 발급자 mock 픽스처 필요)·AC8(인증 방식 구성 유연성 — 다중 구성 전환 변형 필요) 2건 + no-config graceful 거부 6건(aws-config-get/AC3 · github-app-installation-token/AC3 · grafana-token/AC3 · opensearch-document-delete/AC5 · opensearch-document-put/AC5 · opensearch-search/AC4 — 대상 시크릿만 뺀 배포 변형 필요). 추가로 platform-auth-safety/AC4의 🚫 e2e 예외는 여전히 모델 definition 미비준(reconciler-tobe-modeler 소관). 이번 시도의 완료 기준은 AC1·AC7 2건이므로 판정에 포함하지 않으며, 위 버전 변화의 재감지가 후속 task를 연다."
             }
           ]
         }
