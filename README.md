@@ -43,6 +43,11 @@ index.html                          # data/ 브라우징용 정적 웹페이지 
 외부 API·CDN이 필요 없다. 마크다운 정의 렌더링, 상태 배지, 검색, 라이트/다크
 테마, 원본 JSON 보기를 지원한다.
 
+- **감지 비활성 모델은 숨긴다**: `checkPolicy.enabled`가 `false`인 모델은 감지 sweep에서
+  제외된 모델이므로 목록·상세에 노출하지 않는다(정의·작업 이력은 `data/`에 그대로 보존).
+  숨겨진 개수는 로드 직후 상태바에 표시된다. 다시 보이게 하려면 `enabled`를 `true`로
+  되돌리거나 필드를 지운다(생략 시 기본값 `true`).
+
 - **GitHub Pages 활성화**: 저장소 Settings → Pages → *Deploy from a branch* →
   브랜치의 `/(root)` 선택. 페이지는 `data/`를 상대경로로 읽으므로 반드시
   루트에서 서빙해야 한다(`/docs` 아님). 배포 후 `https://<owner>.github.io/<repo>/`.

@@ -310,7 +310,7 @@
     cancelled:        { label: "취소됨",      cls: "b-cancelled",      color: "#94a3b8" }
   };
 
-  var state = { models: [], tasksByModel: {}, selected: null, filter: "" };
+  var state = { models: [], tasksByModel: {}, selected: null, filter: "", hiddenCount: 0 };
 
   var $ = function (s, el) { return (el || document).querySelector(s); };
 
@@ -640,6 +640,12 @@
       "</div>";
   }
 
+  // checkPolicy.enabled === false 인 모델은 감지 sweep에서 제외된 모델이므로
+  // 페이지 목록에도 노출하지 않는다. 생략 시 기본값은 true(=노출).
+  function isModelEnabled(m) {
+    return !(m && m.checkPolicy && m.checkPolicy.enabled === false);
+  }
+
   function latestDisplayTask(modelId) {
     // No-op detections should not mask the latest meaningful workflow status.
     var arr = (state.tasksByModel[modelId] || []).filter(function (t) {
@@ -775,7 +781,9 @@
   function loadData() {
     setStatus("불러오는 중…");
     return fetchJSON("data/to-be-models.json").then(function (models) {
-      state.models = Array.isArray(models) ? models : [];
+      var all = Array.isArray(models) ? models : [];
+      state.models = all.filter(isModelEnabled);
+      state.hiddenCount = all.length - state.models.length;
       // Task files are named <toBeModelId>.json. A model may have no tasks yet,
       // in which case the fetch 404s — that is expected and handled as "no tasks".
       // (The browser still logs the 404 to the console; it is harmless.)
@@ -796,7 +804,9 @@
       else if (!state.selected && state.models.length) state.selected = state.models[0].id;
 
       var totalTasks = Object.keys(state.tasksByModel).reduce(function (n, k) { return n + state.tasksByModel[k].length; }, 0);
-      setStatus("모델 " + state.models.length + "개 · 작업 " + totalTasks + "건 · " + new Date().toLocaleTimeString() + " 로드됨");
+      setStatus("모델 " + state.models.length + "개 · 작업 " + totalTasks + "건" +
+        (state.hiddenCount ? " · 감지 비활성 " + state.hiddenCount + "개 숨김" : "") +
+        " · " + new Date().toLocaleTimeString() + " 로드됨");
       setTimeout(function () { setStatus(""); }, 4000);
 
       renderAll();
