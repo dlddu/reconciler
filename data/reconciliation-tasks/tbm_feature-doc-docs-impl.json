@@ -691,7 +691,7 @@
       }
     },
     "createdAt": "2026-08-07T20:39:48Z",
-    "updatedAt": "2026-08-07T21:53:00Z",
+    "updatedAt": "2026-08-07T21:58:00Z",
     "stateSummary": {
       "asIs": "**as-is = `backend/` + `frontend/` 구현 트리** (dlddu/feature-doc@main `e5a5c61`, 2026-08-07T20:39Z 관측)\n\n- 트리거 delta는 **정확히 커밋 1개** — #11 `e5a5c61` \"feat(frontend): AC1.1 S02·S03 화면 (슬라이스 2b) — reconciler rct_20260807-0001\". baseline(`backend:f03bf09a frontend:0f3eaedb` · `docs:d6a3b0e6`)이 직전 커밋 #10 `fc0b04f`의 트리와 일치함을 `git rev-parse fc0b04f:{backend,frontend,docs}`로 확인했다.\n- #11 내역(9파일 +973/-12): `frontend/src/HomeRepositories.tsx`(+294 신규) · `ConnectRepository.tsx`(+256 신규) · `api.ts`(+77) · `format.ts`(+26 신규) · `App.tsx`(+35 라우팅) · `CredentialsSetup.tsx`(+19) · `index.css`(+182) + `e2e/tests/s02-s03.spec.ts`(신규, as-is 범위 밖) + `docs/doc-tracker.md`. **`backend/` 트리는 불변**(`f03bf09a`) — 순수 프런트 슬라이스.\n- 구현 표면 실측(트래커가 아니라 소스 기준): backend 라우트 전량 = `/api/auth/{login,callback,logout}` · `/api/me` · `/api/github/{install-url,setup,connection}` · `/api/llm-keys{,/preflight,/{id}}` · `/api/repositories` · `/api/analyses{,/preflight}` · `/api/audit` · `/hello`. `analysis.rs`는 **enqueue 계약뿐**이고 `queued` 행을 소비하는 워커·파이프라인이 없다(`grep queued backend/src/*.rs` = analysis.rs 주석·INSERT뿐).\n- frontend 화면 = `App.tsx` · `CredentialsSetup.tsx`(S01) · `HomeRepositories.tsx`(S02) · `ConnectRepository.tsx`(S03). feature 표현·문서 CRUD·진행 가시성 화면은 존재하지 않는다.",
       "toBe": "**to-be = `docs/` 트리** (동 커밋 `docs:d997dde8`)\n\n- AC의 SSOT `docs/prd/`는 4개 문서, **확정 AC 24개**(AC1.1~1.5 · 2.1~2.6 · 3.1~3.5 · 4.1~4.8; `grep -rhoE 'AC[0-9]+\\.[0-9]+' docs/prd/ | sort -u` = 24). **#11로 AC 정의는 변하지 않았다** — docs delta는 `docs/doc-tracker.md` 1파일 +19/-4뿐.\n- 트래커 갱신 내용: 구현 수렴 로드맵의 슬라이스 2b를 ✅ 완료로 표기(§로드맵 표 L153), 진행 현황을 \"**AC1.1 구현 완료**, 미구현 = AC1.2~1.5 · AC2.1~2.6 · AC3.1~3.5 · AC4.4~4.7\"로 갱신(L147), 변경 이력 1행 추가(L130), 목업↔구현 편차 4건 등재.\n- 모델 정의: 미구현 확정 AC는 **백로그가 아니라 drift**이며, docs↔impl 불일치도 drift다.",
@@ -704,6 +704,77 @@
       "reason": "post-reconcile 재트리거. #11은 rct_20260807-0001의 슬라이스 산출물이고 그 task는 succeeded/terminal, 이 모델에 열린 handoff가 0이다. 트리거 자체(AC 불변·트래커 진행 반영)는 무해하지만 Step 3이 묻는 것은 **잔여 gap에 지금 작업이 필요한가**이고, 잔여는 19/24 AC 미구현으로 크고 소유자가 없다. 모델 definition이 미구현 확정 AC를 수렴 대상 drift로 못박고(백로그 예외 불가) 트래커 로드맵이 다음 슬라이스를 **슬라이스 3(AC4.5 큐/워커 워크로드 분리 + AC1.5 비동기 진행 가시성, 화면 S04)**로 이미 지목해 두었으므로 planner가 바로 집을 수 있다. 정적 구조 gap이라 자동 해소 가능성이 없어 재확인 유예는 부적합.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-07T20:39:48Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "로드맵이 '다음 권장'으로 지목한 슬라이스 3(AC4.5 + AC1.5 + S04)을, 슬라이스 2가 2a/2b로 쪼개진 선례대로 3a/3b로 나누고 이번 task는 **3a = AC4.5(k8s 배포 및 워크로드 분리) 1건만 완전히 닫는 것**을 완료 기준으로 삼는다. 이 경계를 고른 이유: (1) AC4.5의 검증 방법(test/04 시나리오 7 '워커 다운 시 API 가용성', 시나리오 8 '워커의 수평 확장')은 전적으로 인프라 층에서 관측되므로 화면 없이도 한 AC를 온전히 닫을 수 있다. (2) 반대로 AC1.5(진행률·현재 단계·비용·단계별 재시도)는 S04 화면이 있어야 닫히고, S04 목업이 요구하는 5단계 중 2~5단계는 LLM(AC1.2~1.4, 슬라이스 4~5)에 의존해 지금 실행할 수 없다 — 한 PR에 묶으면 어느 AC도 못 닫으면서 표면만 커진다. (3) 워커는 슬라이스 4~5 파이프라인의 기질이므로 먼저 깔아야 후속이 얹힌다.\n\n**아키텍처 결정 — 큐 클레임을 HTTP로 넘긴다.** 이 레포의 DB는 RWO PVC 위의 SQLite이고 Deployment가 `replicas:1` + `Recreate`로 '두 파드가 동시에 마운트하지 않는다'를 불변식으로 못박아 뒀다(deployment.yaml:10-11, db.rs:11-17). 워커가 DB를 직접 열면 그 불변식이 깨진다. 따라서 워커는 **DB에 접근하지 않고** API의 내부 라우트(`/internal/*`, 워커 토큰 베어러 인증)로 작업을 claim·보고한다. API가 유일한 writer로 남아 SQLite 불변식이 보존되면서도 AC4.5가 요구하는 '워커 워크로드 분리 + 큐 기반 비동기 실행 + 수평 확장'은 그대로 성립한다. Postgres 이관(대안)은 이 슬라이스 범위를 몇 배로 키우고 클러스터 의존을 새로 만들어 기각했다. 워커는 별도 이미지가 아니라 **같은 이미지의 두 번째 바이너리**(`CMD` 오버라이드)로 두어 배포 표면과 빌드 시간을 늘리지 않는다.\n\n**가짜 실행 금지.** 워커는 S04 목업이 정의한 5단계 중 LLM이 필요 없는 **1단계 `fetch`(저장소 트리 조회 → 실제 파일 수·바이트)만 실제로 실행**하고, 2~5단계는 `pending`으로 남겨 슬라이스 4~5가 채우게 한다. 목업의 '847 files · 2.3 MB'가 바로 이 1단계의 산출이라 지어낸 값이 아니며, 부수적으로 AC1.1의 크기 휴리스틱 추정이 실측값으로 교정된다.\n\n**완료 기준(이 task가 succeeded인 조건)**: AC4.5가 구현·검증되어 미구현 AC 19 → 18로 줄고, 전용 e2e spec 1건이 시나리오 7·8을 자동으로 단정하며, `docs/doc-tracker.md`의 e2e 매핑(5→6)·공백(19→18)·로드맵·변경 이력이 그 사실과 일치한다. **범위 밖**: AC1.5의 S04 화면·사용자 대면 진행률/재시도 UI(→3b), AC1.2~1.4 LLM 단계(→4~5), AC4.6 실측 비용 회계(→7), 그리고 CI `push` 잡의 브랜치 가드 결여(별도 과제 — 지침에 기록).",
+          "riskLevel": "medium",
+          "plannedAt": "2026-08-07T21:58:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`backend/migrations/0004_analysis_stages.sql` 신설. (a) `analyses`에 워커 리스 컬럼 추가: `claimed_by TEXT`, `claimed_at INTEGER`, `lease_expires_at INTEGER`, `started_at INTEGER`, `finished_at INTEGER`, `error TEXT`. (b) `analysis_stages(id, analysis_id → analyses(id) ON DELETE CASCADE, seq, key, title, status, detail, error, started_at, finished_at)` + `UNIQUE(analysis_id, seq)` + `idx_analysis_stages_analysis`. 기존 3개 마이그레이션은 건드리지 않고 순수 추가만 한다(운영 DB에 이미 적용된 파일 수정 금지).",
+              "expectedOutcome": "`cargo test`의 `tests/migrations.rs`가 신규 마이그레이션 포함해 통과하고, 기존 테이블·데이터 계약이 깨지지 않는다."
+            },
+            {
+              "seq": 2,
+              "action": "단계 목록의 SSOT를 코드에 한 곳으로 둔다: `backend/src/pipeline.rs`(신규)에 S04 목업(`docs/mockups/s04-analysis-progress.html`)이 정의한 5단계 `fetch · cross_cutting · discovery_strategy · feature_candidates · acceptance_dependencies`를 seq·key·title로 선언. `analysis::create`가 `analyses` INSERT와 **같은 트랜잭션에서** 5개 `analysis_stages` 행을 `pending`으로 시드하도록 수정.",
+              "expectedOutcome": "분석 트리거 1회 → `analyses` 1행 + `analysis_stages` 5행(seq 1..5, 전부 `pending`)이 원자적으로 생긴다. 통합 테스트로 단정."
+            },
+            {
+              "seq": 3,
+              "action": "워커 인증. `Config`에 `worker_token: String`(env `FEATUREDOC_WORKER_TOKEN`, 기본 빈 문자열) 추가 + `Debug`에 `[REDACTED]`로 표기(AC4.3 관례 준수). `backend/src/worker_api.rs`(신규)에 `WorkerAuth` 추출자: 베어러 토큰이 설정값과 상수시간 비교로 일치할 때만 통과하고, **토큰이 미설정(빈 문자열)이면 무조건 거부**한다(운영에 시크릿을 넣기 전에는 내부 라우트가 열리지 않는다). `backend/tests/common/mod.rs`의 `Config` 리터럴에도 새 필드를 추가한다.",
+              "expectedOutcome": "토큰 미설정 배포에서 `/internal/*` 전부 401. 토큰 설정 후 올바른 베어러만 통과, 틀린/없는 베어러는 401. 통합 테스트로 세 경우 단정."
+            },
+            {
+              "seq": 4,
+              "action": "claim 라우트 `POST /internal/analyses/claim`(WorkerAuth). 원자적 클레임: `UPDATE analyses SET status='running', claimed_by=?, claimed_at=?, lease_expires_at=?, started_at=COALESCE(started_at,?) WHERE id = (SELECT id FROM analyses WHERE status='queued' ORDER BY created_at, id LIMIT 1) AND status='queued'` 후 `rows_affected == 1`인 경우에만 성공으로 본다(0이면 다른 워커가 선점 → 재시도/204). 응답에는 job id·owner·name·branch와, real 모드에서 `github_app::mint_installation_token`으로 즉석 발급한 **단명 설치 토큰**을 싣는다(저장하지 않는다 — AC4.1의 기존 정책 그대로). 큐가 비면 `204 No Content`.",
+              "expectedOutcome": "동시에 N개 워커가 claim해도 한 job은 정확히 1회만 클레임된다. 통합 테스트에서 같은 큐에 대해 claim을 병렬 호출해 '단일 승자 + 중복 0'을 단정."
+            },
+            {
+              "seq": 5,
+              "action": "보고 라우트(WorkerAuth): `POST /internal/analyses/{id}/stages/{key}` (status running|succeeded|failed + detail/error + 타임스탬프 기록, 리스 보유자만 허용), `POST /internal/analyses/{id}/heartbeat` (리스 연장), `POST /internal/analyses/{id}/finish` (status succeeded|failed, finished_at). 리스 만료 job의 회수: claim 셀렉터에 `OR (status='running' AND lease_expires_at < now)`를 더해 죽은 워커의 job이 다시 큐로 돌아오게 한다.",
+              "expectedOutcome": "단계 전이가 서버에 영속되고, 리스가 만료된 job은 다음 claim에서 회수된다(테스트에서 `lease_expires_at`을 과거로 밀어 단정). 리스를 갖지 않은 워커의 보고는 409/403으로 거부된다."
+            },
+            {
+              "seq": 6,
+              "action": "1단계 `fetch` 실행 경로. `backend/src/repo_scan.rs`(신규): real 모드는 GitHub `GET /repos/{owner}/{name}/git/trees/{branch}?recursive=1`로 blob 수·총 바이트를 집계하고, `Mode::Stub`은 `github_app::stub_repositories()`의 `size_kb`에서 파생한 **결정적** 값을 돌려준다(기존 stub 관례와 동일, kind e2e는 네트워크를 타지 않는다). 워커가 이 함수를 호출해 `fetch` 단계를 `succeeded`로 보고하고 `detail`에 `\"<n> files · <x> MB\"`를 남긴다. 2~5단계는 `pending` 그대로 두고, 분석 전체 status는 `awaiting_pipeline`으로 마감한다(성공도 실패도 아닌 '여기까지 구현됨'을 상태로 정직하게 표현).",
+              "expectedOutcome": "stub 모드에서 트리거한 분석이 워커에 의해 `fetch` 단계 `succeeded`(실측 파일 수·크기 detail 포함) + 나머지 4단계 `pending` + 분석 status `awaiting_pipeline`으로 수렴한다."
+            },
+            {
+              "seq": 7,
+              "action": "워커 바이너리 `backend/src/bin/worker.rs`: DB 풀을 열지 않고 `FEATUREDOC_API_BASE` + `FEATUREDOC_WORKER_TOKEN`으로 claim 폴링 루프(백오프 포함) → `fetch` 실행 → 보고 → 다음 job. `WORKER_ID`(기본 hostname)로 자기 신원을 claim에 실어 로그에 남긴다. SIGTERM 시 진행 중 job을 마저 보고하고 종료. `Dockerfile` 3단계에 두 번째 바이너리 COPY 추가(같은 cargo 빌드 산출물).",
+              "expectedOutcome": "`cargo test`/`cargo build --release`가 두 바이너리를 모두 만들고, 런타임 이미지에 `/usr/local/bin/featuredoc`과 `/usr/local/bin/featuredoc-worker`가 함께 들어간다. API 바이너리의 기존 동작은 무변경."
+            },
+            {
+              "seq": 8,
+              "action": "`deploy/k8s/worker-deployment.yaml`(신규) + `kustomization.yaml` 등재: `featuredoc-worker` Deployment, `replicas: 1`, `command: [/usr/local/bin/featuredoc-worker]`, **PVC 미마운트**(DB 접근 없음 = SQLite 단일 writer 불변식 보존), `FEATUREDOC_API_BASE=http://featuredoc:8080`, `envFrom: featuredoc-secrets`(워커 토큰 포함), `strategy: RollingUpdate`(상태가 없으므로 API와 달리 무중단 교체 가능 = 수평 확장 가능성의 근거). `deploy/k8s/secret.yaml.example`에 `FEATUREDOC_WORKER_TOKEN` 항목 추가.",
+              "expectedOutcome": "`kubectl kustomize deploy/k8s`가 API·워커 두 Deployment를 낸다. 워커의 replicas를 바꿔도 API Deployment·PVC는 영향받지 않는다."
+            },
+            {
+              "seq": 9,
+              "action": "`deploy/e2e/kustomization.yaml` 오버레이 갱신: 워커 Deployment에도 `imagePullPolicy: IfNotPresent` + `FEATUREDOC_MODE=stub` 패치, `secretGenerator`에 결정적 `FEATUREDOC_WORKER_TOKEN=e2e-worker-token-not-a-real-secret` 추가. `scripts/e2e.sh`의 `[5/7] wait for rollout`에 `deployment/featuredoc-worker` 대기를 더한다.",
+              "expectedOutcome": "kind에서 API·워커 두 파드가 뜨고, 트리거한 분석이 사람 개입 없이 `fetch` 완료까지 진행된다."
+            },
+            {
+              "seq": 10,
+              "action": "전용 e2e spec `e2e/tests/ac4-5-worker-workload-separation.spec.ts` 신설(헤더 `// 검증 AC: AC4.5`, 자기 stub 신원 `?as=ac45` — 트래커의 매핑 규약 준수). 시나리오 7: `kubectl scale deploy/featuredoc-worker --replicas=0` 후 분석 2건 트리거 → `/api/me`·`/api/llm-keys`·`/api/analyses` 모두 200이고 두 건 모두 `queued`로 남는다. 시나리오 8: `--replicas=2`로 늘리고 총 4건이 전부 드레인되며 각 job의 `fetch` 단계 `startedAt`이 1회만 기록(= 중복 클레임 0)됨을 단정, `kubectl logs -l app.kubernetes.io/name=featuredoc-worker`에서 **두 파드 이름이 모두** claim 로그를 남겼음을 확인. 종료 시 `--replicas=1`로 복원. `fullyParallel:false`라 다른 spec과 간섭하지 않는다.",
+              "expectedOutcome": "spec이 CI kind에서 통과하며 시나리오 7·8을 코드로 단정한다. 워커 0에서 API 200, 워커 2에서 4건 전부 드레인·중복 0."
+            },
+            {
+              "seq": 11,
+              "action": "`backend/tests/worker.rs`(신규) 통합 테스트: 토큰 미설정/오설정 거부, claim 원자성(단일 승자), 리스 만료 회수, 단계 보고 영속, 리스 미보유자 보고 거부, 트리거 시 5단계 시드. 기존 `tests/analyses.rs`는 시드 5행 단정만 보강한다.",
+              "expectedOutcome": "`cargo test --release`가 신규·기존 전부 green. 워커 프로토콜의 안전 성질이 kind 없이도 게이트된다."
+            },
+            {
+              "seq": 12,
+              "action": "`docs/doc-tracker.md` 동반 갱신(같은 PR): e2e 매핑 표에 AC4.5 행 추가(5→6, 공백 19→18, 항등식 `24 − 0 = 6 + 18` 재검산), '현재 상태 요약'의 spec 수치, 구현 수렴 로드맵의 슬라이스 3을 **3a(AC4.5, 이번 완료) / 3b(AC1.5 · S04, 다음)** 로 분할하고 진행 현황 문구를 '미구현 18건'으로 갱신, 변경 이력 1행 추가, '알려진 목업↔구현 편차' 표의 S02 진행률 행 해소 시점을 3b로 정정. **AC 24개(to-be)는 낮추지 않는다.** 예외 등재는 하지 않는다(시나리오 8이 자동화됐으므로 트래커가 예외 후보로 적어 둔 '워커 수평 확장'을 등재할 이유가 없어졌다 — 그 판단도 이력에 남긴다).",
+              "expectedOutcome": "트래커 집계가 실측과 일치한다: `ls e2e/tests/*.spec.ts | wc -l` = 6, `grep -h '^// 검증 AC:'` = 6개 서로 다른 AC, PRD AC 총수 24 불변, 공백 18. 자매 모델 `tbm_feature-doc-ac-e2e`가 볼 상태와 모순이 없다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
