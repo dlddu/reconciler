@@ -187,6 +187,57 @@
       "assessedAt": "2026-08-07T01:36:32Z"
     },
     "createdAt": "2026-08-07T01:36:32Z",
-    "updatedAt": "2026-08-07T05:33:00Z"
+    "updatedAt": "2026-08-07T05:33:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "PRD-1(메타데이터)이 병합된 뒤 남은 29개 AC 중, 파이프라인 입력 단계의 나머지 절반인 PRD-2 · 리뷰 컨텍스트 수집(AC2-1~AC2-6, 6개 AC)을 하나의 자족적·CI 검증 가능한 슬라이스로 구현한다. 이 모듈을 고른 이유: (1) 파이프라인 순서상 metadata와 나란한 stage-1 입력이라 하위 모듈(PRD-4 관용 판단·PRD-5 논리 엔진·PRD-6 공백 탐지)이 전부 Context를 입력으로 받는다 — 여기를 채워야 다음 슬라이스들이 실입력을 갖는다. (2) docs/tests/context.md의 7개 시나리오가 전부 PR 원자료(제목·본문·브랜치명·additions/deletions·연결 이슈 마감일)에서 순수 동기 로직으로 판정 가능해 DB·async·프론트엔드를 건드리지 않는다. (3) 두 보존 불변식(AC6-5 머지/코드베이스 변경 금지 경계, tokens.css 정식 토큰 소스)에서 물리적으로 멀다 — backend/src/context/ + packages/shared 타입만 만진다. 설계 판단 1건: 스캐폴드의 `ContextModule` 메서드 시그니처가 `(ref: PullRequestRef)`만 받아 라이브 어댑터 없이는 구현 불가능하므로, PRD-1이 이미 채택한 선례대로 원자료(`RawPullRequest`)를 받도록 좁힌다(어댑터는 여전히 스텁이고 이번 슬라이스 범위 밖). SCOPE / 완료 기준: AC2-1~AC2-6이 구현되고 docs/tests/context.md 7개 시나리오가 CI에서 통과하며, AC6-5 회귀 seam(gap-detection.test.ts 3 assertion)과 tokens.css 무변경이 유지되면 이 task는 성공이다. OUT OF SCOPE(범위 밖 잔여 — 실패가 아니라 재감지가 새 task로 잇는다): PRD-3·4·5·6·7의 나머지 23개 AC, GitHub/Linear/Slack 어댑터의 실제 API 연결(원자료를 실제로 채우는 일), 프론트엔드 라우트↔목업·여정·디자인 시스템 정합.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "packages/shared 도메인 타입을 AC2-5가 요구하는 만큼만 확장: `IssueLink`에 optional read-only `dueDate?: string`(ISO-8601, 연결 이슈 마감일) 추가. 새 mutating API 없음.",
+              "expectedOutcome": "`IssueLink.dueDate`가 선택 필드로 존재하고 기존 타입 계약은 불변 — packages/shared typecheck·build green, 기존 소비자(frontend 포함) 무영향."
+            },
+            {
+              "seq": 2,
+              "action": "backend/src/adapters/github/index.ts의 `RawPullRequest`에 optional read-only `headRef?: string`(브랜치명)과 `linkedIssues?`/`threadUrls?` 원자료 필드를 추가한다(AC2-2·AC2-3 시나리오가 '본문/브랜치명'에서 참조를 찾도록 요구). 읽기 전용 필드 추가만 — mutating 메서드는 추가하지 않는다(AC6-5 경계 보존).",
+              "expectedOutcome": "`RawPullRequest`가 컨텍스트 수집 원자료를 실을 수 있고, GithubAdapter 인터페이스의 메서드 집합은 fetchPullRequest/fetchDiff 2개 그대로 — merge/approve/push류 메서드 0개."
+            },
+            {
+              "seq": 3,
+              "action": "backend/src/context/index.ts에 contextModule을 구현한다. 시그니처를 `(pr: RawPullRequest)` 기반으로 좁히고(PRD-1 선례) 각 AC를 순수 동기 로직으로: AC2-1 collectIntent(제목·본문·연결 이슈에서 의도 추출, 확정 불가 시 `confirmed:false` = '의도 불명확'), AC2-2 linkIssues(본문+브랜치명에서 Linear 이슈 키 파싱, 없으면 빈 배열 = 명시적 '없음'), AC2-3 linkThreads(본문에서 Slack 스레드 URL 파싱, 없으면 빈 배열), AC2-4 measureChangeSize(additions/deletions 수치화), AC2-5 collectSchedule(연결 이슈 마감일 중 가장 이른 것 → ScheduleContext, 없으면 undefined), AC2-6 collect(전체 합성 — optional 부재가 throw가 아닌 명시적 '없음'으로 기록되고 수집이 끝까지 진행).",
+              "expectedOutcome": "contextModule의 6개 메서드가 더 이상 notImplemented를 throw하지 않는다. optional 항목이 전부 부재한 PR에서도 collect()가 예외 없이 Context를 반환하고, relatedIssues/relatedThreads는 `[]`, schedule은 부재, intent.confirmed는 false다."
+            },
+            {
+              "seq": 4,
+              "action": "backend/src/context/context.test.ts의 6개 `it.todo`를 docs/tests/context.md의 7개 시나리오를 덮는 실제 assertion으로 교체한다(시나리오 1·2 → AC2-1, 3 → AC2-2, 4 → AC2-3, 5 → AC2-4, 6 → AC2-5, 7 → AC2-6).",
+              "expectedOutcome": "`context (PRD-2)` 스위트가 6 passing(이전 6 pending)으로 바뀌고, 백엔드 전체는 7 passed/29 todo → 13 passed/23 todo가 된다."
+            },
+            {
+              "seq": 5,
+              "action": "로컬에서 CI와 동일한 4개 게이트를 재현 실행한다: 아키텍처 매칭 standalone Node 22(aarch64) + pnpm 10.33.0으로 `pnpm install --frozen-lockfile` 후 `pnpm -r lint` / `typecheck` / `test` / `build`. (이 슬라이스는 blind 저작이 아니다 — 이번 실행 환경에서 baseline 4게이트가 모두 통과함을 이미 확인했다.)",
+              "expectedOutcome": "4개 게이트 전부 로컬 green. 실패하면 push 전에 고쳐 CI 왕복을 없앤다."
+            },
+            {
+              "seq": 6,
+              "action": "dlddu/pr-review에 브랜치 reconcile/rct_20260807-0001로 푸시하고 draft PR을 연다(머지하지 않음). PR 본문에 task id·gap 요약·계획 단계·검증 방법을 적는다.",
+              "expectedOutcome": "draft PR이 열리고 CI가 트리거된다(사용자 토큰 push라 workflow가 실제로 돈다)."
+            },
+            {
+              "seq": 7,
+              "action": "[executor] CI 4개 스텝(lint/typecheck/test/build)이 모두 green인지 확인한 뒤에만 병합한다. green이 아니면 병합 금지.",
+              "expectedOutcome": "`gh pr checks` 전부 pass. context (PRD-2) 스위트 6 passing이 CI 로그에 나타난다."
+            },
+            {
+              "seq": 8,
+              "action": "[executor] PR 병합 후 계획 범위(AC2-1~AC2-6) 기준으로 수렴을 검증한다 — 모델 전체 to-be가 아니라 이 슬라이스 기준.",
+              "expectedOutcome": "10/33 AC 구현(PRD-1 4개 + PRD-2 6개), AC6-5 seam green, tokens.css diff 없음. 잔여 23개 AC는 범위 밖으로 남아 재감지가 새 task로 잇는다."
+            }
+          ],
+          "plannedAt": "2026-08-07T05:36:00Z"
+        }
+      }
+    ]
   }
 ]
