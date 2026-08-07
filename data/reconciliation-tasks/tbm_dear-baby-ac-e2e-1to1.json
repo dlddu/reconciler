@@ -1331,6 +1331,67 @@
       "assessedAt": "2026-08-07T01:36:32Z"
     },
     "createdAt": "2026-08-07T01:36:32Z",
-    "updatedAt": "2026-08-07T01:36:32Z"
+    "updatedAt": "2026-08-07T01:36:32Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "이 task 의 gap(PRD-009 확정으로 새로 편입된 AC 들이 전용 e2e flow 없이 ⬜ 로 남아 규칙 #1 위반 지속) 에서 **AC-001-06(작성 시점 공개/비공개 선택)** 한 건을 슬라이스로 닫는다. === 왜 이 AC 인가(대상 전수 조사 결과): 이번 잔여 13~14건은 AC-009-01~11·13(커뮤니티 탭)·AC-001-06·07 인데, 레포를 실제로 열어 보면 **어느 것도 지금 상태로는 flow 를 쓸 수 없다** — 커뮤니티 탭은 app/app/(tabs)/community.tsx 가 '곧 추가됩니다' placeholder 이고(AC-009-02~11·13 전부 미구현), AC-001-07 의 보관함 화면(app/app/drafts.tsx)은 구현돼 있으나 홈 drafts 배너가 PRD-007 정리분으로 제거되며 **진입점을 잃어** 도달 불가다(home-voice-record.yaml 주석에 명시). 즉 이 task 는 'flow 만 쓰면 되는' 상태가 아니고, 수렴하려면 대응 화면이 먼저 있어야 한다. 그중 AC-001-06 이 압도적으로 최소다: **서버·API 는 이미 완성돼 있고 UI 토글만 없다** — backend records.Create 가 body.visibility 를 받아 검증하고 미지정 시 'private' 로 저장하며(handlers.go:87·136, model.go Visibility), app 쪽 createTextRecord/createVoiceRecord 도 CreateRecordOptions.visibility 를 이미 payload 에 실어 보낸다(src/api/records.ts). 따라서 이 슬라이스는 **마이그레이션 0건·백엔드 0줄**의 순수 프런트 UI 추가이고, 나머지 후보(커뮤니티 탭 전체, 보관함 진입점 UX 재설계)보다 한 자릿수 작다. 또한 이 환경은 오늘 node20 + jest + tsc 로 dear-baby app 의 CI 게이트(app-unit-tests)를 1:1 재현 가능함이 확인돼(blind 아님) UI 변경을 로컬 검증한 뒤 올릴 수 있다. === 접근: (1) 두 저장 화면(record-text.tsx 텍스트 저장, record-audio-review.tsx 음성 저장/저장+업로드)의 **고정 footer** 안, 저장 버튼 위에 공개/비공개 세그먼트 토글을 추가한다(기본값 'private'). footer 는 ScrollView 밖이라 항상 보이고, 기존 CI run-list flow 가 누르는 저장 버튼 testID·위치는 그대로 유지된다. (2) 토글은 기존 컨벤션을 그대로 따른다 — VisibilityBadge 처럼 **상태를 testID 접미사로 노출**(`-private`/`-public`)해 한국어·이모지 부분문자열 매칭을 피하고, 선택 칩 모양은 DiaryFilterSheet 의 공개여부 3선택 칩과 동일 톤으로 맞춘다. (3) 선택값을 create{Text,Voice}Record 의 visibility 로 전달한다. (4) AC-001-06 전용 flow e2e/maestro/record-visibility-select.yaml 을 신설한다. === 완료 기준(이 시도의 성공 범위): ① 두 저장 화면에 공개/비공개 토글이 표시되고 기본값이 비공개이며 선택값이 visibility 로 서버에 전달된다(jest 단위로 단정), ② 신규 flow record-visibility-select.yaml 이 헤더에 정확히 AC-001-06 만 주검증으로 선언하고 텍스트 작성 경로에서 토글 노출·기본 비공개·공개 전환·저장 복귀를 testID 로 단정한다, ③ docs/doc-tracker.md 매핑에서 AC-001-06 이 ⬜→✅ `record-visibility-select.yaml` 로 갱신되고 카운트(✅21→22·⬜47→46)와 변경 이력 행이 반영돼 파일 단위 1:1(중복·묶음·고아 0)이 유지된다, ④ CI 4개 잡(app-unit-tests·backend-unit-tests·E2E Android/iOS) green 으로 머지된다. === 범위 밖(후속 재감지가 새 task 로 잇는다): 커뮤니티 탭 AC-009-01~11·13 전용 flow(탭 구현 선행 필요) · AC-001-07 보관함 진입점 복구 · AC-008-05 편집 화면 토글 · **저장된 기록 상세에서 공개 상태를 e2e 로 재확인하는 단정**(신규 기록의 record id 를 flow 가 알 수 없어 `diary-list-card-<id>` 로 특정 불가 — TC-001-06 3·4단계 후반은 jest 단위 검증으로 대체하고 e2e 밖 잔여로 명시) · 신규 flow 의 CI run-list 등재(이 모델의 직전 5개 슬라이스와 동일하게 미등재 — run-list 는 큐레이트 목록이라 등재 시 ~60분 잡에 blind 저작 flow 의 red 리스크를 더한다; 등재는 별도 판단 사항). === 왜 이 방식인가(대안 대비): 대안 A(커뮤니티 탭 착수)는 화면·필터·상세·댓글이 한 슬라이스에 들어가지 않고 형제 task rct_20260807-0002(PR #169, 홈 커뮤니티 피드)와 표면이 겹친다. 대안 B(AC-001-07 보관함 진입점 복구)는 '어디에 진입점을 둘지'가 제품 UX 결정이라 planner 가 단독으로 정할 사안이 아니다. 대안 C(예외 등재)는 이 레포 정책이 **영구 예외 AC 0건**이라 배제된다. 가역성: 머지 전에는 PR close, 머지 후에는 revert 1건으로 완전 복원되며 기본값이 기존 동작(비공개)과 같아 회귀 표면이 없다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "job-private clone($CLAUDE_JOB_DIR/db-work)에서 origin/main 최신화 후 브랜치 reconcile/rct_20260807-0001 생성. node20 표준 배포본을 받아 app/ 에서 `npm ci` 로 CI 와 동일한 의존성 트리를 준비한다.",
+              "expectedOutcome": "브랜치 생성 완료, `npm test` 가 변경 전 baseline 에서 green(23 suites/141 tests)."
+            },
+            {
+              "seq": 2,
+              "action": "공개/비공개 세그먼트 토글 컴포넌트를 신설한다(app/src/components/record/VisibilityToggle.tsx). props: value: RecordVisibility, onChange, testID. 상태를 testID 접미사로 노출(`<testID>-private`/`-public`), 선택 여부는 accessibilityState + 색으로 구분. DiaryFilterSheet 의 공개여부 칩과 동일 톤·spacing/colors 토큰만 사용.",
+              "expectedOutcome": "tsc 통과, 하드코딩 색·숫자 없음, 기존 컴포넌트 index 컨벤션 준수."
+            },
+            {
+              "seq": 3,
+              "action": "record-text.tsx 에 토글을 배선한다 — useState<RecordVisibility>('private'), 고정 footer 안 저장 버튼 **위**에 배치(testID `record-text-visibility`), handleSave 에서 createTextRecord(trimmed, {..., visibility}) 로 전달.",
+              "expectedOutcome": "기본값 비공개로 렌더되고 record-text-save 의 testID·동작은 무변경(기존 home-record-ctas.yaml 이 그대로 통과)."
+            },
+            {
+              "seq": 4,
+              "action": "record-audio-review.tsx 에 동일 토글을 배선한다(testID `record-audio-review-visibility`). handleSave·handleSaveAndUpload 두 경로 모두 createVoiceRecord 에 visibility 를 전달한다.",
+              "expectedOutcome": "두 저장 경로 모두 선택값을 반영. 기존 record-audio-review-save / -save-and-upload testID·순서 무변경."
+            },
+            {
+              "seq": 5,
+              "action": "jest 단위 테스트를 추가한다 — 저장 화면 렌더 시 `*-visibility-private` 가 활성(기본 비공개), 공개 칩 탭 후 저장하면 create{Text,Voice}Record 가 visibility:'public' 으로 호출됨, 미조작 저장이면 'private'. 기존 __tests__ 배치·모킹 컨벤션을 따른다.",
+              "expectedOutcome": "`npm test -- --ci` 전부 통과(신규 suite 포함), TC-001-06 3·4단계의 '저장된 값' 부분이 단위로 커버됨."
+            },
+            {
+              "seq": 6,
+              "action": "AC-001-06 전용 flow e2e/maestro/record-visibility-select.yaml 을 신설한다. 헤더에 검증 대상 AC-001-06(TC-001-06) 단 1개만 선언. 셋업은 검증된 형제 flow 와 동일(clearKeychain → launchApp clearState → 'isn't responding' 가드 → subflows tester-login-fast · onboarding-q1-q2-caseA · onboarding-caseA-full). 본문: home-text-cta → record-text-screen → `record-text-visibility-private` 노출(기본 비공개) → `record-text-visibility-public` 탭 → 상태 전환 단정 → 본문 입력 → record-text-save → home-tab 복귀. 한국어 부분문자열 단정 금지(testID 만).",
+              "expectedOutcome": "flow 파일 1개 추가로 AC-001-06 이 전용 flow 를 정확히 1개 갖게 되고, 기존 어떤 flow 도 AC-001-06 을 선언하지 않아 중복 0."
+            },
+            {
+              "seq": 7,
+              "action": "e2e/scripts/check-login-subflows.sh 가드를 로컬 실행해 신규 flow 의 로그인 서브플로우 사용이 규약(실제 제스처는 login.yaml 단독, 나머지는 tester-login-fast)에 맞는지 확인한다.",
+              "expectedOutcome": "가드 스크립트 exit 0."
+            },
+            {
+              "seq": 8,
+              "action": "docs/doc-tracker.md 를 갱신한다 — AC↔flow 표에서 AC-001-06 ⬜ 후속 → ✅ `record-visibility-select.yaml`, 기준 카운트 ✅21→22·⬜47→46, 상단 요약(제품 flow 21→22, 후속 47→46)과 변경 이력 행 1건 추가.",
+              "expectedOutcome": "표 재계수 ✅22·⬜46·1차제외1 = 69 가 맞고, 매핑 표·요약·이력이 서로 일치."
+            },
+            {
+              "seq": 9,
+              "action": "로컬 CI 게이트 재현 — app/ 에서 `npm run check:routes` 와 `npm test -- --ci --colors=false`, 추가로 `npx tsc --noEmit`. backend 무변경이므로 Go 게이트는 생략한다.",
+              "expectedOutcome": "세 명령 모두 통과(=CI app-unit-tests 1:1 재현). Maestro e2e 는 시뮬레이터 필요라 로컬 재현 불가 — PR CI 가 객관 게이트."
+            },
+            {
+              "seq": 10,
+              "action": "noreply 저자(39251873+dlddu@users.noreply.github.com)로 커밋해 브랜치를 push 하고 dlddu/dear-baby 에 **draft PR** 을 연다. 본문에 task id·gap 요약·계획 단계·검증 방법·범위 밖 잔여를 적는다. 머지는 하지 않는다.",
+              "expectedOutcome": "draft PR 생성, pull_request 이벤트로 CI run 기동(설치 토큰이 아닌 gh user 토큰 push 여야 Actions 가 뜬다)."
+            }
+          ],
+          "plannedAt": "2026-08-07T06:52:00Z"
+        }
+      }
+    ]
   }
 ]
