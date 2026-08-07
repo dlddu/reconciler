@@ -471,7 +471,7 @@
   },
   {
     "toBeModelId": "tbm_kubernetes-dashboard-e2e-mock-policy",
-    "status": "assessing",
+    "status": "action_required",
     "trigger": {
       "detectedAt": "2026-08-07T20:39:48Z",
       "changedSides": [
@@ -495,6 +495,12 @@
       "gap": "**유의미한 차이가 1건 남았다(크게 수렴했으나 미완).**\n\n정합 기준은 \"허용목록 등재 집합 == 코드 인터셉트 집합(양방향 1:1)\"이다. 이번 관측 실측:\n- **등재 29 ↔ 코드 주석 29** — 수치·파일별 분포 모두 일치. 고아 등재(코드에 없는 등재) 0건.\n- **미등재 인터셉트 1건 잔존**: `e2e/pods-hide-completed.spec.ts`(호출 라인 2 = `page.route` + `route.fulfill` 한 쌍). 인터셉트를 가진 12개 파일 중 허용목록에 이름이 없는 유일한 파일이다(`comm`으로 교차 확인).\n- 그 성격은 **명시적 불허 카테고리에 정면으로 해당**한다 — \"목록·개수·상태 조합을 고정하려는 데이터 모킹(→ fixture 또는 전용 namespace로 해결)\". 실제로 `/api/pods/all` 응답 전체를 합성 pod 4건(Running 2 + Succeeded 2)으로 치환해 PD6(완료 파드 숨김 토글)을 검증한다. `ERR`·`LAT`·`ABS` 어디에도 들지 않는다.\n- 모델 등록 시점 메모도 이 파일을 콕 집어 \"주석에 '클러스터 fixture 의존 제거'를 사유로 pod 목록 전체를 fulfill → **불허(fixture 대체) 후보**\"로 지목해 두었고, 정책 문서 자신도 미판정 절에 남겨 \"제거한다\"는 방향을 적어 두었다.\n\n직전 task rct_20260807-0001은 `succeeded`/terminal이고 이 모델에 열린 handoff가 없다.",
       "summarizedAt": "2026-08-07T20:39:48Z"
     },
-    "id": "rct_20260807-0002"
+    "id": "rct_20260807-0002",
+    "assessment": {
+      "actionRequired": true,
+      "reason": "post-reconcile 재트리거이며 잔여가 소유자 없이 남아 있다. #215가 23곳을 전수 판정(등재 18·제거 5)해 미판정 6파일 → **1파일**로 줄인 것은 계획대로의 convergent 결과지만, 정합 기준인 양방향 1:1은 아직 성립하지 않는다 — `e2e/pods-hide-completed.spec.ts`의 미등재 인터셉트 1건이 남았고, 이는 등재로 해소할 수 있는 종류가 아니라 **정책이 명시적으로 불허한 데이터 모킹**이라 fixture/전용 namespace로 대체해 제거해야 한다(모델의 \"충돌 시 기본 방향\": 카테고리 미해당 → 제거, 애매하면 제거 쪽으로). 직전 task terminal + 열린 handoff 0 → planner가 바로 집을 수 있다. 잔여 범위가 작고 방향이 이미 문서에 규범적으로 적혀 있어 단일 슬라이스로 이 모델을 완전 수렴시킬 수 있는 상태다. 정적 구조 gap이라 자동 해소 가능성 없음(재확인 유예 부적합).",
+      "assessedBy": "agent",
+      "assessedAt": "2026-08-07T20:39:48Z"
+    }
   }
 ]
