@@ -1146,7 +1146,7 @@
       }
     },
     "createdAt": "2026-08-07T20:39:48Z",
-    "updatedAt": "2026-08-07T21:22:00Z",
+    "updatedAt": "2026-08-07T21:40:00Z",
     "stateSummary": {
       "asIs": "**as-is = `tests/` 트리** (dlddu/homelab-k3s-mcp@main `823842a`, 2026-08-07T20:39Z 관측)\n\n- 트리거 delta는 **정확히 커밋 1개** — #37 `823842a` \"test(e2e): per-AC no-config graceful-refusal cases for 6 ACs\", 커밋 본문이 `reconcile rct_20260807-0002 (tbm_homelab-k3s-mcp-ac-e2e)`로 이 task의 직전 task(현재 `succeeded`/terminal) 산출물임을 명시한다. 중간 커밋 #36 `fdc56e1`(opensearch 타임아웃 35s)은 `internal/`만 건드려 양측 트리에 delta가 없다 — `git rev-parse fdc56e1:{tests,docs}`가 baseline과 동일함을 확인했다.\n- #37 내역(10파일 +233/-21): 신규 `tests/integration/no_config.py`(+188) · `tests/k8s/kind/auth-fixture.yaml`(+7, 기존 픽스처에 스텝 추가) · `.github/workflows/ci.yml`(+10, port 8088 검증 스텝) · `docs/doc-tracker.md` · `docs/test-*.md` 6종.\n- 실측: `tests/integration/no_config.py`에 per-AC 케이스 **6개** 존재 — `test_aws_config_get_ac3_unconfigured_refusal` · `test_github_app_installation_token_ac3_unconfigured_refusal` · `test_grafana_token_ac3_unconfigured_refusal` · `test_opensearch_search_ac4_unconfigured_refusal` · `test_opensearch_document_put_ac5_unconfigured_refusal` · `test_opensearch_document_delete_ac5_unconfigured_refusal`. CI가 `python tests/integration/no_config.py http://127.0.0.1:8088`로 실행한다(`ci.yml:263,266`).\n- `tests/integration/` 전체: `_helpers.py` · `auth.py` · `aws_config.py` · `dear_baby.py` · `github_app.py` · `grafana.py` · `no_config.py` · `opensearch.py` · `smoke.py` · `workload.py`.",
       "toBe": "**to-be = `docs/prd-*.md` + `docs/doc-tracker.md`** (`1ccdfcaf`, 직전 `3aa75255`). AC 총계는 **52개로 불변**(prd 문서 변경 없음, 레지스트리 갱신뿐).\n\n- `docs/doc-tracker.md` §\"AC ↔ e2e 1:1 정합성(reconciler 렌즈)\" 레지스트리 헤더가 갱신됐다: **✅ e2e 49 (통합 32 · 전용 케이스 17) · ⬜ e2e 보강 2 · 🚫 e2e 예외 1** (직전 ✅43·⬜8·🚫1).\n- 변경 이력에 2026-08-07 행 추가: \"미설정 시 graceful 거부\" 6건을 per-AC 전용 케이스로 승격, 신규 픽스처 없이 직전 슬라이스의 `auth-fixture.yaml`(자격증명 시크릿 미부착 = 정의상 no-config 배포)을 재사용.\n- ⬜ backlog 절이 8건 → **2건**으로 축소: platform-auth-safety/AC2(인증 디스커버리 — OIDC 발급자 mock 픽스처 필요) · AC8(인증 방식 구성 유연성 — 다중 구성 배포 변형 필요).\n- 🚫 절은 그대로 1건: platform-auth-safety/AC4(하드닝된 런타임) — \"definition이 `task에서 제안한다`고 명시하므로 모델 정의에 일방 적용하지 않고 **ratify 후** 예외 목록에 반영한다\"고 스스로 미비준 상태임을 기록.",
@@ -1159,6 +1159,62 @@
       "reason": "post-reconcile 재트리거이고 잔여 3축이 소유자 없이 남아 있다. #37이 \"미설정 graceful 거부\" 6건을 닫아 ✅43·⬜8 → ✅49·⬜2로 수렴시켰지만, (a) ⬜2(platform AC2 디스커버리·AC8 구성 유연성) (b) ✅49 중 **32건의 파일 수준 \"통합\" 커버가 규칙 1·2 미충족** (c) platform/AC4 🚫 예외의 definition 미비준 — 세 축 모두 유효하다. 특히 (b)는 이번 슬라이스로 전혀 줄지 않은 최대 잔여이고 레지스트리 스스로 미충족으로 기재한다. 직전 task terminal + 열린 handoff 0 → planner가 집을 차례. 슬라이싱 판단(⬜2를 픽스처 신설로 먼저 닫을지, 32건 통합→per-AC 분리 리팩터를 시작할지, AC4 예외 비준을 별도로 올릴지)은 planner 몫으로 남긴다. 정적 구조 gap이라 자동 해소 가능성 없음(재확인 유예 부적합).",
       "assessedBy": "agent",
       "assessedAt": "2026-08-07T20:39:48Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "잔여 3축 중 (b) '✅49 중 32건이 파일 수준 통합 커버라 규칙 1·2 미충족' — 이번 슬라이스로 전혀 줄지 않은 최대 잔여축 — 을 공략한다. **범위(완료 기준): 통합 커버 32건 중 8건(ping/AC1 · platform-auth-safety/AC5·AC6 · github-app-installation-token/AC1·AC2·AC4 · grafana-token/AC1·AC2)을 per-AC 전용 케이스로 분리해 레지스트리를 ✅49(통합 32·전용 17) → ✅49(통합 24·전용 25)로 옮기고, 레지스트리↔코드가 양방향 1:1임을 기계적으로 확인한다.** 이 8건을 고른 이유는 두 가지다. (1) **검증 가능성**: 세 CI 스텝(smoke 8080 · github_app 8083 · grafana 8085)과 no-config 스텝(8088)이 요구하는 백엔드가 ConfigMap에 박힌 순수 stdlib 파이썬 mock 2개(github-mock·grafana-mock)와 서버 자신뿐이라, go dist로 빌드한 실제 서버 바이너리 + mock을 이 박스에서 그대로 띄워 CI 스텝을 1:1 재현할 수 있다(kind·MinIO·OpenSearch가 필요한 aws_config·opensearch·workload·dear_baby는 재현 불가라 이번 범위에서 제외). (2) **신규 픽스처·신규 CI 스텝이 필요 없다** — 선례(pod-describe 3건, 파괴적 표기 5건)와 같은 additive-in-file 형태라 kind 배포 경로를 건드리지 않는다. 대안으로 ⬜2(platform AC2 디스커버리·AC8 구성 유연성)를 먼저 닫는 길이 있었으나 둘 다 신규 픽스처(OIDC 발급자 mock·다중 구성 배포 변형)가 선행이고 그 픽스처는 여기서 검증할 수 없어 blind 저작이 되므로 뒤로 미뤘다. 축 (c)(platform/AC4 🚫 예외의 definition 비준)는 to-be-models.json 개정이라 소유 스킬이 reconciler-tobe-modeler이고 사용자 ratify가 전제라 이 task 범위 밖으로 명시한다. **범위 밖(후속)**: 잔여 통합 24건(aws_config.py 2 · dear_baby.py 2 · opensearch.py 9 · workload.py 11), ⬜2, AC4 예외 비준. 롤백은 tests/·docs/ 전용 변경이라 PR revert 한 번이면 끝이고 런타임 영향이 없다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-08-07T21:40:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "로컬 검증 하네스 구축: go1.24.7 linux-arm64 dist로 서버 바이너리 빌드, github-mock/grafana-mock ConfigMap의 server.py를 그대로 추출해 로컬 포트로 기동, venv+get-pip으로 tests/integration/requirements.txt 설치. (a) 주 배포 대역 = 서버에 GitHub App·Grafana env를 CI와 같은 값으로 주입(MCP_K8S_DISABLED=1, MCP_AUTH_DISABLED=1), (b) 자격증명 미부착 변형 대역 = MCP_API_KEYS=ci-e2e-key만 준 두 번째 인스턴스(auth-fixture.yaml 미러).",
+              "expectedOutcome": "수정 전 smoke.py·github_app.py·grafana.py가 (a)에서, auth.py·no_config.py가 (b)에서 전부 rc=0 — 로컬 하네스가 CI 스텝과 등가임을 baseline으로 입증."
+            },
+            {
+              "seq": 2,
+              "action": "smoke.py를 per-AC 케이스로 분리: test_platform_auth_safety_ac6_health_readiness(/healthz·/readyz) + test_ping_ac1_always_pong(ping을 실제로 호출해 'pong' 단언 — 기존 스크립트는 ping을 호출조차 하지 않고 tools/list 존재만 봤다). EXPECTED_TOOLS 단언은 AC 케이스가 아닌 공용 사전조건으로 run()에 남기고 그 이유를 주석에 명시.",
+              "expectedOutcome": "smoke.py가 (a)에서 rc=0이고 출력에 두 AC 라벨이 찍힌다."
+            },
+            {
+              "seq": 3,
+              "action": "platform-auth-safety/AC5를 smoke.py → no_config.py로 이관: AC 문언이 '자격증명 env를 비운 채 기동'을 전제하는데 주 배포는 모든 자격증명이 배선돼 있어 전제 자체가 성립하지 않는다. 전제가 성립하는 유일한 배포(자격증명 미부착 변형)에 test_platform_auth_safety_ac5_graceful_degradation을 신설해 /healthz 정상 + tools/list가 14개 도구 표면을 그대로 반환함을 단언.",
+              "expectedOutcome": "no_config.py가 (b)에서 rc=0, 기존 6개 refusal 케이스도 그대로 통과."
+            },
+            {
+              "seq": 4,
+              "action": "github_app.py를 3개 per-AC 케이스로 분리(AC1 단명 토큰 발급 · AC2 스코프 제한 · AC4 개인키 비노출). AC4는 기존 스크립트에 단언이 아예 없었으므로 신설: 직렬화한 전체 결과에 PEM 아머·PRIVATE KEY·GITHUB_APP_PRIVATE_KEY·서명 JWT(eyJ)가 없음을 단언. AC1 docstring에 mock이 고정 만료(2099)를 쓰므로 ~1h TTL은 e2e 미관측임을, AC2 docstring에 설치범위 밖 repo 거부는 GitHub 측이라 mock으로 관측 불가임을 명시.",
+              "expectedOutcome": "github_app.py가 (a)에서 rc=0, 세 AC 라벨 출력."
+            },
+            {
+              "seq": 5,
+              "action": "grafana.py를 3개 per-AC 케이스로 분리(AC1·AC2 신설 + 기존 AC4 유지). AC1은 '# token expires <RFC3339>'를 파싱해 만료가 지금부터 50~70분임을 단언 — grafana-mock이 서버가 보낸 expiresAt을 그대로 되돌려주므로 1시간 TTL이 실제로 관측된다(기존엔 주석 존재만 확인). AC2는 메트릭·로그 URL/USER 4종을 값 단위로 비교.",
+              "expectedOutcome": "grafana.py가 (a)에서 rc=0, TTL 단언이 실제 ~59분59초를 통과."
+            },
+            {
+              "seq": 6,
+              "action": "네거티브 컨트롤: 새로 쓴 단언 7개를 각각 의도적으로 어긋나게 변형(github AC4 스캔에 실제로 존재하는 문자열 주입 · grafana AC1 TTL 창을 70~90분으로 이동 · grafana AC2 기대값 변조 · github AC2 설치 id 변조 · ping 기대 본문 변조 · AC5 EXPECTED_TOOLS에 없는 도구 추가 · AC6를 없는 경로로 호출)해 전부 실패하는지 확인.",
+              "expectedOutcome": "7개 변형 전부 AssertionError/HTTPStatusError로 실패 = 단정이 비어 있지 않음(vacuous 아님) 입증."
+            },
+            {
+              "seq": 7,
+              "action": "docs 갱신: doc-tracker.md 레지스트리 8행을 '✅ 통합' → '✅ 전용 케이스 <file>::<func>'로, 헤더 집계를 (통합 24 · 전용 케이스 25)로, '현재 미충족' 노트를 잔여 4파일 24건으로 좁히고, 완료 노트 + 변경 이력 1행 추가. test-ping.md · test-platform-auth-safety.md · test-github-app-installation-token.md · test-grafana-token.md의 자동화 필드를 신설 케이스 경로로 갱신(규칙 3).",
+              "expectedOutcome": "레지스트리 표를 기계 재계수했을 때 52행 = 통합 24 · 전용 25 · ⬜2 · 🚫1 로 헤더 주장과 정확히 일치."
+            },
+            {
+              "seq": 8,
+              "action": "레지스트리↔코드 양방향 1:1 기계 검증: 레지스트리의 모든 '전용 케이스 <file>::<func>'에 대해 (i) 파일·함수가 실제로 존재하고 (ii) docstring 첫 줄이 정확히 그 AC를 선언하는지(규칙 3), (iii) 한 케이스가 둘 이상의 AC에 재사용되지 않는지(규칙 2), 역방향으로 (iv) 코드의 모든 test_* 케이스가 레지스트리에 등재돼 있는지(고아 없음) 확인.",
+              "expectedOutcome": "전용 25건 ↔ 코드 25건, BROKEN 0 · 중복 0 · 고아 0."
+            },
+            {
+              "seq": 9,
+              "action": "reconcile/rct_20260807-0003 브랜치로 커밋·푸시하고 dlddu/homelab-k3s-mcp에 draft PR 생성. push는 gh 사용자 토큰 경로로 해서 Actions가 실제로 발화하는지 gh run list로 확인.",
+              "expectedOutcome": "draft PR이 열리고 lint·unit tests·integration tests 3개 잡이 기동."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
