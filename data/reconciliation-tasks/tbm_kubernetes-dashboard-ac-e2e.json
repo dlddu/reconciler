@@ -1062,7 +1062,7 @@
       "assessedAt": "2026-08-02T09:42:27Z"
     },
     "createdAt": "2026-08-02T09:42:27Z",
-    "updatedAt": "2026-08-07T01:12:00Z",
+    "updatedAt": "2026-08-07T01:20:00Z",
     "attempts": [
       {
         "plan": {
@@ -1103,6 +1103,51 @@
           "reviewer": "user",
           "reviewedAt": "2026-08-06T22:33:43Z",
           "comment": "채팅 반려 — 대안(path a) 채택. 사유 원문: 'metrics-server 부재 kind 프로파일 + 전용 OV7 spec 슬라이스로 재계획'. 즉 OV7을 영구 e2e 면제로 비준하는 접근을 채택하지 않고, 엄격 53:53 전단사 계약을 그대로 유지한 채 metrics-server 부재를 재현하는 별도 kind 프로파일을 신설하고 그 위에서 OV7 전용 e2e 스펙을 실환경으로 작성하는 슬라이스로 재계획할 것. (실행자 부기: 재계획 시 planner가 다뤄야 할 선결 사항 — ① 부재 프로파일의 격리 방식(별도 kind 클러스터/컨텍스트 vs 기존 공유 클러스터 변형)과 metrics 의존 spec(OV1 등)의 파손 회피, ② playwright 프로젝트·워커 구성(fullyParallel·workers:4) 에서의 분리 실행 경로, ③ CI 파이프라인·러너 비용 증가분, ④ 형제 모델 tbm_kubernetes-dashboard-e2e-mock-policy 무drift 유지(신규 인터셉트 0). 또한 이번 접근 전용으로 스테이징된 draft PR https://github.com/dlddu/kubernetes-dashboard/pull/213 (docs 면제 표기)은 이 결정으로 무효 — 재계획 시 닫고 새 슬라이스로 준비할 것. executor는 PR을 닫지 않고 draft 상태로 남겨 뒀다. reconciler 모델 definition은 미변경(면제 조항 추가 안 함).)"
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "OV7(메트릭 서버 부재 폴백)을 **실환경 e2e로 검증**해 잔여 1건(52↔53)을 닫는다 — 2026-08-06 사용자 반려로 채택된 path a(엄격 53:53 전단사 유지, metrics-server 부재 kind 프로파일 + 전용 OV7 spec)를 구현한다. 직전 att0의 'OV7 영구 면제 비준' 접근은 반려됐다. 【격리 방식 결정(선결사항 ①·②)】 metrics-server 부재를 **별도 CI matrix leg + 전용 kind 클러스터**로 재현한다 — GitHub Actions matrix(profile: default|no-metrics)의 두 leg는 각자 독립 러너에서 자기 클러스터를 띄우므로, no-metrics leg가 metrics-server를 설치하지 않아도 default leg(OV1 등 metrics 의존 스펙)는 **다른 러너·다른 클러스터라 파손 불가**. playwright.config.ts를 두 프로젝트로 분리해(chromium=OV7 spec 제외, no-metrics=OV7 spec 전용) default leg는 --project=chromium, no-metrics leg는 --project=no-metrics로 실행 → 하나의 클러스터를 전역 변형하거나 fullyParallel/workers:4에서 순서를 강제할 필요가 없다. 대안 기각: (a) 공유 클러스터에서 metrics-server를 삭제/중단하면 workers:4 병렬에서 OV1 등이 비결정적으로 깨짐, (b) 같은 클러스터에 RBAC로 metrics API를 막은 2번째 대시보드는 'forbidden'이지 AC7의 '부재'가 아니고 앱/RBAC 표면이 커진다. 코드/앱 무변경(폴백 로직은 이미 존재·유닛 커버 `handlers/overview_test.go::TestCalculateResourceUsageFallback`), 인프라·테스트·문서만 추가한다. OV7 spec은 인터셉트 0(순수 실 네비게이션+단정)이라 형제 모델 tbm_kubernetes-dashboard-e2e-mock-policy 무drift(지문 83 불변, 선결사항 ④). 가역: 전부 additive·설정 변경이라 PR revert로 복구, 프로덕션·클러스터·데이터 영향 없음. 【범위(완료 기준)】 OV7이 최상위 전용 스펙 `e2e/overview-metrics-fallback.spec.ts` 1개를 갖고 그 스펙이 metrics-server 부재 kind 클러스터에서 실제로 초록이며, docs(test-overview.md·doc-tracker.md)가 이를 반영해 다음 ac-e2e 재감지가 '최상위 e2e 스펙 53 ↔ 필수 AC 53 = 전단사·공백 0'으로 수렴하고, 형제 mock-policy 모델이 무drift(신규 인터셉트 0)인 것. CI(E2E matrix 두 leg + ci.yaml) green이 객관 게이트. 【범위 밖(후속)】 없음(이 슬라이스가 모델 gap을 완전 종결) — 앱 코드 변경 불필요, contracts 무관. 선택적 후속(FX6·AR4 라이브 폴링 보강)은 이 모델의 전단사와 무관한 별건. 【승인/주의】 CI 구조를 바꾸고(E2E 잡을 matrix 2-leg로) PR당 e2e 실행 비용이 대략 2배(추가 kind 클러스터 1회)로 늘며(선결사항 ③), 직전 사용자 결정(면제 반려·path a 지정)을 구현하지만 실제 머지는 executor 검토 게이트에서 CI green + 비용을 확인 후 진행한다. 무효화된 draft PR #213(면제 표기)은 준비 단계에서 close한다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "[대상 레포 dlddu/kubernetes-dashboard] scripts/kind-cluster.sh — metrics-server 설치를 INSTALL_METRICS_SERVER(기본 true) 환경변수로 조건화한다. create_cluster()에서 install_metrics_server 호출을 `if [ \"$INSTALL_METRICS_SERVER\" = true ]`로 감싸고, false면 설치·metrics-data 대기 루프를 생략하고 'skipping metrics-server (OV7 fallback profile)' 로그를 남긴다. argo/fluxcd/external-secrets CRD 설치는 불변(fixtures 의존). 다른 서브커맨드·기존 default 동작 무변.",
+              "expectedOutcome": "`bash -n scripts/kind-cluster.sh` 통과. INSTALL_METRICS_SERVER 미지정/true면 기존과 동일(metrics-server 설치). false면 metrics-server 미설치·대기 생략. CRD 설치 경로 불변."
+            },
+            {
+              "seq": 2,
+              "action": "[대상 레포] .github/workflows/e2e.yaml — 단일 e2e-test 잡을 strategy.matrix(fail-fast:false; include: {profile:default, install_metrics:'true', pw_project:chromium, artifact_suffix:''} / {profile:no-metrics, install_metrics:'false', pw_project:no-metrics, artifact_suffix:'-no-metrics'})로 확장. 'Create kind cluster' 스텝에 env INSTALL_METRICS_SERVER=${{ matrix.install_metrics }}; 'Wait for metrics-server' 스텝은 if: matrix.profile == 'default'; Playwright 실행은 `npx playwright test --project=${{ matrix.pw_project }}`; 아티팩트 이름에 ${{ matrix.artifact_suffix }} 접미사(잡 간 충돌 방지). 'Apply fixtures and deploy' 스텝은 두 leg 공유(CRD 설치 유지되어 fixtures 적용 가능). 잡 name에 profile 표기.",
+              "expectedOutcome": "python yaml.safe_load 파싱 통과. 두 matrix leg가 독립 러너에서 병렬 실행 — default는 metrics 상주+chromium(52+eng+smoke, OV7 제외), no-metrics는 metrics 부재+no-metrics(OV7 spec 1개)."
+            },
+            {
+              "seq": 3,
+              "action": "[대상 레포] playwright.config.ts — projects를 2개로 분리한다: name:'chromium'(use: Desktop Chrome, testIgnore:'**/overview-metrics-fallback.spec.ts') + name:'no-metrics'(use: Desktop Chrome, testMatch:'**/overview-metrics-fallback.spec.ts'). testDir·timeout·workers·retries·reporter·use(baseURL 등) 상위 설정 불변. 이렇게 하면 파일은 최상위 e2e/*.spec.ts로 남아 전단사 카운트에 잡히되(파일 수=53), default leg가 OV7 spec을 metrics 상주 환경에서 실행하지 않는다.",
+              "expectedOutcome": "esbuild 구문 검사 통과. --project=chromium은 OV7 spec 제외 전 스펙(eng/smoke 포함), --project=no-metrics는 OV7 spec만 실행."
+            },
+            {
+              "seq": 4,
+              "action": "[대상 레포] e2e/overview-metrics-fallback.spec.ts 신설(최상위 파일 → AC↔스펙 전단사에 편입). OV7(AC7 metrics-server 부재 graceful) 전용: `/` 진입→networkidle→ overview-tab 가시 단정, 4개 요약 카드(getByRole('article') count 4) 가시, summary-cards-error count 0, avg CPU/avg memory 카드의 summary-card-value가 %형식·usage-bar aria-valuenow가 0–100 범위 숫자임을 단정(빈 화면/에러 없이 폴백 사용률 렌더 = AC7 기대결과). page.route/fulfill/abort 등 인터셉트 0(순수 실 네비게이션). 헤더 주석: 'Verifies: OV7 (docs/product/prd-overview.md) — sole dedicated spec; MUST run in the no-metrics Playwright project (metrics-server 부재 프로파일)'. 기존 overview-summary-cards(OV1)/namespace-scope(OV6) 스펙의 testid·셀렉터 관례 재사용.",
+              "expectedOutcome": "esbuild 구문 검사 통과. 인터셉트 지문 grep 값 83으로 불변(형제 mock-policy 무drift). 최상위 e2e/*.spec.ts 파일 수 52→53."
+            },
+            {
+              "seq": 5,
+              "action": "[대상 레포] docs/product/test-overview.md — 시나리오7(OV7) '자동화' 필드를 '⚠️ 공백'에서 '`e2e/overview-metrics-fallback.spec.ts` (OV7 전용 — metrics-server 부재 kind 프로파일/no-metrics 프로젝트에서 실행)'로 교체하고, 부재 재현 방식(별도 matrix leg)·백엔드 유닛 커버 병행을 한 줄 기재. '커버리지 요약'에서 OV7을 '자동화 공백'에서 '자동화 연결됨(전용 스펙 1:1)'로 이동.",
+              "expectedOutcome": "test-overview.md에서 OV7이 전용 스펙 정확히 1개를 가리키고 자동화 공백 목록에서 빠짐(기계적 AC↔파일 매핑 확인 가능)."
+            },
+            {
+              "seq": 6,
+              "action": "[대상 레포] docs/product/doc-tracker.md — 집계 뷰를 실제 상태와 일치시킨다: (a) 현재 상태 요약의 '자동화 공백 1(OV7)'·'연결 AC 52↔전용 스펙 52'를 '자동화 공백 0'·'연결 AC 53↔전용 스펙 53'로, (b) PRD↔테스트 인덱스 OV행의 '자동화 공백' 열 OV7→—, (c) '자동화 공백 — 1건(OV7 잔여)' 섹션을 '0건 — 전단사 완성'으로 갱신하고 OV7 항목을 해소로 표기, (d) '다음 단계 제안'의 OV7 항목 제거(53↔53 완성 반영), (e) 변경 이력에 이번 슬라이스(OV7 실환경 e2e·metrics 부재 matrix leg, 공백 1→0, 52↔52→53↔53) 행 추가.",
+              "expectedOutcome": "doc-tracker의 매칭 집계가 53↔53·공백0·건강함과 일치. OV7 잔여 언급이 모두 해소로 갱신됨."
+            },
+            {
+              "seq": 7,
+              "action": "[로컬 검증(blind 아님, 가능 범위)] arch(aarch64/arm64) 매칭 esbuild 바이너리로 신규 spec + playwright.config.ts 구문 검사(Playwright 런타임 픽스처/testid는 CI 몫), `bash -n scripts/kind-cluster.sh`, python `yaml.safe_load`로 .github/workflows/e2e.yaml 파싱, 인터셉트 지문 grep이 83으로 불변인지, 최상위 e2e/*.spec.ts가 53개인지 확인.",
+              "expectedOutcome": "esbuild 구문·bash -n·yaml 파싱 모두 통과, 인터셉트 지문=83, 최상위 스펙=53. (kind/CI 의미 검증은 대상 레포 CI가 최종 게이트)"
+            }
+          ],
+          "plannedAt": "2026-08-07T01:20:00Z"
         }
       }
     ]
