@@ -719,6 +719,57 @@
       "assessedAt": "2026-08-07T01:36:32Z"
     },
     "createdAt": "2026-08-07T01:36:32Z",
-    "updatedAt": "2026-08-07T01:45:00Z"
+    "updatedAt": "2026-08-07T01:50:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "platform-auth-safety의 e2e 공백 4건 중 배포 변형이 가장 단순·계약이 코드로 확정된 AC1(인증 게이트)·AC7(API 키 인증) 2건을, 인증을 켠 최소 배포 변형(auth-fixture)을 CI에 추가하고 전용 e2e 케이스로 승격해 닫는다. 접근 근거: 기존 kind 배포는 configMap이 MCP_AUTH_DISABLED=1이라 /mcp가 무방비 → 게이트 자체를 e2e로 관측할 수 없다. 그래서 같은 :ci 이미지로 인증을 켠(=MCP_AUTH_DISABLED 미설정 + MCP_API_KEYS 세팅) 독립 Deployment/Service를 별 네임스페이스(homelab-k3s-mcp-auth)에 띄운다. 이 변형은 자격증명 시크릿을 붙이지 않아도 뜬다 — main.go의 buildXService가 시크릿 부재 시 NewUnavailable로 graceful degrade하고 서버는 계속 기동하며, auth.FromEnv는 MCP_API_KEYS만으로 정상 Config를 반환(에러 없음)하기 때문. 게이트 계약은 internal/auth/auth.go에 확정돼 있어(무Authorization→401 body 'missing_token'; 잘못된 Bearer→401 'invalid_token'; 유효 키→통과) 단언이 추측이 아니다. AC1·AC7은 동일 fixture·동일 test 파일을 공유(부정 401 2건 + 유효키 인가 1건)해 자연스러운 최소 단위. 대안(AC2 디스커버리)은 OAuth/OIDC 발급자 mock 픽스처가 필요해 배제; AC8(구성 유연성)은 다중 인증 구성 전환 시연이 필요해 배제. 규칙 3상 파일 위치가 아니라 이름+docstring이 AC를 선언하므로 auth.py 신설 배치가 규약 위반이 아니다. 완료 기준(이 슬라이스 범위): platform-auth-safety/AC1·AC7 2건이 배포 서버(인증 켬) 전용 e2e 케이스를 가져 레지스트리에서 ✅ 전용 케이스로 승격(✅41·⬜10·🚫1 → ✅43·⬜8·🚫1). 범위 밖(후속, 재감지가 새 task로 열림): platform AC2(디스커버리 — OIDC 발급자 mock 픽스처 필요)·AC8(인증 방식 구성 유연성 — 다중 구성 전환 변형) + no-config graceful 거부 6건(대상 시크릿만 뺀 no-config 배포 변형 필요) + platform/AC4 🚫 e2e 예외의 모델 definition 비준(reconciler-tobe-modeler 소관).",
+          "riskLevel": "low",
+          "plannedAt": "2026-08-07T01:50:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "dlddu/homelab-k3s-mcp의 main에서 브랜치 reconcile/rct_20260807-0001 생성.",
+              "expectedOutcome": "main HEAD(91b8bc1) 기준 새 브랜치가 생성된다."
+            },
+            {
+              "seq": 2,
+              "action": "인증 켠 최소 배포 변형 매니페스트 신설: tests/k8s/kind/auth-fixture.yaml = Namespace(homelab-k3s-mcp-auth) + Deployment(homelab-k3s-mcp-auth) + Service(homelab-k3s-mcp-auth, port 80→http). Deployment는 image homelab-k3s-mcp:ci(imagePullPolicy IfNotPresent, kind 로드 이미지 재사용), env는 LISTEN_ADDR=0.0.0.0:3000 + MCP_API_KEYS=ci-e2e-key(리터럴) 만, MCP_AUTH_DISABLED은 미설정(=인증 활성), 자격증명 secretRef는 붙이지 않는다(서비스 graceful degrade). 파드 securityContext·probes(startup/liveness/readiness on /healthz·/readyz)·nodeSelector(arch arm64)는 k8s/deployment.yaml을 그대로 미러. 기존 k8s/ base·kind kustomization·기존 배포는 건드리지 않는다(무회귀).",
+              "expectedOutcome": "새 파일 1개만 추가되고 기존 매니페스트는 불변. 인증 켠 서버 인스턴스가 별 네임스페이스에 정의된다."
+            },
+            {
+              "seq": 3,
+              "action": "tests/integration/_helpers.py의 open_session에 선택적 headers 매개변수 추가(기본 None → 기존 호출 불변, streamablehttp_client(mcp_url, headers=headers)로 전달). 기존 smoke.py 등 호출부는 무영향(하위호환 additive).",
+              "expectedOutcome": "open_session이 Authorization 헤더를 실어 MCP 세션을 열 수 있게 되고, 기존 통합 테스트는 동작 불변."
+            },
+            {
+              "seq": 4,
+              "action": "tests/integration/auth.py 신설: 2개 per-AC 케이스 함수. test_platform_auth_safety_ac1_gate(url) docstring 'AC: platform-auth-safety/AC1' — httpx로 POST /mcp를 Authorization 없이 호출→401 & 응답 본문 'missing_token' 단언. test_platform_auth_safety_ac7_api_key(url) docstring 'AC: platform-auth-safety/AC7' — (a) 잘못된 Bearer로 POST /mcp→401 & 'invalid_token', (b) 유효 키(ci-e2e-key)를 Authorization: Bearer로 실어 open_session→list_tools()가 성공하고 기대 도구(ping 등) 포함 단언. run()에서 wait_for_healthz 후 두 케이스 실행. base_url은 argv[1](_helpers.base_url 재사용).",
+              "expectedOutcome": "auth.py가 인증 게이트(AC1)와 API 키 인가/거부(AC7)를 배포 서버 e2e로 단언한다. python3 -m py_compile 통과."
+            },
+            {
+              "seq": 5,
+              "action": ".github/workflows/ci.yml integration-tests 잡에 스텝 3개를 기존 패턴대로 추가: (apply 그룹) 'Apply auth-variant fixture' = kubectl apply -f tests/k8s/kind/auth-fixture.yaml (dear-baby fixture apply 뒤); (wait 그룹) 'Wait for auth-variant rollout' = kubectl -n homelab-k3s-mcp-auth rollout status deploy/homelab-k3s-mcp-auth --timeout=120s (dear-baby rollout wait 뒤); (validate 그룹) 'Validate auth gate against variant' = port-forward svc/homelab-k3s-mcp-auth -n homelab-k3s-mcp-auth 8087:80 후 python tests/integration/auth.py http://127.0.0.1:8087 (opensearch validate 뒤). 실패 진단 덤프에 homelab-k3s-mcp-auth 네임스페이스 get/describe/logs 블록 추가(additive).",
+              "expectedOutcome": "CI가 인증 켠 변형을 배포·롤아웃 대기·검증한다. 기존 스텝 순서·내용은 불변(추가만)."
+            },
+            {
+              "seq": 6,
+              "action": "docs/doc-tracker.md 갱신: 레지스트리 표의 platform-auth-safety/AC1·AC7 행을 ⬜ 보강 필요 → ✅ 전용 케이스 auth.py::test_platform_auth_safety_ac1_gate·::test_platform_auth_safety_ac7_api_key로 승격. 섹션 헤더 카운트 '✅ e2e 41 (통합 32·전용 케이스 9)·⬜ e2e 보강 10·🚫 e2e 예외 1' → '✅ e2e 43 (통합 32·전용 케이스 11)·⬜ e2e 보강 8·🚫 e2e 예외 1'. ⬜ backlog에서 platform AC1·AC2 및 AC7 항목 중 AC1·AC7 두 불릿 제거(AC2·AC8 잔존), 변경 이력에 2026-08-07 행 추가. prd/AC 집합(52) 불변 — 레지스트리 bookkeeping.",
+              "expectedOutcome": "레지스트리가 2건 ✅ 승격·집계 재산정(43/8/1=52)되어 tests 변화와 일치. doc-tracker blob 변경 → 머지 후 재감지 트리거(잔여 후속 task)."
+            },
+            {
+              "seq": 7,
+              "action": "docs/test-platform-auth-safety.md의 자동화 필드 갱신: 시나리오 1(인증 게이트)·시나리오 7(API 키 인증)의 자동화 항목에 신규 배포 서버 통합 e2e 케이스 경로(tests/integration/auth.py::test_platform_auth_safety_ac1_gate·::test_platform_auth_safety_ac7_api_key)를 기존 Go 단위 테스트 옆에 추가.",
+              "expectedOutcome": "테스트 문서 자동화 필드가 새 e2e 케이스를 지목한다(test-*.md는 to-be 해시 미포함이라 재감지 무트리거)."
+            },
+            {
+              "seq": 8,
+              "action": "브랜치 push 후 GitHub API로 draft PR 생성(머지하지 않음). PR 본문에 task id, gap 요약, 계획 단계, 검증 방법, blind-authoring(로컬 kind 불가·CI가 객관 게이트) 고지 기재.",
+              "expectedOutcome": "draft PR이 열리고 CI(integration-tests kind)가 트리거되어 인증 켠 변형에서 auth.py 케이스가 실행된다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
