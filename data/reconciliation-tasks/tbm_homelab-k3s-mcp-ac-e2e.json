@@ -915,7 +915,7 @@
   {
     "id": "rct_20260807-0002",
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "assessing",
+    "status": "action_required",
     "trigger": {
       "detectedAt": "2026-08-07T04:59:33Z",
       "changedSides": [
@@ -937,6 +937,12 @@
       "toBe": "관측 2026-08-07T04:56Z · `docs/` (`prd-*.md` + `doc-tracker.md`) = `3aa75255`.\n- `docs/prd-*.md` 15종의 `### ACn` 헤딩 합계 = **52** (직전과 동일 — AC 집합 자체는 무변경).\n- `doc-tracker.md` 레지스트리 헤더: \"AC 레지스트리 (52) — ✅ e2e 43 (통합 32 · 전용 케이스 11) · ⬜ e2e 보강 8 · 🚫 e2e 예외 1\" (직전 관측 ✅41·⬜10·🚫1에서 전진).\n- ⬜8 내역: `aws-config-get/AC3` · `github-app-installation-token/AC3` · `grafana-token/AC3` · `opensearch-document-delete/AC5` · `opensearch-document-put/AC5` · `opensearch-search/AC4` (모두 \"미설정 시 graceful 거부\") + `platform-auth-safety/AC2`(인증 디스커버리) · `AC8`(인증 방식 구성 유연성).\n- 🚫1: `platform-auth-safety/AC4`(하드닝된 런타임) — 정적 매니페스트 성격이라 e2e 예외로 **제안**된 상태.\n- 규약 섹션이 \"현재 미충족(후속 리팩터)\"로 통합 스크립트 7개 파일의 per-AC 케이스 분리가 남았음을 명시.",
       "gap": "**유의미한 차이 지속**. #35가 platform-auth-safety AC1(인증 게이트)·AC7(API 키 인증)을 인증 켠 배포 변형 위의 전용 per-AC 케이스로 승격해 ⬜10→⬜8로 수렴시켰으나, 정의의 규칙 1(AC→케이스 정확히 1개)·2(케이스→AC 정확히 1개)에 여전히 미달한다. 잔여 3축: **(a) ⬜8 — e2e 케이스 자체가 없는 AC**: 미설정 graceful 거부 6건(대상 시크릿만 뺀 no-config 배포 변형 필요) + platform AC2(OIDC 발급자 mock 픽스처 필요)·AC8(다중 인증 구성 전환 변형 필요). **(b) ✅43 중 32건이 \"통합\" 파일 수준 커버** — 한 스크립트가 여러 AC를 함께 실행하므로 규칙 1·2를 충족하지 못한다(레지스트리 스스로 \"현재 미충족(후속 리팩터)\"로 기재). **(c) `platform-auth-safety/AC4`의 🚫 e2e 예외가 모델 `definition`에 비준되지 않았다** — definition에 예외 목록이 없어 정식 제외가 아니고, 레지스트리에만 \"예외 개정 제안\"으로 남아 있다. #36(opensearch 타임아웃)은 `internal/`만 건드려 이 판정에 무관.",
       "summarizedAt": "2026-08-07T04:59:33Z"
+    },
+    "assessment": {
+      "actionRequired": true,
+      "reason": "post-reconcile 재트리거다 — 직전 task `rct_20260807-0001`의 실행 산출물 PR #35가 병합돼 `tests/`·`docs/`를 올렸고 그 task는 `succeeded`(terminal), 이 모델에 열린 handoff가 없다. 슬라이스는 계획대로 수렴했지만 (platform AC1·AC7 승격, ✅41·⬜10 → ✅43·⬜8) 그 계획이 명시적으로 범위 밖으로 남긴 잔여가 그대로 남아 있고, 정의상 미매칭 AC는 backlog가 아니라 **drift**다. 지금 대응이 필요한 이유: 잔여가 정적 구조 gap이라 시간이 지나 자동 해소될 성질이 아니고(진행 중 롤아웃·일시 alert 아님), 각 항목이 서로 다른 인프라 선행조건을 요구해 planner의 슬라이싱 판단이 필요하다 — (1) 미설정 graceful 거부 6건은 대상 시크릿만 뺀 no-config 배포 변형(platform AC8의 env-게이팅 다중 구성 메커니즘과 공유), (2) platform AC2는 OIDC 발급자 mock 픽스처, AC8은 다중 인증 구성 전환 변형, (3) 통합 파일 수준 커버 32건의 per-AC 케이스 분리 리팩터(kind CI 검증 필요), (4) `platform-auth-safety/AC4` e2e 예외의 모델 definition 비준(reconciler-tobe-modeler 소관). → `action_required`로 planner에 미점유 인계하고, baseline을 `f7328df5`/`3aa75255`로 전진시켜 precheck churn을 막는다.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-08-07T04:59:33Z"
     }
   }
 ]
