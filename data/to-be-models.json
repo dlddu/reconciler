@@ -535,5 +535,49 @@
     "checkPolicy": {
       "intervalSeconds": 3600
     }
+  },
+  {
+    "id": "tbm_feature-doc-ac-e2e",
+    "metadata": {
+      "name": "feature-doc AC ↔ E2E 1:1 정합성",
+      "description": "dlddu/feature-doc에서 docs/prd의 AC(ACn.m, 등록 시점 24개)와 e2e/tests/ 최상위 *.spec.ts(Playwright)를 완전 1:1(AC 1개 ↔ 파일 1개)로 유지한다. AC↔파일 매핑은 spec 헤더 주석의 `검증 AC:` 선언으로 확인하고, 자동화가 곤란한 AC는 docs/doc-tracker.md의 'e2e 매핑' 섹션 예외 목록으로 관리하며, 등재된 AC는 drift가 아니다.",
+      "tags": [
+        "feature-doc",
+        "ac",
+        "e2e",
+        "consistency",
+        "playwright"
+      ],
+      "createdAt": "2026-08-07T12:40:43Z"
+    },
+    "definition": "# feature-doc AC ↔ E2E 1:1 정합성\n\n## 목표\n`dlddu/feature-doc` 레포에서 **PRD의 Acceptance Criteria(`docs/prd`의 `ACn.m` 체계, 등록 시점 24개)** 와 **e2e 테스트(`e2e/tests/` 최상위 `*.spec.ts` Playwright spec)** 를 **완전 1:1(전단사)** 로 유지한다: 예외 목록에 등재되지 않은 모든 AC는 자신을 주검증하는 파일을 정확히 1개 가지며, 모든 매칭 단위 파일은 정확히 1개의 AC를 주검증한다. 따라서 (AC 수 − 예외 수) = (AC 매칭 파일 수).\n\n## 무엇이 \"맞는 상태\"인가 (SSOT)\n- **AC의 SSOT**는 `docs/prd`다 (등록 시점: `ACn.m` 24개 — AC1.1~1.5 · AC2.1~2.6 · AC3.1~3.5 · AC4.1~4.8).\n- **e2e 매칭 단위**는 `e2e/tests/` 최상위 `*.spec.ts`다. `e2e/smoke.sh`(HTTP 스모크), `e2e/playwright.config.ts`, `e2e/package.json`·`e2e/package-lock.json`은 매칭 단위가 아니다.\n- **AC ↔ 파일 매핑의 확인 지점**은 각 spec 파일 상단 헤더 주석의 `검증 AC: ACx.y` 선언이며, 매핑은 여기서 기계적으로 확인 가능해야 한다(파일당 정확히 1개의 AC 식별자).\n- **예외·비-AC 매핑 등재의 SSOT**는 `docs/doc-tracker.md`의 \"e2e 매핑\" 섹션이다.\n\n## 1:1 매칭 규칙 (판정 기준)\n1. **AC → 파일 유일**: 예외 목록에 없는 모든 AC는 자신을 주검증 대상으로 선언한 파일을 **정확히 1개** 가진다. 0개면 누락, 2개 이상이면 중복 — 둘 다 drift.\n2. **파일 → AC 유일**: 모든 매칭 단위 파일은 **정확히 1개**의 AC만 주검증 대상으로 선언한다. 여러 AC를 묶은 파일은 분리 대상(drift). 셋업 과정에서 다른 AC의 화면·경로를 경유하는 것은 검증으로 세지 않는다 — 선언된 검증 대상만 센다.\n3. **비-AC 파일 불허**: AC를 선언하지 않은 매칭 단위 파일은 모두 고아(drift)다. 스모크·인프라 확인은 매칭 단위 밖(`e2e/smoke.sh`)에서 수행한다.\n4. **AC 예외 목록**: e2e로 자동 검증이 곤란한 AC(예: 실제 GitHub App 설치·해제 라운드트립과 외부 OAuth, 실제 LLM 제공자 호출 로그 확인, 운영 로그의 평문 노출 점검, k8s 워커 강제 종료·수평 확장, 분석 작업 격리, 비용·관측 수치, LLM 산출물의 비결정적 품질)는 `docs/doc-tracker.md`의 \"e2e 매핑\" 섹션에 **AC별 사유와 대체 검증 수단**(수동 QA, 단위/통합 테스트, 스모크 스크립트 등)을 적어 등재한다. 등재된 AC는 파일이 없어도 drift가 아니다. 등재 없이 파일만 없는 AC는 drift.\n5. **참조 무결성**: 파일이 존재하지 않는 AC를 참조하거나, 예외 목록이 존재하지 않는 AC를 등재하고 있으면 drift.\n6. **집계 일치**: `docs/doc-tracker.md`의 \"e2e 매핑\" 집계(AC 수·파일 수·공백 목록)가 1~5의 실제 상태와 일치해야 한다.\n\n파일명을 AC 코드에 맞추는 규칙은 강제하지 않고 task 단계에서 정한다. 단, AC↔파일 매핑은 spec 헤더 주석의 `검증 AC:` 선언에서 기계적으로 확인 가능해야 한다.\n\n## 충돌 시 기본 방향\nAC(PRD)가 스펙(SSOT)이다.\n- AC에 전용 파일이 없으면 → 전용 파일을 신설한다(여러 AC를 겸하는 기존 파일은 AC별로 분할).\n- 한 AC에 파일이 여러 개면 → 전용 파일 1개로 병합한다.\n- AC 없는 고아 파일이 나타나면 → 의도된 동작이면 PRD에 AC를 신설해 문서화하고, 아니면 파일을 제거하거나 매칭 단위 밖으로 옮긴다.\n어느 쪽인지는 각 task에서 판단(planner)하며, 변경 시 spec 헤더 주석·`docs/doc-tracker.md`의 \"e2e 매핑\" 섹션을 함께 갱신한다.\n\n## 추적 방식 (요약)\n- **to-be** = github `dlddu/feature-doc` `docs/prd` 하위 트리 해시 + `docs/doc-tracker.md` blob 해시 조합(AC 집합 또는 예외/매핑 등재가 바뀌면 변함).\n- **as-is** = github `dlddu/feature-doc` `e2e` 하위 트리 해시(파일 추가·수정·삭제 시 변함).\n- 어느 한쪽 버전이 바뀌면 task가 생성되어 1:1 매칭을 재검증한다.\n\n## 초기 상태 메모 (등록 시점 2026-08-07T12:40:43Z)\nAC 24개 vs 매칭 단위 파일 **1개**(`e2e/tests/s01.spec.ts`)로 격차가 크다. 현재 s01.spec.ts는 S01 여정 전체(로그인 → GitHub App 연결 → 권한 범위 표시 → LLM 키 등록·마스킹 → 계속)를 한 파일에서 검증해 **AC4.1·AC4.2·AC4.3 계열을 묶고 있고**, `검증 AC:` 선언 주석이 없어 매핑이 기계적으로 확인되지 않는다. `docs/doc-tracker.md`에는 \"e2e 매핑\" 섹션이 아직 없다(예외 등재·집계 부재). 나머지 23개 AC는 공백이며, 이 중 상당수는 구현 자체가 미착수 상태다(tracker의 구현 수렴 로드맵 슬라이스 2b~7). 따라서 첫 task는 (1) 헤더 주석 `검증 AC:` 규약 도입과 `docs/doc-tracker.md`의 \"e2e 매핑\" 섹션 신설로 매핑 표·예외 목록을 확정 (2) s01.spec.ts의 묶음 분리(AC4.1/AC4.2/AC4.3 전용 파일) (3) 남은 AC를 예외 등재할지 공백 gap으로 유지할지 판단을 다루게 된다 — 큰 초기 격차는 예상된 것이다.\n\n## 범위 밖 / 비고\n- 단위·통합 테스트(`cargo test` 등)와 `e2e/smoke.sh`는 이 루프의 매칭 단위가 아니다(예외 목록의 \"대체 검증 수단\"으로 언급될 수는 있음).\n- AC 문구와 e2e 단언 내용의 의미적 일치(테스트가 AC를 \"제대로\" 검증하는가)는 task 단계의 판단 사항이며, 이 모델의 버전 추적은 변경 감지까지만 담당한다.\n- **문서 ↔ 구현 코드의 정합성은 별도 모델 `tbm_feature-doc-docs-impl`이 담당**한다(그 모델의 as-is 범위는 `backend/`+`frontend/`로 `e2e/`를 제외한다). 이 모델은 AC ↔ e2e 파일 매칭만 본다. 미구현 AC의 구현 여부는 docs-impl 루프가, 그 AC에 전용 e2e 파일이 있는지는 이 루프가 본다.\n- `docs/doc-tracker.md`는 e2e 매핑 외에 로드맵·변경 이력·연결 매트릭스도 담고 있어, \"e2e 매핑\"과 무관한 갱신도 to-be 버전을 바꿔 재검증을 트리거한다(무해하지만 노이즈). 노이즈가 크면 e2e 매핑 등재를 별도 파일로 분리하고 to-be의 blob 대상을 그 파일로 좁힐 수 있다.\n",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/feature-doc",
+        "ref": "main"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = AC 집합(docs/prd) + 예외/매핑 등재(docs/doc-tracker.md).\n# 이 둘 밖의 문서·코드 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/feature-doc)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\np=\"$(git rev-parse \"HEAD:docs/prd\")\"\nt=\"$(git rev-parse \"HEAD:docs/doc-tracker.md\")\"\nprintf 'ac:%s reg:%s\\n' \"$p\" \"$t\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/feature-doc",
+        "ref": "main",
+        "subPath": "e2e"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = e2e 테스트 구현. e2e/ 하위 트리 해시만 사용 → 그 밖 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/feature-doc)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:e2e\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "checkPolicy": {
+      "intervalSeconds": 3600
+    }
   }
 ]
