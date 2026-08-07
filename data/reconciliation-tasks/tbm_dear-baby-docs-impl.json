@@ -439,7 +439,7 @@
   {
     "id": "rct_20260805-0001",
     "toBeModelId": "tbm_dear-baby-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-05T11:08:13Z",
       "changedSides": [
@@ -508,10 +508,83 @@
           "reviewer": "user",
           "reviewedAt": "2026-08-06T23:40:00Z",
           "comment": "승인 — 프라이버시 노출 풀 3조건·마스킹 재확인과 CI green 확인 후 머지하는 조건으로 진행 승인."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-08-06T23:40:00Z",
+          "finishedAt": "2026-08-07T02:55:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-08-06T23:41:00Z",
+              "finishedAt": "2026-08-06T23:52:00Z",
+              "log": "PR #168 diff 검토 완료(+521/-0, 4파일). 노출 풀 쿼리가 r.visibility='public' AND rs.kind=? AND r.user_id!=? 세 조건을 모두 건다(community.go CommunityFeed). 응답 FeedItem에 원문 이메일·실명·전체 content 없음 — maskDisplayName(로컬파트 5자↑ 앞3+***+뒤1 / 4자↓ 앞1+***)과 rune-safe 50자 preview만. 라우트는 인증 그룹(pr) 아래 배선. SubjectKindForUser가 미존재 subject와 타 사용자 subject를 모두 ErrInvalidSubject로 합쳐 존재 여부 유출 차단. 기존 records 핸들러/스토어/마이그레이션 무변경(순수 add 3파일 + router 1줄). 범위 이탈·기존 동작 변경 없음."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-08-06T23:52:00Z",
+              "finishedAt": "2026-08-07T02:50:00Z",
+              "log": "최초 head d8422425에서 전 체크 green이었으나 main이 앞서 나가 브랜치 보호(up-to-date 요구)로 머지 거부(405 'Required status check CI Success is expected'). update-branch로 main 반영해 head 17ac262a로 갱신 후 CI 전체 재실행 → Backend Unit Tests success, Integration success, E2E Android success, E2E iOS success(약 80분), Build & Push Backend Image success, 집계 체크 CI Success success. 실패 체크 0건."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-08-07T02:50:00Z",
+              "finishedAt": "2026-08-07T02:52:00Z",
+              "log": "draft 해제(markPullRequestReadyForReview) 후 CI green 확인하고 squash 머지. merge commit e057920ab9779d570e783f352d019d5113f2eb93. main HEAD = e057920 'feat(backend): read-only community feed endpoint (PRD-009 slice 1) (#168)'."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-08-07T02:52:00Z",
+              "finishedAt": "2026-08-07T03:05:00Z",
+              "log": "머지된 main을 클론해 검증. router.go:149에 pr.Get(\"/community/feed\") 존재, records/{community.go,community_handlers.go,community_test.go} 존재. go1.24.7로 go test ./internal/records/ -run 'Community|MaskDisplayName' -v 7종 전부 PASS, go test ./... 전 패키지 ok. 상세는 verification.checks 참조."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "app:1b8acc99f1782f20b67f4509637d45f74daccf8a backend:8f13933e31f6775b64968fe280199763eaf56ac1 worker:613d4709f465471e4cefbae8c576af2a3a63856b",
+          "verifiedAt": "2026-08-07T03:06:00Z",
+          "checks": [
+            {
+              "name": "엔드포인트 main 반영 (ENG-007~010 계약 배선)",
+              "status": "passed",
+              "detail": "main e057920의 backend/internal/app/router.go:149에 pr.Get(\"/community/feed\", recordsHandlers.CommunityFeed) 존재. 인증 그룹 하위. as-is backend 서브트리가 a674e6a7 → 8f13933e로 전진(app/worker는 무변경)."
+            },
+            {
+              "name": "커뮤니티 피드 유닛 테스트 (TEST-009-01·02·10 부분)",
+              "status": "passed",
+              "detail": "main에서 go test ./internal/records/ -run 'Community|MaskDisplayName' -v (go1.24.7): TestMaskDisplayName, TestCommunityFeed_ExposurePool, _Pagination, _RequiresSubjectID, _ForeignSubject_400, _Unauthorized, _EmptyPool 7종 전부 PASS."
+            },
+            {
+              "name": "기존 동작 무회귀 (backend 전체 스위트)",
+              "status": "passed",
+              "detail": "main에서 go test ./... 전 패키지 ok (auth, db, onboarding, records, storage, tasks, users). 기존 records 스위트 포함 회귀 없음."
+            },
+            {
+              "name": "노출 풀 3조건 + 작성자명 마스킹 (AC-009-01·10, ENG-008·010)",
+              "status": "passed",
+              "detail": "쿼리가 visibility='public' AND rs.kind=viewerKind AND user_id!=viewer를 모두 적용, ExposurePool 테스트가 비공개·본인·타 kind 기록 제외를 검증. maskDisplayName이 AC-009-10 규칙(5자↑ 앞3+***+뒤1, 4자↓ 앞1+***, 빈 로컬파트 ***)대로 동작. 배포 후 인증 토큰 스모크(200/400/401 경로)는 실행 환경이 필요해 이번 검증에선 미실시 — 동일 경로를 핸들러 유닛 테스트가 커버한다."
+            },
+            {
+              "name": "PR CI 게이트 (머지 전 전체 green)",
+              "status": "passed",
+              "detail": "head 17ac262a에서 CI Success·Backend Unit Tests·Integration·E2E Android·E2E iOS·Build & Push Backend Image 모두 success, 실패 0건. 브랜치를 main으로 up-to-date 갱신한 뒤 재실행한 결과."
+            },
+            {
+              "name": "[정보성] 계획 범위 밖 잔여 gap",
+              "status": "passed",
+              "detail": "이 task의 완료 기준은 read 슬라이스 1건이며 그 범위는 수렴했다. 모델 전체로는 PRD-009 잔여(ENG-011 유사시기 가중/AC-009-03, 좋아요·댓글 카운트·뮤테이션/AC-009-08·09, 신고/AC-009-11, 같은 질문 상호성 게이트/AC-009-05, ENG-012 소프트삭제 write 배선, 컨텐츠 타입 필터/AC-009-06, 앱 UI 전체/AC-009-02·13·14)와 기존 standing gap(PRD-003·004·005 계열)이 남아 있다. converged 판정에는 넣지 않으며 다음 감지 주기가 후속 task로 잇는다."
+            }
+          ]
         }
       }
     ],
-    "updatedAt": "2026-08-06T23:40:00Z"
+    "updatedAt": "2026-08-07T03:06:54Z"
   },
   {
     "id": "rct_20260807-0001",
