@@ -94,7 +94,7 @@
   .iconbtn:hover { border-color: var(--accent); color: var(--accent); }
   .gh { font-size: 12px; }
 
-  /* ---- view mode switch (실행 대기 / 실행 중 / 활성 전체 / 숨김) ---- */
+  /* ---- view mode switch (계획 중 / 실행 대기 / 실행 중 / 활성 전체 / 숨김) ---- */
   .modes {
     display: inline-flex; align-items: center; gap: 2px;
     background: var(--panel-2); border: 1px solid var(--border-strong);
@@ -141,12 +141,15 @@
   .model-item .mi-meta { margin-top: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
   .taskcount { font-size: 11px; color: var(--muted); }
+  .planpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #f3e8ff; color: #7e22ce; }
   .pendpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #e0f2fe; color: #0369a1; }
   .runpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #e0e7ff; color: #4338ca; }
   .hidepill { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: var(--code-bg); color: var(--muted); }
+  :root[data-theme="dark"] .planpill { background: #331a4d; color: #d8b4fe; }
   :root[data-theme="dark"] .pendpill { background: #0c2f45; color: #7dd3fc; }
   :root[data-theme="dark"] .runpill { background: #221f4d; color: #a5b4fc; }
   @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .planpill { background: #331a4d; color: #d8b4fe; }
     :root:not([data-theme="light"]) .pendpill { background: #0c2f45; color: #7dd3fc; }
     :root:not([data-theme="light"]) .runpill { background: #221f4d; color: #a5b4fc; }
   }
@@ -345,15 +348,22 @@
 
   // 사이드바 보기 모드. state.models 는 숨김 모델까지 포함한 전체 목록이고,
   // 실제로 목록에 노출되는 집합은 여기서 정한다. 기본값은 "pending"(실행 대기).
+  //
+  // 워크플로 순서대로: 계획 중 → 실행 대기 → 실행 중.
+  // 계획 중·실행 중은 워커가 그 단계를 붙잡고 있는 점유(lock) 상태이고,
+  // 그 사이의 실행 대기(planned)는 executor에게 넘어가기를 기다리는 미점유 인수인계 지점이다.
+  // 종료 상태(succeeded/failed/cancelled/no_action_needed)와 계획 대기(action_required)는
+  // 세 집합 어디에도 들어가지 않는다.
+  var PLANNING_STATUSES = ["assessing", "planning"];
   var PENDING_STATUS = "planned";   // STATUS_META 기준 "실행 대기"
-  // 워커가 붙잡고 처리 중인(= 점유 lock) 상태들. 인수인계 지점인 planned/action_required와
-  // 종료 상태(succeeded/failed/cancelled/no_action_needed)는 여기 들어가지 않는다.
-  var RUNNING_STATUSES = ["assessing", "planning", "awaiting_review", "executing", "verifying"];
+  var RUNNING_STATUSES = ["awaiting_review", "executing", "verifying"];
   var MODES = [
-    { id: "pending", label: "실행 대기", head: "실행 대기 모델", hint: "실행 대기(planned) 작업이 있는 모델만",
+    { id: "planning", label: "계획 중",  head: "계획 중 모델",   hint: "계획 중(" + PLANNING_STATUSES.join("/") + ") 작업이 있는 모델만",
+      empty: "계획 중인 작업이 없습니다." },
+    { id: "pending", label: "실행 대기", head: "실행 대기 모델", hint: "실행 대기(" + PENDING_STATUS + ") 작업이 있는 모델만",
       empty: "실행 대기 중인 작업이 없습니다." },
-    { id: "running", label: "실행 중",   head: "실행 중 모델",   hint: "진행 중(" + RUNNING_STATUSES.join("/") + ") 작업이 있는 모델만",
-      empty: "진행 중인 작업이 없습니다." },
+    { id: "running", label: "실행 중",   head: "실행 중 모델",   hint: "실행 중(" + RUNNING_STATUSES.join("/") + ") 작업이 있는 모델만",
+      empty: "실행 중인 작업이 없습니다." },
     { id: "active",  label: "활성 전체", head: "ToBeModels",     hint: "감지가 활성인 모델 전체",
       empty: "감지 활성 모델이 없습니다." },
     { id: "hidden",  label: "숨김",      head: "숨김 모델",       hint: "감지 비활성(숨김) 모델만",
@@ -708,25 +718,29 @@
     return MODES[0];
   }
 
-  // 실행 대기 = 아직 executor가 집어가지 않은 planned 상태의 작업 수.
-  function pendingTaskCount(modelId) {
+  function countTasksIn(modelId, statuses) {
     return (state.tasksByModel[modelId] || []).filter(function (t) {
-      return t && t.status === PENDING_STATUS;
+      return t && statuses.indexOf(t.status) !== -1;
     }).length;
   }
 
-  // 실행 중 = 어떤 워커가 그 단계를 붙잡고 처리 중인 작업 수(RUNNING_STATUSES).
-  function runningTaskCount(modelId) {
-    return (state.tasksByModel[modelId] || []).filter(function (t) {
-      return t && RUNNING_STATUSES.indexOf(t.status) !== -1;
-    }).length;
-  }
+  // 계획 중 = detector/planner가 붙잡고 있는 작업 수.
+  function planningTaskCount(modelId) { return countTasksIn(modelId, PLANNING_STATUSES); }
+
+  // 실행 대기 = 아직 executor가 집어가지 않은 planned 상태의 작업 수.
+  function pendingTaskCount(modelId) { return countTasksIn(modelId, [PENDING_STATUS]); }
+
+  // 실행 중 = executor가 붙잡고 있는 작업 수(검토 대기·실행·검증).
+  function runningTaskCount(modelId) { return countTasksIn(modelId, RUNNING_STATUSES); }
 
   function modelsInMode(mode) {
     if (mode === "hidden") {
       return state.models.filter(function (m) { return !isModelEnabled(m); });
     }
     var active = state.models.filter(isModelEnabled);
+    if (mode === "planning") {
+      return active.filter(function (m) { return planningTaskCount(m.id) > 0; });
+    }
     if (mode === "pending") {
       return active.filter(function (m) { return pendingTaskCount(m.id) > 0; });
     }
@@ -802,16 +816,18 @@
       var meta = STATUS_META[lt && lt.status] || null;
       var dot = meta ? '<span class="dot" style="background:' + meta.color + '" title="' + escapeHtml(lt.status) + '"></span>' : '<span class="dot" style="background:var(--border-strong)" title="표시할 상태 없음"></span>';
       var count = (state.tasksByModel[m.id] || []).length;
+      var planning = planningTaskCount(m.id);
+      var planpill = planning ? '<span class="planpill" title="계획 중(' + PLANNING_STATUSES.join("/") + ')">계획 중 ' + planning + "</span>" : "";
       var pending = pendingTaskCount(m.id);
-      var pill = pending ? '<span class="pendpill" title="실행 대기(planned)">실행 대기 ' + pending + "</span>" : "";
+      var pill = pending ? '<span class="pendpill" title="실행 대기(' + PENDING_STATUS + ')">실행 대기 ' + pending + "</span>" : "";
       var running = runningTaskCount(m.id);
-      var runpill = running ? '<span class="runpill" title="진행 중(' + RUNNING_STATUSES.join("/") + ')">실행 중 ' + running + "</span>" : "";
+      var runpill = running ? '<span class="runpill" title="실행 중(' + RUNNING_STATUSES.join("/") + ')">실행 중 ' + running + "</span>" : "";
       var hide = isModelEnabled(m) ? "" : '<span class="hidepill" title="감지 비활성">숨김</span>';
       var tags = ((m.metadata && m.metadata.tags) || []).slice(0, 3).map(function (t) { return '<span class="tag">' + escapeHtml(t) + "</span>"; }).join(" ");
       return '<button class="model-item' + (m.id === state.selected ? " active" : "") + '" data-id="' + escapeHtml(m.id) + '">' +
         '<div class="mi-name">' + dot + "<span>" + escapeHtml((m.metadata && m.metadata.name) || m.id) + "</span></div>" +
         '<div class="mi-id">' + escapeHtml(m.id) + "</div>" +
-        '<div class="mi-meta">' + pill + runpill + hide + '<span class="taskcount">작업 ' + count + "</span> " + tags + "</div>" +
+        '<div class="mi-meta">' + planpill + pill + runpill + hide + '<span class="taskcount">작업 ' + count + "</span> " + tags + "</div>" +
         "</button>";
     }).join("");
 
@@ -964,7 +980,9 @@
       }
 
       var totalTasks = Object.keys(state.tasksByModel).reduce(function (n, k) { return n + state.tasksByModel[k].length; }, 0);
-      setStatus("실행 대기 " + modelsInMode("pending").length + "개 · 실행 중 " + modelsInMode("running").length +
+      setStatus("계획 중 " + modelsInMode("planning").length +
+        "개 · 실행 대기 " + modelsInMode("pending").length +
+        "개 · 실행 중 " + modelsInMode("running").length +
         "개 · 활성 " + modelsInMode("active").length +
         "개 · 숨김 " + modelsInMode("hidden").length + "개 · 작업 " + totalTasks + "건 · " +
         new Date().toLocaleTimeString() + " 로드됨");

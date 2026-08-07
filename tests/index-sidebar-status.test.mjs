@@ -52,8 +52,11 @@ function renderSidebar(tasks) {
     list,
     modeMeta: () => ({ head: "ToBeModels", empty: "없습니다." }),
     pendingTaskCount: () => 0,
+    planningTaskCount: () => 0,
     runningTaskCount: () => 0,
-    RUNNING_STATUSES: ["assessing", "planning", "awaiting_review", "executing", "verifying"],
+    PENDING_STATUS: "planned",
+    PLANNING_STATUSES: ["assessing", "planning"],
+    RUNNING_STATUSES: ["awaiting_review", "executing", "verifying"],
     result: undefined,
     select() {},
     state: {
