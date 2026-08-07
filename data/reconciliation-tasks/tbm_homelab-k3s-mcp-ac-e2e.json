@@ -1318,7 +1318,7 @@
     },
     "createdAt": "2026-08-07T23:34:48Z",
     "id": "rct_20260807-0004",
-    "updatedAt": "2026-08-07T23:41:52Z",
+    "updatedAt": "2026-08-07T23:48:46Z",
     "stateSummary": {
       "asIs": "**as-is = `tests/` 트리** (dlddu/homelab-k3s-mcp@main `b879b4e`, 2026-08-07T23:34Z 관측, 해시 `27a73b8a`)\n\n- 트리거 delta는 **정확히 커밋 1개** — #38 `b879b4e` \"test(e2e): split 8 integration-level AC covers into per-AC cases (rct_20260807-0003)\". `git rev-parse 823842a:tests` == 직전 baseline `48e68d32`로 확인했으므로 그 사이 다른 커밋은 없다. 이 커밋은 이 모델의 직전 task `rct_20260807-0003`(23:32Z `succeeded`, `converged:true`)의 reconcile 산출물이다.\n- #38 내역(9파일 +423/-91): `tests/integration/{github_app,grafana,no_config,smoke}.py` 4종 + `docs/{doc-tracker,test-github-app-installation-token,test-grafana-token,test-ping,test-platform-auth-safety}.md` 5종. **A/D/R 없이 M×9** — 신규 픽스처·신규 CI 스텝 없이 기존 스텝 안에서 평면 `run()` 본문을 케이스 함수로 재구성했다.\n- **per-AC 전용 케이스 실측 = 25개** (AST로 `tests/integration/*.py`의 `test_*` 함수를 전부 파싱; `async def` + 여러 줄 시그니처라 단순 `^def test_` grep은 25건 중 1건만 잡는다 — 계수 주의): `auth.py` 2 · `github_app.py` 3 · `grafana.py` 3 · `no_config.py` 7 · `dear_baby.py` 1 · `opensearch.py` 2 · `smoke.py` 2 · `workload.py` 5. **25건 전부 docstring에 `AC: <domain>/ACn`을 정확히 하나** 선언한다(0건 미선언, 0건 복수 선언).\n- **평면 스크립트로 남은 4파일**(레지스트리의 `✅ 통합` 24건 근거): `workload.py::run()` L217-470(253줄, 11 AC) · `opensearch.py::run()` L97-218(121줄, 9 AC) · `dear_baby.py::run()` L26-98(2 AC) · `aws_config.py::run()` L21-50(2 AC). 이 파일들에는 per-AC `test_*` 함수가 각각 5·2·1·0개뿐이고 나머지 AC는 `run()` 본문이 한꺼번에 실행한다.",
       "toBe": "**to-be = `docs/prd-*.md` + `docs/doc-tracker.md`** (`c2056b10`, 직전 `1ccdfcaf`). AC 총계는 **52개로 불변** — prd 문서는 #38에서 손대지 않았고(변경된 docs 5종은 전부 `doc-tracker.md` + `test-*.md`), 15개 prd 파일의 `### ACn` 헤딩을 직접 세어 **52**를 재확인했다.\n\n- `docs/doc-tracker.md` §\"AC ↔ e2e 1:1 정합성(reconciler 렌즈)\" 레지스트리 헤더가 갱신됐다: **✅ e2e 49 (통합 24 · 전용 케이스 25) · ⬜ e2e 보강 2 · 🚫 e2e 예외 1** (직전 ✅49(통합 32·전용 17)·⬜2·🚫1). ✅ 합계 49는 불변이고 통합→전용으로 정확히 8건이 이동했다.\n- 규칙 절(L112-117)도 함께 갱신: \"현재 미충족(후속 리팩터, **잔여 24**)\" = `aws_config.py`(2)·`dear_baby.py`(2)·`opensearch.py`(9)·`workload.py`(11), 그리고 `smoke.py`·`github_app.py`·`grafana.py`·`no_config.py`·`auth.py`는 \"분리를 마쳐 `run()`이 per-AC 케이스 디스패처\"라고 명시한다.\n- 변경 이력에 2026-08-07 행 추가(✅49 통합32·전용17 → 통합24·전용25). 이력은 이번 슬라이스가 **빈 단정 3건을 실제 단언으로 보강**했다고 기록한다: ping/AC1은 `smoke.py`가 `ping`을 호출조차 하지 않았고, github/AC4(개인키 비노출)는 단언이 전무했으며, grafana/AC1은 `# token expires` 주석의 존재만 봤다(→ RFC3339 파싱 후 TTL 50~70분 단언). platform/AC5는 AC 전제(자격증명 미설정)가 성립하는 유일한 배포인 `no_config.py`(port 8088)로 이관.\n- ⬜ backlog 절은 2건 그대로: `platform-auth-safety/AC2`(인증 디스커버리 — OIDC 발급자 mock 픽스처 필요) · `AC8`(인증 방식 구성 유연성 — env-게이팅 다중 구성 배포 변형 필요).\n- 🚫 절도 1건 그대로: `platform-auth-safety/AC4`(하드닝된 런타임). 레지스트리 자신이 \"definition이 `task에서 제안한다`고 명시하므로 모델 정의에 일방 적용하지 않고 **ratify 후** 반영한다\"고 미비준 상태임을 기록한다.",
@@ -1330,6 +1330,57 @@
       "reason": "post-reconcile 재트리거이고, 잔여 gap이 크고, **소유자가 없고, 독립적으로 수행 가능**하다 — 네 조건이 모두 성립해 planner로 넘긴다.\n\n**소유권**: 이 모델의 task 6개가 전부 terminal(`succeeded`)이고 직전 `rct_20260807-0003`도 23:32Z에 닫혔다. 열린 `action_required`/`planning`/`planned` handoff가 0건이므로 새 task가 경쟁 handoff가 되지 않는다(22:00Z·22:30Z fire에서 세운 \"잔여의 유일한 종결 경로가 다른 열린 task에 있으면 no_action_needed\" 규칙의 반대 상황).\n\n**잔여의 크기**: 52개 AC 중 **26개가 규칙 1·2 미달** — (a) `✅ 통합` 24건이 파일 수준 커버(`workload.py` 11 · `opensearch.py` 9 · `dear_baby.py` 2 · `aws_config.py` 2), (b) ⬜ 2건(platform AC2 디스커버리 · AC8 구성 유연성)은 전용 케이스가 아예 없음. 여기에 (c) platform/AC4 🚫 예외의 definition 미비준이 더해진다. 이번 슬라이스가 32→24로 8건을 옮겼지만 (a)는 여전히 수적으로 가장 큰 축이다.\n\n**수행 가능성**(이번 판정의 핵심 — 큰 gap만으로는 action_required가 되지 않으므로 명시적으로 확인): (a)는 **이미 5개 슬라이스가 같은 종류의 작업을 성공적으로 수행한 전례**가 있고(#32 파괴적 표기 5 · #33/#34 pod-describe 3 · #35 인증 게이트 2 · #37 no-config 6 · #38 통합분리 8), 레지스트리 자신이 다음 단위를 \"잔여 통합 24건(aws_config.py 2 · dear_baby.py 2 · opensearch.py 9 · workload.py 11)은 후속 슬라이스\"로 미리 지목한다. 신규 AC 저작이나 미구현 기능 대기가 아니라 **이미 도는 CI 스텝 안의 평면 `run()`을 케이스 함수로 재구성하는 리팩터**라 선행 조건이 없다. (b)는 선행 픽스처(OIDC 발급자 mock · 다중 구성 배포 변형) 저작이 필요하지만 이 역시 #35가 `auth-fixture.yaml`로 이미 해본 종류의 작업이다.\n\n**슬라이싱은 planner 몫**으로 남긴다. 참고로 직전 계획이 (a) 24건을 이번 범위에서 뺀 이유는 \"이 박스에서 로컬 재현 불가\"였다(kind·MinIO·OpenSearch 필요) — 로컬 검증이 불가능할 뿐 CI의 kind 통합 잡은 이들을 실제로 실행하므로 검증 수단이 없는 것은 아니다. 규모가 작고 의존이 가벼운 `aws_config.py`(2) · `dear_baby.py`(2)가 자연스러운 다음 단위 후보이고, `workload.py`(11)·`opensearch.py`(9)는 분할이 필요할 수 있다.\n\n**축 (c)는 이 task 범위 밖**임을 명시한다 — `to-be-models.json`의 `definition` 개정이라 소유 스킬이 reconciler-tobe-modeler이고 정의 자신이 \"task에서 **제안**한다\"고 못박아 사용자 ratify가 전제다. planner는 제안까지만 할 수 있다.\n\n정적 구조 gap이라 시간이 지나 자동 해소될 여지가 없다(재확인 유예 부적합).",
       "assessedBy": "agent",
       "assessedAt": "2026-08-07T23:34:48Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "잔여 3축 중 (a) `✅ 통합` 24건에서 **`workload.py`가 소유한 11건 전부**를 per-AC 전용 케이스로 분리한다(namespace-list/AC1 · workload-list/AC1·AC2 · workload-logs/AC1·AC2·AC3·AC4 · workload-restart/AC1 · workload-scale/AC1·AC2 · platform-auth-safety/AC3). 이 파일을 고른 이유: (1) 잔여 24건 중 **단일 파일이 소유한 최대 덩어리**(11건 = 46%)이고, (2) 이미 도는 CI 스텝(port 8081, `workload.py`) 안의 평면 `run()`을 케이스 디스패처로 재구성하는 것이라 **신규 CI 스텝·신규 네임스페이스·신규 롤아웃 대기가 0**이며(직전 슬라이스 #38과 동일한 검증된 패턴), (3) 11건이 **6개 PRD에 걸쳐** 있어 AC 본문을 하나씩 읽게 되고 — #38이 그랬듯 — 파일 수준 `✅ 통합`이 숨기고 있던 빈/반쪽 단정이 드러난다. 실제로 사전 대조에서 6건을 확인했다: platform/AC3(RBAC 경계)은 `workload.py`에 **단언이 0개**, workload-list/AC1은 AC가 요구하는 \"각 enum 종류\"를 Deployment 하나만 보고 \"레플리카 요약\"을 아예 안 보며, namespace-list/AC1은 AC 문언의 **생성 시각**을 빼먹고, workload-logs/AC1은 로그를 내지 않는 `pause` 픽스처에서 `logs == \"\"`만 봐 \"최근 로그가 반환된다\"를 관측하지 못하고, workload-scale/AC1은 AC가 명시한 **replicas=0**을 한 번도 시도하지 않으며, workload-restart/AC1은 \"delete가 아닌 patch\"를 단언하지 않는다. 대안으로 `opensearch.py`(9)·`aws_config.py`(2)·`dear_baby.py`(2)를 저울질했으나, opensearch는 put→search→delete가 한 파이프라인이라 분리에 공유 상태 재설계가 필요하고 AC4/AC3(AssumeRole·SigV4)은 보안 플러그인 off 픽스처에서 독립 관측이 어렵다 — 같은 11건이면 재설계 위험이 없는 쪽을 먼저 소화한다. 가역성: 변경 표면이 `tests/`뿐이라 revert 한 번이면 원복되고, 런타임 이미지는 `COPY --from=builder <바이너리>` 하나뿐이라 프로덕션 내용이 바뀌지 않는다.\n\n**이 시도의 완료 기준(범위)**: `workload.py`의 통합 커버 11건이 per-AC 전용 케이스로 분리돼 `doc-tracker.md` 레지스트리가 **✅ 49(통합 13 · 전용 36) · ⬜ 2 · 🚫 1**이 되고, 분리 과정에서 드러난 빈/반쪽 단정이 **새 CI 스텝·새 롤아웃 대기 없이 가능한 범위에서** 실단정으로 보강되며, 대상 레포 CI 4잡이 green이다.\n\n**범위 밖(후속 재감지가 새 task로 잇는다)**: 잔여 통합 13건(`opensearch.py` 9 · `aws_config.py` 2 · `dear_baby.py` 2), ⬜ 2건(platform/AC2 디스커버리 · AC8 구성 유연성 — OIDC 발급자 mock·다중 구성 배포 변형 필요), 🚫 platform/AC4의 모델 `definition` 예외 비준(소유 스킬이 reconciler-tobe-modeler이고 사용자 ratify 전제), 그리고 workload-logs/AC4의 \"멀티컨테이너 파드에서 container 미지정 시 거부\" 반쪽(러닝 멀티컨테이너 픽스처 + 롤아웃 대기 = 새 CI 스텝이 필요 → docstring에 '단언하지 않는 것'으로 명시하고 레지스트리 backlog에 남긴다).",
+          "riskLevel": "low",
+          "plannedAt": "2026-08-07T23:48:46Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "11개 AC의 PRD 본문(`docs/prd-{namespace-list,workload-list,workload-logs,workload-restart,workload-scale,platform-auth-safety}.md`)과 현재 `tests/integration/workload.py::run()` 본문을 1:1 대조해, 각 AC별로 (a) 이미 실단정이 있는 부분, (b) 비어 있거나 반쪽인 부분을 표로 확정한다.",
+              "expectedOutcome": "11건 각각에 대해 '그대로 이관' / '보강 필요(무엇을)' / '보강 불가(왜, 후속)'가 정해진다. 사전 대조 기준 보강 대상 6건: platform/AC3(단언 0) · workload-list/AC1(enum 1종·레플리카 요약 미단언) · namespace-list/AC1(생성 시각 누락) · workload-logs/AC1(로그 내용 미관측) · workload-scale/AC1(replicas=0 미시도) · workload-restart/AC1(patch-not-delete 미단언)."
+            },
+            {
+              "seq": 2,
+              "action": "`tests/k8s/kind/test-deployment.yaml`에 `workload-test` 네임스페이스의 StatefulSet 1개(`workload-fixture-sts`)와 DaemonSet 1개(`workload-fixture-ds`)를 추가한다(둘 다 `registry.k8s.io/pause:3.9`, 최소 resources). 러닝 파드가 필요 없는 목록 조회 대상이므로 **롤아웃 대기 스텝을 추가하지 않는다**.",
+              "expectedOutcome": "workload-list/AC1의 '각 enum 종류에 대해'가 Deployment/StatefulSet/DaemonSet 셋 다 실측 가능해지고, workload-scale/AC2의 DaemonSet 거부를 **실재하는 DaemonSet** 대상으로 단정할 수 있게 된다(거부가 '부재' 때문이 아니라 '종류' 때문임이 드러난다). `ci.yml` 무변경."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/integration/workload.py`의 평면 `run()`을 per-AC 케이스 함수 11개로 분리한다. 이름·docstring 규약은 레지스트리 규칙 3과 기존 케이스(#38)를 그대로 따른다 — `async def test_<domain>_ac<n>_<slug>(...)` + docstring 첫 줄 `AC: <domain>/ACn`. 기존 단정은 문장 단위로 그대로 옮기고, `run()`은 상태 의존 순서(재시작 → 스케일 → 로그 → 스냅샷)를 주석으로 명시한 디스패처만 남긴다.",
+              "expectedOutcome": "`tests/integration/workload.py`에 `test_*` 함수가 총 16개(기존 5 + 신규 11) 존재하고 각각 docstring에 AC를 정확히 하나 선언한다. 기존 5개 케이스(pod-describe 3 · destructive hint 2)는 무수정."
+            },
+            {
+              "seq": 4,
+              "action": "분리하며 드러난 빈/반쪽 단정을 보강한다. (a) `test_platform_auth_safety_ac3_rbac_boundary`: `kubectl auth can-i --as=system:serviceaccount:homelab-k3s-mcp:homelab-k3s-mcp --as-group=system:serviceaccounts --as-group=system:serviceaccounts:homelab-k3s-mcp --as-group=system:authenticated <verb> <resource>`로 apiserver SubjectAccessReview에 직접 물어 허용 동사(workloads get/list/watch/patch · pods get/list · pods/log get · pods/exec get·create · namespaces·events get/list)는 yes, 금지 동사(deployments delete·create, pods delete, secrets get/list)는 no임을 단정한다. (b) namespace-list/AC1에 `creation_timestamp` 단정 추가. (c) workload-list/AC1에 kind별 레플리카 요약 키(`replicas`/`ready_replicas`/`updated_replicas`/`available_replicas`, sts의 `current_replicas`, ds의 `desired_number_scheduled` 등) 단정 + 3 enum 전부 호출. (d) workload-list/AC2에 스코프 호출 결과의 **모든** 항목이 해당 ns임을 단정(음성 방향). (e) workload-logs/AC1을 실제 로그를 내는 `crashloop-fixture`(현 인스턴스 `crashloop-fixture: recovered`) 대상으로 옮겨 로그 **내용**을 단정. (f) workload-logs/AC4에 `timestamps=True` 출력이 RFC3339로 시작함을 단정(에코 필드 확인에 그치지 않음) + 멀티컨테이너 거부 반쪽은 docstring에 미단언으로 명시. (g) workload-scale/AC1에 replicas=0 → 0 반영 확인 → 1 복귀 경로 추가. (h) workload-restart/AC1에 재시작 전후 Deployment `metadata.uid` 불변을 단정해 'delete가 아닌 patch'를 관측.",
+              "expectedOutcome": "보강된 6개 AC가 AC 본문이 명시한 검증 방법을 실제로 관측한다. 각 케이스가 후속 케이스의 전제(파드 1개 Running)를 깨지 않도록 스케일은 반드시 1로 복귀 + `rollout status` 대기."
+            },
+            {
+              "seq": 5,
+              "action": "로컬 검증: (1) `python3 -m py_compile`; (2) venv + `pip install -r tests/integration/requirements.txt`(pip 부트스트랩)로 **실제 `mcp`/`httpx` 의존을 깐 뒤 모듈 import** — 모듈 수준 이름/시그니처 오류를 잡는다; (3) `internal/k8s/types.go`의 json 태그를 **기계적으로 파싱**해 만든 스텁 세션·스텁 kubectl 하네스로 11개 케이스를 전부 구동(응답 필드명을 손으로 짓지 않아 순환 논증을 피한다); (4) **네거티브 컨트롤** — 각 신규/보강 단정마다 스텁 응답을 의도적으로 훼손해(예: `creation_timestamp` 제거, can-i 응답 뒤집기, 로그 마커 제거, uid 변경, replicas 0 미반영) 해당 케이스가 실제로 실패하는지 확인한 뒤 복원해 baseline green 재확인.",
+              "expectedOutcome": "py_compile·import 통과, 11개 케이스가 스텁 하네스에서 전부 통과, 네거티브 컨트롤이 전부 의도대로 실패 후 복원. 클러스터 실동작(kind·kubelet·apiserver)은 로컬 재현 불가이므로 CI가 유일한 객관 게이트임을 명시."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/doc-tracker.md`를 갱신한다: 레지스트리 헤더 `✅ e2e 49 (통합 24 · 전용 케이스 25)` → `(통합 13 · 전용 케이스 36)`, 11개 AC 행의 `✅ 통합 workload.py` → `✅ 전용 케이스 workload.py::test_...`, 규칙 절의 '현재 미충족(후속 리팩터, 잔여 24)' → '잔여 13'(`aws_config.py` 2 · `dear_baby.py` 2 · `opensearch.py` 9)이며 `workload.py`도 분리를 마쳤음을 명시, ⬜ backlog에 workload-logs/AC4 멀티컨테이너 반쪽을 후속으로 기재, 변경 이력에 2026-08-07 행 추가.",
+              "expectedOutcome": "레지스트리의 버킷 합이 52로 유지되고(13+36+2+1), 표의 `전용 케이스` 36행이 코드의 `test_*` 36개와 **양방향 1:1**(고아 0 · BROKEN 0 · 중복 0)로 파서 검증된다."
+            },
+            {
+              "seq": 7,
+              "action": "브랜치 `reconcile/rct_20260807-0004`에 커밋·푸시하고 draft PR을 연다(머지하지 않음). PR 본문에 task id·gap 요약·계획 단계·검증 방법·범위 밖 잔여를 적는다. 푸시는 `gh` 사용자 토큰 경로로 해서 Actions가 실제로 발화하는지 `gh run list --branch`로 확인한다.",
+              "expectedOutcome": "draft PR이 열리고 CI 4잡(lint · unit-tests · integration-tests · docker build&push)이 트리거된다."
+            },
+            {
+              "seq": 8,
+              "action": "PR CI 결과를 관측해 `integration-tests` 잡이 green인지 확인하고, 결과(잡별 소요·실패 시 원인)를 task 레코드에 기록한다.",
+              "expectedOutcome": "CI 4잡 green. 붉으면 원인을 계획에 반영해 수정 커밋을 올린다(계획 범위 안)."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
