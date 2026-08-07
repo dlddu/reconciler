@@ -51,6 +51,12 @@ test("keeps only enabled models in the sidebar list", () => {
   assert.deepEqual(visible, ["a", "c", "d"]);
 });
 
-test("loadData filters the fetched models with isModelEnabled", () => {
-  assert.match(html, /state\.models = all\.filter\(isModelEnabled\);/);
+test("loadData keeps hidden models in state so the hidden view can show them", () => {
+  assert.match(html, /state\.models = Array\.isArray\(models\) \? models : \[\];/);
+  assert.doesNotMatch(html, /state\.models = all\.filter\(isModelEnabled\);/);
+});
+
+test("the view mode filter is what applies isModelEnabled", () => {
+  assert.match(html, /function modelsInMode\(mode\) \{[\s\S]*?state\.models\.filter\(function \(m\) \{ return !isModelEnabled\(m\); \}\)/);
+  assert.match(html, /function modelsInMode\(mode\) \{[\s\S]*?var active = state\.models\.filter\(isModelEnabled\);/);
 });

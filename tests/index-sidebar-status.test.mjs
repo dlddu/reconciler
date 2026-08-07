@@ -48,15 +48,20 @@ function renderSidebar(tasks) {
   const context = {
     $: (selector) => selector === "#modellist" ? list : modelCount,
     escapeHtml: (value) => String(value),
+    isModelEnabled: () => true,
     list,
+    modeMeta: () => ({ head: "ToBeModels", empty: "없습니다." }),
+    pendingTaskCount: () => 0,
     result: undefined,
     select() {},
     state: {
       filter: "",
+      mode: "active",
       models: [{ id: "model", metadata: { name: "Model", tags: [] } }],
       selected: null,
       tasksByModel: { model: tasks }
     },
+    visibleModels: () => context.state.models,
     STATUS_META: {
       no_action_needed: { color: "#no-action" },
       planned: { color: "#planned" }

@@ -94,6 +94,26 @@
   .iconbtn:hover { border-color: var(--accent); color: var(--accent); }
   .gh { font-size: 12px; }
 
+  /* ---- view mode switch (실행 대기 / 활성 전체 / 숨김) ---- */
+  .modes {
+    display: inline-flex; align-items: center; gap: 2px;
+    background: var(--panel-2); border: 1px solid var(--border-strong);
+    border-radius: 8px; padding: 2px;
+  }
+  .modes button {
+    display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+    background: transparent; border: none; border-radius: 6px;
+    height: 28px; padding: 0 10px; cursor: pointer;
+    font: inherit; font-size: 12.5px; color: var(--muted);
+  }
+  .modes button:hover { color: var(--text); }
+  .modes button[aria-pressed="true"] { background: var(--panel); color: var(--accent); font-weight: 700; box-shadow: var(--shadow); }
+  .modes .n {
+    font-size: 11px; line-height: 16px; min-width: 18px; text-align: center;
+    padding: 0 5px; border-radius: 999px; background: var(--bg); color: var(--muted);
+  }
+  .modes button[aria-pressed="true"] .n { background: var(--accent-weak); color: var(--accent); }
+
   #statusbar { padding: 7px 18px; font-size: 12.5px; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--panel-2); display: none; }
   #statusbar.show { display: block; }
   #statusbar.err { color: #d33; }
@@ -121,6 +141,12 @@
   .model-item .mi-meta { margin-top: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
   .taskcount { font-size: 11px; color: var(--muted); }
+  .pendpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #e0f2fe; color: #0369a1; }
+  .hidepill { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: var(--code-bg); color: var(--muted); }
+  :root[data-theme="dark"] .pendpill { background: #0c2f45; color: #7dd3fc; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .pendpill { background: #0c2f45; color: #7dd3fc; }
+  }
 
   .legend { margin-top: auto; border-top: 1px solid var(--border); padding: 10px 14px; font-size: 12px; color: var(--muted); }
   .legend summary { cursor: pointer; font-weight: 600; }
@@ -256,6 +282,9 @@
   details.raw[open] > summary::before { content: "▾"; }
 
   @media (max-width: 820px) {
+    .topbar { flex-wrap: wrap; row-gap: 8px; }
+    .controls { margin-left: 0; width: 100%; flex-wrap: wrap; }
+    .controls input[type="search"] { flex: 1; min-width: 140px; max-width: none; width: auto; }
     .layout { flex-direction: column; }
     .sidebar { width: auto; max-height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
     .detail { padding: 18px 16px 50px; }
@@ -270,6 +299,7 @@
       <span class="sub">데이터 브라우저 · <code>data/</code></span>
     </div>
     <div class="controls">
+      <div class="modes" id="modes" role="group" aria-label="보기 모드"></div>
       <input id="search" type="search" placeholder="이름·id·태그 검색…" autocomplete="off" spellcheck="false">
       <a id="ghlink" class="iconbtn gh" title="GitHub에서 보기" target="_blank" rel="noopener" style="display:none">GitHub ↗</a>
       <button id="reload" class="iconbtn" title="새로고침">↻</button>
@@ -279,7 +309,7 @@
   <div id="statusbar"></div>
   <main class="layout">
     <aside class="sidebar">
-      <div class="list-head">ToBeModels (<span id="modelcount">0</span>)</div>
+      <div class="list-head"><span id="listhead">ToBeModels</span> (<span id="modelcount">0</span>)</div>
       <div id="modellist"></div>
       <details class="legend">
         <summary>상태 범례</summary>
@@ -310,7 +340,24 @@
     cancelled:        { label: "취소됨",      cls: "b-cancelled",      color: "#94a3b8" }
   };
 
-  var state = { models: [], tasksByModel: {}, selected: null, filter: "", hiddenCount: 0 };
+  // 사이드바 보기 모드. state.models 는 숨김 모델까지 포함한 전체 목록이고,
+  // 실제로 목록에 노출되는 집합은 여기서 정한다. 기본값은 "pending"(실행 대기).
+  var PENDING_STATUS = "planned";   // STATUS_META 기준 "실행 대기"
+  var MODES = [
+    { id: "pending", label: "실행 대기", head: "실행 대기 모델", hint: "실행 대기(planned) 작업이 있는 모델만",
+      empty: "실행 대기 중인 작업이 없습니다." },
+    { id: "active",  label: "활성 전체", head: "ToBeModels",     hint: "감지가 활성인 모델 전체",
+      empty: "감지 활성 모델이 없습니다." },
+    { id: "hidden",  label: "숨김",      head: "숨김 모델",       hint: "감지 비활성(숨김) 모델만",
+      empty: "숨겨진 모델이 없습니다." }
+  ];
+  var DEFAULT_MODE = "pending";
+
+  var state = {
+    models: [], tasksByModel: {}, selected: null, filter: "",
+    mode: DEFAULT_MODE,
+    modePinned: false   // 사용자가 모드를 직접 고르면 새로고침해도 유지한다
+  };
 
   var $ = function (s, el) { return (el || document).querySelector(s); };
 
@@ -641,9 +688,57 @@
   }
 
   // checkPolicy.enabled === false 인 모델은 감지 sweep에서 제외된 모델이므로
-  // 페이지 목록에도 노출하지 않는다. 생략 시 기본값은 true(=노출).
+  // 기본 목록에는 노출하지 않는다("숨김" 모드에서만 보인다).
+  // 생략 시 기본값은 true(=노출).
   function isModelEnabled(m) {
     return !(m && m.checkPolicy && m.checkPolicy.enabled === false);
+  }
+
+  // ---------- view modes ----------
+  function modeMeta(id) {
+    for (var i = 0; i < MODES.length; i++) if (MODES[i].id === id) return MODES[i];
+    return MODES[0];
+  }
+
+  // 실행 대기 = 아직 executor가 집어가지 않은 planned 상태의 작업 수.
+  function pendingTaskCount(modelId) {
+    return (state.tasksByModel[modelId] || []).filter(function (t) {
+      return t && t.status === PENDING_STATUS;
+    }).length;
+  }
+
+  function modelsInMode(mode) {
+    if (mode === "hidden") {
+      return state.models.filter(function (m) { return !isModelEnabled(m); });
+    }
+    var active = state.models.filter(isModelEnabled);
+    if (mode === "pending") {
+      return active.filter(function (m) { return pendingTaskCount(m.id) > 0; });
+    }
+    return active;
+  }
+
+  function matchesFilter(m, f) {
+    if (!f) return true;
+    var hay = [m.id, m.metadata && m.metadata.name, m.metadata && m.metadata.description]
+      .concat((m.metadata && m.metadata.tags) || []).join(" ").toLowerCase();
+    return hay.indexOf(f) !== -1;
+  }
+
+  // 사이드바에 실제로 보이는 목록 = 모드 필터 + 검색 필터.
+  function visibleModels() {
+    var f = state.filter.trim().toLowerCase();
+    return modelsInMode(state.mode).filter(function (m) { return matchesFilter(m, f); });
+  }
+
+  // 딥링크(#modelId)로 들어온 모델이 기본 모드에 없을 수 있으므로,
+  // 그 모델을 담고 있는 첫 번째 모드를 찾아준다.
+  function modeContaining(modelId) {
+    for (var i = 0; i < MODES.length; i++) {
+      var found = modelsInMode(MODES[i].id).some(function (m) { return m.id === modelId; });
+      if (found) return MODES[i].id;
+    }
+    return DEFAULT_MODE;
   }
 
   function latestDisplayTask(modelId) {
@@ -658,19 +753,29 @@
   }
 
   // ---------- rendering ----------
+  function renderModes() {
+    var box = $("#modes");
+    box.innerHTML = MODES.map(function (mo) {
+      return '<button type="button" data-mode="' + mo.id + '"' +
+        ' aria-pressed="' + (state.mode === mo.id ? "true" : "false") + '"' +
+        ' title="' + escapeHtml(mo.hint) + '">' + escapeHtml(mo.label) +
+        '<span class="n">' + modelsInMode(mo.id).length + "</span></button>";
+    }).join("");
+
+    Array.prototype.forEach.call(box.querySelectorAll("button"), function (el) {
+      el.addEventListener("click", function () { setMode(el.getAttribute("data-mode")); });
+    });
+  }
+
   function renderSidebar() {
     var list = $("#modellist");
-    var f = state.filter.trim().toLowerCase();
-    var models = state.models.filter(function (m) {
-      if (!f) return true;
-      var hay = [m.id, m.metadata && m.metadata.name, m.metadata && m.metadata.description]
-        .concat((m.metadata && m.metadata.tags) || []).join(" ").toLowerCase();
-      return hay.indexOf(f) !== -1;
-    });
+    var models = visibleModels();
+    $("#listhead").textContent = modeMeta(state.mode).head;
     $("#modelcount").textContent = models.length;
 
     if (!models.length) {
-      list.innerHTML = '<div class="empty small">일치하는 모델이 없습니다.</div>';
+      var msg = state.filter.trim() ? "일치하는 모델이 없습니다." : modeMeta(state.mode).empty;
+      list.innerHTML = '<div class="empty small">' + escapeHtml(msg) + "</div>";
       return;
     }
 
@@ -679,11 +784,14 @@
       var meta = STATUS_META[lt && lt.status] || null;
       var dot = meta ? '<span class="dot" style="background:' + meta.color + '" title="' + escapeHtml(lt.status) + '"></span>' : '<span class="dot" style="background:var(--border-strong)" title="표시할 상태 없음"></span>';
       var count = (state.tasksByModel[m.id] || []).length;
+      var pending = pendingTaskCount(m.id);
+      var pill = pending ? '<span class="pendpill" title="실행 대기(planned)">실행 대기 ' + pending + "</span>" : "";
+      var hide = isModelEnabled(m) ? "" : '<span class="hidepill" title="감지 비활성">숨김</span>';
       var tags = ((m.metadata && m.metadata.tags) || []).slice(0, 3).map(function (t) { return '<span class="tag">' + escapeHtml(t) + "</span>"; }).join(" ");
       return '<button class="model-item' + (m.id === state.selected ? " active" : "") + '" data-id="' + escapeHtml(m.id) + '">' +
         '<div class="mi-name">' + dot + "<span>" + escapeHtml((m.metadata && m.metadata.name) || m.id) + "</span></div>" +
         '<div class="mi-id">' + escapeHtml(m.id) + "</div>" +
-        '<div class="mi-meta"><span class="taskcount">작업 ' + count + "</span> " + tags + "</div>" +
+        '<div class="mi-meta">' + pill + hide + '<span class="taskcount">작업 ' + count + "</span> " + tags + "</div>" +
         "</button>";
     }).join("");
 
@@ -696,7 +804,10 @@
     var detail = $("#detail");
     var m = state.models.filter(function (x) { return x.id === state.selected; })[0];
     if (!m) {
-      detail.innerHTML = '<div class="empty">왼쪽에서 ToBeModel을 선택하세요.</div>';
+      var nothingVisible = !visibleModels().length;
+      detail.innerHTML = '<div class="empty">' +
+        escapeHtml(nothingVisible ? modeMeta(state.mode).empty : "왼쪽에서 ToBeModel을 선택하세요.") +
+        "</div>";
       return;
     }
     var md_ = m.metadata || {};
@@ -722,6 +833,7 @@
         (md_.description ? '<p class="m-desc">' + escapeHtml(md_.description) + "</p>" : "") +
         '<div class="m-dates"><span>생성 ' + fmtDate(md_.createdAt) + "</span>" +
           (md_.updatedAt ? "<span>수정 " + fmtDate(md_.updatedAt) + "</span>" : "") + "</div>" +
+        (isModelEnabled(m) ? "" : '<p class="m-desc muted">이 모델은 감지가 비활성(<code>checkPolicy.enabled: false</code>)이라 기본 목록에서 숨겨집니다. 정의와 작업 이력은 그대로 보존됩니다.</p>') +
       "</div>" +
 
       '<div class="section-title">추적 상태 (tracked state)</div>' +
@@ -753,14 +865,33 @@
     }).join("");
   }
 
-  function renderAll() { renderSidebar(); renderDetail(); }
+  function renderAll() { renderModes(); renderSidebar(); renderDetail(); }
+
+  function writeHash(id) {
+    if (history.replaceState) history.replaceState(null, "", id ? "#" + encodeURIComponent(id) : "#");
+    else location.hash = id ? encodeURIComponent(id) : "";
+  }
 
   function select(id) {
     state.selected = id;
-    if (history.replaceState) history.replaceState(null, "", "#" + encodeURIComponent(id));
-    else location.hash = encodeURIComponent(id);
+    writeHash(id);
     renderSidebar();
     renderDetail();
+  }
+
+  // 모드를 바꾸면 선택된 모델이 목록에서 사라질 수 있다.
+  // 그럴 땐 새 목록의 첫 모델로 옮기고, 비어 있으면 선택을 해제한다.
+  function setMode(mode) {
+    if (state.mode === mode) return;
+    state.mode = mode;
+    state.modePinned = true;
+    var models = visibleModels();
+    var keep = models.some(function (m) { return m.id === state.selected; });
+    if (!keep) {
+      state.selected = models.length ? models[0].id : null;
+      writeHash(state.selected);
+    }
+    renderAll();
   }
 
   // ---------- data loading ----------
@@ -781,9 +912,9 @@
   function loadData() {
     setStatus("불러오는 중…");
     return fetchJSON("data/to-be-models.json").then(function (models) {
-      var all = Array.isArray(models) ? models : [];
-      state.models = all.filter(isModelEnabled);
-      state.hiddenCount = all.length - state.models.length;
+      // 숨김(감지 비활성) 모델도 함께 담아둔다 — "숨김" 모드에서 그대로 보여주기 위해서다.
+      // 어떤 모델이 실제로 목록에 나올지는 modelsInMode()가 정한다.
+      state.models = Array.isArray(models) ? models : [];
       // Task files are named <toBeModelId>.json. A model may have no tasks yet,
       // in which case the fetch 404s — that is expected and handled as "no tasks".
       // (The browser still logs the 404 to the console; it is harmless.)
@@ -800,13 +931,22 @@
       });
 
       var hash = decodeURIComponent((location.hash || "").replace(/^#/, ""));
-      if (hash && state.models.some(function (m) { return m.id === hash; })) state.selected = hash;
-      else if (!state.selected && state.models.length) state.selected = state.models[0].id;
+      var target = hash && state.models.some(function (m) { return m.id === hash; }) ? hash : null;
+
+      // 사용자가 모드를 직접 고른 뒤라면 그 선택을 존중하고(새로고침 포함),
+      // 그렇지 않으면 딥링크가 가리키는 모델이 보이는 모드로, 없으면 기본 모드로 연다.
+      if (!state.modePinned) state.mode = target ? modeContaining(target) : DEFAULT_MODE;
+
+      var models = visibleModels();
+      if (target && models.some(function (m) { return m.id === target; })) state.selected = target;
+      else if (!models.some(function (m) { return m.id === state.selected; })) {
+        state.selected = models.length ? models[0].id : null;
+      }
 
       var totalTasks = Object.keys(state.tasksByModel).reduce(function (n, k) { return n + state.tasksByModel[k].length; }, 0);
-      setStatus("모델 " + state.models.length + "개 · 작업 " + totalTasks + "건" +
-        (state.hiddenCount ? " · 감지 비활성 " + state.hiddenCount + "개 숨김" : "") +
-        " · " + new Date().toLocaleTimeString() + " 로드됨");
+      setStatus("실행 대기 " + modelsInMode("pending").length + "개 · 활성 " + modelsInMode("active").length +
+        "개 · 숨김 " + modelsInMode("hidden").length + "개 · 작업 " + totalTasks + "건 · " +
+        new Date().toLocaleTimeString() + " 로드됨");
       setTimeout(function () { setStatus(""); }, 4000);
 
       renderAll();
@@ -849,6 +989,7 @@
   function init() {
     applyTheme(currentTheme());
     renderLegend();
+    renderModes();
 
     var gh = ghRepoUrl();
     if (gh) { var a = $("#ghlink"); a.href = gh; a.style.display = ""; }
@@ -859,6 +1000,10 @@
     window.addEventListener("hashchange", function () {
       var hash = decodeURIComponent((location.hash || "").replace(/^#/, ""));
       if (hash && hash !== state.selected && state.models.some(function (m) { return m.id === hash; })) {
+        // 현재 모드에 없는 모델을 가리키면 그 모델이 보이는 모드로 옮겨준다.
+        if (!modelsInMode(state.mode).some(function (m) { return m.id === hash; })) {
+          state.mode = modeContaining(hash);
+        }
         state.selected = hash; renderAll();
       }
     });
