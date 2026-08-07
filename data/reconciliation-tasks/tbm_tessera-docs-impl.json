@@ -542,6 +542,52 @@
       "reason": "post-reconcile 재트리거다 — 직전 task `rct_20260729-0001`의 실행 산출물 PR #35(AC4.1)가 병합돼 as-is를 올렸고, 그 task는 2026-08-07T04:48Z `succeeded`(terminal, 사용자 수동 e2e 확인 포함)라 이 모델에 열린 handoff가 없다. 슬라이스는 수렴했지만 두 종류의 유의미한 gap이 남아 지금 작업이 필요하다: **(1) 미구현 AC(criterion 1)** — AC3.3·3.4·4.2·4.3·4.6 스텁 + AC2.2·2.3·2.6 부분. 코드에 자가 수렴 기전이 없는 정적 미달이라 재확인 유예로 해소될 성질이 아니다. **(2) doc-tracker 불일치(criterion 4) — 이번 병합이 새로 만든 drift**: #35가 docs를 갱신하지 않아 트래커가 AC4.1을 여전히 '✗ 스텁'으로, AC4.5를 '`surfaces:[]` 골격만'으로 기술한다(실제와 반대). 이건 값싸고 즉시 가능한 수정이라 다음 슬라이스에 반드시 포함돼야 하며, 방치하면 이후 감지의 기준선인 트래커 집계가 계속 틀린다. 덧붙여 AC4.1 e2e 스펙이 CI(vitest만 실행)에 미배선인 점도 planner가 함께 판단할 대상이다(유닛만으로 회귀 방어). 구현 순서·범위(PRD-4 복원 본체 AC4.2/4.3/4.6 vs PRD-3 방향 B AC3.3/3.4 vs AC2.6 lifecycle)는 정의대로 planner 몫이다. → `action_required`로 미점유 인계하고 as-is baseline을 `src:a1d5f683 test:f730027a`로 전진시켜 precheck churn을 막는다.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-07T04:59:33Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "criterion ④(doc-tracker 불일치) 단독 슬라이스 — #35가 새로 만든 문서-실측 역전을 `docs/tessera-doc-tracker.md` 한 파일 재동기화로 해소한다. **왜 이 방법인가**: (a) 감지 판정이 이 수정을 '값싸고 즉시 가능하며 다음 슬라이스에 반드시 포함' 으로 지목했고, 방치하면 이후 모든 감지의 기준선인 트래커 집계가 계속 틀린다 — 즉 SSOT가 실제와 반대를 말하는 상태가 복리로 쌓인다. (b) **`src/`를 건드리지 않는 것이 결정적 이점**이다: 이 레포 CI는 `src/*`·`build/*`·`package*.json`·`electron-builder.yml`·`tsconfig*`·`.nvmrc`·`.github/workflows/ci.yml` 중 하나라도 바뀐 PR을 release-worthy로 판정해 **미병합 PR 코드로 서명·공증된 빌드를 실사용자 auto-updater에 즉시 배포**한다(ci.yml 주석이 명시적으로 경고). docs-only PR은 이 경로를 타지 않아 사용자 영향이 0이며 되돌림도 문서 revert 뿐이다. (c) 선례가 있다 — 2026-07-21 `#33`(집계 정합)·2026-07-27 `#34`(dangling 참조)가 같은 형태의 docs-only 정합 슬라이스로 succeeded 종료했다.\n**이 시도의 범위(완료 기준)**: `docs/tessera-doc-tracker.md`의 구현·검증 축 기술이 실측과 1:1로 일치하면 성공이다 — 구체적으로 ① AC4.1을 '✗ 스텁'에서 '✅ 구현'으로 이동, ② AC4.5의 근거 문구('`surfaces:[]`로 골격만 저장')를 실제('스냅샷이 편집기 서피스를 실어 저장하나 Claude·터미널 콘텐츠는 미캡처')로 교정, ③ AC4.2/4.3의 스텁 근거 문구에서 이미 해소된 '`surfaces:[]` 고정' 사유 제거, ④ 집계 전량 재계산(구현 16→**17**·부분 4·스텁 6→**5**, 완전충족 17/26, 미완 10건→**9건**, V4 롤업 1/6→**2/6**), ⑤ 테스트 게이팅 절의 스텁 AC 목록에서 AC4.1 제거 + AC4.1 e2e 스펙이 CI 미배선(‘ci’ job은 vitest만 실행)이라는 검증 축 한계 명시, ⑥ 다음 구현 우선순위 절 갱신, ⑦ 변경 이력 행 추가. **범위 밖(후속)**: criterion ①의 미구현 AC 구현(AC3.3·3.4·4.2·4.3·4.6 스텁, AC2.2·2.3·2.6·4.5 부분) — `src/` 변경이라 release 경로를 타므로 별도 슬라이스로 분리한다. 축 ③의 e2e를 CI에 배선하는 것도 `.github/workflows/ci.yml`이 release-worthy 경로라 범위 밖이며, 이번엔 트래커에 '한계'로 **기술만** 한다. 이 잔여들은 실행이 만드는 docs 버전 변화의 재감지가 새 task로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 `dlddu/tessera`를 job-private 경로에 클론하고 `main`(`e6a8a22`) 기준으로 브랜치 `reconcile/rct_20260807-0001`을 만든다. 시작 전 `git rev-parse HEAD:docs`가 `1da6464b…`, `HEAD:src`가 `a1d5f683…`인지 확인해 감지가 관측한 것과 동일한 트리에서 작업함을 보장한다.",
+              "expectedOutcome": "브랜치가 `e6a8a22`에서 분기되고 docs/src 트리 해시가 task의 `stateSummary`와 일치."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/tessera-doc-tracker.md`의 '구현·검증 상태' 표 3행을 실측에 맞춘다: ✅ 구현 행에 AC4.1 추가(16→17), ✗ 스텁 행에서 AC4.1 제거(6→5)하고 남은 AC4.2/4.3의 근거 문구에서 이미 거짓이 된 '`buildWorkspaceSnapshot`의 `surfaces:[]` 고정' 사유를 삭제해 '스냅샷 서피스 캡처는 편집기만 배선됨 — Claude/터미널 페이로드 미캡처'로 교체, ◐ 부분 행의 AC4.5 근거를 '`surfaces:[]`로 골격만 저장' → '호스트측 원자·디바운스 저장과 편집기 서피스 캡처는 동작하나 AC4.5가 요구하는 복원 대상 3종 중 Claude·터미널 콘텐츠가 미포함'으로 교체.",
+              "expectedOutcome": "표의 세 행 카운트가 17/4/5로 합 26이 되고, 각 근거 문구가 `src/` 실측(`editorStateRegistry.ts` 캡처·`WorkspaceView` autosave 배선)과 모순되지 않는다."
+            },
+            {
+              "seq": 3,
+              "action": "같은 파일의 집계 파생값을 전부 재계산해 갱신한다: 건강 상태 줄('구현 16 · 부분 4 · 스텁 6'), '주의 — 문서 사슬 완결' 블록의 '26개 AC 중 10개(부분 4·스텁 6)', 섹션 헤더의 '구현 16 · 부분 4 · 스텁 6 (완전 충족 16/26)', 값별 롤업의 'V4(상태 복원) 1/6 ✗', 연결 매트릭스 V4 행의 '✗ 1/6 (AC4.4만, 4.5 부분·4.1·4.2·4.3·4.6 스텁)', 그리고 '미검증 AC 없음' 절의 10개 AC 나열(AC2.2·2.3·2.6·3.3·3.4·4.1·4.2·4.3·4.5·4.6).",
+              "expectedOutcome": "문서 전체에서 '16'·'스텁 6'·'10개'·'1/6' 형태의 옛 집계가 하나도 남지 않고, V4는 '◐ 2/6 (AC4.1·AC4.4, 4.5 부분·4.2·4.3·4.6 스텁)', 미완 목록은 9개(AC2.2·2.3·2.6·3.3·3.4·4.2·4.3·4.5·4.6)로 일관된다."
+            },
+            {
+              "seq": 4,
+              "action": "'테스트 게이팅' 줄의 스텁 AC 목록에서 AC4.1을 제거하고, 검증 축 한계를 한 문장 추가한다: AC4.1은 비게이트 유닛 13건(`test/unit/editor-restore.test.ts`)으로 회귀 방어되나 신설 `test/e2e/editor-restore.spec.ts`는 CI `ci` job이 `npm test`(vitest)만 실행하고 `npm run test:e2e`(playwright)를 호출하지 않아 **어디서도 자동 실행되지 않는다**. 이어 '다음 구현 우선순위' 줄을 AC4.1 완료 반영해 갱신한다(PRD-4 잔여 = AC4.2·4.3·4.6 + AC4.5의 Claude/터미널 페이로드, 이어 PRD-3 방향 B AC3.3·3.4, AC2.6 lifecycle, AC2.2/2.3).",
+              "expectedOutcome": "트래커가 AC4.1을 구현으로 표기하면서도 그 e2e가 CI 미배선이라는 사실을 숨기지 않는다 — to-be 조건 1('테스트 문서가 기술하는 대로 자동화 검증 가능')에 대한 현재 한계가 문서에 드러난다."
+            },
+            {
+              "seq": 5,
+              "action": "'변경 이력' 표 맨 아래에 2026-08-07 행을 #33·#34 행과 같은 형식(날짜 | 변경 | before | after)으로 추가한다: criterion ④ 해소 — #35(AC4.1 구현)가 `docs/`를 갱신하지 않아 생긴 트래커 역전을 실측 재동기화. before='트래커가 AC4.1을 ✗ 스텁, AC4.5를 `surfaces:[]` 골격만으로 기술(실제와 반대), 집계 16/4/6', after='구현 17/부분 4/스텁 5, V4 2/6, AC4.1 e2e CI 미배선 한계 명시'. 문서 상단 '최근 갱신' 리드 문장도 이 슬라이스로 갱신한다.",
+              "expectedOutcome": "트래커 자신의 이력만 읽어도 이번 정합 작업의 before/after를 감사할 수 있다."
+            },
+            {
+              "seq": 6,
+              "action": "AC 본문·PRD·테스트 문서·여정·mockup·디자인 시스템은 **일절 건드리지 않았음**을 `git diff --stat`으로 확인한다(단일 파일 변경). 변경 후 `grep`으로 옛 집계 잔재(`구현 16`, `스텁 6`, `1/6`, `10개(부분 4`)가 0건인지, 새 집계 합이 17+4+5=26인지 재확인한다.",
+              "expectedOutcome": "`git diff --stat`이 `docs/tessera-doc-tracker.md` 1 file changed만 보고하고, to-be(AC 정의)는 불변 — 정의의 '문서가 SSOT, to-be를 현 구현 수준으로 낮추지 않는다'를 위반하지 않는다."
+            },
+            {
+              "seq": 7,
+              "action": "브랜치를 push하고 `dlddu/tessera`에 **draft PR**을 연다. 본문에 task id·gap 요약(criterion ④)·단계별 변경·검증 방법·범위 밖 잔여를 적는다. 머지는 하지 않는다(executor 몫).",
+              "expectedOutcome": "draft PR URL 확보, CI `ci` job(typecheck·lint·test·build)이 그린. `changes` job은 release=false를 출력해 `gate`/`release`가 건너뛰어진다(사용자 auto-updater 무영향)."
+            }
+          ],
+          "plannedAt": "2026-08-07T05:15:29Z"
+        }
+      }
+    ]
   }
 ]
