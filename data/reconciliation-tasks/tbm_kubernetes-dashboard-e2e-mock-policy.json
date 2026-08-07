@@ -468,5 +468,33 @@
         }
       }
     ]
+  },
+  {
+    "toBeModelId": "tbm_kubernetes-dashboard-e2e-mock-policy",
+    "status": "assessing",
+    "trigger": {
+      "detectedAt": "2026-08-07T20:39:48Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "sites=83 files=12\ne3814c6a1d1fa1ed576ed740640e2c9d468312f35085a6965c116f38e0f7f422",
+        "currentVersion": "sites=73 files=12\n8b75461fcd0c53996cabd91f927530a0a26ed98d470b96310550b146a82c6144"
+      },
+      "toBe": {
+        "previousVersion": "984306f6ce1c47d74ef626cfd578bbe706154e0f",
+        "currentVersion": "f9716b069ae079bb8f27aa4c72e0e74d642bb09a"
+      }
+    },
+    "createdAt": "2026-08-07T20:39:48Z",
+    "updatedAt": "2026-08-07T20:39:48Z",
+    "stateSummary": {
+      "asIs": "**as-is = e2e 인터셉트 사용 지문** (dlddu/kubernetes-dashboard@main `08a694e`, 2026-08-07T20:39Z 관측). 지문 진단값 **sites=73 files=12** (직전 83 → −10).\n\n- 트리거 delta는 **정확히 커밋 1개** — #215 `08a694e` \"test(e2e): judge remaining mock-exceptions — register 18, remove 5 (mock-policy slice rct_20260807-0001)\". 이 task의 직전 task(rct_20260807-0001, 현재 `succeeded`/terminal)가 계획·실행한 슬라이스 산출물이다.\n- 파일별 인터셉트 호출 라인(현 상태): argo-data-states 14 · fluxcd-data-states 12 · fluxcd-suspend-resume 10 · fluxcd-reconcile 8 · fluxcd-detail 6 · argo-submit 5 · external-secrets-data-states 5 · argo-workflow-delete 3 · argo-workflow-resubmit 3 · overview-summary-cards 3 · pods-hide-completed 2 · workloads-restart-confirm 2 = **73줄 / 12파일**.\n- `// mock-exception:` 주석: spec 파일 안에 **29개**(파일별 argo-data-states 6 · fluxcd-data-states 5 · fluxcd-reconcile 4 · fluxcd-suspend-resume 4 · external-secrets 2 · fluxcd-detail 2 · argo-submit 2 · argo-workflow-delete 1 · argo-workflow-resubmit 1 · overview-summary-cards 1 · workloads-restart-confirm 1). (`e2e/README.md`의 규약 설명 1건은 코드 주석이 아니라 제외.)\n- **주석이 하나도 없는 인터셉트 보유 파일: `e2e/pods-hide-completed.spec.ts` 1개.** 그 내용은 `mockPods()` 헬퍼(L49~58)가 `page.route('**/api/pods/all**')` + `route.fulfill(...)`로 **pod 목록 응답 전체를 합성 데이터로 치환**하고, 테스트가 Running×2 + Succeeded×2 조합을 직접 지어 넣는다.",
+      "toBe": "**to-be = `docs/e2e-mocking-policy.md` blob** (`f9716b06`, 직전 `984306f6`)\n\n- **허용목록(승인된 예외) 번호행 29개** — #215가 12~29번 18행을 추가했다: fluxcd-reconcile LAT×2·ERR×2, fluxcd-suspend-resume LAT×2·ERR×2, argo-data-states LAT×3·ERR×3, external-secrets-data-states ERR×1·LAT×1, argo-submit ERR×1·LAT×1.\n- 허용 카테고리는 `ERR`·`LAT`·`ABS` 3종 그대로. 명시적 불허 목록(데이터 모킹·플레이키 무마·백엔드 미구현 우회)도 그대로.\n- **\"미판정 인터셉트(후속 — 허용목록 아님)\" 표가 6행 → 1행으로 축소**: 남은 항목은 `e2e/pods-hide-completed.spec.ts` 인터셉트 호출 수 2뿐이다. 해당 절은 \"여기 나열된 인터셉트는 어느 카테고리에도 들지 않으므로 `page.on('request', …)` 등 비인터셉트 수단으로 대체해 제거한다\"고 규범적 방향을 명시한다.",
+      "gap": "**유의미한 차이가 1건 남았다(크게 수렴했으나 미완).**\n\n정합 기준은 \"허용목록 등재 집합 == 코드 인터셉트 집합(양방향 1:1)\"이다. 이번 관측 실측:\n- **등재 29 ↔ 코드 주석 29** — 수치·파일별 분포 모두 일치. 고아 등재(코드에 없는 등재) 0건.\n- **미등재 인터셉트 1건 잔존**: `e2e/pods-hide-completed.spec.ts`(호출 라인 2 = `page.route` + `route.fulfill` 한 쌍). 인터셉트를 가진 12개 파일 중 허용목록에 이름이 없는 유일한 파일이다(`comm`으로 교차 확인).\n- 그 성격은 **명시적 불허 카테고리에 정면으로 해당**한다 — \"목록·개수·상태 조합을 고정하려는 데이터 모킹(→ fixture 또는 전용 namespace로 해결)\". 실제로 `/api/pods/all` 응답 전체를 합성 pod 4건(Running 2 + Succeeded 2)으로 치환해 PD6(완료 파드 숨김 토글)을 검증한다. `ERR`·`LAT`·`ABS` 어디에도 들지 않는다.\n- 모델 등록 시점 메모도 이 파일을 콕 집어 \"주석에 '클러스터 fixture 의존 제거'를 사유로 pod 목록 전체를 fulfill → **불허(fixture 대체) 후보**\"로 지목해 두었고, 정책 문서 자신도 미판정 절에 남겨 \"제거한다\"는 방향을 적어 두었다.\n\n직전 task rct_20260807-0001은 `succeeded`/terminal이고 이 모델에 열린 handoff가 없다.",
+      "summarizedAt": "2026-08-07T20:39:48Z"
+    },
+    "id": "rct_20260807-0002"
   }
 ]
