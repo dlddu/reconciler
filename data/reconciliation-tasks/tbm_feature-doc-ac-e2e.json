@@ -18,7 +18,7 @@
       }
     },
     "createdAt": "2026-08-07T20:39:48Z",
-    "updatedAt": "2026-08-07T21:03:00Z",
+    "updatedAt": "2026-08-07T21:10:00Z",
     "stateSummary": {
       "asIs": "**as-is = `e2e/` 트리 = 실제 Playwright spec 집합** (dlddu/feature-doc@main `e5a5c61`, 2026-08-07T20:39Z 관측). **최초 관측**(양측 `lastObservedVersion` = null).\n\n`e2e/` 전체 파일: `tests/s01.spec.ts` · `tests/s02-s03.spec.ts` · `playwright.config.ts` · `smoke.sh` · `package.json` · `package-lock.json` · `.gitignore`.\n→ 모델이 정의한 **매칭 단위(`e2e/tests/` 최상위 `*.spec.ts`)는 2개**다. (등록 시점 메모는 1개(`s01.spec.ts`)라고 적었으나, 등록(12:40:43Z) 직전 12:37:06Z에 머지된 #11 `e5a5c61`가 `s02-s03.spec.ts`를 추가해 실제로는 2개 — 메모가 3분 차이로 낡았다.)\n\n- `s01.spec.ts`: 단일 test `'S01: sign in → connect GitHub App → register key → continue'` — 로그인·App 설치·권한 범위 표시·LLM 키 등록/마스킹까지 **S01 여정 전체를 한 파일에서** 검증(AC4.1·4.2·4.3 계열 묶음).\n- `s02-s03.spec.ts`: 단일 test `'S02·S03: home → connect repository → trigger analysis (queued)'` — AC1.1의 양성/음성 경로(범위 밖 저장소 거부·미큐잉)를 한 파일에서 검증.\n- **`검증 AC:` 헤더 선언은 두 파일 모두 없다** (`grep -rn '검증 AC' e2e/` = 0 hit). `e2e/` 전체에서 AC 식별자가 등장하는 곳은 산문 주석 2군데(`AC1.1`, `AC4.3`)뿐이라 매핑을 기계적으로 확인할 수 없다.",
       "toBe": "**to-be = AC 집합(`docs/prd`) + 매핑·예외 등재(`docs/doc-tracker.md`)** (동 커밋).\n\n- `docs/prd/` 4문서에 **확정 AC 24개**(AC1.1~1.5 · AC2.1~2.6 · AC3.1~3.5 · AC4.1~4.8) — 등록 시점 정의와 동일.\n- `docs/doc-tracker.md`(160줄)의 섹션 목록: 현재 상태 요약 / 연결 매트릭스 3종 / 위험 진단 / 알려진 목업↔구현 편차 / 수용된 위험 / 변경 이력 / 다음 단계 권장 / 구현 수렴 로드맵. → **\"e2e 매핑\" 섹션이 존재하지 않는다**(예외 등재·AC↔파일 표·집계 전부 부재).\n- 따라서 정합 기준선은 \"예외 0건 등재 상태에서 AC 24개 각각이 자신을 선언한 파일 정확히 1개를 가지고, 매칭 단위 파일 2개가 각각 정확히 1개 AC를 선언\"이다.",
@@ -31,6 +31,47 @@
       "reason": "최초 관측이고 gap이 정의의 1:1 전단사를 정면으로 위반한다(AC 24 vs 선언된 매핑 0, 고아 파일 2, 매핑·예외 등재 섹션 부재). 모델 등록 메모 스스로 첫 task의 범위를 (1) 헤더 `검증 AC:` 규약 도입 + `docs/doc-tracker.md` \"e2e 매핑\" 섹션 신설 (2) `s01.spec.ts` 묶음 분리 (3) 남은 AC의 예외 등재 여부 판단으로 명시해 두었다 → planner가 바로 집을 수 있는 정의된 작업이다. 이 모델에 task 이력이 없어 점유·경합도 없다. 정적 구조 gap이라 자동 해소 가능성 없음(재확인 유예 부적합). 다만 규모가 크고 19개 AC는 구현 미착수라 실제 수렴은 자매 모델 `tbm_feature-doc-docs-impl`의 구현 슬라이스와 보조를 맞춰 여러 슬라이스로 나뉠 가능성이 높다 — 첫 슬라이스는 규약·등재 인프라(1)+(2)에 한정하는 것이 planner의 자연스러운 선택으로 보인다.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-07T20:39:48Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "매핑 규약을 먼저 세우고, 지금 실제로 검증 가능한 만큼만 1:1로 정렬한다. (1) spec 헤더에 `검증 AC: ACx.y` 선언 규약을 도입하고, (2) 4개 AC(AC4.1·4.2·4.3·4.8)를 한 파일에 묶고 있는 `e2e/tests/s01.spec.ts`를 AC별 전용 spec 4개로 분리하며, (3) `s02-s03.spec.ts`를 AC1.1 전용 파일로 리네임·선언하고, (4) `docs/doc-tracker.md`에 'e2e 매핑' 섹션(매핑 표·예외 정책·공백 목록·집계·기계 확인 recipe)을 신설한다. 파일명은 `ac<major>-<minor>-<slug>.spec.ts`로 두어 헤더 선언과 파일명이 서로를 교차 확인하게 한다. 대안으로 '미구현 19개 AC를 예외 등재해 전단사를 즉시 성립시키는' 경로가 있었으나 기각했다 — 모델 규칙 4의 예외는 '자동 검증이 곤란한 AC'용이지 '아직 구현되지 않은 AC'용이 아니고, 그렇게 하면 자매 모델 tbm_feature-doc-docs-impl이 drift로 추적 중인 19건을 이 모델이 정상으로 선언해 서로 모순되기 때문이다. 예외는 0건으로 두고 그 정책을 섹션에 명문화한다. **이 시도의 범위(완료 기준)**: ① 규칙 2 위반 0(매칭 단위 파일이 2개 이상 AC를 선언하지 않음) ② 규칙 3 위반 0(모든 매칭 단위 파일이 `검증 AC:` 선언 보유) ③ 규칙 6 충족(doc-tracker 'e2e 매핑' 집계가 실제와 일치) ④ 규칙 1은 **구현된 5개 AC(AC1.1·AC4.1·AC4.2·AC4.3·AC4.8)에 한해** 전용 파일 1개씩 확보 ⑤ 규칙 5 충족(등재된 AC 식별자가 모두 docs/prd에 실재). **범위 밖**: 미구현 19개 AC(AC1.2~1.5·AC2.1~2.6·AC3.1~3.5·AC4.4~4.7)의 전용 spec — 화면·라우트 자체가 없어 지금 쓸 수 없고, docs-impl 로드맵 슬라이스 3~7이 구현을 얹을 때마다 재감지가 후속 task로 잇는다. 이들은 '공백'으로 등재되어 계속 drift로 계수된다(숨기지 않는다). 또한 AC4.1의 실제 GitHub App 설치·범위변경·해제 라운드트립, AC4.2의 실제 제공자 호출, AC4.3의 운영 로그 평문 점검은 stub 모드 e2e로 도달할 수 없어 '부분 커버 잔여'로 표에 남긴다(예외 등재가 아니라 잔여 표기).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`e2e/tests/s01.spec.ts`(현재 AC4.8 로그인 → AC4.1 App 연결 → AC4.2 키 등록 → AC4.3 마스킹을 한 테스트에 묶음)를 AC별 전용 spec 4개로 분리한다: `ac4-8-signin-and-session.spec.ts`(기본 stub 사용자 — UI 'Sign in with GitHub' 버튼·세션·로그아웃 무효화), `ac4-1-github-app-connection.spec.ts`(핸들 `ac41`), `ac4-2-llm-key-lifecycle.spec.ts`(핸들 `ac42` — 등록·검증 실패·폐기 후 차단), `ac4-3-credential-safety.spec.ts`(핸들 `ac43` — 마스킹·평문 미노출·감사 이력 열람). 각 파일 상단에 `// 검증 AC: ACx.y` 한 줄과 무엇을 왜 이 파일이 소유하는지 주석을 단다. 원본 `s01.spec.ts`는 삭제한다.",
+              "expectedOutcome": "`e2e/tests/` 최상위에 AC 1개씩만 선언한 spec 4개가 생기고 `s01.spec.ts`는 사라진다. spec 파일은 서로 다른 `?as=` 핸들을 써서 병렬 워커에서 사용자 상태가 겹치지 않는다(설치·키는 사용자 단위 상태)."
+            },
+            {
+              "seq": 2,
+              "action": "`e2e/tests/s02-s03.spec.ts`를 `ac1-1-repository-connect-and-trigger.spec.ts`로 `git mv` 하고 헤더에 `// 검증 AC: AC1.1` 선언을 추가한다. 본문 단언은 그대로 둔다(이미 AC1.1만 검증한다). 사용자 핸들도 `s02journey` → `ac11`로 맞춰 다른 spec과 충돌하지 않게 한다.",
+              "expectedOutcome": "AC1.1이 전용 파일 1개를 갖고, 고아(비-AC) 파일이 0이 된다. 매칭 단위 파일 총 5개."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/doc-tracker.md`에 'e2e 매핑' 섹션을 신설한다: (a) AC↔파일 매핑 표(5행, 각 행에 전용 파일·부분 커버 잔여) (b) 예외 목록 — **0건** + 예외 정책(미구현은 예외 사유가 아니다) (c) 공백 19건 목록 + 각 AC를 닫을 구현 수렴 로드맵 슬라이스 번호 (d) 집계(AC 24 · 예외 0 · 매핑 파일 5 · 공백 19) (e) 매핑을 기계적으로 재확인하는 grep recipe와 파일명 규약(`ac<major>-<minor>-<slug>.spec.ts`).",
+              "expectedOutcome": "규칙 4·6의 SSOT가 생기고, 다음 감지가 집계를 실제와 대조할 수 있다. 공백 19건이 docs-impl 모델의 미구현 19건과 정확히 같은 집합이 된다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/doc-tracker.md`의 '현재 상태 요약'에 e2e 매핑 한 줄을 추가하고 '변경 이력'에 이번 변경(reconciler rct_20260807-0001, 모델 tbm_feature-doc-ac-e2e) 행을 더한다. to-be(24 AC)는 건드리지 않는다.",
+              "expectedOutcome": "트래커 상단 요약만 읽어도 e2e 매핑 상태를 알 수 있고, 이력에 근거가 남는다. AC 총수는 24로 불변."
+            },
+            {
+              "seq": 5,
+              "action": "로컬 검증: 이 머신엔 node가 없으므로 CI와 같은 node 22 dist를 받아(`nodejs.org/dist/v22.14.0/node-v22.14.0-linux-arm64.tar.gz`, aarch64) `e2e/`에서 `npm ci` 후 `npx playwright test --list`를 돌린다. 브라우저 바이너리 없이도 Playwright의 **수집(collection)** 단계가 그대로 재현되므로 파싱·import·테스트 등록 오류를 CI 이전에 잡는다.",
+              "expectedOutcome": "5개 spec 파일이 모두 수집되고 테스트 5개가 나열된다(수집 오류 0). 실제 브라우저 실행·단언은 CI의 kind e2e(`scripts/e2e.sh`)가 객관 게이트로 담당한다."
+            },
+            {
+              "seq": 6,
+              "action": "브랜치 `reconcile/rct_20260807-0001`에 커밋하고 draft PR을 연다. 푸시는 Actions가 트리거되도록 `gh` 사용자 토큰 경로로 한다(installation 토큰 푸시는 워크플로를 발화시키지 않아 필수 체크가 비고 executor가 머지할 수 없게 된다).",
+              "expectedOutcome": "PR에 `CI / test (cargo + kind e2e)` 실행이 생기고, 이 실행이 초록이면 분리된 5개 spec이 실제 kind 배포에서 통과함이 증명된다."
+            }
+          ],
+          "plannedAt": "2026-08-07T21:10:00Z"
+        }
+      }
+    ]
   }
 ]
