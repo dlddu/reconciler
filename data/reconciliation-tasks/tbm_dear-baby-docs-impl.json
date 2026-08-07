@@ -796,7 +796,7 @@
       }
     },
     "createdAt": "2026-08-07T20:39:48Z",
-    "updatedAt": "2026-08-07T22:02:00Z",
+    "updatedAt": "2026-08-07T22:20:00Z",
     "stateSummary": {
       "asIs": "**as-is = `app/` + `backend/` + `worker/` 구현 트리** (dlddu/dear-baby@main `92939e8`, 2026-08-07T20:39Z 관측). `worker:613d4709` 불변.\n\n- 트리거 delta는 **커밋 1개** — #169 `92939e8` \"feat(app,backend): wire home community section to the real feed (PRD-009 slice 2)\", 직전 task rct_20260807-0002(현재 `succeeded`/terminal)의 슬라이스 산출물이다. (같은 구간의 #163은 `e2e/`+`docs/`만 건드려 as-is에 delta 없음.)\n- #169 내역(12파일 +805/-453): `app/src/api/community.ts`(+117 신규) ↔ `app/src/api/feed.ts`(−136 삭제) · `app/app/(tabs)/index.tsx`(+104/-…) · `app/src/components/OtherEntryCard.tsx` 개편 · `backend/internal/records/community.go`(+128) · 각 테스트 파일 · `e2e/maestro/home-feed.yaml`.\n- 즉 **홈 화면의 \"다른 엄마들의 기록\" 섹션(AC-009-14)이 하드코딩 mock 풀에서 실제 `GET /v1/community/feed` 응답으로 전환**됐고, `child_status_text`(임신 주차/양육 개월 라벨)가 서버에서 계산돼 내려온다.\n- 커뮤니티 표면 실측: 백엔드 라우트는 `pr.Get(\"/community/feed\", …)` **읽기 1개뿐**(`backend/internal/app/router.go:149`) — 공감·댓글·신고·상세·재비공개/삭제 write 경로 없음. 앱의 커뮤니티 탭 `app/app/(tabs)/community.tsx`는 여전히 **29줄 플레이스홀더**(\"커뮤니티\" 제목 + \"곧 추가됩니다\" 캡션)다.\n- 앱 화면 전량: landing · onboarding(a1~c3·q1·q2) · tabs(index·diary·memoir·community·settings) · diary/[id]{,/edit} · drafts · record-{audio,audio-review,text}.",
       "toBe": "**to-be = `docs/` 트리** (`4215214d`, 직전 `982da7f2`)\n\n- docs delta는 **#163의 `doc-tracker.md` 1파일뿐**(AC-002-01 e2e 매핑 ⬜→✅, 집계 ✅22·⬜46) — 자매 모델 `tbm_dear-baby-ac-e2e-1to1`의 원장이 움직인 것으로, 이 모델 관점에서는 **AC 정의 무변경 bookkeeping**이다. `docs/prd/` 트리는 불변.\n- AC 집합: PRD-001~009, 제품 AC **69개 전부 확정**(검증 대상 68 + 1차 제외 1 = AC-009-12 알림). PRD-009 커뮤니티 탭은 2026-08-05에 draft 해제·확정됐다.\n- 모델 정의의 drift 판정 #1: **미구현 확정 AC = drift**(백로그로 빼지 않음), #2: 살아있는 구현↔문서 불일치도 drift.",
@@ -809,6 +809,67 @@
       "reason": "post-reconcile 재트리거이고 잔여가 소유자 없이 남아 있다. #169는 계획대로 AC-009-14를 닫았지만(mock 노출 해소 = 가장 시급한 drift #2 종료), PRD-009의 사용자 대면 본체는 여전히 미구현이다 — 커뮤니티 탭이 \"곧 추가됩니다\" 플레이스홀더이고 백엔드 커뮤니티 라우트가 읽기 1개뿐이라는 것을 소스로 확인했다. 여기에 PRD-003/004/005 계열 standing gap이 그대로 얹힌다. definition이 미구현 확정 AC를 백로그가 아닌 drift로 규정하므로 유예 대상이 아니다. 직전 task terminal + 열린 handoff 0 → planner가 다음 슬라이스(자연스러운 후보: 커뮤니티 탭 피드 화면 AC-009-02, 그 다음 공감/댓글 write 경로)를 계획할 차례. 정적 구현 gap이라 자동 해소 가능성 없음(재확인 유예 부적합).\n\n참고: 같은 커밋 #169가 자매 모델 `tbm_dear-baby-ac-e2e-1to1`에는 별개의 구조 drift(`home-feed.yaml` 헤더 2 AC 묶음 + 트래커 미갱신)를 만들었고, 그쪽은 rct_20260807-0002로 따로 기록했다.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-07T20:39:48Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "PRD-009 커뮤니티의 세 번째 슬라이스로 **커뮤니티 탭 메인 화면 1차**를 구현한다. 앞선 두 슬라이스가 백엔드 읽기 경로(#168)와 홈 섹션 배선(#169)을 끝내 `GET /v1/community/feed`가 이미 마스킹·정렬·페이지네이션·아이현황을 완결해 내려주는데, 정작 그 탭(`app/app/(tabs)/community.tsx`)은 29줄 '곧 추가됩니다' 플레이스홀더다 — 즉 남은 것은 새 데이터 경로가 아니라 **이미 있는 데이터를 그리는 화면**이라, 표면이 좁고 되돌리기 쉬운 다음 조각이다.\n\n**이 시도의 범위(= 완료 기준)**: 아래 3개를 만족하면 이 task는 성공이다.\n(1) **AC-009-03 완결** — 상단에 현재 활성 아이 기준 상태값(임신 N주차 / 생후 N개월 / N살) 표시, 아이 전환 시 상태값·피드 동시 갱신, 사용자 수동 시기 필터 미제공.\n(2) **AC-009-06 완결** — 전체/질문답변/자유일기 3종 필터, 기본값 `전체`. 서버가 `type` 파라미터로 거른다(클라이언트가 페이지 안에서 거르면 커서 페이지네이션과 어긋나 '다음 페이지엔 있는데 빈 화면'이 나온다).\n(3) **AC-009-13의 커뮤니티 피드 3행 완결** — 공개 기록 0건 '아직 공개된 기록이 없어요' · 필터 결과 0건 '해당 조건의 기록이 아직 없어요' · 네트워크 오류 '기록을 불러오지 못했어요. 다시 시도해주세요'.\n부수적으로 AC-009-02의 화면 구조 ①헤더 ②유사시기 영역 ④타입 필터 ⑤공개 기록 피드 4/5와 카드 요소(표시명·아이현황·콘텐츠타입·질문텍스트·본문미리보기) 5/8을 채우지만, AC-009-02 자체는 이 슬라이스로 닫히지 않는다(아래 범위 밖).\n\n**왜 이 조합인가**: AC-009-02/07/08/09는 서로 물려 있어(카드 탭→상세, 상세→공감·댓글 수) 한 조각으로 못 자르는데, AC-009-03과 AC-009-06은 각자 AC 본문이 검증 범위를 **명시적으로 좁혀** 두어(AC-009-03: '상태값 표시·아이 전환 갱신·수동 필터 미제공까지', 정렬 자체는 ENG-011/007 확정 후 재개발 / AC-009-06: 필터 3종과 기본값) 지금 있는 재료만으로 **완전히** 닫힌다. 부분 수렴만 쌓는 대신 확정 AC 2건을 실제로 종료시키는 쪽을 골랐다.\n\n**설계상 주의 하나를 미리 잡았다**: AC-009-03의 표시 문구는 홈 헤더 포맷터(`formatPregnancyLabel`)와 **다르다** — 홈은 AC-007-01에 따라 잔여 100일 이하를 `D-36`으로 그리지만 AC-009-03 표는 언제나 `임신 20주차`다. 홈 포맷터를 재사용하면 출산 100일 전 사용자에게 AC-009-03 위반이 조용히 발생하므로, 백엔드 `childStatusText`(카드에 찍히는 문구)와 1:1로 맞춘 전용 포맷터를 앱에 추가한다. 같은 화면에서 내 상태값과 카드의 아이현황이 같은 어휘를 쓰게 되는 부수 효과도 있다.\n\n**범위 밖(잔여 gap — 실행이 만든 버전 변화의 재감지가 새 task로 잇는다)**: AC-009-04 오늘의 질문 카드 CTA 3분기(내 답변 상태 조회 API 부재) · AC-009-05 같은 질문 답변 모아보기 · AC-009-07 상세 화면(카드 탭 이동 포함) · AC-009-08 공감 · AC-009-09 댓글(테이블 없음 → 카드에 공감/댓글 수를 찍지 않는다, #169가 세운 '없는 수를 지어내지 않는다' 원칙 유지) · AC-009-11 신고 · AC-009-12 알림(1차 제외) · ENG-011 유사 시기 가중 랭킹(정렬은 최신순 유지) · 카드의 '제목'(records에 title 컬럼 자체가 없음) · PRD-003/004/005 계열 standing gap.\n\n**가역성**: 마이그레이션 0건, 기존 라우트 동작 무변경(`type` 미지정 = 기존과 동일한 응답), 홈 화면 무변경(카드 타입 배지는 opt-in prop, 기본 off). 머지 전이면 PR 닫기, 머지 후면 revert 1건으로 복구된다.",
+          "riskLevel": "medium",
+          "plannedAt": "2026-08-07T22:20:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "backend: `Store.CommunityFeed`에 콘텐츠 타입 인자를 추가하고 WHERE 절에 `r.question_text IS NOT NULL`(질문답변) / `IS NULL`(자유일기) 를 붙인다. `all`은 절을 붙이지 않아 기존 쿼리와 동일. 커서·정렬·노출 풀 규칙은 건드리지 않는다.",
+              "expectedOutcome": "마이그레이션 0건. `go build ./...` 통과, 기존 records 테스트 전부 그대로 통과."
+            },
+            {
+              "seq": 2,
+              "action": "backend: `CommunityFeed` 핸들러가 `type` 쿼리 파라미터를 읽어 `all|question|diary`만 허용하고(빈 값 = `all`), 그 외에는 400 `invalid type`으로 거절한다. 응답 형태는 불변.",
+              "expectedOutcome": "`GET /v1/community/feed`가 `type` 없이 호출되면 이전과 바이트 동일한 응답. `type=bogus`는 400."
+            },
+            {
+              "seq": 3,
+              "action": "backend 테스트: `community_test.go`에 (a) type별 필터링(질문답변만/자유일기만/전체), (b) 기본값이 all, (c) 잘못된 type 400, (d) 필터가 커서 페이지네이션과 함께 동작(필터된 풀 안에서 keyset이 이어짐) 케이스를 추가한다.",
+              "expectedOutcome": "`go test ./...` green. 새 케이스를 의도적으로 뒤집으면(negative control) 실패하는 것을 확인."
+            },
+            {
+              "seq": 4,
+              "action": "app: `src/api/community.ts`의 `CommunityFeedOptions`에 `type?: 'all'|'question'|'diary'` 를 추가해 쿼리스트링으로 전달한다. `getTopThreeForHome`은 손대지 않는다(홈 무변경).",
+              "expectedOutcome": "`type` 미지정 시 기존과 동일한 URL. 기존 `src/api/__tests__/community.test.ts` 전부 통과."
+            },
+            {
+              "seq": 5,
+              "action": "app: AC-009-03 표시 문구 전용 포맷터를 추가한다(`src/utils/communityStageLabel.ts`) — 임신은 항상 `임신 N주차`(ENG-001 280일 기준, 백엔드 childStatusText와 동일한 경계: 과거 5주/미래 45주 초과는 null), 육아는 13개월 미만 `생후 N개월`·이상 `N살`. 홈 헤더의 D-day 분기를 재사용하지 않는 이유를 파일 주석에 남긴다.",
+              "expectedOutcome": "단위 테스트가 백엔드 `childStatusText`의 경계값(0주/40주/12개월/13개월/범위 밖 null)과 같은 답을 낸다."
+            },
+            {
+              "seq": 6,
+              "action": "app: `src/components/OtherEntryCard.tsx`에 opt-in prop(`showTypeBadge`, 기본 false)을 추가해 `questionText != null ? '질문답변' : '자유일기'` 배지를 그린다(AC-009-02 카드의 '콘텐츠 타입' 요소). 홈은 prop을 넘기지 않으므로 렌더 결과가 그대로다.",
+              "expectedOutcome": "기존 `OtherEntryCard.test.tsx`·`index-feed.test.tsx` 무수정 통과 + 배지 on/off 케이스 추가."
+            },
+            {
+              "seq": 7,
+              "action": "app: `app/(tabs)/community.tsx` 를 구현한다 — 루트 `testID=\"community-tab\"` 유지(기존 e2e 3개 flow가 이 id를 단정한다), 상단 헤더(`커뮤니티` 타이틀 + 활성 아이 상태값), Pill 3종 필터 행, FlatList 피드(OtherEntryCard, `showTypeBadge`), `onEndReached`로 커서 추가 로드, 로딩/빈/필터빈/오류 분기. 활성 아이(subjectId)·선택 필터가 바뀌면 첫 페이지부터 재조회한다.",
+              "expectedOutcome": "`npm run check:routes` 라우트 수 불변(28개), 화면이 세 상태를 각각 그린다."
+            },
+            {
+              "seq": 8,
+              "action": "app 테스트: `app/(tabs)/__tests__/community.test.tsx` 신규 — (a) 피드 카드 렌더 + 상태값 문구, (b) 필터 탭 시 `type` 인자로 재조회 + 기본값 all, (c) 빈/필터빈/오류 3문구, (d) 활성 아이 전환 시 재조회, (e) onEndReached 시 커서로 다음 페이지 append.",
+              "expectedOutcome": "`npm test` green, 스위트 수 23 → 26 (community/communityStageLabel/OtherEntryCard 배지)."
+            },
+            {
+              "seq": 9,
+              "action": "로컬에서 CI 게이트를 1:1 재현한다 — app: `npm run check:routes && npm test -- --ci --colors=false` (node 20 dist), backend: `go build ./... && go vet ./internal/... && go test ./...` (go1.24.7 dist). 기존 141개 테스트가 하나도 깨지지 않았는지 확인한다.",
+              "expectedOutcome": "두 게이트 모두 green이고 기존 테스트 141개 전부 유지."
+            },
+            {
+              "seq": 10,
+              "action": "`reconcile/rct_20260807-0003` 브랜치로 커밋·푸시하고 dlddu/dear-baby 에 **draft PR**을 연다(gh 사용자 토큰 경로 — installation 토큰으로 밀면 Actions가 발화하지 않는다). PR 본문에 task id·gap·범위·범위 밖·검증 방법·배포 노출 경고를 적는다.",
+              "expectedOutcome": "PR이 열리고 `gh run list --branch reconcile/rct_20260807-0003` 에 run이 실제로 생성된다. App/Backend Unit Tests green."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
