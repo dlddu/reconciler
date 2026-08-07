@@ -915,7 +915,7 @@
   {
     "id": "rct_20260807-0002",
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "planned",
+    "status": "executing",
     "trigger": {
       "detectedAt": "2026-08-07T04:59:33Z",
       "changedSides": [
@@ -944,7 +944,7 @@
       "assessedBy": "agent",
       "assessedAt": "2026-08-07T04:59:33Z"
     },
-    "updatedAt": "2026-08-07T06:52:00Z",
+    "updatedAt": "2026-08-07T12:35:00Z",
     "attempts": [
       {
         "plan": {
@@ -1002,6 +1002,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/37",
           "preparedAt": "2026-08-07T06:45:00Z",
           "notes": "draft PR #37 로 스테이징(머지 안 함). base main fdc56e1, head f087253, mergeable=MERGEABLE, push 로 CI 워크플로 실제 기동 확인(설치 토큰 0-run 함정 회피 — gh 사용자 토큰 경로로 push). 10파일 · +233/-21, 런타임 Go 코드·주 배포·kustomize 오버레이 무변경(test-only + docs).\n\n[신규] tests/integration/no_config.py — 6개 per-AC 케이스 + 공용 헬퍼 assert_unavailable_refusal(). 헬퍼가 (1) isError=true (2) content[0].text 가 '<도메인> unavailable: <미구성 사유>' 와 정확히 일치 (3) 직후 ping 이 'pong' 반환(= 서버·다른 도구 무영향) 3가지를 단언한다. auth 가 켜진 변형이라 세션은 auth.py 와 같은 정적 키로 연다.\n[수정] .github/workflows/ci.yml — 'Validate auth gate against variant' 바로 뒤에 스텝 1개 추가(port-forward 8088 → no_config.py). 신규 배포·신규 롤아웃 대기 없음. 포트 8088 은 기존 8080~8087 과 비충돌(파싱으로 확인).\n[수정] tests/k8s/kind/auth-fixture.yaml — 주석만 7줄 추가('자격증명 미부착'이 이제 no_config.py 의 계약임을 명시). YAML 파싱 결과가 직전 커밋과 **완전 동일**함을 확인(리소스 스펙 불변, 주장 아니라 검증).\n[수정] docs/doc-tracker.md — 레지스트리 6행 ⬜→✅ 전용 케이스, 헤더 tally ✅43(통합32·전용11)·⬜8 → ✅49(통합32·전용17)·⬜2, backlog 헤더 (8)→(2) + no-config 블록을 완료 노트로 교체, 변경 이력 2026-08-07 행 추가.\n[수정] docs/test-{aws-config-get,github-app-installation-token,grafana-token,opensearch-search,opensearch-document-put,opensearch-document-delete}.md — 각 '미설정 시 도구 에러' 시나리오의 자동화 필드에 신규 e2e 케이스 경로 추가.\n\n검증(로컬 실측 — 이 슬라이스는 blind 가 아니다): Go 1.24.7 dist 로 서버를 빌드해 auth-fixture 와 동일 env(MCP_API_KEYS=ci-e2e-key, 자격증명 4종 미설정, MCP_K8S_DISABLED=1)로 띄운 뒤 venv(pip 부트스트랩 + requirements.txt)로 실제 실행 — 기존 auth.py green(하네스 동등성), 신규 no_config.py 6/6 green. 6개 도구 응답을 직접 관측해 단언 문자열을 확정했고(추측 아님), 호출 후 /healthz·/readyz 200 + tools/list 14개 유지도 확인. gofmt -l 빈 결과 · go vet ./... · go build ./... 통과(Go 무변경). 케이스명 ↔ docstring 'AC:' 선언 ↔ 레지스트리 ↔ test-*.md 4자 교차 검증에서 누락·dangling 0, 레지스트리 계수도 스크립트로 재계산해 헤더와 일치(52행 = ✅49(통합32·전용17)+⬜2+🚫1) 확인.\n로컬 미재현 잔여: kind 클러스터 배포·port-forward 배선·CI 스텝 실행 순서 → CI 'integration tests' 잡이 객관 게이트."
+        },
+        "review": {
+          "required": false,
+          "status": "not_required",
+          "reason": "riskLevel=low + 변경 성격이 test-only + docs 로, 사람 검토 없이 진행해도 되는 근거가 모두 관측으로 확인됨. (1) PR #37 diff 10파일 +233/-21 중 런타임 Go 코드·k8s/ 매니페스트·main.go·kustomize 오버레이 무변경 — auth-fixture.yaml 은 주석 7줄만 추가되어 파싱된 리소스 스펙이 직전 커밋과 동일. (2) 프로덕션 워크로드·데이터 영향 없음 — 새 케이스는 kind 안 자격증명 미배선 파드에만 요청하고, 파괴적 도구(opensearch put/delete)는 unavailable 로 거부되는 것이 곧 단언 내용이라 실제 색인·삭제가 일어나지 않음. (3) ci.yml 의 docker build & push 잡은 이미 pull_request 이벤트(run 31154351770)에서 성공해 ghcr latest/sha 태그를 올렸고 Go 코드가 무변경이라, 머지가 프로덕션 이미지에 새로 유발하는 변화가 없음. (4) 불가역 지점은 squash 머지 1개뿐이며 test-only 라 revert 1건으로 완전 가역, 마이그레이션·스키마 변경 0건. (5) 계획이 요구한 객관 게이트가 이미 green — run 31154351770 의 4개 잡(fmt+vet · unit tests · integration tests · docker) 전부 success 이고, 신규 스텝 로그에 'refusal ok:' 6줄(aws-config-get/AC3 · github-app-installation-token/AC3 · grafana-token/AC3 · opensearch-search/AC4 · opensearch-document-put/AC5 · opensearch-document-delete/AC5)이 실제 관측됨. 판단이 갈릴 모호함이 없어 검토 불필요로 판정하고 바로 실행한다."
         }
       }
     ]
