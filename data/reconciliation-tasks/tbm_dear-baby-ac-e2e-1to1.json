@@ -1497,7 +1497,7 @@
   },
   {
     "toBeModelId": "tbm_dear-baby-ac-e2e-1to1",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-08-07T20:39:48Z",
       "changedSides": [
@@ -1514,7 +1514,7 @@
       }
     },
     "createdAt": "2026-08-07T20:39:48Z",
-    "updatedAt": "2026-08-07T20:39:48Z",
+    "updatedAt": "2026-08-07T21:34:46Z",
     "stateSummary": {
       "asIs": "**as-is = `e2e/` 트리 = maestro flow 집합** (dlddu/dear-baby@main `92939e8`, 2026-08-07T20:39Z 관측)\n\n트리거 delta는 **커밋 2개**(baseline `d36d8c03` = #168 `e057920` 시점 트리):\n1. **#163 `6d6afe3`** \"test(e2e): add AC-002-01 daily question display flow\" — 신규 `e2e/maestro/daily-question-display.yaml`(+57) + `docs/doc-tracker.md`. 헤더는 `# 검증 대상: AC-002-01 (오늘의 질문 표시 — PRD-002 오늘의 질문).` **단일 AC 선언**. 트래커 기록상 이 PR은 `rct_20260731-0001` 슬라이스의 산출물이다.\n2. **#169 `92939e8`** \"feat(app,backend): wire home community section to the real feed (PRD-009 slice 2)\" — `e2e/maestro/home-feed.yaml` 수정(+39/-...). 홈 피드가 mock에서 실 API로 바뀌면서 flow를 빈 상태 검증으로 재작성했다.\n\n현재 `e2e/maestro/*.yaml` **24개**(제품 flow + `login.yaml`(ENG-003) + `health.yaml`(스모크 예외) + `onboarding-case*` 등). 헤더 `# 검증 대상:` 선언을 가진 파일 16개.\n\n**#169가 `home-feed.yaml` 헤더를 바꿨다**:\n```\n- # 검증 대상: AC-009-14 (홈 \"다른 엄마들의 기록\" 섹션 — 카드 표시).\n+ # 검증 대상: AC-009-14 (홈 \"다른 엄마들의 기록\" 섹션) + AC-009-13 (빈 상태).\n```\n본문도 `TC-009-14-B (공개 기록 0건 → 빈 카드 + '첫 기록을 공개해보세요' CTA)`를 주검증으로 삼도록 재작성됐다.",
       "toBe": "**to-be = `docs/prd` 트리 + `docs/doc-tracker.md`** — `prd:4a1d701e` **불변**, `tracker:3a0c62ff → 3087f8b6`.\n\n- **AC 집합은 변하지 않았다**(prd 트리 해시 동일): 제품 AC 69개 전부 확정(검증 대상 68 + 1차 제외 1 = AC-009-12).\n- 트래커 delta는 **#163 것뿐**(`git rev-parse 6d6afe3:docs/doc-tracker.md` == `92939e8:...` == `3087f8b6` — **#169는 트래커를 갱신하지 않았다**). 내용: AC-002-01 행 `⬜ 후속` → `✅ daily-question-display.yaml`, 집계 `✅21·⬜47` → **`✅22·⬜46`**, backlog 34→33, 변경 이력 1행 추가.\n- 트래커가 선언하는 불변식: \"각 AC 는 (a) 전용 flow 1개(✅) · (b) 후속 flow(⬜) 중 하나\", \"**모든 제품 flow 는 헤더에 정확히 1개 AC 를 선언한다(중복·묶음 0)**\", 영구 예외 AC 0건.\n- 현재 트래커 상태: `AC-009-13 | 빈 상태/예외 상태 | ⬜ 후속`이고, ⬜ backlog 절에도 **`AC-009-13 빈/예외 상태 → community-empty-states.yaml: 상황별 문구 6종 (TC-009-13)`**로 별도 flow가 예정돼 있다. `AC-009-14 | 홈 \"다른 엄마들의 기록\" 섹션 | ✅ home-feed.yaml`.",
@@ -1580,6 +1580,11 @@
           "pullRequestUrl": "https://github.com/dlddu/dear-baby/pull/171",
           "preparedAt": "2026-08-07T21:30:00Z",
           "notes": "10파일 +27/-2, **주석·문서 전용**. base main `92939e8`, head `57dc12f`(noreply author, gh user 토큰 push → Actions run 31219877571 즉시 기동). e2e/maestro 9개(home-feed 단일 AC 복원 + legacy 8개 헤더 정규화) + docs/doc-tracker.md 2 hunk.\n\n**로컬 검증 완료(blind 아님)** — `python3 -m venv` + get-pip 부트스트랩으로 PyYAML 확보 후 실측: (1) 24개 flow 전부 2-document YAML로 파싱되고 **커맨드 시퀀스가 편집 전과 deep-equal 동일**(주석만 바뀌었다는 증명 — Maestro 수집 단계 실패 위험 0), (2) 제품 flow **22/22**가 `검증 대상:` 헤더에 정확히 1개 AC 선언(before 13/22), 묶음 0·중복 0·헤더 누락 0, (3) 선언 AC 22개 집합이 트래커 매핑 표 ✅ 22행과 **파일명까지 양방향 일치**. 재현 스크립트는 PR 본문에 인라인.\n\n**CI 실측**: `changes` 필터가 `e2e`만 true → **E2E iOS·Android 2개만 돈다**(~60–90분), App/Backend Unit·Integration은 skipping(=성공 처리), `CI Success`가 이들을 집계. `docs/**`는 어떤 필터에도 안 걸린다. 앱·백엔드 코드 무변경이라 이 PR이 e2e를 붉히는 유일한 경로는 flow 파싱뿐인데 위 (1)로 배제됐다 — 실패가 나면 무관한 기존 flake일 가능성이 높다(파일명 확인 필수).\n\n**열린 PR #170과의 관계**: 같은 레포·같은 `docs/doc-tracker.md` 변경 이력 표 **맨 위**에 각각 한 행을 추가하므로 나중에 머지되는 쪽이 그 지점에서 충돌한다(해소 = 두 행 모두 유지, 둘 다 2026-08-07). 카운트 라인(✅22·⬜46·AC-001-06 행·backlog 절)은 이 PR이 건드리지 않아 겹치지 않는다. 현재 `mergeable=MERGEABLE`(main 대비 충돌 없음), `mergeStateStatus=BLOCKED`(draft + 체크 진행 중).\n\nPR 본문은 planner가 열었으므로 이미 완비돼 있다(gap·SSOT 근거·완료 기준 표·재현 스크립트·범위 밖·주의)."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "계획이 스스로 '사람이 판단할 유일한 지점'으로 지정한 방향성 결정이 들어 있다 — AC-009-13(빈/예외 상태)에 묶여 있던 홈 섹션 빈 상태 검증을 AC-009-14 소속으로 재분류하는 것. PRD-009 AC-009-14 조건문과 TEST-009 TC-009-14-B의 '검증 대상' 선언 두 SSOT가 이를 뒷받침하지만, AC 귀속은 정의 해석이 갈릴 수 있는 판단이고 트래커의 AC↔flow 매핑(SSOT)을 바꾸는 효과가 있다. 또한 실행이 대상 레포 main 머지를 지나며, 계획의 실행 순서표도 머지 직전 사용자 승인을 명시적 단계로 두고 있다. riskLevel은 low(주석·문서 전용, 런타임/데이터 영향 0, revert 1회로 원복)지만 방향성 판단 때문에 검토가 필요하다."
         }
       }
     ]
