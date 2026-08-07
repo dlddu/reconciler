@@ -1042,5 +1042,28 @@
         }
       }
     ]
+  },
+  {
+    "id": "rct_20260807-0001",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "assessing",
+    "trigger": {
+      "detectedAt": "2026-08-07T22:36:00Z",
+      "changedSides": [
+        "as_is"
+      ],
+      "asIs": {
+        "previousVersion": "contracts:b67b8ff3a7918b8df40e1a7866d3b920ad5d1abf python:801121719e524af99fb66df694b55a21e2b75563 go:d44021489001cfb2be4f0a2c58e0145f7f719d17 web:bb4a0ab2923910e4fc7d6843834f60168d42310e deploy:342ca91f2d870f3afe03355ccfe6c54bbd0de881",
+        "currentVersion": "contracts:b67b8ff3a7918b8df40e1a7866d3b920ad5d1abf python:bf77a10eb715656a0ef5d107d1f942d6dd3c9d93 go:d44021489001cfb2be4f0a2c58e0145f7f719d17 web:bb4a0ab2923910e4fc7d6843834f60168d42310e deploy:781916043165ab21c57ec3f1be4fd39aa3d0ef10"
+      }
+    },
+    "stateSummary": {
+      "asIs": "관측 시각 2026-08-07T22:36Z · `dlddu/economic-opinion-trend-monitor`@main HEAD `218dec6`\nas-is 버전: `contracts:b67b8ff3 python:bf77a10e go:d4402148 web:bb4a0ab2 deploy:78191604`\n(직전 baseline `python:80112171 deploy:342ca91f` 대비 python·deploy 두 트리만 이동, contracts·go·web 무변경)\n\n**트리거 delta = 정확히 2커밋, 둘 다 이 모델 자신의 task `rct_20260802-0001`(현재 succeeded)의 실행 산출물**\n- `c4038e2` (#11, 2026-08-07T12:25Z) — deploy: schedule hourly ingestion as an Argo CronWorkflow (AC1.1)\n- `218dec6` (2026-08-07T21:31:53Z, author reconciler-bot, 커밋 본문 `reconcile rct_20260802-0001`) — 그 CronWorkflow unsuspend\n`git rev-parse 12acd9c:python|:deploy` == 직전 baseline 값과 일치하므로 baseline 시점은 #8 `12acd9c`이고 그 사이 다른 커밋은 없다.\n\n**구현 실측(문서·verification 기록이 아니라 소스에서 재확인)**\n- `deploy/batch/`: `cronworkflow-ingestion.yaml`(`suspend: false`, `schedule: \"0 * * * *\"`, `timezone: Etc/UTC`, `concurrencyPolicy: Forbid`, `startingDeadlineSeconds: 1800`) + `workflow-template.yaml` + `rbac.yaml` + 전용 PVC, prod 오버레이에만 배선. → **AC1.1(정기 수집 스케줄링)의 구현체가 실제로 존재하고 가동 상태**다.\n- `python/packages/` = core · ingestion · analysis · aggregation. **analysis 패키지에는 `fake_llm.py`만 있고 실 LLM 분석기 모듈이 없다**(`ls python/packages/analysis/src/econ_analysis/` = `__init__.py __main__.py cli.py fake_llm.py`; cli.py에 `--analyzer` 선택지 없음). → AC2.1~2.6 미구현.\n- `go/internal/handlers/handlers.go` 헤더 주석이 스스로 \"화면당 stub 라우트 1개(7화면→7라우트) … 실제 데이터 계약은 후속\"이라 명시하고, 본문에도 `\"note\": \"stub: single-bucket skeleton data (AC3.5 time series is follow-up)\"`, `\"stub: 원문 역추적 자리 … 후속 작업 (AC2.6)\"`, `\"stub: 재처리 콘솔 자리 … 후속 작업 (AC2.6)\"`가 남아 있다. → AC3.x 서빙 미구현.\n- `web/`: `App.tsx`가 화면 정의를 순회하며 `<Placeholder screen={s} />`를 렌더하고, `Dashboard.tsx:33` 주석이 \"Representative screen (dash). The other 6 screens are placeholders\"라고 적는다. → 7화면 중 6화면 자리표시자.\n- `go/internal/static/static.go`: 웹 번들이 없을 때 placeholder를 서빙하는 골격 유지.",
+      "toBe": "관측 시각 2026-08-07T22:36Z · to-be 버전 `docs` 트리 `ab943bb6` — **2026-07-26 이래 무변경**(이번 트리거는 as-is 단독).\n\n**AC 전집 21개** (`grep -rohE 'AC[0-9]+\\.[0-9]+' docs | sort -u`): AC1.1~1.7(수집) · AC2.1~2.6(분석) · AC3.1~3.8(정규화·집계·시각화).\n`docs/econ-opinion-monitor-doc-tracker.md`의 수렴 로드맵이 21개 AC를 슬라이스에 1:1로 소유시킨다 —\n- 슬라이스 2 \"실수집 → 실 Bronze\": AC1.1·1.2·1.3·1.4·1.5·1.6·1.7\n- 슬라이스 3 \"실분석 → 실 Silver\": AC2.1·2.2·2.3·2.4·2.5·2.6 (페이크 LLM → 실 LLM, sentiment 4분류 + 미분석 상태)\n- 슬라이스 4~10: AC3.2·3.3(대시보드 첫 수직 관통) · AC3.5(trend) · AC3.4·3.6(sentiment) · AC3.7(compare) · AC3.1·3.8(fairness) + trace·reprocess 콘솔\ndefinition의 판정 기준 1은 **미구현 AC 자체를 drift로 규정**하고 \"골격의 페이크/스텁(페이크 소스·페이크 LLM·더미 JSON 라우트)은 AC 충족으로 보지 않는다\"고 명시한다(2026-07-12 사용자 결정: 백로그 예외 불가). 2026-08-07 개정으로 `deploy/`가 as-is 범위에 포함돼, 매니페스트가 구현체인 AC1.1이 정상적으로 감지·계획된다.",
+      "gap": "**슬라이스 2(AC1.1~1.7)가 이번 트리거로 닫혔고, 잔여 14개 AC가 그대로 남았다.**\n- 닫힌 쪽: AC1.1(정기 수집 스케줄링)은 로드맵상 슬라이스 2의 마지막 잔여 AC였고, `deploy/batch/`의 CronWorkflow가 실구현체로 착지한 뒤 `218dec6`로 unsuspend까지 됐다(`suspend: false`). 직전 task의 verification이 22:00:00Z 예약 tick → `econ-ingestion-hourly-1786140000` 30초 완주를 실측 기록했고, 그 `asIsVersionAfter`가 이번 사이클의 현재 as-is 값과 문자 단위로 일치한다 — 즉 **이 트리거는 그 슬라이스의 착지 그 자체**이지 새 외부 변경이 아니다.\n- 남은 쪽(definition 기준 1 위반, 유의미): **AC2.1~2.6 + AC3.1~3.8 = 14개 AC가 통째로 미구현**이다. 위 as-is 실측대로 분석은 `fake_llm`뿐이고, 서빙은 자기 주석이 stub이라 선언한 라우트이며, 웹은 7화면 중 6화면이 Placeholder다. 페이크·스텁을 충족으로 보지 않는다는 정의에 따라 전부 drift다.\n- 운영 잔여(수렴 판정과 별개의 관측 사실): `default_feeds.json`의 3개 소스(treasury-press·imf-news·worldbank-news)가 매 사이클 실패하나 AC1.6대로 격리돼 사이클은 완주한다. PR #9(analysis 실 LLM opt-in, 반려 유지)·#10(CronJob 수단, 미채택 보존)은 열린 draft 그대로다.\n- 문서↔구현 모순(기준 5)은 새로 발견되지 않았다: `deploy/` 매니페스트 주석이 기술하는 동작이 실제 스케줄 필드와 일치하고, go/web의 stub 주석은 \"아직 후속\"이라고 정직하게 적혀 있어 문서가 구현을 과대 기술하지 않는다.",
+      "summarizedAt": "2026-08-07T22:36:00Z"
+    },
+    "createdAt": "2026-08-07T22:36:00Z",
+    "updatedAt": "2026-08-07T22:36:00Z"
   }
 ]
