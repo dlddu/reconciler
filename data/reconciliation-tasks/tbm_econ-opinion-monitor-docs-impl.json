@@ -1064,7 +1064,7 @@
       "summarizedAt": "2026-08-07T22:36:00Z"
     },
     "createdAt": "2026-08-07T22:36:00Z",
-    "updatedAt": "2026-08-07T23:11:09Z",
+    "updatedAt": "2026-08-07T23:11:35Z",
     "assessment": {
       "actionRequired": true,
       "reason": "슬라이스 착지 → 재감지의 정상 흐름이고, 잔여가 크고 **소유자가 없다**. (1) 트리거 delta 2커밋(`c4038e2`·`218dec6`)은 이 모델 자신의 task `rct_20260802-0001`의 실행 산출물이며, 그 task는 22:11:54Z 검증을 마치고 `succeeded`(terminal)로 닫혔다 — verification의 `asIsVersionAfter`가 이번 as-is와 문자 단위로 일치해 동일 사건임을 확인했다. 직전 3개 감지 사이클이 이 모델을 건너뛴 이유(당시 `executing` 점유)가 이제 해소됐다. (2) 이 모델에 다른 열린 task가 없다 — 전 이력이 succeeded/no_action_needed/cancelled로 모두 terminal이라 planner가 집어갈 미점유 handoff가 0건이다. (3) 잔여가 definition 기준 1에 정면으로 걸린다: **AC2.1~2.6 + AC3.1~3.8 = 14개 AC가 통째로 미구현**이고, 소스에서 실측한 근거는 analysis 패키지에 `fake_llm.py`뿐이라는 것, go 핸들러가 스스로 stub이라 주석한 라우트라는 것, web이 7화면 중 6화면 Placeholder라는 것이다. 정의는 페이크/스텁을 AC 충족으로 보지 않고 미구현 AC를 백로그가 아닌 drift로 규정한다. (4) 유예(재확인) 대상이 아니다 — 롤아웃 진행이나 일시 alert가 아니라 정적 문서↔구현 격차라 시간이 지나도 자동 해소되지 않는다. (5) 실행 가능한 조치가 실제로 존재한다: doc-tracker 로드맵이 다음 단위를 슬라이스 3(AC2.x 실 LLM 분석)으로 이미 특정해 두었고, 그 방향의 draft PR #9가 열려 있다(반려 사유는 \"모델 정의를 곧 바꾼다\"였고 그 개정은 `48fef79`로 이미 착지했으므로 반려 전제가 소멸했다) — 재상신 여부·범위·순서는 planner 판단. → planner 대기(`action_required`).\n참고로 이번 트리거 자체(AC1.1 스케줄링 착지)는 수렴 방향이며, 함께 관측된 운영 잔여(default_feeds 3개 소스 실패, PR #10 미채택 draft)는 AC 충족과 무관한 후속 사항으로 상태 요약에만 남긴다.",
@@ -1137,7 +1137,7 @@
           "branch": "reconcile/rct_20260807-0001-analysis-llm",
           "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/12",
           "preparedAt": "2026-08-07T23:06:58Z",
-          "notes": "draft PR #12, 대상 커밋 `e0fa167` (7파일 +721/-20). 신규 `econ_analysis/llm.py`(280줄) + `tests/test_llm.py`(17건) + `tests/test_cli.py`(5건), `cli.py`에 `--analyzer {fake,llm}`·exit 2/3 가드, `__init__`/README/`.github/workflows/image.yml` 문구 정정. contracts·go·web·deploy 무변. 열린 draft #9(같은 방향, 이전 task 소유)는 손대지 않고 보존 — PR 본문에 '이 PR이 그 실질을 대체하므로 함께 닫아도 된다(판단은 검토자 몫)'로 명시. 로컬 검증(blind 아님): venv+pip로 uv.lock 핀 `ruff==0.15.18`·pytest 확보 → `ruff check`/`ruff format --check` 통과, `pytest` **50 passed**(기존 28 전부 유지 + 신규 22). smoke의 python 구간을 편집 전(218dec6)/후 두 트리에서 각각 돌려 bronze/silver/gold **바이트 단위 동일** 확인 = 기본값 무변 증명. 네거티브 컨트롤 5건 전부 의도대로 실패 후 복구."
+          "notes": "draft PR #12, 대상 커밋 `e0fa167` (7파일 +721/-20). 신규 `econ_analysis/llm.py`(280줄) + `tests/test_llm.py`(17건) + `tests/test_cli.py`(5건), `cli.py`에 `--analyzer {fake,llm}`·exit 2/3 가드, `__init__`/README/`.github/workflows/image.yml` 문구 정정. contracts·go·web·deploy 무변. 열린 draft #9(같은 방향, 이전 task 소유)는 손대지 않고 보존 — PR 본문에 '이 PR이 그 실질을 대체하므로 함께 닫아도 된다(판단은 검토자 몫)'로 명시. 로컬 검증(blind 아님): venv+pip로 uv.lock 핀 `ruff==0.15.18`·pytest 확보 → `ruff check`/`ruff format --check` 통과, `pytest` **50 passed**(기존 28 전부 유지 + 신규 22). smoke의 python 구간을 편집 전(218dec6)/후 두 트리에서 각각 돌려 bronze/silver/gold **바이트 단위 동일** 확인 = 기본값 무변 증명. 네거티브 컨트롤 5건 전부 의도대로 실패 후 복구. || PR CI **4잡 전부 green**(로컬 예측과 일치): build 57s(= make gen-check + make lint + make test, 여기에 tests/smoke.sh 교차언어 스모크 포함) · e2e 2m41s · publish (batch) 30s · publish (serving) 27s. || 관측된 부수효과: image.yml이 `on: pull_request`에서도 `type=raw,value=latest` + `push:true`로 돌아 **PR을 연 것만으로 GHCR `latest` 두 개가 이 브랜치의 머지 커밋(eae3a20) 빌드로 교체됐다**(로그: `pushing manifest for ...-batch:latest`). deploy의 두 워크로드가 모두 `:latest`를 참조하므로 시간당 ingestion CronWorkflow는 다음 tick부터 이 이미지를 pull 한다 — 다만 변경 트리가 python/packages/analysis + README + workflow 주석뿐이고 core/ingestion/aggregation/go/web/contracts/deploy는 무변이라 기능 영향은 0. executionGuide 맨 위에 배치."
         }
       }
     ]
