@@ -719,7 +719,7 @@
       "assessedAt": "2026-08-07T01:36:32Z"
     },
     "createdAt": "2026-08-07T01:36:32Z",
-    "updatedAt": "2026-08-07T02:00:00Z",
+    "updatedAt": "2026-08-07T02:05:00Z",
     "attempts": [
       {
         "plan": {
@@ -767,7 +767,8 @@
               "action": "브랜치 push 후 GitHub API로 draft PR 생성(머지하지 않음). PR 본문에 task id, gap 요약, 계획 단계, 검증 방법, blind-authoring(로컬 kind 불가·CI가 객관 게이트) 고지 기재.",
               "expectedOutcome": "draft PR이 열리고 CI(integration-tests kind)가 트리거되어 인증 켠 변형에서 auth.py 케이스가 실행된다."
             }
-          ]
+          ],
+          "executionGuide": "## 실행 순서 (의존성)\n1. **PR #35 CI 대기** — 잡: `fmt + vet`(gofmt/vet/build, Go 전용) · `unit tests`(Go 전용) · `integration tests`(kind, 게이트) · `docker`(needs 전 3잡). 이 PR은 Go 코드를 건드리지 않으므로 `fmt+vet`·`unit tests`는 기존과 동일하게 통과해야 정상(회귀 신호 아님). **유일한 실질 게이트는 `integration tests`**다.\n2. `integration tests` 그린이면 인증 켠 배포 변형이 뜨고 AC1·AC7 케이스가 실서버에서 통과한 것 — 아래 검증으로 확정.\n3. 라이트 리뷰(test + docs + CI 설정, prod-impact 0) → **un-draft → merge**. 병렬 불가한 지점은 CI 게이트뿐, 저작 단계 병렬 이슈 없음.\n\n## 검증 방법 (완료 기준 = platform-auth-safety AC1·AC7만)\n`integration tests` 잡의 **\"Validate auth gate against variant\"** 스텝 로그(port 8087, `auth.py`)에 아래 3줄이 순서대로 찍혀야 한다:\n- `auth gate ok: unauthenticated /mcp -> 401 missing_token`  ← AC1\n- `api key auth ok: unknown key -> 401 invalid_token`  ← AC7(부정)\n- `api key auth ok: valid key -> tools/list authorized`  ← AC7(긍정)\n\n또한 그 앞의 **\"Wait for auth-variant rollout\"** 스텝이 성공해야 한다(파드 기동 확인). 문서 정합: `docs/doc-tracker.md` 집계 `✅43·⬜8·🚫1`(합 52), platform AC1·AC7 두 행이 ✅ 전용 케이스인지 재확인. **범위 밖 ⬜8(platform AC2·AC8 + no-config 6)은 이 task 완료 기준에 포함하지 않는다** — 머지 후 doc-tracker/tests 해시 변화의 재감지가 후속 task로 개시한다.\n\n## Red triage (배포 서버 CI만이 진실 — 로컬 kind 불가)\n- **\"Wait for auth-variant rollout\" 타임아웃** = 변형 파드가 안 뜸. 진단: 새로 추가한 실패 덤프의 `kubectl -n homelab-k3s-mcp-auth describe/logs`. 흔한 원인 후보: (a) 이미지 태그 — 변형은 `homelab-k3s-mcp:ci`(kind 로드분) + `imagePullPolicy: IfNotPresent`를 쓴다. base와 동일 이미지라 `ImagePullBackOff`면 로드 순서 문제; (b) `MCP_API_KEYS`만 설정돼 `auth.FromEnv`가 정상 Config 반환(에러 아님) — 만약 서버가 부팅 로그에서 auth config 에러로 죽으면 env 오타 의심; (c) `nodeSelector arch=arm64`는 ubuntu-24.04-arm 러너라 문제없음(base가 동일 사용).\n- **AC1 라인에서 401 아님(200/404 등)**: 200이면 게이트 미적용 → `MCP_AUTH_DISABLED`가 어딘가에서 켜졌거나 변형이 아닌 기존 서비스를 port-forward한 것(포트/네임스페이스 확인, 반드시 `-n homelab-k3s-mcp-auth svc/homelab-k3s-mcp-auth`). 404면 라우팅 문제(서버 버전 상이).\n- **AC7 부정 라인에서 401 아님**: 잘못된 키가 통과 = 심각(키 대조 로직 회귀). 이는 테스트 탓 아닌 코드 신호 — 별도 조사.\n- **AC7 긍정 라인 실패(list_tools 에러/타임아웃)**: 유효 키가 게이트를 못 넘거나 MCP 세션 문제. `open_session(headers=...)`가 Authorization을 실어 보내는지(→ `_helpers.py`) 확인. 이 긍정 경로가 유일한 SDK 의존 부분이므로, 만약 헤더 전달 미지원 버전이면 여기만 실패한다(mcp>=1.13은 `streamablehttp_client(url, headers=...)` 지원). 이때 fix 슬라이스: 긍정 케이스를 raw httpx SSE 파싱으로 대체.\n\n## 주의사항\n- **비가역 지점 없음. 프로덕션/트래픽/데이터 영향 0** — 전부 CI 전용(kind ephemeral) 리소스와 문서. 대상 서비스 배포·kustomize base·기존 그린 테스트는 **건드리지 않았다**(additive). 롤백 = PR 미머지 또는 revert 커밋 하나.\n- **blind 저작**: 저작 환경에서 kind를 못 돌려 `integration tests` 잡이 유일한 객관 검증이다. **CI 그린 전에는 절대 머지하지 말 것.** Red면 위 triage로 좁혀 재작업(테스트/매니페스트/CI 스텝만; Go 코드 변경 불필요할 가능성 높음).\n- **사전 조건(머지 전)**: 리뷰어는 (1) `auth-fixture.yaml`의 `MCP_API_KEYS` 값이 `auth.py`의 `API_KEY`와 일치(`ci-e2e-key`)하는지, (2) 새 CI 스텝이 기존 스텝 순서를 바꾸지 않고 추가만 됐는지, (3) doc-tracker 집계 43/8/1=52 정합을 확인.\n- **범위 밖(후속) 명시**: platform AC2(디스커버리 — OIDC 발급자 mock 픽스처), AC8(구성 유연성 — 다중 구성 전환), no-config graceful 거부 6건(대상 시크릿만 뺀 배포 변형), platform/AC4 🚫 예외의 모델 definition 비준(reconciler-tobe-modeler). 이번 슬라이스는 여기에 손대지 않는다.\n"
         },
         "preparation": {
           "prepared": true,
