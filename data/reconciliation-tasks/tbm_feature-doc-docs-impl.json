@@ -497,6 +497,62 @@
       "assessedAt": "2026-08-07T01:36:32Z"
     },
     "createdAt": "2026-08-07T01:36:32Z",
-    "updatedAt": "2026-08-07T05:53:00Z"
+    "updatedAt": "2026-08-07T06:05:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "구현 수렴 로드맵이 '다음 권장'으로 지목한 슬라이스 2b — AC1.1의 프론트엔드(S02 Home·Repositories + S03 Connect Repository) — 만 이번 범위로 잡고, PR #8(2a)이 이미 배포한 백엔드 enqueue 계약(GET /api/repositories · POST /api/analyses/preflight · POST/GET /api/analyses)을 소비하는 UI를 붙인다. 이 경로를 고른 이유: (1) 문서(doc-tracker 로드맵)가 SSOT로서 순서를 이미 확정해 뒀고 planner가 임의로 뒤집을 근거가 없다, (2) 백엔드가 이미 있어 이번 슬라이스는 프론트 전용 → backend/·migrations 무변경이라 cargo test·DB 스키마 리스크가 0이고 롤백이 PR revert 한 번으로 끝난다, (3) stub 모드(FEATUREDOC_MODE=stub)가 3개 저장소를 결정적으로 반환하므로 S02·S03 여정 전체를 kind e2e(Playwright)로 실제 검증할 수 있어 '구현했다'가 주장이 아니라 게이트가 된다. **완료 기준(이 시도의 성공 판정 범위)**: ① S01 Continue → S02 → S03 → 분석 트리거 → S02 목록에 queued 작업이 보이는 여정이 동작하고, ② 접근 범위 밖 저장소는 명확한 오류 + App 설치 범위 추가 경로가 표시되며 큐에 등록되지 않고(테스트 문서 시나리오 2), ③ 이 여정이 stub 모드 Playwright 스펙으로 CI에서 검증되고, ④ doc-tracker 로드맵의 2b가 완료로 갱신된다. **범위 밖(후속)**: 큐 소비 워커·단계별 진행률·S04(AC1.5/AC4.5=슬라이스 3), AC1.2~1.4 파이프라인(슬라이스 4), AC2.x·AC3.x(슬라이스 5·6), AC4.6 실측 비용 회계·AC4.7·AC4.4 모바일 마감 검증(슬라이스 7). 이들은 잔여 gap으로 남으며 이번 실행이 만든 버전 변화의 재감지가 새 task로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "frontend/src/api.ts에 2a 계약용 타입·클라이언트 함수 추가: Repository / Analysis / PreflightResult 타입과 listRepositories(), listAnalyses(), preflightAnalysis(repoUrl, branch), createAnalysis(repoUrl, branch). 기존 파일의 규약(same-origin credentials, errorMessage() 재사용, camelCase 응답)을 그대로 따른다.",
+              "expectedOutcome": "backend/src/analysis.rs의 RepoView·AnalysisView·PreflightView 필드와 1:1로 대응하는 타입이 생기고, tsc가 통과한다."
+            },
+            {
+              "seq": 2,
+              "action": "frontend/src/index.css에 S02·S03가 쓰는 디자인 시스템 컴포넌트 추가: appbar/appbar-title/icon-btn, section-title/count/section-action, metric-grid(cell/k/v), progress, tabbar/tab, input-row, metric, dot-sep. 값은 docs/design-system.md §4와 docs/mockups/s02·s03 HTML의 인라인 CSS에서 그대로 가져와 기존 토큰(var(--…))으로 표현한다.",
+              "expectedOutcome": "S01이 쓰던 기존 클래스는 그대로 두고 신규 클래스만 추가되어, 목업과 동일한 시각 언어로 S02·S03를 조립할 수 있다."
+            },
+            {
+              "seq": 3,
+              "action": "frontend/src/HomeRepositories.tsx(S02) 신설: /api/repositories와 /api/analyses를 병렬 로드해 메트릭 그리드 + 저장소 카드 목록 + 분석 작업 상태 배지를 렌더링. '+ New' 액션이 S03로, 하단 탭바의 Keys가 S01로 이동. 미설치(저장소 0건) 사용자는 S01로 되돌아가는 안내를 본다.",
+              "expectedOutcome": "stub 모드에서 stub-account의 3개 저장소가 카드로 보이고, 트리거된 분석이 queued 배지로 목록에 나타난다."
+            },
+            {
+              "seq": 4,
+              "action": "frontend/src/ConnectRepository.tsx(S03) 신설: 저장소 URL·브랜치 입력 → pre-flight 호출 → 추정 카드(파일 수·LLM 호출·비용·소요) 표시 → 'Start Analysis'로 POST /api/analyses. hasAccess=false면 오류 카드 + GitHub App 설치 범위 추가 경로(install-url)를 제시하고 트리거 버튼을 막는다.",
+              "expectedOutcome": "정상 저장소는 추정치가 보이고 트리거 시 201 + S02 복귀, 범위 밖 저장소는 명확한 메시지와 복구 경로가 뜨며 큐에 아무것도 등록되지 않는다(테스트 문서 시나리오 2)."
+            },
+            {
+              "seq": 5,
+              "action": "frontend/src/App.tsx를 최소 화면 라우팅(screen state: credentials | home | connect)으로 바꾸고, CredentialsSetup의 Continue를 S02 진입으로 연결한다(기존 preflight 확인은 유지). 외부 라우팅 라이브러리는 추가하지 않는다.",
+              "expectedOutcome": "여정 플로우 1(S01 → S02 → S03)이 한 SPA 안에서 이어지고, 의존성 추가 없이 번들이 커지지 않는다."
+            },
+            {
+              "seq": 6,
+              "action": "로컬 게이트 재현: 받아둔 standalone node 22로 frontend에서 `npm ci` 후 `npm run build`(= tsc -b && vite build)를 실행해 CI의 프론트 컴파일 경로를 1:1로 통과시킨다.",
+              "expectedOutcome": "tsc 타입 오류 0 + vite 번들 산출 성공. Docker 빌드 단계에서 처음 실패하는 blind 리스크가 제거된다."
+            },
+            {
+              "seq": 7,
+              "action": "e2e/tests/s02-s03.spec.ts 신설: stub 모드에서 로그인 → App 연결 → S02 진입(저장소 3건) → '+ New' → 범위 밖 URL로 오류 확인 → stub 저장소로 pre-flight 추정 확인 → Start Analysis → S02 목록에 queued 작업 확인까지를 실제 브라우저로 구동한다. 기존 s01.spec.ts의 data-testid 규약을 따른다.",
+              "expectedOutcome": "CI의 kind e2e 잡이 S02·S03 여정을 검증한다 — AC1.1의 '검증 방법'(URL 입력 → 분석 시작 → 큐 등록 확인 / 범위 밖 repo는 명확한 오류)이 자동 테스트로 커버된다."
+            },
+            {
+              "seq": 8,
+              "action": "docs/doc-tracker.md 갱신: 로드맵 표의 2b를 완료(✅)로, '다음 권장 슬라이스'를 3으로 옮기고, 진행 현황 문단의 미구현 AC 잔여에서 AC1.1을 제거한다. 또한 S02 메트릭 그리드의 Features/Spend 셀이 파이프라인 데이터(슬라이스 4 이후)를 요구해 현재는 실제 보유 데이터(Repos/Analyses/Est. cost)로 대체됐음을 알려진 편차로 기록한다.",
+              "expectedOutcome": "문서의 메타 상태가 구현 현실과 일치하고, 목업↔구현의 남은 편차가 은폐되지 않고 추적 대상으로 남는다."
+            },
+            {
+              "seq": 9,
+              "action": "reconcile/rct_20260807-0001 브랜치로 커밋·푸시하고 dlddu/feature-doc에 draft PR을 연다(머지는 executor 몫). PR 본문에 task id·gap·슬라이스 범위·검증 방법·범위 밖 잔여를 적는다.",
+              "expectedOutcome": "CI(cargo test + kind e2e)가 객관적 게이트로 돌아가는 draft PR이 열리고, executor가 검토·승인·머지만 하면 되는 상태가 된다."
+            }
+          ],
+          "plannedAt": "2026-08-07T06:05:00Z"
+        }
+      }
+    ]
   }
 ]
