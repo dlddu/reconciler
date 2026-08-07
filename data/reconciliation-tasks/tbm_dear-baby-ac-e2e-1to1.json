@@ -971,7 +971,8 @@
               "expectedOutcome": "계획 범위(AC-002-01 커버) 달성 → task succeeded. 범위 밖 46건은 재감지가 후속 슬라이스로 이음."
             }
           ],
-          "plannedAt": "2026-08-07T01:19:07Z"
+          "plannedAt": "2026-08-07T01:19:07Z",
+          "executionGuide": "## 실행 지침 — AC-002-01 재착지 (rct_20260731-0001 재작업)\n\n### 배경 (왜 재작업인가)\n직전 att0 는 계획·준비·**사용자 승인**을 마쳤고 전용 flow `daily-question-display.yaml` 은\nb890640 에서 CI 전체 green(2026-08-01)이었다. failed 로 닫힌 유일 원인은 착지 메커니즘:\nPR #163 을 rebase 한 뒤 **GitHub App 설치 토큰으로 push** 하자 워크플로가 기동되지 않아\n(설치 토큰 push 는 Actions 미트리거) head 28d6616 에 CI 0건 → 필수 체크 부재로\n`mergeable_state=blocked` → 머지 불가 → main 미수렴. 슬라이스 내용 자체는 문제없었다.\n\n### 현재 스테이징 상태 (planner 가 이미 완료)\n- 브랜치 `reconcile/rct_20260731-0001-ac-002-01` 를 최신 main 위로 rebase 완료 → head **ba6a812**.\n  - main 이 `0e0cea6`(PR#167, home-feed AC-007-08→AC-009-14 재선언)로 전진해 doc-tracker changelog line 이\n    양쪽에서 편집됨 → 그 1줄만 충돌. main 의 `rct_20260805-0001 home-feed 재선언 완료` 괄호주석을 유지하며\n    `2026-08-06 AC-002-01 flow 신설` changelog·카운트 `✅22·⬜46` 를 재적용해 해소.\n  - main 대비 최종 diff = 정확히 **2파일**(`docs/doc-tracker.md` 5+/5-, `e2e/maestro/daily-question-display.yaml` 신설 57+).\n    `daily-question-display.yaml` 은 green b890640 과 **byte-identical**.\n- 이 환경의 **user 토큰(gh dlddu)** 으로 `--force-with-lease` push 완료 → **CI 기동 확인**\n  (ba6a812 에 pull_request `CI` run 생성, 2026-08-07 01:16Z). ← 직전 실패 원인 해소의 핵심 증거.\n- PR #163 은 **draft 유지**(머지 안 함).\n\n### 실행 순서 (executor)\n> 1→2→3 순차. 1(CI green)은 2(merge)의 **선결 게이트**(병렬 불가). 3 은 merge 반영 후.\n\n1. **CI green 확인** — `gh pr checks 163 --repo dlddu/dear-baby` 또는\n   `gh api repos/dlddu/dear-baby/commits/ba6a812.../check-runs`. `CI` 워크플로(Detect Changes →\n   E2E Tests Android/iOS)가 전부 `success` 여야 한다. E2E 는 실 에뮬레이터라 수십 분 소요될 수 있음.\n2. **머지** — CI green + (필요시) 검토 승인 후 draft 해제하고 PR #163 을 main 에 머지.\n   *직전 att0 에서 사용자 승인을 이미 받았고 변경 실질은 동일하나, 재작업이므로 executor 검토 게이트에서 재확인 권장.*\n3. **main 수렴 검증** — merge 후 main 의 `docs/doc-tracker.md` 확인:\n   - AC-002-01 행이 `✅ daily-question-display.yaml`\n   - 요약/changelog 카운트 `✅22·⬜46·🟡0·1차제외1`\n   - `e2e/maestro/daily-question-display.yaml` 파일 존재\n   세 가지 모두 충족 → **계획 범위 달성, task succeeded**.\n\n### 검증 방법 (완료 기준 = 이 슬라이스 범위)\n- **단계별**: (1) check-runs 전부 success (2) `gh pr view 163 --json state,mergedAt` → merged\n  (3) `gh api repos/dlddu/dear-baby/contents/docs/doc-tracker.md?ref=main` 에서 위 3항목 확인.\n- **전체 수렴 판정**: 모델 전체 to-be(55 AC 전량)가 아니라 **AC-002-01 커버 1건** 기준으로 판정한다.\n  이 1건이 main 에 ✅ 로 반영되면 성공으로 닫는다.\n\n### 주의사항\n- **되돌리기**: 가역적 — 문제 시 merge revert 또는 브랜치 삭제로 복구(앱 코드·클러스터·데이터 무변경).\n- **push 는 반드시 user 토큰으로**: 재-push 가 필요하면(예: main 재전진으로 재-rebase) **절대\n  GitHub App 설치 토큰으로 push 하지 말 것** — 그게 직전 failed 의 근본 원인(0 CI run). 이 환경의\n  기본 gh 자격(dlddu user 토큰)으로 push 하면 CI 가 트리거된다. `GH_TOKEN`/`GITHUB_TOKEN` 을 수동\n  export 하지 말 것(gh pre-auth 를 덮어써 401).\n- **PR body 편집 주의**: 이 세션에서 연 PR 이 아니라 `gh pr edit --body` 는 정책상 거부될 수 있음\n  (분류기 External System Writes). 본문 대신 이 task 레코드(plan/executionGuide)와 diff 가 맥락을 담는다.\n- **범위 밖(후속)**: 나머지 46개 미커버 AC(외부 호출 경계 MB-3~6 게이트 7건 포함)는 ⬜ backlog 로 남으며\n  재감지가 다음 슬라이스를 연다. AC-002-01 조건3 '짧은 안내 문구' 마이크로카피·질문 본문 의미 정확성은\n  e2e(testID 노출) 밖 잔여 = dailyQuestions 단위 + 수동 QA.\n- **doc-tracker 카운트 재확인**: 만약 이 사이 다른 슬라이스가 먼저 머지되어 baseline 카운트가 또\n  움직였다면(예: ✅22 가 이미 반영), 머지 전 재-rebase 하며 카운트 산술을 다시 맞출 것.\n- **checkout 휘발 주의**: 이번 계획 중 `.reconciler-work/runs/<run>` 이 동시 인스턴스에 의해 중간 삭제됨\n  (본 지침의 A/B 커밋은 push 되어 remote 에 보존). executor 도 쓰기 직전 `pull --rebase` + 상태 재확인 필수.\n"
         },
         "preparation": {
           "prepared": true,
@@ -983,7 +984,7 @@
         }
       }
     ],
-    "updatedAt": "2026-08-07T01:19:46Z"
+    "updatedAt": "2026-08-07T04:58:32Z"
   },
   {
     "id": "rct_20260802-0001",
