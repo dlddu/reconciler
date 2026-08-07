@@ -328,6 +328,47 @@
       "assessedAt": "2026-08-07T01:36:32Z"
     },
     "createdAt": "2026-08-07T01:36:32Z",
-    "updatedAt": "2026-08-07T05:45:00Z"
+    "updatedAt": "2026-08-07T05:52:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "정책 문서가 '미판정'으로 남겨둔 6개 스펙 중 **5개**(fluxcd-reconcile·argo-data-states·fluxcd-suspend-resume·external-secrets-data-states·argo-submit)의 인터셉트 등록 지점 23곳을 정책 카테고리로 전수 판정해, 정당한 18곳은 `// mock-exception:` 주석 + 허용목록 등재로 양방향 1:1을 성립시키고 부당한 5곳은 코드에서 제거한다. 이 접근을 고른 이유: 직전 슬라이스(#212, fluxcd-detail·fluxcd-data-states)가 이미 '판정→등재 또는 제거' 패턴과 주석 문구 형식을 확립해 두었으므로 같은 패턴을 확장 적용하는 것이 가장 적은 신규 리스크로 gap을 줄인다. 제거 5곳은 모두 정책이 명시적으로 불허하는 유형(순수 pass-through 요청 카운터 3, no-op continue-only 1, 편의성 200 fulfill 1)이고, 대체 수단이 레포 안에 이미 존재한다(요청 카운트는 `page.on('request')`, 실 mutation은 전용 픽스처 `test/fixtures/fluxcd-mut-fixtures.yaml`의 kust-mut-reconcile — 같은 파일의 GitRepository 형제 테스트가 이미 실 backend `continue`로 통과 중이라 선례가 있다). **이 시도의 완료 기준(범위)**: (1) 위 5개 스펙에 미판정 인터셉트가 0건 — 남은 모든 인터셉트 등록 지점에 `// mock-exception:` 주석이 붙고 (2) `docs/e2e-mocking-policy.md` 허용목록이 11행→29행으로 늘어 코드 주석과 정확히 1:1 대응하며 (3) 미판정 표에 `pods-hide-completed.spec.ts` 한 건만 남고 (4) E2E CI(kind, `E2E Tests with kind (default)`)가 green. **범위 밖(후속)**: `pods-hide-completed.spec.ts`의 pod 목록 전체 fulfill 1곳 — 정책상 제거 대상이지만 Running/Succeeded 파드가 공존하는 실 kind 픽스처(전용 namespace) 신설이 필요해 성격이 다른 인프라 작업이다. 이 슬라이스 머지가 만드는 as-is/to-be 버전 변화의 재감지가 후속 task로 잇는다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "5개 스펙의 인터셉트 등록 지점 23곳을 전수 판정해 판정표를 확정한다. 결과: 등재 18(ERR 8 · LAT 10), 제거 5. 파일별 — fluxcd-reconcile 8곳(등재 4·제거 4), argo-data-states 6곳(전부 등재), fluxcd-suspend-resume 5곳(등재 4·제거 1), external-secrets-data-states 2곳(등재 2), argo-submit 2곳(등재 2).",
+              "expectedOutcome": "23곳 각각에 카테고리(ERR/LAT) 또는 '제거' 판정과 한 줄 사유가 붙은 판정표. 어느 지점도 '미판정'으로 남지 않는다."
+            },
+            {
+              "seq": 2,
+              "action": "제거 대상 5곳을 정리한다. (a) 순수 pass-through 요청 카운터 3곳 — fluxcd-reconcile.spec.ts L47(gitrepo detail)·L216(kust detail), fluxcd-suspend-resume.spec.ts L142(kust detail) — 을 `page.on('request', …)` + `new URL(req.url()).pathname` 정확 일치 카운트로 대체한다. (b) fluxcd-reconcile.spec.ts L52의 continue-only no-op 라우트를 삭제한다. (c) fluxcd-reconcile.spec.ts L222의 편의성 200 fulfill을 삭제해 실 backend가 응답하게 하고, L175는 `fulfill(200)`→`continue()`로 낮춰 순수 지연 주입(LAT)만 남긴다.",
+              "expectedOutcome": "5개 등록 지점이 코드에서 사라지고 각 테스트의 어서션은 그대로다. kust 계열 reconcile 요청이 전용 픽스처 kust-mut-reconcile를 향해 실제로 나가, 같은 파일의 GitRepository 형제 테스트와 동일한 실환경 경로가 된다."
+            },
+            {
+              "seq": 3,
+              "action": "등재 대상 18곳에 등록 직전 줄로 `// mock-exception: <CODE> — <실환경 불가 사유>` 주석을 단다. 문구 형식은 선례(#212, fluxcd-data-states.spec.ts)를 그대로 따른다.",
+              "expectedOutcome": "`grep -rn 'mock-exception' e2e/` 가 기존 12건 → 30건(등재 29행 + e2e/README.md 설명 1건)을 반환하고, 5개 스펙의 모든 등록 지점이 주석을 가진다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/e2e-mocking-policy.md`를 갱신한다 — 허용목록에 18행 추가(11 → 29행, 파일·대상 API 패턴·카테고리·실환경 불가 사유 4열), '미판정 인터셉트' 표에서 5개 파일 행을 제거해 `pods-hide-completed.spec.ts` 1행만 남기고, 제외 사유 각주를 이번 슬라이스(rct_20260807-0001) 기준으로 갱신한다.",
+              "expectedOutcome": "허용목록 29행 ↔ 코드 `// mock-exception:` 주석 29개가 파일·패턴 단위로 1:1 대응. 미판정 표에는 pods-hide-completed 1행만 남는다."
+            },
+            {
+              "seq": 5,
+              "action": "로컬 구문 게이트: arch 일치 esbuild 단독 바이너리(linux-arm64)를 받아 변경한 5개 스펙을 `--loader:.ts=ts --bundle=false`로 파싱해 SyntaxError가 없음을 확인한다(로컬에 node/npm이 없어 Playwright 실행은 불가하므로 구문까지가 로컬 상한).",
+              "expectedOutcome": "5개 파일 모두 esbuild 종료코드 0, 출력 없음."
+            },
+            {
+              "seq": 6,
+              "action": "브랜치 `reconcile/rct_20260807-0001`에 커밋·푸시하고 draft PR을 연다. PR 본문에 task id, gap 요약, 판정표, 검증 방법, 범위 밖 항목을 적는다.",
+              "expectedOutcome": "draft PR이 열리고 `E2E Tests with kind` (default·no-metrics) + CI(frontend/go) 워크플로가 트리거된다."
+            }
+          ],
+          "plannedAt": "2026-08-07T05:52:00Z"
+        }
+      }
+    ]
   }
 ]
