@@ -706,7 +706,7 @@
   {
     "id": "rct_20260802-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-08-02T09:42:27Z",
       "changedSides": [
@@ -730,7 +730,7 @@
       "assessedAt": "2026-08-02T09:42:27Z"
     },
     "createdAt": "2026-08-02T09:42:27Z",
-    "updatedAt": "2026-08-07T05:41:00Z",
+    "updatedAt": "2026-08-07T05:36:08Z",
     "attempts": [
       {
         "plan": {
@@ -845,6 +845,11 @@
           "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/10",
           "preparedAt": "2026-08-07T05:32:00Z",
           "notes": "AC1.1 스케줄링 코드 PR(draft #10), 9파일 +189/-17. 신규: Dockerfile.batch, deploy/batch/{kustomization,cronjob-ingestion}.yaml. 수정: deploy/overlays/prod/kustomization.yaml(../../batch 포함 + CronJob 볼륨→econ-serving-data PVC + 주기 변경 패치 예시 주석), .github/workflows/image.yml(단일 잡→serving/batch matrix, 캐시 scope 분리), .dockerignore(!python + .venv/__pycache__ 제외), cli.py·feeds.py docstring, README 배포 절. contracts/ 미변경 → gen-check 무변. tests/ 미변경. 로컬 검증 수행(완전 blind 아님): arch-matched kustomize v5.7.1로 deploy/base·deploy/batch·deploy/overlays/prod·tests/e2e/k8s 4경로 build 성공, 그리고 deploy/base·tests/e2e/k8s의 build 출력이 변경 전후 byte-identical(diff 무출력)임을 확인 — CronJob이 e2e로 유입되지 않는다는 핵심 격리 주장이 실증됨. arch-matched ruff 0.16.1로 CI lint 1:1 재현(check + format --check clean), python 단위테스트 28개 오프라인 green(docstring 회귀 없음), py_compile 통과. 미실행(=CI 최종 게이트): docker 빌드(이 환경에 docker 없음) → image 워크플로가 PR에서 Dockerfile.batch를 실제 빌드하는 것이 배치 이미지의 객관적 게이트다. uv sync·make gen-check·go/web 잡·kind e2e도 CI 몫. 직전 시도의 PR #9(analysis LLM opt-in)는 반려 상태 그대로 열린 draft로 보존했고 이 PR과 브랜치·파일 모두 겹치지 않는다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "riskLevel=medium이고, 이 PR의 산출물은 코드가 아니라 **클러스터에서 도는 스케줄**이다. merge 후 Flux가 deploy/overlays/prod를 자동 동기화 중이라면 merge=apply가 되어 매시간 외부 뉴스 피드 6곳으로 실제 HTTP 요청이 나가기 시작한다 — default_feeds.json은 아직 운영 검증되지 않은 starter 목록이라고 계획 자체가 명시한다(불가역에 가장 가까운 지점). 추가로 계획이 스스로 사람 확인을 요구하는 잔여 리스크가 셋 있다: (1) PVC가 RWO라 배치 Pod와 서빙 Pod가 같은 노드에 스케줄돼야 하고 멀티노드면 Pending, (2) GHCR에 새 패키지 (...-batch)가 처음 생기며 private이면 pull 불가, (3) 기존 PVC 소유권에 따라 첫 Job이 fsGroup 권한 오류로 실패할 수 있다. executionGuide도 '리뷰 → draft 해제 → merge'와 'CI green 전 merge 금지', 그리고 deploy/base에 batch가 없다는 리뷰어 육안 확인을 명시적 전제로 걸어 두었다. 또한 이 GitHub App 토큰에 checks/actions 권한이 없어 CI 4개 잡의 green 여부를 자동으로 읽을 수 없다 → 그 게이트를 사람이 대신 확인해야 한다."
         }
       }
     ]
