@@ -68,7 +68,7 @@
 
   /* ---- top bar ---- */
   .topbar {
-    display: flex; align-items: center; gap: 14px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
     padding: 10px 18px;
     background: var(--panel);
     border-bottom: 1px solid var(--border);
@@ -78,7 +78,7 @@
   .brand h1 { font-size: 16px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
   .brand .sub { color: var(--muted); font-size: 12px; white-space: nowrap; }
   .brand .logo { font-size: 18px; }
-  .controls { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .controls { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .controls input[type="search"] {
     background: var(--panel-2); color: var(--text);
     border: 1px solid var(--border-strong); border-radius: 8px;
@@ -94,7 +94,7 @@
   .iconbtn:hover { border-color: var(--accent); color: var(--accent); }
   .gh { font-size: 12px; }
 
-  /* ---- view mode switch (실행 대기 / 활성 전체 / 숨김) ---- */
+  /* ---- view mode switch (실행 대기 / 실행 중 / 활성 전체 / 숨김) ---- */
   .modes {
     display: inline-flex; align-items: center; gap: 2px;
     background: var(--panel-2); border: 1px solid var(--border-strong);
@@ -142,10 +142,13 @@
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
   .taskcount { font-size: 11px; color: var(--muted); }
   .pendpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #e0f2fe; color: #0369a1; }
+  .runpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #e0e7ff; color: #4338ca; }
   .hidepill { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: var(--code-bg); color: var(--muted); }
   :root[data-theme="dark"] .pendpill { background: #0c2f45; color: #7dd3fc; }
+  :root[data-theme="dark"] .runpill { background: #221f4d; color: #a5b4fc; }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .pendpill { background: #0c2f45; color: #7dd3fc; }
+    :root:not([data-theme="light"]) .runpill { background: #221f4d; color: #a5b4fc; }
   }
 
   .legend { margin-top: auto; border-top: 1px solid var(--border); padding: 10px 14px; font-size: 12px; color: var(--muted); }
@@ -343,9 +346,14 @@
   // 사이드바 보기 모드. state.models 는 숨김 모델까지 포함한 전체 목록이고,
   // 실제로 목록에 노출되는 집합은 여기서 정한다. 기본값은 "pending"(실행 대기).
   var PENDING_STATUS = "planned";   // STATUS_META 기준 "실행 대기"
+  // 워커가 붙잡고 처리 중인(= 점유 lock) 상태들. 인수인계 지점인 planned/action_required와
+  // 종료 상태(succeeded/failed/cancelled/no_action_needed)는 여기 들어가지 않는다.
+  var RUNNING_STATUSES = ["assessing", "planning", "awaiting_review", "executing", "verifying"];
   var MODES = [
     { id: "pending", label: "실행 대기", head: "실행 대기 모델", hint: "실행 대기(planned) 작업이 있는 모델만",
       empty: "실행 대기 중인 작업이 없습니다." },
+    { id: "running", label: "실행 중",   head: "실행 중 모델",   hint: "진행 중(" + RUNNING_STATUSES.join("/") + ") 작업이 있는 모델만",
+      empty: "진행 중인 작업이 없습니다." },
     { id: "active",  label: "활성 전체", head: "ToBeModels",     hint: "감지가 활성인 모델 전체",
       empty: "감지 활성 모델이 없습니다." },
     { id: "hidden",  label: "숨김",      head: "숨김 모델",       hint: "감지 비활성(숨김) 모델만",
@@ -707,6 +715,13 @@
     }).length;
   }
 
+  // 실행 중 = 어떤 워커가 그 단계를 붙잡고 처리 중인 작업 수(RUNNING_STATUSES).
+  function runningTaskCount(modelId) {
+    return (state.tasksByModel[modelId] || []).filter(function (t) {
+      return t && RUNNING_STATUSES.indexOf(t.status) !== -1;
+    }).length;
+  }
+
   function modelsInMode(mode) {
     if (mode === "hidden") {
       return state.models.filter(function (m) { return !isModelEnabled(m); });
@@ -714,6 +729,9 @@
     var active = state.models.filter(isModelEnabled);
     if (mode === "pending") {
       return active.filter(function (m) { return pendingTaskCount(m.id) > 0; });
+    }
+    if (mode === "running") {
+      return active.filter(function (m) { return runningTaskCount(m.id) > 0; });
     }
     return active;
   }
@@ -786,12 +804,14 @@
       var count = (state.tasksByModel[m.id] || []).length;
       var pending = pendingTaskCount(m.id);
       var pill = pending ? '<span class="pendpill" title="실행 대기(planned)">실행 대기 ' + pending + "</span>" : "";
+      var running = runningTaskCount(m.id);
+      var runpill = running ? '<span class="runpill" title="진행 중(' + RUNNING_STATUSES.join("/") + ')">실행 중 ' + running + "</span>" : "";
       var hide = isModelEnabled(m) ? "" : '<span class="hidepill" title="감지 비활성">숨김</span>';
       var tags = ((m.metadata && m.metadata.tags) || []).slice(0, 3).map(function (t) { return '<span class="tag">' + escapeHtml(t) + "</span>"; }).join(" ");
       return '<button class="model-item' + (m.id === state.selected ? " active" : "") + '" data-id="' + escapeHtml(m.id) + '">' +
         '<div class="mi-name">' + dot + "<span>" + escapeHtml((m.metadata && m.metadata.name) || m.id) + "</span></div>" +
         '<div class="mi-id">' + escapeHtml(m.id) + "</div>" +
-        '<div class="mi-meta">' + pill + hide + '<span class="taskcount">작업 ' + count + "</span> " + tags + "</div>" +
+        '<div class="mi-meta">' + pill + runpill + hide + '<span class="taskcount">작업 ' + count + "</span> " + tags + "</div>" +
         "</button>";
     }).join("");
 
@@ -944,7 +964,8 @@
       }
 
       var totalTasks = Object.keys(state.tasksByModel).reduce(function (n, k) { return n + state.tasksByModel[k].length; }, 0);
-      setStatus("실행 대기 " + modelsInMode("pending").length + "개 · 활성 " + modelsInMode("active").length +
+      setStatus("실행 대기 " + modelsInMode("pending").length + "개 · 실행 중 " + modelsInMode("running").length +
+        "개 · 활성 " + modelsInMode("active").length +
         "개 · 숨김 " + modelsInMode("hidden").length + "개 · 작업 " + totalTasks + "건 · " +
         new Date().toLocaleTimeString() + " 로드됨");
       setTimeout(function () { setStatus(""); }, 4000);

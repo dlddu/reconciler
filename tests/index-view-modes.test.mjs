@@ -20,9 +20,10 @@ assert.ok(modesMatch, "the view modes block must exist in index.html");
 
 const source = constsMatch[0] + enabledMatch[0] + modesMatch[0];
 
-// Three models: one active with a planned task, one active without, one hidden.
+// Active models: one with a planned task, one mid-flight, one idle. Plus a hidden one.
 const MODELS = [
   { id: "waiting", metadata: { name: "Waiting", tags: ["k8s"] } },
+  { id: "busy", metadata: { name: "Busy", tags: [] } },
   { id: "idle", metadata: { name: "Idle", tags: [] } },
   { id: "off", metadata: { name: "Off", tags: [] }, checkPolicy: { enabled: false } }
 ];
@@ -32,8 +33,15 @@ const TASKS = {
     { id: "a", status: "succeeded" },
     { id: "b", status: "planned" }
   ],
+  busy: [
+    { id: "e", status: "succeeded" },
+    { id: "f", status: "executing" }
+  ],
   idle: [{ id: "c", status: "succeeded" }],
-  off: [{ id: "d", status: "planned" }]
+  off: [
+    { id: "d", status: "planned" },
+    { id: "g", status: "verifying" }
+  ]
 };
 
 function run(expression, overrides = {}) {
@@ -61,6 +69,7 @@ test("defaults to the pending-execution view", () => {
   assert.equal(run("MODES[0].id"), "pending");
   assert.deepEqual(Array.from(run("MODES.map(function (m) { return m.id; })")), [
     "pending",
+    "running",
     "active",
     "hidden"
   ]);
@@ -74,8 +83,30 @@ test("pending mode never surfaces a hidden model, even with a planned task", () 
   assert.equal(run('modelsInMode("pending")').some((m) => m.id === "off"), false);
 });
 
+test("running mode keeps only active models with a task a worker is holding", () => {
+  assert.deepEqual(ids(run('modelsInMode("running")')), ["busy"]);
+});
+
+test("running mode never surfaces a hidden model, even mid-flight", () => {
+  assert.equal(run('modelsInMode("running")').some((m) => m.id === "off"), false);
+});
+
+test("running and pending are disjoint: planned is a handoff, not work in flight", () => {
+  assert.equal(run("RUNNING_STATUSES.indexOf(PENDING_STATUS)"), -1);
+});
+
+test("the five worker-held statuses are the running set", () => {
+  assert.deepEqual(Array.from(run("RUNNING_STATUSES")), [
+    "assessing",
+    "planning",
+    "awaiting_review",
+    "executing",
+    "verifying"
+  ]);
+});
+
 test("active mode is every model whose detection is enabled", () => {
-  assert.deepEqual(ids(run('modelsInMode("active")')), ["waiting", "idle"]);
+  assert.deepEqual(ids(run('modelsInMode("active")')), ["waiting", "busy", "idle"]);
 });
 
 test("hidden mode is only the models whose detection is disabled", () => {
@@ -84,12 +115,34 @@ test("hidden mode is only the models whose detection is disabled", () => {
 
 test("pendingTaskCount counts planned tasks only", () => {
   assert.equal(run('pendingTaskCount("waiting")'), 1);
+  assert.equal(run('pendingTaskCount("busy")'), 0);
   assert.equal(run('pendingTaskCount("idle")'), 0);
   assert.equal(run('pendingTaskCount("nope")'), 0);
 });
 
+test("runningTaskCount counts worker-held tasks only", () => {
+  assert.equal(run('runningTaskCount("busy")'), 1);
+  assert.equal(run('runningTaskCount("waiting")'), 0);
+  assert.equal(run('runningTaskCount("idle")'), 0);
+  assert.equal(run('runningTaskCount("nope")'), 0);
+});
+
+test("runningTaskCount recognises every status in the running set", () => {
+  for (const status of run("RUNNING_STATUSES")) {
+    assert.equal(
+      run('runningTaskCount("solo")', { tasksByModel: { solo: [{ id: "x", status }] } }),
+      1,
+      `${status} should count as running`
+    );
+  }
+});
+
 test("visibleModels applies the search filter on top of the mode", () => {
-  assert.deepEqual(ids(run("visibleModels()", { mode: "active" })), ["waiting", "idle"]);
+  assert.deepEqual(ids(run("visibleModels()", { mode: "active" })), [
+    "waiting",
+    "busy",
+    "idle"
+  ]);
   assert.deepEqual(
     ids(run("visibleModels()", { mode: "active", filter: "idle" })),
     ["idle"]
@@ -98,17 +151,22 @@ test("visibleModels applies the search filter on top of the mode", () => {
     "waiting"
   ]);
   assert.deepEqual(ids(run("visibleModels()", { mode: "pending", filter: "idle" })), []);
+  assert.deepEqual(ids(run("visibleModels()", { mode: "running", filter: "busy" })), [
+    "busy"
+  ]);
+  assert.deepEqual(ids(run("visibleModels()", { mode: "running", filter: "idle" })), []);
 });
 
 test("modeContaining resolves a deep link to a mode that shows the model", () => {
   assert.equal(run('modeContaining("waiting")'), "pending");
+  assert.equal(run('modeContaining("busy")'), "running");
   assert.equal(run('modeContaining("idle")'), "active");
   assert.equal(run('modeContaining("off")'), "hidden");
   assert.equal(run('modeContaining("unknown")'), "pending");
 });
 
 test("every mode carries a label, a list heading and an empty-state message", () => {
-  for (const id of ["pending", "active", "hidden"]) {
+  for (const id of ["pending", "running", "active", "hidden"]) {
     const meta = run(`modeMeta("${id}")`);
     assert.equal(meta.id, id);
     assert.ok(meta.label, `${id} needs a label`);
