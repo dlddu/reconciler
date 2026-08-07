@@ -617,7 +617,7 @@
   {
     "id": "rct_20260807-0002",
     "toBeModelId": "tbm_dear-baby-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-07T04:59:33Z",
       "changedSides": [
@@ -641,7 +641,7 @@
       "assessedBy": "agent",
       "assessedAt": "2026-08-07T04:59:33Z"
     },
-    "updatedAt": "2026-08-07T13:05:55Z",
+    "updatedAt": "2026-08-07T20:08:35Z",
     "attempts": [
       {
         "plan": {
@@ -694,9 +694,85 @@
           "comment": "승인"
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-08-07T13:05:55Z",
-          "entries": []
+          "finishedAt": "2026-08-07T14:40:07Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "finishedAt": "2026-08-07T14:40:07Z",
+              "log": "PR#169에 스테이징된 backend 변경을 diff로 확인 후 머지. community.go: FeedItem.ChildStatusText `json:\"child_status_text\"` 추가, childStatusText(kind,dueDate,birthDate,recordedAt) 신설, records_subjects→fetuses/children LEFT JOIN 2개. 노출 풀 3조건(r.visibility='public' / rs.kind=? / r.user_id!=?)과 maskDisplayName 무변경. 원본 due_date/birth_date는 SQL scan 로컬 변수로만 쓰이고 json 태그 없음(AC-009-10 경계 유지). community_test.go +141. CI Backend Unit Tests green, 머지 후 로컬 재실행 `go test ./internal/records/ -run 'ChildStatus|Community'` = ok 0.020s."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "finishedAt": "2026-08-07T14:40:07Z",
+              "log": "app/src/api/community.ts 신설(+117), __tests__/community.test.ts 신설(+147). getCommunityFeed가 subject_id·limit 쿼리로 apiFetch 호출, 비200/네트워크 예외 구분 전파, getTopThreeForHome이 HOME_FEED_LIMIT로 첫 페이지만 요청. 정렬·절단·마스킹은 서버 결과 그대로 사용. CI App Unit Tests green."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "finishedAt": "2026-08-07T14:40:07Z",
+              "log": "app/src/api/feed.ts(mock 풀 6건, -136)와 그 테스트(-154) 삭제. index.tsx가 feedStatus 3갈래(loading/ready/error)로 분기 — testID home-feed-error('기록을 불러오지 못했어요. 다시 시도해주세요'), home-feed-empty + home-feed-empty-cta('첫 기록을 공개해보세요'), home-feed-entry-* 최대 3건. OtherEntryCard는 마스킹명·childStatusText·questionText·preview로 전환하고 ♥(heartRow/heartGlyph/heartCount) 제거(AC-009-08로 이월). CI App Unit Tests green."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "finishedAt": "2026-08-07T14:40:07Z",
+              "log": "e2e/maestro/home-feed.yaml을 mock assert에서 빈 상태+네비게이션 검증으로 교체(+19/-20). CI E2E Tests (Android) success 13:40:59Z, E2E Tests (iOS) success ~14:32Z."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-08-07T12:52:00Z",
+              "finishedAt": "2026-08-07T14:40:07Z",
+              "log": "지침 순서대로 1)diff 검토 → 2)CI green 확인 → 3)draft 해제+squash 머지 → 4)수렴 검증. 계획 밖 처리 1건: 검토 대기 중 main이 e057920→6d6afe31(#163)로 전진해 PR이 behind가 되었고, 브랜치 보호의 up-to-date 요구로 첫 머지 시도가 405 'Required status check \"CI Success\" is expected'로 거부됨. update-branch로 main과 동기화(head e48d1890→5e847d6f)해 CI를 재기동하고 squash auto-merge를 걸어 green 시에만 머지되도록 했다(우회 아님 — 보호 규칙 충족). 재기동 CI 전원 green: Detect Changes / Backend Unit / App Unit / Integration / E2E Android / E2E iOS / CI Success. 2026-08-07T14:40:07Z squash 머지, main 92939e8."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "main 92939e8 · app=19ce469f · backend=9aa34539 · worker=613d4709(불변) · docs=4215214d",
+          "verifiedAt": "2026-08-07T20:08:35Z",
+          "checks": [
+            {
+              "name": "완료기준① child_status_text 반환",
+              "status": "passed",
+              "detail": "머지된 main에서 community.go:75 `ChildStatusText string `json:\"child_status_text\"``, :121 childStatusText() 확인. 로컬 `go test ./internal/records/ -run 'ChildStatus|Community'` ok(0.020s) — 임신/양육/경계/미설정 케이스 통과."
+            },
+            {
+              "name": "완료기준② 홈 실제 API 최대 3건 렌더",
+              "status": "passed",
+              "detail": "index.tsx가 activeChild.subjectId로 getTopThreeForHome 호출, home-feed-entry-* 카드 렌더. community.ts의 HOME_FEED_LIMIT로 서버 limit 적용. 카드는 마스킹명·childStatusText·questionText·preview 사용."
+            },
+            {
+              "name": "완료기준③ 빈 상태 CTA / 오류 문구 분리",
+              "status": "passed",
+              "detail": "index.tsx:252 home-feed-error '기록을 불러오지 못했어요. 다시 시도해주세요', :263 home-feed-empty + :268 home-feed-empty-cta '첫 기록을 공개해보세요'. 실패를 0건으로 그리지 않음(feedStatus 3갈래)."
+            },
+            {
+              "name": "완료기준④ mock 풀 소멸",
+              "status": "passed",
+              "detail": "머지된 main에서 app/src/api/feed.ts 부재, `git grep MOCK_FEED_POOL` 0건. 잔존 'cho***3'/'seo***1' 문자열은 유닛테스트 픽스처와 주석(typography.ts, OtherEntryCard 헤더)뿐으로 사용자에게 렌더되는 경로 아님."
+            },
+            {
+              "name": "완료기준⑤ CI green 머지",
+              "status": "passed",
+              "detail": "head 5e847d6f: Backend Unit·App Unit·Integration·E2E iOS·E2E Android·CI Success 전부 success. auto-merge(SQUASH)로 14:40:07Z 머지, PR#169 merged=true."
+            },
+            {
+              "name": "프라이버시 경계(AC-009-10) 무변경",
+              "status": "passed",
+              "detail": "노출 풀 3조건과 maskDisplayName 무변경. 신규 노출은 child_status_text 하나뿐이고 원본 due_date/birth_date는 json 태그 없음(grep 0건). JOIN은 LEFT라 프로필 없는 레거시 subject 기록이 피드에서 사라지지 않음."
+            },
+            {
+              "name": "as-is 버전 전진",
+              "status": "passed",
+              "detail": "app 1b8acc99→19ce469f, backend 8f13933e→9aa34539. worker/docs 무변경. 마이그레이션 0건으로 롤백은 revert 1건."
+            }
+          ]
         }
       }
     ]
