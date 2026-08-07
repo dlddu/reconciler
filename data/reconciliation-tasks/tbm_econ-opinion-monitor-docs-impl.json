@@ -730,7 +730,7 @@
       "assessedAt": "2026-08-02T09:42:27Z"
     },
     "createdAt": "2026-08-02T09:42:27Z",
-    "updatedAt": "2026-08-07T05:02:16Z",
+    "updatedAt": "2026-08-07T05:20:00Z",
     "attempts": [
       {
         "plan": {
@@ -786,6 +786,56 @@
           "reviewer": "user",
           "reviewedAt": "2026-08-06T22:40:00Z",
           "comment": "반려 — to-be model 수정 예정. 사용자가 이 모델의 목표 상태(to-be) 정의 자체를 곧 바꿀 계획이므로, 현행 to-be 기준으로 세운 이 슬라이스(analysis 실 LLM 분석기 opt-in, PR #9)를 지금 머지하지 않는다. 수정된 to-be 모델을 반영해 재감지·재계획한 뒤 다시 판단한다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "AC1.1(정기 수집 스케줄링) 슬라이스 — 개정된 to-be가 열어준 작업으로 방향 전환. 직전 시도(analysis 실 LLM opt-in, PR #9)는 '이 모델의 to-be 정의 자체를 곧 바꾼다, 수정된 모델을 반영해 재감지·재계획한 뒤 다시 판단한다'는 사유로 반려됐고, 그 개정이 2026-08-07 `48fef79`로 실제 착지했다(as-is 범위에 `deploy/` 추가). 개정 노트가 목적을 명시한다 — 'AC1.1은 구현체가 CronJob 매니페스트라 슬라이스를 머지해도 as-is가 불변 → 재감지가 안 열려, 슬라이스 2의 두 task가 연속으로 범위 밖으로 미뤘다. 범위를 넓혀 그 작업이 정상적으로 감지·계획되게 한다.' 따라서 반려된 analysis 슬라이스를 그대로 재상신하지 않고(PR #9는 열린 draft로 보존, 후속 task 몫), 개정이 정조준한 AC1.1을 이번 슬라이스로 잡는다. 이는 doc-tracker 로드맵상 슬라이스 2(AC1.1~1.7)의 마지막 잔여 AC이기도 하다(AC1.2~1.7은 #5·#7·#8로 이미 착지). 접근: 배치 이미지(`Dockerfile.batch`, uv 워크스페이스 + `econ-ingestion` 엔트리포인트)를 새로 만들고, CronJob을 `deploy/base`가 아니라 **별도 `deploy/batch/` 컴포넌트**로 두어 prod 오버레이만 포함시킨다. 근거: `deploy/base`는 자기 헤더가 '서빙 스택'으로 계약돼 있고 kind e2e 오버레이(`tests/e2e/k8s`)가 그 base를 그대로 상속하므로, base에 CronJob을 넣으면 e2e 클러스터에 사이드로드되지 않은 배치 이미지를 참조하는 Job이 생겨(ImagePullBackOff) e2e를 오염시킨다. batch를 분리하면 e2e는 무영향이고 prod 오버레이에서만 PVC·스케줄이 배선된다(가역: resources 한 줄 제거 또는 `suspend: true`). 주기 설정 가능성(AC1.1)은 kustomize 오버레이 패치(`/spec/schedule`)로, 누락 보정은 `startingDeadlineSeconds`(놓친 시작 캐치업)·`concurrencyPolicy: Forbid`·Job `backoffLimit`(재시도)로 충족한다. === 완료 기준(이 시도 성공 범위): (1) `deploy/batch/` CronJob이 시간당 1회 `econ-ingestion --cycle`을 실행하도록 정의되고 prod 오버레이에 배선(PVC 공유), (2) 주기를 오버레이 패치로 바꿀 수 있고 그 방법이 매니페스트·README에 문서화, (3) 누락 실행 보정·재시도 필드가 명시적으로 설정, (4) 배치 이미지가 CI(`image` 워크플로)에서 실제로 빌드·발행, (5) `kustomize build`가 prod·batch·e2e 세 경로 모두 통과하고 e2e 오버레이 출력이 무변(CronJob 미유입), (6) CronJob이 배선됐다는 사실이 코드 주석·README에 반영돼 문서↔구현 모순(drift 기준 5) 미발생, (7) CI(build/e2e/image) green. === 범위 밖(후속 재감지가 새 task로 이음): PR #9의 analysis 실 LLM opt-in(반려 상태 유지 — 재상신 여부는 후속 판단), analysis·aggregation CronJob(AC2.x·AC3.x 슬라이스 몫), `ingestion.spec` e2e 1:1 AC1.1 케이스(`tests/`는 as-is 범위 밖), `default_feeds.json` 실엔드포인트 운영 검증·튜닝, 원격 오브젝트 스토리지 전환, 클러스터 실제 적용(apply는 executor/사용자 판단). 수렴 판정은 모델 전체 to-be가 아니라 이 범위 기준으로 한다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`.dockerignore` 확장 — 현재 `*` 제외 + `!go`/`!web`만 허용이라 배치 빌드 컨텍스트에 `python/`이 없다. `!python`을 추가하고 `python/.venv`·`**/__pycache__`·`**/*.pyc`를 제외한다.",
+              "expectedOutcome": "루트 Dockerfile(서빙)은 go/·web/만 COPY하므로 이미지 내용 무변. 배치 빌드가 `python/`을 볼 수 있다."
+            },
+            {
+              "seq": 2,
+              "action": "`Dockerfile.batch` 신설 — `ghcr.io/astral-sh/uv:python3.12-bookworm-slim` 단일 스테이지, `COPY python/ ./`, `uv sync --frozen --no-dev`(`python/uv.lock` 커밋돼 있음), `ENV PATH=/app/.venv/bin:$PATH ECON_DATA_ROOT=/data`, `ENTRYPOINT [\"econ-ingestion\"]`. 멀티스테이지 venv 복사는 shebang 절대경로 의존이라 blind 위험이 커 단일 스테이지를 택한다.",
+              "expectedOutcome": "`econ-ingestion` 콘솔 스크립트가 PATH에 놓인 이미지. 로컬 docker 없음 → CI `image` 잡이 객관적 게이트."
+            },
+            {
+              "seq": 3,
+              "action": "`.github/workflows/image.yml`을 matrix로 확장 — 기존 서빙(`Dockerfile` → `ghcr.io/dlddu/economic-opinion-trend-monitor`)에 배치(`Dockerfile.batch` → `…-batch`)를 추가. 태그 규칙(`latest` + `sha-<commit>`)·캐시 scope는 이미지별로 분리.",
+              "expectedOutcome": "PR에서 두 이미지가 모두 빌드된다(`on: pull_request` 기존 설정). 배치 이미지 빌드 실패는 PR에서 즉시 드러난다."
+            },
+            {
+              "seq": 4,
+              "action": "`deploy/batch/` 신설 — `kustomization.yaml`(labels `app: econ-batch`) + `cronjob-ingestion.yaml`: `schedule: \"0 * * * *\"`(AC1.1 기본 매시간), `concurrencyPolicy: Forbid`, `startingDeadlineSeconds: 1800`(놓친 시작 캐치업), `successfulJobsHistoryLimit: 3`/`failedJobsHistoryLimit: 3`, Job `backoffLimit: 3`·`restartPolicy: OnFailure`(재시도), 컨테이너 `…-batch:latest` + `ECON_DATA_ROOT=/data` + `/data` 쓰기 마운트(base는 emptyDir — 오버레이 seam), securityContext는 서빙과 동형(nonRoot·drop ALL·allowPrivilegeEscalation false).",
+              "expectedOutcome": "`kustomize build deploy/batch` 성공. `deploy/base`(서빙 계약)와 `tests/e2e/k8s` 출력은 완전 무변."
+            },
+            {
+              "seq": 5,
+              "action": "`deploy/overlays/prod/kustomization.yaml`에 `../../batch`를 resources로 추가하고, CronJob의 `/spec/jobTemplate/spec/template/spec/volumes/0`을 서빙과 동일한 PVC(`econ-serving-data`)로 replace하는 패치 추가. 주기 변경 방법(`op: replace, path: /spec/schedule`)을 주석 예시로 명시(AC1.1 '설정으로 주기 변경').",
+              "expectedOutcome": "`kustomize build deploy/overlays/prod`가 Namespace+PVC+Deployment+Service+CronJob을 내고, CronJob 볼륨이 `econ-serving-data` PVC, 네임스페이스 `econ-monitor`."
+            },
+            {
+              "seq": 6,
+              "action": "문서↔구현 모순 제거(drift 기준 5) — `python/packages/ingestion/src/econ_ingestion/cli.py` 모듈 docstring의 '실제 스케줄(Kubernetes CronJob) 배선은 배포 후속 작업' 문장과 `feeds.py::default_feeds_path` docstring의 '스케줄된 CronJob(AC1.1)이 가동되기 전에' 문구를 현실(배선 완료, `deploy/batch/`)에 맞게 갱신. README 배포 절의 '배치 CronJob 배선은 후속 작업이다' 항목도 갱신하고 `deploy/` 트리 설명에 `batch/`를 추가.",
+              "expectedOutcome": "코드 주석·README가 실제 배선 상태와 일치. ruff line-length 100 준수."
+            },
+            {
+              "seq": 7,
+              "action": "로컬 검증(blind 아님) — `uname -m`(aarch64) 매칭 kustomize 바이너리를 GitHub releases에서 받아 `kustomize build`를 `deploy/base`·`deploy/batch`·`deploy/overlays/prod`·`tests/e2e/k8s` 네 경로에 실행(변경 전/후 출력 diff로 base·e2e 무변 증명). arch 매칭 ruff로 `ruff check .` + `ruff format --check .`를 `python/`에서 CI와 1:1 재현. stdlib pytest shim + PYTHONPATH로 ingestion/core 단위테스트 오프라인 실행.",
+              "expectedOutcome": "kustomize 4경로 build 성공 + base/e2e 출력 diff 없음, ruff clean, 기존 python 테스트 회귀 없음. (CI에 매니페스트 검증 잡이 없으므로 이 kustomize 재현이 사실상 유일한 매니페스트 게이트다.)"
+            },
+            {
+              "seq": 8,
+              "action": "대상 레포 `dlddu/economic-opinion-trend-monitor`에 `reconcile/rct_20260802-0001-ac1-1-ingestion-cronjob` 브랜치 push + draft PR 생성(본문: task id·gap·이 슬라이스 범위·검증 방법·주의사항).",
+              "expectedOutcome": "draft PR 생성, `build`·`e2e`·`image`(2개 이미지) CI 트리거."
+            }
+          ],
+          "plannedAt": "2026-08-07T05:20:00Z"
         }
       }
     ]
