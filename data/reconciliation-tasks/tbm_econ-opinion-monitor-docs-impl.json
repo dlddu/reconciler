@@ -730,7 +730,7 @@
       "assessedAt": "2026-08-02T09:42:27Z"
     },
     "createdAt": "2026-08-02T09:42:27Z",
-    "updatedAt": "2026-08-07T06:12:30Z",
+    "updatedAt": "2026-08-07T06:20:30Z",
     "attempts": [
       {
         "plan": {
@@ -853,6 +853,61 @@
           "reviewer": "user",
           "reviewedAt": "2026-08-07T06:02:28Z",
           "comment": "반려 — 구현 수단 변경: Kubernetes CronJob 대신 Argo Workflows를 사용한다. AC1.1(정기 수집 스케줄링, 주기 설정 가능)이라는 목표 자체는 유효하지만, 이 PR(#10)이 택한 batch/v1 CronJob 매니페스트라는 구현체를 사용자가 채택하지 않는다. 따라서 PR #10은 머지하지 않고 열린 draft로 보존하며, 재계획은 Argo Workflows(CronWorkflow 등) 기반으로 AC1.1의 세 요구 — 정해진 주기 자동 실행 / 주기를 설정으로 변경 / 실행 누락 보정·재시도 — 를 어떤 필드로 충족할지 다시 매핑해야 한다. 재계획 시 이번 실행 전 확인에서 드러난 두 제약을 그대로 입력으로 가져갈 것: (A) Flux가 deploy/overlays/prod를 5분 간격 자동 동기화하므로 merge=apply이며, 새 수단에서도 apply 시점과 실제 첫 가동 시점을 분리할 방법(suspend 상태 착지 등)을 계획에 넣어야 한다. (B) flux-cd-apps의 ghcr imagePullSecret 패치가 target {kind: Deployment, name: econ-serving}로 한정돼 있어 배치 성격의 워크로드에는 주입되지 않는다 — Argo 경로에서도 배치 이미지 pull 경로(패키지 visibility 또는 flux-cd-apps 동반 변경)를 슬라이스 범위에 포함할지 판단이 필요하다. 또한 Argo Workflows 컨트롤러가 이 클러스터에 이미 설치돼 있는지, 없다면 그 설치가 이 슬라이스 범위인지 별도 선행 슬라이스인지도 계획 단계에서 정해야 한다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "AC1.1(정기 수집 스케줄링) 재계획 — 사용자 반려 사유대로 구현 수단을 batch/v1 CronJob에서 **Argo Workflows CronWorkflow**로 전환한다. 직전 시도(att1, PR #10)는 목표(AC1.1)는 유효하나 CronJob이라는 구현체를 사용자가 채택하지 않아 반려됐다 — PR #10은 머지하지 않고 열린 draft로 보존하고, 그 브랜치에서 **CI로 이미 검증된 수단 무관 레이어(Dockerfile.batch·.dockerignore·image.yml matrix; PR #10 4개 체크 전부 pass, `publish (batch)` 포함)는 그대로 재사용**하되 매니페스트 레이어만 교체한다. 환경 실측으로 확인한 전제: (1) Argo Workflows v3.7.9 컨트롤러가 이미 클러스터에 상주하고 `managedNamespace=`가 비어 있어 **클러스터 스코프**다 → `econ-monitor` 네임스페이스의 CronWorkflow가 그대로 처리된다. 설치는 별도 인프라 레포(flux-cd) 소관이라 이 슬라이스 범위 밖이다. (2) 같은 클러스터에 CronWorkflow 선례가 4개 (frankfurter-daily, gha-observability-{silver-hourly,compaction-daily,completeness}) 있어 그 관례를 그대로 미러링한다 — ServiceAccount + `workflowtaskresults` create/patch Role/RoleBinding(Argo v3.4+ executor 필수), WorkflowTemplate + `workflowTemplateRef` CronWorkflow, `retryStrategy`, `concurrencyPolicy: Forbid`, history limit. === 반려가 지정한 두 제약의 해소: (A) Flux가 deploy/overlays/prod를 5분 간격 동기화해 merge=apply이므로, CronWorkflow를 **`suspend: true` 상태로 착지**시켜 apply 시점과 첫 가동 시점을 분리한다(같은 클러스터의 gha-observability-completeness가 쓰는 동일 패턴). 가동은 이미지 pull·PVC·수집을 수동 1회 제출로 실증한 뒤 별도 unsuspend 커밋으로 연다. (B) ghcr imagePullSecret 패치가 `{kind: Deployment, name: econ-serving}`로 한정돼 배치에 주입되지 않는 문제는, **WorkflowTemplate spec에 `imagePullSecrets: [{name: ghcr}]`를 직접 넣어** 이 레포 안에서 닫는다 → flux-cd-apps 동반 변경 불필요(범위 밖 의존 제거). 두 GHCR 패키지 모두 비공개임을 익명 registry probe로 실측 확인(HTTP 403)했고, `ghcr` 시크릿은 네임스페이스 라벨 `external-secrets/github`로 이미 주입돼 있다. === 추가로 직전 리뷰가 남긴 잔여 리스크 2건을 설계로 소거한다: RWO PVC 멀티어태치(배치·서빙 동일 노드 강제)와 기존 PVC fsGroup 소유권 오류는, 서빙 PVC를 공유하지 않고 **배치 전용 PVC(`econ-batch-data`)를 신설**해 함께 사라진다. 근거: 이 슬라이스가 배선하는 ingestion은 Bronze만 쓰고 서빙은 Gold만 읽으므로 지금 볼륨을 공유할 이유가 없다. 게다가 econ-serving은 Sablier scale-to-zero(sessionDuration 15m)라 서빙 파드가 자주 부재해 RWO 공유는 특히 불안정하다. 전용 PVC는 단일 파드만 마운트하므로(`concurrencyPolicy: Forbid`) RWO로도 충돌이 원천적으로 없고 이식성(cluster default storageClass)도 유지된다. === AC1.1 세 요구의 Argo 필드 매핑: (1) 정해진 주기 자동 실행 → `spec.schedule: \"0 * * * *\"` + `timezone: Etc/UTC`, (2) 주기를 설정으로 변경 → prod 오버레이의 JSON6902 패치로 `/spec/schedule` 치환(주석에 실행 가능한 예시 명시), (3) 실행 누락 보정·재시도 → `startingDeadlineSeconds`(놓친 시작 캐치업) + `concurrencyPolicy: Forbid` + 템플릿 `retryStrategy{limit: \"3\", retryPolicy: Always}`(Argo 네이티브 재시도). === 완료 기준(이 시도 성공 범위): (1) `deploy/batch/`가 Argo CronWorkflow + WorkflowTemplate + SA/Role/RoleBinding + 전용 PVC로 시간당 1회 `econ-ingestion --cycle` 상당 작업을 정의하고 prod 오버레이에만 배선, (2) 주기를 오버레이 패치로 바꿀 수 있고 그 방법이 매니페스트·README에 문서화, (3) 누락 보정·재시도 필드가 명시적으로 설정, (4) `suspend: true`로 착지해 merge가 곧 가동이 되지 않음, (5) `kustomize build`가 base·batch·prod·e2e 네 경로 통과하고 base·e2e 출력이 변경 전후 byte-identical(CronWorkflow가 e2e로 유입되지 않음), (6) 문서·코드의 'CronJob' 표현이 실제 수단(Argo CronWorkflow)과 일치(drift 기준 4·5 위반 미발생), (7) CI(build/e2e/image) green, (8) 머지·동기화 후 컨트롤러가 CronWorkflow를 등록하고, 수동 1회 제출이 이미지 pull·PVC 쓰기·수집까지 성공, (9) unsuspend 후 예약 실행 1회 관측. === 범위 밖(후속 재감지가 새 task로 이음): PR #9(analysis 실 LLM opt-in, 반려 상태 유지)와 PR #10(CronJob 수단, 미채택 보존) 처리, analysis·aggregation 스케줄(AC2.x·AC3.x), Bronze→Silver→Gold 체인과 배치·서빙 볼륨 통합 전략(그때 RWX 전환 판단), `ingestion.spec` e2e 1:1 AC1.1 케이스(`tests/`는 as-is 범위 밖), `default_feeds.json` 실엔드포인트 운영 검증·튜닝, Argo Workflows 컨트롤러 자체의 설치·업그레이드(flux-cd 인프라 레포 소관). 수렴 판정은 모델 전체 to-be가 아니라 이 범위 기준으로 한다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #10 브랜치(`reconcile/rct_20260802-0001-ac1-1-ingestion-cronjob`)에서 새 브랜치 `reconcile/rct_20260802-0001-ac1-1-argo-cronworkflow`를 딴다. CI로 검증된 수단 무관 레이어(`Dockerfile.batch`, `.dockerignore`, `.github/workflows/image.yml` matrix)는 그대로 두고, CronJob 수단 파일 `deploy/batch/cronjob-ingestion.yaml`을 삭제한다. PR #10 자체는 건드리지 않는다(열린 draft 보존).",
+              "expectedOutcome": "새 브랜치가 이미 green인 이미지 빌드 레이어를 승계하고 CronJob 매니페스트만 빠진 상태. PR #10은 OPEN/draft 그대로."
+            },
+            {
+              "seq": 2,
+              "action": "`deploy/batch/rbac.yaml` 신설 — ServiceAccount `econ-batch` + Role `econ-batch-executor`(apiGroups `argoproj.io`, resources `workflowtaskresults`, verbs `create`/`patch`) + 동명 RoleBinding. frankfurter·gha-observability의 동일 3종 세트를 그대로 미러링한다(Argo v3.4+ executor가 없으면 워크플로가 첫 스텝에서 실패).",
+              "expectedOutcome": "네임스페이스 스코프 RBAC 3종이 정의됨. 이 SA가 없으면 워크플로 파드가 workflowtaskresults 패치 실패로 죽는다는 알려진 실패 모드를 사전 차단."
+            },
+            {
+              "seq": 3,
+              "action": "`deploy/batch/workflow-template.yaml` 신설 — `argoproj.io/v1alpha1` WorkflowTemplate `econ-batch-pipeline`: `entrypoint: ingest`, `serviceAccountName: econ-batch`, `imagePullSecrets: [{name: ghcr}]`(비공개 배치 이미지 pull — 제약 B를 이 레포 안에서 해소), `podMetadata.annotations.gitops-repository`, 볼륨 `data`(PVC `econ-batch-data`). `ingest` 템플릿: `retryStrategy{limit: \"3\", retryPolicy: Always}`, 컨테이너 이미지 `ghcr.io/dlddu/economic-opinion-trend-monitor-batch:latest`, `command: [econ-ingestion]`, `env ECON_DATA_ROOT=/data`, `/data` 마운트, securityContext는 서빙과 동형(runAsNonRoot·drop ALL·allowPrivilegeEscalation false·fsGroup).",
+              "expectedOutcome": "AC1.1의 '재시도' 요구가 Argo 네이티브 retryStrategy로 충족되고, 이미지 pull 경로가 flux-cd-apps 변경 없이 닫힌다."
+            },
+            {
+              "seq": 4,
+              "action": "`deploy/batch/cronworkflow-ingestion.yaml` 신설 — CronWorkflow `econ-ingestion-hourly`: `schedule: \"0 * * * *\"`(AC1.1 기본 매시간), `timezone: \"Etc/UTC\"`, `concurrencyPolicy: Forbid`, `startingDeadlineSeconds: 1800`(놓친 시작 캐치업 = '다음 주기 보정'), `successfulJobsHistoryLimit: 3`/`failedJobsHistoryLimit: 3`, **`suspend: true`**, `workflowSpec.workflowTemplateRef.name: econ-batch-pipeline`. suspend가 의도된 보류임을 주석으로 명시한다(gha-observability-completeness와 동일 관례).",
+              "expectedOutcome": "주기·누락 보정·동시성 정책이 선언되고, merge가 곧 첫 가동이 되지 않는다(제약 A 해소). 컨트롤러가 `schedule`(단수) 필드를 처리함은 같은 클러스터의 기존 4개 CronWorkflow가 실증."
+            },
+            {
+              "seq": 5,
+              "action": "`deploy/batch/pvc.yaml`(배치 전용 `econ-batch-data`, `ReadWriteOnce`, 1Gi, storageClassName 미지정=클러스터 기본) + `deploy/batch/kustomization.yaml`(labels `app: econ-batch`, resources 4종) 신설. 서빙 PVC `econ-serving-data`는 건드리지 않는다.",
+              "expectedOutcome": "직전 리뷰의 잔여 리스크 2건(RWO 멀티어태치 co-location, 기존 PVC fsGroup 소유권)이 설계상 소거됨 — 단일 파드만 마운트하는 신규 볼륨이라 충돌 대상이 없다."
+            },
+            {
+              "seq": 6,
+              "action": "`deploy/overlays/prod/kustomization.yaml`에 `../../batch`를 resources로 추가하고, 주기 변경 방법을 실행 가능한 JSON6902 패치 예시(`op: replace, path: /spec/schedule, value: \"*/30 * * * *\"`)로 주석에 명시한다(AC1.1 '주기를 설정으로 변경'). 기존 CronJob 시절 주석 문구도 함께 갱신.",
+              "expectedOutcome": "`kustomize build deploy/overlays/prod`가 Namespace+PVC(서빙)+Deployment+Service에 더해 SA/Role/RoleBinding/PVC(배치)/WorkflowTemplate/CronWorkflow를 내고, 전부 `econ-monitor` 네임스페이스."
+            },
+            {
+              "seq": 7,
+              "action": "문서↔구현 모순 제거(drift 기준 4·5) — 실제 수단이 Argo CronWorkflow가 되므로 'CronJob'을 명시한 4곳을 갱신한다: `README.md:121`(배치 CronJob 배선은 후속 작업 → Argo CronWorkflow로 배선됨, suspend 착지·unsuspend 절차 포함), `deploy/overlays/prod/kustomization.yaml:6` 주석, `python/packages/ingestion/src/econ_ingestion/cli.py`·`__init__.py` 모듈 docstring, `feeds.py::default_feeds_path` docstring.",
+              "expectedOutcome": "코드 주석·README가 실제 배선 수단·상태와 일치. ruff line-length 100 준수."
+            },
+            {
+              "seq": 8,
+              "action": "로컬 검증(blind 아님) — `uname -m`(aarch64) 매칭 kustomize v5.7.1 바이너리로 `deploy/base`·`deploy/batch`·`deploy/overlays/prod`·`tests/e2e/k8s` 네 경로를 build하고, 변경 전/후 출력을 diff해 `deploy/base`·`tests/e2e/k8s`가 byte-identical임을 증명한다(CronWorkflow가 kind e2e로 유입되지 않음). arch 매칭 ruff 0.16.1로 `ruff check .` + `ruff format --check .`를 `python/`에서 CI와 1:1 재현하고, stdlib pytest shim + PYTHONPATH로 ingestion/core 단위테스트를 오프라인 실행한다.",
+              "expectedOutcome": "kustomize 4경로 build 성공 + base/e2e diff 무출력, ruff clean, python 테스트 회귀 없음. (CI에 매니페스트 검증 잡이 없으므로 이 kustomize 재현이 사실상 유일한 매니페스트 게이트다.)"
+            },
+            {
+              "seq": 9,
+              "action": "대상 레포 `dlddu/economic-opinion-trend-monitor`에 브랜치를 push하고 draft PR을 연다. 본문에 task id·gap 요약·이 슬라이스 범위(완료 기준/범위 밖)·AC1.1 필드 매핑·검증 방법·주의사항(merge=apply, suspend 착지, 이미지 pull 확인 필요)을 적는다. push는 `gh` 사전 인증 사용자 토큰으로 해 Actions가 실제로 트리거되게 한다(설치 토큰 push는 워크플로를 안 띄운다).",
+              "expectedOutcome": "draft PR 생성 + `build`·`e2e`·`image`(serving/batch) CI 트리거. PR #9·#10은 열린 draft로 그대로 보존."
+            }
+          ],
+          "plannedAt": "2026-08-07T06:18:00Z"
         }
       }
     ]
