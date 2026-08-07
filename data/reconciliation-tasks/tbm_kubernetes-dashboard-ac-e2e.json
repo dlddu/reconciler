@@ -1033,7 +1033,7 @@
   {
     "id": "rct_20260802-0001",
     "toBeModelId": "tbm_kubernetes-dashboard-ac-e2e",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-02T09:42:27Z",
       "changedSides": [
@@ -1167,9 +1167,77 @@
           "comment": "승인. CI 비용 증가(E2E matrix 2-leg)와 path a 격리 방식(별도 러너·metrics-server 부재 kind 클러스터)을 확인한 뒤 승인. PR #214 머지 + 무효화된 #213 close 진행."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-08-07T03:14:00Z",
-          "entries": []
+          "finishedAt": "2026-08-07T03:22:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-08-07T03:15:00Z",
+              "finishedAt": "2026-08-07T03:16:00Z",
+              "log": "실행 지침 §1-1: PR #214(head c0e8b46) CI 재확인 — 체크 9건 전부 success. 두 e2e leg 포함: 'E2E Tests with kind (default)' success(=OV1 등 metrics 의존 스펙 무회귀), 'E2E Tests with kind (no-metrics)' success(=metrics-server 부재 실환경에서 OV7 폴백 렌더 실증). ci.yaml 계열(Go Tests·Frontend Tests·Integration Tests·Docker Build·매니페스트/픽스처 검증) 모두 success. mergeable=true, mergeable_state=clean."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-08-07T03:16:00Z",
+              "finishedAt": "2026-08-07T03:18:00Z",
+              "log": "실행 지침 §1-2: PR #214 draft 해제(markPullRequestReadyForReview → isDraft=false) 후 squash merge. merge sha d48ab1675f189c19e167f1f5312835891b01bef5, base main. 변경 6파일 +122/-26(앱 코드 무변경)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-08-07T03:18:00Z",
+              "finishedAt": "2026-08-07T03:19:00Z",
+              "log": "실행 지침 §1-3: 무효화된 draft PR #213(OV7 영구 면제안) 머지 없이 close. 'superseded by #214, path a' 취지의 코멘트 선행. state=closed, merged=false."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-08-07T03:19:00Z",
+              "finishedAt": "2026-08-07T03:22:00Z",
+              "log": "실행 지침 §1-4: 머지 후 main(d48ab16) 체크아웃으로 양측 트리 해시 재계산 — as-is HEAD:e2e = 19b03f88f4c4a1b2b3b7239f06ea2fe826958ec3(직전 5addcd8), to-be HEAD:docs/product = 7cd20fcd7b0b752038c6a0b902d7784e9117939f(직전 5ee11cb). 양측 변경 → 다음 감지 주기가 수렴 확인용 재감지 1회를 돈다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "19b03f88f4c4a1b2b3b7239f06ea2fe826958ec3",
+          "verifiedAt": "2026-08-07T03:24:00Z",
+          "checks": [
+            {
+              "name": "PR #214 CI green (객관 게이트)",
+              "status": "passed",
+              "detail": "head c0e8b46 기준 9개 체크 전부 success. 'E2E Tests with kind (default)'(metrics 상주·--project=chromium) green으로 OV1 등 metrics 의존 스펙 무회귀 확인, 'E2E Tests with kind (no-metrics)'(INSTALL_METRICS_SERVER=false·--project=no-metrics) green으로 부재 실환경 폴백 렌더(AC7 기대결과) 실증."
+            },
+            {
+              "name": "최상위 e2e 스펙 수 = 53",
+              "status": "passed",
+              "detail": "머지된 main(d48ab16)에서 `ls e2e/*.spec.ts | wc -l` = 53 (직전 52). 신규 e2e/overview-metrics-fallback.spec.ts 존재 확인."
+            },
+            {
+              "name": "AC↔스펙 전단사(53↔53·공백 0)",
+              "status": "passed",
+              "detail": "test-overview.md 시나리오7 OV7의 `자동화:`가 e2e/overview-metrics-fallback.spec.ts 정확히 1개를 가리키고, 커버리지 요약의 '자동화 공백: 없음'. doc-tracker.md 집계도 '연결 AC 53 ↔ 전용 스펙 53, 공유·중복·고아 0, 자동화 공백 0'으로 일치(건강 상태 🟢). 모델 정의의 판정 기준 1·2·3 모두 충족."
+            },
+            {
+              "name": "형제 mock-policy 모델 무drift",
+              "status": "passed",
+              "detail": "머지된 main에서 인터셉트 지문 grep(.route/.routeFromHAR/.routeWebSocket/route.fulfill|abort|continue/vi.mock, -- 'e2e') = 83으로 base와 동일. 이번 슬라이스의 e2e 추가는 인터셉트 0 → tbm_kubernetes-dashboard-e2e-mock-policy에 drift 유발 없음."
+            },
+            {
+              "name": "무효화 PR #213 정리",
+              "status": "passed",
+              "detail": "머지 없이 close(state=closed, merged=false). 면제 조항은 어디에도 반영되지 않아 엄격 53:53 계약 유지 — reconciler 모델 definition 무변경."
+            },
+            {
+              "name": "머지 후 main CI (정보성)",
+              "status": "passed",
+              "detail": "머지 커밋 d48ab16의 main 워크플로는 관측 시점(03:25Z)에 Frontend Tests·E2E(default)·E2E(no-metrics)가 in_progress, 픽스처·매니페스트 검증 3건은 success. 동일 트리에서 PR CI 전건 green이었으므로 완료 기준 판정은 PR 게이트로 충족. 정보성으로 남김."
+            }
+          ]
         }
       }
     ]
