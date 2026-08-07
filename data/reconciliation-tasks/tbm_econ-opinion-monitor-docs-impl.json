@@ -706,7 +706,7 @@
   {
     "id": "rct_20260802-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "awaiting_review",
+    "status": "review_rejected",
     "trigger": {
       "detectedAt": "2026-08-02T09:42:27Z",
       "changedSides": [
@@ -730,7 +730,7 @@
       "assessedAt": "2026-08-02T09:42:27Z"
     },
     "createdAt": "2026-08-02T09:42:27Z",
-    "updatedAt": "2026-08-07T05:38:26Z",
+    "updatedAt": "2026-08-07T06:02:28Z",
     "attempts": [
       {
         "plan": {
@@ -848,8 +848,11 @@
         },
         "review": {
           "required": true,
-          "status": "pending",
-          "reason": "riskLevel=medium이고, 이 PR의 산출물은 코드가 아니라 **클러스터에서 도는 스케줄**이다. merge 후 Flux가 deploy/overlays/prod를 자동 동기화 중이라면 merge=apply가 되어 매시간 외부 뉴스 피드 6곳으로 실제 HTTP 요청이 나가기 시작한다 — default_feeds.json은 아직 운영 검증되지 않은 starter 목록이라고 계획 자체가 명시한다(불가역에 가장 가까운 지점). 추가로 계획이 스스로 사람 확인을 요구하는 잔여 리스크가 셋 있다: (1) PVC가 RWO라 배치 Pod와 서빙 Pod가 같은 노드에 스케줄돼야 하고 멀티노드면 Pending, (2) GHCR에 새 패키지 (...-batch)가 처음 생기며 private이면 pull 불가, (3) 기존 PVC 소유권에 따라 첫 Job이 fsGroup 권한 오류로 실패할 수 있다. executionGuide도 '리뷰 → draft 해제 → merge'와 'CI green 전 merge 금지', 그리고 deploy/base에 batch가 없다는 리뷰어 육안 확인을 명시적 전제로 걸어 두었다. 또한 이 GitHub App 토큰에 checks/actions 권한이 없어 CI 4개 잡의 green 여부를 자동으로 읽을 수 없다 → 그 게이트를 사람이 대신 확인해야 한다. || 실행 전 추가 확인으로 드러난 사실 2건(계획이 '가정'으로 남긴 것을 실측): (A) Flux가 이 경로를 실제로 자동 동기화한다 — flux-cd-apps/cluster/econ-monitor.yaml의 Kustomization econ-monitor-app이 path=./deploy/overlays/prod, branch=main, interval=5m, prune=true. 즉 merge = 약 5분 내 apply이며 계획이 말한 '머지까지가 완료 기준, apply는 별도 결정'이 이 클러스터에서는 성립하지 않는다. (B) 배치 CronJob은 ghcr imagePullSecret을 받지 못한다 — 같은 파일의 imagePullSecrets 패치가 target: {kind: Deployment, name: econ-serving}로 한정돼 있어 CronJob의 /spec/jobTemplate/spec/template/spec에는 주입되지 않는다. 그 패치 주석이 서빙 이미지를 '프라이빗 패키지'로 명시하므로 신규 ...-batch 패키지도 private일 가능성이 높고, 그러면 첫 tick이 ImagePullBackOff로 실패한다. 이는 PR #10만으로는 닫히지 않고 flux-cd-apps 쪽 동반 변경이 필요한 범위 밖 의존이다."
+          "status": "rejected",
+          "reason": "riskLevel=medium이고, 이 PR의 산출물은 코드가 아니라 **클러스터에서 도는 스케줄**이다. merge 후 Flux가 deploy/overlays/prod를 자동 동기화 중이라면 merge=apply가 되어 매시간 외부 뉴스 피드 6곳으로 실제 HTTP 요청이 나가기 시작한다 — default_feeds.json은 아직 운영 검증되지 않은 starter 목록이라고 계획 자체가 명시한다(불가역에 가장 가까운 지점). 추가로 계획이 스스로 사람 확인을 요구하는 잔여 리스크가 셋 있다: (1) PVC가 RWO라 배치 Pod와 서빙 Pod가 같은 노드에 스케줄돼야 하고 멀티노드면 Pending, (2) GHCR에 새 패키지 (...-batch)가 처음 생기며 private이면 pull 불가, (3) 기존 PVC 소유권에 따라 첫 Job이 fsGroup 권한 오류로 실패할 수 있다. executionGuide도 '리뷰 → draft 해제 → merge'와 'CI green 전 merge 금지', 그리고 deploy/base에 batch가 없다는 리뷰어 육안 확인을 명시적 전제로 걸어 두었다. 또한 이 GitHub App 토큰에 checks/actions 권한이 없어 CI 4개 잡의 green 여부를 자동으로 읽을 수 없다 → 그 게이트를 사람이 대신 확인해야 한다. || 실행 전 추가 확인으로 드러난 사실 2건(계획이 '가정'으로 남긴 것을 실측): (A) Flux가 이 경로를 실제로 자동 동기화한다 — flux-cd-apps/cluster/econ-monitor.yaml의 Kustomization econ-monitor-app이 path=./deploy/overlays/prod, branch=main, interval=5m, prune=true. 즉 merge = 약 5분 내 apply이며 계획이 말한 '머지까지가 완료 기준, apply는 별도 결정'이 이 클러스터에서는 성립하지 않는다. (B) 배치 CronJob은 ghcr imagePullSecret을 받지 못한다 — 같은 파일의 imagePullSecrets 패치가 target: {kind: Deployment, name: econ-serving}로 한정돼 있어 CronJob의 /spec/jobTemplate/spec/template/spec에는 주입되지 않는다. 그 패치 주석이 서빙 이미지를 '프라이빗 패키지'로 명시하므로 신규 ...-batch 패키지도 private일 가능성이 높고, 그러면 첫 tick이 ImagePullBackOff로 실패한다. 이는 PR #10만으로는 닫히지 않고 flux-cd-apps 쪽 동반 변경이 필요한 범위 밖 의존이다.",
+          "reviewer": "user",
+          "reviewedAt": "2026-08-07T06:02:28Z",
+          "comment": "반려 — 구현 수단 변경: Kubernetes CronJob 대신 Argo Workflows를 사용한다. AC1.1(정기 수집 스케줄링, 주기 설정 가능)이라는 목표 자체는 유효하지만, 이 PR(#10)이 택한 batch/v1 CronJob 매니페스트라는 구현체를 사용자가 채택하지 않는다. 따라서 PR #10은 머지하지 않고 열린 draft로 보존하며, 재계획은 Argo Workflows(CronWorkflow 등) 기반으로 AC1.1의 세 요구 — 정해진 주기 자동 실행 / 주기를 설정으로 변경 / 실행 누락 보정·재시도 — 를 어떤 필드로 충족할지 다시 매핑해야 한다. 재계획 시 이번 실행 전 확인에서 드러난 두 제약을 그대로 입력으로 가져갈 것: (A) Flux가 deploy/overlays/prod를 5분 간격 자동 동기화하므로 merge=apply이며, 새 수단에서도 apply 시점과 실제 첫 가동 시점을 분리할 방법(suspend 상태 착지 등)을 계획에 넣어야 한다. (B) flux-cd-apps의 ghcr imagePullSecret 패치가 target {kind: Deployment, name: econ-serving}로 한정돼 있어 배치 성격의 워크로드에는 주입되지 않는다 — Argo 경로에서도 배치 이미지 pull 경로(패키지 visibility 또는 flux-cd-apps 동반 변경)를 슬라이스 범위에 포함할지 판단이 필요하다. 또한 Argo Workflows 컨트롤러가 이 클러스터에 이미 설치돼 있는지, 없다면 그 설치가 이 슬라이스 범위인지 별도 선행 슬라이스인지도 계획 단계에서 정해야 한다."
         }
       }
     ]
