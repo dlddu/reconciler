@@ -1064,12 +1064,73 @@
       "summarizedAt": "2026-08-07T22:36:00Z"
     },
     "createdAt": "2026-08-07T22:36:00Z",
-    "updatedAt": "2026-08-07T22:52:00Z",
+    "updatedAt": "2026-08-07T22:59:40Z",
     "assessment": {
       "actionRequired": true,
       "reason": "슬라이스 착지 → 재감지의 정상 흐름이고, 잔여가 크고 **소유자가 없다**. (1) 트리거 delta 2커밋(`c4038e2`·`218dec6`)은 이 모델 자신의 task `rct_20260802-0001`의 실행 산출물이며, 그 task는 22:11:54Z 검증을 마치고 `succeeded`(terminal)로 닫혔다 — verification의 `asIsVersionAfter`가 이번 as-is와 문자 단위로 일치해 동일 사건임을 확인했다. 직전 3개 감지 사이클이 이 모델을 건너뛴 이유(당시 `executing` 점유)가 이제 해소됐다. (2) 이 모델에 다른 열린 task가 없다 — 전 이력이 succeeded/no_action_needed/cancelled로 모두 terminal이라 planner가 집어갈 미점유 handoff가 0건이다. (3) 잔여가 definition 기준 1에 정면으로 걸린다: **AC2.1~2.6 + AC3.1~3.8 = 14개 AC가 통째로 미구현**이고, 소스에서 실측한 근거는 analysis 패키지에 `fake_llm.py`뿐이라는 것, go 핸들러가 스스로 stub이라 주석한 라우트라는 것, web이 7화면 중 6화면 Placeholder라는 것이다. 정의는 페이크/스텁을 AC 충족으로 보지 않고 미구현 AC를 백로그가 아닌 drift로 규정한다. (4) 유예(재확인) 대상이 아니다 — 롤아웃 진행이나 일시 alert가 아니라 정적 문서↔구현 격차라 시간이 지나도 자동 해소되지 않는다. (5) 실행 가능한 조치가 실제로 존재한다: doc-tracker 로드맵이 다음 단위를 슬라이스 3(AC2.x 실 LLM 분석)으로 이미 특정해 두었고, 그 방향의 draft PR #9가 열려 있다(반려 사유는 \"모델 정의를 곧 바꾼다\"였고 그 개정은 `48fef79`로 이미 착지했으므로 반려 전제가 소멸했다) — 재상신 여부·범위·순서는 planner 판단. → planner 대기(`action_required`).\n참고로 이번 트리거 자체(AC1.1 스케줄링 착지)는 수렴 방향이며, 함께 관측된 운영 잔여(default_feeds 3개 소스 실패, PR #10 미채택 draft)는 AC 충족과 무관한 후속 사항으로 상태 요약에만 남긴다.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-07T22:38:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "doc-tracker 로드맵 **슬라이스 3(AC2.1~2.6, 실분석 → 실 Silver)의 첫 증분**: analysis 패키지에 실 chat-completions 분석기를 착지시킨다. 접근 = 주입식 `Completer` 트랜스포트(ingestion의 `Fetcher`와 동형) + stdlib urllib HTTP 완성기 — 프롬프트 구성·JSON 응답 파싱·Silver `Analysis` 매핑은 **진짜 로직**이고 전송만 주입해, 오프라인 CI가 그 실 로직을 결정적으로 검증한다. === 왜 지금 이것인가: (a) 이 모델의 잔여 14개 AC 중 AC3.x는 전부 Silver 의존이라 메달리온 하드 의존상 슬라이스 3이 유일한 다음 단위다. (b) 직전 시도(att2, PR #11)로 **시간당 실수집이 클러스터에서 가동**되기 시작해, 페이크 분석기의 부적합이 이론이 아니라 운영 사실이 됐다 — `fake_llm`은 본문에 심어 둔 `tone=`·`대상국=` 마커를 정규식으로 읽으므로 실 RSS 본문에서는 전 건이 `unanalyzed`가 된다. (c) 사용자가 PR #9를 반려할 때 사유가 '이 모델의 to-be 정의를 곧 바꾼다 → 수정된 모델을 반영해 재감지·재계획한 뒤 **다시 판단한다**'였고, 그 개정은 `48fef79`로 착지해 반려 전제가 소멸했다 — 즉 재판단이 예정된 슬라이스다. === PR #9를 그대로 재상신하지 않는다. #9의 CI-검증된 레이어(llm.py·`--analyzer` 플래그·테스트)는 contracts가 그때 이후 무변(`contracts:b67b8ff3` 동일)이라 기계적으로 이식하되, **#9가 가진 실제 결함 하나를 고쳐서** 올린다: #9는 `ECON_LLM_API_KEY`가 없으면 항목마다 `CompletionError`를 삼켜 **전 건을 `unanalyzed`로 기록**한다. `LocalFsStore.write_records`는 데이터셋을 **통째 교체**하므로(append 아님) 키를 잊은 1회 실행이 정상 Silver를 전량 미분석으로 파괴한다. 게다가 AC2.5의 `unanalyzed`는 '본문 부족·판단 불가'라는 **데이터 품질 신호**이고 AC3.4가 '미분석 분리'로 그 신호를 소비하므로, 오설정을 같은 값으로 기록하면 AC2.5가 정의한 의미 자체가 오염된다. → 오설정은 분석 결과가 아니라 **운영 실패**로 취급: 설정 검증은 Bronze를 읽기 전에 하고 비0 종료(아무것도 쓰지 않음), 모델 호출을 시도했는데 성공이 0건이면 Silver를 **쓰지 않고** 비0 종료한다. === 기본 analyzer는 `fake` 유지(cutover 아님). 근거는 이 레포 자신의 선례다 — 수집도 #7에서 실피드를 opt-in으로 올리고 #8에서 기본값을 전환하는 2단계였다. 실 모델을 한 번도 실행해 보지 않은 상태에서 기본값을 옮기면 프롬프트가 검증되지 않은 경로가 유일한 경로가 되고, `tests/smoke.sh`가 의존하는 Gold 산출(현재 대시보드 데모의 유일한 실데이터원)이 키 없는 환경에서 사라진다. === 완료 기준(이 시도 성공 범위): (1) `econ_analysis.llm` 모듈이 프롬프트 구성 + 다국가 `target_countries`(AC2.1) + 정규화 `narrative_subjects`(AC2.2) + 4분류 `sentiment`(AC2.3) + 동일 Silver 스키마 다중값 보존(AC2.4) + 저신뢰/미분석 비강제(AC2.5) + Bronze 추적키 보존(AC2.6)을 실제로 구현, (2) CLI `--analyzer {fake,llm}` 기본 `fake`, (3) 오설정 → Bronze 읽기 전 비0 종료·무기록, (4) 호출 시도 전량 실패 → Silver 미기록·비0 종료 + 시도/실패 카운터를 실행 요약에 노출, (5) 신규·기존 python 테스트 전량 오프라인 green + `ruff check`/`ruff format --check` 통과(CI lint-py 1:1), (6) 기본값이 fake라 `tests/smoke.sh`의 명령줄과 산출이 무변, (7) README·docstring이 실제 동작과 일치(기준 5 무위반). === 범위 밖(후속 재감지가 새 task로 이음): 기본 analyzer의 llm cutover(수집 #8 대응 — 실 모델 1회 실증 후), 배치 WorkflowTemplate에 analysis/aggregation 엔트리포인트 배선 + LLM 키 시크릿(클러스터·flux-cd-apps 소관), `analysis.spec` e2e 1:1 6케이스(`tests/`는 as-is 추적 범위 밖), AC3.1~3.8(집계·서빙·화면), contracts 변경(불필요 — Silver 스키마가 이미 이 6개 AC를 표현한다). 수렴 판정은 모델 전체 to-be가 아니라 위 완료 기준 범위로 한다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "현행 main에서 브랜치 `reconcile/rct_20260807-0001-analysis-llm` 생성. PR #9(브랜치 `reconcile/rct_20260802-0001-analysis-llm-optin`)는 열린 draft로 **보존**하고 손대지 않는다 — 다른 task 소유이며, 이 슬라이스는 새 PR로 올린다(선례: att2가 PR #10을 보존하고 #11을 새로 열었다).",
+              "expectedOutcome": "main(HEAD 218dec6) 기준 새 브랜치. #9 브랜치·상태 무변."
+            },
+            {
+              "seq": 2,
+              "action": "`python/packages/analysis/src/econ_analysis/llm.py` 신설: `Completer` Protocol · `CompletionError` · `http_completer()`(OpenAI 호환 `/chat/completions`, stdlib urllib, env `ECON_LLM_BASE_URL`/`ECON_LLM_MODEL`/`ECON_LLM_API_KEY`) · `build_prompt` · `parse_response`(코드펜스·잡문 허용) · `analyze_llm`(→ `econ_core.models.Analysis`). `fake_llm.analyze`와 동일 시그니처·출력 계약으로 drop-in 유지, `normalize_subject` 재사용으로 표기 변형 통합(AC2.2), 카탈로그 밖 대상은 원형 보존.",
+              "expectedOutcome": "AC2.1~2.6을 실제로 구현한 모듈. 네트워크 없이 임포트·호출 가능(전송은 주입)."
+            },
+            {
+              "seq": 3,
+              "action": "오설정을 분석 결과와 분리: `http_completer()`가 **생성 시점에** 키 부재를 `ConfigError`로 올린다(#9는 호출마다 지연 검사 후 삼킴). CLI는 `--analyzer llm`일 때 store를 열기 **전에** 완성기를 만들고, `ConfigError`면 stderr 메시지 + exit 2로 즉시 종료한다.",
+              "expectedOutcome": "키 없이 `--analyzer llm` 실행 시 exit 2, Bronze 미독출·Silver 파일 미생성/미변경."
+            },
+            {
+              "seq": 4,
+              "action": "`run_llm_analysis(items, bodies, completer, analyzer_version) -> (list[dict], AnalysisStats)` 추가 — ingestion `run_feed_ingestion`/`IngestStats` 동형. `AnalysisStats(attempted, failed)`: 본문이 있어 모델을 부른 건수와, 응답을 못 받았거나 파싱 불가였던 건수. CLI 요약에 `attempted=/failed=` 출력.",
+              "expectedOutcome": "실행 요약이 '몇 건을 물어봤고 몇 건이 실패했는지'를 보고. 본문 없는 항목은 attempted에 안 잡힌다."
+            },
+            {
+              "seq": 5,
+              "action": "전량 실패 가드: `stats.attempted > 0 and stats.attempted == stats.failed`면 `write_records`를 호출하지 않고 stderr + exit 3. 근거를 코드 주석에 남긴다(write_records는 데이터셋 통째 교체 → 전량 실패 기록은 정상 Silver 파괴 + AC2.5 신호 오염).",
+              "expectedOutcome": "엔드포인트 전면 장애 상황에서 기존 `silver/analysis.jsonl` 내용이 바이트 단위로 보존되고 exit 3."
+            },
+            {
+              "seq": 6,
+              "action": "테스트: `tests/test_llm.py`(프롬프트에 제목·본문 포함, 전체 응답 매핑, 표기 변형 통합, 신규 대상 보존, 저신뢰 임계, 모델 거부 → 미분석, 파싱 불가 → 미분석, 본문 없음 → 모델 미호출, confidence 타입 오류, parse_response 코드펜스/비JSON) + `tests/test_cli.py` 신규(키 없음 → exit 2·무기록, 전량 실패 → exit 3·기존 Silver 보존, 부분 실패 → 기록 + 카운터, fake 기본값 경로 무변).",
+              "expectedOutcome": "python 테스트 전량 오프라인 green(기존 28건 유지 + 신규)."
+            },
+            {
+              "seq": 7,
+              "action": "로컬에서 CI 게이트 1:1 재현: venv+pip 부트스트랩으로 `ruff==0.15.18`(uv.lock 핀)·pytest 확보 → `python/`에서 `ruff check .`, `ruff format --check .`(= `make lint-py`), `pytest`(= `make test-py`). 추가로 `tests/smoke.sh`의 python 구간(fake ingestion → analysis → aggregation)을 임시 레이크에서 재현해 Gold 산출이 그대로임을 확인.",
+              "expectedOutcome": "lint·test 전부 통과. smoke의 python 구간이 편집 전후 동일한 Gold를 만든다(기본값 무변 증명)."
+            },
+            {
+              "seq": 8,
+              "action": "네거티브 컨트롤: 신규 단정마다 구현을 의도적으로 뒤집어(예: ConfigError 미발생, 전량 실패 가드 제거, attempted 카운트 누락) 해당 테스트가 실제로 실패하는지 확인하고 되돌린다.",
+              "expectedOutcome": "각 신규 테스트가 공허하지 않음이 관측으로 확인됨."
+            },
+            {
+              "seq": 9,
+              "action": "README 범위 문구·`econ_analysis/__init__.py`·`cli.py` docstring을 실제 동작(opt-in 실 LLM, 기본 fake, 오설정 시 실패)에 맞춰 갱신. 겸사겸사 `.github/workflows/image.yml`의 주석이 존재하지 않는 `deploy/batch/cronjob-ingestion.yaml`을 가리키는 것을 실제 파일명(`cronworkflow-ingestion.yaml`)으로 정정.",
+              "expectedOutcome": "문서가 구현을 과대·과소 기술하지 않음. README·워크플로 주석이 실제 파일·플래그와 일치."
+            },
+            {
+              "seq": 10,
+              "action": "커밋·푸시 후 draft PR 생성(본문: task id, gap 요약, 계획 단계, 검증 방법, #9와의 관계). 대상 레포 토큰은 `contents:write`+`pull_requests:write`로 별도 발급.",
+              "expectedOutcome": "draft PR URL 확보, `preparation`에 기록. 머지는 executor/사용자 몫."
+            }
+          ],
+          "plannedAt": "2026-08-07T22:59:40Z"
+        }
+      }
+    ]
   }
 ]
