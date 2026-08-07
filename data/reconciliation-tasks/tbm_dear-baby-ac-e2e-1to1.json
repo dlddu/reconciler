@@ -933,9 +933,49 @@
             }
           ]
         }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "직전 att0 는 AC-002-01(오늘의 질문 표시, PRD-002) 슬라이스 계획·준비·사용자 승인까지 마쳤고 전용 flow daily-question-display.yaml 은 b890640 에서 CI 전체 green(2026-08-01)이었다. 그럼에도 failed 로 닫힌 유일 원인은 '착지 메커니즘': PR #163 을 PRD-009 baseline 위로 rebase 한 뒤 executor 가 GitHub App 설치 토큰으로 push 하자 워크플로가 기동되지 않아(설치 토큰 push 는 Actions 미트리거) head 28d6616 에 CI 0건 → 필수 체크 부재로 mergeable_state=blocked → 머지 불가 → main 미수렴(AC-002-01 ⬜ 유지). 이번 재계획은 이미 승인·CI검증된 슬라이스 내용을 그대로 유지하고 착지 메커니즘만 고친다: (1) 브랜치를 최신 main(0e0cea6/PR#167 home-feed AC-009-14 재선언 — doc-tracker changelog line 편집 포함) 위로 rebase, 유일 충돌인 changelog-basis line 은 main 의 rct_20260805-0001 괄호주석을 유지하면서 '2026-08-06 AC-002-01 flow 신설' changelog 항목과 카운트 ✅22·⬜46 를 재적용해 해소(나머지 4개 doc-tracker hunk + yaml 신설은 자동 이관). (2) 이 실행환경의 pre-authed **user 토큰(gh dlddu)** 으로 force-with-lease push → pull_request synchronize 이벤트가 CI 를 기동(head ba6a812 에서 CI run 생성·in_progress 확인, 직전 app-토큰 0건과 대비되는 핵심 수정). === 완료 기준(이 시도 성공 범위): PR #163 head ba6a812 가 CI green 을 받고 main 에 머지되어 docs/doc-tracker.md 에서 AC-002-01 이 ⬜→✅ `daily-question-display.yaml` (✅21→22·⬜47→46·🟡0·1차제외1)로 갱신되고 전용 flow 파일이 main 에 존재하며 파일 단위 1:1(중복·묶음·고아 0)이 유지되면 성공. === 범위 밖(후속 재감지가 새 task 로 이음): 나머지 46개 미커버 AC(외부 호출 경계 MB-3~6 게이트 7건 포함)는 ⬜ backlog 로 남는다. AC-002-01 조건3 '짧은 안내 문구' 마이크로카피 문구·질문 본문 의미 정확성은 e2e(요소 노출)로 판정하지 않고 dailyQuestions 단위 + 수동 QA 잔여(Android Maestro 한글 부분문자열 불안정 → testID 노출만 단정하는 repo 컨벤션). 왜 이 접근인가: 실질 작업은 완료·CI검증 상태였고 결함은 직전 executor 환경의 토큰 선택 메커니즘뿐이라, 동일 슬라이스를 재-스테이징+올바른 토큰으로 재-트리거하는 것이 최소·최저위험이며 가역적(revert/브랜치 삭제)이다. CI 리스크 최저: daily-question-display.yaml 은 green b890640 과 byte-identical, 델타는 doc-tracker 마크다운과 무관하게 이미 머지된 main 커밋(0e0cea6)뿐.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 reconcile/rct_20260731-0001-ac-002-01 를 최신 origin/main(0e0cea6 로 1커밋 전진) 위로 rebase 한다.",
+              "expectedOutcome": "docs/doc-tracker.md 의 changelog-basis line(약 line 73) 단 1곳만 충돌(양쪽이 같은 줄 편집). yaml 신설·나머지 doc-tracker hunk 는 자동 적용."
+            },
+            {
+              "seq": 2,
+              "action": "충돌 해소: main 의 'rct_20260805-0001 home-feed 재선언 완료' 괄호주석을 유지하고, 그 줄에 '· 2026-08-06 AC-002-01 flow 신설'과 카운트 ✅22·⬜46 를 재적용. daily-question-display.yaml(신설)과 다른 doc-tracker 편집(요약 flow 22개, AC-002-01 행 ✅, backlog 33건·불릿 제거, 변경이력 행)은 그대로 유지.",
+              "expectedOutcome": "main 대비 최종 diff = 정확히 2파일(docs/doc-tracker.md, e2e/maestro/daily-question-display.yaml), 충돌 마커 0, 카운트 내부 일관(✅22·⬜46)."
+            },
+            {
+              "seq": 3,
+              "action": "이 환경의 pre-authed user 토큰(gh dlddu)으로 --force-with-lease push 해 PR #163 branch head 를 갱신한다. GitHub App 설치 토큰으로 push 하지 않는다(직전 실패 원인).",
+              "expectedOutcome": "PR #163 head = 새 sha(ba6a812), 그 head 에 pull_request 이벤트 'CI' 워크플로 run 생성(직전 app-토큰 push 의 0건과 대비)."
+            },
+            {
+              "seq": 4,
+              "action": "CI('CI' 워크플로: Detect Changes → E2E Tests Android/iOS)가 새 head 에서 green 으로 완료되는지 확인한다.",
+              "expectedOutcome": "필수 체크 전부 success, PR mergeable_state 정상(blocked 해소)."
+            },
+            {
+              "seq": 5,
+              "action": "(executor) CI green + 필요한 검토 통과 후 PR #163 을 main 에 머지한다.",
+              "expectedOutcome": "main HEAD 에 daily-question-display.yaml 존재 + doc-tracker AC-002-01 ✅ 반영."
+            },
+            {
+              "seq": 6,
+              "action": "(executor) main 수렴 검증: doc-tracker 에서 AC-002-01 이 ✅ `daily-question-display.yaml`, 카운트 ✅22·⬜46, flow 파일 존재.",
+              "expectedOutcome": "계획 범위(AC-002-01 커버) 달성 → task succeeded. 범위 밖 46건은 재감지가 후속 슬라이스로 이음."
+            }
+          ],
+          "plannedAt": "2026-08-07T01:19:07Z"
+        }
       }
     ],
-    "updatedAt": "2026-08-07T01:10:28Z"
+    "updatedAt": "2026-08-07T01:19:07Z"
   },
   {
     "id": "rct_20260802-0001",
