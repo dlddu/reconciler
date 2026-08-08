@@ -2,7 +2,7 @@
   {
     "id": "rct_20260808-0001",
     "toBeModelId": "tbm_session-platform-ac-e2e",
-    "status": "assessing",
+    "status": "action_required",
     "trigger": {
       "detectedAt": "2026-08-08T01:33:51Z",
       "changedSides": [
@@ -19,12 +19,18 @@
       }
     },
     "createdAt": "2026-08-08T01:33:51Z",
-    "updatedAt": "2026-08-08T01:36:46Z",
+    "updatedAt": "2026-08-08T01:38:52Z",
     "stateSummary": {
       "asIs": "## as-is — e2e 매칭 단위 파일 (dlddu/session-platform@main `6a48f60`, 관측 2026-08-08T01:3xZ)\n\n버전: `api:3d1e79fe… web:52390ac1…` (최초 관측, previous=null)\n\n**매칭 단위 파일 8개** — Go API e2e 3 + Playwright 5. 셋 다 빌드 태그 `//go:build e2e` 확인:\n\n| 파일 | 스위트 | 헤더가 실제로 다루는 AC (주석 서술 기준) |\n| --- | --- | --- |\n| `control-plane/test/e2e_test.go` (9 케이스) | go | A1/A2, C2/C3, C4 + healthz·404 (비-AC) |\n| `control-plane/test/e2e_shell_test.go` (4 케이스) | go | D1, D2/D3 |\n| `control-plane/test/e2e_deferred_test.go` (8 케이스) | go | A1/A2, A3, B1, B2/B3, C1, C2/C3, D4 (4건 skip 시드) |\n| `web/e2e/j1-session-creation.spec.ts` | playwright | A1/A2, C2/C3, D2/D3 |\n| `web/e2e/j3-multi-session-switch.spec.ts` | playwright | C4 |\n| `web/e2e/j5-shell-interaction.spec.ts` | playwright | D2/D3 |\n| `web/e2e/deferred.spec.ts` | playwright | B1, B2, C1 (전부 `test.skip` 시드) |\n| `web/e2e/smoke.spec.ts` | playwright | 비-AC (SPA 부팅·baseURL 배선) |\n\n매칭 단위 **아님**(정의대로 제외 확인): `control-plane/test/integration_test.go`·\n`client_orchestrator_test.go` — 둘 다 `//go:build integration`.\n\n**결정적 관측: `검증 AC:` 선언이 레포 전체에 0건이다.** `grep -rn '검증 AC'` 히트는 전부\n`docs/test/*.md`(시나리오 문서)의 `- **검증 AC**: AC-…` 줄이며, 매칭 단위 파일(.go/.ts)의\n헤더 주석에는 하나도 없다. 즉 파일→AC 매핑을 기계적으로 확인할 지점이 아직 존재하지 않고,\n현재 매핑은 각 파일의 산문 주석과 `docs/test/e2e.md`의 표에만 있다.\n\n검증 축은 살아 있다: `scripts/e2e/up.sh`(`kubectl apply -k deploy/`) + kind 하네스,\n`.github/workflows/e2e.yml`가 go e2e와 Playwright를 실제로 돌린다.\n",
       "toBe": "## to-be — AC 집합(docs/prd) + 매핑·예외 등재(docs/test/e2e.md)\n\n버전: `ac:9d6d4878… reg:dd590235…` (최초 관측, previous=null)\n\n**AC 21개**, `### AC-…` 헤딩 실측(모델 정의의 21개와 일치):\n- `architecture.md` A1·A2·A3 (3)\n- `lifecycle.md` B1·B2·B3 (3)\n- `state-api.md` C1·C2·C3·C4 (4)\n- `shell-workload.md` D1·D2·D3·D4·D5 (5)\n- `claude-code-workload.md` E1·E2·E3·E4·E5·E6 (6)\n\n**등재 SSOT `docs/test/e2e.md`(114줄) 실측**:\n- 「현재 커버되는 시나리오」 표 — **테스트 함수/시나리오 단위**, 파일 단위 아님. 언급 AC:\n  A1·A2·A3·B2·B3·C1·C2·C3·C4·D1·D2·D3·D4 (+ V3/V4/V5 가치, 에러 매핑).\n- 「Deferred 시드 ↔ 문서 시나리오 매핑」 표 — 시드(테스트 함수) 단위. B1·B2·C1·C2·C3 잔여.\n- **파일 단위 매핑 표 없음 · AC 예외 목록 없음 · 집계(AC 수/파일 수/공백) 없음.**\n- 두 표 어디에도 **D5, E1~E6 (7개)** 는 등장하지 않는다.\n\n따라서 to-be가 요구하는 등재물 3종(파일 단위 매핑 표 · 예외 목록 · 집계) 중 **0종**이\n현재 문서에 존재한다.\n",
       "gap": "정의의 1:1 규칙 6개 중 5개가 위반 상태다(최초 관측이므로 예상된 큰 격차).\n**(AC 21 − 예외 0) = 21 vs `검증 AC:` 선언을 가진 매칭 파일 0개.**\n① 규칙1(AC→파일 유일): 21개 AC 전부 선언 파일 0개 → 전부 누락.\n② 규칙2(파일→AC 유일): 매칭 단위 8개 전부 선언 0개이며 주석상 다중 AC를 묶고 있다\n(A1/A2·C2/C3는 go `e2e_test.go`와 Playwright `j1`에, D2/D3는 go `e2e_shell_test.go`와\n`j5`에, C4는 `e2e_test.go`와 `j3`에 — 스위트 교차 중복도 규칙1상 drift).\n③ 규칙3: `smoke.spec.ts`는 허용 유형(스모크)이지만 `docs/test/e2e.md`에 등재 행이 없어 고아.\n④ 규칙4: 예외 목록 자체가 없다 — D5·E1~E6 7개는 파일도 등재도 없다.\n⑤ 규칙6: 집계가 없어 일치 여부를 확인할 수 없다.\n버전 변화 자체는 최초 관측(양쪽 previous=null)이므로 '무엇이 바뀌었나'가 아니라\n'등록된 목표에 현재 상태가 얼마나 못 미치나'가 이번 판정의 실체다.",
       "summarizedAt": "2026-08-08T01:36:46Z"
+    },
+    "assessment": {
+      "actionRequired": true,
+      "reason": "작업 필요. 최초 관측이지만 '전부 미충족'이라는 숫자(21/21)만으로 판정하지 않고,\n닫을 수 있는 경로가 하나라도 열려 있는지로 갈랐다 — **열려 있고, 소유자도 없다**.\n\n(a) **막히지 않았다**: 21개 AC 중 14개(A1·A2·A3·B1·B2·B3·C1·C2·C3·C4·D1·D2·D3·D4)는 이미\n실제 단언이 존재하고 8개 매칭 단위 파일도 실재한다. 첫 슬라이스가 요구하는 일 —\n헤더 `검증 AC:` 규약 도입, `docs/test/e2e.md`에 파일 단위 매핑 표·예외 목록·집계 신설,\n묶음 파일 분할과 스위트 교차 중복(A1/A2·C2/C3·C4·D2/D3) 정리 — 은 전부 지금 착수 가능한\n문서 + 기존 green 스펙 리팩터다. 새 제품 기능이 필요 없다.\n\n(b) **검증 축이 살아 있다**: `scripts/e2e/up.sh`(`kubectl apply -k deploy/`) + kind 하네스와\n`.github/workflows/e2e.yml`가 go e2e·Playwright를 실제로 돌린다. '아무도 안 돌리는 스펙'\n상황이 아니다.\n\n(c) **소유자가 없다**: 이 모델은 task가 0건이었다. 자매 모델 `tbm_session-platform-docs-impl`의\n열린 `rct_20260808-0001`(현재 planned)은 docs↔impl 축(AC-E 구현)이라 여기의 매핑·분할·예외\n등재 위반을 하나도 닫지 못한다.\n\n(d) 예외 등재로 닫는 길도 열려 있다: 규칙 4가 예외 후보를 명시(AC-B1 미확정 트리거 정책,\nAC-E2/E4/E6 외부 LLM 자격증명·비결정 산출물, AC-C1 실 apiserver CAS는 envtest 대체)하고,\n`internal/service/reaper.go`·`session.go`의 `TODO(policy)`로 B1 사유가 실제로 확인된다.\n\nplanner 유의: **AC-E1~E6 6개는 첫 슬라이스에서 제외**할 것. 이 계열은 구현이 전무하고\n(`tbm_session-platform-docs-impl` rct_20260808-0001이 AC-E1 구현을 계획 중) 순서 의존이 있다.\n남는 잔여는 재감지가 후속 task로 잇는다. 또 J1/J3/J5 여정 spec을 AC별로 쪼개지 않고\n'여정 통합' 형태를 유지하려면 그건 규칙 3의 확장 = 판정 기준 변경이므로 task 안에서 임의로\n하지 말고 모델 definition 개정 커밋으로 처리해야 한다(정의가 명시).",
+      "assessedBy": "agent",
+      "assessedAt": "2026-08-08T01:38:52Z"
     }
   }
 ]
