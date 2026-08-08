@@ -465,7 +465,7 @@
       "summarizedAt": "2026-08-08T01:05:38Z"
     },
     "createdAt": "2026-08-08T01:05:38Z",
-    "updatedAt": "2026-08-08T01:48:00Z",
+    "updatedAt": "2026-08-08T01:58:00Z",
     "id": "rct_20260808-0001",
     "assessment": {
       "actionRequired": true,
@@ -545,10 +545,56 @@
           "comment": "승인. 설명(gap 요약·PR #21 변경 내용·CI 10개 잡 전부 green 재확인·squash 머지가 유일한 불가역 지점·이 슬라이스가 AC-E1을 닫지 않는다는 점)을 제시한 뒤 받은 명시적 승인."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-08-08T01:48:00Z",
-          "finishedAt": null,
-          "entries": []
+          "finishedAt": "2026-08-08T01:58:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "log": "session.WorkloadType + WorkloadTypeShell/ClaudeCode + 정규화가 control-plane/internal/session/session.go(+64/-…)에 있고, Session/CreateRequest에 workloadType 필드가 붙었다. PR #21(head 4b848e0)에 저작된 상태로, squash 머지 8ac8e46으로 main에 반영됨. 증거: ci/control-plane (lint+unit) success on main."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "log": "service/manager.go에서 Create가 pod 생성 전 정규화·검증하고 orch.Start에 타입을 전달, Restore가 세션 자신의 타입을 실어 복원. PR #21(head 4b848e0)에 저작된 상태로, squash 머지 8ac8e46으로 main에 반영됨. 증거: TestWorkloadTypeSurvivesSnapshotRestore·TestLegacySessionRecordRestoresAsShell(control-plane/internal/service/workload_type_test.go)이 포함된 패키지가 main CI에서 PASS."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "log": "PodOrchestrator.Start/RestoreInto 시그니처에 타입 추가, ClientOrchestrator에 WithWorkloadImage + 타입별 이미지/DATA_PLANE_WORKLOAD env/session-platform.dev/workload-type 라벨 분기, 이미지 미설정 타입은 pod 생성 전 명시적 에러(shell 폴백 없음). PR #21(head 4b848e0)에 저작된 상태로, squash 머지 8ac8e46으로 main에 반영됨. 증거: ci/integration (happy path) success — TestClientOrchestrator_PodSpecBranchesOnWorkloadType 포함."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "api.go의 createReq가 workloadType을 디코드해 CreateRequest로 전달(허용값 외 ErrInvalidInput→400), main.go가 DATA_PLANE_CLAUDE_CODE_IMAGE를 WithWorkloadImage로 배선. PR #21(head 4b848e0)에 저작된 상태로, squash 머지 8ac8e46으로 main에 반영됨. 증거: TestCreateSessionWorkloadType(4 서브테스트)·TestWorkloadTypeIsImmutableAfterCreate가 든 internal/api 패키지 PASS."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "openapi.yaml에 WorkloadType enum 추가(L162), Session.required에 workloadType 포함(L180·184), CreateSessionRequest에 workloadType(L195~197). PR #21(head 4b848e0)에 저작된 상태로, squash 머지 8ac8e46으로 main에 반영됨. 머지 후 main 트리에서 직접 확인."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "신규 테스트 3파일 389줄(internal/api/workload_type_test.go 116 · internal/service/workload_type_test.go 141 · test/workload_type_orchestrator_test.go 132). PR #21(head 4b848e0)에 저작된 상태로, squash 머지 8ac8e46으로 main에 반영됨. 기존 어서션 수정 0 — 유일한 기존 테스트 편집은 test/client_orchestrator_test.go의 Start/RestoreInto 호출부에 session.WorkloadTypeShell 인자 추가 + import 1줄(머지 후 diff로 재확인)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "log": "data-plane/README.md의 'not yet implemented here'를 'control plane 절반은 배선됨 / data plane 절반(이미지·에이전트 모드) 미구현'으로 정정, docs/doc-tracker.md의 '구현 사슬 미반영(AC-E1/E6)' 항목을 '부분 반영(AC-E1)'으로 갱신 + 변경 이력 행 추가. PR #21(head 4b848e0)에 저작된 상태로, squash 머지 8ac8e46으로 main에 반영됨. 머지 후 main diff로 확인."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "log": "CI 게이트: 계획 단계의 로컬 재현에 더해 executor가 PR head 4b848e0의 check-run 10건 전부 success를 재확인(control-plane / data-plane / web / integration / envtest / docker image ×2 / build&push ×2 / e2e kind+API+browser). 머지 후 main 8ac8e46에서도 check-run 9건 전부 success."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "log": "executor 실제 액션: markPullRequestReadyForReview로 draft 해제(isDraft=false) → 머지 직전 mergeable=true·mergeable_state=clean·head 4b848e0 재확인 → sha 고정 squash 머지 성공(merged=true, main HEAD=8ac8e46). 레포가 squash 전용이라 merge_method=squash 사용. 브랜치 보호 규칙에 막히지 않음."
+            }
+          ]
         }
       }
     ]
