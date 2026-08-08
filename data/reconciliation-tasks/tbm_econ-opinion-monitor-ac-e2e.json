@@ -1,0 +1,30 @@
+[
+  {
+    "toBeModelId": "tbm_econ-opinion-monitor-ac-e2e",
+    "status": "assessing",
+    "trigger": {
+      "detectedAt": "2026-08-08T00:34:25Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": null,
+        "currentVersion": "58d9bbd4f40a4f90e4848178adc5dc1c61ceb1ff"
+      },
+      "toBe": {
+        "previousVersion": null,
+        "currentVersion": "ac:2a9851cb8c1b3bd0111df61ab9511d64553cc557e41d9ac401f3d020269aabf0 reg:ce80d3acebd13c26805346bf9b56baf09d6d02cf"
+      }
+    },
+    "createdAt": "2026-08-08T00:34:25Z",
+    "updatedAt": "2026-08-08T00:34:25Z",
+    "id": "rct_20260808-0001",
+    "stateSummary": {
+      "asIs": "관측 2026-08-08T00:34Z · dlddu/economic-opinion-trend-monitor@main `218dec6` · as-is 버전 `58d9bbd4` (= `HEAD:tests/e2e` 트리 해시, 첫 관측)\n\n**매칭 단위(`tests/e2e/specs/` 최상위 `*.spec.ts`) = 1개**\n- `tests/e2e/specs/serving.spec.ts` — 테스트 3개\n  - `api: health responds ok` (`GET /api/health` → 200 `{status:\"ok\"}`)\n  - `api: dashboard serves fixture Gold for the KR axis` (`GET /api/dashboard?axis=KR` → 픽스처 서브젝트 + `\"normalized\":true`)\n  - `web: dashboard renders the fixture subject` (`/` 렌더, 타이틀 + 픽스처 서브젝트 노출, \"데이터 없음\"·\"The web build was not found\" 부재)\n\n**`검증 AC:` 헤더 선언 = 0건.** 레포 전체 `grep -rn '검증 AC'` 결과 히트는 전부 `docs/`(test-*.md 시나리오의 `- **검증 AC**:` 필드, doc-tracker 본문)이며 `tests/` 아래에는 **0건**이다. 즉 spec 파일에서 AC를 기계적으로 확인할 수 있는 선언 규약이 아직 코드에 존재하지 않는다.\n\n**매칭 단위가 아닌 하네스·픽스처**(정의상 제외): `fixtures/README.md`, `fixtures/gold/{axis_sentiment,subject_trend}.jsonl`, `k8s/{e2e-patch,kustomization}.yaml`, `kind-config.yaml`, `package.json`, `package-lock.json`, `playwright.config.ts`, `run.sh`.\n\n**검증 축은 살아 있다**: `tests/e2e/run.sh`는 serving 이미지를 빌드해 일회용 kind 클러스터에 픽스처 Gold를 ConfigMap으로 물려 띄우고 port-forward에 대해 Playwright를 돌린다. `.github/workflows/ci.yml`이 `tests/e2e/package-lock.json` 캐시 + `tests/e2e/playwright-report` 아티팩트를 참조하는 e2e 잡을 갖고 있어 CI에서 실제로 실행된다(테세라식 \"스펙은 있으나 아무도 안 돌림\" 상황이 아님).\n\n**구현 측 참고**(spec 신설 가능성 판단 근거): 슬라이스 2(AC1.1~1.7)는 자매 모델 `tbm_econ-opinion-monitor-docs-impl`의 `rct_20260802-0001`이 2026-08-07T22:11Z `succeeded`로 닫으며 실구현됐다 — `python/packages/ingestion/src/econ_ingestion/`에 `feeds.py`·`sources.py`·`cli.py`·`default_feeds.json` + 단위 테스트, `deploy/` 시간별 CronWorkflow `suspend:false`. 반면 AC2.x는 `python/packages/analysis/src/econ_analysis/`에 `fake_llm.py`뿐(실 analyzer 없음), AC3.x는 `go/internal/handlers/handlers.go`가 스스로 \"one stub route per frontend screen\"이라 적고 인라인 `stub: single-bucket skeleton data (AC3.5 …)` / `stub: 원문 역추적 자리 … (AC2.6)`를 남긴 상태다. 단 현행 e2e 하네스는 **serving 경로만** 기동한다(수집 잡은 클러스터에 없음).",
+      "toBe": "관측 2026-08-08T00:34Z · 같은 커밋 `218dec6` · to-be 버전 `ac:2a9851cb… reg:ce80d3ac…` (첫 관측)\n\n**AC 전집 = 21개** (`### ACn.m:` 헤딩 실측, 등록 시점 메모와 일치)\n- `docs/econ-opinion-monitor-prd-ingestion.md` → AC1.1~AC1.7 (7)\n- `docs/econ-opinion-monitor-prd-analysis.md` → AC2.1~AC2.6 (6)\n- `docs/econ-opinion-monitor-prd-aggregation-viz.md` → AC3.1~AC3.8 (8)\n중복 없음(정렬·유일화 후 21).\n\n**doc-tracker(`docs/econ-opinion-monitor-doc-tracker.md`)의 e2e 관련 절 실측**\n- `### AC↔e2e 1:1 매핑 원칙`(L86~) — 1:1을 **테스트 케이스** 단위로 정의한다(\"21개 AC 각각은 … e2e 테스트 **케이스**를 정확히 하나 가진다\").\n- `### AC↔e2e 1:1 매핑표`(L124~156) — 21개 AC 전수를 `` `spec 파일`::제목 `` 형태의 **목표** 케이스에 배정한 로드맵 표다. 배정 대상 spec 파일은 7종(`ingestion.spec` 7건 · `analysis.spec` 6건 · `aggregation.spec` 2건 · `sentiment.spec` 2건 · `fairness.spec` 2건 · `trend.spec` 1건 · `compare.spec` 1건)이고, 각 행에 소유 슬라이스가 붙어 있다. **현재 상태 기록이 아니라 계획표이며, 실제로 존재하는 파일은 그중 하나도 없다.**\n- 모델 정의가 SSOT로 지목한 **\"e2e 매핑\" 섹션(예외 목록 + 실제 상태 집계)은 존재하지 않는다.** 예외 사유·대체 검증 수단이 적힌 AC는 0건이다.\n- 위험 진단의 `🟢 미검증 AC (없음)` / `🟢 고아 테스트 (없음)`은 **test 문서(T1/T2/T3 시나리오) 축**에 대한 집계이며(`### AC → 테스트 커버리지`가 AC1.1~3.8을 T1~T3 시나리오에 매핑), e2e spec 파일 축의 집계가 아니다 — 이 축에는 집계 자체가 없다.",
+      "gap": "**유의미한 drift — 정의의 1:1 전단사가 성립하는 지점이 사실상 없다.** 규칙별 실측:\n\n- **규칙1(AC→파일 유일) 위반 21건**: 21개 AC 전부가 자신을 주검증한다고 선언한 spec 파일 0개이고, 예외 등재도 0건이다. (AC 21 − 예외 0) = 21 ≠ AC 매칭 파일 0.\n- **규칙2(파일→AC 유일) 위반 1건**: 유일한 매칭 단위 `serving.spec.ts`가 선언하는 AC는 0개다(여러 AC를 묶은 게 아니라 선언 자체가 없음).\n- **규칙3(비-AC 파일 등재) 위반 1건**: `serving.spec.ts`는 doc-tracker의 \"e2e 매핑\" 섹션에 스모크/인프라 유형으로도 등재돼 있지 않다 → 고아 파일.\n- **규칙4(예외 목록)**: 예외 목록 섹션 자체가 부재. 정의가 지목한 예외 후보(AC1.1 장주기 스케줄링 실동작, AC1.2/AC1.6 외부 API rate limit·부분 장애, AC2.2/AC2.3/AC2.5 LLM 산출물의 의미적 품질)는 아직 아무 판정도 받지 않았다.\n- **규칙5(참조 무결성)**: 위반 없음 — 존재하지 않는 AC를 참조하는 spec도, 존재하지 않는 AC를 등재한 예외도 없다(참조와 예외가 둘 다 0건이라 공허하게 충족).\n- **규칙6(집계 일치) 위반**: 실제 상태를 집계하는 \"e2e 매핑\" 섹션이 없다. 존재하는 `AC↔e2e 1:1 매핑표`는 목표 배정표라 현 상태(21 공백 + 고아 1)를 드러내지 않는다.\n\n**추가로, 계획표 자체가 이 모델의 판정 기준과 충돌한다(planner가 먼저 풀어야 할 지점)**: doc-tracker의 매핑표는 1:1을 *테스트 케이스* 단위로 잡아 `ingestion.spec`에 AC1.1~1.7 7건, `analysis.spec`에 AC2.1~2.6 6건 등 한 파일에 여러 AC를 배정한다. 그러나 이 모델의 매칭 단위는 **파일**이고 규칙2는 \"여러 AC를 묶은 파일은 분리 대상(drift)\"이라고 명시한다. 즉 매핑표를 적힌 그대로 구현하면 21개 AC가 7개 파일에 담겨 규칙2를 5개 파일에서 즉시 위반한다. 매핑표를 21개 파일로 다시 끊거나, 모델 정의의 매칭 단위 개정을 제안하거나 — 어느 쪽인지 확정이 필요하다.\n\n정의의 \"큰 초기 격차는 예상된 것\"과 부합하는 첫 관측이며, 관측된 격차는 등록 시점 메모(AC 21 vs 매칭 spec 0, `serving.spec.ts` 고아, 선언 규약·예외 목록 부재)와 정확히 일치한다.",
+      "summarizedAt": "2026-08-08T00:34:25Z"
+    }
+  }
+]
