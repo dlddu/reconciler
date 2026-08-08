@@ -1,1 +1,30 @@
-[]
+[
+  {
+    "toBeModelId": "tbm_dear-baby-e2e-mock-policy",
+    "status": "assessing",
+    "trigger": {
+      "detectedAt": "2026-08-08T01:05:38Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": null,
+        "currentVersion": "5530065b9493459fafea11cf58fb1f034f6dc170f275e218bdd57a2337da0097"
+      },
+      "toBe": {
+        "previousVersion": null,
+        "currentVersion": "a8853794ef0568def31afae46bb7f93f1463ef151214e2a2e03584f53adfa1fd"
+      }
+    },
+    "stateSummary": {
+      "asIs": "dear-baby HEAD `ea8ab5f` (#171, 2026-08-07T22:26Z). 지문 `seams=32 files=20` / sha `5530065b…`. 스코프(`app` `backend` `worker` `e2e` `scripts` `.github`, 단위테스트 제외)에서 실측한 seam:\n\n- **MB-1(마이크+온디바이스 STT) 등재 seam — 코드와 일치**: `EXPO_PUBLIC_E2E_AUDIO_FIXTURE`(`app/src/config/env.ts` · `app/src/voice/{recorder,whisperEngine,modelManager,uploadAudio}.ts` · `e2e/maestro/home-voice-record.yaml` · `.github/workflows/e2e-{android,ios}.yml`) + `FixtureRecorder`(`app/src/voice/recorder.ts`). 레지스트리 MB-1 행이 명시한 seam과 그대로 대응한다.\n- **미등재 seam ① `EXPO_PUBLIC_E2E_FAST_TESTER_LOGIN`**: `app/src/config/env.ts:52` · `app/app/(landing)/index.tsx:304` · `app/.env.example:21` · `e2e/maestro/subflows/tester-login-fast.yaml` · `.github/workflows/e2e-{android,ios}.yml`. `docs/engineering/client-login-process.md`(ENG-003) L329에 상세히 문서화돼 있고(스토어 빌드에는 미컴파일, `__tests__`가 비노출 강제, `e2e/scripts/check-login-subflows.sh`가 배선 강제, 플래그에 자격증명 미탑재) 로그인을 *준비 단계*로 쓰는 flow 전부가 사용하지만, **레지스트리 MB-2 행에는 없다**(MB-2는 tester-login 제스처 + `TesterLoginModal`만 명시).\n- **미등재 seam ② `STUB_UNREAD_COUNT = 1`** (`app/src/api/notifications.ts:11`, 반환 `:14`): 파일 상단 주석이 스스로 \"백엔드 알림 API 가 아직 없으므로 결정적 stub 을 둔다\"고 밝힌다(PRD-007 AC-007-03 종 아이콘 red dot).\n- **미등재 seam ③ recordsCount 하드코딩 fallback** (`app/src/api/recordsCount.ts`): 주석 \"백엔드 답변 카운트 API 가 아직 없으므로 결정적 stub\", 그리고 \"fallback 값은 두 분기(`n < 50`, `n = 50`)를 같은 mock 으로 검증할 수 있도록\" 선택했다고 명시(PRD-007 AC-007-07).\n- **미등재 seam ④ openrouter mock 서버 배선**: `scripts/openrouter-mock/{server.js,deployment.yaml}` + `OPENROUTER_BASE_URL`(`worker/cmd/worker/main.go:52,85` · `worker/internal/openrouter/client.go:24` · `.github/workflows/integration.yml:107,166` · `.github/actions/setup-ai-worker/action.yml:113`). 배선 지점이 **`integration.yml`(워커 통합 테스트 레인)** 이고 maestro e2e 레인(`e2e-android.yml`/`e2e-ios.yml`)이 아니라는 점이 판정의 핵심이다.\n- **표기 규약 미도입**: `mock-exception:` 토큰 레포 전역 **0 hit**.\n- **지문 오탐 3종(계측 한계 — 첫 task가 알아야 함)**: `E2E_KEYCHAIN_PATH`/`E2E_KEYCHAIN_PWD`(`.github/workflows/e2e-ios.yml:217,218,400` — iOS 서명 키체인, 모킹 아님. STRONG 패턴 `\\bE2E_[A-Z0-9_]+\\b`가 잡음), `app/src/api/community.ts:6`의 \"예전 mock 셀렉터\" 산문 언급(실제 seam이 아니라 오히려 *클라이언트 재구현 금지* 근거), `notifications.ts`/`recordsCount.ts`의 산문 `mock`/`stub` 낱말이 WEAK 패턴으로 중복 계수.",
+      "toBe": "`docs/doc-tracker.md`의 **\"외부 호출 모킹 경계 레지스트리(Mock Boundary Registry)\"** 섹션(`lines=62 boundaries=6`, sha `a8853794…`). 2026-07-20 경계 재프레이밍으로 신설됐고, 그 이전 \"자동화 곤란 AC\" 목록을 전부 경계 등재로 흡수해 **영구 예외 AC를 0건**으로 만드는 것이 취지다.\n\n원칙: e2e flow는 최대한 실제 경로로 구동하고, 결정적으로 치환하는 것은 **외부 세계 부작용**(실물 배송·실결제 청구·OS 푸시 실도달·LLM 산출 품질처럼 CI에서 재현 불가·비결정적인 부분)뿐이며 그 앞뒤의 앱 로직·네트워크·화면 전이는 모두 실제로 e2e한다.\n\n등재 경계 6건 — **MB-1** 마이크 캡처+온디바이스 STT(**구현됨**: `EXPO_PUBLIC_E2E_AUDIO_FIXTURE`→`FixtureRecorder`), **MB-2** OAuth 신원 공급자(**구현됨**: tester-login 제스처+`TesterLoginModal`), **MB-3** 카메라/미디어 캡처(**신설 예정**: `EXPO_PUBLIC_E2E_CAMERA_FIXTURE`), **MB-4** LLM 서사 생성(**신설 예정(백엔드)**: e2e 모드에서 백엔드가 결정적 canned 서사를 스트리밍), **MB-5** 푸시 알림 도달(**신설 예정(백엔드)**: e2e 모드에서 예약 알림 즉시 생성 → 앱이 알림 API로 조회), **MB-6** 결제+실물 제작·배송(**신설 예정(백엔드)**).\n\n정합 상태 = **등재 seam 집합 == 코드 실재 seam 집합(양방향 1:1)** + 허용된 seam마다 직전 줄에 `// mock-exception: MB-N — <실환경으로 불가능한 이유>` 주석. 등재 자격은 (1) 치환 대상이 외부 세계 부작용, (2) 치환 범위가 경계의 최소 부분, (3) 등재 행이 \"결정적 치환 최소 부분 / e2e로 구동되는 실제 구간 / 경계 성질상 잔여\"를 각각 명시할 때만 생긴다. **명시적 불허**: 시드로 만들 수 있는 데이터의 모킹, 플레이키 회피, **백엔드 미구현 우회 stub**, 속도만을 위한 실경로 우회. 애매하면 제거 쪽으로 기운다.",
+      "gap": "**첫 관측**(양쪽 `previousVersion` = null). 양방향 1:1이 성립하지 않고, 어긋남이 네 갈래다:\n\n1. **표기 규약 0% 도입** — 정의가 요구하는 `// mock-exception: MB-N` 주석이 레포 전역 **0건**이다. seam↔경계를 잇는 추적 수단 자체가 없어, 정의가 \"지문의 사각지대\"에 대비해 둔 안전망(새 이름의 플래그·프록시 주입도 주석 토큰으로 잡히게 하는 장치)이 작동하지 않는다.\n2. **명시적 불허 카테고리에 해당하는 미등재 stub 2건** — `notifications.ts`의 `STUB_UNREAD_COUNT`와 `recordsCount.ts`의 하드코딩 fallback. **두 코드 주석이 스스로 \"백엔드 API 미구현\" 우회임을 밝히므로** 외부 세계 부작용 요건을 못 채워 등재 자격이 없고, 정의상 등재가 아니라 제거·대체(백엔드 구현, 또는 flow 보류 후 이슈 추적) 대상이다. MB-5는 \"백엔드가 e2e 모드에서 예약 알림을 생성\"하는 **서버측** 신설 seam이라 이 클라이언트 stub과 같은 것이 아니다.\n3. **판정 대기 미등재 seam 1건** — `EXPO_PUBLIC_E2E_FAST_TESTER_LOGIN`은 실 seam이고 ENG-003에 문서화돼 있으나 레지스트리에 없다. MB-2(OAuth 경계)에 흡수 등재할지, \"속도만을 위한 실경로 우회\"로 보고 정리할지 판정이 필요하다(15탭 대신 히트존 1회 = 가속 목적이라는 점이 후자 쪽 근거, 스토어 빌드 미컴파일·CI 강제 장치가 전자 쪽 근거).\n4. **경계 서술 ↔ 코드 어긋남 후보 1건** — MB-4가 \"신설(백엔드)\"인데 LLM 경계 mock 서버(`scripts/openrouter-mock/` + `OPENROUTER_BASE_URL`)는 **이미 코드에 있다.** 다만 그 배선이 워커 **통합 테스트 레인**(`integration.yml`)이라, 모델의 범위 밖 조항(\"앱·백엔드·워커의 단위/통합 테스트 모킹은 대상이 아니다\")에 걸릴 수 있다 → 실 불일치인지 **지문 오탐**인지 판정하고, 오탐이면 as-is 스캔 범위를 좁혀야 한다.\n\nMB-3·MB-5·MB-6은 \"신설 예정\" 표시라 seam 부재가 고아 등재가 **아니다**(정의가 명시적으로 면제). 요약: 실측 32 seam 중 레지스트리와 대응하는 것은 MB-1 계열뿐이고, 규약 주석은 0건, 불허 stub 2건 + 판정 대기 2건이 남는다. 등록 직후의 구조적 gap이지 노이즈가 아니다.",
+      "summarizedAt": "2026-08-08T01:05:38Z"
+    },
+    "createdAt": "2026-08-08T01:05:38Z",
+    "updatedAt": "2026-08-08T01:05:38Z",
+    "id": "rct_20260808-0001"
+  }
+]
