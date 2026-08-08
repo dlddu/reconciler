@@ -680,5 +680,49 @@
     "checkPolicy": {
       "intervalSeconds": 3600
     }
+  },
+  {
+    "id": "tbm_session-platform-ac-e2e",
+    "metadata": {
+      "name": "session-platform AC ↔ E2E 1:1 정합성",
+      "description": "dlddu/session-platform에서 docs/prd의 AC(AC-A1~E6, 등록 시점 21개)와 e2e 테스트(control-plane/test/e2e_*_test.go Go API e2e + web/e2e/*.spec.ts Playwright)를 두 스위트 통합 단일 매칭 공간에서 완전 1:1(AC 1개 ↔ 파일 1개)로 유지한다. AC↔파일 매핑은 파일 헤더 주석의 `검증 AC:` 선언으로 확인하고, 자동화가 곤란한 AC는 docs/test/e2e.md의 예외 목록으로 관리하며, 등재된 AC는 drift가 아니다.",
+      "tags": [
+        "session-platform",
+        "ac",
+        "e2e",
+        "consistency",
+        "playwright",
+        "go"
+      ],
+      "createdAt": "2026-08-08T01:21:13Z"
+    },
+    "definition": "# session-platform AC ↔ E2E 1:1 정합성\n\n## 목표\n`dlddu/session-platform` 레포에서 **PRD의 Acceptance Criteria(`docs/prd`의 `AC-<계열문자><번호>` 체계, 등록 시점 21개)** 와 **e2e 테스트(Go API e2e `control-plane/test/e2e_*_test.go` + Playwright `web/e2e/*.spec.ts`)** 를 **완전 1:1(전단사)** 로 유지한다: 예외 목록에 등재되지 않은 모든 AC는 자신을 주검증하는 파일을 정확히 1개 가지며, 모든 매칭 단위 파일은 정확히 1개의 AC를 주검증한다. 따라서 (AC 수 − 예외 수) = (AC 매칭 파일 수).\n\n## 무엇이 \"맞는 상태\"인가 (SSOT)\n- **AC의 SSOT**는 `docs/prd`의 `### AC-...` 헤딩이다 (등록 시점 21개 — AC-A1~A3 `architecture.md` · AC-B1~B3 `lifecycle.md` · AC-C1~C4 `state-api.md` · AC-D1~D5 `shell-workload.md` · AC-E1~E6 `claude-code-workload.md`).\n- **e2e 매칭 단위**는 **두 스위트를 합친 단일 매칭 공간**이다: Go API e2e인 `control-plane/test/` 최상위 `e2e_*_test.go`(빌드 태그 `e2e`)와 Playwright인 `web/e2e/` 최상위 `*.spec.ts`. 한 AC의 전용 파일은 **둘 중 한 스위트에만** 존재한다(어느 스위트가 적합한지 — 백엔드 API 계약이면 Go, 브라우저 UI 동작이면 Playwright — 는 각 task에서 판단). 파일 안의 개별 `func Test...`/`test()` 케이스는 매칭 단위가 아니다 — 한 AC의 파일이 여러 케이스로 쪼개져 있어도 무방하다.\n- 같은 디렉터리에 있어도 **e2e가 아닌 것은 매칭 단위가 아니다**: `control-plane/test/integration_test.go`·`client_orchestrator_test.go`(인프로세스 통합), `control-plane/internal/**/*_test.go`(단위·envtest). 실행 하네스인 `scripts/e2e/*.sh`, `deploy/`, `web/playwright.config.ts`, `.github/workflows/e2e.yml`, `Makefile`도 매칭 단위가 아니다.\n- **AC ↔ 파일 매핑의 확인 지점**은 각 e2e 파일 상단 헤더 주석의 `검증 AC:` 선언이며(Go·TS 모두 `// 검증 AC: AC-D1` 형태), 매핑은 여기서 기계적으로 확인 가능해야 한다(파일당 정확히 1개의 AC 식별자).\n- **예외·비-AC 매핑 등재의 SSOT**는 `docs/test/e2e.md`다(등록 시점의 \"현재 커버되는 시나리오\"·\"Deferred 시드 ↔ 문서 시나리오 매핑\" 표를 **파일 단위 매핑 표 + 예외 목록 + 집계**로 확장해 사용한다).\n\n## 1:1 매칭 규칙 (판정 기준)\n1. **AC → 파일 유일**: 예외 목록에 없는 모든 AC는 자신을 주검증 대상으로 선언한 파일을 **정확히 1개** 가진다. 0개면 누락, 2개 이상이면 중복 — 둘 다 drift. 같은 AC를 Go와 Playwright 양쪽에서 선언하는 것도 **중복(drift)** 이다.\n2. **파일 → AC 유일**: 모든 매칭 단위 파일은 **정확히 1개**의 AC만 주검증 대상으로 선언한다. 여러 AC를 묶은 파일은 분리 대상(drift). 셋업 과정에서 다른 AC의 화면·경로·API를 경유하는 것은 검증으로 세지 않는다 — 선언된 검증 대상만 센다.\n3. **비-AC 파일 허용 유형**: AC 대신 **스모크/인프라 검증**(SPA 부팅·baseURL 배선, `healthz`, 클러스터 도달 확인)을 검증 대상으로 선언한 파일은 허용하되, `docs/test/e2e.md`에 등재되어야 한다. 어디에도 매핑되지 않은 파일은 고아(drift).\n4. **AC 예외 목록**: e2e로 자동 검증이 곤란한 AC는 `docs/test/e2e.md`에 **AC별 사유와 대체 검증 수단**(수동 QA, 단위/통합 테스트, envtest 등)을 적어 등재한다. 등재된 AC는 파일이 없어도 drift가 아니다. 등재 없이 파일만 없는 AC는 drift. 예외 후보(등록 시점 판단 아님, task에서 확정): 운영 60분 유휴 실시간 대기와 미확정 트리거 정책(AC-B1, `session.go`의 `TODO(policy)`), 외부 LLM 자격증명·과금이 필요한 실 에이전트 실행과 비결정적 산출물 품질(AC-E2·E4·E6), 실 apiserver CAS 단일-승자(AC-C1 — envtest 잡이 대체 검증).\n5. **참조 무결성**: 파일이 존재하지 않는 AC를 참조하거나, 예외 목록이 존재하지 않는 AC를 등재하고 있으면 drift.\n6. **집계 일치**: `docs/test/e2e.md`의 매칭 집계(AC 수·파일 수·공백 목록)가 1~5의 실제 상태와 일치해야 한다.\n\n파일명을 AC 코드에 맞추는 규칙은 강제하지 않고 task 단계에서 정한다. 단, AC↔파일 매핑은 헤더 주석의 `검증 AC:` 선언에서 기계적으로 확인 가능해야 한다. 빌드 태그 `e2e`가 붙은 Go 파일은 파일명이 `e2e_`로 시작해야 매칭 단위로 인식된다.\n\n## 충돌 시 기본 방향\nAC(PRD)가 스펙(SSOT)이다.\n- AC에 전용 파일이 없으면 → 전용 파일을 신설한다(여러 AC를 겸하는 기존 파일은 AC별로 분할).\n- 한 AC에 파일이 여러 개면 → 전용 파일 1개로 병합한다(스위트가 갈리면 그 AC에 더 적합한 쪽 하나만 남기고, 남는 쪽은 제거하거나 매칭 단위 밖으로 옮긴다).\n- AC 없는 고아 파일이 나타나면 → 의도된 동작이면 PRD에 AC를 신설해 문서화하고, 아니면 파일을 제거하거나 스모크/인프라 유형으로 재매핑해 등재한다.\n어느 쪽인지는 각 task에서 판단(planner)하며, 변경 시 파일 헤더의 `검증 AC:` 선언과 `docs/test/e2e.md`의 매핑 표·예외 목록·집계를 함께 갱신한다.\n\n## 추적 방식 (요약)\n- **to-be** = github `dlddu/session-platform` `docs/prd` 하위 트리 해시 + `docs/test/e2e.md` blob 해시 조합(AC 집합 또는 예외/매핑 등재가 바뀌면 변함).\n- **as-is** = 같은 레포의 `control-plane/test/e2e_*_test.go` blob 집합 지문(sha256) + `web/e2e` 하위 트리 해시 조합(e2e 파일 추가·수정·삭제 시 변함). 같은 디렉터리의 통합·단위 테스트 변경은 무시된다.\n- 어느 한쪽 버전이 바뀌면 task가 생성되어 1:1 매칭을 재검증한다.\n\n## 초기 상태 메모 (등록 시점 2026-08-08T01:21:13Z)\nAC **21개** vs **AC 매칭 파일 0개**. 매칭 단위 파일은 8개 존재하지만(`control-plane/test/`의 `e2e_test.go`·`e2e_shell_test.go`·`e2e_deferred_test.go`, `web/e2e/`의 `j1-session-creation`·`j3-multi-session-switch`·`j5-shell-interaction`·`deferred`·`smoke`) **`검증 AC:` 선언을 가진 파일이 하나도 없고, 8개 전부가 다중 AC를 묶고 있다**:\n- `e2e_test.go`(9 케이스) → A1/A2/C2/C3/C4 + healthz·404 에러 매핑\n- `e2e_shell_test.go`(4 케이스) → D1/D2/D3\n- `e2e_deferred_test.go`(8 케이스) → A1/A2/A3/B1/B2/B3/C1/C2/C3/D4, 이 중 4개는 skip 시드(B1, B2 잉여, C2·C3의 idle 분기)\n- `j1-…`(A1/A2/C2/C3/D2/D3), `j3-…`(C4), `j5-…`(D2/D3), `deferred.spec.ts`(B1/B2/C1 skip 시드), `smoke.spec.ts`(비-AC 스모크)\n\n현재 AC↔테스트 매핑은 `docs/test/e2e.md`의 두 표에 **테스트 함수 단위로만** 존재하며, 파일 단위 선언·예외 목록·집계는 아직 없다. **AC-E 계열 6개(E1~E6, claude-code 워크로드)는 e2e가 완전 공백**이고, 이 계열은 구현 수렴(`tbm_session-platform-docs-impl`)과 순서 의존이 있다.\n\n따라서 첫 task는 (1) 헤더 주석 `검증 AC:` 규약 도입과 `docs/test/e2e.md`의 파일 단위 매핑 표·예외 목록·집계 신설로 매핑을 확정 (2) 8개 묶음 파일의 AC별 분할(중복 선언 정리 포함 — 예: D2/D3는 현재 Go와 Playwright 양쪽에서 검증되므로 한쪽으로 확정) (3) 남은 AC의 전용 파일 신설 또는 예외 등재를 다루게 된다. **큰 초기 격차는 예상된 것**이다.\n\n## 범위 밖 / 비고\n- 단위·통합 테스트(`control-plane/test/integration_test.go`, `client_orchestrator_test.go`, `control-plane/internal/**/*_test.go`, envtest 잡)는 이 루프의 매칭 단위가 아니다(예외 목록의 \"대체 검증 수단\"으로 언급될 수는 있음).\n- AC 문구와 e2e 단언 내용의 의미적 일치(테스트가 AC를 \"제대로\" 검증하는가)는 task 단계의 판단 사항이며, 이 모델의 버전 추적은 변경 감지까지만 담당한다.\n- **문서 ↔ 구현 코드의 정합성은 별도 모델 `tbm_session-platform-docs-impl`이 담당**한다. 이 모델은 AC ↔ e2e 파일 매칭만 본다. 미구현 AC의 구현 여부는 docs-impl 루프가, 그 AC에 전용 e2e 파일이 있는지는 이 루프가 본다. 다만 이 레포는 e2e가 각 컴포넌트 디렉터리 안에 중첩돼 있어(`control-plane/test/`, `web/e2e/`) docs-impl의 as-is 범위(`control-plane/`·`web/` 전체 트리 해시)에서 경로 수준으로 깔끔히 배제되지 않는다 — **e2e 변경은 두 모델을 모두 트리거한다**(중복이지만 무해). 노이즈가 크면 docs-impl의 as-is 스크립트에서 e2e 파일을 필터로 제외하도록 그 모델을 개정할 수 있다.\n- 등록 시점 `tbm_session-platform-docs-impl`의 definition은 AC를 \"15개\"로 기술하고 있으나 실제 SSOT는 21개다(`claude-code-workload.md`의 AC-E1~E6 추가분). 이 모델은 21개를 기준으로 하며, docs-impl 쪽 집계 갱신은 그 모델의 task에서 처리한다.\n- `docs/test/e2e.md`는 매핑·예외 외에 하네스 구성(kustomize base/overlay, NodePort, CRIU 오버레이)·CI 흐름 서술도 담고 있어, 매핑과 무관한 갱신도 to-be 버전을 바꿔 재검증을 트리거한다(무해하지만 노이즈). 노이즈가 크면 매핑·예외 등재만 별도 파일로 분리하고 to-be의 blob 대상을 그 파일로 좁힐 수 있다.\n- 등록 시점 Playwright 여정 spec(J1·J3·J5)은 여정 전체를 한 파일에서 검증해 다중 AC를 묶고 있다. 통합 1:1 결정에 따라 이들은 AC별 전용 파일로 분할 대상이며, 여정 통합 검증 형태를 유지하려면 규칙 3의 비-AC 허용 유형을 확장해야 한다 — 그것은 이 모델의 판정 기준 변경이므로 task 안에서 임의로 하지 않고 **모델 definition 개정 커밋**으로 처리한다.\n",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/session-platform",
+        "ref": "main"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = AC 집합(docs/prd) + 예외/매핑 등재(docs/test/e2e.md).\n# 이 둘 밖의 문서(values.md, user-journeys/, mockups/, doc-tracker.md)·코드 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\np=\"$(git rev-parse \"HEAD:docs/prd\")\"\nt=\"$(git rev-parse \"HEAD:docs/test/e2e.md\")\"\nprintf 'ac:%s reg:%s\\n' \"$p\" \"$t\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/session-platform",
+        "ref": "main"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = e2e 테스트 구현 두 스위트.\n#   api = control-plane/test 최상위 e2e_*_test.go blob 집합 지문(ls-tree 출력은 경로 정렬이라 결정적).\n#         같은 디렉터리의 integration_test.go·client_orchestrator_test.go 변경은 무시된다.\n#   web = web/e2e 하위 트리 해시.\n# 이 범위 밖(구현 코드·하네스·문서) 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\napi=\"$(git ls-tree -r HEAD -- control-plane/test | { grep -E 'e2e_[a-z0-9_]*test\\.go$' || true; } | sha256sum | cut -d' ' -f1)\"\nweb=\"$(git rev-parse \"HEAD:web/e2e\")\"\nprintf 'api:%s web:%s\\n' \"$api\" \"$web\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "checkPolicy": {
+      "intervalSeconds": 3600
+    }
   }
 ]
