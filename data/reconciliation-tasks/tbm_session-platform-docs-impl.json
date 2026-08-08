@@ -472,6 +472,62 @@
       "reason": "정의 drift 기준 #1에 따라 유의미한 gap이 크게 벌어졌다. 문서 PR #18~#20이 to-be를 **AC 15개 → 21개**로 확장(신규 PRD·테스트 문서·여정 J6·mockup·가치 V6/V7→V8 재편)한 반면 as-is는 실행 코드가 한 줄도 움직이지 않아, **AC-E1~E6 6개가 통째로 미구현·미검증**이고 기존 AC-B1(reaper e2e)·AC-C2/C3(idle 분기)의 하드 skip도 그대로다. 롤아웃 진행 중이거나 곧 재동기화될 성질이 아니라 구조적·안정적 gap이므로 재확인 유예 대상이 아니며, 좁히려면 실제 구현·검증 작업이 필요하다.\n\n점유 상태: 직전 task `rct_20260806-0001`은 `succeeded`(terminal)이고 이 모델에 열린 task가 없다 → **미점유 `action_required`** 로 넘긴다. 이 축적분이 지금 처음 감지되는 이유는 모델이 2026-08-06T21:51Z~2026-08-08T00:56Z 동안 `checkPolicy.enabled:false`였기 때문이며, 사용자가 `c2cf449`로 재활성화한 직후의 첫 fire가 이번 감지다(비활성 구간에 phantom task가 만들어지지 않았음도 확인 — 이 모델의 마지막 task는 08-06자).\n\nplanner에게 넘기는 순서 판단 재료: (a) **AC-E4 재개 방식·AC-E6 기본 모델은 문서상 미확정**이고 테스트 문서가 시나리오 5를 \"확정 전까지 의도적 실패\"로 선언하므로, 그 두 AC를 첫 슬라이스에 넣으려면 **결정 확정이 선행**돼야 한다(정의상 의도된 동작 변경 판단은 planner 몫이나, 미확정 사항의 확정 자체는 사용자 승인이 필요할 수 있다). (b) 반면 **AC-E1(workloadType 파라미터·검증·타입별 프로비저닝)** 은 열린 항목에 걸리지 않는 독립 축이라 가장 작고 가역적인 첫 슬라이스 후보다. (c) 기존 AC-C2/C3 idle 분기는 `claude-code`의 `idle` 의미 미결(열린 항목 3)과 얽히므로 두 축을 함께 볼 것. 21개를 한 번에 좁히지 말고 슬라이스 → 재감지 → 후속 task로 잇는다.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-08T01:05:38Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "AC-E1(세션 워크로드 타입 선택)의 **control plane 계약 + 타입 분기 프로비저닝**만 슬라이스로 구현한다. #18~#20이 to-be를 AC 15→21로 넓혔지만 신규 AC-E1~E6은 구현 흔적이 0 hit이고, doc-tracker가 스스로 '구현 사슬 미반영(AC-E1/E6): openapi.yaml의 CreateSessionRequest에 workloadType·model 필드가 없고 data plane에도 클로드 코드 CLI 워크로드가 없다'고 적어둔 상태다. E1은 나머지 다섯 AC 전부의 선행 조건이다 — 세션이 타입을 갖고 그 타입이 저장·불변·프로비저닝에 반영되기 전에는 E2(write=프롬프트 실행)·E3(read)·E5(아카이브 동결)·E6(model/Secret) 중 무엇도 붙일 자리가 없다. 반면 E4(재개 방식)와 E6(기본 모델)은 doc-tracker 🟡 열린 항목이라 제품 결정 전에는 코드를 쓸 수 없고, E2/E3/E5는 claude CLI가 든 data plane 이미지 + 에이전트 워크로드 모드를 요구해 한 슬라이스에 담기엔 크다. 그래서 **막히지 않았고, 가장 작고, 모든 후속을 여는** E1의 control plane 절반을 고른다.\n\n접근: 도메인에 session.WorkloadType('shell' 기본 / 'claude-code')을 추가하고 Session·CreateRequest에 실어 ConfigMap 스토어(JSON)로 그대로 영속화한다. 빈 값은 레거시 레코드 호환을 위해 shell로 정규화하고 (기존 세션 레코드에는 필드가 없다), 허용값 외는 ErrInvalidInput→400으로 거부한다. 불변성은 별도 필드 잠금이 아니라 구조로 보장한다 — 타입을 바꾸는 API가 없고 Snapshot/Restore가 타입을 그대로 나른다(테스트로 고정). PodOrchestrator 포트의 Start/RestoreInto에 타입을 실어 ClientOrchestrator가 타입별 이미지 + DATA_PLANE_WORKLOAD env + workload-type 라벨로 pod 스펙을 분기하게 하고, 이미지가 설정되지 않은 타입은 조용히 shell pod로 떨어지는 대신 명시적 에러로 거부한다(정직한 미구현 > 위장된 성공).\n\n대안으로 (a) 계약만 추가하고 프로비저닝 분기는 빼는 안, (b) claude CLI 이미지·에이전트 모드까지 한 번에 가는 안을 저울질했다. (a)는 AC-E1의 '타입에 따라 서로 다른 워크로드로 프로비저닝' 절이 통째로 죽은 문구로 남고, (b)는 이미지 빌드를 로컬에서 검증할 수 없어(도커 부재) 블라인드 저작이 된다. 가운데를 골랐다.\n\n가역성: 순수 가법적 변경이라 되돌리기는 PR revert 한 번이다. workloadType 미지정 = 오늘과 동일한 shell 세션이므로 web(현재 {name}만 전송)·기존 e2e·기존 세션 레코드는 무변경으로 통과해야 한다.\n\n**완료 기준(이 task의 범위)**: (1) workloadType이 생성 요청에서 수용·기본값 적용·검증(허용값 외 400)되고 Session 응답·OpenAPI·영속 레코드에 반영된다; (2) 세션 수명 동안 불변이며 snapshot→restore 왕복 후에도 보존된다; (3) ClientOrchestrator가 타입별로 다른 pod 스펙을 만들고 미설정 타입을 거부한다; (4) shell 경로 무회귀 — 두 Go 모듈의 vet/gofmt/go test와 -tags=integration 하네스가 전부 통과; (5) data-plane/README.md와 doc-tracker.md의 '구현 사슬 미반영' 항목이 실제 상태로 갱신된다. 이 다섯이 성립하면 성공이다.\n\n**범위 밖(후속 재감지가 새 task로 잇는다)**: AC-E1의 나머지 절반인 claude-code data plane 이미지(claude CLI 설치)와 에이전트 워크로드 모드 — 따라서 **이 슬라이스는 AC-E1을 닫지 않는다**; AC-E2/E3(프롬프트 1회 실행·직렬 큐잉·출력 커서), AC-E5(파일시스템 아카이브 동결·복원), AC-E6(model 필드·Secret 주입); T-클로드코드 시나리오 1~7 자동화; doc-tracker 🟡 열린 항목 3건(E4 재개 방식·E6 기본 모델·claude-code의 idle 의미 — 제품 결정 필요); web의 타입 선택 UI(J6·new-session.html mockup ↔ 구현 gap, drift #3); 기존 잔여 gap(AC-B1 reaper e2e, AC-C2/C3 idle 분기, TODO(policy)/TODO(client-go)).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "control-plane/internal/session/session.go: WorkloadType 타입 + WorkloadTypeShell(\"shell\")/WorkloadTypeClaudeCode(\"claude-code\") 상수 + Valid() + 빈 값을 shell로 접는 정규화 헬퍼를 추가하고, Session에 `WorkloadType` 필드(json:\"workloadType,omitempty\")를 단다. manager.go의 CreateRequest에도 WorkloadType을 추가한다.",
+              "expectedOutcome": "`go build ./...` 통과. 기존 Session 레코드(필드 없음)를 Unmarshal하면 빈 값이 되고 정규화 헬퍼가 shell을 돌려준다."
+            },
+            {
+              "seq": 2,
+              "action": "control-plane/internal/service/manager.go: Create에서 req.WorkloadType을 정규화·검증해(허용값 외 session.ErrInvalidInput) Session에 싣고, orch.Start에 타입을 넘긴다. Snapshot/Restore가 타입을 그대로 보존하는지 확인하고(Restore는 sess를 재사용하므로 보존되지만 RestoreInto에도 타입을 넘겨야 한다) 필요한 곳만 손댄다.",
+              "expectedOutcome": "생성 시 타입이 스토어에 기록되고, snapshot→restore 왕복 뒤에도 같은 타입이 유지된다."
+            },
+            {
+              "seq": 3,
+              "action": "control-plane/internal/adapter/k8s: PodOrchestrator.Start/RestoreInto 시그니처에 session.WorkloadType을 더하고, StubOrchestrator와 ClientOrchestrator를 맞춘다. ClientOrchestrator에는 타입→이미지 맵(WithWorkloadImage)을 두고 buildPod가 타입별 이미지 + DATA_PLANE_WORKLOAD env + workload-type 라벨을 넣게 한다. 이미지 미설정 타입은 pod 생성 전에 명시적 에러로 거부한다.",
+              "expectedOutcome": "fake clientset 기준으로 shell/claude-code 두 타입의 pod 스펙이 이미지·env·라벨에서 서로 다르고, 미설정 타입 Start는 타입 이름이 담긴 에러를 돌려준다."
+            },
+            {
+              "seq": 4,
+              "action": "control-plane/internal/api/api.go: createReq에 `workloadType`을 디코드해 CreateRequest로 넘긴다(빈 값=미지정). 잘못된 값은 기존 ErrInvalidInput→400 매핑을 그대로 탄다. cmd/control-plane/main.go에서 DATA_PLANE_CLAUDE_CODE_IMAGE를 읽어 WithWorkloadImage로 배선한다.",
+              "expectedOutcome": "POST /api/v1/sessions에 workloadType=claude-code/미지정/foo를 넣으면 각각 타입 반영·shell 기본·400이 나온다."
+            },
+            {
+              "seq": 5,
+              "action": "control-plane/api/openapi.yaml: WorkloadType enum 스키마 추가, CreateSessionRequest에 workloadType(기본 shell) 추가, Session에 workloadType 추가, 설명에 타입 불변성과 타입별 프로비저닝을 명시한다.",
+              "expectedOutcome": "OpenAPI가 실제 핸들러 계약과 1:1이고, 문서 없는 구현(drift #5)이 생기지 않는다."
+            },
+            {
+              "seq": 6,
+              "action": "테스트 추가: internal/api/api_test.go(기본값·명시 타입·허용값 외 400), internal/service/manager_test.go(스토어 영속·snapshot→restore 타입 보존·미설정 타입 거부), internal/adapter/k8s(fake clientset으로 타입별 pod 스펙 분기), test/integration_test.go(-tags=integration 해피패스에 타입 축 1건).",
+              "expectedOutcome": "신규 테스트가 전부 통과하고, 기존 테스트는 단 하나도 수정 없이 통과한다(shell 무회귀 증거)."
+            },
+            {
+              "seq": 7,
+              "action": "문서 갱신: data-plane/README.md의 'not yet implemented here' 문장을 '컨트롤 플레인 계약·타입 분기는 반영됨 / 이미지·에이전트 모드는 후속'으로 정정하고, docs/doc-tracker.md의 '구현 사슬 미반영 (AC-E1/E6)' 항목을 현재 사실로 갱신한다(openapi에 workloadType은 생겼고 model은 아직 없음, data plane 이미지 미구현).",
+              "expectedOutcome": "트래커·README가 실제 코드 상태와 일치해 drift #6(트래커 불일치)를 새로 만들지 않는다."
+            },
+            {
+              "seq": 8,
+              "action": "CI 게이트 로컬 재현: PATH에 go1.24.7 dist를 얹고 control-plane/data-plane 두 모듈에 `go vet ./...`, `test -z \"$(gofmt -l .)\"`, `go test ./...`를 돌리고 control-plane에 `go test -tags=integration ./...`까지 돌린다.",
+              "expectedOutcome": "ci.yml의 control-plane·data-plane·integration 잡과 동일한 명령이 로컬에서 전부 green — PR 올리기 전에 측정된 결과."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치 reconcile/rct_20260808-0001에 커밋·푸시하고 dlddu/session-platform에 draft PR을 연다(머지하지 않음). 본문에 task id·gap 요약·완료 기준·범위 밖·로컬 검증 결과를 적는다.",
+              "expectedOutcome": "draft PR이 열리고 ci.yml(+경로 필터에 걸린 e2e.yml)이 돌기 시작한다."
+            }
+          ],
+          "plannedAt": "2026-08-08T01:17:00Z"
+        }
+      }
+    ]
   }
 ]
