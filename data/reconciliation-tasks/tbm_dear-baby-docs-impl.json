@@ -918,7 +918,7 @@
   {
     "id": "rct_20260808-0001",
     "toBeModelId": "tbm_dear-baby-docs-impl",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-08-08T02:07:15Z",
       "changedSides": [
@@ -930,7 +930,7 @@
       }
     },
     "createdAt": "2026-08-08T02:07:15Z",
-    "updatedAt": "2026-08-08T10:05:00Z",
+    "updatedAt": "2026-08-08T10:06:00Z",
     "stateSummary": {
       "asIs": "**as-is 무변경** — `app:19ce469f98b2e8c1d56f23d676c3e3fa0e99cd0c backend:9aa34539f9a6a07595e4e62249e236e315c999e9 worker:613d4709f465471e4c…`, baseline과 바이트 동일. #174는 docs 전용 커밋이다.\n\n개정된 PRD-002/ENG-001/ENG-013이 요구하는 것과 대조하기 위해 **구현 실측**(`9f8cfc2` 트리):\n\n- **질문 선정 = 단계 무관 단일 풀.** `app/src/data/dailyQuestions.ts` — `DAILY_QUESTIONS` 12문항 고정 배열 + `getDailyQuestionTriplet(date, pool)`가 `dayOfYear(date) % pool.length`로 시작 인덱스를 정해 3개를 고른다. **아이·단계·기준값을 입력으로 받지 않는다.** 소비처는 `app/app/(tabs)/index.tsx:63` `getDailyQuestionTriplet()` (인자 없음) → `HomeQuestionCard`.\n- **그 12문항은 전부 태아 1인칭이다** — \"엄마, 오늘은 제가 **엄마 배 속에서** 어떤 꿈을 꿨을까요?\" 등. 카드 렌더는 `activeChild.kind`로 분기하지 않으므로 **양육(child) 활성 아이에게도 임신 축 문항이 그대로 노출된다.**\n- **단계 배지는 이미 양축 분기한다** — `index.tsx:98` `contextLabel` = `kind==='fetus' ? formatPregnancyLabel(dueOrBirthDate) : formatChildAgeLabel(dueOrBirthDate)`, 활성 아이가 없으면 `null`(미표시). `HomeQuestionCard`는 `contextLabel`이 null이면 배지를 그리지 않는다(`testID=\"home-question-card-context\"`).\n- **단계 스냅샷 컬럼 없음** — `backend/internal/migrations/` 0001~0012 전수 확인. `records`는 `id · user_id · content · created_at`(0004) + `question_text`(0007, nullable) + `subject_id`·`visibility`(0012)뿐이고, **단계/주차/생후개월을 저장하는 컬럼이 없다.** 0007 주석이 스스로 \"AC-002-02(주차 매칭 카탈로그)가 들어오면 후속 마이그레이션으로 정규화 컬럼 추가\"라고 미래형으로 적어 둔 상태다.\n- 생후 나이 산출 자체는 존재한다 — `backend/internal/records/community.go`가 AC-009-14 카드용으로 \"임신 N주차 / 생후 N개월 / N살\"을 ENG-001 식으로 포맷(단위 테스트 있음). 즉 **계산 로직은 있고, 그것을 기록에 못 박아 두는 저장·재계산 계약이 없다.**",
       "toBe": "**to-be 변경** — `docs` 트리 `b0b573fb…`→`3d39cd9e…`. 단일 커밋 **#174 `9f8cfc2`** (2026-08-08T01:47:51Z), docs 18개 파일 +596/-91. 이 모델의 to-be는 `docs/` 전체이므로 아래가 전부 스펙 이동이다.\n\n**이번 개정은 북키핑이 아니라 스펙 본체의 이동이다:**\n\n1. **V-005 개정(VDOC-001)** — \"임신 주차별 맞춤 질문\" → \"**아이 단계별 맞춤 질문**\" (ID 유지).\n2. **PRD-002 전면 개정** (+168줄) — \"질문 모델\" 절 신설: 단계를 아이의 **기본 속성**으로 규정, **두 축(임신 주차 | 생후 나이) 배타 · 케이스 혼합 금지**, 단계 스냅샷은 작성 당시 기준. AC-002-01·02·03·04를 양축으로 **재작성**하고 **AC-002-05(단계 산출 불가 시 폴백 — 단계 무관 공용 풀 + 단계 표시 생략) 신설**. 양육 축 질문 풀 구간을 1년차 1개월 · 2년차 3개월 · 3년차 6개월 · 4년차 이후 1년 티어(반개구간 `[시작, 끝)`)로 확정.\n3. **ENG-013 `stage-snapshot-persistence.md` 신설 — `status: active`, 본문이 스스로 \"확정 문서다\"라고 선언.** 열려 있던 \"물리 저장 vs 소급 계산\" 구현 재량을 **물리 저장 + 기준값 정정 시 재계산(백필)** 으로 닫았다. 계약: 재계산 트리거 T1 `due_date` 수정 · T2 `birth_date` 수정 · T3 컬럼 도입 마이그레이션(1회) / **전량 재산출(델타 이동 금지)** / **컬럼 nullable 필수**(AC-002-05 단계 없음 작성분) / **출산 전환은 백필 비대상** — 놓치면 임신기 기록 전체가 \"생후 -N개월\"로 오염된다고 경고.\n4. **ENG-001 확장** — 제목 \"아이 단계 산출 정책\", 생후 나이 산출(출생 당일=1일째, **달력 기준** 개월, 상한 없음) · 양축 비교표 · 단계 산출 불가 판정 추가. ENG-011의 죽은 참조 해소.\n5. **ENG-002(`status: deferred`) 일반화** — 개정 후 gap 표를 문서가 직접 명시: AC-002-02 단계별 풀 매칭 ❌(기존) · **임신·양육 풀 분리 ❌(개정으로 추가된 gap)** · 반복 방지 ❌ · **AC-002-05 ⚠️ \"우연히 충족 — 분기가 존재하지 않는다\"** · AC-002-01 단계 표시 ✅(배지).\n6. **TEST-002 4 → 11 TC** (임산부/양육자 분기, 케이스 혼합 금지, 스냅샷 불변성·정정 반영 TC-002-03-C, 폴백 2건).\n7. **용어집** — `DailyQuestion` 정의 갱신 + `ChildStage` · `PostnatalAge` · `StageSnapshot` 3행 신설. 하위 참조 정합: PRD-006/007/009 제공 가치 문구, PRD-007 AC-007-04, 여정 4편, mockups README, design-system 카피.\n\n확정 AC 총계 69 → **70**.",
