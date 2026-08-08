@@ -19,7 +19,7 @@
       }
     },
     "createdAt": "2026-08-08T01:33:51Z",
-    "updatedAt": "2026-08-08T02:05:00Z",
+    "updatedAt": "2026-08-08T02:25:00Z",
     "stateSummary": {
       "asIs": "## as-is — e2e 매칭 단위 파일 (dlddu/session-platform@main `6a48f60`, 관측 2026-08-08T01:3xZ)\n\n버전: `api:3d1e79fe… web:52390ac1…` (최초 관측, previous=null)\n\n**매칭 단위 파일 8개** — Go API e2e 3 + Playwright 5. 셋 다 빌드 태그 `//go:build e2e` 확인:\n\n| 파일 | 스위트 | 헤더가 실제로 다루는 AC (주석 서술 기준) |\n| --- | --- | --- |\n| `control-plane/test/e2e_test.go` (9 케이스) | go | A1/A2, C2/C3, C4 + healthz·404 (비-AC) |\n| `control-plane/test/e2e_shell_test.go` (4 케이스) | go | D1, D2/D3 |\n| `control-plane/test/e2e_deferred_test.go` (8 케이스) | go | A1/A2, A3, B1, B2/B3, C1, C2/C3, D4 (4건 skip 시드) |\n| `web/e2e/j1-session-creation.spec.ts` | playwright | A1/A2, C2/C3, D2/D3 |\n| `web/e2e/j3-multi-session-switch.spec.ts` | playwright | C4 |\n| `web/e2e/j5-shell-interaction.spec.ts` | playwright | D2/D3 |\n| `web/e2e/deferred.spec.ts` | playwright | B1, B2, C1 (전부 `test.skip` 시드) |\n| `web/e2e/smoke.spec.ts` | playwright | 비-AC (SPA 부팅·baseURL 배선) |\n\n매칭 단위 **아님**(정의대로 제외 확인): `control-plane/test/integration_test.go`·\n`client_orchestrator_test.go` — 둘 다 `//go:build integration`.\n\n**결정적 관측: `검증 AC:` 선언이 레포 전체에 0건이다.** `grep -rn '검증 AC'` 히트는 전부\n`docs/test/*.md`(시나리오 문서)의 `- **검증 AC**: AC-…` 줄이며, 매칭 단위 파일(.go/.ts)의\n헤더 주석에는 하나도 없다. 즉 파일→AC 매핑을 기계적으로 확인할 지점이 아직 존재하지 않고,\n현재 매핑은 각 파일의 산문 주석과 `docs/test/e2e.md`의 표에만 있다.\n\n검증 축은 살아 있다: `scripts/e2e/up.sh`(`kubectl apply -k deploy/`) + kind 하네스,\n`.github/workflows/e2e.yml`가 go e2e와 Playwright를 실제로 돌린다.\n",
       "toBe": "## to-be — AC 집합(docs/prd) + 매핑·예외 등재(docs/test/e2e.md)\n\n버전: `ac:9d6d4878… reg:dd590235…` (최초 관측, previous=null)\n\n**AC 21개**, `### AC-…` 헤딩 실측(모델 정의의 21개와 일치):\n- `architecture.md` A1·A2·A3 (3)\n- `lifecycle.md` B1·B2·B3 (3)\n- `state-api.md` C1·C2·C3·C4 (4)\n- `shell-workload.md` D1·D2·D3·D4·D5 (5)\n- `claude-code-workload.md` E1·E2·E3·E4·E5·E6 (6)\n\n**등재 SSOT `docs/test/e2e.md`(114줄) 실측**:\n- 「현재 커버되는 시나리오」 표 — **테스트 함수/시나리오 단위**, 파일 단위 아님. 언급 AC:\n  A1·A2·A3·B2·B3·C1·C2·C3·C4·D1·D2·D3·D4 (+ V3/V4/V5 가치, 에러 매핑).\n- 「Deferred 시드 ↔ 문서 시나리오 매핑」 표 — 시드(테스트 함수) 단위. B1·B2·C1·C2·C3 잔여.\n- **파일 단위 매핑 표 없음 · AC 예외 목록 없음 · 집계(AC 수/파일 수/공백) 없음.**\n- 두 표 어디에도 **D5, E1~E6 (7개)** 는 등장하지 않는다.\n\n따라서 to-be가 요구하는 등재물 3종(파일 단위 매핑 표 · 예외 목록 · 집계) 중 **0종**이\n현재 문서에 존재한다.\n",
@@ -90,6 +90,14 @@
             }
           ],
           "plannedAt": "2026-08-08T02:05:00Z"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20260808-0001-ac-e2e-1to1",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/23",
+          "preparedAt": "2026-08-08T02:25:00Z",
+          "notes": "계획 1~7단계를 커밋 1개로 스테이징했다(31 파일, +1736/-1036). Go 묶음 파일 3개 삭제 → AC별 전용 14개 + 비-AC 스모크 1개 + 공용 하네스 1개(매칭 단위 밖), Playwright 여정 spec 4개는 web/e2e/journeys/로 git mv, docs/test/e2e.md 등재 신설, scripts/e2e/check-ac-mapping.sh + Makefile 타깃 + ci.yml 잡(AC 매핑 체크 · go vet -tags=e2e) 추가.\n로컬에서 재현 가능한 게이트는 전부 통과 확인: check-ac-mapping.sh OK(AC 21 = 매칭 14 + 예외 1 + 공백 6), go vet ./... , go vet -tags=e2e ./... , gofmt -l 무출력, go test ./... (Go 1.24.7 dist를 받아 실행). 체크 스크립트는 위반 5종(중복 선언/선언 누락/미존재 AC 선언/집계 불일치/미등재 신규 파일)을 각각 주입해 전부 non-zero로 잡히는 것까지 확인했다 — 공허한 게이트가 아니다.\n클러스터가 필요한 kind e2e(go e2e + Playwright)는 로컬 불가 → PR의 e2e.yml이 판정한다.\n주의: ci.yml을 건드리므로 push에 GitHub App의 workflows:write 권한이 필요했다(contents+pull_requests만으로는 remote rejected). executor가 같은 레포에 다시 push할 일이 있으면 동일 권한으로 토큰을 발급할 것."
         }
       }
     ]
