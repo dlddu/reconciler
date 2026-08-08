@@ -1859,7 +1859,7 @@
   {
     "id": "rct_20260808-0001",
     "toBeModelId": "tbm_dear-baby-ac-e2e-1to1",
-    "status": "assessing",
+    "status": "no_action_needed",
     "trigger": {
       "detectedAt": "2026-08-08T02:07:15Z",
       "changedSides": [
@@ -1877,6 +1877,12 @@
       "toBe": "**to-be 변경** — `docs/prd` 트리 `4a1d701e…`→`83098884…`, `docs/doc-tracker.md` blob `6946f27a…`→`bd2ee2a0…`.\n\n단일 커밋 **#174 `9f8cfc2`** (2026-08-08T01:47:51Z, docs 18개 파일 +596/-91): \"질문 모델을 아이 단계(임신 주차 | 생후 나이)로 일반화 — V-005 개정·AC-002-05·ENG-013 신설\".\n\n이 모델의 매칭 단위(AC 집합 · 등재)에 실제로 닿은 부분만 추리면:\n\n- **AC 집합이 정확히 1건 늘었다** — `docs/prd` 전체에서 AC id를 추출해 baseline과 diff한 결과 **추가 `AC-002-05`(단계 산출 불가 시 폴백) 1건, 삭제·개명 0건**. PRD-002 본문에 `### AC-002-05` 절이 실재한다(AC-002-01~05 = 5개). 트래커 집계도 AC 69→**70**(검증 대상 69 + 1차 제외 1).\n- **AC-002-02는 ID 유지·제목만 개정** — \"임신 주차별 질문 매칭\" → \"아이 단계별 질문 매칭\". ID가 안 바뀌었으므로 어떤 flow 헤더·매핑 참조도 끊기지 않는다.\n- **트래커 등재는 이번 변경을 정확히 따라갔다**: 매핑 표에 `| AC-002-05 | 단계 산출 불가 시 폴백 | ⬜ 후속 |` 행 추가, 집계 `✅ 22 · ⬜ 46` → **`✅ 22 · ⬜ 47`**, ⬜ backlog 목록 33건→34건에 `AC-002-05 … → daily-question-stage-fallback.yaml` 항목 신설, AC-002-02의 목표 flow명도 `daily-question-week-match.yaml`→`daily-question-stage-match.yaml`로 개명(둘 다 ⬜ = 미작성이라 as-is 파일 개명은 없다).",
       "gap": "**이번 트리거가 만든 차이는 \"standing ⬜ backlog +1\" 하나뿐이고, 구조 위반은 0건이다.**\n\n실측으로 4개 규칙을 재검증했다(트래커 집계를 믿지 않고 파일에서 재도출):\n\n- **규칙 #2(flow→AC 유일) clean** — 제품 flow 22/22가 정확히 1개 AC 선언. #174는 `e2e/`를 건드리지 않았다.\n- **규칙 #3(비-AC flow) clean** — `login.yaml`(ENG-003) · `health.yaml`(스모크) 2건, 모두 등재.\n- **규칙 #5(참조 무결성) clean** — flow 헤더가 선언한 AC 22개가 전부 `docs/prd`에 실재(dangling 0). AC-002-02는 제목만 바뀌고 ID가 유지돼 참조가 끊기지 않았고, 삭제된 AC는 없다.\n- **규칙 #6(집계 일치) clean** — 트래커 ✅ 22행의 (AC id, 파일명) 집합과 flow 헤더 선언 22건이 **완전 일치**. 매핑 표의 ⬜ 행을 세면 정확히 **47**로 집계 문구와 일치한다.\n\n- **규칙 #1(AC→flow 유일) 잔여가 46 → 47로 1건 늘었다** — 신설 `AC-002-05`가 전용 flow 없이 ⬜다. 이는 **to-be 확장**(AC 집합이 커짐)이지 as-is 퇴행이 아니며, 등록 시점부터 슬라이스로 좁혀 오는 **standing gap과 같은 성질·같은 목록**의 +1이다. 트래커가 이 1건을 ⬜로 정직하게 등재했고 목표 flow명(`daily-question-stage-fallback.yaml`)과 단정 핵심까지 적어 뒀으므로 **미등재로 인한 drift(규칙 #4 위반)도 아니다**.",
       "summarizedAt": "2026-08-08T02:07:15Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "reason": "차이는 남아 있으나 **이번 트리거가 만든 것은 standing backlog의 +1뿐이고, 그 backlog를 좁히는 다음 슬라이스는 이 모델에 이미 열려 있는 task가 점유 중**이다.\n\n(1) **이번 트리거가 새 drift를 만들지 않았다.** #174는 docs 전용이라 as-is(`e2e` 트리)가 바이트 동일이고, 파일에서 재도출한 결과 규칙 #2(제품 flow 22/22가 정확히 1개 AC 선언) · #3(비-AC flow 2건 등재) · #5(선언 AC 22개 전부 `docs/prd`에 실재, dangling 0) · #6(트래커 ✅22행 ↔ 선언 22건이 AC 집합·파일명까지 완전 일치, ⬜ 행 실수 47 == 집계 문구)이 모두 clean이다. AC-002-02는 제목만 바뀌고 **ID가 유지**돼 참조도 끊기지 않았다.\n\n(2) **늘어난 1건은 미등재 drift가 아니다.** 신설 AC-002-05는 트래커 매핑 표에 `⬜ 후속`으로 정직하게 등재됐고 목표 flow명(`daily-question-stage-fallback.yaml`)과 단정 핵심까지 적혀 있다. 규칙 #4가 문제 삼는 \"등재 없이 flow만 없는 AC\"가 아니라, 규칙 #1의 standing ⬜ 목록이 46→47로 한 칸 늘어난 것이다.\n\n(3) **그 standing 목록의 다음 슬라이스는 점유돼 있다.** `rct_20260807-0001`이 status `executing`(draft PR #170, AC-001-06 전용 flow 신설)으로 executor가 실제로 붙잡고 있다. 여기서 `action_required`를 새로 열면 **같은 standing backlog에 대해 planner용 미점유 handoff가 둘이 되어** 동일 레포에 경쟁 슬라이스가 계획된다 — 점유 규약 위반이다. 바로 직전 `rct_20260807-0003`이 같은 상황에서 같은 판정을 내렸고, 그때는 소유 task가 `planned`였는데 이번엔 `executing`이라 점유가 더 강하다.\n\n(4) 자동 해소 성격이 아니라 재확인 유예 대상도 아니다(정적 구조 gap). 판정을 감사 로그로 남기고 baseline을 전진시켜 종료한다 — 침묵하면 baseline이 낡은 채 남아 precheck가 5분마다 claude를 무의미하게 재기동한다. 다음 실제 재감지는 PR #170 머지가 `e2e` 트리를 올릴 때 열리고, 그때 잔여 ⬜47이 다시 평가된다.\n\n참고: 같은 커밋 #174가 자매 모델 `tbm_dear-baby-docs-impl`에는 **별개의 유의미한 drift**(ENG-013 확정 계약 미구현 + AC-002-05 + 풀 분리)를 만들었고 그쪽은 `rct_20260808-0001`로 `action_required` 기록했다. 이 모델의 ⬜47은 flow 저작 축이라 그 구현 축과 범위가 겹치지 않는다.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-08-08T02:07:15Z"
     }
   }
 ]
