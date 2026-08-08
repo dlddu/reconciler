@@ -1,0 +1,177 @@
+# 템플릿: e2e 모킹 최소화 (e2e-mock-policy)
+
+한 레포에서 **e2e가 실환경을 그대로 구동하는 것**을 기본으로 두고, 결정적 치환
+(네트워크 인터셉트·응답 모킹·테스트 전용 fixture seam·외부 서비스 mock 서버)은
+**실환경으로 재현이 불가능한 경우에 한해, 문서에 등재된 지점만** 허용하는 모델.
+정합 상태 = **허용목록에 등재된 모킹 지점의 집합 == 코드에 실재하는 모킹 지점의
+집합**(양방향 1:1). 미등재 모킹도, 코드에 없는 고아 등재도 모두 drift.
+
+"실환경 우선"이 스펙(SSOT)이고, 예외는 **늘지 않는 방향으로만** 관리한다.
+
+## 슬롯 표
+
+대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다.
+
+| 슬롯 | 의미 | 예 (kubernetes-dashboard) | 예 (dear-baby) |
+|---|---|---|---|
+| `{{REPO}}` | owner/repo | `dlddu/kubernetes-dashboard` | `dlddu/dear-baby` |
+| `{{SLUG}}` | id·이름용 소문자 레포명 | `kubernetes-dashboard` | `dear-baby` |
+| `{{REAL_BASELINE}}` | "실제로 구동한다"의 기준선(실환경 하네스) | kind 실클러스터 + 실 fixture | 실 백엔드·Postgres·Redis·MinIO + `reset-user`/`seed-diary` 시드 |
+| `{{MOCK_KINDS}}` | 이 레포에서 "모킹"으로 세는 것 | Playwright 네트워크 인터셉트(`page.route` 계열) | 빌드타임 E2E 플래그, fixture 구현체, 외부 서비스 mock 서버 |
+| `{{POLICY_SSOT}}` | 정책·허용목록의 위치 (파일 또는 파일 내 섹션) | `docs/e2e-mocking-policy.md` | `docs/doc-tracker.md`의 "외부 호출 모킹 경계 레지스트리" 섹션 |
+| `{{CATEGORIES}}` | 허용 예외 카테고리 체계 | `ERR`·`LAT`·`ABS`·`DES` 코드 | 외부 호출 경계 ID `MB-N` |
+| `{{FORBIDDEN}}` | 명시적 불허 | 데이터 모킹, 플레이키 회피, 백엔드 미구현 우회 | 〃 (대상에 맞게) |
+| `{{ANNOTATION}}` | 코드 쪽 표기 규약 | `// mock-exception: <CODE> — <사유>` | `// mock-exception: MB-N — <사유>` |
+| `{{MOCK_SCOPE}}` | as-is 스캔 범위(경로 목록) | `e2e` | `app backend worker e2e scripts .github` |
+| `{{MOCK_PATTERN}}` | 모킹 지점 탐지 ERE | `\.route\(`·`route\.fulfill\(` 등 | `EXPO_PUBLIC_E2E_[A-Z0-9_]+` 등 |
+| `{{SCOPE_EXCLUDE}}` | 스캔 제외(단위 테스트 등) | — | `__tests__/`, `*.test.ts`, `*_test.go` |
+| `{{ALTERNATIVES}}` | 모킹 대신 권장하는 실환경 수단 | fixture·전용 namespace | seed CLI·전용 테스트 계정·docker-compose 의존성 |
+| `{{OUT_OF_SCOPE}}` | 이 모델의 대상이 아닌 모킹 | 프론트/Go 단위 테스트 | 앱·백엔드 단위 테스트 |
+| `{{SIBLING_MODEL}}` | 중복 트리거를 피할 자매 모델 [선택] | `tbm_kubernetes-dashboard-ac-e2e` | `tbm_dear-baby-ac-e2e-1to1` |
+| `{{INITIAL_STATE}}` | 등록 시점 현황(등재 수 vs 실측 지점 수, 미등재·고아 예시) | 정책 문서 부재, 인터셉트 83줄 | 경계 6건 등재, seam 32건 실측 |
+| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` | 〃 |
+
+## 모델 JSON 골격
+
+```json
+{
+  "id": "tbm_{{SLUG}}-e2e-mock-policy",
+  "metadata": {
+    "name": "{{SLUG}} e2e 모킹 최소화 (정책 ↔ 실제 모킹 지점)",
+    "description": "{{REPO}}의 e2e는 {{REAL_BASELINE}} 기반이 기본이고, {{MOCK_KINDS}}는 실환경으로 재현 불가능한 경우({{CATEGORIES}})에 한해 {{POLICY_SSOT}}에 등재된 것만 허용한다. 미등재 모킹과 고아 등재는 모두 drift.",
+    "tags": ["{{SLUG}}", "e2e", "mocking", "test-policy", "consistency"],
+    "createdAt": "{{NOW_ISO}}"
+  },
+  "definition": "<definition 본문 템플릿을 채워 넣기>",
+  "toBe": {
+    "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "{{POLICY_SSOT의 파일 경로}}" },
+    "versionScript": { "runtime": "bash", "code": "<to-be 스크립트>", "timeoutSeconds": 60 }
+  },
+  "asIs": {
+    "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "{{MOCK_SCOPE}}" },
+    "versionScript": { "runtime": "bash", "code": "<as-is 스크립트>", "timeoutSeconds": 120 }
+  },
+  "checkPolicy": { "intervalSeconds": 3600 }
+}
+```
+
+- e2e 도구 태그(`playwright`, `maestro` 등)를 tags에 추가해도 된다.
+- `{{MOCK_SCOPE}}`가 단일 디렉터리가 아니면 `asIs.dataSource.subPath`는 생략하고
+  스크립트가 경로 목록을 직접 다룬다(스크립트가 진실).
+
+## versionScript
+
+**to-be** — 정책·허용목록의 지문. 정책이 바뀔 때만 값이 변해야 한다.
+문서가 **없는 상태도 유효한 관측**이므로 `absent`로 표현한다(빈 해시로 뭉개지 않는다).
+
+*A. 전용 문서형* — 정책이 파일 하나를 통째로 차지할 때:
+
+```bash
+#!/usr/bin/env bash
+# to-be = 모킹 정책·허용목록 문서의 blob hash. 아직 없으면 'absent'.
+# 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
+set -euo pipefail
+git rev-parse --verify --quiet "HEAD:{{POLICY_SSOT}}" || echo "absent"
+```
+
+*B. 섹션 추출형* — 정책이 더 큰 문서 안의 한 섹션일 때(그 문서의 다른 섹션 변경에
+반응하지 않도록 섹션만 잘라 해시한다). 섹션이 사라지거나 제목이 바뀌면 추출이 비어
+`absent`가 되고, 이는 "정책이 사라졌다"는 올바른 drift 신호다:
+
+```bash
+#!/usr/bin/env bash
+# to-be = <문서>의 "<섹션 제목>" 섹션만 추출한 sha256. 같은 문서의 다른 섹션 변경은 무시된다.
+# 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
+set -euo pipefail
+export LC_ALL=C
+SEC=$(git show "HEAD:{{POLICY_SSOT의 파일}}" 2>/dev/null \
+  | awk '/^### <섹션 제목>/{f=1; print; next} f && /^##/{exit} f{print}')
+if [ -z "$SEC" ]; then echo "absent"; exit 0; fi
+echo "entries=$(printf '%s\n' "$SEC" | grep -cE '<등재 행 패턴>' || true)"   # 진단용
+printf '%s' "$SEC" | sha256sum | cut -d' ' -f1
+```
+
+**as-is** — 코드에 실재하는 모킹 지점의 지문. **트리 해시를 쓰지 않는다**: 어서션·
+셀렉터 등 모킹과 무관한 변경에 반응하면 자매 모델(`{{SIBLING_MODEL}}`)과 중복
+트리거되고 노이즈가 커진다. 대신 `{{MOCK_PATTERN}}`에 걸리는 부분만 뽑아 정규화·
+정렬·해시한다.
+
+*라인형* — 매칭된 **줄 전체**를 지문에 넣는다. 대상 URL 패턴처럼 줄 안의 인자가
+정책적으로 중요할 때(예: Playwright 인터셉트):
+
+```bash
+#!/usr/bin/env bash
+# as-is = e2e의 "모킹 지점 지문". 인터셉트 호출 라인만 뽑아 정규화·정렬 후 해시한다.
+# 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
+set -euo pipefail
+export LC_ALL=C
+PATTERN='{{MOCK_PATTERN}}'
+HITS=$({ git ls-files -- {{MOCK_SCOPE}} | grep -vE '{{SCOPE_EXCLUDE}}' | sort \
+        | xargs -r grep -EH "$PATTERN" || true; } \
+  | sed 's/[[:space:]]\+/ /g' | sed 's/^ //; s/ $//' | sort)
+echo "sites=$(printf '%s' "$HITS" | grep -c . || true) files=$(printf '%s' "$HITS" | cut -d: -f1 | sort -u | grep -c . || true)"
+printf '%s' "$HITS" | sha256sum | cut -d' ' -f1
+```
+
+*토큰형* — 매칭된 **토큰과 파일의 쌍**만 지문에 넣는다(`grep -Eo` + `sort -u`).
+모킹 지점이 이름 붙은 플래그·심볼이고 주변 배선(로그 덤프·롤아웃 대기 등)이 잦게
+바뀌는 레포에서 쓴다. 같은 파일 안에서 같은 토큰이 몇 번 나오는지는 지문에
+반영되지 않는다 — 그 대가로 문구 수정에 흔들리지 않는다.
+
+```bash
+HITS=$({ git ls-files -- {{MOCK_SCOPE}} | grep -vE '{{SCOPE_EXCLUDE}}' | sort \
+        | xargs -r grep -EHo "$PATTERN" || true; } | sort -u)
+```
+
+두 형태 모두:
+- 모킹 지점이 **하나도 없는** 목표 상태의 지문은 빈 입력 sha256
+  `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`로 안정적으로 고정된다.
+- 마지막 줄만 버전이므로 `sites=…` 진단 줄은 값에 영향을 주지 않는다.
+- 단위 테스트는 반드시 `{{SCOPE_EXCLUDE}}`로 제외한다(그 층위의 모킹은 정상이다).
+
+## definition 본문 템플릿
+
+`[선택]` 표시 블록은 해당 없으면 통째로 삭제. `<!-- 지침 -->`은 모두 제거.
+
+```markdown
+# {{SLUG}} e2e 모킹 최소화
+
+## 목표
+`{{REPO}}`의 e2e는 **{{REAL_BASELINE}}**을 대상으로 도는 것이 기본이다. {{MOCK_KINDS}}는 **실환경으로 재현이 불가능한 경우에 한해서만** 허용하고, 그 예외는 문서에 등재된 것만 인정한다. 편의(실환경 준비 회피, 어서션 단순화, 플레이키 무마)를 위한 모킹은 drift다.
+
+## 무엇이 "맞는 상태"인가 (SSOT)
+- **정책·허용목록의 SSOT**는 {{POLICY_SSOT}}다. 허용 카테고리와 승인된 모킹 지점 목록(위치 · 대상 · 카테고리 · 실환경 불가 사유)을 담는다.
+- **실제 사용의 SSOT**는 코드의 모킹 지점이다: {{MOCK_SCOPE}} 범위에서 {{MOCK_KINDS}}에 해당하는 지점.
+- 정합 상태 = **허용목록에 등재된 지점의 집합 == 코드에 실재하는 지점의 집합**(양방향 1:1). 미등재 모킹도, 코드에 없는 고아 등재도 모두 drift.
+
+## 허용 예외 카테고리 (이 밖은 불허)
+{{CATEGORIES}} <!-- 지침: 코드/ID와 의미를 표나 목록으로. 각 항목은 "실환경으로 왜 불가능한가"를 담아야 하며, 실환경으로 준비 가능하면 그 카테고리를 쓸 수 없다는 단서를 붙인다 -->
+
+명시적 불허: {{FORBIDDEN}}.
+
+## 표기 규약
+허용된 모킹 지점은 그 지점 직전 줄에 사유 주석을 단다.
+
+`{{ANNOTATION}}`
+
+같은 항목이 {{POLICY_SSOT}} 허용목록에도 있어야 한다. 주석만 있고 미등재이거나, 등재만 있고 코드에 없으면 drift다.
+
+## 충돌 시 기본 방향
+"실환경 우선"이 스펙이다.
+- 미등재 모킹 → 카테고리에 해당하면 등재+주석, 아니면 {{ALTERNATIVES}}로 대체해 모킹을 **제거**한다.
+- 고아 등재 → 허용목록에서 지운다.
+- 카테고리 판정이 애매하면 **제거 쪽으로 기운다**. 예외는 늘지 않는 방향으로만 관리한다.
+
+## 추적 방식 (요약)
+- **to-be** = {{POLICY_SSOT}}의 지문. 없으면 `absent`. 정책·허용목록이 바뀔 때만 변한다.
+- **as-is** = {{MOCK_SCOPE}}에서 모킹 지점만 추출·정규화·정렬한 sha256 지문. 트리 해시를 쓰지 않으므로 무관한 변경에는 반응하지 않고<!-- [선택] --> (자매 모델 `{{SIBLING_MODEL}}`과의 중복 트리거 회피)<!-- --> 모킹이 추가·삭제되거나 대상 패턴이 바뀔 때만 변한다.
+
+## 초기 상태 메모 (등록 시점 {{NOW_ISO}})
+{{INITIAL_STATE}} <!-- 지침: 등재 수 vs 실측 지점 수, 미등재·고아의 구체 예를 남긴다. 격차가 크면 "첫 task는 (1) 정책 문서 정비 (2) 기존 지점의 카테고리 판정 → 등재 또는 제거를 다루게 된다 — 큰 초기 격차는 예상된 것"을 포함 -->
+
+## 범위 밖 / 비고
+- {{OUT_OF_SCOPE}}의 모킹은 대상이 아니다. 그 층위에서는 모킹이 정상이다.
+- {{ALTERNATIVES}}는 모킹이 아니라 이 정책이 권장하는 **대안**이다.
+- 특정 모킹이 "정말 필요한지"의 최종 판단은 각 task(planner)의 몫이고, 이 모델은 카테고리와 등재 규약이라는 **판단 기준**만 고정한다.
+- <!-- 지침: 지문의 사각지대를 1~2줄로 명시한다 — {{MOCK_PATTERN}}에 걸리지 않는 새 모킹 수단은 보이지 않으므로, 표기 규약({{ANNOTATION}})이 그 안전망이라는 점 -->
+```

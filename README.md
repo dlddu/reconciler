@@ -20,6 +20,7 @@ templates/                          # 반복 등록되는 모델 유형의 표�
   README.md                         # 슬롯 규약·인스턴스화 절차
   docs-impl.tbm.md                  # 제품 문서 ↔ 구현 정합성
   ac-e2e.tbm.md                     # AC ↔ E2E 1:1 정합성
+  e2e-mock-policy.tbm.md            # e2e 모킹 최소화 (정책 ↔ 실제 모킹 지점)
 data/                               # 운영 데이터 (스킬이 런타임에 생성·기록, 초기엔 비어 있음)
   to-be-models.json                 # ToBeModel (배열)
   reconciliation-tasks/             # task: to-be 모델(toBeModelId)별로 파일 분리
@@ -30,10 +31,11 @@ index.html                          # data/ 브라우징용 정적 웹페이지 
 
 ## 모델 템플릿
 
-레포마다 반복 등록되는 두 정합성 유형 — **제품 문서 ↔ 구현**(docs-impl),
-**AC ↔ E2E 1:1**(ac-e2e) — 은 `templates/`의 템플릿으로 등록한다. 판정 기준·
-충돌 방향·추적 방식 같은 고정부는 템플릿이 유형의 SSOT이고, 새 대상 등록 시엔
-슬롯(레포·경로·AC 체계 등)만 채운다. 자세한 절차는 `templates/README.md`.
+레포마다 반복 등록되는 정합성 유형 — **제품 문서 ↔ 구현**(docs-impl),
+**AC ↔ E2E 1:1**(ac-e2e), **e2e 모킹 최소화**(e2e-mock-policy) — 은 `templates/`의
+템플릿으로 등록한다. 판정 기준·충돌 방향·추적 방식 같은 고정부는 템플릿이 유형의
+SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 채운다. 자세한 절차는
+`templates/README.md`.
 
 ## 데이터 브라우저 (GitHub Pages)
 
