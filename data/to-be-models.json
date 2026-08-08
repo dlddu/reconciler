@@ -416,8 +416,8 @@
         "code": "#!/usr/bin/env bash\n# to-be = 제품 문서. docs/ 하위 트리 해시만 사용 → docs 밖(코드·인프라 등) 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:docs\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "87d07967a1c26aff80365f4df69dcd1f3a6c94f5",
-      "lastObservedAt": "2026-08-06T03:06:23Z"
+      "lastObservedVersion": "9ca495557390771cf13ecf6f0afefc0015179fc9",
+      "lastObservedAt": "2026-08-08T01:05:38Z"
     },
     "asIs": {
       "dataSource": {
@@ -430,8 +430,8 @@
         "code": "#!/usr/bin/env bash\n# as-is = 구현·테스트(control-plane/ data-plane/ web/) + 배포·CI·e2e 하네스(k8s/ deploy/ scripts/ .github/ Makefile).\n# → 이 범위 밖 변경(docs/, README, 루트 잡파일)은 무시된다.\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ncp=\"$(git rev-parse \"HEAD:control-plane\")\"\ndp=\"$(git rev-parse \"HEAD:data-plane\")\"\nw=\"$(git rev-parse \"HEAD:web\")\"\nk=\"$(git rev-parse \"HEAD:k8s\")\"\nd=\"$(git rev-parse \"HEAD:deploy\")\"\ns=\"$(git rev-parse \"HEAD:scripts\")\"\nc=\"$(git rev-parse \"HEAD:.github\")\"\nm=\"$(git rev-parse \"HEAD:Makefile\")\"\nprintf 'control-plane:%s data-plane:%s web:%s k8s:%s deploy:%s scripts:%s github:%s makefile:%s\\n' \\\n  \"$cp\" \"$dp\" \"$w\" \"$k\" \"$d\" \"$s\" \"$c\" \"$m\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "control-plane:00d71fefe91e91cb472415efae841d26bf1307e5 data-plane:6f8b240ebe0caf20c70d239d6c70a1cba7afe841 web:71abb71069b571d7749383524b3ecf62fa4b66db k8s:d70f21662b7d1f1b3143fc73a4de3f25c5d339cf deploy:5380976cd4a3dabf08b6a584f1f9e6439ce35941 scripts:f726316ea06f359bed780885a36f5f7fd6d30926 github:0c3ded29b29a520fe4aa5d8d275ec38011d68963 makefile:4f337498ec665776fed331343a3a4964e2caa829",
-      "lastObservedAt": "2026-08-06T03:06:23Z"
+      "lastObservedVersion": "control-plane:00d71fefe91e91cb472415efae841d26bf1307e5 data-plane:47962c65974b211a497d137cee2965296ba4c32a web:2fac31c66ed7e02858f70aaa62a04fff354a9318 k8s:d70f21662b7d1f1b3143fc73a4de3f25c5d339cf deploy:5380976cd4a3dabf08b6a584f1f9e6439ce35941 scripts:f726316ea06f359bed780885a36f5f7fd6d30926 github:0c3ded29b29a520fe4aa5d8d275ec38011d68963 makefile:4f337498ec665776fed331343a3a4964e2caa829",
+      "lastObservedAt": "2026-08-08T01:05:38Z"
     },
     "checkPolicy": {
       "intervalSeconds": 3600,
@@ -659,7 +659,9 @@
         "runtime": "bash",
         "code": "#!/usr/bin/env bash\n# to-be = 모킹 정책·허용목록. docs/doc-tracker.md 에서 \"외부 호출 모킹 경계\n# 레지스트리\" 섹션만 잘라 해시한다 → 같은 파일의 다른 섹션(연결 매트릭스·\n# AC↔flow 매핑·변경 이력) 변경에는 반응하지 않는다.\n# 섹션이 사라지거나 제목이 바뀌면 'absent' (= 정책 소실 신호).\n# 런타임이 dataSource.repository(dlddu/dear-baby)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nexport LC_ALL=C\nSEC=$(git show \"HEAD:docs/doc-tracker.md\" 2>/dev/null \\\n  | awk '/^### 외부 호출 모킹 경계 레지스트리/{f=1; print; next} f && /^##/{exit} f{print}')\nif [ -z \"$SEC\" ]; then echo \"absent\"; exit 0; fi\n# 진단용(마지막 줄이 아니므로 버전에 영향 없음)\necho \"lines=$(printf '%s\\n' \"$SEC\" | grep -c . || true) boundaries=$(printf '%s\\n' \"$SEC\" | grep -cE '^\\| \\*\\*MB-' || true)\"\nprintf '%s' \"$SEC\" | sha256sum | cut -d' ' -f1\n",
         "timeoutSeconds": 60
-      }
+      },
+      "lastObservedVersion": "a8853794ef0568def31afae46bb7f93f1463ef151214e2a2e03584f53adfa1fd",
+      "lastObservedAt": "2026-08-08T01:05:38Z"
     },
     "asIs": {
       "dataSource": {
@@ -671,7 +673,9 @@
         "runtime": "bash",
         "code": "#!/usr/bin/env bash\n# as-is = 코드에 실재하는 \"모킹 seam 지문\".\n# 트리 해시가 아니라 seam 토큰만 뽑아 (파일, 토큰) 쌍으로 중복제거·정렬 후 해시한다\n#  → flow 어서션·CI 로그 배선 같은 무관한 변경에는 반응하지 않고(자매 모델\n#    tbm_dear-baby-ac-e2e-1to1 과의 중복 트리거 회피), seam 이 추가·삭제되거나\n#    파일을 옮길 때만 버전이 바뀐다.\n# STRONG: 이름 붙은 seam(빌드타임 E2E 플래그, fixture/stub 구현체, 외부 서비스\n#         mock 배선, 표기 규약 주석) — 레포 전역 스캔.\n# WEAK:   이름이 없는 stub 이 모이는 좁은 구역(app/src/api, scripts)에서만 mock/stub 낱말.\n# 단위 테스트(__tests__/·*.test.ts·*_test.go)는 제외한다 — 그 층위의 모킹은 정상이다.\n# 런타임이 dataSource.repository(dlddu/dear-baby)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nexport LC_ALL=C\nscope() {\n  git ls-files -- \"$@\" \\\n    | grep -vE '(^|/)(__tests__|__mocks__)/' \\\n    | grep -vE '\\.(test|spec)\\.(ts|tsx|js|jsx)$' \\\n    | grep -vE '_test\\.go$' | sort\n}\nSTRONG='EXPO_PUBLIC_E2E_[A-Z0-9_]+|\\bE2E_[A-Z0-9_]+\\b|\\bFixture[A-Z][A-Za-z0-9]*|\\bSTUB_[A-Z0-9_]+|OPENROUTER_BASE_URL|mock-exception:'\nWEAK='\\b[Mm]ock\\b|\\b[Ss]tub\\b'\nHITS=$(\n  { scope app backend worker e2e scripts .github | xargs -r grep -EHo \"$STRONG\" 2>/dev/null || true\n    scope app/src/api scripts                    | xargs -r grep -EHo \"$WEAK\"   2>/dev/null || true\n  } | sort -u\n)\n# 진단용(마지막 줄이 아니므로 버전에 영향 없음)\necho \"seams=$(printf '%s' \"$HITS\" | grep -c . || true) files=$(printf '%s' \"$HITS\" | cut -d: -f1 | sort -u | grep -c . || true)\"\nprintf '%s' \"$HITS\" | sha256sum | cut -d' ' -f1\n",
         "timeoutSeconds": 120
-      }
+      },
+      "lastObservedVersion": "5530065b9493459fafea11cf58fb1f034f6dc170f275e218bdd57a2337da0097",
+      "lastObservedAt": "2026-08-08T01:05:38Z"
     },
     "checkPolicy": {
       "intervalSeconds": 3600
