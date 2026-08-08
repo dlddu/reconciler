@@ -442,7 +442,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-08T01:05:38Z",
       "changedSides": [
@@ -465,7 +465,7 @@
       "summarizedAt": "2026-08-08T01:05:38Z"
     },
     "createdAt": "2026-08-08T01:05:38Z",
-    "updatedAt": "2026-08-08T01:58:00Z",
+    "updatedAt": "2026-08-08T02:00:00Z",
     "id": "rct_20260808-0001",
     "assessment": {
       "actionRequired": true,
@@ -595,6 +595,54 @@
               "log": "executor 실제 액션: markPullRequestReadyForReview로 draft 해제(isDraft=false) → 머지 직전 mergeable=true·mergeable_state=clean·head 4b848e0 재확인 → sha 고정 squash 머지 성공(merged=true, main HEAD=8ac8e46). 레포가 squash 전용이라 merge_method=squash 사용. 브랜치 보호 규칙에 막히지 않음."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:c9e185e7b59e6e9f35390330c9b76a88a73f3f98 data-plane:af75d908fc6b1a31e6acaf7355a83eb04bcebdb3 web:a2eabfdba531deeade0334f897fe08cfd64516bc k8s:d70f21662b7d1f1b3143fc73a4de3f25c5d339cf deploy:5380976cd4a3dabf08b6a584f1f9e6439ce35941 scripts:f726316ea06f359bed780885a36f5f7fd6d30926 github:0c3ded29b29a520fe4aa5d8d275ec38011d68963 makefile:4f337498ec665776fed331343a3a4964e2caa829",
+          "checks": [
+            {
+              "name": "완료기준1 — workloadType 수용·기본값·검증·응답/OpenAPI/레코드 반영",
+              "status": "passed",
+              "detail": "openapi.yaml에 WorkloadType enum(L162) + Session.required에 workloadType(L180) + CreateSessionRequest.workloadType(L195). internal/api/workload_type_test.go의 TestCreateSessionWorkloadType(4 서브테스트)이 든 패키지가 main CI의 control-plane 잡에서 PASS."
+            },
+            {
+              "name": "완료기준2 — 수명 중 불변 + snapshot→restore 보존",
+              "status": "passed",
+              "detail": "TestWorkloadTypeIsImmutableAfterCreate(internal/api) · TestWorkloadTypeSurvivesSnapshotRestore · TestLegacySessionRecordRestoresAsShell(internal/service)이 머지된 main 트리에 존재하고, 두 패키지 모두 main CI control-plane 잡에서 PASS. 타입을 바꾸는 API가 없다는 구조적 보장도 유지."
+            },
+            {
+              "name": "완료기준3 — 오케스트레이터 타입별 pod 스펙 + 미설정 타입 거부",
+              "status": "passed",
+              "detail": "test/workload_type_orchestrator_test.go의 TestClientOrchestrator_PodSpecBranchesOnWorkloadType 외가 main에 있고 ci/integration (happy path) 잡 success. client_orchestrator.go에 WithWorkloadImage(L140)와 미설정 타입 거부 경로(L337 주석 이하) 확인."
+            },
+            {
+              "name": "완료기준4 — shell 경로 무회귀 (기존 어서션 수정 0)",
+              "status": "passed",
+              "detail": "6a48f60..8ac8e46 diff 15파일 +695/-79. 기존 테스트 파일 편집은 test/client_orchestrator_test.go 단 하나이며 내용은 Start/RestoreInto 호출부에 session.WorkloadTypeShell 인자 추가 + import 1줄뿐 — 어서션 변경 0건. PR head에서 e2e(kind+API+browser) success, 새로 생긴 SKIP 0건(기존 하드 skip 4건만 유지: IdleToSnapshot·SnapshotRestore·Read/WriteIdleAndSnapshotBranches)."
+            },
+            {
+              "name": "완료기준5 — 문서 ↔ 코드 일치",
+              "status": "passed",
+              "detail": "data-plane/README.md가 'control plane half is wired / data plane half is not built here yet (AC-E2~E6)'로 갱신되고 미설정 시 명시적 에러 동작까지 기술. docs/doc-tracker.md가 '구현 사슬 부분 반영(AC-E1)'으로 갱신되고 'AC-E1은 아직 닫히지 않았다'를 명시 + 변경 이력 행 추가. 머지 후 main diff로 직접 확인."
+            },
+            {
+              "name": "머지 후 main CI 무회귀",
+              "status": "passed",
+              "detail": "main 8ac8e46의 check-run 9건 전부 success: control-plane / data-plane / web / integration / envtest(real-apiserver CAS/Lease) / docker image ×2 / build&push ×2."
+            },
+            {
+              "name": "e2e 출처 명시(정직성)",
+              "status": "passed",
+              "detail": "e2e.yml은 트리거가 pull_request + workflow_dispatch뿐이라 main push에서는 돌지 않는다. 따라서 e2e green 근거는 PR head 4b848e0의 e2e 잡 success이며, squash 결과 트리는 그 head와 동일한 내용이다. main에서 e2e를 재실행해 확인한 것이 아니라는 점을 기록한다."
+            },
+            {
+              "name": "범위 밖 — AC-E1은 닫히지 않음(정보성)",
+              "status": "passed",
+              "detail": "이 슬라이스는 AC-E1의 control plane 절반만 닫는다. AC-E1의 검증 방법이 요구하는 'claude-code pod에서 CLI 실행 가능'의 근거인 data plane 이미지·에이전트 모드는 여전히 없고, DATA_PLANE_CLAUDE_CODE_IMAGE도 매니페스트에 의도적으로 미설정이다. 모델 전체 잔여 gap(AC-E1 나머지 절반·E2~E6·T-클로드코드 자동화·web 타입 선택 UI·AC-B1/B2/C2/C3 기존 skip·doc-tracker 🟡 제품 결정 3건)은 converged 판정에 넣지 않으며, 다음 감지 주기가 후속 task로 잇는다."
+            }
+          ],
+          "verifiedAt": "2026-08-08T02:00:00Z"
         }
       }
     ]
