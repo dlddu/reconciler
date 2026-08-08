@@ -215,7 +215,7 @@
   /* ---- tasks ---- */
   .task { border: 1px solid var(--border); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow); margin-bottom: 14px; overflow: hidden; }
   .task-head { display: flex; align-items: center; gap: 9px; padding: 12px 15px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
-  .task-id { font-size: 12px; color: var(--muted); }
+  .task-id { font-size: 12px; color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
   .task-head .spacer { flex: 1; }
   .task-trigger { padding: 9px 15px; font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--panel-2); }
   .task-body { padding: 6px 15px 12px; }
@@ -576,6 +576,15 @@
     return null;
   }
 
+  // 작업 식별자는 모델 안에서만 유일하므로(rct_<날짜>-<연번>), 화면에는 소속 모델을
+  // 앞에 붙인 <toBeModelId>-<task id> 형태로 보여준다. 다른 모델의 같은 번호와 헷갈리지
+  // 않고, 그대로 복사해 붙이면 어느 모델의 작업인지가 함께 전달된다.
+  // toBeModelId가 없는(예전) 레코드는 task id만 그대로 쓴다.
+  function taskDisplayId(t) {
+    if (!t) return "";
+    return (t.toBeModelId ? t.toBeModelId + "-" : "") + t.id;
+  }
+
   function sec(title, sub, bodyHtml, open) {
     return '<details class="sec"' + (open ? " open" : "") + "><summary>" + escapeHtml(title) +
       (sub ? ' <span class="muted small">' + sub + "</span>" : "") + '</summary><div class="sec-body">' + bodyHtml + "</div></details>";
@@ -698,7 +707,7 @@
       : "";
 
     return '<div class="task">' +
-      '<div class="task-head">' + statusBadge(t.status) + ' <code class="task-id">' + escapeHtml(t.id) + "</code> " + actionPill + prChip +
+      '<div class="task-head">' + statusBadge(t.status) + ' <code class="task-id">' + escapeHtml(taskDisplayId(t)) + "</code> " + actionPill + prChip +
         '<span class="spacer"></span><span class="muted small">detected ' + fmtDate(trig.detectedAt) + "</span></div>" +
       '<div class="task-trigger">변경: ' + (sides || "—") + " " + fmtTriggerVersions(trig) + "</div>" +
       (sections ? '<div class="task-body">' + sections + "</div>" : "") +
