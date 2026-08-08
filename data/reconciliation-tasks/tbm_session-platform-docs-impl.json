@@ -439,5 +439,33 @@
       }
     ],
     "updatedAt": "2026-08-06T21:48:34Z"
+  },
+  {
+    "toBeModelId": "tbm_session-platform-docs-impl",
+    "status": "assessing",
+    "trigger": {
+      "detectedAt": "2026-08-08T01:05:38Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "control-plane:00d71fefe91e91cb472415efae841d26bf1307e5 data-plane:6f8b240ebe0caf20c70d239d6c70a1cba7afe841 web:71abb71069b571d7749383524b3ecf62fa4b66db k8s:d70f21662b7d1f1b3143fc73a4de3f25c5d339cf deploy:5380976cd4a3dabf08b6a584f1f9e6439ce35941 scripts:f726316ea06f359bed780885a36f5f7fd6d30926 github:0c3ded29b29a520fe4aa5d8d275ec38011d68963 makefile:4f337498ec665776fed331343a3a4964e2caa829",
+        "currentVersion": "control-plane:00d71fefe91e91cb472415efae841d26bf1307e5 data-plane:47962c65974b211a497d137cee2965296ba4c32a web:2fac31c66ed7e02858f70aaa62a04fff354a9318 k8s:d70f21662b7d1f1b3143fc73a4de3f25c5d339cf deploy:5380976cd4a3dabf08b6a584f1f9e6439ce35941 scripts:f726316ea06f359bed780885a36f5f7fd6d30926 github:0c3ded29b29a520fe4aa5d8d275ec38011d68963 makefile:4f337498ec665776fed331343a3a4964e2caa829"
+      },
+      "toBe": {
+        "previousVersion": "87d07967a1c26aff80365f4df69dcd1f3a6c94f5",
+        "currentVersion": "9ca495557390771cf13ecf6f0afefc0015179fc9"
+      }
+    },
+    "stateSummary": {
+      "asIs": "HEAD `6a48f60` (#20 머지 후). baseline(`020945e`, #16) 대비 **as-is 스코프(control-plane/ data-plane/ web/ k8s/ deploy/ scripts/ .github/ Makefile)의 델타는 문서 2건뿐**이고 실행 코드·테스트·매니페스트·CI 변경은 **0건**이다:\n- `data-plane/README.md` (+5/-2): 두 번째 워크로드 타입(클로드 코드 CLI)이 `docs/prd/claude-code-workload.md`(AC-E1~E6)에 명세됐으나 **\"not yet implemented here\"** 라고 스스로 명시. 삭제된 가치 V6 참조 제거.\n- `web/src/design/README.md` (신규 +67): 디자인 시스템 **정본이 코드**(`web/src/design/tokens.css` · `web/src/app/shell.css`)임을 선언하는 얇은 색인. `tokens.css` 자체는 #1(`dbc5631`)부터 있던 기존 파일 — 새 UI 구현이 아니다.\n\n**신규 AC-E1~E6 구현 흔적 전무**: 구현 스코프 전역 `git grep -niE 'workloadtype|claude-code|ANTHROPIC_'`(README 제외) = **0 hit**. workloadType 파라미터·타입별 pod 프로비저닝·프롬프트 원샷 실행·직렬 큐잉·대화 기록/작업 디렉터리 아카이브·Secret 주입 모두 미구현이고, `docs/test/claude-code-workload.md`의 시나리오 7종에 대응하는 자동화도 없다.\n\n기존 15 AC의 as-is는 #17(2026-08-06T21:46Z, 직전 task `rct_20260806-0001`의 reconcile) 이후 그대로다: CP/DP 분리, 세션당 real client-go pod(`TestDeferred_RealPodProvisioned`/`RealPodReclaimed` 실단언), ConfigMap resourceVersion-CAS + Lease store, PTY `/bin/bash` 에이전트, 실 criu 어댑터 + CRIU 왕복 e2e(`TestDeferred_CRIUIntegrity` PASS), AC-B1 운영 트리거 `service.IdleReaper`.\n\n**잔여 하드 skip / TODO**(`control-plane/test/e2e_deferred_test.go`): L218 `TestDeferred_IdleToSnapshot`(AC-B1 reaper-구동 e2e), L224 `TestDeferred_SnapshotRestore`(AC-B2 focused placeholder — `docs/test/e2e.md`가 \"비차단 잉여\"로 표기), L306·L313 `TestDeferred_Read/WriteIdleAndSnapshotBranches`(AC-C2/C3 **idle 분기** — StateIdle 진입 트리거 부재). `TODO(policy)` (session.go:48 · manager.go:11 · reaper.go:27), `TODO(client-go)` (adapter/k8s/orchestrator.go:75·86) 잔존.",
+      "toBe": "`docs/`(SSOT, subtree `9ca4955`). **이 모델 이력에서 가장 큰 to-be 확장이다.** baseline `87d0796`(#16 시점) → `9ca4955` 사이에 문서 PR 3건이 들어갔는데, 이 구간은 모델이 `checkPolicy.enabled:false`로 꺼져 있던 2026-08-06T21:51Z~2026-08-08T00:56Z와 겹친다(사용자가 00:56Z `c2cf449`로 재활성화 → 이번 감지가 그 축적분을 처음 본다):\n- **#18 `21e7d81`** — 세션 워크로드를 단수→복수(타입)로 확장. 신규 PRD `prd/claude-code-workload.md`가 **AC-E1~E6 6개** 추가: E1 `workloadType`(`shell` 기본 / `claude-code`) 선택·수명 중 불변, E2 write = `claude --model … -p <payload>` **원샷 실행**(비블로킹 + 세션 내 직렬 큐잉), E3 read = 쉘과 **동일한 offset 커서 계약**(내용만 다름), E4 대화·작업 디렉터리 연속성(pod 파일시스템 대화 기록 이어받기), E5 **CRIU 비대상** — 작업 디렉터리·대화 기록·출력 버퍼의 파일시스템 아카이브로 동결/복원(복원 후 `nextOffset` 유효), E6 `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN` 전역 Secret 주입(요청 지정 불가·노출 금지) + `model`은 세션별 설정·불변. 신규 테스트 문서 `test/claude-code-workload.md`(시나리오 7종). `values.md`의 V2·V3 서술이 **타입 중립**으로 재작성(동결/복원 메커니즘이 타입별로 분기).\n- **#19 `1123bfc`** — 여정 **J6**(작업 환경 선택 · 에이전트 프롬프트 루프) 신설 + mockup 확충: `mockups/agent-workspace.html` 신규(758줄), `new-session.html`에 워크로드 타입·모델 선택 UI 추가.\n- **#20 `6a48f60`** — 디자인 시스템 **정본을 `web/src/design/`(코드)로 확정**하고 문서는 색인 역할로 정리.\n\n가치 축도 개정됐다: **V6(인터랙티브 쉘 세션)·V7(에이전트 세션) 삭제**(워크로드 타입은 가치가 아니라 수단 → PRD 소관), 대신 **V8(목적에 맞는 작업 환경 선택)** 신설, 삭제 식별자 재사용 금지 표 추가.\n\n따라서 to-be = **AC 15개 → 21개**(A1~A3 · B1~B3 · C1~C4 · D1~D5 · **E1~E6**), PRD 4→5종, 테스트 문서 4→5종, 가치 6개(V1~V5 · V8). `doc-tracker.md` 자체 집계도 21/21 연결 · 21/21 커버로 갱신됐다. 판정 기준은 불변: 21 AC 전부 구현 **AND 실제 자동 검증**(게이트 뒤 stub·TODO·의도적 하드 skip은 충족 불인정 — 2026-07-27 사용자 결정), UI가 mockup·여정 일치, 인프라가 문서와 일치, 미문서 동작 없음, 트래커 집계가 실제와 일치.\n\n**문서 자신이 남긴 열린 항목 3건**(planner가 알아야 함): (1) AC-E4 **대화 재개 방식 미확정** — 확정된 커맨드에 재개 옵션이 없어 2회차 이후가 E4를 만족하지 못하며, T-클로드코드 시나리오 5는 \"확정 전까지 **의도적 실패**로 둔다\"고 명시; (2) AC-E6 model 불변성·**플랫폼 기본 모델 값 미확정**; (3) `claude-code`의 `idle` 상태 의미 미결(상주 프로세스가 없어 active와의 실질 차이가 자원 점유뿐). mockup의 모델 선택지(`model-a`/`model-b`)와 재개 표현도 이 미확정에 걸린 **자리표시자**라고 doc-tracker가 스스로 표시한다.",
+      "gap": "이번 트리거는 **to-be가 크게 앞서 나간 확장**이다 — as-is 델타는 문서 2건(README·디자인 색인)뿐이고 실행 코드는 0줄 변경. 정의 drift 기준 #1(미구현·미검증 AC는 drift, 게이트 뒤 stub·의도적 skip 충족 불인정)에 정면으로 걸린다:\n1. **신규 AC-E1~E6 6개 전부 미구현·미검증** — 구현 스코프에 `workloadType`/`claude-code`/`ANTHROPIC_*` 흔적 0 hit, T-클로드코드 7 시나리오 전부 미자동화. 21 AC 중 6개가 **통째로 열림**.\n2. **기존 잔여 gap 유지** — AC-B1 reaper-구동 e2e(`TestDeferred_IdleToSnapshot`)와 AC-C2/C3 **idle 분기**가 하드 skip(StateIdle 진입 트리거 부재), AC-B2 focused placeholder(문서가 비차단으로 명시), `TODO(policy)`·`TODO(client-go)` 잔존.\n3. **문서 내 미확정이 구현을 선행 차단** — AC-E4 재개 방식과 AC-E6 기본 모델이 미확정이라, 그 두 AC는 코드를 쓰기 전에 결정이 먼저 필요하다(테스트 문서가 시나리오 5를 의도적 실패로 선언).\n\nas-is 델타 자체(`data-plane/README.md`가 \"not yet implemented here\"를 명시, 디자인 정본을 코드로 확정)는 **수렴 방향의 정직한 문서화**라 새 어긋남·미문서 구현이 아니지만, gap을 좁히지도 않는다. 잠금파일·자동 포맷 같은 무해 노이즈가 아니라 구조적 확장 gap이다.",
+      "summarizedAt": "2026-08-08T01:05:38Z"
+    },
+    "createdAt": "2026-08-08T01:05:38Z",
+    "updatedAt": "2026-08-08T01:05:38Z",
+    "id": "rct_20260808-0001"
   }
 ]
