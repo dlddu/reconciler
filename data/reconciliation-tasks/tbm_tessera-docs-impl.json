@@ -1151,6 +1151,77 @@
       "reason": "post-reconcile 재트리거이며, 이번 슬라이스가 실제로 수렴했음에도 정의가 drift로 규정한 gap이 크게 남아 지금 작업이 필요하다.\n\n**왜 지금인가**: 트리거를 만든 #38 `8270b757`은 직전 task `rct_20260807-0003`의 실행 산출물이고(그 task의 `verification.asIsVersionAfter`가 현재 as-is 버전과 바이트 동일, `converged:true`), 그 task는 2026-08-08T11:59:39Z `succeeded`(terminal)로 닫혔다. 이 모델에 열린 task는 **하나도 없다**(6건 전부 `succeeded`) → 인수인계 슬롯이 비어 있어 경쟁 워커 문제가 없다. 스킬이 규정한 '슬라이스 → 재감지 → 후속 task'의 정상 진행 지점이다.\n\n**왜 노이즈가 아닌가**: 26개 AC 중 **8개가 여전히 미충족**(◐ AC2.2·2.3·2.6·4.5 / ✗ AC3.3·3.4·4.2·4.6)이고 이를 트래커 기술이 아니라 `src/` 직접 실측으로 확인했다 — `runProcess`/`getEnv`·`backend.lifecycle`·`forwardCallback` 전부 `NotImplementedError` 사이트, `ClaudeSurface`는 39줄 정적 목업(`claudeSession|claudeState` grep 0건), `conflict` 로직 0건(CSS 클래스만), 스냅샷 `surfaces`가 싣는 것은 editor+terminal 뿐. 정의는 '미구현 AC는 백로그로 빼지 않고 drift로 본다 · 모든 AC가 구현될 때까지 이 gap은 지속 존재한다'고 명시한다. 코드에 자가 수렴 기전이 없는 정적 미달이므로 재확인 유예로 해소될 성질이 아니다(→ `recheckAfter` 부적합).\n\n**이번 사이클이 남긴 것은 순수하게 기준 ① 잔여 + 알려진 기준 ② 잔여**: 기준 ③(문서 없는 구현)은 새로 생긴 것이 없고(동결 배너·`읽기 전용` 배지·`재연결` 버튼은 전부 AC4.3 본문·T-4 시나리오 3·M-J4-S1이 이미 기술), 기준 ④(트래커 불일치)도 발생하지 않았다(집계 18/4/4를 버킷별로 `src/`와 대조해 전부 일치). 기준 ②는 M-J4-S1의 **워크스페이스 전역 크롬** 미실현이 남지만 이는 새로 벌어진 어긋남이 아니라 이번 슬라이스로 한 조각 줄어든 기존 gap이며, 디자인 시스템 canon·mockup은 무수정이다.\n\n**planner에게 넘기는 판단 재료**:\n(1) **가장 가까운 다음 조각은 AC2.6 컨테이너 생명주기**(J4 단계 2 — `backend.lifecycle`의 stop/remove/restart). 트래커도 이번 커밋에서 우선순위를 여기로 옮겼고 근거가 구조적이다: M-J4-S1의 전역 크롬(타이틀바 `backend down` 배지·상단 danger 배너·전 pane dim·`백엔드 재기동` 카드)은 **워크스페이스 단위 백엔드 헬스 신호**를 요구하는데 오늘 렌더러에는 그 신호가 없다(`backend.lifecycle`이 `NotImplementedError`, 상태 조회 채널 부재). 단일 PTY 종료를 '백엔드 전체 down'으로 승격하는 것은 과잉 주장이므로 전역 표현은 AC2.6과 함께 오는 것이 맞다 — 즉 AC2.6 슬라이스가 기준 ①과 기준 ② 잔여를 동시에 닫는다.\n(2) **AC4.2는 선행 종속**: `ClaudeSurface`가 정적 목업인 한 캡처할 세션이 없어 AC2.2/2.3(라이브 백엔드 프로세스 실행)이 먼저다. AC4.5의 미충족분(복원 대상 3종 중 Claude 콘텐츠 미캡처)도 같은 종속에 걸린다 — 세 AC가 한 사슬이라 슬라이스 경계를 여기서 자르면 안 된다.\n(3) **AC4.6·PRD-3 방향 B(AC3.3·3.4)가 그다음 최대 gap**이고 서로 독립적이다.\n(4) **검증 인프라 과제(기준 ① 슬라이스와 분리 검토)**: `ci.yml`이 `npm run test:e2e`를 전혀 호출하지 않아 `test/e2e/` spec 19개가 한 번도 게이트된 적이 없다. 여기에 구체적 위험이 하나 붙는다 — `isAbnormalPtyExit`가 `code !== 0`도 비정상으로 보는데(직전 review에서 사용자가 알고 승인) 셸의 인자 없는 `exit`는 직전 명령의 종료 코드를 물려받으므로 실패한 명령 뒤 `exit`는 탭을 닫지 않고 동결한다. `test/e2e/terminal-exit.spec.ts`의 2개 테스트가 정확히 '`exit` → 탭/워크스페이스 닫힘(AC1.7)'을 단언하는데 미실행 19개에 포함돼 CI가 이를 잡지 못한다. e2e 일괄 배선 전 상태 확인이 선행이라는 트래커의 경고와 함께 다룰 것.\n(5) **⚠️ 실행 단계 리스크(직전 사이클에서 관측된 사실)**: tessera `ci.yml`은 CI와 릴리스가 한 파일이고 `src/*` 변경이 release-worthy라, **PR을 여는 것만으로**(머지가 아니라) `release` 잡이 PR head를 빌드·서명·공증해 GitHub Release를 발행하고 전 사용자 auto-updater가 그것을 가져간다. draft는 안전 근거가 아니다(#37이 v0.1.102를, #38이 v0.1.104를 실제 퍼블리시). auto-updater는 단조 증가라 revert로 회수되지 않는다 — 준비(3-2) 단계에서 PR을 열기 전에 이 노출을 계획에 명시하고 riskLevel에 반영할 것.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-08T12:14:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "AC2.6(container backend의 생명주기와 native 수준 응답성)을 ◐ 부분 → ✅ 완전으로 닫는 단일 슬라이스. **왜 이 방법인가**: (1) 트래커가 이번 커밋에서 '다음 구현 우선순위'를 AC2.6으로 직접 옮겼고, J4 여정 문서도 '백엔드 재기동 메커니즘 자체는 PRD-2의 AC2.6에 기댄다'고 명시해 이 조각이 PRD-4 잔여의 구조적 선행이다. (2) AC2.6은 다른 미충족 AC에 종속되지 않는 유일한 잔여다 — AC4.2/AC4.5잔여는 AC2.2/2.3(라이브 Claude 세션) 선행에 묶여 있고 AC4.6은 그 사슬 위에 있다. (3) 이 레포의 유일한 실게이트는 vitest(`ci.yml`의 `npm test`)이고 컨테이너 런타임은 이미 주입 가능한 `ContainerRuntime` 인터페이스라, 생명주기 동작을 가짜 런타임으로 100% 유닛 게이트할 수 있다. (4) 대안으로 검토한 AC4.6(충돌 처리)은 T-4 시나리오 6이 '파일/세션' 양축을 요구하는데 세션 축이 AC4.2 스텁에 막혀 공허하므로, 완주해도 ✅가 아니라 ◐에 머물러 미충족 개수를 못 줄인다 — 그래서 뒤로 미뤘다. **실 CLI 검증 완료**: apple/container `docs/container-machine.md`로 `container machine stop <name>` · `container machine rm <name>` · `container machine inspect <name>`이 실재하고 별도 `machine start`는 없으며 `machine run`이 정지 상태면 부팅한다는 것을 확인했다(추측 동사 없음). **완료 기준(이 시도의 범위)**: ① container 백엔드의 정지·재시작·제거·상태조회가 `backend.lifecycle` IPC로 실제 동작하고(`NotImplementedError` 제거), ② 터미널 입력→출력 왕복 지연이 측정·노출되어 AC2.6의 '체감 응답성'이 관측 가능해지며, ③ 그 둘이 M-J2-S6 목업 그대로의 백엔드 패널(상태 배지·이미지·머신·지연 게이지·정지/재시작 버튼)로 표현되고, ④ 새 로직이 비게이트 유닛 테스트로 방어되며, ⑤ doc-tracker 집계가 실측과 일치하게 갱신된다. **범위 밖(후속)**: M-J4-S1의 워크스페이스 전역 크롬(타이틀바 down/ro 배지·상단 danger 배너·전 pane dim·'백엔드 재기동' 카드)은 이 슬라이스가 만드는 헬스 신호 위에 얹히는 AC4.3 표현 슬라이스로 분리한다 — 직전 슬라이스가 '신호가 없다'는 이유로 미뤘던 그 신호를 여기서 만드는 것이 이번 기여이고, 표현까지 한 슬라이스에 뭉치면 검증 단위가 커진다. AC2.2·2.3·3.3·3.4·4.2·4.5·4.6과 e2e CI 배선은 손대지 않는다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`ContainerRuntime` 인터페이스에 `stopMachine(name)`·`removeMachine(name)`·`bootMachine(name)`을 추가하고 `CliContainerRuntime`에 구현한다. stop/rm은 기존 `machine inspect`와 같은 관리 명령 경로(`this.run`/`exec`)로 `['machine','stop',name]`·`['machine','rm',name]`을, boot은 `machine run`이 정지 상태를 부팅한다는 성질을 이용해 기존 `runPty(name, ':')` 일회성 경로로 태운다. 실패는 기존 `toUnavailable`로 매핑.",
+              "expectedOutcome": "argv가 apple/container 문서의 실제 서브커맨드와 1:1 일치하고, 새 유닛 테스트가 세 동사의 argv·에러 매핑을 단언한다."
+            },
+            {
+              "seq": 2,
+              "action": "`Backend` 인터페이스에 `stop()`·`restart()`·`remove()`를 추가한다. `ContainerBackend`는 런타임에 위임하며 `lifecycle` 상태를 stopped/starting/running/error로 정확히 전이시키고, 재시작은 stop → boot 순서로 수행한다. `HostBackend`는 '호스트 백엔드는 정지/재시작/제거할 수 없습니다' 취지로 **명시적으로 거부**한다(무음 no-op 금지 — BackendRegistry의 '조용한 폴백 없음' 규약과 같은 결).",
+              "expectedOutcome": "가짜 런타임 유닛 테스트에서 stop 후 status='stopped', restart 후 'running', 실패 시 'error'로 전이하고 HostBackend는 reject한다."
+            },
+            {
+              "seq": 3,
+              "action": "`BackendLifecycleRequest`에 `action?: 'status'|'stop'|'restart'|'remove'`(생략 시 status)를 더한다. 응답 타입 `BackendLifecycleState{status,latencyMs?,message?}`는 이미 존재하므로 그대로 쓴다. 영속 스냅샷 스키마는 건드리지 않는다(v3 불변).",
+              "expectedOutcome": "typecheck 통과, 스냅샷 버전 무변경."
+            },
+            {
+              "seq": 4,
+              "action": "`registerBackendIpc`의 `backend.lifecycle` 스텁(`NotImplementedError`)을 실제 핸들러로 교체한다. `backends.resolve(workspaceId, DEFAULT_AREA_ID)`로 워크스페이스 기본 영역 백엔드를 잡아 action별로 분기하고, 항상 `BackendLifecycleState`를 돌려준다. 모듈 상단 주석의 'lifecycle은 스텁' 문구도 함께 정정한다.",
+              "expectedOutcome": "유닛 테스트에서 네 action이 각각 백엔드의 대응 메서드를 호출하고, 실패는 message로 실어 돌려준다."
+            },
+            {
+              "seq": 5,
+              "action": "렌더러에 순수 모듈 `terminalLatencyRegistry.ts`를 신설한다. 입력 전송 시각과 그 뒤 첫 출력 도착 시각의 왕복을 표본으로 모아(대기 중 입력이 없으면 표본 없음) 최근 N개의 **중앙값**을 ms로 제공한다. `now`는 주입(기존 `terminalScrollbackRegistry.notifyTerminalChanged` 선례) — DOM·xterm 의존 0.",
+              "expectedOutcome": "노드 테스트 환경에서 직접 구동 가능하고, 표본 수집·중앙값·표본 없음 경로가 유닛으로 덮인다."
+            },
+            {
+              "seq": 6,
+              "action": "`TerminalSurface`의 입력 경로(`term.onData` → `surface.sendInput`)와 출력 경로(`onPtyData` → `term.write`)에 위 레지스트리 기록을 한 줄씩 배선한다. 렌더링·기존 동작은 바꾸지 않는다.",
+              "expectedOutcome": "기존 terminal 유닛 25건이 그대로 green이고, 지연 표본이 워크스페이스 단위로 쌓인다."
+            },
+            {
+              "seq": 7,
+              "action": "M-J2-S6 목업 그대로의 `BackendPanel` 컴포넌트를 만든다. `.bepanel/.behead/.bebody/.metric/.gauge/.belife` + `.badge` + `.btn.ghost.sm`은 **이미 디자인 시스템(`tessera.css`)에 있고 쓰는 컴포넌트만 없으므로** 그대로 재사용하고, 오버레이 배치 규칙만 렌더러 전용 `shell.css`에 넣는다(직전 슬라이스와 동일한 criterion ② 무증가 전략). 지연 게이지는 목업의 '목표 < 16 ms' 기준으로 채운다.",
+              "expectedOutcome": "`docs/design-system/`·`docs/mockups/`·`tessera.css` 무수정. 패널 마크업이 `renderToStaticMarkup` 유닛으로 검증된다."
+            },
+            {
+              "seq": 8,
+              "action": "공유 커맨드 레지스트리에 백엔드 패널 토글 커맨드를 추가하고(⌃⌘B, 기존 ⌃⌘H host 영역 커맨드와 같은 배선 형태) `CommandContext`에 핸들러를 더해 `WorkspaceView`에서 공급한다. 커맨드는 backend를 분기하지 않으므로 AC2.5 parity가 구조적으로 유지된다.",
+              "expectedOutcome": "⌘K 팔레트와 키맵 양쪽에서 같은 커맨드로 패널이 열리고, 기존 command-registry/parity 유닛이 green을 유지한다."
+            },
+            {
+              "seq": 9,
+              "action": "새 유닛 테스트를 추가한다: 런타임 argv 3종 + 에러 매핑, ContainerBackend 상태 전이(stop/restart/remove/실패), HostBackend 거부, lifecycle IPC action 라우팅, 지연 레지스트리 순수 함수, BackendPanel 마크업. 이 레포 CI는 vitest 전용이라 새 e2e spec은 **추가하지 않는다**(게이트되지 않는 dead weight).",
+              "expectedOutcome": "vitest 총 건수가 증가하고 전부 green."
+            },
+            {
+              "seq": 10,
+              "action": "`docs/tessera-doc-tracker.md`를 같은 PR에서 갱신한다: AC2.6을 ◐ → ✅로 이동, 집계 구현 19·부분 3·스텁 4, V2 롤업 5/8 → 6/8, '미완 8개' → 7개(AC2.2·2.3·4.5·3.3·3.4·4.2·4.6), 테스트 게이팅·검증 축 문구의 유닛 건수 갱신, '다음 구현 우선순위'를 M-J4-S1 전역 크롬 + AC4.6으로 이동, 변경 이력 1행 추가. 표만 고치지 말고 문서 전체를 grep해 집계 숫자가 남은 곳을 모두 맞춘다(직전 사이클 교훈: 같은 문서 자기모순).",
+              "expectedOutcome": "트래커 집계가 `src/` 실측과 1:1 일치해 criterion ④ drift가 새로 생기지 않는다."
+            },
+            {
+              "seq": 11,
+              "action": "로컬에서 CI 4단계(`npm run typecheck` · `npm run lint` · `npm test` · `npm run build`)를 node 22 dist + `npm ci --ignore-scripts`로 1:1 재현한다.",
+              "expectedOutcome": "4단계 전부 green."
+            },
+            {
+              "seq": 12,
+              "action": "`reconcile/rct_20260808-0001` 브랜치로 커밋·푸시하고 `dlddu/tessera`에 draft PR을 연다. PR 본문에 task id·gap 요약·단계·검증 방법과 **PR-open이 곧 릴리스 발행**이라는 노출을 명시한다.",
+              "expectedOutcome": "draft PR이 열리고 CI `typecheck · lint · test · build`가 green."
+            }
+          ],
+          "plannedAt": "2026-08-08T12:36:00Z"
+        }
+      }
+    ]
   }
 ]
