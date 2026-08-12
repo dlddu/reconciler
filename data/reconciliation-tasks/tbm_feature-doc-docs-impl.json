@@ -674,7 +674,7 @@
   },
   {
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-08-07T20:39:48Z",
       "changedSides": [
@@ -691,7 +691,7 @@
       }
     },
     "createdAt": "2026-08-07T20:39:48Z",
-    "updatedAt": "2026-08-07T22:59:00Z",
+    "updatedAt": "2026-08-12T11:20:47Z",
     "stateSummary": {
       "asIs": "**as-is = `backend/` + `frontend/` 구현 트리** (dlddu/feature-doc@main `e5a5c61`, 2026-08-07T20:39Z 관측)\n\n- 트리거 delta는 **정확히 커밋 1개** — #11 `e5a5c61` \"feat(frontend): AC1.1 S02·S03 화면 (슬라이스 2b) — reconciler rct_20260807-0001\". baseline(`backend:f03bf09a frontend:0f3eaedb` · `docs:d6a3b0e6`)이 직전 커밋 #10 `fc0b04f`의 트리와 일치함을 `git rev-parse fc0b04f:{backend,frontend,docs}`로 확인했다.\n- #11 내역(9파일 +973/-12): `frontend/src/HomeRepositories.tsx`(+294 신규) · `ConnectRepository.tsx`(+256 신규) · `api.ts`(+77) · `format.ts`(+26 신규) · `App.tsx`(+35 라우팅) · `CredentialsSetup.tsx`(+19) · `index.css`(+182) + `e2e/tests/s02-s03.spec.ts`(신규, as-is 범위 밖) + `docs/doc-tracker.md`. **`backend/` 트리는 불변**(`f03bf09a`) — 순수 프런트 슬라이스.\n- 구현 표면 실측(트래커가 아니라 소스 기준): backend 라우트 전량 = `/api/auth/{login,callback,logout}` · `/api/me` · `/api/github/{install-url,setup,connection}` · `/api/llm-keys{,/preflight,/{id}}` · `/api/repositories` · `/api/analyses{,/preflight}` · `/api/audit` · `/hello`. `analysis.rs`는 **enqueue 계약뿐**이고 `queued` 행을 소비하는 워커·파이프라인이 없다(`grep queued backend/src/*.rs` = analysis.rs 주석·INSERT뿐).\n- frontend 화면 = `App.tsx` · `CredentialsSetup.tsx`(S01) · `HomeRepositories.tsx`(S02) · `ConnectRepository.tsx`(S03). feature 표현·문서 CRUD·진행 가시성 화면은 존재하지 않는다.",
       "toBe": "**to-be = `docs/` 트리** (동 커밋 `docs:d997dde8`)\n\n- AC의 SSOT `docs/prd/`는 4개 문서, **확정 AC 24개**(AC1.1~1.5 · 2.1~2.6 · 3.1~3.5 · 4.1~4.8; `grep -rhoE 'AC[0-9]+\\.[0-9]+' docs/prd/ | sort -u` = 24). **#11로 AC 정의는 변하지 않았다** — docs delta는 `docs/doc-tracker.md` 1파일 +19/-4뿐.\n- 트래커 갱신 내용: 구현 수렴 로드맵의 슬라이스 2b를 ✅ 완료로 표기(§로드맵 표 L153), 진행 현황을 \"**AC1.1 구현 완료**, 미구현 = AC1.2~1.5 · AC2.1~2.6 · AC3.1~3.5 · AC4.4~4.7\"로 갱신(L147), 변경 이력 1행 추가(L130), 목업↔구현 편차 4건 등재.\n- 모델 정의: 미구현 확정 AC는 **백로그가 아니라 drift**이며, docs↔impl 불일치도 drift다.",
@@ -782,6 +782,11 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/13",
           "preparedAt": "2026-08-07T22:35:00Z",
           "notes": "draft PR #13, 24파일 +1785/-28, 커밋 e20970d. 계획 12단계를 모두 반영했고 계획 대비 변경점 2가지를 아래에 남긴다.\n\n**로컬 검증(이 레포는 blind가 아니다 — 새 레시피)**: rust 1.94 dist(aarch64) + Ubuntu deb 23개를 dpkg-deb로 사설 prefix에 풀어 만든 C 툴체인으로 `cargo test --release`를 그대로 재현했다(루트 권한·시스템 변경 0). 결과 **27건 → 44건 전부 green**. 더해 node22 dist로 `playwright test --list`(6 files/6 tests)·프론트 `tsc -b`, kustomize 5.4.3으로 운영/e2e 오버레이 렌더를 확인했다.\n\n**실제 구동 검증**: kind 없이 API+워커 프로세스 2개를 띄워 큐가 실제로 비워지는 것을 관측했다 — 워커 없이 5초간 3건 `queued` 유지 + `/api/me` 200, 워커 2개 기동 후 3건이 서로 다른 워커에 분배되어 `fetch` 단계 succeeded(`766 files · 2.2 MB` 등) + 2~5단계 pending + `awaiting_pipeline`. `/internal` 인증 3종(무인증 401·오토큰 401·정토큰 204), 토큰 없는 워커 기동 거부, 전 로그에서 토큰/KEK 평문 0건까지 확인했다.\n\n**네거티브 컨트롤**: 클레임 원자성을 제거하면 4건 실패, 서브쿼리 status 필터만 제거해도 2건 실패 — 테스트가 공허하지 않음을 확인했다. 이 과정에서 `UPDATE`의 status 재확인이 사실은 방어적 중복(SQLite write 직렬화 + 서브쿼리 재평가가 진짜 기질)임을 측정으로 밝혀 코드 주석을 그에 맞게 정정했다.\n\n**계획 대비 변경 1 — e2e 시나리오 8의 단정 범위**: 계획 step 10은 '두 파드가 모두 claim 로그를 남겼음'을 단정하려 했으나, 로컬 구동에서 **빠른 파드 하나가 형제 파드 부팅 전에 큐 전체를 비울 수 있음**을 관측해 그대로 두면 CI flaky가 된다. 결정적으로 관측 가능한 것만 단정하도록 바꿨다 — replicas=2 확인 · 두 파드 모두 기동 로그(크래시루프 아님) · 대기 중이던 4건 전량 드레인 · **건당 정확히 1회 클레임** · fetch 단계 4회 실제 실행. 동시 클레임의 분리성은 `backend/tests/worker.rs`(4스레드·워커 6개 경합)가 결정적으로 게이트한다. 트래커의 '자동화 밖 잔여' 칸에 '처리량의 비례적 증가 측정'만 남겼다(예외 등재 아님 — AC4.5는 전용 spec을 가지므로 1:1 매핑 충족).\n\n**계획 대비 변경 2 — 범위 밖이지만 게이트를 위해 함께 고친 것**: 기존 `cargo test`가 `no such table: users`로 간헐 실패했다(이 박스에서 처음 4회 중 2회). 원인은 `tests/common`의 `temp_db_url()`이 `SystemTime::now().as_nanos()`만 쓰는데 **벽시계 해상도가 굵어 20,000회 중 1,617회가 중복**(측정)이라, 병렬 테스트 둘이 같은 임시 DB를 잡고 한쪽이 마이그레이션 중일 때 다른 쪽이 질의하는 것. 프로세스 단위 카운터를 더해 해소(수정 후 6회 연속 green). 이 PR이 테스트 바이너리를 하나 늘려 병렬도를 올리므로 게이트를 먼저 신뢰 가능하게 만들 필요가 있었다.\n\n**부수 발견(정정 아님, 기록)**: 이 레포의 CI `push` 잡에 브랜치 가드가 없어 **PR CI green = ghcr `:latest` 갱신 = 다음 파드 재시작부터 운영 반영**이다(`deploy/k8s`가 `:latest`+기본 Always). 이 PR의 변경은 순수 추가형이라 그 경로로도 안전하지만(마이그레이션 ALTER ADD·새 테이블, 시크릿 없으면 `/internal` 전량 401, 워커 Deployment는 별도 적용 전까지 부재), 범위 밖 문제이므로 고치지 않고 README에 최소 수정안과 함께 명시하고 PR 본문에서 별도 과제를 권고했다.\n\n**CI 확인 완료 — 그린**(run 31224909218, head `a4ec32d`): `cargo test --release` 44건 + kind e2e 6 spec 전부 통과(ac4-5 38.9s). 준비 중 CI가 두 번 빨갛게 났고 **둘 다 새 spec의 단정이 틀린 것**이었다(구현은 두 번 다 옳았다). ① `kubectl scale --replicas=0`·`rollout status`는 파드가 실제로 죽기 전에 반환하므로 종료 중 워커가 계속 큐를 비운다 → 파드 목록이 목표 수에 수렴할 때까지 대기하도록 수정. 같은 뿌리로 '워커가 떠 있으면 ac1-1의 `Queued` 단정과 경합'하는 위험도 발견 → 워커 replica는 사용자 단위가 아니라 **배포 전역 상태**라 이 레포의 per-user stub 신원 관례로 격리 불가 ⇒ e2e 오버레이 기본 0 replica + ac4-5 단독 소유 + playwright `workers:1`, 이 규약을 doc-tracker의 e2e 매핑 규약에 명문화. ② 큐가 사용자 전역이라 앞서 돈 ac1-1의 잔여 작업까지 정상 처리되어 로그 줄 수가 4가 아닌 5였다 → 줄 수 대신 analysis id별 claim 1회·fetch 완료 1회로 단정(더 엄격하고 다른 spec에 영향받지 않음). 커밋 `a99d822`·`a4ec32d`.\n\n**⚠️ `push` 잡이 실제로 돌았다**: `test` 그린 직후 `a4ec32d`가 `ghcr.io/dlddu/featuredoc:latest`로 발행됐다 — 운영 파드가 다음에 재시작하면 머지 전에 이 코드가 뜬다. 변경이 순수 추가형(마이그레이션 ALTER ADD·새 테이블, 시크릿 없으면 `/internal` 전량 401, 워커 Deployment는 별도 적용 전까지 부재)이라 안전하지만, 승인 설명에 반드시 포함할 것."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "riskLevel=medium이고 영향이 운영에 직접 닿는다. (1) 머지 대상 PR이 DB 마이그레이션 0004(ALTER ADD 6개 + 신규 테이블)를 포함하며 down 스크립트가 없다. (2) 새 k8s 워커 Deployment 적용과 운영 Secret에 워커 토큰 추가가 뒤따르고, API 재시작(Recreate 전략)에 짧은 다운타임이 있다. (3) 이 레포 CI의 push 잡에 브랜치 가드가 없어 PR CI 그린만으로 ghcr :latest가 이미 갱신됐다 — 머지 전에도 다음 파드 재시작부터 운영에 반영되는 상태라 사람이 사실관계를 알고 결정해야 한다. 순수 추가형 설계라 안전 마진은 있으나 불가역 요소(마이그레이션·이미지 발행)가 섞여 있어 자동 진행 대상이 아니다."
         }
       }
     ]
