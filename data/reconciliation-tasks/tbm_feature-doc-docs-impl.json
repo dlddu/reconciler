@@ -674,7 +674,7 @@
   },
   {
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-07T20:39:48Z",
       "changedSides": [
@@ -691,7 +691,7 @@
       }
     },
     "createdAt": "2026-08-07T20:39:48Z",
-    "updatedAt": "2026-08-12T19:33:48Z",
+    "updatedAt": "2026-08-12T19:34:18Z",
     "stateSummary": {
       "asIs": "**as-is = `backend/` + `frontend/` 구현 트리** (dlddu/feature-doc@main `e5a5c61`, 2026-08-07T20:39Z 관측)\n\n- 트리거 delta는 **정확히 커밋 1개** — #11 `e5a5c61` \"feat(frontend): AC1.1 S02·S03 화면 (슬라이스 2b) — reconciler rct_20260807-0001\". baseline(`backend:f03bf09a frontend:0f3eaedb` · `docs:d6a3b0e6`)이 직전 커밋 #10 `fc0b04f`의 트리와 일치함을 `git rev-parse fc0b04f:{backend,frontend,docs}`로 확인했다.\n- #11 내역(9파일 +973/-12): `frontend/src/HomeRepositories.tsx`(+294 신규) · `ConnectRepository.tsx`(+256 신규) · `api.ts`(+77) · `format.ts`(+26 신규) · `App.tsx`(+35 라우팅) · `CredentialsSetup.tsx`(+19) · `index.css`(+182) + `e2e/tests/s02-s03.spec.ts`(신규, as-is 범위 밖) + `docs/doc-tracker.md`. **`backend/` 트리는 불변**(`f03bf09a`) — 순수 프런트 슬라이스.\n- 구현 표면 실측(트래커가 아니라 소스 기준): backend 라우트 전량 = `/api/auth/{login,callback,logout}` · `/api/me` · `/api/github/{install-url,setup,connection}` · `/api/llm-keys{,/preflight,/{id}}` · `/api/repositories` · `/api/analyses{,/preflight}` · `/api/audit` · `/hello`. `analysis.rs`는 **enqueue 계약뿐**이고 `queued` 행을 소비하는 워커·파이프라인이 없다(`grep queued backend/src/*.rs` = analysis.rs 주석·INSERT뿐).\n- frontend 화면 = `App.tsx` · `CredentialsSetup.tsx`(S01) · `HomeRepositories.tsx`(S02) · `ConnectRepository.tsx`(S03). feature 표현·문서 CRUD·진행 가시성 화면은 존재하지 않는다.",
       "toBe": "**to-be = `docs/` 트리** (동 커밋 `docs:d997dde8`)\n\n- AC의 SSOT `docs/prd/`는 4개 문서, **확정 AC 24개**(AC1.1~1.5 · 2.1~2.6 · 3.1~3.5 · 4.1~4.8; `grep -rhoE 'AC[0-9]+\\.[0-9]+' docs/prd/ | sort -u` = 24). **#11로 AC 정의는 변하지 않았다** — docs delta는 `docs/doc-tracker.md` 1파일 +19/-4뿐.\n- 트래커 갱신 내용: 구현 수렴 로드맵의 슬라이스 2b를 ✅ 완료로 표기(§로드맵 표 L153), 진행 현황을 \"**AC1.1 구현 완료**, 미구현 = AC1.2~1.5 · AC2.1~2.6 · AC3.1~3.5 · AC4.4~4.7\"로 갱신(L147), 변경 이력 1행 추가(L130), 목업↔구현 편차 4건 등재.\n- 모델 정의: 미구현 확정 AC는 **백로그가 아니라 drift**이며, docs↔impl 불일치도 drift다.",
@@ -857,6 +857,44 @@
               "log": "doc-tracker 매핑 6·공백 18·로드맵 3a/3b 분할·이력 갱신 — squash 47706ab (PR #13, head a4ec32d)"
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "backend:d36815a24add5d9124026a0b19f91d2265778e85 frontend:f841a8d61216298a6c188afc145308e49ab5f3ef",
+          "checks": [
+            {
+              "name": "PR #13 CI test 그린",
+              "status": "passed",
+              "detail": "head a4ec32d의 check-run 'test (cargo + kind e2e)' success (run 31224909218). cargo test --release 44건 + kind e2e 6 spec(ac4-5 포함)."
+            },
+            {
+              "name": "PR #13 main 머지",
+              "status": "passed",
+              "detail": "squash 머지 완료 — main 47706ab. 머지 전 mergeable_state=clean, draft 해제 후 squash."
+            },
+            {
+              "name": "e2e 매핑 실측 일치",
+              "status": "passed",
+              "detail": "머지 커밋 기준 e2e/tests/*.spec.ts = 6개, '// 검증 AC:' 고유 선언 = 6개(AC1.1·4.1·4.2·4.3·4.5·4.8), docs/prd의 AC 고유 수 = 24(to-be 미하향)."
+            },
+            {
+              "name": "doc-tracker 집계 일치",
+              "status": "passed",
+              "detail": "doc-tracker.md: 매핑 6 · 예외 0 · 공백 18, 항등식 (24 − 0) = 6 + 18 명기. 로드맵이 3a 완료/3b 다음으로 갱신되고 변경 이력 1행 추가됨."
+            },
+            {
+              "name": "deploy/k8s 두 Deployment",
+              "status": "passed",
+              "detail": "kustomization resources에 deployment.yaml + worker-deployment.yaml 등재, 두 파일 모두 kind: Deployment. 워커는 volumeMounts/DATABASE_URL 없음(SQLite 단일 writer 불변식 보존)."
+            },
+            {
+              "name": "범위 밖 잔여(정보성)",
+              "status": "passed",
+              "detail": "미구현 AC 19→18(AC1.2~1.5·2.1~2.6·3.1~3.5·4.4·4.6·4.7). 운영 적용(워커 Secret·kubectl apply)은 승인 범위에서 제외되어 미실행 — 워커 Deployment는 클러스터에 아직 없다. 머지 후 main의 push CI(run 31633200241)는 이 시점 진행 중. CI push 잡 브랜치 가드 결여는 별도 과제."
+            }
+          ],
+          "verifiedAt": "2026-08-12T19:34:18Z"
         }
       }
     ]
