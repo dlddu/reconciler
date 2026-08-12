@@ -5,6 +5,12 @@
 사이의 정합성을 추적하는 모델. 문서가 SSOT이고, 미구현 AC·구현↔문서 불일치·
 문서 없는 구현을 drift로 본다.
 
+**개수·범위 숫자는 판정 기준에 넣지 않는다.** AC·PRD는 계속 추가·삭제되므로,
+"AC 55개" 같은 숫자를 목표나 판정 기준에 박으면 하나가 늘어난 순간 definition이
+사실과 어긋난다. 숫자는 definition의 "등록 시점 현황"에만 **스냅샷으로
+라벨링해** 두고, 판정은 개수 독립적 서술로 쓴다. 대상이 늘면 to-be 버전이 바뀌어
+재평가가 트리거되고, 새 항목도 자동으로 판정 대상에 들어온다.
+
 ## 슬롯 표
 
 대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다.
@@ -15,15 +21,15 @@
 | `{{SLUG}}` | id·이름용 소문자 레포명 | `dear-baby` |
 | `{{PRODUCT_ONELINE}}` | 제품 한 줄 설명 | Expo 앱 + Go 백엔드의 육아 기록 서비스 |
 | `{{DOCS_PATH}}` | 제품 문서 루트 | `docs` |
-| `{{DOC_SYSTEM}}` | 문서 체계 요약: 가치→PRD→AC(ID 체계·개수)→테스트 + 실제 존재하는 부속(여정/목업/디자인 시스템/ENG 노트/glossary) | 가치(V-001~008) → PRD-001~009 → `AC-NNN-NN` 55개 → TEST-001~008, journeys·mockups·design-system·engineering |
-| `{{AC_SCOPE}}` | to-be에 포함되는 AC 범위(확정 PRD)와 개수 | 확정 PRD-001~008의 AC 55개 |
+| `{{DOC_SYSTEM}}` | 문서 체계 요약: 가치→PRD→AC→테스트의 **ID 체계**(개수·번호 나열 아님) + 실제 존재하는 부속(여정/목업/디자인 시스템/ENG 노트/glossary) | 가치 `V-NNN` → PRD `PRD-NNN` → AC `AC-NNN-NN` → 테스트 `TEST-NNN`, journeys·mockups·design-system·engineering |
+| `{{AC_SCOPE}}` | to-be에 포함되는 AC 범위를 정하는 **규칙**(개수·번호 나열 아님) | 확정(draft가 아닌) PRD의 모든 AC |
 | `{{IMPL_DESC}}` | 구현 디렉터리와 역할 | `app/` RN 앱 · `backend/` Go API · `worker/` Go 워커 |
 | `{{IMPL_PATHS}}` | as-is 버전 범위 디렉터리 목록 | `app`, `backend`, `worker` |
 | `{{OUT_OF_SCOPE}}` | as-is 범위에서 빼는 것(운영·검증·빌드 인프라)과 이유 | `e2e/`·`k8s/`·`scripts/`·compose·`CLAUDE.md` |
 | `{{TRACKER_PATH}}` | 문서 체계 상태 추적 파일 [선택] | `docs/doc-tracker.md` |
 | `{{IMPL_EXCEPTIONS}}` | "문서 없는 구현"의 명시적 예외 [선택] | (tessera의 auto-update처럼 제품 가치 밖 플랫폼 인프라) |
 | `{{DRAFT_POLICY}}` | draft PRD 취급 [선택] | draft PRD-009는 확정 전까지 to-be 제외 |
-| `{{INITIAL_STATE}}` | 등록 시점 구현 수준 한 줄 | 프로덕션 운영 중, 최초 gap 산정은 첫 task 몫 |
+| `{{INITIAL_STATE}}` | 등록 시점 **스냅샷**: 구현 수준 + 규모 숫자 | 확정 PRD-001~008의 AC 55개, 프로덕션 운영 중 — 최초 gap 산정은 첫 task 몫 |
 | `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
 
 ## 모델 JSON 골격
@@ -101,6 +107,7 @@ printf '{{IMPL_PATH_1}}:%s {{IMPL_PATH_2}}:%s\n' "$a" "$b"
   5. `{{TRACKER_PATH}}`의 상태 집계가 1~4의 실제 상태와 일치한다. <!-- [선택] tracker 없으면 삭제 -->
 - **draft PRD의 취급**: {{DRAFT_POLICY}} <!-- [선택] draft 문서가 없으면 삭제. draft 해제·수정은 docs 변경이므로 to-be 버전을 바꿔 재평가를 트리거한다는 문장 포함 -->
 - **부분 구현은 as-is다, to-be가 아니다.** {{INITIAL_STATE}} to-be를 현 구현 수준으로 낮춰 잡지 않는다.
+  이 문장의 숫자는 **스냅샷일 뿐 판정 기준이 아니다** — AC·PRD가 추가·삭제되면 to-be 버전이 바뀌어 재평가가 트리거되고, 새 AC도 확정 PRD에 속하는 순간 자동으로 판정 대상이 된다. 현황 숫자 갱신은 각 task의 몫이다.
 
 ## drift 판정 기준
 as-is(구현)가 to-be(문서 전체)에 미달하거나 어긋나면 drift다:
