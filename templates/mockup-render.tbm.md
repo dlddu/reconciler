@@ -1,0 +1,161 @@
+# 템플릿: 목업 ↔ 구현 렌더링 정합성 (mockup-render)
+
+한 레포 안에서 **목업(디자인 시안)** 이 정의한 화면과 **이미 구현된 화면**의
+렌더링 결과가 일치하는지를 추적하는 모델. 목업이 시각의 SSOT이고, 매핑 공백·
+디자인 토큰 불일치·카피 불일치·구조 수치 불일치·미문서화 이탈을 drift로 본다.
+
+**판정은 화면 코드 정적 대조다** — 실행 스크린샷 픽셀 비교가 아니다. 목업의
+스타일 표기(예: Tailwind 클래스)를 수치로 환원해 구현의 스타일 값과 맞추고,
+텍스트 리터럴을 집합으로 비교한다. 픽셀 비교 인프라를 도입하려면 이 유형의
+정체성이 바뀌는 것이므로 **템플릿을 고치는 커밋을 별도로** 만든다.
+
+**범위는 이미 구현된 화면뿐이다.** 목업에만 있고 아직 구현되지 않은 화면은 이
+모델의 drift가 아니라 `docs-impl`(미구현 AC)의 관심사다. 이 경계가 두 유형의
+중복 계상을 막는 고정부다.
+
+## 슬롯 표
+
+대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다.
+
+| 슬롯 | 의미 | 예 (dear-baby) |
+|---|---|---|
+| `{{REPO}}` | owner/repo | `dlddu/dear-baby` |
+| `{{SLUG}}` | id·이름용 소문자 레포명 | `dear-baby` |
+| `{{PRODUCT_ONELINE}}` | 제품 한 줄 설명 | Expo/RN 육아 기록 앱 |
+| `{{MOCKUP_PATH}}` | 목업 루트(소스 포함) | `docs/mockups` |
+| `{{MOCKUP_STACK}}` | 목업 스택 + 화면 ID 체계·개수 | React+Vite+Tailwind+shadcn/ui, `M-01`~`M-42` 42개 |
+| `{{MOCKUP_BUILD}}` | 목업의 렌더 산출물(빌드 번들) 경로 [선택] | `docs/index.html` |
+| `{{DS_PATH}}` | 디자인 토큰 정의 문서 루트 | `docs/design-system` |
+| `{{TOKEN_SSOT}}` | 목업 쪽 토큰 정의 파일 ↔ 구현 쪽 토큰 정의 | `tailwind.config.js` ↔ `app/src/theme/*.ts` |
+| `{{TOKEN_KINDS}}` | 1:1 대조할 토큰 종류 | 팔레트 8색, radius(`db-xs`~`db-xl`), shadow(`db-sm`~`db-lg`), fontFamily |
+| `{{SCREEN_DESC}}` | 화면 구현 방식 한 줄 | `app/app/` expo-router 라우트 |
+| `{{SCREEN_PATHS}}` | as-is 버전 범위(렌더링 소스) 디렉터리 목록 | `app/app`, `app/src/components`, `app/src/theme` |
+| `{{UNIT_RULE}}` | 목업 스타일 표기 → 구현 수치 환산 규칙 | `p-5`=20 ↔ `spacing[5]`, `rounded-db-md`=16 ↔ `radius.md` |
+| `{{MAPPING_MECHANISM}}` | 라우트 ↔ 목업 매핑을 무엇으로 확인하는가 | 라우트 헤더 주석의 `M-xx` + 목업 소스 라인 범위 |
+| `{{MAPPING_STATE}}` | 등록 시점 매핑 커버리지와 공백 | 라우트 31개 중 20개, `(tabs)`·`record-*` 등 11개 미표기 |
+| `{{ALLOWED_DEVIATIONS}}` | 승인된 플랫폼 이탈 [선택] | Pretendard 미배포 → Noto Sans KR 대체 |
+| `{{INITIAL_FINDINGS}}` | 등록 시점 확인된 drift 후보 [선택] | `b2-purpose.tsx`가 M-13 참조(README상 M-35) |
+| `{{SIBLING_DOCS_IMPL}}` | 자매 docs-impl 모델 id [선택] | `tbm_dear-baby-docs-impl` |
+| `{{OUT_OF_SCOPE}}` | as-is에서 빼는 코드 경로와 이유 | `app/src/api`·`context`·`data` 등 비렌더링 모듈 |
+| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
+
+## 모델 JSON 골격
+
+`definition`·`code`는 아래 본문/스크립트를 채워 넣는다(개행 이스케이프는
+`json.dump` 조립으로 해결 — `templates/README.md` 절차 참고).
+
+```json
+{
+  "id": "tbm_{{SLUG}}-mockup-render",
+  "metadata": {
+    "name": "{{SLUG}} 목업 ↔ 구현 렌더링 정합성",
+    "description": "{{REPO}}에서 이미 구현된 화면({{SCREEN_DESC}})이 대응 목업({{MOCKUP_PATH}}, {{MOCKUP_STACK}})과 시각적으로 일치하는지를 화면 코드 정적 대조로 추적한다. 매핑·디자인 토큰·카피·구조 수치·상태 스타일의 불일치와 미문서화 이탈을 drift로 본다. 미구현 화면과 실행 스크린샷 픽셀 비교는 범위 밖이다.",
+    "tags": ["{{SLUG}}", "mockup", "ui", "design-system", "consistency"],
+    "createdAt": "{{NOW_ISO}}"
+  },
+  "definition": "<definition 본문 템플릿을 채워 넣기>",
+  "toBe": {
+    "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "{{MOCKUP_PATH}}" },
+    "versionScript": { "runtime": "bash", "code": "<to-be 스크립트>", "timeoutSeconds": 60 }
+  },
+  "asIs": {
+    "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "<렌더링 소스의 공통 상위 경로>" },
+    "versionScript": { "runtime": "bash", "code": "<as-is 스크립트>", "timeoutSeconds": 60 }
+  },
+  "checkPolicy": { "intervalSeconds": 3600 }
+}
+```
+
+## versionScript
+
+**to-be** — 목업(시각 SSOT)의 트리 해시. 빌드 산출물이 레포에 커밋되는 구조라면
+**번들의 blob 해시를 함께 넣는다**: 소스만 고치고 재빌드하지 않은 경우와, 번들만
+갱신된 경우가 모두 감지된다(한쪽만 보면 렌더 결과 변화를 놓친다).
+
+```bash
+#!/usr/bin/env bash
+# to-be = 목업(시각 SSOT). {{MOCKUP_PATH}}(소스) + {{DS_PATH}}(토큰) 트리 해시 +
+# {{MOCKUP_BUILD}}(빌드 번들) blob 해시 조합 → 소스만 고치고 번들 미재빌드한 경우도 감지.
+# 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
+set -euo pipefail
+m="$(git rev-parse "HEAD:{{MOCKUP_PATH}}")"
+d="$(git rev-parse "HEAD:{{DS_PATH}}")"
+b="$(git rev-parse "HEAD:{{MOCKUP_BUILD}}")"
+printf 'mockups:%s design-system:%s bundle:%s\n' "$m" "$d" "$b"
+```
+
+- 빌드 산출물이 없거나 커밋되지 않는 구조면 `b` 줄과 `bundle:%s`를 삭제한다.
+- 토큰 정의가 목업 소스 안에만 있으면(`{{DS_PATH}}` 부재) `d` 줄을 삭제한다.
+
+**as-is** — 렌더링 소스 디렉터리의 트리 해시 조합. 화면·컴포넌트·토큰만 범위에
+넣어 API 클라이언트·상태관리 같은 비렌더링 모듈의 변경에 반응하지 않게 한다.
+
+```bash
+#!/usr/bin/env bash
+# as-is = 실제 구현의 렌더링 소스. {{SCREEN_PATHS}} 트리 해시 조합.
+# → 렌더링과 무관한 변경({{OUT_OF_SCOPE}} 등)은 무시된다.
+# 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
+set -euo pipefail
+r="$(git rev-parse "HEAD:{{SCREEN_PATH_1}}")"
+c="$(git rev-parse "HEAD:{{SCREEN_PATH_2}}")"
+t="$(git rev-parse "HEAD:{{SCREEN_PATH_3}}")"
+printf '{{SCREEN_PATH_1}}:%s {{SCREEN_PATH_2}}:%s {{SCREEN_PATH_3}}:%s\n' "$r" "$c" "$t"
+```
+
+- `{{SCREEN_PATH_1..N}}`은 `{{SCREEN_PATHS}}`의 개별 항목이다. 디렉터리 수에 맞게
+  줄을 늘리거나 줄이고, 하나뿐이면 `asIs.dataSource.subPath`에 그 경로를 넣고
+  단일 `rev-parse`로 줄인다.
+
+**지문으로의 승급 (선택)**: 화면 ↔ 목업 매핑이 기계가 읽을 수 있는 파일로
+정착하면, as-is를 트리 해시 대신 **매핑·토큰·카피 지문(sha256)** 으로 좁혀 로직
+전용 변경의 노이즈 트리거를 없앨 수 있다(`e2e-mock-policy` 템플릿의 지문 스크립트
+형태를 따른다). 매핑 파일이 아직 없는 상태에서 지문 스크립트를 먼저 넣지 않는다 —
+**등록 시점에 실제로 값이 나오는 스크립트**여야 하고, 매핑 신설 자체는 첫 감지
+task의 계획 대상으로 넘긴다. 승급은 모델 개정 커밋으로 처리한다.
+
+## definition 본문 템플릿
+
+`[선택]` 표시 블록은 해당 없으면 통째로 삭제. `<!-- 지침 -->`은 모두 제거.
+
+```markdown
+# {{SLUG}} 목업 ↔ 구현 렌더링 정합성
+
+## 목표
+`{{REPO}}`({{PRODUCT_ONELINE}})에서 **이미 구현된 화면**({{SCREEN_DESC}})의 렌더링 결과가 대응 **목업**(`{{MOCKUP_PATH}}`, {{MOCKUP_STACK}})의 화면과 일치하도록 수렴시킨다. 판정은 **화면 코드 정적 대조**로 한다(실행 스크린샷 픽셀 비교가 아님).
+
+## 무엇이 "맞는 상태"인가 (to-be)
+- **시각의 단일 소스(SSOT)는 목업**이다: `{{MOCKUP_PATH}}`(소스), `{{MOCKUP_BUILD}}`(빌드 산출물), `{{DS_PATH}}`(토큰 정의). <!-- [선택] 빌드 산출물·토큰 문서가 없으면 해당 항목 삭제 -->
+- **to-be(목표 상태)** 는 다음이 모두 성립하는 상태다:
+  1. **매핑 완비** — 구현된 모든 화면이 대응 목업 ID와 기계적으로 확인 가능한 형태로 매핑되어 있다({{MAPPING_MECHANISM}}).
+  2. **토큰 일치** — {{TOKEN_SSOT}}의 {{TOKEN_KINDS}}가 1:1 대응한다.
+  3. **카피 일치** — 목업 화면의 텍스트 리터럴과 대응 구현 화면의 텍스트가 양방향으로 일치한다.
+  4. **구조·수치 일치** — {{UNIT_RULE}} 환산이 성립하고, 요소 순서·계층, 상태별 스타일, CTA 구성이 목업과 같다.
+  5. **이탈의 문서화** — 플랫폼상 불가피한 차이는 사유가 명시된 허용목록으로만 존재한다. {{ALLOWED_DEVIATIONS}} <!-- [선택] 이탈이 없으면 슬롯만 삭제하고 문장은 남긴다 -->
+- **범위**: 구현된 화면에 대응하는 목업만. 아직 구현되지 않은 화면의 부재는 이 모델의 drift가 **아니다**.
+- **등록 시점 현황**: {{MAPPING_STATE}}. **기계적 대조의 전제가 되는 매핑 파일 신설은 첫 감지 task의 계획 단계에서 다룬다.** 현재 커버리지를 to-be로 낮춰 잡지 않는다. <!-- 지침: 매핑이 이미 기계 판독 가능한 파일로 존재하면 두 번째 문장을 삭제하고 그 파일 경로를 명시한다 -->
+
+## drift 판정 기준
+as-is(구현 화면)가 to-be(목업)와 어긋나면 drift다:
+1. **매핑 공백·오매핑** — 구현 화면에 대응 목업 매핑이 없거나 매핑이 실제와 다름. {{INITIAL_FINDINGS}} <!-- [선택] 등록 시점 확인된 후보가 없으면 슬롯 삭제 -->
+2. **stale 참조** — 매핑이 가리키는 목업 소스 위치(라인 범위 등)가 실제 컴포넌트와 어긋남. <!-- [선택] 매핑이 라인 참조를 쓰지 않으면 삭제 -->
+3. **토큰 불일치** — 대조 대상 토큰 중 어느 하나라도 어긋남.
+4. **카피 불일치** — 어느 방향이든 텍스트 차집합이 존재함.
+5. **구조·수치 불일치** — 요소 순서·계층, 간격·라운드·굵기, 상태별 스타일, CTA 유무의 차이.
+6. **미문서화 이탈** — 허용목록에 사유 없이 존재하는 차이.
+
+각 task는 직전 관측 대비 "일치가 늘었는가 / 새 불일치가 생겼는가 / 목업 변경으로 to-be가 달라졌는가"를 평가하되, 남은 불일치 전체를 상태 요약에 유지한다.
+
+## 충돌 시 기본 방향
+**목업이 스펙(SSOT)이므로 원칙적으로 구현을 목업에 맞춘다.** 단 그 차이가 의도된 디자인 변경이거나 플랫폼상 불가피하면, 목업 소스를 고쳐 산출물을 재빌드하거나 허용목록에 사유를 남겨 구현에 맞춘다. 어느 쪽인지는 각 task의 계획 단계에서 판단한다.
+
+## 추적 방식 (요약)
+- **to-be** = github `{{REPO}}`의 `{{MOCKUP_PATH}}` + `{{DS_PATH}}` 트리 해시와 `{{MOCKUP_BUILD}}` blob 해시 조합. 소스만 고치고 산출물을 재빌드하지 않은 경우와 그 반대가 모두 감지된다.
+- **as-is** = 같은 레포의 {{SCREEN_PATHS}} 트리 해시 조합. 렌더링과 무관한 변경은 무시된다.
+- 매핑 파일이 정착하면 as-is를 **매핑·토큰·카피 지문(sha256)** 으로 좁힐 수 있다(모델 개정 사항).
+
+## 범위 밖 / 비고
+- **실행 스크린샷 픽셀 비교는 범위 밖**이다. 이 모델은 정적 대조로 판정한다. 캡처 인프라를 도입하면 판정 방식을 개정한다. <!-- 지침: 등록 시점에 캡처 인프라가 없다면 그 사실을 한 줄로 덧붙인다 -->
+- **미구현 화면의 구현 의무는 `{{SIBLING_DOCS_IMPL}}`이 담당**한다. 그 모델의 to-be 중 "UI가 목업·디자인 시스템과 일치" 항목과 겹치므로, **화면 단위 시각 대조는 이 모델이 담당**하는 것으로 경계를 둔다. <!-- [선택] docs-impl 모델이 없으면 삭제 -->
+- 동작·상태 전이의 검증 커버리지는 `tbm_{{SLUG}}-ac-e2e`가 담당한다. <!-- [선택] 쌍 모델이 없으면 삭제 -->
+- {{OUT_OF_SCOPE}}는 렌더링 소스가 아니므로 as-is 버전 범위에서 제외한다.
+```

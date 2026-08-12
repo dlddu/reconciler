@@ -12,6 +12,7 @@
 | `docs-impl.tbm.md` | 제품 문서 ↔ 구현 정합성 | 제품 문서(`docs/`)가 기술하는 의도된 동작과 실제 구현 코드의 일치 |
 | `ac-e2e.tbm.md` | AC ↔ E2E 1:1 정합성 | PRD의 Acceptance Criteria와 e2e 테스트 파일의 완전 1:1(전단사) 매칭 |
 | `e2e-mock-policy.tbm.md` | e2e 모킹 최소화 | 모킹 정책·허용목록과 코드에 실재하는 모킹 지점의 양방향 1:1 |
+| `mockup-render.tbm.md` | 목업 ↔ 구현 렌더링 정합성 | 목업이 정의한 화면과 이미 구현된 화면의 시각적 일치(코드 정적 대조) |
 
 한 레포에 docs-impl·ac-e2e 두 유형을 등록하는 것이 기본이며, 이때 역할 분담은:
 **docs-impl**은 "문서 ↔ 구현 코드"의 일치를, **ac-e2e**는 "AC ↔ e2e 테스트
@@ -22,6 +23,15 @@
 ac-e2e가 "AC마다 e2e가 있는가"를 본다면 이쪽은 "그 e2e가 실환경을 실제로
 구동하는가"를 본다. 같은 e2e 트리를 보므로 as-is에 **트리 해시를 쓰지 않고**
 모킹 지점만 추출해 지문화한다 — ac-e2e와의 중복 트리거를 피하기 위한 고정부다.
+
+**mockup-render**는 목업(디자인 시안)을 가진 레포에 얹는 네 번째 유형으로,
+docs-impl이 "문서가 기술한 동작이 구현되었는가"를 본다면 이쪽은 "**이미 구현된
+화면이 목업대로 보이는가**"를 본다. docs-impl의 to-be에도 "UI가 목업·디자인
+시스템과 일치" 항목이 있어 겹치므로, **화면 단위 시각 대조는 mockup-render가
+전담**하고 **미구현 화면은 docs-impl이 담당**하는 것이 두 유형의 경계다(양쪽
+템플릿의 "범위 밖 / 비고"에서 교차 참조한다). 판정은 코드 정적 대조이며 실행
+스크린샷 픽셀 비교는 이 유형의 범위 밖이다 — 픽셀 비교를 도입하려면 유형의
+정체성이 바뀌므로 템플릿을 고치는 커밋으로 처리한다.
 
 ## 고정부와 가변부
 
@@ -41,11 +51,11 @@ ac-e2e가 "AC마다 e2e가 있는가"를 본다면 이쪽은 "그 e2e가 실환�
 
 | 항목 | 규약 |
 |---|---|
-| id | `tbm_<slug>-docs-impl` / `tbm_<slug>-ac-e2e` / `tbm_<slug>-e2e-mock-policy` (slug = 소문자 레포명) |
-| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> AC ↔ E2E 1:1 정합성` / `<slug> e2e 모킹 최소화 (정책 ↔ 실제 모킹 지점)` |
-| metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, ac, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` (+ 필요 시 도구 태그: maestro, playwright 등) |
+| id | `tbm_<slug>-docs-impl` / `tbm_<slug>-ac-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` (slug = 소문자 레포명) |
+| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> AC ↔ E2E 1:1 정합성` / `<slug> e2e 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` |
+| metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, ac, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` (+ 필요 시 도구 태그: maestro, playwright 등) |
 | checkPolicy | `{"intervalSeconds": 3600}` |
-| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·ac-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120` |
+| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·ac-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60` |
 | lastObservedVersion/At | 등록 시 생략(첫 감지 sweep이 채운다) |
 
 ## 인스턴스화 절차
