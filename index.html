@@ -114,6 +114,11 @@
   }
   .modes button[aria-pressed="true"] .n { background: var(--accent-weak); color: var(--accent); }
 
+  /* ---- 보기 대상 전환 (모델 / 템플릿) ---- */
+  .views { border-color: var(--border); }
+  .views button[aria-pressed="true"] { color: var(--text); }
+  .views button[aria-pressed="true"] .n { background: var(--code-bg); color: var(--muted); }
+
   #statusbar { padding: 7px 18px; font-size: 12.5px; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--panel-2); display: none; }
   #statusbar.show { display: block; }
   #statusbar.err { color: #d33; }
@@ -139,6 +144,7 @@
   .model-item .mi-name { font-weight: 600; font-size: 13.5px; margin-bottom: 3px; display: flex; align-items: center; gap: 7px; }
   .model-item .mi-id { font-size: 11px; color: var(--muted); word-break: break-all; }
   .model-item .mi-meta { margin-top: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .model-item .mi-sub { margin-top: 6px; font-size: 11.5px; color: var(--muted); }
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
   .taskcount { font-size: 11px; color: var(--muted); }
   .planpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #f3e8ff; color: #7e22ce; }
@@ -281,6 +287,14 @@
   .prose hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
   .prose strong { font-weight: 700; }
   .prose a { word-break: break-word; }
+  .prose table { border-collapse: collapse; margin: 10px 0; font-size: 12.5px; display: block; max-width: 100%; overflow-x: auto; }
+  .prose th, .prose td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; vertical-align: top; }
+  .prose th { background: var(--panel-2); font-weight: 700; white-space: nowrap; }
+  .prose tbody tr:nth-child(even) td { background: var(--panel-2); }
+
+  /* ---- 템플릿 본문 카드 ---- */
+  .doc-card { padding: 6px 20px 18px; }
+  .doc-empty { padding: 28px 20px; color: var(--muted); }
 
   details.raw { margin-top: 26px; }
   details.raw > summary { font-size: 12px; color: var(--muted); cursor: pointer; padding: 6px 0; display: inline-flex; gap: 7px; align-items: center; }
@@ -302,9 +316,10 @@
     <div class="brand">
       <span class="logo">🔁</span>
       <h1>reconciler</h1>
-      <span class="sub">데이터 브라우저 · <code>data/</code></span>
+      <span class="sub" id="brandsub">데이터 브라우저 · <code>data/</code></span>
     </div>
     <div class="controls">
+      <div class="modes views" id="views" role="group" aria-label="보기 대상"></div>
       <div class="modes" id="modes" role="group" aria-label="보기 모드"></div>
       <input id="search" type="search" placeholder="이름·id·태그 검색…" autocomplete="off" spellcheck="false">
       <a id="ghlink" class="iconbtn gh" title="GitHub에서 보기" target="_blank" rel="noopener" style="display:none">GitHub ↗</a>
@@ -317,7 +332,7 @@
     <aside class="sidebar">
       <div class="list-head"><span id="listhead">ToBeModels</span> (<span id="modelcount">0</span>)</div>
       <div id="modellist"></div>
-      <details class="legend">
+      <details class="legend" id="legend">
         <summary>상태 범례</summary>
         <div id="legendbody"></div>
       </details>
@@ -371,10 +386,22 @@
   ];
   var DEFAULT_MODE = "pending";
 
+  // 사이드바가 무엇의 목록인지 — 운영 데이터(모델)냐, 모델을 찍어내는 템플릿이냐.
+  var VIEWS = [
+    { id: "models",    label: "모델",   hint: "data/의 ToBeModel과 정합성 작업" },
+    { id: "templates", label: "템플릿", hint: "templates/의 ToBeModel 유형 템플릿" }
+  ];
+  var DEFAULT_VIEW = "models";
+
   var state = {
     models: [], tasksByModel: {}, selected: null, filter: "",
     mode: DEFAULT_MODE,
-    modePinned: false   // 사용자가 모드를 직접 고르면 새로고침해도 유지한다
+    modePinned: false,  // 사용자가 모드를 직접 고르면 새로고침해도 유지한다
+    view: DEFAULT_VIEW,
+    templates: null,        // README 표 파싱 결과 (null = 아직 안 불러옴)
+    templatesError: null,
+    templateBodies: {},     // file -> { text } | { error }
+    selectedTemplate: null
   };
 
   var $ = function (s, el) { return (el || document).querySelector(s); };
@@ -398,7 +425,9 @@
 
   // Compact, self-contained markdown renderer covering the constructs used in this data:
   // headings, bold, inline code, fenced code, ordered/unordered lists (1 level of nesting),
-  // blockquotes, horizontal rules, links, and paragraphs.
+  // blockquotes, horizontal rules, links, pipe tables, and paragraphs.
+  // (Tables carry the substance of the templates — slot tables, the template index,
+  //  the shared-defaults table — so they must render as tables, not as raw pipes.)
   function md(src) {
     if (src == null || src === "") return "";
     var lines = String(src).replace(/\r\n?/g, "\n").split("\n");
@@ -411,6 +440,40 @@
         out.push("<p>" + renderInline(escapeHtml(para.join(" "))) + "</p>");
         para = [];
       }
+    }
+
+    // A pipe table is a header row, a delimiter row (|---|---|), then body rows.
+    function isTableRow(l) { return l != null && /^\s*\|.*\|\s*$/.test(l); }
+    function isDelimiterRow(l) { return isTableRow(l) && /^[\s|:-]+$/.test(l) && l.indexOf("-") !== -1; }
+
+    // Split on unescaped pipes only, so a cell may contain a literal "\|".
+    function splitRow(l) {
+      var body = l.trim().replace(/^\|/, "").replace(/\|$/, "");
+      var cells = [];
+      var cur = "";
+      for (var k = 0; k < body.length; k++) {
+        var ch = body.charAt(k);
+        if (ch === "\\" && body.charAt(k + 1) === "|") { cur += "|"; k++; continue; }
+        if (ch === "|") { cells.push(cur.trim()); cur = ""; continue; }
+        cur += ch;
+      }
+      cells.push(cur.trim());
+      return cells;
+    }
+
+    function parseTable() {
+      var head = splitRow(lines[i]);
+      i += 2;   // skip header + delimiter
+      var html = "<table><thead><tr>" + head.map(function (c) {
+        return "<th>" + renderInline(escapeHtml(c)) + "</th>";
+      }).join("") + "</tr></thead><tbody>";
+      while (i < lines.length && isTableRow(lines[i]) && !isDelimiterRow(lines[i])) {
+        html += "<tr>" + splitRow(lines[i]).map(function (c) {
+          return "<td>" + renderInline(escapeHtml(c)) + "</td>";
+        }).join("") + "</tr>";
+        i++;
+      }
+      return html + "</tbody></table>";
     }
 
     function parseList() {
@@ -461,6 +524,7 @@
         out.push("<blockquote>" + md(q.join("\n")) + "</blockquote>");
         continue;
       }
+      if (isTableRow(line) && isDelimiterRow(lines[i + 1])) { flushPara(); out.push(parseTable()); continue; }
       if (/^\s*([-*+]|\d+[.)])\s+/.test(line)) { flushPara(); out.push(parseList()); continue; }
       para.push(line.trim());
       i++;
@@ -782,6 +846,71 @@
     return DEFAULT_MODE;
   }
 
+  // ---------- templates ----------
+  // 정적 페이지는 디렉터리를 나열할 수 없으므로 템플릿 목록의 출처가 필요하다.
+  // 별도 매니페스트(JSON)를 두면 templates/README.md의 "템플릿 목록" 표와 두 벌이
+  // 되어 그 자체가 drift 대상이 되므로, 이미 유형의 SSOT인 그 표를 그대로 파싱한다.
+  // → 템플릿을 추가할 때 README 표에만 한 줄 넣으면 이 페이지에도 자동으로 뜬다.
+  var TEMPLATE_DIR = "templates/";
+  var TEMPLATE_INDEX_FILE = "README.md";
+  var TEMPLATE_HASH_PREFIX = "tpl:";
+  var TEMPLATE_OVERVIEW = {
+    file: TEMPLATE_INDEX_FILE,
+    name: "템플릿 개요",
+    type: "개요",
+    target: "슬롯 규약 · 공통 기본값 · 인스턴스화 절차",
+    overview: true
+  };
+
+  // README의 표에서 첫 칸이 `<name>.tbm.md` 인 행만 템플릿으로 본다.
+  // (공통 규약 표 등 다른 표는 이 조건에 걸리지 않는다.)
+  function parseTemplateIndex(src) {
+    var out = [];
+    var lines = String(src == null ? "" : src).replace(/\r\n?/g, "\n").split("\n");
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (line.charAt(0) !== "|") continue;
+      var cells = line.replace(/^\|/, "").replace(/\|$/, "").split("|").map(function (c) { return c.trim(); });
+      var file = cells[0].replace(/^`+|`+$/g, "").trim();
+      if (!/^[A-Za-z0-9._-]+\.tbm\.md$/.test(file)) continue;
+      if (out.some(function (t) { return t.file === file; })) continue;
+      out.push({
+        file: file,
+        name: cells[1] || file.replace(/\.tbm\.md$/, ""),
+        type: cells[1] || "",
+        target: cells[2] || ""
+      });
+    }
+    return out;
+  }
+
+  // 사이드바에 나오는 항목 = 개요 + README 표의 템플릿들.
+  function templateEntries() {
+    return [TEMPLATE_OVERVIEW].concat(state.templates || []);
+  }
+
+  function templateByFile(file) {
+    var found = templateEntries().filter(function (t) { return t.file === file; })[0];
+    // 표에 없는 파일을 딥링크로 가리켜도 열어는 준다(없으면 상세에서 404로 드러난다).
+    return found || { file: file, name: file, type: "", target: "" };
+  }
+
+  function matchesTemplateFilter(t, f) {
+    if (!f) return true;
+    return [t.file, t.name, t.type, t.target].join(" ").toLowerCase().indexOf(f) !== -1;
+  }
+
+  function visibleTemplates() {
+    var f = state.filter.trim().toLowerCase();
+    return templateEntries().filter(function (t) { return matchesTemplateFilter(t, f); });
+  }
+
+  function templateHash(file) { return TEMPLATE_HASH_PREFIX + file; }
+
+  function templateFileFromHash(hash) {
+    return hash.indexOf(TEMPLATE_HASH_PREFIX) === 0 ? hash.slice(TEMPLATE_HASH_PREFIX.length) : null;
+  }
+
   function latestDisplayTask(modelId) {
     // No-op detections should not mask the latest meaningful workflow status.
     var arr = (state.tasksByModel[modelId] || []).filter(function (t) {
@@ -806,6 +935,34 @@
     Array.prototype.forEach.call(box.querySelectorAll("button"), function (el) {
       el.addEventListener("click", function () { setMode(el.getAttribute("data-mode")); });
     });
+  }
+
+  function viewCount(id) {
+    if (id === "models") return state.models.length;
+    return state.templates ? state.templates.length : 0;
+  }
+
+  function renderViews() {
+    var box = $("#views");
+    box.innerHTML = VIEWS.map(function (v) {
+      return '<button type="button" data-view="' + v.id + '"' +
+        ' aria-pressed="' + (state.view === v.id ? "true" : "false") + '"' +
+        ' title="' + escapeHtml(v.hint) + '">' + escapeHtml(v.label) +
+        '<span class="n">' + viewCount(v.id) + "</span></button>";
+    }).join("");
+
+    Array.prototype.forEach.call(box.querySelectorAll("button"), function (el) {
+      el.addEventListener("click", function () { setView(el.getAttribute("data-view")); });
+    });
+  }
+
+  // 모드 전환·상태 범례는 모델 목록에만 해당하므로 템플릿 보기에선 감춘다.
+  function applyViewChrome() {
+    var tpl = state.view === "templates";
+    $("#modes").style.display = tpl ? "none" : "";
+    $("#legend").style.display = tpl ? "none" : "";
+    $("#search").placeholder = tpl ? "템플릿 검색…" : "이름·id·태그 검색…";
+    $("#brandsub").innerHTML = tpl ? "모델 템플릿 · <code>templates/</code>" : "데이터 브라우저 · <code>data/</code>";
   }
 
   function renderSidebar() {
@@ -902,6 +1059,89 @@
     detail.scrollTop = 0;
   }
 
+  function renderTemplateSidebar() {
+    var list = $("#modellist");
+    $("#listhead").textContent = "모델 템플릿";
+
+    if (state.templatesError) {
+      $("#modelcount").textContent = 0;
+      list.innerHTML = '<div class="empty small">템플릿 목록을 불러오지 못했습니다.<br>' +
+        "<code>" + escapeHtml(TEMPLATE_DIR + TEMPLATE_INDEX_FILE) + "</code> · " +
+        escapeHtml(state.templatesError) + "</div>";
+      return;
+    }
+    if (!state.templates) {
+      $("#modelcount").textContent = 0;
+      list.innerHTML = '<div class="empty small">불러오는 중…</div>';
+      return;
+    }
+
+    var items = visibleTemplates();
+    $("#modelcount").textContent = items.length;
+    if (!items.length) {
+      list.innerHTML = '<div class="empty small">일치하는 템플릿이 없습니다.</div>';
+      return;
+    }
+
+    list.innerHTML = items.map(function (t) {
+      return '<button class="model-item' + (t.file === state.selectedTemplate ? " active" : "") +
+        '" data-file="' + escapeHtml(t.file) + '">' +
+        '<div class="mi-name"><span class="dot" style="background:' +
+          (t.overview ? "var(--border-strong)" : "var(--accent)") + '"></span><span>' +
+          escapeHtml(t.name || t.file) + "</span></div>" +
+        '<div class="mi-id">' + escapeHtml(t.file) + "</div>" +
+        (t.target ? '<div class="mi-sub">' + escapeHtml(t.target) + "</div>" : "") +
+        "</button>";
+    }).join("");
+
+    Array.prototype.forEach.call(list.querySelectorAll(".model-item"), function (el) {
+      el.addEventListener("click", function () { selectTemplate(el.getAttribute("data-file")); });
+    });
+  }
+
+  function renderTemplateDetail() {
+    var detail = $("#detail");
+    var file = state.selectedTemplate;
+    if (!file) {
+      detail.innerHTML = '<div class="empty">' +
+        escapeHtml(state.templatesError ? "템플릿 목록을 불러올 수 없습니다." : "왼쪽에서 템플릿을 선택하세요.") + "</div>";
+      return;
+    }
+
+    var t = templateByFile(file);
+    var path = TEMPLATE_DIR + file;
+    var gh = ghRepoUrl();
+    var ghHref = gh ? gh + "/blob/main/" + path : null;
+    var cached = state.templateBodies[file];
+
+    var body;
+    if (!cached) body = '<div class="doc-empty">불러오는 중…</div>';
+    else if (cached.error) {
+      body = '<div class="doc-empty">본문을 불러오지 못했습니다 (' + escapeHtml(cached.error) + ").<br>" +
+        "<code>" + escapeHtml(path) + "</code>가 실제로 존재하는지 확인하세요 — " +
+        "템플릿 목록은 <code>" + escapeHtml(TEMPLATE_DIR + TEMPLATE_INDEX_FILE) + "</code>의 표에서 읽습니다.</div>";
+    } else body = '<div class="prose">' + md(cached.text) + "</div>";
+
+    detail.innerHTML =
+      '<div class="m-header">' +
+        "<h2>" + escapeHtml(t.name || file) + "</h2>" +
+        '<div class="m-id mono">' + escapeHtml(path) + "</div>" +
+        '<div class="tags"><span class="tag">' + escapeHtml(t.overview ? "개요" : "템플릿") + "</span></div>" +
+        (t.target ? '<p class="m-desc">' + escapeHtml(t.target) + "</p>" : "") +
+        (ghHref ? '<div class="m-dates"><a href="' + escapeHtml(ghHref) +
+          '" target="_blank" rel="noopener">GitHub에서 보기 ↗</a></div>' : "") +
+      "</div>" +
+      '<div class="section-title">' + escapeHtml(t.overview ? "템플릿 사용 규약" : "템플릿 본문") + "</div>" +
+      '<div class="card doc-card">' + body + "</div>" +
+      (cached && cached.text != null
+        ? '<details class="raw"><summary>원본 마크다운 보기 (raw)</summary><pre class="code"><code>' +
+            escapeHtml(cached.text) + "</code></pre></details>"
+        : "");
+
+    detail.scrollTop = 0;
+    if (!cached) loadTemplateBody(file);
+  }
+
   function renderLegend() {
     $("#legendbody").innerHTML = Object.keys(STATUS_META).map(function (k) {
       var m = STATUS_META[k];
@@ -910,7 +1150,12 @@
     }).join("");
   }
 
-  function renderAll() { renderModes(); renderSidebar(); renderDetail(); }
+  function renderAll() {
+    renderViews();
+    applyViewChrome();
+    if (state.view === "templates") { renderTemplateSidebar(); renderTemplateDetail(); return; }
+    renderModes(); renderSidebar(); renderDetail();
+  }
 
   function writeHash(id) {
     if (history.replaceState) history.replaceState(null, "", id ? "#" + encodeURIComponent(id) : "#");
@@ -922,6 +1167,31 @@
     writeHash(id);
     renderSidebar();
     renderDetail();
+  }
+
+  function selectTemplate(file) {
+    state.selectedTemplate = file;
+    writeHash(file ? templateHash(file) : null);
+    renderTemplateSidebar();
+    renderTemplateDetail();
+  }
+
+  // 보기를 바꾸면 주소도 그 보기의 선택 대상을 가리키게 맞춘다.
+  function setView(view) {
+    if (state.view === view) return;
+    state.view = view;
+    // 검색어는 보기마다 대상이 다르므로 넘어갈 때 비운다
+    // (모델 이름으로 걸린 필터가 템플릿 목록을 통째로 비우는 일을 막는다).
+    state.filter = "";
+    $("#search").value = "";
+    if (view === "templates") {
+      if (state.templates == null && !state.templatesError) loadTemplates();
+      if (!state.selectedTemplate) state.selectedTemplate = TEMPLATE_OVERVIEW.file;
+      writeHash(templateHash(state.selectedTemplate));
+    } else {
+      writeHash(state.selected);
+    }
+    renderAll();
   }
 
   // 모드를 바꾸면 선택된 모델이 목록에서 사라질 수 있다.
@@ -951,6 +1221,39 @@
     return fetch(url, { cache: "no-cache" }).then(function (r) {
       if (!r.ok) { var e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
       return r.json();
+    });
+  }
+
+  function fetchText(url) {
+    return fetch(url, { cache: "no-cache" }).then(function (r) {
+      if (!r.ok) { var e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
+      return r.text();
+    });
+  }
+
+  // 템플릿 목록은 모델 데이터와 독립적으로 불러온다 — 한쪽이 실패해도 다른 쪽은 계속 보인다.
+  function loadTemplates() {
+    return fetchText(TEMPLATE_DIR + TEMPLATE_INDEX_FILE).then(function (text) {
+      state.templateBodies[TEMPLATE_INDEX_FILE] = { text: text };
+      state.templates = parseTemplateIndex(text);
+      state.templatesError = null;
+    }).catch(function (err) {
+      state.templates = null;
+      state.templatesError = err.message;
+    }).then(function () {
+      renderViews();
+      if (state.view === "templates") { renderTemplateSidebar(); renderTemplateDetail(); }
+    });
+  }
+
+  function loadTemplateBody(file) {
+    return fetchText(TEMPLATE_DIR + file).then(function (text) {
+      state.templateBodies[file] = { text: text };
+    }).catch(function (err) {
+      state.templateBodies[file] = { error: err.message };
+    }).then(function () {
+      // 그 사이 다른 항목으로 옮겼으면 다시 그리지 않는다.
+      if (state.view === "templates" && state.selectedTemplate === file) renderTemplateDetail();
     });
   }
 
@@ -1039,23 +1342,46 @@
     renderLegend();
     renderModes();
 
+    // #tpl:<파일>로 들어오면 템플릿 보기로 연다.
+    var initialTpl = templateFileFromHash(decodeURIComponent((location.hash || "").replace(/^#/, "")));
+    if (initialTpl) { state.view = "templates"; state.selectedTemplate = initialTpl; }
+    renderViews();
+    applyViewChrome();
+
     var gh = ghRepoUrl();
     if (gh) { var a = $("#ghlink"); a.href = gh; a.style.display = ""; }
 
-    $("#search").addEventListener("input", function (e) { state.filter = e.target.value; renderSidebar(); });
-    $("#reload").addEventListener("click", function () { loadData(); });
+    $("#search").addEventListener("input", function (e) {
+      state.filter = e.target.value;
+      if (state.view === "templates") renderTemplateSidebar(); else renderSidebar();
+    });
+    $("#reload").addEventListener("click", function () { loadTemplates(); loadData(); });
     $("#theme").addEventListener("click", cycleTheme);
     window.addEventListener("hashchange", function () {
       var hash = decodeURIComponent((location.hash || "").replace(/^#/, ""));
-      if (hash && hash !== state.selected && state.models.some(function (m) { return m.id === hash; })) {
-        // 현재 모드에 없는 모델을 가리키면 그 모델이 보이는 모드로 옮겨준다.
-        if (!modelsInMode(state.mode).some(function (m) { return m.id === hash; })) {
-          state.mode = modeContaining(hash);
+      var tplFile = templateFileFromHash(hash);
+      if (tplFile) {
+        if (state.view !== "templates" || tplFile !== state.selectedTemplate) {
+          state.view = "templates";
+          state.selectedTemplate = tplFile;
+          if (state.templates == null && !state.templatesError) loadTemplates();
+          renderAll();
         }
-        state.selected = hash; renderAll();
+        return;
+      }
+      if (hash && state.models.some(function (m) { return m.id === hash; })) {
+        if (state.view === "templates" || hash !== state.selected) {
+          state.view = "models";
+          // 현재 모드에 없는 모델을 가리키면 그 모델이 보이는 모드로 옮겨준다.
+          if (!modelsInMode(state.mode).some(function (m) { return m.id === hash; })) {
+            state.mode = modeContaining(hash);
+          }
+          state.selected = hash; renderAll();
+        }
       }
     });
 
+    loadTemplates();
     loadData();
   }
 

@@ -25,7 +25,8 @@ data/                               # 운영 데이터 (스킬이 런타임에 �
   to-be-models.json                 # ToBeModel (배열)
   reconciliation-tasks/             # task: to-be 모델(toBeModelId)별로 파일 분리
     <toBeModelId>.json
-index.html                          # data/ 브라우징용 정적 웹페이지 (GitHub Pages)
+index.html                          # data/·templates/ 브라우징용 정적 웹페이지 (GitHub Pages)
+tests/                              # index.html 동작 테스트 (node --test)
 .nojekyll                           # Pages가 data/*.json을 그대로 서빙하도록 Jekyll 우회
 ```
 
@@ -40,12 +41,30 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
 ## 데이터 브라우저 (GitHub Pages)
 
 `index.html`은 의존성 없는 단일 파일 정적 페이지로, `data/`의 ToBeModel과
-모델별 ReconciliationTask를 읽어 목록·상세로 보여준다. `to-be-models.json`을
-불러온 뒤 각 모델 id로 `reconciliation-tasks/<id>.json`을 상대경로로 fetch하므로
-외부 API·CDN이 필요 없다. 마크다운 정의 렌더링, 상태 배지, 검색, 라이트/다크
-테마, 원본 JSON 보기를 지원한다.
+모델별 ReconciliationTask, 그리고 `templates/`의 모델 템플릿을 읽어 목록·상세로
+보여준다. `to-be-models.json`을 불러온 뒤 각 모델 id로
+`reconciliation-tasks/<id>.json`을 상대경로로 fetch하므로 외부 API·CDN이 필요
+없다. 마크다운 정의 렌더링(표 포함), 상태 배지, 검색, 라이트/다크 테마,
+원본 JSON 보기를 지원한다.
 
-- **보기 모드 5종**: 상단 툴바의 전환 버튼으로 사이드바 목록의 범위를 바꾼다.
+- **보기 대상 2종 (모델 / 템플릿)**: 상단 툴바 맨 왼쪽 전환 버튼으로 사이드바가
+  무엇의 목록인지 바꾼다. **모델**은 `data/`의 운영 데이터, **템플릿**은
+  `templates/`의 유형 템플릿이다. 각 버튼에는 등록된 모델 수·템플릿 수가 함께 표시된다.
+
+  템플릿 보기에서는 사이드바에 **템플릿 개요**(`templates/README.md`)와 각 템플릿이
+  나열되고, 고르면 본문 마크다운이 슬롯 표·스크립트까지 그대로 렌더링된다
+  (원본 마크다운도 함께 볼 수 있다). 검색은 파일명·유형·대상에 걸리고,
+  보기를 바꾸면 검색어는 초기화된다. 모드 전환 버튼과 상태 범례는 모델 목록에만
+  해당하므로 템플릿 보기에서는 감춘다.
+
+  목록의 출처는 `templates/README.md`의 **템플릿 목록** 표다. 정적 페이지는
+  디렉터리를 나열할 수 없어 어딘가에 목록이 필요한데, 별도 매니페스트를 두면 그 표와
+  두 벌이 되어 그 자체가 drift 대상이 되므로 이미 유형의 SSOT인 표를 그대로 파싱한다.
+  **템플릿을 추가할 땐 그 표에 한 줄 넣으면 페이지에도 자동으로 나온다.**
+  표에는 있는데 파일이 없으면 상세에서 404로 드러나고, 표와 `templates/`의 실제
+  파일 목록이 어긋나면 `tests/index-templates.test.mjs`가 실패한다.
+
+- **보기 모드 5종**(모델 보기): 상단 툴바의 전환 버튼으로 사이드바 목록의 범위를 바꾼다.
   버튼은 워크플로 순서대로 놓이고, 각 버튼에는 해당 모드의 모델 수가 함께 표시된다.
 
   | 모드 | 목록에 나오는 모델 |
@@ -73,10 +92,13 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
   `enabled`를 `true`로 되돌리거나 필드를 지운다(생략 시 기본값 `true`).
 
 - **딥링크**: `#<toBeModelId>`로 들어오면 그 모델이 보이는 모드로 자동 전환되므로,
-  숨김 모델 링크도 그대로 열린다.
+  숨김 모델 링크도 그대로 열린다. `#tpl:<파일명>`(예: `#tpl:ac-e2e.tbm.md`)은
+  템플릿 보기로 열린다.
 
 - **GitHub Pages 활성화**: 저장소 Settings → Pages → *Deploy from a branch* →
   브랜치의 `/(root)` 선택. 페이지는 `data/`를 상대경로로 읽으므로 반드시
   루트에서 서빙해야 한다(`/docs` 아님). 배포 후 `https://<owner>.github.io/<repo>/`.
 - **로컬 확인**: `python3 -m http.server` 실행 후 `http://localhost:8000/` 접속.
   `file://`로 직접 열면 브라우저 보안정책상 `data/`를 못 읽으니 서버로 열 것.
+- **테스트**: `node --test "tests/*.test.mjs"` — 각 테스트는 `index.html`에서 해당
+  함수 블록을 정규식으로 뽑아 `vm`으로 실행한다(빌드·의존성 없음).
