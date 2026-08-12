@@ -1,7 +1,7 @@
 [
   {
     "toBeModelId": "tbm_econ-opinion-monitor-ac-e2e",
-    "status": "awaiting_review",
+    "status": "review_rejected",
     "trigger": {
       "detectedAt": "2026-08-08T00:34:25Z",
       "changedSides": [
@@ -18,7 +18,7 @@
       }
     },
     "createdAt": "2026-08-08T00:34:25Z",
-    "updatedAt": "2026-08-12T20:07:11Z",
+    "updatedAt": "2026-08-12T20:15:53Z",
     "id": "rct_20260808-0001",
     "stateSummary": {
       "asIs": "관측 2026-08-08T00:34Z · dlddu/economic-opinion-trend-monitor@main `218dec6` · as-is 버전 `58d9bbd4` (= `HEAD:tests/e2e` 트리 해시, 첫 관측)\n\n**매칭 단위(`tests/e2e/specs/` 최상위 `*.spec.ts`) = 1개**\n- `tests/e2e/specs/serving.spec.ts` — 테스트 3개\n  - `api: health responds ok` (`GET /api/health` → 200 `{status:\"ok\"}`)\n  - `api: dashboard serves fixture Gold for the KR axis` (`GET /api/dashboard?axis=KR` → 픽스처 서브젝트 + `\"normalized\":true`)\n  - `web: dashboard renders the fixture subject` (`/` 렌더, 타이틀 + 픽스처 서브젝트 노출, \"데이터 없음\"·\"The web build was not found\" 부재)\n\n**`검증 AC:` 헤더 선언 = 0건.** 레포 전체 `grep -rn '검증 AC'` 결과 히트는 전부 `docs/`(test-*.md 시나리오의 `- **검증 AC**:` 필드, doc-tracker 본문)이며 `tests/` 아래에는 **0건**이다. 즉 spec 파일에서 AC를 기계적으로 확인할 수 있는 선언 규약이 아직 코드에 존재하지 않는다.\n\n**매칭 단위가 아닌 하네스·픽스처**(정의상 제외): `fixtures/README.md`, `fixtures/gold/{axis_sentiment,subject_trend}.jsonl`, `k8s/{e2e-patch,kustomization}.yaml`, `kind-config.yaml`, `package.json`, `package-lock.json`, `playwright.config.ts`, `run.sh`.\n\n**검증 축은 살아 있다**: `tests/e2e/run.sh`는 serving 이미지를 빌드해 일회용 kind 클러스터에 픽스처 Gold를 ConfigMap으로 물려 띄우고 port-forward에 대해 Playwright를 돌린다. `.github/workflows/ci.yml`이 `tests/e2e/package-lock.json` 캐시 + `tests/e2e/playwright-report` 아티팩트를 참조하는 e2e 잡을 갖고 있어 CI에서 실제로 실행된다(테세라식 \"스펙은 있으나 아무도 안 돌림\" 상황이 아님).\n\n**구현 측 참고**(spec 신설 가능성 판단 근거): 슬라이스 2(AC1.1~1.7)는 자매 모델 `tbm_econ-opinion-monitor-docs-impl`의 `rct_20260802-0001`이 2026-08-07T22:11Z `succeeded`로 닫으며 실구현됐다 — `python/packages/ingestion/src/econ_ingestion/`에 `feeds.py`·`sources.py`·`cli.py`·`default_feeds.json` + 단위 테스트, `deploy/` 시간별 CronWorkflow `suspend:false`. 반면 AC2.x는 `python/packages/analysis/src/econ_analysis/`에 `fake_llm.py`뿐(실 analyzer 없음), AC3.x는 `go/internal/handlers/handlers.go`가 스스로 \"one stub route per frontend screen\"이라 적고 인라인 `stub: single-bucket skeleton data (AC3.5 …)` / `stub: 원문 역추적 자리 … (AC2.6)`를 남긴 상태다. 단 현행 e2e 하네스는 **serving 경로만** 기동한다(수집 잡은 클러스터에 없음).",
@@ -97,8 +97,11 @@
         },
         "review": {
           "required": true,
-          "status": "pending",
-          "reason": "코드 위험은 낮고(제품 코드 diff 0, revert 한 번으로 복구) riskLevel도 low지만, 이 머지가 확정하는 것은 코드가 아니라 세 가지 정책 판단이다: (1) 1:1 매칭 단위를 '파일'로 확정하고 로드맵 매핑표를 모델에 맞춰 재절단 — 대안은 모델 정의 개정이며 그건 reconciler-tobe-modeler + 사용자 비준 소관이라 이 PR 반려로만 갈 수 있는 갈림길이다. (2) AC1.1·AC2.2·AC2.3을 예외로 등재 — 해당 AC를 1:1 요구에서 영구히 빼는 결정이고, AC1.2·AC1.6·AC2.5를 등재하지 않은 판단도 함께 확정된다. (3) 로드맵이 슬라이스 6·8에 배정한 AC3.6·AC3.8을 지금 claim. 여기에 더해 Makefile `lint` 의존에 들어가는 `lint-ac-mapping` 게이트가 머지 즉시 레포 전체의 후속 PR에 마찰을 만든다(AC·spec 변경 시 doc-tracker 갱신 강제, 미갱신 시 CI 빨강) — 계획의 실행 지침도 '검토자가 이 마찰을 받아들일지가 이 PR의 실질적 승인 포인트'라고 명시하며 위 세 판단의 확인을 요청한다. 정의만으로 판단이 갈리는 모호함에 해당하므로 사람 승인 후 머지한다."
+          "status": "rejected",
+          "reason": "코드 위험은 낮고(제품 코드 diff 0, revert 한 번으로 복구) riskLevel도 low지만, 이 머지가 확정하는 것은 코드가 아니라 세 가지 정책 판단이다: (1) 1:1 매칭 단위를 '파일'로 확정하고 로드맵 매핑표를 모델에 맞춰 재절단 — 대안은 모델 정의 개정이며 그건 reconciler-tobe-modeler + 사용자 비준 소관이라 이 PR 반려로만 갈 수 있는 갈림길이다. (2) AC1.1·AC2.2·AC2.3을 예외로 등재 — 해당 AC를 1:1 요구에서 영구히 빼는 결정이고, AC1.2·AC1.6·AC2.5를 등재하지 않은 판단도 함께 확정된다. (3) 로드맵이 슬라이스 6·8에 배정한 AC3.6·AC3.8을 지금 claim. 여기에 더해 Makefile `lint` 의존에 들어가는 `lint-ac-mapping` 게이트가 머지 즉시 레포 전체의 후속 PR에 마찰을 만든다(AC·spec 변경 시 doc-tracker 갱신 강제, 미갱신 시 CI 빨강) — 계획의 실행 지침도 '검토자가 이 마찰을 받아들일지가 이 PR의 실질적 승인 포인트'라고 명시하며 위 세 판단의 확인을 요청한다. 정의만으로 판단이 갈리는 모호함에 해당하므로 사람 승인 후 머지한다.",
+          "reviewer": "user",
+          "reviewedAt": "2026-08-12T20:15:53Z",
+          "comment": "반려 — 예외 등재 범위 조정 요구. **AC1.1 예외는 승인**한다(기본 주기 매시간 + Argo 컨트롤러 부재로 CI 예산 안에서 실트리거 관측 불가라는 근거를 수용). **AC2.2·AC2.3은 예외 등재를 철회하고 골든 평가 하네스를 추가하는 방향으로 재계획할 것.** 두 AC의 예외 사유는 '실 LLM 응답에 의존해 CI에서 결정적 단언 불가'였고 대체 검증 수단으로 이미 '골든 입력셋 오프라인 품질 평가'를, 재검토 조건으로 '프롬프트 회귀를 잡는 골든 평가 하네스가 생기면 이관·재판정'을 스스로 적어두었다. 즉 예외 해제 경로가 이미 식별돼 있으므로, 영구 면제로 등재해 두고 나중에 되돌리는 대신 이번에 하네스를 만들어 검증 축을 세운다. 재계획 시 반영할 것: (1) `### 예외 목록`은 AC1.1 1건만 남긴다. (2) AC2.2·AC2.3은 골든 평가 하네스로 검증되는 것으로 잡는다 — 하네스가 이번 슬라이스 범위에 들어가는지, 아니면 하네스 신설을 선행 슬라이스로 끊고 두 AC를 그때까지 공백으로 계수할지는 planner가 비용을 보고 판단한다(예외로 등재하지 않는다는 점만 고정). (3) 그에 따라 doc-tracker의 집계 숫자(예외 3 → 1, 1:1 대상 18 → 20, 공백 16 → 하네스 처리 방식에 따라 재산출)와 체커 기대값, 완료 기준을 함께 갱신한다. (4) 매칭 단위를 '파일'로 확정한 것과 AC3.6·AC3.8을 지금 claim한 것에는 이견 없음 — 그대로 유지."
         }
       }
     ]
