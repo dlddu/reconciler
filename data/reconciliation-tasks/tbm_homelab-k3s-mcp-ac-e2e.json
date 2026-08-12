@@ -1300,7 +1300,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-07T23:34:48Z",
       "changedSides": [
@@ -1318,7 +1318,7 @@
     },
     "createdAt": "2026-08-07T23:34:48Z",
     "id": "rct_20260807-0004",
-    "updatedAt": "2026-08-12T20:18:00Z",
+    "updatedAt": "2026-08-12T20:19:00Z",
     "stateSummary": {
       "asIs": "**as-is = `tests/` 트리** (dlddu/homelab-k3s-mcp@main `b879b4e`, 2026-08-07T23:34Z 관측, 해시 `27a73b8a`)\n\n- 트리거 delta는 **정확히 커밋 1개** — #38 `b879b4e` \"test(e2e): split 8 integration-level AC covers into per-AC cases (rct_20260807-0003)\". `git rev-parse 823842a:tests` == 직전 baseline `48e68d32`로 확인했으므로 그 사이 다른 커밋은 없다. 이 커밋은 이 모델의 직전 task `rct_20260807-0003`(23:32Z `succeeded`, `converged:true`)의 reconcile 산출물이다.\n- #38 내역(9파일 +423/-91): `tests/integration/{github_app,grafana,no_config,smoke}.py` 4종 + `docs/{doc-tracker,test-github-app-installation-token,test-grafana-token,test-ping,test-platform-auth-safety}.md` 5종. **A/D/R 없이 M×9** — 신규 픽스처·신규 CI 스텝 없이 기존 스텝 안에서 평면 `run()` 본문을 케이스 함수로 재구성했다.\n- **per-AC 전용 케이스 실측 = 25개** (AST로 `tests/integration/*.py`의 `test_*` 함수를 전부 파싱; `async def` + 여러 줄 시그니처라 단순 `^def test_` grep은 25건 중 1건만 잡는다 — 계수 주의): `auth.py` 2 · `github_app.py` 3 · `grafana.py` 3 · `no_config.py` 7 · `dear_baby.py` 1 · `opensearch.py` 2 · `smoke.py` 2 · `workload.py` 5. **25건 전부 docstring에 `AC: <domain>/ACn`을 정확히 하나** 선언한다(0건 미선언, 0건 복수 선언).\n- **평면 스크립트로 남은 4파일**(레지스트리의 `✅ 통합` 24건 근거): `workload.py::run()` L217-470(253줄, 11 AC) · `opensearch.py::run()` L97-218(121줄, 9 AC) · `dear_baby.py::run()` L26-98(2 AC) · `aws_config.py::run()` L21-50(2 AC). 이 파일들에는 per-AC `test_*` 함수가 각각 5·2·1·0개뿐이고 나머지 AC는 `run()` 본문이 한꺼번에 실행한다.",
       "toBe": "**to-be = `docs/prd-*.md` + `docs/doc-tracker.md`** (`c2056b10`, 직전 `1ccdfcaf`). AC 총계는 **52개로 불변** — prd 문서는 #38에서 손대지 않았고(변경된 docs 5종은 전부 `doc-tracker.md` + `test-*.md`), 15개 prd 파일의 `### ACn` 헤딩을 직접 세어 **52**를 재확인했다.\n\n- `docs/doc-tracker.md` §\"AC ↔ e2e 1:1 정합성(reconciler 렌즈)\" 레지스트리 헤더가 갱신됐다: **✅ e2e 49 (통합 24 · 전용 케이스 25) · ⬜ e2e 보강 2 · 🚫 e2e 예외 1** (직전 ✅49(통합 32·전용 17)·⬜2·🚫1). ✅ 합계 49는 불변이고 통합→전용으로 정확히 8건이 이동했다.\n- 규칙 절(L112-117)도 함께 갱신: \"현재 미충족(후속 리팩터, **잔여 24**)\" = `aws_config.py`(2)·`dear_baby.py`(2)·`opensearch.py`(9)·`workload.py`(11), 그리고 `smoke.py`·`github_app.py`·`grafana.py`·`no_config.py`·`auth.py`는 \"분리를 마쳐 `run()`이 per-AC 케이스 디스패처\"라고 명시한다.\n- 변경 이력에 2026-08-07 행 추가(✅49 통합32·전용17 → 통합24·전용25). 이력은 이번 슬라이스가 **빈 단정 3건을 실제 단언으로 보강**했다고 기록한다: ping/AC1은 `smoke.py`가 `ping`을 호출조차 하지 않았고, github/AC4(개인키 비노출)는 단언이 전무했으며, grafana/AC1은 `# token expires` 주석의 존재만 봤다(→ RFC3339 파싱 후 TTL 50~70분 단언). platform/AC5는 AC 전제(자격증명 미설정)가 성립하는 유일한 배포인 `no_config.py`(port 8088)로 이관.\n- ⬜ backlog 절은 2건 그대로: `platform-auth-safety/AC2`(인증 디스커버리 — OIDC 발급자 mock 픽스처 필요) · `AC8`(인증 방식 구성 유연성 — env-게이팅 다중 구성 배포 변형 필요).\n- 🚫 절도 1건 그대로: `platform-auth-safety/AC4`(하드닝된 런타임). 레지스트리 자신이 \"definition이 `task에서 제안한다`고 명시하므로 모델 정의에 일방 적용하지 않고 **ratify 후** 반영한다\"고 미비준 상태임을 기록한다.",
@@ -1426,6 +1426,49 @@
               "startedAt": "2026-08-12T20:07:00Z",
               "finishedAt": "2026-08-12T20:07:40Z",
               "log": "draft 해제(GraphQL markPullRequestReadyForReview) 후 squash 머지 — main `448a7102` \"test(e2e): split workload.py's 11 integration-level AC covers into per-AC cases (rct_20260807-0004) (#39)\". 대상 레포에 branch protection이 없고 PR 작성 신원과 동일 앱이라 형식적 approve 리뷰는 생략(루프의 검토 게이트는 review.not_required로 기록됨)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "78518fa300b440d574f6cc62172ec492ca2dc36e",
+          "verifiedAt": "2026-08-12T20:19:00Z",
+          "checks": [
+            {
+              "name": "PR CI 4잡 green (계획이 지정한 유일한 객관 게이트)",
+              "status": "passed",
+              "detail": "run 31635397927 · head `3e33b9a`(머지된 트리와 동일): fmt+vet · unit tests · integration tests 3m52s · docker build & push 전부 success."
+            },
+            {
+              "name": "머지 후 main CI 4잡 green",
+              "status": "passed",
+              "detail": "run 31635971904 · main `448a7102`: fmt+vet 16s · unit tests 19s · integration tests 3m37s · docker build & push 18s 전부 success."
+            },
+            {
+              "name": "11개 per-AC 케이스가 실제로 실행됐는지 (통과 여부가 아니라 실행 증거)",
+              "status": "passed",
+              "detail": "integration tests 로그에서 지침이 명시한 11줄(`--- ... (AC: <domain>/ACn) ---`)을 전부 확인. 추가 증거 라인 `rbac boundary ok: 21 granted verbs, 11 refused verbs`, `workload_scale to 0 ok`도 확인."
+            },
+            {
+              "name": "레지스트리 버킷 = 계획 완료 기준(통합 13 · 전용 36)",
+              "status": "passed",
+              "detail": "머지된 main의 doc-tracker 헤더 `### AC 레지스트리 (64) — ✅ e2e 49 (통합 13 · 전용 케이스 36) · ⬜ e2e 보강 14 · 🚫 e2e 예외 1`. 계획이 쓴 '합 52·⬜2'는 범위 밖 변경(#40의 session 3종 PRD, AC 12 추가)으로 64·⬜14가 됐고, 이번 슬라이스가 책임지는 통합→전용 전환분(24·25 → 13·36)은 계획대로 달성됐다."
+            },
+            {
+              "name": "레지스트리 ↔ 코드 양방향 1:1",
+              "status": "passed",
+              "detail": "머지된 트리 기계 검증: 레지스트리 행 64 = prd-*.md의 `### ACn` 총계 64, 버킷 합 13+36+14+1=64, `tests/integration/*.py`의 `test_*` 함수 36개 = 레지스트리 전용 케이스 36행, AC 미선언·복수선언 0, BROKEN(레지스트리→코드 부재) 0, 고아(코드→미등재) 0, 경로 불일치 0."
+            },
+            {
+              "name": "as-is / to-be 버전 변동 (다음 감지의 입력)",
+              "status": "passed",
+              "detail": "as-is `27a73b8a…` → `78518fa3…`(HEAD:tests), to-be `c2056b10…` → `471b8cfc…`(prd-*.md + doc-tracker.md blob 목록 해시). 양쪽 모두 이동 — 지침이 예상한 정상 경로."
+            },
+            {
+              "name": "[정보성] 모델 전체 잔여 gap (이 시도의 범위 밖 · converged 판정에 미포함)",
+              "status": "passed",
+              "detail": "잔여 ✅통합 13건(`opensearch.py` 9 · `aws_config.py` 2 · `dear_baby.py` 2), ⬜ 14건(platform-auth-safety/AC2·AC8 + #40이 추가한 session-list/read/write 12건 — 도구 자체 미구현), 🚫 1건(platform-auth-safety/AC4 예외 비준, reconciler-tobe-modeler 소유), workload-logs/AC4의 멀티컨테이너 거부 반쪽(케이스 docstring·backlog에 미단언 명시). 후속은 재감지가 새 task로 잇는다."
             }
           ]
         }
