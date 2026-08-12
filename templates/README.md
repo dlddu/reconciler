@@ -10,18 +10,18 @@
 | 파일 | 유형 | 대상 |
 |---|---|---|
 | `docs-impl.tbm.md` | 제품 문서 ↔ 구현 정합성 | 제품 문서(`docs/`)가 기술하는 의도된 동작과 실제 구현 코드의 일치 |
-| `ac-e2e.tbm.md` | AC ↔ E2E 1:1 정합성 | PRD의 Acceptance Criteria와 e2e 테스트 파일의 완전 1:1(전단사) 매칭 |
-| `e2e-mock-policy.tbm.md` | e2e 모킹 최소화 | 모킹 정책·허용목록과 코드에 실재하는 모킹 지점의 양방향 1:1 |
+| `ac-e2e.tbm.md` | AC ↔ E2E 1:1 정합성 | PRD의 Acceptance Criteria와 E2E 테스트 파일의 완전 1:1(전단사) 매칭 |
+| `e2e-mock-policy.tbm.md` | E2E 모킹 최소화 | 모킹 정책·허용목록과 코드에 실재하는 모킹 지점의 양방향 1:1 |
 | `mockup-render.tbm.md` | 목업 ↔ 구현 렌더링 정합성 | 목업이 정의한 화면과 이미 구현된 화면의 시각적 일치(코드 정적 대조) |
 
 한 레포에 docs-impl·ac-e2e 두 유형을 등록하는 것이 기본이며, 이때 역할 분담은:
-**docs-impl**은 "문서 ↔ 구현 코드"의 일치를, **ac-e2e**는 "AC ↔ e2e 테스트
-파일"의 1:1 매칭을 본다. docs-impl의 as-is 범위에서 e2e 디렉터리를 제외하고,
+**docs-impl**은 "문서 ↔ 구현 코드"의 일치를, **ac-e2e**는 "AC ↔ E2E 테스트
+파일"의 1:1 매칭을 본다. docs-impl의 as-is 범위에서 E2E 디렉터리를 제외하고,
 서로를 "범위 밖 / 비고"에서 교차 참조한다(템플릿에 반영되어 있음).
 
-**e2e-mock-policy**는 e2e를 가진 레포에 선택적으로 얹는 세 번째 유형으로,
-ac-e2e가 "AC마다 e2e가 있는가"를 본다면 이쪽은 "그 e2e가 실환경을 실제로
-구동하는가"를 본다. 같은 e2e 트리를 보므로 as-is에 **트리 해시를 쓰지 않고**
+**e2e-mock-policy**는 E2E를 가진 레포에 선택적으로 얹는 세 번째 유형으로,
+ac-e2e가 "AC마다 E2E가 있는가"를 본다면 이쪽은 "그 E2E가 실환경을 실제로
+구동하는가"를 본다. 같은 E2E 트리를 보므로 as-is에 **트리 해시를 쓰지 않고**
 모킹 지점만 추출해 지문화한다 — ac-e2e와의 중복 트리거를 피하기 위한 고정부다.
 
 **mockup-render**는 목업(디자인 시안)을 가진 레포에 얹는 네 번째 유형으로,
@@ -44,7 +44,7 @@ docs-impl이 "문서가 기술한 동작이 구현되었는가"를 본다면 이
   대상 특성상 불가피하게 이탈해야 하면, 모델 definition의 "범위 밖 / 비고"에
   이탈 내용과 사유를 명시한다.
 - **스냅샷(숫자)** — 개수·번호 범위는 **어느 템플릿에서도 판정 기준에 넣지 않는다.**
-  대상(AC·목업·e2e 파일)은 계속 늘고 줄기 때문에, "AC 55개"·"목업 M-01~M-42" 같은
+  대상(AC·목업·E2E 파일)은 계속 늘고 줄기 때문에, "AC 55개"·"목업 M-01~M-42" 같은
   숫자를 목표나 판정 기준에 박으면 하나가 추가된 순간 definition이 사실과 어긋난다.
   숫자는 definition의 "등록 시점 현황"에만 **스냅샷으로 라벨링**해 두고, 판정은
   개수 독립적 서술("모든 AC는…", "(AC 수 − 예외 수) = (파일 수)")로 쓴다. 대상이
@@ -59,7 +59,7 @@ docs-impl이 "문서가 기술한 동작이 구현되었는가"를 본다면 이
 | 항목 | 규약 |
 |---|---|
 | id | `tbm_<slug>-docs-impl` / `tbm_<slug>-ac-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` (slug = 소문자 레포명) |
-| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> AC ↔ E2E 1:1 정합성` / `<slug> e2e 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` |
+| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> AC ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` |
 | metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, ac, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` (+ 필요 시 도구 태그: maestro, playwright 등) |
 | checkPolicy | `{"intervalSeconds": 3600}` |
 | versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·ac-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60` |
@@ -68,7 +68,7 @@ docs-impl이 "문서가 기술한 동작이 구현되었는가"를 본다면 이
 ## 인스턴스화 절차
 
 1. **대상 파악**: 대상 레포를 클론·탐색해 슬롯 표의 값을 확정한다
-   (문서 경로, AC ID 체계·개수, 구현/e2e 디렉터리, 예외 후보, 등록 시점 현황).
+   (문서 경로, AC ID 체계·개수, 구현/E2E 디렉터리, 예외 후보, 등록 시점 현황).
 2. **조립**: JSON 골격의 슬롯을 채우고, definition 본문 템플릿을 채워 `definition`
    필드에 넣는다. `[선택]` 블록은 해당 없으면 통째로 삭제하고, `<!-- 지침 -->`
    주석은 모두 제거한다. definition·versionScript.code처럼 개행이 많은 문자열은

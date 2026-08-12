@@ -54,7 +54,7 @@ test("reads the file, type and target of every template row", () => {
       "| 파일 | 유형 | 대상 |",
       "|---|---|---|",
       "| `docs-impl.tbm.md` | 제품 문서 ↔ 구현 정합성 | 문서와 구현의 일치 |",
-      "| `ac-e2e.tbm.md` | AC ↔ E2E 1:1 정합성 | AC와 e2e 파일의 전단사 |"
+      "| `ac-e2e.tbm.md` | AC ↔ E2E 1:1 정합성 | AC와 E2E 파일의 전단사 |"
     ].join("\n")
   );
 
@@ -69,7 +69,7 @@ test("reads the file, type and target of every template row", () => {
       file: "ac-e2e.tbm.md",
       name: "AC ↔ E2E 1:1 정합성",
       type: "AC ↔ E2E 1:1 정합성",
-      target: "AC와 e2e 파일의 전단사"
+      target: "AC와 E2E 파일의 전단사"
     }
   ]);
 });

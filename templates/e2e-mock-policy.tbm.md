@@ -1,6 +1,6 @@
-# 템플릿: e2e 모킹 최소화 (e2e-mock-policy)
+# 템플릿: E2E 모킹 최소화 (e2e-mock-policy)
 
-한 레포에서 **e2e가 실환경을 그대로 구동하는 것**을 기본으로 두고, 결정적 치환
+한 레포에서 **E2E가 실환경을 그대로 구동하는 것**을 기본으로 두고, 결정적 치환
 (네트워크 인터셉트·응답 모킹·테스트 전용 fixture seam·외부 서비스 mock 서버)은
 **실환경으로 재현이 불가능한 경우에 한해, 문서에 등재된 지점만** 허용하는 모델.
 정합 상태 = **허용목록에 등재된 모킹 지점의 집합 == 코드에 실재하는 모킹 지점의
@@ -37,8 +37,8 @@
 {
   "id": "tbm_{{SLUG}}-e2e-mock-policy",
   "metadata": {
-    "name": "{{SLUG}} e2e 모킹 최소화 (정책 ↔ 실제 모킹 지점)",
-    "description": "{{REPO}}의 e2e는 {{REAL_BASELINE}} 기반이 기본이고, {{MOCK_KINDS}}는 실환경으로 재현 불가능한 경우({{CATEGORIES}})에 한해 {{POLICY_SSOT}}에 등재된 것만 허용한다. 미등재 모킹과 고아 등재는 모두 drift.",
+    "name": "{{SLUG}} E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)",
+    "description": "{{REPO}}의 E2E는 {{REAL_BASELINE}} 기반이 기본이고, {{MOCK_KINDS}}는 실환경으로 재현 불가능한 경우({{CATEGORIES}})에 한해 {{POLICY_SSOT}}에 등재된 것만 허용한다. 미등재 모킹과 고아 등재는 모두 drift.",
     "tags": ["{{SLUG}}", "e2e", "mocking", "test-policy", "consistency"],
     "createdAt": "{{NOW_ISO}}"
   },
@@ -55,7 +55,7 @@
 }
 ```
 
-- e2e 도구 태그(`playwright`, `maestro` 등)를 tags에 추가해도 된다.
+- E2E 도구 태그(`playwright`, `maestro` 등)를 tags에 추가해도 된다.
 - `{{MOCK_SCOPE}}`가 단일 디렉터리가 아니면 `asIs.dataSource.subPath`는 생략하고
   스크립트가 경로 목록을 직접 다룬다(스크립트가 진실).
 
@@ -101,7 +101,7 @@ printf '%s' "$SEC" | sha256sum | cut -d' ' -f1
 
 ```bash
 #!/usr/bin/env bash
-# as-is = e2e의 "모킹 지점 지문". 인터셉트 호출 라인만 뽑아 정규화·정렬 후 해시한다.
+# as-is = E2E의 "모킹 지점 지문". 인터셉트 호출 라인만 뽑아 정규화·정렬 후 해시한다.
 # 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
 set -euo pipefail
 export LC_ALL=C
@@ -134,10 +134,10 @@ HITS=$({ git ls-files -- {{MOCK_SCOPE}} | grep -vE '{{SCOPE_EXCLUDE}}' | sort \
 `[선택]` 표시 블록은 해당 없으면 통째로 삭제. `<!-- 지침 -->`은 모두 제거.
 
 ```markdown
-# {{SLUG}} e2e 모킹 최소화
+# {{SLUG}} E2E 모킹 최소화
 
 ## 목표
-`{{REPO}}`의 e2e는 **{{REAL_BASELINE}}**을 대상으로 도는 것이 기본이다. {{MOCK_KINDS}}는 **실환경으로 재현이 불가능한 경우에 한해서만** 허용하고, 그 예외는 문서에 등재된 것만 인정한다. 편의(실환경 준비 회피, 어서션 단순화, 플레이키 무마)를 위한 모킹은 drift다.
+`{{REPO}}`의 E2E는 **{{REAL_BASELINE}}**을 대상으로 도는 것이 기본이다. {{MOCK_KINDS}}는 **실환경으로 재현이 불가능한 경우에 한해서만** 허용하고, 그 예외는 문서에 등재된 것만 인정한다. 편의(실환경 준비 회피, 어서션 단순화, 플레이키 무마)를 위한 모킹은 drift다.
 
 ## 무엇이 "맞는 상태"인가 (SSOT)
 - **정책·허용목록의 SSOT**는 {{POLICY_SSOT}}다. 허용 카테고리와 승인된 모킹 지점 목록(위치 · 대상 · 카테고리 · 실환경 불가 사유)을 담는다.
