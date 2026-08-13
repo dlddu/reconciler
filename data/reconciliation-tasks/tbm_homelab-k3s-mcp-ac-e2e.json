@@ -1501,12 +1501,58 @@
       "gap": "**유의미한 차이 있음 — 엄격 1:1 미충족 27/64 (13 통합 커버 + 14 e2e 부재), 그리고 이번 트리거가 to-be를 12 AC 늘렸다.**\n\n두 델타의 성격이 정반대이므로 분리해 판정한다.\n\n1. **as-is 델타(PR #39)는 수렴이다.** 이 모델 자신의 직전 슬라이스 산출물로, `workload.py`의 11개 AC를 파일 수준 커버에서 per-AC 전용 케이스로 승격했다(통합 24→13 · 전용 25→36). 코드에서 재도출한 AC 선언 36건은 중복 0이고 레지스트리 표와 완전 일치한다 → 이 델타가 새로 연 gap은 없다.\n\n2. **to-be 델타(PR #40)는 gap 확대다.** 신규 PRD 3개가 AC를 52→64로 12건 늘렸는데, 이 12건은 전부 e2e가 없다(⬜). 게다가 e2e 이전에 **도구 자체가 미구현**이다 — `internal/`에 `sessionplatform` 패키지가 없고, 레지스트리 자신도 \"session-platform 배포가 2026-08-06 제거된 상태라 12 AC 전부 자동화 공백\"이라고 적고 있다. 규칙 1(모든 AC는 자신을 검증하는 e2e 케이스를 정확히 하나 가진다)의 정면 위반이 12건 새로 생겼다.\n\n3. **기존 잔여도 그대로다.** `aws_config.py`(2) · `dear_baby.py`(2) · `opensearch.py`(9) = 13 AC가 여전히 도메인당 평면 스크립트의 파일 수준 커버라 규칙 1·2를 충족하지 못한다. platform AC2·AC8도 e2e 부재.\n\n정적 문서↔테스트 구조 격차라 롤아웃·일시 alert 같은 자동 해소 기전이 없다.\n",
       "summarizedAt": "2026-08-13T06:35:00Z"
     },
-    "updatedAt": "2026-08-13T07:05:00Z",
+    "updatedAt": "2026-08-13T07:20:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "27/64 AC가 정의의 1:1 매칭을 충족하지 못하고, 그중 12건은 **이번 트리거가 새로 만든 위반**이며, 이 모델에 열린 task가 0이다 → 지금 작업이 필요하다.\n\n근거 1 — **새 위반이 실제로 생겼다.** PR #40이 AC를 52→64로 늘렸고 신규 12건은 전부 e2e 부재(규칙 1 위반). \"구현 선행 문서\"라는 사정은 정의상 면제 사유가 아니다 — 이 모델의 예외는 \"e2e로 커버하기 비현실적인 AC\"에만 열려 있고(현재 등재 1건: platform/AC4), 미구현은 예외 사유가 아니다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 task 7건 중 열린 것은 0건이다(직전 `rct_20260807-0004`는 이번 as-is 트리거를 만든 PR #39의 슬라이스로 `succeeded`). 미점유 handoff이므로 planner가 바로 집을 수 있다.\n\n근거 3 — **닫을 수 있는 경로가 열려 있다.** 잔여 13건(`opensearch.py` 9 · `aws_config.py` 2 · `dear_baby.py` 2)은 **이미 CI에서 초록인 통합 스크립트를 per-AC 케이스로 쪼개는 리팩터**이고, 방금 `workload.py`가 같은 작업을 11건 규모로 성공시킨 직전 선례가 있다(신규 픽스처 없이 기존 배포·CI 스텝 재사용 패턴). 실행 위험이 낮고 완료 기준이 기계적으로 검증된다.\n\n근거 4 — 정적 구조 gap이라 자동 해소 가능성이 없다 → `recheckAfter` 유예 부적합.\n\n**planner 참고 (슬라이스 경계 권고)**\n\n- **첫 슬라이스에서 session-* 12건은 빼라.** 이쪽은 e2e 작성이 막혀 있다: `internal/`에 `sessionplatform` 패키지가 아예 없고(실측), session-platform 배포도 2026-08-06 제거됐다. 레지스트리가 적어 둔 선행 순서(앱 재배포 → env 배선 → `internal/sessionplatform` 구현 → 단위 → e2e)를 그대로 존중하는 게 맞고, 이 12건은 **이 루프가 아니라 도구 구현 작업**이 선행돼야 한다. 다만 gap 계수에서 빼지는 말 것(⬜로 계속 계수).\n- **첫 슬라이스 후보 = `opensearch.py`의 9 AC per-AC 분리** — 잔여 13건 중 가장 큰 단일 파일이고, `workload.py` 선례와 동일하게 기존 배포·CI 스텝을 재사용할 수 있다. `aws_config.py`(2) + `dear_baby.py`(2)는 작아서 같은 슬라이스에 붙이거나 후속으로 돌려도 된다.\n- **완료 기준에 기계 확인을 넣을 것**: docstring `AC: <domain>/AC<n>` 선언 수 == 레지스트리 `✅ 전용 케이스` 수, 중복 선언 0, 레지스트리 행 합 == AC 총수. 이번 fire에서 이 세 항목을 실측해 모두 일치함을 확인했으므로, 슬라이스 후에도 같은 방식으로 검증하면 된다.\n- **별건 이월**: 🚫 예외 1건(platform-auth-safety/AC4)은 문서에 \"정의 예외 개정 제안\"으로만 남아 있고 모델 `definition`의 예외 목록에는 아직 반영되지 않았다. 이건 planner의 작업이 아니라 **reconciler-tobe-modeler로 definition을 개정할 사안**이다 — 이번 슬라이스 범위에 넣지 말 것.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-13T06:35:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "잔여 `✅ 통합`(파일 수준 커버) 13건을 이번 슬라이스에서 전부 처리해 레지스트리에서 `✅ 통합` 행을 0으로 만든다. 9건(opensearch put/AC1·AC2 · search/AC1·AC2 · delete/AC1·AC2 · aws-config-get/AC1 · dear-baby-reset-user/AC1·AC2)은 per-AC 전용 케이스로 승격하고, 나머지 4건(opensearch put/AC4 · search/AC3 · delete/AC4 · aws-config-get/AC2 — 전부 'AssumeRole·SigV4/정적 키 미사용' 계열)은 **현 픽스처에서 e2e로 관측 불가**임을 근거와 함께 `⬜ 보강 필요`로 정정한다. 이 방법을 고른 이유: (a) `workload.py` 11건(PR #39)·8건(PR #38) 선례와 동일하게 **이미 도는 CI 스텝(8082·8084·8086) 안의 재구성**이라 신규 픽스처·신규 롤아웃 대기·신규 CI 스텝이 0이고, (b) opensearch의 put→search→delete 공유 파이프라인은 **케이스별 전용 인덱스**(put이 인덱스를 자동 생성하므로 가능)로 쪼개면 공유 상태 재설계 없이 독립 케이스가 되며, (c) AssumeRole 계열 4건은 보안 플러그인이 꺼진 OpenSearch 픽스처가 '서명됨'과 '서명 안 됨'을 구분하지 못해 어떤 단언도 vacuous해진다 — 지금 ✅로 남겨두는 것이 오히려 규칙 1 위반을 숨긴다(#38·#39에서 반복 확인된 '✅ 통합은 커버를 뜻하지 않는다' 함정). **완료 기준**: `docs/doc-tracker.md`에 `✅ 통합` 행 0 · `tests/integration/*.py`의 `AC: <domain>/AC<n>` docstring 선언 45건(중복 0) · 레지스트리 행 합 64 = ✅ 전용 45 + ⬜ 18 + 🚫 1 · CI `integration-tests` 잡 green. **범위 밖**: AssumeRole·SigV4 4건의 관측 수단 신설(MinIO HTTP trace 또는 서명 기록 프록시 픽스처), platform-auth-safety AC2·AC8, session-* 12건(도구 자체 미구현), 🚫 예외 1건의 definition 반영(reconciler-tobe-modeler 소관).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`tests/integration/opensearch.py`를 케이스 디스패처로 재구성한다. 평면 `run()`을 6개 per-AC 케이스로 쪼개고(각각 `test_opensearch_document_put_ac1_upsert_semantics` · `_ac2_index_auto_creation` · `test_opensearch_search_ac1_query_matching` · `_ac2_size_default_and_cap` · `test_opensearch_document_delete_ac1_single_document` · `_ac2_missing_document_not_found`), 케이스마다 `ci-<case>-<RUN_ID>` 전용 인덱스를 써 공유 상태를 없앤다. AC 본문의 '검증 방법' 문장을 한 줄씩 대조해 현재 비어 있는 단언을 채운다 — 특히 (a) put/AC2는 색인 전 그 인덱스 검색이 404로 거부되는 것을 선행 관측해 '자동 생성'을 실제로 단정하고, (b) search/AC2는 문서 12건을 시드해 **size 미지정 시 정확히 10건**(현재 e2e가 한 번도 관측한 적 없음)을 단정한다.",
+              "expectedOutcome": "opensearch.py가 8개 케이스(신규 6 + 기존 destructiveHint 2)를 갖고, `run()`은 세션 하나를 열어 케이스를 호출만 하는 디스패처가 된다. 각 케이스 docstring 첫 줄이 `AC: <domain>/AC<n>`을 정확히 하나 선언한다."
+            },
+            {
+              "seq": 2,
+              "action": "`tests/integration/aws_config.py`의 `run()`을 `test_aws_config_get_ac1_fixed_object`로 분리하고, AC1 문언이 명시한 메타데이터(size·contentType·ETag·last-modified)를 실제로 단정한다(현재는 size만 단정하고 etag는 print에만 등장).",
+              "expectedOutcome": "aws_config.py가 AC1 전용 케이스 1개를 갖고, 응답의 bucket·key·content·size·etag·lastModified가 모두 단정된다."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/integration/dear_baby.py`를 AC1(`test_dear_baby_reset_user_ac1_reset_execution`)·AC2(`test_dear_baby_reset_user_ac2_explicit_target`) 전용 케이스로 분리한다. AC2는 현재 **어떤 단언도 없는** '`email` 누락 호출 거부'를 신설하고(JSON-RPC -32602 → SDK `McpError`, 메시지 `email is required`), 기본 selector/container 해석과 재정의 경로를 함께 단정한다. AC1은 성공 경로(exitCode 0 · stdout 마커 · success) + 실패 경로(no user found, exitCode 1)를 단정하되, busybox 스텁 CLI라 **온보딩 필드 초기화 자체는 관측 불가**임을 docstring에 '단언하지 않는 것'으로 명시한다.",
+              "expectedOutcome": "dear_baby.py가 AC1·AC2·AC3(기존 destructiveHint) 3개 케이스를 갖고, email 누락 거부가 e2e에서 처음으로 관측된다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/doc-tracker.md` 레지스트리를 갱신한다: 9행을 `✅ 전용 케이스 <파일>::<케이스명>`으로 승격, AssumeRole 계열 4행을 `⬜ 보강 필요 (관측 수단 부재)`로 정정, 헤더 집계를 `(64) — ✅ e2e 45 (전용 케이스 45) · ⬜ e2e 보강 18 · 🚫 e2e 예외 1`로 맞추고, ⬜ backlog 절에 4건의 정정 사유와 후속 설계(MinIO `MINIO_HTTP_TRACE`로 AssumeRole 요청을 파드 로그에서 관측 / OpenSearch 앞단 서명 기록 프록시 픽스처)를 적는다. 완료 노트·변경 이력도 추가한다.",
+              "expectedOutcome": "`grep -c '✅ 통합' docs/doc-tracker.md` == 0, 레지스트리 행 64 = 45 + 18 + 1, 헤더 집계와 실측이 일치."
+            },
+            {
+              "seq": 5,
+              "action": "영향 받는 테스트 문서 5개(`test-opensearch-document-put.md` · `test-opensearch-search.md` · `test-opensearch-document-delete.md` · `test-aws-config-get.md` · `test-dear-baby-reset-user.md`)의 **자동화** 필드를 새 케이스 경로(`파일::케이스명`)로 갱신하고, AssumeRole 시나리오의 자동화 필드에서 '통합 e2e가 이 경로를 검증한다'는 문장을 사실에 맞게(Go 단위만 검증 · e2e는 보강 대기) 정정한다.",
+              "expectedOutcome": "규칙 3(식별 가능성)이 케이스 docstring과 테스트 문서 양쪽에서 성립하고, 문서가 실제로 존재하지 않는 e2e 커버를 주장하지 않는다."
+            },
+            {
+              "seq": 6,
+              "action": "클러스터 없이 검증한다: (a) 응답 스키마를 **소스에서 파싱**해(`internal/opensearch/opensearch.go`의 json 태그, `internal/mcp/mcp.go`의 payload, `internal/awsconfig/awsconfig.go`) 인메모리 가짜 OpenSearch + 가짜 MCP 세션 스텁 하네스를 만들고 6개 opensearch 케이스를 로컬 구동, (b) 각 단언마다 **네거티브 컨트롤**(예: updated를 created로, 자동 id 중복, 인덱스 스코프 무시, size 미지정에 12건 반환, 삭제 후에도 검색에 잔존, not_found 대신 에러)을 넣어 의도대로 실패하는지 확인 후 복원, (c) 모든 변경 파일 `py_compile`.",
+              "expectedOutcome": "6개 케이스가 스텁에서 통과하고 네거티브 컨트롤이 전부 실패로 잡힌다(단언이 vacuous하지 않음을 증명). py_compile 무오류."
+            },
+            {
+              "seq": 7,
+              "action": "`reconcile/rct_20260813-0001` 브랜치로 커밋·푸시하고 draft PR을 연다. PR 본문에 task id·gap 요약·완료 기준·4건 정정 근거(왜 ✅가 vacuous한지)·검증 방법·범위 밖 잔여를 적는다.",
+              "expectedOutcome": "dlddu/homelab-k3s-mcp에 draft PR이 열리고 CI 4잡이 돌기 시작한다."
+            }
+          ],
+          "plannedAt": "2026-08-13T07:20:00Z"
+        }
+      }
+    ]
   }
 ]
