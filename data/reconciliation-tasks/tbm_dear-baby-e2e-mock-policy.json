@@ -254,5 +254,39 @@
       "assessedBy": "agent",
       "assessedAt": "2026-08-08T02:07:15Z"
     }
+  },
+  {
+    "toBeModelId": "tbm_dear-baby-e2e-mock-policy",
+    "status": "no_action_needed",
+    "trigger": {
+      "detectedAt": "2026-08-13T06:52:00Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "seams=32 files=20\n5530065b9493459fafea11cf58fb1f034f6dc170f275e218bdd57a2337da0097",
+        "currentVersion": "seams=50 files=22\nfdfeef90c2edd98f0d91303811f4d4ff596f87a53954a6f4e25c1f7e6f1fbea9"
+      },
+      "toBe": {
+        "previousVersion": "lines=63 boundaries=6\n17211265768d5c82f61fb9e6b747ddce9f41a20443056d49117e20ba97d7a5ee",
+        "currentVersion": "lines=78 boundaries=6\nf0c9a5236eb431e77dd2b3918637b7e34ce682238f34899b90736f9892e3b2b7"
+      }
+    },
+    "createdAt": "2026-08-13T06:52:00Z",
+    "id": "rct_20260813-0001",
+    "updatedAt": "2026-08-13T06:52:00Z",
+    "stateSummary": {
+      "summarizedAt": "2026-08-13T06:52:00Z",
+      "asIs": "## as-is — 실제 모킹 지점 지문 @ `b2336d2` (2026-08-13T06:44:16Z)\n\n지문 `seams=50 files=22 / fdfeef90…` (직전 `seams=32 files=20 / 5530065b…`). **seam이 18개 늘어난 것은 새 모킹이 생겨서가 아니라, 이번 PR이 도입한 `mock-exception:` 주석 자체가 지문 패턴에 잡히기 때문**이다(주석 1줄 = 토큰 1개).\n\n레지스트리가 스스로 규정한 검증 명령을 그대로 돌린 결과:\n\n```\n$ git grep -ho 'mock-exception: MB-[0-9][0-9]*' -- app backend worker e2e scripts .github | sort | uniq -c\n     11 mock-exception: MB-1\n      9 mock-exception: MB-2\n      7 mock-exception: MB-4\n```\n\n→ 코드에 실재하는 경계 토큰 집합 = **{MB-1, MB-2, MB-4}**. 주석은 각 seam 사이트 직전 줄에 사유와 함께 달렸다(`app/src/config/env.ts` · `voice/recorder.ts`·`whisperEngine.ts`·`modelManager.ts` · `auth/useTesterLoginGesture.ts`·`TesterLoginModal.tsx` · `app/app/(landing)/index.tsx` · `e2e/maestro/home-voice-record.yaml`·`subflows/tester-login-fast.yaml` · `scripts/openrouter-mock/*` · `worker/cmd/worker/main.go`·`worker/internal/openrouter/client.go` · `.github/actions/setup-ai-worker` 등).\n\n**등재 불가 부채 2건은 코드에 그대로 있다**(실측): `app/src/api/notifications.ts:11` `const STUB_UNREAD_COUNT = 1;`, `app/src/api/recordsCount.ts`의 하드코딩 fallback(50/36/12/50).\n",
+      "toBe": "## to-be — 모킹 경계 레지스트리 @ `b2336d2`\n\n지문 `lines=78 boundaries=6 / f0c9a523…` (직전 `lines=63 boundaries=6 / 17211265…`). 경계 수는 **6개 불변**, 절이 15줄 늘었다.\n\n레지스트리 정정 내용:\n\n1. **표기 규약 신설** — `// mock-exception: MB-N — <이유>`를 seam 직전 줄에 다는 규약과, 스캔 범위(`app backend worker e2e scripts .github`, `docs/` 제외)·검증 명령·\"양쪽 집합이 정확히 일치해야 한다\"는 불변식을 명문화. 규약의 목적을 \"지문의 사각지대를 덮는 것\"으로 적었다(새 이름의 환경 플래그·프록시 주입처럼 기존 토큰 패턴에 안 걸리는 수단도 주석으로 잡힌다).\n2. **MB-4를 \"신설(백엔드)\" → \"구현됨\"으로 정정** — LLM 경계 mock이 이미 `scripts/openrouter-mock/`에 있고 `.github/actions/setup-ai-worker`가 이를 띄워 워커를 물리며, `e2e-android.yml`·`e2e-ios.yml` 양 maestro 레인과 `integration.yml`이 모두 그 액션을 쓴다. 치환 지점도 백엔드 SSE가 아니라 **LLM 공급자 HTTP 경계**로 재기술.\n3. **`EXPO_PUBLIC_E2E_FAST_TESTER_LOGIN`을 MB-2에 흡수 등재** — 아무것도 치환하지 않고 모달 도달 방법만 15탭 → 히트존 1회로 줄인다는 근거와, 원경로를 `login.yaml`·`subflows/tester-login.yaml`이 계속 단정한다는 커버리지 보전을 함께 기재.\n4. **\"등재 불가 · 제거 대기\" 표 신설(2건)** — `STUB_UNREAD_COUNT`(AC-007-03)와 `recordsCount.ts` fallback(AC-007-07). **예외 목록이 아니라 정책 위반 부채**로 못박고, 닫는 조건을 \"등재가 아니라 제거\"(백엔드 알림 조회 API / 답변 수 집계 API 구현 후 실 호출로 교체)로 명시.\n5. **지문 오탐 4종 고정** — `E2E_KEYCHAIN_PATH`/`_PWD`(iOS 서명 키체인) · `community.ts` 산문 · `notifications.ts`/`recordsCount.ts` 산문 낱말 중복 계수 · `uploadAudio.ts`의 \"업로드는 치환 안 함\" 산문. 재심리 금지 표시.\n6. 경계별 후속 문구를 \"MB-1·MB-2 구현 완료\" → \"**MB-1·MB-2·MB-4** 구현 완료 / MB-3·MB-5·MB-6은 후속\"으로 갱신.\n",
+      "gap": "**이번 reconcile은 계획 범위 내에서 수렴했고, 남은 gap은 전부 다른 축에 의존한다.**\n\n**닫힌 것 — 실측으로 확인.** 이 모델의 직전 관측이 지적한 두 가지가 해소됐다: (a) `mock-exception:` 표기 채택 **0건 → 27건**(MB-1 11 · MB-2 9 · MB-4 7), (b) 등재↔실재 불일치 — 레지스트리의 **구현됨** 집합과 코드 토큰 집합이 **양쪽 모두 정확히 {MB-1, MB-2, MB-4}** 로 일치한다(레지스트리가 규정한 검증 명령을 직접 돌려 확인). MB-4의 \"신설 예정\" 오기와 `EXPO_PUBLIC_E2E_FAST_TESTER_LOGIN` 미등재도 정정됐다. 이제 1:1이 **기계 검증 가능한 상태**다.\n\n**남은 gap.**\n\n1. **MB-3(카메라) · MB-5(푸시) · MB-6(결제·제작) seam 미구현** — 셋 다 레지스트리에서 여전히 \"신설\". 그러나 이들은 **모킹 seam을 못 만들어서가 아니라 치환할 실제 기능이 아직 없어서** 열려 있다: 앱에 카메라 라이브러리(`expo-camera`/`expo-image-picker`)가 없고(실측 0건), 푸시 예약·결제/주문도 백엔드 e2e 결정 모드가 전제다. 레지스트리 자신이 \"seam 실구현과 대응 신 flow 저작이 필요하고 앱 구동·백엔드 통합 검증을 요한다\"고 적었다.\n2. **등재 불가 부채 2건 존속** — `STUB_UNREAD_COUNT = 1`(notifications.ts:11)과 `recordsCount.ts` 하드코딩 fallback이 코드에 그대로 있다. 닫는 조건은 등재가 아니라 **제거**이고, 그 선행은 백엔드 알림 조회 API·답변 수 집계 API 구현이다 — 레지스트리가 \"백엔드에 해당 라우트·핸들러가 실제로 0건임을 확인\"했다고 기록했다.\n\n즉 이 모델의 잔여는 모두 **제품 기능 구현(자매 모델 `tbm_dear-baby-docs-impl`의 축)이 선행**돼야 움직인다.\n"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "assessedBy": "agent",
+      "assessedAt": "2026-08-13T06:52:00Z",
+      "reason": "post-reconcile 재트리거이고 계획 범위 내 수렴이 실측으로 확인되며, **잔여는 이 루프가 독립적으로 닫을 수 없다** → 작업 불필요.\n\n근거 1 — **이번 델타가 만든 새 drift가 없다.** 델타는 주석·문서 전용이고(19파일 +77/-3, 런타임 코드·flow 커맨드·CI 배선 무변경) 지문의 seam 32→50 증가는 **새 모킹이 아니라 이번에 추가한 `mock-exception:` 주석 자신**이 패턴에 잡힌 결과다. 모킹 지점이 늘어난 것이 아니다.\n\n근거 2 — **직전 gap이 실제로 닫혔다.** 레지스트리가 규정한 검증 명령을 직접 돌려 코드 토큰 집합 `{MB-1, MB-2, MB-4}`가 레지스트리의 **구현됨** 집합과 정확히 일치함을 확인했다(주석 27건: MB-1 11 · MB-2 9 · MB-4 7). 직전 관측의 두 지적(표기 채택 0건 · MB-4 등재 오기)이 모두 해소됐고, 이제 1:1이 기계 검증된다.\n\n근거 3 — **남은 두 갈래는 전부 다른 축에 막혀 있다.** (a) MB-3·MB-5·MB-6은 치환할 **기능 자체가 미구현**이다 — 앱에 카메라 라이브러리가 0건이고(실측), 푸시 예약·결제/주문도 백엔드 e2e 결정 모드가 전제다. 기능 없는 경계에 mock seam을 먼저 만드는 것은 순서가 뒤집힌 작업이다. (b) 등재 불가 부채 2건(`STUB_UNREAD_COUNT`, `recordsCount` fallback)은 닫는 조건이 **제거**이고 그 선행이 백엔드 알림/답변수 API 구현인데, 레지스트리가 해당 라우트·핸들러 0건을 확인해 기록했다. 두 갈래 모두 소유자는 `tbm_dear-baby-docs-impl`(구현 축)이다.\n\n근거 4 — 따라서 지금 `action_required`로 넘겨도 planner가 세울 수 있는 계획이 \"선행 기능이 생길 때까지 대기\"뿐이다. 자동 해소를 기다리는 것이 아니라 **다른 축의 진행에 종속된 상태**이므로 `recheckAfter` 유예가 아니라 종료가 맞다. 기능이 구현되면 as-is 지문이 움직여 이 모델이 정상적으로 재트리거된다.\n\n**이월 메모(다음 감지·모델러용)**: ① 이 모델의 to-be 지문이 `docs/doc-tracker.md`의 `### 외부 호출 모킹 경계 레지스트리` → 다음 `^##` 슬라이스를 해싱하는데, 그 범위 안에 자매 모델(`tbm_dear-baby-ac-e2e-1to1`)의 ⬜ backlog가 물리적으로 들어 있어 **남의 AC가 늘 때마다 이 모델의 to-be가 흔들리는** 구조적 오탐이 여전하다(`rct_20260808-0002`가 이미 지적). 절 경계를 `⬜ 후속 flow backlog` 앞에서 끊거나 MB 표만 해싱하도록 좁히는 것은 `reconciler-tobe-modeler` 몫이다. ② 이번에 레지스트리가 \"지문 오탐 4종\"을 문서에 고정했으므로, 다음 감지는 그 4종을 재심리하지 말 것."
+    }
   }
 ]
