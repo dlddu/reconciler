@@ -169,5 +169,39 @@
         }
       }
     ]
+  },
+  {
+    "toBeModelId": "tbm_session-platform-e2e-mock-policy",
+    "status": "no_action_needed",
+    "trigger": {
+      "detectedAt": "2026-08-13T06:35:00Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "seams=18 files=8\nf8e44c553069a30a34d4ccd26c1512da124ae45b2218532cb67fc9372ce16c87",
+        "currentVersion": "seams=16 files=11\n225c98d22aecfdb92e39515021b14a15c13b2d86bfa327c2e03e0683220a5800"
+      },
+      "toBe": {
+        "previousVersion": "lines=19\ncee6f846679ad14d64ac6ef6c3533ed16c4b7eca1381d64d233c50410034f675",
+        "currentVersion": "lines=18\n1fb20cb85b8359ba3553eff165e0441cdbf8d9cd1e7976030867f8bbef33e3ad"
+      }
+    },
+    "createdAt": "2026-08-13T06:35:00Z",
+    "id": "rct_20260813-0001",
+    "updatedAt": "2026-08-13T06:35:00Z",
+    "stateSummary": {
+      "summarizedAt": "2026-08-13T06:35:00Z",
+      "asIs": "## as-is — e2e SUT 경로의 충실도 seam 지문 @ `ed71777`\n\n지문 `seams=16 files=11 / 225c98d2…` (직전 `seams=18 files=8 / f8e44c55…`). 토큰 수는 줄었지만 **구성이 크게 바뀌었다**. HEAD의 16개 히트를 실측해 분류하면:\n\n| 분류 | 히트 | 비고 |\n|---|---|---|\n| **GATE**(CRIU 게이트) | `main.go:CRIU_ENABLED` · `main.go:NewStubCheckpointer` · `Makefile` · `deploy/kustomization.yaml` · `k8s/deployment.yaml` | 직전 관측과 동일하게 존속. 프로덕션 off 경로가 no-op 스텁이라는 잔여도 그대로 |\n| **TRIG**(test-only `/snapshot` 트리거) | — | **소멸**. `E2E_TEST_ENDPOINTS`·`WithTestEndpoints`가 repo 전역에서 사라졌다(`grep -rn` 0건) |\n| **NET**(web 인터셉트) | `j6-agent-prompt-loop.spec.ts`(`.route(` · `route.fulfill(`) · `manual-archive.spec.ts`(동) · `session-deletion.spec.ts`(동) | **신규 — 직전 관측 0건에서 3개 파일로 등장** |\n| 산문·배선(비-seam) | `.github/workflows/e2e.yml:test-only` · `deploy/minio.yaml:test-only` · `web/e2e/deferred.spec.ts:test-only` · `control-plane/test/e2e_deferred_test.go:test-only` · `e2e_deferred_test.go:E2E_SESSION_NAMESPACE` | 앞 4개는 산문, `E2E_SESSION_NAMESPACE`는 단정 배선(직전 task가 **제외 목록 대상**으로 판정한 항목) |\n\n- `mock-exception:` 표기 채택은 **여전히 repo 전역 0건**.\n- 파일 수가 8 → 11로 는 것은 web spec 3개가 새로 지문에 들어왔기 때문이다.\n",
+      "toBe": "## to-be — 충실도 정책·허용목록(`docs/test/e2e.md`의 충실도 절) @ `ed71777`\n\n지문 `lines=18 / 1fb20cb8…` (직전 `lines=19 / cee6f846…`). 절이 사라지지 않았고(`absent` 아님) 1줄 줄었다.\n\n내용 델타의 실질:\n\n- **\"test-only snapshot 트리거\" 문구가 삭제되고 \"제품 snapshot endpoint를 통해\"로 교체**됐다. 즉 정책 문서가 TRIG seam의 소멸을 반영했다.\n- reaper 서술이 \"운영 idle→snapshot 트리거는 아직 미확정(`TODO(policy)`)\"에서 \"**운영 reaper는 마지막 read/write부터 60분에 도달한 세션을 스캔해 snapshot한다. 다만 배포 e2e에는 60분 시계를 가속하거나 `lastAccess`를 주입하는 제품 API가 없어 실제 시간 경계 시드는 skip이다**\"로 바뀌었다.\n- 여전히 **산문 블록쿼트이며 per-seam 행이 0개**다. 허용목록으로의 승격(표 형태·seam별 사유·대체 검증)은 이루어지지 않았다.\n- **새로 등장한 web 인터셉트 3파일은 이 절에 한 줄도 등재되지 않았다.**\n",
+      "gap": "**유의미한 차이 있음 — 한 축은 닫혔고, 이 모델이 지키려던 회귀선 하나가 새로 뚫렸다.**\n\n1. **TRIG 축은 실제로 닫혔다(수렴).** 직전 관측이 2개 실 seam 중 하나로 지목한 test-only `/snapshot` 트리거(`E2E_TEST_ENDPOINTS` + `WithTestEndpoints` + `api.go`의 조건부 라우트)가 코드에서 제거되고 제품 snapshot endpoint로 대체됐다. 정책 문서도 같은 커밋 계열에서 문구를 따라 갱신했다 → 이 부분은 as-is·to-be가 함께 움직인 정상 수렴이다.\n\n2. **NET 회귀선이 뚫렸다 — 이 모델이 존재하는 이유에 직접 해당한다.** 직전 first observation은 \"web 인터셉트 **0**\"을 이 모델이 지켜야 할 회귀선으로 명시하고 planner에게 \"`NET: 0 rows`를 명시적 항목으로 동결하라\"고 넘겼다. 그 사이 머지된 3개 신규 spec이 전부 Playwright route fixture를 쓴다 — `j6-agent-prompt-loop.spec.ts` · `manual-archive.spec.ts` · `session-deletion.spec.ts`. 허용목록(`docs/test/e2e.md` 충실도 절)에는 이들을 등재한 행이 **0개**다. 모델 정의 기준으로 **미등재 모킹 = 정책상 drift**다.\n\n3. **표기 규약도 그대로 미채택**: `mock-exception:` 0건이라 각 인터셉트가 코드 안에서 사유를 밝히지도 않는다.\n\n4. **GATE 잔여 불변**: 프로덕션 off 경로가 `NewStubCheckpointer(false)` no-op이라는 잔여는 그대로이며, `E2E_SESSION_NAMESPACE`가 지문에 계속 잡히는 오탐(제외 목록으로 옮겨야 하는 정의 개정 사항)도 그대로다.\n"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "assessedBy": "agent",
+      "assessedAt": "2026-08-13T06:35:00Z",
+      "reason": "새 drift가 실재하지만 **이 모델의 handoff는 이미 planner가 점유(`planning`)하고 있어 두 번째 미점유 handoff를 여는 것이 규약 위반**이다 → 새 task는 불필요. 대신 점유 중인 task가 반드시 반영해야 할 입력 변화를 아래에 남긴다.\n\n근거 1 — **점유 상태.** `rct_20260808-0001`이 `planning`이다. 그 task의 대상이 바로 이 모델의 허용목록 승격·seam 등재이며, 지금 `action_required`를 하나 더 열면 같은 문서(`docs/test/e2e.md` 충실도 절)와 같은 spec 파일들을 두고 두 워커가 경합한다.\n\n근거 2 — **이번 델타의 절반은 수렴이다.** 직전 관측이 지목한 2개 실 seam 중 TRIG(test-only `/snapshot`)가 코드에서 완전히 제거되고 제품 endpoint로 대체됐으며(`E2E_TEST_ENDPOINTS`·`WithTestEndpoints` repo 전역 0건), 정책 문서도 같은 방향으로 갱신됐다. 이 부분에 대해서는 열 작업이 없다.\n\n근거 3 — 나머지 절반(NET 회귀)은 실재하는 drift이지만 **점유 중인 계획의 범위 조정으로 흡수되는 것이 옳다.** 그 계획이 다루려던 것이 정확히 \"허용목록 승격 + seam별 등재\"이고, 새 인터셉트 3건은 그 표에 행으로 들어갈 대상이지 별개의 작업 축이 아니다.\n\n근거 4 — 자동 해소 기전이 없으므로 `recheckAfter` 유예가 아니라 종료가 맞다. 다음 트리거(계획된 reconcile 머지)가 재감지를 잇는다.\n\n**⚠️ 점유 중인 `rct_20260808-0001`(planner)에게 — 계획의 전제 2개가 이미 무너졌다. 계획을 다시 맞출 것:**\n\n- **① \"NET: 0 rows를 회귀선으로 동결한다\"는 더 이상 현실이 아니다.** web Playwright 인터셉트가 **3개 파일에서 실재**한다 — `j6-agent-prompt-loop.spec.ts`(`.route(`·`route.fulfill(`) · `manual-archive.spec.ts`(동) · `session-deletion.spec.ts`(동). 계획은 \"0을 지킨다\"가 아니라 **\"이 3건을 판정해 등재하거나 제거한다\"** 로 바뀌어야 한다. 각각이 무엇을 가로채는지(세션 API 응답인지 SSE 스트림인지 오류 주입인지)를 파일에서 확인한 뒤, 충실도 관점에서 허용할 것과 실 SUT로 대체할 것을 나눌 것.\n- **② TRIG seam은 이미 사라졌다.** 계획이 \"GATE·TRIG 2개 seam을 등재한다\"로 짜여 있다면 TRIG 항목은 삭제하고, 대신 **정책 문서의 해당 문구가 이미 갱신됐다는 사실**(test-only 트리거 → 제품 snapshot endpoint)을 근거로 남길 것. 남은 코드측 seam은 GATE 하나다.\n- **③ 여전히 유효한 이월 항목**: (a) `mock-exception:` 표기 채택 0건 — 규약 도입이 필요하다. (b) `E2E_SESSION_NAMESPACE`는 단정 배선이지 충실도 seam이 아니므로 지문 **제외 목록**으로 옮기는 정의 개정이 필요하다(planner가 아니라 `reconciler-tobe-modeler` 몫). (c) 산문 히트 4건(`e2e.yml` · `deploy/minio.yaml` · `deferred.spec.ts` · `e2e_deferred_test.go`의 `test-only` 단어)은 seam이 아니라 오탐이므로 등재 대상이 아니다.\n- **④ GATE 잔여의 정확한 표현**: e2e SUT는 `deploy/` 오버레이가 `CRIU_ENABLED`를 켜 **실 경로로 돈다**. 등재할 잔여는 \"e2e가 스텁을 쓴다\"가 아니라 **프로덕션 base 경로가 `NewStubCheckpointer(false)` no-op**이라는 쪽이다 — 직전 task가 바로잡은 판정이므로 계획에서 다시 뒤집지 말 것."
+    }
   }
 ]
