@@ -960,6 +960,57 @@
       "reason": "잔여 gap이 유의미하고, 소유자 없는 미점유 handoff이며, 자동 해소 경로가 없다 → 지금 작업이 필요하다.\n\n근거 1 — **정의상 drift다.** 모델 정의는 \"미구현 AC는 백로그가 아니라 to-be 미달 gap이며 drift다\"를 판정 기준 1로 명시한다. 현재 미구현 18/24(AC1.2~1.5 · AC2.1~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7). 트리거 델타가 수렴 방향(19→18)이라는 사실은 무행동 근거가 되지 못한다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 task 이력 6건 중 열린 것은 0건이다(직전 `rct_20260807-0002`는 이번 트리거를 만든 PR #13의 슬라이스로 `succeeded`, `rct_20260807-0003`은 `no_action_needed`). 전형적인 post-reconcile 재트리거이고 handoff 슬롯이 비어 있다.\n\n근거 3 — **다음 슬라이스가 이미 지목돼 있어 planner가 바로 집을 수 있다.** 트래커 로드맵이 슬라이스 3을 3a(AC4.5, 완료)/3b로 쪼개고 **3b = AC1.5 비동기 진행 가시성, 화면 S04**를 \"다음 권장 슬라이스\"로 못박았다. 3a가 이미 `analysis_stages`에 5단계를 시드하고 워커가 1단계 `fetch`를 실행해 데이터를 적재하므로, 3b는 **적재된 데이터를 화면에 표현하는 작업**이라 선행 의존이 이미 닫혀 있다(트래커의 \"알려진 목업↔구현 편차\" S02 행도 \"단계 데이터 자체는 3a에서 적재된다 · 표현은 3b\"로 갱신됨).\n\n근거 4 — 정적 문서↔코드 격차라 롤아웃·일시 alert 같은 자동 수렴 기전이 없다 → `recheckAfter` 유예 부적합.\n\nplanner 참고: 3b의 완료 기준에는 **AC1.5 전용 e2e spec 신설**을 반드시 포함할 것 — 자매 모델 `tbm_feature-doc-ac-e2e`가 AC↔spec 1:1 전단사를 강제하고 있어, 구현만 얹고 spec을 빠뜨리면 그 모델에 즉시 새 gap이 생긴다(현재 공백 18건 = 이 모델의 미구현 18건과 정확히 같은 집합). 또한 3a가 도입한 \"배포 전역 상태를 건드리는 spec은 그 상태를 단독 소유(`deploy/e2e/` 기본 비활성 + `finally` 복원 + `workers: 1`)\" 규약이 트래커에 등재돼 있으니 3b spec도 이를 따라야 한다.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-13T06:35:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "트래커 로드맵이 \"다음 권장 슬라이스\"로 못박은 3b(AC1.5)를 그 정의대로 구현한다 — 3a가 이미 `analysis_stages`에 5단계를 적재하고 워커가 1단계 `fetch`를 실행하므로, 남은 것은 (가) 적재된 진행을 사용자에게 보여주는 화면(S04)과 (나) 실패 단계의 부분 재시도다. 접근은 \"백엔드가 이미 아는 것만 표현한다\" — 진행률·단계·소요시간은 `analysis_stages` 행에서 그대로 파생하고, 목업의 '실제 누적 비용($0.32 of est $0.80)'처럼 파이프라인이 아직 모르는 수치는 지어내지 않고 추정치만 보여준 뒤 편차로 등재한다(3a가 2~5단계를 pending으로 남긴 것과 같은 원칙). 재시도는 별도 워커 프로토콜을 만들지 않고 **큐로 되돌리는** 방식을 택한다 — 해당 단계 행만 pending으로 리셋하고 분석을 `queued`로 되돌리면 기존 claim/lease 기전이 그대로 재실행을 수행하므로, 되돌릴 것이 상태 두 개뿐이라 가역적이다.\n\n**완료 기준(이 시도의 범위)**: AC1.5의 두 검증 시나리오(test/01 시나리오 5 '앱 종료 후 복귀 시 동일 진행률', 시나리오 6 '실패 단계만 재시도')가 stub 모드 kind e2e에서 자동 검증되고, 전용 spec `ac1-5-*.spec.ts`가 생겨 자매 모델 `tbm_feature-doc-ac-e2e`의 1:1 매핑 공백이 18→17로 줄며, 트래커의 미구현 AC가 18→17로 갱신된다.\n\n**범위 밖(후속)**: ① 실제 누적 LLM 비용·호출 수 = AC4.6(슬라이스 7) — S04의 Spend 카드는 추정치만 표시하고 '실측 대기'를 명시, 편차로 등재. ② 단계 2~5의 실제 실행 = AC1.2~1.4(슬라이스 4~5) — 계속 `pending`으로 남고 S04는 todo로 렌더. ③ 재시도가 성공으로 끝나는 왕복 — stub의 실패 원인(존재하지 않는 브랜치)은 결정적이라 2차 시도도 같은 이유로 실패한다. 재실행 사실은 단계 타임스탬프 갱신으로 단정하고, '성공 재시도'는 자동화 밖 잔여로 등재.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "백엔드 읽기 면: `GET /api/analyses/{id}` 신설 — 소유자 스코프(AC4.7)로 분석 1건 + `stages[]`(seq·key·title·status·detail·error·startedAt·finishedAt)를 반환하고, 완료 단계 수·전체 수를 함께 낸다. 목록 `GET /api/analyses`에도 `stagesDone`/`stagesTotal`을 얹어 S02 카드가 'step N of 5'를 말할 수 있게 한다.",
+              "expectedOutcome": "cargo test: 자기 분석은 200 + 5개 단계 행(모두 pending), 남의 분석 id는 404, 미인증은 401. 기존 `/api/analyses` 응답에 필드가 추가돼도 ac1-1 spec의 단정(카드 텍스트 포함 검사)은 그대로 통과."
+            },
+            {
+              "seq": 2,
+              "action": "백엔드 재시도: `POST /api/analyses/{id}/stages/{key}/retry` 신설 — 대상 단계가 `failed`일 때만 허용하고, 그 행만 `pending`으로 리셋(error·detail·startedAt·finishedAt 초기화)한 뒤 분석을 `queued`로 되돌린다(claimed_by·lease_expires_at·finished_at·error 해제). 형제 단계 행은 한 컬럼도 건드리지 않는다. 실패 상태가 아니면 409, 소유자가 아니면 404, 모르는 단계 키면 400.",
+              "expectedOutcome": "cargo test: 실패 단계 리셋 후 (a) 앞선 succeeded 단계의 status·detail·finishedAt이 불변, (b) 분석이 다시 claim 가능(=워커가 재실행할 수 있음), (c) pending 단계에 대한 retry는 409, (d) 다른 사용자의 분석에 대한 retry는 404."
+            },
+            {
+              "seq": 3,
+              "action": "스텁 충실도 수정: `repo_scan::stub_scan`이 브랜치를 무시하던 것을 고쳐, 스텁 저장소가 갖지 않은 브랜치는 real 경로의 GitHub 404와 같은 실패(`github tree rejected (404)`)로 답하게 한다. 이는 테스트 훅이 아니라 더블의 충실도 결함 수정이다 — real_scan은 존재하지 않는 브랜치에 404를 받는데 stub만 성공을 반환하고 있었다. 부수 효과로 '실패 단계'가 사용자 입력(S03 브랜치 칸)만으로 도달 가능해진다.",
+              "expectedOutcome": "cargo test(unit): `stub_scan(\"payments-api\", \"main\")`은 기존과 동일한 값, `stub_scan(\"payments-api\", \"no-such-branch\")`는 real 경로와 같은 문구로 Err. 기존 worker 테스트(기본 브랜치 사용)는 영향 없음."
+            },
+            {
+              "seq": 4,
+              "action": "프론트 S04 화면 `frontend/src/AnalysisProgress.tsx` 신설 — `docs/mockups/s04-analysis-progress.html`을 이식한다(진행 링 + 퍼센트, `Pipeline · N of 5`, 단계 카드 5개(done/active/todo + failed), 단계별 detail·소요시간, LLM Spend 카드, 'Run in background'). 스타일은 목업 인라인 CSS의 `.step` 계열을 `index.css`에 그대로 옮기고 새 색·새 값은 도입하지 않는다. 실패 단계 카드에만 '이 단계만 다시 시도' 액션을 렌더. 분석이 `queued`/`running`인 동안 2초 폴링(비동기 진행 가시성).",
+              "expectedOutcome": "화면이 서버 상태만으로 그려진다(클라이언트 메모리에 진행을 보관하지 않음) → 새로고침해도 동일 진행률. 목업에 있으나 데이터가 없는 '실제 누적 비용'은 추정치 + '실측 대기' 표기로 대체."
+            },
+            {
+              "seq": 5,
+              "action": "라우팅: `App.tsx`에 `#/analyses/{id}` 해시 라우트를 더해 S04를 주소 지정 가능하게 하고(파일 주석이 이미 'S04 onwards'에 필요하다고 예고), S02의 저장소 카드에 최신 분석이 있으면 탭 → S04로 이동. 라우터 의존성은 추가하지 않는다(`hashchange` + 상태 머신 유지).",
+              "expectedOutcome": "S02 카드 탭 → S04 진입, 브라우저 새로고침으로 같은 URL 재진입 시 같은 화면·같은 진행(test/01 시나리오 5의 '앱 종료 후 복귀'에 대응)."
+            },
+            {
+              "seq": 6,
+              "action": "e2e: `e2e/tests/ac1-5-async-progress-and-partial-retry.spec.ts` 신설(헤더 `// 검증 AC: AC1.5`, 자기 stub 사용자 `?as=ac15`). 정상 브랜치 1건 + 없는 브랜치 1건을 S03 UI로 트리거하고, 워커를 1개로 올려 각각 `awaiting_pipeline`/`failed`까지 진행시킨 뒤 S04를 검증한다. 워커 replica 조작 헬퍼는 ac4-5에서 `e2e/support/cluster.ts`로 추출해 공유하고, 트래커의 '배포 전역 상태' 규약을 **단독 소유 → 임대(자기 블록에서 켜고 finally에서 0 복원, `workers: 1`이 파일 간 동시 실행을 막음)** 로 일반화한다. 규약이 요구하는 잔여 조건(자기 소유가 아닌 job에 대해 단정하지 않는다)도 함께 명문화.",
+              "expectedOutcome": "e2e 5단정: (1) 성공 분석의 S04가 '1 of 5' + `fetch` done + 실측 detail(`766 files · 2.2 MB`), (2) 새로고침 후 동일(시나리오 5), (3) 실패 분석의 S04가 실패 단계와 사유를 보여주고 재시도 액션을 제공, (4) 재시도 후 그 단계가 다시 실행됨(타임스탬프 갱신) 그리고 (5) 형제 단계 4개는 여전히 pending(시나리오 6). `finally`에서 워커 0 복원."
+            },
+            {
+              "seq": 7,
+              "action": "문서: `docs/doc-tracker.md` 갱신 — 로드맵 3b를 ✅로, 미구현 AC 18→17(AC1.5 제거), e2e 매핑 표에 AC1.5 행 추가(매핑 6→7 · 공백 18→17 · 항등식 재계산), '알려진 목업↔구현 편차' 표에서 S02 진행 표현 행을 좁히고(단계 진행은 해소, features/conflicts는 슬라이스 4 잔여) S04의 실제 비용 미표시를 새 편차로 등재, 변경 이력 행 추가, 배포 전역 상태 규약 문구를 임대 모델로 갱신.",
+              "expectedOutcome": "트래커의 기계 확인 recipe(`ls e2e/tests/*.spec.ts | wc -l` = 7, `grep '^// 검증 AC:'` 7행 중복 없음, AC 총수 24 불변)와 집계 항등식 `(24 − 0) = 7 + 17`이 실제 파일 상태와 일치."
+            },
+            {
+              "seq": 8,
+              "action": "로컬 게이트 재현 후 PR: `cargo test --release`(CI와 동일 게이트)와 프론트 `npm run build`(= `tsc -b && vite build`, Docker 빌드가 실행하는 것과 동일)를 이 박스에서 돌려 초록을 확인하고, 브랜치 `reconcile/rct_20260813-0001-ac1-5-s04-progress`로 draft PR을 연다. kind e2e는 로컬 불가이므로 PR CI가 판정한다.",
+              "expectedOutcome": "cargo test 전건 통과(기존 44건 + 신규), frontend build 성공, draft PR 생성, PR CI의 `test (cargo + kind e2e)` 잡 green."
+            }
+          ],
+          "plannedAt": "2026-08-13T07:38:00Z"
+        }
+      }
+    ]
   }
 ]
