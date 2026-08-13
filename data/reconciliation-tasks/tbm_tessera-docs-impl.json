@@ -1335,7 +1335,7 @@
     },
     "createdAt": "2026-08-13T06:35:00Z",
     "id": "rct_20260813-0001",
-    "updatedAt": "2026-08-13T07:13:05Z",
+    "updatedAt": "2026-08-13T07:19:30Z",
     "stateSummary": {
       "summarizedAt": "2026-08-13T06:35:00Z",
       "asIs": "## as-is — 구현·테스트(`src/` + `test/`) @ `a3d703b` (2026-08-13T04:50:03Z)\n\n버전 `src:f1e2601a test:3be61331` (직전 `src:ea2ec55e test:f12452e3`). 기준선 이후 이 쪽을 바꾼 커밋 **3개**:\n\n1. **PR #39 `a3d703b`** — `feat: container backend lifecycle + terminal responsiveness (AC2.6)`. 이 모델 자신의 직전 task `rct_20260808-0001`(`succeeded`)의 reconcile 산출물이다. `ContainerRuntime.stopMachine/bootMachine/removeMachine` 추가(`container machine stop|rm`; 별도 `machine start`가 없어 부팅은 `machine run`의 on-demand boot을 무해한 `:` 명령으로 태움), `Backend.stop/restart/remove`, `backend.lifecycle` IPC의 `NotImplementedError` 스텁 → 실핸들러 교체, 순수 모듈 `terminalLatencyRegistry`(입력→출력 왕복 최근 20표본 중앙값), M-J2-S6 목업대로의 `BackendPanel`(⌃⌘B / ⌘K). 유닛 신설 36건(`backend-lifecycle` 17 + `backend-responsiveness` 19).\n2. **PR #41 `070a17e`** — `feat(diagnostics): 패키징 빌드 프로덕션 디버깅 기반`. `src/main/diagnostics/` 신설(`logger` 파일 로그 `~/Library/Logs/Tessera/main.log` 2MB 회전 · `installDiagnostics` 크래시 훅 · `attachWindowDiagnostics` · **`installDiagnosticsMenu` = 앱 메뉴 `Debug` 신설: `Reveal Log Folder`(⌘⌥L) · `Copy Log File Path`** · DevTools escape hatch), `src/main/index.ts` 배선. 유닛 25건(`diagnostics.test.ts`). **`docs/` 변경 0.**\n3. **PR #42 `5724897`** — `feat(diagnostics): 레이아웃 골격 저장·재구성 로깅 (AC1.5)`. `PersistenceStore` 확장, `src/renderer/diagnostics/log.ts`, `src/shared/types/layout.ts`. 유닛 10건(`persistence-logging.test.ts`). **`docs/` 변경 0.**\n\n- 유닛 테스트 실측: `test/unit/` 25개 파일, `it(`/`test(` **340건**.\n- `test/e2e/` 19 spec은 여전히 CI에서 실행되지 않는다(`.github/workflows/ci.yml`의 `ci` job = `npm ci` → typecheck → lint → `npm test`(vitest) → build; `npm run test:e2e` 호출 지점 없음).\n",
@@ -1347,6 +1347,42 @@
       "assessedBy": "agent",
       "assessedAt": "2026-08-13T06:35:00Z",
       "reason": "세 축(①③④)에 실측 gap이 있고, 이 모델에 열린 task가 0이며, 막힌 곳이 없다 → 지금 작업이 필요하다.\n\n근거 1 — **\"수렴했다\"가 무행동 근거가 되지 않는다.** AC2.6이 닫혀 완전 충족이 18→19/26으로 올랐지만, 모델 정의는 미구현 AC를 백로그가 아니라 drift로 규정한다. 7개 AC(◐ AC2.2·2.3·4.5 / ✗ AC3.3·3.4·4.2·4.6)가 정적으로 미달이고 자가 수렴 기전이 없다 → `recheckAfter` 유예 부적합.\n\n근거 2 — **이번 구간에 새 drift가 실제로 생겼다.** PR #41이 `Debug` 앱 메뉴(`Reveal Log Folder` ⌘⌥L · `Copy Log File Path`)와 DevTools escape hatch라는 **사용자 대면 표면**을 추가했는데 `docs/`에는 흔적이 없다(기준 ③). 그리고 #41·#42가 `docs/`를 전혀 갱신하지 않아 트래커의 유닛 집계가 305 대 실측 340으로 35건 어긋났다(기준 ④). 둘 다 이번 트리거 구간에서 발생한 것이지 이월된 잔여가 아니다.\n\n근거 3 — **점유 충돌 없음.** 이 모델의 task 7건 중 열린 것은 0건(직전 `rct_20260808-0001`은 이번 as-is 트리거를 만든 PR #39의 슬라이스로 `succeeded`). 미점유 handoff다.\n\n근거 4 — **다음 조각이 명확히 지목돼 있고 선행 조건이 방금 풀렸다.** 트래커가 M-J4-S1 워크스페이스 전역 크롬을 다음 우선순위로 적으며 \"직전 두 슬라이스가 이것을 미룬 단 하나의 이유(워크스페이스 단위 백엔드 헬스 신호 부재)를 AC2.6 슬라이스가 만들었으므로 이제 막힌 곳이 없다\"고 근거까지 남겼다. planner가 바로 집을 수 있다.\n\n**planner 참고 (슬라이스 · 함정)**\n\n- **첫 슬라이스 후보 = M-J4-S1 워크스페이스 전역 크롬**(criterion ② 잔여). 이제 `backend.lifecycle` status 채널이 실재하므로 단일 PTY 종료를 \"백엔드 전체 down\"으로 승격 추정하지 말고 **실제 머신 상태를 물어** 타이틀바 배지·상단 danger 배너·전 pane dim·'백엔드 재기동' 카드를 그릴 것.\n- **③④는 같은 슬라이스에 싸게 붙는다.** 트래커의 유닛 집계를 340으로 정정하고 #41·#42를 이력에 반영하면 ④가 닫힌다(문서 편집만, 코드 변경 0).\n- **⚠️ ③(diagnostics)은 planner가 단독으로 결론내지 말 것.** 두 갈래다: (a) `docs/`에 진단 기능을 제품 문서로 편입하거나, (b) **모델 정의의 예외 목록을 auto-update + diagnostics 2건으로 개정**하거나. PR #41의 README가 (b)의 의도를 명시적으로 선언했으므로 (b)가 자연스럽지만, **정의 개정은 이 루프가 아니라 `reconciler-tobe-modeler`의 몫**이다. planner는 슬라이스 범위에서 (a)/(b) 중 무엇을 권하는지만 근거와 함께 남기고, 정의 개정 자체는 모델러에게 넘길 것.\n- **⚠️ 릴리스 리스크 — PR을 여는 순간 유저에게 배포된다.** `.github/workflows/ci.yml`은 단일 워크플로이며 `release` 잡이 **pull_request 이벤트에서** 동작한다. 워크플로 헤더가 직접 경고한다: \"release publishes a live build from un-merged PR code, so every release-worthy push to a PR ships that code to every user's auto-updater.\" draft PR도 보호가 아니고 auto-updater는 단조 증가라 revert로 회수되지 않는다. **3-2(PR 준비) 전에 이 사실을 plan의 riskLevel·주의사항에 반드시 넣을 것.**\n- **AC4.2는 아직 열지 말 것**: `ClaudeSurface`가 정적 목업인 한 캡처할 라이브 세션이 없어 **AC2.2/2.3 구현이 선행**이다. AC4.2·4.5·2.2·2.3은 한 의존 사슬이므로 그 안쪽에 슬라이스 경계를 긋지 말 것.\n- **검증 축**: `test/e2e/` 19 spec 전량 CI 미배선은 별도의 큰 조각이다(macOS 러너에서 build 후 실행, 한 번도 게이트된 적 없어 일괄 배선 전 상태 확인 선행). 위 슬라이스와 섞지 말 것."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "이번 트리거 구간(PR #41·#42)이 새로 만든 두 drift만 닫는다 — criterion ③(문서 없는 구현: diagnostics의 사용자 대면 표면)과 criterion ④(doc-tracker 검증 축 집계가 실측과 35건 어긋남). ③의 해소 방향은 '코드를 문서에 맞춘다'가 아니라 '의도된 추가이므로 문서를 갱신해 코드에 맞춘다'다(모델의 충돌 시 기본 방향 단서 조항) — 다만 diagnostics는 V1~V4 어느 가치도 달성하지 않으므로 가치→PRD→AC→테스트 사슬에 넣으면 검증 불가한 AC와 mockup 공백을 새로 만든다. 그래서 **AC를 늘리지 않는 최소 형태**로 `docs/tessera-platform-infrastructure.md` 부록을 신설해 diagnostics와 auto-update를 '등재 자격 규칙 + 코드 근거 + 유닛 테스트 + 졸업 조건'과 함께 등재한다. README에만 있던 예외 선언을 SSOT(docs/) 안으로 옮겨 감사 가능하게 만드는 것이지 예외를 늘리는 장치가 아니다. planner는 모델 정의(예외 목록)를 바꿀 수 없으므로(tobe-modeler 소관), 소유자가 뒤집더라도 이 부록은 그 결정의 근거 목록으로 남는다. ④는 유닛 집계를 305 → **340**으로 재동기화하되 숫자만 고치지 않고 **측정 방법(`test/unit/**`의 `^\\s*(it|test)\\(` 선언 수)** 을 문서에 박아 다음 슬라이스가 재검증할 수 있게 한다(이 방법이 트래커의 기존 값 269·305를 그대로 재현함을 커밋 대조로 확인했다).\n\n**완료 기준(이 시도의 범위)**: (1) `src/main/diagnostics/`·`src/renderer/diagnostics/`가 노출하는 사용자 대면 표면이 전부 `docs/` 안에 표현된다 → criterion ③ 잔여 0. (2) doc-tracker의 검증 축·집계가 2026-08-13 실측과 일치한다 → criterion ④ 잔여 0. (3) AC 26 · 버킷(구현 19·부분 3·스텁 4) · mockup 27 · e2e spec 19는 실측으로 불변임을 확인하고 손대지 않는다(to-be 무하향, criterion ① 회계 무변경).\n\n**범위 밖(후속)**: criterion ① 미구현 7건(◐ AC2.2·AC2.3·AC4.5 / ✗ AC3.3·AC3.4·AC4.2·AC4.6), criterion ② 잔여인 M-J4-S1 워크스페이스 전역 크롬, playwright e2e 19 spec의 CI 배선. 이 셋은 이 슬라이스로 줄지 않으며, 머지가 만드는 docs 트리 해시 변화의 재감지가 새 task로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`docs/tessera-platform-infrastructure.md` 신설. (a) 등재 자격 규칙 — 'V1~V4 어느 가치도 달성하지 않고, 제품 기능이 아니라 앱 자체의 운영·복구를 위한 표면'만 등재하며 AC·테스트 문서·여정·mockup을 갖지 않는다. (b) diagnostics 항목: 로그 파일 경로(`~/Library/Logs/Tessera/main.log`)·2MB 크기 회전(main.1~3)·레벨 기본값과 `TESSERA_LOG_LEVEL`·`Debug` 메뉴 2항목(`Reveal Log Folder` ⌘⌥L / `Copy Log File Path`)·Electron 기본 View 메뉴의 ⌘⌥I·`TESSERA_DEBUG=1` 자동 DevTools·크래시 미니덤프(`uploadToServer:false`, 외부 전송 없음)·렌더러 console 릴레이와 무엇이 기록되는가. (c) auto-update 항목: 주기 확인 → 백그라운드 다운로드 → 재시작 어포던스(`update.onDownloaded` → 상태바). (d) 졸업 규칙 — 제품 가치를 달성하기 시작하면 이 부록에서 빼고 가치→PRD→AC→테스트 사슬로 올린다. 각 항목에 코드 근거 파일과 방어 유닛 테스트 파일을 명시한다.",
+              "expectedOutcome": "docs/ 안에 diagnostics·auto-update의 사용자 대면 표면이 전부 표현된다. AC·가치·PRD·테스트 문서·여정·mockup 파일은 한 줄도 바뀌지 않는다(criterion ① 회계 불변)."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/tessera-doc-tracker.md`의 '문서 인덱스' 표에 새 부록 행을 추가하고, '구현·검증 상태' 절에 criterion ③ 해소를 근거와 함께 기록한다(등재 표면 목록 + '부록은 예외를 늘리는 장치가 아니라 감사 가능하게 하는 장치' 명시 + 모델 정의 예외 조항 개정은 tobe-modeler 소관이라는 경계).",
+              "expectedOutcome": "트래커만 읽어도 criterion ③이 어떤 방식으로 닫혔고 무엇이 planner 권한 밖인지 알 수 있다."
+            },
+            {
+              "seq": 3,
+              "action": "트래커 검증 축 재동기화(criterion ④): 절 제목 '(as-is · 2026-08-08 실측)' → '2026-08-13 실측', 유닛 집계 305 → 340과 **측정 방법**(`test/unit/**`의 `^\\s*(it|test)\\(` 선언 수) 명기, 신규 파일 2개 등재(`diagnostics.test.ts` 25 · `persistence-logging.test.ts` 10), 헤더 '최근 갱신' 갱신(직전 항목은 '이전 갱신'으로 강등, 기존 관례 유지), '변경 이력' 표에 2026-08-13 행 추가.",
+              "expectedOutcome": "트래커의 검증 축 수치가 실측과 일치하고, 다음 슬라이스가 같은 방법으로 재측정해 대조할 수 있다."
+            },
+            {
+              "seq": 4,
+              "action": "불변량 실측 검증: AC 유일 코드 26 · mockup 27 · e2e spec 19(`helpers.ts` 제외) · 유닛 340 · 버킷 합 26을 재측정하고, `git diff --stat origin/main`이 `docs/` 밖 파일을 0건 포함함을 확인한다. 추가로 diagnostics 외에 미등재 플랫폼 표면이 없음을 `src/` 전수 grep(`Menu.`/`accelerator:`/`shell.open`/`clipboard.`/`openDevTools`/`globalShortcut`)으로 확인한다.",
+              "expectedOutcome": "등재 누락 0 · docs 밖 변경 0 · 수치 5종이 문서에 적은 값과 정확히 일치."
+            },
+            {
+              "seq": 5,
+              "action": "브랜치 `reconcile/rct_20260813-0001`로 커밋·푸시하고 dlddu/tessera에 draft PR을 연다. 본문에 task id, 두 criterion의 gap 근거(실측 수치 포함), 부록 방식을 고른 이유와 대안(모델 정의 개정)의 소관, 범위 밖 목록, 검증 방법을 적는다.",
+              "expectedOutcome": "검토자가 '왜 AC를 안 늘렸는가'와 '무엇이 범위 밖인가'를 PR만 읽고 판단할 수 있다. CI는 `ci`(typecheck·lint·test·build) 1개만 도는 것이 정상이다 — docs-only는 release 경로 파일 필터에 걸리지 않는다."
+            }
+          ],
+          "plannedAt": "2026-08-13T07:19:30Z"
+        }
+      }
+    ]
   }
 ]
