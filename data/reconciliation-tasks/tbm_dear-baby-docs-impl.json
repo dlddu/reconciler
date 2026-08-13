@@ -796,7 +796,7 @@
       }
     },
     "createdAt": "2026-08-07T20:39:48Z",
-    "updatedAt": "2026-08-13T06:13:10Z",
+    "updatedAt": "2026-08-13T06:25:00Z",
     "stateSummary": {
       "asIs": "**as-is = `app/` + `backend/` + `worker/` 구현 트리** (dlddu/dear-baby@main `92939e8`, 2026-08-07T20:39Z 관측). `worker:613d4709` 불변.\n\n- 트리거 delta는 **커밋 1개** — #169 `92939e8` \"feat(app,backend): wire home community section to the real feed (PRD-009 slice 2)\", 직전 task rct_20260807-0002(현재 `succeeded`/terminal)의 슬라이스 산출물이다. (같은 구간의 #163은 `e2e/`+`docs/`만 건드려 as-is에 delta 없음.)\n- #169 내역(12파일 +805/-453): `app/src/api/community.ts`(+117 신규) ↔ `app/src/api/feed.ts`(−136 삭제) · `app/app/(tabs)/index.tsx`(+104/-…) · `app/src/components/OtherEntryCard.tsx` 개편 · `backend/internal/records/community.go`(+128) · 각 테스트 파일 · `e2e/maestro/home-feed.yaml`.\n- 즉 **홈 화면의 \"다른 엄마들의 기록\" 섹션(AC-009-14)이 하드코딩 mock 풀에서 실제 `GET /v1/community/feed` 응답으로 전환**됐고, `child_status_text`(임신 주차/양육 개월 라벨)가 서버에서 계산돼 내려온다.\n- 커뮤니티 표면 실측: 백엔드 라우트는 `pr.Get(\"/community/feed\", …)` **읽기 1개뿐**(`backend/internal/app/router.go:149`) — 공감·댓글·신고·상세·재비공개/삭제 write 경로 없음. 앱의 커뮤니티 탭 `app/app/(tabs)/community.tsx`는 여전히 **29줄 플레이스홀더**(\"커뮤니티\" 제목 + \"곧 추가됩니다\" 캡션)다.\n- 앱 화면 전량: landing · onboarding(a1~c3·q1·q2) · tabs(index·diary·memoir·community·settings) · diary/[id]{,/edit} · drafts · record-{audio,audio-review,text}.",
       "toBe": "**to-be = `docs/` 트리** (`4215214d`, 직전 `982da7f2`)\n\n- docs delta는 **#163의 `doc-tracker.md` 1파일뿐**(AC-002-01 e2e 매핑 ⬜→✅, 집계 ✅22·⬜46) — 자매 모델 `tbm_dear-baby-ac-e2e-1to1`의 원장이 움직인 것으로, 이 모델 관점에서는 **AC 정의 무변경 bookkeeping**이다. `docs/prd/` 트리는 불변.\n- AC 집합: PRD-001~009, 제품 AC **69개 전부 확정**(검증 대상 68 + 1차 제외 1 = AC-009-12 알림). PRD-009 커뮤니티 탭은 2026-08-05에 draft 해제·확정됐다.\n- 모델 정의의 drift 판정 #1: **미구현 확정 AC = drift**(백로그로 빼지 않음), #2: 살아있는 구현↔문서 불일치도 drift.",
@@ -885,6 +885,76 @@
           "reviewer": "user",
           "reviewedAt": "2026-08-12T19:47:00Z",
           "comment": "반려 — 목업 디자인 기준으로 다시 작업 필요. 이 슬라이스는 AC 문언(AC-009-03 상태값 · AC-009-06 타입 필터 · AC-009-13 안내 문구)만 완료 기준으로 삼아 커뮤니티 탭 화면을 구현했고, 화면의 시각적 형태를 목업 디자인과 대조하지 않았다. 재계획 시 목업(디자인 문서/mockup)을 1차 기준으로 삼아 레이아웃·컴포넌트·스타일을 대조하고, AC 충족과 목업 준수를 함께 완료 기준에 넣어야 한다. 준비된 draft PR #172(11파일 +965/-13, CI 12체크 green이나 현재 BEHIND)는 머지하지 않고 그대로 두었다 — 그 브랜치를 고쳐 쓸지 새로 열지는 목업 대조 후 planner가 판단한다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "직전 시도는 AC 문언(AC-009-03·06·13)만 완료 기준으로 삼아 커뮤니티 탭을 지었고, **화면의 시각적 형태를 목업과 대조하지 않아** 반려됐다. 그 사이 main 이 움직였다 — #177 이 **M-43 「커뮤니티 탭 메인 (공개 기록 피드)」 목업을 신설**했고(`docs/mockups/source/src/screens/Community.tsx`, 2026-08-13), 같은 커밋이 레포 스킬 `.claude/skills/screen-with-mockup-and-design-system` 의 화면 목록에 M-43 을 등재했다. 그 스킬은 「mockup 을 보지 않고 화면을 구현하는 것은 금지한다」를 못박는다. 즉 반려 시점에 없던 1차 기준이 지금은 존재한다.\n\n**그래서 이번 시도는 \"AC 를 더 닫는\" 시도가 아니라 \"같은 AC 를 M-43 대로 다시 짓는\" 시도다.** 직전 시도의 산출물 중 목업과 무관한 축(백엔드 `type` 필터 · API 클라이언트 · AC-009-03 상태값 포맷터)은 그대로 살리고, **화면과 카드 컴포넌트만 M-43 의 구조·카피·토큰에 맞춰 교체**한다. 브랜치는 새로 열지 않고 기존 `reconcile/rct_20260807-0003`(PR #172)에 main 을 머지한 뒤 재작업 커밋을 얹어 **PR 을 제자리에서 갱신**한다 — 검토 이력이 한 PR 에 남고 force-push 도 필요 없다(main→branch 머지 dry-run 충돌 0 확인).\n\n**이 시도의 범위(= 완료 기준)**: 아래 다섯을 만족하면 성공이다.\n(A) **M-43 시각 정합** — 화면의 네 영역(① 상단 헤더 · ② 나와 비슷한 엄마들의 기록 · ④ 콘텐츠 타입 필터 · ⑤ 공개 기록 피드)이 M-43 의 요소 순서·카피·토큰(색·간격·라운드·그림자·타이포)과 1:1 대응하고, 대응하지 않는 요소는 **이탈 3건**으로 사유와 함께 코드 주석·PR 본문에 등재된다. 카피는 한 글자도 임의 변경하지 않는다(스킬 Step 1).\n(B) **AC-009-03 완결** — 활성 아이 기준 상태값(`임신 N주차`/`생후 N개월`/`N살`)을 M-43 의 beige pill 형태로 표시, 아이 전환 시 상태값·피드 동시 갱신, 수동 시기 필터 미제공(pill 은 M-43 과 동일하게 **비인터랙티브**).\n(C) **AC-009-06 완결** — 전체/질문답변/자유일기 3종, 기본값 `전체`, 서버가 `type` 파라미터로 거른다. 형태는 M-43 의 세그먼티드 컨트롤(개별 Pill 나열이 아니다).\n(D) **AC-009-13 의 커뮤니티 피드 3행 완결** — 공개 기록 0건 · 필터 결과 0건 · 네트워크 오류의 세 문구가 AC 표 문자열 그대로.\n(E) **무회귀** — 홈 화면(AC-009-14) 렌더 무변경(`OtherEntryCard` 를 main 상태로 되돌려 커뮤니티 전용 카드를 분리 신설), 기존 앱·백엔드 테스트 전부 유지.\n\n**설계 판단 셋을 미리 잡았다.**\n① **카드를 공용하지 않고 분리한다.** 직전 시도는 홈의 `OtherEntryCard` 에 `showTypeBadge` opt-in 을 달아 재사용했는데, 두 카드의 시각 출처가 다르다 — 홈은 M-17(`HomePregnancyScreen.tsx` L114-129), 커뮤니티는 M-43 의 `FeedCard` 다. 한 컴포넌트가 두 목업을 섬기면 어느 쪽도 대조할 수 없다. `CommunityFeedCard` 를 신설하고 `OtherEntryCard` 는 main 으로 되돌린다 → 홈 무변경이 주장이 아니라 diff 로 증명된다.\n② **② 영역의 `▼` 는 그리되 누를 수 없게 둔다.** M-43 은 `임신 20주차 ▼` 를 `<div>` 로(=비인터랙티브) 그렸고 주석에 「1차 런치는 수동 필터 미제공」이라 적었다. AC-009-03 도 「사용자가 직접 필터를 변경하는 기능을 제공하지 않는다」다. 둘이 같은 말을 하므로 `View` 로 그리면 목업·AC 를 동시에 만족한다 — 글리프를 지우면 목업 이탈이고, `Pressable` 로 만들면 AC 위반이다.\n③ **CTA 반경 충돌은 실재하지 않는다.** `docs/mockups/README.md` 가 「M-43 CTA 는 12px 인데 공용 `<PrimaryButton>` 은 `rounded-full` — 미결」로 남긴 항목은 **목업 내부의 불일치**다. 앱의 `Button` 은 이미 `radius.sm`(12px)라 `docs/design-system/components.md` 의 Primary Button(12px)과 M-43 양쪽에 맞는다. 이번 슬라이스는 CTA 를 쓰지 않지만(이탈 #1), 이 사실을 PR 에 남겨 미결 항목이 구현 쪽에서는 이미 결론이 나 있음을 알린다.\n\n**토큰 매핑 규칙**(스킬 Step 2): M-43 의 Tailwind 클래스를 `app/src/theme/*` 의 기존 토큰에서 먼저 찾고, 없으면 **토큰을 먼저 추가**한다(선례: `cardTitle`·`aliasStrong`·`micro` 가 모두 같은 이유로 추가됐고 주석에 출처가 적혀 있다). 인라인 수치는 이모지 글리프 크기처럼 선례가 있는 경우로 한정한다. M-43 과 `docs/design-system/*.md` 가 어긋나면 **design-system 문서를 따르고** 그 차이를 이탈로 남긴다.\n\n**M-43 대비 이탈 3건 (사유 포함, 전부 데이터 부재가 원인이다)**\n1. **③ 오늘의 질문 카드 미구현** — AC-009-04 의 CTA 는 내 답변 상태로 3분기하는데, 그중 「답변했고 공개 → 같은 질문 답변 모아보기 화면」의 목적지가 **화면·목업 모두 미작성**이고(PRD-009 「남은 후속 작업」이 직접 열거), 레포 스킬 Step 3 이 목업 없는 화면 구현을 금지한다. 게다가 분기 판정에 필요한 「내 오늘 질문 답변 상태」 조회 경로가 없다(records 는 `question_id` 가 아니라 `question_text` 만 갖고, 목록 API 에 질문 필터가 없다). 카드만 그리고 CTA 가 아무 데도 못 가면 그건 충족이 아니라 새 거짓말이다.\n2. **피드 카드 공감 수(❤️) 미표시** — likes 테이블·집계가 없다(AC-009-08 미구현). 0 을 찍으면 이 화면이 오래 해 온 mock 노출을 되풀이하는 셈이다(`OtherEntryCard` 가 같은 이유로 이미 생략 중).\n3. **피드 카드 댓글 수(💬) 미표시** — comments 테이블이 없다(AC-009-09 미구현).\n(부수: 카드 탭 → 상세 이동 없음 — AC-009-07 미구현. M-43 은 정적 목업이라 시각 이탈은 아니다.)\n\n**docs 는 건드리지 않는다.** 이번 변경은 미구현 AC 를 구현하는 것이라 문서를 고칠 이유가 없고, `docs/doc-tracker.md` 는 열린 PR #170·#173 이 둘 다 편집 중이라 충돌원이다. 이탈은 화면 코드 주석과 PR 본문에 남긴다(스킬의 「출력 시 동반 보고」가 요구하는 형식). 기계적 목업 대조 파일 신설은 자매 모델 `tbm_dear-baby-mockup-render` 소관이므로 여기서 만들지 않는다.\n\n**범위 밖(잔여 gap — 재감지가 새 task 로 잇는다)**: AC-009-04 오늘의 질문 카드 · AC-009-05 같은 질문 답변 모아보기(+공개 전환 유도 팝업) · AC-009-07 상세 · AC-009-08 공감 · AC-009-09 댓글 · AC-009-11 신고 · AC-009-12 알림(1차 제외) · ENG-011 유사 시기 가중 랭킹 · 일기 탭 헤더(`DiaryHeader`)의 M-36 대비 굵기 이탈(600 vs 700 — 자매 모델 소관) · PRD-003/004/005 계열 standing gap.\n\n**가역성**: 마이그레이션 0건, 백엔드는 `type` 미지정 시 기존과 동일 응답, 홈 화면 무변경. 머지 전이면 PR 닫기, 머지 후면 revert 1건.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 `reconcile/rct_20260807-0003` 을 체크아웃하고 `origin/main`(537c3f6)을 **머지**한다(rebase·force-push 금지). 이어서 `app/src/utils/communityStageLabel.ts` 주석의 문서 경로를 `docs/engineering/pregnancy-week-calc.md` → `ENG-001-pregnancy-week-calc.md` 로 고친다(#178 일괄 개명 반영).",
+              "expectedOutcome": "충돌 0 으로 머지 완료. `git diff origin/main -- app backend` 가 직전 시도의 8+3 파일만 남기고, stale 문서 참조가 사라진다."
+            },
+            {
+              "seq": 2,
+              "action": "토큰을 먼저 추가한다 — `app/src/theme/typography.ts` 에 `h3Bold`(17/700/24) · `feedTitle`(15/700/22) · `feedBody`(13/400/22), `app/src/theme/colors.ts` 에 `primary.peachTint`(`#F5C6A859` = Peach 35%). 각 항목 주석에 M-43 의 어느 클래스에서 왔는지 적는다(`cardTitle`·`aliasStrong`·`micro` 의 선례와 같은 형식).",
+              "expectedOutcome": "`app/src/theme/__tests__` 의 기존 토큰 테스트가 그대로 통과하고, 새 토큰이 M-43 의 Tailwind 값과 수치로 일치한다."
+            },
+            {
+              "seq": 3,
+              "action": "`app/src/components/OtherEntryCard.tsx` 와 `app/src/components/__tests__/OtherEntryCard.test.tsx` 를 **main 상태로 되돌린다**(직전 시도가 넣은 `showTypeBadge` opt-in 제거). 홈 카드의 시각 출처는 M-17 이고 커뮤니티 카드는 M-43 이라 한 컴포넌트가 둘을 섬길 수 없다.",
+              "expectedOutcome": "`git diff origin/main -- app/src/components/OtherEntryCard.tsx …__tests__/OtherEntryCard.test.tsx` 가 **빈 출력**. 홈 무변경이 주장이 아니라 diff 로 증명된다."
+            },
+            {
+              "seq": 4,
+              "action": "`app/src/components/CommunityHeader.tsx` 를 신설한다 — M-43 ①: 좌 32×32 spacer · 중앙 `커뮤니티`(h3Bold) · 우 🔔(32×32, fontSize 18) + 미읽음 coral dot(8×8), 하단 hairline beige. 미읽음 수는 일기 탭과 **같은 소스** `getUnreadCount()`(`src/api/notifications.ts`)를 쓴다. `DiaryHeader` 는 건드리지 않는다.",
+              "expectedOutcome": "단위 테스트가 타이틀 문자열·종 버튼 accessibilityLabel·dot 유무 분기를 단언하고 통과. `DiaryHeader.tsx` 는 diff 에 없다."
+            },
+            {
+              "seq": 5,
+              "action": "`app/src/components/CommunityTypeFilter.tsx` 를 신설한다 — M-43 ④ 세그먼티드 컨트롤: 컨테이너 `bg cream + 1px beige + radius.md + padding 4`, 세그먼트 `flex 1 + paddingVertical 10 + radius.sm + 14/600`, 활성 `coral 배경 + onPrimary 텍스트 + shadows.card`, 비활성 `text.secondary`. `Pill` 을 재사용하지 않는다(온보딩 성별 선택의 시각이 함께 흔들린다).",
+              "expectedOutcome": "라벨이 `전체`/`질문답변`/`자유일기` 순서 그대로 렌더되고, 활성 항목만 `accessibilityState.selected === true`, 탭 시 onChange 가 해당 값으로 호출된다."
+            },
+            {
+              "seq": 6,
+              "action": "`app/src/components/CommunityFeedCard.tsx` 를 신설한다 — M-43 `FeedCard` 대응: 메타행(표시명 14/700 + 아이 현황 12 muted) → 제목행(자유일기면 인라인 `자유일기` 배지 + 제목/질문 `feedTitle`) → 본문 미리보기(`feedBody`, 서버가 붙인 `…` 는 muted 로 분리). 파일 상단에 「시각 출처: docs/mockups/source/src/screens/Community.tsx (M-43 FeedCard)」와 **이탈 2건(❤️ 공감 수 · 💬 댓글 수)의 사유**를 적는다.",
+              "expectedOutcome": "질문답변/자유일기 두 분기, 아이 현황 없음(빈 문자열) 케이스, `…` 마커 분리가 각각 단언되고 통과. 공감·댓글 수 관련 렌더가 **없음**이 테스트로 고정된다."
+            },
+            {
+              "seq": 7,
+              "action": "`app/app/(tabs)/community.tsx` 를 M-43 구조로 재작성한다 — 루트 `testID=\"community-tab\"` 유지(기존 e2e 3 flow 가 단정), ① CommunityHeader → ② 유사 시기 행(`나와 비슷한 엄마들의 기록` + beige stage pill, **`View` 로 비인터랙티브**) → ④ CommunityTypeFilter → ⑤ FlatList(CommunityFeedCard, `onEndReached` 커서 추가 로드) + 빈/필터빈/오류 3분기. 파일 상단 주석에 M-43 대조 요약과 이탈 3건을 적는다.",
+              "expectedOutcome": "`npm run check:routes` 의 라우트 수 불변. 화면이 M-43 의 ①②④⑤ 순서로 그려지고 ③ 자리에는 아무것도 렌더되지 않는다."
+            },
+            {
+              "seq": 8,
+              "action": "`app/app/(tabs)/__tests__/community.test.tsx` 를 새 구조에 맞게 다시 쓴다 — (a) 헤더 타이틀·종, (b) 섹션 카피 + stage pill 문구, (c) pill 이 button role 을 갖지 않음(AC-009-03 수동 필터 미제공), (d) 필터 기본 `all` + 선택 시 `type` 재조회 + 커서 초기화, (e) AC-009-13 세 문구와 분기, (f) 활성 아이 전환 시 stage·피드 동시 갱신, (g) `onEndReached` 커서 append.",
+              "expectedOutcome": "`npm test` green. 스위트 수가 머지 직후 기준선 대비 순증(신규 3 컴포넌트 테스트 추가, OtherEntryCard 배지 케이스 제거분 상쇄)."
+            },
+            {
+              "seq": 9,
+              "action": "네거티브 컨트롤 3건 이상을 문법적으로 유효하게 주입해 각각이 **실패하는지** 확인하고 되돌린다 — 예: 기본 `type` 을 `'question'` 으로 변경 / stage pill 을 `Pressable` 로 변경 / AC-009-13 오류 문구 끝에 마침표 추가 / 활성 세그먼트 판정을 상수 `true` 로 고정.",
+              "expectedOutcome": "각 변조가 **의도한 그 단언만** 실패시킨다. 통과해 버리는 컨트롤이 있으면 해당 테스트를 조인다(테스트가 헐거운 것이다)."
+            },
+            {
+              "seq": 10,
+              "action": "CI 게이트를 로컬에서 1:1 재현한다 — app: node 20 dist 로 `npm ci && npm run check:routes && npm test -- --ci --colors=false` (+ `npm run tsc`), backend: go1.24.7 dist 로 `go build ./... && go vet ./internal/... && make test`. 머지 직후 기준선과 테스트 수를 비교해 **감소 0** 을 확인한다.",
+              "expectedOutcome": "두 게이트 모두 green, 기존 테스트 감소 0, 라우트 수 불변."
+            },
+            {
+              "seq": 11,
+              "action": "§2-2 대조표를 실제 구현 값으로 채워 완성하고, 이탈 3건(+배지 11px vs 12px 판정)을 표로 정리한다. 이탈이 4건 이상이면 그 항목이 정말 데이터 부재 때문인지 다시 묻고, 아니면 구현한다.",
+              "expectedOutcome": "M-43 의 모든 시각 요소가 「구현됨」 또는 「이탈 + 사유」 중 하나로 분류되어 빠짐없이 회계된다."
+            },
+            {
+              "seq": 12,
+              "action": "브랜치에 커밋·푸시하고 PR #172 의 제목·본문을 갱신한다 — 반려 사유와 그 해소, 참조 목업 M-43, 참조 design-system 항목, §2-2 대조표, 이탈 3건과 사유, 완료 기준 A~E, 범위 밖 목록, 그리고 **§0 배포 발화 경고**를 싣는다(스킬의 「출력 시 동반 보고」 요구 형식). draft 유지.",
+              "expectedOutcome": "PR #172 가 갱신되고 `gh pr checks 172` 에 새 run 이 생성된다. App/Backend Unit Tests green."
+            }
+          ],
+          "plannedAt": "2026-08-13T06:25:00Z"
         }
       }
     ]
