@@ -1662,12 +1662,63 @@
       "gap": "**유의미한 drift — 개정된 파일 단위 기준에서는 전단사가 성립하는 지점이 사실상 없다.**\n\n규칙별 실측(레지스트리 자기신고가 아니라 파일에서 재도출):\n\n- **규칙 1(AC→파일 유일) 위반 63건**: 예외 후보 1건(`platform-auth-safety/AC4`)을 빼도 1:1 대상 63개 AC 중 자신을 주검증한다고 **선언한 파일이 있는 AC는 0개**다. `(AC 64 − 예외 1) = 63 ≠ AC 매칭 파일 0`.\n- **규칙 2(파일→AC 유일) 위반 9건**: 매칭 단위 9개 파일 전부가 여러 AC를 겸한다(최대 `workload.py` 16 AC). 선언 자체가 없으므로 \"정확히 1개의 AC를 선언\"도 0건이다.\n- **규칙 3(비-AC 파일)**: `smoke.py`는 스모크/인프라 유형으로 재분류 가능한 후보지만, 현재 레지스트리에는 케이스 2건이 AC(`ping/AC1`·`platform-auth-safety/AC2` 계열)로 귀속돼 있어 파일 단위 유형 판정이 아직 없다.\n- **규칙 5(참조 무결성)**: 위반 없음 — 레지스트리 64행이 모두 실재 AC를 가리키고, 존재하지 않는 AC를 등재한 예외도 없다.\n- **규칙 6(집계 일치) 위반**: 레지스트리 집계(✅49 케이스·⬜14·🚫1)는 **케이스 단위** 회계라 파일 단위 실제 상태(매칭 파일 0 · 다중 AC 파일 9)를 전혀 드러내지 않는다. \"케이스 식별 규약\" 절 자체가 개정 전 규약이다.\n\n**차이의 성격 — 후퇴가 아니라 자(尺)의 교체다.** 이번 트리거를 만든 PR #41은 케이스 단위 기준에서는 완주였다(파일 수준 `✅ 통합` 커버 잔여 13건을 정리해 ✅를 전부 전용 케이스로 만들고, AssumeRole·SigV4 관측을 위한 `http-trace` 프록시 픽스처까지 넣었다). 코드 품질이 나빠진 것이 아니라, 04:00Z 정의 개정이 판정 단위를 파일로 옮기면서 **같은 코드가 새 기준에서 미달**이 된 것이다. 정의의 \"현황 메모(2026-08-14)\"도 이 상태를 그대로 예고한다 — \"AC 64개 vs 매칭 단위 파일 9개 … 규칙 2를 충족하는 파일도, 전용 파일을 가진 AC도 개정 시점에는 0 … 큰 초기 격차는 예상된 것\".\n\n또한 ⬜ 14건(platform AC2·AC8 + session-* 12)은 자(尺)와 무관하게 남는 실제 공백이다 — session-* 12건은 도구 구현 자체가 없고(정의: 미구현은 예외 사유가 아니다), platform/AC2는 OIDC 발급자 mock, AC8은 다중 구성 전환이 선행돼야 한다.",
       "summarizedAt": "2026-08-14T13:07:00Z"
     },
-    "updatedAt": "2026-08-14T14:35:35Z",
+    "updatedAt": "2026-08-14T14:39:09Z",
     "assessment": {
       "actionRequired": true,
       "reason": "유의미한 차이가 크고, 미점유이며, 자동 해소 경로가 없다 → 지금 작업이 필요하다.\n\n근거 1 — **개정된 정의 기준으로 위반이 실측된다.** 규칙 1 위반 63건 · 규칙 2 위반 9건 · 규칙 6(집계가 케이스 단위) 위반. 확인 지점인 모듈 docstring `검증 AC:` 선언이 레포 전체에 0건이라, 지금은 파일 단위 매핑을 기계적으로 확인할 방법 자체가 없다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 열린 task는 0건이다. 정의 개정 시점에 `awaiting_review`였던 `rct_20260813-0001`은 그 뒤 executor가 04:21Z 승인·04:22Z 머지(PR #41)·04:28Z 검증으로 `succeeded` 종결했으므로, 정의가 남긴 \"그대로 진행할지 파일 단위로 다시 계획할지\" 판단은 **이 신규 task로 넘어온다**.\n\n근거 3 — **자동 해소 기전이 없다.** 정적인 문서·테스트 배치 격차이고, 닫으려면 실제 파일 분할·선언 주입·레지스트리 재작성이 필요하다 → `recheckAfter` 유예 부적합.\n\nplanner 참고(이 task에서 먼저 확정해야 할 판단):\n① **분할 규모와 슬라이싱** — 1:1을 그대로 달성하면 매칭 단위가 9개 → 최대 63개 파일이 된다. 정의가 \"범위 밖/비고\"에서 지목한 대로 **CI 하네스 재구성**(현재 `ci.yml`은 파일별 배포·포트포워드 스텝을 나열한다 — 파일이 63개가 되면 스텝 나열은 불가능하고 파일 목록 순회 러너가 필요)이 선행 판단이다. 도메인 단위 슬라이스로 끊는 것을 권한다(예: `workload.py` 16 → 16파일이 가장 크다).\n② **케이스 단위 자산의 승계** — 이미 per-AC 케이스 49건이 존재하므로 분할은 \"새 검증 작성\"이 아니라 \"케이스를 파일로 승격 + 모듈 docstring 선언 주입 + 공유 셋업을 `_helpers.py`로 이동\"이다. 단정 내용을 바꾸지 않는 순수 이동으로 설계하면 회귀 위험이 낮다.\n③ **레지스트리 재작성** — `docs/doc-tracker.md`의 \"케이스 식별 규약(규칙 1·2·3)\" 절과 AC 레지스트리 64행을 **파일 단위 규약·매핑 표**로 옮기고, 집계를 `(AC 64 − 예외 N) = 매칭 파일 수 + 공백`으로 재정의해야 규칙 6이 성립한다. 자매 모델들이 쓰는 CI 체커 방식(econ `check_ac_mapping.py`, session-platform `check-fidelity-allowlist.py`)을 참고해 기계 검사로 못박는 것을 권한다.\n④ **예외 등재** — `platform-auth-safety/AC4`(정적 매니페스트 성격) 1건은 레지스트리가 이미 \"정의 예외 개정 제안\"으로 올려 뒀다. 파일 단위 개정 정의도 예외 등재 SSOT를 `docs/doc-tracker.md`로 지정하므로, 이 task에서 등재를 확정하면 1:1 대상이 63으로 고정된다. 반면 session-* 12건은 도구 미구현이라 예외가 아니다(규칙 4 명시).",
       "assessedBy": "agent",
       "assessedAt": "2026-08-14T13:07:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**범위(완료 기준): 파일 단위 1:1을 '기계로 확인 가능하고 CI가 자동으로 실행하는' 상태로 만들고, 가장 깨끗한 3개 도메인을 전용 파일로 분할해 매칭 파일 0 → 9를 만든다.** 구체적으로 ① 모듈 docstring `검증 AC:` 선언 규약 도입(9개 기존 파일 전부 + 신설 파일) ② 파일 단위 체커 `tests/integration/check_ac_mapping.py` 신설 + CI lint 잡 배선(클러스터 불필요) ③ 파일 목록 순회 러너 `tests/integration/run_all.py` 도입 + `ci.yml`의 파일별 9스텝을 배포 대상별 2스텝으로 대체 ④ grafana-token(3)·github-app-installation-token(3)·dear-baby-reset-user(3) = 9 AC를 전용 파일로 분할(순수 이동) ⑤ `docs/doc-tracker.md`의 케이스 단위 규약·레지스트리를 파일 단위로 재작성하고 `platform-auth-safety/AC4`를 예외로 등재. \n\n**왜 이 순서·이 방법인가.** 지금은 확인 지점(`검증 AC:` 선언)이 레포에 0건이라 '무엇이 몇 개 어긋났는지'를 기계로 셀 방법 자체가 없다 — 분할부터 시작하면 진척을 검증할 자가 없다. 또 `ci.yml`이 파일별 배포·포트포워드 스텝을 나열하는 구조라, 분할할 때마다 CI 스텝을 늘려야 하고 빠뜨리면 **새 파일이 조용히 실행되지 않는다**(이 루프가 과거에 명시적으로 경계한 실패 모드). 러너를 먼저 넣으면 이후 슬라이스는 파일만 추가하면 되고, 체커가 '모든 매칭 단위 파일이 러너에 정확히 1번 배차된다'를 CI에서 강제하므로 미실행 파일이 구조적으로 불가능해진다. 분할 대상 3개 도메인은 (a) primary 배포 하나만 쓰고 (b) 프록시 인자가 없고 (c) 케이스 간 공유 가변 상태가 없어(각 파일 docstring이 순서 무관을 명시) **단언을 한 줄도 바꾸지 않는 순수 이동**으로 분할 가능한 도메인이다. 분할은 새 검증 작성이 아니라 이미 있는 per-AC 케이스의 파일 승격이므로 회귀 위험이 낮고, 잘못되면 커밋 되돌리기로 원상복구된다(가역).\n\n**이 시도의 성공 기준(수렴 판정)**: (1) `python3 tests/integration/check_ac_mapping.py` exit 0 — AC 전집 64 · 예외 1 · 1:1 대상 63 · **매칭 파일 9** · 분할 대기 파일 6 · 공백 AC 54(그중 케이스 자체 없음 14) 로 집계와 실측이 일치. (2) 분할 전후 케이스 함수의 이름·docstring·본문이 완전히 동일(순수 이동 증명). (3) CI `integration tests` 잡이 green이고, 러너가 매칭 단위 파일 **전부**를 실행한다(체커가 배차 누락을 막는다). (4) to-be(PRD의 AC 본문)는 한 글자도 바꾸지 않는다 — 등재는 doc-tracker에만.\n\n**범위 밖(후속 task)**: `workload.py`(16 AC)·`opensearch.py`(11)·`no_config.py`(7)·`auth.py`(2)·`aws_config.py`(2)·`smoke.py`(2)의 분할 = 40 AC, ⬜ 14건(platform-auth-safety AC2·AC8 + session-* 12)의 케이스 신설(session-* 는 도구 미구현이 선행), `smoke.py`의 비-AC(스모크) 유형 재분류. 이 잔여는 이번 실행이 만든 as-is 버전 변화의 재감지가 새 task로 잇는다.",
+          "riskLevel": "medium",
+          "plannedAt": "2026-08-14T14:39:09Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "선언 규약 도입: `tests/integration/` 최상위 매칭 단위 9개 파일(`auth.py`·`aws_config.py`·`dear_baby.py`·`github_app.py`·`grafana.py`·`no_config.py`·`opensearch.py`·`smoke.py`·`workload.py`)의 모듈 docstring에 `검증 AC: <domain>/AC<n>[, ...]`와 `실행 대상: primary|auth-variant`, 필요 시 `추가 인자: trace` 줄을 넣는다. 아직 분할 전이라 여러 AC를 겸하는 파일은 자신이 겸하는 AC를 **전부** 선언한다(정직한 위반 계수).",
+              "expectedOutcome": "`grep -c '검증 AC' tests/integration/*.py` 가 9개 파일 모두 1 이상. 선언된 AC 식별자 49개가 레지스트리의 ✅ 49건과 정확히 일치."
+            },
+            {
+              "seq": 2,
+              "action": "체커 신설: `tests/integration/check_ac_mapping.py`(표준 라이브러리만). `docs/prd-*.md`의 `### ACn:`에서 AC 전집을, 매칭 단위 파일의 모듈 docstring에서 선언을, `docs/doc-tracker.md`에서 예외·비-AC 등재와 집계를 읽어 규칙 1·2·3·5·6을 판정한다. 정확히 1개 AC를 선언한 파일만 '매칭 파일'로 세고, 2개 이상 선언한 파일은 '분할 대기(규칙 2 위반)'로 세며 그 AC들은 공백으로 계수한다.",
+              "expectedOutcome": "`python3 tests/integration/check_ac_mapping.py` 가 6줄 집계(AC 64 / 예외 1 / 1:1 대상 63 / 매칭 파일 / 분할 대기 파일 / 공백)를 출력하고 exit 0. 중복 선언·존재하지 않는 AC 참조·고아 파일·집계 불일치·러너 미배차는 exit 1."
+            },
+            {
+              "seq": 3,
+              "action": "러너 신설: `tests/integration/run_all.py`. 매칭 단위 파일을 자동 발견해 선언된 `실행 대상` 그룹별로 필터링하고, 각 파일을 `python <file> <base_url> [trace_url]` 서브프로세스로 실행한다(비-AC/스모크 파일 먼저, 그다음 파일명 정렬). `--group`·`--base-url`·`--trace-url`·`--list`(드라이런) 인자를 받는다.",
+              "expectedOutcome": "`python3 tests/integration/run_all.py --group primary --list` 와 `--group auth-variant --list` 의 합집합이 매칭 단위 파일 전집과 정확히 일치하고 중복이 없다(체커가 이 성질을 검사한다)."
+            },
+            {
+              "seq": 4,
+              "action": "CI 배선: `.github/workflows/ci.yml`의 `integration-tests` 잡에서 파일별 9개 스텝(smoke/workload/dear_baby/github_app/aws_config/grafana/opensearch/auth/no_config)을 **배포 대상별 2스텝**으로 대체한다 — primary 그룹(8080 + http-trace 8090), auth-variant 그룹(8088). 포트포워드는 끊겨도 되살아나도록 재시도 루프로 띄운다. `lint` 잡에는 체커 스텝을 추가한다(클러스터·의존성 불필요).",
+              "expectedOutcome": "ci.yml diff에서 없어진 9스텝이 모두 러너 2스텝으로 흡수되고, 러너 배차 목록과 원래 스텝의 파일 목록이 1:1로 대응한다. 새 파일 추가 시 ci.yml 수정이 더 이상 필요 없다."
+            },
+            {
+              "seq": 5,
+              "action": "도메인 분할(순수 이동): `grafana.py` → grafana-token AC1·AC2·AC4, `github_app.py` → github-app-installation-token AC1·AC2·AC4, `dear_baby.py` → dear-baby-reset-user AC1·AC2·AC3 를 각각 AC 전용 파일 9개로 옮기고 원본 3개 파일(grafana.py·github_app.py·dear_baby.py)을 삭제한다. 파일명 규약은 `<domain_snake>_ac<n>.py`. 두 파일 이상이 공유하는 헬퍼(`parse_env_resource`·`parse_env_pairs`)는 `_helpers.py`로 올린다. 케이스 함수의 이름·docstring·본문은 한 글자도 바꾸지 않는다.",
+              "expectedOutcome": "AST로 분할 전후 케이스 함수 소스를 대조했을 때 9개 모두 완전 일치. `python3 -m py_compile` 전부 통과. 각 신설 파일의 `검증 AC:` 선언이 정확히 1개."
+            },
+            {
+              "seq": 6,
+              "action": "레지스트리 재작성: `docs/doc-tracker.md`의 '케이스 식별 규약(규칙 1·2·3)' 절과 AC 레지스트리 64행을 **파일 단위** 규약·매핑 표로 옮긴다. 각 행은 `전용 파일 / 분할 대기(현재 겸용 파일) / 공백 / 예외` 중 하나로 표기하고, 집계를 `(AC 64 − 예외 1) = 매칭 파일 + 공백`으로 재정의한다. `platform-auth-safety/AC4`(정적 매니페스트 성격)를 사유·대체 검증 수단과 함께 예외로 등재한다.",
+              "expectedOutcome": "체커의 규칙 6(집계 일치)·규칙 5(참조 무결성) 통과. 표 64행이 그대로 유지되고(AC 누락 0), 예외 1건 외에는 어떤 AC도 계수에서 빠지지 않는다."
+            },
+            {
+              "seq": 7,
+              "action": "테스트 문서 동기화: 분할한 3개 도메인의 `docs/test-*.md` 자동화 필드가 지목하는 케이스 경로를 새 파일 경로로 갱신한다(`grafana.py::test_...` → `grafana_token_ac1.py::test_...` 등).",
+              "expectedOutcome": "`grep -rn 'grafana\\.py\\|github_app\\.py\\|dear_baby\\.py' docs/` 가 0건(옛 경로 참조 잔재 없음)."
+            },
+            {
+              "seq": 8,
+              "action": "로컬 검증 후 브랜치 `reconcile/rct_20260814-0001-file-unit-1to1`에 커밋·푸시하고 draft PR을 연다. PR 본문에 task id, gap 요약(자[尺] 교체로 생긴 격차), 이번 슬라이스의 완료 기준과 범위 밖 잔여, 검증 방법을 적는다.",
+              "expectedOutcome": "draft PR이 열리고 CI(`fmt + vet`·`unit tests`·`integration tests`)가 돌기 시작한다. 실행 단계는 CI green + 사용자 승인 후 squash merge."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
