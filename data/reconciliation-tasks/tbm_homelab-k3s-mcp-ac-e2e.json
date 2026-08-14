@@ -1477,7 +1477,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-08-13T06:35:00Z",
       "changedSides": [
@@ -1501,7 +1501,7 @@
       "gap": "**유의미한 차이 있음 — 엄격 1:1 미충족 27/64 (13 통합 커버 + 14 e2e 부재), 그리고 이번 트리거가 to-be를 12 AC 늘렸다.**\n\n두 델타의 성격이 정반대이므로 분리해 판정한다.\n\n1. **as-is 델타(PR #39)는 수렴이다.** 이 모델 자신의 직전 슬라이스 산출물로, `workload.py`의 11개 AC를 파일 수준 커버에서 per-AC 전용 케이스로 승격했다(통합 24→13 · 전용 25→36). 코드에서 재도출한 AC 선언 36건은 중복 0이고 레지스트리 표와 완전 일치한다 → 이 델타가 새로 연 gap은 없다.\n\n2. **to-be 델타(PR #40)는 gap 확대다.** 신규 PRD 3개가 AC를 52→64로 12건 늘렸는데, 이 12건은 전부 e2e가 없다(⬜). 게다가 e2e 이전에 **도구 자체가 미구현**이다 — `internal/`에 `sessionplatform` 패키지가 없고, 레지스트리 자신도 \"session-platform 배포가 2026-08-06 제거된 상태라 12 AC 전부 자동화 공백\"이라고 적고 있다. 규칙 1(모든 AC는 자신을 검증하는 e2e 케이스를 정확히 하나 가진다)의 정면 위반이 12건 새로 생겼다.\n\n3. **기존 잔여도 그대로다.** `aws_config.py`(2) · `dear_baby.py`(2) · `opensearch.py`(9) = 13 AC가 여전히 도메인당 평면 스크립트의 파일 수준 커버라 규칙 1·2를 충족하지 못한다. platform AC2·AC8도 e2e 부재.\n\n정적 문서↔테스트 구조 격차라 롤아웃·일시 alert 같은 자동 해소 기전이 없다.\n",
       "summarizedAt": "2026-08-13T06:35:00Z"
     },
-    "updatedAt": "2026-08-13T07:30:00Z",
+    "updatedAt": "2026-08-14T00:42:21Z",
     "assessment": {
       "actionRequired": true,
       "reason": "27/64 AC가 정의의 1:1 매칭을 충족하지 못하고, 그중 12건은 **이번 트리거가 새로 만든 위반**이며, 이 모델에 열린 task가 0이다 → 지금 작업이 필요하다.\n\n근거 1 — **새 위반이 실제로 생겼다.** PR #40이 AC를 52→64로 늘렸고 신규 12건은 전부 e2e 부재(규칙 1 위반). \"구현 선행 문서\"라는 사정은 정의상 면제 사유가 아니다 — 이 모델의 예외는 \"e2e로 커버하기 비현실적인 AC\"에만 열려 있고(현재 등재 1건: platform/AC4), 미구현은 예외 사유가 아니다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 task 7건 중 열린 것은 0건이다(직전 `rct_20260807-0004`는 이번 as-is 트리거를 만든 PR #39의 슬라이스로 `succeeded`). 미점유 handoff이므로 planner가 바로 집을 수 있다.\n\n근거 3 — **닫을 수 있는 경로가 열려 있다.** 잔여 13건(`opensearch.py` 9 · `aws_config.py` 2 · `dear_baby.py` 2)은 **이미 CI에서 초록인 통합 스크립트를 per-AC 케이스로 쪼개는 리팩터**이고, 방금 `workload.py`가 같은 작업을 11건 규모로 성공시킨 직전 선례가 있다(신규 픽스처 없이 기존 배포·CI 스텝 재사용 패턴). 실행 위험이 낮고 완료 기준이 기계적으로 검증된다.\n\n근거 4 — 정적 구조 gap이라 자동 해소 가능성이 없다 → `recheckAfter` 유예 부적합.\n\n**planner 참고 (슬라이스 경계 권고)**\n\n- **첫 슬라이스에서 session-* 12건은 빼라.** 이쪽은 e2e 작성이 막혀 있다: `internal/`에 `sessionplatform` 패키지가 아예 없고(실측), session-platform 배포도 2026-08-06 제거됐다. 레지스트리가 적어 둔 선행 순서(앱 재배포 → env 배선 → `internal/sessionplatform` 구현 → 단위 → e2e)를 그대로 존중하는 게 맞고, 이 12건은 **이 루프가 아니라 도구 구현 작업**이 선행돼야 한다. 다만 gap 계수에서 빼지는 말 것(⬜로 계속 계수).\n- **첫 슬라이스 후보 = `opensearch.py`의 9 AC per-AC 분리** — 잔여 13건 중 가장 큰 단일 파일이고, `workload.py` 선례와 동일하게 기존 배포·CI 스텝을 재사용할 수 있다. `aws_config.py`(2) + `dear_baby.py`(2)는 작아서 같은 슬라이스에 붙이거나 후속으로 돌려도 된다.\n- **완료 기준에 기계 확인을 넣을 것**: docstring `AC: <domain>/AC<n>` 선언 수 == 레지스트리 `✅ 전용 케이스` 수, 중복 선언 0, 레지스트리 행 합 == AC 총수. 이번 fire에서 이 세 항목을 실측해 모두 일치함을 확인했으므로, 슬라이스 후에도 같은 방식으로 검증하면 된다.\n- **별건 이월**: 🚫 예외 1건(platform-auth-safety/AC4)은 문서에 \"정의 예외 개정 제안\"으로만 남아 있고 모델 `definition`의 예외 목록에는 아직 반영되지 않았다. 이건 planner의 작업이 아니라 **reconciler-tobe-modeler로 definition을 개정할 사안**이다 — 이번 슬라이스 범위에 넣지 말 것.",
@@ -1560,6 +1560,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/41",
           "preparedAt": "2026-08-13T07:22:32Z",
           "notes": "draft PR #41 (base main 448a710, head fea1769). 9 files, +639/-233: tests/integration/{opensearch,aws_config,dear_baby}.py 재구성 + docs/doc-tracker.md 레지스트리(9행 승격·4행 ⬜ 정정·헤더 집계·backlog·완료 노트·변경 이력) + docs/test-*.md 5개 자동화 필드. 신규 픽스처·CI 스텝·네임스페이스·롤아웃 대기 0. 클러스터가 없어 CI를 로컬 재현할 수 없으므로 응답 스키마·에러 문구를 서버 소스에서 파싱한 인메모리 스텁 하네스로 12개 케이스를 구동해 전부 통과시키고, 네거티브 컨트롤 17건이 전부 의도대로 실패함을 확인했다(단언 비-vacuous 증명). 레지스트리 실측: docstring `AC:` 선언 45건(중복 0) == ✅ 전용 45행, 레지스트리 행 64 = 45+18+1, `| ✅ 통합` 0건. **핸드오프 시점 CI 확인(2026-08-13T07:26:13Z)**: `fmt + vet` ✅ · `unit tests` ✅ · `integration tests`(kind, 3분32초) ✅ — 신규/재구성 12개 케이스가 실제 클러스터에서 전부 실행·통과했다(로그 증거: `opensearch tools ok -> run af4710bc`, 8개 케이스 헤더, `missing-email rejection ok`·`selector override ok`·`container override ok -> kubernetes api error: container not-a-container is not valid for pod ...`, `aws_config_get ok -> s3://ci-config-bucket/aws/config (48 bytes, application/octet-stream, etag=a98e5c5e…, modified=2026-08-13T07:25:08Z)`). 즉 스텁 하네스로만 검증한 blind 슬라이스가 아니라 실 CI로 확인된 상태다. `docker build & push` 잡도 PR 이벤트에서 함께 돌아 `:latest`가 이 커밋으로 갱신된다(코드 변경 0이라 이미지 내용은 main과 동일)."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "riskLevel은 low이고 변경은 tests/·docs/ 전용(서버 코드 0줄, revert 1개로 완전 복구)이라 실행 위험 자체는 낮다. 그러나 이 PR에는 판단이 갈릴 수 있는 항목이 하나 있다 — 레지스트리에서 AssumeRole·SigV4 계열 4건(opensearch-search/AC3 · put/AC4 · delete/AC4 · aws-config-get/AC2)을 ✅에서 ⬜ 보강 필요로 내린다. 표면적으로는 '커버가 줄어드는' 변경이라 근거(현 픽스처에서 어떤 단언도 vacuous하다는 점)를 사람이 읽고 동의해야 한다. 또한 머지 시 ghcr.io/dlddu/homelab-k3s-mcp:latest가 이 커밋 기준으로 다시 밀린다(코드 변경 0이라 이미지 내용은 main과 동일하나, 레지스트리 태그가 움직이는 것은 사실이다). 두 항목 모두 실행 전 사람 확인이 적절하다."
         }
       }
     ]
