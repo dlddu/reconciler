@@ -2,7 +2,7 @@
   {
     "id": "rct_20260808-0001",
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "detectedAt": "2026-08-08T01:33:51Z",
       "changedSides": [
@@ -19,7 +19,7 @@
       }
     },
     "createdAt": "2026-08-08T01:33:51Z",
-    "updatedAt": "2026-08-14T00:38:16Z",
+    "updatedAt": "2026-08-14T00:40:24Z",
     "stateSummary": {
       "asIs": "## as-is — e2e SUT 경로의 충실도 seam 실측 (dlddu/session-platform@main `6a48f60`)\n\n버전: `seams=18 files=8` / `f8e44c55…` (최초 관측, previous=null)\n\n지문 18건(파일,토큰)의 **실제 내용을 하나씩 확인**한 결과, 판정 대상이 되는 실 seam은\n**2종**이고 나머지는 그 2종의 중복 토큰·산문·배선이다.\n\n**진짜 seam ①  `GATE` 후보 — CRIU 게이트**\n`control-plane/cmd/control-plane/main.go:74` `var ckpt criu.Checkpointer = criu.NewStubCheckpointer(false)`,\n`cfg.criuEnabled`가 참일 때만 실 체크포인터로 교체.\n- base `k8s/deployment.yaml:42` → `CRIU_ENABLED: \"false\"` (주석: \"gated off until a verified runtime exists\")\n- overlay `deploy/kustomization.yaml:68-70` → env/2를 `\"true\"`로 **replace**\n- e2e SUT는 항상 `scripts/e2e/up.sh:62` `kubectl apply -k deploy/`로 뜬다 → **e2e는 게이트 ON, 실 CRIU 경로를 탄다.**\n\n**진짜 seam ②  `TRIG` 후보 — test-only snapshot 트리거**\n`E2E_TEST_ENDPOINTS`(main.go:195 · api.go) → `api.WithTestEndpoints(cfg.testEndpoints)`(main.go:102),\n켜졌을 때만 `POST /api/v1/sessions/{id}/snapshot`(api.go:170 `snapshotSession`) 등록.\noverlay가 `E2E_TEST_ENDPOINTS: \"1\"` 주입, `e2e_deferred_test.go`가 이 엔드포인트로 동결을 유발.\n- **운영 트리거는 실재한다**: `service.NewIdleReaper(mgr, session.MaxIdle, …)`가 main.go:93에서 배선됨\n  (`internal/service/reaper.go` = \"the operational idle->snapshot trigger (AC-B1)\").\n  잔여는 트리거 부재가 아니라 **세밀한 타이밍 정책 미확정**(`TODO(policy)` — session.go:48, reaper.go:27:\n  grace period · per-session override · AC-D5 클라이언트-유휴 중 장기 포그라운드 작업 처리).\n\n**seam이 아닌 것 (등재 대상 아님 / 지문 오탐)**\n- `control-plane/test/e2e_deferred_test.go:38` `E2E_SESSION_NAMESPACE` — 어서션용 kube 클라이언트가\n  볼 **namespace 지정**일 뿐(기본 `default`), SUT 충실도를 낮추지 않는다. `E2E_BASE_URL`과 동일 성격\n  → **지문 제외 대상**(모델 정의 개정 사안).\n- `Makefile:59` `CRIU_ENABLED` — `test-integration`(`//go:build integration`, **명시적 범위 밖**)\n  설명 주석.\n- `deploy/minio.yaml:8` `test-only` — MinIO가 test-only 저장소가 **아니라** 프로덕션과 같은 S3\n  코드 경로를 탄다는 서술(= 실환경 준비, 모킹 아님).\n- `web/e2e/deferred.spec.ts:9` `test-only` — skip 사유 산문.\n- `main.go:99` · `api.go:23,169` · `e2e_deferred_test.go:133,137,154,158` 의 `test-only` — seam ②를\n  설명하는 주석/스킵 가드로, 독립 seam이 아니다.\n\n**표기 규약 채택률 0** — `mock-exception:` 토큰 레포 전체 **0건**.\n**web 네트워크 인터셉트 0건** — `web/e2e/*.spec.ts`에 `page.route`/`routeFromHAR` 류 호출 없음(재확인).\n",
       "toBe": "## to-be — `docs/test/e2e.md` 충실도 섹션 (정책·허용목록 SSOT)\n\n버전: `lines=19` / `cee6f846…` (최초 관측, previous=null)\n\n섹션은 **이미 존재한다** — `docs/test/e2e.md:7-25`, `> **충실도**: …` 블록쿼트 19줄.\n`absent`(정책 소실)가 아니다. 내용 실측:\n\n- PodOrchestrator·StateStore 모두 실 구현, 진짜 Pod 1:1, ConfigMap+Lease, 실 data-plane\n  이미지, create가 쉘 도달(Reach)까지 확인, SUT 2 replica로 교차-replica 원자성(AC-C1) 검증.\n- Checkpointer(CRIU)는 **오버레이에서 게이트 ON**(agent-driven in-pod CRIU + MinIO 아카이브 +\n  test-only snapshot 트리거)으로 배포되어 snapshot→회수→복원 왕복이 실 단언(AC-B2/B3/D4).\n- 운영 idle→snapshot 트리거의 **타이밍 정책은 미확정**(`TODO(policy)`, AC-B1)이라 명시.\n- 검증 범위와 deferred 시드(B1, C2/C3 idle 분기) 서술.\n\n**형식상 미비**: 전부 **서술형 산문**이다. 정의가 요구하는\n「seam 토큰 · 코드 위치 · 카테고리(GATE/TRIG/EXT/NET) · e2e에서 실제로 구동되는 구간 ·\n치환으로 검증되지 않는 잔여」를 담은 **seam별 등재 행이 0행**이고, 제목이 \"충실도\"를 포함하는\n`##`/`###` 허용목록 섹션으로 **승격되지 않았다**(현재는 블록쿼트).\n`mock-exception:` 표기 규약도 문서에 아직 없다.\n",
@@ -174,6 +174,65 @@
           "reviewer": "user",
           "reviewedAt": "2026-08-14T00:38:16Z",
           "comment": "승인 — 판정 3건(SNAPSHOT-TRIG 등재 삭제 · web 인터셉트 6쌍 NET 미등재 · 「미해소 위반」 원장 + 상한 6 도입), lint-ac 게이트의 python3 의존, GHCR latest 부수효과를 설명받고 승인. 머지 순서 지침(#40 먼저, #22는 머지 말고 닫기)도 함께 승인."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-08-14T00:41:00Z",
+          "finishedAt": "2026-08-14T00:40:24Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "skipped",
+              "log": "계획(preparation) 단계에서 이미 수행되어 PR #40 커밋 4848bf0에 반영됨. executor는 재실행하지 않고 결과만 재확인했다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "log": "계획(preparation) 단계에서 이미 수행되어 PR #40 커밋 4848bf0에 반영됨. executor는 재실행하지 않고 결과만 재확인했다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "log": "계획(preparation) 단계에서 이미 수행되어 PR #40 커밋 4848bf0에 반영됨. executor는 재실행하지 않고 결과만 재확인했다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "log": "계획(preparation) 단계에서 이미 수행되어 PR #40 커밋 4848bf0에 반영됨. executor는 재실행하지 않고 결과만 재확인했다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "skipped",
+              "log": "계획(preparation) 단계에서 이미 수행되어 PR #40 커밋 4848bf0에 반영됨. executor는 재실행하지 않고 결과만 재확인했다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "skipped",
+              "log": "계획(preparation) 단계에서 이미 수행되어 PR #40 커밋 4848bf0에 반영됨. executor는 재실행하지 않고 결과만 재확인했다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "skipped",
+              "log": "계획(preparation) 단계에서 이미 수행되어 PR #40 커밋 4848bf0에 반영됨. executor는 재실행하지 않고 결과만 재확인했다."
+            },
+            {
+              "stepSeq": 8,
+              "status": "skipped",
+              "log": "계획(preparation) 단계에서 이미 수행되어 PR #40 커밋 4848bf0에 반영됨. executor는 재실행하지 않고 결과만 재확인했다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "skipped",
+              "log": "계획(preparation) 단계에서 이미 수행되어 PR #40 커밋 4848bf0에 반영됨. executor는 재실행하지 않고 결과만 재확인했다."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-08-14T00:41:00Z",
+              "finishedAt": "2026-08-14T00:40:24Z",
+              "log": "(a) PR #40 재확인: state=open·draft=true·mergeable=clean, base가 여전히 ed71777 = 계획 시점 main(그 사이 main 무이동, rebase 불필요). (b) CI 재확인: head 4848bf0의 check-run 11건 전부 success — ci 9잡(신규 `e2e fidelity allowlist` 포함) + `e2e (kind + API + browser)` + GHCR 이미지 2잡. (c) fidelity 잡 로그가 API로 비어 있어(output 미기재) 대신 PR head를 로컬 체크아웃해 `python3 scripts/check-fidelity-allowlist.py`를 직접 실행 → exit 0, 지침 §1이 요구한 요약 4줄과 문자열 일치: '등재 seam 1 (GATE 1 · TRIG 0 · EXT 0 · NET 0) / 회계 행 16 == 스캔된 (파일,토큰) 쌍 16 (등재 귀속 4 · 미해소 위반 6 · 비-seam 6) + mock-exception: 마커 3파일 / 마커 3지점 / 3파일 · web 네트워크 인터셉트 6건 (승인 0 · 위반 6, 상한 6)'. (d) draft 해제(GraphQL markPullRequestReadyForReview) 후 **squash merge** → main = 7cd13a9. (e) 지침 ⚠️2에 따라 #22를 supersede 코멘트와 함께 **닫았다**(머지하지 않음) — #22는 사라진 SNAPSHOT-TRIG를 등재하고 있어 머지 시 고아 등재 drift. (f) 지침 ⚠️1의 GHCR `:latest` 잔존 문제는 머지로 해소(머지 후 main 빌드가 latest를 재발행)."
+            }
+          ]
         }
       }
     ]
