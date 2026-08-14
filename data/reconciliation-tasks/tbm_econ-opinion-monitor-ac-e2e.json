@@ -18,7 +18,7 @@
       }
     },
     "createdAt": "2026-08-08T00:34:25Z",
-    "updatedAt": "2026-08-14T00:17:23Z",
+    "updatedAt": "2026-08-14T00:41:02Z",
     "id": "rct_20260808-0001",
     "stateSummary": {
       "asIs": "관측 2026-08-08T00:34Z · dlddu/economic-opinion-trend-monitor@main `218dec6` · as-is 버전 `58d9bbd4` (= `HEAD:tests/e2e` 트리 해시, 첫 관측)\n\n**매칭 단위(`tests/e2e/specs/` 최상위 `*.spec.ts`) = 1개**\n- `tests/e2e/specs/serving.spec.ts` — 테스트 3개\n  - `api: health responds ok` (`GET /api/health` → 200 `{status:\"ok\"}`)\n  - `api: dashboard serves fixture Gold for the KR axis` (`GET /api/dashboard?axis=KR` → 픽스처 서브젝트 + `\"normalized\":true`)\n  - `web: dashboard renders the fixture subject` (`/` 렌더, 타이틀 + 픽스처 서브젝트 노출, \"데이터 없음\"·\"The web build was not found\" 부재)\n\n**`검증 AC:` 헤더 선언 = 0건.** 레포 전체 `grep -rn '검증 AC'` 결과 히트는 전부 `docs/`(test-*.md 시나리오의 `- **검증 AC**:` 필드, doc-tracker 본문)이며 `tests/` 아래에는 **0건**이다. 즉 spec 파일에서 AC를 기계적으로 확인할 수 있는 선언 규약이 아직 코드에 존재하지 않는다.\n\n**매칭 단위가 아닌 하네스·픽스처**(정의상 제외): `fixtures/README.md`, `fixtures/gold/{axis_sentiment,subject_trend}.jsonl`, `k8s/{e2e-patch,kustomization}.yaml`, `kind-config.yaml`, `package.json`, `package-lock.json`, `playwright.config.ts`, `run.sh`.\n\n**검증 축은 살아 있다**: `tests/e2e/run.sh`는 serving 이미지를 빌드해 일회용 kind 클러스터에 픽스처 Gold를 ConfigMap으로 물려 띄우고 port-forward에 대해 Playwright를 돌린다. `.github/workflows/ci.yml`이 `tests/e2e/package-lock.json` 캐시 + `tests/e2e/playwright-report` 아티팩트를 참조하는 e2e 잡을 갖고 있어 CI에서 실제로 실행된다(테세라식 \"스펙은 있으나 아무도 안 돌림\" 상황이 아님).\n\n**구현 측 참고**(spec 신설 가능성 판단 근거): 슬라이스 2(AC1.1~1.7)는 자매 모델 `tbm_econ-opinion-monitor-docs-impl`의 `rct_20260802-0001`이 2026-08-07T22:11Z `succeeded`로 닫으며 실구현됐다 — `python/packages/ingestion/src/econ_ingestion/`에 `feeds.py`·`sources.py`·`cli.py`·`default_feeds.json` + 단위 테스트, `deploy/` 시간별 CronWorkflow `suspend:false`. 반면 AC2.x는 `python/packages/analysis/src/econ_analysis/`에 `fake_llm.py`뿐(실 analyzer 없음), AC3.x는 `go/internal/handlers/handlers.go`가 스스로 \"one stub route per frontend screen\"이라 적고 인라인 `stub: single-bucket skeleton data (AC3.5 …)` / `stub: 원문 역추적 자리 … (AC2.6)`를 남긴 상태다. 단 현행 e2e 하네스는 **serving 경로만** 기동한다(수집 잡은 클러스터에 없음).",
@@ -169,8 +169,11 @@
         },
         "review": {
           "required": true,
-          "status": "pending",
-          "reason": "riskLevel은 low이고 제품 코드 diff가 0(revert 1건으로 원복)이라 기술적 위험은 낮지만, 이 머지가 확정하는 것은 코드가 아니라 **판정**이라 사람 승인 없이 반영하지 않는다. (1) 1차 검토에서 사용자가 'AC2.2·AC2.3의 예외 등재를 철회하고 골든 평가 하네스를 추가하는 방향으로 재계획하라'고 반려했는데, 이번 재계획은 예외 철회는 그대로 수용하되 하네스는 **선행 슬라이스로 끊어 이번 범위에서 뺐다** — 반려 지시의 후반부를 planner 재량으로 해석한 것이므로 그 해석이 사용자 의도와 맞는지 확인이 필요하다. (2) AC2.2·AC2.3을 '공백'으로 계수해 잔여 공백이 16→18로 늘어나는데, 이 숫자가 보고 지표로 쓰인다면 맥락을 아는 사람의 승인이 있어야 한다. (3) `make lint` 의존에 들어가는 `lint-ac-mapping` 게이트가 머지 즉시 레포 전체 후속 PR에 마찰을 만든다(팀 정책 성격의 결정). 실행 지침 §3-2도 이 3건을 명시적 승인 포인트로 지목한다."
+          "status": "approved",
+          "reason": "riskLevel은 low이고 제품 코드 diff가 0(revert 1건으로 원복)이라 기술적 위험은 낮지만, 이 머지가 확정하는 것은 코드가 아니라 **판정**이라 사람 승인 없이 반영하지 않는다. (1) 1차 검토에서 사용자가 'AC2.2·AC2.3의 예외 등재를 철회하고 골든 평가 하네스를 추가하는 방향으로 재계획하라'고 반려했는데, 이번 재계획은 예외 철회는 그대로 수용하되 하네스는 **선행 슬라이스로 끊어 이번 범위에서 뺐다** — 반려 지시의 후반부를 planner 재량으로 해석한 것이므로 그 해석이 사용자 의도와 맞는지 확인이 필요하다. (2) AC2.2·AC2.3을 '공백'으로 계수해 잔여 공백이 16→18로 늘어나는데, 이 숫자가 보고 지표로 쓰인다면 맥락을 아는 사람의 승인이 있어야 한다. (3) `make lint` 의존에 들어가는 `lint-ac-mapping` 게이트가 머지 즉시 레포 전체 후속 PR에 마찰을 만든다(팀 정책 성격의 결정). 실행 지침 §3-2도 이 3건을 명시적 승인 포인트로 지목한다.",
+          "reviewer": "user",
+          "reviewedAt": "2026-08-14T00:41:02Z",
+          "comment": "승인 — 승인 포인트 3건(하네스를 선행 슬라이스로 끊은 planner 해석 / 잔여 공백 16→18 / lint-ac-mapping 게이트의 레포 전역 마찰)을 설명받고 이견 없이 승인. 추가 조건 없음."
         }
       }
     ]
