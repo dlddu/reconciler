@@ -1477,7 +1477,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-13T06:35:00Z",
       "changedSides": [
@@ -1501,7 +1501,7 @@
       "gap": "**유의미한 차이 있음 — 엄격 1:1 미충족 27/64 (13 통합 커버 + 14 e2e 부재), 그리고 이번 트리거가 to-be를 12 AC 늘렸다.**\n\n두 델타의 성격이 정반대이므로 분리해 판정한다.\n\n1. **as-is 델타(PR #39)는 수렴이다.** 이 모델 자신의 직전 슬라이스 산출물로, `workload.py`의 11개 AC를 파일 수준 커버에서 per-AC 전용 케이스로 승격했다(통합 24→13 · 전용 25→36). 코드에서 재도출한 AC 선언 36건은 중복 0이고 레지스트리 표와 완전 일치한다 → 이 델타가 새로 연 gap은 없다.\n\n2. **to-be 델타(PR #40)는 gap 확대다.** 신규 PRD 3개가 AC를 52→64로 12건 늘렸는데, 이 12건은 전부 e2e가 없다(⬜). 게다가 e2e 이전에 **도구 자체가 미구현**이다 — `internal/`에 `sessionplatform` 패키지가 없고, 레지스트리 자신도 \"session-platform 배포가 2026-08-06 제거된 상태라 12 AC 전부 자동화 공백\"이라고 적고 있다. 규칙 1(모든 AC는 자신을 검증하는 e2e 케이스를 정확히 하나 가진다)의 정면 위반이 12건 새로 생겼다.\n\n3. **기존 잔여도 그대로다.** `aws_config.py`(2) · `dear_baby.py`(2) · `opensearch.py`(9) = 13 AC가 여전히 도메인당 평면 스크립트의 파일 수준 커버라 규칙 1·2를 충족하지 못한다. platform AC2·AC8도 e2e 부재.\n\n정적 문서↔테스트 구조 격차라 롤아웃·일시 alert 같은 자동 해소 기전이 없다.\n",
       "summarizedAt": "2026-08-13T06:35:00Z"
     },
-    "updatedAt": "2026-08-14T04:25:30Z",
+    "updatedAt": "2026-08-14T04:31:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "27/64 AC가 정의의 1:1 매칭을 충족하지 못하고, 그중 12건은 **이번 트리거가 새로 만든 위반**이며, 이 모델에 열린 task가 0이다 → 지금 작업이 필요하다.\n\n근거 1 — **새 위반이 실제로 생겼다.** PR #40이 AC를 52→64로 늘렸고 신규 12건은 전부 e2e 부재(규칙 1 위반). \"구현 선행 문서\"라는 사정은 정의상 면제 사유가 아니다 — 이 모델의 예외는 \"e2e로 커버하기 비현실적인 AC\"에만 열려 있고(현재 등재 1건: platform/AC4), 미구현은 예외 사유가 아니다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 task 7건 중 열린 것은 0건이다(직전 `rct_20260807-0004`는 이번 as-is 트리거를 만든 PR #39의 슬라이스로 `succeeded`). 미점유 handoff이므로 planner가 바로 집을 수 있다.\n\n근거 3 — **닫을 수 있는 경로가 열려 있다.** 잔여 13건(`opensearch.py` 9 · `aws_config.py` 2 · `dear_baby.py` 2)은 **이미 CI에서 초록인 통합 스크립트를 per-AC 케이스로 쪼개는 리팩터**이고, 방금 `workload.py`가 같은 작업을 11건 규모로 성공시킨 직전 선례가 있다(신규 픽스처 없이 기존 배포·CI 스텝 재사용 패턴). 실행 위험이 낮고 완료 기준이 기계적으로 검증된다.\n\n근거 4 — 정적 구조 gap이라 자동 해소 가능성이 없다 → `recheckAfter` 유예 부적합.\n\n**planner 참고 (슬라이스 경계 권고)**\n\n- **첫 슬라이스에서 session-* 12건은 빼라.** 이쪽은 e2e 작성이 막혀 있다: `internal/`에 `sessionplatform` 패키지가 아예 없고(실측), session-platform 배포도 2026-08-06 제거됐다. 레지스트리가 적어 둔 선행 순서(앱 재배포 → env 배선 → `internal/sessionplatform` 구현 → 단위 → e2e)를 그대로 존중하는 게 맞고, 이 12건은 **이 루프가 아니라 도구 구현 작업**이 선행돼야 한다. 다만 gap 계수에서 빼지는 말 것(⬜로 계속 계수).\n- **첫 슬라이스 후보 = `opensearch.py`의 9 AC per-AC 분리** — 잔여 13건 중 가장 큰 단일 파일이고, `workload.py` 선례와 동일하게 기존 배포·CI 스텝을 재사용할 수 있다. `aws_config.py`(2) + `dear_baby.py`(2)는 작아서 같은 슬라이스에 붙이거나 후속으로 돌려도 된다.\n- **완료 기준에 기계 확인을 넣을 것**: docstring `AC: <domain>/AC<n>` 선언 수 == 레지스트리 `✅ 전용 케이스` 수, 중복 선언 0, 레지스트리 행 합 == AC 총수. 이번 fire에서 이 세 항목을 실측해 모두 일치함을 확인했으므로, 슬라이스 후에도 같은 방식으로 검증하면 된다.\n- **별건 이월**: 🚫 예외 1건(platform-auth-safety/AC4)은 문서에 \"정의 예외 개정 제안\"으로만 남아 있고 모델 `definition`의 예외 목록에는 아직 반영되지 않았다. 이건 planner의 작업이 아니라 **reconciler-tobe-modeler로 definition을 개정할 사안**이다 — 이번 슬라이스 범위에 넣지 말 것.",
@@ -1587,6 +1587,49 @@
               "startedAt": "2026-08-14T04:24:00Z",
               "finishedAt": "2026-08-14T04:25:10Z",
               "log": "draft 해제(GraphQL markPullRequestReadyForReview) 후 squash 머지. 머지 API에 head sha 가드를 걸어 호출했고, 첫 시도는 sha 불일치로 409가 나 실제 full sha `588db7cfb33227f6403fd06976fa9e4e2cc53df6`로 재호출해 성공. main `56d2ef6` — \"test(e2e): split the last 13 file-level AC covers + http-trace access-path fixture (rct_20260813-0001) (#41)\". 12파일 변경."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "aff1ef80e39ba49b428d6ddb52b42949d3c912d7",
+          "verifiedAt": "2026-08-14T04:31:00Z",
+          "checks": [
+            {
+              "name": "머지 후 main CI 4잡 green",
+              "status": "passed",
+              "detail": "main `56d2ef6`: fmt+vet · unit tests · integration tests · docker build & push 전부 success. integration tests가 초록이라는 것은 이번에 새로 데이터 경로에 들어간 http-trace 프록시(MinIO :9000 / OpenSearch :9200 프론트)가 실제 kind 클러스터에서 정상 동작했다는 뜻이기도 하다."
+            },
+            {
+              "name": "파일 수준 커버 잔여 0 (계획 원 범위의 완료 기준)",
+              "status": "passed",
+              "detail": "머지된 main에서 `grep -c '| ✅ 통합' docs/doc-tracker.md` == 0. opensearch.py 9 · aws_config.py 2 · dear_baby.py 2 = 13건이 전부 per-AC 전용 케이스로 전환됐다."
+            },
+            {
+              "name": "레지스트리 ↔ 코드 1:1 (선언 == 등재, 중복 0, 실재 확인)",
+              "status": "passed",
+              "detail": "`tests/integration/*.py`의 `AC: <domain>/AC<n>` docstring 선언 49건(중복 0) == 레지스트리 ✅ 전용 49행, 두 목록 diff 차이 없음. 레지스트리가 지목한 `파일::케이스` 참조 중 코드에 없는 것 0건."
+            },
+            {
+              "name": "레지스트리 총계 == AC SSOT (승인으로 재기준화된 완료 기준)",
+              "status": "passed",
+              "detail": "레지스트리 행 64 == prd-*.md의 `### ACn` 총수 64. 버킷 = ✅ 전용 49 · ⬜ 14 · 🚫 1 (49+14+1=64). 계획서가 쓴 45/18/1은 검토 대기 중 추가된 http-trace 픽스처로 AssumeRole·SigV4 4건이 ⬜ 정정 대신 ✅ 승격되면서 49/14/1로 대체됐고, 사용자가 이 확장 범위를 완료 기준으로 승인했다(review.comment)."
+            },
+            {
+              "name": "승격된 4건의 단언이 vacuous하지 않은지 (이번 범위 변경의 핵심 쟁점)",
+              "status": "passed",
+              "detail": "`assert_assumed_role_access`가 세 관측을 함께 요구한다 — ①설정된 role ARN에 대한 AssumeRole이 발급되고 그 STS 호출은 베이스 키 `minioadmin`으로 서명됨, ②데이터플레인 요청에 AWS4-HMAC-SHA256 서명이 service·region·host를 덮어 존재, ③서명 키가 STS 발급 키 집합에 속하고 베이스 키가 아니며 X-Amz-Security-Token 동반. 정적 키로 접근하거나 서명하지 않는 서버는 세 지점에서 각각 떨어진다. 관측 수단 자체도 가짜 upstream 서명 재계산 + Host 재작성 403 네거티브 컨트롤로 검증돼 있고, `588db7c`는 프록시 결함이 실제 CI 실패로 드러나 고쳐진 사례라 프록시가 실경로에 있다는 방증이 된다."
+            },
+            {
+              "name": "as-is / to-be 버전 변동 (다음 감지 주기의 입력)",
+              "status": "passed",
+              "detail": "as-is `78518fa3…` → `aff1ef80…`(HEAD:tests, http-trace 픽스처·케이스 재구성 반영), to-be `471b8cfc…` → `895a1449…`(prd-*.md + doc-tracker.md blob 목록 해시). 양쪽 모두 이동 — 모델의 lastObservedVersion은 의도적으로 갱신하지 않았으므로 다음 sweep이 이 변화를 보고 후속 task를 연다."
+            },
+            {
+              "name": "[정보성] 모델 전체 잔여 gap (이 시도 범위 밖 · converged 판정 미포함)",
+              "status": "passed",
+              "detail": "엄격 1:1 미충족 잔여 15건: ⬜ 14(platform-auth-safety/AC2 인증 디스커버리 · AC8 구성 유연성 + session-list/read/write 12건 — 도구 자체가 미구현이라 e2e 이전에 구현이 선행돼야 함) + 🚫 예외 1(platform-auth-safety/AC4, 모델 definition 반영은 reconciler-tobe-modeler 소관). 이번 머지로 27 → 15로 줄었다."
             }
           ]
         }
