@@ -326,7 +326,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
-    "status": "detected",
+    "status": "assessing",
     "trigger": {
       "detectedAt": "2026-08-14T13:07:00Z",
       "changedSides": [
@@ -343,6 +343,13 @@
       }
     },
     "createdAt": "2026-08-14T13:07:00Z",
-    "id": "rct_20260814-0001"
+    "id": "rct_20260814-0001",
+    "stateSummary": {
+      "asIs": "## as-is — e2e SUT 경로의 seam 지문 @ `7cd13a9d` (2026-08-14T00:39Z)\n\n지문 `seams=19 files=11 / be0a2baf…` (직전 기준선 `seams=16 files=11 / 225c98d2…`). 델타는 **PR #40 `7cd13a9d`** — 이 모델 자신의 직전 task `rct_20260808-0001`(succeeded, 00:44Z 검증)의 reconcile 산출물이다. seam 3건 증가는 새 모킹이 아니라 **`// mock-exception: CRIU-GATE` 마커 3지점 신설**(그 토큰 자체가 지문 대상)이다.\n\n레포에서 체커(`scripts/check-fidelity-allowlist.py`)를 직접 돌려 재도출:\n\n```\nOK: e2e 충실도 허용목록 ↔ 코드 seam 1:1\n  등재 seam 1 (GATE 1 · TRIG 0 · EXT 0 · NET 0)\n  회계 행 16 == 스캔된 (파일,토큰) 쌍 16 (등재 귀속 4 · 미해소 위반 6 · 비-seam 6) + mock-exception: 마커 3파일\n  마커 3지점 / 3파일 · web 네트워크 인터셉트 6건 (승인 0 · 위반 6, 상한 6)\n```\n\n- 승인된 seam은 `CRIU-GATE`(GATE) 1건뿐 — 프로덕션 base는 `CRIU_ENABLED:\"false\"`(no-op 스텁), e2e 오버레이만 on.\n- **정책이 금지하는 치환이 코드에 6쌍 실재한다**: `web/e2e/j6-agent-prompt-loop.spec.ts` · `web/e2e/manual-archive.spec.ts` · `web/e2e/session-deletion.spec.ts` × (`.route(`, `route.fulfill(`).\n- 과거의 `SNAPSHOT-TRIG`(test-only `/snapshot` 트리거)는 소멸했다 — 제품 `POST /api/v1/sessions/{id}/snapshot`으로 승격돼 `E2E_TEST_ENDPOINTS`/`WithTestEndpoints`가 레포에서 사라졌다.",
+      "toBe": "## to-be — `docs/test/e2e.md` 충실도 섹션 @ `7cd13a9d`\n\n- 버전 `lines=107 / 72e2df8d…` (직전 기준선 `lines=18 / 1fb20cb8…`). 서술형 블록쿼트 18줄이 **구조화된 허용목록 107줄**로 승격됐다.\n- 구성: `### 표기 규약` · `### 등재된 seam`(CRIU-GATE 1행: e2e에서 실제로 구동되는 구간 + 검증되지 않는 잔여 명시) · `### 미해소 위반 (승인된 예외가 아니다)`(6행: 무엇을 위조하는가 · 제거 경로와 선결조건) · `### seam 지문 회계`(16행: 등재 귀속 4 · 위반 6 · 비-seam 6) · `### 집계`(마커로 감싼 요약, 상한 6 선언).\n- 문서가 못박은 제거 경로: **인클러스터 가짜 Claude provider를 `deploy/`에 배포**(MinIO 선례)하고 `claude-code-credentials`의 `base-url`을 그쪽으로 돌린 뒤 web 테스트를 실 SUT 위에서 재작성. 잔여 중 `session-deletion`의 409 충돌 주입과 `manual-archive`의 지연 주입만이 `NET`(ERR/LAT)으로 **행 단위 승인 가능**하다고 적혀 있다.",
+      "gap": "**유의미한 차이 — 정책이 불허하는 치환 6쌍이 코드에 실재한다.**\n\n정의는 정합 상태를 \"허용목록에 등재된 seam의 집합 == 코드에 실재하는 seam의 집합(양방향 1:1)\"으로 두고, **미등재 치환도 고아 등재도 drift**라고 명시한다. 지금 상태는 그 중간이다:\n\n- **회계는 성립한다.** 체커 exit 0 — 등재 1건이 코드에 실재하고, 코드의 모든 (파일,토큰) 쌍 16개가 등재·위반·비-seam 중 하나로 귀속되며, 고아 등재 0.\n- **그러나 정책 위반 6쌍은 그대로다.** `.route(`/`route.fulfill(` 6쌍은 **승인된 예외가 아니라 \"미해소 위반\"으로 등재**됐다(승인 NET 0 · 위반 6). 세 spec이 세션·config·SSE 스트림·삭제 응답(200/404/409/204)을 브라우저 레벨에서 위조하고 있어, 그만큼 실 SUT가 검증되지 않는다.\n- 직전 슬라이스는 이 사실을 **정직하게 기록하고 상한(6)을 걸어 증가를 CI로 막는 데까지**가 범위였다. 그 verification의 정보성 체크가 \"web 인터셉트 6쌍은 여전히 정책 위반이며 기록·상한만 걸린 상태 … 실제 제거는 인클러스터 가짜 Claude provider 배포가 선결조건이라 범위 밖 — 후속은 재감지가 새 task로 잇는다\"고 명시적으로 인계했다.\n\n즉 이번 트리거는 수렴 방향(정책 문서 승격 + 게이트 신설 + SNAPSHOT-TRIG 제거)이지만, 모델이 요구하는 목표 상태(불허 치환 0)와의 거리는 6쌍만큼 그대로 남아 있다.",
+      "summarizedAt": "2026-08-14T13:07:00Z"
+    },
+    "updatedAt": "2026-08-14T13:07:00Z"
   }
 ]
