@@ -350,12 +350,63 @@
       "gap": "**유의미한 차이 — 정책이 불허하는 치환 6쌍이 코드에 실재한다.**\n\n정의는 정합 상태를 \"허용목록에 등재된 seam의 집합 == 코드에 실재하는 seam의 집합(양방향 1:1)\"으로 두고, **미등재 치환도 고아 등재도 drift**라고 명시한다. 지금 상태는 그 중간이다:\n\n- **회계는 성립한다.** 체커 exit 0 — 등재 1건이 코드에 실재하고, 코드의 모든 (파일,토큰) 쌍 16개가 등재·위반·비-seam 중 하나로 귀속되며, 고아 등재 0.\n- **그러나 정책 위반 6쌍은 그대로다.** `.route(`/`route.fulfill(` 6쌍은 **승인된 예외가 아니라 \"미해소 위반\"으로 등재**됐다(승인 NET 0 · 위반 6). 세 spec이 세션·config·SSE 스트림·삭제 응답(200/404/409/204)을 브라우저 레벨에서 위조하고 있어, 그만큼 실 SUT가 검증되지 않는다.\n- 직전 슬라이스는 이 사실을 **정직하게 기록하고 상한(6)을 걸어 증가를 CI로 막는 데까지**가 범위였다. 그 verification의 정보성 체크가 \"web 인터셉트 6쌍은 여전히 정책 위반이며 기록·상한만 걸린 상태 … 실제 제거는 인클러스터 가짜 Claude provider 배포가 선결조건이라 범위 밖 — 후속은 재감지가 새 task로 잇는다\"고 명시적으로 인계했다.\n\n즉 이번 트리거는 수렴 방향(정책 문서 승격 + 게이트 신설 + SNAPSHOT-TRIG 제거)이지만, 모델이 요구하는 목표 상태(불허 치환 0)와의 거리는 6쌍만큼 그대로 남아 있다.",
       "summarizedAt": "2026-08-14T13:07:00Z"
     },
-    "updatedAt": "2026-08-14T14:52:00Z",
+    "updatedAt": "2026-08-14T14:57:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "유의미한 drift(불허 치환 6쌍)가 실재하고, 미점유이며, 제거 경로와 선결조건이 문서에 이미 확정돼 있다 → 지금 작업이 필요하다.\n\n근거 1 — **정의상 drift다.** 6쌍은 `NET` 자격(실 SUT가 요청 시점에 낼 수 없는 서버 실패·지연 주입)을 만족하지 못해 승인 예외로 등재될 수 없고, 문서 스스로 \"승인된 예외가 아니다\"라고 계수한다. 정의의 \"판정이 애매하면 제거 쪽으로 기운다\"·\"예외는 늘지 않는 방향으로만 관리한다\"에 따르면 남은 길은 제거뿐이다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 task 2건은 모두 종결됐다(`rct_20260808-0001` succeeded 00:44Z · `rct_20260813-0001` no_action_needed). 직전 verification이 후속을 재감지에 인계했고, handoff 슬롯이 비어 있다.\n\n근거 3 — **자동 해소 기전이 없다.** 정적인 테스트 코드·배포 구성 격차이며, 상한 6은 증가만 막을 뿐 스스로 줄지 않는다 → `recheckAfter` 유예 부적합.\n\nplanner 참고:\n① **선결 슬라이스 = 인클러스터 가짜 Claude provider.** 문서가 지목한 경로 그대로 — MinIO를 실 배포로 넣은 선례를 따라 `deploy/`에 결정적 응답을 내는 가짜 provider를 배포하고 `claude-code-credentials`의 `base-url`을 돌린다. 이것이 서면 `j6-agent-prompt-loop`(12테스트)·`manual-archive`의 인터셉트가 실 SUT 경로로 대체 가능해진다.\n② **행 단위로 승인 가능한 잔여는 분리해서 남긴다.** `session-deletion`의 DELETE 409 충돌 주입은 `NET`(ERR), `manual-archive`의 중간 \"Archiving…\" 지연은 `NET`(LAT)로 **자격을 만족하므로**, 제거 대상과 승인 등재 대상을 섞지 말 것. 그 두 건만 남기면 위반 6 → 0, 승인 NET 2가 되는 것이 현실적인 종착점이다.\n③ **완료 기준에 체커를 넣을 것** — `python3 scripts/check-fidelity-allowlist.py` exit 0 + `집계` 블록의 \"위반 N\" 감소 + **상한을 내려 잠글 것**(문서: \"상한은 내릴 때만 고친다\"). 상한을 줄이지 않으면 다음 슬라이스가 다시 6까지 늘릴 수 있다.\n④ 이 작업은 `web/e2e/*.spec.ts`를 대량 수정하므로, 자매 모델 `tbm_session-platform-ac-e2e`의 열린 `rct_20260808-0001`(awaiting_review, 같은 spec 파일들의 AC 매핑 작업)과 **같은 파일을 건드린다** — 실행 순서를 그 task와 조율하거나, 최소한 rebase 전제를 계획에 명시할 것.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-14T13:07:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "미해소 위반 6쌍 중 **`web/e2e/session-deletion.spec.ts` 1파일(2쌍)만** 이번 슬라이스로 해소한다. 그 세 번째 테스트를 실 SUT 위로 옮기고 — 세션을 `POST /api/v1/sessions`로 실제로 만들고 제품 `POST /api/v1/sessions/{id}/snapshot`으로 진짜 `snapshot` 상태까지 얼린 뒤 — 인터셉트가 가로채는 범위를 **첫 DELETE 한 번의 409 응답으로만** 좁혀 `NET`(ERR) 자격을 만족시키고 `DELETE-CONFLICT-ERR`로 등재한다. 나머지 요청(목록·단건·재시도 DELETE)은 `route.continue()`로 실 control-plane이 응답한다.\n\n이 경로를 고른 이유: 문서가 못박은 세 파일의 제거 경로 중 **선결조건이 이미 충족된 것은 이 파일뿐**이다. j6와 manual-archive는 둘 다 인클러스터 가짜 Claude provider 배포(`deploy/claude-code-credentials-secret.yaml`의 `base-url: https://127.0.0.1:9`를 돌리는 일)가 선행돼야 하고, kind 오버레이는 `DATA_PLANE_CLAUDE_CODE_IMAGE`조차 일반 data-plane 이미지로 치환해 두었다 — claude-code 워크로드를 실 SUT에서 `active`까지 세우는 것 자체가 별도 슬라이스다. 반면 session-deletion이 필요로 하는 `snapshot` 상태는 제품 endpoint로 이미 도달 가능하고(`TestDeferred_PodReclaimedOnSnapshot`·`TestDeferred_CRIUIntegrity`가 같은 트리거로 실 단언을 돌린다), 남는 409는 실 SUT가 **세션 Lease 경합 시에만** 내는 응답이라(`service.Terminate`가 snapshot/restore와 같은 Lease를 잡고, 충돌 시 `session.ErrConflict` → `api.writeErr`가 409) 요청 시점에 결정적으로 유발할 수 없다 — 모델 정의의 `NET`(ERR) 자격 그대로다.\n\n**완료 기준(이 task의 성공 판정)**: (1) `python3 scripts/check-fidelity-allowlist.py` exit 0, (2) 「미해소 위반」 6 → **4**이고 상한도 6 → **4**로 함께 내려가 래칫이 유지되며, (3) 등재 표에 `DELETE-CONFLICT-ERR`(NET)가 잔여를 명시한 채 추가되고 코드에 `mock-exception: DELETE-CONFLICT-ERR` 마커가 있으며, (4) `session-deletion.spec.ts`의 세 테스트가 kind e2e에서 green(세 번째가 실 세션·실 snapshot 위에서 돈다), (5) ci.yml의 `fidelity`·`web` 잡 green.\n\n**범위 밖(후속 재감지가 새 task로 잇는다)**: j6-agent-prompt-loop(2쌍)·manual-archive(2쌍)의 위반 4쌍과 그 선결조건인 인클러스터 가짜 Claude provider 배포. `manual-archive`의 `NET`(LAT) 승인도 그 뒤 일이다. 모델 definition의 `E2E_SESSION_NAMESPACE` 지문 제외 개정도 이번 범위가 아니다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 `reconcile/rct_20260814-0001-session-deletion-real-sut`를 `origin/main`(7cd13a9)에서 딴다.",
+              "expectedOutcome": "PR #23(자매 task, 08-08자 stale)과 겹치지 않는 새 브랜치. PR #23 변경 파일 목록에 session-deletion.spec.ts는 없다(겹치는 건 docs/test/e2e.md 하나뿐)."
+            },
+            {
+              "seq": 2,
+              "action": "`web/e2e/session-deletion.spec.ts`의 세 번째 테스트(`delete a snapshot from Restore and retry after a conflict`)를 실 SUT 기반으로 재작성한다. 픽스처 `snapshot` 객체와 `page.route(\"**/api/v1/**\")` 전면 인터셉트를 삭제하고: `request.post(\"/api/v1/sessions\", {data:{name}})` → 201 확인 → `request.post(\"/api/v1/sessions/{id}/snapshot\")`로 실제 동결(응답 `state==\"snapshot\"` 단언, 404/503이면 `test.skip` — Go 스위트가 같은 조건에서 skip하는 방식과 동일) → CRIU 왕복 시간을 감안해 `test.setTimeout(180_000)`.",
+              "expectedOutcome": "테스트가 `/restore/{id}`를 실 세션으로 열고, 화면의 세션 이름·checkpoint 메타가 실 control-plane 응답에서 온다."
+            },
+            {
+              "seq": 3,
+              "action": "인터셉트를 첫 DELETE 하나로 좁힌다. `page.route(\"**/api/v1/sessions/\" + id, handler)`를 걸고 handler는 `method !== \"DELETE\" || 이미 주입됨` 이면 `route.continue()`, 아니면 한 번만 `route.fulfill({status:409, body:{error:\"session state changed concurrently\"}})`. 직전 줄에 `// mock-exception: DELETE-CONFLICT-ERR — <사유>` 마커를 단다. 단언은 실서버 메시지 기준 `409 session state changed concurrently`로 바꾸고, 409 직후 세션이 실제로 살아 있음(`GET /sessions/{id}` == 200)과 재시도 후 실제로 사라짐(== 404)을 실 API로 확인한다.",
+              "expectedOutcome": "스캔되는 (파일,토큰) 쌍이 `.route(`·`route.fulfill(`·`route.continue(` 3개 + 마커 1개. 재시도 DELETE는 실 SUT가 204로 처리하고 UI는 `/`로 돌아가 토스트를 띄운다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/test/e2e.md` 충실도 섹션을 갱신한다. ① 등재 표(`fidelity:registry`)에 `DELETE-CONFLICT-ERR | NET | <e2e에서 실제로 구동되는 구간> | <검증되지 않는 잔여>` 행 추가. ② 위반 표(`fidelity:violations`)에서 session-deletion 2행 삭제, 그 위 산문의 \"세 파일 모두\"를 두 파일 기준으로 수정. ③ 회계 표(`fidelity:ledger`)의 session-deletion 2행 CODE를 `위반` → `DELETE-CONFLICT-ERR`로 바꾸고 `route.continue(` 행 신설.",
+              "expectedOutcome": "R2(칸 채움)·R3(CODE 참조)·R4(고아 등재 없음)·R6(마커↔회계 파일 집합 일치)·R7(인터셉트 귀속)·R9(위반 원장 == 미승인 인터셉트) 모두 성립."
+            },
+            {
+              "seq": 5,
+              "action": "집계 블록(`fidelity:summary`)을 실제와 맞춘다: 등재 seam **2**(GATE **1**·TRIG **0**·EXT **0**·NET **1**), 마커 지점 **4**/마커 파일 **4**, 회계 행 **17**(등재 귀속 7·미해소 위반 **4**·비-seam **6**), 인터셉트 **7**건(승인 3·위반 4, 상한 **4**).",
+              "expectedOutcome": "R8(집계 일치)과 R9의 래칫(`위반 == 상한`) 통과. 상한이 6에서 4로 내려가 다음 슬라이스가 6까지 되돌릴 수 없다."
+            },
+            {
+              "seq": 6,
+              "action": "로컬 게이트 재현: `python3 scripts/check-fidelity-allowlist.py`(= `make check-fidelity`, ci.yml `fidelity` 잡)와 node 22 부트스트랩 후 `cd web && npm ci && npm run lint`(= `tsc --noEmit`, ci.yml `web` 잡).",
+              "expectedOutcome": "체커가 `OK: e2e 충실도 허용목록 ↔ 코드 seam 1:1 / 등재 seam 2 (GATE 1 · TRIG 0 · EXT 0 · NET 1) … 위반 4, 상한 4`를 출력하고, tsc가 무출력."
+            },
+            {
+              "seq": 7,
+              "action": "체커가 공허하지 않은지 음성 확인: 집계의 상한만 6으로 되돌려 R9가 실패하는지, 마커 줄만 지워 R6가 실패하는지 각각 주입해 non-zero를 확인하고 되돌린다.",
+              "expectedOutcome": "두 주입 모두 FAIL로 잡힌다 — 등재 이동이 체커에 실제로 강제되고 있음이 증명된다."
+            },
+            {
+              "seq": 8,
+              "action": "커밋·푸시하고 dlddu/session-platform에 PR을 연다(머지하지 않는다). 본문에 task id·gap 요약·계획 단계·검증 방법·PR #23과의 머지 순서 주의를 적는다.",
+              "expectedOutcome": "PR이 열리고 ci.yml(`fidelity`·`web` 등)과 e2e.yml(kind + API + browser)이 돈다. kind e2e가 이 변경의 진짜 판정자다."
+            }
+          ],
+          "plannedAt": "2026-08-14T14:57:00Z"
+        }
+      }
+    ]
   }
 ]
