@@ -1118,12 +1118,73 @@
       "gap": "**유의미한 차이 있음 — 미구현 AC 17/24.**\n\n이번 트리거 자체는 수렴 방향이다: 델타는 이 모델 자신의 슬라이스 3b(PR #15)뿐이고 AC1.5를 구현 완료시켜 미구현을 18→17로 줄였다. to-be(AC 24개)는 넓어지지도 좁아지지도 않았다(`docs/prd` 트리 불변, 문서 델타는 트래커 1개 파일).\n\n그러나 판정 대상은 트리거 델타가 아니라 **잔여 gap**이다. 모델 정의는 미구현 AC를 백로그가 아니라 to-be 미달 drift로 못박고 있고, 현재 **AC1.2~1.4 · AC2.1~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7 = 17건**이 문서에만 존재하고 구현이 없다. 분석 파이프라인은 여전히 1단계 `fetch`만 실행되고 2~5단계는 `pending`으로 남아 있으며(3b가 표현만 얹었다), feature 추출·문서 CRUD 화면(S05~S10)은 코드가 없다. 정적 문서↔코드 격차라 자동 해소 기전이 없다.",
       "summarizedAt": "2026-08-14T13:07:00Z"
     },
-    "updatedAt": "2026-08-14T14:25:22Z",
+    "updatedAt": "2026-08-14T14:29:41Z",
     "assessment": {
       "actionRequired": true,
       "reason": "잔여 gap이 유의미하고, 소유자 없는 미점유 handoff이며, 자동 해소 경로가 없다 → 지금 작업이 필요하다.\n\n근거 1 — **정의상 drift다.** 모델 정의는 \"미구현 AC는 백로그가 아니라 to-be 미달 gap이며 drift\"를 판정 기준 1로 명시한다. 현재 미구현 17/24. 트리거 델타가 수렴 방향(18→17)이라는 사실은 무행동 근거가 되지 못한다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 task 이력 7건 중 열린 것은 0건이다(직전 `rct_20260813-0001`은 이번 트리거를 만든 PR #15의 슬라이스로 `succeeded`, 04:29Z 검증 완료). 그 verification의 정보성 체크가 \"미구현 17건은 이 시도의 plan 범위 밖 — 재감지가 후속 task로 잇는다\"고 명시적으로 인계를 남겼다. 전형적인 post-reconcile 재트리거이고 handoff 슬롯이 비어 있다.\n\n근거 3 — **다음 슬라이스가 이미 지목돼 있어 planner가 바로 집을 수 있다.** 트래커 로드맵이 **슬라이스 4 = AC1.2 → AC1.3 → AC1.4 (화면 S05·S06·S07, 분석 파이프라인: 횡단 관심사 → 탐색 전략 → feature 후보, AC4.6 계측 내장)**을 \"다음 권장 슬라이스\"로 못박았다. 선행 의존도 닫혀 있다 — 3a가 `analysis_stages`에 5단계를 시드하고 워커가 1단계를 실행하며, 3b가 그 진행을 화면에 표현하는 경로(`GET /api/analyses/{id}` + S04)를 이미 뚫어 뒀으므로 슬라이스 4는 2~5단계의 실제 실행을 채우는 작업이다.\n\n근거 4 — 정적 문서↔코드 격차라 롤아웃·일시 alert 같은 자동 수렴 기전이 없다 → `recheckAfter` 유예 부적합.\n\nplanner 참고 (둘 다 직전 task가 남긴 관측):\n① 완료 기준에 **각 AC별 전용 e2e spec 신설**을 반드시 포함할 것 — 자매 모델 `tbm_feature-doc-ac-e2e`가 AC↔spec 1:1 전단사를 강제하고 있고 현재 공백 17건이 이 모델의 미구현 17건과 정확히 같은 집합이라, 구현만 얹고 spec을 빠뜨리면 그 모델에 즉시 새 gap이 생긴다. 3a·3b가 확립한 \"배포 전역 상태를 건드리는 spec은 그 상태를 임대(`e2e/support/cluster.ts` + `finally` 복원 + `workers: 1`)\" 규약도 따를 것.\n② **범위 밖이지만 기록해 둔 위험**: `ci.yml`의 push job에 브랜치 조건이 없어 PR CI가 green이면 머지 전에 ghcr `:latest`로 코드가 나가고 실제로 featuredoc 파드가 그 이미지를 서빙했다(직전 task의 정보성 체크에서 관측). 이 모델의 정의 대상(문서↔구현)은 아니므로 이 task의 gap 계수에는 넣지 않았고, 별도 후속 대상으로만 남긴다.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-14T13:07:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "슬라이스 4를 선례(2a/2b · 3a/3b)대로 나눈 **4a — AC1.2(횡단 관심사 자동 추출 및 문서화) 단 하나**를 구현 완료시킨다. 트래커 로드맵이 다음 권장 슬라이스로 못박은 슬라이스 4는 AC1.2→AC1.3→AC1.4 세 AC와 화면 S05·S06·S07을 한 덩어리로 묶고 있으나, 이 레포는 슬라이스 2·3을 모두 절반으로 쪼개 진행해 왔고 (2a 백엔드/2b 프론트, 3a 워크로드 분리/3b 진행 화면), 세 AC는 AC1.2→AC1.3→AC1.4로 **직렬 의존**한다(PRD 'AC 간 관계'). 한 PR에 셋을 담으면 첫 단계의 LLM 경계 설계가 틀렸을 때 되돌릴 단위가 없다.\n\n접근: 3a가 `analysis_stages`에 시드해 두고 3b가 화면에 표현만 해 둔 **2단계 `cross_cutting`을 실제로 실행**시킨다. 이를 위해 (1) `Mode::Stub`/`Mode::Real` 이분법을 그대로 따르는 **LLM 호출 경계**를 `backend/src/llm.rs`로 신설하고 — 이 경계는 4b의 AC1.3·AC1.4가 그대로 재사용하는 자산이다 — (2) 1단계 `fetch`가 이미 읽고 있으면서 버리던 **파일 경로 목록**을 산출물로 승격해 2단계의 입력으로 삼고, (3) 산출 문서를 `analysis_documents`에 영속화하고, (4) S05 화면과 전용 e2e spec을 붙인다.\n\nLLM 키 전달은 `installation_token` 선례를 그대로 따른다 — claim 응답에 복호화한 키를 **단명으로** 실어 보내고 워커는 저장·로깅하지 않는다(AC4.1·AC4.3의 기존 규약). 워커가 DB를 열지 않는다는 AC4.5 불변식은 건드리지 않는다: 산출물도 `/internal` 라우트로 제출한다.\n\n**완료 기준(이 시도의 범위)**: ① `cross_cutting` 단계가 stub·real 양쪽에서 실제로 실행돼 5축(인프라·저장소 구조·아키텍처·프레임워크/런타임·미들웨어) 문서를 근거 파일 경로와 함께 남긴다, ② 같은 repo 재분석 시 산출물의 동일/변경 여부가 명시된다(AC 검증 방법의 결정성 조항), ③ S05가 그 문서를 그린다, ④ `ac1-2-cross-cutting-concerns.spec.ts`가 kind e2e에서 통과한다, ⑤ `cargo test --release` 무회귀, ⑥ doc-tracker가 AC1.2 완료·미구현 17→16으로 갱신된다.\n\n**범위 밖(후속)**: AC1.3(S06 탐색 전략)·AC1.4(S07 feature 후보) = 슬라이스 4b. AC4.6의 **실측** 비용 회계는 이번에 토큰 사용량 컬럼을 남기는 데까지만 하고 화면 표기는 슬라이스 7에 남긴다. AC2.x·AC3.x·AC4.4·AC4.7도 범위 밖. 잔여 미구현 16건은 재감지가 새 task로 잇는다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`backend/src/llm.rs` 신설 — 프로바이더 비의존 채팅 호출 경계. `Mode::Stub`은 입력 해시에서 파생한 결정적 응답을 내고, `Mode::Real`은 등록된 프로바이더(우선 Anthropic Messages API, temperature 0)로 실호출한다. 키는 인자로만 받고 구조체에 저장하지 않으며 오류 메시지에 응답 본문·키를 섞지 않는다(AC4.3).",
+              "expectedOutcome": "`cargo test`에 stub 결정성·프롬프트 직렬화 단위 테스트가 추가되고 통과한다. `llm.rs`가 `lib.rs`에 등록된다."
+            },
+            {
+              "seq": 2,
+              "action": "`repo_scan::ScanResult`에 정렬된 파일 경로 목록을 추가한다. `real_scan`은 이미 받은 트리에서 경로를 모으고, `stub_scan`은 결정적 가짜 경로 집합을 만든다. 기존 `detail()` 문자열 형식은 바꾸지 않는다(S04 표기·기존 테스트 보존).",
+              "expectedOutcome": "기존 `repo_scan` 테스트 4건이 그대로 통과하고, 경로 목록이 결정적임을 확인하는 테스트가 추가된다."
+            },
+            {
+              "seq": 3,
+              "action": "마이그레이션 `0005_analysis_documents.sql` 추가 — `analysis_documents(id, analysis_id, kind, content, content_hash, model, input_tokens, output_tokens, created_at)`. 분석·종류당 최신 1행 규약과 `ON DELETE CASCADE`를 건다.",
+              "expectedOutcome": "`tests/migrations.rs`가 통과하고 새 테이블이 생성된다."
+            },
+            {
+              "seq": 4,
+              "action": "`worker_api.rs` 확장 — claim 응답에 단명 LLM 키를 싣고(`llmApiKey`, 미저장·미로깅) `executable_stages`에 `cross_cutting`을 더한다. 산출물 제출용 `POST /internal/analyses/{id}/documents/{kind}`를 추가하고 lease 보유자만 쓰게 한다.",
+              "expectedOutcome": "`tests/worker.rs`에 키 전달·문서 제출·lease 미보유 거부 테스트가 추가되고, 기존 13건은 무회귀로 통과한다."
+            },
+            {
+              "seq": 5,
+              "action": "`bin/worker.rs`가 2단계 `cross_cutting`을 실행한다 — 1단계가 만든 경로 목록을 결정적으로 정렬·절단해 `llm.rs`로 5축 추출을 요청하고, 결과를 문서로 제출한 뒤 단계를 `succeeded`로 보고한다. 키가 없거나 호출이 실패하면 그 단계만 `failed`로 남겨 AC1.5의 부분 재시도 경로에 얹는다(다음 단계를 실행하지 않는다).",
+              "expectedOutcome": "stub 모드에서 분석이 2단계까지 진행되고 3~5단계는 `pending`으로 남으며 분석은 여전히 `awaiting_pipeline`으로 닫힌다(미구현 단계를 완료로 표기하지 않는 기존 규약 유지)."
+            },
+            {
+              "seq": 6,
+              "action": "읽기 면 `GET /api/analyses/{id}/documents/cross-cutting`(소유자 스코프) 추가 — 문서와 함께 **직전 실행 대비 동일/변경 판정**을 `content_hash` 비교로 실어 보낸다. AC 검증 방법의 '결정적으로 재현되거나 차이가 명시된다'를 관측 가능하게 만드는 지점이다.",
+              "expectedOutcome": "`tests/analyses.rs`(또는 신규 `tests/documents.rs`)에 소유자 격리·재현성 판정 테스트가 추가되고 통과한다."
+            },
+            {
+              "seq": 7,
+              "action": "프론트 S05 `CrossCuttingConcerns.tsx` + `#/analyses/{id}/cross-cutting` 해시 라우트 추가, S04에서 단계가 성공했을 때 진입 링크를 노출한다. 목업이 4개 범주만 그리는 것과 달리 AC가 요구하는 5축을 그린다(AC가 SSOT).",
+              "expectedOutcome": "`npm run build`(tsc+vite)가 통과하고 화면이 문서 내용을 근거 경로와 함께 렌더한다."
+            },
+            {
+              "seq": 8,
+              "action": "e2e `e2e/tests/ac1-2-cross-cutting-concerns.spec.ts` 신설 — 헤더에 `// 검증 AC: AC1.2` 한 줄을 두고, `e2e/support/cluster.ts`의 워커 임대 규약(scale 1 → finally scale 0)을 따른다. 자신이 만든 분석만 단정하고, 재분석 시 판정이 드러나는 것까지 관측한다.",
+              "expectedOutcome": "kind e2e에서 통과하고, 자매 모델 `tbm_feature-doc-ac-e2e`의 AC↔spec 1:1에서 AC1.2가 공백에서 빠진다(매핑 7→8, 공백 17→16)."
+            },
+            {
+              "seq": 9,
+              "action": "`docs/doc-tracker.md` 갱신 — AC1.2 구현 완료, 미구현 17→16, 매핑 7→8, 공백 17→16, 로드맵 슬라이스 4를 4a(완료)/4b(AC1.3·AC1.4)로 분할, 변경 이력 1행 추가, 목업↔구현 편차에 'S05 목업 4범주 vs AC 5축' 등재.",
+              "expectedOutcome": "트래커 자기신고가 실측과 일치한다(집계 정합성 위반 없음)."
+            },
+            {
+              "seq": 10,
+              "action": "로컬 게이트 재현 — `cargo test --manifest-path backend/Cargo.toml --release`(기준선 53건 대비 무회귀) + `cd frontend && npm ci && npm run build`. 그 뒤 브랜치 push, draft PR 생성.",
+              "expectedOutcome": "로컬 게이트 green, PR이 열려 CI(`test` 잡: cargo + kind e2e)가 판정을 이어받는다."
+            }
+          ],
+          "plannedAt": "2026-08-14T14:29:41Z"
+        }
+      }
+    ]
   }
 ]
