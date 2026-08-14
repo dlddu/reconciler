@@ -2,7 +2,7 @@
   {
     "id": "rct_20260808-0001",
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
-    "status": "awaiting_review",
+    "status": "executing",
     "trigger": {
       "detectedAt": "2026-08-08T01:33:51Z",
       "changedSides": [
@@ -19,7 +19,7 @@
       }
     },
     "createdAt": "2026-08-08T01:33:51Z",
-    "updatedAt": "2026-08-14T00:19:11Z",
+    "updatedAt": "2026-08-14T00:38:16Z",
     "stateSummary": {
       "asIs": "## as-is — e2e SUT 경로의 충실도 seam 실측 (dlddu/session-platform@main `6a48f60`)\n\n버전: `seams=18 files=8` / `f8e44c55…` (최초 관측, previous=null)\n\n지문 18건(파일,토큰)의 **실제 내용을 하나씩 확인**한 결과, 판정 대상이 되는 실 seam은\n**2종**이고 나머지는 그 2종의 중복 토큰·산문·배선이다.\n\n**진짜 seam ①  `GATE` 후보 — CRIU 게이트**\n`control-plane/cmd/control-plane/main.go:74` `var ckpt criu.Checkpointer = criu.NewStubCheckpointer(false)`,\n`cfg.criuEnabled`가 참일 때만 실 체크포인터로 교체.\n- base `k8s/deployment.yaml:42` → `CRIU_ENABLED: \"false\"` (주석: \"gated off until a verified runtime exists\")\n- overlay `deploy/kustomization.yaml:68-70` → env/2를 `\"true\"`로 **replace**\n- e2e SUT는 항상 `scripts/e2e/up.sh:62` `kubectl apply -k deploy/`로 뜬다 → **e2e는 게이트 ON, 실 CRIU 경로를 탄다.**\n\n**진짜 seam ②  `TRIG` 후보 — test-only snapshot 트리거**\n`E2E_TEST_ENDPOINTS`(main.go:195 · api.go) → `api.WithTestEndpoints(cfg.testEndpoints)`(main.go:102),\n켜졌을 때만 `POST /api/v1/sessions/{id}/snapshot`(api.go:170 `snapshotSession`) 등록.\noverlay가 `E2E_TEST_ENDPOINTS: \"1\"` 주입, `e2e_deferred_test.go`가 이 엔드포인트로 동결을 유발.\n- **운영 트리거는 실재한다**: `service.NewIdleReaper(mgr, session.MaxIdle, …)`가 main.go:93에서 배선됨\n  (`internal/service/reaper.go` = \"the operational idle->snapshot trigger (AC-B1)\").\n  잔여는 트리거 부재가 아니라 **세밀한 타이밍 정책 미확정**(`TODO(policy)` — session.go:48, reaper.go:27:\n  grace period · per-session override · AC-D5 클라이언트-유휴 중 장기 포그라운드 작업 처리).\n\n**seam이 아닌 것 (등재 대상 아님 / 지문 오탐)**\n- `control-plane/test/e2e_deferred_test.go:38` `E2E_SESSION_NAMESPACE` — 어서션용 kube 클라이언트가\n  볼 **namespace 지정**일 뿐(기본 `default`), SUT 충실도를 낮추지 않는다. `E2E_BASE_URL`과 동일 성격\n  → **지문 제외 대상**(모델 정의 개정 사안).\n- `Makefile:59` `CRIU_ENABLED` — `test-integration`(`//go:build integration`, **명시적 범위 밖**)\n  설명 주석.\n- `deploy/minio.yaml:8` `test-only` — MinIO가 test-only 저장소가 **아니라** 프로덕션과 같은 S3\n  코드 경로를 탄다는 서술(= 실환경 준비, 모킹 아님).\n- `web/e2e/deferred.spec.ts:9` `test-only` — skip 사유 산문.\n- `main.go:99` · `api.go:23,169` · `e2e_deferred_test.go:133,137,154,158` 의 `test-only` — seam ②를\n  설명하는 주석/스킵 가드로, 독립 seam이 아니다.\n\n**표기 규약 채택률 0** — `mock-exception:` 토큰 레포 전체 **0건**.\n**web 네트워크 인터셉트 0건** — `web/e2e/*.spec.ts`에 `page.route`/`routeFromHAR` 류 호출 없음(재확인).\n",
       "toBe": "## to-be — `docs/test/e2e.md` 충실도 섹션 (정책·허용목록 SSOT)\n\n버전: `lines=19` / `cee6f846…` (최초 관측, previous=null)\n\n섹션은 **이미 존재한다** — `docs/test/e2e.md:7-25`, `> **충실도**: …` 블록쿼트 19줄.\n`absent`(정책 소실)가 아니다. 내용 실측:\n\n- PodOrchestrator·StateStore 모두 실 구현, 진짜 Pod 1:1, ConfigMap+Lease, 실 data-plane\n  이미지, create가 쉘 도달(Reach)까지 확인, SUT 2 replica로 교차-replica 원자성(AC-C1) 검증.\n- Checkpointer(CRIU)는 **오버레이에서 게이트 ON**(agent-driven in-pod CRIU + MinIO 아카이브 +\n  test-only snapshot 트리거)으로 배포되어 snapshot→회수→복원 왕복이 실 단언(AC-B2/B3/D4).\n- 운영 idle→snapshot 트리거의 **타이밍 정책은 미확정**(`TODO(policy)`, AC-B1)이라 명시.\n- 검증 범위와 deferred 시드(B1, C2/C3 idle 분기) 서술.\n\n**형식상 미비**: 전부 **서술형 산문**이다. 정의가 요구하는\n「seam 토큰 · 코드 위치 · 카테고리(GATE/TRIG/EXT/NET) · e2e에서 실제로 구동되는 구간 ·\n치환으로 검증되지 않는 잔여」를 담은 **seam별 등재 행이 0행**이고, 제목이 \"충실도\"를 포함하는\n`##`/`###` 허용목록 섹션으로 **승격되지 않았다**(현재는 블록쿼트).\n`mock-exception:` 표기 규약도 문서에 아직 없다.\n",
@@ -169,8 +169,11 @@
         },
         "review": {
           "required": true,
-          "status": "pending",
-          "reason": "riskLevel은 low(제품 동작 변경 0 — Go/YAML은 주석만, 신규 파일은 검사 스크립트 하나, revert 1회로 원복)이나 실행이 프로덕션 레포 dlddu/session-platform의 main에 머지하는 것이고, 이 PR이 확정하는 실질은 코드가 아니라 정책 판정 3건이다: (1) `SNAPSHOT-TRIG` seam을 허용목록에서 통째로 삭제(main에서 제품 엔드포인트로 승격됐다는 실측에 근거), (2) web 인터셉트 6쌍을 `NET` 승인 예외로 등재하지 않는다는 판정 — 반려 코멘트가 첫 선택지로 열어 둔 경로를 자격 미달로 닫는 것이라 사용자 의도와 갈릴 수 있다, (3) 허용목록에 `미해소 위반` 원장 + 상한 6을 1급 구성요소로 신설 — '승인 예외 0 / 위반 6 기록·상한' 이라는 새 회계 형식을 팀 규약으로 굳힌다. 체커는 '문서와 코드가 서로 가리키는가'만 강제할 뿐 등재 서술이 사실인지는 검증하지 못한다. 여기에 `make lint`에 python3 의존을 추가하는 개발 워크플로 게이트가 머지 즉시 레포 전체 후속 PR에 마찰을 만들고(새 seam 토큰 등장 시 CI 빨강), GHCR `:latest`가 이 브랜치 빌드로 교체돼 머지하지 않고 닫으면 그대로 남는 부수효과도 사람이 알고 결정해야 한다. 정의만으로 판단이 갈리는 모호함 + 직전 시도가 사용자 반려를 받은 이력에 해당하므로 승인 후 머지한다."
+          "status": "approved",
+          "reason": "riskLevel은 low(제품 동작 변경 0 — Go/YAML은 주석만, 신규 파일은 검사 스크립트 하나, revert 1회로 원복)이나 실행이 프로덕션 레포 dlddu/session-platform의 main에 머지하는 것이고, 이 PR이 확정하는 실질은 코드가 아니라 정책 판정 3건이다: (1) `SNAPSHOT-TRIG` seam을 허용목록에서 통째로 삭제(main에서 제품 엔드포인트로 승격됐다는 실측에 근거), (2) web 인터셉트 6쌍을 `NET` 승인 예외로 등재하지 않는다는 판정 — 반려 코멘트가 첫 선택지로 열어 둔 경로를 자격 미달로 닫는 것이라 사용자 의도와 갈릴 수 있다, (3) 허용목록에 `미해소 위반` 원장 + 상한 6을 1급 구성요소로 신설 — '승인 예외 0 / 위반 6 기록·상한' 이라는 새 회계 형식을 팀 규약으로 굳힌다. 체커는 '문서와 코드가 서로 가리키는가'만 강제할 뿐 등재 서술이 사실인지는 검증하지 못한다. 여기에 `make lint`에 python3 의존을 추가하는 개발 워크플로 게이트가 머지 즉시 레포 전체 후속 PR에 마찰을 만들고(새 seam 토큰 등장 시 CI 빨강), GHCR `:latest`가 이 브랜치 빌드로 교체돼 머지하지 않고 닫으면 그대로 남는 부수효과도 사람이 알고 결정해야 한다. 정의만으로 판단이 갈리는 모호함 + 직전 시도가 사용자 반려를 받은 이력에 해당하므로 승인 후 머지한다.",
+          "reviewer": "user",
+          "reviewedAt": "2026-08-14T00:38:16Z",
+          "comment": "승인 — 판정 3건(SNAPSHOT-TRIG 등재 삭제 · web 인터셉트 6쌍 NET 미등재 · 「미해소 위반」 원장 + 상한 6 도입), lint-ac 게이트의 python3 의존, GHCR latest 부수효과를 설명받고 승인. 머지 순서 지침(#40 먼저, #22는 머지 말고 닫기)도 함께 승인."
         }
       }
     ]
