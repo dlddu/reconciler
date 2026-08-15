@@ -31,6 +31,67 @@
       "reason": "작업 필요. 화면 단위 27개 → 여정 단위 4개 페이지로의 마이그레이션은 파일 재구성이 필요한 작업이며 자동 해소될 성질이 아니다. 식별자 체계 이관(순번 `S1` → 슬러그 `STP-<슬러그>`)과 `data-journey`/`data-step` 규약 도입을 **같은 작업에서 함께 처리하면 파일명 변경이 한 번으로 끝난다** — 모델 정의도 이 점을 명시한다. 인덱스가 27/27 매핑을 이미 갖고 있어 재편의 기준표로 쓸 수 있으므로 지금이 작업하기 좋은 시점이다. 다만 27개 파일을 건드리는 큰 변경이므로 planner가 여정 단위(J1~J4)로 슬라이스를 나누는 것이 적절하다.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-15T15:35:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "J1(통합 작업 표면 구성, 8단계) 한 여정만 슬라이스로 잡아 화면 단위 목업 8개(M-J1-S1~S8)를 여정 단위 페이지 1개(docs/mockups/journeys/JRN-layout.html)로 통합하고, 그 페이지에 data-journey/data-step 규약과 슬러그 식별자를 도입한 뒤 인덱스·갤러리·여정 문서·트래커를 함께 갱신한다. **완료 기준(이 시도의 성공 조건)**: (1) J1의 mockup 페이지가 정확히 1개가 되고 구 8개 파일이 사라진다(규칙 1·2를 J1에 한해 충족), (2) 그 페이지의 data-step 집합이 J1 여정 문서의 단계 집합과 양방향으로 정확히 일치한다(규칙 3을 J1에 한해 기계 검증 가능하게 만든다), (3) 규칙 5의 (a)~(g)를 J1 페이지가 충족한다, (4) 규칙 6·7이 깨지지 않는다 — docs/ 상대 링크 깨짐 0, 인덱스·갤러리·여정 문서·트래커가 실제 상태와 일치. **범위 밖**: J2·J3·J4의 마이그레이션(19개 파일 그대로 유지), 여정 J1 외의 식별자 이관, docs/design-system/ 및 src/ 일체. **왜 한 여정만인가**: 27단계를 한 번에 옮기면 규칙 5의 '흐름 체험' 표현 방식(스테퍼·전진 핫스폿·딥링크 규약)이 반려될 때 27단계 전부를 재작업해야 한다 — 이 레포는 직전 사이클(PR #43)에서 실제로 반려를 겪었다. 먼저 한 여정으로 규약을 확정해 검토받고, 나머지 셋은 재감지가 여는 후속 task에서 같은 규약을 기계적으로 복제한다. **왜 J1인가**: 8단계로 가장 크고 화면 형태가 가장 다양해(단일 pane→분할→2×2→드래그→저장→zoom→워크스페이스 전환) 규약을 가장 세게 검증한다. 네 여정 모두 다른 여정으로 가는 분기 행이 없어(규칙 4 공허 충족) 분기 규약 확정은 J4 슬라이스로 미룰 수 있다. **왜 docs/mockups/journeys/ 인가**: 모델이 예시로 든 docs/journeys/ 는 (가) 이 모델의 as-is 버전 스크립트가 보지 않는 경로라 여정 페이지가 drift 추적에서 통째로 빠지고, (나) 열려 있는 PR #43이 여정 마크다운 문서의 이동 대상으로 이미 그 경로를 쓴다. as-is 지문에 포함되는 docs/mockups 트리 안에 journeys/ 하위를 두면 두 문제가 모두 사라지고, 'journeys/*.html = 여정 단위 페이지 / M-*.html = 아직 이관 안 된 화면 단위 파일'로 규칙 1의 계수가 기계적으로 명확해진다. **왜 M-J1-S<m> 식별자를 폐기하지 않는가**: src/·test/의 주석 40곳이 이 ID를 경로 없는 이름으로 인용하는데, src/ 를 건드리면 ci.yml의 release job이 서명·공증 빌드를 전 사용자 auto-updater로 내보낸다(머지 전에, PR 코드로). 따라서 슬러그 STP-<슬러그>를 data-step의 정식 식별자로 세우되 M-J1-S<m>은 인덱스·페이지에 legacy alias로 보존한다 — 모델의 '기존 식별자를 바꾸지 않는다' 규정과도 일치하고, 순번이 파일명에서 사라지므로 이관의 목적(단계 재배치 시 파일명·인덱스 동시 붕괴)은 달성된다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "main에서 브랜치 reconcile/rct_20260815-0001 생성. 사전 사실 고정: (a) git grep -c 'M-J1-S[0-9]' -- src test 로 소스 인용 인벤토리를 기록, (b) docs/ 전수 상대 링크 기준선(main)을 링크 체커로 측정, (c) 열려 있는 PR #43이 건드리는 파일 목록을 확인해 충돌 예정 파일을 기록.",
+              "expectedOutcome": "브랜치 생성. main 기준 docs/ 상대 링크 수와 깨짐 수(기준선)가 기록되고, 충돌 예정 파일 3개(docs/tessera-journey-layout.md · docs/mockups/tessera-mockup-index.md · docs/tessera-doc-tracker.md)가 확정된다."
+            },
+            {
+              "seq": 2,
+              "action": "생성 스크립트로 docs/mockups/journeys/JRN-layout.html 을 만든다. 8개 원본(M-J1-S1~S8.html)에서 .caption 과 .win 블록을 **파싱해 그대로 추출**하고(화면 마크업을 손으로 다시 짓지 않는다), 각각을 <section class=\"step\" id=\"STP-<슬러그>\" data-step=\"STP-<슬러그>\" data-legacy-id=\"M-J1-S<m>\"> 으로 감싼다. 루트 컨테이너에 data-journey=\"JRN-layout\" 을 정확히 1회 선언. 공유 CSS는 ../../design-system/tessera.css 를 <link>로 참조하고, 스테퍼 크롬 스타일은 갤러리(index.html) 선례대로 페이지 로컬 <style>에 둔다 — docs/design-system/ 은 절대 수정하지 않는다.",
+              "expectedOutcome": "단일 HTML 파일에 8개 section이 생기고, 각 section의 화면 마크업이 원본과 문자열 단위로 동일하다(추출 검증). data-journey 선언 1건, data-step 8건."
+            },
+            {
+              "seq": 3,
+              "action": "규칙 5의 (a)~(g) 배선: (b)(c) 상단 고정 스테퍼 8칸 + 이전/다음 버튼, 현재 단계 강조(aria-current), (e) #STP-<슬러그> 딥링크를 :target CSS로 처리(무JS 동작), (d) 각 단계의 '주요 행동' 요소를 다음 단계로 가는 <a>로 배선 — 어느 요소를 핫스폿으로 골랐는지 8건 전부를 인덱스에 표로 기록한다(감사 가능), (g) 빌드·네트워크 없이 file:// 로 열림. 덧붙여 legacy 해시(#M-J1-S3)를 정식 해시로 넘겨주는 인라인 스크립트를 둔다(무JS면 정식 해시만 동작).",
+              "expectedOutcome": "file:// 로 열어 8단계를 스테퍼·핫스폿 양쪽으로 왕복할 수 있고, #STP-* 딥링크가 JS 없이도 해당 단계를 연다. 외부 요청 0건(스크립트·이미지·폰트 외부 참조 없음)."
+            },
+            {
+              "seq": 4,
+              "action": "구 화면 단위 파일 8개(docs/mockups/M-J1-S1.html ~ M-J1-S8.html)를 git rm 한다.",
+              "expectedOutcome": "docs/mockups/M-J1-S*.html 0건. J1의 mockup 페이지 수가 8 → 1(규칙 1 충족). J2·J3·J4의 19개 파일은 그대로."
+            },
+            {
+              "seq": 5,
+              "action": "docs/tessera-journey-layout.md 갱신: ## 단계 표에 '단계 ID' 열을 신설해 STP-<슬러그> 8개를 명시(문서가 단계 식별자의 SSOT가 된다), 시각화 칸의 링크를 ./mockups/journeys/JRN-layout.html#STP-<슬러그> 로 교체, 머리말에 '여정 슬러그 ID: JRN-layout'을 추가, 시각화 상태 절을 여정 단위 페이지 1개 기준으로 다시 쓴다. 단계 본문·순서·근거 AC는 건드리지 않는다(흐름 SSOT 불변).",
+              "expectedOutcome": "여정 문서의 단계 집합이 8개 그대로이고, 각 행이 STP-<슬러그>를 갖는다. 규칙 3의 문서 측 대조점이 기계적으로 파싱 가능해진다."
+            },
+            {
+              "seq": 6,
+              "action": "docs/mockups/tessera-mockup-index.md 갱신: J1 섹션을 여정 페이지 1개 + 단계 8행(단계 ID · legacy ID · 화면 · 가치 · AC · 전진 핫스폿 · 딥링크) 표로 다시 쓰고, 문서 상단에 '여정 단위 페이지 규약' 절을 신설한다(디렉터리·파일명·data-journey/data-step·슬러그 규칙·전진 핫스폿·딥링크·legacy alias 정책 — 후속 J2~J4가 그대로 따를 계약). 커버리지 절을 실제 상태로 재계산한다(여정 페이지 1 + 화면 단위 19 = mockup 파일 20, 단계 시각화 27/27 유지).",
+              "expectedOutcome": "인덱스가 혼재 상태(J1은 여정 단위, J2~J4는 화면 단위)를 정확히 기술하고, 후속 슬라이스가 참조할 규약이 문서화된다. 규칙 7의 인덱스 축 유지."
+            },
+            {
+              "seq": 7,
+              "action": "docs/mockups/index.html(갤러리) J1 섹션 재배선: 8장의 카드가 ./journeys/JRN-layout.html#STP-<슬러그> 를 링크·iframe src로 가리키게 바꾸고(카드 단위 미리보기는 유지, 실제 페이지는 1개), 제목·리드 문구의 개수를 실제와 맞춘다. docs/index.html(허브)은 ./mockups/ 로 보내는 리다이렉트라 링크 목록이 없어 변경 불필요임을 확인만 한다.",
+              "expectedOutcome": "갤러리에서 J1 카드를 누르면 여정 페이지의 해당 단계가 열린다. 갤러리 문구의 숫자가 실제 파일 수와 일치. 허브는 무변경(as-is 지문의 hub 부분 불변)."
+            },
+            {
+              "seq": 8,
+              "action": "docs/tessera-user-journeys.md 와 docs/tessera-doc-tracker.md 의 현황 문구를 실제와 맞춘다 — 여정 인덱스의 mockup 안내 줄, 트래커의 프론트엔드 사슬 bullet · 문서 인덱스 행 · 변경 이력 1행. 트래커의 '최근 갱신' 문단(1~5행)과 과거 변경 이력 행은 건드리지 않는다(PR #43과의 충돌면 최소화 + 이력은 이력대로 보존).",
+              "expectedOutcome": "두 문서가 '여정 단위 페이지 1개 + 화면 단위 19개'라는 실제를 기술한다. 트래커 편집이 4개 국소 hunk를 넘지 않는다."
+            },
+            {
+              "seq": 9,
+              "action": "검증 3종을 스크립트로 돌린다: (1) docs/ 전수 상대 링크 체커 — 마크다운 링크와 html href/src 를 해석하되 코드 펜스·인라인 코드를 먼저 제거하고, main 기준선과 대조해 깨짐 0을 확인, (2) 1:1 규칙 체커 — 여정 문서의 STP-* 집합과 페이지의 data-step 집합을 양방향 대조하고 data-journey 선언이 정확히 1건인지 확인, (3) 자체 완결성 체커 — 외부(http/https) 참조 0건, 태그 중첩 정상(html.parser 사용 시 handle_startendtag 를 오버라이드해 자체 닫기 태그를 두 번 세지 않게 한다).",
+              "expectedOutcome": "세 체커 모두 PASS. 링크 총수는 기준선 대비 증가분이 새 페이지·새 표로 전부 설명되고 깨짐은 0."
+            },
+            {
+              "seq": 10,
+              "action": "브랜치를 푸시하고 draft PR을 연다. 본문에 task id · gap 요약 · 이 슬라이스의 완료 기준과 범위 밖 · 검증 방법 · 머지 전 확인이 필요한 판단 3건(디렉터리 규약 / legacy alias 정책 / 전진 핫스폿 선택) · PR #43과의 머지 순서를 적는다. CI 실측 결과(ci · changes · gate · release)를 관측해 기록한다.",
+              "expectedOutcome": "draft PR 생성. CI의 changes job이 release=false 를 내고 gate·release 가 skipped 여서 서명·공증 릴리스가 트리거되지 않음을 실측으로 확인."
+            }
+          ],
+          "plannedAt": "2026-08-15T23:35:00Z"
+        }
+      }
+    ]
   }
 ]
