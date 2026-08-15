@@ -1,0 +1,214 @@
+# 템플릿: 사용자 여정 ↔ 목업 1:1 정합성 (journey-mockup)
+
+한 레포 안에서 **사용자 여정 문서**와 **여정 mockup 페이지**를 **두 층위 모두
+완전 1:1(전단사)** 로 유지하는 모델. 여정 1개당 mockup 페이지 정확히 1개, 그
+페이지 안의 단계 집합은 여정 문서의 단계 집합과 정확히 같다. mockup을 두지 않기로
+한 여정은 예외 목록으로 등재해 관리한다. **여정 문서가 흐름의 스펙(SSOT)이다.**
+
+**판정은 여정·단계 식별자의 집합 대조다** — 목업이 예쁜지, 디자인 시스템을 잘
+따르는지, 구현과 같아 보이는지는 이 유형이 보지 않는다. 여정 문서가 정의한 흐름이
+mockup에 **빠짐없이, 군더더기 없이, 걸어볼 수 있는 형태로** 존재하는가만 본다.
+
+**개수·범위 숫자는 판정 기준에 넣지 않는다.** 여정과 단계는 계속 추가·삭제되므로
+"여정 7개"·"단계 5개" 같은 숫자를 목표나 판정 기준에 박으면 하나가 늘어난 순간
+definition이 사실과 어긋난다. 숫자는 definition의 "등록 시점 현황"에만 **스냅샷으로
+라벨링해** 두고, 판정은 개수 독립적 불변식으로 쓴다. 여정·단계가 늘면 to-be 버전이
+바뀌어 재평가가 트리거되고, 새 항목도 자동으로 판정 대상이 된다.
+
+**단계 식별자는 순번이 아니라 슬러그다.** 순번을 식별자로 쓰면 단계가 중간에
+추가·재배치되는 순간 문서와 mockup의 연결이 조용히 어긋나고, 이 모델의 집합 대조가
+전부 거짓 drift로 뒤집힌다. 순번 식별자를 쓰는 레포는 **첫 task에서 식별자 체계
+이관부터** 다룬다.
+
+## 슬롯 표
+
+대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다.
+
+| 슬롯 | 의미 | 예 (dear-baby) |
+|---|---|---|
+| `{{REPO}}` | owner/repo | `dlddu/dear-baby` |
+| `{{SLUG}}` | id·이름용 소문자 레포명 | `dear-baby` |
+| `{{JOURNEY_PATH}}` | 여정 문서 루트(to-be 버전 범위) | `docs/user-journeys` |
+| `{{JOURNEY_UNIT}}` | 여정 매칭 단위(파일 유형·위치) | `docs/user-journeys/JRN-*.md` 파일 1개 = 여정 1개 |
+| `{{ID_SCHEME}}` | 여정·단계 ID **체계**(개수 아님) | 여정 `JRN-<슬러그>`, 단계 `STP-<슬러그>` |
+| `{{STEP_SSOT}}` | 여정 문서에서 단계 목록을 읽는 위치 | "3. 단계별 상세"의 `### \`STP-…\`` 헤딩 |
+| `{{BRANCH_SSOT}}` | 여정 문서에서 분기를 읽는 위치 [선택] | "4. 분기·예외 흐름" 표의 "이어지는 단계" 열 |
+| `{{MOCKUP_ROOT}}` | 여정 mockup 루트(as-is 버전 범위) | `docs/journeys` |
+| `{{MOCKUP_UNIT}}` | mockup 매칭 단위 | `docs/journeys/<journey-id>/index.html` |
+| `{{NON_UNIT}}` | mockup 루트 안이지만 매칭 단위가 아닌 것 [선택] | `docs/journeys/_shared/`(공용 스타일·스크립트) |
+| `{{STEP_MARKUP}}` | mockup의 식별자 노출 규약 | `<main data-journey="…">` / `<section data-step="…">` |
+| `{{MAPPING_SSOT}}` | 여정↔mockup 매핑을 기계적으로 확인하는 곳(인덱스) | `docs/mockup-index.md` |
+| `{{HUB}}` | Pages 진입 허브(인덱스의 반영물) | `docs/index.html` |
+| `{{EXCEPTION_SSOT}}` | 여정 예외·비-여정 페이지 등재 위치 | `docs/doc-structure-state.md`의 "여정 mockup 예외" 섹션 |
+| `{{EXCLUDED_STATES}}` | 판정 대상에서 빼는 여정 상태 | `폐기`(무조건), `초안`(예외 등재 시) |
+| `{{TOBE_EXTRA}}` | to-be 버전에 함께 묶을 파일 [선택] | `docs/doc-structure-state.md` blob(예외 등재 변경도 감지) |
+| `{{ASIS_COMMON}}` | as-is 경로들의 공통 상위(dataSource.subPath) | `docs` |
+| `{{SIBLING_MOCKUP_RENDER}}` | 자매 mockup-render 모델 id [선택] | `tbm_dear-baby-mockup-render` |
+| `{{INITIAL_STATE}}` | 등록 시점 **스냅샷**: 여정 수 vs 페이지 수, 공백·중복·미규약 예시 | 여정 7 vs 페이지 3, `data-step` 규약 미도입, 2개 여정이 한 페이지 |
+| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
+
+## 모델 JSON 골격
+
+`definition`·`code`는 아래 본문/스크립트를 채워 넣는다(개행 이스케이프는
+`json.dump` 조립으로 해결 — `templates/README.md` 절차 참고).
+
+```json
+{
+  "id": "tbm_{{SLUG}}-journey-mockup",
+  "metadata": {
+    "name": "{{SLUG}} 사용자 여정 ↔ 목업 1:1 정합성",
+    "description": "{{REPO}}에서 {{JOURNEY_PATH}}의 사용자 여정({{ID_SCHEME}})과 여정 mockup({{MOCKUP_UNIT}})을 여정·단계 두 층위 모두 완전 1:1로 유지한다. mockup을 두지 않기로 한 여정은 {{EXCEPTION_SSOT}} 예외 목록으로 관리하며, 등재된 여정은 drift가 아니다. 목업의 시각 품질과 구현 일치는 범위 밖이다.",
+    "tags": ["{{SLUG}}", "journey", "mockup", "ux", "consistency"],
+    "createdAt": "{{NOW_ISO}}"
+  },
+  "definition": "<definition 본문 템플릿을 채워 넣기>",
+  "toBe": {
+    "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "{{JOURNEY_PATH}}" },
+    "versionScript": { "runtime": "bash", "code": "<to-be 스크립트>", "timeoutSeconds": 60 }
+  },
+  "asIs": {
+    "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "{{ASIS_COMMON}}" },
+    "versionScript": { "runtime": "bash", "code": "<as-is 스크립트>", "timeoutSeconds": 60 }
+  },
+  "checkPolicy": { "intervalSeconds": 3600 }
+}
+```
+
+- `{{TOBE_EXTRA}}`를 쓰면(예외 등재가 여정 문서 밖에 있을 때 권장)
+  `toBe.dataSource`의 `subPath`는 빼고 to-be 스크립트를 조합형으로 쓴다.
+- as-is는 mockup 트리·인덱스·허브를 함께 보므로 `subPath`는 그 **공통 상위**
+  (`{{ASIS_COMMON}}`)를 적고, 실제 범위는 스크립트가 정한다(스크립트가 진실).
+
+## versionScript
+
+**to-be** — 여정 문서(흐름의 SSOT) 트리 해시. `{{TOBE_EXTRA}}` 없으면 단일형:
+
+```bash
+#!/usr/bin/env bash
+# to-be = 사용자 여정 정의. {{JOURNEY_PATH}} 하위 트리 해시만 사용 → 그 밖 변경은 무시된다.
+# 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
+set -euo pipefail
+git rev-parse "HEAD:{{JOURNEY_PATH}}"
+```
+
+있으면 조합형(예외 등재가 바뀌어도 재평가가 트리거된다):
+
+```bash
+#!/usr/bin/env bash
+# to-be = 여정 집합({{JOURNEY_PATH}}) + 예외 등재({{TOBE_EXTRA}}).
+# 이 둘 밖의 문서·코드 변경은 무시된다.
+# 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
+set -euo pipefail
+j="$(git rev-parse "HEAD:{{JOURNEY_PATH}}")"
+x="$(git rev-parse "HEAD:{{TOBE_EXTRA}}")"
+printf 'journeys:%s reg:%s\n' "$j" "$x"
+```
+
+**as-is** — mockup 트리 해시 + 매핑 인덱스 + 허브의 조합. 셋을 함께 보는 이유는
+**허브 불일치가 이 유형의 가장 흔한 실패 모드**이기 때문이다: 페이지만 추가하고
+인덱스·허브를 안 고친 경우와 그 반대가 모두 감지되어야 한다.
+
+인덱스·허브가 **아직 없는 것도 유효한 관측**이므로 `absent`로 표현한다(빈 해시로
+뭉개면 "없음 → 생김"이 감지되지 않는다).
+
+```bash
+#!/usr/bin/env bash
+# as-is = 여정 mockup({{MOCKUP_ROOT}}) 트리 해시 + 매핑 인덱스({{MAPPING_SSOT}}) +
+# 허브({{HUB}}) blob 해시 조합. 페이지만 늘고 인덱스·허브가 안 따라온 경우도 감지된다.
+# 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
+set -euo pipefail
+m="$(git rev-parse --verify --quiet "HEAD:{{MOCKUP_ROOT}}" || echo absent)"
+i="$(git rev-parse --verify --quiet "HEAD:{{MAPPING_SSOT}}" || echo absent)"
+h="$(git rev-parse --verify --quiet "HEAD:{{HUB}}" || echo absent)"
+printf 'mockups:%s index:%s hub:%s\n' "$m" "$i" "$h"
+```
+
+- `{{MAPPING_SSOT}}`나 `{{HUB}}`가 `{{MOCKUP_ROOT}}` **안에** 있으면 그 항목은
+  트리 해시에 이미 포함되므로 해당 줄을 삭제한다(중복은 무해하지만 값이 길어진다).
+- 매핑 인덱스가 없는 레포도 그대로 등록한다. `index:absent`는 올바른 관측이고,
+  **인덱스 신설은 첫 감지 task의 계획 대상**이다.
+
+**지문으로의 승급 (선택)**: `{{STEP_MARKUP}}` 규약이 정착하면, as-is를 트리 해시
+대신 **식별자 지문(sha256)** 으로 좁혀 스타일·카피 수정의 노이즈 트리거를 없앨 수
+있다. 판정 표면이 곧 식별자 집합이므로 이 유형은 승급 이득이 특히 크다.
+
+```bash
+#!/usr/bin/env bash
+# as-is = 여정 mockup의 "식별자 지문". 파일별 data-journey/data-step 집합만 뽑아
+# 정규화·정렬·해시한다 → 스타일·문구 변경에 반응하지 않는다.
+set -euo pipefail
+export LC_ALL=C
+HITS=$({ git ls-files -- {{MOCKUP_ROOT}} | sort \
+        | xargs -r grep -EHo 'data-(journey|step)="[^"]+"' || true; } | sort -u)
+echo "steps=$(printf '%s' "$HITS" | grep -c 'data-step' || true) pages=$(printf '%s' "$HITS" | cut -d: -f1 | sort -u | grep -c . || true)"
+printf '%s\n%s\n%s' "$HITS" \
+  "$(git rev-parse --verify --quiet "HEAD:{{MAPPING_SSOT}}" || echo absent)" \
+  "$(git rev-parse --verify --quiet "HEAD:{{HUB}}" || echo absent)" \
+  | sha256sum | cut -d' ' -f1
+```
+
+- 마지막 줄만 버전이므로 `steps=…` 진단 줄은 값에 영향을 주지 않는다.
+- **규약이 아직 없는 상태에서 지문 스크립트를 먼저 넣지 않는다** — 등록 시점에
+  실제로 값이 나오는 스크립트여야 한다. 지문이 늘 빈 입력 해시로 고정되면 그 모델은
+  아무것도 감지하지 못한다. 승급은 모델 개정 커밋으로 처리한다.
+
+## definition 본문 템플릿
+
+`[선택]` 표시 블록은 해당 없으면 통째로 삭제. `<!-- 지침 -->`은 모두 제거.
+
+```markdown
+# {{SLUG}} 사용자 여정 ↔ 목업 1:1 정합성
+
+## 목표
+`{{REPO}}` 레포에서 **사용자 여정 문서**(`{{JOURNEY_PATH}}`의 {{ID_SCHEME}})와 **여정 mockup**({{MOCKUP_UNIT}})을 **두 층위 모두 완전 1:1(전단사)** 로 유지한다: 예외 목록에 등재되지 않은 모든 여정은 자신을 시각화하는 mockup 페이지를 정확히 1개 가지고, 모든 mockup 페이지는 정확히 1개의 여정을 시각화하며, **그 페이지가 담은 단계 집합은 여정 문서의 단계 집합과 정확히 같다**. 따라서 (판정 대상 여정 수 − 예외 수) = (여정 mockup 페이지 수)이고, 각 여정에 대해 (문서의 단계 수) = (그 페이지의 단계 수).
+
+## 무엇이 "맞는 상태"인가 (SSOT)
+- **흐름의 SSOT는 여정 문서**다: `{{JOURNEY_PATH}}` (등록 시점 체계: {{ID_SCHEME}}). mockup은 그 흐름의 **걸어볼 수 있는 시각화**이지 흐름의 원천이 아니다.
+- **여정 매칭 단위**는 {{JOURNEY_UNIT}}, **mockup 매칭 단위**는 {{MOCKUP_UNIT}}다. {{NON_UNIT}}은 매칭 단위가 아니다. <!-- [선택] 공용 자산 디렉터리가 없으면 뒷문장 삭제 -->
+- **단계 목록의 확인 지점**은 여정 문서의 {{STEP_SSOT}}, mockup 쪽은 {{STEP_MARKUP}}이며, 양쪽 모두 기계적으로 확인 가능해야 한다.
+- **여정 ↔ 페이지 매핑의 SSOT**는 {{MAPPING_SSOT}}다. `{{HUB}}`는 그 인덱스의 **반영물이지 원천이 아니다**.
+- **예외 등재의 SSOT**는 {{EXCEPTION_SSOT}}다.
+- **판정 대상**: 상태가 {{EXCLUDED_STATES}}인 여정은 판정 대상에서 제외한다.
+
+## 1:1 매칭 규칙 (판정 기준)
+1. **여정 → 페이지 유일**: 예외 목록에 없는 모든 판정 대상 여정은 자신을 시각화하는 mockup 페이지를 **정확히 1개** 가진다. 0개면 미시각화, 2개 이상이면 중복 — 둘 다 drift.
+2. **페이지 → 여정 유일**: 모든 mockup 페이지는 **정확히 1개**의 여정을 선언한다({{STEP_MARKUP}}). 여러 여정을 한 페이지에 담았으면 분리 대상(drift). 어느 여정도 선언하지 않은 페이지는 고아(drift). 같은 화면이 여러 여정에 등장하는 것은 중복이 아니다 — 여정마다 그 화면의 데이터·다음 행동이 다르므로 각 여정 페이지에 그 여정의 맥락으로 각각 존재하는 것이 정상이다.
+3. **단계 집합 일치**: 여정 문서의 단계 식별자 집합과 그 페이지의 단계 식별자 집합이 **양방향으로 같다**. 문서에만 있으면 미시각화, 페이지에만 있으면 문서 미반영 — 어느 방향이든 차집합이 있으면 drift.
+4. **분기 대응**: 여정 문서 {{BRANCH_SSOT}}의 각 분기가 mockup에서 선택 가능하고, 선언된 대상 단계 식별자로 실제 이동한다. <!-- [선택] 여정 문서에 분기 섹션이 없으면 이 항목 삭제 -->
+5. **흐름 체험 가능**: 각 페이지가 다음을 모두 만족한다 — (a) 모든 단계 포함 (b) 단계 전환 수단(다음/이전 또는 스텝 인디케이터) (c) 현재 위치 표시 (d) 각 단계의 주요 행동을 눌러 전진 가능(외부 네비게이션만으로 넘어가는 것은 체험이 아니다) (e) `#<step-id>` 딥링크 (f) 분기 선택과 각 갈래의 끝 표현 (g) 빌드·네트워크 없이 열리는 단일 파일 정적 동작. 미충족은 "흐름 체험 불가" drift.
+6. **참조 무결성**: mockup이나 인덱스가 존재하지 않는 여정·단계 식별자를 참조하거나, 예외 목록이 존재하지 않는 여정을 등재하고 있으면 drift. **폐기된 식별자의 재사용도 drift**다.
+7. **인덱스·허브 동기화**: {{MAPPING_SSOT}}의 매핑(대상 여정·단계 목록·공개 경로)이 1~5의 실제 상태와 일치하고, `{{HUB}}`의 링크 목록이 인덱스와 일치한다. 한쪽만 갱신된 상태는 drift(허브 불일치).
+8. **예외 등재**: mockup을 두지 않기로 한 여정은 {{EXCEPTION_SSOT}}에 **여정별 사유와 재검토 시점**을 적어 등재한다. 등재된 여정은 페이지가 없어도 drift가 아니다. 등재 없이 페이지만 없는 여정은 drift.
+
+파일명·디렉터리명 규칙은 강제하지 않고 task 단계에서 정한다. 단, 여정↔페이지 매핑은 {{MAPPING_SSOT}}에서, 단계 매핑은 {{STEP_MARKUP}}에서 기계적으로 확인 가능해야 한다.
+
+## 충돌 시 기본 방향
+**여정 문서가 스펙(SSOT)이므로 원칙적으로 mockup을 여정에 맞춘다.**
+- 여정에 페이지가 없으면 → 페이지를 신설한다(여러 여정을 겸하는 페이지는 여정별로 분할).
+- 한 여정에 페이지가 여러 개면 → 페이지 1개로 병합한다.
+- 문서에 없는 단계가 페이지에 있으면 → mockup을 만들며 발견한 흐름이 실제로 더 낫다고 판단될 때만 **여정 문서를 개정**한다(단계 식별자 신설 + 변경 이력 한 줄 + 버전 상향). 아니면 페이지에서 뺀다.
+- 여정 없는 고아 페이지가 나타나면 → 속한 여정을 확정해 재매핑하거나, 여정 문서를 신설하거나, 페이지를 제거한다.
+
+**기존 단계 식별자는 어느 방향으로 고치든 절대 바꾸지 않는다.** 단계가 사라지면 식별자를 재사용하지 말고 여정 문서의 변경 이력에 폐기 사실을 남긴다. 어느 쪽으로 수렴할지는 각 task에서 판단(planner)하며, 변경 시 {{MAPPING_SSOT}}·`{{HUB}}`·{{EXCEPTION_SSOT}}를 함께 갱신한다.
+
+## 추적 방식 (요약)
+- **to-be** = github `{{REPO}}` `{{JOURNEY_PATH}}` 하위 트리 해시<!-- [선택] TOBE_EXTRA 쓰면 --> + `{{TOBE_EXTRA}}` blob 해시 조합(여정 집합 또는 예외 등재가 바뀌면 변함).
+- **as-is** = 같은 레포의 `{{MOCKUP_ROOT}}` 트리 해시 + `{{MAPPING_SSOT}}`·`{{HUB}}` blob 해시 조합(페이지만 늘고 인덱스·허브가 안 따라온 경우도 감지된다). 인덱스·허브 부재는 `absent`로 관측된다.
+- 어느 한쪽 버전이 바뀌면 task가 생성되어 1:1 매칭을 재검증한다.
+- {{STEP_MARKUP}} 규약이 정착하면 as-is를 **식별자 지문(sha256)** 으로 좁힐 수 있다(모델 개정 사항).
+
+## 초기 상태 메모 (등록 시점 {{NOW_ISO}})
+{{INITIAL_STATE}} 이 문단의 숫자는 **스냅샷일 뿐 판정 기준이 아니다** — 여정이나 페이지가 추가·삭제되면 어느 한쪽 버전이 바뀌어 재평가가 트리거되고, 새 여정도 자동으로 1:1 판정 대상이 된다. 판정은 항상 개수 독립적 불변식으로 한다. 현황 숫자 갱신은 각 task의 몫이다. <!-- 지침: 현재 여정 수 vs 페이지 수, 단계 커버리지 공백/중복/미규약의 구체 예를 남긴다. 격차가 크면 "첫 task는 (1) 매핑 인덱스·예외 목록 신설 (2) {{STEP_MARKUP}} 규약 도입 (3) 묶음 페이지 분리·누락 여정의 페이지 신설을 다루게 된다 — 큰 초기 격차는 예상된 것"을 포함 -->
+
+<!-- [선택] 단계 식별자가 순번(STP-1, STP-2 …)이면 아래 문단을 남기고, 슬러그 체계면 삭제 -->
+**식별자 체계 이관이 선행 과제다.** 현재 단계 식별자가 순번 기반이라 단계가 추가·재배치되면 mockup과의 대조가 통째로 어긋난다. 첫 task는 슬러그 체계({{ID_SCHEME}})로의 일괄 이관을 계획 대상에 포함한다.
+
+## 범위 밖 / 비고
+- **목업이 구현 화면과 일치하는가는 `{{SIBLING_MOCKUP_RENDER}}`가 담당**한다. 이 모델은 여정 문서 ↔ mockup의 **구조적 커버리지**만 보고, 그 mockup이 실제 화면으로 옳게 렌더링되는지는 보지 않는다. 사슬은 `여정 문서 → 여정 mockup → 구현 화면`이고 이 모델은 앞 칸, 자매 모델이 뒤 칸이다. <!-- [선택] 자매 모델이 없으면 "구현 화면과의 시각 일치는 이 모델의 범위 밖이다"로 축약 -->
+- 같은 mockup 트리를 두 모델이 보므로 mockup 변경은 양쪽 모두를 트리거하지만, 판정 대상이 달라(식별자 집합 vs 시각 대조) 중복 계상되지 않는다.
+- **목업의 시각 품질·디자인 시스템 준수 여부는 범위 밖**이다. 이 모델은 단계가 "있는가"를 보지 "잘 그렸는가"를 보지 않는다.
+- **여정이 어떤 제품 가치를 달성하는가(고아 여정)는 범위 밖**이다. 가치 ↔ 문서 연결은 제품 문서 쪽 모델의 관심사다.
+- 여정 단계의 동작·상태 전이에 대한 검증 커버리지는 `tbm_{{SLUG}}-ac-e2e`가 담당한다. <!-- [선택] 쌍 모델이 없으면 삭제 -->
+- 여정 문구의 품질(페르소나 서술, 페인포인트 서술의 충실도)은 판정 대상이 아니다. 이 모델은 식별자와 구조만 대조한다.
+- <!-- 지침: 노이즈 비고 — as-is 범위 안의 무관한 변경(예: 허브의 스타일 수정, 공용 자산 갱신)도 재검증을 트리거할 수 있음(무해), 노이즈가 크면 지문 승급으로 좁힐 수 있음 — 을 대상에 맞게 1~2줄 작성 -->
+```

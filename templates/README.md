@@ -13,6 +13,7 @@
 | `ac-e2e.tbm.md` | AC ↔ E2E 1:1 정합성 | PRD의 Acceptance Criteria와 E2E 테스트 파일의 완전 1:1(전단사) 매칭 |
 | `e2e-mock-policy.tbm.md` | E2E 모킹 최소화 | 모킹 정책·허용목록과 코드에 실재하는 모킹 지점의 양방향 1:1 |
 | `mockup-render.tbm.md` | 목업 ↔ 구현 렌더링 정합성 | 목업이 정의한 화면과 이미 구현된 화면의 시각적 일치(코드 정적 대조) |
+| `journey-mockup.tbm.md` | 사용자 여정 ↔ 목업 1:1 정합성 | 여정 문서와 여정 mockup 페이지의 여정·단계 두 층위 완전 1:1(전단사) |
 
 한 레포에 docs-impl·ac-e2e 두 유형을 등록하는 것이 기본이며, 이때 역할 분담은:
 **docs-impl**은 "문서 ↔ 구현 코드"의 일치를, **ac-e2e**는 "AC ↔ E2E 테스트
@@ -32,6 +33,15 @@ docs-impl이 "문서가 기술한 동작이 구현되었는가"를 본다면 이
 템플릿의 "범위 밖 / 비고"에서 교차 참조한다). 판정은 코드 정적 대조이며 실행
 스크린샷 픽셀 비교는 이 유형의 범위 밖이다 — 픽셀 비교를 도입하려면 유형의
 정체성이 바뀌므로 템플릿을 고치는 커밋으로 처리한다.
+
+**journey-mockup**은 목업을 가진 레포에 얹는 다섯 번째 유형으로, mockup-render의
+**한 칸 앞**을 본다. 사슬은 `여정 문서 → 여정 mockup → 구현 화면`이고,
+journey-mockup이 앞 칸(여정이 mockup에 빠짐없이 담겼는가 = **식별자 집합 대조**),
+mockup-render가 뒤 칸(그 mockup대로 구현됐는가 = **시각 대조**)을 담당한다. 같은
+목업 트리를 둘 다 보므로 목업 변경은 양쪽을 함께 트리거하지만, 판정 대상이 달라
+중복 계상되지 않는다. 이 유형은 목업의 시각 품질을 보지 않고, 여정이 어떤 가치를
+달성하는지도 보지 않는다 — **여정 1개 ↔ 페이지 1개, 문서 단계 집합 == 페이지 단계
+집합**만이 판정 표면이다.
 
 ## 고정부와 가변부
 
@@ -58,11 +68,11 @@ docs-impl이 "문서가 기술한 동작이 구현되었는가"를 본다면 이
 
 | 항목 | 규약 |
 |---|---|
-| id | `tbm_<slug>-docs-impl` / `tbm_<slug>-ac-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` (slug = 소문자 레포명) |
-| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> AC ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` |
-| metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, ac, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` (+ 필요 시 도구 태그: maestro, playwright 등) |
+| id | `tbm_<slug>-docs-impl` / `tbm_<slug>-ac-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` / `tbm_<slug>-journey-mockup` (slug = 소문자 레포명) |
+| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> AC ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` / `<slug> 사용자 여정 ↔ 목업 1:1 정합성` |
+| metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, ac, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` / `[<slug>, journey, mockup, ux, consistency]` (+ 필요 시 도구 태그: maestro, playwright 등) |
 | checkPolicy | `{"intervalSeconds": 3600}` |
-| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·ac-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60` |
+| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·ac-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60` |
 | lastObservedVersion/At | 등록 시 생략(첫 감지 sweep이 채운다) |
 
 ## 인스턴스화 절차
