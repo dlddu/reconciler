@@ -536,7 +536,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-08-20T06:06:42Z",
-    "updatedAt": "2026-08-20T06:22:00Z",
+    "updatedAt": "2026-08-20T06:48:00Z",
     "trigger": {
       "detectedAt": "2026-08-20T06:06:42Z",
       "changedSides": [
@@ -564,6 +564,57 @@
       "reason": "작업 필요. 잔여 drift 4쌍이 실재하고, handoff 슬롯이 비어 있으며, 제거 경로와 선결조건이 문서에 이미 확정돼 있다.\n\n근거 1 — **정의상 drift이고 문서가 스스로 그렇게 계수한다.** 4쌍은 \"승인된 예외가 아니다\" 표에 올라 있고, `page.route(\"**/api/v1/**\")`가 API 표면 전체를 삼키는 형태라 `NET` 자격을 행 단위로 만족시킬 수 없다. 정의의 \"예외는 늘지 않는 방향으로만 관리한다\"·\"애매하면 제거 쪽으로 기운다\"에 따르면 남은 길은 제거다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 기존 task 3건은 모두 종결됐다(`rct_20260808-0001` succeeded · `rct_20260813-0001` no_action_needed · `rct_20260814-0001` succeeded 오늘 05:11Z). 직전 verification이 잔여를 명시적으로 \"이 시도의 범위 밖\"으로 두고 재감지에 인계했으므로, 지금 새 handoff를 여는 것이 그 인계를 받는 정상 경로다.\n\n근거 3 — **자동 해소 기전이 없다.** 정적 코드·배포 구성 격차이고 상한 4는 증가만 막는다 → `recheckAfter` 유예 부적합.\n\n**planner 참고:**\n\n① **선결 슬라이스 = 인클러스터 가짜 Claude provider 배포.** 4쌍 전부의 공통 병목이 `deploy/claude-code-credentials-secret.yaml:17-18`의 의도적 unroutable base-url(`https://127.0.0.1:9`)이다. 정의의 `EXT` 규칙(\"kind에 실물 배포 가능하면 그쪽이 우선\")과 MinIO 실배포 선례를 그대로 따라, 결정적 응답(SSE `output`/`reset` 이벤트 포함)을 내는 가짜 provider를 `deploy/`에 넣고 secret의 base-url을 그리로 돌리는 것이 1순위다. 이것이 서기 전에는 j6·manual-archive의 인터셉트를 제거할 수 없다.\n\n② **행 단위 승인 가능한 잔여를 미리 갈라 둘 것.** `manual-archive.spec.ts`의 중간 \"Archiving…\" 지연 주입은 `NET`(LAT) 자격을 만족하므로 제거 대상이 아니라 등재 대상이다. 제거와 승인 등재를 섞지 말 것 — 직전 슬라이스가 `session-deletion`에서 정확히 이 방식(실 SUT 이전 + 잔여 1건만 NET 등재)으로 6→4를 만들었고, 같은 패턴이 4→0(또는 4→승인 N)로 이어진다.\n\n③ **완료 기준에 체커를 넣고 상한을 함께 내릴 것.** `python3 scripts/check-fidelity-allowlist.py` exit 0 + 집계의 \"미해소 위반\" 감소 + **상한 4를 그만큼 하향 잠금**(문서 규약: 상한은 내릴 때만 고친다). 상한을 내리지 않으면 다음 슬라이스가 다시 4까지 늘릴 수 있다.\n\n④ **머지 순서 — 자매 PR #23과 반드시 조율할 것(직전 task에서 이어지는 인계).** `tbm_session-platform-ac-e2e`/`rct_20260808-0001`의 PR #23이 08-08 이후 그대로 열려 있고(`mergeable_state` UNKNOWN, 마지막 갱신 2026-08-08T02:12Z), `docs/test/e2e.md`를 함께 건드리며 **`control-plane/test/e2e_deferred_test.go` 삭제 + `web/e2e/{deferred,j1,j3,j5}.spec.ts` → `web/e2e/journeys/` 이동**을 포함한다. 두 경로 모두 현재 회계 표에 등재돼 있어 그대로 머지되면 체커가 R5로 막는다. 나중에 머지되는 쪽이 rebase 후 체커를 다시 통과시켜야 한다 — 이 task의 계획에 그 전제를 명시할 것.\n\n⑤ **j6 spec은 두 모델이 함께 본다.** 이 작업이 `j6-agent-prompt-loop.spec.ts`·`manual-archive.spec.ts`를 대폭 수정하므로 `tbm_session-platform-ac-e2e`의 AC 매핑 작업과 같은 파일을 건드린다. 지금 그 모델의 handoff는 점유 상태(`awaiting_review`)이므로 이 task가 먼저 움직여도 무방하나, 실행 시점에 다시 확인할 것.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-20T06:06:42Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**범위(완료 기준): 「미해소 위반」 4쌍 중 `web/e2e/manual-archive.spec.ts`의 2쌍을 인터셉트 제거로 해소하고, 그 사실을 허용목록 회계·상한에 반영한다(위반 4→2, 상한 4→2, 회계 행 17→15, 인터셉트 7→5). `j6-agent-prompt-loop.spec.ts`의 2쌍은 이 시도의 범위 밖이다.** 성공 판정은 (a) `python3 scripts/check-fidelity-allowlist.py` exit 0 with 위반 2/상한 2, (b) PR의 `e2e` 워크플로에서 재작성한 Playwright 테스트가 kind 실 SUT 위에서 통과, (c) 문서의 j6 제거 경로가 실측한 선결조건을 담고 있을 것 — 셋 다다.\n\n**접근과 그 근거**: detector는 4쌍 공통 병목을 `deploy/claude-code-credentials-secret.yaml`의 unroutable `base-url` 하나로 보고 「인클러스터 가짜 Claude provider 배포」를 1순위로 제안했다. 코드를 읽어 보니 **그보다 먼저 걸리는 벽이 하나 더 있다**: `data-plane/entrypoint.sh`가 `DATA_PLANE_WORKLOAD=claude-code`일 때 agent를 exec하기 전에 `K3S_MCP_TOKEN`으로 K3s MCP를 호출해 단명 GitHub token을 받고 **비공개** `dlddu/plugin-marketplace`에서 플러그인을 설치한다(`set -eu` + `curl --fail`). kind e2e의 토큰은 placeholder이고 `.github/workflows/e2e.yml`도 실토큰을 넣지 않으므로 bootstrap은 항상 실패 → claude-code pod가 Ready에 못 가고 세션 생성 자체가 불가능하다. 즉 **가짜 provider만으로는 어느 스펙도 실 세션 위로 못 옮긴다.** 그 우회 스위치를 새로 다는 것은 정책이 금지하는 '미구현 우회 stub'이라 해법이 아니고, 남는 길은 CI 실자격(운영 결정) 또는 bootstrap을 기동 필수에서 떼는 제품 설계 변경 — 둘 다 이 슬라이스보다 크고 이 환경에서 검증 불가다.\n\n그래서 **claude-code 의존이 실제로는 없는 쪽부터 잘라낸다**. `web/src/screens/Workspace.tsx`의 `ws-archive-session` 버튼은 `isAgent` 분기 **밖**에 있어 workload와 무관하게 렌더되고, 누르면 제품 `POST /api/v1/sessions/{id}/snapshot`을 부른다. 갈리는 것은 문구뿐(`Freeze now`/`Session frozen — pod reclaimed` vs `Archive now`/`Session archived — pod reclaimed`)이므로, **실 shell 세션**으로 같은 화면 계약을 검증할 수 있다. 직전 슬라이스(#41)가 `session-deletion.spec.ts`에 쓴 방법과 동형이고, CRIU 게이트가 오버레이에서 ON이라 실 동결이 실제로 돈다는 것도 그 PR과 `TestDeferred_CRIUIntegrity`가 이미 입증했다.\n\n**지연 주입(NET/LAT)은 일부러 넣지 않았다.** 진행 중 상태(`Freezing…`·disabled·`aria-busy`)는 실 CRIU dump + MinIO 업로드가 요청을 수 초 이상 붙잡으므로 주입 없이 관측된다. 정책상 등재 가능하지만 '애매하면 제거 쪽으로 기운다'·'예외는 늘지 않는 방향으로만'을 따랐다. CI에서 불안정해지면 LAT 등재가 정해진 퇴로다(스펙 주석·지침에 명시).\n\n**명시적으로 배제한 대안**: j6에 인터셉트를 합쳐 파일 수를 줄이는 방법. `(파일,토큰)` 쌍을 세는 회계 특성상 위반 4→2가 되지만 치환은 그대로 남는다 — 세는 대상을 속이는 짓이라 채택하지 않았고, 그 이유를 문서에도 적었다.\n\n**교환 조건(정직하게 기록)**: claude-code 문구 분기가 브라우저 커버리지에서 빠진다. `web/`에 단위 테스트가 전혀 없으므로 그 분기는 Deferred 시드로만 남는다. 다만 그 분기는 지금도 100% 손으로 지은 픽스처로만 '검증'되고 있었으므로, 실 세션 검증과 맞바꾸는 것이 충실도 관점에서 이득이다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`web/e2e/manual-archive.spec.ts`를 실 SUT 기반으로 재작성한다. `request.post(\"/api/v1/sessions\")`로 실 shell 세션 생성 → `/session/{id}`에서 `ws-archive-session` 클릭 → 진행 중 상태·리다이렉트·토스트·카드 `data-state=\"snapshot\"` 단언 → `GET /api/v1/sessions/{id}`로 `state=snapshot`·`pod` 비움(pod 회수) 그라운드-트루스 확인. `page.route`/`route.fulfill` 전량 제거. 실 CRIU 동결에 맞춰 `test.setTimeout(180_000)`과 URL 단언 150s.",
+              "expectedOutcome": "파일에 충실도 스캔 토큰이 0건이 된다(스캐너와 같은 정규식으로 확인)."
+            },
+            {
+              "seq": 2,
+              "action": "같은 파일에 claude-code 문구 분기용 `test.skip` 시드를 추가한다(선결조건 주석 포함). `deferred.spec.ts`가 아니라 이 파일에 두는 이유는 열린 PR #23이 `deferred.spec.ts`를 `web/e2e/journeys/`로 옮기기 때문에 충돌을 피하려는 것.",
+              "expectedOutcome": "시드가 추가돼도 스캔 토큰은 0건 유지(`test-only` 등 금지 문자열 회피)."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/test/e2e.md`의 「미해소 위반」 표에서 manual-archive 2행을 제거하고, 회계 표에서도 같은 2행을 제거한다. 집계를 위반 2·상한 2·회계 행 15·인터셉트 5로 갱신한다.",
+              "expectedOutcome": "`python3 scripts/check-fidelity-allowlist.py` exit 0, 출력이 `미해소 위반 2 ... 상한 2`."
+            },
+            {
+              "seq": 4,
+              "action": "같은 문서에서 j6의 제거 경로를 실측대로 정정한다 — 선결조건을 ①(entrypoint의 K3s MCP + 비공개 marketplace bootstrap → pod가 Ready에 못 감) ②(unroutable base-url) 둘로 갈라 적고, e2e 전용 우회 스위치가 정책상 해법이 아님을 명시한다. 「해소된 것」 문단에 이번 전환과 '파일 옮기기로 개수를 줄이지 않았다'는 근거를 남긴다.",
+              "expectedOutcome": "다음 슬라이스가 문서만 읽고도 ①을 먼저 만나며, 가짜 provider만으로는 부족함을 안다."
+            },
+            {
+              "seq": 5,
+              "action": "커버 시나리오 표에 워크스페이스 수동 아카이브 행을, Deferred 표에 claude-code 문구 분기 행(선결조건 ①②)을 추가한다.",
+              "expectedOutcome": "실제로 도는 브라우저 커버리지와 남은 잔여가 표에 각각 반영된다."
+            },
+            {
+              "seq": 6,
+              "action": "로컬에서 CI 게이트를 재현한다: `python3 scripts/check-fidelity-allowlist.py`. 이어 래칫이 공허하지 않음을 음성 시험 4종으로 확인한다(미등록 인터셉트 주입 / manual-archive 인터셉트 되돌림 / 상한만 4로 남김 / 코드에 있는 회계 행 삭제). 주입 전에 `cp`로 good 사본을 떠 두고 그 사본으로 복원한다(`git checkout` 금지 — tracked는 편집이 날아가고 untracked는 조용히 실패한다).",
+              "expectedOutcome": "본 검사 exit 0, 음성 시험 4종 모두 예상한 규칙(R5/R7/R8/R9)으로 실패, 복원 후 working tree가 주입 전과 byte-identical."
+            },
+            {
+              "seq": 7,
+              "action": "브랜치를 push하고 PR을 연다. 본문에 task id·gap·선결조건 정정·검증 결과·검토 판단 3건·PR #23과의 머지 순서·롤백을 담는다.",
+              "expectedOutcome": "PR이 열리고 `e2e` 워크플로가 `web/**` 경로 필터에 걸려 발화한다."
+            },
+            {
+              "seq": 8,
+              "action": "PR의 CI(특히 `e2e` 잡)를 완료까지 관측하고 결과를 이 레코드에 기록한다. 재작성한 테스트가 kind 실 SUT 위에서 실제로 통과하는지가 이 슬라이스의 최종 판정이다.",
+              "expectedOutcome": "`fidelity`·`web`·`e2e` 잡의 실제 결론이 `preparation.notes`에 관측값으로 남는다."
+            }
+          ],
+          "plannedAt": "2026-08-20T06:48:00Z"
+        }
+      }
+    ]
   }
 ]
