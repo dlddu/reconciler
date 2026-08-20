@@ -350,7 +350,7 @@
       "gap": "**유의미한 차이 — 정책이 불허하는 치환 6쌍이 코드에 실재한다.**\n\n정의는 정합 상태를 \"허용목록에 등재된 seam의 집합 == 코드에 실재하는 seam의 집합(양방향 1:1)\"으로 두고, **미등재 치환도 고아 등재도 drift**라고 명시한다. 지금 상태는 그 중간이다:\n\n- **회계는 성립한다.** 체커 exit 0 — 등재 1건이 코드에 실재하고, 코드의 모든 (파일,토큰) 쌍 16개가 등재·위반·비-seam 중 하나로 귀속되며, 고아 등재 0.\n- **그러나 정책 위반 6쌍은 그대로다.** `.route(`/`route.fulfill(` 6쌍은 **승인된 예외가 아니라 \"미해소 위반\"으로 등재**됐다(승인 NET 0 · 위반 6). 세 spec이 세션·config·SSE 스트림·삭제 응답(200/404/409/204)을 브라우저 레벨에서 위조하고 있어, 그만큼 실 SUT가 검증되지 않는다.\n- 직전 슬라이스는 이 사실을 **정직하게 기록하고 상한(6)을 걸어 증가를 CI로 막는 데까지**가 범위였다. 그 verification의 정보성 체크가 \"web 인터셉트 6쌍은 여전히 정책 위반이며 기록·상한만 걸린 상태 … 실제 제거는 인클러스터 가짜 Claude provider 배포가 선결조건이라 범위 밖 — 후속은 재감지가 새 task로 잇는다\"고 명시적으로 인계했다.\n\n즉 이번 트리거는 수렴 방향(정책 문서 승격 + 게이트 신설 + SNAPSHOT-TRIG 제거)이지만, 모델이 요구하는 목표 상태(불허 치환 0)와의 거리는 6쌍만큼 그대로 남아 있다.",
       "summarizedAt": "2026-08-14T13:07:00Z"
     },
-    "updatedAt": "2026-08-20T05:06:00Z",
+    "updatedAt": "2026-08-20T05:06:23Z",
     "assessment": {
       "actionRequired": true,
       "reason": "유의미한 drift(불허 치환 6쌍)가 실재하고, 미점유이며, 제거 경로와 선결조건이 문서에 이미 확정돼 있다 → 지금 작업이 필요하다.\n\n근거 1 — **정의상 drift다.** 6쌍은 `NET` 자격(실 SUT가 요청 시점에 낼 수 없는 서버 실패·지연 주입)을 만족하지 못해 승인 예외로 등재될 수 없고, 문서 스스로 \"승인된 예외가 아니다\"라고 계수한다. 정의의 \"판정이 애매하면 제거 쪽으로 기운다\"·\"예외는 늘지 않는 방향으로만 관리한다\"에 따르면 남은 길은 제거뿐이다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 task 2건은 모두 종결됐다(`rct_20260808-0001` succeeded 00:44Z · `rct_20260813-0001` no_action_needed). 직전 verification이 후속을 재감지에 인계했고, handoff 슬롯이 비어 있다.\n\n근거 3 — **자동 해소 기전이 없다.** 정적인 테스트 코드·배포 구성 격차이며, 상한 6은 증가만 막을 뿐 스스로 줄지 않는다 → `recheckAfter` 유예 부적합.\n\nplanner 참고:\n① **선결 슬라이스 = 인클러스터 가짜 Claude provider.** 문서가 지목한 경로 그대로 — MinIO를 실 배포로 넣은 선례를 따라 `deploy/`에 결정적 응답을 내는 가짜 provider를 배포하고 `claude-code-credentials`의 `base-url`을 돌린다. 이것이 서면 `j6-agent-prompt-loop`(12테스트)·`manual-archive`의 인터셉트가 실 SUT 경로로 대체 가능해진다.\n② **행 단위로 승인 가능한 잔여는 분리해서 남긴다.** `session-deletion`의 DELETE 409 충돌 주입은 `NET`(ERR), `manual-archive`의 중간 \"Archiving…\" 지연은 `NET`(LAT)로 **자격을 만족하므로**, 제거 대상과 승인 등재 대상을 섞지 말 것. 그 두 건만 남기면 위반 6 → 0, 승인 NET 2가 되는 것이 현실적인 종착점이다.\n③ **완료 기준에 체커를 넣을 것** — `python3 scripts/check-fidelity-allowlist.py` exit 0 + `집계` 블록의 \"위반 N\" 감소 + **상한을 내려 잠글 것**(문서: \"상한은 내릴 때만 고친다\"). 상한을 줄이지 않으면 다음 슬라이스가 다시 6까지 늘릴 수 있다.\n④ 이 작업은 `web/e2e/*.spec.ts`를 대량 수정하므로, 자매 모델 `tbm_session-platform-ac-e2e`의 열린 `rct_20260808-0001`(awaiting_review, 같은 spec 파일들의 AC 매핑 작업)과 **같은 파일을 건드린다** — 실행 순서를 그 task와 조율하거나, 최소한 rebase 전제를 계획에 명시할 것.",
@@ -419,6 +419,62 @@
           "required": false,
           "status": "not_required",
           "reason": "저위험·가역·프로덕션 무영향으로 판단해 사람 검토 없이 진행한다. 근거 4가지. ① 변경 표면이 2파일뿐이고(`web/e2e/session-deletion.spec.ts` +63/-64, `docs/test/e2e.md` +22/-17) 서비스 코드·`k8s/` 매니페스트·컨테이너 이미지 정의를 전혀 건드리지 않는다 — 머지해도 프로덕션 워크로드·데이터·트래픽에 도달하는 경로가 없다. ② `plan.riskLevel`이 low이고, 실행 지침이 \"되돌릴 수 없는 지점은 없다 / 트래픽·데이터 영향 없음\"을 명시했다. 되돌리려면 revert PR 1회면 되고, 충실도 체커 R9가 집계(위반·상한)를 함께 되돌리도록 강제하므로 원복 누락도 구조적으로 막힌다. ③ 판정 게이트가 이미 났다 — head `a34f37d`의 체크 11개 전부 success이며, 이 변경의 진짜 판정자인 `e2e (kind + API + browser)`가 통과했고 준비 단계가 로그 원문으로 '재작성한 테스트가 skip이 아니라 실제 통과'임을 확인했다. ④ 지침이 경고한 유일한 선행 조건(PR #23과의 머지 순서)은 현 시점에 판단 여지가 없다 — #23은 `mergeable_state:dirty`라 지금 머지 자체가 불가능하고, 지침의 권장이 애초에 '#41 먼저'다. 즉 이 실행은 이미 승인된 정책 범위 안의 순서대로 진행하는 것이다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-08-20T05:06:00Z",
+          "finishedAt": "2026-08-20T05:06:23Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "finishedAt": "2026-08-20T05:06:23Z",
+              "log": "계획 단계에서 브랜치 `reconcile/rct_20260814-0001-session-deletion-real-sut` 커밋 `a34f37d`로 스테이징됨(PR #41). 이번 실행에서 squash 머지 `c7a5284`로 main에 착지. base main은 계획 시점 `7cd13a9` 그대로여서 rebase 불필요."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "finishedAt": "2026-08-20T05:06:23Z",
+              "log": "계획 단계에서 브랜치 `reconcile/rct_20260814-0001-session-deletion-real-sut` 커밋 `a34f37d`로 스테이징됨(PR #41). 이번 실행에서 squash 머지 `c7a5284`로 main에 착지."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "finishedAt": "2026-08-20T05:06:23Z",
+              "log": "계획 단계에서 브랜치 `reconcile/rct_20260814-0001-session-deletion-real-sut` 커밋 `a34f37d`로 스테이징됨(PR #41). 이번 실행에서 squash 머지 `c7a5284`로 main에 착지."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "finishedAt": "2026-08-20T05:06:23Z",
+              "log": "계획 단계에서 브랜치 `reconcile/rct_20260814-0001-session-deletion-real-sut` 커밋 `a34f37d`로 스테이징됨(PR #41). 이번 실행에서 squash 머지 `c7a5284`로 main에 착지."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "finishedAt": "2026-08-20T05:06:23Z",
+              "log": "계획 단계에서 브랜치 `reconcile/rct_20260814-0001-session-deletion-real-sut` 커밋 `a34f37d`로 스테이징됨(PR #41). 이번 실행에서 squash 머지 `c7a5284`로 main에 착지."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "finishedAt": "2026-08-20T05:06:23Z",
+              "log": "로컬 게이트는 계획 단계에서 재현 완료. 이번 실행에서는 CI가 판정: head `a34f37d`의 체크 11건 전부 success — `e2e fidelity allowlist (docs <-> code seams)` · `web (typecheck + build)` · `e2e (kind + API + browser)` 포함."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "finishedAt": "2026-08-20T05:06:23Z",
+              "log": "체커 음성 확인 3종은 계획 단계에서 완료(R9 / R6+R8 / R3+R7 각각 non-zero). 이번 실행에서 재수행하지 않음 — 코드가 그때와 동일한 `a34f37d`다."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-08-20T05:06:00Z",
+              "finishedAt": "2026-08-20T05:06:23Z",
+              "log": "실행 지침 순서대로: ① 머지 순서 정리 — 자매 PR #23은 현재 `mergeable_state:dirty`(main #40 이후 충돌)라 선행 머지가 불가능하고, 지침의 권장도 '#41 먼저'이므로 그대로 #41을 먼저 머지. #23은 rebase 후 `check-fidelity-allowlist.py`를 다시 통과시켜야 한다는 인계는 유효. ② PR #41 CI 확인 — 11/11 success. ③ squash merge 완료 → main `c7a5284`. 머지 시점 mergeable=true / mergeable_state=clean."
+            }
+          ]
         }
       }
     ]
