@@ -1118,7 +1118,7 @@
       "gap": "**유의미한 차이 있음 — 미구현 AC 17/24.**\n\n이번 트리거 자체는 수렴 방향이다: 델타는 이 모델 자신의 슬라이스 3b(PR #15)뿐이고 AC1.5를 구현 완료시켜 미구현을 18→17로 줄였다. to-be(AC 24개)는 넓어지지도 좁아지지도 않았다(`docs/prd` 트리 불변, 문서 델타는 트래커 1개 파일).\n\n그러나 판정 대상은 트리거 델타가 아니라 **잔여 gap**이다. 모델 정의는 미구현 AC를 백로그가 아니라 to-be 미달 drift로 못박고 있고, 현재 **AC1.2~1.4 · AC2.1~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7 = 17건**이 문서에만 존재하고 구현이 없다. 분석 파이프라인은 여전히 1단계 `fetch`만 실행되고 2~5단계는 `pending`으로 남아 있으며(3b가 표현만 얹었다), feature 추출·문서 CRUD 화면(S05~S10)은 코드가 없다. 정적 문서↔코드 격차라 자동 해소 기전이 없다.",
       "summarizedAt": "2026-08-14T13:07:00Z"
     },
-    "updatedAt": "2026-08-28T11:27:07Z",
+    "updatedAt": "2026-08-29T07:42:03Z",
     "assessment": {
       "actionRequired": true,
       "reason": "잔여 gap이 유의미하고, 소유자 없는 미점유 handoff이며, 자동 해소 경로가 없다 → 지금 작업이 필요하다.\n\n근거 1 — **정의상 drift다.** 모델 정의는 \"미구현 AC는 백로그가 아니라 to-be 미달 gap이며 drift\"를 판정 기준 1로 명시한다. 현재 미구현 17/24. 트리거 델타가 수렴 방향(18→17)이라는 사실은 무행동 근거가 되지 못한다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 task 이력 7건 중 열린 것은 0건이다(직전 `rct_20260813-0001`은 이번 트리거를 만든 PR #15의 슬라이스로 `succeeded`, 04:29Z 검증 완료). 그 verification의 정보성 체크가 \"미구현 17건은 이 시도의 plan 범위 밖 — 재감지가 후속 task로 잇는다\"고 명시적으로 인계를 남겼다. 전형적인 post-reconcile 재트리거이고 handoff 슬롯이 비어 있다.\n\n근거 3 — **다음 슬라이스가 이미 지목돼 있어 planner가 바로 집을 수 있다.** 트래커 로드맵이 **슬라이스 4 = AC1.2 → AC1.3 → AC1.4 (화면 S05·S06·S07, 분석 파이프라인: 횡단 관심사 → 탐색 전략 → feature 후보, AC4.6 계측 내장)**을 \"다음 권장 슬라이스\"로 못박았다. 선행 의존도 닫혀 있다 — 3a가 `analysis_stages`에 5단계를 시드하고 워커가 1단계를 실행하며, 3b가 그 진행을 화면에 표현하는 경로(`GET /api/analyses/{id}` + S04)를 이미 뚫어 뒀으므로 슬라이스 4는 2~5단계의 실제 실행을 채우는 작업이다.\n\n근거 4 — 정적 문서↔코드 격차라 롤아웃·일시 alert 같은 자동 수렴 기전이 없다 → `recheckAfter` 유예 부적합.\n\nplanner 참고 (둘 다 직전 task가 남긴 관측):\n① 완료 기준에 **각 AC별 전용 e2e spec 신설**을 반드시 포함할 것 — 자매 모델 `tbm_feature-doc-ac-e2e`가 AC↔spec 1:1 전단사를 강제하고 있고 현재 공백 17건이 이 모델의 미구현 17건과 정확히 같은 집합이라, 구현만 얹고 spec을 빠뜨리면 그 모델에 즉시 새 gap이 생긴다. 3a·3b가 확립한 \"배포 전역 상태를 건드리는 spec은 그 상태를 임대(`e2e/support/cluster.ts` + `finally` 복원 + `workers: 1`)\" 규약도 따를 것.\n② **범위 밖이지만 기록해 둔 위험**: `ci.yml`의 push job에 브랜치 조건이 없어 PR CI가 green이면 머지 전에 ghcr `:latest`로 코드가 나가고 실제로 featuredoc 파드가 그 이미지를 서빙했다(직전 task의 정보성 체크에서 관측). 이 모델의 정의 대상(문서↔구현)은 아니므로 이 task의 gap 계수에는 넣지 않았고, 별도 후속 대상으로만 남긴다.",
@@ -1254,6 +1254,14 @@
             }
           ],
           "plannedAt": "2026-08-28T11:27:07Z"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/feature-doc",
+          "branch": "reconcile/rct_20260814-0001-v2",
+          "pullRequestUrl": null,
+          "preparedAt": "2026-08-29T07:42:03Z",
+          "notes": "브랜치 `reconcile/rct_20260814-0001-v2` — 커밋 2개(`3e4f538` 슬라이스 4a를 현재 main 위로 옮긴 것 + `827fc1f` 재계획분).\norigin/main 대비 22 files +2324/-64.\n\n**직전 시도(PR #16) 대비 이번 재계획의 델타는 9 files** — `llm.rs`(OpenAI Responses API dispatch +\nprovider별 기본 모델 + `DEFAULT_PROVIDER` + 순수 builder/parser와 그 테스트), `llmkey.rs`(활성 키\n선택을 OpenAI 우선으로, preflight와 워커 경로가 같은 SQL을 공유), `bin/worker.rs`(폴백 provider),\n`cross_cutting.rs`(스키마에서 stub 응답 분리), `CredentialsSetup.tsx`(초기 선택 provider + 순서),\n`tests/llmkey.rs`(키 우선순위 2건), `tests/auth.rs`(임시 DB 경로 헬퍼 공용화 — 범위 밖 flake 수정),\n`ac1-2` spec fixture, `docs/doc-tracker.md`(「LLM 프로바이더 지원 범위」 절 + 변경 이력 보강).\n\n**로컬에서 재현한 게이트**(CI `test` 잡과 같은 명령): `cargo test --release` **83 passed / 0 failed**\n(직전 71 — 신규 12건: OpenAI 요청/응답 5 + Google 미지원 1 + 기본값 매핑 1 + 스키마 순수성 2 +\n키 우선순위 2 + 무회귀 대조 1), `npm run build`(tsc -b && vite build) 통과,\n`npx playwright test --list` 8파일/8테스트 트랜스파일 통과. `docs/prd` 트리 불변 확인.\n**로컬 불가**: docker/kind e2e — CI가 판정한다.\n\n**계획 대비 정정 2건**:\n① 계획 step 1은 PR #16 브랜치를 rebase해 갱신한다고 적었으나, **원격이 merge 커밋을 거부하고\nforce-push는 하지 않는다는 방침**이라 새 브랜치 `-v2`로 선형 히스토리를 만들었다. PR #16은 닫지\n않고 superseded로 남긴다(사용자 반려 코멘트가 그 스레드에 있다).\n② 계획 step 5는 `active_key_for_user`만 바꾼다고 적었으나 `preflight`도 같은 규칙을 써야 했다 —\n안 그러면 \"이 분석이 쓸 키\"를 알려주는 화면과 실제 호출이 서로 다른 키를 가리킨다. 두 곳이 같은\n`ACTIVE_KEY_SQL`을 공유하게 했다.\n\n⚠️ **게시 실패(환경)**: 계획 실행 환경의 egress가 1~2KB를 넘는 HTTP 요청 본문을 망가뜨려\n(`400 malformed request from your client` 또는 연결 끊김) `git push`와 Git Data API가 모두 실패했다.\n세션 초반에는 되던 것이 도중에 나빠진 것으로, 변경 내용과 무관하다. 커밋은\n`/home/silas/planner/.reconciler-work/artifacts/rct_20260814-0001-v2.{bundle,patch}`에 보존했고\n지침 §0에 복원·게시 절차를 적었다."
         }
       }
     ]
