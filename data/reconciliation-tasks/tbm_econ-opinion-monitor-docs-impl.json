@@ -1064,7 +1064,7 @@
       "summarizedAt": "2026-08-07T22:36:00Z"
     },
     "createdAt": "2026-08-07T22:36:00Z",
-    "updatedAt": "2026-08-12T19:50:06Z",
+    "updatedAt": "2026-08-29T08:27:26Z",
     "assessment": {
       "actionRequired": true,
       "reason": "슬라이스 착지 → 재감지의 정상 흐름이고, 잔여가 크고 **소유자가 없다**. (1) 트리거 delta 2커밋(`c4038e2`·`218dec6`)은 이 모델 자신의 task `rct_20260802-0001`의 실행 산출물이며, 그 task는 22:11:54Z 검증을 마치고 `succeeded`(terminal)로 닫혔다 — verification의 `asIsVersionAfter`가 이번 as-is와 문자 단위로 일치해 동일 사건임을 확인했다. 직전 3개 감지 사이클이 이 모델을 건너뛴 이유(당시 `executing` 점유)가 이제 해소됐다. (2) 이 모델에 다른 열린 task가 없다 — 전 이력이 succeeded/no_action_needed/cancelled로 모두 terminal이라 planner가 집어갈 미점유 handoff가 0건이다. (3) 잔여가 definition 기준 1에 정면으로 걸린다: **AC2.1~2.6 + AC3.1~3.8 = 14개 AC가 통째로 미구현**이고, 소스에서 실측한 근거는 analysis 패키지에 `fake_llm.py`뿐이라는 것, go 핸들러가 스스로 stub이라 주석한 라우트라는 것, web이 7화면 중 6화면 Placeholder라는 것이다. 정의는 페이크/스텁을 AC 충족으로 보지 않고 미구현 AC를 백로그가 아닌 drift로 규정한다. (4) 유예(재확인) 대상이 아니다 — 롤아웃 진행이나 일시 alert가 아니라 정적 문서↔구현 격차라 시간이 지나도 자동 해소되지 않는다. (5) 실행 가능한 조치가 실제로 존재한다: doc-tracker 로드맵이 다음 단위를 슬라이스 3(AC2.x 실 LLM 분석)으로 이미 특정해 두었고, 그 방향의 draft PR #9가 열려 있다(반려 사유는 \"모델 정의를 곧 바꾼다\"였고 그 개정은 `48fef79`로 이미 착지했으므로 반려 전제가 소멸했다) — 재상신 여부·범위·순서는 planner 판단. → planner 대기(`action_required`).\n참고로 이번 트리거 자체(AC1.1 스케줄링 착지)는 수렴 방향이며, 함께 관측된 운영 잔여(default_feeds 3개 소스 실패, PR #10 미채택 draft)는 AC 충족과 무관한 후속 사항으로 상태 요약에만 남긴다.",
@@ -1141,8 +1141,11 @@
         },
         "review": {
           "required": true,
-          "status": "pending",
-          "reason": "riskLevel은 low이고 되돌리기도 squash 커밋 1개 revert로 끝나지만, 사람이 먼저 봐야 할 지점이 셋 있다. (1) **가동 중인 프로덕션 워크로드가 참조하는 이미지가 재발행된다** — `image.yml`이 `type=raw,value=latest` + `push:true`라 머지 push 트리거로 GHCR `latest` 두 개가 main 빌드로 다시 발행되고, `deploy/batch/workflow-template.yaml`·`deploy/base/deployment.yaml`이 둘 다 `:latest`를 참조하므로 시간당 ingestion CronWorkflow가 다음 tick부터 그 이미지를 pull 한다(기능 영향은 0으로 판단 — 변경 트리가 python/packages/analysis + README + 워크플로 주석뿐이고 core/ingestion/aggregation/go/web/contracts/deploy 무변). (2) **`ECON_LLM_BASE_URL`/`ECON_LLM_MODEL`/`ECON_LLM_API_KEY` env 이름이 이후 클러스터 시크릿의 장기 계약이 된다** — executionGuide 자신이 '이름을 바꿀 거면 지금이 가장 싸다'고 검토를 요청한다. (3) **같은 방향의 직전 PR #9를 사용자가 명시적으로 반려한 이력**이 있다(사유: 모델 정의 개정 후 재판단). 반려 전제(`48fef79` 착지)는 소멸했지만, 재상신 여부는 사람이 확인할 사안이다. executionGuide도 '사람이 지켜야 할 게이트는 검토 → 머지 하나'라고 명시한다."
+          "status": "approved",
+          "reason": "riskLevel은 low이고 되돌리기도 squash 커밋 1개 revert로 끝나지만, 사람이 먼저 봐야 할 지점이 셋 있다. (1) **가동 중인 프로덕션 워크로드가 참조하는 이미지가 재발행된다** — `image.yml`이 `type=raw,value=latest` + `push:true`라 머지 push 트리거로 GHCR `latest` 두 개가 main 빌드로 다시 발행되고, `deploy/batch/workflow-template.yaml`·`deploy/base/deployment.yaml`이 둘 다 `:latest`를 참조하므로 시간당 ingestion CronWorkflow가 다음 tick부터 그 이미지를 pull 한다(기능 영향은 0으로 판단 — 변경 트리가 python/packages/analysis + README + 워크플로 주석뿐이고 core/ingestion/aggregation/go/web/contracts/deploy 무변). (2) **`ECON_LLM_BASE_URL`/`ECON_LLM_MODEL`/`ECON_LLM_API_KEY` env 이름이 이후 클러스터 시크릿의 장기 계약이 된다** — executionGuide 자신이 '이름을 바꿀 거면 지금이 가장 싸다'고 검토를 요청한다. (3) **같은 방향의 직전 PR #9를 사용자가 명시적으로 반려한 이력**이 있다(사유: 모델 정의 개정 후 재판단). 반려 전제(`48fef79` 착지)는 소멸했지만, 재상신 여부는 사람이 확인할 사안이다. executionGuide도 '사람이 지켜야 할 게이트는 검토 → 머지 하나'라고 명시한다.",
+          "reviewer": "user",
+          "reviewedAt": "2026-08-29T08:27:26Z",
+          "comment": "사용자가 대화에서 '승인'으로 답변. 코멘트·조건 없음. 검토 요청 시 제시한 세 지점(GHCR latest 재발행 → 시간당 ingestion CronWorkflow의 다음 pull, ECON_LLM_* env 이름의 장기 계약화, 직전 PR #9 반려 이력)을 그대로 두고 진행하는 것에 동의한 것으로 기록한다."
         }
       }
     ]
