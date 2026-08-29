@@ -1064,7 +1064,7 @@
       "summarizedAt": "2026-08-07T22:36:00Z"
     },
     "createdAt": "2026-08-07T22:36:00Z",
-    "updatedAt": "2026-08-29T08:27:43Z",
+    "updatedAt": "2026-08-29T08:32:32Z",
     "assessment": {
       "actionRequired": true,
       "reason": "슬라이스 착지 → 재감지의 정상 흐름이고, 잔여가 크고 **소유자가 없다**. (1) 트리거 delta 2커밋(`c4038e2`·`218dec6`)은 이 모델 자신의 task `rct_20260802-0001`의 실행 산출물이며, 그 task는 22:11:54Z 검증을 마치고 `succeeded`(terminal)로 닫혔다 — verification의 `asIsVersionAfter`가 이번 as-is와 문자 단위로 일치해 동일 사건임을 확인했다. 직전 3개 감지 사이클이 이 모델을 건너뛴 이유(당시 `executing` 점유)가 이제 해소됐다. (2) 이 모델에 다른 열린 task가 없다 — 전 이력이 succeeded/no_action_needed/cancelled로 모두 terminal이라 planner가 집어갈 미점유 handoff가 0건이다. (3) 잔여가 definition 기준 1에 정면으로 걸린다: **AC2.1~2.6 + AC3.1~3.8 = 14개 AC가 통째로 미구현**이고, 소스에서 실측한 근거는 analysis 패키지에 `fake_llm.py`뿐이라는 것, go 핸들러가 스스로 stub이라 주석한 라우트라는 것, web이 7화면 중 6화면 Placeholder라는 것이다. 정의는 페이크/스텁을 AC 충족으로 보지 않고 미구현 AC를 백로그가 아닌 drift로 규정한다. (4) 유예(재확인) 대상이 아니다 — 롤아웃 진행이나 일시 alert가 아니라 정적 문서↔구현 격차라 시간이 지나도 자동 해소되지 않는다. (5) 실행 가능한 조치가 실제로 존재한다: doc-tracker 로드맵이 다음 단위를 슬라이스 3(AC2.x 실 LLM 분석)으로 이미 특정해 두었고, 그 방향의 draft PR #9가 열려 있다(반려 사유는 \"모델 정의를 곧 바꾼다\"였고 그 개정은 `48fef79`로 이미 착지했으므로 반려 전제가 소멸했다) — 재상신 여부·범위·순서는 planner 판단. → planner 대기(`action_required`).\n참고로 이번 트리거 자체(AC1.1 스케줄링 착지)는 수렴 방향이며, 함께 관측된 운영 잔여(default_feeds 3개 소스 실패, PR #10 미채택 draft)는 AC 충족과 무관한 후속 사항으로 상태 요약에만 남긴다.",
@@ -1148,9 +1148,71 @@
           "comment": "사용자가 대화에서 '승인'으로 답변. 코멘트·조건 없음. 검토 요청 시 제시한 세 지점(GHCR latest 재발행 → 시간당 ingestion CronWorkflow의 다음 pull, ECON_LLM_* env 이름의 장기 계약화, 직전 PR #9 반려 이력)을 그대로 두고 진행하는 것에 동의한 것으로 기록한다."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-08-29T08:27:43Z",
-          "entries": []
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "finishedAt": "2026-08-29T08:32:32Z",
+              "log": "브랜치 reconcile/rct_20260807-0001-analysis-llm의 산출물이 이번 머지로 main에 착지. PR #9(브랜치 reconcile/rct_20260802-0001-analysis-llm-optin)와 PR #10은 손대지 않았고 머지 후에도 open draft로 그대로 확인됨."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "finishedAt": "2026-08-29T08:32:32Z",
+              "log": "econ_analysis/llm.py 280줄이 main에 존재. Completer Protocol · CompletionError · ConfigError · http_completer(ECON_LLM_BASE_URL/MODEL/API_KEY) · build_prompt · parse_response · analyze_llm 확인. fake_llm.normalize_subject 재사용(AC2.2), _tracking_key가 record_id·source_url 보존(AC2.6), sentiment는 SENTIMENT_VALUES 4분류 강제(AC2.3), _clean_list로 다중 target_countries 보존(AC2.1·2.4), 저신뢰 임계 미만은 low_confidence·판단 불가는 unanalyzed(AC2.5)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "finishedAt": "2026-08-29T08:32:32Z",
+              "log": "오설정 분리 가드 실증: 머지된 main에서 키 없이 `python -m econ_analysis --data <lake> --analyzer llm` 실행 → exit 2, stderr `analysis[llm]: ECON_LLM_API_KEY is not set; required by --analyzer llm`, 기존 silver/analysis.jsonl md5 1331ebff… 변화 없음(Bronze 미독출)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "finishedAt": "2026-08-29T08:32:32Z",
+              "log": "AnalysisStats(attempted/failed) 노출 확인 — 전량 실패 실행이 `all 12 model calls failed`로 시도 건수를 보고. 본문 없는 2건은 attempted에 잡히지 않음(fake 경로 산출의 unanalyzed 2건과 정합)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "finishedAt": "2026-08-29T08:32:32Z",
+              "log": "전량 실패 가드 실증: ECON_LLM_BASE_URL=http://127.0.0.1:9/v1 + 더미 키로 실행 → exit 3, stderr `analysis[llm]: all 12 model calls failed; Silver left unchanged`, 기존 Silver 바이트 보존 확인."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "finishedAt": "2026-08-29T08:32:32Z",
+              "log": "테스트 착지 확인 — packages/analysis/tests/test_llm.py 17건 + test_cli.py 5건 신규, 전체 pytest 50 passed(기존 28건 유지). 오프라인 실행(네트워크 없이 전송 주입)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "finishedAt": "2026-08-29T08:32:32Z",
+              "log": "CI 게이트 로컬 1:1 재현(머지된 main 체크아웃): `uv run pytest` 50 passed, `uv run ruff check .` All checks passed, `uv run ruff format --check .` 30 files already formatted, ruff 0.15.18(uv.lock 핀과 일치)."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "finishedAt": "2026-08-29T08:32:32Z",
+              "log": "네거티브 컨트롤은 계획 단계에서 5건 수행·복구 기록이 있어 재수행하지 않음. 이번 실행에서는 두 가드를 실제 프로세스 종료코드(2/3)와 파일 md5로 관측해 단정이 공허하지 않음을 재확인."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "finishedAt": "2026-08-29T08:32:32Z",
+              "log": "문서 정합 확인 — README 범위 문구·__init__/cli docstring이 opt-in 실 LLM·기본 fake·오설정 실패를 그대로 기술. image.yml 주석의 존재하지 않는 파일명 정정도 함께 착지."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "finishedAt": "2026-08-29T08:32:32Z",
+              "log": "머지 실행 — draft 해제(GraphQL markPullRequestReadyForReview) 후 squash merge. 머지 커밋 fc304c58076ae98328a89f7a9e048686a2662303, base는 계획 당시 218dec6이 아니라 그동안 3커밋 전진한 39d2337(#13 e2e 인프라·#16 Pages 골격·#14 compare 뷰). mergeable=MERGEABLE / CLEAN으로 충돌 없이 머지됐고, 그 3커밋은 go·web·tests·docs만 건드려 python과 겹치지 않음. 머지 시 브랜치 자동 삭제(수동 DELETE는 422 = 이미 없음). || 계획이 지시한 `gh pr checks 12` CI 재확인은 **수행하지 못함** — 이 GitHub App 설치에 checks:read·actions:read 권한이 없어 Actions/check-runs API가 403. 대신 (a) 머지 직전 mergeable_state=clean과 (b) 머지된 main에서 CI 게이트(pytest·ruff·기본 경로 산출)를 로컬로 직접 재현하는 것으로 대체했고, 그 결과가 아래 verification이다."
+            }
+          ],
+          "finishedAt": "2026-08-29T08:32:32Z"
         }
       }
     ]
