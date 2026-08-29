@@ -1046,7 +1046,7 @@
   {
     "id": "rct_20260807-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-07T22:36:00Z",
       "changedSides": [
@@ -1064,7 +1064,7 @@
       "summarizedAt": "2026-08-07T22:36:00Z"
     },
     "createdAt": "2026-08-07T22:36:00Z",
-    "updatedAt": "2026-08-29T08:32:32Z",
+    "updatedAt": "2026-08-29T08:33:34Z",
     "assessment": {
       "actionRequired": true,
       "reason": "슬라이스 착지 → 재감지의 정상 흐름이고, 잔여가 크고 **소유자가 없다**. (1) 트리거 delta 2커밋(`c4038e2`·`218dec6`)은 이 모델 자신의 task `rct_20260802-0001`의 실행 산출물이며, 그 task는 22:11:54Z 검증을 마치고 `succeeded`(terminal)로 닫혔다 — verification의 `asIsVersionAfter`가 이번 as-is와 문자 단위로 일치해 동일 사건임을 확인했다. 직전 3개 감지 사이클이 이 모델을 건너뛴 이유(당시 `executing` 점유)가 이제 해소됐다. (2) 이 모델에 다른 열린 task가 없다 — 전 이력이 succeeded/no_action_needed/cancelled로 모두 terminal이라 planner가 집어갈 미점유 handoff가 0건이다. (3) 잔여가 definition 기준 1에 정면으로 걸린다: **AC2.1~2.6 + AC3.1~3.8 = 14개 AC가 통째로 미구현**이고, 소스에서 실측한 근거는 analysis 패키지에 `fake_llm.py`뿐이라는 것, go 핸들러가 스스로 stub이라 주석한 라우트라는 것, web이 7화면 중 6화면 Placeholder라는 것이다. 정의는 페이크/스텁을 AC 충족으로 보지 않고 미구현 AC를 백로그가 아닌 drift로 규정한다. (4) 유예(재확인) 대상이 아니다 — 롤아웃 진행이나 일시 alert가 아니라 정적 문서↔구현 격차라 시간이 지나도 자동 해소되지 않는다. (5) 실행 가능한 조치가 실제로 존재한다: doc-tracker 로드맵이 다음 단위를 슬라이스 3(AC2.x 실 LLM 분석)으로 이미 특정해 두었고, 그 방향의 draft PR #9가 열려 있다(반려 사유는 \"모델 정의를 곧 바꾼다\"였고 그 개정은 `48fef79`로 이미 착지했으므로 반려 전제가 소멸했다) — 재상신 여부·범위·순서는 planner 판단. → planner 대기(`action_required`).\n참고로 이번 트리거 자체(AC1.1 스케줄링 착지)는 수렴 방향이며, 함께 관측된 운영 잔여(default_feeds 3개 소스 실패, PR #10 미채택 draft)는 AC 충족과 무관한 후속 사항으로 상태 요약에만 남긴다.",
@@ -1213,6 +1213,74 @@
             }
           ],
           "finishedAt": "2026-08-29T08:32:32Z"
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "contracts:b67b8ff3a7918b8df40e1a7866d3b920ad5d1abf python:83acd70ad90a20aa9fb6de0a29a2b4974d3d5d11 go:a180e198cdb690bb0a6821a44181b5041e775dbd web:c0299bf0806878b2cd02e40f9e9df4351038d63e deploy:781916043165ab21c57ec3f1be4fd39aa3d0ef10",
+          "verifiedAt": "2026-08-29T08:33:34Z",
+          "checks": [
+            {
+              "name": "(a) 실 분석기 모듈이 main에 존재 + 기본값 fake 유지",
+              "status": "passed",
+              "detail": "머지된 main(fc304c5) 체크아웃: python/packages/analysis/src/econ_analysis/llm.py 280줄 존재, cli.py:49 `default=\"fake\"`. 패키지 구성 __init__/__main__/cli/fake_llm/llm."
+            },
+            {
+              "name": "(b) 오프라인 게이트 재현 (완료 기준 5)",
+              "status": "passed",
+              "detail": "`uv run pytest` **50 passed**(기존 28 + 신규 22: test_llm.py 17 · test_cli.py 5). `uv run ruff check .` All checks passed, `uv run ruff format --check .` 30 files already formatted. ruff 0.15.18로 uv.lock 핀과 일치."
+            },
+            {
+              "name": "(c-1) 오설정 = 운영 실패 가드 (완료 기준 3)",
+              "status": "passed",
+              "detail": "키 없이 --analyzer llm → **exit 2**, stderr `ECON_LLM_API_KEY is not set; required by --analyzer llm`. 직전 fake 실행이 만든 silver/analysis.jsonl md5 1331ebffa8d5bf7a963e4e2137df98f9가 실행 전후 동일 = Bronze 읽기 전 종료·무기록 확인."
+            },
+            {
+              "name": "(c-2) 전량 실패 가드 + 시도/실패 카운터 (완료 기준 4)",
+              "status": "passed",
+              "detail": "ECON_LLM_BASE_URL=http://127.0.0.1:9/v1 + 더미 키 → **exit 3**, stderr `all 12 model calls failed; Silver left unchanged`. 기존 Silver md5 불변. 본문 없는 2건은 attempted에서 제외돼 12로 계수(전체 14건 중)."
+            },
+            {
+              "name": "(d) 기본 경로 산출 무변 (완료 기준 6)",
+              "status": "passed",
+              "detail": "머지 전 트리(39d2337)와 머지 후 트리(fc304c5)에서 각각 smoke.sh와 동일한 3단 파이프라인(fake ingestion → analysis → aggregation, --cycle 2026-06-23T14:00) 실행 후 전량 비교: bronze/news_item(14) · bronze/news_body(12) · silver/analysis(14) · gold/axis_sentiment(3) · gold/subject_trend(14) **전 레코드 동일**. 유일한 차이는 실행 벽시계 필드(collected_at·first_seen_at·analyzed_at)로 두 실행이 1초 차이로 돈 결과이며, 정규화 후 완전 일치. gold 두 파일은 정규화 없이도 바이트 동일."
+            },
+            {
+              "name": "(1) AC2.1~2.6 구현체 실재 (완료 기준 1)",
+              "status": "passed",
+              "detail": "llm.py 실측: 다중 target_countries 보존(AC2.1·2.4, _clean_list) · normalize_subject 재사용한 표기 통합 + 카탈로그 밖 원형 보존(AC2.2) · SENTIMENT_VALUES 4분류 밖이면 CompletionError(AC2.3) · 임계 미만 low_confidence·판단 불가 unanalyzed 비강제(AC2.5) · _tracking_key가 record_id/source_url 보존(AC2.6). _SYSTEM_PROMPT가 이 기준들을 문장으로 직접 담고 있음."
+            },
+            {
+              "name": "(2) CLI 계약 (완료 기준 2)",
+              "status": "passed",
+              "detail": "`--analyzer {fake,llm}` 존재, 기본 fake. 실 LLM 경로는 플래그 + ECON_LLM_API_KEY가 동시에 있어야만 발화."
+            },
+            {
+              "name": "(7) 문서-구현 일치 (완료 기준 7·기준 5 무위반)",
+              "status": "passed",
+              "detail": "README 범위 문구와 __init__/cli docstring이 opt-in 실 LLM·기본 fake·오설정 시 실패를 그대로 기술. image.yml 주석의 잘못된 파일명(cronjob-ingestion.yaml) 정정도 착지."
+            },
+            {
+              "name": "(e) 재감지 트리거 성립",
+              "status": "passed",
+              "detail": "as-is python 트리 bf77a10e… → **83acd70a…** 변화. contracts·deploy는 무변(b67b8ff3 / 78191604), go·web은 이 작업과 무관한 그 사이 3커밋(#13·#16·#14)으로 이동. 다음 감지 주기가 이 변화를 보고 잔여 gap의 후속 task를 연다."
+            },
+            {
+              "name": "[정보] 계획이 지시한 CI 재확인은 대체 수행",
+              "status": "passed",
+              "detail": "executionGuide 1·4단계의 `gh pr checks` / 머지 후 Actions 확인은 이 GitHub App 설치에 checks:read·actions:read가 없어 403으로 불가했다(권한 요청 시 422). 머지 직전 mergeable_state=CLEAN과, 위 (b)(c)(d)의 로컬 게이트 재현으로 대체했다. Actions 자체 결과는 이 검증에 포함되지 않음."
+            },
+            {
+              "name": "[정보] 이 task 범위 밖 잔여 gap",
+              "status": "passed",
+              "detail": "모델 전체 to-be 대비: 기본 analyzer의 llm cutover, 배치 WorkflowTemplate에 analysis/aggregation 배선 + 키 시크릿, analysis.spec e2e 6케이스, AC3.1~3.8 중 미착지분이 남는다(단 #14로 AC3.7 compare 뷰가 그 사이 별도 task로 착지). 수렴 판정에는 넣지 않으며 재감지가 후속 task로 잇는다."
+            },
+            {
+              "name": "[정보] 열린 draft PR 보존",
+              "status": "passed",
+              "detail": "PR #9(같은 방향, 이전 task 소유)와 #10(미채택 CronJob 수단)은 지침대로 손대지 않았고 머지 후에도 open draft. #9 정리 여부는 검토자 판단이며 이 task의 완료 조건 아님."
+            }
+          ]
         }
       }
     ]
