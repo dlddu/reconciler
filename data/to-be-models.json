@@ -1025,5 +1025,50 @@
     "checkPolicy": {
       "intervalSeconds": 3600
     }
+  },
+  {
+    "id": "tbm_feature-doc-mockup-render",
+    "metadata": {
+      "name": "feature-doc 목업 ↔ 구현 렌더링 정합성",
+      "description": "dlddu/feature-doc에서 이미 구현된 화면 컴포넌트(frontend/src의 React+Vite SPA)가 대응 목업(docs/mockups, 자립형 HTML · 여정 페이지 JRN-*와 화면 단위 sNN-*, 화면 ID 체계 S01~S10)과 시각적으로 일치하는지를 화면 코드 정적 대조로 추적한다. 매핑·디자인 토큰·카피·구조 수치·상태 스타일의 불일치와 미문서화 이탈을 drift로 본다. 미구현 화면은 범위 밖(docs-impl 담당)이고, 실행 스크린샷 픽셀 비교도 범위 밖이다.",
+      "tags": [
+        "feature-doc",
+        "mockup",
+        "ui",
+        "design-system",
+        "consistency"
+      ],
+      "createdAt": "2026-08-30T13:59:17Z"
+    },
+    "definition": "# feature-doc 목업 ↔ 구현 렌더링 정합성\n\n## 목표\n`dlddu/feature-doc`(GitHub 저장소가 제공하는 최종 사용자 기능을 LLM의 도움으로 발견·표현·관리하는 도구)에서 **이미 구현된 화면**(`frontend/src/*.tsx` — React+Vite SPA의 화면 컴포넌트)의 렌더링 결과가 대응 **목업**(`docs/mockups/`, 자립형 HTML 393×844 다크 · 여정 페이지 `JRN-<슬러그>.html`과 화면 단위 `sNN-*.html`, 화면 ID 체계 `S01`~`S10`)의 화면과 일치하도록 수렴시킨다. 판정은 **화면 코드 정적 대조**로 한다(실행 스크린샷 픽셀 비교가 아님).\n\n## 무엇이 \"맞는 상태\"인가 (to-be)\n- **시각의 단일 소스(SSOT)는 목업**이다: `docs/mockups/`(디자인 시스템 CSS를 파일마다 인라인한 자립형 HTML), 토큰 정의 `docs/design-system.md`. 목업은 빌드 없이 `file://`로 열리는 원본이라 **별도 빌드 산출물이 없다**.\n- **to-be(목표 상태)** 는 다음이 모두 성립하는 상태다:\n  1. **매핑 완비** — 구현된 모든 화면 컴포넌트가 대응 목업과 기계적으로 확인 가능한 형태로 매핑되어 있다(컴포넌트 파일 상단 주석의 `docs/mockups/<파일>#STP-<슬러그>` 앵커 또는 `SNN` 화면 ID 참조).\n  2. **토큰 일치** — `docs/design-system.md` §5.2 `:root`의 토큰(표면 5단계, 보더 3단계, 텍스트 4단계, status 4색, accent 3종, `--font-sans`·`--font-mono`)이 `frontend/src/index.css`의 `:root` 커스텀 프로퍼티와 이름·값 모두 1:1 대응한다. 목업이 쓰는 raw hex는 새 값을 만들지 않고 이 토큰으로 환원된다.\n  3. **카피 일치** — 목업 화면의 텍스트 리터럴과 대응 구현 화면의 텍스트가 양방향으로 일치한다.\n  4. **구조·수치 일치** — 목업과 구현이 **양쪽 다 CSS**이므로 클래스·커스텀 프로퍼티·px 값을 별도 환산 없이 직접 대조한다. 요소 순서·계층, 간격·라운드·굵기, 상태별 스타일, primary CTA 구성(디자인 시스템 §6 원칙 6 — 화면당 1개)이 목업과 같다.\n  5. **이탈의 문서화** — 불가피한 차이는 사유가 명시된 허용목록으로만 존재한다. 이 레포의 허용목록은 `docs/doc-tracker.md`의 「알려진 목업↔구현 편차」 표이며, 각 행은 무엇이 왜 덜 표현되는지와 **해소 시점(슬라이스)** 을 함께 적는다.\n- **범위**: 구현된 화면에 대응하는 목업만. 아직 구현되지 않은 화면의 부재는 이 모델의 drift가 **아니다**.\n- **여정 이관 진행 중이라는 특수 사정**: 목업은 화면 단위(`sNN-*.html`)에서 여정 단위(`JRN-*.html`)로 이관 중이고, 이관으로 흡수된 원본은 삭제된다(`docs/mockups/README.md` 「여정 페이지 규약」 ①⑤). 따라서 구현 주석의 목업 참조는 **이관과 함께 갱신되어야 하며**, 삭제된 파일이나 존재하지 않는 앵커를 가리키는 주석은 아래 판정 기준 1의 매핑 공백으로 본다.\n- **등록 시점 현황**: 화면 컴포넌트 4개(`CredentialsSetup`=S01, `HomeRepositories`=S02, `ConnectRepository`=S03, `AnalysisProgress`=S04)가 모두 상단 주석 매핑을 갖는다 — S01~S03은 여정 페이지 `JRN-connect-repo.html`의 `#STP-*` 앵커를, S04는 아직 화면 단위인 `s04-analysis-progress.html`을 가리킨다. 목업은 여정 페이지 1개 + 화면 단위 7개(`s04`~`s10`)이고, 「알려진 목업↔구현 편차」에 등재된 이탈은 6건이다. 이 문단의 숫자는 **스냅샷일 뿐 판정 기준이 아니다** — 목업이 추가·삭제되거나 여정 이관이 진행되면 to-be 트리 해시가 바뀌어 재평가가 트리거되고, 새 목업도 대응 화면이 구현되는 순간 자동으로 판정 대상이 된다. 현황 숫자 갱신은 각 task의 몫이다.\n\n## drift 판정 기준\nas-is(구현 화면)가 to-be(목업)와 어긋나면 drift다:\n1. **매핑 공백·오매핑** — 구현 화면 컴포넌트에 대응 목업 매핑이 없거나, 매핑이 이관으로 삭제된 파일·존재하지 않는 `#STP-*` 앵커를 가리킴.\n2. **stale 참조** — 매핑이 가리키는 목업 앵커의 화면 블록이 실제 컴포넌트가 그리는 화면과 어긋남(이관·재작성으로 내용이 바뀐 경우 포함).\n3. **토큰 불일치** — `:root` 토큰 이름·값 중 어느 하나라도 어긋나거나, 구현이 토큰 밖의 새 값을 도입함.\n4. **카피 불일치** — 어느 방향이든 텍스트 차집합이 존재함.\n5. **구조·수치 불일치** — 요소 순서·계층, 간격·라운드·굵기, 상태별 스타일, CTA 유무의 차이.\n6. **미문서화 이탈** — 「알려진 목업↔구현 편차」에 사유·해소 시점 없이 존재하는 차이.\n\n각 task는 직전 관측 대비 \"일치가 늘었는가 / 새 불일치가 생겼는가 / 목업 변경으로 to-be가 달라졌는가\"를 평가하되, 남은 불일치 전체를 상태 요약에 유지한다.\n\n## 충돌 시 기본 방향\n**목업이 스펙(SSOT)이므로 원칙적으로 구현을 목업에 맞춘다.** 단 그 차이가 의도된 디자인 변경이거나 목업이 전제하는 데이터·API가 아직 없어서 생긴 것이면, 목업 소스를 고치거나 「알려진 목업↔구현 편차」에 해소 시점과 함께 등재해 구현에 맞춘다. **지어낸 값으로 목업을 흉내내지 않는 것**이 이 레포의 기존 방침이며(등재된 6건이 그 결과다), 어느 쪽인지는 각 task의 계획 단계에서 판단한다.\n\n## 추적 방식 (요약)\n- **to-be** = github `dlddu/feature-doc`의 `docs/mockups` 트리 해시와 `docs/design-system.md` blob 해시 조합. 목업이 자립형이라 빌드 산출물 해시는 쓰지 않는다.\n- **as-is** = 같은 레포의 `frontend/src` 트리 해시. `backend`·`e2e`·`deploy` 변경은 무시된다.\n- 매핑이 주석 밖의 기계 판독 파일로 정착하면 as-is를 트리 해시 대신 **매핑·토큰·카피 지문(sha256)** 으로 좁힐 수 있다(모델 개정 사항).\n\n## 범위 밖 / 비고\n- **실행 스크린샷 픽셀 비교는 범위 밖**이다. 등록 시점에 `e2e/`(Playwright)는 기능 검증만 하고 시각 회귀 스냅샷 대조를 쓰지 않는다. 캡처 인프라를 도입하면 이 모델의 판정 방식을 개정한다.\n- **미구현 화면의 구현 의무는 `tbm_feature-doc-docs-impl`이 담당**한다. 그 모델의 to-be 중 UI 일치 항목과 겹치므로, **화면 단위 시각 대조는 이 모델이 담당**하는 것으로 경계를 둔다.\n- 사슬 `여정 문서 → 여정 mockup → 구현 화면`에서 **앞 칸(여정 ↔ 목업 페이지 1:1과 프로토타입 충실도)은 `tbm_feature-doc-journey-mockup`**, 뒤 칸(그 목업대로 구현됐는가)이 이 모델이다. 동작·상태 전이의 검증 커버리지는 `tbm_feature-doc-ac-e2e`가 담당한다.\n- `docs/wireframes/`는 화면의 정보 구조 합의물이지 시각 SSOT가 아니므로 to-be 소스에 포함하지 않는다.\n- `backend/`·`e2e/`·`deploy/`는 렌더링 소스가 아니므로 as-is 범위 밖이다. 다만 `frontend/src`는 평면 구조라 비렌더링 모듈(`api.ts`·`format.ts`·`vite-env.d.ts`)이 같은 트리에 있어 버전 범위에서 분리되지 않는다 — 이들만 바뀐 변경도 task를 만들 수 있으나, **판정 대상은 화면 컴포넌트와 `index.css`뿐**이다.\n",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/feature-doc",
+        "ref": "main",
+        "subPath": "docs/mockups"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = 목업(시각 SSOT). docs/mockups(자립형 HTML 소스) 트리 해시 +\n# docs/design-system.md(토큰 정의) blob 해시 조합.\n# 목업이 빌드 없이 열리는 원본이라 별도 번들 해시는 쓰지 않는다.\n# 런타임이 dataSource.repository(dlddu/feature-doc)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nm=\"$(git rev-parse \"HEAD:docs/mockups\")\"\nd=\"$(git rev-parse \"HEAD:docs/design-system.md\")\"\nprintf 'mockups:%s design-system:%s\\n' \"$m\" \"$d\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/feature-doc",
+        "ref": "main",
+        "subPath": "frontend/src"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = 실제 구현의 렌더링 소스. frontend/src(화면 컴포넌트 + index.css) 트리 해시.\n# → backend/·e2e/·deploy/ 등 렌더링과 무관한 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/feature-doc)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ns=\"$(git rev-parse \"HEAD:frontend/src\")\"\nprintf 'frontend-src:%s\\n' \"$s\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "checkPolicy": {
+      "intervalSeconds": 3600
+    }
   }
 ]
