@@ -102,7 +102,7 @@
     "toBeModelId": "tbm_dear-baby-journey-mockup",
     "status": "planning",
     "createdAt": "2026-08-30T10:07:30Z",
-    "updatedAt": "2026-08-30T10:33:00Z",
+    "updatedAt": "2026-08-30T10:47:00Z",
     "trigger": {
       "detectedAt": "2026-08-30T10:07:30Z",
       "changedSides": [
@@ -149,8 +149,8 @@
             },
             {
               "seq": 3,
-              "action": "`patch_model.py`(지침 §4에 전문 수록)로 패치 JSON을 만든다. description 1건 + definition exact-match 치환 14건 + 개정 메모 + `toBe`(dataSource.subPath·versionScript·재기준선) + `asIs`(versionScript·재기준선) + `metadata.updatedAt`을 담고, 치환 대상 문자열을 하나라도 못 찾으면 아무것도 쓰지 않고 실패한다.",
-              "expectedOutcome": "`OK: 패치 생성 … definition 치환 14/14 + description + 개정 메모 + toBe + asIs`. `FAIL:`이면 계획 이후 레코드가 바뀐 것이므로 **부분 적용하지 말고** 재계획한다."
+              "action": "`patch_model.py`(지침 §4에 전문 수록)로 패치 JSON을 만든다. description 1건 + definition exact-match 치환 13건 + 개정 메모 + `toBe`(dataSource.subPath·versionScript·재기준선) + `asIs`(versionScript·재기준선) + `metadata.updatedAt`을 담고, 치환 대상 문자열을 하나라도 못 찾으면 아무것도 쓰지 않고 실패한다.",
+              "expectedOutcome": "`OK: 패치 생성 … definition 치환 13/13 + description + 개정 메모 + toBe + asIs`. `FAIL:`이면 계획 이후 레코드가 바뀐 것이므로 **부분 적용하지 말고** 재계획한다."
             },
             {
               "seq": 4,
@@ -179,6 +179,13 @@
             }
           ],
           "plannedAt": "2026-08-30T10:33:00Z"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/reconciler",
+          "pullRequestUrl": null,
+          "preparedAt": "2026-08-30T10:47:00Z",
+          "notes": "**PR 없음 — 직접 액션으로 실행한다.** 바꿀 대상이 대상 서비스 레포가 아니라 **reconciler 레포 자신의 모델 레코드**(`data/to-be-models.json`의 `tbm_dear-baby-journey-mockup` 1건)이기 때문이다. 근거 셋: ① 이 레포의 관례상 모델 레코드는 PR이 아니라 main 직접 커밋(`model(tbm_...)`)으로 편집된다 — 지금까지 planner가 만든 PR은 전부 대상 서비스 레포행이다. ② `data/to-be-models.json`은 detector가 fire마다 baseline을 전진시키며 쓰는 단일 JSON이라 PR 브랜치는 머지 시점 충돌이 거의 확정이다(이 레포엔 `awaiting_review`로 3주째 대기 중인 task가 있다). ③ 가역성은 PR 없이도 커밋 1건 `git revert`로 확보된다. 대상 레포(dlddu/dear-baby)·클러스터·배포에는 아무 변경도 가하지 않는다 — dear-baby는 **읽기만** 했다.\n\n**PR 대신 스테이징한 것**: 실행을 결정적으로 만드는 **패치 스크립트 전문**을 `plan.executionGuide` §4에 실었다. definition 치환 13건이 전부 exact-match라, 계획 이후 레코드가 바뀌었으면 패치를 만들지 않고 `FAIL:`로 멈춘다(부분 적용 불가). 재기준선 값은 계획서 값을 붙여넣지 않고 실행 시점에 대상 레포 클론에서 스크립트를 실제로 돌려 얻는다. 적용은 `reconciler_tool.py upsert --schema`가 한다.\n\n**계획 시점 실증(2026-08-30 ~10:4xZ) — 전 과정을 사본에서 한 번 완주했다**(`$CLAUDE_JOB_DIR/tmp`의 repo 사본. reconciler 레포에는 아무것도 적용하지 않았다):\n- 치환 13/13 매칭 · description 1건 · 개정 이력 절 추가 · `FAIL:` 가드(중복 적용·죽은 앵커 잔존) 동작\n- `upsert --schema` 성공 → `validate` **21 record(s) conform**\n- **라운드트립**: 갱신된 레코드에서 두 versionScript를 도로 뽑아 dear-baby HEAD(`2ee25b3`)에서 실행 → 둘 다 exit 0, 형태 정규식 통과, `lastObservedVersion`과 **MATCH**\n  · to-be `user-journeys-tree:afc731d8391e88eedab8618d1ef3790b999ca8ec`\n  · as-is `mockups:086c3876… jmock:c3c619fc… map:f7439117… hub:0d5aaf98…`\n- **부정 시험**(레코드에서 뽑은 스크립트로, PR #182 직전 커밋 `51fbd4a7`): to-be → `user-journeys-tree:absent` exit 0 / as-is → `mockups:baba3df0… jmock:4fc0e70e… map:absent hub:ffced502…` exit 0. **죽지 않고 관측된다.**\n- diff 범위: 레코드 1건 · 바뀐 키 `metadata`·`definition`·`toBe`·`asIs` · `checkPolicy`와 `asIs.dataSource` 불변 · 나머지 20개 모델 무변\n\n**곁가지로 확인된 것 둘(둘 다 실측)**\n① `51fbd4a7`에서 새 as-is 스크립트가 내는 `mockups:baba3df0…`·`hub:ffced502…`는 레코드에 남은 구 `asIs.previousVersion`과 정확히 일치하고, `jmock:4fc0e70e…`는 구 `toBe.previousVersion`과 정확히 일치한다 — **같은 경로가 to-be 축이자 as-is 축이었다**는 것이 baseline 수준에서 확인된다.\n② 열린 PR [dear-baby#181](https://github.com/dlddu/dear-baby/pull/181)(= 이 모델의 `rct_20260815-0001`, status `awaiting_review`)을 현재 main에 머지해 **실제로 돌려 봤다**: `docs/doc-tracker.md` 머지 충돌 1건 + 그 PR이 신설하는 CI 체커 `scripts/check-journey-mockup-map.mjs`가 **exit 1, 실패 40건 이상**(`JOURNEY_DIR='docs/journeys'`를 하드코딩해 여정 문서를 0개로 읽는다 → J2 PHANTOM_ROW 6건 + J5 STAGE_SET 25건 + J9 SYNC 6건). 그 PR의 자체 review가 '가장 큰 위험'으로 적은 **'머지 후 main에서 체커가 실패하면 모든 후속 PR이 빨간불'** 이 지금 실현된 상태다. 그 task는 executor 점유라 **상태를 건드리지 않았고**, 사실만 지침 §5와 보고에 남긴다."
         }
       }
     ]
