@@ -141,7 +141,7 @@
     "toBeModelId": "tbm_feature-doc-journey-mockup",
     "status": "planning",
     "createdAt": "2026-08-30T10:31:00Z",
-    "updatedAt": "2026-08-30T10:44:00Z",
+    "updatedAt": "2026-08-30T10:55:00Z",
     "trigger": {
       "detectedAt": "2026-08-30T10:31:00Z",
       "changedSides": [
@@ -169,6 +169,67 @@
       "reason": "작업 필요 → `action_required`. 세 갈래이며, **순서가 중요하다**.\n\n**근거 1 — 판정 대상 집합이 교체됐고, 새 gap은 열린 task가 담고 있지 않다.**\n직전 `rct_20260829-0001`을 `no_action_needed`로 닫은 논리는 \"잔여 gap이 열린\n`rct_20260815-0001`의 범위와 정확히 같다\"였다. 이번엔 그 전제가 깨졌다. to-be가 플로우 4개\n(전역 순번 `S01`~`S11`)에서 여정 6개(슬러그 `JRN-`/`STP-`, 26단계)로 통째로 바뀌었고,\n`rct_20260815-0001`의 계획은 (a) base `c06a858`, (b) \"`S01`~`S11` 11개 전부를 `STP-*`로 등록\"하는\n레지스트리, (c) 선행 결정 항목 \"**플로우 4 방향 결정**\", (d) 산출물\n`docs/journeys/flow-01-onboarding-and-connect.html`을 명시한다. 플로우 4 문서는 이제 존재하지\n않고, 슬러그 이관은 레포가 이미 **다른 분할**로 끝냈다(구 플로우 4 → `JRN-follow-code-change` +\n`JRN-restore-history` 두 개로 쪼갬). 그 계획대로 실행하면 삭제된 문서를 근거로 작업하게 된다.\n같은 gap의 중복 handoff가 아니라 **다른 gap**이다.\n\n**근거 2 — 모델 `definition`이 실재와 어긋나 판정 기준이 공집합이 된다(선행 수리 대상).**\n`versionScript`는 `docs/user-journey` 트리 전체를 해시하므로 rc=0이고 의미도 유지된다. 문제는\n`definition`이다: SSOT를 네 파일로 **열거**하고 매칭 단위를 \"`docs/user-journey/0N-*.md` 파일 1개 =\n플로우 1개\"로 못박는데, 그 패턴에 맞는 파일이 **0개**다. 단계 확인 지점도 \"`### S<NN>` 헤딩,\n플로우 4는 `## 시나리오 A~D`\"로 적혀 있어 실제 `### \\`STP-*\\``와 다르다. 규칙을 문자 그대로\n적용하면 판정 대상이 공집합이 되어 **드리프트가 영구히 0으로 보인다**. versionScript가 죽으면\n매 fire가 시끄럽게 실패하지만 이 경우는 조용히 통과하므로 더 위험하다 — 재감지 경로가 살아 있는\n채로 판정만 비어 있다. 계획 수립보다 **이 수리가 먼저**여야, 다음 계획이 무엇을 1:1로 맞출지\n말할 수 있다.\n\n**근거 3 — 자동 해소를 기다릴 성질이 아니다.** 유예(`recheckAfter`)는 롤아웃·일시적 alert처럼\n스스로 수렴하는 변화에 쓴다. 여기서는 반대로 레포가 `docs/mockups/README.md`와 doc-tracker에\n\"여정 단위 전환 여부는 **여전히 미결정**\"이라고 명문화했다. 방치하면 gap이 그대로 유지된다.\n\n**근거 4 — 다만 판정 대상은 6개가 아니라 5개로 줄었다(gap의 정확한 크기).** doc-tracker의\n\"수용된 위험\" 표에서 첫 행이 \"플로우 4 시나리오 D — 변경 이력 화면(S11 후보)\"에서\n\"**`JRN-restore-history` 전체** — 변경 이력 화면(S11 후보)\"으로 재키잉되면서, 사유와 수용\n시점(2026-05-27)을 갖춘 **여정 단위 예외**가 이 모델 이력상 처음으로 성립했다(규칙 8 충족).\n그 여정은 목업 페이지가 없어도 drift가 아니다. 두 번째 행(`STP-sign-in` 미인증 상태)은 여전히\n단계 표현 결함이지 여정 예외가 아니다. 따라서 규칙 1 위반은 **5/5**(전부 미시각화)이고,\n이전의 \"과다 시각화 3·4·3\" 케이스는 사라졌다.\n\n**planner에게 넘기는 권고(범위 제안, 구속은 아님)**\n1. **모델 수리 선행**: `definition`의 SSOT 열거·매칭 단위 패턴(`0N-*.md` → `JRN-*.md`)·단계 확인\n   지점(`### S<NN>` → `### \\`STP-<슬러그>\\``)을 실재에 맞춘다. 이건 reconciler-tobe-modeler의 몫이다.\n2. **`rct_20260815-0001` 처분 결정**: 계획이 무효화됐으므로 재계획하거나 `cancelled`로 닫는다.\n   detector가 점유 상태를 건드리지 않는 규약에 따라 여기서는 손대지 않고 넘긴다.\n3. **전환 여부는 사람 확인 대상**: 레포가 두 곳(`docs/mockups/README.md`, doc-tracker 위험 진단)에서\n   \"미결정\"이라고 명시했다. 모델 정의상 SSOT는 여정 문서이므로 drift 판정 자체는 흔들리지 않지만,\n   목업 10개를 재구성하는 실행은 그 미결정을 사람에게 확인한 뒤가 안전하다.\n4. **슬라이스 힌트**: `JRN-restore-history`는 소스 화면(S11)이 아예 없어 나머지 4개와 성격이 다르고\n   이미 예외 등재돼 있으므로 후순위다. 나머지 5개 중 `JRN-connect-repo`(S01~S03 3화면)가 가장 작다.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-30T10:31:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "슬라이스 1 — 「규약을 **실재 SSOT 식별자 위에** 다시 세우고, `JRN-connect-repo` 하나로 실증한다」. 2026-08-30 여정 재작성(PR #20)으로 to-be의 판정 대상이 플로우 4개(전역 순번 `S01`~`S11`)에서 여정 6개(`JRN-`/`STP-` 슬러그, 26단계)로 통째로 교체됐고, 규칙 1 위반은 **5/5 전부 미시각화**다(`JRN-restore-history`는 doc-tracker '수용된 위험'에 여정 단위로 등재돼 규칙 8 예외로 성립 — 판정 대상 6→5). **`JRN-connect-repo`를 고른 이유는 '가장 작아서'가 아니라 '선결 판단 없이 끝나는 유일한 여정'이기 때문이다.** `user-journey/README.md` §5 매트릭스를 보면 화면 소유가 이렇게 갈린다 — S01·S02·S03은 `JRN-connect-repo` **전용**이고, S04·S07은 discover/follow 두 여정이, S08·S09·S10은 review/understand/follow 세 여정이 공유한다. 흡수한 화면 파일을 삭제하는 규약은 그 화면을 쓰는 여정이 **전부** 이관됐을 때만 적용할 수 있으므로, connect-repo 말고는 어떤 여정을 골라도 '공유 화면을 어떻게 할지'라는 선결 판단이 먼저 붙는다. 같은 사실이 **규칙 2가 화면 단위 파일로는 원리적으로 충족 불가능**함도 증명한다 — 한 파일이 정확히 1개 여정을 선언해야 하는데 S04·S07·S08·S09·S10은 2~3개 여정의 터치포인트다. 이관이 유일한 길이라는 근거이자, 직전 계획(`rct_20260815-0001`, PR #17)이 s04~s10에 `data-journey`를 주입해 뒀던 방식이 새 여정 집합에서는 성립하지 않는다는 근거다.\n\n**단계→화면 매핑을 창작하지 않고 여정 문서에서 파싱한다.** 각 단계의 `- **터치포인트**:` 줄에 있는 `S01`~`S10` 토큰이 그 단계가 임베드할 화면이다(`STP-sign-in` 0개 · `STP-grant-repo-access` S01 · `STP-register-llm-key` S01 · `STP-pick-target` S02·S03 · `STP-confirm-cost` S03). 그래서 페이지 구성이 설계 판단이 아니라 **기계 변환**이 되고, 체커가 문서와 페이지를 양방향 대조할 수 있다. 화면 본문은 원본 `sNN-*.html`의 `<body>` 내용을 **바이트 동일**하게 옮기고(공용 CSS는 s02 1벌 — 10개 중 9개가 바이트 동일하고 s02만 `.section-action` 16줄 상위집합), 여정 크롬(스텝퍼·분기 선택·딥링크·전진 배선)만 덧붙인다.\n\n**여정 페이지를 `docs/journeys/`가 아니라 `docs/mockups/JRN-<슬러그>.html`에 둔다 — 이게 이번 계획의 두 번째 실질 판단이다.** 이 모델의 as-is versionScript는 `docs/mockups` 트리 해시 + `docs/index.html` blob 해시다. 여정 페이지를 `docs/journeys/`에 두면 **그 파일을 아무리 고쳐도 as-is 버전이 변하지 않아 재감지가 영영 안 걸린다** — 모델이 추적한다고 선언한 산출물이 모델의 시야 밖에 놓인다. PR #17이 정확히 그 자리에 만들었고 아무도 짚지 않았다. `docs/mockups/` 안에 두면 모델을 고치지 않고도 추적이 성립하고, 매핑 SSOT(`docs/mockups/README.md`)도 그대로 인덱스가 된다. `reader.html`의 전환 힌트(`journeys/${id}/`)는 이 근거로 기각하고 `mockups/${id}.html`로 배선한다.\n\n**규칙 2·3을 '판정 불가'에서 '기계 판정 가능'으로 바꾸는 체커를 함께 넣는다.** 감지가 보고한 gap의 한 성분이 `data-journey`/`data-step`이 레포 전체 0건이라 규칙 2·3을 판정할 수 없다는 것이고, 모델 정의도 '양쪽 모두 기계적으로 확인 가능해야 한다'를 명시한다. 의존성 0(파이썬 stdlib)인 체커를 별도 워크플로로 얹고, 아직 이관하지 않은 화면 단위 7개(s04~s10)는 **미해소 위반 원장 + 상한 래칫**으로 등재해 '고쳤는데 원장에 남은 공전'과 '상한 초과'를 둘 다 실패로 만든다(면제가 아니라 래칫).\n\n**완료 기준(이 시도의 성공 판정 범위)**: (a) `JRN-connect-repo`가 자신을 선언하는 목업 페이지를 **정확히 1개** 갖는다 — `docs/mockups/JRN-connect-repo.html` 생성, 흡수된 `s01`~`s03` 3개 삭제(규칙 1). (b) 그 페이지의 `data-journey` 선언이 정확히 1개다(규칙 2). (c) 페이지의 `data-step` 집합 == `JRN-connect-repo.md`의 `### \\`STP-*\\`` 집합, 양방향 차집합 0(규칙 3). (d) 여정 문서 §4 분기표 7행 각각이 페이지에서 선택 가능하고 선언된 `STP-*`로 실제 이동한다(규칙 4). (e) 페이지가 규칙 5 (a)~(g)를 만족한다 — 전 단계 포함·전환 수단·현재 위치·주요 행동 클릭 전진·`#STP-*` 딥링크·분기와 갈래의 끝(`END-analysis-queued`)·빌드/네트워크 없이 정적 동작. (f) 각 단계 섹션이 임베드한 화면 본문이 원본 `sNN-*.html`의 `<body>` 내용과 **바이트 동일**하고, 그 화면 집합이 여정 문서 터치포인트 줄에서 파싱한 집합과 정확히 같다. (g) 매핑 SSOT(`docs/mockups/README.md`)·허브(`docs/index.html`)·`doc-tracker.md`가 실제 상태와 일치하고 서로도 일치한다(규칙 7). (h) 삭제된 3파일을 가리키는 참조 0건이고 `docs/` 상대 링크가 전부 실재 파일로 해석된다(규칙 6). (i) 체커가 CI에서 돌고, 네거티브 컨트롤로 각 규칙이 실제로 잡는 것이 실증된다. (j) 무효화된 `rct_20260815-0001`이 `cancelled`로 닫히고 PR #17에 대체 사유가 남는다.\n\n**범위 밖(후속 task)**: 나머지 4개 여정(`JRN-discover-features`·`JRN-review-feature`·`JRN-understand-feature`·`JRN-follow-code-change`)의 페이지 신설 — 규칙 1 위반은 그 넷에 대해 **5/5 → 4/5**로만 줄고 계속 남는다(공유 화면 처리가 선결). `JRN-restore-history`(수용된 위험, S11 미제작) · `STP-sign-in` 미인증 화면 제작(수용된 위험 유지) · 목업→여정 문서 복귀 링크(doc-tracker 다음 단계 6번) · 목업의 시각 품질(모델 정의상 범위 밖) · **모델 `definition` 수리**(SSOT 열거가 삭제된 `0N-*.md` 4개를 가리키고 단계 확인 지점이 `### S<NN>`이라 문자 그대로 적용하면 판정 대상이 공집합 — reconciler-tobe-modeler의 몫이며 이 PR로는 못 고친다).",
+          "riskLevel": "medium",
+          "plannedAt": "2026-08-30T10:55:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`dlddu/feature-doc` main(`0b45376`)에서 브랜치 `reconcile/rct_20260830-0001-journey-page-connect-repo`를 만든다. base는 반드시 현재 main이다 — PR #17의 base `c06a858`은 그 뒤 #18(문서 포털)·#20(여정 재작성) 두 머지를 놓쳐 `main`과 5개 충돌(그중 `docs/user-journey/01-onboarding-and-connect.md`는 modify/delete)이 난다.",
+              "expectedOutcome": "브랜치가 `0b45376`에서 갈라져 있고, `git merge-tree main HEAD`가 충돌 0."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/mockups/README.md`에 「여정 페이지 규약」 절을 신설한다. 못박을 것 넷: ① 경로·파일명 `docs/mockups/JRN-<슬러그>.html`(여정 1개 = 페이지 1개) — `docs/journeys/`가 아닌 이유는 as-is versionScript가 `docs/mockups` 트리만 해시하므로 그 밖에 두면 재감지가 안 걸리기 때문이라고 근거까지 적는다. ② 루트 `<body>`가 `data-journey=\"JRN-<슬러그>\"`를 정확히 1개, 각 단계 섹션이 `id`와 같은 값의 `data-step=\"STP-<슬러그>\"`를 선언한다. `END-*` 블록은 갈래의 끝이며 단계가 아니다(`data-step` 없음). ③ **식별자 레지스트리는 새로 만들지 않는다** — 여정 문서(`docs/user-journey/JRN-*.md`)의 `### \\`STP-*\\`` 헤딩이 정식 식별자이고 README는 그것을 인용만 한다(SSOT 이중화 금지). ④ 단계→화면 매핑은 각 단계의 `- **터치포인트**:` 줄에서 파싱하며, 화면 본문은 원본과 바이트 동일하게 옮긴다.",
+              "expectedOutcome": "README에 규약 절이 생기고, 여정 6개 · 26단계 표가 문서에서 파싱한 값과 일치한다."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/mockups/JRN-connect-repo.html`을 **스크립트로 생성**한다. 공용 CSS는 `s02`의 `<style>` 1벌(다른 9개의 상위집합 — `.section-action` 16줄만 더 있다). 단계 섹션 5개(`STP-sign-in`·`STP-grant-repo-access`·`STP-register-llm-key`·`STP-pick-target`·`STP-confirm-cost`)를 문서 순서대로 만들고, 각 섹션에 터치포인트에서 파싱한 화면의 `<body>` 내용을 그대로 임베드한다(S01×2 · S02×1 · S03×2 = 5벌). `STP-sign-in`은 임베드할 화면이 없다 — **화면을 지어내지 않고** \"이 상태는 아직 시각화되지 않았습니다(수용된 위험)\" 패널 + doc-tracker 링크 + 다음 단계로 전진하는 버튼을 둔다. 여정 크롬: 상단 스텝퍼(현재 위치 표시)·이전/다음·각 화면의 주요 CTA에 `data-goto` 배선·`#STP-*` 해시 라우팅과 `hashchange`·여정 문서 §4 분기표 7행을 그대로 옮긴 분기 선택기(각 행이 선언된 `STP-*`로 이동)·완료 블록 `END-analysis-queued`(여정 완료 기준 \"분석 1건이 큐에 등록됨\").",
+              "expectedOutcome": "브라우저 없이 열리는 단독 HTML 1개. `data-journey` 1개, `data-step` 5개, 임베드 5벌이 원본과 바이트 동일."
+            },
+            {
+              "seq": 4,
+              "action": "흡수된 `docs/mockups/s01-credentials-setup.html`·`s02-home-repositories.html`·`s03-connect-repository.html` 3개를 삭제한다. 이 셋은 §5 매트릭스상 `JRN-connect-repo` **전용** 터치포인트라 다른 여정의 이관을 막지 않는다. **`s04`~`s10`에는 `data-journey`를 주입하지 않는다** — S04·S07은 2개, S08~S10은 3개 여정의 터치포인트라 '정확히 1개 선언'이 원리적으로 불가능하다(PR #17이 구 플로우의 화면 분할을 전제로 하던 주입이 새 여정 집합에서 깨지는 지점).",
+              "expectedOutcome": "`docs/mockups/*.html`이 여정 페이지 1 + 화면 단위 7. `git log`에 원본 3개가 보존된다."
+            },
+            {
+              "seq": 5,
+              "action": "레포 안의 참조를 새 경로로 옮긴다: 허브 `docs/index.html`의 Flow 01 화면 카드 3개 → 여정 페이지 카드 1개(iframe 미리보기·`Open journey`), hero 요약 수치 정정(`10 Screens`·`04 Flows`·`18 Documents`가 전부 실제와 다르다 — 문서 구획은 이미 `20 documents`라고 적고 있어 허브 안에서도 자기모순), `frontend/src/{CredentialsSetup,HomeRepositories,ConnectRepository}.tsx`와 `index.css`의 목업 경로 주석 4곳 → 여정 페이지 앵커, `docs/reader.html`의 `journeySection`/`flowHref`를 '여정 페이지가 있으면 `mockups/<JRN>.html`, 없으면 기존 허브 구획'으로 바꾸고 전환 힌트 주석을 실제 규약으로 갱신. **와이어프레임(`docs/wireframes/*.svg`)과 `tools/gen-wireframes.js`는 건드리지 않는다** — 모델 정의상 매칭 단위가 아니다.",
+              "expectedOutcome": "`grep -rn 's01-credentials-setup\\|s02-home-repositories\\|s03-connect-repository'`가 와이어프레임 축(README·gen-wireframes.js, SVG 파일명)만 남긴다."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/doc-tracker.md`를 실제 상태로 맞춘다: ① 「연결 매트릭스 — 화면 ↔ 와이어프레임 ↔ 목업」의 S01~S03 행 목업 칸을 여정 페이지 앵커로 ② 「현재 상태 요약」의 목업 카운트를 '여정 페이지 1 + 화면 단위 7' ③ 위험 진단 「🟡 여정 단위 미전환」의 **미결정을 결정으로 전환** — 이 PR의 머지가 곧 '전환한다'는 결정이며 여정 하나씩 옮기는 방식임을 기록 ④ 「수용된 위험」 2건은 그대로 두되 `STP-sign-in` 행에 '여정 페이지가 이 공백을 단계 자리에서 명시적으로 드러낸다'를 덧붙임 ⑤ 「여정 단위 목업 이관」 진행 원장 신설(여정 6개 × 상태) ⑥ 변경 이력 1행(task id·이전/이후).",
+              "expectedOutcome": "doc-tracker가 규칙 7·8의 SSOT로서 실제 파일 상태와 일치한다."
+            },
+            {
+              "seq": 7,
+              "action": "`tools/check-journey-mockup.py`(파이썬 stdlib, 의존성 0)와 `.github/workflows/docs-journey-mockup.yml`(pull_request + push:main, 단일 잡)을 신설한다. 규칙: **R1** 예외 등재되지 않은 여정마다 자신을 선언하는 `docs/mockups/*.html`이 정확히 1개 · **R2** 모든 `docs/mockups/*.html`이 `data-journey`를 정확히 1개 선언(미선언은 원장 등재된 것만 허용) · **R3** 각 여정 페이지의 `data-step` 집합 == 그 여정 문서의 `### \\`STP-*\\`` 집합(양방향) · **R4** 여정 문서 §4 분기표의 모든 `이어지는 단계`가 페이지의 이동 대상으로 존재 · **R5** 페이지 내부 `#STP-*`/`data-goto` 대상이 전부 실재 섹션 id · **R6** 단계별 임베드 화면 집합 == 터치포인트 줄에서 파싱한 집합 · **R7** 원장 래칫(원장 밖 새 위반 실패 · **이미 해소됐는데 원장에 남은 공전 실패** · 상한 초과 실패) · **R8** `docs/` 상대 링크 dangling 0 · **R9** README/허브/doc-tracker의 집계 선언이 실측과 일치.",
+              "expectedOutcome": "체커가 CI에서 1초 미만으로 돌고, 현재 트리에서 통과하며 상한은 미이관 7건."
+            },
+            {
+              "seq": 8,
+              "action": "**네거티브 컨트롤**로 각 규칙이 공허하지 않음을 실증한다(최소 9건, 규칙당 1건 이상): 여정 페이지 삭제(R1) · `data-journey` 2개 선언(R2) · `data-step` 하나 제거(R3) · 분기표 행의 대상 단계를 존재하지 않는 값으로(R4) · `data-goto`를 dangling으로(R5) · 임베드 화면 1벌 제거(R6) · 원장 행 삭제/공전/상한 초과(R7 ×3) · 링크 깨뜨리기(R8) · 집계 숫자 되돌리기(R9). 복원은 `git checkout`이 아니라 **사전 `cp` good 사본**으로 한다(브랜치 편집이 통째로 날아간 전례).",
+              "expectedOutcome": "컨트롤마다 의도한 규칙 하나씩만 실패하고, 복원 후 전부 통과."
+            },
+            {
+              "seq": 9,
+              "action": "커밋·푸시하고 **draft PR**을 연다. PR 본문에 task id, gap 요약(규칙 1 위반 5/5 · 규칙 2·3 판정 불가 · 규칙 8 예외 1건), 이 슬라이스의 완료 기준과 범위 밖, 검증 결과, 그리고 **검토 쟁점 3개**를 적는다 — ① 여정 단위 전환을 실제로 결정하는가(머지 = 결정) ② 여정 페이지를 `docs/mockups/` 안에 두는 경로 판단 ③ `s01`~`s03` 삭제 수용 여부. 주의사항에 `ci.yml`의 `push` 잡이 `needs: test`뿐이라 **PR CI가 green이 되는 시점에 `ghcr.io/dlddu/featuredoc:latest`가 이 브랜치 트리로 갱신된다**는 것을 명시한다(머지 시점이 아니다).",
+              "expectedOutcome": "draft PR이 열리고 CI 2잡이 green. 문서·정적 HTML·주석만이라 이미지 내용은 main과 실질 동일."
+            },
+            {
+              "seq": 10,
+              "action": "무효화된 `rct_20260815-0001`(status `planned`)을 `cancelled`로 닫고, PR #17에 대체 사유를 코멘트로 남긴다(닫지는 않는다 — 그 스레드에 규약 논의가 있다). 근거는 실측 3가지: base `c06a858` 기준으로 현재 main과 **5개 충돌**(`01-onboarding-and-connect.md`는 modify/delete) · 그 계획의 식별자 레지스트리가 **화면 파생**(`STP-credentials-setup` 등 11개)이라 실재 SSOT의 **행동 파생** 26개와 **교집합 0** · '플로우 4는 전용 페이지를 갖는다'는 결정의 대상 플로우가 두 여정으로 분할돼 사라졌고 그중 하나는 이제 규칙 8 예외다.",
+              "expectedOutcome": "`rct_20260815-0001`이 `cancelled`, PR #17에 사유 코멘트. executor 대기 큐에서 실행 불가능한 계획이 사라진다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
