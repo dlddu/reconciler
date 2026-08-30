@@ -147,9 +147,9 @@
   },
   {
     "toBeModelId": "tbm_feature-doc-journey-mockup",
-    "status": "planned",
+    "status": "awaiting_review",
     "createdAt": "2026-08-30T10:31:00Z",
-    "updatedAt": "2026-08-30T11:40:00Z",
+    "updatedAt": "2026-08-30T12:26:00Z",
     "trigger": {
       "detectedAt": "2026-08-30T10:31:00Z",
       "changedSides": [
@@ -245,6 +245,11 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/21",
           "preparedAt": "2026-08-30T11:15:00Z",
           "notes": "draft PR #21. base main@0b45376, 커밋 4개(916a9a6 · d74a387 · 061d3c5 · 8d9b1e6). 15파일 +2213/−2408(삭제 3파일이 대부분). 문서·정적 HTML·주석·신규 스크립트만 — 실행 코드 동작 변화 0.\n\n**신설**: `docs/mockups/JRN-connect-repo.html`(1431줄 — 그중 ~610줄이 s02 에서 가져온 공용 스타일 1벌, 임베드 5벌 ~430줄, 나머지가 여정 크롬) · `tools/check-journey-mockup.py`(492줄, 의존성 0) · `.github/workflows/docs-journey-mockup.yml`(31줄).\n**삭제**: `docs/mockups/s01~s03.html` — 여정 페이지에 바이트 동일하게 흡수. 이 셋은 §5 매트릭스상 `JRN-connect-repo` 전용 터치포인트라 다른 여정의 이관을 막지 않는다(S04·S07 은 2개, S08~S10 은 3개 여정 공유).\n**수정**: `mockups/README.md`(여정 페이지 규약 신설 + Journeys 매핑 + 이관 대기 원장·상한 2종) · `doc-tracker.md`(전환 결정 기록 · 화면↔목업 매트릭스에 여정 열 추가 · 커버리지 재계상 · 변경 이력 1행) · `index.html`(Flow 01 화면 카드 3개 → 여정 카드 1개, 요약 수치 자기모순 정정 — hero 는 `18 Documents` 인데 문서 구획은 `20 documents` 였다) · `reader.html`(journeyPage 배선, 라벨을 이관 여부에 따라 전환) · `frontend/src` 주석 4곳.\n\n**계획 단계에서 검증을 다 돌렸다.**\n① 체커 통과 — `여정 6 (예외 1 · 이관 완료 1 · 이관 대기 4) · 목업 페이지 8 (여정 1 + 화면 7) · 문서 20`, docs/ 상대 링크 183건 dangling 0.\n② **네거티브 컨트롤 20건 전부 의도한 규칙이 실패**하고 복원 후 전부 통과(규칙 R0~R9 각 1건 이상). 복원은 `git checkout` 이 아니라 사전 `cp` good 사본으로 했다.\n③ 컨트롤이 **체커 결함 4개를 잡아내 고쳤다** — (a) `data-journey` 2개 선언이 R2 를 통과했다(탐욕적 `[^>]*` 로 한 태그의 두 번째 속성을 놓침) → `<body>` 태그를 떼어 낸 뒤 세도록 수정, 그 과정에서 문서 주석 안의 `<body>` 를 먼저 잡던 문제도 드러나 주석 제거를 추가 (b) R4 가 멤버십만 봐서 **공허**했다(버튼 대상을 바꿔도 자기 자신과는 늘 일치) → 여정 문서 §4 의 각 행을 `(상황, 이어지는 단계)` 쌍으로 순서까지 대조하게 수정 (c) 허브가 여정 페이지의 단계로 거는 링크(6건)를 아무도 검사하지 않았다(R5 는 페이지 안만, R8 은 파일 존재만) → 교차 파일 앵커 대조 추가 (d) 여정 페이지가 `.md` 를 직접 링크했다 — `.nojekyll` 때문에 클릭하면 다운로드된다 → 생성기가 reader 경유로 재작성하게 고치고 같은 규칙을 R8 에 넣었더니 **내가 놓친 2건(`./README.md`)을 바로 잡아냈다**.\n④ **jsdom 으로 실제 DOM 에서 굴려** 규칙 5 (a)~(g) 를 20개 단언으로 확인 — 활성 섹션 항상 1개 · 다음/이전 · 스텝퍼 current 1개 · **임베드된 S03 의 실제 `Start Analysis →` 클릭으로 여정 완료 도달** · S01 `Continue` 로 전진 · `#STP-*`/`#END-*` 딥링크 6개 · 분기 버튼 7개가 선언된 단계로 이동 · 두 화면 단계의 전환 · 외부 의존은 폰트 CDN 뿐. 뮤테이션(CTA 배선 절단)으로 이 하네스가 공허하지 않음도 확인.\n⑤ 임베드 5벌이 원본 `<body>` 와 **바이트 동일**하고 `data-sha256` 과 일치. HTML 태그 중첩 unclosed 0 · mismatch 0. 페이지 JS `node --check` 통과.\n\n**CI 실측 (최종 커밋 `8d9b1e6`)**: `docs — journey ↔ mockup` run `33308805107` **success** — 로그에 체커 출력이 그대로 찍혔다(`여정 6 (예외 1 · 이관 완료 1 · 이관 대기 4) · 목업 페이지 8 (여정 1 + 화면 7) · 문서 20` / `통과 — R0~R9 이상 없음`). `CI` run `33308805055` **success** — 스텝 초록만 보지 않고 로그를 읽었다: cargo **53 passed / 0 failed**(13개 바이너리), Playwright **7 passed**(전부 `✓`, skip 아님).\n\n**주의**: `ci.yml` 의 `push` 잡에 이벤트 가드가 없어(`needs: test` 뿐) **PR CI 가 green 이 되는 시점에 `ghcr.io/dlddu/featuredoc:latest` 가 이 브랜치 트리로 갱신된다** — 머지 시점이 아니다. 이번에도 `build & push image (ghcr)` 잡이 **success 로 실제 실행됐다**(실측, 예고한 대로). 이번 변경은 문서·주석뿐이라 이미지 내용은 main 과 실질 동일하다. 정합성 체커를 `ci.yml` 에 얹지 않고 별도 워크플로로 둔 것도 같은 이유이며, 워크플로 파일 push 에는 App 토큰의 `workflows:write` 가 필요했다.\n\n**부수 처분**: `rct_20260815-0001`(PR #17) 을 `cancelled` 로 닫고 — 계획 도중 그 task 가 `planned`→`review_rejected` 로 바뀌었다(사용자가 11:02Z 에 \"사용자 여정 문서 변경됨\" 으로 반려). 그 반려 코멘트가 요구한 재계획 항목 (a)~(d) 가 정확히 이 task 가 한 일이라, 같은 gap 을 두 task 가 들고 있지 않도록 닫았다. PR #17 에 대체 사유를 코멘트로 남겼다(닫지는 않음 — 그 스레드의 규약 논의를 #21 이 이어받았다)."
+        },
+        "review": {
+          "required": true,
+          "reason": "사람 검토 필요. 근거 셋이 각각 독립적으로 성립한다. ① **머지가 곧 제품 결정**이다 — `doc-tracker.md`가 오래 \"미결정\"으로 적어 온 「목업을 여정 단위로 전환하는가」에 이 PR이 \"전환한다\"로 답하고 그 결정이 문서에 박히며, 이후 슬라이스가 전부 그 위에 쌓인다. 정의와 판단만으로 갈리는 문제다. ② **`main`에서 파일 3개가 삭제된다**(`docs/mockups/s01~s03.html`). revert 1회로 가역이지만 허브·doc-tracker·프런트 주석 참조가 함께 움직여 되돌리는 비용이 0이 아니다. ③ **이미 발생한 부작용이 있다** — `ci.yml`의 `push` 잡에 이벤트 가드가 없어(`needs: test`뿐) PR CI가 green이 된 시점에 `ghcr.io/dlddu/featuredoc:latest`가 이 브랜치 트리로 갱신됐다(실측). 머지 여부와 무관하게 일어난 사실이므로 검토자가 알고 승인해야 한다. `plan.riskLevel`도 medium이다.",
+          "status": "pending"
         }
       }
     ]
