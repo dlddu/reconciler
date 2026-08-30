@@ -1824,7 +1824,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
     "status": "planning",
     "createdAt": "2026-08-29T06:55:00Z",
-    "updatedAt": "2026-08-30T06:12:00Z",
+    "updatedAt": "2026-08-30T06:24:00Z",
     "trigger": {
       "detectedAt": "2026-08-29T06:55:00Z",
       "changedSides": [
@@ -1852,6 +1852,57 @@
       "assessedBy": "agent",
       "assessedAt": "2026-08-30T06:05:00Z",
       "reason": "유의미한 잔여 gap이 실측되고, 점유 충돌이 없으며, 자동 해소 경로가 없다 → 지금 작업이 필요하다.\n\n근거 1 — **잔여가 체커로 확정된 수치다(추정이 아니다).** 머지된 main에서 직접 돌린 `check_ac_mapping.py`가 `매칭 파일 9 / 분할 대기 6 / 공백 54`를 출력한다. 1:1 대상 63개 중 54개가 아직 전용 파일을 갖지 못했다. 모델 정의는 전단사를 목표로 하고 \"미구현은 예외 사유가 아니다\"를 명문화하므로, 이 54건은 백로그가 아니라 to-be 미달 drift다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 열린 task는 0건이다. 직전 `rct_20260814-0001`은 2026-08-28T11:30:27Z에 `succeeded`로 종결됐다(PR #42 머지 → 체커·CI 검증 → converged).\n\n근거 3 — **직전 task가 이 후속을 명시적으로 인계했다.** 그 계획의 \"범위 밖(후속 task)\" 문단이 분할 대기 6개 파일과 공백 14건을 지목하며 \"이 잔여는 이번 실행이 만든 as-is 버전 변화의 재감지가 새 task로 잇는다\"고 적었고, verification도 사후 버전 `869978c1`/`329f3559`를 미리 기록했다. 이번 스윕이 정확히 그 값을 관측했으므로 중복이 아니라 예정된 후속이다.\n\n근거 4 — **자동 해소 기전이 없다.** 정적인 파일 배치·선언·레지스트리 격차이고, 닫으려면 실제 파일 분할과 문서 갱신이 필요하다 → `recheckAfter` 유예 부적합.\n\nplanner 참고(이번 주기에 먼저 정할 것):\n\n① **분할 슬라이스 경계.** 남은 6개 파일의 AC 분포가 `workload.py` 16 · `opensearch.py` 11 · `no_config.py` 7 · `auth.py` 2 · `aws_config.py` 2 · `smoke.py` 2 로 매우 불균등하다. 직전 주기가 \"가장 깨끗한 3개 도메인\"(각 3 AC)을 골라 9개를 뽑아낸 것과 달리, 다음 후보는 크기·공유 상태·배포 대상이 제각각이다. 작은 것부터(`aws_config.py`·`auth.py`·`smoke.py` = 6 AC) 갈지 큰 것부터(`workload.py` 16)로 갈지가 첫 판단이다.\n\n② **인프라는 이미 깔려 있다 — 순수 이동으로 설계 가능하다.** `run_all.py`가 파일을 자동 발견해 그룹별로 배차하고 `check_ac_mapping.py`가 배차 누락·중복 선언·집계 불일치를 CI에서 막는다. 따라서 이번 분할은 \"새 검증 작성\"이 아니라 \"케이스를 파일로 승격 + 모듈 docstring `검증 AC:` 선언 갱신 + 공유 셋업을 `_helpers.py`로 이동\"이다. 단언을 바꾸지 않는 이동으로 유지하면 회귀 위험이 낮다.\n\n③ **`auth.py`는 배포 대상이 다르다.** 러너의 `auth-variant` 그룹은 2개 파일뿐이고 `auth.py`가 그중 하나다(`platform-auth-safety/AC1`·`AC7`). 분할하면 그 그룹의 배차가 늘어나므로 CI 시간·클러스터 기동 비용을 함께 본다.\n\n④ **`smoke.py`는 규칙 3(비-AC 파일) 재분류 후보다.** 현재 `ping/AC1` + `platform-auth-safety/AC6` 2건을 겸한다. AC별로 쪼갤지, 스모크 유형으로 등재하고 두 AC를 다른 곳으로 옮길지는 분할 전에 정해야 한다.\n\n⑤ **공백 14건(케이스 자체 없음)은 이번 범위가 아닐 가능성이 높다.** `session-list`·`session-read`·`session-write` 12건은 **도구가 미구현**이고, 레지스트리가 적었듯 session-platform 배포가 2026-08-06에 클러스터에서 제거돼 실 검증 경로 자체가 없다. `platform-auth-safety/AC2`는 OIDC 발급자 mock, `AC8`은 다중 구성 전환이 선행된다. 분할(40건)과 성격이 다르므로 슬라이스를 섞지 않는 편이 낫다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "분할 대기 6개 파일 중 **선결 판단 없이 순수 이동으로 끝나는 둘**(`opensearch.py` 11 AC · `aws_config.py` 2 AC)을 AC별 전용 파일 13개로 쪼갠다. 이 둘을 고른 근거는 케이스가 이미 서로를 관측하지 못한다는 것이다 — 2026-08-13 슬라이스가 opensearch의 공유 상태(put→search→delete 파이프라인)를 케이스별 전용 인덱스 `ci-<case>-<RUN_ID>` + 유일 질의 토큰으로 없앴고 `run()`이 \"순서는 자유\"라고 명시한다. 파일이 갈라지면 `RUN_ID`도 파일별로 새로 뽑혀 격리는 오히려 강해진다. 인프라(러너 자동 발견 + 체커)가 #42에서 이미 깔렸으므로 이번 작업은 새 검증 작성이 아니라 케이스를 파일로 승격 + 모듈 docstring 선언 + 공유 표면을 `_` 접두 모듈로 이동하는 이동 작업이고, 단언을 한 줄도 바꾸지 않아 회귀 위험이 낮다.\n\n**완료 기준(이 시도의 범위)**: PR #43이 머지돼 main에서 (1) `check_ac_mapping.py`가 exit 0이면서 집계가 매칭 파일 22 · 분할 대기 4 · 공백 41(겸용 커버 27 · 케이스 없음 14)을 출력하고, (2) CI `integration tests` 잡이 green이며 그 로그에서 신규 13개 파일이 **파일명 단위로 실행**된 것이 확인되면 성공이다. AC 전집 64 · 예외 1은 불변이어야 한다(gap을 줄이려고 AC를 낮추지 않는다).\n\n**범위 밖(후속 task)**: 남은 분할 대기 4개 파일 27 AC — `workload.py`(16, 케이스가 공유 픽스처 상태에 순서 의존적이라 분할 전에 그 의존을 끊어야 한다) · `no_config.py`(7)·`auth.py`(2)(둘 다 `auth-variant` 그룹이라 그 그룹 배차가 2→8·2→4로 늘어난다) · `smoke.py`(2, 두 AC를 뗀 뒤 남는 도구 표면 확인을 규칙 3의 비-AC 파일로 등재할지 미결). 그리고 공백 14건(`platform-auth-safety/AC2`·`AC8` · `session-*` 12 — 도구 자체가 미구현이라 e2e 이전에 구현·재배포가 선행). 이 잔여는 이번 실행이 만드는 `tests/` 트리 해시·`doc-tracker.md` 변화의 재감지가 새 task로 잇는다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-08-30T06:24:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 선정을 실측으로 확정한다 — main을 클론해 `check_ac_mapping.py`를 직접 돌려 task 기록의 수치(매칭 9 · 분할 대기 6 · 공백 54)를 재현하고, 분할 대기 6개 파일의 docstring·`run()`을 읽어 케이스 간 공유 상태/순서 의존을 파일별로 판정한다.",
+              "expectedOutcome": "체커 exit 0 + 기록과 동일한 집계. `opensearch.py`·`aws_config.py`만 순서 의존이 없음이 소스로 확인되고(전용 인덱스+유일 토큰, `run()` 주석), 나머지 4개는 각각 미결 판단(순서 의존 / auth-variant 배차 / 규칙 3 재분류)을 가짐이 드러난다."
+            },
+            {
+              "seq": 2,
+              "action": "공유 표면을 매칭 단위 밖으로 내린다 — `_opensearch.py`(픽스처 상수 + `index_for`·`token_for`·`structured`·`put_doc`·`delete_doc`·`search`·`search_until`·`hit_ids`)와 `_aws_config.py`(버킷·키·내용·role ARN·region·ETag 모양)를 원본의 ast 소스 세그먼트로 생성한다.",
+              "expectedOutcome": "두 모듈이 `run_all.matching_unit_paths()`의 `_` 접두 필터에 걸려 매칭 단위에서 빠지고, 따라서 `검증 AC:` 선언을 요구받지 않는다. 체커가 러너와 같은 함수로 판정하므로 두 곳이 어긋날 수 없다."
+            },
+            {
+              "seq": 3,
+              "action": "13개 전용 파일을 생성한다 — 각 케이스 함수를 원본의 ast 소스 세그먼트로 그대로 옮기고, 모듈 docstring에 `검증 AC: <domain>/AC<n>`·`실행 대상: primary`(+ http-trace를 실제로 읽는 4개만 `추가 인자: trace`)를 선언한 뒤 파일별 `run()` 디스패처를 붙인다. 원본 `opensearch.py`·`aws_config.py`는 삭제한다.",
+              "expectedOutcome": "`opensearch_{search,document_put,document_delete}_ac*.py` 11개 + `aws_config_get_ac{1,2}.py` 2개. 러너 `--list`가 primary 13 → 24개 파일을 배차하고 auth-variant는 2개로 불변. `+trace` 표시는 4개 파일에만 붙는다."
+            },
+            {
+              "seq": 4,
+              "action": "순수 이동임을 ast로 증명한다 — `HEAD`의 원본 두 파일과 신규 파일들의 top-level 정의를 도메인별로 스코프해 `ast.dump` 대조한다(`REGION`처럼 두 원본에 같은 값이 있던 상수는 각자의 도메인 모듈에 하나씩 남아야 한다).",
+              "expectedOutcome": "`run()` 디스패처를 제외한 원본 정의 32개 전부가 정확히 한 신규 파일에 AST 동일하게 착지(problems 0). 단언은 한 줄도 바뀌지 않았음이 주장이 아니라 대조 결과가 된다."
+            },
+            {
+              "seq": 5,
+              "action": "레지스트리와 문서를 같은 PR에서 갱신한다 — `doc-tracker.md`의 13개 행을 `⬜ 분할 대기` → `✅ 전용 파일 <파일명>`으로, 집계 블록을 매칭 22 · 분할 대기 4 · 공백 41로, 레지스트리 헤딩·「공백 내역」 주석(남은 4개의 미결 판단 포함)·완료 블록·변경 이력 행을 쓴다. `docs/test-*.md`의 `<파일>::<케이스>` 참조 11건과 `ci.yml`의 주석 2줄(삭제된 파일명을 가리킴)도 함께 고친다.",
+              "expectedOutcome": "`check_ac_mapping.py` exit 0, 집계 6줄이 AC 전집 64 · 예외 1 · 1:1 대상 63 · 매칭 22 · 분할 대기 4 · 공백 41 + 「겸용 커버 27 · 케이스 없음 14」. 삭제된 파일명을 가리키는 살아 있는 참조가 0건(변경 이력의 과거 서술 제외)."
+            },
+            {
+              "seq": 6,
+              "action": "로컬 게이트를 돌린다 — (a) venv(mcp+httpx)로 `tests/integration/*.py` 전 모듈 import, (b) 13개 파일의 `run()`을 센티넬 세션으로 구동해 배선(세션 오픈·healthz 대기·케이스 arity·trace URL 전달)을 확인, (c) 네거티브 컨트롤 5건으로 체커가 공허하지 않음을 확인.",
+              "expectedOutcome": "(a) 31개 모듈 전부 import 성공(분할의 최빈 실패 모드). (b) 13개 전부 센티넬 도달, trace URL은 선언한 4개에서만 해석됨. (c) 5건이 각각 의도한 규칙 하나씩 실패하고 복원 후 다시 exit 0."
+            },
+            {
+              "seq": 7,
+              "action": "브랜치 `reconcile/rct_20260829-0001`에 커밋·푸시하고 draft PR을 연다(머지하지 않는다). PR 본문에 task id·집계 이동·파일 선택 근거·남은 4개의 미결 판단·검증 내역·검토 쟁점·머지 주의를 적는다.",
+              "expectedOutcome": "draft PR 1건. Go 코드 0줄, `docs/prd-*.md` 0줄, `ci.yml` 워크플로 로직 0줄(주석 2줄만)."
+            },
+            {
+              "seq": 8,
+              "action": "PR CI 4잡 결과를 실측한다 — 스텝 초록만 보지 말고 `integration tests` 로그에서 `러너: primary 그룹 24개 파일` 배너와 신규 13개 파일이 파일명 단위로 실행된 줄을 확인한다.",
+              "expectedOutcome": "`fmt + vet`(체커 포함)·`unit tests`·`integration tests` green, 로그에 13개 신규 파일의 실행 헤더와 `ok: <AC>` 줄이 모두 찍힌다. 붉으면 executor가 머지하지 않는다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
