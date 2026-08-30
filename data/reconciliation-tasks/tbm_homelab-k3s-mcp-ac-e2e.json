@@ -1822,9 +1822,9 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "planned",
+    "status": "awaiting_review",
     "createdAt": "2026-08-29T06:55:00Z",
-    "updatedAt": "2026-08-30T06:29:00Z",
+    "updatedAt": "2026-08-30T14:20:01Z",
     "trigger": {
       "detectedAt": "2026-08-29T06:55:00Z",
       "changedSides": [
@@ -1910,6 +1910,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/43",
           "preparedAt": "2026-08-30T06:23:01Z",
           "notes": "draft PR #43 (base main `32fde9f0`, head `6c95eb0`). 22개 파일: 신규 15(전용 13 + 공유 `_opensearch.py`·`_aws_config.py`) · 삭제 2(`opensearch.py`·`aws_config.py`) · 수정 5(`doc-tracker.md` · `test-{aws-config-get,opensearch-search,opensearch-document-put,opensearch-document-delete}.md`) · `ci.yml` 주석 2줄. **Go 코드 0줄 · `docs/prd-*.md` 0줄 · ci.yml 워크플로 로직 0줄** — #42가 넣은 러너가 파일을 자동 발견해 배차하므로 분할에 CI 수정이 필요 없다(주석 2줄은 삭제된 파일명을 가리키고 있어 고친 것이며 `workflows:write` 토큰이 필요했다).\n\n로컬 검증 완료: (1) `check_ac_mapping.py` exit 0 — 집계 매칭 22 · 분할 대기 4 · 공백 41(겸용 커버 27 · 케이스 없음 14), (2) ast 대조로 원본 top-level 정의 **32개 전부**가 정확히 한 신규 파일에 AST 동일하게 착지(problems 0, `run()` 디스패처 제외 — 단언 무변경), (3) venv(mcp+httpx)에서 `tests/integration/*.py` **31개 모듈 전부 import 성공**, (4) 13개 파일의 `run()`을 센티넬 세션으로 구동해 배선 확인 — 세션 오픈·healthz 대기·케이스 arity 정상이고 trace URL은 선언한 4개 파일에서만 해석돼 `fetch_trace`로 전달됨, (5) 네거티브 컨트롤 5건(선언 삭제 → 규칙 3 / 레지스트리 행 되돌림 → 규칙 6 행 / 집계 되돌림 → 규칙 6 집계 / 한 파일 2 AC 선언 → 매칭·분할대기·공백 3중 검출 / `_` 접두로 숨김 → 배차 누락) 전부 의도한 규칙 하나씩 실패, 복원 후 재차 exit 0.\n\n러너 배차: primary 13 → 24개 파일, auth-variant 2 → 2(불변 — 그 그룹의 두 파일은 이번 범위 밖). 머지하지 않았다.\n\n**CI 실측 (run `33296766521`, 4잡 전부 green, ~4분)**: `fmt + vet`(체커 포함)·`unit tests`·`integration tests`·`docker build & push` 모두 success. 스텝 초록만 보지 않고 로그에서 `러너: primary 그룹 24개 파일`·`러너: auth-variant 그룹 2개 파일` 배너와 신규 13개 파일의 `===== <파일명> (AC: <ac>) =====` 헤더 13개 + 각 `ok: <AC>` 줄을 확인했다.\n\n**분할의 비자명한 전제가 실증됐다**: 접근 경로 단정 3건(opensearch)이 **서로 다른 프로세스**에서 돌았는데(인덱스 접미사 `4491e435`·`69331839`·`aed4fcce` = 파일별 `RUN_ID`) 전부 **같은 STS 발급 키** `885ZQYZUDPO8KZWGT7Y9`를 관측했다 — 서버가 자격증명을 캐시해 AssumeRole을 한 번만 발급하고 http-trace 프록시가 그 레코드만은 evict하지 않기 때문이다. 파일 분할이 접근 경로 단정을 깨뜨리지 않음이 추론이 아니라 관측으로 확인됐다. `aws_config_get`은 다른 role이라 다른 키(`TBGJULJIC6FYP57AE94Y`)가 정상. 관측 내용은 PR #43에 코멘트로도 남겼다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "riskLevel은 low(테스트 파일 재배치 — Go 0줄 · docs/prd-*.md 0줄 · ci.yml 워크플로 로직 0줄, squash 커밋 revert 1회로 원복, 클러스터 매니페스트·RBAC·시크릿 무변경)이지만, **계획 자신이 머지 전 사람 판단을 요구한다** — executionGuide §1 순서 2가 \"검토 쟁점 3건(§4)에 대해 승인을 받는다\"를 squash merge(순서 3)의 선행 조건으로 명시했다.\n\n그 3건은 실측으로 대체할 수 없는 설계 선택이다: (1) 공유 표면을 `_opensearch.py`·`_aws_config.py`로 내리는 규약(대안은 상수 복제) — 앞으로의 모든 분할 슬라이스가 따를 전례가 된다, (2) 남은 분할 대기 4개 파일 27 AC를 이번 범위에서 뺀 경계 설정, (3) `RUN_ID`가 파일(프로세스)별로 뽑히면서 한 CI run의 인덱스 구성이 \"1 RUN_ID × 11\" → \"11 RUN_ID × 1\"로 바뀌는 것.\n\n또한 main 머지는 되돌릴 수는 있어도 즉시 되돌아가지는 않는 대상 레포 변경이고, `docker build & push` 잡에 `if:` 조건이 없어 ghcr `:latest`가 갱신되는 경로가 걸려 있다(이번엔 바이너리 내용이 main과 동일해 실질 변화는 없으나 경로 자체는 존재)."
         }
       }
     ]
