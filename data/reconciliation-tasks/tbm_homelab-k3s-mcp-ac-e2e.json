@@ -1822,9 +1822,9 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "createdAt": "2026-08-29T06:55:00Z",
-    "updatedAt": "2026-08-30T14:45:00Z",
+    "updatedAt": "2026-08-30T14:52:00Z",
     "trigger": {
       "detectedAt": "2026-08-29T06:55:00Z",
       "changedSides": [
@@ -1965,6 +1965,54 @@
               "startedAt": "2026-08-30T14:38:00Z",
               "finishedAt": "2026-08-30T14:41:00Z",
               "log": "머지 전 게이트 실측 + 머지 수행(executionGuide §1 순서 1·3).\n- 게이트: PR run 33296766521 4잡(`fmt + vet`·`unit tests`·`integration tests`·`docker build & push`) 전부 completed/success, head 6c95eb04 불변, base main 32fde9f0 불변, mergeable_state clean.\n- 사이 끼어들 PR 확인: 열린 다른 PR은 #20 하나뿐이고 2026-05-24 생성 후 base가 옛 커밋(bd74aadd)·mergeable_state dirty라 머지 불가 상태 — 계획서의 '열린 다른 PR 없음' 서술과 다르나 §1의 '사이에 다른 PR을 머지하지 말 것' 조건은 충족.\n- draft 해제: GraphQL `markPullRequestReadyForReview`(REST로는 undraft 불가) → isDraft=false.\n- squash merge: PUT /pulls/43/merge (merge_method=squash) → merged=true, main HEAD `b25798e08e4dc3d0de4dfa4801607d4375bd4bed`."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "8da9016e8acb509a6963c8d6524eac7d7f21fe96",
+          "verifiedAt": "2026-08-30T14:52:00Z",
+          "checks": [
+            {
+              "name": "체커 집계(완료 기준 1)",
+              "status": "passed",
+              "detail": "머지된 main `b25798e0`을 클론해 `check_ac_mapping.py` 직접 실행 → exit 0. 출력: AC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일(전용) 22 · 분할 대기 4 · 공백 41(겸용 커버 27 · 케이스 없음 14). 계획이 명시한 기대값과 완전 일치. 규칙 1·2·3·5·6 위반 없음, 러너 배차 누락 없음."
+            },
+            {
+              "name": "AC 전집 불변(gap을 낮추지 않았음)",
+              "status": "passed",
+              "detail": "`grep -c '^### AC[0-9]*:' docs/prd-*.md` 합계 = 64, 예외 등재 1 그대로. AC를 지우거나 예외로 도피해 gap을 줄이지 않았다."
+            },
+            {
+              "name": "러너 배차",
+              "status": "passed",
+              "detail": "`run_all.py --group primary --list` = 24개 파일(분할 전 13), `--group auth-variant --list` = 2개(불변, 이번 범위 밖)."
+            },
+            {
+              "name": "전용 파일 13개 실재 + 파일당 1 AC 선언",
+              "status": "passed",
+              "detail": "`opensearch_{search,document_put,document_delete}_ac*.py` 11개 + `aws_config_get_ac{1,2}.py` 2개 = 13개 존재, 각 파일 모듈 docstring의 `검증 AC:` 선언이 정확히 1건. 겸용 원본 `opensearch.py`·`aws_config.py`는 삭제됨(No such file)."
+            },
+            {
+              "name": "머지 후 main CI 4잡 + 파일명 단위 실행(완료 기준 2)",
+              "status": "passed",
+              "detail": "push run `33317538018`(head b25798e0) 4잡 전부 completed/success. `integration tests` 로그 실측: 배너 `러너: primary 그룹 24개 파일`·`러너: auth-variant 그룹 2개 파일`, 신규 13개 파일 각각의 `===== <파일명> (AC: <ac>) =====` 헤더 13개와 대응 `ok: <AC>` 줄 확인."
+            },
+            {
+              "name": "접근 경로 단정(파일 분할의 비자명한 전제)",
+              "status": "passed",
+              "detail": "http-trace를 읽는 4개 파일이 서로 다른 프로세스에서 돌았음에도 opensearch 3건은 동일한 STS 발급 키 `H9QQ2L2S5TNIDODXWNZL`을 관측(서버가 자격증명을 캐시), `aws_config_get_ac2`는 다른 role이라 다른 키 `1ODJVAV2UWL6BP6T7PYM`. 준비 단계 관측과 같은 패턴이 머지 후 main에서도 재현됐다."
+            },
+            {
+              "name": "(정보성) 남은 잔여 gap — 이 task 범위 밖",
+              "status": "passed",
+              "detail": "분할 대기 4개 파일 27 AC(`workload.py` 16 · `no_config.py` 7 · `auth.py` 2 · `smoke.py` 2)와 공백 14건(`platform-auth-safety/AC2`·`AC8` · `session-*` 12)이 남는다. converged 판정에는 넣지 않았다 — 계획이 명시적으로 범위 밖으로 뺀 잔여이며 재감지가 후속 task로 잇는다. 참고: CI 로그의 `aws-config-get/AC3`·`opensearch-*/AC4·AC5` ok 줄은 겸용 파일 `no_config.py`가 낸 것으로, 전용 파일 미보유(공백) 상태와 모순되지 않는다."
+            },
+            {
+              "name": "(정보성) 실행 후 버전 — 다음 감지 주기 트리거",
+              "status": "passed",
+              "detail": "as-is(`HEAD:tests`) `869978c1` → `8da9016e`, to-be(prd-*.md + doc-tracker.md blob 목록) `329f3559` → `313d9eb8`. 모델의 `lastObservedVersion`은 의도적으로 갱신하지 않았다 — 이 변화가 다음 감지의 트리거이자 후속 task의 진입점이다."
             }
           ]
         }
