@@ -1819,5 +1819,33 @@
         }
       }
     ]
+  },
+  {
+    "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
+    "status": "assessing",
+    "createdAt": "2026-08-29T06:55:00Z",
+    "updatedAt": "2026-08-29T06:55:00Z",
+    "trigger": {
+      "detectedAt": "2026-08-29T06:55:00Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "aff1ef80e39ba49b428d6ddb52b42949d3c912d7",
+        "currentVersion": "869978c1d64b2cc6682fe105007ebeeb848a48e2"
+      },
+      "toBe": {
+        "previousVersion": "895a14493f212b757793eba7087b4ed2a0b193cb",
+        "currentVersion": "329f3559008cf533911d52d95e2a34393d216d17"
+      }
+    },
+    "stateSummary": {
+      "asIs": "## as-is — 매칭 단위 `tests/integration/*.py` @ `32fde9f0` (2026-08-28T11:23:21Z)\n\n트리 해시 `869978c1` (직전 기준선 `aff1ef80`). 델타는 **PR #42 `32fde9f0`** — `test(e2e): file-unit AC↔e2e mapping — declarations, checker, list-driven runner, 3 domains split (rct_20260814-0001)`, 즉 **이 모델 자신의 직전 task가 만든 산출물**이다(27 files +1380/-666).\n\n**직접 실측**(머지된 main을 클론해 체커를 돌린 결과, task 기록을 인용한 것이 아니다):\n\n```\n$ python3 tests/integration/check_ac_mapping.py      # exit 0\nAC 전집: 64 / 예외 등재: 1 / 1:1 대상: 63\n매칭 파일(전용): 9 / 분할 대기 파일(규칙 2 위반): 6 / 공백 AC: 54\n공백 내역: 겸용 파일이 커버 40 · 케이스 자체 없음 14\nOK: 규칙 1(중복 전용)·2·3·5·6 위반 없음, 러너 배차 누락 없음\n```\n\n- **매칭 단위 파일 15개**(직전 9개 → 15개), 전부 모듈 docstring에 `검증 AC:` 1건씩 선언. 직전 관측에서 `grep -c '검증 AC'`가 **전 파일 0건**이었던 확인 지점이 이제 존재한다.\n- **전용 파일 9개**(정확히 1 AC 선언): `grafana_token_ac{1,2,4}.py` · `github_app_installation_token_ac{1,2,4}.py` · `dear_baby_reset_user_ac{1,2,3}.py`. 원본 `grafana.py`·`github_app.py`·`dear_baby.py`는 삭제됐다.\n- **분할 대기 파일 6개**(2개 이상 선언 = 규칙 2 위반): `workload.py` 16 · `opensearch.py` 11 · `no_config.py` 7 · `auth.py` 2 · `aws_config.py` 2 · `smoke.py` 2 = **40 AC**.\n- **러너 배차**: `run_all.py --group primary --list` 13개 + `--group auth-variant --list` 2개 = 15, 합집합이 매칭 단위 전집과 일치하고 중복 없음. `ci.yml`은 파일별 9스텝 → 배포 대상별 2스텝 + lint 체커 1스텝으로 교체됐다.\n- 신설 인프라 `check_ac_mapping.py`(290줄, 표준 라이브러리만)·`run_all.py`(203줄)는 매칭 단위 밖이다.",
+      "toBe": "## to-be — AC(`docs/prd-*.md`) + 매핑 레지스트리(`docs/doc-tracker.md`) @ `32fde9f0`\n\n- 버전 `329f3559` (직전 기준선 `895a1449`). 델타는 PR #42의 레지스트리 재작성 + 테스트 문서 4건 갱신(`doc-tracker.md` +176 라인대 개편).\n- **AC 전집 64개 / PRD 18개 — 불변.** `git diff 56d2ef6e..32fde9f -- docs/prd-*.md`가 비어 있다(체커도 64로 재도출). gap을 줄이려고 AC를 낮추지 않았다.\n- **레지스트리가 케이스 단위 → 파일 단위로 재작성됐다.** \"AC 레지스트리 (64) — ✅ 전용 파일 9 · ⬜ 분할 대기 40 · ⬜ 공백(케이스 없음) 14 · 🚫 예외 1\"이 새 회계이고, 항등식 `(AC 64 − 예외 1) = 전용 9 + 분할대기 40 + 공백 14 = 63`이 성립한다. 직전 주기에 규칙 6 위반이었던 \"케이스 단위 집계\"가 해소됐다.\n- **예외 등재 1건**: `platform-auth-safety/AC4`(정적 매니페스트 성격). 직전 주기에 \"제안\" 상태였던 것이 정식 등재됐다.\n- **공백(케이스 자체 없음) 14건**: `platform-auth-safety/AC2`(인증 디스커버리)·`AC8`(인증 방식 구성 유연성) + `session-list/*`(3) · `session-read/*`(4) · `session-write/*`(5). 레지스트리 주석: session 3종 12 AC는 **도구 미구현**이고 session-platform 배포가 2026-08-06에 클러스터에서 제거돼 실 검증 경로가 없다.",
+      "gap": "**유의미한 drift가 남아 있다 — 규칙 1 위반 54건 · 규칙 2 위반 6건.** 다만 성격은 \"정체\"가 아니라 **부분 수렴 후의 잔여**다.\n\n규칙별 실측(체커 출력 + 파일 재도출):\n\n- **규칙 1(AC→전용 파일 유일) 위반 54건**: 1:1 대상 63개 AC 중 전용 파일을 가진 AC는 9개뿐이다. 나머지 54건이 공백(겸용 파일이 커버 40 + 케이스 자체 없음 14).\n- **규칙 2(파일→AC 유일) 위반 6건**: `workload.py`(16 AC)·`opensearch.py`(11)·`no_config.py`(7)·`auth.py`(2)·`aws_config.py`(2)·`smoke.py`(2)가 여전히 여러 AC를 겸한다.\n- **규칙 3(비-AC 파일)**: `smoke.py`가 여전히 `ping/AC1`+`platform-auth-safety/AC6` 2건을 겸한다 — 스모크 유형으로 재분류할지 AC별로 쪼갤지 미결.\n- **규칙 5(참조 무결성)·규칙 6(집계 일치)**: **위반 없음**(체커 exit 0). 규칙 6은 직전 주기의 위반이 이번에 해소됐다.\n\n**직전 주기 대비 이동**: 매칭 파일 **0 → 9**, 규칙 1 위반 **63 → 54**, 규칙 2 위반 **9 → 6**, 규칙 6 위반 **1 → 0**, 확인 지점(`검증 AC:` 선언) **0건 → 15개 파일 전부**. 즉 직전 task는 계획이 명시한 완료 기준(체커·러너·CI 배선 + 3개 도메인 분할)에 수렴했고, 그 계획이 **명시적으로 범위 밖으로 뺀 잔여**가 지금 이 gap이다.\n\n**이 gap은 재감지가 잇도록 설계된 잔여다.** 직전 task `rct_20260814-0001`의 verification 정보성 체크가 \"as-is 트리 해시가 `aff1ef80` → `869978c1`, to-be가 `895a1449` → `329f3559`로 바뀌었으므로 다음 감지 주기가 후속 task를 연다\"고 사후 버전을 미리 적어 뒀고, **이번 스윕이 정확히 그 두 값을 관측했다**. 슬라이스 → 재감지 → 후속 task의 정상 진행이다.",
+      "summarizedAt": "2026-08-29T06:55:00Z"
+    },
+    "id": "rct_20260829-0001"
   }
 ]
