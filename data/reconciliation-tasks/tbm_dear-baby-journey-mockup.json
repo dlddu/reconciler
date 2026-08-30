@@ -100,9 +100,9 @@
   },
   {
     "toBeModelId": "tbm_dear-baby-journey-mockup",
-    "status": "assessing",
+    "status": "action_required",
     "createdAt": "2026-08-30T10:07:30Z",
-    "updatedAt": "2026-08-30T10:07:30Z",
+    "updatedAt": "2026-08-30T10:08:00Z",
     "trigger": {
       "detectedAt": "2026-08-30T10:07:30Z",
       "changedSides": [
@@ -124,6 +124,12 @@
       "gap": "**유의미한 차이 2건. 하나는 감지 장치 자체가 조용히 뒤집힌 것이고, 하나는 실제 커버리지 미달이다.**\n\n**① 모델 정의 결함 — to-be가 as-is 산출물을 가리킨다 (이 task의 실질 대상, 신규)**\n`toBe.versionScript`가 `docs/journeys`를 하드코딩하는데, 그 경로의 **의미가 PR #182로 반전됐다**: 여정 정의는 `docs/user-journeys/`로 떠났고 그 자리에는 여정 mockup 빌드 산출물이 들어왔다. 결과는 두 방향으로 틀린다 — (a) **여정 정의가 앞으로 어떻게 바뀌어도 to-be 버전이 움직이지 않아 재감지되지 않는다**, (b) 여정 mockup을 하나 더 빌드할 때마다 `docs/journeys` 트리가 바뀌어 **to-be가 변한 것처럼 오탐**한다(실제로는 as-is 변화다). 즉 이 모델은 이제 mockup을 mockup과 대조한다.\n\n같은 결함이 as-is 쪽에도 있다: `index:` 축이 존재한 적 없는 `docs/journey-mockup-map.md`를 계속 가리키는 사이, 실제 매핑 SSOT는 `docs/doc-structure-state.md`로 생겨났다. 모델은 그것을 관측하지 않는다.\n\n**`tbm_econ-opinion-monitor-journey-mockup`의 열린 `rct_20260830-0002`와 같은 종류의 결함이되, 증상이 더 나쁘다** — econ 쪽은 경로가 삭제돼 `versionScript`가 rc=128로 죽어서 **눈에 띄었다**. 여기는 경로가 살아 있어 스크립트가 **정상 종료(rc=0)** 하므로 아무 신호도 나지 않는다. 오늘 이 rename을 사람이 보지 않았다면 조용히 영구 미감지로 갔다.\n\n**② 규칙 1 미달 — 여정 6개 중 여정 mockup 1개 (실측)**\n`docs/doc-structure-state.md`가 스스로 \"🟡 6개 중 1개\"라고 적는다. 예외 등재 없이 여정 mockup이 없는 여정 5개는 모델 정의 규칙 1·8상 drift다. 다만 이 축(여정 단위 재편·`data-*` 규약·매핑 인덱스 신설)은 **열린 `rct_20260815-0001`(status `awaiting_review`, executor 점유)이 이미 쥐고 있는 범위**이며, PR #182의 `JourneyShell` + `diary-browse` 도입은 그 방향으로의 **첫 슬라이스가 실제로 착지한 것**으로 읽힌다(6개 중 1개). 따라서 여기서 중복해 손대지 않는다.",
       "summarizedAt": "2026-08-30T10:07:30Z"
     },
-    "id": "rct_20260830-0001"
+    "id": "rct_20260830-0001",
+    "assessment": {
+      "actionRequired": true,
+      "reason": "작업 필요. **이 task의 범위는 ①(모델 정의 수복)으로 한정한다** — ②의 여정 mockup 커버리지(6개 중 1개)는 열린 `rct_20260815-0001`(status `awaiting_review`, executor 점유)이 쥔 범위이고, PR #182의 `JourneyShell`+`diary-browse` 착지가 바로 그 슬라이스의 진행분이라 여기서 손대면 경합이 된다.\n\n**왜 지금 반드시 처리해야 하는가**: `toBe.versionScript`가 가리키는 `docs/journeys`의 의미가 PR #182로 반전됐다 — 여정 정의는 `docs/user-journeys/`로 이동했고 그 경로에는 여정 mockup 빌드 산출물이 들어왔다. 경로가 살아 있어 스크립트는 **rc=0으로 정상 종료하므로 아무 경보도 나지 않는다.** 방치하면 (a) 여정 정의 변경이 다시는 감지되지 않고, (b) 여정 mockup을 추가로 빌드할 때마다 to-be가 바뀐 것처럼 오탐한다. 자동 해소 가능성은 0이다(rename이 되돌아올 이유가 없다). 감지 장치가 조용히 죽은 상태라 우선순위가 높다.\n\n**참고**: 이번 fire가 기록한 `toBe.lastObservedVersion`(`c3c619fc`)은 **잘못된 대상의 해시**다. 재감지 churn을 막기 위해 관측값 그대로 캐시했을 뿐이므로, 수복 시 이 값을 새 스크립트 기준으로 다시 계산해 덮어써야 한다.\n\n**필요한 조치(planner용)**\n- `toBe.versionScript`: `git rev-parse HEAD:docs/journeys` → **`HEAD:docs/user-journeys` 트리 해시**로 교체. econ 쪽 `rct_20260830-0002`가 같은 형태의 수복을 이미 계획 중이니 스크립트 관용구를 맞추면 좋다.\n- `asIs.versionScript`: (a) `index:` 축의 대상을 없는 `docs/journey-mockup-map.md`에서 실제 매핑 SSOT로 자리잡은 **`docs/doc-structure-state.md`**로 교체하고, (b) 여정 mockup 배포물 **`docs/journeys/` 트리**를 as-is 축으로 편입한다 — 그래야 '여정 6개 중 mockup 몇 개'가 버전에 반영돼 규칙 1 진행이 기계적으로 추적된다.\n- 모델 `definition`의 경로 서술(`docs/journeys/`·`docs/journey-mockup-map.md`)도 함께 갱신한다.\n- 스크립트 수복은 `rev-parse --verify --quiet || echo absent` 관용구를 써서, 다음번 경로 이동 때 **조용한 오독이 아니라 `absent`라는 눈에 띄는 관측값**이 남게 한다.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-08-30T10:08:00Z"
+    }
   }
 ]
