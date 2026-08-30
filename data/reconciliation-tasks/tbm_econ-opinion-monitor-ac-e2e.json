@@ -502,7 +502,7 @@
       }
     },
     "createdAt": "2026-08-30T06:00:00Z",
-    "updatedAt": "2026-08-30T06:37:00Z",
+    "updatedAt": "2026-08-30T06:40:00Z",
     "stateSummary": {
       "asIs": "관측 시각 2026-08-30T06:00Z · `dlddu/economic-opinion-trend-monitor@main` fc304c5. `tests/e2e` 트리 `ad5c733e` (직전 `7f0be0ee`).\n\n39d2337 (2026-08-29, PR #14 — `feat(compare): 3축 비교 뷰 착지 + AC3.7 e2e spec (slice 7, reconcile rct_20260814-0001)`)이 더한 것:\n- `specs/ac3-7-three-axis-compare.spec.ts` 신설(139줄) — AC3.7 전용 spec.\n- `fixtures/gold/axis_sentiment.jsonl`(1행) · `fixtures/gold/subject_trend.jsonl`(2행) · `fixtures/README.md`(7행) 추가.\n- 기존 spec은 손대지 않았다 (+149 −0, 순수 추가).\n\n현재 spec 구성: AC 선언 3개(`ac3-6-sentiment-ratio-viz` · `ac3-7-three-axis-compare` · `ac3-8-normalized-ratio`) + 비-AC(스모크·인프라) 1개.",
       "toBe": "관측 시각 2026-08-30T06:00Z · `ac:2a9851cb…`(**변화 없음**) `reg:4343e5af`(직전 `cce58693`). **AC 집합(`docs/econ-opinion-monitor-prd-*.md`)은 변하지 않았고 레지스트리(`econ-opinion-monitor-doc-tracker.md`)만 바뀌었다.**\n\n- 집계: AC 전집 21 · 예외 등재 1 · 1:1 대상 20 · **AC 매칭 spec 파일 2 → 3** · **공백 18 → 17** · 비-AC spec 1.\n- 매핑표에 `AC3.7 | tests/e2e/specs/ac3-7-three-axis-compare.spec.ts` 행 추가, 슬라이스 표의 AC3.7 행에 ✅ **착지** 표기.\n- 공백 목록(`<!-- gap-list -->` 마커 안)에서 AC3.7 제거 → 잔여 17건: AC1.2~1.7 · AC2.1~2.6 · AC3.1~3.5.\n- 산문 갱신: \"✅ 착지한 2건\" → \"3건\". AC3.7은 `/api/compare`가 처음부터 Gold 파생이었으나 `/compare` 라우트가 플레이스홀더라 착지하지 못하던 건이며, 소유 슬라이스 7의 화면 절반을 당겨 실화면으로 세운 결과라고 명시했다. 슬라이스 7에 남는 몫은 축·기간 컨트롤 등 화면 확장이고, 이 AC의 spec은 신설이 아니라 **확장** 대상이라고 등재했다.",
@@ -515,6 +515,57 @@
       "reason": "작업 필요. 공백 17건은 예외가 아니라 미검증이며(레지스트리가 \"'아직 안 만들었다'는 예외 사유가 아니다\"를 명문화하고 있다), 자동 해소되지 않는다.\n\nplanner에게 넘기는 판단 재료:\n- **AC3.1~3.5(5건)가 지금 열려 있는 유일한 저비용 축이다.** 나머지 12건(AC1.x·AC2.x)은 배치 하네스 신설이 선행 조건이라 spec만으로 닫을 수 없다. 직전 세 건(AC3.6·AC3.8 → AC3.7)이 \"화면 착지 + 같은 하네스에서 spec 추가\"로 성립한 것과 같은 경로다.\n- **슬라이스 7의 잔여를 먼저 확인할 것.** 레지스트리가 AC3.7 spec을 \"신설이 아니라 확장 대상\"으로 등재했고 슬라이스 7에 축·기간 컨트롤이 남아 있다고 적었다. 새 AC를 여는 것보다 슬라이스 7을 닫는 편이 규칙 2 위반(새 파일 신설) 위험이 없다.\n- **AC2.x를 e2e로 열려면 분석기 cutover가 선행돼야 한다.** PR #12가 실 분석기를 opt-in으로만 넣고 `deploy/`를 바꾸지 않았으므로, e2e 하네스 작업 전에 `tbm_econ-opinion-monitor-docs-impl` 쪽 슬라이스와 순서를 맞추는 편이 낫다 — 두 모델의 AC2.x 잔여는 같은 지점에서 풀린다.\n- 완료 기준은 `<!-- gap-list -->` 마커와 집계 블록으로 기계 판정 가능하다.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-30T06:00:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "AC3.5(서술 대상별 추세 시계열 시각화) 전용 spec을 신설해 공백을 17 → 16으로 줄인다. AC3.5는 순수 서빙·시각화 AC라 배치 파이프라인 없이 현행 하네스(픽스처 Gold → Go API → 웹 렌더)에서 AC 본문의 검증 방법을 그대로 단언할 수 있다 — AC3.6·AC3.7·AC3.8이 소유 슬라이스보다 먼저 착지한 것과 같은 경로이고, 직전 task(rct_20260814-0001)가 AC3.7에서 화면 절반을 함께 당겨 온 선례를 그대로 따른다. 다만 AC3.5는 '시계열'이라 현행 단일 버킷 픽스처로는 단언이 공허하다. 그래서 픽스처에 과거 버킷을 더하는데, 그러면 버킷을 거르지 않는 dashboard·fairness·sentiment 경로가 같은 대상을 버킷 수만큼 중복 노출해 ac3-8의 `.rankrow` 유일성 단언이 깨진다(실측 확인). 따라서 세 경로를 compare가 이미 쓰는 '최신 버킷 하나로 정렬' 규약으로 맞추는 것을 선행 단계로 넣는다 — 과거 버킷만 더하므로 최신 버킷의 관측값은 불변이고, 기존 spec 3종의 기대값도 그대로다.\n\n대안 비교: (a) 슬라이스 7 잔여(compare 축·기간 컨트롤)를 닫는 안 — detector가 1순위로 권했지만 AC3.7은 이미 spec을 가지고 있어 **어느 모델의 수렴 지표도 움직이지 않는다**(공백 17 불변). 기각. (b) AC2.x e2e 하네스 — 실 LLM 분석기가 opt-in이고 `deploy/batch/workflow-template.yaml`에 analyze entrypoint 자체가 없으며 `ECON_LLM_API_KEY` 시크릿이 선행이라 이 루프 단독으로 못 끊는다. 기각. (c) AC3.1~3.4 — 각각 fairness·대시보드 실집계·sentiment 화면이 선행이라 AC3.5보다 비싸다. AC3.5는 `/api/trend`가 이미 라우팅돼 있고(스텁) `/trend` 화면만 플레이스홀더라 한계 비용이 가장 작다.\n\n**이 시도의 완료 기준(범위)**: `tests/e2e/specs/ac3-5-subject-trend-chart.spec.ts`가 착지하고, `/api/trend`가 실 시계열을 내려주고, `/trend`가 실화면이 되며, doc-tracker의 `## e2e 매핑` 절이 매칭 4 · 공백 16으로 갱신돼 `python3 tests/e2e/check_ac_mapping.py`(규칙 1·2·3·4'·5·6)가 통과하고 CI의 build·e2e 두 잡이 green인 것. **범위 밖**: 나머지 공백 16건(AC1.2~1.7 · AC2.1~2.6 · AC3.1~3.4), 목업이 그리는 축·단위·기간 세그먼트 컨트롤과 정규화 토글, 실집계 Gold(슬라이스 4), `image.yml`의 PR 이벤트 GHCR `:latest` 가드.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "선행 결함 수정 — `go/internal/handlers/handlers.go`의 dashboard·fairness·sentiment가 time bucket을 거르지 않는 것을 compare와 같은 '최신 버킷 하나' 규약으로 맞춘다. `latestBucket`/`trendsInBucket`을 재사용하고 `sentimentFor`(축 첫 행 반환)를 `sentimentInBucket`으로 대체한다. `go/internal/handlers/handlers_test.go`에 '과거 버킷이 섞여도 최신 버킷만 노출된다'는 케이스를 추가한다.",
+              "expectedOutcome": "`cd go && go test ./...` 통과. 단일 버킷 입력에 대한 기존 단언은 전부 불변 (과거 버킷이 없으면 필터가 항등이므로). 다중 버킷 입력에서 대시보드 상위 목록에 같은 subject가 두 번 나오지 않는다."
+            },
+            {
+              "seq": 2,
+              "action": "`/api/trend`를 스텁에서 실 시계열로 바꾼다 — Gold를 (subject, axis)로 묶고 time_bucket 오름차순 시리즈를 만들어, 선택 대상 1개 + 같은 축 상위 대상들의 시리즈를 함께 내려준다. 응답에 비교 기준(bucket_unit · normalized · 선택 대상)을 명시한다(compare가 `basis`로 세운 관례). `subject`·`axis` 쿼리 파라미터를 지원하고, subject 미지정이면 그 축의 1위 대상을 기본 선택으로 삼는다. `note: stub…` 문구는 제거한다.",
+              "expectedOutcome": "`GET /api/trend?axis=KR`이 series[] (각 subject마다 points[] = {time_bucket, normalized_share, raw_count})와 basis를 돌려준다. handlers_test.go의 신규 케이스가 버킷 정렬·대상 선택·상위 대상 동반을 단언하고 통과한다."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/e2e/fixtures/gold/*.jsonl`에 **과거** 버킷을 더한다(최신 버킷 2026-06-23T14는 행·값 모두 그대로 두고 T11·T12·T13을 앞에 붙인다). `fixtures/README.md`의 '묵은 버킷을 넣지 않는다' 문단을 새 규약(과거 버킷은 넣되 최신 버킷 행은 불변, 그래서 대시보드·비교 spec의 기대값이 안 바뀐다)으로 고쳐 쓴다.",
+              "expectedOutcome": "픽스처가 KR 축에 4개 버킷 × 2개 대상의 시계열을 갖는다. `git diff`에서 2026-06-23T14 행이 한 줄도 수정되지 않았음이 보인다."
+            },
+            {
+              "seq": 4,
+              "action": "`web/src/screens/Trend.tsx` 신설 — 목업 `docs/mockups/trend.html`의 카드 구조를 따라 ① 다중 시리즈 SVG 라인차트(선택 대상 강조 + 비교 대상 겹치기) ② 대상 선택 목록 ③ 선택 대상 현재 점유율 지표. 디자인 시스템 토큰(`--primary`·`--ax-us`·`--ax-gl`, `.card`/`.card-h`/`.card-b`/`.legend`/`.norm-flag`)만 쓰고 외부 차트 라이브러리는 쓰지 않는다. `App.tsx`의 `BUILT`에 `trend`를 넣고 라우팅을 Placeholder에서 뗀다. `web/src/api/types.ts`·`client.ts`에 응답 타입과 `api.trend()`를 더한다.",
+              "expectedOutcome": "`cd web && npm run build && npm run lint && npm run test` 전부 통과. `/trend`가 플레이스홀더 문구 없이 차트를 렌더한다."
+            },
+            {
+              "seq": 5,
+              "action": "`tests/e2e/specs/ac3-5-subject-trend-chart.spec.ts` 신설. 헤더에 `// 검증 AC: AC3.5` 정확히 한 줄. AC 본문의 검증 방법을 낱말대로 쪼개 단언한다 — ① 차트가 집계와 일치 (폴리라인 점 개수·좌표가 API series의 값에서 도출된 것과 같다) ② 대상 선택이 동작 (다른 대상을 고르면 강조 시리즈와 지표가 그 대상으로 바뀐다) ③ 상위 대상 비교가 동작 (여러 시리즈가 하나의 공통 스케일 위에 함께 그려진다). 기대값은 상수로 박지 않고 API 응답을 먼저 읽어 대조한다(ac3-6·3-7·3-8이 세운 관례).",
+              "expectedOutcome": "`npx playwright test --list`가 새 파일을 포함해 전 spec을 트랜스파일하고 테스트 수를 보고한다. CI e2e 잡에서 신규 spec과 기존 3종이 모두 통과한다."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/econ-opinion-monitor-doc-tracker.md` 갱신 — `## e2e 매핑` 절의 집계 표(AC 매칭 spec 파일 3→4 · 공백 17→16), AC↔spec 표에 AC3.5 행 추가, `<!-- gap-list -->` 마커 안에서 AC3.5 제거, 산문의 '착지한 3건'을 4건으로 고치고 AC3.5의 성격(시계열이라 픽스처에 과거 버킷을 더했고 소유 슬라이스 5에는 화면 확장이 남는다)을 적는다. 로드맵의 AC↔e2e 1:1 매핑표 AC3.5 행에 ✅ 착지 표기, `## 변경 이력`에 행 추가. ⚠️ 이 절의 산문에 공백 목록 밖의 AC 코드를 새로 쓰지 않는다(검사기가 절 전체에서 코드를 긁는다).",
+              "expectedOutcome": "`python3 tests/e2e/check_ac_mapping.py`가 'OK: 규칙 1(중복)·2·3·4'·5·6 위반 없음'을 출력하고 exit 0."
+            },
+            {
+              "seq": 7,
+              "action": "로컬 게이트를 CI와 1:1로 돌린다 — `cd go && gofmt -l . && go vet ./... && go test ./...`, `cd web && npm run build && npm run lint && npm run test`, `python3 tests/e2e/check_ac_mapping.py`, `cd tests/e2e && npm ci && npx playwright test --list`. kind e2e(docker 필요)는 이 환경에서 불가하므로 CI 결과로 대신 확인한다.",
+              "expectedOutcome": "네 묶음 모두 exit 0. 로컬에서 못 도는 것은 kind e2e 하나뿐임이 명시된다."
+            },
+            {
+              "seq": 8,
+              "action": "브랜치 `reconcile/rct_20260830-0001`로 커밋·푸시하고 PR을 연다(머지하지 않는다). 본문에 task id · gap 요약 · 단계 · 검증 방법 · 범위 밖 목록 · GHCR `:latest` 경고를 적는다. PR CI(build · e2e · Image 2잡)의 결과를 **관측**해 `preparation.notes`와 지침에 실측으로 기록한다.",
+              "expectedOutcome": "PR URL이 생기고, check-run 결과가 예측이 아니라 관측값으로 레코드에 남는다."
+            }
+          ],
+          "plannedAt": "2026-08-30T06:40:00Z"
+        }
+      }
+    ]
   }
 ]
