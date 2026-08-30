@@ -102,7 +102,7 @@
     "toBeModelId": "tbm_dear-baby-journey-mockup",
     "status": "planning",
     "createdAt": "2026-08-30T10:07:30Z",
-    "updatedAt": "2026-08-30T10:22:00Z",
+    "updatedAt": "2026-08-30T10:33:00Z",
     "trigger": {
       "detectedAt": "2026-08-30T10:07:30Z",
       "changedSides": [
@@ -130,6 +130,57 @@
       "reason": "작업 필요. **이 task의 범위는 ①(모델 정의 수복)으로 한정한다** — ②의 여정 mockup 커버리지(6개 중 1개)는 열린 `rct_20260815-0001`(status `awaiting_review`, executor 점유)이 쥔 범위이고, PR #182의 `JourneyShell`+`diary-browse` 착지가 바로 그 슬라이스의 진행분이라 여기서 손대면 경합이 된다.\n\n**왜 지금 반드시 처리해야 하는가**: `toBe.versionScript`가 가리키는 `docs/journeys`의 의미가 PR #182로 반전됐다 — 여정 정의는 `docs/user-journeys/`로 이동했고 그 경로에는 여정 mockup 빌드 산출물이 들어왔다. 경로가 살아 있어 스크립트는 **rc=0으로 정상 종료하므로 아무 경보도 나지 않는다.** 방치하면 (a) 여정 정의 변경이 다시는 감지되지 않고, (b) 여정 mockup을 추가로 빌드할 때마다 to-be가 바뀐 것처럼 오탐한다. 자동 해소 가능성은 0이다(rename이 되돌아올 이유가 없다). 감지 장치가 조용히 죽은 상태라 우선순위가 높다.\n\n**참고**: 이번 fire가 기록한 `toBe.lastObservedVersion`(`c3c619fc`)은 **잘못된 대상의 해시**다. 재감지 churn을 막기 위해 관측값 그대로 캐시했을 뿐이므로, 수복 시 이 값을 새 스크립트 기준으로 다시 계산해 덮어써야 한다.\n\n**필요한 조치(planner용)**\n- `toBe.versionScript`: `git rev-parse HEAD:docs/journeys` → **`HEAD:docs/user-journeys` 트리 해시**로 교체. econ 쪽 `rct_20260830-0002`가 같은 형태의 수복을 이미 계획 중이니 스크립트 관용구를 맞추면 좋다.\n- `asIs.versionScript`: (a) `index:` 축의 대상을 없는 `docs/journey-mockup-map.md`에서 실제 매핑 SSOT로 자리잡은 **`docs/doc-structure-state.md`**로 교체하고, (b) 여정 mockup 배포물 **`docs/journeys/` 트리**를 as-is 축으로 편입한다 — 그래야 '여정 6개 중 mockup 몇 개'가 버전에 반영돼 규칙 1 진행이 기계적으로 추적된다.\n- 모델 `definition`의 경로 서술(`docs/journeys/`·`docs/journey-mockup-map.md`)도 함께 갱신한다.\n- 스크립트 수복은 `rev-parse --verify --quiet || echo absent` 관용구를 써서, 다음번 경로 이동 때 **조용한 오독이 아니라 `absent`라는 눈에 띄는 관측값**이 남게 한다.",
       "assessedBy": "agent",
       "assessedAt": "2026-08-30T10:08:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**모델 정의 수복 — 이 모델은 지금 mockup을 mockup과 대조하고 있다.** `toBe.versionScript`가 하드코딩한 `docs/journeys`의 **의미가 dear-baby PR #182(오늘 09:53Z 병합)로 반전됐다**: 여정 정의 6개는 `docs/user-journeys/`로 떠났고, 비워진 `docs/journeys/`에는 **여정 mockup 빌드 산출물**(`<journey-id>/index.html`)이 들어왔다. 경로가 살아 있어 스크립트는 rc=0으로 조용히 종료하므로 아무 경보도 나지 않는다. 방치하면 (a) 여정 정의 변경이 다시는 감지되지 않고 (b) 여정 mockup을 하나 더 빌드할 때마다 to-be가 변한 것처럼 오탐한다.\n\n**얼마나 정확히 자기 자신을 보고 있었는지 실측했다**: PR #182 직전 커밋 `51fbd4a7`에서 `HEAD:docs/journeys` = `4fc0e70e…` 인데, 이는 레코드에 얼어붙은 **구 to-be baseline과 정확히 같은 값**이고 동시에 **새 as-is `jmock:` 축이 그 커밋에서 내는 값과도 같다**. 즉 같은 경로가 to-be 축이자 as-is 축이다.\n\n**고칠 것 넷** — 앞의 둘은 detector가 지목했고, 뒤의 둘은 계획 중 레포 실측으로 찾았다.\n① `toBe.versionScript`·`toBe.dataSource.subPath`를 `docs/journeys` → **`docs/user-journeys` 트리**로. detector는 versionScript만 짚었지만 `dataSource.subPath`도 같은 죽은 경로를 선언하고 있어 함께 옮긴다.\n② `asIs.versionScript`의 죽은 `index:` 축(존재한 적 없는 `docs/journey-mockup-map.md`)을 실제 매핑 SSOT로 자리잡은 **`docs/doc-structure-state.md`**로 바꾸고, 여정 mockup 배포 트리 **`docs/journeys/`를 `jmock:` 축으로 편입**한다 — 그래야 '여정 6개 중 mockup 몇 개'가 버전에 반영돼 규칙 1 진행이 기계적으로 추적된다.\n③ **정의의 mockup 매칭 단위가 다음 감지에 거짓 6/6을 먹인다(실측).** 정의는 매칭 단위를 \"`src/screens/<Journey>.tsx` 화면 모듈 + `GalleryScreen.tsx`의 여정 그룹\"이라 적는데, 그 소스에는 여정별 화면 모듈 6개와 갤러리 그룹 7개(6여정+Community)가 **전부 존재한다**. 그대로 두면 detector는 규칙 1을 충족으로 읽지만 레포 자신의 `doc-structure-state.md`는 **🟡 6개 중 1개**라 적는다. 매칭 단위를 실제 산출물(`src/journey/<id>.tsx` → `docs/journeys/<id>/index.html`)로 옮긴다.\n④ **as-is `hub:` 축의 의미도 같은 PR에서 뒤집혔다(실측).** 갤러리 번들이 `docs/index.html` → `docs/mockups/index.html`로 **이동**했고(blob `ffced502`가 두 경로에서 동일), 그 자리에 문서 포털이 신설됐다. 축 자체는 그대로 두되(포털이 곧 규칙 7의 허브이고, 번들은 이제 `mockups:` 트리에 포함된다) 그렇게 읽으라고 정의·주석에 명시한다.\n\n**대안 두 가지를 저울질했다.** (i) *versionScript만 고치기* — 감지는 살아나지만 ③ 때문에 다음 detector가 규칙 1을 6/6으로 오판하는 반쪽 수복이라 버렸다(econ `rct_20260830-0002`가 같은 이유로 같은 대안을 기각했다). (ii) *1:1 수렴까지 착수* — 여정 mockup 5개 신설은 열린 `rct_20260815-0001`(`awaiting_review`, executor 점유)의 범위라 경합이다. 그래서 **규칙 1~8의 내용은 한 글자도 건드리지 않고 판정 앵커만 옮기는** 최소 경로를 골랐다. 가역성은 reconciler 커밋 1건 `git revert`로 확보된다.\n\n**완료 기준(이 시도의 범위)**: (a) 갱신된 `toBe.versionScript`가 대상 레포 최신 main에서 exit 0으로 `user-journeys-tree:<40hex>`를 내고, (b) 갱신된 `asIs.versionScript`가 exit 0으로 `mockups:<40hex> jmock:<40hex> map:<40hex> hub:<40hex>`를 내며, (c) 두 출력이 각각 재기준선된 `lastObservedVersion`과 문자열 동일하고(다음 fire 오탐 0), (d) 정의·description의 규범 절에 `docs/journeys`를 **여정 정의**로 부르는 서술과 `docs/journey-mockup-map.md`를 매핑 SSOT로 부르는 서술이 남지 않고, (e) 두 스크립트가 PR #182 이전 커밋에서 하드 실패 대신 `absent`로 degrade하며, (f) diff가 `data/to-be-models.json`의 이 모델 1건에 그친다(다른 모델·`checkPolicy` 불변).\n\n**범위 밖(후속)**: 여정 mockup 커버리지 1/6 → 6/6 수렴, `data-journey`/`data-step` 규약의 나머지 5여정 확산, 미시각화 단계 4건·고아 M-43 처리 — 전부 `rct_20260815-0001`의 범위다. 그 task의 재계획·취소 여부도 여기서 결정하지 않고 **사실만 지침·보고에 남긴다**(아래 지침 §5).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "reconciler `git pull --rebase`로 최신화하고, 이 task의 status가 아직 `planning`인지(= 내 lock이 유지되는지) 재확인한다. 대상 레포 `dlddu/dear-baby`를 fresh clone 한다. 전제 재확인: `HEAD:docs/user-journeys`에 `README.md` + `*-journey.md` 6개 · `HEAD:docs/journeys`에 `diary-browse/index.html`만 · `HEAD:docs/doc-structure-state.md` 존재 · `HEAD:docs/journey-mockup-map.md` 부재. 대상 레포 HEAD가 `2ee25b3`을 지났으면 `git log 2ee25b3..HEAD -- docs/user-journeys docs/journeys docs/mockups docs/doc-structure-state.md docs/index.html`으로 새 변경을 읽는다.",
+              "expectedOutcome": "네 전제가 그대로 확인된다. HEAD가 전진했으면 그 커밋 내용을 읽어 `verification.notes`에 남긴다 — 재기준선이 미분류 변경을 조용히 삼키지 않게 한다. status가 `planning`이 아니면 다른 워커가 가져간 것이므로 중단하고 보고만 한다."
+            },
+            {
+              "seq": 2,
+              "action": "재기준선 두 값을 대상 레포 클론에서 **실측 계산**한다(새 to-be 스크립트 1회, 새 as-is 스크립트 1회). 계획서에 적힌 기대값을 붙여넣지 않는다.",
+              "expectedOutcome": "`user-journeys-tree:<40hex>` 한 줄과 `mockups:<40hex> jmock:<40hex> map:<40hex> hub:<40hex>` 한 줄. 계획 시점(HEAD=`2ee25b3`) 실측값은 지침 §2에 적어 뒀다 — 다르면 1단계에서 읽은 새 커밋이 원인인지 확인한다."
+            },
+            {
+              "seq": 3,
+              "action": "`patch_model.py`(지침 §4에 전문 수록)로 패치 JSON을 만든다. description 1건 + definition exact-match 치환 14건 + 개정 메모 + `toBe`(dataSource.subPath·versionScript·재기준선) + `asIs`(versionScript·재기준선) + `metadata.updatedAt`을 담고, 치환 대상 문자열을 하나라도 못 찾으면 아무것도 쓰지 않고 실패한다.",
+              "expectedOutcome": "`OK: 패치 생성 … definition 치환 14/14 + description + 개정 메모 + toBe + asIs`. `FAIL:`이면 계획 이후 레코드가 바뀐 것이므로 **부분 적용하지 말고** 재계획한다."
+            },
+            {
+              "seq": 4,
+              "action": "`reconciler_tool.py upsert --file data/to-be-models.json --id tbm_dear-baby-journey-mockup --schema schemas/to-be-model.schema.json --patch <패치>`로 적용하고, 이어서 `validate`로 파일 전체를 검증한다. 직접 `json.dump` 하지 않는다 — 병합·검증·포맷은 헬퍼가 책임진다.",
+              "expectedOutcome": "`updated tbm_dear-baby-journey-mockup …` · `OK: N record(s) … conform`."
+            },
+            {
+              "seq": 5,
+              "action": "사후 검증 ①(라운드트립): 갱신된 레코드에서 `toBe.versionScript.code`와 `asIs.versionScript.code`를 **그대로 뽑아** 대상 레포 클론에서 실행하고, 각 출력을 해당 `lastObservedVersion`과 문자열 비교한다.",
+              "expectedOutcome": "둘 다 exit 0 · to-be 출력이 `^user-journeys-tree:[0-9a-f]{40}$` · as-is 출력이 `^mockups:[0-9a-f]{40} jmock:[0-9a-f]{40} map:[0-9a-f]{40} hub:[0-9a-f]{40}$` · 각각 baseline과 MATCH. 하나라도 불일치면 다음 fire가 즉시 오탐하므로 커밋하지 않는다."
+            },
+            {
+              "seq": 6,
+              "action": "사후 검증 ②(부정 시험): PR #182 이전 커밋 `51fbd4a7`에 `git worktree add --detach`로 워크트리를 만들어 같은 두 스크립트를 돌린다.",
+              "expectedOutcome": "to-be → `user-journeys-tree:absent` exit 0, as-is → `mockups:baba3df0… jmock:4fc0e70e… map:absent hub:ffced502…` exit 0. **죽지 않고 관측된다**는 것이 재발 방지의 실증이다. 덤으로 `mockups:`·`hub:` 두 값이 레코드의 구 `previousVersion`과 일치해 baseline 출처가 확인된다."
+            },
+            {
+              "seq": 7,
+              "action": "diff 범위를 확인한다: `data/to-be-models.json` 1파일 · 레코드 1건 · 바뀐 최상위 키가 `metadata`·`definition`·`toBe`·`asIs`에 한정 · `checkPolicy`와 `asIs.dataSource` 불변 · 다른 모델 레코드 무변.",
+              "expectedOutcome": "`changed: ['tbm_dear-baby-journey-mockup']` · `changed keys: ['metadata','definition','toBe','asIs']` · 다른 모델 0건."
+            },
+            {
+              "seq": 8,
+              "action": "`model(tbm_dear-baby-journey-mockup): repair to-be/as-is versionScript for user-journeys restructure + rebaseline`으로 커밋하고 `git pull --rebase && git push`. 충돌하면 rebase 후 **3~7단계를 다시 돌린다**(패치를 손으로 병합하지 않는다).",
+              "expectedOutcome": "push 성공. ⚠️ 형제 task `tbm_econ-opinion-monitor-journey-mockup/rct_20260830-0002`(status `planned`)가 **같은 파일 `data/to-be-models.json`**을 같은 방식으로 고치는 계획을 들고 대기 중이다 — 어느 쪽이 먼저 착지하든 나머지는 rebase 후 재적용으로 해소된다(레코드 id가 달라 내용 충돌은 없다)."
+            }
+          ],
+          "plannedAt": "2026-08-30T10:33:00Z"
+        }
+      }
+    ]
   }
 ]
