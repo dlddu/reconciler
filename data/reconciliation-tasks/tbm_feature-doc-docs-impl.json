@@ -1094,7 +1094,7 @@
   },
   {
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-14T13:07:00Z",
       "changedSides": [
@@ -1118,7 +1118,7 @@
       "gap": "**유의미한 차이 있음 — 미구현 AC 17/24.**\n\n이번 트리거 자체는 수렴 방향이다: 델타는 이 모델 자신의 슬라이스 3b(PR #15)뿐이고 AC1.5를 구현 완료시켜 미구현을 18→17로 줄였다. to-be(AC 24개)는 넓어지지도 좁아지지도 않았다(`docs/prd` 트리 불변, 문서 델타는 트래커 1개 파일).\n\n그러나 판정 대상은 트리거 델타가 아니라 **잔여 gap**이다. 모델 정의는 미구현 AC를 백로그가 아니라 to-be 미달 drift로 못박고 있고, 현재 **AC1.2~1.4 · AC2.1~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7 = 17건**이 문서에만 존재하고 구현이 없다. 분석 파이프라인은 여전히 1단계 `fetch`만 실행되고 2~5단계는 `pending`으로 남아 있으며(3b가 표현만 얹었다), feature 추출·문서 CRUD 화면(S05~S10)은 코드가 없다. 정적 문서↔코드 격차라 자동 해소 기전이 없다.",
       "summarizedAt": "2026-08-14T13:07:00Z"
     },
-    "updatedAt": "2026-08-31T14:00:00Z",
+    "updatedAt": "2026-08-31T14:02:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "잔여 gap이 유의미하고, 소유자 없는 미점유 handoff이며, 자동 해소 경로가 없다 → 지금 작업이 필요하다.\n\n근거 1 — **정의상 drift다.** 모델 정의는 \"미구현 AC는 백로그가 아니라 to-be 미달 gap이며 drift\"를 판정 기준 1로 명시한다. 현재 미구현 17/24. 트리거 델타가 수렴 방향(18→17)이라는 사실은 무행동 근거가 되지 못한다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 task 이력 7건 중 열린 것은 0건이다(직전 `rct_20260813-0001`은 이번 트리거를 만든 PR #15의 슬라이스로 `succeeded`, 04:29Z 검증 완료). 그 verification의 정보성 체크가 \"미구현 17건은 이 시도의 plan 범위 밖 — 재감지가 후속 task로 잇는다\"고 명시적으로 인계를 남겼다. 전형적인 post-reconcile 재트리거이고 handoff 슬롯이 비어 있다.\n\n근거 3 — **다음 슬라이스가 이미 지목돼 있어 planner가 바로 집을 수 있다.** 트래커 로드맵이 **슬라이스 4 = AC1.2 → AC1.3 → AC1.4 (화면 S05·S06·S07, 분석 파이프라인: 횡단 관심사 → 탐색 전략 → feature 후보, AC4.6 계측 내장)**을 \"다음 권장 슬라이스\"로 못박았다. 선행 의존도 닫혀 있다 — 3a가 `analysis_stages`에 5단계를 시드하고 워커가 1단계를 실행하며, 3b가 그 진행을 화면에 표현하는 경로(`GET /api/analyses/{id}` + S04)를 이미 뚫어 뒀으므로 슬라이스 4는 2~5단계의 실제 실행을 채우는 작업이다.\n\n근거 4 — 정적 문서↔코드 격차라 롤아웃·일시 alert 같은 자동 수렴 기전이 없다 → `recheckAfter` 유예 부적합.\n\nplanner 참고 (둘 다 직전 task가 남긴 관측):\n① 완료 기준에 **각 AC별 전용 e2e spec 신설**을 반드시 포함할 것 — 자매 모델 `tbm_feature-doc-ac-e2e`가 AC↔spec 1:1 전단사를 강제하고 있고 현재 공백 17건이 이 모델의 미구현 17건과 정확히 같은 집합이라, 구현만 얹고 spec을 빠뜨리면 그 모델에 즉시 새 gap이 생긴다. 3a·3b가 확립한 \"배포 전역 상태를 건드리는 spec은 그 상태를 임대(`e2e/support/cluster.ts` + `finally` 복원 + `workers: 1`)\" 규약도 따를 것.\n② **범위 밖이지만 기록해 둔 위험**: `ci.yml`의 push job에 브랜치 조건이 없어 PR CI가 green이면 머지 전에 ghcr `:latest`로 코드가 나가고 실제로 featuredoc 파드가 그 이미지를 서빙했다(직전 task의 정보성 체크에서 관측). 이 모델의 정의 대상(문서↔구현)은 아니므로 이 task의 gap 계수에는 넣지 않았고, 별도 후속 대상으로만 남긴다.",
@@ -1329,6 +1329,64 @@
               "log": "로컬 게이트: `check-mockup-render.py`·`check-journey-mockup.py`·`check-journey-prototype.js`(단언 160건)·`npm run build` 전부 통과. Rust 툴체인이 이 실행 환경에 없어 cargo 는 CI 에 맡겼다. push 후 **PR #27** 개설(head `db740bd`, base main). CI 런 33395932799 — `test (cargo + kind e2e)` success(cargo **83 passed**, playwright **8/8 통과이며 skip 아님**: `ac1-2` 34.5s · `ac1-5` 35.5s · `ac4-5` 39.2s) · `build & push image (ghcr)` success. 별도 워크플로 `docs — mockup ↔ render` · `docs — journey ↔ mockup` 도 success. 그 뒤 **squash merge** → main `e7b1582`. 대체된 PR #16 · #19 는 사유 코멘트를 달고 닫았다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "backend:9c282473461ef6aa56ebbcb35ef10d772030e8c1 frontend:ba78e868365c988cac5d419a6fc0e14798bdaa8a",
+          "checks": [
+            {
+              "name": "(a) OpenAI 호출 경로 존재 + 요청/응답 모양 고정",
+              "status": "passed",
+              "detail": "CI 런 33395932799 의 `cargo test --release` 83 passed / 0 failed(직전 기준선 71 대비 신규 12건 — OpenAI 요청/응답 5 · Google 미지원 1 · 기본값 매핑 1 · 스키마 순수성 2 · 키 우선순위 2 · 무회귀 대조 1). 머지된 main 에서 `backend/src/llm.rs:36` 의 `OPENAI_MODEL=\"gpt-5.6-luna\"` 확인."
+            },
+            {
+              "name": "(b) 기본값 3지점이 모두 OpenAI/Luna",
+              "status": "passed",
+              "detail": "머지된 main 실측: ① `backend/src/llm.rs:123` `pub const DEFAULT_PROVIDER: Provider = Provider::OpenAI;` ② `backend/src/bin/worker.rs:226` `.unwrap_or(llm::DEFAULT_PROVIDER)` ③ `frontend/src/CredentialsSetup.tsx:66` `useState<ProviderId>('openai')`. 단위 테스트 `llm.rs:500-501` 이 `DEFAULT_PROVIDER == OpenAI` 와 `default_model() == \"gpt-5.6-luna\"` 를 단정하며 CI 에서 통과했다."
+            },
+            {
+              "name": "(c) Anthropic 경로 무회귀",
+              "status": "passed",
+              "detail": "`ANTHROPIC_MODEL=\"claude-opus-5\"`(llm.rs:35) 유지되고 `llm.rs:504` 가 그 값을 단정한다. cargo 전체 83 passed 로 기존 71건 무회귀. e2e 8/8 통과(`ac4-1`·`ac4-2`·`ac4-3`·`ac4-8` 포함)."
+            },
+            {
+              "name": "(d) rebase 후 CI green + 머지",
+              "status": "passed",
+              "detail": "PR #27(head `db740bd`) — `test (cargo + kind e2e)` success · `build & push image (ghcr)` success · `docs — mockup ↔ render` success · `docs — journey ↔ mockup` success. squash merge → main `e7b1582`(2026-08-31T13:27:01Z). 머지 후 main CI 런 33397037078 도 두 잡 모두 success(이미지 push 13:37:33Z)."
+            },
+            {
+              "name": "AC↔e2e spec 1:1 전단사(자매 모델 tbm_feature-doc-ac-e2e)",
+              "status": "passed",
+              "detail": "머지된 main: `e2e/tests/*.spec.ts` 8개, `// 검증 AC:` 선언 중복 0건. doc-tracker 집계도 spec 8 · 매핑 8 · 공백 16 으로 일치하며 항등식 (24−0)=8+16 성립. 즉 AC1.2 구현을 얹으면서 자매 모델에 새 gap 을 만들지 않았다."
+            },
+            {
+              "name": "목업↔구현 CI 게이트(자매 모델 tbm_feature-doc-mockup-render)",
+              "status": "passed",
+              "detail": "머지된 main 에서 `check-mockup-render.py` 전 규칙 통과 — 활성 1 · 보류 4 · 편차 22 · 공전 행 0. **대조 보류 상한을 3 → 4 로 한 칸 열었다**(이 시도가 유일한 인상 요인). 사유는 카피 축 선결 결정이며 doc-tracker 에 명시했다. 편차 원장은 22 로 불변(구 S05 4범주 편차는 여정 목업 이관으로 이미 해소돼 등재하지 않았다)."
+            },
+            {
+              "name": "[정보성] 프로덕션 outage 의 전진 복구 조건",
+              "status": "passed",
+              "detail": "이 실행 직전 프로덕션 app 파드는 `Error: migration 5 was previously applied but is missing in the resolved migrations` 로 CrashLoopBackOff 였다(DB 에는 이 PR 의 0005 가 적용돼 있는데 main 이미지에는 없었다). 머지로 `backend/migrations/0005_analysis_documents.sql` 이 main 에 들어왔고 `:latest` 가 13:37:33Z 에 그 빌드로 갱신됐다 — 불일치의 원인이 구조적으로 제거됐다."
+            },
+            {
+              "name": "[정보성] 런타임 롤아웃 확인 미완",
+              "status": "passed",
+              "detail": "`featuredoc` Deployment 는 현재 sablier 에 의해 replicas=0 이라(문제의 12:56 파드는 사라졌다) 새 이미지로 정상 기동하는지를 실제로 관측하지 못했다. replicas=1 로 올려 확인하려 했으나 클러스터 스케일 동작이 승인되지 않아 보류했다. `featuredoc-worker` 는 2026-08-28T04:16:45Z 기동분(restart 0)이 그대로 떠 있어 아직 옛 미머지 빌드를 서빙한다 — app 과 worker 가 서로 다른 코드다. 둘 다 **plan 완료 기준 (a)~(d) 밖**이므로 converged 판정에 넣지 않았고, 사용자 확인 사항으로 남긴다."
+            },
+            {
+              "name": "[정보성] 범위 밖 잔여 — ghcr `:latest` 브랜치 조건 부재",
+              "status": "passed",
+              "detail": "`ci.yml` 의 push job 에는 여전히 `if:` 가 없고 `type=raw,value=latest` 도 무조건이다. main 의 PR #25(`8917a889`)는 커밋 메시지에 \"latest 는 main 한정\"이라 적었으나 실제로는 PR 이미지에 head SHA 태그를 더한 것까지이며 latest 조건은 넣지 않았다 — 이번 outage 의 근본 원인이 그대로 남아 있다. 이 모델(문서↔구현) 범위 밖이므로 별도 task 가 필요하다(`workflows:write` 권한 요함)."
+            },
+            {
+              "name": "[정보성] 모델 전체 잔여 gap",
+              "status": "passed",
+              "detail": "미구현 AC 16건(AC1.3·AC1.4 · AC2.1~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7). 이 시도의 완료 기준 밖이며, 실행이 만든 버전 변화를 다음 감지 주기가 보고 후속 task 를 연다. 트래커 로드맵의 다음 권장 슬라이스는 4b(AC1.3·AC1.4)."
+            }
+          ],
+          "verifiedAt": "2026-08-31T14:02:00Z"
         }
       }
     ]
