@@ -815,7 +815,7 @@
     "toBeModelId": "tbm_feature-doc-journey-mockup",
     "status": "planning",
     "createdAt": "2026-08-31T13:15:44Z",
-    "updatedAt": "2026-08-31T14:02:00Z",
+    "updatedAt": "2026-08-31T14:12:00Z",
     "trigger": {
       "detectedAt": "2026-08-31T13:15:44Z",
       "changedSides": [
@@ -842,6 +842,62 @@
       "assessedBy": "agent",
       "assessedAt": "2026-08-31T13:50:00Z",
       "reason": "작업 필요 → `action_required`(미점유, planner 대기). 근거 넷.\n\n**1. 스킬이 규정한 정상 진행이다.** 직전 `rct_20260831-0001`은 스스로 범위를 여정 1개 이관으로 좁혀 `succeeded`로 닫았고, 그 실행이 만든 버전 변화가 이 감지를 트리거했다. 스킬은 이 경우를 *「실행 단계가 부분 슬라이스로 task를 succeeded로 닫은 뒤 … 잔여 gap이 남아 있으면 새 task를 열어 action_required로 넘긴다」*로 명시한다. 잔여 gap은 실재한다 — **판정 대상 5개 중 3개가 목업 페이지 없음.**\n\n**2. 이 모델에 열린 task가 없다.** 비종료 task 목록을 확인했다 — `rct_20260831-0001`·`rct_20260830-0001` succeeded, `rct_20260831-0002` no_action_needed, `rct_20260815-0001` cancelled. **점유 중인 워커도, 이 gap을 든 미점유 task도 없다.** 지금 넘기지 않으면 이 잔여 gap은 주인이 없다.\n\n**3. 선결 과제가 방금 닫혀 지금이 진행 가능한 시점이다.** 이전 슬라이스들이 「공유 화면 처리 방식 미결정」을 이유로 순서를 못 정했는데, #24가 그것을 결정으로 닫고 규약·원장·변경 이력에 기록했다(*「이관은 여정 단위로 진행하고 원본 삭제만 마지막 소비 여정까지 미룬다」*). 또한 하네스가 여정별 등록부(`INPUT_PROBE`·`SECOND_END`)로 일반화되어 **세 번째 여정 페이지가 하네스를 죽이지 않는다** — #24 자신이 「실질 블로커는 페이지가 아니라 하네스였다」고 적었고 그것을 고쳤다. 즉 다음 슬라이스의 기술적 장애물이 제거된 상태다.\n\n**4. 방치하면 래칫이 현 상태를 고정한다.** 상한은 이관 대기 3 · 화면 단위 잔여 5로 내려와 있어 CI는 **되돌아가는 것만** 막는다. 전진은 강제하지 않으므로, 후속 task가 없으면 2/5에서 무기한 정지하고 게이트는 계속 초록을 찍는다.\n\n**자동 해소 대상이 아니다.** 여정 이관은 사람이/에이전트가 페이지를 새로 써야 하는 일이라 시간이 지난다고 해소되지 않는다. `assessing` 유예를 두지 않는다.\n\n### 계획 단계에 넘기는 관측\n- **다음 슬라이스 후보는 `JRN-follow-code-change`가 자연스럽다** — 이 여정이 `S04`·`S07`의 마지막 소비자이므로, 이관하면 원장에서 원본 2개를 삭제해 화면 단위 잔여를 5→3으로 내릴 수 있다. `JRN-review-feature`·`JRN-understand-feature`는 `S08`~`S10`을 셋이 공유해 원본 삭제가 뒤로 밀린다.\n- **`JRN-restore-history`는 이 task의 범위가 아니다** — 소스 화면 S11이 와이어프레임·목업 모두 없어 제작이 선결이고, 현재 「수용된 위험」으로 예외 등재되어 판정 대상에서 빠져 있다.\n- **형제 모델과의 간섭을 확인할 것.** 이번 이관이 `tbm_feature-doc-mockup-render`의 스테이징 PR #26을 충돌시켰고(부모에선 clean, 트리거에서 `docs/doc-tracker.md` 충돌) 그 PR의 보류 전제를 무효화했다 — 상세는 같은 fire가 연 `tbm_feature-doc-mockup-render/rct_20260831-0003`에 있다. 다음 이관도 같은 파일을 건드리므로 **머지 순서 조율이 필요하다.**"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`JRN-review-feature` 를 클릭되는 여정 프로토타입으로 이관하고, 그 전제로 **여정 밖 §4 분기(cross-journey handoff)** 규약을 세워 두 게이트에 집행시킨다. 이관 대기 3 → 2.\n\n**왜 이 여정인가 — detector 의 제안(`JRN-follow-code-change`)을 뒤집는 근거.** 남은 세 여정은 각각 §4 에 「다른 여정의 단계」를 가리키는 행을 정확히 1개씩 갖고 있고, 그 의존은 **사슬**이다: understand → follow → review → discover(이관 완료). 지금 `review-feature` 를 이관하면 그 handoff 대상(`JRN-discover-features`/`STP-sift-candidates`)이 **이미 실재하는 페이지 앵커**라 규약을 강한 형태(대상 여정 페이지의 단계 앵커로 실제 링크)로 세우고 R8 의 교차 파일 앵커 검사로 그 자리에서 증명할 수 있다. 반대로 detector 가 제안한 `follow-code-change` 를 먼저 하면 그 handoff 대상(`STP-read-scenarios`)의 페이지가 없어 **약한 대체형(문서 reader 링크)** 을 지금 설계해야 하고, `review-feature` 가 이관되는 순간 그 링크를 다시 고쳐야 한다. review → follow → understand 순서만이 세 여정 모두에서 대상 페이지가 이미 존재하는 유일한 순서다. detector 가 든 이점(`follow` 이관 시 S04·S07 원본 삭제 → 화면 잔여 5→3)은 사라지지 않고 **다음 슬라이스로 미뤄질 뿐**이다.\n\n**범위(완료 기준)** — 이 셋이 되면 성공이다.\n1. 여정 밖 §4 분기 규약이 `docs/mockups/README.md` 에 서고, 정적 체커(R4·R5)와 DOM 하네스(P4)가 그것을 집행한다.\n2. `docs/mockups/JRN-review-feature.html` 이 규칙 ⑥(a)~(h)를 만족하는 프로토타입으로 존재하고, 두 게이트가 그 페이지를 포함해 통과한다.\n3. 매핑·원장·집계·허브·doc-tracker 가 새 상태(이관 완료 3 · 이관 대기 2 · 상한 3→2)로 함께 갱신된다.\n\n**범위 밖** — `JRN-follow-code-change`·`JRN-understand-feature` 이관(2/5 잔여), `s04`·`s07`·`s08`~`s10` 원본 삭제(S08~S10 은 두 여정이 아직 쓴다 — 화면 단위 잔여 상한 5 는 그대로), `JRN-understand-feature`/`STP-open-shared` 의 S02 3자 불일치(직전 시도가 등재만 해 둔 잠복 결함), 목업의 시각 품질. 잔여 gap 은 이 실행이 만드는 버전 변화의 재감지가 새 task 로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "게이트가 세 번째 여정 페이지를 통과시킬 수 있는지 **먼저 실측한다** — 스텁 `JRN-review-feature.html` 을 놓고 `tools/check-journey-mockup.py` 와 `tools/check-journey-prototype.js` 를 돌려, 여정 밖 분기(`STP-sift-candidates`)에서 정확히 어느 규칙이 어떻게 깨지는지 확인한다.",
+              "expectedOutcome": "R4(분기 대응)·R5(앵커 무결성)·P4(분기 이동)가 예측대로 실패한다. 하네스가 uncaught 예외로 통째 죽지 않고 단언으로 보고하는지도 함께 확인(#24 에서 실제로 죽었던 실패 양식)."
+            },
+            {
+              "seq": 2,
+              "action": "여정 밖 분기 규약을 `docs/mockups/README.md` 「여정 페이지 규약」에 명문화한다: §4 의 「이어지는 단계」가 **다른 여정의 단계**면 그 분기는 이 여정의 끝(handoff)이며, 페이지는 `data-goto=\"END-*\"` + `data-goto-journey=\"JRN-<대상>#STP-<단계>\"` 로 선언하고 그 END 블록이 대상 여정 페이지의 단계 앵커로 실제 링크를 건다(대상 여정에 페이지가 없으면 `reader.html?doc=` 경유).",
+              "expectedOutcome": "규약이 SSOT 인 README 에 서고, 이후 두 여정의 이관이 같은 규약을 재사용한다."
+            },
+            {
+              "seq": 3,
+              "action": "정적 체커를 확장한다 — R4 의 대조 대상을 `data-goto-journey` 의 STP 부분으로 치환(순서 대조는 그대로), R5 에 여정 밖 분기 규칙 추가(대상 여정·단계가 여정 문서에 실재할 것 · `data-goto` 는 이 페이지의 END-* 일 것 · END 블록의 outbound 링크가 대상의 현재 형태와 일치할 것).",
+              "expectedOutcome": "`python3 tools/check-journey-mockup.py` 가 기존 2페이지에 회귀 없이 통과하고, 새 규칙이 스텁의 위반을 잡는다."
+            },
+            {
+              "seq": 4,
+              "action": "원장의 「쓰는 여정」 칸을 파생으로 강제하는 R7 규칙을 추가한다 — 각 화면 단위 파일의 소비자 목록 = {그 화면을 터치포인트로 쓰는 여정} − {이미 이관된 여정}. 손글씨가 실측과 어긋나거나, 소비자가 0이 됐는데 파일이 남아 있으면 실패.",
+              "expectedOutcome": "이 PR 이 손으로 지우는 `JRN-review-feature` 3행이 기계 검증을 받고, 다음 슬라이스의 원본 삭제 시점이 프로즈가 아니라 게이트로 강제된다."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/mockups/JRN-review-feature.html` 을 작성한다 — 5단계(S08 인수 시나리오 → S08 근거 확인 → S09 종단 의존성 → S10 편집 요청 → S10 diff 결정), 각 단계는 화면 안의 `data-cta=\"advance\"` 로 전진, 실제 `<input>/<select>/<textarea>`, §4 5행의 상태 변형, `#STP-*` 딥링크, END 2종(정상 종료 + 여정 밖 handoff).",
+              "expectedOutcome": "파일이 `file://` 로 열리고 5단계를 눌러서 걸을 수 있다."
+            },
+            {
+              "seq": 6,
+              "action": "DOM 하네스에 `JRN-review-feature` 등록부 4종(ARM·INPUT_PROBE·PRODUCT_PATHS·SECOND_END)을 추가하고, P4 가 여정 밖 분기를 「대상 END 블록의 `data-goto-journey` 가 문서가 말한 `JRN#STP` 와 같은가」로 판정하도록 확장한다(기대값의 원천은 계속 여정 문서).",
+              "expectedOutcome": "`node tools/check-journey-prototype.js` 가 여정 3개 · 단언 240건 안팎으로 통과한다."
+            },
+            {
+              "seq": 7,
+              "action": "반영물을 함께 갱신한다 — README Journeys 표(이관 완료)·steps 블록 신설·집계·이관 대기 상한 3→2·원장 「쓰는 여정」·Mockup index 공개 경로, `docs/doc-tracker.md` 요약과 변경 이력, `docs/index.html` 허브 링크와 카운트.",
+              "expectedOutcome": "R9(집계 일치)·R8(링크 무결성)이 통과한다."
+            },
+            {
+              "seq": 8,
+              "action": "네거티브 컨트롤로 새 규칙이 실제로 무는지 증명한다 — ① handoff 를 in-journey `data-goto` 로 되돌리기 ② `data-goto-journey` 의 대상 단계를 존재하지 않는 값으로 ③ END 블록의 outbound 링크 제거 ④ 원장 「쓰는 여정」에서 한 여정 지우기 ⑤ 새 페이지의 입력 검증 배선만 제거. 각각 **의도한 규칙에서만** 울리는지 확인하고 `cp` 백업으로 바이트 동일 복원.",
+              "expectedOutcome": "5건 전부 의도한 규칙(R5·R5·R5·R7·P3)에서 실패하고, 복원 후 두 게이트가 다시 통과한다."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치 `reconcile/rct_20260831-0003` 로 커밋(규약+체커 / 페이지+하네스 / 반영물)하고 push, draft PR 을 연다. PR 본문에 task id·gap·범위·검토 쟁점·검증 방법을 적는다.",
+              "expectedOutcome": "draft PR 이 열리고 `docs — journey ↔ mockup` 게이트가 green."
+            }
+          ],
+          "plannedAt": "2026-08-31T14:12:00Z"
+        }
+      }
+    ]
   }
 ]
