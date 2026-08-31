@@ -440,5 +440,33 @@
       "assessedAt": "2026-08-31T13:40:00Z",
       "reason": "작업 불필요 → `no_action_needed`.\n\n**이 모델이 판정하는 것**(AC 집합 ↔ e2e spec의 1:1 매핑)의 **양쪽 재료가 모두 부동**이고, 움직인 `docs/doc-tracker.md`의 변경분에는 AC 식별자·e2e 매핑·spec 언급이 **한 줄도 없다**(grep 0건). 판정 대상 집합은 부모/트리거 양쪽에서 AC 24개 · e2e spec 7개로 동일하며, 공백 17건이라는 기존 gap도 그대로다 — **줄지도 늘지도 않았다.**\n\n**그럼에도 task를 남기는 이유**: 이 판정 자체가 기록될 가치가 있고, 무엇보다 `lastObservedVersion` 베이스라인을 전진시켜야 다음 fire가 같은 변경으로 다시 깨어나지 않는다. 아무것도 쓰지 않고 넘어가면 프리체크가 5분마다 동일한 노이즈로 재점화된다.\n\n**범위 밖(이 task가 다루지 않음)**: e2e 공백 17건은 이 모델의 실재하는 잔여 gap이지만 이번 트리거가 만든 것이 아니고 이번 변경으로 달라지지도 않았다. 그 수렴은 AC 구현 진척을 따라가므로 `tbm_feature-doc-docs-impl`의 슬라이스가 앞서고 이 모델은 그 뒤에 재감지된다."
     }
+  },
+  {
+    "toBeModelId": "tbm_feature-doc-ac-e2e",
+    "status": "assessing",
+    "createdAt": "2026-08-31T14:00:33Z",
+    "updatedAt": "2026-08-31T14:36:00Z",
+    "trigger": {
+      "detectedAt": "2026-08-31T14:00:33Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "2b7efa67653923b9a37b654edeaea711c140d496",
+        "currentVersion": "d991ed59492db0a88a310778e172340d88054e1d"
+      },
+      "toBe": {
+        "previousVersion": "ac:85259fcc1270973c13362cb9fd7c65962de339ff reg:da11768a2441f2c79bd3ad2006750c07eb3daf37",
+        "currentVersion": "ac:85259fcc1270973c13362cb9fd7c65962de339ff reg:cab32c8a18b10dc2baa38e97a0a03ffb0b536559"
+      }
+    },
+    "stateSummary": {
+      "summarizedAt": "2026-08-31T14:35:00Z",
+      "asIs": "## as-is — e2e 테스트 구현 (`e2e/`), 관측 2026-08-31T14:00~14:26Z\n\n트리거 커밋 **`e7b1582`**(PR [#27](https://github.com/dlddu/feature-doc/pull/27), 머지 13:27:01Z). 직전 관측(`345fc0c`) 이후 착지한 커밋은 #27 하나뿐이다.\n\n### 매칭 단위 파일 — 7개 → **8개**\n`ls e2e/tests/*.spec.ts` 와 `grep -h '^// 검증 AC:'` 를 부모·트리거 양쪽에서 직접 실행한 결과:\n\n| spec 파일 | 선언 AC | 상태 |\n|---|---|---|\n| `ac1-1-repository-connect-and-trigger.spec.ts` | AC1.1 | 기존 |\n| **`ac1-2-cross-cutting-concerns.spec.ts`** | **AC1.2** | **#27 신규 (+158)** |\n| `ac1-5-async-progress-and-partial-retry.spec.ts` | AC1.5 | 단정 갱신 (+16/−7) |\n| `ac4-1-github-app-connection.spec.ts` | AC4.1 | 기존 |\n| `ac4-2-llm-key-lifecycle.spec.ts` | AC4.2 | 기존 |\n| `ac4-3-credential-safety.spec.ts` | AC4.3 | 기존 |\n| `ac4-5-worker-workload-separation.spec.ts` | AC4.5 | 기존 |\n| `ac4-8-signin-and-session.spec.ts` | AC4.8 | 기존 |\n\n**중복 선언 0 · 고아 파일 0 · 파일당 정확히 1개 AC.** `e2e/` 변경은 이 두 파일이 전부이며 `e2e/support/`·`playwright.config.ts`·`smoke.sh`는 부동이다.\n\n### 신규 spec의 성격\n헤더가 `// 검증 AC: AC1.2` 로 규약대로 선언하고, `docs/test/01-analysis-pipeline.md` 시나리오 2를 따라간다. 기대값을 상수로 박지 않고 화면·API 산출물끼리 대조하는 방식이라 픽스처 변경에 깨지지 않는다.\n\n### 기존 단정 변경은 2종뿐 — 전부 파이프라인 단계 증가의 직접 귀결\n`ac1-5` 의 `pipeline-count` `1 of 5` → `2 of 5`, `progress-percent` `20` → `40`, 카드 `step 1 of 5` → `step 2 of 5`. 슬라이스 4a가 2단계 `cross_cutting`을 실제로 실행시켰기 때문이며, **판정 축(AC↔spec 매핑)과 무관한 값 갱신**이다.",
+      "toBe": "## to-be — AC 집합 + 매핑/예외 등재, 관측 2026-08-31T14:00~14:26Z\n\n### AC 집합(`docs/prd`)은 **부동** — `ac:85259fcc…` 불변\n`grep -rohE 'AC[0-9]+\\.[0-9]+' docs/prd | sort -u | wc -l` 을 부모·트리거 양쪽에서 실행해 **둘 다 24**. #27은 AC를 만들지도 지우지도 고치지도 않았다.\n\n### 등재부(`docs/doc-tracker.md`)만 이동 — `reg:da11768…` → `reg:cab32c8…`\n「e2e 매핑」 절의 변경분은 전부 **이번 신규 spec을 반영한 계수 갱신**이다:\n\n| 항목 | 이전 | 현재 |\n|---|---|---|\n| 매핑(전용 spec 보유 AC) | 7 | **8** |\n| 예외 등재 | 0 | **0** (불변) |\n| 공백(구현 미착수) | 17 | **16** |\n| 매칭 단위 파일 | 7 | **8** |\n\n- 매핑 표에 `AC1.2 횡단 관심사 자동 추출·문서화` 행이 추가됐고, 「자동화 밖 잔여」로 *「LLM 산출물의 의미적 품질 — stub 모드 추출 결과는 결정적 더블이므로 검증하지 않는다. 검증하는 것은 구조·근거·결정성이다」* 를 적었다.\n- 공백 표에서 `AC1.2`가 빠지고 닫을 슬라이스 표기가 `4` → `4b`로 바뀌었다.\n- **예외 후보 목록에서 AC1.2가 취소선 처리**됐다: *「4a에서 구조·근거·결정성을 자동 검증했다 — 남는 것은 의미적 품질 한 갈래뿐이라 AC 전체를 면제하는 것은 과잉이고, 등재하지 않았다」*.\n\n### 예외 수를 현재 텍스트에서 재도출\n「현재 등재된 예외는 없다」 — **0건**. 규약도 그대로다: *「\"아직 구현되지 않았다\"는 예외 사유가 아니다 — 미구현 AC는 공백 목록에 남아 계속 gap으로 계수된다」*. 즉 이번 변경으로 **면제가 늘어난 것은 없다.**\n\n### 항등식\n`(AC 24 − 예외 0) = 매핑 8 + 공백 16` ✅ — 원장의 주장이 아니라 파일 실측(AC 24 / spec 8)으로 독립 확인했다.",
+      "gap": "**차이는 있으나 이 모델의 판정 축에서 새 어긋남이 아니다 — 순수 수렴 1건이고, 남은 gap은 성격상 자매 모델이 끄는 것이다.**\n\n## 판정 축에서 실제로 움직인 것 — 공백 17 → 16\n\n이 모델이 판정하는 것은 「AC 24개 각각이 전용 e2e spec을 갖는가」다. 그 축에서 **AC1.2가 공백에서 매핑으로 이동**했다. 방향은 수렴이고 크기는 1이다.\n\n**어긋남(위반)은 하나도 생기지 않았다.** 실측으로 확인한 네 가지:\n\n1. **1:1 규약 유지** — 8개 파일이 각각 정확히 1개 AC를 선언한다. 중복 선언 0 · 미선언 0 · 고아 파일 0.\n2. **파일명 규약 준수** — `ac1-2-cross-cutting-concerns.spec.ts` 가 `ac<major>-<minor>-<slug>.spec.ts` 를 따른다.\n3. **AC 집합 불변** — `docs/prd` 트리 해시가 부동이므로 \"spec은 있는데 AC가 사라진\" 고아 매핑이 생길 수 없다.\n4. **예외 0건 유지** — 면제로 gap을 줄인 것이 아니라 **실제로 spec을 써서** 줄였다. 오히려 원장은 AC1.2를 예외 후보에서 **명시적으로 뺐다**.\n\n## 남은 gap — 공백 16건 (실재하지만 이 모델이 단독으로 닫을 수 없다)\n\n| 공백 AC | 닫을 슬라이스 |\n|---|---|\n| AC1.3 · AC1.4 | 4b |\n| AC2.1~AC2.6 | 5 |\n| AC3.1~AC3.5 | 6 |\n| AC4.4 · AC4.6 · AC4.7 | 7 |\n\n원장은 이 집합이 *「자매 모델 `tbm_feature-doc-docs-impl`이 추적하는 미구현 16건과 **정확히 같은 집합**이며, 각 슬라이스가 구현을 얹을 때 **그 슬라이스가 spec도 함께 만든다**」* 고 규정한다. 이번 트리거가 그 규약이 실제로 작동함을 보여준 사례다 — 4a가 구현과 spec을 **같은 PR(#27)에서** 함께 실었다.\n\n따라서 이 gap은 「e2e spec을 따로 쓰면 닫히는 일」이 아니다. **전용 spec을 쓸 화면·라우트 자체가 아직 없다.** 구현이 선행해야 하고, 그 구현은 `tbm_feature-doc-docs-impl`의 슬라이스가 끈다.\n\n## 재감지 경로가 확보돼 있다\n\n이 gap은 주인이 없는 채 방치되는 것이 아니다 — 같은 fire에서 `tbm_feature-doc-docs-impl`에 **`rct_20260831-0004`를 `action_required`로 열어** 슬라이스 4b(AC1.3·AC1.4)를 인수인계했다. 그 슬라이스가 착지하면 `e2e/` 트리가 움직여 이 모델이 다시 깨어나고, 공백은 16 → 14로 줄어든 상태로 재판정된다. **막힌 곳이 없다.**"
+    },
+    "id": "rct_20260831-0004"
   }
 ]
