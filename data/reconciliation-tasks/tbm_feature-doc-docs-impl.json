@@ -1556,9 +1556,9 @@
   },
   {
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "planned",
+    "status": "awaiting_review",
     "createdAt": "2026-08-31T14:00:33Z",
-    "updatedAt": "2026-08-31T15:56:06Z",
+    "updatedAt": "2026-08-31T23:24:51Z",
     "trigger": {
       "detectedAt": "2026-08-31T14:00:33Z",
       "changedSides": [
@@ -1659,6 +1659,11 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/29",
           "preparedAt": "2026-08-31T14:57:02Z",
           "notes": "draft PR, head `3cb63c9`. **CI 3워크플로 전부 success**(run 33406821269, 15:09:33→15:20:42Z): cargo 96 passed · playwright 9/9 passed(2.5m, ac1-3 35.2s) · smoke ok · docs 게이트 2종 success · `build & push image (ghcr)` success(= :latest 이미 갱신됨). 첫 실행(`49c73a6`)은 e2e 2건 실패 — ① ac1-3 의 `.not.toContainText` 가 4개 요소 로케이터에서 strict mode 위반(내 spec 버그) ② ac1-5 가 `2 of 5`·40% 를 단정하는데 3단계 구현으로 `3 of 5`·60% 가 됐다(기존 단정이 슬라이스의 직접 귀결로 바뀐 것). 둘 다 `3cb63c9` 에서 고쳤고 doc-tracker 의 AC1.5 매핑 설명도 같은 수치로 갱신했다. 로컬 실측(계획 시점): cargo 96 · 문서 게이트 3종 통과 · 네거티브 통제 3/3 이 의도한 규칙에서 실패 후 cp 복원 cmp 동일. kind e2e 는 로컬 재현 불가 — 러너가 유일한 관측 지점이고, 실제로 러너만 잡은 결함이 1건 있었다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "사람 검토 필요. 근거 넷.\n\n**1. 되돌리기 어려운 부수효과가 둘 있다.** ① 머지되면 마이그레이션 `0006_discovery_strategies.sql`이 프로덕션 DB에 적용된다(신규 표 추가라 기존 데이터는 건드리지 않지만, revert해도 표는 남는다). ② `ci.yml`이 main push에서 `ghcr.io/dlddu/featuredoc:latest`를 갱신하므로 latest를 당기는 클러스터는 머지 직후 새 코드로 움직인다. 되돌리려면 revert 후 CI를 다시 통과시켜야 한다.\n\n**2. 반복 비용이 늘어난다.** 워커가 파이프라인 3단계(`discovery_strategy`)를 실제로 실행하므로 **분석 1건당 LLM 호출이 1회 증가**한다. 비용 계측 화면(AC4.6)이 아직 없어 사후 관측이 어렵다 — 머지 시점을 사람이 정하는 게 맞다.\n\n**3. 계획 수립 이후 전제가 실제로 바뀌었다.** planner가 PR을 준비한 14:57Z 이후 main에 커밋 2건(#30 로그 ANSI 제거, #28 JRN-review-feature 목업 이관)이 들어와 브랜치가 **`mergeable:false`(dirty)** 가 됐다. 겹치는 파일은 `backend/src/lib.rs`·`docs/doc-tracker.md`다. 지침이 금지한 force-push 대신 `origin/main`을 브랜치로 머지해 해소하고 CI를 다시 통과시켜야 하므로, 계획서에 적힌 「CI green 확인 후 바로 머지」보다 한 단계가 더 든다.\n\n**4. 슬라이스 경계 자체가 제품 판단이다.** 계획은 4b를 4b-1(AC1.3·S06)만으로 좁혔다. 지침 §1-2가 *「경계에 동의하지 않으면 여기서 멈춘다 — 검증을 다 통과해도 경계가 틀렸다면 머지는 틀린 결정」* 이라고 명시한다. `plan.riskLevel`도 medium이다."
         }
       }
     ]
