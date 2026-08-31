@@ -2018,5 +2018,33 @@
         }
       }
     ]
+  },
+  {
+    "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
+    "status": "detected",
+    "trigger": {
+      "detectedAt": "2026-08-31T02:30:33Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "869978c1d64b2cc6682fe105007ebeeb848a48e2",
+        "currentVersion": "8da9016e8acb509a6963c8d6524eac7d7f21fe96"
+      },
+      "toBe": {
+        "previousVersion": "329f3559008cf533911d52d95e2a34393d216d17",
+        "currentVersion": "313d9eb88e64824f40e2d50860c53f015f2172db"
+      }
+    },
+    "createdAt": "2026-08-31T02:30:33Z",
+    "updatedAt": "2026-08-31T02:30:33Z",
+    "stateSummary": {
+      "asIs": "**as-is = e2e 테스트 (2026-08-31T02:30Z, `dlddu/homelab-k3s-mcp@b25798e`)**\n\n`tests/` 트리 `869978c1` → `8da9016e`.\n\nPR #43이 겸용 파일 2개를 AC별 전용 파일 13개로 쪼갰다 — `opensearch.py`(11 AC, 597행) 삭제 → `opensearch_{search_ac1..3, document_put_ac1..4, document_delete_ac1..4}.py` 11개, `aws_config.py`(2 AC, 155행) 삭제 → `aws_config_get_ac{1,2}.py` 2개. 공유 표면은 매칭 단위에서 제외되는 `_opensearch.py`·`_aws_config.py`로 내려갔다. `ci.yml` 변경은 삭제된 파일명을 가리키던 주석 2줄뿐이다.",
+      "toBe": "**to-be = AC SSOT + 매핑 레지스트리 (같은 커밋)**\n\n`docs/prd-*.md` + `docs/doc-tracker.md` blob 목록 해시 `329f3559` → `313d9eb8`.\n\n- **AC 총수 64는 불변**(`prd-*.md` 무변경 — 델타는 `doc-tracker.md`와 `test-*.md` 4개인데 `test-*.md`는 versionScript의 판정 목록 밖이다).\n- 레지스트리가 이번 슬라이스를 반영해 갱신됐다: **✅ 전용 파일 9 → 22 · ⬜ 분할 대기 40 → 27 · ⬜ 공백(케이스 없음) 14 → 14 · 🚫 예외 1**. 매칭 파일 9 → 22, 규칙 2 위반 6 → 4, 공백 AC 54 → 41.",
+      "gap": "**유의미한 차이 — 슬라이스가 예정대로 수렴시켰고, 잔여 41건은 어느 열린 task도 담고 있지 않다.**\n\n이번 트리거는 이 모델 자신의 `rct_20260829-0001`(succeeded, 2026-08-30T14:52:30Z)이 만든 **PR #43**(`b25798e`, 14:40:59Z) 단 하나다.\n\n**수렴한 부분(레지스트리와 실제 파일이 일치함을 확인).** 13개 AC가 `⬜ 분할 대기 — opensearch.py(11 AC 겸용)`/`aws_config.py(2 AC 겸용)`에서 `✅ 전용 파일 <파일명>`으로 전이했고, 그 13개 파일이 `tests/integration/`에 실재한다. 커밋 본문이 \"케이스 함수·상수를 ast 소스 세그먼트로 옮겨 32개 top-level 정의 전부가 정확히 한 파일에 동일하게 착지함을 대조로 확인했고, 재작성한 것은 파일별 `run()`과 모듈 docstring뿐, 단언은 한 줄도 바뀌지 않았다\"고 근거를 남겼다.\n\n**잔여 gap 41건 (규칙 1 위반) — 성격이 둘로 갈린다.**\n1. **분할 대기 27건 / 파일 4개** — 겸용 파일이 커버하고는 있으나 AC 전용 파일이 아니다: `workload.py`(16) · `no_config.py`(7) · `auth.py`(2) · `smoke.py`(2). doc-tracker가 **각 파일의 선결 판단을 이번에 명문화했다**: `workload.py`는 케이스가 공유 픽스처 상태에 순서 의존적이라(러너가 파일별 프로세스로 돌리므로) 순서 의존을 먼저 끊어야 하고, `no_config.py`·`auth.py`는 `auth-variant` 배포 그룹이라 분할하면 그 그룹의 배차가 2 → 8 · 2 → 4로 늘며, `smoke.py`는 두 AC를 떼고 남는 도구 표면 확인을 규칙 3의 **비-AC 파일**로 등재할지가 미결이다. (이번 슬라이스가 `opensearch.py`·`aws_config.py`를 고른 이유가 정확히 \"그 둘만 선결 판단 없이 순수 이동으로 끝나기\" 때문이다.)\n2. **케이스 없음 14건** — 테스트 케이스 자체가 존재하지 않는다(backlog). 이 숫자는 이번 슬라이스에서 움직이지 않았다.\n\n**정의상 문제인가 — 그렇다.** 규칙 1이 요구하는 AC↔전용 파일 전단사가 64 − 예외 1 = 63 대 22로 아직 41건 모자란다. 그리고 이 잔여를 담고 있는 열린 task가 **없다** — 이 모델의 최근 task 3건(`rct_20260813-0001` · `rct_20260814-0001` · `rct_20260829-0001`)이 전부 `succeeded`로 종료됐고, 슬라이스 → 재감지 → 후속 task가 이 루프의 정상 진행 방식이다.",
+      "summarizedAt": "2026-08-31T02:30:33Z"
+    },
+    "id": "rct_20260831-0001"
   }
 ]
