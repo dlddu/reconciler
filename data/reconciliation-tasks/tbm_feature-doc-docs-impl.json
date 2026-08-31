@@ -1094,7 +1094,7 @@
   },
   {
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "detectedAt": "2026-08-14T13:07:00Z",
       "changedSides": [
@@ -1118,7 +1118,7 @@
       "gap": "**유의미한 차이 있음 — 미구현 AC 17/24.**\n\n이번 트리거 자체는 수렴 방향이다: 델타는 이 모델 자신의 슬라이스 3b(PR #15)뿐이고 AC1.5를 구현 완료시켜 미구현을 18→17로 줄였다. to-be(AC 24개)는 넓어지지도 좁아지지도 않았다(`docs/prd` 트리 불변, 문서 델타는 트래커 1개 파일).\n\n그러나 판정 대상은 트리거 델타가 아니라 **잔여 gap**이다. 모델 정의는 미구현 AC를 백로그가 아니라 to-be 미달 drift로 못박고 있고, 현재 **AC1.2~1.4 · AC2.1~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7 = 17건**이 문서에만 존재하고 구현이 없다. 분석 파이프라인은 여전히 1단계 `fetch`만 실행되고 2~5단계는 `pending`으로 남아 있으며(3b가 표현만 얹었다), feature 추출·문서 CRUD 화면(S05~S10)은 코드가 없다. 정적 문서↔코드 격차라 자동 해소 기전이 없다.",
       "summarizedAt": "2026-08-14T13:07:00Z"
     },
-    "updatedAt": "2026-08-31T13:09:30Z",
+    "updatedAt": "2026-08-31T14:00:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "잔여 gap이 유의미하고, 소유자 없는 미점유 handoff이며, 자동 해소 경로가 없다 → 지금 작업이 필요하다.\n\n근거 1 — **정의상 drift다.** 모델 정의는 \"미구현 AC는 백로그가 아니라 to-be 미달 gap이며 drift\"를 판정 기준 1로 명시한다. 현재 미구현 17/24. 트리거 델타가 수렴 방향(18→17)이라는 사실은 무행동 근거가 되지 못한다.\n\n근거 2 — **점유 충돌 없음.** 이 모델의 task 이력 7건 중 열린 것은 0건이다(직전 `rct_20260813-0001`은 이번 트리거를 만든 PR #15의 슬라이스로 `succeeded`, 04:29Z 검증 완료). 그 verification의 정보성 체크가 \"미구현 17건은 이 시도의 plan 범위 밖 — 재감지가 후속 task로 잇는다\"고 명시적으로 인계를 남겼다. 전형적인 post-reconcile 재트리거이고 handoff 슬롯이 비어 있다.\n\n근거 3 — **다음 슬라이스가 이미 지목돼 있어 planner가 바로 집을 수 있다.** 트래커 로드맵이 **슬라이스 4 = AC1.2 → AC1.3 → AC1.4 (화면 S05·S06·S07, 분석 파이프라인: 횡단 관심사 → 탐색 전략 → feature 후보, AC4.6 계측 내장)**을 \"다음 권장 슬라이스\"로 못박았다. 선행 의존도 닫혀 있다 — 3a가 `analysis_stages`에 5단계를 시드하고 워커가 1단계를 실행하며, 3b가 그 진행을 화면에 표현하는 경로(`GET /api/analyses/{id}` + S04)를 이미 뚫어 뒀으므로 슬라이스 4는 2~5단계의 실제 실행을 채우는 작업이다.\n\n근거 4 — 정적 문서↔코드 격차라 롤아웃·일시 alert 같은 자동 수렴 기전이 없다 → `recheckAfter` 유예 부적합.\n\nplanner 참고 (둘 다 직전 task가 남긴 관측):\n① 완료 기준에 **각 AC별 전용 e2e spec 신설**을 반드시 포함할 것 — 자매 모델 `tbm_feature-doc-ac-e2e`가 AC↔spec 1:1 전단사를 강제하고 있고 현재 공백 17건이 이 모델의 미구현 17건과 정확히 같은 집합이라, 구현만 얹고 spec을 빠뜨리면 그 모델에 즉시 새 gap이 생긴다. 3a·3b가 확립한 \"배포 전역 상태를 건드리는 spec은 그 상태를 임대(`e2e/support/cluster.ts` + `finally` 복원 + `workers: 1`)\" 규약도 따를 것.\n② **범위 밖이지만 기록해 둔 위험**: `ci.yml`의 push job에 브랜치 조건이 없어 PR CI가 green이면 머지 전에 ghcr `:latest`로 코드가 나가고 실제로 featuredoc 파드가 그 이미지를 서빙했다(직전 task의 정보성 체크에서 관측). 이 모델의 정의 대상(문서↔구현)은 아니므로 이 task의 gap 계수에는 넣지 않았고, 별도 후속 대상으로만 남긴다.",
@@ -1273,9 +1273,62 @@
           "comment": "사용자 응답 원문: \"승인\". 검토 요청 시 제시한 내용(기본 LLM을 OpenAI gpt-5.6-luna로 이동 · 프로덕션 app 파드 CrashLoopBackOff의 전진 복구가 이 머지라는 점 · PR #19가 현재 dirty라 rebase 후 CI 재green이 선행된다는 점 · :latest 결함 잔존)을 전제로 한 승인이다."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-08-31T13:09:30Z",
-          "entries": []
+          "finishedAt": "2026-08-31T13:31:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-08-31T13:09:40Z",
+              "finishedAt": "2026-08-31T13:14:00Z",
+              "log": "계획 시점의 `-v2` 브랜치를 현재 origin/main(345fc0ce — PR #19 base 대비 5커밋 앞) 위로 rebase 해 `reconcile/rct_20260814-0001-v3` 를 만들었다(force-push 금지 방침이라 새 브랜치). 충돌은 `docs/doc-tracker.md` 2 hunk: ① 요약 계수 — main 의 여정 문서 줄(7개)은 그대로 두고 e2e 계수만 머지 후 값(spec 8 · 매핑 8 · 공백 16)으로 확정 ② 편차 원장 — main 이 rct_20260831-0001 에서 현재 목업 기준으로 재기준선한 22행 표를 통째로 채택하고 브랜치의 구 7행 표는 폐기."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "log": "`Ask.stub` 을 JSON Schema 밖으로 분리 — 커밋 c023a54 가 그대로 replay 됨. CI cargo 83 passed 로 재확인."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "log": "provider별 기본 모델 + `DEFAULT_PROVIDER=Provider::OpenAI` — 커밋 c023a54. 머지된 main 에서 `llm.rs:123` 확인."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "OpenAI Responses API dispatch — 커밋 c023a54. `OPENAI_MODEL=\"gpt-5.6-luna\"`(llm.rs:36), Anthropic 갈래 유지(`ANTHROPIC_MODEL=\"claude-opus-5\"`, llm.rs:35)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "`ACTIVE_KEY_SQL` OpenAI 우선 선택 — 커밋 c023a54. 전용 단위 테스트가 CI 에서 통과."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "`CredentialsSetup.tsx` 초기 선택 provider `'openai'`(:66) + 활성 키가 있으면 그 provider 로 시작(커밋 4abf2f9). main 이 같은 파일 상단 주석을 바꿨으나 자동 병합됐다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "log": "신규 단위 테스트 12건 — CI cargo 총 83 passed / 0 failed."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-08-31T13:14:00Z",
+              "finishedAt": "2026-08-31T13:19:00Z",
+              "log": "문서 갱신 + **rebase 후속 정정 1건(커밋 db740bd)**. main 이 `s05-cross-cutting-concerns.html` 을 `JRN-discover-features.html#STP-review-landscape` 로 흡수·삭제해 이 브랜치가 삭제된 목업을 가리키고 있었다(`check-mockup-render.py` M1 이 dangling 으로 검출). ① `CrossCuttingConcerns.tsx` 상단 주석을 여정 앵커로 재배선 ② 새 화면을 「대조 보류」에 등재하고 상한 3→4 — 활성 등재를 실제로 시도했더니 M3 위반 39건이 나왔다. 이 단계의 목업 카피가 대부분 예시 데이터(`PostgreSQL 15` · `docker-compose.yml:12` 등)인데 구현은 같은 자리에 분석 결과를 동적으로 렌더해 리터럴 대조가 성립하지 않는다. 카피 축 수렴은 제품 결정이므로 래칫으로 붙잡았다 ③ 변경 이력의 \"목업 4범주 vs AC 5축\" 서술 정정 — 새 여정 목업이 `저장소 구조` 축을 함께 그려 그 편차는 **이미 해소**됐으므로 원장에 등재하지 않는다. `docs/prd` 트리 불변."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-08-31T13:19:00Z",
+              "finishedAt": "2026-08-31T13:31:00Z",
+              "log": "로컬 게이트: `check-mockup-render.py`·`check-journey-mockup.py`·`check-journey-prototype.js`(단언 160건)·`npm run build` 전부 통과. Rust 툴체인이 이 실행 환경에 없어 cargo 는 CI 에 맡겼다. push 후 **PR #27** 개설(head `db740bd`, base main). CI 런 33395932799 — `test (cargo + kind e2e)` success(cargo **83 passed**, playwright **8/8 통과이며 skip 아님**: `ac1-2` 34.5s · `ac1-5` 35.5s · `ac4-5` 39.2s) · `build & push image (ghcr)` success. 별도 워크플로 `docs — mockup ↔ render` · `docs — journey ↔ mockup` 도 success. 그 뒤 **squash merge** → main `e7b1582`. 대체된 PR #16 · #19 는 사유 코멘트를 달고 닫았다."
+            }
+          ]
         }
       }
     ]
