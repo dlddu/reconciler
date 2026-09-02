@@ -2191,9 +2191,9 @@
   },
   {
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "planned",
+    "status": "awaiting_review",
     "createdAt": "2026-09-02T07:09:19Z",
-    "updatedAt": "2026-09-02T08:12:00Z",
+    "updatedAt": "2026-09-02T09:27:24Z",
     "trigger": {
       "detectedAt": "2026-09-02T07:09:19Z",
       "changedSides": [
@@ -2299,6 +2299,11 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/40",
           "preparedAt": "2026-09-02T08:05:00Z",
           "notes": "계획 12단계 중 1~12 를 브랜치 `reconcile/rct_20260902-0005-docs-impl` 에 반영해 draft PR 로 스테이징했다(머지하지 않음). **base 는 트리거 시점(`381c23b`)이 아니라 병합 시점의 main `9c14bbd` 다** — 계획 도중 main 이 두 번 움직였다(#39 `381c23b` 는 감지 스냅샷 07:09 이후 07:17 에, #38 `258ed4f` 는 구현 도중에 머지). 하우스 스타일대로 리베이스가 아니라 **병합**(`76cb60b`)했고 `docs/doc-tracker.md` 충돌 2건을 손으로 분류했다 — 「마지막 검증 시점」은 **같은 행의 두 판본**이라 한 줄로 합쳤고, 변경 이력 2행은 **서로 다른 행**이라 합집합으로 남겼다.\n\n**로컬 실측(병합 트리에서 재실행)**: `cargo test --release` 103 → **114 passed / 0 failed**(신규 11건 = 통합 7 + 단위 4) · `check-mockup-render.py` rc=0(활성 4→**5** · 보류 2 불변 · 편차 37→**44** · M3A 128건 미등재 0 · M3B 100건 미등재 0 · `data-sample` 19→32 · 오용 0) · `check-journey-mockup.py` rc=0 · `check-journey-prototype.js` rc=0(단언 408 불변) · `npx playwright test --list` **10 tests / 10 files**(매핑 1:1 9→10) · `npm run build`(tsc) rc=0.\n\n**네거티브 통제 3건 전부 의도한 규칙의 문장에서 울렸다**(건수가 아니라 문장으로 판정): ① 거부 사유 가드를 `if false &&` 로 무력화 → `a_rejection_without_a_reason_is_refused_and_stores_nothing` 이 `left: 200 / right: 400` ② claim 의 pending 필터 무력화 → `approving_requeues_...` 가 `[fetch, cross_cutting, discovery_strategy, feature_candidates]` vs `[fetch, feature_candidates]` ③ `data-sample` 을 CTA `<button>` 에 부착 → M6 오용 검출. 복원은 전부 `cp` 백업 → 복원 → `cmp -s` 바이트 동일(3/3).\n\n**회귀 통제**: 브랜치 트리 + `git show origin/main:docs/doc-tracker.md` 로 돌린 결과가 `origin/main` 단독 실행과 **완전히 동일**(M3A 92 · M3B 74 · 미등재 0 · 편차 37/37 · 보류 2/2). 유일한 차이는 M1 이 새 화면을 부모 표에서 못 찾는 것으로 의도한 것이다 — 즉 `data-sample` 마킹도 새 원장 7행도 기존 판정을 느슨하게 만들지 않았다.\n\n**kind e2e 만 로컬 재현 불가**(docker 필요) — PR CI 가 유일한 관측 지점이다. 진행률을 단정하는 기존 spec 을 먼저 grep 했고(`of 5` · `progress-percent` · `step N of`), `ac1-5` 는 전략을 승인하지 않아 4단계가 pending 인 채로 남으므로 `3 of 5`·60% 단정이 그대로 유효하다(단계 수를 늘린 4a 가 밟았던 함정을 이번엔 피했다).\n\n**래칫 인상은 이 PR 의 명시적 결정이다**: 미해소 편차 상한 37 → 44. 「대조 보류」가 2/2 라 새 화면은 활성으로만 들어올 수 있고, 활성으로 들이면 그 화면의 부채가 처음으로 보인다 — 보류에 두는 쪽(상한 3)은 부채를 감춘 채로 늘리는 것이라 택하지 않았다. 승격이 드러낸 18건 중 13건은 `data-sample`·카피 이관으로 닫고 7건만 등재했다. 「대조 보류」는 늘리지 않았다(2/2 불변).\n\n**PR CI 4워크플로 green 확인(2026-09-02 08:07Z).** 잡 로그 원문으로 수치까지 셌다 — cargo `test result: ok.` 합 **114 passed**(`test result: FAILED` 0건)이고 신규 8건이 전부 실행 확인됨(`a_candidate_list_exists_only_once_the_stage_has_extracted_one` · `a_rejection_without_a_reason_is_refused_and_stores_nothing` · `renaming_keeps_the_candidates_identity_and_merging_keeps_the_folded_row` · `a_rejected_candidate_comes_back_flagged_in_the_next_analysis_of_the_same_target` · `approving_requeues_the_job_and_the_next_claim_offers_only_what_is_left` · `an_approval_that_lands_mid_run_still_gets_its_turn` · `another_users_candidates_are_not_readable_or_decidable` · `feature_candidates::tests::every_stub_candidate_cites_a_path_the_analysis_saw`). Playwright `Running 10 tests` → **10 passed (3.2m)** 이고 `ac1-4-feature-candidates.spec.ts` 가 kind 실클러스터에서 통과했다 — **승인 → 재큐잉 → 4단계 실행**이 실제로 관측된 지점이다. `test (cargo + kind e2e)` 는 07:55:43 → 08:06:44(**11m01s**) — 체감이 아니라 API 타임스탬프로 확인했다. `build & push image (ghcr)` success · `pin deployment image (main only)` 는 skipped(정상, main 전용). **green 확인 뒤 `mergeable` 을 한 번 더 물었다**(형제 머지가 체크 종료 직후에 들어온 전례) — `mergeable=true` · `mergeable_state=clean` · base `9c14bbd` 불변 · PR 은 draft 유지."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "사람 검토가 필요하다. ① 머지 = 배포다 — PR #40 이 머지되면 ghcr 이미지가 빌드되고 deploy 이미지 핀 커밋을 거쳐 실제 클러스터로 롤아웃된다. ② 마이그레이션 0007(feature_candidates)은 전진 전용이라 코드 롤백 뒤에도 테이블이 남는다(가법적이라 무해하지만 되돌릴 수 없는 지점인 것은 사실이다). ③ analyses 상태 머신에 새 전이(awaiting_pipeline → queued)를 넣어 승인이 잡을 재큐잉하게 만든다 — 파이프라인 실행 경로 자체의 실질 변경이다. ④ 승인된 분석마다 LLM 호출이 1건(stage 4) 늘어 비용이 증가한다. ⑤ plan.riskLevel = medium 으로, 스킬 기준상 medium 이상은 검토 대상이다. ⑥ 이 PR 은 브라우저 렌더를 눈으로 확인하지 않았고(로컬 kind 부재) 병합 UI 는 대응 목업 없이 최소 형태로 낸 뒤 원장에 등재했다 — 사람이 수용 가능한 선택인지 판단할 여지가 있다."
         }
       }
     ]
