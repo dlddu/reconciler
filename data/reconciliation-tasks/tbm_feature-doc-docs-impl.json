@@ -2191,9 +2191,9 @@
   },
   {
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "createdAt": "2026-09-02T07:09:19Z",
-    "updatedAt": "2026-09-02T21:36:00Z",
+    "updatedAt": "2026-09-02T21:38:00Z",
     "trigger": {
       "detectedAt": "2026-09-02T07:09:19Z",
       "changedSides": [
@@ -2356,6 +2356,59 @@
             }
           ],
           "finishedAt": "2026-09-02T12:54:23Z"
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "backend:b346d1b52be10b099ed422a5eb1c32f678e95be1 frontend:a1566f5a52317e291c77d760cf8dc9426605945c",
+          "verifiedAt": "2026-09-02T21:38:00Z",
+          "checks": [
+            {
+              "name": "마이그레이션 0007 실 DB 적용 (§2-5 1번)",
+              "status": "passed",
+              "detail": "파드 `featuredoc-57cbb74d69-qcdl8` · 이미지 `576db21…` · 12:54:21Z 기동 · Running/Ready · **restart 0** · 21:33Z 현재까지 8h39m 무재시작. sqlx 마이그레이션 실패는 기동 자체를 막는다(같은 날 0004 체크섬 사고로 실증). ⚠️ 다만 §2-5 의 2~4번(프로덕션에서 분석을 새로 돌려 승인→`queued` 전이·stage 4 실행·2·3단계 `content_hash` 불변을 직접 관측)은 **수행하지 않았다** — GitHub OAuth 로그인·LLM 키·실 LLM 비용이 필요하고, 정합성 루프가 사용자 데이터를 만들어 낼 자리가 아니다. 동일 단언은 아래 kind e2e 체크가 병합 트리 그대로에서 통과시켰다."
+            },
+            {
+              "name": "서비스 헬스 — `/hello`",
+              "status": "passed",
+              "detail": "`https://feature-doc.llkm.nl/hello` → 200 `{\"message\":\"Hello from FeatureDoc backend\"}` (21:34Z 실측)."
+            },
+            {
+              "name": "후보 라우트 4종 실배포 등록",
+              "status": "passed",
+              "detail": "`GET /api/analyses/{id}/candidates` → **401 unauthorized**, `POST .../candidates/decision|rename|merge` → 각각 **401**. 대조군: 존재하지 않는 경로(`/api/nonexistent-route`, `.../candidates/nosuchroute`)는 SPA fallback **404 HTML**. 즉 인증 게이트가 도는 실제 라우트로 등록됐다(계획 5단계 산출물)."
+            },
+            {
+              "name": "S07 화면이 배포 번들에 포함",
+              "status": "passed",
+              "detail": "`/assets/index-B5opsZgO.js`(240,767B)에 필터 옵션 `전체`·`미결정`·`승인`, `합치기`, `/candidates` 3건. `FeatureCandidates.tsx` 가 실제로 서빙된다(계획 8단계 산출물)."
+            },
+            {
+              "name": "cargo test --release (병합 트리 CI)",
+              "status": "passed",
+              "detail": "`test result: ok.` 합 **114 passed**, `FAILED` **0건**(기준선 103 → 순증 11). 신규 8건 전부 실행 확인: `a_candidate_list_exists_only_once_the_stage_has_extracted_one` · `a_rejection_without_a_reason_is_refused_and_stores_nothing` · `renaming_keeps_the_candidates_identity_and_merging_keeps_the_folded_row` · `a_rejected_candidate_comes_back_flagged_in_the_next_analysis_of_the_same_target` · `approving_requeues_the_job_and_the_next_claim_offers_only_what_is_left` · `an_approval_that_lands_mid_run_still_gets_its_turn` · `another_users_candidates_are_not_readable_or_decidable` · `every_stub_candidate_cites_a_path_the_analysis_saw`. 잡 12:21:04→12:32:11(11m07s, API 타임스탬프)."
+            },
+            {
+              "name": "kind e2e — `ac1-4` 로 승인→재큐잉→stage 4 실증",
+              "status": "passed",
+              "detail": "`Running 10 tests using 1 worker` → **10 passed (3.3m)**. `tests/ac1-4-feature-candidates.spec.ts:83 › 4단계가 이 저장소에서 나온 후보를 뽑고, 사용자가 결정하면 그 결정이 다음 분석까지 이어진다` ✓ **39.1s**. AC↔spec 1:1 매핑 9 → **10**. 이 체크가 §2-5 2~4번의 실질 근거다 — 실클러스터·실 DB 에서 승인이 잡을 재큐잉하고 stage 4 만 도는 경로가 통과했다."
+            },
+            {
+              "name": "문서 게이트 3종 (머지된 main 에서 재실행)",
+              "status": "passed",
+              "detail": "`check-mockup-render.py` rc=0 — 활성 **5** · 보류 **2/2** · 편차 **43/43** · M3A 123건 미등재 0 · M3B 106건 미등재 0 · M4 행 43 공전 0 · `data-sample` **37**건 오용 0. `check-journey-mockup.py` rc=0 — 여정 6(예외 1 · 이관 완료 5 · 대기 0) · 상대 링크 241건. `check-journey-prototype.js` rc=0 — 단언 **408건 불변**. CI 쪽도 `576db21` 에서 문서 2워크플로 + pages 배포 success."
+            },
+            {
+              "name": "doc-tracker 숫자 갱신 (미구현 AC 15 → 14)",
+              "status": "passed",
+              "detail": "머지 커밋 `576db21` 의 `docs/doc-tracker.md` 실측: `AC: **24** · 예외: **0** · 매핑된 AC(전용 spec 보유): **10** · 공백: **14**`. 「공백 14건」이 곧 미구현 AC 이며 자매 모델이 추적하는 집합과 같다고 문서가 명시한다. 15 → 14 로 한 칸 줄었다."
+            },
+            {
+              "name": "머지 유지 — 롤백·revert 없음",
+              "status": "passed",
+              "detail": "`576db21` 이 `origin/main` 의 조상이고 main tip 은 그 이미지 핀 `a4a76fa`. 8시간 이상 지난 21:35Z 시점에도 revert 없음."
+            }
+          ]
         }
       }
     ]
