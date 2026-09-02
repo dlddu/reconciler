@@ -2193,7 +2193,7 @@
     "toBeModelId": "tbm_feature-doc-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-02T07:09:19Z",
-    "updatedAt": "2026-09-02T07:22:00Z",
+    "updatedAt": "2026-09-02T07:35:00Z",
     "trigger": {
       "detectedAt": "2026-09-02T07:09:19Z",
       "changedSides": [
@@ -2221,6 +2221,77 @@
       "reason": "작업 필요 → **`action_required`**. 근거 넷 모두 실측이다.\n\n**근거 1 — 「소비된 트리거」다. 지금 `no_action_needed` 로 닫으면 슬라이스 4b-2 를 열 사건이 사라진다.**\n이 트리거(`4c2124c`, PR #37)는 **`rct_20260902-0002` 자신의 산출물**이다(커밋 메시지가\n`reconciler rct_20260902-0002 (tbm_feature-doc-docs-impl)` 를 명시). 그 task 의 완료 기준 6개는\n**전부 머지됐고**(`attempts[-1].execution.status = \"succeeded\"`, 스텝 4~9 전원 succeeded), 남은\n실행 행위는 4-4 검증뿐이라 **대상 레포에 커밋을 만들지 않는다**. task 를 닫는 행위는 reconciler\n레포에만 쓴다. 따라서 baseline 을 이 값으로 올리고 손을 떼면, 잔여 15건은 **아무도 붙들지 않은 채**\n버전 변화 없는 상태로 남는다. 「형제 모델의 PR #38·#39 가 `docs/` 를 건드려 어차피 재감지된다」는\n재감지 경로가 아니다 — 그건 남의 작업의 부수 효과이고, 그 PR 들이 멈추면 이 모델도 함께 멈춘다.\n\n**근거 2 — 잔여 gap 이 실재하고 정의가 그것을 drift 로 못박았다.** 미구현 AC **15건**\n(AC1.4 · AC2.1~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7). 모델 정의 판정 기준 1 은 \"문서에 있으나 아직\n구현되지 않은 AC 는 to-be 미달 gap 이며 drift다. **백로그로 치부해 이 루프 밖으로 빼지 않는다**\"라고\n적는다. 이번 트리거로 줄어든 것은 판정 기준 3(문서 없는 구현 1 → 0)이지 판정 기준 1 이 아니다\n(AC 24 불변 · 구현 AC 9 불변 — AC4.2 는 이미 구현돼 있었고 조항이 더해진 것뿐).\n\n**근거 3 — 다음 슬라이스의 선결 조건이 방금 풀렸다.** `rct_20260902-0002` 의 계획은 4b-2(AC1.4 · S07)를\n\"자매 모델의 PR #32 머지가 선결\"이라며 범위 밖으로 뒀다. 그 **PR #32 는 05:59:24Z 에 머지**됐다\n(`f0f2e34`, 목업 예시값 `data-sample` 표기 규약). 4b-2 를 막던 사유(S07 카피 48건 중 예시 데이터가\n20건을 넘어 리터럴 대조 불성립)가 해소됐으므로, **지금이 4b-2 를 열 수 있는 첫 시점**이다.\n\n**근거 4 — 점유 규칙이 여기에 적용되지 않는다.** `rct_20260902-0002` 는 `executing` 이지만, 점유\n규칙이 지키려는 것은 \"한 워커가 붙들고 있는 **미완의 범위**\"다. 그 task 의 범위는 이미 전부 머지돼\n잔여의 주인이 아니다. 이 새 task 는 그 task 의 상태를 건드리지 않으며(그 lock 은 실행자 소유로 그대로\n둔다), 그 task 가 명시적으로 **범위 밖**이라 적은 잔여만 인수한다.\n\n> **판정 직후 확인**: 이 감지가 진행되는 동안 `rct_20260902-0002` 가 **07:10:10Z 에 `succeeded` 로\n> 닫혔다**(관측 시각 07:10:40Z). 이로써 이 모델의 열린 task 는 **0개**가 됐고, 미구현 AC 15건은\n> 주인이 없다. 근거 1 이 예측한 상태가 그대로 실현됐으므로 이 판정은 더 이상 점유 판단에\n> 기대지 않는다 — 잔여를 인수할 task 가 실제로 하나도 없다.\n\n---\n\n### planner 가 알아야 할 제약 (실측)\n\n1. **래칫 둘이 상한에 붙어 있다.** `tools/check-mockup-render.py` 를 트리거에서 실행한 실측:\n   `M5 래칫 — 미해소 편차 28/28` · `M5 래칫 — 대조 보류 3/3`. 4b-2 의 S07 은 보류가 꽉 차 있어\n   **활성 대조로만** 들어올 수 있고, 새 편차가 나오면 상한을 올리는 명시적 결정이 필요하다.\n2. **S07 목업 개정은 자매 모델 소관이다.** `docs/mockups/` 는 `tbm_feature-doc-mockup-render` ·\n   `tbm_feature-doc-journey-mockup` 의 판정면이고, 지금 그 두 모델에 열린 staged PR 이 셋이다\n   (#39 `planned` · #38 `awaiting_review` · #26 오래된 draft). `docs/doc-tracker.md` 를 만지는 PR 이\n   여럿이라 머지 순서 충돌이 반복되고 있다 — 이 레포의 하우스 스타일은 **main 을 브랜치에 머지**\n   (리베이스·force-push 아님)한 뒤 게이트 3종 재실행이다.\n3. **등재된 잔여 1건을 함께 볼 것**: doc-tracker 「다음 단계 권장」 **11번** — `CredentialsSetup.tsx`\n   L25~28 이 아직 Google 을 제시한다(실측). 백엔드가 400 으로 막아 AC4.2 조항 자체는 충족되지만,\n   해소하려면 목업 `JRN-connect-repo.html` `STP-register-llm-key` 개정이 함께 가야 한다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-02T07:11:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "로드맵이 「다음 권장 슬라이스」로 지목한 **4b-2(AC1.4 · S07)** 를 착수해 미구현 AC 를 15 → 14 로 줄인다. 이 슬라이스를 막고 있던 사유(S07 카피 48건 중 예시 데이터가 20건을 넘어 활성 대조가 성립하지 않음)는 자매 모델의 `data-sample` 표기 규약(PR #32, 05:59Z 머지)으로 해소됐고, 「대조 보류」가 2/2 라 S07 은 **활성 대조로만** 들어올 수 있다 — 그 규약이 정확히 그 통로를 연다. 접근을 고르며 코드를 읽다 **stage 4 가 영원히 돌 수 없는 구멍**을 실측으로 찾았다: `worker_api::claim` 의 SQL 은 `status IN (queued, 리스 만료 running)` 만 집는데, 워커는 stage 3 뒤 `awaiting_pipeline` 로 끝내고 `approve_strategy` 는 상태를 건드리지 않는다. 즉 전략을 승인해도 그 분석을 다시 집어갈 워커가 없다. 그래서 이 슬라이스는 「추출 로직 추가」가 아니라 **승인 → 재큐잉 → 이미 성공한 단계는 다시 돌리지 않기** 라는 실행 경로까지 포함한다. 재큐잉만 넣고 끝내면 워커가 stage 1~3 을 통째로 재실행해 LLM 비용을 다시 쓰고 사용자가 승인한 전략의 근거 문서를 새 제안으로 덮어쓴다(`run()` 이 stage 를 무조건 재실행한다 — 실측). 그 회피를 「claim 이 pending 인 단계만 내준다」로 풀되, **stage 3 이 pending 이면 그 입력인 stage 2 도 함께 내주어** 기존 부분 재시도 동작을 그대로 보존한다(새 `/internal` 엔드포인트 없이 닫힌다). stage 4 의 입력은 in-pass 산출물이 아니라 **fetch 가 이번 패스에 잰 경로 목록 + claim 이 실어 준 승인된 패턴** 이라 앞 단계 재실행에 기대지 않는다. AC1.4 의 검증 방법이 요구하는 네 행위(승인·거부·병합·이름 변경)를 **전부** 구현한다 — 목업은 승인·거부만 그리지만, 이 레포의 확립된 방향은 「구현을 목업에 맞추면 AC 를 어기는 경우 목업이 뒤처진 쪽」(원장 유형 「목업 미갱신」, `CrossCuttingConcerns` 의 AC1.2 5축 선례)이므로 병합·이름 변경 카피는 원장에 등재해 드러낸다. **이 시도의 완료 기준(범위)**: ① 마이그레이션 0007 + `feature_candidates.rs` 로 stage 4 가 승인된 전략을 따라 후보를 추출·영속화하고 각 후보가 이름·위치(파일·심볼)·근거를 갖는다 ② 전략 승인이 분석을 재큐잉하고, 이미 `succeeded` 인 단계는 재실행되지 않는다(승인이 실행 중에 들어온 경우도 `finish` 규칙으로 닫는다) ③ 후보를 승인·거부·병합·이름 변경할 수 있고 거부는 사유가 필수다 ④ 거부 사유가 기록되어 **같은 저장소·브랜치의 다음 분석**에서 같은 위치의 후보에 「이전에 거부된 항목」으로 표시된다(test/01 시나리오 7) ⑤ `FeatureCandidates.tsx` 가 S07 `STP-sift-candidates` 를 그리고 **활성 대조**로 승격되며, 승격이 드러내는 이탈을 `data-sample` 마킹 · 구현 수렴 · 원장 등재로 **전량** 갈라 처리하고 래칫을 실측값으로 갱신한다 ⑥ `e2e/tests/ac1-4-feature-candidates.spec.ts` 로 AC↔spec 1:1 매핑이 9 → 10 이 된다 ⑦ doc-tracker 의 로드맵·미구현 AC 잔여(15 → 14)·e2e 매핑·대조 범위·원장·변경 이력이 갱신된다 ⑧ CI 3워크플로(cargo + kind e2e · 여정↔목업 · 목업↔구현) green. **범위 밖(후속)**: S07 의 두 번째 단계 `STP-add-missing`(직접 추가 + 인수 기준 초안·의존성 후보 제안)은 AC2.1~2.2 의 내용이라 슬라이스 5 몫이며 이번 활성 대조 범위에 넣지 않는다. 실측 누적 비용(`누적 비용`)은 AC4.6 · 슬라이스 7. 분석 중단(`비용이 예상보다 커요 — 중단하기`)은 취소 경로 자체가 없다. stage 5 (`acceptance_dependencies`)와 나머지 미구현 AC 13건. doc-tracker 「다음 단계 권장」 11번(등록 화면의 Google 선택지)은 여전히 `JRN-connect-repo.html` 개정을 동반해야 해 이번에도 손대지 않는다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "마이그레이션 `backend/migrations/0007_feature_candidates.sql` 신설 — 후보 1건 = 1행(`analysis_id` · `key`(위치 기반 안정 식별자) · `name` · `location` · `symbol` · `rationale` · `decision`(undecided/approved/rejected) · `reject_reason` · `merged_into` · `created_at`/`updated_at`). 0006 이 JSON 한 덩어리인 것과 달리 행 단위인 이유를 헤더 주석에 적는다 — 결정은 후보마다 따로 바뀌고, 거부 사유 이월 질의가 `(repo, branch, key)` 로 **행을 골라** 읽기 때문이다.",
+              "expectedOutcome": "`cargo test --release` 의 `migrations.rs` 가 새 마이그레이션까지 적용하고 통과. 스키마 변경 외 동작 변화 0."
+            },
+            {
+              "seq": 2,
+              "action": "`backend/src/feature_candidates.rs` 신설 — stage 4 의 LLM 경계. `discovery_strategy.rs` 와 같은 형태(SYSTEM 프롬프트 · 닫힌 JSON 스키마 · `stub_answer`)로 짓되, 입력은 **승인된 전략의 패턴 목록 + stage 1 이 잰 경로 목록**이다. stub 은 하드코딩 문자열이 아니라 **실제 트리에서 파생**시킨다(2·3단계 stub 과 같은 이유 — e2e 가 AC1.4 의 실제 성질 「모든 후보가 분석이 실제로 본 경로에 근거한다」를 단언할 수 있어야 한다).",
+              "expectedOutcome": "`cargo check` 통과. 단위 테스트로 ① 승인 패턴에 맞는 경로만 근거가 된다 ② 같은 트리·같은 패턴이면 같은 후보 집합(결정성)을 단정."
+            },
+            {
+              "seq": 3,
+              "action": "`backend/src/worker_api.rs` `claim` 을 **pending 인지 보고 내주도록** 고친다 — `fetch` 는 항상, `cross_cutting` 은 자기 행이 pending 이거나 **`discovery_strategy` 가 pending 일 때**(그 단계의 in-pass 입력이므로 기존 부분 재시도 동작을 그대로 보존한다), `discovery_strategy` 는 자기 행이 pending 일 때, `feature_candidates` 는 전략이 승인됐고 자기 행이 pending 일 때. 승인된 패턴을 `approvedPatterns` 로 응답에 실어 stage 4 가 새 엔드포인트 없이 입력을 받게 한다.",
+              "expectedOutcome": "기존 워커 테스트 전부 통과(신선한 잡의 `executableStages` 는 종전과 동일). 새 테스트: stage 1~3 succeeded + 승인 상태의 잡을 claim 하면 `[fetch, feature_candidates]` 만 나오고 `approvedPatterns` 가 승인 목록과 같다."
+            },
+            {
+              "seq": 4,
+              "action": "`backend/src/analysis.rs`: ① `approve_strategy` 가 승인과 **같은 트랜잭션**에서 분석을 `queued` 로 되돌린다(단 `running` 인 동안은 건드리지 않는다 — 리스 보유자 밑에서 재큐잉하지 않는다는 `retry_stage` 의 기존 불변식) ② `worker_api::finish` 가 `awaiting_pipeline` 을 쓸 때 **지금 실행 가능한 pending 단계가 남아 있으면 `queued` 로 바꾼다** — 실행 중에 승인이 들어온 경우의 유일한 회피로다.",
+              "expectedOutcome": "새 테스트 둘: 승인 직후 `analyses.status = queued` 이고, 「실행 중 승인 → finish(awaiting_pipeline)」 경로가 `queued` 로 착지해 stage 4 가 고아가 되지 않는다."
+            },
+            {
+              "seq": 5,
+              "action": "`backend/src/analysis.rs` 에 후보 라우트 추가 — `GET /api/analyses/{id}/candidates`(목록 + `previouslyRejected` 표시), `POST .../candidates/{key}/decision`(`approve` | `reject`+사유 필수), `POST .../candidates/{key}/rename`, `POST .../candidates/merge`. 전부 `owned_analysis` 로 소유 검증(AC4.7)하고, 서버가 항상 **갱신된 목록 전체**를 돌려준다(S06 과 같은 규약 — 화면이 추측하지 않는다).",
+              "expectedOutcome": "`POST decision` 에 사유 없는 `reject` 는 400 이고 아무것도 저장되지 않는다. 승인/거부/이름 변경/병합 각각이 목록을 바꾸고, 다른 사용자의 분석 id 는 404."
+            },
+            {
+              "seq": 6,
+              "action": "거부 사유 이월(test/01 시나리오 7) — `carried_over` 와 같은 형태의 질의로 **같은 (user, owner, name, branch) 의 직전 분석들**에서 같은 `key` 의 거부 사유·시점을 찾아 `previouslyRejected` 로 실어 준다. 자동 재거부는 하지 않는다(목업이 「자동으로 다시 채택하지 않았으니 이번에도 직접 결정해 주세요」로 못박은 성질).",
+              "expectedOutcome": "새 테스트: 1차 분석에서 거부한 후보가 2차 분석에서 `previouslyRejected`(사유·시점 포함)로 오되 `decision` 은 `undecided` 다."
+            },
+            {
+              "seq": 7,
+              "action": "`backend/src/bin/worker.rs` 가 stage 4 를 실행한다 — `run_feature_candidates`(stage 2·3 과 같은 형태: 보고 책임은 호출자에 둔다). stage 2·3 은 **claim 이 내주지 않으면 건너뛴다**. `pipeline.rs` 의 「stages 4-5 는 미구현」 주석을 stage 5 만 남도록 고친다.",
+              "expectedOutcome": "워커 통합 테스트: 승인 후 재큐잉된 잡을 돌리면 stage 4 만 running→succeeded 로 보고되고 stage 2·3 의 저장 문서·`content_hash` 가 **바뀌지 않는다**."
+            },
+            {
+              "seq": 8,
+              "action": "프론트 `frontend/src/FeatureCandidates.tsx` 신설(S07 `STP-sift-candidates`) + `api.ts` 함수 + `App.tsx` 에 `#/analyses/<id>/candidates` 라우트. 카피는 **목업의 카피 그대로** 옮긴다(활성 대조 규약). 필터(전체·미결정·승인·거부) · 미결정 카운트 · 후보 카드(이름·위치·근거·이전 거부 안내) · 거부 사유 패널(사유 없으면 확정 불가) · 이름 변경 · 병합 · 「여기까지 저장하고 나가기」.",
+              "expectedOutcome": "`npm run build`(tsc) 통과. `data-testid` 로 e2e 가 집을 지점이 전부 열린다."
+            },
+            {
+              "seq": 9,
+              "action": "목업 `docs/mockups/JRN-discover-features.html` 의 `STP-sift-candidates` 예시 데이터에 **잎 단위** `data-sample` 을 붙인다(후보 이름 4 · 위치 4 · 근거 4 · 이전 거부 사유·날짜 · 카운트·비용 수치). M6 오용 가드(`a`·`button`·`data-goto`·`data-cta`·`id`·`href` 금지)를 어기지 않도록 필요하면 잎 span 을 새로 쓴다.",
+              "expectedOutcome": "`python3 tools/check-mockup-render.py` 의 M6 오용 0 유지, `data-sample` 건수가 19 → 실측값으로 증가. `check-journey-mockup.py`·`check-journey-prototype.js` 는 rc=0 불변."
+            },
+            {
+              "seq": 10,
+              "action": "`docs/doc-tracker.md` 갱신 — 「활성 대조 대상」에 `FeatureCandidates.tsx` ↔ `STP-sift-candidates` 1행 추가(보류는 2/2 라 활성만 가능), 승격이 드러낸 잔여 이탈을 원장에 등재하고 **미해소 편차 상한을 실측값으로 올린다**(상한 인상은 이 PR 의 명시적 결정이므로 캡션에 왜 올랐는지 적는다), 「구현 수렴 로드맵」의 4b-2 를 완료로·미구현 AC 를 15 → 14 로, 「e2e 매핑」을 9 → 10 으로, 「현재 상태 요약」·「변경 이력」 갱신.",
+              "expectedOutcome": "`check-mockup-render.py` 가 M0~M6 전 규칙 통과(미등재 0). 문서의 숫자가 **체커가 말하는 숫자**와 일치."
+            },
+            {
+              "seq": 11,
+              "action": "게이트 3종 + 네거티브 통제. 게이트: `cargo test --release`(기준선 103) · `check-mockup-render.py` · `check-journey-mockup.py` + `check-journey-prototype.js`(`npm ci --prefix tools`) · `npx playwright test --list`. 네거티브 통제 3건: ① 거부 사유 필수 가드 무력화 → 그 단언에서만 실패 ② claim 의 pending 필터 무력화 → 「stage 2·3 문서 불변」 단언 실패 ③ `data-sample` 을 CTA 에 붙여 M6 오용 검출. 전부 `cp` 백업 → 복원 → `cmp -s` 바이트 동일 확인. **회귀 통제**: 브랜치 트리에 `git show main:docs/doc-tracker.md` 를 얹어 돌려 M3A/M3B 카운터가 부모와 같은지 확인(기존 판정을 느슨하게 하지 않았음의 직접 증거).",
+              "expectedOutcome": "게이트 4종 rc=0, cargo 는 기준선 103 대비 순증 전부 통과·실패 0, playwright `--list` 가 10 tests / 10 files. 네거티브 통제 3건이 **의도한 규칙의 문장**에서 울린다(건수가 아니라 문장으로 판정)."
+            },
+            {
+              "seq": 12,
+              "action": "브랜치 `reconcile/rct_20260902-0005-docs-impl`(모델 슬러그 포함 — `rct` id 는 모델 간에 유일하지 않다)로 커밋·푸시하고 **draft** PR 을 연다(머지하지 않는다). 본문에 task id · gap · 실행 경로 구멍의 실측 근거 · 완료 기준 · 검증 방법 · 범위 밖 · 래칫 인상 사유를 적는다. PR CI 3워크플로 green 을 잡 로그 원문의 수치로 확인하고, green 뒤 `mergeable` 을 한 번 더 묻는다(형제 머지가 체크 종료 직후에 들어온 전례가 있다).",
+              "expectedOutcome": "draft PR 이 열리고 3워크플로 전부 success, `mergeable=true`·`clean`."
+            }
+          ],
+          "plannedAt": "2026-09-02T07:35:00Z"
+        }
+      }
+    ]
   }
 ]
