@@ -1891,7 +1891,7 @@
     "toBeModelId": "tbm_feature-doc-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-02T05:12:00Z",
-    "updatedAt": "2026-09-02T05:22:30Z",
+    "updatedAt": "2026-09-02T05:30:00Z",
     "trigger": {
       "detectedAt": "2026-09-02T05:12:00Z",
       "changedSides": [
@@ -1919,6 +1919,62 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-02T05:15:00Z",
       "reason": "작업 필요 → `action_required`. 근거 넷 모두 실측이다.\n\n**근거 1 — 이것은 「소비된 트리거」다. 지금 `no_action_needed` 로 닫으면 슬라이스 4b-2 를 열 사건이\n영원히 오지 않는다.** 이 모델은 슬라이스 단위로 수렴한다. 슬라이스 머지는 **직전 task 의 산출물이자\n동시에 다음 슬라이스를 열 수 있는 유일한 사건**인데, task 를 닫는 행위는 reconciler 레포에만 쓰고\n대상 레포에는 아무 커밋도 만들지 않는다. 실측: PR #29 가 04:45:25Z 에 머지됐고 `rct_20260831-0004`\n가 **05:00:10Z 에 `succeeded` 로 닫혔다**(이 fire 시작 48초 전). 그 task 의 범위(4b-1)는 이미 머지됐고\n상태는 종료라 **누구도 잔여를 붙들고 있지 않다.** 지금 baseline 만 올리고 물러나면 잔여 15건은\n주인이 없는 채로 남는다.\n\n**근거 2 — 점유 규칙이 적용되지 않는다. 이 모델에 열린 task 가 하나도 없다.** `tbm_feature-doc-docs-impl`\n의 전체 task 이력을 확인했다 — 마지막 6건이 전부 종료 상태(`no_action_needed` 5 · `succeeded` 1)다.\n양보할 대상 자체가 없다.\n\n**근거 3 — 형제 PR 이 경로를 스쳐 재감지가 걸릴 *가능성* 은 재감지 경로가 아니다.** 열린 PR #31·#32 가\n머지되면 `docs/`·`frontend/src` 가 움직여 이 모델이 우연히 재트리거될 수는 있다. 그러나 그것은 **다른\n모델의 작업이 공유 경로를 건드리는 부수효과**일 뿐, 이 모델의 슬라이스를 여는 사건이 아니다. 그렇게\n재트리거된 detector 는 지금과 똑같은 판단 앞에 다시 서게 되고, 그 사이 잔여 gap 은 계속 방치된다.\n\n**근거 4 — 실행자 자신이 「범위 밖 · 미해소」로 선언한 판정 기준 3 위반이 하나 있다.** PR #29 가 신설한\ndoc-tracker 「미해소 질문」 10번은 `rct_20260831-0004` 가 *판정 기준 3 위반으로 등재했고 4b-1 의 범위\n밖으로 남겼다* 고 스스로 적는다(Google 키는 등록되나 분석에서 실패하는데 그 동작을 규정하는 AC 가\n없다 → PRD-4 개정 필요). 이건 「아직 구현 안 된 AC」가 아니라 **이미 사용자에게 보이는 무문서 동작**이라\n슬라이스 순서와 독립적으로 처리 가능하다.\n\n---\n\n## planner 를 위한 제약 (실측으로 확정했다 — 다시 파지 말 것)\n\n**⚠️ 다음 권장 슬라이스 4b-2(AC1.4 · S07)는 형제 모델의 PR #32 머지가 선결이다.**\ndoc-tracker 로드맵이 근거를 적어 두었다: 「대조 보류」가 상한 4/4 로 차 있어 새 화면은 **활성 대조로만**\n들어올 수 있는데, S07(`STP-sift-candidates`)은 판정 카피 48건 중 예시 데이터가 20건을 넘어 리터럴\n대조가 성립하지 않는다. 그 해소 수단(`data-sample` 예시값 표기 규약)은 `tbm_feature-doc-mockup-render`\n의 `rct_20260831-0002` 가 **PR #32 로 이미 스테이징**해 뒀고 현재 `awaiting_review`(22.9시간째)다.\n\n이번 fire 에서 PR #32 를 트리거 위로 시험 병합해 **실측**했다:\n- PR #29 부모(`0cd3bb8`)에는 **CLEAN**, 트리거(`fb203a2`)에는 `docs/doc-tracker.md` **CONFLICT**\n  → 충돌은 PR #29 가 만든 것이 맞다(활성 표 · 편차 캡션·상한 두 곳).\n- 다만 PR #32 의 `executionGuide` §3-① 이 **이 상황을 정확히 예견하고 산술까지 적어 두었다**:\n  *「#29가 먼저 머지되면 … 28이 아니라 **24 + 6 = 30**이 된다」*.\n- 그 합집합 해소를 실제로 적용해 게이트를 돌린 결과 **정확히 그 값에서 전 규칙 통과**:\n  `활성 3 · 보류 3 · 편차 30/30 · M4 행 30 공전 0 · M6 data-sample 13건 오용 0`, 형제 게이트도 통과.\n\n→ 즉 **PR #32 는 계획이 무효화된 것이 아니라 리베이스만 남았고, 머지되면 「대조 보류」가 4/4 → 3/3 으로\n내려가며 S07 이 들어올 자리가 열린다.** 4b-2 계획은 그 머지 이후를 전제로 세우고, 그 전에 착수 가능한\n것은 근거 4의 AC4.2 조항(PRD-4 개정 + 검증 수단 결정)이다.\n\n**참고 — 이 모델의 versionScript 는 `docs/doc-tracker.md` 를 to-be 에 포함하므로**(`docs/` 트리 전체),\n문서 메타 파일만 바뀌어도 트리거된다. 이번 트리거의 to-be 변경분은 그 파일 하나뿐이며 **AC 를 정의하는\nSSOT(`docs/prd`·`docs/test`·`values.md`)는 불변**이다 — to-be 는 24개 AC 그대로다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "판정 기준 3 위반(문서 없는 구현) 1건을 **PRD-4 개정 + 구현을 그 개정에 맞추기**로 닫는다. 결정한 것은 하나다 — 「등록은 되지만 분석에서 실패」는 의도가 아니며, **분석 호출이 구현되지 않은 제공자의 키는 등록 시점에 거부한다**. 이 방향을 고른 근거는 실측이다: `llmkey::ACTIVE_KEY_SQL` 이 `ORDER BY (provider='openai') DESC, created_at DESC` 이므로, Anthropic 키로 잘 쓰던 사용자가 Google 키를 나중에 등록하면 **그 미지원 키가 활성 키가 되어 이미 동작하던 분석이 조용히 깨진다**. 등록을 허용해서 제품이 얻는 것은 없고(호출도 비용 추정도 불가) 잃는 것은 이 회귀다. 반대 방향(현행 동작을 의도로 문서화)은 그 회귀를 AC 로 승인하는 셈이라 택하지 않았다. 부수 효과로 **검증 수단 문제도 함께 풀린다** — 등록 거부는 stub 모드에서 그대로 관측되므로 doc-tracker 가 「e2e 로는 관측되지 않는다」고 적어 둔 조항이 e2e 로 판정 가능해진다(현행 동작은 stub 에서 미지원 제공자도 성공하므로 관측 불가). **이 시도의 완료 기준(범위)**: ① PRD-4 AC4.2 에 지원 제공자 범위 조항이 있고 ② `docs/test/04-platform.md` 에 그 조항의 검증 시나리오가 있고 ③ 백엔드가 미지원 제공자 등록을 400 으로 거부하며 그 판정이 `llm::Provider` 의 「호출 구현 여부」 **한 소스**에서 파생되고 ④ `e2e/tests/ac4-2-*.spec.ts` 가 그 거부를 화면에서 관측하며 ⑤ doc-tracker 의 「LLM 프로바이더 지원 범위」 미해소 문구와 「다음 단계 권장」 10번이 해소로 갱신되고 ⑥ CI 3게이트(cargo+kind e2e · 여정↔목업 · 목업↔구현)가 green 인 상태. **범위 밖(후속)**: 미구현 AC 15건 전부 — 특히 다음 권장 슬라이스 4b-2(AC1.4 · S07)는 자매 모델의 PR #32 머지가 선결이라 이번에 착수하지 않는다. Google 제공자의 실제 호출 구현, 등록 화면의 선택지 축소와 그에 따른 목업(`JRN-connect-repo.html`) 개정(자매 모델 `tbm_feature-doc-mockup-render` 소관 · 그 파일에 열린 PR 이 둘), 이미 저장된 미지원 제공자 키의 소급 처리. AC 개수는 24 로 불변이다(새 AC 를 만들지 않고 AC4.2 에 조항을 더한다).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`backend/src/llm.rs`: `Provider` 에 `supports_analysis()` 를 `default_model().is_some()` 로 정의해 「분석 호출이 구현된 제공자」의 단일 소스를 만든다. `ask()` 의 미지원 분기는 그대로 둔다(이미 저장된 키에 대한 방어선).",
+              "expectedOutcome": "`supports_analysis()` 가 OpenAI·Anthropic 에 true, Google 에 false. `cargo check` 통과. 동작 변화 0."
+            },
+            {
+              "seq": 2,
+              "action": "`backend/src/llmkey.rs`: 사설 `Provider` 에서 `llm::Provider` 로 가는 다리(`fn llm(self)`)를 놓고, `register` 가 `validate_key`·암호화·저장·감사 **이전에** `supports_analysis()` 로 걸러 400 을 낸다. 거부 메시지는 사유와 대안 제공자를 담고 키는 절대 에코하지 않는다(AC4.3).",
+              "expectedOutcome": "`POST /api/llm-keys {provider:\"google\"}` → 400, `llm_keys` 행 0건, 감사 로그에 `llm_key.register` 없음. OpenAI·Anthropic 등록 경로는 무변화."
+            },
+            {
+              "seq": 3,
+              "action": "`backend/tests/llmkey.rs` 에 통합 테스트 추가: ① 미지원 제공자 등록 400 + 저장 0건 ② 지원 제공자 등록 201 회귀 ③ **회귀 시나리오 단정** — Anthropic 등록 후 Google 등록 시도가 거부되어 `preflight` 가 여전히 Anthropic 을 가리킨다. `backend/src/llm.rs` 단위 테스트에 `supports_analysis()` ↔ `ask()` 분기 일치 단정을 더한다.",
+              "expectedOutcome": "`cargo test --release` 가 베이스라인 대비 순증(신규 4건 내외) 전부 통과, 기존 실패 0."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/prd/04-platform.md` AC4.2 에 「지원 제공자 범위」 조항을 더한다 — 분석 호출이 구현된 제공자만 키 등록 대상이며, 미지원 제공자의 등록 요청은 사유와 함께 거부되고 키는 저장되지 않는다. 지원 범위는 호출 구현이 늘 때 함께 넓어진다.",
+              "expectedOutcome": "AC4.2 설명·검증 방법에 조항이 반영되고 AC 식별자 개수는 24 로 불변."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/test/04-platform.md` 말미에 시나리오 13(미지원 제공자 키 등록 거부)을 **추가**한다. 기존 시나리오 번호는 재배치하지 않는다(4~12 가 다른 AC 에 물려 있다).",
+              "expectedOutcome": "AC4.2 검증 시나리오가 3·4·13 세 건이 되고, 테스트 문서의 AC 커버 24/24 는 불변."
+            },
+            {
+              "seq": 6,
+              "action": "`e2e/tests/ac4-2-llm-key-lifecycle.spec.ts` 에 미지원 제공자 등록 거부 케이스를 더한다 — `provider-google` 선택 → `AIza…` 키 입력 → `register-key` → `key-error` 노출 · `active-key` 0건. spec 파일 수·AC 매핑(1:1)은 그대로 9 건.",
+              "expectedOutcome": "`npx playwright test --list` 가 트랜스파일·케이스 수를 확인하고, kind e2e 에서 그 단언이 실제로 실행된다."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/doc-tracker.md` 갱신: 「LLM 프로바이더 지원 범위」 표의 Google 행(키 등록 ✅→❌)과 산문·「문서 공백(미해소)」 인용문을 해소 서술로 교체, 「다음 단계 권장」 10번을 해소 표기로, 「e2e 매핑」 AC4.2 행의 커버 범위 갱신, 「변경 이력」 1행 추가, 「현재 상태 요약」 검증 시점 갱신.",
+              "expectedOutcome": "doc-tracker 가 더 이상 미해소 문서 공백을 선언하지 않고, 판정 기준 3 위반 등재가 0 건이 된다."
+            },
+            {
+              "seq": 8,
+              "action": "로컬 게이트 3종을 베이스라인과 대조해 돌린다 — `cargo test --release` · `python3 tools/check-mockup-render.py --verbose` · `python3 tools/check-journey-mockup.py` + `node tools/check-journey-prototype.js`(`npm ci --prefix tools`). 네거티브 통제: 등록 거부 가드를 한 줄 되돌려 신규 테스트가 **그 단언에서** 실패하는지 확인하고 `cp` 백업 → 복원 → `cmp -s` 로 바이트 동일 확인.",
+              "expectedOutcome": "3게이트 rc=0 이고, 문서 게이트 출력이 베이스라인(대조 보류 4/4 · 편차 20행 · 링크 230건)과 동일. 네거티브 통제가 의도한 단언에서만 울린다."
+            },
+            {
+              "seq": 9,
+              "action": "새 브랜치 `reconcile/rct_20260902-0002` 로 커밋·푸시하고 draft PR 을 연다(머지하지 않는다). PR 본문에 task id·gap·결정 근거(ACTIVE_KEY_SQL 회귀)·검증 방법·범위 밖을 적는다.",
+              "expectedOutcome": "draft PR 이 열리고 PR CI 3워크플로가 전부 green."
+            }
+          ],
+          "plannedAt": "2026-09-02T05:30:00Z"
+        }
+      }
+    ]
   }
 ]
