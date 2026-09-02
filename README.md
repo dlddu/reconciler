@@ -40,45 +40,6 @@ tests/                              # index.html 동작 테스트 (node --test)
 SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 채운다. 자세한 절차는
 `templates/README.md`.
 
-## 대상 레포 작업 규약
-
-계획 단계(`reconciler-work-planner`)가 대상 레포에 만드는 `reconcile/*` 브랜치와 PR에
-공통으로 적용된다. 개별 task의 `plan.executionGuide`는 이 규약을 **전제로** 쓰고,
-어긋나는 지침을 쓰지 않는다. 이 절이 브랜치 갱신 방식의 SSOT다.
-
-### 브랜치 갱신 — rebase + force-push
-
-계획·검토 중에 대상 레포 `main`이 움직여 PR이 최신이 아니게 되면,
-**`origin/main` 머지가 아니라 rebase 후 force-push로 갱신한다.** 머지 커밋을 이력에
-남기지 않고, PR diff를 이 task가 의도한 변경만으로 유지하기 위함이다.
-
-```bash
-git fetch origin
-git rebase origin/main                          # 충돌은 여기서 해소
-# ── 대상 레포의 게이트를 전량 재실행한다 (아래 주의사항 3) ──
-git ls-remote --heads origin <branch>           # 원격 tip 확인
-git push --force-with-lease origin <branch>
-```
-
-주의사항:
-
-1. **`--force-with-lease`를 쓴다(`--force` 아님).** 원격 tip이 내가 마지막으로 본 값일
-   때만 덮어쓴다. 이 레포에서 이미 한 번, `rct` id가 모델 간에 유일하지 않아 형제 모델의
-   동명 task가 같은 이름의 브랜치를 점유한 적이 있다(`rct_20260902-0002` — PR #37 ↔ #38).
-   그때 `--force`였으면 남의 브랜치를 지웠다. 아래 브랜치 이름 규약과 짝으로 지킨다.
-2. **force-push는 PR의 리뷰 맥락을 흐린다.** 검토 승인을 이미 받은 뒤 rebase했다면,
-   무엇이 어떻게 바뀌었는지(충돌 해소 내용)를 PR 코멘트로 남겨 승인의 근거가 유지되게 한다.
-3. **rebase 후 대상 레포의 게이트를 반드시 다시 돌린다.** 텍스트 충돌이 없어 자동으로
-   붙어도, 집계 숫자·원장 행을 파싱하는 체커는 어긋날 수 있다. 충돌이 없었다는 것은
-   재실행을 생략할 근거가 되지 못한다.
-4. **상한·편차 같은 래칫 숫자를 "맞추려고" 낮추지 않는다.** 낮추는 행위 자체가 결정이다.
-   충돌하면 양쪽 사실을 합치되 상한은 더 엄격한 쪽을 남긴다.
-
-### 브랜치 이름
-
-`reconcile/<rct_id>-<모델 슬러그>`. `rct` id는 모델별 task 파일 **안에서만** 유일하므로,
-id만 쓰면 다른 모델의 동명 task와 브랜치가 충돌한다.
-
 ## 데이터 브라우저 (GitHub Pages)
 
 `index.html`은 의존성 없는 단일 파일 정적 페이지로, `data/`의 ToBeModel과
