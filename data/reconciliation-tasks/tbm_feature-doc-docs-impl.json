@@ -2193,7 +2193,7 @@
     "toBeModelId": "tbm_feature-doc-docs-impl",
     "status": "executing",
     "createdAt": "2026-09-02T07:09:19Z",
-    "updatedAt": "2026-09-02T11:55:16Z",
+    "updatedAt": "2026-09-02T12:22:00Z",
     "trigger": {
       "detectedAt": "2026-09-02T07:09:19Z",
       "changedSides": [
@@ -2325,6 +2325,20 @@
               "startedAt": "2026-09-02T11:52:00Z",
               "finishedAt": "2026-09-02T11:54:30Z",
               "log": "**차단 — 프로덕션이 이미 죽어 있다(이 PR 과 무관한 선행 장애).** 지침 §2-5 의 실배포 관측 대상을 머지 전에 미리 확인하다 발견: `feature-doc/featuredoc` 파드가 CrashLoopBackOff(restart 4, exit 1), 로그는 단 한 줄 `Error: migration 4 was previously applied but has been modified`. 워커는 살아 있으나 5초마다 `claim failed: error sending request for url (http://featuredoc:8080/internal/analyses/claim)` — 서비스 전체가 정지 상태다. 원인: PR #31(`c668d12`, 05:20Z, 목업 이관 슬라이스)이 **이미 적용된 마이그레이션 파일** `backend/migrations/0004_analysis_stages.sql` 의 주석 2줄을 고쳐(`docs/mockups/s04-analysis-progress.html` → `JRN-discover-features.html#STP-leave-and-return`) sqlx 체크섬이 어긋났다. 그 이미지가 `c4cdc48`(05:31:15Z)로 핀되면서 그때부터 API 가 기동하지 못한다 — 약 6시간 20분. kind e2e 가 이걸 못 잡는 이유는 CI DB 가 매번 새로 만들어져 0004 가 새 체크섬으로 처음 적용되기 때문이다(기존 DB 에만 나타난다). 이 PR 은 0004 를 건드리지 않으므로 머지해도 이 장애는 그대로이고, 반대로 이 장애가 살아 있는 한 §2-5 의 관측 4종(마이그레이션 0007 적용 · 승인 후 `awaiting_pipeline → queued` 전이 · stage 4 실행 · 2·3단계 `content_hash` 불변)은 **하나도 확인할 수 없다.** 승인 범위 밖의 수정이라 임의로 고치지 않고 사용자 판단을 기다린다."
+            },
+            {
+              "stepSeq": 12,
+              "status": "succeeded",
+              "startedAt": "2026-09-02T12:16:00Z",
+              "finishedAt": "2026-09-02T12:18:00Z",
+              "log": "**선행 장애 해소 확인 — 차단이 풀렸다.** 직전 항목이 머지를 멈춘 사유(prod API CrashLoopBackOff, `migration 4 was previously applied but has been modified`)는 이 task 범위 밖에서 닫혔다: PR #42 `fix(migrations): 0004 주석 원복 — sqlx 체크섬 복구`(`59dc027`, 12:00:14Z) → 이미지 핀 `c2787c6`(12:11:45Z) → 롤아웃. 실측: `feature-doc/featuredoc` 파드 `featuredoc-864889d58-gkkwl` **Running · Ready · restart 0**, 이미지 `ghcr.io/dlddu/featuredoc:59dc027…`, 기동 12:16:32Z, 로그 `featuredoc listening on http://0.0.0.0:8080` 한 줄로 정상 기동. 워커도 복구 — 12:17:30Z `analysis finished … status=awaiting_pipeline` 이 찍혔다(claim 실패 루프 종료). 즉 §2-5 실배포 관측의 전제가 다시 성립한다."
+            },
+            {
+              "stepSeq": 12,
+              "status": "succeeded",
+              "startedAt": "2026-09-02T12:18:30Z",
+              "finishedAt": "2026-09-02T12:22:00Z",
+              "log": "**지침 §1-1~1-3 재수행(두 번째) — base 가 또 움직였다.** `adc37bb` → `c2787c6`(#42 `59dc027` + 이미지 핀). 브랜치는 이미 merge 커밋 2개를 갖고 있어(76cb60b·a13f695, 직전 워커가 구 규약대로 만든 것) 지금 rebase 로 갈아타면 이미 해소한 doc-tracker 충돌을 다시 풀어야 하고 리뷰 이력을 다시 쓴다 — 얻는 diff 이득이 없어 이번에도 `git merge origin/main`(병합 커밋 `2b77f2b`, force-push 없이 fast-forward push). **충돌 0건**: 들어온 변경은 `0004_analysis_stages.sql` 주석 2줄과 `deploy/k8s/*.yaml` 이미지 핀뿐이고 이 브랜치는 셋 다 건드리지 않는다. 병합 후 `git diff origin/main -- backend/migrations/0004_analysis_stages.sql` **무출력** — 즉 머지해도 #42 의 체크섬 복구가 되돌아가지 않는다(이 확인이 이번 병합의 핵심). 병합 트리에서 문서 게이트 3종 재실행, 전부 rc=0: `check-mockup-render` 활성 5 · 보류 2/2 · 편차 **43/43** · M3A 123건 미등재 0 · M3B 106건 미등재 0 · M4 행 43 공전 0 · `data-sample` 37건 오용 0 / `check-journey-mockup` 여정 6(이관 완료 5 · 대기 0) · 상대 링크 241건 / `check-journey-prototype` 단언 **408건 불변**. (이 샌드박스에 rust 툴체인이 없어 `cargo test` 는 PR CI 가 유일한 관측 지점이다.) push 로 CI 재실행 — 문서 2워크플로 12:21 success, `CI (cargo + kind e2e)` 진행 중."
             }
           ]
         }
