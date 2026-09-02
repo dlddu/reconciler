@@ -1350,7 +1350,7 @@
     "toBeModelId": "tbm_feature-doc-journey-mockup",
     "status": "planning",
     "createdAt": "2026-09-02T05:31:00Z",
-    "updatedAt": "2026-09-02T05:52:00Z",
+    "updatedAt": "2026-09-02T06:05:00Z",
     "trigger": {
       "detectedAt": "2026-09-02T05:31:00Z",
       "changedSides": [
@@ -1377,6 +1377,67 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-02T05:44:17Z",
       "reason": "작업 필요 → `action_required`. 근거 넷 모두 실측이다.\n\n**근거 1 — 「소비된 트리거」다. 지금 `no_action_needed` 로 닫으면 슬라이스 5 를 열 사건이 영원히 오지 않는다.** 이 모델은 여정 하나씩 이관하는 슬라이스 모델이고, 슬라이스 머지는 *직전 task 의 산출물이자 동시에 다음 슬라이스를 열 수 있는 유일한 사건*이다. task 를 닫는 행위는 reconciler 레포에만 쓰고 대상 레포에는 커밋을 만들지 않는다. 실측: PR #31 이 05:20:06Z 에 머지됐고 `rct_20260831-0005` 가 **05:21:53Z 에 `succeeded`** 로 닫혔다. 그 task 의 범위(슬라이스 4)는 이미 머지됐고 상태는 종료라 **누구도 잔여를 붙들고 있지 않다.** 여기서 baseline 만 올리고 물러나면 `JRN-understand-feature` 미시각화는 주인 없이 남는다.\n\n**근거 2 — 점유 규칙이 적용되지 않는다. 이 모델에 열린 task 가 0건이다.** 전체 이력 11건 중 이 task 를 뺀 10건이 전부 종료 상태(`no_action_needed` 9 · `succeeded` 1)다. 양보할 대상 자체가 없다. 형제 detector 가 05:22~05:24 에 남긴 `rct_20260902-0001`(`no_action_needed`)은 *#31 머지 이전 상태를 읽은 기록*이며(그 task 의 as-is 는 `mockups:dfe7983…` = 이전 값), 그 판단의 근거 3 은 명시적으로 *「잔여 2건은 `executing` 인 `rct_20260831-0005` 가 붙들고 있다」* 였다. 그 워커는 그 뒤 머지하고 종료했으므로 전제가 소멸했다.\n\n**근거 3 — 재감지 경로가 없다.** 이 모델의 두 side 는 `docs/user-journey`+`docs/doc-tracker.md`(to-be) 와 `docs/mockups`+`docs/index.html`(as-is) 이다. 누군가 이관 작업을 실제로 하지 않는 한 어느 쪽도 움직이지 않는다. 형제 모델의 PR 이 `docs/` 를 스쳐 우연히 재트리거될 수는 있으나, 그것은 다른 모델의 작업이 공유 경로를 건드리는 **부수효과**일 뿐 이 모델의 슬라이스를 여는 사건이 아니다 — 그렇게 재점화된 detector 는 지금과 똑같은 판단 앞에 다시 서고 그 사이 gap 은 방치된다. 게이트는 그동안 계속 초록이다(남은 1건이 상한 1 안에 등재돼 있으므로 R0~R10 이 전부 통과한다). **gap 실재 + 게이트 초록 + 재감지 경로 없음** 은 `action_required` 를 지지하는 적극적 논거다.\n\n**근거 4 — 지금이 착수 적기다. 순서 제약이 방금 풀렸다.** 규약 ⑦ 은 여정 밖 분기의 대상 페이지가 먼저 존재해야 강한 형태(단계 앵커)로 설 수 있다고 정하고, 남은 사슬을 `understand-feature → follow-code-change → review-feature → discover-features` 로 적시한다. `JRN-understand-feature` §4 의 유일한 여정 밖 분기 대상 `JRN-follow-code-change`/`STP-resolve-conflict` 는 **이번 트리거가 만든 페이지 안에 실재한다**(문서·페이지 양쪽 실측). 즉 마지막 남은 여정은 지금 바로 강한 형태로 이관 가능하고, 그것이 끝나면 이관 대기 원장이 비며 두 상한이 모두 0 이 된다.\n\n**자동 해소 대상이 아니다.** 목업 이관은 시간이 지난다고 일어나지 않으므로 `assessing` 유예를 두지 않는다.\n\n---\n\n## planner 를 위한 제약 (실측으로 확정했다 — 다시 파지 말 것)\n\n1. **슬라이스 5 의 범위는 정확히 여정 1개** — `JRN-understand-feature`(4단계: `STP-open-shared` · `STP-grasp-behavior` · `STP-check-scope` · `STP-flag-ambiguity`). 규약 ⑦ 의 사슬이 순서를 고정하므로 나눌 것도 합칠 것도 없다.\n2. **여정 밖 분기는 강한 형태로 세운다** — §4 의 「P2의 제안이 P1 편집과 겹침 → `JRN-follow-code-change` `STP-resolve-conflict`」 1행. 대상 페이지가 실재하므로 `data-goto-journey=\"JRN-follow-code-change#STP-resolve-conflict\"` 를 END 블록 **한 곳에서만** 선언하고 링크는 `./JRN-follow-code-change.html#STP-resolve-conflict` 로 건다(규약 ⑦ 두 번째·세 번째 항목). 문서 링크(`reader.html?doc=`) 형태로 두면 체커가 낡은 링크로 잡는다.\n3. **원본 삭제가 이번 슬라이스의 몫이다** — 터치포인트 실측상 `STP-grasp-behavior`=S08 · `STP-check-scope`=S09 · `STP-flag-ambiguity`=S10 이라, 이 여정이 이관되면 `s08`~`s10` 의 마지막 소비자가 사라진다. 규약 ⑤ 대로 원본 3개를 삭제하고 **이관 대기 원장을 비우며 두 상한을 0 으로 내린다**(화면 단위 잔여 상한 3→0 · 이관 대기 여정 상한 1→0). 원장에 공전 행을 남기면 체커가 실패시킨다.\n4. **`STP-open-shared` 의 터치포인트는 `S02 계열`** 이라 규약 ④ 의 `S01`~`S10` 토큰 파싱이 S02 를 집는다. S02 원본은 이미 삭제됐고 공개 경로는 `JRN-connect-repo.html#STP-pick-target` 앵커다 — 규약 ⑤ 대로 **복제가 아니라 이 여정의 맥락으로 다시 쓴다**.\n5. **DOM 하네스 등록이 필수 산출물이다** — `tools/check-journey-prototype.js` 에 이 여정의 ARM · INPUT_PROBE · SECOND_END · PRODUCT_PATHS(§4 분기 5행 중 여정 종료 2건·단계 복귀 2건·여정 밖 1건)를 등록해야 한다. 슬라이스 4 가 같은 파일에 +126줄로 한 그대로가 선례다. 하네스 미등록은 규칙 5 자체의 위반이다.\n6. **함께 갱신할 네 곳** — `docs/mockups/README.md`(Journeys 표 · 단계 표 · 이관 대기 원장 · 두 상한 · 집계 문장), `docs/index.html`(Mockup pages 07→08 은 여정 페이지 +1 화면 단위 −3 이므로 **05**, `아직 화면 단위로 남은 것` 섹션 삭제, 여정 섹션 신설), `docs/doc-tracker.md`(현재 상태 요약 · 진행 4/5→5/5 · 고아 목업 3→0 · 목업 페이지 없는 여정 1→0 · 변경 이력), 그리고 **상한 문장의 굵은 숫자와 옆 산문을 함께** 고칠 것(숫자만 고치고 산문을 남기면 체커는 초록인데 문장이 자기모순인 상태가 된다 — #28 의 전례).\n7. **형제 모델의 열린 PR 과 겹치는 파일이 있다** — `tbm_feature-doc-mockup-render` 의 `rct_20260831-0002` 가 PR #32 를 `awaiting_review` 로 세워 두었고 그 PR 도 `docs/doc-tracker.md` 를 고친다(이 fire 에서 시험 병합·게이트 실측: 올바른 리베이스는 활성 3 · 보류 3/3 · 편차 28/28 에서 전 규칙 통과). 슬라이스 5 의 PR 은 그 표들과 충돌할 것을 전제하고, 머지 직전 리베이스 규칙을 executionGuide 에 미리 적어 둘 것."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`JRN-understand-feature`(4단계) 한 여정만 여정 페이지로 이관해 규칙 1 위반을 1 → 0 으로 닫는다. **사슬의 마지막 칸이고, 잠금이 방금 풀렸다** — §4 의 유일한 여정 밖 분기(「P2의 제안이 P1 편집과 겹침」 → `JRN-follow-code-change` `STP-resolve-conflict`)의 대상 페이지가 직전 슬라이스(PR #31, 05:20Z 머지)로 생겼으므로, 규약 ⑦ 이 요구하는 **강한 형태**(단계 앵커 `./JRN-follow-code-change.html#STP-resolve-conflict`)로 바로 설 수 있다. 이 여정이 이관되면 `S08`~`S10` 의 마지막 소비자가 사라져 원장이 비고 두 상한이 모두 0 이 된다 — 즉 이 슬라이스는 gap 을 줄이는 것이 아니라 **닫는다**.\n\n**완료 기준(이 시도의 범위).** ① `docs/mockups/JRN-understand-feature.html` 신설 — 규칙 5 (a)~(h) 를 만족하는 클릭되는 프로토타입(실제 폼 요소 · 화면 안 행동으로만 전진 · 상태 변형 · 딥링크 · 여정 밖 분기 1건을 END 블록 handoff 로). 이 여정은 **P2(비개발자·모바일 100%)의 첫 화면**이므로, 제품 화면에 자격증명·설정 경로가 한 곳도 나타나지 않아야 한다(여정 문서가 명시한 이탈 위험). ② DOM 하네스 등록부 4종(`ARM`·`INPUT_PROBE`·`PRODUCT_PATHS`·`SECOND_END`)에 이 여정을 추가해 P0 공허 실패를 피하고 기존 333 단언을 회귀 없이 유지. ③ R7 이 기계적으로 요구하는 원본 흡수·삭제 — `s08-feature-acceptance.html`·`s09-feature-dependencies.html`·`s10-llm-edit.html`(셋 다 소비자가 0 이 된다) 삭제 + 원장 3행 전부 제거 + 화면 단위 잔여 **상한 3 → 0**. ④ **이관 대기 상한 1 → 0**(같은 줄 산문의 「1개」도 동시 정정 — 체커는 굵은 숫자만 읽으므로 산문은 영영 못 잡는 자리다. #28 의 자기모순 문장이 그렇게 생겼다). ⑤ README 매핑·집계·단계 표, 허브 `docs/index.html`(「아직 화면 단위로 남은 것」 섹션 **삭제** + 여정 카드 신설 + `Mockup pages` 7 → 5), `doc-tracker.md` 동기화(목업 집계 `5 / 5 / 0` · 고아 목업 3 → 0 · 목업 페이지 없는 여정 1 → 0 · 연결 매트릭스 S08~S10 공개 경로 · 변경 이력).\n\n**완료 판정**: 두 게이트(`check-journey-mockup.py` R0~R10 · `check-journey-prototype.js` P0~P7)가 PR CI 에서 green 이고, 정적 체커 보고가 `여정 6 (예외 1 · 이관 완료 5 · 이관 대기 0) · 목업 페이지 5 (여정 5 + 화면 0)` 을 찍는 것. 자매 게이트 `docs-mockup-render`(M0~M5)도 회귀 없이 green 이어야 한다 — `s08`~`s10` 삭제가 구현 파일의 매핑 주석을 dangling 으로 만들 수 있는 자리다. 모델 전체 to-be 는 이 슬라이스로 **도달**하지만, 판정은 이 범위 기준으로 한다.\n\n**대안을 버린 이유**: (a) 이관 없이 예외 등재로 닫기 — 규칙 8 예외는 「목업을 두지 않기로 한」 여정을 위한 것이고, 이 여정은 V3(비개발자 이해) 검증의 본체라 등재 사유가 성립하지 않는다. 게이트를 초록으로 만들 뿐 gap 은 남는다. (b) 페이지만 만들고 `s08`~`s10` 원본은 남기기 — R7 이 「소비자 0 인 원장 행」을 실패로 만들어 **불가능**하다(선택지가 아니라 기계적 귀결). (c) 상한만 내리고 원장 행은 남기기 — 같은 이유로 불가. 가역성: 이 PR 은 `docs/` + `tools/` 만 건드리는 문서 변경이라 revert 하나로 완전히 되돌아가고, 런타임·데이터에 닿지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`docs/mockups/JRN-understand-feature.html` 신설. 공용 CSS 를 직전 선례(`JRN-follow-code-change.html`)에서 그대로 잇고 이 여정 전용 tail 만 더한다(시나리오 카드 `.scn` · 의존성 줄 `.dep` · 제안 diff `.snip`). 4개 단계 섹션에 `id == data-step` 과 여정 문서 터치포인트에서 **파싱한** `data-screens` 를 선언한다 — `STP-open-shared`=S02 · `STP-grasp-behavior`=S08 · `STP-check-scope`=S09 · `STP-flag-ambiguity`=S10. 갈래의 끝 `END-*` 3종(정상 종료 · 여정 밖 분기 handoff · 권한 없음 종료)을 두고, 문서 메타는 전부 기본 닫힌 `<details data-meta=\"doc\">` 한 개 안에만 둔다. `STP-open-shared` 의 S02 는 원본이 이미 삭제됐으므로 **복제가 아니라 P2 맥락(공유 링크로 들어온 첫 화면 · 권한 있는 저장소만 노출 · 자격증명 경로 없음)으로 새로 쓴다**(규약 ⑤).",
+              "expectedOutcome": "`python3 tools/check-journey-mockup.py` 가 R3(단계 집합 4=4 양방향) · R6(선언 화면 == 터치포인트 S02/S08/S09/S10) · R10(제품 평면 메타 누출 0) 을 통과한다. R1/R7/R9 는 아직 실패한다(README·원장 미갱신 상태이므로 정상)."
+            },
+            {
+              "seq": 2,
+              "action": "여정 밖 분기를 규약 ⑦ 의 강한 형태로 세운다. §4 에서 `STP-` 토큰을 가진 행은 정확히 3개(「읽다가 용어에서 막힘」→`STP-flag-ambiguity` · 「P2의 제안이 P1 편집과 겹침」→`JRN-follow-code-change` `STP-resolve-conflict` · 「모바일에서 링크가 앱 대신 브라우저로 열림」→`STP-open-shared`)이므로 `.branches` 도 정확히 3항목이어야 한다. 두 번째 행만 여정 밖이며, `<section id=\"END-...\" data-goto-journey=\"JRN-follow-code-change#STP-resolve-conflict\">` 로 **한 곳에서만** 선언하고 그 블록 안에 `href=\"./JRN-follow-code-change.html#STP-resolve-conflict\"` 실제 링크를 둔다. 분기 버튼은 그 END 블록을 `data-goto` 로 가리킬 뿐 대상 식별자를 다시 적지 않는다. 「여정 종료」 두 행은 이어지는 단계가 없어 목록에 오르지 않으므로, 그 취지는 보조 레이어 주석과 화면 안 행동·갈래의 끝으로 표현한다.",
+              "expectedOutcome": "R4 가 여정 문서 §4 의 3행과 페이지 `.branches` 3항목을 **상황 문자열까지 순서대로** 일치로 판정하고, R5 의 handoff 검증 4종(형식 · 자기여정 아님 · 대상 단계가 여정 문서에 실재 · 대상 페이지 단계 앵커 링크 존재)이 전부 통과한다."
+            },
+            {
+              "seq": 3,
+              "action": "`tools/check-journey-prototype.js` 의 등록부 4종에 `JRN-understand-feature` 항목을 추가한다. `ARM` 은 각 단계의 CTA 를 살리는 최소 입력(끝까지 읽어야 전진하는 완독 게이트 · 한 줄 요청 입력 등), `INPUT_PROBE` 는 `<input>`/`<select>`/`<textarea>`/checkbox 각각이 **관측 가능한 상태 변화**를 만드는지, `PRODUCT_PATHS` 는 §4 3행 각각의 제품 화면 경로(도착지 + 그 상황의 화면 상태), `SECOND_END` 는 정상 경로 밖의 두 번째 갈래의 끝(권한 없는 링크 → 여정 종료). 등록부 본문에 **다른 여정 전용 id 를 쓰지 않는다**(그 함정이 과거에 하네스를 통째로 죽였다).",
+              "expectedOutcome": "`node tools/check-journey-prototype.js` 가 `여정 프로토타입 5개 · 단언 N건`(N > 333) 으로 통과한다. 기존 4여정 몫 333건이 회귀 없이 남아 있는지는 등록부만 추가한 시점에 따로 확인한다."
+            },
+            {
+              "seq": 4,
+              "action": "흡수된 원본 삭제 — `docs/mockups/s08-feature-acceptance.html` · `s09-feature-dependencies.html` · `s10-llm-edit.html` 를 `git rm` 하고, `docs/mockups/README.md` 이관 대기 원장의 3행을 **모두** 제거해 표를 헤더만 남긴다(마커 `<!-- ledger:begin/end -->` 는 유지 — 지우면 R0 가 실패한다). 「화면 단위 잔여 — 화면별 매핑」 표의 S08~S10 행도 함께 제거한다.",
+              "expectedOutcome": "R7 이 「소비자 0 인 원장 행」·「원장에 없는 화면 단위 파일」·「상한 초과」 어느 것도 보고하지 않는다. `ls docs/mockups/s*.html` 이 0개, `docs/mockups/*.html` 이 여정 페이지 5개."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/mockups/README.md` 나머지 갱신 — Journeys 표에서 `JRN-understand-feature` 를 「⬜ 이관 대기」 → 「✅ 이관 완료」 + 페이지 링크로, 집계 문장을 `여정 6 · 예외 1 · 판정 대상 5 · 이관 완료 5 · 이관 대기 0` 으로, **이관 대기 상한 1 → 0 과 같은 줄 산문 동시 정정**, **화면 단위 잔여 상한 3 → 0** 과 옆 산문 동시 정정, `<!-- steps:JRN-understand-feature:begin/end -->` 마커 블록 신설(4행 · 화면 열은 터치포인트 파생값 `S02`/`S08`/`S09`/`S10`), 「Mockup index」의 S08~S10 공개 경로에서 삭제되는 화면 단위 파일 링크를 빼고 새 여정 페이지 앵커를 더한다. 원장 절의 산문(「`S08`~`S10` 은 … 남았습니다」)도 이관이 끝난 사실로 다시 쓴다.",
+              "expectedOutcome": "R0(마커 3+1개) · R1(상태·페이지 칸) · R9(집계 5튜플 · 단계 표 순서/식별자/화면 열) 이 전부 통과."
+            },
+            {
+              "seq": 6,
+              "action": "허브 `docs/index.html` 갱신 — 「아직 화면 단위로 남은 것」 섹션(S08·S09·S10 카드 3장)을 **통째로 삭제**하고, `JRN-understand-feature` 여정 카드(4단계 앵커 링크 + iframe 미리보기 + Open journey)를 추가한다. 요약 수치 `Mockup pages` 를 07 → 05 로 맞춘다(`Journeys` 6 · `Documents` 20 은 불변).",
+              "expectedOutcome": "R9 의 허브 요약 3항목 · 「허브 목업 링크 집합 == docs/mockups 파일 집합」(5=5) 이 통과하고, R8 의 「허브 → 여정 페이지 단계 앵커가 대상 파일에 실재」 확인이 4개 앵커 전부에서 통과한다."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/doc-tracker.md` 갱신 — 「현재 상태 요약」 목업 줄을 `5개 페이지 — 여정 페이지 5개 … 화면 단위 0개` 로(R9 가 이 문장을 정규식으로 파싱한다), 마지막 검증 시점·건강 상태의 「이관 대기 1건」 표기 제거, 연결 매트릭스 S08~S10 행의 공개 경로에서 「화면 단위 (understand-feature 이관 대기)」를 빼고 새 여정 페이지 앵커를 더한다, 위험 진단의 「고아 목업」 3건 → 0건 · 「목업 페이지 없는 여정」 1건 → 0건, 변경 이력 1행 추가. **「수용된 위험」 섹션은 건드리지 않는다** — `JRN-restore-history` 예외 1건은 이 슬라이스의 범위가 아니고, 그 섹션을 만지면 R1 의 예외 집합이 흔들린다.",
+              "expectedOutcome": "R9 의 doc-tracker 목업 집계 대조가 실측 `(5, 5, 0)` 과 일치하고, R8 이 doc-tracker 의 상대 링크에서 dangling 을 보고하지 않는다. 예외 여정 수는 1 로 불변."
+            },
+            {
+              "seq": 8,
+              "action": "자매 게이트(`docs-mockup-render`) 회귀 방지 — `s08`~`s10` 삭제가 `frontend/src/*.tsx` 나 `backend/` 의 매핑 주석·`doc-tracker.md` 「목업↔구현 대조 범위」/「알려진 목업↔구현 편차」에서 dangling 을 만드는지 `grep -rn 's08-\\|s09-\\|s10-'` 로 전수 확인하고, 걸리는 참조는 이관된 여정 페이지 앵커로 옮긴다. 상한·보류 건수 등 그 모델의 래칫 숫자는 임의로 완화하지 않는다.",
+              "expectedOutcome": "`python3 tools/check-mockup-render.py` 가 M0~M5 전부 통과하고, 그 보고의 활성/보류 건수가 트리거 시점(`c668d12`)과 동일하다(이 PR 이 자매 모델의 래칫을 건드리지 않았다는 증거)."
+            },
+            {
+              "seq": 9,
+              "action": "두 게이트를 로컬에서 전량 실행하고, 새로 넣은 단언의 실효성을 **네거티브 컨트롤**로 확인한다 — 최소 4건: ① 한 단계의 화면 내 CTA 배선만 끊기(P2 가 그 단계를 지목하는가) ② 실제 `<textarea>` 를 비대화형 마크업으로 치환(P3) ③ handoff 의 `data-goto-journey` 를 존재하지 않는 단계로(R5) ④ README 집계 숫자 1 변조(R9). 각 뮤테이션은 `cp` 백업 → 복원 → `cmp -s` 로 원상 복구를 증명한다.",
+              "expectedOutcome": "네 뮤테이션이 각각 **의도한 규칙에서** 실패하고(다른 규칙의 cascade 만으로 끝나지 않는다), 복원 후 두 게이트가 다시 green — 정적 `여정 6 (예외 1 · 이관 완료 5 · 이관 대기 0) · 목업 페이지 5 (여정 5 + 화면 0)`, DOM `여정 프로토타입 5개`."
+            },
+            {
+              "seq": 10,
+              "action": "브랜치 `reconcile/rct_20260902-0002` 로 커밋·푸시하고 draft PR 을 연다. PR 본문에 task id · gap 요약 · 이 계획의 단계 · 검증 방법 · 범위 밖 목록을 적는다. **머지하지 않는다.** 열려 있는 자매 PR(#32 `tbm_feature-doc-mockup-render` / `rct_20260831-0002`, `awaiting_review`)이 같은 `docs/doc-tracker.md` 를 고치므로, 머지 직전 리베이스 규칙을 executionGuide 에 명시한다.",
+              "expectedOutcome": "PR 이 draft 로 열리고 `docs — journey ↔ mockup` 게이트(정적 + DOM)와 `docs — mockup ↔ render` 게이트가 PR CI 에서 green. reconciler task 의 `preparation.pullRequestUrl` 에 그 URL 이 기록된다."
+            }
+          ],
+          "plannedAt": "2026-09-02T06:05:00Z"
+        }
+      }
+    ]
   }
 ]
