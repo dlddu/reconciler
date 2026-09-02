@@ -2193,7 +2193,7 @@
     "toBeModelId": "tbm_feature-doc-docs-impl",
     "status": "executing",
     "createdAt": "2026-09-02T07:09:19Z",
-    "updatedAt": "2026-09-02T11:49:26Z",
+    "updatedAt": "2026-09-02T11:55:16Z",
     "trigger": {
       "detectedAt": "2026-09-02T07:09:19Z",
       "changedSides": [
@@ -2307,6 +2307,26 @@
           "reviewer": "user",
           "reviewedAt": "2026-09-02T11:49:26Z",
           "comment": "승인 (코멘트 없음). 승인 요청 시 제시한 내용 — PR #40 머지 = 배포, 마이그레이션 0007 전진 전용, analyses 상태 머신 새 전이(awaiting_pipeline → queued), 승인된 분석당 LLM 호출 1건 증가, 미해소 편차 래칫 37→44 인상, 브라우저 렌더 미확인 — 을 그대로 수용."
+        },
+        "execution": {
+          "status": "running",
+          "startedAt": "2026-09-02T11:50:00Z",
+          "entries": [
+            {
+              "stepSeq": 12,
+              "status": "succeeded",
+              "startedAt": "2026-09-02T11:49:30Z",
+              "finishedAt": "2026-09-02T11:51:50Z",
+              "log": "지침 §1-1~1-3(머지 직전 base 재측정 → 병합 → 병합 트리 게이트 재실행). base 가 움직였다: 9c14bbd → adc37bbe (#41 b4f1270 `rct_20260902-0004` 편차 2행 정리 11:37Z + 이미지 핀 11:48Z). 하우스 스타일대로 리베이스가 아니라 `git merge origin/main`(병합 커밋 a13f695). 충돌은 예상대로 docs/doc-tracker.md 「알려진 목업↔구현 편차」 1곳 — main 의 AnalysisProgress 신규 1행과 이 브랜치의 FeatureCandidates 7행은 서로 다른 행이라 합집합으로 남기고, 같은 행인 캡션·이력 주석만 재계산했다(36+7=43, 상한 43; 이력 주석의 '37 → 44' 표현도 '36 → 43' 으로 정정). 병합 트리에서 문서 게이트 3종 재실행 전부 rc=0 — check-mockup-render 활성 5 · 보류 2/2 · 편차 43/43 · M3A 123건 미등재 0 · M3B 106건 미등재 0 · M4 행 43 공전 0 · data-sample 37건 오용 0 / check-journey-mockup rc=0 / check-journey-prototype 단언 408건 불변 rc=0. push 로 PR CI 재실행: 문서 2워크플로 success, `test (cargo + kind e2e)` 11:51:53Z 시작 진행 중. **머지는 아직 하지 않았다** — 아래 실배포 관측에서 발견한 선행 장애 때문에 지침 §1-4(ready 전환·머지) 앞에서 멈췄다."
+            },
+            {
+              "stepSeq": 12,
+              "status": "failed",
+              "startedAt": "2026-09-02T11:52:00Z",
+              "finishedAt": "2026-09-02T11:54:30Z",
+              "log": "**차단 — 프로덕션이 이미 죽어 있다(이 PR 과 무관한 선행 장애).** 지침 §2-5 의 실배포 관측 대상을 머지 전에 미리 확인하다 발견: `feature-doc/featuredoc` 파드가 CrashLoopBackOff(restart 4, exit 1), 로그는 단 한 줄 `Error: migration 4 was previously applied but has been modified`. 워커는 살아 있으나 5초마다 `claim failed: error sending request for url (http://featuredoc:8080/internal/analyses/claim)` — 서비스 전체가 정지 상태다. 원인: PR #31(`c668d12`, 05:20Z, 목업 이관 슬라이스)이 **이미 적용된 마이그레이션 파일** `backend/migrations/0004_analysis_stages.sql` 의 주석 2줄을 고쳐(`docs/mockups/s04-analysis-progress.html` → `JRN-discover-features.html#STP-leave-and-return`) sqlx 체크섬이 어긋났다. 그 이미지가 `c4cdc48`(05:31:15Z)로 핀되면서 그때부터 API 가 기동하지 못한다 — 약 6시간 20분. kind e2e 가 이걸 못 잡는 이유는 CI DB 가 매번 새로 만들어져 0004 가 새 체크섬으로 처음 적용되기 때문이다(기존 DB 에만 나타난다). 이 PR 은 0004 를 건드리지 않으므로 머지해도 이 장애는 그대로이고, 반대로 이 장애가 살아 있는 한 §2-5 의 관측 4종(마이그레이션 0007 적용 · 승인 후 `awaiting_pipeline → queued` 전이 · stage 4 실행 · 2·3단계 `content_hash` 불변)은 **하나도 확인할 수 없다.** 승인 범위 밖의 수정이라 임의로 고치지 않고 사용자 판단을 기다린다."
+            }
+          ]
         }
       }
     ]
