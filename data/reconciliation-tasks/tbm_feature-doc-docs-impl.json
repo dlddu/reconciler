@@ -2424,7 +2424,7 @@
     "toBeModelId": "tbm_feature-doc-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-02T13:09:26Z",
-    "updatedAt": "2026-09-02T13:22:18Z",
+    "updatedAt": "2026-09-02T13:32:55Z",
     "trigger": {
       "detectedAt": "2026-09-02T13:09:26Z",
       "changedSides": [
@@ -2452,6 +2452,92 @@
       "reason": "작업 필요 → **`action_required`**(planner 대기, 미점유). 근거는 전부 실측이다.\n\n**근거 1 — 「소비된 트리거」다. 지금 닫으면 슬라이스 5 를 열 사건이 사라진다.**\n「내가 `no_action_needed` 를 적으면 무엇이 다음 슬라이스를 여는가?」에 답이 없다:\n- 트리거 `576db21` 은 점유 task `rct_20260902-0005` **자신의 산출물**이고(reconciler `89eb63c`),\n  그 task 의 완료 기준 ①~⑧ 은 그 PR 하나에 전부 담겨 **이미 머지됐다**. 남은 실행 행위는 4-4\n  검증뿐이며 그것은 reconciler 레포에만 쓴다 — **대상 레포 커밋을 만들지 않으므로 이 모델을 다시\n  트리거할 수 없다**. 그 task 의 계획은 슬라이스 5(AC2.1~2.2 `STP-add-missing` 포함)를 「범위\n  밖(후속)」으로 못박았으므로 자동으로 이어받지도 않는다.\n- **대체 재감지 경로가 실제로 없다**(형식 판별이 아니라 열거로 확인): feature-doc 4개 모델의\n  비종료 task 는 이 `executing` 하나뿐이다. 열린 PR 은 #26 · #17 둘뿐인데 각각\n  `tbm_feature-doc-mockup-render/rct_20260831-0002`(`succeeded`, 실제로는 PR #32 로 완료) ·\n  `tbm_feature-doc-journey-mockup/rct_20260815-0001`(`cancelled`)의 **버려진 draft** 다 — 주인\n  없는 draft 는 재감지 경로가 아니다. 이미지 핀 봇은 `deploy/` 만 만진다(실측: `576db21` 과\n  `a4a76fa` 의 docs·backend·frontend 트리 해시 동일).\n- 「형제 모델이 언젠가 `docs/` 를 건드려 어차피 재감지된다」는 경로로 치지 않는다 — 남의 작업의\n  부수 효과이고, 지금은 그 남의 작업조차 하나도 열려 있지 않다.\n\n**근거 2 — 점유 규칙이 여기에 적용되지 않는다.** `rct_20260902-0005` 는 `executing` 이지만\n(`attempts[-1].execution.status = \"running\"`, `updatedAt` 12:40:00Z — 살아 있는 워커다), 점유 규칙이\n지키려는 것은 「한 워커가 붙들고 있는 **미완의 범위**」다. 그 범위는 이미 전부 머지됐고 잔여\n14건의 주인이 아니다. 이 새 task 는 그 task 의 상태를 **건드리지 않으며**(lock 은 실행자 소유로\n그대로 둔다), 그 task 가 명시적으로 범위 밖이라 적은 잔여만 인수한다. 자매 레코드\n`rct_20260902-0007`(12:21:30Z)이 「PR #40 이 아직 미머지이므로 그 머지가 곧 재감지 경로」라며\n`no_action_needed` 로 닫았는데, **그 머지가 12:37:09Z 에 실제로 일어난 것이 이 트리거다** — 그\n레코드가 예고한 재감지가 지금이고, 그 레코드는 「그때도 열린 task 가 없다면」을 조건으로 달았다.\n\n**근거 3 — 잔여 gap 이 실재하고 정의가 그것을 drift 로 못박았다.** 미구현 AC **14건**\n(AC2.1~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7). 모델 정의 판정 기준 1: 「문서에 있으나 아직\n구현되지 않은 AC 는 to-be 미달 gap 이며 drift다. **백로그로 치부해 이 루프 밖으로 빼지 않는다**」.\n독립 실측 둘이 같은 집합을 가리킨다 — `docs/doc-tracker.md` 로드맵의 미구현 14건, 그리고\n`e2e/tests/*.spec.ts` 실측 10개에 대한 공백 14건(항등식 `24 − 0 = 10 + 14` 성립).\n\n**근거 4 — 다음 슬라이스의 선결 조건이 이번 트리거로 풀렸다.** 슬라이스 5 는 파이프라인 5단계\n`acceptance_dependencies` 를 실행시키는데, 4b-2 가 **4단계를 실제로 돌게 만들었다**(승인 → 재큐잉,\n`claim` 이 이미 `succeeded` 인 단계를 내주지 않음). 4b-2 이전에는 4단계가 영원히 `pending` 이라\n5단계의 입력이 존재할 수 없었다. 또한 슬라이스 5 가 닫아야 할 `STP-add-missing` 은 S07 의 두 번째\n단계이고, S07 화면 자체가 이번에 생겼다.\n\n---\n\n### planner 가 알아야 할 제약 (전부 실측)\n\n**1. 래칫 둘 다 상한에 붙어 있다.** 트리거 지점 `check-mockup-render.py` 실측:\n`M5 래칫 — 미해소 편차 43/43` · `M5 래칫 — 대조 보류 2/2`. 슬라이스 5 는 화면 **둘**(S08·S09)을\n들여오는데, 보류가 꽉 차 있어 **활성 대조로만** 들어올 수 있다(보류로 넣으려면 상한을 3 으로\n올려야 하고 그건 부채를 감춘 채 늘리는 쪽이다). 활성으로 들이면 그 화면들의 이탈이 처음 드러나\n편차 상한을 또 올려야 한다 — **명시적 결정으로 계획에 넣을 것**. S08~S10 목업은 이미\n`JRN-understand-feature.html` 에 흡수돼 있다(앵커 `STP-open-shared`·`STP-grasp-behavior`·\n`STP-check-scope`·`STP-flag-ambiguity`, `data-screens` S08·S09·S10 실측).\n\n**2. 이번 트리거가 심은 문서 오류 1건 — 「변경 이력」 4b-2 행의 편차 산술이 틀렸다.**\n그 행은 「원장 7행으로 등재해 상한을 **37 → 44** 로 올렸다」라고 적고 전/후 칸도 「편차 **37**」 →\n「편차 **44**」인데, **같은 문서의 원장 자신은 「알려진 편차: 43건 · 미해소 편차 상한: 43」이고\n게이트 실측도 부모 36 → 트리거 43** 이다(M0 편차 43 · M4 행 43 · M5 43/43). 원인은 명확하다 —\n브랜치를 딸 때 원장이 37행이었고 그 사이 PR #41(`rct_20260902-0004`)이 37 → 36 으로 내렸는데,\n머지 해소 때 원장 캡션·상한 줄만 36+7=43 으로 재계산하고 **산문 행은 옛 산술 그대로 남았다**.\n게이트는 이 자리를 **구조적으로 읽지 않는다**(`check-mockup-render.py` 는 원장 표 행 ·\n`알려진 편차: **N건**` 캡션 · `미해소 편차 상한: **N**` 만 정규식으로 집는다 — 소스 실측\nL473~495). 따라서 **영원히 green 인 채로 틀린 숫자**다. 원장 자체는 정확하므로 이것은 별도 task 가\n아니라 **doc-tracker 를 손대는 다음 슬라이스가 한 줄로 고칠 일**이다(전/후 칸 포함 4곳: 37→36,\n44→43).\n\n**3. 등재된 잔여 1건**: doc-tracker 「다음 단계 권장」 **11번** — `CredentialsSetup.tsx` 의\n`PROVIDERS` 가 아직 Google 을 제시한다. 백엔드가 400 으로 막아 AC4.2 조항 자체는 충족되지만,\n해소하려면 목업 `JRN-connect-repo.html#STP-register-llm-key` 개정이 함께 가야 하고 그 화면은\n「대조 보류」 2칸 중 하나라 화면 분할 결정에도 묶여 있다. 이번에도 손대지 않은 채다.\n\n**4. 두 모델의 게이트 사이로 빠지는 항목 — 재감지 경로가 없으므로 이 task 가 흡수하길 권한다.**\n`backend/migrations/0004_analysis_stages.sql` L23 의 주석이 **삭제된 목업**\n`docs/mockups/s04-analysis-progress.html` 을 가리킨다(실측: `git ls-files docs/mockups/` 에 없음).\n이것은 PR #42 의 **의도된 되돌림**이다 — 그 파일을 한 바이트라도 바꾸면 기존 DB 에서 sqlx 가\n`migration 4 was previously applied but has been modified` 로 기동을 거부하고, 실제로 그렇게\n**6시간 41분 프로덕션이 죽었다**(자매 레코드 `rct_20260902-0007` 실측). 문제는 참조가 아니라\n**그 제약이 레포 어디에도 적혀 있지 않다는 것**이다. 트리거 지점 재실측:\n`grep -rn \"previously applied\"` **0건**, 비-lock 파일의 `checksum` **0건**, `체크섬` **0건** —\n`.github/workflows/`·`tools/`·`docs/doc-tracker.md` 「수용된 위험」·마이그레이션 머리말 전부 없고\n`backend/migrations/` 에 README 도 없다. PR #40 도 더하지 않았다.\n그리고 **어떤 루프도 이것을 다시 꺼내 주지 않는다**: `tbm_feature-doc-mockup-render` 의 as-is 는\n`frontend/src` 라 `backend/` 를 보지 못하고(트리거 지점 M1 dangling 앵커 0), 이 모델의 판정 기준\n1~3 에 「코드 주석의 문서 참조」가 없으며, kind e2e 는 매 실행 DB 를 새로 만들어 0004 를 새\n체크섬으로 **처음** 적용하므로 구조적으로 못 잡고, 손상은 **머지 후 이미지 핀이 반영된 뒤에야**\n드러나 PR 단계 게이트로도 관측되지 않는다.\n슬라이스 5 는 5단계용 마이그레이션(0008)을 새로 넣을 것이므로 **0004 를 건드리지 않는 방식으로**\n같은 걸음에 닫기 좋다 — 예: `backend/migrations/README.md` 에 불변성 제약 명문화 + doc-tracker\n「수용된 위험」 등재 + 적용된 마이그레이션의 변경을 PR 단계에서 잡는 검사 추가. **0004 자체를\n「고쳐야 할 dangling 참조」로 보고 편집하면 프로덕션을 같은 방식으로 다시 세운다.**",
       "assessedBy": "agent",
       "assessedAt": "2026-09-02T13:09:26Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "로드맵의 「다음 권장 슬라이스 5」를 **5a 로 쪼개 AC2.1·AC2.2·AC2.3 만** 구현한다 — 파이프라인 5단계 `acceptance_dependencies` 의 **인수 시나리오 절반**(로직에서 인수 기준 도출 → 테스트 코드로 보강·모순 분리 → 최종 사용자 언어의 인수 테스트 문서)과 그것을 그리는 **S08 의 첫 단계 `STP-read-scenarios`**, 그리고 전용 e2e spec 3건.\n\n**왜 쪼개는가(실측 근거).** ① 슬라이스 5 원안은 AC 6건(2.1~2.6) + 화면 2개(S08·S09)로, 1 AC + 1 화면이던 직전 두 슬라이스(4b-1 AC1.3·S06, 4b-2 AC1.4·S07)의 3배다. ② **목업 자신이 경계를 그어 두었다** — S04 목업 `#STP-leave-and-return` 의 5번째 파이프라인 단계 라벨은 「인수 시나리오 생성」이고 의존성은 파이프라인 단계가 아니다(실측). 의존성은 test/02 시나리오 5 에서 **feature 단위 「의존성 분석」 트리거**로 기술된다. 즉 `acceptance_dependencies` 라는 단계 이름이 두 일을 뭉쳐 부르고 있을 뿐, 5단계가 실제로 해야 하는 일은 인수 시나리오다. ③ 여정 문서 `JRN-review-feature` 가 `STP-read-scenarios` 의 연결 AC 를 **AC2.1·AC2.2·AC2.3 정확히 셋**으로 적는다 — 이 세 AC 는 한 문서·한 화면이라 더 쪼개면 소비자 없는 산출물이 된다.\n\n**왜 이 접근인가.** 5단계는 이미 존재하는 세 기질을 그대로 재사용한다 — `llm.rs` 호출 경계(4a), 승인 게이트를 큐의 성질로 표현하는 `offered_stages`(4b-2), 생성물은 `analysis_documents`·사용자 결정은 전용 테이블이라는 분업(0006·0007). 5a 는 **사용자 결정이 없는 절반**이라 새 마이그레이션이 필요 없다 — 생성 문서만 `analysis_documents(kind='acceptance_dependencies')` 에 들어간다. 마이그레이션을 추가하지 않는 것은 부수 효과가 아니라 선택이다: 직전 6시간 41분 프로덕션 장애가 **적용된 마이그레이션 파일 수정**(0004 체크섬)이었고, 이 슬라이스는 그 파일군을 아예 건드리지 않는다.\n\n**가역성.** 전량 PR 한 건이고 스키마 변경·데이터 마이그레이션이 없다. 되돌림은 revert 하나이며, 되돌려도 기존 4단계까지의 상태는 그대로다(5단계 행은 다시 `pending` 이 될 뿐).\n\n**완료 기준(이 시도의 성공 판정).** ① `docs/doc-tracker.md` 「구현 수렴 로드맵」의 미구현 AC 가 **14 → 11**(AC2.1·2.2·2.3 이 ✅). ② e2e 매핑이 **10 → 13**, 공백 **14 → 11**, 항등식 `24 − 0 = 13 + 11` 성립. ③ 활성 대조 **5 → 6**(`FeatureAcceptance.tsx` ↔ `JRN-review-feature.html#STP-read-scenarios`), 보류는 **2 그대로**(상한 안 올린다). ④ CI 3 워크플로(ci.yml · docs-mockup-render · docs-journey-mockup) 전부 green. ⑤ 아래 두 흡수 항목이 함께 닫힌다.\n\n**함께 흡수하는 것 2건**(감지가 「재감지 경로가 없다」고 지목한 것 — 별도 task 로 열릴 사건이 없다). ⓐ **마이그레이션 불변성 제약의 명문화 + 회귀 검사**: `backend/migrations/0004_analysis_stages.sql` 이 삭제된 목업을 가리키는 주석을 갖고 있는데, 그 파일을 한 바이트라도 고치면 sqlx 가 `migration N was previously applied but has been modified` 로 기동을 거부한다(실제로 그렇게 죽었다). 문제는 그 제약이 레포 어디에도 적혀 있지 않다는 것이므로 — `backend/migrations/README.md` 로 명문화하고, `backend/tests/migrations.rs` 에 **적용된 마이그레이션 파일의 체크섬 고정 테스트**를 더해 PR 단계에서 잡는다. **0004 자체는 한 바이트도 건드리지 않는다.** ⓑ **`docs/doc-tracker.md` 「변경 이력」 4b-2 행의 편차 산술 오류**(37→44 로 적혀 있으나 실제는 36→43, 전·후 칸 포함 4곳). 게이트가 구조적으로 읽지 않는 자리라 영원히 green 인 채 틀려 있다.\n\n**범위 밖(후속, 재감지가 새 task 로 잇는다).** AC2.4·2.5·2.6(의존성 추출·구조화 저장·재계산 diff) · S09 `STP-trace-dependencies` · S08 두 번째 단계 `STP-verify-evidence`(근거 코드 스니펫 뷰어 — 저장소 **파일 내용** fetch 라는 새 능력이 필요하다. 현재 `repo_scan` 은 트리 경로만 본다) · 검수 상태(미검수/검수 완료)와 재개 배너 · `STP-add-missing` · AC3.x · AC4.4/4.6/4.7. 이 중 목업에 그려져 있으나 5a 가 구현하지 않는 카피는 **전부 편차 원장에 해소 시점 「슬라이스 5b」로 등재**한다(면제가 아니라 부채로 계수된다).",
+          "riskLevel": "medium",
+          "plannedAt": "2026-09-02T13:31:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`backend/src/pipeline.rs` — 5단계 상수 `ACCEPTANCE_DEPENDENCIES` 를 이름 있는 const 로 승격하고, 모듈 주석의 「stage 5 stays pending」 서술을 실제(5단계 실행)로 고친다. 단계 `key` 는 와이어 계약이므로 바꾸지 않는다.",
+              "expectedOutcome": "`pipeline::stage(\"acceptance_dependencies\")` 가 그대로 해석되고 `STAGES` 는 5개 그대로. `cargo test --release -p featuredoc` 의 기존 progress/worker 테스트가 깨지지 않는다."
+            },
+            {
+              "seq": 2,
+              "action": "`backend/src/worker_api.rs` — ① `approved_candidates(state, analysis_id)` 추가(= `feature_candidates` 중 `decision='approved' AND merged_into IS NULL`). ② `offered_stages` 에 「승인된 후보가 1건 이상이고 5단계가 아직 succeeded 가 아니면 offer」 규칙 추가. ③ `ClaimView` 에 `approvedCandidates` 필드 추가. ④ `work_remains` 를 4단계 전용에서 「offered 에 아직 실행 안 된 게이트 단계가 있는가」로 일반화.",
+              "expectedOutcome": "승인 전에는 claim 응답의 `executableStages` 에 `acceptance_dependencies` 가 없고, 후보 1건을 승인한 뒤 claim 하면 들어 있다. 이미 succeeded 인 2~4단계는 여전히 재-offer 되지 않는다."
+            },
+            {
+              "seq": 3,
+              "action": "`backend/src/acceptance.rs` 신설 — AC2.1(로직 근거 시나리오 given/when/then + evidence 경로) · AC2.2(테스트 경로에서 보강 + `contradictions` 분리) · AC2.3(feature 1개당 1문서, 최종 사용자 언어) 의 생성 로직. `llm::ask` 로 구조화 출력, `stub_answer` 는 **실제 트리 경로와 승인된 후보에서 파생**(고정 문자열 금지). 답변 검증: 모든 evidence 경로가 이 분석이 실제로 본 경로여야 하고 아니면 탈락, 남은 게 0이면 에러. 모순 판정은 LLM 판단이 아니라 **Rust 규칙**(같은 given+when 의 then 불일치)으로 계산한다. 단위 테스트 포함.",
+              "expectedOutcome": "`cargo test --release` 에서 acceptance 단위 테스트 통과 — ① 모든 시나리오가 트리 안의 경로를 근거로 든다 ② 같은 입력이 같은 문서를 낸다(결정성) ③ 테스트 경로가 있는 feature 는 보강 후 시나리오 수가 같거나 많다 ④ 모순은 given+when 이 같고 then 이 다를 때만 나온다."
+            },
+            {
+              "seq": 4,
+              "action": "`backend/src/bin/worker.rs` — 5단계 실행 arm 추가(2~4단계와 같은 모양: running 보고 → heartbeat → `acceptance::derive` → `submit_document` → succeeded 보고). 5단계까지 성공하면 `finish` 를 `awaiting_pipeline` 이 아니라 그대로 두되, 아직 구현 안 된 단계가 없어졌으므로 상태 서술 주석을 실제에 맞춘다.",
+              "expectedOutcome": "stub 모드에서 후보 승인 후 워커가 5단계를 실행해 `analysis_documents(kind='acceptance_dependencies')` 를 남기고 S04 의 5번째 단계가 `succeeded` 로 바뀐다."
+            },
+            {
+              "seq": 5,
+              "action": "`backend/src/analysis.rs` — ① 후보 승인(`decide_candidate` 의 approve 경로)이 전략 승인과 **같은 방식으로 분석을 재큐잉**하도록 트랜잭션 추가(`status <> running` 가드 포함). ② `GET /api/analyses/{id}/acceptance` 라우트 추가 — 승인된 feature 목록과 각 feature 의 인수 문서(시나리오·근거·모순)를 S08 이 읽는 모양으로 내려준다. 소유자 스코프는 기존 `owned_analysis` 재사용(AC4.7).",
+              "expectedOutcome": "후보를 승인하면 분석이 `queued` 로 돌아가고(단, 실행 중이면 건드리지 않고 `finish` 가 착지시킨다), `/api/analyses/{id}/acceptance` 가 200 으로 `{ generated: bool, features: [...] }` 를 준다. 남의 분석 id 는 404."
+            },
+            {
+              "seq": 6,
+              "action": "`backend/tests/acceptance.rs` 신설 — 게이트(승인 전 5단계 미제공) · 재큐잉 · 문서 생성·조회 · 소유자 스코프 · 결정성(재실행 시 content_hash 동일)을 통합 테스트로 고정. `backend/tests/common/` 의 기존 하네스를 그대로 쓴다.",
+              "expectedOutcome": "`cargo test --release` 전량 통과, 신규 테스트가 실제로 실행됨(`test result: ok. N passed` 의 N 이 베이스라인보다 증가)."
+            },
+            {
+              "seq": 7,
+              "action": "`frontend/src/api.ts` — `AcceptanceScenario`·`AcceptanceContradiction`·`FeatureAcceptanceDoc`·`AcceptanceView` 타입과 `getAcceptance(id)` 추가.",
+              "expectedOutcome": "`npx tsc --noEmit` 통과."
+            },
+            {
+              "seq": 8,
+              "action": "`frontend/src/FeatureAcceptance.tsx` 신설(S08 · `STP-read-scenarios`) + `frontend/src/App.tsx` 에 `#/analyses/<id>/acceptance` 라우트 추가. 카피는 목업이 SSOT 이므로 목업 문구를 그대로 쓴다 — 검수할 기능 목록 · 인수 시나리오(주어진 상황/이럴 때/이렇게 됩니다 + 근거 태그) · 「코드와 테스트가 다르게 말하는 부분」 섹션 · 「이건 기능이 아닌 것 같아요 → 후보 결정으로 넘기기」(S07 로 복귀) · 「나중에 이어서 볼게요」. 상단 주석에 목업 매핑을 적어 M1 이 이 화면을 발견하게 한다.",
+              "expectedOutcome": "`npm run build` 통과. `python3 tools/check-mockup-render.py` 의 M1 이 화면 6개를 발견하고 대조 범위 표와 일치한다."
+            },
+            {
+              "seq": 9,
+              "action": "`docs/mockups/JRN-review-feature.html` — `STP-read-scenarios` 의 **예시 데이터에만** `data-sample` 을 붙인다(feature 이름·시나리오 문장·근거 경로·모순 예시·카운트 숫자). 규약대로 **잎 요소에만** 붙이고, 상호작용 요소(a/button)나 `data-goto`·`id` 를 가진 요소에는 붙이지 않는다. 필요한 곳은 값과 카피를 잎으로 분리한다(4b-2 의 `prev-reason` 선례).",
+              "expectedOutcome": "`check-mockup-render.py` 의 M6 오용 0건이 유지되고 `data-sample` 총계가 증가한다. `check-journey-mockup.py` 와 `check-journey-prototype.js` 는 바이트 의미 불변으로 그대로 통과한다."
+            },
+            {
+              "seq": 10,
+              "action": "`docs/doc-tracker.md` 「목업↔구현 대조 범위」 — 활성 대조 표에 `frontend/src/FeatureAcceptance.tsx` ↔ `JRN-review-feature.html` · `STP-read-scenarios` 행 추가(보류는 건드리지 않는다). 5a 가 구현하지 않는 목업 카피(재개 배너 · 검수 상태/잔여 카운트 · 근거 확인 진입)와 구현이 더한 카피(로딩·미생성 상태 등)를 「알려진 목업↔구현 편차」에 **사유·해소 시점(슬라이스 5b)과 함께** 등재하고, 캡션·「미해소 편차 상한」을 실제 행 수로 함께 올린다.",
+              "expectedOutcome": "`python3 tools/check-mockup-render.py` 가 rc=0 — M3A/M3B 미등재 0건, M4 공전 행 0건, M5 래칫 「미해소 편차 N/N」·「대조 보류 2/2」."
+            },
+            {
+              "seq": 11,
+              "action": "e2e spec 3건 신설 — `ac2-1-acceptance-from-logic.spec.ts` · `ac2-2-acceptance-from-tests.spec.ts` · `ac2-3-user-facing-acceptance-doc.spec.ts`. 각 파일 첫 줄에 `// 검증 AC: ACx.y` 를 정확히 1개 선언하고, 파일명과 교차 확인되게 짓는다. 기대값을 상수로 박지 않고 **화면·API 가 내려준 값들끼리 대조**한다(선례: ac1-4). 워커 replica 는 `e2e/support/cluster.ts` 로 임대하고 `finally` 에서 0 으로 되돌린다.",
+              "expectedOutcome": "`npx playwright test --list` 가 3개 파일을 트랜스파일하고 테스트를 열거한다(브라우저·SUT 불필요). CI 의 kind e2e 에서 실제 실행은 executor 가 확인한다."
+            },
+            {
+              "seq": 12,
+              "action": "`docs/doc-tracker.md` 나머지 갱신 — 「구현 수렴 로드맵」(5a ✅ / 5b 신설 · 미구현 14 → 11 · 다음 권장 슬라이스 = 5b) · 「e2e 매핑」(매핑 10 → 13 · 공백 14 → 11 · 항등식) · 「현재 상태 요약」 · 「변경 이력」 신규 행. 같은 편집에서 **4b-2 행의 편차 산술 오류 4곳(37→36, 44→43)** 을 고친다.",
+              "expectedOutcome": "문서의 세 집계(로드맵 잔여 · e2e 공백 · 원장 행 수)가 실제 파일 상태와 일치하고, 「변경 이력」의 전/후 숫자가 원장 캡션과 어긋나지 않는다."
+            },
+            {
+              "seq": 13,
+              "action": "마이그레이션 불변성 흡수 — `backend/migrations/README.md` 신설(적용된 마이그레이션은 한 바이트도 고치지 않는다 · 이유는 sqlx 체크섬 · 위반 시 기동 거부 · 고칠 게 있으면 새 번호로 · 2026-09-02 6시간 41분 장애가 그 사례) + `backend/tests/migrations.rs` 에 **파일 체크섬 고정 테스트** 추가 + `docs/doc-tracker.md` 「수용된 위험」에 0004 의 dangling 목업 참조를 사유와 함께 등재. **0004 파일 자체는 건드리지 않는다.**",
+              "expectedOutcome": "`cargo test --release` 에서 체크섬 테스트 통과. 누군가 적용된 마이그레이션을 고치면 그 테스트가 PR 단계에서 붉어진다(지금은 머지 후 이미지 핀이 반영된 뒤에야 드러난다)."
+            },
+            {
+              "seq": 14,
+              "action": "로컬에서 CI 게이트 1:1 재현 — `source /home/silas/toolchains/env.sh` 후 ① `cargo test --release`(backend) ② `npm ci && npm run build && npx tsc --noEmit`(frontend) ③ `npm ci --prefix tools && python3 tools/check-journey-mockup.py && node tools/check-journey-prototype.js` ④ `python3 tools/check-mockup-render.py --verbose` ⑤ `npx playwright test --list`(e2e). 베이스라인(`origin/main`)과 수치를 대조한다.",
+              "expectedOutcome": "다섯 게이트 전부 rc=0 이고, 테스트 수가 베이스라인 대비 늘어난 것이 로그의 실제 숫자로 확인된다(성공 문구가 아니라 개수)."
+            },
+            {
+              "seq": 15,
+              "action": "브랜치 `reconcile/rct_20260902-0008-feature-doc-docs-impl` 로 커밋·푸시하고 **draft PR** 을 연다. 본문에 task id · gap 요약 · 완료 기준 · 범위 밖 · 검증 방법 · 검토 쟁점을 적는다. 머지는 하지 않는다(executor 몫).",
+              "expectedOutcome": "PR 이 열리고 CI 3 워크플로가 돈다. reconciler 레코드의 `preparation.pullRequestUrl` 이 그 PR 을 가리킨다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
