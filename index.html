@@ -119,6 +119,18 @@
   .views button[aria-pressed="true"] { color: var(--text); }
   .views button[aria-pressed="true"] .n { background: var(--code-bg); color: var(--muted); }
 
+  /* ---- 대상 레포 선택 ---- */
+  .repo-filter { display: inline-flex; align-items: center; min-width: 0; }
+  .repo-filter select {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border-strong); border-radius: 8px;
+    height: 34px; padding: 0 8px; cursor: pointer;
+    font: inherit; font-size: 12.5px;
+    max-width: 210px; min-width: 0; text-overflow: ellipsis;
+  }
+  .repo-filter select:focus { outline: 2px solid var(--accent-weak); border-color: var(--accent); }
+  .repo-filter.on select { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+
   #statusbar { padding: 7px 18px; font-size: 12.5px; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--panel-2); display: none; }
   #statusbar.show { display: block; }
   #statusbar.err { color: #d33; }
@@ -302,8 +314,15 @@
   details.raw[open] > summary::before { content: "▾"; }
 
   @media (max-width: 820px) {
-    .topbar { flex-wrap: wrap; row-gap: 8px; }
-    .controls { margin-left: 0; width: 100%; flex-wrap: wrap; }
+    .topbar { flex-wrap: wrap; row-gap: 8px; max-width: 100%; }
+    .controls { margin-left: 0; width: 100%; min-width: 0; flex-wrap: wrap; }
+    /* 좁은 화면에서 상태(보기 모드) 버튼 묶음이 화면 폭을 넘겨 가로 스크롤을 만들지 않도록,
+       한 줄을 통째로 쓰고 넘치는 버튼은 다음 줄로 접는다. */
+    .controls .modes { flex: 1 1 100%; max-width: 100%; min-width: 0; flex-wrap: wrap; row-gap: 2px; }
+    .controls .modes button { flex: 1 1 auto; min-width: 0; padding: 0 8px; justify-content: center; }
+    .controls .views { flex: 0 1 auto; }
+    .repo-filter { flex: 1 1 150px; }
+    .repo-filter select { width: 100%; max-width: none; }
     .controls input[type="search"] { flex: 1; min-width: 140px; max-width: none; width: auto; }
     .layout { flex-direction: column; }
     .sidebar { width: auto; max-height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
@@ -320,6 +339,9 @@
     </div>
     <div class="controls">
       <div class="modes views" id="views" role="group" aria-label="보기 대상"></div>
+      <div class="repo-filter" id="repofilter">
+        <select id="repo" aria-label="대상 레포"></select>
+      </div>
       <div class="modes" id="modes" role="group" aria-label="보기 모드"></div>
       <input id="search" type="search" placeholder="이름·id·태그 검색…" autocomplete="off" spellcheck="false">
       <a id="ghlink" class="iconbtn gh" title="GitHub에서 보기" target="_blank" rel="noopener" style="display:none">GitHub ↗</a>
@@ -396,7 +418,10 @@
   var state = {
     models: [], tasksByModel: {}, selected: null, filter: "",
     mode: DEFAULT_MODE,
-    modePinned: false,  // 사용자가 모드를 직접 고르면 새로고침해도 유지한다
+    // 사용자가 모드를 직접 고르면 localStorage에 저장해 새로고침해도 유지한다.
+    // (init()에서 저장값을 읽어 mode/modePinned를 채운다.)
+    modePinned: false,
+    repo: "",           // 대상 레포 필터. ""(빈 문자열) = 전체 레포. 역시 저장·복원된다.
     view: DEFAULT_VIEW,
     templates: null,        // README 표 파싱 결과 (null = 아직 안 불러옴)
     templatesError: null,
@@ -806,11 +831,47 @@
   // 실행 중 = executor가 붙잡고 있는 작업 수(검토 대기·실행·검증).
   function runningTaskCount(modelId) { return countTasksIn(modelId, RUNNING_STATUSES); }
 
+  // ---------- 대상 레포 필터 ----------
+  // 모델의 "대상 레포" = as-is/to-be 데이터 소스가 가리키는 github repository.
+  // 두 소스가 서로 다른 레포를 볼 수 있으므로 집합으로 다룬다(둘 중 하나만 걸려도 그 레포의 모델).
+  // github 이외의 소스(k8s·monitor·custom)만 쓰는 모델은 어떤 레포에도 속하지 않으므로
+  // 레포를 고르면 목록에서 빠지고 "전체 레포"에서만 보인다.
+  function modelRepos(m) {
+    var out = [];
+    ["toBe", "asIs"].forEach(function (side) {
+      var ds = m && m[side] && m[side].dataSource;
+      if (ds && ds.type === "github" && ds.repository && out.indexOf(ds.repository) === -1) {
+        out.push(ds.repository);
+      }
+    });
+    return out;
+  }
+
+  // 데이터에 실제로 등장하는 레포만 선택지로 만든다 — 별도 목록을 두면 그 자체가 drift 대상이 된다.
+  function allRepos() {
+    var seen = {}, out = [];
+    state.models.forEach(function (m) {
+      modelRepos(m).forEach(function (r) { if (!seen[r]) { seen[r] = true; out.push(r); } });
+    });
+    return out.sort();
+  }
+
+  // repo가 비어 있으면(= "전체 레포") 필터를 걸지 않는다.
+  function matchesRepo(m, repo) {
+    if (!repo) return true;
+    return modelRepos(m).indexOf(repo) !== -1;
+  }
+
+  function modelsInRepo(repo) {
+    return state.models.filter(function (m) { return matchesRepo(m, repo); });
+  }
+
+  // 모드별 개수도 레포 필터를 적용한 뒤에 센다 — 버튼의 숫자와 실제 목록이 어긋나지 않게.
   function modelsInMode(mode) {
     if (mode === "hidden") {
-      return state.models.filter(function (m) { return !isModelEnabled(m); });
+      return modelsInRepo(state.repo).filter(function (m) { return !isModelEnabled(m); });
     }
-    var active = state.models.filter(isModelEnabled);
+    var active = modelsInRepo(state.repo).filter(isModelEnabled);
     if (mode === "planning") {
       return active.filter(function (m) { return planningTaskCount(m.id) > 0; });
     }
@@ -956,10 +1017,32 @@
     });
   }
 
-  // 모드 전환·상태 범례는 모델 목록에만 해당하므로 템플릿 보기에선 감춘다.
+  function renderRepoFilter() {
+    var sel = $("#repo");
+    var repos = allRepos();
+
+    // 저장된 레포가 더 이상 데이터에 없으면(모델이 지워졌거나 레포가 바뀌었으면) 조용히 전체로 되돌린다.
+    // 단 데이터가 아직 안 들어온 첫 렌더에서는 판단하지 않는다 — 그때는 레포 목록이 늘 비어 있어서
+    // 복원해 둔 선택을 그대로 지워버리게 된다.
+    if (state.repo && state.models.length && repos.indexOf(state.repo) === -1) {
+      setStoredRepo((state.repo = ""));
+    }
+
+    sel.innerHTML = ['<option value="">전체 레포 (' + state.models.length + ")</option>"]
+      .concat(repos.map(function (r) {
+        return '<option value="' + escapeHtml(r) + '">' +
+          escapeHtml(r) + " (" + modelsInRepo(r).length + ")</option>";
+      })).join("");
+    sel.value = state.repo;
+    sel.title = state.repo ? "대상 레포: " + state.repo : "모든 레포의 모델을 봅니다";
+    $("#repofilter").className = "repo-filter" + (state.repo ? " on" : "");
+  }
+
+  // 모드 전환·레포 필터·상태 범례는 모델 목록에만 해당하므로 템플릿 보기에선 감춘다.
   function applyViewChrome() {
     var tpl = state.view === "templates";
     $("#modes").style.display = tpl ? "none" : "";
+    $("#repofilter").style.display = tpl ? "none" : "";
     $("#legend").style.display = tpl ? "none" : "";
     $("#search").placeholder = tpl ? "템플릿 검색…" : "이름·id·태그 검색…";
     $("#brandsub").innerHTML = tpl ? "모델 템플릿 · <code>templates/</code>" : "데이터 브라우저 · <code>data/</code>";
@@ -973,6 +1056,8 @@
 
     if (!models.length) {
       var msg = state.filter.trim() ? "일치하는 모델이 없습니다." : modeMeta(state.mode).empty;
+      // 목록이 빈 이유가 레포 필터일 수 있으므로 어떤 레포로 좁혀져 있는지 함께 알려준다.
+      if (state.repo) msg += " (레포: " + state.repo + ")";
       list.innerHTML = '<div class="empty small">' + escapeHtml(msg) + "</div>";
       return;
     }
@@ -1152,6 +1237,7 @@
 
   function renderAll() {
     renderViews();
+    renderRepoFilter();
     applyViewChrome();
     if (state.view === "templates") { renderTemplateSidebar(); renderTemplateDetail(); return; }
     renderModes(); renderSidebar(); renderDetail();
@@ -1194,19 +1280,60 @@
     renderAll();
   }
 
-  // 모드를 바꾸면 선택된 모델이 목록에서 사라질 수 있다.
+  // 모드·레포를 바꾸면 선택된 모델이 목록에서 사라질 수 있다.
   // 그럴 땐 새 목록의 첫 모델로 옮기고, 비어 있으면 선택을 해제한다.
+  function reselectVisible() {
+    var models = visibleModels();
+    if (models.some(function (m) { return m.id === state.selected; })) return;
+    state.selected = models.length ? models[0].id : null;
+    writeHash(state.selected);
+  }
+
   function setMode(mode) {
     if (state.mode === mode) return;
     state.mode = mode;
     state.modePinned = true;
-    var models = visibleModels();
-    var keep = models.some(function (m) { return m.id === state.selected; });
-    if (!keep) {
-      state.selected = models.length ? models[0].id : null;
-      writeHash(state.selected);
-    }
+    setStoredMode(mode);
+    reselectVisible();
     renderAll();
+  }
+
+  function setRepo(repo) {
+    if (state.repo === repo) return;
+    state.repo = repo;
+    setStoredRepo(repo);
+    reselectVisible();
+    renderAll();
+  }
+
+  // ---------- 사용자 선택 저장 (새로고침해도 유지) ----------
+  // 테마와 같은 자리(localStorage)에 모드와 레포도 남긴다. 저장이 막힌 환경(사파리 프라이빗 등)에서는
+  // 조용히 무시하고 기본값으로 동작한다 — 페이지가 저장 실패로 깨지지 않게.
+  var STORE_MODE = "reconciler-mode";
+  var STORE_REPO = "reconciler-repo";
+
+  function storeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+  function storeSet(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
+
+  // 저장값은 신뢰하지 않는다 — 모드 목록에 없는 값이면 버리고 기본값을 쓴다.
+  function storedMode() {
+    var v = storeGet(STORE_MODE);
+    return MODES.some(function (mo) { return mo.id === v; }) ? v : null;
+  }
+  function setStoredMode(mode) { storeSet(STORE_MODE, mode); }
+
+  // 레포는 값 목록을 미리 알 수 없으므로 그대로 읽고, 데이터에 없으면 renderRepoFilter가 되돌린다.
+  function storedRepo() { return storeGet(STORE_REPO) || ""; }
+  function setStoredRepo(repo) { storeSet(STORE_REPO, repo); }
+
+  // 딥링크(#modelId)로 들어온 모델이 저장된 레포 필터 밖이면 링크가 이긴다 — 필터를 푼다.
+  // (아니면 공유받은 링크가 "빈 목록"으로 열려 원인을 알 수 없다.)
+  function releaseRepoFilterFor(modelId) {
+    if (!state.repo) return;
+    var m = state.models.filter(function (x) { return x.id === modelId; })[0];
+    if (m && matchesRepo(m, state.repo)) return;
+    state.repo = "";
+    setStoredRepo("");
   }
 
   // ---------- data loading ----------
@@ -1281,9 +1408,17 @@
       var hash = decodeURIComponent((location.hash || "").replace(/^#/, ""));
       var target = hash && state.models.some(function (m) { return m.id === hash; }) ? hash : null;
 
-      // 사용자가 모드를 직접 고른 뒤라면 그 선택을 존중하고(새로고침 포함),
-      // 그렇지 않으면 딥링크가 가리키는 모델이 보이는 모드로, 없으면 기본 모드로 연다.
-      if (!state.modePinned) state.mode = target ? modeContaining(target) : DEFAULT_MODE;
+      // 딥링크가 있으면 그 모델이 보이는 것이 우선이다 — 필요하면 저장된 레포 필터를 풀고
+      // 모드도 그 모델을 담은 모드로 옮긴다. 저장된 모드가 이미 그 모델을 보여주면 그대로 둔다.
+      // 딥링크가 없으면 사용자가 고른 모드(저장값)를 존중하고, 그것도 없으면 기본 모드로 연다.
+      if (target) {
+        releaseRepoFilterFor(target);
+        if (!modelsInMode(state.mode).some(function (m) { return m.id === target; })) {
+          state.mode = modeContaining(target);
+        }
+      } else if (!state.modePinned) {
+        state.mode = DEFAULT_MODE;
+      }
 
       var models = visibleModels();
       if (target && models.some(function (m) { return m.id === target; })) state.selected = target;
@@ -1297,6 +1432,7 @@
         "개 · 실행 중 " + modelsInMode("running").length +
         "개 · 활성 " + modelsInMode("active").length +
         "개 · 숨김 " + modelsInMode("hidden").length + "개 · 작업 " + totalTasks + "건 · " +
+        (state.repo ? "레포 " + escapeHtml(state.repo) + " · " : "") +
         new Date().toLocaleTimeString() + " 로드됨");
       setTimeout(function () { setStatus(""); }, 4000);
 
@@ -1339,8 +1475,15 @@
   // ---------- init ----------
   function init() {
     applyTheme(currentTheme());
+
+    // 저장된 선택을 먼저 복원한 뒤에 그린다 — 기본값으로 한 번 그렸다가 바뀌는 깜빡임을 피한다.
+    var savedMode = storedMode();
+    if (savedMode) { state.mode = savedMode; state.modePinned = true; }
+    state.repo = storedRepo();
+
     renderLegend();
     renderModes();
+    renderRepoFilter();
 
     // #tpl:<파일>로 들어오면 템플릿 보기로 연다.
     var initialTpl = templateFileFromHash(decodeURIComponent((location.hash || "").replace(/^#/, "")));
@@ -1355,6 +1498,7 @@
       state.filter = e.target.value;
       if (state.view === "templates") renderTemplateSidebar(); else renderSidebar();
     });
+    $("#repo").addEventListener("change", function (e) { setRepo(e.target.value); });
     $("#reload").addEventListener("click", function () { loadTemplates(); loadData(); });
     $("#theme").addEventListener("click", cycleTheme);
     window.addEventListener("hashchange", function () {
@@ -1372,7 +1516,9 @@
       if (hash && state.models.some(function (m) { return m.id === hash; })) {
         if (state.view === "templates" || hash !== state.selected) {
           state.view = "models";
+          // 레포 필터에 걸려 안 보이는 모델을 가리키면 필터를 풀고,
           // 현재 모드에 없는 모델을 가리키면 그 모델이 보이는 모드로 옮겨준다.
+          releaseRepoFilterFor(hash);
           if (!modelsInMode(state.mode).some(function (m) { return m.id === hash; })) {
             state.mode = modeContaining(hash);
           }
