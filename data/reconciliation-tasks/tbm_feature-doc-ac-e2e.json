@@ -537,5 +537,32 @@
       "assessedAt": "2026-09-02T05:18:00Z",
       "reason": "작업 불필요 → `no_action_needed`.\n\n**근거 1 — 정의가 요구하는 1:1 이 실제로 성립한다.** 파일 9개가 각각 정확히 1개 AC 를 선언하고,\n중복 선언 0 · 고아 0 이며, 항등식 `(AC 24 − 예외 0) = 매핑 9 + 공백 15` 가 닫힌다. 원장의 집계를\n믿지 않고 `docs/prd` 와 `e2e/tests` 에서 직접 세어 얻은 값이다.\n\n**근거 2 — 이번 변경은 어긋남이 아니라 이 모델이 규약으로 요구한 수렴이다.** 새 구현 슬라이스가\n`ac1-3-discovery-strategy.spec.ts` 를 함께 데려왔고 문서 집계도 같은 커밋에서 8→9 · 16→15 로\n갱신됐다. **파일과 문서가 양방향으로 일치**하므로 판정할 drift 가 없다.\n\n**근거 3 — to-be 는 불변이다.** AC 정의(`docs/prd`)의 트리 해시가 그대로이고(`ac:85259fcc…`),\n움직인 것은 예외 등재 SSOT(`docs/doc-tracker.md`)뿐이다. 그 변경도 예외를 **0건으로 유지**했다 —\nAC1.3 은 취소선과 함께 *등재하지 않았다* 고 명시됐다. 즉 판정 대상 집합이 넓어지지도 좁아지지도\n않았다.\n\n**공백 15건은 이 모델의 drift 가 아니다.** 원장이 *「자매 모델 `tbm_feature-doc-docs-impl` 이\n추적하는 미구현 15건과 정확히 같은 집합」* 이라고 명시하며, 미구현은 구현 모델의 gap 이다. 그쪽은\n이번 fire 에서 **`rct_20260902-0002` 로 `action_required` 를 열어 두었다** — 여기서 중복 계상하지\n않는다.\n\n**baseline 을 전진시킨다.** 판정을 기록하고 `lastObservedVersion` 을 현재 값으로 올린다. 그러지\n않으면 같은 노이즈로 5분마다 감지가 재점화된다."
     }
+  },
+  {
+    "id": "rct_20260902-0002",
+    "toBeModelId": "tbm_feature-doc-ac-e2e",
+    "status": "assessing",
+    "createdAt": "2026-09-02T05:31:00Z",
+    "updatedAt": "2026-09-02T05:51:00Z",
+    "trigger": {
+      "detectedAt": "2026-09-02T05:31:00Z",
+      "changedSides": [
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "41c0278a6146c9ede1f74987579c32233268524a",
+        "currentVersion": "41c0278a6146c9ede1f74987579c32233268524a"
+      },
+      "toBe": {
+        "previousVersion": "ac:85259fcc1270973c13362cb9fd7c65962de339ff reg:370fc284bb34082cc09fb3c33a484f2500bdd4d1",
+        "currentVersion": "ac:85259fcc1270973c13362cb9fd7c65962de339ff reg:d26da6c4965d9b9946dfa74c276034c05d61d8f7"
+      }
+    },
+    "stateSummary": {
+      "summarizedAt": "2026-09-02T05:51:00Z",
+      "asIs": "관측 시각 2026-09-02T05:36Z · `dlddu/feature-doc` main `c4cdc48`(판정 대상 커밋 `c668d12`, PR #31, 05:20:06Z 머지).\n\n`e2e` 트리 해시 **`41c0278…` 불변** — 트리거가 이 경로를 전혀 건드리지 않았다(`git rev-parse fb203a2:e2e` == `c668d12:e2e`).\n\n최상위 spec **9개**(매칭 단위), 각각 정확히 1개 AC 를 선언:\n\n```\nac1-1-repository-connect-and-trigger  ac1-2-cross-cutting-concerns\nac1-3-discovery-strategy              ac1-5-async-progress-and-partial-retry\nac4-1-github-app-connection           ac4-2-llm-key-lifecycle\nac4-3-credential-safety               ac4-5-worker-workload-separation\nac4-8-signin-and-session\n```\n\n`e2e/support/` 는 최상위가 아니라 매칭 단위에 들지 않는다(규약 그대로).",
+      "toBe": "관측 시각 2026-09-02T05:36Z · 같은 커밋.\n\n## AC 집합 (`docs/prd`) — 트리 해시 `85259fcc…` **불변**\n\n`grep -rohE 'AC[0-9]+\\.[0-9]+' docs/prd | sort -u | wc -l` = **24**. 부모와 동일.\n\n## 예외·매핑 등재 (`docs/doc-tracker.md`) — blob 해시만 움직였다\n\n트리거가 이 파일을 60줄 고쳤지만, **이 모델이 보는 두 섹션은 부모와 바이트 동일**하다(`awk` 로 잘라 `diff -q` — 둘 다 IDENTICAL).\n\n| 섹션 | 결과 |\n|---|---|\n| `## e2e 매핑` (AC↔spec 매핑·예외·공백 목록) | **IDENTICAL** |\n| `## 수용된 위험` (예외 등재 SSOT) | **IDENTICAL** |\n\n바뀐 hunk 는 전부 다른 섹션이다(라인 4·12·15 현재 상태 요약의 목업 항목, 59~67 화면↔와이어프레임↔목업 매트릭스, 161~265 여정 이관 진행·위험 진단, 294~388 목업↔구현 대조 범위·편차 원장·변경 이력). `현재 상태 요약` 의 e2e 줄(라인 9)은 hunk 에 들어 있지 않다.\n\n## 항등식 재도출 (원장 집계를 믿지 않고 파일에서 직접)\n\n| 축 | 실측 |\n|---|---|\n| AC 총수 | **24** |\n| 예외 | **0** |\n| 매핑 spec | **9** |\n| 공백 | **15** (AC1.4 · AC2.1~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7) |\n| `(24 − 0) = 9 + 15` | **성립 ✅** |",
+      "gap": "**유의미한 차이가 없다 — 이 모델의 두 판정 소스가 모두 불변이고, 트리거는 순수 노이즈다.**\n\nto-be 의 두 축 중 AC 집합(`docs/prd` 트리)은 해시가 그대로이고, 예외·매핑 등재(`docs/doc-tracker.md`)는 blob 해시만 움직였을 뿐 **이 모델이 읽는 두 섹션(`e2e 매핑` · `수용된 위험`)이 부모와 바이트 동일**하다. as-is(`e2e` 트리)도 불변이다. 따라서 판정 대상 집합(AC 24 · 예외 0)과 매핑 집합(spec 9)이 어느 방향으로도 넓어지거나 좁아지지 않았고, 항등식 `(24 − 0) = 9 + 15` 가 그대로 닫힌다.\n\n트리거가 실제로 한 일은 형제 모델들의 축(여정 이관 진행 4/5, 목업↔구현 편차 원장 24→22)에 대한 갱신이며, `doc-tracker.md` 를 공유하는 이 모델은 그 파일 해시 때문에 함께 트리거됐을 뿐이다 — 모델 `definition` 이 *「여정 문서·tracker 변경은 그 모델들도 함께 트리거한다(무해). 판정 대상이 달라 중복 계상되지 않는다」* 로 이미 예고한 형태다.\n\n**세 겹 파손 점검 — 전부 해당 없음.**\n\n1. **버전 스크립트 건전성**: 양쪽 side rc=0.\n2. **경로 의미**: `docs/prd` · `docs/doc-tracker.md` · `e2e` 모두 삭제·리네임 없이 `definition` 이 말하는 그대로다. (이번 트리거는 `docs/mockups/` 안에서 파일 2개를 지웠지만 이 모델의 어느 side 도 그 경로를 보지 않는다.)\n3. **정의의 글롭이 실재를 선택하는가**: `docs/prd/*.md` → AC 24개, `e2e/tests/` 최상위 spec → 9개. 어느 쪽도 공집합이 아니다. 예외 수도 현재 텍스트에서 다시 세어 **0건**이다.\n\n**공백 15건은 이 모델의 drift 가 아니다.** 원장이 *「자매 모델 `tbm_feature-doc-docs-impl` 이 추적하는 미구현 15건과 정확히 같은 집합」* 이라고 명시하며, 미구현은 구현 모델의 gap 이다. 그쪽은 `rct_20260902-0002` 가 이 fire 시각 현재 `planning` 으로 살아 있다."
+    }
   }
 ]
