@@ -1558,7 +1558,7 @@
     "toBeModelId": "tbm_feature-doc-docs-impl",
     "status": "executing",
     "createdAt": "2026-08-31T14:00:33Z",
-    "updatedAt": "2026-09-02T04:44:20Z",
+    "updatedAt": "2026-09-02T04:57:10Z",
     "trigger": {
       "detectedAt": "2026-08-31T14:00:33Z",
       "changedSides": [
@@ -1667,6 +1667,68 @@
           "reviewer": "user (chat)",
           "reviewedAt": "2026-09-02T04:44:20Z",
           "comment": "「승인」 — 조건 없이 회신. 설명한 내용 위에서 받은 승인이다: (1) gap 요약(AC 24 중 구현 8, 이번 슬라이스는 AC1.3 하나만 닫아 미구현 16→15) (2) 슬라이스 경계가 검증이 아니라 제품 판단이라는 점(4b를 4b-1로 좁히고 AC1.4·S07은 목업 예시 데이터의 리터럴 대조 미성립 때문에 제외) (3) 불가역 지점 — 마이그레이션 0006의 프로덕션 적용(revert해도 표는 남음)과 머지 시 배포 이동 (4) 분석 1건당 LLM 호출 1회 증가, 비용 계측 화면(AC4.6)은 아직 없음 (5) 롤백은 revert 1건. 승인 직전 턴에서 계획 이후 바뀐 사실 둘을 함께 제시하고 그 위에서 승인받았다 — ① main이 6커밋 전진해 PR이 dirty가 됐고, 지침 §6이 금지한 force-push(rebase) 대신 origin/main 머지로 해소해 새 head 8cb6ae1에서 CI 4잡 재통과(cargo 100 · playwright 9/9 · 문서 게이트 2종), PR은 mergeable:true/clean ② #36이 latest·브랜치 롤링 태그를 폐기해 계획서 §6 ①(PR CI green 시점 latest 갱신)이 더 이상 성립하지 않고, 배포는 머지 후 main 전용 pin deployment image 잡이 매니페스트를 머지 SHA로 고정할 때 움직인다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-02T04:44:20Z",
+          "finishedAt": "2026-09-02T04:57:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "log": "계획 단계의 실측(활성 1 · 보류 4/4 · 편차 22/22, S06 카피 21건 vs S07 48건)이 슬라이스 경계의 근거로 PR 본문에 남았다. 머지된 main에서 재실행한 `check-mockup-render.py`는 활성 2 · 보류 4/4 · 편차 24/24로, 상한이 열리지 않았음(래칫 후퇴 없음)을 확인."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "log": "`backend/migrations/0006_discovery_strategies.sql` — main CI의 `test (cargo + kind e2e)` success로 `tests/migrations.rs`가 새 스키마에서 통과. 머지 후 프로덕션 DB에 적용된다(신규 표만 추가)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "log": "`backend/src/discovery_strategy.rs` — 유닛 7건이 main CI에서 통과: `the_same_input_reproduces_the_same_document` · `every_entry_cites_a_path_from_the_tree` · `an_empty_tree_fails_rather_than_inventing_a_strategy` · `the_proposal_is_capped_for_a_human_reviewer` 등."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "`pipeline.rs`의 `DISCOVERY_STRATEGY` · `bin/worker.rs` 3단계 실행 · `worker_api.rs`의 `executable_stages` 확장. `backend/tests/worker.rs`의 claim 단정이 `[fetch, cross_cutting, discovery_strategy]`로 갱신되어 통과."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "승인 게이트 — `the_next_stage_is_withheld_from_the_queue_until_the_strategy_is_approved`가 main CI 로그에서 통과 확인. AC1.3의 「승인된 전략만 다음 단계의 입력」이 기계 계약이 됐다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "사용자 API 3종(GET 초안 시딩 · PUT entries · POST approve). 이어받기는 `the_reviewers_own_entries_carry_into_the_next_analysis_of_the_same_target`로 단정, main CI에서 통과."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "log": "S06 `frontend/src/DiscoveryStrategy.tsx` + `api.ts` + `App.tsx` 해시 라우트 + S04 진입 버튼. `build` 잡 success. **브라우저 렌더는 사람 눈으로 확인하지 않았다**(지침 §4 미결 관측 항목)."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "log": "`docs/doc-tracker.md` 갱신 — S06을 활성 대조에 등재, 편차 원장 24행, 상한 갱신. 머지된 main에서 `check-mockup-render.py` 전 규칙 통과(M4 원장 무결성 행 24 · 공전 0)."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "log": "`e2e/tests/ac1-3-discovery-strategy.spec.ts` 신설. main CI playwright **9 passed (2.6m)**, 로그에 `ac1-3-discovery-strategy.spec.ts:54:3 › AC1.3 …` 실제 실행 확인(파일 존재만 하고 skip된 것이 아니다)."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "log": "네거티브 통제 3종은 계획 단계에서 수행·복원 완료(cp 백업 → 의도한 규칙에서 실패 → 복원 후 cmp 동일). 실행 단계에서 재수행하지 않았다."
+            },
+            {
+              "stepSeq": 11,
+              "status": "succeeded",
+              "log": "PR #29. **검토 대기 중 브랜치 최신화**: main이 6커밋 전진해 dirty가 되어 지침 §6대로 force-push 대신 `origin/main`(c4d2dd4)을 머지(`8cb6ae1`) — 충돌은 `docs/doc-tracker.md`의 「마지막 검증 시점」 1행뿐이었고 4b-1 쪽 채택. 새 head에서 CI 4잡 재통과 후 `mergeable:true/clean`. 승인 후 draft 해제 → **squash merge** → main **`f36c943`**. 머지 후 main 워크플로 전부 success(cargo **100 passed / 0 failed** · playwright **9/9** · 문서 게이트 2종 · build · deploy). `pin deployment image` 잡이 `deploy/k8s` 매니페스트를 머지 SHA로 고정하는 커밋 `fb203a2`를 남겼다 — 배포가 이 시점에 새 이미지로 이동했다."
+            }
+          ]
         }
       }
     ]
