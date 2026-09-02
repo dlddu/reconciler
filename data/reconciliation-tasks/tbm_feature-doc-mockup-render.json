@@ -715,7 +715,7 @@
     "toBeModelId": "tbm_feature-doc-mockup-render",
     "status": "planning",
     "createdAt": "2026-09-02T06:02:38Z",
-    "updatedAt": "2026-09-02T06:15:10Z",
+    "updatedAt": "2026-09-02T06:31:00Z",
     "trigger": {
       "detectedAt": "2026-09-02T06:02:38Z",
       "changedSides": [
@@ -743,6 +743,67 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-02T06:15:10Z",
       "reason": "작업 필요 → **`action_required`**(미점유, planner 대기). 근거 넷 모두 실측이다.\n\n**근거 1 — 이것은 「소비된 트리거」다. 지금 `no_action_needed` 로 닫으면 다음 슬라이스를 열 사건이\n영원히 오지 않는다.** 이 모델은 슬라이스 단위로 수렴한다(보류 한 칸 → 활성 한 칸). 슬라이스 머지는\n**직전 task 의 산출물이자 동시에 다음 슬라이스를 열 수 있는 유일한 사건**인데, task 를 닫는 행위는\nreconciler 레포에만 쓰고 대상 레포에는 커밋을 만들지 않는다. 실측: PR #32 가 05:59:24Z 에 머지됐고\n`rct_20260831-0002` 가 **06:01:15Z 에 `succeeded`** 로 닫혔다(이 fire 의 sweep 도중). 그 task 의 범위\n(`data-sample` 규약 + S05 승격)는 이미 머지됐고 상태는 종료다.\n\n**근거 2 — 점유 규칙이 적용되지 않는다. 이 모델에 열린 task 가 하나도 없다.** 전체 task 이력 7건이\n모두 종료 상태다(`no_action_needed` 6 · `succeeded` 1). 양보할 대상 자체가 없고, 잔여(보류 3화면 ·\n편차 28행)를 붙들고 있는 워커가 없다. baseline 만 올리고 물러나면 그 잔여는 주인이 없는 채로 남는다.\n\n**근거 3 — 잔여가 방금 「해금」됐고, 그 사실이 원장 자신에 문자로 적혀 있다.** `AnalysisProgress`\n보류 행의 해소 시점은 「카피 축 결정 **또는 목업 예시값 표기 규약 도입 시**」다. 트리거가 도입한 것이\n정확히 그 규약(`data-sample`)이다. 같은 행이 *「`CrossCuttingConcerns` 행과 같은 뿌리다」* 라고 적는데,\n그 형제는 이번에 승격됐고 이 행은 손대지 않은 채 보류에 남았다. 즉 **선결 조건이 사라졌는데 대기가\n남은 상태**이며, 이건 「아직 결정이 안 서서 미뤄 둔 것」과 성격이 다르다. 크기도 실측했다 — 승격 시\nM3A 미등재 21 · M3B 미등재 10 · M5 보류 상한 하향 1 = 위반 32건이고, 그중 상당수가 `data-sample` 이\n겨냥한 예시값(`dlddu/payments-api` · `847 files · 2.3 MB` · `1m 04s` · `12 items` …)이라 **방금 생긴\n도구로 실제 처리 가능한 일**이다.\n\n**근거 4 — 형제 PR 이 경로를 스쳐 재트리거될 *가능성*은 재감지 경로가 아니다.** `journey-mockup`\n슬라이스 5(`docs/mockups` 를 건드린다)와 `docs-impl` 4b-2(`frontend/src` 를 건드린다)가 머지되면 이\n모델이 우연히 재트리거될 수는 있다. 그러나 그것은 **다른 모델의 작업이 공유 경로를 건드리는\n부수효과**일 뿐 이 모델의 슬라이스를 여는 사건이 아니다. 그렇게 재트리거된 detector 는 지금과 똑같은\n판단 앞에 다시 서고, 그 사이 잔여는 계속 방치된다. 게다가 게이트가 초록인 것은 **규칙 준수의\n증거이지 커버리지의 증거가 아니다** — M3 는 활성 쌍에만 돌므로 보류 3화면의 이탈은 어떤 게이트에도\n잡히지 않는다(이번 트리거가 S01 제공자 순서 이탈을 「보류라 M3 가 돌지 않아 9시간 넘게 가려져 있던\n항목」으로 발견한 것이 그 실증이다).\n\n---\n\n## planner 를 위한 제약 (실측으로 확정했다 — 다시 파지 말 것)\n\n**1. 권장 다음 슬라이스는 `AnalysisProgress`(S04) 활성 승격 하나다.** 남은 보류 2건\n(`CredentialsSetup`·`HomeRepositories`)의 보류 사유는 「화면 분할 여부」라는 **제품 결정**이라 아직\n해금되지 않았다 — 이번 트리거는 그 결정에 아무 영향도 주지 않았다.\n\n**2. 두 래칫이 모두 상한에 붙어 있다(편차 28/28 · 보류 3/3).** 실측: 승격만 하고 상한을 그대로 두면\nM5 가 *「대조 보류 가 2건으로 줄었다 — 상한을 2로 낮출 것(래칫)」* 로 **실패한다**. 보류 상한 3 → 2\n하향을 같은 PR 에 넣어야 한다. 그리고 드러나는 31건 중 원장 등재로 처리하는 몫이 생기면 **편차 상한\n28 도 함께 올려야** CI 가 통과한다(래칫 완화이므로 사유를 남길 것 — 「승격이 드러낸 기존 부채」는\n이번 트리거가 이미 쓴 논거다).\n\n**3. 승격 시 드러나는 미등재 목록(트리거 트리에서 실측, `--verbose`).** 이 31건을 ① `data-sample` 로\n뺄 예시값 ② 구현/목업으로 수렴시킬 제품 카피 ③ 원장 등재 로 갈라야 한다.\n- **M3A(목업→구현) 21건**: `dlddu/payments-api` · `앱을 닫아도 분석은 계속 돌아요. 단계가 끝날 때마다\n  알림을 보내 드립니다.` · `Progress` · `저장소 내려받기` · `847 files · 2.3 MB` · `1m 04s` ·\n  `횡단 관심사 추출` · `12 items` · `3m 51s` · `탐색 전략 생성`(2회) · `2m 12s` · `feature 후보 추출` ·\n  `인수 시나리오 생성` · `단계가 실패했어요. 앞 단계 결과는 그대로 있으니 이 단계만 다시 돌리면 됩니다.` ·\n  `앱을 닫아 두었어요. 분석은 서버에서 계속 돌고 있고, 진행률과 누적 비용은 그대로 보존됩니다.` ·\n  `백그라운드 진행 중` · `알림에서 다시 열기` · `추출된 횡단 관심사 보기` · `앱 닫고 나가기` ·\n  `실패한 단계는 그 단계만 재시도합니다 · 누적 비용은 항상 표시`\n- **M3B(구현→목업) 10건**: `횡단 관심사 문서 보기` · `구현된 단계는 모두 끝났어요. 남은 단계는 분석\n  파이프라인 슬라이스에서 실행됩니다.` · `실측 누적은 아직 계측 전` · `Run in background` ·\n  `— discovery · async progress` · `Percent Complete` · `진행 중…` · `완료` · `다시 시도하는 중…` · `0.1em`\n- ⚠️ **`0.1em` 은 카피가 아니라 CSS 값이 M3B 추출기에 새어 든 것으로 보인다.** 원장에 편차로 등재하면\n  거짓 부채가 되므로, 승격 전에 추출기(`is_copy()` / JSX 문자열 리터럴 수집) 쪽을 먼저 확인할 것.\n\n**4. `data-sample` 은 잎 요소에만 · 상호작용 요소·속성에는 금지**(M6 이 실패시킨다). `STP-leave-and-return`\n구간에는 아직 마킹이 **하나도 없다** — 현재 13건은 전부 `STP-review-landscape` 몫이다.\n\n**5. 재료: 버려진 draft PR [#26](https://github.com/dlddu/feature-doc/pull/26)** (`reconcile/rct_20260831-0002`,\n08-31 생성, `CONFLICTING`, 그 뒤 무갱신)이 *「S01·S02 활성 대조 승격 + 대조 범위를 `data-screens`\n파생으로」* 를 이미 담고 있다. 같은 task id 로 열렸다가 #32(다른 브랜치 `…-sample-notation`)로 재계획\n되면서 버려진 PR 이다 — 남은 보류 2건의 재료이자 **정리 대상**이다(현재 열린 draft PR 3개 중 하나).\n\n**6. 「변경 이력」 새 행의 before/after 「활성 대조 1 → 2」는 실측 2 → 3 이다.** 계획 시점(PR #29 가\n`DiscoveryStrategy` 를 활성으로 올리기 전) 산술이 남았다. 게이트가 읽지 않는 산문 칸이라 자동으로는\n영영 잡히지 않으므로, **별도 task 를 열지 말고 같은 줄을 건드리는 다음 슬라이스에 접어 넣을 것.**\n\n**7. 머지 순서.** 형제 staged PR [#37](https://github.com/dlddu/feature-doc/pull/37)\n(`tbm_feature-doc-docs-impl`/`rct_20260902-0002`, `planned`)이 같은 `docs/doc-tracker.md` 를 고치며\n이번 트리거 때문에 **이미 `CONFLICTING`** 이다(부모에서는 CLEAN — 이 트리거가 원인이다). 이 모델의\n다음 PR 도 같은 파일의 같은 절(「대조 보류」·「알려진 편차」·「변경 이력」)을 건드리므로 리베이스\n규칙을 executionGuide 에 명시할 것. #37 쪽 충돌은 「변경 이력」 1행 대 1행이라 **합집합 해소**면 되고,\n그 해소로 두 게이트가 통과함을 이 fire 가 실측했다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`AnalysisProgress`(S04)를 「대조 보류」에서 「활성 대조」로 승격하고, 승격이 드러내는 위반 31건(M3A 21 · M3B 10)을 한 PR에서 전량 처리한다. 이 슬라이스를 고른 이유는 남은 보류 2건(`CredentialsSetup`·`HomeRepositories`)의 보류 사유가 「화면 분할 여부」라는 **제품 결정**이라 아직 해금되지 않은 반면, S04 의 보류 사유는 원장 자신이 해소 시점을 「카피 축 결정 **또는 목업 예시값 표기 규약 도입 시**」로 적어 두었고 직전 트리거(PR #32)가 정확히 그 `data-sample` 규약을 도입해 **선결 조건이 이미 사라졌기** 때문이다. 처리 방식은 직전 슬라이스(S05 승격)가 세운 것과 같다 — ① 분석마다 값이 달라지는 자리는 `data-sample` 로 대조에서 빼고 ② 제품 결정이 필요 없는 카피는 목업(SSOT)으로 수렴시키고 ③ 나머지는 사유·해소 시점과 함께 원장에 **전량 등재**한다. 여기에 이번 승격이 드러낸 **게이트 자신의 결함 1건**(CSS 길이 `0.1em` 이 구현 카피로 추출되는 M3B 오탐)을 원장에 거짓 부채로 적는 대신 추출기에서 고친다. 실측으로 확정한 두 래칫 조정(보류 3→2 · 편차 28→37)을 같은 PR에 넣지 않으면 M5 가 실패하므로 함께 낸다. 대안으로 「보류 상한만 유지한 채 구현을 목업 구조까지 수렴」을 저울질했으나, 목업의 진행률 표현(메트릭 그리드 + 선형 바)으로 옮기면 그리드 두 칸 중 하나(`Cost so far`)가 실측 비용 부재로 이미 등재된 상태라 한 칸짜리 그리드가 되고 e2e(`progress-percent`)를 함께 고쳐야 해, 실측 비용이 붙는 슬라이스 7 로 미루고 등재하는 쪽을 골랐다. **완료 기준(이 시도의 범위)**: main 기준 세 워크플로가 전부 green 이고 `docs — mockup ↔ render` 가 **활성 4 · 보류 2 · 편차 37 · 미등재 0** 으로 rc=0 이며, 승격으로 드러난 31건 중 원장 밖에 남은 것이 하나도 없다. **범위 밖**: 보류 2건(`CredentialsSetup`·`HomeRepositories` — 화면 분할 제품 결정 대기) · 백엔드가 소유한 단계 제목의 한글화(`backend/src/pipeline.rs`, 이 모델의 as-is 범위 `frontend/src` 밖이며 e2e 가 영문 제목을 단정한다) · 진행률 표현 구조 수렴(AC4.6 슬라이스 7) · 버려진 draft PR #26 정리.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`dlddu/feature-doc` main(`95fee31`)에서 브랜치 `reconcile/rct_20260902-0003-mockup-render` 를 딴다. 브랜치명에 모델 슬러그를 붙이는 이유는 `rct` id 가 모델 간에 유일하지 않아 형제 워커의 열린 PR 브랜치를 밟을 수 있기 때문이다.",
+              "expectedOutcome": "새 브랜치가 main 과 같은 트리에서 시작하고, 게이트 3종이 이 시점에 rc=0 이다(부모 기준선)."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/mockups/JRN-discover-features.html` 의 `STP-leave-and-return` 구간에서 **분석마다 값이 달라지는 잎 요소 6곳**에 `data-sample` 을 붙인다 — 앱바 저장소명(`dlddu/payments-api`) · 단계 요약 2곳(`847 files · 2.3 MB` · `12 items`) · 경과 시간 3곳(`1m 04s` · `3m 51s` · `2m 12s`). 마지막 `2m 12s` 는 `id=\"stage-3-time\"` 를 갖고 있어 M6(오용 가드)가 `id` 를 상호작용 속성으로 막으므로, id 를 떼고 프로토타입 스크립트의 조회를 `$('stage-3-time')` → `s3.querySelector('.time')` 로 바꾼다(`s3` 는 같은 함수가 이미 잡아 둔 `#stage-3`).",
+              "expectedOutcome": "M6 `data-sample` 13건 → 19건 · 오용 0건. M3A 에서 이 6개 문자열이 사라진다. `tools/check-journey-prototype.js` 는 `#stage-3-time` 을 쓰지 않으므로(쓰는 것은 `#stage-3`·`#prog-pct`·`#cost-now`·`#btn-leave`·`#btn-reopen`·`#btn-see-landscape`) 하네스 단언 수가 회귀 없이 그대로다."
+            },
+            {
+              "seq": 3,
+              "action": "`tools/check-mockup-render.py` 의 `TECHNICAL` 패턴에 **CSS 길이 리터럴**(`-?\\d+(\\.\\d+)?(px|em|rem|%|vh|vw|ch|fr|s|ms|deg)`)을 더해 M3B 구현 카피 추출에서 뺀다. 승격이 드러낸 `0.1em` 은 `AnalysisProgress.tsx` 의 `letterSpacing: '0.1em'` 인라인 스타일 값이 추출기에 새어 든 것이지 제품 카피가 아니다 — 원장에 등재하면 **거짓 부채**가 된다.",
+              "expectedOutcome": "M3B 미등재에서 `0.1em` 이 사라진다. 다른 화면의 M3B 카운터(기존 활성 3쌍)는 회귀 없이 동일하다 — 규칙을 느슨하게 만들지 않았다는 증거."
+            },
+            {
+              "seq": 4,
+              "action": "제품 결정이 필요 없는 **무전제 수렴 2건**을 `frontend/src/AnalysisProgress.tsx` 에 반영한다 — ① 횡단 관심사 문서로 가는 버튼 라벨을 목업의 1차 CTA 문구 `추출된 횡단 관심사 보기` 로 맞춘다(현재 `횡단 관심사 문서 보기`; 목적지·testid `open-cross-cutting` 동일) ② 진행 중 단계의 부제를 목업대로 `진행 중` 으로 맞춘다(현재 `진행 중…`). 화면 상단 매핑 주석도 현재 상태에 맞게 갱신하되 `docs/mockups/JRN-discover-features.html#STP-leave-and-return` 참조는 유지한다(M1 이 이 주석으로 화면을 발견한다).",
+              "expectedOutcome": "M3A 1건(`추출된 횡단 관심사 보기`)과 M3B 2건(`횡단 관심사 문서 보기` · `진행 중…`)이 동시에 사라진다. e2e 는 두 문자열을 단정하지 않으므로(testid 로 클릭한다) 회귀 없음."
+            },
+            {
+              "seq": 5,
+              "action": "원장의 기존 S04 행(`Cost so far` ↔ `Est. LLM Spend`)에서 산문 따옴표로만 적혀 있던 `실측 누적은 아직 계측 전` 을 **백틱 토큰으로 승격**한다. 등재는 돼 있었지만 백틱이 없어 기계 대조에서 빠져 있던 자리다 — 새 행을 만들 일이 아니라 기존 행의 정비다.",
+              "expectedOutcome": "M3B 미등재에서 `실측 누적은 아직 계측 전` 이 사라지고 원장 행 수는 28 그대로다. M4 는 이 토큰이 `AnalysisProgress.tsx` 에 실재함을 확인한다."
+            },
+            {
+              "seq": 6,
+              "action": "남은 위반을 원장 9행으로 **전량 등재**한다 — ① 백엔드가 소유한 단계 제목 5건(`저장소 내려받기` 등, 구현은 `backend/src/pipeline.rs` 가 시드한 영문 제목을 렌더한다) ② 알림·백그라운드 4건(알림 인프라 부재, `#leave-card` 는 앱 종료를 시뮬레이션하는 프로토타입 전용 상태) ③ 실패 안내 정적 문장 ④ 화면 범례(`ConnectRepository` 의 같은 사유 행과 한 뿌리) ⑤ 진행률 표현(`Progress` 메트릭 셀 ↔ 구현의 링 `Percent Complete`) ⑥ 이탈 액션 문구(`앱 닫고 나가기` ↔ `Run in background`) ⑦ `awaiting_pipeline` 안내 ⑧ 재시도 진행 라벨 ⑨ 완료 단계 fallback 문구. 각 행에 유형·사유·해소 시점을 채우고, 백엔드 소유 카피를 위해 유형 「범위 밖 소유」를 신설한다. 캡션을 28 → 37 건으로 갱신한다.",
+              "expectedOutcome": "M3A·M3B 미등재 0건. M4 원장 무결성 — 행 37건, 공전 행 0건, 캡션 집계 37 = 행 수 37."
+            },
+            {
+              "seq": 7,
+              "action": "「목업↔구현 대조 범위」를 옮긴다 — 「대조 보류」의 `AnalysisProgress` 행을 지우고 「활성 대조 대상」에 `frontend/src/AnalysisProgress.tsx` ↔ `docs/mockups/JRN-discover-features.html` `STP-leave-and-return` 행을 더한다. 래칫 두 개를 함께 조정한다: **대조 보류 상한 3 → 2**(줄었으므로 낮추지 않으면 M5 가 실패한다) · **미해소 편차 상한 28 → 37**(래칫 완화이므로 사유를 캡션 아래에 남긴다 — 승격이 드러낸 기존 부채이지 새로 생긴 이탈이 아니다). 절 도입부 산문에 이번 승격을 반영한다.",
+              "expectedOutcome": "M0 파싱 무결성 — 활성 4 · 보류 2 · 편차 37. M5 래칫 — 미해소 편차 37/37 · 대조 보류 2/2."
+            },
+            {
+              "seq": 8,
+              "action": "「변경 이력」에 이번 슬라이스 행을 추가하고, 직전 행(2026-09-01 목업 예시값 표기 규약 도입)의 before/after 칸에 남아 있는 **산술 오류를 함께 고친다** — 「활성 대조 1 → 활성 대조 2」로 적혀 있으나 게이트 실측은 2 → 3 이다(계획 시점이 PR #29 가 `DiscoveryStrategy` 를 활성으로 올리기 전이었다). M5·M0 는 표를 세지 산문 칸을 읽지 않아 자동으로는 영영 잡히지 않으므로 같은 줄을 건드리는 이 슬라이스에 접어 넣는다(별도 task 를 열지 않는다).",
+              "expectedOutcome": "「변경 이력」의 before/after 가 게이트 실측과 일치하고, 이번 변경이 한 행으로 기록된다."
+            },
+            {
+              "seq": 9,
+              "action": "게이트 3종을 로컬에서 1:1 재현한다 — `python3 tools/check-mockup-render.py --verbose` · `python3 tools/check-journey-mockup.py` · `PATH=/home/silas/toolchains/node-v22.14.0-linux-arm64/bin:$PATH npm ci --prefix tools && node tools/check-journey-prototype.js`. 부모 커밋에서도 같은 셋을 돌려 **회귀 통제**(기존 활성 3쌍의 M3A·M3B 카운터가 승격 전후로 동일한가)를 실측한다.",
+              "expectedOutcome": "세 게이트 모두 rc=0. 기존 활성 3쌍 몫의 미등재가 승격 전후로 0으로 동일하고, 프로토타입 하네스 단언 수가 부모와 같다."
+            },
+            {
+              "seq": 10,
+              "action": "커밋·푸시하고 `dlddu/feature-doc` 에 **draft PR** 을 연다(머지는 실행 단계의 몫). PR 본문에 task id, gap 요약, 계획 단계, 31건의 처리 내역(수렴/마킹/등재 갈래), 검증 방법, 그리고 형제 PR 과의 리베이스 규칙을 적는다.",
+              "expectedOutcome": "draft PR 이 열리고 세 워크플로(`docs — mockup ↔ render` · `docs — journey ↔ mockup` · `CI (cargo + kind e2e)`)가 붙는다."
+            }
+          ],
+          "plannedAt": "2026-09-02T06:31:00Z"
+        }
+      }
+    ]
   }
 ]
