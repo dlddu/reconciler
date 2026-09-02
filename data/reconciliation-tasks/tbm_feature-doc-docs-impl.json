@@ -1886,5 +1886,33 @@
       "assessedAt": "2026-09-02T02:45:00Z",
       "reason": "작업 불필요 → `no_action_needed`(종료). 근거 넷과, 이 판정이 무엇을 **하지 않는지** 하나.\n\n**1. 이 트리거는 이 모델의 어느 판정 기준에도 걸리지 않는다.** 기준 1(미구현 AC)은 16건 불변 — 두 커밋 모두 AC를 구현하지 않았고 `e2e/`를 건드리지 않았다. 기준 2(구현↔문서 불일치)는 오히려 **부호가 반대다**: #35는 「이미 설치한 사용자가 두 번째 설치를 열게 되던」 상태를 없애 구현을 AC4.1 쪽으로 당긴다. 기준 3(문서 없는 구현)은 성립하지 않는다 — 입양 경로는 AC4.1이 이미 규정한 상태로 가는 복구 경로이고, 신규 감사 이벤트는 AC4.3의 「감사 가능하도록 기록된다」를 충족하는 쪽이며 PRD는 감사 이벤트를 열거하지 않는다.\n\n**2. #34는 프로덕션에서 정의상 무동작이다 — 추정이 아니라 실측이다.** `OAUTH_REDIRECT_BASE_URL`·`FEATUREDOC_PREVIEW_ID`가 레포 전체에서 `backend/src/config.rs` 안에만 등장하고 `deploy/k8s`·`deploy/e2e` 어디에도 없음을 확인했다. 미설정 기본값이 종전 동작과 동일한 값(`base_url`, `None`)으로 접히므로, 경로상 `backend/`에 들어 있어도 실제로는 preview 배포 배관이다.\n\n**3. 상시 gap(미구현 AC 16건)은 이미 열린 task가 들고 있고, 그 task의 범위는 아직 머지되지 않았다.** `rct_20260831-0004`(슬라이스 4b-1)는 `awaiting_review`이고 PR #29는 draft로 열려 있다. **「소비된 트리거」 예외에 해당하지 않는다** — 그 예외는 점유 task의 범위가 *이미 머지돼* 잔여가 무주공산이 됐을 때의 것인데, 여기서는 PR #29가 머지되는 순간 그 머지가 `backend/`·`frontend/`·`docs/`를 모두 움직여 슬라이스 4b-2를 여는 트리거가 된다. **재감지 경로가 살아 있으므로** 여기서 베이스라인만 전진시켜도 모델이 자기를 잠그지 않는다. 점유 레코드에는 아무것도 쓰지 않았고 그 상태를 대신 바꾸지도 않았다.\n\n**4. 트리거가 스테이징된 PR #29를 방해하지 않는다 — 세 축을 각각 답했다.**\n- *충돌 축*: PR #29를 부모 `1a385a4`와 트리거 `952df17` 양쪽에 시험 머지한 결과 충돌 집합이 **`docs/doc-tracker.md` 1건으로 동일**했다. `CONFLICTING` 상태는 #28·#30이 남긴 기존 것이고 08-31T23:24Z 검토 기록이 이미 잡아 뒀다 → 이번 트리거 무혐의.\n- *게이트 축*: `check-mockup-render.py`·`check-journey-mockup.py`를 부모와 트리거 양쪽에서 돌려 **출력이 byte-identical**, 둘 다 rc=0. 래칫(대조 보류 4/4 · 활성 1 · 편차 22)도 계획 전제 그대로다 → 무혐의.\n- *빌드 축*: 파일 교집합 **0건**. #34가 `Config`에 비-Default 필드 2개를 더했지만 **PR #29는 `Config {` 리터럴을 하나도 만들지 않고**(리터럴 3곳은 전부 #34가 함께 고쳤고 PR #29는 안 건드린다), PR #29가 쓰는 `common::stub_state()`의 시그니처도 불변이다 → 머지 트리 컴파일 성립.\n\n### 이 판정이 하지 않는 것 (기록만 남긴다)\n\n**입양 실패 시의 best-effort 강등이 문서에 없다.** GitHub 장애·App 회수·쓸 수 없는 OAuth 토큰이면 S01이 종전과 같은 \"미설치\"로 떨어진다 — 제품 결정인데 Rust doc comment에만 있다. **task로 열지 않는 이유**: `doc-tracker.md:92`가 「실제 GitHub에서의 설치·저장소 범위 변경·설치 해제 라운드트립」을 이미 **e2e 범위 밖으로 명시**해 뒀으므로 새로 생긴 공백이 아니라 **선언된 공백 안**이고, 단독으로 슬라이스를 열 만한 크기가 아니다. AC4.1 라운드트립이나 AC4.6 계측을 다루는 슬라이스가 열릴 때 함께 처리하면 된다.\n\n**자동 해소 유예 대상이 아니다** — 판정이 「차이 없음」이지 「곧 사라질 차이」가 아니므로 `assessing` 유예를 두지 않고 여기서 종료한다."
     }
+  },
+  {
+    "toBeModelId": "tbm_feature-doc-docs-impl",
+    "status": "assessing",
+    "createdAt": "2026-09-02T05:12:00Z",
+    "updatedAt": "2026-09-02T05:13:00Z",
+    "trigger": {
+      "detectedAt": "2026-09-02T05:12:00Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "backend:734728af3c39089dd9e54aaef9318fcd428ab0c8 frontend:ba78e868365c988cac5d419a6fc0e14798bdaa8a",
+        "currentVersion": "backend:d663e1d29a225a128ffa019c649ec652622d8372 frontend:a50b531627bfb98562b933207578fda94abc66b1"
+      },
+      "toBe": {
+        "previousVersion": "c3f43ab175d45cd4401d2685d83ab097e30b9212",
+        "currentVersion": "ce02be4aaca0a167a647bc254a1eee50321950ab"
+      }
+    },
+    "id": "rct_20260902-0002",
+    "stateSummary": {
+      "summarizedAt": "2026-09-02T05:13:00Z",
+      "asIs": "## 관측 (2026-09-02 05:12Z · main `fb203a2`)\n\n`backend/`+`frontend/` 트리가 **PR #29 `f36c943`**(2026-09-02 04:45:25Z, 「feat: AC1.3 탐색 전략\n생성·검토·수정·승인 + S06 (슬라이스 4b-1)」) 하나로 움직였다. 직후 `fb203a2` 는 배포 이미지 태그\n고정(`[skip ci]`)이라 이 모델의 판정 대상 밖이다.\n\nPR #29 diffstat 17파일 / +1794 −75 — 판정 대상(`backend/`·`frontend/`)만 추림:\n\n- `backend/migrations/0006_discovery_strategies.sql` (신규 27줄) · `backend/src/discovery_strategy.rs` (신규 306줄)\n- `backend/src/analysis.rs` +303 · `backend/src/bin/worker.rs` +155 · `backend/src/worker_api.rs` +34 · `pipeline.rs` +20 · `lib.rs` +1\n- `backend/tests/strategy.rs` (신규 371줄) · `backend/tests/worker.rs` +8\n- `frontend/src/DiscoveryStrategy.tsx` (신규 228줄, S06) · `App.tsx` +35 · `api.ts` +59 · `AnalysisProgress.tsx` +20 · `index.css` +38\n\n범위 밖 동시 변경(참고): `e2e/tests/ac1-3-discovery-strategy.spec.ts` 신규 190줄, `docs/doc-tracker.md` +56.\n\n**구현 완료 AC (9/24)** — AC1.1 · AC1.2 · **AC1.3(이번)** · AC1.5 · AC4.1 · AC4.2 · AC4.3 · AC4.5 · AC4.8.\n`docs/prd/*.md` 에서 기계 추출한 고유 AC 식별자는 **24개**로 원장 표기와 일치한다.",
+      "toBe": "## 관측 (2026-09-02 05:12Z · main `fb203a2`)\n\n`docs/` 트리는 `c3f43ab` → `ce02be4`. **바뀐 파일은 `docs/doc-tracker.md` 단 하나**\n(`1774fbc` → `370fc28`)이며 PR #29 가 같은 커밋에서 갱신했다. `docs/prd`·`docs/test`·`docs/values.md`\n등 **AC 를 정의하는 SSOT 는 한 글자도 바뀌지 않았다** — 즉 이번 트리거로 **to-be 자체는 불변**이고,\n움직인 것은 진행 현황을 적는 메타 상태 파일뿐이다.\n\ndoc-tracker 가 기록한 to-be 대비 현황:\n\n- 정의된 가치 8 · PRD 4 · **AC 24**(가치 연결 24 / 미연결 0) · 테스트 문서 4(AC 커버 24 / 미커버 0)\n- **미구현 15건**: AC1.4 · AC2.1~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7\n- 로드맵: 슬라이스 4b 가 4b-1(완료) / **4b-2(다음 권장 · AC1.4 · S07)** 로 분할됨\n\n`definition` 의 판정 기준을 그대로 적용하면 to-be 는 「24개 AC 전부 구현 + 문서와 어긋남 0 +\n문서 없는 구현 0」이고, 현재 as-is 는 그 중 9개만 만족한다.",
+      "gap": "**유의미한 차이가 실재한다. 두 갈래이고, 어느 쪽도 지금 아무 워커도 붙들고 있지 않다.**\n\n## ① 미구현 AC 15건 — 판정 기준 1의 지속 gap (크기 16 → 15 로 줄었다)\n\n`definition` 이 명시한다: *「문서에 있으나 아직 구현되지 않은 AC는 to-be 미달 gap이며 **drift다**.\n백로그로 치부해 이 루프 밖으로 빼지 않는다」* · *「모든 AC가 구현될 때까지 1번 gap은 지속 존재한다」*.\n이번 트리거는 그 gap 을 **16 → 15 로 1건 줄인 수렴**이며(AC1.3 구현 완료), 새 어긋남을 만들지 않았다.\n잔여 15건은 그대로 drift 로 남는다. 다음 단위는 문서 자신이 지목한다 — **슬라이스 4b-2(AC1.4 · S07)**.\n\n## ② 판정 기준 3 위반 1건이 이번 커밋에서 **새로 등재**됐다 (문서 없는 구현)\n\nPR #29 가 `docs/doc-tracker.md` 「미해소 질문」에 **10번 항목을 신설**했고, 그 본문이 스스로\n`rct_20260831-0004` 가 *판정 기준 3 위반으로 등재했고 슬라이스 4b-1 의 범위 밖으로 남겼다* 고 적는다:\n\n> 구현에는 사용자 대면 동작이 이미 있는데(Google 키는 등록되지만 분석 단계가 \"아직 지원하지\n> 않는다\"로 실패한다) **그 동작을 규정하는 AC 가 없다.** … 해소하려면 PRD-4 를 고쳐야 한다.\n\n즉 **실행자 자신이 미해소로 선언하고 범위 밖에 둔 drift** 다. 결정이 필요한 것은 하나(등록 허용 후\n분석 실패가 의도인가 / 등록 자체를 막아야 하는가)이고, stub 모드에서는 미지원 제공자가\n`DEFAULT_PROVIDER` 로 폴백해 **e2e 로 관측되지 않으므로** 검증 수단까지 함께 정해야 한다.\n\n## 새로 생긴 어긋남은 없다 — 실측으로 확인\n\n- 레포 자신의 게이트 2종을 트리거(`fb203a2`)와 PR #29 부모(`0cd3bb8`)에서 각각 실행: **양쪽 rc=0**.\n- `목업 ↔ 구현 화면` 게이트는 신규 화면 `DiscoveryStrategy.tsx` 를 **활성 대조로 편입**했고\n  (활성 1 → 2, M3A 카피 36 → 57건, M3B 26 → 40건, **미등재 0건 유지**), 드러난 편차 2건을 원장에\n  등재했다(22 → 24, 캡션·상한·행 수 일치, 공전 행 0).\n- `여정 ↔ 목업 1:1` 게이트 출력은 부모와 **바이트 동일**.\n- e2e 매핑 항등식도 성립: AC 24 − 예외 0 = 매핑 9 + 공백 15 (spec 파일 9개, 각 1개 AC 선언, 중복·고아 0).\n\n**따라서 이 트리거는 「수렴 1건 + 실행자가 남긴 미해소 1건」이고, 잔여 gap 15건은 여전히 열려 있다.**"
+    }
   }
 ]
