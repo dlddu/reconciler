@@ -14,6 +14,7 @@
 | `e2e-mock-policy.tbm.md` | E2E 모킹 최소화 | 모킹 정책·허용목록과 코드에 실재하는 모킹 지점의 양방향 1:1 |
 | `mockup-render.tbm.md` | 목업 ↔ 구현 렌더링 정합성 | 목업이 정의한 화면과 이미 구현된 화면의 시각적 일치(코드 정적 대조) |
 | `journey-mockup.tbm.md` | 사용자 여정 ↔ 목업 1:1 정합성 | 여정 문서와 여정 mockup 페이지의 여정·단계 두 층위 완전 1:1(전단사) |
+| `comment-redundancy.tbm.md` | 주석 비중복성 (복원 가능한 주석 제거) | 코드·문서·PR·커밋 이력으로 복원되는 내용이 주석에 남아 있지 않음 |
 
 한 레포에 docs-impl·ac-e2e 두 유형을 등록하는 것이 기본이며, 이때 역할 분담은:
 **docs-impl**은 "문서 ↔ 구현 코드"의 일치를, **ac-e2e**는 "AC ↔ E2E 테스트
@@ -46,6 +47,17 @@ mockup-render가 뒤 칸(그 mockup대로 구현됐는가 = **시각 대조**)�
 규칙 5가 실제 입력 요소·화면 내 전진 배선·정상 경로 밖 상태를 요구하고 DOM 하네스
 CI 게이트로 집행한다. 여백과 색은 여전히 보지 않는다.
 
+**comment-redundancy**는 어느 레포에나 얹을 수 있는 여섯 번째 유형으로, 앞의
+다섯과 **화살표 방향이 반대**다. docs-impl이 "문서가 기술한 것이 코드에
+있는가"(문서 → 코드의 누락)를 본다면, 이쪽은 "코드·문서·이력이 이미 말한 것이
+주석에 또 있는가"(코드 → 주석의 중복)를 본다. 같은 소스 트리를 보므로 두 모델이
+함께 트리거되는 구간이 있지만, as-is 지문이 **주석 줄에만 한정**되어 있어
+판정 대상이 겹치지 않는다. 이 유형은 주석의 **정확성**도, 문서·커밋 메시지
+자체의 품질도 보지 않는다 — 오직 중복만 본다. 그리고 다른 유형들이 예외를 줄이는
+방향으로 기우는 것과 달리, **판단이 갈리면 주석을 남기는 쪽으로 기운다**: 중복
+주석의 비용은 작지만 유일한 지식을 지우면 회복되지 않는다는 비대칭 때문이다.
+언어 중립이며, 언어마다 달라지는 것은 주석 줄을 뽑는 패턴 슬롯뿐이다.
+
 ## 고정부와 가변부
 
 각 템플릿은 두 부분으로 나뉜다:
@@ -71,11 +83,11 @@ CI 게이트로 집행한다. 여백과 색은 여전히 보지 않는다.
 
 | 항목 | 규약 |
 |---|---|
-| id | `tbm_<slug>-docs-impl` / `tbm_<slug>-ac-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` / `tbm_<slug>-journey-mockup` (slug = 소문자 레포명) |
-| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> AC ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` / `<slug> 사용자 여정 ↔ 목업 1:1 정합성` |
-| metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, ac, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` / `[<slug>, journey, mockup, ux, consistency]` (+ 필요 시 도구 태그: maestro, playwright 등) |
+| id | `tbm_<slug>-docs-impl` / `tbm_<slug>-ac-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` / `tbm_<slug>-journey-mockup` / `tbm_<slug>-comment-redundancy` (slug = 소문자 레포명) |
+| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> AC ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` / `<slug> 사용자 여정 ↔ 목업 1:1 정합성` / `<slug> 주석 비중복성 (복원 가능한 주석 제거)` |
+| metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, ac, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` / `[<slug>, journey, mockup, ux, consistency]` / `[<slug>, comments, documentation, consistency]` (+ 필요 시 도구·언어 태그: maestro, playwright, go, python 등) |
 | checkPolicy | `{"intervalSeconds": 3600}` |
-| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·ac-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60` |
+| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·ac-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60`. comment-redundancy는 e2e-mock-policy와 같은 grep 지문(sha256)을 쓰되 주석 줄만 추출하고 `timeoutSeconds: 120` |
 | lastObservedVersion/At | 등록 시 생략(첫 감지 sweep이 채운다) |
 
 ## 인스턴스화 절차
