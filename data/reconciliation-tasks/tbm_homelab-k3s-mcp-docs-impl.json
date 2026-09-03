@@ -29,6 +29,62 @@
       "assessedAt": "2026-09-03T12:00:00Z"
     },
     "createdAt": "2026-09-03T12:00:00Z",
-    "updatedAt": "2026-09-03T12:36:00Z"
+    "updatedAt": "2026-09-03T12:45:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**session_list 1종을 착지시켜 미구현 AC 12건 중 3건(session-list/AC1·AC2·AC3)을 닫는다.**\n문서(SSOT)가 이미 확정한 계약을 코드로 옮기는 일이므로 「충돌 시 기본 방향」의 기본값\n(코드를 문서에 맞춘다)을 그대로 따른다. 함께, 이 gap을 「구현 선행이라 검증 불가」로\n묶어 두던 **doc-tracker의 거짓 전제 1건을 사실로 되돌린다.**\n\n**왜 이 방법인가**\n- **계약을 짓지 않고 소스에서 뽑는다.** 제어면 계약의 SSOT는 `dlddu/session-platform`의\n  `control-plane/api/openapi.yaml`이다(`servers: /api/v1`, `GET /sessions` →\n  `{\"sessions\":[Session]}`, `Session.required = [id,name,state,workloadType,createdAt,\n  lastAccess]`, `pod`·`auxiliaryPods`·`model`·`checkpoint`는 선택). 응답 모양을 손으로\n  짓지 않고 이 파일에서 파싱해 PRD가 노출하라고 적은 7개 필드와 대조한다.\n- **AC3(미설정 시 graceful 거부)은 새 발명이 아니라 기존 관용구의 재사용이다.**\n  `internal/grafana`·`awsconfig`·`github`·`opensearch` 네 패키지가 이미 동일한 골격\n  (`FromEnv()`이 미설정이면 nil → `main.go`가 `NewUnavailable(...)`로 대체 → 도구는\n  unavailable 에러, 서버·타 도구는 무영향)을 프로덕션에서 증명하고 있다. 같은 골격을\n  따르면 AC3은 구조적으로 성립한다.\n- **3종을 한꺼번에 잡지 않는다.** PRD가 `session_list`를 read/write의 세션 id 진입점으로\n  못박았고(순서 의존이 문서에 있다), read/write는 「접근=active화」 부수 효과(유휴 승격·\n  스냅샷 복원)를 갖는 상태 변경 도구라 상태 전이 픽스처를 요구한다. list는 순수 GET이라\n  같은 슬라이스에 묶으면 위험도만 올라간다.\n- **가역성**: 추가되는 것은 도구 1종 + 비밀 아닌 env 1개뿐이고, 기존 14종의 wire 계약과\n  기동 경로를 건드리지 않는다. 롤백 = PR revert(마이그레이션·상태 없음).\n\n**이번 시도의 범위(완료 기준)**\n1. `session_list` 도구가 `tools/list`에 노출되고 `tools/call`로 동작한다.\n2. `internal/sessionplatform` 패키지 + `test-session-list.md`가 이름까지 지정한 Go 단위\n   테스트 3종(`TestListSessionsReturnsAllSessions`·`TestListSessionsEmpty`·\n   `TestUnavailableFailsEveryCall`)이 통과한다.\n3. `k8s/deployment.yaml`에 `SESSION_PLATFORM_ENDPOINT`가 배선된다(tracker가 적은 순서\n   「앱 재배포 → env 배선 → 구현」의 남은 두 칸).\n4. `docs/doc-tracker.md`의 거짓 전제가 사실로 교정되고, session_list 행의 「구현 선행」\n   표기가 실제와 맞춰진다.\n5. 기존 게이트 3종이 모두 초록으로 유지된다(`check_ac_mapping.py` 집계 6키 불변 포함).\n\n**범위 밖(잔여 — 다음 계획의 입력)**\n- `session_read`(AC 4건)·`session_write`(AC 5건) 구현 — 이 모델의 잔여 9건. 이번 실행이\n  `internal/` 트리를 움직이므로 재감지가 새 task로 잇는다.\n- `tests/integration/session.py`·`no_config.py`의 e2e 3건 — **자매 모델\n  `tbm_homelab-k3s-mcp-ac-e2e`의 판정 대상**이다(그쪽은 \"AC에 대응하는 e2e 파일이 없다\"를\n  본다). 이번 슬라이스는 그 모델의 선행 조건(도구 미구현)을 푸는 것이지 대신 닫지 않는다 —\n  이중 계상 금지 규약 그대로다.\n- 판정 기준 2·3(기존 14종의 오류 메시지·자격증명 취급 전수 대조) — 감지가 계획 단계로\n  넘긴 항목이나, 이번 슬라이스에서 표본 대조만 하고 전수는 별도 task로 남긴다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "제어면 계약을 소스에서 확정한다. `dlddu/session-platform`의 `control-plane/api/openapi.yaml`을 파싱해 (a) base path(`servers[0].url`), (b) `GET /sessions` 200 응답의 최상위 키와 배열 요소 스키마, (c) `Session`의 required/optional 필드와 `state`·`workloadType` enum 값을 뽑아, `docs/prd-session-list.md`가 노출하라고 적은 7개 필드(id·name·workloadType·state·pod·createdAt·lastAccess)와 대조한다. 동시에 `k8s/service.yaml`에서 in-cluster 주소(`control-plane`, port 80)를 확인한다.",
+              "expectedOutcome": "base=`/api/v1`, 응답 `{\"sessions\":[Session]}`, PRD의 7개 필드가 모두 openapi `Session`에 존재함이 확인된다(선택 필드 `pod`의 부재 조건 = 스냅샷 상태도 함께 확인). PRD 주소 `http://control-plane.session-platform.svc.cluster.local`이 실제 Service 이름/포트와 일치한다."
+            },
+            {
+              "seq": 2,
+              "action": "`internal/sessionplatform/sessionplatform.go`를 추가한다. 기존 `internal/grafana`·`internal/awsconfig` 골격을 그대로 따른다 — `Service` 인터페이스(`ListSessions(ctx) ([]Session, error)`), HTTP 클라이언트(`FromEnv()`: `SESSION_PLATFORM_ENDPOINT` 미설정이면 `nil, nil`), `Unavailable` 대체 구현, `errKind{unavailable, api}` 에러 타입, 10초 타임아웃, `version` User-Agent. `ListSessions`는 `GET <base>/api/v1/sessions` 단 한 번만 호출한다(AC2: 상태를 바꾸는 요청을 보내지 않는다).",
+              "expectedOutcome": "`go build ./...` 통과. 패키지가 미설정·API 오류·정상 세 경로를 구분해 반환하고, GET 이외의 메서드나 read/write 엔드포인트를 호출하는 코드가 존재하지 않는다."
+            },
+            {
+              "seq": 3,
+              "action": "`internal/sessionplatform/sessionplatform_test.go`를 추가한다. `test-session-list.md`가 지정한 이름을 그대로 쓴다 — `TestListSessionsReturnsAllSessions`(httptest 스텁에 `active` 1 + `snapshot` 1을 세우고 7개 필드 전부와 상태를 단언), `TestListSessionsEmpty`(`{\"sessions\":[]}` → 빈 목록, 에러 아님), `TestUnavailableFailsEveryCall`(unavailable 에러). 추가로 AC2의 기계적 근거로 스텁이 받은 요청을 기록해 **메서드·경로가 `GET /api/v1/sessions` 정확히 1건**임을 단언한다(호출 3회 반복 시 3건 모두 동일, 다른 경로 0건).",
+              "expectedOutcome": "`go test ./internal/sessionplatform/... -v`에서 4개 테스트 통과. AC1·AC2·AC3의 단위 레벨 근거가 각각 한 개 이상의 실패 가능한 단언으로 존재한다."
+            },
+            {
+              "seq": 4,
+              "action": "MCP 표면에 배선한다. (a) `internal/mcp/toolslist.go`에 `session_list` 엔트리 추가 — 입력 없음(`properties:{}`, `additionalProperties:false`), 어노테이션은 PRD가 못박은 `readOnlyHint=true`·`destructiveHint=false`·`idempotentHint=true`·`openWorldHint=true`. (b) `internal/mcp/mcp.go`의 `toolsCall` switch에 `case \"session_list\"` + `h.sessionList(ctx)` 핸들러(`successResult(map[string]any{\"sessions\": items})`). (c) `Handler` 필드·`NewHandler`·`server.App`·`main.go`의 `buildSessionPlatformService()` 까지 기존 5개 서비스와 동일한 방식으로 주입한다.",
+              "expectedOutcome": "`go build ./...`·`go vet ./...` 통과. `tools/list`가 15종을 반환하고 새 도구의 어노테이션이 PRD와 일치한다."
+            },
+            {
+              "seq": 5,
+              "action": "기존 단위 테스트를 새 표면에 맞춘다. `internal/server/mcp_test.go:101`의 `len(tools) != 14` 단언을 15로 갱신하고, 그 테스트가 이름 집합을 검사한다면 `session_list`를 더한다. 미설정 기본값(테스트 서버는 env 없이 뜬다)에서 `session_list` 호출이 unavailable 도구 에러를 돌려주고 직후 `ping`이 여전히 `pong`임을 확인하는 서버 레벨 케이스를 1건 더한다(AC3의 end-to-end 근거).",
+              "expectedOutcome": "`go test ./... -v` 전부 통과. 도구 수 단언이 실측(15)과 일치하고, AC3이 패키지·서버 두 레벨에서 각각 단언된다."
+            },
+            {
+              "seq": 6,
+              "action": "`k8s/deployment.yaml`의 `env:` 블록에 `SESSION_PLATFORM_ENDPOINT: http://control-plane.session-platform.svc.cluster.local`을 추가한다(비밀이 아니므로 `envFrom` secret이 아니라 평문 env — `LISTEN_ADDR`·`LOG_LEVEL`과 같은 자리). `envFrom` 블록과 그 주석 규약은 건드리지 않는다.",
+              "expectedOutcome": "매니페스트 diff가 env 1줄 추가(+2줄)뿐이고, `kubectl apply -k k8s` 대상 리소스의 다른 필드는 불변이다(YAML 파싱 대조로 확인)."
+            },
+            {
+              "seq": 7,
+              "action": "문서를 사실로 되돌린다. (a) `docs/doc-tracker.md`의 🔴 자동화 공백 항목에서 「session-platform 배포가 2026-08-06에 클러스터에서 제거된 상태라 실제 제어면 대상 검증이 불가능하다」를 **현재 사실**로 교체한다(제어면은 `session-platform` 네임스페이스에 재배포돼 Deployment `control-plane` 1/1 · Service `control-plane:80` — 2026-09-03T12:35Z 실측). 남은 공백을 read/write 9건으로 좁히고 배선 순서 중 완료된 칸을 표시한다. (b) 도구 PRD 표의 `session_list` 행에서 「(구현 선행)」 표기를 제거한다. (c) `docs/prd-session-list.md`의 상태 블록쿼트(계약이 아니라 현황 메모)를 갱신한다 — **`### AC<n>` 헤딩과 AC 본문은 한 글자도 바꾸지 않는다**(AC 전집 = 64 불변). (d) `docs/test-session-list.md`의 자동화 필드에서 Go 단위 3종의 「(미작성)」을 걷고, 통합 e2e 항목은 「(미작성)」 그대로 두어 자매 모델의 잔여임을 유지한다.",
+              "expectedOutcome": "`check_ac_mapping.py`가 여전히 rc=0이고 집계 6키가 baseline과 **문자 단위로 동일**(AC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일 22 · 분할 대기 4 · 공백 41). doc-tracker에 「검증 불가」를 주장하는 문장이 남지 않는다."
+            },
+            {
+              "seq": 8,
+              "action": "CI 게이트를 로컬에서 1:1 재현한다(go1.24.7 = CI의 1.24): `gofmt -l .`(빈 출력) → `go vet ./...` → `go build ./...` → `go test ./... -v` → `python3 tests/integration/check_ac_mapping.py`. 추가로 baseline(HEAD)과 브랜치에서 체커 출력을 각각 받아 `diff`로 동일함을 확인한다.",
+              "expectedOutcome": "다섯 게이트 모두 rc=0, 체커 출력 diff 0줄. kind 통합 잡은 로컬 재현 대상이 아니며 PR CI에서 확인한다(`EXPECTED_TOOLS - names` 형태라 도구 추가에 깨지지 않음을 소스로 확인해 둔다)."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치 `reconcile/rct_20260903-0001-homelab-k3s-mcp-docs-impl`를 푸시하고 PR을 연다(머지하지 않는다). 본문에 task id·gap 요약·이번 범위와 범위 밖·검증 방법·롤백을 적는다. PR CI(lint·unit·integration) 결과를 확인해 preparation에 기록한다.",
+              "expectedOutcome": "PR이 열리고 `mergeable` 상태이며 CI 3잡이 통과한다. 실패 시 원인을 계획에 반영해 브랜치를 갱신한다."
+            }
+          ],
+          "plannedAt": "2026-09-03T12:45:00Z"
+        }
+      }
+    ]
   }
 ]
