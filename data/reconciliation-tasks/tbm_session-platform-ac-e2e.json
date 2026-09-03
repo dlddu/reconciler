@@ -207,9 +207,9 @@
   },
   {
     "toBeModelId": "tbm_session-platform-ac-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "createdAt": "2026-08-30T11:37:01Z",
-    "updatedAt": "2026-09-03T11:14:00Z",
+    "updatedAt": "2026-09-03T11:16:00Z",
     "trigger": {
       "detectedAt": "2026-08-30T11:37:01Z",
       "changedSides": [
@@ -369,6 +369,59 @@
               "log": "**guide 1단계(신선도 확인) → 재머지 불필요로 판정.** `git fetch` 후 `origin/main`=`81f7ef8`(준비 시점 `5eaa735`에서 전진). 그러나 브랜치는 이미 `da72899`까지 머지돼 있어(merge-base=`da72899`) 브랜치에 없는 main 커밋은 `24c1545`(#50 여정 mockup 층위)·`81f7ef8`(이미지 핀) 2개뿐이다. `git diff --name-only da72899 origin/main` = docs/journeys/** · docs/mockups/README.md · docs/index.html · docs/doc-structure-state.md · k8s/deployment.yaml · tools/** · .github/workflows/docs-journey-mockup.yml · .gitignore. guide가 재머지 조건으로 지정한 `web/e2e/**`·`docs/prd/**`·`docs/test/e2e.md`와 매칭 단위 `control-plane/test/`는 **0건** → '안 건드렸으면 그대로 2단계로' 분기. **브랜치 push 없음, main 변경 없음.**\n\n**guide 2단계(PR CI 확인)**: `actions:read` REST로 조회(이 설치의 App에 `checks` 권한이 없어 `gh pr checks`는 못 씀). head `feaf87e` 기준 `ci` = success, `Build and Push Docker Image to GHCR` = success, 그리고 범위 밖으로 뒀던 클러스터 `e2e`(kind + Playwright)까지 **success**. PR #23: state=open, mergeable=true, mergeable_state=clean, 38파일 +1821/-1051."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "api:c449cb1d29e85b728f2a89c29e217f016964a6669636f50d75e42f082bee0ee9 web:c34b24d40a8726ed51d66280808ab9054190533e",
+          "checks": [
+            {
+              "name": "① PR #23 충돌 해소 (mergeable)",
+              "status": "passed",
+              "detail": "`GET /repos/dlddu/session-platform/pulls/23` → state=open, **mergeable=true, mergeable_state=clean**, head=`feaf87e`, 38파일 +1821/-1051. 계획 시점의 `dirty`(충돌 6건)에서 벗어났다."
+            },
+            {
+              "name": "② AC ↔ e2e 1:1 게이트 (check-ac-mapping.sh)",
+              "status": "passed",
+              "detail": "`./scripts/e2e/check-ac-mapping.sh` **rc=0** — `AC ↔ e2e 1:1 OK — AC 27개 = 매칭 파일 14 + 예외 1 + 공백 12 (매칭 단위 16개, 비-AC 2개)`.\n\n**계획이 적은 기대 수치(AC 21 = 매칭 14 + 예외 1 + 공백 6)와 다르다.** 원인은 이 task의 실패가 아니라 **후속 task `rct_20260903-0001`의 준비분이 같은 브랜치에 얹혀서**다 — #46이 AC-F1~F6을 추가해 AC 총계가 21→27이 됐고, 그 task가 등재 원장을 27 기준으로 갱신했다(`feaf87e`). 이 계획의 실질 완료 기준은 **게이트 rc=0**(= 승인해도 자기 게이트가 터지지 않는 상태)이고 수치는 계획 시점 스냅샷이므로, 갱신된 수치로 rc=0인 것은 기준 충족이다. 매칭 파일 14·예외 1(AC-B1)은 계획값 그대로이며 공백만 6→12(E1~E6 + F1~F6)로 늘었다."
+            },
+            {
+              "name": "③ e2e 충실도 게이트 (check-fidelity-allowlist.py)",
+              "status": "passed",
+              "detail": "`python3 scripts/check-fidelity-allowlist.py` **rc=0** — `회계 행 16 == 스캔된 (파일,토큰) 쌍 16 (등재 귀속 7 · 미해소 위반 4 · 비-seam 5)`, `web 네트워크 인터셉트 7건 (승인 3 · 위반 4, 상한 4)`. 계획이 적은 `회계 행 16 == 스캔 쌍 16`과 정확히 일치. 계획 시점 rc=1(R5 위반 14건)에서 해소됐다."
+            },
+            {
+              "name": "④ Go/web 정적 게이트",
+              "status": "passed",
+              "detail": "control-plane: `gofmt -l .` 무출력 · `go vet ./...` exit=0 · `go vet -tags=e2e ./...` exit=0 · `go test ./...` 전 패키지 ok(8 ok / 3 no test files). web: `npm ci` 후 `npm run lint`(tsc --noEmit) exit=0. Go는 이 샌드박스에 go1.24.7을 새로 설치해 돌렸다(레포 go.mod = go 1.24)."
+            },
+            {
+              "name": "⑤ PR CI (ci 워크플로)",
+              "status": "passed",
+              "detail": "head `feaf87e` 기준 `ci` **conclusion=success**. 덤으로 계획이 범위 밖으로 명시한 클러스터 `e2e`(kind + Playwright)와 GHCR 이미지 빌드도 success. (`checks` 권한 부재로 `gh pr checks` 대신 `actions:read` REST 사용.)"
+            },
+            {
+              "name": "교차 확인 — 매칭 공간을 직접 세기",
+              "status": "passed",
+              "detail": "`ls control-plane/test/e2e_*_test.go` = **15** (AC 선언 14 + 비-AC 스모크 1) · `ls web/e2e/*.spec.ts` = **1** (`smoke.spec.ts`만) · `grep -l '^// 검증 AC: AC-'` = **14**. 계획 5단계가 옮기려던 신규 spec 3개(j6-agent-prompt-loop · session-deletion · manual-archive)는 `web/e2e/journeys/` 아래에 있고, 그 디렉터리에는 총 7개 spec이 있다."
+            },
+            {
+              "name": "교차 확인 — 브라우저 커버리지 손실 0",
+              "status": "passed",
+              "detail": "`npx playwright test --list` = **Total: 23 tests in 8 files**. clean `origin/main`(`81f7ef8`) 워크트리에서 같은 명령 = **23 tests in 8 files**로 동일 — 파일을 `journeys/`로 옮겼지만 수집되는 테스트가 줄지 않았다(Playwright testDir 재귀 탐색)."
+            },
+            {
+              "name": "환경 요인 귀속 — data-plane go test 1건 실패",
+              "status": "passed",
+              "detail": "`data-plane` `go vet ./...` exit=0이나 `go test ./...`에서 `TestEntrypointBootstrapsPrivateMarketplace…`가 `entrypoint.sh: 28: jq: not found`(exit 127)로 실패. **clean `origin/main` 워크트리에서 바이트 동일하게 실패**하고(대조 실행함) 이 샌드박스에 jq가 없어 환경 요인으로 귀속된다. 러너에는 jq가 있어 ⑤의 `ci`가 success다. executionGuide가 예고한 그대로다 — 이 PR 탓이 아니다."
+            },
+            {
+              "name": "정보성 — 범위 밖 잔여 gap (모델 전체 to-be)",
+              "status": "passed",
+              "detail": "수렴 판정에 넣지 않는 사실 기록. 공백 12개 = AC-E1~E6(claude-code 워크로드) + AC-F1~F6(#46 approval-gated, **이 계획 수립 이후 신설**). 예외 1개는 AC-B1(트리거 정책 미확정). 이들은 재감지가 후속 task로 잇는다 — 실제로 `rct_20260903-0001`이 이미 F 계열을 다루며 `executing` 중이다. PR #23 자체의 머지도 범위 밖으로, `rct_20260808-0001`(awaiting_review, 사람 승인 대기)이 쥐고 있다."
+            }
+          ],
+          "verifiedAt": "2026-09-03T11:16:00Z"
         }
       }
     ]
