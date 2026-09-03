@@ -1,0 +1,34 @@
+[
+  {
+    "id": "rct_20260903-0001",
+    "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
+    "status": "action_required",
+    "trigger": {
+      "detectedAt": "2026-09-03T12:00:00Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "currentVersion": "internal:00a0edc25fd25140ec1ba35d6ad2ef168b96b7b9 main.go:ef750610931a49af3ef3f4f95b78081e618d55e4"
+      },
+      "toBe": {
+        "currentVersion": "56f54f61e9d569daa588612723165730b3fec55a"
+      }
+    },
+    "stateSummary": {
+      "asIs": "최초 관측 2026-09-03T12:00Z · `dlddu/homelab-k3s-mcp` main `4c77989`\n(`docs: 문서 허브 추가 (GitHub Pages) (#46)`, 2026-08-31T06:49Z).\n`internal:00a0edc2… main.go:ef750610…` (양쪽 `previousVersion` = `null`, 첫 관측).\n\n**MCP 도구 표면 = 14종**(실측: `internal/mcp/toolslist.go`의 `\"name\":` 선언) —\n`ping` · `namespace_list` · `workload_list` · `workload_restart` · `workload_scale` ·\n`workload_logs` · `pod_describe` · `dear_baby_reset_user` ·\n`github_app_installation_token` · `aws_config_get` · `opensearch_search` ·\n`opensearch_document_put` · `opensearch_document_delete` · `grafana_token`.\n\n**`session_list` · `session_read` · `session_write` 3종은 구현이 없다** —\n`git grep 'session_list|session_read|session_write' -- internal main.go` = **0 hit**\n(하이픈 표기 `session-list` 등으로도 0 hit — 이 레포의 도구 이름은 언더스코어 규약이라\n두 표기 모두 확인했다).\n\n`internal/` 패키지 구성: auth · k8s · mcp · server · github · grafana · awsconfig ·\nopensearch · version. 나머지 14종은 프로덕션 운영 중이다.",
+      "toBe": "최초 관측 2026-09-03T12:00Z · 같은 커밋. `docs` 트리 `56f54f61…`.\n\n문서 체계를 실측했고 **등록 스냅샷과 정확히 일치한다**:\n- 가치 **5개**(`docs/values.md`의 `### V<n>` = V1~V5)\n- PRD **18개**(`docs/prd-*.md`) = 도구 PRD **17개**(`aws-config-get` · `dear-baby-reset-user` ·\n  `github-app-installation-token` · `grafana-token` · `namespace-list` ·\n  `opensearch-document-delete` · `opensearch-document-put` · `opensearch-search` · `ping` ·\n  `pod-describe` · `session-list` · `session-read` · `session-write` · `workload-list` ·\n  `workload-logs` · `workload-restart` · `workload-scale`) + 공통 기반 **1개**(`platform-auth-safety`)\n- AC **64개**(`grep -rhoE '^### AC[0-9]+:' docs/prd-*.md`)\n- 테스트 문서 **18개**(`docs/test-*.md`)\n- 상태 추적 `docs/doc-tracker.md`\n\n**세 미구현 도구의 AC는 12건이다**(실측): `prd-session-list.md` 3 · `prd-session-read.md` 4 ·\n`prd-session-write.md` 5. definition이 적은 \"AC 12건\"과 일치한다.\n\n`docs/index.html`·`reader.html`·`.nojekyll`은 definition이 \"의도된 동작의 기술이 아니라 배포\n골격\"으로 분류한 항목이며 #46이 넣은 것이다.",
+      "gap": "**최초 관측이다(양쪽 `previousVersion` = `null`). 격차는 미구현 AC 12건이며, 판정식은\n\"문서에 있으나 구현되지 않은 AC는 drift\"라는 판정 기준 1이다.**\n\n**① 격차 실측 — AC 64건 중 12건 미구현.** 도구 PRD 17종 대비 구현된 도구 표면은 14종이고,\n빠진 `session_list`·`session_read`·`session_write` 3종에 걸린 AC가 각각 3·4·5 = **12건**이다.\n`internal`·`main.go` 전체에서 세 이름의 hit이 **0**임을 언더스코어·하이픈 두 표기로 확인했다\n(이 레포는 언더스코어 규약 — `aws_config_get` 등 — 이라 하이픈만 grep하면 거짓 0이 나올 수\n있어 양쪽을 다 돌렸다). 나머지 14종은 프로덕션 운영 중이다.\n\n**② definition이 이 격차를 \"backlog가 아니라 drift\"로 못박았다.** *\"미구현 AC: 문서에 있으나\n구현되지 않은 AC는 to-be 미달 gap이며 drift다. 백로그로 치부해 이 루프 밖으로 빼지 않는다\n(현 시점의 `session-*` 12건이 여기 해당한다).\"* 즉 판정 기준이 이 12건을 명시적으로\n호명하고 있다. 또 *\"부분 구현은 as-is다, to-be가 아니다 … to-be를 현 구현 수준으로 낮춰\n잡지 않는다\"* 로 목표 하향도 금지했다.\n\n**③ 등록 스냅샷의 자체 검증 — 다섯 수치 전부 실물과 일치.** 가치 5 · PRD 18(도구 17 + 공통 1) ·\nAC 64 · 테스트 문서 18 · 미구현 3종(AC 12). 스냅샷이 실물과 어긋나는 경우가 있어 각 수치를\n직접 세었고 어긋난 것은 없었다.\n\n**④ 최초 관측의 신선도 — 스냅샷이 낡지 않았다.** 모델 등록은 2026-09-03T11:48:28Z이고 대상\n레포 HEAD `4c77989`는 **2026-08-31T06:49Z**로 등록보다 약 3일 **앞선다**. 등록 직후 머지가\n끼어들어 첫 sweep부터 낡아 있는 경우가 아니다 — 관측은 현재 상태 그대로다.\n\n**⑤ 판정 기준 2~4는 이번 관측에서 위반을 발견하지 못했다(주의: 전수 대조는 아니다).**\n14종 도구의 이름·인자 스키마 대조는 `toolslist.go` 선언과 PRD 파일명이 1:1로 대응함을\n확인하는 수준까지 했고, 오류 메시지·자격증명 취급 같은 계약 세부의 전수 대조는 이번 감지\n범위에서 하지 않았다. 첫 task의 계획 단계가 다룰 항목으로 남긴다.\n\n**⑥ 형제 모델과 이중 계상하지 않는다.** 같은 `session-*` 3종이 자매 모델\n`tbm_homelab-k3s-mcp-ac-e2e`에도 나타나지만 판정 대상이 다르다 — **여기는 \"구현이 없다\",\n그쪽은 \"AC에 대응하는 e2e 파일이 없다\"**. definition이 이 분리를 명시했다. 또 이 레포에는\n사용자 여정·목업 문서가 없어 `mockup-render`·`journey-mockup` 축은 아예 등록되지 않았다.",
+      "summarizedAt": "2026-09-03T12:00:00Z"
+    },
+    "assessment": {
+      "actionRequired": true,
+      "reason": "**작업 필요 — 최초 관측이고, 미구현 AC 12건이 definition이 직접 drift로 호명한 격차다.**\n\n**무엇이 격차인가**: 도구 PRD 17종 중 `session_list`·`session_read`·`session_write` 3종이\n구현 0줄이고(두 표기 모두 0 hit), 그 3종에 걸린 AC가 3+4+5 = **12건**이다. AC 64건 중 12건.\n\n**\"전부 미충족\"이라는 숫자가 아니라 닫을 수 있는지로 판정했다 — 열려 있다.**\n- 문서 쪽은 완비돼 있다: 세 도구 모두 PRD(`prd-session-*.md`)와 대응 테스트 문서가 이미 있고\n  AC가 번호로 확정돼 있다. 즉 **구현할 대상이 명세로 존재한다** — 먼저 문서를 쓰는 선행 작업이\n  필요 없다.\n- 기반도 있다: 나머지 14종이 같은 `internal/mcp` 도구 등록 구조(`toolslist.go` + `mcp.go`\n  디스패치)로 프로덕션 운영 중이라, 새 도구는 그 자리에 얹으면 된다.\n- 외부 선결 조건은 하나 있다 — 세 도구는 `session-platform` 제어면을 호출한다\n  (`prd-session-list.md`가 \"session-platform 제어면이 보유한 세션 목록을 조회하는 도구\"라고\n  적었다). 그 제어면의 가용성·계약 확인이 첫 슬라이스의 계획 대상이다.\n\n**소유자가 없다**: 이 모델은 등록 6분 만의 첫 관측으로 task가 **0건**이다.\n\n**자동 해소 가능성 0**: 미구현 기능이 저절로 생기지 않는다. 문서(to-be)가 움직일 이유도 없다\n— PRD·AC는 이미 완비돼 있고 이번 관측 구간에 변경이 없었다.\n\n**planner 유의**\n- **슬라이스를 3종 한꺼번에 잡지 말 것을 권한다.** `session_read`·`session_write`는\n  `session_list`가 돌려주는 세션 id를 진입점으로 삼는다(`prd-session-list.md`가 명시).\n  순서 의존이 문서에 적혀 있으므로 `session_list` → `read`/`write` 로 끊는 것이 자연스럽다.\n- **선결 확인**: 세 도구의 상류인 `session-platform` 제어면 API 계약을 먼저 확정할 것.\n  같은 조직의 `dlddu/session-platform`이 그 제어면이며 현재 활발히 변경 중이다\n  (오늘만 PR #23·#46·#47·#48·#50·#51·#52 머지).\n- **범위 밖**: AC↔e2e 1:1 파일 매칭은 자매 모델 `tbm_homelab-k3s-mcp-ac-e2e`,\n  E2E 모킹 정책은 `tbm_homelab-k3s-mcp-e2e-mock-policy`(같은 fire에서 첫 관측\n  `rct_20260903-0001`을 `action_required`로 열었다)가 담당한다. 구현이 들어오면 그 두 축의\n  후속이 재감지로 이어진다.\n- **판정 기준 2·3(계약 불일치·문서 없는 구현)은 이번 감지에서 전수 대조하지 않았다.**\n  14종 도구의 오류 메시지·자격증명 취급 같은 계약 세부 대조는 계획 단계에서 한 번 훑을 것.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-03T12:00:00Z"
+    },
+    "createdAt": "2026-09-03T12:00:00Z",
+    "updatedAt": "2026-09-03T12:00:00Z"
+  }
+]
