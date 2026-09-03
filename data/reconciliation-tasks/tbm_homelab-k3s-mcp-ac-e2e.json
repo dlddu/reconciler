@@ -2260,7 +2260,7 @@
   {
     "id": "rct_20260903-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "action_required",
+    "status": "planning",
     "trigger": {
       "detectedAt": "2026-09-03T15:42:54Z",
       "changedSides": [
@@ -2277,7 +2277,7 @@
       }
     },
     "createdAt": "2026-09-03T15:42:54Z",
-    "updatedAt": "2026-09-03T15:42:54Z",
+    "updatedAt": "2026-09-03T15:55:00Z",
     "stateSummary": {
       "asIs": "## as-is — `tests/` e2e 파일 (`5c981c61`, main `4e00d36`, 2026-09-03T13:02:30Z 머지)\n\n`tests/integration/` 최상위 매칭 단위 파일 **34개**(+ 매칭 단위 밖 `_helpers.py`·`_auth_variant.py`·`_opensearch.py`·`_aws_config.py`·`run_all.py`·`check_ac_mapping.py`·`requirements.txt`).\n\n레포의 자체 게이트 `tests/integration/check_ac_mapping.py`를 **트리거의 부모(`4c77989`)와 트리거(`4e00d36`) 양쪽에서** 실행해 실제 상태에서 재도출했다(둘 다 rc=0):\n\n| | 부모 `4c77989` | 트리거 `4e00d36` |\n|---|---|---|\n| AC 전집 | 64 | 64 |\n| 예외 등재 | 1 | 1 |\n| 1:1 대상 | 63 | 63 |\n| **매칭 파일(전용)** | **22** | **33** |\n| **분할 대기(규칙 2 위반)** | **4** | **1** |\n| **공백 AC** | **41** | **30** |\n| 공백 내역 | 겸용 27 · 케이스 없음 14 | 겸용 16 · 케이스 없음 14 |\n\n- 배차: `run_all.py` primary **26** · auth-variant **9**(실측), primary 앞머리 2개가 `실행 순서: 0`.\n- 남은 규칙 2 위반은 **`workload.py` 단 하나**로, 모듈 docstring이 16개 AC를 겸용 선언한다\n  (`namespace-list/AC1` · `platform-auth-safety/AC3` · `pod-describe/AC1~AC3` · `workload-list/AC1·AC2` ·\n  `workload-logs/AC1~AC4` · `workload-restart/AC1·AC2` · `workload-scale/AC1~AC3`).\n- 전용 파일이 아예 없는 AC는 **14건**: `platform-auth-safety/AC2`·`AC8` + `session-list/AC1~AC3` ·\n  `session-read/AC1~AC4` · `session-write/AC1~AC5`. (`platform-auth-safety/AC4`는 규칙 4 예외 등재라 1:1 계수 밖.)\n- CI 배선 확인: `check_ac_mapping.py`는 `.github/workflows/ci.yml:26` lint 잡에서 돌고,\n  러너는 그룹별 2스텝(`ci.yml:242`·`:253`)이라 파일이 늘어도 `ci.yml` 수정이 필요 없다.",
       "toBe": "## to-be — AC SSOT + 매핑 레지스트리 (`c69d4941`)\n\n`docs/prd-*.md` 18개 + `docs/doc-tracker.md`의 blob 목록 해시.\n\n- **AC 전집 64건 불변**: `git diff --name-only 4c77989 4e00d36 -- 'docs/prd-*.md'` = **0개 파일**.\n  `grep -hE '^### AC[0-9]+:' docs/prd-*.md | wc -l` = **64**. 트리거의 `docs/` diff에 잡히는\n  `^[+-]### AC` 2줄은 PRD의 AC 헤딩이 아니라 `doc-tracker.md`의 「AC 레지스트리」 **섹션 헤딩**이다.\n- 이번 to-be 변화는 전부 `doc-tracker.md`의 레지스트리 갱신(46+/22-)이다: 집계 블록 6줄,\n  레지스트리 11행을 `✅ 전용 파일 …`로, 섹션 헤딩 숫자, 「공백 내역」 문단, 「비-AC 파일」 절 0→1,\n  backlog의 삭제 파일명 정정, 변경 이력 1행.\n\n**모델 정의가 요구하는 목표**: (AC 수 − 예외 수) = (AC 매칭 파일 수) → **63 = 63**.\n현재 33이므로 **30건 미달**이다.\n\n**레지스트리의 숫자 주장을 전수 대조했다**(같은 사실이 여러 곳에 적히는 파손 패턴 점검) — 전부 일치:\n`<!-- ac-e2e-집계 -->` 64/1/63/33/1/30 · 섹션 헤딩 `(64) — ✅33 · ⬜16 · ⬜14 · 🚫1`(합 64) ·\n「공백 30건의 내역: 16 / 14」 · 「공백 backlog (14)」(실제 항목 2+12=14) · 「비-AC 파일」 1건(`smoke.py`) ·\n「e2e 예외 (1)」(`platform-auth-safety/AC4`) · 완료 기록의 `22 → 33`·`4 → 1`·`41 → 30`·`겸용 27 → 16` ·\n`auth-variant 배차 2 → 9`(실측 9) · 「26개 파일」(실측 primary 26) · 「뒤따르는 25개 AC 파일」(26 − 비-AC 1).\n도구 표면 **14개** 주장은 양쪽에서 검증했다 — `internal/mcp/toolslist.go`의 `toolsListJSON`을 파싱하면\n정확히 14개이고 `tests/integration/_helpers.py::EXPECTED_TOOLS` 14개와 **집합이 완전히 같다**.\n삭제된 `no_config.py`·`auth.py`를 가리키는 `docs/` 참조 3건은 전부 **이력·완료 기록 서술**\n(`doc-tracker.md:314`의 ✅완료(2026-08-07) 기록, `:348`·`:349`의 2026-08-07 변경 이력 행)이며\n살아 있는 경로 주장은 0건이다.",
