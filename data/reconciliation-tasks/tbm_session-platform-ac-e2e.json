@@ -19,7 +19,7 @@
       }
     },
     "createdAt": "2026-08-08T01:33:51Z",
-    "updatedAt": "2026-09-03T11:16:09Z",
+    "updatedAt": "2026-09-03T11:22:04Z",
     "stateSummary": {
       "asIs": "## as-is — e2e 매칭 단위 파일 (dlddu/session-platform@main `6a48f60`, 관측 2026-08-08T01:3xZ)\n\n버전: `api:3d1e79fe… web:52390ac1…` (최초 관측, previous=null)\n\n**매칭 단위 파일 8개** — Go API e2e 3 + Playwright 5. 셋 다 빌드 태그 `//go:build e2e` 확인:\n\n| 파일 | 스위트 | 헤더가 실제로 다루는 AC (주석 서술 기준) |\n| --- | --- | --- |\n| `control-plane/test/e2e_test.go` (9 케이스) | go | A1/A2, C2/C3, C4 + healthz·404 (비-AC) |\n| `control-plane/test/e2e_shell_test.go` (4 케이스) | go | D1, D2/D3 |\n| `control-plane/test/e2e_deferred_test.go` (8 케이스) | go | A1/A2, A3, B1, B2/B3, C1, C2/C3, D4 (4건 skip 시드) |\n| `web/e2e/j1-session-creation.spec.ts` | playwright | A1/A2, C2/C3, D2/D3 |\n| `web/e2e/j3-multi-session-switch.spec.ts` | playwright | C4 |\n| `web/e2e/j5-shell-interaction.spec.ts` | playwright | D2/D3 |\n| `web/e2e/deferred.spec.ts` | playwright | B1, B2, C1 (전부 `test.skip` 시드) |\n| `web/e2e/smoke.spec.ts` | playwright | 비-AC (SPA 부팅·baseURL 배선) |\n\n매칭 단위 **아님**(정의대로 제외 확인): `control-plane/test/integration_test.go`·\n`client_orchestrator_test.go` — 둘 다 `//go:build integration`.\n\n**결정적 관측: `검증 AC:` 선언이 레포 전체에 0건이다.** `grep -rn '검증 AC'` 히트는 전부\n`docs/test/*.md`(시나리오 문서)의 `- **검증 AC**: AC-…` 줄이며, 매칭 단위 파일(.go/.ts)의\n헤더 주석에는 하나도 없다. 즉 파일→AC 매핑을 기계적으로 확인할 지점이 아직 존재하지 않고,\n현재 매핑은 각 파일의 산문 주석과 `docs/test/e2e.md`의 표에만 있다.\n\n검증 축은 살아 있다: `scripts/e2e/up.sh`(`kubectl apply -k deploy/`) + kind 하네스,\n`.github/workflows/e2e.yml`가 go e2e와 Playwright를 실제로 돌린다.\n",
       "toBe": "## to-be — AC 집합(docs/prd) + 매핑·예외 등재(docs/test/e2e.md)\n\n버전: `ac:9d6d4878… reg:dd590235…` (최초 관측, previous=null)\n\n**AC 21개**, `### AC-…` 헤딩 실측(모델 정의의 21개와 일치):\n- `architecture.md` A1·A2·A3 (3)\n- `lifecycle.md` B1·B2·B3 (3)\n- `state-api.md` C1·C2·C3·C4 (4)\n- `shell-workload.md` D1·D2·D3·D4·D5 (5)\n- `claude-code-workload.md` E1·E2·E3·E4·E5·E6 (6)\n\n**등재 SSOT `docs/test/e2e.md`(114줄) 실측**:\n- 「현재 커버되는 시나리오」 표 — **테스트 함수/시나리오 단위**, 파일 단위 아님. 언급 AC:\n  A1·A2·A3·B2·B3·C1·C2·C3·C4·D1·D2·D3·D4 (+ V3/V4/V5 가치, 에러 매핑).\n- 「Deferred 시드 ↔ 문서 시나리오 매핑」 표 — 시드(테스트 함수) 단위. B1·B2·C1·C2·C3 잔여.\n- **파일 단위 매핑 표 없음 · AC 예외 목록 없음 · 집계(AC 수/파일 수/공백) 없음.**\n- 두 표 어디에도 **D5, E1~E6 (7개)** 는 등장하지 않는다.\n\n따라서 to-be가 요구하는 등재물 3종(파일 단위 매핑 표 · 예외 목록 · 집계) 중 **0종**이\n현재 문서에 존재한다.\n",
@@ -107,6 +107,67 @@
           "reviewer": "user",
           "reviewedAt": "2026-09-03T11:16:09Z",
           "comment": "대화에서 승인. 승인 전에 계획 이후 달라진 점(main 2회 머지로 AC 21→27, 잔여 공백 6→12, PR 규모 31파일→38파일)과 CI 전 잡 green(12 성공 + main 전용 1 skip)·mergeable clean 상태를 설명하고 받은 승인이다. 슬라이스 범위(A/B/C/D 15개 AC) 자체는 계획과 동일."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-03T11:17:00Z",
+          "finishedAt": "2026-09-03T11:22:04Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "skipped",
+              "log": "planner 준비 단계에서 PR #23으로 스테이징 완료. 이후 rct_20260830-0001(브랜치 되살리기)·rct_20260903-0001(AC 21→27 등재 갱신)이 같은 브랜치를 main 변화에 맞춰 갱신했다. executor가 새로 실행할 로컬 작업 없음."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "log": "planner 준비 단계에서 PR #23으로 스테이징 완료. 이후 rct_20260830-0001(브랜치 되살리기)·rct_20260903-0001(AC 21→27 등재 갱신)이 같은 브랜치를 main 변화에 맞춰 갱신했다. executor가 새로 실행할 로컬 작업 없음."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "log": "planner 준비 단계에서 PR #23으로 스테이징 완료. 이후 rct_20260830-0001(브랜치 되살리기)·rct_20260903-0001(AC 21→27 등재 갱신)이 같은 브랜치를 main 변화에 맞춰 갱신했다. executor가 새로 실행할 로컬 작업 없음."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "log": "planner 준비 단계에서 PR #23으로 스테이징 완료. 이후 rct_20260830-0001(브랜치 되살리기)·rct_20260903-0001(AC 21→27 등재 갱신)이 같은 브랜치를 main 변화에 맞춰 갱신했다. executor가 새로 실행할 로컬 작업 없음."
+            },
+            {
+              "stepSeq": 5,
+              "status": "skipped",
+              "log": "planner 준비 단계에서 PR #23으로 스테이징 완료. 이후 rct_20260830-0001(브랜치 되살리기)·rct_20260903-0001(AC 21→27 등재 갱신)이 같은 브랜치를 main 변화에 맞춰 갱신했다. executor가 새로 실행할 로컬 작업 없음."
+            },
+            {
+              "stepSeq": 6,
+              "status": "skipped",
+              "log": "planner 준비 단계에서 PR #23으로 스테이징 완료. 이후 rct_20260830-0001(브랜치 되살리기)·rct_20260903-0001(AC 21→27 등재 갱신)이 같은 브랜치를 main 변화에 맞춰 갱신했다. executor가 새로 실행할 로컬 작업 없음."
+            },
+            {
+              "stepSeq": 7,
+              "status": "skipped",
+              "log": "planner 준비 단계에서 PR #23으로 스테이징 완료. 이후 rct_20260830-0001(브랜치 되살리기)·rct_20260903-0001(AC 21→27 등재 갱신)이 같은 브랜치를 main 변화에 맞춰 갱신했다. executor가 새로 실행할 로컬 작업 없음."
+            },
+            {
+              "stepSeq": 8,
+              "status": "skipped",
+              "log": "planner 준비 단계에서 PR #23으로 스테이징 완료. 이후 rct_20260830-0001(브랜치 되살리기)·rct_20260903-0001(AC 21→27 등재 갱신)이 같은 브랜치를 main 변화에 맞춰 갱신했다. executor가 새로 실행할 로컬 작업 없음."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T11:17:00Z",
+              "finishedAt": "2026-09-03T11:22:04Z",
+              "log": "지침 §1 순서대로 확인 후 머지. PR head feaf87ed 체크런 13개: 'AC ↔ e2e 1:1 mapping' success, 'control-plane (lint + unit)'(go vet -tags=e2e 포함) success, 'e2e (kind + API + browser)' success(04:08:40Z), 나머지 success, 'pin deployment images (main only)'만 skip(설계상 main 전용). mergeable_state=clean 확인 후 squash 머지 — 레포가 merge commit·rebase를 불허(allow_merge_commit=false, allow_squash_merge=true)해 지침의 '스쿼시 아님'을 따를 수 없었고, 브랜치에 main 머지 커밋 2개가 섞여 있어 스쿼시가 오히려 main 이력을 깨끗하게 남긴다. 머지 커밋 main@2e5a0a78. 머지 후 main 체크런 16개 전부 success."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T11:22:04Z",
+              "finishedAt": "2026-09-03T11:22:04Z",
+              "log": "main에서 check-ac-mapping.sh 실행 + 수동 교차 카운트. 상세는 verification 참조."
+            }
+          ]
         }
       }
     ]
