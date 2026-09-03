@@ -798,6 +798,47 @@
       "assessedAt": "2026-09-03T11:41:00Z"
     },
     "createdAt": "2026-09-03T11:41:00Z",
-    "updatedAt": "2026-09-03T11:53:09Z"
+    "updatedAt": "2026-09-03T11:58:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**규칙 6(집계 일치) 위반 1건을, 숫자를 갱신하는 대신 중복 사본 자체를 걷어내는 방식으로 닫는다.**\n\n`docs/test/e2e.md` 142~145행 「AC 검증 범위」 노트가 `ac-summary` 블록(288~293행)과 **같은 사실을 두 번째로 말하는 사본**이고, 그 사본만 낡아 세 값 중 둘이 틀렸다 — 총계 `AC 21개`(실제 27) · 공백 목록에서 `AC-F1~F6` 6건 누락(실제 공백 12건). `check-ac-mapping.sh`는 `ac-summary` 주석 블록만 파싱하므로(103·143행) 이 산문은 얼마나 틀리든 CI가 영원히 초록이다 — HEAD에서 실측 확인했다(게이트 2종 rc=0, 산문은 거짓).\n\n**왜 숫자 갱신(21→27, 공백 6→12)이 아니라 제거인가.** 숫자만 고치면 같은 지뢰를 다시 심는다 — 게이트 밖 두 번째 사본이 그대로 남아 다음 AC 증감 때 똑같이 낡는다(실제로 #46이 AC를 21→27로 늘린 뒤 #23이 남긴 이 사본만 뒤처졌다). 이 레포의 관례는 **숫자는 체커가 대조하는 마커 블록 안에만 두고 산문은 설명만 한다**는 것이고(`ac-summary` · `ac-mapping` · `ac-exceptions` · `fidelity:summary` 전부 그 형태, 139행이 \"표만 고치고 집계를 잊으면 실패한다\"고 명시), 이 노트만 그 관례 밖에 있다. 노트를 **정본을 가리키는 포인터**로 되돌리면 위반이 지금 해소되고 재발이 구조적으로 불가능해진다. 편집 범위는 같은 4줄이라 비용도 같다.\n\n**완료 기준(이 시도의 범위)**: `docs/test/e2e.md`의 「AC 검증 범위」 노트에서 AC 집계 수치 사본이 사라지고, 노트가 `ac-summary` 블록과 「AC ↔ e2e 파일 매핑」을 정본으로 가리키며, 재복사 금지 사유가 적혀 있을 것. 게이트 2종(`scripts/e2e/check-ac-mapping.sh`, `scripts/check-fidelity-allowlist.py`)이 rc=0을 유지하고 집계 수치(27/1/14/12)는 한 글자도 바뀌지 않을 것. 문서 1개 파일, 그 노트 외 편집 0.\n\n**범위 밖(건드리지 않는다)**: ① 잔여 공백 12건(AC-E1~E6·F1~F6)을 닫는 일 — E 계열은 `tbm_session-platform-e2e-mock-policy`의 `rct_20260820-0001`(PR #42, 실 SUT 전환)이, F 계열은 `approval-gated` 구현이 각각 선결이고 둘 다 살아 있는 형제가 쥐고 있다. ② `ac-summary`·`ac-mapping`·`ac-exceptions` 블록 — 이들은 정답이다. ③ `check-ac-mapping.sh` 확장(산문까지 파싱) — 임의 산문 파싱은 취약하고, 사본을 없애면 같은 보장을 코드 0줄로 얻는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`dlddu/session-platform` main(현재 `f7ed61c`)에서 브랜치 `reconcile/rct_20260903-0002-ac-summary-prose`를 딴다.",
+              "expectedOutcome": "main 기준 새 브랜치. 형제 PR #42/#49/#52 브랜치를 밟지 않는다(브랜치명에 모델 슬러그를 붙여 rct id 충돌도 피한다)."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/test/e2e.md` 142~145행 「AC 검증 범위」 블록쿼트를 교체한다. AC 집계 수치 사본(`AC 21개 중 14개`·`AC-B1은 예외 등재`·`AC-E1~E6…은 공백`)을 걷어내고, 정본이 「AC ↔ e2e 파일 매핑」 + 「집계」의 `ac-summary` 블록임을 가리키게 한 뒤, `check-ac-mapping.sh`가 그 블록만 파싱하므로 숫자를 여기로 옮겨 적지 말라는 사유를 남긴다. 마지막 문장(idle 분기 서술)은 §「남은 미검증 분기」(355~364행)와 일치하는 참이므로 그대로 둔다.",
+              "expectedOutcome": "`git diff --stat` 이 `docs/test/e2e.md` 1개 파일만, 그 블록쿼트 범위만 보여준다. `grep -n 'AC 21개' docs/test/e2e.md` → 0건."
+            },
+            {
+              "seq": 3,
+              "action": "집계 블록 불변 확인: `git diff` 에 288~293행(`ac-summary`)·234~251행(`ac-mapping`)·257~261행(`ac-exceptions`)이 등장하지 않음을 확인한다.",
+              "expectedOutcome": "diff hunk가 「집계」 절 근처에 하나도 없다. 27/1/14/12 수치 무변경."
+            },
+            {
+              "seq": 4,
+              "action": "레포 자체 게이트 2종을 로컬에서 돌린다: `bash scripts/e2e/check-ac-mapping.sh` 와 `python3 scripts/check-fidelity-allowlist.py`. (둘 다 정적이라 클러스터·node 불필요.)",
+              "expectedOutcome": "둘 다 rc=0. 첫째는 `AC ↔ e2e 1:1 OK — AC 27개 = 매칭 파일 14 + 예외 1 + 공백 12 (매칭 단위 16개, 비-AC 2개)`, 둘째는 `OK: e2e 충실도 허용목록 ↔ 코드 seam 1:1 … 미해소 위반 4(상한 4)`."
+            },
+            {
+              "seq": 5,
+              "action": "형제 PR #42와의 병합 안전성을 실측한다: 작업 브랜치에 `origin pull/42/head`를 시험 머지(`git merge --no-commit --no-ff`)해 `docs/test/e2e.md` 충돌이 없는지 보고, 결과를 버린다(`git merge --abort`).",
+              "expectedOutcome": "충돌 0건. #42는 같은 파일을 +53/−29 고치지만 이 노트 4줄은 손대지 않는다(그 브랜치 161행에 원문 그대로 존재) — 3-way 머지가 자동 해소한다."
+            },
+            {
+              "seq": 6,
+              "action": "브랜치를 push하고 GitHub API로 PR을 연다(머지하지 않는다). 본문에 task id·규칙 6 위반 근거·게이트가 못 잡는 이유·수치 갱신이 아니라 사본 제거를 택한 이유·검증 방법·범위 밖 항목을 적는다.",
+              "expectedOutcome": "PR URL 확보. CI의 `AC ↔ e2e 1:1 mapping` 잡을 포함한 정적 검사가 green."
+            }
+          ],
+          "plannedAt": "2026-09-03T11:58:00Z"
+        }
+      }
+    ]
   }
 ]
