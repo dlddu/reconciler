@@ -207,9 +207,9 @@
   },
   {
     "toBeModelId": "tbm_session-platform-ac-e2e",
-    "status": "planned",
+    "status": "executing",
     "createdAt": "2026-08-30T11:37:01Z",
-    "updatedAt": "2026-08-30T12:20:30Z",
+    "updatedAt": "2026-09-03T11:10:00Z",
     "trigger": {
       "detectedAt": "2026-08-30T11:37:01Z",
       "changedSides": [
@@ -305,6 +305,11 @@
           "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/23",
           "preparedAt": "2026-08-30T12:13:36Z",
           "notes": "새 PR을 열지 않았다. 이 task의 준비물은 **열린 PR #23을 되살리는 것**이고, 그 PR은 rct_20260808-0001의 산출물이라 브랜치를 그대로 갱신했다.\n\n**force-push 하지 않았다.** rebase 결과를 강제로 덮는 대신 `origin/main`을 브랜치로 **머지**해 원격 tip `76859a52`에서 fast-forward 되게 만들었다(`b2c6963` 머지 + `265119f` 갱신). 검토 중인 브랜치의 히스토리를 다시 쓰지 않으므로 기존 리뷰 맥락이 보존된다. (먼저 rebase로 해소를 만든 뒤, 그 트리를 `commit-tree`로 머지 부모에 얹었다 — 푸시한 트리는 게이트를 돌린 트리와 **바이트 동일**함을 `rev-parse ^{tree}` 대조로 확인했다.)\n\n되돌림 안전망: force-push 이전 tip을 `/home/silas/planner/.reconciler-work/artifacts/pr23-76859a52-pre-rebase.{bundle,patch}` 에 보존했다(`git bundle verify` 통과). 이번엔 fast-forward라 필요 없었지만 남겨 둔다.\n\n**바뀐 것** (PR 38파일 +1774/-1051): ① main 머지 — 충돌 6건 해소(Makefile·README.md·docs/criu-verification.md·docs/test/e2e.md 내용 + e2e_test.go·e2e_deferred_test.go modify/delete). 두 Go 파일의 main 쪽 수정은 신규 테스트 함수 0개·주석/skip 문구뿐임을 확인하고 삭제 채택. ② 신규 spec 3개(j6-agent-prompt-loop·session-deletion·manual-archive)를 web/e2e/journeys/ 로 이동. ③ #36이 지운 E2E_TEST_ENDPOINTS/test-only 문구를 분할 파일 7곳에서 제품 엔드포인트 표현으로 이식. ④ docs/test/e2e.md에 충실도 허용목록(mock-policy 모델 SSOT)과 AC 등재 5종을 공존시키고, 회계 행 경로를 이동 후 경로로 갱신(17→16행, 비-seam 6→5; 미해소 위반 4건과 상한 4는 불변). ⑤ 삭제된 테스트 이름 참조 정리(criu-verification.md·e2e.yml·kustomization.yaml).\n\n**로컬 게이트 결과**: check-ac-mapping.sh rc=0 (`AC 21개 = 매칭 파일 14 + 예외 1 + 공백 6`) · check-fidelity-allowlist.py rc=0 (`회계 행 16 == 스캔 쌍 16`) · go vet ./... · go vet -tags=e2e ./... · gofmt -l 무출력 · control-plane go test ./... · web npm run lint(tsc --noEmit) · playwright test --list = **23 tests in 8 files**(clean origin/main과 동일 — 이동으로 잃은 커버리지 0). 두 정적 게이트는 음성 시험까지 했다: `검증 AC:` 한 줄 제거 → 그 파일을 지목하며 rc=1, 회계 행 경로 1개 변조 → R9/R7이 그 쌍을 지목하며 rc=1. 되돌린 뒤 cmp로 바이트 동일 확인.\ndata-plane go test는 이 박스에서 `entrypoint.sh: jq: not found`로 1건 실패하는데 clean origin/main 워크트리에서도 동일해 환경 요인이다(러너에는 jq가 있다).\n\nPR #23 본문 상단에 2026-08-30 갱신 절을 넣어 위 내용·완료 기준 산식·AC-E 재판정 근거·PR #42와의 순서 권고를 적었다. 머지 후 `mergeable:true`(충돌 해소), CI 트리거됨.\n\n토큰: ci.yml이 diff에 있어 contents+pull_requests+**workflows** write로 발급해야 통과한다."
+        },
+        "review": {
+          "required": false,
+          "status": "not_required",
+          "reason": "이 시도의 잔여 실행분은 **관측뿐**이라 사람 검토 게이트가 붙을 대상이 없다. 계획의 실질 변경(PR #23 브랜치에 main 머지 + 3개 spec journeys/ 이동 + 등재 병합)은 준비 단계(3-2)에서 이미 원격 브랜치에 fast-forward로 올라갔고, executionGuide가 executor에게 남긴 일은 1~3단계 전부가 '확인'이다 — 신선도 대조, 정적 게이트 2종 로컬 재현, 완료 기준 5항목 대조.\n\n**guide 1단계(신선도)의 분기를 실제로 판정했고, 쓰기 분기에 걸리지 않았다.** 준비 시점 기준 `origin/main`은 `5eaa735`였고 현재는 `81f7ef8`이지만, 브랜치는 그 사이 `da72899`까지 이미 머지돼 있다(merge-base=`da72899`). 브랜치에 아직 없는 main 커밋은 `24c1545`(#50 여정 mockup 층위)·`81f7ef8`(이미지 핀) 2개뿐이고, `git diff --name-only da72899 origin/main`이 건드리는 파일은 `docs/journeys/**`·`docs/mockups/README.md`·`docs/index.html`·`docs/doc-structure-state.md`·`k8s/deployment.yaml`·`tools/**`·`.github/workflows/docs-journey-mockup.yml`·`.gitignore`뿐이다 — guide가 재머지 조건으로 지정한 세 경로(`web/e2e/**`·`docs/prd/**`·`docs/test/e2e.md`)와 매칭 단위(`control-plane/test/`)는 **0건**이다. 따라서 guide의 '안 건드렸으면 그대로 2단계로' 분기이며, 브랜치 push가 발생하지 않는다.\n\n검토 필요 신호 대조: (1) 프로덕션 워크로드·데이터 영향 0 — main·클러스터에 아무것도 반영하지 않고, 대상은 미머지 PR 브랜치다. (2) 불가역성 0 — 쓰기가 없어 롤백 대상 자체가 없다(준비분 안전망은 `pr23-76859a52-pre-rebase.bundle`). (3) riskLevel=medium은 **PR #23 머지**를 전제로 매긴 값인데, 머지는 이 계획이 범위 밖으로 명시했고 `rct_20260808-0001`(awaiting_review)이 사람 승인과 함께 쥐고 있다. 이 task는 그 앞에서 멈춘다.\n\n**병행 워커 주의(기록)**: 같은 모델의 `rct_20260903-0001`이 `executing`으로 같은 PR #23을 관측 중이다. 이 task는 쓰기가 없으므로 경합하지 않는다 — 다만 브랜치 tip(`feaf87e`)은 그쪽 준비가 얹은 AC 27 기준 갱신을 포함하므로, 이 계획이 적은 기대 수치(AC 21 = 매칭 14 + 예외 1 + 공백 6)는 관측 시점에 이미 후속 task가 갱신한 값으로 나타날 수 있다. 게이트 rc=0이 실질 완료 기준이고 수치는 계획 시점 스냅샷이다."
         }
       }
     ]
