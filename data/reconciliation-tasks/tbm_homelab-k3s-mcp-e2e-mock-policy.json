@@ -219,5 +219,39 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-03T15:45:43Z"
     }
+  },
+  {
+    "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
+    "status": "no_action_needed",
+    "trigger": {
+      "detectedAt": "2026-09-03T23:12:00Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "sites=22 files=20\n9e1ba980a9c3276bea93cc18fe2e955c2ed1960a08a6e39fe661d1f2f8d4d00c",
+        "currentVersion": "sites=33 files=20\nf18c92ba5d08fa261661eb18df0a3493b2eb2f46da29a7e94fcaad09c8cb5ba3"
+      },
+      "toBe": {
+        "previousVersion": "absent",
+        "currentVersion": "e933220f9367d357f30eb0343f53934d7f7b675a"
+      }
+    },
+    "createdAt": "2026-09-03T23:12:00Z",
+    "updatedAt": "2026-09-03T23:12:00Z",
+    "stateSummary": {
+      "asIs": "## as-is — 모킹 지점 지문 `sites=22 files=20` → `sites=33 files=20` (main `ed8d0c5`, PR #47)\n\n부모(`4e00d36`)와 트리거(`ed8d0c5`)에서 같은 스크립트를 돌려 (파일, 토큰) 쌍 목록을 직접\n차집합했다.\n\n**순증 11쌍 · 순감 0쌍.** 전부 이번 트리거 자신이 만든 것이다:\n- `e2e-mock` **6쌍** — 정책 문서 경로(`docs/e2e-mocking-policy.md`)를 가리키는 주석이\n  `.github/workflows/ci.yml:28` + kind 픽스처 5개에 붙었다. 실재하는 모킹이 아니라 **등재를\n  가리키는 주석**이며, 정책 문서 자신이 이 오탐 가능성을 ℹ️ 항목으로 미리 적어 두었다.\n- `mock-exception` **5쌍** — 표기 규약 주석이 정의 지점 5곳에 붙었다.\n\n`files`는 20에서 변하지 않았다(11개 새 쌍이 전부 이미 세어진 파일 안에서 생겼다).\n\n### 실재 모킹 지점을 **정의 기준으로** 다시 셌다 (자기신고가 아니라 실측)\n\n지문은 `(파일, 토큰)` 쌍이라 판정 단위(모킹의 **종류**)보다 거칠다. 그래서 각 종류가\n**실제로 정의되는 자리**를 개별 grep으로 확인했다:\n\n| ID | 정의 지점 (실측) | 나머지 히트의 정체 |\n| --- | --- | --- |\n| `MCP_AUTH_DISABLED` | `tests/k8s/kind/kustomization.yaml:19` (`- MCP_AUTH_DISABLED=1`) **1곳뿐** | 나머지 11건은 e2e 모듈 docstring의 산문(\"auth is on … `MCP_AUTH_DISABLED` unset\")과 `auth-fixture.yaml`의 \"일부러 unset\" 주석 |\n| `DISABLE_SECURITY_PLUGIN` | `tests/k8s/kind/opensearch.yaml:42` **1곳뿐** | — |\n| `github-mock` | `tests/k8s/kind/github-mock.yaml` | `ci.yml`은 배포·재배선(참조) |\n| `grafana-mock` | `tests/k8s/kind/grafana-mock.yaml` | `ci.yml` 배포·재배선 + `grafana_token_ac4.py` 어서션(참조) |\n| `dear-baby-fixture` | `tests/k8s/kind/dear-baby-fixture.yaml` | `ci.yml` + `dear_baby_reset_user_ac1/ac2.py`(참조) |\n\n**새로 등장한 모킹 종류는 0개다.** 실재 종류는 여전히 5종.",
+      "toBe": "## to-be — `absent` → `e933220f9367d357f30eb0343f53934d7f7b675a` (정책 SSOT가 처음으로 존재한다)\n\n`docs/e2e-mocking-policy.md`(+200줄)가 main에 착지했다. 이 모델 등록 시점부터 `absent`였던\n판정 축의 **좌변이 처음으로 채워졌다.**\n\n문서를 직접 읽어 원장을 확인했다 — 5행, `<!-- mock-exception-원장 -->` 마커 블록:\n\n| ID | 카테고리 | 모킹 지점 | 대체 검증 |\n| --- | --- | --- | --- |\n| `github-mock` | `UPS` | `tests/k8s/kind/github-mock.yaml` | — |\n| `grafana-mock` | `UPS` | `tests/k8s/kind/grafana-mock.yaml` | — |\n| `dear-baby-fixture` | `IMG` | `tests/k8s/kind/dear-baby-fixture.yaml` | — |\n| `MCP_AUTH_DISABLED` | `GATE` | `tests/k8s/kind/kustomization.yaml` | `tests/k8s/kind/auth-fixture.yaml` |\n| `DISABLE_SECURITY_PLUGIN` | `GATE` | `tests/k8s/kind/opensearch.yaml` | `tests/k8s/kind/http-trace.yaml` |\n\n등재 상한 마커 = 5. 그리고 집행 수단도 함께 섰다 — `scripts/check_mock_policy.py`(R1~R6)가\n`.github/workflows/ci.yml`의 `lint` 잡(`E2E mocking policy` 스텝)에서 돈다.\n\n**숫자가 두 곳에서 말해지는가(사본 낡음 검사)**: 문서에서 개수를 말하는 곳은 **원장 표와 상한\n마커 두 곳뿐**이고 R6이 양방향으로 강제한다. 산문에 별도 집계 숫자는 없다 — `grep`으로\n확인했다. 사본이 조용히 낡을 자리가 없다.",
+      "gap": "**격차 0 — 등재 집합(5) == 실재 집합(5). 이 모델은 이번 트리거로 수렴했다.**\n\n## ① 판정식을 직접 계산했다 (executor 기록을 믿지 않고 재측정)\n\n- `python3 scripts/check_mock_policy.py`를 머지된 main `ed8d0c5`에서 직접 실행 → **rc=0**:\n  `등재 5(상한 5) · 모킹 지점 5 · 실재 토큰 5 · 표기 주석 5 · 미등재 0 · 고아 0`.\n- 그 초록의 **근거**도 따로 재었다 — 위 `stateSummary.asIs` 표처럼 각 ID의 **정의 지점**을\n  개별 grep으로 확인해 원장의 선언(ID당 1곳)이 실제와 일치함을 확인했다. `MCP_AUTH_DISABLED`가\n  담긴 파일이 12개지만 **실제로 켜는 자리는 `kustomization.yaml:19` 하나**다.\n- 카테고리 자격도 실물로 확인했다: `GATE` 2행이 요구하는 대체 검증 산출물\n  `tests/k8s/kind/auth-fixture.yaml` · `tests/k8s/kind/http-trace.yaml`이 **둘 다 실재**한다(R5).\n\n## ② 소비된 트리거 형상이지만, 잔여의 **자체 해소 조건**으로 판정했다\n\n이번 트리거 `ed8d0c5`는 **이 모델 자신의 task `rct_20260903-0001`의 산출물**(PR #47)이고,\n그 task는 `succeeded`(22:53:46Z, `converged: true`)로 닫혀 이 모델에 **열린 task가 0건**이다.\n= 「자기 슬라이스 머지 + `succeeded` + 열린 task 0 + 잔여」 형상. 형상이 아니라 잔여 항목\n각각이 **스스로 적은 해소 조건**을 실제 레포에 대조했다:\n\n| 잔여 | 자체 해소 조건 (정책 문서 「소멸 조건」) | 지금 발화했나 |\n| --- | --- | --- |\n| `github-mock` 제거 | 실 GitHub App 자격증명을 CI에서 안전하게 쓸 수 있게 되거나 상류를 CI 안에서 구동 가능 | ❌ 변화 없음 |\n| `grafana-mock` 제거 | Grafana Cloud를 CI에서 안전하게 호출 가능 | ❌ 변화 없음 |\n| `dear-baby-fixture` 제거 | dear-baby 이미지를 CI에서 pull 가능(공개 또는 자격증명) | ❌ 변화 없음 |\n| `MCP_AUTH_DISABLED` 제거 | 기본 배포에서도 인증을 켜고 **모든** e2e가 자격증명을 들고 돌 수 있게 정리 | ❌ 변화 없음 |\n| `DISABLE_SECURITY_PLUGIN` 제거 | SigV4를 실제로 검증하는 실환경 대체물(AWS 관리형 엔드포인트 또는 SigV4 검증 프런트) | ❌ 변화 없음 |\n\n**5건 중 발화 0건.** 전부 이 레포 밖의 외부 조건(SaaS 자격증명·비공개 이미지·AWS 관리형\n엔드포인트)이며 이번 슬라이스가 건드린 것이 하나도 없다.\n\nexecutor가 `verification`에 「범위 밖 잔여」로 남긴 나머지 둘도 이 모델의 task 거리가 아니다:\n- **지문 패턴 확대**(`<이름>-mock` 꼴이 아닌 새 스텁 미포착) — 모델 정의 자신이 「지문의\n  사각지대」로 적어 둔 항목이고 **모델 개정 = `reconciler-tobe-modeler`의 몫**이다.\n  안전망(`mock-exception:` 표기 규약)은 이번에 실제로 섰다.\n- **`internal/`의 Go 단위 테스트 모킹** — 모델과 정책 문서가 모두 명시적으로 범위 밖.\n\n## ③ 직전 fire가 남긴 제약을 재검증했다 (여전히 오탐 아님)\n\n`rct_20260903-0002`(15:45Z)가 체커 소스를 읽고 「**선언되지 않은 모킹 지점 파일**을 대조하지\n않는다」를 실행 제약으로 남겼다 — R2는 발견된 *토큰*만 보고, R3·R4는 원장이 선언한\n`row[\"sites\"]`만 순회하며, 출력의 `모킹 지점 N`은 `sum(len(row[\"sites\"]))` 즉 **자기신고**다.\n\n**오늘도 오탐이 아니다**: 위 ①의 정의-지점 실측이 ID별 1/1로 원장과 일치하므로 자기신고가\n정확하다. 다만 이 구멍은 그대로 남아 있고, **이미 등재된 종류의 두 번째 정의 지점**이\n생기면 체커가 조용히 통과한다는 성질도 그대로다. 지금 고칠 위반이 아니라 다음 슬라이스의\n설계 입력으로 이 레코드에 이어 적는다.\n\n## ④ 형제 모델과의 경계 (이중 계상 방지)\n\nPR #47은 `docs/`(→ `tbm_homelab-k3s-mcp-docs-impl`)와 `tests/`(→ `tbm_homelab-k3s-mcp-ac-e2e`)\n트리도 움직여 두 자매 모델을 함께 트리거했다.\n- **ac-e2e**: `check_ac_mapping.py` 출력이 부모 `4e00d36`와 트리거 `ed8d0c5`에서 **문자 단위\n  동일**(AC 전집 64 · 예외 1 · 매칭 33 · 분할 대기 1 · 공백 30, rc=0)임을 직접 확인했다.\n  그 모델은 `rct_20260903-0002`(22:54Z)로 이미 판정·기록을 마쳤다.\n- **docs-impl**: 이번 트리거가 `docs/doc-tracker.md`의 문서 등록 집계를 낡게 만들었다 —\n  그 판정은 **그 모델의 `rct_20260903-0003`**이 소유한다. 여기서 다시 열지 않는다.\n\n**결론**: 판정식이 성립(5==5)하고 게이트가 main에서 실제로 가동 중이며, 잔여 5건의 해소 조건이\n0건 발화했다 ⇒ 지금 좁힐 차이가 없다. baseline을 전진시키고 종료한다.",
+      "summarizedAt": "2026-09-03T23:12:00Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "reason": "작업이 필요 없다 — **이 모델은 이번 트리거로 수렴했다.**\n\n**1. 판정식이 성립한다(재측정).** 등재 집합 5 == 실재 집합 5. 머지된 main `ed8d0c5`에서\n`scripts/check_mock_policy.py`를 직접 돌려 rc=0(`등재 5(상한 5) · 모킹 지점 5 · 실재 토큰 5 ·\n표기 주석 5 · 미등재 0 · 고아 0`)을 확인했고, **초록의 근거**도 따로 실측했다 — ID별 정의\n지점을 개별 grep해 원장 선언(1/1)이 실제와 맞음을 확인했다(`MCP_AUTH_DISABLED`는 12개 파일에\n나타나지만 실제로 켜는 자리는 `kustomization.yaml:19` 하나). `GATE` 2행의 대체 검증 산출물\n2개도 실재한다.\n\n**2. as-is 지문 순증 11쌍은 전부 이번 슬라이스의 산출물이다** — `e2e-mock` 6(정책 문서 경로\n참조 주석) + `mock-exception` 5(표기 규약 주석), 순감 0. **새 모킹 종류 0개.**\n\n**3. 소비된 트리거 형상이지만 잔여의 자체 해소 조건으로 판정했다.** 트리거가 이 모델 자신의\n`rct_20260903-0001`(PR #47) 산출물이고 그 task는 `succeeded`, 열린 task 0건 — 형상만 보면\n「내가 안 열면 아무도 안 여는」 자리다. 그러나 정책 문서가 ID별로 적어 둔 **「소멸 조건」 5건을\n실제 레포에 대조한 결과 발화 0건**이다(전부 외부 조건: GitHub App 자격증명 · Grafana Cloud\n호출 가능성 · dear-baby 이미지 공개 · 전 e2e의 자격증명 보유 · SigV4 검증 실환경 대체물).\n즉 지금 착수 가능한 후속이 없다.\n\n**4. 나머지 잔여 2건은 이 모델의 task 거리가 아니다.** 지문 패턴 확대는 모델 개정\n(`reconciler-tobe-modeler`) 몫이고 — 그 안전망인 `mock-exception:` 표기 규약이 이번에 실제로\n섰다 — `internal/`의 Go 단위 테스트 모킹은 모델·정책 문서가 모두 범위 밖으로 명시했다.\n\n**5. 재발 방지선이 새로 섰다.** 이 레포에는 없던 집행 체커가 `lint` 잡에서 돌기 시작했으므로,\n다음 미등재 모킹은 CI가 즉시 막는다.\n\nbaseline을 전진시켜 5분 precheck 재발화를 끊는다. 다음 슬라이스의 설계 입력 1건(체커가\n「원장에 선언되지 않은 두 번째 정의 지점」을 대조하지 않는다 — 오늘 기준 1/1로 정확하므로\n위반은 아니다)을 `stateSummary.gap` ③에 이어 적었고, 자매 모델과의 소유 경계는 ④에 명시했다.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-03T23:12:00Z"
+    },
+    "id": "rct_20260903-0003"
   }
 ]
