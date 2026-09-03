@@ -2021,7 +2021,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-08-31T02:30:33Z",
       "changedSides": [
@@ -2038,7 +2038,7 @@
       }
     },
     "createdAt": "2026-08-31T02:30:33Z",
-    "updatedAt": "2026-08-31T03:36:00Z",
+    "updatedAt": "2026-09-03T12:27:00Z",
     "stateSummary": {
       "asIs": "**as-is = e2e 테스트 (2026-08-31T02:30Z, `dlddu/homelab-k3s-mcp@b25798e`)**\n\n`tests/` 트리 `869978c1` → `8da9016e`.\n\nPR #43이 겸용 파일 2개를 AC별 전용 파일 13개로 쪼갰다 — `opensearch.py`(11 AC, 597행) 삭제 → `opensearch_{search_ac1..3, document_put_ac1..4, document_delete_ac1..4}.py` 11개, `aws_config.py`(2 AC, 155행) 삭제 → `aws_config_get_ac{1,2}.py` 2개. 공유 표면은 매칭 단위에서 제외되는 `_opensearch.py`·`_aws_config.py`로 내려갔다. `ci.yml` 변경은 삭제된 파일명을 가리키던 주석 2줄뿐이다.",
       "toBe": "**to-be = AC SSOT + 매핑 레지스트리 (같은 커밋)**\n\n`docs/prd-*.md` + `docs/doc-tracker.md` blob 목록 해시 `329f3559` → `313d9eb8`.\n\n- **AC 총수 64는 불변**(`prd-*.md` 무변경 — 델타는 `doc-tracker.md`와 `test-*.md` 4개인데 `test-*.md`는 versionScript의 판정 목록 밖이다).\n- 레지스트리가 이번 슬라이스를 반영해 갱신됐다: **✅ 전용 파일 9 → 22 · ⬜ 분할 대기 40 → 27 · ⬜ 공백(케이스 없음) 14 → 14 · 🚫 예외 1**. 매칭 파일 9 → 22, 규칙 2 위반 6 → 4, 공백 AC 54 → 41.",
@@ -2119,6 +2119,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/44",
           "preparedAt": "2026-08-31T03:30:00Z",
           "notes": "draft PR(머지하지 않음). 커밋 `2fb8a7e` — 30 files changed, +873/-479. 신규 AC 전용 파일 11 + 비-AC 파일 1(`smoke.py` 재작성) + 공유 모듈 `_auth_variant.py`, 원본 `no_config.py`·`auth.py` 삭제. `ci.yml`·Go 코드·`prd-*.md` 무변경.\n\n로컬에서 통과시킨 게이트(체커는 클러스터 불필요라 그대로 재현된다): ① `check_ac_mapping.py` → 매칭 파일 33 · 분할 대기 1 · 공백 30(겸용 16 · 케이스 없음 14), `OK: 규칙 1·2·3·5·6 위반 없음, 러너 배차 누락·케이스 미호출 없음` ② 배차 primary 26 · auth-variant 9 ③ 순수 이동 AST 대조 — 원본 3개 파일의 top-level 정의 19개 전부가 정확히 한 파일에 동일하게 착지(재작성 허용 4개: 파일별 `run()` 3 + 도구 표면 상수 1) ④ `mcp`·`httpx` 스텁으로 41개 모듈 실제 import + 각 `run()` 이 자기 케이스를 전부 호출하는지 확인 ⑤ 음성 통제 6건 전부 의도한 규칙을 지목하며 exit 1(선언 제거→규칙 3 · 중복 전용→규칙 1 · 집계 오차→규칙 6 · 비-AC 미등재→규칙 3 · 행-실측 불일치→규칙 6 · 케이스 미호출→하네스), 되돌림은 `cmp` 로 바이트 동일 확인.\n\nkind e2e 는 로컬 재현 불가 — PR CI 의 `integration tests` 잡이 유일한 관측 지점이다. 계획에 없던 추가분 1건: 체커에 `check_cases_are_run()` 을 넣어 \"배차는 됐지만 `run()` 이 케이스를 부르지 않아 조용히 통과하는 파일\" 을 막았다 — 파일 하나에 케이스 하나인 구조가 되면서 새로 생긴 구멍이라 같은 PR 에서 닫았고, 전용 음성 통제로 실효성을 확인했다.\n\nPR CI 관측(`2fb8a7e`, run 33353263237): **4잡 전부 green** — `fmt + vet`(체커: 매칭 33 · 분할 대기 1 · 공백 30 · `OK: ... 배차 누락·케이스 미호출 없음`) · `unit tests` · `integration tests`(kind e2e) · `docker build & push`. 러너 로그에 `러너: primary 그룹 26개 파일` · `러너: auth-variant 그룹 9개 파일` 과 `OK: ... 전부 통과` 가 찍혔고 파일 헤더 35개(26+9)가 출력됐다 — 새 파일들이 존재만 하는 게 아니라 실제로 실행됐다는 증거다. 관측 결과는 PR 본문에도 덧붙였다.\n\n저장된 `executionGuide` 의 실행 가능성을 라운드트립으로 증명했다: 커밋된 레코드에서 지침을 도로 꺼내 §2-1 의 기대 출력 8줄과 §2-2 의 배차 숫자·앞머리 파일명을 정규식으로 뽑아 실제로 돌린 결과와 대조 — 전부 일치."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "검토 필요 → `awaiting_review`.\n\n**근거 1 — 준비된 PR이 더 이상 그대로 머지되지 않는다(계획 시점과 달라진 유일한 사실).** 계획 당시 base였던 `b25798e`가 그 뒤 `4c77989`(PR #46, 문서 허브 신설)로 움직여 PR #44는 `mergeable_state: dirty`다. 충돌은 `docs/doc-tracker.md` **변경 이력 표 최상단 1개 훅**뿐이고 (두 PR이 같은 날짜 행을 각자 맨 위에 삽입), 두 행을 모두 남기면 해소된다 — #46의 doc-tracker 델타는 신설 「문서 공개(GitHub Pages)」 절과 그 이력 행뿐이라 e2e 렌즈 섹션과 겹치지 않는다. 그럼에도 이것은 **계획·승인 시점에 없던 산출물 수정**(executor가 준비된 PR의 내용을 손대는 것)이므로 사람이 그 해소 방식을 보고 넘어가는 것이 맞다.\n\n**근거 2 — draft PR이다.** planner가 의도적으로 draft로 남겼고(`preparation.notes`: \"머지하지 않음\"), executionGuide §1도 `gh pr ready` 후 머지를 전제한다 — ready 전환 자체가 사람의 결정 지점이다.\n\n**근거 3 — 선례가 되는 판단 두 건을 확정해 넣는다.** ① `auth-variant` 배차 2 → 9 수용 ② `smoke.py` 잔여를 규칙 3 **비-AC 파일로 첫 등재**(등재 0건이던 경로의 최초 양성 사례). 계획 자신이 executionGuide §0에서 \"검토자가 그 둘 중 하나를 뒤집으면 `review_rejected`로 돌려보내면 된다\"고 이 지점을 명시적으로 사람 몫으로 남겼다.\n\n**근거 4 — main SSOT에 대한 영구 변경이다.** 30 files / +873 −479, 기존 파일 2개 삭제 포함. `plan.riskLevel`은 low이고 롤백은 `git revert` 1건으로 끝나지만(레지스트리와 파일이 같은 커밋에 있어 부분 롤백 불가 — 의도된 안전장치), 이는 \"이미 승인된 정책 범위 내의 단순 재동기화\"가 아니라 테스트 구조 재편이다.\n\n**검토 전 미리 확인해 둔 것(승인 시 실행 위험 감소).** 충돌을 해소한 병합 트리에서 계획의 완료 기준을 그대로 재현했다: 체커 `매칭 파일 33 · 분할 대기 1 · 공백 30`(겸용 16 · 케이스 없음 14) exit 0, 배차 primary 26 · auth-variant 9(앞머리 `platform_auth_safety_ac6.py` · `smoke.py`), 통합 파일 41개 `py_compile` 통과, 삭제 파일을 가리키는 **살아 있는** 경로 참조 0건(잔여 12건은 전부 이력·완료 기록 서술), #46이 새로 넣은 `docs/index.html`·`reader.html`의 옛 테스트 파일명 참조 0건."
         }
       }
     ]
