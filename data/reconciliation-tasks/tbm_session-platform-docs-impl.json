@@ -897,7 +897,7 @@
   {
     "id": "rct_20260903-0002",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-03T11:52:00Z",
       "changedSides": [
@@ -999,9 +999,94 @@
           "comment": "승인. 설명(무엇이 어긋났는지 · PR #57의 변경 범위 · medium 위험과 롤백 경로 · 이번 슬라이스로는 approval-gated 세션이 아직 서지 않는다는 의도된 순서 · 검토 시 봐 주실 점 3건)을 받은 뒤 추가 조건 없이 '승인'으로 답했다."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-03T22:27:00Z",
-          "entries": []
+          "finishedAt": "2026-09-03T22:38:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T22:27:30Z",
+              "finishedAt": "2026-09-03T22:29:00Z",
+              "log": "머지 직전 PR #57 재확인 — head `e3b7004`, mergeable=true/clean, check-runs 14건 중 non-success 0(`pin deployment images`만 skipped). 계획이 우려한 data-plane 잡도 CI에서는 green(로컬 `jq` 부재는 개발 환경 결함이었음이 확인됨)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T22:29:10Z",
+              "finishedAt": "2026-09-03T22:29:20Z",
+              "log": "squash 머지 완료 — 레포 관례대로 `feat(control-plane): … (#57)`. main 머지 sha `4db7275552cba60bd3471b6d07edf1e368f72802`. 사용자 승인(22:26Z) 이후에만 실행."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T22:29:30Z",
+              "finishedAt": "2026-09-03T22:33:00Z",
+              "log": "이미지 파이프라인 정상 — 머지 커밋 check-runs 16건 success, 관례대로 배포 고정 커밋 `2b373db chore(deploy): session-platform 이미지를 4db7275… 로 고정 [skip ci]`가 뒤따랐다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T22:36:00Z",
+              "finishedAt": "2026-09-03T22:37:00Z",
+              "log": "클러스터 확인(선택 단계 실행) — `session-platform/control-plane` 1/1 Ready, 파드가 `ghcr.io/dlddu/session-platform:4db7275…`로 롤아웃되어 Running, restart 0. 기동 로그에 새 배선이 드러난다: `data_plane_approval_gated_image:\"\"` — 계획이 말한 '비워 두는 것이 의도된 상태'가 실제 배포 상태다. 기존 `data_plane_image`·`data_plane_claude_code_image` 불변."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T22:37:00Z",
+              "finishedAt": "2026-09-03T22:38:00Z",
+              "log": "수렴 검증은 verification에 기록. 시크릿·토큰은 로그·커밋 어디에도 남기지 않았다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:e9ccb80ee7cd2b1c0a26986682508c694a7687ea data-plane:3f924596c4cc0edc39745298a4174c7903aceb47 web:4fa80cf3dac198e13dab761835c3275f009604b3",
+          "verifiedAt": "2026-09-03T22:38:00Z",
+          "checks": [
+            {
+              "name": "완료기준1 — AC-F1 제어 평면 계약",
+              "status": "passed",
+              "detail": "머지된 main을 clone 해 Go 1.24.6으로 직접 실행: `go test ./internal/api/... ./internal/service/...` 둘 다 ok. 부수로 `go vet ./...`·`go vet -tags=e2e ./...` rc=0, `gofmt -l` 0건, `go test ./...` 전 패키지 ok."
+            },
+            {
+              "name": "완료기준2 — 파드 쌍 프로비저닝 (AC-F4 골격)",
+              "status": "passed",
+              "detail": "`go test -tags=integration ./test/ -run ApprovalGated -v` → 6/6 PASS. 지정 3종 포함: `…ProvisionsWorkloadAndHelperPod`, `…RestoreProvisionsAFreshPair`, `…HelperPodIsReclaimedWhenTheWorkloadPodFails`."
+            },
+            {
+              "name": "완료기준3 — 자격 증명 3방향 분리 (AC-F6 pod 스펙)",
+              "status": "passed",
+              "detail": "`TestApprovalGated_CredentialsAreSplitAcrossHelperContainers` PASS, 짝인 `TestApprovalGated_WorkloadPodHasNoCredentialSidecar`도 PASS."
+            },
+            {
+              "name": "완료기준4 — 기존 타입 불변",
+              "status": "passed",
+              "detail": "`TestApprovalGated_ExistingTypesUnchanged`(하위 `shell`·`claude-code`) PASS. 충실도 회계 `16 == 16` 유지, web `npm run lint`·`npm run build` 통과. Playwright 23 기준선은 브라우저 없는 이 환경에서 직접 돌리지 못했으나 머지 커밋 `4db7275`의 CI에서 `e2e (kind + API + browser)` 포함 16잡 전부 success."
+            },
+            {
+              "name": "완료기준5 — 문서↔구현 불일치 0",
+              "status": "passed",
+              "detail": "`check-ac-mapping.sh` rc=0 — `AC 27개 = 매칭 파일 14 + 예외 1 + 공백 12` 불변. `docs/test/shell-workload.md`의 `TestDeferred_CRIUIntegrity` dangling 인용이 사라졌다. 레포 전체 grep 1건이 남지만 그것은 `doc-tracker.md` 변경 이력이 '그 인용을 정정했다'고 서술하며 식별자를 언급하는 역사적 인용이지 dangling 참조가 아니다."
+            },
+            {
+              "name": "완료기준6 — 잘못된 동결 폴백 없음",
+              "status": "passed",
+              "detail": "`go test ./internal/service/ -run TestSnapshotIsRefusedForApprovalGated` PASS — approval-gated 스냅샷이 shell CRIU로 폴백하지 않고 소리 내어 거부된다."
+            },
+            {
+              "name": "자매 게이트 회귀 없음",
+              "status": "passed",
+              "detail": "머지된 main에서 정적 게이트 3종 rc=0 — `check-fidelity-allowlist.py`(등재 seam 2 · 회계 16==16 · 인터셉트 7건 상한 4), `check-render-fidelity.py`(R1~R10 OK), `check-ac-mapping.sh`."
+            },
+            {
+              "name": "(정보) 범위 밖 잔여 — 다음 감지가 후속 task로 잇는다",
+              "status": "passed",
+              "detail": "의도적으로 남긴 것이며 미달로 세지 않는다: ① data plane의 `mcp` 워크로드(없어서 approval-gated 세션은 아직 Ready에 이르지 못한다 — 배포 로그의 빈 `data_plane_approval_gated_image`가 그 상태), ② AC-F2 NetworkPolicy와 실집행(kindnet이 정책을 집행하지 않아 현 e2e 하네스로 검증 불가), ③ credential-proxy의 pod IP 바인딩(②와 같은 슬라이스), ④ AC-F3 승인 게이트·AC-F5 RWX 볼륨, ⑤ SPA의 세 번째 타입 카드, ⑥ AC-F 전용 e2e 파일(형제 모델 `tbm_session-platform-ac-e2e` 소관). AC 공백 12건은 그대로다. 모델의 lastObservedVersion은 규약대로 건드리지 않았다."
+            }
+          ]
         }
       }
     ]
