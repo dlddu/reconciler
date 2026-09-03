@@ -313,7 +313,7 @@
     "toBeModelId": "tbm_session-platform-ac-e2e",
     "status": "executing",
     "createdAt": "2026-09-03T03:47:07Z",
-    "updatedAt": "2026-09-03T10:59:00Z",
+    "updatedAt": "2026-09-03T11:01:30Z",
     "trigger": {
       "detectedAt": "2026-09-03T03:47:07Z",
       "changedSides": [
@@ -413,6 +413,83 @@
           "required": false,
           "status": "not_required",
           "reason": "이 시도의 잔여 실행분은 **관측뿐**이라 사람 검토 게이트가 붙을 대상이 없다. 계획의 실질 변경(main 머지 + docs/test/e2e.md 1파일 갱신)은 준비 단계(3-2)에서 이미 미머지 PR 브랜치에 fast-forward로 올라갔고, executionGuide가 executor에게 남긴 일은 1~5단계 전부가 '확인'이다 — 브랜치 tip 대조, 정적 게이트 2종 로컬 재현, PR CI 잡 로그 확인, 완료 기준 6항목 대조, 잔여 gap 기록. 즉 이 단계에서 프로덕션·클러스터·main에 가하는 변경이 0이다.\n\n검토 필요 신호를 하나씩 대조해도 걸리는 것이 없다: (1) 프로덕션 워크로드·데이터 영향 없음 — 대상은 미머지 브랜치의 문서 1파일이고 배포 경로에 닿지 않는다. (2) 불가역성 없음 — 아무것도 바꾸지 않으므로 롤백 대상 자체가 없다(준비분 롤백은 되돌림 커밋 한 번, 번들 안전망도 보존돼 있다). (3) `plan.riskLevel`이 `low`. (4) 판단이 갈리는 모호함 없음 — 완료 기준 6항목이 전부 관측 가능한 rc/문자열 대조로 서술돼 있다.\n\n**가장 중요한 안전 경계는 이미 계획이 범위 밖으로 못박아 뒀다: PR #23 머지 금지.** 그 PR은 `rct_20260808-0001`(awaiting_review)의 산출물로 사람 승인 대기 중이며, 이 task는 '승인하면 터지는 상태'를 '승인하면 통과하는 상태'로 되돌리는 데서 멈춘다. 사람 승인이 필요한 진짜 결정(머지)은 이 task가 건드리지 않으므로, 여기에 별도 승인 게이트를 세우면 그 task의 검토를 이중으로 흉내내는 셈이다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-03T10:59:00Z",
+          "finishedAt": "2026-09-03T11:01:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T10:59:10Z",
+              "finishedAt": "2026-09-03T10:59:20Z",
+              "log": "안전망 — 준비 단계(3-2)에서 수행됨. 이 executor 박스에서는 planner의 artifacts 경로(/home/silas/…)가 존재하지 않아 번들 파일 자체를 재확인하지 못했다. 다만 그보다 강한 복구 근거를 원격에서 직접 관측했다: `git merge-base --is-ancestor 265119f feaf87e` = 참, 즉 준비 이전 tip이 현재 히스토리에 그대로 남아 있어 번들 없이도 `git revert`/브랜치 재설정으로 복구 가능하다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T10:59:20Z",
+              "finishedAt": "2026-09-03T10:59:40Z",
+              "log": "main 머지 — 준비 단계에서 커밋 `6d6861d`로 수행됨. 실행 단계 재확인: 원격 tip `feaf87e`, `da72899`(현재 main)가 조상, 충돌 마커 grep 0건, `git status --porcelain` 무출력. main은 계획 시점(`da72899`) 이후 움직이지 않았다(ls-remote 재확인)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T10:59:40Z",
+              "finishedAt": "2026-09-03T10:59:45Z",
+              "log": "실패 재현 — 준비 단계에서 수행됨(rc=1, 실패 3줄). 실행 단계에서는 이미 고쳐진 트리라 재현 대상이 없어 대신 **음성 통제로 등가 확인**했다(8단계 참조): 집계 `AC 총계`를 27→21로 되돌리자 게이트가 `FAIL: … 집계 'AC 총계' = 21, 실제 = 27 (규칙 6)`으로 rc=1. 준비 단계가 본 실패 3줄 중 첫 줄과 같은 규칙·같은 문구다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T10:59:45Z",
+              "finishedAt": "2026-09-03T11:00:00Z",
+              "log": "`ac-summary` 갱신 확인 — `feaf87e`의 블록 실측: `AC 총계: 27 / 예외: 1 / AC 매칭 파일: 14 / 공백: 12 — AC-E1…E6 AC-F1…F6`. 게이트 rc=0, 출력 `AC ↔ e2e 1:1 OK — AC 27개 = 매칭 파일 14 + 예외 1 + 공백 12 (매칭 단위 16개, 비-AC 2개)`. 손으로도 세어 교차 확인: `docs/prd`의 `### AC-` 27건 · `control-plane/test/e2e_*_test.go` 15개 · `web/e2e/*.spec.ts`(최상위) 1개 = 매칭 단위 16개 · `검증 AC:` 선언 파일 16개(AC 14 + 비-AC 2)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T11:00:00Z",
+              "finishedAt": "2026-09-03T11:00:10Z",
+              "log": "F 계열 판정 노트 확인 — `docs/test/e2e.md` 집계 절 아래에 존재(라인 309~330대). ⓐ 공백으로 두는 근거(구현 0줄) ⓑ `approval-gated-workload.md`의 '실클러스터 확인' 문장이 자동화 곤란성이 아니라는 해석 ⓒ 승격 조건(F1·F3·F5·F6 전용 파일 / F2·F4는 그때 규칙 4 예외 후보, kindnet이 NetworkPolicy를 집행하지 않는다는 근거 포함) ⓓ 선결 부채(`session.go`의 단수 `Pod string`, doc-tracker 등재)가 모두 적혀 있다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T11:00:10Z",
+              "finishedAt": "2026-09-03T11:00:20Z",
+              "log": "AC-A2/A3 개정 판정 확인 — 같은 문서에 존재(라인 351 부근). 개정된 A2/A3를 현재 `e2e_a2`/`e2e_a3` 전용 파일이 그대로 만족한다는 판정과, `approval-gated` 구현 착지 시 재검토하라는 트리거가 적혀 있다. 계획대로 **테스트 코드는 한 줄도 바뀌지 않았다** — `6d6861d..feaf87e` diff는 `docs/test/e2e.md` 1파일 +51/−4가 전부다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T11:00:20Z",
+              "finishedAt": "2026-09-03T11:00:40Z",
+              "log": "게이트 일괄 — 이 executor 박스에는 Go 툴체인이 없어(`/home/silas/toolchains` 부재, `go` 미설치) 정적 게이트 2종만 로컬 재현했다: `check-ac-mapping.sh` rc=0, `check-fidelity-allowlist.py` rc=0(등재 seam 2 · 회계 행 16 == 스캔 16 · 미해소 위반 4/상한 4). Go·web 게이트는 **같은 head SHA의 CI 잡 결과로 대체 확인**했고 이쪽이 더 강한 증거다 — `control-plane (lint + unit)`·`data-plane (lint + unit)`·`web (typecheck + build)` 전부 success. 특히 준비 단계에서 로컬 환경 요인(`jq: not found`)으로 실패했던 data-plane이 러너에서는 통과함이 확정됐다. 이번 변경이 문서 1파일뿐이라 Go·web 결과가 영향받을 경로도 없다."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T11:00:40Z",
+              "finishedAt": "2026-09-03T11:00:50Z",
+              "log": "음성 통제 재실행 — `cp` 백업 후 `ac-summary`의 `AC 총계`를 27→21로 변조: rc=1, `FAIL: docs/test/e2e.md 집계 'AC 총계' = 21, 실제 = 27 (규칙 6)`으로 **의도한 규칙을 지목**. 복원 후 `cmp -s` 바이트 동일, 게이트 rc=0 재확인, `git status --porcelain` 무출력. 게이트가 살아 있고 rc=0이 공허하지 않다는 직접 증거."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T11:00:50Z",
+              "finishedAt": "2026-09-03T11:00:55Z",
+              "log": "push + PR 본문 갱신 — 준비 단계에서 수행됨. 실행 단계 재확인: 원격 tip `feaf87e`(ls-remote), `265119f`가 조상이라 **force-push가 아니었음**이 확정된다. PR #23은 `state=open · draft=false · head=feaf87e · base=main · mergeable=true · mergeable_state=clean`."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-03T11:00:55Z",
+              "finishedAt": "2026-09-03T11:01:00Z",
+              "log": "PR CI 확인 — head `feaf87e`의 워크플로 3개 **전부 success**: `ci`(9잡 전부 success) · `Build and Push Docker Image to GHCR` · **`e2e`(kind + API + browser)**. 계획 시점에 미결이었던 `e2e`가 이번에 success로 확정됐다 — 계획이 범위 밖으로 뒀던 유일한 미지수가 초록으로 닫혔다. `conclusion` 필드만 믿지 않고 잡 로그 원문도 확인: `AC ↔ e2e 1:1 mapping` 잡 로그에 `AC ↔ e2e 1:1 OK — AC 27개 = 매칭 파일 14 + 예외 1 + 공백 12`, fidelity 잡 로그에 `회계 행 16 == 스캔된 (파일,토큰) 쌍 16`. **PR은 머지하지 않았다**(계획이 명시한 범위 밖)."
+            }
+          ]
         }
       }
     ]
