@@ -893,5 +893,39 @@
         }
       }
     ]
+  },
+  {
+    "id": "rct_20260903-0002",
+    "toBeModelId": "tbm_session-platform-docs-impl",
+    "status": "action_required",
+    "trigger": {
+      "detectedAt": "2026-09-03T11:52:00Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "control-plane:31a6b7b9dcd0153065078af52c463bce4da14f5b data-plane:3f924596c4cc0edc39745298a4174c7903aceb47 web:78e223b355c0a508b725faeab7df74f4846217f1",
+        "currentVersion": "control-plane:745224a0c0f15aee4e8bb6a2cac6195959a9fd82 data-plane:3f924596c4cc0edc39745298a4174c7903aceb47 web:83dbf6e56a29e4a4ae76752ca1c7729c5129b970"
+      },
+      "toBe": {
+        "previousVersion": "646e512fba5663c85b1712c3b6178bf95886ffc7",
+        "currentVersion": "d31726a63b317c3f1afe6cb6ad2a33400dce6118"
+      }
+    },
+    "stateSummary": {
+      "asIs": "관측 2026-09-03T11:50Z · main `f31d03e` (실질 트리거 `aeeea5b` = **PR #48**, 머지\n11:43:05Z — **이 모델 자신의 `rct_20260903-0001` reconcile 산출물**, 그 task는 11:45:12Z에\n`succeeded`로 닫혔다).\n\n`control-plane:31a6b7b9…→745224a0…` · `data-plane:3f924596…` 무변경 · `web:78e223b3…→83dbf6e5…`.\n\n**PR #48이 세션 pod 참조 모델을 집합으로 바꿨다(실물 확인).**\n`control-plane/internal/session/session.go:212`에 `AuxiliaryPods []string \\`json:\"auxiliaryPods,omitempty\"\\``,\n`:233`에 `Pods()`가 워크로드 파드 + 보조 파드 합집합을 돌려준다. `web/src/api/types.ts`·\n`openapi.yaml`에도 `auxiliaryPods`가 노출됐다. 직전 관측이 \"`approval-gated` 구현의 첫 관문\"\n으로 지목한 단수 `Pod string` 제약이 **해소됐다.**\n\n**그러나 AC-F 본체는 여전히 0줄이다(실측).** `WorkloadType` 열거는 `session.go:60,63`의\n`shell`·`claude-code` **둘뿐**이고 `WorkloadTypeApprovalGated`는 없다. `NetworkPolicy`는\n구현 3종·`deploy`·`k8s` 통틀어 **0 hit**. `approval-gated` 문자열 3 hit은 전부 이번 슬라이스가\n남긴 주석·테스트 스캐폴딩(`client_orchestrator.go`·`orchestrator.go`·`auxiliary_pods_test.go`)\n이다 — 승인 게이트웨이·MCP/credential-proxy 컨테이너·RWX 공유 볼륨·자격 증명 분리 어느 것도\n실물이 없다.\n\n앞선 두 머지(PR #23 `2e5a0a7` e2e 재편, PR #51 `2b2c635` 허브 재스타일)도 이 트리거 구간에\n포함되지만 제품 코드는 건드리지 않았다.",
+      "toBe": "관측 2026-09-03T11:50Z. `docs` 트리 `646e512f…→d31726a6…`.\n\n세 머지가 겹쳐 있다 — **PR #23**(`docs/test/e2e.md` AC↔e2e 매핑 개편 · `criu-verification.md` ·\n`claude-code-workload.md` · `doc-structure-state.md`), **PR #50**(`docs/journeys/**` 신설 ·\n`mockups/README.md` · `index.html`), **PR #51**(`docs/index.html` 디자인 토큰 재적용 + 표기 4건),\n그리고 **PR #48**의 `doc-tracker.md` 부채 항목 해소 표기.\n\n**AC SSOT `docs/prd`는 무변경이다** — 형제 모델 `tbm_session-platform-ac-e2e`의 to-be 지문에서\n`ac:8b106595…`가 이 구간 전체에 걸쳐 동일함으로 교차 확인했다. **AC 27개, 신설·삭제·개정 0건.**\n따라서 이번 격차 이동은 분모(AC)가 아니라 **분자(구현)** 쪽에서만 일어났다.",
+      "gap": "**슬라이스가 계획대로 수렴했다. 그리고 그 수렴이 두 가지를 남겼다 — 이제 열린 F 계열과,\n트리거가 만든 문서↔구현 불일치 1건. 둘 다 소유자가 없다.**\n\n**① 무엇이 닫혔나(executor의 verification과 독립 확인).** 직전 관측의 미충족 목록 중\n\"개정 AC-A2(보조 파드 미지원)\"가 닫혔다 — `session.go:212 AuxiliaryPods` + `:233 Pods()`,\n`openapi.yaml`·`web/src/api/types.ts`의 `auxiliaryPods` 노출을 실물로 확인했다. 낡은 문구\n2건 중 `e2e_deferred_test.go:218`은 PR #23의 파일 삭제로, `session.go`의\n*\"one dedicated pod per session\"* 은 이 슬라이스로 각각 해소됐다(구현 3종 0 hit).\n\n**② AC-F1~F6 6건이 남았고, 이제는 막혀 있지 않다.** 실측: `WorkloadType` 열거는 여전히\n`shell`·`claude-code` 둘뿐, `NetworkPolicy` 0 hit, `approval-gated` 3 hit은 전부 이번\n슬라이스의 주석·테스트 스캐폴딩. 즉 **구현은 0줄 그대로**다. 결정적 차이는 **선결 조건이\n사라졌다**는 것이다 — 직전 계획이 \"AC-F 구현의 첫 관문\"이자 \"필드 하나를 더 붙이는 문제가\n아니라 참조 모델 자체를 바꾸는 일\"이라고 지목한 단수 pod 참조가 이번에 집합으로 바뀌었고,\nexecutor 자신이 verification에 *\"이 슬라이스는 자리만 열었다 … 재감지가 후속 task로 잇는다\"*\n라고 적었다. **닫을 수 있는 길이 열렸는데 아무도 들고 있지 않다.**\n\n**③ 트리거 구간이 새 drift 1건을 만들었다 — 판정 기준 2(문서가 존재하지 않는 구현을 가리킴).**\n`docs/test/shell-workload.md:34`가 *\"`control-plane/test/e2e_deferred_test.go`의\n`TestDeferred_CRIUIntegrity`는 … 실제 dump→pod 회수→새 pod restore를 단언한다\"* 라고\n적고 있는데, **그 파일도 그 함수도 존재하지 않는다** — PR #23이 `e2e_deferred_test.go`(453줄)를\n삭제했다. 레포 전체 `git grep TestDeferred_CRIUIntegrity` = **이 문서 한 줄이 유일한 hit**이고\n`control-plane/test/`에 `deferred` 파일은 0개다. 즉 문서가 삭제된 테스트를 AC-D4/B3의 검증\n근거로 계속 인용한다.\n- **누가 발견했나**: PR #48의 executor가 verification의 「범위 밖(정보성)」 항목으로 적어 두고\n  converged 판정에서 뺐다. 즉 **의도적으로 남긴 잔여**이지 놓친 것이 아니다.\n- **어느 게이트도 못 잡는다**: `check-ac-mapping.sh`는 `docs/prd`의 AC와 `docs/test/e2e.md`의\n  등재만 대조하고 `docs/test/shell-workload.md`의 산문 인용은 파싱하지 않는다.\n  `check-fidelity-allowlist.py`는 seam 토큰 회계라 무관하다. 실제로 두 게이트 모두 HEAD에서 rc=0이다.\n- **형제 모델의 것이 아니다**: `tbm_session-platform-ac-e2e`의 판정 기준은 AC↔파일 1:1이고\n  `shell-workload.md`는 그 모델의 등재 SSOT(`docs/test/e2e.md`)가 아니다. 이중 계상을 피해\n  **여기(docs↔impl)로 귀속**시킨다.\n\n**④ consumed trigger 형상이 성립한다.**\n- 이 모델의 task **전부 종료 상태**다(`rct_20260729`·`0805`·`0806`·`0808`·`0903-0001` 모두\n  `succeeded`). 열린 인수인계 **0건**.\n- 소유 task `rct_20260903-0001`의 **범위는 이미 머지됐다**(PR #48 → main `aeeea5b`).\n- 그 task를 닫는 행위는 reconciler 레포에만 쓰고 **대상 레포에 커밋을 만들지 않는다.**\n  ⇒ 슬라이스 N+1을 열 수 있었던 유일한 사건이 방금 소비된 이 트리거다.\n- `docs/prd`는 무변경이고 앞으로 F 계열 구현이 스스로 착지할 이유가 없다. 여기서 baseline만\n  전진시키면 **AC-F 6건 + 문서 dangling 인용이 \"버전 변화 없음\"으로 영구히 잠긴다.**\n\n**⑤ 이 fire 안에서 상태가 두 번 움직였음을 밝혀 둔다.** 11:39Z 1차 관측 시점에 이 task는\n`executing`(사람 승인 11:26:37Z 완료, PR #48 미머지)이었고 그때의 올바른 판정은\n\"점유 + 재감지 경로 살아 있음 → 물러남\"이었다. 분석 중 11:43:05Z에 #48이 머지되고 11:45:12Z에\ntask가 `succeeded`로 닫히면서 형상이 **점유 → consumed trigger** 로 바뀌었다. 위 판정은\n재클론 후 재측정한 `f31d03e` 기준이다.",
+      "summarizedAt": "2026-09-03T11:52:00Z"
+    },
+    "assessment": {
+      "actionRequired": true,
+      "reason": "**작업 필요 — 후속 슬라이스가 필요하고, 지금 열지 않으면 열릴 사건이 없다.**\n\n**무엇을 하는 task인가 (두 갈래, planner가 슬라이스 경계 결정)**\n1. **AC-F1~F6 구현** — `WorkloadTypeApprovalGated` 열거값, 헬퍼 파드 스펙(MCP·credential-proxy\n   컨테이너), NetworkPolicy egress 격리, 승인 게이트, RWX 공유 볼륨, 자격 증명 분리.\n   직전 슬라이스가 **자리만 열었고**(`AuxiliaryPods`/`Pods()` 착지) 본체는 0줄이다.\n2. **문서↔구현 dangling 인용 1건 정정** — `docs/test/shell-workload.md:34`가 삭제된\n   `control-plane/test/e2e_deferred_test.go`의 `TestDeferred_CRIUIntegrity`를 AC-D4/B3의 검증\n   근거로 계속 인용한다(레포 전체에서 그 이름의 유일한 hit). 값싼 수정이므로 첫 슬라이스에\n   접어 넣기를 권한다.\n\n**닫을 수 있는가: ①의 선결 조건이 방금 사라졌다.** 직전 계획이 \"AC-F 구현의 첫 관문\"으로\n지목한 단수 `Pod string` 참조 모델이 PR #48로 집합이 됐다. executor 자신이\n*\"이 슬라이스는 자리만 열었다 … 재감지가 후속 task로 잇는다\"* 라고 적었다. ②는 문서 한 줄이다.\n\n**소유자가 있는가: 없다.** 이 모델의 task 5건이 전부 `succeeded`이고 열린 인수인계가 0건이다.\n\n**자동 해소 가능성 0 · 재감지 경로 없음(consumed trigger).** 소유 task의 범위(PR #48)는 이미\n머지됐고, 그 task를 닫는 행위는 대상 레포에 커밋을 만들지 않는다. 슬라이스 N+1을 열 수 있었던\n유일한 사건이 바로 이 트리거다. `docs/prd`는 무변경이라 to-be가 움직일 이유도 없다. 여기서\n`no_action_needed`로 baseline만 전진시키면 AC-F 6건과 dangling 인용이 영구히 초록이 된다.\n게이트도 못 잡는다 — HEAD에서 `check-ac-mapping.sh`·`check-fidelity-allowlist.py` 둘 다 rc=0이고,\n전자는 `docs/prd`↔`docs/test/e2e.md`만 보므로 `shell-workload.md`의 산문 인용을 파싱하지 않는다.\n\n**planner 유의**\n- **F 계열을 한 슬라이스에 통째로 넣지 말 것.** 직전 계획이 기각한 이유가 유효하다 —\n  AC-F2(egress 격리)·F4(보조 파드 수명)의 검증 방법이 **실클러스터 확인**을 요구하고,\n  `doc-tracker.md`가 그 근거인 참조 구현 `dlddu/pure-agent`를 **클러스터에 배선된 적 없음**으로\n  등재해 두었다. 검증 불가능한 덩어리를 한 번에 열지 않는다.\n- **AC-F1 단독 착지 금지.** 직전 계획이 명시했듯 AC-F1은 \"워크로드 파드 + 세션 전용 헬퍼 파드를\n  **함께** 프로비저닝\"을 요구한다. 열거값만 더하면 승인 게이트 없는 `approval-gated` 세션이\n  생겨 보안 성질을 이름으로만 주장하게 된다 — 미구현보다 나쁘다.\n- **기존 두 타입의 wire 계약을 깨지 말 것**(`shell`·`claude-code`, 보조 파드 0개). 직전 슬라이스가\n  Playwright 23 tests·fidelity 회계 16==16을 기준선으로 유지했다.\n- **형제 모델과 이중 계상 금지**: `tbm_session-platform-ac-e2e`의 잔여 공백 AC-F1~F6은 **e2e\n  전용 파일이 없다**는 별개 위반이고, 그쪽 원장이 \"구현이 0줄이라 전용 파일도 예외도 성립하지\n  않는다\"고 적어 두었다. **구현이 여기서 들어와야 그쪽이 닫힌다** — 순서 의존이지 중복이 아니다.\n  (오늘 연 `tbm_session-platform-ac-e2e/rct_20260903-0002`에 이 의존을 기록해 뒀다.)",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-03T11:52:00Z"
+    },
+    "createdAt": "2026-09-03T11:52:00Z",
+    "updatedAt": "2026-09-03T11:52:00Z"
   }
 ]
