@@ -897,7 +897,7 @@
   {
     "id": "rct_20260903-0002",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-09-03T11:52:00Z",
       "changedSides": [
@@ -989,6 +989,11 @@
           "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/57",
           "preparedAt": "2026-09-03T13:25:00Z",
           "notes": "계획 9단계를 모두 구현해 PR로 스테이징했다(11 파일 수정 + 신규 시험 1 파일, +543/-149 규모). 로컬에서 CI 잡과 동일한 게이트를 1:1 재현해 전부 통과 — control-plane `go vet ./...`·`go vet -tags=e2e ./...`·`gofmt -l`(0건)·`go test ./...`·`go test -tags=integration ./...`, web `npm run lint`·`npm run build`, `check-fidelity-allowlist.py`(회계 16==16 · 상한 불변), `check-render-fidelity.py`, `check-ac-mapping.sh`(AC 27 = 매칭 14 + 예외 1 + 공백 12, 불변). 환경 결함 1건은 이 PR과 무관하다 — 이 개발 머신에 `jq`가 없어 data-plane의 `TestEntrypointBootstrapsPrivateMarketplace…`가 `exit 127`로 실패하며, **main에서도 동일하게 실패**함을 stash 후 재측정으로 확인했다(CI 러너에는 jq가 있다). 실행 단계에서 남는 판단 지점은 하나 — 헬퍼 프록시의 pod IP 바인딩이 pod 스펙에만 있고 data plane은 아직 loopback만 허용한다는 의도된 순서를 이 상태로 머지할지다(PR 본문 「검토 시 봐 주실 점」). || PR CI 14잡 **전부 SUCCESS**(2026-09-03T13:40Z 확인) — `ci` 정적/단위/통합 게이트 전체, `envtest`, GHCR 이미지 빌드 3종, 그리고 **`e2e (kind + API + browser)`**까지 포함한다. 즉 기존 타입의 동작 불변은 로컬 단위 시험뿐 아니라 **살아 있는 SUT에서도** 확인됐다. `data-plane (lint + unit)`도 초록이라 로컬의 `jq` 실패가 환경 결함이었음이 재확인됐다. 지침 §1-1(‘머지 전 CI 그린 확인’)은 이미 충족됐으므로 executor는 머지 승인 판단부터 시작하면 된다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "**검토 필요.** 이 PR(#57)은 프로덕션 control plane에 들어가는 **코드 변경**이고(12파일 +923/−149, `session.go`·`client_orchestrator.go`·`main.go`·`openapi.yaml`), 공개 API의 허용값을 넓힌다 — `workloadType` enum에 `approval-gated`를 더하는 것은 하위 호환 추가지만, 되돌리면 **계약 축소**가 되므로 그 타입의 세션이 존재하는 상태에서는 revert가 안전하지 않다. plan.riskLevel도 `medium`이다.\n\n더해 **판단이 갈릴 수 있는 지점을 남긴 채 머지를 요청한다** — 헬퍼 파드 credential-proxy의 pod IP 바인딩이 pod 스펙에만 있고 data plane은 아직 loopback만 허용한다(그 바인딩을 안전하게 만드는 AC-F2 ingress 정책과 같은 슬라이스에서 열기로 한 의도된 순서). 즉 이번 머지로 `approval-gated` 세션은 **아직 실제로 서지 않는다** — 이것을 결함으로 볼지 의도된 순서로 볼지가 사람이 확인할 지점이다. plan.executionGuide의 「0. 검토 필요 여부」도 같은 결론(사람 검토 권고)이고, PR 본문이 「검토 시 봐 주실 점」 3건(헬퍼 우선 프로비저닝·역할 라벨 도입·pod IP 바인딩 순서)을 명시적으로 남겨 두었다.\n\n위험 완화 요소: 클러스터 상태 직접 변경 0(매니페스트·Secret·NetworkPolicy 변경 없음), 기존 두 타입의 pod 스펙·wire 계약 불변이 회귀 시험으로 못박혀 있고, PR head `e3b7004`에서 CI 14잡 전부 green(실 kind e2e 포함)이다."
         }
       }
     ]
