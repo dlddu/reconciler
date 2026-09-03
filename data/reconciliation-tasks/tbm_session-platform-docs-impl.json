@@ -1191,6 +1191,51 @@
       "assessedAt": "2026-09-03T22:49:23Z",
       "reason": "**작업이 필요하다 — 소비된 트리거이고, 지금 열지 않으면 다음 슬라이스를 여는 사건이 없다.**\n\n1. **열린 task 0건.** 직전 task `rct_20260903-0002`가 22:26~에 `succeeded`(`converged=true`)로\n   닫혔다. 점유 규칙이 미룰 상대가 없다.\n2. **소비된 트리거.** 이 모델은 슬라이스 단위로 전진하고, 슬라이스의 머지는 *직전 task의\n   산출물*인 동시에 *다음 슬라이스를 열 수 있는 유일한 사건*이다. task를 닫는 것은 reconciler\n   레포에만 쓰이고 대상 레포에 커밋을 만들지 않는다. 여기서 `no_action_needed`로 baseline만\n   전진시키면 — **무엇이 다음 슬라이스를 여는가? 답이 없다.**\n3. **executor가 명시적으로 넘겼다.** 그 검증의 「(정보) 범위 밖 잔여 — **다음 감지가 후속\n   task로 잇는다**」 항목이 ①~⑥을 열거하고 *\"모델의 lastObservedVersion은 규약대로 건드리지\n   않았다\"* 고 적어 재감지 경로를 열어 두었다.\n4. **선행 조건이 실제로 하나도 안 걸린 항목이 여럿이다.** ①(data plane MCP 워크로드) ·\n   ②(NetworkPolicy 오브젝트) · ④(AC-F3/F5) · ⑤(SPA 카드) 어느 것도 외부 사건을 기다리지\n   않는다. 「조건이 안 섰다」로 미룰 수 없다. 막힌 것은 ②'(실집행 검증)뿐이다.\n5. **정의가 보류를 금지한다.** 판정 기준 1이 「백로그로 치부해 이 루프 밖으로 빼지 않는다 —\n   보류 예외 없음」이다. 미구현 AC를 남긴 채 `no_action_needed`로 닫는 것은 정의 위반이다.\n\n**계획 단계 제약 — 반드시 읽을 것:**\n- **슬라이스 경계가 문서에 이미 적혀 있다.** #57이 `doc-tracker.md`에 넣은 「구현 사슬 부채」\n  행이 ②③을 **\"둘은 같은 슬라이스에서 낸다\"**고 못박았다(프록시의 pod IP 바인딩을 안전하게\n  만드는 것이 AC-F2 ingress 정책이므로). 쪼개면 안전 규칙을 깨는 중간 상태가 생긴다.\n- **①이 가장 앞선 관문일 가능성이 높다.** 세션 MCP 워크로드가 없으면 이 타입 세션 자체가\n  Ready에 못 가므로 ②③④의 실검증 경로가 서지 않는다. 다만 이건 계획 단계 판단이다.\n- **②'는 이번에도 닫히지 않는다.** kindnet이 NetworkPolicy를 집행하지 않아 현 e2e 하네스로\n  \"실제로 막히는가\"를 검증할 수 없다. 오브젝트 착지(Go 단언 가능)와 실집행 검증(CNI 선결)을\n  **완료 기준에서 분리**해 적어야 한다 — 안 그러면 executor가 닫을 수 없는 기준을 받는다.\n- **main CI가 지금 레드다**(`render fidelity` R10, `tbm_session-platform-mockup-render`\n  `rct_20260903-0003` 소유). PR을 띄우면 이 잡이 빨갛게 뜨지만 **이 작업이 만든 것이 아니다** —\n  ac-e2e의 executor도 같은 판단을 기록했다. main과 대조해 선행 상태임을 확인하고 진행할 것.\n- **AC-F2·F4·F5는 미검증 참조 구현(`dlddu/pure-agent`) 전제**라고 doc-tracker가 등재해 두었다 —\n  「CI는 그린이지만 클러스터에 배선되어 검증된 적이 없다」. 실검증 전까지 설계 의도이지 확인된\n  동작이 아니다."
     },
-    "attempts": []
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**`approval-gated` 파드 쌍이 스스로 서게 만들고, 그 배치를 안전하게 만드는 AC-F2 네트워크 정책 오브젝트를 함께 착지시킨다.**\n\n왜 이 묶음인가 — 실제 코드를 읽어 보니 이 타입의 세션이 실패하는 원인이 doc-tracker가 적은 하나(세션 MCP 부재)가 아니라 **셋**이었다. data plane 에이전트의 워크로드 스위치에 `mcp`도 `approval-gated`도 없어 **헬퍼 파드의 MCP 컨테이너와 워크로드 파드가 둘 다 `unknown data plane workload`로 exit 1**하고(`data-plane/cmd/agent/main.go:88` switch), 헬퍼의 credential-proxy는 `0.0.0.0:8091`을 받는데 `validateCredentialProxyBindAddr`가 **loopback IP만 허용**해 역시 exit 1한다(`credential_proxy.go:249`, 컨트롤 플레인이 주는 값은 `client_orchestrator.go`의 `helperProxyListenAddr`). 파드 Ready는 컨테이너 전부가 Ready여야 성립하므로 셋 중 하나만 고쳐도 쌍은 서지 않는다 — **셋이 한 슬라이스여야 관측 가능한 결과가 나온다.**\n\n여기에 프록시의 파드 IP 바인딩을 여는 순간 같은 네임스페이스의 아무 파드나 헬퍼의 8091로 붙어 플랫폼 공급자 토큰을 빌려 쓸 수 있게 된다. 그것을 막는 것이 AC-F2의 ingress 정책이므로 doc-tracker(`doc-tracker.md:56`)가 못박은 대로 **정책 오브젝트를 같은 슬라이스에 넣는다.** 쪼개면 안전 규칙에 구멍이 난 중간 상태가 남는다.\n\n대안 검토: (a) 데이터 평면만(①) — 프록시가 계속 죽어 쌍이 서지 않아 관측 가능한 결과가 없다. (b) 정책만(②③) — MCP가 없어 역시 쌍이 서지 않는다. (c) AC-F3 승인 게이트까지 — 게이트웨이 클라이언트·in-band 마커·`lastAccess` 갱신이 파드 둘에 걸쳐 있어 이 슬라이스의 3~4배이고, 게이트웨이 자격 증명이 없어 검증도 못 한다. 그래서 (d) **쌍이 서는 최소 수직 슬라이스**를 고른다. 가역성: 모든 변경이 `approval-gated`/`mcp` 분기 안에 갇히고 기존 두 타입의 경로는 건드리지 않으며, 되돌리기는 PR revert 하나다.\n\n**이 시도의 완료 기준(범위)**: ① data plane이 `approval-gated`·`mcp` 두 워크로드를 알고 각각 정상 기동한다. ② credential-proxy가 **배치별로** 바인딩을 가른다(헬퍼=파드 IP 허용, `claude-code` 사이드카=loopback 강제 유지). ③ control plane이 `approval-gated` 세션마다 NetworkPolicy 2종(워크로드 egress 허용목록 · 헬퍼 ingress 제한)을 세션 셀렉터로 만들고 그 라운드의 파드와 함께 회수한다. ④ 워크로드 파드의 에이전트가 세션 MCP를 MCP 서버로 등록하고 허용 목록에 더하되 marketplace plugin은 활성화하지 않는다(AC-F6). ⑤ `k8s/rbac.yaml`에 networkpolicies 동사 추가. ⑥ `doc-tracker.md`의 구현 사슬 부채 행을 실제 상태로 갱신. **Go 테스트 + `make test-unit`/`make lint` + PR CI 그린**이 수렴 판정 근거다.\n\n**범위 밖(후속)**: AC-F3 승인 게이트 실체, AC-F5 RWX 공유 볼륨, AC-F2 **실집행 검증**(kindnet이 NetworkPolicy를 집행하지 않음 — CNI 선결), 프로덕션 활성화(`k8s/deployment.yaml`의 `DATA_PLANE_APPROVAL_GATED_IMAGE` + 실 `approval-gateway-credentials` Secret — 게이트웨이 자격 증명 미보유), SPA 세 번째 타입 카드, AC-F 전용 e2e 파일(`tbm_session-platform-ac-e2e` 소관), main 선행 레드인 `render fidelity` R10(`tbm_session-platform-mockup-render` 소유).",
+          "riskLevel": "medium",
+          "plannedAt": "2026-09-03T23:12:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "data-plane: `DATA_PLANE_WORKLOAD=mcp` 워크로드를 신설한다. 세션 MCP 컨테이너가 `SESSION_MCP_PORT`(8092)에서 `/healthz` 200과 최소 MCP JSON-RPC 엔드포인트(`initialize` · `notifications/initialized` · `tools/list`)를 연다. **외부 도구는 아직 없다** — `tools/list`는 빈 목록이고 승인 게이트(AC-F3)는 이 슬라이스 밖임을 코드 주석에 명시한다.",
+              "expectedOutcome": "`go test ./...`(data-plane)에서 `mcp` 워크로드가 unknown으로 죽지 않고 `/healthz`가 200, `tools/list`가 빈 목록을 규격대로 돌려주는 것을 단언하는 테스트가 통과한다."
+            },
+            {
+              "seq": 2,
+              "action": "data-plane: `DATA_PLANE_WORKLOAD=approval-gated` 워크로드를 신설한다. `claude-code`의 실행 엔진(AC-E2~E5)을 **그대로 재사용**하되 (a) `K3S_MCP_TOKEN`을 요구하지 않고, (b) 프록시 클라이언트 검증을 loopback 고정이 아니라 **주입된 헬퍼 프록시 URL**을 요구하도록 배치별로 가르며(토큰은 placeholder 고정, 직접 자격 증명 금지는 그대로), (c) 플랫폼 관리 설정에 `SESSION_MCP_URL`을 MCP 서버로 등록하고 허용 목록에 그 MCP만 더하며 **marketplace plugin은 활성화하지 않는다**(AC-F6 2026-09-03 확정).",
+              "expectedOutcome": "테스트가 (a) `approval-gated`가 알려진 워크로드로 기동, (b) loopback이 아닌 헬퍼 프록시 URL을 받아들이고 직접 자격 증명·빈 URL은 거부, (c) 생성된 `settings.json`에 세션 MCP가 등록되고 `enabledPlugins`가 비어 있음을 단언한다. `claude-code` 경로의 기존 단언은 전부 그대로 통과한다."
+            },
+            {
+              "seq": 3,
+              "action": "data-plane: `validateCredentialProxyBindAddr`를 **배치 인자를 받는 형태로** 바꾼다. 사이드카 배치(`claude-code`)는 loopback IP만 계속 허용하고, 헬퍼 배치(`approval-gated`)만 파드 네트워크 바인딩을 허용한다. 배치는 컨트롤 플레인이 주는 명시적 신호로 고르고, 기본값은 **안전한 쪽(loopback 강제)**이다.",
+              "expectedOutcome": "테스트가 사이드카 배치에서 `0.0.0.0:8091`이 여전히 거부되고 헬퍼 배치에서만 허용됨을, 그리고 신호가 없을 때 loopback으로 닫히는 것을 단언한다."
+            },
+            {
+              "seq": 4,
+              "action": "control-plane: `approval-gated` 세션마다 NetworkPolicy 2종을 만든다. ⓐ **워크로드 egress 허용목록** — kube-dns와 그 세션 헬퍼 파드의 두 포트(8091·8092)만, ⓑ **헬퍼 ingress 제한** — 그 세션의 워크로드 파드에서 오는 연결만. 셀렉터는 세션 라벨(`LabelSessionID` + `LabelPodRole`)로 짓고, 오브젝트는 그 프로비저닝 라운드의 헬퍼 파드에 `ownerReferences`로 묶어 **파드와 함께 회수**되게 한다(동결·삭제·복원 라운드 교체 모두 같은 경로). 정책은 워크로드 파드보다 **먼저** 만든다.",
+              "expectedOutcome": "fake client 기반 Go 테스트가 두 정책의 존재·이름·셀렉터·포트·ownerReference를 단언하고, `approval-gated`가 아닌 타입에서는 정책이 만들어지지 않음을 단언한다. 헬퍼 프로비저닝 실패 시 정책이 남지 않는(cleanup) 것도 단언한다."
+            },
+            {
+              "seq": 5,
+              "action": "`k8s/rbac.yaml`의 control-plane Role에 `networking.k8s.io/networkpolicies`의 create/get/list/delete 동사를 더한다(주석으로 AC-F2 근거 명시). **이 파일은 이 모델의 as-is 버전 범위 밖**이지만, 없으면 위 코드가 실클러스터에서 403이 되는 필수 동반 변경이라 같은 PR에 넣고 PR 본문에 교차 모델 사항으로 적는다.",
+              "expectedOutcome": "매니페스트가 `kubectl apply --dry-run` 수준에서 유효하고, e2e 워크플로의 SUT 롤아웃이 그대로 그린이다."
+            },
+            {
+              "seq": 6,
+              "action": "docs: `doc-tracker.md`의 「구현 사슬 부채 — `approval-gated`가 아직 서지 않는다」 행을 **실제 상태로 갱신**한다 — 무엇이 이제 서고(파드 쌍 기동 경로·정책 오브젝트), 무엇이 남았는지(AC-F3 승인 게이트, AC-F5 공유 볼륨, 정책 **실집행** 검증은 CNI 선결, 프로덕션 활성화는 게이트웨이 Secret 선결). 변경 이력 표에 이번 슬라이스 한 줄을 더한다. **숫자 집계(AC 27)는 건드리지 않는다** — 이 슬라이스는 AC 정의를 바꾸지 않는다.",
+              "expectedOutcome": "`./scripts/e2e/check-ac-mapping.sh`와 `python3 scripts/check-fidelity-allowlist.py`가 그대로 rc=0이고, 부채 행이 코드 실물과 어긋나지 않는다."
+            },
+            {
+              "seq": 7,
+              "action": "게이트 실행: `make test-unit`(control-plane + data-plane), `make lint`(check-fidelity · check-ac-mapping · go vet · gofmt · web typecheck)를 로컬 툴체인(`/home/silas/toolchains/go/bin`, `node-v22.14.0-linux-arm64/bin`)으로 돌려 그린을 확인한 뒤 브랜치를 푸시하고 PR을 연다.",
+              "expectedOutcome": "로컬 게이트 전부 그린. PR의 ci.yml 잡이 `render fidelity`(main 선행 레드, 이 작업 무관)를 빼고 전부 그린이고, 경로 필터에 걸린 e2e.yml 잡도 그린이다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
