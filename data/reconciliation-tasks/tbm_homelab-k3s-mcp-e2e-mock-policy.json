@@ -87,5 +87,34 @@
         }
       }
     ]
+  },
+  {
+    "id": "rct_20260903-0002",
+    "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
+    "status": "no_action_needed",
+    "trigger": {
+      "detectedAt": "2026-09-03T15:45:43Z",
+      "changedSides": [
+        "as_is"
+      ],
+      "asIs": {
+        "previousVersion": "sites=13 files=11\n2984f782a64dd1a0eaf0d8bbd4208e133252cd7bf6ad7767ec174930094c68ab",
+        "currentVersion": "sites=22 files=20\n9e1ba980a9c3276bea93cc18fe2e955c2ed1960a08a6e39fe661d1f2f8d4d00c"
+      }
+    },
+    "createdAt": "2026-09-03T15:45:43Z",
+    "updatedAt": "2026-09-03T15:45:43Z",
+    "stateSummary": {
+      "asIs": "## as-is — 모킹 지점 지문 (`sites=13 files=11` → `sites=22 files=20`, main `4e00d36`)\n\n지문은 `git ls-files -- tests .github/workflows`(`*_test.go` 제외)에서 상류 스텁 이름·충실도 저하\n스위치·예외 주석 토큰을 **파일×토큰 쌍**으로 뽑아 정렬·해시한 값이다. 부모(`4c77989`)와\n트리거(`4e00d36`)에서 같은 스크립트를 돌려 쌍 목록을 직접 차집합했다:\n\n**추가 10건 — 전부 `MCP_AUTH_DISABLED` 한 종류이고, 전부 PR #44가 새로 만든 e2e 파일이다**\n`_auth_variant.py` · `aws_config_get_ac3.py` · `github_app_installation_token_ac3.py` ·\n`grafana_token_ac3.py` · `opensearch_document_delete_ac5.py` · `opensearch_document_put_ac5.py` ·\n`opensearch_search_ac4.py` · `platform_auth_safety_ac1.py` · `platform_auth_safety_ac5.py` ·\n`platform_auth_safety_ac7.py`\n\n**삭제 1건** — `tests/integration/auth.py:MCP_AUTH_DISABLED`(PR #44가 파일을 분할·삭제).\n\n순증 +9 지점 / +9 파일. **새로 등장한 모킹 종류는 0개다.**\n\n결정적 관측 — 이 10건은 전부 **모듈 docstring의 산문 언급**이지 모킹을 만드는 자리가 아니다.\n문구는 모두 *\"This runs against the deployment variant in `tests/k8s/kind/auth-fixture.yaml`:\nauth is on (`MCP_API_KEYS` set, `MCP_AUTH_DISABLED` unset) …\"* 꼴로, 자기가 도는 배포 변형을\n설명한다. 이 스위치를 **실제로 켜는 자리는 레포 전체에서 `tests/k8s/kind/kustomization.yaml:17`\n(`- MCP_AUTH_DISABLED=1`) 하나뿐**이고, `auth-fixture.yaml`의 3건도 \"여기서는 일부러 unset\"이라는\n주석이다.",
+      "toBe": "## to-be — 모킹 정책 SSOT (`absent`, 변화 없음)\n\n`docs/e2e-mocking-policy.md`는 main에 **아직 없다**(`git rev-parse --verify HEAD:…` 실패 → `absent`).\n모델 정의가 이 관측을 유효한 상태이자 drift 신호로 미리 선언해 둔 그대로다.\n\n문서·체커·등재는 열린 task `rct_20260903-0001`(`planned`)이 **draft PR #47**\n(`reconcile/rct_20260903-0001-e2e-mock-policy`, head `7ca40f8`)로 스테이징해 두었고\n**아직 미머지**다(`gh pr view 47` → `state: OPEN`, `isDraft: true`).",
+      "gap": "**as-is 지문은 움직였지만 판정 대상은 움직이지 않았다 — 유의미한 차이가 아니다.**\n\n이 모델이 요구하는 것은 「허용목록에 등재된 모킹 지점의 집합 == 코드에 실재하는 모킹 지점의 집합」\n이고, 그 단위는 **모킹의 종류(= 정책 원장의 행)** 다. 트리거는 그 집합을 바꾸지 않았다:\n추가된 10개 쌍이 전부 이미 등재 대상인 `MCP_AUTH_DISABLED` 한 종류의 **산문 언급**이고,\n그 스위치를 실제로 켜는 자리는 여전히 `tests/k8s/kind/kustomization.yaml:17` 하나뿐이다.\n버전 스크립트의 토큰 지문이 판정 단위보다 거칠어서 생긴 노이즈다(정의가 \"매칭 단위 밖 변경도\n해시를 바꿔 재검증을 트리거할 수 있다\"고 예고한 유형).\n\n**스테이징된 PR #47을 두 축 모두에서 실측 면책했다.**\n- **충돌 축**: `git merge-base pr47 4e00d36` = `4c77989` = 트리거의 부모이고 그 부모는 pr47의\n  조상이므로 부모쪽 병합은 fast-forward(자명하게 깨끗). 트리거쪽\n  `git merge --no-commit --no-ff pr47` → **rc=0, 충돌 0**.\n- **게이트 축**: 해소된 병합 트리에서 PR #47이 들여오는 체커 `scripts/check_mock_policy.py`를\n  실행 → **rc=0**, 계수기도 계획이 명시한 값 그대로다:\n  `등재 5(상한 5) · 모킹 지점 5 · 실재 토큰 5 · 표기 주석 5 · 미등재 0 · 고아 0`\n  (UPS `github-mock`·`grafana-mock` / IMG `dear-baby-fixture` / GATE `MCP_AUTH_DISABLED`(대체 검증\n  `auth-fixture.yaml`) · `DISABLE_SECURITY_PLUGIN`(대체 검증 `http-trace.yaml`)).\n  즉 이번 트리거는 R6 상한(5)도, R2 미등재도, R3 고아도 건드리지 않는다.\n\nPR #47이 **미머지**이므로 그 머지가 as-is·to-be를 동시에 움직여 재감지 경로를 스스로 연다\n(소비된 트리거가 아니다). 따라서 baseline만 전진시키고 종료한다.\n\n---\n\n### 실행 단계에 남기는 제약 1건 — 체커가 \"선언되지 않은 지점\"을 보지 않는다\n\nPR #47의 체커 소스를 읽고 확인한 사실이다(초록의 근거를 검증한 결과이지, 위반 주장이 아니다).\n\n- **R2**는 스캔에서 발견된 *토큰*이 원장에 등재돼 있는지만 본다. 발견된 *파일*이 원장의\n  「모킹 지점」 열에 선언돼 있는지는 **어디서도 대조하지 않는다.**\n- **R3·R4는 원장이 선언한 지점만 순회**한다(`row[\"sites\"]`). 그리고 출력의 `모킹 지점 N`은\n  `sum(len(row[\"sites\"]))` — 실측이 아니라 **원장 자기신고**다.\n- 귀결: 이미 등재된 종류에 대해 **두 번째 정의 지점**이 새로 생겨도 체커는 조용히 통과한다.\n\n이번 fire가 그 경로의 첫 실사례다 — `MCP_AUTH_DISABLED`가 담긴 파일이 11개에서 20개로 늘었는데도\n체커는 아무 말을 하지 않았다. **오늘은 오탐이 아니다**: 늘어난 10건이 전부 산문이고 실제 정의\n지점은 여전히 1곳뿐이라 원장의 선언(1/1)이 정확하기 때문이다. 그래서 지금 고칠 위반이 아니라\n**PR #47을 실행·검토할 때의 제약**으로 남긴다. 참고로 as-is 지문(파일×토큰)과 체커의 판정 단위\n(종류)는 의도적으로 층위가 다르므로, 지문이 튀었다는 사실만으로 원장을 늘리면 안 된다.",
+      "summarizedAt": "2026-09-03T15:45:43Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "reason": "작업이 필요 없다. as-is 지문이 `sites=13 files=11` → `sites=22 files=20`으로 움직였지만,\n쌍 목록을 부모·트리거에서 직접 차집합한 결과 순증은 **`MCP_AUTH_DISABLED` 한 종류의 산문 언급 10건**\n(PR #44가 만든 새 e2e 파일들의 모듈 docstring)과 삭제된 `auth.py` 1건뿐이고, **새로운 모킹 종류는\n0개**다. 이 스위치를 실제로 켜는 자리는 여전히 `tests/k8s/kind/kustomization.yaml:17` 하나이므로\n이 모델의 판정 단위(모킹 종류 = 정책 원장의 행)는 불변이다.\n\n스테이징된 draft PR #47도 두 축 모두 실측으로 면책됐다 — 트리거쪽 trial-merge **rc=0/충돌 0**\n(부모쪽은 fast-forward), 해소된 병합 트리에서 체커 `scripts/check_mock_policy.py` **rc=0**이며\n계수기가 `등재 5(상한 5) · 모킹 지점 5 · 실재 토큰 5 · 표기 주석 5 · 미등재 0 · 고아 0`으로\n계획값 그대로다. PR #47은 **미머지**이므로 그 머지가 as-is·to-be를 함께 움직여 재감지 경로를 스스로\n연다(소비된 트리거 아님) ⇒ baseline만 전진시키고 종료한다.\n\n부기: 체커가 \"원장에 선언되지 않은 모킹 지점 파일\"을 대조하지 않는다는 것을 소스에서 확인해\n`stateSummary.gap`에 실행 제약으로 남겼다(오늘 기준 선언 1/1이 정확하므로 위반은 아니다).",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-03T15:45:43Z"
+    }
   }
 ]
