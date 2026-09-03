@@ -313,7 +313,7 @@
     "toBeModelId": "tbm_session-platform-ac-e2e",
     "status": "planning",
     "createdAt": "2026-09-03T03:47:07Z",
-    "updatedAt": "2026-09-03T03:52:30Z",
+    "updatedAt": "2026-09-03T03:57:00Z",
     "trigger": {
       "detectedAt": "2026-09-03T03:47:07Z",
       "changedSides": [
@@ -340,6 +340,67 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-03T03:52:00Z",
       "reason": "**작업 필요.** 이번 트리거는 노이즈가 아니라 판정 대상 집합 자체의 확대다 — PR #46이 `docs/prd`에 AC-F1~F6 6개를 신설해 SSOT가 21 → 27이 됐고, 그 6개는 전용 e2e 파일도 `docs/test/e2e.md` 예외 등재도 **하나도 없다**(grep 0건). definition은 \"등재 없이 파일도 없는 AC는 drift\"라고 명시하므로 규칙 1 위반 6건이 새로 생긴 것이다.\n\n**왜 새 task인가 (기존 열린 task에 얹지 않는 이유)**\n이 모델에는 열린 task가 둘 있는데 어느 쪽도 이 변경을 담을 자리가 아니다.\n- `rct_20260808-0001` = `awaiting_review`(**점유**, 26.1일). executor가 쥔 레코드라 detector가 쓰면 경합한다.\n- `rct_20260830-0001` = `planned`(**미점유이지만 executor의 큐 아이템**, 3.6일). 트리거가 다르고(`ac:02d9e2d8→54a774b0` vs 내 `54a774b0→8b106595`), 범위도 \"PR #23을 현재 main 위에서 되살린다\"로 명시적으로 한정돼 있으며 AC-E1~E6조차 범위 밖으로 선언해 뒀다. 여기에 내 감지를 써넣으면 executor의 인수인계 기록이 오염된다.\n따라서 **별도 task를 열고 `action_required`로 놓아 planner가 집어가게 한다.**\n\n**왜 지금인가 (자동 해소 가능성 0)**\n잔여 gap이 저절로 닫히는 경로가 없다. 두 열린 task 중 어느 것이 진행돼도 F 계열은 닫히지 않는다 — `rct_20260830-0001`의 완료 기준은 PR #23의 게이트 통과까지이고, PR #23의 등재 표에는 F 계열이 애초에 없다. 게다가 **내가 baseline을 `ac:8b106595…`로 전진시키므로, 지금 `no_action_needed`로 닫으면 문서가 또 바뀌기 전까지 F1~F6 공백을 다시 열어줄 트리거가 존재하지 않는다.** 재감지 경로가 없는 실재 격차 = `action_required`의 정의 그대로다.\n\n**planner에게 넘기는 판단 재료**\n1. **F 계열 6개의 처리 방향**은 규칙 1(전용 파일 신설)과 규칙 4(예외 등재) 사이에서 갈린다. 문서 쪽에 이미 근거가 있다 — 신규 `docs/test/approval-gated-workload.md`가 **AC-F2(egress 차단)·AC-F4(헬퍼 파드 동반 회수)는 \"코드 단언이 아니라 실클러스터 확인(kind overlay 또는 실 클러스터)으로 검증한다\"** 고 못박고, 그 근거로 참조 구현(`dlddu/pure-agent`)이 클러스터에 배선된 적 없는 **미검증 전제**임을 든다. 규칙 4의 \"e2e 자동 검증이 곤란한 AC + 대체 검증 수단\" 서식에 그대로 맞는 예외 후보다. 나머지 F1·F3·F5·F6는 구현 여부부터 확인해야 한다(구현이 없으면 `tbm_session-platform-docs-impl`과 순서 의존 — E 계열이 08-08부터 겪어 온 것과 같은 상황).\n2. **PR #23의 집계 블록을 반드시 함께 고쳐야 한다 — 이건 rebase가 아니라 내용 수정이다.** 실측으로 확정했다: PR #23은 트리거 전/후 **양쪽 모두 충돌 0건(CLEAN)** 이지만, 그 PR이 도입하는 자체 게이트 `scripts/e2e/check-ac-mapping.sh`가 `5eaa735` 병합 트리에선 **rc=0**, `da72899` 병합 트리에선 **rc=1**(집계 3항목 불일치: AC 총계 21≠27, 공백 6≠12, 공백 목록 불일치)이다. 게이트가 `docs/prd`에서 AC를 실시간으로 세기 때문에 등재를 갱신하지 않으면 머지 순간 자기 CI 잡이 떨어진다. 새 산식은 F 계열 처리 방향에 달려 있다 — 전부 공백으로 두면 `AC 27 = 매칭 14 + 예외 1 + 공백 12`, F2·F4를 예외로 등재하면 `AC 27 = 매칭 14 + 예외 3 + 공백 10`.\n3. **`rct_20260830-0001`의 명시적 재확인이 하나 무효가 됐다.** 그 계획은 \"완료 기준 산식은 바뀌지 않는다 — `AC 21 = 매칭 14 + 예외 1 + 공백 6`은 여전히 성립한다\"고 08-30에 적었는데, 이제 성립하지 않는다. 그 task의 status·레코드는 **건드리지 않았다**(executor 큐). 산식 갱신을 그 task 안에서 처리할지, 이 task가 함께 가져갈지는 planner가 정한다. 다만 **둘을 따로 진행하면 PR #23은 머지 시점에 반드시 빨간불이 된다** — 순서 의존이 있다.\n4. **AC-A2/A3 개정의 내용 영향(산식 밖)**: #46은 A2의 1:1 주어를 \"워크로드 파드\"로 좁히고 **보조 파드** 조항을 신설했으며, A3 검증 방법을 \"워크로드 파드와, 있다면 보조 파드\"까지 넓혔다. PR #23이 신설하는 `e2e_a3_pod_reclaim_test.go`는 개정 전 문구를 전제로 쓰였다. 게이트는 AC 식별자만 대조하므로 **초록불로 통과한다** — 즉 게이트가 잡아주지 않는 종류의 어긋남이다. definition이 \"AC 문구와 e2e 단언의 의미적 일치는 task 단계 판단\"이라고 넘긴 항목이라 planner가 명시적으로 판정해야 한다.\n\n**detector가 하지 않은 것**: `rct_20260808-0001`(점유)·`rct_20260830-0001`(executor 큐) 어느 쪽의 status도 레코드도 건드리지 않았다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**PR #23의 AC 등재 원장을 AC 27개 기준으로 갱신해, 이번 트리거(#46)가 그 PR에 심은 자기-게이트 실패를 없애고 신규 AC-F1~F6의 처리 방향을 정본에 확정한다.** 이 모델의 1:1 규약(헤더 `// 검증 AC:` 선언 + `docs/test/e2e.md`의 매핑·예외·집계 블록)은 **아직 main에 없고 전부 미머지 PR #23 안에만 있다.** 따라서 이번 gap을 반영할 수 있는 자리는 그 브랜치뿐이며, 다른 곳에 새 PR을 열면 고칠 대상 블록 자체가 존재하지 않는다.\n\n**실측으로 확정한 사실(계획 전 재현)**\n1. **충돌 없음** — `reconcile/rct_20260808-0001-ac-e2e-1to1`(tip `265119f`)에 현재 `origin/main`(`da72899`)을 머지하면 CLEAN(충돌 0건, 26파일 +1665/-169).\n2. **게이트는 정확히 3줄로 깨진다** — 머지 트리에서 `./scripts/e2e/check-ac-mapping.sh` rc=1: `'AC 총계' = 21, 실제 = 27` / `'공백' = 6, 실제 = 12` / `공백 목록 'AC-E1…E6' ≠ 'AC-E1…E6 AC-F1…F6'`. detector 보고와 완전히 일치한다.\n3. **다른 게이트는 무사하다** — 같은 머지 트리에서 `python3 scripts/check-fidelity-allowlist.py` rc=0(등재 seam 2 · 회계 행 16 == 스캔 16 · 미해소 위반 4/상한 4). 08-30 작업이 해소한 상태가 이번 트리거로 다시 깨지지는 않았다.\n4. **`approval-gated` 구현은 레포에 한 줄도 없다** — `git grep -ni 'approval-gated|approvalGated|approval_gated' origin/main -- control-plane web data-plane deploy` = **0건**. `docs/doc-tracker.md`도 \"코드 구현은 후속\"이라 적고, 첫 관문으로 `session.go:198`의 단수 `Pod string` 참조 모델을 구현 사슬 부채로 등재해 뒀다.\n\n**핵심 판단 — AC-F1~F6은 여섯 건 모두 「공백」으로 등재한다(예외 아님).** detector가 planner에게 넘긴 갈림길(규칙 1 전용 파일 신설 vs 규칙 4 예외 등재)에서 **어느 쪽도 지금은 성립하지 않는다**:\n- **전용 파일 신설 불가** — 검증 대상 구현이 0줄이다. 지금 파일을 만들면 전부 skip이거나 실패한다.\n- **규칙 4 예외 등재도 부적격** — 규칙 4는 사유와 함께 **대체 검증 수단**을 요구하는데, F 계열에는 단위·통합·envtest 어느 것도 존재하지 않는다(구현이 없으니 당연하다). `docs/test/approval-gated-workload.md`가 F2·F4를 \"코드 단언이 아니라 실클러스터 확인\"으로 적은 것은 사실이지만, 그 문장이 가리키는 것은 **참조 구현(`dlddu/pure-agent`)이 클러스터에 배선된 적 없다는 미검증 전제**이지 \"자동화가 원리적으로 곤란하다\"가 아니다. 예외로 등재하면 **구현이 들어온 뒤에도 1:1 원장에서 영구 면제**되는 거짓 예외가 박힌다.\n따라서 AC-E1~E6이 08-08부터 놓여 온 자리와 같은 「공백」에 둔다 — 원장에 보이고, 집계가 세고, 해소 조건이 적혀 있는 상태다. **승격 조건을 문서에 못박아** 다음 감지가 같은 논점을 다시 열지 않게 한다: 구현이 착지하면 F1·F3·F5·F6은 전용 파일로, F2·F4는 (그때 비로소 근거가 서는) 규칙 4 예외 후보로 간다.\n\n**대안 검토**: ① F2·F4를 지금 예외로 등재 → 위 사유로 기각(거짓 예외). ② main 대상 새 PR → 고칠 블록이 main에 없어 성립 불가. ③ `rct_20260830-0001`(planned) 레코드 안에서 처리 → 그 task는 executor 큐 아이템이라 detector도 나도 건드리지 않는다. 다만 **브랜치는 공유 산출물**이므로, 내 갱신은 그 task의 완료 기준(② `check-ac-mapping.sh` rc=0 ⑤ CI green)을 **현재 main 위에서 다시 성립시키는 방향**이지 되돌리는 방향이 아니다. ④ rebase + force-push → 08-30 교훈대로 금지(검토 중인 브랜치의 히스토리를 다시 쓴다). **머지로 fast-forward** 시킨다.\n\n**이 시도의 범위(완료 기준)**: PR #23이 ① 현재 main(`da72899`) 위로 충돌 없이 올라가고 ② `check-ac-mapping.sh` rc=0(집계 `AC 27 = 매칭 14 + 예외 1 + 공백 12`) ③ `check-fidelity-allowlist.py` rc=0 ④ `go vet ./...` / `go vet -tags=e2e ./...` / `gofmt -l` 무출력 / `go test ./...`(control-plane·data-plane) 통과 / web `tsc -b && vite build` ⑤ PR CI green ⑥ F 계열 처리 방향과 AC-A2/A3 개정 판정이 `docs/test/e2e.md` 정본에 적혀 재감지가 같은 논점을 다시 열지 않는 상태 — 여기까지 도달하면 성공이다.\n**범위 밖(명시)**: (a) **PR #23 머지 자체** — `rct_20260808-0001`(awaiting_review) 산출물이고 사람 승인 대기다. \"승인하면 터지는 상태\"를 \"승인하면 통과하는 상태\"로 되돌리는 데서 멈춘다. (b) `rct_20260808-0001`·`rct_20260830-0001`의 레코드·status. (c) **AC-F1~F6의 실제 1:1 해소** — 구현 선결, 재감지가 새 task로 잇는다. (d) AC-E1~E6 공백(08-30 재판정 근거 그대로 유지). (e) `approval-gated` 구현 자체(`tbm_session-platform-docs-impl` 소관). (f) 클러스터가 필요한 `e2e.yml`(kind + Playwright)은 로컬 재현 불가 — PR CI가 판정한다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-03T03:57:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "안전망. `reconcile/rct_20260808-0001-ac-e2e-1to1`의 현재 원격 tip(`265119f`)을 `git bundle create`로 `/home/silas/planner/.reconciler-work/artifacts/`(잡 tmp 밖, 세션 종료 후에도 남는 경로)에 보존한다. 복구는 `git fetch <bundle> ...` + 브랜치 재설정 한 줄이다.",
+              "expectedOutcome": "번들 파일이 존재하고 `git bundle verify`가 통과. 원격 tip 해시가 `265119f`임을 `ls-remote`로 재확인."
+            },
+            {
+              "seq": 2,
+              "action": "PR 브랜치에 현재 `origin/main`(`da72899`)을 **머지**한다(rebase·force-push 금지 — 검토 중인 브랜치의 히스토리를 다시 쓰지 않는다). `git merge --no-edit origin/main`.",
+              "expectedOutcome": "충돌 0건으로 머지 커밋 생성. `git status --porcelain` 무출력. `git merge-base --is-ancestor 265119f HEAD` 참."
+            },
+            {
+              "seq": 3,
+              "action": "**고치기 전에 실패를 재현한다.** 머지 트리에서 `./scripts/e2e/check-ac-mapping.sh`와 `python3 scripts/check-fidelity-allowlist.py`를 돌린다.",
+              "expectedOutcome": "전자 rc=1, 실패 정확히 3줄(AC 총계 21≠27 · 공백 6≠12 · 공백 목록 불일치). 후자 rc=0. 이것이 이번 변경이 닫아야 할 대상의 전부라는 근거."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/test/e2e.md`의 `<!-- ac-summary -->` 블록을 실제와 맞춘다: `AC 총계: 21 → 27`, `공백: 6 — AC-E1…E6` → `공백: 12 — AC-E1 AC-E2 AC-E3 AC-E4 AC-E5 AC-E6 AC-F1 AC-F2 AC-F3 AC-F4 AC-F5 AC-F6`. `예외: 1`·`AC 매칭 파일: 14`는 **건드리지 않는다**(F 계열은 파일도 예외도 만들지 않으므로 두 수는 불변). 공백 목록의 문자열은 게이트가 `comm -23`으로 만드는 정렬 순서(`sort -u` 기준)와 **바이트 단위로 같아야** 한다.",
+              "expectedOutcome": "`./scripts/e2e/check-ac-mapping.sh` rc=0, 출력 `AC ↔ e2e 1:1 OK — AC 27개 = 매칭 파일 14 + 예외 1 + 공백 12 (매칭 단위 16개, 비-AC 2개)`."
+            },
+            {
+              "seq": 5,
+              "action": "같은 문서의 집계 아래에 **F 계열 처리 방향을 판정 근거와 승격 조건까지 적는다**(E 계열 재판정 노트와 같은 서식). 담을 것: ⓐ 왜 공백인가 — 구현 0줄(grep 근거)이라 전용 파일이 불가하고, 규칙 4 예외는 대체 검증 수단이 없어 부적격이다 ⓑ `docs/test/approval-gated-workload.md`의 \"실클러스터 확인\" 문장은 참조 구현 미검증 전제를 가리키는 것이지 자동화 곤란성이 아니다 ⓒ 승격 조건 — 구현 착지 후 F1·F3·F5·F6은 전용 파일, F2·F4는 그때 규칙 4 예외 후보(kind 기본 CNI가 NetworkPolicy를 집행하지 않는다는 별도 근거 포함) ⓓ 선결 부채 — `session.go`의 단수 `Pod string` 참조 모델(doc-tracker 등재).",
+              "expectedOutcome": "다음 감지가 이 문서만 읽고도 「F 계열을 왜 지금 안 닫았는가」에 답할 수 있다. 게이트 결과는 불변(rc=0)."
+            },
+            {
+              "seq": 6,
+              "action": "**AC-A2/A3 개정의 내용 영향을 명시적으로 판정해 같은 문서에 남긴다.** 실측 근거: `e2e_a2_dedicated_pod_test.go`는 pod를 **라벨로 목록 조회하지 않고** 생성 응답이 돌려준 `s.Pod` 이름만 확인하며(고유성도 `s.Pod` 집합으로 센다), `e2e_a3_pod_reclaim_test.go`도 `s.Pod` 하나의 삭제만 단언한다. 따라서 개정된 A2(\"세션당 전용 **워크로드** Pod\" + 보조 파드 조항)와 A3(\"워크로드 파드와, 있다면 보조 파드\")를 **현재 구현 기준으로는 그대로 만족**한다 — 보조 파드를 만드는 타입이 아직 없어 \"있다면\" 절이 공허참이다. 재검토 트리거를 함께 적는다: `approval-gated` 구현이 착지해 헬퍼 파드가 생기는 순간 A3는 두 파드 회수를, A2는 라벨 조회 시 보조 파드를 세지 않는 것을 단언해야 한다.",
+              "expectedOutcome": "게이트가 잡아 주지 않는 종류의 어긋남(식별자는 맞고 의미가 흔들리는 경우)에 대한 판정이 정본에 남는다. 테스트 코드는 이번에 **한 줄도 고치지 않는다**(고칠 근거가 아직 없다)."
+            },
+            {
+              "seq": 7,
+              "action": "로컬에서 재현 가능한 게이트를 전부 돌린다: `./scripts/e2e/check-ac-mapping.sh`, `python3 scripts/check-fidelity-allowlist.py`, control-plane에서 `go vet ./... && go vet -tags=e2e ./... && test -z \"$(gofmt -l .)\" && go test ./...`, data-plane에서 같은 4종, web에서 `npm ci && npx tsc -b && npx vite build`, 그리고 `npx playwright test --list`. 툴체인은 `source /home/silas/toolchains/env.sh` + `PATH=/home/silas/toolchains/go/bin:$PATH`(go1.24.7, node v22.14.0).",
+              "expectedOutcome": "전부 rc=0. `playwright --list`의 테스트·파일 수가 **부모 커밋과 동일**(이번 변경은 문서 전용이므로 커버리지가 1건도 움직이면 안 된다)."
+            },
+            {
+              "seq": 8,
+              "action": "**음성 통제.** `ac-summary`의 `AC 총계`를 27→21로 되돌려 게이트가 다시 rc=1이 되는지, 그리고 그 실패 메시지가 **의도한 규칙(규칙 6 집계 일치)** 을 지목하는지 확인한다. 백업은 `cp`로 뜨고 복원 후 `cmp -s`로 바이트 동일을 확인한다.",
+              "expectedOutcome": "변조 시 rc=1 + `집계 'AC 총계' = 21, 실제 = 27`. 복원 후 `cmp` 무출력, 게이트 rc=0. \"집계를 고쳐서 통과시킨 것이 아니라 실제와 맞춘 것\"의 직접 증거."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치를 **fast-forward push**한다(`--force` 금지). 토큰은 `~/.git-credentials`를 덮어쓰지 말고 원격 URL에 인라인한다(형제 워커와 공유 파일이다). 이어서 PR #23 본문에 이번 갱신을 덧붙인다: 무엇이 왜 바뀌었는지(#46이 AC 21→27), F 계열을 공백으로 둔 판정과 승격 조건, AC-A2/A3 개정 판정, 그리고 **머지는 여전히 이 PR을 쥔 쪽(`rct_20260808-0001`)의 몫**이라는 경계.",
+              "expectedOutcome": "원격 tip이 새 머지 커밋으로 이동하고 `265119f`가 조상으로 남는다(리뷰 맥락 보존). PR #23이 `mergeable`."
+            },
+            {
+              "seq": 10,
+              "action": "PR CI 결과를 확인한다. 이 설치의 GitHub App에는 `checks` 권한이 없어 `gh pr checks`가 돌지 않으므로 `actions:read`로 REST를 쓴다: `gh api \"repos/dlddu/session-platform/actions/runs?per_page=15\" --jq '.workflow_runs[] | select(.head_sha==\"<sha>\")'`. green 확인 뒤 `mergeable`을 **한 번 더** 묻는다(형제 머지는 체크가 끝나는 순간에도 들어온다).",
+              "expectedOutcome": "`ci`의 잡 전부 + `e2e`(kind) success. 결론은 `conclusion` 필드만이 아니라 `ac-mapping` 잡 로그 원문의 `AC ↔ e2e 1:1 OK — AC 27개 …` 한 줄로 확인한다. `mergeable=true`·`mergeable_state=clean`, base 불변."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
