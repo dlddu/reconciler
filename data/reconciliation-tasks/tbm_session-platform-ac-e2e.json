@@ -313,7 +313,7 @@
     "toBeModelId": "tbm_session-platform-ac-e2e",
     "status": "planning",
     "createdAt": "2026-09-03T03:47:07Z",
-    "updatedAt": "2026-09-03T03:57:00Z",
+    "updatedAt": "2026-09-03T04:07:00Z",
     "trigger": {
       "detectedAt": "2026-09-03T03:47:07Z",
       "changedSides": [
@@ -399,6 +399,14 @@
               "expectedOutcome": "`ci`의 잡 전부 + `e2e`(kind) success. 결론은 `conclusion` 필드만이 아니라 `ac-mapping` 잡 로그 원문의 `AC ↔ e2e 1:1 OK — AC 27개 …` 한 줄로 확인한다. `mergeable=true`·`mergeable_state=clean`, base 불변."
             }
           ]
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20260808-0001-ac-e2e-1to1",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/23",
+          "preparedAt": "2026-09-03T04:07:00Z",
+          "notes": "**새 PR을 열지 않았다.** 이 모델의 1:1 규약(헤더 `// 검증 AC:` 선언 + `docs/test/e2e.md`의 `ac-mapping`/`ac-exceptions`/`ac-nonac`/`ac-summary` 블록)은 **아직 main에 존재하지 않고 전부 미머지 PR #23 안에만 있다**(main에서 네 마커 모두 grep 0건). 따라서 이번 gap을 반영할 수 있는 자리는 그 브랜치뿐이며, 다른 곳에 새 PR을 열면 고칠 블록 자체가 없다.\n\n**force-push 하지 않았다 — fast-forward 푸시다.** `265119f..feaf87e`(앞에 `+` 없음)로 원격 tip이 전진했고 `git merge-base --is-ancestor 265119f HEAD`가 참이라 기존 리뷰 맥락이 그대로 보존된다. 커밋 2개: `6d6861d`(main 머지, 충돌 0건) + `feaf87e`(문서 1파일 +51 −4).\n\n**안전망**: 손대기 전 원격 tip을 번들로 보존했다 — `/home/silas/planner/.reconciler-work/artifacts/pr23-265119f-pre-rct20260903-0001.bundle` (`git bundle verify` = \"records a complete history\"). 되돌리려면 이 번들에서 fetch해 브랜치를 `265119f`로 되돌리면 된다(이 경우 force-push가 필요하다 — 그래서 롤백은 되돌림 커밋을 얹는 쪽이 기본이다).\n\n**바꾼 것은 `docs/test/e2e.md` 한 파일뿐이다**:\n1. `ac-summary` 블록 — `AC 총계 21 → 27`, `공백 6 → 12`(`AC-E1…E6 AC-F1…F6`). `예외 1`·`AC 매칭 파일 14`는 **불변**(F 계열은 파일도 예외도 만들지 않는다). 공백 목록 문자열은 게이트가 `comm -23`으로 만드는 정렬 순서와 바이트 단위로 일치시켰다.\n2. F 계열을 **예외가 아니라 공백**으로 두는 판정 + 승격 조건 노트(E 계열 재판정 노트와 같은 서식).\n3. AC-A2/A3 개정이 기존 `e2e_a2`/`e2e_a3` 전용 파일을 무효화하지 않는다는 판정 + 재검토 트리거.\n**테스트 코드는 한 줄도 고치지 않았다** — 고칠 근거가 아직 없기 때문이다(아래 판정 참조).\n\n**로컬에서 재현 가능한 게이트 전부 통과**(툴체인: `source /home/silas/toolchains/env.sh` + `PATH=/home/silas/toolchains/go/bin:$PATH`, go1.24.7 · node v22.14.0):\n- `./scripts/e2e/check-ac-mapping.sh` → rc=0, `AC ↔ e2e 1:1 OK — AC 27개 = 매칭 파일 14 + 예외 1 + 공백 12 (매칭 단위 16개, 비-AC 2개)`\n- `python3 scripts/check-fidelity-allowlist.py` → rc=0(등재 seam 2 · 회계 행 16 == 스캔 16 · 미해소 위반 4/상한 4) — 이번 트리거로 다시 깨지지 않았다\n- control-plane: `go vet ./...` rc=0 · `go vet -tags=e2e ./...` rc=0 · `gofmt -l .` 무출력 · `go test ./...` 전 패키지 ok\n- data-plane: `go vet` rc=0 · `gofmt -l` 무출력 · `go test ./...` **1건 실패** — `entrypoint.sh: 28: jq: not found`(exit 127). **clean `origin/main` 워크트리에서도 같은 1건이 같은 메시지로 실패**함을 대조했다 → 이 박스의 `jq` 부재이지 이 PR과 무관하다(CI 러너에는 있다).\n- web: `npm ci` → `npx tsc -b` rc=0 · `npx vite build` rc=0(built in 477ms)\n- `npx playwright test --list` → **23 tests in 8 files**, 부모 `265119f`의 같은 명령 출력과 `diff` **무출력(완전 동일)** → 문서 전용 변경이 커버리지를 1건도 건드리지 않았다는 관측 증거.\n\n**음성 통제 2건 — 둘 다 의도한 규칙(규칙 6 집계 일치)을 지목하며 발화**:\n① `AC 총계`를 27→21로 되돌림 → rc=1, `집계 'AC 총계' = 21, 실제 = 27`. ② 공백 목록에서 `AC-F6` 하나만 삭제 → rc=1, 공백 목록 불일치를 두 문자열을 나란히 찍어 지목. 두 경우 모두 `cp` 백업에서 복원 후 `cmp -s` 바이트 동일 확인, 이어서 rc=0 재확인. **집계를 고쳐 통과시킨 것이 아니라 실제와 맞춘 것**이라는 직접 증거다.\n\n**PR #23 본문을 갱신했다** — 맨 위에 09-03 블록을 얹어 (a) #46이 심은 자기-게이트 실패와 실측 재현(rc=1, 실패 3줄 / 충돌 0건), (b) 새 산식 `AC 27 = 매칭 14 + 예외 1 + 공백 12`, (c) F 계열을 공백에 둔 판정을 두 갈래 표로, (d) 승격 조건(kindnet이 NetworkPolicy를 집행하지 않아 F2는 현재 하네스로 검증 불가라는 근거 포함), (e) AC-A2/A3 개정 판정과 재검토 트리거, (f) **머지 판단은 여전히 `rct_20260808-0001`의 몫**이라는 경계를 적었다. 본문 안의 낡은 게이트 출력(\"AC 21개\")과 「범위 밖(후속)」 항목도 27/공백 12 기준으로 정정했다. 08-30 블록의 **PR #42 우선 머지 권고는 그대로 유효**함을 명시했다.\n\n**다른 task의 레코드는 건드리지 않았다** — `rct_20260808-0001`(awaiting_review)·`rct_20260830-0001`(planned) 둘 다 status·필드 무변경. 브랜치는 이 모델 체인의 공유 산출물이고, 이 갱신은 `rct_20260830-0001`의 완료 기준(② `check-ac-mapping.sh` rc=0 ⑤ CI green)을 **현재 main 위에서 다시 성립시키는 방향**이다."
         }
       }
     ]
