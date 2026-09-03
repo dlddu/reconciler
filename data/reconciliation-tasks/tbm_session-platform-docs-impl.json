@@ -926,7 +926,63 @@
       "assessedAt": "2026-09-03T11:52:00Z"
     },
     "createdAt": "2026-09-03T11:52:00Z",
-    "updatedAt": "2026-09-03T12:44:00Z"
+    "updatedAt": "2026-09-03T12:52:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`approval-gated` 워크로드 타입의 **control plane 절반**을 착지시킨다 — 타입 축에 세 번째 값을 더하되,\n**열거값만 더하지 않고**(assessment의 금지 사항) 세션 전용 헬퍼 파드(컨테이너 둘: 세션 MCP · credential-proxy)를\n워크로드 파드와 **함께** 프로비저닝하는 오케스트레이션과 자격 증명의 컨테이너별 배치까지를 한 슬라이스로 낸다.\n직전 슬라이스(PR #48)가 pod 참조를 집합으로 바꿔 자리를 열었으므로, 이번엔 그 자리에 실제로 파드 쌍을 채운다.\n\n**왜 이 경계인가.** ① F 계열 6건을 통째로 열지 않는다 — AC-F3(승인 게이트·게이트웨이 연동·in-band 마커·\n`lastAccess` 갱신)과 AC-F5(RWX 공유 볼륨·아카이브)는 각자 제품 런타임 작업이고, AC-F2(egress 차단)는\n`docs/test/e2e.md`가 이미 판정해 둔 대로 **현 e2e 하네스에서 집행 자체가 불가능하다**(`deploy/kind-config.yaml`이\n`disableDefaultCNI`를 켜지 않아 kindnet이 뜨고, kindnet은 NetworkPolicy를 집행하지 않는다). ② 반대로 이번 범위는\n전부 **pod 스펙·API 계약 단언**으로 검증된다 — AC-F6의 검증 방법이 문자 그대로 \"세션 pod 스펙에서 확인한다\"이고,\nAC-F1은 AC-E1과 같은 모양이라 기존 `workload_type_test.go` 계열을 그대로 확장한다. ③ 선례가 있다 —\nAC-E1도 #21에서 'control plane 절반'으로 먼저 착지하고 #24가 워크로드 런타임을 이었다.\n\n**완료 기준(이 범위 기준으로 수렴 판정)**: (a) `workloadType=approval-gated`가 생성 요청에서 수용되고, 생략=shell·\nexplicit `\"\"`/`null`/비문자열·허용값 밖은 pod 생성 전 400, 타입·model 불변, `model` 계약은 AC-E6과 동일;\n(b) 그 타입의 `Start`/`RestoreInto`가 헬퍼 파드를 **먼저** 띄워 IP를 얻고 워크로드 파드에 주입해 **쌍으로** 반환하며,\n기존 집합 라이프사이클(동결·삭제·복원·생성 롤백)이 두 파드를 함께 회수·재기동한다; (c) pod 스펙에서 게이트웨이\nURL·API key·userId는 **MCP 컨테이너에만**, 공급자 base-url·auth-token은 **credential-proxy 컨테이너에만**,\n워크로드 파드에는 **둘 다 없이** 헬퍼 주소와 placeholder만 있고 `k3s-mcp-token`이 주입되지 않는다;\n(d) `shell`·`claude-code`의 pod 스펙·wire 계약이 **바이트 단위로 불변**임을 시험이 못박는다;\n(e) 이 PR이 만드는 문서↔구현 불일치가 남지 않는다 — `docs/test/e2e.md`의 \"구현이 0줄이다 / `git grep approval-gated`가\n한 건도 잡지 못한다\" 판정문을 실제 상태로 갱신하고, `doc-tracker.md`에 이번 슬라이스를 등재하며, 트리거가 남긴\ndangling 인용(`docs/test/shell-workload.md:34` → 삭제된 `e2e_deferred_test.go`의 `TestDeferred_CRIUIntegrity`)을 정정한다.\n\n**범위 밖(후속 · 재감지가 새 task로 잇는다)**: AC-F2 NetworkPolicy 오브젝트와 실집행, AC-F3 승인 게이트, AC-F5 RWX\n볼륨, data-plane의 `mcp` 워크로드 런타임과 credential-proxy의 pod IP 바인딩 허용(현재 loopback 강제 —\n이것을 안전하게 만드는 것이 AC-F2 ingress 정책이므로 **같은 슬라이스에서** 함께 낸다), web의 세 번째 타입 카드,\nAC-F 전용 e2e 파일(형제 모델 `tbm_session-platform-ac-e2e` 소관), 실클러스터 확인. 이 범위 밖 때문에\n**이번 슬라이스로는 approval-gated 세션이 실제로 서지 않는다**(헬퍼 파드의 MCP 컨테이너가 Ready가 되지 못한다).\n그것은 은폐할 결함이 아니라 의도된 순서이며, PR 본문과 `doc-tracker.md`에 구현 사슬 부채로 명시한다 —\n스텁으로 Ready를 위조해 AC를 충족한 척하지 않는다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`session.go`에 `WorkloadTypeApprovalGated = \"approval-gated\"`를 더하고 `Valid()`에 편입, `NormalizeModel`이 이 타입에서 claude-code와 동일한 계약(생략→`platform-default`, `modelNamePattern` 검증)을 따르게 한다. `NormalizeWorkloadType`의 기본값 폴딩(빈 문자열→shell)은 건드리지 않는다.",
+              "expectedOutcome": "`go test ./internal/session/...` 통과. `workloadType=approval-gated`가 도메인 계층에서 유효값이 되고, 생략/불명값 처리 규칙은 이전과 동일하다."
+            },
+            {
+              "seq": 2,
+              "action": "`internal/api`·`openapi.yaml`의 타입 축을 3종으로 확장한다 — `WorkloadType` enum에 `approval-gated` 추가, `model` 필드 설명을 두 에이전트 타입에 적용되도록 갱신, `SessionResponse`/`CreateRequest` 서술 정정. 검증 분기 코드는 이미 `Valid()`에 위임하므로 새 분기를 만들지 않는다.",
+              "expectedOutcome": "`internal/api/workload_type_test.go`에 approval-gated 케이스를 더해도 400 규칙(explicit `\"\"`/`null`/비문자열/허용값 밖 → pod 생성 전 400)이 그대로 성립하고, 생성 응답의 `workloadType`이 `approval-gated`로 돌아온다."
+            },
+            {
+              "seq": 3,
+              "action": "`client_orchestrator.go`에 헬퍼 파드 스펙 빌더를 추가한다: 이름 `sess-<id>-helper`(복원 시 워크로드 파드와 **같은 난수 접미사**를 공유하는 `sess-<id>-h<hex>`, 63자 DNS 라벨 상한 준수), 라벨 `session-id`·`workload-type`·`managed-by` + 새 역할 라벨(예: `session-platform.dev/pod-role: helper|workload`), 컨테이너 둘 — 세션 MCP(`DATA_PLANE_WORKLOAD=mcp`, MCP 포트 상수, healthz readiness probe)와 credential-proxy(`DATA_PLANE_WORKLOAD=credential-proxy`, `DATA_PLANE_AGENT_ADDR`를 pod IP 바인딩으로).",
+              "expectedOutcome": "빌더 단위 시험이 컨테이너 2개·라벨·포트·이름 길이(≤63)를 단정한다. 워크로드 파드 빌더는 이 변경으로 달라지지 않는다."
+            },
+            {
+              "seq": 4,
+              "action": "AC-F6의 자격 증명 배치를 스펙에 넣는다 — 새 옵션 `WithApprovalGatewaySecret(name)`(기본 `approval-gateway-credentials`, 키 `url`/`api-key`/`user-id`)로 게이트웨이 3종을 **MCP 컨테이너에만** `secretEnv`로 주입하고, 공급자 `base-url`/`auth-token`은 **credential-proxy 컨테이너에만** 주입한다. approval-gated 워크로드 컨테이너에는 `ANTHROPIC_BASE_URL`=헬퍼 파드 주소, `ANTHROPIC_AUTH_TOKEN`=placeholder, 세션 MCP 주소만 넣고 **`k3s-mcp-token`은 주입하지 않는다**(AC-F6 확정 항목: 런타임 plugin 부트스트랩 없음).",
+              "expectedOutcome": "pod 스펙 시험이 (a) 게이트웨이 3종이 MCP 컨테이너에만, (b) 공급자 2종이 proxy 컨테이너에만, (c) 워크로드 컨테이너에는 어떤 `SecretKeyRef`도 없고 placeholder·주소만 있음을 단정한다."
+            },
+            {
+              "seq": 5,
+              "action": "`Start`/`RestoreInto`가 approval-gated에서 **헬퍼 파드를 먼저** provision해 Ready·IP를 얻고, 그 IP를 워크로드 파드 env에 주입해 두 번째로 provision한 뒤 `SessionPods{Workload, Auxiliary:[helper]}`를 돌려주게 한다. 워크로드 파드가 실패하면 헬퍼 파드도 cleanup한다(AC-A3 위생). 다른 두 타입은 기존 단일 파드 경로를 그대로 탄다.",
+              "expectedOutcome": "fake clientset 시험에서 approval-gated 세션이 pod 2개를 만들고, 워크로드 pod env의 프록시/MCP 주소가 헬퍼 pod IP를 가리키며, 워크로드 provision 실패 시 남는 pod가 0개다. shell·claude-code는 여전히 pod 1개."
+            },
+            {
+              "seq": 6,
+              "action": "라이프사이클 회귀 시험을 더한다 — approval-gated 세션의 생성 응답이 `auxiliaryPods`에 헬퍼 이름을 담고, 삭제·동결 시 `Pods()` 집합 전체가 회수되며, 복원이 새 파드 **쌍**을 띄우는지(기존 `auxiliary_pods_test.go`가 스텁 노브로 세운 계약을 실제 타입으로 재확인). 아울러 approval-gated에는 checkpointer가 등록되지 않아 스냅샷이 `ErrCheckpointDisabled`로 **소리 내어 실패**함을 못박는다(AC-F5 미착지 상태에서 shell CRIU로 잘못 폴백하지 않는다).",
+              "expectedOutcome": "`internal/service`의 시험이 통과하고, approval-gated 스냅샷 시도가 조용히 잘못된 체크포인트를 만들지 않고 거부된다."
+            },
+            {
+              "seq": 7,
+              "action": "`cmd/control-plane/main.go`에 `DATA_PLANE_APPROVAL_GATED_IMAGE`·`APPROVAL_GATEWAY_SECRET` 배선을 더한다(미설정이면 그 타입만 프로비저닝 불가 — `imageFor`가 이미 소리 내어 거부한다). 기존 env의 기본값·의미는 바꾸지 않는다.",
+              "expectedOutcome": "`main_test.go`/기동 로그가 새 설정을 드러내고, 미설정 배포에서 shell·claude-code 동작은 완전히 동일하다."
+            },
+            {
+              "seq": 8,
+              "action": "기존 타입 불변성 회귀를 명시적으로 못박는다 — shell·claude-code의 pod 스펙(컨테이너 수·env 목록·볼륨·probe)이 이번 변경 전과 동일함을 단정하는 시험을 추가/보강하고, `web/src/api/types.ts`의 `WorkloadType` 유니온에 세 번째 값을 더할지 여부를 결정한다(UI 노출은 범위 밖이므로 타입만 추가하고 화면 분기는 손대지 않는다 — 렌더 충실도 게이트·Playwright 기준선을 건드리지 않는 선).",
+              "expectedOutcome": "`go test ./...`(두 모듈), `npm run lint`, `python3 scripts/check-fidelity-allowlist.py`, `python3 scripts/check-render-fidelity.py`, `./scripts/e2e/check-ac-mapping.sh`가 모두 통과한다."
+            },
+            {
+              "seq": 9,
+              "action": "문서를 실제 상태로 맞춘다 — (a) `docs/test/e2e.md`의 F 계열 「공백」 판정문에서 '구현이 0줄 / grep 0건'을 이번 착지 기준으로 갱신하고 승격 조건(AC-F1 전용 파일이 언제 성립하는지)을 현재 사실에 맞게 다시 적는다, (b) `doc-tracker.md`에 이번 슬라이스와 남은 구현 사슬 부채(data-plane `mcp` 런타임 · proxy pod IP 바인딩 · AC-F2 정책)를 등재한다, (c) 트리거가 남긴 dangling 인용 `docs/test/shell-workload.md:34`의 `control-plane/test/e2e_deferred_test.go`·`TestDeferred_CRIUIntegrity` 문구를 삭제된 사실에 맞게 정정한다.",
+              "expectedOutcome": "`git grep TestDeferred_CRIUIntegrity`가 0건이 되고, `check-ac-mapping.sh`의 집계 블록이 실제와 일치하며(전용 파일을 신설하지 않으므로 총계 불변), 문서가 존재하지 않는 구현을 가리키지 않는다."
+            }
+          ],
+          "plannedAt": "2026-09-03T12:52:00Z"
+        }
+      }
+    ]
   },
   {
     "id": "rct_20260903-0003",
