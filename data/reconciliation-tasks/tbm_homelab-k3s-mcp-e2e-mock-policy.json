@@ -1,1 +1,36 @@
-[]
+[
+  {
+    "id": "rct_20260903-0001",
+    "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
+    "status": "action_required",
+    "trigger": {
+      "detectedAt": "2026-09-03T12:00:00Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": null,
+        "currentVersion": "sites=13 files=11\n2984f782a64dd1a0eaf0d8bbd4208e133252cd7bf6ad7767ec174930094c68ab"
+      },
+      "toBe": {
+        "previousVersion": null,
+        "currentVersion": "absent"
+      }
+    },
+    "stateSummary": {
+      "asIs": "최초 관측 2026-09-03T12:00Z · `dlddu/homelab-k3s-mcp` main `4c77989`\n(2026-08-31T06:49Z). 지문 `sites=13 files=11` / `2984f782…`(`previousVersion` = `null`).\n\n**모킹 지점 5종이 실재한다(실측, definition의 두 부류 기준):**\n\n*상류 스텁 서버 3종*\n- **`github-mock`** — `tests/k8s/kind/github-mock.yaml`(네임스페이스 + ConfigMap 스크립트 +\n  Deployment + Service)을 `.github/workflows/ci.yml:106-107`이 배포하고,\n  `ci.yml:135`가 `GITHUB_API_BASE_URL=http://github-mock.github-mock.svc.cluster.local`로\n  **엔드포인트를 재배선**한다(rollout 대기 `:195-196`).\n- **`grafana-mock`** — `tests/k8s/kind/grafana-mock.yaml` + `ci.yml:112-113` 배포,\n  `ci.yml:161`이 `GRAFANA_API_URL=http://grafana-mock.grafana-mock.svc.cluster.local/api`로\n  재배선(rollout 대기 `:201-202`).\n- **dear-baby busybox 스텁** — `tests/k8s/kind/dear-baby-fixture.yaml`(+\n  `tests/k8s/kind/test-deployment.yaml`, `tests/integration/dear_baby_reset_user_ac1.py`).\n\n*충실도 저하 스위치 2종*\n- **`MCP_AUTH_DISABLED=1`** — `tests/k8s/kind/kustomization.yaml:17`. 기본 kind 배포가 인증을\n  끈 구성으로 뜬다.\n- **`DISABLE_SECURITY_PLUGIN`** — `tests/k8s/kind/opensearch.yaml:40`. OpenSearch 픽스처의\n  보안 플러그인을 끈다.\n\n**표기 주석 `# mock-exception:` = 0 hit** (`tests`·`.github/workflows` 전체).\n\ndefinition이 \"모킹이 아니라 실환경 수단\"으로 분류한 것들도 확인했다 — MinIO(S3+STS) ·\n단일노드 OpenSearch · 실 k8s 워크로드 픽스처 · http-trace 기록 프록시.\n`auth-fixture.yaml`은 인증을 **켠** 별도 배포 변형으로 실재한다\n(`tests/k8s/kind/auth-fixture.yaml:73` — *\"Auth ENABLED: MCP_AUTH_DISABLED is deliberately\nunset\"*).",
+      "toBe": "최초 관측 2026-09-03T12:00Z. **`absent`.**\n\n`docs/e2e-mocking-policy.md`가 **존재하지 않는다**(`ls` 확인). definition이 이 값을 미리\n규정해 두었다 — *\"등록 시점에 이 문서는 아직 존재하지 않으며, to-be 버전은 `absent`로\n관측된다 — 이는 유효한 관측이자 '정책이 없다'는 drift 신호다.\"*\n\n따라서 **허용목록 등재 = 0건**이고, 정책 SSOT 자체가 부재다. 정합 상태의 정의\n(*\"허용목록에 등재된 지점의 집합 == 코드에 실재하는 지점의 집합\"*)에서 좌변이 공집합이다.",
+      "gap": "**격차 = 미등재 5종 / 고아 0건. 정책 문서 자체가 없어 양방향 1:1의 한쪽이 공집합이다.**\n\n**① 판정식.** 정합 = (허용목록 등재 집합) == (코드 실재 집합). 현재\n**등재 0 vs 실재 5종(11파일 13지점)** 이므로 미등재 5종이 전부 drift이고, 반대 방향의\n고아 등재는 문서가 없으니 0건이다.\n\n**② 5종을 실물로 확인했다**(위 `stateSummary.asIs`에 파일·행 번호까지 기재): 상류 스텁\n`github-mock`·`grafana-mock`·dear-baby busybox 3종 + 충실도 저하 스위치\n`MCP_AUTH_DISABLED`·`DISABLE_SECURITY_PLUGIN` 2종. 표기 주석 `# mock-exception:`은 레포 전체\n**0 hit**이라 등재·주석 양쪽이 모두 비어 있다.\n\n**③ 등록 스냅샷 검증 — 일치.** definition의 *\"등재 0건, 실측 모킹 지점 5종이 11개 파일\n13개 지점\"* 과 versionScript 지문 `sites=13 files=11`이 맞아떨어졌고, 5종의 실재도 개별\n확인했다.\n\n**④ 최초 관측의 신선도.** 등록 2026-09-03T11:48:28Z, 대상 HEAD `4c77989`는 2026-08-31T06:49Z로\n등록보다 약 3일 앞선다 — 등록 직후 머지로 스냅샷이 낡은 경우가 아니다.\n\n**⑤ `GATE` 카테고리의 전제 조건이 실제로 충족돼 있다(중요).** definition은 `GATE` 등재에\n*\"그 계층 자체를 검증하는 AC는 게이트를 켠 별도 배포 변형에서 반드시 검증되어야\"* 를 요구하고\n`auth-fixture.yaml`이 그 역할을 한다고 적었다. 실물로 확인했다 —\n`tests/k8s/kind/auth-fixture.yaml:73`이 *\"Auth ENABLED: `MCP_AUTH_DISABLED` is deliberately\nunset and a single [API key]\"* 로 인증을 켠 변형을 띄우고, `tests/integration/auth.py:12-14`가\n*\"CI deployment runs with `MCP_AUTH_DISABLED=1` and therefore cannot observe the …\"* 라며 그\n분리를 문서화하고 있다. **즉 `MCP_AUTH_DISABLED`는 `GATE`로 등재할 근거가 갖춰져 있다.**\n\n**⑥ 사전 소견은 구속력이 없고, 한 건은 실제로 갈린다.** definition이 *\"사전 판정 소견\n(구속력 없음, task가 재판정한다)\"* 으로 `github-mock`·`grafana-mock`=`UPS`,\ndear-baby=`IMG`, `MCP_AUTH_DISABLED`=`GATE` 후보를 적었고, `DISABLE_SECURITY_PLUGIN`은\n*\"http-trace가 SigV4 서명을 별도로 관측하고 있어 `GATE`로 등재할지 서명 검증을 켜서 제거할지가\n갈린다\"* 고 열어 두었다. 이 마지막 한 건이 첫 task의 실질 판단 지점이다.\n\n**⑦ 게이트 부재 = 재감지의 안전망도 없다.** 이 레포에는 모킹 정책을 집행하는 CI 체커가\n없다(정책 문서 자체가 없으니 당연하다). 자매 레포 `session-platform`의\n`scripts/check-fidelity-allowlist.py`에 해당하는 수단이 여기엔 아직 없으므로, 첫 task가\n정책과 함께 집행 수단을 세울지도 계획 대상이다.",
+      "summarizedAt": "2026-09-03T12:00:00Z"
+    },
+    "assessment": {
+      "actionRequired": true,
+      "reason": "**작업 필요 — 최초 관측이고, 정책 SSOT 자체가 부재해 판정 축의 한쪽이 통째로 비어 있다.**\n\n**무엇이 격차인가**: `docs/e2e-mocking-policy.md`가 없어 **등재 0건**인데 코드에는 모킹 지점\n**5종이 11파일 13지점**에 실재한다(상류 스텁 `github-mock`·`grafana-mock`·dear-baby busybox,\n충실도 저하 스위치 `MCP_AUTH_DISABLED`·`DISABLE_SECURITY_PLUGIN`). 표기 주석\n`# mock-exception:`도 0 hit이다. 양방향 1:1에서 좌변이 공집합이므로 미등재 5종 전부가 drift다.\n\n**닫을 수 있는가: 열려 있다.** definition이 첫 task의 작업 목록을 직접 지정했다 —\n*\"(1) `docs/e2e-mocking-policy.md` 신설 (2) 기존 5종의 카테고리 판정 → 등재 또는 제거\n(3) 표기 주석 부착\"*. 셋 다 문서 작성 + 주석 부착 + 카테고리 판단이며 새 제품 기능이 필요\n없다. 특히 `GATE` 카테고리가 요구하는 전제(게이트를 켠 별도 배포 변형)가 실물로 이미 존재함을\n확인했다(`tests/k8s/kind/auth-fixture.yaml:73`, `tests/integration/auth.py:12-14`) — 즉\n`MCP_AUTH_DISABLED`는 지금 바로 등재 가능하다.\n\n**소유자가 없다**: 등록 12분 만의 첫 관측으로 이 모델의 task는 **0건**이다.\n\n**자동 해소 가능성 0**: 정책 문서가 저절로 생기지 않는다. to-be가 `absent`인 한 버전이 움직일\n경로도 없다 — 누군가 그 파일을 만들어야만 to-be가 처음으로 값을 갖는다.\n\n**planner 유의**\n- **사전 소견은 구속력이 없다**(definition이 명시). 특히 **`DISABLE_SECURITY_PLUGIN` 한 건은\n  실제로 갈린다** — `GATE`로 등재할지, http-trace가 SigV4 서명을 별도 관측하고 있으니 서명\n  검증을 켜서 **제거**할지. definition의 \"충돌 시 기본 방향\"이 *\"카테고리 판정이 애매하면\n  제거 쪽으로 기운다. 예외는 늘지 않는 방향으로만 관리한다\"* 이므로 제거 가능성을 먼저 따질 것.\n- **`GATE` 등재 요건을 개별 확인할 것**: `MCP_AUTH_DISABLED`는 `auth-fixture.yaml`이 게이트를\n  켠 검증을 제공하므로 요건 충족(확인함). `DISABLE_SECURITY_PLUGIN`에 대응하는 \"보안 켠 변형\"이\n  있는지는 별도로 확인해야 한다 — 없으면 `GATE` 등재 불가이고 제거 쪽이다.\n- **집행 수단도 함께 세울지 결정할 것.** 이 레포에는 정책을 집행하는 CI 체커가 없다. 자매\n  레포 `dlddu/session-platform`의 `scripts/check-fidelity-allowlist.py`가 같은 문제를 푸는\n  선례이며(등재↔코드 1:1을 회계 행 수로 대조하고 상한 래칫을 건다), 그 레포에서는 체커가\n  **정책 산문이 낡는 것을 막지 못하는 한계**도 함께 드러났다 — 게이트가 파싱하는 블록과 산문\n  copy가 어긋난 사례가 오늘 감지됐다. 체커를 세운다면 집계를 두 곳에 적지 않게 설계할 것.\n- **범위 경계 재확인**: `internal/`의 Go 단위 테스트(httptest·fakes)는 대상이 아니고,\n  MinIO·OpenSearch·워크로드·auth 픽스처와 http-trace 프록시는 모킹이 아니라 이 정책이 권장하는\n  실환경 수단이다.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-03T12:00:00Z"
+    },
+    "createdAt": "2026-09-03T12:00:00Z",
+    "updatedAt": "2026-09-03T12:00:00Z"
+  }
+]
