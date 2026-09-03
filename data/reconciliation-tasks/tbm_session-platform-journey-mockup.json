@@ -514,7 +514,7 @@
     "toBeModelId": "tbm_session-platform-journey-mockup",
     "status": "planning",
     "createdAt": "2026-09-03T22:45:06Z",
-    "updatedAt": "2026-09-03T22:52:00Z",
+    "updatedAt": "2026-09-03T23:05:00Z",
     "trigger": {
       "detectedAt": "2026-09-03T22:45:06Z",
       "changedSides": [
@@ -542,6 +542,71 @@
       "assessedAt": "2026-09-03T22:45:06Z",
       "reason": "**작업이 필요하다 — 소비된 트리거이고, 지금 열지 않으면 다음 슬라이스를 여는 사건이 없다.**\n\n1. **열린 task 0건.** 직전 task `rct_20260903-0002`는 executor가 22:35:04Z에\n   `converged=true`로 `succeeded` 처리했다. 점유 규칙이 미룰 상대가 없다.\n2. **소비된 트리거.** 이 모델은 슬라이스 단위(2/8 → 5/8)로 전진한다. 슬라이스의 머지는\n   *직전 task의 산출물*인 동시에 *다음 슬라이스를 열 수 있는 유일한 사건*이다. task를 닫는 것은\n   reconciler 레포에만 쓰이고 대상 레포에 커밋을 만들지 않으므로, 여기서\n   `no_action_needed`로 baseline만 전진시키면 **모델이 \"버전 변화 없음\"에 영구히 잠긴다.**\n   *\"이 baseline을 전진시키고 나면 무엇이 슬라이스 6/8을 여는가?\"* — 답이 없다.\n3. **executor가 명시적으로 넘겼다.** 그 검증의 「(정보) 모델 전체 잔여 gap」이\n   *\"agent 클러스터 3종이 남았고 STP-approval-decide 소유권 결정도 그 슬라이스 몫이다.\n   이 머지가 만든 as-is 버전 변화를 **다음 감지 주기가 후속 task로 잇는다**(모델\n   lastObservedVersion 미변경)\"* 라고 적어 감지 단계를 잔여의 owner로 지명했다.\n4. **선행 조건이 실제로 하나도 안 걸린 항목이 있다.** `JRN-agent-prompt-loop`는 5단계 전부\n   화면 근거가 있어 지금 그릴 수 있다. \"조건이 안 섰다\"로 미룰 수 없다.\n\n**자매 PR이 어차피 재트리거한다**는 반론은 채택하지 않는다 — 그건 다른 모델 작업의 부수 효과이지\n이 모델의 다음 슬라이스를 여는 경로가 아니다.\n\n**계획 단계 제약 — 반드시 읽을 것:**\n- **⚠️ R10이 이제 새 여정 페이지를 막는다.** PR #55가 도입한 토큰 복제 원장은 정본 토큰을\n  인라인 재선언하는 **모든** tracked 파일이 `web/src/design/README.md`의 원장에 등재돼 있을 것을\n  요구한다(양방향). 신설 여정 페이지가 기존 3종처럼 토큰을 인라인 복제하면 **원장 등재 없이는\n  `check-render-fidelity.py`가 실패**하고, 그 잡은 `ci.yml`의 필수 게이트다.\n  게다가 **지금 main이 이미 그 이유로 레드**다(자매 task `rct_20260903-0004`가 소유).\n  → 그 task가 먼저 착지하는 편이 재작업이 적다. 새 페이지는 원장 등재 + 값 정합(DUP이면\n  값 불일치 0)을 처음부터 맞춰야 한다.\n- **슬라이스 경계는 분기표가 정한다.** 직전 슬라이스가 3종을 한 묶음으로 간 이유는\n  \"세 여정의 분기표가 서로를 가리켜 쪼개면 앞서 만든 페이지를 되열어야 하기 때문\"이다.\n  남은 3종도 같은 기준으로 묶을지 쪼갤지 판단이 필요하다.\n- **`JRN-multi-session-switch` 페이지를 만들면 하네스가 미승급 링크 1건을 강제로 잡는다.**\n  `JRN-session-creation`의 `STP-session-list` 대상 `data-branch-pending`을 실링크로 승급하고\n  딥링크(누르면 대상 단계가 열림)까지 통과시켜야 한다 — 기존 페이지 수정이 함께 온다.\n- **`JRN-approval-gated-work`는 `STP-approval-decide` 처분 결정이 선행**한다(§2 단계 집합\n  양방향 일치). ⚪(의도적 비시각화, `JRN-concurrent-access` 선례)로 갈지 세션 쪽 최소 화면을\n  둘지 — 후자면 화면 단위 mockup 신설이 따라오고 그건 자매 모델 영역과 맞물린다."
     },
-    "attempts": []
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근: 남은 「agent 클러스터」 3종을 한 슬라이스로 신설해 여정 페이지 커버리지를 5/8 → 8/8 로 닫는다.**\n\n`JRN-multi-session-switch`(4단계·분기 5행) · `JRN-agent-prompt-loop`(5단계·분기 8행) ·\n`JRN-approval-gated-work`(4단계·분기 9행) 페이지를 `docs/journeys/<id>/index.html` 로 신설하고,\n매핑 표·허브·예외 등재 문서를 같은 커밋에서 맞춘다.\n\n**왜 3종을 한 묶음으로 가는가 — 원장이 이미 이 경계를 정해 두었다.** `docs/doc-structure-state.md:164`\n(「권장 다음 단계」)가 *\"agent 클러스터(`JRN-multi-session-switch` · `JRN-agent-prompt-loop` ·\n`JRN-approval-gated-work`) 페이지 신설. 이 셋은 lifecycle 클러스터로 **한 방향으로만** 링크하므로\n기존 5개 페이지를 되열 필요가 없다\"* 라고 적어 두었고, 직전 슬라이스(#56)의 계획도 *\"3+3이 재작업\n없는 유일한 분할\"* 이라고 근거까지 남겼다. 감지가 남긴 \"묶을지 쪼갤지 판단\"에 대한 답은 **재검토가\n아니라 집행**이다. 실측으로 재확인한 결합면:\n- `JRN-agent-prompt-loop` 8행 → `JRN-approval-gated-work#STP-gated-prompt-submit`,\n  `JRN-approval-gated-work` 9행 → `JRN-agent-prompt-loop#STP-workload-choice` — **상호 참조**.\n  규약 §6은 *\"대상 페이지가 생기는 순간 `data-branch-pending` 은 하네스에서 실패\"* 이므로 둘 중\n  하나만 만들면 나머지를 만들 때 앞 페이지를 되열어야 한다. 함께 만들면 두 갈래가 처음부터 실링크다.\n- `JRN-multi-session-switch` 는 나머지 둘과 무관하지만, **기존 `JRN-session-creation` 페이지가\n  걸어 둔 마지막 미승급 링크 1건**(`JRN-multi-session-switch#STP-session-list`)의 대상이다.\n  이 셋을 함께 착지시키면 레포에 남는 비예외 `data-branch-pending` 이 **0건**이 된다.\n- 3종을 쪼개면 아래 R10 원장 갱신을 **두 번** 하게 된다(자매 모델과의 충돌면을 두 번 여는 셈).\n\n**핵심 제약 R10 — 새 여정 페이지는 토큰 복제 원장에 스스로 등재해야 한다.** PR #55가 도입한\nR10(`scripts/check-render-fidelity.py`)은 정본 `web/src/design/tokens.css` 의 `:root` 토큰을\n재선언하는 **레포 전수** tracked `*.html`/`*.css` 를 실측해 `web/src/design/README.md` 의 원장과\n양방향 대조한다. 여정 페이지는 `docs/` 가 GitHub Pages 루트(`source.path=/docs`, 실측)라\n`web/src/design/tokens.css` 를 상대 링크로 참조할 수 없어 **인라인 복제가 불가피**하다. 따라서\n신설 3파일은 원장에 `DUP` 로 등재하고 유지비 문구를 게이트 계산값으로 갱신한다 —\n자매 모델의 규칙을 우회하지 않고 **그 규칙이 요구하는 대로 자기 몫을 등재**한다.\n값 불일치를 0으로 만들기 위해 `--frozen-soft` 는 정본값 `#13313D` 로 선언한다(#56 의 3파일이\n`#12262F` 로 어긋난 것이 지금 main 을 레드로 만든 원인이며, **그 교정은 이 슬라이스가 하지 않는다**).\n\n**소유 경계(이중계상 방지)**: main 은 지금 `render fidelity` 잡이 레드다(R10 5줄 —\n#56 여정 페이지 3종 미등재 + 값 드리프트 + 유지비 문구 2사본). 그 5줄은 자매 모델\n`tbm_session-platform-mockup-render` 의 `rct_20260903-0003`(2차 시도, 계획 중, PR 미개설)이\nowner 로 집고 있으므로 **여기서 고치지 않는다**. 이 PR 이 하는 일은 *자기가 새로 들여오는 복제\n3건을 등재*하는 것뿐이며, 그 결과 브랜치의 R10 실패는 5줄 → **3줄(전부 #56 파일)** 로 줄고\n남은 3줄은 전부 자매 task 소유임이 파일 이름으로 자명해진다.\n\n**이 시도의 범위(완료 기준)** — 아래가 모두 참이면 성공이다.\n1. 여정 페이지 3종 신설, 규칙 2·3·4·5(a)~(h)·6 충족 — CI `docs-journey-mockup` **green**.\n2. `JRN-session-creation` 의 미승급 링크 1건을 실링크로 승급 → 레포의 비예외 `data-branch-pending` **0건**.\n3. `docs/mockups/README.md`(매핑 3행 ⏳→✅ · 5/8→8/8) · `docs/index.html`(허브 3행 링크·칩) ·\n   `docs/doc-structure-state.md`(요약·매트릭스·위험 진단·변경 이력) 동기화.\n4. 신설 3파일이 R10 원장에 `DUP`(값 불일치 0)로 등재되고, 유지비 문구가 게이트 계산값과 일치한다.\n   즉 **이 PR 이 새로 만드는 R10 실패는 0건**이다.\n5. 하네스 단언 수가 늘어난 채로 전량 통과하고, 변이 시험이 각 규칙을 실제로 발화시킨다.\n\n**범위 밖(후속)**: ① main 의 기존 R10 실패 3줄(#56 파일 미등재 + `--frozen-soft` 드리프트) —\n자매 모델 `rct_20260903-0003` 소유. ② `docs/mockups/README.md` 의 「여정 단계별 시각화 커버리지」\n(화면 단위 층위, ✅18·⚠️5·❌7·⚪3)와 「미시각화 단계 메모」의 결정 대기 항목 — 다른 층위이고\n`STP-switch-back`·`STP-approval-decide` 의 화면 단위 mockup 신설 여부는 자매 모델 영역이다.\n③ `JRN-concurrent-access`(⚪ 예외 등재)는 계속 그리지 않는다.\n\n**`STP-approval-decide` 처분 — 여정 페이지 안에 그린다(화면 단위 mockup 은 신설하지 않는다).**\n규칙 3(단계 집합 양방향 일치)은 단계 단위 예외를 허용하지 않으므로(예외 등재는 *여정* 단위다)\n이 단계는 페이지에 반드시 실재해야 한다. 여정 문서가 *\"결정은 세션 화면 밖(승인 게이트웨이)에서\n이뤄지고 결과는 세션 화면으로 돌아와 보인다\"* + *\"세션 쪽 콘솔에 요청 식별자와 대상이 남아 두\n화면을 눈으로 이을 수 있게 한다\"* 라고 적었으므로, **세션 콘솔 + 그와 요청 식별자로 이어지는\n외부 게이트웨이 알림 화면**을 한 단계 화면으로 그린다. 규약 §0 이 *\"이 페이지의 화면이 곧\n원본\"* 이라고 못박았으므로 `docs/mockups/` 에 새 화면 단위 파일을 만들지 않는다 — 그쪽은 자매\n모델의 to-be 라 건드리면 이중 소유가 된다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-03T23:05:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "베이스라인 고정. `/home/silas/toolchains/node-v22.14.0-linux-arm64/bin` 을 PATH 에 넣고 `tools/` 에서 `npm ci` + `npx playwright install chromium` 후 `node --test journey-prototype.test.mjs` 를 현재 main(`269bc5c`)에서 돌려 통과 단언 수를 기록한다. 같은 트리에서 `python3 scripts/check-render-fidelity.py`(rc·실패 5줄)와 `python3 scripts/check-fidelity-allowlist.py`(rc) 도 뜬다. 이후 회귀 판정은 전부 이 출력과의 대조로만 한다.",
+              "expectedOutcome": "하네스 전량 통과(=main 은 여정 게이트 기준 초록)이고, render-fidelity 는 rc=1 + R10 5줄이 그대로 재현된다. 이 5줄이 '내가 만들지 않은 실패'의 기준선이 된다."
+            },
+            {
+              "seq": 2,
+              "action": "여정 문서 3종을 **하네스와 동일한 정규식**으로 파싱해 정답 수치를 고정한다(`^###\\s+`(STP-…)`` 헤딩, \"## 4. 분기·예외 흐름\" 표의 3열 → `canonicalTargets`). 특히 `JRN-approval-gated-work` 6행(`JRN-manual-freeze` · `JRN-session-deletion` 두 여정이 한 행)이 **허용 대상 집합 {JRN-manual-freeze, JRN-session-deletion} 중 하나를 고르는 1개 요소**임을 확인한다.",
+              "expectedOutcome": "단계 4/5/4(합 13) · 분기 5/8/9(합 22). 각 분기 행의 허용 `data-branch-target` 집합이 표로 확정되어, 페이지의 `data-branch-row` 범위와 target 값의 정답이 손이 아니라 파서에서 나온다."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/journeys/JRN-multi-session-switch/index.html` 신설 — `STP-session-list` · `STP-switch-away` · `STP-target-activation` · `STP-switch-back` 4단계. 실입력(목록 필터 `<select>` · 세션 검색 `<input>`), 화면 안 행동으로 전진, 상태 변형(빈 목록 · 대상이 `snapshot` 이라 복원 대기 · 404 삭제됨 · 복귀했더니 A 가 접혀 있음), 분기 5행 배선: 1행 `STP-target-activation` · 2행 `STP-session-list`(같은 여정, 실이동) · 3행 `JRN-concurrent-access#STP-collision`(`data-branch-pending data-branch-excepted`) · 4행 `JRN-idle-resume#STP-auto-freeze` · 5행 `JRN-session-deletion#STP-delete-intent`(둘 다 페이지가 있으므로 **실링크 승급**).",
+              "expectedOutcome": "`file://` 로 열어 4단계를 화면 안 행동만으로 통과하고, 두 외부 갈래가 실제로 그 페이지의 그 단계로 이동한다(하네스의 페이지 간 딥링크 검사 통과)."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/journeys/JRN-agent-prompt-loop/index.html` 신설 — `STP-workload-choice` · `STP-prompt-submit` · `STP-response-watch` · `STP-conversation-carry` · `STP-agent-freeze-resume` 5단계. 실입력(세션 이름 `<input>` · 워크로드 타입 3종 `radio` · 모델 `<select>` · 프롬프트 `<textarea>`), 상태 변형(413 너무 큼 · 429 대기열 포화 · 507 출력 한계 · 연결 끊김 후 이어붙임 · 이어붙일 수 없어 전체 재수신), 분기 8행 배선: 1·2행 `STP-prompt-submit` · 3행 `STP-conversation-carry` · 4·5행 `STP-response-watch` · 6행 `JRN-idle-resume#STP-reaccess`(실링크) · 7행 `STP-workload-choice` · 8행 `JRN-approval-gated-work#STP-gated-prompt-submit`(같은 슬라이스에서 생기므로 **실링크**).",
+              "expectedOutcome": "타입 3종 카드에서 `claude-code` 를 골라 세션을 만들고, 프롬프트 제출 → 출력 관찰 → 문맥 이어쓰기 → 동결 후 재개까지 클릭만으로 도달한다. 8행 갈래가 새로 만든 approval-gated 페이지로 이동한다."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/journeys/JRN-approval-gated-work/index.html` 신설 — `STP-gated-prompt-submit` · `STP-approval-wait` · `STP-approval-decide` · `STP-gated-result` 4단계. 실입력(프롬프트 `<textarea>` · 거절 사유 `<input>`), `STP-approval-decide` 는 세션 콘솔 + 요청 식별자로 이어지는 외부 게이트웨이 알림 화면으로 그린다(화면 단위 mockup 은 신설하지 않는다). 상태 변형(승인 · 거절 · 만료 · 경계에서 차단된 자율 외부 호출 · 대기 중 자동 동결 정지), 분기 9행 배선: 1·2·3행 `STP-gated-result` · 4행 `STP-gated-prompt-submit` · 5행 `STP-approval-wait` · 6행 `JRN-manual-freeze`(허용 집합 중 택1, 실링크) · 7행 `STP-gated-prompt-submit` · 8행 `JRN-idle-resume#STP-reaccess`(실링크) · 9행 `JRN-agent-prompt-loop#STP-workload-choice`(같은 슬라이스, **실링크**).",
+              "expectedOutcome": "승인 대기가 실패가 아니라 진행 중 상태로 보이고, 승인·거절·만료 세 갈래가 모두 `STP-gated-result` 로 수렴하며 어느 쪽이든 세션이 살아 있음이 화면에 남는다. 마지막 단계가 `[data-journey-end]` 를 갖는다."
+            },
+            {
+              "seq": 6,
+              "action": "기존 `docs/journeys/JRN-session-creation/index.html` 의 마지막 미승급 링크 1건을 승급한다 — `JRN-multi-session-switch#STP-session-list` 대상 요소에서 `data-branch-pending` 을 걷고 `<a href=\"../JRN-multi-session-switch/index.html#STP-session-list\">` 로 바꾸며, 더 이상 쓰이지 않는 note 문구·핸들러를 정리한다. 경로에 `index.html` 을 명시한다(규약 §6 — 디렉터리 링크는 `file://` 에서 깨진다).",
+              "expectedOutcome": "레포에 남는 `data-branch-pending` 은 `JRN-concurrent-access`(⚪ 예외 등재) 대상 2건뿐이고 전부 `data-branch-excepted` 를 동반한다. 비예외 미승급 링크 0건."
+            },
+            {
+              "seq": 7,
+              "action": "매핑·허브·원장 동기화. `docs/mockups/README.md`: 여정 매핑 표 3행을 `⏳ 예정` → `✅ 페이지 있음`(공개 경로 링크) 으로 올리고 `현재 **5 / 8**` → `**8 / 8**`, 미승급 링크 문단을 '비예외 0건'으로 고치고 갱신 이력 한 줄 추가. `docs/index.html`: 3행의 `class=\"missing\" href=\"#\"` 플레이스홀더를 `href=\"journeys/<id>/\"` 실링크 + live 배지로 바꾸고 요약 칩 `5/8` → `8/8`, 본문 문장 갱신. `docs/doc-structure-state.md`: 「현재 상태 요약」(5개 → 8개) · 「여정 ↔ 여정 mockup 페이지」 매트릭스 · 「권장 다음 단계」의 🟠 여정 mockup 잔여 3개 행 제거 · 「변경 이력」 한 줄 추가. **`docs/mockups/README.md` 의 「화면 ↔ mockup 매핑」·「패널 구조 차집합」 섹션은 건드리지 않는다**(자매 게이트 R1~R9 가 파싱한다).",
+              "expectedOutcome": "규칙 1·7·8 이 새 상태와 일치하고, 하네스의 문서 층위 검사(매핑 상태·허브 링크·예외 등재)가 전부 통과한다. 자매 게이트의 파싱 대상 섹션은 무변경."
+            },
+            {
+              "seq": 8,
+              "action": "R10 자기 등재. `python3 scripts/check-render-fidelity.py --emit` 으로 실측 원장 표를 뽑아 **손으로 짓지 않고** 신설 3파일 행을 `web/src/design/README.md` 「토큰 복제 원장」 표에 경로 사전순으로 삽입하고(`DUP`, 값 불일치 0), 같은 파일과 `docs/mockups/README.md` 의 유지비 문구 `최소 **N**곳 · 최대 **M**곳` 을 게이트 계산값으로 갱신한다(주변 산문의 숫자도 함께). 더해 `docs/doc-structure-state.md` 의 **제3 사본**(「토큰 7중복」 3곳: `:18` · `:94` · `:131` · `:169`)은 이 모델 소유이므로, 손으로 쓴 숫자를 **원장 포인터로 교체**한다 — 게이트가 계산하는 값을 산문이 사본으로 들고 있으면 반드시 다시 낡는다.",
+              "expectedOutcome": "브랜치에서 R10 이 신설 3파일에 대해 실패를 내지 않는다. 남는 R10 실패는 기준선의 5줄 중 **#56 파일 3줄뿐**이며(유지비 문구 2줄은 이 PR 이 참값으로 갱신하므로 해소), 그 3줄은 전부 자매 task 소유 파일이다."
+            },
+            {
+              "seq": 9,
+              "action": "로컬 검증 ①. `node --test tools/journey-prototype.test.mjs` 전량 통과 + **통과 단언 수가 기준선보다 늘어난** 것을 확인한다(초록이되 집행 대상이 줄어드는 조용한 회귀를 이 수로 가른다). 이어서 `python3 scripts/check-render-fidelity.py` 출력을 기준선과 `diff` 해 **R1~R9 판정 불변** + R10 실패가 5줄 → 3줄로 줄고 그 3줄이 전부 `docs/journeys/JRN-{idle-resume,manual-freeze,session-deletion}` 인지 확인한다. `check-fidelity-allowlist.py` rc 도 기준선과 동일함을 본다.",
+              "expectedOutcome": "여정 게이트는 브랜치에서 초록이고, 렌더 게이트의 잔여 적자는 이 PR 이 만든 것이 0건임이 파일 이름 수준으로 증명된다."
+            },
+            {
+              "seq": 10,
+              "action": "로컬 검증 ② — **음성 통제 6종**을 각각 걸고 되돌린다(각각 *그 규칙의 문장이 실제로 출력됐는지* 를 grep 으로 확인한다): (a) `JRN-agent-prompt-loop` 8행 링크를 `data-branch-pending` 으로 되돌리기(= 원래 버그의 재발 형태 — 대상 페이지가 생겼는데 승급 안 함) (b) 승급 링크의 대상 단계를 다른 `STP-` 로 변조(페이지 간 딥링크 끊김) (c) 신설 페이지의 `details.step-meta` 에 `open` 달기 (d) 매핑 표의 새 행 하나를 `⏳` 로 방치 (e) 신설 페이지의 `--frozen-soft` 를 `#12262F` 로 되돌려 R10 DUP 값 불일치 유발 (f) 원장에서 신설 3행 중 하나 삭제 → R10 누락. 되돌린 뒤 `git status` 가 깨끗하고 파일이 바이트 동일함을 확인한다.",
+              "expectedOutcome": "6종이 모두 의도한 규칙 문장으로 실패하고, 복원 후 트리가 변이 전과 바이트 동일하다. 게이트가 헛돌지 않음이 증명된다."
+            },
+            {
+              "seq": 11,
+              "action": "브랜치 `reconcile/rct_20260903-0006-journey-mockup`(모델 슬러그 포함 — `rct` id 는 모델 간에 유일하지 않다)을 만들어 커밋·푸시하고 draft 아닌 PR 을 연다. 본문에 task id · 모델 id · 격차(5/8 → 8/8) · 슬라이스 경계 근거 · `STP-approval-decide` 처분 근거 · R10 자기 등재와 **남은 3줄이 자매 task 소유**라는 사실 · 변이 시험 결과 · 범위 밖 잔여 · 머지 순서 주의(자매 PR 과 유지비 문구가 같은 줄에서 충돌한다)를 적는다. `.github/workflows/` 는 건드리지 않으므로 `contents:write` + `pull_requests:write` 로 충분하다.",
+              "expectedOutcome": "PR 이 열리고 `docs-journey-mockup` 체크가 늘어난 단언 수로 초록이 된다. executor 가 CI 결과와 함께 검토·머지·검증을 이어받을 수 있는 상태."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
