@@ -1170,5 +1170,50 @@
     "checkPolicy": {
       "intervalSeconds": 3600
     }
+  },
+  {
+    "id": "tbm_session-platform-mockup-render",
+    "metadata": {
+      "name": "session-platform 목업 ↔ 구현 렌더링 정합성",
+      "description": "dlddu/session-platform에서 이미 구현된 화면(web/src/screens의 React 라우트 화면 + web/src/app의 앱 셸 컴포넌트)이 대응 목업(docs/mockups, 순수 HTML + 인라인 CSS 변수, 화면 식별자는 파일명)과 시각적으로 일치하는지를 화면 코드 정적 대조로 추적한다. 매핑·디자인 토큰·카피·구조 수치·상태 스타일의 불일치와 미문서화 이탈을 drift로 본다. 단 디자인 토큰의 정본은 이 레포에서 코드(web/src/design/tokens.css)이므로 토큰만 방향이 반대다. 미구현 화면과 실행 스크린샷 픽셀 비교는 범위 밖이다.",
+      "tags": [
+        "session-platform",
+        "mockup",
+        "ui",
+        "design-system",
+        "consistency"
+      ],
+      "createdAt": "2026-09-03T01:49:59Z"
+    },
+    "definition": "# session-platform 목업 ↔ 구현 렌더링 정합성\n\n## 목표\n`dlddu/session-platform`(세션당 전용 pod에서 도는 장시간 작업 세션을 만들고·접어두고·되살리는 플랫폼)에서 **이미 구현된 화면**(`web/src/screens/`의 React 라우트 화면과 `web/src/app/`의 앱 셸·공용 컴포넌트로 이루어진 Vite+React SPA)의 렌더링 결과가 대응 **목업**(`docs/mockups`, 순수 HTML + 파일별 인라인 CSS 변수, 빌드 없음, 화면 식별자는 파일명)의 화면과 일치하도록 수렴시킨다. 판정은 **화면 코드 정적 대조**로 한다(실행 스크린샷 픽셀 비교가 아님).\n\n## 무엇이 \"맞는 상태\"인가 (to-be)\n- **시각의 단일 소스(SSOT)는 목업**이다: `docs/mockups`(소스이자 산출물 — 별도 빌드 단계가 없다).\n- **단, 디자인 토큰만은 코드가 정본이다**(아래 \"범위 밖 / 비고\"의 이탈 항목 참고).\n- **to-be(목표 상태)** 는 다음이 모두 성립하는 상태다:\n  1. **매핑 완비** — 구현된 모든 화면이 대응 목업 파일과 기계적으로 확인 가능한 형태로 매핑되어 있다(`docs/mockups/README.md`의 매핑 표 + 각 화면 컴포넌트 헤더 주석의 대응 mockup 파일명 선언).\n  2. **토큰 일치** — mockup 각 파일의 `:root` 인라인 CSS 변수와 `web/src/design/tokens.css`(+ 컴포넌트·패턴 `web/src/app/shell.css`)의 팔레트(`--ink`·`--surface`·`--line`·`--text` 계열), 상태색(`--active`·`--idle`·`--frozen`·`--resume`·`--ok`·`--danger`와 각 `-soft` 변형), 라운드(`--r`·`--r-sm`), 레이아웃 상수(`--rail`·`--maxw`), 이징(`--ease`)이 1:1 대응한다.\n  3. **카피 일치** — 목업 화면의 텍스트 리터럴과 대응 구현 화면의 텍스트가 양방향으로 일치한다.\n  4. **구조·수치 일치** — mockup의 CSS 변수·px 값과 구현의 `tokens.css` 변수·`shell.css` 규칙값이 같은 값으로 환산되고(양쪽 모두 CSS이므로 변수명·값 직접 대조), 요소 순서·계층, 상태별 스타일, CTA 구성이 목업과 같다.\n  5. **이탈의 문서화** — 플랫폼상 불가피한 차이는 사유가 명시된 허용목록으로만 존재한다. 등록 시점 허용목록은 존재하지 않으며, 신설은 첫 task의 계획 대상이다.\n- **범위**: 구현된 화면에 대응하는 목업만. 아직 구현되지 않은 화면의 부재는 이 모델의 drift가 **아니다**.\n- **등록 시점 현황**: SPA 화면 4종(`Sessions.tsx` · `NewSession.tsx` · `Workspace.tsx` · `Restore.tsx`)과 앱 셸 컴포넌트 5종(`AppShell` · `SessionCard` · `StateBadge` · `DeleteSessionDialog` · `Toast`)에 대해 mockup은 6종(`index` · `new-session` · `workspace` · `agent-workspace` · `gated-workspace` · `restore`)이다. 이름상 `Sessions↔index` · `NewSession↔new-session` · `Restore↔restore`가 대응하고 `Workspace`는 워크로드 타입 3종(`shell` · `claude-code` · `approval-gated`)에 따라 `workspace`/`agent-workspace`/`gated-workspace` 셋에 걸치지만, **이 대응을 선언하는 기계 판독 가능한 매핑은 존재하지 않는다** — `docs/mockups/README.md`는 mockup ↔ 여정 단계만 매핑한다.\n  이 문단의 숫자는 **스냅샷일 뿐 판정 기준이 아니다** — 목업이 추가·삭제되면 to-be 버전이 바뀌어 재평가가 트리거되고, 새 목업도 대응 화면이 구현되는 순간 자동으로 판정 대상이 된다. 현황 숫자 갱신은 각 task의 몫이다. **기계적 대조의 전제가 되는 화면 ↔ 목업 매핑 신설은 첫 감지 task의 계획 단계에서 다룬다.** 현재 커버리지를 to-be로 낮춰 잡지 않는다.\n\n## drift 판정 기준\nas-is(구현 화면)가 to-be(목업)와 어긋나면 drift다:\n1. **매핑 공백·오매핑** — 구현 화면에 대응 목업 매핑이 없거나 매핑이 실제와 다름. 등록 시점 확인된 후보: 화면↔목업 매핑이 어디에도 선언되어 있지 않고, `DeleteSessionDialog.tsx`(삭제 확인 대화상자)는 SPA에만 있고 대응 mockup이 없다.\n2. **토큰 불일치** — 대조 대상 토큰 중 어느 하나라도 어긋남. 등록 시점 확인된 후보: mockup 6개가 `tokens.css`를 참조하지 않고 같은 값을 각자 인라인으로 갖고 있어 토큰 1개 변경 시 **7곳**을 고쳐야 한다(`docs/doc-structure-state.md`가 🟢 위험으로 기록). 값은 현재 일치하지만 연결이 아니므로 어느 한쪽만 바뀌면 조용히 어긋난다.\n3. **카피 불일치** — 어느 방향이든 텍스트 차집합이 존재함.\n4. **구조·수치 불일치** — 요소 순서·계층, 간격·라운드·굵기, 상태별 스타일, CTA 유무의 차이.\n5. **미문서화 이탈** — 허용목록에 사유 없이 존재하는 차이. `docs/doc-structure-state.md`가 \"SPA의 정본 준수 여부 미검증(🟢)\"으로 남겨둔 항목 — `web/src/screens/`의 인라인 스타일·하드코딩 hex — 이 여기 해당한다.\n\n각 task는 직전 관측 대비 \"일치가 늘었는가 / 새 불일치가 생겼는가 / 목업 변경으로 to-be가 달라졌는가\"를 평가하되, 남은 불일치 전체를 상태 요약에 유지한다.\n\n## 충돌 시 기본 방향\n**목업이 스펙(SSOT)이므로 원칙적으로 구현을 목업에 맞춘다.** 단 그 차이가 의도된 디자인 변경이거나 플랫폼상 불가피하면, 목업 소스를 고치거나 허용목록에 사유를 남겨 구현에 맞춘다. 어느 쪽인지는 각 task의 계획 단계에서 판단한다.\n\n**디자인 토큰만은 방향이 반대다** — 이 레포는 토큰 정본을 코드(`web/src/design/tokens.css`)로 확정했고 \"코드를 먼저 고치고 mockup이 따라온다\"를 명시적 규칙으로 두고 있다(`docs/mockups/README.md`, `docs/doc-structure-state.md`). 따라서 토큰 값이 어긋나면 **mockup을 코드에 맞춘다**.\n\n## 추적 방식 (요약)\n- **to-be** = github `dlddu/session-platform`의 `docs/mockups` 트리 해시. 별도 빌드 산출물이 없고(HTML 자체가 산출물) 토큰 정의도 각 mockup 파일 안에 인라인으로 있으므로 단일 트리 해시로 충분하다.\n- **as-is** = 같은 레포의 `web/src/screens` · `web/src/app` · `web/src/design` 트리 해시 조합. 렌더링과 무관한 변경은 무시된다.\n- 화면 ↔ 목업 매핑 파일이 정착하면 as-is를 **매핑·토큰·카피 지문(sha256)** 으로 좁힐 수 있다(모델 개정 사항).\n\n## 범위 밖 / 비고\n- **실행 스크린샷 픽셀 비교는 범위 밖**이다. 이 모델은 정적 대조로 판정한다. 등록 시점 이 레포에는 스크린샷 캡처·비교 인프라가 없다(`web/e2e`의 Playwright는 동작 e2e이지 시각 회귀 도구로 쓰이지 않는다). 캡처 인프라를 도입하면 판정 방식을 개정한다.\n- **템플릿 고정부에서의 의도된 이탈 — 토큰의 SSOT 방향**: 이 유형의 기본은 \"목업이 시각 SSOT이므로 구현을 목업에 맞춘다\"이지만, session-platform은 2026-08-08에 디자인 시스템 정본을 **코드**(`web/src/design/tokens.css` 토큰·프리미티브, `web/src/app/shell.css` 컴포넌트·패턴, 색인 `web/src/design/README.md`)로 확정했다. 역사적으로 mockup이 먼저였고 `tokens.css`가 거기서 1:1 이식됐으나 방향이 뒤집혔다. 따라서 **화면·카피·구조는 목업이 SSOT, 디자인 토큰은 코드가 SSOT**로 갈라 판정한다. 이 때문에 `web/src/design`은 as-is 범위에 들어 있고 to-be에는 들어 있지 않다.\n- **미구현 화면의 구현 의무는 `tbm_session-platform-docs-impl`이 담당**한다. 그 모델의 to-be 중 \"UI가 목업·사용자 여정과 일치\" 항목과 겹치므로, **화면 단위 시각 대조는 이 모델이 담당**하는 것으로 경계를 둔다.\n- **여정 문서 ↔ 여정 mockup의 구조적 커버리지는 `tbm_session-platform-journey-mockup`이 담당**한다. 그 모델은 `docs/journeys`(등록 시점 부재)를 보고 이 모델은 `docs/mockups`(화면 단위 6종)를 본다. 첫 task들이 화면 단위 자산을 여정 단위로 재편하면 두 모델의 to-be가 같은 트리를 보게 되지만, 판정 대상이 달라(식별자 집합 vs 시각 대조) 중복 계상되지 않는다.\n- 동작·상태 전이의 검증 커버리지는 `tbm_session-platform-ac-e2e`가 담당한다.\n- `web/src/api`(API 클라이언트·타입), `web/e2e`(Playwright 스위트), `web/index.html`·`vite.config.ts`·`playwright.config.ts` 등 빌드·테스트 설정, 그리고 `control-plane/`·`data-plane/`(Go 백엔드)는 렌더링 소스가 아니므로 as-is 버전 범위에서 제외한다. 단 `control-plane/internal/static`이 SPA 번들을 서빙하는 경로라는 점은 배포 경계일 뿐 렌더링 정의가 아니다.\n",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/session-platform",
+        "ref": "main",
+        "subPath": "docs/mockups"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = 목업(시각 SSOT). docs/mockups 하위 트리 해시.\n# 별도 빌드 산출물이 없고(HTML 자체가 산출물) 토큰도 각 파일에 인라인이므로 단일 트리 해시다.\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:docs/mockups\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/session-platform",
+        "ref": "main",
+        "subPath": "web/src"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = 실제 구현의 렌더링 소스. web/src/screens · web/src/app · web/src/design 트리 해시 조합.\n# → 렌더링과 무관한 변경(web/src/api, web/e2e, 빌드 설정, control-plane/, data-plane/)은 무시된다.\n# web/src/design이 여기 들어 있는 것은 이 레포가 디자인 토큰 정본을 코드로 확정했기 때문이다.\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ns=\"$(git rev-parse \"HEAD:web/src/screens\")\"\na=\"$(git rev-parse \"HEAD:web/src/app\")\"\nd=\"$(git rev-parse \"HEAD:web/src/design\")\"\nprintf 'screens:%s app:%s design:%s\\n' \"$s\" \"$a\" \"$d\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "checkPolicy": {
+      "intervalSeconds": 3600
+    }
   }
 ]
