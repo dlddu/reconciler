@@ -3,7 +3,7 @@
     "toBeModelId": "tbm_session-platform-journey-mockup",
     "status": "planning",
     "createdAt": "2026-09-03T04:00:00Z",
-    "updatedAt": "2026-09-03T04:36:00Z",
+    "updatedAt": "2026-09-03T04:41:00Z",
     "trigger": {
       "detectedAt": "2026-09-03T04:00:00Z",
       "changedSides": [
@@ -31,6 +31,62 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-03T04:04:00Z",
       "reason": "**작업 필요.** 첫 관측이자 전면 격차다 — 판정 대상 여정 **8개 전부**(30단계)가 미시각화이고, 규칙 5를 집행할 DOM 하네스·CI 게이트도 없다. 이 모델에는 **열린 task가 0개**(파일 자체가 없었다)이므로 경합할 워커도, 이 격차를 이미 들고 있는 기록도 없다.\n\n**자동 해소 가능성 0.** `docs/journeys`는 누가 만들지 않는 한 생기지 않는다. 게다가 내가 baseline을 `null`에서 현재 값으로 전진시키므로, 지금 `no_action_needed`로 닫으면 여정 문서나 인덱스가 또 바뀌기 전까지 이 격차를 다시 열어줄 트리거가 없다. 재확인을 미룰 근거도 없다.\n\n**planner에게 (계획 재료·선행 순서)**\n1. **선행 결정 1건이 단계 집합을 좌우한다.** `STP-approval-decide`(승인 결정 화면)는 결정 UI가 **이 레포 밖 제품**에 있다는 사실이 `docs/mockups/README.md`에 적혀 있고, ⚪(의도적 비시각화, `JRN-concurrent-access`와 같은 처리)로 수용할지 세션 쪽에 최소 요약 화면을 둘지가 **결정 대기 중**이다. `JRN-approval-gated-work` 페이지의 단계 집합(규칙 3은 양방향 일치를 요구한다)을 확정하려면 이게 먼저다. ⚪로 간다면 규칙 8에 따라 `docs/doc-structure-state.md`에 **단계 단위 예외**를 등재해야 하는데, 현재 그 섹션은 여정 단위 등재(`JRN-concurrent-access`) 서식만 갖고 있다 — 서식 확장이 필요할 수 있다.\n2. **하네스는 페이지보다 먼저 서는 편이 낫다.** definition이 \"판정 기준만 있고 집행이 없으면 규칙 5는 조용히 썩는다\"고 적었고, 규칙 5의 (c)(d)(e)는 정적 대조로 확인 불가라고 못박았다. 페이지를 여러 개 만든 뒤 하네스를 붙이면 그 시점에 전부 되돌아가 고쳐야 한다. **주의: 이 호스트에는 node/npm이 없다** — `tools/journey-prototype.test.mjs`의 통과 여부는 로컬 재현이 아니라 **CI 체크런**(`gh api .../check-runs`, `gh run view --log`)으로 읽어야 하고, 단언 건수까지 함께 읽어 커버리지 회귀를 판별해야 한다.\n3. **화면 단위 6종의 처리 방향을 먼저 정할 것.** `docs/mockups/`의 `index`·`new-session`·`workspace`·`agent-workspace`·`gated-workspace`·`restore`는 이 모델의 매칭 단위가 아니라 **자매 모델 `tbm_session-platform-mockup-render`의 to-be**다. 이들을 여정 단위로 재구성하면 두 모델의 범위가 겹치기 시작하고, 제자리 재편을 택하면 이 모델의 `MOCKUP_ROOT`(`docs/journeys`) 자체가 **모델 개정 사항**이 된다(definition이 명시). 그 경우 detector·planner가 임의로 바꾸지 말고 tobe-modeler로 넘겨야 한다. 참고로 `docs/index.html:12`의 링크 규칙 주석은 `여정 mockup → journeys/<journey-id>/`로 이미 `docs/journeys`를 가리키고 있다.\n4. **집계 두 종류를 섞지 말 것.** `docs/mockups/README.md`의 `✅ 18 · ⚠️ 5 · ❌ 7 · ⚪ 3 (총 33단계)`는 산술적으로 정합하지만(합 33 = 실측), 그 ✅는 \"어떤 화면 단위 mockup이 그 단계를 담고 있다\"는 뜻이지 \"그 여정의 전용 페이지가 있다\"가 아니다. 이 모델 기준으로는 ✅ 18건도 전부 미시각화이며, 완료 기준을 그 표의 숫자로 잡으면 조용히 어긋난다. 규칙 7이 요구하는 여정→페이지 매핑(대상 여정·단계 목록·공개 경로)은 **아직 이 문서에 없다** — 신설 대상이다.\n5. **정비 항목 2건(작지만 규칙에 걸린다)**: (a) 기존 예외 등재 `JRN-concurrent-access`에 규칙 8이 요구하는 **재검토 시점**이 없다. (b) `docs/index.html`의 mockup 링크 9개가 `href=\"#\"` 플레이스홀더라, 페이지가 생길 때 허브·인덱스를 함께 갱신하지 않으면 곧바로 규칙 7 위반이 된다.\n6. **슬라이스 분할은 planner 판단**이지만, 여정 8개를 한 번에 닫는 계획은 규칙 5의 8개 하위 조건 때문에 검증 비용이 매우 크다. definition이 제시한 4단계(매핑 SSOT 확장 → `data-journey`/`data-step` 규약 도입 → 페이지 신설/재구성 → 하네스·CI 게이트)를 그대로 슬라이스 경계로 쓰는 것이 자연스럽다. **부분 슬라이스로 닫으면 잔여 격차는 재감지가 새 task로 잇는다** — 단, 이 모델의 as-is/to-be 경로 안에서 변화가 일어나야 재감지가 걸린다는 점을 완료 기준에 반영할 것(예: 하네스 파일 `tools/`와 워크플로 `.github/`는 **두 versionScript 어디에도 잡히지 않는다** — 그 산출물만 남기는 슬라이스는 스스로를 재감지시키지 못하므로 같은 슬라이스에 `docs/` 변경을 함께 넣거나 완료 기준을 계획에 명시해야 한다)."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근: '규약 + 집행 + 파일럿 2개'를 한 슬라이스로 세운다.** 판정 대상 여정 8개가 전부 미시각화지만, 8개를 한 번에 만드는 계획은 규칙 5의 8개 하위 조건(a~h) 때문에 검증 비용이 감당 불가다. definition이 제시한 4단계(매핑 SSOT 확장 → `data-journey`/`data-step` 규약 → 페이지 신설 → 하네스·CI 게이트) 중 **하네스를 페이지보다 먼저 세우고, 그 하네스가 실제로 무언가를 집행하도록 파일럿 페이지 2개를 같은 PR에 넣는다.** 페이지를 여러 개 만든 뒤 하네스를 붙이면 그 시점에 전부 되돌아가 고쳐야 하고(규칙 5의 (c)(d)(e)는 정적 대조로 확인 불가), 반대로 하네스만 먼저 넣으면 집행 대상이 0이라 통과가 무의미하다. 둘을 한 PR에 묶어야 '하네스가 실제 페이지를 굴려 통과했다'는 증거가 남는다.\n\n**핵심 결정 3건 (계획 단계에서 확정)**\n1. **`docs/mockups/*.html` 6종은 제자리에 그대로 둔다.** 여정 페이지는 `docs/journeys/<journey-id>/index.html`에 **신설**하고, 화면 단위 mockup의 마크업은 필요한 만큼 옮겨 적되 파일을 옮기거나 지우지 않는다. 이유: (a) 6종은 자매 모델 `tbm_session-platform-mockup-render`의 to-be이고 **지금 다른 워커가 그 모델을 planning 중**이라 파일을 건드리면 남의 작업을 밟는다, (b) 제자리 재편을 택하면 이 모델의 `MOCKUP_ROOT`가 모델 개정 사항이 되어 tobe-modeler로 넘겨야 한다 — 신설이면 `docs/journeys`가 그대로 유효하다, (c) definition이 '여정 페이지의 화면은 복제해 온 스냅샷이 아니라 그 자체가 원본'이라고 못박았으므로 참조가 아니라 자기 마크업을 갖는 것이 옳다.\n2. **파일럿은 `JRN-session-creation`(3단계)과 `JRN-shell-interaction`(4단계).** 둘 다 현재 커버리지가 전 단계 ✅라 `new-session.html`·`workspace.html`에 옮겨 적을 재료가 이미 있고(신규 창작 최소), `STP-isolated-work` → 쉘 루프로 서로 이어져 규칙 4의 여정 간 분기를 실제로 굴려볼 수 있다. 두 페이지여야 규칙 2(페이지→여정 유일)가 공집합이 아닌 상태로 검증된다.\n3. **커버리지(규칙 1)는 CI를 빨갛게 만들지 않되 침묵도 불가능하게 한다.** 하네스는 *존재하는 페이지*에 대해 규칙 2·3·4·5·6·7을 **실패로** 집행하고, 페이지가 없는 여정은 매핑 SSOT에 `⏳ 예정` 또는 예외 등재 둘 중 하나로 **반드시 선언돼 있어야** 통과시킨다. 어느 쪽으로도 선언되지 않은 여정이 있으면 실패다. 미완을 예외로 위장해 초록을 만드는 길을 막으면서, 잔여 6개 여정 때문에 무관한 PR이 막히는 일도 없다.\n\n**이 시도의 범위(완료 기준)** — 아래 4개가 main에 머지되고 `docs-journey-mockup` 체크가 초록이면 이 task는 성공이다.\n(1) 매핑 SSOT `docs/mockups/README.md`에 **여정 → 여정 mockup 페이지** 매핑 섹션 신설(대상 여정·단계 목록·공개 경로·상태) — 기존 '화면 단위 커버리지' 표와 **다른 지표임을 명시**해 ✅18 집계와 섞이지 않게 한다.\n(2) `docs/journeys/JRN-session-creation/index.html`·`docs/journeys/JRN-shell-interaction/index.html` 신설 — 규칙 2·3·4·5(a)~(h) 충족.\n(3) 하네스 `tools/journey-prototype.test.mjs`(+`tools/package.json`)와 CI 게이트 `.github/workflows/docs-journey-mockup.yml` 신설 — Playwright로 `file://` 실브라우저에서 굴린다.\n(4) `docs/doc-structure-state.md` 예외 등재 정비(규칙 8이 요구하는 **재검토 시점** 추가)와 `docs/index.html` 허브 링크 갱신(파일럿 2건은 실주소, `JRN-concurrent-access`는 '준비 중' 플레이스홀더 대신 **의도적 비시각화** 표기).\n\n**범위 밖(후속 task로 잇는다)**: 나머지 6개 여정(`JRN-idle-resume`·`JRN-multi-session-switch`·`JRN-agent-prompt-loop`·`JRN-manual-freeze`·`JRN-session-deletion`·`JRN-approval-gated-work`)의 페이지, `STP-approval-decide`의 소유권 결정(⚪ 수용 vs 세션 쪽 요약 화면 — 이 결정은 `JRN-approval-gated-work` 페이지를 만들 때가 되어야 필요하다), `docs/mockups/` 6종의 최종 처리 방향, mockup↔`tokens.css` 정본 연결(🟢 위험). 이 슬라이스가 `docs/journeys`·`docs/mockups/README.md`·`docs/index.html`·`docs/doc-structure-state.md`를 모두 건드리므로 as-is·to-be 두 versionScript가 함께 전진하고, 잔여 격차는 다음 감지가 새 task로 연다.\n\n**되돌리기**: 전부 문서·CI 추가이고 런타임·클러스터·데이터에 닿지 않는다. 문제가 생기면 머지 커밋 revert 하나로 원복되며, 게이트가 시끄러우면 워크플로 파일만 지워도 나머지는 무해하게 남는다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-03T04:40:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 `reconcile/rct_20260903-0001-opus5` 생성 후, 하네스 파서가 기준으로 삼을 실측값을 먼저 고정한다: `docs/user-journeys/JRN-*.md`에서 여정 9개·단계 33개(`^### \\`STP-` 백틱 포함 헤딩)·각 여정의 '4. 분기·예외 흐름' 표 행, `docs/doc-structure-state.md` '수용된 위험'의 등재 여정 1건(`JRN-concurrent-access`).",
+              "expectedOutcome": "여정 9 / 단계 33 / 예외 1 / 분기 행(여정별 5~9행)이 파싱으로 재현된다. 단계 헤딩을 `^### STP-`(백틱 없음)로 세면 0이 나오는 함정을 파서가 피한다."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/mockups/README.md` 끝부분에 새 섹션 '## 여정 → 여정 mockup 페이지 매핑 (`docs/journeys/`)'을 **추가**한다(기존 표는 수정하지 않는다). 각 행: 여정 id · 단계 목록 · 공개 경로 · 상태(✅ 페이지 있음 / ⏳ 예정 / ⚪ 예외 등재). 섹션 머리에 '이 표는 여정 전용 페이지 유무를 세며, 위의 화면 단위 커버리지(✅18 · ⚠️5 · ❌7 · ⚪3)와 **다른 지표**다'라고 명시한다.",
+              "expectedOutcome": "9행(파일럿 2 = ✅, `JRN-concurrent-access` = ⚪, 나머지 6 = ⏳)짜리 표가 생기고, 두 지표가 섞이지 않는다는 경고 문구가 붙는다. 기존 화면 단위 표·요약 줄은 바이트 그대로다(자매 모델 PR과의 충돌면 최소화)."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/doc-structure-state.md`의 '수용된 위험'에서 `JRN-concurrent-access` 등재에 규칙 8이 요구하는 **재검토 시점**을 추가하고(예: '재검토 2027-06-27 또는 이 여정에 UI 표면이 생기는 상류 변경 시'), '현재 상태 요약'·'변경 이력'에 여정 mockup 층위(`docs/journeys/`) 항목을 새로 넣는다.",
+              "expectedOutcome": "예외 등재가 사유+재검토 시점을 모두 갖춰 규칙 8을 충족한다. 문서가 '여정 단계↔화면 단위 mockup'과 '여정↔여정 페이지' 두 층위를 구분해 기록한다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/journeys/JRN-session-creation/index.html` 신설. `<main data-journey=\"JRN-session-creation\">` 아래 `<section data-step>` 3개(`STP-create-request`·`STP-workspace-entry`·`STP-isolated-work`). 실입력(세션 이름 `<input>`, 타입·모델 `<select>`/라디오), 화면 안 행동으로 전진(Create → 프로비저닝 → 워크스페이스), 상태 변형(400 검증 실패·pod 스케줄 실패·재시도), `#STP-…` 딥링크, 분기표 5행 전부를 `data-branch-target`으로 배선(여정 내부 2건은 실제 이동, 여정 밖 3건은 대상 페이지가 없으므로 `data-branch-pending`), 문서 메타는 기본 닫힌 `<details>`에만 둔다.",
+              "expectedOutcome": "브라우저에서 `file://`로 열어 3단계를 클릭만으로 통과할 수 있고, 잘못된 입력으로 400 화면에, 재시도로 실패 화면에 도달한다. 연 직후 보이는 것은 제품 화면이고 단계 메타는 접혀 있다."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/journeys/JRN-shell-interaction/index.html` 신설. `<section data-step>` 4개(`STP-shell-attach`·`STP-command-input`·`STP-output-read`·`STP-shell-state-carry`). 실제 `<input>` 명령줄에 타이핑→Enter로 stdout이 붙고, cwd·env가 다음 명령으로 이어지는 Shell state 패널, 분기표 6행 배선(내부 2건 실제 이동 — 출력 잘림·컨테이너 재시작, 외부 4건 pending), 딥링크·상태 변형(출력 누적 한계, 쉘 프로세스 종료) 포함.",
+              "expectedOutcome": "명령을 실제로 입력해 출력이 늘고, 상태 패널이 갱신되며, 4단계를 화면 안 행동만으로 통과한다. `JRN-session-creation`의 `STP-isolated-work`에서 이 페이지로 넘어오는 링크가 살아 있다."
+            },
+            {
+              "seq": 6,
+              "action": "하네스 `tools/journey-prototype.test.mjs`(+ `tools/package.json`에 `@playwright/test` 1.61.0 고정) 작성. `node --test`로 돌며 Playwright chromium이 각 페이지를 `file://`로 연다. 집행 항목: 규칙 2(페이지당 `data-journey` 정확히 1개·여정당 페이지 1개)·규칙 3(단계 집합 양방향 일치)·규칙 4(분기표 각 행에 대응 `data-branch-target`, 내부 대상은 클릭 시 실제 이동)·규칙 5(a)(b) `<details>` 기본 닫힘 (c) 각 단계가 화면 안 행동으로 도달됨 (d) `<input>`/`<select>`/`<textarea>` 포커스·타이핑 동작 (e) 분기·예외 상태 도달 (f) `#step-id` 딥링크 (g) 분기 선택과 끝 (h) 네트워크 없이 로드(장식 폰트 외 요청 차단 상태로 통과)·규칙 6(모르는/폐기 식별자 참조 0)·규칙 7(매핑 표·허브 링크가 실제 페이지 집합과 일치). 페이지 없는 여정은 매핑 표에 `⏳ 예정` 또는 예외 등재로 선언돼야만 통과.",
+              "expectedOutcome": "로컬에는 node가 없으므로 통과 여부는 CI에서 읽는다. 단언 수가 출력되어(`# pass N`) 이후 슬라이스에서 커버리지 회귀를 판별할 수 있다."
+            },
+            {
+              "seq": 7,
+              "action": "`.github/workflows/docs-journey-mockup.yml` 신설. `pull_request`·`push:[main]`·`workflow_dispatch`, path 필터 `docs/journeys/**`·`docs/user-journeys/**`·`docs/mockups/README.md`·`docs/index.html`·`docs/doc-structure-state.md`·`tools/**`·자기 자신. `setup-node@v4` node 22 → `npm install` (tools) → `npx playwright install --with-deps chromium` → `node --test tools/journey-prototype.test.mjs`.",
+              "expectedOutcome": "규칙 5가 CI 게이트로 집행된다 — definition이 '하네스가 없거나 CI에 걸려 있지 않은 상태는 그 자체가 drift'라고 한 항목이 해소된다. 문서와 무관한 PR은 path 필터로 영향받지 않는다."
+            },
+            {
+              "seq": 8,
+              "action": "`docs/index.html` 허브 갱신: 파일럿 2개 여정 행의 `<a class=\"missing\" href=\"#\">여정 mockup 준비 중</a>`을 `<a href=\"journeys/JRN-…/\">여정 mockup</a>`으로 교체하고, `JRN-concurrent-access` 행은 '준비 중'이 아니라 **의도적 비시각화(예외 등재)** 표기로 바꾼다. 나머지 6개 행은 '준비 중' 그대로 둔다(사실과 일치). 상단 hint 문구와 '최종 갱신' 날짜도 현재 상태에 맞춘다.",
+              "expectedOutcome": "허브가 실제 페이지 집합과 일치해 규칙 7을 충족하고, 하네스의 허브 검사도 통과한다. `href=\"#\"` 잔여는 미완 6건 + `docs/` 밖 미공개 1건뿐이다."
+            },
+            {
+              "seq": 9,
+              "action": "커밋·푸시 후 `dlddu/session-platform`에 draft가 아닌 일반 PR을 연다. 본문에 task id(`rct_20260903-0001`)·모델 id·격차 요약(8/8 미시각화)·이 슬라이스의 완료 기준·범위 밖 항목·검증 방법을 적는다. 머지는 하지 않는다.",
+              "expectedOutcome": "PR이 열리고 `docs-journey-mockup` 체크가 실행된다. executor가 체크 결과와 함께 검토·머지·검증을 이어받을 수 있는 상태가 된다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
