@@ -3,7 +3,7 @@
     "toBeModelId": "tbm_session-platform-mockup-render",
     "status": "planning",
     "createdAt": "2026-09-03T04:02:00Z",
-    "updatedAt": "2026-09-03T04:24:00Z",
+    "updatedAt": "2026-09-03T04:33:00Z",
     "trigger": {
       "detectedAt": "2026-09-03T04:02:00Z",
       "changedSides": [
@@ -31,6 +31,62 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-03T04:05:00Z",
       "reason": "**작업 필요.** 첫 관측이며 판정 기준 5개 중 3개(매핑·카피/구조·미문서화 이탈)가 실측으로 위반이다. 이 모델에는 **열린 task가 0개**(파일 자체가 없었다)라 경합할 워커도 이 격차를 들고 있는 기록도 없다.\n\n**근거 요약**\n1. **매핑 0/4** — 구현 화면 4종 중 어느 것도 대응 목업을 선언하지 않고, `docs/mockups/README.md`도 화면 매핑을 담지 않는다. `DeleteSessionDialog.tsx`는 구현만 있고 목업이 없다.\n2. **카피·구조 위반** — `Vitals`·`Lifecycle`·`Shell state`·`Idle timer`·`Auto-freeze at`·`Pod uptime`·`process tree`·`Resuming from checkpoint`·`Session workspace` 9개 패널 라벨이 `web/src` 전역에서 0 hit이다.\n3. **미문서화 이탈** — 허용목록이 없는데 하드코딩 hex 14건 + 인라인 `style={{` 6건이 존재한다.\n\n**중요: 토큰은 위반이 아니다.** 목업 6개 × 24개 토큰이 정본 `tokens.css`와 이름·값 모두 일치한다(hex 대소문자와 `--ease`의 `.22`/`0.22` 표기만 다르고 의미는 동일). **\"토큰 불일치\"로 계획을 세우면 잘못된 전제로 시작한다** — 실제 위험은 값 어긋남이 아니라 7중복(정본 미참조)이고, 그건 `docs/doc-structure-state.md:148`에 \"mockup을 `tokens.css`에 물릴지, 복제 수용으로 갈지 **결정 필요**\"로 이미 미결 등재돼 있다.\n\n**왜 지금인가 (자동 해소 가능성 0)**\n매핑·허용목록은 누가 만들지 않으면 생기지 않고, 누락된 패널도 마찬가지다. 게다가 **내가 baseline을 `null`에서 현재 값으로 전진시키므로**, 지금 `no_action_needed`로 닫으면 목업이나 화면 코드가 또 바뀌기 전까지 이 격차를 다시 열어줄 트리거가 없다.\n\n**planner에게 (계획 재료·순서)**\n1. **매핑 신설이 선행 조건이다.** ①이 서기 전에는 ③의 정밀 차집합(어느 화면의 어느 문자열이 어느 목업과 어긋나는지)을 산출할 수 없다. definition이 요구하는 형태는 두 갈래다 — `docs/mockups/README.md`의 매핑 표 **+** 각 화면 컴포넌트 헤더 주석의 대응 mockup 파일명 선언. 후자는 `icons.tsx:1`의 \"ported 1:1 from docs/mockups/index.html\"이 사실상의 선례이니 그 서식을 규약으로 승격하는 것이 자연스럽다.\n2. **`Workspace.tsx`의 1:N 대응을 먼저 정할 것.** 이 화면 하나가 워크로드 타입에 따라 `workspace`/`agent-workspace`/`gated-workspace` 셋에 걸친다. 다만 `approval-gated`는 **구현이 없으므로**(`WorkloadType`이 `shell`·`claude-code` 둘뿐) 현재 대조 대상은 `workspace`·`agent-workspace` **둘**이다. `gated-workspace.html`을 이 모델의 대조 대상에 넣으면 아직 없는 화면을 drift로 세는 오계상이 된다 — 그 구현 의무는 `tbm_session-platform-docs-impl` `rct_20260903-0001`(AC-F1~F6)이 들고 있다.\n3. **누락 패널은 \"목업이 SSOT\"의 기본 방향대로면 구현을 늘리는 일이다.** 다만 definition은 \"의도된 디자인 변경이거나 플랫폼상 불가피하면 목업을 고치거나 허용목록에 사유를 남긴다\"는 반대 경로도 열어 뒀다. `Vitals`(CPU/Memory)·`Pod uptime`·`process tree`처럼 **실데이터 소스가 필요한 패널**은 API가 그 값을 제공하는지부터 확인해야 판단이 선다 — 제공하지 않으면 목업 축소 또는 허용목록 등재가 현실적인 수렴 방향이다.\n4. **허용목록 신설이 판정 기준 5의 전제다.** definition이 \"등록 시점 허용목록은 존재하지 않으며, 신설은 첫 task의 계획 대상\"이라고 명시했다. 하드코딩 hex 14건·인라인 style 6건을 (a) 토큰 참조로 고칠지 (b) 사유와 함께 등재할지 건별로 갈라야 하고, 등재처는 `docs/doc-structure-state.md`의 🟢 항목(`:149`)을 확장하는 쪽이 자연스럽다. **주의: `scripts/check-fidelity-allowlist.py`는 e2e 충실도용이라 여기에 얹으면 자매 모델 `tbm_session-platform-e2e-mock-policy`의 SSOT를 오염시킨다** — 별도 파일이어야 한다.\n5. **토큰 7중복 결정은 이 task가 임의로 정하지 말 것.** `docs/doc-structure-state.md:148`이 \"결정 필요\"로 남긴 제품/설계 결정이다. 다만 목업을 `tokens.css`에 물리는 쪽으로 가면 목업의 \"빌드 없음 · `file://`로 열림\" 성질을 깨지 않는지 확인이 필요하다(상대 경로 `<link>`는 `file://`에서 동작하므로 불가능하지는 않다).\n6. **재감지 경로 주의.** 이 모델의 as-is는 `web/src/screens`·`web/src/app`·`web/src/design` 셋뿐이다. 매핑 표를 `docs/mockups/README.md`에만 쓰면 **to-be(`docs/mockups`) 쪽 해시만 움직여** 재감지는 걸리지만, 허용목록을 `docs/doc-structure-state.md`에 쓰면 **양쪽 어느 versionScript에도 잡히지 않는다**(그 파일은 `tbm_session-platform-journey-mockup`의 to-be다). 부분 슬라이스로 닫을 경우 그 산출물의 완료 판정을 버전 해시가 아니라 계획의 완료 기준에 명시해 둘 것."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근**: 이 모델의 판정 기준 5개 중 3개가 위반이지만, 그중 ①매핑 공백이 나머지 전부의 선행 조건이다 (감지가 \"①이 서기 전에는 ③의 정밀 차집합을 산출할 수 없다\"고 못박았다). 그래서 이번 시도는 **화면을 고치지 않고 판정 하네스를 먼저 세운다** — 화면↔목업 매핑 SSOT를 신설하고, 정본 이탈·구조 차집합을 원장으로 등재하고, 그 둘을 문서 낭독이 아니라 **집합 동등성**으로 강제하는 python3 게이트를 CI에 건다. 이 레포에는 같은 모양의 선례가 이미 있다 — `scripts/check-fidelity-allowlist.py`(R1~R9, stdlib 전용, CI `fidelity` 잡). 그 서식을 그대로 따라 두 번째 게이트를 세우면 리뷰어가 새 규약을 배울 필요가 없고, 호스트에 node/go가 없어도 로컬에서 1:1 재현된다.\n\n**왜 지금 화면을 고치지 않는가(가역성)**: 누락 패널(`Vitals`·`Shell state`·`Lifecycle`)을 구현하는 일은 CPU/메모리·pod uptime 같은 **실데이터 소스가 API에 있는지**에 달려 있고, 하드코딩 hex 14건을 토큰으로 접는 일은 **렌더 결과를 바꾸는데 이 레포에는 스크린샷 회귀 인프라가 없다**(모델이 범위 밖으로 명시). 둘 다 이번에 손대면 검증 불가능한 변경이 된다. 반면 원장+게이트는 렌더 출력을 한 픽셀도 바꾸지 않으면서 \"앞으로 이탈이 늘 수 없게\" 만든다 — 되돌리려면 PR revert 한 번이면 된다.\n\n**이 시도의 범위(완료 기준)** — 아래 5개가 모두 성립하면 이 task는 성공이다:\n① `docs/mockups/README.md`에 **화면 ↔ mockup 매핑 표**가 서고, 구현된 화면·컴포넌트가 빠짐없이 1행씩 등재된다(양방향).\n② 각 화면/컴포넌트 파일 헤더에 `mockup: docs/mockups/<file>.html` **선언 주석**이 붙고, 표와 양방향으로 일치한다.\n③ `web/src/design/README.md`에 **정본 이탈 원장**이 서서, `web/src/screens`+`web/src/app`의 하드코딩 hex·인라인 style이 빠짐없이 (수용 예외 | 동적 바인딩 | 미해소 위반) 중 하나로 분류되고, 미해소 위반 개수에 **상한**이 걸린다.\n④ mockup↔구현의 **패널(`.panel` > `<h4>`) 층위 차집합**이 쌍별로 원장에 등재되고 개수에 상한이 걸린다.\n⑤ `scripts/check-render-fidelity.py`가 ①~④를 집합 동등성으로 강제하고 CI 잡으로 걸리며, **각 규칙마다 음성 통제** (고의 위반 → 의도한 메시지로 실패 → 복원 후 바이트 동일)를 통과한다.\n\n**범위 밖(후속, 재감지가 새 task로 잇는다)**: (a) 패널 **내부** 카피·수치 대조(`Idle timer`·`Auto-freeze at`·`Pod uptime`·`process tree`·`Resuming from checkpoint`·`Session workspace`·역방향 `Delete session`·`Switch (AC-C4)`) — 판정 기준 3 전체와 4의 세부. (b) 누락 패널의 **실제 구현**과 hex 14건의 **토큰화** — 원장의 상한을 내리며 닫는다. (c) `DeleteSessionDialog` 대응 mockup 신설(원장에 미해소로 등재만). (d) 토큰 7중복 해소 방향 결정 — `docs/doc-structure-state.md:148`이 \"결정 필요\"로 남긴 제품 결정이라 이 task가 정하지 않는다. (e) `docs/doc-structure-state.md` 자체는 **건드리지 않는다** — 그 파일은 자매 모델 `tbm_session-platform-journey-mockup`의 **to-be**라 여기서 고치면 남의 모델 목표 상태를 움직인다. (f) 모델 definition의 등록 시점 스냅샷 어긋남(`WorkloadType` 3종이라 적혔으나 실제 2종) — 모델 편집은 tobe-modeler 몫.\n\n**재감지 경로 확인**: 이번 변경은 이 모델의 to-be(`docs/mockups/README.md`)와 as-is(`web/src/screens/*.tsx` 헤더 · `web/src/design/README.md`) **양쪽 해시를 모두 움직인다** — 게이트 산출물이 `scripts/`·`.github/`뿐이라 스스로를 재감지시키지 못하는 함정을 피했다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`docs/mockups/README.md`에 「## 화면 ↔ mockup 매핑 (SPA 구현 대조)」 섹션을 신설한다. 표 열: `구현 파일` · `종류`(screen/component) · `대응 mockup` · `근거` · `상태`. 화면 4종(`Sessions.tsx`→`index.html`, `NewSession.tsx`→`new-session.html`, `Workspace.tsx`→`workspace.html`+`agent-workspace.html`(1:N), `Restore.tsx`→`restore.html`)과 앱 셸 컴포넌트 5종(`AppShell`·`SessionCard`·`StateBadge`·`Toast`·`icons`)을 등재하고, `DeleteSessionDialog.tsx`는 `대응 mockup 없음`으로 등재한다. `gated-workspace.html`은 `구현 없음`으로 등재하되 **구현 신호**(`web/src`에서 `approval-gated` grep) 칸을 함께 적는다.",
+              "expectedOutcome": "매핑 표가 존재하고, `web/src/screens/*.tsx`·`web/src/app/*.tsx`의 모든 파일이 정확히 1행씩 갖는다. mockup 6종도 전부 표에 나타난다(구현 없음 포함)."
+            },
+            {
+              "seq": 2,
+              "action": "각 구현 파일 헤더에 기계 판독 가능한 선언 주석 `// mockup: docs/mockups/<file>.html` 을 단다(1:N이면 콤마 구분). `web/src/app/icons.tsx:1`의 \"ported 1:1 from docs/mockups/index.html\" 선례를 정규 서식으로 승격하는 것이며, `shell.css`는 `/* mockup: ... */` 형태를 쓴다. 기존 산문 주석은 지우지 않고 선언 줄만 추가한다.",
+              "expectedOutcome": "선언 주석의 (파일 → mockup 집합)이 1번 매핑 표와 **양방향으로 정확히 같다**. `DeleteSessionDialog.tsx`는 `// mockup: none — <사유>` 형태로 선언한다."
+            },
+            {
+              "seq": 3,
+              "action": "`web/src/design/README.md`에 「## 정본 이탈 원장」을 신설한다. `web/src/screens`+`web/src/app` 스캔으로 나온 하드코딩 hex 14건과 `style={{` 10건을 **건별로** 네 카테고리 중 하나에 넣는다 — `DYN`(런타임 값 바인딩, 이탈 아님) · `EXC`(수용 예외, 코드에 `design-system-exception:` 마커 필수) · `OPEN`(미해소 위반, 제거 경로 필수) · 토큰화 가능하면 `OPEN`. 미해소 위반 개수에 **선언 상한**을 적는다(늘면 CI 실패, 줄이면 상한도 내린다).",
+              "expectedOutcome": "원장의 (파일, 값) 집합 == 실제 스캔 결과(양방향 동등). `EXC` 행은 코드에 대응 마커가 있고, 마커 파일 집합 == 그 행들의 파일 집합."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/mockups/README.md` 매핑 섹션에 「패널 구조 차집합」 표를 덧붙인다. mockup 쪽은 `<div class=\"panel\">` 안의 `<h4>` 제목(태그 제거 후 공백 정규화), 구현 쪽은 `className=\"panel…\"` 인접 `<h4>` 텍스트를 뽑아, **쌍별로** `mockup-only` / `impl-only` 패널을 등재한다. 1:N인 `Workspace.tsx`는 쌍마다 그 변형이 그리는 패널 집합을 선언하고, **쌍별 선언의 합집합 == 파일에서 추출한 전체 집합**이 되게 한다(조용한 누락 방지). 차집합 총계에 상한을 건다.",
+              "expectedOutcome": "등재된 차집합이 실측과 정확히 일치한다. 등록 시점 실측: `workspace.html` mockup-only = Vitals·Shell state·Lifecycle, `agent-workspace.html` mockup-only = Vitals·Conversation·Lifecycle, `restore.html` mockup-only = Vitals·Lifecycle, 구현 전용 = Actions."
+            },
+            {
+              "seq": 5,
+              "action": "`web/src/design/README.md:54`의 stale 숫자를 고친다 — 「`tokens.css` + mockup **5개**, 총 **6곳**」 → 「mockup **6개**, 총 **7곳**」. 같은 사실을 `docs/mockups/README.md:48`·`docs/doc-structure-state.md:77`은 이미 7곳으로 맞게 적고 있어 이 파일만 stale하다(마지막 수정 2026-08-08 #20, PR #46이 갱신 누락).",
+              "expectedOutcome": "세 문서의 숫자가 일치한다. 그리고 6번의 게이트가 이 숫자를 `1 + docs/mockups/*.html 개수`로 **계산해서** 대조하므로 다음에 mockup이 늘어도 stale해질 수 없다."
+            },
+            {
+              "seq": 6,
+              "action": "`scripts/check-render-fidelity.py`를 작성한다 — python3 표준 라이브러리만, 파일 목록은 `git ls-files`. 규칙: R1 매핑 섹션 존재·서식 / R2 등재된 구현 파일·mockup 파일이 실재 / R3 스캔된 구현 파일 집합 == 매핑 표 행 집합(양방향) / R4 헤더 `mockup:` 선언 == 매핑 표(양방향) / R5 mockup 6종 전부가 표에 등장하고, `구현 없음` 행은 선언한 **구현 신호가 실제로 0 hit**이어야 한다 / R6 hex·inline 스캔 == 정본 이탈 원장(양방향) / R7 `design-system-exception:` 마커 == `EXC` 행 / R8 패널 차집합 실측 == 원장, 쌍별 선언의 합집합 == 파일 전체 집합 / R9 집계·상한 줄의 숫자가 실제와 일치하고 미해소 위반이 상한을 넘지 않는다 / R10 토큰 중복 개수 문구 == `1 + mockup 파일 수`.",
+              "expectedOutcome": "`python3 scripts/check-render-fidelity.py` 가 rc=0으로 통과하고, 통과 시 R별 실측 수치를 한 줄씩 출력한다."
+            },
+            {
+              "seq": 7,
+              "action": "**음성 통제**: R3·R4·R5·R6·R7·R8·R9·R10 각각에 대해 고의로 한 곳을 어긋나게 만들어(예: 매핑 표에서 한 행 삭제 / 헤더 선언 한 줄 변경 / 원장에서 hex 한 건 삭제 / 패널 차집합에 없는 항목 추가 / 상한을 1 낮춤 / 숫자 문구 되돌림) 게이트가 **그 규칙 이름과 함께** 실패하는지 확인하고, `cp` 백업에서 복원한 뒤 `cmp -s`로 바이트 동일을 확인한다.",
+              "expectedOutcome": "규칙마다 의도한 메시지로 정확히 실패하고, 복원 후 전 파일이 원본과 바이트 동일하다. \"게이트가 초록불인 이유는 실제와 맞아서\"의 직접 증거가 남는다."
+            },
+            {
+              "seq": 8,
+              "action": "`.github/workflows/ci.yml`에 `render-fidelity` 잡을 추가한다 — 기존 `fidelity` 잡과 같은 모양(`actions/checkout@v4` + `python3 scripts/check-render-fidelity.py`), 툴체인 불필요. 잡 주석에 무엇을 강제하는지와 자매 게이트(`check-fidelity-allowlist.py`, e2e 충실도)와의 경계를 적는다.",
+              "expectedOutcome": "CI에 잡이 하나 늘고, PR에서 green. 기존 8개 잡의 정의는 한 글자도 바뀌지 않는다."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치 `reconcile/rct_20260903-0001-opus5-1m`에 커밋·푸시하고 `dlddu/session-platform`에 draft PR을 연다(머지하지 않는다). 본문에 task id, gap 요약, 완료 기준 5개, 범위 밖 목록, 검증 방법, 음성 통제 결과를 적는다.",
+              "expectedOutcome": "draft PR이 열리고 CI 전 잡이 green이며 `mergeable_state`가 `clean`이다."
+            }
+          ],
+          "plannedAt": "2026-09-03T04:33:00Z"
+        }
+      }
+    ]
   }
 ]
