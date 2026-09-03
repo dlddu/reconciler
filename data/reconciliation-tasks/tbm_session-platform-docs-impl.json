@@ -1157,5 +1157,40 @@
     },
     "createdAt": "2026-09-03T12:20:01Z",
     "updatedAt": "2026-09-03T12:20:01Z"
+  },
+  {
+    "id": "rct_20260903-0005",
+    "toBeModelId": "tbm_session-platform-docs-impl",
+    "status": "action_required",
+    "createdAt": "2026-09-03T22:49:23Z",
+    "updatedAt": "2026-09-03T22:49:23Z",
+    "trigger": {
+      "detectedAt": "2026-09-03T22:49:23Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "control-plane:745224a0c0f15aee4e8bb6a2cac6195959a9fd82 data-plane:3f924596c4cc0edc39745298a4174c7903aceb47 web:02ae7b679053c49a0424efab7e57d560713d519a",
+        "currentVersion": "control-plane:e9ccb80ee7cd2b1c0a26986682508c694a7687ea data-plane:3f924596c4cc0edc39745298a4174c7903aceb47 web:4fa80cf3dac198e13dab761835c3275f009604b3"
+      },
+      "toBe": {
+        "previousVersion": "ca81c8028c1fa5f9cb3f11a764899623e2442350",
+        "currentVersion": "5016f0313f9b4e127700a0278a2c6c81a4804238"
+      }
+    },
+    "stateSummary": {
+      "summarizedAt": "2026-09-03T22:49:23Z",
+      "asIs": "# as-is — 2026-09-03T22:49Z, `dlddu/session-platform` main `269bc5c`\n\n## 트리거\n직전 baseline(12:20, `9688a36`) 이후 as-is·to-be가 함께 움직였다.\n- as-is `control-plane:745224a0`→`e9ccb80e`, `web:02ae7b67`→`4fa80cf3` (`data-plane` 불변)\n  — **PR #57**(`4db7275`, 22:27:19Z), 이 모델의 task `rct_20260903-0002` 산출물.\n- to-be `docs:ca81c802`→`5016f031` — #57(`doc-tracker.md`·`test/e2e.md`·`test/shell-workload.md`) +\n  자매 PR **#56**(`doc-structure-state.md`·`index.html`·`journeys/`) · **#55**(`mockups/README.md`) ·\n  **#53**(`test/e2e.md`, `5f60249`, 22:41:20Z).\n\n## 직전 슬라이스가 착지시킨 것 (PR #57)\nexecutor가 머지된 main에서 직접 검증해 `converged=true`로 닫았다(22:26~). 요지:\n- `session.WorkloadTypeApprovalGated` 신설 — 허용값 3종, 생략 시 `shell` 불변, 허용값 밖은\n  pod 생성 전 400. OpenAPI·SPA 타입 유니온 동기(`web/src/api/types.ts`).\n- 오케스트레이터가 이 타입에서 **헬퍼 파드를 먼저 띄워 IP를 얻고 워크로드 파드에 주입해 쌍으로**\n  반환(AC-F4 프로비저닝 절반). 헬퍼 = 컨테이너 둘(세션 MCP · credential-proxy), 세션 라벨 귀속,\n  SA 토큰 미마운트, 무상태.\n- AC-F6 자격 증명 3방향 분리를 **pod 스펙으로 강제** — 게이트웨이 자격은 MCP 컨테이너에만,\n  공급자 자격은 프록시 컨테이너에만, 워크로드 파드엔 둘 다 없음.\n- 모든 세션 파드에 역할 라벨 `session-platform.dev/pod-role`.\n- 이 타입의 동결은 shell CRIU로 **폴백하지 않고** `ErrCheckpointDisabled`로 거부.\n- 클러스터 확인: `control-plane` 1/1 Ready, `4db7275` 이미지로 롤아웃, restart 0.\n\n## 지금 상태 — **AC 27개, 미구현 AC-F 계열이 남아 있다**\n`doc-tracker.md` 집계는 **AC 27 · 미구현 F6**으로 #57 전후 불변이다(#57 자신이 변경 이력에\n「**AC를 닫지는 못했다**」고 적었다). `scripts/e2e/check-ac-mapping.sh` rc=0,\n`AC 27개 = 매칭 파일 14 + 예외 1 + 공백 12`(AC-E1~E6 · AC-F1~F6) — 이 숫자도 불변이다.\n\n## #57이 스스로 등재한 「구현 사슬 부채」 (doc-tracker.md:56, 신규 행)\n> **`approval-gated`가 아직 서지 않는다 (AC-F1·F2·F3)**: 제어 평면은 파드 쌍을 만들 수 있지만\n> **헬퍼 파드의 세션 MCP 워크로드가 data plane 에이전트에 없어** 그 파드가 Ready에 이르지\n> 못한다. 따라서 배포에서 `DATA_PLANE_APPROVAL_GATED_IMAGE`를 비워 두는 것이 현재의 의도된\n> 상태이고, **그 타입의 세션은 생성 시 실패한다.**\n\n배포 실물로도 확인된다 — `control-plane` 기동 로그의 `data_plane_approval_gated_image:\"\"`,\n코드상 `main.go:268` `env(\"DATA_PLANE_APPROVAL_GATED_IMAGE\", \"\")`.\n\n같은 행이 남은 둘을 잇는다: ① credential-proxy가 아직 **loopback 바인딩만** 허용하므로 헬퍼\n파드용 pod IP 바인딩을 열어야 하는데 그걸 안전하게 만드는 것이 AC-F2 ingress 정책이라\n**둘은 같은 슬라이스**다. ② AC-F2 NetworkPolicy 오브젝트 자체가 미착지 — **존재·셀렉터·동반\n삭제는 Go로 단언 가능**하고, \"실제로 막히는가\"만 정책 집행 CNI가 선결이다.",
+      "toBe": "# to-be — 모델 정의 기준\n\n`docs/`(SSOT)가 기술하는 의도된 동작을 `control-plane/` · `data-plane/` · `web/` 구현이\n**전부 실현·검증하고 서로 어긋나지 않는** 상태. 정의가 못박은 것 중 이번 판정에 걸리는 것:\n\n- **판정 기준 1 — 미구현 AC는 drift다.** 「문서에 있으나 구현되지 않은 AC는 to-be 미달 gap이며\n  **drift다**. 게이트 뒤 스텁·`TODO(...)` 잔여·의도적 skip은 AC 충족으로 보지 않는다.\n  **백로그로 치부해 이 루프 밖으로 빼지 않는다**(2026-07-27 사용자 결정: 문서→구현 완전 수렴\n  목표, **보류 예외 없음**).」 우선순위·분할은 각 task의 계획 단계 몫이다.\n- **부분 구현은 as-is다, to-be가 아니다.** 「to-be를 현 구현 수준으로 낮춰 잡지 않는다.」\n- 확정 PRD 6종의 **AC 27개**(A3 · B3 · C4 · D5 · E6 · F6)가 판정 대상이다.",
+      "gap": "**유의미한 gap이다 — AC-F 계열이 문서에 확정돼 있으나 구현이 미완이고, 그 타입의 세션은\n지금 생성 시 실패한다.**\n\n정의의 판정 기준 1이 「미구현 AC는 drift, 보류 예외 없음」이라고 못박고 있으므로, `approval-gated`\n타입이 문서(PRD `approval-gated-workload.md`, AC-F1~F6)에 확정된 이상 미구현분은 전부 gap이다.\n#57은 제어 평면 몫만 착지시켰고 **스스로 「AC를 닫지는 못했다」**고 기록했다.\n\n**잔여를 항목별로 세우고 각자의 자체 선행 조건을 실제 레포에 대조했다** (형태가 아니라 조건):\n\n| # | 잔여 | 자체 선행 조건 | 지금 섰나 |\n|---|------|----------------|-----------|\n| ① | data plane의 세션 **MCP 워크로드** (없어서 헬퍼 파드가 Ready에 못 감 → 타입 세션 생성 실패) | 없음 — 순수 구현 작업 | **선행조건 없음** |\n| ② | AC-F2 NetworkPolicy **오브젝트** 착지 | 없음(존재·셀렉터·동반 삭제는 Go 단언 가능) | **선행조건 없음** |\n| ②' | AC-F2 **실집행 검증**(\"실제로 막히는가\") | 정책 집행 CNI (kindnet 미집행) | ❌ 안 섬 |\n| ③ | credential-proxy **pod IP 바인딩** | AC-F2 ingress 정책과 같은 슬라이스(②) | ②와 함께 |\n| ④ | AC-F3 승인 게이트 · AC-F5 RWX 공유 볼륨 | 명시된 선행 조건 없음 | **선행조건 없음** |\n| ⑤ | SPA의 **세 번째 타입 카드** | 없음 | **선행조건 없음** |\n| ⑥ | AC-F 전용 **e2e 파일** | 자매 모델 `tbm_session-platform-ac-e2e` 소관 | — (범위 밖) |\n\n즉 ①②③④⑤는 외부 사건을 기다리지 않는다. **막힌 것은 ②'(실집행 검증) 하나뿐**이고, 그건\n같은 AC의 *검증 방법*이지 착지 자체를 막지 않는다.\n\n**노이즈로 분리한 것**: to-be 해시 이동분 중 #56(`doc-structure-state.md`·`journeys/`·`index.html`) ·\n#55(`mockups/README.md` 유지비 문구) · #53(`test/e2e.md`「AC 검증 범위」 산문)은 이 모델의\n판정 대상(AC 집계 · 구현↔문서 일치)을 건드리지 않는다. 근거: `check-ac-mapping.sh` 출력이\n`AC 27개 = 매칭 14 + 예외 1 + 공백 12`로 **불변**이고 `doc-tracker.md` 집계도 AC 27 불변이다.\n\n**소유 경계(이중계상 방지)**:\n- **AC 공백 12건(e2e 파일)은 이 task의 gap이 아니다** — 자매 모델 `tbm_session-platform-ac-e2e`\n  소관이며, 그쪽은 이번에 `no_action_needed`(F 계열 선결=구현, 아직 안 섬)로 닫았다.\n  여기서 구현이 진행되면 그 선결이 서면서 그쪽이 다시 열린다.\n- **main CI 레드(`render fidelity` R10)는 이 모델 소관이 아니다** — `tbm_session-platform-mockup-render`\n  `rct_20260903-0003`(planner 점유 중)이 소유한다. #57의 자매 게이트 회귀 검사도 그 사실을\n  기록했다. 여기서 다시 열지 않는다."
+    },
+    "assessment": {
+      "actionRequired": true,
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-03T22:49:23Z",
+      "reason": "**작업이 필요하다 — 소비된 트리거이고, 지금 열지 않으면 다음 슬라이스를 여는 사건이 없다.**\n\n1. **열린 task 0건.** 직전 task `rct_20260903-0002`가 22:26~에 `succeeded`(`converged=true`)로\n   닫혔다. 점유 규칙이 미룰 상대가 없다.\n2. **소비된 트리거.** 이 모델은 슬라이스 단위로 전진하고, 슬라이스의 머지는 *직전 task의\n   산출물*인 동시에 *다음 슬라이스를 열 수 있는 유일한 사건*이다. task를 닫는 것은 reconciler\n   레포에만 쓰이고 대상 레포에 커밋을 만들지 않는다. 여기서 `no_action_needed`로 baseline만\n   전진시키면 — **무엇이 다음 슬라이스를 여는가? 답이 없다.**\n3. **executor가 명시적으로 넘겼다.** 그 검증의 「(정보) 범위 밖 잔여 — **다음 감지가 후속\n   task로 잇는다**」 항목이 ①~⑥을 열거하고 *\"모델의 lastObservedVersion은 규약대로 건드리지\n   않았다\"* 고 적어 재감지 경로를 열어 두었다.\n4. **선행 조건이 실제로 하나도 안 걸린 항목이 여럿이다.** ①(data plane MCP 워크로드) ·\n   ②(NetworkPolicy 오브젝트) · ④(AC-F3/F5) · ⑤(SPA 카드) 어느 것도 외부 사건을 기다리지\n   않는다. 「조건이 안 섰다」로 미룰 수 없다. 막힌 것은 ②'(실집행 검증)뿐이다.\n5. **정의가 보류를 금지한다.** 판정 기준 1이 「백로그로 치부해 이 루프 밖으로 빼지 않는다 —\n   보류 예외 없음」이다. 미구현 AC를 남긴 채 `no_action_needed`로 닫는 것은 정의 위반이다.\n\n**계획 단계 제약 — 반드시 읽을 것:**\n- **슬라이스 경계가 문서에 이미 적혀 있다.** #57이 `doc-tracker.md`에 넣은 「구현 사슬 부채」\n  행이 ②③을 **\"둘은 같은 슬라이스에서 낸다\"**고 못박았다(프록시의 pod IP 바인딩을 안전하게\n  만드는 것이 AC-F2 ingress 정책이므로). 쪼개면 안전 규칙을 깨는 중간 상태가 생긴다.\n- **①이 가장 앞선 관문일 가능성이 높다.** 세션 MCP 워크로드가 없으면 이 타입 세션 자체가\n  Ready에 못 가므로 ②③④의 실검증 경로가 서지 않는다. 다만 이건 계획 단계 판단이다.\n- **②'는 이번에도 닫히지 않는다.** kindnet이 NetworkPolicy를 집행하지 않아 현 e2e 하네스로\n  \"실제로 막히는가\"를 검증할 수 없다. 오브젝트 착지(Go 단언 가능)와 실집행 검증(CNI 선결)을\n  **완료 기준에서 분리**해 적어야 한다 — 안 그러면 executor가 닫을 수 없는 기준을 받는다.\n- **main CI가 지금 레드다**(`render fidelity` R10, `tbm_session-platform-mockup-render`\n  `rct_20260903-0003` 소유). PR을 띄우면 이 잡이 빨갛게 뜨지만 **이 작업이 만든 것이 아니다** —\n  ac-e2e의 executor도 같은 판단을 기록했다. main과 대조해 선행 상태임을 확인하고 진행할 것.\n- **AC-F2·F4·F5는 미검증 참조 구현(`dlddu/pure-agent`) 전제**라고 doc-tracker가 등재해 두었다 —\n  「CI는 그린이지만 클러스터에 배선되어 검증된 적이 없다」. 실검증 전까지 설계 의도이지 확인된\n  동작이 아니다."
+    },
+    "attempts": []
   }
 ]
