@@ -536,7 +536,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-08-20T06:06:42Z",
-    "updatedAt": "2026-09-03T13:05:00Z",
+    "updatedAt": "2026-09-03T13:30:00Z",
     "trigger": {
       "detectedAt": "2026-08-20T06:06:42Z",
       "changedSides": [
@@ -697,6 +697,61 @@
           "reviewer": "user",
           "reviewedAt": "2026-09-03T12:53:40Z",
           "comment": "반려 — 계획의 **범위와 방향**에 대한 반려다. 접근의 정확성(manual-archive를 실 SUT로 옮겨 인터셉트를 제거)이나 판단 ②(지연 주입 미등재)·③(상한 4→2 래칫)에 대한 이견이 아니다. **플러그인 부트스트랩과 LLM 제공자를 모킹 예외로 명시하라**는 것이 반려의 내용이며, 이는 남은 j6 2쌍의 처리 방향을 '제거'에서 '등재'로 뒤집으므로 계획을 다시 세워야 한다. manual-archive 2쌍 해소도 그 재계획에 흡수한다.\n\n**재계획이 다뤄야 할 것:**\n\n1. **LLM 제공자 — `EXT` 자격이 깨끗하게 붙는다.** 정의의 EXT 배제 조항은 \"kind에 실물 배포가 가능하면 EXT를 쓸 수 없다\"인데, Anthropic API는 클러스터에 존재시킬 수 없으므로 MinIO를 EXT에서 뺀 근거가 여기엔 해당하지 않는다. 현재 EXT 등재 0건이며 이것이 첫 항목이 된다. 대상은 `deploy/claude-code-credentials-secret.yaml`의 `base-url: https://127.0.0.1:9`(의도적 unroutable)이고, MinIO 선례대로 인클러스터 가짜 provider를 배포해 그리로 돌린다. 등재 행의 잔여는 \"실 provider의 스트리밍·에러 계약은 검증되지 않는다\"가 된다.\n\n2. **플러그인 부트스트랩 — 자격 논증이 필요하다(그냥 등재할 수 없다).** `data-plane/entrypoint.sh`가 `set -eu` + `curl --fail`로 K3s MCP 토큰을 받아 비공개 `dlddu/plugin-marketplace`에서 플러그인을 설치하고, 실패하면 `exec /agent` 전에 중단되어 claude-code pod가 Ready에 못 간다. 못 쓰는 것이 *외부 시스템*이 아니라 *비공개 레포 접근 자격*이라는 점에서 EXT 모양이 애매하고, no-op으로 떨어뜨리면 e2e는 claude-code pod가 프로덕션이 뜨는 방식으로 뜨는지를 영영 검증하지 않게 된다. 정의는 \"미구현 우회 stub\" 불허와 \"애매하면 제거 쪽으로 기운다\"를 명시하므로, planner는 EXT 자격을 명시적으로 논증하거나 정의의 EXT 조항 개정을 **reconciler-tobe-modeler**로 넘겨야 한다. 이 판정 없이 등재 행을 쓰면 정책이 자기 기준을 어긴다.\n\n3. **두 seam이 서면 j6 2쌍은 제거가 아니라 등재로 닫힌다** — 실 SUT에서 claude-code 세션을 세울 수 있게 되므로 `page.route(\"**/api/v1/**\")`가 필요 없어진다. 상한·회계·집계를 그 형태에 맞춰 다시 계산할 것.\n\n4. **직전 계획의 판단 ①(claude-code 커버리지 교환)은 이 방향에서 사라진다** — claude-code 세션이 provision 가능해지면 문구 분기(`Archive now` / `Session archived — pod reclaimed`)를 실 세션으로 검증할 수 있어, 커버리지를 맞바꿀 이유가 없다. `test.skip` 시드도 채워진다.\n\n**PR #42의 현재 상태(재계획 입력).** 실행 직전 신선도 확인에서 base main이 4커밋 전진해 있어(#51 `2b2c635` · #48 `aeeea5b` · 이미지 고정 2건) 지침 0-1대로 `git merge origin/main`으로 브랜치를 갱신해 head를 `9d27dad`로 올리고 fast-forward push했다(충돌 0건). 그 head에서 체크 13개 중 12 success · 1 skipped · 실패 0이며 `e2e (kind + API + browser)`(job 100637737423) green — Playwright 20 passed · 4 skipped · 0 failed, `journeys/manual-archive.spec.ts`가 3.7초 1차 시도 통과. 정적 게이트 2종도 green(회계 행 14 · 위반 2 · 상한 2 · 인터셉트 5). PR은 열린 채로 두었고, 재계획이 이 브랜치를 이어 쓸지 닫고 새로 열지는 planner가 정한다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**범위(완료 기준) — 두 가지다.** ① 「미해소 위반」 4쌍 중 `manual-archive.spec.ts` 2쌍을 인터셉트 제거로 해소하고 회계·상한에 반영한다(위반 4→2, 상한 4→2). ② **claude-code e2e 공백의 원인 3건을 「차단 요인」 원장으로 승격하고 체커 규칙 R10으로 강제**하며, 각 원인의 카테고리 판정을 확정한다. 성공 판정은 (a) `check-fidelity-allowlist.py` exit 0 with 위반 2 · 상한 2 · 차단 요인 3, (b) 자매 게이트 2종(`check-ac-mapping.sh` · `check-render-fidelity.py`) exit 0, (c) **현재 main을 담은 트리**에서 PR의 `e2e (kind + API + browser)` 잡이 재작성한 Playwright 테스트를 실 SUT 위에서 통과 — 셋 다다. **범위 밖(후속)**: 가짜 provider 배포 · 인클러스터 marketplace 원격 · j6 재작성.\n\n**반려는 방향에 대한 것이었다.** 검토는 접근의 정확성(manual-archive 실 SUT 이전)이나 판단 ②③에는 이견이 없다고 명시하면서, **\"플러그인 부트스트랩과 LLM 제공자를 모킹 예외로 명시하라\"**고 요구했다 — 이는 j6 2쌍의 처리 방향을 '제거'에서 '등재'로 뒤집는다. 그래서 manual-archive 해소는 그대로 안고(검토가 \"재계획에 흡수한다\"고 명시), 방향 전환을 이 시도의 두 번째 축으로 넣었다.\n\n**핵심 관찰 — 이 공백은 게이트가 영원히 못 본다.** 「미해소 위반」이 *치환이 있어서* 생긴 drift라면, claude-code 워크로드 AC(AC-E1~E6 통짜 공백)는 *치환조차 없어서* e2e가 그 경로를 아예 밟지 못해 생긴 것이다. 원인들은 코드에 seam 토큰을 남기지 않는다 — `base-url: \"https://127.0.0.1:9\"`도 `entrypoint.sh`의 부트스트랩도 모델의 as-is 스캔 정규식(`CRIU_ENABLED|E2E_*|NewStub*|test-only|mock-exception:|route 호출`)에 **하나도 걸리지 않는다**. 모델 정의가 스스로 「지문의 사각지대」로 적어 둔 자리다. 그래서 R5는 이것들에 대해 영원히 침묵하고, 지금까지 산문으로만 적혀 있어 **원인이 고쳐져도 문서만 조용히 낡는** 상태였다. 답은 원장으로 옮기고 **리터럴 단위로 대조**하는 것이다(R10): 원인이 고쳐지면 선언한 리터럴이 사라져 게이트가 빨개지고, '해소 시' 칸이 예고한 등재/실배포를 함께 반영해야 통과한다.\n\n**카테고리 판정 — 같은 부트스트랩 안에서 갈린다(이것이 검토가 요구한 자격 논증이다).** 기준은 정의의 EXT 배제 조항 하나: *\"kind에 실물로 배포 가능하면 EXT를 쓸 수 없다\"*(MinIO 선례).\n- **K3s MCP 자격 발급 → `EXT` 자격 있음.** 그 MCP는 실 GitHub App 개인키를 쥔 조직 서비스다. 인클러스터에 복제해도 자격이 없어 토큰을 만들지 못하므로 **기능하는 실물을 세울 수 없다** → 배제 조항이 걸리지 않는다.\n- **비공개 marketplace 호스팅 → `EXT` 자격 없음(판정 `없음`).** marketplace는 git 원격일 뿐이고 `claude plugin marketplace add <url>`는 호스트를 가리지 않는다. MinIO가 S3를 실물로 세웠듯 인클러스터 git 원격을 세우면 **같은 코드 경로가 그대로 돈다** → 실물 배포가 가능하므로 EXT를 쓸 수 없고, URL을 설정값으로 빼서 **등재 없이** 해소한다. 검토가 \"EXT 모양이 애매하다\"고 지적한 부분의 답이 이 분해다 — 막는 것이 하나가 아니라 **자격 발급**과 **호스팅** 둘이고, 판정이 서로 다르다.\n- **unroutable `base-url` → `EXT` 자격 있음.** Anthropic API는 클러스터에 존재시킬 수 없다. MinIO를 EXT에서 뺀 근거가 여기엔 해당하지 않는다(검토 지적 1과 같은 결론).\n\n이 분해 덕에 **정의 개정을 reconciler-tobe-modeler로 넘길 필요가 없다** — 현행 정의가 세 경우를 모두 판정한다. 다만 지금 등재하지는 않는다: 대체물이 서기 전에는 \"e2e에서 실제로 구동되는 구간\" 칸에 쓸 것이 없어 **등재가 거짓말이 된다**(R2가 그 칸을 비워 두지 못하게 한다). 그래서 판정만 확정하고 차단 요인으로 둔다 — 그리고 예고 CODE가 등재 표에 먼저 나타나면 R10이 막는다.\n\n**j6는 전량 제거가 목표가 아니다(방향 전환의 실질).** 재작성 뒤에도 config 503 · 응답 보류 · past-end cursor `reset` 재생처럼 **실 SUT가 요청 시점에 낼 수 없는 주입**이 남는다. 이것들은 `NET` 자격을 만족하므로 session-deletion 선례대로 **행 단위로 좁혀 승인 등재**로 닫는다. 문서의 제거 경로를 그렇게 고쳤다.\n\n**검토 지적 ④도 흡수했다** — manual-archive의 claude-code 문구 `test.skip` 시드를 \"브라우저 커버리지를 맞바꾼 영구 교환\"이 아니라 **\"차단이 풀리면 채워지는 공백\"**으로 다시 적었다. 차단이 풀리면 실 세션으로 그 문구를 검증할 수 있어 맞바꿀 이유가 사라진다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "현재 main(`9688a36`)을 PR 브랜치에 **머지**한다(rebase+force-push 아님). 직전 시도의 반려 사유 중 하나가 검증 근거의 신선도였으므로 매번 머지 대상 트리에서 CI를 다시 발화시킨다.",
+              "expectedOutcome": "충돌 0건(main은 `89c56a8` 이후 `docs/test/e2e.md`·체커를 건드리지 않았다)이고, 머지 트리에서 기존 게이트 3종이 그대로 exit 0."
+            },
+            {
+              "seq": 2,
+              "action": "`scripts/check-fidelity-allowlist.py`에 `<!-- fidelity:blockers -->` 블록 파싱과 **R10**을 더한다 — 5칸 필수, 판정은 GATE/TRIG/EXT/NET/없음, 선언 리터럴이 그 파일에 실재, 가리키는 경로가 tracked, '해소 시' 칸 비우기 금지, 예고 CODE가 이미 등재 표에 있으면 실패. 차단 요인은 스캔 스코프 **밖**도 가리키므로 `git ls-files` 전체를 쓴다.",
+              "expectedOutcome": "체커가 새 블록을 요구하고, 집계 키 `차단 요인`을 R8이 함께 대조한다."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/test/e2e.md`에 `### 차단 요인` 절과 원장 3행을 넣는다. j6 위반 2행의 '제거 경로'를 그 원장으로 다시 걸고 순서(부트스트랩 → provider)와 **행 단위 NET 등재로 닫는다**는 방침을 적는다. 산문의 선결조건 1·2 문단은 원장으로 대체해 사본을 만들지 않는다.",
+              "expectedOutcome": "`python3 scripts/check-fidelity-allowlist.py` exit 0, 출력에 `차단 요인 3건`이 추가되고 나머지 숫자는 그대로."
+            },
+            {
+              "seq": 4,
+              "action": "`web/e2e/journeys/manual-archive.spec.ts`의 `test.skip` 시드 주석을 「차단 요인」 원장과 R10을 가리키도록 고치고, 영구 교환이 아니라 채워질 공백임을 명시한다.",
+              "expectedOutcome": "스펙 파일에 충실도 스캔 토큰이 추가되지 않는다(as-is 지문 불변)."
+            },
+            {
+              "seq": 5,
+              "action": "**회귀가 없음을 대조로 증명한다** — 같은 트리에서 이전 체커(`origin/pr42:scripts/check-fidelity-allowlist.py`)와 새 체커를 각각 돌려 출력을 `diff`한다.",
+              "expectedOutcome": "차이가 `차단 요인` 한 줄뿐 — R1~R9의 판정이 바뀌지 않았음이 주장이 아니라 대조로 남는다."
+            },
+            {
+              "seq": 6,
+              "action": "R10이 공허하지 않음을 **음성 시험 6종**으로 확인한다: ① 선언 리터럴 소멸(원래 실패 형태의 재연) ② 판정값이 카테고리가 아님 ③ 예고 CODE를 등재 표에 미리 올림 ④ tracked 아닌 경로 ⑤ '해소 시' 칸 비움 ⑥ 집계 숫자만 위조. 주입 전 `cp` 사본을 뜨고 그 사본으로 복원한다(`git checkout` 금지).",
+              "expectedOutcome": "①②④⑤ R10, ③ R10+R4+R8, ⑥ R8로 실패하고, 복원 후 `cmp`로 byte-identical이며 본 검사가 다시 exit 0."
+            },
+            {
+              "seq": 7,
+              "action": "자매 게이트 2종(`./scripts/e2e/check-ac-mapping.sh`, `python3 scripts/check-render-fidelity.py`)을 돌려 이 변경이 그쪽 집계를 흔들지 않음을 확인한다.",
+              "expectedOutcome": "둘 다 exit 0 — AC 27 = 매칭 14 + 예외 1 + 공백 12 그대로."
+            },
+            {
+              "seq": 8,
+              "action": "브랜치를 **fast-forward push**(force 금지)하고 PR #42 본문에 「2026-09-03 방향 재계획」 절과 상단 배너를 더한다. 새 PR을 열지 않는 이유는 manual-archive 변경이 그대로 유효하고 검토도 그것을 재계획에 흡수하라고 했기 때문이다.",
+              "expectedOutcome": "PR #42 head가 새 커밋으로 바뀌고 모든 CI 잡이 새 head에서 재발화한다."
+            },
+            {
+              "seq": 9,
+              "action": "새 head의 CI를 완료까지 관측하고 결과를 이 레코드에 실측으로 남긴다. 특히 `e2e (kind + API + browser)`와 `fidelity`·`ac-mapping`의 결론.",
+              "expectedOutcome": "체크 전 잡 success. Playwright에서 `journeys/manual-archive.spec.ts`의 실 SUT 테스트가 통과하고 claude-code 문구 분기는 skip으로 남는다."
+            }
+          ],
+          "plannedAt": "2026-09-03T13:30:00Z"
         }
       }
     ]
