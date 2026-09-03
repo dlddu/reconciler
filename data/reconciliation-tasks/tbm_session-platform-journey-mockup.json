@@ -266,7 +266,68 @@
       "assessedAt": "2026-09-03T11:45:00Z"
     },
     "createdAt": "2026-09-03T11:45:00Z",
-    "updatedAt": "2026-09-03T12:11:44Z"
+    "updatedAt": "2026-09-03T12:17:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근: 잔여 6건을 '분기 사슬'로 갈라 lifecycle 클러스터 3종을 한 슬라이스로 만든다.** 잔여 여정 6개는 서로를 분기 대상으로 참조하는 두 덩어리로 정확히 쪼개진다 — **lifecycle 클러스터**(`JRN-idle-resume` 4단계 · `JRN-manual-freeze` 3단계 · `JRN-session-deletion` 3단계)와 **agent 클러스터**(`JRN-multi-session-switch` · `JRN-agent-prompt-loop` · `JRN-approval-gated-work`). 이 슬라이스는 앞의 셋을 만든다.\n\n**왜 3개를 묶는가 — 쪼개면 오히려 비싸다.** 세 여정의 분기표가 서로를 가리킨다: idle-resume 4행 → `JRN-manual-freeze`의 `STP-freeze-now`, idle-resume 5행 → `JRN-session-deletion`의 `STP-delete-intent`, manual-freeze 5행 → `JRN-idle-resume`의 `STP-reaccess`, manual-freeze 6행 → `JRN-session-deletion`의 `STP-delete-confirm`, session-deletion 5행 → `JRN-manual-freeze`의 `STP-freeze-now`. 규약상 **대상 페이지가 생기는 순간 `data-branch-pending`은 하네스에서 실패**가 되므로, 이 셋 중 일부만 만들면 나머지를 만들 때 앞서 만든 페이지를 **다시 열어 고쳐야 한다**(2~3개 파일 재작업). 셋을 함께 만들면 클러스터 내부 링크가 처음부터 실주소로 서고 재작업이 0이다. 직전 감지가 남긴 힌트('슬라이스 경계를 분기 사슬에 맞춰 끊는 편이 싸다')를 그대로 따른 것이다. 반대로 6개를 한 번에 하지 않는 이유도 같다 — agent 클러스터는 lifecycle 쪽으로 **한 방향으로만** 링크하므로(`STP-reaccess`·`STP-freeze-now`·`STP-delete-intent`) 나중에 만들어도 이 셋을 되열 필요가 없다. 즉 3+3이 재작업 없는 유일한 분할이다.\n\n**부수 효과 — 기존 페이지의 미승급 링크 6건 중 5건이 이번에 닫힌다.** 파일럿 2개가 걸어둔 pending 6건 중 `JRN-idle-resume` 3건(session-creation 4행 · shell-interaction 1·6행 대상)과 `JRN-session-deletion` 2건이 실링크로 승급하고, `JRN-multi-session-switch` 1건만 pending으로 남는다(agent 클러스터 몫).\n\n**계획 단계에서 발견해 이 슬라이스가 함께 고치는 하네스 결함 1건.** 규약(`docs/journeys/README.md` §6)은 '대상 페이지가 있으면 `../JRN-y/#STP-x`로 링크한다'고 적었는데, 현재 하네스의 분기 클릭 검사는 **모든 여정 간 갈래에 대해 원본 페이지의 `[data-state-note]`가 보일 것**을 요구한다. 실링크로 승급하면 클릭이 다른 문서로 이동해 그 단언이 성립할 수 없다 — 즉 **승급 경로 자체가 하네스에 막혀 있다.** 파일럿 슬라이스에는 승급 대상이 하나도 없어 드러나지 않았고, 이번이 그 경로를 처음 밟는 슬라이스다. 하네스를 **더 강하게** 고친다: 승급된 갈래는 클릭해 **실제로 그 여정 페이지로 이동하고 대상 단계가 활성인지**까지 확인한다(페이지 간 딥링크 무결성 — 지금은 아무도 검사하지 않는다). 미승급(`data-branch-pending`)·`none` 갈래의 기존 `[data-state-note]` 요구는 그대로 둔다.\n\n**함께 넣는 최소 보강 1건**: 예외 등재(⚪) 여정을 향한 갈래는 페이지가 영원히 생기지 않으므로 pending이 영구적이다. 이를 '아직 안 만든 것'과 구분하려 `data-branch-excepted`를 두고, 하네스가 (i) 그 표시가 붙은 갈래의 대상은 실제 예외 등재 여정일 것, (ii) 표시 없는 pending의 대상은 매핑 표에 `⏳ 예정`일 것을 강제한다. 허브(`docs/index.html`)에 이미 있는 '준비 중 vs 의도적 비시각화' 구분을 페이지 층위에도 세우는 것으로, 이번에 신설하는 manual-freeze·session-deletion 두 페이지가 `JRN-concurrent-access`를 가리키므로 지금이 필요한 시점이다.\n\n**이 시도의 범위(완료 기준)** — 아래가 main에 머지되고 `docs-journey-mockup` 체크가 초록이면 성공이다.\n(1) 여정 페이지 3종 신설(`docs/journeys/JRN-idle-resume|JRN-manual-freeze|JRN-session-deletion/index.html`) — 규칙 2·3·4·5(a)~(h)·6 충족.\n(2) 기존 페이지 2종의 미승급 링크 5건 승급(`data-branch-pending` 제거 + 실주소 `<a>`).\n(3) 하네스 `tools/journey-prototype.test.mjs`의 승급 경로 검사 + 예외 갈래 검사 추가와 `docs/journeys/README.md` §6 규약 문구 동기화(규약과 하네스는 같은 커밋에서 바뀐다).\n(4) 매핑 SSOT `docs/mockups/README.md`의 해당 3행 `⏳ 예정` → `✅`(공개 경로 포함)와 '현재 2 / 8' → '5 / 8', 허브 `docs/index.html` 3행 링크·배지 승급, `docs/doc-structure-state.md` 현재 상태 요약·위험 진단·변경 이력 갱신.\n\n**범위 밖(후속 task로 잇는다)**: agent 클러스터 3종(`JRN-multi-session-switch`·`JRN-agent-prompt-loop`·`JRN-approval-gated-work`) 페이지와 그때 함께 승급될 session-creation 3행의 마지막 pending 1건, `STP-approval-decide` 소유권 결정(⚪ 수용 vs 세션 쪽 요약 화면 — `JRN-approval-gated-work` 페이지를 만드는 슬라이스의 몫), `docs/mockups/` 화면 단위 6종의 최종 처리 방향과 mockup↔`tokens.css` 정본 연결(자매 모델 `tbm_session-platform-mockup-render`). 이 슬라이스가 `docs/journeys`·`docs/mockups/README.md`·`docs/index.html`·`docs/doc-structure-state.md`를 모두 건드리므로 as-is·to-be 두 versionScript가 함께 전진하고, 잔여는 다음 감지가 새 task로 연다.\n\n**되돌리기**: 전부 문서·하네스 추가이고 런타임·클러스터·데이터·제품 코드에 닿지 않는다. 머지 커밋 revert 하나로 원복된다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 `reconcile/rct_20260903-0002-opus5` 생성. 로컬 게이트를 먼저 세워 기준선을 실측한다 — `/home/silas/toolchains/node-v22.14.0-linux-arm64/bin`을 PATH에 넣고 `tools/`에서 `npm ci` + `npx playwright install chromium` 후 `node --test tools/journey-prototype.test.mjs`.",
+              "expectedOutcome": "51/51 통과(감지가 기준선으로 기록한 수와 일치). 이후 모든 변경을 이 하네스로 검증할 수 있는 상태."
+            },
+            {
+              "seq": 2,
+              "action": "세 여정 문서(`docs/user-journeys/JRN-idle-resume.md`·`JRN-manual-freeze.md`·`JRN-session-deletion.md`)에서 단계 헤딩(``### `STP-…` ``)과 '4. 분기·예외 흐름' 표를 하네스와 같은 정규식으로 파싱해 실측값을 고정한다.",
+              "expectedOutcome": "단계 4/3/3(합 10), 분기 행 6/6/6(합 18). 이 수가 페이지의 `data-step` 개수·`data-branch-row` 범위의 정답이 된다."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/journeys/JRN-idle-resume/index.html` 신설. `STP-step-away`·`STP-auto-freeze`·`STP-reaccess`·`STP-restore-resume` 4단계. 실입력(유휴 한계 분 `<input>`·복원 후 첫 명령 `<input>`), 화면 안 행동으로 전진, 상태 변형(복원 진행·복원 실패→`snapshot` 되돌림·체크포인트 비활성 503·컨테이너 재시작 구분), `#STP-…` 딥링크, 분기 6행 배선(내부 3행은 실제 이동, `JRN-manual-freeze#STP-freeze-now`·`JRN-session-deletion#STP-delete-intent`는 같은 슬라이스에서 페이지가 생기므로 **실링크**, '해당 없음' 1행은 `data-state-note`).",
+              "expectedOutcome": "`file://`로 열어 4단계를 클릭만으로 통과하고, 복원 실패·503·재시작 상태에 프로토타입 안에서 도달한다. 여정 밖 갈래 2건이 새 페이지로 실제 이동한다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/journeys/JRN-manual-freeze/index.html` 신설. `STP-freeze-decision`·`STP-freeze-now`·`STP-freeze-confirm` 3단계. 실입력(접기 사유 메모 `<textarea>`·'접은 뒤 알림' 체크박스), 상태 변형(접기 실패→`active` 되돌림·이미 접힌 세션에 재요청·503), 분기 6행 배선 — `JRN-concurrent-access#STP-collision`은 예외 등재 여정이므로 `data-branch-pending data-branch-excepted`, `JRN-idle-resume#STP-reaccess`·`JRN-session-deletion#STP-delete-confirm`은 실링크.",
+              "expectedOutcome": "3단계를 화면 안 행동으로 통과하고, 접기 실패 시 반쯤 접힌 상태가 남지 않음을 화면이 보여준다. 예외 갈래는 '그리지 않기로 한 여정'임을 명시한다."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/journeys/JRN-session-deletion/index.html` 신설. `STP-delete-intent`·`STP-delete-confirm`·`STP-delete-settled` 3단계. 실입력(삭제 확인용 세션 이름 타이핑 `<input>`·목록 필터 `<select>`), 상태 변형(취소·이미 삭제됨 404·삭제 실패 재시도·접힌 세션 삭제 시 스냅샷 동반 정리 문구), 분기 6행 배선 — `JRN-concurrent-access#STP-collision`은 `data-branch-excepted`, `JRN-manual-freeze#STP-freeze-now`는 실링크.",
+              "expectedOutcome": "이름을 정확히 입력해야 삭제 버튼이 열리고, 취소·404·실패 상태에 도달하며, 마지막 단계가 `[data-journey-end]`로 여정의 끝을 표현한다."
+            },
+            {
+              "seq": 6,
+              "action": "하네스 `tools/journey-prototype.test.mjs`의 분기 클릭 검사를 승급 경로까지 다루도록 고친다: 대상이 `JRN-…`이고 `data-branch-pending`이 없으면 클릭 후 **URL이 `docs/journeys/<대상>/index.html`이고 `[data-journey]`가 그 여정, 단계가 지정됐으면 `data-step-active`가 그 단계**임을 확인한다. pending·`none`은 기존 `[data-state-note]` 요구 유지. 더해 `data-branch-excepted` 검사 2건(붙은 갈래의 대상은 실제 예외 등재 여정일 것 / 붙지 않은 pending의 대상은 매핑 표에서 `⏳ 예정`일 것)을 추가하고, `docs/journeys/README.md` §6을 같은 내용으로 갱신한다.",
+              "expectedOutcome": "승급된 갈래가 실제로 그 페이지의 그 단계로 데려가는지까지 CI가 집행한다(페이지 간 딥링크 무결성 신설). 규약 문서와 하네스가 같은 커밋에서 일치한다."
+            },
+            {
+              "seq": 7,
+              "action": "기존 페이지 2종의 미승급 링크 5건 승급: `JRN-session-creation`의 4행(`JRN-idle-resume#STP-auto-freeze`)·5행(`JRN-session-deletion#STP-delete-intent`), `JRN-shell-interaction`의 1행(`…#STP-auto-freeze`)·2행(`…#STP-restore-resume`)·6행(`JRN-session-deletion#STP-delete-intent`)을 `data-branch-pending` 제거 + `<a href=\"../JRN-…/#STP-…\">`로 바꾸고, 더 이상 쓰이지 않는 note 문구·핸들러를 정리한다. `JRN-multi-session-switch` 대상 1건은 pending 그대로 둔다.",
+              "expectedOutcome": "파일럿 2개 페이지에서 다섯 갈래가 실제로 새 페이지로 이동한다. 남은 pending은 `JRN-multi-session-switch` 1건뿐이다."
+            },
+            {
+              "seq": 8,
+              "action": "매핑·허브·원장 동기화: `docs/mockups/README.md`의 세 행을 `⏳ 예정` → `✅ 페이지 있음`(공개 경로 링크 포함)으로 올리고 '현재 **2 / 8**' → '**5 / 8**', '마지막 갱신'에 항목 추가. `docs/index.html`의 세 행을 `journeys/<id>/` 실링크 + `badge live`로 바꾼다. `docs/doc-structure-state.md`의 '현재 상태 요약'(2개 → 5개)·'위험 진단'의 여정 mockup 잔여 항목(6 → 3)·'변경 이력'을 갱신한다. **`화면 ↔ mockup 매핑 (SPA 구현 대조)`·`패널 구조 차집합 (구현 대조)` 섹션은 건드리지 않는다**(자매 게이트 `render-fidelity`가 그 두 섹션을 파싱한다).",
+              "expectedOutcome": "규칙 7(인덱스·허브 동기화)과 규칙 1이 새 상태와 일치한다. `render-fidelity`·`fidelity`·`ac-mapping` 등 기존 게이트는 영향받지 않는다."
+            },
+            {
+              "seq": 9,
+              "action": "로컬에서 `node --test tools/journey-prototype.test.mjs` 전량 통과를 확인하고, 이어서 변이 5종을 넣어 각각 실패로 잡히는지 확인한다: (a) 승급 링크를 pending으로 되돌리기 (b) 승급 링크의 href를 잘못된 단계로 바꾸기 (c) `data-branch-excepted`를 예외 아닌 여정 갈래에 붙이기 (d) 매핑 표의 새 행을 `⏳` 그대로 두기 (e) 새 페이지의 `details.step-meta`에 `open` 달기. 확인 뒤 전부 되돌린다.",
+              "expectedOutcome": "통과 단언 수가 51 → 100 안팎으로 **늘어난다**(초록이되 집행 대상이 줄어드는 조용한 회귀를 이 수로 가른다). 변이 5종이 모두 빨갛게 잡혀 게이트가 헛돌지 않음이 확인된다."
+            },
+            {
+              "seq": 10,
+              "action": "커밋·푸시 후 `dlddu/session-platform`에 PR을 연다(머지하지 않는다). 본문에 task id `rct_20260903-0002`·모델 id·격차(2/8 → 5/8)·완료 기준·범위 밖·검증 방법·하네스 변경 사유를 적는다. `.github/workflows/`는 건드리지 않으므로 `contents:write`+`pull_requests:write` 토큰으로 충분하다.",
+              "expectedOutcome": "PR이 열리고 `docs-journey-mockup` 체크가 새 단언 수로 실행된다. executor가 체크 결과와 함께 검토·머지·검증을 이어받을 수 있는 상태."
+            }
+          ],
+          "plannedAt": "2026-09-03T12:17:00Z"
+        }
+      }
+    ]
   },
   {
     "id": "rct_20260903-0003",
