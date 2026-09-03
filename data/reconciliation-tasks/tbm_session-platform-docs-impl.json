@@ -651,7 +651,7 @@
     "toBeModelId": "tbm_session-platform-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-03T03:53:00Z",
-    "updatedAt": "2026-09-03T04:06:00Z",
+    "updatedAt": "2026-09-03T04:10:00Z",
     "trigger": {
       "detectedAt": "2026-09-03T03:53:00Z",
       "changedSides": [
@@ -679,6 +679,77 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-03T03:57:00Z",
       "reason": "**작업 필요.** 판정 기준 1(미구현 AC = drift)에 걸리는 신규 gap이 6건 생겼고, 판정 기준 2(구현↔문서 불일치)에 걸리는 항목이 2건 함께 확인됐다.\n\n**근거 요약**\n1. **AC-F1~F6 구현 0.** `approval-gated`·`approvalGated`·`ApprovalGated`·`NetworkPolicy` 토큰이 `control-plane`·`data-plane`·`web` 전체에서 **0 hit**이고, `WorkloadType` 열거는 Go(`session.go:57,60`)·TS(`web/src/api/types.ts:9`) 양쪽 모두 `shell`·`claude-code` 둘뿐이다. definition은 \"백로그로 치부해 이 루프 밖으로 빼지 않는다\"고 못박고 있다.\n2. **개정된 AC-A2가 구현과 어긋난다.** 보조 파드 조항이 신설됐으나 세션 레코드의 pod 참조는 단수 `Pod string`(`session.go:198`)이고, 같은 파일의 `WorkloadType` 선언 주석은 개정 전 문구(\"one dedicated pod per session\")를 그대로 들고 있다.\n3. **낡은 skip 사유 1건.** `control-plane/test/e2e_deferred_test.go:218`이 \"idle→snapshot 트리거가 없다\"는 이유로 skip하는데 그 트리거(`service.IdleReaper`)는 이미 착지했다.\n\n**왜 지금인가 (자동 해소 가능성 0)**\n- 이 모델의 열린 task는 **0개**다(기존 4건 전부 `succeeded` 종료). 즉 아무도 이 gap을 들고 있지 않다.\n- F 계열은 문서만 있고 코드가 없으므로, 누가 구현하지 않는 한 시간이 지나도 좁아지지 않는다.\n- **내가 baseline을 전진시키므로**(as-is 3성분·to-be `646e512f…`), 지금 `no_action_needed`로 닫으면 이 27개 기준 재산정 결과를 다시 열어줄 트리거가 없다. 게다가 이 모델은 08-07~09-03 약 27일간 비활성이었고 그 사이 AC가 15→27로 늘었다 — **재활성화의 목적 자체가 이 재산정이고, definition이 그 일을 첫 task에 명시적으로 배정했다.**\n\n**planner에게 (판단 재료·순서)**\n1. **F 계열의 첫 관문은 AC 구현이 아니라 참조 모델 변경이다.** 보조 파드(AC-F4)를 지원하려면 세션 레코드의 단수 `Pod string`을 pod 집합으로 바꿔야 하고, 조회·스냅샷·복원·삭제와 `PodOrchestrator.Start`/`RestoreInto`/`Stop`, 라벨 기반 조회, e2e의 `pod` 필드(`e2e_test.go:49`)가 함께 움직인다. `doc-tracker.md`가 이 항목을 \"`approval-gated` 구현의 첫 관문\"이자 부채의 단일 관리 지점으로 등재해 두었다 — 슬라이스 경계를 여기서 끊는 것이 자연스럽다. AC-A2 개정 반영(주석 포함)도 같은 슬라이스에 속한다.\n2. **F2·F4는 검증 수단이 다르다.** 신규 `docs/test/approval-gated-workload.md`가 두 AC를 \"코드 단언이 아니라 **실클러스터 확인**(kind overlay 또는 실 클러스터)\"으로 검증하라고 적었고, `doc-tracker.md`의 🟡 항목은 그 근거가 참조 구현 `dlddu/pure-agent`의 **미검증 전제**임을 밝히며 \"실검증 전까지 AC-F2·F4는 '설계 의도'이지 '확인된 동작'이 아니다\"라고 선언한다. 구현 슬라이스를 짤 때 이 둘의 완료 기준을 나머지 넷과 같게 잡으면 안 된다.\n3. **자매 모델과의 경계를 지킬 것.** as-is가 3종으로 좁혀졌으므로 `k8s/`·`.github/`·`Makefile` 변경은 이 모델의 as-is 버전을 움직이지 않는다 — 그러나 AC-F2의 NetworkPolicy는 성격상 `k8s/`에도 산출물을 남긴다. **그 부분은 이 모델의 versionScript가 보지 못하므로**(재감지 경로 없음) 완료 판정을 버전 해시가 아니라 계획의 완료 기준으로 명시해 두어야 한다. AC↔e2e 1:1은 `tbm_session-platform-ac-e2e`(같은 트리거로 `rct_20260903-0001` 개설, F 계열 6건이 매핑·예외 모두 없음), 화면 단위 시각 대조는 `tbm_session-platform-mockup-render`, 여정↔목업은 `tbm_session-platform-journey-mockup` 소관이다.\n4. **좁혀진 부분도 기록에 남긴다.** 직전 관측(2026-08-08)이 \"통째로 미구현\"으로 적은 AC-E1~E6는 이제 구현됐고, AC-B1의 트리거도 착지했다. 즉 이 task는 순수한 확대가 아니라 **E가 닫히고 F가 열린 교체**이며, 남은 보류(B1 세부 정책 `TODO(policy)`, C2·C3 idle 분기 e2e, B2 focused placeholder, D5)는 이전 관측에서 그대로 이월된 것이다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**세션의 pod 참조 모델을 단수 문자열에서 「그 세션의 pod 집합」으로 바꾼다 — 개정된 AC-A2를 코드에 반영하고, AC-F1~F6(`approval-gated`) 구현의 첫 관문을 연다.** definition의 「충돌 시 기본 방향」이 *문서가 SSOT이므로 코드를 문서에 맞춘다*이고, #46이 AC-A2의 1:1 주어를 「전용 data plane pod」에서 「세션 워크로드를 실행하는 파드 1:1 + 세션 전속 **보조 파드** 허용」으로 개정했는데 구현은 `session.go:198`의 `Pod string` 단수 참조라 보조 파드를 표현할 자리 자체가 없다. `docs/doc-tracker.md`가 이 항목을 **\"`approval-gated` 구현의 첫 관문\"이자 그 부채의 단일 관리 지점**으로 등재해 두었고(line 85), detector도 슬라이스 경계를 여기서 끊으라고 넘겼다.\n\n**왜 이 경로인가 (대안 검토)**\n- ① **AC-F1(타입 값 추가)부터** — 기각. AC-F1은 \"control plane이 이 타입에 대해 워크로드 파드와 **그 세션 전용 헬퍼 파드 하나**를 함께 프로비저닝한다\"를 명시적으로 요구한다. 참조 모델 없이 열거값만 더하면 **승인 게이트가 없는 `approval-gated` 세션**이 생긴다 — 보안 성질을 이름으로만 주장하는 상태라 미구현보다 나쁘다.\n- ② **필드 하나만 더 붙이기**(`helperPod string`) — 기각. AC-F4는 회수(AC-A3)·동결(AC-B1)·복원(AC-B2)·삭제가 **두 파드를 합쳐** 성립한다고 적었다. 필드만 늘리면 라이프사이클 5경로가 각자 `Pod`과 새 필드를 따로 다루게 되고, 세 번째 보조 파드가 생기면 같은 일을 또 한다. doc-tracker가 \"필드 하나를 더 붙이는 문제가 아니라 참조 모델 자체를 바꾸는 일\"이라고 못박은 지점이다.\n- ③ **F 계열을 한 슬라이스에 통째로** — 기각. NetworkPolicy·MCP·승인 게이트웨이·RWX 볼륨은 **실클러스터 검증**을 요구하고(AC-F2·F4의 검증 방법), doc-tracker는 그 근거인 참조 구현 `dlddu/pure-agent`가 **클러스터에 배선된 적 없다**고 등재해 두었다. 검증 불가능한 덩어리를 한 번에 열지 않는다.\n- ④ **`Pod`을 `Pods []string`으로 통째 치환** — 기각. 개정 AC-A2의 1:1 주어는 여전히 **워크로드 파드**다. 워크로드 파드와 보조 파드를 한 배열에 뭉개면 \"1 세션 = 1 워크로드 파드\"를 구조로 강제하지 못하고, `pod` wire 필드도 깨진다(`e2e_test.go:49`가 그 계약을 독립적으로 단정한다). **`Pod`은 워크로드 파드로 의미를 좁혀 유지하고, 보조 파드를 별도 집합으로 더한 뒤 라이프사이클이 합집합을 다루게** 한다 — 기존 계약을 하나도 깨지 않으면서 집합 의미를 얻는 유일한 배치다.\n\n**이 시도의 범위(완료 기준)** — 아래 5개가 모두 성립하면 이 task는 성공이다.\n1. 도메인: `session.Session`이 워크로드 파드(`Pod`)와 보조 파드 집합을 함께 들고, `Pods()`가 그 세션의 pod 집합을 돌려준다.\n2. 포트: `k8s.PodOrchestrator`의 `Start`/`RestoreInto`가 pod **집합**을 돌려주고, `Stop`이 집합을 회수한다.\n3. 라이프사이클 **5경로 전부**(생성·생성 롤백·동결(shell CRIU + claude archive)·복원·삭제)가 `.Pod` 단수가 아니라 집합을 다룬다.\n4. 보조 파드를 실제로 만드는 스텁 노브로 그 계약이 **테스트로 단정**된다: 생성 시 2개 기동 · 동결/삭제 시 **둘 다** 회수 · 복원 시 둘 다 재기동 · 실패 롤백 시 둘 다 회수.\n5. 개정 AC-A2가 코드 주석·`openapi.yaml`·`web` 타입에 반영되고, 낡은 문구 2건(`session.go`의 \"one dedicated pod per session\", `e2e_deferred_test.go:218`의 skip 사유)이 정정되며, `doc-tracker.md`의 부채 항목(line 85)이 해소로 갱신된다. 기존 두 타입(`shell`·`claude-code`)의 동작·wire 계약은 **한 바이트도 바뀌지 않는다**(보조 파드 0개).\n\n**범위 밖(명시 — 후속은 재감지가 새 task로 잇는다)**\n- (a) **AC-F1~F6의 실제 구현** — `WorkloadTypeApprovalGated` 열거값, 헬퍼 파드 스펙(MCP·credential-proxy 컨테이너), NetworkPolicy, 승인 게이트, RWX 공유 볼륨, 자격 증명 분리. 이 슬라이스는 그것들이 **들어올 자리**만 연다.\n- (b) AC-F2·F4의 실클러스터 검증 — doc-tracker가 미검증 전제로 등재한 항목이고, 코드 단언으로 닫을 수 있는 종류가 아니다.\n- (c) 이월된 보류 — AC-B1의 `TODO(policy)` 세부 정책, AC-C2·C3의 idle 분기 e2e, AC-B2 focused placeholder, AC-D5.\n- (d) **AC ↔ e2e 1:1**(자매 모델 `tbm_session-platform-ac-e2e`가 `rct_20260903-0001`로 지금 계획 중 — 그쪽은 `docs/test/e2e.md`와 PR #23 브랜치만 만진다. 파일 겹침 0).\n- (e) `k8s/`·`deploy/`·`.github/` — 이 모델의 as-is 범위 밖(`tbm_session-platform-e2e-mock-policy` 소관). NetworkPolicy 산출물이 거기 생기는 것은 (a)와 함께 후속이다.\n- (f) kind e2e·envtest·Playwright — 로컬 재현 불가, PR CI가 판정한다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "안전망·기준선. `reconcile/rct_20260903-0001-session-platform-docs-impl` 브랜치를 `origin/main`(`da72899`)에서 딴다. 브랜치 이름에 **모델 슬러그를 넣는다** — `rct` id는 모델 간에 유일하지 않아 형제 모델의 열린 PR 브랜치를 밟은 전력이 있다. 이어서 기준선 게이트를 떠 둔다: control-plane에서 `gofmt -l .`(무출력) · `go build ./...` · `go vet ./...` · `go vet -tags=e2e ./...` · `go test ./...`.",
+              "expectedOutcome": "브랜치 생성. 기준선 5게이트 전부 통과(실측 완료: gofmt 무출력, vet 무출력, `go test ./...` 8패키지 ok). 이후 어떤 실패든 「내 변경 탓인가」를 이 기준선과 대조해 답할 수 있다."
+            },
+            {
+              "seq": 2,
+              "action": "**도메인 — 참조 모델을 집합으로.** `control-plane/internal/session/session.go`: `Session`에 `AuxiliaryPods []string \\`json:\"auxiliaryPods,omitempty\"\\`` 추가(세션 전속 보조 파드 이름들, AC-F4). `Pod`의 주석을 「워크로드 파드」로 좁혀 다시 쓴다. `func (s *Session) Pods() []string`를 더해 **워크로드 파드를 맨 앞에 둔, 빈 이름을 제외한 그 세션의 pod 집합**을 돌려준다. `WorkloadType` 선언 주석의 낡은 문구 `AC-A2 (one dedicated pod per session) hold for every type`를 개정 문구(1 세션 = 1 워크로드 파드, 보조 파드는 세션 전속)로 고치고, `Session` aggregate 주석(`mapped 1:1 to (at most) one data plane pod`)도 같이 고친다.",
+              "expectedOutcome": "`go build ./...` 통과. `AuxiliaryPods`는 `configmap` 어댑터의 `storedSession`이 `session.Session`을 **임베드**하므로 별도 배선 없이 그대로 영속화·복원된다(store.go:575 실측)."
+            },
+            {
+              "seq": 3,
+              "action": "**포트 — `Start`/`RestoreInto`가 집합을 돌려주고 `Stop`이 집합을 회수한다.** `control-plane/internal/adapter/k8s/orchestrator.go`: `type SessionPods struct { Workload PodRef; Auxiliary []PodRef }` 신설 + `All() []PodRef`(워크로드 먼저). `PodOrchestrator.Start`/`RestoreInto`의 반환을 `(SessionPods, error)`로, `Stop`을 `Stop(ctx context.Context, refs ...PodRef) error` **가변인자**로 바꾼다. 가변인자를 고른 이유: 기존 단일 호출부(`Stop(ctx, ref)`)가 그대로 컴파일되면서 집합 회수가 일급이 된다 — 호출부마다 슬라이스를 짓지 않아도 된다. 인터페이스 주석의 AC 매핑(Start→AC-A2, Stop→AC-A3, RestoreInto→AC-B2)에 보조 파드 조항을 반영한다.",
+              "expectedOutcome": "포트 계약이 pod 집합을 표현한다. 이 단계 직후에는 구현체·호출부가 아직 안 맞아 `go build`가 깨져 있다(다음 두 단계에서 닫힌다)."
+            },
+            {
+              "seq": 4,
+              "action": "**어댑터 두 구현을 새 계약에 맞춘다.** ① `StubOrchestrator`: `running map[string]PodRef`를 `map[string]SessionPods`로 바꾸고 `RunningCount()`가 **집합의 총 pod 수**를 세게 한다(기존 단정의 의미가 「1:1 매핑과 회수」이므로 파드 총수가 맞는 눈금이다). 테스트가 보조 파드를 만들 수 있도록 노브 `SetAuxiliaryPods(n int)`를 더한다 — 이것이 4단계 계약을 단정 가능하게 만드는 유일한 수단이다(`approval-gated` 타입은 아직 없다). `Stop`은 가변 refs를 순회하며 자기 집합에서 해당 파드만 지운다. ② `ClientOrchestrator`: `provision`이 만든 워크로드 PodRef를 `SessionPods{Workload: ref}`로 감싼다 — **보조 파드 0개**라 `shell`·`claude-code`의 실제 동작은 불변이다.",
+              "expectedOutcome": "`go build ./...` 통과. `internal/adapter/k8s` 패키지 테스트 통과."
+            },
+            {
+              "seq": 5,
+              "action": "**서비스 라이프사이클 5경로를 집합으로 옮긴다** (`control-plane/internal/service/manager.go`). ① 생성(≈190): `Start`가 준 집합에서 `Reach`는 **워크로드 파드에만** 걸고(보조 파드는 세션 에이전트가 아니다), 세션 레코드에 `Pod`+`AuxiliaryPods`를 함께 쓴다. ② 생성 롤백 2곳(`Reach` 실패·`store.Put` 실패): `Stop(ctx, pods.All()...)`로 **전량** 회수. ③ 동결 — shell CRIU 경로(≈455)와 claude archive 경로(`snapshotWithTransactionLocked`) 둘 다: 체크포인트 대상은 워크로드 파드, 회수는 `sess.Pods()` 전량, 성공 시 `next.Pod=\"\"`와 함께 `next.AuxiliaryPods=nil`. `finalizeSnapshotLocked`(≈713)도 동일. ④ 복원(≈830): `RestoreInto`가 준 집합을 레코드에 반영하고 실패 롤백(`stopPodBestEffort`)이 전량을 회수하도록 시그니처를 집합으로 바꾼다. ⑤ 삭제(≈920): `pods := sess.Pods()`로 시작해 `txn.SourcePod`가 그 집합에 없을 때만 덧붙인다(현재는 `sess.Pod`와만 비교한다).",
+              "expectedOutcome": "`go build ./...`·`go vet ./...`·`gofmt -l .`(무출력) 통과. 기존 `internal/service` 테스트가 **수정 없이** 통과한다 — 보조 파드 0개일 때 동작이 불변임의 첫 증거다."
+            },
+            {
+              "seq": 6,
+              "action": "**집합 계약을 테스트로 못박는다** (`control-plane/internal/service/manager_test.go` 또는 새 `auxiliary_pods_test.go`). 스텁에 `SetAuxiliaryPods(1)`을 걸고 네 가지를 단정한다: (a) 생성 후 `RunningCount()==2`이고 세션 레코드의 `Pods()`가 워크로드+보조 둘을 워크로드 먼저 순서로 돌려준다, (b) 동결 후 `RunningCount()==0`이고 레코드의 `Pod`·`AuxiliaryPods`가 모두 비었다(AC-A3+AC-F4: 회수는 두 파드를 합쳐 성립), (c) 복원 후 다시 `RunningCount()==2`이고 레코드가 새 집합을 가리킨다(AC-B2), (d) 삭제 후 `RunningCount()==0`. 추가로 (e) `Reach` 실패 롤백에서 **보조 파드도** 회수되는지(누수 방지). 각 단정에 대응 AC를 주석으로 단다.",
+              "expectedOutcome": "`go test ./internal/service/...` 통과, 신규 케이스가 실제로 실행됨(`-run` + `-v`로 이름 확인). 이 다섯이 완료 기준 3·4의 직접 증거다."
+            },
+            {
+              "seq": 7,
+              "action": "**음성 통제(negative control) — 시험이 진짜 그 규칙을 지키는지 확인한다.** 5단계 ③에서 회수를 `sess.Pods()`에서 `[]string{sess.Pod}`로 되돌려 (b)가 **의도한 단언**(회수 후 `RunningCount()==0`)에서 실패하는지 본다. 이어서 (e)의 롤백을 워크로드 파드만 회수하도록 되돌려 (e)가 울리는지 본다. **실패 건수가 아니라 실패 메시지가 그 단언인지**로 판정한다(cascade가 의도한 단언을 가릴 수 있다). 백업은 `cp <f> $CLAUDE_JOB_DIR/tmp/f.bak` → 시험 → `cp` 복원 → `cmp -s`로 바이트 동일 확인. **`git checkout -- <file>`은 쓰지 않는다** — 커밋 전이면 그날 작업 전체를 날린다.",
+              "expectedOutcome": "두 통제 모두 의도한 단언의 메시지로 실패하고, 복원 후 `cmp -s` 바이트 동일. 컴파일 에러로 죽으면 아무것도 증명하지 못하므로 그 경우 시험 방식을 바꾼다."
+            },
+            {
+              "seq": 8,
+              "action": "**계약 문서·타입·낡은 문구 정정.** ① `control-plane/api/openapi.yaml`: Session 스키마(≈482)에 `auxiliaryPods: { type: array, items: { type: string } }`를 설명과 함께 더하고, 문서 머리말(line 7)의 `session maps 1:1 to a dedicated data plane pod (AC-A2)`를 개정 AC-A2 문구로 고친다. ② `web/src/api/types.ts`의 `Session`에 `auxiliaryPods?: string[]` 추가(주석에 「AC-A2 개정: 세션 전속 보조 파드, 현재 타입 둘은 항상 비어 있다」). ③ `control-plane/test/e2e_deferred_test.go:218`의 낡은 skip 사유 정정 — 「idle→snapshot 트리거가 없다」는 **거짓이 되었다**(`service.IdleReaper`가 착지했다). 실제 잔여 blocker를 적는다: 리퍼는 존재하나 `session.MaxIdle`이 **컴파일 타임 상수 60분**(`session.go:141`)이라 e2e가 세션을 늙힐 수단이 없다. 테스트를 통과시키지는 **않는다**(설정 노브 신설은 제품 변경 + 문서 변경이라 범위 밖).",
+              "expectedOutcome": "web `npx tsc -b && npx vite build` 통과. openapi는 스키마 파서로 로드 가능. skip 사유가 실제 blocker를 가리킨다(판정 기준 2의 낡은 문구 1건 해소)."
+            },
+            {
+              "seq": 9,
+              "action": "**`docs/doc-tracker.md` 갱신.** ① 부채 항목(line 85 「세션 레코드의 pod 참조가 단수」)을 **해소**로 고쳐 쓴다 — 무엇이 어떻게 바뀌었는지(집합 참조 모델·5경로·포트 계약)와, **남은 것이 무엇인지**(헬퍼 파드 스펙·NetworkPolicy·MCP·승인 게이트·RWX 볼륨 = AC-F1~F6 본체)를 명시한다. 부채가 사라진 것이 아니라 **첫 관문만 열렸다**고 적는다. ② 변경 이력에 `2026-09-03 (5)` 행을 더한다(before/after: 보조 파드 표현 불가 → 표현 가능·라이프사이클 5경로 집합 처리, AC·문서 수는 불변). **집계 숫자를 임의로 바꾸지 않는다** — 이 슬라이스는 AC를 구현하지 않았으므로 「미구현 AC」 집계는 그대로다.",
+              "expectedOutcome": "판정 기준 4(tracker 불일치)를 새로 만들지 않는다. 다음 감지가 「부채가 해소됐는데 등재만 남았다」를 drift로 다시 열지 않는다."
+            },
+            {
+              "seq": 10,
+              "action": "**로컬에서 CI 게이트를 1:1 재현한다.** control-plane: `gofmt -l .`(무출력) · `go build ./...` · `go vet ./...` · `go vet -tags=e2e ./...` · `go test ./...`. data-plane: 같은 5종 — ⚠️ 이 박스에서 `go test ./...`는 `jq: not found`로 1건(`TestEntrypointBootstrapsPrivateMarketplace…`) **항상 실패**한다. 원인 규명에 시간 쓰지 말고 `git worktree add --detach origin/main`으로 기준선을 떠 **같은 1건만 실패**함을 대조하고 넘어간다. web: `npm ci && npx tsc -b && npx vite build`, 그리고 `npx playwright test --list`(브라우저·SUT 불필요, 전 spec 트랜스파일 + 테스트 수).",
+              "expectedOutcome": "control-plane 5게이트 전부 통과. data-plane은 기준선과 **동일한 실패 1건**(회귀 아님을 워크트리 대조로 증명). web 빌드 통과, playwright 테스트 수가 기준선과 동일."
+            },
+            {
+              "seq": 11,
+              "action": "**커밋·푸시·draft PR.** 대상 레포 토큰을 따로 발급하고(`contents:write`,`pull_requests:write`,`metadata:read` — `.github/`를 건드리지 않으므로 `workflows` 불필요), **`~/.git-credentials`를 덮어쓰지 말고** 원격 URL에 토큰을 인라인해 푸시한다(형제 워커와 공유되는 파일이라 덮어쓰면 남의 push가 깨진다). `gh`로 draft PR을 연다. PR 본문에 task id, gap 요약, 이 슬라이스의 완료 기준과 **범위 밖 목록**, 검증 방법, 그리고 **검토 쟁점**(공개 wire에 `auxiliaryPods`를 더하는 결정 — 항상 비어 있지만 additive라 무해한가)을 적는다.",
+              "expectedOutcome": "draft PR URL 확보. `preparation`에 기록."
+            },
+            {
+              "seq": 12,
+              "action": "**PR CI 확인 + base 재확인.** 이 설치의 GitHub App에는 `checks` 권한이 없어 `gh pr checks`가 돌지 않는다 — `actions:read`로 REST를 쓴다(`gh api \"repos/dlddu/session-platform/actions/runs?per_page=15\"`). green을 확인하되 **잡 로그 원문의 수치**(`ok  ` 패키지 수, 실패 0)로 읽는다. green 뒤 `mergeable`을 **한 번 더** 묻는다 — 형제 머지는 체크가 끝나는 그 순간에도 들어온다(09-02에 두 번 당했다). base가 움직였으면 rebase가 아니라 **머지**로 따라간다(force-push 금지).",
+              "expectedOutcome": "CI green, `mergeable=true`·`clean`. 이 상태로 executor에 넘긴다."
+            }
+          ],
+          "plannedAt": "2026-09-03T04:10:00Z"
+        }
+      }
+    ]
   }
 ]
