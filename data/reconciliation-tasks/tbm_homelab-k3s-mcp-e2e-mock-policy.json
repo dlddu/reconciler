@@ -31,6 +31,52 @@
       "assessedAt": "2026-09-03T12:00:00Z"
     },
     "createdAt": "2026-09-03T12:00:00Z",
-    "updatedAt": "2026-09-03T12:00:00Z"
+    "updatedAt": "2026-09-03T12:00:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**정책 SSOT를 신설하면서 「원장(등재) + 표기 주석 + CI 집행 체커」를 한 PR로 묶는다.**\ndefinition이 첫 task로 지목한 셋(① `docs/e2e-mocking-policy.md` 신설 ② 기존 5종 카테고리 판정 →\n등재/제거 ③ 표기 주석 부착)을 전부 하되, 여기에 **집행 수단**(`scripts/check_mock_policy.py` +\nlint 잡 스텝)을 같은 PR에 넣는다. 문서만 만들면 다음 모킹이 추가될 때 다시 \"등재 0\" 상태로\n새어 나가고, 이 모델의 판정식(양방향 1:1)은 사람이 매번 손으로 세야만 확인된다. 반대로 체커만\n먼저 세우는 것도 불가능하다 — 등재 대상이 5종 실재하므로 게이트는 첫날부터 집행할 일이 있다.\n\n**5종 카테고리 판정(사전 소견은 구속력 없음 — 전부 재판정했다).**\n`github-mock`·`grafana-mock` = **UPS**(실 상류가 외부 SaaS·실 자격증명을 요구해 kind 안에서\n구동 불가). dear-baby busybox 스텁 = **IMG**(실 백엔드 이미지가 비공개라 CI에서 당길 수 없다).\n`MCP_AUTH_DISABLED` = **GATE**(게이트를 켠 별도 배포 변형 `tests/k8s/kind/auth-fixture.yaml`이\n실재 — 요건 충족). 갈리는 한 건 `DISABLE_SECURITY_PLUGIN`도 **GATE로 등재**하되 근거를 새로\n세웠다: **제거(= 보안 플러그인을 켜기)가 충실도를 오히려 낮춘다.** 프로덕션 대상은 AWS\nOpenSearch **Serverless**이고 그 요청 인증은 AWS 관리형 front door의 SigV4다 —\n`opensearchproject/opensearch` 이미지의 security plugin은 basic auth·JWT·TLS 인증서 계열이라\n**SigV4를 검증하지 못한다.** 켜면 서버가 basic auth로 갈아타야 해서 AC(`opensearch-search/AC3`\n등)가 검증하는 SigV4 경로 자체가 사라진다. 즉 \"게이트를 켠 변형\"이 원리적으로 존재할 수 없고,\n그 계층 자체를 검증하는 우리 AC도 없다(상류의 동작이지 제품 표면이 아니다). 대신 이 스위치가\n가리는 성질(무서명 요청 거부)은 **http-trace 관측**이 이미 메꾸고 있다 —\n`opensearch_search_ac3.py`가 응답이 아니라 트레이스를 읽는 이유를 자기 docstring에 그렇게\n적어 두었다.\n\n**그 판단을 무료 통행증으로 두지 않기 위해, GATE 행에는 「대체 검증」 산출물 경로를 필수로\n요구하고 체커가 실재를 강제한다** — `MCP_AUTH_DISABLED` → `auth-fixture.yaml`,\n`DISABLE_SECURITY_PLUGIN` → `http-trace.yaml`. 둘 중 하나가 사라지면 CI가 빨개져 예외를\n다시 정당화해야 한다(범위 밖으로 미루는 항목에 「돌아오게 만드는 장치」를 같이 두는 선례와 같은 계열).\n\n**이 시도의 완료 기준(= 이 task의 성공 판정 범위)**: (1) `docs/e2e-mocking-policy.md`가\n5종을 등재한 원장으로 존재하고, (2) 5개 정의 지점에 `# mock-exception:` 주석이 붙고,\n(3) `scripts/check_mock_policy.py`가 R1~R6을 집행하며 HEAD에서 rc=0이고, (4) lint 잡이 그\n체커를 돌리며, (5) 각 규칙이 **음성 통제(뮤테이션)로 실제 발화**함이 확인된다. 즉 판정식\n\"등재 집합 == 실재 집합\"이 문서로 성립하고 기계로 집행된다.\n\n**범위 밖(후속)**: 실제 모킹의 **제거**(5종 모두 제거 요건 미충족 — UPS/IMG는 CI에서 실상류·실\n이미지를 못 얻고, GATE 2종은 위 근거로 대체 불가), as-is 지문 패턴 확대(모델 개정 사항 —\n`<name>-mock` 꼴이 아닌 새 스텁은 지문에 안 잡힌다), `internal/`의 Go 단위 테스트 모킹(모델이\n범위 밖으로 명시). 이들은 재감지가 새 task로 잇거나 tobe-modeler의 몫이다.\n\n**형제 모델 충돌 회피**: 체커를 `tests/integration/`에 두지 않고 `scripts/`에 둔다 —\n`run_all.py`의 `NOT_MATCHING_UNIT`이 하드코딩 집합이라 거기 두면 자매 모델\n`tbm_homelab-k3s-mcp-ac-e2e`의 `check_ac_mapping.py`가 「고아 파일」로 잡고, 그 모델의 열린\nPR #44(`tests/integration/*.py` 30파일 재편)와도 정면으로 부딪친다. 같은 이유로\n`docs/doc-tracker.md`(자매 모델의 to-be)와 `tests/integration/*.py`는 **한 줄도 건드리지 않는다.**\n",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 `reconcile/rct_20260903-0001-mock-policy`를 만들고 `docs/e2e-mocking-policy.md`를 신설한다. 목표·모킹 계수 범위·허용 카테고리(UPS/IMG/GATE)·표기 규약을 모델 definition에서 그대로 내려 적고, 기계 판독 원장(표)에 5종을 `ID | 카테고리 | 모킹 지점 | 대체 검증` 으로 등재한 뒤 ID별 산문 절에 「실환경 불가 사유」와 「소멸 조건」을 적는다. 집계 숫자는 원장 표와 `상한` 마커 딱 두 곳에만 두고 산문에는 숫자를 쓰지 않는다(체커가 둘의 일치를 강제하므로 조용히 어긋날 수 없다).",
+              "expectedOutcome": "`docs/e2e-mocking-policy.md`가 존재하고 원장 행 5개(github-mock=UPS · grafana-mock=UPS · dear-baby-fixture=IMG · MCP_AUTH_DISABLED=GATE · DISABLE_SECURITY_PLUGIN=GATE), GATE 2행에 대체 검증 경로가 채워져 있다. to-be 버전이 `absent` → blob hash 로 처음 값을 갖는다."
+            },
+            {
+              "seq": 2,
+              "action": "정의 지점 5곳에 표기 주석 `# mock-exception: <CODE> — <사유>` 를 **그 ID 토큰이 나타나는 줄 바로 앞**에 붙인다: `tests/k8s/kind/github-mock.yaml`(Namespace name), `grafana-mock.yaml`(동), `dear-baby-fixture.yaml`(Deployment name), `kustomization.yaml`(`- MCP_AUTH_DISABLED=1` 앞), `opensearch.yaml`(`- name: DISABLE_SECURITY_PLUGIN` 앞). **`.github/workflows/ci.yml`의 `run: |` 블록 안에는 절대 넣지 않는다** — 백슬래시로 이어진 줄 사이에 `#` 을 끼우면 뒤따르는 `--from-literal` 인자들이 통째로 주석이 되어 시크릿이 조용히 잘못 만들어진다.",
+              "expectedOutcome": "5개 파일에 각 1줄씩 추가. `git diff --stat` 이 5파일 +5줄. YAML 파싱 무해(주석) — `kubectl apply --dry-run` 없이도 구조 무변경임이 diff로 확인된다. as-is 지문에 `mock-exception: <CODE>` 토큰 5종이 새로 잡혀 재감지가 열린다."
+            },
+            {
+              "seq": 3,
+              "action": "`scripts/check_mock_policy.py`(python3 표준 라이브러리 전용, 클러스터 불필요)를 작성한다. 스캔 범위는 모델 as-is와 동일(`git ls-files -- tests .github/workflows` 에서 `*_test.go` 제외). 집행 규칙: **R1** 카테고리는 UPS/IMG/GATE 중 하나 · **R2** 코드에서 발견된 모킹 토큰이 전부 원장에 등재된 ID다(미등재 = 실패) · **R3** 등재된 모든 ID가 코드에 실재하고, 선언한 모킹 지점 파일이 존재하며 그 ID 토큰을 담는다(고아 등재 = 실패) · **R4** 각 모킹 지점에 `# mock-exception: <CODE>` 주석이 있고 **다음 비어 있지 않은 줄**이 그 ID를 담으며 CODE == 행의 카테고리다. 역방향으로 스캔 범위 안의 모든 `mock-exception:` 주석도 이 조건을 만족해야 한다 · **R5** GATE 행은 대체 검증 경로를 반드시 선언하고 그 경로가 실재한다 · **R6** `상한` 마커 값 == 원장 행 수(상·하 양방향 — 올리려면 같은 PR에서 명시적으로 올려야 하고, 예외가 줄면 상한도 같이 내려야 한다).",
+              "expectedOutcome": "`python3 scripts/check_mock_policy.py` 가 브랜치에서 rc=0 이고 등재 5 · 지점 5 · 미등재 0 · 고아 0 을 출력한다. 표준 라이브러리 외 의존성 없음."
+            },
+            {
+              "seq": 4,
+              "action": "`.github/workflows/ci.yml` 의 `lint` 잡에 스텝 하나를 더한다 — 기존 `AC <-> e2e file mapping` 스텝 바로 뒤에 `E2E mocking policy` 스텝으로 `python3 scripts/check_mock_policy.py` 를 돌린다. 같은 잡을 고른 이유는 이 체커도 표준 라이브러리 전용·클러스터 불필요라 kind 잡을 기다릴 이유가 없기 때문이다. 이 파일을 건드리므로 **대상 레포 토큰을 처음부터 `workflows:write` 로 발급**한다.",
+              "expectedOutcome": "PR CI 의 `fmt + vet` 잡에 `E2E mocking policy` 스텝이 나타나고 통과한다. 다른 잡(unit/integration/docker)은 무변경."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/index.html` 헤더 링크에 `reader.html?doc=e2e-mocking-policy.md` 한 줄을 더해 새 SSOT를 문서 허브에서 찾을 수 있게 한다(`reader.html` 은 `docs/` 아래 임의의 `.md` 를 받으므로 다른 변경은 불필요).",
+              "expectedOutcome": "index.html +1줄. 허브에서 정책 문서로 이동 가능."
+            },
+            {
+              "seq": 6,
+              "action": "**음성 통제(뮤테이션)** 로 R1~R6 이 각각 실제로 발화하는지 확인한다. 최소 6종: (a) 원장에서 `grafana-mock` 행 삭제 → R2 미등재 · (b) 코드에 없는 ID(`slack-mock`) 행 추가 → R3 고아 · (c) `opensearch.yaml` 의 주석 삭제 → R4 주석 누락 · (d) `kustomization.yaml` 주석의 CODE 를 `UPS` 로 변조 → R4 카테고리 불일치 · (e) `DISABLE_SECURITY_PLUGIN` 행의 대체 검증을 `—` 로 → R5 · (f) 상한을 4/6 으로 → R6 양방향. 각 변이는 **`cp` 로 백업 → 변조 → 확인 → 복원 → `cmp -s` 로 바이트 동일** 절차로 하고 `git checkout --` 는 쓰지 않는다.",
+              "expectedOutcome": "6종 전부 rc=1 로 실패하고 **실패 메시지가 의도한 규칙의 것**임을 확인(단순 예외·파싱 오류가 아니라). 확인 후 작업 트리가 변이 전과 바이트 동일."
+            },
+            {
+              "seq": 7,
+              "action": "브랜치를 push 하고 draft PR 을 연다(머지하지 않는다). PR 본문에 task id, gap 요약(등재 0 vs 실재 5종), 5종 카테고리 판정과 그 근거(특히 `DISABLE_SECURITY_PLUGIN` 의 GATE 판정 논거), 체커 규칙 R1~R6, 로컬 검증 결과(rc=0 + 뮤테이션 6종), 그리고 **형제 모델 영향**(docs 트리·tests 트리 해시 변화로 `tbm_homelab-k3s-mcp-docs-impl`·`tbm_homelab-k3s-mcp-ac-e2e` 재감지가 뜨는 것은 의도된 무해)을 적는다.",
+              "expectedOutcome": "draft PR URL 확보. 대상 레포 main 은 무변경(머지는 executor·사람의 몫)."
+            }
+          ],
+          "plannedAt": "2026-09-03T12:22:00Z"
+        }
+      }
+    ]
   }
 ]
