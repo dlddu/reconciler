@@ -311,9 +311,9 @@
   },
   {
     "toBeModelId": "tbm_session-platform-ac-e2e",
-    "status": "executing",
+    "status": "succeeded",
     "createdAt": "2026-09-03T03:47:07Z",
-    "updatedAt": "2026-09-03T11:01:30Z",
+    "updatedAt": "2026-09-03T11:04:00Z",
     "trigger": {
       "detectedAt": "2026-09-03T03:47:07Z",
       "changedSides": [
@@ -488,6 +488,54 @@
               "startedAt": "2026-09-03T11:00:55Z",
               "finishedAt": "2026-09-03T11:01:00Z",
               "log": "PR CI 확인 — head `feaf87e`의 워크플로 3개 **전부 success**: `ci`(9잡 전부 success) · `Build and Push Docker Image to GHCR` · **`e2e`(kind + API + browser)**. 계획 시점에 미결이었던 `e2e`가 이번에 success로 확정됐다 — 계획이 범위 밖으로 뒀던 유일한 미지수가 초록으로 닫혔다. `conclusion` 필드만 믿지 않고 잡 로그 원문도 확인: `AC ↔ e2e 1:1 mapping` 잡 로그에 `AC ↔ e2e 1:1 OK — AC 27개 = 매칭 파일 14 + 예외 1 + 공백 12`, fidelity 잡 로그에 `회계 행 16 == 스캔된 (파일,토큰) 쌍 16`. **PR은 머지하지 않았다**(계획이 명시한 범위 밖)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "api:c449cb1d29e85b728f2a89c29e217f016964a6669636f50d75e42f082bee0ee9 web:c34b24d40a8726ed51d66280808ab9054190533e",
+          "verifiedAt": "2026-09-03T11:04:00Z",
+          "checks": [
+            {
+              "name": "① PR #23이 현재 main(da72899) 위로 충돌 없이 올라간다",
+              "status": "passed",
+              "detail": "PR #23 API 조회: `state=open · head=feaf87e · base=main · mergeable=true · mergeable_state=clean`. `da72899`가 `feaf87e`의 조상이고(머지 커밋 `6d6861d`), 트리 전체에서 충돌 마커 grep 0건. main은 계획 시점 이후 움직이지 않았다(ls-remote로 `da72899` 재확인)."
+            },
+            {
+              "name": "② check-ac-mapping.sh rc=0 — 집계 AC 27 = 매칭 14 + 예외 1 + 공백 12",
+              "status": "passed",
+              "detail": "로컬 재현(feaf87e 체크아웃): rc=0, `AC ↔ e2e 1:1 OK — AC 27개 = 매칭 파일 14 + 예외 1 + 공백 12 (매칭 단위 16개, 비-AC 2개)` + 공백 목록 `AC-E1…E6 AC-F1…F6`. CI 러너의 `AC ↔ e2e 1:1 mapping` 잡 로그 원문에서도 같은 한 줄 확인. 손으로 센 교차 확인도 일치: docs/prd의 `### AC-` 27건 · Go 매칭단위 15 + web 최상위 1 = 16 · `검증 AC:` 선언 16(AC 14 + 비-AC 2)."
+            },
+            {
+              "name": "③ check-fidelity-allowlist.py rc=0",
+              "status": "passed",
+              "detail": "로컬 rc=0 — 등재 seam 2 · 회계 행 16 == 스캔된 (파일,토큰) 쌍 16 · 미해소 위반 4(상한 4). CI `e2e fidelity allowlist` 잡도 success이고 로그 원문에 같은 수치. 다른 모델(`tbm_session-platform-e2e-mock-policy`)의 SSOT가 이번 변경으로 깨지지 않았다는 확인."
+            },
+            {
+              "name": "④ Go·web 게이트 (vet ×2 / gofmt / go test / tsc+build)",
+              "status": "passed",
+              "detail": "이 executor 박스에 Go 툴체인이 없어 로컬 재현 불가 — **같은 head SHA의 CI 잡으로 확인**했고 이쪽이 더 강한 증거다: `control-plane (lint + unit)`·`data-plane (lint + unit)`·`web (typecheck + build)`·`integration (happy path)`·`envtest (real-apiserver CAS/Lease)` 전부 success. 준비 단계에서 로컬 환경 요인(`jq: not found`)으로 1건 실패했던 data-plane이 러너에서는 통과함이 확정됐다. 브랜치 자체 변경이 `docs/test/e2e.md` 1파일(+51/−4)뿐이라 코드 게이트에 영향을 줄 경로도 없다."
+            },
+            {
+              "name": "⑤ PR CI green — 계획 시점 미결이던 e2e(kind) 포함",
+              "status": "passed",
+              "detail": "head `feaf87e`의 워크플로 3개 전부 success: `ci`(9잡 전부) · `Build and Push Docker Image to GHCR` · **`e2e (kind + API + browser)`**. 계획이 '로컬 재현 불가, PR CI가 유일한 판정자'로 남겨 둔 유일한 미지수가 이번에 초록으로 닫혔다."
+            },
+            {
+              "name": "⑥ F 계열·AC-A2/A3 판정이 정본(docs/test/e2e.md)에 기록됨",
+              "status": "passed",
+              "detail": "집계 절 아래 두 노트를 육안 확인. F 계열: 공백으로 두는 근거(구현 0줄) + `approval-gated-workload.md`의 '실클러스터 확인' 문장 해석 + 승격 조건(F1·F3·F5·F6 전용 파일 / F2·F4는 그때 규칙 4 예외 후보, kindnet의 NetworkPolicy 미집행 근거 포함) + 선결 부채(`session.go`의 단수 `Pod string`). A2/A3: 개정 문구 기준으로도 현행 `e2e_a2`/`e2e_a3` 단언이 유효하다는 판정과 재검토 트리거(approval-gated 구현 착지). 계획대로 테스트 코드는 한 줄도 바뀌지 않았다."
+            },
+            {
+              "name": "게이트 음성 통제 — rc=0이 공허하지 않음",
+              "status": "passed",
+              "detail": "`ac-summary`의 `AC 총계`를 27→21로 변조하자 rc=1과 `FAIL: … 집계 'AC 총계' = 21, 실제 = 27 (규칙 6)` — 의도한 규칙을 지목하며 발화. 복원 후 `cmp -s` 바이트 동일, rc=0 재확인, `git status --porcelain` 무출력. 집계를 맞춰 통과시킨 것이 아니라 실제와 일치시킨 것이라는 직접 증거."
+            },
+            {
+              "name": "(정보성) 모델 전체 잔여 gap — converged 판정에서 제외",
+              "status": "passed",
+              "detail": "이 task의 완료 기준은 plan이 명시한 범위(PR #23의 등재 원장을 AC 27 기준으로 되살리는 것)이며, 아래는 그 범위 밖이라 converged 판정에 넣지 않았다: (a) AC-E1~E6·AC-F1~F6 12건의 실제 1:1 해소 — F 계열은 `approval-gated` 구현이 0줄이라 선결, E 계열은 PR #42의 실 SUT 전환이 선행 (b) PR #23 머지 자체 — `rct_20260808-0001`(awaiting_review)의 몫이라 건드리지 않았다 (c) `docs/prd` 기준 as-is 쪽 규약(`검증 AC:` 선언)은 여전히 main에 0건 — 규약 전체가 미머지 PR 안에 있다. **재감지 참고**: 이번 실행은 main에 아무것도 반영하지 않아 as-is/to-be 버전이 그대로다(as-is `api:c449cb1d… web:c34b24d4…`, to-be `ac:8b106595… reg:e90cc483…` — 모델의 lastObservedVersion과 동일). 따라서 이 실행 자체는 새 트리거를 만들지 않으며, 다음 트리거는 PR #23 머지 또는 `docs/prd`·e2e 변경이 만든다."
             }
           ]
         }
