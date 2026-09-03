@@ -263,7 +263,7 @@
       }
     },
     "createdAt": "2026-09-03T12:14:15Z",
-    "updatedAt": "2026-09-03T22:42:00Z",
+    "updatedAt": "2026-09-03T22:50:00Z",
     "stateSummary": {
       "asIs": "관측 2026-09-03T12:13Z · main `9688a36`(직전 실 커밋 `91afa68` = PR #49 머지, 12:05:50Z).\nas-is 3요소 전부 이동: `screens:58b1cbe8…→634aaab0…` · `app:9beab0f3…→ccbf7c5b…` ·\n`design:0d7580d0…→95a35d60…`.\n\n**변경의 실체는 이 모델 자신의 직전 슬라이스다.** `rct_20260903-0001`이 계획한 판정 하네스가\n그대로 착지했다 — 구현 파일 11개 헤더에 `// mockup: docs/mockups/<file>.html` 선언 주석,\n`web/src/design/README.md`의 「정본 이탈 원장」, `scripts/check-render-fidelity.py`(R1~R10),\nCI 잡 `render fidelity (mockups <-> SPA screens)`. **렌더 출력은 한 픽셀도 안 바뀌었다**\n(`git diff 91afa68^ 91afa68 -- web/src`가 전부 주석 추가 + 마크다운).\n\n**게이트를 main에서 직접 돌린 실측** (`python3 scripts/check-render-fidelity.py`, rc=0):\n```\nR1-R5  화면 매핑 OK — 구현 파일 11개 · mockup 6종 (구현 없음 1종, 구현 신호 0 hit 확인)\nR6-R7  정본 이탈 원장 OK — HEX 14건 / INLINE 14건 / rgba 31건, EXC 마커 0건\nR8     패널 구조 OK — 쌍 3개, 차집합 10건\nR9     상한 OK — 미해소 27/27 · 패널 차집합 10/10\nR10    토큰 중복 문구 OK — mockup 6개, 총 7곳\n```\n자매 게이트 `check-fidelity-allowlist.py`도 rc=0(등재 seam 2 · 회계 행 16 · 인터셉트 7건/상한 4)\n— 두 원장이 섞이지 않았다.\n\n**독립 재측정 — 판정 기준별 현황**\n- **기준 2(토큰 값)**: 정본 `tokens.css` 23토큰 대비 mockup 6개 각 23토큰 공유,\n  **의미 불일치 0건**. (`:root`를 `;`로 쪼개 파싱했다 — 목업은 한 줄에 여러 선언이 들어 있어\n  줄머리 앵커 grep은 24개 중 11개만 잡는다. hex 대소문자·수치 shorthand 정규화 필수:\n  `#FFB43A`/`cubic-bezier(.22,…)` 가 정규화 없이는 가짜 불일치가 된다.)\n- **기준 3(카피, 양방향)**: 역방향 차집합이 남아 있다 — 구현이 렌더하는 `Actions`(2파일) ·\n  `Delete session`(3파일) · `Switch (AC-C4)`(1파일)가 **mockup 6개 전부에서 0 hit**.\n  통제 문자열 `Archive now`는 impl 1 · mockup 2로 **양쪽에 존재**하므로 blanket 주장이 아니라\n  항목별 차집합이다.\n- **기준 4(구조)**: mockup 전용 패널의 CSS 클래스가 `shell.css`에 아예 없다 —\n  `.gauge`(mockup 6파일 / shell.css 0) · `.st-row`(mockup 1 / shell.css 0) ⇒ 이름이 바뀐 것이\n  아니라 **누락**이다. 게이트의 패널 차집합 10건과 정합한다.\n- **미해소(OPEN) 27건 · 상한 27/27**, **패널 차집합 10/10** — 두 래칫 모두 상한에 붙어 있다.",
       "toBe": "to-be(`docs/mockups` 트리) `6440c95c… → 40215286…`. 같은 PR #49가 to-be도 움직였다 —\n`docs/mockups/README.md`에 「화면 ↔ mockup 매핑」 표와 「패널 구조 차집합」 표가 신설됐다.\n목업 파일 6종(`index`·`new-session`·`workspace`·`agent-workspace`·`gated-workspace`·`restore`)\n자체는 무변경이다.\n\n**즉 이번 트리거는 이 모델의 판정 *재료*가 아니라 판정 *하네스*가 생긴 사건이다.** 등록 시점\ndefinition이 \"기계 판독 가능한 매핑은 존재하지 않는다\"고 적어 둔 전제 조건 ①이 이제 섰고,\n그 위에서 기준 3·4의 정밀 차집합을 산출할 수 있게 됐다 — `rct_20260903-0001`의 계획이\n\"①이 서기 전에는 ③의 정밀 차집합을 산출할 수 없다\"며 화면 수정을 뒤로 미룬 그 선행 조건이다.\n\n**직전 시도가 스스로 범위 밖으로 선언한 잔여**(그 task의 verification ⑦, converged 판정에\n넣지 않음): 패널 내부 카피·수치 대조 / 누락 패널(`Vitals`·`Shell state`·`Lifecycle`)의 실제 구현 /\nOPEN 27건의 토큰화 / `DeleteSessionDialog` 대응 mockup 신설 / rgba 총량의 값 단위 분해 /\n토큰 중복 해소 방향 결정(제품 결정).",
@@ -401,6 +401,66 @@
               "name": "잔여 gap(정보성, converged 판정 제외)",
               "status": "passed",
               "detail": "계획이 범위 밖으로 선언한 것들 — 토큰 복제 자체의 해소(제품 결정 대기) · 제3 사본 `docs/doc-structure-state.md`(자매 모델 소유) · 판정 기준 3 카피 역방향 차집합 · 기준 4 패널 차집합 10건 · OPEN 27건 토큰화(스크린샷 회귀 인프라 부재) · `DeleteSessionDialog` mockup 신설. 여기에 **신규 잔여 2건**을 더한다: (1) 여정 페이지 3종의 원장 등재(`--emit` 로 생성 가능) + 두 문구 7~13 갱신, (2) `--frozen-soft` 값 드리프트 해소 방향 결정(여정 페이지를 정본에 맞출지)."
+            }
+          ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "**직전 시도가 만든 게이트가 main에서 빨갛다 — 그 게이트가 실제로 잡아낸 것(미등재 복제 3건 + 값 드리프트 1건)을 등재·교정해서 닫는다. 규칙을 느슨하게 만들지 않는다.**\n\n**무엇이 일어났는가(재작업 사유).** 직전 시도의 PR #55(22:32Z 머지)는 R10을 「하드코딩 공식 + 손으로 쓴 스칼라」에서 「레포 전수 실측 + 원장 양방향 집합 동등성」으로 바꿨다. 그 브랜치는 base `9688a36`에서 CI 전부 초록이었고 GitHub도 `mergeable=clean`이었다. 그러나 그 사이(22:27Z) 자매 모델 `tbm_session-platform-journey-mockup`의 PR #56이 여정 페이지 3종을 main에 넣었고, 그 3파일이 정본 토큰을 인라인 복제한다. **텍스트 충돌은 0이지만 의미 충돌**이라 머지 직후 main에서 rc=1이 됐다:\n\n```\n[R10] 정본 토큰을 재선언하는데 원장에 없다: docs/journeys/JRN-idle-resume|JRN-manual-freeze|JRN-session-deletion/index.html (각 공유 17 · 값 불일치 1)\n[R10] web/src/design/README.md 의 유지비 문구가 실제와 다르다: 문구=7~10 실제=7~13\n[R10] docs/mockups/README.md 의 유지비 문구가 실제와 다르다: 문구=7~10 실제=7~13\n```\n\n**이것은 게이트의 결함이 아니라 게이트가 설계대로 작동한 결과다.** 구 게이트의 공식 `1 + len(docs/mockups/*.html)`이었다면 여정 페이지 3종은 **보이지 않았을** 것이다(직전 검증의 기준③이 이미 그렇게 판정했다). 그러므로 답은 규칙을 되돌리거나 완화하는 것이 아니라, **게이트가 처음으로 드러낸 사실을 원장에 반영하는 것**이다.\n\n**핵심 판단 — 값 드리프트를 「등재」가 아니라 「교정」으로 닫는다.** 3파일은 `--frozen-soft`를 `#12262F`로 선언하는데 정본 `tokens.css`는 `#13313d`다. 세 가지 처리가 가능한데 앞의 둘을 기각했다:\n- ⛔ **IND(독립 팔레트)로 등재** — 거짓이다. 17개 공유 토큰 중 16개가 정본과 정확히 일치하고, 나머지 하나만 어긋난다. 독립 팔레트가 아니라 **복제하다 한 자리를 잘못 적은 것**이다. IND로 넣으면 유지비 계산에서도 빠져 비용을 낮게 보이게 한다(7~13 → 7~10).\n- ⛔ **처분 `DRIFT`를 신설해 「알려진 불일치」로 등재** — 규칙 (c)(`DUP` 행은 값 불일치 0)에 영구 탈출구를 낸다. 그 규칙은 *오늘 처음으로 실제 드리프트를 잡았다*. 첫 성공 사례를 예외로 만들면 규칙이 죽는다.\n- ✅ **정본값으로 교정** — `--frozen-soft: #13313d`는 레포 최초 커밋 `dbc5631`(#1) 이래 한 번도 바뀌지 않았고, 허브 `docs/index.html`도 mockup 6종도 전부 `#13313d`다. 즉 정본은 명확하고 `#12262F`만 유일한 이탈이다. 한 글자 수정이고 revert 한 번으로 되돌릴 수 있다.\n\n**범위 판단 — `docs/journeys/`를 건드리는 것이 옳은가.** 이 모델의 as-is는 `web/src/{screens,app,design}`, to-be는 `docs/mockups`이므로 여정 페이지는 둘 다 아니고, 소유는 자매 모델 `tbm_session-platform-journey-mockup`에 있다. 그럼에도 건드리는 근거는 셋이다. ① **R10의 모집단이 레포 전수인 것은 승인된 설계다**(직전 시도 review에서 사람이 명시 승인: \"게이트 모집단을 레포 전수로 넓히는 설계 판단에 이의 없음\"). ② 이 모델의 정의가 **디자인 토큰의 정본을 `web/src/design/tokens.css`로 확정**하고 있어 \"정본에서 벗어난 토큰 값\"은 위치와 무관하게 이 모델의 판정 대상이다. ③ **자매 모델은 지금 점유 중이 아니다** — 그 모델의 최신 task 3건(`rct_20260903-0003`~`0005`)이 전부 `no_action_needed`이고 열린 PR도 없다. 충돌 위험이 없고, 내 변경이 그 모델의 as-is 해시를 움직이므로 **재감지로 통보된다**.\n\n**부수 개선 — 이번 사고의 구조적 원인에 대한 값싼 가드.** 원인은 \"두 브랜치가 각자 초록인데 병합 결과가 빨간\" 의미 충돌이고, R10의 모집단이 레포 전수라 **누구의 PR이든** 이 게이트를 무효화할 수 있다. 되돌릴 수 없는 지점(머지) 앞에 **병합 결과에서 게이트를 돌려 보는 한 줄**을 지침과 원장 주석에 박는다. 브랜치 보호 설정(`require branches to be up to date`)이 근본책이지만 그건 레포 관리 권한 밖이다. 다만 **이 사고는 일회성 전환 비용**이기도 하다 — 앞으로 R10이 들어 있는 main에서 분기한 여정 페이지 PR은 **자기 브랜치 CI에서** 원장 누락으로 빨개진다(#56은 R10 이전 base라 그러지 못했다).\n\n**범위(완료 기준) — 이 다섯이 모두 참이면 성공이다:**\n1. 병합 결과(브랜치 = 현재 main + 변경)에서 `python3 scripts/check-render-fidelity.py` **rc=0**. CI 잡 `render fidelity (mockups <-> SPA screens)`가 green.\n2. 여정 페이지 3종이 원장에 **DUP(공유 17 · 값 불일치 0)** 로 등재되고, `--frozen-soft` 드리프트가 정본 `#13313d`로 해소된다(레포 전수 `#12262F` 잔존 0건).\n3. 두 사본(`web/src/design/README.md` · `docs/mockups/README.md`)의 유지비 문구가 게이트 계산값 **7~13**과 일치한다.\n4. **R1~R9 판정 불변** — main 출력과 앞 4줄이 바이트 동일. 자매 게이트 2종(`check-fidelity-allowlist.py` · `docs-journey-mockup` 하네스) 회귀 없음.\n5. 음성 통제로 규칙이 여전히 문다는 것을 확인한다 — **「원래 버그의 재발 형태」(새 복제 파일이 원장 없이 들어옴)를 반드시 한 종 포함**한다.\n\n**범위 밖(후속으로 남긴다)**: 복제 자체의 해소(mockup을 `tokens.css`에 물릴지는 `docs/doc-structure-state.md:148`의 **제품 결정 대기**) · 제3 사본 `docs/doc-structure-state.md`(자매 모델 to-be, 원장에 「등재된 후속」으로 이미 선언돼 있다) · 판정 기준 3 카피 역방향 차집합 · 기준 4 패널 차집합 10건 축소 · OPEN 27건 토큰화(스크린샷 회귀 인프라 부재) · `DeleteSessionDialog` 대응 mockup 신설 · 브랜치 보호 설정 변경(레포 관리 권한 밖).",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-03T22:50:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "베이스라인 고정. 현재 `origin/main`(`269bc5c`)에서 `python3 scripts/check-render-fidelity.py`를 돌려 rc=1과 실패 5줄을 그대로 기록하고, `--emit`으로 실측 원장 표(복제 파일 13개)를 뽑는다. 자매 게이트 `python3 scripts/check-fidelity-allowlist.py`의 rc·출력도 함께 뜬다. 이후 모든 회귀 판정은 이 출력과의 대조로만 한다.",
+              "expectedOutcome": "render-fidelity rc=1(실패 5줄 전부 R10) · fidelity-allowlist rc=0. `--emit` 표에 `docs/journeys/JRN-{idle-resume,manual-freeze,session-deletion}/index.html`이 각 공유 17 · 불일치 1로, `docs/reader.html`이 공유 2 · 불일치 2로 나온다."
+            },
+            {
+              "seq": 2,
+              "action": "값 드리프트의 정본 방향을 실측으로 확정한다. (a) `git log -L`로 `tokens.css`의 `--frozen-soft` 이력을 확인, (b) 레포 전수 `git grep -in 12262f`로 이탈 파일을 전수 확인, (c) 허브·mockup 6종이 선언한 값을 확인, (d) 3파일의 나머지 16개 공유 토큰이 전부 정본과 일치함을 확인.",
+              "expectedOutcome": "`#13313d`는 최초 커밋 `dbc5631`(#1) 이래 무변경. `#12262F`는 여정 페이지 3파일에만 존재(각 1곳). 허브 `docs/index.html`·mockup 6종은 전부 `#13313d`. 3파일의 16/17 토큰 일치 ⇒ **독립 팔레트가 아니라 복제 중 한 자리 이탈**임이 근거로 확정된다."
+            },
+            {
+              "seq": 3,
+              "action": "여정 페이지 3종의 `--frozen-soft:#12262F`를 `#13313D`로 교정한다(정본 표기와 같은 대문자 hex — 그 파일들의 나머지 값이 전부 대문자다). 파일당 정확히 1치환이며, 치환 건수를 단언하는 스크립트로 수행한다.",
+              "expectedOutcome": "3파일 각 1줄 변경. `git grep -in 12262f`가 0건. 게이트의 `dupe_row()`가 3파일 모두 (17, 0)을 돌려준다. `--frozen-soft`를 쓰는 `.pill.snap`·`.banner.info`의 배경색이 다른 사본과 동일해진다(시각적으로도 정합)."
+            },
+            {
+              "seq": 4,
+              "action": "`web/src/design/README.md`의 「토큰 복제 원장」 표에 여정 페이지 3행을 `| … | 17 | 0 | DUP | 사유 |`로 추가하고(정렬은 기존 표와 같이 경로 사전순), 같은 파일과 `docs/mockups/README.md`의 유지비 문구 `최소 **7**곳 · 최대 **10**곳`을 게이트 계산값 `최소 **7**곳 · 최대 **13**곳`으로 갱신한다. 행 내용은 손으로 짓지 않고 `--emit` 출력에서 가져온다.",
+              "expectedOutcome": "원장 행 13개(DUP 12 · IND 1)가 실측 집합과 양방향으로 같아진다. 문구 7~13이 `dupe_cost()`가 계산한 값과 일치 ⇒ R10 (a)(b)(c)(e) 전부 통과."
+            },
+            {
+              "seq": 5,
+              "action": "원장 문서에 **「병합 결과에서 확인할 것」** 주석 한 문단을 더한다: 이 게이트의 모집단이 레포 전수이므로 브랜치 CI가 초록이어도 그 사이 머지된 형제 PR이 새 복제를 들여오면 main에서 빨개진다(2026-09-03 #55 ↔ #56이 그 실례). 머지 직전에 병합 결과에서 게이트를 한 번 돌리는 명령을 함께 적는다.",
+              "expectedOutcome": "이번 사고의 원인이 산문이 아니라 **실행 가능한 절차**로 문서에 남는다. 다음 사람이 같은 함정을 밟기 전에 명령 한 줄로 확인할 수 있다."
+            },
+            {
+              "seq": 6,
+              "action": "로컬 검증 ① — 브랜치에서 `python3 scripts/check-render-fidelity.py` rc=0을 확인하고, seq 1의 main 출력과 **R1~R9 요약 4줄이 바이트 단위로 동일**한지 `diff`로 대조한다(main은 rc=1이라 요약을 안 찍으므로, `git stash`한 clean main 워크트리 대신 `--emit` 및 R1~R9 산출 경로를 비교하는 방식이 필요하면 별도 워크트리에서 이전 green 커밋 `76b5dcc`의 출력과 대조한다).",
+              "expectedOutcome": "브랜치 rc=0이고 `R1-R5`·`R6-R7`·`R8`·`R9` 네 줄이 마지막 green 상태(`76b5dcc`)와 바이트 동일. R10 줄만 `복제 파일 13개(DUP 12 · IND 1) … 유지비 7~13곳`으로 바뀐다. **'세는 대상을 바꾸지 않았다'가 주장이 아니라 대조로 남는다.**"
+            },
+            {
+              "seq": 7,
+              "action": "로컬 검증 ② — **병합 결과 대조**(이번 사고의 직접 재발 방지). `git merge-tree`(또는 임시 워크트리 test-merge)로 브랜치와 `origin/main`의 병합 트리를 만들고 그 트리에서 게이트를 돌린다.",
+              "expectedOutcome": "병합 결과에서도 rc=0. 브랜치가 최신 main 위에 있음(또는 병합 후에도 참임)이 대조로 확인된다 — 직전 시도가 하지 않아 실패한 바로 그 단계다."
+            },
+            {
+              "seq": 8,
+              "action": "로컬 검증 ③ — **음성 통제 6종**을 각각 걸고 되돌린다: (1) **여정 페이지 3행 중 하나를 원장에서 제거**(= 원래 버그의 재발 형태: 새 복제 파일이 원장 없이 들어옴), (2) 교정한 `--frozen-soft`를 다시 `#12262F`로 되돌림 → DUP 값 불일치 실패, (3) 새 행의 공유 토큰 수를 17→16으로 조작 → 건수 불일치, (4) 새 행 처분을 `IND`로 바꾸고 사유를 비움 → IND 사유 없음 실패, (5) 유지비 문구를 `7~12`로 → 문구 불일치, (6) `docs/mockups/README.md` 사본만 `7~10`으로 유지 → 제2 사본 문구 불일치. 각 시험은 **그 규칙의 문장이 실제로 출력됐는지** grep으로 확인한다(실패 건수 증가만으로는 통제가 아니다).",
+              "expectedOutcome": "6종 전부 rc=1이고 각 실패 메시지가 의도한 규칙의 문장이다. 복원은 `cp` 백업 → `cp` 복원 → `cmp -s` 바이트 확인으로 하고(`git checkout --`는 미커밋 작업을 날리므로 쓰지 않는다), 마지막에 `git status --porcelain`으로 시험 흔적이 없음을 확인한다."
+            },
+            {
+              "seq": 9,
+              "action": "로컬 검증 ④ — **자매 게이트 회귀**. (a) `python3 scripts/check-fidelity-allowlist.py` 출력이 main과 동일한지, (b) `docs/journeys/**`·`docs/mockups/README.md`가 `docs-journey-mockup` 워크플로의 path 필터에 걸리므로 `/home/silas/toolchains/node-v22.14.0-linux-arm64/bin`의 node로 `tools`에서 `npm ci` 후 `node --test journey-prototype.test.mjs`를 브랜치와 `origin/main` 양쪽에서 돌려 결과를 대조한다.",
+              "expectedOutcome": "(a) 출력 동일 rc=0. (b) 브랜치와 main의 pass/fail 건수 동일. 여정 페이지를 건드리면서 자매 모델의 게이트를 깨지 않았음이 대조로 확인된다(그 하네스에 색상 단언이 없다는 것은 정적으로도 확인했지만, 대조가 근거다)."
+            },
+            {
+              "seq": 10,
+              "action": "브랜치 `reconcile/rct_20260903-0003-mockup-render-r2`(모델 슬러그 + 재시도 차수 — `rct` id는 모델 간에 유일하지 않고 직전 시도가 같은 슬러그를 이미 썼다)를 만들어 커밋·푸시하고 draft PR을 연다. PR 본문에 task id, 재작업 사유(#55↔#56 의미 충돌), 왜 IND/DRIFT가 아니라 값 교정인지, 자매 모델 파일을 건드리는 근거, 변이 시험 결과, 범위 밖 잔여를 적는다.",
+              "expectedOutcome": "draft PR이 열리고 `ci`(`render fidelity`·`e2e fidelity allowlist` 잡 포함)·`docs-journey-mockup`이 green, `mergeable=MERGEABLE`. **머지되면 main의 빨간 CI가 초록으로 돌아온다.**"
             }
           ]
         }
