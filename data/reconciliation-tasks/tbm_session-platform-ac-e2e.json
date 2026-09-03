@@ -935,5 +935,35 @@
         }
       }
     ]
+  },
+  {
+    "id": "rct_20260903-0003",
+    "toBeModelId": "tbm_session-platform-ac-e2e",
+    "status": "no_action_needed",
+    "createdAt": "2026-09-03T22:49:23Z",
+    "updatedAt": "2026-09-03T22:49:23Z",
+    "trigger": {
+      "detectedAt": "2026-09-03T22:49:23Z",
+      "changedSides": [
+        "to_be"
+      ],
+      "toBe": {
+        "previousVersion": "ac:8b10659576e552cf61976c1ef7311f8f6a9e8b93 reg:1d5fc64fdf22fb61228ddb3e293a3696503b2cc1",
+        "currentVersion": "ac:8b10659576e552cf61976c1ef7311f8f6a9e8b93 reg:08734bc8e12d0d82ca89a6fbef0a5db0adf32854"
+      }
+    },
+    "stateSummary": {
+      "summarizedAt": "2026-09-03T22:49:23Z",
+      "asIs": "# as-is — 2026-09-03T22:49Z, `dlddu/session-platform` main `269bc5c`\n\n**as-is는 움직이지 않았다.** `api:49a95828… web:37fc1bfb…` — `lastObservedVersion`과 동일하다.\n직전 executor도 같은 관측을 기록했다(「이 PR은 e2e 스펙을 건드리지 않았다」).\n\ne2e 커버리지 실측 — `bash scripts/e2e/check-ac-mapping.sh` rc=0:\n```\nAC ↔ e2e 1:1 OK — AC 27개 = 매칭 파일 14 + 예외 1 + 공백 12 (매칭 단위 16개, 비-AC 2개)\n공백(전용 파일도 예외 등재도 없는 AC): AC-E1 AC-E2 AC-E3 AC-E4 AC-E5 AC-E6 AC-F1 AC-F2 AC-F3 AC-F4 AC-F5 AC-F6\n```\n직전 baseline 시점과 **문자 단위로 동일**하다.",
+      "toBe": "# to-be — 모델 정의 기준\n\n`docs/prd`의 모든 AC가 전용 e2e 파일과 1:1로 대응하거나 사유와 함께 예외 등재된 상태.\n정본은 `docs/test/e2e.md`의 마커 블록(`ac-summary` · `ac-mapping` · `ac-exceptions`)이고\n`scripts/e2e/check-ac-mapping.sh`가 CI(`AC ↔ e2e 1:1 mapping`)에서 집행한다.\n\nto-be 버전은 `ac:`(AC 집합) + `reg:`(`docs/test/e2e.md`) 두 성분이다.",
+      "gap": "**차이는 있으나(공백 12건) 이번 트리거가 만든 것은 아니고, 지금 좁힐 수 있는 항목이 0건이다.**\n\n## 트리거는 노이즈다 — 오히려 위반의 **해소**다\n`reg:` `1d5fc64`→`08734bc`는 **PR #53**(`5f60249`, 22:41:20Z), 이 모델의 task\n`rct_20260903-0002` 산출물이다. `docs/test/e2e.md`의 「AC 검증 범위」 블록쿼트 1곳\n(+11/−4)만 바꿨고, 바꾼 내용은 **낡은 집계 사본 `AC 21개 중 14개`를 걷어내고 정본 포인터로\n되돌린 것**이다.\n\n이건 내 감지 이력이 세 번 연속 놓쳤던 그 결함(한 섹션이 같은 숫자를 두 번 말하고 한 사본만\n낡는 형태)의 **해소**다 — `#23`이 심은 `AC 21개` 사본이 `#46`의 21→27 확대 뒤에도 게이트\n초록 아래 낡은 채 남아 있었다. 새 문구는 재복사 금지 사유(`check-ac-mapping.sh`가 `ac-summary`\n마커 블록만 파싱하므로 블록 밖 사본은 CI가 못 잡는다)와 재발 이력까지 함께 적었다.\n\n**집계 자체는 불변**임을 확인했다: 머지 전후 `ac-summary`·`ac-mapping`·`ac-exceptions`\n마커 블록 md5 동일, 게이트 출력 문자 단위 동일(27/1/14/12). 남은 `AC 21개` 1건은\n역사적 인용이지 집계 주장이 아니다.\n\n## 잔여 공백 12건 — 각 항목의 **자체 선행 조건**을 실제 레포에 대조했다\n\n| 계열 | 항목 | 자체 선행 조건 | 지금 섰나 |\n|------|------|----------------|-----------|\n| E | AC-E1~E6 (claude-code 워크로드) | 실 SUT 전환 — 자매 모델 `tbm_session-platform-e2e-mock-policy` `rct_20260820-0001`(PR #42) | ❌ **안 섬** — PR #42 open·미머지, 그 task는 `planning`(살아 있는 planner가 점유) |\n| F | AC-F1~F6 (approval-gated) | approval-gated **구현** | ❌ **안 섬** — 제어 평면 절반만 착지 |\n\n**F 계열을 특히 조심해서 봤다.** PR #57이 22:27에 AC-F1 제어 평면 몫과 AC-F4/F6 pod 스펙을\n착지시켰으므로 「선행 조건이 이번에 풀린 것 아닌가」를 검사해야 한다. 결론은 **아직 아니다**:\n#57 자신이 `doc-tracker.md`에 「**AC를 닫지는 못했다**」와 「구현 사슬 부채 — `approval-gated`가\n아직 서지 않는다」를 등재했고, **헬퍼 파드의 세션 MCP 워크로드가 data plane에 없어 그 타입의\n세션은 생성 시 실패한다**(배포의 `data_plane_approval_gated_image:\"\"`가 그 상태다).\n세션이 Ready에 이르지 못하면 e2e 시나리오가 성립하지 않는다. 그 구현 잔여는 자매 모델\n`tbm_session-platform-docs-impl`의 `rct_20260903-0005`가 방금 소유했다.\n\n**즉 12건 중 지금 선행 조건이 선 항목은 0건이고, 두 선행 조건 모두 살아 있는 소유자가 있다.**\n소비된 트리거 형태(자기 슬라이스 머지 + `succeeded` + 열린 task 0)이지만, 형태가 아니라\n**각 잔여의 자체 해소 조건으로 판정**한 결과 지금은 착수 가능한 것이 없다.\n\n**소유 경계(이중계상 방지)**: AC 공백 12건을 자매 모델에서 다시 열지 않는다 —\ndocs-impl `rct_20260903-0005`는 **구현**을 소유하고 e2e 파일은 이 모델 소관이다.\n그쪽 레코드에도 상호 명시했다. 구현·실 SUT 전환 중 하나가 착지하면 그 머지가 이 모델의\nas-is/to-be를 움직여 재감지가 후속 task를 연다 — **재감지 경로가 확보돼 있다.**"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-03T22:49:23Z",
+      "reason": "**지금 좁힐 수 있는 차이가 없다 — `no_action_needed`.**\n\n1. **트리거가 노이즈다.** PR #53은 낡은 집계 사본을 걷어낸 문서 산문 변경이고, 마커 블록\n   md5와 게이트 출력이 머지 전후 문자 단위로 동일하다(27/1/14/12 불변). 판정 대상을 하나도\n   바꾸지 않았다. 오히려 규칙 6 위반의 **해소**다.\n2. **잔여 12건 전부 선행 조건이 안 섰고, 둘 다 살아 있는 소유자가 있다.** E 계열은 PR #42\n   (`tbm_session-platform-e2e-mock-policy` `rct_20260820-0001`, `planning` — 이 판정 직전에\n   상태를 재확인했다), F 계열은 approval-gated 구현(`tbm_session-platform-docs-impl`\n   `rct_20260903-0005`, 방금 `action_required`로 개설). **내가 여기서 task를 열면 두 소유자와\n   경합할 뿐 아무것도 앞당기지 못한다.**\n3. **재감지 경로가 확보돼 있다.** 둘 중 무엇이 착지하든 이 모델의 버전이 움직여 다음 감지가\n   후속 task를 연다. 소비된 트리거의 위험(「내가 안 열면 아무도 안 연다」)이 여기서는\n   성립하지 않는다 — 잔여를 여는 사건이 **다른 모델의 작업 그 자체**이고 그 작업엔 owner가 있다.\n4. baseline을 전진시켜 5분 precheck 재발화(churn)를 끊는다. 이 레코드가 「이번 변경은\n   노이즈이며 잔여는 대기 중」이라는 판단을 근거와 함께 남긴다.\n\n**같은 형태(소비된 트리거)인데 자매 모델과 판정이 갈린 이유**: 판정은 형태가 아니라\n**각 잔여의 자체 해소 조건이 실제로 발화했는가**로 한다. docs-impl은 선행 조건 없는 항목이\n넷이라 `action_required`, 여기는 0건이라 `no_action_needed`다."
+    },
+    "attempts": []
   }
 ]
