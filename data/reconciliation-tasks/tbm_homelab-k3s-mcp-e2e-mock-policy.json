@@ -2,7 +2,7 @@
   {
     "id": "rct_20260903-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-09-03T12:00:00Z",
       "changedSides": [
@@ -84,6 +84,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/47",
           "preparedAt": "2026-09-03T12:33:00Z",
           "notes": "draft PR(머지하지 않음). head `7ca40f8` — 9 files changed, +515/-0 (삭제 0줄).\n신규 2(`docs/e2e-mocking-policy.md` · `scripts/check_mock_policy.py`) · 수정 7\n(`.github/workflows/ci.yml` lint 잡 +1 스텝 · `docs/index.html` +1줄 · kind 픽스처 5개 각 +2줄 주석).\n\n**계획 범위대로 5종 전부 등재했다**(제거 0건): `github-mock`·`grafana-mock`=UPS ·\ndear-baby busybox 스텁=IMG · `MCP_AUTH_DISABLED`=GATE(대체 검증 `auth-fixture.yaml`) ·\n`DISABLE_SECURITY_PLUGIN`=GATE(대체 검증 `http-trace.yaml`). 마지막 한 건은 제거 경로를 먼저\n따져 닫혀 있음을 확인한 뒤 등재했다 — OpenSearch security plugin 은 SigV4 를 검증하지 못하고\n(프로덕션은 AWS 관리형 front door), 켜면 basic auth 로 갈아타야 해 충실도가 오히려 내려가며\n`opensearch-*/AC` 가 검증하는 SigV4 경로 자체가 사라진다. 즉 \"게이트를 켠 변형\"이 원리적으로\n존재할 수 없고, 그 계층 자체를 검증하는 우리 AC 도 없다. 대신 GATE 행에 「대체 검증」 산출물\n경로를 필수로 요구하고 체커 R5 가 실재를 강제한다.\n\n로컬에서 통과시킨 게이트(체커는 클러스터 불필요라 CI 와 동일 조건으로 재현된다):\n① `python3 scripts/check_mock_policy.py` → rc=0, `등재 5(상한 5) · 모킹 지점 5 · 실재 토큰 5 ·\n표기 주석 5 · 미등재 0 · 고아 0` ② **음성 통제 10종 전부 의도한 규칙으로 발화**\n(R2 미등재 · R3 고아 · R4 주석 누락 · R4 카테고리 불일치 · R5 미선언 · R5 산출물 부재 ·\nR6 상한 상·하 양방향 · R1 잘못된 카테고리 · R2 코드에만 등장한 새 스텁). 백업→변조→확인→복원\n→`cmp -s` 절차로 했고 복원 후 기준선 rc=0 재확인 ③ **매니페스트 무변경 증명** — 5개 YAML 을\npyyaml 로 파싱해 HEAD 판과 파이썬 객체 동등(문서 수 4/4/2/1/3 그대로), `ci.yml` 도 파싱해\nlint 잡만 스텝 +1 이고 unit(3)·integration(37)·docker(5) 는 무변경 ④ **자매 체커 무영향** —\n`tests/integration/check_ac_mapping.py` rc=0(매칭 22 · 분할 대기 4 · 공백 41, 기준선 동일)\n⑤ 체커 cwd 독립 · python 3.12.\n\n버전 이동(재감지 예측): to-be `absent` → `e933220f9367d357f30eb0343f53934d7f7b675a`(정책 문서\nblob). as-is `2984f782…`(sites=13 files=11) → `b46af4dea539e03f13b9e03eb50167462938103e03c28fb437cc617c3a66713f`\n(sites=24 files=11). 머지되면 양쪽이 다 움직여 재감지가 열리고, 그 재감지는 등재 5 == 실재 5 를\n확인해 `no_action_needed` 로 닫히는 것이 정상이다.\n\n⚠️ `.github/workflows/**` 를 건드리므로 대상 레포 토큰을 `workflows:write` 로 발급했다.\n⚠️ `run: |` 블록 안에는 `# mock-exception:` 주석을 넣지 않았다 — 백슬래시 연속 줄 사이의 `#` 은\n뒤따르는 `--from-literal` 인자를 통째로 셸 주석으로 만들어 시크릿을 조용히 망가뜨린다.\nℹ️ 정책 문서 경로가 `<이름>-mock` 패턴에 `e2e-mock` 으로 걸린다 — 체커는 오탐하지 않지만\n모델 as-is 지문 목록에는 나타난다(주석이지 모킹이 아니다). 정책 문서·PR 본문에 명시했다.\n\n형제 모델 영향(의도됨, 무해): `docs/` 트리 해시 변화로 `tbm_homelab-k3s-mcp-docs-impl`,\n`tests/` 트리 해시 변화로 `tbm_homelab-k3s-mcp-ac-e2e` 가 재감지된다. 두 모델의 판정 대상\n(`docs/prd-*.md` · `docs/doc-tracker.md` · `tests/integration/*.py`)은 한 줄도 건드리지 않았고,\n자매 모델의 열린 PR #44 와 파일이 하나도 겹치지 않는다(체커를 `tests/integration/` 이 아니라\n`scripts/` 에 둔 이유).\n\n\n**PR CI 전체 초록 확인(head `7ca40f8`, run 33754741525)**: `fmt + vet`=success (그 안의 `AC <-> e2e file mapping`·신규 `E2E mocking policy` 스텝 둘 다 success) · `unit tests`=success · **`integration tests`(kind 클러스터)=success** · `docker build & push`=success. kind 잡이 초록이라는 것이 픽스처 YAML 주석이 실제 적용을 깨지 않았다는 최종 증거다 — 지침 A의 「머지 전 확인」 항목은 이것으로 충족됐다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "검토 필요. (1) **이 PR은 판정 기준 자체를 만든다.** 모델의 SSOT인 `docs/e2e-mocking-policy.md`가 없어 등재 0건인 상태에서, 이 원장이 앞으로 모든 모킹 판정의 기준이 된다. 그런데 계획은 실측 5종을 **전부 등재하고 제거는 0건**으로 잡았다 — definition이 \"카테고리 판정이 애매하면 제거 쪽으로 기운다\", \"예외는 늘지 않는 방향으로만 관리한다\"고 못박은 축이라, 첫 원장이 실측 전량을 승인하는 형태는 정의만으로 판단이 갈리는 모호함에 해당한다. 특히 `DISABLE_SECURITY_PLUGIN`은 모델 등록 시점 소견부터 \"GATE 등재 vs 서명 검증을 켜서 제거\"로 갈린다고 적혀 있던 한 건이고, planner가 \"제거가 오히려 충실도를 낮춘다\"는 새 근거로 GATE로 뒤집었다. 이 뒤집기는 사람의 비준을 받아야 한다. (2) **차단형 CI 게이트가 추가된다.** `.github/workflows/ci.yml`의 lint 잡에 `check_mock_policy.py` 스텝이 들어가 이후 이 레포의 **모든 PR**이 이 체커를 통과해야 한다 — 영향 범위가 이 task 밖으로 나간다. riskLevel 자체는 low이고 롤백은 PR revert로 완전 가역이지만, 두 항목 모두 \"정의만으로 판단이 갈리는 모호함\"과 \"설정의 실질 변경\" 신호에 해당한다."
         }
       }
     ]
