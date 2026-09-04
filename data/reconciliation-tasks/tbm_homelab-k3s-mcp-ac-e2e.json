@@ -3346,7 +3346,7 @@
   {
     "id": "rct_20260904-0008",
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-09-04T14:47:12Z",
       "changedSides": [
@@ -3375,7 +3375,7 @@
       "assessedAt": "2026-09-04T14:47:12Z"
     },
     "createdAt": "2026-09-04T14:47:12Z",
-    "updatedAt": "2026-09-04T15:41:00Z",
+    "updatedAt": "2026-09-04T21:34:20Z",
     "attempts": [
       {
         "plan": {
@@ -3443,6 +3443,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/58",
           "preparedAt": "2026-09-04T15:12:00Z",
           "notes": "draft PR [#58](https://github.com/dlddu/homelab-k3s-mcp/pull/58) — 8파일 +748/−113, head `3671229`, base `7aa025e`(#56). **Go 실행 코드 0줄.**\n\n**변경 구성**: 픽스처(`tests/k8s/kind/session-platform.yaml`) — 제어면과 같은 커밋 태그의 `DATA_PLANE_IMAGE` + `data-plane` ServiceAccount / CI(`ci.yml`) — 데이터 플레인 이미지 선-pull + `kind load`, 실패 시 세션 파드 진단 / 신규 e2e 2파일(`session_read_ac1.py`·`session_write_ac1.py`) / `_session_platform.py`에 제품 API 세션 수명주기(`live_shell_session` — 생성·삭제·**파드 회수 대기**) / `port_forward`를 `_oidc.py` → `_helpers.py` 이동(`_oidc`가 재수출하므로 `platform_auth_safety_ac{2,8}.py` 무변경) / 원장 갱신.\n\n**로컬 게이트 3종 rc=0**(변경 전 → 후): `check_ac_mapping.py` 매칭 58→**60** · 공백 5→**3** · 분할 대기 0 유지 · 예외 1 / `check_mock_policy.py` **불변**(등재 5, 상한 5 — 실 구성요소라 `IMG`·`UPS` 어디에도 걸리지 않는다) / `check_comment_policy.py` 964줄 68파일 → 1067줄 70파일, **등재 범위 무변경**. 배차 확인: `run_all.py --group primary --list`에 신규 2파일, `auth-variant`·`oauth-variant`에는 없음.\n\n**계획이 소스에서 확정한 사실 셋**(전부 실측): (1) `ghcr.io/dlddu/session-platform-data-plane:5f60249f…`의 linux/arm64 매니페스트가 익명 pull 토큰으로 HTTP 200이고 **압축 267.95 MiB / 10레이어**다 — 제어면의 `defaultReadyTimeout`이 2분이라 그 예산 안에서 당기게 두면 안 되므로 CI 선-pull을 넣었다. (2) 세션 파드 스펙이 `ServiceAccountName: data-plane`을 박으므로 SA가 없으면 파드가 뜨지 않는다. (3) **session-write/AC4의 429·507은 `data-plane/cmd/agent/claude.go`에만 있다** — shell 에이전트의 `/write`는 503/400/500만 낸다. 원장의 「AC4도 AC1과 같은 선행」 서술을 이 PR이 교정했다.\n\n**남은 검증은 CI 하나**: kind 위에서 세션 파드가 실제로 Ready가 되는지는 로컬에서 잴 수 없고 `integration-tests` 잡이 그 관측이다. 머지는 하지 않았다.\n\n---\n\n**PR CI 초록 — 두 번 돌았고 두 번 다 4체크 전부 success**(잡 로그 원문 확인, 요약만 믿지 않았다).\n- head `3671229` → run `33888375967` 4/4 success.\n- head **`3bace09`**(현재) → run `33889832008` 4/4 success. `integration tests`가 `--- session-read/AC1 --- session e107bc23… pod sess-e107bc23…` · `offset 0 ok: nextOffset = 54` · `empty-at-cursor ok: 54` · `increment ok: 54 -> 181` · `replay ok: 54 -> 181` · `write accepted ok: active` · `workload output ok: echo and result both present` · `OK: primary 그룹 47개 파일 전부 통과`를 찍었다. **파드 이름이 찍혔다는 것이 완료 기준 ⓐ의 증거다** — 제어면은 파드가 Ready가 된 뒤에야 201을 낸다. `fmt + vet` 잡의 게이트 출력도 로컬과 글자 그대로 같다(매칭 60 · 공백 3 · 모킹 등재 5(상한 5)).\n\n**2번째 커밋 `3bace09`은 잠재 경합 제거다.** 1차 판의 「같은 커서가 같은 구간을 돌려준다」가 한 번 관측한 payload와의 **동등 비교**였는데, 명령 종료 뒤 쉘이 찍는 새 프롬프트가 두 읽기 사이에 도착하면 깨진다(1차 CI는 프롬프트가 이미 도착해 통과했을 뿐이다). 단정을 **재현성**(조용해진 뒤 두 번 읽어 바이트 동일)과 **비소비**(이미 받은 구간이 접두)로 갈라 강화했다.\n\n**형제 PR 충돌 0 — 시험 머지로 확인.** 같은 레포에 자매 모델의 [#59](https://github.com/dlddu/homelab-k3s-mcp/pull/59)(`rct_20260904-0006`, `tbm_homelab-k3s-mcp-comment-redundancy`)가 열렸다. 바뀌는 파일이 **한 개도 겹치지 않고**(#59는 `internal/**`·`docs/comment-policy.md`), `git merge --no-commit` rc=0이며 **머지된 트리에서 게이트 3종 전부 초록**이다(전역 주석 1068→1023줄, 등재 범위 2→11). 머지 순서 무관."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "riskLevel=medium이고, 실행 동작이 라이브 서비스 레포 dlddu/homelab-k3s-mcp의 main으로 PR #58을 squash merge 하는 것이다. 변경 자체는 tests/ 픽스처·CI 워크플로·doc-tracker 원장에 한정되고 Go 실행 코드·프로덕션 매니페스트는 0줄이라 되돌리기가 revert 하나로 가역이지만, (1) .github/workflows/ci.yml을 편집해 CI 파이프라인의 동작을 바꾸고(데이터 플레인 이미지 선-pull + kind load), (2) main push 트리거로 PR 컨텍스트에서 스킵되던 docker 잡이 처음 돌며, (3) 같은 base에서 갈라진 형제 PR #59·#60이 열려 있어 머지 순서가 main 상태에 영향을 준다. 사람이 한 번 보고 넘기는 게 맞다."
         }
       }
     ]
