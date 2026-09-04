@@ -1910,8 +1910,64 @@
       "assessedAt": "2026-09-04T21:40:00Z"
     },
     "createdAt": "2026-09-04T21:40:00Z",
-    "updatedAt": "2026-09-04T21:53:00Z",
-    "id": "rct_20260904-0006"
+    "updatedAt": "2026-09-04T21:58:00Z",
+    "id": "rct_20260904-0006",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "AC-F3의 유휴 예외를 구현한다 — 승인 대기 중에는 클라이언트 I/O가 없어도 `lastAccess`를 갱신해 유휴 카운트를 멈추고, 결정이 나면 갱신을 멈춰 일반 카운트로 돌아간다.\n\n**신호 경로를 pull로 고른 근거(대안 저울질)**: 계획 시점에 `control-plane/internal/adapter/k8s/network_policy.go:85-137`을 직접 읽어 세 방향을 각각 판정했다 — ① 워크로드 egress 허용목록은 kube-dns와 자기 세션 헬퍼의 두 포트뿐이라 **워크로드 → control plane 은 막혀 있고**(push 불가), ② 헬퍼 ingress는 워크로드 파드에서만 받으므로 **control plane → 헬퍼:8092 도 막혀 있으며**, ③ **control plane → 워크로드 파드는 ingress 정책 자체가 없어 열려 있다**(기존 Read/Write가 이미 그 경로를 쓴다). 따라서 「control plane 이 워크로드 파드에게 묻는다」가 **NetworkPolicy·`k8s/` 매니페스트를 한 줄도 바꾸지 않는 유일한 경로**다. 직전 슬라이스(#67)가 헬퍼→워크로드를 pull 로 고른 것과 같은 근거이며, 그 tailer 가 이미 「지금 무엇을 기다리는가」를 아는 유일한 지점이므로 그 자리에 상태를 세운다.\n\n**되돌릴 수 있는 형태로 짠다**: 새 분기는 전부 `idleCutoff != nil`(리퍼 경로) + `workloadType == approval-gated` 안에만 둔다. 그래서 ⑴ 수동 동결·삭제는 PRD가 요구하는 대로 대기 중에도 그대로 얼리고, ⑵ `shell`·`claude-code`의 동결 경로는 코드가 닿지 않으며, ⑶ 조회가 실패하면 「대기 아님」으로 취급해 **기존 AC-B1 동작으로 되돌아간다**(조회 불가가 파드를 영구히 붙잡지 않는다). control plane 쪽 포트는 `agent.Client` 인터페이스를 넓히지 않고 이 레포가 이미 쓰는 **선택적 능력 인터페이스**(`checkpointAborter` 등과 같은 형태)로 붙여, 기존 테스트 fake 를 하나도 고치지 않는다.\n\n**이 시도의 범위(완료 기준)** — 다음 넷을 모두 만족하면 이 task 는 성공이다:\n1. `approval-gated` 세션이 승인 대기 중이면 유휴 한계를 넘겨도 동결되지 않고 `lastAccess`가 갱신된다.\n2. 결정(APPROVED/REJECTED/EXPIRED/TIMEOUT)·게이트웨이 장애로 대기가 끝나면 갱신이 멈추고 한계 도달 시 정상 동결된다.\n3. **대조군** — 같은 조건의 `shell`·`claude-code` 세션은 기존 AC-D5/AC-B1 그대로 동결된다(`docs/test/approval-gated-workload.md:54`가 명시적으로 요구). 대기 중 **수동** 동결은 그대로 언다(PRD 「동결·삭제와의 충돌」).\n4. `docs/doc-tracker.md:125`의 4열 중 2열만 채운 변경 이력 행이 앞선 24행과 같은 형태(파이프 5개)가 된다.\n\n**범위 밖(후속)** — 완료 기준에 넣지 않는다. 넣으면 executor 가 닫을 수 없는 task 가 된다: 실게이트웨이 대조(`approval-gateway-credentials` Secret 선행) · kind e2e 실행(같은 Secret + `DATA_PLANE_APPROVAL_GATED_IMAGE` 선행) · AC-F5 RWX 공유 볼륨(클러스터 StorageClass 선행) · 정책 실집행(CNI 선행) · **AC-F3 전용 e2e 파일 1:1**(자매 모델 `tbm_session-platform-ac-e2e`의 축 — 여기서 열지 않는다).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "data-plane: `session_mcp_notice_tail.go`의 tailer 가 마커를 렌더링만 하고 버리던 것을, 대기 상태까지 sink 에 알리도록 바꾼다. `emit func(string)` 파라미터를 작은 sink 인터페이스(`appendPlatformNotice` + `observeApprovalNotices(notices []approvalNotice, dropped int)`)로 바꿔 `*claudeWorkload`가 그대로 만족하게 한다(main.go 는 인자 하나만 바뀐다). 상태 규칙: `awaiting` → externalID 등재, `decided`/`unavailable` → 해제, `dropped>0` → 집합 전체 비움.",
+              "expectedOutcome": "tailer 가 폴링한 notice 마다 sink 에 (마커, 대기 상태) 둘을 전달한다. `dropped>0`에서 집합을 비우는 것은 **동결 쪽으로 여는 선택**이다 — 놓친 `decided`가 대기를 영원히 남겨 파드를 무한히 붙잡는 것보다, 한 번 잘못 얼고 재접근 시 복원되는 쪽이 회복 가능하다(V2). 기존 마커 테스트는 어댑터로 그대로 통과."
+            },
+            {
+              "seq": 2,
+              "action": "data-plane: `claude.go`의 `claudeWorkload`에 승인 대기 집합(뮤텍스 + set)과 `observeApprovalNotices`/`awaitingApproval()`을 붙이고, `claudeRoutes`에 `GET /approval` → `{\"awaiting\":bool,\"pending\":N}`을 더한다. 응답에는 도구 이름·외부 식별자·게이트웨이 정보를 **싣지 않는다**(AC-F6 — 이미 파드 경계를 넘지 않는 값만 남긴다).",
+              "expectedOutcome": "워크로드 파드가 「지금 사람을 기다리는가」를 control plane 이 물을 수 있는 형태로 낸다. `claude-code` 워크로드도 같은 라우트를 갖지만 집합이 늘 비어 `awaiting:false`이며, control plane 은 이 타입에 묻지 않는다."
+            },
+            {
+              "seq": 3,
+              "action": "data-plane: `main.go` 의 tailer 배선 한 줄(`newNoticeTailer(tools.SessionMCP, claude.appendPlatformNotice, logger)` → `newNoticeTailer(tools.SessionMCP, claude, logger)`)만 바꾼다. 열린 형제 PR #66 이 같은 파일을 편집 중이므로 **인자 하나로 국한**해 충돌 표면을 최소화한다.",
+              "expectedOutcome": "`approval-gated` 워크로드에서만 tailer 가 `claudeWorkload`를 sink 로 받아 돈다. 파일 diff 는 한 줄."
+            },
+            {
+              "seq": 4,
+              "action": "control-plane: `internal/adapter/agent/client.go`의 `HTTPClient`에 `AwaitingApproval(ctx, pod) (bool, error)`를 더한다(`GET /approval`, 짧은 타임아웃의 `http` 클라이언트, 기존 `resolve`/`baseURL` 재사용). **`Client` 인터페이스는 넓히지 않는다.**",
+              "expectedOutcome": "control plane 이 이미 뚫려 있는 방향(→ 워크로드 파드 8091)으로 대기 여부를 묻는다. 기존 Read/Write/Stream fake 는 한 줄도 고치지 않는다."
+            },
+            {
+              "seq": 5,
+              "action": "control-plane: `internal/service/manager.go`의 `snapshot()` 안, `idleCutoff != nil` 블록에서 `LastAccess.After(cutoff)` 검사 **직후**에 AC-F3 분기를 넣는다 — `sess.WorkloadType == session.WorkloadTypeApprovalGated && sess.Pod != \"\"` 일 때만 선택적 인터페이스 `approvalWaitReporter`로 조회하고, 대기 중이면 `s.touch()` 후 갱신된 세션을 돌려주며 `snapshotted`는 false 로 둔다. 조회 오류는 「대기 아님」으로 취급하고 로그만 남긴다.",
+              "expectedOutcome": "Lease 를 이미 쥔 지점이라 동시 접근과 경합하지 않고, 리퍼가 이미 가진 「cutoff 이후 접근이 있었으면 아무것도 하지 않는다」 경로와 같은 모양으로 합류한다. **수동 `Snapshot`은 `idleCutoff == nil` 이라 이 분기를 지나지 않는다** — PRD 의 「대기 중 수동 동결은 언다」가 코드 구조로 보장된다."
+            },
+            {
+              "seq": 6,
+              "action": "테스트를 쓴다. data-plane: awaiting→decided 왕복으로 집합이 서고 풀리는지 · `unavailable`도 해제하는지 · `dropped>0`이 집합을 비우는지 · 모르는 kind 를 무시하는지 · `GET /approval` 응답 모양. control-plane: ⑴ 대기 중 `SnapshotIfIdle` → 동결 안 됨 + `LastAccess` 전진, ⑵ 결정 뒤 → 정상 동결, ⑶ **대조군** `shell`·`claude-code`는 같은 조건에서 동결, ⑷ 대기 중 **수동** `Snapshot`은 동결, ⑸ 조회 오류 시 정상 동결.",
+              "expectedOutcome": "`docs/test/approval-gated-workload.md` 시나리오 5 의 세 단언(대기 중 미동결 · 결정 후 동결 · 대조군 동결)이 전부 결정적 단위 테스트로 선다. ⑸는 새 분기가 실패했을 때 기존 AC-B1 로 되돌아감을 고정한다."
+            },
+            {
+              "seq": 7,
+              "action": "docs: `docs/doc-tracker.md`의 형식 결함(`:125` 변경 이력 행이 헤더의 4열 중 2열만 채움)을 「이전 상태 | 이후 상태」를 채워 고치고, 부채 행 ①을 이 슬라이스 반영으로 갱신하고, 이번 변경의 이력 행을 4열 전부 채워 덧붙인다.",
+              "expectedOutcome": "`awk -F'|' 'NR==125{print NF}'`가 앞선 행들과 같아진다(파이프 3 → 5). 변경 이력 표의 모든 행이 같은 열 수를 갖는다. 이 파일을 읽는 게이트는 레포에 없으므로(`grep -rn doc-tracker scripts/` 0건) 이 검사는 사람·지침이 수행한다."
+            },
+            {
+              "seq": 8,
+              "action": "게이트 재현: 두 Go 모듈에서 `gofmt -l .`(빈 출력) · `go vet ./...` · `go vet -tags=e2e ./...`(control-plane) · `go test ./...`, 그리고 레포 게이트 3종(`scripts/check-fidelity-allowlist.py` · `scripts/check-render-fidelity.py` · `scripts/e2e/check-ac-mapping.sh`)을 돌려 **HEAD 에서 잰 baseline 출력과 대조**한다.",
+              "expectedOutcome": "baseline(2026-09-04 `2cc17c1`): 세 게이트 전부 rc=0이고 `AC ↔ e2e 1:1 OK — AC 27개 = 매칭 파일 15 + 예외 1 + 공백 11` · 렌더 R10 `복제 파일 16 · 정본 토큰 24` · allowlist `차단 요인 1건`. 변경 후에도 rc 와 이 집계가 **글자 그대로 같아야** 한다(이 슬라이스는 e2e 파일도 SPA 도 건드리지 않으므로 숫자가 움직이면 그것이 회귀다)."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치 `reconcile/rct_20260904-0006-opus5-1m` 로 커밋·푸시하고 PR 을 연다(머지하지 않는다). 그 뒤 열린 형제 PR(#66·#69)과 **시험 머지 + 게이트 실행**까지 해 「충돌 0」과 「게이트 통과」를 따로 확인하고, PR CI 결과를 잡 로그 원문으로 대조한다.",
+              "expectedOutcome": "PR 이 열리고 CI 가 초록이며, 형제 PR 과의 시험 머지 트리에서도 게이트가 통과한다. 브랜치 이름에 모델 슬러그를 붙여 형제 워커의 열린 PR 브랜치를 밟지 않는다."
+            }
+          ],
+          "plannedAt": "2026-09-04T21:58:00Z"
+        }
+      }
+    ]
   },
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
