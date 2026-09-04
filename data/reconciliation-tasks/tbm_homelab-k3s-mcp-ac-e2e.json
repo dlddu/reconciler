@@ -3151,5 +3151,39 @@
     },
     "createdAt": "2026-09-04T09:07:06Z",
     "updatedAt": "2026-09-04T09:07:06Z"
+  },
+  {
+    "trigger": {
+      "detectedAt": "2026-09-04T09:15:35Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "6b71bfbdfac1163f9dc5eeb0432214a746e0d87f",
+        "currentVersion": "181890453977a573145c99b445a7870894138915"
+      },
+      "toBe": {
+        "previousVersion": "f589ab08f7997d22a96f056b8d04c749f399f5c4",
+        "currentVersion": "f802ba8dfba35ac5777981401483e5bcd028b9d2"
+      }
+    },
+    "stateSummary": {
+      "asIs": "**as-is = `tests/` 트리 해시 `18189045`, 관측 2026-09-04T09:15:35Z @ `4c5040f`(PR #55, 09:09:27Z)**\n\n- 매칭 단위 파일: `tests/integration/` 최상위 `*.py` — 게이트 실측 **전용 파일 56개**.\n- 이번 트리거가 더한 것: `session_read_ac3.py`(150줄) · `session_read_ac4.py`(74줄) 2개.\n- `check_ac_mapping.py`를 머지된 main에서 새 클론·clean 트리(`porcelain=0`)로 재도출:\n  `AC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일(전용) 56 · 분할 대기 0 · 공백 AC 7`, rc=0.\n- 직전 관측(#54 `000ba8c`) 대비 **매칭 54 → 56 · 공백 9 → 7**. 규칙 2 위반은 0 유지.",
+      "toBe": "**to-be = `docs/` 하위 `prd-*.md` + `doc-tracker.md` blob 목록 해시 `f802ba8d`, 같은 시각 관측**\n\n- `prd-*.md` **18개 변경 0** — AC 전집 64는 불변이다(게이트가 재도출해 확인).\n- 움직인 것은 `doc-tracker.md` 하나: AC 레지스트리에서 `session-read/AC3`·`AC4`가\n  ⬜ 공백 → ✅ 전용 파일로 바뀌고, `<!-- ac-e2e-집계 -->` 블록이 `54 → 56` · `9 → 7`로,\n  공백 backlog 절이 「9건」 → 「7건」으로 다시 쓰였다.\n- 같은 PR이 backlog 서술도 고쳐 **남은 7건의 선행 조건을 AC별로 명시**했다(`:288-293`).",
+      "gap": "**유의미한 차이다 — 소비된 트리거이고, 잔여 7건 중 2건은 선행이 하나도 남아 있지 않다.**\n\n## ① 소비된 트리거 — 형태와 조건이 둘 다 성립한다\n\n**형태**: 트리거 `4c5040f`(#55)는 이 모델 자신의 슬라이스 `rct_20260904-0004`의 산출물이고,\n그 task는 머지 15초 뒤 `succeeded` / `verification.passed` / `converged: true`로 닫혔다\n(09:09:42Z 기록, 09:12:06Z 관측). **지금 이 모델의 열린 task는 0개다.**\n\n**executor가 잔여의 소유자를 이 단계로 지목했다** — verification의 마지막 체크가\n「이 머지가 `tests/`·`docs/`를 바꿔 양측 해시가 움직였다 ⇒ **다음 감지 주기가 잔여 7건을\n새 task로 연다**」고 적었고, 모델의 `lastObservedVersion`을 의도적으로 건드리지 않았다.\n그 baseline 전진은 이 레코드가 한다.\n\n## ② 잔여 7건을 항목별로 자기 선행 조건과 대조했다\n\n원장 `docs/doc-tracker.md:288-293`이 AC별 선행을 소스 근거와 함께 적어 두었다. 그대로 믿지\n않고 PRD의 **검증 방법**과 구현을 직접 읽어 갈랐다:\n\n| 잔여 AC | 원장이 적은 선행 | 실측 판정 |\n| --- | --- | --- |\n| `session-write/AC3` 파괴적 작업 표기 | (언급 없음) | **선행 0 — 지금 가능** |\n| `session-write/AC5` 미설정 시 graceful 거부 | 「선행에 걸리지 않을 가능성이 높다」 | **선행 0 — 지금 가능** |\n| `session-read/AC1` 오프셋 커서 읽기 | 실 데이터 플레인 파드 | 미발화 |\n| `session-read/AC2` 상태 분기 노출 | 위 + CRIU 게이트 | 미발화 |\n| `session-write/AC1` 워크로드 입력 주입 | 데이터 플레인 공유 | 미발화 |\n| `session-write/AC2` 상태 분기 처리·노출 | CRIU 게이트 공유 | 미발화 |\n| `session-write/AC4` 거부 응답의 구분 전달 | 「선행에 걸리지 않을 가능성이 높다」 | ⚠️ **원장 정정 — 데이터 플레인에 걸린다** |\n\n**`AC3`이 가장 확실한 착수점이다.** PRD의 검증 방법이 「`tools/list` 응답의 어노테이션이\n`destructiveHint=true`, `readOnlyHint=false`」뿐이라 세션도 파드도 필요 없다. 레포에 같은\n형태의 선례가 **5개** 있고(`workload_scale_ac3.py` · `workload_restart_ac2.py` ·\n`opensearch_document_{put,delete}_ac3.py` · `dear_baby_reset_user_ac3.py`), 그중\n`workload_scale_ac3.py`의 docstring이 근거를 그대로 적어 둔다 —\n「`tools/list` 메타데이터만 읽고 … **클러스터 픽스처와 무관하므로 선행 조건이 없다**」.\n그리고 도구는 이미 그렇게 광고된다: `internal/mcp/toolslist.go`의 `toolsListJSON`을\n`json.loads`로 파싱하면 `session_write` = `{readOnlyHint: false, destructiveHint: true}`\n(도구 17종 전부 파싱됨) ⇒ **단정이 오늘 참이 되는 상태다.**\n\n**`AC5`는 방금 착지한 파일이 그대로 템플릿이다.** `session_read_ac4.py`(#55가 만든 것)가\n같은 「미설정 시 graceful 거부」를 `실행 대상: auth-variant`(port 8088)에서 닫았고, 원장도\n`session_list_ac3.py`·`session_read_ac4.py`를 선례로 지목한다. 데이터 플레인이 아예 없는\n변형에서 도는 검증이라 선행이 없다.\n\n## ③ ⚠️ 원장의 저작 순서 권고를 하나 정정한다 — `AC4`는 지금 못 닫는다\n\n`doc-tracker.md:293`은 「미설정 거부(AC5)와 **인자·거부 응답 구분(AC4)**은 그 선행에 걸리지\n않을 **가능성이 높으니** 저작 순서를 그렇게 잡을 것」이라고 적었다. AC5는 맞지만 **AC4는\n틀렸다** — `docs/prd-session-write.md`의 AC4 **검증 방법**이 이렇게 되어 있다:\n\n> 각 거부 상황에서 서로 다른 사유가 담긴 도구 에러가 반환되고, **큐 포화·쿼터 소진의 경우\n> 기존 세션 출력은 `session_read`로 계속 조회된다.**\n\n뒷 절이 **읽히는 실 세션**을 요구한다 — 그건 `session-read/AC1`의 선행(에이전트 파드가 떠서\n`:8090/read`에 응답)과 정확히 같은 것이다. 없는 세션(not found) 갈래만 떼어 닫는 것은 이 원장이\n08-07·08-13에 되돌아와 고쳤다고 스스로 적은 **「반쪽 단정」**이다. ⇒ **AC4는 데이터 플레인\n슬라이스에 함께 넣어야 하며, 이번 슬라이스의 완료 기준에 넣으면 executor가 닫을 수 없는\ntask를 받는다.** 원장 `:293`의 그 문장도 함께 고치는 것이 이번 슬라이스의 몫이다.\n\n## ④ 재감지 경로가 없다 — 지금 열지 않으면 잔여는 보이지 않는다\n\n- **게이트는 영원히 초록이다.** `check_ac_mapping.py`는 rc=0이면서 `공백 AC: 7`을 나란히\n  출력한다 — 공백은 **실패가 아니라 카운터**다. 규칙 1·2·3·5·6 위반이 0이므로 CI가 붉어질\n  일이 없고, 자동 발견 경로는 존재하지 않는다.\n- **이 레코드가 baseline을 `18189045`/`f802ba8d`로 전진시킨다.** 그러면 다음 트리거는 누군가\n  `tests/` 또는 `prd-*.md`·`doc-tracker.md`를 건드릴 때까지 오지 않고, 그때 와도 그것은\n  **다른 모델 작업의 부수 효과**이지 잔여 7건을 여는 경로가 아니다.\n- 자매 모델도 이 7건을 열지 않는다 — `tbm_homelab-k3s-mcp-docs-impl`은 **도구 구현**을 보는데\n  `session_write`는 PR #53(`1d1db45`)으로 이미 착지해 도구 표면 17종이 됐고, 그 모델은 이번\n  fire에서도 자기 잔여를 **발화 0건**으로 확정했다. **구현은 끝났고 남은 것은 이 렌즈의 파일\n  저작뿐이다.**\n\n## ⑤ 이중 계상 방지\n\n- `session-write/AC1~AC5`의 **구현**은 자매 `tbm_homelab-k3s-mcp-docs-impl` 소관이었고 이미\n  닫혔다(#53). 여기서 여는 것은 **e2e 파일 저작**뿐이다 — 그쪽에서 다시 열지 말 것.\n- 이번 트리거가 만든 주석 6줄(신규 파일 2개)의 **비중복성 판정**은\n  `tbm_homelab-k3s-mcp-comment-redundancy` 소관이며, 그 모델의 `rct_20260904-0004`가\n  `action_required`로 이미 잔여를 소유하고 있다. 여기서 계상하지 않는다.\n- 신규 파일이 더한 모킹 지문 1건은 `tbm_homelab-k3s-mcp-e2e-mock-policy` 소관이고, 같은 fire에서\n  **노이즈로 판정**했다(docstring 언급, 정의 지점 불변).\n\n## ⑥ planner에게 남기는 제약\n\n1. **슬라이스는 `session-write/AC3` + `AC5` 둘로 끊을 것.** 선행 0인 항목이 정확히 이 둘이다.\n2. **`AC4`를 완료 기준에 넣지 말 것**(③). 대신 원장 `:293`의 「AC4는 선행에 걸리지 않을\n   가능성이 높다」 문장을 **같은 PR에서 교정**하라 — 게이트가 읽지 않는 산문이라 고치지 않으면\n   다음 계획도 같은 함정에 빠진다.\n3. 완료 기준은 `check_ac_mapping.py`가 **매칭 56 → 58 · 공백 7 → 5**를 내는 것으로 잡되,\n   레지스트리(`doc-tracker.md` AC 레지스트리 행 + `<!-- ac-e2e-집계 -->` 블록 + backlog 절의\n   건수)를 같은 PR에서 함께 갱신해야 규칙 6이 통과한다.\n4. **모킹 정책을 건드리지 말 것** — `check_mock_policy.py`는 `등재 5(상한 5)`로 만석 표기지만\n   R6은 `cap != len(rows)`의 **양방향 미러**라 「만석」이 아니다. 다만 이 두 AC는 새 모킹이\n   필요 없다(AC3은 `tools/list`만, AC5는 기존 auth-variant 배포).",
+      "summarizedAt": "2026-09-04T09:15:35Z"
+    },
+    "assessment": {
+      "actionRequired": true,
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-04T09:15:35Z",
+      "reason": "**작업이 필요하다(`actionRequired: true`).**\n\n1. **소비된 트리거 + 열린 task 0.** 트리거 #55는 이 모델 자신의 슬라이스이고 그 task는\n   `succeeded`/`converged`로 닫혔다. executor가 「다음 감지 주기가 잔여 7건을 새 task로 연다」고\n   명시하고 `lastObservedVersion`을 남겨 두었다 — 그 인수인계를 받는 것이 이 레코드다.\n2. **잔여 7건 중 2건은 선행이 0이다.** 형태가 아니라 **항목별 자기 해소 조건**으로 갈랐다 —\n   `session-write/AC3`(`tools/list` 어노테이션만 읽는다, 레포에 선례 5개, 도구는 이미\n   `destructiveHint=true`로 광고됨)와 `session-write/AC5`(방금 착지한 `session_read_ac4.py`가\n   그대로 템플릿, auth-variant 배포는 이미 서 있다). 나머지 5건은 데이터 플레인·CRIU 선행이\n   미발화라 제외했다.\n3. **재감지 경로가 0이다.** 공백은 게이트를 붉히지 않는 카운터이고(rc=0과 `공백 AC: 7`이 나란히\n   출력된다), 이 레코드가 baseline을 전진시키므로 지금 열지 않으면 잔여는 다른 모델 작업의\n   부수 효과를 기다리는 수밖에 없다.\n4. **구현 선행은 이미 닫혔다.** `session_write` 도구는 PR #53으로 착지했고(도구 표면 17종),\n   자매 `docs-impl`은 이번 fire에서도 잔여 발화 0으로 확정했다 ⇒ 남은 것은 이 렌즈의 저작뿐이다.\n\n**범위 제약(계획 단계에 넘긴다)**: `AC4`를 이 슬라이스에 넣지 말 것 — 원장 `:293`의 권고와 달리\nPRD의 검증 방법이 「큐 포화·쿼터 소진 시 기존 세션 출력은 `session_read`로 계속 조회된다」를\n요구해 **실 데이터 플레인 파드가 선행**이다. 그 문장 자체의 교정을 같은 PR에 포함할 것."
+    },
+    "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
+    "status": "action_required",
+    "createdAt": "2026-09-04T09:15:35Z",
+    "updatedAt": "2026-09-04T09:15:35Z",
+    "id": "rct_20260904-0007"
   }
 ]
