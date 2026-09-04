@@ -2711,7 +2711,7 @@
       }
     },
     "createdAt": "2026-09-04T05:40:00Z",
-    "updatedAt": "2026-09-04T05:52:09Z",
+    "updatedAt": "2026-09-04T06:02:42Z",
     "stateSummary": {
       "asIs": "**as-is (실측 2026-09-04T05:35Z · `dlddu/homelab-k3s-mcp` main `9116ac1`)**\n\n`tests/` 트리 = `dbc7b72d…`. 레포 게이트 `tests/integration/check_ac_mapping.py`를 머지된 main에서\n직접 실행(rc=0):\n\n```\nAC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일(전용) 52 · 분할 대기(규칙 2 위반) 0 · 공백 AC 11\n공백 내역: 겸용 파일이 커버 0 · 케이스 자체 없음 11\nOK: 규칙 1·2·3·5·6 위반 없음, 러너 배차 누락·케이스 미호출 없음\n```\n\n- 전용 매칭 파일 **52**(직전 49 → +3) + 비-AC 파일 1(`smoke.py`, 규칙 3 등재분).\n- **규칙 2 위반 0 유지** — 겸용 파일은 09-03 슬라이스에서 이미 소멸했다.\n- 자매 게이트 `scripts/check_mock_policy.py`도 rc=0(등재 5 · 상한 5 · 미등재 0 · 고아 0).\n\n**as-is 이동의 출처는 PR #50 하나다**(`9116ac1`, 05:14:26Z 머지). 부모 `0378f8d`에서 `tests/`\n해시가 `4ac92ac1…`(= 직전 baseline)이었고 #50만이 그것을 `dbc7b72d…`로 옮겼다. #50은 **이 모델\n자신의 task `rct_20260904-0001`의 산출물**이며, 그 executor가 05:21:46Z에 `succeeded`로 닫았다\n(verification `passed` · `converged: true`).\n\n`tests/integration/` 최상위 신규 4파일 — 매칭 단위 3(`session_list_ac{1,2,3}.py`) + 매칭 단위 밖\n공유 표면 1(`_session_platform.py`). 픽스처 `tests/k8s/kind/session-platform.yaml`은 스텁이 아니라\n**실 제어면**(공개 GHCR 이미지를 SHA로 핀)이다.",
       "toBe": "**to-be (실측 2026-09-04T05:35Z · 같은 커밋)**\n\n`prd-*.md` + `doc-tracker.md` blob 목록 해시 = `fbdb709d…`. 정의의 판정식은 **개수 독립적**이다 —\n「(AC 수 − 예외 수) = (AC 매칭 파일 수)」.\n\n- **AC 전집 64**(`docs/prd-*.md`의 `### ACn:`), **규칙 4 예외 등재 1**, 따라서 **1:1 대상 63**.\n- to-be가 요구하는 상태: 63개 AC 각각이 모듈 docstring `검증 AC:`로 자신을 주검증하는 전용 파일을\n  **정확히 1개** 가진다.\n- 레지스트리 SSOT는 `docs/doc-tracker.md`의 「AC ↔ e2e 1:1 정합성 (reconciler 렌즈)」 섹션이고,\n  #50이 세 행을 ⬜ 공백 → ✅ 전용 파일로 승격하고 집계 블록을 49→52 · 14→11로 갱신했다.\n\n**남은 공백 11건의 내역**(레지스트리 backlog 절, `doc-tracker.md:268` 이하):\n\n| 잔여 | 원장이 적은 선행 조건 |\n| --- | --- |\n| `platform-auth-safety/AC2` (디스커버리) | OAuth/OIDC 발급자 픽스처 필요 |\n| `platform-auth-safety/AC8` (구성 유연성) | env-게이팅 다중 구성 배포 변형 |\n| `session-read/AC1~AC4` (4) | **구현이 선행** — 도구 미구현, 자매 모델 `tbm_homelab-k3s-mcp-docs-impl` 소관 |\n| `session-write/AC1~AC5` (5) | 동상 |\n\n원장은 이 소유 경계를 스스로 명문화한다 — 「그 해소는 자매 모델 `tbm_homelab-k3s-mcp-docs-impl`의\n몫이다 — 규칙 4가 \"도구·기능 미구현은 예외 사유가 아니다\"라고 못박으므로 계수에서는 빠지지 않고\n여기 공백으로 남는다」.",
@@ -2724,6 +2724,67 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-04T05:40:00Z"
     },
-    "id": "rct_20260904-0002"
+    "id": "rct_20260904-0002",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근**: `platform-auth-safety/AC2`(인증 디스커버리)·`AC8`(인증 방식 구성 유연성) 두 건을 한 슬라이스로 묶어 전용 e2e 파일 2개(`tests/integration/platform_auth_safety_ac{2,8}.py`)를 신설한다. 둘은 같은 난제(「OIDC 발급자가 있어야 서버가 기동한다」)를 공유하고 같은 픽스처로 해소되므로 나누면 같은 `ci.yml`을 두 번 건드린다.\n\n**핵심 판단 ① — 발급자는 스텁이 아니라 실 IdP(dex)다.** `docs/e2e-mocking-policy.md`는 실 구현체를 띄운 것을 모킹으로 세지 않는다(MinIO가 S3를, 단일노드 OpenSearch가 Serverless를 대신하는 것이 선례다). `UPS`는 「실 상류를 CI에서 띄울 수 있으면 쓸 수 없다」고 못박고 `IMG`는 「이미지가 공개되면 소멸한다」고 못박는데, `ghcr.io/dexidp/dex:v2.44.0`은 **공개 이미지이며 linux/arm64 매니페스트가 실재한다**(GHCR 매니페스트 인덱스로 확인). 그래서 정적 JSON 스텁 발급자는 어느 카테고리에도 걸리지 않는 **등재 불가 모킹**이고, 09-04 session-list 슬라이스가 같은 논리로 실 제어면을 고른 것이 직전 선례다. ⇒ **모킹 허용목록·상한 5는 불변**이고 `check_mock_policy.py`는 이 PR에서 갱신할 것이 없다. dex 최소 구성이 `issuer`·`storage`·`web` 셋만 요구하고 커넥터 없이도 기동함을 v2.44.0 소스(`cmd/dex/config.go::Validate`, `cmd/dex/serve.go`)에서 확인했다.\n\n**핵심 판단 ② — AC8은 (a)만이 아니라 4구성 전부를 덮는다.** 감지 단계가 계획에 못박으라고 넘긴 항목이다. (a)만으로 끊으면 AC 본문이 (a)~(d)를 명시하는데 파일은 4분의 1만 단정하는 「반쪽 단정」이 되고, 이 레포는 그런 파일을 나중에 되돌아와 고쳐 온 이력이 있다(2026-08-07·08-13 보강). 발급자 픽스처를 세우는 이 슬라이스에서 (b)(c)는 배포 변형 하나씩이면 되고 (d)는 기동 실패 관측이라 픽스처가 필요 없으므로, **지금이 4구성을 덮는 가장 싼 순간**이다. 각 구성은 **관측 가능한 표면까지** 단정한다 — (a) 401 + 챌린지에 `resource_metadata` 없음 + 디스커버리 404, (b) 디스커버리 200 + Ready, (c) API 키 인가 + 디스커버리 200 + 챌린지에 `resource_metadata` 있음, (d) `availableReplicas: 0` + 로그에 `no authentication configured`.\n\n**핵심 판단 ③ — 실 JWT 발급은 범위 밖.** dex에서 password grant로 실 토큰을 받아 「유효 JWT → 인가」까지 단정하는 길은 dex에 staticClients·enablePasswordDB·bcrypt 해시를 더해야 하고, AC2의 검증 방법은 「메타데이터가 발급자/리소스를 반환하고 표준 클라이언트가 그것으로 **자동 구성**할 수 있다」이지 「인증에 성공한다」가 아니다. 서버의 JWKS 동적 로드는 **기동 성공 자체가 증거**다(`auth.FromEnv`가 openid-configuration 조회 → `jwks_uri` 부재/JWKS에 RSA 키 0개면 `os.Exit(1)`), 그리고 그 증거가 공허하지 않다는 것은 같은 PR의 (d) 변형이 실제로 기동 실패함을 보임으로써 확보된다. 후속에서 dex에 정적 클라이언트를 더하면 AC1·AC8(c)까지 함께 강화된다.\n\n**가역성**: `k8s/`(프로덕션 매니페스트)는 건드리지 않고 `tests/`·`docs/`·`.github/workflows/`만 바꾼다. 클러스터·데이터에 대한 부작용이 없고 롤백은 PR revert 하나다.\n\n**이 시도의 범위(완료 기준)**: `check_ac_mapping.py`가 **매칭 파일 52 → 54 · 공백 AC 11 → 9 · 규칙 2 위반 0 유지 · 예외 1·AC 전집 64 불변**로 rc=0, `check_mock_policy.py`가 **등재 5 · 상한 5 불변**으로 rc=0, CI 3개 잡(lint·unit·integration) green. **범위 밖**: `session-read/AC1~AC4`·`session-write/AC1~AC5` 9건(도구 미구현, 자매 모델 `tbm_homelab-k3s-mcp-docs-impl` 소관 — 이 task로 끌어오지 않는다)과 위 판단 ③의 실 JWT 인가 단정.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`tests/k8s/kind/oidc-fixture.yaml` 신설 — (1) ns `dex`에 dex Deployment/Service/ConfigMap(`issuer: http://dex.dex.svc.cluster.local:5556`, `storage: memory`, `web.http: 0.0.0.0:5556`, 이미지는 `ghcr.io/dexidp/dex:v2.44.0`을 SHA로 핀, 프로브는 `/.well-known/openid-configuration`), (2) ns `homelab-k3s-mcp-oauth`에 `:ci` 이미지 MCP 변형 3종 — `homelab-k3s-mcp-oauth`(구성 c: `MCP_OAUTH_*` + `MCP_API_KEYS`), `homelab-k3s-mcp-oauth-only`(구성 b: `MCP_OAUTH_*`만), `homelab-k3s-mcp-no-auth`(구성 d: 아무것도 미설정 — 기동 실패가 의도). 파일명·리소스명에 `-mock`이 들어가지 않게 한다(`check_mock_policy.py`의 `ID_TOKEN_RE`가 `*-mock`을 미등재 모킹으로 잡는다).",
+              "expectedOutcome": "`kubectl apply --dry-run=client -f`가 통과하고, 매니페스트에 `-mock` 토큰이 없다. `MCP_OAUTH_RESOURCE`는 audience와 다른 값으로 명시해 `Resource != Audience` 분기를 실제로 태운다."
+            },
+            {
+              "seq": 2,
+              "action": "`tests/integration/run_all.py`의 `GROUPS`에 `\"oauth-variant\"`를 추가하고, 모듈 docstring의 `실행 대상` 설명에 새 그룹이 어느 배포를 가리키는지 한 줄 더한다.",
+              "expectedOutcome": "`python3 tests/integration/run_all.py --group oauth-variant --list`가 인자 오류 없이 돈다(이 시점엔 배차 0건)."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/integration/_oidc.py`(밑줄 접두 = 매칭 단위 아님) 신설 — 발급자/audience/resource/API 키 상수, `kubectl port-forward`를 띄우고 포트가 열릴 때까지 폴링한 뒤 정리하는 `port_forward()` 컨텍스트 매니저, `kubectl get -o jsonpath` · `kubectl logs` 얇은 래퍼.",
+              "expectedOutcome": "`run_all.py::matching_unit_paths()`가 이 파일을 제외한다(`_` 접두). `python3 -c \"import ast,pathlib; ast.parse(...)\"`로 문법 통과."
+            },
+            {
+              "seq": 4,
+              "action": "`tests/integration/platform_auth_safety_ac2.py` 저작 — `검증 AC: platform-auth-safety/AC2` · `실행 대상: oauth-variant`. 단정 체인: ① 인증 없는 `POST /mcp` → 401이고 `WWW-Authenticate`가 `resource_metadata=<resource>/.well-known/oauth-protected-resource`를 광고(자동 구성 진입점), ② `GET /.well-known/oauth-protected-resource` → `resource`·`authorization_servers == [issuer]`·`bearer_methods_supported == [\"header\"]`가 배포된 구성과 일치, ③ 광고된 `authorization_servers[0]`를 따라가 dex의 `/.well-known/openid-configuration`을 `port_forward()`로 조회 → `jwks_uri` 존재, 그 JWKS에 `kty:RSA` + `kid` 키가 1개 이상(표준 클라이언트의 자동 구성 경로를 실제로 걸어 본다), ④ 이 배포가 Ready라는 사실이 곧 서버가 기동 시 그 디스커버리·JWKS를 동적 로드했다는 증거임을 kubectl로 단정.",
+              "expectedOutcome": "파일 하나가 AC 하나만 선언하고, `run()`이 정의된 `test_*`를 전부 호출한다(체커의 하네스 검사 통과)."
+            },
+            {
+              "seq": 5,
+              "action": "`tests/integration/platform_auth_safety_ac8.py` 저작 — `검증 AC: platform-auth-safety/AC8` · `실행 대상: auth-variant`(= 구성 (a) 배포를 자기 base_url로 받는다). 4구성 단정: (a) base_url 직접 — 무인증 `POST /mcp` → 401 `missing_token`, 챌린지에 `resource_metadata` **없음**, `GET /.well-known/oauth-protected-resource` → **404**; (b) `port_forward()`로 `homelab-k3s-mcp-oauth-only` → 디스커버리 200 + `authorization_servers == [issuer]` + Deployment Ready; (c) `port_forward()`로 `homelab-k3s-mcp-oauth` → API 키로 `tools/list` 인가 + 디스커버리 200 + 무인증 챌린지에 `resource_metadata` **있음**; (d) `homelab-k3s-mcp-no-auth`의 `availableReplicas`가 0이고 파드 로그에 `no authentication configured`가 있음.",
+              "expectedOutcome": "네 구성이 각각 하나의 `test_*`로 갈리고 `run()`이 넷을 모두 호출한다. (a)와 (c)의 챌린지 대조가 「OAuth 미설정이면 디스커버리를 광고하지 않는다」를 양방향으로 판별한다."
+            },
+            {
+              "seq": 6,
+              "action": "`.github/workflows/ci.yml` 배선 — ① `kubectl apply -f tests/k8s/kind/oidc-fixture.yaml` 스텝, ② dex 롤아웃 대기(먼저) → `homelab-k3s-mcp-oauth`·`homelab-k3s-mcp-oauth-only` 롤아웃 대기(dex가 뜨기 전에는 두 변형이 기동 실패로 재시작하므로 timeout을 넉넉히), ③ `Run integration tests (oauth-variant deployment)` 스텝(포트포워드 8089 재시도 루프, `run_all.py --group oauth-variant`), ④ 실패 진단 덤프에 두 네임스페이스 추가. `run: |` 블록 안에는 `mock-exception` 주석을 넣지 않는다(정책 문서의 경고).",
+              "expectedOutcome": "`homelab-k3s-mcp-no-auth`에는 롤아웃 대기를 걸지 않는다(기동 실패가 의도이므로 걸면 CI가 거기서 멈춘다). YAML 파싱 통과."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/doc-tracker.md` 갱신 — AC2·AC8 레지스트리 행을 `✅ 전용 파일 ...`로, 집계 블록을 매칭 파일 52→54·공백 11→9로, `### AC 레지스트리 (64) — ...` 제목 줄의 숫자도 같이, 공백 backlog 절에서 platform 2건을 빼고 완료 노트를 더하고, 변경 이력 표 맨 위에 행 하나를 넣는다.",
+              "expectedOutcome": "`python3 tests/integration/check_ac_mapping.py` rc=0 — 「AC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일(전용) 54 · 분할 대기 0 · 공백 AC 9」."
+            },
+            {
+              "seq": 8,
+              "action": "`docs/test-platform-auth-safety.md` 갱신 — 시나리오 2의 자동화 `❌ 현재 자동화 없음`을 신규 파일로 교체하고, 시나리오 8의 자동화에 e2e 파일을 더한다(기존 Go 단위 나열은 유지).",
+              "expectedOutcome": "PRD(`docs/prd-*.md`)는 건드리지 않는다 — AC 전집 64가 변하면 안 된다."
+            },
+            {
+              "seq": 9,
+              "action": "로컬 게이트 재현 — `python3 tests/integration/check_ac_mapping.py`와 `python3 scripts/check_mock_policy.py`를 레포 루트에서 실행한다(둘 다 표준 라이브러리 전용, 클러스터 불필요).",
+              "expectedOutcome": "둘 다 rc=0. 후자는 「등재 5 · 상한 5 · 미등재 0 · 고아 0」이 유지된다."
+            },
+            {
+              "seq": 10,
+              "action": "브랜치 `reconcile/rct_20260904-0002-opus5` 로 커밋·푸시하고 `dlddu/homelab-k3s-mcp`에 PR을 연다(머지하지 않는다). 본문에 task id·gap 요약·계획 단계·검증 방법·범위 밖 항목을 적는다.",
+              "expectedOutcome": "PR이 열리고 CI 3개 잡이 돈다. 머지는 실행 단계(executor)의 몫이다."
+            }
+          ],
+          "plannedAt": "2026-09-04T06:05:00Z"
+        }
+      }
+    ]
   }
 ]
