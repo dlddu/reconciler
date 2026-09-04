@@ -1710,6 +1710,52 @@
       "assessedAt": "2026-09-04T15:01:32Z"
     },
     "createdAt": "2026-09-04T15:01:32Z",
-    "updatedAt": "2026-09-04T15:08:11Z"
+    "updatedAt": "2026-09-04T15:16:29Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "헬퍼 파드의 MCP 컨테이너에 **seq 붙은 notice 피드**(`GET /notices?after=<seq>`, long-poll)를 두고, 워크로드 파드의 approval-gated 에이전트가 그 피드를 tail해 AC-E3의 **같은 append-only 바이트열**에 `[session-platform: awaiting approval — <도구> · <외부 식별자>]`와 결정 결과 한 줄을 in-band 마커로 붙인다.\n\n**왜 이 방향인가(pull, push 아님)**: 외부 식별자를 아는 쪽은 헬퍼의 MCP인데 출력 바이트열은 워크로드에 있다. 헬퍼 → 워크로드 **push**는 워크로드 ingress와 헬퍼 egress를 새로 뚫어야 하고 그건 AC-F2의 NetworkPolicy 2종과 `k8s/` 매니페스트 변경(자매 모델 소관 경로)을 부른다. 반대로 **워크로드 → 헬퍼:8092**는 AC-F2 egress 허용목록에 이미 들어 있는 유일한 두 목적지 중 하나라 정책·매니페스트를 하나도 건드리지 않는다. 피드를 메모리 링으로 두면 「헬퍼 파드는 자체 상태를 보존하지 않는다」(AC-F4)도 그대로다 — 동결 시 링은 버려지고, 이미 찍힌 마커는 워크로드 scrollback을 타고 아카이브된다(AC-E5). 가역성: 되돌림은 이 PR revert 한 번이고 영속 상태·스키마·계약 변경이 없다.\n\n**범위(완료 기준) = ⓐ 대기 표시만.** 이 task는 다음이 모두 참이면 성공이다: (1) 게이트가 대기 시작과 결정(APPROVED/REJECTED/EXPIRED/TIMEOUT/게이트웨이 장애)을 피드에 내고, (2) approval-gated 워크로드가 그것을 scrollback에 in-band로 append하며(누적 256 MiB 상한·터미널 마커 규약 유지), (3) **새 SSE event type이나 run/queue 상태 event를 만들지 않아** 커서 규약(`id=nextOffset`, `{offset,payloadBase64,nextOffset}`, UTF-8 경계, reset)이 타입 간 동일하고, (4) 이것이 Go 테스트로 단언되며 뮤테이션으로 비공허성이 증명되고, (5) `docs/doc-tracker.md`의 ① 행이 실제 상태와 맞게 갱신된다.\n\n**범위 밖(후속 task가 잇는다)**: ⓑ 승인 대기 중 `lastAccess` 갱신(AC-B1 구체화) — 유휴 리퍼(`SnapshotIfIdle`)를 건드려 **모든 타입**의 동결·자원 회수(V2)에 영향이 가므로 blast radius가 다른 PR이다. 이 슬라이스가 착지하면 워크로드가 대기 여부를 알게 되고, control plane → 워크로드 방향은 이미 허용된 경로라 후속이 싸진다. ② AC-F5 RWX(클러스터 StorageClass 선행) · ③ SPA 세 번째 카드(④ 뒤) · ④ 프로덕션 활성화(`approval-gateway-credentials` Secret, 루프 밖) · 실게이트웨이/실클러스터 대조(④ 선행) · AC-F3 전용 e2e 파일 저작(`tbm_session-platform-ac-e2e` 소관).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "헬퍼 MCP 컨테이너에 notice 피드를 신설한다 — `data-plane/cmd/agent/session_mcp_notices.go`: seq 단조 증가 메모리 링(상한 초과 시 드롭을 알리는 notice로 대체)과 `GET /notices?after=<seq>` long-poll 핸들러. 자격 증명·게이트웨이 URL은 싣지 않는다(AC-F6).",
+              "expectedOutcome": "`after` 커서로 재연결 시 놓친 notice만 돌아오고, 새 것이 없으면 바운드된 대기 뒤 빈 배열로 끊긴다. 새 테스트 `TestSessionMCPNoticeFeedIsTailable`·`TestSessionMCPNoticesCarryNoSecrets` 통과."
+            },
+            {
+              "seq": 2,
+              "action": "게이트가 대기와 결정을 피드에 낸다 — `session_mcp_tools.go`의 `callTool`에서 기존 `logger.Info(\"awaiting approval\", …)` 자리에 대기 notice를, `await` 반환 뒤에 결정 notice(APPROVED/REJECTED/EXPIRED/TIMEOUT/게이트웨이 장애)를 발행한다. 게이트 판정 로직은 손대지 않는다.",
+              "expectedOutcome": "`TestSessionMCPPublishesTheWaitAndTheDecision`이 대기→결정 순서와 `{세션ID}:{요청ID}` 형태를 단언하며 통과. 기존 게이트 테스트 9종 회귀 없음."
+            },
+            {
+              "seq": 3,
+              "action": "워크로드 쪽 tailer를 붙인다 — approval-gated 모드에서만 `SESSION_MCP_URL`의 `/notices`를 tail하는 goroutine을 띄우고, 받은 notice를 `[session-platform: …]` 한 줄로 렌더해 scrollback에 append한다. append는 `appendClaudeBoundedAt`(누적 상한·터미널 마커 예약)을 재사용하는 **새 메서드**로만 하고 기존 메서드는 고치지 않는다.",
+              "expectedOutcome": "`TestApprovalNoticesLandInTheOutputByteStream`이 마커 바이트열을 단언하며 통과. `claude-code` 경로는 tailer가 아예 뜨지 않아 기존 테스트가 그대로 통과."
+            },
+            {
+              "seq": 4,
+              "action": "누적 상한·커서 규약 회귀를 단언한다 — 상한에 닿은 scrollback에 마커도 더 붙지 않음을 단언하고, `outputStreamEvent`·SSE event type에 변경이 없음을 diff로 확인한다.",
+              "expectedOutcome": "`TestApprovalNoticesRespectTheCumulativeOutputLimit` 통과. `/stream`·`/read` 관련 기존 테스트 무변경 통과."
+            },
+            {
+              "seq": 5,
+              "action": "뮤테이션으로 새 단언의 비공허성을 증명한다 — (a) 대기 notice 발행 한 줄 제거, (b) tailer의 append 호출 제거를 각각 넣어 예고한 테스트만 FAIL함을 보이고 되돌린다.",
+              "expectedOutcome": "(a)는 피드·마커 테스트 둘 다 FAIL, (b)는 마커 테스트만 FAIL. 되돌린 뒤 전 스위트 통과."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/doc-tracker.md`를 실제 상태에 맞춘다 — 부채 행(`:56`)의 잔여 ①을 「ⓐ 대기 표시 착지, ⓑ `lastAccess` 갱신은 남음」으로 갈라 적고, 채널 설계가 확정됐음(워크로드 → 헬퍼 pull)을 기술한 뒤 변경 이력에 행을 더한다. AC-F3을 닫았다고 적지 않는다.",
+              "expectedOutcome": "tracker의 서술이 코드와 일치(판정 기준 4). `docs/test/*`·`docs/prd/*`는 변경 0 — AC는 이미 이 동작을 요구하고 있었으므로 문서를 고칠 이유가 없다."
+            },
+            {
+              "seq": 7,
+              "action": "게이트 전량 재실행 후 PR을 연다 — `data-plane`에서 `go vet ./... && gofmt -l . && go test ./...`, 레포 루트에서 `python3 scripts/check-render-fidelity.py`, `python3 scripts/check-fidelity-allowlist.py`, `./scripts/e2e/check-ac-mapping.sh`.",
+              "expectedOutcome": "넷 다 rc=0이고 fidelity·ac-mapping 카운터가 baseline과 동일(이 PR이 그 축을 건드리지 않았다는 증거). PR이 열리고 CI가 green."
+            }
+          ],
+          "plannedAt": "2026-09-04T15:16:29Z"
+        }
+      }
+    ]
   }
 ]
