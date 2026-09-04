@@ -2915,7 +2915,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-04T08:01:29Z",
       "changedSides": [
@@ -2944,7 +2944,7 @@
       "assessedAt": "2026-09-04T08:01:29Z"
     },
     "createdAt": "2026-09-04T08:01:29Z",
-    "updatedAt": "2026-09-04T09:00:36Z",
+    "updatedAt": "2026-09-04T09:09:42Z",
     "id": "rct_20260904-0004",
     "attempts": [
       {
@@ -2998,6 +2998,93 @@
           "required": false,
           "status": "not_required",
           "reason": "`plan.riskLevel: low` + 영향 표면이 `tests/`·`docs/` 전용이라 사용자 검토 없이 진행한다. 근거 넷: ① 프로덕션·클러스터·데이터에 닿지 않는다 — net diff는 신규 e2e 파일 2개(`session_read_ac3.py`·`session_read_ac4.py`)와 `docs/doc-tracker.md`·`docs/test-session-read.md` 문서 갱신뿐이고 `.github/workflows/ci.yml`·`tests/k8s/kind/*`·`k8s/`는 무변경이다(이미지·스키마·설정 실질 변경 0). ② 불가역 지점은 squash 머지 하나뿐이고 롤백은 revert PR로 끝난다 — 트래픽 중단 가능성 0. ③ 판단이 갈릴 여지로 계획이 지목한 유일한 지점(AC3·AC4만 닫고 AC1·AC2를 뺀 범위 경계)은 소스 근거로 확정돼 있어 실행 지침 1단계에서 executor가 기계적으로 대조 가능하다 — 사람의 취향 판단이 아니다. ④ 새 모킹 0건이라 자매 모델 `tbm_homelab-k3s-mcp-e2e-mock-policy`의 허용목록(등재 5·상한 5)도 불변이다. 다만 머지 게이트는 유지한다: CI 3잡이 머지 직전 head에서 전부 초록이 아니면 머지하지 않고 실패를 그대로 기록한다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-04T09:01:00Z",
+          "finishedAt": "2026-09-04T09:09:42Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T09:01:30Z",
+              "finishedAt": "2026-09-04T09:02:10Z",
+              "log": "범위 경계(AC3·AC4만, AC1·AC2 제외)의 소스 근거를 `dlddu/session-platform@5f60249f`에서 직접 대조해 **셋 다 계획대로 확인**했다. ① `control-plane/internal/adapter/agent/client.go`의 `HTTPClient.Read`가 `c.resolve(ctx, pod)`로 파드 이름을 IP로 해석한 뒤 `GET %s/read?offset=%d`를 친다 ⇒ AC1은 실 데이터 플레인 파드 없이 관측 불가. ② `control-plane/internal/service/manager.go:1000` `checkpointerFor`가 `ckpt == nil || !ckpt.Enabled()`에서 `session.ErrCheckpointDisabled`를 반환한다(주석: 「Never reclaim a pod behind synthetic checkpoint metadata」) ⇒ AC2의 `snapshot` 분기는 CRIU 게이트 없이 거부된다. ③ 픽스처 `tests/k8s/kind/session-platform.yaml:23-24`가 `CRIU_ENABLED`를 **명시적으로 미설정**으로 남기고 `control-plane/cmd/control-plane/main.go:109`가 그 경우 `criu.NewStubCheckpointer(false)`를 주입한다 ⇒ 현재 픽스처에서 AC2 관측 불가. 따라서 「AC2를 active·idle 둘만으로 닫는다」는 반쪽 단정 대안을 기각한 계획 판단에 동의한다 — 머지 보류 사유 없음."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T09:03:06Z",
+              "finishedAt": "2026-09-04T09:03:30Z",
+              "log": "CI `fmt + vet` 잡 success(병합 커밋 `1dc9d54`). 로컬 재현도 일치 — `check_ac_mapping.py` rc=0 `AC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일(전용) 56 · 분할 대기 0 · 공백 AC 7`, `check_mock_policy.py` rc=0 `등재 5(상한 5) · 모킹 지점 5 · 미등재 0 · 고아 0`(불변)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T09:03:05Z",
+              "finishedAt": "2026-09-04T09:07:34Z",
+              "log": "CI `integration tests` 잡(job 100970618181) success. **두 파일이 실제로 배차·실행됐다**: `session_read_ac3.py`가 primary 그룹 **44개** 중 하나로 돌아 `not-found ok: session platform not found: session \"e2e-read-ac3-missing\": session not found` · `bad cursor rejected ok: offset=-1 -> offset must be >= 0` · `bad cursor rejected ok: offset=1.5 -> offset must be an integer` · `target untouched ok: active 2026-09-03T11:00:00Z` → `ok: session-read/AC3`. `session_read_ac4.py`가 auth-variant 그룹 **12개** 중 하나로 돌아 `refusal ok: session-read/AC4`. 실 제어면이 돌려준 not-found 문구가 계획 단계에서 소스로 합성한 문자열과 바이트 단위로 일치한다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T09:00:50Z",
+              "finishedAt": "2026-09-04T09:09:20Z",
+              "log": "**머지 전 병합이 한 번 더 필요했다.** 점유 시점에 main이 `1d1db45` → `000ba8c`로 또 전진해 있었다 — 자매 모델 `tbm_homelab-k3s-mcp-comment-redundancy/rct_20260904-0001`의 주석 정책 PR #54가 08:55:46Z에 머지돼 PR #55가 `mergeable:false`(`dirty`)가 됐다. 계획 지침이 예고한 상황이라 강제 푸시 대신 main을 브랜치로 **병합**했다(`1dc9d54`). 충돌은 `docs/doc-tracker.md` **변경 이력 테이블 1곳뿐**이고 순수 추가 충돌이었다 — 양쪽이 같은 자리에 각자의 행을 넣었다. 테이블이 최신-위 정렬이고 #55가 #54보다 나중에 머지되므로 **내 행을 위, #54 행을 아래**로 두어 둘 다 보존했다(어느 쪽도 버리지 않았다). #54는 문서 인벤토리 계수(정책·허브)만 건드려 AC↔파일 계수와 표면이 겹치지 않으므로 내 행의 `이전 상태 54·9`는 여전히 정확하다. 병합 후 net diff 불변(4파일 +257 −14) 확인, 게이트 2종 재실행 통과, 푸시 후 CI **4잡 전부 success**(`fmt + vet`·`unit tests`·`integration tests`·`docker build & push`)를 확인한 뒤 squash 머지 ⇒ main `4c5040f`."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T09:09:25Z",
+              "finishedAt": "2026-09-04T09:09:42Z",
+              "log": "머지된 main을 **새로 클론해 재도출**했다(자기신고 아님): `HEAD=4c5040f` · `git status --porcelain` 비어 있음. `check_ac_mapping.py` rc=0 → `매칭 파일(전용): 56` · `공백 AC: 7` · `공백 내역: 겸용 파일이 커버 0 · 케이스 자체 없음 7`. 레지스트리 `:267-268`에 `session-read/AC3 → session_read_ac3.py` · `session-read/AC4 → session_read_ac4.py` 두 행이 ✅로 서 있다. `check_mock_policy.py` rc=0 `등재 5(상한 5) · 미등재 0 · 고아 0`."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T09:09:42Z",
+              "finishedAt": "2026-09-04T09:10:00Z",
+              "log": "잔여 gap 7건과 각각의 해소 조건·재감지 경로를 verification.checks의 정보성 항목에 기록했다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "181890453977a573145c99b445a7870894138915",
+          "verifiedAt": "2026-09-04T09:09:42Z",
+          "checks": [
+            {
+              "name": "판정식 — check_ac_mapping.py (머지된 main 4c5040f 재도출)",
+              "status": "passed",
+              "detail": "rc=0 · `AC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일(전용) 56 · 분할 대기 0 · 공백 AC 7`. 직전 `54 · 9` 대비 계획이 명시한 완료 기준 `56 · 7`과 정확히 일치. 새 클론·클린 워킹트리에서 잰 값이다."
+            },
+            {
+              "name": "레지스트리 일치(규칙 6)",
+              "status": "passed",
+              "detail": "`docs/doc-tracker.md:267-268`에 `session-read/AC3 → session_read_ac3.py` · `session-read/AC4 → session_read_ac4.py`가 ✅ 전용 파일로 등재되고, 집계·공백 내역이 체커 실측과 같다."
+            },
+            {
+              "name": "모킹 정책 불변 — check_mock_policy.py",
+              "status": "passed",
+              "detail": "rc=0 · `등재 5(상한 5) · 모킹 지점 5 · 실재 토큰 5 · 표기 주석 5 · 미등재 0 · 고아 0`. 새 모킹 0건이라 자매 모델 `tbm_homelab-k3s-mcp-e2e-mock-policy`의 허용목록은 건드리지 않았다."
+            },
+            {
+              "name": "실제 실행 — CI integration tests 로그",
+              "status": "passed",
+              "detail": "`session_read_ac3.py`가 primary 44개 중, `session_read_ac4.py`가 auth-variant 12개 중 실제로 배차돼 각각 `ok: session-read/AC3` · `refusal ok: session-read/AC4`로 통과. kind 실배포 + 실 제어면 대조라, 로컬 스텁 하네스가 증명하지 못하던 유일한 축이 여기서 닫혔다."
+            },
+            {
+              "name": "하네스 무결성",
+              "status": "passed",
+              "detail": "`OK: … 러너 배차 누락·케이스 미호출 없음` — 배차 1회 · `run()`이 자기 `test_*`를 전부 호출."
+            },
+            {
+              "name": "[정보성] 범위 밖 잔여 gap 7건과 해소 조건",
+              "status": "passed",
+              "detail": "이 task의 수렴 판정에 넣지 않는 **범위 밖** 잔여다(모델 전체 to-be는 공백 0). ① `session-read/AC1`(1) — 선행: 실 데이터 플레인 파드. `agent.Read`가 파드 IP를 해석해 `:8090/read`를 치기 때문. 이미지는 실재 확인됨(제어면과 같은 SHA 태그의 공개 arm64 패키지)이라 스텁은 모킹 정책상 등재 불가. ② `session-read/AC2`(1) — 선행: 위 + **CRIU 게이트**. `checkpointerFor`가 `ErrCheckpointDisabled`로 거부하고 픽스처는 `CRIU_ENABLED`를 미설정으로 둔다. ③ `session-write/AC1~AC5`(5) — 도구 구현은 PR #53(`1d1db45`)으로 이미 착지했고 전용 e2e 파일 저작만 남았다. 원장 `:293`이 저작 순서를 권고한다(AC4·AC5 먼저 — 그 둘만 데이터 플레인·CRIU 선행에 걸리지 않는다). **재감지 경로**: 이 머지가 `tests/`를 바꿔 as-is 해시가 `181890453977a573145c99b445a7870894138915`로, `docs/`를 바꿔 to-be 해시가 `f802ba8dfba35ac5777981401483e5bcd028b9d2`로 움직였다 ⇒ 다음 감지 주기가 잔여 7건을 새 task로 연다. 모델의 `lastObservedVersion`은 의도적으로 건드리지 않았다."
+            }
+          ]
         }
       }
     ]
