@@ -288,7 +288,7 @@
       }
     },
     "createdAt": "2026-09-04T00:18:30Z",
-    "updatedAt": "2026-09-04T00:33:00Z",
+    "updatedAt": "2026-09-04T00:45:00Z",
     "id": "rct_20260904-0001",
     "stateSummary": {
       "asIs": "**as-is (실측 시각 2026-09-04T00:17Z · `dlddu/homelab-k3s-mcp` main `0378f8d`)**\n\n`internal:e61c7bbb… main.go:cec9c82d…` — 직전 baseline(2026-09-03T12:00, `internal:00a0edc2…\nmain.go:ef750610…`) 대비 **구현이 실제로 움직였다**. 출처는 이 모델 자신의 task\n`rct_20260903-0001`이 만든 PR #48(`0378f8d`, 00:06:17Z squash 머지).\n\n- **도구 표면 15종.** `internal/mcp/toolslist.go`의 `toolsListJSON`을 `json.loads`로 파싱하면\n  `session_list`를 포함해 15개다(직전 14개). 상수 선언이 아니라 JSON 리터럴이라\n  `grep -c 'Name: \"'`류로는 0이 나온다.\n- **신규 패키지 `internal/sessionplatform`** — 제어면 `GET /api/v1/sessions` 클라이언트\n  (`Client`/`FromEnv`)와 미설정 대체 구현(`Unavailable`), 오류 종류 분리\n  (`unavailable`/`apiError`). `Session` 구조체 필드는 `id·name·workloadType·state·pod·\n  createdAt·lastAccess`.\n- **배선**: `SESSION_PLATFORM_ENDPOINT`를 세팅하는 곳은 레포 전체에서\n  `k8s/deployment.yaml:55` 하나뿐이다(`main.go:156`은 미설정 시 경고만 남기고 기동한다).\n- **제어면 가동은 문서가 아니라 클러스터에서 직접 확인**: ns `session-platform`의\n  Deployment `control-plane` **1/1 Ready**(replicas 1 · ready 1 · available 1, 생성\n  2026-09-02T01:10:21Z).\n- **미구현 잔여**: `session_read`·`session_write` — `internal/sessionplatform`에 대응 메서드가\n  없고 `internal/mcp`의 디스패치에도 없다.\n\n**미관측 1건(다음 관측으로 넘어온 항목)**: executor가 프로덕션 MCP 엔드포인트로 `session_list`를\n직접 호출하는 현장 확인을 「이 실행 세션의 도구 목록이 세션 시작 시점에 고정돼」 수행하지\n못했다고 기록했다. **이 fire도 같은 제약에 걸린다** — 내 세션의 k3s MCP 도구 표면은 14종이고\n`session_list`가 없다(세션 시작 00:01Z, 프로덕션 롤아웃 완료 00:09:07Z). 즉 이 항목은 감지\n단계가 닫을 수 없다.",
@@ -301,6 +301,77 @@
       "reason": "**작업이 필요하다 — `action_required`.** 두 갈래의 실질 gap이 있고 둘 다 **지금 소유자가 없다**.\n\n**1. 기준 1 — 미구현 AC 9건(`session-read` 4 · `session-write` 5)의 선행 조건이 전부 해소됐다.**\n정의는 「문서에 있으나 구현되지 않은 AC는 to-be 미달 gap이며 drift다. 백로그로 치부해 이 루프\n밖으로 빼지 않는다」고 못박았다. 잔여를 항목별 해소 조건과 대조한 결과 **0건이 아니라 전건이\n착수 가능**하다 — 유일한 외부 선행이던 「제어면이 클러스터에서 제거됨」이 죽었고, 그것을\n문서(#48의 자기 폐기문)와 **클러스터 실측**(ns `session-platform` Deployment `control-plane`\n**1/1 Ready**) 두 겹으로 확인했다. 남은 것은 외부 사건이 아니라 작업 자체이며, `session_list`가\n그 패턴(클라이언트 메서드 + `internal/mcp` 등록 + 단위 테스트)을 방금 프로덕션에서 증명했다.\n\n**2. 기준 4 — 직전 fire가 명시한 트립와이어가 발화했다.** `rct_20260903-0003`은\n「PR #48이 이 수정 없이 머지되면 … 소유자도 게이트도 없으므로 `action_required`로 열어야\n한다」고 조건을 적었다. #48은 00:06:17Z에 머지됐고 수정은 없었다. 현재 main 실측으로\n`doc-tracker.md:48`의 「허브 도달 가능 문서 **38 / 38**」이 실측 **39 / 39**와 어긋나고,\n`:29-36` 문서 인벤토리 표에 `e2e-mocking-policy.md` 행이 없다(파일 전체에서 그 이름 **0회**).\n레포 체커는 `doc-tracker.md`의 **e2e 렌즈 섹션만** 파싱하므로 이 두 곳은 **영원히 초록**이다.\n날짜 붙은 변경 이력 사본(`:370`)은 결함이 아님을 전수로 갈라 놓았다.\n\n**3. 소비된 트리거 — 지금 열지 않으면 재감지 경로가 없다.** `rct_20260903-0001`이 자기 PR을\n머지하며 `succeeded`(`converged: true`)로 닫혀 **열린 task 0개**이고, 그 executor의 마지막\ncheck가 「이번 실행이 `internal/` 트리를 움직였으므로 다음 감지 주기가 후속 task를 연다」로\n후속 소유자를 지명했다. task를 닫는 행위는 대상 레포에 커밋을 만들지 않으므로, baseline만\n전진시키고 끝내면 잔여 9건과 원장 2곳은 우연한 트리거가 오기 전까지 관측되지 않는다.\n\n**4. 자동 해소 가능성 0.** 미구현 기능이 저절로 생기지 않고, 원장 두 줄도 그것을 고치는 PR\n없이는 움직이지 않는다(#47 이후 `doc-tracker.md`를 고친 두 PR이 모두 다른 섹션만 건드렸다).\n\n**planner를 위한 범위·제약**\n- **범위**: (a) `internal/sessionplatform`에 read/write 추가 + `internal/mcp` 도구 등록 + 단위\n  테스트, (b) `doc-tracker.md` 원장 2곳 교정(`:48` → **39 / 39** · 분해 괄호에 정책 문서 범주\n  1 추가, `:29-36`에 `e2e-mocking-policy.md` 행 신설).\n- **(b)를 별도 PR로 열지 말 것** — 표 1행 + 숫자 1개이고 이 task가 어차피 상태 갱신으로\n  `doc-tracker.md`를 편집한다. 같은 원장 줄을 두고 형제 PR 둘이 붙는 것은 이 조직에서 실제로\n  main을 빨갛게 만든 형태다.\n- **슬라이스는 read → write 순을 권한다.** read/write는 「접근 = active화」 부수 효과(유휴\n  승격·스냅샷 복원)를 결과로 노출할 것을 AC가 못박아 **상태를 바꾸는 호출**이고,\n  `session-write/AC4`(거부 응답 구분 전달)는 429/507 매핑까지 요구해 계약 표면이 더 넓다.\n- **범위 밖(이중 계상 금지)**: `session-list/AC1~AC3`의 통합 e2e 3건과\n  `platform-auth-safety/AC2·AC8`은 자매 모델 `tbm_homelab-k3s-mcp-ac-e2e`의\n  `rct_20260904-0001` 소관이다(#48의 원장 갱신문이 그 렌즈에 이름으로 배정했다).\n- **미관측 1건의 종착지를 계획에 못박을 것**: executor가 「다음 관측으로 넘긴다」고 남긴\n  프로덕션 `session_list` 직접 호출은 감지 단계도 수행할 수 없다(에이전트 세션의 MCP 도구\n  표면이 세션 시작 시점에 고정 — 내 세션은 14종으로 `session_list`가 없다). 자매 모델의\n  통합 e2e가 이를 대체한다고 명시해 무한 이월을 끊어라.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-04T00:21:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**미구현 AC 9건 중 `session_read` 1종(AC1~AC4, 4건)을 구현으로 닫고, 같은 PR에서 원장(`doc-tracker.md`) 어긋남 2곳을 교정한다.**\n\n**왜 이 방법인가.** 감지가 남긴 제약이 슬라이스를 거의 결정했다 — (1) 「read → write 순을 권한다」, (2) 「원장 수정 2곳은 이 task에 접어라(형제 PR이 같은 원장 줄을 다투면 main이 빨개진다)」. read를 먼저 두는 이유는 감지가 적은 계약 표면 크기 말고도 하나 더 있다: `session-write/AC1`의 검증 방법 자체가 **「write한 뒤 read로 그 출력이 누적됨을 확인한다」**여서, read가 서기 전에는 write를 정직하게 검증할 수 없다. 구현 골격은 발명이 아니라 **`session_list`가 방금 프로덕션에서 증명한 홈**을 그대로 따라간다 (`internal/sessionplatform` 메서드 + `Unavailable` 대체 + `internal/mcp` 도구 등록·디스패치 + Go 단위). `server.App`/`NewHandler`의 DI 시그니처는 이미 `sessionplatform.Service`를 받고 있어, 직전 사이클이 치른 「테스트 호출부 73곳 일괄 편집」 비용이 이번에는 **0**이다(인터페이스에 메서드를 더할 뿐).\n\n**응답 계약은 추측하지 않고 자매 레포에서 파싱해 온다** — `dlddu/session-platform`의 `control-plane/api/openapi.yaml`에서 `POST /api/v1/sessions/{id}/read`의 `ReadRequest{offset:int64,minimum:0}` / `ReadResult{session,path,payload,nextOffset}`와 상태코드(400/404/413)를, 그리고 제어면 소스 `internal/service/manager.go`의 `dispatchPath()`에서 `path` 리터럴 3종(`active` · `idle->active->read` · `snapshot->restore->read`)을 실측했다.\n\n**이 시도의 완료 기준(범위).** 아래 넷이 모두 성립하면 이 task는 성공이다.\n1. `session_read` 도구가 `tools/list`에 광고되고 `tools/call`로 동작하며, PRD `session-read/AC1~AC4`의    **도구 계층 절반**이 Go 단위 테스트로 검증된다(테스트 문서 `test-session-read.md`가 지목한 이름 그대로:    `TestReadFullThenIncremental` · `TestReadIsNonDestructive` · `TestReadRejectsNegativeOffset` · `TestReadNotFound`).\n2. `docs/doc-tracker.md`의 살아 있는 어긋남 2곳이 실측값과 일치한다 — `:48` 「허브 도달 가능 문서 38 / 38」 →    **39 / 39**(분해 괄호에 정책 문서 1 추가), 「문서 인벤토리」 표에 `e2e-mocking-policy.md` 행 신설.\n3. 이 PR이 **거짓으로 만드는 문서 서술을 같은 PR에서 고친다** — `prd-session-read.md`·`test-session-read.md`의    「구현 선행 문서 / 도구 미구현」 단서, 원장 매트릭스 `session_read` 행의 `(구현 선행)`, 자동화 커버리지    🔴 항목의 「9 AC」.\n4. 레포의 두 게이트(`check_ac_mapping.py` · `check_mock_policy.py`)와 CI 4잡이 초록이고,    **AC 전집 64 · e2e 렌즈 집계는 불변**이다.\n\n**범위 밖(후속으로 넘긴다).**\n- **`session_write` 구현(AC1~AC5, 5건)** — 다음 슬라이스. 429(큐 포화)/507(쿼터 소진)/413(1 MiB 상한) 매핑이   필요해 계약 표면이 넓고, `destructiveHint=true` 도구라 별도 검토가 정당하다.\n- **`session_read`의 통합 e2e** — `tests/integration/`은 자매 모델 `tbm_homelab-k3s-mcp-ac-e2e` 소관이고,   지금 그 모델의 `rct_20260904-0001`이 `planning`으로 열려 있어 손대면 형제 PR과 충돌한다.   따라서 e2e 렌즈 레지스트리의 `session-read/AC1~AC4` 공백 4행과 집계는 **건드리지 않는다**.\n- **AC2의 실클러스터 절반**(스냅샷 세션이 read 한 번에 실제로 파드를 되살리는가) — 제어면 스텁/kind가 필요해   위와 같은 이유로 e2e 렌즈 몫이다. 이 PR은 「제어면이 알려 준 `path`와 처리 후 상태를 결과에 드러낸다」는   **도구 계층 계약**만 닫는다.\n- **프로덕션 MCP 엔드포인트로 `session_list`를 직접 호출하는 현장 확인** — 에이전트 세션의 MCP 도구 표면이   세션 시작 시점에 고정돼 planner·detector 어느 쪽도 수행할 수 없다(내 세션도 14종으로 `session_list`가 없다).   **자매 모델의 통합 e2e가 이 항목을 대체한다**고 여기서 못박아 무한 이월을 끊는다.\n- **기존 14종의 계약 전수 대조**(감지가 두 사이클 연속 미완으로 남긴 항목) — 감지 단계의 몫이다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 `reconcile/rct_20260904-0001-opus5-1m`을 `main`(`0378f8d`) 기준으로 만든다. 형제 워커의 열린 PR 브랜치를 밟지 않도록 브랜치명에 모델 슬러그를 붙인다.",
+              "expectedOutcome": "`git rev-parse HEAD` = `0378f8d…`, 새 브랜치가 origin에 없음(`git ls-remote` 0줄)."
+            },
+            {
+              "seq": 2,
+              "action": "`internal/sessionplatform/sessionplatform.go`에 read 계약을 더한다 — `ReadResult{Session, Path, Payload, NextOffset}` 타입, `Service` 인터페이스에 `ReadSession(ctx, id string, offset int64) (*ReadResult, error)`, `Client.ReadSession`(`POST {endpoint}/api/v1/sessions/{id}/read`, body `{\"offset\":N}`), `Unavailable.ReadSession`. 404를 구분하기 위해 `errKind`에 `kindNotFound`를 추가하고 `notFound()` 생성자와 `Error.Error()` 분기를 더한다. offset<0은 HTTP를 보내기 전에 거부한다(요청을 아예 내지 않아야 대상 세션의 state·lastAccess가 불변임이 구조적으로 보장된다 — AC3).",
+              "expectedOutcome": "`go build ./...` 통과. `Client`가 `Service`를 만족하고 `Unavailable`도 만족한다."
+            },
+            {
+              "seq": 3,
+              "action": "`internal/mcp/toolslist.go`의 `toolsListJSON` 리터럴에 `session_read` 항목을 더한다 — `inputSchema`: `id`(string, required) · `offset`(integer, minimum 0, 기본 0), 어노테이션 `readOnlyHint=false` · `destructiveHint=false` · `idempotentHint=true` · `openWorldHint=true`(PRD 「도구 개요」와 1:1). description에 「읽기가 유휴 승격·스냅샷 복원을 유발할 수 있고 그 분기가 `path`로 드러난다」와 `SESSION_PLATFORM_ENDPOINT` 요구를 명시한다.",
+              "expectedOutcome": "`json.loads(toolsListJSON)`의 `tools` 길이가 15 → **16**, `session_read`의 annotations가 PRD와 문자열 단위로 일치."
+            },
+            {
+              "seq": 4,
+              "action": "`internal/mcp/mcp.go`에 `case \"session_read\": return h.sessionRead(ctx, rawArgs)`를 더하고 `sessionRead` 핸들러를 쓴다. 인자 검증은 형제 도구(`workloadScale`의 replicas)와 같은 관용구로 — `id` 없으면 `-32602 \"id is required\"`, `offset`이 정수가 아니면 `\"offset must be an integer\"`, 음수면 `\"offset must be >= 0\"`. 성공 시 `successResult({payload, nextOffset, path, session})`로 처리 후 세션 상태까지 반환한다(AC2).",
+              "expectedOutcome": "`go build ./...`·`go vet ./...` 통과. `tools/call session_read`가 `structuredContent.path`와 처리 후 `session.state`를 담아 돌아온다."
+            },
+            {
+              "seq": 5,
+              "action": "Go 단위 테스트를 쓴다. `internal/sessionplatform/sessionplatform_test.go`에 테스트 문서가 지목한 4개 이름을 그대로 — `TestReadFullThenIncremental`(offset 0 전체 → nextOffset 재호출은 빈 payload·동일 커서 → 새 출력 후 증분만), `TestReadIsNonDestructive`(같은 커서 반복이 같은 구간), `TestReadRejectsNegativeOffset`(**요청이 0건임을 스텁 기록으로 단언** — 상태 불변의 구조적 증거), `TestReadNotFound`(404 → `kindNotFound`). 여기에 `path` 3분기 노출(`active`·`idle->active->read`·`snapshot->restore->read`)과 `Unavailable.ReadSession` 케이스를 더한다. `internal/server/mcp_test.go`에는 `session_list`가 판 홈을 따라 도구 표면(`tools/list`에 16종·어노테이션)과 미설정 거부(AC4)를 더한다.",
+              "expectedOutcome": "`go test ./... -v` 전 패키지 ok. 신규 테스트가 6개 이상 추가되고 기존 테스트는 불변."
+            },
+            {
+              "seq": 6,
+              "action": "뮤테이션(음성 통제)으로 단언이 실제로 무는지 확인한다 — ① `offset<0` 사전 거부를 제거(요청 0건 단언이 깨져야 함) ② `path`를 결과에서 누락 ③ `nextOffset` 대신 payload 길이를 반환 ④ 404를 kindAPI로 매핑 ⑤ `Unavailable.ReadSession`이 조용히 성공 ⑥ `readOnlyHint=true`로 광고. 각각 의도한 테스트가 실패하는지 보고 `cmp -s`로 바이트 동일 복원한다.",
+              "expectedOutcome": "6종 모두 **의도한 테스트만** 실패하고, 복원 후 `git status --porcelain`이 뮤테이션 잔재 0줄."
+            },
+            {
+              "seq": 7,
+              "action": "이 PR이 거짓으로 만드는 문서 서술을 고친다 — `docs/prd-session-read.md`의 「구현 선행 문서」 블록쿼트를 구현 완료 사실로 교체, `docs/test-session-read.md`의 「자동화 상태: 도구 미구현」 단서와 Go 단위 항목의 `(미작성)` 마커를 실제 경로로 교체(통합 항목은 **`(미작성)` 유지** — 자매 모델 몫). **`### AC` 헤딩과 「검증 대상 AC」 목록은 한 글자도 건드리지 않는다**(AC 전집 64 불변).",
+              "expectedOutcome": "`grep -c '^### AC' docs/prd-*.md` 합계가 **64**로 불변, `git diff -U0 docs/prd-session-read.md | grep -c '^[+-]### AC'`가 **0**."
+            },
+            {
+              "seq": 8,
+              "action": "`docs/doc-tracker.md`의 원장 어긋남 2곳을 교정한다(감지가 지정한 값 그대로) — ① `:48` 「허브 도달 가능 문서 ✅ 38 / 38 (가치 1 + PRD 18 + 테스트 18 + 상태 추적 1)」 → **39 / 39** 이고 분해 괄호에 **정책 1** 범주를 더한다, ② 「문서 인벤토리」 표에 `e2e-mocking-policy.md` 행을 신설한다(파일 전체 등장 0회 → 1회 이상).",
+              "expectedOutcome": "허브 실측 스크립트(마크다운 39 · 허브 `reader.html?doc=` 고유 대상 39 · 집합 차 0)와 원장 문장이 일치. `grep -c 'e2e-mocking-policy' docs/doc-tracker.md` ≥ 1."
+            },
+            {
+              "seq": 9,
+              "action": "같은 파일의 상태 서술을 이 슬라이스에 맞춘다 — 매트릭스 `session_read` 행 `✅ 완전 (구현 선행)` → `✅ 완전`, 자동화 커버리지 🟢에 session_read 단위 커버리지를 등재, 🔴 항목 「session_read·session_write 9 AC — 도구 미구현」 → **「session_write 5 AC」**로 좁히고 남은 순서를 갱신, 변경 이력에 2026-09-04 행 1줄 추가. **`### AC 레지스트리` 이후의 e2e 렌즈 섹션(레지스트리 행·공백 backlog·예외·집계)은 한 줄도 건드리지 않는다** — 그 섹션은 체커가 파싱하는 자매 모델의 소유물이고, 지금 그 모델의 task가 `planning`으로 열려 있다.",
+              "expectedOutcome": "`git diff` 상 `### AC 레지스트리` 이후 변경은 **변경 이력 표 1행 삽입뿐**. e2e 렌즈 공백 14건·집계 불변."
+            },
+            {
+              "seq": 10,
+              "action": "게이트를 로컬에서 main 대비 대조한다 — `python3 tests/integration/check_ac_mapping.py`와 `python3 scripts/check_mock_policy.py`를 main과 브랜치에서 각각 돌려 **출력 diff가 0줄**임을 확인하고, `gofmt -l .`(0줄) · `go vet ./...` · `go build ./...` · `go test ./... -v`를 돌린다.",
+              "expectedOutcome": "두 체커 rc=0이고 main↔브랜치 출력 diff 0줄(AC 전집 64 · 매칭 49 · 공백 14 · 예외 1 전부 불변). gofmt 0줄, vet·build·test 전부 통과."
+            },
+            {
+              "seq": 11,
+              "action": "브랜치를 push하고 GitHub API로 PR을 연다(머지하지 않는다). 본문에 task id, gap 요약, 계획 단계, 검증 방법, **검토 시 봐 주실 점**(범위를 read로 자른 근거와 write를 미룬 이유), 범위 밖 목록을 적는다.",
+              "expectedOutcome": "PR URL 확보. `mergeable_state`가 `dirty`가 아니고 형제 PR(#50 계열)과의 충돌 여부를 명시적으로 기록."
+            },
+            {
+              "seq": 12,
+              "action": "PR CI 4잡(`fmt + vet` · `unit tests` · `integration tests`(kind) · `docker build`)의 결론을 확인해 `preparation.notes`에 기록한다.",
+              "expectedOutcome": "4잡 전부 SUCCESS. 실패가 있으면 원인을 브랜치에서 고쳐 다시 초록으로 만든 뒤 기록."
+            }
+          ],
+          "plannedAt": "2026-09-04T00:45:00Z"
+        }
+      }
+    ]
   }
 ]
