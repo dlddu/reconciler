@@ -1912,5 +1912,34 @@
     "createdAt": "2026-09-04T21:40:00Z",
     "updatedAt": "2026-09-04T21:53:00Z",
     "id": "rct_20260904-0006"
+  },
+  {
+    "toBeModelId": "tbm_session-platform-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "detectedAt": "2026-09-04T21:58:30Z",
+      "changedSides": [
+        "to_be"
+      ],
+      "toBe": {
+        "previousVersion": "75d852ac58ce8e2a1a44b96d4ea54dc3165b9f3d",
+        "currentVersion": "17671ad213dffc784ebdb030aacd19fcad9e29b3"
+      }
+    },
+    "stateSummary": {
+      "asIs": "as-is(`control-plane`·`data-plane`·`web` 트리)는 **불변**이다 — 이 fire가 방금 연 `rct_20260904-0006`이 기록한 `control-plane:1c301a95 data-plane:33146354 web:8870879a` 그대로. 트리거 PR #68(`46a9c4b`, 21:50:40Z)은 `docs/test/e2e.md` 1파일만 바꿨다.\n\n**게이트 3종 현재 main 실측**: `check-render-fidelity.py` rc=0 · `check-fidelity-allowlist.py` rc=0 · `scripts/e2e/check-ac-mapping.sh` rc=0(AC 27 = 매칭 15 + 예외 1 + 공백 11) — 전부 이 fire의 앞선 두-커밋 대조와 동일.\n\n**`control-plane/cmd/control-plane/main.go:79-82`의 주석이 거짓이 됐다** — 「Its data plane runtime — the helper pod's session MCP — **is not implemented yet**, so leaving this unset is the expected deployment state」. #68 자신의 분석이 그 문장을 반증한다(「`data-plane/cmd/agent/main.go`에 `workloadSessionMCP = \"mcp\"`가 있고 그 워크로드를 실제로 서브한다 … #60이 헬퍼 파드 쌍을 기동시키고 #64가 도구 표면과 승인 게이트웨이 왕복을 넣었다」). 즉 「미구현이라 unset이 정상」이라는 **근거절이 소멸했고**, 실제 이유는 #68이 새로 등재한 SUT 오버레이 선행 ⓐ·ⓑ다. sp-ac-e2e executor의 verification도 이 줄을 잔여로 열거하며 **「docs-impl·comment-redundancy 소관」**이라고 이름으로 넘겼다.\n\n이 줄은 **이 모델의 as-is(`control-plane/`) 안**이고, 판정 기준 2(구현이 대응 AC·PRD·설계 노트와 어긋나면 drift)와 3(문서 없는 구현)의 표면이다. 자매 `comment-redundancy` 모델은 정의상 「주석의 **정확성**은 판정 표면이 아니다」라고 스스로 제외하므로(중복만 본다), **소유는 이 모델**이다.\n",
+      "toBe": "`docs/` 전체(SSOT), `75d852ac → 17671ad2`. 실체는 `docs/test/e2e.md` +71/−14 — 자매 렌즈 `tbm_session-platform-ac-e2e`의 F 계열 선행 재판정이다(그 모델의 `rct_20260904-0002`에 전문을 요약했다).\n\n**이 모델의 판정 기준에는 중립이다** — `docs/prd/`의 AC 집합 불변, `docs/test/approval-gated-workload.md` 불변(시나리오 (d) 유휴 예외 요구가 그대로다), `doc-tracker.md` 불변. 바뀐 것은 e2e 렌즈가 자기 공백의 **선행**을 어떻게 적는가이고, 그 축의 소유자는 자매 모델이다.\n\n**다만 그 재판정이 이 모델의 열린 task와 겹쳐 읽힐 위험이 있다** — #68이 등재한 ⓐ·ⓑ는 「배포된 **e2e SUT에서 approval-gated 세션이 서지 않는다**」의 선행이지, 「AC-F3의 유휴 예외를 **구현**할 수 있는가」의 선행이 아니다.\n",
+      "gap": "**이 트리거는 이 모델 축에 새 gap을 만들지 않았다. 단, 두 가지를 기록으로 남긴다 — 열린 task가 오독으로 축소되지 않게 하는 것과, 트리거가 반증한 코드 주석이다.**\n\n**① 열린 task와의 관계 (오독 방지)** — 이 모델의 `rct_20260904-0006`이 21:51:59Z에 planner에게 claim되어 **`planning`으로 점유**돼 있다(내가 이 fire에서 연 것). 그 범위는 **AC-F3의 유휴 예외**(승인 대기 중 `lastAccess` 갱신, `prd/approval-gated-workload.md:81` · `prd/lifecycle.md:16` · `test/approval-gated-workload.md:53-54`)이고, 검증 수단은 **제어면 Go 단위·통합**이다(유휴 리퍼 `service/reaper.go` · `manager.go:362-407 SnapshotIfIdle`). #68이 새로 등재한 ⓐ(`DATA_PLANE_APPROVAL_GATED_IMAGE` 미설정)·ⓑ(게이트웨이 Secret 부재)는 **배포된 e2e SUT에서 이 타입 세션이 서는가**의 선행이므로 그 범위를 막지 않는다. **점유된 task에는 쓰지 않았다** — planner가 #68을 읽고 「F 계열은 선행 미충족」으로 축소하지 않도록 이 레코드에 근거를 남긴다.\n\n**② 트리거가 반증한 코드 주석 — 이 모델 소관, 게이트 없음, 재감지 경로 없음.** `main.go:79-82`의 「session MCP is not implemented yet」은 #68의 실측으로 거짓이 됐다. 어느 게이트도 Go 주석을 읽지 않고(`check-render-fidelity`·`check-fidelity-allowlist`·`check-ac-mapping` 셋 다), 내가 지금 baseline을 전진시키므로 **재감지 경로가 0**이다. 그런데 고칠 자리가 `WithWorkloadImage(session.WorkloadTypeApprovalGated, …)` 호출 바로 위 — 즉 **점유된 `rct_20260904-0006`이 손댈 `main.go`·approval-gated 배선 구역과 같은 파일**이다. 그래서 **rival task를 열지 않고 그 슬라이스에 접어 넣도록 아래 트립와이어로 넘긴다**(EIGHTEENTH-break형 충돌 회피).\n\n**경계 — 이중 계상 금지**: 선행 ⓐ·ⓑ의 해소와 AC-F1·F3·F5·F6 **전용 e2e 파일** 저작은 자매 모델 `tbm_session-platform-ac-e2e`(rct_20260904-0002에서 `no_action_needed`로 판정)와 `tbm_session-platform-e2e-mock-policy`(`executing`)의 몫이다. 이 모델은 **구현 축**만 본다.\n",
+      "summarizedAt": "2026-09-04T21:58:30Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "reason": "**작업 불필요(actionRequired: false).** 근거:\n\n1. **as-is 무변경 · to-be 이동이 자매 렌즈 전용** — `docs/prd/`·`docs/test/approval-gated-workload.md`·`doc-tracker.md` 어느 것도 움직이지 않았고, 이 모델의 AC 집합과 판정 기준 1~5에 새 어긋남이 없다.\n2. **이미 열린 task가 실질 gap을 들고 있다** — `rct_20260904-0006`(`planning`, 점유)이 AC-F3 유휴 예외를 범위로 갖는다. 같은 gap에 rival을 열면 planner와 경쟁만 생긴다.\n3. **새로 확인된 주석 결함 하나는 그 점유 슬라이스와 같은 파일·같은 구역**이라 접어 넣는 것이 옳다(별도 task는 EIGHTEENTH-break형 충돌을 만든다).\n\n이 레코드의 목적은 **판단 기록 + baseline 전진 + 점유 task 오독 방지**다.\n\n**트립와이어(두 분기)** — `main.go:79-82` 주석에 대해 다음 감지가 기계적으로 판정할 것:\n- (a) **`rct_20260904-0006`의 PR이 이 교정 없이 머지되면** → `action_required`로 열 것. 기계 조건: 그 task가 `succeeded` **그리고** `git grep -c 'session MCP — is not implemented yet' control-plane/cmd/control-plane/main.go` ≥ 1.\n- (b) **그 task가 `cancelled`/`failed`로 끝나고 재계획도 없으면** → 같은 grep이 여전히 ≥ 1이고 baseline은 이미 전진했으므로 **재감지 경로 0** ⇒ 그 시점에 `action_required`.\n",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-04T21:58:30Z"
+    },
+    "createdAt": "2026-09-04T21:58:30Z",
+    "updatedAt": "2026-09-04T21:58:30Z",
+    "id": "rct_20260904-0007"
   }
 ]

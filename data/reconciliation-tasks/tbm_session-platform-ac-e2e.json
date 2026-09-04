@@ -1137,5 +1137,34 @@
         }
       }
     ]
+  },
+  {
+    "toBeModelId": "tbm_session-platform-ac-e2e",
+    "status": "no_action_needed",
+    "trigger": {
+      "detectedAt": "2026-09-04T21:58:30Z",
+      "changedSides": [
+        "to_be"
+      ],
+      "toBe": {
+        "previousVersion": "ac:8b10659576e552cf61976c1ef7311f8f6a9e8b93 reg:31e2a7ea7c574967a24f5bd1b10b7725199d40ab",
+        "currentVersion": "ac:8b10659576e552cf61976c1ef7311f8f6a9e8b93 reg:56e281af6b3018f9cfba072d8554d8f729c02975"
+      }
+    },
+    "stateSummary": {
+      "asIs": "as-is(`control-plane/test/e2e_*_test.go` blob 집합 + `web/e2e` 트리)는 **불변**이다 — `api:b6cc73d8… web:37fc1bfb…` 그대로. 트리거 PR #68(`46a9c4b`, 21:50:40Z)이 바꾼 것은 `docs/test/e2e.md` **1파일 +71/−14**뿐이고, `control-plane/test/e2e_*`·`web/e2e/`·`deploy/`·`k8s/`·`.go`·`.ts` 변경이 0이다.\n\n**게이트 2종 현재 main 실측**: `./scripts/e2e/check-ac-mapping.sh` rc=0 — 「AC 27개 = 매칭 파일 15 + 예외 1 + **공백 11**」, 공백 목록 AC-E2~E6 · AC-F1~F6 그대로. `python3 scripts/check-fidelity-allowlist.py` rc=0 — 차단 요인 1건. 둘 다 부모 `a78e7fd`에서와 **바이트 동일**(이 fire의 앞선 sweep에서 두 커밋에서 각각 실행해 확인).\n",
+      "toBe": "`docs/prd`(AC 집합, `ac:8b106595…` **불변**) + `docs/test/e2e.md`(예외·매핑 등재, `reg:31e2a7ea → 56e281af`).\n\n**#68은 이 렌즈 자신의 슬라이스이고, 공백을 줄인 것이 아니라 「왜 공백인가」의 선행을 재판정했다**:\n- 2026-09-03 판정이 「**선결 조건은 하나뿐**」이라며 지목했던 「헬퍼 파드의 세션 MCP 워크로드가 data plane 에이전트에 없다」가 **해소됐음**을 ✅로 기록하고, 그 문장을 근거로 남겨 두면 원장이 「선행이 풀렸으니 지금 저작해도 된다」로 읽힌다고 경고한다.\n- 실제 남은 선행 둘을 파일·줄 좌표와 함께 새로 등재했다 — **ⓐ `DATA_PLANE_APPROVAL_GATED_IMAGE`가 어디에도 설정돼 있지 않다**(base `k8s/deployment.yaml`이 선언하는 이미지 env는 `DATA_PLANE_IMAGE`·`DATA_PLANE_CLAUDE_CODE_IMAGE` 둘뿐, e2e 오버레이 `deploy/kustomization.yaml`의 patch도 `env/1·2·3`만 replace ⇒ `imageFor`가 에러 ⇒ 생성 요청이 **500으로 실패하고 파드가 하나도 서지 않는다**), **ⓑ 게이트웨이 Secret 부재**(`git grep 'approval-gateway' -- deploy k8s` **0 hits**인데 헬퍼 MCP 컨테이너는 3종을 `secretEnv`로 투영하고 그 자리는 `Optional`을 세우지 않는다 ⇒ kubelet이 컨테이너 구성에서 실패 ⇒ 헬퍼 파드가 Ready에 이르지 못한다).\n- 승격 조건을 「해제 조건은 **ⓐ와 ⓑ가 함께** 충족되는 것」으로 재작성했고, 「AC-F1을 400 거부 갈래만으로 먼저 끊지 말 것」·「AC-F5에는 선행이 하나 더 있다(공유 볼륨 미구현)」를 명시했다.\n",
+      "gap": "**소비된-트리거 형태(내 슬라이스 #68 머지 · `rct_20260904-0001` `succeeded`/`converged:true` 21:52:37Z · 열린 task 0 · 잔여 11)이지만, 잔여 **어느 항목의 선행도 발화하지 않았다** ⇒ 형태가 아니라 사유의 성격으로 갈라 `no_action_needed`.**\n\n| 잔여 | 이 트리거가 새로 등재한 선행 | 성격 | 발화? |\n| --- | --- | --- | --- |\n| AC-F1·F3·F5·F6 전용 e2e | ⓐ `DATA_PLANE_APPROVAL_GATED_IMAGE`(SUT 오버레이 `deploy/`) **그리고** ⓑ `approval-gateway-credentials` Secret | ⓐ는 이 모델 as-is 밖(`deploy/`) · ⓑ는 **클러스터 Secret = 루프 밖** | **0/2** |\n| AC-F5 | 위 둘 + 공유 볼륨(RWX) 미구현 | 외부 StorageClass | 미발화 |\n| AC-E2~E6 | 「차단 요인 ③」 해소 | `check-fidelity-allowlist.py` 차단 요인 1건이 그대로 | 미발화 |\n\n**ⓐ 하나만 채워도 열리지 않는다** — #68이 「해제 조건은 ⓐ와 ⓑ가 **함께**」라고 못박았고, ⓑ는 실제 승인 게이트웨이의 url·api-key·user-id를 담는 클러스터 Secret이라 이 루프가 만들 수 없다. 그래서 잔여 11 중 **지금 착수 가능한 항목이 0**이며, 이는 소비된-트리거의 「0 closable」 변형이다(형태는 같지만 판정은 반대).\n\n**소유권 정리 — 이중 계상 금지**: 선행 ⓐ의 해소(`deploy/` 오버레이에 이미지 env 추가)는 SUT 경로를 보는 자매 모델 `tbm_session-platform-e2e-mock-policy`의 몫이고 그 모델은 지금 `rct_20260904-0001`이 `executing`이다. ⓑ는 사람·인프라의 몫이다. 여기서 열지 말 것.\n\n**함께 발견 — 이 트리거가 반증한 코드 주석 하나가 남는다**: **`control-plane/cmd/control-plane/main.go:79-82`의 주석이 거짓이 됐다** — 「Its data plane runtime — the helper pod's session MCP — **is not implemented yet**, so leaving this unset is the expected deployment state」. #68 자신의 분석이 그 문장을 반증한다(「`data-plane/cmd/agent/main.go`에 `workloadSessionMCP = \"mcp\"`가 있고 그 워크로드를 실제로 서브한다 … #60이 헬퍼 파드 쌍을 기동시키고 #64가 도구 표면과 승인 게이트웨이 왕복을 넣었다」). 즉 「미구현이라 unset이 정상」이라는 **근거절이 소멸했고**, 실제 이유는 #68이 새로 등재한 SUT 오버레이 선행 ⓐ·ⓑ다. sp-ac-e2e executor의 verification도 이 줄을 잔여로 열거하며 **「docs-impl·comment-redundancy 소관」**이라고 이름으로 넘겼다. **이 모델의 as-is(`e2e_*_test.go` + `web/e2e`) 밖이라 여기서 열지 않는다** — `tbm_session-platform-docs-impl`의 `rct_20260904-0007`에 좌표·근거·트립와이어를 남겼다.\n",
+      "summarizedAt": "2026-09-04T21:58:30Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "reason": "**작업 불필요(actionRequired: false).** 근거:\n\n1. **as-is 무변경 · 집계 무변경** — 문서 전용 슬라이스라 e2e 구현 두 스위트가 그대로이고, `check-ac-mapping.sh` rc=0의 「AC 27 = 매칭 15 + 예외 1 + 공백 11」이 부모와 바이트 동일이다. 1:1 매핑 축에 새 어긋남이 없다.\n2. **잔여 11건 중 선행이 발화한 것이 0건이다** — #68이 방금 재판정한 ⓐ·ⓑ는 「함께 충족」이 해제 조건인데 ⓑ가 클러스터 Secret(루프 밖)이고 ⓐ도 이 모델 as-is 밖(`deploy/`, 자매 모델 소관)이다. AC-E2~E6은 차단 요인 ③이 그대로다. 지금 여는 task는 executor가 닫을 수 없다.\n3. **트리거 자신이 「선행이 풀렸다」는 오독을 막으려고 쓰인 슬라이스다** — 그 판정을 뒤집어 착수로 읽는 것은 이 슬라이스의 목적에 정면으로 반한다.\n\n**트립와이어(두 분기)** — 다음 감지가 기계적으로 판정할 것:\n- (a) **ⓐ가 채워지면**: `git grep -c 'DATA_PLANE_APPROVAL_GATED_IMAGE' -- deploy k8s` ≥ 1 **그리고** `git grep -c 'approval-gateway' -- deploy k8s` ≥ 1 ⇒ 두 선행이 함께 충족 ⇒ AC-F1·F3·F6 전용 e2e 저작으로 `action_required`.\n- (b) **ⓐ만 채워지고 ⓑ가 없으면**: 위 첫 조건만 참 ⇒ 여전히 `no_action_needed`이되, 그 상태에서 e2e를 저작하면 **전부 실패**하므로 계획을 열지 말 것(#68이 이 함정을 명시했다).\n",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-04T21:58:30Z"
+    },
+    "createdAt": "2026-09-04T21:58:30Z",
+    "updatedAt": "2026-09-04T21:58:30Z",
+    "id": "rct_20260904-0002"
   }
 ]
