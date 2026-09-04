@@ -2516,7 +2516,7 @@
       }
     },
     "createdAt": "2026-09-04T00:11:47Z",
-    "updatedAt": "2026-09-04T00:24:00Z",
+    "updatedAt": "2026-09-04T00:47:00Z",
     "id": "rct_20260904-0001",
     "stateSummary": {
       "asIs": "**as-is (실측 시각 2026-09-04T00:11Z · `dlddu/homelab-k3s-mcp` main `0378f8d`)**\n\n`tests/` 트리 = `4ac92ac1…`. `tests/integration/` 최상위 `*.py` **57개** 중 매칭 단위는 **50개**\n(`_` 접두 헬퍼 5 · 러너 `run_all.py` · 체커 `check_ac_mapping.py` 제외 — 제외 판정은 러너와\n체커가 **같은 함수** `run_all.matching_unit_paths()`를 쓴다).\n\n- **전용 매칭 파일 49** + **비-AC 파일 1**(`smoke.py`, 규칙 3 등재분).\n- **규칙 2 위반(겸용 파일) 0** — 직전 슬라이스가 마지막 겸용 파일 `workload.py`(16 AC)를\n  AC별 16파일로 쪼개며 소멸시켰다.\n- 러너 배차: primary **41** · auth-variant **9**(합 50, 배차 누락 0).\n- 레포 자체 게이트 `tests/integration/check_ac_mapping.py`를 **트리거(`7456a46`)와 현재\n  HEAD(`0378f8d`) 양쪽**에서 실행: 둘 다 **rc=0**, 출력 문자 단위 동일 —\n  `AC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일 49 · 분할 대기 0 · 공백 AC 14`.\n- 자매 게이트 `scripts/check_mock_policy.py`도 rc=0(등재 5 · 모킹 지점 5 · 미등재 0 · 고아 0).\n\n**직전 관측 대비 as-is 이동의 출처**: PR #49(`7456a46`, 이 모델 `rct_20260903-0001`의 산출물)\n단 하나다. 이번 fire 도중 머지된 PR #48(`0378f8d`, 자매 모델 산출물)은 `tests/` 를 **0파일**\n건드려 as-is 해시가 `4ac92ac1…`로 불변이다(트리거 시점과 현재 HEAD가 같은 값).",
@@ -2529,6 +2529,67 @@
       "reason": "**작업이 필요하다 — `action_required`.** 근거 넷.\n\n**1. 유의미한 차이가 실재한다.** 정의의 판정식이 `1:1 대상 63 = 매칭 파일 49`로 **14건 미달**이다\n(레포 게이트 `check_ac_mapping.py` 실측, 트리거 `7456a46`·현재 HEAD `0378f8d` 양쪽 rc=0 ·\n출력 문자 단위 동일). 규칙 4의 예외 등재는 1건뿐이고, 나머지 14건은 등재 없이 파일이 없는\n상태 = 정의가 명시한 drift다.\n\n**2. 소비된 트리거다 — 지금 열지 않으면 재감지 경로가 사라진다.** as-is·to-be를 움직인 #49는\n이 모델 자신의 슬라이스(`rct_20260903-0001`) 산출물이고 그 task는 머지와 함께 `succeeded`로\n닫혔다. **열린 task 0개**, 그리고 그 executor의 검증 ⑦이 「lastObservedVersion은 의도적으로\n건드리지 않았다 … 다음 감지 주기가 잔여 14건을 새 task로 잇는다」고 후속 소유자를 지명했다.\n게이트는 공백을 **보고만 하고 실패시키지 않으므로** 영원히 초록이다 — baseline만 전진시키면\n이 gap은 관측되지 않는다.\n\n**3. 잔여를 항목별 해소 조건과 대조한 결과 5건이 「지금이 착수 가능한 첫 순간」이다.**\n- `platform-auth-safety/AC2`·`AC8`(2) — 구현은 이미 있고(디스커버리 라우트·API키/OAuth 독립\n  활성), 유예 사유였던 「픽스처 신설이 선행이라 **별도 슬라이스 후보**」의 그 앞 슬라이스가\n  #49로 머지되며 소멸했다. 픽스처 저작은 외부 사건이 아니라 작업 자체이고 소유자가 없다.\n- `session-list/AC1·AC2·AC3`(3) — **선행 조건이 이번 fire 도중 해소됐다.** 원장이 적었던 두\n  선행(「도구 미구현」·「제어면이 클러스터에서 제거됨」)을 PR #48(00:06 머지)이 각각 구현과\n  정정으로 닫았고, 제어면 가동은 문서가 아니라 **클러스터에서 직접 확인**했다(ns\n  `session-platform` Deployment `control-plane` **1/1 Ready**). 게다가 #48의 원장 갱신문이\n  이 세 건의 e2e 저작을 「**그 렌즈의 몫이다**」라며 이 모델에 이름으로 배정했다.\n\n**4. 나머지 9건(`session-read` 4 · `session-write` 5)은 범위 밖이며 중복 계상하지 않는다.**\n도구 자체가 미구현이고 그 해소는 자매 모델 `tbm_homelab-k3s-mcp-docs-impl`의 몫이다\n(#48은 `session_list`만 구현했다). 완료 기준을 14건 전부로 잡으면 executor가 닫을 수 없는\ntask가 된다 — **5건으로 끊을 것.**\n\n**planner를 위한 범위·제약**\n- **범위**: 전용 e2e 파일 5개 신설 —\n  `platform_auth_safety_ac{2,8}.py` · `session_{list_ac1,list_ac2,list_ac3}.py`.\n  완료 기준은 `공백 14 → 9`, `매칭 파일 49 → 54`, 규칙 2 위반 0 유지, 게이트 rc=0.\n- **슬라이스 분할을 권한다.** 두 묶음은 선행 조건이 전혀 다르다 — platform 2건은 **인증 배포\n  변형**(발급자 픽스처·기동 실패 배차)이 선행이고, session 3건은 **제어면 접근**(kind 스텁\n  또는 실 제어면)이 선행이다. 한 PR에 섞으면 `ci.yml`을 두 방향으로 동시에 건드린다.\n- 제약 4건(모킹 상한이 천장이 아니라 R6 거울이라는 정정 · AC2의 기동 의존 · AC3의\n  `실행 대상: auth-variant` 근거 · `_helpers.EXPECTED_TOOLS` 14 vs 도구 표면 15)은\n  `stateSummary.gap` ⑤에 실측 근거와 함께 적었다. 특히 마지막 건은 게이트 밖이고 단정이\n  부분집합이라 **깨진 게 아니라 조용히 약해진** 상태이므로, session-list 슬라이스에 접어라.\n- **자매 경계**: `session-read`·`session-write` 9건은 docs-impl 소관. 이 task에 끌어오지 말 것.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-04T00:14:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**session-list 도메인 3건(AC1·AC2·AC3)에 전용 e2e 파일 3개를 신설해 이 렌즈의 공백을 14 → 11로 줄인다.** 핵심 판단은 「제어면 스텁이냐 실 제어면이냐」였고, **모킹 정책이 답을 이미 정해 뒀다**: 원장(`docs/e2e-mocking-policy.md`)의 `IMG` 카테고리는 '실 구성요소의 이미지를 CI에서 확보할 수 없어 최소 스텁으로 대체'할 때만 쓸 수 있고 '이미지가 공개되거나 CI에서 당길 수 있게 되면 이 카테고리는 소멸하고 실 구성요소로 대체해야 한다'고 명시한다. `ghcr.io/dlddu/session-platform` 은 **익명 pull이 200으로 열려 있고 arm64 매니페스트가 있어** CI 러너(`ubuntu-24.04-arm`)의 kind에서 그대로 뜬다(실측). `UPS`(외부 SaaS·유료 계정)도 해당하지 않는다. 따라서 스텁은 정책 위반이고 **실 제어면을 kind에 띄운다 — 새 모킹 예외 0건, 등재 상한 5 불변**이 이 계획의 성립 조건이다.\n\n실 제어면이 가능한 근거 셋(전부 소스 실측): ① `service.Service.List()` → `configmap.Store.List()` 는 라벨 `app.kubernetes.io/managed-by=control-plane` 이 붙은 ConfigMap만 읽고 **파드를 일절 조회하지 않는다** — 세션 상태는 `session-<id>` ConfigMap의 `session` 데이터 키에 든 JSON이 전부라, 세션을 kubectl로 **실 저장소에 시드**하면 실 제어면의 실 API·실 직렬화 경로가 그대로 돈다(MinIO를 `minio-seed` Job으로 시드하는 이 레포의 선례와 같은 자리다). ② `main.go` 의 idle reaper 는 `snapshotEnabled = CRIU_ENABLED || CLAUDE_CODE_ARCHIVE_ENABLED` 일 때만 돈다 — 픽스처는 둘 다 프로덕션 기본값(`false`)이므로 시드한 상태가 테스트 도중 저절로 바뀌지 않는다(AC2가 요구하는 결정성). ③ homelab 쪽 배선은 **한 줄도 고칠 필요가 없다** — `k8s/deployment.yaml:55` 가 이미 `SESSION_PLATFORM_ENDPOINT=http://control-plane.session-platform.svc.cluster.local` 을 base에 박아 뒀고 kind 오버레이는 그 base를 그대로 쓰므로, 픽스처를 **프로덕션과 같은 이름**(ns `session-platform` · Service `control-plane`)으로 띄우면 기존 주소가 그대로 해석된다.\n\n실 제어면이 스텁보다 강한 이유가 AC2에서 드러난다: AC2의 '새 파드가 기동되지 않음' 절은 스텁 앞에서는 **vacuous**(스텁은 애초에 파드를 만들지 않는다)지만, 실 제어면은 snapshot 세션에 접근하면 실제로 복원 파드를 만들므로 파드 0건 단정이 진짜 판별자가 된다.\n\n**이 시도의 범위(완료 기준)**: (1) 전용 파일 3개 신설 — `session_list_ac1.py`·`session_list_ac2.py`(`실행 대상: primary`) · `session_list_ac3.py`(`실행 대상: auth-variant`), 공유 표면은 매칭 단위 밖 `_session_platform.py`; (2) 실 제어면 픽스처 `tests/k8s/kind/session-platform.yaml`(공개 이미지를 프로덕션이 선언한 커밋 SHA로 핀) + `ci.yml` 에 배포·롤아웃 대기·진단 덤프 스텝; (3) `docs/doc-tracker.md` 레지스트리 3행 ✅ 승격 + 집계 (매칭 파일 49→52 · 공백 14→11) + backlog·변경 이력 갱신; (4) 게이트로 확인 — `check_ac_mapping.py` rc=0, `check_mock_policy.py` rc=0 **등재 5·상한 5 불변**, CI 4잡 green.\n**같이 접는 것 1건**: `_helpers.EXPECTED_TOOLS` 를 14 → 15로 정정한다(`session_list` 누락). `toolslist.go` 의 도구 표면은 15개인데 상수는 14개이고, `smoke.py`·`platform_auth_safety_ac5.py` 의 단정이 `EXPECTED_TOOLS - names`(**부분집합**)이라 CI는 통과한다 — **깨진 게 아니라 조용히 약해진** 상태이고 어떤 게이트도 이것을 보지 않는다. session_list를 실제로 구동하는 이 슬라이스가 고칠 자리다.\n**범위 밖(후속)**: `platform-auth-safety/AC2·AC8` 2건 — 선행이 전혀 다르다(OIDC 발급자 픽스처 + 다중 구성 배포 변형 + '기동 실패'를 단정하는 배차). 한 PR에 섞으면 `ci.yml` 을 두 방향으로 동시에 건드린다. `session-read` 4 · `session-write` 5 = 9건 — 도구 자체가 미구현이며 자매 모델 `tbm_homelab-k3s-mcp-docs-impl` 소관이다. 이 슬라이스가 머지되면 `tests/` 트리 해시가 움직여 재감지가 잔여 11건을 새 task로 잇는다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "실 제어면 픽스처 `tests/k8s/kind/session-platform.yaml` 을 만든다 — Namespace `session-platform` · ServiceAccount/Role/RoleBinding(session-platform 레포 `k8s/rbac.yaml` 과 같은 권한: pods·configmaps·leases) · Deployment(`ghcr.io/dlddu/session-platform:5f60249f8381d5cfecbe093bb77fc30d874697f4` — session-platform main 의 `k8s/deployment.yaml` 이 선언한 프로덕션 핀, 익명 pull 200·arm64 확인) · Service `control-plane`(80 → 8080). env 는 `CP_ADDR=:8080` 만 두고 `CRIU_ENABLED`·`CLAUDE_CODE_ARCHIVE_ENABLED` 는 미설정(= 프로덕션 기본 false)으로 남긴다. `secretKeyRef` 를 쓰지 않으므로 Secret 이 필요 없다. 파일명·주석 어디에도 `*-mock` 토큰을 쓰지 않는다(모킹 체커 `ID_TOKEN_RE` 오탐 방지).",
+              "expectedOutcome": "`kubectl apply -f` 로 뜨고 `kubectl -n session-platform rollout status deploy/control-plane` 이 성공하며 `GET /api/v1/healthz` 가 200. `check_mock_policy.py` 는 이 파일에서 어떤 토큰도 잡지 않아 rc=0·등재 5 불변."
+            },
+            {
+              "seq": 2,
+              "action": "`.github/workflows/ci.yml` 의 integration-tests 잡에 스텝 셋을 더한다 — (a) `kubectl apply -f tests/k8s/kind/session-platform.yaml`(다른 픽스처 apply 뒤), (b) `kubectl -n session-platform rollout status deploy/control-plane --timeout=180s`(primary 러너 스텝 **앞**), (c) 실패 시 진단 덤프에 `session-platform` 네임스페이스 3줄 추가. `run: |` 블록 안에는 `mock-exception` 주석을 넣지 않는다(정책 문서의 명시적 경고).",
+              "expectedOutcome": "러너는 파일을 자동 발견하므로 파일별 스텝 추가는 없다. 워크플로 변경 push 에는 `workflows:write` 토큰이 필요하다."
+            },
+            {
+              "seq": 3,
+              "action": "공유 표면 `tests/integration/_session_platform.py`(`_` 접두 → 매칭 단위 아님)를 만든다 — 네임스페이스·라벨(`app.kubernetes.io/managed-by=control-plane`·`session-id`)·ConfigMap 이름 규약(`session-<id>`)·데이터 키(`session`) 상수, 세션 사양 → ConfigMap JSON 직렬화, `clear_sessions()`(관리 라벨이 붙은 ConfigMap 전삭제) · `seed_sessions(specs)`(전삭제 후 생성) · `session_pod_names()`(제어면이 만든 세션 파드 조회). 시드 JSON 의 필드명은 손으로 짓지 말고 `session.Session`/`storedSession` 의 구조체 태그에서 확인한 것만 쓴다.",
+              "expectedOutcome": "세 파일이 각자 `run()` 에서 자기 선행 조건을 스스로 성립시켜 파일 간 실행 순서 의존이 0이다(`실행 순서:` 선언 0건). 직전 슬라이스가 확립한 패턴과 같다."
+            },
+            {
+              "seq": 4,
+              "action": "`session_list_ac1.py`(검증 AC: session-list/AC1 · 실행 대상: primary) — ① `clear_sessions()` 후 `session_list` 가 **빈 목록**을 반환하고 에러가 아님을 단정, ② 서로 다른 상태(active/snapshot)의 세션 2개를 시드한 뒤 둘이 각각 id·name·workloadType·state·lastAccess 와 함께 열거됨을 단정. snapshot 세션은 `pod` 가 비어 있고 active 세션은 파드명이 실림을 함께 본다.",
+              "expectedOutcome": "AC1 검증 방법의 두 절('세션 2개가 각각의 상태와 함께 열거' · '세션 없는 제어면에서 빈 목록')이 한 파일 안에서 모두 관측된다."
+            },
+            {
+              "seq": 5,
+              "action": "`session_list_ac2.py`(검증 AC: session-list/AC2 · 실행 대상: primary) — snapshot 세션을 포함해 시드한 뒤 `session_list` 를 3회 반복 호출해 ① 각 세션의 `state` 와 `lastAccess` 가 호출 전후 **동일**하고 ② 제어면 네임스페이스에 **세션 파드가 새로 기동되지 않았음**(호출 전후 파드 집합 동일, 실 제어면이므로 복원이 일어났다면 파드가 생긴다)을 단정한다.",
+              "expectedOutcome": "AC2 검증 방법의 세 절(state 불변 · lastAccess 불변 · 새 파드 없음)이 전부 실 제어면 위에서 관측된다. 스텁이었다면 세 번째 절이 vacuous 하다."
+            },
+            {
+              "seq": 6,
+              "action": "`session_list_ac3.py`(검증 AC: session-list/AC3 · 실행 대상: auth-variant) — `_auth_variant.py` 에 `SESSION_REFUSAL`(= `internal/sessionplatform` 의 `Error()` 접두 + `NewUnavailable` 기본 사유에서 그대로 뜬 문자열)을 더하고, 기존 `assert_unavailable_refusal()` 로 미설정 거부 + 직후 `ping` 생존을 단정한다. auth-fixture 에는 `SESSION_PLATFORM_ENDPOINT` 가 없으므로 전제가 이미 성립한다(레포 전체에서 이 env 를 세팅하는 곳은 `k8s/deployment.yaml:55` 하나뿐 — 실측).",
+              "expectedOutcome": "`aws_config_get_ac3.py` 등 기존 '미설정 거부' 6건과 같은 모양·같은 배포에서 도는 7번째 파일. 신규 픽스처·신규 배선 0."
+            },
+            {
+              "seq": 7,
+              "action": "`_helpers.EXPECTED_TOOLS` 에 `session_list` 를 더해 14 → 15로 맞춘다(도구 표면 `internal/mcp/toolslist.go` 실측 15개와 일치). `smoke.py`(primary)와 `platform_auth_safety_ac5.py`(auth-variant) 두 소비자의 단정이 함께 강해진다.",
+              "expectedOutcome": "두 배포 모두에서 `session_list` 가 광고되는 것이 단정된다. auth-variant 는 `SESSION_PLATFORM_ENDPOINT` 미설정이지만 도구 표면은 구성과 무관하게 정적이므로 통과해야 한다 — 이 단정이 실패하면 그 전제 자체가 깨진 것이다."
+            },
+            {
+              "seq": 8,
+              "action": "`docs/doc-tracker.md` e2e 렌즈를 갱신한다 — 레지스트리 3행(session-list/AC1·AC2·AC3)을 `✅ 전용 파일 \\`session_list_ac{1,2,3}.py\\`` 로, 레지스트리 제목과 집계 블록을 매칭 파일 49→52 · 공백 14→11 로, `⬜ 공백 backlog` 를 (14)→(11)로 줄이고 session 항목을 'read/write 9건은 도구 미구현(자매 모델 소관)' 으로 다시 쓰며, 변경 이력에 이번 슬라이스 행을 더한다. `docs/test-session-list.md` 의 자동화 필드도 새 파일을 가리키게 교정한다.",
+              "expectedOutcome": "`check_ac_mapping.py` 의 규칙 6(집계·행별 상태 일치)이 통과한다. 이 갱신이 없으면 같은 PR 이 CI 에서 실패한다."
+            },
+            {
+              "seq": 9,
+              "action": "로컬 게이트로 확인한다 — `python3 tests/integration/check_ac_mapping.py`(집계가 52/11 로 찍히고 rc=0) · `python3 scripts/check_mock_policy.py`(등재 5·상한 5·미등재 0, rc=0) · 러너 드라이런 배차(primary 41→43 · auth-variant 9→10) · 신규 파이썬 파일의 `symtable` 정적 이름 해석(임포트 누락 0). 음성 통제로 각 게이트가 vacuous 하지 않음을 확인한 뒤 `cp` 백업에서 바이트 동일 복원한다.",
+              "expectedOutcome": "커밋 전에 lint 잡의 두 체커를 1:1 재현해 CI 왕복 없이 판정한다. kind 통합(실 제어면 기동·시드·3파일 실행)은 로컬 불가이므로 CI 가 판정한다."
+            },
+            {
+              "seq": 10,
+              "action": "브랜치 `reconcile/rct_20260904-0001-homelab-k3s-mcp-ac-e2e` 로 push 하고 PR 을 연다(머지하지 않는다). PR 본문에 task id·gap 요약·계획 단계·검증 방법·범위 밖 잔여를 적는다. PR CI 4잡(lint · unit tests · integration tests · docker) 결과를 확인해 레코드에 남긴다.",
+              "expectedOutcome": "`integration tests` 잡이 실 제어면 기동 + 3파일 실행까지 초록이면 이 계획의 유일한 로컬 불가 구간이 검증된 것이다."
+            }
+          ],
+          "plannedAt": "2026-09-04T00:47:00Z"
+        }
+      }
+    ]
   }
 ]
