@@ -3593,7 +3593,7 @@
       "assessedAt": "2026-09-04T21:49:00Z"
     },
     "createdAt": "2026-09-04T21:49:00Z",
-    "updatedAt": "2026-09-04T22:20:00Z",
+    "updatedAt": "2026-09-04T22:45:00Z",
     "id": "rct_20260904-0009",
     "attempts": [
       {
@@ -3663,6 +3663,14 @@
             }
           ],
           "plannedAt": "2026-09-04T22:20:00Z"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20260904-0009-ac-e2e",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/61",
+          "preparedAt": "2026-09-04T22:45:00Z",
+          "notes": "draft PR [#61](https://github.com/dlddu/homelab-k3s-mcp/pull/61) — 7파일 +577/−50, head `bc6f635`, base `88b3b17`(#59). **Go 실행 코드 0줄 · 프로덕션 매니페스트 0줄.**\n\n**변경 구성**: 픽스처(`tests/k8s/kind/session-platform.yaml`) — `DATA_PLANE_CLAUDE_CODE_IMAGE`(= `DATA_PLANE_IMAGE`와 같은 패키지·같은 커밋 태그. session-platform은 멀티 워크로드 이미지 하나를 내고 `DATA_PLANE_WORKLOAD`로 고르므로 **추가 pull 없음**, 사이드카도 같은 이미지) + 자리표시자 `claude-code-credentials` Secret(키 정확히 셋: `base-url`·`auth-token`·`k3s-mcp-token`) / 신규 e2e `session_write_ac4.py`(317줄) / `session_write_ac1.py`에 claude-code 절 / `_session_platform.py`에 `live_claude_code_session`(기존 호출부 무변경) / `ci.yml` 진단에 credential-proxy 사이드카 로그 / 원장·테스트 문서 갱신.\n\n**계획이 소스에서 뒤집은 것 — 감지가 준 「네 거부를 전부 단정하라」는 달성 불가다.** 507(출력 쿼터 소진)의 발화 조건은 `len(buf) > scrollbackLimit − marker`인데 `scrollbackLimit`은 `claudeConfig.ScrollbackLimit`이 0이면 256 MiB로 고정되고, **그 필드를 채우는 env·플래그가 데이터 플레인에 없다**(에이전트 `main.go`의 생성 호출은 `StateDir`·`Model`·`Binary`·`RunTimeout`만 읽는다). 우회로였던 「이미 상한을 소진한 아카이브 복원」도 `claude_archive.go`가 생성·복원 양쪽에서 256 MiB 초과를 거부해 막혀 있다. 감지의 전제는 「오류가 어디서 나는가」의 답이었지 「e2e가 그 상태에 도달할 수 있는가」의 답이 아니었다.\n\n**그래서 507을 카브아웃하되 네 항목으로 남겼다**: 근거(소스 좌표) · 대체 검증(양쪽 Go 단위 3종) · e2e가 **네 접두 상수 전부**를 쌍쌍 대조해 507 문구가 떠내려가면 함께 깨지게 함 · 해제 조건(session-platform 데이터 플레인이 그 상한을 설정 표면으로 노출 — 다른 레포·다른 모델). 기각한 대안: 규칙 4 예외 등재(관측 가능한 세 거부까지 잃는다) · 규칙 7 구현 대기(기능은 구현됨) · 데이터 플레인 설정 추가(모델 경계 밖).\n\n**로컬 게이트 3종 rc=0**(변경 전 → 후): `check_ac_mapping.py` 매칭 60→**61** · 공백 3→**2** · 분할 대기 0 유지 · 예외 1 / `check_mock_policy.py` **불변**(등재 5, 상한 5 — 자리표시자 Secret은 상류의 대체물이 아니라 필수 SecretKeyRef의 충족이고, 단정하는 세 거부는 어느 것도 상류를 타지 않는다) / `check_comment_policy.py` rc=0, 등재 범위 무변경. 배차: `run_all.py --group primary --list`에 신규 1파일, `auth-variant`·`oauth-variant`에는 없음.\n\n**계획 단계가 실측으로 확인한 것 넷**:\n1. **네 사유 접두를 손으로 짓지 않았다** — `internal/sessionplatform`의 `Error.Error()` 스위치 리터럴과 **verbatim 일치**함을 스크립트로 대조했다.\n2. **스텁 하네스로 다섯 케이스를 실제로 돌렸다.** 제어면·에이전트의 판정 로직을 소스에서 옮겨 적은 가짜 세션에 배출 속도를 바꿔 가며 재현 — 주입 2회당 1발 배출이라는 비관적 비율에서 **127발**, 현실적 비율에서 **63~70발**에 포화했다. `QUEUE_FILL_MAX_ATTEMPTS = 200`이 그 여유분이다.\n3. **음성 통제 5종이 전부 의도한 문장으로 실패했다** — 워커가 1:1로 따라잡는 경우 / 서버가 전부 수락 / 413이 재시도 가능 문구로 무너짐 / 거부 후 read가 다른 세션을 침 / 없는 id가 거부되지 않음.\n4. **프롬프트 크기를 64 KiB로 낮춘 것이 이 슬라이스의 가장 중요한 설계 판단이다.** 워커는 프롬프트를 `claude`의 argv 마지막 원소로 넘기는데 리눅스는 argv 원소 하나를 `MAX_ARG_STRLEN`(4 KiB 페이지에서 128 KiB)로 제한한다. 상한(1 MiB)에 가까운 프롬프트는 `execve`에서 즉시 실패하고, 그러면 워커가 큐를 **실행이 아니라 실패로** 비워 배출이 주입보다 빨라진다 — 큐를 채우려는 케이스에 정확히 역효과다.\n\n**곁가지 — AC2 둘의 「같은 CRIU 벽」 서술을 정정했다(리드, 미검증).** `checkpointerFor`는 워크로드 타입별로 체크포인터를 고르고 그 문단의 `NewStubCheckpointer(false)`는 **shell의 것**이다. claude-code는 `CLAUDE_CODE_ARCHIVE_ENABLED`가 켜지면 CRIU가 아니라 `NewAgentArchiveCheckpointer`를 받는다. 이 PR은 그 게이트를 켜지 않고(체크포인트 스토어·유휴 리퍼·`idle` 도달 경로 셋이 미검증) backlog에 리드만 남겼다.\n\n**형제 PR 충돌 0 — 시험 머지로 확인.** 자매 모델의 [#60](https://github.com/dlddu/homelab-k3s-mcp/pull/60)(`rct_20260904-0009`, `tbm_homelab-k3s-mcp-docs-impl`)과 `git merge --no-commit` rc=0이고 **머지된 트리에서 게이트 3종 전부 초록**이다(#60이 도입하는 **규칙 7** 포함). 겹치는 파일은 `docs/doc-tracker.md`(#60은 `## 자동화 커버리지` 절, 이 PR은 레지스트리·집계·backlog)와 `docs/test-session-write.md`(#60은 시나리오 1·3·5, 이 PR은 **시나리오 4만**)이며 헝크가 떨어져 있다. **머지 순서 무관.**\n\n**남은 검증은 CI 하나** — claude-code 파드(에이전트 + credential-proxy 사이드카)가 kind에서 Ready가 되는지, 그리고 큐가 실제로 포화하는지는 로컬에서 잴 수 없고 `integration-tests` 잡이 그 관측이다. 머지는 하지 않았다."
         }
       }
     ]
