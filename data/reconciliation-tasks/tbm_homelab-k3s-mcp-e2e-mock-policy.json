@@ -282,5 +282,34 @@
       "assessedAt": "2026-09-04T05:44:00Z"
     },
     "id": "rct_20260904-0001"
+  },
+  {
+    "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
+    "status": "no_action_needed",
+    "trigger": {
+      "detectedAt": "2026-09-04T07:59:09Z",
+      "changedSides": [
+        "as_is"
+      ],
+      "asIs": {
+        "previousVersion": "sites=35 files=22\n56b2181eb0a3238ed6af5c6baed7cc923c9351d4029ac7ba1864442aaef3e4f1",
+        "currentVersion": "sites=39 files=25\nc8be744eac5b1f369371cc717ad5d79b3730a7c2888d8cae0bf737b760549515"
+      }
+    },
+    "stateSummary": {
+      "asIs": "**as-is = E2E 모킹 지점 지문(토큰형), 관측 2026-09-04T07:59:09Z @ `b2b6b68`**\n\n- `sites=39 files=25` / `c8be744e…` (직전 `sites=35 files=22` / `56b2181e…`).\n- 지문이 +4 올랐지만 **판정 대상 모킹 종류는 5로 불변**이다. `scripts/check_mock_policy.py` rc=0:\n  `등재 5(상한 5) · 모킹 지점 5 · 실재 토큰 5 · 표기 주석 5 · 미등재 0 · 고아 0`\n  — `UPS github-mock` · `UPS grafana-mock` · `IMG dear-baby-fixture` ·\n  `GATE MCP_AUTH_DISABLED` · `GATE DISABLE_SECURITY_PLUGIN`.",
+      "toBe": "**to-be = `docs/e2e-mocking-policy.md` blob, 관측 2026-09-04T07:59:09Z — 불변**\n\n- `e933220f…` = 직전 관측과 **동일**. PR #52 (`b2b6b68`, 07:50:06Z — `test(platform-auth-safety): AC2·AC8 전용 e2e 파일 신설 + 실 OIDC 발급자 픽스처`)는 정책 문서를 0줄 건드렸다.\n- 정책의 판정 기준(변화 없음): 실 구현체를 CI에 띄운 것은 **모킹으로 세지 않는다**(MinIO가 S3를,\n  단일노드 OpenSearch가 Serverless를 대신하는 것이 선례). `UPS`는 실 상류를 CI에서 띄울 수 있으면\n  쓸 수 없고, `IMG`는 이미지를 당길 수 없을 때만 쓴다.",
+      "gap": "**유의미한 차이가 아니다 — 지문 +4는 전부 「정의가 아니라 *언급*」이고, 판정 대상 5종은 불변이다.**\n\n## ① 지문 상승분을 파일별 원문 맥락으로 분해 (카운트가 아니라 맥락)\n\n부모 `577af3a`와 트리거 `b2b6b68`에서 지문 스크립트의 site 목록을 각각 산출해 차집합을 떴다\n(각 커밋에서 `reset --hard && clean -fdx`, `status --porcelain` = 0). **추가 4 · 삭제 0**:\n\n| 추가된 site | 원문 맥락 | 정의인가? |\n| --- | --- | --- |\n| `platform_auth_safety_ac2.py:MCP_AUTH_DISABLED` | 모듈 docstring `:11` 「주 배포는 `MCP_AUTH_DISABLED=1` 이고 auth-variant 는 API 키 전용이라, 이 AC 는 두 곳 어디에서도 관측되지 않는다」 | **아니다 — 산문 서술** |\n| `platform_auth_safety_ac8.py:MCP_AUTH_DISABLED` | docstring `:10`·`:15`·`:241`. 모두 네 구성을 **설명**하며, `:15`·`:241`은 오히려 「**미설정**으로 두는 것」을 서술 | **아니다 — 산문 서술** |\n| `oidc-fixture.yaml:MCP_AUTH_DISABLED` | YAML **주석** `:5`(「The primary kind deployment runs with MCP_AUTH_DISABLED=1」) · `:27`(「MCP_AUTH_DISABLED unset」) · `:381`(「MCP_AUTH_DISABLED is **NOT** set」) | **아니다 — 주석, 그중 둘은 미설정 선언** |\n| `oidc-fixture.yaml:e2e-mock` | 주석 `:11`의 문자열 **`docs/e2e-mocking-policy.md`** 안 `e2e-mock`을 정규식 `[A-Za-z0-9_-]*-mock`이 잡은 것 — 정책을 인용하는 주석이다. 그런 이름의 스텁은 없다 | **아니다 — 정책 문서 파일명 오탐** |\n\n**`MCP_AUTH_DISABLED`가 실제로 SET되는 자리는 레포 전체에서 `tests/k8s/kind/kustomization.yaml:19`\n(`- MCP_AUTH_DISABLED=1`) 하나뿐이고, 이번 변경으로 늘지 않았다.** 이 두 오탐 계열(정의 vs 언급,\n정책 문서 파일명)은 이 모델에서 반복 관측된 것이라 지문 급등을 곧바로 drift로 읽으면 안 된다.\n\n## ② 신규 픽스처는 모킹이 아니라 실 구현체다 — 정책이 이미 답을 정해 뒀다\n\nPR #52 (`b2b6b68`, 07:50:06Z — `test(platform-auth-safety): AC2·AC8 전용 e2e 파일 신설 + 실 OIDC 발급자 픽스처`)가 세운 `tests/k8s/kind/oidc-fixture.yaml`은 **실 OIDC 발급자 dex**(`ghcr.io/dexidp/dex`,\n다이제스트 핀)다. 정책의 두 후보 범주가 모두 스텁을 배제한다 — `UPS`는 실 상류를 CI에서 띄울 수\n있으면 쓸 수 없고(dex는 공개·arm64라 띄울 수 있다), `IMG`는 이미지를 당길 수 없을 때만 쓴다.\n그래서 정적 JSON 스텁이었다면 **등재 불가 모킹**이 됐을 것이고, 실 구현체를 고른 이 선택이\n허용목록을 불변으로 유지한다. 09-04 session-list 슬라이스가 같은 논리로 실 제어면을 고른 것이\n직전 선례다. **게이트 실측이 이 판단을 확인한다**: 미등재 0 · 고아 0.\n\n## ③ 「등재 5(상한 5)」는 만석이 아니다 — R6은 양방향 미러다\n\n`check_mock_policy.py`의 R6은 `cap != len(rows)`를 **양방향으로** 실패시키므로, 초록일 때\n`cap == rows`는 자명하게 참이다. 즉 「상한 5에 꽉 찼다」가 아니라 「선언과 실측이 같다」는 뜻이고,\n새 모킹이 필요하면 같은 PR에서 숫자를 올리면 된다. 실제 제약은 **정책의 기본 방향**(실 구현체 픽스처\n> mock)이지 개수가 아니다. (이 문장은 09-03의 내 기록 「등재 5/5 만석」을 정정한 것을 유지한다.)\n\n## ④ 열린 task 없음 — 이 레코드가 baseline을 전진시킨다\n\n이 모델의 모든 task가 종료 상태이고 열린 task는 0개다. 지문이 노이즈로 올랐는데 아무것도 쓰지\n않으면 baseline이 낡은 채 남아 precheck가 5분마다 재발화한다. 그래서 판정을 기록하고 baseline을\n전진시키는 것이 이 `no_action_needed`의 역할이다.",
+      "summarizedAt": "2026-09-04T07:59:09Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "reason": "**작업이 필요하지 않다(`actionRequired: false`).**\n\n지문은 `sites=35 files=22` → `sites=39 files=25`로 올랐지만, 부모/트리거 양쪽에서 site 목록을 산출해\n차집합을 뜬 결과 **추가 4건 전부가 정의가 아니라 언급**이다 — docstring 산문 2건, YAML 주석 1건\n(그중 둘은 오히려 「미설정」을 선언), 그리고 정규식이 `docs/e2e-mocking-policy.md`라는 **정책 문서\n파일명**을 잡은 오탐 1건. `MCP_AUTH_DISABLED`가 실제로 SET되는 자리는 레포 전체에서\n`tests/k8s/kind/kustomization.yaml:19` 하나이고 이번에 늘지 않았다.\n\n신규 `oidc-fixture.yaml`은 실 OIDC 발급자(dex)라 정책상 모킹이 아니며, `check_mock_policy.py`가\n트리거에서 rc=0으로 `등재 5 · 미등재 0 · 고아 0`을 재도출해 이를 확인한다. ⇒ 판정 대상 5종 불변,\n순수 지문 노이즈.\n\n다음 fire를 위해: 「등재 5(상한 5)」는 R6이 양방향 미러라 **만석이 아니라 선언==실측**이라는 뜻이다.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-04T07:59:09Z"
+    },
+    "createdAt": "2026-09-04T07:59:09Z",
+    "updatedAt": "2026-09-04T07:59:09Z",
+    "id": "rct_20260904-0002"
   }
 ]
