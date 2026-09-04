@@ -189,9 +189,9 @@
       "reason": "**작업이 필요하다(`actionRequired: true`).**\n\n1. **소비된 트리거 + 열린 task 0.** 트리거 #63은 이 모델 자신의 슬라이스이고, 그 task는 폴링으로\n   닫히는 것을 확인한 뒤(`succeeded`/`passed`/`converged`) 판정했다.\n2. **잔여의 선행이 발화했다.** 미판정 `2,815줄 / 99파일`을 막던 유일한 선행은 「판정 기준이\n   레포 안에 없다」였고, 이 트리거가 `docs/comment-policy.md`를 세워 그것을 해소했다 —\n   to-be가 `absent`를 벗어난 것이 그 증거다. 형태가 아니라 **항목별 해소 조건**으로 갈랐고,\n   나머지 두 잔여(지문 사각지대 · 주석 정확성)는 미발화·범위 밖이라 제외했다.\n3. **executor가 이 단계를 소유자로 지목했다** — 「다음 감지 주기가 후속 task로 잇는다」고 적고\n   `lastObservedVersion`을 남겨 두었다. 숫자는 독립 재도출로 검증했다(`2958−143=2815`).\n4. **ungated이고 재감지 경로가 0이다.** CI 17잡 어디도 주석 중복을 보지 않으며, 이 레코드가\n   baseline을 전진시키므로 지금 열지 않으면 잔여는 다른 모델 작업의 부수 효과를 기다릴 뿐이다.\n\n**범위 제약**: 한 번에 좁히지 말고 패키지 단위로 끊을 것(집중 구간 `client_orchestrator.go` 313줄\n1순위). 「애매하면 남긴다」와 판정 이력의 줄 수 표기는 `stateSummary.gap` ⑤에 적었다."
     },
     "toBeModelId": "tbm_session-platform-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "createdAt": "2026-09-04T09:27:18Z",
-    "updatedAt": "2026-09-04T14:06:00Z",
+    "updatedAt": "2026-09-04T14:22:00Z",
     "id": "rct_20260904-0002",
     "attempts": [
       {
@@ -270,9 +270,68 @@
           "comment": "대화에서 「승인」. 승인 범위는 PR #65 머지다. **PR #54 종료는 승인에 포함되지 않았다** — 승인 요청에서 함께 물었으나 응답에 언급이 없었고, 실행 지침이 「승인 없이는 #54를 그대로 둔다」고 못박았으므로 #54는 손대지 않는다(후속 슬라이스가 같은 경로를 정책 기준으로 다시 판정하면 자연히 무의미해진다). 승인 전 executor가 확인한 것: PR #65 head `9c0fd32`의 체크 14개 = success 13 · skipped 1(main 전용 핀) · 실패 0, 준비 시점의 유일한 공백이던 `e2e (kind + API + browser)`가 10:12:49Z success, base `539819e` == 현재 main HEAD, `mergeable: clean`, 변경 파일 8개가 준비 기록과 일치."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-04T14:06:00Z",
-          "entries": []
+          "finishedAt": "2026-09-04T14:08:30Z",
+          "entries": [
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T14:03:00Z",
+              "finishedAt": "2026-09-04T14:06:00Z",
+              "log": "지침 1단계(머지 전 확인). PR #65 head `9c0fd32`의 check-runs 14개 = success 13 · skipped 1(`pin deployment images (main only)`, PR에서 정상) · 실패 0. 계획이 「로컬 재현 없음」으로 남긴 유일한 게이트 `e2e (kind + API + browser)`가 10:12:49Z success로 닫혀 검증 공백 0. base `539819e` == 현재 main HEAD(형제 머지로 인한 표류 없음), `mergeable: clean`. 변경 파일 8개가 준비 기록과 일치(`control-plane/internal/service/` 6 + `docs/comment-policy.md` + `docs/doc-tracker.md`, +134/−130)."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T14:07:00Z",
+              "finishedAt": "2026-09-04T14:08:30Z",
+              "log": "지침 2단계(머지). PR이 draft라 GraphQL `markPullRequestReadyForReview`로 먼저 ready 전환(REST로는 draft 해제 불가) 후 squash merge — main 커밋 `7f04e3ec`. 이어 `docker-build-push`→`pin` 잡이 돌아 `47dcd7a`(`chore(deploy): … 7f04e3ec 로 고정 [skip ci]`)로 이미지 핀을 되커밋했다. 예고된 정상 동작이며 코드 미변경이라 빌드 캐시가 히트했다. **PR #54는 승인 범위 밖이라 손대지 않았다.**"
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=2883 files=101\n9a583275785da6b51e32ad5459c72edaec0630dba3375e0e5f0092fa250394fc",
+          "verifiedAt": "2026-09-04T14:22:00Z",
+          "checks": [
+            {
+              "name": "① 판정 범위의 주석이 229줄인가",
+              "status": "passed",
+              "detail": "머지된 main(`7f04e3ec`)을 새로 클론해 범위 한정 카운트 실행 — `control-plane/internal/service` = **229** (계획 시점 304 − 제거 75). 지침 경고대로 전역 지문이 아니라 범위 카운트로 판정했다. 지문 오검출 5줄을 빼면 실제 잔여 주석 224줄 = 계획의 「유지 224」와 일치."
+            },
+            {
+              "name": "② 판정 이력 등재 — 범위 열에 줄 수와 측정 커밋",
+              "status": "passed",
+              "detail": "`grep -c '299줄 @ \\`539819e\\`' docs/comment-policy.md` → 1, `grep -c '162줄 @ \\`acde617\\`'` → 1(1차 행 소급 적용). 두 판정이 측정 커밋과 함께 문서에 남았다."
+            },
+            {
+              "name": "③ 코드가 안 바뀌었음 — 게이트 3종 + CI Go 게이트",
+              "status": "passed",
+              "detail": "머지된 main 로컬 실행: `check-ac-mapping.sh` rc=0 — **AC 27개 = 매칭 14 + 예외 1 + 공백 12 불변** · `check-fidelity-allowlist.py` rc=0(등재 seam 2 · 회계 16 · 마커 4 · 위반 4/상한 4) · `check-render-fidelity.py` rc=0(R1~R10). 샌드박스에 Go 툴체인이 없어 Go 게이트는 머지 커밋 `7f04e3ec`의 check-runs로 확인 — **16개 전부 completed/success**, `control-plane (lint + unit)`(gofmt·go vet·go test)·`data-plane (lint + unit)`·`integration (happy path)`·`envtest (real-apiserver CAS/Lease)`·`web (typecheck + build)`·두 이미지 빌드·`pin deployment images` 포함, 실패 0."
+            },
+            {
+              "name": "④ 머지 커밋에 주석·빈 줄 아닌 삭제가 없는가",
+              "status": "passed",
+              "detail": "`git show -U0 7f04e3ec -- control-plane/internal/service`의 삭제 줄에서 주석·빈 줄 패턴을 걷어낸 결과 **출력 없음**. Go 실행 경로는 한 줄도 바뀌지 않았다."
+            },
+            {
+              "name": "as-is/to-be 이동 (기록용)",
+              "status": "passed",
+              "detail": "as-is 지문 `lines=2958 files=101`/`d74ff5c4…` → **`lines=2883 files=101`/`9a583275…`** — 정확히 −75줄이고 준비 단계의 예고값과 바이트 동일. to-be(`docs/comment-policy.md` blob)도 `c93a618c…` → `5b2276a0…`로 함께 움직였다(판정 이력 등재 때문이며 이 모델의 정상 형태). **모델의 `lastObservedVersion`은 건드리지 않았다** — 이 이동이 다음 감지의 트리거다."
+            },
+            {
+              "name": "잔여 gap (정보성 — 이 task의 범위 밖)",
+              "status": "passed",
+              "detail": "미판정 잔여 **93파일 약 2,516줄**. 다음 슬라이스 후보는 `adapter/criu/`(215) · `adapter/configmap/`(140) · `adapter/agent/`(75) · `adapter/checkpointstore/`(70)이고, 집중 구간 1·2순위(`adapter/k8s/client_orchestrator.go` 313 · `data-plane/cmd/agent/main.go` 168)는 형제 PR #62·#64가 닫힌 뒤에 집어야 한다. 지문 패턴 정비(오검출 36줄 · 줄 끝 주석·raw string 사각지대)는 모델 레코드 편집이라 대상 레포 PR이 아니다. **PR #54는 미처리**(종료가 승인 범위에 포함되지 않았다). 전부 converged 판정에 넣지 않았다 — 다음 감지 주기가 후속 task로 잇는다."
+            },
+            {
+              "name": "프로덕션 회귀 없음 (정보성)",
+              "status": "passed",
+              "detail": "ns `session-platform`의 Deployment `control-plane` **1/1 Ready · restart 0**(관측 14:20Z, pod `control-plane-7659779bd4-tvnvv`, 이미지 `a3d46a3…` = 직전 핀). 새 핀 `47dcd7a`(이미지 `7f04e3ec`)의 Flux 롤아웃은 관측 시점에 아직 반영 전이다. 주석 전용 변경이라 바이너리 동작은 불변이며 이 task의 완료 기준에 포함되지 않는다."
+            }
+          ]
         }
       }
     ]
