@@ -536,7 +536,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-08-20T06:06:42Z",
-    "updatedAt": "2026-09-03T22:34:30Z",
+    "updatedAt": "2026-09-04T08:05:00Z",
     "trigger": {
       "detectedAt": "2026-08-20T06:06:42Z",
       "changedSides": [
@@ -769,6 +769,66 @@
           "reviewer": "user",
           "reviewedAt": "2026-09-03T22:23:55Z",
           "comment": "반려 — \"claude-code → shell로 바꾸지 말 것\".\n\n**무엇을 가리키는가(executor 주석).** 이 시도가 안고 온 manual-archive 슬라이스의 판단 ①이다: `web/e2e/journeys/manual-archive.spec.ts`의 인터셉트를 걷어내면서 테스트 대상을 **claude-code 세션 → 실 shell 세션**으로 바꾸고, claude-code 문구 분기는 `test.skip` 시드로 남긴 교환. 이번 계획은 그 시드를 \"영구 교환\"이 아니라 \"차단이 풀리면 채워질 공백\"으로 다시 적는 선에서 유지했는데, 검토는 그 표기 변경이 아니라 **워크로드 타입 교체 자체를 하지 말라**고 반려했다.\n\n**재계획이 다뤄야 할 것.** manual-archive e2e는 claude-code 세션을 대상으로 유지한 채 인터셉트를 해소하는 경로를 찾아야 한다. 이는 차단 요인 3건(K3s MCP 자격 발급 `EXT` · 비공개 marketplace 호스팅 `없음` · unroutable `base-url` `EXT`)이 **선결조건에서 이 슬라이스의 범위 안으로 들어온다**는 뜻이므로, 슬라이스 경계 자체를 다시 그어야 한다 — 원장·R10만 남기고 manual-archive 재작성을 후속으로 미루거나, 가짜 provider·인클러스터 marketplace 원격을 먼저 세우는 순서로 바꾸는 선택지가 있다. 판단 ②(지연 주입 미등재)·③(상한 4→2 래칫)과 차단 요인 카테고리 판정에 대한 이견은 이번 반려에 담기지 않았다.\n\n**신선도는 문제가 아니었다**(참고): head `3c98381` 체크 14개 중 13 success · 1 skipped · 실패 0, `e2e (kind + API + browser)` green, base main `9688a36` 불변, `mergeable: clean`."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**범위(완료 기준) — 이번 시도는 슬라이스 경계를 다시 그었다.** claude-code e2e 공백의 원인 3건을 「차단 요인」 원장으로 승격하고 체커 **R10**으로 강제하는 것까지가 범위다. **manual-archive·j6의 인터셉트 제거는 범위 밖으로 뺀다.** 성공 판정은 (a) 게이트 3종(`check-fidelity-allowlist.py` · `check-ac-mapping.sh` · `check-render-fidelity.py`) exit 0이면서 **미해소 위반 4 · 상한 4 · 회계 행 16 · 인터셉트 7이 그대로**이고 `차단 요인 3`이 더해질 것, (b) **as-is seam 지문이 main과 동일**할 것(= 이 슬라이스가 seam을 하나도 건드리지 않았다는 기계적 증거), (c) 현재 main을 담은 트리에서 PR의 CI 잡이 전부 green일 것 — 셋 다다.\n\n**반려는 방향에 대한 것이었다 — \"claude-code → shell로 바꾸지 말 것\".** 검토는 접근의 정확성이나 판단 ②(지연 주입 미등재)·차단 요인 카테고리 판정에는 이견을 달지 않았고, `manual-archive.spec.ts`의 **워크로드 타입 교체 자체**를 금지했다. 그 교체가 직전 시도가 위반 4→2를 만든 유일한 수단이었으므로, 그것을 빼면 이 시도에서 위반 수치는 **줄지 않는다**. 검토가 명시한 두 선택지 중 **\"원장·R10만 남기고 재작성을 후속으로 미룬다\"** 를 골랐다.\n\n**왜 다른 선택지(가짜 provider·인클러스터 marketplace를 먼저 세우기)를 고르지 않았는가 — 검증 가능성 때문이다.** 코드를 읽어 확인한 사실 둘: ① 지금 kind에서 claude-code 세션을 세우는 e2e는 **0건**이고, `workload_type_orchestrator_test.go`·`approval_gated_orchestrator_test.go`는 `//go:build integration`(fake clientset)이라 이 모델의 범위 밖이다. ② 차단 3건은 **동시에** 풀려야 처음으로 그 경로가 밟힌다(①② 없이는 pod가 Ready에 못 가고, ③ 없이는 세션이 아무 응답도 못 받는다). 즉 인프라만 세우는 슬라이스는 **CI가 아무것도 증명하지 못한 채** 머지되고, 인프라+재작성을 한 번에 하면 실패 시 원인 분해가 불가능한 큰 슬라이스가 된다. 반면 이 슬라이스는 문서·체커 **2파일**이고 revert 1회로 원복된다.\n\n**그렇다면 왜 지금 원장을 세우는가 — 그것이 다음 슬라이스의 입력이자 래칫이기 때문이다.** 「미해소 위반」이 *치환이 있어서* 생긴 drift라면 claude-code AC(AC-E1~E6) 공백은 *치환조차 없어서* 생긴 것이라, 원인들이 as-is 스캔 정규식에 **하나도 걸리지 않는다** — R5는 영원히 침묵한다(모델 정의가 스스로 「지문의 사각지대」로 적어 둔 자리다). 산문으로만 적어 두면 **원인이 고쳐져도 문서만 조용히 낡는다.** 리터럴 단위로 대조하면 원인이 사라질 때 게이트가 빨개지고, '해소 시' 칸이 예고한 등재/실배포를 함께 반영해야 통과한다.\n\n**정직하게 기록하는 교환 조건**: 이 시도는 gap 수치를 줄이지 않는다(위반 4 → 4). 수렴은 \"숫자가 줄어드는 것\"이 아니라 \"공백의 원인이 게이트에 묶여 다음 슬라이스가 그것을 우회할 수 없게 되는 것\"이다. 숫자를 줄이는 것은 차단 3건이 풀린 뒤의 후속 task 몫이다.\n\n**카테고리 판정은 현행 정의로 끝난다 — 정의 개정을 넘길 필요가 없다.** 기준은 `EXT` 배제 조항 하나(\"kind에 실물 배포가 가능하면 EXT를 쓸 수 없다\", MinIO 선례)이고, 같은 부트스트랩 안에서 **자격 발급**(`EXT` — 실 GitHub App 개인키를 쥔 조직 서비스라 기능하는 실물을 못 세운다)과 **호스팅**(`없음` — `claude plugin marketplace add <url>`는 호스트를 가리지 않으므로 인클러스터 git 원격으로 같은 코드 경로가 돈다 → 실물 배포 가능 → EXT 불가, 등재 없이 해소)의 판정이 갈린다. 검토가 \"EXT 모양이 애매하다\"고 지적한 부분의 답이 이 분해다. **지금 등재하지는 않는다** — 대체물이 서기 전에는 \"구동되는 구간\" 칸에 쓸 것이 없어 등재가 거짓이 되고(R2가 빈 칸을 막는다), 예고 CODE가 등재 표에 먼저 나타나면 R10이 막는다.\n\n**PR은 #42를 이어 쓰지 않고 새로 열었다(#62).** #42의 head 커밋 내용 자체가 반려된 워크로드 교체라, 그 위에 되돌리는 커밋을 얹으면 최종 diff는 같아져도 리뷰 이력이 \"반려된 변경 + 취소\"로 남아 읽기 어렵다. 게다가 #42의 base는 `9688a36`으로 5커밋 낡았다. #62는 **현재 main(`0a750cd`) 위에 반려되지 않은 부분만** 다시 세운 것이고, 스펙 파일은 **한 줄도 건드리지 않는다**. #42는 닫기를 권고하되 그 실행은 사람 판단으로 남긴다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #42를 이어 쓰지 않고 **현재 main(`0a750cd`) 위에 새 브랜치**(`reconcile/rct_20260820-0001-blocker-ledger`)를 세운다. #42의 base는 `9688a36`으로 5커밋 낡았고(#53·#55·#57·#60·#61), 그중 #53이 `docs/test/e2e.md`를 고쳐 실제 충돌이 난다.",
+              "expectedOutcome": "브랜치가 현재 main에서 갈라져 나오고, 그 트리에서 기존 게이트 3종이 그대로 exit 0."
+            },
+            {
+              "seq": 2,
+              "action": "`scripts/check-fidelity-allowlist.py`에 **R10**을 이식한다(#42에서 반려되지 않은 부분) — `<!-- fidelity:blockers -->` 블록 파싱, 5칸 필수, 판정은 GATE/TRIG/EXT/NET/없음, 선언 리터럴이 그 파일에 실재, 가리키는 경로가 tracked, '해소 시' 칸 비우기 금지, 예고 CODE가 이미 등재 표에 있으면 실패. 차단 요인은 스캔 스코프 **밖**도 가리키므로 `git ls-files` 전체를 쓴다.",
+              "expectedOutcome": "main의 체커에 패치가 그대로 적용된다(main은 `9688a36` 이후 이 파일을 건드리지 않았다). 집계 키 `차단 요인`을 R8이 함께 대조한다."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/test/e2e.md`에 `### 차단 요인` 절과 원장 3행을 넣는다. 「미해소 위반」의 산문 문단(현재 provider 하나만 원인으로 적어 **불완전하다**)을 원장 포인터로 교체해 사본을 만들지 않는다(main #53이 정확히 사본 문제를 걷어낸 직후다). 체커 블록 개수 문장을 '네 블록 → 다섯 블록'으로 고치고 집계에 `차단 요인 3`을 더한다.",
+              "expectedOutcome": "`python3 scripts/check-fidelity-allowlist.py` exit 0이고 출력에 `차단 요인 3건`이 추가되며, **나머지 숫자는 전부 그대로**(등재 2 · 회계 행 16 · 위반 4 · 인터셉트 7 · 상한 4)."
+            },
+            {
+              "seq": 4,
+              "action": "「미해소 위반」 4행의 '제거 경로'를 원장으로 다시 걸고 **순서(①② → ③)** 를 적는다. manual-archive 2행에는 **\"워크로드를 shell로 바꿔 우회하지 않는다\"** 를 명시하고 그 이유(대상을 바꾸면 위반은 사라져도 claude-code 아카이브 UI 경로가 영영 미검증으로 남는다)를 남긴다. j6 행에는 재작성 뒤 남는 주입을 `session-deletion` 선례대로 **행 단위 `NET` 등재**로 닫는다는 방침을 적는다.",
+              "expectedOutcome": "반려 사유가 문서에 규범으로 박혀, 다음 슬라이스가 같은 우회를 다시 시도할 수 없다."
+            },
+            {
+              "seq": 5,
+              "action": "**테스트를 한 줄도 바꾸지 않았음을 기계로 확인한다** — `web/e2e/**`·`deploy/**`·런타임 코드가 diff에 없고, 모델의 as-is 버전 스크립트 결과가 main과 **동일**한지 대조한다.",
+              "expectedOutcome": "PR diff가 `docs/test/e2e.md` + `scripts/check-fidelity-allowlist.py` 2파일이고, as-is가 `seams=20 files=11` / `e0cc9203…`로 main과 같다."
+            },
+            {
+              "seq": 6,
+              "action": "**회귀가 없음을 주장이 아니라 대조로 증명한다** — 같은 트리에서 main의 이전 체커와 새 체커를 각각 돌려 출력을 `diff`한다(이전 체커는 `scripts/` 아래 임시 사본으로 두고 실행 후 삭제 — 체커가 `__file__` 기준으로 레포 루트를 잡는다).",
+              "expectedOutcome": "차이가 `차단 요인` 한 줄뿐이고 양쪽 모두 exit 0 — R1~R9의 판정이 바뀌지 않았음이 대조로 남는다."
+            },
+            {
+              "seq": 7,
+              "action": "R10이 공허하지 않음을 **음성 시험 6종**으로 확인한다: ① 선언 리터럴 소멸(원래 실패 형태의 재연) ② 판정값이 카테고리가 아님 ③ 예고 CODE를 등재 표에 미리 올림 ④ tracked 아닌 경로 ⑤ '해소 시' 칸 비움 ⑥ 집계 숫자만 위조. 주입 전 `cp`로 사본을 뜨고 그 사본으로 복원한다(`git checkout` 금지 — tracked는 편집이 날아가고 untracked는 조용히 실패한다).",
+              "expectedOutcome": "①②④⑤ R10, ③ R10+R4+R8, ⑥ R8로 실패하고, 복원 후 `cmp`로 byte-identical이며 본 검사가 다시 exit 0."
+            },
+            {
+              "seq": 8,
+              "action": "자매 게이트 2종(`./scripts/e2e/check-ac-mapping.sh`, `python3 scripts/check-render-fidelity.py`)을 돌려 이 변경이 그쪽 집계를 흔들지 않음을 확인한다.",
+              "expectedOutcome": "둘 다 exit 0 — AC 27 = 매칭 14 + 예외 1 + 공백 12 그대로."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치를 push하고 **새 PR**을 연다. 본문에 task id·판정 근거·대조 결과·음성 시험 6종·범위 밖(후속)·#42 처리 권고를 담는다.",
+              "expectedOutcome": "PR이 열리고 `ci.yml`의 잡들이 발화한다. **`e2e` 워크플로는 경로 필터(`control-plane/**`·`data-plane/**`·`web/**`·`deploy/**`·`k8s/**`·`scripts/e2e/**`·`Makefile`)에 걸리지 않아 발화하지 않으며, 그 부재 자체가 '테스트·배포를 건드리지 않았다'의 증거다**."
+            },
+            {
+              "seq": 10,
+              "action": "새 head의 CI를 완료까지 관측하고 결과를 이 레코드에 실측으로 남긴다.",
+              "expectedOutcome": "체크 전 잡 success(또는 main 전용 skip). 특히 `e2e fidelity allowlist`·`AC ↔ e2e 1:1 mapping`·`render fidelity` 세 게이트가 green."
+            }
+          ],
+          "plannedAt": "2026-09-04T08:05:00Z"
         }
       }
     ]
