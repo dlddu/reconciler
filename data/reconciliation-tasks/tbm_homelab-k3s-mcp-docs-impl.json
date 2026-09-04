@@ -271,7 +271,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "awaiting_review",
+    "status": "executing",
     "trigger": {
       "detectedAt": "2026-09-04T00:18:30Z",
       "changedSides": [
@@ -288,7 +288,7 @@
       }
     },
     "createdAt": "2026-09-04T00:18:30Z",
-    "updatedAt": "2026-09-04T05:16:00Z",
+    "updatedAt": "2026-09-04T07:09:00Z",
     "id": "rct_20260904-0001",
     "stateSummary": {
       "asIs": "**as-is (실측 시각 2026-09-04T00:17Z · `dlddu/homelab-k3s-mcp` main `0378f8d`)**\n\n`internal:e61c7bbb… main.go:cec9c82d…` — 직전 baseline(2026-09-03T12:00, `internal:00a0edc2…\nmain.go:ef750610…`) 대비 **구현이 실제로 움직였다**. 출처는 이 모델 자신의 task\n`rct_20260903-0001`이 만든 PR #48(`0378f8d`, 00:06:17Z squash 머지).\n\n- **도구 표면 15종.** `internal/mcp/toolslist.go`의 `toolsListJSON`을 `json.loads`로 파싱하면\n  `session_list`를 포함해 15개다(직전 14개). 상수 선언이 아니라 JSON 리터럴이라\n  `grep -c 'Name: \"'`류로는 0이 나온다.\n- **신규 패키지 `internal/sessionplatform`** — 제어면 `GET /api/v1/sessions` 클라이언트\n  (`Client`/`FromEnv`)와 미설정 대체 구현(`Unavailable`), 오류 종류 분리\n  (`unavailable`/`apiError`). `Session` 구조체 필드는 `id·name·workloadType·state·pod·\n  createdAt·lastAccess`.\n- **배선**: `SESSION_PLATFORM_ENDPOINT`를 세팅하는 곳은 레포 전체에서\n  `k8s/deployment.yaml:55` 하나뿐이다(`main.go:156`은 미설정 시 경고만 남기고 기동한다).\n- **제어면 가동은 문서가 아니라 클러스터에서 직접 확인**: ns `session-platform`의\n  Deployment `control-plane` **1/1 Ready**(replicas 1 · ready 1 · available 1, 생성\n  2026-09-02T01:10:21Z).\n- **미구현 잔여**: `session_read`·`session_write` — `internal/sessionplatform`에 대응 메서드가\n  없고 `internal/mcp`의 디스패치에도 없다.\n\n**미관측 1건(다음 관측으로 넘어온 항목)**: executor가 프로덕션 MCP 엔드포인트로 `session_list`를\n직접 호출하는 현장 확인을 「이 실행 세션의 도구 목록이 세션 시작 시점에 고정돼」 수행하지\n못했다고 기록했다. **이 fire도 같은 제약에 걸린다** — 내 세션의 k3s MCP 도구 표면은 14종이고\n`session_list`가 없다(세션 시작 00:01Z, 프로덕션 롤아웃 완료 00:09:07Z). 즉 이 항목은 감지\n단계가 닫을 수 없다.",
@@ -382,8 +382,11 @@
         },
         "review": {
           "required": true,
-          "status": "pending",
-          "reason": "**검토 필요 — `awaiting_review`.** 세 가지가 겹친다.\n\n1. **프로덕션 영향 있는 머지다.** `plan.riskLevel`이 `medium`이고, #51 머지는 CI의 `docker build & push`를 거쳐 프로덕션 k3s의 MCP 서버 이미지를 새 리비전으로 롤아웃시킨다. 지침이 「되돌릴 수 없는 지점은 없다(revert 하나로 충분)」고 적었지만, 되돌리기가 가능한 것과 사람 확인 없이 밀어도 되는 것은 다르다.\n2. **추가되는 도구가 읽기 전용이 아니다.** `session_read`는 제어면이 대상을 먼저 `active`로 만들기 때문에 호출 하나가 유휴 세션을 깨우고 스냅샷 세션의 파드를 되살린다(그래서 `readOnlyHint=false`로 광고한다). 도구 표면이 15 → 16으로 늘어나는 것 자체가 운영자가 알아야 할 계약 변경이다.\n3. **계획 수립 이후 전제가 움직였다.** 형제 PR #50이 2026-09-04T05:14:26Z에 머지되어 main이 `0378f8d` → `9116ac1`로 이동했고, #51은 지금 `mergeable_state=dirty`다. 지침 §4가 예고한 바로 그 충돌(`docs/doc-tracker.md` 변경 이력 표의 같은 삽입 지점)이며 해소법도 「양쪽 행을 모두 살린다」로 명시돼 있으나, **머지 전 rebase와 충돌 해소라는 추가 편집이 실행에 포함된다.** 계획이 검증한 head(`1bcfb64`)가 그대로 머지되지 않으므로 사람이 한 번 보는 것이 맞다."
+          "status": "approved",
+          "reason": "**검토 필요 — `awaiting_review`.** 세 가지가 겹친다.\n\n1. **프로덕션 영향 있는 머지다.** `plan.riskLevel`이 `medium`이고, #51 머지는 CI의 `docker build & push`를 거쳐 프로덕션 k3s의 MCP 서버 이미지를 새 리비전으로 롤아웃시킨다. 지침이 「되돌릴 수 없는 지점은 없다(revert 하나로 충분)」고 적었지만, 되돌리기가 가능한 것과 사람 확인 없이 밀어도 되는 것은 다르다.\n2. **추가되는 도구가 읽기 전용이 아니다.** `session_read`는 제어면이 대상을 먼저 `active`로 만들기 때문에 호출 하나가 유휴 세션을 깨우고 스냅샷 세션의 파드를 되살린다(그래서 `readOnlyHint=false`로 광고한다). 도구 표면이 15 → 16으로 늘어나는 것 자체가 운영자가 알아야 할 계약 변경이다.\n3. **계획 수립 이후 전제가 움직였다.** 형제 PR #50이 2026-09-04T05:14:26Z에 머지되어 main이 `0378f8d` → `9116ac1`로 이동했고, #51은 지금 `mergeable_state=dirty`다. 지침 §4가 예고한 바로 그 충돌(`docs/doc-tracker.md` 변경 이력 표의 같은 삽입 지점)이며 해소법도 「양쪽 행을 모두 살린다」로 명시돼 있으나, **머지 전 rebase와 충돌 해소라는 추가 편집이 실행에 포함된다.** 계획이 검증한 head(`1bcfb64`)가 그대로 머지되지 않으므로 사람이 한 번 보는 것이 맞다.",
+          "reviewer": "user",
+          "reviewedAt": "2026-09-04T07:08:00Z",
+          "comment": "사용자가 「승인」으로 답했다. 승인 요청 시 제시한 범위 그대로 진행한다 — #50 머지로 main이 `9116ac1`로 이동해 #51이 `dirty`이므로, rebase → `docs/doc-tracker.md` 변경 이력 표 충돌 해소(양쪽 행 모두 유지) → 두 게이트 재확인 → 머지 → 롤아웃 확인 순서. 별도 단서·제한은 달지 않았다."
         }
       }
     ]
