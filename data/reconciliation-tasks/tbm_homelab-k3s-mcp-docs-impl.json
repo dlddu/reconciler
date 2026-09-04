@@ -548,7 +548,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-04T07:39:47Z",
       "changedSides": [
@@ -755,6 +755,49 @@
               "log": "PR #53이 `MERGED`. 머지 전 head `c92c032`의 CI 4잡 전부 success, `mergeable_state: clean`을 확인한 뒤 squash 머지했다. 머지 커밋 `1d1db45`의 main CI도 `fmt + vet`·`unit tests`·`integration tests`·`docker build & push` 전부 success."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:df80f5fc542f4cfda14fd9065383373f2b83cf3f main.go:1c3bdc00914455499530398ccc260fac096c9283",
+          "checks": [
+            {
+              "name": "① 도구 표면 16 → 17 (session_write 포함)",
+              "status": "passed",
+              "detail": "`toolslist.go`의 `toolsListJSON`을 `json.loads`로 파싱해 17종 확인 — aws_config_get · dear_baby_reset_user · github_app_installation_token · grafana_token · namespace_list · opensearch_document_{delete,put} · opensearch_search · ping · pod_describe · session_{list,read,write} · workload_{list,logs,restart,scale}."
+            },
+            {
+              "name": "② AC1~AC5의 도구 계층 Go 단위 검증",
+              "status": "passed",
+              "detail": "`go test ./internal/sessionplatform/ ./internal/server/ -run Write -v` → write 관련 13케이스(하위 테스트 포함) 전부 PASS. `go test ./...` 전 패키지 ok. AC4의 핵심인 `TestWriteRefusalsAreDistinctWithoutTheControlPlanesProse`(네 상태코드에 같은 본문을 물려도 메시지가 쌍쌍이 달라야 통과)도 PASS."
+            },
+            {
+              "name": "③ doc-tracker.md의 거짓 단정 3건 소멸",
+              "status": "passed",
+              "detail": "본문 기준 0/0/0. 지침의 단순 `grep -c`는 셋 다 1을 주지만, 세 히트는 전부 `## 변경 이력` 표의 2026-09-04 행이 **교정 사실을 서술하며 원문을 인용한 것**(같은 줄 415에 셋 다 있음)이다. 살아 있는 서술인 🔴 자동화 공백 절(`:162-185`)은 실측과 일치하도록 다시 쓰였다 — 「세 도구 모두 구현됐고 도구 표면 17종」·「read·write의 전용 파일이 아직 없다(9건 공백)」·「소유자는 자매 모델 ac-e2e」·「스텁 vs 실 제어면 택일은 이미 실 제어면으로 결정」. 인용을 제외한 본문 카운트가 정확한 판정이라고 보고 passed로 둔다."
+            },
+            {
+              "name": "④ 파생 서술 교정",
+              "status": "passed",
+              "detail": "`prd-session-write.md`의 「구현 선행」 0회 · `test-session-write.md`의 「도구 미구현」 0회 · `doc-tracker.md`의 「완전 (구현 선행)」 0회."
+            },
+            {
+              "name": "⑤ EXPECTED_TOOLS 17 + toolslist.go 등호 일치",
+              "status": "passed",
+              "detail": "양방향 차집합 0, 17종. 부분집합이 아니라 등호로 대조했다."
+            },
+            {
+              "name": "⑥ 레포 게이트 2종 + CI",
+              "status": "passed",
+              "detail": "`check_ac_mapping.py` rc=0 (AC 64 · 예외 1 · 1:1 대상 63 · 매칭 전용 파일 54 · 분할 대기 0 · 공백 9 — 형제 슬라이스 #52의 집계 그대로 보존). `check_mock_policy.py` rc=0 (등재 5/상한 5 · 미등재 0 · 고아 0). 머지 커밋 `1d1db45`의 main CI: fmt + vet · unit tests · integration tests · docker build & push 전부 success."
+            },
+            {
+              "name": "(정보) 모델 전체 잔여 gap — converged 판정에 넣지 않음",
+              "status": "passed",
+              "detail": "docs-impl 렌즈의 판정 기준 1(미구현 AC)은 이제 **0건**이다(PRD 17종 도구 전부 구현). 남는 것은 자매 모델 소관인 session-read 4 · session-write 5 = **통합 e2e 파일 9개**(ac-e2e의 공백 9건에 이미 계상)와, 원장의 별개 항목인 opensearch 3종 프로덕션 스모크(env 배선 대기)다. `session_write` 프로덕션 스모크는 파괴적이라 의도적 제외 — 대체 검증은 kind 실 제어면의 통합 e2e가 진다."
+            }
+          ],
+          "verifiedAt": "2026-09-04T08:35:30Z"
         }
       }
     ]
