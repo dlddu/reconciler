@@ -246,7 +246,7 @@
   {
     "id": "rct_20260903-0003",
     "toBeModelId": "tbm_session-platform-mockup-render",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-09-03T12:14:15Z",
       "changedSides": [
@@ -472,6 +472,11 @@
           "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/58",
           "preparedAt": "2026-09-03T23:05:00Z",
           "notes": "draft PR, base main `269bc5c`(= 이 브랜치의 merge-base, 즉 **브랜치가 최신 main 위에 있다**), head `1da2866` — 5파일 +27 −7. 제품 코드·렌더 산출물·`deploy/` 변경 0.\n\n브랜치 이름에 모델 슬러그 + 재시도 차수(`-r2`)를 넣었다 — `rct` id 는 모델 간에 유일하지 않고, 직전 시도가 `reconcile/rct_20260903-0003-mockup-render` 를 이미 썼다(그 브랜치는 #55 로 머지됨).\n\n**계획 단계에서 실측을 모두 끝냈다** — 실행 단계는 CI 재확인 + 머지 + 재감지 확인이면 된다.\n① 브랜치 게이트 rc=0(`복제 파일 13개(DUP 12 · IND 1) … 유지비 7~13곳`)이고 **R1~R9 요약 4줄이 마지막 green `15f6ace`(#55 head)와 바이트 동일**(`diff` 0줄). 두 래칫(27/27 · 10/10) 무변경.\n② **병합 결과 대조** — `git merge-tree --write-tree HEAD origin/main` → `fc6688c`, 그 트리를 워크트리로 꺼내 게이트 실행 rc=0. 직전 시도가 하지 않아 실패한 바로 그 단계다.\n③ 음성 통제 6종 전부 의도한 규칙 문장으로 rc=1 — 그중 ①이 **원래 버그의 재발 형태**(새 복제 파일이 원장 없이 들어옴), ②가 **이번에 교정한 값 드리프트의 재발 형태**. 복원은 전부 `cp` 백업 → `cp` 복원 → `cmp -s` 바이트 확인.\n④ 자매 게이트 2종 회귀 없음 — `check-fidelity-allowlist.py` 출력이 main 과 문자 단위 동일(rc=0), `docs-journey-mockup` 하네스(`tools/journey-prototype.test.mjs`)가 브랜치 **105/105 pass** · `origin/main` 도 **105/105 pass**(node 22.14.0, `/home/silas/toolchains`). 그 하네스에 색상 단언이 없다는 것은 정적으로도 확인했지만 근거는 이 대조다.\n\n**충돌면 확인**: 열린 PR 2건 — #54(control-plane·data-plane·web/src/{app,screens,api} 65파일)와 #42(`docs/test/e2e.md` · `scripts/check-fidelity-allowlist.py` · `web/e2e/…`) 모두 이 PR 의 5파일을 건드리지 않는다. ⚠️ 다만 #54 는 `web/src/app/*.tsx`·`web/src/screens/*.tsx` 를 대량으로 고치므로 **R6/R7 의 HEX·INLINE·rgba 집계와 R9 상한**을 움직일 수 있다 — 이 PR 과의 충돌은 아니지만 #54 쪽이 자기 브랜치에서 게이트를 통과해야 한다.\n\n**계획 대비 조정**: 계획 seq 6 은 \"main 출력과 대조\"였으나 **현재 main 은 rc=1 이라 요약을 찍지 않는다**. 그래서 `refs/pull/55/head`(`15f6ace`, 새 게이트가 초록이던 마지막 트리)를 fetch 해 워크트리로 꺼내 기준선을 만들고 그것과 대조했다. #56 이후 main 에는 green 커밋이 없다는 사실 자체가 이 재작업의 근거이기도 하다.\n\n**PR CI 결과(2026-09-03T23:2xZ, head `1da2866`)**: 워크플로 4종 전부 `completed/success` —\n`ci`(10잡: **`render fidelity (mockups <-> SPA screens)` 포함**, `e2e fidelity allowlist` · `AC ↔ e2e 1:1 mapping` · envtest · integration · web build 등) · `docs-journey-mockup`(Playwright) · `e2e`(kind 클러스터) · GHCR 빌드.\n`mergeable=true`, `mergeable_state=clean`, base 는 여전히 `269bc5c` — **머지 직전 병합 결과 재검사(지침 2-2)가 계획 시점 실측 그대로 유효하다**(main 이 움직이지 않았다)."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "**계획의 전제가 실행 직전에 무효화됐다 — 기계적으로 진행할 수 없어 사람 판단이 필요하다.**\n\n1. **같은 수정이 이미 main에 착지했다.** PR #61(`16278575`, 2026-09-04T02:41Z, `dlddu-k3s-homelab-k3s-mcp[bot]` 머지)이 이 계획과 동일한 5파일 중 4파일을 같은 방향으로 고쳤다 — 여정 3종의 `--frozen-soft` 정본 교정 + 원장 3행 등재 + 유지비 문구 `7~13` 두 사본.\n2. **완료 기준 ①~④가 이미 참이다.** 현재 main(`96389c6`)에서 실측: `check-render-fidelity.py` rc=0(R10 = 복제 파일 13개 DUP 12·IND 1, 유지비 7~13곳), `git grep -in 12262f` 0건, 자매 게이트 `check-fidelity-allowlist.py` rc=0.\n3. **PR #58은 이제 main과 충돌한다.** `git merge-tree pr58 main` rc=1 — `web/src/design/README.md` 원장에서 양쪽이 같은 줄을 고쳤다. 지침 2-3의 `gh pr merge 58 --squash`를 그대로 실행할 수 없다.\n4. 계획 대비 **미착지 잔여는 계획 step 5의 「병합 결과에서 확인할 것」 문단 하나뿐**이고, 이는 계획이 정한 완료 기준 ①~⑤ 어디에도 들어 있지 않다.\n\n따라서 지침대로의 머지는 부적절하고, 남은 선택(취소 후 재감지에 위임 / 잔여 문단만 재계획)은 executor가 단독으로 정할 사안이 아니다 — 재계획은 planner 몫이고, 취소는 사용자 확인이 필요하다."
         }
       }
     ]
