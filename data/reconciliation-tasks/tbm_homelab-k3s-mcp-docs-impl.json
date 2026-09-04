@@ -2,7 +2,7 @@
   {
     "id": "rct_20260903-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-03T12:00:00Z",
       "changedSides": [
@@ -154,6 +154,59 @@
               "log": "계획 이후 main이 두 차례 앞서 나가 PR이 dirty가 되어, 지침 2절대로 충돌을 추측하지 않고 실측·해소했다.\n① 1차 재병합(main ed8d0c5): 충돌 2건 — docs/doc-tracker.md 변경이력 표(두 행 병존으로 해소), docs/test-session-list.md AC3 자동화 필드(#48이 추가한 단위·MCP 표면 테스트는 살리고, 미작성 통합 테스트 경로는 #44의 AC별 파일 규약 session_list_ac3.py 채택). 커밋 ad7a38d.\n② 그 사이 형제 워커가 PR #49를 머지해 main이 7456a46으로 재이동 → 2차 재병합. 충돌 1건(doc-tracker 변경이력 표, 2026-09-03 두 행 병존). 커밋 c984559.\n③ 게이트: check_ac_mapping.py rc=0, 출력이 origin/main과 문자 단위 동일(49/0/14, diff 0줄). docs 변경이 AC를 건드리지 않음도 확인(git diff main -- docs/ 에서 '^[+-]### AC' 빈 출력).\n④ PR CI 4잡 전부 success(head c984559): fmt+vet · unit tests · integration tests(kind) · docker build & push. mergeable=clean.\n⑤ 2026-09-04T00:06:17Z squash 머지 → main 0378f8d. main CI 전 잡 success(integration tests 00:10:25Z, docker push 00:10:50Z).\n⑥ 롤아웃: GitOps(flux-cd-apps)가 새 파드 템플릿을 적용해 00:09:03Z 파드 교체, 00:09:07Z 기동. 1/1 Ready, restart 0."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:e61c7bbb962efc1a4b88f04ecac20c065233c834 main.go:cec9c82d7d1b2ec4f3def1d13dd39adf90cd301a",
+          "checks": [
+            {
+              "name": "AC↔e2e 매핑 게이트(check_ac_mapping.py)",
+              "status": "passed",
+              "detail": "머지 전 브랜치에서 rc=0이고 출력이 origin/main과 문자 단위 동일(AC 64 · 예외 1 · 1:1 대상 63 · 매칭 49 · 분할 대기 0 · 공백 14). 문서 편집이 집계를 움직이지 않았다."
+            },
+            {
+              "name": "AC 계약 무변경",
+              "status": "passed",
+              "detail": "git diff main -- docs/ 에서 '^[+-]### AC' 빈 출력. docs 변경은 prd-session-list.md의 구현 상태 노트, doc-tracker 교정, test-session-list.md 자동화 필드뿐."
+            },
+            {
+              "name": "PR CI 4잡(head c984559)",
+              "status": "passed",
+              "detail": "fmt+vet(체커 포함) · unit tests · integration tests(kind 실클러스터) · docker build & push 전부 success. mergeable=clean."
+            },
+            {
+              "name": "머지 및 main CI",
+              "status": "passed",
+              "detail": "2026-09-04T00:06:17Z squash 머지 → main 0378f8d. main에서 integration tests success(00:10:25Z), docker build & push success(00:10:50Z) 포함 전 잡 초록."
+            },
+            {
+              "name": "도구 표면 15종에 session_list 존재",
+              "status": "passed",
+              "detail": "머지된 main의 internal/mcp/toolslist.go 실측 15종(ping … grafana_token, session_list). 통합 CI가 kind에 배포한 실서버의 tools/list·tools/call로 검증했다. 다만 프로덕션 MCP 엔드포인트로의 직접 tools/call은 이 실행 세션의 도구 목록이 세션 시작 시점에 고정돼 수행하지 못했다(미관측)."
+            },
+            {
+              "name": "프로덕션 롤아웃 및 env 배선",
+              "status": "passed",
+              "detail": "GitOps가 새 파드 템플릿 적용 → 파드 homelab-k3s-mcp-9fbfc5fc5-khxj2가 00:09:03Z 스케줄, 00:09:07Z 기동, 1/1 Ready, restart 0. 기동 로그에 'session platform integration loaded'가 찍혀 SESSION_PLATFORM_ENDPOINT 배선과 신규 바이너리 구동이 간접 확인된다(이 로그 줄은 이번 PR이 추가한 코드 경로다)."
+            },
+            {
+              "name": "기존 도구 회귀 없음",
+              "status": "passed",
+              "detail": "롤아웃 후 프로덕션 서버에 workload_list · pod_describe · workload_logs를 호출해 정상 응답(서버 로그 POST /mcp 200). 기존 14종의 wire 계약은 변경되지 않았다."
+            },
+            {
+              "name": "AC2 프로덕션 현장 확인(정보성)",
+              "status": "passed",
+              "detail": "세션 목록 2회 호출로 state·lastAccess 불변을 프로덕션에서 직접 보는 항목은 수행하지 못했다(도구 호출 경로 부재). 계획이 허용한 대체 경로대로 단위 TestListSessionsIsPassive + 통합 CI로 충족된 것으로 기록하고, 현장 확인은 다음 관측으로 넘긴다."
+            },
+            {
+              "name": "잔여 gap(범위 밖, 정보성)",
+              "status": "passed",
+              "detail": "모델 전체로는 session_read(4 AC)·session_write(5 AC) 9건이 미구현으로 남는다. 이번 실행이 internal/ 트리를 움직였으므로 다음 감지 주기가 후속 task를 연다. 통합 e2e 3건은 자매 모델 tbm_homelab-k3s-mcp-ac-e2e 소관."
+            }
+          ],
+          "verifiedAt": "2026-09-04T00:16:00Z"
         }
       }
     ]
