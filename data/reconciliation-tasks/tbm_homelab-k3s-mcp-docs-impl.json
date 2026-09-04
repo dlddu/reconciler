@@ -968,7 +968,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-09-04T15:12:04Z",
       "changedSides": [
@@ -985,7 +985,7 @@
       }
     },
     "createdAt": "2026-09-04T15:12:04Z",
-    "updatedAt": "2026-09-04T15:58:00Z",
+    "updatedAt": "2026-09-04T21:53:17Z",
     "id": "rct_20260904-0009",
     "stateSummary": {
       "asIs": "관측 2026-09-04T15:12:04Z, `dlddu/homelab-k3s-mcp` main `7aa025e`(#56, 14:10:02Z).\n\n**구현 코드(`internal/` + `main.go`)는 이 판정에서 쟁점이 아니다.** 직전 레코드\n`rct_20260904-0008`이 확인한 대로 #57의 `internal/` 변경은 주석 전용(주석·빈 줄을 걷어낸\n변경 줄 0)이고 도구 표면은 17종으로 `_helpers.EXPECTED_TOOLS`와 집합이 일치한다. 그 판정을\n독립 재실행으로 확인했고 **이의 없다**.\n\n**이 task가 여는 축은 as-is의 다른 부분 — 레포에 실재하는 e2e 파일 집합이다.**\n`tests/integration/`의 session 계열 파일 **7개**(실측, `7aa025e`):\n\n```\nsession_list_ac1.py  session_list_ac2.py  session_list_ac3.py\nsession_read_ac3.py  session_read_ac4.py\nsession_write_ac3.py session_write_ac5.py\n```\n\n- `session_read_ac{3,4}.py`는 **#55(09:07:06Z)** 가 착지시켰다.\n- `session_write_ac{3,5}.py`는 **#56(14:10:02Z, 이번 트리거)** 가 착지시켰다.\n\n게이트 `tests/integration/check_ac_mapping.py`를 세 커밋에서 각각 `reset --hard && clean -fdx`\n(`git status --porcelain`=0) 후 실행한 실측:\n\n| 커밋 | 매칭 파일(전용) | 공백 AC | rc |\n| --- | --- | --- | --- |\n| `4c5040f`(#55, baseline) | 56 | 7 | 0 |\n| `f58d401`(#57, 부모) | 56 | 7 | 0 |\n| `7aa025e`(#56, 트리거) | **58** | **5** | 0 |\n\n**실제 공백 5건의 신원**(레지스트리 표 `:265,266,269,270,272` 전수):\n`session-read/AC1`(오프셋 커서 읽기) · `session-read/AC2`(상태 분기 노출) ·\n`session-write/AC1`(워크로드 입력 주입) · `session-write/AC2`(상태 분기 처리와 노출) ·\n`session-write/AC4`(거부 응답의 구분 전달). 즉 **read 2 · write 3 = 5**이고 session-list는 0이다.",
@@ -1056,6 +1056,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/60",
           "preparedAt": "2026-09-04T15:52:00Z",
           "notes": "head 3050868 · base 7aa025e(#56) · 4파일 +123/−33. 문서 3 + 게이트 1(`tests/integration/check_ac_mapping.py` 규칙 7). Go 코드·픽스처·`ci.yml` 무변경 — 체커는 `fmt + vet` 잡에 이미 배선돼 있어 ci.yml을 건드릴 필요가 없었고, 그것이 「새 스크립트 + ci.yml 배선」 안을 기각한 이유다(형제 PR #58이 ci.yml을 편집 중). 로컬 게이트 3종 전부 rc=0. 규칙 7은 64 AC 전수에서 위반 2건(= 고치는 그 둘)만 잡고 나머지 17개 테스트 문서 오검출 0. 음성 통제 2종(7a: 시나리오 3에 (미작성) 복원 / 7b: 시나리오 1의 (미작성) 제거) 모두 rc=1로 위반 AC를 이름 지목, 복원 후 `cmp -s` 바이트 동일. **형제 PR #58과 시험 머지 rc=0·충돌 0**(doc-tracker.md auto-merge)이나 **머지된 트리에서는 규칙 7이 rc=1** — #58이 `session_read_ac1.py`·`session_write_ac1.py`를 착지시키면서 `docs/test-*.md`를 건드리지 않기 때문이며, 이것이 게이트를 함께 넣은 실측 근거다(없으면 같은 거짓이 두 건 새로 생긴다). 해소는 나중에 머지되는 쪽이 두 문서 시나리오 1의 `(미작성)`을 지우는 것(union, 편들기 금지). **PR CI 전건 초록(2026-09-04T15:49Z, run 33891226735)**: `fmt + vet` pass 18s · `unit tests` pass 16s · `integration tests`(kind + e2e) pass 4m24s · `docker build & push` pass 1m31s — 실패 0 · 스킵 0. 잡 로그 원문에서 게이트 출력이 로컬과 **글자 그대로 일치**함을 확인했다: `AC 전집: 64 / 예외 등재: 1 / 1:1 대상: 63 / 매칭 파일(전용): 58 / 분할 대기 파일(규칙 2 위반): 0 / 공백 AC: 5` 와 `OK: 규칙 1(중복 전용)·2·3·5·6·7 위반 없음, 러너 배차 누락·케이스 미호출 없음` — **`·7`이 찍혔다는 것이 규칙 7이 CI에서 실제로 도는 증거**다. 나머지 두 게이트도 같은 잡에서 초록(mock R1~R6 · comment R1~R4). 집계는 이 PR 전후로 불변(58 · 공백 5)이라 e2e 렌즈 값에 손대지 않았음이 기계로 확인된다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "① 불가역 지점 포함 — PR #60 머지는 revert PR 로만 되돌아간다. ② 레포 전체에 영향을 주는 CI 게이트를 추가한다: `check_ac_mapping.py` 규칙 7(전용 e2e 파일 실재 ↔ 테스트 문서 `(미작성)` 표기)이 64 AC 전수에 걸리며, 머지 후 열린 형제 PR(특히 #58)이 `docs/test-*.md` 를 함께 갱신하지 않으면 빨개진다 — 계획이 그 비용을 명시적으로 승인 사항으로 올렸다. ③ 계획 시점(15:44Z) 이후 약 6시간이 지나 형제 PR #58 의 머지 여부에 따라 실행 경로가 갈린다(OPEN 이면 그대로 진행, MERGED 면 지침 2절의 머지 후 보정 선행) — 어느 분기로 갈지가 사람이 확인할 사항이다. ④ riskLevel 은 low 이고 클러스터·배포·트래픽 영향은 0(문서 3개 + 게이트 스크립트 1개)이나, 타 워커의 작업 흐름을 막는 변경이라 사전 검토가 맞다."
         }
       }
     ]
