@@ -2944,7 +2944,48 @@
       "assessedAt": "2026-09-04T08:01:29Z"
     },
     "createdAt": "2026-09-04T08:01:29Z",
-    "updatedAt": "2026-09-04T08:13:00Z",
-    "id": "rct_20260904-0004"
+    "updatedAt": "2026-09-04T08:38:00Z",
+    "id": "rct_20260904-0004",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**session-read/AC1~AC4 중 「제어면이 에이전트 파드를 치지 않는」 2건(AC3·AC4)만 전용 e2e 파일로 닫는다.** 경계는 취향이 아니라 소스에서 나왔다 — `Service.Read`는 `activate` 뒤 `agent.Read(ctx, sess.Pod, offset)`를 부르고 `HTTPClient.Read`는 **파드 이름을 k8s API로 IP 해석해** `GET http://<podIP>:8090/read`를 치므로, AC1(오프셋 커서 읽기)·AC2(상태 분기 노출)는 ConfigMap 시드만으로 관측되지 않는다. AC2는 거기에 더해 `snapshot` 분기가 `Restore → checkpointerFor`를 타는데 그 함수가 체크포인터 `Enabled()`가 아니면 `ErrCheckpointDisabled`로 **거부**하고, 픽스처는 `CRIU_ENABLED`를 켜지 않아 `NewStubCheckpointer(false)`가 주입되므로 **현재 픽스처에서는 관측 자체가 불가능하다**. 반면 AC3의 두 실패는 어느 쪽도 파드에 닿지 않고(없는 id는 `Get`에서 404, 잘못된 커서는 `internal/mcp`가 HTTP 이전에 `-32602`로 거부), AC4는 제어면이 아예 없는 `auth-variant`에서 돈다.\n\n**완료 기준(이 task의 성공 판정)**: PR이 머지돼 main에서 `check_ac_mapping.py`가 rc=0으로 `매칭 파일(전용) 56 · 공백 AC 7`을 재도출하고(직전 54·9), CI의 `integration-tests` 잡에서 `session_read_ac3.py`(primary)·`session_read_ac4.py`(auth-variant) 두 파일이 실제로 배차·통과할 것. `check_mock_policy.py`는 등재 5·상한 5 불변(새 모킹 0건).\n\n**범위 밖(후속)**: session-read/AC1·AC2(위 선행 때문) + session-write/AC1~AC5(도구 미구현 — 자매 모델 `tbm_homelab-k3s-mcp-docs-impl` 소관). 잔여 7건은 계수에서 빠지지 않고 공백으로 남으며, 이 PR이 `tests/`를 바꾸므로 as-is 해시가 움직여 **재감지가 다음 task를 연다**. 그 다음 계획이 바로 착수할 수 있도록 AC1·AC2의 선행 조건과 그 소스 근거를 같은 PR에서 `doc-tracker.md` backlog에 확정해 적었다 — 원장이 「`DATA_PLANE_IMAGE` 배선이 필요한지 먼저 판단할 것」이라고 미뤄 둔 질문의 답이다(AC1은 필요하고, AC2는 그것만으로도 부족하다).\n\n**함께 교정하는 것**: #52가 backlog에 적은 「`session_read`·`session_write` 도구 자체가 아직 없고」는 `session_read`에 대해 **쓰인 순간 이미 거짓**이었다(구현 #51이 34분 먼저 착지). 그 문장이 4건을 자매 모델로 넘기는 동안 자매 task는 같은 4건을 자기 범위에서 제외해 **양쪽이 서로를 가리키는 상태**였다. 규칙 6이 요구하는 「집계 일치」의 산문 짝이므로 같은 PR에서 되돌린다. 곁가지로 `_helpers.EXPECTED_TOOLS`가 `session_read`를 빠뜨려 **조용히 약해져** 있던 것도 15 → 16으로 정정한다(09-03 `session_list`와 같은 형태의 재발).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #55의 범위 경계를 검토한다 — AC3·AC4만 닫고 AC1·AC2를 뺀 사유가 소스와 맞는지 확인: `agent.Read`의 파드 IP 해석 경로(`control-plane/internal/adapter/agent/client.go`)와 `checkpointerFor`의 `ErrCheckpointDisabled` 거부(`control-plane/internal/service/manager.go`).",
+              "expectedOutcome": "두 근거가 실제 소스와 일치하고, 「AC2를 active·idle 둘만으로 닫지 않는다」는 판단(반쪽 단정 회피)에 동의할 수 있다."
+            },
+            {
+              "seq": 2,
+              "action": "CI `fmt + vet` 잡의 두 체커 결과를 확인한다 — `python3 tests/integration/check_ac_mapping.py` 와 `python3 scripts/check_mock_policy.py`.",
+              "expectedOutcome": "전자 rc=0에 집계 `AC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일(전용) 56 · 분할 대기 0 · 공백 AC 7`. 후자 rc=0에 `등재 5(상한 5) · 미등재 0 · 고아 0`(불변)."
+            },
+            {
+              "seq": 3,
+              "action": "CI `integration-tests` 잡에서 두 신규 파일이 실제로 배차·실행되는지 로그로 확인한다(러너가 파일명을 출력한다).",
+              "expectedOutcome": "primary 그룹 배차 43 → 44에 `session_read_ac3.py`가, auth-variant 그룹 10 → 11에 `session_read_ac4.py`가 포함되고 둘 다 `ok: session-read/AC3` · `refusal ok: session-read/AC4`를 찍고 통과한다."
+            },
+            {
+              "seq": 4,
+              "action": "세 잡이 모두 초록인 것을 확인한 뒤 PR #55를 머지한다(squash). 실패 시 머지하지 않고 원인을 task에 기록한다.",
+              "expectedOutcome": "main에 머지 커밋이 생기고 `tests/`·`docs/` 트리 해시가 바뀐다(as-is·to-be 양쪽 트리거)."
+            },
+            {
+              "seq": 5,
+              "action": "머지된 main을 새로 체크아웃해 게이트를 **재도출**한다 — 자기신고가 아니라 레포 실제 상태에서.",
+              "expectedOutcome": "`check_ac_mapping.py` rc=0, `매칭 파일(전용): 56` · `공백 AC: 7`. 레지스트리에 `session-read/AC3 → session_read_ac3.py` · `session-read/AC4 → session_read_ac4.py` 두 행이 ✅로 서 있다."
+            },
+            {
+              "seq": 6,
+              "action": "잔여 gap 7건(session-read 2 + session-write 5)과 각각의 해소 조건을 검증 기록에 남기고, 재감지가 다음 task를 여는 경로(as-is `tests/` 해시 변경)를 명시한다.",
+              "expectedOutcome": "`converged: true`(이 계획의 범위 기준)로 task를 닫으면서도, 범위 밖 7건이 「누구도 소유하지 않는 잔여」로 남지 않는다."
+            }
+          ],
+          "plannedAt": "2026-09-04T08:38:00Z"
+        }
+      }
+    ]
   }
 ]
