@@ -368,6 +368,46 @@
       "assessedAt": "2026-09-04T14:59:10Z"
     },
     "createdAt": "2026-09-04T14:59:10Z",
-    "updatedAt": "2026-09-04T15:42:00Z"
+    "updatedAt": "2026-09-04T16:05:00+09:00",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "이번에 차단이 풀린 레포 최대 밀집 구간 `control-plane/internal/adapter/k8s/` 4파일 473줄을 판정하고, 같은 PR 에서 판정 원장을 지키는 CI 게이트를 세운다. **완료 기준(범위)**: PR #69 가 머지되고 main 에서 `scripts/check_comment_policy.py` 가 초록으로 세 행(143·229·320, 합계 692)을 보고하면 성공이다. 선행으로 PR #54 를 종료한다. **범위 밖**: `data-plane/cmd/agent/main.go`(178) 를 포함한 미판정 잔여 약 2,659줄 — 이 슬라이스가 만드는 as-is 이동의 재감지가 새 task 로 잇는다. **왜 이 경로인가**: (1) 범위 선택 — executor 가 「형제 PR #62·#64 가 잡고 있어 미룬다」로 명시적으로 기록한 1순위 `client_orchestrator.go`(327) 의 차단 사유가 이 fire 안에서 소멸했고(#64 14:18Z, #62 14:41Z 머지), 포트(`orchestrator.go`)와 구현이 서로를 되풀이하는 구조라 파일 하나만 집으면 「지운 쪽의 사본」을 소유하지 못한다 — 그래서 파일이 아니라 패키지 경계로 잡았다(직전 패스가 `internal/service/` 를 통째로 잡은 것과 같은 이유). (2) 게이트 동봉 — 감지가 「이 축에는 CI 게이트가 0건이라 원장의 「@ 측정 커밋」이 사람이 지키는 규약으로만 남아 있다」를 짚었다. 이 PR 은 원장에 세 번째 행을 더하는데, 그 행을 기계가 지키지 않으면 다음 감지가 그 범위를 「판정 완료」로 오독한다 — 행과 그 행의 집행을 같은 PR 에 두는 것이 자연스러운 짝이다(자매 레포 homelab 의 검증된 스크립트를 이식하되, 스캔 범위·지시어 정규식을 이 모델의 as-is 스크립트와 글자 그대로 맞추고 base 커밋 `4277b31` 에서 모델이 기록한 지문 `dd607ce2…de774a` 재현을 실측 확인했다). (3) 대안 기각 — 게이트를 별도 PR 로 빼는 안은 원장 행과 그 집행이 갈려 그 사이에 오독 창이 열리므로 택하지 않았고, 판정 범위를 `client_orchestrator.go` 하나로 좁히는 안은 위 (1) 의 포트↔구현 이중 서술 때문에 택하지 않았다. **가역성**: 되돌릴 수 없는 지점은 PR 머지 하나뿐이고, #54 종료는 reopen 으로, 게이트는 `ci.yml` 잡 제거로 되돌아간다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #54(`chore/prune-redundant-comments`) 를 종료한다 — `gh pr close 54 --repo dlddu/session-platform --comment '<사유>'`. 사유에 ① 정책 문서(#63)보다 먼저 만들어져 5단계 판정 절차 미적용 ② 64파일이 모든 후속 슬라이스 후보와 교집합 ③ 「포인터는 남기고 사본은 지운다」와 반대 방향 ④ 무변경·`mergeable:false`·리뷰 0건을 적는다.",
+              "expectedOutcome": "`gh pr view 54 --json state` 가 `CLOSED`. 이후 슬라이스가 어떤 경로를 집어도 #54 와 충돌하지 않는다."
+            },
+            {
+              "seq": 2,
+              "action": "PR #69 의 CI 를 확인한다 — `gh pr checks 69 --repo dlddu/session-platform`. 특히 신규 잡 `comment policy ledger (docs <-> comments)` 와 `control-plane (lint + unit)` 의 gofmt check.",
+              "expectedOutcome": "모든 잡 통과. 신규 잡이 `OK: 규칙 R1~R4 위반 없음 … 판정 완료 692줄(23.2%) / 등재 범위 3` 을 출력한다."
+            },
+            {
+              "seq": 3,
+              "action": "PR #69 를 squash 머지한다 — `gh pr merge 69 --repo dlddu/session-platform --squash`. **되돌리기 어려운 지점.**",
+              "expectedOutcome": "main 이 전진하고 `docs/comment-policy.md` 의 판정 이력이 3행, 합계 마커가 692 가 된다. `internal/adapter/k8s/` 4파일의 판정 대상 주석이 473 → 320 줄."
+            },
+            {
+              "seq": 4,
+              "action": "머지된 main 에서 수렴을 확인한다 — `python3 scripts/check_comment_policy.py` 와 기존 게이트 3종(`check-fidelity-allowlist.py`·`check-render-fidelity.py`·`scripts/e2e/check-ac-mapping.sh`), 그리고 `go vet`·`gofmt -l`·`go test ./...` (control-plane · data-plane 양쪽).",
+              "expectedOutcome": "새 게이트가 세 행(지문 `b43d405ac066`·`f708d58cdb19`·`9cdef98eca26`, 합계 692)을 초록으로 보고하고, 기존 게이트·빌드·테스트가 전부 그대로 통과한다. 모델 `lastObservedVersion` 은 건드리지 않는다 — 그 이동이 다음 감지의 트리거다."
+            }
+          ],
+          "plannedAt": "2026-09-04T16:05:00+09:00",
+          "executionGuide": "# 실행 지침 — `rct_20260904-0003` (3차 판정 슬라이스 + 원장 게이트)\n\n## 이 시도의 완료 기준\n\n**PR [#69](https://github.com/dlddu/session-platform/pull/69) 가 머지되고, 머지된 main 에서\n`python3 scripts/check_comment_policy.py` 가 초록으로 세 행을 보고하면 이 task 는 성공이다.**\n모델 전체 gap(미판정 2,659줄)의 수렴은 이 시도의 판정 기준이 **아니다** — 잔여는 재감지가\n새 task 로 잇는다.\n\n## 순서 (의존성이 있다 — 바꾸지 말 것)\n\n### 1. PR #54 를 **먼저** 닫는다 ← 되돌릴 수 있음(reopen)\n\n```bash\ngh pr close 54 --repo dlddu/session-platform --comment \"<아래 사유>\"\n```\n\n사유는 이미 머지된 정책 문서(#65)의 권고와 이 PR 의 기록을 인용한다: ① #63(정책 문서)보다\n하루 앞서 만들어져 5단계 판정 절차를 한 번도 거치지 않았다, ② 64파일이 **모든 후속 슬라이스\n후보와 교집합**이라 열어 둔 채로는 어떤 범위도 안전하게 집을 수 없다, ③ 「포인터는 남기고\n사본은 지운다」와 정확히 반대 방향으로 `(AC-…)` 포인터를 지운다, ④ 2026-09-03 이후 무변경이고\n`mergeable:false`, 리뷰 0건.\n\n**왜 먼저인가**: #69 가 머지되면 `internal/adapter/k8s/` 의 주석이 바뀐다. #54 는 그 4파일을\n전부 건드리므로, 순서가 뒤바뀌면 #54 의 충돌 표면이 커지고 「어느 쪽이 정본인가」가 흐려진다.\n또한 #69 의 정책 문서 변경이 「#54 를 종료한다」를 **기록**하므로, 기록과 사실이 어긋난 채로\n머지되면 안 된다.\n\n**검증**: `gh pr view 54 --repo dlddu/session-platform --json state` → `\"CLOSED\"`.\n\n### 2. PR #69 의 CI 가 전부 초록인지 확인한다\n\n```bash\ngh pr checks 69 --repo dlddu/session-platform\n```\n\n특히 새로 추가된 **`comment policy ledger (docs <-> comments)`** 잡을 볼 것. 이 잡이\nGitHub Actions 에서 처음 도는 것이라, 로컬 통과가 CI 통과를 보장하지 않는 유일한 후보다.\n\n- 실패하면 **머지하지 말 것.** R2 실패라면 base 가 전진하며 등재 범위에 주석이 더해진 것이다 —\n  그때는 rebase 후 `python3 scripts/check_comment_policy.py` 출력의 실측 줄 수·지문으로\n  `docs/comment-policy.md` 3차 행을 갱신하고 합계도 함께 고친 뒤 다시 밀 것(그 갱신 자체가\n  재판정의 기록이다).\n- `control-plane (lint + unit)` 의 `gofmt check` 도 볼 것 — 주석 제거로 구조체 필드 정렬 그룹이\n  합쳐져 gofmt 가 공백을 재정렬했고, 그 결과를 커밋에 이미 포함했다.\n\n**병렬 가능**: 1 과 2 는 서로 의존하지 않는다. 다만 3 은 둘 다 끝난 뒤다.\n\n### 3. PR #69 를 머지한다 ← **되돌리기 어려운 지점**\n\n```bash\ngh pr merge 69 --repo dlddu/session-platform --squash\n```\n\n여기부터는 main 이 전진하고 배포 핀 워크플로가 새 이미지를 굽는다. 되돌리려면 revert PR 이\n필요하다.\n\n**검증**: 머지 커밋에서\n```bash\npython3 scripts/check_comment_policy.py\n```\n가 `OK: 규칙 R1~R4 위반 없음 … 판정 완료 692줄` 과 등재 범위 3을 출력하고, 세 행의 지문이\n`b43d405ac066` · `f708d58cdb19` · `9cdef98eca26` 인지 확인한다.\n\n### 4. 수렴 판정 (4-4)\n\n**계획 범위 기준**으로 아래 넷을 확인하면 수렴이다:\n\n1. `docs/comment-policy.md` 의 판정 이력이 **3행**이고 합계 마커가 **692**다.\n2. `scripts/check_comment_policy.py` 가 main 에서 초록이고, `ci.yml` 에 `comment-policy` 잡이\n   있으며 `make lint` 가 그것을 부른다.\n3. `control-plane/internal/adapter/k8s/` 4파일의 판정 대상 주석이 **320줄**이다\n   (판정 전 473 − 제거 153).\n4. PR #54 가 `CLOSED` 다.\n\n**모델의 `lastObservedVersion` 은 건드리지 말 것** — 이 이동이 다음 감지의 트리거다.\n\n## 주의사항\n\n- **되돌릴 수 없는 지점은 3(머지)뿐이다.** 1은 reopen 으로, 2는 아무것도 바꾸지 않으므로 되돌아간다.\n- **트래픽·데이터 영향 없음.** 주석만 지웠고 `go build`·`go vet`·`gofmt`·유닛 테스트가 전부\n  초록이다. 유일한 비주석 변경은 gofmt 의 공백 재정렬(동작 무관)과 신규 CI 잡·Makefile 타깃이다.\n- **새 CI 잡이 다른 PR 을 막을 수 있다.** 머지 이후 열려 있는 모든 PR 이 `comment-policy` 잡을\n  받는다. 그 잡이 빨개지는 PR 은 **등재 범위에 주석을 더한 PR**이고, 그것이 이 게이트의 목적이다 —\n  해당 PR 저자는 그 범위를 재판정하고 원장 행을 갱신해야 한다. 이 부작용은 의도된 것이지만,\n  머지 직후 형제 워커의 PR 이 걸릴 수 있으니 인지할 것.\n- **게이트의 스캔 범위·지시어 정규식은 모델 `tbm_session-platform-comment-redundancy` 의 as-is\n  버전 스크립트와 글자 그대로 같아야 한다.** 한쪽만 고치면 게이트가 모델이 보지 않는 것을 재게\n  된다. 스크립트 상단 주석에 그 요구를 못박아 두었다.\n- **피크 시간대 회피 불필요** — 배포 영향이 없는 문서·주석 변경이다.\n\n## 롤백\n\n| 단계 | 롤백 |\n| --- | --- |\n| 1 (#54 종료) | `gh pr reopen 54` |\n| 2 (CI 확인) | 상태 변경 없음 |\n| 3 (#69 머지) | revert PR. 게이트만 되돌리려면 `ci.yml` 의 `comment-policy` 잡 제거로 충분하다 — 원장 형식은 되돌리지 않아도 무해하다(사람이 읽는 표로 남는다) |\n\n## 범위 밖 (후속 — 재감지가 새 task 로 잇는다)\n\n- **`data-plane/cmd/agent/main.go` (178줄)** — 이번에 함께 차단이 풀린 2순위. 다음 슬라이스 1순위.\n- `control-plane/internal/adapter/` 잔여 약 500줄(`criu/` 149 · `configmap/` 82 · `agent/` 48 ·\n  `checkpointstore/` 47 …), `control-plane/test/` 558줄, `web/` 222줄, `cmd/control-plane/` 77줄.\n- **지문 사각지대의 패턴 확장** — 줄 끝 주석과 Go raw string 안의 주석. 이 범위에서 줄 끝 주석\n  7건을 실측했다. 확장하려면 게이트·모델 정의·정책 문서를 **한 번에** 고쳐야 한다.\n- **오검출(포인터 역참조·임베드 필드)** — 직전 패스가 레포 전체 36줄로 보고했다. 이 범위에는 0건.\n"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20260904-0003-opus5-1m",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/69",
+          "preparedAt": "2026-09-04T16:05:00+09:00",
+          "notes": "8파일 +502/−269. 신규 `scripts/check_comment_policy.py`(R1~R4, 표준 라이브러리 전용)와 `ci.yml` 의 `comment-policy` 잡 · `make check-comment-policy`(+`lint` 에 편입); `docs/comment-policy.md` 의 원장을 마커 + `| 판정일 | 범위 | 주석 줄 | 지문 | 결과 |` 로 이전하고 기존 두 행을 파일 단위·현재 값으로 재기재(143 · 229) 후 3차 행(320) 추가, 3차 패스 상세 절과 #54 종료 판단 기록 추가; `internal/adapter/k8s/` 4파일에서 주석 153줄 제거. 로컬 검증 완료 — 새 게이트 초록(+음성 테스트로 R2 발화 확인), 기존 정적 게이트 3종 초록, control-plane·data-plane 양쪽 `go vet`/`gofmt`/`go test` 초록. base `4277b31` 에서 게이트가 모델 as-is 지문 `dd607ce2…de774a`(lines=3132 files=107)를 정확히 재현함을 실측. 푸시에 `workflows:write` 토큰이 필요했다(`ci.yml` 변경) — 기본 contents/pull_requests 토큰으로는 remote 가 거부한다. 머지는 하지 않았다."
+        }
+      }
+    ]
   }
 ]
