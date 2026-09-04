@@ -344,5 +344,34 @@
     "createdAt": "2026-09-04T09:17:30Z",
     "updatedAt": "2026-09-04T09:17:30Z",
     "id": "rct_20260904-0003"
+  },
+  {
+    "id": "rct_20260904-0004",
+    "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
+    "status": "no_action_needed",
+    "trigger": {
+      "detectedAt": "2026-09-04T14:44:04Z",
+      "changedSides": [
+        "as_is"
+      ],
+      "asIs": {
+        "previousVersion": "sites=40 files=26\nc59493cb4b36715b3e047862db81e59edb98f3c803ff634af967b035cc51d766",
+        "currentVersion": "sites=41 files=27\ne3c327045893cf6c68913ff1afe9ef62035e70388bfcf465c6931e5a44edba09"
+      }
+    },
+    "stateSummary": {
+      "asIs": "관측 2026-09-04T14:3xZ, `dlddu/homelab-k3s-mcp` main `7aa025e`(#56, 14:10:02Z). 직전 baseline은 `4c5040f`(#55) 시점.\n\n**지문**: `sites=40 files=26` → **`sites=41 files=27`** (+1 site / +1 file).\n\n**모킹 게이트 `scripts/check_mock_policy.py`는 부모(`f58d401`)·트리거(`7aa025e`) 양쪽에서 rc=0이고 출력이 바이트 동일하다**:\n\n```\nOK: 규칙 R1~R6 위반 없음 — 등재 5(상한 5) · 모킹 지점 5 · 실재 토큰 5 · 표기 주석 5 · 미등재 0 · 고아 0\n  UPS  github-mock              대체 검증: —\n  UPS  grafana-mock             대체 검증: —\n  IMG  dear-baby-fixture        대체 검증: —\n  GATE MCP_AUTH_DISABLED        대체 검증: tests/k8s/kind/auth-fixture.yaml\n  GATE DISABLE_SECURITY_PLUGIN  대체 검증: tests/k8s/kind/http-trace.yaml\n```\n\n**+1 site를 `comm` 차집합으로 특정했다** — 세 커밋(`4c5040f`/`f58d401`/`7aa025e`)에서 각각 `reset --hard && clean -fdx`(`git status --porcelain`=0) 후 지문 스크립트의 site 목록을 뽑아 비교:\n\n- `#55 → #57`: 추가 0 · 제거 0 (sites 40 불변). #57은 `scripts/`·`docs/`·`internal/`만 건드려 `tests`·`.github/workflows` 스캔 범위 밖이다.\n- `#57 → #56`: 추가 **정확히 1건** — `tests/integration/session_write_ac5.py:MCP_AUTH_DISABLED` · 제거 0.\n\n**그 1건의 원문 맥락**(`session_write_ac5.py:10`):\n\n> ``auth is on (``MCP_API_KEYS`` set, ``MCP_AUTH_DISABLED`` unset) and no credential``\n\n모듈 docstring 산문이며, 그 env가 **미설정임을 선언하는** 문장이다 — *정의*가 아니라 *언급*이다. 레포 전체에서 `MCP_AUTH_DISABLED`가 실제로 **SET**되는 지점은 여전히 `tests/k8s/kind/kustomization.yaml:19`(`- MCP_AUTH_DISABLED=1`) **한 곳뿐**이고, 나머지 등장은 전부 산문(README·PRD·테스트 문서·doc-tracker·다른 docstring)이거나 Go 코드의 참조다.",
+      "toBe": "관측 2026-09-04T14:3xZ. `docs/e2e-mocking-policy.md` blob `e933220f9367d357f30eb0343f53934d7f7b675a` — **불변**(baseline 2026-09-03T23:12:00Z와 동일). 두 트리거 어느 쪽도 이 파일을 건드리지 않았다(`git diff --name-only 4c5040f 7aa025e -- docs/` = `docs/comment-policy.md` · `docs/doc-tracker.md` 둘뿐).\n\n허용목록은 5종 그대로다: `github-mock`(UPS) · `grafana-mock`(UPS) · `dear-baby-fixture`(IMG) · `MCP_AUTH_DISABLED`(GATE, 대체 검증 `auth-fixture.yaml`) · `DISABLE_SECURITY_PLUGIN`(GATE, 대체 검증 `http-trace.yaml`).",
+      "gap": "**유의미한 차이가 없다 — 지문 스파이크가 판정 단위의 이동이 아니다(같은 오탐 계열 4 fire 연속).**\n\n정의는 정합 상태를 「허용목록에 등재된 지점의 집합 == 코드에 실재하는 지점의 집합(양방향 1:1)」으로 못박는다. 그 집합은 **모킹 지점**이지 「토큰이 등장하는 줄」이 아니다.\n\n- **등재 5 == 실재 5 == 표기 주석 5 · 미등재 0 · 고아 0** — 게이트가 부모·트리거에서 **바이트 동일**하게 출력한다. 지문이 41로 오른 것은 판정 단위가 늘어서가 아니다.\n- **+1의 정체**: `session_write_ac5.py:10`의 모듈 docstring이 「`MCP_AUTH_DISABLED` **unset**」이라고 *선언하는* 산문. 지문 정규식(`MCP_AUTH_DISABLED`)이 정의와 언급을 구별하지 못해 파일이 늘 때마다 +1이 오른다. 이 레포에 같은 관용구가 여러 파일에 있고, **실제 SET 지점은 `tests/k8s/kind/kustomization.yaml:19` 하나로 불변**이다.\n- **모킹은 0건 늘었다** — #56은 e2e 파일 2개를 더했을 뿐 새 상류 스텁도, 새 충실도 저하 스위치도, `ci.yml`·픽스처 변경도 없다. 자매 렌즈(`ac-e2e`) task `rct_20260904-0007`의 검증도 같은 결론을 독립적으로 기록했다(「모킹을 0건 늘렸다는 계획의 단정대로 지문이 불변」).\n\n**정의가 지목한 사각지대에도 걸리지 않는다** — 「다른 이름을 쓴 새 스텁이나 새 충실도 저하 env」의 안전망은 `# mock-exception:` 표기 규약인데, 신규 2파일에 그 주석은 0건이고 게이트의 `표기 주석 5`도 불변이다.\n\n⚠️ **다음 fire를 위한 기록**: 이 오탐은 **4 fire 연속** 재발했다(09-03 23:xx `sites 39→40` · 09-04 05:31 `+2` · 09-04 08:xx · 이번 `+1`). 매번 `MCP_AUTH_DISABLED` 관용구를 담은 e2e 파일이 늘어난 것이고, 그때마다 정답 절차는 같다 — **부모·트리거에서 site 목록을 뽑아 `comm` 차집합 + 파일별 원문 맥락**(카운트만 보지 말 것). 잔여 공백 AC를 닫는 파일이 앞으로도 이 관용구를 계속 들고 들어오므로 재발은 계속된다. 지문 패턴을 「정의만 잡도록」 좁히는 것은 모델 개정(tobe-modeler) 사항이지 이 단계의 판정이 아니며, 게이트가 이미 양방향 1:1을 강제하므로 **오탐의 비용은 헛 트리거 한 번뿐**이다.",
+      "summarizedAt": "2026-09-04T14:44:04Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "reason": "**작업 불필요(`actionRequired: false`).**\n\n1. **정의가 요구하는 등식이 성립한다** — `check_mock_policy.py`가 부모·트리거에서 rc=0, 출력 바이트 동일(`등재 5 · 실재 5 · 표기 주석 5 · 미등재 0 · 고아 0`). 미등재 모킹도 고아 등재도 0건이다.\n2. **지문 +1은 판정 단위가 아니다** — `comm` 차집합으로 단 1건(`session_write_ac5.py:MCP_AUTH_DISABLED`)임을 특정했고, 원문은 그 env가 **미설정임을 선언하는** 모듈 docstring이다. 실제 SET 지점은 `tests/k8s/kind/kustomization.yaml:19` 하나로 불변.\n3. **to-be 불변** — `docs/e2e-mocking-policy.md` blob이 baseline과 동일하다. 허용목록·카테고리 판정이 재검토를 요구하지 않는다.\n4. **이 레코드가 baseline을 전진시킨다** — 판정을 남기고 baseline을 `sites=41 files=27` 지문으로 옮겨 5분 precheck의 헛 재발사를 끊는다. 열린 task가 0개라 경쟁하는 작업도 없다.\n\n노이즈 판정이지만 **모킹이 는 것이 아니라 관용구를 담은 e2e 파일이 는 것**이라는 근거를 남긴다 — 다음 fire가 같은 스파이크를 다시 파지 않도록 절차(`comm` 차집합 + 원문 맥락)까지 함께 적었다.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-04T14:44:04Z"
+    },
+    "createdAt": "2026-09-04T14:44:04Z",
+    "updatedAt": "2026-09-04T14:44:04Z"
   }
 ]
