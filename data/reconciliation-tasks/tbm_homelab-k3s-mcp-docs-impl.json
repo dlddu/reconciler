@@ -577,7 +577,78 @@
       "assessedAt": "2026-09-04T07:39:47Z"
     },
     "createdAt": "2026-09-04T07:39:47Z",
-    "updatedAt": "2026-09-04T07:42:49Z",
-    "id": "rct_20260904-0003"
+    "updatedAt": "2026-09-04T07:47:09Z",
+    "id": "rct_20260904-0003",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**`session_write` 도구 계층을 구현해 이 모델의 마지막 미구현 도구를 닫고, 같은 PR에서 원장 `doc-tracker.md:166-168`의 거짓 서술 3건을 교정한다.** 접근은 직전 슬라이스(`session_read`, PR #51)가 증명한 골격을 그대로 재사용한다 — `internal/sessionplatform`에 제어면 클라이언트 메서드 추가 → `Service` 인터페이스 확장(직전 사이클에서 `server.App`/`NewHandler`가 이미 `sessionplatform.Service`를 받으므로 배선 비용 0) → `Unavailable` 대체 구현 → `internal/mcp` 도구 등록·디스패치 → Go 단위. 새 설계 판단은 **거부 응답 매핑 하나**다: 원장이 지목한 대로 `errKind`에 재시도 가능/불가를 더하되, **두 종류가 아니라 세 종류**(`kindBusy` 429 · `kindTooLarge` 413 · `kindQuotaExhausted` 507)를 더한다 — 두 종류면 413과 507이 같은 kind로 접혀 둘의 구별이 제어면이 보내는 산문(`{\"error\": ...}`)에만 의존하게 되고, AC4가 요구하는 것은 '네 거부가 서로 구별되는 것'이라 그 의존을 구조로 바꾸는 편이 세다. 페이로드 1 MiB 상한은 **클라이언트에서 선제 거부하지 않는다** — 상한은 `claude-code`에만 걸리는 워크로드 타입별 규칙이고 클라이언트는 조회 없이 타입을 모르므로, 판정은 제어면에 남기고 413만 구별해 전달한다. 대안으로 'sessionplatform을 건드리지 않고 mcp 레이어에서 HTTP를 직접 치는' 길이 있었으나 `Unavailable` 대체·단위 스텁·DI가 전부 Service 인터페이스에 묶여 있어 채택하지 않았다. 가역성: 전 범위가 코드·문서 추가/수정이고 PR 되돌리기(revert)로 완전 롤백된다. 클러스터 상태·데이터에 손대지 않는다.\n\n### 이 시도의 범위(완료 기준)\n\n다음 6가지가 모두 참이면 이 task는 성공이다:\n1. `session_write`가 `internal/sessionplatform`(`WriteSession`)·`internal/mcp`(등록·디스패치·`toolslist.go`)에 구현돼 **도구 표면 16 → 17**이 된다.\n2. AC1~AC5가 **도구 계층에서** Go 단위로 검증된다(제어면 httptest 스텁 + `fakeSessionPlatform`).\n3. `docs/doc-tracker.md:166-168`의 세 단정(「통합 e2e 케이스가 없다」·「e2e 렌즈에서 공백으로 계수된다」·「스텁/실 제어면 택일은 그 렌즈의 몫이다」)이 실측과 일치하게 교정된다.\n4. 이 PR이 거짓으로 만드는 서술 — `prd-session-write.md`의 「구현 선행 문서」, `test-session-write.md`의 「도구 미구현」·`(미작성)` 중 도구 계층 몫, `doc-tracker.md`의 자동화 커버리지 🔴 첫 항목 — 이 **같은 PR에서** 교정된다.\n5. `tests/integration/_helpers.py::EXPECTED_TOOLS`가 **15 → 17**로 정정된다(`session_read` 누락분 + 신규 `session_write`).\n6. 레포 게이트 2종(`check_ac_mapping.py` · `check_mock_policy.py`)과 CI 4잡이 전부 초록이다.\n\n### 범위 밖(후속 — 이 슬라이스가 닫지 않는다)\n\n- **session-read/AC1~AC4 · session-write/AC1~AC5의 통합 e2e 파일 9개** — 자매 모델 `tbm_homelab-k3s-mcp-ac-e2e`의 공백 11건에 이미 계상돼 있다. 이 PR은 e2e 레지스트리 표(`:256-267`)와 집계(매칭 52 · 공백 11)를 **건드리지 않는다** — 건드리면 이중 계상이고 `check_ac_mapping.py`가 즉시 붉어진다.\n- **프로덕션 스모크** — `session_write`는 `destructiveHint=true`이고 접근만으로 스냅샷을 복원한다. 프로덕션 임의 세션 대상 시험 호출을 하지 않는다(주의사항 참조). 대체 검증의 소유는 자매 e2e 렌즈다.\n- **opensearch 3종 프로덕션 스모크** — 원장의 별개 🔴 항목, env 배선 대기 중.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-04T07:47:09Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`internal/sessionplatform/sessionplatform.go`: 제어면 write 계약을 코드로 옮긴다. (a) `writePath(id)` = `/api/v1/sessions/{id}/write`, (b) `WriteResult{Session, Path}` 타입 — 제어면 OpenAPI `WriteResult`가 `{session, path}`뿐이고 payload/nextOffset이 **없다**(비블로킹의 구조적 표현: 산출물은 read로만 회수한다), (c) `errKind`에 `kindBusy`(429) · `kindTooLarge`(413) · `kindQuotaExhausted`(507) 추가 + `Error.Error()`에 각각의 접두사 — 재시도 가능(`busy, retry after ...`)과 불가(`payload too large` / `output quota exhausted`)가 **문구에서** 갈리게 한다, (d) `Service` 인터페이스에 `WriteSession(ctx, id, payload string) (*WriteResult, error)` 추가, (e) `Unavailable.WriteSession`, (f) `Client.WriteSession` — 빈 id는 HTTP 이전 `invalidArgument`로 거부하고, 응답은 404/400/413/429/507/기타 비-2xx를 각 kind로 매핑한다.",
+              "expectedOutcome": "`go build ./...` 통과. `Service`를 만족하는 구현체가 `Client`·`Unavailable`·테스트 fake 셋뿐이므로 컴파일 에러가 곧 누락 목록이 된다."
+            },
+            {
+              "seq": 2,
+              "action": "`internal/mcp/toolslist.go`에 `session_write` 항목을 추가한다 — `inputSchema`: `id`(string, 필수) · `payload`(string, 필수), `additionalProperties:false`, `required:[\"id\",\"payload\"]`. `annotations`: `title=\"Write to Session\"` · `readOnlyHint=false` · `destructiveHint=true` · `idempotentHint=false` · `openWorldHint=true`(PRD가 네 힌트를 전부 못박았다). description에 워크로드 타입별 의미(shell=PTY stdin / claude-code=프롬프트 큐 1회 실행) · 비블로킹 · 산출물은 `session_read`로 회수 · 접근=active화 부수 효과(스냅샷 복원 포함)와 `path` 3종(`active`/`idle->active->write`/`snapshot->restore->write`) · 거부 4종을 적는다.",
+              "expectedOutcome": "`toolsListJSON`을 `json.loads`로 파싱했을 때 도구 17종이고 `session_write` 어노테이션이 `destructiveHint=true`·`readOnlyHint=false`다(AC3)."
+            },
+            {
+              "seq": 3,
+              "action": "`internal/mcp/mcp.go`: `case \"session_write\": return h.sessionWrite(ctx, rawArgs)` 디스패치와 `sessionWrite` 핸들러를 추가한다. 인자 검증은 HTTP 이전에 한다 — `id` 누락/비문자열, `payload` 누락/비문자열은 `-32602` JSON-RPC 에러(도구 에러 아님)로 거부하고 **제어면에 요청을 보내지 않는다**. 성공 응답은 `{\"path\": ..., \"session\": {...}}`이며 `session.pod`는 `sessionRead`와 같은 규칙으로 빈 값이면 생략한다. 1 MiB 상한은 여기서 검사하지 않는다(워크로드 타입별 규칙 — 제어면 소관).",
+              "expectedOutcome": "`go build ./... && go vet ./...` 통과. `tools/call session_write`가 `structuredContent.path`·`structuredContent.session.state`를 돌려준다."
+            },
+            {
+              "seq": 4,
+              "action": "`main.go`의 `buildSessionPlatformService()` 경고 문구를 `\"session_list, session_read and session_write tools will return errors\"`로 갱신한다(현재 `session_write`가 빠져 있어 미설정 시 로그가 실제 영향 범위를 과소 보고한다).",
+              "expectedOutcome": "미설정 기동 시 로그가 영향받는 도구 3종을 정확히 열거한다."
+            },
+            {
+              "seq": 5,
+              "action": "`internal/sessionplatform/sessionplatform_test.go`에 write 단위를 더한다. 제어면 스텁은 `/read`와 `/write`를 **한 서버에서** 서빙하고 write가 출력 버퍼에 append하도록 만든다 — AC1의 검증 방법(\"write한 뒤 read로 출력 누적 확인\")을 도구 계층에서 그대로 재현하기 위함이다. 케이스: ① `TestWriteThenReadRecoversOutput`(AC1 — payload가 **바이트 그대로** 전달되고, write 응답에는 출력이 없으며, 뒤이은 read에서 누적으로 관측된다) ② `TestWriteDisclosesStateBranch`(AC2 — `active`/`idle->active->write`/`snapshot->restore->write` 3분기가 그대로 전달되고 처리 후 상태가 `active`) ③ `TestWriteMapsControlPlaneRefusals`(AC4 — 404/413/429/507 각각이 **서로 다른 kind와 서로 다른 문구**를 내고, 큐 포화만 재시도 가능으로 읽힌다) ④ `TestWriteRejectsEmptyIDBeforeTheWire`(빈 id 거부 시 스텁이 본 요청 0건) ⑤ `TestUnavailableRefusesWrite`(AC5) ⑥ `TestWriteUsesThePerSessionEndpoint`(POST `/api/v1/sessions/{id}/write` 경로 고정). 픽스처에서 개념상 다른 두 값(세션 id ↔ pod 이름, path ↔ state)이 우연히 같아지지 않게 서로 다른 리터럴로 잡는다.",
+              "expectedOutcome": "`go test ./internal/sessionplatform/ -v` 전부 통과. AC4 케이스는 네 에러 문자열이 쌍쌍이 서로 다름을 단언하므로 매핑이 하나로 접히면 실패한다."
+            },
+            {
+              "seq": 6,
+              "action": "`internal/server/fakes_test.go`에 `writeCall{id, payload}` · `fakeSessionPlatform.writeCalls` · `writeResponse` 훅 · `WriteSession` 메서드를 더하고, `internal/server/mcp_test.go`에 도구 계층 단위를 더한다: ① `TestToolsListAdvertisesSessionWrite`(AC3 — 네 어노테이션 전부와 `required:[id,payload]`) ② `TestSessionWriteReturnsBranchAndSession`(AC2 — `snapshot->restore->write` 분기와 처리 후 `active` 상태가 응답에 드러난다) ③ `TestSessionWriteRejectsBadArguments`(id 누락 · payload 누락 · payload 비문자열 → `-32602`이고 `writeCalls`가 0건 = 거부된 호출은 세션을 건드리지 못한다) ④ `TestSessionWriteSurfacesRefusals`(실 `Client`를 httptest 제어면에 붙여 429/507이 서로 다른 도구 에러로 나오고 둘 다 `unavailable`과 다르게 읽힘) ⑤ `TestSessionWriteUnavailableReturnsToolError`(AC5 — 거부가 이 도구에 갇히고 직후 `ping`은 `pong`).",
+              "expectedOutcome": "`go test ./internal/server/ -v` 전부 통과. `go test ./...` 전체 통과."
+            },
+            {
+              "seq": 7,
+              "action": "`tests/integration/_helpers.py::EXPECTED_TOOLS`를 15 → **17**로 정정한다(`session_read` 누락분 + 신규 `session_write`). 감지가 지목한 15→16에 이번 슬라이스가 더하는 1종을 합친 값이다. 단정이 `EXPECTED_TOOLS - names` 부분집합이라 누락은 CI를 깨지 않고 **조용히 약화**시키므로, 도구를 더하는 PR이 같은 자리를 함께 고치는 것이 유일한 방어다.",
+              "expectedOutcome": "`smoke.py`(primary)와 `platform_auth_safety_ac5.py`(auth-variant) 두 소비자가 17종을 요구하고, `toolslist.go`가 정적이라 두 배포 모두 만족한다. 통합 잡 초록."
+            },
+            {
+              "seq": 8,
+              "action": "`docs/doc-tracker.md`의 **자동화 커버리지** 절을 교정한다. (a) 🔴 첫 항목(`:155-165`, session_write 미구현)을 삭제하고 그 내용을 🟢 자동화 항목으로 옮긴다 — session_write AC1~AC5의 **도구 계층**이 어느 테스트로 검증되는지 파일·케이스 이름으로 적는다. (b) 🔴 **두 번째 항목(`:166-168`)의 거짓 단정 3건을 교정**한다: 「`tests/integration/`에 아직 케이스가 없다」→ session-list 3건은 `session_list_ac{1,2,3}.py`로 저작 완료(2026-09-04), 「공백으로 계수된다」→ 같은 파일 `:256-258`이 셋 다 ✅ 전용 파일로 등재하고 게이트 실측도 매칭 52·공백 11, 「스텁/실 제어면 택일은 그 렌즈의 몫」→ 그 택일은 이미 내려졌다(모킹 정책 `IMG` 조항에 따라 **실 제어면** `tests/k8s/kind/session-platform.yaml`, `:288`·`:292`가 근거를 기록). 남는 진짜 공백은 **session-read 4 + session-write 5 = 9건의 통합 e2e**이며 그 소유는 자매 렌즈임을 명시한다. (c) 문서 인벤토리·허브 수치·AC 전집은 **불변**이므로 손대지 않는다.",
+              "expectedOutcome": "`grep -c '아직 케이스가 없다' docs/doc-tracker.md` = 0, `grep -c 'session 3종의 통합 e2e — 미작성'` = 0. `## AC ↔ e2e 1:1` 이후 영역은 변경 이력 1행 외 무변경."
+            },
+            {
+              "seq": 9,
+              "action": "`docs/prd-session-write.md`의 「구현 선행 문서」 인용구(`:24-25`)와 `docs/test-session-write.md`의 「자동화 상태: 도구 미구현」 인용구 및 각 시나리오의 `(미작성)` 표기를 **이 PR이 실제로 만든 상태**에 맞춘다 — 도구 계층은 구현·Go 단위 검증됨, 통합 e2e는 `(미작성)`으로 남기되 그 소유가 AC↔e2e 1:1 렌즈임을 명시한다. 시나리오별 자동화 필드의 존재하지 않는 경로(`tests/integration/session.py::...`)를 실제 파일·케이스 이름으로 재조준한다. **AC 문안·개수는 고치지 않는다**(AC 전집 64 불변 — 게이트가 재도출로 확인한다).",
+              "expectedOutcome": "`check_ac_mapping.py`가 AC 전집 64·매칭 52·공백 11로 rc=0을 유지한다(AC 문안 무변경). 두 문서에 「미구현」·「구현 선행」 서술이 남지 않는다."
+            },
+            {
+              "seq": 10,
+              "action": "`docs/doc-tracker.md`의 **변경 이력** 표 맨 위에 `| 2026-09-04 |` 행을 1개 추가한다 — 무엇을 구현했고(도구 표면 16→17), 어떤 설계 판단을 했으며(거부 kind 3종 추가와 그 이유), 원장 어긋남 3건을 어떻게 교정했고, 무엇을 범위 밖으로 남겼는지(통합 e2e 9건 — 자매 렌즈)를 적는다. 이전/이후 상태 칸은 `가치 5 / PRD 18 / AC 64 / 테스트 18 (불변)`.",
+              "expectedOutcome": "감사 이력이 남고, `### AC 레지스트리` 이후 영역의 변경이 이 1행뿐임을 diff 훵크 라인 번호로 대조 가능하다."
+            },
+            {
+              "seq": 11,
+              "action": "로컬 게이트 재현: `gofmt -l .`(빈 출력) → `go vet ./...` → `go build ./...` → `go test ./... `→ `python3 tests/integration/check_ac_mapping.py` → `python3 scripts/check_mock_policy.py`. 그다음 `toolsListJSON`을 `json.loads`로 파싱해 도구 17종을 실측하고, `EXPECTED_TOOLS`(17)와 **집합이 정확히 같은지** 대조한다(부분집합이 아니라 등호 — 이번 회귀의 재발 방지).",
+              "expectedOutcome": "여섯 명령 전부 rc=0, `gofmt -l` 빈 출력, 도구 이름 집합 `toolslist.go == EXPECTED_TOOLS`(17종, 차집합 양방향 0)."
+            },
+            {
+              "seq": 12,
+              "action": "브랜치 `reconcile/rct_20260904-0003-opus-5`로 커밋·푸시하고 PR을 연다(머지하지 않는다). PR 본문에 task id · gap 요약 · 계획 단계 · 검증 방법 · 범위 밖 항목을 적는다. 형제 PR과의 충돌 가능성(`docs/doc-tracker.md` 변경 이력 표 상단)을 점검해 지침에 적는다.",
+              "expectedOutcome": "PR이 열리고 CI 4잡(fmt+vet · unit tests · integration tests · 그 외)이 전부 SUCCESS."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
