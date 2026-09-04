@@ -485,7 +485,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-ac-e2e",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-08-30T06:00:00Z",
       "changedSides": [
@@ -502,7 +502,7 @@
       }
     },
     "createdAt": "2026-08-30T06:00:00Z",
-    "updatedAt": "2026-08-30T07:02:00Z",
+    "updatedAt": "2026-09-04T08:22:58Z",
     "stateSummary": {
       "asIs": "관측 시각 2026-08-30T06:00Z · `dlddu/economic-opinion-trend-monitor@main` fc304c5. `tests/e2e` 트리 `ad5c733e` (직전 `7f0be0ee`).\n\n39d2337 (2026-08-29, PR #14 — `feat(compare): 3축 비교 뷰 착지 + AC3.7 e2e spec (slice 7, reconcile rct_20260814-0001)`)이 더한 것:\n- `specs/ac3-7-three-axis-compare.spec.ts` 신설(139줄) — AC3.7 전용 spec.\n- `fixtures/gold/axis_sentiment.jsonl`(1행) · `fixtures/gold/subject_trend.jsonl`(2행) · `fixtures/README.md`(7행) 추가.\n- 기존 spec은 손대지 않았다 (+149 −0, 순수 추가).\n\n현재 spec 구성: AC 선언 3개(`ac3-6-sentiment-ratio-viz` · `ac3-7-three-axis-compare` · `ac3-8-normalized-ratio`) + 비-AC(스모크·인프라) 1개.",
       "toBe": "관측 시각 2026-08-30T06:00Z · `ac:2a9851cb…`(**변화 없음**) `reg:4343e5af`(직전 `cce58693`). **AC 집합(`docs/econ-opinion-monitor-prd-*.md`)은 변하지 않았고 레지스트리(`econ-opinion-monitor-doc-tracker.md`)만 바뀌었다.**\n\n- 집계: AC 전집 21 · 예외 등재 1 · 1:1 대상 20 · **AC 매칭 spec 파일 2 → 3** · **공백 18 → 17** · 비-AC spec 1.\n- 매핑표에 `AC3.7 | tests/e2e/specs/ac3-7-three-axis-compare.spec.ts` 행 추가, 슬라이스 표의 AC3.7 행에 ✅ **착지** 표기.\n- 공백 목록(`<!-- gap-list -->` 마커 안)에서 AC3.7 제거 → 잔여 17건: AC1.2~1.7 · AC2.1~2.6 · AC3.1~3.5.\n- 산문 갱신: \"✅ 착지한 2건\" → \"3건\". AC3.7은 `/api/compare`가 처음부터 Gold 파생이었으나 `/compare` 라우트가 플레이스홀더라 착지하지 못하던 건이며, 소유 슬라이스 7의 화면 절반을 당겨 실화면으로 세운 결과라고 명시했다. 슬라이스 7에 남는 몫은 축·기간 컨트롤 등 화면 확장이고, 이 AC의 spec은 신설이 아니라 **확장** 대상이라고 등재했다.",
@@ -573,6 +573,11 @@
           "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/18",
           "preparedAt": "2026-08-30T06:55:00Z",
           "notes": "draft PR. 누적 diff 14파일 +1076 −42 (신규 3: e2e spec · Trend.tsx · Trend.test.tsx).\n\n계획 대비 변경 없음 — 다만 계획 step 1이 예상한 '버킷 미필터' 결함이 실제로 있었고, 그 범위가 예상보다 하나 넓었다: dashboard 순위·fairness 표뿐 아니라 **대시보드 분위기**도 `sentimentFor`가 축의 첫 행을 집어 와 파일 순서에 따라 묵은 버킷을 노출할 수 있었다. 셋 다 compare가 이미 쓰던 '최신 버킷 하나' 규약으로 정렬하고 `sentimentFor`는 제거했다.\n\n회귀 없음을 실측으로 확인: main(옛 코드+옛 픽스처)과 브랜치(새 코드+새 픽스처)를 각각 띄워 먼저 착지한 spec들이 읽는 5개 엔드포인트(/api/dashboard 3축 · /api/compare · /api/fairness)의 응답이 **바이트 동일**. 픽스처 diff는 +19 −0(수정된 줄 0).\n\n로컬 게이트(CI build 잡과 1:1) 전부 통과: gen-check · lint-py(ruff 30 files) · lint-go(gofmt+vet) · lint-web(eslint) · lint-ac-mapping(매칭 4 · 공백 16, 규칙 1·2·3·4'·5·6 위반 0) · test-py 51 · test-go(신규 4케이스) · test-web 5(신규 2) · test-cross(smoke.sh) · playwright --list 11 tests/5 files. 로컬 불가는 kind e2e 하나뿐(docker·kind 부재) — CI e2e 잡이 판정한다.\n\n음성 시험 7종으로 래칫이 공허하지 않음을 확인(각 시험 후 cp 사본 복원 + cmp 바이트 동일): ①대시보드·공정성을 전 버킷 순위로 되돌림 → 묵은 행이 1위로 올라와 FAIL ②분위기를 축 첫 행으로 → FAIL ③시리즈 정렬 제거 → FAIL ④매핑표에서 AC3.5 행 제거 → 규칙6 ⑤공백 목록에 AC3.5 잔류 → 규칙6 ⑥spec이 AC 2개 선언 → 규칙2 ⑦집계만 옛 숫자 → 규칙6.\n\n⚠️ GHCR :latest 함정이 이 레포에도 그대로다 — image.yml이 `on: pull_request` + 가드 없음 + `type=raw,value=latest` + `push: true`. 이번엔 문서만이 아니라 **serving 바이너리와 web 번들이 바뀌는** PR이라 영향이 실재한다: deploy/base/deployment.yaml이 그 :latest를 참조한다. 관측 — econ-monitor/econ-serving은 현재 replicas 0이라 즉시 롤아웃은 없지만, 다음 스케일 업이 이 브랜치 빌드를 끌어간다. 가드 추가는 workflows:write 필요라 범위 밖(별도 task 감).\n\n중간 커밋 하나(`chore: restore data/ .gitkeep`)는 로컬 정리가 tracked placeholder를 지운 것을 되돌린 것이다 — main 대비 누적 diff에는 나타나지 않는다.\n\nCI 관측 결과는 executionGuide에 실측으로 기록한다.\n\n[CI 관측 — head 65af4fb, 06:52~06:55Z] CI run #45(pull_request): build **success**(49s) · e2e(kind) **success**(2m46s). e2e 로그 실측 `Running 11 tests using 1 worker` → **11 passed (6.8s)**, 신규 AC3.5 3케이스 전부 ✓, `[e2e] OK: fixture Gold -> in-cluster serving -> API + browser`. build 로그에 `AC 매칭 spec 파일 4` · `공백 16` · `OK: 규칙 1·2·3·4'·5·6 위반 없음`, pytest 50 passed, vitest 3 files, `[smoke] OK`. 먼저 착지한 ac3-6·ac3-7·ac3-8·smoke 8케이스도 같은 런에서 통과 — 픽스처를 시계열로 늘리고도 회귀 없음이 실 브라우저에서 확인됐다. Image run #35(pull_request): publish(serving)·publish(batch) 둘 다 success — **:latest 가 머지 전에 이 브랜치 트리로 갱신됐다**(예고가 아니라 실측). 정정: 계획 중 PR 본문에 pytest를 51 passed로 적었으나 실제는 50이다(CI 로그 기준) — 본문을 고쳤다."
+        },
+        "review": {
+          "required": true,
+          "reason": "riskLevel medium. 준비된 PR #18은 spec·픽스처·doc-tracker만이 아니라 go 서빙 핸들러(dashboard·fairness·sentiment의 버킷 필터)·`/api/trend` 스텁→실 구현·`web/src/screens/Trend.tsx` 신설까지 포함해 main에 머지되는 순간 사용자 대면 동작이 바뀐다. 또한 이 계획이 이 모델(AC↔e2e spec 1:1)의 범위 안인지 형제 모델(docs-impl)의 몫인지는 정의만으로 갈리는 판단이라 사람의 판정이 필요하다.",
+          "status": "pending"
         }
       }
     ]
