@@ -998,6 +998,47 @@
       "assessedAt": "2026-09-04T14:57:31Z"
     },
     "createdAt": "2026-09-04T14:57:31Z",
-    "updatedAt": "2026-09-04T15:22:30Z"
+    "updatedAt": "2026-09-04T15:34:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**`docs/test/e2e.md` 「집계」 절의 F 계열 판정문 한 블록(`:354-388`)만 재판정한다** — 낡아버린 선행 서술을 «해소»로 기록하고, 실측한 현재의 진짜 선행 **둘**을 파일·줄 근거와 함께 새로 적고, 「승격 조건」을 그 새 선행 기준으로 다시 못박는다. **e2e 파일은 한 개도 만들지 않고 코드는 한 줄도 고치지 않는다.**\n\n**왜 이 방법인가.** gap이 지목한 위반은 숫자가 아니라 **상태 서술**이고, 그 서술이 하필 원장이 스스로 「승격 조건(다음 감지가 이 논점을 다시 열지 않도록 못박는다)」이라 선언한 자리다. 대안 둘을 저울질했다 — (a) **F1 전용 e2e를 이번에 저작**해 원장의 약속을 문자 그대로 이행하는 길, (b) **F 계열을 규칙 4 예외로 등재**해 공백을 줄이는 길. 둘 다 소스 실측으로 기각했다(아래). 남는 것은 **서술을 사실에 맞추는 것**뿐이고, 그것이 이 렌즈의 판정 기준 6(집계·상태 일치)이 요구하는 최소 충분한 작업이다. 게이트가 파싱하는 마커 블록(`ac-mapping`/`ac-exceptions`/`ac-nonac`/`ac-summary`, `fidelity:*`)을 **하나도 건드리지 않으므로** 집계는 27/1/15/11 그대로이고 두 게이트는 초록을 유지한다.\n\n**실측으로 확정한 사실 (모두 `4277b31` 기준, 이 계획이 근거로 쓰는 전부).**\n1. **낡은 선행은 해소됐다** — `data-plane/cmd/agent/main.go:59` `workloadSessionMCP = \"mcp\"`가 있고 `:177-197`이 그 워크로드를 실제로 서브한다. 즉 원장 `:362-363`의 「세션 MCP 워크로드가 data plane 에이전트에 **아직 없어**」는 거짓이 됐다.\n2. **진짜 선행 ⓐ — 이미지가 어디에도 설정돼 있지 않다.** base `k8s/deployment.yaml`의 이미지 env는 `DATA_PLANE_IMAGE`(`:52`)·`DATA_PLANE_CLAUDE_CODE_IMAGE`(`:62`) **둘뿐**이고 `DATA_PLANE_APPROVAL_GATED_IMAGE`는 **선언 자체가 없다**. e2e 오버레이 `deploy/kustomization.yaml`의 control-plane patch도 `env/1`·`env/2`·`env/3`만 replace한다. 따라서 `cmd/control-plane/main.go:268`의 기본값 `\"\"`가 쓰이고, `WithWorkloadImage`가 빈 문자열을 **no-op으로 버리며**(`client_orchestrator.go:264-274`), `imageFor`가 shell 아닌 미설정 타입에 **에러를 돌린다**(`:555-563`). 결과: `workloadType=approval-gated` 생성 요청은 타입 검증을 **통과한 뒤**(400이 아니다) 프로비저닝에서 **500**으로 실패한다 — 파드가 하나도 서지 않는다.\n3. **진짜 선행 ⓑ — 게이트웨이 Secret이 없고, 그 참조는 optional이 아니다.** `git grep 'approval-gateway' -- deploy k8s` = **0 hits**(`deploy/`·`k8s/` 어디에도 `approval-gateway-credentials` 매니페스트가 없다). 그런데 헬퍼 파드의 MCP 컨테이너는 게이트웨이 3종을 **`secretEnv`**로 투영한다(`client_orchestrator.go:780-782`; `secretEnv`는 `:887-895`, `Optional`을 세우지 않는다 — optional 버전은 `:897-902`에 따로 있고 여기 쓰이지 않았다). 그래서 Secret이 없으면 kubelet이 컨테이너 구성 단계에서 실패해 **헬퍼 파드가 Ready에 이르지 못한다.** ⚠️ 이 대목은 `doc-tracker.md:56`의 「게이트웨이 3종 env가 없으면 컨테이너는 뜨되 **도구 목록이 빈다**」와 겹쳐 읽으면 오독하기 쉽다 — 그 관용은 **agent 프로세스 수준**의 것이고(`data-plane/cmd/agent/main.go:182-195`), **필수 SecretKeyRef가 걸린 이 배포에서는 그 경로에 도달하지 못한다**. 원장에 둘의 층위를 갈라 적는다.\n\n**대안 (a) 기각 — AC-F1은 이번에도 끊을 수 없다.** 감지가 「참인지 소스로 확정하고 거짓이면 넣지 말 것」으로 넘긴 항목이고, **확정 결과는 거짓이다.** AC-F1의 검증 방법(`docs/prd/approval-gated-workload.md:31`)은 네 갈래인데 **첫 갈래가 「세션을 생성하면 워크로드 파드와 세션 전용 헬퍼 파드(컨테이너 둘)가 함께 기동되고 …」**다 — 선행 ⓐ·ⓑ가 정확히 그것을 막는다. 400 거부 갈래만 단언하는 파일은 AC-F1의 **주검증**이 될 수 없다(규칙 1이 요구하는 것은 AC의 전용 검증이다). 같은 렌즈의 선례가 이를 뒷받침한다 — `control-plane/test/e2e_e1_workload_type_test.go`는 헤더에 「네 갈래를 **전부** 단언한다」고 적고 실제로 파드 기동 갈래(`TestWorkloadType_ClaudeCodeSessionRunsTheClaudeCLI`)를 갖는데, 그 갈래는 **부트스트랩 두 대역이 선 뒤에야** 도달 가능해졌다(#62). F1도 같은 모양이다.\n\n**대안 (b) 기각 — 예외 등재는 여전히 부적격.** 그 논거(예외는 **영구 면제**이고 F 계열은 순서를 기다리는 것)는 그대로 유효하다. 다만 그 불릿이 근거로 든 「나머지(승인 게이트·공유 볼륨·egress 차단)는 여전히 단위·통합·envtest 어느 것도 없다」는 **#60·#64로 낡았다** — 승인 게이트는 `data-plane/cmd/agent/{approval_gateway,session_mcp_gate,session_mcp,approval_gated}_test.go`가, egress 정책 오브젝트는 `control-plane/test/approval_gated_network_policy_test.go`가 덮는다. **결론은 유지하고 전제만 사실로 고친다** — 같은 블록 안에서 반대 방향으로 낡은 문장을 남겨 두면 다음 감지가 같은 자리를 다시 열게 된다.\n\n**이 시도의 범위(완료 기준).** 다음이 모두 참이면 성공이다.\n1. `docs/test/e2e.md` 「집계」 절의 F 계열 판정문이 (i) 낡은 선행을 해소로 기록하고, (ii) 현재 선행 ⓐ·ⓑ를 **파일·줄 좌표와 함께** 적고, (iii) 「승격 조건」을 ⓐ·ⓑ 기준으로 다시 못박으며, (iv) **AC-F1을 400 갈래만으로 끊을 수 없다는 판정**과 (v) **AC-F5는 구현 미착지라는 별도 선행**(`client_orchestrator.go:685`)을 담는다.\n2. 예외 부적격 불릿의 전제(대체 검증 수단 목록)가 실재 파일과 일치한다.\n3. **게이트가 파싱하는 어떤 마커 블록도 바뀌지 않는다** — `ac-summary`는 27/1/15/11 그대로, `ac-mapping`·`ac-exceptions`·`ac-nonac`·`fidelity:*` 무변경. `./scripts/e2e/check-ac-mapping.sh`와 `python3 scripts/check-fidelity-allowlist.py` 둘 다 rc=0.\n4. **e2e 파일 0개 신설·수정, Go/TS 코드 0줄, `deploy/`·`k8s/` 0줄.** 변경 파일은 `docs/test/e2e.md` 하나다.\n\n**범위 밖(후속 — 재감지가 잇는다).**\n- **선행 ⓐ·ⓑ의 해소(오버레이에 이미지 env + `approval-gateway-credentials` Secret 배포)는 이 렌즈의 산출물이 아니다.** 모델 definition이 「이 루프의 산출물은 e2e 테스트와 등재 문서뿐」이라 못박는다. 그 작업은 e2e SUT 하네스의 몫이고, 형태로 보면 `tbm_session-platform-e2e-mock-policy`의 「차단 요인」 표와 같은 종류다. **그 표는 이번에 건드리지 않는다** — 지금 그쪽 `rct_20260904-0001`이 `planning`으로 같은 파일을 잡고 있고, 표를 늘리면 `fidelity:summary`의 「차단 요인 1건」과 checker R10까지 함께 손대야 해 이 슬라이스의 리뷰 표면이 두 배가 된다.\n- **`cmd/control-plane/main.go:79-82`의 Go 주석도 같은 낡음을 갖고 있다**(「Its data plane runtime — the helper pod's session MCP — is not implemented yet」). 코드 주석은 이 렌즈의 산출물이 아니다 — `tbm_session-platform-comment-redundancy`/`docs-impl`의 몫으로 남긴다. **원장에 한 줄로 지목만 해 둔다.**\n- **AC-E2~E6 서술은 지금 정확하다**(차단 요인 ③이 남아 있는 동안 공백) — 손대지 않는다.\n- **AC-F2/F4의 승격 조건 ②는 그대로 참이다** — `deploy/kind-config.yaml`에 `disableDefaultCNI`가 없음을 재확인했다(`networking` 키 자체가 없다). 건드리지 않는다.\n\n**가역성.** 변경은 마크다운 한 파일의 한 블록이고 되돌리기는 PR revert 하나다. 실행 코드·매니페스트·테스트·게이트 스크립트가 0줄이라 SUT·프로덕션 동작에 닿는 표면이 없다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 `dlddu/session-platform`을 `4277b31`(main)에서 브랜치 `reconcile/rct_20260904-0001-ac-e2e`로 딴다. **모델 슬러그를 반드시 붙인다** — 형제 모델 `tbm_session-platform-e2e-mock-policy`의 열린 task가 **같은 `rct` id `rct_20260904-0001`**을 갖고 있어 슬러그 없는 이름은 정면 충돌한다.",
+              "expectedOutcome": "브랜치가 `4277b31`을 base로 서고, `git branch -r`에 형제 워커의 동명 브랜치가 없다."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/test/e2e.md` F 계열 판정문(`:354-388`)의 **첫 불릿**(「전용 파일 신설 불가」)을 재작성한다: 낡은 근거(「세션 MCP 워크로드가 data plane 에이전트에 아직 없어」)를 **해소로 기록**하고(근거 `data-plane/cmd/agent/main.go:59`·`:177-197`, #60·#64), 그 자리에 현재 선행 **ⓐ 이미지 미설정**(`k8s/deployment.yaml`에 env 선언 없음 · `deploy/kustomization.yaml`은 `env/1·2·3`만 replace · `main.go:268` 기본값 `\"\"` · `WithWorkloadImage` no-op `client_orchestrator.go:264-274` · `imageFor` 에러 `:555-563` → 생성이 **400이 아니라 500**)과 **ⓑ 게이트웨이 Secret 부재**(`deploy`·`k8s`에 0 hits · MCP 컨테이너는 `secretEnv`로 **필수** 투영 `:780-782`,`:887-895` → 헬퍼 파드가 Ready 불가)를 좌표와 함께 적는다. ⓑ에는 **`doc-tracker.md:56`의 「컨테이너는 뜨되 도구 목록이 빈다」가 agent 프로세스 층위의 관용이며 필수 SecretKeyRef가 걸린 이 배포에서는 도달하지 못한다**는 층위 구분을 한 문장으로 남긴다.",
+              "expectedOutcome": "첫 불릿에 「아직 없어」류의 현재형 낡은 진술이 0건이고, ⓐ·ⓑ가 각각 파일·줄 좌표를 갖는다. `git diff`가 이 블록 밖으로 나가지 않는다."
+            },
+            {
+              "seq": 3,
+              "action": "**둘째 불릿**(규칙 4 예외 부적격)의 전제를 사실로 고친다 — 「나머지(승인 게이트·공유 볼륨·egress 차단)는 여전히 단위·통합·envtest 어느 것도 없다」를, 착지한 대체 커버리지(`data-plane/cmd/agent/{approval_gateway,session_mcp_gate,session_mcp,approval_gated}_test.go` · `control-plane/test/approval_gated_network_policy_test.go`)와 아직 없는 것(AC-F5 공유 볼륨)으로 갈라 적는다. **결론(예외 = 영구 면제이므로 부적격)은 그대로 둔다.**",
+              "expectedOutcome": "불릿이 인용하는 테스트 파일이 전부 실재하고(`ls`로 확인), 결론 문장은 변경 전과 동일하다."
+            },
+            {
+              "seq": 4,
+              "action": "**「승격 조건」 ①**을 새 선행 기준으로 다시 못박는다: (i) 해제 조건을 ⓐ+ⓑ로 명시, (ii) **AC-F1은 400 거부 갈래만으로 끊을 수 없다**는 판정을 근거(`docs/prd/approval-gated-workload.md:31`의 첫 갈래 + 선례 `e2e_e1_workload_type_test.go` 헤더)와 함께 못박아 다음 planner가 반쪽 파일을 완료 기준에 넣지 못하게 한다, (iii) **AC-F5는 ⓐ·ⓑ 위에 구현 미착지라는 선행이 하나 더 있다**(`client_orchestrator.go:685`, `doc-tracker.md:56`의 ②)를 덧붙인다. **② (AC-F2·F4 / kindnet)는 재확인만 하고 손대지 않는다.**",
+              "expectedOutcome": "승격 조건 ①이 ⓐ·ⓑ를 해제 조건으로 갖고, F1·F5에 대한 두 판정이 각각 한 문단으로 들어간다. ②는 `git diff`에 나타나지 않는다."
+            },
+            {
+              "seq": 5,
+              "action": "무영향을 증명한다: (a) `git diff` 대상 파일이 `docs/test/e2e.md` **하나**이고, (b) 그 diff가 `<!-- ac-mapping`·`ac-exceptions`·`ac-nonac`·`ac-summary`·`fidelity:` 마커 블록 **밖**에만 있고(마커 블록 바이트 동일성을 `git show HEAD:…`와 추출 비교로 확인), (c) `./scripts/e2e/check-ac-mapping.sh` rc=0·출력이 `매칭 파일 15 + 예외 1 + 공백 11`로 변경 전과 동일, (d) `python3 scripts/check-fidelity-allowlist.py` rc=0.",
+              "expectedOutcome": "네 검사 모두 통과. 특히 (c)의 출력 문자열이 base(`4277b31`)의 출력과 **한 글자도 다르지 않다**."
+            },
+            {
+              "seq": 6,
+              "action": "커밋 후 push하고 GitHub API로 PR을 연다(머지하지 않는다). 본문에 task id `rct_20260904-0001`, gap 요약, 무엇을 왜 고쳤는지, 실행한 게이트 결과, **범위 밖으로 남긴 넷**(오버레이 선행 해소 · 차단 요인 표 · `main.go:79-82` Go 주석 · E 계열 서술)을 적는다.",
+              "expectedOutcome": "PR이 열리고 base=`main`, 변경 파일 1개, CI(`check-fidelity`·`check-ac-mapping`)가 초록."
+            }
+          ],
+          "plannedAt": "2026-09-04T15:34:00Z"
+        }
+      }
+    ]
   }
 ]
