@@ -30,8 +30,49 @@
       "assessedAt": "2026-09-04T07:51:37Z"
     },
     "createdAt": "2026-09-04T07:51:37Z",
-    "updatedAt": "2026-09-04T08:01:58Z",
-    "id": "rct_20260904-0001"
+    "updatedAt": "2026-09-04T08:35:00Z",
+    "id": "rct_20260904-0001",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근: 정책을 먼저 세우고, 그 정책을 좁은 범위에 완전 적용해 실제로 작동함을 보인다.**\n\n정의가 첫 task의 순서를 못박아 두었다 — (1) `docs/comment-policy.md` 정비 → (2) 기존 주석의 복원 가능성 판정. 그 순서를 그대로 따르되, (2)를 전 범위(848줄)로 벌리지 않고 **두 패키지로 잘라** 한 PR에서 끝낸다. 정책만 세우고 판정을 다음 task로 미루는 안도 있었지만 택하지 않았다 — 적용해 보지 않은 정책은 판정 절차가 실제로 결론을 내는지 검증되지 않고, as-is가 전혀 움직이지 않아 다음 재감지가 to-be 변화 하나만 보게 된다. 반대로 전 범위를 한 번에 판정하는 안은 정의가 「한 번에 좁힐 대상이 아니다」라고 명시적으로 배제했다.\n\n**이 시도의 범위(= 완료 기준)**\n\n1. `docs/comment-policy.md`가 main에 존재한다 → to-be가 `absent`를 벗어난다. 문서는 복원 경로 넷 · 유지 대상 셋 · 5단계 판정 절차 · 「애매하면 남긴다」의 비용 비대칭 근거 · 지문 사각지대를 고정한다.\n2. 그 정책이 `internal/opensearch/` · `internal/sessionplatform/` **두 패키지 전체**(주석 161줄 / 4파일 = 범위 내 848줄의 19%)에 완전 적용돼 있다 — 제거된 것은 제거 사유가, 남긴 것은 유지 사유가 판정 가능한 상태.\n3. 새 문서가 레포의 문서 원장에 등재돼 있다(`docs/doc-tracker.md` 인벤토리·허브 계수·변경 이력, `docs/index.html` 허브 링크). 자매 모델 `tbm_homelab-k3s-mcp-docs-impl`에 새 drift를 만들지 않기 위함이다.\n4. CI 3잡(lint / unit-tests / integration-tests)이 초록이다.\n\n**범위 밖(후속 task로 넘긴다)**\n\n- 나머지 주석 **679줄**의 판정 — `main.go`, `internal/`의 나머지 8개 패키지, `tests/`(YAML 240 · Python 177), `scripts/`.\n- 지문 사각지대의 패턴 확장(Python docstring 본문 · Go 블록 주석 · 줄 끝 주석). 정의가 「다음 task에서 다룬다」고 미뤄 둔 항목이다.\n- 이 축의 CI 게이트 신설. 현재 ungated이고, 게이트를 만들려면 「복원 가능한가」를 기계가 판정할 수 있어야 하는데 이번 판정 표본은 그것이 사람 판단임을 보여 준다.\n\n**판정에서 나온 정정 하나**: 감지가 예시한 중복 유형 ③ 「매니페스트 재진술 — kind 픽스처 YAML 주석이 바로 아래 선언을 되풀이」는 실측에서 **성립하지 않았다**. `tests/k8s/kind/*.yaml`의 주석 240줄을 훑어보면 대부분 상류 함정(MinIO는 중복 Content-Length를 접지만 OpenSearch는 거부한다), 모킹 정책 판단 근거, 플레이키했던 형태를 피한 이유다 — 전형적인 유지 대상이다. 그래서 이번 슬라이스는 YAML을 범위에서 빼고 Go 쪽을 골랐다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`docs/comment-policy.md`를 신설한다. 복원 경로 넷(코드 · 저장소 문서 · PR · 커밋 메시지)을 표로 고정하고, 유지 대상 셋을 이 레포의 실측으로 채운다 — 기계 판독 주석(`검증 AC:` 67건/63파일 · `# mock-exception:` 9건/6파일 · shebang 4 · `# noqa` 2 · `//go:`·`nolint` 현재 0)과 그것을 읽는 스크립트, Go exported 1줄 doc·패키지 주석·Python 모듈 docstring이라는 관례 최소치, 복원 불가능한 지식 6종. 이어 제거 대상 세 유형을 이 레포의 실제 주석으로 예시하고, 5단계 판정 절차와 「애매하면 남긴다」의 비용 비대칭을 적는다. 마지막에 추적 방식·지문 사각지대·판정 이력 표를 둔다.",
+              "expectedOutcome": "`git rev-parse HEAD:docs/comment-policy.md`가 blob hash를 반환한다(= to-be가 `absent`가 아니다). 문서만 읽고도 임의의 주석 하나에 대해 유지/제거 판정을 내릴 수 있다."
+            },
+            {
+              "seq": 2,
+              "action": "정책을 `internal/opensearch/` · `internal/sessionplatform/` 두 패키지의 주석 161줄 전부에 적용해 판정한다. 제거는 세 유형에 걸리는 것만: ① 선언 재진술 ② `docs/prd-opensearch-*.md` 재진술 ③ 자기 파일 안의 중복. exported 식별자의 1줄 doc 주석과 패키지 주석은 건드리지 않는다.",
+              "expectedOutcome": "주석 8줄 제거(opensearch.go 7 · sessionplatform.go 1), 코드 로직 변경 0. 구체적으로 — `MaxSearchSize` 본문(prd-opensearch-search.md AC2 그대로), `PutResult`/`DeleteResult`의 값 열거(PRD와 DeleteDocument 코드가 이미 말한다), `// Base credentials: the default chain (instance profile in production).`(패키지 주석 2~3줄의 verbatim 중복), `Search`/`PutDocument`/`do` 구현체 doc에서 인터페이스 doc·시그니처를 되풀이하는 절, `FromEnv`에서 5줄 아래 에러 메시지가 그대로 말하는 절. as-is 지문이 `lines=848 files=64` → `lines=840 files=64`로 움직인다."
+            },
+            {
+              "seq": 3,
+              "action": "판정하되 **남긴** 것 중 판단이 갈린 묶음을 정책 문서와 PR 본문에 남긴다 — (a) `internal/sessionplatform/sessionplatform_test.go`의 테스트 doc 주석 8건(`TestReadFullThenIncremental is AC1's cursor contract: …` 류: 첫 절은 테스트 이름·AC 재진술이지만 뒤따르는 절은 「그 단정이 왜 이 형태여야 하는가」다), (b) `// --- session_read ---` 류 구획 배너(레포 전반의 관례라 한 곳만 지우면 불일치가 된다), (c) `readPath`의 `POST /api/v1/sessions/{id}/read`가 테스트의 같은 문장과 겹치는 것(테스트 쪽이 검증되는 사본이지만 소스 쪽 독자에게도 필요하다).",
+              "expectedOutcome": "「애매하면 남긴다」가 적용된 지점이 기록으로 남아 다음 판정의 입력이 된다. 정책 문서의 판정 이력 표에 이번 범위와 결과(제거 8 / 유지 153)가 등재된다."
+            },
+            {
+              "seq": 4,
+              "action": "새 문서를 레포의 문서 원장에 등재한다 — `docs/index.html` 허브에 링크 1줄, `docs/doc-tracker.md`의 「문서 인벤토리」 정책 행에 `comment-policy.md` 추가, 「허브 도달 가능 문서」 39/39 → 40/40, 「변경 이력」에 이번 슬라이스 행 추가.",
+              "expectedOutcome": "`docs/*.md` 40개 전부가 허브에서 도달 가능(미도달 0). doc-tracker의 계수가 실측과 일치해 자매 모델 `tbm_homelab-k3s-mcp-docs-impl`에 새 어긋남이 생기지 않는다. PRD·AC·테스트 문서는 불변(가치 5 / PRD 18 / AC 64 / 테스트 18)."
+            },
+            {
+              "seq": 5,
+              "action": "CI 게이트를 로컬에서 1:1 재현해 통과를 확인한 뒤 브랜치를 푸시하고 PR을 연다(머지는 하지 않는다). lint 잡: `python3 tests/integration/check_ac_mapping.py`, `python3 scripts/check_mock_policy.py`, `gofmt -l .`(빈 출력), `go vet ./...`, `go build ./...`. unit-tests 잡: `go test ./...`.",
+              "expectedOutcome": "5개 검사 전부 통과, `go test ./...` 전 패키지 ok. PR이 열리고 본문에 task id·gap 요약·계획 단계·검증 방법이 담긴다."
+            },
+            {
+              "seq": 6,
+              "action": "(실행 단계) PR을 검토·머지한 뒤 main에서 to-be와 as-is를 재측정하고, GitHub Actions의 3개 잡이 초록인지 확인한다.",
+              "expectedOutcome": "to-be가 `absent`에서 blob hash로 전이. as-is 지문이 변화. CI 3잡 초록. 이 시점에 완료 기준 4개가 모두 충족된다."
+            }
+          ],
+          "plannedAt": "2026-09-04T08:35:00Z"
+        }
+      }
+    ]
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-redundancy",
