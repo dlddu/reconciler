@@ -969,7 +969,7 @@
   {
     "id": "rct_20260904-0001",
     "toBeModelId": "tbm_session-platform-ac-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-04T14:57:31Z",
       "changedSides": [
@@ -998,7 +998,7 @@
       "assessedAt": "2026-09-04T14:57:31Z"
     },
     "createdAt": "2026-09-04T14:57:31Z",
-    "updatedAt": "2026-09-04T21:51:55Z",
+    "updatedAt": "2026-09-04T21:52:37Z",
     "attempts": [
       {
         "plan": {
@@ -1089,6 +1089,49 @@
               "status": "succeeded",
               "finishedAt": "2026-09-04T21:51:55Z",
               "log": "수렴 판정은 verification에 기록. 문서 전용 변경이라 롤아웃·이미지 핀·재기동 없음(§2-D 그대로)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "api:b6cc73d89d6c1b46529ebc6b63121d9c46c01c019dcdca56779edd100629035e web:37fc1bfba683878bf538de59c3b0e9ab7f308caf",
+          "verifiedAt": "2026-09-04T21:52:37Z",
+          "checks": [
+            {
+              "name": "완료기준 1 — F 계열 판정문 5요소가 main에 착지",
+              "status": "passed",
+              "detail": "main `46a9c4b`의 `docs/test/e2e.md`에서 확인: (i) 낡은 선행이 「✅ … 해소됐다」로 기록 · (ii) 선행 ⓐ(이미지 미설정 → 500)·ⓑ(게이트웨이 Secret 부재 + 필수 secretEnv)가 파일·줄 좌표와 함께 등재 · (iii) 승격 조건 ①이 「해제 조건은 ⓐ와 ⓑ가 함께 충족되는 것」으로 재작성(옛 문구 `선결 조건은 하나뿐` 0 hits) · (iv) 「AC-F1을 「400 거부 갈래만」으로 먼저 끊지 말 것」 경고 존재 · (v) 「AC-F5에는 선행이 하나 더 있다」(공유 볼륨 미구현) 존재."
+            },
+            {
+              "name": "완료기준 2 — 예외 부적격 불릿이 든 대체 검증 수단이 실재",
+              "status": "passed",
+              "detail": "`data-plane/cmd/agent/{approval_gateway,session_mcp_gate,session_mcp,approval_gated}_test.go` 4파일과 `control-plane/test/approval_gated_network_policy_test.go` 전부 존재."
+            },
+            {
+              "name": "완료기준 3 — 집계 불변 + 두 게이트 rc=0 (머지 후 main에서 재실행)",
+              "status": "passed",
+              "detail": "`./scripts/e2e/check-ac-mapping.sh` rc=0 — 「AC 27개 = 매칭 파일 15 + 예외 1 + 공백 11 (매칭 단위 17개, 비-AC 2개)」로 base와 동일, 공백 목록도 AC-E2~E6·AC-F1~F6 그대로. `python3 scripts/check-fidelity-allowlist.py` rc=0 — 등재 seam 3(GATE 1·TRIG 0·EXT 1·NET 1) · 회계 행 18 · 마커 5지점/5파일 · 차단 요인 1건, 전부 머지 전과 동일."
+            },
+            {
+              "name": "완료기준 4 — e2e 파일·코드·매니페스트 무변경",
+              "status": "passed",
+              "detail": "머지된 변경은 `docs/test/e2e.md` 1파일 +71/−14뿐. `control-plane/test/e2e_*`·`web/e2e/`·`deploy/`·`k8s/`·`.go`·`.ts` 변경 0. 이 때문에 as-is 지문이 `api:b6cc73d8… web:37fc1bfb…`로 **실행 전과 글자 그대로 동일**하다 — 이 렌즈의 as-is는 e2e 구현 두 스위트만 보므로 문서 전용 슬라이스는 as-is를 움직이지 않는 것이 정상이다."
+            },
+            {
+              "name": "배포 영향 없음",
+              "status": "passed",
+              "detail": "문서 전용이라 롤아웃·이미지 핀·재기동 없음. `chore(deploy): … [skip ci]` 후속 커밋도 생기지 않았다(정상)."
+            },
+            {
+              "name": "(정보) to-be 지문이 움직였다 — 다음 감지의 트리거",
+              "status": "passed",
+              "detail": "to-be = `ac:8b106595…`(불변) + `reg:31e2a7ea…` → `reg:56e281af…`. 모델의 `lastObservedVersion`은 의도적으로 건드리지 않았다. 다음 감지 주기가 이 이동을 보고 후속 task를 연다 — 범위 밖 잔여(선행 ⓐ·ⓑ 해소는 e2e 하네스 소관, AC-F1·F3·F5·F6 전용 파일은 그 뒤, AC-E2~E6은 차단 요인 ③ 해소 뒤, `control-plane/cmd/control-plane/main.go:79-82`의 낡은 Go 주석은 docs-impl·comment-redundancy 소관)은 converged 판정에 넣지 않았다."
+            },
+            {
+              "name": "(정보) 문서 인용 줄번호가 머지 시점 main에서 한두 칸 밀린다",
+              "status": "passed",
+              "detail": "계획 이후 착지한 `77fbf07`(AC-F3 in-band 마커)이 `data-plane/cmd/agent/main.go`를 고쳐 `workloadSessionMCP` 상수가 `:59`→`:60`, 서브 케이스가 `:177-197`→`:187~`로 이동했다. 판정문의 사실 관계는 전부 유효하고 게이트도 이 좌표를 파싱하지 않는다. 승인 요청에서 캐비엇으로 고지했고, 좌표 갱신이 필요하면 다음 감지가 여는 후속 task의 몫이다."
             }
           ]
         }
