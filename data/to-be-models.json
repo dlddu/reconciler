@@ -125,8 +125,8 @@
         "code": "#!/usr/bin/env bash\n# to-be = AC의 SSOT인 docs/prd-*.md + AC↔파일 매핑 레지스트리 docs/doc-tracker.md.\n# 두 종류 blob 목록(모드+해시+파일명)만 해시 → test-*.md, values.md 등 그 외 docs 변경은 무시된다.\n# 레지스트리 갱신(슬라이스 완료 반영)도 재검증을 트리거한다(잔여 gap 후속 task의 진입점).\n# 런타임이 dataSource.repository(dlddu/homelab-k3s-mcp)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit ls-tree \"HEAD:docs\" | awk -F'\\t' '$2 ~ /^prd-.*\\.md$/ || $2 == \"doc-tracker.md\"' | git hash-object --stdin\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "f231015e4ced0a4c358c6f36dd7fcc7613c151f2",
-      "lastObservedAt": "2026-09-04T08:01:29Z"
+      "lastObservedVersion": "6a06d08cbd105e31b46690d041d524e7aaad6b21",
+      "lastObservedAt": "2026-09-04T08:47:25Z"
     },
     "asIs": {
       "dataSource": {
@@ -140,8 +140,8 @@
         "code": "#!/usr/bin/env bash\n# as-is = e2e 테스트. tests/ 하위 트리 해시(통합 테스트 + kind 픽스처).\n# → internal/(단위 테스트)·docs/ 등 tests/ 밖 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/homelab-k3s-mcp)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:tests\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "b4b7a3dbb55a1dcb11aa6e7b59f0b0e8e3995fc8",
-      "lastObservedAt": "2026-09-04T08:01:29Z"
+      "lastObservedVersion": "6b71bfbdfac1163f9dc5eeb0432214a746e0d87f",
+      "lastObservedAt": "2026-09-04T08:47:25Z"
     },
     "checkPolicy": {
       "intervalSeconds": 3600
@@ -1250,8 +1250,8 @@
         "code": "#!/usr/bin/env bash\n# to-be = 제품 문서. docs/ 하위 트리 해시만 사용 → docs 밖(코드 등) 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/homelab-k3s-mcp)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:docs\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "8edbca2bb69fe8e22c84465625602ef1e291fed8",
-      "lastObservedAt": "2026-09-04T08:02:48Z"
+      "lastObservedVersion": "c95bfbc499801f0e9d94ba972952d77bdca67e27",
+      "lastObservedAt": "2026-09-04T08:47:25Z"
     },
     "asIs": {
       "dataSource": {
@@ -1264,8 +1264,8 @@
         "code": "#!/usr/bin/env bash\n# as-is = 실제 구현. internal/ 트리 해시 + main.go blob 해시 조합.\n# → tests/·k8s/·.github/·Dockerfile·go.mod/go.sum 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/homelab-k3s-mcp)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\na=\"$(git rev-parse \"HEAD:internal\")\"\nb=\"$(git rev-parse \"HEAD:main.go\")\"\nprintf 'internal:%s main.go:%s\\n' \"$a\" \"$b\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "internal:27f9d8aebb879c6680bb972dfaa14bc397ac4ccf main.go:1eb40df606850d6b5d2ad4d4932c4cf3e3036d3c",
-      "lastObservedAt": "2026-09-04T07:39:47Z"
+      "lastObservedVersion": "internal:df80f5fc542f4cfda14fd9065383373f2b83cf3f main.go:1c3bdc00914455499530398ccc260fac096c9283",
+      "lastObservedAt": "2026-09-04T08:47:25Z"
     },
     "checkPolicy": {
       "intervalSeconds": 3600
@@ -1410,8 +1410,8 @@
         "code": "#!/usr/bin/env bash\n# as-is = 판정 대상 주석의 지문. 주석이 추가·수정·삭제될 때만 값이 변한다.\n# 트리 해시를 쓰지 않으므로 주석과 무관한 코드 변경에는 반응하지 않는다\n# (자매 모델 tbm_homelab-k3s-mcp-docs-impl과의 중복 트리거 회피).\n# 런타임이 dataSource.repository(dlddu/homelab-k3s-mcp)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nexport LC_ALL=C\nPATTERN='^[[:space:]]*(//|#)'\nDIRECTIVE='//go:|nolint|#!|# ?noqa|# ?type:|# ?pragma|검증 AC:|mock-exception:'\nHITS=$({ git ls-files -- main.go internal tests scripts | grep -vE '(^|/)(\\.venv|vendor|node_modules)/|\\.pb\\.go$' | sort \\\n        | xargs -r grep -EH \"$PATTERN\" || true; } \\\n  | grep -vE \"$DIRECTIVE\" \\\n  | sed 's/[[:space:]]\\+/ /g' | sed 's/^ //; s/ $//' \\\n  | sort)\necho \"lines=$(printf '%s' \"$HITS\" | grep -c . || true) files=$(printf '%s' \"$HITS\" | cut -d: -f1 | sort -u | grep -c . || true)\"\nprintf '%s' \"$HITS\" | sha256sum | cut -d' ' -f1\n",
         "timeoutSeconds": 120
       },
-      "lastObservedVersion": "lines=848 files=64\n1e4a6a576570b9877afd6d3bcea0b9f88292e77ea4917f0fac3b1be27b808715",
-      "lastObservedAt": "2026-09-04T08:04:04Z"
+      "lastObservedVersion": "lines=971 files=64\n7654b60df1ad41f87ded1820850140f157e1de309d1591ab9e45365323a510c6",
+      "lastObservedAt": "2026-09-04T08:47:25Z"
     },
     "checkPolicy": {
       "intervalSeconds": 3600
