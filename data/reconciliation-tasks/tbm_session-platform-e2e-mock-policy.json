@@ -536,7 +536,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-08-20T06:06:42Z",
-    "updatedAt": "2026-09-04T09:15:00Z",
+    "updatedAt": "2026-09-04T09:20:00+09:00",
     "trigger": {
       "detectedAt": "2026-08-20T06:06:42Z",
       "changedSides": [
@@ -846,6 +846,66 @@
           "reviewer": "user",
           "reviewedAt": "2026-09-04T09:02:00Z",
           "comment": "반려. 사유(원문): \"차단 요인에 모킹 적용. 모킹 예외로 명시적으로 등재\"\n\n**요구의 내용** — 차단 요인 3건을 '판정만 확정하고 등재는 미룬' 상태로 두지 말고, **그 지점들에 모킹을 적용해 「등재된 seam」 표에 승인된 모킹 예외로 명시적으로 올리라**는 것이다. 즉 이 시도가 고른 \"원장 + R10만, 등재는 대체물이 선 뒤\"라는 경계를 다시 무르고, 원장을 종착지가 아니라 **등재로 가는 경유지**로 만들라는 지시다.\n\n**이 반려가 뒤집는 판단** — 계획 요약의 \"**지금 등재하지는 않는다** — 대체물이 서기 전에는 '구동되는 구간' 칸에 쓸 것이 없어 등재가 거짓이 되고(R2가 빈 칸을 막는다), 예고 CODE가 등재 표에 먼저 나타나면 R10이 막는다\"가 정면으로 반려됐다. 검토자는 그 순서(대체물 → 등재)를 받아들이지 않고, 모킹을 적용한 뒤 그것을 승인된 예외로 등재하는 쪽을 택했다.\n\n**재계획이 풀어야 할 논점(planner에게)**\n1. **자격 판정과의 정합.** 직전 시도는 ①K3s MCP 자격 발급 = `EXT`, ②marketplace 호스팅 = `없음`(인클러스터 git 원격으로 실물 배포 가능 → EXT 불가), ③unroutable base-url = `EXT`로 갈랐다. \"모킹 적용 후 등재\"는 최소한 ②의 판정('등재 없이 해소')과 충돌한다 — ②까지 모킹 예외로 등재할 것인지, 아니면 ①③만 등재하고 ②는 실물 배포로 갈 것인지를 검토자에게 확인하거나 근거를 세워 확정해야 한다.\n2. **R2/R10과의 정합.** 현행 체커는 '구동되는 구간'이 빈 등재(R2)와 차단 요인이 예고한 CODE의 선등재(R10)를 막는다. 모킹을 실제로 적용해 그 칸을 채우면 R2는 충족되지만, 그렇다면 그 지점은 더 이상 '차단 요인'이 아니라 seam이므로 **원장에서 등재 표로 이동**해야 한다 — 원장·R10을 이번 시도의 형태로 유지할지, 등재를 전제로 다시 설계할지 결정이 필요하다.\n3. **상한·회계의 이동.** 등재가 늘면 등재 seam 2 → 2+N, 회계 행·귀속이 함께 움직인다. 이번 시도의 완료 기준(\"숫자가 하나도 안 움직인다\")은 폐기되고, 새 예고값을 실측으로 다시 세워야 한다.\n4. **정의의 EXT 배제 조항 재검토.** \"kind에 실물 배포가 가능하면 EXT를 쓸 수 없다\"(MinIO 선례)를 그대로 두면 ②는 등재 불가다. 검토자의 지시를 따르려면 이 조항의 적용 범위를 어떻게 볼지 정리해야 하고, 정의 자체를 손대야 한다면 그것은 reconciler-tobe-modeler 소관이다.\n\n**PR #62는 머지하지 않았다.** 현재 main(`acde617`) 위에서 여전히 mergeable/clean이고 게이트 3종 green이므로, 재계획이 이 브랜치를 이어 쓸지 새로 열지는 planner가 정한다. PR #42도 닫지 않았다(닫기 승인은 이 반려에 묶여 함께 보류됐다)."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**범위(완료 기준) — 차단 요인 원장을 종착지가 아니라 「경유지」로 만든다.** 반려 사유\n(*\"차단 요인에 모킹 적용. 모킹 예외로 명시적으로 등재\"*)를 그대로 실행하되, 3건을 한 번에\n묶지 않고 **부트스트랩 순서상 앞의 둘(①②)** 을 해소하는 것까지가 이 시도의 범위다. 성공 판정은\n넷이다: (a) 게이트 3종(`check-fidelity-allowlist.py` · `check-ac-mapping.sh` ·\n`check-render-fidelity.py`) exit 0이면서 **등재 seam 2→3(EXT 0→1) · 회계 행 16→18 · 마커\n4→5 · 차단 요인 3→1** 로 이동하고 **미해소 위반 4·상한 4는 불변**일 것, (b) 배포된 kind SUT에서\n**`workloadType=claude-code` 세션이 실제로 `active`에 이르고** 그 pod 안에서 `claude --version`이\n돌 것, (c) 그 결과로 **AC-E1이 공백에서 나와 전용 파일을 가질 것**(매칭 파일 14→15, 공백 12→11),\n(d) PR의 CI 잡이 전부 green — 특히 이번에는 `e2e (kind + API + browser)` 가 **경로 필터에 걸려\n실제로 발화**할 것(직전 시도는 문서·체커만 건드려 발화하지 않았다).\n\n**반려가 뒤집은 판단과, 이 시도가 그것을 어떻게 받았는가.** 직전 시도는 \"대체물이 서기 전에는\n'구동되는 구간' 칸에 쓸 것이 없어 등재가 거짓이 된다\"는 이유로 **등재를 미뤘고**, 검토자는 그\n순서(대체물 → 등재)를 받아들이지 않았다. 이 시도는 순서를 뒤집는 대신 **대체물을 실제로\n세워** 그 칸을 참으로 채웠다 — 등재의 진실성 요구(R2)와 검토자의 지시가 동시에 만족되는 유일한\n경로다. 그래서 이 슬라이스는 문서 작업이 아니라 **인프라 작업**이 됐다.\n\n**반려가 남긴 논점 ①(②의 판정)은 정의를 근거로 확정했다.** 기준은 모델 정의의 `EXT` 배제 조항\n하나다 — *\"kind에 실물로 배포 가능하면 EXT를 쓸 수 없다\"*(MinIO 선례). 같은 부트스트랩 안에서\n결론이 갈린다: **자격 발급(①)은 `EXT`** — 실 K3s MCP는 조직 GitHub App **개인키**를 쥔\n서비스라 복제해도 토큰을 만들지 못해 \"기능하는 실물\"이 불가능하다 → 대역이 유일한 길이고\n**승인된 모킹 예외로 등재**한다. **호스팅(②)은 `없음`** — 마켓플레이스는 git 원격일 뿐이고\n`claude plugin marketplace add <url>`는 호스트를 가리지 않으므로 인클러스터 원격을 세우면\n**같은 코드 경로**가 그대로 돈다 → EXT를 쓸 수 없고 **등재 없이** 해소한다. ②까지 등재하면\n정의와 정면 충돌하고, 그 조항을 고치는 것은 planner가 아니라 `reconciler-tobe-modeler` 소관이라\n**정의를 지키는 쪽**을 골랐다. 사용자 지시의 핵심(\"원장에 미뤄 두지 말 것\")은 두 행이 **모두\n원장에서 사라지는 것**으로 충족된다 — 하나는 등재로, 하나는 실배포로. 이 갈림은 실행 지침이\n승인 대상으로 명시한다.\n\n**왜 ③(provider)을 같은 슬라이스에 넣지 않는가 — 위험의 종류가 다르다.** ①②의 대체물은 계약이\n**이 레포 안에** 있다(entrypoint의 jq 표현식·기존 단위 테스트의 가짜 응답·실제 marketplace.json\n구조). 그래서 로컬에서 실제로 구동해 확인할 수 있었고 실제로 했다. ③은 **실 Claude CLI가\n받아들이는 Messages API 계약**을 맞추는 일이라 정본이 레포 밖에 있고 CLI 버전에 묶인다. 셋을\n한 커밋에 묶으면 실패 시 원인 분해가 불가능해지고, ①②가 만든 확실한 이득(claude-code 세션이\nSUT에서 서는 것 + AC-E1 해소)까지 함께 막힌다. ③은 자기 슬라이스를 가진다.\n\n**범위 밖(후속)**: ③ provider 대역과 `CLAUDE-PROVIDER`(EXT) 등재 · 미해소 위반 4쌍 제거\n(`j6-agent-prompt-loop`·`manual-archive` 재작성, ③이 선결) · AC-E2~E6 · PR #42 닫기.\n**직전 반려의 금지(\"claude-code → shell 워크로드 교체 금지\")는 이번에도 지켰고**, 위반 표 행에\n규범으로 박아 두어 다음 슬라이스가 같은 우회를 다시 시도할 수 없게 했다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "직전 시도의 브랜치 `reconcile/rct_20260820-0001-blocker-ledger`(PR #62)를 이어 쓴다. 새 PR을 또 열지 않는다 — #62가 담은 원장·R10은 반려되지 않았고 이 시도는 그 위에 '적용과 등재'를 얹는 상위집합이라, 한 PR 안에서 원장이 경유지로 쓰이는 아크가 그대로 읽힌다. 현재 main(`acde617`)을 **merge**로 들여온다(rebase+force-push 아님).",
+              "expectedOutcome": "브랜치가 현재 main을 포함하고 충돌 0건. #42는 손대지 않는다(닫기는 운영 판단)."
+            },
+            {
+              "seq": 2,
+              "action": "차단 ①의 대역을 만든다 — `deploy/e2e-k3s-mcp-fake.yaml`. 응답 모양은 손으로 짓지 말고 **소스에서** 가져온다: `data-plane/entrypoint.sh`의 jq 표현식이 읽는 경로와 `data-plane/cmd/agent/entrypoint_test.go`의 가짜 curl 응답이 정본이다. 플랫폼 Secret의 `k3s-mcp-token`을 bearer로 검사해 틀리면 401. `mock-exception: PLUGIN-CRED` 마커와 `test-only` 토큰을 이 파일에 둔다(회계 행의 앵커).",
+              "expectedOutcome": "ConfigMap+Deployment+Service 3오브젝트. 이미지는 이미 kind에 load된 `session-platform/data-plane:dev`(Node 22 포함)라 추가 빌드·pull이 없다."
+            },
+            {
+              "seq": 3,
+              "action": "차단 ②의 **실물**을 만든다 — `deploy/plugin-marketplace-git.yaml`. `git http-backend`를 CGI로 얹은 **smart HTTP** 원격이어야 한다(dumb HTTP는 `--depth` 얕은 클론을 못 받는다). 픽스처 마켓플레이스는 실제 `dlddu/plugin-marketplace`의 `.claude-plugin/marketplace.json`에서 `session-platform` 플러그인의 source/skills/mcpServers 구성을 그대로 가져온다. **이 파일에는 예외 마커를 달지 않는다**(달면 R6가 미등록 CODE로 막는다).",
+              "expectedOutcome": "init 컨테이너가 bare repo를 seed하고 서버가 스마트 프로토콜로 응답. 회계에는 `test-only`·CODE `—`(비-seam) 한 행."
+            },
+            {
+              "seq": 4,
+              "action": "엔드포인트를 설정값으로 뺀다. `data-plane/entrypoint.sh`: 상수로 박힌 마켓플레이스 URL을 `CLAUDE_CODE_PLUGIN_MARKETPLACE_URL`로 빼고, 인증 헤더 스코프(`http.<url>.extraheader`)가 **URL을 따라 함께 움직이게** 한다. `client_orchestrator.go`: `k3s-mcp-url`·`plugin-marketplace-url`을 **optional** Secret env로만 투영한다.",
+              "expectedOutcome": "키가 없으면 entrypoint가 기존 조직 엔드포인트 기본값을 그대로 쓴다 → `k8s/` 프로덕션 매니페스트 무변경. 기존 단위 테스트(github.com 기본값 + 그 URL로 좁혀진 extraheader)가 그대로 통과."
+            },
+            {
+              "seq": 5,
+              "action": "두 대역을 **로컬에서 실제로 구동해** 확인한다(kind가 없어도 할 수 있는 부분을 전부 한다). git 원격: seed 후 `git clone` 전체와 `--depth 1` 얕은 클론 둘 다, 그리고 `info/refs?service=git-upload-pack`의 content-type. MCP 대역: 틀린 bearer에 401, 그리고 **수정된 entrypoint.sh 자체**를 실 curl·실 jq로 붙여 끝까지 돌린다.",
+              "expectedOutcome": "클론 2종 성공 + `application/x-git-upload-pack-advertisement`. entrypoint가 토큰을 받아 extraheader를 새 URL로 좁히고 claude 두 번·agent 순으로 진행하며 **GitHub 토큰이 agent 환경으로 새지 않는다**."
+            },
+            {
+              "seq": 6,
+              "action": "AC-E1 전용 e2e를 신설한다 — `control-plane/test/e2e_e1_workload_type_test.go`(`// 검증 AC: AC-E1`). AC의 검증 방법 네 갈래를 전부 배포 SUT 위에서 단언한다. claude-code pod는 credential-proxy 사이드카가 있어 exec에 **컨테이너 이름(`session`)을 명시**해야 한다(공용 하네스의 `execInPod`는 단일 컨테이너용이라 이 파일에 국소 헬퍼를 둔다).",
+              "expectedOutcome": "`go vet -tags=e2e ./test/...` 통과. 잘못된 타입 7종이 400이고 **세션 pod 수가 움직이지 않음**(= pod 생성 전 거부)으로 단언된다."
+            },
+            {
+              "seq": 7,
+              "action": "`scripts/e2e/up.sh`가 두 새 Deployment의 rollout을 기다리게 한다(MinIO와 같은 이유 — 첫 claude-code 세션이 기동을 앞지르면 안 되고, 마켓플레이스는 init 컨테이너의 seed까지 끝나야 한다).",
+              "expectedOutcome": "`kubectl rollout status`가 control-plane 대기 **앞에** 들어간다."
+            },
+            {
+              "seq": 8,
+              "action": "문서를 옮긴다 — `docs/test/e2e.md`. 「차단 요인」에서 ①②를 **지우고**(R10: 예고 CODE가 등재되면 그 행은 더 이상 차단 요인이 아니다), ①을 「등재된 seam」에 `PLUGIN-CRED`(EXT)로 올린다. 회계에 2행, 집계 5개 숫자, 위반 표의 '제거 경로'(이제 선결조건은 ③ 하나), AC 매핑·집계·E 계열 판정 노트를 함께 갱신한다.",
+              "expectedOutcome": "게이트 3종 로컬 exit 0이고 숫자가 예고와 정확히 일치(등재 3 · 회계 18 · 마커 5 · 차단 1 · 위반 4 · 상한 4 · 매칭 15 · 공백 11)."
+            },
+            {
+              "seq": 9,
+              "action": "레포의 정적 검증을 CI와 같은 명령으로 전부 돌린다 — 게이트 3종, `go vet` 2종(e2e·integration 태그), 두 모듈 `go test ./...`, `go test -tags=integration ./test/...`, 임베드된 JS 2종 `node --check`, deploy YAML 파싱.",
+              "expectedOutcome": "전부 통과. 통과하지 못하는 것은 `kubectl kustomize`(이 환경에 없음)뿐이고, 그것은 CI의 e2e 잡이 첫 실측이다."
+            },
+            {
+              "seq": 10,
+              "action": "브랜치를 push하고 **PR #62의 제목·본문을 새 범위로 갱신**한다(새 PR을 열지 않는다). 본문에 판정 근거·로컬 실측·집계 이동·범위 밖·되돌리기를 담는다. 그 뒤 CI를 완료까지 관측한다 — 이번 PR은 `deploy/**`·`data-plane/**`·`scripts/e2e/**`를 건드리므로 `e2e (kind + API + browser)` 잡이 **발화한다**.",
+              "expectedOutcome": "체크 전 잡 success(또는 main 전용 skip). 특히 `e2e (kind + API + browser)`가 green — 이것이 대역 둘이 kind에서 실제로 동작한다는 유일한 기계적 증거다."
+            }
+          ],
+          "plannedAt": "2026-09-04T09:20:00+09:00"
         }
       }
     ]
