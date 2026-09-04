@@ -2038,7 +2038,48 @@
     },
     "createdAt": "2026-09-04T22:06:30Z",
     "updatedAt": "2026-09-04T22:06:30Z",
-    "id": "rct_20260904-0008"
+    "id": "rct_20260904-0008",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**`ca-cert` optional Secret 키를 `docs/prd/`(SSOT)에 키 단위로 등재한다** — 같은 Secret의 다른 다섯 키가 이미 「필수/optional · 주입 대상 컨테이너 · 부재 시 동작」을 키 단위로 적는 house style을 그대로 따른다. 코드로 확인한 세 가지 사실을 그대로 옮긴다: ① `optionalSecretEnv(ANTHROPIC_CA_CERT, …, \"ca-cert\")`가 `credentialProxyContainer`(client_orchestrator.go:759) **한 곳**에서 주입되므로 **두 배치(claude-code 사이드카 AC-E6 · approval-gated 헬퍼 파드 AC-F6) 모두에 흐르고 주 컨테이너에는 없다**, ② `trustProviderCA`(credential_proxy.go:88-106)는 시스템 풀에 **추가**할 뿐 대체하지 않는다, ③ 비어 있으면 시스템 풀 그대로이고 **비어 있지 않은데 인증서가 하나도 안 나오면 프록시 시작이 실패**한다(main.go:218-227의 `os.Exit(1)`). 대안(k8s example yaml 주석만 유지 / `docs/test/e2e.md`에만 남김)은 이 모델의 판정 기준 3(문서 없는 구현)을 그대로 두므로 택하지 않는다. 문서만 바꾸므로 런타임 영향이 없고 revert 한 번으로 되돌아간다.\n\n**이 시도의 범위(완료 기준)**: `docs/prd/claude-code-workload.md`의 AC-E6 설명·검증 방법과 `docs/prd/approval-gated-workload.md`의 AC-F6 설명·검증 방법에 `ca-cert`가 위 세 사실과 함께 등재되어 `git grep -c 'ca-cert' -- 'docs/prd/*'`가 0에서 양수가 되고, 게이트 4종이 **머지 전 baseline 대비 악화 없음**으로 유지되는 것(fidelity-allowlist rc=0 · render-fidelity rc=0 · check-ac-mapping rc=0에서 AC 27/매칭 15/예외 1/공백 11 불변 · comment-policy는 **baseline과 동일한 2건 그대로**).\n\n**범위 밖(후속)**: (a) 같은 Secret의 optional `k3s-mcp-url`·`plugin-marketplace-url` 두 키도 `docs/prd/`에 0건이다 — 같은 판정 기준 3의 형제 잔여이나 이 트리거가 만든 변경이 아니므로 이번 슬라이스에 넣지 않는다. (b) `check_comment_policy.py`의 main baseline 붉음(2건)은 자매 모델 `tbm_session-platform-comment-redundancy`의 축이다. (c) 코드·e2e 변경은 일절 하지 않는다 — 자매 task `rct_20260904-0003`(AC-E2~E6 전용 파일)·`rct_20260904-0002`(미해소 위반 4행 재작성)의 몫이다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-04T22:35:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "코드에서 계약 사실 3종을 확정한다 — `grep -rn 'AnthropicCACertEnvVar\\|ClaudeCodeCACertSecretKey' --include='*.go'`로 주입 지점이 `credentialProxyContainer` 하나뿐임을, `sed -n '715,770p' control-plane/internal/adapter/k8s/client_orchestrator.go`로 그 함수가 사이드카(:734)와 헬퍼 파드(:725) 양쪽에서 호출됨을, `sed -n '88,106p' data-plane/cmd/agent/credential_proxy.go`로 `AppendCertsFromPEM`이 시스템 풀에 더하는 것임을 확인.",
+              "expectedOutcome": "주입 지점 1곳(:759) · 호출자 2곳(:725 헬퍼, :734 사이드카) · `x509.SystemCertPool()` 위에 append. 즉 `ca-cert`는 AC-E6과 AC-F6 **양쪽**의 계약이고 주 컨테이너에는 없다(workload_type_orchestrator_test.go:336-337이 그것을 단언한다)."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/prd/claude-code-workload.md` AC-E6 **설명**(:99)의 `model` 키 서술 앞에 `ca-cert` 문장을 추가한다 — optional · **자격 증명이 아닌 신뢰 앵커**(공개 물건) · **credential-proxy 컨테이너에만** 주입(`ANTHROPIC_CA_CERT`) · 시스템 루트를 **대체가 아니라 추가** · 키가 없거나 비면 시스템 풀 그대로 · 비어 있지 않은데 인증서가 없으면 **프록시 시작 실패**(첫 요청까지 미루지 않는다).",
+              "expectedOutcome": "`git grep -c 'ca-cert' -- docs/prd/claude-code-workload.md` ≥ 1. 「사설 CA만 신뢰한다」로 읽히는 문장이 없다."
+            },
+            {
+              "seq": 3,
+              "action": "같은 파일 AC-E6 **검증 방법**(:109)에 단언 항목을 추가한다 — 「optional `ca-cert`는 credential-proxy 컨테이너에만 있고 주 컨테이너에는 없으며, 값이 있으면 사설 발급자 대역에 도달하고 없으면 시스템 신뢰 그대로이며, 공개 발급 엔드포인트는 값이 있어도 계속 동작하고, 인증서 없는 번들은 시작 실패다」. 이 PRD는 설명과 검증이 짝을 이루므로 함께 갱신한다.",
+              "expectedOutcome": "검증 항목이 실재 시험과 대응한다 — `credential_proxy_ca_test.go`의 `TestCredentialProxyTrustsConfiguredProviderCA`·`TestProviderCAWidensTrustWithoutWeakeningIt`·`TestEmptyProviderCALeavesTrustAtTheSystemDefault`·`TestCredentialProxyRejectsCABundleWithoutCertificate`, `workload_type_orchestrator_test.go:328-337`, 배포 SUT의 `e2e_provider_reachability_test.go`."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/prd/approval-gated-workload.md` AC-F6에 파급을 반영한다 — :117 배치 목록의 「공급자 `base-url`·`auth-token` → 헬퍼 파드의 credential-proxy 컨테이너에만」에 optional `ca-cert`를 같은 배치로 덧붙이고, :119 「동작 계약은 AC-E6을 그대로 재사용한다」 문장에 사설 CA 추가 신뢰가 포함됨을 명시하고, :126 검증 방법의 (b)항·「AC-E6의 프록시 검증 항목 … 파드 IP 바인딩에서도 동일하게」 목록에 `ca-cert`를 넣는다.",
+              "expectedOutcome": "`git grep -c 'ca-cert' -- docs/prd/approval-gated-workload.md` ≥ 1. 코드가 한 함수로 두 배치를 만드는 사실과 문서가 일치한다."
+            },
+            {
+              "seq": 5,
+              "action": "게이트 4종을 로컬에서 돌려 baseline과 대조한다 — `python3 scripts/check-fidelity-allowlist.py` · `python3 scripts/check-render-fidelity.py` · `./scripts/e2e/check-ac-mapping.sh` · `python3 scripts/check_comment_policy.py`.",
+              "expectedOutcome": "앞의 셋 rc=0(AC 27 = 매칭 15 + 예외 1 + 공백 11 불변 — 본문만 늘렸고 `### AC-` 헤딩은 건드리지 않았다). comment-policy는 rc=1이지만 **baseline과 글자 그대로 같은 2건**(`2026-09-04(#3)` 행의 320 != 334 · 지문 불일치)이며 이 게이트는 `docs/prd/`를 읽지 않는다(스크립트에 `prd` 문자열 0건)."
+            },
+            {
+              "seq": 6,
+              "action": "`reconcile/rct_20260904-0008-session-platform-docs-impl` 브랜치로 커밋·푸시하고 PR을 연다(머지하지 않는다). PR 본문에 task id · gap · 계약 3사실의 코드 근거 · 게이트 대조표 · baseline 붉음 고지를 적는다.",
+              "expectedOutcome": "PR이 열리고 CI에서 fidelity-allowlist · render-fidelity · AC↔e2e 매핑이 초록, comment-policy는 main과 같은 이유로 붉다(이 PR이 만든 것이 아님을 본문이 미리 밝힌다)."
+            }
+          ]
+        }
+      }
+    ]
   },
   {
     "id": "rct_20260904-0009",
