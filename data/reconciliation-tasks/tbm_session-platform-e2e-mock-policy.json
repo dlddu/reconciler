@@ -1092,7 +1092,7 @@
   {
     "id": "rct_20260904-0001",
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-09-04T14:55:35Z",
       "changedSides": [
@@ -1121,7 +1121,7 @@
       "assessedAt": "2026-09-04T14:55:35Z"
     },
     "createdAt": "2026-09-04T14:55:35Z",
-    "updatedAt": "2026-09-04T15:40:00Z",
+    "updatedAt": "2026-09-04T21:39:00Z",
     "attempts": [
       {
         "plan": {
@@ -1179,6 +1179,11 @@
           "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/66",
           "preparedAt": "2026-09-04T15:25:00Z",
           "notes": "draft PR 13파일(신규 3: `deploy/e2e-anthropic-fake.yaml` · `control-plane/test/e2e_provider_reachability_test.go` · `data-plane/cmd/agent/credential_proxy_ca_test.go`), head `1df5432`, base `4277b31`.\n\n구성: ① data-plane credential-proxy가 optional `ANTHROPIC_CA_CERT`(PEM)를 시스템 루트에 **덧붙여** 신뢰 (대체하지 않는다). ② control-plane이 그 값을 플랫폼 Secret의 optional `ca-cert` 키에서 **프록시 컨테이너에만** 투영 — sidecar(claude-code)·helper(approval-gated) 두 배치가 같은 함수를 쓰므로 AC-F6의 「계약 하나, 배치만 다름」이 유지된다. ③ `deploy/`에 HTTPS 대역(Node/data-plane 이미지 재사용, 체크인된 일회용 사설 CA 서명 인증서) 배포 + base-url 전환. ④ 원장 갱신(등재 4·EXT 2·마커 6/6·회계 19·차단 0, 상한 4 유지).\n\n브랜치명에 모델 슬러그를 붙였다 — `rct` id 는 모델 간 유일하지 않아 형제 워커의 브랜치를 밟을 수 있다.\n\n로컬 검증 전량 초록: fidelity(R1~R10) · ac-mapping · gofmt(양 모듈) · go vet(`./...` 및 `-tags=e2e`) · go test(양 모듈) · go test -tags=integration. 추가로 **실 agent 바이너리를 credential-proxy 워크로드로 띄워** 대역을 상대로 관통 확인 — CA 없이 502, CA 주면 200+결정적 마커와 SSE 이벤트열, 위조 Authorization은 대체됨. 음성 통제 4종(마커 제거 / 차단 요인 행 존치 / 집계 미갱신 / 비-AC 미등재) 전부 1차 KILL, 복원 후 바이트 동일.\n\n미확인으로 남긴 것: kind e2e 잡(로컬에 kubectl·kind·docker 없음) — CI가 유일한 관측 지점이다. 그리고 실 Claude CLI 2.1.220의 프롬프트 루프 만족 여부(범위 밖, 등재 행에 미검증 명시).\n\n**CI 관측(계획 단계)**: 첫 head `1df5432`에서 **14체크 전부 초록**. `e2e (kind + API + browser)` 잡 로그를 원문으로 내려받아 `deployment \"anthropic-fake\" successfully rolled out`과 신규 세 테스트의 `--- PASS`(Reachable · Streaming · ReplacesCallerSuppliedAuthorization)를 확인했다 — 스위트 전체에 `FAIL`·`SKIP` 0건이라 실제로 클러스터에 붙어 단언했다. AC-E1 두 테스트도 PASS(회귀 없음), Playwright 20 passed.\n\n그 뒤 후속 커밋 `3aa8a51`을 얹었다 — `deploy/claude-code-credentials-secret.yaml` 주석에 남겨 두었던 옛 `base-url` 리터럴을 걷는 변경이다. R10은 차단 요인 행이 선언한 리터럴을 **그 파일 본문에서** 찾으므로, 과거 값이 주석에 남아 있으면 나중에 같은 행이 다시 등재됐을 때 실제 설정이 이미 옮겨갔어도 게이트가 초록으로 지나간다. 최종 head는 `3aa8a51`이고 주석 한 블록만 다르다. **그 최종 head도 14체크 전부 초록이다** — 잡 `101078030381` 로그에서 롤아웃 성공과 세 테스트 `PASS`, 스위트 `FAIL`·`SKIP` 0건, Playwright `20 passed`를 같은 방식으로 확인했다. 두 head가 독립적으로 초록이므로 이 PR은 검토·머지 대기 상태로 넘긴다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "riskLevel=medium이고, 이 시도의 유일한 불가역 지점인 PR #66 머지가 `dlddu/session-platform` main에 실코드를 착지시킨다 — data-plane credential-proxy의 TLS 신뢰 경로(`ANTHROPIC_CA_CERT`를 시스템 루트에 덧붙임)와 control-plane의 Secret env 투영이 포함되므로, 배선은 test-only가 아니라 프로덕션 코드 경로다. 또한 레포에 사설 CA 개인키(`deploy/e2e-anthropic-fake.yaml`의 `tls.key`)를 체크인하는 변경이라 사람이 그 성격(일회용·인클러스터 SAN 한정·2095 만료)을 확인하고 수용하는 편이 옳다. 롤백은 revert PR로 가능하고 프로덕션 클러스터 매니페스트(`k8s/` base)의 실효 변경은 0이지만, 「불가역 + 실코드 + 키 자료 체크인」 세 신호가 겹쳐 검토 필요로 판단한다."
         }
       }
     ]
