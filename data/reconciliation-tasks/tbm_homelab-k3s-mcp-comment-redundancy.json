@@ -253,5 +253,38 @@
     },
     "createdAt": "2026-09-04T09:07:06Z",
     "updatedAt": "2026-09-04T09:07:06Z"
+  },
+  {
+    "trigger": {
+      "detectedAt": "2026-09-04T09:18:42Z",
+      "changedSides": [
+        "as_is"
+      ],
+      "asIs": {
+        "previousVersion": "lines=963 files=64\n9552a5673d4735ad44135034a28a91a6bd6318e58fd9fa2e3102ee1557c0925d",
+        "currentVersion": "lines=969 files=66\n8af452a1f257e5ef48d625e3f4e6eceb4e2f670c5f16d7cc328c6460ecbaf07f"
+      },
+      "toBe": {
+        "previousVersion": "329ef9408530937f557de3eafb52af06aae6ddd0",
+        "currentVersion": "329ef9408530937f557de3eafb52af06aae6ddd0"
+      }
+    },
+    "stateSummary": {
+      "asIs": "**as-is = 판정 대상 주석 지문 `lines=969 files=66` / `8af452a1`, 관측 2026-09-04T09:18:42Z @ `4c5040f`(PR #55)**\n\n- `963/64` → **`969/66`**: 신규 파일 2개(`session_read_ac{3,4}.py`)가 주석 **6줄**을 더했다.\n- **순감 0** — 기존 64개 파일의 주석은 한 줄도 바뀌지 않았다(변한 파일이 정확히 신규 2개, 둘 다 `0 → N`).\n- 이 6줄은 `검증 AC:` 지시자 줄이 지문 필터에 걷힌 뒤 남은 산문 주석이다.",
+      "toBe": "**to-be = `docs/comment-policy.md` blob `329ef940` — 트리거 전후 불변**\n\n- PR #55는 정책 문서를 건드리지 않았다. 복원 경로 넷 · 유지 대상 셋 · 5단계 판정 절차 ·\n  「애매하면 남긴다」의 비용 비대칭 · 지문 사각지대 · 판정 이력 표 모두 그대로다.",
+      "gap": "**이 트리거 자체로는 새 작업이 필요 없다 — 잔여는 이미 열려 있는 `rct_20260904-0004`가 소유한다.\n다만 이 fire가 독립 측정으로 확인한 것 둘을 여기 남긴다(그 task는 미점유 인수인계 지점이라 쓰지 않는다).**\n\n## ① 이 트리거의 성격 — 잔여를 6줄 늘렸을 뿐 성격은 불변\n\n신규 파일 2개가 주석 6줄을 더했고 **기존 주석은 순감 0으로 무변경**이다. 미판정 잔여가\n`722줄 / 60파일` → **`728줄 / 62파일`**로 커졌다. `rct_20260904-0004`(`action_required`,\n09:07:06Z)가 이미 그 잔여 전체를 소유하므로 **여기서 rival task를 열지 않는다** — 이 레코드의\n실질 효용은 **baseline 전진**(지문이 낡은 채로 남으면 precheck가 매 5분 claude를 재발사한다)과\n아래 ②의 기록이다.\n\n## ② ⚠️ 1차 판정 패스의 제거 8줄을 **전건 복원 가능성 검증**했다 — 결함 없음(다음 fire가 다시 파지 말 것)\n\n`rct_20260904-0004`는 잔여와 정책 문서의 거짓 진술을 다뤘지만, **이미 제거된 8줄이 정책의\n「복원 가능한가」 기준을 실제로 만족하는지**는 대조되지 않았다. 이번 fire가 8줄 전부를 원문\n근거와 1:1로 확인했다 — **전건 복원 가능, 오제거 0건**:\n\n| 제거된 주석 | 복원 경로(실측) |\n| --- | --- |\n| `MaxSearchSize … Requests above it are rejected, not clamped.` | `docs/prd-opensearch-search.md:33-34` 「상한을 초과하는 요청은 클램프하지 않고 도구 에러로 거부한다」 + 코드 `opensearch.go:222-224`가 실제로 거부 + 인터페이스 doc `:107` 「above MaxSearchSize are rejected」 **잔존** |\n| `PutResult … Result is … \"created\" or \"updated\".` | `prd-opensearch-document-put.md:17,27,29` |\n| `DeleteResult … \"deleted\" or \"not_found\".` | `prd-opensearch-document-delete.md:15,21,26,33` + 코드 리터럴 `:318,320` + 인터페이스 doc `:113` **잔존** |\n| `PutDocument … id 자동 생성 / 인덱스 자동 생성` | `prd-opensearch-document-put.md:15,17` + **AC2(인덱스 자동 생성) 전체** + 인터페이스 doc `:109-110` **잔존** |\n| `Search … one index or the whole collection` | `prd-opensearch-search.md:13` 「`index`(선택, 기본 전체 인덱스)」 |\n| `Base credentials: the default chain (instance profile in production).` | 같은 파일 패키지 주석의 verbatim 중복 |\n| `do … returns the response status and body` | 시그니처 `(int, []byte, *Error)` 자체 |\n| `sessionplatform.FromEnv … absolute http(s) URL이 아니면 오류` | **5줄 아래** `:204-205`의 에러 문자열 「`SESSION_PLATFORM_ENDPOINT must be an absolute http(s) URL, got %q`」 |\n\n**패턴이 일관된다**: 지워진 것은 전부 *구현체* doc 주석이고, 같은 내용의 *인터페이스* doc은\n`opensearch.go:107-113`에 **그대로 남아 있다**. 즉 「인터페이스 doc을 구현체가 되풀이한다」는\n제거 사유가 실제 코드 형태와 맞는다. ⇒ **1차 패스는 정책을 올바로 적용했고, 오제거로 열\ntask는 없다.** 다음 fire는 이 8줄을 다시 파지 말 것.\n\n## ③ 「판정받은 범위」의 경계에 주의 — 88줄 문제는 이 fire에서도 재확인된다\n\n`rct_20260904-0004`가 잡은 항목이지만 측정을 독립적으로 재현했으므로 수치를 남긴다.\n판정 대상 2개 패키지의 주석 줄 수를 커밋별로 재계산하면:\n\n| 커밋 | 2개 패키지 주석 | 전체 |\n| --- | --- | --- |\n| `577af3a` (#51) — **1차 판정이 실측한 시점** | **161** | 739 |\n| `b2b6b68` (#52) | 161 | 848 |\n| `1d1db45` (#53, `session_write` 구현) | **249** (+88) | 971 |\n| `000ba8c` (#54, 판정 패스 머지) | **241** (−8) | 963 |\n| `4c5040f` (#55, 이번 트리거) | 241 | **969** |\n\n즉 정책 문서 판정 이력 표의 「(주석 161줄 / 4파일)」은 **머지 시점 기준으로는 이미 249줄**이었다 —\n계획이 `577af3a`에서 재고 3커밋 뒤에 머지됐기 때문이다(행 자체는 날짜가 붙은 이력이라 역사로는 참).\n**다음 슬라이스가 이 두 패키지를 「판정 완료」로 건너뛰면 88줄이 영원히 미판정으로 남는다.**\n\n## ④ 이중 계상 방지\n\n- 잔여 판정 작업의 소유자는 **`rct_20260904-0004`(`action_required`)** 하나다. 여기서 열지 않는다.\n- 신규 파일 2개가 더한 **모킹 지문 1건**은 `tbm_homelab-k3s-mcp-e2e-mock-policy` 소관이고 같은\n  fire에서 노이즈로 판정했다(`rct_20260904-0003`).\n- 두 파일의 **AC↔e2e 매칭**은 `tbm_homelab-k3s-mcp-ac-e2e` 소관이다(`rct_20260904-0007`).",
+      "summarizedAt": "2026-09-04T09:18:42Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-04T09:18:42Z",
+      "reason": "**작업 불필요(`actionRequired: false`) — 잔여가 없어서가 아니라, 이미 소유자가 있기 때문이다.**\n\n1. **잔여는 열려 있는 `rct_20260904-0004`(`action_required`, 09:07:06Z)가 소유한다.** 그 task는\n   미점유 인수인계 지점이라 planner가 언제든 집어간다 — 같은 gap으로 rival task를 여는 것은\n   경쟁이고, 그 안에 쓰는 것은 레이스다. 그래서 **별도 `no_action_needed`로 남긴다**(이쪽은\n   planner에게 아무것도 넘기지 않으므로 경쟁하지 않는다).\n2. **이 트리거 자체는 노이즈에 가깝다** — 신규 파일 2개의 주석 6줄뿐이고 기존 주석은 **순감 0**으로\n   무변경이다. 잔여의 크기만 `722/60` → `728/62`로 커졌지 성격이 바뀌지 않았다.\n3. **to-be 불변** — 정책 문서를 건드리지 않았다.\n4. **baseline 전진이 이 레코드의 실질 효용이다.** 지문을 낡은 채 두면 dumb precheck가 매 5분\n   claude를 재발사한다.\n\n**적극적으로 기록한 「결함 아님」**: 1차 판정 패스가 제거한 주석 8줄을 전건 복원 가능성 검증해\n**오제거 0건**을 확인했다(`stateSummary.gap` ②의 표). 다음 fire가 같은 자리를 다시 파지 않도록\n근거를 파일·줄 단위로 남겼다."
+    },
+    "toBeModelId": "tbm_homelab-k3s-mcp-comment-redundancy",
+    "status": "no_action_needed",
+    "createdAt": "2026-09-04T09:18:42Z",
+    "updatedAt": "2026-09-04T09:18:42Z",
+    "id": "rct_20260904-0005"
   }
 ]
