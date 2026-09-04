@@ -1997,5 +1997,39 @@
     "createdAt": "2026-09-04T21:58:30Z",
     "updatedAt": "2026-09-04T21:58:30Z",
     "id": "rct_20260904-0007"
+  },
+  {
+    "toBeModelId": "tbm_session-platform-docs-impl",
+    "status": "action_required",
+    "trigger": {
+      "detectedAt": "2026-09-04T22:06:30Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "control-plane:1c301a955f3e8c27193063b6188d30a23baf6074 data-plane:33146354fd0490ecb08efe0264de37e55f9d06b9 web:8870879a7861b9d79b244055c344a6e3affa896c",
+        "currentVersion": "control-plane:05c65c638a155b2e281e34ebda1b69e0c7753ebe data-plane:4fb1afe1bf2fa497ca717559afd0ccabb0bf139b web:8870879a7861b9d79b244055c344a6e3affa896c"
+      },
+      "toBe": {
+        "previousVersion": "17671ad213dffc784ebdb030aacd19fcad9e29b3",
+        "currentVersion": "5a68eae5d541d2303140f6d3c3e5185646d8a026"
+      }
+    },
+    "stateSummary": {
+      "asIs": "`dlddu/session-platform@b227224`(= PR #66 `f8ed6a0` + 이미지 핀), 관측 2026-09-04T22:05Z. 트리거는 자매 렌즈 `tbm_session-platform-e2e-mock-policy`의 슬라이스다 — 인클러스터 provider 대역을 세워 「차단 요인」 표를 비웠다.\n\nas-is `control-plane:1c301a95 → 05c65c63` · `data-plane:33146354 → 4fb1afe1`(`web` 불변). 구현 변경의 실체:\n- `control-plane/internal/adapter/k8s/client_orchestrator.go` **+17/−0** — `AnthropicCACertEnvVar = \"ANTHROPIC_CA_CERT\"` · `ClaudeCodeCACertSecretKey = \"ca-cert\"` 신설(`:119-129`)과 `:866`의 `optionalSecretEnv(AnthropicCACertEnvVar, o.claudeCredentialsSecret, ClaudeCodeCACertSecretKey)` 주입.\n- `data-plane/cmd/agent/credential_proxy.go` **+43/−1** — `providerCACertEnv`(`:60-67`)를 읽어 프록시의 신뢰 앵커에 사설 PEM 번들을 **추가**한다(시스템 루트를 대체하지 않는다). `main.go` +1이 그 값을 넘긴다.\n- 신규 `credential_proxy_ca_test.go`(148) · `e2e_provider_reachability_test.go`(137) · `workload_type_orchestrator_test.go` +14.\n\n**즉 플랫폼 전역 Secret `claude-code-credentials`에 새 optional 키 `ca-cert`가 생겼다** — 값이 있으면 credential-proxy가 그 PEM을 신뢰하고, 없으면 시스템 풀 그대로다. `k8s/claude-code-credentials-secret.example.yaml`(+7)과 `deploy/claude-code-credentials-secret.yaml`(+28/−2), `docs/test/e2e.md`가 이를 기술한다.\n\n**게이트 3종 머지된 main 실측**: `check-render-fidelity.py` rc=0 · `check-fidelity-allowlist.py` rc=0(차단 요인 0건) · `scripts/e2e/check-ac-mapping.sh` rc=0(AC 27 = 매칭 15 + 예외 1 + 공백 11). **어느 게이트도 `docs/prd/`를 코드와 대조하지 않는다.**\n",
+      "toBe": "`docs/` 전체(SSOT), `17671ad2 → 5a68eae5`. 실체는 `docs/test/e2e.md` +34/−13(충실도 원장에 `CLAUDE-PROVIDER`(EXT) 등재 + 차단 요인 표 비움)이다.\n\n**`docs/prd/`는 한 글자도 바뀌지 않았다** — `ac:8b106595…` 불변(자매 ac-e2e 모델의 지문으로 확인). 그런데 PRD는 바로 이 Secret의 키 계약을 **키별로 열거하는 문서**다:\n- `docs/prd/claude-code-workload.md:99` — 「플랫폼 전역 Kubernetes Secret의 **필수** `base-url`·`auth-token` 키는 … credential-proxy sidecar에만 주입된다 … proxy는 시작 시 **HTTPS** upstream origin을 고정하고, 허용 목록에 든 … 헤더만 전달한 뒤 플랫폼 토큰 하나를 주입한다. … 반면 Secret의 `model` 키는 자격 증명이 아닌 **optional 플랫폼 기본값**이다.」\n- `:101` — 「플랫폼 Secret의 **필수** `k3s-mcp-token` 키는 …」, `:105` — 「별도의 **optional** `models` 키는 …」\n- `:109` 검증 방법이 「Secret의 필수 HTTPS `base-url`·`auth-token`이 sidecar에만 주입되고 … sidecar가 loopback에만 바인딩되고 **평문 HTTP·고정 upstream 외 목적지**…를 거부」를 요구한다.\n\n즉 **필수/optional 구분 · 주입 대상 컨테이너 · 값이 없을 때의 동작**까지 키 단위로 적는 것이 이 PRD의 서술 수준인데, 새 `ca-cert` 키만 그 목록에 없다. 실측: `git grep -c 'ca-cert' -- 'docs/prd/*'` = **0**.\n",
+      "gap": "**유의미한 차이 있음 — 판정 기준 3(문서 없는 구현)의 신선한 위반이다.**\n\n`ca-cert`는 코드에 존재하는 **배포 대면 계약**이다: 플랫폼 운영자가 Secret에 넣는 키이고, 그 유무가 credential-proxy의 **TLS 신뢰 앵커**를 바꾼다. 같은 Secret의 다른 다섯 키(`base-url`·`auth-token`·`k3s-mcp-token`·`model`·`models`)는 전부 `prd/claude-code-workload.md`가 필수/optional·주입 대상·부재 시 동작까지 적는다. 이 키만 PRD에 **0건**이고, `k8s/…example.yaml`과 `docs/test/e2e.md`(자매 렌즈의 원장)에만 있다 — **SSOT가 아닌 곳에만 있는 계약**이다.\n\n판정 기준 2 쪽도 스쳐 있다 — PRD `:99`·`:109`가 프록시를 「HTTPS upstream 고정 + 시스템 신뢰」로만 기술하는데, 이제 **사설 발급자를 신뢰하는 경로**가 optional 키 하나로 열린다. 보안 표면의 서술이 실제와 어긋난다(코드는 시스템 루트를 대체하지 않고 **추가**만 하지만, 그 사실 자체가 PRD에 없다).\n\n**게이트가 영원히 초록이다** — 세션-플랫폼의 세 게이트는 목업 충실도·모킹 허용목록·AC↔e2e 매핑을 보고, **`docs/prd/`를 코드와 대조하는 게이트는 레포에 없다.** 그리고 내가 지금 baseline을 전진시키면 **재감지 경로가 0**이다.\n\n**열린 task와의 관계 — 접지 않고 여는 이유**: 이 모델에는 `rct_20260904-0006`이 `planning`으로 점유돼 있으나(이 fire가 21:40에 연 것), 그 범위는 **AC-F3의 유휴 예외**(`lastAccess` 갱신, 제어면 유휴 리퍼)이고 완료 기준이 `prd/approval-gated-workload.md:81`·`prd/lifecycle.md:16`·`test/approval-gated-workload.md:53-54`에 걸려 있다. **그 슬라이스가 성공해도 `ca-cert`의 PRD 부재는 그대로 남는다**(파일도 `prd/claude-code-workload.md` vs 제어면 Go 코드로 겹치지 않는다) ⇒ 접어 넣을 자리가 없어 별도 task가 옳다. 두 task는 서로 다른 변경을 다루므로 경쟁하지 않는다.\n\n**경계 — 이중 계상 금지**: 같은 트리거가 자매 모델 둘의 잔여도 열었다 — `tbm_session-platform-e2e-mock-policy/rct_20260904-0002`(미해소 위반 4행 재작성)와 `tbm_session-platform-ac-e2e/rct_20260904-0003`(AC-E2~E6 전용 파일). **`CLAUDE-PROVIDER` 등재 자체와 e2e 재작성은 그 둘의 몫**이고, 여기서 여는 것은 **PRD 서술 축** 하나다.\n",
+      "summarizedAt": "2026-09-04T22:06:30Z"
+    },
+    "assessment": {
+      "actionRequired": true,
+      "reason": "**작업 필요(actionRequired: true).** 범위는 **`ca-cert` 키의 PRD 반영** 하나로 끊는다.\n\n1. **판정 기준 3의 명확한 위반** — 코드에 실재하는 배포 대면 Secret 키 계약이 SSOT(`docs/prd/`)에 **0건**이다(실측 `git grep -c 'ca-cert' -- 'docs/prd/*'` = 0). 같은 Secret의 다른 다섯 키는 전부 키 단위로 서술돼 있어 **house style이 이미 답을 정해 두었다**.\n2. **판정 기준 2도 스친다** — PRD `:99`·`:109`가 프록시 신뢰를 「HTTPS 고정 upstream」으로만 적어 사설 CA 경로가 서술에서 빠져 있다.\n3. **게이트 무능 + 재감지 경로 0** — `docs/prd/`를 코드와 대조하는 게이트가 레포에 없고, 이 레코드가 baseline을 전진시키므로 다음 트리거가 이 사실을 다시 들추지 않는다.\n\n**계획 단계 제약 4가지**:\n- **`prd/claude-code-workload.md`의 Secret 키 열거에 `ca-cert`를 optional로 추가**하고, 다른 키와 같은 수준으로 적을 것 — 주입 대상(주 컨테이너가 아니라 **credential-proxy 컨테이너**), 부재 시 동작(**시스템 루트 그대로**), 그리고 이것이 **자격 증명이 아니라 신뢰 앵커**라는 분류(`model`·`models`가 「자격 증명이 아닌 optional」로 분류된 선례를 따를 것).\n- **「대체가 아니라 추가」를 명시할 것** — 코드(`credential_proxy.go:60-67`)는 시스템 풀에 PEM을 **더한다**. 「사설 CA만 신뢰한다」로 잘못 적으면 새 문서-코드 불일치가 된다.\n- **검증 방법 절(`:109`)도 함께 갱신할 것** — 이 PRD는 설명과 검증 방법이 짝을 이룬다. 「`ca-cert`가 있으면 사설 발급자 대역에 도달하고, 없으면 기존대로 시스템 신뢰만 쓴다」를 단언 항목으로 넣을 것. 실측 근거는 이미 있다 — `data-plane/cmd/agent/credential_proxy_ca_test.go`(148줄)와 배포 SUT의 `control-plane/test/e2e_provider_reachability_test.go`.\n- **`approval-gated` 쪽 파급을 확인할 것** — `prd/approval-gated-workload.md:117`이 같은 공급자 `base-url`·`auth-token`을 헬퍼 파드의 credential-proxy에 두고 「AC-E6의 프록시 검증 항목 … 은 **파드 IP 바인딩에서도 동일하게** 성립함을 확인한다」(`:126`)고 적는다. `ca-cert`가 그 배치에도 흐르는지 코드로 확인하고, 흐른다면 그 문장에도 반영할 것.\n",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-04T22:06:30Z"
+    },
+    "createdAt": "2026-09-04T22:06:30Z",
+    "updatedAt": "2026-09-04T22:06:30Z",
+    "id": "rct_20260904-0008"
   }
 ]
