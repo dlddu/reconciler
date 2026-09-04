@@ -1681,7 +1681,7 @@
   {
     "id": "rct_20260904-0005",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-04T15:01:32Z",
       "changedSides": [
@@ -1710,7 +1710,7 @@
       "assessedAt": "2026-09-04T15:01:32Z"
     },
     "createdAt": "2026-09-04T15:01:32Z",
-    "updatedAt": "2026-09-04T21:30:41Z",
+    "updatedAt": "2026-09-04T21:32:03Z",
     "attempts": [
       {
         "plan": {
@@ -1825,6 +1825,54 @@
               "startedAt": "2026-09-04T21:26:46Z",
               "finishedAt": "2026-09-04T21:30:41Z",
               "log": "머지 전: PR #67 CI 14잡 중 13 success · 1 skipped(`pin deployment images`는 main 전용), `mergeable_state: clean`, head `c2a140a2` · base `4277b313`(main 무전진 → 브랜치에 main 머지 불필요). squash 머지 → `77fbf07`. 머지 후 자동 이미지 핀 커밋 `a78e7fd`(`[skip ci]`) 착지 — 이것이 다음 감지 주기의 트리거다. 머지된 main에서 게이트 전량 재실행 rc=0: `go vet` · `gofmt -l` 공백 · `go test ./...` · `check-render-fidelity.py` · `check-fidelity-allowlist.py` · `check-ac-mapping.sh`."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:1c301a955f3e8c27193063b6188d30a23baf6074 data-plane:33146354fd0490ecb08efe0264de37e55f9d06b9 web:8870879a7861b9d79b244055c344a6e3affa896c",
+          "verifiedAt": "2026-09-04T21:32:03Z",
+          "checks": [
+            {
+              "name": "(1) Go 게이트 — 머지된 main에서 재실행",
+              "status": "passed",
+              "detail": "`dlddu/session-platform@a78e7fd`(머지 커밋 `77fbf07` + 이미지 핀)를 새로 클론해 `data-plane/`에서 실행: `go vet ./...` rc=0 · `gofmt -l .` 공백 · `go test ./...` rc=0. (샌드박스에 `jq`가 없어 `entrypoint_test.go` 2건이 처음 실패했으나 `exit status 127 / jq: not found`인 환경 결손이었고, jq 설치 후 전량 통과 — 이 PR과 무관.)"
+            },
+            {
+              "name": "(1) 계획이 예고한 단언 12종 전부 PASS",
+              "status": "passed",
+              "detail": "`TestSessionMCPPublishesTheWaitAndTheDecision` · `…GatewayOutageAsItsOwnKind` · `TestSessionMCPNoticeFeedIsTailable` · `…EndsAnIdlePoll` · `…ReportsWhatItEvicted` · `TestSessionMCPNoticesCarryNoSecrets` · `TestSessionMCPGateRunsWithoutANoticeFeed` · `TestApprovalNoticesLandInTheOutputByteStream` · `TestApprovalRefusalsAreMarkedToo` · `TestApprovalNoticesRespectTheCumulativeOutputLimit` · `TestApprovalNoticesOnlyAppend` · `TestNoticeTailerSurvivesAnUnreachableFeed` — 12/12 PASS."
+            },
+            {
+              "name": "(2) 새 단언의 비공허성 — 뮤테이션 2종 재실행",
+              "status": "passed",
+              "detail": "(a) 대기 publish 제거 → 마커 테스트·publish 테스트·피드 테스트 3종 FAIL(예고한 2종 + 1). (b) tailer의 `emit(rendered)` 무력화 → 마커 테스트 2종만 FAIL, 피드·publish는 PASS. 예고대로 갈렸고 두 계층의 분리가 증명됐다. 되돌린 뒤 porcelain 공백 · 전 스위트 rc=0."
+            },
+            {
+              "name": "(3) 자매 모델 축 무변경 — 게이트 3종 카운터가 baseline과 동일",
+              "status": "passed",
+              "detail": "`check-render-fidelity.py` rc=0 — R1~R10 OK(구현 11 · mockup 6 · 상한 27/27 · 패널 차집합 10/10). `check-fidelity-allowlist.py` rc=0 — 등재 seam 3 · **회계 행 18**. `check-ac-mapping.sh` rc=0 — **AC 27 = 매칭 15 + 예외 1 + 공백 11**. 셋 다 감지 단계가 기록한 baseline과 정확히 일치 → 이 PR이 ac-e2e·e2e-mock-policy·mockup-render의 축을 건드리지 않았다."
+            },
+            {
+              "name": "(3) SSE 계약 불변 (AC-C2/AC-E3)",
+              "status": "passed",
+              "detail": "머지된 diff의 추가/삭제 줄에 새 `event:` 타입 선언 · `outputStreamEvent` 필드 변경 · `serveOutputStream` 변경이 0건. 커서 규약(`id=nextOffset`, `{offset,payloadBase64,nextOffset}`, UTF-8 경계, reset)이 타입 간 동일하게 유지된다."
+            },
+            {
+              "name": "(3) 공유 경로·diff 경계",
+              "status": "passed",
+              "detail": "변경 9파일 +770/−6이 `data-plane/cmd/agent/*` 8개와 `docs/doc-tracker.md`뿐. `claude.go`는 +18/−0(신규 `appendPlatformNotice`만, 기존 함수·`scrollback` 무변경), tailer는 `workload == workloadApprovalGated` 분기 안에서만 기동, 게이트 판정 로직 무변경. as-is 버전에서도 확인됨 — `control-plane`·`web` 트리 해시가 트리거 시점과 **동일**하고 `data-plane`만 `58f16039 → 33146354`로 이동."
+            },
+            {
+              "name": "(4) doc-tracker가 실제 상태와 일치",
+              "status": "passed",
+              "detail": "부채 행 `:56`의 ①이 「대기 표시 착지 / 유휴 예외(`lastAccess`) 잔여」로 갈라졌고 pull 방향 선택 근거(AC-F2 egress 허용목록)와 메모리 피드의 AC-F4 정합이 기술됐다. 변경 이력에 `2026-09-04 (4)` 행 추가. **AC-F3을 닫았다고 적지 않았다** — 같은 행이 `lastAccess` 갱신과 실게이트웨이 대조를 잔여로 남긴다(판정 기준 4 충족)."
+            },
+            {
+              "name": "[정보성] 모델 전체 잔여 gap — 이 task의 수렴 판정 밖",
+              "status": "passed",
+              "detail": "계획이 그은 범위는 ⓐ 대기 표시뿐이고 그 범위는 수렴했다. 모델 전체로는 넷이 남는다: ⓑ 승인 대기 중 `lastAccess` 갱신(AC-B1 구체화 — 유휴 리퍼를 건드려 blast radius가 다름, **이제 선행이 없다**) · AC-F5 RWX 공유 볼륨(클러스터 RWX StorageClass 선행, 이 fire에서도 `kubectl` 부재로 미확인) · SPA 세 번째 타입 카드(프로덕션 활성화 뒤) · 프로덕션 활성화(`approval-gateway-credentials` Secret = 루프 밖). 이미지 핀 커밋 `a78e7fd`가 다음 감지 주기의 트리거가 되며, 후속 task는 재감지가 연다 — executor는 만들지 않는다. 모델의 `lastObservedVersion`은 건드리지 않았다."
             }
           ]
         }
