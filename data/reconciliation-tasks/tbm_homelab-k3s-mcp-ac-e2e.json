@@ -2915,7 +2915,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
-    "status": "planned",
+    "status": "executing",
     "trigger": {
       "detectedAt": "2026-09-04T08:01:29Z",
       "changedSides": [
@@ -2944,7 +2944,7 @@
       "assessedAt": "2026-09-04T08:01:29Z"
     },
     "createdAt": "2026-09-04T08:01:29Z",
-    "updatedAt": "2026-09-04T08:44:00Z",
+    "updatedAt": "2026-09-04T09:00:36Z",
     "id": "rct_20260904-0004",
     "attempts": [
       {
@@ -2993,6 +2993,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/55",
           "preparedAt": "2026-09-04T08:52:00Z",
           "notes": "base `1d1db45`(현재 main) · head `45da4f9` · **현재 main 대비 4파일 +257 −14**(신규 2 · 수정 2).\n\n**신규**: `tests/integration/session_read_ac3.py`(`실행 대상: primary`) · `tests/integration/session_read_ac4.py`(`실행 대상: auth-variant`).\n**수정**: `tests/integration/_helpers.py`(EXPECTED_TOOLS 15 → 16) · `docs/doc-tracker.md`(레지스트리 2행 · 집계 54→56·9→7 · backlog 재작성 · 변경 이력 1행) · `docs/test-session-read.md`(시나리오 3·4 자동화 필드).\n**무변경**: `.github/workflows/ci.yml` · `tests/k8s/kind/*` — 러너가 파일을 자동 발견하고 두 배포는 이미 서 있다. 모킹 허용목록도 등재 5·상한 5 불변(새 모킹 0건).\n\n**로컬에서 미리 돌린 것**(브랜치 head 기준):\n- `check_ac_mapping.py` rc=0 — `AC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일(전용) 56 · 분할 대기 0 · 공백 AC 7`. 하네스 검사(배차 1회 · `run()`이 자기 `test_*`를 전부 호출)도 통과.\n- `check_mock_policy.py` rc=0 — `등재 5(상한 5) · 미등재 0 · 고아 0`.\n- 러너 드라이런 — primary 43 → 44(`session_read_ac3.py` 포함) · auth-variant 10 → 11(`session_read_ac4.py` 포함).\n- **에러 문자열을 손으로 짓지 않고 소스에서 합성해 대조**: 제어면 `writeErr(ErrNotFound)` → `{\"error\":\"session not found\"}` → `controlPlaneMessage()` → `notFound(fmt.Sprintf(\"session %q: %s\", …))` → `Error()` 접두 ⇒ `session platform not found: session \"e2e-read-ac3-missing\": session not found`. 두 커서 거부 문구는 `internal/mcp/mcp.go`의 `errf(-32602, …)` 리터럴과 verbatim 일치.\n- **스텁 하네스로 두 파일의 `run()`을 실제 실행**(클러스터 없이 `kubectl`·MCP 세션을 대역으로 주입)하고 **음성 통제 9종이 전부 의도한 규칙 문장으로 실패**함을 확인: 없는 id가 성공으로 돌아옴 / not-found 문구가 AC4 거부와 구분되지 않음 / `offset=-1` 수용 / `offset=1.5` 수용 / not-found 경로가 다른 세션의 `lastAccess`를 건드림 / not-found 경로가 파드를 만듦 / 거부가 프로토콜 에러로 옴 / 거부 문구가 다름 / 거부 직후 `ping`이 죽음.\n\n**CI에서만 관측되는 것**: kind에 실제 배포된 서버를 상대로 한 두 파일의 실행(`integration-tests` 잡). 로컬 하네스는 단정 논리와 응답 모양까지만 증명한다 — 실 배포·실 제어면 대조는 executor가 CI 로그로 확인할 것.\n\n**데이터 플레인 이미지 실재 확인**(범위 밖 AC1의 후속 근거): `ghcr.io/dlddu/session-platform-data-plane:5f60249f8381d5cfecbe093bb77fc30d874697f4`가 익명 pull 토큰으로 조회되고 OCI 인덱스에 `linux/arm64` 매니페스트를 갖는다(제어면 이미지와 같은 SHA 태그·같은 워크플로 발행). 따라서 스텁 에이전트는 모킹 정책의 `IMG`·`UPS` 어디에도 걸리지 않는다.\n\n**[08:52Z 갱신] main 이 계획 중에 전진해 병합했다.** 최초 푸시(`2614c82`, base `b2b6b68`) 직후 자매 task `rct_20260904-0003`의 `session_write` 구현 PR #53이 머지돼(`1d1db45`, 08:24Z) PR 이 `mergeable: false` 가 됐다 — 그 상태에서는 GitHub 이 `refs/pull/N/merge` 를 만들지 못해 **`pull_request` 워크플로가 아예 돌지 않는다**(계획이 지침 2·3으로 요구한 CI 확인이 불가능해진다). 강제 푸시 대신 main 을 브랜치로 **병합**해 해소했고(`45da4f9`), PR 은 `mergeable: true` 로 바뀌고 CI 가 기동했다. 충돌 2곳:\n- `tests/integration/_helpers.py` — **main 것을 채택하고 내 변경을 버렸다.** #53 이 EXPECTED_TOOLS 를 이미 17종(`session_read`·`session_write` 포함)으로 고쳐, 이 브랜치의 15 → 16 정정이 불필요해졌다. 같은 조용한 약화를 양쪽이 독립적으로 잡았고 결과는 같다 — **이 PR 의 net diff 에서 그 파일은 빠졌다.**\n- `docs/doc-tracker.md` — #53 이 「도구 미구현」 서술을 이미 교정했으므로 그 교정은 main 것을 두고, 이 브랜치는 레지스트리 2행 · 집계(54→56, 9→7) · backlog 재작성 · 변경 이력만 얹었다. backlog 는 session-read AC1·AC2 와 session-write 5건으로 나눠 다시 쓰고 각각의 남은 선행(데이터 플레인 파드 / CRIU 게이트)을 소스 근거와 함께 적었다. **session-write 5건의 저작 순서 권고**(AC4·AC5 먼저 — 그 둘만 데이터 플레인·CRIU 선행에 걸리지 않는다)도 같은 근거로 덧붙였다.\n\n병합 후 게이트·하네스 **전부 재실행**했다: `check_ac_mapping.py` rc=0(매칭 56 · 공백 7) · `check_mock_policy.py` rc=0(등재 5 불변) · 스텁 하네스 양성 2 + 음성 통제 9/9 그대로.\n\n**[08:44Z] CI 관측 — `45da4f9` 3잡 전부 success.** `fmt + vet`(두 체커) · `unit tests` · `integration tests`. 계획이 「로컬에서 증명할 수 없는 유일한 축」으로 남겨 둔 **kind 실배포 실행이 이것으로 관측됐다**: `session_read_ac3.py`가 primary 그룹 44개 중 하나로 돌아 `ok: session-read/AC3`, `session_read_ac4.py`가 auth-variant 12개 중 하나로 돌아 `refusal ok: session-read/AC4`. 실 제어면이 돌려준 not-found 문구가 계획 단계의 소스 합성 결과와 바이트 단위로 일치했다. (지침의 배차 기대치를 `auth-variant 10 → 11`에서 실측인 `11 → 12`로 정정했다 — 원장 서술을 재보지 않고 옮겨 적은 값이었다.)"
+        },
+        "review": {
+          "required": false,
+          "status": "not_required",
+          "reason": "`plan.riskLevel: low` + 영향 표면이 `tests/`·`docs/` 전용이라 사용자 검토 없이 진행한다. 근거 넷: ① 프로덕션·클러스터·데이터에 닿지 않는다 — net diff는 신규 e2e 파일 2개(`session_read_ac3.py`·`session_read_ac4.py`)와 `docs/doc-tracker.md`·`docs/test-session-read.md` 문서 갱신뿐이고 `.github/workflows/ci.yml`·`tests/k8s/kind/*`·`k8s/`는 무변경이다(이미지·스키마·설정 실질 변경 0). ② 불가역 지점은 squash 머지 하나뿐이고 롤백은 revert PR로 끝난다 — 트래픽 중단 가능성 0. ③ 판단이 갈릴 여지로 계획이 지목한 유일한 지점(AC3·AC4만 닫고 AC1·AC2를 뺀 범위 경계)은 소스 근거로 확정돼 있어 실행 지침 1단계에서 executor가 기계적으로 대조 가능하다 — 사람의 취향 판단이 아니다. ④ 새 모킹 0건이라 자매 모델 `tbm_homelab-k3s-mcp-e2e-mock-policy`의 허용목록(등재 5·상한 5)도 불변이다. 다만 머지 게이트는 유지한다: CI 3잡이 머지 직전 head에서 전부 초록이 아니면 머지하지 않고 실패를 그대로 기록한다."
         }
       }
     ]
