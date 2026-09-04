@@ -271,7 +271,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-09-04T00:18:30Z",
       "changedSides": [
@@ -288,7 +288,7 @@
       }
     },
     "createdAt": "2026-09-04T00:18:30Z",
-    "updatedAt": "2026-09-04T01:19:00Z",
+    "updatedAt": "2026-09-04T05:16:00Z",
     "id": "rct_20260904-0001",
     "stateSummary": {
       "asIs": "**as-is (실측 시각 2026-09-04T00:17Z · `dlddu/homelab-k3s-mcp` main `0378f8d`)**\n\n`internal:e61c7bbb… main.go:cec9c82d…` — 직전 baseline(2026-09-03T12:00, `internal:00a0edc2…\nmain.go:ef750610…`) 대비 **구현이 실제로 움직였다**. 출처는 이 모델 자신의 task\n`rct_20260903-0001`이 만든 PR #48(`0378f8d`, 00:06:17Z squash 머지).\n\n- **도구 표면 15종.** `internal/mcp/toolslist.go`의 `toolsListJSON`을 `json.loads`로 파싱하면\n  `session_list`를 포함해 15개다(직전 14개). 상수 선언이 아니라 JSON 리터럴이라\n  `grep -c 'Name: \"'`류로는 0이 나온다.\n- **신규 패키지 `internal/sessionplatform`** — 제어면 `GET /api/v1/sessions` 클라이언트\n  (`Client`/`FromEnv`)와 미설정 대체 구현(`Unavailable`), 오류 종류 분리\n  (`unavailable`/`apiError`). `Session` 구조체 필드는 `id·name·workloadType·state·pod·\n  createdAt·lastAccess`.\n- **배선**: `SESSION_PLATFORM_ENDPOINT`를 세팅하는 곳은 레포 전체에서\n  `k8s/deployment.yaml:55` 하나뿐이다(`main.go:156`은 미설정 시 경고만 남기고 기동한다).\n- **제어면 가동은 문서가 아니라 클러스터에서 직접 확인**: ns `session-platform`의\n  Deployment `control-plane` **1/1 Ready**(replicas 1 · ready 1 · available 1, 생성\n  2026-09-02T01:10:21Z).\n- **미구현 잔여**: `session_read`·`session_write` — `internal/sessionplatform`에 대응 메서드가\n  없고 `internal/mcp`의 디스패치에도 없다.\n\n**미관측 1건(다음 관측으로 넘어온 항목)**: executor가 프로덕션 MCP 엔드포인트로 `session_list`를\n직접 호출하는 현장 확인을 「이 실행 세션의 도구 목록이 세션 시작 시점에 고정돼」 수행하지\n못했다고 기록했다. **이 fire도 같은 제약에 걸린다** — 내 세션의 k3s MCP 도구 표면은 14종이고\n`session_list`가 없다(세션 시작 00:01Z, 프로덕션 롤아웃 완료 00:09:07Z). 즉 이 항목은 감지\n단계가 닫을 수 없다.",
@@ -379,6 +379,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/51",
           "preparedAt": "2026-09-04T01:05:00Z",
           "notes": "PR [#51](https://github.com/dlddu/homelab-k3s-mcp/pull/51) — base `0378f8d`, head `1bcfb64`, 10파일 +745/−32.\n\n**구현**: `internal/sessionplatform`에 `ReadResult` + `ReadSession`(제어면 `POST /api/v1/sessions/{id}/read`), `errKind`에 `kindNotFound`·`kindInvalidArgument` 추가, `internal/mcp`에 `session_read` 등록·디스패치 (도구 표면 15 → 16), `main.go` 미설정 경고 문구 갱신. 응답 계약은 자매 레포 `dlddu/session-platform`의 `control-plane/api/openapi.yaml`(`ReadRequest`/`ReadResult`/400·404·413)과 제어면 소스 `internal/service/manager.go`의 `dispatchPath()`(`path` 리터럴 3종)에서 실측해 왔다.\n\n**문서**: `prd-session-read.md`·`test-session-read.md`의 「구현 선행/미구현」 서술 교정(AC 헤딩 불변), `doc-tracker.md` 매트릭스 `(구현 선행)` 제거 · 자동화 커버리지 🟢 등재 · 🔴 「9 AC」 → 「session_write 5 AC」, 그리고 **원장 어긋남 2곳 교정**(허브 도달 38/38 → 39/39 + 분해에 정책 1, 문서 인벤토리 표에 `e2e-mocking-policy.md` 행 신설).\n\n**로컬 검증(go 1.24.7)**: `gofmt -l .` 0줄 · `go vet ./...` · `go build ./...` · `go test ./...` 전 패키지 ok (신규 단위 14개). 두 게이트 `check_ac_mapping.py`·`check_mock_policy.py` 모두 rc=0이고 **main 대비 출력 diff 0줄** — AC 전집 64 · 매칭 49 · 공백 14 · 예외 1 전부 불변. 허브 실측 재확인: 마크다운 39 · 허브 고유 대상 39 · 끊긴 0 · 미도달 0.\n\n**음성 통제 6종** 전부 의도한 테스트가 잡고 `cmp` 바이트 동일 복원. 단 ③(`nextOffset`을 payload 길이로 계산)은 **1차에 살아남았다** — 픽스처에서 커서와 payload 길이가 우연히 둘 다 16이라 단언이 구별하지 못했다. 커서를 1024(절대 오프셋)로 바꿔 잡히게 고쳤다. 증분 읽기에서는 실제로 둘이 다르다.\n\n**형제 PR과의 충돌 — 실측했다.** 자매 모델 `tbm_homelab-k3s-mcp-ac-e2e`의 PR [#50](https://github.com/dlddu/homelab-k3s-mcp/pull/50)도 같은 base `0378f8d`에서 열려 있다. 시험 머지 결과 **충돌 파일은 `docs/doc-tracker.md` 하나, 충돌 훵크는 변경 이력 표의 삽입 지점 하나뿐**이다(양쪽이 `| 2026-09-04 |` 행을 표 맨 위에 넣는다). **내용 겹침은 0** — #50의 doc-tracker 편집은 전부 `### AC 레지스트리` 전후의 e2e 렌즈 영역(레지스트리 행·backlog·예외)이고, 내 편집은 문서 인벤토리·허브 수치·매트릭스·자동화 커버리지다. 해소는 **양쪽 행을 모두 살리면 끝**이다. #51은 main 대비 `mergeable=true`.\n\n**PR CI 4잡 전부 SUCCESS**(head `1bcfb64`): `fmt + vet` · `unit tests` · `integration tests`(kind) · `docker build & push`. 로컬 검증과 CI가 일치한다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "**검토 필요 — `awaiting_review`.** 세 가지가 겹친다.\n\n1. **프로덕션 영향 있는 머지다.** `plan.riskLevel`이 `medium`이고, #51 머지는 CI의 `docker build & push`를 거쳐 프로덕션 k3s의 MCP 서버 이미지를 새 리비전으로 롤아웃시킨다. 지침이 「되돌릴 수 없는 지점은 없다(revert 하나로 충분)」고 적었지만, 되돌리기가 가능한 것과 사람 확인 없이 밀어도 되는 것은 다르다.\n2. **추가되는 도구가 읽기 전용이 아니다.** `session_read`는 제어면이 대상을 먼저 `active`로 만들기 때문에 호출 하나가 유휴 세션을 깨우고 스냅샷 세션의 파드를 되살린다(그래서 `readOnlyHint=false`로 광고한다). 도구 표면이 15 → 16으로 늘어나는 것 자체가 운영자가 알아야 할 계약 변경이다.\n3. **계획 수립 이후 전제가 움직였다.** 형제 PR #50이 2026-09-04T05:14:26Z에 머지되어 main이 `0378f8d` → `9116ac1`로 이동했고, #51은 지금 `mergeable_state=dirty`다. 지침 §4가 예고한 바로 그 충돌(`docs/doc-tracker.md` 변경 이력 표의 같은 삽입 지점)이며 해소법도 「양쪽 행을 모두 살린다」로 명시돼 있으나, **머지 전 rebase와 충돌 해소라는 추가 편집이 실행에 포함된다.** 계획이 검증한 head(`1bcfb64`)가 그대로 머지되지 않으므로 사람이 한 번 보는 것이 맞다."
         }
       }
     ]
