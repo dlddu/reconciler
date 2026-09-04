@@ -1198,7 +1198,58 @@
       "assessedAt": "2026-09-04T22:04:00Z"
     },
     "createdAt": "2026-09-04T22:04:00Z",
-    "updatedAt": "2026-09-04T22:45:00Z",
-    "id": "rct_20260904-0003"
+    "updatedAt": "2026-09-04T22:55:00Z",
+    "id": "rct_20260904-0003",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**AC-E2 한 건만** 전용 e2e 파일로 닫는다 — `control-plane/test/e2e_e2_prompt_invocation_test.go`(`// 검증 AC: AC-E2`) 신설 + `docs/test/e2e.md` 매핑·집계 갱신. **완료 기준(수치)**: `scripts/e2e/check-ac-mapping.sh` rc=0에서 **AC 매칭 파일 15 → 16 · 공백 11 → 10(AC-E2가 목록에서 빠진다) · 예외 1 불변 · 매칭 단위 18 → 19 · 비-AC 3 불변**, `scripts/check-fidelity-allowlist.py` rc=0 · **회계 행 19 · 차단 요인 0건 불변**, `scripts/check_comment_policy.py` rc=0(등재 범위 3 불변), 그리고 PR CI 전 잡 green(특히 `e2e (kind + API + browser)`).\n\n**왜 E2 하나인가 — detector가 제안한 E2·E3·E6 묶음을 계획 시점 실측으로 좁혔다.**\n판정을 바꾼 것은 **원장이 이 슬라이스의 첫 단계로 지정한 그 확인을 실제로 돌려 봤다**는 것이다: 핀된 실 Claude CLI **2.1.220**을 로컬에 설치하고, `deploy/e2e-anthropic-fake.yaml`에서 `server.js`·TLS 자료를 **파싱해 그대로 꺼내** 대역을 세운 뒤(응답 로직 무수정), SUT가 만드는 **exact argv**를 그대로 실행했다.\n- ✅ **프롬프트 루프는 성립한다**: `is_error=false · num_turns=1 · result=\"session-platform-e2e-provider-ok\" · exit 0`. `--model claude-e2e-model`(SUT의 `platform-default` 주입값)도 수용되고 `--continue` 2회차도 exit 0이다. → **AC-E2의 선행은 가정이 아니라 측정으로 풀렸다.**\n- ❌ **AC-E3은 지금 대역으로 닫을 수 없다**: 한 invocation의 `content_block_delta`가 **정확히 1개**다(실측). AC-E3의 검증 방법 핵심인 「**둘 이상의** SSE output delta가 (프로세스 종료 전에) 순서대로」가 한 write로 관측되지 않는다. detector는 E3을 「가능」으로 봤으나 그 근거(대역이 SSE 이벤트열을 낸다)는 **이벤트 종류**의 문제였고 AC가 요구하는 것은 **델타 개수**다. 대역 확장이 선행이며, 그 파일(`deploy/`)의 소유는 자매 모델 `tbm_session-platform-e2e-mock-policy`다.\n- ⏭ **AC-E6은 이번에 넣지 않는다**: 프롬프트 루프에 의존하지 않아 안전하지만, 그 AC의 가장 날카로운 단언(버퍼드·SSE·`Authorization` 대체)을 **이미 `e2e_provider_reachability_test.go`가 비-AC 인프라로 소유**하고 있다. 「그 파일을 AC-E6으로 재선언할 것인가(비-AC 3→2·매칭 15→16) vs 별도 파일을 세울 것인가」는 **#66이 방금 내린 판정을 뒤집는 문제**라 별도 슬라이스에서 명시적으로 다뤄야 한다. 이번 PR에 섞으면 두 개의 미지 표면이 한 CI에 얹힌다.\n- ⏭ **AC-E4·E5는 대역 상수 응답에 막혀 있다**(`REPLY`가 프롬프트를 한 글자도 반영하지 않음 — 소스 전수 확인). detector 판정 그대로.\n\n**범위 밖(이 task의 완료 기준 아님)**: AC-E3·E4·E5·E6, AC-F1~F6, 그리고 AC-E2 검증 방법 중 **429(큐 포화)·16 MiB invocation truncation·「첫 실행 실패 뒤엔 `--continue` 미부착」** 세 갈래 — 각각 64건 큐 적재/거대 출력/강제 실패 주입이 필요해 상수 응답 대역 위에서 결정적으로 만들 수 없다. 지침의 「범위 밖(후속)」에 남겨 재감지 입력으로 넘긴다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`main`(현재 `d88e258`)에서 `reconcile/rct_20260904-0003-opus5-1m` 브랜치를 딴다. 형제 워커가 같은 `rct` id로 브랜치를 밟지 않도록 모델 슬러그를 붙인다.",
+              "expectedOutcome": "브랜치가 origin에 없고 로컬에서 새로 생성된다."
+            },
+            {
+              "seq": 2,
+              "action": "`control-plane/test/e2e_e2_prompt_invocation_test.go`를 신설한다. 헤더는 `//go:build e2e` + `// 검증 AC: AC-E2` **정확히 1줄**. 단언 네 갈래: (a) write는 프롬프트로 해석되어 invocation이 돌고 응답이 세션 출력에 투영된다(마커 `session-platform-e2e-provider-ok`), (b) write는 실행 완료를 기다리지 않는다 — write가 돌아온 직후 read에 마커가 **아직 없고** 나중에 생긴다(인과 순서이지 단순 타이밍이 아니다), (c) pod 안에서 exact argv의 `claude` 프로세스가 관측되고 두 개가 동시에 돌지 않으며 실행 후 상주 프로세스가 남지 않는다(원샷·직렬 큐), (d) 1 MiB 초과 프롬프트는 public API에서 413이고 invocation이 돌지 않는다.",
+              "expectedOutcome": "파일이 생기고 `gofmt -l`이 침묵한다."
+            },
+            {
+              "seq": 3,
+              "action": "`/proc` 샘플링 프로브를 **자기 자신을 매치하지 않도록** 설계한다 — 프로브 스크립트에 소문자 sentinel(`claude-argv-probe-self`)을 심고 cmdline에 그 sentinel이 있는 프로세스는 건너뛴다. 명령 치환이 만드는 서브셸이 부모의 cmdline을 그대로 물려받으므로 `$$` 제외만으로는 부족하다. sentinel은 `E2E_[A-Z0-9_]+` 패턴에 걸리지 않는 형태여야 한다(fidelity R5).",
+              "expectedOutcome": "프로브가 자기 자신을 세지 않고, 실제 `claude` 프로세스만 잡는다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/test/e2e.md`의 `<!-- ac-mapping -->` 블록에 AC-E2 행을 추가하고 `<!-- ac-summary -->`의 「AC 매칭 파일」 15→16, 「공백」 11→10 및 공백 목록에서 `AC-E2`를 제거한다. 표 행의 파일 경로 셀은 백틱으로 감싸고 게이트의 `sed` 파싱 형태(`| AC-X | \\`path\\` | go | … |`)를 정확히 따른다.",
+              "expectedOutcome": "`scripts/e2e/check-ac-mapping.sh` rc=0, 출력이 「매칭 파일 16 + 예외 1 + 공백 10」."
+            },
+            {
+              "seq": 5,
+              "action": "「e2e 충실도 허용목록」의 `CLAUDE-PROVIDER`(EXT) 행에서 '구동 구간'·'잔여' 칸을 갱신한다 — 원장이 「AC-E2~E6 전용 파일을 세우는 슬라이스가 그 계약을 먼저 실물로 확인해야 하고, 그때 이 행의 '구동 구간'이 넓어진다」고 예고한 그 갱신이다. 이제 실 CLI의 프롬프트 루프가 구동됨을 적고, 잔여에는 **델타 1개(스트리밍 점진성 미검증)·상수 응답(대화 연속성 미검증)**을 남긴다. R2는 두 칸이 비지 않았는지만 보므로 **수치는 움직이지 않는다**.",
+              "expectedOutcome": "`scripts/check-fidelity-allowlist.py` rc=0, 「회계 행 19 · 차단 요인 0건」 불변."
+            },
+            {
+              "seq": 6,
+              "action": "정적 게이트 4종을 편집 전/후로 돌려 「악화 없음」을 수치로 못박는다: `check-ac-mapping.sh` · `check-fidelity-allowlist.py` · `check_comment_policy.py` · `go vet -tags e2e ./test/...`(+ `gofmt -l`). baseline은 **잡 전용 tmp의 별도 pristine checkout**에서 잰다.",
+              "expectedOutcome": "네 게이트 모두 편집 후 rc=0. comment-policy는 등재 범위 3이 불변(새 파일은 어느 등재 행에도 속하지 않는다)."
+            },
+            {
+              "seq": 7,
+              "action": "커밋·푸시하고 PR을 연다(머지하지 않는다). 본문에 task id, gap 요약, 계획 단계, 검증 방법, **로컬에서 측정한 프롬프트 루프 증거**(exact argv·CLI 2.1.220·대역 그대로), 범위 밖 잔여를 적는다.",
+              "expectedOutcome": "PR URL이 생기고 CI가 돈다."
+            },
+            {
+              "seq": 8,
+              "action": "PR CI를 관측한다. `e2e (kind + API + browser)` 잡이 새 파일을 실제로 배포 SUT 위에서 돌린다 — 여기가 이 슬라이스의 유일한 미지수다.",
+              "expectedOutcome": "전 잡 green. 실패하면 그 실패 문면이 **플랫폼 러너 경로**에 대한 새 사실이므로 그대로 기록해 다음 계획의 입력으로 넘긴다."
+            }
+          ],
+          "plannedAt": "2026-09-04T22:55:00Z"
+        }
+      }
+    ]
   }
 ]
