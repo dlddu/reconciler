@@ -1881,7 +1881,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-04T21:40:00Z",
       "changedSides": [
@@ -1910,7 +1910,7 @@
       "assessedAt": "2026-09-04T21:40:00Z"
     },
     "createdAt": "2026-09-04T21:40:00Z",
-    "updatedAt": "2026-09-04T23:32:00Z",
+    "updatedAt": "2026-09-04T23:33:30Z",
     "id": "rct_20260904-0006",
     "attempts": [
       {
@@ -2015,6 +2015,54 @@
               "startedAt": "2026-09-04T23:24:20Z",
               "finishedAt": "2026-09-04T23:27:00Z",
               "log": "지침 4번(머지 후 재검증) — 머지된 main `3726dbd`를 pristine checkout(`reset --hard && clean -fdx`, porcelain=0)으로 받아 (a)(c)를 재실행했다. 결과는 verification.checks 참조. 요약: 양 모듈 gofmt 빈 출력 · vet(+`-tags=e2e`) rc=0 · `go test ./...` rc=0, 게이트 4종 rc=0이고 3종은 baseline과 바이트 동일. `check_comment_policy.py`는 CI가 찍은 값과 같은 `판정 완료 710줄(21.1%) / 등재 범위 3`."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:521cba8bf8a326cfb552de7290c60a2860939cab data-plane:bd330030c78600cdd16d8b2bb2c9b33a9abf494c web:8870879a7861b9d79b244055c344a6e3affa896c",
+          "verifiedAt": "2026-09-04T23:33:00Z",
+          "checks": [
+            {
+              "name": "완료기준 1·2 — 승인 대기 중 미동결 / 결정 뒤 정상 동결",
+              "status": "passed",
+              "detail": "머지된 main `3726dbd`의 pristine checkout에서 `go test ./internal/service/ -run 'ApprovalWait|...' -v` rc=0. `TestApprovalWaitHoldsTheIdleCountAndReleasesIt` PASS — 대기 중 유휴 한계를 넘겨도 동결되지 않고 `lastAccess`가 전진하며, 대기가 끝나면 갱신이 멈춰 한계 도달 시 정상 동결됨을 한 테스트가 왕복으로 단언한다. data-plane 쪽 `TestApprovalWaitClosesWhenTheRealGateDecides` PASS 로 결정 시 대기 해제 경로도 선다."
+            },
+            {
+              "name": "완료기준 3 — 대조군(shell·claude-code) 및 수동 동결 회귀 없음",
+              "status": "passed",
+              "detail": "`TestOtherWorkloadTypesKeepTheOrdinaryIdleRule` (하위 케이스 `shell`·`claude-code` 둘 다) PASS, `TestManualSnapshotStillFreezesDuringAnApprovalWait` PASS, `TestUnreadableApprovalStateFallsBackToTheOrdinaryIdleRule` PASS, `TestAgentWithoutApprovalReportingKeepsTheOrdinaryIdleRule` PASS. 검토에서 최대 위험으로 지목한 「유휴 리퍼가 다른 타입까지 안 얼림 → 자원 누수」와 「조회 실패가 파드를 영구히 붙잡음」 둘 다 테스트가 물고 있고, 넷 다 머지 후 main 에서 재실행해 통과했다."
+            },
+            {
+              "name": "완료기준 4 — doc-tracker 변경 이력 표 열 수 균일",
+              "status": "passed",
+              "detail": "머지된 main 에서 `awk 'NR>=93 { n=gsub(/\\|/,\"|\"); if (n>0) print n }' docs/doc-tracker.md | sort -u` → **`5` 한 줄만** 출력. 4열 중 2열만 채우던 `2026-09-04 (4)` 행이 앞선 24행과 같은 형태가 됐다."
+            },
+            {
+              "name": "양 모듈 게이트 재현 (지침 2-(a))",
+              "status": "passed",
+              "detail": "main `3726dbd` pristine(porcelain=0)에서 — control-plane: `gofmt -l .` 빈 출력 · `go vet ./...` rc=0 · `go vet -tags=e2e ./...` rc=0 · `go test ./...` rc=0(8패키지 ok). data-plane: `gofmt -l .` 빈 출력 · `go vet ./...` rc=0 · `go test ./...` rc=0. (샌드박스에 `jq` 부재로 `entrypoint_test.go` 2건이 처음 exit 127 로 죽었으나 이는 환경 결손이었고, `jq` 설치 후 재실행해 통과 — PR 과 무관.)"
+            },
+            {
+              "name": "게이트 3종 baseline 바이트 재현 (자매 모델 축 불변)",
+              "status": "passed",
+              "detail": "머지 직전 main `5c380d8`에서 뜬 baseline 과 머지된 main `3726dbd` 출력을 `cmp` 로 대조 — `check-fidelity-allowlist.py` · `check-render-fidelity.py` · `scripts/e2e/check-ac-mapping.sh` **3종 모두 IDENTICAL**, rc=0. AC↔e2e 는 `AC 27개 = 매칭 파일 15 + 예외 1 + 공백 11` 그대로다 — **공백 11 불변**이 자매 모델 `tbm_session-platform-ac-e2e` 의 축(전용 e2e 파일 1:1)을 건드리지 않았다는 증거. baseline 파일은 지침 경고대로 `/tmp` 가 아닌 잡 전용 디렉터리에 뒀다."
+            },
+            {
+              "name": "주석 판정 원장 게이트",
+              "status": "passed",
+              "detail": "`python3 scripts/check_comment_policy.py` rc=0, `OK: 규칙 R1~R4 위반 없음 — … 판정 완료 710줄(21.1%) / 등재 범위 3`. 이 PR 이 원장을 갱신하므로 이 게이트만 baseline 대비 이동이 정상이고(`internal/service/` 행 229→239, 지문 f708d58c→1d85544c), 지침이 요구한 값(`710줄(21.1%) / 등재 범위 3`)과 **글자 그대로 일치**한다. 형제 PR 이 그 사이 `internal/service/` 를 건드려 red 가 나는 시나리오는 발생하지 않았다."
+            },
+            {
+              "name": "머지된 main 의 CI (독립 재현)",
+              "status": "passed",
+              "detail": "머지 커밋 `3726dbd` 에 붙은 체크 **17개 전부 success · 실패 0**(control-plane/data-plane lint+unit · envtest(real-apiserver CAS/Lease) · integration(happy path) · 4종 문서↔코드 게이트 · web typecheck+build · 이미지 빌드·푸시 · deploy · pin deployment images). 로컬 pristine 재현과 CI 가 독립적으로 같은 결론에 도달했다."
+            },
+            {
+              "name": "(정보성) 범위 밖 잔여 gap — converged 판정에 넣지 않음",
+              "status": "passed",
+              "detail": "모델 전체 to-be 기준으로는 `doc-tracker.md` 의 잔여가 남아 있다: ② AC-F5 RWX 공유 볼륨(클러스터 RWX StorageClass 선행) · ③ 프로덕션 활성화(`approval-gateway-credentials` Secret + `DATA_PLANE_APPROVAL_GATED_IMAGE`) · ④ 정책 실집행·실게이트웨이 대조(집행 CNI · 같은 Secret) · SPA 세 번째 타입 카드(③ 종속). 넷 다 이 레포 밖 사건이 선행이라 plan 이 명시적으로 범위 밖으로 뺐고, 계획 범위(완료 기준 4항)는 전부 달성됐으므로 converged:true. 이 잔여의 후속은 재감지가 새 task 로 잇는다."
             }
           ]
         }
