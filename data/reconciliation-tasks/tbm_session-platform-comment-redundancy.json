@@ -191,7 +191,68 @@
     "toBeModelId": "tbm_session-platform-comment-redundancy",
     "status": "planning",
     "createdAt": "2026-09-04T09:27:18Z",
-    "updatedAt": "2026-09-04T09:42:00Z",
-    "id": "rct_20260904-0002"
+    "updatedAt": "2026-09-04T10:03:00Z",
+    "id": "rct_20260904-0002",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**1차 패스가 세운 정책을 서비스 계층 한 패키지에 적용하는 2차 판정 슬라이스.** 1차(#63)가 `docs/comment-policy.md`를 세워 to-be가 `absent`를 벗어났고, 잔여 「99파일 2,815줄 미판정」을 막던 유일한 선행(판정 기준이 레포 안에 없음)이 해소됐다. 그래서 이번엔 **`control-plane/internal/service/` 6파일 전부**(판정 대상 주석 299줄)를 통째로 읽어 판정한다 — 제거 75 / 유지 224.\n\n**왜 이 패키지인가**: 감지가 1순위로 지목한 집중 구간 둘(`adapter/k8s/client_orchestrator.go` 313줄 · `data-plane/cmd/agent/main.go` 168줄)은 **열려 있는 형제 PR #64·#62가 모두 건드리고 있어** 지금 집으면 충돌한다(실측: #64는 client_orchestrator.go·main.go를, #62는 client_orchestrator.go를 수정). 그다음 순위가 `service/manager.go`(152줄)이고, 그 패키지는 형제 PR과 교집합이 **0파일**이다. 도메인 코어(`internal/session/`) 바로 위 계층이라 1차 판정과 같은 관용구·같은 리뷰어를 공유한다는 이점도 있다.\n\n**왜 「유형 목록」이 아니라 통째 읽기인가**: 정책 문서가 판정 절차 2항에서 그렇게 요구하고, 1차 패스가 「중복 유형 셋은 가설이었다」고 정정한 그대로다. 실제로 이 패키지의 지배적 형태는 감지가 예시한 셋 중 어느 것도 아닌 **「AC 서술의 사본」**이었다 — 패키지 주석과 `activate`·`Read`·`Write`·`Switch`의 doc이 `prd/state-api.md` AC-C2/AC-C3의 분기 목록을 각자 한 번씩 다시 적고, 「세션이 소유한 모든 파드를 회수한다(AC-A3, AC-F4)」는 **한 파일 안에서 네 번** 반복됐다.\n\n**가역성**: 전부 PR 한 건의 텍스트 변경이라 revert 하나로 원복된다. 런타임·데이터 영향 0이고, 삭제된 줄이 전부 주석·빈 줄임을 기계로 확인했다.\n\n**슬라이스 범위(= 완료 기준)**\n- ✅ `control-plane/internal/service/`의 **판정 대상 주석 299줄 전부**가 판정된다 — 제거든 유지든, 제거에는 「어느 복원 경로의 어느 좌표가 이미 이 내용을 말하는가」가 붙는다.\n- ✅ 판정이 `docs/comment-policy.md` 판정 이력에 등재되고, **범위 열에 줄 수와 측정 커밋**이 적힌다(1차 행에도 소급).\n- ✅ 재현 가능한 CI 게이트가 전부 통과하고 **AC 집계 27 = 14 + 1 + 12가 불변**이다.\n- ✅ `docs/doc-tracker.md` 변경 이력에 등재된다.\n\n**범위 밖(후속 재감지가 새 task로 잇는다)**\n- 나머지 **93파일 약 2,516줄**의 판정 — 다음 후보는 `adapter/criu/`(215) · `adapter/configmap/`(140) · `adapter/agent/`(75) · `adapter/checkpointstore/`(70). 집중 구간 1·2순위는 #64·#62가 닫힌 뒤에.\n- **지문 패턴 정비(양방향)** — 이번에 새로 발견한 **오검출**(포인터 역참조문·임베드 필드를 주석으로 셈, 레포 전체 36줄)과 정의가 이미 유예한 **사각지대**(줄 끝 주석·raw string). 모델 레코드 편집이라 대상 레포 PR이 아니다.\n- **PR #54의 처리** — 종료를 권고하되 사용자 승인 사항으로 남긴다.\n- 주석의 **정확성**(코드와 맞는가) — 이 모델의 판정 표면이 아니다.\n\n**계획 중 확정한 사실 둘(감지가 몰랐던 것)**\n1. **열린 PR #54가 같은 일을 거꾸로 하고 있다.** 64파일 −1,126줄의 봇 PR인데, 산문 사본을 남기고 `(AC-…)` 포인터를 지운다 — 정책의 「포인터는 남기고 사본은 지운다」와 정확히 반대다. 게다가 `mergeable:false`(dirty)·리뷰 0건이고 base가 보조 파드 도입 이전이다. 감지의 gap 분석에 이 PR은 등장하지 않았다.\n2. **as-is 지문이 주석 아닌 줄을 센다.** 패턴의 `\\*[^/]` 가지가 Go 포인터 역참조문·임베드 필드에 걸린다 — 레포 전체 36줄, 이 패키지 5줄. 그래서 판정 대상은 지문이 세는 304가 아니라 299다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 `dlddu/session-platform`을 클론하고 as-is·to-be versionScript를 재실행해 감지 스냅샷이 현재도 유효한지 확인한다.",
+              "expectedOutcome": "as-is = `lines=2958 files=101` / `d74ff5c4…`, to-be = `c93a618c…` — **감지값과 바이트 동일**. HEAD는 `539819e`(#63 머지 + 이미지 핀)."
+            },
+            {
+              "seq": 2,
+              "action": "같은 레포의 열린 PR을 전수 조사해 형제 워커의 작업 파일과 충돌 표면을 실측한다(감지가 이 정보를 갖고 있지 않다).",
+              "expectedOutcome": "열린 PR 4건. **#64**(형제 docs-impl, 같은 `rct` id)가 `client_orchestrator.go`·`data-plane/cmd/agent/main.go`를, **#62**(형제 e2e-mock-policy)가 `client_orchestrator.go`를 건드린다 ⇒ 감지가 1순위로 지목한 집중 구간 둘 다 충돌 표면. **#54**는 주석 제거 자체를 하는 미리뷰 PR로 발견."
+            },
+            {
+              "seq": 3,
+              "action": "PR #54의 diff·머지 상태·저자를 확인해 이번 계획과의 관계를 판정한다.",
+              "expectedOutcome": "봇 저자, 64파일 +603/−1,126, `mergeable:false`(dirty)·`rebaseable:false`·리뷰 0건, 2026-09-03(정책보다 하루 앞). diff가 **산문을 남기고 `(AC-…)` 포인터를 지운다** ⇒ 정책의 운영 규칙과 정반대. **머지가 아니라 종료 권고** 결론."
+            },
+            {
+              "seq": 4,
+              "action": "슬라이스 범위를 확정하고 판정 대상 줄 수를 실측한다. 형제 PR과 교집합 0인 패키지 중 가장 무거운 곳을 고른다.",
+              "expectedOutcome": "`control-plane/internal/service/` 6파일 = 지문 기준 304줄. 후보 비교: criu 215 · configmap 140 · agent 75. 형제 PR과 겹치는 파일 0개."
+            },
+            {
+              "seq": 5,
+              "action": "지문 패턴이 실제로 주석만 세는지 검증한다(줄 수를 이력에 적기 전에).",
+              "expectedOutcome": "**오검출 발견** — `\\*[^/]` 가지가 Go 포인터 역참조문(`*snapshotted = true`)·임베드 필드(`*agent.StubClient`)에 걸린다. 이 패키지 5줄, 레포 전체 36줄 ⇒ 실제 판정 대상은 **299줄**."
+            },
+            {
+              "seq": 6,
+              "action": "범위 안 299줄을 한 줄도 빠짐없이 읽고, 제거 후보마다 복원 경로의 좌표를 PRD·테스트 문서·같은 파일 코드에서 실제로 확인한다.",
+              "expectedOutcome": "제거 75 / 유지 224 확정. 좌표 예: 패키지 주석 → `prd/state-api.md` AC-C2/AC-C3 구체화 문단 · 파드 회수 4중복 → 같은 파일 `sessionPodRefs` doc · `reaper.go`의 `TODO(policy)` 5줄 → `session.MaxIdle`의 원본(1차 패스가 doc-tracker 앵커라 보존한 그 블록) · `Create`의 AC-E1 해설 → `NormalizeWorkloadType` doc 축자 일치."
+            },
+            {
+              "seq": 7,
+              "action": "편집 후 삭제된 줄이 전부 주석·빈 줄인지 기계로 확인한다.",
+              "expectedOutcome": "`git diff -U0`의 삭제 줄에서 주석·공백 패턴을 걷어내면 **남는 줄 0개**. 범위 카운트 304 → 229, 전역 지문 2958 → 2883(정확히 −75)."
+            },
+            {
+              "seq": 8,
+              "action": "판정 이력을 `docs/comment-policy.md`에 등재하고, 범위 열 형식을 「줄 수 @ 측정 커밋」으로 바꾼다(1차 행 소급 포함). `docs/doc-tracker.md`에 변경 이력 행을 더한다.",
+              "expectedOutcome": "판정 이력 표 2행(162줄 @ `acde617` / 299줄 @ `539819e`), 제거 표(좌표 포함)·유지 목록·갈린 판정 1건·오검출 정정·#54 관측이 문서에 남는다."
+            },
+            {
+              "seq": 9,
+              "action": "재현 가능한 CI 게이트를 로컬에서 전부 돌린다(go 1.24.7).",
+              "expectedOutcome": "`check-fidelity-allowlist.py` rc=0 · `check-render-fidelity.py` rc=0 · `check-ac-mapping.sh` rc=0(**AC 27 = 14+1+12 불변**) · control-plane `gofmt -l` 무출력 · `go vet ./...` · `go vet -tags=e2e ./...` · `go test ./...` · `go test -tags=integration ./...` 전부 rc=0."
+            },
+            {
+              "seq": 10,
+              "action": "브랜치 `reconcile/rct_20260904-0002-comment-redundancy`로 커밋·푸시하고 draft PR을 연다(머지하지 않는다).",
+              "expectedOutcome": "PR #65 확보. 브랜치명에 모델 슬러그를 붙여 **형제 PR #64가 이미 쓰고 있는 `reconcile/rct_20260904-0002-opus5-1m`을 밟지 않는다**(`rct` id는 모델 간에 유일하지 않다)."
+            }
+          ],
+          "plannedAt": "2026-09-04T10:05:00Z"
+        }
+      }
+    ]
   }
 ]
