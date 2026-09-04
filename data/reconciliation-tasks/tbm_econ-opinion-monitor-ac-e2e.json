@@ -502,7 +502,7 @@
       }
     },
     "createdAt": "2026-08-30T06:00:00Z",
-    "updatedAt": "2026-09-04T08:41:58Z",
+    "updatedAt": "2026-09-04T08:49:06Z",
     "stateSummary": {
       "asIs": "관측 시각 2026-08-30T06:00Z · `dlddu/economic-opinion-trend-monitor@main` fc304c5. `tests/e2e` 트리 `ad5c733e` (직전 `7f0be0ee`).\n\n39d2337 (2026-08-29, PR #14 — `feat(compare): 3축 비교 뷰 착지 + AC3.7 e2e spec (slice 7, reconcile rct_20260814-0001)`)이 더한 것:\n- `specs/ac3-7-three-axis-compare.spec.ts` 신설(139줄) — AC3.7 전용 spec.\n- `fixtures/gold/axis_sentiment.jsonl`(1행) · `fixtures/gold/subject_trend.jsonl`(2행) · `fixtures/README.md`(7행) 추가.\n- 기존 spec은 손대지 않았다 (+149 −0, 순수 추가).\n\n현재 spec 구성: AC 선언 3개(`ac3-6-sentiment-ratio-viz` · `ac3-7-three-axis-compare` · `ac3-8-normalized-ratio`) + 비-AC(스모크·인프라) 1개.",
       "toBe": "관측 시각 2026-08-30T06:00Z · `ac:2a9851cb…`(**변화 없음**) `reg:4343e5af`(직전 `cce58693`). **AC 집합(`docs/econ-opinion-monitor-prd-*.md`)은 변하지 않았고 레지스트리(`econ-opinion-monitor-doc-tracker.md`)만 바뀌었다.**\n\n- 집계: AC 전집 21 · 예외 등재 1 · 1:1 대상 20 · **AC 매칭 spec 파일 2 → 3** · **공백 18 → 17** · 비-AC spec 1.\n- 매핑표에 `AC3.7 | tests/e2e/specs/ac3-7-three-axis-compare.spec.ts` 행 추가, 슬라이스 표의 AC3.7 행에 ✅ **착지** 표기.\n- 공백 목록(`<!-- gap-list -->` 마커 안)에서 AC3.7 제거 → 잔여 17건: AC1.2~1.7 · AC2.1~2.6 · AC3.1~3.5.\n- 산문 갱신: \"✅ 착지한 2건\" → \"3건\". AC3.7은 `/api/compare`가 처음부터 Gold 파생이었으나 `/compare` 라우트가 플레이스홀더라 착지하지 못하던 건이며, 소유 슬라이스 7의 화면 절반을 당겨 실화면으로 세운 결과라고 명시했다. 슬라이스 7에 남는 몫은 축·기간 컨트롤 등 화면 확장이고, 이 AC의 spec은 신설이 아니라 **확장** 대상이라고 등재했다.",
@@ -631,6 +631,14 @@
             }
           ],
           "plannedAt": "2026-09-04T08:41:58Z"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20260830-0001-ac-e2e-pending",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/23",
+          "preparedAt": "2026-09-04T08:49:06Z",
+          "notes": "draft PR #23, head `7d1b1d6`, base `052c112`. **2파일 +185 −27** — `docs/econ-opinion-monitor-doc-tracker.md`(+66 −19)와 `tests/e2e/check_ac_mapping.py`(+119 −8)뿐이다. 제품 코드(`python/` `go/` `web/` `contracts/` `deploy/` `.github/`) 무변경 — `git diff --quiet go/` 로 확인했고 `git status --porcelain` 이 두 파일만 낸다. 반려 사유(모델 범위 외)를 구조적으로 재발 불가하게 만든 것이 이번 슬라이스의 핵심이다.\n\n계획 대비 변경 없음. 다만 계획 step 1의 실측에서 **감지·직전 계획이 공유하던 전제 하나가 깨졌다**: 잔여 17건이 \"하네스 또는 구현 선행\"이라는 뭉뚱그림 아래 있었는데, 실제로는 **15건이 이미 구현돼 있고 미구현은 2건뿐**이었다. 특히 AC2.x 6건은 doc-tracker가 아직 \"실 분석기는 미머지 PR에 스테이징\"이라 적고 있었으나 #12(`fc304c5`)로 main에 착지해 있었다 — 등재가 낡아 있었던 것이지 구현이 없던 게 아니다. 그 결과 이 모델의 실제 백로그(하네스 15건)가 docs-impl의 몫(2건)보다 훨씬 크다는 사실이 처음으로 문서에 드러난다.\n\n설계 판단 하나를 계획보다 늘렸다 — **해제 신호**. 규칙7은 \"구현이 착지하면 버전이 바뀌어 다음 감지에서 자동 복귀\"를 전제하는데, 이 모델은 as-is=`tests/e2e` 트리·to-be=PRD+doc-tracker라 `go/`·`web/`·`python/` 착지를 **어느 쪽 버전으로도 감지하지 못한다.** 등재만 넣으면 조용히 낡을 자리라, 등재 행마다 \"아직 미구현임을 보여 주는 문자열\"을 (파일 ∋ 문자열) 좌표로 적고 게이트가 그 생존을 매 CI 확인하게 했다. 이 모델의 재감지 사각을 등재 자신이 막는다.\n\n로컬 검증: `python3 tests/e2e/check_ac_mapping.py` exit 0, 집계 `AC 21 · 예외 1 · 구현 대기 2 · 1:1 대상 18 · 매칭 3 · 공백 15 · 비-AC 1`, `OK: 규칙 1·2·3·4'·5·6·6'·7 위반 없음`. 검사기는 표준 라이브러리만 쓴다(레포 관례) — 툴체인 부트스트랩 없이 그대로 돈다.\n\n음성 시험 8종 전부 KILL, 각 시험 후 `cp` 사본 복원 + `cmp` 바이트 동일 확인(`git checkout --` 금지 규칙 준수), 복원 후 재실행 rc=0: ①구현 대기 표 삭제→규칙6 ②AC3.5 예외 동시 등재→규칙7 ③spec 가진 AC3.6을 구현 대기 등재→규칙7 ④담당 셀 공란→규칙7 ⑤**해제 신호 문자열을 `handlers.go` 에서 제거(구현 착지 시뮬레이션)→규칙7** ⑥집계만 옛 값→규칙6 ⑦공백 목록에 AC3.5 잔류→규칙6 ⑧로드맵 표 AC2.2를 예외로 되돌림→규칙6'. 각 변이의 실패 메시지가 **의도한 규칙**을 가리키는지까지 대조했다(exit code만 보지 않았다).\n\n다른 CI 게이트는 입력이 무변이다: `lint-py` 의 ruff는 `cd python` 으로 실행돼 `tests/e2e/check_ac_mapping.py` 를 보지 않고, gen-check·lint-go·lint-web·test-* 4종·test-cross 어느 것도 입력이 바뀌지 않는다. spec 파일 무변경이라 `e2e` 잡의 11케이스도 그대로다. 즉 실제로 움직이는 게이트는 `lint-ac-mapping` 하나이고 그것을 로컬에서 변경 전/후로 돌렸다.\n\n⚠️ GHCR `:latest`: `image.yml` 이 `on: pull_request` 에서 가드 없이 `:latest` 를 push한다. 다만 이 브랜치는 코드가 main과 동일하므로 산출 이미지도 main과 같고, 오히려 반려된 PR #18 빌드가 남긴 `:latest` 를 main 내용으로 되돌린다. `deploy/base/deployment.yaml` 이 그 태그를 참조한다.\n\n⚠️ PR #18(반려된 구현 초안)은 그대로 draft로 남겼다 — 이 모델이 처분할 대상이 아니고, AC3.5 구현이 docs-impl 슬라이스로 열릴 때 입력 자료가 된다. 지침에 권고만 적었다.\n\n토큰 위생: clone 직후 `git remote set-url` 로 평문 복원, push는 인라인 URL. `~/.git-credentials` 는 건드리지 않았다(형제 워커와 공유)."
         }
       }
     ]
