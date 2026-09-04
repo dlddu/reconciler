@@ -2516,7 +2516,7 @@
       }
     },
     "createdAt": "2026-09-04T00:11:47Z",
-    "updatedAt": "2026-09-04T00:47:00Z",
+    "updatedAt": "2026-09-04T01:15:00Z",
     "id": "rct_20260904-0001",
     "stateSummary": {
       "asIs": "**as-is (실측 시각 2026-09-04T00:11Z · `dlddu/homelab-k3s-mcp` main `0378f8d`)**\n\n`tests/` 트리 = `4ac92ac1…`. `tests/integration/` 최상위 `*.py` **57개** 중 매칭 단위는 **50개**\n(`_` 접두 헬퍼 5 · 러너 `run_all.py` · 체커 `check_ac_mapping.py` 제외 — 제외 판정은 러너와\n체커가 **같은 함수** `run_all.matching_unit_paths()`를 쓴다).\n\n- **전용 매칭 파일 49** + **비-AC 파일 1**(`smoke.py`, 규칙 3 등재분).\n- **규칙 2 위반(겸용 파일) 0** — 직전 슬라이스가 마지막 겸용 파일 `workload.py`(16 AC)를\n  AC별 16파일로 쪼개며 소멸시켰다.\n- 러너 배차: primary **41** · auth-variant **9**(합 50, 배차 누락 0).\n- 레포 자체 게이트 `tests/integration/check_ac_mapping.py`를 **트리거(`7456a46`)와 현재\n  HEAD(`0378f8d`) 양쪽**에서 실행: 둘 다 **rc=0**, 출력 문자 단위 동일 —\n  `AC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일 49 · 분할 대기 0 · 공백 AC 14`.\n- 자매 게이트 `scripts/check_mock_policy.py`도 rc=0(등재 5 · 모킹 지점 5 · 미등재 0 · 고아 0).\n\n**직전 관측 대비 as-is 이동의 출처**: PR #49(`7456a46`, 이 모델 `rct_20260903-0001`의 산출물)\n단 하나다. 이번 fire 도중 머지된 PR #48(`0378f8d`, 자매 모델 산출물)은 `tests/` 를 **0파일**\n건드려 as-is 해시가 `4ac92ac1…`로 불변이다(트리거 시점과 현재 HEAD가 같은 값).",
@@ -2588,6 +2588,14 @@
             }
           ],
           "plannedAt": "2026-09-04T00:47:00Z"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20260904-0001-homelab-k3s-mcp-ac-e2e",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/50",
+          "preparedAt": "2026-09-04T01:15:00Z",
+          "notes": "base `0378f8d` · head `0a31733` · 10파일 +681 −22 (신규 6 · 수정 4).\n\n**계획 대비 바뀐 것 없음 — 다만 스텁/실 제어면 택일이 조사 중에 확정됐다.** `ghcr.io/dlddu/session-platform` 이 익명 pull 200 · linux/arm64 매니페스트를 가진 **공개 패키지**임을 실측해, 모킹 정책의 `IMG`(이미지를 CI에서 확보 불가)·`UPS`(외부 SaaS) 어느 쪽도 스텁을 정당화하지 못함을 확인했다 → 실 제어면. **모킹 허용목록 5건·상한 5 불변**이 이 PR의 성립 조건이자 결과다.\n\n**커밋 전 로컬 검증(전부 실측)**\n- `check_ac_mapping.py` rc=0 — AC 전집 64 · 예외 1 · 1:1 대상 63 · **매칭 파일 52** · 분할 대기 0 · **공백 11**\n- `check_mock_policy.py` rc=0 — 등재 5(상한 5) · 미등재 0 · 고아 0. ⚠️ 이 체커는 `git ls-files` 기반이라 **`git add` 전에는 신규 파일을 못 본다** — 스테이징 후 다시 돌려 확인했다.\n- 러너 배차 primary 41→43 · auth-variant 9→10, 신규 3파일 전부 `실행 순서` 기본값 50(파일 간 순서 의존 0).\n- **시드 JSON을 손으로 짓지 않았다**: 네 payload를 session-platform의 `session.Session`으로 `json.Unmarshal` → `NormalizeWorkloadType`/`NormalizeModel` 까지 통과시켜 제어면이 `List`에서 하는 일을 그대로 재현(4/4). 거부 문자열도 `NewUnavailable(\"\").ListSessions()` 의 `Error()` 출력과 문자 동일함을 Go로 확인.\n- `EXPECTED_TOOLS` == `toolslist.go` 15개 집합 동등. `symtable` 정적 이름 해석 미해소 0건.\n- `kustomize build tests/k8s/kind` 렌더로 `SESSION_PLATFORM_ENDPOINT` 가 `http://control-plane.session-platform.svc.cluster.local` 로 남는 것을 확인 → **오버레이 무변경**.\n- **음성 통제 6종** 전부 의도한 규칙 문장으로 rc=1, 복원은 `cp`+`cmp -s` 바이트 동일. 특히 ⑤(픽스처에 `-mock` 토큰을 넣으면 `[R2] 미등재 모킹 토큰`)는 **스텁이었다면 게이트가 잡는다**는 증명이고, ⑥(상한만 5→6 → `[R6]`)은 상한이 천장이 아니라 행 수의 거울임을 재확인한다.\n\n**로컬 불가**: kind 통합(실 제어면 기동·시드·3파일 실행)은 이 호스트에 docker/kind가 없어 CI가 판정한다. PR CI 결과는 별도 커밋으로 기록한다."
         }
       }
     ]
