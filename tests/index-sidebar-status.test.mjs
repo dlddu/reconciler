@@ -49,6 +49,8 @@ function renderSidebar(tasks) {
     $: (selector) => selector === "#modellist" ? list : modelCount,
     escapeHtml: (value) => String(value),
     isModelEnabled: () => true,
+    lastAction: () => null,
+    relTime: () => "방금",
     list,
     modeMeta: () => ({ head: "ToBeModels", empty: "없습니다." }),
     pendingTaskCount: () => 0,
