@@ -1235,5 +1235,34 @@
     },
     "createdAt": "2026-09-04T22:23:45Z",
     "updatedAt": "2026-09-04T22:23:45Z"
+  },
+  {
+    "id": "rct_20260904-0012",
+    "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "detectedAt": "2026-09-04T23:31:00Z",
+      "changedSides": [
+        "to_be"
+      ],
+      "toBe": {
+        "previousVersion": "fe57fa2042e54e5b55a3b2e6af8d5f750bbfe351",
+        "currentVersion": "8024f21934af842342e316aa58f985bed683eb2e"
+      }
+    },
+    "stateSummary": {
+      "asIs": "**as-is = `internal:e3db63108f1cbc5719d40325a584081fa785117c main.go:1c3bdc00914455499530398ccc260fac096c9283` — 직전 관측값과 글자 그대로 동일(불변).**\n\n트리거 커밋 `8188c28`의 변경 파일은 `docs/doc-tracker.md` **하나**뿐이다(`git diff --name-only 8fdbfa3 8188c28`). `internal/`·`main.go` 변경 0줄 ⇒ **기준 1(미구현 AC)·2(구현↔문서 불일치)·3(문서 없는 구현)은 이번 트리거로 움직일 수 없다** — 산문 논증이 아니라 산술이다.\n\n구현 현황(불변): 도구 표면 17종(`session_list`·`session_read`·`session_write` 포함 — 09-04 오전 #48·#51·#53이 마지막 미구현 도구까지 닫았다). 게이트 `scripts/check_comment_policy.py` rc=0, 판정 대상 1025줄/70파일 중 502줄(49.0%) 판정 완료, 등재 범위 11, 전체 지문 `eee5e55ba1d4…` — 부모 `8fdbfa3`와 **바이트 동일**.",
+      "toBe": "**to-be = `docs/` 트리 해시 = `fe57fa20…` → `8024f219…`.**\n\n**단일 트리거: `8188c28` (PR #61, 2026-09-04T23:16:44Z).** 최근 6커밋 지문 재계산으로 단독 귀속 확인(`8fdbfa3`가 정확히 baseline `fe57fa20…`).\n\n`docs/doc-tracker.md` +9 / −1. 자매 모델 `tbm_homelab-k3s-mcp-ac-e2e`의 슬라이스(`rct_20260904-0009`)가 session-write/AC4를 닫으려다 CI에서 막힌 뒤 **실측만 남기고 코드를 되돌린** 결과를 원장의 AC4 항목에 3항(①507 도달 불가 · ②claude-code 파드 기동 선행 · ③따라서 선행이 한 겹 더 크다)과 AC2 리드로 등재했다.\n\n**기준 4(원장 집계·상태 ↔ 실제) 재도출 — 어긋남 0:**\n\n| 원장이 진술하는 것 | 실측 | 결과 |\n| --- | --- | --- |\n| e2e 렌즈 집계 블록 · 레지스트리 | `check_ac_mapping.py` rc=0 — AC 전집 64 · 예외 1 · 1:1 대상 63 · 매칭(전용) 60 · 공백 3 · 규칙 1·2·3·5·6·7 위반 0 | **일치**(부모와 바이트 동일) |\n| 주석 판정 원장 수치 | `check_comment_policy.py` rc=0 — 1025줄/70파일 · 판정 502줄 · 등재 11 · 지문 `eee5e55b…` | **일치**(부모와 바이트 동일) |\n| 모킹 등재 | `check_mock_policy.py` rc=0 — 등재 5(상한 5) · 지점 5 · 미등재 0 · 고아 0 | **일치**(부모와 바이트 동일) |\n| 이번에 새로 등재된 7개 사실 주장 | 소스에서 전건 독립 검증(아래) | **전건 참** |\n\n**새 등재 주장의 독립 검증**(session-platform `261033c` / homelab `8188c28`): `newClaudeWorkload(claudeConfig{…})`가 세우는 필드에 `ScrollbackLimit` 없음(`data-plane/cmd/agent/main.go:160-170`; 그 필드를 세우는 코드는 `claude_archive_test.go:231,266` 단위 테스트뿐) · 0이면 256 MiB 고정(`claude.go:252-259`) · 아카이브가 생성(`claude_archive.go:25`)·복원(`:202-203`) **양쪽**에서 초과 거부 · `entrypoint.sh`가 `set -eu`(`:2`) 아래 claude-code 분기(`:7`)에서 `K3S_MCP_TOKEN` 필수(`:8`)로 토큰 발급(`:22`)·마켓플레이스 add/install(`:67`,`:71`)을 마친 **뒤에야** `exec \"$agent_bin\"`(`:83`) · `k3s-mcp-url`은 `optionalSecretEnv`(`client_orchestrator.go:559`) · claude-code는 `checkpointerFor`(`manager.go:1007`)를 통해 CRIU가 아니라 `criu.NewAgentArchiveCheckpointer`(`control-plane/main.go:119-124`) · 대체 검증 3종 실재(`sessionplatform_test.go:704,744` · `mcp_test.go:1739`).\n\n**정밀도 부기(결함 아님, 다음 fire가 다시 파지 않도록)**: `## 변경 이력` 표는 35행 고정으로 #58·#59·#60·#61 넷을 싣지 않았다. 그러나 이 표는 **선택적 로그**이고(직전 행은 #57), 기준 4가 지목하는 「집계·상태」는 e2e 렌즈 집계 블록·레지스트리·주석 판정 원장·모킹 등재라는 **별도 자리**에 있으며 위 표대로 전부 일치한다. 어느 게이트도 이 표를 파싱하지 않고, 정의도 요구하지 않는다 ⇒ 어긋남으로 계상하지 않는다.",
+      "gap": "**유의미한 새 gap 없음.**\n\n1. **기준 1·2·3은 구조적으로 움직일 수 없다** — as-is 변경 0줄(트리거의 유일한 파일이 `docs/doc-tracker.md`).\n2. **기준 4는 어긋남 0** — 게이트 셋의 출력이 부모/트리거에서 **바이트 동일**하고, 이번에 새로 등재된 7개 주장을 소스에서 재확인해 전건 참이었다. 원장이 늘어난 것은 **어긋남의 발생이 아니라 미지의 축소**다(직전 슬라이스가 소스로 실측한 차단점을 산문으로 고정).\n\n**직전 레코드(`tbm_homelab-k3s-mcp-docs-impl/rct_20260904-0011`, 22:23:45Z)가 박아 둔 트립와이어 둘 — 둘 다 미발화:**\n- **(a)** 「`git grep -c 'flux-cd-apps' docs/doc-tracker.md`가 0이 되거나 opensearch 🔴의 「미수행」이 사라지면」 → **실측 1건 잔존**(`:170` 「opensearch 3종 — 프로덕션 스모크 미수행(env 배선이 infrastructure/flux-cd-apps …」). 외부 인프라 대기 그대로.\n- **(b)** 「`check_ac_mapping.py` rc=0인데 `docs/test-*.md`의 참조 파일과 그 파일 docstring의 `검증 AC:`가 불일치하는 쌍 ≥1」 → 트리거가 `docs/test-*.md`를 **한 파일도 건드리지 않았고**(변경 파일 1개) 게이트 출력도 바이트 동일하므로 그 모집단이 움직이지 않았다.\n\n**잔여(이월, 소유자 명시) — 착수 가능 0건:**\n\n| 잔여 | 유예 사유 | 소유 |\n| --- | --- | --- |\n| opensearch 3종 프로덕션 스모크 · session_write 스모크 | env 배선이 `infrastructure/flux-cd-apps` 반영 대기 | **루프 밖 외부 인프라** |\n| e2e 공백 3건(session-read/AC2 · session-write/AC2·AC4) | 507 도달 불가 · claude-code 파드 기동 선행 · 모킹 정책 판정 미착수 | **자매 모델 `tbm_homelab-k3s-mcp-ac-e2e`** — 같은 트리거로 이 fire가 `tbm_homelab-k3s-mcp-ac-e2e/rct_20260904-0011`에 항목별 미발화를 실측 대조해 기록했다. **여기서 다시 열지 말 것(이중 계상 금지).** |\n| 자동화 필드가 전용 파일 경로를 참조하지 않는 AC들 | 「완결성」 문제이지 거짓 진술이 아니다 — 기준 4는 「집계·상태가 **어긋나면**」 | **판정 기준 밖** |\n\n**트립와이어(다음 감지가 기계적으로 판정할 것)** — 위 (a)·(b)를 그대로 이월하고 한 갈래를 더한다:\n- **(c)** 원장의 `## 변경 이력` 표가 **집계 수치를 새로 진술하기 시작하면**(현재는 마지막 행 이후 신규 0행이라 무해) 그 수치를 게이트 실측과 대조할 것. 기계 조건: `awk 'NR>449' docs/doc-tracker.md | grep -c '^| 2026-'`가 35에서 늘고, 그 새 행의 「이후 상태」 셀 숫자가 `check_ac_mapping.py` 실측(현재 AC 64 / 매칭 60 / 공백 3)과 다르면 기준 4로 열 것.",
+      "summarizedAt": "2026-09-04T23:43:08Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "reason": "**작업 불필요(actionRequired: false).** 근거 셋:\n\n1. **as-is가 글자 그대로 불변이다.** 트리거 `8188c28`의 변경 파일이 `docs/doc-tracker.md` 하나뿐이라 `internal/`·`main.go` 0줄 — 기준 1·2·3에 새 어긋남이 생길 수 없다(산술 증명).\n\n2. **기준 4도 어긋남 0이다.** 세 게이트(`check_ac_mapping.py`·`check_mock_policy.py`·`check_comment_policy.py`)를 부모 `8fdbfa3`와 트리거 `8188c28` 양쪽 클린 트리에서 돌려 **출력·지문이 바이트 동일**함을 확인했고(변경 영역이 비교 집합 밖이라는 적극적 증거), 게이트가 읽지 않는 자리에 이번에 **새로 등재된 7개 사실 주장**은 산문 신뢰 대신 session-platform·homelab 소스에서 재확인해 전건 참이었다. 원장이 늘어난 것은 어긋남의 발생이 아니라 **미지의 축소**다.\n\n3. **직전 레코드의 트립와이어 둘 다 미발화이고, 이월 잔여의 착수 가능 항목이 0건이다.** (a) `flux-cd-apps` 대기 문구 잔존(외부 인프라), (b) `docs/test-*.md` 모집단 무변경. 잔여 셋은 각각 「외부 인프라 대기」·「자매 모델 소유」·「판정 기준 밖」이라 이 모델의 축으로 닫을 수 없거나 자매와 경쟁한다.\n\n이 레코드의 목적은 판단의 기록과 **baseline 전진**이다(적지 않으면 precheck가 5분마다 같은 fire를 다시 띄운다). 트립와이어 (a)·(b)를 그대로 이월하고 `## 변경 이력` 표에 대한 (c)를 더해 `stateSummary.gap`에 기계 조건으로 남겼다.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-04T23:43:08Z"
+    },
+    "createdAt": "2026-09-04T23:43:08Z",
+    "updatedAt": "2026-09-04T23:43:08Z"
   }
 ]
