@@ -3593,7 +3593,78 @@
       "assessedAt": "2026-09-04T21:49:00Z"
     },
     "createdAt": "2026-09-04T21:49:00Z",
-    "updatedAt": "2026-09-04T22:03:00Z",
-    "id": "rct_20260904-0009"
+    "updatedAt": "2026-09-04T22:20:00Z",
+    "id": "rct_20260904-0009",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**claude-code 데이터 플레인을 kind 픽스처에 세우고, 그 위에서 `session-write/AC4`(거부 응답의 구분 전달) 전용 파일을 저작한다. 동시에 직전 슬라이스가 남긴 `prd-session-write.md` AC1의 claude-code 절을 같은 PR에서 닫는다.**\n\n**감지가 준 제약 하나를 소스로 뒤집었다 — 「네 거부를 전부 단정할 것」은 달성 불가다.** 감지는 「429·507이 `c.enqueue`의 자기 로직이라 상류가 개입하지 않으므로 조달 가능」이라고 적었지만, 그것은 **오류가 어디서 나는가**의 답일 뿐 **e2e가 그 상태에 도달할 수 있는가**의 답이 아니다. 소스 실측:\n- **507(`errClaudeOutputFull`)은 도달 불가다.** 발화 조건이 `c.out.claudeFullAt(c.scrollbackLimit, ...)`, 즉 `len(buf) > scrollbackLimit - marker`이고, `scrollbackLimit`은 `cfg.ScrollbackLimit`이 0일 때 `maxClaudeScrollbackBytes = 256 MiB`로 고정된다(`claude.go:248-256`). 그런데 **`ScrollbackLimit`을 채우는 env·플래그가 데이터 플레인 어디에도 없다** — `newClaudeWorkload(claudeConfig{...})` 호출부(`main.go:160-170`)가 `StateDir`·`Model`·`Binary`·`RunTimeout`만 env에서 읽고 `ScrollbackLimit`은 아예 넘기지 않는다(그 필드를 세우는 곳은 `claude_archive_test.go`뿐이다). 즉 e2e가 507을 보려면 **에이전트가 256 MiB의 출력을 실제로 쌓아야** 하고, 그건 유효한 상류 자격증명으로 Claude를 장시간 돌린다는 뜻이라 이 하네스의 예산 밖이다. 우회로였던 「복원된 아카이브가 이미 상한을 소진한 경우」도 막혀 있다 — `claude_archive.go:25`가 생성 시, `:202`가 복원 시 각각 256 MiB 초과를 거부하므로 제품 경로로는 그 아카이브를 만들 수 없고, 손으로 지어 넣으려면 256 MiB짜리 아카이브를 체크포인트 스토어에 밀어 넣어야 한다.\n- **404·413·429는 도달 가능하다.** 404는 타입 무관. **413은 파드에 닿지도 않는다** — 제어면 `Service.Write`가 `activate` **이전에** `current.WorkloadType == claude-code && len(payload) > MaxClaudePromptBytes`를 재고 `ErrWorkloadPromptTooLarge`를 낸다(`service/manager.go:320-327`). 429는 `queuedBytes + len(prompt) > maxClaudeQueuedBytes(8 MiB)`이므로 **1 MiB 프롬프트 9~10발**이면 채워진다. 워커는 프롬프트 하나마다 node 기반 `claude` CLI를 새로 띄우므로(이미지에 실재 — `Dockerfile` 3단계가 `@anthropic-ai/claude-code@2.1.220`를 설치) 배출 속도가 주입 속도보다 훨씬 느리다.\n\n**그래서 범위를 「관측 가능한 세 거부 + 거부 이후 읽기 보존 + 네 메시지의 쌍쌍 구별」로 긋고, 507 분기는 원장에 근거·대체 검증·해제 조건과 함께 명시적으로 도려낸다.** 이것은 원장이 08-07·08-13에 고쳤다고 적은 「반쪽 단정」과 다르다 — 그때의 유예 사유는 「아직 안 했다」였고 지금은 **구조적 불가**이며, 근거를 소스 좌표로 남기고 해제 조건(session-platform 데이터 플레인이 `ScrollbackLimit`을 설정 표면으로 노출하는 것 — **다른 레포·다른 모델의 몫**)까지 적는다. 직전 슬라이스가 `session_write_ac1.py`를 ✅로 두면서 claude-code 절을 「공백이 아니라 강화 후속」으로 등재한 것과 같은 형태이고, 그 선례의 잔여를 이번 PR이 실제로 닫는다.\n\n**대안 검토**: (a) AC4를 규칙 4 예외로 등재 — 관측 가능한 세 거부의 커버리지까지 버리므로 기각. (b) 규칙 7 구현 대기 — 기능은 이미 구현됐으므로 해당 없음. (c) 데이터 플레인에 `CLAUDE_CODE_SCROLLBACK_LIMIT`를 추가 — 모델 정의가 「이 루프의 산출물은 e2e 테스트와 등재 문서뿐」이라 경계 밖이고, 애초에 session-platform 레포다.\n\n**가역성**: 픽스처·CI 진단·테스트 파일·문서만 바뀐다. **Go 실행 코드 0줄, 프로덕션 매니페스트 0줄.** 되돌리기는 PR revert 하나다.\n\n**이 시도의 범위(완료 기준)** — ⓐ~ⓕ가 전부 참이면 성공이다.\n- ⓐ **claude-code 세션 파드가 실제로 뜬다**: 제품 API `POST /api/v1/sessions`(`workloadType=claude-code`)로 만든 세션이 `active`가 되고, 워크로드 컨테이너 + credential-proxy 사이드카가 둘 다 Ready가 된다.\n- ⓑ **전용 파일 `session_write_ac4.py`**가 primary 그룹에 배차되어 통과한다: 404 · 413 · 429 세 거부가 **서로 다른 사유 문구**로 오고, 429 직후 기존 출력이 `session_read`로 계속 읽히며, 네 사유 접두가 쌍쌍이 다르다.\n- ⓒ **`session_write_ac1.py`가 claude-code 절을 단정한다**: claude-code 세션에 프롬프트를 write하면 실행을 기다리지 않고 `{path, session}`만 돌아온다(큐 적재). 파일 docstring의 「claude-code 절은 범위 밖」 서술을 제거한다.\n- ⓓ **원장 갱신**: 레지스트리 `session-write/AC4` 행이 ✅ 전용 파일로, 집계가 매칭 60→**61** · 공백 3→**2**로 바뀌고 `check_ac_mapping.py` rc=0. backlog가 (3)→(2)로 줄고 AC4 자리에 507 카브아웃과 AC1 claude-code 절 완료가 적힌다. `docs/test-session-write.md` 시나리오 4의 `(미작성)`도 같은 PR에서 지운다(형제 PR #60이 도입하는 규칙 7이 이것을 기계로 강제한다).\n- ⓔ **모킹 지문 불변**: `check_mock_policy.py` 등재 5(상한 5) rc=0. 더미 `claude-code-credentials`는 상류의 **대체물**이 아니라 필수 SecretKeyRef의 **충족**이고, 이 파일이 단정하는 세 거부는 어느 것도 상류 호출을 타지 않는다(404·413은 제어면에서, 429는 에이전트 큐에서 끝난다). 이 판단을 원장에 남긴다.\n- ⓕ **PR CI 전 체크 초록**(lint · unit · integration).\n\n**범위 밖(후속)**: ① `session-write/AC4`의 **507 분기** — 위 근거로 도려냄, 해제 조건은 session-platform 데이터 플레인의 설정 표면. ② `session-read/AC2` · `session-write/AC2` — 공백으로 유지. 다만 **원장의 「같은 CRIU 벽」 서술이 claude-code에는 거짓임을 실측했다**: `checkpointerFor`는 **워크로드 타입별**로 체크포인터를 고르고(`service/manager.go:964-976`), claude-code는 `CLAUDE_CODE_ARCHIVE_ENABLED`가 켜지면 CRIU가 아니라 `NewAgentArchiveCheckpointer`(파일시스템 아카이브)를 받는다(`cmd/control-plane/main.go:118-128`). 이번 슬라이스는 그 게이트를 켜지 않지만(체크포인트 스토어·유휴 리퍼 부작용이 별도 검증을 요구한다), **다음 계획이 「CRIU가 선행」이라는 낡은 전제에서 출발하지 않도록** 그 정정과 미검증 지점을 backlog에 리드로 남긴다. ③ `docs/doc-tracker.md`의 `## 자동화 커버리지` 절 — 자매 모델 `tbm_homelab-k3s-mcp-docs-impl`의 PR #60 소유, 건드리지 않는다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 `reconcile/rct_20260904-0009-ac-e2e`를 `main`(`88b3b17`)에서 끊고 변경 전 게이트 3종으로 기준선을 기록한다: `python3 tests/integration/check_ac_mapping.py` · `python3 scripts/check_mock_policy.py` · `python3 scripts/check_comment_policy.py`.",
+              "expectedOutcome": "셋 다 rc=0. 기준선 — 매칭 60 / 공백 3 / 분할 대기 0 / 예외 1, 모킹 등재 5(상한 5), 주석 전체 지문 `93922050335b…`. 이 값이 변경 후 대조의 기준이다."
+            },
+            {
+              "seq": 2,
+              "action": "형제 PR #60(`reconcile/rct_20260904-0009-docs-impl`, 자매 모델 `tbm_homelab-k3s-mcp-docs-impl`)과의 교집합을 **시험 머지로** 확인한다. #60은 `docs/doc-tracker.md`(160~190행 `## 자동화 커버리지` 절 + 규칙 목록) · `docs/test-session-{read,write}.md` · `tests/integration/check_ac_mapping.py`(+97, **규칙 7 신설**)를 만진다. `git merge --no-commit origin/reconcile/rct_20260904-0009-docs-impl` 후 게이트 3종을 머지된 트리에서 돌린다.",
+              "expectedOutcome": "겹치는 파일은 `docs/doc-tracker.md`와 `docs/test-session-write.md` 둘뿐이고 헝크가 서로 떨어져 있어 자동 머지된다. 머지된 트리에서 게이트 3종 rc=0 — **특히 #60의 규칙 7**(테스트 문서의 `자동화` 필드 ↔ 실측 파일 집합)이 이 PR이 새로 만드는 `session_write_ac4.py`에 대해서도 통과해야 하므로, 4단계의 `docs/test-session-write.md` 갱신이 선택이 아니라 필수임을 여기서 확정한다."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/k8s/kind/session-platform.yaml`에 (a) 더미 `claude-code-credentials` Secret(키 **정확히 세 개**: `k3s-mcp-token`·`base-url`·`auth-token` — 나머지 `model`·`k3s-mcp-url`·`plugin-marketplace-url`·`ca-cert`는 `optionalSecretEnv`라 생략), (b) 제어면 Deployment에 `DATA_PLANE_CLAUDE_CODE_IMAGE`(= 이미 핀된 `DATA_PLANE_IMAGE`와 **같은 이미지·같은 커밋 태그**) env를 더한다. 파일 머리말의 「`DATA_PLANE_CLAUDE_CODE_IMAGE` stays unset … Only `shell` sessions can be created」 문단을 이번 슬라이스가 그것을 켠 이유로 고쳐 쓴다. `CRIU_ENABLED`·`CLAUDE_CODE_ARCHIVE_ENABLED`는 **계속 미설정**으로 둔다(스냅샷·유휴 리퍼가 서면 시드 세션이 흔들린다 — 파일 머리말이 이미 적은 이유 그대로).",
+              "expectedOutcome": "`kubectl apply --dry-run=client -f`가 통과하고 diff가 Secret 1개 + env 1줄 + 주석뿐이다. Secret 값은 자격증명이 아니라 **필수 SecretKeyRef를 충족시키는 자리표시자**임이 주석에 적힌다. `snapshotEnabled`는 false로 유지된다."
+            },
+            {
+              "seq": 4,
+              "action": "`tests/integration/_session_platform.py`의 `live_shell_session`을 워크로드 타입으로 일반화한다(내부 `_live_session(name, workload_type)` + `live_shell_session`·`live_claude_code_session` 두 얇은 래퍼). 생성 요청·응답 모양은 **손으로 짓지 말고** session-platform의 `control-plane/internal/api/api.go`의 `createReq`/`writeResp`와 create 핸들러에서 확인한 그대로 쓴다(특히 `model`을 생략했을 때 제어면이 `platform-default`로 정규화하는지). 모듈 상단의 「`claude-code` 세션은 만들 수 없다」 주석을 갱신한다.",
+              "expectedOutcome": "`live_claude_code_session`이 `state == \"active\"`이고 `pod`를 신고하는 세션을 돌려주고, 나갈 때 세션 삭제 + 파드 회수까지 기다린다(`_wait_for_pod_gone` 재사용). `session_read_ac1.py`·`session_write_ac1.py`가 쓰는 `live_shell_session`은 **시그니처·동작 무변경**이다."
+            },
+            {
+              "seq": 5,
+              "action": "`tests/integration/session_write_ac4.py` 신설 — `검증 AC: session-write/AC4`, `실행 대상: primary`. 케이스 넷: (1) **404** 존재하지 않는 id에 write → `session platform not found:` 접두, (2) **413** claude-code 세션에 `MaxClaudePromptBytes + 1` 바이트 페이로드 → `payload too large, retrying will not help` 접두(제어면이 `activate` 전에 재므로 파드에 닿지 않는다), (3) **429** 1 MiB 프롬프트를 상한 있는 루프(≤24회)로 밀어 넣어 `busy, retry after a queued prompt finishes` 접두를 관측, (4) **429 직후 기존 출력이 계속 읽힌다** — `session_read`가 에러 없이 응답하고 커서를 발급한다. 더해 **쌍쌍 구별**을 단정한다(관측한 세 사유 문구가 서로 접두부터 다르다 — 「재시도가 의미 있는 거부」와 그렇지 않은 거부가 문구로 갈린다). 문구 리터럴은 손으로 짓지 말고 `internal/sessionplatform/sessionplatform.go`의 `Error.Error()` 스위치에서 그대로 가져온다. **507 분기는 단정하지 않으며, 그 이유(소스 좌표 포함)와 대체 검증(`TestWriteMapsControlPlaneRefusals`·`TestWriteRefusalsAreDistinctWithoutTheControlPlanesProse`)을 파일 docstring에 적는다.**",
+              "expectedOutcome": "네 케이스가 전부 `run()`에서 호출되고(체커의 「케이스 미호출」 검사), 단정이 vacuous하지 않다 — 413은 1 MiB+1에서만 나고 1 MiB에서는 나지 않음을 함께 확인해 경계를 고정한다. 429 루프는 실패 시 「몇 발을 넣었고 무엇을 받았는가」를 메시지에 담아, 도달 실패와 문구 불일치가 구분된다."
+            },
+            {
+              "seq": 6,
+              "action": "`tests/integration/session_write_ac1.py`에 **claude-code 절**을 더한다 — claude-code 세션에 프롬프트를 write하면 (1) 실행을 기다리지 않고 반환하고 결과가 `{path, session}`뿐이며, (2) `path == \"active\"`다. shell 절의 「출력이 누적된다」에 대응하는 관측은 claude-code에서 상류 자격증명 없이는 성립하지 않으므로 **단정하지 않고**, 그 경계를 docstring에 적는다. 파일 docstring의 「**claude-code 절은 범위 밖이다**」 문단을 「이 슬라이스가 무엇을 닫았고 무엇을 남겼는가」로 고쳐 쓴다. 파일은 여전히 **AC 하나만** 선언한다(규칙 2).",
+              "expectedOutcome": "`session_write_ac1.py`가 shell 세션과 claude-code 세션 두 개를 각각 만들고 지운다. 규칙 2 위반 0 유지 — 선언은 `session-write/AC1` 하나뿐이다. 원장 backlog의 「범위 밖으로 함께 남은 것」 항목이 소멸한다."
+            },
+            {
+              "seq": 7,
+              "action": "`.github/workflows/ci.yml`의 진단 덤프에 **credential-proxy 사이드카**를 추가한다(`kubectl -n session-platform logs -l session-platform.dev/pod-role=workload -c <proxy 컨테이너명> --tail=200 || true`). 이미지 선-pull 스텝은 **고치지 않는다** — 그 스텝은 픽스처에서 `ghcr.io/dlddu/session-platform-data-plane:<sha>`를 grep해 `head -1`로 하나만 뽑는데, 새 env가 **같은 이미지 참조**라 뽑히는 값이 바뀌지 않는다(사이드카도 같은 이미지를 쓰므로 추가 pull이 없다). 컨테이너명은 추측하지 말고 `client_orchestrator.go`의 사이드카 생성부에서 확인한다.",
+              "expectedOutcome": "`ci.yml` diff가 진단 한두 줄뿐이고 pull/load 스텝은 무변경이다. 실패 시 claude-code 파드의 두 컨테이너 로그가 모두 남아, 워크로드 실패와 프록시 실패가 구분된다."
+            },
+            {
+              "seq": 8,
+              "action": "`docs/doc-tracker.md` 갱신: (a) 레지스트리 `session-write/AC4` 행 → ``✅ 전용 파일 `session_write_ac4.py` `` (체커가 `startswith(\"✅\")` + 첫 파일 참조로 판정하므로 이 형태를 지킨다), (b) 집계 블록 매칭 60→**61** · 공백 3→**2**, (c) 레지스트리 헤딩의 숫자, (d) backlog 헤딩 `(3)`→`(2)`와 내역 재작성, (e) **완료 노트** 추가. 완료 노트에 반드시 담을 것 — ① **507 카브아웃**: 근거(`ScrollbackLimit`에 설정 표면 없음 — `main.go:160-170`이 그 필드를 넘기지 않고 기본값이 256 MiB), 대체 검증(양쪽 레포의 Go 단위), 해제 조건(session-platform 데이터 플레인이 그 상한을 설정으로 노출 — **다른 레포·다른 모델**), ② **AC2 둘의 벽 정정**: CRIU는 **shell**의 벽이고 claude-code는 `CLAUDE_CODE_ARCHIVE_ENABLED`로 아카이브 체크포인터를 받는다는 실측 + 아직 미검증인 지점(체크포인트 스토어 구성, 유휴 리퍼 부작용, `idle` 상태 도달 경로)을 **리드로** 명시, ③ AC1 claude-code 절 완료, ④ 더미 Secret이 모킹이 아니라는 판단.",
+              "expectedOutcome": "`check_ac_mapping.py` rc=0으로 `매칭 파일(전용): 61` · `공백 AC: 2`를 출력한다. backlog 산문은 게이트의 파싱 범위 밖이므로 같은 사실을 PR 본문에도 적어 기계 검증 없는 자리를 사람 리뷰로 덮는다."
+            },
+            {
+              "seq": 9,
+              "action": "`docs/test-session-write.md` 시나리오 4의 `자동화` 필드에서 `(미작성)`을 지우고 `tests/integration/session_write_ac4.py`를 참조로 남긴다. 시나리오 1의 claude-code 절 서술도 이번 슬라이스가 닫은 만큼 갱신한다. **다른 시나리오 줄은 건드리지 않는다**(#60의 소유).",
+              "expectedOutcome": "형제 PR #60이 도입하는 규칙 7이 머지된 트리에서 이 AC에 대해 통과한다. #60이 먼저 머지되든 이 PR이 먼저 머지되든 이 편집은 옳다 — 파일이 실재하게 되므로 `(미작성)`은 어느 순서에서도 거짓이다."
+            },
+            {
+              "seq": 10,
+              "action": "로컬 게이트 재실행 + 하네스 배차 확인: 게이트 3종 rc=0, `python3 tests/integration/run_all.py --group primary --list`에 `session_write_ac4.py`가 나타나고 `--group auth-variant`·`--group oauth-variant`에는 없다. `git diff --stat`으로 `*.go` 0파일 · `k8s/`(프로덕션 매니페스트) 0파일을 확인한다.",
+              "expectedOutcome": "게이트 3종 rc=0(매칭 61 / 공백 2 / 모킹 등재 5 상한 5 / 주석 원장 등재 범위 무변경), 배차 목록에 신규 1파일, Go·프로덕션 매니페스트 변경 0."
+            },
+            {
+              "seq": 11,
+              "action": "브랜치를 푸시하고 **draft PR**을 연다(머지하지 않는다). PR 본문에 task id · gap 요약 · 완료 기준 ⓐ~ⓕ · 검증 방법 · **507 카브아웃의 근거와 해제 조건** · 범위 밖 3건 · 형제 PR #60과의 관계를 적는다. 그다음 **PR CI를 끝까지 관측**해 3잡 결과를 잡 로그 **원문**에서 확인한다(요약만 믿지 않는다).",
+              "expectedOutcome": "draft PR URL과 head SHA가 확보되고 CI 체크가 전부 success다. `integration tests` 잡 로그에 claude-code 세션 id·파드 이름과 세 거부의 관측 줄이 찍히면 ⓐ·ⓑ가 실측으로 닫힌다. 붉으면 로그 원문에서 실패 지점을 읽어 고치되, **인프라 한계로 판명되면 아래 축소 범위로 전환**한다."
+            },
+            {
+              "seq": 12,
+              "action": "**축소 범위 전환 기준(executor가 닫을 수 있는 task를 받게 하기 위한 설계)**. T1 — 429가 CI에서 재현되지 않으면(워커 배출이 주입보다 빠름): `session_write_ac4.py`를 404·413·쌍쌍 구별·거부 후 읽기 보존으로 좁히고, 429를 507과 함께 카브아웃에 등재한다. AC4는 여전히 ✅(매칭 61 / 공백 2). T2 — claude-code 파드가 kind에서 Ready가 되지 않으면: 픽스처·신규 파일·AC1 claude-code 절을 되돌리고, **측정된 실패 원인과 로그를 원장 backlog에 적는 것만** 남긴다(매칭 60 / 공백 3 유지). 어느 쪽이든 그 전환 사실과 근거를 PR 본문과 원장에 적는다.",
+              "expectedOutcome": "전환이 필요해도 task는 닫을 수 있는 상태로 남는다. T1/T2 어디로 가든 「무엇을 재서 그렇게 판단했는가」가 로그 인용과 함께 원장에 남아, 다음 감지가 같은 벽을 처음부터 다시 재지 않는다."
+            }
+          ],
+          "plannedAt": "2026-09-04T22:20:00Z"
+        }
+      }
+    ]
   }
 ]
