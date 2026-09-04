@@ -1420,7 +1420,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-04T08:07:03Z",
       "changedSides": [
@@ -1449,7 +1449,7 @@
       "assessedAt": "2026-09-04T08:07:03Z"
     },
     "createdAt": "2026-09-04T08:07:03Z",
-    "updatedAt": "2026-09-04T14:22:42Z",
+    "updatedAt": "2026-09-04T14:23:20Z",
     "id": "rct_20260904-0002",
     "attempts": [
       {
@@ -1541,6 +1541,69 @@
               "stepSeq": 6,
               "status": "succeeded",
               "log": "준비 단계의 draft PR을 실행 단계에서 갱신·해제·머지했다. 브랜치 갱신 2회(head `67a2395` → `3672255` → `d219724`), `markPullRequestReadyForReview`로 draft 해제 후 squash 머지. **관측 하나를 기록한다 — 충돌 상태(`mergeable_state: dirty`)의 PR에는 `pull_request` 워크플로가 아예 생성되지 않는다.** `3672255`를 push했을 때 체크가 0개였고, 충돌을 해소한 `d219724`에서야 3개 워크플로가 발화했다. 「CI가 붉다」와 「CI가 없다」를 구분하지 않으면 낡은 head의 green을 신선한 것으로 오독하게 된다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:7a8208e2e7a7318b8b452e7fe1cdcafe518b0867 data-plane:1e0b49a86649b3bbcf8ce5fd9c2613b7c5989202 web:8870879a7861b9d79b244055c344a6e3affa896c",
+          "verifiedAt": "2026-09-04T14:23:20Z",
+          "checks": [
+            {
+              "name": "완료 기준 1 — 도구 표면과 게이트 순서",
+              "status": "passed",
+              "detail": "머지된 main 새 클론에서 `go test -run 'SessionMCP|ApprovalGateway' ./cmd/agent/` **24건 전부 PASS**. `TestSessionMCPOffersTheGatedToolWhenTheGateExists`(도구 정확히 하나 = `web_fetch_get`) · `TestSessionMCPFetchesOnlyAfterApproval`(결정 이후에만 upstream 정확히 1회)."
+            },
+            {
+              "name": "완료 기준 2 — 외부 식별자 유일성",
+              "status": "passed",
+              "detail": "`TestSessionMCPGivesEachCallItsOwnExternalID` · `TestApprovalGatewayExternalIDsSeparateCallsAndSessions` PASS — 같은 세션의 연속 호출과 다른 세션의 호출이 모두 다른 값."
+            },
+            {
+              "name": "완료 기준 3 — 거절은 네트워크에 닿지 않는다",
+              "status": "passed",
+              "detail": "`TestSessionMCPRefusalsNeverReachTheNetwork` · `…TimeoutIsARefusal` · `…GatewayOutageIsAToolFailure` PASS — upstream 0회 + JSON-RPC 전송 오류가 아닌 `isError` 도구 결과."
+            },
+            {
+              "name": "완료 기준 4 — 승인 컨텍스트에 비밀 없음",
+              "status": "passed",
+              "detail": "`TestApprovalGatewaySendsIdentityWithoutSecrets` PASS."
+            },
+            {
+              "name": "완료 기준 5 — 세션 ID가 MCP 컨테이너에 도달",
+              "status": "passed",
+              "detail": "`go test -tags=integration -run ApprovalGated -v ./test/...` 10건 PASS 중 `TestApprovalGated_MCPContainerKnowsItsSession` — 값이 파드 세션 라벨과 같고 프록시 컨테이너에는 없다."
+            },
+            {
+              "name": "뮤테이션 — 게이트 단언의 비공허성",
+              "status": "passed",
+              "detail": "`session_mcp_tools.go:144`의 `if outcome.Decision != approvalApproved` → `if false`로 바꾸자 지침이 예고한 정확히 그 둘(`TestSessionMCPRefusalsNeverReachTheNetwork` · `TestSessionMCPTimeoutIsARefusal`)이 FAIL. 복원 후 baseline 재통과."
+            },
+            {
+              "name": "문서 게이트 3종 (머지된 main)",
+              "status": "passed",
+              "detail": "`check-fidelity-allowlist.py` rc=0 · `check-render-fidelity.py` rc=0 · `check-ac-mapping.sh` = AC 27 = 매칭 14 + 예외 1 + 공백 12 **불변**(기대값 일치)."
+            },
+            {
+              "name": "PR CI (머지 직전 head `d219724`)",
+              "status": "passed",
+              "detail": "체크 14개 = 13 success + 1 skipped(`pin deployment images (main only)`). `e2e (kind + API + browser)` · `integration (happy path)` · `envtest` · 양 모듈 lint+unit · `web (typecheck + build)` 포함 전부 success. 낡은 트리가 아니라 **현재 main(`47dcd7a`)을 담은 head**에서의 결과다."
+            },
+            {
+              "name": "프로덕션 무회귀 (§2.3)",
+              "status": "passed",
+              "detail": "ns `session-platform` Deployment `control-plane` Running/Ready, **restart 0**. 기동 로그의 `data_plane_approval_gated_image:\"\"` — 여전히 빈 값(이 타입은 아직 꺼져 있는 것이 정상). 머지 커밋 `git show --name-only`에 `k8s/**` **0건**, 11파일 +1137/−31로 지침의 12파일 상한 이내."
+            },
+            {
+              "name": "이미지 자동 핀 커밋",
+              "status": "passed",
+              "detail": "머지 2분 뒤 `347e6a27` `chore(deploy): … 47da36e7… 로 고정 [skip ci]`가 붙었다. 이 커밋이 다음 감지 주기의 트리거가 된다."
+            },
+            {
+              "name": "[정보성] 모델 전체 잔여 gap",
+              "status": "passed",
+              "detail": "converged 판정에 넣지 않는다(범위 밖). 원장 부채 행이 이름으로 들고 있는 넷이 그대로 남는다 — ① AC-F3의 in-band 대기 마커·대기 중 `lastAccess` 갱신(헬퍼→워크로드 신호 경로가 공통 병목) ② AC-F5 RWX 공유 볼륨(이제 쓸 주체가 생겨 순서상 다음, 단 RWX StorageClass 존재가 선행) ③ SPA 세 번째 타입 카드(프로덕션 활성화 이후가 낫다) ④ 프로덕션 활성화(`approval-gateway-credentials` Secret — 루프 밖 조치). 다음 감지 주기가 후속 task로 잇는다."
             }
           ]
         }
