@@ -1420,7 +1420,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-09-04T08:07:03Z",
       "changedSides": [
@@ -1449,7 +1449,7 @@
       "assessedAt": "2026-09-04T08:07:03Z"
     },
     "createdAt": "2026-09-04T08:07:03Z",
-    "updatedAt": "2026-09-04T09:27:00Z",
+    "updatedAt": "2026-09-04T13:58:29Z",
     "id": "rct_20260904-0002",
     "attempts": [
       {
@@ -1498,6 +1498,11 @@
           "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/64",
           "preparedAt": "2026-09-04T09:05:00Z",
           "notes": "PR 커밋 4개, **각각 독립적으로 green**(control-plane unit+integration · data-plane vet+unit · gofmt): `2ab50a9` control-plane이 헬퍼 파드 MCP 컨테이너에 `SESSION_ID` 주입(외부 식별자의 세션 절반) · `62b3893` 승인 게이트웨이 클라이언트(`approval_gateway.go`, 참조 구현 wire 규약 그대로) · `fb34ccd` 세션 MCP 도구 표면(`session_mcp_tools.go`, `web_fetch_get` + 게이트를 지나는 `tools/call`) · `67a2395` 원장 갱신 + 잘못된 파일 참조 정정.\n\n**로컬에서 CI 게이트 6종 전부 재현·통과**: `check-fidelity-allowlist.py` rc=0 · `check-render-fidelity.py` rc=0 · `check-ac-mapping.sh` **AC 27 = 매칭 14 + 예외 1 + 공백 12 불변** · control-plane(`gofmt` 0건 · `go vet` · `go vet -tags=e2e` · `go test` · `go test -tags=integration`) · data-plane(`gofmt` 0건 · `go vet` · `go test`) · web(`tsc --noEmit` · `vite build` 459ms).\n\n**뮤테이션 3종으로 단언의 비공허성을 확인**: ① 결정 무시(모든 대기를 승인으로) → 2건 실패 ② 게이트 **앞에서** fetch → 4건 실패 ③ 외부 식별자 상수화 → 3건 실패. 복원 후 baseline 그린 재확인.\n\n**환경 메모**: 이 박스에 Go는 `/home/silas/toolchains/go/bin`에 있고(1.24.7), `entrypoint_test.go`가 `jq`를 요구해 정적 바이너리를 `/home/silas/toolchains/bin/jq`(1.7.1)에 설치했다 — 그 전까지 data-plane 단위 테스트가 baseline에서 1건 붉었다. node는 `toolchains/node-v22.14.0-linux-arm64/bin`(22.14.0). `npm install`은 2분을 넘으니 타임아웃을 늘려 잡을 것.\n\n**중요 — 계획 당시보다 main이 앞서 있다**: 감지 시점 `docs=71706142…`였으나 계획 중 #59(`5463044`, 08:08Z, 여정 mockup 3종)가 머지돼 지금 `docs=ae483db0…`이고 `web`도 `fc8622ef…`→`8870879a…`로 움직였다. 다만 web 변경은 `web/src/design/README.md` 한 파일뿐이라 **SPA 화면은 불변**이고, 이 슬라이스가 건드리는 control-plane·data-plane 트리는 그대로다. 브랜치는 `acde617`(#59 이후) 기준으로 떴다.\n\n**CI 실측(2026-09-04 ~09:0x–09:2xZ, `67a2395`)** — 3워크플로 전부 success:\n- `ci` **8잡 전부 success** — fidelity allowlist · render fidelity · **AC ↔ e2e 1:1 매핑**(집계 27=14+1+12 불변) · control-plane(lint+unit) · data-plane(lint+unit) · web(typecheck+build) · integration(happy path) · docker image(combined API+SPA).\n- `e2e`(kind + API + browser) success — **`Running 23 tests` → 20 passed / 3 skipped**. 직전 형제 브랜치 실행(`rct_20260904-0001`, 08:35Z)과 **숫자가 완전히 동일**하다 → 이 슬라이스가 새 skip을 만들지도, 기존 e2e를 깨지도 않았다. envtest(real-apiserver CAS/Lease)도 success.\n- `Build and Push Docker Image to GHCR` success — 머지 전에 이미지가 갱신되는 기존 함정 재확인(`build & push control-plane image`·`build & push data-plane image` 둘 다 success). `pin deployment images (main only)`는 예상대로 skipped.\n\n⚠️ Actions 로그 API는 서명 URL로 302하므로 `Authorization` 헤더를 떼는 리다이렉트 핸들러로 받아야 한다(기록대로 재확인)."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "사람 검토 필요. `plan.riskLevel`이 medium이고, 이 슬라이스는 이 레포에서 처음으로 **에이전트에게 파드 밖으로 나가는 경로를 준다**(세션 MCP의 `web_fetch_get`). 지금까지 `approval-gated` 타입은 나갈 길이 아예 없었고 그것이 빠진 조각의 안전한 쪽이었다 — 그 성질이 이 머지로 바뀐다.\n\n① **불가역 지점이 실재한다** — PR #64 머지 한 번. 이후 되돌리기는 revert 하나로 충분하고 활성 세션 영향은 없지만(이 타입은 프로덕션에서 이미지 미설정으로 꺼져 있다), 머지 자체는 main과 control-plane 이미지를 움직인다(헬퍼 파드 spec에 `SESSION_ID` env 추가 → 무중단 롤아웃).\n② **검토의 초점이 기계 검증으로 닫히지 않는다** — 실행 지침 3절이 검토자에게 물을 것으로 「게이트가 정말 모든 경로 앞에 있는가」를 지목하고 확인 지점 3줄(`c.fetch` 단일 호출 + 그 위의 결정 검사 · `gated()` 미설정 시 도구 호출 거부 · 미설정 시 `tools/list` 공집합)을 명시한다. 게이트웨이 wire 규약은 참조 구현 `dlddu/pure-agent`에서 그대로 가져왔고 새로 정한 계약은 없다.\n③ **완료 기준이 가짜 게이트웨이로 끊겨 있다** — 실게이트웨이 대조는 클러스터에 없는 `approval-gateway-credentials` Secret에 걸려 닫을 수 없는 task가 되므로 의도적으로 범위 밖이다. 이 경계(무엇을 검증하지 않기로 했는가)도 사람이 확인할 사항이다."
         }
       }
     ]
