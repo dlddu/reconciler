@@ -710,8 +710,8 @@
         "code": "#!/usr/bin/env bash\n# to-be = AC 집합(docs/prd) + 예외/매핑 등재(docs/test/e2e.md).\n# 이 둘 밖의 문서(values.md, user-journeys/, mockups/, doc-tracker.md)·코드 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\np=\"$(git rev-parse \"HEAD:docs/prd\")\"\nt=\"$(git rev-parse \"HEAD:docs/test/e2e.md\")\"\nprintf 'ac:%s reg:%s\\n' \"$p\" \"$t\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "ac:8b10659576e552cf61976c1ef7311f8f6a9e8b93 reg:56e281af6b3018f9cfba072d8554d8f729c02975",
-      "lastObservedAt": "2026-09-04T21:58:30Z"
+      "lastObservedVersion": "ac:8b10659576e552cf61976c1ef7311f8f6a9e8b93 reg:28a2b896cac4a08c657e65b8096ecf2f7ffa0908",
+      "lastObservedAt": "2026-09-04T22:04:00Z"
     },
     "asIs": {
       "dataSource": {
@@ -724,8 +724,8 @@
         "code": "#!/usr/bin/env bash\n# as-is = e2e 테스트 구현 두 스위트.\n#   api = control-plane/test 최상위 e2e_*_test.go blob 집합 지문(ls-tree 출력은 경로 정렬이라 결정적).\n#         같은 디렉터리의 integration_test.go·client_orchestrator_test.go 변경은 무시된다.\n#   web = web/e2e 하위 트리 해시.\n# 이 범위 밖(구현 코드·하네스·문서) 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\napi=\"$(git ls-tree -r HEAD -- control-plane/test | { grep -E 'e2e_[a-z0-9_]*test\\.go$' || true; } | sha256sum | cut -d' ' -f1)\"\nweb=\"$(git rev-parse \"HEAD:web/e2e\")\"\nprintf 'api:%s web:%s\\n' \"$api\" \"$web\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "api:b6cc73d89d6c1b46529ebc6b63121d9c46c01c019dcdca56779edd100629035e web:37fc1bfba683878bf538de59c3b0e9ab7f308caf",
-      "lastObservedAt": "2026-09-04T14:57:31Z"
+      "lastObservedVersion": "api:a64eaed37c90daf90f1b6db223ed08645da90b2fa143d49fcff65f0c6fda4ff0 web:37fc1bfba683878bf538de59c3b0e9ab7f308caf",
+      "lastObservedAt": "2026-09-04T22:04:00Z"
     },
     "checkPolicy": {
       "intervalSeconds": 3600
@@ -760,8 +760,8 @@
         "code": "#!/usr/bin/env bash\n# to-be = 모킹 정책·허용목록. docs/test/e2e.md 에서 \"충실도\" 섹션만 잘라 해시한다\n#  → 같은 파일의 다른 섹션(빠른 실행·매니페스트 구조·SUT 도달·CI·커버 표·deferred\n#    매핑) 변경에는 반응하지 않는다.\n# 마커는 현재의 블록쿼트(`> **충실도**`)와 승격 후의 제목(`##`/`###` 에 충실도·모킹·\n# 허용목록 포함) 양쪽을 받는다 → 허용목록 승격 후에도 추적이 끊기지 않는다.\n# 섹션이 사라지면 'absent' (= 정책 소실 신호).\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nexport LC_ALL=C\nSEC=$(git show \"HEAD:docs/test/e2e.md\" 2>/dev/null | awk '\n  !f && (/^> \\*\\*충실도\\*\\*/ || /^##+[[:space:]].*(충실도|모킹|허용목록)/) {f=1; print; next}\n  f && /^## / {exit}\n  f {print}')\nif [ -z \"$SEC\" ]; then echo \"absent\"; exit 0; fi\n# 진단용(마지막 줄이 아니므로 버전에 영향 없음)\necho \"lines=$(printf '%s\\n' \"$SEC\" | grep -c . || true)\"\nprintf '%s' \"$SEC\" | sha256sum | cut -d' ' -f1\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "lines=146\ndaaa4c08987d5f089db4705a32cddbf7ba3e6a73486ec3b64a3806c77a254f80",
-      "lastObservedAt": "2026-09-04T14:55:35Z"
+      "lastObservedVersion": "lines=160\n34cf158496f41a58cdd4a880d155ba68ceb1bca5a86af4919ab58dc9ea8594e8",
+      "lastObservedAt": "2026-09-04T22:04:00Z"
     },
     "asIs": {
       "dataSource": {
@@ -774,8 +774,8 @@
         "code": "#!/usr/bin/env bash\n# as-is = e2e SUT 경로에 실재하는 \"충실도 seam 지문\".\n# 트리 해시가 아니라 seam 토큰만 뽑아 (파일, 토큰) 쌍으로 중복제거·정렬 후 해시한다\n#  → 어서션·셀렉터·로그 문구 같은 무관한 변경에는 반응하지 않고(자매 모델\n#    tbm_session-platform-docs-impl 과의 중복 트리거 최소화), seam 이 추가·삭제되거나\n#    파일을 옮길 때만 버전이 바뀐다.\n# 범위: SUT 기동·게이트 선택(control-plane/cmd), test-only 엔드포인트 등록\n#       (control-plane/internal/api), 배포 오버레이(deploy, k8s), e2e 스위트\n#       (//go:build e2e 인 control-plane/test), web(Playwright), scripts/e2e,\n#       Makefile, .github/workflows/e2e.yml.\n# 제외: 단위 테스트(*_test.go 중 e2e 빌드태그 아닌 것), //go:build integration 인\n#       인프로세스 통합 하네스(그 층위 스텁은 이 모델의 대상이 아님),\n#       E2E_BASE_URL(SUT 주소 지정일 뿐 충실도 seam 아님).\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nexport LC_ALL=C\nscope() {\n  git ls-files -- control-plane/cmd control-plane/internal/api control-plane/test \\\n                   data-plane/cmd deploy k8s scripts/e2e web Makefile .github/workflows/e2e.yml \\\n  | grep -vE '(^|/)node_modules/' \\\n  | while IFS= read -r f; do\n      case \"$f\" in\n        *_test.go) head -1 \"$f\" | grep -q '^//go:build e2e$' && printf '%s\\n' \"$f\" ;;\n        *.test.ts|*.test.tsx) ;;\n        *) printf '%s\\n' \"$f\" ;;\n      esac\n    done | sort\n}\nTOKENS='CRIU_ENABLED|E2E_[A-Z0-9_]+|NewStub[A-Za-z0-9]*|WithTestEndpoints|test-only|mock-exception:|\\.route\\(|\\.unroute\\(|route\\.fulfill\\(|route\\.abort\\(|route\\.continue\\(|routeFromHAR|routeWebSocket'\nHITS=$(scope | xargs -r grep -EHo \"$TOKENS\" 2>/dev/null | grep -v ':E2E_BASE_URL$' | sort -u || true)\n# 진단용(마지막 줄이 아니므로 버전에 영향 없음)\necho \"seams=$(printf '%s' \"$HITS\" | grep -c . || true) files=$(printf '%s' \"$HITS\" | cut -d: -f1 | sort -u | grep -c . || true)\"\nprintf '%s' \"$HITS\" | sha256sum | cut -d' ' -f1\n",
         "timeoutSeconds": 120
       },
-      "lastObservedVersion": "seams=23 files=13\nc6ca4c4ffbc061982dea5d33481fef5aa8665bc54fa27c2934c527785ea4bd5b",
-      "lastObservedAt": "2026-09-04T14:55:35Z"
+      "lastObservedVersion": "seams=25 files=14\n21dc4fcbe1f9006061f86e59c110d79d8983e714e6ce87ba2aaaf6a16ea4ebe2",
+      "lastObservedAt": "2026-09-04T22:04:00Z"
     },
     "checkPolicy": {
       "intervalSeconds": 3600
