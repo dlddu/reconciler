@@ -223,7 +223,7 @@
   {
     "id": "rct_20260904-0004",
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-04T09:07:06Z",
       "changedSides": [
@@ -252,7 +252,7 @@
       "assessedAt": "2026-09-04T09:07:06Z"
     },
     "createdAt": "2026-09-04T09:07:06Z",
-    "updatedAt": "2026-09-04T14:10:45Z",
+    "updatedAt": "2026-09-04T14:12:14Z",
     "attempts": [
       {
         "plan": {
@@ -344,6 +344,49 @@
               "startedAt": "2026-09-04T14:04:02Z",
               "finishedAt": "2026-09-04T14:09:13Z",
               "log": "지침 4 — 머지 커밋 f58d401의 CI run 33881579153 4잡 전부 success(fmt + vet · unit tests · integration tests(kind) · docker build & push). `fmt + vet` 잡에서 세 게이트 스텝 전부 success: 'AC <-> e2e file mapping' · 'E2E mocking policy' · 'Comment policy ledger'. 신규 게이트가 브랜치가 아니라 main에서 실제로 도는 것이 확인됐다(완료 기준 ③)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=960 files=67\n08ae8a771b7cf79b6b55b3cf35f9bf37c444d7c1b3748486488045dcb7b6e86f",
+          "verifiedAt": "2026-09-04T14:12:14Z",
+          "checks": [
+            {
+              "name": "(a) 완료기준③ — 새 게이트가 머지된 main에서 초록이고 원장이 실측과 맞는가",
+              "status": "passed",
+              "detail": "새 클론(`/tmp/verify`, HEAD f58d401) clean 트리(`git status --porcelain` 비어 있음)에서 `python3 scripts/check_comment_policy.py` rc=0. 원장 두 행이 지침의 기대값과 문자 그대로 일치 — `2026-09-04(#1) 52줄 d9c561b69bcc internal/opensearch/{opensearch.go,opensearch_test.go}` · `2026-09-04(#2) 172줄 3bdaa24398db internal/sessionplatform/{sessionplatform.go,sessionplatform_test.go}`. 전역 수치는 `960줄 / 67파일 · 판정 완료 224줄(23.3%)`이나 지침대로 완료 기준에 넣지 않는다(형제 PR #56이 머지되면 움직이는 값)."
+            },
+            {
+              "name": "(b) 게이트 지문 == 모델 as-is 지문",
+              "status": "passed",
+              "detail": "모델의 bash as-is 스크립트를 같은 트리에서 직접 실행 → `lines=960 files=67`, sha256 `08ae8a77…e86f`. 게이트 stdout의 `전체 지문`과 **완전 일치**. 두 구현이 갈리지 않아 게이트가 헛것을 재지 않는다."
+            },
+            {
+              "name": "(c) 완료기준① — internal/sessionplatform 재판정이 계획대로 적용됐는가",
+              "status": "passed",
+              "detail": "제거 표본 3문구 전부 0건(`The offset is validated here…` · `A shell payload goes to the PTY's stdin` · `Every refusal the control plane can raise`). 접어 넣은 절 `this client would have to look the session up` 1건(버린 것이 아니라 `kindTooLarge` doc으로 이관). 유지 표본 4건 전부 1건 이상(`// Package sessionplatform` · `kindQuotaExhausted…507` · `writePath renders…` · `the assertion becomes vacuous`). 원장 행이 96줄 재판정과 제거 18줄의 근거를 담고 있다."
+            },
+            {
+              "name": "(d) 실행 코드 무변경 — 이 PR의 안전성 근거",
+              "status": "passed",
+              "detail": "`git show --stat f58d401 -- internal/sessionplatform/` = `sessionplatform.go` 1파일 3 insertions / 20 deletions. `git show -U0 … | grep`로 주석 아닌 diff 줄을 뽑으면 **출력 0줄**. 배포 바이너리의 동작 변경 0."
+            },
+            {
+              "name": "(e) 완료기준② — comment-policy.md에 낡을 수 있는 현재형 수치가 0인가",
+              "status": "passed",
+              "detail": "`161줄 / 4파일` 0건. `848줄 / 64파일`은 1건 남아 있으나 **현재형 주장이 아니라 과거형 서술**이다(`:156-161` — 「한때 이 자리에 …라 적혀 있었는데 그 값은 이 문서가 머지되기도 전에 형제 PR 하나로 거짓이 됐다」는 근거 문단, 바로 앞줄이 「현재 수치는 이 문서에 적지 않는다」). 마커 원장(`<!-- 판정-원장 -->` `:206-212`)과 합계 마커(`<!-- 판정-합계 -->224` `:214`)가 자리를 대신한다."
+            },
+            {
+              "name": "완료기준④ — 기존 게이트 5종 + 자매 모델 무영향",
+              "status": "passed",
+              "detail": "머지된 main에서 `check_ac_mapping.py` rc=0(`전용 파일 56 · 공백 7 · 규칙 1·2·3·5·6 위반 0` — #56 미머지이므로 불변이 정상), `check_mock_policy.py` rc=0(`등재 5(상한 5) · 모킹 지점 5 · 미등재 0 · 고아 0`), `ls docs/*.md` = 40(문서 신설 없음). 머지 커밋 f58d401의 CI run 33881579153 4잡 전부 success이고 `fmt + vet` 잡에서 게이트 3종 스텝 전부 success — 신규 `Comment policy ledger` 포함(`ci.yml:38-39`)."
+            },
+            {
+              "name": "(정보) 잔여 gap — 이 task의 범위 밖",
+              "status": "passed",
+              "detail": "미판정 약 736줄(`main.go` · `internal/`의 나머지 8개 패키지 · `tests/` YAML 240 · Python · `scripts/`)이 남는다 — 게이트 출력의 `판정 완료 224줄(23.3%)`이 잔량을 매 CI에서 보여 준다. 지문 사각지대 패턴 확장과 중복성 자체의 기계 판정도 유예 사유가 살아 있다. converged 판정에는 넣지 않는다. 이 머지가 as-is(주석 −18줄 + 게이트 스크립트 신설)와 to-be(`comment-policy.md` blob)를 **둘 다** 움직였으므로 **다음 감지 주기가 후속 task를 연다**. 모델의 `lastObservedVersion`은 의도적으로 건드리지 않았다."
             }
           ]
         }
