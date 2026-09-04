@@ -30,7 +30,58 @@
       "assessedAt": "2026-09-04T07:51:37Z"
     },
     "createdAt": "2026-09-04T07:51:37Z",
-    "updatedAt": "2026-09-04T08:23:00Z",
-    "id": "rct_20260904-0001"
+    "updatedAt": "2026-09-04T08:30:00Z",
+    "id": "rct_20260904-0001",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**정책을 먼저 세우고, 그 정책을 도메인 코어 한 패키지에 실제로 적용해 보이는 슬라이스.** 이 모델의 to-be는 `docs/comment-policy.md`의 blob hash인데 그 파일이 없어 `absent`로 관측된다 — 즉 개별 주석의 「복원 가능한가」를 가를 기준이 레포 안에 하나도 없다. 그래서 (1) 모델 정의의 판단 기준(복원 경로 넷 · 유지 대상 셋 · 「애매하면 남긴다」)을 레포 안 SSOT 문서로 고정하고, (2) 그 정책이 실제로 적용 가능한지를 **`control-plane/internal/session/` 패키지(session.go 131줄 + manager.go 31줄 = 판정 대상 주석 162줄)** 에 대한 첫 판정 패스로 증명하고, (3) 새 문서를 이 레포의 문서 원장(`docs/index.html` 허브 · `docs/doc-tracker.md`)에 등재한다.\n\n**왜 이 경로인가**: 대안은 ⓐ 정책 없이 눈에 띄는 주석부터 지우기 ⓑ 정책만 쓰고 판정은 다음 task로 미루기였다. ⓐ는 기준 없는 삭제라 리뷰가 불가능하고 되돌리기도 어렵다(지운 지식은 어디에도 안 남는다). ⓑ는 to-be만 세우고 as-is는 그대로라 「정책이 실제로 적용 가능한가」가 검증되지 않은 채 문서만 남는다 — 정책 문서는 적용해 보기 전엔 초안이다. 그래서 **정책 + 그 정책을 적용한 최초 판정 한 패키지**를 한 슬라이스로 묶었다. 가역성: 전부 PR 한 건의 텍스트 변경이라 revert 하나로 원복되고, 런타임·데이터 영향이 없다.\n\n**슬라이스 범위(= 완료 기준)**\n- ✅ `docs/comment-policy.md`가 존재하고 판단 기준·유지 대상·판정 절차·이번 판정 이력을 담는다 (⇒ to-be가 `absent`를 벗어난다).\n- ✅ `control-plane/internal/session/`의 **판정 대상 주석 162줄 전부**가 판정된다 — 제거든 유지든, 각 판정에 「어느 복원 경로에 걸렸는가」의 **좌표**(파일·줄 또는 문서·AC)가 붙는다.\n- ✅ 새 문서가 `docs/index.html` 허브와 `docs/doc-tracker.md`에 등재된다(자매 모델 `tbm_session-platform-docs-impl`에 새 drift를 만들지 않기 위함).\n- ✅ 재현 가능한 CI 게이트가 전부 통과한다.\n\n**범위 밖(후속 재감지가 새 task로 잇는다)**\n- 나머지 99개 파일 2,815줄의 판정 — 특히 집중 구간 `client_orchestrator.go`(313) · `data-plane/cmd/agent/main.go`(168) · `service/manager.go`(152) · `criu/container_checkpointer.go`(101).\n- 지문 사각지대(줄 끝 주석 · Go raw string 내부 주석)의 패턴 확장 — 모델 정의가 「다음 task에서 다룬다」고 명시적으로 미뤄 둔 항목이다.\n- 주석의 **정확성**(코드와 맞는가) — 이 모델의 판정 표면이 아니다.\n\n**감지 가설의 재판정(직전 사이클 교훈의 집행)**: 감지가 「표본에서 관측됐다」고 적은 중복 유형 셋을 실측으로 대조한 결과 **① 선언 재진술은 레포 전체에 사실상 1건**(`session/manager.go:8` `CreateRequest is the input to Manager.Create.`)뿐이고, **② 문서·AC 재진술의 `Scenario N (AC-..)` 헤더는 9건**으로 감지의 서술보다 훨씬 얇다. 감지의 「관측된 유형」은 가설이지 목록이 아니므로, 이번 판정은 그 목록이 아니라 **범위 안 162줄을 통째로 읽어** 수행한다. 이 정정은 PR 본문과 정책 문서의 판정 이력에 남긴다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 `dlddu/session-platform`을 클론하고 as-is·to-be versionScript를 재실행해 감지 스냅샷이 현재도 유효한지 확인한다(신규 모델의 「초기 상태 메모」는 등록 시점 값이므로 계획 시작 시 재측정한다).",
+              "expectedOutcome": "to-be = `absent`(파일 없음) 확인. as-is = `lines=2977 files=101` / `a947870568e713f4…` — 감지값과 **바이트 동일**. HEAD는 `acde617`(이미지 핀 `[skip ci]`)로 감지 이후 전진했으나 주석은 불변."
+            },
+            {
+              "seq": 2,
+              "action": "감지가 예시한 중복 유형 셋(① 선언 재진술 ② 문서·AC 재진술 ③ 작업 흔적)이 실측에서 성립하는지 레포 전역 패턴으로 대조한다.",
+              "expectedOutcome": "① `^// [A-Z]\\w+ is the (input|result|...)` 히트 2건 중 실제 순수 재진술은 `session/manager.go:8` 1건(다른 1건 `orchestrator.go:26`은 정보를 더한다). ② `Scenario [0-9]` 9건. ⇒ **가설은 부분적으로만 성립**하며 판정 대상을 「유형 목록」이 아니라 「범위 안 전체」로 잡아야 한다는 결론."
+            },
+            {
+              "seq": 3,
+              "action": "슬라이스 범위를 확정한다 — `control-plane/internal/session/`(도메인 코어). 형제 워커가 계획 중이거나 곧 집을 task의 대상 파일(`client_orchestrator.go` — AC-F5, `data-plane/cmd/agent/session_mcp.go` — AC-F3, `web/e2e`·`scripts` — e2e-mock-policy)을 피해 충돌 표면을 0으로 만든다.",
+              "expectedOutcome": "판정 대상 주석 162줄(session.go 131 + manager.go 31). 형제 PR과 겹치는 파일 0개."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/comment-policy.md`를 작성한다: 복원 경로 넷 · 유지 대상 셋 · 「애매하면 남긴다」의 비용 비대칭 · **포인터는 남기고 포인터가 가리키는 내용의 사본은 지운다**는 운영 규칙 · 판정 절차 · 이번 판정 이력 표.",
+              "expectedOutcome": "파일이 생겨 to-be versionScript가 `absent` 대신 blob hash를 반환한다. 문서가 판정 근거를 좌표로 적을 것을 요구하는 형태여야 한다."
+            },
+            {
+              "seq": 5,
+              "action": "`control-plane/internal/session/`의 162줄을 한 줄씩 판정한다. 제거 대상은 「어느 복원 경로의 어느 좌표가 이미 이 내용을 말하는가」를 확인한 것만 지우고, 판단이 갈린 것은 보존하되 갈린 사실을 기록한다.",
+              "expectedOutcome": "제거·유지 각각의 줄 수와 근거 좌표가 확정된다. 예: `session.go:16-22`의 상태기계 ASCII 다이어그램은 자신이 인용한 `docs/prd/lifecycle.md`(AC-B1/B2)·`docs/prd/state-api.md`(AC-C1)가 이미 말하므로 제거하되 **포인터 줄은 남긴다**; `session/manager.go:8`은 정의가 예시한 순수 선언 재진술이라 제거; `manager.go:43`의 `This is the \"SessionManager\" of the design docs.`는 같은 패키지 주석 `session.go:1-4`가 이미 말한다."
+            },
+            {
+              "seq": 6,
+              "action": "새 문서를 문서 원장에 등재한다 — `docs/index.html` 허브에 `reader.html?doc=comment-policy.md` 링크 추가, `docs/doc-tracker.md`에 변경 이력 행 추가.",
+              "expectedOutcome": "`ls docs/**/*.md`의 md 문서 집합과 `docs/index.html`의 `reader.html?doc=` 링크 집합이 **양방향 차집합 0**(29/29 → 30/30). 자매 모델 `tbm_session-platform-docs-impl`에 새 drift를 만들지 않는다."
+            },
+            {
+              "seq": 7,
+              "action": "재현 가능한 CI 게이트를 로컬에서 전부 돌린다: `check-fidelity-allowlist.py` · `check-render-fidelity.py` · `scripts/e2e/check-ac-mapping.sh` · control-plane `go vet ./...` + `go vet -tags=e2e ./...` + `gofmt -l` + `go test ./...` + `go test -tags=integration ./...`.",
+              "expectedOutcome": "전부 rc=0. AC 집계 27 = 매칭 + 예외 + 공백이 **불변**(이 슬라이스는 AC를 건드리지 않는다). `docs/index.html`을 만지므로 `docs-journey-mockup` 워크플로가 PR에서 함께 돈다는 점을 인지."
+            },
+            {
+              "seq": 8,
+              "action": "브랜치 `reconcile/rct_20260904-0001-opus5-1m`을 만들어 커밋·푸시하고 PR을 연다(머지하지 않는다). PR 본문에 task id · gap 요약 · 판정 표(제거분 전체를 좌표와 함께) · 유지 판정의 근거 · 검증 방법을 적는다.",
+              "expectedOutcome": "PR URL 확보. 브랜치명에 모델 슬러그가 붙어 형제 워커의 열린 PR 브랜치를 밟지 않는다."
+            }
+          ],
+          "plannedAt": "2026-09-04T08:30:00Z"
+        }
+      }
+    ]
   }
 ]
