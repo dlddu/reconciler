@@ -2800,5 +2800,34 @@
         }
       }
     ]
+  },
+  {
+    "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
+    "status": "no_action_needed",
+    "trigger": {
+      "detectedAt": "2026-09-04T07:41:43Z",
+      "changedSides": [
+        "to_be"
+      ],
+      "toBe": {
+        "previousVersion": "fbdb709d54ce1606917eadac122ce67060fc2c42",
+        "currentVersion": "3f7ed780b2bd3c2d6f014eb0a07c2d224f2cb71d"
+      }
+    },
+    "stateSummary": {
+      "asIs": "**as-is = `tests/` 트리, 관측 2026-09-04T07:31Z @ `577af3ac` — 불변**\n\n- 버전 `dbc7b72d…` = 직전 관측과 **동일**. 트리거 #51은 `tests/` 아래 파일을 **0개** 건드렸다\n  (`git show --numstat 577af3a`: `docs/` 3 · `internal/` 5 · `main.go` 1).\n- 매칭 단위 파일 **52개**가 전용 AC 1개씩을 선언(`session_list_ac{1,2,3}.py` 포함), 겸용 0, 비-AC 1, 예외 1.",
+      "toBe": "**to-be = `docs/` 하위 `prd-*.md` + `doc-tracker.md` blob 목록 해시, 관측 2026-09-04T07:31Z @ `577af3ac`**\n\n- 버전 `fbdb709d…` → **`3f7ed780…`** (변경). 원인은 #51이 `doc-tracker.md`와 `prd-session-read.md`의\n  **내용**을 고쳤기 때문이다 — 이 versionScript는 두 파일군의 blob 해시 목록을 찍으므로 AC가 하나도\n  안 바뀌어도 값이 움직인다.\n- **판정 축은 전부 불변이다.** `check_ac_mapping.py`를 `577af3ac`에서 재도출(rc=0):\n  `AC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일 52 · 분할 대기 0 · 공백 AC 11`\n  — 직전 관측과 **숫자 전건 동일**. `check_mock_policy.py`도 rc=0(등재 5/상한 5).",
+      "gap": "**유의미한 차이가 아니다 — 판정 축(AC 전집 · 레지스트리 · 집계)이 전건 불변이고 게이트가 이를 재도출로 확인한다.**\n\n## ① 트리거는 자매 모델의 산출물이고, 이 모델의 축을 건드리지 않았다\n\n#51은 `tbm_homelab-k3s-mcp-docs-impl`의 슬라이스(`session_read` 도구 구현)다. 이 모델 쪽 영향은:\n\n| 축 | 변화 | 근거 |\n| --- | --- | --- |\n| AC 전집 | 64 → **64** | `prd-session-read.md` diff는 「구현 선행 문서」 인용구를 「구현 상태(2026-09-04)」로 교체한 것뿐 — `### ACn:` 헤딩 **신설·삭제 0** |\n| 매칭 단위 파일 | 52 → **52** | `tests/` 무변경(as-is 해시 동일) |\n| 레지스트리 · 예외 · 비-AC | 불변 | #51의 `doc-tracker.md` diff는 인벤토리 1행 · 허브 수치 · 도구 표 1칸 · 🔴 첫 항목 · 변경 이력 1행뿐 |\n| 규칙 1·2·3·5·6 | 위반 0 | 게이트 rc=0 |\n\n⇒ **노이즈**. 정의가 예고한 자리다: 「`test-*.md`·`values.md` 변경은 트리거하지 않는다」지만\n`doc-tracker.md`는 해시 대상이라 자매 모델의 원장 갱신이 이 모델을 깨운다.\n\n## ② 열린 task와의 관계 — 경쟁하지 않는다\n\n`rct_20260904-0002`(platform-auth-safety/AC2·AC8 슬라이스, PR #52)는 **점유 상태**다 —\n07:39:15Z에 executor가 claim해 `awaiting_review`(사람 승인 대기)로 옮겼다. 이 레코드는 그 task에\n**아무것도 쓰지 않고**, planner에게 넘길 것도 없는 별도의 노이즈 판정이다(baseline 전진이 목적).\n잔여 공백 11건의 처리는 그 task와 자매 docs-impl `rct_20260904-0003`이 나눠 갖는다.\n\n## ③ 스테이징된 PR #52에 대한 양축 귀속 — 충돌축 유죄, 게이트축 무죄, 수정은 rebase 범위\n\n`merge-base(pr52, 577af3a)` = `9116ac19` = **트리거의 부모** ⇒ 부모 쪽 병합은 fast-forward라\n자명히 CLEAN, 트리거 쪽만 실행하면 된다.\n\n- **충돌축: 유죄.** `git merge --no-commit --no-ff refs/pr/52` rc=1, 충돌 **파일 1 · 훵크 1**\n  (`docs/doc-tracker.md`). 다만 **내용 겹침 0** — 두 PR이 각자의 변경 이력 행을 표 맨 위 **같은 자리에\n  삽입**했을 뿐이다.\n- **해소는 union이고, 그것을 실측으로 증명했다.** 두 행을 모두 남기고 마커만 제거한 트리에서:\n\n  | 검증 | 결과 |\n  | --- | --- |\n  | `check_ac_mapping.py` | **rc=0** — AC 전집 64 · 매칭 파일 **54** · 공백 **9** = #52 계획의 완료 기준과 정확히 일치 |\n  | `check_mock_policy.py` | **rc=0** — 등재 5(상한 5) · 미등재 0 · 고아 0 |\n  | #51의 편집 4곳 생존 | 허브 `39 / 39` ✅ · 인벤토리 `정책 e2e-mocking-policy.md` 행 ✅ · 🔴 「session_write 5 AC」 재작성 ✅ · 도구 표 `session_read … ✅ 완전` ✅ |\n  | #52의 신규 등재 | `platform_auth_safety_ac{2,8}.py` 2행 ✅ |\n\n  ⇒ **조용한 되돌림 0**. 어느 쪽 편을 통째로 고르는 해소(「take this PR's side」)는 상대 PR의 행을\n  떨어뜨리지만, **union은 어떤 숫자도 새로 지어낼 필요가 없다** — #52가 적어 둔 이전 상태\n  「✅ 52 · 공백 11」이 실제 base와 일치하고 이후 상태 「✅ 54 · 공백 9」가 병합 트리의 게이트 실측과 같다.\n- **executor도 독립적으로 같은 결론에 도달했다** — 07:38Z 검토 판단 2번이 이 충돌을 지목하며\n  「원장을 손으로 병합하는 동작이라 잘못 고르면 게이트가 조용히 통과할 수 있다」고 경고했다. 위 표가\n  그 위험을 측정으로 닫는다: **union 해소는 게이트가 통과할 뿐 아니라 계획이 못박은 54/9에 정확히\n  착지하고, 양쪽 편집이 모두 살아남는다.**\n- ⇒ 충돌축 유죄지만 **수정이 rebase 범위**이므로 rival task를 열지 않고 여기에 기록한다.\n\n## ④ 자매 모델로 넘긴 것 (이중 계상 방지)\n\n`doc-tracker.md:166-168`의 🔴 「session 3종의 통합 e2e — 미작성 … `tests/integration/`에는 아직\n케이스가 없다 … 택일은 그 렌즈의 몫이다」 세 단정은 **모두 거짓**이다(`session_list_ac{1,2,3}.py` 3개\n실재, 같은 파일 `:256-258`이 ✅ 전용 파일로 등재, `:288`이 실 제어면 선택을 기록).\n\n**그럼에도 이 모델의 drift가 아니다.** 규칙 6은 「**매칭 집계**(AC 수·파일 수·공백 목록)」로 한정되고\n그 집계는 **정확하다**(게이트 rc=0, 52/11). 원장 `:183`이 두 영역을 다른 렌즈로 명문화한다.\ndocs-impl 판정 기준 4가 그 파일을 이름으로 지목하므로 소유는 그쪽이고,\n**`tbm_homelab-k3s-mcp-docs-impl/rct_20260904-0003`에 `action_required`로 열어 두었다.**\n다음 fire가 여기서 다시 열지 말 것.",
+      "summarizedAt": "2026-09-04T07:41:43Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "reason": "**작업이 필요하지 않다(`actionRequired: false`).**\n\nto-be 해시는 움직였지만 이 모델의 판정 축은 전건 불변이다 — `check_ac_mapping.py`를 트리거\n`577af3ac`에서 재도출해 `AC 전집 64 · 예외 1 · 1:1 대상 63 · 매칭 파일 52 · 분할 대기 0 · 공백 11`,\nrc=0을 확인했고 직전 관측과 숫자가 모두 같다. 트리거 #51은 `tests/`를 0줄 건드렸고(as-is 해시 동일)\n`prd-session-read.md`에 AC를 신설·삭제하지 않았다. ⇒ 순수 노이즈.\n\n이 레코드의 역할은 (a) 노이즈 판정을 감사 가능하게 남기고 (b) baseline을 전진시켜 precheck의\n5분 재발화를 끊는 것이다. 잔여 공백 11건은 점유 중인 `rct_20260904-0002`(PR #52, `awaiting_review`)와\n자매 `tbm_homelab-k3s-mcp-docs-impl/rct_20260904-0003`이 나눠 가지므로 planner에게 넘길 것이 없다.\n\n여기 기록해 둔 실행 정보 둘(별도 task 아님):\n- **PR #52의 충돌 해소 규칙**: `docs/doc-tracker.md` 변경 이력 표 훵크 1개를 **union**(두 행 모두 유지)으로\n  풀면 게이트 2종 rc=0 · 매칭 파일 54 · 공백 9로 계획의 완료 기준에 정확히 착지하고 #51의 편집 4곳이\n  모두 생존한다(③에 측정 표). 07:38Z executor 검토가 지목한 「조용한 통과」 위험에 대한 답이다.\n- **`EXPECTED_TOOLS` 15 vs 도구 표면 16**: `_helpers.py`는 공유 헬퍼라 이 모델의 매칭 단위가 아니고\n  `tests/`는 docs-impl의 as-is 범위 밖이다. 단정이 부분집합이라 CI는 초록 — 다음 슬라이스가 함께\n  고칠 항목으로 자매 레코드에 적어 두었다.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-04T07:41:43Z"
+    },
+    "createdAt": "2026-09-04T07:41:43Z",
+    "updatedAt": "2026-09-04T07:41:43Z",
+    "id": "rct_20260904-0003"
   }
 ]
