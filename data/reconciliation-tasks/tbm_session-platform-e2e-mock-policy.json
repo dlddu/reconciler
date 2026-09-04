@@ -1121,6 +1121,57 @@
       "assessedAt": "2026-09-04T14:55:35Z"
     },
     "createdAt": "2026-09-04T14:55:35Z",
-    "updatedAt": "2026-09-04T15:05:00Z"
+    "updatedAt": "2026-09-04T15:12:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "차단 요인 ③(제공자 도달 불가)을 **인클러스터 가짜 provider 배포 + 플랫폼의 사설 CA 신뢰 경로 신설**로 해소하고 `CLAUDE-PROVIDER`(EXT)로 등재해 차단 요인 표를 0건으로 만든다.\n\n**왜 이 경로인가.** credential-proxy는 upstream 스킴을 **https로 강제한다**(`data-plane/cmd/agent/credential_proxy.go`의 `parseCredentialProxyUpstream`). 따라서 대역을 세워 base-url을 돌리는 것만으로는 부족하고, 그 대역의 사설 CA를 **프록시 컨테이너가 신뢰**할 수 있어야 한다. 이를 `claude-code-credentials`의 **optional 키 `ca-cert`**로 푼다 — #62가 `k3s-mcp-url`·`plugin-marketplace-url`을 optional 키로 들여온 것과 글자 그대로 같은 형태이고(키가 없으면 프로덕션 동작 불변, `k8s/` base 무영향), 사설 게이트웨이를 쓰는 프로덕션 배포에도 의미가 있어 test-only 배선이 아니다. 신뢰는 시스템 풀을 **대체하지 않고 덧붙인다**(공개 CA를 잃지 않는다). 대안 둘은 기각했다: (a) https 요구 완화는 프로덕션 보안 게이트를 테스트 편의로 낮추는 것이라 정책상 새 위반이고, (b) CA를 data-plane 이미지에 굽는 것은 프로덕션 이미지 오염이다.\n\n**이 시도의 범위(완료 기준)** — 셋을 다 만족하면 성공이다:\n1. 배포된 SUT에 HTTPS provider 대역(`anthropic-fake`)이 서서 rollout이 Ready에 이른다.\n2. claude-code 세션 pod의 credential-proxy가 **프로덕션 코드 경로 그대로**(헤더 허용목록·플랫폼 토큰 주입·TLS 검증) 그 대역에 도달해 결정적 응답을 돌려받는 것을 e2e가 배포 SUT 위에서 단언한다.\n3. `CLAUDE-PROVIDER`(EXT)가 등재되고 차단 요인 ③ 행이 사라지며 회계·집계가 맞아 `scripts/check-fidelity-allowlist.py`(R1~R10)와 `scripts/e2e/check-ac-mapping.sh`가 초록이다.\n\n**범위 밖(후속)**: ① j6·manual-archive의 미해소 위반 4행 재작성 — 선행은 풀리지만 재작성 자체는 별개 슬라이스이고 **상한 4는 그대로 유지한다**(래칫은 실제로 줄일 때만 내린다). ② AC-E2~E6 전용 파일 저작 — 자매 렌즈 `tbm_session-platform-ac-e2e` 소관. ③ **실 Claude CLI(핀 2.1.220)의 프롬프트 루프가 이 대역을 만족하는지** — 그 계약의 정본은 이 레포 소스에 없다(외부 바이너리의 프로토콜). 이번 슬라이스는 그것을 단언하지 않고, 등재 행의 '잔여' 칸에 미검증으로 명시한다. 이 경계를 지키는 이유는 완료 기준을 레포 안에 정본이 있는 계약(프록시 왕복)에만 걸어 executor가 닫을 수 있게 하기 위해서다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "data-plane: `newCredentialProxy`가 optional 환경변수 `ANTHROPIC_CA_CERT`(PEM 본문)를 읽어 `x509.SystemCertPool()` 사본에 **덧붙여** transport의 RootCAs로 쓴다. 빈 값이면 기존 동작 그대로. 값이 있으나 인증서가 하나도 파싱되지 않으면 소리 내어 기동 실패. `main.go`에서 env를 넘긴다.",
+              "expectedOutcome": "`data-plane` 단위 테스트 신설 3케이스 초록 — (a) 사설 CA 서버에 CA 없이 붙으면 502/실패, (b) CA를 주면 200 왕복, (c) 쓰레기 PEM이면 생성 단계에서 에러. `go test ./...`·`go vet ./...`·gofmt 초록."
+            },
+            {
+              "seq": 2,
+              "action": "control-plane: `credentialProxyContainer`에 `optionalSecretEnv(AnthropicCACertEnvVar, o.claudeCredentialsSecret, ClaudeCodeCACertSecretKey)` 한 줄을 추가한다 — sidecar(claude-code)와 helper(approval-gated) 두 배치가 같은 함수를 쓰므로 AC-F6의 「계약 하나, 배치만 다름」이 유지된다. 주 컨테이너에는 넣지 않는다.",
+              "expectedOutcome": "`control-plane/test/workload_type_orchestrator_test.go`에 (a) 프록시 env가 Secret-backed이고 `Optional=true`, (b) 주 컨테이너에는 그 env가 **없음** 단언 추가 후 `go test ./...` 초록."
+            },
+            {
+              "seq": 3,
+              "action": "deploy: `deploy/e2e-anthropic-fake.yaml` 신설 — TLS Secret(체크인된 사설 CA 서명 leaf) + server.js ConfigMap + Deployment(data-plane 이미지의 Node 22 재사용, k3s-mcp-fake 선례) + Service(8443). 서버는 `Authorization: Bearer <auth-token>`을 검사하고(대역을 정직하게 유지), `POST /v1/messages`를 비스트리밍 JSON과 `stream:true` SSE 두 형태로 결정적 응답한다. 파일 머리에 `mock-exception: CLAUDE-PROVIDER` 마커와 `test-only` 서술을 둔다(회계 행 1개를 만든다). `deploy/kustomization.yaml`에 resource로 추가.",
+              "expectedOutcome": "`kubectl kustomize deploy/`가 오류 없이 렌더되고 새 오브젝트 4종이 나온다. 로컬에서 `node server.js`를 띄워 Go 클라이언트가 CA로 검증하며 두 응답 형태를 받는 것을 확인."
+            },
+            {
+              "seq": 4,
+              "action": "deploy: `deploy/claude-code-credentials-secret.yaml`의 `base-url`을 `https://127.0.0.1:9` → `https://anthropic-fake:8443`으로 돌리고 `ca-cert`에 CA PEM을 넣는다. `k8s/claude-code-credentials-secret.example.yaml`에는 optional 키 `ca-cert`를 **주석으로만** 문서화한다(프로덕션 `stringData`는 건드리지 않는다).",
+              "expectedOutcome": "프로덕션 base(`k8s/`)의 렌더 결과가 바이트 단위로 불변임을 `kubectl kustomize k8s/` 전후 대조로 확인."
+            },
+            {
+              "seq": 5,
+              "action": "`scripts/e2e/up.sh`에 `kubectl rollout status deploy/anthropic-fake` 대기를 추가한다 — 첫 claude-code 세션이 대역의 기동과 경합하지 않게(MinIO·k3s-mcp-fake와 같은 이유).",
+              "expectedOutcome": "`bash -n scripts/e2e/up.sh` 통과, 대기 순서가 control-plane rollout **앞**에 온다."
+            },
+            {
+              "seq": 6,
+              "action": "e2e: `control-plane/test/e2e_provider_reachability_test.go` 신설(비-AC 스모크·인프라). claude-code 세션을 배포 SUT에 만들고 워크로드 컨테이너에서 `curl`로 loopback 프록시(`http://127.0.0.1:8091/v1/messages`)를 때려 대역의 결정적 본문을 받는지, 그리고 `stream:true`가 SSE로 오는지 단언한다. 세션은 반드시 정리한다.",
+              "expectedOutcome": "파일 머리에 `// 검증 AC: 없음 (스모크·인프라)` 선언. `go vet -tags=e2e ./...` 초록. CI의 `e2e (kind + API + browser)` 잡에서 이 테스트가 통과."
+            },
+            {
+              "seq": 7,
+              "action": "docs/test/e2e.md 충실도 섹션 갱신 — 등재 표에 `CLAUDE-PROVIDER`(EXT) 행 추가(구동 구간·잔여 칸 필수), 차단 요인 ③ 행 삭제(R10: 등재된 CODE가 차단 요인에 남아 있으면 실패), 회계 표에 `deploy/e2e-anthropic-fake.yaml`·`test-only` 행 추가, 위반 4행의 '제거 경로' 칸을 「선행 해소 — 재작성만 남음」으로 갱신, 집계를 등재 4·EXT 2·마커 6지점/6파일·회계 19·차단 0으로 갱신(상한 4 유지). AC 절의 `ac-nonac` 블록에 새 e2e 파일 1행을 더하고, AC-E1 블록쿼트의 「③이 남아 있는 동안」 문장을 현재 사실로 고친다.",
+              "expectedOutcome": "`python3 scripts/check-fidelity-allowlist.py` rc=0이고 출력이 등재 4·EXT 2·회계 19·차단 0을 찍는다. `./scripts/e2e/check-ac-mapping.sh` rc=0."
+            },
+            {
+              "seq": 8,
+              "action": "로컬 게이트 전량(`gofmt`·`go vet`(양 모듈·e2e 태그 포함)·`go test`·fidelity·ac-mapping)을 돌린 뒤 브랜치 `reconcile/rct_20260904-0001-e2e-mock-policy`로 push하고 draft PR을 연다. PR 본문에 task id·gap 요약·범위 경계·검증 방법을 적는다.",
+              "expectedOutcome": "draft PR URL 확보. CI가 발화하고 `fidelity`·`AC ↔ e2e 1:1 mapping`·양 모듈 lint/unit·`e2e (kind + API + browser)` 잡이 돈다."
+            }
+          ],
+          "plannedAt": "2026-09-04T15:12:00Z"
+        }
+      }
+    ]
   }
 ]
