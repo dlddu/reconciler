@@ -3561,5 +3561,39 @@
         }
       }
     ]
+  },
+  {
+    "toBeModelId": "tbm_homelab-k3s-mcp-ac-e2e",
+    "status": "action_required",
+    "trigger": {
+      "detectedAt": "2026-09-04T21:49:00Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "a57b66b2b614f99c1b17fda28f218a0d56959202",
+        "currentVersion": "a2d399e76ac2131caf970eb18e477c5f74dd04e2"
+      },
+      "toBe": {
+        "previousVersion": "117adb254f2da1abc4c6872bfc433c95d122fcf7",
+        "currentVersion": "b66d39465975d8ae9559155546e0087a9032084a"
+      }
+    },
+    "stateSummary": {
+      "asIs": "`dlddu/homelab-k3s-mcp@fb511d1` (= PR #58, 머지 2026-09-04T21:37:06Z), 관측 21:43Z.\n\n**트리거는 이 모델 자신의 슬라이스다** — `rct_20260904-0008`의 reconcile PR. `--numstat` 8파일 +763/−113: 신규 `tests/integration/session_read_ac1.py`(250) · `session_write_ac1.py`(154), 수정 `_helpers.py`·`_oidc.py`·`_session_platform.py`·`.github/workflows/ci.yml`·`docs/doc-tracker.md`·`tests/k8s/kind/session-platform.yaml`. **`*.go` 0파일 · 프로덕션 매니페스트 0파일.**\n\n**게이트 실측 (트리거 커밋에서 직접 실행)** — `python3 tests/integration/check_ac_mapping.py` rc=0: `AC 전집 64 · 예외 등재 1 · 1:1 대상 63 · 매칭 파일(전용) 60 · 분할 대기 0 · 공백 AC 3`. 파일 실물도 확인했다 — `tests/integration/session_{list,read,write}_*.py` **9개** 실재(`session_read_ac{1,3,4}` · `session_write_ac{1,3,5}` · `session_list_ac{1,2,3}`).\n\n**executor는 21:45:36Z에 `succeeded`/`converged:true`로 닫혔고**, verification의 마지막 체크가 잔여 3건을 열거하며 「후속은 다음 감지 주기가 새 task로 연다」고 **detector를 소유자로 지목**한다. 이 모델의 열린 task는 **0**이다.\n\n**잔여 3건의 선행을 소스에서 재도출했다** (원장 산문을 그대로 믿지 않았다):\n- **session-write/AC4의 병목은 「데이터 플레인」이 아니라 「claude-code 데이터 플레인」이다.** AC가 요구하는 네 거부 중 429·507은 `data-plane/cmd/agent/claude.go:1056-1061`의 `c.enqueue(...)`에서만 나오고(`errClaudeQueueFull` → 429, `errClaudeOutputFull` → 507), 둘 다 **에이전트 자기 큐·출력 상한 로직**이라 상류 Anthropic 호출이 전혀 개입하지 않는다.\n- 픽스처 `tests/k8s/kind/session-platform.yaml:29-33`이 스스로 요구사항을 적는다 — 「`DATA_PLANE_CLAUDE_CODE_IMAGE` stays unset … such a pod needs the `claude-code-credentials` Secret through a **required** SecretKeyRef plus the loopback credential proxy sidecar」.\n- **그 둘 다 조달 가능함을 실물로 확인했다.** (a) 이미지: session-platform의 `docker-build-push.yaml`은 **정확히 두 개**만 발행한다 — `ghcr.io/dlddu/session-platform`(제어면)과 `ghcr.io/dlddu/session-platform-data-plane`(데이터 플레인, 멀티 워크로드). 별도 claude-code 패키지는 **없다**(`session-platform-data-plane-claude-code`·`session-platform-claude-code` 둘 다 GHCR 403). 즉 `DATA_PLANE_CLAUDE_CODE_IMAGE`는 픽스처가 이미 핀한 **같은 패키지**를 가리키고, 그 태그(`5f60249f…`)는 익명 토큰으로 매니페스트 **HTTP 200**이다. (b) Secret: 필수 SecretKeyRef는 **키의 실재만** 요구하고, 429·507 관측에 상류가 불필요하므로 더미 Secret으로 충족된다.\n- **session-read/AC2 · session-write/AC2는 여전히 막혀 있다** — 둘 다 `snapshot` 분기를 요구하는데 `checkpointerFor`가 `Enabled()`가 아니면 `ErrCheckpointDisabled`로 거부하고, 픽스처는 `CRIU_ENABLED`를 켜지 않는다(`:23-24`, 프로덕션도 같은 값). 해소하려면 CRIU 런타임·특권 파드·체크포인트 저장소가 kind에 서야 한다. **#58은 shell 데이터 플레인만 세웠고 CRIU는 건드리지 않았다.**\n",
+      "toBe": "`docs/prd-*.md` + `docs/doc-tracker.md`(AC↔파일 매핑 레지스트리), 같은 커밋 `fb511d1`.\n\n**레지스트리는 이 슬라이스로 정확히 갱신됐다** — `<!-- ac-e2e-집계 -->` 블록이 매칭 60 · 공백 3(5→3), 레지스트리 표에서 `session-read/AC1`·`session-write/AC1`이 ⬜ → ✅ 전용 파일로 바뀌었다. 게이트가 이 절을 파싱하므로 rc=0이 그 일치를 증명한다.\n\n**공백 backlog(3)가 각 항목의 선행을 스스로 적는다**:\n- `session-read/AC2` · `session-write/AC2` — 「같은 벽 하나를 공유한다: … `checkpointerFor` … `ErrCheckpointDisabled` … 해소하려면 CRIU 런타임·특권 파드·체크포인트 저장소를 kind에 세워야 한다」. 원장 자신이 「2026-09-04의 데이터 플레인 슬라이스가 이 둘을 닫지 못한 이유가 정확히 이것이다」라고 적는다.\n- `session-write/AC4` — 「선행은 「데이터 플레인」이 아니라 **「claude-code 데이터 플레인」**이다 … 2026-09-04 슬라이스가 세운 shell 데이터 플레인보다 **엄격히 큰 게이트**이고, 그래서 그 슬라이스는 AC1 둘만 닫고 이 항목을 남겼다」. 그리고 **「다음 계획은 위 근거를 소스에서 다시 확인한 뒤 착수할 것」**이라고 다음 계획에 직접 지시한다.\n- 완료 노트가 슬라이스 층위를 명문화한다 — 「(a) **shell 데이터 플레인이면 되는 것** — AC1 둘, (b) **claude-code 데이터 플레인이 필요한 것** — session-write/AC4, (c) **CRIU 게이트까지 필요한 것** — AC2 둘. 이 슬라이스는 (a)만 열었다」.\n\n**범위 밖으로 함께 남은 것** — `prd-session-write.md` AC1의 claude-code 절(「프롬프트 1회 실행이 큐에 적재된다」). `session_write_ac1.py`가 shell 절만 단정하고 그 사실을 자기 docstring에 적었다. 원장은 이것을 「공백이 아니라 **강화 후속**」으로 분류하고 「위 AC4 슬라이스가 claude-code 픽스처를 세우면 **같은 PR에서 함께 닫는 것이 자연스럽다**」고 적는다.\n",
+      "gap": "**유의미한 차이 있음. 소비된-트리거이고, 잔여 3건 중 1건(session-write/AC4)의 선행이 이 트리거로 「층」 하나만큼 내려와 착수 가능해졌다.**\n\n형태: 내 슬라이스(#58)가 머지 · `rct_20260904-0008`이 `succeeded`/`converged:true`(21:45:36Z) · **열린 task 0** · 잔여 3. executor verification의 마지막 체크가 「후속은 다음 감지 주기가 새 task로 연다」고 적었으므로, 내가 baseline만 전진시키면 이 잔여의 재감지 경로는 **0**이다.\n\n**항목별 선행 대조** (형태가 아니라 유예 사유의 *성격*으로 가른다):\n\n| 잔여 | 원장이 적은 선행 | 성격 | 발화? |\n| --- | --- | --- | --- |\n| **session-write/AC4** (거부 응답 구분) | claude-code 데이터 플레인 픽스처 | **직전 슬라이스가 그은 경계**(ⓑ) — 대상이 자기 모델 as-is(`tests/k8s/kind/`) 안 | **발화** |\n| session-read/AC2 | CRIU 런타임·특권 파드·체크포인트 저장소 | 클러스터 런타임 능력(ⓐ) | 미발화 |\n| session-write/AC2 | 같은 CRIU 벽 | 같음(ⓐ) | 미발화 |\n\n**AC4를 실물로 검증했다 — 원장의 「엄격히 큰 게이트」는 참이지만 「닿을 수 없다」는 아니다:**\n1. 429·507은 `claude.go:1056-1061`의 `c.enqueue` 자기 로직이다 ⇒ **상류 Anthropic 호출 불필요**.\n2. `DATA_PLANE_CLAUDE_CODE_IMAGE`가 가리킬 이미지는 **별도 패키지가 아니다** — 발행 워크플로가 내는 것은 `session-platform`과 `session-platform-data-plane` 둘뿐이고(멀티 워크로드 이미지), claude-code 전용 패키지 후보 2종은 GHCR 403(부재). 픽스처가 이미 핀한 그 태그는 익명 매니페스트 **HTTP 200**.\n3. 필수 SecretKeyRef는 키 실재만 요구 ⇒ **더미 `claude-code-credentials`로 파드가 선다**.\n⇒ 픽스처 변경 규모는 #58이 방금 한 것(env 한 줄 + SA 하나)과 **같은 대역**이다.\n\n**게이트는 이 gap을 영원히 초록으로 덮는다** — `check_ac_mapping.py`는 rc=0과 나란히 「공백 AC: 3」을 **카운터로** 출력할 뿐 실패시키지 않고, backlog 절은 그 파서의 범위 밖(산문)이라 원장 자신이 「이 절은 … 기계 검증이 없다」고 적는다. 초록이 착수 필요 없음의 근거가 되지 않는다.\n\n**경계 — 이중 계상 금지**: 「`prd-session-write.md` AC1의 claude-code 절」은 레지스트리상 ✅(공백 아님)인 **강화 후속**이며, 원장이 「AC4 슬라이스가 claude-code 픽스처를 세우면 같은 PR에서 함께 닫는 것이 자연스럽다」고 적었다 — 별도 task로 열지 말고 이 task의 슬라이스에 포함시킨다. 그리고 `docs/doc-tracker.md`의 `## 자동화 커버리지` 🔴 절이 낡은 축은 **자매 모델 `tbm_homelab-k3s-mcp-docs-impl`의 `rct_20260904-0009`(PR #60)가 소유**한다 — 여기서 열지 말 것(그쪽 `rct_20260904-0010`에 상호 참조를 남겼다).\n",
+      "summarizedAt": "2026-09-04T21:49:00Z"
+    },
+    "assessment": {
+      "actionRequired": true,
+      "reason": "**작업 필요(actionRequired: true).** 범위는 **session-write/AC4 하나**로 끊는다.\n\n1. **잔여가 실재한다** — 게이트 실측 공백 3(`check_ac_mapping.py` rc=0의 카운터), 전부 전용 e2e 파일이 없다. 이 모델의 판정 기준은 AC↔전용 파일 1:1이므로 그대로 drift다.\n2. **AC4의 선행이 발화했고, 원장 산문이 아니라 소스·레지스트리로 확인했다** — 429·507이 상류를 타지 않고(`claude.go:1056-1061`), 필요한 이미지가 픽스처가 이미 핀한 **같은 GHCR 패키지**이며(별도 claude-code 패키지 부재, 403), 필수 SecretKeyRef는 더미로 충족된다. 원장 자신이 「다음 계획은 위 근거를 소스에서 다시 확인한 뒤 착수할 것」이라고 이 단계를 지시한다.\n3. **재감지 경로가 0이다** — 열린 task 0 · executor가 `lastObservedVersion`을 건드리지 않고 detector를 소유자로 지목 · 게이트는 공백을 카운터로만 찍어 영원히 초록. 이 task를 열지 않으면 다음 트리거가 없다.\n\n**계획 단계 제약 4가지**:\n- **AC2 둘(session-read/AC2 · session-write/AC2)을 완료 기준에 넣지 말 것.** CRIU 런타임·특권 파드·체크포인트 저장소가 선행이고 이번 트리거로 아무것도 바뀌지 않았다 — 넣으면 executor가 닫을 수 없는 task를 받는다.\n- **`prd-session-write.md` AC1의 claude-code 절을 같은 PR에서 닫을 것.** 원장이 그렇게 지시했고, 같은 픽스처가 선행이다. `session_write_ac1.py`의 docstring에 남은 「shell 절만 단정한다」 서술도 함께 갱신한다.\n- **네 거부를 전부 단정할 것 — 「반쪽 단정」 금지.** 404(타입 무관) · 413(제어면이 `WorkloadType == claude-code`일 때만 잰다) · 429(`errClaudeQueueFull`) · 507(`errClaudeOutputFull`). 원장이 08-07·08-13에 되돌아와 고쳤다고 스스로 적은 실패 유형이다.\n- **모킹 정책 축을 함께 확인할 것.** 실 데이터 플레인 이미지를 띄우는 것은 `IMG`·`UPS` 어디에도 걸리지 않는다는 #58의 논증이 claude-code에도 그대로 적용되는지 `scripts/check_mock_policy.py` rc=0 · 등재 5/상한 5 불변으로 확인한다(더미 Secret은 자격 **모킹**이 아니라 필수 참조 충족이라는 판단을 원장에 남길 것).\n",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-04T21:49:00Z"
+    },
+    "createdAt": "2026-09-04T21:49:00Z",
+    "updatedAt": "2026-09-04T21:49:00Z",
+    "id": "rct_20260904-0009"
   }
 ]
