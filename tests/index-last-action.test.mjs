@@ -83,12 +83,23 @@ test("the newest moment across every task of the model is used", () => {
   assert.equal(result.taskId, "new");
 });
 
-test("a no-op detection still counts as the last action", () => {
+test("a no-op detection is not an action", () => {
   const result = lastAction([
+    { id: "real", status: "succeeded", createdAt: "2026-08-01T00:00:00Z" },
     { id: "noop", status: "no_action_needed", createdAt: "2026-08-30T10:12:12Z", trigger: { detectedAt: "2026-08-30T10:12:12Z" } }
   ]);
 
-  assert.equal(result.label, "감지");
+  assert.equal(result.at, "2026-08-01T00:00:00Z");
+  assert.equal(result.taskId, "real");
+});
+
+test("a model whose every task needed no action reports nothing", () => {
+  const result = lastAction([
+    { id: "noop1", status: "no_action_needed", createdAt: "2026-08-01T00:00:00Z" },
+    { id: "noop2", status: "no_action_needed", createdAt: "2026-08-30T10:12:12Z" }
+  ]);
+
+  assert.equal(result, null);
 });
 
 test("a model with no task at all reports nothing", () => {
