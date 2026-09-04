@@ -3375,6 +3375,67 @@
       "assessedAt": "2026-09-04T14:47:12Z"
     },
     "createdAt": "2026-09-04T14:47:12Z",
-    "updatedAt": "2026-09-04T14:53:11Z"
+    "updatedAt": "2026-09-04T15:00:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**픽스처에 실 shell 데이터 플레인을 세우고, 그 위에서 `session-read/AC1`·`session-write/AC1` 두 파일을 저작한다.** 잔여 3건 중 이 둘만 고른 이유는 **선행의 크기가 서로 다르다는 것을 소스에서 확인했기 때문**이다 — 원장은 셋을 「같은 데이터 플레인 선행」으로 묶었지만, `session-write/AC4`가 요구하는 네 거부 중 **큐 포화(429)·쿼터 소진(507)은 `data-plane/cmd/agent/claude.go`에만 존재한다**(shell 에이전트의 `/write`는 그 두 상태코드를 낼 수 없다). 즉 AC4의 선행은 「데이터 플레인」이 아니라 **claude-code 데이터 플레인**(`DATA_PLANE_CLAUDE_CODE_IMAGE` + `claude-code-credentials` Secret + credential-proxy 사이드카)이며, 이 슬라이스가 세우는 shell 데이터 플레인보다 엄격히 큰 게이트다. 반면 AC1 둘은 shell 파드 하나로 **서로의 검증 방법을 완성한다** — session-write/AC1의 검증 방법이 「write한 뒤 read로 그 출력이 누적 출력에 나타남을 확인한다」이고, session-read/AC1의 증분 구간을 만드는 가장 자연스러운 사건이 그 write다.\n\n**접근**: 픽스처 제어면이 이미 핀한 SHA(`5f60249f…`)와 **같은 커밋 태그**의 `ghcr.io/dlddu/session-platform-data-plane`를 `DATA_PLANE_IMAGE`로 주입하고, 세션 파드 스펙이 요구하는 `data-plane` ServiceAccount를 같은 네임스페이스에 만든다(`buildPod`가 `ServiceAccountName: data-plane` + `AutomountServiceAccountToken: true`를 박으므로 SA가 없으면 파드가 기동하지 못한다). 제어면을 최신 프로덕션 핀(`717639f4…`)으로 올리는 대안은 기각했다 — 이 슬라이스의 목적이 아니고 제어면 동작 변화를 함께 들여온다. 같은 SHA 쌍은 발행 워크플로가 보장한다(`docker-build-push.yaml`이 두 이미지를 같은 커밋 태그로 함께 낸다).\n\n**가역성**: 픽스처·CI·테스트 파일만 바뀌고 Go 실행 코드·프로덕션 매니페스트는 0줄이다. 되돌리기는 PR revert 하나이며, 되돌리면 픽스처는 지금과 글자 그대로 같아진다.\n\n**이 시도의 범위(완료 기준)** — 아래 ⓐ~ⓔ가 전부 참이면 이 task는 성공이다.\n- ⓐ **실 세션 파드가 뜬다**: 제어면 제품 API(`POST /api/v1/sessions`)로 만든 shell 세션이 `Ready`가 되고, 하네스가 그 파드를 관측한다(CI `integration-tests` 잡에서).\n- ⓑ **전용 파일 2개**(`session_read_ac1.py`·`session_write_ac1.py`)가 러너에 배차되어 primary 그룹에서 통과한다.\n- ⓒ **원장 갱신**: 레지스트리 2행이 ✅로, 집계가 매칭 58→**60** / 공백 5→**3**으로 바뀌고 `check_ac_mapping.py` rc=0.\n- ⓓ **모킹 지문 불변**: `check_mock_policy.py`가 등재 5(상한 5)로 rc=0 — 실 구성요소를 띄우는 것이라 `IMG`·`UPS` 어디에도 걸리지 않는다(제어면 픽스처가 세운 논증 그대로).\n- ⓔ **PR CI 전 체크 초록**(lint·unit·integration 3잡).\n\n**범위 밖(후속)**: `session-read/AC2`·`session-write/AC2`(CRIU 게이트 — 특권 파드·체크포인트 저장소가 선행), `session-write/AC4`(claude-code 데이터 플레인 게이트, 위 근거). 셋 다 원장 backlog에 사유와 함께 남긴다.\n\n**ⓐ가 CI에서 막히면**(이미지 pull 실패·리소스 한계 등): 그 사실과 실패 로그를 원장에 적고 ⓑ~ⓒ를 되돌린 축소 범위(원장 기록만, 공백 5 유지)로 닫는다 — executor가 **닫을 수 있는** task를 받게 하기 위한 설계다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 `reconcile/rct_20260904-0008-ac-e2e`를 `main`(`7aa025e`)에서 끊고, 변경 전 게이트 3종을 실행해 기준선을 기록한다: `python3 tests/integration/check_ac_mapping.py` · `python3 scripts/check_mock_policy.py` · `python3 scripts/check_comment_policy.py`.",
+              "expectedOutcome": "셋 다 rc=0. 기준선 수치 — 매칭 58 / 공백 5 / 분할 대기 0 / 예외 1, 모킹 등재 5(상한 5), 주석 판정 대상 964줄 68파일 · 지문 `b8718a0b…`. 이 수치가 변경 후 대조의 기준이다."
+            },
+            {
+              "seq": 2,
+              "action": "`tests/k8s/kind/session-platform.yaml`에 (a) `session-platform` 네임스페이스의 `data-plane` ServiceAccount와 (b) 제어면 Deployment의 `DATA_PLANE_IMAGE=ghcr.io/dlddu/session-platform-data-plane:5f60249f8381d5cfecbe093bb77fc30d874697f4` env를 더한다. 파일 머리말의 「DATA_PLANE_IMAGE is unset … out of scope for session_list」 문단을 **이번 슬라이스가 그것을 켠 이유**로 고쳐 쓴다(제어면 RBAC는 이미 pods create/delete를 갖고 있어 변경 없음). 프로덕션의 두 ClusterRoleBinding(`view`·node-reader)은 **일부러 만들지 않고** 그 이유를 주석에 적는다 — shell 에이전트 경로는 apiserver를 읽지 않으므로 권한 **축소**이지 게이트 완화가 아니다.",
+              "expectedOutcome": "`kubectl apply --dry-run=client -f`가 통과하고, diff가 SA 1개 + env 1개 + 주석뿐이다. `CRIU_ENABLED`·`CLAUDE_CODE_ARCHIVE_ENABLED`는 그대로 미설정이라 `snapshotEnabled=false`가 유지된다(유휴 reaper 계속 정지 — 시드 세션이 흔들리지 않는다)."
+            },
+            {
+              "seq": 3,
+              "action": "`.github/workflows/ci.yml`에 데이터 플레인 이미지 **선-pull + kind load** 스텝을 제어면 픽스처 적용 **앞**에 넣는다(`docker pull … && kind load docker-image … --name homelab-k3s-mcp`). 실패 시 진단 덤프에 세션 파드(`-n session-platform get pods -o wide`·`describe pod -l session-platform.dev/pod-role=workload`·해당 파드 로그)를 추가한다.",
+              "expectedOutcome": "노드에 이미지가 이미 있으므로 `pullPolicyForImage`가 SHA 태그에 매기는 `IfNotPresent`가 pull 없이 성립하고, 세션 파드 Ready가 제어면 `waitReady`의 **2분 예산**(`defaultReadyTimeout`) 안에 들어온다. 압축 268 MiB(10레이어)를 그 예산 안에서 당기게 두는 것이 이 슬라이스의 가장 큰 인프라 리스크이고, 이 스텁이 그것을 예산 밖으로 옮긴다."
+            },
+            {
+              "seq": 4,
+              "action": "`port_forward`·`_free_to_bind`를 `_oidc.py`에서 `_helpers.py`로 옮기고 `_oidc.py`는 그것을 임포트해 이름을 유지한다(`platform_auth_safety_ac{2,8}.py`의 `from _oidc import port_forward`가 그대로 돈다). 이동 사유를 두 파일에 한 줄씩 적는다 — 이 헬퍼는 dex 전용이 아니라 「그룹 포워드가 닿지 않는 서비스에 짧게 여는 길」이고, 이제 소비자가 둘이다.",
+              "expectedOutcome": "`python3 -c 'import _oidc, _helpers'`(tests/integration에서)가 통과하고, `platform_auth_safety_ac{2,8}.py`는 **무변경**이다. 60줄 복제를 만들지 않으므로 자매 렌즈(`tbm_homelab-k3s-mcp-comment-redundancy`)의 잔여를 늘리지 않는다."
+            },
+            {
+              "seq": 5,
+              "action": "`_session_platform.py`에 **제품 API 세션 수명주기** 표면을 더한다: 제어면 `svc/control-plane`(ns `session-platform`, 80→로컬 18083, ready_path `/api/v1/healthz`)로 짧게 여는 포워드 위에서 `POST /api/v1/sessions`(생성) · `DELETE /api/v1/sessions/{id}`(정리) · `POST /api/v1/sessions/{id}/write`(read 파일의 증분 유발용, 도구를 경유하지 않는 셋업 경로). 요청·응답 모양은 손으로 짓지 말고 `control-plane/internal/api/api.go`의 `createReq`/`writeReq`/`readResp` 구조체 태그에서 확인한 것만 쓴다. 로컬 포트는 18080·18081·18082 관례를 이어 **18083**을 쓴다.",
+              "expectedOutcome": "헬퍼가 세션 id와 파드 이름(`sess-<id>`)을 돌려주고, 컨텍스트를 빠져나갈 때 세션을 삭제해 파드까지 회수한다. 생성은 파드 Ready + `Reach`(attach 웹소켓)를 기다리므로 클라이언트 타임아웃을 넉넉히(≥180s) 준다."
+            },
+            {
+              "seq": 6,
+              "action": "`tests/integration/session_read_ac1.py` 신설 — `검증 AC: session-read/AC1`, `실행 대상: primary`. AC1 검증 방법 네 절을 전부 단정한다: (1) `offset=0`이 세션 시작 이후 전체를 반환하고 `nextOffset`을 발급한다, (2) 그 커서로 재호출하면 **빈 payload와 같은 커서**다, (3) 셋업 경로로 새 출력을 만든 뒤 같은 커서로 호출하면 **증분만** 반환한다, (4) 같은 커서 반복 호출이 **같은 구간**을 반환한다(비파괴). 결과의 `path`가 `active`이고 세션이 `active`로 보고되는 것도 함께 본다.",
+              "expectedOutcome": "단정이 vacuous하지 않다 — `scrollback.Since`는 `offset >= len`에서 빈 payload와 `nextOffset=len`을 돌려주고, 증분은 실제 PTY 바이트다. 파일이 자기 세션을 만들고 지우므로 다른 파일이 남긴 상태와 무관하다."
+            },
+            {
+              "seq": 7,
+              "action": "`tests/integration/session_write_ac1.py` 신설 — `검증 AC: session-write/AC1`, `실행 대상: primary`. AC1 검증 방법의 shell 절을 단정한다: shell 세션에 `session_write`로 명령을 주입하면 (1) 호출이 **실행을 기다리지 않고** 반환하고 (결과에 출력이 없다 — `WriteResult`는 `path`·`session`뿐), (2) 이후 `session_read`의 누적 출력에 그 명령의 산출물이 나타난다. claude-code 절은 **범위 밖**임을 파일 docstring에 적는다(그 워크로드 타입은 `DATA_PLANE_CLAUDE_CODE_IMAGE`와 자격증명 Secret이 선행).",
+              "expectedOutcome": "write 응답에 payload 필드가 없고 `path == \"active\"`이며, 폴링 read가 주입한 명령의 고유 마커를 누적 출력에서 찾는다. 마커는 파일이 고른 유일 문자열이라 셸 프롬프트·에코와 구분된다."
+            },
+            {
+              "seq": 8,
+              "action": "`docs/doc-tracker.md` 갱신: (a) 레지스트리 2행을 `✅ 전용 파일 `session_read_ac1.py`` · `✅ 전용 파일 `session_write_ac1.py``로, (b) 집계 마커를 매칭 58→60 · 공백 5→3으로, (c) 레지스트리 헤딩(`### AC 레지스트리 (64) — ✅ 전용 파일 58 …`)을 60/3으로, (d) backlog 헤딩 `(5)`→`(3)`과 내역을 재작성, (e) 완료 노트를 추가한다. **AC4 서술을 교정한다** — 「AC1과 같은 데이터 플레인 선행」이 아니라 「claude-code 데이터 플레인이 선행(429·507이 `claude.go`에만 있다)」로 고치고, 그 문장이 이 슬라이스가 되돌아와 고친 것임을 명시한다.",
+              "expectedOutcome": "`check_ac_mapping.py`가 rc=0으로 `매칭 파일(전용): 60` · `공백 AC: 3`을 출력한다. 게이트가 읽지 않는 산문(backlog 절)의 교정은 기계 검증이 없는 자리이므로 PR 본문에도 같은 사실을 적는다."
+            },
+            {
+              "seq": 9,
+              "action": "로컬 게이트 재실행 + 하네스 배차 확인: 게이트 3종 rc=0, `python3 tests/integration/run_all.py --group primary --list`에 신규 2파일이 나타나고 `--group auth-variant`·`--group oauth-variant`에는 나타나지 않는다. Go 변경이 0줄임을 `git diff --stat`으로 확인한다.",
+              "expectedOutcome": "게이트 3종 rc=0(매칭 60 / 공백 3 / 모킹 등재 5 상한 5 / 주석 원장 무변경), 배차 목록에 신규 2파일, `*.go` 변경 0파일."
+            },
+            {
+              "seq": 10,
+              "action": "브랜치를 푸시하고 draft PR을 연다(머지하지 않는다). PR 본문에 task id·gap 요약·완료 기준 ⓐ~ⓔ·검증 방법·범위 밖 3건과 그 사유를 적는다. 그다음 **PR의 CI를 끝까지 관측**해 3잡(lint·unit·integration) 결과를 기록한다 — 이 슬라이스에서 로컬로 검증할 수 없는 것은 오직 kind 위의 ⓐ뿐이고, 그것을 재는 곳이 `integration-tests` 잡이다.",
+              "expectedOutcome": "draft PR URL과 head SHA가 확보되고, CI 체크가 전부 success(또는 PR에서 정상 skip)다. `integration-tests`가 초록이면 ⓐ·ⓑ가 실측으로 닫힌다. 붉으면 잡 로그 원문에서 실패 지점을 읽어 픽스처/CI를 고치고 재실행하되, 인프라 한계로 판명되면 계획의 축소 범위로 전환한다."
+            }
+          ],
+          "plannedAt": "2026-09-04T15:00:00Z"
+        }
+      }
+    ]
   }
 ]
