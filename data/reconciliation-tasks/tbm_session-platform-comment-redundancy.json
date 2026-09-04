@@ -557,7 +557,7 @@
   {
     "id": "rct_20260904-0006",
     "toBeModelId": "tbm_session-platform-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-04T22:28:04Z",
       "changedSides": [
@@ -647,6 +647,74 @@
           "reviewer": "user",
           "reviewedAt": "2026-09-04T23:22:00Z",
           "comment": "승인. 설명(형제 PR #73과의 docs/test/e2e.md 경합, 머지 직전 재측정 게이트 포함)을 제시한 뒤 사용자가 '승인'으로 답했다. 머지 순서에 대한 별도 지시는 없었다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-04T23:23:00Z",
+          "finishedAt": "2026-09-04T23:39:30Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T23:23:00Z",
+              "finishedAt": "2026-09-04T23:28:00Z",
+              "log": "브랜치를 origin/main(3726dbd, PR #71 AC-F3 유휴 예외 포함)에 rebase. 충돌 3건 — 모두 #71이 같은 자리의 코드를 바꾼 데서 왔고, main의 코드를 취하고 이 슬라이스의 주석 판정을 그 위에 다시 얹어 해소했다: (a) main.go `newNoticeTailer(..., claude, ...)` 새 시그니처 + 이 패스가 남긴 2줄 포인터 주석, (b) notice_tail.go 필드 `emit func(string)` → `sink noticeSink`(#71 리네임) + 테스트 주입 근거를 뺀 1줄 doc, (c) dropped-notice 자리 — 이 패스가 이미 제거 판정한 3줄이라 main의 새 호출부만 남겼다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T23:28:00Z",
+              "finishedAt": "2026-09-04T23:34:00Z",
+              "log": "머지 게이트(clean checkout)에서 R2 발생 — 4행 등재 739 != 실측 755, 지문 b635c650ace0 != 07cfe78f1a64. 지침의 재판정 절차대로 처리했다: #71이 등재 32파일에 더한 16줄만 판정(제거 8 · 유지 8) → claude.go `approvals` 필드 doc 2→1(claude-code 비어있음 서술은 approval_wait.go가 소유), claude.go approvalWaitPath 핸들러 doc 5→2(AC-F3 서술은 prd 사본, 「복원 대기 중에도 답한다」는 이웃 /attach의 isReady 가드와의 대비로만 보이므로 유지), noticeSink doc 4→2(인터페이스 형태가 말하는 부분 제거, AC 포인터 유지), notice_tail_test.go recordingSink doc 2→0(선언 재진술). run()의 「State before markers」 4줄은 순서 계약이라 유지. 원장 4행 739/b635c650ace0 → 747/c6b11fc5193e, 합계 마커 1449 → 1457, 증분 재판정 절 추가. 재실행: check_comment_policy rc=0 「판정 완료 1457줄 / 등재 범위 4」. 나머지 게이트 악화 없음 — ac-mapping rc=0(AC 27 = 매칭 15 + 예외 1 + 공백 11 불변) · fidelity-allowlist rc=0(차단 요인 0건) · render-fidelity rc=0 · data-plane go vet / go vet -tags=e2e / gofmt 전부 통과. go test는 `entrypoint.sh`가 부르는 jq가 샌드박스에 없어 entrypoint 테스트 2건이 실패하는데, origin/main worktree에서도 동일하게 실패해 이 PR과 무관한 환경 결함으로 확인했다(그 2건 제외 시 rc=0)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T23:34:00Z",
+              "finishedAt": "2026-09-04T23:38:30Z",
+              "log": "rebase 결과를 --force-with-lease로 푸시(5316401). PR #74 mergeable_state=clean, head의 워크플로 3종 전부 completed/success — ci(comment-policy·fidelity·ac-mapping·go 게이트 포함) · e2e(kind + API + browser) · Docker 빌드."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T23:38:30Z",
+              "finishedAt": "2026-09-04T23:39:30Z",
+              "log": "PR #74 squash 머지 → main f0134e4a. 되돌리기 어려운 지점 통과. 직전에 형제 PR #73(rct_20260904-0002)이 66e8f73로 먼저 착지해 있었고, 이 PR과의 유일한 접점 docs/test/e2e.md는 서로 다른 절(앵커 3개 vs 충실도 회계)이라 충돌 없이 공존한다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=3125 files=117\ncaf0e05555bbc567416b8a3763950ae320df2570272345a948ec43dcf00caac5",
+          "verifiedAt": "2026-09-04T23:40:30Z",
+          "checks": [
+            {
+              "name": "머지된 main에서 판정 게이트 초록(이 시도의 완료 기준)",
+              "status": "passed",
+              "detail": "main f0134e4a에서 `python3 scripts/check_comment_policy.py` rc=0 — 「OK: 규칙 R1~R4 위반 없음 … 판정 완료 1457줄(46.6%) / 등재 범위 4」. 계획이 적은 1439줄(48.2%)과 다른 이유는 둘 다 실행 창 안의 main 전진 때문이고 게이트가 재측정으로 강제한 값이다: #71이 2행 범위에 +10(229→239), 이 시도의 증분 재판정이 4행에 +8(739→747). 등재 범위 4라는 완료 기준은 충족됐다."
+            },
+            {
+              "name": "판정 원장 4행 + 합계 마커 미러(R4)",
+              "status": "passed",
+              "detail": "143 `b43d405ac066` · 239 `1d85544cb83a` · 328 `b09a85723f8c` · **747 `c6b11fc5193e`**, 합계 마커 1457. 4행 지문이 실측과 일치한다."
+            },
+            {
+              "name": "나머지 게이트 악화 없음",
+              "status": "passed",
+              "detail": "머지된 main에서 ac-mapping rc=0 「AC 27개 = 매칭 15 + 예외 1 + 공백 11」 불변 · fidelity-allowlist rc=0 차단 요인 0건(회계 행은 #73 착지로 19→17, 미해소 위반 4→2 — 이 PR이 아니라 형제 슬라이스의 결과다) · render-fidelity rc=0."
+            },
+            {
+              "name": "data-plane 빌드·정적 검사",
+              "status": "passed",
+              "detail": "머지된 main에서 go vet ./... rc=0 · go vet -tags=e2e ./... rc=0 · gofmt -l 출력 없음. go test는 jq 부재로 entrypoint 테스트 2건만 실패하며 origin/main에서도 동일 — 환경 결함이고 PR CI(jq 있음)에서는 ci 워크플로가 success였다."
+            },
+            {
+              "name": "모델 버전 이동(기록용, 재감지 트리거)",
+              "status": "passed",
+              "detail": "as-is `lines=3225 files=113 / 41b64e08…` → `lines=3125 files=117 / caf0e055…`, to-be `305377cc…` → `72ef5ef2…`. 두 이동 모두 다음 감지 주기의 트리거다. 잔여(정보성): 이 패키지에 #71이 새로 더한 approval_wait.go(48줄)·approval_wait_test.go(20줄) 68줄이 등재 행 파일 목록 밖이라 미판정으로 남고, cmd/control-plane(77줄) 등 컨트롤 플레인 잔여도 그대로다 — 모두 이 시도의 범위 밖이라 converged 판정에 넣지 않았다."
+            }
+          ]
         }
       }
     ]
