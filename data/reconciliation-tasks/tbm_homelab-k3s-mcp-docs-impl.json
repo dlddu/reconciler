@@ -271,7 +271,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-04T00:18:30Z",
       "changedSides": [
@@ -288,7 +288,7 @@
       }
     },
     "createdAt": "2026-09-04T00:18:30Z",
-    "updatedAt": "2026-09-04T07:22:00Z",
+    "updatedAt": "2026-09-04T07:26:00Z",
     "id": "rct_20260904-0001",
     "stateSummary": {
       "asIs": "**as-is (실측 시각 2026-09-04T00:17Z · `dlddu/homelab-k3s-mcp` main `0378f8d`)**\n\n`internal:e61c7bbb… main.go:cec9c82d…` — 직전 baseline(2026-09-03T12:00, `internal:00a0edc2…\nmain.go:ef750610…`) 대비 **구현이 실제로 움직였다**. 출처는 이 모델 자신의 task\n`rct_20260903-0001`이 만든 PR #48(`0378f8d`, 00:06:17Z squash 머지).\n\n- **도구 표면 15종.** `internal/mcp/toolslist.go`의 `toolsListJSON`을 `json.loads`로 파싱하면\n  `session_list`를 포함해 15개다(직전 14개). 상수 선언이 아니라 JSON 리터럴이라\n  `grep -c 'Name: \"'`류로는 0이 나온다.\n- **신규 패키지 `internal/sessionplatform`** — 제어면 `GET /api/v1/sessions` 클라이언트\n  (`Client`/`FromEnv`)와 미설정 대체 구현(`Unavailable`), 오류 종류 분리\n  (`unavailable`/`apiError`). `Session` 구조체 필드는 `id·name·workloadType·state·pod·\n  createdAt·lastAccess`.\n- **배선**: `SESSION_PLATFORM_ENDPOINT`를 세팅하는 곳은 레포 전체에서\n  `k8s/deployment.yaml:55` 하나뿐이다(`main.go:156`은 미설정 시 경고만 남기고 기동한다).\n- **제어면 가동은 문서가 아니라 클러스터에서 직접 확인**: ns `session-platform`의\n  Deployment `control-plane` **1/1 Ready**(replicas 1 · ready 1 · available 1, 생성\n  2026-09-02T01:10:21Z).\n- **미구현 잔여**: `session_read`·`session_write` — `internal/sessionplatform`에 대응 메서드가\n  없고 `internal/mcp`의 디스패치에도 없다.\n\n**미관측 1건(다음 관측으로 넘어온 항목)**: executor가 프로덕션 MCP 엔드포인트로 `session_list`를\n직접 호출하는 현장 확인을 「이 실행 세션의 도구 목록이 세션 시작 시점에 고정돼」 수행하지\n못했다고 기록했다. **이 fire도 같은 제약에 걸린다** — 내 세션의 k3s MCP 도구 표면은 14종이고\n`session_list`가 없다(세션 시작 00:01Z, 프로덕션 롤아웃 완료 00:09:07Z). 즉 이 항목은 감지\n단계가 닫을 수 없다.",
@@ -460,6 +460,59 @@
               "log": "**PR CI 4잡(head `c8d1ade`) 전부 success** — `fmt + vet` · `unit tests` · `integration tests`(kind) · `docker build & push`. 그 위에서 **squash 머지** → main **`577af3a`**(07:16:2xZ). **main CI 전 잡 초록** — build(07:16:45Z) · fmt+vet(07:16:58Z) · unit tests(07:16:48Z) · integration tests(07:20:49Z) · docker build & push(07:21:11Z) · deploy(07:16:58Z) · report-build-status. 머지 SHA 가드를 걸어 실행했다(head가 그사이 바뀌었으면 409로 거부되도록)."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:27f9d8aebb879c6680bb972dfaa14bc397ac4ccf main.go:1eb40df606850d6b5d2ad4d4932c4cf3e3036d3c",
+          "checks": [
+            {
+              "name": "게이트 불변 — check_ac_mapping.py · check_mock_policy.py",
+              "status": "passed",
+              "detail": "머지 전 rebase된 브랜치와 origin/main(`9116ac1`)에서 각각 실행해 **출력 diff 0줄**, 둘 다 rc=0. 머지된 main(`577af3a`)에서 재실행해도 동일: AC 전집 64 · 매칭 파일 52 · 분할 대기 0 · 공백 AC 11 · 예외 1. 공백이 계획 시점의 14가 아닌 11인 것은 형제 PR #50이 `session-list/AC1~AC3`을 닫아 생긴 정상 변화이며 이 PR의 회귀가 아니다(0줄 diff가 증거) — 지침 §4가 미리 구분해 둔 항목이다."
+            },
+            {
+              "name": "AC 계약 무변경 — 전집 64 불변",
+              "status": "passed",
+              "detail": "머지된 main에서 `grep -h '^### AC' docs/prd-*.md | wc -l` = **64**. AC 헤딩·「검증 대상 AC」 목록 편집 0건."
+            },
+            {
+              "name": "완료 기준 2 — 원장 어긋남 2곳 교정",
+              "status": "passed",
+              "detail": "① 실측 스크립트(md · 허브 `reader.html?doc=` 고유 대상 · 집합 차) = `md=39 hub=39 broken=[] unreachable=[]`이고 원장 `:49`가 「허브 도달 가능 문서 ✅ **39 / 39** (가치 1 + PRD 18 + 테스트 18 + 상태 추적 1 + 정책 1)」로 일치한다(머지 전 main에서는 38 / 38이었다). ② `grep -c 'e2e-mocking-policy' docs/doc-tracker.md` = **3**(머지 전 main에서는 **0**) — 문서 인벤토리 표에 행이 섰다."
+            },
+            {
+              "name": "완료 기준 1 — session_read 도구 계층",
+              "status": "passed",
+              "detail": "머지된 main의 `internal/mcp/toolslist.go` 실측 **16종**이고 session 계열은 `['session_list', 'session_read']`. AC1~AC4의 도구 계층은 테스트 문서가 지목한 이름 그대로의 Go 단위(`TestReadFullThenIncremental`·`TestReadIsNonDestructive`·`TestReadRejectsNegativeOffset`·`TestReadNotFound` + `path` 3분기 노출·`Unavailable` 거부)로 검증되며, PR·main 양쪽 CI의 `unit tests`·`integration tests`(kind 실서버) 잡이 초록이다."
+            },
+            {
+              "name": "완료 기준 3 — 거짓이 된 서술 제거",
+              "status": "passed",
+              "detail": "머지된 main에서 `docs/prd-session-read.md`·`docs/test-session-read.md`의 「구현 선행」·「도구 미구현」 문자열 **0건**. 원장 매트릭스의 `(구현 선행)` 제거, 자동화 커버리지 🔴 항목은 「9 AC」 → session_write 5 AC로 좁혀졌다."
+            },
+            {
+              "name": "완료 기준 4 — CI 4잡 · 머지 · main CI",
+              "status": "passed",
+              "detail": "PR head `c8d1ade`에서 4잡 전부 success(`fmt + vet`·`unit tests`·`integration tests`(kind)·`docker build & push`). squash 머지 → main **`577af3a`**. main CI 전 잡 초록: build 07:16:45Z · unit tests 07:16:48Z · fmt+vet 07:16:58Z · deploy 07:16:58Z · integration tests 07:20:49Z · docker build & push 07:21:11Z · report-build-status."
+            },
+            {
+              "name": "형제 PR #50과의 충돌 해소",
+              "status": "passed",
+              "detail": "#50이 05:14:26Z에 먼저 머지되어 #51이 dirty가 됐고, 지침 §4의 예측대로 충돌은 `docs/doc-tracker.md` 1파일 · 변경 이력 표 삽입 지점 1훵크뿐이었다. **양쪽 행을 모두 살려** 해소했고(표가 최신순이라 나중 착지인 이 행이 위), rebase 전후 diff stat이 10파일 +745/−32로 동일해 해소 과정의 유실이 없다. 지침이 「어느 쪽을 지우지 말 것 — 둘은 서로 다른 사건이다」로 못박은 대로다."
+            },
+            {
+              "name": "프로덕션 롤아웃 (정보성 — 이 시도의 완료 기준 아님)",
+              "status": "passed",
+              "detail": "**아직 새 이미지가 뜨지 않았다.** ns `homelab-k3s-mcp`의 파드 `...-9fbfc5fc5-zm8lb`는 06:54:42Z 기동본으로 1/1 Ready·restart 0이고, 새 이미지는 07:21:11Z에 push됐다. main의 `deploy` 잡(07:16:58Z)이 `docker build & push`(07:21:11Z)보다 **먼저** 끝나 이번 사이클에서는 새 태그를 집어가지 못했다 — 지침 §1이 「5번은 머지 자체와 분리해서 볼 것, 배포 지연은 이 슬라이스의 실패가 아니다」로 미리 갈라 둔 경우다. 도구 계층 계약은 Go 단위와 kind 통합 CI가 닫았으므로 수렴 판정에 넣지 않는다. 제어면 전제도 확인됨: ns `session-platform`의 Deployment `control-plane` 1/1 Ready. 다음 롤아웃(또는 이미지 자동화 주기)에 뜬다."
+            },
+            {
+              "name": "잔여 gap (범위 밖 — 정보성)",
+              "status": "passed",
+              "detail": "모델 전체로는 `session-write/AC1~AC5` 5건이 미구현으로 남는다(이 모델의 다음 슬라이스). `session_read`의 통합 e2e와 AC2의 실클러스터 절반은 자매 모델 `tbm_homelab-k3s-mcp-ac-e2e` 소관이고 이 PR은 e2e 렌즈 섹션을 한 줄도 건드리지 않았다. 프로덕션 `session_list` 직접 호출 확인은 계획이 정한 대로 자매 모델의 통합 e2e가 대체하며 **여기서 이월을 끊는다**. 이번 실행이 `internal/`·`docs/` 양쪽을 움직였으므로 **다음 감지 주기가 후속 task를 연다**(executor가 직접 만들지 않는다)."
+            }
+          ],
+          "verifiedAt": "2026-09-04T07:26:00Z"
         }
       }
     ]
