@@ -2014,7 +2014,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-04T22:06:30Z",
       "changedSides": [
@@ -2043,7 +2043,7 @@
       "assessedAt": "2026-09-04T22:06:30Z"
     },
     "createdAt": "2026-09-04T22:06:30Z",
-    "updatedAt": "2026-09-04T23:10:00Z",
+    "updatedAt": "2026-09-04T23:12:21Z",
     "id": "rct_20260904-0008",
     "attempts": [
       {
@@ -2144,6 +2144,34 @@
               "startedAt": "2026-09-04T23:52:00Z",
               "finishedAt": "2026-09-04T23:10:00Z",
               "log": "PR #72 squash 머지 완료 — main `c2b7f3c69c8bdd462a59e9d6b256b243943cfa81`. 머지 전 `mergeable:true`(`mergeable_state:unstable`은 갱신 전 낡은 체크 탓, 갱신 후 해소). 코드·매니페스트·워크플로 0파일이라 `deploy/` 자동 동기화 경로를 타지 않는다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:1fdec6464d3398310addece1e36f6fc9ee5c4775 data-plane:4fb1afe1bf2fa497ca717559afd0ccabb0bf139b web:8870879a7861b9d79b244055c344a6e3affa896c",
+          "verifiedAt": "2026-09-04T23:12:21Z",
+          "checks": [
+            {
+              "name": "① 계약이 SSOT에 있다",
+              "status": "passed",
+              "detail": "머지된 main(`5c380d8d`, PR squash `c2b7f3c6` + 이미지 핀)에서 `git grep -c 'ca-cert' -- 'docs/prd/*'` → `approval-gated-workload.md:3` · `claude-code-workload.md:2`. 직전 0건이었으므로 판정 기준 3(문서 없는 구현)의 이 표면이 닫혔다. 계획이 예고한 수치(3·2)와 정확히 일치."
+            },
+            {
+              "name": "② 게이트 3종 초록 + AC 회계 불변",
+              "status": "passed",
+              "detail": "머지된 main 실측 rc=0 셋: `check-fidelity-allowlist.py`(등재 seam 4 · 회계 행 19 · 차단 요인 0건) · `check-render-fidelity.py`(R1–R10 OK · 복제 파일 16 · 정본 토큰 24) · `check-ac-mapping.sh`(**AC 27 = 매칭 15 + 예외 1 + 공백 11**). 매칭 15·공백 11이 불변이므로 `### AC-` 헤딩과 e2e 파일을 건드리지 않았음이 확인된다 — 자매 모델 `tbm_session-platform-ac-e2e`의 축을 침범하지 않았다. PR CI도 갱신 후 11/11 초록."
+            },
+            {
+              "name": "③ 서술이 코드와 일치 (계약 3사실)",
+              "status": "passed",
+              "detail": "⑴ 주입 지점 1곳 — `client_orchestrator.go:753`의 `optionalSecretEnv(AnthropicCACertEnvVar, …, ClaudeCodeCACertSecretKey)`가 `credentialProxyContainer`(정의 :739) 안에 있고 그 함수는 :724(헬퍼 파드 AC-F6)·:733(사이드카 AC-E6) 두 곳에서 호출된다 ⇒ 문서가 두 배치 모두에 등재한 것이 옳다. 주 컨테이너 부재는 `test/workload_type_orchestrator_test.go:336-337`이 단언. ⑵ 「대체가 아니라 추가」 — `trustProviderCA`(`credential_proxy.go:90`)가 `x509.SystemCertPool()`을 받아 `AppendCertsFromPEM`으로 더하고 그 풀을 `RootCAs`로 둔다(교체 아님). ⑶ 시작 실패 — 번들에 인증서가 하나도 없으면 `credential proxy CA bundle contains no certificate` 오류가 `newCredentialProxy`로 올라가 `main.go:225-227`의 `os.Exit(1)`로 끝난다. 첫 요청까지 미루지 않는다. ⚠️ #70(`27bc0749`)이 같은 파일을 줄여 계획이 적은 줄번호(`:866`·`:759`·`:725`·`:734`)가 밀렸으나 구조는 동일해 서술은 그대로 참이다. 실행 근거는 CI `data-plane (lint + unit)` 잡이 초록으로 대신했다(`credential_proxy_ca_test.go` 5개 시험 포함)."
+            },
+            {
+              "name": "④ 잔여 gap 관측 (정보성 — 이 시도의 범위 밖)",
+              "status": "passed",
+              "detail": "계획이 후속으로 밀어둔 형제 잔여가 여전히 남아 있음을 사실로만 기록한다: 같은 Secret의 optional `k3s-mcp-url`·`plugin-marketplace-url`(`client_orchestrator.go:113-114`)이 `docs/prd/`에 **0건**이다(같은 판정 기준 3). 이 task의 완료 기준에 없으므로 converged 판정에 넣지 않는다. 이 PR이 `docs/` 지문을 `311a6869 → b483872e`로 움직였으므로 다음 감지 주기가 이 축을 다시 볼 기회를 갖는다."
             }
           ]
         }
