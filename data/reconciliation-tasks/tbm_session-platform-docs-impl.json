@@ -2043,7 +2043,7 @@
       "assessedAt": "2026-09-04T22:06:30Z"
     },
     "createdAt": "2026-09-04T22:06:30Z",
-    "updatedAt": "2026-09-04T23:03:56Z",
+    "updatedAt": "2026-09-04T23:10:00Z",
     "id": "rct_20260904-0008",
     "attempts": [
       {
@@ -2097,6 +2097,55 @@
           "required": false,
           "status": "not_required",
           "reason": "문서 전용 변경이라 사람 검토 신호가 하나도 걸리지 않는다. ⑴ 변경 범위가 `docs/prd/` 2파일(+5/−5, 6곳 치환)뿐이고 코드·매니페스트·워크플로 0파일이라 프로덕션 워크로드·데이터·이미지·스키마·설정에 실질 영향이 없다. ⑵ `deploy/`·`k8s/`를 건드리지 않아 「머지 = 적용」 GitOps 경로를 타지 않는다(런타임 영향 0). ⑶ `plan.riskLevel:low`이고 머지 후에도 revert 한 번으로 완전히 되돌아가는 가역 변경이며 불가역 지점이 없다. ⑷ 판단이 갈리는 모호함도 없다 — 같은 Secret의 다른 다섯 키가 이미 키 단위 서술 house style을 정해 두었고, 이 PR은 그 형식을 그대로 따른다. 따라서 「저위험·가역·이미 정해진 정책 범위 내의 문서 재동기화」에 해당해 승인 게이트 없이 실행한다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-04T23:01:00Z",
+          "finishedAt": "2026-09-04T23:10:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T23:01:00Z",
+              "finishedAt": "2026-09-04T23:02:00Z",
+              "log": "계약 3사실이 PR 본문에 반영됐는지 diff로 확인. `docs/prd/claude-code-workload.md`가 ⑴ `ANTHROPIC_CA_CERT`로 credential-proxy 컨테이너에만 optional SecretKeyRef 주입·주 컨테이너 미노출, ⑵ 시스템 루트 풀에 「추가할 뿐 대체하지 않는다」, ⑶ 값이 비어 있지 않은데 인증서가 하나도 파싱되지 않으면 첫 요청까지 미루지 않고 proxy 시작 실패 — 셋을 그대로 서술한다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T23:02:00Z",
+              "finishedAt": "2026-09-04T23:02:30Z",
+              "log": "AC-E6 설명(:99)에 `ca-cert` 문단이 `model` 키 서술 앞에 들어갔다(+1/−1 치환). 「자격 증명이 아니라 신뢰 앵커」 분류가 `model`·`models`의 optional 분류 선례를 따르고, 「이 키는 신뢰하는 발급자 집합만 넓히며 upstream origin을 시작 시 HTTPS로 고정하는 요구를 낮추지 않는다」로 보안 표면을 닫는다. 「사설 CA만 신뢰한다」로 읽히는 문장 없음."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T23:02:30Z",
+              "finishedAt": "2026-09-04T23:03:00Z",
+              "log": "AC-E6 검증 방법(:109)에 단언 항목 추가(+1/−1) — optional `ca-cert`가 credential-proxy에만 있고 주 컨테이너에 없음 · 값이 있으면 사설 발급자 대역 도달 · 같은 설정에서 공개 발급 upstream 검증도 계속 성공(신뢰 확대가 기존 신뢰를 약화하지 않음) · 부재/공백이면 시스템 풀만 · 인증서 없는 비어 있지 않은 번들은 시작 실패."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T23:03:00Z",
+              "finishedAt": "2026-09-04T23:03:30Z",
+              "log": "`docs/prd/approval-gated-workload.md` AC-F6에 파급 반영(+3/−3) — :117 배치 목록에 optional `ca-cert`를 헬퍼 파드 credential-proxy 컨테이너 배치로 덧붙이고, AC-E6 계약 재사용 문장에 「시스템 루트에 사설 발급자를 추가하는 신뢰 확대」를 넣고, 검증 방법 (b)항과 「파드 IP 바인딩에서도 동일」 목록에도 등재. 주입 지점이 `credentialProxyContainer` 하나이므로 두 배치가 같은 계약을 공유한다는 코드 사실과 일치."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T23:04:00Z",
+              "finishedAt": "2026-09-04T23:52:00Z",
+              "log": "게이트 재현을 로컬 대신 CI로 받았다. ⚠️ 첫 CI(`5fa6851a`)는 `comment policy ledger`만 실패했고 내용이 계획 지침이 예고한 baseline 2건(`2026-09-04(#3)` 행 320!=334 · 지문 `9cdef98eca26`!=`47cc2c1388aa`)과 글자 그대로 같았다. 그러나 **합격선의 전제가 그 사이 바뀌었다** — 형제 PR #70(`27bc0749`, 22:21)이 바로 그 행을 재판정(제거 6·유지 8, 320→328)해 main CI가 초록이 됐다. 즉 지침의 「main과 같은 실패」가 더는 성립하지 않고 브랜치 신호만 낡은 상태였다. 지침의 주의사항대로 force-push·rebase 없이 `PUT /pulls/72/update-branch`로 main을 브랜치에 **머지**(`5fa6851a`→`2d10b4f6`)하고 CI를 다시 받았다: 실행 11/11 초록(comment policy 포함). 병합 후에도 변경 범위 불변(2파일 +5/−5)."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-04T23:52:00Z",
+              "finishedAt": "2026-09-04T23:10:00Z",
+              "log": "PR #72 squash 머지 완료 — main `c2b7f3c69c8bdd462a59e9d6b256b243943cfa81`. 머지 전 `mergeable:true`(`mergeable_state:unstable`은 갱신 전 낡은 체크 탓, 갱신 후 해소). 코드·매니페스트·워크플로 0파일이라 `deploy/` 자동 동기화 경로를 타지 않는다."
+            }
+          ]
         }
       }
     ]
