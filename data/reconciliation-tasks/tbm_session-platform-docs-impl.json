@@ -1417,5 +1417,39 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-04T03:38:00Z"
     }
+  },
+  {
+    "toBeModelId": "tbm_session-platform-docs-impl",
+    "status": "action_required",
+    "trigger": {
+      "detectedAt": "2026-09-04T08:07:03Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "control-plane:e9ccb80ee7cd2b1c0a26986682508c694a7687ea data-plane:3f924596c4cc0edc39745298a4174c7903aceb47 web:fc8622effdc49b118e6e9cc0f9194591531adfdf",
+        "currentVersion": "control-plane:3cc9a9fc474e5514a6cec60d71cb8ee0b261b5d5 data-plane:8cd1d7c32168cf43c38c5f8e69fae66ef91ce4b3 web:fc8622effdc49b118e6e9cc0f9194591531adfdf"
+      },
+      "toBe": {
+        "previousVersion": "dd06288336550142179675604d3bd2d0369f9a70",
+        "currentVersion": "717061420d6fd6922ac9091c069432c896a98af8"
+      }
+    },
+    "stateSummary": {
+      "asIs": "**as-is = `control-plane/` · `data-plane/` · `web/` 트리, 관측 2026-09-04T08:07:03Z @ `0a750cd`**\n\n- `control-plane:3cc9a9fc… data-plane:8cd1d7c3… web:fc8622ef…` (직전 `control-plane:e9ccb80e… data-plane:3f924596…`).\n  **`web:` 부분은 불변** — 이번 슬라이스는 SPA를 건드리지 않았다.\n- 트리거는 PR #60(`aff738d`, 07:37:20Z, `feat(data-plane,control-plane): approval-gated 파드 쌍이 실제로\n  서게 하고 AC-F2 정책 오브젝트를 낸다`) + 자동 이미지 핀 `0a750cd`(07:38:54Z, `[skip ci]`).\n- **착지한 것**: data plane이 `approval-gated`·`mcp` 두 워크로드를 인식(`unknown data plane workload`\n  exit 경로 소멸) · credential-proxy가 배치별로 바인딩 분기(헬퍼=파드 IP, 사이드카=loopback 강제 유지) ·\n  AC-F2 NetworkPolicy 2종이 세션 셀렉터로 생성되고 헬퍼 파드 `ownerReferences`로 동반 회수 ·\n  `k8s/rbac.yaml:51-53`에 `networkpolicies` verbs `create,get,list,watch`(update·patch·delete 없음).\n- **프로덕션 롤아웃 확인됨**: ns `session-platform`의 Deployment `control-plane` 1/1 Ready,\n  새 파드가 이미지 `…:aff738de`로 07:43:25Z 기동, restart 0. 다만 기동 로그의\n  `data_plane_approval_gated_image:\"\"`가 **여전히 빈 값** — 이 타입은 프로덕션에서 아직 켜지지 않았다(의도).",
+      "toBe": "**to-be = `docs/` 트리, 관측 2026-09-04T08:07:03Z @ `0a750cd`**\n\n- `71706142…` (직전 `dd062883…`). #60이 `docs/doc-tracker.md`의 구현 사슬 부채 행을 실제 상태로 갱신했다.\n- 체계 집계 **불변**: 가치 6 · PRD 6 · **AC 27** · 테스트 6 · 여정 9 · mockup 6 · 워크로드 타입 3종.\n  `./scripts/e2e/check-ac-mapping.sh` = AC 27 = 매칭 14 + 예외 1 + 공백 12 **불변**,\n  `check-fidelity-allowlist.py` rc=0, `check-render-fidelity.py` rc=0.\n- 부채 행 `doc-tracker.md:56`이 **남은 것 셋**을 이름으로 열거한다 — ① AC-F3 승인 게이트 없음\n  ② AC-F5 RWX 공유 볼륨 미착지 ③ 프로덕션 활성화(게이트웨이 Secret 선결) + 정책 실집행 미검증(CNI 선결).",
+      "gap": "**유의미한 차이다 — 소비된 트리거이고, 잔여 중 최소 3건의 선행 조건이 0이다.**\n\n## ① 소비된 트리거 — 열린 task 0개, 재감지 경로 없음\n\n트리거 #60은 **이 모델 자신의 슬라이스**(`rct_20260903-0005`) 산출물이고, 그 task는\n`succeeded`·`converged: true`로 닫혔다(08:01:44Z). 지금 이 모델의 **열린 task는 0개**다.\nexecutor의 검증 ⑫가 잔여를 「**범위 밖, 판정 제외**」로 명시적으로 열거하고 `converged`에서 뺐다 —\n즉 **누구도 소유하지 않는 잔여**를 남기고 닫은 것이다. task를 닫는 행위는 대상 레포에 커밋을 만들지\n않으므로, 여기서 baseline만 전진시키면 그 잔여는 아무도 열지 않는다.\n\n*(이 fire는 executor가 `executing`인 동안 baseline을 전진시키지 않고 기다렸다 — 그 검증이\n`lastObservedVersion` 불변에 의존하기 때문이다. 08:01:44Z에 닫힌 뒤 판정한다.)*\n\n## ② 잔여를 **항목별** 해소 조건과 대조 — 3건 착수 가능 · 3건 선행 미발화\n\n| 잔여 | 원장·코드가 적은 선행 | 지금 상태(실측) | 판정 |\n| --- | --- | --- | --- |\n| **AC-F3 승인 게이트** | 원장 `:56` ①은 「없다」만 적고 **선행을 적지 않는다**. 코드 주석이 같은 말을 한다 — `data-plane/cmd/agent/session_mcp.go:102` 「Empty until AC-F3 lands」 | 구현 선행 **0**. 직전 계획이 이것을 뺀 사유는 「이 슬라이스의 3~4배」라는 **범위 크기**와 「게이트웨이 자격 증명이 없어 **검증**도 못 한다」였다 — 앞은 슬라이스 경계라 머지로 소멸했고, 뒤는 **실게이트웨이 대조**에만 걸리는 제약이지 구현·단위/통합 검증을 막지 않는다 | **착수 가능(선행 0)** |\n| **AC-F5 RWX 공유 볼륨** | 선행 서술 **없음** | `control-plane/internal/adapter/k8s/client_orchestrator.go:660` 주석이 그대로 「AC-F5's shared RWX volume is **not implemented yet**」 — 막는 것이 아니라 안 한 것 | **착수 가능(선행 0)** |\n| **SPA 세 번째 타입 카드** | 선행 서술 없음 | `web/src/api/types.ts:8` 「claude-code; approval-gated exists in the API contract but **has no screen**」. `WorkloadType`은 이미 3종을 선언(`:11`)하는데 화면만 없다. `web:` 해시는 이번 슬라이스에서 **불변** | **착수 가능(선행 0)** |\n| 프로덕션 활성화 | 원장 `:56` ③ 「`approval-gateway-credentials` Secret(url·api-key·user-id)이 **클러스터에 먼저 있어야 한다**」 | 클러스터 외부 조치(사람/운영)이고 발화하지 않았다 | **선행 미충족 — 제외** |\n| AC-F2 정책 **실집행** 검증 | 「정책 집행 CNI가 선결이고 e2e의 kindnet은 NetworkPolicy를 집행하지 않는다」 | 인프라 선결, 미발화 | **선행 미충족 — 제외** |\n| AC-F 전용 e2e | — | 자매 모델 **`tbm_session-platform-ac-e2e`** 소관(executor ⑫가 그렇게 적었다) | **제외 — 이중 계상 방지** |\n\n## ③ 판정 기준 1에 그대로 걸린다\n\n정의의 판정 기준 1은 「문서에 있으나 구현되지 않은 AC는 to-be 미달 gap이며 **drift다**. 백로그로\n치부해 이 루프 밖으로 빼지 않는다」이다. AC-F3·F5는 `docs/prd/approval-gated-workload.md`에 있는\nAC이고 구현이 없다. AC 집계 27은 불변이므로 **to-be가 낮아진 것이 아니라 as-is가 못 따라간 것**이다.\n\n## ④ 게이트는 잔여를 붉히지 않는다\n\n머지된 main에서 세 게이트를 재현했고 전부 통과다(`check-ac-mapping.sh` 27=14+1+12 불변 ·\n`check-fidelity-allowlist.py` rc=0 · `check-render-fidelity.py` rc=0). AC 매핑의 **공백 12**는\n카운터로 출력될 뿐 실패가 아니다 ⇒ **gap은 실재하고 CI는 초록**이며, baseline은 이 레코드가\n전진시킨다 = 이 기록이 유일한 사본.\n\n## ⑤ planner에게 넘기는 제약 · 정밀도 지적\n\n- **범위 권고**: AC-F3(게이트) 또는 AC-F5(RWX 볼륨) 중 **하나**를 한 슬라이스로. AC-F3은 직전 계획이\n  「이 슬라이스의 3~4배」로 평가한 크기이므로 더 쪼갤 여지를 먼저 볼 것. SPA 카드는 `web/`만 건드려\n  다른 둘과 충돌하지 않으므로 독립 슬라이스로도 좋다.\n- **AC-F3의 완료 기준을 「실게이트웨이 대조」로 잡지 말 것** — 그것은 미발화한 Secret 선결에 걸린다.\n  구현 + 단위/통합(가짜 게이트웨이)까지로 끊어야 닫을 수 있는 기준이 된다. 이 구분을 안 하면\n  executor가 닫을 수 없는 task를 받는다.\n- **원장 `:56` ③의 파일 참조가 부정확하다(경미)**: 「`k8s/deployment.yaml`의\n  `DATA_PLANE_APPROVAL_GATED_IMAGE`는 여전히 비어 있고」라고 적었으나 그 env는 **매니페스트에 선언 자체가\n  없다** — 선언된 이미지 env는 `DATA_PLANE_IMAGE`(`:52`)와 `DATA_PLANE_CLAUDE_CODE_IMAGE`(`:62`) 둘뿐이고,\n  값은 `control-plane/cmd/control-plane/main.go:268`의 `env(\"DATA_PLANE_APPROVAL_GATED_IMAGE\", \"\")`\n  기본값으로 빈 문자열이 된다. **「비어 있다」는 결론은 참**이므로 drift로 계상하지 않지만, 그 줄을\n  찾으러 가면 없으니 활성화 슬라이스에서 함께 정정할 것.",
+      "summarizedAt": "2026-09-04T08:07:03Z"
+    },
+    "assessment": {
+      "actionRequired": true,
+      "reason": "**작업이 필요하다(`actionRequired: true`).**\n\n1. **소비된 트리거**: 트리거 #60은 이 모델 자신의 슬라이스 머지이고 그 task는 `succeeded`·`converged`로\n   닫혀 **열린 task가 0개**다. executor의 검증 ⑫는 잔여를 「범위 밖, 판정 제외」로 열거만 하고 소유자를\n   남기지 않았다. 지금 열지 않고 baseline만 전진시키면 그 잔여의 재감지 경로가 사라진다.\n2. **잔여 중 3건의 선행 조건이 0이다** — 원장·코드를 항목별로 대조했다:\n   AC-F3 승인 게이트(`session_mcp.go:102` 「Empty until AC-F3 lands」, 선행 서술 없음),\n   AC-F5 RWX 공유 볼륨(`client_orchestrator.go:660` 「not implemented yet」),\n   SPA 세 번째 타입 카드(`web/src/api/types.ts:8` 「has no screen」). 직전 계획이 AC-F3을 뺀 사유는\n   **범위 크기**(슬라이스 경계 — 머지로 소멸)와 **실게이트웨이 검증 불가**(구현이 아니라 검증에만 걸린다)였다.\n3. **판정 기준 1에 정면으로 걸린다**: 문서에 있고 구현이 없는 AC는 drift이며 백로그로 빼지 않는다.\n   AC 집계 27은 불변이므로 as-is가 못 따라간 것이다.\n4. **게이트 사각**: 세 체커 전부 머지된 main에서 통과하고 공백 12는 실패가 아니라 카운터다.\n\n**제외한 것(선행 미발화 · 이중 계상)**: 프로덕션 활성화(`approval-gateway-credentials` Secret이\n클러스터에 먼저 있어야 한다 — 외부 조치) · AC-F2 실집행 검증(정책 집행 CNI 선결, kindnet은 집행하지\n않는다) · AC-F 전용 e2e(자매 `tbm_session-platform-ac-e2e` 소관 — **여기서 다시 열지 말 것**).\n\nplanner는 ⑤의 세 제약을 볼 것 — 특히 **AC-F3의 완료 기준을 실게이트웨이 대조로 잡으면 닫을 수 없는\ntask가 된다**.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-04T08:07:03Z"
+    },
+    "createdAt": "2026-09-04T08:07:03Z",
+    "updatedAt": "2026-09-04T08:07:03Z",
+    "id": "rct_20260904-0002"
   }
 ]
