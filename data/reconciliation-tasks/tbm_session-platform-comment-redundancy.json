@@ -751,6 +751,62 @@
       "assessedAt": "2026-09-05T00:00:30Z"
     },
     "createdAt": "2026-09-05T00:00:30Z",
-    "updatedAt": "2026-09-05T00:12:00Z"
+    "updatedAt": "2026-09-05T00:40:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**범위(완료 기준) = 다음 판정 슬라이스 3덩어리를 원장에 등재하고 게이트로 확정한다 — 판정 653줄 / 17파일.** ⑴ 게이트가 침묵하던 `data-plane/cmd/agent`의 등재 밖 68줄(#71이 더한 `approval_wait.go`·`approval_wait_test.go`)을 4번째 행에 **편입**, ⑵ `control-plane/internal/adapter/`의 k8s 외 전부(508줄/14파일)를 새 행으로 등재해 **어댑터 계층을 닫고**, ⑶ 4차 패스가 「다음 패스의 1순위」로 지목한 `control-plane/cmd/control-plane/main.go`(77줄)를 새 행으로 등재한다. 셋을 한 PR로 묶은 이유는 셋 다 `docs/comment-policy.md`의 같은 원장 표와 합계 마커를 건드려 R4 양방향 미러상 분리할 수 없기 때문이고, 서로 다른 패키지라 게이트가 각 행을 독립적으로 재측정한다. 접근은 확립된 절차 그대로다 — 범위 안 주석을 한 줄도 빠짐없이 읽고, 제거하는 줄마다 「이미 말하는 곳」 좌표를 원장에 적고, 애매하면 남긴다. **완료 기준은 절대 수치가 아니라 「머지된 main에서 `python3 scripts/check_comment_policy.py` rc=0 · 등재 범위 6 · 나머지 세 게이트 출력 baseline 동일」**로 적는다(직전 시도가 계획의 수치와 머지 후 실측이 갈린 원인이 실행 창 안의 main 전진이었으므로). **범위 밖**: `control-plane/test`(~602) · `web/*`(~267) · `internal/api`(61) · `internal/store`(30) · `internal/static`(13) · `internal/service` 잔여(31) — 재감지가 다음 슬라이스로 잇는다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-05T00:40:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "HEAD(3b591bd) 클린 트리에서 게이트 4종을 돌려 baseline을 고정한다: `check_comment_policy.py`(3125줄/117파일 · 판정 1457 · 등재 4) · `check-fidelity-allowlist.py` · `check-ac-mapping.sh` · `check-render-fidelity.py`.",
+              "expectedOutcome": "넷 다 rc=0. 이후 비교 대상이 되는 출력 문자열 확보."
+            },
+            {
+              "seq": 2,
+              "action": "게이트의 추출 함수(`comment_lines`)로 미판정 분포를 실측해 슬라이스 경계를 확정한다 — 미판정 1668줄 중 `data-plane/cmd/agent` 68 · `internal/adapter` 508 · `cmd/control-plane` 77을 고르고, 자매의 열린 PR #75(`control-plane/test/`·`docs/test/e2e.md`·`.github/workflows/e2e.yml`)와 겹치지 않음을 확인한다.",
+              "expectedOutcome": "선택 범위 653줄/17파일. PR #75와 파일 교집합 0."
+            },
+            {
+              "seq": 3,
+              "action": "`data-plane/cmd/agent/approval_wait.go`(48) · `approval_wait_test.go`(20)의 주석을 전량 읽고 판정한다. 복원 좌표는 ② AC-F3/AC-F2/AC-F4, ③ PR #71 본문(「방향을 pull로 고른 근거」·「판단이 갈린 지점」), ① `session_mcp_notices.go`·`session_mcp_notice_tail.go`의 정본 doc.",
+              "expectedOutcome": "제거 34 · 유지 34. 포인터(AC 태그·`session_mcp_notices.go`)는 남고 사본만 사라진다."
+            },
+            {
+              "seq": 4,
+              "action": "`control-plane/internal/adapter/`의 k8s 외 14파일(criu 5 · configmap 2 + envtest 2 · agent 3 · checkpointstore 2)을 전량 읽고 판정한다. 이 계층의 지배적 형태인 「인터페이스 doc · 구현 doc · 본문 인라인에 같은 계약이 두세 벌」을 골라내고, 계약을 소유하는 자리 하나만 남긴다.",
+              "expectedOutcome": "제거 156 · 유지 352. 동시성·락·순서 계약(configmap 74줄)과 CRIU/kubelet/S3 외부 지식은 유지 쪽."
+            },
+            {
+              "seq": 5,
+              "action": "`control-plane/cmd/control-plane/main.go`(77)를 판정한다. `docs/test/e2e.md`가 지목한 「helper pod의 session MCP는 아직 구현되지 않았다」가 **거짓인지 실측으로 확정**하고(데이터 플레인의 `session_mcp*.go` 8파일과 `main.go`의 `case workloadSessionMCP:` 존재), 같은 주장이 두 자리에 있음을 확인해 둘 다 지운다.",
+              "expectedOutcome": "제거 19 · 유지 58. 거짓 주석 2건 소멸, 현재 사유는 `docs/test/e2e.md`가 좌표까지 들어 소유."
+            },
+            {
+              "seq": 6,
+              "action": "두 모듈에서 `gofmt -l`(빈 출력) · `go build ./...` · `go vet ./...` · `go vet -tags=e2e ./...` · `go test ./...`를 돌리고, 변경 .go 16개에서 **주석 줄을 제외한 나머지가 HEAD와 완전히 같은지** 기계로 확인한다.",
+              "expectedOutcome": "전부 통과. 「비-주석 줄이 달라진 파일: 없음」 — 의미 변화 0의 산술 증명."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/comment-policy.md`를 갱신한다 — 4행에 신규 2파일 편입 + 줄수/지문 갱신(747→781 · `7dad4f10cce1`), 5행(adapter 352 · `45e1de866652`)·6행(cmd 58 · `44ca04abf7ff`) 신설, **합계 마커 1457 → 1901을 같은 커밋에서** 이동(R4), 그리고 제거 좌표표·유지 근거·갈린 판정을 담은 상세 절 3개를 추가한다.",
+              "expectedOutcome": "`check_comment_policy.py` rc=0 · 판정 완료 1901줄(65.2%) / 등재 범위 6 · 인구조사 2916줄."
+            },
+            {
+              "seq": 8,
+              "action": "음성 통제 5종으로 게이트가 실제로 무는지 확인한다: ⑴ 합계만 1457로 되돌리기(R4) ⑵ 신규 등재 파일 하나 빼기(R2) ⑶ 5행 지문 위조(R2) ⑷ 범위 밖 파일 등재(R1) ⑸ 등재 범위에 주석 한 줄 추가(R2).",
+              "expectedOutcome": "다섯 다 rc=1이고 각각 기대한 규칙 이름으로 실패. 복원 후 rc=0."
+            },
+            {
+              "seq": 9,
+              "action": "`reconcile/rct_20260905-0001-opus5-1m` 브랜치로 커밋·푸시하고 PR을 연다(머지는 검토자 몫). 본문에 task id·gap 요약·판정 수치·검증 방법·범위 밖 잔여를 적는다.",
+              "expectedOutcome": "PR 생성. CI 통과."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
