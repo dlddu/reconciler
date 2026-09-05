@@ -2335,7 +2335,7 @@
   {
     "id": "rct_20260904-0011",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-04T23:31:00Z",
       "changedSides": [
@@ -2364,7 +2364,7 @@
       "assessedAt": "2026-09-04T23:55:24Z"
     },
     "createdAt": "2026-09-04T23:55:24Z",
-    "updatedAt": "2026-09-05T01:20:00Z",
+    "updatedAt": "2026-09-05T01:22:00Z",
     "attempts": [
       {
         "plan": {
@@ -2478,6 +2478,99 @@
               "startedAt": "2026-09-05T00:48:00Z",
               "finishedAt": "2026-09-05T01:20:00Z",
               "log": "planner 가 연 PR #76 을 **머지**했다(step 8 은 계획상 PR 개설까지였고, 머지가 executor 의 몫이다).\n\n**머지 전 게이트 3종**\n1. base 재측정 — `origin/main` 이 `c36dcd4` 로 PR base 와 **동일**해 `origin/main` 재병합이 불필요했다(계획 한 사이클 동안 한 번 전진했던 것과 달리 이번엔 정지 상태였다).\n2. 지면 충돌 — 열린 형제 PR 둘과 교집합 **0**. #77(comment-policy)은 `data-plane/cmd/agent/approval_wait{,_test}.go`·`control-plane/internal/adapter/**`·`docs/comment-policy.md` 로 `entrypoint_test.go`·`docs/prd/` 를 건드리지 않고, #78(j6 e2e)은 `docs/test/e2e.md`·`web/e2e/journeys/**` 뿐이다.\n3. PR CI — head `d3a012b` 체크 15개 중 **14 success · 실패 0**(`pin` 은 main-only skip). `mergeable_state: clean`.\n\n**머지** — 레포가 squash 만 허용하므로(`allow_merge_commit:false`·`allow_rebase_merge:false`) 집안 관례 `<subject> (#N)` 형태로 squash 했다. 결과 커밋 **`ba3cddcd5a26efb9ed09692aa35b3373c7f2607b`**.\n\n**머지 후** — main CI 체크 **17개 전부 success**(`pin deployment images (main only)` 포함). pin job 이 `cb6a990` 으로 `k8s/deployment.yaml` 의 이미지 참조 3곳을 `ba3cddc` 로 고정했고, 그 커밋의 diff 는 `k8s/deployment.yaml` **한 파일 3줄뿐**이라 이 모델의 as-is(`control-plane`·`data-plane`·`web`)·to-be(`docs`) 어느 트리도 움직이지 않았다 — 검토 단계에서 「내용상 no-op」이라고 판단한 근거가 실측으로 확인됐다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:2ef446089f25c4bc743325d08cd967aa39cbd5e0 data-plane:4f4405746288af09bb2889e34b84cbbe8237e449 web:55d4b3e4326ec0e39c262122b478a22d66c5881f",
+          "verifiedAt": "2026-09-05T01:22:00Z",
+          "checks": [
+            {
+              "name": "V1 `docs/prd/` 의 `k3s-mcp-url` 등장",
+              "status": "passed",
+              "detail": "`grep -ro 'k3s-mcp-url' docs/prd/ | wc -l` = **2** (base `c36dcd4` 에서는 0). 완료 기준 1 의 절반."
+            },
+            {
+              "name": "V2 `docs/prd/` 의 `plugin-marketplace-url` 등장",
+              "status": "passed",
+              "detail": "`grep -ro 'plugin-marketplace-url' docs/prd/ | wc -l` = **2** (base 0). 완료 기준 1 충족 — 두 키 모두 0 → 1건 이상."
+            },
+            {
+              "name": "V3 `approval-gated-workload.md` 무변경",
+              "status": "passed",
+              "detail": "`git diff --stat c36dcd4 -- docs/prd/approval-gated-workload.md` **빈 출력**. AC-F6 은 이 부트스트랩을 두지 않기로 확정했으므로 등재 대상이 아니다 — #72(`ca-cert`)와 갈리는 지점을 의도대로 지켰다."
+            },
+            {
+              "name": "V4 `### AC-` 헤딩 총수",
+              "status": "passed",
+              "detail": "`grep -hc '^### AC-' docs/prd/*.md | paste -sd+ | bc` = **27** 불변. 기존 AC-E6 문단 안의 산문만 늘렸다."
+            },
+            {
+              "name": "V5 AC ↔ e2e 1:1 매핑 게이트",
+              "status": "passed",
+              "detail": "`scripts/e2e/check-ac-mapping.sh` rc=0 · `AC 27개 = 매칭 파일 16 + 예외 1 + 공백 10` — 병합 후 base 기대값과 정확히 일치. 자매 `tbm_session-platform-ac-e2e` 의 축을 한 칸도 움직이지 않았다."
+            },
+            {
+              "name": "V6 e2e 충실도 허용목록 게이트",
+              "status": "passed",
+              "detail": "`scripts/check-fidelity-allowlist.py` rc=0 · `등재 seam 4` · `회계 행 17` · `미해소 위반 2, 상한 2` · `차단 요인 0건` — 전부 기대값."
+            },
+            {
+              "name": "V7 주석 원장 게이트 (조용한 함정 지점)",
+              "status": "passed",
+              "detail": "`scripts/check_comment_policy.py` rc=0 · `등재 범위 4` · **전체 지문 `3cd4c41e0d3389c1d81b9cfd8e4e2c850eef9ba119d16c16967f6c43079a23ff` 불변**. 이 PR 이 `entrypoint_test.go` 에 넣은 것은 셸 문자열 안의 단언뿐이고 Go 주석 0줄이라 지문이 움직이면 안 되는 자리였다 — 움직였다면 R2(증분 주석 미판정)로 붉어졌을 것이다."
+            },
+            {
+              "name": "V8 렌더 충실도 게이트",
+              "status": "passed",
+              "detail": "`scripts/check-render-fidelity.py` rc=0 · R1-R10 OK (화면 매핑 · 정본 이탈 원장 · 패널 구조 · 상한 27/27 · 토큰 복제 원장)."
+            },
+            {
+              "name": "V9 control-plane 정적·단위 검사",
+              "status": "passed",
+              "detail": "`go vet ./...` rc=0 · `go vet -tags=e2e ./...` rc=0 · `gofmt -l .` 빈 출력 · `go test ./...` 8패키지 ok, FAIL 0. `-tags=integration ./test/` 와 envtest 는 클러스터가 필요해 로컬 미실행 — main CI 의 `integration (happy path)`·`envtest (real-apiserver CAS/Lease)` 가 success 로 덮었다."
+            },
+            {
+              "name": "V10 data-plane 정적·단위 검사",
+              "status": "passed",
+              "detail": "`go vet ./...` rc=0 · `gofmt -l .` 빈 출력 · `go test ./...` ok. 최초 실행의 두 실패는 샌드박스에 `jq` 가 없어 `entrypoint.sh:33` 이 `exit status 127` 로 죽은 환경 결손이었고, `jq` 설치 후 전부 통과했다(코드 회귀 아님)."
+            },
+            {
+              "name": "V11 entrypoint 테스트 3종",
+              "status": "passed",
+              "detail": "`go test ./cmd/agent/ -run Entrypoint -count=1` ok — `SkipsPluginBootstrapForShell` · `BootstrapsPrivateMarketplaceWithScopedAuthHeader…` · `PointsMarketplaceAndAuthHeaderAtTheConfiguredRemote` 전부 PASS."
+            },
+            {
+              "name": "음성 통제 4종",
+              "status": "passed",
+              "detail": "⑴ `EXPECTED_K3S_MCP_URL` 만 프로덕션 기본값으로 → red ✅ ⑵ `entrypoint.sh` 의 `k3s_mcp_url` 재정의를 하드코딩으로 → red ✅ ⑶ ⑵ 유지 + 새 단언 세 줄만 제거 → **green** ✅(그 회귀가 이 PR 이전까지 조용히 통과했다는 직접 증거 — 완료 기준 3 이 겨눈 비대칭이 실재했음을 확인) ⑷ PRD 두 키 문장 삭제 → V1·V2 = 0 ✅. 복원 후 백업과 바이트 동일, porcelain 0줄."
+            },
+            {
+              "name": "PR CI (head `d3a012b`)",
+              "status": "passed",
+              "detail": "체크 15개 중 **14 success · 실패 0**, `pin deployment images (main only)` 만 skip(main 전용). `mergeable_state: clean`."
+            },
+            {
+              "name": "머지 후 main CI (`ba3cddc`)",
+              "status": "passed",
+              "detail": "체크 **17개 전부 success** — 게이트 4종 · control-plane/data-plane lint+unit · integration · envtest · 이미지 빌드 4종 · web typecheck+build · `pin deployment images (main only)` · build/deploy/report-build-status. 완료 기준 4 충족."
+            },
+            {
+              "name": "pin job 의 영향이 내용상 no-op 임을 실측",
+              "status": "passed",
+              "detail": "머지가 깨운 pin job 이 `cb6a990` 으로 `k8s/deployment.yaml` 의 이미지 참조를 `ba3cddc` 로 고정했다. 그 커밋 diff 는 **`k8s/deployment.yaml` 한 파일 3줄뿐**이라 as-is 세 트리(`control-plane`·`data-plane`·`web`)와 to-be(`docs`) 어느 것도 움직이지 않았다. 검토 불필요 판정의 근거 ③ 이 실측으로 확인됐다."
+            },
+            {
+              "name": "트리 해시 이동의 귀속 (정보성)",
+              "status": "passed",
+              "detail": "`control-plane` 이 `521cba8b…` → `2ef44608…` 로 움직인 것은 **`c36dcd4`(자매 PR #75)의 몫**이지 이 실행이 아니다 — `ba3cddc` 는 `c36dcd4` 대비 `data-plane`(`c443a7fe…` → `4f440574…`, `entrypoint_test.go` 만)과 `docs`(`c5b615b7…` → `adc18c2e…`)만 움직였고 `web` 은 `55d4b3e4…` 로 불변이다. 이중 계상 방지를 위해 기록해 둔다."
+            },
+            {
+              "name": "모델 전체 잔여 gap (정보성 — converged 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "이 task 의 완료 기준은 plan 이 명시한 범위(두 키의 SSOT 등재)이고 그 범위는 수렴했다. 모델 전체로는 아래가 남아 있으며 전부 **레포 밖 선행**이 걸려 이번 범위에서 의도적으로 제외했다: ① AC-F5 RWX 공유 볼륨(클러스터 RWX StorageClass) ② 프로덕션 활성화(`approval-gateway-credentials` Secret + `DATA_PLANE_APPROVAL_GATED_IMAGE`) ③ NetworkPolicy 실집행·실게이트웨이 대조(집행 CNI — e2e 의 kindnet 은 집행하지 않는다) ④ SPA 세 번째 타입 카드(③ 종속). 자매 축인 j6 미해소 위반 2행(`tbm_session-platform-e2e-mock-policy`, PR #78 열려 있음)과 AC 공백 10(`tbm_session-platform-ac-e2e`)도 여기서 열지 않았다. 이 실행이 `data-plane`·`docs` 지문을 움직였으므로 **다음 감지 주기가 이 축들을 다시 본다** — 모델의 `lastObservedVersion` 은 의도적으로 건드리지 않았다."
             }
           ]
         }
