@@ -989,6 +989,67 @@
       "assessedAt": "2026-09-05T08:49:55Z"
     },
     "createdAt": "2026-09-05T08:49:55Z",
-    "updatedAt": "2026-09-05T08:52:21Z"
+    "updatedAt": "2026-09-05T09:00:20Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**미판정 1,292줄 중 143줄/11파일을 판정해 원장 7번째 행으로 등재하고, 같은 PR에서 이 원장 자신의 `파일:줄` 좌표 부패를 전수 정정한 뒤 그 재발을 게이트 규칙(R5)으로 끊는다.**\n\n**왜 이 범위인가.** 최대 잔여는 `control-plane/test/`(799줄/25파일)지만 그 경로는 자매 모델 `tbm_session-platform-ac-e2e`가 매 슬라이스 새 파일을 더하는 자리다(#75 +363 · #79 +91) — 저작 시점 측정이 머지 창 안에서 배신당하기 가장 쉬운 범위이고, 직전 사이클들이 두 번 그 형태로 데였다. 대신 **아무도 열어 두지 않은 경계**를 골랐다: 이 fire 시점 대상 레포의 열린 PR은 #81 하나뿐이고 그 지면은 `k8s/deployment.yaml`·`deploy/kustomization.yaml`로 이 슬라이스와 교집합 0이다(실측). 그리고 이 행이 들어가면 **스캔 범위에서 남는 미판정은 `control-plane/test/`와 `web/` 둘뿐**이 된다 — 경계가 두 개의 이름으로 줄어드는 착지라, 다음 슬라이스의 선택지가 산술이 아니라 이름이 된다.\n\n**왜 좌표 정정을 같은 PR에 접는가(fold-in).** 이 모델의 전제는 「제거한 주석의 지식은 좌표로 복원 가능하다」인데, 직전 슬라이스(#77)가 자기 원장의 좌표를 낡게 만들었다. 좌표를 세는 것은 이 PR이 어차피 다시 쓰는 파일이고, **`check_comment_policy.py`는 좌표를 검증하지 않아 영원히 초록이다** — 별도 task로 떼면 그 사이 다음 슬라이스가 좌표를 또 밀어 낸다. 나아가 좌표를 「고쳐 적기」만 하면 이번 슬라이스의 제거가 또 줄을 민다. 그래서 **숫자를 갱신하지 않고 심볼 앵커로 바꿔** 구조적으로 끊고(이 문서 대부분이 이미 그 형태다 — `ScanOnce` doc · `sessionPodRefs` doc), 그 형태를 **게이트 R5**(원장 문서 안 `파일:줄` 좌표 금지)로 강제한다. 직전 사이클의 「낡는 열거는 갱신하지 말고 정본 참조로 바꿔 구조로 끊을 것」과 같은 처방이고, 이번엔 그것을 기계가 지킨다.\n\n**이 시도의 완료 기준(범위).** 머지된 main에서 ① `python3 scripts/check_comment_policy.py` **rc=0**이고 **등재 범위 7**, 7행이 아래 11파일 전량을 덮는다 ② `docs/comment-policy.md` 안의 `파일:줄` 좌표 **0건** ③ R5의 음성 통제(좌표 한 건을 되돌리면 rc=1)가 성립 ④ `go build/vet/test`가 이 범위에서 기준선과 같다. **절대 수치(3193·59.5% 등)는 완료 기준이 아니다** — 머지 창 안에서 main이 전진하면 인구조사는 움직이고 등재 행은 움직이지 않는다.\n\n**범위(11파일 · 판정 대상 143줄 · 지문 `4aadadabcdf1` @af002f8)**: `control-plane/go.mod`(5) · `control-plane/cmd/control-plane/main_test.go`(0) · `internal/api/{api.go 30, api_test.go 19, workload_type_test.go 11, config_test.go 1, errors_test.go 0}` · `internal/service/approval_idle_test.go`(31) · `internal/static/static.go`(13) · `internal/store/store.go`(30) · `data-plane/go.mod`(3). 주석 0줄 파일도 등재한다 — R2가 *등재된 파일 목록만* 재측정하므로, 등재하지 않으면 그 파일에 나중에 생기는 주석이 rc=0 아래에서 영원히 미판정으로 남는다(직전 슬라이스가 정확히 그 형태로 68줄을 놓쳤다).\n\n**범위 밖(후속 — 재감지가 잇는다)**: `control-plane/test/` 799줄/25파일 · `web/e2e/**` 191줄/10파일 · `web/src/**` 156줄/16파일 · `data-plane/Dockerfile` 1줄(지문이 세지만 주석이 아니다 — `*) echo …` case 와일드카드 오검출. 비-주석을 원장에 넣으면 원장이 거짓을 주장하게 되므로 등재하지 않고 측정 메모로만 남긴다. 2차 패스의 「오검출 5줄」 선례와 같은 처리다).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "베이스라인 재현 — 클린 `af002f8`에서 `python3 scripts/check_comment_policy.py` 실행, 레코드의 as-is 지문과 글자 그대로 대조. 범위 11파일의 판정 대상 줄 수·지문을 게이트 자신의 추출 함수로 따로 측정.",
+              "expectedOutcome": "rc=0 · 「판정 대상 주석 3193줄 / 121파일 … 판정 완료 1901줄(59.5%) / 등재 범위 6」 · 전체 지문 `b9ec1973…`(레코드 currentVersion과 일치). 범위 11파일 = 143줄 · 지문 `4aadadabcdf1`."
+            },
+            {
+              "seq": 2,
+              "action": "범위 11파일의 주석 143줄을 **한 줄도 빠짐없이** 읽고 제거/유지를 판정한다. 유형 목록에서 찾지 않는다. 제거하는 줄마다 「이미 말하는 곳」 좌표를 **심볼 이름으로** 적는다(줄 번호 금지 — R5).",
+              "expectedOutcome": "제거·유지 판정이 143줄 전체를 덮고, 각 제거에 복원 경로(①코드 ②문서 ③PR ④커밋) 중 하나가 붙는다. 「애매하면 남긴다」로 갈린 건은 갈린 이유와 함께 유지."
+            },
+            {
+              "seq": 3,
+              "action": "판정대로 소스에서 주석만 편집한다. 비-주석 줄은 한 바이트도 건드리지 않는다.",
+              "expectedOutcome": "변경 파일에서 주석 줄을 제외한 나머지가 `af002f8`과 **바이트 동일**(산술로 증명). `go build ./...` · `go vet ./...` · `go test ./...`가 기준선과 같다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/comment-policy.md`에 7번째 판정 행(범위 11파일 · 현재 줄 수 · 12자리 지문 · 결과)과 상세 절을 추가하고, 합계 마커 1901 → (1901 + 이 범위의 유지 줄 수)로 **같은 커밋에서** 이동한다(R4 양방향 미러).",
+              "expectedOutcome": "`check_comment_policy.py` rc=0 · 「등재 범위 7」. 합계만 고치거나 행만 고치면 rc=1인 것을 음성 통제로 확인."
+            },
+            {
+              "seq": 5,
+              "action": "원장의 `파일:줄` 좌표 6건을 전수 정정한다 — 5건은 부패(`cmd/control-plane/main.go:152`→`signal.NotifyContext` 심볼, `main.go:79-82`×3→`k8s.WithWorkloadImage(session.WorkloadTypeApprovalGated, …)` 앞 인라인, `client_orchestrator.go:780-782`→게이트웨이 3종 `secretEnv(ApprovalGateway{URL,APIKey,UserID}EnvVar, …)`), 1건은 현재 정확하지만 줄 번호(`prd/approval-gated-workload.md:81`→AC-F3 「유휴 기준」 항목)라 같이 앵커화한다.",
+              "expectedOutcome": "`grep -nE '[A-Za-z0-9_./-]+\\.(go|ts|tsx|md|yaml|yml|sh|py):[0-9]' docs/comment-policy.md` 가 **0행**. 각 앵커가 현재 트리에 실재하는 것을 `git grep`으로 확인."
+            },
+            {
+              "seq": 6,
+              "action": "게이트에 **R5**를 더한다 — 원장 문서 안에서 `파일:줄` 형태의 좌표를 금지한다(줄 번호는 조용히 썩는데 R1~R4 어느 것도 그것을 보지 않는다). 규칙은 stdlib 정규식 하나로 끝낸다.",
+              "expectedOutcome": "R5 추가 후 rc=0. **음성 통제**: 좌표 한 건을 줄 번호 형태로 되돌리면 rc=1이고 실패 메시지가 `[R5]`다(exit code가 아니라 메시지가 그 단언인지 확인)."
+            },
+            {
+              "seq": 7,
+              "action": "레포의 정적 게이트를 전부 로컬 재현한다 — `check_comment_policy.py` · `check-fidelity-allowlist.py` · `check-render-fidelity.py` · `scripts/e2e/check-ac-mapping.sh`(있으면) — 그리고 `af002f8` pristine 체크아웃(`clone --shared` + `reset --hard && clean -fdx`)의 출력과 대조해 **내 변경 밖 게이트는 불변**임을 확인한다.",
+              "expectedOutcome": "comment-policy 외 게이트의 출력이 pristine과 동일(바이트 대조). comment-policy만 「등재 범위 6 → 7」·합계 이동만큼 달라진다."
+            },
+            {
+              "seq": 8,
+              "action": "브랜치 `reconcile/rct_20260905-0004-comment-redundancy`로 push하고 PR을 연다(머지하지 않는다). PR 본문에 task id · gap 요약 · 범위와 범위 밖 · 완료 기준 · 검증 방법 · R5의 근거를 적는다.",
+              "expectedOutcome": "PR이 열리고 CI가 붙는다. 변경 경로가 `control-plane/**`·`data-plane/**`를 포함하므로 `e2e (kind+API+browser)`까지 발화한다(경로 필터 계산 결과)."
+            },
+            {
+              "seq": 9,
+              "action": "**머지 직전 재측정** — main이 전진했으면 `origin/main`을 브랜치로 **머지**(rebase·force-push 금지, PR 번호 보존)하고 게이트를 다시 돌려 등재 행의 줄 수·지문이 여전히 맞는지 확인한다.",
+              "expectedOutcome": "머지 시점의 main에서 rc=0 · 등재 범위 7. 지문이 갈리면 그 범위를 재측정해 행을 갱신한 뒤에만 머지한다."
+            },
+            {
+              "seq": 10,
+              "action": "executor: PR 머지 후 머지된 main에서 완료 기준 4종을 재실행해 수렴을 판정한다.",
+              "expectedOutcome": "① rc=0 · 등재 범위 7 ② 좌표 grep 0행 ③ R5 음성 통제 rc=1 ④ go build/vet/test 기준선 동일. 넷 다 통과하면 `succeeded`."
+            }
+          ],
+          "plannedAt": "2026-09-05T09:00:20Z"
+        }
+      }
+    ]
   }
 ]
