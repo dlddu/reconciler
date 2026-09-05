@@ -2364,6 +2364,57 @@
       "assessedAt": "2026-09-04T23:55:24Z"
     },
     "createdAt": "2026-09-04T23:55:24Z",
-    "updatedAt": "2026-09-04T23:55:24Z"
+    "updatedAt": "2026-09-04T23:55:24Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**플랫폼 Secret의 optional `k3s-mcp-url`·`plugin-marketplace-url` 두 키를 `docs/prd/claude-code-workload.md` AC-E6의 SSOT 서술에 등재한다** — #72가 `ca-cert`에 대해 남긴 선례와 같은 모양·같은 지면으로. 대안(코드에서 두 키를 제거해 문서에 맞추기)은 배제했다: e2e SUT 오버레이가 두 키로 인클러스터 대역을 물려 claude-code 세션을 세우고 있어 제거하면 검증 경로가 무너진다. 정합성 모델의 「충돌 시 기본 방향」대로 **구현이 의도된 동작이므로 문서를 코드에 맞춘다**.\n\n**완료 기준(이 시도의 범위)** — 넷 다 참이면 성공:\n1. `grep -c` 로 `docs/prd/` 안의 `k3s-mcp-url` · `plugin-marketplace-url` 등장이 **각각 0건 → 1건 이상**.\n2. 그 서술이 소스 실측과 일치한다 — ⑴ claude-code **주 컨테이너에만** optional SecretKeyRef(`client_orchestrator.go:559-564`), ⑵ 키 부재·빈 값이면 `entrypoint.sh:10,15`의 `${VAR:-기본값}`이 프로덕션 기본값(`https://homelab-k3s-mcp.llkm.nl/mcp` · `https://github.com/dlddu/plugin-marketplace.git`)으로 떨어져 `k8s/` base가 한 줄도 안 바뀐다, ⑶ 두 주소는 **스킴을 강제하지 않는다**(프록시 upstream의 HTTPS 고정과 다르다), ⑷ 단명 GitHub token의 Git `extraheader` 범위가 **재정의된 URL을 따라 이동**해 넓어지지 않는다(`entrypoint.sh:56`), ⑸ `approval-gated`에는 이 부트스트랩 자체가 없어(AC-F6 확정) **`approval-gated-workload.md`는 건드리지 않는다** — #72와 갈리는 지점이다.\n3. 그 검증 방법이 **실재하는 단언에 대응한다**. `plugin-marketplace-url`은 `entrypoint_test.go`의 재정의 테스트가 이미 클론 대상과 헤더 범위를 함께 단언하지만, `k3s-mcp-url`은 env만 넣고 **curl이 그 주소로 갔는지 아무도 확인하지 않는다** — 그 비대칭을 가짜 curl의 단언 한 줄로 메운다(주석 0줄 추가: 원장 게이트 R2 회피).\n4. 게이트 4종 rc=0 유지 · AC 회계 `27 = 매칭 15 + 예외 1 + 공백 11` 불변 · `### AC-` 헤딩 수 불변 · data-plane `go vet`·`gofmt -l`·`go test ./...` 통과 · PR CI 전 잡 green.\n\n**명시적 범위 밖(후속)** — 완료 판정에 넣지 않는다: ① AC-F5 RWX 공유 볼륨(클러스터 RWX StorageClass 선행), ② 프로덕션 활성화(`approval-gateway-credentials` Secret + `DATA_PLANE_APPROVAL_GATED_IMAGE`), ③ NetworkPolicy 실집행·실게이트웨이 대조(집행 CNI 선행), ④ SPA 세 번째 타입 카드(③ 종속), ⑤ j6 미해소 위반 2행(자매 `tbm_session-platform-e2e-mock-policy`의 축 — 여기서 열지 않는다), ⑥ AC 공백 11(자매 `tbm_session-platform-ac-e2e`의 축).\n\n**`k8s/claude-code-credentials-secret.example.yaml`도 같은 PR에서 함께 본다**(운영자가 실제로 읽는 참조 지면인데 다른 키 여섯은 전부 설명하면서 이 둘만 빠져 있다). `k8s/`는 이 모델의 as-is 범위 밖이므로 **수치 완료 기준에는 넣지 않고** 정의가 허용하는 「함께 보고」로 처리한다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "세션 전용 checkout에서 `reconcile/rct_20260904-0011-opus5-1m` 브랜치를 `origin/main`(계획 시점 `3b591bd`)에서 딴다. 편집 전에 baseline 을 잡 전용 tmp 에 고정한다: 게이트 4종 rc·요약줄, `grep -c` 로 `docs/prd/` 안 두 키의 등장 수, `### AC-` 헤딩 총수, data-plane `go test ./...` 결과.",
+              "expectedOutcome": "baseline 기록 — 게이트 4종 rc=0(`등재 seam 4`·`회계 행 17`·`미해소 위반 2, 상한 2` / `AC 27 = 15 + 1 + 11` / 주석 원장 지문 `caf0e055…` / 렌더 R1-R10 OK), 두 키 등장 **0건**, `### AC-` 27개, data-plane 테스트 통과."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/prd/claude-code-workload.md` AC-E6 **설명**의 부트스트랩 문단(현재 101행)에 두 optional 키를 등재한다: 주 컨테이너 전용 optional SecretKeyRef(`K3S_MCP_URL`·`CLAUDE_CODE_PLUGIN_MARKETPLACE_URL`), 키 부재·빈 값 시 프로덕션 기본값 fallback(⇒ `k8s/` base 불변), 두 주소에 스킴 강제가 없다는 것과 그 경계, 그리고 Git `extraheader` 범위가 재정의된 URL을 따라 이동해 넓어지지 않는다는 것. 마켓플레이스 원격은 같은 저장소 모양을 서빙해야 `session-platform@dlddu-plugins` 설치가 성립한다는 것도 함께 적는다.",
+              "expectedOutcome": "`grep -c 'k3s-mcp-url'`·`grep -c 'plugin-marketplace-url'` 가 `docs/prd/claude-code-workload.md` 에서 0 → 1 이상. `### AC-` 헤딩 수 불변. `docs/prd/approval-gated-workload.md` 무변경."
+            },
+            {
+              "seq": 3,
+              "action": "같은 AC-E6 의 **검증 방법**(현재 109행)에 확인 항목을 추가한다: 두 키가 주 컨테이너에만 optional SecretKeyRef 로 있고 credential-proxy·control-plane 에는 없다는 것, 키를 주면 부트스트랩의 두 상류가 그 주소로 이동하고 마켓플레이스 auth 헤더 범위도 함께 이동한다는 것, 키가 없거나 비면 프로덕션 기본값으로 떨어진다는 것.",
+              "expectedOutcome": "추가한 문장이 전부 **실재하는 단언에 대응**한다 — `control-plane/test/workload_type_orchestrator_test.go:246-250`(두 키의 optional SecretKeyRef · 주 컨테이너의 예상 밖 Secret env 금지), `data-plane/cmd/agent/entrypoint_test.go`(기본 경로 · 재정의 경로 · 헤더 범위 이동), 그리고 4단계가 더하는 K3s MCP 대상 단언."
+            },
+            {
+              "seq": 4,
+              "action": "`data-plane/cmd/agent/entrypoint_test.go` 의 재정의 테스트(`TestEntrypointPointsMarketplaceAndAuthHeaderAtTheConfiguredRemote`)에서 가짜 `curl` 이 **자기 마지막 인자가 `K3S_MCP_URL` 값과 같은지** 단언하게 한다. 현재는 env 만 넣고 아무도 확인하지 않아 `k3s-mcp-url` 만 비대칭으로 미검증이다. **Go 주석은 한 줄도 더하지 않는다**(주석 원장 R2 회피) — 단언은 셸 문자열 안에 넣는다.",
+              "expectedOutcome": "`go test ./cmd/agent/ -run Entrypoint -count=1` ok. `python3 scripts/check_comment_policy.py` 의 전체 지문이 `caf0e055…` 로 **불변**(주석 0줄 증가). 음성 통제: 기대 URL 을 프로덕션 기본값으로 바꾸면 red."
+            },
+            {
+              "seq": 5,
+              "action": "`k8s/claude-code-credentials-secret.example.yaml` 의 헤더 주석에 두 optional 키를 다른 여섯 키와 같은 톤으로 설명한다(운영자 참조 지면). `stringData` 에는 값을 넣지 않는다 — 프로덕션은 이 둘을 생략하고 기본값을 쓰는 것이 정상 경로다.",
+              "expectedOutcome": "예제 매니페스트가 Secret 의 **전체 키 집합**을 설명한다. `k8s/` 는 as-is 지문 밖이라 수치 완료 기준에는 들어가지 않는다. 게이트 4종 rc 불변(주석 원장은 `.go`/`.ts` 만 스캔한다)."
+            },
+            {
+              "seq": 6,
+              "action": "음성 통제를 돌린다 — `cp` 로 백업 후 ⑴ 두 키 문장 삭제 ⑵ 새 단언의 기대 URL 을 기본값으로 교체 ⑶ `entrypoint.sh` 의 `k3s_mcp_url` 참조를 하드코딩으로 되돌리기 를 각각 넣고 판정이 뒤집히는지 본 뒤 복원한다. `git checkout --` 는 쓰지 않는다(미커밋 작업 유실).",
+              "expectedOutcome": "⑴ 은 V1·V2 를 0 으로, ⑵⑶ 은 `go test -run Entrypoint` 를 red 로 만든다. 복원 뒤 `diff` 로 백업과 **바이트 동일**."
+            },
+            {
+              "seq": 7,
+              "action": "깨끗한 트리에서 게이트 4종 + AC 회계 + data-plane `go vet`·`gofmt -l`·`go test ./...` 를 재실측해 baseline 과 대조한다.",
+              "expectedOutcome": "게이트 4종 rc=0 이고 수치가 baseline 과 **전부 동일**(`등재 seam 4` · `회계 행 17` · `미해소 위반 2, 상한 2` · `AC 27 = 15 + 1 + 11` · 주석 지문 `caf0e055…` · 렌더 R1-R10 OK). data-plane 3종 통과."
+            },
+            {
+              "seq": 8,
+              "action": "커밋·푸시하고 대상 레포에 PR 을 연다(머지는 하지 않는다). PR 본문에 task id, gap 요약(두 키의 PRD 0건 대조표), 계획 단계, 검증 방법, 범위 밖 목록을 적는다. push 는 인라인 토큰 URL 로 한다 — `~/.git-credentials` 는 형제 워커와 공유되므로 덮어쓰지 않는다.",
+              "expectedOutcome": "PR 이 열리고 CI 전 잡이 green. 브랜치명에 모델 슬러그를 붙여(`reconcile/<rct>-opus5-1m`) 형제 워커의 열린 PR 브랜치를 밟지 않는다."
+            }
+          ],
+          "plannedAt": "2026-09-05T00:32:00Z"
+        }
+      }
+    ]
   }
 ]
