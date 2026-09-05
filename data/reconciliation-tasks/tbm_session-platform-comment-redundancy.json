@@ -989,7 +989,7 @@
       "assessedAt": "2026-09-05T08:49:55Z"
     },
     "createdAt": "2026-09-05T08:49:55Z",
-    "updatedAt": "2026-09-05T09:00:20Z",
+    "updatedAt": "2026-09-05T09:24:00Z",
     "attempts": [
       {
         "plan": {
@@ -1048,6 +1048,14 @@
             }
           ],
           "plannedAt": "2026-09-05T09:00:20Z"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20260905-0004-comment-redundancy",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/82",
+          "preparedAt": "2026-09-05T09:24:00Z",
+          "notes": "base `af002f8` · 10파일 +159/−94. 계획 범위 그대로 착지했다.\n\n**판정**: 143줄/11파일(지문 기준) → 86줄. 실제 판정 대상은 142줄(`approval_idle_test.go`의 임베드 필드 `*agent.StubClient` 1줄은 2차 패스가 적어 둔 지문 오검출) — **제거 57 · 유지 85**. 원장 7행(`4b1264fc2b5f`)과 합계 마커 1901 → **1987**을 같은 커밋에서 움직였다(R4 양방향 미러).\n\n**계획 대비 넓어진 것 1건 — 좌표는 5건이 아니라 6건이었다.** detector가 「전수 5건」이라 적었지만 정규식으로 파일 전체를 세니 6건이다(`prd/approval-gated-workload.md:81`을 놓쳤다). 여섯째는 **현재 정확하지만** 같은 줄 번호 형태라 함께 앵커화했다. *상위 단계의 「전수」는 하한이다 — 같은 형태를 파일 전체에서 다시 셀 것.*\n\n**계획에 없던 것 1건 — 부패의 원인이 절차 문면이었다.** 「판정 절차」 3번이 *「어느 파일 몇 줄이」* 로 **줄 번호를 요구하고 있었다.** 좌표만 고치고 이 문장을 두면 다음 패스가 같은 부패를 다시 만든다 — *「어느 파일의 어느 심볼이」* 로 고쳤다. R5만 넣고 이 문장을 두었으면 문서가 자기 게이트와 모순한다.\n\n**낡아 거짓이 된 주석 2건을 확정해 지웠다** — `control-plane/go.mod`의 「no extra runtime deps」와 「Only the Checkpointer (CRIU) remains an in-memory stub, so its external deps are not required yet」. 반증이 **같은 파일 다섯 줄 아래**에 있다(aws-sdk 다섯 + gorilla/websocket 직접 의존, 그리고 5차 패스가 이미 등재한 `adapter/criu/*`·`adapter/checkpointstore/store.go`).\n\n**선례를 모양이 아니라 근거로 따랐다** — `api.go`의 절 배너 3개(`// ---- handlers ----` 등)는 「지식 0」이라 제거 후보로 보였으나, 5차 패스가 `adapter/configmap/store.go`의 같은 배너를 **유지 판정**했음을 `git grep`으로 확인하고 남겼다(「같은 형태에 다른 기준을 적용하지 않는다」). 반대로 `store.go`의 `AC mapping:` 블록은 1차 패스가 `session.Manager`의 같은 블록을 남긴 근거(포트→AC 방향 색인이 문서에 없다)가 그대로 성립해 유지했다.\n\n**로컬 검증(전부 실측)**: ① `check_comment_policy.py` rc=0 · 등재 범위 7 · 판정 완료 1987줄(63.4%) ② 좌표 grep **0행** ③ **음성 통제 4종 전부 rc=1이고 메시지가 의도한 규칙**(R5 좌표 2형태 · R4 합계만 되돌리기 · R2 등재한 0줄 파일에 주석 추가 — 셋째가 「0줄 파일도 등재」 설계를 확인한다). 복원은 `cp` 백업으로 하고 `cmp`로 바이트 동일 확인 ④ 비-주석 줄이 8파일 전부 `af002f8`과 **바이트 동일** (70/328/445/232/212/32/19/6) ⑤ `control-plane` go build/vet/test 통과, `data-plane` build/vet 통과 ⑥ 내 변경 밖 게이트 3종(fidelity · render-fidelity · ac-mapping)이 `af002f8` pristine (`clone --shared` + `reset --hard && clean -fdx`, porcelain=0) 출력과 **바이트 동일**.\n\n**기대 CI**(선례를 베끼지 않고 변경 경로 × 워크플로 `paths`로 계산했다): `ci.yml`은 path filter가 없어 전 잡 발화 · `e2e.yml`은 `control-plane/**`·`data-plane/**`에 걸려 **발화한다** · `docs-journey-mockup.yml`은 `docs/journeys/**`·`docs/index.html` 등만 걸려 `docs/comment-policy.md` 변경으로는 **발화하지 않는다**.\n\n브랜치 이름에 모델 슬러그를 넣었다(`rct` id는 모델 간 유일하지 않다). 형제 PR은 #81 하나뿐이고 지면 교집합 0."
         }
       }
     ]
