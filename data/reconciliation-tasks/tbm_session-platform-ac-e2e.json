@@ -1620,7 +1620,7 @@
   {
     "id": "rct_20260905-0003",
     "toBeModelId": "tbm_session-platform-ac-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-05T02:19:31Z",
       "changedSides": [
@@ -1763,6 +1763,44 @@
               "startedAt": "2026-09-05T08:47:30Z",
               "finishedAt": "2026-09-05T08:48:00Z",
               "log": "(plan.steps 밖 — 순서표 3행.) PR #80 을 **squash 머지**했다 — head `8671a5e`, 머지 커밋 `4a367c6`, `merged=true`. 머지 후 main 의 트리 해시 `789a976059c76b2ac6e8019833b8385fa59facc6` 가 seq 8 에서 실측한 로컬 머지 트리와 **동일** — 스쿼시가 재측정한 그 상태를 그대로 착지시켰고 머지 창 동안 빠진 것이 없다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "api:14f3bf84afb959f251ca1aa715ad4e793dcfa475d7304f25d98cdeded78a02ee web:c2f6cbdb96d9636e1fe9b1bfe0eced6f495f55cf",
+          "verifiedAt": "2026-09-05T08:45:43Z",
+          "checks": [
+            {
+              "name": "완료 기준 A-1 — 공백 목록 산문 사본 소멸 (`grep -c 'E2~E6'` == 0)",
+              "status": "passed",
+              "detail": "머지된 main(`4a367c6`)에서 **0**. 새 base `dc46905` 에서는 **4**(넷 다 공백 목록 사본: :141 · :379-380 · :387 · :389). 이것이 이 축의 유일한 판별자다 — 게이트는 마커 블록 밖 산문을 파싱하지 않으므로 rc 로는 영원히 잡히지 않는다."
+            },
+            {
+              "name": "완료 기준 A-2 — 근거 ① 의 파일 구성 서술 정정",
+              "status": "passed",
+              "detail": "`grep -c '파일에서 묶어'` base 1 → **0**, `grep -c '세 파일로 나뉘었다'` base 0 → **1**, `grep -c '654줄'` base 2 → **1**. 남은 1건은 `:114` 의 「654줄 한 파일을 세 파일로 나누고」로 #78 의 이력 서술이라 **사실이며 남는 것이 정답**이다(계획 step 4 의 기대값 `0` 은 preparation 이 정정한 오기)."
+            },
+            {
+              "name": "정적 게이트 4종 — rc=0 · 새 base 와 출력 바이트 동일",
+              "status": "passed",
+              "detail": "머지된 main 에서 `check-fidelity-allowlist` · `check-render-fidelity` · `check_comment_policy` · `check-ac-mapping` 모두 rc=0 이고 새 base `dc46905` 출력과 `cmp -s` **네 개 전부 동일**. `check-ac-mapping` 은 「AC 27개 = 매칭 파일 17 + 예외 1 + 공백 9 (매칭 단위 20개, 비-AC 3개)」와 공백 목록 `AC-E3 AC-E4 AC-E5 AC-F1…F6` 을 낸다 — #79 머지가 만든 수치이고 **이 PR 은 그것을 움직이지 않았다**. 계획이 예고한 「base 가 움직이면 base 를 머지 후 main 으로 다시 잡아 대조」를 그대로 적용한 결과."
+            },
+            {
+              "name": "마커 블록 무변경 — 기계 확인",
+              "status": "passed",
+              "detail": "블록 9개(`ac-summary`·`ac-mapping`·`ac-exceptions`·`ac-nonac`·`fidelity:*`)의 줄 범위와 `git diff -U0 origin/main` 변경 줄 16개의 **교집합 = 0**(`INSIDE-BLOCK CHANGES: none`). 즉 #79 의 완료 기준 수치도, 자매 모델 `tbm_session-platform-e2e-mock-policy` 소관인 `fidelity:*` 회계도 건드리지 않았다. 지침의 🔴 두 번째 주의사항 준수."
+            },
+            {
+              "name": "머지 결과 == 재측정한 상태 (스쿼시 무손실)",
+              "status": "passed",
+              "detail": "머지 후 main 트리 `789a9760…` 가 seq 8 의 로컬 머지 트리와 동일. 변경 파일은 `docs/test/e2e.md` **하나**뿐이고 코드 0줄."
+            },
+            {
+              "name": "[정보성] 모델 전체 잔여 gap — 이 task 의 범위 밖",
+              "status": "passed",
+              "detail": "공백 9건이 남는다: **AC-E3/E4/E5** 는 페이크 provider 대역 확장(상수 응답·`content_block_delta` 1개)이 선행이고 그 파일은 자매 모델 소관, **AC-F1~F6** 은 approval-gated 워크로드가 SUT 에 서지 않는 것이 선행이다. 다만 이번 실행 중 관측: **PR #81 「feat(deploy): approval-gated 워크로드를 프로덕션에서 켠다」가 열려 있다** — 착지하면 F 계열의 외부 선행이 풀릴 수 있다. 이 잔여 gap 은 converged 판정에 넣지 않으며(계획 범위는 산문 다섯 지점), 후속은 **다음 감지 주기**가 새 task 로 잇는다. 이 실행이 `reg:` 지문을 `32859ff4…` → `4fff8710…` 으로, #79 가 `api:` 지문을 `6b9d5e3f…` → `14f3bf84…` 로 움직였으므로 재감지 트리거는 이미 서 있다."
             }
           ]
         }
