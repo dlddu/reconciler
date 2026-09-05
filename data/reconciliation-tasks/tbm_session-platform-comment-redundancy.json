@@ -718,5 +718,39 @@
         }
       }
     ]
+  },
+  {
+    "id": "rct_20260905-0001",
+    "toBeModelId": "tbm_session-platform-comment-redundancy",
+    "status": "action_required",
+    "trigger": {
+      "detectedAt": "2026-09-04T23:31:00Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "lines=3225 files=113\n41b64e0808b110c1635e6ba2ba67b3c328dff24f5eac1cdb530404bf8c61adc2",
+        "currentVersion": "lines=3125 files=117\ncaf0e05555bbc567416b8a3763950ae320df2570272345a948ec43dcf00caac5"
+      },
+      "toBe": {
+        "previousVersion": "305377cc6e026462d95113f236b37f81414b5b54",
+        "currentVersion": "72ef5ef2b1703b3e711601ad599d95666bef81f8"
+      }
+    },
+    "stateSummary": {
+      "asIs": "**as-is = 스캔 범위(`control-plane` · `data-plane` · `web/src` · `web/e2e`) 주석 인구조사 `lines=3225 files=113` → `lines=3125 files=117`(지문 `41b64e08…` → `caf0e055…`).**\n\n두 커밋이 옮겼다: **#71 `3726dbd`**(AC-F3 유휴 예외 — `approval_wait.go`·`approval_wait_test.go` 신설 등으로 파일·줄 증가)와 **#74 `f0134e4`**(이 모델 자신의 슬라이스, `data-plane/cmd/agent` 21파일 주석 976줄 판정 — 제거 237 · 유지 739).\n\n**게이트 실측(HEAD `3b591bd`, 클린 트리)** — `python3 scripts/check_comment_policy.py` rc=0:\n\n```\nOK: 규칙 R1~R4 위반 없음 — 판정 대상 주석 3125줄 / 117파일\n   (Go 소스 1717 · Go 테스트 1121 · TypeScript 234 · 기타 53)\n   판정 완료 1457줄(46.6%) / 등재 범위 4\n  143줄  b43d405ac066  control-plane/internal/session/{session,manager}.go\n  239줄  1d85544cb83a  control-plane/internal/service/{manager,reaper,…}.go\n  328줄  b09a85723f8c  control-plane/internal/adapter/k8s/{client_orchestrator,orchestrator,network_policy,…}.go\n  747줄  c6b11fc5193e  data-plane/cmd/agent/(21파일)\n```\n\n⇒ **미판정 3125 − 1457 = 1,668줄.** 직전 관측(판정 완료 700줄 / 21.7%) 대비 **완료가 757줄 늘었고 비율은 21.7% → 46.6%**다.\n\n**미판정 잔여의 분포(자체 계수 — 체커의 지시자-줄 제외를 반영하지 않은 근사, 합계 ≈1,700이 게이트의 1,668과 대략 일치)**:\n\n| 미판정 줄(근사) | 파일 | 범위 |\n| --- | --- | --- |\n| ~643 | 23 | `control-plane/test/` (Go e2e) |\n| ~499 | 13 | `control-plane/internal/adapter/` (k8s 3파일 외) |\n| ~104 | 7 | `web/e2e/journeys/` |\n| ~78 | 1 | `control-plane/cmd/control-plane/` |\n| **~68** | **2** | **`data-plane/cmd/agent/` — 방금 판정한 패키지에 #71이 나중에 더한 `approval_wait.go`(48) · `approval_wait_test.go`(20)** |\n| ~61 | 4 | `control-plane/internal/api/` |\n| ~163 | 15 | `web/src/{app,screens,api,design}` |\n| ~31 | 1 | `control-plane/internal/service/` (등재 6파일 외) |\n| ~30 / ~14 | 1 / 1 | `control-plane/internal/store` · `internal/static` |\n\n68줄 항목은 executor의 verification ⑤가 남긴 수치(`approval_wait.go` 48줄 · `approval_wait_test.go` 20줄)와 **독립 계수로 정확히 일치**한다.",
+      "toBe": "**to-be = `docs/comment-policy.md` blob `305377cc…` → `72ef5ef2…`.** 두 커밋이 옮겼다 — **#71 `3726dbd`**(+19/−2, `internal/service` 행 229→239 재판정)과 **#74 `f0134e4`**(+88/−1, `data-plane/cmd/agent` 판정 원장 4번째 행 등재 + 합계 마커 700→1457).\n\n모델의 to-be는 「**스캔 범위의 모든 판정 대상 주석이 정책 절차로 판정돼 원장에 등재된 상태**」다. 현재 원장은 4행(143 · 239 · 328 · 747)에 합계 마커 1457로, 스캔 범위 3125줄의 **46.6%**만 덮는다.\n\n**게이트의 자기 선언(소스 docstring)**: 「이 체커가 판정하는 것은 **원장의 무결성**이지 중복 자체가 아니다 … 기계는 판정이 끝난 범위가 그 뒤로 변하지 않았는지만 본다.」 규칙은 R1(범위 실재) · **R2(등재된 범위를 as-is와 동일한 추출·정규화로 재측정해 줄수·지문 대조)** · R3(파일 중복 등재 금지) · R4(합계 마커 양방향 미러).",
+      "gap": "**유의미한 gap이 실재한다 — 미판정 1,668줄(53.4%). 소비된-트리거의 「범위 경계로 밀림」 변형이고, 이 모델이 설계상 반복하는 슬라이스 진행이다.**\n\n형태는 교과서적이다: 내 슬라이스 #74 머지 · `rct_20260904-0006` `succeeded`/`converged:true` · **열린 task 0** · verification ⑤가 「두 이동 모두 **다음 감지 주기의 트리거**다」로 detector를 소유자 지목. 항목별 유예 사유 대조:\n\n| 잔여 | 유예 사유(원문) | 성격 | 판정 |\n| --- | --- | --- | --- |\n| `data-plane/cmd/agent`의 68줄(#71이 더한 2파일) | 「등재 행 파일 목록 밖이라 미판정으로 남고 … 이 시도의 범위 밖」 | **슬라이스 경계** | 발화 |\n| `cmd/control-plane`(~78) 등 컨트롤 플레인 잔여 | 「모두 이 시도의 범위 밖」 | **슬라이스 경계** | 발화 |\n| `control-plane/test`(~643) · `internal/adapter` 나머지(~499) · `web/*`(~267) | 계획이 패키지 단위로 끊었을 뿐 | **슬라이스 경계** | 발화 |\n\n**외부 선행이 0건이다.** 대상 파일은 전부 이 모델 as-is 안이고, 다른 레포·클러스터·사람 결정에 걸린 항목이 하나도 없다. 유일한 실무적 차단이었던 「형제 PR이 그 파일을 잡고 있다」도 지금 열린 PR이 `tbm_session-platform-ac-e2e`의 **#75**(`control-plane/test/e2e_e2_prompt_invocation_test.go` 신설 + `docs/test/e2e.md` + `.github/workflows/e2e.yml`) 하나뿐이라 범위를 고르면 피할 수 있다.\n\n**재감지 경로**: 이 모델의 as-is는 스캔 범위 **전체** 주석을 해시하므로 「누군가 어디든 주석을 고치면」 지문이 움직인다. 그러나 그것은 **다른 모델의 작업이 만드는 부수효과이지 이 잔여의 다음 슬라이스를 여는 경로가 아니다** — 그리고 지금 baseline을 전진시키면 현재 관측된 1,668줄은 다음 주석 편집이 있을 때까지 보이지 않는다. 게이트도 rc=0에 카운터만 찍는다.\n\n---\n\n### ⚠️ 계획 입력 — R2는 「등재된 파일」만 재측정한다(선언==실측을 단언하지 않는다)\n\n체커 docstring이 겨냥하는 실패 모드가 **이번에 실제로 재현됐다**: 「판정을 잰 커밋과 머지 커밋 사이에 다른 PR이 그 경로에 주석을 더하면, 그 증분은 어느 행에도 속하지 않은 채 영원히 미판정으로 남는다.」 #71이 `data-plane/cmd/agent/`에 `approval_wait.go`·`approval_wait_test.go`를 신설했고, #74의 원장 행은 그 패키지의 **21개 파일을 이름으로** 열거하므로 두 새 파일은 어느 행에도 속하지 않는다. **R2는 등재된 파일 목록을 재측정할 뿐 「이 패키지에 등재 밖 파일이 있는가」를 묻지 않으므로 그 68줄에 대해 침묵한다.**\n\n이것은 게이트 결함 주장이 아니다 — 총 인구조사(3125)와 완료(1457)를 나란히 출력하므로 **부족분은 카운터로 보인다**. 다만 「전 규칙 통과」가 커버리지를 뜻하지 않는다는 점을 다음 계획이 알고 있어야 한다.\n\n### 계획 단계 제약 6가지\n\n1. **패키지 경계로 끊을 것** — 이 모델의 확립된 슬라이스 단위다.\n2. **`data-plane/cmd/agent`의 68줄을 이번 슬라이스에 함께 넣을 것(권장).** 방금 판정을 끝낸 패키지의 증분이라 문맥이 살아 있고, 원장 4번째 행의 파일 목록에 두 파일을 더하고 줄수·지문·합계 마커를 함께 올리면 닫힌다. 지금 닫지 않으면 게이트가 침묵하는 형태로 남는다.\n3. **원장 행 형식을 지킬 것** — 파일 목록 + 줄수 + 12자리 지문, 그리고 **합계 마커를 같은 PR에서 함께 이동**(R4 양방향 미러라 한쪽만 고치면 rc=1).\n4. **머지 직전 재측정을 절차의 게이트로 둘 것.** 이번에도 계획이 적은 `1439줄(48.2%)`과 머지 후 실측 `1457줄(46.6%)`이 갈렸고, 원인은 실행 창 안의 main 전진(#71이 2행 범위에 +10)이었다. **완료 기준은 절대 수치가 아니라 「머지된 main에서 rc=0 + 등재 범위 N」으로 적을 것.**\n5. **「애매하면 남긴다」** — 정책의 확립된 판정 원칙.\n6. **자매 staged PR을 피할 것** — `tbm_session-platform-ac-e2e`의 **PR #75**가 `control-plane/test/`에 새 파일 하나를 더한다. 이번 슬라이스로 `control-plane/test`(~643줄, 최대 잔여)를 고르면 그 파일이 머지 창 안에 들어와 4번 제약의 재측정이 반드시 필요하다 — 그 사실을 알고 고르거나, `control-plane/internal/adapter` 나머지(~499)처럼 겹치지 않는 범위를 고를 것.\n\n### 이중 계상 금지 경계\n\n같은 트리거 묶음이 자매 셋의 지문도 움직였고 이 fire가 각각 별도로 기록했다 — `tbm_session-platform-docs-impl`(`action_required`: `k3s-mcp-url`·`plugin-marketplace-url` PRD 미등재) · `tbm_session-platform-e2e-mock-policy`(`action_required`: j6 미해소 위반 2행) · `tbm_session-platform-ac-e2e`(`no_action_needed`: 판정 축 바이트 불변 + PR #75의 낡은 baseline 수치 둘). **여기서 그 축들을 다시 열지 말 것** — 이 모델이 보는 것은 오직 주석의 비중복성 판정 커버리지다.",
+      "summarizedAt": "2026-09-05T00:00:30Z"
+    },
+    "assessment": {
+      "actionRequired": true,
+      "reason": "**작업 필요(actionRequired: true).** 범위는 **다음 판정 슬라이스 — 미판정 패키지 하나 + `data-plane/cmd/agent`의 등재 밖 68줄**로 끊는다.\n\n1. **잔여가 실재하고 크다** — 게이트 실측으로 판정 대상 3,125줄 중 판정 완료 **1,457줄(46.6%)**, 미판정 **1,668줄**. 모델의 to-be가 「모든 판정 대상 주석이 판정돼 원장에 등재된 상태」이므로 미판정은 그대로 gap이다. 직전 관측(700줄 / 21.7%) 대비 757줄이 닫혔고, 슬라이스가 정상적으로 전진하고 있다.\n\n2. **잔여의 유예 사유가 전부 「직전 슬라이스가 그은 경계」이고 외부 선행이 0건이다.** executor verification ⑤가 항목을 열거하며 「모두 이 시도의 범위 밖이라 converged 판정에 넣지 않았다 … 두 이동 모두 다음 감지 주기의 트리거다」로 **detector를 소유자로 지목**했다. 대상 파일은 전부 이 모델 as-is 안이고, 유일한 실무 차단이었던 「형제 PR이 그 파일을 잡고 있다」도 현재 열린 PR이 #75 하나뿐이라 범위 선택으로 피할 수 있다.\n\n3. **다음 슬라이스를 여는 경로가 이 task 말고는 없다.** 열린 task 0이고, task를 닫는 것은 대상 레포 커밋을 만들지 않는다. as-is 지문은 「누군가 어디든 주석을 고치면」 움직이지만 그것은 **다른 모델 작업의 부수효과**이지 이 잔여를 여는 경로가 아니며, 지금 baseline을 전진시키면 관측된 1,668줄은 다음 주석 편집까지 보이지 않는다. 게이트는 rc=0에 카운터만 찍는다.\n\n**계획 입력 하나를 특히 강조해 넘긴다**: 체커 docstring이 겨냥한 실패 모드가 이번에 실제로 재현됐다 — #71이 방금 판정을 끝낸 `data-plane/cmd/agent/`에 `approval_wait.go`(48줄)·`approval_wait_test.go`(20줄)를 신설했는데, 원장 행이 그 패키지의 21개 파일을 **이름으로** 열거하므로 두 새 파일은 어느 행에도 속하지 않고, **R2는 등재된 파일만 재측정하므로 그 68줄에 침묵한다**. 게이트 결함 주장이 아니라(인구조사 카운터로는 보인다) 다음 슬라이스가 싸게 닫을 자리다. 나머지 제약 다섯은 `stateSummary.gap`에 있다 — 특히 **완료 기준을 절대 수치가 아니라 「머지된 main에서 rc=0 + 등재 범위 N」으로 적을 것**(이번에도 계획의 1439/48.2%와 실측 1457/46.6%가 실행 창 안의 main 전진으로 갈렸다).",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-05T00:00:30Z"
+    },
+    "createdAt": "2026-09-05T00:00:30Z",
+    "updatedAt": "2026-09-05T00:00:30Z"
   }
 ]
