@@ -2745,6 +2745,47 @@
       "assessedAt": "2026-09-05T15:45:00Z"
     },
     "createdAt": "2026-09-05T15:45:00Z",
-    "updatedAt": "2026-09-05T15:53:00Z"
+    "updatedAt": "2026-09-05T15:57:12Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**`docs/doc-tracker.md`의 🟡 「구현 사슬 부채」 항목 ③을 실측에 맞게 교정하는 문서 슬라이스 하나.** 구현 작업이 아니다 — 코드·매니페스트는 한 줄도 건드리지 않는다.\n\n**왜 이 방법인가.** 기준 5(「tracker의 집계·상태가 실제와 어긋나면 drift」)를 어긴 것은 ③의 **상태 서술**이고, SSOT 원칙상 문서가 스펙이지만 여기서는 **문서가 현실을 잘못 기술한 쪽**이라 고칠 대상이 문서다(코드를 문서에 맞추는 방향이 아니다). ③은 세 지점에서 거짓임을 실측으로 확인했다 — 「`k8s/deployment.yaml`에 이 env 선언 자체가 없다」(실제 `:75`에 실재) · 「선언된 이미지 env는 둘뿐이다」(실제 `:52`·`:62`·`:75` **셋**) · 「프로덕션 활성화가 남았다」(#81 `5cc2bf9`가 base 핀 + e2e 오버레이 `env/4` replace까지 착지). 거짓을 만든 #81은 이 모델의 as-is(`control-plane`·`data-plane`·`web`)를 건드리지 않아 트리거하지 못했고, #83이 `web:`을 움직여서야 관측 가능해졌다.\n\n**대안을 물리친 이유.** ③을 「~~해소~~」 한 줄로 지우는 쪽이 가장 짧지만 **틀린다** — `approval-gated` 세션은 kind e2e SUT에서 **여전히 서지 않고** 원인만 ⓐ(이미지 미설정)에서 ⓑ(`approval-gateway-credentials` Secret 부재)로 옮겨갔다. 실측: `git grep -c 'approval-gateway-credentials' -- deploy` = **0**이고, 헬퍼 파드의 MCP 컨테이너는 게이트웨이 3종을 **필수 `secretEnv`**로 투영하며(`client_orchestrator.go:688-690`, 정의 `:790`; `Optional`을 세우는 `:800` 판은 여기 쓰이지 않는다), `:378-393`이 이 타입에서 헬퍼를 먼저 띄워 파드 IP를 얻은 뒤에야 워크로드 파드를 만든다 ⇒ Secret이 없으면 세션 생성 자체가 중단된다. 그래서 교정문은 **「프로덕션 활성화 해소 / kind SUT는 ⓑ로 여전히 차단」 두 축**으로 쓰고, ③을 **살아 있는 항목으로 남긴다** — 그래야 절 머리말의 「남은 것 **셋**」(②③④가 살아 있음)이 계속 참이고, 자매 `ac-e2e`의 F 계열 공백이 「선행이 다 풀렸다」로 오독되지 않는다.\n\n**이 시도의 범위(완료 기준).** `docs/doc-tracker.md` **한 파일**만 바꾼다: (1) 항목 ③ 교정, (2) `## 변경 이력`에 행 1개 추가. 성공 = ③이 두 축을 모두 담고 · ②(AC-F5 RWX 미착지)와 ④(kindnet 미집행)가 **글자 그대로 보존**되며 · 집계 절(`## 현재 상태 요약`·`## 연결 매트릭스`)이 **바이트 동일**하고 · `git diff --stat`이 1파일이며 · `docs/` 밖 트리 해시가 불변이고 · `ci.yml`의 11개 잡이 전부 green인 상태로 PR이 열려 있는 것.\n\n**범위 밖(후속).** ① `docs/test/e2e.md:432-440`의 같은 #81발 거짓 — 그 파일은 자매 모델 `tbm_session-platform-ac-e2e`의 원장이고 이 모델의 기준 5는 `doc-tracker.md`·`doc-structure-state.md`만 이름으로 부르므로 **의도적으로 열지 않는다**(감지가 그쪽 터미널 레코드에 정밀도 지적으로 이미 남겼다). ② AC-F5(RWX 공유 볼륨) 구현 — 실측상 PVC·StorageClass 0건, `ReadWriteMany`는 PRD 1건뿐, `git grep -w efs` **0 hits**라 레포 밖 클러스터 능력이 선행이다. ③ kind SUT에 게이트웨이 Secret을 세우는 일 — `deploy/`는 이 모델의 as-is 밖이고 `tbm_session-platform-e2e-mock-policy`의 관할이다. ④ `docs/doc-structure-state.md` — 같은 계열 거짓이 있는지 실측했고 **없다**(`DATA_PLANE`·`프로덕션 활성화`·`approval-gateway` 0 hits).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포를 `$CLAUDE_JOB_DIR/tmp/session-platform`에 clone하고 `main` HEAD의 지문이 레코드와 일치하는지 확인한다 — `git rev-parse HEAD:docs`가 `b469953a…`, `HEAD:control-plane|data-plane|web`이 `5ba1c730…|693d11cb…|bac7995d…`. 그 뒤 `reconcile/rct_20260905-0005-session-platform-docs-impl` 브랜치를 만든다.",
+              "expectedOutcome": "네 지문이 레코드의 lastObservedVersion과 글자 그대로 일치(스캔 재현 확인). 브랜치가 `main`에서 갈라져 나옴. ⚠️ 브랜치명에 모델 슬러그가 들어가 형제 모델의 동명 `rct` 브랜치와 충돌하지 않는다."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/doc-tracker.md:56`의 항목 ③ 문장(「③ **프로덕션 활성화가 남았다** — … 이미지 미설정으로 실패한다.」)을 두 축 교정문으로 치환한다. python으로 `count(old)==1`을 단정한 뒤 치환한다. 절 머리말 「**남은 것 셋**」·②·④·①의 취소선은 손대지 않는다.",
+              "expectedOutcome": "③이 「프로덕션 활성화는 #81이 끝냈다(`:75` 선언 + `env/4` replace, 이미지 env는 이제 셋)」와 「그러나 kind e2e SUT에서는 `approval-gateway-credentials` Secret 부재로 여전히 세션 생성이 실패한다(필수 `secretEnv`, 헬퍼 선행 기동)」 두 축을 모두 담는다. ③은 여전히 **살아 있는 항목**이라 「남은 것 셋」이 참으로 유지된다."
+            },
+            {
+              "seq": 3,
+              "action": "`## 변경 이력` 표 끝에 `2026-09-05` 행 1개를 추가한다(시점 / 변경 내용 / 이전 상태 / 이후 상태 4열). 기존 행은 **하나도 수정하지 않는다** — 변경 이력은 그 시점의 사실을 적은 append-only 기록이고, `2026-09-03 (7)`·`2026-09-04 (5)` 행의 「프로덕션 활성화는 게이트웨이 Secret이 선결」류 문장은 당시 참이었다.",
+              "expectedOutcome": "표에 행 하나가 늘고 기존 행은 바이트 동일. 새 행의 이전/이후 상태가 '살아 있는 항목 3 → 3'으로 집계 불변을 명시."
+            },
+            {
+              "seq": 4,
+              "action": "기계 검증 — ① `git diff --stat`이 `docs/doc-tracker.md` **1파일**만 · ② `## 현재 상태 요약`부터 `## 위험 진단` 직전까지의 블록이 `main` 판과 **바이트 동일**(md5 대조) · ③ ②·④ 문장의 특징 문자열(`AC-F5 RWX 공유 볼륨 미착지`, `kindnet은 NetworkPolicy를 집행하지 않는다`)이 그대로 존재 · ④ 새 파일의 `DATA_PLANE_APPROVAL_GATED_IMAGE` 언급이 실측과 일치(선언 env 셋) · ⑤ `git rev-parse <branch>:control-plane|data-plane|web`이 `main`과 동일.",
+              "expectedOutcome": "다섯 단언 전부 통과. 특히 ⑤가 통과해야 '문서만 바꿨다'가 주장이 아니라 사실이 된다."
+            },
+            {
+              "seq": 5,
+              "action": "커밋·푸시하고 GitHub API로 PR을 연다(머지하지 않는다). PR 본문에 task id, gap 요약, ③의 거짓 3지점과 실측, 두 축으로 가른 이유, 범위 밖 목록을 담는다.",
+              "expectedOutcome": "PR이 열리고 URL을 얻는다. ⚠️ 이 레포엔 워크플로가 있으므로 토큰은 `workflows:write`를 포함해 받아야 첫 push가 거부되지 않는다."
+            },
+            {
+              "seq": 6,
+              "action": "CI 관측 — `gh api repos/dlddu/session-platform/actions/runs`로 브랜치의 런을 확인한다. `ci.yml`의 11개 잡(fidelity · render-fidelity · comment-policy · control-plane · ac-mapping · data-plane · web · image · data-plane-image · integration · envtest)이 기대 체크 목록이다.",
+              "expectedOutcome": "`ci.yml` 11잡 전부 success. `docs-journey-mockup.yml`과 `e2e.yml`은 paths 필터에 `docs/doc-tracker.md`가 없어 **미발화가 기대값**이다(누락이 아니다). 네 문서 게이트 중 `doc-tracker.md`를 읽는 것은 하나도 없으므로(fidelity→`test/e2e.md`, render-fidelity→`mockups/README.md`, comment-policy→`comment-policy.md`, ac-mapping→`prd/`+`test/e2e.md`) green은 '무해함'의 증거일 뿐 교정의 증거가 아니다 — 교정의 증거는 4단계의 기계 단언이다."
+            }
+          ],
+          "plannedAt": "2026-09-05T15:57:12Z"
+        }
+      }
+    ]
   }
 ]
