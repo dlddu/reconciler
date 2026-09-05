@@ -1483,6 +1483,52 @@
       "assessedAt": "2026-09-04T23:53:02Z"
     },
     "createdAt": "2026-09-04T23:53:02Z",
-    "updatedAt": "2026-09-05T00:23:00Z"
+    "updatedAt": "2026-09-05T00:40:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**j6 의 통짜 `**/api/v1/**` 인터셉트를 걷어내고, 배포 SUT 가 실제로 낼 수 없는 응답만 엔드포인트 단위로 좁혀 `NET` 승인 등재로 닫는다.** 파일을 세 개로 나눈다 — 실 SUT 위에서 프롬프트 루프를 도는 여정, 배포된 실 카탈로그를 쓰는 모델 선택 여정, 그리고 실 스트림이 원리적으로 낼 수 없는 past-end `reset`·중복 재생만 주입하는 복구 여정.\n\n**이 접근을 고른 이유는 계획 단계 실측 하나다: 배포 SUT 가 이미 실 모델 카탈로그를 낸다.** `deploy/claude-code-credentials-secret.yaml` 이 `model: claude-e2e-model` 과 `models: [\"claude-e2e-model\",\"claude-e2e-alternate\"]` 을 심고, `k8s/deployment.yaml:78,86` 이 그것을 `CLAUDE_CODE_DEFAULT_MODEL`·`CLAUDE_CODE_MODELS` 로 제어면에 투영하며, `internal/api/api.go:130` 이 `GET /api/v1/config` 로 그대로 낸다. 즉 detector 가 「배포된 SUT 하나는 그 세 상태를 동시에 낼 수 없다」고 적은 세 카탈로그 중 **하나(구체 기본값이 목록에 들어 있는 2개짜리)는 지금 SUT 가 진짜로 내고 있다**. 12 테스트 중 그 형태에 걸리는 둘은 인터셉트 없이 그대로 실 SUT 로 옮겨지고, 남는 것은 「이 배포가 동시에 가질 수 없는 구성」과 「요청 시점 실패·보류」뿐이라 그때서야 `NET` 자격이 깨끗해진다 — 인터셉트가 SUT 가 낼 수 있는 것을 위조하지 않게 된다.\n\n**비용도 실측으로 확인했다.** 직전 e2e 성공 런(33929545325)에서 브라우저 스위트 전체가 57.6s 이고, 실 claude-code 세션을 만들어 아카이브까지 도는 `manual-archive` 가 **5.1s** 다. 원장이 「재작성 노동뿐」이라고 적은 그 노동에 CI 예산 문제가 없다.\n\n**완료 기준(이 task 의 성공 판정)**: `web/e2e` 의 **미해소 위반 2 → 0**, **상한 2 → 0**, 그리고 `scripts/check-fidelity-allowlist.py` rc=0 + `e2e (kind + API + browser)` 잡 green. 등재 seam 은 **4 → 6**(NET 1 → 3)으로 **늘어난다** — 원장이 `route.fulfill(` 행에 「전량 제거가 목표가 아니다 … 남는 주입은 행 단위로 좁혀 `NET` 승인 등재」라고 미리 적어 둔 그대로이고, 늘어나는 두 행의 정당화를 원장 산문에 함께 적는다.\n\n**범위 밖(후속)**: ⓐ `deploy/e2e-anthropic-fake.yaml` 대역 확장(상수 응답·delta 1개) — 자매 `tbm_session-platform-ac-e2e` 의 AC-E3/E4/E5 슬라이스 몫이고 두 계획이 그 한 파일에서 만난다. ⓑ AC ↔ e2e 1:1 매핑(`ac-*` 마커 블록) — 자매 모델 소관이라 한 줄도 건드리지 않는다. ⓒ `web/` 단위 테스트 층 신설(vitest 등) — 카탈로그 형태 검증의 더 나은 집이지만 러너·CI 잡 신설이라 별도 슬라이스이고, 애초에 이 토큰으로는 `.github/workflows/` 를 밀 수 없다. ⓓ `E2E_SESSION_NAMESPACE` 를 지문에서 빼는 모델 definition 개정(원장 :180 이 지목).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "기준선을 현재 main 에서 재현한다 — 모델의 as-is/to-be 스크립트를 pristine checkout 에서 그대로 돌리고, `python3 scripts/check-fidelity-allowlist.py` 를 돌려 원장이 적은 수치와 글자 그대로 맞는지 본다.",
+              "expectedOutcome": "as-is `seams=23 files=13`/`1539d2c6…` 가 레코드와 바이트 동일. to-be 는 `lines=169` 이나 해시가 `1b96b71f…` 로 레코드의 `7c9fa887…` 와 다르다 — PR #75(efac085)가 감지 이후 머지돼 충실도 섹션의 `CLAUDE-PROVIDER` 등재 행을 고쳤기 때문이고, 이 차이는 계획의 전제를 바꾸지 않는다(위반 2 · 상한 2 불변). 게이트 rc=0, `미해소 위반 2 · 상한 2 · 회계 17 · 등재 4`."
+            },
+            {
+              "seq": 2,
+              "action": "`web/e2e/journeys/j6-agent-prompt-loop.spec.ts` 를 **인터셉트 0** 으로 재작성한다. 제품 API 로 실 claude-code 세션을 만들고(`workloadType=claude-code`, `model=claude-e2e-alternate`), `/agent/{id}` 에서 프롬프트를 보내 실 `claude` invocation 의 응답이 세션 출력에 뜨는 것과, `ws-refresh-output`(커서 read)이 그 출력을 비파괴로 다시 읽는 것을 단언한다. 아카이브→`/restore` 왕복도 `manual-archive` 선례대로 실 SUT 로 돌린다.",
+              "expectedOutcome": "이 파일에 `.route(`·`route.fulfill(` 토큰 0개. 인클러스터 대역만이 낼 수 있는 마커 `session-platform-e2e-provider-ok` 가 `ws-log` 에 뜨는 것으로 왕복이 실물임이 증명된다."
+            },
+            {
+              "seq": 3,
+              "action": "`web/e2e/journeys/j6-model-selection.spec.ts` 를 신설한다. 배포 SUT 의 실 카탈로그로 도는 테스트(콤보박스 옵션·구체 기본값 중복 제거·선택 제출 → 실 세션의 model 그라운드-트루스)는 인터셉트 없이 쓰고, 이 배포가 동시에 가질 수 없는 config 상태(빈 카탈로그 · 구체 기본값 없음 · 503 · 응답 보류)만 `**/api/v1/config` **한 엔드포인트에** 건 핸들러로 주입한다. 그 밖의 요청은 핸들러를 아예 지나지 않는다(라우트 패턴 자체가 config 로 좁다).",
+              "expectedOutcome": "`session-deletion` 선례와 같은 모양 — 인터셉트가 만드는 것은 SUT 가 낼 수 없는 config 응답뿐이고, SPA·세션 생성·목록·조회는 전부 배포된 control-plane 이 응답한다. 이 파일의 seam 은 새 `NET` 코드에 귀속된다."
+            },
+            {
+              "seq": 4,
+              "action": "`web/e2e/journeys/j6-stream-recovery.spec.ts` 를 신설한다. `**/sessions/*/stream` **한 엔드포인트만** 가로채 past-end `reset` 과 중복 바이트 범위 재생을 주입하고, 브라우저가 보관 출력을 교체·중복 제거하고 서버가 발급한 커서로 재연결하는지 단언한다. 세션 생성·`write`·`read` 는 실 SUT 다.",
+              "expectedOutcome": "`data-plane/cmd/agent/output_stream.go:32-44` 의 reset 조건은 `offset > len(buf)` 뿐이고, AC-B3 이 동결 전 커서의 복원 후 유효성을 보장하므로 실 SUT 는 이 상태를 요청 시점에 만들 수 없다 — `NET` 자격이 성립한다."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/test/e2e.md` 충실도 섹션을 갱신한다: 등재 표에 `MODEL-CONFIG-STATE`·`STREAM-RESET-REPLAY` 두 `NET` 행 추가(각 행의 「검증되지 않는 잔여」 명시), 「미해소 위반」 표 비우기 + 왜 두 행이 나갔는지와 **왜 등재가 둘 늘었는지**의 정당화 산문, 회계(ledger) 행 재작성, 집계 블록 갱신. `ac-*` 마커 블록은 손대지 않는다(자매 모델 소관).",
+              "expectedOutcome": "`scripts/check-fidelity-allowlist.py` rc=0 이고 출력이 `등재 seam 6 (GATE 1 · TRIG 0 · EXT 2 · NET 3) · 미해소 위반 0 · 상한 0`."
+            },
+            {
+              "seq": 6,
+              "action": "정적 게이트를 전부 로컬 실측한다: `python3 scripts/check-fidelity-allowlist.py`, `scripts/e2e/check-ac-mapping.sh`, `npx tsc --noEmit`(web), `npx playwright test --list`. 그리고 **음성 통제**로 게이트가 실제로 무는지 확인한다(집계 숫자 되돌리기 / 위반 행 남기기 / 등재 행 삭제 / 상한 2 유지) → 넷 다 rc=1 이어야 하고, `cp` 백업/복원으로 원복 후 바이트 동일 확인.",
+              "expectedOutcome": "정적 게이트 4종 pass, 음성 통제 4종 fail. executor 에게 남는 미지수가 「kind SUT 에서 브라우저 스위트가 실제로 도는가」 하나로 줄어든다."
+            },
+            {
+              "seq": 7,
+              "action": "브랜치 `reconcile/rct_20260904-0003-opus5-1m` 에 커밋·푸시하고 dlddu/session-platform 에 PR 을 연다(본문에 task id · gap · 계획 단계 · 검증 방법 · 범위 밖 잔여). `e2e (kind + API + browser)` 잡이 초록인지 확인하고 결과를 레코드에 남긴다.",
+              "expectedOutcome": "PR 의 e2e 잡 green — 새로 쓴 실 SUT 단언이 배포 SUT 에서 실제로 돈다는 유일한 증거다. 붉으면 그 로그를 근거로 고쳐 다시 민다."
+            }
+          ],
+          "plannedAt": "2026-09-05T00:40:00Z"
+        }
+      }
+    ]
   }
 ]
