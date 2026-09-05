@@ -1394,7 +1394,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-ac-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-05T00:41:00Z",
       "changedSides": [
@@ -1534,6 +1534,54 @@
               "startedAt": "2026-09-05T08:30:30Z",
               "finishedAt": "2026-09-05T08:30:43Z",
               "log": "(plan.steps에 없는 실행 단계 고유 액션 — executionGuide 순서표 2행 「사람 검토 → 머지」에 해당한다.) 사용자 승인 후 PR #79를 squash 머지했다 — head `cea102756a3c2b441ab405c9148b961f33c0f28f` 명시, 머지 커밋 `457d49dcd5b022a93ab71d1b77de22a1f6b11d5a`, merged_at 2026-09-05T08:30:43Z. 재시도 없이 1회 성공. 머지 시점 main 직전 커밋은 `1efb4ef`(자매 PR #77, comment-policy 653줄 판정)로, 승인 대기 중 자매 executor가 먼저 머지한 것이다. 지침 주의사항 ③의 시한부 위험(자매가 `control-plane/test`를 원장에 등재한 뒤 이 PR이 머지되면 R2 지문이 깨짐)은 발생하지 않았다 — #77의 등재 범위는 `internal/adapter`·`cmd/control-plane`·`data-plane/cmd/agent`뿐이고 `control-plane/test`는 명시적 범위 밖이었다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "api:14f3bf84afb959f251ca1aa715ad4e793dcfa475d7304f25d98cdeded78a02ee web:c2f6cbdb96d9636e1fe9b1bfe0eced6f495f55cf",
+          "verifiedAt": "2026-09-05T08:36:00Z",
+          "checks": [
+            {
+              "name": "scripts/e2e/check-ac-mapping.sh (머지된 main 457d49d 클린 클론)",
+              "status": "passed",
+              "detail": "rc=0 — 「AC ↔ e2e 1:1 OK — AC 27개 = 매칭 파일 17 + 예외 1 + 공백 9 (매칭 단위 20개, 비-AC 3개)」. 공백 목록 `AC-E3 AC-E4 AC-E5 AC-F1 AC-F2 AC-F3 AC-F4 AC-F5 AC-F6` — **AC-E6이 빠졌다**(완료 기준 1). 계획이 못박은 수치(매칭 16→17 · 공백 10→9 · 매칭 단위 19→20 · 비-AC 3 불변)와 정확히 일치한다."
+            },
+            {
+              "name": "AC 총계 27 · 예외 1 불변 (완료 기준 2)",
+              "status": "passed",
+              "detail": "위 출력이 AC 27 · 예외 1을 그대로 보고한다. 이 PR은 `docs/prd`를 건드리지 않았고 to-be 지문의 `ac:` 축이 `8049013d`로 머지 전과 동일하다(움직인 것은 `reg:` = `docs/test/e2e.md` 뿐: `32859ff4` → `982d95f6`)."
+            },
+            {
+              "name": "AC-E6 전용 파일 존재·헤더 선언",
+              "status": "passed",
+              "detail": "머지된 main에 `control-plane/test/e2e_e6_credential_placement_test.go`가 있고 헤더가 `//go:build e2e` + `// 검증 AC: AC-E6` **정확히 1줄**(파일 내 `검증 AC:` 등장 1회). `git grep -c '검증 AC: AC-E6'` = 1(그 파일 한 곳)."
+            },
+            {
+              "name": "scripts/check-fidelity-allowlist.py (완료 기준 3)",
+              "status": "passed",
+              "detail": "rc=0 · **차단 요인 0건 유지**. 절대 수치는 계획 시점 baseline(등재 seam 4 · 회계 17 · 미해소 위반 2)에서 등재 seam 6 · 회계 19 · 미해소 위반 0으로 움직였는데, 이는 이 PR이 아니라 승인 대기 중 머지된 자매 PR #78(j6 통짜 인터셉트 제거, 미해소 위반 2→0)의 결과다. 완료 기준은 「rc=0 + 차단 요인 0건 유지」이므로 만족한다."
+            },
+            {
+              "name": "scripts/check-render-fidelity.py · scripts/check_comment_policy.py (완료 기준 4)",
+              "status": "passed",
+              "detail": "둘 다 rc=0. render-fidelity: R1~R10 전부 OK. comment_policy: 「R1~R4 위반 없음 — 판정 대상 3193줄 / 121파일 · 판정 완료 1901줄(59.5%) / 등재 범위 6」. 지침 주의사항 ③이 경고한 R2 파열은 일어나지 않았다 — 자매 #77이 등재한 6행 어디에도 `control-plane/test`가 없어서, 이 PR이 더한 주석은 인구조사 총계(2916→3193)만 올리고 등재 행의 줄수·지문은 건드리지 않는다. 비율 하락(65.2%→59.5%)은 분모 증가일 뿐 위반이 아니다."
+            },
+            {
+              "name": "Go 정적 게이트 (검증 방법 3) — 머지된 main CI",
+              "status": "passed",
+              "detail": "이 실행 환경에 Go 툴체인이 없어 로컬 실행 불가. 대신 머지 커밋 457d49d의 `ci` 워크플로(run 33955463363, completed success)의 `control-plane (lint + unit)` 잡이 초록이고 여기에 `gofmt -l` · `go vet ./...` · `go vet -tags=e2e ./...`가 포함된다. 머지 결과 트리 위에서 실행된 것이므로 PR CI(base cb6a990)보다 강한 근거다. 게이트 4종도 이 main CI에서 모두 초록으로 독립 재확인됐다."
+            },
+            {
+              "name": "새 e2e 테스트가 skip이 아니라 pass (완료 기준 5 · 검증 방법 4)",
+              "status": "passed",
+              "detail": "PR head cea1027의 `e2e (kind + API + browser)` run 33935037668 로그를 직접 내려받아 확인했다 — `TestCredentialPlacementOnTheDeployedSUT`와 서브테스트 6개, `..._ConcreteModelLiteralBeatsThePlatformDefault`, `..._CredentialFieldsCannotBeSetByTheCreateRequest`와 서브테스트 4개가 전부 `--- PASS`이고 run 전체 `--- SKIP` 0건. 즉 kubeClient ok=false로 조용히 넘어간 구간이 없다. ⚠️ 이 레포의 `e2e` 워크플로는 main push에서는 돌지 않으므로(머지 후 트리거된 것은 `ci`·이미지 빌드뿐), 머지 결과 트리 위에서의 실 SUT 재실행은 다음 e2e 트리거가 답한다. 이 슬라이스의 완료 기준은 게이트 수치이므로 판정에 영향 없음."
+            },
+            {
+              "name": "[정보성] 모델 전체 잔여 gap — 이 task의 범위 밖",
+              "status": "passed",
+              "detail": "공백 9건이 남아 있다: AC-E3/E4/E5(페이크 대역의 상수 응답·`content_block_delta` 1개가 선행이고 그 대역 확장은 **여전히 소유자 미정** — 이 모델과 자매 `tbm_session-platform-e2e-mock-policy`가 서로를 가리킨다), AC-F1~F6(ⓐ `DATA_PLANE_APPROVAL_GATED_IMAGE` 미설정 · ⓑ `approval-gateway` Secret 부재로 레포·클러스터 밖). converged 판정에 넣지 않았다. 머지로 as-is의 `api:` 축(6b9d5e3f→14f3bf84)과 to-be의 `reg:` 축(32859ff4→982d95f6)이 함께 전진했으므로 다음 감지 주기가 이 변화를 트리거로 본다. 모델의 `lastObservedVersion`은 건드리지 않았다."
             }
           ]
         }
