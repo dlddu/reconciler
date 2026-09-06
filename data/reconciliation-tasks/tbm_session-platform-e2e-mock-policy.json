@@ -1730,7 +1730,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-09-06T02:09:53Z",
-    "updatedAt": "2026-09-06T02:22:54Z",
+    "updatedAt": "2026-09-06T02:30:33Z",
     "trigger": {
       "detectedAt": "2026-09-06T02:09:53Z",
       "changedSides": [
@@ -1756,6 +1756,67 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-06T02:09:53Z",
       "reason": "**작업 필요.** 범위는 **인클러스터 승인 게이트웨이 대역 + `approval-gateway-credentials` Secret 을 e2e 오버레이에 세우고 `EXT` 로 등재**하는 것으로 끊는다.\n\n1. **정책 원장이 회계하지 않는 상태가 실재한다** — SUT 가 워크로드 타입 하나를 통째로 구동하지 못하는데 「차단 요인」 표가 비어 있다. 그 표의 존재 이유가 정확히 이 상태이고(`CLAUDE-PROVIDER` 이전의 ③ 제공자 도달이 선례), 지금은 표를 채우는 것보다 **원인을 없애는 편이 같은 슬라이스 안에서 가능하다.**\n\n2. **선행이 하나만 남았고 그것이 이 렌즈의 산출물이다** — 이미지 축은 #81 이 닫았고, 남은 ⓑ 는 `deploy/` 오버레이에 매니페스트를 하나 더 놓는 일이다. 자매 렌즈 `tbm_session-platform-ac-e2e` 의 원장이 「이 해제는 e2e 하네스(오버레이) 작업이라 **이 렌즈의 산출물이 아니다**」라고 소유권을 여기로 넘겨 두었다.\n\n3. **`EXT` 자격이 실측으로 선다** — 참조 구현에 배포 가능한 게이트웨이 서버가 없음을 소스에서 확인했다(위 gap ②). MinIO 논리가 성립하지 않으므로 `CLAUDE-PROVIDER` 와 같은 근거로 등재 가능하고, 이 등재는 **관용의 확대가 아니라** SUT 가 못 서던 타입을 세우는 순수 이득이다(#66 과 동형).\n\n4. **재감지 경로가 0이다** — #81 은 seam 토큰을 하나도 안 만들어 이 모델 지문을 안 움직였고, 자매 모델 지문도 안 움직였다. 네 게이트 모두 rc=0 이라 기계도 침묵한다. 열린 task 는 두 모델 모두 **0건**이다.\n\n**계획 단계 제약 5가지**\n- **선례를 그대로 따를 것** — `deploy/e2e-anthropic-fake.yaml` 의 형태(ConfigMap 에 서버 코드 + Deployment + Service + 파일 상단 `# mock-exception: <CODE> — <한 줄>`)를 쓰되 **TLS 는 두지 않는다**(위 gap ③: 게이트웨이는 https 강제가 없다). 사설 CA·`tls.crt` 를 복제하면 근거 없는 복잡도다.\n- **Secret 은 별도 매니페스트로** — `deploy/claude-code-credentials-secret.yaml` 과 같은 자리·같은 주석 관례(「kind e2e only. 프로덕션은 out-of-band 로 같은 키를 provision 한다」). 키는 정확히 `url`·`api-key`·`user-id` 셋이고 **값이 비면 안 된다**(빈 문자열이면 파드는 뜨되 도구 목록이 빈다).\n- **`k8s/` base 를 건드리지 말 것** — 프로덕션은 이미 `flux-cd-apps` external-secret 으로 이 Secret 을 갖는다. base 변경은 이 슬라이스의 산출물이 아니다.\n- **네 게이트를 전부 통과시킬 것** — 특히 `check-fidelity-allowlist.py` 는 등재 ↔ 코드를 **양방향**으로 대조한다(주석만 있고 미등재, 등재만 있고 코드 없음 둘 다 drift). 회계·집계 블록도 함께 갱신한다. `check-ac-mapping.sh` 출력은 **부모와 바이트 동일**해야 한다(이 슬라이스는 AC 매칭을 하나도 바꾸지 않는다).\n- **AC-F 전용 e2e 파일을 여기서 저작하지 말 것** — 그것은 자매 렌즈의 몫이고, 특히 **F2·F5 는 이 대역이 서도 열리지 않는다**(CNI 미집행 · RWX 미구현). 완료 기준에 넣으면 executor 가 닫을 수 없다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "e2e 오버레이에 **인클러스터 승인 게이트웨이 대역 + `approval-gateway-credentials` Secret**을 세워 `approval-gated` 워크로드 타입이 kind SUT에서 실제로 서게 하고, 그 대역을 `APPROVAL-GATEWAY`(EXT)로 충실도 허용목록에 등재한다. 대역은 `deploy/e2e-k3s-mcp-fake.yaml` 선례를 그대로 따른다(ConfigMap에 server.js + Deployment + Service, 이미지는 이미 kind에 load된 `session-platform/data-plane:dev`). **TLS는 두지 않는다** — `newApprovalGateway`(`data-plane/cmd/agent/approval_gateway.go:76`)는 네 값의 non-empty만 검사하고 스킴을 보지 않아 `CLAUDE-PROVIDER`가 필요로 했던 사설 CA 왕복이 여기엔 없다(credential-proxy의 `parseCredentialProxyUpstream` https 강제와 다른 자리다). 승인·거절·만료는 대역이 **승인 컨텍스트의 URL 첫 경로 세그먼트**로 결정한다 — 제품에 test-only 표면을 뚫지 않고 e2e가 결과를 결정적으로 고르는, 대역 자신의 운영자 면이다(그래서 `TRIG`가 아니다).\n\n**완료 기준(이 시도의 범위)**: (1) 오버레이가 게이트웨이 대역과 Secret 세 키(`url`·`api-key`·`user-id`)를 배포하고 `scripts/e2e/up.sh`가 그 롤아웃을 기다린다 (2) `docs/test/e2e.md`에 `APPROVAL-GATEWAY`(EXT) 등재 행·회계 행·집계가 들어가고 (3) 승인된 `web_fetch_get`의 **실제 아웃바운드 호출**이 아직 막혀 있다는 사실이 「차단 요인」 표에 회계된다 (4) 네 정적 게이트(fidelity·render-fidelity·comment-policy·ac-mapping)와 CI가 초록이며 `check-ac-mapping.sh` 출력이 부모와 바이트 동일하다.\n\n**범위 밖**: AC-F 전용 e2e 파일 저작(자매 렌즈 `tbm_session-platform-ac-e2e` 몫) · TIMEOUT 갈래(`defaultApprovalTimeout` 10분 하드코딩, 설정화는 제품 변경 → `tbm_session-platform-docs-impl`) · AC-F2 NetworkPolicy 집행(kindnet이 집행하지 않는다) · AC-F5 RWX 공유 볼륨(구현 자체가 없다) · `k8s/` base(프로덕션은 flux-cd-apps의 external-secret으로 이미 이 Secret을 갖는다).",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-06T02:30:33Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 `reconcile/rct_20260906-0001-session-platform-e2e-mock-policy`를 `origin/main`(`2007050`)에서 딴다. `rct` id는 모델 간에 유일하지 않으므로 브랜치 이름에 모델 슬러그를 넣는다.",
+              "expectedOutcome": "형제 워커의 열린 PR 브랜치와 충돌하지 않는 새 ref."
+            },
+            {
+              "seq": 2,
+              "action": "`deploy/e2e-approval-gateway-fake.yaml` 신설 — ConfigMap(`server.js`) + Deployment + Service. 파일 상단에 `# mock-exception: APPROVAL-GATEWAY — <한 줄 사유>` 마커와, 왜 EXT인지(참조 구현 `dlddu/pure-agent`에는 클라이언트만 있고 배포할 게이트웨이 서버가 없다)·왜 TLS가 없는지·결정 규칙이 무엇인지를 적는다. 응답 모양은 손으로 짓지 말고 `data-plane/cmd/agent/approval_gateway.go`의 `create`/`poll`/`do`에서 파생한다.",
+              "expectedOutcome": "`POST /api/requests` → `{id,...}`, `GET /api/requests/{id}` → `{status,...}`, `x-api-key` 불일치 시 401, `GET /healthz` → 200인 평문 HTTP 서버 매니페스트."
+            },
+            {
+              "seq": 3,
+              "action": "`deploy/approval-gateway-credentials-secret.yaml` 신설 — `deploy/claude-code-credentials-secret.yaml`과 같은 자리·같은 주석 관례. 키는 정확히 `url`·`api-key`·`user-id`(상수 정본: `client_orchestrator.go:159-161`)이고 값은 비우지 않는다. 스캔 토큰(`test-only` 등)을 넣지 않는다 — 넣으면 회계 행이 필요해진다.",
+              "expectedOutcome": "`url`이 대역 Service(`http://approval-gateway-fake:8080`)를 가리키는 Secret."
+            },
+            {
+              "seq": 4,
+              "action": "`deploy/kustomization.yaml`의 `resources`에 두 매니페스트를 더하고, 왜 필요한지(헬퍼 pod의 MCP 컨테이너가 세 값을 non-optional `secretEnv`로 투영하므로 Secret이 없으면 kubelet이 컨테이너 구성에서 실패해 Ready에 이르지 못한다)를 주석으로 남긴다. **이 파일에는 `mock-exception:` 마커를 넣지 않는다** — R6는 CODE별 마커 파일 집합 == 회계 행 파일 집합을 요구하는데 이 파일의 남은 스캔 토큰은 이미 `CRIU-GATE`가 가져갔다.",
+              "expectedOutcome": "`kustomize build deploy/`가 Secret·ConfigMap·Deployment·Service를 포함해 렌더된다."
+            },
+            {
+              "seq": 5,
+              "action": "`scripts/e2e/up.sh`의 롤아웃 대기 목록에 `kubectl rollout status deploy/approval-gateway-fake --timeout=120s`를 더한다(첫 approval-gated 세션이 대역 기동과 경합하지 않게). 새 스캔 토큰이 생기지 않도록 문면을 고른다.",
+              "expectedOutcome": "up.sh가 minio·k3s-mcp-fake·plugin-marketplace-git·anthropic-fake와 나란히 게이트웨이 대역도 기다린다."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/test/e2e.md` 갱신 — ① `fidelity:registry`에 `APPROVAL-GATEWAY` | `EXT` 행(구동 구간·잔여 둘 다 채운다) ② `fidelity:ledger`에 `deploy/e2e-approval-gateway-fake.yaml` | `test-only` | `APPROVAL-GATEWAY` 행 ③ `fidelity:blockers`에 「승인된 `web_fetch_get`의 실제 아웃바운드 호출」 행 ④ `fidelity:summary` 갱신 ⑤ 「차단 요인」 절의 「표는 지금 비어 있다」 산문 정정.",
+              "expectedOutcome": "`python3 scripts/check-fidelity-allowlist.py` rc=0."
+            },
+            {
+              "seq": 7,
+              "action": "로컬 계약 검증 — `/home/silas/toolchains`의 node로 `server.js`를 그대로 기동하고(ConfigMap에서 정규식으로 꺼내 무수정), 같은 레포의 **실 Go 클라이언트**(`data-plane/cmd/agent`의 `approvalGateway`)를 일회용 `_test.go`로 붙여 APPROVED·REJECTED·EXPIRED·PENDING 네 갈래와 401을 실행으로 확인한다. 끝나면 probe 파일을 지워 clone을 clean하게 남긴다.",
+              "expectedOutcome": "wire 계약이 주장이 아니라 실행 결과가 된다 — 클러스터 왕복 없이."
+            },
+            {
+              "seq": 8,
+              "action": "정적 게이트 4종을 로컬에서 돌린다: `python3 scripts/check-fidelity-allowlist.py` · `python3 scripts/check-render-fidelity.py` · `python3 scripts/check_comment_policy.py` · `bash scripts/e2e/check-ac-mapping.sh`. ac-mapping 출력은 부모 커밋 출력과 **바이트 동일**해야 한다(이 슬라이스는 AC 매칭을 하나도 바꾸지 않는다).",
+              "expectedOutcome": "4종 rc=0, ac-mapping 출력 diff 0."
+            },
+            {
+              "seq": 9,
+              "action": "음성 통제 — 등재 행 제거·회계 행 제거·집계 숫자 되돌리기·차단 요인 리터럴 변조 각각에 대해 fidelity 체커가 rc=1이 되고 **메시지가 의도한 규칙(R2/R4/R5/R8/R10)** 인지 확인한다. 복원은 `cp` 백업 → `cmp`로 바이트 동일 확인(`git checkout --` 금지).",
+              "expectedOutcome": "새 등재·회계·집계·차단 요인이 실제로 기계에 물려 있다는 증거."
+            },
+            {
+              "seq": 10,
+              "action": "커밋·푸시하고 PR을 연다(머지하지 않는다). 본문에 task id · gap 요약 · 계획 단계 · 검증 방법 · 범위 밖 목록을 적는다. 기대 체크 목록은 「변경 경로 × 워크플로 `paths`」로 계산해 지침에 남긴다.",
+              "expectedOutcome": "executor가 검토·머지할 수 있는 PR."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
