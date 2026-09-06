@@ -960,7 +960,7 @@
   {
     "id": "rct_20260905-0004",
     "toBeModelId": "tbm_session-platform-comment-redundancy",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-09-05T08:49:55Z",
       "changedSides": [
@@ -989,7 +989,7 @@
       "assessedAt": "2026-09-05T08:49:55Z"
     },
     "createdAt": "2026-09-05T08:49:55Z",
-    "updatedAt": "2026-09-05T09:27:00Z",
+    "updatedAt": "2026-09-06T05:02:00Z",
     "attempts": [
       {
         "plan": {
@@ -1057,6 +1057,11 @@
           "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/82",
           "preparedAt": "2026-09-05T09:24:00Z",
           "notes": "base `af002f8` · 10파일 +159/−94. 계획 범위 그대로 착지했다.\n\n**판정**: 143줄/11파일(지문 기준) → 86줄. 실제 판정 대상은 142줄(`approval_idle_test.go`의 임베드 필드 `*agent.StubClient` 1줄은 2차 패스가 적어 둔 지문 오검출) — **제거 57 · 유지 85**. 원장 7행(`4b1264fc2b5f`)과 합계 마커 1901 → **1987**을 같은 커밋에서 움직였다(R4 양방향 미러).\n\n**계획 대비 넓어진 것 1건 — 좌표는 5건이 아니라 6건이었다.** detector가 「전수 5건」이라 적었지만 정규식으로 파일 전체를 세니 6건이다(`prd/approval-gated-workload.md:81`을 놓쳤다). 여섯째는 **현재 정확하지만** 같은 줄 번호 형태라 함께 앵커화했다. *상위 단계의 「전수」는 하한이다 — 같은 형태를 파일 전체에서 다시 셀 것.*\n\n**계획에 없던 것 1건 — 부패의 원인이 절차 문면이었다.** 「판정 절차」 3번이 *「어느 파일 몇 줄이」* 로 **줄 번호를 요구하고 있었다.** 좌표만 고치고 이 문장을 두면 다음 패스가 같은 부패를 다시 만든다 — *「어느 파일의 어느 심볼이」* 로 고쳤다. R5만 넣고 이 문장을 두었으면 문서가 자기 게이트와 모순한다.\n\n**낡아 거짓이 된 주석 2건을 확정해 지웠다** — `control-plane/go.mod`의 「no extra runtime deps」와 「Only the Checkpointer (CRIU) remains an in-memory stub, so its external deps are not required yet」. 반증이 **같은 파일 다섯 줄 아래**에 있다(aws-sdk 다섯 + gorilla/websocket 직접 의존, 그리고 5차 패스가 이미 등재한 `adapter/criu/*`·`adapter/checkpointstore/store.go`).\n\n**선례를 모양이 아니라 근거로 따랐다** — `api.go`의 절 배너 3개(`// ---- handlers ----` 등)는 「지식 0」이라 제거 후보로 보였으나, 5차 패스가 `adapter/configmap/store.go`의 같은 배너를 **유지 판정**했음을 `git grep`으로 확인하고 남겼다(「같은 형태에 다른 기준을 적용하지 않는다」). 반대로 `store.go`의 `AC mapping:` 블록은 1차 패스가 `session.Manager`의 같은 블록을 남긴 근거(포트→AC 방향 색인이 문서에 없다)가 그대로 성립해 유지했다.\n\n**로컬 검증(전부 실측)**: ① `check_comment_policy.py` rc=0 · 등재 범위 7 · 판정 완료 1987줄(63.4%) ② 좌표 grep **0행** ③ **음성 통제 4종 전부 rc=1이고 메시지가 의도한 규칙**(R5 좌표 2형태 · R4 합계만 되돌리기 · R2 등재한 0줄 파일에 주석 추가 — 셋째가 「0줄 파일도 등재」 설계를 확인한다). 복원은 `cp` 백업으로 하고 `cmp`로 바이트 동일 확인 ④ 비-주석 줄이 8파일 전부 `af002f8`과 **바이트 동일** (70/328/445/232/212/32/19/6) ⑤ `control-plane` go build/vet/test 통과, `data-plane` build/vet 통과 ⑥ 내 변경 밖 게이트 3종(fidelity · render-fidelity · ac-mapping)이 `af002f8` pristine (`clone --shared` + `reset --hard && clean -fdx`, porcelain=0) 출력과 **바이트 동일**.\n\n**기대 CI**(선례를 베끼지 않고 변경 경로 × 워크플로 `paths`로 계산했다): `ci.yml`은 path filter가 없어 전 잡 발화 · `e2e.yml`은 `control-plane/**`·`data-plane/**`에 걸려 **발화한다** · `docs-journey-mockup.yml`은 `docs/journeys/**`·`docs/index.html` 등만 걸려 `docs/comment-policy.md` 변경으로는 **발화하지 않는다**.\n\n브랜치 이름에 모델 슬러그를 넣었다(`rct` id는 모델 간 유일하지 않다). 형제 PR은 #81 하나뿐이고 지면 교집합 0.\n\n**CI 실측 (head `a52950d`, 09:24:47Z)** — 발화한 워크플로 셋 전부 초록, **체크 13개 전부 success · 실패 0**: `ci` 11잡(그중 **`comment policy ledger (docs <-> comments)`** — 이번에 R5 를 더한 그 잡 — 과 `e2e fidelity allowlist` · `AC ↔ e2e 1:1 mapping` · `render fidelity` · `envtest` · `integration` · control-plane/data-plane/web lint+unit · 도커 이미지 2종) · `e2e (kind + API + browser)` **8분 59초** · `Build and Push Docker Image to GHCR`. `docs-journey-mockup`은 **발화하지 않았다** — 계산과 일치한다.\n\n⚠️ **앵커 정정 커밋 1건이 더 있다(`a52950d`).** 새 원장 행이 주장하는 심볼 앵커 14개를 `grep -F`로 전수 확인하다 하나가 어긋난 것을 찾았다 — `data-plane`이 부르는 것은 `pty.Start`가 아니라 `pty.StartWithSize`다. **좌표 부패를 고치는 PR이 새 좌표를 틀리게 적는 것은 자기모순이다.** R5는 줄 번호만 막고 **심볼의 실재는 검사하지 않으므로**, 앵커는 등재 전에 grep으로 확인해야 한다 — 이 PR이 남기는 규율이다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "검토 필요(required: true). `plan.riskLevel`은 low이고 되돌릴 수 없는 지점이 없다 — PR #82는 10파일 +159/−94이며 변경 `.go`/`go.mod`의 **비-주석 줄이 base `af002f8`과 바이트 동일**함이 준비 단계에서 실측으로 증명됐고, `deploy/`·`k8s/`가 무변경이라 「머지 = 적용」 GitOps 경로를 타지 않으며, 롤백은 squash 커밋 revert 1건이다. 그럼에도 넷이 사람 판단을 요구한다.\n\n1. **이 PR이 담은 것은 코드가 아니라 판정이다.** 11파일의 주석 142줄을 읽고 **제거 57 · 유지 85**로 갈랐다 — 「이 주석의 지식이 이미 다른 곳에서 말해지는가」는 기계가 확인할 수 없는 판단이고, 게이트(`check_comment_policy.py`)도 docstring이 스스로 밝히듯 **원장의 무결성만** 보지 판정의 옳음은 보지 않는다. 이 모델의 앞선 다섯 슬라이스(rct_20260904-0001·-0002·-0003·-0006, rct_20260905-0001)가 모두 같은 근거로 `review.required: true`였고 전부 승인됐다 — 확립된 규약이다.\n\n2. **레포 전체의 CI 규칙이 늘어난다(R5).** `scripts/check_comment_policy.py`에 원장 문서 안 `파일:줄` 좌표를 금지하는 규칙을 더한다. 이 task의 산출물을 넘어 앞으로 누구든 `docs/comment-policy.md`에 줄 번호 좌표를 적으면 CI가 붉어진다. 같은 레포에서 CI 정책을 넓힌 변경(`tbm_session-platform-journey-mockup` rct_20260903-0001의 워크플로 신설, `tbm_session-platform-mockup-render` rct_20260903-0003의 R10 모집단 확대)은 저위험이었음에도 모두 사람 검토를 거쳤다.\n\n3. **원장의 판정 절차 문면 자체를 고친다.** 준비 단계가 계획에 없던 것을 하나 발견해 넓혔다 — 부패의 원인이 「판정 절차」 3번이 *「어느 파일 몇 줄이」* 로 **줄 번호를 요구하고 있었던 것**이라, 그 문장을 *「어느 파일의 어느 심볼이」* 로 고쳤다. 좌표도 5건이 아니라 6건이었다. 앞으로의 모든 판정이 따르는 SSOT의 절차 문면 변경이므로 승인 대상이다.\n\n4. **계획·준비 시점 측정이 20시간 낡았다.** PR #82는 base `af002f8`에서 2026-09-05T09:24Z에 준비됐고 지금은 09-06 05:00대다. 원장 7행은 `86줄 / 4b1264fc2b5f`를 **주장**하고 R2가 그 주장을 머지된 트리에서 재측정하므로, 그 사이 누가 범위 11파일의 주석을 건드렸으면 **머지 직후 main이 붉어진다**. 이 모델이 같은 함정에 세 사이클 연속 걸렸고, 지침 §C가 「머지 직전 재측정」을 절차가 아니라 머지 조건으로 못박았다. 실행 시 그 재측정을 먼저 돌리는 것이 승인 조건에 포함된다."
         }
       }
     ]
