@@ -1730,7 +1730,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-09-06T02:09:53Z",
-    "updatedAt": "2026-09-06T12:02:21Z",
+    "updatedAt": "2026-09-06T12:10:00Z",
     "trigger": {
       "detectedAt": "2026-09-06T02:09:53Z",
       "changedSides": [
@@ -1832,6 +1832,71 @@
           "reviewer": "user",
           "reviewedAt": "2026-09-06T09:55:55Z",
           "comment": "**반려 — 재계획으로 넘긴다.** 사용자가 「네 소견에 따를게」로 executor 가 제시한 판단을 그대로 채택했고, 그 소견의 사유는 아래와 같다.\n\n**반려 사유**: 이 계획이 스테이징한 PR [#87](https://github.com/dlddu/session-platform/pull/87) 은 지금 머지할 수 없고, 머지해도 안 된다. 같은 task 에 대해 형제 워커가 연 [#86](https://github.com/dlddu/session-platform/pull/86) 이 **2026-09-06T04:59:01Z 에 먼저 머지**(`84f919c`)돼 이 계획의 핵심 산출물을 이미 착지시켰다 — 게이트웨이 대역 매니페스트 · `deploy/kustomization.yaml` 등재 · `docs/test/e2e.md` 의 `APPROVAL-GATEWAY`(EXT) 등재 행과 회계 행. 그 결과 #87 은 `mergeable_state: dirty` 이고, 강행하면 **충돌이 아니라 중복 구현**이 된다: `approval-gateway-credentials` Secret 2개(#86 은 대역 파일 안 `:190`, #87 은 별도 매니페스트) · `approval-gateway-fake` Deployment/Service 2벌(대역 본체가 264줄 vs 253줄로 바이트가 다른 독립 구현). 「형제 PR 이 먼저 착지했으면 rebase 말고 origin/main 을 머지하라」는 지침 절차로는 풀리지 않는다.\n\n**그러나 폐기가 아니다 — 재계획이 이어받을 잔여가 실측으로 둘 남았다** (완료 기준 4개 중 2개 미충족):\n1. **`scripts/e2e/up.sh` 의 롤아웃 대기 부재** — 현재 main 에 `kubectl rollout status deploy/approval-gateway-fake` 가 **없다**. 완료 기준 (1) 의 「`up.sh` 가 그 롤아웃을 기다린다」가 미충족이고, 첫 게이트 호출이 리스너와 경합할 수 있다. #87 이 가진 +5줄이 그것이다.\n2. **「차단 요인」 회계 행 부재** — 승인 이후의 **실제 아웃바운드 호출**은 대역이 서도 여전히 막혀 있다(도구는 https 만 받는데 그 호출을 내는 MCP 컨테이너 fetch 는 시스템 루트만 신뢰하는 `http.DefaultClient` 이고, `helperPodSpec` 의 env 는 워크로드·주소·세션ID·게이트웨이 3종뿐이라 CA 를 넣을 자리가 없다). #87 은 이것을 차단 요인 0 → **1** 로 등재하고 집계 블록(등재 seam 7 · 회계 행 20 · 차단 요인 1)까지 맞추는데, main 은 아직 그 회계가 없다 ⇒ 완료 기준 (3) 미충족. 판정은 `없음`(정적 https 원본은 kind 에 실물로 세울 수 있어 EXT 배제 조항이 걸린다), R10 트립와이어는 리터럴 `http.DefaultClient.Do(req)`.\n\n**재계획에 넘기는 판단** (executor 가 고르지 않는다): ⑴ 잔여 둘만 담은 좁은 브랜치를 현재 main 기준으로 새로 내고 #87 은 닫는다 / ⑵ #87 을 현재 main 위로 다시 세워 중복분을 걷어낸다 / ⑶ 이 task 는 #86 착지로 종결하고 잔여 둘을 다음 슬라이스로 넘긴다. 어느 쪽이든 **집계 블록의 기준값이 #86 착지 후 main 기준으로 다시 측정돼야 한다** — #87 의 「등재 seam 7 · 회계 행 20」은 #86 이 등재 행을 이미 넣기 전 기준으로 계산된 값이라 그대로 쓰면 게이트가 붉어진다.\n\n**루프 자체에 남기는 지적 — 같은 task 에 준비본이 둘 생겼다.** #86(`reconcile/rct_20260906-0001-mock-policy`)과 #87(`reconcile/rct_20260906-0001-session-platform-e2e-mock-policy`)은 같은 task id 의 두 planner 산출물이고, 브랜치 명명 규약만 달라 서로를 알아보지 못했다. `preparation.pullRequestUrl` 은 #87 하나만 가리키므로 **레코드만 보면 #86 의 존재가 보이지 않는다.** planner 의 준비 단계가 PR 을 열기 전에 대상 레포의 열린/최근 머지된 PR 을 같은 task id 로 조회하는 확인을 두면 재발을 막는다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**재계획 — 직전 시도의 산출물 대부분이 형제 PR [#86](https://github.com/dlddu/session-platform/pull/86)으로 이미 main에 착지했다. 남은 잔여 둘만 담은 좁은 브랜치를 현재 main 기준으로 새로 내고 [#87](https://github.com/dlddu/session-platform/pull/87)은 닫는다(반려가 제시한 갈래 ⑴).**\n\n**왜 ⑴(새 좁은 브랜치)인가 — ⑵(#87 재정초)·⑶(종결 후 이월)과 저울질한 결과.** #87의 324줄 중 ~300줄이 지금은 **중복 구현**이다: 대역 매니페스트가 253줄 vs main의 264줄로 바이트가 다른 독립 구현이고, Secret도 #87은 별도 파일(`deploy/approval-gateway-credentials-secret.yaml`)·main은 대역 파일 안이다. ⑵를 택하면 그 브랜치에서 자기가 만든 파일 둘을 **지우는** 커밋이 이력에 남고, 지우다 한 오브젝트라도 남기면 같은 Secret/Deployment가 둘이 되는 되돌리기 어려운 실수가 된다 — 충돌이 아니라 중복이라 git이 잡아주지 않는다. ⑶은 잔여 둘이 **실측으로 열려 있는데**(아래 진단) 재감지가 그것을 다시 열어줄 보장이 없다: `up.sh` 잔여는 as-is 지문이 잡지만 「차단 요인 표가 비어 있다」는 **부재**라 어느 지문도 움직이지 않는다. 현재 main(`09e7581`)에서 딴 2파일 브랜치는 diff가 곧 잔여라 검토가 자명하고 revert 1회로 가역이다.\n\n**현재 main(`09e7581`) 실측 — 무엇이 끝났고 무엇이 남았나.** 네 게이트 전부 rc=0이고 충실도 집계는 이미 `등재 seam 7 · 회계 행 20 · 마커 9지점/9파일 · 인터셉트 7(상한 0) · **차단 요인 0**`이다. 즉 반려가 요구한 「집계 기준값 재측정」의 답은 **집계에서 움직일 숫자가 차단 요인 하나뿐**이라는 것이다(#87이 들고 있던 `6→7`·`19→20`·`8→9`는 #86이 이미 반영했으므로 그대로 쓰면 R8이 붉어진다). 남은 잔여 둘:\n- ① `scripts/e2e/up.sh`에 `kubectl rollout status deploy/approval-gateway-fake`가 **없다**(`grep`으로 5개 대기만 확인: minio·k3s-mcp-fake·plugin-marketplace-git·anthropic-fake·control-plane). 첫 gated 호출이 대역 리스너와 경합할 수 있다.\n- ② 「차단 요인」 표가 **비어 있고**(`<!-- fidelity:blockers -->` 사이 헤더 2줄뿐) 산문도 「표는 지금 비어 있다」로 남아 있다. 승인이 떨어진 뒤의 실제 아웃바운드 호출은 대역이 서도 여전히 막혀 있다 — 도구는 https만 받는데(`validateFetchTarget`) 그 호출을 내는 MCP 컨테이너의 fetch는 시스템 루트만 신뢰하는 기본 클라이언트이고(`session_mcp_tools.go`의 `http.DefaultClient.Do(req)`, 리터럴 실재 확인) `helperPodSpec`에 CA를 넣을 자리가 없다.\n\n**②에 한 줄을 더 붙인다 — 등재 표의 잔여 칸 교차 참조.** main의 `APPROVAL-GATEWAY` 등재 행 잔여 칸은 알림·만료 시계·TIMEOUT 셋만 적고 「`APPROVED` 갈래가 *게이트를 통과했다*는 데까지만 관측된다」를 적지 않는다. 차단 요인 행만 세우고 등재 행을 그대로 두면 **같은 문서의 두 표가 서로 다른 말을 한다** — 지금 자매 렌즈(`tbm_session-platform-ac-e2e`/`rct_20260906-0002`)가 청소하고 있는 실패 모드(원장이 실제보다 많이 주장하는 것)를 내 표에서 되풀이하는 셈이다. 집계 숫자는 움직이지 않는다.\n\n**완료 기준(이 시도의 범위)**: (1) `scripts/e2e/up.sh`가 `approval-gateway-fake` 롤아웃을 기다린다 (2) `docs/test/e2e.md`의 「차단 요인」 표에 그 잔여가 판정 `없음`·리터럴 `http.DefaultClient.Do(req)`로 등재되고, 표 위 산문과 집계(`차단 요인` **0 → 1**)와 `APPROVAL-GATEWAY` 등재 행의 잔여 칸이 그것과 일치한다 (3) 네 정적 게이트(fidelity·render-fidelity·comment-policy·ac-mapping)와 PR CI가 초록이고 `check-ac-mapping.sh` 출력이 부모와 바이트 동일하다 (4) **이 task의 준비본이 하나로 남는다** — 새 PR을 연 뒤 #87을 새 PR을 가리키는 코멘트와 함께 닫는다.\n\n**범위 밖(후속)**: #86이 이미 착지시킨 것 전부(대역 매니페스트·`kustomization.yaml` 등재·`APPROVAL-GATEWAY` 등재 행·회계 행) · AC-F 전용 e2e 파일 저작(자매 렌즈 `tbm_session-platform-ac-e2e`, 지금 형제 워커가 `rct_20260906-0002`로 점유 중) · `docs/test/e2e.md`의 「AC 검증 범위」·AC 매핑·`ac-summary` 절(그 자매 원장이고 지금 열려 있다 — 줄이 겹치지 않게 손대지 않는다) · TIMEOUT 갈래(`defaultApprovalTimeout` 10분 하드코딩, 설정화는 제품 변경 → `tbm_session-platform-docs-impl`) · AC-F2 NetworkPolicy 집행(kindnet 미집행) · AC-F5 RWX 공유 볼륨(구현 없음) · MCP 컨테이너의 CA 신뢰 경로 자체(차단 요인 행이 예고하는 제품 변경) · `k8s/` base.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-06T12:10:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "**준비 전 중복 확인(이번 반려가 지목한 루프 결함의 직접 대응).** 대상 레포의 PR 목록을 `state=all`로 조회해 이 task id(`rct_20260906-0001`)를 브랜치명에 가진 준비본이 몇 개인지 센다. 브랜치 명명 규약이 달라도 잡히도록 `rct_20260906-0001` 부분 문자열로 찾는다.",
+              "expectedOutcome": "#85(`-ac-e2e`, 자매 task)·#86(`-mock-policy`, 머지됨)·#87(`-session-platform-e2e-mock-policy`, open) 셋이 보이고, 그중 이 task의 준비본이 #86(머지)·#87(open) 둘임이 확정된다."
+            },
+            {
+              "seq": 2,
+              "action": "현재 `origin/main`(`09e7581`)에서 브랜치 `reconcile/rct_20260906-0001-mock-policy-residual`을 딴다. #87의 브랜치를 재사용하지 않는다 — 그 브랜치에는 중복 구현이 실려 있다.",
+              "expectedOutcome": "#86 착지 이후 main을 부모로 갖는 새 ref. `git merge-base` == `09e7581`."
+            },
+            {
+              "seq": 3,
+              "action": "`scripts/e2e/up.sh`의 롤아웃 대기 목록에 `kubectl rollout status deploy/approval-gateway-fake --timeout=120s`를 더한다 — `anthropic-fake` 다음, `control-plane` 앞. 주석은 이웃(minio·plugin bootstrap·provider)과 같은 형식으로 *왜 기다리는가*를 적는다. 문면에 스캔 토큰(`test-only`·`E2E_*`·`mock-exception:`·`CRIU_ENABLED`)이 들어가지 않게 고른다 — `scripts/e2e`는 충실도 스캔 범위 안이라 토큰이 생기면 회계 행이 필요해진다.",
+              "expectedOutcome": "대기가 5개 → 6개. `python3 scripts/check-fidelity-allowlist.py`의 「회계 행 20 == 스캔된 쌍 20」이 그대로 유지된다(새 쌍 0)."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/test/e2e.md`의 「차단 요인」 표(`<!-- fidelity:blockers -->` 블록)에 행 하나를 넣는다 — 5칸: 무엇이 막는가 / `data-plane/cmd/agent/session_mcp_tools.go` / `http.DefaultClient.Do(req)` / `없음` / 해소 시. 판정이 `없음`인 근거(정적 https 원본은 kind에 실물로 세울 수 있어 정의의 EXT 배제 조항이 걸린다)와, 해소가 **제품 변경 선행**(MCP 컨테이너가 사설 발급자를 신뢰할 길 — 소관 `tbm_session-platform-docs-impl`)을 요구한다는 것을 '해소 시' 칸에 못박는다. '해소 시' 칸의 백틱 대문자 토큰은 **등재 표에 없는 것만** 쓴다(R10은 예고 CODE가 이미 등재돼 있으면 실패시킨다 — `FETCH-ORIGIN`은 미등재라 안전, `EXT`·`MinIO`는 백틱에 싸지 않는다).",
+              "expectedOutcome": "표에 1행. R10의 다섯 검사(칸 5개·'무엇이 막는가' 비지 않음·'해소 시' 비지 않음·판정이 허용집합·리터럴이 그 tracked 파일에 실재)를 전부 통과."
+            },
+            {
+              "seq": 5,
+              "action": "같은 파일의 산문·집계·등재 행을 그 한 행과 일치시킨다: ① 표 바로 위 「**표는 지금 비어 있다.**」 문단을 「다시 채워졌다」로 바꾸고 이번 행이 *결재 이후* 구간이며 판정이 `없음`인 이유를 적는다 ② 「집계」 블록의 `차단 요인 **0**건 …` 줄을 `**1**건`으로 고치고 괄호 안 서술도 실제와 맞춘다 ③ `APPROVAL-GATEWAY` 등재 행의 **잔여 칸**에 「승인 뒤의 실제 아웃바운드 호출은 여전히 막혀 있어 `APPROVED` 갈래는 *게이트를 통과했다*는 데까지만 관측된다(아래 「차단 요인」)」를 더한다. **집계의 다른 네 줄(등재 seam 7 · 마커 9 · 회계 행 20 · 인터셉트 7)은 손대지 않는다** — #86이 이미 맞춰 놓았고 #87의 값을 그대로 옮기면 R8이 붉어진다.",
+              "expectedOutcome": "R8(집계 == 실제)과 R2(등재 행의 두 칸이 비지 않음)를 통과하고, 문서 안에 「비어 있다」와 「1건」이 동시에 존재하지 않는다."
+            },
+            {
+              "seq": 6,
+              "action": "「AC 검증 범위」·AC 매핑·`ac-summary` 절은 **열지 않는다**. 자매 렌즈 `tbm_session-platform-ac-e2e`의 `rct_20260906-0002`가 지금 그 절을 고치는 계획을 `planning`으로 점유하고 있다. 커밋 직전 `git diff`로 내 변경이 그 줄 범위 밖(충실도 절)에만 있음을 눈으로 확인한다.",
+              "expectedOutcome": "`git diff -- docs/test/e2e.md`의 hunk 헤더가 전부 충실도 절 범위 안이고 AC 절(대략 :430 이후)에는 0 hunk. 두 PR이 같은 파일을 움직여도 git 충돌 0."
+            },
+            {
+              "seq": 7,
+              "action": "정적 게이트 4종을 로컬에서 돌린다: `python3 scripts/check-fidelity-allowlist.py` · `python3 scripts/check-render-fidelity.py` · `python3 scripts/check_comment_policy.py` · `bash scripts/e2e/check-ac-mapping.sh`. ac-mapping 출력은 부모 커밋(`09e7581`)의 출력과 `cmp`로 **바이트 동일**해야 한다 — 이 슬라이스는 AC 매칭을 하나도 바꾸지 않는다.",
+              "expectedOutcome": "4종 rc=0. fidelity 출력의 마지막 줄이 `차단 요인 1건`. ac-mapping 출력 `cmp` diff 0(부모 값: AC 27 = 매칭 17 + 예외 1 + 공백 9)."
+            },
+            {
+              "seq": 8,
+              "action": "음성 통제 — 새로 세운 것이 실제로 기계에 물려 있는지 확인한다. ① 차단 요인 행 삭제 → R10이 아니라 **R8**(집계 1 vs 실제 0)로 붉어지는지 ② 리터럴을 `http.DefaultClient.Do(r)`로 한 글자 변조 → **R10**(리터럴 없음) ③ 집계를 `0`으로 되돌림 → **R8** ④ 판정을 `없음`→`NONE` → **R10**(허용 판정 아님) ⑤ '해소 시' 칸의 `FETCH-ORIGIN`을 이미 등재된 `APPROVAL-GATEWAY`로 바꿈 → **R10**(예고 CODE가 이미 등재). 각각 rc=1이고 **메시지가 의도한 규칙**인지 본다. 복원은 `cp` 백업 → `cmp` 바이트 동일 확인(`git checkout --` 금지 — 다른 변경까지 날린다).",
+              "expectedOutcome": "5종 전부 rc=1이고 규칙 태그가 의도대로. 복원 후 `cmp` 0이고 게이트 4종이 다시 rc=0."
+            },
+            {
+              "seq": 9,
+              "action": "커밋하고 푸시한 뒤 PR을 연다(머지하지 않는다). 본문에 task id · 반려 경위(#86 선착지) · 이 PR이 담은 잔여 둘 · 검증 방법 · 「범위 밖(후속)」을 소유 모델까지 적는다. **#87과의 관계와 자매 PR 존재 여부를 본문에 명시한다.**",
+              "expectedOutcome": "2파일만 바뀐 PR(`scripts/e2e/up.sh` · `docs/test/e2e.md`), `mergeable_state`가 `clean`."
+            },
+            {
+              "seq": 10,
+              "action": "**#87을 닫는다**(머지하지 않는다). 닫기 전에 코멘트로 이유(#86 선착지로 중복 구현이 됐고 `mergeable_state: dirty`)와 잔여 둘을 이어받은 새 PR 번호를 남긴다. 닫기는 가역이다(재오픈 가능) — 이 task의 준비본을 하나로 만드는 것이 목적이다.",
+              "expectedOutcome": "#87 `state: closed`, `merged: false`, 코멘트 1건. 이 task id로 열려 있는 PR이 새 PR 하나뿐."
+            },
+            {
+              "seq": 11,
+              "action": "PR 체크를 예측과 대조한다. 변경 경로는 `scripts/e2e/up.sh`·`docs/test/e2e.md` 둘. `ci.yml`(paths 필터 없음) 11잡 전부 · `docker-build-push.yaml`(paths 필터 없음, 의도적) 3잡 중 2 실행 + `pin`은 main 전용이라 skipped · `e2e.yml`은 `scripts/e2e/**`가 걸려 1잡 실행 · `docs-journey-mockup.yml`은 paths에 `docs/test/e2e.md`가 없어 **미발화**(기대값). 합 **15 체크 = 실행 14 + skipped 1**.",
+              "expectedOutcome": "실측이 예측과 일치하고 실패 0. 특히 `e2e (kind + API + browser)` 로그에 `deployment \"approval-gateway-fake\" successfully rolled out`이 **새 대기 지점에서** 찍힌다."
+            }
+          ]
         }
       }
     ]
