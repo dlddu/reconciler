@@ -1224,6 +1224,52 @@
       "assessedAt": "2026-09-06T12:12:00Z"
     },
     "createdAt": "2026-09-06T12:12:00Z",
-    "updatedAt": "2026-09-06T12:33:00Z"
+    "updatedAt": "2026-09-06T12:40:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`web/` 를 통째로 판정해 이 모델의 남은 두 경계 중 **아무도 열어 두지 않은 쪽을 닫는다** — `web/e2e/**`(191줄/10파일) + `web/src/**`(194줄/18파일)의 주석을 정책의 5단계 절차로 전수 판정하고, 복원 가능한 것을 지운 뒤 원장에 7차까지의 형태 그대로 **#8 행 하나**로 등재한다. 자매 `ac-e2e` 가 `planning` 으로 파일을 신설하는 `control-plane/test/`(799줄) 는 이번에 건드리지 않는다 — 저작 시점 측정이 머지 창 안에서 배신당하는 바로 그 범위다. 이 범위를 고른 근거는 detector 가 항목별로 대조한 그대로다: `web/` 잔여에는 계획이 적어 둔 유예 사유가 **하나도 없고**, `web` 트리 해시가 #83(09-05) 이후 불변이며, `web/` 를 판정면으로 갖는 자매 셋 중 비-터미널 task 를 가진 것은 범위가 `docs/doc-tracker.md` 한 파일인 `docs-impl` 뿐이다. 접근은 **문서 슬라이스가 아니라 코드 슬라이스**다 — 원장이 초록인 채로 잔여를 영원히 미판정으로 두는 축(게이트는 *등재된* 파일만 재측정한다)을 등재로 덮는 것이 이 모델의 유일한 전진 방향이다.\n\n**완료 기준(이 시도의 범위)**: 머지된 main 에서 ⑴ `scripts/check_comment_policy.py` rc=0, ⑵ **등재 범위 8**, ⑶ 새 #8 행의 파일 집합 == `git ls-files -- web/src web/e2e` 에서 `web/src/design/README.md` 를 뺀 **전량**, ⑷ 합계 마커가 행 줄 수 합과 일치(R4). 인구조사 수치(3172·62.6% 같은 절대값)는 **완료 기준에 넣지 않는다** — 지난 두 사이클이 그것으로 살았다.\n\n**범위 밖(후속 — 재감지가 잇는다)**: `control-plane/test/` 799줄/25파일(자매 `ac-e2e/rct_20260906-0002` 가 그 경로에 파일을 신설 중), 그리고 지문 오검출 3종 — `data-plane/Dockerfile` 1줄(`*) echo` case 와일드카드) · `web/src/design/README.md` 6줄(마크다운 볼드 접두) · `web/src/design/tokens.css` 2줄(CSS 전체 선택자 `* {`). 앞의 둘은 선례대로 **등재하지 않고 측정 메모로만** 남기고, 세 번째는 tokens.css 가 실 주석도 갖고 있어 파일은 등재하되 행의 `결과` 칸에 오검출 2줄을 명시한다(2차·7차 패스가 Go 포인터 역참조·임베드 필드를 그렇게 처리한 선례).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포를 clone 하고 **감지가 넘긴 실측을 전건 재확인**한다: HEAD·`web` 트리 해시, 모델 as-is versionScript 재실행, `scripts/check_comment_policy.py` rc/출력, 디렉터리별 재집계. 이어서 **지문 오검출을 스스로 다시 센다** — `^[[:space:]]*\\*[^/]` 가지에 걸리는 줄을 전수 뽑아 JSDoc 연속 줄과 오검출을 가른다.",
+              "expectedOutcome": "HEAD `09e75818` · web 트리 `bac7995d` · as-is `lines=3172 files=120` / `d5972b0f…` · 게이트 rc=0 「등재 범위 7 · 판정 완료 1987줄」이 레코드와 글자 그대로 일치. 오검출은 detector 가 적은 README 6줄 **말고도** `tokens.css` 의 `* {` 2줄이 더 있어, 실 판정 대상은 detector 가 적은 379줄이 아니라 **377줄**임을 확정한다(상위 단계 수치는 하한이다)."
+            },
+            {
+              "seq": 2,
+              "action": "**제거하기 전에 게이트를 깨는 자리를 먼저 센다.** `scripts/check-fidelity-allowlist.py` 의 `TOKEN_RE` 로 `web/src`·`web/e2e` 의 `(파일, 토큰)` 쌍을 전수 추출하고, 그중 **주석 줄 안에 사는 것**을 가려낸다. 같은 방식으로 `scripts/check-render-fidelity.py` 의 `DECL_RE`(`mockup:`) 가 읽는 헤더 줄을 확정한다.",
+              "expectedOutcome": "`web/e2e/journeys/deferred.spec.ts` 의 유일한 스캔 토큰 `test-only` 가 **주석 줄 안에만** 있고(그 파일의 다른 어디에도 없다), 충실도 회계 표에 `(deferred.spec.ts, test-only)` 행이 있다는 것이 확인된다 — 즉 **그 주석을 지우면 `fidelity` 잡이 빨개진다.** `mockup:` 선언은 R4 가 읽지만 그 **다음 줄**의 「매핑 표와 양방향으로 일치해야 한다」 는 어느 게이트도 읽지 않음을 스크립트 본문으로 확인한다."
+            },
+            {
+              "seq": 3,
+              "action": "`web/e2e/**` 10파일 191줄을 정책 절차 2번대로 **한 줄도 빠짐없이** 읽고 판정한다. 제거 근거는 줄마다 「이미 말하는 곳」을 심볼·AC·문서 절 이름으로 적는다(R5 때문에 줄 번호는 쓰지 않는다). 운영 규칙(「포인터는 남기고 사본은 지운다」)을 주된 도구로 쓴다.",
+              "expectedOutcome": "7파일에 되풀이된 「매칭 단위 밖」 헤더(22줄)가 `docs/test/e2e.md` §「매칭 단위 밖」 표의 사본임이 확인돼 파일마다 포인터 1줄로 줄고, `j6-model-selection`·`j6-stream-recovery`·`manual-archive`·`session-deletion` 의 헤더가 각각 `MODEL-CONFIG-STATE`·`STREAM-RESET-REPLAY`·「해소된 것」②·`DELETE-CONFLICT-ERR` 등재 행의 축자 사본임이 확인된다. **유지**되는 것은 증명 근거(마커가 트리 어디에도 없다는 전역 사실 · `$((…))` 가 에코와 구별되는 이유 · `route.fulfill` 이 열린 스트리밍 응답을 못 남긴다는 Playwright 제약 · containment 단언의 비결정성 근거)와 **step 2 가 찾아낸 `test-only` 블록**이다."
+            },
+            {
+              "seq": 4,
+              "action": "`web/src/**` 18파일 194줄(실 판정 186줄)을 같은 절차로 판정한다. 10파일에 되풀이된 「`docs/mockups/README.md` 의 매핑 표와 양방향으로 일치해야 한다」 1줄과, AC 본문을 옮겨 적은 doc 주석을 주 대상으로 본다.",
+              "expectedOutcome": "그 10줄이 `docs/mockups/README.md` 의 「표와 선언이 어긋나면 게이트가 실패하므로, 둘 중 하나만 고치는 것은 불가능합니다」 와 `check-render-fidelity.py` 독스트링 R3·R4 의 사본이고 **기계가 이미 강제하는 규칙**임이 근거로 적힌다. `types.ts`·`Restore.tsx`·`Workspace.tsx` 의 AC-A2/B2/E3/F3/F4 재진술이 PRD 축자 대조로 갈린다. **유지**되는 것은 동시성·순서 계약(generation guard · 커서 경합 · 직렬화), `fatal: true` 원샷 디코드 근거, `MaxIdle` 이 Go 상수를 **미러**한다는 언어 간 사실, 정적 플레이스홀더 vitals 의 근거, mockup 의 데모 전용 트리거를 **의도적으로 뺐다**는 이탈 기록이다. `shell.css`·`tokens.css` 의 절 배너는 5차·7차 패스 선례대로 **유지**한다(같은 형태에 다른 기준을 적용하지 않는다)."
+            },
+            {
+              "seq": 5,
+              "action": "제거를 반영한 뒤 게이트 3종(`check_comment_policy.py` · `check-fidelity-allowlist.py` · `check-render-fidelity.py`)과 `check-ac-mapping.sh`, 그리고 `web` 잡과 같은 명령(`npm run lint` · `npm run build`)을 로컬에서 돌린다. **음성 통제**로 각 게이트가 실제 판별자임을 확인한다.",
+              "expectedOutcome": "네 게이트 전부 rc=0 이고 `npm run lint`·`npm run build` 성공. 음성 통제 5종이 각각 의도한 규칙으로 rc=1 이 된다 — ⑴ `deferred.spec.ts` 의 `test-only` 주석 제거 → `fidelity` 실패, ⑵ `mockup:` 선언 줄 제거 → `render-fidelity` **R4** 실패, ⑶ #8 행 줄 수 되돌림 → **R2** 실패, ⑷ 합계 마커 미갱신 → **R4**(comment-policy) 실패, ⑸ 원장에 `파일:줄` 좌표 삽입 → **R5** 실패. 복원은 전부 `cp` 백업 → `cmp` 바이트 동일로 확인한다(`git checkout --` 금지)."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/comment-policy.md` 에 **#8 행**(27파일)과 판정 상세 절을 더하고 합계 마커를 갱신한다. 행의 줄 수·지문은 **제거를 반영한 뒤의 값**을 게이트 출력에서 그대로 읽어 적는다(예고값을 손으로 짓지 않는다). 상세 절에는 제거표(위치·제거한 것·이미 말하는 곳)와 유지 목록, **갈린 판정**, 그리고 오검출 3종·`test-only` 함정을 남긴다.",
+              "expectedOutcome": "게이트가 「등재 범위 **8**」 을 출력하고 rc=0. #8 행의 파일 집합이 `git ls-files -- web/src web/e2e` 전량에서 `web/src/design/README.md` 하나만 뺀 것과 정확히 같다(집합 대조로 확인). `DeleteSessionDialog.tsx` 처럼 판정 후 주석이 **0줄이 되는 파일도 등재**한다 — 빼면 나중에 그 파일에 생기는 주석이 rc=0 아래에서 영원히 미판정으로 남는다."
+            },
+            {
+              "seq": 7,
+              "action": "PR 을 열기 **전에** 대상 레포를 `state=all` 로 조회해 task id 부분 문자열과 `web/`·`docs/comment-policy.md` 경로로 형제 준비본을 센다. 그 다음 `reconcile/rct_20260906-0001-comment-redundancy` 브랜치로 PR 을 열고 15개 체크(ci 11 + docker 3(`pin` skipped) + e2e 1, `docs-journey-mockup` 미발화)를 기대값으로 명시한 뒤 실측한다.",
+              "expectedOutcome": "열린 형제 PR 은 #88(`deploy/`·`docs/test/e2e.md`)·#89(`docs/doc-tracker.md`) 둘뿐이고 **내 변경 파일과 교집합이 0** 임이 확인된다. PR 체크 15개 중 실행 14개 전부 success · skipped 1(`pin`) · 실패 0."
+            }
+          ],
+          "plannedAt": "2026-09-06T12:40:00Z"
+        }
+      }
+    ]
   }
 ]
