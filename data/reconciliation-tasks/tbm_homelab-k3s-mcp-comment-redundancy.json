@@ -913,6 +913,57 @@
       "assessedAt": "2026-09-06T12:14:00Z"
     },
     "createdAt": "2026-09-06T12:14:00Z",
-    "updatedAt": "2026-09-06T12:24:00Z"
+    "updatedAt": "2026-09-06T12:24:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "공유 헬퍼 `tests/integration/_*.py` **7파일의 docstring 227줄을 전수 판정**하고 docstring 원장 4행째로 등재한다. #63이 R5~R8과 docstring 표면을 착지시키면서 직전 계획이 이 7파일을 뺐던 사유(「구조 변경과 판정이 한 PR에서 둘 다 커진다」)가 소멸했으므로, 이번엔 구조를 건드리지 않는 **순수 판정 슬라이스**다. 판정 결과 지울 것은 한 종류뿐이었다 — 6개 모듈 docstring의 둘째 문단 「`_` 접두라 `run_all.py::matching_unit_paths()`가 걸러내므로 AC를 주검증하지 않고 `검증 AC:` 선언도 갖지 않는다」로, `run_all.py:89`의 `not p.name.startswith(\"_\")` 한 줄로 복원되는 ①코드 재진술이며 #63이 `*_ac*.py` 60파일에서 지운 정형 문단의 부정형이다. 여기에 `_session_platform.py`의 **한 docstring 안 자기 중복** 2줄(「List reads only these ConfigMaps…」가 두 문단에 중복)을 더해 계측 7줄(물리 13줄)을 제거하고, 나머지 213줄은 상류 SDK·kubectl·SigV4·설계 경위 등 복원 불가능한 지식이라 전부 유지한다. **완료 기준(범위)**: 머지된 main에서 게이트 3종 rc=0 + docstring 등재 범위 **4** + 4행째가 `_*.py` **7파일 전량**을 덮는다 + R8 합계·잔량이 실측과 일치. **범위 밖**: `*_ac*.py` 843줄(형제 `ac-e2e`가 파일을 신설할 수 있는 자리) · 줄 끝 주석 5줄(정책이 명시 유예) · 모델 `asIs.versionScript`의 docstring 확장(`reconciler-tobe-modeler` 소관 — 이 task로 닫을 수 없다).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "게이트 `scripts/check_comment_policy.py`의 `docstring_lines()`를 직접 임포트해 `_*.py` 7파일의 docstring을 독립 재측정하고, 감지 레코드의 227줄/7파일과 대조한다.",
+              "expectedOutcome": "227줄 / 7파일, 지문 `687ce0dfbce6`. 감지 수치와 일치."
+            },
+            {
+              "seq": 2,
+              "action": "7파일의 module·function docstring을 **전부** 읽어 복원 경로 넷(코드·문서·PR·커밋)에 하나씩 대조한다. 복원 가능 판정에는 그 경로를 실제 grep으로 확인한다.",
+              "expectedOutcome": "`run_all.py:89`의 `not p.name.startswith(\"_\")`와 `check_ac_mapping.py:47`의 `import run_all`이 실재 → 「매칭 단위가 아니다」 문단이 ①코드로 복원됨을 확인. 나머지는 복원 불가로 유지 판정."
+            },
+            {
+              "seq": 3,
+              "action": "6개 모듈 docstring의 정형 둘째 문단을 제거한다(`_workload.py`는 그 문단에 실내용이 섞여 있어 내용 문장만 남긴다). 요약 줄의 「(매칭 단위가 아니다)」 괄호는 `smoke.py` 선례를 따라 유지한다.",
+              "expectedOutcome": "물리 13줄 제거. 요약 줄과 기계 판독 선언 줄은 무변경."
+            },
+            {
+              "seq": 4,
+              "action": "`_session_platform.py`의 자기 중복 2줄(마지막 문단이 *Seeding* 문단의 「List reads only these ConfigMaps…」를 반복)을 제거한다.",
+              "expectedOutcome": "docstring 안에서 같은 주장이 한 번만 남는다."
+            },
+            {
+              "seq": 5,
+              "action": "docstring을 플레이스홀더로 치환한 AST를 HEAD와 대조해 **실행 코드가 한 줄도 바뀌지 않았음**을 증명한다(#63의 절차).",
+              "expectedOutcome": "변경 6파일 전부 AST 동일."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/comment-policy.md`의 docstring 원장에 4행째(7파일·220줄·지문)를 등재하고, `docstring-합계` 159→379 · `docstring-잔량` 1070→843 마커를 갱신한다. 잔량 프로즈가 낡지 않도록 「이번 슬라이스」를 `rct_20260905-0001`로 명시한다.",
+              "expectedOutcome": "게이트 R1~R8 rc=0, 「등재 범위 4 · 판정 완료 379줄(31.0%) · 미판정 잔량 843줄」."
+            },
+            {
+              "seq": 7,
+              "action": "음성 통제 5종으로 새 행이 실제로 무는지 확인한다(지운 문단 되살리기 / 잔량 마커만 되돌리기 / 합계 마커만 되돌리기 / 중복 등재 / docstring 한 줄 추가). 복원은 `cp` 백업 → `cmp` 바이트 동일.",
+              "expectedOutcome": "5종 전부 rc=1이고 메시지가 의도한 규칙(R6 재측정·R8 미러 두 형태·R7 중복). 복원 후 rc=0."
+            },
+            {
+              "seq": 8,
+              "action": "게이트 3종(`check_comment_policy` · `check_ac_mapping` · `check_mock_policy`) rc=0과 `py_compile`을 확인하고 브랜치를 푸시해 PR을 연다.",
+              "expectedOutcome": "게이트 3종 rc=0. PR 생성, CI 4잡(lint · unit-tests · integration-tests · docker) 발화."
+            }
+          ],
+          "plannedAt": "2026-09-06T12:40:00Z"
+        }
+      }
+    ]
   }
 ]
