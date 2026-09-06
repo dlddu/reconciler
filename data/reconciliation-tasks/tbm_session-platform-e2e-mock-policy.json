@@ -1730,7 +1730,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-09-06T02:09:53Z",
-    "updatedAt": "2026-09-06T02:30:33Z",
+    "updatedAt": "2026-09-06T02:40:25Z",
     "trigger": {
       "detectedAt": "2026-09-06T02:09:53Z",
       "changedSides": [
@@ -1815,6 +1815,14 @@
               "expectedOutcome": "executor가 검토·머지할 수 있는 PR."
             }
           ]
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20260906-0001-session-platform-e2e-mock-policy",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/87",
+          "preparedAt": "2026-09-06T02:40:25Z",
+          "notes": "5파일 +324/−6 (신규 2 · 수정 3), base `2007050`.\n\n**계획 대비 벗어난 것 · 계획에 없던 발견**\n\n1. **감지가 적지 않은 잔여를 하나 찾아 「차단 요인」 표에 등재했다.** 승인이 떨어진 뒤의 **실제 아웃바운드 호출**은 이 대역이 서도 여전히 막혀 있다 — 도구는 https 만 받는데(`validateFetchTarget`) 그 호출을 내는 MCP 컨테이너의 fetch 는 시스템 루트만 신뢰하는 `http.DefaultClient` 이고, credential-proxy 와 달리 헬퍼 pod 의 MCP 컨테이너에는 CA 를 넣을 자리가 아예 없다(`helperPodSpec` 의 env 는 워크로드·주소·세션ID·게이트웨이 3종뿐). 감지 레코드의 「④ 남는 제약」은 TIMEOUT·AC-F2·AC-F5 셋만 적었다 — **상위 단계의 잔여 목록은 하한이다.** 판정은 `없음`(정적 https 원본은 kind 에 실물로 세울 수 있어 EXT 배제 조항이 걸린다), 리터럴 `http.DefaultClient.Do(req)` 가 R10 트립와이어다. 이 등재로 차단 요인 집계가 0 → 1 이 된다.\n\n2. **`deploy/kustomization.yaml` 에는 `mock-exception:` 마커를 넣지 않았다.** R6 은 CODE 별 「마커 파일 집합 == 회계 행 파일 집합」을 요구하는데, 이 파일의 비-마커 스캔 토큰은 `CRIU_ENABLED` 하나뿐이고 이미 `CRIU-GATE` 가 가져갔다. 마커만 더하면 R6 이 「마커는 있으나 그 파일의 회계 행이 없다」로 붉어진다. 마커는 대역 매니페스트 한 곳에만 둔다.\n\n3. **자매 경계를 지켰다.** 이 PR 이 머지되면 `docs/test/e2e.md` 「AC 검증 범위」 절의 선행 ⓑ(「`git grep 'approval-gateway' -- deploy k8s` 가 0 hits」)와 승격 조건 ①(「ⓐ와 ⓑ가 함께」)이 거짓이 된다. 그 블록은 자매 렌즈 `tbm_session-platform-ac-e2e` 의 원장이라 **열지 않았다** — 그쪽 `rct_20260906-0001` 이 미점유로 열려 있고 이미 ⓐ를 들고 있으므로, 그 슬라이스가 ⓐ·ⓑ 둘을 한 번에 사실로 적으면 된다. PR 본문 「범위 밖(후속)」에 소유 모델까지 명시했다. 지금 그 블록을 함께 고치면 미점유 task 와 같은 파일 같은 줄에서 충돌한다.\n\n**계획 단계에서 실행으로 확정한 것**\n- ConfigMap 의 `server.js` 를 정규식으로 꺼내 node 22 로 그대로 기동하고 **같은 레포의 실 Go 클라이언트**(`approvalGateway`)를 일회용 `_test.go` 로 붙여 6 케이스 전부 통과(APPROVED·REJECTED·EXPIRED·TIMEOUT·401·외부식별자/자격증명 비유출). 뮤테이션(기본 결재 APPROVED→REJECTED)으로 시험이 판별자임을 확인했고 프로브 파일은 커밋 전에 삭제. **렌더된 ConfigMap 의 server.js 가 로컬 실행본과 바이트 동일**.\n- `kustomize build deploy/` base 대조: 기존 오브젝트 **24개 전부 바이트 동일**, 증가는 정확히 4개.\n- 정적 게이트 4종 rc=0, `check-ac-mapping.sh` 출력 부모와 `cmp` 바이트 동일.\n- 음성 통제 5종 전부 rc=1 이고 메시지가 의도한 규칙(R3/R6/R8 · R4/R5/R8 · R8 · R10 리터럴 · R10 예고 CODE). 복원은 `cp` 백업 → `cmp` (`git checkout --` 금지 규율).\n\n**지문 예고**: as-is `seams=27 files=14 / 27ffb865…` → `seams=29 files=15 / de1e6837…` · to-be `lines=187 / e60213f0…` → `lines=195 / 1ca12062…` · 자매 렌즈 to-be blob `4fff8710…` → `77c3ce1a…`."
         }
       }
     ]
