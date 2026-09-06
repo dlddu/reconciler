@@ -2716,7 +2716,7 @@
   {
     "id": "rct_20260905-0005",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-05T15:45:00Z",
       "changedSides": [
@@ -2745,7 +2745,7 @@
       "assessedAt": "2026-09-05T15:45:00Z"
     },
     "createdAt": "2026-09-05T15:45:00Z",
-    "updatedAt": "2026-09-06T09:54:00Z",
+    "updatedAt": "2026-09-06T09:56:37Z",
     "attempts": [
       {
         "plan": {
@@ -2801,6 +2801,76 @@
           "reviewer": "user",
           "reviewedAt": "2026-09-06T09:54:00Z",
           "comment": "사용자가 「승인」으로 답했다. **executor의 권고(거부 후 재계획)와 다른 판단이며, 재측정 결과를 모두 제시받은 뒤의 결정이다** — 승인 요청에서 #86이 `approval-gateway-credentials` Secret을 `deploy/`에 세워 교체문의 핵심 주장 셋(「Secret 0건」·「넷만 세운다」·「kind SUT 여전히 차단」)이 지금 main에서 거짓이 됐음과, 머지하면 고친 자리에 새 거짓이 심긴다는 점을 명시해 전달했다.\n\n따라서 실행은 계획대로 PR #84 머지로 진행하되, **머지 직후 ③은 다시 기준 5 위반 상태가 된다** — 이번엔 ⓑ(게이트웨이 Secret 부재)가 #86으로 해소됐다는 사실을 반영하지 못한 형태다. 이 잔여는 이 시도의 계획 범위 밖이므로 converged 판정에 넣지 않고 검증 detail에 사실로만 남긴다. 후속은 재감지가 새 task로 잇는다(머지가 `docs/` 트리 해시를 움직이므로 다음 감지 주기가 반드시 깨어난다)."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-06T09:55:00Z",
+          "finishedAt": "2026-09-06T09:56:37Z",
+          "entries": [
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "CI 관측 — head `a4eabe0` 의 워크플로 런 2건 모두 completed/success(`ci`, `Build and Push Docker Image to GHCR`). `docs-journey-mockup`·`e2e`는 paths 필터에 `docs/doc-tracker.md`가 없어 미발화 — 지침 §2의 기대값과 일치(누락 아님)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "머지 전 정합성 단언 6종을 브랜치에서 실행, **전부 통과**. ① `git diff --name-only main...HEAD` = `docs/doc-tracker.md` 1파일 ② 집계 절(`## 현재 상태 요약`~`## 위험 진단`) md5 `228aa9beb620` 양쪽 동일 ③ `control-plane`·`data-plane`·`web`·`k8s`·`deploy`·`scripts`·`.github` diff 전부 빈 출력 ④ 거짓 4문구가 살아 있는 절(`## 위험 진단`~`## 변경 이력`)에서 0회, `## 변경 이력`에만 인용으로 잔존 ⑤ ②·④·「남은 것 셋」이 old/new 양쪽 1회씩 ⑥ 변경 이력 append-only(+1행, 앞 행 전부 바이트 동일). 아울러 §0 사전 조건 재확인: PR open · `changed_files==1` · `mergeable_state=clean` · base 이후 main이 `doc-tracker.md`를 건드린 커밋 **0건**."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "PR #84 squash 머지 완료 — 머지 커밋 `b38d3197`. rebase·force-push 없이 clean 머지. `deploy/`·`k8s/` 무변경이라 배포·롤아웃·재시작 없음."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane=5ba1c730 data-plane=693d11cb web=bac7995d (세 지문 모두 불변) / docs=b469953a→036bfc25",
+          "verifiedAt": "2026-09-06T09:56:37Z",
+          "checks": [
+            {
+              "name": "① 변경 파일 1개",
+              "status": "passed",
+              "detail": "머지된 main `b38d3197`의 diff는 `docs/doc-tracker.md` 하나뿐."
+            },
+            {
+              "name": "② 집계 절 바이트 동일",
+              "status": "passed",
+              "detail": "`## 현재 상태 요약`~`## 위험 진단` md5 `228aa9beb620` — 머지 후에도 동일. 가치 6·PRD 6·AC 27·테스트 6 집계 불변."
+            },
+            {
+              "name": "③ 구현 트리 불변",
+              "status": "passed",
+              "detail": "머지된 main에서 `HEAD:control-plane`=`5ba1c730` · `HEAD:data-plane`=`693d11cb` · `HEAD:web`=`bac7995d` — 레코드의 lastObservedVersion과 **글자 그대로 일치**. `HEAD:docs`만 `b469953a`→`036bfc25`로 이동. 「문서만 바꿨다」가 주장이 아니라 사실."
+            },
+            {
+              "name": "④ 거짓 주장이 살아 있는 절에서 사라졌는가",
+              "status": "passed",
+              "detail": "머지된 main의 `## 위험 진단`~`## 변경 이력` 구간에서 「이 env 선언 자체가 없다」·「둘뿐이다」·「이미지 미설정으로 실패한다」·「프로덕션 활성화가 남았다」 **전부 0회**. `## 변경 이력`에는 「…라고 주장했으나」 인용으로 남아 있으며 이는 의도된 형태(절 단위 단언)."
+            },
+            {
+              "name": "⑤ 살려 둔 것 보존",
+              "status": "passed",
+              "detail": "`② **AC-F5 RWX 공유 볼륨 미착지**` · `④ 정책의 **실집행**은 여전히 미검증이다` · `**남은 것 셋**` 각 1회씩 보존. ③이 살아 있는 항목으로 남아 「남은 것 셋」(②③④)이 계속 참."
+            },
+            {
+              "name": "⑥ 변경 이력 append-only",
+              "status": "passed",
+              "detail": "표에 2026-09-05 행 1개만 늘고 앞선 행은 전부 바이트 동일. `2026-09-03 (7)`·`2026-09-04 (5)`의 당시-참 서술은 손대지 않았다."
+            },
+            {
+              "name": "⑦ 문서 게이트 4종 회귀 없음(보조)",
+              "status": "passed",
+              "detail": "머지된 main에서 `check-fidelity-allowlist.py`·`check-render-fidelity.py`·`check_comment_policy.py`·`scripts/e2e/check-ac-mapping.sh` 전부 rc=0. 단, 지침 §3이 못박듯 **이 green은 「무해함」의 증거일 뿐 교정의 증거가 아니다** — `doc-tracker.md`를 읽는 게이트는 이 레포에 하나도 없다."
+            },
+            {
+              "name": "⑧ [정보성 · 범위 밖] 새 교정문의 ⓑ 축이 머지 시점에 이미 낡았다",
+              "status": "passed",
+              "detail": "**실패 판정이 아니라 사실 기록이다.** 이 시도의 완료 기준은 위 ①~⑥의 기계 단언이고 전부 통과했다. 그러나 머지 창 안에서 #86(`84f919c9`)이 `deploy/e2e-approval-gateway-fake.yaml`(264줄)을 신설하고 `deploy/kustomization.yaml`에 등재하며 **`approval-gateway-credentials` Secret을 kind e2e SUT에 세웠다**. 머지 후 실측: `git grep -c 'approval-gateway-credentials' -- deploy` = `e2e-approval-gateway-fake.yaml:2` · `kustomization.yaml:1`(계획·준비 시점 **0건**). 따라서 방금 착지한 ③의 두 번째 축 — 「`deploy/`에 0건」·「`deploy/`는 넷을 세우면서 이것만 세우지 않는다」·「kind e2e SUT는 게이트웨이 Secret 부재로 여전히 막혀 있다」 — 은 **현재 main에서 거짓이다**. executor가 승인 요청에서 이 사실과 「거부 후 재계획」 권고를 명시했고 사용자가 그것을 받은 뒤 승인했다. 교정문을 다시 가르는 것은 새 판정이라 planner의 몫이므로 executor가 여기서 고치지 않았다. **후속은 재감지가 잇는다** — 이 머지가 `docs` 트리 해시를 `b469953a`→`036bfc25`로 움직였으므로 다음 감지 주기가 반드시 깨어나고, 그때 ③은 다시 기준 5 위반으로 잡힌다."
+            }
+          ]
         }
       }
     ]
