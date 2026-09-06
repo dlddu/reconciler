@@ -2028,7 +2028,7 @@
     "toBeModelId": "tbm_session-platform-ac-e2e",
     "status": "planning",
     "createdAt": "2026-09-06T05:18:06Z",
-    "updatedAt": "2026-09-06T05:25:00Z",
+    "updatedAt": "2026-09-06T05:40:00Z",
     "trigger": {
       "detectedAt": "2026-09-06T05:18:06Z",
       "changedSides": [
@@ -2054,6 +2054,57 @@
       "reason": "**작업 필요.** 규칙 6이 요구하는 「집계·**상태**가 실제와 일치」가 두 자리에서 깨졌고, 그 깨짐이 가리는\n사실 — 승격 조건 ①의 **유일한** 해제 조건이 충족됐다 — 이 이 모델의 공백 9건 중 4건을 즉시 착수 가능하게\n만들었다. 자동 해소 경로는 0이다(게이트는 카운터, 열린 task 0, 자매 계획서가 명시 제외).\n\n**범위 판단 — 두 축을 한 task로 묶되 슬라이스는 planner가 끊는다.**\n원장 교정만 하고 F 저작을 미루면 「해제 조건이 충족됐다」는 사실이 또 산문에만 남아 다음 fire가 같은 자리를\n다시 판다. 반대로 F 저작만 하면 `ac-summary` 공백 목록이 움직이면서 ⓑ 산문이 여전히 거짓으로 남는다.\n두 축은 같은 파일(`docs/test/e2e.md`)의 같은 판정문에서 만난다.\n\n**계획 단계 제약 (전부 실측 근거를 붙였다)**\n\n1. **F5·F2를 완료 기준에 넣지 말 것.** F5는 RWX 미구현(`ReadWriteMany` 레포 전체 1 hit = PRD 문장뿐)이\n   선행이고 구현은 `tbm_session-platform-docs-impl` 몫, F2는 정책 집행 CNI가 선행이다. 넣으면\n   **executor가 닫을 수 없는 task**가 된다. 원장 ①의 열거가 `F1·F3·F5·F6`인 것에 끌려가지 말 것 —\n   바로 아래 ⚠️가 F5의 추가 선행을 스스로 적고, ②가 F4를 「예외가 아니라 전용 파일」로 되돌린다.\n2. **승인 뒤의 「실제 외부 GET」은 아직 닫히지 않는다 — F3 슬라이스를 여기서 끊어라.**\n   도구는 https만 받는데(`session_mcp_tools.go:174` `validateFetchTarget`) 그 호출을 내는 MCP 컨테이너의\n   fetch는 시스템 루트만 신뢰하는 `http.DefaultClient`(`session_mcp_tools.go:208`)이고 헬퍼 파드의 MCP\n   컨테이너에는 CA를 넣을 자리가 없다(`helperPodSpec`의 env는 워크로드·주소·세션ID·게이트웨이 3종뿐).\n   자매 렌즈가 이것을 「차단 요인」 회계 행으로 등재하려다 아직 못 넣었다(현재 원장 집계 **차단 요인 0건**).\n   ⇒ F3은 「대기 표시·`lastAccess`·`isError` 갈래」까지로 끊고 APPROVED 후 성공 왕복은 다음으로 넘긴다.\n3. **`up.sh`에 대역 롤아웃 대기가 없다 — F 파일이 플레이크를 밟는다.** main의 `scripts/e2e/up.sh`는\n   minio·k3s-mcp-fake·plugin-marketplace-git·anthropic-fake·control-plane 다섯의\n   `kubectl rollout status`를 기다리지만 **`deploy/approval-gateway-fake`는 없다**(#86이 안 넣었고,\n   자매의 미머지 PR #87이 그 5줄을 들고 있다). 이 task의 F 파일이 실제로 대역을 호출하므로\n   **자매 슬라이스가 그 5줄을 넣는 것과 순서를 맞추거나, 이 task가 그 5줄을 함께 가져가야 한다.**\n   자매 task는 현재 `awaiting_review`(사람 판단 대기)라 언제 착지할지 모른다 — planner가 확인할 것.\n4. **마커 블록을 산술로 지킬 것.** F 파일이 서면 `ac-summary`의 공백이 9 → (9 − 착지한 개수)로,\n   `ac-mapping` 매칭이 17 → (17 + 개수)로 움직인다. 완료 기준은 **절대 수치가 아니라**\n   「머지된 main에서 `check-ac-mapping.sh` rc=0이고 매칭+예외+공백 = AC 27로 닫힌다」로 쓸 것\n   (main이 전진하면 절대 수치는 스스로 낡는다 — 이 레포에서 이미 두 번 겪었다).\n5. **숫자·경로 사본을 새로 심지 말 것.** 이 자리는 `AC 21개`(#23)·`E2~E6`(#78)·「선언 자체가 없다」(#81)\n   로 **세 번** 낡았고, 원장 `:216-223`이 그 이력을 자기 house style로 적어 두었다. ⓑ 교정도 「해소됐다 +\n   어디서 확인하는가(정본 경로)」 형태로, 매니페스트 값의 사본을 두지 말 것.\n6. **두 문장으로 쓸 것 — 「ⓑ 해소」와 「그래도 F2·F5는 막혀 있다」.** 한 문장으로 「선행이 다 풀렸다」고\n   적으면 다음 planner가 F2·F5까지 착수 가능으로 오독한다. 자매 `docs-impl`의 executor가 같은 이유로\n   ③을 두 축으로 가르는 것을 지금 사람 검토에 올려 두었다(`rct_20260905-0005`, `awaiting_review`).\n\n**중복 계상 금지.** `docs/doc-tracker.md`의 같은 계열 낡음(항목 ③)은 이 렌즈의 산출물이 아니라\n`tbm_session-platform-docs-impl` 소관이고, 그쪽 `rct_20260905-0005`가 이미 그 자리를 들고\n`awaiting_review`에 있다 — **여기서 다시 열지 말 것.** 반대로 `docs/test/e2e.md`의 ⓑ·승격 조건은\n그쪽 소관이 아니다(자매 executor의 재측정 기록도 `doc-tracker.md`만 다룬다).",
       "assessedBy": "agent",
       "assessedAt": "2026-09-06T05:18:06Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근**: 감지가 연 두 축(① 원장의 ⓑ 서술이 #86으로 거짓이 됨 ② 승격 조건 ①의 유일한 해제 조건이 발화)을 **한 슬라이스로 묶되, F 저작은 AC-F1 하나만** 끊는다. 두 축은 같은 파일(`docs/test/e2e.md`)의 같은 판정문에서 만나므로 따로 착지시키면 어느 쪽이든 남은 문장이 거짓이 된다 — 원장만 고치면 「해제됐다」가 다시 산문으로만 남고(게이트는 카운터라 재감지 경로 0), F만 저작하면 `ac-summary`가 움직이는 사이 ⓑ 산문은 그대로 거짓이다.\n\n**왜 AC-F1이 첫 파일인가**: ⓑ 해소가 실제로 산 것은 「이 타입의 세션이 SUT에서 선다」이고, AC-F1의 검증 방법 첫 갈래가 정확히 그 문장이다(워크로드 파드 + 헬퍼 파드 컨테이너 둘이 함께 기동). 즉 F1 전용 파일은 원장 교정이 **주장하는 사실을 기계 단언으로 바꾸는** 파일이라, 산문 교정과 같은 PR에 있어야 서로를 지지한다. 나머지 F3·F4·F6은 지금 착수 가능하지만 각각 다른 축(승인 왕복·동반 회수·자격 배치)이라 별도 슬라이스로 남긴다 — 이 PR이 `docs/test/e2e.md`와 `control-plane/test/`를 모두 움직이므로 **두 지문(reg·api)이 함께 이동해 재감지가 반드시 걸린다.**\n\n**완료 기준(이 시도의 성공 조건)**\n1. `docs/test/e2e.md`에서 ⓑ를 「남아 있는 유일한 선행」으로 서술하는 세 자리(선행 ⓑ 문단 · 그 위 ⚠️ · 승격 조건 ①)가 main 실측과 일치하고, **「ⓑ는 해소됐다」와 「그래도 F2·F5는 각자의 선행에 막혀 있다」가 서로 다른 두 문장**으로 적혀 있다.\n2. `control-plane/test/e2e_f1_workload_type_test.go`가 서고 `// 검증 AC: AC-F1`을 선언하며, 머지된 main에서 `bash scripts/e2e/check-ac-mapping.sh`가 rc=0이고 **매칭 + 예외 + 공백 = AC 총계**로 닫히며 공백 목록에서 AC-F1이 빠져 있다(절대 수치로 적지 않는다 — main이 전진하면 낡는다).\n3. PR의 `e2e (kind + API + browser)` 잡이 success이고 그 안에서 AC-F1 파일의 케이스가 실제로 실행됐다(잡 로그로 확인).\n\n**범위 밖(후속 — 재감지가 새 task로 잇는다)**\n- **AC-F3·F4·F6 전용 파일**: 지금 선행이 다 풀려 착수 가능하지만 이 PR에 넣지 않는다. 소관은 같은 모델(`tbm_session-platform-ac-e2e`).\n  - F3은 추가 제약이 있다 — 승인 **뒤의 실제 외부 GET**은 아직 닫히지 않는다(도구는 https만 받는데 MCP 컨테이너의 fetch는 시스템 루트만 쓰는 `http.DefaultClient`이고 헬퍼 파드에 CA를 넣을 자리가 없다). F3 슬라이스는 「대기 마커·`lastAccess`·거절/만료 갈래」까지로 끊어야 한다.\n- **AC-F5**: 공유 RWX 볼륨 구현 자체가 없다(`ReadWriteMany`가 레포 전체에서 PRD 문장 1건, PVC 0). 구현 소관은 `tbm_session-platform-docs-impl`.\n- **AC-F2**: `deploy/kind-config.yaml`이 `disableDefaultCNI`를 켜지 않아 kindnet이 NetworkPolicy를 집행하지 않는다 — 정책 집행 CNI가 선행. 클러스터 능력이라 이 렌즈 밖.\n- **`scripts/e2e/up.sh`의 `approval-gateway-fake` 롤아웃 대기 5줄**: 이 모델의 산출물은 「e2e 파일과 등재 문서뿐」이고 `scripts/e2e/*.sh`는 원장 스스로 「매칭 단위 밖 = 실행 하네스」로 등재한 자리다. 소관은 자매 렌즈 `tbm_session-platform-e2e-mock-policy`이고 그 5줄은 이미 PR #87이 들고 있다(현재 `dirty` — #86이 같은 내용을 먼저 착지시켰다). **AC-F1은 이 대기가 없어도 안전하다**: 헬퍼 파드의 Ready 조건은 두 컨테이너의 loopback TCP exec 프로브뿐이고(`helperPodSpec`), MCP 컨테이너는 기동 시 게이트웨이로 다이얼하지 않는다(`newApprovalGateway`는 env 파싱만 하고 실패해도 `gateway=nil`로 계속). 게이트웨이를 실제로 부르는 F3 슬라이스에서는 이 대기가 선행이다.\n- `control-plane/cmd/control-plane/main.go:79-82`의 낡은 Go 주석, `docs/doc-tracker.md` 항목 ③: 각각 `tbm_session-platform-comment-redundancy` · `tbm_session-platform-docs-impl` 소관. 여기서 열지 않는다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-06T05:40:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포를 잡 tmp(`$CLAUDE_JOB_DIR/tmp/session-platform`)에 clone하고 브랜치 `reconcile/rct_20260906-0002-session-platform-ac-e2e`를 판다. 착수 전 세 로컬 게이트의 baseline을 기록한다: `bash scripts/e2e/check-ac-mapping.sh` · `python3 scripts/check-fidelity-allowlist.py` · `python3 scripts/check_comment_policy.py`. 모델 as-is/to-be 버전 스크립트도 직접 돌려 레코드의 `lastObservedVersion`과 글자 그대로 일치하는지 확인한다.",
+              "expectedOutcome": "세 게이트 전부 rc=0이고, ac-mapping 출력이 `AC 27개 = 매칭 파일 17 + 예외 1 + 공백 9`. 지문이 `ac:8049013d… reg:da11fe7c…` / `api:14f3bf84… web:c2f6cbdb…`로 레코드와 바이트 동일 — 이후의 「움직였다」 판정이 신뢰 가능해진다."
+            },
+            {
+              "seq": 2,
+              "action": "`control-plane/test/e2e_f1_workload_type_test.go` 신설. 헤더는 `//go:build e2e` + `// 검증 AC: AC-F1` 정확히 1줄. AC-F1 검증 방법의 네 갈래를 전부 단언한다 — ⓐ `workloadType=approval-gated` 생성이 201이고 `state=active`·타입 에코·워크로드 파드가 있으며, **라벨(`session-id` + `session-platform.dev/pod-role=helper`)로 찾은 헬퍼 파드가 정확히 1개이고 그 안에 `session-mcp`·`credential-proxy` 컨테이너가 각각 하나씩**이며 둘 다 Ready다. ⓑ 타입 축 판별 — 필드 생략과 explicit `shell`은 헬퍼 파드를 만들지 않는다(0개). ⓒ 근접 오타(`approval_gated`·` approval-gated`·`APPROVAL-GATED`)와 explicit `\"\"`/`null`/비문자열이 **파드 생성 전** 400(세션 파드 수 불변으로 그라운드-트루스 확인). ⓓ 생성 후 `/read`·`/write`·`/switch`에 `workloadType`·`model` 변경 필드를 보내면 400이고 조회 시 원래 값 유지.",
+              "expectedOutcome": "파일 1개 추가. 스캔 토큰(`E2E_[A-Z0-9_]+`·`test-only`·`NewStub*`·`.route(` 등)을 한 개도 새로 들이지 않아 fidelity 원장 20행·집계가 그대로다. `go vet -tags=e2e ./...`가 통과한다."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/test/e2e.md`의 게이트 파싱 블록 두 곳을 갱신한다 — `<!-- ac-mapping -->` 표에 AC-F1 행을 알파벳 순서 자리(AC-E6 뒤)에 추가하고, `<!-- ac-summary -->`의 「AC 매칭 파일」과 「공백」 수치·목록을 실측에 맞춘다. 수치는 손으로 적지 말고 `check-ac-mapping.sh`가 뱉는 실패 메시지의 「실제 = N」을 그대로 반영한다.",
+              "expectedOutcome": "`bash scripts/e2e/check-ac-mapping.sh` rc=0. 출력의 매칭 파일이 1 늘고 공백이 1 줄며 공백 목록에서 AC-F1이 사라진다. 합이 여전히 AC 총계로 닫힌다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/test/e2e.md`의 산문 세 자리를 교정한다. (a) 「선행 ⓑ(남아 있는 유일한 선행)」 문단 → ⓑ 해소 기록으로. **매니페스트 값의 사본을 두지 않는다** — 「해소됐다 + 정본은 어디인가(오버레이 파일과 그 Secret을 여는 kustomization)」 형태로만 쓰고 Secret 키 이름·URL 값은 옮겨 적지 않는다(이 자리는 같은 함정으로 세 번 낡았고 원장 자신이 📌로 경고한다). (b) 그 위 ⚠️(「ⓑ가 그대로 남아 있어 세션은 여전히 서지 않는다」) → **두 문장으로 가른다**: ⓐ·ⓑ가 다 풀려 이 타입의 세션이 SUT에서 선다는 문장과, 그래도 F2(정책 집행 CNI)·F5(RWX 미구현)는 각자의 선행에 막혀 있다는 문장. 한 문장으로 「선행이 다 풀렸다」고 적으면 다음 planner가 F2·F5까지 착수 가능으로 오독한다. (c) 승격 조건 ① → 「해제 조건은 이제 ⓑ 하나다」를 **발화 기록**으로 바꾸고, 열거를 `F1·F3·F5·F6`에서 **실제로 착수 가능한 집합**으로 고친다(F5는 바로 아래 ⚠️가 스스로 추가 선행을 적고, F4는 ②가 「예외가 아니라 전용 파일이 기본값」이라 적는다). AC-F1이 이 PR에서 나갔음과 남은 것이 무엇인지를 함께 적는다.",
+              "expectedOutcome": "main 실측과 어긋나는 문장이 그 절에 남지 않는다. 「ⓑ 해소」와 「F2·F5 잔존」이 서로 다른 문장이다. 새로 심은 매니페스트 값 사본이 0이다."
+            },
+            {
+              "seq": 5,
+              "action": "게이트 전량 재실행 + 컴파일 검증. `check-ac-mapping.sh` · `check-fidelity-allowlist.py` · `check_comment_policy.py` 세 개와, `go build ./...` · `go vet ./...` · `go vet -tags=e2e ./...` · `go vet -tags=integration ./...`(태그가 다르면 다른 파일이 컴파일된다) · `go test ./...`을 돌린다. fidelity·comment-policy는 baseline과 **출력 자체를 대조**한다.",
+              "expectedOutcome": "전부 rc=0. fidelity·comment-policy 출력이 baseline과 동일(내 변경이 그 두 원장의 회계를 건드리지 않았다는 증거). vet 3종 전부 통과."
+            },
+            {
+              "seq": 6,
+              "action": "음성 통제(뮤테이션)로 새 단언이 판별자임을 확인한다. 최소 3종 — ① 헤더의 `검증 AC:` 선언을 지우면 ac-mapping 게이트가 rc=1로 「선언이 없다」, ② `ac-summary`의 공백 수치를 한 칸 되돌리면 rc=1로 「실제 = N」, ③ 헬퍼 파드 단언의 기대 컨테이너 이름을 틀리게 바꾸면 컴파일은 통과하되 그 단언이 실패하도록 설계돼 있는지(상수 대조가 아니라 실제 파드 스펙 조회인지) 코드로 확인. 복원은 `cp` 백업 → `cmp` 바이트 동일로 하고 **`git checkout --`는 쓰지 않는다**(아직 커밋되지 않은 작업 전체를 날린다).",
+              "expectedOutcome": "각 변이가 rc=1이고 실패 메시지가 의도한 규칙을 가리킨다. 복원 후 `cmp`가 바이트 동일."
+            },
+            {
+              "seq": 7,
+              "action": "커밋·푸시하고 PR을 연다(머지하지 않는다). PR 본문에 task id·gap 요약·완료 기준·검증 방법·범위 밖 목록을 적는다. 커밋 후 **다시** to-be/as-is 지문을 재서 예고값을 남긴다 — to-be 스크립트는 `git rev-parse HEAD:…`를 읽어 **워킹트리를 보지 않으므로** 커밋 전 측정은 변화가 없는 것처럼 보인다.",
+              "expectedOutcome": "PR이 열리고, 커밋 후 재측정한 `reg:`와 `api:` 두 지문이 레코드의 `lastObservedVersion`에서 **둘 다** 이동한다(= 이 슬라이스 이후 잔여 F 계열에 대한 재감지 경로가 실제로 존재한다)."
+            },
+            {
+              "seq": 8,
+              "action": "PR CI를 끝까지 관찰한다. 기대 체크는 15개 — `ci.yml` 11잡(fidelity · render-fidelity · comment-policy · control-plane · ac-mapping · data-plane · web · image · data-plane-image · integration · envtest) + `docker-build-push.yaml` 3잡 중 PR에서 도는 2개(`build-and-push` · `build-and-push-data-plane`, `pin`은 main push 전용이라 skipped) + `e2e.yml` 1잡. `docs-journey-mockup.yml`은 paths 필터에 `docs/test/e2e.md`가 없어 **미발화가 기대값**이다. e2e 잡은 로그를 받아 AC-F1 케이스가 실제로 실행됐는지(이름과 PASS)까지 확인한다 — success만 보면 skip을 통과로 오독한다.",
+              "expectedOutcome": "실행 14 전부 success · skipped 1 · 실패 0. e2e 잡 로그에 AC-F1 파일의 케이스 이름과 `--- PASS`가 보인다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
