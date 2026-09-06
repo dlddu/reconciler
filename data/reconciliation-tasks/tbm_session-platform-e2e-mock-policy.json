@@ -1730,7 +1730,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-09-06T02:09:53Z",
-    "updatedAt": "2026-09-06T12:10:00Z",
+    "updatedAt": "2026-09-06T12:25:00Z",
     "trigger": {
       "detectedAt": "2026-09-06T02:09:53Z",
       "changedSides": [
@@ -1897,6 +1897,14 @@
               "expectedOutcome": "실측이 예측과 일치하고 실패 0. 특히 `e2e (kind + API + browser)` 로그에 `deployment \"approval-gateway-fake\" successfully rolled out`이 **새 대기 지점에서** 찍힌다."
             }
           ]
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20260906-0001-mock-policy-residual",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/88",
+          "preparedAt": "2026-09-06T12:25:00Z",
+          "notes": "2파일 +16/−4, base `09e7581`(#86·#85 착지 후 현재 main). 반려가 제시한 갈래 ⑴ — 잔여 둘만 담은 좁은 브랜치를 새로 내고 #87 은 닫는다 — 를 그대로 실행했다.\n\n**준비 전 중복 확인(반려가 지목한 루프 결함의 직접 대응).** PR 을 열기 **전에** 대상 레포의 PR 을 `state=all` 로 조회해 이 task id 를 브랜치명에 가진 준비본을 셌다: #86(`reconcile/rct_20260906-0001-mock-policy`, 04:59:01 머지) · #87(`…-session-platform-e2e-mock-policy`, open). 브랜치 명명 규약이 달라도 잡히도록 `rct_20260906-0001` **부분 문자열**로 찾았다 — 지난 사이클이 서로를 못 알아본 지점이 정확히 여기다. 같은 조회로 자매 task 의 #85(`…-ac-e2e`)도 함께 보였다. 준비 후 재조회 결과 이 레포의 **열린 PR 은 #88 하나뿐**이다.\n\n**#87 은 닫았다**(머지 아님, `merged:false`). 닫기 전에 이유(#86 선착지로 중복 구현·`mergeable_state: dirty`·rebase 로 풀리지 않는 종류)와 잔여 둘을 이어받은 #88 을 코멘트로 남겼다: https://github.com/dlddu/session-platform/pull/87#issuecomment-5559122109 . 닫기는 가역이라(재오픈 가능) 되돌릴 수 없는 지점을 만들지 않는다.\n\n**계획 대비 벗어난 것 — 없음. 계획이 예측한 대로였다.**\n- 반려가 요구한 「집계 기준값 재측정」의 답: 현재 main 에서 게이트를 돌려보니 이미 `등재 seam 7 · 회계 행 20 · 마커 9지점/9파일 · 인터셉트 7(상한 0) · 차단 요인 **0**` 이다. 즉 **이 슬라이스가 움직이는 집계 숫자는 `차단 요인 0 → 1` 하나뿐**이고, #87 이 들고 있던 `6→7`·`19→20`·`8→9` 를 그대로 옮겼다면 R8 이 붉어졌을 것이다.\n- 등재 표 잔여 칸 교차 참조(계획 step 5 ③)를 실제로 넣었다. main 의 `APPROVAL-GATEWAY` 행은 알림·만료 시계·TIMEOUT 셋만 적어 「`APPROVED` 갈래가 게이트 통과까지만 관측된다」를 빠뜨리고 있었다. 집계 숫자는 움직이지 않는다.\n\n**실행으로 확정한 것(전부 이 브랜치에서)**\n- 정적 게이트 4종 rc=0. fidelity 출력 마지막 줄 `차단 요인 1건`, 나머지 네 줄 불변.\n- `check-ac-mapping.sh` 출력이 부모 `09e7581` 과 `cmp` **바이트 동일**(AC 27 = 매칭 17 + 예외 1 + 공백 9).\n- **음성 통제 5종 전부 rc=1 이고 메시지가 의도한 규칙**: 차단 요인 행 삭제 → `[R8] 집계 불일치: 차단 요인 문서=1 실제=0` · 리터럴 `Do(req)`→`Do(r)` → `[R10] … 리터럴 … 가 없다` · 집계 1→0 → `[R8] … 문서=0 실제=1` · 판정 `없음`→`NONE` → `[R10] … 허용되지 않는다` · 예고 CODE 를 이미 등재된 `APPROVAL-GATEWAY` 로 교체 → `[R10] … 이미 등재 표에 있다 … 행을 지울 것`. 복원은 전부 `cp` 백업 → `cmp` 바이트 동일(`git checkout --` 금지 규율).\n- `up.sh` 추가분에 충실도 스캔 토큰이 없음을 확인(`scripts/e2e` 는 스캔 범위 안이다). 게이트의 「회계 행 20 == 스캔된 쌍 20」이 그대로 유지된다.\n- **자매 경계**: diff hunk 가 `docs/test/e2e.md` 의 :73 · :167-179 · :220 셋뿐 — 전부 충실도 절 안이다. 자매 렌즈 `tbm_session-platform-ac-e2e`/`rct_20260906-0002`(지금 `planning` 점유 중)가 고치는 「AC 검증 범위」·AC 매핑·`ac-summary` 절은 :227 이후라 **줄 범위가 겹치지 않는다.** 어느 순서로 머지해도 git 충돌은 없고, 이번엔 두 PR 이 서로 다른 사실을 주장하지도 않는다(지난 사이클의 #85↔#87 순서 문제와 다르다 — 그쪽은 한 PR 이 다른 PR 의 전제를 없앴다).\n\n**PR**: https://github.com/dlddu/session-platform/pull/88 — `mergeable: true`, 2파일(`scripts/e2e/up.sh` · `docs/test/e2e.md`)."
         }
       }
     ]
