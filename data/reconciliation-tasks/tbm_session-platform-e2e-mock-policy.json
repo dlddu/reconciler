@@ -1724,5 +1724,38 @@
     },
     "createdAt": "2026-09-05T08:56:18Z",
     "updatedAt": "2026-09-05T08:56:18Z"
+  },
+  {
+    "id": "rct_20260906-0001",
+    "toBeModelId": "tbm_session-platform-e2e-mock-policy",
+    "status": "action_required",
+    "createdAt": "2026-09-06T02:09:53Z",
+    "updatedAt": "2026-09-06T02:09:53Z",
+    "trigger": {
+      "detectedAt": "2026-09-06T02:09:53Z",
+      "changedSides": [
+        "as_is"
+      ],
+      "asIs": {
+        "previousVersion": "seams=27 files=14\n27ffb86572fd61056d90f4aca1af801b41fdb71c4a4d62e1cfba1865778b421a",
+        "currentVersion": "seams=27 files=14\n27ffb86572fd61056d90f4aca1af801b41fdb71c4a4d62e1cfba1865778b421a"
+      },
+      "toBe": {
+        "previousVersion": "lines=187\ne60213f00c6d4b3bb0f43659b9c9ff1a203b46dfc638fdefd2b9f9f9d432e054",
+        "currentVersion": "lines=187\ne60213f00c6d4b3bb0f43659b9c9ff1a203b46dfc638fdefd2b9f9f9d432e054"
+      }
+    },
+    "stateSummary": {
+      "summarizedAt": "2026-09-06T02:09:53Z",
+      "asIs": "## as-is — SUT 충실도 seam 지문 @ `dlddu/session-platform` main `2007050`\n\n**지문 불변**: `seams=27 files=14 / 27ffb865…` — `lastObservedVersion` 과 바이트 동일. 네 게이트 모두 rc=0 (`check-fidelity-allowlist.py` · `check-ac-mapping.sh` · `check-render-fidelity.py` · `check_comment_policy.py`).\n\n**그런데 이 fire 가 지문 밖에서 SUT 오버레이의 상태 변화를 찾았다.** 트리거 **PR #81 `5cc2bf9`** 는 `deploy/kustomization.yaml`(이 모델 as-is **범위 안**)을 건드렸지만 seam 토큰(`E2E_[A-Z0-9_]+` · `mock-exception:` · `.route(` …)을 하나도 만들거나 지우지 않아 지문이 안 움직였다:\n\n- `deploy/kustomization.yaml:118-120` — 오버레이가 `env/4`(`DATA_PLANE_APPROVAL_GATED_IMAGE`)를 `session-platform/data-plane:dev` 로 replace 한다.\n\n즉 **SUT 는 이제 `workloadType=approval-gated` 를 이미지 미설정으로 500 내지 않는다** — 요청이 프로비저닝까지 간다.\n\n**그러나 그 세션은 여전히 서지 않는다.** `approval-gateway-credentials` Secret 이 오버레이에 없다(`git grep -c 'approval-gateway' -- deploy` = **0**; `resources` 8종은 checkpoint-s3 · claude-code-credentials · minio · e2e-k3s-mcp-fake · plugin-marketplace-git · e2e-anthropic-fake · `../k8s`). 헬퍼 파드의 MCP 컨테이너는 게이트웨이 3종을 `secretEnv`(non-optional)로 투영하므로(`control-plane/internal/adapter/k8s/client_orchestrator.go:688-690`; 같은 파일 `:800` 의 `optionalSecretEnv` 는 여기 쓰이지 않았다) kubelet 이 컨테이너 구성 단계에서 실패해 헬퍼 파드가 **Ready 에 이르지 못한다.**",
+      "toBe": "## to-be — 충실도 정책·허용목록 섹션. **지문 불변** (`lines=187 / e60213f0…`)\n\n현재 등재 6행(`CRIU-GATE` GATE · `PLUGIN-CRED` EXT · `DELETE-CONFLICT-ERR` NET · `CLAUDE-PROVIDER` EXT · `MODEL-CONFIG-STATE` NET · `STREAM-RESET-REPLAY` NET), 미해소 위반 **0**(상한 0), **차단 요인 표 0건**.\n\n**정책이 요구하는 상태**: SUT 는 기본값이 실환경이고, 클러스터에 실물을 세울 수 있으면 대역을 쓰지 않으며(MinIO·plugin-marketplace-git 이 그 예), 세울 수 없는 외부 의존만 `EXT` 로 등재한다. 그리고 **SUT 가 워크로드 타입 하나를 통째로 구동하지 못하는 상태는 「차단 요인」으로 등재해 회계한다** — `CLAUDE-PROVIDER` 이전의 「차단 요인 ③ 제공자 도달」이 정확히 그 선례이고, #66 이 인클러스터 대역을 세워 EXT 등재로 승격시키며 그 행이 나갔다.\n\n지금은 **`approval-gated` 타입이 같은 자리에 있는데 차단 요인 표에도 등재에도 없다.**",
+      "gap": "**유의미한 gap — SUT 가 워크로드 타입 하나(`approval-gated`)를 구동하지 못하는데 그 사실이 정책 원장 어디에도 회계되지 않는다. 그리고 그것을 세우는 것이 정확히 이 렌즈의 산출물이다.**\n\n### ① 실물 진단 (소스 실측)\n\n| 축 | 상태 |\n| --- | --- |\n| 이미지 env (`DATA_PLANE_APPROVAL_GATED_IMAGE`) | ✅ base `k8s/deployment.yaml:75` + 오버레이 `deploy/kustomization.yaml:118-120` — **#81 로 해소** |\n| 게이트웨이 Secret (`approval-gateway-credentials`) | ❌ 오버레이에 없음. 프로덕션은 `flux-cd-apps` external-secret 으로 있으나 kind SUT 에는 없다 |\n| 참조 필수성 | `secretEnv` non-optional ⇒ Secret·키 부재 시 헬퍼 파드 Ready 불가 |\n\n⚠️ `doc-tracker.md:56` 의 「게이트웨이 3종 env 가 없으면 컨테이너는 뜨되 **도구 목록이 빈다**」와 겹쳐 읽어 \"Secret 없어도 파드는 선다\"로 결론 내지 말 것 — 그 관용은 **agent 프로세스 층위**(`data-plane/cmd/agent/main.go` 의 `case workloadSessionMCP:` 가 `newApprovalGateway` 실패를 `Warn` 으로 삼키고 도구 0개로 뜬다)이고, 필수 SecretKeyRef 가 걸린 이 배포에서는 프로세스가 시작조차 못 해 그 경로에 도달하지 않는다.\n\n### ② `EXT` 자격이 선다 — 배포 가능한 실물이 없다 (실측)\n\n정책은 「kind 에 실물로 배포 가능하면 그쪽이 우선이라 `EXT` 를 쓸 수 없다」(MinIO 선례)고 못박는다. 그래서 참조 구현을 직접 확인했다:\n\n- `dlddu/pure-agent` 가 갖고 있는 것은 **클라이언트뿐**이다 — `mcp-server/src/services/gatekeeper.ts` 가 `${gatekeeperUrl}/api/requests` 로 나가고, 설정은 `GATEKEEPER_URL: \"https://gatekeeper.example.com\"` 처럼 **외부 주소**를 받는다.\n- 레포의 `gate/` 는 승인 API 서버가 아니라 Python CLI·transcript uploader 다(`gate/src/gate/{cli,transcript_upload,config}.py`).\n- 즉 **배포할 실물 게이트웨이 구현이 존재하지 않는다.** `CLAUDE-PROVIDER` 와 같은 근거이고 MinIO 논리는 성립하지 않는다.\n\n### ③ 대역의 비용이 낮다 — TLS 가 필요 없다\n\n`CLAUDE-PROVIDER` 대역이 사설 CA 까지 필요했던 이유는 credential-proxy 가 upstream 스킴을 https 로 강제하기 때문이었다(`parseCredentialProxyUpstream`). **게이트웨이에는 그 강제가 없다** — `newApprovalGateway`(`data-plane/cmd/agent/approval_gateway.go:76`)는 네 값의 non-empty 만 검사하고 스킴을 보지 않는다. https 강제는 도구의 **대상 URL** 쪽이다(`session_mcp_tools.go:183`, `web_fetch_get` 의 `url` 인자). ⇒ 평문 HTTP Service 하나로 충분하다.\n\n**wire 계약 전부**(`approval_gateway.go`, 참조 구현과 동일):\n- `POST {base}/api/requests` + `x-api-key`, body `{externalId, context, requesterName:\"session-platform\", userId}` → `{id}`\n- `GET {base}/api/requests/{id}` + `x-api-key` → `{status}`. `APPROVED`·`REJECTED`·`EXPIRED` 만 settle, 그 밖의 값은 PENDING 취급\n- 비-2xx 는 **결정이 아니라 게이트웨이 오류** (「묻지 못한 것」과 「거절당한 것」을 구분한다)\n- 외부 식별자 `{세션ID}:{요청ID}`\n\n### ④ 남는 제약 (다음 슬라이스가 다시 열지 않도록 못박는다)\n\n- **TIMEOUT 갈래는 이 대역으로도 안 열린다** — `defaultApprovalTimeout = 10 * time.Minute`, `defaultApprovalPollInterval = 3s` 가 하드코딩이고 env 오버라이드가 없다(`approval_gateway.go`). 결정되지 않는 요청을 내는 대역을 만들어도 e2e 가 10분을 태워야 한다. 설정화는 제품 변경이라 이 렌즈 밖이다(`tbm_session-platform-docs-impl`).\n- **AC-F2 의 실차단은 이 대역과 무관하게 여전히 막힌다** — `deploy/kind-config.yaml` 이 `disableDefaultCNI` 를 켜지 않아 kindnet 으로 뜨고 kindnet 은 NetworkPolicy 를 집행하지 않는다. 정책 집행 CNI 오버레이는 **별도 슬라이스**다.\n- **AC-F5 도 무관하게 막힌다** — RWX 공유 볼륨이 구현 자체로 없다(`ReadWriteMany` 레포 전역 0 hits).\n- 대역에는 **결정 제어 표면**이 필요하다(승인·거절·만료를 e2e 가 결정적으로 고른다). 이것은 사람 승인을 대신하는 **대역 자신의 운영자 면**이지 제품에 뚫는 test-only seam 이 아니므로 `TRIG` 가 아니다 — `TRIG` 는 현재 0건이고 이 슬라이스가 늘리지 않는다."
+    },
+    "assessment": {
+      "actionRequired": true,
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-06T02:09:53Z",
+      "reason": "**작업 필요.** 범위는 **인클러스터 승인 게이트웨이 대역 + `approval-gateway-credentials` Secret 을 e2e 오버레이에 세우고 `EXT` 로 등재**하는 것으로 끊는다.\n\n1. **정책 원장이 회계하지 않는 상태가 실재한다** — SUT 가 워크로드 타입 하나를 통째로 구동하지 못하는데 「차단 요인」 표가 비어 있다. 그 표의 존재 이유가 정확히 이 상태이고(`CLAUDE-PROVIDER` 이전의 ③ 제공자 도달이 선례), 지금은 표를 채우는 것보다 **원인을 없애는 편이 같은 슬라이스 안에서 가능하다.**\n\n2. **선행이 하나만 남았고 그것이 이 렌즈의 산출물이다** — 이미지 축은 #81 이 닫았고, 남은 ⓑ 는 `deploy/` 오버레이에 매니페스트를 하나 더 놓는 일이다. 자매 렌즈 `tbm_session-platform-ac-e2e` 의 원장이 「이 해제는 e2e 하네스(오버레이) 작업이라 **이 렌즈의 산출물이 아니다**」라고 소유권을 여기로 넘겨 두었다.\n\n3. **`EXT` 자격이 실측으로 선다** — 참조 구현에 배포 가능한 게이트웨이 서버가 없음을 소스에서 확인했다(위 gap ②). MinIO 논리가 성립하지 않으므로 `CLAUDE-PROVIDER` 와 같은 근거로 등재 가능하고, 이 등재는 **관용의 확대가 아니라** SUT 가 못 서던 타입을 세우는 순수 이득이다(#66 과 동형).\n\n4. **재감지 경로가 0이다** — #81 은 seam 토큰을 하나도 안 만들어 이 모델 지문을 안 움직였고, 자매 모델 지문도 안 움직였다. 네 게이트 모두 rc=0 이라 기계도 침묵한다. 열린 task 는 두 모델 모두 **0건**이다.\n\n**계획 단계 제약 5가지**\n- **선례를 그대로 따를 것** — `deploy/e2e-anthropic-fake.yaml` 의 형태(ConfigMap 에 서버 코드 + Deployment + Service + 파일 상단 `# mock-exception: <CODE> — <한 줄>`)를 쓰되 **TLS 는 두지 않는다**(위 gap ③: 게이트웨이는 https 강제가 없다). 사설 CA·`tls.crt` 를 복제하면 근거 없는 복잡도다.\n- **Secret 은 별도 매니페스트로** — `deploy/claude-code-credentials-secret.yaml` 과 같은 자리·같은 주석 관례(「kind e2e only. 프로덕션은 out-of-band 로 같은 키를 provision 한다」). 키는 정확히 `url`·`api-key`·`user-id` 셋이고 **값이 비면 안 된다**(빈 문자열이면 파드는 뜨되 도구 목록이 빈다).\n- **`k8s/` base 를 건드리지 말 것** — 프로덕션은 이미 `flux-cd-apps` external-secret 으로 이 Secret 을 갖는다. base 변경은 이 슬라이스의 산출물이 아니다.\n- **네 게이트를 전부 통과시킬 것** — 특히 `check-fidelity-allowlist.py` 는 등재 ↔ 코드를 **양방향**으로 대조한다(주석만 있고 미등재, 등재만 있고 코드 없음 둘 다 drift). 회계·집계 블록도 함께 갱신한다. `check-ac-mapping.sh` 출력은 **부모와 바이트 동일**해야 한다(이 슬라이스는 AC 매칭을 하나도 바꾸지 않는다).\n- **AC-F 전용 e2e 파일을 여기서 저작하지 말 것** — 그것은 자매 렌즈의 몫이고, 특히 **F2·F5 는 이 대역이 서도 열리지 않는다**(CNI 미집행 · RWX 미구현). 완료 기준에 넣으면 executor 가 닫을 수 없다."
+    }
   }
 ]

@@ -1840,5 +1840,38 @@
     },
     "createdAt": "2026-09-05T08:52:34Z",
     "updatedAt": "2026-09-05T15:55:00Z"
+  },
+  {
+    "id": "rct_20260906-0001",
+    "toBeModelId": "tbm_session-platform-ac-e2e",
+    "status": "action_required",
+    "createdAt": "2026-09-06T02:09:53Z",
+    "updatedAt": "2026-09-06T02:09:53Z",
+    "trigger": {
+      "detectedAt": "2026-09-06T02:09:53Z",
+      "changedSides": [
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "api:14f3bf84afb959f251ca1aa715ad4e793dcfa475d7304f25d98cdeded78a02ee web:c2f6cbdb96d9636e1fe9b1bfe0eced6f495f55cf",
+        "currentVersion": "api:14f3bf84afb959f251ca1aa715ad4e793dcfa475d7304f25d98cdeded78a02ee web:c2f6cbdb96d9636e1fe9b1bfe0eced6f495f55cf"
+      },
+      "toBe": {
+        "previousVersion": "ac:8049013d06ba469af13b998be29f47bdd4d5f304 reg:4fff8710fc41f41fc46113a02202eb37bb22f7f0",
+        "currentVersion": "ac:8049013d06ba469af13b998be29f47bdd4d5f304 reg:4fff8710fc41f41fc46113a02202eb37bb22f7f0"
+      }
+    },
+    "stateSummary": {
+      "summarizedAt": "2026-09-06T02:09:53Z",
+      "asIs": "## as-is — e2e 두 스위트 @ `dlddu/session-platform` main `2007050` (관측 2026-09-06T02:09Z)\n\n**지문 불변**: `api:14f3bf84… web:c2f6cbdb…` — `lastObservedVersion`과 **바이트 동일**하다. 직전 baseline(`rct_20260905-0004`, `af002f8`) 이후 main 이 전진했지만 e2e 매칭 공간은 한 파일도 안 움직였다.\n\n게이트 실측(`bash scripts/e2e/check-ac-mapping.sh`, rc=0):\n```\nAC ↔ e2e 1:1 OK — AC 27개 = 매칭 파일 17 + 예외 1 + 공백 9 (매칭 단위 20개, 비-AC 3개)\n공백: AC-E3 AC-E4 AC-E5 AC-F1 AC-F2 AC-F3 AC-F4 AC-F5 AC-F6\n```\n직전 관측과 문자 단위로 동일하다.",
+      "toBe": "## to-be — AC 집합 + 등재 원장. **두 성분 모두 지문 불변** (`ac:8049013d… reg:4fff8710…`)\n\n**그런데 원장의 내용은 사실과 어긋나게 됐다.** 지문이 안 움직인 이유는 어긋남을 만든 커밋이 이 모델의 추적 경로(`docs/prd` · `docs/test/e2e.md` · `control-plane/test` · `web/e2e`) **바깥**에 있기 때문이다.\n\n**PR #81 `5cc2bf9` 「feat(deploy): approval-gated 워크로드를 프로덕션에서 켠다」** (직전 baseline `af002f8` 이후 착지, 2파일 +21/−1):\n- `k8s/deployment.yaml:75` — `DATA_PLANE_APPROVAL_GATED_IMAGE` 를 **env/4 로 선언**하고 값을 채운다(CI `pin` job 관리 대상으로 등재).\n- `deploy/kustomization.yaml:118-120` — e2e 오버레이가 `env/4` 를 `session-platform/data-plane:dev` 로 **replace** 한다.\n\n실측 재확인: `git grep -c 'DATA_PLANE_APPROVAL_GATED_IMAGE' -- k8s deploy` = **2 hits**(직전 판정 시점 0). 프로덕션 Secret 도 `flux-cd-apps/apps/session-platform/approval-gateway-credentials-external-secret.yaml` 로 실재한다.",
+      "gap": "**규칙 6(집계·상태 일치) 위반 — 원장이 「승격 조건」이라 스스로 못박은 자리의 선행 서술이 거짓이 됐다.**\n\n### ① 거짓이 된 문장 (`docs/test/e2e.md`)\n\n| 위치 | 문면 | 실제 |\n| --- | --- | --- |\n| `:432-437` 선행 ⓐ | 「base `k8s/deployment.yaml` 이 선언하는 이미지 env 는 `DATA_PLANE_IMAGE`(`:52`)와 `DATA_PLANE_CLAUDE_CODE_IMAGE`(`:62`) **둘뿐**이고 이 env 는 **선언 자체가 없다**」 | ❌ `:75` 에 선언되고 값이 차 있다 |\n| `:432-437` 선행 ⓐ | 「e2e 오버레이 `deploy/kustomization.yaml` 의 control-plane patch 도 `env/1`·`env/2`·`env/3` 만 replace 한다」 | ❌ `env/4` replace 가 `:118-120` 에 있다 |\n| `:481-483` 승격 조건 ① | 「해제 조건은 ⓐ와 ⓑ가 **함께** 충족되는 것」 — ⓐ를 미발화로 전제 | ❌ ⓐ는 충족됐고 **ⓑ만 남았다** |\n\n같은 낡음이 `docs/doc-tracker.md:56` 항목 ③에도 있다(「`k8s/deployment.yaml` 에는 이 env 선언 자체가 없다」). 그쪽은 이 렌즈의 산출물이 아니므로 지목만 남긴다(소관: `tbm_session-platform-docs-impl`).\n\n### ② 왜 재감지가 이것을 못 잡는가 (구조적)\n\n- **지문이 안 움직인다** — `deploy/`·`k8s/` 는 이 모델의 to-be 에도 as-is 에도 없다. `rct_20260905-0004` 가 남긴 트립와이어 (a)(`git grep -c 'DATA_PLANE_APPROVAL_GATED_IMAGE' -- deploy k8s ≥ 1`)가 **이미 발화했는데 그것을 읽어 줄 감지가 걸리지 않는다.**\n- **게이트도 못 잡는다** — `check-ac-mapping.sh` 는 AC 식별자와 마커 블록만 대조하므로 이 산문이 얼마나 틀리든 rc=0 이다. 원장 `:216-223` 이 같은 함정(#23 의 `AC 21개` 사본)을 이미 자기 이력으로 적어 두었다.\n- 즉 **아무도 안 열면 아무도 안 연다.** 이 레코드가 그 경로다.\n\n### ③ 잔여 공백 9건 — 이 트리거로 갈린 것은 없다\n\n- **AC-F1·F3·F4·F6** — 선행이 ⓐ·ⓑ 「함께」였고 ⓐ만 풀렸다. 실측: `git grep -c 'approval-gateway' -- deploy` = **0**, 오버레이 `resources` 8종 어디에도 `approval-gateway-credentials` 가 없다. 헬퍼 파드의 MCP 컨테이너는 3종을 `secretEnv`(non-optional, `client_orchestrator.go:688-690`)로 투영하므로 Secret 부재 시 kubelet 이 컨테이너 구성에서 실패해 Ready 에 이르지 못한다 — 선행 ⓑ는 그대로다.\n- **AC-F2** — ⓐ·ⓑ와 무관한 별개 선행. `deploy/kind-config.yaml` 이 `disableDefaultCNI` 를 켜지 않아 kindnet 으로 뜨고, kindnet 은 NetworkPolicy 를 집행하지 않는다. 미발화.\n- **AC-F5** — RWX 공유 볼륨 미구현(`ReadWriteMany` 레포 전역 **0 hits**). docs-impl 소관, 미발화.\n- **AC-E3·E4·E5** — 대역 응답이 결정적 상수라는 성질 그대로. 미발화.\n\n따라서 **이 task 의 범위는 공백을 줄이는 것이 아니라 원장의 거짓 서술을 사실로 되돌리는 것**이다."
+    },
+    "assessment": {
+      "actionRequired": true,
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-06T02:09:53Z",
+      "reason": "**작업 필요.** 범위는 `docs/test/e2e.md` 의 **선행 ⓐ 서술과 승격 조건 ①** 두 자리로 끊는다.\n\n1. **판정 기준에 정면으로 걸린다** — 규칙 6 은 매칭 집계와 **상태 서술**이 실제와 일치할 것을 요구하는데, 원장이 스스로 「승격 조건(다음 감지가 이 논점을 다시 열지 않도록 못박는다)」이라 선언한 자리가 거짓을 들고 있다. 지금 이 원장을 읽는 planner 는 「ⓐ·ⓑ 둘 다 미발화」로 읽어 F 계열을 통째로 미루거나, 반대로 ⓐ 문장을 실측과 대조하다 매번 같은 논점을 다시 연다.\n\n2. **자동 해소 경로가 0이다** — (a) 이 모델의 지문은 `deploy/`·`k8s/` 변경에 반응하지 않아 재감지가 안 걸린다. (b) `check-ac-mapping.sh` 는 마커 블록만 파싱해 산문 거짓을 rc≠0 으로 만들지 않는다. (c) 열린 task 가 이 모델에도 자매 모델에도 **0건**이라 얹힐 인수인계 지점이 없다. 기록하지 않으면 사라지는 종류의 위반이다.\n\n3. **공백을 줄이는 일과 섞지 않는다** — AC-F1·F3·F4·F6 의 남은 선행 ⓑ(게이트웨이 Secret)는 `deploy/` 오버레이 작업이고, 원장 자신이 「이 해제는 e2e 하네스(오버레이) 작업이라 **이 렌즈의 산출물이 아니다**」라 못박았다. 그 몫은 자매 모델 `tbm_session-platform-e2e-mock-policy` 의 `rct_20260906-0001` 로 별도 개설했다. 이 task 가 그것까지 완료 기준에 넣으면 executor 가 닫을 수 없다.\n\n**계획 단계 제약**\n- **집계 마커 블록(`ac-summary`·`ac-mapping`·`ac-exceptions`·`ac-nonac`)을 건드리지 말 것.** 공백 9·매칭 17·예외 1 은 이 슬라이스에서 불변이고, 게이트 출력이 부모와 바이트 동일해야 한다.\n- **숫자·경로 사본을 새로 심지 말 것.** #23 의 `AC 21개`, #78 의 `E2~E6` 이 같은 자리에서 두 번 낡았다(원장 `:216-223` 의 house style). ⓐ 서술은 「해소됐다 + 어디서 확인하는가(경로)」로 적고, 라인 번호 대신 구조 참조를 쓴다(#74 선례).\n- **ⓑ가 남았다는 사실을 흐리지 말 것.** ⓐ 해소를 적으면서 승격 조건을 「ⓑ 하나」로 다시 못박아야, 다음 감지가 「선행이 풀렸으니 지금 저작해도 된다」로 오독하지 않는다 — #68 이 정확히 그 오독을 막으려고 쓰인 슬라이스다.\n- **`doc-tracker.md` 는 손대지 않는다**(지목만). 소관: `tbm_session-platform-docs-impl`."
+    }
   }
 ]
