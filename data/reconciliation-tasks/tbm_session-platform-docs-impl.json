@@ -3142,7 +3142,7 @@
   {
     "id": "rct_20260907-0002",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-09-07T02:52:15Z",
       "changedSides": [
@@ -3171,7 +3171,7 @@
       "assessedAt": "2026-09-07T02:52:15Z"
     },
     "createdAt": "2026-09-07T02:52:15Z",
-    "updatedAt": "2026-09-07T03:28:43Z",
+    "updatedAt": "2026-09-07T04:36:00Z",
     "attempts": [
       {
         "plan": {
@@ -3249,6 +3249,11 @@
           "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/93",
           "preparedAt": "2026-09-07T03:18:55Z",
           "notes": "계획 단계 12步를 모두 스테이징했다(머지하지 않았다). 커밋 `5b47508`, 12파일 +246/−36 — 제품 4(`client_orchestrator.go`·`session_mcp_tools.go`·`credential_proxy.go`·`main.go`) · 테스트 2(control-plane 오케스트레이터 케이스 1건 추가 · data-plane 실 TLS 신규 파일) · 문서 6(`prd/approval-gated-workload.md`·`test/approval-gated-workload.md`·`doc-tracker.md`·`test/e2e.md`·`comment-policy.md`).\n\n**로컬 게이트 13종 전부 rc=0**(브랜치)이고 `origin/main` baseline worktree에서 같은 명령을 돌려 갈린 게이트가 없음을 확인했다: check-fidelity-allowlist · check_comment_policy · check-render-fidelity · check-ac-mapping · gofmt · cp(build/vet/vet-e2e/test/test-integration) · dp(build/vet/test).\n\n**새 테스트의 비공허성 확인**: `TestApprovalGated_MCPContainerHasItsOwnTrustAnchor`를 상수만 심은 baseline worktree에 이식하면 `MCP container is missing Secret-backed SESSION_MCP_CA_CERT`로 실패한다.\n\n**계획 대비 실측으로 조정한 것 둘**: ① 계획 4步의 「인증서 0개면 os.Exit(1)」은 `main.go`가 아니라 `newSessionMCPConfig`가 오류를 반환하고 `main.go`가 그것으로 종료하는 형태로 넣었다(테스트 가능한 경계를 남기기 위함). ② data-plane 테스트의 「공개 풀 검증이 약해지지 않는다」를 두 번째 httptest TLS 서버로 사려던 초안은 **공허했다** — httptest 는 모든 NewTLSServer 가 같은 내장 인증서를 쓰므로 하나를 신뢰하면 다른 하나도 신뢰된다. 실행하자 실패해서 발견했고, widen-never-weaken 규칙 자체는 이미 `credential_proxy_ca_test.go` 가 `trustExtraCA` 수준에서 사고 있으므로 여기서는 transport 의 `RootCAs != nil` · `InsecureSkipVerify == false` 를 사는 것으로 바꿨다.\n\n**자매와의 파일 경계**: `docs/test/e2e.md` 를 만지지만 `fidelity:blockers`(176–180) · `fidelity:summary`(215–221) 블록뿐이고, `tbm_session-platform-ac-e2e/rct_20260907-0002` 가 예고한 `ac-mapping`(325) · `ac-summary`(384) 와 100줄 이상 떨어져 있다. 순서 의존은 없다.\n\n**PR CI 초록 확인(2026-09-07 03:28Z)**: 커밋 `5b47508`의 check-run **15잡 전부 통과**(success 14 · skipped 1 = `pin deployment images (main only)`). 실패·미완 0. 핵심 게이트 셋이 모두 초록이다 — `e2e fidelity allowlist (docs <-> code seams)`(R10 리터럴 대조 · R8 집계 미러) · `comment policy ledger (docs <-> comments)`(R2 지문 재측정) · `e2e (kind + API + browser)`(실 kind SUT 회귀 없음). 로컬 13종 예행이 CI와 갈리지 않았다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "제품 코드를 바꾸는 슬라이스다(riskLevel medium). PR #93은 control-plane `client_orchestrator.go`·data-plane `session_mcp_tools.go`/`credential_proxy.go`/`main.go` 4개 제품 파일을 만지고, 헬퍼 파드의 MCP 컨테이너에 새 env(`SESSION_MCP_CA_CERT`)를 주입하며, `newSessionMCPConfig`에 '비어 있지 않은 PEM에서 인증서 0개 파싱 시 시작 실패' 경로를 새로 넣는다 — 값이 잘못 채워지면 MCP 컨테이너가 기동 실패하는, 세션 런타임에 직접 닿는 변경이다. 또한 AC-F6의 자격 배치 경계(공급자 신뢰 도메인 vs 승인 URL 신뢰 도메인)를 PRD 본문에서 개정하므로, 정책 해석이 갈릴 수 있는 지점이다. main 머지 후 GitOps가 프로덕션에 적용하므로 되돌리려면 revert PR이 필요하다. 이 셋(프로덕션 워크로드 영향 · 설정/스키마 실질 변경 · medium risk) 중 어느 하나만으로도 사람 검토 신호에 해당한다."
         }
       }
     ]
