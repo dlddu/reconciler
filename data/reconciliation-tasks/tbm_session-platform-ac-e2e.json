@@ -2225,7 +2225,7 @@
   {
     "id": "rct_20260907-0002",
     "toBeModelId": "tbm_session-platform-ac-e2e",
-    "status": "executing",
+    "status": "failed",
     "trigger": {
       "detectedAt": "2026-09-07T02:50:11Z",
       "changedSides": [
@@ -2254,7 +2254,7 @@
       "assessedAt": "2026-09-07T02:50:11Z"
     },
     "createdAt": "2026-09-07T02:50:11Z",
-    "updatedAt": "2026-09-07T03:23:06Z",
+    "updatedAt": "2026-09-07T03:24:46Z",
     "attempts": [
       {
         "plan": {
@@ -2338,6 +2338,44 @@
               "startedAt": "2026-09-07T03:20:00Z",
               "finishedAt": "2026-09-07T03:23:06Z",
               "log": "**머지하지 않았다 — `e2e` 워크플로가 빨갛다.** run `34078351674` conclusion=`failure`, 잡 `e2e (kind + API + browser)` 실패(스텝 8 `API e2e (go, -tags=e2e)`), 03:04:02Z→03:12:18Z. 잡 로그 원문에서 새 케이스 다섯을 셌다(executionGuide §3-2): **PASS 3 · FAIL 2 · SKIP 0**.\\n\\n- ✅ `IsDedicatedToOneSession` (10.11s) · ✅ `DeleteReclaimsBothPods` (6.11s) · ✅ `ContainersDoNotSharePIDNamespace` (6.27s)\\n- ❌ `FreezeReclaimsBothPods` — `e2e_f4_helper_pod_test.go:245: snapshot status=503 body={\\\"error\\\":\\\"checkpoint strategy is disabled\\\"}`\\n- ❌ `RestoreProvisionsAFreshPairAndRewiresTheWorkloadPod` — `:315`에서 **같은 503**\\n\\n**SKIP 0건**이므로 클러스터는 정상 기동했다(CRIU 프로브도 `Succeeded`, `criu check` = 「Looks good」). 즉 환경 문제(§5-3)가 아니다. 나머지 기존 e2e는 전부 PASS이며 `TestPodReclaim_*`·`TestSnapshotRestore_*`(shell 타입)도 초록이므로 스냅샷 경로 자체의 회귀도 아니다.\\n\\nexecutionGuide §1의 순서상 3(머지)은 2의 통과가 전건이다. 전건이 거짓이므로 머지·§4 재실행은 수행하지 않았고, **PR #92는 열린 채 그대로 둔다**(닫으면 통과한 세 케이스까지 잃는다 — 처분은 planner의 재계획 몫)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "failed",
+          "converged": false,
+          "asIsVersionAfter": "api:9d8485b161adedde2bafa9fbffe4bd64798ebdd1b9568fa98d7d17001ac33b73 web:3201105e2fda5bb58206eb79969dfc8235cd8e93",
+          "verifiedAt": "2026-09-07T03:24:46Z",
+          "checks": [
+            {
+              "name": "완료기준 ①: 새 파일의 케이스가 `--- PASS`로 돈다 (SKIP 아님)",
+              "status": "failed",
+              "detail": "**PASS 3 · FAIL 2 · SKIP 0.** 실패 둘은 **같은 한 줄**로 떨어진다 — `snapshot status=503 body={\"error\":\"checkpoint strategy is disabled\"}` (`e2e_f4_helper_pod_test.go:245`의 `FreezeReclaimsBothPods`, `:315`의 `RestoreProvisionsAFreshPairAndRewiresTheWorkloadPod`). 통과한 셋은 `IsDedicatedToOneSession`·`DeleteReclaimsBothPods`·`ContainersDoNotSharePIDNamespace`."
+            },
+            {
+              "name": "완료기준 ②: 머지된 `main`에서 공백 8→7 · 매칭 18→19",
+              "status": "failed",
+              "detail": "①이 거짓이라 머지하지 않았고, `main`(`2aece7c7`)에서 `bash scripts/e2e/check-ac-mapping.sh` 재실행 결과는 baseline 그대로다 — rc=0 · 「AC 27개 = 매칭 파일 **18** + 예외 1 + 공백 **8**」 · 공백 목록에 `AC-F4` 잔존. `asIsVersionAfter`도 트리거 시점과 바이트 동일(as-is 무변화)."
+            },
+            {
+              "name": "완료기준 ③: 다른 축을 깨지 않았다",
+              "status": "passed",
+              "detail": "브랜치의 `ci` 워크플로(run `34078351661`) 전 잡 success — `fidelity`·`render-fidelity`·`comment-policy`·`control-plane`·`ac-mapping`·`integration`·`envtest` 포함. 이미지 빌드 워크플로도 success. 이 슬라이스가 인접 축을 훼손하지 않았다는 것은 확인됐다."
+            },
+            {
+              "name": "환경 배제: 클러스터 그라운드-트루스가 실제로 관측됐다",
+              "status": "passed",
+              "detail": "**SKIP 0건**이고 기존 e2e 전 케이스가 PASS(`TestPodReclaim_FreezeDeletesTheBackingPod`·`TestSnapshotRestore_AccessRestoresIntoANewPod` 등 shell 타입 동결·복원 포함). CRIU 프로브 파드도 `Succeeded`(`criu check` = 「Looks good」, `ns_last_pid` writable). ⇒ executionGuide §5-3(환경 문제)도, 스냅샷 경로 전반의 회귀도 아니다. 타임아웃도 아니다(잡 8분 16초, 한계 30분)."
+            },
+            {
+              "name": "실패 원인 귀속 (executionGuide §5 분류)",
+              "status": "passed",
+              "detail": "**§5-2(관측 방법 결함)가 아니라, 계획의 절단선이 미발화 선행을 넘었다.** 503의 출처는 `control-plane/internal/service/manager.go:1007-1018` `checkpointerFor` — `s.ckpts[workload]`가 없거나 `Enabled()`가 아니면 `session.ErrCheckpointDisabled`를 낸다. `approval-gated`에 체크포인터가 등록되지 않은 것은 **의도된 계약**이고 이미 단위 테스트가 그 계약을 산다(`internal/service/workload_type_test.go:316` — snapshot이 `ErrCheckpointDisabled`이길 단언). `docs/doc-tracker.md` 2026-09-03(6)이 같은 말을 적는다: 「아카이브 전략이 없는 동안 이 타입의 동결은 shell CRIU로 폴백하지 않고 `ErrCheckpointDisabled`로 소리 내어 거부한다」.\n\n그리고 그 아카이브 전략이 곧 **AC-F5**다 — `docs/prd/lifecycle.md:5`가 「`approval-gated`는 파일시스템 아카이브(AC-E5·AC-F5, CRIU 비대상)」로 못박는다. 이 task의 gap 분석 ③은 AC-F5를 **선행 미발화(`ReadWriteMany` 코드 0 · PVC 0 · `efs` 0 hits)** 로 제외하고 소관을 자매 `tbm_session-platform-docs-impl`로 넘겼는데, **AC-F4의 검증 방법 절반이 바로 그 F5 위에 서 있었다** — AC-F4 원문: 「스냅샷 시 **두 파드가 모두** 사라지고 자원이 회복되는지 … 복원 시 두 파드가 함께 기동되고」.\n\n⇒ 단언은 AC에 대해 **옳고**, 제품도 **결함이 아니다**. 「F3·F4·F6이 착수 가능해졌다」는 판정이 F4에 대해서는 **프로비저닝·귀속·격리 절반에만** 성립했다는 것이 이번 실행이 산 사실이다(그 절반은 실제로 세 케이스가 초록으로 샀다)."
+            },
+            {
+              "name": "부수 관측 (정보성 — 이 task 범위 밖)",
+              "status": "passed",
+              "detail": "PR #92는 **열린 채 두었다.** 닫으면 통과한 세 케이스(전속성·삭제 동반 회수·PID 경계)까지 잃는다 — 처분(범위를 셋으로 좁혀 재계획 / F5 착지까지 보류)은 planner의 판단이다. 레포에 머지된 것은 **없고** 실행 중인 워크로드에 가한 변경도 **없다**(제품 코드 0줄, `deploy/` 무변경). 롤백할 것이 없다."
             }
           ]
         }
