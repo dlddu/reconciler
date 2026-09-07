@@ -2254,6 +2254,42 @@
       "assessedAt": "2026-09-07T02:50:11Z"
     },
     "createdAt": "2026-09-07T02:50:11Z",
-    "updatedAt": "2026-09-07T02:52:01Z"
+    "updatedAt": "2026-09-07T02:58:14Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**AC-F4 한 건만** 전용 e2e 파일로 닫는다 — `control-plane/test/e2e_f4_helper_pod_test.go` 신설 + `docs/test/e2e.md`의 `ac-mapping` 행 1개와 `ac-summary` 집계 갱신. 제품 코드는 0줄이다(모델 definition이 못박은 「이 루프의 산출물은 e2e 테스트와 등재 문서뿐」).\n\n**착수 가능한 셋(F3·F4·F6) 중 F4를 고른 이유** — 나머지 둘은 지금 쓰면 각자 구체적인 실패 모양이 있다:\n\n1. **F6은 자매 슬라이스가 곧 거짓으로 만든다.** `tbm_session-platform-docs-impl/rct_20260907-0002`(같은 fire에서 `action_required`로 열림)가 MCP 컨테이너에 `optionalSecretEnv(AnthropicCACertEnvVar, …)`를 더하면서 **AC-F6 PRD 본문까지 개정**한다(그 레코드의 계획 제약이 「제품 변경과 함께 AC-F6/PRD를 갱신할 것」으로 명시). 현행 AC-F6은 `ca-cert`를 credential-proxy 컨테이너 **전용**으로 적으므로, 지금 그대로 단언하는 e2e를 쓰면 그 슬라이스가 착지하는 순간 내 파일이 빨개진다. 그리고 그 PRD 개정은 `ac:` 지문(=`docs/prd` 트리 해시)을 반드시 움직이므로 **F6 재감지가 보장**된다 — 미루는 쪽이 안전하고, 미뤄도 잊히지 않는다.\n2. **F3은 새 구동 기구가 필요한데 로컬에서 예행할 수 없다.** provider 대역이 상수 응답 하나(`const REPLY`, `content_block_delta` 1회)라 LLM이 `tool_use`를 내지 못하므로, 승인 왕복을 e2e에서 굴리려면 **세션 MCP의 JSON-RPC를 파드 안에서 직접 두드리고 게이트웨이 대역의 `/operator/*` 표면으로 사람을 연기하는** 기구를 새로 만들어야 한다. kind e2e는 이 실행 호스트에서 재현 불가라(docker 없음) 판정이 CI 왕복뿐인데, F4와 한 PR에 묶으면 **서로 독립인 두 위험이 하나의 초록에 걸린다.**\n3. **F4는 이미 CI가 통과시킨 어휘만 재사용한다.** #91의 `e2e_f1_workload_type_test.go`가 `session-id`+`pod-role=helper` 라벨 조회와 컨테이너 이름 둘(`session-mcp`·`credential-proxy`)을 실 kind SUT에서 PASS 시켰고, 회수·복원 관측은 `e2e_a3_pod_reclaim_test.go`·`e2e_b2_snapshot_restore_test.go`의 기존 패턴 그대로다. 새로 도입하는 기구는 **없다**.\n\n**이 파일이 배타적으로 사는 것**(fake clientset의 `approval_gated_orchestrator_test.go`가 이미 산 것을 다시 사지 않는다 — 그쪽은 제출되는 pod spec·워크로드 실패 시 회수·복원 쌍 생성을 태그 `integration`으로 소유한다): ① **전속성** — 실 세션 2개가 서로 다른 헬퍼 파드를 갖고 어느 쪽도 공유되지 않음, ② **회수** — 실 API server에서 동결·삭제 시 워크로드 파드와 헬퍼 파드가 **둘 다** 사라짐, ③ **복원** — 복원이 새 쌍을 세우고 워크로드 파드에 **그때 만들어진** 헬퍼 주소가 주입됨, ④ **격리** — 두 헬퍼 컨테이너가 PID 네임스페이스를 공유하지 않아 서로의 프로세스 테이블을 보지 못함(fake clientset이 원리적으로 살 수 없는 것, 실 kubelet만 답한다). F1이 이미 산 「헬퍼 파드 1개 · 컨테이너 둘 Ready」는 다시 사지 않는다.\n\n**완료 기준(이 시도의 성공 판정)**: `scripts/e2e/check-ac-mapping.sh`가 rc=0이면서 **공백 8 → 7**(`AC-F4`가 목록에서 빠짐) · **AC 매칭 파일 18 → 19**로 찍히고, PR의 `e2e (kind + API + browser)` 잡에서 새 파일의 케이스가 `--- PASS`(SKIP이 아니다)로 돈다.\n\n**범위 밖(후속)**: AC-F3·AC-F6 — 이 슬라이스가 착지하면 as-is·to-be 지문이 둘 다 움직여 재감지가 새 task로 잇는다. AC-F2(정책 집행 CNI 미도입, `disableDefaultCNI` 0건) · AC-F5(RWX 구현 0, 소관 `docs-impl`) · AC-E3·E4·E5(대역이 상수 응답) — 선행 미발화라 규칙 7의 구현 대기 축이며 이 시도에서 건드리지 않는다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-07T02:58:14Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 `dlddu/session-platform`을 clone하고 브랜치 `reconcile/rct_20260907-0002-session-platform-ac-e2e`를 `main`(`2aece7c7`)에서 딴다. 브랜치명에 모델 슬러그를 붙이는 것은 `rct` id가 모델 간 유일하지 않아 형제 모델의 열린 PR 브랜치를 밟지 않기 위함이다.",
+              "expectedOutcome": "브랜치가 origin/main과 같은 커밋을 가리키고, `bash scripts/e2e/check-ac-mapping.sh`가 baseline 그대로 rc=0 · 「공백 8」을 찍는다."
+            },
+            {
+              "seq": 2,
+              "action": "`control-plane/test/e2e_f4_helper_pod_test.go`를 신설한다. 헤더는 `//go:build e2e` + `// 검증 AC: AC-F4` **정확히 1줄**(규칙 2). 케이스 넷: (a) 세션 2개의 헬퍼 파드가 서로 다른 파드이고 각자 자기 `session-id` 라벨만 갖는다, (b) 동결(`POST /snapshot`) 시 워크로드 파드와 헬퍼 파드가 **둘 다** 클러스터에서 사라진다, (c) 복원(`switch`) 후 새 쌍이 서고 워크로드 파드의 헬퍼 주소 env가 **새 헬퍼 파드 IP**를 가리킨다, (d) 헬퍼 파드의 두 컨테이너가 PID 네임스페이스를 공유하지 않는다.",
+              "expectedOutcome": "`gofmt -l` 무출력 · `go vet -tags=e2e ./...`가 control-plane에서 rc=0(파일이 컴파일된다). 기존 파일은 한 줄도 바뀌지 않는다(`e2e_f1_*`의 `helperPodsFor`·`containerReady`를 같은 패키지에서 재사용)."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/test/e2e.md`를 갱신한다 — `<!-- ac-mapping -->` 표에 `| AC-F4 | control-plane/test/e2e_f4_helper_pod_test.go | go | … |` 행 1개를 AC-F1 행 뒤에 추가하고, `<!-- ac-summary -->`의 「AC 매칭 파일」 18→19 · 「공백」 8→7 및 공백 목록에서 `AC-F4`를 뺀다. 모킹 충실도 쪽 블록(`fidelity:*`)은 **건드리지 않는다** — 이 변경은 새 seam도 새 인터셉트도 만들지 않는다.",
+              "expectedOutcome": "`bash scripts/e2e/check-ac-mapping.sh` rc=0이면서 「AC 27개 = 매칭 파일 19 + 예외 1 + 공백 7」 · 공백 목록이 `AC-E3 AC-E4 AC-E5 AC-F2 AC-F3 AC-F5 AC-F6`."
+            },
+            {
+              "seq": 4,
+              "action": "로컬에서 돌릴 수 있는 게이트를 **전부** 돌려 baseline과 대조한다: `check-ac-mapping.sh` · `scripts/check-fidelity-allowlist.py` · `scripts/check-render-fidelity.py` · `scripts/check_comment_policy.py` · `gofmt -l` · `go build ./...` · `go vet -tags=e2e ./...`. 각각 `git worktree add --detach origin/main` 로 뜬 baseline에서도 돌려 **출력이 같은지**(또는 의도한 차이만 있는지) 대조한다.",
+              "expectedOutcome": "충실도·주석 게이트 3종은 baseline과 **출력 바이트 동일**(이 슬라이스는 그 축을 건드리지 않으므로). ac-mapping만 의도한 대로 달라진다. vet·build·gofmt는 rc=0."
+            },
+            {
+              "seq": 5,
+              "action": "커밋·푸시하고 `dlddu/session-platform`에 PR을 연다(머지하지 않는다). 본문에 task id·gap 요약·이 슬라이스의 완료 기준·범위 밖 항목(F3·F6과 그 재감지 경로)·검증 방법을 적는다.",
+              "expectedOutcome": "PR이 열리고 `e2e (kind + API + browser)`를 포함한 CI 잡이 기동한다. 머지는 executor(4-3)의 몫이다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
