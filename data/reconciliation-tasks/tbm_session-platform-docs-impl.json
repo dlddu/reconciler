@@ -3142,7 +3142,7 @@
   {
     "id": "rct_20260907-0002",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "awaiting_review",
+    "status": "review_rejected",
     "trigger": {
       "detectedAt": "2026-09-07T02:52:15Z",
       "changedSides": [
@@ -3171,7 +3171,7 @@
       "assessedAt": "2026-09-07T02:52:15Z"
     },
     "createdAt": "2026-09-07T02:52:15Z",
-    "updatedAt": "2026-09-07T04:36:00Z",
+    "updatedAt": "2026-09-07T04:52:00Z",
     "attempts": [
       {
         "plan": {
@@ -3252,8 +3252,11 @@
         },
         "review": {
           "required": true,
-          "status": "pending",
-          "reason": "제품 코드를 바꾸는 슬라이스다(riskLevel medium). PR #93은 control-plane `client_orchestrator.go`·data-plane `session_mcp_tools.go`/`credential_proxy.go`/`main.go` 4개 제품 파일을 만지고, 헬퍼 파드의 MCP 컨테이너에 새 env(`SESSION_MCP_CA_CERT`)를 주입하며, `newSessionMCPConfig`에 '비어 있지 않은 PEM에서 인증서 0개 파싱 시 시작 실패' 경로를 새로 넣는다 — 값이 잘못 채워지면 MCP 컨테이너가 기동 실패하는, 세션 런타임에 직접 닿는 변경이다. 또한 AC-F6의 자격 배치 경계(공급자 신뢰 도메인 vs 승인 URL 신뢰 도메인)를 PRD 본문에서 개정하므로, 정책 해석이 갈릴 수 있는 지점이다. main 머지 후 GitOps가 프로덕션에 적용하므로 되돌리려면 revert PR이 필요하다. 이 셋(프로덕션 워크로드 영향 · 설정/스키마 실질 변경 · medium risk) 중 어느 하나만으로도 사람 검토 신호에 해당한다."
+          "status": "rejected",
+          "reason": "제품 코드를 바꾸는 슬라이스다(riskLevel medium). PR #93은 control-plane `client_orchestrator.go`·data-plane `session_mcp_tools.go`/`credential_proxy.go`/`main.go` 4개 제품 파일을 만지고, 헬퍼 파드의 MCP 컨테이너에 새 env(`SESSION_MCP_CA_CERT`)를 주입하며, `newSessionMCPConfig`에 '비어 있지 않은 PEM에서 인증서 0개 파싱 시 시작 실패' 경로를 새로 넣는다 — 값이 잘못 채워지면 MCP 컨테이너가 기동 실패하는, 세션 런타임에 직접 닿는 변경이다. 또한 AC-F6의 자격 배치 경계(공급자 신뢰 도메인 vs 승인 URL 신뢰 도메인)를 PRD 본문에서 개정하므로, 정책 해석이 갈릴 수 있는 지점이다. main 머지 후 GitOps가 프로덕션에 적용하므로 되돌리려면 revert PR이 필요하다. 이 셋(프로덕션 워크로드 영향 · 설정/스키마 실질 변경 · medium risk) 중 어느 하나만으로도 사람 검토 신호에 해당한다.",
+          "reviewer": "user",
+          "reviewedAt": "2026-09-07T04:52:00Z",
+          "comment": "반려 — 승인된 아웃바운드 호출의 검증 방식을 '실물 https 원본 + 사설 CA 신뢰 앵커'가 아니라 **대역(모킹)** 으로 가기로 했다. 그러면 이 슬라이스가 놓으려던 MCP 컨테이너의 신뢰 앵커(`SESSION_MCP_CA_CERT` + Secret optional `ca-cert` 키 + CA 풀을 든 클라이언트)는 소비자가 생기지 않으므로 필요하지 않다.\n\n검토 대화에서 확인한 사실이 이 판단의 근거다: (1) 헬퍼 파드에는 egress 제한이 없어(`network_policy.go`는 워크로드 egress와 헬퍼 ingress만 만든다) 실사용 대상이 공개 https면 시스템 풀로 충분하다, (2) `deploy/`의 https 원본은 공급자 대역 `anthropic-fake:8443` 하나뿐이고 그건 credential-proxy 쪽 `ca-cert`가 이미 담당한다, (3) 따라서 이 키의 유일한 소비자는 아직 존재하지 않는 kind e2e의 fetch 원본이고, 그 후속(자매 `tbm_session-platform-e2e-mock-policy`)에는 현재 열린 task가 없다.\n\n후속 방향: `docs/test/e2e.md` 「차단 요인」 행이 예고한 대체 경로 — 판정을 EXT로 뒤집어 `FETCH-ORIGIN`으로 등재하고 그 행을 지우는 것 — 을 택한다. 그 판정 변경과 대역 설계는 SUT 대역 정책을 소유한 자매 모델 `tbm_session-platform-e2e-mock-policy`의 소관이므로, 이 모델에서 재계획할 때 그 경계를 넘지 말 것. PR #93은 머지하지 않은 채 열려 있다(닫거나 되살리는 판단도 재계획 몫)."
         }
       }
     ]
