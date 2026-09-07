@@ -2911,7 +2911,7 @@
   {
     "id": "rct_20260906-0002",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "planned",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-09-06T12:10:00Z",
       "changedSides": [
@@ -2940,7 +2940,7 @@
       "assessedAt": "2026-09-06T12:10:00Z"
     },
     "createdAt": "2026-09-06T12:10:00Z",
-    "updatedAt": "2026-09-06T12:39:00Z",
+    "updatedAt": "2026-09-07T11:15:00+09:00",
     "attempts": [
       {
         "plan": {
@@ -2993,6 +2993,11 @@
           "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/89",
           "preparedAt": "2026-09-06T12:32:00Z",
           "notes": "문서 1파일 슬라이스(`docs/doc-tracker.md` +2/−1, 항목 ③ 1053자 → 2410자 치환 + 변경 이력 행 1개). 코드는 한 줄도 건드리지 않았다. **계획의 근거를 전건 재실측했고 전부 맞았다** — 네 지문(docs 6c19575e / cp 1c7156d3 / dp 2202f0a5 / web bac7995d)이 레코드와 글자 그대로 일치, `deploy/`의 Secret 2파일 3건, 오버레이 픽스처 일곱, `client_orchestrator.go`의 :128·:378-393·:662·:683-685·:688-690·:753·:105-106과 `session_mcp_tools.go`의 :184·:208, `k8s/deployment.yaml`의 :52·:62·:70-73·:75가 모두 현행. #82가 control-plane의 주석 74줄을 지웠지만 변경 파일 목록에 `client_orchestrator.go`·`session_mcp_tools.go`가 없어 **좌표 부패 0**임을 커밋 stat으로 확인했다.\n\n**감지 레코드보다 한 축을 더 넣었다.** detector가 지시한 축 3은 「그래도 막힌 것 둘 = AC-F2·AC-F5」였으나 그 둘은 같은 절의 ②·④가 이미 소유해 ③에 다시 적으면 이중 계상이다. 대신 실측으로 **새 부채**를 찾아 축 3에 넣었다 — 승인 이후의 실제 아웃바운드 호출이 막혀 있다(도구는 https 강제 `session_mcp_tools.go:184`, 그 호출을 내는 MCP 컨테이너의 fetch는 시스템 루트만 쓰는 `http.DefaultClient` `:208`, `helperPodSpec`이 그 컨테이너에 주는 env는 여섯 개뿐이라 CA를 넣을 자리가 없다). 이것이 ③을 살아 있는 항목으로 유지하는 근거이자 「남은 것 셋」 집계를 지키는 근거다. 같은 사실을 자매 `e2e-mock-policy`가 열린 PR #88에서 `test/e2e.md`의 「차단 요인」 행으로 등재 중이며 **그 행이 해소 소관으로 이 모델을 지목한다** — 다만 #88은 미머지라 여기서는 그 원장을 인용하지 않고 **코드 실측만** 근거로 삼았다.\n\n**변경 이력 인용은 의도적으로 탈리터럴**이다(2026-09-05 행이 이미 쓰던 규약을 실측 확인하고 따랐다). 초안은 옛 주장을 글자 그대로 인용했는데, 그러면 상위 단계가 쓰는 리터럴 트립와이어(`` `deploy/`에 **0건** `` 등)를 **재무장해 다음 감지가 오탐**한다. 리터럴만 깨고 내용은 보존했다.\n\n검증은 손으로 세운 단언 9종(21개 체크) 전부 PASS이고, **음성 통제 5종 전부 rc=1**이며 실패 메시지가 각각 의도한 규칙(① 옛 ③ 되살리기 · ⑥⑧ 변경 이력 행 삭제 · ③ 「셋」→「넷」 · ④ ② 항목 손대기 · ② 인용 재리터럴화). 복원은 `cp` 백업 → `cmp` 바이트 동일(`git checkout --` 금지 규율 지킴).\n\n**자매 경계 준수**: `docs/test/e2e.md`의 같은 계열 노후 서술(「해제 조건은 이제 ⓑ 하나다」·「그 타입의 세션은 배포된 SUT에서 아직 서지 않으므로」)은 자매 `tbm_session-platform-ac-e2e` `rct_20260906-0002`(planning) 소관이라 열지 않았다. 그 파일은 열려 있는 PR #88도 건드리므로 경계를 지킨 것이 실제 충돌을 막았다 — **#89와 #88의 파일 교집합은 0**이다.\n\nto-be 지문 예고(커밋 후 측정 — 버전 스크립트가 `git show HEAD:docs`를 읽어 워킹트리를 안 보기 때문): `docs` 6c19575e → **3ca1e1fa**. as-is 3종은 불변이므로 머지 후 다음 감지 주기가 to-be 축으로만 깨어난다.\n\n**PR #89 CI green (12:37Z)**: 체크 **14개 — 13 pass · 1 skipping(`pin`) · 실패 0**, `mergeStateStatus: CLEAN` · `mergeable: MERGEABLE`. 계획 6단계가 예측한 수치와 정확히 일치한다 (`ci.yml` 11잡 + `docker-build-push.yaml` build 2잡 + `pin` skipped, `e2e.yml`·`docs-journey-mockup.yml`은 paths 필터에 이 파일이 없어 미발화). 워크플로 파일 *안의* 잡까지 세어 예측했고 실측이 그대로였다. 다만 이 green은 **무해함의 증거일 뿐**이다 — `doc-tracker.md`를 읽는 게이트가 이 레포에 0개이므로 교정의 증거는 전적으로 `executionGuide` 3절의 단언 9종(21체크)이다.\n\n**핸드오프 직전 자매 경계 재확인(12:38Z)**: `docs/doc-tracker.md`를 건드리는 열린 PR은 #89 하나뿐이고, #88은 `docs/test/e2e.md`·`scripts/e2e/up.sh`로 **파일 교집합 0**이다. 09-06 02:20 사이클과 달리 **머지 순서 제약이 없다** — 어느 순서로 머지해도 양쪽 문장이 동시에 참이다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "riskLevel은 low가 맞다 — `docs/doc-tracker.md` 1파일 +2/−1, 코드·매니페스트 0줄, 프로덕션 워크로드·데이터 영향 0, 롤백은 `git revert <merge-sha>` 한 번. 그럼에도 사람 검토를 요구하는 근거 셋.\n\n1. **이 변경을 검증하는 기계가 하나도 없다.** `git grep -l 'doc-tracker' -- scripts .github Makefile tools` = 0 hits — PR #89의 CI 14체크(13 pass · 1 skipped)는 executionGuide 스스로 적었듯 **무해함의 증거일 뿐**이고, 교정 내용이 맞다는 증거는 전적으로 planner가 손으로 세운 단언 9종(21체크)이다. 즉 내용의 진위를 볼 수 있는 것은 사람뿐이다.\n\n2. **바뀌는 대상이 후속 감지 주기가 진실로 읽는 SSOT 원장이다.** 여기에 틀린 문장이 들어가면 #84가 그랬던 것처럼 조용히 착지해 다음 사이클의 판정 입력을 오염시킨다 — 이 task 자체가 그 사고의 수습이다.\n\n3. **planner가 detector의 지시를 대체했다.** detector가 지정한 축 3(「그래도 막힌 것 둘 = AC-F2·AC-F5」)을 「②·④와 이중 계상」이라는 이유로 버리고, 실측으로 찾은 새 부채(결재 이후 아웃바운드 차단 — CA 주입 자리 부재)를 대신 넣었다. 근거는 기록돼 있으나 원장에 실제로 새겨질 문장을 바꾼 판단이므로 승인 대상에 포함한다."
         }
       }
     ]
