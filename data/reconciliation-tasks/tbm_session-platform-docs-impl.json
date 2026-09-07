@@ -3680,6 +3680,62 @@
       "assessedAt": "2026-09-07T15:15:03Z"
     },
     "createdAt": "2026-09-07T15:15:03Z",
-    "updatedAt": "2026-09-07T15:25:00Z"
+    "updatedAt": "2026-09-07T15:30:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**AC-F5의 「볼륨 자체」를 착지시킨다 — 세션 전용 RWX PVC를 워크로드 컨테이너와 헬퍼 파드의 `session-mcp` 컨테이너에 같은 경로로 마운트하고, credential-proxy에는 마운트하지 않으며, 헬퍼 파드 owner reference로 파드와 함께 회수되게 한다.**\n\n## 왜 이 방법인가\n\n대안 셋을 저울질했다. ⓐ **EmptyDir 확장** — 파드가 둘이라 원천적으로 불가(공유 볼륨은 파드 경계를 넘어야 한다). ⓑ **hostPath** — 노드 파일시스템을 세션 워크로드에 여는 것이라 AC-F2/V1의 격리 방향과 정반대다. ⓒ **PVC(ReadWriteMany)** — AC-F5 문면 그대로이고, 이 레포가 이미 쓰는 「세션 스코프 비-파드 오브젝트를 헬퍼 파드가 소유한다」 패턴 (`network_policy.go`의 `ownerReferenceTo`)을 그대로 재사용할 수 있다. **ⓒ를 택한다.**\n\n가역성: PVC 생성은 `provision`의 `afterCreate` 훅에서 NetworkPolicy와 **같은 자리**에 붙으므로, 되돌리기는 그 한 줄과 마운트 두 곳을 빼는 것이다. 머지 전에는 CI가 유일한 영향면이고, 머지 후 문제가 생겨도 revert 한 번으로 이전 파드 스펙으로 정확히 돌아간다.\n\nStorageClass는 **레포에서 확정할 수 없다**(감지 제약 ⑥.2). 이름을 박지 않고 `SESSION_SHARED_VOLUME_STORAGE_CLASS`(빈 값 = 필드 생략 = 클러스터 기본 클래스) · `SESSION_SHARED_VOLUME_SIZE`(기본 `1Gi`)로 뺀다. 「클러스터에 efs가 있다」는 PR #81 본문 주장을 근거로 받지 않는다 — 기본값은 **kind 경로**(기본 StorageClass)이고, 그 경로가 실제로 서는지는 이 PR의 `e2e (kind)` 잡이 직접 증명한다(아래 완료 기준).\n\n## 이 시도의 범위(완료 기준)\n\n**AC-F5 세 축 중 첫 축 — 「볼륨 위상과 수명」만** 착지시킨다. 다음이 모두 참이면 이 task는 성공이다.\n\n1. `approval-gated` 세션 프로비저닝이 그 라운드 전용 PVC를 하나 만든다    (`accessModes: [ReadWriteMany]`, 이름은 그 라운드 헬퍼 파드에서 파생, 세션 id 라벨).\n2. 워크로드 파드의 `session` 컨테이너와 헬퍼 파드의 `session-mcp` 컨테이너가 그 PVC를    **같은 경로**(`/session/shared`)로 마운트한다.\n3. 헬퍼 파드의 `credential-proxy` 컨테이너와 `claude-code`의 사이드카에는 그 경로가 **없다**.\n4. `shell`·`claude-code` 세션은 PVC를 **하나도** 만들지 않는다(파드 스펙 무변경).\n5. PVC가 그 라운드 헬퍼 파드의 controller owner reference를 갖는다(= 파드 회수 시 GC 동반 회수).    복원 라운드는 자기 PVC를 새로 갖는다.\n6. 위 다섯이 fake clientset 통합 테스트로 단언되고, 로컬 재현 가능한 CI 게이트 전부가 rc=0이며,    `e2e (kind)`가 초록이다(= 배포 SUT에서 두 파드가 실제로 그 볼륨을 물고 Ready에 도달한다).\n7. 기준 4(원장 정합): `docs/doc-tracker.md`의 AC-F5 항목이 **두 축으로 갈려** 갱신되고,    `docs/comment-policy.md` 판정 원장이 이 PR이 만진 등재 범위에 대해 재판정된다.\n\n## 범위 밖(후속 — 재감지가 새 task로 잇는다)\n\n- **MCP가 그 볼륨에 큰 결과물을 쓰고 에이전트가 파일로 읽는 축.** 이것이 원장 `doc-tracker.md` ②의   `maxFetchedBodyBytes = 100_000` 임시 대체를 걷어내는 축이고, 감지 제약 ⑥.3대로 걷어내려면   원장 두 문장을 같은 PR에서 함께 정정해야 한다 — 이 PR은 그 상수를 **한 글자도 만지지 않는다**.\n- **아카이브 포함·복원 축(data-plane).** 감지의 제안 절단선은 여기까지 포함했으나 더 좁힌다. 근거 셋:   ⑴ **순서 의존** — 아카이브가 실어 나를 디렉터리가 파드 안에 먼저 있어야 한다(이 슬라이스가 그 선행이다).   ⑵ **`installClaudeState`의 원자적 rename 기법을 공유 디렉터리에 그대로 못 쓴다** — 그쪽은 마운트   포인트라 별도의 in-place 설치와 그 자체의 불변식이 필요하다. ⑶ **아카이브 포맷 하위호환** —   `restoreClaudeArchive`는 미등록 엔트리를 거부하므로 `shared/` 추가는 기존 체크포인트와의   호환 규칙을 따로 세워야 한다. 파드 스펙 선언과 tar 포맷 변경을 한 PR에 섞으면 검토 단위가 무너진다.\n- **AC-F5 전용 e2e 파일과 `docs/test/e2e.md` 등재** — 자매 `tbm_session-platform-ac-e2e` 소관   (감지 제약 ⑧). 그래서 이 PR의 새 테스트는 `e2e_*_test.go`가 **아닌** 이름을 쓴다(아래 5단계).\n- **`FETCH-ORIGIN` 대역 등재** — 자매 `tbm_session-platform-e2e-mock-policy` 소관.\n- **`docs/test/e2e.md:545`의 부정확한 좌표**(`client_orchestrator.go:685`) — 그 파일이 **열린 #95의   변경 파일**이라 만지지 않는다(감지 제약 ④의 교집합 0을 지키기 위해). PR 본문에 인계만 남긴다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`control-plane/internal/adapter/k8s/shared_volume.go`(신규)에 AC-F5의 볼륨 선언을 모은다: 라운드 PVC 스펙 빌더(`accessModes:[ReadWriteMany]`, 크기·StorageClass는 주입값, 세션 id + managed-by 라벨, 이름은 헬퍼 파드 이름 파생), 마운트 헬퍼, `WithSharedVolume(storageClass, size)` 옵션. 기존 파일이 아니라 새 파일인 이유는 `network_policy.go`가 AC-F2를 한 파일에 모은 것과 같다 — 그리고 comment-policy 등재 범위를 불필요하게 넓히지 않는다.",
+              "expectedOutcome": "`go build ./...` 통과. 아직 어디서도 호출하지 않으므로 파드 스펙은 무변경이고 기존 테스트가 전부 그대로 통과한다."
+            },
+            {
+              "seq": 2,
+              "action": "`client_orchestrator.go`를 배선한다. ⑴ `helperPodSpec`의 `session-mcp` 컨테이너에 마운트를 더하고 파드에 PVC volume을 더한다(`credential-proxy` 컨테이너는 건드리지 않는다). ⑵ `buildPod`의 `approval-gated` 분기에서 워크로드 `session` 컨테이너에 같은 경로 마운트 + 같은 PVC volume을 더한다. ⑶ `startSet`의 헬퍼 `provision(...)` `afterCreate` 훅에서 NetworkPolicy 생성 **앞에** PVC를 생성한다 — owner reference에 헬퍼 파드 UID가 필요해 파드 create 뒤여야 하고, 파드는 PVC가 생기기 전까지 Pending으로 기다린다(waitReady 안).",
+              "expectedOutcome": "`go vet ./...` · `go vet -tags=e2e ./...` · `gofmt -l .`(빈 출력) 통과. 기존 통합 테스트 중 파드 스펙 개수를 세는 것들이 여전히 통과한다(`shell`/`claude-code`는 경로를 타지 않는다)."
+            },
+            {
+              "seq": 3,
+              "action": "`control-plane/cmd/control-plane/main.go`에 `SESSION_SHARED_VOLUME_STORAGE_CLASS`(기본 \"\" = 클러스터 기본 클래스) · `SESSION_SHARED_VOLUME_SIZE`(기본 `1Gi`)를 `config`에 더하고 `k8s.WithSharedVolume(...)`으로 넘긴다. 크기 파싱은 `resource.ParseQuantity`로 하고 잘못된 값이면 기동을 실패시킨다(조용한 기본값 대체 금지 — 다른 config 항목의 관례와 같다).",
+              "expectedOutcome": "`go test ./...` 통과. 두 env 모두 미설정인 기존 배포는 기본 StorageClass + 1Gi로 동작한다."
+            },
+            {
+              "seq": 4,
+              "action": "`k8s/rbac.yaml`의 `control-plane-pods` Role에 `persistentvolumeclaims: [\"create\"]`를 더한다. **create만** — PVC는 헬퍼 파드 owner reference로 GC가 회수하므로 delete가 필요 없다. 바로 위 `networkpolicies` 규칙과 같은 근거이고, 주석도 그 형태를 따른다.",
+              "expectedOutcome": "`kubectl apply` 대상 YAML이 유효하다. (이 파일은 as-is 버전 범위 밖이라 as-is 해시는 움직이지 않지만, 없으면 배포 클러스터에서 PVC 생성이 403으로 죽는다.)"
+            },
+            {
+              "seq": 5,
+              "action": "`control-plane/test/approval_gated_shared_volume_test.go`(신규, `//go:build integration`)에 완료 기준 1~5를 fake clientset으로 단언한다. 선례는 `approval_gated_orchestrator_test.go`(같은 하네스·같은 `podSet` 헬퍼). **파일명이 `e2e_*_test.go`가 아니어야 한다** — 그 glob이 `check-ac-mapping.sh`의 매칭 단위라, 그 이름을 쓰면 `// 검증 AC:` 선언과 `docs/test/e2e.md` 등재를 요구해 자매 모델의 소관을 침범한다.",
+              "expectedOutcome": "`go test -tags=integration ./...` 전부 통과. `./scripts/e2e/check-ac-mapping.sh` 출력이 부모와 **바이트 동일**(공백 7 · 매칭 19 불변)."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/doc-tracker.md`의 🟡 AC-F5 항목(②)을 **두 축으로 갈라** 갱신한다 — 「볼륨 위상·수명은 착지했다」와 「MCP가 그 볼륨에 쓰는 축은 아직이라 100 000바이트 절단 대체가 그대로 서 있다」. 「~~해소~~ 한 줄」로 지우지 않는다(감지 제약 ⑤). 변경 이력에 `2026-09-07 (3)` 1행을 더한다. `docs/test/e2e.md`는 **만지지 않는다**(열린 #95와의 교집합 0).",
+              "expectedOutcome": "기준 4 정합 유지. `git diff --stat`이 `docs/`에서 `doc-tracker.md` 한 파일만 보여준다."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/comment-policy.md` 판정 원장을 재판정한다. 이 PR이 주석을 더하는 등재 범위는 3차 패스 행(`internal/adapter/k8s/*`)과 6차 패스 행(`cmd/control-plane/main.go`)이다. 새 주석을 정책 절차대로 판정한 뒤 각 행의 주석 줄 수·지문과 `<!-- 판정-합계 -->`를 갱신한다(R2·R4). 신규 파일 둘은 미등재로 두어도 게이트는 통과하지만, 새 코드가 판정 밖에 남지 않도록 각각 해당 행에 편입한다. 원장 문면에 줄 번호 좌표를 쓰지 않는다(R5).",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` rc=0, 합계가 행 합과 양방향 일치."
+            },
+            {
+              "seq": 8,
+              "action": "로컬 재현 가능한 게이트 전부를 부모(`f41ca7d4`)와 브랜치에서 각각 클린 워크트리로 돌려 대조한다: `go vet ./...` · `go vet -tags=e2e ./...` · `gofmt -l .` · `go test ./...` · `go test -tags=integration ./...`(control-plane), `go vet`·`gofmt`·`go test`(data-plane), `check-ac-mapping.sh` · `check_comment_policy.py` · `check-fidelity-allowlist.py` · `check-render-fidelity.py`.",
+              "expectedOutcome": "전부 rc=0. `check-ac-mapping.sh`·`check-fidelity-allowlist.py`·`check-render-fidelity.py`는 부모와 **출력 바이트 동일**(내가 그 게이트들의 비교 집합을 건드리지 않았다는 적극 증명). `check_comment_policy.py`는 재판정한 두 행만큼만 수치가 움직인다."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치 `reconcile/rct_20260907-0005-session-platform-docs-impl`로 커밋·푸시하고 PR을 연다(머지하지 않는다). 본문에 task id, gap 요약, 범위와 범위 밖, 완료 기준, 검증 방법, `docs/test/e2e.md:545` 좌표 인계, 그리고 **`e2e (kind)` 잡이 이 PR에서 처음 뜬다는 사실과 그 잡이 곧 완료 기준 6이라는 것**을 적는다.",
+              "expectedOutcome": "PR URL이 나오고 CI가 돌기 시작한다. 열린 #95와 변경 파일 교집합 0."
+            }
+          ],
+          "plannedAt": "2026-09-07T15:30:00Z"
+        }
+      }
+    ]
   }
 ]
