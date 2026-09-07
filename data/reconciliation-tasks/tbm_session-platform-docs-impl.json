@@ -3171,6 +3171,77 @@
       "assessedAt": "2026-09-07T02:52:15Z"
     },
     "createdAt": "2026-09-07T02:52:15Z",
-    "updatedAt": "2026-09-07T03:02:25Z"
+    "updatedAt": "2026-09-07T03:10:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**MCP 컨테이너에 신뢰 앵커를 낸다 — credential-proxy의 optional `ca-cert` 선례를 그대로 복제하되, 별도 env·별도 Secret 키로 두 신뢰 도메인을 분리한다.** 원장 항목 ③이 「해소는 제품 변경이고 이 문서의 소관」이라 지목한 그 축이다.\n\n## 왜 이 형태인가 (대안 저울질)\n\n| 안 | 판정 |\n| --- | --- |\n| **(A) `approval-gateway-credentials`에 optional `ca-cert` 키를 더하고 `SESSION_MCP_CA_CERT`로 MCP 컨테이너에만 주입** | **채택.** MCP 컨테이너가 이미 참조하는 유일한 Secret이고, 그 Secret은 세션별이 아니라 **플랫폼 전역**(`defaultApprovalGatewaySecret`)이라 「이 배치의 fetch가 추가로 신뢰할 발급자」를 담기에 자리가 맞다. optional 키라 값이 없으면 `k8s/`·`deploy/`가 한 줄도 달라지지 않는다(`ca-cert`·`k3s-mcp-url`이 세운 규약). |\n| (B) 기존 `ANTHROPIC_CA_CERT`/`claude-code-credentials`의 `ca-cert`를 MCP에도 준다 | **기각 — AC-F6이 금지하고 기존 테스트가 이미 그것을 산다.** PRD는 공급자 `base-url`·`auth-token`·optional `ca-cert`를 「헬퍼 파드의 credential-proxy 컨테이너**에만**」으로 못박고, `control-plane/test/e2e_e6_credential_placement_test.go`의 `e6RequireAbsent(main, \"ANTHROPIC_CA_CERT\")`와 `workload_type_orchestrator_test.go`의 「tool-running 컨테이너는 이 env를 받아선 안 된다」가 그 경계를 단언한다. 공급자 게이트웨이의 발급자와 사람이 승인한 임의 URL의 발급자는 **다른 신뢰 도메인**이라 alias 하면 안 된다. |\n| (C) 전용 Secret을 새로 만든다 | 기각 — 새 Secret 이름·오케스트레이터 필드·`deploy/` 픽스처가 따라붙는데 `deploy/`는 이 모델 as-is 밖(자매 `e2e-mock-policy` 소관)이라 슬라이스가 모델 경계를 넘는다. |\n| (D) 승인 게이트웨이 호출(`approvalGateway.client`)의 TLS 신뢰도 같이 넓힌다 | **이번 범위 밖.** 게이트웨이는 https 강제가 없고(`deploy/e2e-approval-gateway-fake.yaml`이 그 이유를 적는다) 실제 SUT 값도 `http://approval-gateway-fake:8080`이다 — 수요가 0인 확장은 짓지 않는다. |\n\n동작 계약은 credential-proxy와 **글자 그대로 같다**: 값이 없거나 비면 시스템 풀만 쓰고, 있으면 시스템 풀에 **추가**하며(대체하지 않는다), 비어 있지 않은데 인증서가 하나도 파싱되지 않으면 첫 요청까지 미루지 않고 **컨테이너 시작을 실패시킨다**. 그래서 `trustProviderCA`를 주체 문자열을 받는 `trustExtraCA`로 일반화해 두 컨테이너가 한 구현을 공유한다 — 판정 근거를 두 벌로 늘리지 않는다.\n\n## 이 슬라이스가 반드시 함께 지는 것 — 게이트 셋 (실측으로 확인했다)\n\n계획 제약이 말한 「문서를 함께 고쳐야 한다」는 **기준 3(문서 없는 구현) 회피만이 아니라 CI 적색을 피하는 필수 조건**이다. 로컬에서 게이트를 실제로 돌려 확인했다:\n\n1. **R10 (`scripts/check-fidelity-allowlist.py`)** — `docs/test/e2e.md`의 `fidelity:blockers` 행이 `session_mcp_tools.go`에 리터럴 `http.DefaultClient.Do(req)`가 **있을 것**을 강제한다. 그 리터럴을 CA 풀을 든 클라이언트로 바꾸는 순간 게이트가 붉어진다 ⇒ **같은 PR에서 그 행을 지우고 `fidelity:summary`의 「차단 요인 **1**건」을 **0**으로 내려야 한다**(R8이 행 수와 집계의 양방향 미러를 강제한다).\n2. **R2 (`scripts/check_comment_policy.py`)** — 판정 원장 #3(`client_orchestrator.go` 포함, 328줄 `b09a85723f8c`)과 #4(`session_mcp_tools.go`·`main.go`·`credential_proxy.go` 포함, 781줄 `7dad4f10cce1`)의 **주석 줄 수와 지문**을 재측정해 대조한다 ⇒ 주석이 한 줄이라도 움직이면 `docs/comment-policy.md`의 두 행과 합계 마커를 **같은 PR에서** 재판정해야 한다.\n3. 나머지(`go build`·`go vet`(+`-tags=e2e`)·`gofmt`·`go test`·`check-render-fidelity.py`·`check-ac-mapping.sh`)는 회귀 확인용이다.\n\n## 자매와의 파일 경계 — gap의 「파일 교집합 0」은 정정한다\n\n`tbm_session-platform-ac-e2e/rct_20260907-0002`(현재 `planning`, 02:58 draft)는 **AC-F4 한 건만** 잡았고 자기 계획에 「모킹 충실도 쪽 블록(`fidelity:*`)은 **건드리지 않는다**」를 명시했다. 반면 위 R10 때문에 이 슬라이스는 `docs/test/e2e.md`를 **반드시** 만진다 ⇒ **교집합은 0이 아니라 「같은 파일 · 서로 다른 블록」이다**: 저쪽은 `ac-mapping:begin`(325행)·`ac-summary:begin`(384행), 이쪽은 `fidelity:blockers`(176–180행)·`fidelity:summary`(215–221행). 100줄 이상 떨어져 git이 자동 병합하지만, **나중에 머지되는 쪽이 rebase 후 두 게이트를 다시 돌리는 것**을 실행 지침에 못박는다. 자매가 AC-F6을 미룬 이유가 바로 이 PRD 개정이므로 순서 의존은 저쪽 → 이쪽이 아니라 **독립**이다.\n\n## 완료 기준 (이 시도의 성공 판정)\n\n`main`에 머지된 상태에서 다음이 **전부** 참이면 성공이다:\n1. `helperPodSpec`의 MCP 컨테이너가 `SESSION_MCP_CA_CERT`를 `approval-gateway-credentials`/`ca-cert`의 **optional** SecretKeyRef로 받는다. proxy·워크로드 컨테이너에는 없고, MCP 컨테이너에 `ANTHROPIC_CA_CERT`는 여전히 **없다**.\n2. MCP 컨테이너의 `web_fetch_get` fetch가 그 PEM을 시스템 풀에 **추가한** 클라이언트로 나가고, 세 결과(빈 값 → 시스템 풀 · 유효 PEM → 사설 발급자 실 handshake 성공 · 비어 있지 않은데 인증서 0 → 시작 실패)가 Go 테스트로 고정된다.\n3. `docs/prd/approval-gated-workload.md`의 AC-F6 설명·검증 방법과 `docs/test/approval-gated-workload.md`의 기대 결과가 이 배치를 기술한다(기준 3 무위반).\n4. `docs/doc-tracker.md` 항목 ③이 「신뢰 경로 없음」을 현재형으로 말하지 않고, 남은 것이 **인클러스터 https 원본의 실배포(자매 `e2e-mock-policy`)와 그 위의 전용 e2e(자매 `ac-e2e`)**임을 소유자와 함께 적는다.\n5. PR의 CI가 전부 초록 — 특히 위 게이트 셋.\n\n## 범위 밖(후속) — 재감지가 잇는다\n\n- **인클러스터 https 원본 픽스처(`deploy/`)** — 이 모델 as-is 밖, 자매 `tbm_session-platform-e2e-mock-policy` 소관. `fidelity:blockers` 행의 「해소 시」가 예고한 실배포가 바로 이것이다.\n- **AC-F1·F3·F4·F6 전용 e2e 파일** — 자매 `tbm_session-platform-ac-e2e` 소관(F4는 이번 fire에서 계획 중). 이 PRD 개정이 `docs/prd` 트리 해시를 움직이므로 **AC-F6 재감지가 보장**된다.\n- **AC-F5 RWX 공유 볼륨** — 레포 밖 RWX StorageClass가 선행(실측 `ReadWriteMany` 코드 0 · PVC 0 · `efs` 0 hits). 끌고 들어오지 않는다.\n- **AC-F2 실집행** — 정책 집행 CNI가 선행, 루프 밖.\n- **`.github/workflows/docker-build-push.yaml`의 「env 2곳」 산문** — 감지가 「결함 아님(기계는 옳다)」으로 판정하고 fold-in 대상으로 남긴 것. 이 PR은 그 파일을 만지지 않으므로 fold-in 기회가 아니다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 `dlddu/session-platform`을 clone하고 `main`(`2aece7c7`)에서 브랜치 `reconcile/rct_20260907-0002-session-platform-docs-impl`를 딴다. 브랜치명에 모델 슬러그를 붙이는 것은 `rct` id가 모델 간 유일하지 않아 형제 모델(`ac-e2e`)의 같은 id 브랜치를 밟지 않기 위함이다.",
+              "expectedOutcome": "`git rev-parse HEAD` == `2aece7c7…`, 브랜치가 형제 것과 다른 이름으로 존재한다."
+            },
+            {
+              "seq": 2,
+              "action": "control-plane: `internal/adapter/k8s/client_orchestrator.go`에 상수 둘(`SessionMCPCACertEnvVar = \"SESSION_MCP_CA_CERT\"` · `ApprovalGatewayCACertSecretKey = \"ca-cert\"`)을 게이트웨이 3종 상수 옆에 더하고, `helperPodSpec`의 MCP 컨테이너 `Env`에 `optionalSecretEnv(SessionMCPCACertEnvVar, o.approvalGatewaySecret, ApprovalGatewayCACertSecretKey)`를 추가한다. credential-proxy 컨테이너와 워크로드 컨테이너는 건드리지 않는다.",
+              "expectedOutcome": "`go build ./...` 통과. 제출되는 helper pod spec의 MCP 컨테이너 env가 여섯에서 일곱으로 늘고, 새 항목만 `Optional=true`인 SecretKeyRef다."
+            },
+            {
+              "seq": 3,
+              "action": "data-plane: `credential_proxy.go`의 `trustProviderCA`를 주체 문자열을 받는 `trustExtraCA(transport, pem, subject)`로 일반화한다(오류 문면은 주체를 끼워 기존과 같은 세 결과를 유지). `session_mcp_tools.go`에 `sessionMCPCACertEnv = \"SESSION_MCP_CA_CERT\"`와, 그 PEM을 시스템 풀에 추가한 transport를 든 fetch 클라이언트 생성자를 더하고, `fetchURL`이 `http.DefaultClient` 대신 그 클라이언트를 쓰게 한다.",
+              "expectedOutcome": "`session_mcp_tools.go`에서 리터럴 `http.DefaultClient.Do(req)`가 사라진다. `gofmt -l .`이 비고 `go vet ./...` 통과."
+            },
+            {
+              "seq": 4,
+              "action": "data-plane: `main.go`의 `workloadSessionMCP` 갈래에서 `os.Getenv(sessionMCPCACertEnv)`를 읽어 config를 만들고, PEM이 비어 있지 않은데 인증서가 0개면 `logger.Error` 후 `os.Exit(1)`로 **시작을 실패**시킨다(게이트웨이 env 부재의 「뜨되 도구가 빈다」와 달리 여기서는 조용한 시스템 신뢰 회귀를 막는다 — credential-proxy가 세운 규약 그대로).",
+              "expectedOutcome": "`newSessionMCPConfig`의 단일 프로덕션 호출부가 새 시그니처로 컴파일되고, 테스트의 `sessionMCPConfig{}` 리터럴 구성은 그대로 산다."
+            },
+            {
+              "seq": 5,
+              "action": "data-plane 테스트: 새 파일에 실 TLS handshake로 세 결과를 고정한다 — (a) 사설 발급자 origin에 빈 PEM이면 fetch가 실패한다, (b) 그 발급자 PEM을 주면 성공하고 **동시에** 공개 풀 검증이 약해지지 않는다, (c) 인증서가 하나도 없는 비어 있지 않은 PEM은 구성 오류다. 기존 `credential_proxy_ca_test.go`의 `tlsUpstreamCAPEM` 헬퍼를 재사용한다.",
+              "expectedOutcome": "`go test ./...`가 data-plane에서 통과하고, 새 케이스가 (a)에서 실제로 handshake 실패를 관측한다(빈 PEM이 우연히 통과하지 않는다)."
+            },
+            {
+              "seq": 6,
+              "action": "control-plane 테스트: `test/approval_gated_orchestrator_test.go`에 AC-F6 배치를 사는 케이스를 더한다 — MCP 컨테이너가 `SESSION_MCP_CA_CERT`를 `approval-gateway-credentials`/`ca-cert`의 optional SecretKeyRef로 갖고, proxy·워크로드 컨테이너에는 없으며, MCP 컨테이너에 `ANTHROPIC_CA_CERT`는 **여전히 없다**(AC-F6의 공급자 자격 증명 경계가 이 추가로 흐려지지 않았음을 산다).",
+              "expectedOutcome": "`go test ./...`·`go vet -tags=e2e ./...` 통과. 기존 `e2e_e6_credential_placement_test.go`·`workload_type_orchestrator_test.go`의 단언은 수정 없이 그대로 산다."
+            },
+            {
+              "seq": 7,
+              "action": "문서(SSOT): `docs/prd/approval-gated-workload.md`의 AC-F6 **설명**에 「MCP 컨테이너의 optional 신뢰 앵커」 단락을 더하고(공급자 `ca-cert`와 **다른 키·다른 env**이며 두 신뢰 도메인을 alias 하지 않는다는 근거 포함), **검증 방법**에 세 결과와 배치 단언을 더한다. `docs/test/approval-gated-workload.md`의 대응 기대 결과도 같은 문장으로 맞춘다.",
+              "expectedOutcome": "AC-F6 본문이 구현과 1:1로 대응해 기준 3(문서 없는 구현)·기준 2(불일치)가 발생하지 않는다. `docs/prd` 트리 해시가 움직여 자매 `ac-e2e`의 AC-F6 재감지가 보장된다."
+            },
+            {
+              "seq": 8,
+              "action": "원장: `docs/doc-tracker.md` 항목 ③에서 「헬퍼 파드의 MCP 컨테이너에는 CA를 넣을 자리가 아예 없다 … 해소는 제품 변경이고 이 문서의 소관이며 문서 교정과 같은 PR에 섞지 않는다」를 **해소로 다시 쓴다** — 신뢰 경로가 생겼고, 남은 것은 인클러스터 https 원본의 **실배포**(자매 `e2e-mock-policy`)와 그 위의 전용 e2e(자매 `ac-e2e`)임을 소유자와 함께 적는다. 취소선 스냅샷 절(`### 🟠 …`)은 건드리지 않는다.",
+              "expectedOutcome": "항목 ③이 현재형 거짓을 남기지 않는다(기준 4). 「남은 것 셋」의 회계와 ②·④의 문면은 보존된다."
+            },
+            {
+              "seq": 9,
+              "action": "게이트 문서 1 — `docs/test/e2e.md`: `fidelity:blockers` 표에서 그 1행을 **지우고**(원인이 사라졌다: 실물 배포가 이제 가능하다), 176행 앞 프로즈의 「이번 행은 …」 단락을 해소 서술로 고치고, `fidelity:summary`의 「차단 요인 **1**건」을 **0**건으로 내린다. `ac-mapping`·`ac-summary`·`fidelity:registry`·`fidelity:ledger` 블록은 **한 글자도 건드리지 않는다**(자매 `ac-e2e`의 hunk).",
+              "expectedOutcome": "`python3 scripts/check-fidelity-allowlist.py`가 rc=0(R10 리터럴 대조 통과 · R8 집계 미러 일치 · R9 상한 래칫 불변)."
+            },
+            {
+              "seq": 10,
+              "action": "게이트 문서 2 — `docs/comment-policy.md`: 게이트가 출력하는 실측값으로 판정 원장 #3(`client_orchestrator.go` 범위)과 #4(data-plane 범위)의 **주석 줄 수·지문**을 갱신하고, 각 행 결과 칸에 이번 증분의 재판정 기록(더한 줄 · 제거/유지)을 덧붙이며 합계 마커를 함께 움직인다. R5대로 **줄 번호 좌표를 쓰지 않고** 심볼 이름·AC 번호로만 가리킨다.",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py`가 rc=0(R1~R5 위반 없음)이고 출력 지문이 원장과 일치한다."
+            },
+            {
+              "seq": 11,
+              "action": "로컬 게이트 전량 실행 + baseline 대조: `git worktree add --detach` 로 `origin/main`을 떠서 같은 명령을 양쪽에서 돌린다 — `check-fidelity-allowlist.py` · `check_comment_policy.py` · `check-render-fidelity.py` · `scripts/e2e/check-ac-mapping.sh` · `gofmt -l .` · `go build ./...` · `go vet ./...` · `go vet -tags=e2e ./...` · `go test ./...`(control-plane · data-plane 양쪽).",
+              "expectedOutcome": "브랜치에서 전부 rc=0이고, baseline과 다른 결과가 나온 게이트는 없다(= 이 슬라이스가 기존 초록을 깨지 않았다)."
+            },
+            {
+              "seq": 12,
+              "action": "커밋·푸시하고 `dlddu/session-platform`에 PR을 연다(**머지하지 않는다**). 본문에 task id, gap 요약, 채택/기각한 설계 대안, 완료 기준, 범위 밖 항목과 그 소유자, 위 게이트 셋이 왜 같은 PR에 묶여야 하는지, 자매 PR과의 hunk 경계를 적는다.",
+              "expectedOutcome": "PR URL이 생기고 CI가 돈다. `preparation`에 그 URL이 기록된다."
+            }
+          ],
+          "plannedAt": "2026-09-07T03:10:00Z"
+        }
+      }
+    ]
   }
 ]
