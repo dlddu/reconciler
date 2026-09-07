@@ -3656,7 +3656,7 @@
   {
     "id": "rct_20260907-0005",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "awaiting_review",
+    "status": "executing",
     "trigger": {
       "detectedAt": "2026-09-07T15:15:03Z",
       "changedSides": [
@@ -3680,7 +3680,7 @@
       "assessedAt": "2026-09-07T15:15:03Z"
     },
     "createdAt": "2026-09-07T15:15:03Z",
-    "updatedAt": "2026-09-08T00:05:00Z",
+    "updatedAt": "2026-09-07T23:54:52Z",
     "attempts": [
       {
         "plan": {
@@ -3746,8 +3746,11 @@
         },
         "review": {
           "required": true,
-          "status": "pending",
-          "reason": "riskLevel=medium이고 되돌릴 수 없는 지점(PR #98 머지)이 실행 경로에 있다. 머지되면 GitOps가 프로덕션 control-plane에 적용되어 approval-gated 세션의 파드 스펙(공유 PVC 마운트)과 RBAC(persistentvolumeclaims:create)가 바뀐다.\n\n추가로, 점유 시점 실측에서 **executionGuide 1순위 전제가 깨져 있다**: PR #98 head `fcd85e0`의 CI 15잡 중 `e2e (kind + API + browser)`가 **실패**(2026-09-07T15:59:56Z, run 34139739565). 다른 14잡은 success/skipped. 실패는 approval-gated 경로에만 국한된다 — `TestApprovalGatedWorkloadType_SessionStandsUpWithItsHelperPod`·`_ImmutableAfterCreate`, `TestApprovalGatedHelperPod_IsDedicatedToOneSession`·`_RefusedFreezeReclaimsNeitherPod`·`_DeleteReclaimsBothPods`·`_ContainersDoNotSharePIDNamespace` 6건이 전부 `POST /api/v1/sessions` 90초 클라이언트 타임아웃으로 FAIL. 반면 `_OtherTypesGetNoHelperPod`(shell/omitted)와 shell·claude-code 계열은 전부 PASS. kind 클러스터의 기본 StorageClass는 `local-path`(WaitForFirstConsumer, 노드 로컬)다.\n\n따라서 executionGuide가 완료 기준 6의 유일한 증거로 지정한 잡이 빨간 상태이며, 가이드 문면상 이 상태에서의 머지는 금지된다. 실행은 '머지'가 아니라 가이드 3절의 우회 경로(① deploy 오버레이에 RWX 가능한 StorageClass 명시 → ② opt-in 전환)를 이 PR 안에서 시도하는 것이 되므로, 어느 경로를 택할지·아예 planner에게 되돌릴지를 사람이 정해야 한다."
+          "status": "approved",
+          "reason": "riskLevel=medium이고 되돌릴 수 없는 지점(PR #98 머지)이 실행 경로에 있다. 머지되면 GitOps가 프로덕션 control-plane에 적용되어 approval-gated 세션의 파드 스펙(공유 PVC 마운트)과 RBAC(persistentvolumeclaims:create)가 바뀐다.\n\n추가로, 점유 시점 실측에서 **executionGuide 1순위 전제가 깨져 있다**: PR #98 head `fcd85e0`의 CI 15잡 중 `e2e (kind + API + browser)`가 **실패**(2026-09-07T15:59:56Z, run 34139739565). 다른 14잡은 success/skipped. 실패는 approval-gated 경로에만 국한된다 — `TestApprovalGatedWorkloadType_SessionStandsUpWithItsHelperPod`·`_ImmutableAfterCreate`, `TestApprovalGatedHelperPod_IsDedicatedToOneSession`·`_RefusedFreezeReclaimsNeitherPod`·`_DeleteReclaimsBothPods`·`_ContainersDoNotSharePIDNamespace` 6건이 전부 `POST /api/v1/sessions` 90초 클라이언트 타임아웃으로 FAIL. 반면 `_OtherTypesGetNoHelperPod`(shell/omitted)와 shell·claude-code 계열은 전부 PASS. kind 클러스터의 기본 StorageClass는 `local-path`(WaitForFirstConsumer, 노드 로컬)다.\n\n따라서 executionGuide가 완료 기준 6의 유일한 증거로 지정한 잡이 빨간 상태이며, 가이드 문면상 이 상태에서의 머지는 금지된다. 실행은 '머지'가 아니라 가이드 3절의 우회 경로(① deploy 오버레이에 RWX 가능한 StorageClass 명시 → ② opt-in 전환)를 이 PR 안에서 시도하는 것이 되므로, 어느 경로를 택할지·아예 planner에게 되돌릴지를 사람이 정해야 한다.",
+          "reviewer": "user",
+          "reviewedAt": "2026-09-07T23:54:52Z",
+          "comment": "경로 A 승인 — executionGuide 3절의 우회 경로 ②(opt-in 전환)를 PR #98 안에서 시도한다. 검토자가 제공한 사실: **프로덕션 클러스터의 StorageClass는 `efs`**. 경로 ①은 kind에 클래스가 기본값 `local-path` 하나뿐이라 명시할 대상이 없어 배제됐다. executor 권고는 B(거부 후 재계획)였으나 검토자가 A를 택했다. A의 알려진 대가: `e2e (kind)`가 공유 볼륨 경로를 더 이상 타지 않으므로 완료 기준 6이 '배포 SUT에서 두 파드가 실제로 볼륨을 물고 Ready에 도달한다'를 사지 못한다 — 검증(4-4)에서 이 축소를 사실대로 기록할 것."
         }
       }
     ]
