@@ -2026,9 +2026,9 @@
   {
     "id": "rct_20260906-0002",
     "toBeModelId": "tbm_session-platform-ac-e2e",
-    "status": "planned",
+    "status": "awaiting_review",
     "createdAt": "2026-09-06T05:18:06Z",
-    "updatedAt": "2026-09-07T10:30:00+09:00",
+    "updatedAt": "2026-09-07T10:55:00+09:00",
     "trigger": {
       "detectedAt": "2026-09-06T05:18:06Z",
       "changedSides": [
@@ -2112,6 +2112,11 @@
           "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/91",
           "preparedAt": "2026-09-06T14:25:00+09:00",
           "notes": "계획 단계 1~7을 실행해 스테이징했다(머지하지 않음). 기준 main은 감지 시점 `621b219`가 아니라 **`09e7581`** — 그 사이 #82(comment-policy)와 이미지 핀 커밋이 들어와 4커밋 전진했으므로 baseline을 전부 다시 측정했다. 재측정 결과 게이트 3종 rc=0이고 ac-mapping 출력이 레코드와 동일(`AC 27개 = 매칭 파일 17 + 예외 1 + 공백 9`)이라 계획의 전제는 그대로 유효하다.\n\n변경: `control-plane/test/e2e_f1_workload_type_test.go` 신설(AC-F1 네 갈래 전부) + `docs/test/e2e.md` 교정(ac-mapping/ac-summary 블록, 선행 ⓑ 해소 기록, ⚠️ 두 문장 분리, 승격 조건 ① 발화 기록, 절 머리와 F1 경고 갱신).\n\n로컬 검증: `check-ac-mapping.sh` rc=0 (`AC 27개 = 매칭 파일 18 + 예외 1 + 공백 8`), `check-fidelity-allowlist.py`·`check_comment_policy.py`는 rc=0이고 출력이 baseline과 **바이트 동일**, `go build`/`vet`(기본·e2e·integration)/`go test` 전부 통과. 뮤테이션 3종(선언 제거 → 「선언이 없다」 rc=1 / 공백 수치 한 칸 되돌림 → 「집계 '공백' = 9, 실제 = 8」 rc=1 / 헬퍼 컨테이너 이름 오기입이 컴파일을 통과함을 확인해 단언이 소스 상수 대조가 아니라 클러스터 실측에 의존함을 입증) 후 `cmp` 바이트 동일 복원.\n\n지문 이동 예고(커밋 후 재측정): to-be `reg:da11fe7c… → 0f144b43…`(`ac:`는 docs/prd 불변이라 그대로), as-is `api:14f3bf84… → 9d8485b1…`(`web:` 불변). **두 지문이 함께 움직이므로** 이 슬라이스 머지 뒤 잔여 F 계열에 대한 재감지 경로가 실제로 존재한다.\n\n주의: PR CI는 아직 관찰 전이다(계획 단계 8). 실행 단계가 머지 전 그 결과를 확인해야 한다.\n\n**PR CI 관찰 완료(계획 단계 8) — head `c7d7c31`, 2026-09-07T01:2xZ.** 체크 15개 중 실행 14 전부 `success` · skipped 1(`pin deployment images (main only)` — main push 전용이라 기대값) · 실패 0. `docs-journey-mockup.yml`은 paths 필터에 `docs/test/e2e.md`가 없어 미발화(기대값).\n\n`e2e (kind + API + browser)` 잡은 **success만 보지 않고 로그로 케이스를 확인**했다 — AC-F1 파일의 네 케이스가 모두 실행되고 `--- PASS`다: `SessionStandsUpWithItsHelperPod`(4.24s) · `OtherTypesGetNoHelperPod`(6.03s, 서브테스트 `omitted`·`explicit_shell` 둘 다 PASS) · `NearMissValuesRejectedBeforeProvisioning`(0.02s) · `ImmutableAfterCreate`(6.04s). 잡 전체에 `--- FAIL`·`--- SKIP`이 0건이고 `ok github.com/dlddu/session-platform/control-plane/test 219.924s`로 닫혔다.\n\n두 가지 조용한 실패 모드가 실제로 배제됐다: (1) `OtherTypesGetNoHelperPod`는 클러스터를 못 잡으면 `t.Skip`하는데 PASS했으므로 kube 클라이언트가 붙었다. (2) `SessionStandsUpWithItsHelperPod`는 클러스터가 없으면 wire 계약만 보고 즉시 반환하는데 4.24s가 걸렸으므로 파드 쌍 기동·헬퍼 파드 라벨 조회· 컨테이너 Ready 단언까지 실제로 갔다. 즉 **`approval-gated` 세션이 배포 SUT에서 실제로 섰다** — 원장 교정이 주장하는 사실이 기계로 확인됐다.\n\n남은 것은 사람 검토 판단과 머지뿐이다. `e2e.yml`이 `pull_request` 전용이라 **머지 후에는 이 잡이 다시 돌지 않는다** — 이 관찰이 마지막 실클러스터 근거다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "위험도는 low이고 산출물은 e2e 테스트 파일 1개(`control-plane/test/e2e_f1_workload_type_test.go`)와 문서 1개(`docs/test/e2e.md`)뿐이지만, 사람이 봐야 할 두 가지가 있다. ① **판단이 갈리는 문면 변경** — 원장의 ⚠️를 「ⓐ·ⓑ 선행이 풀려 approval-gated 세션이 SUT에서 선다」와 「그래도 F2·F5는 각자의 선행에 막혀 있다」 두 문장으로 가르는 것이 이 변경의 목적인데, 그 목적(다음 planner가 「선행이 다 풀렸다」로 오독하지 않는 것)이 달성됐는지는 문장을 읽어야 판정된다. 게이트는 카운터라 이 산문을 검증하지 않는다. ② **머지가 main 파이프라인을 발화시킨다** — `docker-build-push.yaml`의 이미지 빌드·푸시와 main 전용 `pin` 잡이 돌아 배포 이미지 핀이 움직인다(제품 코드는 불변이므로 내용 변화는 없으나 롤아웃 경로 자체는 열린다). 머지 뒤에는 `e2e.yml`이 `pull_request` 전용이라 실클러스터 검증이 다시 돌지 않아, 머지가 이 시도의 사실상 불가역 지점이다(되돌림은 revert 1회로 가능)."
         }
       }
     ]
