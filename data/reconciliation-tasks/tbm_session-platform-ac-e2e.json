@@ -2254,7 +2254,7 @@
       "assessedAt": "2026-09-07T02:50:11Z"
     },
     "createdAt": "2026-09-07T02:50:11Z",
-    "updatedAt": "2026-09-07T03:20:02Z",
+    "updatedAt": "2026-09-07T03:23:06Z",
     "attempts": [
       {
         "plan": {
@@ -2302,6 +2302,44 @@
           "required": false,
           "status": "not_required",
           "reason": "**검토 불필요(low risk · 가역 · 프로덕션 무영향).** 근거 셋. ① **제품 코드 0줄** — PR #92는 `control-plane/test/e2e_f4_helper_pod_test.go`(신설, `//go:build e2e`)와 `docs/test/e2e.md` 두 파일뿐이고, `deploy/`·워크로드 매니페스트·CI 워크플로 정의를 한 글자도 건드리지 않는다. 머지가 곧 클러스터 적용이 되는 경로가 없다(GitOps 대상 경로 무변경). ② **가역** — 롤백은 `git revert <squash-sha>` 하나이고, 되돌려도 잃는 것은 이 테스트 커버리지뿐이다(`check-ac-mapping.sh`의 공백은 rc=0과 나란히 찍히는 카운터라 8이든 7이든 게이트는 초록). ③ **`plan.riskLevel: low`** 이며 계획 단계가 로컬 판정 가능한 게이트를 이미 전부 통과시켰다(fidelity 2종은 `origin/main` 베이스라인과 출력 바이트 동일 · comment-policy rc=0 · gofmt/build/vet 3종 rc=0). 남은 실질 판정은 CI의 `e2e (kind + API + browser)` 잡 하나이고, 이는 사람의 승인이 아니라 **로그 원문에서 `--- PASS`/`SKIP`을 세는 것**으로 답해야 하는 기계 판정이다 — executionGuide §3-2의 SKIP 가드를 실행 단계에서 그대로 집행한다."
+        },
+        "execution": {
+          "status": "failed",
+          "startedAt": "2026-09-07T03:20:00Z",
+          "finishedAt": "2026-09-07T03:23:06Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "finishedAt": "2026-09-07T03:04:25Z",
+              "log": "계획 단계에서 착지. executor는 재실행하지 않고 PR #92 API 상태로 재확인 — head `a4f7129f`, base `main`, 커밋 1개, 2파일 `+418 -2`, `mergeable: true`."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "finishedAt": "2026-09-07T03:04:25Z",
+              "log": "`control-plane/test/e2e_f4_helper_pod_test.go` 신설분이 PR에 포함됨. CI `ci` 워크플로(run 34078351661) success — gofmt/build/vet 축이 초록이므로 컴파일·정적 검사는 재확인됨."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "finishedAt": "2026-09-07T03:04:25Z",
+              "log": "`docs/test/e2e.md`의 ac-mapping 행 + ac-summary(18→19 · 8→7) 갱신분이 PR에 포함됨. CI의 `ac-mapping` 잡이 브랜치에서 초록."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "finishedAt": "2026-09-07T03:04:25Z",
+              "log": "로컬 판정 가능한 게이트는 계획 단계 실측 그대로이며, CI에서도 `fidelity`·`render-fidelity`·`comment-policy`·`integration`·`envtest` 포함 `ci` 워크플로 전체가 success로 재확인됐다(run 34078351661)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "failed",
+              "startedAt": "2026-09-07T03:20:00Z",
+              "finishedAt": "2026-09-07T03:23:06Z",
+              "log": "**머지하지 않았다 — `e2e` 워크플로가 빨갛다.** run `34078351674` conclusion=`failure`, 잡 `e2e (kind + API + browser)` 실패(스텝 8 `API e2e (go, -tags=e2e)`), 03:04:02Z→03:12:18Z. 잡 로그 원문에서 새 케이스 다섯을 셌다(executionGuide §3-2): **PASS 3 · FAIL 2 · SKIP 0**.\\n\\n- ✅ `IsDedicatedToOneSession` (10.11s) · ✅ `DeleteReclaimsBothPods` (6.11s) · ✅ `ContainersDoNotSharePIDNamespace` (6.27s)\\n- ❌ `FreezeReclaimsBothPods` — `e2e_f4_helper_pod_test.go:245: snapshot status=503 body={\\\"error\\\":\\\"checkpoint strategy is disabled\\\"}`\\n- ❌ `RestoreProvisionsAFreshPairAndRewiresTheWorkloadPod` — `:315`에서 **같은 503**\\n\\n**SKIP 0건**이므로 클러스터는 정상 기동했다(CRIU 프로브도 `Succeeded`, `criu check` = 「Looks good」). 즉 환경 문제(§5-3)가 아니다. 나머지 기존 e2e는 전부 PASS이며 `TestPodReclaim_*`·`TestSnapshotRestore_*`(shell 타입)도 초록이므로 스냅샷 경로 자체의 회귀도 아니다.\\n\\nexecutionGuide §1의 순서상 3(머지)은 2의 통과가 전건이다. 전건이 거짓이므로 머지·§4 재실행은 수행하지 않았고, **PR #92는 열린 채 그대로 둔다**(닫으면 통과한 세 케이스까지 잃는다 — 처분은 planner의 재계획 몫)."
+            }
+          ]
         }
       }
     ]
