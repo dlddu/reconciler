@@ -2026,9 +2026,9 @@
   {
     "id": "rct_20260906-0002",
     "toBeModelId": "tbm_session-platform-ac-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "createdAt": "2026-09-06T05:18:06Z",
-    "updatedAt": "2026-09-07T11:20:00+09:00",
+    "updatedAt": "2026-09-07T11:22:00+09:00",
     "trigger": {
       "detectedAt": "2026-09-06T05:18:06Z",
       "changedSides": [
@@ -2139,6 +2139,54 @@
               "startedAt": "2026-09-07T11:16:00+09:00",
               "finishedAt": "2026-09-07T11:16:20+09:00",
               "log": "PR #91 squash 머지. 머지 커밋 `e63a6a50d07fed6a0095d62a60a8e8cdd426b476`. 머지 시점 main은 계획 기준 `09e7581`이 아니라 `829a410`으로 2커밋 전진해 있었다 — 그 사이 자매 렌즈 PR #88(`441a7af`, 게이트웨이 대역 롤아웃 대기 + 결재 이후 차단 요인)과 그에 따른 이미지 핀 커밋이 들어왔다. #88이 `docs/test/e2e.md`를 함께 움직였으나(reg `da11fe7c`→`8bff5c61`) 머지는 충돌 없이 clean이었다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "api:9d8485b161adedde2bafa9fbffe4bd64798ebdd1b9568fa98d7d17001ac33b73 web:c2f6cbdb96d9636e1fe9b1bfe0eced6f495f55cf",
+          "verifiedAt": "2026-09-07T11:22:00+09:00",
+          "checks": [
+            {
+              "name": "완료 기준 ② — ac-mapping 게이트가 합으로 닫히고 공백에서 AC-F1이 빠졌다",
+              "status": "passed",
+              "detail": "머지된 main `e63a6a50` 클린 트리(`porcelain=0`)에서 `bash scripts/e2e/check-ac-mapping.sh` rc=0. 출력: 「AC 27개 = 매칭 파일 18 + 예외 1 + 공백 8 (매칭 단위 21개, 비-AC 3개)」 — 18+1+8=27로 총계에 닫힌다. 공백 목록은 `AC-E3 AC-E4 AC-E5 AC-F2 AC-F3 AC-F4 AC-F5 AC-F6`으로 **AC-F1이 없다**. 절대 수치가 아니라 「합이 닫히는가 / F1이 목록에서 빠졌는가」로 판정했다(guide §2-3)."
+            },
+            {
+              "name": "완료 기준 ② — 전용 파일이 서고 선언이 정확히 1줄",
+              "status": "passed",
+              "detail": "`control-plane/test/e2e_f1_workload_type_test.go`가 main에 존재하고, 헤더가 `//go:build e2e` + `// 검증 AC: AC-F1` 1줄이다. 원장 `<!-- ac-mapping -->` 표에도 AC-F1 행이 파일 경로·스위트(go)·검증 갈래와 함께 등재됐다."
+            },
+            {
+              "name": "완료 기준 ① — 원장 세 자리가 실측과 일치하고 ⓑ 해소가 F 계열 전체 해소와 두 문장으로 갈렸다",
+              "status": "passed",
+              "detail": "머지된 `docs/test/e2e.md` 실측: (a) 선행 ⓑ 자리에 「✅ ⓐ·ⓑ가 둘 다 풀려, 이 타입의 세션은 이제 e2e SUT에서 실제로 선다」가 있고 매니페스트 값(Secret 키·URL)의 사본은 두지 않았다(📌 경고 준수). (b) 바로 다음 문단이 별도 ⚠️로 「그렇다고 F 계열 전체의 선행이 풀린 것은 아니다 — AC-F2(정책 집행 CNI)와 AC-F5(공유 RWX 볼륨)는 각자의 선행에 그대로 막혀 있다」이고, 두 문장으로 나눈 이유까지 명시한다. (c) 승격 조건 ①이 「해제 조건 ⓐ·ⓑ가 둘 다 발화했다」는 발화 기록으로 바뀌고, 열거가 낡은 `F1·F3·F5·F6`에서 「F1 착지 / F3·F4·F6 착수 가능(F3은 승인 뒤 외부 GET 갈래 제외) / F5는 제외」로 교정됐다."
+            },
+            {
+              "name": "완료 기준 ③ — PR e2e 잡에서 AC-F1 케이스가 실제로 실행됐다",
+              "status": "passed",
+              "detail": "preparation이 head `c7d7c31`에서 관찰한 결과를 그대로 채택한다(머지 직전 head가 그 값과 동일해 재관찰이 불필요했다): 체크 15개 중 실행 14 success · skipped 1(`pin`, main 전용) · 실패 0이고, `e2e (kind + API + browser)` 로그에서 네 케이스가 `--- PASS`(SessionStandsUpWithItsHelperPod 4.24s · OtherTypesGetNoHelperPod 6.03s · NearMissValuesRejectedBeforeProvisioning 0.02s · ImmutableAfterCreate 6.04s). 조용한 실패 모드 둘(클러스터 미획득 시 `t.Skip` / wire 계약만 보고 즉시 반환)이 SKIP 0건과 실행 시간으로 배제됐다. `e2e.yml`은 `pull_request` 전용이라 머지 후 재실행 경로가 없어 이 관찰이 마지막 실클러스터 근거다."
+            },
+            {
+              "name": "부수 회계 불변 — fidelity 원장",
+              "status": "passed",
+              "detail": "`python3 scripts/check-fidelity-allowlist.py` rc=0이고 머지 직전 부모 `829a410`의 출력과 **바이트 동일**(등재 seam 7 · 회계 행 20 == 스캔 쌍 20 · 미해소 위반 0). 새 파일이 스캔 토큰을 하나도 들이지 않았다는 증거."
+            },
+            {
+              "name": "부수 회계 불변 — comment-policy 원장",
+              "status": "passed",
+              "detail": "`python3 scripts/check_comment_policy.py` rc=0(R1~R5 위반 없음). 부모와 **회계는 불변**이다: 등재 범위 7 · 판정 완료 1987줄 · 원장 7행 모두 그대로. 다만 인구조사 두 값이 이동했다 — 판정 대상 3172줄/120파일 → 3223줄/121파일(Go 테스트 1205→1256), 전체 지문 `d5972b0f…`→`b81dd4d3…`. 이는 주석 53줄을 가진 새 e2e 파일이 센서스에 들어온 기계적 결과이고(원장 등재분이 아니라 미판정 잔여가 늘어난 것), 자매 모델 `tbm_session-platform-comment-redundancy`가 소관하는 축이다. 회계가 아니라 센서스만 움직였으므로 이 변경이 다른 원장을 깨지 않았다는 판정은 유지된다."
+            },
+            {
+              "name": "재감지 경로 — 두 지문이 함께 이동했다",
+              "status": "passed",
+              "detail": "머지된 main에서 재측정: as-is `api:14f3bf84…`→`9d8485b1…`(`web:c2f6cbdb…` 불변), to-be `reg:8bff5c61…`→`f530f87e…`(`ac:8049013d…` 불변 — `docs/prd` 무변경). 둘 다 움직였으므로 잔여 F 계열에 대한 재감지 경로가 실재한다. preparation의 예고값(`reg:0f144b43`)과 다른 것은 그 사이 자매 PR #88이 같은 blob을 먼저 움직였기 때문이고, 판정은 「이동했는가」로 한다."
+            },
+            {
+              "name": "범위 밖 잔여(정보성 — converged 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "모델 전체 to-be(공백 0) 기준 잔여 8건: AC-E3·E4·E5(anthropic-fake 대역 확장이 선행) · AC-F2(정책 집행 CNI) · AC-F5(RWX 미구현, 소관 `tbm_session-platform-docs-impl`) · **AC-F3·F4·F6(선행이 풀려 지금 착수 가능, 소관은 이 모델)**. F3은 승인 뒤 실제 외부 GET 갈래를 제외하고 끊어야 한다. 이 잔여의 후속은 위 지문 이동에 대한 다음 감지 주기가 새 task로 연다."
             }
           ]
         }
