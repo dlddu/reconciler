@@ -2510,6 +2510,57 @@
       "reason": "**작업 필요(`actionRequired: true`) — 범위는 `AC-F6` 하나.** 근거 넷.\n\n1. **소비된 트리거다.** 내 슬라이스 PR #92가 04:37:44Z에 머지되고 `rct_20260907-0002`가 04:41:42Z에\n   `succeeded`(`converged: true`)로 닫혔으며 이 모델의 **열린 task 0 · 열린 `reconcile/*-ac-e2e` PR 0**이다.\n   잔여(공백 7)는 지금 아무의 것도 아니다. executor의 verification도 「`lastObservedVersion`은 건드리지\n   않았다」로 detector를 소유자로 지목했다.\n\n2. **AC-F6의 유예 사유가 이 fire 30분 전에 죽었다.** 직전 계획이 F6을 기각한 이유는 단 하나\n   —「그 PRD 본문을 고치는 자매 PR #93이 아직 열려 있다」— 였는데, **04:52:00Z에 사람이 #93을 반려**하며\n   그 개정이 「소비자가 생기지 않으므로 **필요하지 않다**」고 판정했다. 원장(`e2e.md:515`)은 여전히\n   「AC-F3·F4·F6은 이제 착수 가능하다」로 열거하고 F4는 이번에 착지했다. 구현도 실재한다\n   (`client_orchestrator.go:688-690` 게이트웨이 3종 필수 `secretEnv` · `:753` 공급자 쪽\n   `optionalSecretEnv`)이고, 이 타입 세션이 SUT에서 선다는 것은 #91·#92의 e2e가 이미 측정했다.\n\n3. **나머지 여섯은 실측으로 제외했다.** AC-F3은 「차단 요인」 행이 main에 그대로 살아 있고\n   (`http.DefaultClient.Do(req)` grep = 1 · 집계 「차단 요인 1건」) 새 해소 경로(대역 `FETCH-ORIGIN`\n   등재)의 소관이 반려문이 이름으로 지목한 **자매 `tbm_session-platform-e2e-mock-policy`**라 이 루프의\n   산출물 밖이다. E3·E4·E5는 대역이 상수 응답(`const REPLY` 1개 · `content_block_delta` 1지점,\n   `f8ed6a0` 이후 무변경), F2는 `disableDefaultCNI` 0파일, F5는 `ReadWriteMany` 문서 2파일뿐 ·\n   PVC 0 · `storageClassName` 0이다.\n\n4. **AC-F6의 재감지 경로가 0이다.** `check-ac-mapping.sh`는 마커 블록 넷만 파싱하고 공백은 rc=0과\n   나란히 찍히는 **카운터**라 이 축에 게이트가 영원히 초록이다. F6을 다시 열어 주기로 돼 있던 유일한\n   사건(#93 머지 → `docs/prd` 트리 해시 이동)이 반려로 사라졌으므로, 이 레코드가 baseline을 전진시키면\n   **F6을 여는 사건이 없다.**\n\n**계획 제약**(gap ⑥): 범위는 AC-F6만 · AC-F2 차단 갈래는 kindnet 미집행이라 관측 불가이므로 #92 선례대로\n「남은 미검증 분기」에 등재해 「반쪽」 규범을 통과할 것 · PID 네임스페이스 갈래는 AC-F4 파일이 이미\n소유하므로 **배치**를 사라(`e2e_e6_credential_placement_test.go`가 선례) · 쓰기 직전 `gh pr view 93`으로\n자매 재계획(05:12:26Z 재claim) 상태를 다시 읽을 것(충돌은 낮다 — 트리거 위 시험 병합 rc=0·충돌 0,\n`docs/test/e2e.md`는 서로 다른 마커 블록).\n\n**fold-in**(gap ⑦): #92가 「남은 미검증 분기」 표 중간에 산문을 끼워 `switch의 idle 대상 승격` 행을\n표 밖으로 떨어뜨렸고(`:592` 빈 줄 · `:598` 고아 행) 그 `〃`가 틀린 사유를 가리킨다. 규칙 1~7에 걸리지\n않고 2줄이면 고쳐지므로 별도 task 대신 이 슬라이스 완료 기준에 넣고, 트립와이어를 gap ⑦에 박았다.\n\n**보고**(gap ⑧): 반려문이 `tbm_session-platform-e2e-mock-policy`에 넘긴 `FETCH-ORIGIN` 등재는 **여는\n사건이 없다** — 그 모델은 비-터미널 task 0건이고 이번 트리거로 두 side 모두 불변이며, 예정돼 있던\nopener(#93의 「차단 요인」 행 삭제)가 반려로 사라졌다.\n\n**움직인 side는 as-is·to-be 둘 다**이므로 baseline을 함께 전진시킨다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-07T05:22:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**AC-F6 전용 e2e 파일 하나를 신설하고 등재를 갱신한다 — 공백 7 → 6, 매칭 19 → 20.**\n\n**왜 이 방법인가.** AC-F6은 「어느 자격 증명이 어느 컨테이너에 있는가」라는 **배치** 주장이고,\n배치는 배포 SUT의 pod spec + 실제로 해소된 컨테이너 환경에서만 그라운드-트루스가 나온다.\n선례가 정확히 같은 모양으로 이미 서 있다 — `e2e_e6_credential_placement_test.go`(AC-E6)가\n`e6RequireSecretRef`/`e6RequireLiteral`/`e6RequireAbsent`와 「자기 마커를 대조군으로 두는\n/proc 프로브」로 claude-code의 배치를 산다. 같은 헬퍼를 재사용하면 새 하네스가 필요 없고\n(같은 `e2e_test` 패키지), 파일은 순수 추가라 기존 등재 행 어느 것도 건드리지 않는다.\n\n**범위(완료 기준) — 이것을 달성하면 이 task는 성공이다.**\n1. `control-plane/test/e2e_f6_credential_split_test.go` 신설(`// 검증 AC: AC-F6` 1줄).\n   AC-F6의 검증 방법 중 **배포 SUT에서 관측 가능한 갈래를 전부** 단언한다 —\n   (a) 게이트웨이 3종(`APPROVAL_GATEWAY_URL`·`_API_KEY`·`_USER_ID`)이 헬퍼 파드의\n   `session-mcp` 컨테이너에만 `approval-gateway-credentials`의 `url`/`api-key`/`user-id`로\n   **필수** 주입되고 `credential-proxy`·워크로드 컨테이너엔 없음,\n   (b) 공급자 3종(`ANTHROPIC_BASE_URL`·`_AUTH_TOKEN` 필수 + `_CA_CERT` optional)이 같은 파드의\n   `credential-proxy` 컨테이너에만 `claude-code-credentials`에서 오고 `session-mcp`엔 없음,\n   그리고 그 컨테이너가 `DATA_PLANE_PROXY_PLACEMENT=helper`·`DATA_PLANE_AGENT_ADDR=0.0.0.0:8091`로\n   **loopback이 아니라 파드 IP에 바인딩**한다는 배치 차이,\n   (c) 워크로드 컨테이너는 **Secret ref를 하나도 갖지 않고**(optional `model` 제외) 주소와\n   placeholder만 갖는다 — `ANTHROPIC_BASE_URL`·`SESSION_MCP_URL`이 **헬퍼 파드의 실제\n   `status.podIP`** 와 일치하고(제어 평면이 주입한 값 ↔ API server가 배정한 IP의 대조),\n   `ANTHROPIC_AUTH_TOKEN`은 비밀 아닌 placeholder이며 `K3S_MCP_TOKEN`은 **없다**(확정 항목),\n   (d) 실컨테이너 해소 그라운드-트루스 — `session-mcp`가 실제 api-key를, `credential-proxy`가\n   실제 auth-token·ca-cert를 해소하고(대조군), 워크로드 컨테이너의 `/proc/*/environ` 어디에도\n   두 비밀이 없다(placeholder는 찾히므로 음성 결과가 자기검증된다),\n   (e) 생성 요청에 `userId`·게이트웨이 필드·공급자 자격 증명을 넣으면 **400**이고 세션이 생기지 않음,\n   (f) 어떤 토큰 문자열도 세션 조회·목록·`read` 출력·**control-plane 파드 로그**에 나타나지 않음\n   (로그가 비어 있지 않음을 대조군으로 먼저 확인한다),\n   (g) model 계약이 claude-code와 동일(플랫폼 기본 → optional Secret ref, 구체 값 → 리터럴,\n   헬퍼 두 컨테이너엔 없음).\n2. `docs/test/e2e.md`의 `ac-mapping` 블록에 AC-F6 행 신설 + `ac-summary`를\n   **매칭 20 · 공백 6(`AC-E3 AC-E4 AC-E5 AC-F2 AC-F3 AC-F5`)** 으로 갱신 →\n   `scripts/e2e/check-ac-mapping.sh` rc=0.\n3. 관측 불가능한 갈래를 §「남은 미검증 분기」에 등재하고, **「반쪽만 단언하는 파일은 주검증이\n   아니다」 규범이 AC-F6에 걸리지 않는다**는 판정을 #92의 AC-F4 선례(`:533-542`의 ✅ 2026-09-07)와\n   같은 형식으로 문서에 박는다 — 빠지는 셋은 임의로 뺀 것이 아니라 **관측 대상 자체가 없다**:\n   ① 워크로드 파드 → 게이트웨이·공급자 origin 직접 연결 차단과 ② 다른 세션 → 이 헬퍼 파드 ingress\n   차단은 kindnet이 NetworkPolicy를 집행하지 않아(실측 `disableDefaultCNI` 0파일) 음성이 vacuous하고,\n   ③ 승인 컨텍스트에 자격 증명이 실리지 않음은 승인 왕복(AC-F3)이 선행이다.\n4. **fold-in(감지 gap ⑦)**: #92가 §「남은 미검증 분기」 표 중간에 산문을 끼워 표 밖으로 떨어뜨린\n   `switch의 idle 대상 승격` 행을 다른 idle 두 행 옆으로 되돌리고(`〃`가 다시 idle 사유를 가리킨다),\n   산문의 「`idle` **두 행**」을 「**세 행**」으로 고친다. 2줄 편집.\n\n**범위 밖(후속).** AC-F3(승인 왕복 — 대역 `FETCH-ORIGIN` 등재가 선행, 소관\n`tbm_session-platform-e2e-mock-policy`) · AC-F5(공유 RWX 볼륨 미구현, 소관\n`tbm_session-platform-docs-impl`) · AC-F2(정책 집행 CNI 선행) · AC-E3/E4/E5(대역 상수 응답).\n제품 코드는 **0줄** 만진다 — 이 루프의 산출물은 e2e 파일과 등재 문서뿐이다.\n\n**대안 검토.** (A) F6과 F3을 한 슬라이스로 → 기각: F3은 대역 정책 자매 모델이 선행이고 감지가\n명시로 제외했다. (B) 배치를 단위/통합(`approval_gated_orchestrator_test.go`)에만 맡긴다 →\n기각: 그쪽은 **제출되는** spec을 보고 fake clientset엔 해소된 환경도 실제 podIP도 없다. 규칙 1이\n요구하는 주검증은 e2e 매칭 단위여야 한다. (C) 관측 불가 갈래를 예외 목록에 → 기각: 예외는 영구\n면제이고 이것들은 선행이 풀리면 관측 가능해지는 임시 상태다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`main`(`97a193c1`)에서 브랜치 `reconcile/rct_20260907-0003-session-platform-ac-e2e`를 딴다. 열린 자매 PR #93·#94의 브랜치와 이름이 겹치지 않는지 확인한다(rct id는 모델 간 유일하지 않다).",
+              "expectedOutcome": "새 브랜치가 `97a193c1`을 가리키고, 기존 열린 PR 브랜치 둘과 이름이 다르다."
+            },
+            {
+              "seq": 2,
+              "action": "`control-plane/test/e2e_f6_credential_split_test.go`를 신설한다. `//go:build e2e` + `// 검증 AC: AC-F6` 선언 1줄, 헤더 주석에 (i) 무엇을 사는가, (ii) 자매가 이미 사서 다시 사지 않는 것(AC-F1 타입 축·파드 집합, AC-F4 PID 네임스페이스와 수명, AC-E6 파일의 claude-code 배치, `approval_gated_orchestrator_test.go`의 제출 spec, `data-plane/cmd/agent/credential_proxy*_test.go`의 프록시 동작 계약), (iii) 빠지는 갈래와 그 등재 위치를 적는다. 같은 패키지의 `e6RequireSecretRef`/`e6RequireLiteral`/`e6RequireAbsent`/`e6ProbeFields`와 `helperPodsFor`/`containerByName`/`execInContainer`를 재사용하고 새 공용 헬퍼는 만들지 않는다.",
+              "expectedOutcome": "파일 1개 추가. `gofmt -l` 빈 출력, `go vet -tags e2e ./test/...` rc=0, `go test -tags e2e -run TestApprovalGatedCredentialSplit -list .` 로 케이스가 열거된다."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/test/e2e.md`의 `ac-mapping` 블록 끝(현재 AC-F4 행 다음)에 AC-F6 행을 추가하고, `ac-summary`를 `AC 매칭 파일: 20` · `공백: 6 — AC-E3 AC-E4 AC-E5 AC-F2 AC-F3 AC-F5`로 고친다.",
+              "expectedOutcome": "`bash scripts/e2e/check-ac-mapping.sh` rc=0 이고 출력이 「AC 27개 = 매칭 파일 20 + 예외 1 + 공백 6」."
+            },
+            {
+              "seq": 4,
+              "action": "§「남은 미검증 분기 (공백은 아님)」 표에 AC-F6이 남기는 세 행(① 워크로드 파드 → 게이트웨이·공급자 origin 직접 연결 차단, ② 다른 세션 워크로드 파드 → 이 헬퍼 파드 ingress 차단, ③ 승인 컨텍스트에 자격 증명 부재)을 소유 파일·막힌 이유·선행과 함께 등재하고, 절 도입문의 「이유는 두 갈래다」를 세 갈래(정책 집행 CNI 부재 추가)로 넓힌다.",
+              "expectedOutcome": "표가 마크다운 표로 온전히 렌더되고, 게이트가 파싱하는 네 블록(`ac-mapping`·`ac-exceptions`·`ac-nonac`·`ac-summary`)은 건드리지 않아 집계 불변."
+            },
+            {
+              "seq": 5,
+              "action": "§「승격 조건」 옆 ✅ 2026-09-07(AC-F4) 판정 문단과 같은 형식으로 **AC-F6 판정 문단**을 추가한다: 「반쪽만 단언하는 파일」 규범이 AC-F6에 걸리지 않는 이유 — 빠지는 셋은 관측 대상 자체가 없고(kindnet 미집행 · AC-F3 선행), 배포 SUT에서 관측 가능한 AC-F6 갈래 중 단언되지 않은 것은 없다.",
+              "expectedOutcome": "다음 감지가 규칙 1 위반으로 읽을 자리가 문서에서 미리 판정돼 있다."
+            },
+            {
+              "seq": 6,
+              "action": "fold-in — `switch의 idle 대상 승격` 행을 산문 뒤(현재 파일 마지막 줄)에서 `write idle->active->write` 행 다음으로 옮기고, 산문의 「`idle` 두 행」을 「`idle` 세 행」으로 고친다.",
+              "expectedOutcome": "표가 다섯 행 연속이 되고 `〃`가 다시 「idle 진입 트리거 없음(AC-B1 정책 미확정)」을 가리킨다. 파일 마지막 줄이 산문이다."
+            },
+            {
+              "seq": 7,
+              "action": "부수 게이트를 base(`origin/main`)와 브랜치 양쪽 클린 트리에서 돌려 대조한다: `scripts/e2e/check-ac-mapping.sh`, `scripts/check-fidelity-allowlist.py`, `scripts/check-render-fidelity.py`, `scripts/check_comment_policy.py`.",
+              "expectedOutcome": "넷 다 rc=0. comment-policy는 신규 파일이라 등재 8행의 지문이 **바이트 동일**하고 인구조사 카운터만 증가한다(#92가 같은 형태로 실측된 선례). fidelity 2종은 base와 동일."
+            },
+            {
+              "seq": 8,
+              "action": "브랜치를 푸시하고 draft가 아닌 PR을 연다. 본문에 task id·gap 요약·계획 단계·검증 방법·범위 밖 목록을 적는다. **머지는 하지 않는다.**",
+              "expectedOutcome": "PR URL이 발급되고 CI가 돈다. 사람이 검토할 맥락이 본문에 있다."
+            }
+          ],
+          "plannedAt": "2026-09-07T05:40:00Z"
+        }
+      }
+    ]
   }
 ]
