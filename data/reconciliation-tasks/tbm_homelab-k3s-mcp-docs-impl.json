@@ -1322,5 +1322,34 @@
     },
     "createdAt": "2026-09-06T12:16:00Z",
     "updatedAt": "2026-09-06T12:16:00Z"
+  },
+  {
+    "id": "rct_20260907-0001",
+    "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
+    "status": "no_action_needed",
+    "createdAt": "2026-09-07T01:48:00Z",
+    "updatedAt": "2026-09-07T01:48:00Z",
+    "trigger": {
+      "detectedAt": "2026-09-07T01:48:00Z",
+      "changedSides": [
+        "to_be"
+      ],
+      "toBe": {
+        "previousVersion": "da51ef4a8ef5f1a3e6898146d322ef099a7eb503",
+        "currentVersion": "75974334cbd560426a3622d181686559f5ac72ed"
+      }
+    },
+    "stateSummary": {
+      "asIs": "## as-is — 구현 (`internal/` + `main.go`), **글자 그대로 불변**\n\n`git diff --name-only ed933698 f61c399 -- internal main.go` = **0파일**. as-is 지문도\n`internal:e3db63108f1cbc5719d40325a584081fa785117c main.go:1c3bdc00914455499530398ccc260fac096c9283`\n로 부모와 동일하다 ⇒ 판정 기준 1·2·3 에 새 어긋남이 생길 **산술적 여지가 없다**.\n\n**도구 표면 17종** — `internal/mcp/toolslist.go` 의 `toolsListJSON` 을 `json.loads` 해 확인:\n`aws_config_get` · `dear_baby_reset_user` · `github_app_installation_token` · `grafana_token` ·\n`namespace_list` · `opensearch_document_{delete,put}` · `opensearch_search` · `ping` · `pod_describe` ·\n**`session_list` · `session_read` · `session_write`** · `workload_{list,logs,restart,scale}`.\n\n> 모델 `definition` 의 「`session-*` 3종 미구현(AC 12건)」은 **등록 시점 스냅샷**이고 정의가 스스로\n> 「판정 기준이 아니다」라고 적는다 — 실제로는 #48·#51·#53 이 셋 다 착지시켰다.\n> (`grep -c 'Name: \"'` 는 **0** 을 준다 — JSON 리터럴 const 라 `json.loads` 로 읽을 것.)",
+      "toBe": "## to-be — `docs/` (트리 `75974334`, 트리거가 이동)\n\n**움직인 파일은 `docs/comment-policy.md` 단 하나**(`+7 −5`). `docs/doc-tracker.md` **0줄**,\n`prd-*.md`·`test-*.md`·`values.md` **0파일**.\n\n**판정 기준 4(tracker 집계·상태)를 실측과 맞대어 재도출** — 전건 일치:\n\n| 원장 주장 | 실측 | |\n| --- | --- | --- |\n| `:49` 「허브 도달 가능 문서 ✅ **40 / 40** (가치 1 + PRD 18 + 테스트 18 + 상태 추적 1 + 정책 2), 끊긴 링크 0」 | `ls docs/*.md` = **40** · `index.html` 의 고유 `.md` 링크 = **40** | ✅ |\n| PRD 18 · 테스트 18 | `ls docs/prd-*.md` = **18** · `ls docs/test-*.md` = **18** | ✅ |\n| e2e 렌즈 집계 (AC 64 · 매칭 60 · 공백 3 · 예외 1) | `check_ac_mapping.py` 가 부모/트리거 **바이트 동일** 출력으로 강제 | ✅ |\n| 도구 표면 17종 | `toolslist.go` `json.loads` = **17** | ✅ |\n\n게이트 3종(`check_comment_policy` · `check_ac_mapping` · `check_mock_policy`) 전부 **rc=0**.",
+      "gap": "## ① 두 축 모두 어긋남 0\n\n- **기준 1·2·3**: as-is 가 0파일 변경이라 산술적으로 불가.\n- **기준 4**: `doc-tracker.md` 0줄 변경이고, 그 원장이 주장하는 집계 넷을 **실측으로 재도출**해\n  전건 일치를 확인했다(위 to-be 표).\n\n## ② NINETEENTH break 판(「내 원장이 기술하는 *현실*을 옮겼는가」)을 따로 물었다 — 해당 없음\n\n트리거는 **새 문서를 만들지 않았다**(기존 `comment-policy.md` 를 수정) ⇒ 인벤토리·허브 계수가\n낡을 여지가 없다. 그리고 트리거가 실제로 옮긴 현실은 「`_*.py` 6파일의 docstring 산문 13줄 제거」인데,\n`doc-tracker.md` 가 그 산문의 **존재를 주장하는 자리는 0건**이다 — `:189`·`:384`·`:400` 이 진술하는\n것은 「`_` 접두 모듈은 매칭 단위가 아니다」라는 **사실**이고, 그 사실은 `run_all.py:89` 의 필터가\n그대로 유지하므로 여전히 참이다.\n\n## ③ **결함 아님**으로 적극 기록 — `doc-tracker.md:189` 의 괄호 열거가 5/7 이다\n\n`:189` 는 「단 **`_` 접두 공유 모듈**(`_helpers.py` · `_workload.py` · `_auth_variant.py` ·\n`_opensearch.py` · `_aws_config.py`)…은 매칭 단위가 아니다」라고 **다섯 개**를 연다. 실제\n`_*.py` 는 **일곱**이다(빠진 둘: `_oidc.py` · `_session_platform.py`).\n\n**그럼에도 기준 4의 「어긋남」이 아닌 근거 넷:**\n\n1. **트리거가 심은 게 아니다** — `git log -L 189,189:docs/doc-tracker.md` 상 이 줄의 마지막 저자는\n   **`7456a46`(#49, 2026-09-03)** 이고, 빠진 두 파일은 그 **뒤**에 생겼다(`_oidc`·`_session_platform`\n   은 #50 이후). 부모/트리거 줄 단위 동일.\n2. **문장의 단정은 범주 수준이고 일곱 전부에 참이다** — 「`_` 접두 공유 모듈은 매칭 단위가 아니다」.\n   괄호는 예시 열거이지 집계가 아니다.\n3. **문장 스스로 권위를 함수에 위임한다** — 같은 줄이 「제외 판정은 러너와 체커가\n   `run_all.py::matching_unit_paths()` **하나로 공유한다**」로 끝난다. 그 함수는 **접두사**로\n   거르지 이름 목록으로 거르지 않으므로(`run_all.py:89`), 목록이 짧아도 실제 분류는 정확하다.\n4. **기계 쌍둥이가 옳다** — `check_ac_mapping.py` 가 `run_all.declarations()` 로 같은 필터를 쓰고\n   rc=0(매칭 60/64 · 고아 0 · 규칙 3 위반 0) ⇒ 어떤 파일도 실제로 오분류돼 있지 않다.\n\n⇒ **정밀도 지적**이며 `docs/doc-tracker.md` 를 만지는 **다음 슬라이스의 fold-in** 으로 넘긴다\n(괄호에 둘을 더하거나 「`_` 접두 전부」로 바꾸면 끝난다). **별도 task 를 열지 말 것.**\n**반증 조건(기계)**: 그 문장이 예시에서 **전수 열거**로 바뀌거나(예: 「다섯 개」·「이 다섯」 같은\n수량 표현이 붙는다), `_` 접두 파일 중 하나가 `검증 AC:` 선언을 갖게 되면 → 근거 2·3 이 무너지므로\n기준 4로 열 것.\n\n## ④ to-be 이동분의 소유는 자매 모델이고, 그쪽에 열었다\n\n움직인 유일한 파일 `docs/comment-policy.md` 는 `tbm_homelab-k3s-mcp-comment-redundancy` 의\n**to-be SSOT** 이며, 같은 fire 가 그 모델에 `rct_20260907-0001` 을 **`action_required`** 로 열었다\n(docstring 미판정 843줄 / 60파일, 이미 쌓인 잔여의 재감지 경로 0). **여기서 같은 자리를 여는 것은\n이중 계상이다.**\n\n## ⑤ 트립와이어 (직전 레코드에서 이월 — 셋 다 미발화)\n\n- **(a)** `git grep -c 'flux-cd-apps' -- docs/doc-tracker.md` 가 **0** 이 되거나 opensearch 🔴 의\n  「미수행」이 사라지면 → 외부 인프라 대기가 끝난 것이므로 재평가. **현재 각 1건 잔존.**\n- **(b)** `check_ac_mapping.py` rc=0 인데 `docs/test-*.md` 의 참조 파일과 그 파일 docstring 의\n  `검증 AC:` 가 불일치하는 쌍 ≥1 이면 → 기준 4로 열 것. **현재 rc=0 이고 규칙 7이 그 쌍을 강제**하며,\n  트리거는 `docs/test-*.md` 를 **0파일** 건드렸다.\n- **(c)** `awk 'NR>449' docs/doc-tracker.md | grep -c '^| 2026-'` 가 **35** 에서 늘고 그 새 행의\n  「이후 상태」 셀 숫자가 `check_ac_mapping.py` 실측(AC 64 / 매칭 60 / 공백 3)과 다르면 기준 4로 열 것.\n  **현재 35 불변**(#64 는 변경 이력 행을 추가하지 않았다).",
+      "summarizedAt": "2026-09-07T01:48:00Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "reason": "**작업 불필요(`actionRequired: false`).** 근거 넷.\n\n1. **as-is 가 글자 그대로 불변이다.** `git diff --name-only ed933698 f61c399 -- internal main.go`\n   = **0파일**. 판정 기준 1·2·3 에 새 어긋남이 생길 산술적 여지가 없다. 도구 표면도\n   `toolslist.go` 를 `json.loads` 해 **17종**(session 3종 포함)으로 확인했다.\n\n2. **기준 4도 어긋남 0이고 계수를 실측과 맞대어 재도출했다.** `doc-tracker.md` **0줄 변경**이며\n   허브 계수 「40 / 40 (가치 1 + PRD 18 + 테스트 18 + 상태 추적 1 + 정책 2)」이 실측\n   (`ls docs/*.md` 40 · `index.html` 고유 `.md` 링크 40 · `prd-*` 18 · `test-*` 18)과 일치하고,\n   e2e 렌즈 집계는 `check_ac_mapping.py` 가 부모/트리거 **바이트 동일** 출력으로 강제한다.\n   게이트 3종 rc=0.\n\n3. **NINETEENTH break 에 해당하지 않으며, 「결함 아님」 하나를 적극 기록했다.** 트리거는 새 문서를\n   만들지 않고 기존 `comment-policy.md` 를 수정했으므로 인벤토리가 낡을 여지가 없고, 트리거가 옮긴\n   현실(docstring 산문 13줄 제거)을 `doc-tracker.md` 가 현재형으로 주장하는 자리는 0건이다.\n   추가로 `:189` 의 괄호가 `_*.py` **5/7** 만 연다는 사실을 찾았으나 ① 트리거가 심은 게 아니고\n   (마지막 저자 `7456a46` 2026-09-03, 빠진 둘은 그 뒤 생성) ② 단정이 범주 수준이라 일곱 전부에 참이며\n   ③ 같은 줄이 권위를 `run_all.py::matching_unit_paths()` 에 명시 위임하고 그 함수는 **접두사**로\n   거르고 ④ 기계 쌍둥이(`check_ac_mapping.py`)가 rc=0 이라 실제 오분류가 0 이다 ⇒ **정밀도 지적 +\n   다음 슬라이스 fold-in**, 별도 task 금지. 반증 조건을 gap ③에 기계 조건으로 박았다.\n\n4. **to-be 이동분의 소유가 자매 모델이고 그쪽에서 이미 열었다.** 움직인 유일한 파일\n   `docs/comment-policy.md` 는 `tbm_homelab-k3s-mcp-comment-redundancy` 의 to-be SSOT 이고, 이 fire 가\n   그 모델에 `rct_20260907-0001` 을 `action_required` 로 열었다. 여기서 같은 자리를 여는 것은\n   이중 계상이다.\n\n이 레코드의 목적은 **판단의 기록과 baseline 전진**이다. 트립와이어 (a)·(b)·(c) 를 기계 조건 그대로\n이월했고 셋 다 미발화다. **움직인 side 는 to-be 하나**이므로 as-is baseline 은 건드리지 않는다.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-07T01:48:00Z"
+    }
   }
 ]
