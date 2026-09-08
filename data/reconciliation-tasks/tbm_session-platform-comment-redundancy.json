@@ -1708,7 +1708,7 @@
   {
     "id": "rct_20260908-0004",
     "toBeModelId": "tbm_session-platform-comment-redundancy",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-09-08T08:00:33Z",
       "changedSides": [
@@ -1725,7 +1725,7 @@
       }
     },
     "createdAt": "2026-09-08T08:00:33Z",
-    "updatedAt": "2026-09-08T09:10:00Z",
+    "updatedAt": "2026-09-08T09:12:00Z",
     "stateSummary": {
       "asIs": "## as-is — 지문 `dd6f8722` → `a87e9a6f` (lines 2962 → **2987**, files 122 불변)\n\n**+25 는 주석이 늘어난 것이 아니다.** 부모·트리거에서 모델 스크립트와 같은 추출·정규화로 hit 목록을\n뽑아 `comm` 차집합을 냈다 — **ADDED 28 · REMOVED 3**, 그리고 ADDED 28 중 **24건이\n`검증 시나리오:` 를 담은 줄**이다(20개 매칭 단위의 선언 + 비-시나리오 3건 + `harness_shared_test.go`\n산문 안의 인용 예시 1건). 즉 실제 주석 내용 변화는 **28 − 24 − 3 = 순증 +1줄**뿐이고, 그 +1 은\n`harness_shared_test.go` 헤더 산문의 AC → 시나리오 재작성 결과다.\n\n## 게이트와 모델 지문이 **갈렸다** (숫자로)\n\n| | 부모 `0af04409` | 트리거 | 증가 |\n| --- | --- | --- | --- |\n| 게이트 `check_comment_policy.py` 판정 대상 | 2962줄 / 122파일 | **2963**줄 / 122파일 | **+1** |\n| 모델 `asIs.versionScript` 지문 | 2962 / 122 | **2987** / 122 | **+25** |\n| 차이 | 0 | **24** | = 개명된 선언 줄 수 |\n\n원인은 `#99` 가 게이트의 DIRECTIVE 목록을 **치환**했기 때문이다:\n\n    scripts/check_comment_policy.py:53   (부모 → 트리거)\n    - DIRECTIVE_RE = re.compile(r\"//go:|nolint|eslint-|@ts-|검증 AC:|mock-exception:|mockup:\")\n    + DIRECTIVE_RE = re.compile(r\"//go:|nolint|eslint-|@ts-|검증 시나리오:|mock-exception:|mockup:\")\n\n반면 이 모델의 `asIs.versionScript.code` 안 `DIRECTIVE=` 문자열은 여전히 `검증 AC:` 를 들고 있다.\n`검증 AC:` 는 이제 `control-plane/test`·`web/e2e` 에서 **0건**이므로 그 항목은 죽었고, 새 토큰\n`검증 시나리오:` 는 목록에 없어 **24줄이 지문에서만 판정 대상으로 편입**됐다.\n\n게이트 기준 실측(트리거): 판정 대상 **2963줄 / 122파일** · 판정 완료 **2624줄(88.6%)** / 등재\n**9행 / 126파일** · rc=**0**(R1~R5 위반 0, 등재 9행의 줄 수·지문 전건 불변).",
       "toBe": "## to-be — `docs/comment-policy.md` blob `e4c50dd9` → `a4e1a28a` (+2 / −2)\n\n정책의 「유지 대상 ① 기계가 읽는 주석」 목록이 게이트와 같은 방향으로 갱신됐다:\n\n    - `//go:` · `nolint` · `eslint-` · `@ts-` · `검증 AC:` · `mock-exception:` · `mockup:`\n      (각각 Go 툴체인 · `scripts/e2e/check-ac-mapping.sh` · ...)\n    + `//go:` · `nolint` · `eslint-` · `@ts-` · `검증 시나리오:` · `mock-exception:` · `mockup:`\n      (각각 Go 툴체인 · `scripts/e2e/check-scenario-mapping.sh` · ...)\n\n⇒ **정책 · 게이트는 새 토큰으로 정렬됐고, 모델 지문만 옛 토큰에 남았다.** 09-08 06:19 레코드가\n박아 둔 트립와이어 **(d)** — 「#99 가 머지된 뒤 정책에 새 토큰 0건인데 코드에 ≥1 이면 연다」 —\n는 전건이 반대로 성립해 **미발화**이고, 예고대로 **은퇴**시킨다. 갈라진 것은 정책이 아니라\n**모델 정의**이므로 새 분기 (d′)로 갈아 끼운다(⑥).\n\n게이트 규칙은 여전히 **R1~R5 다섯 개뿐**이고 그중 어느 것도 「등재 == 실측」을 요구하지 않는다 —\nR1(범위 파일 실재) · R2(행별 재측정 == 등재값) · R3(이중 등재 금지) · R4(합계 마커 == 행 합, 양방향\n미러) · R5(줄 좌표 금지). **커버리지 규칙이 없다** ⇒ 등재 **밖**에 쌓이는 잔여는 CI 를 붉히지\n못한다. 이 축의 재감지는 게이트가 아니라 as-is 지문이 진다.",
