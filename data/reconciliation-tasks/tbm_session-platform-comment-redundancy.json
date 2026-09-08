@@ -1708,7 +1708,7 @@
   {
     "id": "rct_20260908-0004",
     "toBeModelId": "tbm_session-platform-comment-redundancy",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-08T08:00:33Z",
       "changedSides": [
@@ -1725,7 +1725,7 @@
       }
     },
     "createdAt": "2026-09-08T08:00:33Z",
-    "updatedAt": "2026-09-08T13:36:00Z",
+    "updatedAt": "2026-09-08T13:36:30Z",
     "stateSummary": {
       "asIs": "## as-is — 지문 `dd6f8722` → `a87e9a6f` (lines 2962 → **2987**, files 122 불변)\n\n**+25 는 주석이 늘어난 것이 아니다.** 부모·트리거에서 모델 스크립트와 같은 추출·정규화로 hit 목록을\n뽑아 `comm` 차집합을 냈다 — **ADDED 28 · REMOVED 3**, 그리고 ADDED 28 중 **24건이\n`검증 시나리오:` 를 담은 줄**이다(20개 매칭 단위의 선언 + 비-시나리오 3건 + `harness_shared_test.go`\n산문 안의 인용 예시 1건). 즉 실제 주석 내용 변화는 **28 − 24 − 3 = 순증 +1줄**뿐이고, 그 +1 은\n`harness_shared_test.go` 헤더 산문의 AC → 시나리오 재작성 결과다.\n\n## 게이트와 모델 지문이 **갈렸다** (숫자로)\n\n| | 부모 `0af04409` | 트리거 | 증가 |\n| --- | --- | --- | --- |\n| 게이트 `check_comment_policy.py` 판정 대상 | 2962줄 / 122파일 | **2963**줄 / 122파일 | **+1** |\n| 모델 `asIs.versionScript` 지문 | 2962 / 122 | **2987** / 122 | **+25** |\n| 차이 | 0 | **24** | = 개명된 선언 줄 수 |\n\n원인은 `#99` 가 게이트의 DIRECTIVE 목록을 **치환**했기 때문이다:\n\n    scripts/check_comment_policy.py:53   (부모 → 트리거)\n    - DIRECTIVE_RE = re.compile(r\"//go:|nolint|eslint-|@ts-|검증 AC:|mock-exception:|mockup:\")\n    + DIRECTIVE_RE = re.compile(r\"//go:|nolint|eslint-|@ts-|검증 시나리오:|mock-exception:|mockup:\")\n\n반면 이 모델의 `asIs.versionScript.code` 안 `DIRECTIVE=` 문자열은 여전히 `검증 AC:` 를 들고 있다.\n`검증 AC:` 는 이제 `control-plane/test`·`web/e2e` 에서 **0건**이므로 그 항목은 죽었고, 새 토큰\n`검증 시나리오:` 는 목록에 없어 **24줄이 지문에서만 판정 대상으로 편입**됐다.\n\n게이트 기준 실측(트리거): 판정 대상 **2963줄 / 122파일** · 판정 완료 **2624줄(88.6%)** / 등재\n**9행 / 126파일** · rc=**0**(R1~R5 위반 0, 등재 9행의 줄 수·지문 전건 불변).",
       "toBe": "## to-be — `docs/comment-policy.md` blob `e4c50dd9` → `a4e1a28a` (+2 / −2)\n\n정책의 「유지 대상 ① 기계가 읽는 주석」 목록이 게이트와 같은 방향으로 갱신됐다:\n\n    - `//go:` · `nolint` · `eslint-` · `@ts-` · `검증 AC:` · `mock-exception:` · `mockup:`\n      (각각 Go 툴체인 · `scripts/e2e/check-ac-mapping.sh` · ...)\n    + `//go:` · `nolint` · `eslint-` · `@ts-` · `검증 시나리오:` · `mock-exception:` · `mockup:`\n      (각각 Go 툴체인 · `scripts/e2e/check-scenario-mapping.sh` · ...)\n\n⇒ **정책 · 게이트는 새 토큰으로 정렬됐고, 모델 지문만 옛 토큰에 남았다.** 09-08 06:19 레코드가\n박아 둔 트립와이어 **(d)** — 「#99 가 머지된 뒤 정책에 새 토큰 0건인데 코드에 ≥1 이면 연다」 —\n는 전건이 반대로 성립해 **미발화**이고, 예고대로 **은퇴**시킨다. 갈라진 것은 정책이 아니라\n**모델 정의**이므로 새 분기 (d′)로 갈아 끼운다(⑥).\n\n게이트 규칙은 여전히 **R1~R5 다섯 개뿐**이고 그중 어느 것도 「등재 == 실측」을 요구하지 않는다 —\nR1(범위 파일 실재) · R2(행별 재측정 == 등재값) · R3(이중 등재 금지) · R4(합계 마커 == 행 합, 양방향\n미러) · R5(줄 좌표 금지). **커버리지 규칙이 없다** ⇒ 등재 **밖**에 쌓이는 잔여는 CI 를 붉히지\n못한다. 이 축의 재감지는 게이트가 아니라 as-is 지문이 진다.",
@@ -1890,6 +1890,59 @@
               "startedAt": "2026-09-08T13:24:00Z",
               "finishedAt": "2026-09-08T13:33:20Z",
               "log": "지침 §2 실행 3순서를 그대로 밟았다.\n\n**⑴ CI 결론 읽기(§2-1·2-2)** — 브랜치 head `917cfe43` 의 워크플로 3종 전부 success: `ci` run `34206587053` **11잡 전부 success**(이 슬라이스에 직접 걸리는 넷 `comment policy ledger` · `control-plane (lint + unit)` · `integration (happy path)` · `시나리오 ↔ e2e 1:1 mapping` 포함) · `e2e` run `34206587029` success · GHCR 빌드 run `34206586987` success. 지침 §3-1 의 vacuous-초록 방어도 실행했다 — `e2e (kind + API + browser)` 잡 로그 원문(3384줄, 서명 URL 302 에서 `Authorization` 제거)에서 `--- PASS: TestApprovalGatedCredentialSplit_*` **최상위 3건 전부 PASS**(`_OnTheDeployedSUT` 11.23s · `_ConcreteModelBeatsThePlatformDefault` 10.70s · `_PlacementCannotBeChosenByTheCreateRequest` 0.80s · 하위 포함 14 PASS), 해당 테스트 **SKIP 0건**. 케이스가 실제로 돌았다.\n\n**⑴′ 머지 창 안전성(§5)** — 검토 대기 중 형제 PR #102(`docs/test/e2e.md` · `scripts/e2e/check-scenario-mapping.sh`)와 #104(`docs/doc-tracker.md` · `docs/index.html` · `docs/session-mcp-tool-surface.md`)가 12:42:26Z·12:44:28Z 에 머지돼 base 가 `78be5330` → `df93ffb` 로 이동했다. 둘 다 이 슬라이스의 3파일과 겹치지 않는다. 이동한 main 위로 로컬 테스트 머지(`git merge --no-commit --no-ff`) **rc=0 · 충돌 0**, 그 해소본에서 `check_comment_policy.py` rc=0 · 판정 2690줄(96.8%) · 등재 10 ⇒ §5 의 union 해소가 불필요한 clean 머지임을 **머지 전에** 확정했다. #101 은 선재 DIRTY 이고 겹치는 행이 없다.\n\n**⑵ 머지(§2-3)** — PR #103 **squash 머지** 완료(13:29:46Z). squash 커밋 `7b66b23ee105d4ebbb77e99894be40d94fc5b1e2`. 클러스터·배포 조작 없음.\n\n**⑶ 머지 후 main CI** — `ci` run `34232314028` **11잡 전부 success** · GHCR 빌드 run `34232314004` success · pages 배포 success. 머지가 main 을 붉히지 않았다. (§3-2 의 게이트 재확인 결과는 verification 에 기록.)"
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=2804 files=122\n2305c817d94d59fe928d7f19649d3e3c02a8bd4ec33fd5b1bf1fc920a7c56cca",
+          "verifiedAt": "2026-09-08T13:36:30Z",
+          "checks": [
+            {
+              "name": "⑴ 게이트 rc (머지된 main)",
+              "status": "passed",
+              "detail": "머지 커밋 `7b66b23` 체크아웃 후 `python3 scripts/check_comment_policy.py` → **rc=0**. 출력: `OK: 규칙 R1~R5 위반 없음 — 판정 대상 주석 2780줄 / 122파일 (Go 소스 1638 · Go 테스트 978 · TypeScript 122 · 기타 42) · 판정 완료 2690줄(96.8%) / 등재 범위 10`."
+            },
+            {
+              "name": "⑵ 등재 행 수 = 10",
+              "status": "passed",
+              "detail": "출력 끝 `등재 범위 10`. 머지 전 부모는 9 였다(9 → 10)."
+            },
+            {
+              "name": "⑶ 10번째 행의 범위 = 대상 2파일",
+              "status": "passed",
+              "detail": "`2026-09-08(#10)  66줄  c71eaf0cc8d9  control-plane/test/e2e_f6_credential_split_test.go control-plane/test/approval_gated_orchestrator_test.go` — 정확히 두 파일이고 그 외 파일이 섞이지 않았다."
+            },
+            {
+              "name": "⑷ 10번째 행의 줄 수·지문이 게이트 재측정과 일치",
+              "status": "passed",
+              "detail": "R2 가 rc=1 을 내지 않았다(⑴이 이미 잡는 조건). 재측정값 66줄 · `c71eaf0cc8d9` 로 등재값과 일치. 지침 §3-2 의 경고대로 이 절대 수치를 완료 기준으로 삼지 않고, 「rc=0 + 등재 10 + 두 파일이 등재 집합에 든다」로 판정했다."
+            },
+            {
+              "name": "⑸ 합계 마커 R4 만족",
+              "status": "passed",
+              "detail": "R4(양방향 미러)가 침묵했다 — 원장 행 줄 수 합과 합계 마커가 일치. 형제 #102·#104 가 머지 창 안에 들어왔지만 둘 다 이 원장을 건드리지 않아 합계 2690 이 그대로 성립했다."
+            },
+            {
+              "name": "⑹ Go 게이트 5종 및 나머지 게이트 3종 (머지된 main)",
+              "status": "passed",
+              "detail": "로컬 샌드박스에 Go 툴체인이 없어 **머지된 main 의 CI 로 확인**했다 — `ci` run `34232314028` 11잡 전부 success. 그 안에 `control-plane (lint + unit)`(= `go vet ./...` · `go vet -tags=e2e ./...` · `gofmt -l .` · `go test ./...`) · `integration (happy path)`(= `go test -tags=integration ./...`) · `시나리오 ↔ e2e 1:1 mapping` · `e2e fidelity allowlist` · `render fidelity` 가 모두 포함된다. 지침이 특히 지목한 `gofmt`(이 PR 에서 const 블록 정렬이 실제로 움직였다)와 `시나리오 ↔ e2e 1:1 mapping`(= `e2e_f6…` 1행의 기계 판독 `// 검증 시나리오:` 선언 보존 여부) 둘 다 초록."
+            },
+            {
+              "name": "3-3 판정이 실제로 무언가를 산다 (뮤테이션, 머지 후 main)",
+              "status": "passed",
+              "detail": "머지된 main 에서 `approval_gated_orchestrator_test.go` 에 주석 한 줄을 더하니 **rc=1** 로 `[R2] 2026-09-08(#10) 행의 주석 줄 수가 등재 66 != 실측 67` + `[R2] … 지문이 등재 c71eaf0cc8d9 != 실측 776877ad6666` 두 건이 발화했다. 백업본 복사로 되돌린 뒤 rc=0 복귀 확인(지침 §3-3 의 `git checkout` 금지 규칙 준수). **등재 전에는 같은 변경이 조용히 통과했다** — 이 차이가 이 슬라이스의 산출물이다."
+            },
+            {
+              "name": "[정보] as-is 버전 변화",
+              "status": "passed",
+              "detail": "실행 전 `lines=2987 files=122 / a87e9a6f…` → 실행 후 `lines=2804 files=122 / 2305c817…` (−183줄, 제거 판정한 줄 수와 정확히 일치). 모델의 `lastObservedVersion` 은 **건드리지 않았다** — 이 변화는 다음 감지 주기의 트리거다."
+            },
+            {
+              "name": "[정보] 범위 밖 잔여 (converged 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "지침 §6 의 예고값대로 미판정 잔여가 **90줄 / 4파일**(오탐 7 제외 실판정 83)로 내려가 임계 100 아래다: `harness_shared_test.go` 54(자매 scenario-e2e 후속 저작 자리) · `shared_volume_test.go` 29(#101 이 원장에 살아 있는 소유 선언) · 오탐 7. 여기에 모델 `asIs.versionScript` 의 `DIRECTIVE=` 갈라짐(지문 vs 게이트 `DIRECTIVE_RE`, 24줄 차이)은 `data/to-be-models.json` 을 고쳐야 하므로 **`reconciler-tobe-modeler` 소관**이며 executor 가 닫을 수 없다. 전부 이 task 의 범위 밖이고, 재감지가 후속 task 로 잇는다. 전체 지문 `49d477d5950757a4d83c0c613ddf30fa25e7b654534f64aa24c3a2150086247f`."
             }
           ]
         }
