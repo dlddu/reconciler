@@ -180,7 +180,7 @@
       "assessedBy": "agent"
     },
     "createdAt": "2026-09-08T00:27:11Z",
-    "updatedAt": "2026-09-08T00:59:56Z",
+    "updatedAt": "2026-09-08T01:02:14Z",
     "attempts": [
       {
         "plan": {
@@ -229,6 +229,14 @@
             }
           ],
           "plannedAt": "2026-09-08T00:59:56Z"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/reconciler",
+          "branch": "reconcile/rct_20260908-0001-claude-transcript-viewer-v2-scenario-e2e",
+          "pullRequestUrl": null,
+          "preparedAt": "2026-09-08T01:02:14Z",
+          "notes": "**PR 없음 — `dlddu/reconciler`는 PR을 만들 수 없는 레포다.** 이번 실행에서 다시 확인했다: `contents:write` 토큰으로 `GET /repos/dlddu/reconciler/pulls`가 **403**인데, **같은 형태의 토큰**으로 대조군 `GET /repos/dlddu/claude-transcript-viewer-v2/pulls`는 **200**이다 — 토큰 스코프가 아니라 레포 자체의 성질이다(형제 워커가 같은 fire에서 `pull_requests:write`를 붙인 App 토큰과 admin 소유자 계정 GraphQL로도 거부됨을 따로 못박아 뒀다). 그래서 스테이징은 **푸시된 브랜치 + compare 뷰**로 하고 `pullRequestUrl`은 `null`이다. 「PR을 위한 억지 변경」은 만들지 않았다.\n\n**스테이징한 것**: 브랜치 `reconcile/rct_20260908-0001-claude-transcript-viewer-v2-scenario-e2e` (커밋 `122bb58`, main `ea5c871` 위). 변경은 `data/to-be-models.json` **1파일 +3/−5**뿐이고, 실행자는 이 브랜치를 `git merge --squash`로 얹기만 하면 된다.\n- compare 뷰: https://github.com/dlddu/reconciler/compare/main...reconcile/rct_20260908-0001-claude-transcript-viewer-v2-scenario-e2e\n\n**브랜치가 이미 통과한 검증**(계획 단계에서 실측):\n1. **결함 재현** — `dlddu/claude-transcript-viewer-v2`@`e43b6fdd`에서 현행 스크립트의 글롭이 **0 entries**(rc=0), `sc:`=`e3b0c442…`이고 이 값이 레코드의 `lastObservedVersion`과 **정확히 일치**. `ls-files`는 같은 HEAD에서 **5개**.\n2. **부수 변경 0** — 커밋된 JSON을 파싱해 29개 모델을 base와 대조: id 집합·순서 동일, **다른 모델은 정확히 0개가 달라졌고**, 대상 모델 안에서도 `definition`·`asIs`·`checkPolicy`·`toBe.dataSource`·`versionScript.runtime`/`timeoutSeconds`가 **바이트 동일**, `metadata`는 `updatedAt`만 움직였다.\n3. **round-trip** — 커밋된 파일에서 `versionScript.code`를 **도로 꺼내** 대상 레포에서 실행 → rc=0, `sc:cc5e94bf…`로 손으로 잰 값과 **바이트 동일**(JSON 이스케이프 파손 없음).\n4. **뮤테이션 M1~M10** — 신·구 스크립트를 나란히 돌려 전부 기대대로(§3 표). 특히 M1~M4에서 **구 스크립트는 4종 전부 SAME** — 눈멀었음의 직접 증거이고, M8(문서 전멸)에서 신 스크립트만 **rc=1로 죽는다**.\n5. **머지 가능성** — `git merge-tree --write-tree`로 현재 main(`ea5c871`)에 **충돌 없이** 얹힘을 확인.\n\n⚠️ **같은 파일을 형제 워커 둘이 동시에 만진다.** `data/to-be-models.json`에는 같은 파손의 자매 수리가 둘 더 걸려 있다 — 미머지 브랜치 `reconcile/rct_20260908-0001-homelab-k3s-mcp-scenario-e2e`(모델 객체가 파일 앞쪽, 내 것과 **~30줄 거리**)와, main 직행으로 계획 중인 `tbm_kubernetes-dashboard-scenario-e2e`. 셋은 서로 다른 모델 객체를 건드리므로 자동 머지가 되지만 **거리가 가까워 재확인이 필요하다**: 머지 직전 `git merge-tree`를 다시 돌리고, 충돌하면 브랜치를 버리고 `executionGuide` §5의 코드 문자열로 손으로 재적용할 것(그 문자열 하나면 재현된다)."
         }
       }
     ]
