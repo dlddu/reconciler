@@ -4117,6 +4117,67 @@
       "assessedAt": "2026-09-08T06:17:52Z"
     },
     "createdAt": "2026-09-08T06:17:52Z",
-    "updatedAt": "2026-09-08T06:33:00Z"
+    "updatedAt": "2026-09-08T06:45:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**AC-F5의 두 반쪽 중 「MCP가 볼륨에 쓰고 에이전트가 파일로 읽는다」(전반)만 산다.** 승인된 `web_fetch_get`의 응답이 인라인 상한을 넘으면 MCP 컨테이너가 세션 공유 볼륨에 파일로 흘려 쓰고, 도구 결과는 **본문 대신 경로**를 돌려주며, 워크로드 파드의 에이전트가 그 경로를 파일로 읽을 수 있게 관리 설정에 공유 마운트를 등재한다. 경로는 control plane이 마운트와 **같은 상수**(`SharedVolumeMountPath`)에서 파생한 env `SESSION_SHARED_DIR`로 두 컨테이너에 함께 주입하므로, opt-in(`SESSION_SHARED_VOLUME_STORAGE_CLASS`)이 꺼진 배포에서는 env도 마운트도 없고 동작이 현재와 **바이트 그대로 같다**.\n\n**왜 이 경로인가**: (a) 볼륨·마운트·회수는 #98·#100이 이미 세웠고 kind SUT에서 관측된다 — 남은 것은 「아무도 쓰지 않는다」 하나이며 그것을 여는 데 새 인프라가 필요 없다. (b) 대안이던 「도구 응답을 계속 키우기」는 AC-F5 원문이 명시적으로 금지한다(「도구 응답 본문으로 왕복시키지 않는다」). (c) 경로를 data-plane에 상수로 박는 대안 대신 control plane이 env로 주는 형태를 골랐다 — 마운트를 만드는 `if o.sharedVolumeEnabled()` **그 블록 안에서** env를 함께 붙이면 「env가 있는데 마운트가 없다」가 구조적으로 불가능해지고, opt-in 스위치가 하나로 유지된다. (d) 가역성: 되돌림은 env 주입 제거 한 곳이며 그 순간 data-plane은 자동으로 인라인 잘라내기(현행)로 떨어진다.\n\n**이 시도의 완료 기준(범위)** — 다섯 전부:\n1. 인라인 상한을 넘는 승인된 응답이 `<공유마운트>/web_fetch_get/<requestID>.body`에 **전량 기록**되고, 도구 결과에 `body` 키가 **없고** `bodyPath`·`bodyBytes`가 있다(본문 무왕복).\n2. 상한 이하의 응답은 지금과 **똑같이** 인라인으로 돌아간다(AC-F5가 「큰 것」만 파일로 넘기라고 적었으므로).\n3. `SESSION_SHARED_DIR`이 없으면(=opt-in 꺼짐) 현행 동작(100 000바이트 잘라 인라인)이 그대로 유지되고, 스필 실패(디스크 참 등)도 같은 자리로 떨어지되 결과에 `spillError`를 실어 조용히 삼키지 않는다.\n4. 워크로드 에이전트의 플랫폼 관리 설정이 공유 마운트를 **읽기 허용 디렉터리**로 등재해 에이전트가 그 경로를 `Read`로 열 수 있다(복원된 아카이브가 가져온 설정도 정규화 때 다시 등재된다).\n5. `docs/doc-tracker.md`의 AC-F5 ② 항이 이 사실로 갱신되고, **남은 후반(아카이브 포함)이 왜 범위 밖인지**가 기계적 근거와 함께 그 자리에 남는다.\n\n**범위 밖 — 근거는 취향이 아니라 실물이다**:\n- **후반(볼륨 내용의 파일시스템 아카이브 포함)**: `approval-gated`에는 **체크포인터가 아예 등록돼 있지 않다** — `control-plane/cmd/control-plane/main.go`는 `shell`(CRIU)과 `claude-code`(`NewAgentArchiveCheckpointer`) 둘만 등록하고, `Service.checkpointerFor`가 나머지를 `ErrCheckpointDisabled`로 거부한다. 그래서 이 타입의 `POST /snapshot`은 **503**이고, e2e `TestApprovalGatedHelperPod_RefusedFreezeReclaimsNeitherPod`가 바로 그 거부를 단언한다. 아카이브에 볼륨을 넣으려면 먼저 **이 타입에 아카이브 전략을 주어야** 하고(= 그 e2e 단언을 뒤집는 별도 슬라이스), 그 전에 넣는 코드는 **어느 환경에서도 실행되지 않는다**.\n- **②-c 프로덕션 스토리지 클래스 한 줄**: 파일이 `k8s/`라 이 모델의 as-is 범위 밖(자매 `tbm_session-platform-e2e-mock-policy`).\n- **③ FETCH-ORIGIN(승인 후 실제 아웃바운드)**: 자매 모델 소관. 그 결과 **승인된 실제 fetch를 e2e로 돌릴 수 없으므로**, 스필 로직 자체는 Go 단위 테스트로, 배선(두 컨테이너의 env == 마운트 경로)은 배포된 SUT의 e2e로 나눠 산다.\n- **`docs/test/e2e.md`·`scripts/e2e/` 미접촉**: AC↔e2e 1:1 매핑은 자매 `tbm_session-platform-scenario-e2e` 소관이고, 그 모델의 PR #99가 두 파일을 다시 쓰는 중(`awaiting_review`)이다. 새 e2e 단언은 매칭 단위가 **아닌** 파일(`control-plane/test/shared_volume_test.go`)에 넣어 `check-ac-mapping.sh`의 규칙 1·2를 건드리지 않는다(#100이 세운 선례).",
+          "riskLevel": "medium",
+          "plannedAt": "2026-09-08T06:45:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "control-plane 배선: `internal/adapter/k8s/shared_volume.go`에 `SharedVolumeDirEnvVar = \"SESSION_SHARED_DIR\"`를 `SharedVolumeMountPath` 옆에 두고, `client_orchestrator.go`의 **기존 `if o.sharedVolumeEnabled()` 블록 두 곳**(approval-gated 워크로드 컨테이너 · 헬퍼 파드 `session-mcp` 컨테이너)에서 마운트를 붙이는 그 자리에 `EnvVar{Name: SharedVolumeDirEnvVar, Value: SharedVolumeMountPath}`를 함께 붙인다. `credential-proxy` 컨테이너와 `shell`·`claude-code` 타입에는 넣지 않는다.",
+              "expectedOutcome": "env와 마운트가 같은 분기에서 나오므로 「env는 있는데 마운트가 없다」가 구조적으로 불가능하다. `gofmt -l .` 빈 출력, `go vet ./...`·`go vet -tags=e2e ./...` rc=0."
+            },
+            {
+              "seq": 2,
+              "action": "control-plane 테스트: `control-plane/test/approval_gated_shared_volume_test.go`(build tag `integration`)에 케이스 넷을 더한다 — (a) 클래스 설정 시 워크로드 컨테이너와 MCP 컨테이너 모두 `SESSION_SHARED_DIR`을 갖고 그 값이 **그 컨테이너가 실제로 클레임을 마운트한 경로와 같다**(리터럴 비교가 아니라 파드 스펙에서 마운트 경로를 되찾아 대조), (b) `credential-proxy` 컨테이너에는 없다, (c) 클래스 미설정이면 두 컨테이너 모두 없다, (d) `shell`·`claude-code` 타입에는 없다.",
+              "expectedOutcome": "`go test -tags=integration ./...`(control-plane) 전 패키지 ok. (a)는 마운트 경로를 근거로 비교하므로 상수만 바꾸고 주입을 잊는 변경을 잡는다."
+            },
+            {
+              "seq": 3,
+              "action": "data-plane MCP 스필 구현: `session_mcp_tools.go`의 `maxFetchedBodyBytes`(현 「AC-F5 착지 전까지의 대체」 주석)를 **인라인 상한** `maxInlineBodyBytes = 100_000`으로 의미를 바꿔 다시 주석하고, 파일 상한 `maxSpilledBodyBytes = 64 << 20`을 더한다. 새 파일 `data-plane/cmd/agent/session_mcp_files.go`에 스필러를 둔다 — `<sharedDir>/web_fetch_get/`를 0700으로 보장하고, 같은 디렉터리의 임시 파일에 `io.LimitReader(body, maxSpilledBodyBytes+1)`로 받아 상한 초과를 판정한 뒤 `<requestID>.body`로 rename(읽는 쪽이 반쪽 파일을 보지 않게). 파일 이름은 URL이 아니라 **서버가 만든 `requestID`**에서만 파생한다(경로 조각이 에이전트 통제 아래 놓이지 않게).",
+              "expectedOutcome": "`callTool`은 상한 이하면 지금과 동일한 `{success,status,headers,body}`를, 초과하고 스필이 성공하면 `body` 없이 `{success,status,headers,bodyPath,bodyBytes}`를 돌려준다. `sharedDir`가 비었거나 스필이 실패하면 현행대로 잘라 인라인하되 후자는 `spillError`를 함께 싣는다. `gofmt`·`go vet` 통과."
+            },
+            {
+              "seq": 4,
+              "action": "data-plane MCP 단위 테스트: `newSessionMCPConfig`가 `sharedDir`를 받도록 시그니처를 넓히고(`main.go`의 `workloadSessionMCP` 분기에서 `os.Getenv(sharedVolumeDirEnv)`를 넘긴다 — env 이름은 그 파일 const 블록의 「control-plane과 sync」 주석 규약 자리에 둔다), `session_mcp_gate_test.go` 형태의 주입 `fetch`로 케이스 다섯을 단언한다 — 상한 이하 인라인 / 상한 초과 스필(파일 내용이 upstream 바이트와 **정확히 일치**, 결과에 `body` 키 부재) / `sharedDir` 미설정 시 현행 잘라내기 / 쓰기 불가 디렉터리에서 인라인 + `spillError` / 파일 상한 초과 시 상한까지만 기록하고 `truncated` 표시.",
+              "expectedOutcome": "`go test ./...`(data-plane) ok. 「본문 왕복 없음」이 결과 맵의 키 부재로 단언되므로, 나중에 누가 본문을 되돌려 넣으면 빨개진다."
+            },
+            {
+              "seq": 5,
+              "action": "워크로드 에이전트가 파일로 읽을 수 있게: `claude.go`의 `toolSurface`에 `SharedDir`를 더하고 `agentToolSurface(workloadApprovalGated)`가 같은 env에서 읽는다. `claudeManagedSettings.Permissions`에 `additionalDirectories`를 더해 `managedSettingsFor`가 `SharedDir != \"\"`일 때 그 경로를 등재하고, `ensureClaudeManagedSettings`의 정규화 경로가 `MCPServers`와 **같은 방식으로** 그것을 다시 세운다(복원된 아카이브가 가져온 설정에도 붙도록). 관련 단위 테스트를 `claude_test.go`에 더한다.",
+              "expectedOutcome": "렌더된 `~/.claude/settings.json`이 `permissions.additionalDirectories`로 공유 마운트를 담고, `SharedDir`가 비면 그 키가 없다. 기존 `claude-code` 설정 스냅샷 테스트는 불변. `go test ./...`(data-plane) ok."
+            },
+            {
+              "seq": 6,
+              "action": "배포된 SUT 배선 e2e: `control-plane/test/shared_volume_test.go`(매칭 단위 아님)에 케이스를 더해 — 헬퍼 파드 MCP 컨테이너와 워크로드 컨테이너에서 `printf %s \"$SESSION_SHARED_DIR\"`를 exec로 읽어 **둘이 서로 같고**, 각 파드 스펙에서 되찾은 그 클레임의 마운트 경로와도 같은지 대조한다. 이어서 그 경로 아래 `web_fetch_get/` 하위 디렉터리를 MCP 컨테이너에서 만들고 워크로드에서 읽어, 스필이 실제로 착지할 디렉터리가 양쪽에서 같은 파일시스템임을 확인한다.",
+              "expectedOutcome": "kind e2e에서 `TestSharedVolume_*` 전건 PASS(스킵 0). env를 주입하지 않은 SUT에서는 빈 문자열로 즉시 실패해 「조용히 미배선」이 통과하지 않는다."
+            },
+            {
+              "seq": 7,
+              "action": "원장 갱신: `docs/doc-tracker.md`의 AC-F5 ② 항에서 「**아직 아무도 그 볼륨에 쓰지 않는다** … 그때까지 승인된 호출의 결과 본문은 100 000바이트에서 잘라 도구 응답으로 돌려준다」를 **착지한 사실**로 다시 쓰고(무엇이 언제 스필되는지, 100 000바이트가 이제 인라인 상한이라는 것, 에이전트가 그것을 파일로 읽는 경로), 남은 후반을 **왜 지금 열 수 없는지**를 기계적 근거(체크포인터 미등록 → `POST /snapshot` 503 → 그 거부를 단언하는 e2e 이름)와 함께 남긴다. `## 변경 이력`에 2026-09-08 행 하나. **줄 번호 좌표를 쓰지 않는다**(comment-policy 규칙 R5 — 심볼 이름·AC 번호로 적는다).",
+              "expectedOutcome": "판정 기준 4(tracker 일치)가 유지된다. `docs/prd/`·`docs/test/`는 건드리지 않는다 — AC-F5 원문도 시나리오 6도 이미 이 동작을 기술하고 있어 고칠 것이 없다."
+            },
+            {
+              "seq": 8,
+              "action": "주석 원장 재판정: `python3 scripts/check_comment_policy.py`를 **`git add` 이후에** 돌려(이 게이트는 `git ls-files`로 스캔해 stage 전 새 파일이 보이지 않는다) R2가 빨개진 행을 확인하고, `docs/comment-policy.md`의 해당 행들의 주석 줄 수·지문을 게이트가 뱉은 값으로 갱신하며 결과 칸에 이번 증분의 판정을 적는다. `<!-- 판정-합계 -->` 마커도 함께 움직인다(R4 양방향 미러). 새 파일은 어느 행에도 등재하지 않는다(#100 선례 — 등재는 판정 범위의 주장이지 파일 목록이 아니다).",
+              "expectedOutcome": "`check_comment_policy.py` rc=0이고, 움직인 행이 실제로 내가 만진 범위와 일치한다(만지지 않은 행의 지문은 불변)."
+            },
+            {
+              "seq": 9,
+              "action": "CI 게이트 로컬 전수 재현: `gofmt -l .`(두 모듈) 빈 출력 · `go vet ./...`(두 모듈) · `go vet -tags=e2e ./...`(control-plane) · `go test ./...`(두 모듈) · `go test -tags=integration ./...`(control-plane) · `scripts/check-fidelity-allowlist.py` · `scripts/check-render-fidelity.py` · `scripts/check_comment_policy.py` · `scripts/e2e/check-ac-mapping.sh`. 마지막 것은 **부모와 출력이 바이트 동일**해야 한다(매핑 축을 건드리지 않았다는 증거).",
+              "expectedOutcome": "kind가 필요한 e2e 잡을 제외한 모든 게이트가 로컬에서 rc=0. `check-ac-mapping.sh` 출력이 부모와 동일."
+            },
+            {
+              "seq": 10,
+              "action": "브랜치·PR: `reconcile/rct_20260908-0003-opus5`로 커밋을 세 덩이(배선+테스트 / MCP 스필+에이전트 읽기 / 원장 둘)로 나눠 push하고 PR을 연다(머지 안 함). 본문에 task id·gap 요약·완료 기준·범위 밖 근거·검증 방법·로컬 게이트 결과를 적는다. push 후 **kind e2e 잡이 끝날 때까지 기다려** `TestSharedVolume_*` 결과를 실측으로 확인하고 그 증거를 레코드에 고정한다.",
+              "expectedOutcome": "PR이 열리고 `ci.yml` 전 잡 + `e2e.yml` green. e2e 로그에 `--- PASS: TestSharedVolume_` 4건(기존 3 + 신규 1)이 **세어져** 확인된다(이 파일의 테스트는 클러스터가 없으면 스스로 `t.Skip`하므로 초록만으로는 「돌았다」가 아니다)."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
