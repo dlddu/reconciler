@@ -4352,7 +4352,7 @@
       }
     },
     "createdAt": "2026-09-08T08:00:12Z",
-    "updatedAt": "2026-09-08T08:12:54Z",
+    "updatedAt": "2026-09-08T08:21:29Z",
     "stateSummary": {
       "asIs": "## as-is — `tests/` 트리 `a24bfa3c` (부모 `691117ed`)\n\n`#66` 이 매칭 단위 61개의 모듈 docstring 선언을 `검증 AC: <domain>/AC<n>` → `검증 시나리오:\ntest-<domain>.md#시나리오 <N>` 로 교체하고(파일당 정확히 한 줄), `run_all.py` 의 선언 파서·실행\n라벨과 `check_ac_mapping.py` 를 시나리오 축으로 개정했다. `--numstat` 총계 **66파일 · +449 / −359**,\n그중 `.go` **0파일** — 실행 중인 워크로드 동작에 닿는 변경 0.\n\n머지된 main(`85132ae`)에서 게이트 실측:\n\n    시나리오 전집 65 · 예외 등재 1 · 구현 대기 등재 4 · 1:1 대상 60\n    매칭 파일(전용) 60 · 분할 대기 0 · 공백 시나리오 0        (rc=0)\n\n불변식 **65 − 1 − 4 = 60 = 매칭 60**, 공백 **0**. 부모에서는 AC 축으로 `AC 전집 64 · 예외 1 ·\n1:1 대상 63 · 매칭 60 · 공백 AC 3`(rc=0)이었다. 축이 옮겨졌을 뿐 매칭 파일 수는 60으로 불변이다.\n\n새 게이트는 미등재 공백을 **실패**로 만든다(불변식을 기계가 강제). 그래서 이번 개정은 미매칭 5건을\n**예외 1**(`test-platform-auth-safety.md#시나리오 4`)과 **구현 대기 4**로 갈라 등재해야만 통과했다.",
       "toBe": "## to-be — `sc:` 불변 · `reg:` 이동 (`a4719404` → `c012694e`)\n\n지문 두 성분 중 **`sc:`(테스트 문서 목록 해시)는 `aae7dc32` 로 글자 그대로 불변**이고 `reg:`\n(`docs/doc-tracker.md`)만 움직였다 — `#66` 이 PRD·테스트 문서 **본문을 한 글자도 건드리지 않았다**는\n뜻이고, 실행 지침이 명시한 정상값이다.\n\n`doc-tracker.md` 의 e2e 렌즈 절이 시나리오 축으로 재작성됐다: 절 제목 `## AC ↔ e2e 1:1 정합성` →\n`## 테스트 시나리오 ↔ e2e 1:1 정합성`, 집계 마커 `ac-e2e-집계` → `scenario-e2e-집계`, 레지스트리\n65행, 그리고 **영구 면제(예외)와 임시 보류(구현 대기)를 별도 표로 분리**했다.\n\n### 구현 대기 4건 — 각자의 「해제 조건」 원문\n\n| 시나리오 | 근거 | 담당 | 해제 조건 |\n| --- | --- | --- | --- |\n| `test-namespace-list.md#시나리오 2` | kind 세 배포(primary · auth-variant · oauth-variant)가 전부 ServiceAccount 로 클러스터에 붙어 있어 「통합 미구성」 상태에 도달할 길이 없다 | **이 렌즈** | k8s 통합을 뺀 네 번째 배포 변형 **또는 기존 변형에서 통합만 끄는 배선**을 픽스처에 세운다 |\n| `test-session-read.md#시나리오 2` | `snapshot` 분기가 `checkpointerFor` 를 타는데 픽스처가 `CRIU_ENABLED` 를 켜지 않아 `NewStubCheckpointer(false)` 가 주입된다 | 이 렌즈 | kind 에 CRIU 런타임·특권 파드·체크포인트 저장소를 세우거나 claude-code 아카이브 체크포인터 리드로 연다 |\n| `test-session-write.md#시나리오 2` | 위와 **같은 벽** | 이 렌즈 | 위와 동일 |\n| `test-session-write.md#시나리오 4` | 429·507 이 `claude.go` 에서만 나오고 507 은 지금의 데이터 플레인에서 도달 불가 | 이 렌즈 + **session-platform**(상한 노출) | ⑴ session-platform 이 스크롤백 상한을 env 로 노출하고 ⑵ claude-code 파드가 이 하네스에서 실제로 선다 |\n\n`docs/test-*.md` 18파일의 시나리오 헤딩 실측 **65개**, PRD 18 · AC 64 · 가치 5 — 전부 불변.",
@@ -4364,6 +4364,67 @@
       "reason": "작업 필요. 잔여 4건 중 **`test-namespace-list.md#시나리오 2` 1건의 해제 조건이 발화**했다.\n\n발화 근거는 「해제 조건이 순환 분류」라는 것이다 — 원장이 든 근거(「kind 세 배포가 전부 ServiceAccount 로 붙어 있다」)는 **현재 픽스처의 측정**이지 외부 차단의 증거가 아니고, 담당은 「이 렌즈」이며 외부 선행·타 모델·사람 승인이 0개다. 결정적으로 통합을 끄는 스위치 `MCP_K8S_DISABLED` 가 `main.go:95` 에 **2026-05-25(#21)부터 이미 존재**한다 — 해제 조건이 스스로 든 「기존 변형에서 통합만 끄는 배선」은 env 한 줄 + `run_all.py:55` 의 GROUPS 에 네 번째 그룹 추가가 전부다. 이 항목은 축 이동이 **새로 드러낸** 것이다(부모 AC 레지스트리의 namespace-list 행은 AC1 하나뿐이었다).\n\n나머지 3건은 ⓐ 미발화로 제외: session-read#2·session-write#2 는 `CRIU_ENABLED` 가 레포 전체에서 「are left unset」 을 *선언하는* 주석 1건뿐(SET 0곳), session-write#4 는 session-platform live main 의 `main.go:111-121` claudeConfig 리터럴이 `ScrollbackLimit` 를 세우지 않고 `SCROLLBACK` env 도 0건이며 claude-code 이미지·자격증명도 「stays unset」 선언뿐.\n\n사람 승인(`rct_20260908-0002` review approved)은 「영구 면제가 아니라 **임시 보류**」임을 확인한 것이고, 구현 대기 표 머리말이 「후속 task 로 저작한다」로, executor verification 이 「다음 감지 주기가 후속 task 로 잇는다」로 각각 명시 위임했다. 게이트는 등재된 구현 대기를 계수에서 빼므로 영원히 rc=0 이다. 재감지 경로가 0 이라고 과장하지 않는다 — 논거는 「유예 사유가 소멸했고 지금이 착수 가능한 첫 순간이며 착수 가능한 유일한 잔여」다.\n\n범위는 **이 1건**으로 좁힌다. `smoke.py:7-9` 의 낡은 산문 3줄(개명 전 모델 id · 「AC 대신」 · 게이트가 파싱하지 않는 「비-AC 파일」 절 이름)은 규칙 1~7 위반이 아니므로 별도 task 없이 이 슬라이스에 fold-in. 모델 definition 정정과 `DIRECTIVE_RE` 정리는 tobe-modeler 소관이라 완료 기준에서 제외한다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-08T08:00:12Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`test-namespace-list.md#시나리오 2`(통합 미설정 시 도구 에러) 하나를 구현 대기에서 꺼내 **전용 e2e 파일로 저작**하고 등재를 ⏳ → ✅ 로 옮긴다. \n\n**왜 이 경로인가.** 해제 조건이 스스로 두 갈래를 든다 — 「k8s 통합을 뺀 네 번째 배포 변형」 **또는** 「기존 변형에서 통합만 끄는 배선」. 후자를 고른다: ⑴ 통합을 끄는 스위치 `MCP_K8S_DISABLED` 가 `main.go:95` 에 2026-05-25(#21)부터 이미 있고 `k8s.NewUnavailable(\"kubernetes integration is disabled\")` 를 돌려준다, ⑵ 그 상태를 단언하는 공유 헬퍼 `_auth_variant.assert_unavailable_refusal` 이 이미 있어 다섯 형제(`aws_config_get_ac3` 등)가 같은 모양으로 쓰고 있다, ⑶ 무엇보다 **선례가 이 원장에 명문으로 있다** — doc-tracker 의 「미설정 graceful 거부(6) — ✅ 완료(2026-08-07)」 항목이 「별도 no-config 픽스처를 만들지 않고 인증 변형을 이용해 … 신규 픽스처·신규 롤아웃 대기 없음」 이라고 적는다. 네 번째 배포 변형은 네임스페이스·Deployment·Service·롤아웃 대기·포트포워드· `GROUPS` 네 번째 항목까지 늘리는데, 그 전부가 env 한 줄로 대체된다. \n\n**auth-variant 재사용이 안전한 근거(실측).** 그 그룹 13개 파일 중 k8s 도구(`namespace_list`·`workload_*`·`pod_describe`·`dear_baby_reset_user`)를 부르는 파일은 **0개**다(`ping` 만 `_auth_variant` 헬퍼가 부른다). `tools/list` 는 서비스 가용성과 무관한 정적 목록이라 `platform_auth_safety_ac5.py` 의 `EXPECTED_TOOLS` 17종 단언도 불변이다. `platform_auth_safety_ac8.py` (a) 가 이 픽스처에 요구하는 것은 `MCP_API_KEYS` 세팅 + `MCP_AUTH_DISABLED`·`MCP_OAUTH_*` 미설정뿐이라 무관하다. 오히려 이 픽스처의 자기 서술(`_auth_variant.py`: 「자격증명 시크릿이 하나도 없어 build*Service 가 전부 degrade 한다」)은 지금 **k8s 하나만 예외**였다 — 그것이 in-cluster ServiceAccount 를 타기 때문이다. 이 변경은 그 예외를 없애 픽스처를 자기 계약에 맞춘다.\n\n**이 시도의 완료 기준(범위).** ⑴ `tests/integration/namespace_list_ac2.py` 가 실재하고 auth-variant 그룹에 배차되어 CI `integration-tests` 잡에서 **실제로 돌아** 통과한다, ⑵ `check_ac_mapping.py` 가 rc=0 이고 불변식이 **65 − 1(예외) − 3(구현 대기) = 61 = 매칭 파일 61 · 공백 0** 으로 다시 닫힌다, ⑶ 구현 대기 표가 4행 → 3행이 되고 레지스트리 행이 ⏳ → ✅ 로 바뀐다, ⑷ `docs/test-namespace-list.md#시나리오 2` 의 `자동화` 필드가 새 파일을 가리킨다(규칙 7), ⑸ 나머지 두 게이트(`check_mock_policy.py`·`check_comment_policy.py`)와 `gofmt`·`go vet`·`go build`·`go test` 가 전부 부모와 같은 rc=0 을 유지한다. 여기에 감지가 지정한 fold-in 하나 — `tests/integration/smoke.py` 모듈 docstring 의 낡은 산문(개명 전 모델 id · 「AC 대신」 · 게이트가 파싱하지 않는 「비-AC 파일」 절 이름) 정정 — 을 더한다. \n\n**범위 밖.** 잔여 구현 대기 3건(`test-session-read.md#시나리오 2` · `test-session-write.md#시나리오 2` · `test-session-write.md#시나리오 4`) — 감지가 각자의 해제 조건을 실측해 **전건 미발화**로 확정했다(`CRIU_ENABLED` 는 레포 전체에서 「are left unset」 을 선언하는 주석 1건뿐이고 SET 0곳; session-platform live main 의 `main.go:111-121` claudeConfig 리터럴이 `ScrollbackLimit` 를 세우지 않으며 `SCROLLBACK` env 는 `k8s`/`deploy` 에 0건). 모델 `definition` 정정 2건과 `DIRECTIVE_RE` 죽은 `검증 AC:` 패턴 정리는 **`reconciler-tobe-modeler` 소관**이라 완료 기준에 넣지 않는다 — 넣으면 executor 가 닫을 수 없다. 파일명·체커명 개명(`<domain>_ac<n>.py` → 시나리오 표기)도 범위 밖이다: 18개 테스트 문서의 `자동화` 참조를 전부 따라 고치게 만들고 주석 원장 22행을 통째로 재판정시키는데 판정에 기여하지 않는다(원장이 명문으로 그렇게 적어 두었다). 그래서 새 파일도 **기존 항등식 `<domain>_ac<n>.py ↔ #시나리오 <n>` 을 지키는 이름**을 쓴다 — 실측으로 60/60 성립하는 항등식이고 혼자 다른 규약을 쓰면 그 눈검사가 깨진다. 주석 비중복성의 잔여도 자매 모델 소관이라, **내 편집이 강제하는 원장 재판정만** 한다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`tests/k8s/kind/auth-fixture.yaml` 의 컨테이너 env 에 `MCP_K8S_DISABLED: \"1\"` 을 추가하고, 파일 머리말에 「이 변형은 k8s 통합도 끈다 — 그래야 파일이 자기 계약(모든 build*Service 가 degrade)을 지키고 시나리오의 사전 조건이 성립한다」와 「이 변형에 k8s 자격/통합을 되살리면 `namespace_list_ac2.py` 가 빨개진다」는 교차 제약을 적는다.",
+              "expectedOutcome": "`kubectl apply -f` 대상 매니페스트만 바뀌고 프로덕션 `k8s/` 는 무변경. `check_mock_policy.py` 는 rc=0 유지 — `ID_TOKEN_RE` 가 `MCP_AUTH_DISABLED` 만 토큰으로 잡고 `MCP_K8S_DISABLED` 는 잡지 않으므로 R2 미등재 판정이 발화하지 않는다(이 env 는 다른 계층을 가리는 모킹이 아니라 **검증 대상 그 자체**다)."
+            },
+            {
+              "seq": 2,
+              "action": "`tests/integration/_auth_variant.py` 에 `K8S_REFUSAL = \"kubernetes client unavailable: kubernetes integration is disabled\"` 를 다섯 형제 상수 옆에 더하고, 그 블록의 `#` 주석(「빈 사유는 주 env 가 미설정일 때 main.go 가 넘기는 것」)이 새 상수에 대해 참이 아니므로 한 줄로 갈래를 갈라 적는다.",
+              "expectedOutcome": "문자열이 `internal/k8s/types.go:56-58`(`\"kubernetes client unavailable: \" + msg`)와 `main.go:97`(`NewUnavailable(\"kubernetes integration is disabled\")`)의 합성과 정확히 같다. 이후 누가 이 픽스처에서 k8s 를 되살리면 실제 텍스트가 달라져 **단언이 빨개진다**(RBAC 거부든 정상 응답이든)."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/integration/namespace_list_ac2.py` 를 신설한다. 모듈 docstring 에 `검증 시나리오: test-namespace-list.md#시나리오 2` · `실행 대상: auth-variant` 를 선언하고, 케이스는 `assert_unavailable_refusal(session, \"namespace_list\", {}, K8S_REFUSAL)` 로 시나리오의 기대 결과 두 반쪽(「호출만 도구 에러」 + 「서버는 정상」)을 모두 단언한다. `run()` 이 그 케이스를 부른다.",
+              "expectedOutcome": "`python3 tests/integration/run_all.py --group auth-variant --list` 출력에 `namespace_list_ac2.py` 가 나타난다(배차 14개). `check_ac_mapping.py` 의 하네스 검사(배차 정확히 1회 · `run()` 이 모든 `test_*` 를 호출)를 통과한다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/test-namespace-list.md` 시나리오 2 의 `자동화` 필드에 통합 e2e 참조를 더한다(형제 `test-aws-config-get.md` 시나리오 3 과 같은 문형). Go 단위 참조는 보존한다.",
+              "expectedOutcome": "규칙 7 검사가 통과한다 — 전용 파일이 실측되는데 `(미작성)` 이 남거나, 없는데 파일을 참조하는 두 방향 모두 아니다. 시나리오 **헤딩과 번호는 건드리지 않는다**(서수 식별자라 밀리면 레지스트리 60여 행이 함께 어긋난다)."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/doc-tracker.md` 의 등재 SSOT 를 갱신한다 — ⑴ 레지스트리 행 `test-namespace-list.md#시나리오 2` 의 상태를 `⏳ 구현 대기` → `✅ 전용 파일 \\`namespace_list_ac2.py\\`` 로, ⑵ ⏳ 구현 대기 표에서 그 행을 제거하고 제목의 (4) → (3) 으로, ⑶ 레지스트리 절 제목의 「✅ 전용 파일 60 · ⏳ 구현 대기 4」를 「61 · 3」으로, ⑷ 그 아래 불변식 산문(`65 − 1 − 4 = 60`)을 `65 − 1 − 3 = 61` 로, ⑸ `<!-- scenario-e2e-집계 -->` 블록의 `구현 대기 등재`·`1:1 대상`·`매칭 파일(전용)` 을 3·61·61 로. **제목 칸은 문서 헤딩과 글자 그대로 같게 유지한다.**",
+              "expectedOutcome": "`python3 tests/integration/check_ac_mapping.py` 가 rc=0 이고 `시나리오 전집 65 · 예외 등재 1 · 구현 대기 등재 3 · 1:1 대상 61 · 매칭 파일(전용) 61 · 분할 대기 0 · 공백 시나리오 0` 을 출력한다. 불변식이 다시 닫힌다."
+            },
+            {
+              "seq": 6,
+              "action": "fold-in: `tests/integration/smoke.py` 모듈 docstring 의 낡은 산문을 고친다 — 개명 전 모델 id `tbm_homelab-k3s-mcp-ac-e2e` → `tbm_homelab-k3s-mcp-scenario-e2e`, 「규칙 3은 AC 대신」 → 「규칙 3은 시나리오 대신」, 그리고 게이트가 실제로 파싱하는 절 이름 「비-AC 파일」 → 「비-시나리오 파일」(2곳: 첫 줄 괄호와 본문). **같은 docstring 의 `platform-auth-safety/AC5` 참조는 건드리지 않는다** — 거짓이 아니고 (그 시나리오의 `검증 AC` 가 실제로 AC5 다) 규칙 위반도 아니다.",
+              "expectedOutcome": "그 docstring 을 따라 「비-AC 파일」 절을 찾으면 없던 상태가 해소된다(`check_ac_mapping.py:176` 은 `_section(text, \"비-시나리오 파일\")` 를 읽는다). 선언 줄 3개(`검증 시나리오:`·`실행 대상:`·`실행 순서:`)는 불변이므로 배차·판정 무변경."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/comment-policy.md` 원장을 **내 편집이 강제하는 만큼만** 재판정한다. 줄 주석 표면: #15(`auth-fixture.yaml`) · #17(`_auth_variant.py` 포함 행), 그리고 신규 파일을 #22(이미 `namespace_list_ac1.py` 를 담은 행)에 편입. docstring 표면: #3(`smoke.py`) · #8(신규 파일 편입). 각 행의 줄 수·지문은 **체커 자신의 파서로 재측정**해 적고, 판정 근거는 #4 행이 세운 증분 재판정 문형(「재판정 2026-09-08: ±N줄 — …, 이하 1차 판정 그대로」)을 따른다. 합계 마커 둘(`판정-합계`·`docstring-합계`)과 `docstring-잔량` 을 재측정값으로 맞춘다. **남의 슬라이스가 남긴 미판정은 손대지 않는다** — 원장 편입은 판정 책임의 주장이다.",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` 가 rc=0. R2/R6(범위별 줄 수·지문) · R4/R8(합계 양방향 미러 + 잔량) 전부 통과하고, 잔량이 0 을 유지한다(부모에서 100.0% 였다 — 새 파일이 그 자리를 조용히 깎지 않는다)."
+            },
+            {
+              "seq": 8,
+              "action": "로컬 게이트 전량 + 부정 대조. 세 lint 게이트와 `gofmt -l .`·`go vet ./...`·`go build ./...`·`go test ./...`(toolchain: `source /home/silas/toolchains/env.sh`)를 돌리고, **미끼 뮤테이션**으로 각 단언이 실제로 발화하는지 확인한다 — ⓐ 새 파일의 `검증 시나리오:` 를 지운다(규칙 3), ⓑ 집계를 한 칸 틀린다(규칙 6), ⓒ 구현 대기 행을 남겨 둔다(등재 충돌), ⓓ `MCP_K8S_DISABLED` 를 픽스처에서 뺀다(=단언 텍스트 불일치 — 실서버가 필요하므로 코드 경로로 대신 확인), ⓔ `run()` 에서 케이스 호출을 지운다(하네스 검사), ⓕ 원장 합계를 틀린다(R4/R8).",
+              "expectedOutcome": "부모 트리에서 세 게이트가 rc=0 임을 먼저 재 두고(선재 결함이 아님을 증명), 변경 후에도 rc=0. 각 뮤테이션은 rc=1 이고 **사유가 서로 다르다**(같은 사유면 그물이 하나뿐이라는 뜻)."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치 `reconcile/rct_20260908-0003-opus5` 로 커밋·푸시하고 PR 을 연다(머지하지 않는다). 본문에 task id · gap 요약 · 단계 · 검증 방법 · 범위 밖 목록을 적는다.",
+              "expectedOutcome": "PR 이 열리고 `lint`·`unit-tests`·`integration-tests` 세 잡이 돈다. `integration-tests` 의 auth-variant 스텝 로그에 `===== namespace_list_ac2.py (시나리오: test-namespace-list.md#시나리오 2) =====` 와 `refusal ok:` 가 찍힌다."
+            },
+            {
+              "seq": 10,
+              "action": "**CI 가 끝날 때까지 기다렸다가** `planned` 로 넘긴다. 이 슬라이스의 유일한 실질 미지수는 「배포된 서버가 그 거부 텍스트를 글자 그대로 내는가」인데 로컬엔 docker/kind 가 없어 계획 단계에서 살 수 없다 — CI 가 그것을 산다. 세 잡이 green 이고 새 파일이 **실제로 배차돼 돌았음**(로그에 파일명 헤더 + `refusal ok:`)을 세어 확인한 뒤 그 실측을 레코드에 박는다.",
+              "expectedOutcome": "executor 는 「미지수를 안은 계획」이 아니라 **관측된 사실**을 넘겨받는다. 실패하면 그 자리에서 고쳐 다시 돌린다(계획 단계이므로 되돌리는 비용이 가장 싸다)."
+            }
+          ],
+          "plannedAt": "2026-09-08T08:21:29Z"
+        }
+      }
+    ]
   }
 ]
