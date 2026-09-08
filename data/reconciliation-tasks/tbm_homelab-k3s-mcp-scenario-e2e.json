@@ -4009,7 +4009,7 @@
       "assessedBy": "agent"
     },
     "createdAt": "2026-09-08T00:27:08Z",
-    "updatedAt": "2026-09-08T05:44:28Z",
+    "updatedAt": "2026-09-08T05:48:32Z",
     "attempts": [
       {
         "plan": {
@@ -4057,6 +4057,48 @@
           "required": false,
           "status": "not_required",
           "reason": "**사용자 검토 불필요(`required:false`).** 근거 넷.\n\n1. **닿는 면이 이 원장 자신뿐이다.** 변경은 `dlddu/reconciler`의 `data/to-be-models.json` 한 파일, 모델 29개 중 `tbm_homelab-k3s-mcp-scenario-e2e` 하나의 `toBe` 세 키(`versionScript`·`lastObservedVersion`·`lastObservedAt`)뿐이다. 제품 코드·매니페스트·클러스터·프로덕션 트래픽·사용자 데이터에 **한 줄도 닿지 않는다**. `riskLevel: low`.\n2. **완전 가역이다.** 되돌리기는 squash 커밋 1개 `git revert`로 끝나고, 불가역 지점이나 트래픽 중단 가능성이 없다. 최악의 오작동은 「정규식 과·소선택으로 엉뚱한 재감지」이며 그것도 revert로 즉시 원복된다.\n3. **판단이 갈리는 모호함이 없다.** 이 수리는 새 설계가 아니라 **원장 자신의 규범을 적용**하는 것이다 — `templates/scenario-e2e.tbm.md:95-99`가 「pathspec 글롭을 쓰지 않는다 … 디렉터리로 훑은 뒤 `grep -E`로 거른다」를 명문으로 갖고 있고, 파손된 스크립트는 그 규범과 **같은 커밋 `d51c3048`**에서 그 규범을 어긴 것이다. 파손은 실측으로 확정됐다(`ls-tree` 글롭 0 entries → `sc:`가 빈 입력의 sha256 `e3b0c442…` 상수).\n4. **게이트가 이미 초록으로 실측돼 있다.** 브랜치에서 스키마 검증 `OK: 29 record(s)` · `node --test tests/*.test.mjs` 82/82 rc=0, 그리고 커밋된 JSON에서 꺼낸 스크립트가 `homelab-k3s-mcp@c4f7c090`에서 `sc:aae7dc32…`(엔트리 18)를 냈다. 레포에 `.github/`가 없어 기다릴 CI도 없다.\n\n**방치 비용이 더 크다** — 계측기가 상수인 동안 이 모델은 시나리오 축의 어떤 변화도 감지하지 못한다(재감지 경로 0). 승인 대기로 눈먼 시간을 늘릴 이유가 없다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-08T05:46:00Z",
+          "finishedAt": "2026-09-08T05:48:32Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-08T05:46:00Z",
+              "finishedAt": "2026-09-08T05:47:30Z",
+              "log": "범위 기계 대조 통과. `git diff --stat` = `data/to-be-models.json` 1파일 +2/−4. **주의 — 지침의 파이썬 스니펫은 `origin/main` tip 을 base 로 잡지만, 그 사이 형제 워커가 main 을 15개 모델의 `lastObservedVersion` 캐시 갱신으로 전진시켜 그대로 돌리면 「바뀐 모델 16개」로 오탐한다. base 를 `git merge-base`(ece7ffd)로 바꿔 3-dot 의미와 맞췄다(`git diff ...` 가 이미 쓰는 base). 재측정 결과: 브랜치가 바꾼 모델 == `['tbm_homelab-k3s-mcp-scenario-e2e']` 정확히 1개(모델 집합 29 불변), `asIs`·`definition`·`metadata`·`checkPolicy`·`toBe.dataSource` 바이트 동일, `toBe` 안에서 바뀐 키 == `['lastObservedAt','lastObservedVersion','versionScript']`, 두 baseline 필드 부재. 덧붙여 최신 main tip 의 이 모델 레코드가 merge-base 와 동일함을 확인 — 형제 워커와 겹치는 편집면이 없다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-08T05:47:30Z",
+              "finishedAt": "2026-09-08T05:49:00Z",
+              "log": "브랜치 worktree(d7f2ff0)에서 게이트 2종 초록. `reconciler_tool.py validate --schema schemas/to-be-model.schema.json --data data/to-be-models.json` → `OK: 29 record(s) … conform`, rc=0. `node --test tests/*.test.mjs`(node v22.22.2) → `# tests 82 / # pass 82 / # fail 0`, rc=0. 레포에 `.github/` 부재 — 대기할 CI 잡 없음. (헬퍼 실행에 `jsonschema` 미설치라 컨테이너에 4.26.0 설치. 레포 변경 아님.)"
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-08T05:49:00Z",
+              "finishedAt": "2026-09-08T05:56:00Z",
+              "log": "`dlddu/homelab-k3s-mcp` clean 클론(main = `c4f7c090`, 계획 시점과 동일)에서 계측기 재현 — 계획이 예고한 값과 **전부 일치**. 선택 카운트: 구 `ls-tree -r HEAD -- 'docs/test-*.md'` **0** / 신 `ls-tree -r HEAD -- docs | grep -E '[[:blank:]]docs/test-[^/]*\\.md$'` **18** / 대조 `ls-files` **18**. 레코드에서 꺼낸 스크립트 실행: 구 = `sc:e3b0c442… reg:a4719404…`(저장돼 있던 `toBe.lastObservedVersion` 과 **문자열 완전 일치** — 파손이 레코드에 굳어 있었다는 증거), 신 = `sc:aae7dc320ea594277ab707ee092869039e22bc60a101d8b1c85a76252481feca reg:a4719404…`. 뮤테이션 6종(임시 브랜치에 각각 커밋 후 `sc:` 성분 비교): ①시나리오 문서 수정 구 SAME / 신 **CHANGED** · ②추가 구 SAME / 신 **CHANGED** · ③삭제 구 SAME / 신 **CHANGED** · ④`docs/prd-*.md` 수정 둘 다 SAME · ⑤`docs/doc-tracker.md` 수정 둘 다 `sc:` SAME · ⑥`tests/integration/*.py` 수정 둘 다 SAME — 계획 표와 6/6 일치. loudness: `docs/test-*.md` 18개 전부 개명해 선택을 비우면 신 스크립트는 출력 없이 **rc=1**, 구 스크립트는 `sc:e3b0c442…` 를 내며 **rc=0**(조용한 파손 그 자체)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-08T05:56:00Z",
+              "finishedAt": "2026-09-08T06:00:00Z",
+              "log": "머지 완료 — `dlddu/reconciler` main `302c627 → 4b16298`, 커밋 1개(`git merge --squash` + 단일 커밋, PR 부재는 계획대로). 머지 직전 `pull --rebase` 로 형제 워커 커밋 2건(`885d88d`,`302c627` — session-platform-docs-impl 실행)을 받아 재측정: 「브랜치가 바꾼 모델 정확히 1개」·「최신 main 에서 이 모델 무변경」 재확인, `Auto-merging data/to-be-models.json` 충돌 없음. 커밋 전 스테이지 상태에서 스키마 재검증 `OK: 29 record(s)`. 푸시 rc=0."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-08T06:00:00Z",
+              "finishedAt": "2026-09-08T05:48:32Z",
+              "log": "머지된 main 을 pull 해 레코드 재확인: `toBe` 키 == `['dataSource','versionScript']` — `lastObservedVersion`·`lastObservedAt` **부재**(되살리지 않음), `versionScript.code` 는 신 형태. 그 텍스트가 단계 3에서 검증에 쓴 브랜치 스크립트와 **바이트 동일**(`diff` 무차이)임을 확인해 「검증한 것과 머지된 것이 같다」를 샀다. `homelab-k3s-mcp@c4f7c090` 에서 머지본 실행 → `sc:aae7dc32…`(≠ `e3b0c442…`), 선택 18 == `ls-files` 18. as-is 재계산 `691117eda6a1cb5484735a023502ce04deddda1e` — 저장값과 동일(as-is 는 이 실행이 건드리지 않는 축)."
+            }
+          ]
         }
       }
     ]
