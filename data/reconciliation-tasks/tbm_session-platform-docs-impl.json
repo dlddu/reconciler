@@ -3680,7 +3680,7 @@
       "assessedAt": "2026-09-07T15:15:03Z"
     },
     "createdAt": "2026-09-07T15:15:03Z",
-    "updatedAt": "2026-09-08T02:08:48Z",
+    "updatedAt": "2026-09-08T02:17:15Z",
     "attempts": [
       {
         "plan": {
@@ -3895,8 +3895,8 @@
             },
             {
               "seq": 7,
-              "action": "`docs/comment-policy.md` 판정 원장에 **새 날짜 행**을 더해 신규 `control-plane/test/shared_volume_test.go`를 등재한다(R3 이중 계상 금지 때문에 기존 2026-09-07 행에 끼워 넣지 않는다). 줄 수·지문·`<!-- 판정-합계 -->`는 **손으로 적지 않고 게이트 출력에서 역수입한다**. R5대로 「이미 말하는 곳」에 줄 번호 좌표를 쓰지 않는다. `deploy/`·`scripts/`는 이 게이트의 스캔 범위(`control-plane`·`data-plane`·`web/src`·`web/e2e`) 밖이라 등재 대상이 아니다.",
-              "expectedOutcome": "`python3 scripts/check_comment_policy.py` rc=0, 합계가 행 합과 양방향 일치(R4)."
+              "action": "`docs/comment-policy.md`는 **만지지 않는다.** 실측으로 그 근거가 섰다 — 이 PR이 주석을 더하는 곳은 ⑴ 신규 파일 `control-plane/test/shared_volume_test.go` ⑵ `deploy/`·`scripts/`·`kind-config.yaml`인데, 후자는 이 게이트의 스캔 범위(`control-plane`·`data-plane`·`web/src`·`web/e2e`) 밖이고 전자는 **어느 등재 행에도 들지 않는 새 파일**이라 R2가 재측정하는 값이 하나도 움직이지 않는다(부모/브랜치 대조로 확인: 등재 9행의 줄 수·지문 전부 불변, rc=0). 움직이는 것은 판정 대상 총계와 「전체 지문」뿐인데 둘 다 **저장되지 않는 출력**이다. 새 파일을 억지로 등재하려면 이 문서의 관례상 판정 패스 산문 한 절을 새로 써야 하는데, 그것은 이 슬라이스가 실제로 수행한 일이 아니다 — 직전 패스(2026-09-07)가 `harness_shared_test.go`·`approval_gated_orchestrator_test.go`를 「다음 패스의 1순위」로 남긴 것과 같은 자리에 둔다.",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` rc=0이고, 부모와 비교해 **등재 행의 줄 수·지문이 전부 불변**(움직이는 값은 출력 전용 둘뿐)."
             },
             {
               "seq": 8,
@@ -3910,6 +3910,14 @@
             }
           ],
           "plannedAt": "2026-09-08T02:08:48Z"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20260907-0005-session-platform-docs-impl-2",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/100",
+          "preparedAt": "2026-09-08T02:17:15Z",
+          "notes": "커밋 `61ed04a` 1개, **6파일 +421/−1**. 인프라 4: `deploy/kind-config.yaml`(두 노드가 같은 호스트 디렉터리를 `/var/session-shared`로 bind-mount) · 신규 `deploy/shared-volume-provisioner.yaml`(167줄 — `sharedFileSystemPath` 모드 local-path 프로비저너 + StorageClass `session-shared`) · `deploy/kustomization.yaml`(리소스 등재 + `SESSION_SHARED_VOLUME_STORAGE_CLASS` env) · `scripts/e2e/up.sh`(롤아웃 대기 + 클래스 부재 즉시 실패). 검증 1: 신규 `control-plane/test/shared_volume_test.go`(210줄, `//go:build e2e`). 문서 1: `docs/doc-tracker.md`(② 갱신 + 변경 이력 1행).\n\n**계획 5단계의 이미지·플래그는 소스에서 확정했다** — kind v0.24.0 `images/local-path-provisioner/Makefile`의 `VERSION=v0.0.24`, `pkg/build/nodeimage/const_storage.go`의 `kindest/local-path-provisioner:v20240813-c6f155d6`·`kindest/local-path-helper:v20230510-486859a6`, v0.0.24 `main.go`의 `--provisioner-name`. ConfigMap·ServiceAccount 이름은 kind 것과 **일부러 같게** 두어(네임스페이스로만 갈린다) `--configmap-name`·`--service-account-name` override가 필요 없다. ClusterRole/Binding은 cluster-scoped라 이름을 갈랐다.\n\n**게이트 대조(부모 `090c845` vs 브랜치, 각각 클린 워크트리)**: `check-ac-mapping.sh`·`check-fidelity-allowlist.py`·`check-render-fidelity.py` **출력 바이트 동일**(공백 6·매칭 20 불변, 충실도 회계 20행 불변 — 새 `deploy/`·`scripts/e2e/` 줄에 seam 토큰 0건). `check_comment_policy.py` rc=0이고 **등재 9행의 줄 수·지문이 하나도 안 움직였다**(신규 파일이라 어느 범위에도 안 든다). control-plane `gofmt -l`(빈 출력)·`go vet ./...`·`-tags=e2e`·`-tags=integration`·`go test ./...`·`go test -tags=integration ./...` 전부 통과. data-plane `gofmt`·`go vet`·`go test` 통과(⚠️ `jq`가 PATH에 있어야 `entrypoint_test.go`가 초록이다 — `/home/silas/toolchains/env.sh`). `bash -n scripts/e2e/up.sh` 통과.\n\n🟢 **kustomize 렌더를 객체 단위로 대조했다**(v5.7.1): 부모 28문서 → 브랜치 35문서, **추가 7 · 삭제 0**, 기존 객체 중 바뀐 것은 `Deployment/control-plane` **하나**이고 그 diff는 `SESSION_SHARED_VOLUME_STORAGE_CLASS` **2줄뿐**이다(인덱스 지정 패치 `env/1`~`env/4`는 건드리지 않고 append만 했다).\n\n⚠️ **kind 경로 자체는 로컬에서 못 돌린다**(이 호스트에 docker/kind 없음) — PR #100의 `e2e (kind + API + browser)` 잡이 그 판정자다. 그 잡이 곧 완료 기준이다.\n\n⚠️ **초록 ≠ 실행**: 새 세 테스트는 kubeconfig가 없으면 스스로 `t.Skip`한다(로컬에서 SKIP 3건으로 확인). 잡 로그에서 `--- PASS: TestSharedVolume_` **3건**을 직접 세야 한다.\n\n**열린 PR 교집합**: #99와 `docs/doc-tracker.md` 1파일이 겹친다(#99는 같은 줄의 다른 꼬리를 만진다). #99는 이미 base가 #98 이전이라 `main` 기준 재정렬이 필요한 상태다."
         }
       }
     ]
