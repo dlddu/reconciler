@@ -4009,6 +4009,42 @@
       "assessedBy": "agent"
     },
     "createdAt": "2026-09-08T00:27:08Z",
-    "updatedAt": "2026-09-08T00:34:50Z"
+    "updatedAt": "2026-09-08T00:42:34Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`toBe.versionScript`의 시나리오 성분을 템플릿이 규정한 조합형(`ls-tree <디렉터리> | grep -E`)으로 교체해 **모델의 눈을 되돌린다**(gap ⓐ). 실측으로 확정된 파손이다 — 현행 `git ls-tree -r HEAD -- 'docs/test-*.md'`는 git 2.43.0에서 **0 entries**를 돌려주고(`ls-tree`는 pathspec 글롭을 하지 않으며 `:(glob)` 매직은 아예 거부한다) rc=0이라 조용하다. 그래서 `sc:`가 빈 입력의 sha256 `e3b0c442…` **상수**로 굳어, 문서 18개·시나리오 65개가 실재하는데도 그 축의 **어떤 변화도 이 모델을 영영 깨우지 못한다**.\n\n**왜 이 형태인가 — 근거를 내 논리가 아니라 원장에서 가져왔다.** `templates/scenario-e2e.tbm.md:95-99`가 이미 「pathspec 글롭을 쓰지 않는다 … 그 sha256(`e3b0c442…`)은 항상 같은 값이라 어떤 변경도 영영 감지되지 않는다. 반드시 디렉터리로 훑은 뒤 `grep -E`로 거른다」를 명문으로 적어 두었고, `:120`에 정확한 조합형 골격까지 있다. 결정적으로 **그 규범과 파손된 스크립트 넷은 같은 커밋 `d51c3048`(00:12:08Z)에서 함께 태어났다** — 규범이 나중에 생긴 것이 아니라, 규범을 쓴 커밋이 자기 규범을 7개 모델 중 4개에서 어겼다. 따라서 이 수리는 새 설계가 아니라 **원장의 자기 규범을 그대로 적용하는 것**이고, 대안(`git ls-files` 글롭)은 index를 읽어 HEAD 의미가 흐려지므로 택하지 않았다.\n\n정규식은 템플릿 예시(`docs/test-[a-z-]+\\.md$`)보다 한 칸 엄밀하게 `[[:blank:]]docs/test-[^/]*\\.md$`로 둔다 — ⑴ 경로 필드 앞 **탭에 앵커**해 `docs/` 최상위만 고르고(중첩 `*/docs/test-*.md` 배제) ⑵ 문자 클래스를 좁히지 않아 **숫자가 든 새 문서(`test-oauth2.md` 등)를 조용히 떨어뜨리지 않는다**(실측: `[a-z-]+`는 그 파일을 18개로 세어 누락, 이쪽은 19개로 포함). 덤으로 이 형태는 **선택이 비면 `grep`이 1을 돌려주고 `pipefail`+`set -e`가 스크립트를 실패시켜**, 같은 종류의 파손이 다시 생기면 조용히 굳는 대신 **소리를 낸다**(실측 rc=1).\n\n**이 시도의 범위(완료 기준)** = `tbm_homelab-k3s-mcp-scenario-e2e` **한 모델의 to-be 계측기 수리**뿐이다. 성공 판정은 셋: ⑴ 머지 후 `dlddu/homelab-k3s-mcp@main`에서 to-be 스크립트가 `sc:aae7dc32…`(문서 18개 실측)를 내고 `e3b0c442…`가 아닐 것 ⑵ 시나리오 문서 편집·추가·삭제가 지문을 움직이고 PRD·values·doc-tracker·tests 변경은 `sc:`를 움직이지 않을 것(실측 6종 뮤테이션 표) ⑶ 선택이 비면 rc≠0으로 실패할 것. **범위 밖**: gap ⓑ의 매핑 마이그레이션(시나리오 65 ↔ 매칭 단위 62, `검증 시나리오:` 선언 현재 0건, `docs/doc-tracker.md` 시나리오 축 절 신설, `tests/integration/check_ac_mapping.py` 개정)은 이 슬라이스에 담지 않는다 — ⓐ가 ⓑ의 **선행**이고(감지 gap ⓒ), 계측기가 눈을 뜨면 그 변화가 다음 감지를 깨워 새 task로 잇는다. 자매 파손 3건(`kubernetes-dashboard`·`claude-transcript-viewer-v2`·`econ-opinion-monitor`)도 각자의 미점유 `action_required` task 소관이라 **건드리지 않는다**(single in-flight).\n\n`toBe.lastObservedVersion`·`lastObservedAt`은 **삭제(absent)** 한다. 남겨 두면 다음 감지가 「to-be 내용이 바뀌었다」로 읽지만 실제로 바뀐 것은 **계측기**다. 비워 두는 쪽이 정직하고, 같은 개정을 한 `d51c3048`이 이미 그 관례(baseline 삭제 = 새 축의 최초 관측)를 썼다. 되돌리기는 squash 커밋 1개 revert로 끝난다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR diff 범위를 확인한다 — 변경 파일이 `data/to-be-models.json` 하나이고, 모델 29개 중 `tbm_homelab-k3s-mcp-scenario-e2e` 정확히 하나만 달라지며, 그 안에서도 `toBe.versionScript`·`toBe.lastObservedVersion`·`toBe.lastObservedAt` 세 키만 움직이는지 파이썬으로 기계 대조한다(지침 §2 단계 1).",
+              "expectedOutcome": "바뀐 모델 목록 == ['tbm_homelab-k3s-mcp-scenario-e2e'] · `asIs`·`definition`·`metadata` 바이트 동일 · 머지 후 `toBe`에 `lastObservedVersion`/`lastObservedAt` 부재."
+            },
+            {
+              "seq": 2,
+              "action": "PR 브랜치에서 게이트를 재측정한다 — `reconciler_tool.py validate --schema schemas/to-be-model.schema.json` 과 `node --test tests/*.test.mjs`(디렉터리 인자 금지).",
+              "expectedOutcome": "스키마 검증 rc=0 · `# tests 82 / # pass 82 / # fail 0`, rc=0 (부모 `origin/main` 실측과 동일)."
+            },
+            {
+              "seq": 3,
+              "action": "`dlddu/homelab-k3s-mcp` clean 체크아웃에서 신·구 스크립트를 실행해 대조하고, 뮤테이션 6종과 빈 선택 loudness를 부숴서 확인한다(지침 §2 단계 3의 표).",
+              "expectedOutcome": "구=`sc:e3b0c442…`(저장된 lastObservedVersion과 완전 일치) · 신=엔트리 18개, `sc:aae7dc32…`(≠ e3b0c442…) · 뮤테이션 표대로 시나리오 축 3종 CHANGED, PRD·doc-tracker·tests 3종 `sc:` SAME · 빈 선택에서 신 스크립트 rc=1(구는 rc=0으로 조용)."
+            },
+            {
+              "seq": 4,
+              "action": "1~3이 모두 통과한 뒤 PR을 **squash** 머지한다(레포가 squash만 허용). 머지 직전 `gh pr view`로 mergeable을 재확인하고, 충돌 시 rebase 후 단계 1을 다시 센다.",
+              "expectedOutcome": "머지 성공, `dlddu/reconciler` main에 커밋 1개 추가. 대기할 CI 잡은 없다(`.github/` 부재)."
+            },
+            {
+              "seq": 5,
+              "action": "머지된 main을 pull해 모델 레코드를 재확인하고 수렴을 판정한다 — 지침 §2 단계 5의 완료 기준 셋(상수 탈출 + 엔트리 수 일치 / 뮤테이션 표 / 빈 선택 rc≠0).",
+              "expectedOutcome": "셋 다 참이면 `succeeded`. 모델 전체 to-be(시나리오 65개 1:1 매핑)로 판정하지 않는다 — gap ⓑ는 범위 밖이며 재감지가 새 task로 잇는다."
+            }
+          ],
+          "plannedAt": "2026-09-08T00:42:34Z"
+        }
+      }
+    ]
   }
 ]
