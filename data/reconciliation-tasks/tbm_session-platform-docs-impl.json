@@ -3656,7 +3656,7 @@
   {
     "id": "rct_20260907-0005",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "executing",
+    "status": "failed",
     "trigger": {
       "detectedAt": "2026-09-07T15:15:03Z",
       "changedSides": [
@@ -3680,7 +3680,7 @@
       "assessedAt": "2026-09-07T15:15:03Z"
     },
     "createdAt": "2026-09-07T15:15:03Z",
-    "updatedAt": "2026-09-07T23:54:52Z",
+    "updatedAt": "2026-09-08T01:46:00Z",
     "attempts": [
       {
         "plan": {
@@ -3751,6 +3751,110 @@
           "reviewer": "user",
           "reviewedAt": "2026-09-07T23:54:52Z",
           "comment": "경로 A 승인 — executionGuide 3절의 우회 경로 ②(opt-in 전환)를 PR #98 안에서 시도한다. 검토자가 제공한 사실: **프로덕션 클러스터의 StorageClass는 `efs`**. 경로 ①은 kind에 클래스가 기본값 `local-path` 하나뿐이라 명시할 대상이 없어 배제됐다. executor 권고는 B(거부 후 재계획)였으나 검토자가 A를 택했다. A의 알려진 대가: `e2e (kind)`가 공유 볼륨 경로를 더 이상 타지 않으므로 완료 기준 6이 '배포 SUT에서 두 파드가 실제로 볼륨을 물고 Ready에 도달한다'를 사지 못한다 — 검증(4-4)에서 이 축소를 사실대로 기록할 것."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-07T23:56:00Z",
+          "finishedAt": "2026-09-08T01:40:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "log": "준비 단계(PR #98, `fcd85e0`)가 이미 착지시켰다. 실행에서는 `shared_volume.go`에 opt-in 단일 정의 `sharedVolumeEnabled()`를 더하고, `sharedVolumeClaim`의 「미설정=클러스터 기본 클래스」 주석과 분기를 걷었다 — 이제 StorageClassName은 항상 설정된다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "log": "`client_orchestrator.go` 배선을 opt-in 뒤로 옮겼다: `buildPod`의 approval-gated 분기와 `helperPodSpec`의 마운트·볼륨이 `sharedVolumeEnabled()`일 때만 붙고, `applySharedVolumeClaim`은 미설정이면 no-op. `gofmt -l .` 빈 출력 · `go vet ./...` · `go vet -tags=e2e ./...` rc=0."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "log": "`main.go`의 env 배선은 준비 단계 것을 유지하고 주석만 정정(빈 클래스=볼륨 off, 크기는 꺼져 있어도 파싱해 오타를 기동 때 드러낸다). `go test ./...` rc=0."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "`k8s/rbac.yaml`의 `persistentvolumeclaims: [create]`는 준비 단계 것을 그대로 유지했다. opt-in 이어도 클래스를 설정한 배포에서는 필요하고, 미설정 배포에서는 쓰이지 않는 권한이라 해가 없다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "통합 테스트를 opt-in 계약으로 고쳤다: 클레임을 기대하는 4개 오케스트레이터에 `withSharedVolume()` 주입, 옛 의미를 박제하던 「StorageClassName은 unset」 단언을 새 계약으로 교체, off 쪽 신규 케이스 `TestApprovalGated_UnconfiguredStorageClassMakesNoClaim` 추가. **뮤테이션 2회로 양쪽이 비어 있지 않음을 확인** — 항상 on이면 off 케이스가, 항상 off면 클레임 케이스 5건이 걸린다. `go test -tags=integration ./...` rc=0, `check-ac-mapping.sh` 공백 7·매칭 19 불변."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "`doc-tracker.md` ②를 opt-in으로 정정하고 **대가를 명시**했다 — kind SUT는 클래스를 설정하지 않아 그 경로를 타지 않으므로 「두 파드가 실제로 같은 클레임을 물고 Ready에 이른다」는 실환경 관측이 비어 있다. 프로덕션 클래스 `efs`는 검토자 진술이고 레포에서 검증되지 않는다고 적었다. 변경 이력에 `2026-09-07 (4)` 1행 추가."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "log": "`comment-policy.md` 재판정 — 3차(377→387, 제거 8·유지 10) · 6차(62→65, 제거 2·유지 3) · 9차(411→423, 제거 0·유지 12) 행의 줄 수·지문과 합계(2599→2624) 갱신. `check_comment_policy.py` rc=0."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "log": "머지. head `eb8bf2e`에서 CI 15잡 전부 green(`e2e (kind + API + browser)` 포함, `pin deployment images`만 main 전용 skip). squash 머지 → main `8de5fd8`. main CI 17잡 전부 green. GitOps 롤아웃 확인 — `session-platform/control-plane` 파드가 `ghcr.io/dlddu/session-platform:8de5fd8b...` 이미지로 Ready 1/1, 재시작 0 (2026-09-08T01:41:14Z 기동)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "failed",
+          "converged": false,
+          "verifiedAt": "2026-09-08T01:46:00Z",
+          "checks": [
+            {
+              "name": "기준 1 — 라운드 전용 RWX 클레임 1개(이름은 헬퍼 파드 파생, 세션 id 라벨)",
+              "status": "passed",
+              "detail": "`TestApprovalGated_SessionGetsItsOwnReadWriteManyClaim` 통과. 뮤테이션(항상 off)에서 걸리는 것으로 단언이 비어 있지 않음을 확인."
+            },
+            {
+              "name": "기준 2 — 워크로드 `session`과 헬퍼 `session-mcp`가 같은 경로로 마운트",
+              "status": "passed",
+              "detail": "`TestApprovalGated_WorkloadAndMCPShareTheClaimAtOnePath` 통과. 볼륨 이름이 아니라 클레임 이름을 거쳐 경로를 해소하는 하네스."
+            },
+            {
+              "name": "기준 3 — `credential-proxy`와 claude-code 사이드카에는 그 경로가 없다",
+              "status": "passed",
+              "detail": "같은 테스트가 프록시 컨테이너 부재를 단언."
+            },
+            {
+              "name": "기준 4 — shell·claude-code는 클레임 0",
+              "status": "passed",
+              "detail": "`TestOtherWorkloadTypesGetNoSharedClaim` 통과."
+            },
+            {
+              "name": "기준 5 — 헬퍼 파드 owner reference, 복원 라운드는 자기 클레임",
+              "status": "passed",
+              "detail": "`TestApprovalGated_ClaimIsOwnedByItsHelperPod` · `_RestoreRoundGetsItsOwnClaim` 통과."
+            },
+            {
+              "name": "기준 6-a — 로컬 재현 가능한 CI 게이트 전부 rc=0",
+              "status": "passed",
+              "detail": "`check-ac-mapping.sh`(공백 7·매칭 19 불변) · `check_comment_policy.py` · `check-fidelity-allowlist.py` · `check-render-fidelity.py` 전부 rc=0. control-plane `gofmt`/`vet`/`vet -tags=e2e`/`test`/`test -tags=integration` 전부 통과."
+            },
+            {
+              "name": "기준 6-b — `e2e (kind)`가 초록",
+              "status": "passed",
+              "detail": "`eb8bf2e` 15잡 · main `8de5fd8` 17잡 전부 green."
+            },
+            {
+              "name": "기준 6-c — 「배포 SUT에서 두 파드가 실제로 그 볼륨을 물고 Ready에 도달한다」",
+              "status": "failed",
+              "detail": "**이 task가 사지 못한 사실.** 계획은 이 문장을 6-b의 뜻으로 적었다(요약: 「그 경로가 실제로 서는지는 이 PR의 `e2e (kind)` 잡이 직접 증명한다」). opt-in 전환으로 kind SUT는 `SESSION_SHARED_VOLUME_STORAGE_CLASS`를 설정하지 않아 클레임도 마운트도 만들지 않으므로, 초록은 더 이상 이 문장을 함의하지 않는다. 착지한 관측은 fake clientset 단언까지다. 검토자가 이 축소를 알고 경로 A를 승인했으나(review.comment), 승인이 관측을 대신하지는 않으므로 **초록을 근거로 이 문장을 참이라 적지 않는다**. `docs/doc-tracker.md` ②와 변경 이력 `2026-09-07 (4)`에 같은 내용을 원장에도 남겼다."
+            },
+            {
+              "name": "기준 7 — 원장 둘 정합",
+              "status": "passed",
+              "detail": "`doc-tracker.md` ②를 두 축으로 갈라 갱신(+대가 명시), `comment-policy.md` 3·6·9차 행 재판정. 두 게이트 rc=0."
+            },
+            {
+              "name": "(계획 밖) 프로덕션 롤아웃 무해",
+              "status": "passed",
+              "detail": "control-plane 파드가 머지 커밋 이미지로 Ready 1/1, 재시작 0. 프로덕션은 클래스 미설정이라 파드 스펙이 AC-F5 이전과 동일 — 이 머지의 프로덕션 관측 가능 변화는 사실상 없다."
+            }
+          ]
         }
       }
     ]
