@@ -180,6 +180,57 @@
       "assessedBy": "agent"
     },
     "createdAt": "2026-09-08T00:27:11Z",
-    "updatedAt": "2026-09-08T00:54:12Z"
+    "updatedAt": "2026-09-08T00:59:56Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**gap ⓐ(모델 파손)만 고치는 슬라이스다** — 이 모델의 `toBe.versionScript`가 `git ls-tree`에 와일드카드 pathspec을 넘겨 시나리오 문서를 **한 개도 선택하지 못하는** 것을, 「디렉터리로 훑고 `grep -E`로 거르는」 형태로 바꿔 `sc:`가 다시 실제 지문을 내게 한다. gap ⓑ(매핑 마이그레이션)는 범위 밖이다 — ⓐ를 고치지 않은 채 ⓑ만 하면 그 뒤의 어떤 시나리오 변경도 이 모델을 영영 깨우지 못하므로 순서상 ⓐ가 먼저다(감지의 ⓒ와 같은 결론).\n\n**결함을 액면가로 받지 않고 직접 재현했다.** `dlddu/claude-transcript-viewer-v2`@`e43b6fdd`에서 현행 스크립트를 그대로 돌려 `git ls-tree -r HEAD -- 'docs/transcript-viewer-test-*.md'` = **0 entries**(rc=0), `sc:` = `e3b0c442…`(빈 문자열의 sha256)임을 확인했고, 이 값은 레코드에 저장된 `lastObservedVersion`과 **정확히 일치**한다 — 파손이 레코드에 굳어 있었다는 직접 증거다. 같은 HEAD에서 `git ls-files 'docs/transcript-viewer-test-*.md'`는 **5개**를 돌려준다.\n\n**왜 이 형태인가(대안 셋을 실측으로 저울질).**\n- (기각) `git ls-files '<글롭>' | sha256sum` — 글롭은 되지만 `ls-files`는 **경로만** 출력하고 blob SHA를 내지 않는다. 실측: 시나리오 문서 내용을 고쳐도 지문이 `9dbd692f509b193b…`에서 **한 비트도 움직이지 않았다**(감지 D1이 적은 값과 일치). 이 축에서 압도적으로 흔한 변화가 「문서 내용 수정」이므로, 이 형태는 **고쳐진 것처럼 보이면서 절반은 계속 눈이 먼다**.\n- (기각) `git ls-files` + 파일별 `git rev-parse \"HEAD:$f\"`(감지 D2의 형태 B) — 내용까지 잡지만 **인덱스를 읽는** `ls-files`와 **HEAD 트리**를 읽는 `rev-parse`가 한 스크립트에서 축이 섞이고, 루프가 늘어 실패 모드가 많아진다.\n- (채택) `git ls-tree -r HEAD -- docs | grep -E '<앵커된 정규식>'`(형태 A) — ⑴ `templates/scenario-e2e.tbm.md:95-120`이 **이미 명문으로 처방한 형태**이고 ⑵ 자매 `tbm_session-platform-scenario-e2e`의 as-is가 쓰는 검증된 관용구라 새 실패 모드를 들이지 않으며 ⑶ 출력에 blob SHA가 있어 **내용 변경을 잡고** ⑷ 나머지 성분(`git rev-parse \"HEAD:…\"`)과 **축이 같고** ⑸ 선택이 0건이면 `grep`이 rc=1을 돌려주고 `pipefail`+`set -e`가 스크립트를 **죽인다**. ⑸는 부수 효과가 아니라 이 계획의 핵심이다 — 이번 결함의 본질이 「빈 선택이 조용히 상수가 된 것」이므로 수리안은 빈 선택에서 **반드시 시끄러워야** 한다.\n\n**정규식은 템플릿 예시보다 한 칸 엄밀하게 갔고 그 이유를 실측으로 샀다.** `[a-z-]+`가 아니라 `[^/]*`를 쓴다 — 실측: `docs/transcript-viewer-test-oauth2.md`(숫자 포함)를 더하면 `[a-z-]+`는 **5개만** 골라 새 문서를 조용히 떨어뜨리고 `[^/]*`는 **6개**를 고른다. 또 경로 필드 앞 **탭에 앵커**(`[[:blank:]]docs/`)해 `docs/` 최상위만 고른다 — 실측: `docs/archive/transcript-viewer-test-legacy.md` 미끼는 지문을 움직이지 않는다(SSOT 글롭 `docs/transcript-viewer-test-*.md`가 `/`를 넘지 않는다는 뜻에 충실).\n\n**`toBe.lastObservedVersion`·`lastObservedAt`은 삭제한다(전진이 아니다).** 선택지는 셋이고 실측으로 갈랐다 — 재감지 게이트 `/home/silas/drift-detector/precheck-drift.py`를 직접 읽었다. ⑴ **새 값으로 전진**시키면 게이트가 `current == baseline`을 보고 drift 없음으로 판정해 **인계가 끊긴다**(기각). ⑵ **상수를 그대로 둠**: 게이트는 CHANGED로 깨우지만(:215), 다음 감지가 보는 델타 `e3b0c442… → cc5e94bf…`는 **대상 레포의 내용이 바뀐 것처럼 읽힌다** — 실제로 바뀐 것은 계측기다. ⑶ **삭제**(채택): 같은 게이트가 `baseline is None`을 **정의상 변경으로** 처리해(:184-189 `no baseline (lastObservedVersion=null) -> drift`) 똑같이 깨우면서, 「수리된 계측기의 최초 관측」이라는 정직한 신호를 준다. 게다가 이 축 개정을 만든 커밋 `d51c3048` 자신이 자기가 손댄 **7개 모델 전부에서 두 필드를 지웠다** — 채택안은 이 원장의 기존 관례다.\n\n**완료 기준(이 시도의 범위) — 값이 아니라 불변식으로 판정한다.** `data/to-be-models.json`의 이 모델 `toBe.versionScript.code`가 위 형태로 교체돼 main에 반영되고, **커밋된 JSON에서 도로 꺼낸** 코드를 `dlddu/claude-transcript-viewer-v2`@main에서 실행했을 때 ⑴ 선택 파일 집합이 `git ls-files 'docs/transcript-viewer-test-*.md'`와 **일치**하고 ⑵ `sc:`가 `e3b0c442…`가 **아니며** ⑶ 뮤테이션 M1~M10(executionGuide의 표)이 재현되고 ⑷ `toBe`에 `lastObservedVersion`·`lastObservedAt`이 **없으면** 이 task는 `succeeded`다. 대상 레포가 그 사이 움직여도 배신당하지 않게 개수·해시를 완료 기준에 박지 않았고, 계획 시점 실측값(HEAD `e43b6fdd` 기준 5개 / `sc:cc5e94bf…`)은 참고로만 적는다.\n\n**범위 밖(후속으로 넘긴다).** ⑴ gap ⓑ 전부 — 시나리오 **28개**에 「구현」 항목 1:1 선언 붙이기, `docs/transcript-viewer-doc-tracker.md`에 시나리오 축 매핑·예외·구현 대기 표 등재, 집계 일치. 수리 전에 하면 그 뒤 변화가 감지되지 않으므로 순서상 뒤다. ⑵ **자매 파손 3건**(`homelab-k3s-mcp`·`kubernetes-dashboard`·`econ-opinion-monitor`) — 각자 task 소관이고, 앞의 둘은 이미 다른 워커가 처리 중이다. ⑶ 감지 레코드의 부정확 2건(아래 note) — `stateSummary`는 감지 소관이라 고치지 않고 지침에 남겨 다음 감지의 입력으로 넘긴다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "reconciler 레포를 `pull --rebase`로 최신화하고, `data/to-be-models.json`에서 `tbm_claude-transcript-viewer-v2-scenario-e2e`의 현재 `toBe.versionScript.code`·`lastObservedVersion`·`lastObservedAt` 전문을 별도 파일로 떠 둔다(롤백 원본). 이 시점의 main SHA도 적어 둔다.",
+              "expectedOutcome": "롤백 원본 확보. 현재 code에 `git ls-tree -r HEAD -- 'docs/transcript-viewer-test-*.md'` 문자열이 있고 `lastObservedVersion`이 `sc:e3b0c442…`로 시작함을 확인."
+            },
+            {
+              "seq": 2,
+              "action": "`dlddu/claude-transcript-viewer-v2`를 read 토큰으로 @main 체크아웃하고, **현행 스크립트를 그대로 실행해 결함을 먼저 재현**한다: `git ls-tree -r HEAD -- 'docs/transcript-viewer-test-*.md' | wc -l` 과 `git ls-files 'docs/transcript-viewer-test-*.md' | wc -l` 을 나란히 센다.",
+              "expectedOutcome": "앞이 **0**(rc=0), 뒤가 **5**. 현행 스크립트 전체 출력의 `sc:`가 `e3b0c442…`이고 레코드의 `lastObservedVersion`과 일치."
+            },
+            {
+              "seq": 3,
+              "action": "수리안 스크립트를 같은 체크아웃에서 실행해 선택 집합과 지문을 확인한다: `git ls-tree -r HEAD -- docs | grep -E '[[:blank:]]docs/transcript-viewer-test-[^/]*\\.md$'`.",
+              "expectedOutcome": "5줄이 나오고 각 줄에 blob SHA가 있으며, 그 파일 목록이 step 2의 `ls-files` 목록과 **완전히 일치**. `sc:`가 `e3b0c442…`가 아님."
+            },
+            {
+              "seq": 4,
+              "action": "뮤테이션 M1~M10(executionGuide §3의 표)을 임시 커밋으로 실제로 부숴 확인한다 — 신·구 스크립트를 매번 나란히 돌린다.",
+              "expectedOutcome": "M1~M4에서 신=CHANGED·구=SAME(눈멀었음의 직접 증거), M5~M7·M9에서 양쪽 SAME(범위 보존), M8에서 신=**rc=1 실패**·구=rc=0 상수(재발 시 소리가 남), M10에서 양쪽 CHANGED."
+            },
+            {
+              "seq": 5,
+              "action": "reconciler 레포에서 이 모델의 `toBe.versionScript.code`만 수리안으로 교체하고 `toBe.lastObservedVersion`·`toBe.lastObservedAt`을 삭제한다(헬퍼 patch의 `null`). `metadata.updatedAt`을 실행 시각으로 갱신한다. `definition`·`checkPolicy`·`asIs`·다른 28개 모델은 **한 글자도 건드리지 않는다**.",
+              "expectedOutcome": "`python3 \"$TOOL\" validate --schema schemas/to-be-model.schema.json --data data/to-be-models.json` rc=0. `git diff --stat`이 `data/to-be-models.json` 1파일뿐이고, diff에 나타나는 `-`줄이 정확히 code 1줄 + lastObserved 2줄 + metadata.updatedAt 1줄."
+            },
+            {
+              "seq": 6,
+              "action": "저장된 JSON에서 코드를 **다시 꺼내** 파일로 쓰고 그 파일을 대상 레포 체크아웃에서 실행한다(직접 타이핑한 스크립트가 아니라 레코드에 실제로 들어간 문자열로 검증).",
+              "expectedOutcome": "rc=0이고 출력이 step 3에서 손으로 잰 값과 **바이트 동일** — JSON 이스케이프(`\\t`·`\\.`·`$`·백슬래시) 파손이 없음이 확인됨."
+            },
+            {
+              "seq": 7,
+              "action": "스테이징 브랜치 `reconcile/rct_20260908-0001-claude-transcript-viewer-v2-scenario-e2e`를 최신 main 위에 올려 두었으므로, 실행자는 `git checkout main && git pull --rebase` 후 `git merge --squash <branch>`로 얹는다. 충돌하면(형제 워커가 같은 파일의 다른 모델을 고치는 중) 브랜치를 버리고 §5의 코드 문자열로 step 5를 손으로 재적용한다.",
+              "expectedOutcome": "main에 커밋 1개. `git show main:data/to-be-models.json`에서 이 모델의 code가 수리안이고 `lastObserved*`가 없음."
+            },
+            {
+              "seq": 8,
+              "action": "머지된 main 기준으로 step 6을 한 번 더 돌려 최종 확인하고, 재감지 게이트가 이 모델을 깨우는지 확인한다: `python3 /home/silas/drift-detector/precheck-drift.py`의 로그에서 이 모델의 toBe 줄을 읽는다.",
+              "expectedOutcome": "게이트 로그에 `tbm_claude-transcript-viewer-v2-scenario-e2e/toBe: no baseline (lastObservedVersion=null) -> drift`가 찍히고 종료 코드 10 — 인계가 실제로 살아 있음이 관측으로 확인됨."
+            }
+          ],
+          "plannedAt": "2026-09-08T00:59:56Z"
+        }
+      }
+    ]
   }
 ]
