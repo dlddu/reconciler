@@ -671,6 +671,52 @@
       "assessedBy": "agent"
     },
     "createdAt": "2026-09-08T00:28:14Z",
-    "updatedAt": "2026-09-08T01:03:00Z"
+    "updatedAt": "2026-09-08T01:12:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**gap ⓐ(계측기 파손)만 고치는 슬라이스다** — 이 모델의 `toBe.versionScript`가 `git ls-tree`에 와일드카드 pathspec을 넘겨 시나리오 문서를 **한 개도 선택하지 못하는** 것을, 템플릿이 규정한 조합형(디렉터리로 훑고 `grep -E`로 거르기)으로 교체해 `sc:`가 다시 실제 지문을 내게 한다.\n\n**파손을 액면가로 받지 않고 손으로 재현했다.** `dlddu/economic-opinion-trend-monitor@052c112f`에서 저장된 스크립트를 그대로 돌리니 `sc:e3b0c442... reg:4343e5af...`가 나왔고, 이는 레코드의 `toBe.lastObservedVersion`과 **바이트 단위로 일치**한다 — 파손이 원장에 굳어 있었다는 직접 증거다. `git ls-tree -r HEAD -- 'docs/econ-opinion-monitor-test-*.md'`는 **0 entries**를 rc=0으로 돌려주고(ls-tree는 pathspec 글롭을 하지 않는다), `e3b0c442...`는 빈 입력의 sha256이다. 실재하는 문서는 **3개**, 그 안의 시나리오는 **21개**(ingestion 7 / analysis 6 / aggregation-viz 8)로 감지의 계수와 일치한다.\n\n**왜 이 형태인가 — 근거는 원장이 스스로 적어 둔 규범에서 가져왔다.** `templates/scenario-e2e.tbm.md`가 이미 「**pathspec 글롭을 쓰지 않는다.** 매칭에 실패해도 조용히 빈 목록을 반환하고, 그 sha256(`e3b0c442...`)은 항상 같은 값이라 **어떤 변경도 영영 감지되지 않는다**. 반드시 디렉터리로 훑은 뒤 `grep -E`로 거른다」를 명문으로 적고 조합형 골격까지 준다. 이 수리는 새 설계가 아니라 그 규범의 적용이다.\n\n**⚠️ 그런데 템플릿 골격을 문자 그대로 베끼면 같은 병이 재발한다 — 실측으로 잡았다.** 템플릿의 슬롯은 `grep -E '{{TEST_DOCS_RE}}'`라 정규식이 **작은따옴표 안**에 놓이는데, 거기에 선행 탭을 `\\t`로 쓰면 **GNU grep -E는 `\\t`를 탭이 아니라 리터럴 `t`로 읽는다**. 그 결과 선택이 0건이 되어 `sc:`가 **다시 `e3b0c442...` 상수로 굳는다**. 실측(GNU grep 3.11):\n\n| 형태 | GNU grep 3.11 | ugrep 7.5.0 |\n| --- | ---: | ---: |\n| A `'\\tdocs/...'` (작은따옴표 + 백슬래시-t) | **0 entries → sc:e3b0c442...** ❌ | 3 entries ✅ |\n| B `$'\\tdocs/...'` (ANSI-C, 실제 탭) | 3 ✅ | 3 ✅ |\n| C `'[[:blank:]]docs/...'` (POSIX 문자류) | 3 ✅ | 3 ✅ |\n\nA가 이 셸에서 멀쩡해 보였던 것은 여기 `grep`이 **ugrep**이기 때문이다 — 즉 A는 **런타임의 grep 구현에 따라 조용히 갈리는** 가장 나쁜 형태다. 그래서 **C(`[[:blank:]]`, POSIX 문자류)** 를 채택한다: 두 구현 모두에서 검증됐고, 자매 `tbm_homelab-k3s-mcp-scenario-e2e`의 수리안이 쓰는 형태와 같다. B도 옳지만 JSON 레코드 안에 **보이지 않는 실제 탭**이 들어가므로 C가 읽기·재현에 강하다.\n\n**가드가 부수 효과가 아니라 요점이다.** 이 결함의 본질은 「빈 선택이 조용히 상수가 된 것」이므로 수리안은 빈 선택에서 반드시 시끄러워야 한다. 실측: 새 스크립트는 선택 0건이면 `grep` rc=1 + `set -euo pipefail`로 **죽고**(rc=1), 구 스크립트는 같은 상황에서 **rc=0으로 상수를 출력**한다. 같은 병이 재발해도 다시는 조용히 굳지 않는다.\n\n**이 시도의 범위(완료 기준)** = `tbm_econ-opinion-monitor-scenario-e2e` **한 모델의 to-be 계측기 수리**뿐이다. 판정은 **값이 아니라 불변식**으로 한다(대상 레포가 그 사이 움직여도 배신당하지 않게): ⑴ 선택 엔트리 수 == `git ls-files -- 'docs/econ-opinion-monitor-test-*.md'` 수 ⑵ `sc:`가 `e3b0c442...`가 **아닐 것** ⑶ 뮤테이션 7종 재현 ⑷ 빈 선택에서 rc≠0. 계획 시점 실측값 `sc:965459bb...`는 대상 HEAD `052c112f`를 핀으로 박은 **참고 스냅샷**일 뿐 완료 조건이 아니다.\n\n**`toBe.lastObservedVersion`·`lastObservedAt`은 삭제(absent)한다.** 남겨 두면 다음 감지가 「to-be 내용이 바뀌었다」로 읽지만 실제로 바뀐 것은 **계측기**다. 축을 개정한 커밋 `d51c3048`이 이미 그 관례(계측기가 바뀌면 baseline을 비워 새 축의 최초 관측으로 넘긴다)를 7개 모델에 썼다. ⚠️ 자매 `tbm_kubernetes-dashboard-scenario-e2e`의 계획은 반대로 「상수 baseline을 남겨야 후속(gap ⓑ)이 깨어난다」고 적었는데, **그 우려는 실측으로 기각된다**: `d51c3048`이 baseline을 지운 **7개 모델 전부**가 이번 fire에서 `previousVersion:null`로 task를 열었다(7/7). 즉 비워도 인계는 끊기지 않으며, 비우는 쪽이 「무엇이 바뀌었나」에 정직하다.\n\n**범위 밖(후속으로 넘긴다).** ⑴ gap ⓑ 마이그레이션 전부 — 시나리오 21개에 `검증 시나리오:` 선언 붙이기(현재 레포 전체 **0건**, spec 4개는 전부 `검증 AC:`), `docs/econ-opinion-monitor-doc-tracker.md`에 시나리오 축 등재(예외 표·구현 대기 표), `tests/e2e/check_ac_mapping.py` 개정. ⓐ가 ⓑ의 **선행**이다 — 수리 전에 ⓑ를 하면 그 뒤 시나리오 변화가 영영 감지되지 않는다. ⑵ 미점유 `planned` task `rct_20260830-0001`(PR #23)의 재계획 — 그 계획은 전제가 전부 AC 축이라 낡았지만 **`planned`는 executor의 큐 항목**이므로 내가 상태를 건드리지 않는다(지침 §6에 인계). ⑶ 자매 파손 3건 — 각자 자기 task 소관이고 이미 둘은 `planned`, 하나는 다른 워커가 `planning`으로 점유 중이다(single in-flight).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "reconciler 레포를 `pull --rebase`로 최신화하고, `data/to-be-models.json`에서 `tbm_econ-opinion-monitor-scenario-e2e`의 현재 `toBe.versionScript.code` 전문을 별도 파일로 떠 둔다(롤백 원본). 스테이징 브랜치 `reconcile/rct_20260908-0001-econ-opinion-monitor-scenario-e2e`가 main에서 얼마나 벌어졌는지 확인한다.",
+              "expectedOutcome": "롤백 원본 확보. 브랜치가 main 대비 1커밋(변경 파일 `data/to-be-models.json` 하나)만 앞서 있음을 확인."
+            },
+            {
+              "seq": 2,
+              "action": "스테이징 브랜치의 diff 범위를 기계로 대조한다 — 변경 파일이 `data/to-be-models.json` 하나이고, 모델 29개 중 `tbm_econ-opinion-monitor-scenario-e2e` 정확히 하나만 달라지며, 그 안에서도 `toBe.versionScript.code`·`toBe.lastObservedVersion`·`toBe.lastObservedAt` 세 키만 움직이는지 확인한다(지침 §2 단계 2에 스크립트 있음).",
+              "expectedOutcome": "달라진 모델 1개, 움직인 키 정확히 3개(code 교체 / 나머지 둘 삭제). 그 밖 0."
+            },
+            {
+              "seq": 3,
+              "action": "브랜치에서 레포 게이트 2종을 재측정한다 — `python3 \"$TOOL\" validate --schema schemas/to-be-model.schema.json --data data/to-be-models.json` 과 `node --test tests/*.test.mjs`(⚠️ 디렉터리 인자 `tests/`는 rc=1이 되므로 반드시 글롭).",
+              "expectedOutcome": "스키마 검증 `OK: 29 record(s)`, node 테스트 전건 통과 rc=0. (레포에 `.github/`가 없어 대기할 CI 잡은 없다.)"
+            },
+            {
+              "seq": 4,
+              "action": "커밋된 JSON에서 `versionScript.code`를 **도로 꺼내** 파일로 쓰고, 그 파일을 `dlddu/economic-opinion-trend-monitor`@main 클린 체크아웃에서 실행한다(직접 타이핑한 스크립트가 아니라 레코드에 실제로 들어간 문자열로 검증 — JSON 이스케이프 파손 배제). 반드시 **GNU grep이 PATH 앞에 오는 상태**(`export PATH=/usr/bin:$PATH`)에서 잰다.",
+              "expectedOutcome": "`sc:`가 `e3b0c442...`가 아니고, 선택 엔트리 수가 `git ls-files -- 'docs/econ-opinion-monitor-test-*.md'` 수(현재 3)와 일치. 참고 스냅샷: HEAD `052c112f`에서 `sc:965459bb... reg:4343e5af...`."
+            },
+            {
+              "seq": 5,
+              "action": "뮤테이션 7종(M1~M7)을 대상 레포 임시 브랜치에서 **실제로 커밋해** 부숴 확인한다(⚠️ 스크립트가 HEAD 트리를 읽으므로 워킹트리 수정만으론 거짓 음성). 지침 §3의 표에 명령과 기대값이 있다.",
+              "expectedOutcome": "M1·M2·M3(시나리오 문서 수정/추가/삭제) → `sc:` CHANGED · M4(PRD 수정) → 출력 바이트 동일 · M5(doc-tracker 수정) → `reg:`만 변화 · M6(문서 전멸) → **rc=1** · M7(중첩 경로 문서) → SAME. 구 스크립트는 7종 전부 SAME."
+            },
+            {
+              "seq": 6,
+              "action": "스테이징 브랜치를 main에 반영한다 — `dlddu/reconciler`는 PR이 비활성화된 단일 브랜치 직행 레포이므로 `git merge --squash` 후 커밋·푸시한다. 머지 직전 `pull --rebase`로 최신화하고, `data/to-be-models.json`이 그새 감지 루프에 의해 바뀌었으면 단계 2를 다시 센 뒤 진행한다.",
+              "expectedOutcome": "main에 `model(tbm_econ-opinion-monitor-scenario-e2e): fix to-be versionScript ls-tree glob` 1커밋. 충돌 시 지침 §5의 재적용 절차(코드 전문이 있으므로 한 키만 다시 얹으면 된다)."
+            },
+            {
+              "seq": 7,
+              "action": "머지된 main을 pull해 모델 레코드를 재확인하고 완료 기준 넷(불변식)으로 수렴을 판정한다. `toBe.lastObservedVersion`·`lastObservedAt`이 **부재**인지도 확인한다.",
+              "expectedOutcome": "레코드의 code가 수리안과 일치, baseline 두 키 부재, 단계 4·5의 불변식 전건 재현 → task `succeeded`. 다음 감지 fire가 `previousVersion:null`로 gap ⓑ의 새 task를 연다."
+            }
+          ],
+          "plannedAt": "2026-09-08T01:12:00Z"
+        }
+      }
+    ]
   }
 ]
