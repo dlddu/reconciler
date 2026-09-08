@@ -56,7 +56,7 @@ function renderSidebar(tasks) {
     pendingTaskCount: () => 0,
     planningTaskCount: () => 0,
     runningTaskCount: () => 0,
-    PENDING_STATUS: "planned",
+    PENDING_STATUSES: ["planned", "approved"],
     PLANNING_STATUSES: ["assessing", "planning"],
     RUNNING_STATUSES: ["awaiting_review", "executing", "verifying"],
     result: undefined,

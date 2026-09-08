@@ -92,7 +92,7 @@ test("planning mode keeps only active models a detector or planner is holding", 
   assert.deepEqual(ids(run('modelsInMode("planning")')), ["thinking"]);
 });
 
-test("pending mode keeps only active models that have a planned task", () => {
+test("pending mode keeps only active models waiting on the next worker", () => {
   assert.deepEqual(ids(run('modelsInMode("pending")')), ["waiting"]);
 });
 
@@ -111,17 +111,23 @@ test("no workflow mode surfaces a hidden model, whatever its tasks are doing", (
 });
 
 test("the three workflow status sets are disjoint", () => {
-  assert.equal(run("PLANNING_STATUSES.indexOf(PENDING_STATUS)"), -1);
-  assert.equal(run("RUNNING_STATUSES.indexOf(PENDING_STATUS)"), -1);
+  assert.equal(
+    run("PENDING_STATUSES.filter(function (s) { return PLANNING_STATUSES.indexOf(s) !== -1; }).length"),
+    0
+  );
+  assert.equal(
+    run("PENDING_STATUSES.filter(function (s) { return RUNNING_STATUSES.indexOf(s) !== -1; }).length"),
+    0
+  );
   assert.equal(
     run("PLANNING_STATUSES.filter(function (s) { return RUNNING_STATUSES.indexOf(s) !== -1; }).length"),
     0
   );
 });
 
-test("planning is the detector/planner lock, running is the executor lock", () => {
+test("planning is the detector/planner lock, pending is the handoff, running is the executor lock", () => {
   assert.deepEqual(Array.from(run("PLANNING_STATUSES")), ["assessing", "planning"]);
-  assert.equal(run("PENDING_STATUS"), "planned");
+  assert.deepEqual(Array.from(run("PENDING_STATUSES")), ["planned", "approved"]);
   assert.deepEqual(Array.from(run("RUNNING_STATUSES")), [
     "awaiting_review",
     "executing",
@@ -160,7 +166,7 @@ test("counters return zero for a model with no tasks at all", () => {
 test("every status in a set is recognised by its counter", () => {
   const cases = [
     ["planningTaskCount", run("PLANNING_STATUSES")],
-    ["pendingTaskCount", [run("PENDING_STATUS")]],
+    ["pendingTaskCount", run("PENDING_STATUSES")],
     ["runningTaskCount", run("RUNNING_STATUSES")]
   ];
 

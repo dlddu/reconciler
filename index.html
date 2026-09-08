@@ -256,6 +256,7 @@
   .b-planned { background: #0ea5e9; color: #04283a; }
   .b-awaiting_review { background: #f59e0b; color: #3a2a00; }
   .b-review_rejected { background: #c026d3; }
+  .b-approved { background: #22d3ee; color: #04303a; }
   .b-executing { background: #6366f1; }
   .b-verifying { background: #14b8a6; color: #04302c; }
   .b-succeeded { background: #16a34a; }
@@ -375,9 +376,10 @@
     no_action_needed: { label: "조치 불필요", cls: "b-no_action_needed", color: "#0ea5a4" },
     action_required:  { label: "계획 대기",   cls: "b-action_required", color: "#f97316" },
     planning:         { label: "계획 중",     cls: "b-planning",       color: "#8b5cf6" },
-    planned:          { label: "실행 대기",   cls: "b-planned",        color: "#0ea5e9" },
-    awaiting_review:  { label: "검토 대기",   cls: "b-awaiting_review", color: "#f59e0b" },
+    planned:          { label: "리뷰 대기",   cls: "b-planned",        color: "#0ea5e9" },
+    awaiting_review:  { label: "승인 대기",   cls: "b-awaiting_review", color: "#f59e0b" },
     review_rejected:  { label: "검토 반려",   cls: "b-review_rejected", color: "#c026d3" },
+    approved:         { label: "실행 대기",   cls: "b-approved",       color: "#22d3ee" },
     executing:        { label: "실행 중",     cls: "b-executing",      color: "#6366f1" },
     verifying:        { label: "검증 중",     cls: "b-verifying",      color: "#14b8a6" },
     succeeded:        { label: "성공",        cls: "b-succeeded",      color: "#16a34a" },
@@ -390,16 +392,17 @@
   //
   // 워크플로 순서대로: 계획 중 → 실행 대기 → 실행 중.
   // 계획 중·실행 중은 워커가 그 단계를 붙잡고 있는 점유(lock) 상태이고,
-  // 그 사이의 실행 대기(planned)는 executor에게 넘어가기를 기다리는 미점유 인수인계 지점이다.
+  // 그 사이의 대기(planned=리뷰 판단 대기, approved=실행 대기)는 다음 워커에게 넘어가기를
+  // 기다리는 미점유 인수인계 지점이다.
   // 종료 상태(succeeded/failed/cancelled/no_action_needed)와 계획 대기(action_required)는
   // 세 집합 어디에도 들어가지 않는다.
   var PLANNING_STATUSES = ["assessing", "planning"];
-  var PENDING_STATUS = "planned";   // STATUS_META 기준 "실행 대기"
+  var PENDING_STATUSES = ["planned", "approved"];   // 미점유 인수인계 지점(리뷰 대기·실행 대기)
   var RUNNING_STATUSES = ["awaiting_review", "executing", "verifying"];
   var MODES = [
     { id: "planning", label: "계획 중",  head: "계획 중 모델",   hint: "계획 중(" + PLANNING_STATUSES.join("/") + ") 작업이 있는 모델만",
       empty: "계획 중인 작업이 없습니다." },
-    { id: "pending", label: "실행 대기", head: "실행 대기 모델", hint: "실행 대기(" + PENDING_STATUS + ") 작업이 있는 모델만",
+    { id: "pending", label: "실행 대기", head: "실행 대기 모델", hint: "실행 대기(" + PENDING_STATUSES.join("/") + ") 작업이 있는 모델만",
       empty: "실행 대기 중인 작업이 없습니다." },
     { id: "running", label: "실행 중",   head: "실행 중 모델",   hint: "실행 중(" + RUNNING_STATUSES.join("/") + ") 작업이 있는 모델만",
       empty: "실행 중인 작업이 없습니다." },
@@ -840,10 +843,10 @@
   // 계획 중 = detector/planner가 붙잡고 있는 작업 수.
   function planningTaskCount(modelId) { return countTasksIn(modelId, PLANNING_STATUSES); }
 
-  // 실행 대기 = 아직 executor가 집어가지 않은 planned 상태의 작업 수.
-  function pendingTaskCount(modelId) { return countTasksIn(modelId, [PENDING_STATUS]); }
+  // 실행 대기 = 아직 다음 워커가 집어가지 않은 planned·approved 상태의 작업 수.
+  function pendingTaskCount(modelId) { return countTasksIn(modelId, PENDING_STATUSES); }
 
-  // 실행 중 = executor가 붙잡고 있는 작업 수(검토 대기·실행·검증).
+  // 실행 중 = 승인 대기·실행·검증으로 붙잡혀 있는 작업 수.
   function runningTaskCount(modelId) { return countTasksIn(modelId, RUNNING_STATUSES); }
 
   // ---------- 대상 레포 필터 ----------
@@ -1126,7 +1129,7 @@
       var planning = planningTaskCount(m.id);
       var planpill = planning ? '<span class="planpill" title="계획 중(' + PLANNING_STATUSES.join("/") + ')">계획 중 ' + planning + "</span>" : "";
       var pending = pendingTaskCount(m.id);
-      var pill = pending ? '<span class="pendpill" title="실행 대기(' + PENDING_STATUS + ')">실행 대기 ' + pending + "</span>" : "";
+      var pill = pending ? '<span class="pendpill" title="실행 대기(' + PENDING_STATUSES.join("/") + ')">실행 대기 ' + pending + "</span>" : "";
       var running = runningTaskCount(m.id);
       var runpill = running ? '<span class="runpill" title="실행 중(' + RUNNING_STATUSES.join("/") + ')">실행 중 ' + running + "</span>" : "";
       var hide = isModelEnabled(m) ? "" : '<span class="hidepill" title="감지 비활성">숨김</span>';
