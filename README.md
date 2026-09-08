@@ -19,7 +19,7 @@ schemas/
 templates/                          # 반복 등록되는 모델 유형의 표준 템플릿
   README.md                         # 슬롯 규약·인스턴스화 절차
   docs-impl.tbm.md                  # 제품 문서 ↔ 구현 정합성
-  ac-e2e.tbm.md                     # AC ↔ E2E 1:1 정합성
+  scenario-e2e.tbm.md               # 테스트 시나리오 ↔ E2E 1:1 정합성
   e2e-mock-policy.tbm.md            # E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)
   mockup-render.tbm.md              # 목업 ↔ 구현 렌더링 정합성
   journey-mockup.tbm.md             # 사용자 여정 ↔ 목업 1:1 정합성
@@ -36,7 +36,7 @@ tests/                              # index.html 동작 테스트 (node --test)
 ## 모델 템플릿
 
 레포마다 반복 등록되는 정합성 유형 — **제품 문서 ↔ 구현**(docs-impl),
-**AC ↔ E2E 1:1**(ac-e2e), **E2E 모킹 최소화**(e2e-mock-policy),
+**테스트 시나리오 ↔ E2E 1:1**(scenario-e2e), **E2E 모킹 최소화**(e2e-mock-policy),
 **목업 ↔ 구현 렌더링**(mockup-render), **사용자 여정 ↔ 목업 1:1**(journey-mockup),
 **주석 비중복성**(comment-redundancy) — 은 `templates/`의
 템플릿으로 등록한다. 판정 기준·충돌 방향·추적 방식 같은 고정부는 템플릿이 유형의
@@ -112,7 +112,7 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
   없는 모델(아직 task가 없거나 전부 no-op)은 `기록 없음`.
 
 - **딥링크**: `#<toBeModelId>`로 들어오면 그 모델이 보이는 모드로 자동 전환되므로,
-  숨김 모델 링크도 그대로 열린다. `#tpl:<파일명>`(예: `#tpl:ac-e2e.tbm.md`)은
+  숨김 모델 링크도 그대로 열린다. `#tpl:<파일명>`(예: `#tpl:scenario-e2e.tbm.md`)은
   템플릿 보기로 열린다.
 
 - **GitHub Pages 활성화**: 저장소 Settings → Pages → *Deploy from a branch* →

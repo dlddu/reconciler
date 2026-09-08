@@ -10,30 +10,39 @@
 | 파일 | 유형 | 대상 |
 |---|---|---|
 | `docs-impl.tbm.md` | 제품 문서 ↔ 구현 정합성 | 제품 문서(`docs/`)가 기술하는 의도된 동작과 실제 구현 코드의 일치 |
-| `ac-e2e.tbm.md` | AC ↔ E2E 1:1 정합성 | PRD의 Acceptance Criteria와 E2E 테스트 파일의 완전 1:1(전단사) 매칭 |
+| `scenario-e2e.tbm.md` | 테스트 시나리오 ↔ E2E 1:1 정합성 | 테스트 문서의 시나리오와 E2E 테스트 파일의 완전 1:1(전단사) 매칭 |
 | `e2e-mock-policy.tbm.md` | E2E 모킹 최소화 | 모킹 정책·허용목록과 코드에 실재하는 모킹 지점의 양방향 1:1 |
 | `mockup-render.tbm.md` | 목업 ↔ 구현 렌더링 정합성 | 목업이 정의한 화면과 이미 구현된 화면의 시각적 일치(코드 정적 대조) |
 | `journey-mockup.tbm.md` | 사용자 여정 ↔ 목업 1:1 정합성 | 여정 문서와 여정 mockup 페이지의 여정·단계 두 층위 완전 1:1(전단사) |
 | `comment-redundancy.tbm.md` | 주석 비중복성 (복원 가능한 주석 제거) | 코드·문서·PR·커밋 이력으로 복원되는 내용이 주석에 남아 있지 않음 |
 
-한 레포에 docs-impl·ac-e2e 두 유형을 등록하는 것이 기본이며, 이때 역할 분담은:
-**docs-impl**은 "문서 ↔ 구현 코드"의 일치를, **ac-e2e**는 "AC ↔ E2E 테스트
-파일"의 1:1 매칭을 본다. docs-impl의 as-is 범위에서 E2E 디렉터리를 제외하고,
-서로를 "범위 밖 / 비고"에서 교차 참조한다(템플릿에 반영되어 있음).
+한 레포에 docs-impl·scenario-e2e 두 유형을 등록하는 것이 기본이며, 이때 역할
+분담은: **docs-impl**은 "문서 ↔ 구현 코드"의 일치를, **scenario-e2e**는 "테스트
+문서의 시나리오 ↔ E2E 테스트 파일"의 1:1 매칭을 본다. docs-impl의 as-is 범위에서
+E2E 디렉터리를 제외하고, 서로를 "범위 밖 / 비고"에서 교차 참조한다(템플릿에
+반영되어 있음).
 
-두 유형의 경계에서 **미구현 AC의 취급**이 고정부다: AC가 기술한 기능이 아직
-구현되지 않아 E2E가 관측할 대상이 없으면 그것은 ac-e2e의 drift가 **아니라**
-docs-impl의 미구현 AC다. ac-e2e는 그 AC를 "구현 대기"로 등재해 넘기고 **제품
-코드를 만들지 않으며**, 산출물은 E2E 테스트와 등재 문서뿐이다. 이 경계가 없으면
-ac-e2e 루프가 E2E를 쓰려고 화면·엔드포인트를 구현해 docs-impl과 같은 일을 두 번
-하게 된다(2026-08 `tbm_econ-opinion-monitor-ac-e2e`의 AC3.7 슬라이스가 그 사례).
-ac-e2e의 "예외 목록"(E2E로 검증이 곤란 = 영구 면제)과 "구현 대기"(검증할 것이
-아직 없음 = 임시 보류)는 성격이 다르므로 **별도 표**로 관리한다.
+**scenario-e2e는 PRD·AC를 읽지 않는다.** 매칭 공간은 시나리오와 E2E 파일 둘뿐이고,
+"모든 AC가 시나리오로 커버되는가"도 "시나리오가 참조하는 AC가 실재하는가"도 이
+유형의 판정 대상이 아니다 — 그 층은 제품 문서 체계(doc-tracker·`product-doc-engineer`)의
+몫이다. 그래서 PRD만 바뀌면 이 유형은 트리거되지 않고, 새 AC는 테스트 문서에
+시나리오로 내려오는 순간부터 판정 대상이 된다. to-be 범위가 테스트 문서로 좁혀지는
+것이 이 경계의 실질이다.
+
+두 유형의 경계에서 **미구현의 취급**이 고정부다: 시나리오가 기술한 기능이 아직
+구현되지 않아 E2E가 관측할 대상이 없으면 그것은 scenario-e2e의 drift가 **아니라**
+docs-impl의 미구현이다. scenario-e2e는 그 시나리오를 "구현 대기"로 등재해 넘기고
+**제품 코드를 만들지 않으며**, 산출물은 E2E 테스트와 등재 문서뿐이다. 이 경계가
+없으면 scenario-e2e 루프가 E2E를 쓰려고 화면·엔드포인트를 구현해 docs-impl과 같은
+일을 두 번 하게 된다(2026-08 `tbm_econ-opinion-monitor-ac-e2e`의 AC3.7 슬라이스가
+그 사례 — 당시 유형명은 ac-e2e였다). scenario-e2e의 "예외 목록"(E2E로 검증이 곤란
+= 영구 면제)과 "구현 대기"(검증할 것이 아직 없음 = 임시 보류)는 성격이 다르므로
+**별도 표**로 관리한다.
 
 **e2e-mock-policy**는 E2E를 가진 레포에 선택적으로 얹는 세 번째 유형으로,
-ac-e2e가 "AC마다 E2E가 있는가"를 본다면 이쪽은 "그 E2E가 실환경을 실제로
-구동하는가"를 본다. 같은 E2E 트리를 보므로 as-is에 **트리 해시를 쓰지 않고**
-모킹 지점만 추출해 지문화한다 — ac-e2e와의 중복 트리거를 피하기 위한 고정부다.
+scenario-e2e가 "시나리오마다 E2E가 있는가"를 본다면 이쪽은 "그 E2E가 실환경을
+실제로 구동하는가"를 본다. 같은 E2E 트리를 보므로 as-is에 **트리 해시를 쓰지 않고**
+모킹 지점만 추출해 지문화한다 — scenario-e2e와의 중복 트리거를 피하기 위한 고정부다.
 
 **mockup-render**는 목업(디자인 시안)을 가진 레포에 얹는 네 번째 유형으로,
 docs-impl이 "문서가 기술한 동작이 구현되었는가"를 본다면 이쪽은 "**이미 구현된
@@ -78,13 +87,13 @@ CI 게이트로 집행한다. 여백과 색은 여전히 보지 않는다.
   대상 특성상 불가피하게 이탈해야 하면, 모델 definition의 "범위 밖 / 비고"에
   이탈 내용과 사유를 명시한다.
 - **스냅샷(숫자)** — 개수·번호 범위는 **어느 템플릿에서도 판정 기준에 넣지 않는다.**
-  대상(AC·목업·E2E 파일)은 계속 늘고 줄기 때문에, "AC 55개"·"목업 M-01~M-42" 같은
-  숫자를 목표나 판정 기준에 박으면 하나가 추가된 순간 definition이 사실과 어긋난다.
+  대상(시나리오·목업·E2E 파일)은 계속 늘고 줄기 때문에, "시나리오 54개"·"목업 M-01~M-42"
+  같은 숫자를 목표나 판정 기준에 박으면 하나가 추가된 순간 definition이 사실과 어긋난다.
   숫자는 definition의 "등록 시점 현황"에만 **스냅샷으로 라벨링**해 두고, 판정은
-  개수 독립적 서술("모든 AC는…", "(AC 수 − 예외 수) = (파일 수)")로 쓴다. 대상이
+  개수 독립적 서술("모든 시나리오는…", "(시나리오 수 − 예외 수) = (파일 수)")로 쓴다. 대상이
   늘면 버전이 바뀌어 재평가가 트리거되고 새 항목은 자동으로 판정 대상이 되므로,
   현황 숫자 갱신은 각 task의 몫이다.
-- **가변부(슬롯)** — `{{SLOT}}` 표기. 대상 레포·경로·AC 체계·예외처럼 레포마다
+- **가변부(슬롯)** — `{{SLOT}}` 표기. 대상 레포·경로·시나리오 식별 체계·예외처럼 레포마다
   달라지는 값. 각 템플릿의 슬롯 표를 보고 **대상 레포를 실제로 탐색해** 채운다.
   탐색으로 확정되지 않는 값은 추측하지 말고 사용자에게 묻는다.
 
@@ -92,11 +101,11 @@ CI 게이트로 집행한다. 여백과 색은 여전히 보지 않는다.
 
 | 항목 | 규약 |
 |---|---|
-| id | `tbm_<slug>-docs-impl` / `tbm_<slug>-ac-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` / `tbm_<slug>-journey-mockup` / `tbm_<slug>-comment-redundancy` (slug = 소문자 레포명) |
-| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> AC ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` / `<slug> 사용자 여정 ↔ 목업 1:1 정합성` / `<slug> 주석 비중복성 (복원 가능한 주석 제거)` |
-| metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, ac, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` / `[<slug>, journey, mockup, ux, consistency]` / `[<slug>, comments, documentation, consistency]` (+ 필요 시 도구·언어 태그: maestro, playwright, go, python 등) |
+| id | `tbm_<slug>-docs-impl` / `tbm_<slug>-scenario-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` / `tbm_<slug>-journey-mockup` / `tbm_<slug>-comment-redundancy` (slug = 소문자 레포명) |
+| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> 테스트 시나리오 ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` / `<slug> 사용자 여정 ↔ 목업 1:1 정합성` / `<slug> 주석 비중복성 (복원 가능한 주석 제거)` |
+| metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, test-scenario, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` / `[<slug>, journey, mockup, ux, consistency]` / `[<slug>, comments, documentation, consistency]` (+ 필요 시 도구·언어 태그: maestro, playwright, go, python 등) |
 | checkPolicy | `{"intervalSeconds": 3600}` |
-| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·ac-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60`. comment-redundancy는 e2e-mock-policy와 같은 grep 지문(sha256)을 쓰되 주석 줄만 추출하고 `timeoutSeconds: 120` |
+| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·scenario-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(글롭이면 `ls-tree` 지문, 복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60`. comment-redundancy는 e2e-mock-policy와 같은 grep 지문(sha256)을 쓰되 주석 줄만 추출하고 `timeoutSeconds: 120` |
 | lastObservedVersion/At | 등록 시 생략(첫 감지 sweep이 채운다) |
 
 ## 인스턴스화 절차
@@ -121,7 +130,12 @@ CI 게이트로 집행한다. 여백과 색은 여전히 보지 않는다.
 
 ## 기존 모델과의 관계
 
-템플릿 도입 이전에 등록된 모델들은 표현이 조금씩 다르다(예: id 접미사
-`-ac-e2e-1to1`, definition 구성 차이). **기존 id는 유지한다**(task 파일이
-id를 참조). 다만 해당 모델의 definition을 크게 개정할 일이 생기면 템플릿
-구조로 수렴시키는 것을 권장한다.
+템플릿 도입 이전에 등록된 모델들은 표현이 조금씩 다르다(definition 구성 차이 등).
+**기존 id는 유지하는 것이 기본이다**(task 파일이 id를 참조). 다만 해당 모델의
+definition을 크게 개정할 일이 생기면 템플릿 구조로 수렴시키는 것을 권장한다.
+
+예외적으로 **유형 자체가 개명되면 id도 함께 옮긴다**: 2026-09 `ac-e2e` →
+`scenario-e2e` 개정에서 기존 7개 모델(`tbm_<slug>-ac-e2e`,
+`tbm_<slug>-ac-e2e-1to1`)을 `tbm_<slug>-scenario-e2e`로 개명하고
+`data/reconciliation-tasks/<id>.json` 파일명과 각 task의 `toBeModelId`를 함께
+옮겼다. id를 옮길 때는 이 셋을 반드시 한 커밋에서 같이 바꿔야 이력이 끊기지 않는다.
