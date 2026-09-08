@@ -1725,7 +1725,7 @@
       }
     },
     "createdAt": "2026-09-08T08:00:33Z",
-    "updatedAt": "2026-09-08T08:35:00Z",
+    "updatedAt": "2026-09-08T08:40:00Z",
     "stateSummary": {
       "asIs": "## as-is — 지문 `dd6f8722` → `a87e9a6f` (lines 2962 → **2987**, files 122 불변)\n\n**+25 는 주석이 늘어난 것이 아니다.** 부모·트리거에서 모델 스크립트와 같은 추출·정규화로 hit 목록을\n뽑아 `comm` 차집합을 냈다 — **ADDED 28 · REMOVED 3**, 그리고 ADDED 28 중 **24건이\n`검증 시나리오:` 를 담은 줄**이다(20개 매칭 단위의 선언 + 비-시나리오 3건 + `harness_shared_test.go`\n산문 안의 인용 예시 1건). 즉 실제 주석 내용 변화는 **28 − 24 − 3 = 순증 +1줄**뿐이고, 그 +1 은\n`harness_shared_test.go` 헤더 산문의 AC → 시나리오 재작성 결과다.\n\n## 게이트와 모델 지문이 **갈렸다** (숫자로)\n\n| | 부모 `0af04409` | 트리거 | 증가 |\n| --- | --- | --- | --- |\n| 게이트 `check_comment_policy.py` 판정 대상 | 2962줄 / 122파일 | **2963**줄 / 122파일 | **+1** |\n| 모델 `asIs.versionScript` 지문 | 2962 / 122 | **2987** / 122 | **+25** |\n| 차이 | 0 | **24** | = 개명된 선언 줄 수 |\n\n원인은 `#99` 가 게이트의 DIRECTIVE 목록을 **치환**했기 때문이다:\n\n    scripts/check_comment_policy.py:53   (부모 → 트리거)\n    - DIRECTIVE_RE = re.compile(r\"//go:|nolint|eslint-|@ts-|검증 AC:|mock-exception:|mockup:\")\n    + DIRECTIVE_RE = re.compile(r\"//go:|nolint|eslint-|@ts-|검증 시나리오:|mock-exception:|mockup:\")\n\n반면 이 모델의 `asIs.versionScript.code` 안 `DIRECTIVE=` 문자열은 여전히 `검증 AC:` 를 들고 있다.\n`검증 AC:` 는 이제 `control-plane/test`·`web/e2e` 에서 **0건**이므로 그 항목은 죽었고, 새 토큰\n`검증 시나리오:` 는 목록에 없어 **24줄이 지문에서만 판정 대상으로 편입**됐다.\n\n게이트 기준 실측(트리거): 판정 대상 **2963줄 / 122파일** · 판정 완료 **2624줄(88.6%)** / 등재\n**9행 / 126파일** · rc=**0**(R1~R5 위반 0, 등재 9행의 줄 수·지문 전건 불변).",
       "toBe": "## to-be — `docs/comment-policy.md` blob `e4c50dd9` → `a4e1a28a` (+2 / −2)\n\n정책의 「유지 대상 ① 기계가 읽는 주석」 목록이 게이트와 같은 방향으로 갱신됐다:\n\n    - `//go:` · `nolint` · `eslint-` · `@ts-` · `검증 AC:` · `mock-exception:` · `mockup:`\n      (각각 Go 툴체인 · `scripts/e2e/check-ac-mapping.sh` · ...)\n    + `//go:` · `nolint` · `eslint-` · `@ts-` · `검증 시나리오:` · `mock-exception:` · `mockup:`\n      (각각 Go 툴체인 · `scripts/e2e/check-scenario-mapping.sh` · ...)\n\n⇒ **정책 · 게이트는 새 토큰으로 정렬됐고, 모델 지문만 옛 토큰에 남았다.** 09-08 06:19 레코드가\n박아 둔 트립와이어 **(d)** — 「#99 가 머지된 뒤 정책에 새 토큰 0건인데 코드에 ≥1 이면 연다」 —\n는 전건이 반대로 성립해 **미발화**이고, 예고대로 **은퇴**시킨다. 갈라진 것은 정책이 아니라\n**모델 정의**이므로 새 분기 (d′)로 갈아 끼운다(⑥).\n\n게이트 규칙은 여전히 **R1~R5 다섯 개뿐**이고 그중 어느 것도 「등재 == 실측」을 요구하지 않는다 —\nR1(범위 파일 실재) · R2(행별 재측정 == 등재값) · R3(이중 등재 금지) · R4(합계 마커 == 행 합, 양방향\n미러) · R5(줄 좌표 금지). **커버리지 규칙이 없다** ⇒ 등재 **밖**에 쌓이는 잔여는 CI 를 붉히지\n못한다. 이 축의 재감지는 게이트가 아니라 as-is 지문이 진다.",
@@ -1737,6 +1737,77 @@
       "reason": "작업 필요. 09-08 06:19 레코드가 박아 둔 **트립와이어 (a) 의 세 기계 조건이 전부 발화**했고, 직전 fire 가 「#99 가 머지되면 거의 확실히 발화한다」고 예고한 그대로다 — 자매 `tbm_session-platform-scenario-e2e` 비-터미널 **0**(07:35:32Z `succeeded`/`converged`), 그 모델 열린 PR **0**(#99 머지·브랜치 삭제), 오탐 2파일을 뺀 미판정 잔여 **332줄** ≥ 임계 100(그때 94). 조건을 사후에 느슨하게 읽지 않는다.\n\n직전 유예 사유도 함께 죽었다: 「잔여 338줄 중 237줄이 #99 가 헤더 선언을 재작성하는 파일에 있어 지금 등재하면 머지 순간 R2 가 붉어진다」 — #99 가 머지돼 그 표면이 안정됐다.\n\n게이트 자체 파서(`parse_ledger`·`comment_lines`)로 잰 잔여는 339줄/6파일이고, 오탐 7줄(마크다운 볼드 6 · 셸 `case` 와일드카드 1, 원문으로 재확인)을 빼면 실판정 대상 332줄이다. 그중 둘을 범위에서 뺀다 — `shared_volume_test.go`(29→41)는 staged PR #101 이 원장에 「다음 패스의 1순위로 남긴다」고 살아 있는 소유를 선언했고, `harness_shared_test.go`(54)는 **이 fire 가 방금 연** 자매 `scenario-e2e` task 의 후속 저작 슬라이스가 건드릴 수 있는 유일한 공유 하네스다. 착수 범위는 `e2e_f6_credential_split_test.go` 184 + `approval_gated_orchestrator_test.go` 65 = **249줄 / 2파일**.\n\n경합면은 실측으로 좁혔다: #101 은 이 두 파일을 건드리지 않고, #101 해소 트리에서 미리 잰 잔여도 이 249 를 불변으로 남긴다(판정 대상 3075 · 완료 2724 · 미판정 351). 제약은 ⑴ #101 이 재작성 중인 등재 행 #3·#4·#9 를 건드리지 말고 새 행을 추가할 것 ⑵ 합계 마커는 머지 직전 실측으로 다시 잡을 것(R4 양방향 미러) ⑶ 완료 기준을 절대 수치가 아니라 「머지된 main 에서 rc=0 + 대상 2파일이 등재 집합에 든다」로 쓸 것.\n\n완료 기준에 **넣지 말 것**: 모델 `asIs.versionScript` 의 `DIRECTIVE=` 와 게이트 `DIRECTIVE_RE` 가 갈라진 문제(지문 2987 vs 게이트 2963, 차이 24 = 개명된 선언 줄). 고칠 자리가 `to-be-models.json` 이라 `reconciler-tobe-modeler` 소관이고, `rct_20260908-0001` 의 executor 도 독립적으로 같은 결론에 같은 수치로 도달했다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-08T08:00:33Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`control-plane/test/` 의 **미판정 잔여 249줄 / 2파일**(`e2e_f6_credential_split_test.go` 184 ·\n`approval_gated_orchestrator_test.go` 65)을 정책의 판정 절차대로 한 줄도 빠짐없이 판정하고, 복원\n가능한 것을 걷어낸 뒤 **원장에 10번째 행으로 등재**한다. 9차 패스가 이 둘 중 하나를\n「다음 패스의 1순위」로 이름까지 찍어 남겼고(`approval_gated_orchestrator_test.go` — 그때의 유예\n사유였던 「열린 PR 이 이 파일을 65→72 로 움직인다」는 그 PR 이 머지돼 소멸했다), 나머지 하나는\n그 뒤 #95·#99 가 들여온 신규 파일이라 어느 행에도 속하지 않은 채 남아 있다.\n\n**이 방법인 이유.** 이 축의 재감지는 게이트가 아니라 as-is 지문이 진다 — 게이트 규칙 R1~R5 중\n「등재 밖 잔여」를 붉히는 것은 하나도 없어서, 판정하지 않고 두면 잔여는 조용히 쌓이기만 한다\n(그래서 임계 100줄 트립와이어가 있고 지금 332다). 반대로 **등재하면 그 순간부터 R2 가 그 범위를\n지켜** 다음 슬라이스가 주석을 더할 때 그 자리에서 빨개진다. 즉 이 작업의 산출물은 「249줄을\n지웠다」가 아니라 **「249줄이 판정을 받았고 앞으로 기계가 지킨다」**이다.\n\n**범위(완료 기준).** 머지된 main 에서 ⑴ `python3 scripts/check_comment_policy.py` **rc=0**,\n⑵ 등재 행 **9 → 10**, ⑶ 그 새 행의 범위가 정확히 이 두 파일이고 실측 줄 수·지문과 일치,\n⑷ 합계 마커가 R4 를 만족(2624 → 2624 + 새 행 줄 수), ⑸ Go 게이트 5종(`go vet ./...` ·\n`go vet -tags=e2e ./...` · `gofmt -l` · `go test ./...` · `go test -tags=integration ./...`)이\n부모와 같이 초록. **절대 수치(예: 「잔여 90줄 이하」)는 완료 기준에 넣지 않는다** — 형제 PR #101\n이 같은 원장을 재작성 중이라 머지 순서에 따라 잔여 총량이 움직인다.\n\n**범위 밖(후속).** ① `harness_shared_test.go` 54줄 — 이 fire 의 자매 `scenario-e2e`\n(`rct_20260908-0002`, 형제 워커가 `planning` 으로 점유 중)의 후속 저작이 착지할 공유 하네스다.\n② `shared_volume_test.go` 29줄(#101 머지 후 41) — #101 이 원장에 「다음 패스의 1순위로 남긴다」는\n소유를 **살아 있는 문장으로** 선언해 두었다. ③ 오탐 7줄(마크다운 볼드 6 · 셸 `case` 1) 과\n④ 모델 `asIs.versionScript` 의 `DIRECTIVE=` 가 게이트 `DIRECTIVE_RE` 와 갈라진 건(지문 2987 vs\n게이트 2963, 차이 24) — 고칠 자리가 `data/to-be-models.json` 이라 **`reconciler-tobe-modeler`\n소관**이고, executor 가 닫을 수 없으므로 완료 기준에 넣지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "감지 재현 — 대상 레포를 클론해 `python3 scripts/check_comment_policy.py` 를 부모 `78be533` 에서 돌리고, 게이트 자체 파서(`parse_ledger`·`scan_files`·`comment_lines`)로 등재 밖 잔여를 **목록으로** 뽑는다.",
+              "expectedOutcome": "rc=0 · 판정 대상 2963줄/122파일 · 판정 완료 2624줄(88.6%) · 등재 9행. 잔여 339줄/6파일이 감지 요약의 파일별 표와 **한 줄도 다르지 않게** 재현된다(184·65·54·29·6·1)."
+            },
+            {
+              "seq": 2,
+              "action": "Go 게이트 5종의 부모 기준선을 뜬다: `go vet ./...` · `go vet -tags=e2e ./...` · `gofmt -l .` · `go test ./...` · `go test -tags=integration ./...` (control-plane). 나머지 게이트 3종(`check-fidelity-allowlist.py` · `check-render-fidelity.py` · `check-scenario-mapping.sh`)의 출력도 저장한다.",
+              "expectedOutcome": "8종 전부 rc=0. 이후 「내가 깼다」를 기준선 대조로 판정할 수 있고, 게이트 3종 출력은 나중에 **바이트 동일**을 주장할 대조본이 된다."
+            },
+            {
+              "seq": 3,
+              "action": "`e2e_f6_credential_split_test.go` 184줄을 한 줄도 빠짐없이 읽고 복원 경로 넷(①코드 ②저장소 문서 ③PR ④커밋)으로 판정한다. 제거하는 줄마다 **줄 번호가 아니라 심볼 이름·AC 번호**로 좌표를 적는다(R5).",
+              "expectedOutcome": "헤더 산문의 지배적 형태가 `docs/test/e2e.md` §「시나리오 ↔ e2e 파일 매핑」의 이 파일 행(더 자세하다)과 §「남은 미검증 분기」 4행의 영어 재작성임이 확인되고, 유지 대상(대조군 근거·k8s/제품 동작 지식·미래 편집자를 향한 규칙)이 목록으로 갈린다."
+            },
+            {
+              "seq": 4,
+              "action": "같은 절차로 `approval_gated_orchestrator_test.go` 65줄을 판정한다. ⚠️ `e2e_f6` 1행의 `// 검증 시나리오: approval-gated-workload.md#시나리오 8` 은 **기계가 읽는 주석**이라 판정 대상이 아니며 **건드리지 않는다**(`check-scenario-mapping.sh` 가 파싱한다).",
+              "expectedOutcome": "두 파일에서 제거·유지 목록이 확정된다. 두 파일에 같은 말이 있으면 9차 패스 선례대로 **한 벌만 남긴다**."
+            },
+            {
+              "seq": 5,
+              "action": "판정 결과를 두 Go 파일에 적용한다(주석만 삭제·축약, 코드 무변경).",
+              "expectedOutcome": "`git diff` 가 주석 줄에만 걸리고, 비-주석 바이트는 부모와 동일하다."
+            },
+            {
+              "seq": 6,
+              "action": "무변경 증명 + Go 게이트 재실행 — 두 파일에서 주석 줄을 걷어낸 나머지 바이트를 부모와 대조하고, 2단계의 Go 게이트 5종을 다시 돌린다.",
+              "expectedOutcome": "비-주석 바이트 차이 0. Go 게이트 5종 전부 부모와 같이 rc=0(주석만 지웠다는 것을 컴파일러·테스트가 뒷받침한다)."
+            },
+            {
+              "seq": 7,
+              "action": "**`git add -A` 로 stage 한 뒤** 게이트 추출기로 두 파일의 새 줄 수·12자 지문을 잰다. (`check_comment_policy.py` 는 `git ls-files` 로 스캔하므로 stage 전에는 새 상태가 보이지 않는다 — 이전 사이클이 실제로 여기 속았다.)",
+              "expectedOutcome": "새 행에 적을 값(줄 수 N · 지문)이 **손으로 지은 것이 아니라 게이트가 뱉은 값**으로 확정된다."
+            },
+            {
+              "seq": 8,
+              "action": "`docs/comment-policy.md` 에 10번째 원장 행을 추가하고(범위 = 이 두 파일, 줄 수·지문 = 7단계 실측), 합계 마커를 2624 → 2624+N 으로 옮기고, 하단에 판정 상세 절(제거 근거 표 + 유지 사유)을 붙인다. ⚠️ #101 이 재작성 중인 기존 행 `#3`·`#4`·`#9` 는 **건드리지 않는다**.",
+              "expectedOutcome": "원장 행 9 → 10. R4(합계 == 행 합)와 R3(이중 등재 없음)이 산술로 성립한다."
+            },
+            {
+              "seq": 9,
+              "action": "게이트 4종 재실행 — `check_comment_policy.py` 는 rc=0 과 새 인구조사를, 나머지 3종은 2단계 저장본과 **바이트 동일**을 확인한다.",
+              "expectedOutcome": "`OK: 규칙 R1~R5 위반 없음 … 등재 범위 10`. 다른 세 게이트의 출력이 부모와 한 바이트도 다르지 않다(= 이 슬라이스가 다른 축을 건드리지 않았다)."
+            },
+            {
+              "seq": 10,
+              "action": "음성 통제(뮤테이션) — ⑴ 새 행의 줄 수를 ±1 ⑵ 새 행의 지문 한 글자 ⑶ 합계 마커만 갱신 누락 ⑷ 새 행에 이미 등재된 파일을 추가(R3) ⑸ 대상 파일에 주석 한 줄 추가. 각각 게이트가 **어느 규칙으로** 우는지 확인하고 되돌린다. ⚠️ 되돌리기는 `git checkout <file>` 이 아니라 **백업 파일 복사 + `cmp`** 로 한다(미커밋 작업 전체를 날린 선례가 있다).",
+              "expectedOutcome": "⑴⑵ → `[R2]`, ⑶ → `[R4]`, ⑷ → `[R3]`, ⑸ → `[R2]` 로 각각 rc=1. 대조군(원상복구본)은 rc=0. **새 행이 실제로 무언가를 지킨다는 증거**가 된다."
+            },
+            {
+              "seq": 11,
+              "action": "`reconcile/rct_20260908-0004-comment-redundancy` 브랜치로 커밋·푸시하고 PR 을 연다(머지하지 않는다). 본문에 task id · gap 요약 · 판정 수치 · 검증 방법 · #101 과의 경합 해소 절차를 적는다.",
+              "expectedOutcome": "PR 이 열리고 CI 11잡이 돌기 시작한다. 브랜치 이름에 모델 슬러그가 들어가 형제 모델의 동명 `rct` 브랜치를 밟지 않는다."
+            },
+            {
+              "seq": 12,
+              "action": "CI 를 끝까지 기다려 미지수를 닫은 뒤 `planned` 로 넘긴다. `gh api repos/dlddu/session-platform/actions/runs` 로 이 브랜치의 잡 결론을 읽는다(이 설치에는 `checks` 권한이 없어 `gh pr checks` 는 못 쓴다).",
+              "expectedOutcome": "`ci` 11잡 success. e2e 워크플로는 경로 필터상 이 PR 에서 돌지 않을 수 있고, 그때는 「돌지 않았다」를 그대로 적는다(초록으로 오독하지 않는다)."
+            }
+          ],
+          "plannedAt": "2026-09-08T08:40:00Z"
+        }
+      }
+    ]
   }
 ]
