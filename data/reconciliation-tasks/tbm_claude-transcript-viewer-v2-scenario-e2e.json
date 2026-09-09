@@ -156,7 +156,7 @@
   {
     "id": "rct_20260908-0001",
     "toBeModelId": "tbm_claude-transcript-viewer-v2-scenario-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "changedSides": [
         "to_be"
@@ -180,7 +180,7 @@
       "assessedBy": "agent"
     },
     "createdAt": "2026-09-08T00:27:11Z",
-    "updatedAt": "2026-09-09T12:05:24Z",
+    "updatedAt": "2026-09-09T12:06:40Z",
     "attempts": [
       {
         "plan": {
@@ -306,6 +306,64 @@
               "log": "재감지 게이트가 이 모델을 실제로 깨우는지 관측(이 슬라이스가 후속 gap ⓑ 를 잇는 **유일한 경로**라 관측이 필요하다).\n\n`python3 /home/silas/drift-detector/precheck-drift.py` 를 origin/main 기준으로 실행:\n```\n[precheck-drift] tbm_claude-transcript-viewer-v2-scenario-e2e/asIs: unchanged\n[precheck-drift] tbm_claude-transcript-viewer-v2-scenario-e2e/toBe: no baseline (lastObservedVersion=null) -> drift\n…\n[precheck-drift] summary: 2 changed, 0 undetermined across 29 enabled models (0 disabled of 29 total)\n[precheck-drift] DRIFT -> run claude detector. changed: tbm_kubernetes-dashboard-scenario-e2e/toBe, tbm_claude-transcript-viewer-v2-scenario-e2e/toBe\n```\n**종료 코드 10** — 지침의 기대와 정확히 일치. 인계가 살아 있다.\n\n`asIs: unchanged` 가 함께 찍힌 것은 §4 의 「`asIs` 는 건드리지 않는다」가 지켜졌다는 증거다(관계없는 축의 재감지를 유발하지 않았다). 게이트는 29개 모델 전부를 fail-open 0건으로 평가했다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "f87d50758bba48dfd2947f734bbadc4659f43afb",
+          "checks": [
+            {
+              "name": "§7-① 커밋된 code 에 `ls-tree` 뒤 와일드카드 pathspec이 없다",
+              "status": "passed",
+              "detail": "origin/main(`50bc216`)의 이 모델 `toBe.versionScript.code` 를 파싱: 주석이 아닌 **실행 라인 중 `ls-tree` 를 부르는 것은 1개**이고 그 pathspec 세그먼트는 `docs` — 와일드카드(`*`·`?`) 없음. 코드에 남은 `*` 두 개는 ⑴ `grep -E '…[^/]*\\.md$'` 의 정규식과 ⑵ 금지형을 명시한 주석(``pathspec 글롭(`-- 'docs/transcript-viewer-test-*.md'`)은 쓰지 않는다``)뿐이라 pathspec 이 아니다."
+            },
+            {
+              "name": "§7-② 커밋된 JSON에서 꺼낸 코드를 대상 레포@main 에서 실행 → rc=0",
+              "status": "passed",
+              "detail": "`git show origin/main:data/to-be-models.json` → 코드 추출 → `dlddu/claude-transcript-viewer-v2`@main(HEAD `e43b6fdd`)에서 실행: **rc=0**. 실행 단계 step 6 에서 이 문자열이 손으로 쓴 스크립트와 `cmp` 바이트 동일임도 확인했다(JSON 이스케이프 파손 없음)."
+            },
+            {
+              "name": "§7-③ 출력의 `sc:` 가 `e3b0c442…`(빈 입력 sha256) 상수가 아니다",
+              "status": "passed",
+              "detail": "출력 `sc:cc5e94bff2d36cfd920bbdde631c96f58451ba56027a4191ec41f1d631027fe3 reg:836f2f59b68a75076f922daaad34336266e96fad`. 수리 전 같은 HEAD 에서 잰 `sc:e3b0c44298fc1c14…`(레코드에 굳어 있던 값)와 다르다 — 계측기가 눈을 떴다."
+            },
+            {
+              "name": "§7-④ 선택 파일 집합이 `git ls-files 'docs/transcript-viewer-test-*.md'` 와 일치",
+              "status": "passed",
+              "detail": "두 목록을 `diff` → 빈 출력(완전 일치). 5개: `…-test-deployment.md` · `-lifecycle.md` · `-lookup.md` · `-session-list.md` · `-viewer.md`. 각 줄이 `100644 blob <sha>\\t<path>` 형태라 **내용 변경도 잡는다**."
+            },
+            {
+              "name": "§7-⑤ 뮤테이션 M1~M10 전부 §3 표대로 (특히 M8 rc=1, M9 SAME)",
+              "status": "passed",
+              "detail": "10종을 대상 레포 로컬 임시 커밋으로 **실제로 부숴** 신·구를 나란히 측정, 전건 일치. M1~M4(문서 수정·추가·삭제·개명) 신=CHANGED / **구=SAME 4/4**(눈멀었음의 직접 증거) · M5~M7·M9 양쪽 SAME(범위 보존, 미끼 `docs/archive/…` 도 SAME) · **M8(문서 전멸) 신=rc=1 실패**·구=rc=0 상수(재발 시 소리가 난다) · M10 양쪽 CHANGED(`reg:` 대조군). 종료 시 HEAD==BASE(`e43b6fdd`)·워킹트리 clean, 대상 레포에 push 없음."
+            },
+            {
+              "name": "§7-⑥ `toBe` 에 `lastObservedVersion`·`lastObservedAt` 이 없다",
+              "status": "passed",
+              "detail": "origin/main 레코드에서 두 키 **모두 부재**(키 자체가 없음). 새 값으로 전진시키지 않았으므로 재감지 인계가 끊기지 않는다(§4 의 명시적 금지 사항)."
+            },
+            {
+              "name": "§7-⑦ `asIs`·`definition`·`checkPolicy` 와 다른 28개 모델이 바이트 동일",
+              "status": "passed",
+              "detail": "실행 직전 스냅샷(`d7d549b:data/to-be-models.json`)과 origin/main 을 모델 단위로 기계 대조: **달라진 모델은 정확히 1개**(`tbm_claude-transcript-viewer-v2-scenario-e2e`), id 집합·순서 동일. 그 모델 안에서도 `definition`·`asIs`·`checkPolicy` 가 바이트 동일하고, 움직인 것은 `toBe.versionScript.code` · `toBe.lastObserved*` 삭제 · `metadata.updatedAt` 뿐이다(+3/−5)."
+            },
+            {
+              "name": "§7-⑧ `reconciler_tool.py validate` (to-be-model 스키마) rc=0",
+              "status": "passed",
+              "detail": "origin/main 의 `data/to-be-models.json` 을 검증 → `OK: 29 record(s) conform`, **rc=0**.\n\n⚠️ 레포의 다른 게이트 `node --test tests/*.test.mjs` 는 **이 실행 환경에 node 바이너리가 없어 돌리지 못했다**(rc=127; `/usr/local/bin`·`~/.nvm`·`/opt` 전수 탐색해도 부재). 우회하지 않고 사실대로 남긴다. 이 게이트는 §7 완료 기준 목록에 없고, **입력이 이 변경과 겹치지 않음을 기계로 확인**했다 — `tests/*.test.mjs` 7개가 읽는 파일은 `../index.html`(7/7)과 `../templates/`(1개)뿐이고 `data/to-be-models.json` 을 읽는 테스트는 0개인데, 이 커밋이 바꾼 파일은 `data/to-be-models.json` 하나뿐이다."
+            },
+            {
+              "name": "§7-⑨ 재감지 게이트에 `…/toBe: no baseline (lastObservedVersion=null) -> drift`",
+              "status": "passed",
+              "detail": "`python3 /home/silas/drift-detector/precheck-drift.py` 실행(origin/main 기준) → `tbm_claude-transcript-viewer-v2-scenario-e2e/toBe: no baseline (lastObservedVersion=null) -> drift` 가 그대로 찍히고 **종료 코드 10**. 같은 실행에서 `…/asIs: unchanged` 도 찍혀 관계없는 축을 건드리지 않았음이 확인된다. 인계가 살아 있다 — 다음 감지 주기가 이 모델로 후속 task 를 연다."
+            },
+            {
+              "name": "(정보) 범위 밖 잔여 gap — gap ⓑ 매핑 마이그레이션",
+              "status": "passed",
+              "detail": "이 슬라이스는 gap ⓐ(계측기 파손)만 닫았다. 모델 전체 to-be 와의 잔여 gap ⓑ — 시나리오 28개에 「구현」 항목 1:1 선언 붙이기, `docs/transcript-viewer-doc-tracker.md` 에 시나리오 축 매핑·예외·구현 대기 표 등재, 집계 일치 — 는 **계획이 처음부터 범위 밖으로 선언**했고 converged 판정에 넣지 않는다. 사실만 남긴다: 대상 레포에 시나리오→spec 선언은 여전히 **0건**이고 spec 은 25개, 시나리오는 28개다. 이 잔여는 위 ⑨의 재감지가 후속 task 로 잇는다."
+            }
+          ],
+          "verifiedAt": "2026-09-09T12:06:40Z"
         }
       }
     ]
