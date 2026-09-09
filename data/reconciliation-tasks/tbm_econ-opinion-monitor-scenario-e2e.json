@@ -671,7 +671,7 @@
       "assessedBy": "agent"
     },
     "createdAt": "2026-09-08T00:28:14Z",
-    "updatedAt": "2026-09-09T12:08:54Z",
+    "updatedAt": "2026-09-09T12:13:08Z",
     "attempts": [
       {
         "plan": {
@@ -729,6 +729,55 @@
           "required": false,
           "status": "not_required",
           "reason": "저위험·가역 범위라 사람 검토 없이 실행 대기로 넘긴다. 쓰기는 reconciler 레포 자신의 `data/to-be-models.json` 중 이 모델 레코드 1건(모델 29개 중 1개, `toBe.versionScript.code` 교체 + baseline 두 키 삭제)에만 일어나고, 대상 레포 `dlddu/economic-opinion-trend-monitor`·클러스터·프로덕션 워크로드·트래픽에는 한 글자도 쓰지 않는다(읽기 전용). 롤백은 squash 커밋 1개 revert로 완결되고 되돌릴 런타임 상태가 남지 않아 불가역 지점이 없다. 게다가 현 상태가 이미 `sc:`가 빈 입력의 sha256 상수로 굳어 이 축의 변화를 영영 감지하지 못하는 파손이라 미실행이 오히려 영구 미감지라는 더 큰 위험을 유지하며, 수리안은 레포 자신의 `templates/scenario-e2e.tbm.md`가 이미 명문화한 조합형(pathspec 글롭 금지 → 디렉터리 훑기 + `grep -E` 거르기)을 적용한 것이라 정책 범위 밖의 신규 설계가 아니다. 새 스크립트는 빈 선택에서 rc=1로 죽어 같은 결함이 조용히 재발할 수 없다는 점에서 실패 양태도 엄격히 개선된다. 검증도 계획 단계에서 완주돼 있다 — 스키마 `OK: 29 record(s)`, `node --test` 82/82, 커밋된 JSON에서 코드를 도로 꺼낸 라운드트립 바이트 동일, 뮤테이션 7종 전건 재현, 모든 grep 측정을 ugrep이 아닌 GNU grep 3.11 강제라는 비관적 조건에서 수행. 유일하게 갈릴 수 있었던 설계 판단(baseline을 비울 것인가 — 자매 `tbm_kubernetes-dashboard-scenario-e2e` 계획은 남기자고 적었다)도 `d51c3048`이 baseline을 지운 7개 모델 전부가 이번 fire에서 task를 연 7/7 실측으로 이미 결착돼 모호함이 남지 않았다. 남은 마찰은 형제 워커가 같은 파일을 동시에 만지는 머지 충돌 하나인데, 계획 step 6과 executionGuide §5가 머지 직전 재확인과 코드 전문 재적용 폴백을 처방해 두었다. 동형 슬라이스인 `tbm_claude-transcript-viewer-v2-scenario-e2e`/`rct_20260908-0001`(같은 ls-tree 글롭 수리)도 이번 사이클에 not_required로 처리됐다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-09T12:08:56Z",
+          "finishedAt": "2026-09-09T12:13:05Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T12:08:56Z",
+              "finishedAt": "2026-09-09T12:09:40Z",
+              "log": "reconciler checkout(run-20260909-120633-1737040) `pull --rebase` → main `912feb6`. 롤백 원본(구 code 544B)을 워커 tmp에 떠 뒀다. 스테이징 브랜치 fetch → `5f35452`. 브랜치는 merge-base `5011f16` 기준 **1커밋 앞**(`data/to-be-models.json` 1파일 +3/−5)이고, main 은 그 사이 **167커밋** 앞서 있다. ⚠️ 지침 §2가 가정한 「main 대비 1커밋」은 성립하지 않으므로 diff 대조 기준을 merge-base 로 잡고, 별도로 main 측 표류를 단계 2에서 따로 쟀다.\n\n환경 확인: 이 환경의 대화형 셸 `grep` 은 **ugrep 7.5.0(셸 함수)** 이지만, 비대화형 `bash <파일>` 안에서는 `command -v grep` = `/usr/bin/grep` = **GNU grep 3.11** 로 해석된다(실측). versionScript 는 런타임에서 스크립트로 실행되므로 이하 모든 측정을 그 조건 — 지침 §2·§4가 요구한 비관적 조건 — 에서 수행했다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T12:09:40Z",
+              "finishedAt": "2026-09-09T12:10:40Z",
+              "log": "두 축으로 기계 대조했다.\n\n[A] 브랜치가 실제로 바꾸는 것(merge-base `5011f16` → `5f35452`): 모델 **29개 불변**, 달라진 모델 **정확히 1개** `tbm_econ-opinion-monitor-scenario-e2e`, 그 안에서 움직인 키 **정확히 4개** — `toBe.versionScript.code`(교체) · `toBe.lastObservedVersion`(삭제) · `toBe.lastObservedAt`(삭제) · `metadata.updatedAt`(2026-08-30T14:15:00Z→2026-09-08T01:15:00Z). 그 밖 0.\n\n[B] 브랜치가 낡은 동안 main 이 이 모델을 건드렸는가: merge-base 와 main 의 해당 레코드가 **바이트 동일**(움직인 키 0). 지침 §3-5가 경고한 「감지 루프가 baseline 을 다시 채워 넣었을 가능성」은 실측으로 배제됐다. main 에서 움직인 다른 모델은 21개이나 전부 이 슬라이스 밖이다.\n\n[C] 로컬 `git merge --squash FETCH_HEAD` 결과(=실제로 main 에 얹힐 바이트)로 단계 2 단언을 **다시** 쟀다: Auto-merging 충돌 없음, 스테이지 1파일 +3/−5, main 대비 달라진 모델 1개 · 키 4개, 병합 후 `toBe` 키가 `['dataSource','versionScript']` 로 baseline 두 키 부재. 즉 브랜치가 아니라 **머지 산출물**을 기준으로 범위를 확정했다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T12:10:40Z",
+              "finishedAt": "2026-09-09T12:11:10Z",
+              "log": "게이트 2종을 **머지 산출물**(스테이징된 working tree)에서 측정했다 — 167커밋 낡은 브랜치 트리가 아니라 실제로 착지할 트리에서 재는 쪽이 엄격하다.\n\n· `reconciler_tool.py validate --schema schemas/to-be-model.schema.json --data data/to-be-models.json` → `OK: 29 record(s) ... conform` rc=0\n· `node --test tests/*.test.mjs`(node v22.14.0, `/home/silas/toolchains/env.sh`) → `# pass 82 / # fail 0 / # cancelled 0 / # skipped 0`, rc=0\n\n⚠️ `. /home/silas/toolchains/env.sh` 는 `set -u` 아래에서 `LD_LIBRARY_PATH: unbound variable` 로 죽는다 — 그 줄만 `set -u` 없이 실행했다. 레포에 `.github/` 가 없어 대기할 CI 잡은 없다(확인)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T12:11:10Z",
+              "finishedAt": "2026-09-09T12:11:55Z",
+              "log": "round-trip: 병합 산출물 JSON 에서 `toBe.versionScript.code` 를 **도로 꺼내**(901B) 파일로 쓰고, `dlddu/economic-opinion-trend-monitor` 클린 클론(@main `052c112f`)에서 `bash` 로 실행했다. 직접 타이핑이 아니라 레코드에 들어간 문자열이므로 JSON 이스케이프 파손이 배제된다.\n\n결과 `sc:965459bbee867d0e1b346b543e8398d284c5578c27927c1efaedbbe5af475443 reg:4343e5af3d8c6b67492184f1202324a2b6de0479`, rc=0.\n\n· I1 — `sc:` 가 `e3b0c442…`(빈 입력 sha256)가 **아니다** ✅\n· I2 — grep 선택 엔트리 **3** == `git ls-files -- 'docs/econ-opinion-monitor-test-*.md'` **3** ✅\n· I3 — rc=0 ✅\n지침의 참고 스냅샷과도 바이트 일치(대상 레포가 그 사이 움직이지 않았다).\n\n대조군으로 구 스크립트를 같은 트리에서 돌리니 `sc:e3b0c44298fc…` — 레코드에 굳어 있던 `toBe.lastObservedVersion` 과 **바이트 동일**. 파손이 원장에 고착돼 있었다는 직접 증거를 실행 시점에도 재현했다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T12:11:55Z",
+              "finishedAt": "2026-09-09T12:12:40Z",
+              "log": "뮤테이션 7종을 대상 레포 **로컬 임시 브랜치 `probe`** 에서 매번 **커밋까지 해** 측정했다(스크립트가 HEAD 트리를 읽으므로 워킹트리 수정만으론 거짓 음성). 신·구 스크립트를 나란히 돌렸다.\n\n| # | 뮤테이션 | 신(기대) | 신(실측) | 구(실측) |\n| --- | --- | --- | --- | --- |\n| M1 | 시나리오 문서 내용 수정 | sc CHANGED | ✅ sc CHANGED rc=0 | SAME |\n| M2 | 문서 신규 추가 `…-test-v2-alerts.md` | sc CHANGED | ✅ sc CHANGED rc=0 | SAME |\n| M3 | 문서 삭제 | sc CHANGED | ✅ sc CHANGED rc=0 | SAME |\n| M4 | PRD 수정 `…-prd-aggregation-viz.md` | 바이트 동일 | ✅ SAME rc=0 | SAME |\n| M5 | doc-tracker 수정 | reg 만 변화 | ✅ sc SAME · reg CHANGED rc=0 | CHANGED |\n| M6 | 시나리오 문서 전멸 | **rc=1** | ✅ rc=1 | rc=0 상수 |\n| M7 | 중첩 `docs/sub/…-test-x.md` | SAME | ✅ SAME rc=0 | SAME |\n\n신 스크립트는 **7종 전건 기대대로**다. M2(핵심 단언)와 M6(가드 단언) 모두 성립한다.\n\n📌 계획서 대조 열의 「구 스크립트는 7종 전부 SAME」은 **M5 에서만 사실이 아니다** — `reg:` 는 두 스크립트가 공유하므로 doc-tracker 수정은 구 스크립트도 잡는다(실측 CHANGED). 눈멀었다는 실질 주장(시나리오 축 M1·M2·M3·M6 전부 SAME)은 그대로 성립하므로 수리의 근거는 흔들리지 않는다. 완료 기준은 **신** 스크립트의 M1~M7 재현이며 그것은 전건 통과다.\n\n대상 레포는 읽기 전용을 지켰다 — 측정 후 `probe` 브랜치 삭제, HEAD `052c112f` 로 복귀, 워킹트리 clean, `origin/main..HEAD` **0커밋**(원격 무변)."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T12:12:40Z",
+              "finishedAt": "2026-09-09T12:13:05Z",
+              "log": "⚠️ 되돌리기 어려운 지점. `dlddu/reconciler` 는 PR 이 꺼진 레포라 계획대로 `git merge --squash` → 커밋 → 인라인 토큰 URL 로 `HEAD:main` push.\n\n커밋 `model(tbm_econ-opinion-monitor-scenario-e2e): fix to-be versionScript ls-tree glob`, push 후 main = **`f128103`**. 충돌 없음(단계 2 [C] 에서 이미 확인). push 직전 `pull --rebase` 로 최신화했고 rebase 로 형제 워커 커밋(`homelab-k3s-mcp-scenario-e2e` verify 등) 위에 얹혔다.\n\n지침 §3-4 를 따라 `~/.git-credentials` 는 덮어쓰지 않고 push·fetch 를 매번 인라인 토큰 URL 로 했다. 계획 범위 밖 변경은 없다.\n\n(plan step 7 은 수렴 판정이므로 `verification` 에 기록한다.)"
+            }
+          ]
         }
       }
     ]
