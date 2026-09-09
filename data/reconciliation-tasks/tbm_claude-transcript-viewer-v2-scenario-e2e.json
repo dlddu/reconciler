@@ -389,7 +389,7 @@
       "summarizedAt": "2026-09-09T12:16:48Z"
     },
     "createdAt": "2026-09-09T12:16:48Z",
-    "updatedAt": "2026-09-09T13:56:25Z",
+    "updatedAt": "2026-09-09T13:58:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "**작업 필요(`actionRequired: true`).**\n\n**근거 ① gap이 실재한다.** 규칙 4 위반 3건(매칭 파일이 없는 시나리오\n`test-deployment.md#시나리오 4-B` · `test-lifecycle.md#시나리오 1-B` · `test-lifecycle.md#시나리오 3`이\n**등재 없이** 파일만 없는 상태) + 규칙 5 위반(등재 SSOT `docs/transcript-viewer-doc-tracker.md`에\n시나리오 축 집계·예외 목록·구현 대기 표가 부재). 현재 등재 기준 불변식은 28 − 0 − 0 = 28 ≠ 25.\n\n**근거 ② 미점유다.** 이 모델의 비-터미널 task **0건**. 직전 `rct_20260908-0001`은 12:06:40Z에\n`succeeded`/`converged: true`로 닫혔고, 그 계획이 gap ⓑ(마이그레이션)를 **처음부터 범위 밖**으로\n선언했으며 verification ⑨가 재감지 게이트 출력(`no baseline (lastObservedVersion=null) -> drift`,\n종료 코드 10)까지 실측해 「인계가 살아 있다 — 다음 감지 주기가 이 모델로 후속 task를 연다」로\n**detector를 소유자로 지목**했다.\n\n**근거 ③ 지금이 착수 가능한 첫 순간이다.** 12:01:49Z 이전에는 `sc:` 성분이 빈 문자열의 sha256\n상수라 시나리오 축이 **구조적으로 관측 불가**였다. 잔여를 막던 선행이 「이 모델 자신의 눈」이었고\n그 수리가 이 fire 도중에 착지했다.\n\n**근거 ④ 아무도 이 자리를 다시 보지 않는다(보조).** 매핑을 검사하는 CI 게이트가 레포에 **0개**이고\n(`docker-publish.yml`·`test.yml`, `scripts/kind-setup.sh`, `docs/` 밖 `doc-tracker` 언급 0),\n위반 두 건은 스스로 어떤 지문도 움직이지 않는 정적 상태다. 계측기가 수리됐으므로 「재감지 경로 0」을\n논거로 **쓰지는 않는다**.\n\n---\n\n**계획 제약(planner에게).**\n\n1. **범위는 등재 층이다. 선언 층은 이미 전단사다** — 28개 시나리오 전부가 `구현` 항목을 갖고,\n   25개가 실재 spec과 1:1(중복 0 · 고아 0)이다. 「매핑을 새로 짓는 슬라이스」로 계획하면 실제와\n   맞지 않는다(gap ④의 정정을 반드시 읽을 것).\n2. **3건은 등재 대 신설의 선택이고, 등재가 기본이다.** 세 시나리오 모두 대체 검증 수단이 이미\n   실재한다(CI 잡 `kind-e2e-tests` · Go 테스트 두 함수). 규칙 4는 「E2E로 자동 검증이 곤란한\n   시나리오」에 **사유와 대체 검증 수단**을 적어 등재하라고 하고, 규칙 6의 「구현 대기」는 **미구현**\n   전용이라 여기 해당하지 않는다(셋 다 기능은 구현돼 있다) — **구현 대기 표에 넣지 말 것.**\n   전용 e2e 신설을 택하더라도 그 판단과 근거를 등재에 남겨야 한다.\n3. **완료 기준은 불변식으로 쓸 것** — `(시나리오 수 − 예외 수 − 구현 대기 수) == (매칭 단위 수)`,\n   그리고 「한 spec을 둘 이상이 지목하지 않는다 · 고아 0」. 절대 수치(28/25/3)는 참고로만.\n4. **경계**: 이 루프의 산출물은 E2E 테스트와 등재 문서뿐이다. `backend/`·`frontend/` 코드 변경이\n   필요해지면 경계를 넘은 것이다.\n5. **다중 줄 선언을 깨지 말 것** — `viewer#시나리오 1`·`#시나리오 5`는 `- **구현**:` 다음 줄의\n   `- E2E:` 하위 항목에 경로를 적는다. 등재 표를 만들 때 한 줄 파서를 쓰면 이 둘이 누락되고,\n   그것이 09-08 레코드의 「23」을 만든 원인이다.\n",
@@ -546,6 +546,41 @@
               "detail": "`asIsVersionAfter` = `f87d5075…` 로 모델의 `asIs.lastObservedVersion`과 **동일**하다. spec 파일을 하나도 안 건드렸고 머지도 없었으니 당연한 결과다. to-be 축(test 문서 지문 + doc-tracker blob)도 main 기준 불변이다 — 머지가 없었으므로 이번 실행은 어떤 재감지 트리거도 만들지 않았다. 모델의 `lastObservedVersion`은 규약대로 건드리지 않았다."
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "**재계획 이유(`failed`)** — 직전 시도는 계획·준비·검증이 **전부 통과**했고 단 한 단계, `gh pr merge` 에서만 막혔다(연속 2회, 동일 사유: `Permission for this action was denied by the Claude Code auto mode classifier`). 실패는 계획·PR·검증의 결함이 아니라 **실행 세션의 권한 게이트**다. 따라서 이 재계획은 기술적 변경을 한 글자도 바꾸지 않는다 — 같은 계획을 근거 없이 세 번째로 내면 동일 실패가 반복될 뿐이므로, 이 재계획이 사는 것은 오직 **그 게이트가 이미 걷혔다는 증거**다.\n\n## ① 게이트가 걷혔다는 증거 (이 재계획의 유일한 실질 변경)\n\n| 시각(UTC) | 사건 |\n| --- | --- |\n| ≈13:25:19Z | **1차 머지 시도 → 거부.** 아래 규칙이 **생기기 전**이다. |\n| **13:35:57Z** | `~/.claude/settings.json` 이 쓰였다(mtime). 내용에 `permissions.allow: [\"Bash(gh pr merge:*)\"]` (`defaultMode: auto`). |\n| 13:44:20–13:45:10Z | **2차 머지 시도 → 거부.** 그 executor 세션의 checkout 은 `run-20260909-133042-1766554`(**13:30:42Z** 생성)로 **규칙이 쓰이기 전에 시작**했다. 권한 설정은 세션 시작 시점에 로드되므로 그 세션은 규칙을 보지 못했다. |\n| 13:50:36Z | 이 planner 세션의 checkout 생성(`run-20260909-135036-1776116`) — **규칙 이후**. |\n| 13:5x Z | 이 세션에서 **비변경 프로브** `gh pr merge --help` 실행 → **거부 없이 통과**(exit 0). 프리픽스 `Bash(gh pr merge:*)` 가 `gh pr merge …` 형태에 실제로 물린다는 뜻이다. |\n\n⇒ **규칙이 쓰인 뒤 시작된 세션이면 머지가 통과할 것으로 본다.** 두 번의 거부는 「계획이 틀렸다」가 아니라 「세션이 규칙보다 먼저 떴다」로 설명된다.\n\n⚠️ **남는 불확실성을 정직하게 적는다**: 프로브가 산 것은 **권한 프리픽스가 물린다**는 것이지 **머지 자체가 통과한다**는 것이 아니다(`--help` 는 GitHub 에 아무것도 하지 않는다). 이 불확실성은 계획 안에서 없앨 수 없고, 아래 ⑤ anti-churn 규칙으로 닫는다.\n\n⚠️ **우회는 여전히 금지다.** 직전 두 시도가 동일 머지를 REST(`PUT /repos/.../pulls/97/merge`)로 돌려 치지 않은 판단은 옳았고 이번에도 유지한다 — 표면만 바꿔 차단 의도를 뒤집는 것이기 때문이다. `main` 직접 push 도 금지다. 허용되는 경로는 **정상 권한이 열린 세션의 `gh pr merge`** 와 **사람의 직접 머지** 둘뿐이다.\n\n## ② 기술적 변경 — 손대지 않는다. PR #97 은 유효하고 신선하다\n\n`main` 은 여전히 `e43b6fd`(`compare/e43b6fd...main` = `identical`, ahead 0 · behind 0 · 변경 파일 0). PR [#97](https://github.com/dlddu/claude-transcript-viewer-v2/pull/97) 은 `OPEN` · `isDraft false` · `MERGEABLE` · `mergeStateStatus CLEAN` · head `a733e9db` · **+71/−0 docs 2파일**. **새 PR 을 만들지 않는다** — 바꿀 것이 없는데 PR 을 새로 여는 것은 억지 변경이다.\n\n## ③ 독립 재측정 (이 계획의 근거는 내 실측이다)\n\n직전 시도의 체커를 재사용하지 않고, 다중 줄 `- **구현**:` 블록을 **다음 최상위 `- **` 항목 전까지** 읽는 파서를 새로 써서 브랜치 `a733e9d` 를 쟀다:\n\n- 시나리오 전집 **28**(deployment 5 · lifecycle 7 · lookup 4 · session-list 6 · viewer 6)\n- 매칭 단위 spec **25**(`e2e/tests/**/*.spec.*`, `support/*.ts` 제외)\n- 파일 없는 시나리오 **3** — `test-deployment#4-B` · `test-lifecycle#1-B` · `test-lifecycle#3`(PR 이 예외로 등재한 정확히 그 3건)\n- 1:N **0** · N:1 **0** · dangling **0** · 고아 **0** · `구현` 항목 누락 **0**\n- **불변식 28 − 3 − 0 = 25 == 25** ✅\n\n`test-viewer.md` 시나리오 1·5 는 경로가 `- E2E:` **하위 줄**에 있어 한 줄 파서면 23 이 나온다 — 25 를 얻었으므로 이 파서는 그 함정을 통과했다. 즉 09-08 레코드의 「23」과 「선언 0건」 두 정정이 **독립적으로 재확인**됐다.\n\n## ④ 이 시도의 범위(완료 기준) — 절대 수치가 아니라 불변식으로 판정\n\n1. PR #97 이 `main` 에 squash 머지된다.\n2. 머지 후 **`main` 에서** `(시나리오 수 − 예외 수 − 구현 대기 수) == (매칭 단위 파일 수)` 가 성립한다.\n3. 전단사가 **불변**이다(1:N 0 · N:1 0 · dangling 0 · 고아 0). `e2e/tests/**/*.spec.*` 무변경이 기계적 증거다.\n4. 등재된 예외 3건이 각각 **사유 + 레포에 실재하는 대체 검증 수단**을 갖는다.\n\n**범위 밖(후속)** — 직전 계획에서 그대로 이어받는다: ⑴ 규칙 7(완전성) 감사 — 25 spec 이 각 시나리오의 *구현된* 기대 결과 **전부**를 단정하는지 파일별 정독 ⑵ **이 축의 CI 게이트 이식**(레포에 게이트 0개; 지금은 이 정합성 루프가 유일한 관측자다) ⑶ AC 축 절·「현재 상태 요약」의 AC 줄 재작성 ⑷ 고아 가치 4건.\n\n## ⑤ anti-churn — 세 번째 거부가 나면 재계획하지 말 것 (다음 planner 에게)\n\n머지가 **세 번째로** 거부되면 그것은 「세션이 규칙보다 먼저 떴다」로 더 이상 설명되지 않는다(이 계획을 실행하는 세션은 정의상 13:35:57Z 이후에 뜬다). 그때는 **4차 동일 재계획을 내지 마라** — 계획·PR·검증은 이미 세 번 통과했고 더 깎을 것이 없다. 사람이 PR #97 을 squash 머지하면 그대로 수렴한다. `verification` 에 「blocked: 사람의 머지 필요」를 남기고 닫되, 재측정을 처음부터 다시 돌리는 낭비를 하지 마라(§4 의 선제 확인이 그 낭비를 막는 장치다).\n\n## ⑥ 가역성\n\n머지는 squash 1커밋이라 revert 한 번으로 되돌아간다. 되돌리면 등재 층 gap 이 그대로 되살아나 다음 감지가 같은 task 를 다시 열 뿐, 어중간한 잔여 상태가 남지 않는다. 제품 코드·spec 파일·워크플로·매니페스트는 한 줄도 바뀌지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "**신선도 재확인(읽기 전용).** `gh api repos/dlddu/claude-transcript-viewer-v2/compare/e43b6fd...main` 과 `gh pr view 97 --json state,isDraft,mergeable,mergeStateStatus,headRefOid,mergedAt,additions,deletions,changedFiles` 를 본다. ⚠️ `main` 이 움직였으면 집계 28/25 가 낡았을 수 있다 — 그때는 머지하지 말고 step 4 의 체커를 **머지 전** 브랜치에 먼저 돌려 불변식이 여전히 성립하는지 보고, 깨졌으면 집계 갱신 커밋을 브랜치에 얹은 뒤 진행한다.",
+              "expectedOutcome": "`compare` = `identical`(ahead 0 · behind 0 · 파일 0), PR #97 `OPEN`/`isDraft false`/`MERGEABLE`/`CLEAN`, head `a733e9db`, +71/−0 · 2파일. 하나라도 어긋나면 그 자리에서 판단을 기록하고 머지 전에 해소한다."
+            },
+            {
+              "seq": 2,
+              "action": "**머지 권한 선제 확인(비변경 프로브).** `gh pr merge --help` 를 실행한다. 이것은 GitHub 에 아무것도 하지 않고 오직 세션의 권한 프리픽스 `Bash(gh pr merge:*)` 가 물리는지만 본다. ⚠️ **거부되면 여기서 멈춘다** — step 4 의 비싼 재측정을 돌리지 말고 바로 `failed` 로 닫으며 계획 §⑤ anti-churn 을 인용해 「사람의 머지 필요」를 남긴다. 이 순서가 3연속 거부 시의 낭비를 막는 장치다.",
+              "expectedOutcome": "프로브가 거부 없이 exit 0. (거부되면 step 3·4 를 건너뛰고 blocked 로 종료 — 그것도 정상 경로다.)"
+            },
+            {
+              "seq": 3,
+              "action": "**PR #97 을 squash 머지한다**: `gh pr merge 97 --repo dlddu/claude-transcript-viewer-v2 --squash --delete-branch`. ⚠️ **이 계획에서 유일하게 외부 상태를 바꾸는 단계다.** 거부되면 REST·`main` 직접 push 등 **어떤 우회도 시도하지 않는다**(계획 §① 참조) — 거부를 그대로 기록하고 §⑤ 로 간다.",
+              "expectedOutcome": "`gh pr view 97 --json mergedAt,state` 가 `mergedAt` 비어 있지 않고 `state MERGED`. `main` HEAD 가 `e43b6fd` 에서 새 squash 커밋으로 전진하고 그 커밋의 diff 가 +71/−0 · docs 2파일."
+            },
+            {
+              "seq": 4,
+              "action": "**머지 후 수렴 재측정 — `main` 에서.** 브랜치가 아니라 머지된 `main` 을 체크아웃해 체커를 돌린다(직전 시도의 체커를 그대로 믿지 말고 다중 줄 `구현` 블록 파싱을 만족하는 것으로 확인할 것). 재는 것: 시나리오 전집 · 매칭 단위 spec · 파일 없는 시나리오 · doc-tracker 예외/구현대기 표 행 수 · 집계 표 값 · 전단사(1:N · N:1 · dangling · 고아).",
+              "expectedOutcome": "`main` 에서 rc=0 — 불변식 `28 − 3 − 0 = 25 == 25` 성립, 예외 표 3행이 파일 없는 시나리오 3건과 정확히 일치(미등재 0 · 실효 등재 0), 구현 대기 표 0행, 전단사 전 항목 0. **부모 `e43b6fd` 에서는 같은 체커가 rc=1**(`[R5]` 등재 절 부재 + `[R4]` 미등재 3건)이어야 한다 — 이 갈림이 수렴의 증거다."
+            },
+            {
+              "seq": 5,
+              "action": "**재감지 인계 확인.** 머지된 `main` 에서 모델의 두 versionScript 를 그대로 돌려 성분을 기록한다. ⚠️ 모델의 `lastObservedVersion` 은 **건드리지 않는다**(detector 소관).",
+              "expectedOutcome": "to-be = `sc:3a842896e970281df057e280bd06b95019fc297df830792ef577d806e59cb870 reg:9d21bb2bb5ea70d54899412294dfa7e91f877d57` (모델 baseline `sc:cc5e94bf… reg:836f2f59…` 에서 **양 성분 모두 전진**). as-is = `f87d50758bba48dfd2947f734bbadc4659f43afb` **불변** — spec 파일을 하나도 안 건드렸다는 기계적 증거다. ⚠️ squash 머지는 blob 을 보존하므로 이 값들은 그 사이 다른 커밋이 끼지 않는 한 정확히 맞아야 한다; 어긋나면 무언가 더 들어온 것이니 step 4 를 다시 본다."
+            }
+          ],
+          "plannedAt": "2026-09-09T13:58:00Z"
         }
       }
     ]
