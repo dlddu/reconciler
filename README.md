@@ -76,7 +76,7 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
   | --- | --- |
   | **계획 중** | 감지 활성 모델 중 detector·planner가 붙잡고 있는 작업이 있는 모델만 — `assessing`·`planning` |
   | **실행 대기** (기본값) | 감지 활성 모델 중 `planned`(리뷰 판단 대기)·`approved`(실행 대기) 작업이 있는 모델만 |
-  | **실행 중** | 감지 활성 모델 중 승인·실행 단계가 붙잡고 있는 작업이 있는 모델만 — `awaiting_review`·`executing`·`verifying` |
+  | **실행 중** | 감지 활성 모델 중 검토·승인·실행 단계가 진행 중인 작업이 있는 모델만 — `reviewing`·`awaiting_review`·`approving`·`executing`·`verifying` |
   | **활성 전체** | 감지가 활성인 모델 전체 |
   | **숨김** | `checkPolicy.enabled`가 `false`인 모델만 |
 
@@ -87,7 +87,9 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
   앞의 세 모드는 서로 겹치지 않는다. **계획 중**과 **실행 중**은 워커가 그 단계를
   붙잡고 있는 점유(lock) 상태이고, 그 사이의 **실행 대기**(`planned`·`approved`)는 다음
   워커에게 넘어가기를 기다리는 미점유 인수인계 지점이다. `planned`는 검토 필요 여부를
-  판단할 리뷰를, `approved`는 실행을 기다린다. 종료 상태(`succeeded`·`failed`·
+  판단할 리뷰를, `approved`는 실행을 기다린다. **실행 중**에 함께 묶인 `awaiting_review`는
+  사람이 집어가기를 기다리는 미점유 지점이지만, 루프 관점에서는 진행 중인 작업이라 이쪽에
+  둔다 — 오래 머무는 건이 눈에 띄어야 한다. 종료 상태(`succeeded`·`failed`·
   `cancelled`·`no_action_needed`)와 계획 대기(`action_required`)는 어느 쪽에도
   들어가지 않는다. 사이드바 항목에는 각각 **계획 중 N**·**실행 대기 N**·**실행 중 N**
   배지가 함께 표시되므로, 한 모델이 여러 단계에 작업을 갖고 있으면 배지도 함께 붙는다.

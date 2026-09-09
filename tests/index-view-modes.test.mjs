@@ -125,11 +125,13 @@ test("the three workflow status sets are disjoint", () => {
   );
 });
 
-test("planning is the detector/planner lock, pending is the handoff, running is the executor lock", () => {
+test("planning is the detector/planner lock, pending is the handoff, running covers review/approval/execution", () => {
   assert.deepEqual(Array.from(run("PLANNING_STATUSES")), ["assessing", "planning"]);
   assert.deepEqual(Array.from(run("PENDING_STATUSES")), ["planned", "approved"]);
   assert.deepEqual(Array.from(run("RUNNING_STATUSES")), [
+    "reviewing",
     "awaiting_review",
+    "approving",
     "executing",
     "verifying"
   ]);
