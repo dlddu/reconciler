@@ -647,7 +647,7 @@
   {
     "id": "rct_20260908-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-scenario-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "changedSides": [
         "to_be"
@@ -671,7 +671,7 @@
       "assessedBy": "agent"
     },
     "createdAt": "2026-09-08T00:28:14Z",
-    "updatedAt": "2026-09-09T12:13:48Z",
+    "updatedAt": "2026-09-09T12:15:50Z",
     "attempts": [
       {
         "plan": {
@@ -780,7 +780,77 @@
           ]
         },
         "verification": {
-          "status": "pending"
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "ad5c733e2e43745751936822317267ef37ee4aa5",
+          "checks": [
+            {
+              "name": "C1 · 머지된 main 레코드가 수리안과 일치",
+              "status": "passed",
+              "detail": "`main@f128103` 의 `tbm_econ-opinion-monitor-scenario-e2e.toBe.versionScript.code` 는 901B, sha256 `5bfd75dc8db0cb9e…`, 단계 4에서 실제로 실행한 문자열과 **바이트 동일**. 주석을 제외한 실행 라인 4줄을 기계로 검사: `git ls-tree -r HEAD -- docs`(디렉터리 pathspec, **글롭 pathspec 없음**) → `grep -E '[[:blank:]]docs/econ-opinion-monitor-test-[^/]+\\.md$'`(**리터럴 `\\t` 없음**) → `sha256sum` → `cut`, 그리고 `set -euo pipefail` 가드 존재. (⚠️ 코드 전문에 `-- 'docs/…'` 와 `\\t` 문자열이 보이지만 전부 **주석 안의 설명**이다 — 실행 라인 기준으로 재측정해 확인했다.)"
+            },
+            {
+              "name": "C2 · to-be baseline 두 키 부재",
+              "status": "passed",
+              "detail": "머지 후 `toBe` 키 = `['dataSource','versionScript']`. `lastObservedVersion` 부재 · `lastObservedAt` 부재. 지침 §3-2대로 **손으로 채워 넣지 않았다** — 다음 감지 fire 가 `previousVersion:null` 로 새 축의 최초 관측 task 를 열게 남긴 것이 의도다. 머지 후 재확인이라 §3-5가 경고한 「감지 루프가 그새 baseline 을 되살려 충돌」도 배제됐다."
+            },
+            {
+              "name": "C3 · I1 — sc: 가 빈 입력 sha256 상수가 아니다",
+              "status": "passed",
+              "detail": "머지된 main 레코드에서 도로 꺼낸 code 를 `dlddu/economic-opinion-trend-monitor@main(052c112f)` 클린 클론에서 실행: `sc:965459bbee867d0e1b346b543e8398d284c5578c27927c1efaedbbe5af475443 reg:4343e5af3d8c6b67492184f1202324a2b6de0479`. `e3b0c442…`(빈 입력 sha256)가 **아니다**. 대조로 구 스크립트를 같은 트리에서 돌리면 `sc:e3b0c442…` 가 나오고, 이는 수리 전 레코드의 `toBe.lastObservedVersion` 과 바이트 동일 — 파손이 원장에 굳어 있었음을 실행 시점에도 재현했다."
+            },
+            {
+              "name": "C4 · I2 — 선택 엔트리 수가 실제 문서 수와 일치",
+              "status": "passed",
+              "detail": "`git ls-tree -r HEAD -- docs | grep -cE '[[:blank:]]docs/econ-opinion-monitor-test-[^/]+\\.md$'` = **3** == `git ls-files -- 'docs/econ-opinion-monitor-test-*.md' | wc -l` = **3** (aggregation-viz · analysis · ingestion). 수리 전에는 선택 0건이었다."
+            },
+            {
+              "name": "C5 · I3 — rc=0",
+              "status": "passed",
+              "detail": "정상 트리에서 종료코드 0."
+            },
+            {
+              "name": "C6 · M1~M3 — 시나리오 문서 변화를 잡는다",
+              "status": "passed",
+              "detail": "대상 레포 로컬 임시 브랜치에서 **커밋까지 해** 측정(스크립트가 HEAD 트리를 읽으므로 워킹트리 수정만으론 거짓 음성). M1 내용 수정 → `sc:` CHANGED · M2 신규 문서 `…-test-v2-alerts.md` 추가 → `sc:` CHANGED · M3 문서 삭제 → `sc:` CHANGED, 셋 다 rc=0. **M2 가 이 수리의 핵심 단언**이다 — 구 스크립트의 주석이 「문서가 새로 추가돼도 글롭이 자동 포함한다」고 적어 두고 실제로는 하나도 포함하지 못하던 바로 그 경우이며, 구 스크립트는 M1·M2·M3 전부 SAME 이다."
+            },
+            {
+              "name": "M4·M7 — 범위 보존(과잉 감지 없음)",
+              "status": "passed",
+              "detail": "M4 PRD(`…-prd-aggregation-viz.md`) 수정 → 출력 **바이트 동일**(AC 층은 이 모델 판정 대상이 아니라는 경계 유지). M7 중첩 경로 `docs/sub/econ-opinion-monitor-test-x.md` 추가 → SAME(`[^/]+` 가 최상위만 선택). 둘 다 rc=0."
+            },
+            {
+              "name": "M5 — doc-tracker 축 분리",
+              "status": "passed",
+              "detail": "doc-tracker 수정 → `sc:` 불변 · `reg:` 만 변화, rc=0. 기대대로다.\\n\\n📌 계획서 대조 열의 「구 스크립트는 7종 **전부** SAME」은 M5 에서만 사실이 아니다 — `reg:`(`git rev-parse HEAD:…doc-tracker.md`) 는 신·구가 공유하는 항이라 구 스크립트도 이 변화는 잡는다(실측 CHANGED). 눈멀었다는 실질 주장(**시나리오 축** M1·M2·M3·M6 전부 SAME)은 그대로 성립하므로 수리 근거는 흔들리지 않는다. 이 task 의 완료 기준은 **신** 스크립트의 M1~M7 재현이고 그것은 전건 통과다."
+            },
+            {
+              "name": "M6 — 재발 시 조용히 굳지 않고 시끄럽게 죽는다",
+              "status": "passed",
+              "detail": "시나리오 문서 전멸 → 신 스크립트 **rc=1**(grep 이 rc=1 → `pipefail` 이 죽인다). 구 스크립트는 같은 조건에서 rc=0 에 상수 출력이었다. 즉 같은 병(선택 0건 → 상수 고착)이 재발해도 침묵하지 않는다 — 실패 양태가 엄격히 개선됐다."
+            },
+            {
+              "name": "레포 게이트 2종",
+              "status": "passed",
+              "detail": "머지 산출물(실제로 착지할 트리)에서 측정: 스키마 검증 `OK: 29 record(s) conform`, `node --test tests/*.test.mjs`(v22.14.0) **82 pass / 0 fail / 0 skipped**, rc=0. 레포에 `.github/` 가 없어 대기할 CI 잡 없음."
+            },
+            {
+              "name": "변경 범위 봉인 — 모델 1개 · 키 4개",
+              "status": "passed",
+              "detail": "main 대비 머지 결과: 모델 **29개 불변**, 달라진 모델 **정확히 1개**, 움직인 키 **정확히 4개**(`toBe.versionScript.code` 교체 · `toBe.lastObservedVersion` 삭제 · `toBe.lastObservedAt` 삭제 · `metadata.updatedAt` 갱신), 그 밖 0. 승인 시점 계획을 넘은 변경은 없다."
+            },
+            {
+              "name": "대상 레포 무변경(읽기 전용 경계)",
+              "status": "passed",
+              "detail": "`dlddu/economic-opinion-trend-monitor` 에는 한 글자도 쓰지 않았다. 뮤테이션 14회(단계 5의 7종 + 단계 7 재현 7종)는 전부 로컬 임시 브랜치 `probe` 커밋이고 push 하지 않았다. 측정 후 브랜치 삭제 · HEAD `052c112f` 복귀 · 워킹트리 clean · `origin/main..HEAD` **0커밋**으로 확인. 클러스터·프로덕션·트래픽 무영향."
+            },
+            {
+              "name": "(정보성) 잔여 gap ⓑ — 이 슬라이스 범위 밖",
+              "status": "passed",
+              "detail": "수렴 판정에 넣지 않는 사실 기록. 대상 레포 `@052c112f` 실측: 시나리오 문서 3개에 `### 시나리오 N:` 헤딩 **21개**(ingestion 7 · analysis 6 · aggregation-viz 8) ↔ `tests/e2e/specs/` 최상위 spec **4개**. `검증 시나리오:` 선언 레포 전체 **0건**, 현행 선언은 전부 `검증 AC:`(**8건**). 즉 새 축의 매핑 마이그레이션은 그대로 남아 있다. 이 task 의 완료 기준은 plan 이 명시한 **gap ⓐ(계측기 수리)** 뿐이며, ⓑ 는 baseline 이 비워진 채 남은 계측기가 **다음 감지 주기**에 `previousVersion:null` 로 관측해 후속 task 를 여는 것이 정상 진행이다."
+            }
+          ],
+          "verifiedAt": "2026-09-09T12:15:50Z"
         }
       }
     ]
