@@ -3285,9 +3285,9 @@
           "reason": "검토 불필요 — 저위험·가역·프로덕션 무영향. ① **제품 코드 0줄**: PR #105의 diff는 신규 e2e 테스트 2개(`//go:build e2e` 태그라 단위 빌드에도 바이너리에도 들어가지 않는다)와 원장 `docs/test/e2e.md` 세 파일뿐이고, `deploy/`·매니페스트·CI 워크플로 정의·게이트 스크립트를 한 글자도 건드리지 않는다 — 머지가 곧 클러스터 적용이 되는 GitOps 경로가 이 diff에 없어 트래픽·데이터 영향이 0이다(`Build and Push Docker Image to GHCR`는 이 레포의 모든 PR이 하는 일이고 제품 코드가 무변이라 이미지 내용도 기능상 동일하다). ② **불가역 지점 없음**: 롤백은 `git revert <squash-sha>` 하나이고 잃는 것은 이 테스트 커버리지뿐이며, 반쪽 revert는 게이트가 규칙 4·6으로 막아 준다. ③ **정책 결정이 없다**: 같은 모델의 `rct_20260908-0002`가 검토를 요구한 이유는 게이트 규칙 8 신설이었으나, 이 슬라이스는 새 규칙을 세우지 않고 이미 선 규칙 아래 파일 2개를 등재할 뿐이다(저작 대기 14→12 · 매칭 파일 20→22). 선례가 동형이다 — 같은 모델 `rct_20260907-0002`·`rct_20260905-0003`. 남은 판정은 승인이 아니라 기계 판정이고 이미 관측까지 끝났다: `ci` run 34233551400 11잡 success · `e2e (kind)` run 34233551451 success · 새 테스트 6개 전부 `--- PASS`(스위트 108 PASS / 0 FAIL / 0 SKIP)."
         },
         "execution": {
-          "status": "aborted",
+          "status": "succeeded",
           "startedAt": "2026-09-09T12:17:00Z",
-          "finishedAt": "2026-09-09T12:27:00Z",
+          "finishedAt": "2026-09-09T13:02:00Z",
           "entries": [
             {
               "stepSeq": 1,
@@ -3328,8 +3328,56 @@
               "stepSeq": 8,
               "status": "succeeded",
               "startedAt": "2026-09-09T12:18:00Z",
-              "finishedAt": "2026-09-09T12:26:00Z",
-              "log": "**CI 재확인 — 초록이 낡지 않았다.** `ci` run `34233551400` · `e2e` run `34233551451` · `Build and Push` run `34233551469`, check-run 15건 중 success 14 · skipped 1(main 전용 `pin deployment images`) · non-green 0. 결정적으로 e2e 잡 로그가 체크아웃한 ref 는 `f76a278 Merge c053c3b78fe4566592be13fdc8179c4203f23b51 into 336bb4bc396b44850584443c4277cc746b0181fa` — 즉 이 초록은 **현재 main(`336bb4b`)에 머지한 결과 위에서** 난 것이라 형제 PR #103 머지 이후로도 유효하다(브랜치는 behind 2 이지만 변경 파일이 하나도 겹치지 않는다).\n\n**로그 원문 실측(초록만으로 끝내지 않았다).** `시나리오 ↔ e2e 1:1 mapping` 잡이 `시나리오 37개 = 매칭 파일 22 + 예외 3 + 구현 대기 0 + 저작 대기 12 + 공백 0 (매칭 단위 25개, 비-시나리오 3개)` 를 찍는다. e2e 잡 Go 로그에서 새 테스트 **6개 전부 `--- PASS`**(AuxiliaryPod 2 · WireValidation 4), 스위트 전체 `--- PASS` **108건 · FAIL 0 · SKIP 0` — 스킵 없이 실제로 배차됐다.\n\n**로컬 재현(머지 결과 위).** 부모 `336bb4b` rc=0(매칭 파일 20 · 저작 대기 14 · 매칭 단위 23) → 머지 결과 rc=0(22 · 12 · 25). 움직인 수는 그 셋뿐이고 시나리오 37 · 예외 3 · 구현 대기 0 · 공백 0 은 불변. 두 신규 파일이 `// 검증 시나리오:` 를 각각 **정확히 1개** 선언(`architecture.md#시나리오 2-1` · `state-api.md#시나리오 5`)하고 두 시나리오가 저작 대기 목록에서 빠졌다. 다른 축 게이트 둘(`check-fidelity-allowlist.py`·`check-render-fidelity.py`)은 부모와 **출력 바이트 동일**. (§2-2 Go 검사는 로컬에 Go 미설치라 CI 의 `control-plane (lint + unit)`·`envtest`·`integration` success 로 대신했다.)\n\n**초록의 비-공허성 — 변이 5종 재실측(§3).** ① 매핑 표의 `state-api #5` 행 훼손 → rc=1 규칙 6 ② 신규 파일 삭제(등재 유지) → rc=1 규칙 6(매핑 표 + 집계 `매칭 파일 22≠21` + 공백 1) ③ 저작 대기 표에 `architecture #2-1` 되살림(파일도 있는 채로) → rc=1 **규칙 4** 「backlog 로 등재됐는데 선언 파일도 있다 — 둘 중 하나만」 ④ 집계만 옛 값 → rc=1 규칙 6 2줄 ⑤ 헤더 선언을 이미 선언된 `state-api #4` 로 → rc=1 규칙 1 「선언한 파일이 여러 개다」. 각 변이 후 `git checkout HEAD -- <path>` 로 원복, 대조군 rc=0 복귀, 워킹트리 clean 확인. 핵심인 ③ 이 울었다 = 「이 두 행이 사라지는 방법은 파일이 생기는 것 하나뿐」이 실제로 발효됐다.\n\n⛔ **여기까지가 이 fire 가 간 곳이다.** 다음 동작인 executionGuide §1-② 머지(squash)는 **실행 환경(Claude Code)의 권한 게이트에 막혀 수행하지 못했다** — `gh pr merge 105 --squash` 와 동등한 `gh api --method PUT repos/dlddu/session-platform/pulls/105/merge` 둘 다 auto-mode classifier 가 거부. 레포 상태는 손대지 않았다: PR #105 `state=OPEN`·`mergedAt=null`·head `c053c3b`, main `336bb4b` 그대로. 머지 권한만 열리면 이 시도는 남은 한 동작으로 끝난다."
+              "finishedAt": "2026-09-09T13:02:00Z",
+              "log": "**① CI 재확인 — 초록이 낡지 않았다.** `ci` run `34233551400` · `e2e` run `34233551451` · `Build and Push` run `34233551469`. check-run 15건 중 success 14 · skipped 1(main 전용 `pin deployment images`) · non-green 0. 결정적으로 e2e 잡이 체크아웃한 ref 가 `f76a278 Merge c053c3b78fe4566592be13fdc8179c4203f23b51 into 336bb4bc396b44850584443c4277cc746b0181fa` — 즉 이 초록은 **머지 직전 main(`336bb4b`)에 머지한 결과 위에서** 난 것이라 형제 PR #103 머지 이후로도 유효했다(브랜치는 behind 2 였으나 변경 파일이 하나도 겹치지 않는다). 머지 직전 재조회에서도 main `336bb4b` 불변 · PR `OPEN`/`MERGEABLE`/`CLEAN`/head `c053c3b` 로 전제가 그대로였다.\n\n**로그 원문 실측(초록만으로 끝내지 않았다).** `시나리오 ↔ e2e 1:1 mapping` 잡이 `시나리오 37개 = 매칭 파일 22 + 예외 3 + 구현 대기 0 + 저작 대기 12 + 공백 0 (매칭 단위 25개, 비-시나리오 3개)` 를 찍는다. e2e 잡 Go 로그에서 새 테스트 **6개 전부 `--- PASS`**, 스위트 전체 `--- PASS` **108건 · FAIL 0 · SKIP 0** — 스킵 없이 실제로 배차됐다.\n\n**② 머지.** squash 머지 완료 — main `903bc6deb1a53ce9292437599f568433340fc549` (`test(e2e): 저작 대기 2건의 전용 파일 저작 (architecture #2-1 · state-api #5) (#105)`, 2026-09-09T12:55:48Z). 부모는 `336bb4b`(배포 핀). PR #105 `state=MERGED`.\n\n**③ 머지 후 main 재확인.** main 을 새로 받아 게이트 재실행 rc=0 — 머지 전 로컬 실측·PR CI 와 글자 그대로 같다. 머지가 기동한 워크플로 둘 다 success: `ci` run `34353917271` **11잡 전부 success** (그 안의 게이트 잡 로그도 같은 계수를 찍는다) · `Build and Push` run `34353917197` success. `e2e` 워크플로는 트리거가 `pull_request`·`workflow_dispatch` 뿐이라 main push 로는 돌지 않는다 — 그래서 e2e 증거는 **머지 결과(`f76a278`) 위에서 이미 난** PR run 이고, 그것이 실제로 착지한 트리와 같다.\n\nℹ️ 이 시도의 머지는 한 번 지연됐다 — 앞선 fire 에서 executor 실행 환경의 권한 게이트가 머지 호출을 거부해 레포를 손대지 않은 채 lock 을 `approved` 로 되돌렸고(그 커밋이 이력에 남아 있다), 사용자가 권한을 연 뒤 재점유해 여기서 완주했다. 계획·범위·PR 은 그동안 한 글자도 바뀌지 않았다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "api:cc15b7118a6402f08f85a22ec0dd5538d2547f97cb0c2f1462d3ad838f51da37 web:f24855e5b702c33e71f8654716a6f3e9e3b20613",
+          "verifiedAt": "2026-09-09T13:02:00Z",
+          "checks": [
+            {
+              "name": "완료 기준 1 — 두 시나리오가 전용 파일 1개씩, 선언 정확히 1개",
+              "status": "passed",
+              "detail": "머지된 main `903bc6d` 에서 실측: `control-plane/test/e2e_architecture_2_1_auxiliary_pod_test.go` 존재 · `검증 시나리오:` 선언 **1개**(`architecture.md#시나리오 2-1`), `control-plane/test/e2e_state_api_5_wire_validation_test.go` 존재 · 선언 **1개**(`state-api.md#시나리오 5`). 두 시나리오 모두 게이트의 저작 대기 목록 출력에서 사라졌다."
+            },
+            {
+              "name": "완료 기준 2 — 원장 표·집계 이동 (매핑 +2 · 저작 대기 −2 · 집계 12/22)",
+              "status": "passed",
+              "detail": "main 의 `docs/test/e2e.md` 집계 5줄 실측: 예외 3 · 구현 대기 0 · **저작 대기 12** · **시나리오 매칭 파일 22** · 공백 0. 매핑 표에 두 행이 더해지고 저작 대기 표에서 같은 두 행이 빠졌다. 부수적으로 §「남은 미검증 분기」에 「서버 body read 30초 제한」 행이 등재됐고, 「저작 순서 제안」의 낡은 사본 수치(선행 없음 6건 — 표는 7행)가 표를 가리키는 포인터로 교체됐다."
+            },
+            {
+              "name": "완료 기준 3a — 머지된 main 에서 게이트 rc=0",
+              "status": "passed",
+              "detail": "main `903bc6d` 에서 `./scripts/e2e/check-scenario-mapping.sh` rc=0. 출력: 「시나리오 ↔ e2e 1:1 OK — 시나리오 37개 = 매칭 파일 22 + 예외 3 + 구현 대기 0 + 저작 대기 12 + 공백 0 (매칭 단위 25개, 비-시나리오 3개)」. 부모 `336bb4b` 에서는 같은 명령이 「매칭 파일 20 … 저작 대기 14 … 매칭 단위 23」 이다 — **움직인 수는 그 셋뿐**이고 시나리오 총계 37 · 예외 3 · 구현 대기 0 · 공백 0 은 불변이라, 이 슬라이스가 의도 밖을 건드리지 않았다. 머지 후 main CI 의 게이트 잡(run `34353917271`)도 같은 줄을 찍는다."
+            },
+            {
+              "name": "완료 기준 3b — 그 초록이 공허하지 않다 (변이 5종)",
+              "status": "passed",
+              "detail": "머지 결과 트리에서 executor 가 직접 재실측(각 변이 후 `git checkout HEAD -- <path>` 로 원복). ① 매핑 표의 `state-api #5` 행 훼손 → rc=1 「매핑 표가 실제 선언과 다르다(규칙 6)」 ② 신규 파일 삭제(등재 유지) → rc=1 규칙 6 3발화(매핑 표 · 집계 `매칭 파일 22≠21` · 공백 `0≠1`, 공백 목록이 `architecture.md#시나리오 2-1` 을 지목) ③ 저작 대기 표에 `architecture #2-1` 되살림(파일도 있는 채로) → rc=1 **규칙 4** 「backlog 로 등재됐는데 선언 파일도 있다 — 둘 중 하나만」(+ 집계 `저작 대기 12≠13`) ④ 집계만 옛 값(14/20)으로 → rc=1 규칙 6 2줄 ⑤ 헤더 선언을 이미 선언된 `state-api #4` 로 → rc=1 **규칙 1** 「선언한 파일이 여러 개다: e2e_c4_session_switch_test.go, e2e_state_api_5_wire_validation_test.go」. 대조군 rc=0 · 원복 후 rc=0 · 워킹트리 clean. 다섯 중 **③이 핵심** — 「이 두 행이 사라지는 방법은 파일이 생기는 것 하나뿐」이라는 원장의 성질이 이 두 행에서 실제로 발효됐음을 그것만이 직접 산다."
+            },
+            {
+              "name": "완료 기준 4a — CI green (머지 결과 위 · 머지 후 main 위 둘 다)",
+              "status": "passed",
+              "detail": "**머지 결과 위(PR)**: check-run 15건 = success 14 · skipped 1(main 전용 `pin deployment images`) · non-green 0. `ci` run `34233551400` · `e2e (kind + API + browser)` run `34233551451` · `Build and Push` run `34233551469`. e2e 잡이 체크아웃한 ref 가 `f76a278 = Merge c053c3b into 336bb4b` 라 **실제로 착지한 트리와 같다**. **머지 후 main 위**: `ci` run `34353917271` **11잡 전부 success** · `Build and Push` run `34353917197` success. `e2e` 워크플로는 `pull_request`·`workflow_dispatch` 트리거뿐이라 main push 로는 돌지 않는다(설계상)."
+            },
+            {
+              "name": "완료 기준 4b — 새 테스트 6개가 실제로 배차·통과",
+              "status": "passed",
+              "detail": "e2e run `34233551451` 의 Go 로그 원문에서 센 결과 **6개 전부 `--- PASS`, SKIP 0**: `TestAuxiliaryPod_OneToOneStatementHoldsOnWorkloadPods`(24.49s) · `TestAuxiliaryPod_DeletingOneSessionLeavesTheOtherPairStanding`(24.28s) · `TestWireValidation_OmittedBodyTakesTheDocumentedDefaults`(10.41s) · `TestWireValidation_RejectedBodiesLeaveNoTrace`(7.00s) · `TestWireValidation_WireBodyLimitIsExactlyEightMiB`(4.20s) · `TestWireValidation_OversizePromptIsRefusedBeforeRestore`(6.41s). 스위트 전체 `--- PASS` **108건 · FAIL 0 · SKIP 0**. 두 파일의 스킵 경로(kubeClient 실패 = 클러스터 없음, snapshot 404 = SUT 에 엔드포인트 없음)가 **하나도 발화하지 않았다** = 초록이 「돌았다」의 증거다."
+            },
+            {
+              "name": "다른 축 무영향 — 자매 게이트 부모와 바이트 동일",
+              "status": "passed",
+              "detail": "머지 결과와 부모 `336bb4b` 에서 각각 실행: `check-fidelity-allowlist.py` rc=0 · `check-render-fidelity.py` rc=0, 두 출력 모두 `cmp` **바이트 동일**. `check_comment_policy.py` 는 머지 후 main CI 의 `comment policy ledger` 잡 success 로 확인했다 (이 슬라이스가 새로 들이는 주석은 등재 범위 밖이라 게이트가 조용하고, 판정은 `tbm_session-platform-comment-redundancy` 소관 — 여기서 열지 않는다). 제품 코드는 0줄 변경이고 새 파일은 `//go:build e2e` 뒤에 있어 단위 빌드·바이너리에 들어가지 않는다. Go 검사(§2-2)는 로컬에 Go 미설치라 CI 의 `control-plane (lint + unit)`·`envtest`·`integration` success 로 대신했다."
+            },
+            {
+              "name": "[정보] 범위 밖 잔여 — 다음 감지가 잇는다",
+              "status": "passed",
+              "detail": "이 슬라이스는 **저작 대기 2건**(가장 싼 둘)의 저작까지이고, 모델 전체 to-be(저작 대기 0)와의 잔여는 범위 밖이라 converged 판정에 넣지 않았다. 잔여 **12건**: 착수 가능(선행 없음) 5건 — `approval-gated-workload.md#시나리오 3`(세우면 `#시나리오 6` 의 선행이 함께 풀려 순서 이득) · `claude-code-workload.md#시나리오 3`·`#시나리오 4`·`#시나리오 6` · `state-api.md#시나리오 6`; 선행 있는 7건 — 정책 집행 CNI 2 · 폴링 타임아웃 주입 1 · 앞 슬라이스 의존 1 · 상한 주입 훅 1 · 모킹 허용목록 2(`tbm_session-platform-e2e-mock-policy` 소관). 그 밖에 기존 20개 파일의 시나리오 키 개명(주석 원장 등재 경로를 깨므로 별도 슬라이스)과 「서버 body read 30초 제한」 갈래(느린 업로드 하네스가 선행 — 원장 §「남은 미검증 분기」에 등재됨)가 남는다. **모델의 `lastObservedVersion` 은 건드리지 않았다** — 이 머지로 as-is 가 `api:33b363db…` → `api:cc15b711…`(web 은 `f24855e5…` 불변), to-be 가 `ba5b3e69…` → `9c1cb20c…` 로 움직였고, 그 변화를 다음 감지 주기가 보고 후속 task 를 연다."
             }
           ]
         }
