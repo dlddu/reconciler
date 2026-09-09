@@ -102,7 +102,7 @@
     "toBeModelId": "tbm_dear-baby-journey-mockup",
     "status": "executing",
     "createdAt": "2026-08-30T10:07:30Z",
-    "updatedAt": "2026-09-09T11:34:35Z",
+    "updatedAt": "2026-09-09T11:37:54Z",
     "trigger": {
       "detectedAt": "2026-08-30T10:07:30Z",
       "changedSides": [
@@ -192,6 +192,53 @@
           "required": false,
           "status": "not_required",
           "reason": "저위험·가역 범위라 사람 검토 없이 실행 대기로 넘긴다. 변경 대상은 reconciler 레포 자신의 `data/to-be-models.json` 중 이 모델 레코드 1건뿐이고(대상 레포 dlddu/dear-baby·클러스터·배포는 읽기만 한다), 프로덕션 워크로드·데이터·트래픽에 닿는 지점이 없다. 롤백은 커밋 1건 `git revert`로 완결되며 되돌릴 런타임 상태가 남지 않는다. 게다가 이 작업은 감지 장치가 이미 고장난 상태(to-be가 as-is 산출물을 가리켜 rc=0으로 조용히 미감지)를 수복하는 쪽이라, 미실행이 오히려 영구 미감지라는 더 큰 위험을 유지한다 — 정의의 규칙 1~8 본문은 건드리지 않고 판정 앵커만 옮기며, 그 방향도 거짓 6/6을 실측 1/6으로 되돌리는 안전한 쪽이다. 실행 절차는 exact-match 13건이 하나라도 어긋나면 아무것도 쓰지 않고 멈추는 fail-closed 패치 스크립트 + 스키마 검증이고, 계획 시점에 사본에서 라운드트립·부정 시험·diff 범위까지 완주해 뒀다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-09T11:34:00Z",
+          "finishedAt": "2026-09-09T11:37:54Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "log": "전제 4건 전부 재확인. dear-baby fresh clone HEAD=`2ee25b30` — 계획 시점과 **동일 커밋**이라 `git log 2ee25b3..HEAD -- docs/user-journeys docs/journeys docs/mockups docs/doc-structure-state.md docs/index.html`이 공집합(재기준선이 미분류 변경을 삼킬 여지 없음). `docs/user-journeys/`=README+`*-journey.md` 6개 · `docs/journeys/`=`diary-browse/index.html` 1건뿐 · `docs/doc-structure-state.md` 존재(blob `f7439117`) · `docs/journey-mockup-map.md` 부재. reconciler 측 lock은 이 실행이 `approved→executing`으로 직접 점유했다 — 계획서 1단계가 적은 `status=='planning'` 재확인은 planner 세션 기준 문구이므로 executor의 claim 게이트가 그 역할을 대신한다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "log": "재기준선 실측(3단계의 `patch_model.py`가 클론에서 새 스크립트를 실제로 실행해 값을 얻는다 — 계획서 값을 붙여넣지 않는다). to-be=`user-journeys-tree:afc731d8391e88eedab8618d1ef3790b999ca8ec` · as-is=`mockups:086c3876… jmock:c3c619fc… map:f7439117… hub:0d5aaf98…`. 지침 §2 표와 **완전 일치**."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "log": "`patch_model.py` 실행 → `OK: 패치 생성` · **definition 치환 13/13건** + 개정 메모 + description. exact-match 가드 전건 통과 = 계획 이후 이 레코드를 아무도 만지지 않았다는 뜻. 잔여 죽은 앵커 검사(`docs/journey-mockup-map.md` 등)도 통과.\n\n⚠️ 계획서 §4 스크립트가 `now`를 **계획 시각 `2026-08-30T10:45:00Z`로 하드코딩**하고 있어, 생성된 패치의 `metadata.updatedAt`·`toBe.lastObservedAt`·`asIs.lastObservedAt` 세 타임스탬프만 실제 관측 시각(`2026-09-09T11:37:54Z`)으로 정정한 뒤 적용했다. 계획이 정한 실질 내용(versionScript 2건·definition·description·재기준선 값)은 한 글자도 바꾸지 않았다 — 10일 묵은 리터럴이 거짓 관측 시각을 기록하는 것을 막은 것뿐이다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "`reconciler_tool.py upsert --schema` 적용 → `updated tbm_dear-baby-journey-mockup`. 이어 `validate --data` → `OK: 29 record(s) … conform`."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "라운드트립(레코드에 **저장된** 스크립트를 도로 뽑아 클론에서 실행): to-be `exit=0 shape=OK baseline=MATCH` · as-is `exit=0 shape=OK baseline=MATCH` → `ROUNDTRIP: PASS`."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "부정 시험(`51fbd4a7` = PR #182 직전 커밋의 detached 워크트리): to-be → `user-journeys-tree:absent` **exit 0** · as-is → `mockups:baba3df0… jmock:4fc0e70e… map:absent hub:ffced502…` **exit 0**. 지침 표와 정확히 일치하며, 경로가 사라져도 **rc=128로 죽지 않고 `absent`라는 눈에 띄는 관측값을 남긴다**는 재발 방지가 실증됐다. 덤으로 `jmock:4fc0e70e…`가 이 레코드의 구 to-be baseline과, `mockups:baba3df0…`·`hub:ffced502…`가 구 as-is baseline과 각각 일치 — **같은 경로가 to-be 축이자 as-is 축이었다**는 진단이 실측으로 확인됐다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "log": "diff 범위: `data/to-be-models.json` 1파일 11+/10-. `changed records: ['tbm_dear-baby-journey-mockup']` · `changed keys: ['asIs','definition','metadata','toBe']` · `checkPolicy` 불변 · `asIs.dataSource` 불변 · `toBe.dataSource.subPath` `docs/journeys`→`docs/user-journeys` · `metadata` 변경 키는 `description`·`updatedAt` 둘뿐 · **다른 모델 레코드 0건 변경**."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "log": "커밋 `model(tbm_dear-baby-journey-mockup): repair to-be/as-is versionScript for user-journeys restructure + rebaseline` → `git pull --rebase && git push` 성공(`cc0b302`). rebase 충돌 없음 — 같은 파일을 고치는 형제 계획 `tbm_econ-opinion-monitor-journey-mockup/rct_20260830-0002`는 아직 착지하지 않았다."
+            }
+          ]
         }
       }
     ]
