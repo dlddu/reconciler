@@ -1365,7 +1365,7 @@
   {
     "id": "rct_20260908-0001",
     "toBeModelId": "tbm_kubernetes-dashboard-scenario-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "changedSides": [
         "to_be"
@@ -1389,7 +1389,7 @@
       "assessedBy": "agent"
     },
     "createdAt": "2026-09-08T00:27:04Z",
-    "updatedAt": "2026-09-09T11:51:21Z",
+    "updatedAt": "2026-09-09T11:52:55Z",
     "attempts": [
       {
         "plan": {
@@ -1487,6 +1487,59 @@
               "stepSeq": 7,
               "status": "succeeded",
               "log": "커밋·푸시 완료: reconciler main `f60aabb` `model(tbm_kubernetes-dashboard-scenario-e2e): fix to-be versionScript ls-tree glob`. 계획대로 PR 없이 직행(대상이 reconciler 레포 자신의 레코드이고, 준비 단계 실측상 이 레포는 PR 기능이 꺼져 있음). `dlddu/kubernetes-dashboard`에는 한 글자도 쓰지 않았다 — 클론은 읽기 전용이었고 뮤테이션 브랜치는 로컬에만 남았다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "ec0b1a74ce5ee7d8e85a3258258a57b088ed1e45",
+          "verifiedAt": "2026-09-09T11:52:55Z",
+          "checks": [
+            {
+              "name": "완료 기준① reconciler main에 수리 커밋 1개",
+              "status": "passed",
+              "detail": "`origin/main`을 fetch해 원격 사실로 확인: `f60aabb` `model(tbm_kubernetes-dashboard-scenario-e2e): fix to-be versionScript ls-tree glob`가 `origin/main`의 조상임(`git merge-base --is-ancestor` 성립). 커밋 메시지는 계획의 지시대로 `fix to-be versionScript ls-tree glob`을 그대로 남겨, 다음 fire의 detector가 트리거를 「versionScript 수리로 인한 지문 정정」으로 읽을 수 있게 했다."
+            },
+            {
+              "name": "완료 기준② 불변식 — 선택 수 == ls-files 수",
+              "status": "passed",
+              "detail": "판정용 스크립트를 손으로 치지 않고 **`origin/main`의 `data/to-be-models.json`에서 직접 꺼내** 대상 레포 체크아웃(`dlddu/kubernetes-dashboard`@main HEAD `2f18a01a`)에서 실행. 선택 **10** == `git ls-files 'docs/product/test-*.md'` **10**. 수리 전 같은 HEAD에서 ls-tree 글롭은 **0**이었다."
+            },
+            {
+              "name": "완료 기준② 불변식 — `sc:` ≠ 빈 문자열 sha256",
+              "status": "passed",
+              "detail": "출력 `sc:e56ed9848821f964375e23e3fd236eca61e1f434817c2cd514db444a722354b4 reg:33a83e4b4bfd5c2d07c3dbb7537cb42d0bd7f57d`. `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`(빈 입력의 sha256, 수리 전 상수)와 다르다. 계획의 참고 스냅샷과도 바이트 동일 — 대상 레포 HEAD가 계획 시점 핀에서 움직이지 않았기 때문이며, 판정 자체는 값이 아니라 불변식으로 했다."
+            },
+            {
+              "name": "완료 기준③ 뮤테이션 6종(M1~M6) 재현",
+              "status": "passed",
+              "detail": "대상 레포 임시 브랜치에서 `2f18a01a`로부터 분기·커밋해 실측(기준 `sc:e56ed984… reg:33a83e4b…`). M1 test-pods.md 수정 → sc `dcf59d73…` 변화·reg 불변·rc=0. M2 prd-pods.md 수정 → 출력 **바이트 동일**·rc=0. M3 test-brandnew.md 신규 → sc `4ef2dee8…` 변화·reg 불변·rc=0(옛 글롭이 놓치던 경우가 이제 잡힌다). M4 test-nodes.md 삭제 → sc `2b350932…` 변화·reg 불변·rc=0. M5 doc-tracker.md 수정 → sc 불변·reg `db439b7c…` 변화·rc=0. M6 test-*.md 전멸 → **rc=1**, 출력 없음(빈 선택에서 상수로 조용히 퇴화하지 않고 죽는 가드). 6/6 표대로."
+            },
+            {
+              "name": "완료 기준④ `toBe.lastObservedVersion` 불변(후속 인계 보존)",
+              "status": "passed",
+              "detail": "`origin/main`의 레코드에서 재확인: `sc:e3b0c44298fc1c14…852b855 reg:33a83e4b4bfd5c2d07c3dbb7537cb42d0bd7f57d` 상수 그대로, `lastObservedAt`도 `2026-09-08T00:27:04Z` 그대로. 수리된 스크립트의 실제 지문(`sc:e56ed984…`)과 어긋난 상태로 남겨 둔 것이 **의도**다 — 다음 감지 주기가 이 차이를 보고 gap ⓑ(마이그레이션) task를 연다. baseline을 전진시켰다면 이 인계가 끊겼을 것이다."
+            },
+            {
+              "name": "범위 가드 — 변경면이 두 필드 한 레코드로 한정",
+              "status": "passed",
+              "detail": "커밋 전 HEAD와 저장본을 29개 모델 전수 딥비교. 변경 경로는 정확히 둘: `tbm_kubernetes-dashboard-scenario-e2e.toBe.versionScript.code`, `…metadata.updatedAt`(2026-09-09T11:49:52Z). `asIs.*`·`definition`·`checkPolicy`·`toBe.lastObserved*` 무변경, 다른 28개 모델 무변경 — 다른 워커가 점유 중인 `tbm_homelab-k3s-mcp-scenario-e2e` 포함. `versionScript.runtime`(bash)·`timeoutSeconds`(60)도 병합으로 보존."
+            },
+            {
+              "name": "범위 가드 — 대상 레포 읽기 전용",
+              "status": "passed",
+              "detail": "`dlddu/kubernetes-dashboard`에는 한 글자도 쓰지 않았다. `git ls-remote --heads`로 원격 확인: `main`은 여전히 `2f18a01`이고 뮤테이션용 `mut-1`~`mut-6`은 로컬 체크아웃에만 존재하며 원격에 없다(원격 브랜치는 `main`과 무관한 기존 `reconcile/rct_20260802-0001-ov7-exempt` 뿐)."
+            },
+            {
+              "name": "JSON 왕복 무결성",
+              "status": "passed",
+              "detail": "저장된 레코드에서 꺼낸 코드가 적용 원본과 `cmp` 바이트 동일하고, 그 문자열을 실행한 결과가 적용 전 실측과 바이트 동일. `$'\\t'`(ANSI-C 인용)과 `\\.`가 JSON 인코드/디코드 왕복에서 깨지지 않았음을 산 값으로 확인."
+            },
+            {
+              "name": "[정보성] 남은 gap ⓑ — 이 슬라이스의 범위 밖",
+              "status": "passed",
+              "detail": "converged 판정에는 넣지 않는다(모델 전체 to-be가 아니라 plan 범위가 이 task의 완료 기준이므로). 실측만 남긴다: `docs/product/test-*.md` **10문서 / `### 시나리오` 헤딩 54개**, 그에 대응해야 할 `검증 시나리오:` 선언은 레포 전체 **0건**, `e2e/` 최상위 `*.spec.ts` **60개**. 즉 시나리오↔E2E 1:1 매핑은 아직 하나도 선언돼 있지 않다. 이 마이그레이션은 다음 감지 주기가 여는 후속 task의 몫이다."
             }
           ]
         }
