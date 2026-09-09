@@ -647,7 +647,7 @@
   {
     "id": "rct_20260908-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-scenario-e2e",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "changedSides": [
         "to_be"
@@ -671,7 +671,7 @@
       "assessedBy": "agent"
     },
     "createdAt": "2026-09-08T00:28:14Z",
-    "updatedAt": "2026-09-09T11:45:00Z",
+    "updatedAt": "2026-09-09T11:47:00Z",
     "attempts": [
       {
         "plan": {
@@ -724,6 +724,11 @@
           "pullRequestUrl": null,
           "preparedAt": "2026-09-08T01:22:00Z",
           "notes": "변경은 브랜치 `reconcile/rct_20260908-0001-econ-opinion-monitor-scenario-e2e`(커밋 `5f35452`, `data/to-be-models.json` 1파일 +3/−5)에 푸시해 스테이징했다. 브랜치명에 **모델 슬러그를 붙인 이유**는 `rct` id가 모델 간에 유일하지 않아 형제 워커의 열린 브랜치를 밟기 때문이다.\n\n**PR은 만들지 않았다 — `dlddu/reconciler`는 pull request가 비활성화된 레포다.** 이번 사이클에 자매 planner 둘이 각각 대조군을 두고 독립 측정한 결과가 원장에 남아 있다: `pull_requests:write`를 실제로 받은 **같은 토큰**으로 `GET /repos/dlddu/reconciler/pulls` → **404**, 대조군(`dlddu/kubernetes-dashboard` · `dlddu/homelab-k3s-mcp`) → **200**. 즉 권한 부족이 아니라 기능이 꺼져 있다. ⚠️ 권한 **없는** 토큰으로 재면 403 `Resource not accessible by integration`이 떠 「토큰 문제」로 오독하기 쉬우므로, 재확인이 필요하면 반드시 권한 있는 토큰 + 대조군 레포로 잴 것. 따라서 검토 지점은 PR이 아니라 **compare 뷰**이고, 실행은 이 브랜치를 main에 **squash 머지**하는 것이다:\n\nhttps://github.com/dlddu/reconciler/compare/main...reconcile/rct_20260908-0001-econ-opinion-monitor-scenario-e2e\n\n**`dlddu/economic-opinion-trend-monitor`는 이 task에서 읽기 전용이다** — 그 레포에는 한 글자도 쓰지 않는다(뮤테이션 검증은 전부 로컬 임시 브랜치에서 했고 push하지 않았다).\n\n**브랜치에서 실측한 게이트·검증 (전건 통과)**\n\n| 항목 | 결과 |\n| --- | --- |\n| diff 범위 | `data/to-be-models.json` 1파일 · 모델 29개 중 **1개**만 변화 · 움직인 키 **4개**(`toBe.versionScript.code` 교체, `toBe.lastObservedVersion`·`toBe.lastObservedAt` 삭제, `metadata.updatedAt` 갱신) |\n| 스키마 검증 | `OK: 29 record(s)` |\n| `node --test tests/*.test.mjs` | **82/82 pass**, rc=0 (⚠️ 디렉터리 인자 `tests/`는 rc=1) |\n| CI | 레포에 `.github/` 자체가 없어 대기할 잡 없음 |\n| JSON 왕복 | 커밋된 JSON에서 `code`를 도로 꺼내 실행 → 실행부 라인 **바이트 동일**, 이스케이프 파손 없음 |\n| 대상 레포 실행 | `@052c112f`에서 `sc:965459bb… reg:4343e5af…` — **`e3b0c442…`가 아님** |\n| 선택 집합 일치 | grep 선택 **3** == `git ls-files -- 'docs/econ-opinion-monitor-test-*.md'` **3** |\n| 뮤테이션 M2(신규 문서 추가) | `sc:` **CHANGED** (구 글롭이 눈멀던 바로 그 경우) |\n| 뮤테이션 M6(문서 전멸) | **rc=1** — 빈 선택에서 시끄럽게 죽는 가드 확인 |\n\n모든 grep 측정은 `PATH=/usr/bin:$PATH`로 **GNU grep 3.11**을 강제한 비관적 조건에서 했다(이 셸의 기본 `grep`은 ugrep이라 낙관적으로 갈린다).\n\n실행자는 브랜치를 squash 머지하고 지침 §2~§3의 검증을 재현하기만 하면 된다. 롤백은 그 squash 커밋 1개 revert로 끝난다(원본 코드 전문은 지침 §5에 있다)."
+        },
+        "review": {
+          "required": false,
+          "status": "not_required",
+          "reason": "저위험·가역 범위라 사람 검토 없이 실행 대기로 넘긴다. 쓰기는 reconciler 레포 자신의 `data/to-be-models.json` 중 이 모델 레코드 1건(모델 29개 중 1개, `toBe.versionScript.code` 교체 + baseline 두 키 삭제)에만 일어나고, 대상 레포 `dlddu/economic-opinion-trend-monitor`·클러스터·프로덕션 워크로드·트래픽에는 한 글자도 쓰지 않는다(읽기 전용). 롤백은 squash 커밋 1개 revert로 완결되고 되돌릴 런타임 상태가 남지 않아 불가역 지점이 없다. 게다가 현 상태가 이미 `sc:`가 빈 입력의 sha256 상수로 굳어 이 축의 변화를 영영 감지하지 못하는 파손이라 미실행이 오히려 영구 미감지라는 더 큰 위험을 유지하며, 수리안은 레포 자신의 `templates/scenario-e2e.tbm.md`가 이미 명문화한 조합형(pathspec 글롭 금지 → 디렉터리 훑기 + `grep -E` 거르기)을 적용한 것이라 정책 범위 밖의 신규 설계가 아니다. 새 스크립트는 빈 선택에서 rc=1로 죽어 같은 결함이 조용히 재발할 수 없다는 점에서 실패 양태도 엄격히 개선된다. 검증도 계획 단계에서 완주돼 있다 — 스키마 `OK: 29 record(s)`, `node --test` 82/82, 커밋된 JSON에서 코드를 도로 꺼낸 라운드트립 바이트 동일, 뮤테이션 7종 전건 재현, 모든 grep 측정을 ugrep이 아닌 GNU grep 3.11 강제라는 비관적 조건에서 수행. 유일하게 갈릴 수 있었던 설계 판단(baseline을 비울 것인가 — 자매 `tbm_kubernetes-dashboard-scenario-e2e` 계획은 남기자고 적었다)도 `d51c3048`이 baseline을 지운 7개 모델 전부가 이번 fire에서 task를 연 7/7 실측으로 이미 결착돼 모호함이 남지 않았다. 남은 마찰은 형제 워커가 같은 파일을 동시에 만지는 머지 충돌 하나인데, 계획 step 6과 executionGuide §5가 머지 직전 재확인과 코드 전문 재적용 폴백을 처방해 두었다. 동형 슬라이스인 `tbm_claude-transcript-viewer-v2-scenario-e2e`/`rct_20260908-0001`(같은 ls-tree 글롭 수리)도 이번 사이클에 not_required로 처리됐다."
         }
       }
     ]
