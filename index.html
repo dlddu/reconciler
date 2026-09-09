@@ -913,10 +913,30 @@
     return hay.indexOf(f) !== -1;
   }
 
-  // 사이드바에 실제로 보이는 목록 = 모드 필터 + 검색 필터.
+  // 목록 순서 = 마지막 조치가 최근인 모델부터. 파일 순서대로 두면 방금 움직인 모델이
+  // 목록 아래에 묻혀 무엇이 살아 있는지 보이지 않는다. 조치 기록이 없는 모델(아직 task가
+  // 없거나 전부 no-op)은 비교할 시각이 없으니 항상 뒤로 보내고, 시각이 같으면 원래
+  // 파일 순서를 유지한다.
+  // lastAction()은 그 모델의 모든 task를 훑으므로 비교 함수 안에서 부르면 O(n log n)번
+  // 재계산된다 — 모델당 한 번만 계산해 두고 그 값으로 정렬한다.
+  function byLastActionDesc(models) {
+    return models.map(function (m, i) {
+      var la = lastAction(m.id);
+      return { model: m, time: la ? la.time : null, order: i };
+    }).sort(function (a, b) {
+      if (a.time === b.time) return a.order - b.order;
+      if (a.time === null) return 1;
+      if (b.time === null) return -1;
+      return b.time - a.time;
+    }).map(function (x) { return x.model; });
+  }
+
+  // 사이드바에 실제로 보이는 목록 = 모드 필터 + 검색 필터, 마지막 조치 최신순.
   function visibleModels() {
     var f = state.filter.trim().toLowerCase();
-    return modelsInMode(state.mode).filter(function (m) { return matchesFilter(m, f); });
+    return byLastActionDesc(
+      modelsInMode(state.mode).filter(function (m) { return matchesFilter(m, f); })
+    );
   }
 
   // 딥링크(#modelId)로 들어온 모델이 기본 모드에 없을 수 있으므로,

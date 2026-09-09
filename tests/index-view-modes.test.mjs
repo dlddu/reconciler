@@ -18,7 +18,12 @@ const modesMatch = html.match(
 );
 assert.ok(modesMatch, "the view modes block must exist in index.html");
 
-const source = constsMatch[0] + enabledMatch[0] + modesMatch[0];
+// visibleModels orders the list by last action, so lastAction must be in scope too.
+const lastActionMatch = html.match(/  function lastAction\(modelId\) \{[\s\S]*?\n  \}\n/);
+assert.ok(lastActionMatch, "lastAction must exist in index.html");
+
+const source =
+  constsMatch[0] + enabledMatch[0] + modesMatch[0] + lastActionMatch[0];
 
 // One active model per workflow stage, one idle, one hidden.
 const MODELS = [
