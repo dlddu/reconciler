@@ -180,7 +180,7 @@
       "assessedBy": "agent"
     },
     "createdAt": "2026-09-08T00:27:11Z",
-    "updatedAt": "2026-09-09T11:58:32Z",
+    "updatedAt": "2026-09-09T12:03:30Z",
     "attempts": [
       {
         "plan": {
@@ -243,6 +243,69 @@
           "required": false,
           "status": "not_required",
           "reason": "계측기(versionScript) 한 줄 수리에 한정된 저위험·가역 변경이라 사람 검토 없이 실행해도 되는 범위로 판단했다. 쓰기는 reconciler 레포 `data/to-be-models.json`의 이 모델 객체 하나(+3/−5)에만 일어나고, 대상 서비스 레포(`dlddu/claude-transcript-viewer-v2`)·클러스터·프로덕션 워크로드에는 한 글자도 쓰지 않는다(읽기 전용). 되돌리기는 커밋 1개 revert로 끝나며, 현재 상태가 이미 `sc:` 상수로 눈이 먼 파손이라 수리안이 더 나빠질 여지가 좁다 — 새 스크립트는 빈 선택에서 rc=1로 죽어 같은 결함이 조용히 재발할 수 없다. 남은 마찰은 형제 워커가 같은 파일을 동시에 만지는 것 하나인데, executionGuide가 머지 직전 `merge-tree` 재확인과 코드 문자열 손 재적용 폴백을 이미 처방해 두었다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-09T11:58:35Z",
+          "finishedAt": "2026-09-09T12:03:30Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T11:58:35Z",
+              "finishedAt": "2026-09-09T11:59:05Z",
+              "log": "롤백 원본 확보 + main 최신화. reconciler main = `d7d549b`(claim 커밋). 이 모델의 `toBe` 전문을 `rollback-original.json` 으로, 현행 `versionScript.code` 를 `old_script.sh` 로 떠 두었다(원문은 이 레코드와 git 이력 양쪽에도 남는다).\n\n지침 §2-1 의 전제 두 개를 레코드에서 확인:\n- 현행 code 에 `git ls-tree -r HEAD -- 'docs/transcript-viewer-test-*.md'` 문자열이 **있다** (True)\n- `toBe.lastObservedVersion` = `sc:e3b0c44298fc1c14… reg:836f2f59b68a7507…` — `sc:e3b0c442…`(빈 입력의 sha256)로 시작한다\n- `toBe.lastObservedAt` = `2026-09-08T00:27:11Z`, `dataSource` = github `dlddu/claude-transcript-viewer-v2`@main"
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T11:59:05Z",
+              "finishedAt": "2026-09-09T11:59:35Z",
+              "log": "대상 레포를 read 토큰으로 @main 클론(HEAD `e43b6fddf89e943413d461923fa8b2280188a714` — **계획 시점과 같은 HEAD**, 마지막 커밋 `fix(db): pin SQLite synchronous=FULL (#96)` 2026-08-01). 클론 직후 remote URL 에서 토큰을 제거했고, 이 레포에는 **한 줄도 쓰지 않았다**(§4 읽기 전용 경계).\n\n**결함을 수리 전에 재현했다 — 지침 §2-1 불변식 전건 성립**:\n| 측정 | 결과 | 기대 |\n| --- | --- | --- |\n| `git ls-tree -r HEAD -- 'docs/transcript-viewer-test-*.md' \\| wc -l` | **0** (rc=0, 조용하다) | 0 |\n| `git ls-files 'docs/transcript-viewer-test-*.md' \\| wc -l` | **5** | > 0 |\n| 글롭 선택의 sha256 | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` | 빈 입력의 sha256 |\n\n레코드에서 꺼낸 **현행 스크립트 전체 출력**: `sc:e3b0c442…852b855 reg:836f2f59b68a75076f922daaad34336266e96fad` (rc=0) — 저장된 `toBe.lastObservedVersion` 과 **바이트 동일**. 파손이 원장에 굳어 있었다는 직접 증거다.\n\n실재 문서 5개: `…-test-deployment.md` · `-lifecycle.md` · `-lookup.md` · `-session-list.md` · `-viewer.md`."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T11:59:35Z",
+              "finishedAt": "2026-09-09T12:00:05Z",
+              "log": "수리안 실측(지침 §2-2·§2-3). `git ls-tree -r HEAD -- docs | grep -E '[[:blank:]]docs/transcript-viewer-test-[^/]*\\.md$'` 가 **5줄**을 돌려주고 각 줄이 `100644 blob <sha>\\t<path>` 형태 — blob SHA 가 있으므로 내용 변경을 잡는다.\n\n- 선택 파일 집합이 step 2 의 `ls-files` 목록과 `diff` **완전 일치**(빈 diff)\n- 전체 출력 `sc:cc5e94bff2d36cfd920bbdde631c96f58451ba56027a4191ec41f1d631027fe3 reg:836f2f59…` — `e3b0c442…` 가 **아니고**, 계획 시점 실측값과 바이트 동일\n- 결정성: 같은 명령 2회 출력 동일 ✓"
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T12:00:05Z",
+              "finishedAt": "2026-09-09T12:00:55Z",
+              "log": "뮤테이션 M1~M10 을 **임시 커밋으로 실제로 만들어** 신·구 스크립트를 나란히 측정. **10종 전부 지침 §3 표대로 재현됐다.**\n\n| # | 뮤테이션 | 신 | 구 | 기대 |\n| --- | --- | --- | --- | --- |\n| M1 | 시나리오 문서 내용 수정 | CHANGED (`054c9052…`) | **SAME** | ✓ |\n| M2 | `…-test-oauth2.md` 추가 | CHANGED (`0f34237e…`) | **SAME** | ✓ |\n| M3 | `…-test-lookup.md` 삭제 | CHANGED (`f8c8cb99…`) | **SAME** | ✓ |\n| M4 | `…-test-lookup.md` 개명 | CHANGED (`acca8b7c…`) | **SAME** | ✓ |\n| M5 | PRD 수정 | SAME | SAME | ✓ |\n| M6 | `…-values.md` 수정 | SAME | SAME | ✓ |\n| M7 | `e2e/tests/lookup-tabs.spec.ts` 수정 | SAME | SAME | ✓ |\n| M8 | 시나리오 문서 전멸 | **rc=1 실패** | SAME (rc=0) | ✓ |\n| M9 | `docs/archive/…-test-legacy.md` 미끼 | SAME | SAME | ✓ |\n| M10 | doc-tracker 수정 | CHANGED (`reg:b5eeba8f…`) | CHANGED | ✓ |\n\n**M1~M4 에서 구 스크립트가 4종 전부 SAME** — 눈멀었음의 직접 증거. **M8 에서 신 스크립트만 rc=1 로 죽는다** — 같은 결함이 재발하면 조용한 상수가 아니라 소리가 난다(§3 의 핵심). **M9 SAME** — 탭 앵커가 `docs/` 최상위만 고른다.\n\n뮤테이션은 전부 로컬 임시 커밋이고 매번 `reset --hard` + `clean -fd` 로 되돌렸다. 종료 시 `HEAD == BASE`(`e43b6fdd`) · 워킹트리 clean · post-reset 지문이 기준값과 동일. **대상 레포에 push 한 것은 없다.**"
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T12:00:55Z",
+              "finishedAt": "2026-09-09T12:01:49Z",
+              "log": "step 7(브랜치 squash 머지)과 함께 수행 — 지침 §1 이 정한 정상 경로 하나뿐이라 계획의 step 5(손 편집)와 step 7(머지)은 같은 착지다. 손 편집은 하지 않았다.\n\n**머지 전 재확인(§4 의 처방)**: 스테이징 브랜치 `122bb58` 는 낡은 base(`ea5c871`) 위에 있고 그 사이 main 이 `d7d549b` 까지 25파일 움직였다. 그래서 **2-dot diff 는 무의미**하고(브랜치가 형제 워커들의 작업을 되돌리는 것처럼 보인다) 3-way 결과로만 판정했다:\n- `git merge-tree --write-tree HEAD origin/<branch>` → **충돌 없음**, tree `d356dfac…`\n- `git diff HEAD <merge-tree>` = **`data/to-be-models.json` 1파일 +3/−5** — 형제 워커의 25파일은 하나도 건드리지 않는다\n- 3-dot diff(브랜치 자신의 변경)도 같은 1파일 +3/−5 로 일치\n\n`git merge --squash` 적용 후 스테이지 실측: code 교체 1줄 · `lastObservedVersion`/`lastObservedAt` 삭제 2줄 · `metadata.updatedAt` 1줄 = 계획이 예고한 그대로.\n\n**부수 변경 0 (기계 대조)**: id 집합·순서 동일, **달라진 모델은 정확히 1개**(`tbm_claude-transcript-viewer-v2-scenario-e2e`), 그 안에서도 `definition`·`asIs`·`checkPolicy`·`toBe.dataSource`·`versionScript.runtime`/`timeoutSeconds` 가 **바이트 동일**, `metadata` 는 `updatedAt` 만 움직였다.\n\n커밋 `c750fe2` `model(tbm_claude-transcript-viewer-v2-scenario-e2e): fix to-be versionScript ls-tree glob` 로 main 직행 push(이 레포는 PR 불가)."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T12:01:49Z",
+              "finishedAt": "2026-09-09T12:02:20Z",
+              "log": "**커밋된 JSON에서 도로 꺼낸** 코드로 재검증(직접 타이핑한 스크립트가 아님 — JSON 이스케이프 파손 배제).\n\n`git show main:data/to-be-models.json` → 이 모델의 `toBe.versionScript.code` 추출 → 파일로 기록 → step 3 에서 쓴 손 스크립트와 `cmp` **BYTE-IDENTICAL**.\n\n그 파일을 대상 레포 @`e43b6fdd` 에서 실행:\n- **rc=0**\n- 출력 `sc:cc5e94bff2d36cfd920bbdde631c96f58451ba56027a4191ec41f1d631027fe3 reg:836f2f59b68a75076f922daaad34336266e96fad` — step 3 실측과 **바이트 동일**, `e3b0c442…` 상수가 **아니다**\n- 선택 파일 집합이 같은 HEAD 의 `git ls-files 'docs/transcript-viewer-test-*.md'` 와 `diff` **완전 일치**\n\n커밋된 레코드에 `toBe.lastObservedVersion`·`lastObservedAt` 이 **둘 다 없다**(키 부재)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T12:00:55Z",
+              "finishedAt": "2026-09-09T12:01:49Z",
+              "log": "step 5 와 동일 착지 — 스테이징 브랜치 `reconcile/rct_20260908-0001-claude-transcript-viewer-v2-scenario-e2e`(`122bb58`)를 `git merge --squash` 로 얹어 main 에 **커밋 1개**(`c750fe2`)를 만들었다. 충돌이 없었으므로 §5 의 손 재적용 폴백은 쓰지 않았다.\n\n머지 전 레포 게이트:\n- `python3 \"$TOOL\" validate --schema schemas/to-be-model.schema.json --data data/to-be-models.json` → **rc=0**, `OK: 29 record(s)`\n- ⚠️ `node --test tests/*.test.mjs` 는 **이 실행 환경에 node 바이너리가 없어 돌리지 못했다**(`node: command not found`, rc=127; `/usr/local/bin`·`~/.nvm`·`/opt` 전수 탐색 결과 부재). 우회하지 않고 사실대로 남긴다. **다만 이 게이트가 이 변경과 무관함은 기계로 확인했다** — `tests/*.test.mjs` 7개가 읽는 파일은 `../index.html`(7개 전부)과 `../templates/`(`index-templates.test.mjs` 하나)뿐이고 `data/to-be-models.json` 을 참조하는 테스트는 **0개**인데, 이 커밋의 변경 파일은 `data/to-be-models.json` **하나뿐**이다. 즉 게이트의 입력이 한 바이트도 움직이지 않았다.\n\n`git show main:…` 로 착지 확인: code 가 수리안이고 `lastObserved*` 두 키가 없다."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-09T12:02:20Z",
+              "finishedAt": "2026-09-09T12:03:30Z",
+              "log": "재감지 게이트가 이 모델을 실제로 깨우는지 관측(이 슬라이스가 후속 gap ⓑ 를 잇는 **유일한 경로**라 관측이 필요하다).\n\n`python3 /home/silas/drift-detector/precheck-drift.py` 를 origin/main 기준으로 실행:\n```\n[precheck-drift] tbm_claude-transcript-viewer-v2-scenario-e2e/asIs: unchanged\n[precheck-drift] tbm_claude-transcript-viewer-v2-scenario-e2e/toBe: no baseline (lastObservedVersion=null) -> drift\n…\n[precheck-drift] summary: 2 changed, 0 undetermined across 29 enabled models (0 disabled of 29 total)\n[precheck-drift] DRIFT -> run claude detector. changed: tbm_kubernetes-dashboard-scenario-e2e/toBe, tbm_claude-transcript-viewer-v2-scenario-e2e/toBe\n```\n**종료 코드 10** — 지침의 기대와 정확히 일치. 인계가 살아 있다.\n\n`asIs: unchanged` 가 함께 찍힌 것은 §4 의 「`asIs` 는 건드리지 않는다」가 지켜졌다는 증거다(관계없는 축의 재감지를 유발하지 않았다). 게이트는 29개 모델 전부를 fail-open 0건으로 평가했다."
+            }
+          ]
         }
       }
     ]
