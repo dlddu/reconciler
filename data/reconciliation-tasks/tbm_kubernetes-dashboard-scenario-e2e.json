@@ -1389,7 +1389,7 @@
       "assessedBy": "agent"
     },
     "createdAt": "2026-09-08T00:27:04Z",
-    "updatedAt": "2026-09-09T11:47:57Z",
+    "updatedAt": "2026-09-09T11:50:24Z",
     "attempts": [
       {
         "plan": {
@@ -1447,6 +1447,48 @@
           "required": false,
           "status": "not_required",
           "reason": "reconciler 레포 자신의 ToBeModel 레코드 1건에서 `toBe.versionScript.code`와 `metadata.updatedAt` 두 필드만 바꾸는 직접 액션이다 — 대상 레포 `dlddu/kubernetes-dashboard`는 읽기 전용이고 클러스터·배포·프로덕션 워크로드나 데이터에 닿는 경로가 없다. 고치는 대상이 `git ls-tree`가 와일드카드 pathspec을 지원하지 않아 선택 집합이 공집합으로 퇴화한 (그래서 `sc:`가 빈 문자열 sha256 `e3b0c442…` 상수로 굳은) **이미 조용히 죽어 있는 감지 축**이라, 적용 후가 적용 전보다 나빠질 수 있는 경로가 없다. 판정 기준 자체는 불변이다 — `definition`·`checkPolicy`·`toBe.lastObservedVersion`을 모두 건드리지 않으므로 이 변경이 무엇을 '맞다'고 볼지 바꾸지 않고, baseline을 손대지 않는 것은 다음 fire가 후속 gap을 task로 열게 하려는 의도된 인계다. 계획 단계에서 JSON 왕복(이스케이프 보존)·대상 레포 HEAD 실측 지문·뮤테이션 6종(선택 0건이면 rc≠0으로 죽는 가드 포함)까지 재현을 마쳤고, 틀렸을 때 최대 피해는 이 모델 한 건의 지문이 다음 fire에서 어긋나는 것으로 커밋 1건 `git revert`로 원복된다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-09T11:47:57Z",
+          "finishedAt": "2026-09-09T11:50:11Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "log": "롤백 원본 확보. 백업한 `toBe.versionScript.code`에 `git ls-tree -r HEAD -- 'docs/product/test-*.md'` 줄이 그대로 들어 있음을 확인. `toBe.lastObservedVersion` = `sc:e3b0c44298fc1c14…852b855 reg:33a83e4b4bfd5c2d07c3dbb7537cb42d0bd7f57d` (기대와 일치), `lastObservedAt` = 2026-09-08T00:27:04Z."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "log": "결함 재현 — `dlddu/kubernetes-dashboard`@main HEAD `2f18a01a`(계획 시점 핀과 동일, 그 사이 움직이지 않음), git 2.43.0. `git ls-tree -r HEAD -- 'docs/product/test-*.md' | wc -l` = **0**, `git ls-files 'docs/product/test-*.md' | wc -l` = **10**. ls-tree 출력의 sha256 = `e3b0c44298fc1c14…852b855`, `printf '' | sha256sum`과 **바이트 동일**. 현행(깨진) 스크립트를 그대로 실행 → `sc:e3b0c442… reg:33a83e4b…`, rc=0(조용한 실패 확인). 레코드의 lastObservedVersion 상수와 일치."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "log": "수리안 실측(스크립트는 executionGuide §5의 코드 블록에서 **기계적으로 추출**해 사용 — 손으로 다시 타이핑하지 않음). 같은 HEAD `2f18a01a`에서 `git ls-tree -r HEAD -- docs/product | grep -cE $'\\tdocs/product/test-[^/]+\\.md$'` = **10** → 불변식① 선택 수 == ls-files 수 **성립**. 출력 `sc:e56ed9848821f964375e23e3fd236eca61e1f434817c2cd514db444a722354b4 reg:33a83e4b4bfd5c2d07c3dbb7537cb42d0bd7f57d` → 불변식② `sc:` ≠ `e3b0c442…` **성립**. 계획의 참고 스냅샷과도 바이트 동일(HEAD가 그대로였으므로)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "뮤테이션 6종 — 대상 레포 임시 브랜치 `mut-1`~`mut-6`에서 각각 `2f18a01a`로부터 분기해 **커밋까지** 수행(HEAD 트리를 읽으므로 워킹트리 수정만으로는 무효), **push 없음**. 기준값 `sc:e56ed984… reg:33a83e4b…`. M1(test-pods.md 수정): sc→`dcf59d73…` 변화, reg 불변, rc=0 ✓. M2(prd-pods.md 수정): 출력 **바이트 동일**, rc=0 ✓. M3(test-brandnew.md 신규): sc→`4ef2dee8…` 변화, reg 불변, rc=0 ✓ — 옛 글롭이 놓치던 바로 그 경우. M4(test-nodes.md 삭제): sc→`2b350932…` 변화, reg 불변, rc=0 ✓. M5(doc-tracker.md 수정): sc 불변, reg→`db439b7c…` 변화, rc=0 ✓. M6(test-*.md 전멸): **rc=1**, 출력 없음 ✓ — 빈 선택에서 상수로 퇴화하지 않고 죽는 가드 확인. 6종 전부 표대로."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "`data/to-be-models.json`에서 이 모델의 `toBe.versionScript.code`를 수리안으로 교체하고 `metadata.updatedAt`을 2026-09-09T11:49:52Z로 갱신. `to-be-model.schema.json` 검증 통과. HEAD와 저장본을 레코드 단위로 전수 비교한 결과 변경 경로는 정확히 둘: `tbm_kubernetes-dashboard-scenario-e2e.toBe.versionScript.code`, `…metadata.updatedAt`. `toBe.lastObservedVersion`·`lastObservedAt`·`asIs.*`·`definition`·`checkPolicy` 무변경, 다른 28개 모델(특히 다른 워커가 점유 중인 `tbm_homelab-k3s-mcp-scenario-e2e`) 무변경. `versionScript.runtime`(bash)·`timeoutSeconds`(60)는 딕셔너리 병합으로 보존됨."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "왕복 검증 — 저장된 JSON에서 코드를 **다시 꺼내** 파일로 쓰고 대상 레포 체크아웃에서 실행. 꺼낸 문자열이 원본과 `cmp` **바이트 동일**($'\\t'·\\. 이스케이프가 JSON 왕복에서 보존됨). 실행 출력 `sc:e56ed984… reg:33a83e4b…` — 단계 3 실측과 **바이트 동일**."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "log": "커밋·푸시 완료: reconciler main `f60aabb` `model(tbm_kubernetes-dashboard-scenario-e2e): fix to-be versionScript ls-tree glob`. 계획대로 PR 없이 직행(대상이 reconciler 레포 자신의 레코드이고, 준비 단계 실측상 이 레포는 PR 기능이 꺼져 있음). `dlddu/kubernetes-dashboard`에는 한 글자도 쓰지 않았다 — 클론은 읽기 전용이었고 뮤테이션 브랜치는 로컬에만 남았다."
+            }
+          ]
         }
       }
     ]
