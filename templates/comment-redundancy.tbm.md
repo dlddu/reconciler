@@ -12,6 +12,37 @@
 "이 문장이 다른 곳에서 복원되는가"이며, 언어별로 달라지는 것은 주석 줄을 뽑는
 패턴(슬롯)뿐이다.
 
+## 정책 디렉터리 (고정부)
+
+정책은 파일 하나가 아니라 **`docs/comment-policy/` 디렉터리**에 역할별로 나눠 둔다. 판정 패스가
+쌓일수록 한 파일에서는 정책 본문이 판정 기록에 묻히고, 이어 붙인 절이 엉뚱한 자리에 끼면서 구조가
+무너진다. 세 부분은 바뀌는 리듬도 다르다 — 본문은 드물게 바뀌고, 원장은 패스마다 기계가 대조하는
+상태로 갱신되며, 상세는 패스마다 새로 쌓인다.
+
+```
+docs/comment-policy/
+├── README.md                  정책 본문 (진입점)
+├── ledger.md                  판정 원장
+└── passes/                    판정 상세 (패스 하나 = 파일 하나)
+    └── <판정일>-<slug>.md
+```
+
+| 파일 | 담는 것 | 담지 않는 것 |
+|---|---|---|
+| `README.md` | 복원 경로 넷 · 유지 대상 · 운영 규칙 · 판정 절차 · 범위 밖 · 지문 사각지대, `ledger.md`·`passes/`로 가는 링크 | 판정 이력, 개별 주석의 판정 근거 |
+| `ledger.md` | 판정한 범위(파일 단위) · 그 범위의 현재 주석 줄 수 · 지문 · 결과 요약의 표, 합계, 원장 읽는 법 | 정책 규칙, 제거표·유지 목록 같은 상세 |
+| `passes/<판정일>-<slug>.md` | 한 패스의 제거 근거표 · 유지 목록 · 판단이 갈려 남긴 것 · 이후의 증분 재판정 | 정책 규칙, 다른 패스의 기록 |
+
+- **진입점은 `README.md`다.** 문서 허브나 다른 문서가 정책을 링크할 때는 이 파일을 가리킨다.
+- `<판정일>`은 그 패스가 등재된 원장 행의 판정일, `<slug>`는 범위를 나타내는 소문자 kebab-case다.
+  원장 행 순번을 쓰지 않는 것은 행이 합쳐지거나 빠질 때 파일 이름이 밀리지 않게 하기 위해서다.
+  원장 행의 결과 칸은 요약 뒤에 해당 `passes/` 파일을 링크한다.
+- 같은 범위의 **증분 재판정은 새 파일을 만들지 않고** 원래 패스 파일에 절을 더한다(원장 행이 같다).
+- 상세로 적을 것이 없는 패스(결과 칸 요약과 task 기록으로 충분한 패스)는 `passes/` 파일을 만들지 않는다.
+- 원장을 기계로 검사하는 게이트를 두는 레포라면 **파싱 대상은 `ledger.md`**이고 게이트가 읽는
+  마커도 거기에만 둔다. 문서 본문 전체를 스캔하는 규칙(예: 줄 번호 좌표 금지)은 디렉터리 전체를 본다.
+- 이 구조에서 벗어나야 하면 모델 definition의 "범위 밖 / 비고"에 이탈 내용과 사유를 적는다.
+
 ## 슬롯 표
 
 대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다.
@@ -20,7 +51,6 @@
 |---|---|---|---|
 | `{{REPO}}` | owner/repo | `dlddu/session-platform` | `dlddu/econ-opinion-monitor` |
 | `{{SLUG}}` | id·이름용 소문자 레포명 | `session-platform` | `econ-opinion-monitor` |
-| `{{POLICY_SSOT}}` | 주석 정책의 위치 (파일 또는 파일 내 섹션) | `docs/comment-policy.md` | `CONTRIBUTING.md`의 "주석" 섹션 |
 | `{{SCAN_SCOPE}}` | 판정 대상 소스 경로 목록 | `control-plane data-plane web/src web/e2e` | `src tests` |
 | `{{SCOPE_EXCLUDE}}` | 스캔 제외 ERE (생성 코드·벤더·서드파티) | `(^|/)(vendor|node_modules|dist)/\|\.pb\.go$` | `(^\|/)(\.venv\|migrations)/` |
 | `{{COMMENT_PATTERN}}` | 주석 줄 탐지 ERE (아래 언어군 표 참고) | `^[[:space:]]*(//\|/\*\|\*[^/])` | `^[[:space:]]*#` |
@@ -66,7 +96,7 @@
   },
   "definition": "<definition 본문 템플릿을 채워 넣기>",
   "toBe": {
-    "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "{{POLICY_SSOT의 파일 경로}}" },
+    "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "docs/comment-policy" },
     "versionScript": { "runtime": "bash", "code": "<to-be 스크립트>", "timeoutSeconds": 60 }
   },
   "asIs": {
@@ -83,33 +113,24 @@
 
 ## versionScript
 
-**to-be** — 주석 정책의 지문. 정책이 바뀔 때만 값이 변해야 한다. 문서가 **없는
-상태도 유효한 관측**이므로 `absent`로 표현한다(빈 해시로 뭉개지 않는다).
-
-*A. 전용 문서형* — 정책이 파일 하나를 통째로 차지할 때:
+**to-be** — 정책 디렉터리의 지문. 정책 본문·원장·판정 상세가 바뀔 때만 값이 변하고 코드 변경에는
+반응하지 않는다. 디렉터리가 **없는 상태도 유효한 관측**이므로 `absent`로 표현한다(빈 해시로
+뭉개지 않는다).
 
 ```bash
 #!/usr/bin/env bash
-# to-be = 주석 정책 문서의 blob hash. 아직 없으면 'absent'.
+# to-be = 주석 정책 디렉터리(docs/comment-policy)의 tree hash. 아직 없으면 'absent'.
 # 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
 set -euo pipefail
-git rev-parse --verify --quiet "HEAD:{{POLICY_SSOT}}" || echo "absent"
+git rev-parse --verify --quiet "HEAD:docs/comment-policy" || echo "absent"
 ```
 
-*B. 섹션 추출형* — 정책이 더 큰 문서(CONTRIBUTING 등) 안의 한 섹션일 때. 섹션이
-사라지거나 제목이 바뀌면 추출이 비어 `absent`가 되고, 이는 "정책이 사라졌다"는
-올바른 drift 신호다:
-
-```bash
-#!/usr/bin/env bash
-# to-be = <문서>의 "<섹션 제목>" 섹션만 추출한 sha256. 같은 문서의 다른 섹션 변경은 무시된다.
-set -euo pipefail
-export LC_ALL=C
-SEC=$(git show "HEAD:{{POLICY_SSOT의 파일}}" 2>/dev/null \
-  | awk '/^## <섹션 제목>/{f=1; print; next} f && /^## /{exit} f{print}')
-if [ -z "$SEC" ]; then echo "absent"; exit 0; fi
-printf '%s' "$SEC" | sha256sum | cut -d' ' -f1
-```
+- **`README.md`만 해싱하지 않는다.** 판정 패스는 주석을 하나도 지우지 않고 원장·상세만 바꾼 채
+  끝날 수 있다("전부 유지"로 끝난 패스). as-is가 그대로인 그런 패스 뒤에도 to-be는 움직여야 미판정
+  잔여를 다시 보는 감지가 돈다 — 본문만 보면 그 재감지 경로가 끊긴다.
+- 단일 파일(예: `docs/comment-policy.md`)이나 다른 문서의 한 섹션에 정책을 두던 레포는 전환 직후
+  to-be가 `absent`로 관측된다. 오류가 아니라 "정해진 자리에 정책이 없다"는 올바른 신호이고, 그
+  task가 이 디렉터리로의 이전을 맡는다.
 
 **as-is** — 코드에 실재하는 주석의 지문. **트리 해시를 쓰지 않는다**: 주석과
 무관한 코드 변경에 반응하면 자매 모델(`{{SIBLING_MODEL}}`)과 중복 트리거되고
@@ -159,7 +180,7 @@ printf '%s' "$HITS" | sha256sum | cut -d' ' -f1
 
 ## 무엇이 "맞는 상태"인가 (SSOT)
 - **복원 경로는 넷**이다: ① 코드 자체 ② 저장소 문서 ③ PR 제목·본문·리뷰 코멘트 ④ 커밋 메시지. 이 중 어디서든 확인되는 내용은 주석의 자리가 아니다.
-- **정책의 SSOT**는 {{POLICY_SSOT}}다. 유지 대상({{KEEP_KINDS}})과 doc 주석 수준({{DOC_COMMENT_POLICY}}), 기계가 읽는 주석 목록을 담는다.
+- **정책의 SSOT**는 `docs/comment-policy/` 디렉터리다. 본문 `README.md`에 유지 대상({{KEEP_KINDS}})과 doc 주석 수준({{DOC_COMMENT_POLICY}}), 기계가 읽는 주석 목록을 두고, 판정 원장은 `ledger.md`, 판정 상세는 `passes/<판정일>-<slug>.md`에 둔다. 세 역할을 한 파일에 섞지 않는다.
 - **실제 상태의 SSOT**는 {{SCAN_SCOPE}} 범위의 주석이다.
 - 정합 상태 = 그 주석들 중 **복원 가능한 내용을 담은 것이 없음**.
 
@@ -176,11 +197,11 @@ printf '%s' "$HITS" | sha256sum | cut -d' ' -f1
 - **애매하면 남긴다.** 이 유형은 제거 쪽으로 기울지 않는다. 중복 주석의 비용은 작지만, 유일한 지식을 담은 주석을 지우면 그 지식은 어디에도 남지 않는다. 비용이 비대칭이므로 판단이 갈리는 주석은 보존하고 그 사실을 task에 남긴다.
 
 ## 추적 방식 (요약)
-- **to-be** = {{POLICY_SSOT}}의 지문. 없으면 `absent`. 정책이 바뀔 때만 변한다.
+- **to-be** = `docs/comment-policy/`의 tree hash. 없으면 `absent`. 정책 본문·원장·판정 상세가 바뀔 때만 변한다.
 - **as-is** = {{SCAN_SCOPE}}에서 주석 줄만 추출·정규화·정렬한 sha256 지문. 트리 해시를 쓰지 않으므로 주석과 무관한 코드 변경에는 반응하지 않고<!-- [선택] --> (자매 모델 `{{SIBLING_MODEL}}`과의 중복 트리거 회피)<!-- --> 주석이 추가·수정·삭제될 때만 변한다.
 
 ## 초기 상태 메모 (등록 시점 {{NOW_ISO}})
-{{INITIAL_STATE}} <!-- 지침: 주석 줄 수와 전체 LOC, 눈에 띄는 중복 유형(문서 재진술·선언 재진술·작업 흔적 등)을 남긴다. 격차가 크면 "첫 task는 (1) 정책 문서 정비 (2) 기존 주석의 복원 가능성 판정을 다루게 된다 — 큰 초기 격차는 예상된 것"을 포함 -->
+{{INITIAL_STATE}} <!-- 지침: 주석 줄 수와 전체 LOC, 눈에 띄는 중복 유형(문서 재진술·선언 재진술·작업 흔적 등)을 남긴다. 격차가 크면 "첫 task는 (1) `docs/comment-policy/` 정비 (2) 기존 주석의 복원 가능성 판정을 다루게 된다 — 큰 초기 격차는 예상된 것"을 포함 -->
 
 ## 범위 밖 / 비고
 - {{OUT_OF_SCOPE}}는 대상이 아니다.

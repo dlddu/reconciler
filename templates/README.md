@@ -74,7 +74,10 @@ CI 게이트로 집행한다. 여백과 색은 여전히 보지 않는다.
 자체의 품질도 보지 않는다 — 오직 중복만 본다. 그리고 다른 유형들이 예외를 줄이는
 방향으로 기우는 것과 달리, **판단이 갈리면 주석을 남기는 쪽으로 기운다**: 중복
 주석의 비용은 작지만 유일한 지식을 지우면 회복되지 않는다는 비대칭 때문이다.
-언어 중립이며, 언어마다 달라지는 것은 주석 줄을 뽑는 패턴 슬롯뿐이다.
+언어 중립이며, 언어마다 달라지는 것은 주석 줄을 뽑는 패턴 슬롯뿐이다. 정책은 파일 하나가 아니라
+`docs/comment-policy/` 디렉터리에 본문(`README.md`)·원장(`ledger.md`)·판정 상세(`passes/`)로
+나눠 두고 to-be는 그 디렉터리의 트리 해시로 본다 — 패스가 쌓이며 한 파일에서 본문이 판정 기록에
+묻히던 것을 구조로 막는 고정부다.
 
 ## 고정부와 가변부
 
@@ -105,7 +108,7 @@ CI 게이트로 집행한다. 여백과 색은 여전히 보지 않는다.
 | metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> 테스트 시나리오 ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` / `<slug> 사용자 여정 ↔ 목업 1:1 정합성` / `<slug> 주석 비중복성 (복원 가능한 주석 제거)` |
 | metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, test-scenario, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` / `[<slug>, journey, mockup, ux, consistency]` / `[<slug>, comments, documentation, consistency]` (+ 필요 시 도구·언어 태그: maestro, playwright, go, python 등) |
 | checkPolicy | `{"intervalSeconds": 3600}` |
-| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·scenario-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(글롭이면 `ls-tree` 지문, 복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60`. comment-redundancy는 e2e-mock-policy와 같은 grep 지문(sha256)을 쓰되 주석 줄만 추출하고 `timeoutSeconds: 120` |
+| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·scenario-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(글롭이면 `ls-tree` 지문, 복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60`. comment-redundancy는 as-is에 e2e-mock-policy와 같은 grep 지문(sha256)을 쓰되 주석 줄만 추출하고 `timeoutSeconds: 120`, to-be는 `docs/comment-policy` 트리 해시(부재는 `absent`)에 `timeoutSeconds: 60` |
 | lastObservedVersion/At | 등록 시 생략(첫 감지 sweep이 채운다) |
 
 ## 인스턴스화 절차
@@ -139,3 +142,9 @@ definition을 크게 개정할 일이 생기면 템플릿 구조로 수렴시키
 `tbm_<slug>-ac-e2e-1to1`)을 `tbm_<slug>-scenario-e2e`로 개명하고
 `data/reconciliation-tasks/<id>.json` 파일명과 각 task의 `toBeModelId`를 함께
 옮겼다. id를 옮길 때는 이 셋을 반드시 한 커밋에서 같이 바꿔야 이력이 끊기지 않는다.
+
+같은 달의 comment-redundancy **정책 디렉터리 개정**은 유형 이름이 그대로라 **id를 옮기지 않았다**.
+기존 모델의 `toBe`(subPath·versionScript)와 definition만 새 구조로 고치고 `lastObservedVersion`은
+건드리지 않는다 — 전환 뒤 첫 감지에서 to-be가 옛 blob hash에서 `absent`로 바뀐 것이 트리거가 되고,
+그 task가 대상 레포의 단일 파일을 디렉터리로 옮긴다. 대상 레포에서 이 모델의 task가 실행 중이면
+실행자의 수렴 검증이 바뀐 스크립트를 읽지 않도록 그 task가 닫힌 뒤에 전환한다.
