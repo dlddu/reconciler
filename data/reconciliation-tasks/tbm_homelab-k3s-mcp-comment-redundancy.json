@@ -1364,7 +1364,7 @@
   {
     "id": "rct_20260910-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-redundancy",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "detectedAt": "2026-09-10T13:01:00Z",
       "changedSides": [
@@ -1382,7 +1382,7 @@
       "summarizedAt": "2026-09-10T13:01:00Z"
     },
     "createdAt": "2026-09-10T13:01:00Z",
-    "updatedAt": "2026-09-10T13:45:00Z",
+    "updatedAt": "2026-09-10T13:47:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "작업이 필요하다. 모델이 12:39:35Z 에 정책 SSOT 를 `docs/comment-policy/` 디렉터리로 다시 겨눴고 대상 레포에는 그 디렉터리가 없다(306줄 단일 파일). 개정 커밋 자신이 「다음 감지가 분할 이전 task 를 연다」고 이 감지를 소유자로 지목했으며 이 fire 가 그 첫 감지다.\n\n소유자 0(비-터미널 task 0 · 열린 PR 0)이고 자동 해소 경로도 없다 — to-be 는 디렉터리가 생기기 전까지 `absent` 에 고정되므로 유예해도 상태가 바뀌지 않는다. 대상 레포가 09-09 이후 정지해 있어 롤아웃 진행 중 같은 일시적 요인도 없다.\n\n범위는 「내용을 고치지 않고 옮긴다」로 좁다: 정책 문구 → `README.md`, 원장 표·합계와 머리말 → `ledger.md`, 패스별 상세 → `passes/<판정일>-<slug>.md`, 옛 파일 삭제, 게이트와 현재형 참조의 경로 갱신. 306줄로 자매 session-platform 의 1,114줄보다 작고 형제 PR 충돌도 없어 먼저 처리하기 쉽다.",
@@ -1431,6 +1431,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/69",
           "preparedAt": "2026-09-10T13:52:00Z",
           "notes": "커밋 1개 · 6파일 `+238/−227` (head `488971fb`). 원문 306줄을 줄 범위로 잘라 `README.md`(208줄) · `ledger.md`(106줄) 로 나눴고, 되붙인 결과를 원본과 diff 해 **선언한 치환 8곳 외에 움직인 줄이 없음**을 확인했다. `passes/` 는 만들지 않았다(모델 개정 메모가 「개정 시점에 옮길 passes 파일은 없다」고 못박았고 템플릿도 상세 없는 패스는 파일을 만들지 않는다).\n\n**계획 단계에서 재서 확인한 제약 둘** — 감지가 「자매 레포처럼 하드코딩인지 계획에서 확인할 것」이라 남긴 것들이다.\n① 게이트가 실제로 하드코딩이다: `POLICY = REPO_ROOT / \"docs\" / \"comment-policy.md\"` (`scripts/check_comment_policy.py:58`) + `main()` 첫 줄 `POLICY.exists()`. 파일만 옮기면 `[R1] 정책 SSOT 가 없다` 로 즉시 rc=1 이다 ⇒ 파싱 대상을 같은 PR 에서 `ledger.md` 로 옮겼고, R1 은 진입점(README)·파싱 대상(ledger) 둘 다 본다.\n② **감지가 못 본 제약: 게이트가 자기 자신을 잡는다.** `scripts/check_comment_policy.py` 는 스캔 범위(`scripts`) 안이고 **docstring 원장 #1 이 등재한 범위**라, 모듈 docstring 을 고치면 R6 이 재판정을 요구한다(실제로 첫 실행에서 rc=1 로 잡혔다). 편집을 **줄 수 중립**으로 설계해 지문만 `ecad9a6d29b1` → `dbe3da0950b3` 로 갱신했고 줄 수 70 이 그대로라 합계 1155 · 잔량 0 은 움직이지 않는다. 줄 주석 표면은 한 줄도 건드리지 않아 원장 #11(`0271fb155480`)도 불변이다.\n\n**로컬 게이트 재현(부모 커밋과 1:1)**: `check_comment_policy.py` rc=0 · `check_mock_policy.py` rc=0 · `check_ac_mapping.py` rc=0(규칙 1~7 위반 없음, 불변식 성립) · `gofmt -l .` 출력 없음. **게이트 출력 수치가 이전 직전 main 과 글자 그대로 같다** — 줄 주석 1016줄/70파일 · 판정 완료 1016(100.0%)/등재 22 · 전체 지문 `7bc7ec4450bca…`, docstring 1155줄/73파일 · 판정 완료 1155(100.0%)/등재 8 · 잔량 0. `.go` 파일 0개 변경이라 `go vet`·`build`·`test` 는 부모와 같다.\n\n**머지 후 기대 지문**: to-be `absent` → `3e19f8a4a646faa9e6db0afd5036e880bcdc28cd`(`docs/comment-policy` tree hash, squash 는 blob 을 보존한다) · as-is `lines=1016 files=70` / `7bc7ec4450bca5b1b43accd850767c540a613b14be61101ef2aa1d6d402db7d3` **불변**(= 줄 주석 무접촉의 기계적 증거).\n\n**허브 도달 40/40 → 41/41 을 손으로 맞췄다** — 문서 인벤토리 행과 이 집계는 어느 게이트의 파싱 범위에도 없다(2026-09-04 이력 행이 「레포 체커의 파싱 범위 밖이라 게이트가 영원히 초록이었다」고 적어 둔 바로 그 자리다). `reader.html` 의 `isSafeDocPath` 가 `/` 를 허용하고 `..` 만 거부하며 `resolvePath` 가 중첩 문서의 상대 링크를 같은 디렉터리 기준으로 풀어서, 허브 → README → `ledger.md` 로 도달한다.\n\n변경 이력의 옛 경로(`doc-tracker.md` 2026-09-04 두 행)는 **고치지 않았다** — 당시 사실의 기록이다.\n\n**관측된 CI (PR #69, run 34483495849, head `488971fb`)** — `fmt + vet` **pass**(41s) · `unit tests` **pass**(25s) · `integration tests` **pass**(5m11s, kind 클러스터). `docker build & push` 는 이미지 빌드 잡이라 이 변경(문서 이동 + 게이트 상수)과 직교하고, lock 을 그만큼 더 쥐지 않으려고 기다리지 않았다 — PR 에 결과가 그대로 남는다.\n\n**게이트 로그가 로컬 실측을 글자 그대로 재현했다.** `fmt + vet` 잡 stdout:\n\n- `OK: 규칙 R1~R8 위반 없음 — 판정 대상 주석 1016줄 / 70파일 (Go 소스 292 · Go 테스트 188 · YAML 262 · Python 274) · 판정 완료 1016줄(100.0%) / 등재 범위 22`\n- `전체 지문: 7bc7ec4450bca5b1b43accd850767c540a613b14be61101ef2aa1d6d402db7d3` — **이전 직전 main 과 동일**이고 모델 `asIs.lastObservedVersion` 과도 같은 값이다.\n- `판정 대상 docstring 1155줄 / 73파일 · 판정 완료 1155줄(100.0%) / 등재 범위 8 · 미판정 잔량 0줄`\n- `2026-09-05(#11)  29줄  0271fb155480  scripts/check_comment_policy.py scripts/check_mock_policy.py` — 줄 주석 원장 행이 **부모와 바이트 동일**. 게이트 파일을 고쳤는데도 이 행이 안 움직인 것이 **「`#` 주석을 한 줄도 건드리지 않았다」의 기계적 증거**다.\n- `2026-09-05(#1)  70줄  dbe3da0950b3  …` — docstring 행만 갱신값으로 착지. 줄 수 70 불변이라 합계·잔량이 함께 움직이지 않았다.\n\n같은 잡의 자매 게이트도 초록이다 — `check_ac_mapping.py` `OK: 규칙 1·2·3·4·5·6·7 위반 없음, 불변식 성립, 러너 배차 누락·케이스 미호출 없음`, `check_mock_policy.py` `OK: 규칙 R1~R6 위반 없음 — 등재 5(상한 5) · 모킹 지점 5 · 실재 토큰 5 · 표기 주석 5 · 미등재 0 · 고아 0`. 후자가 안 움직인 것은 `.github/workflows/ci.yml` 주석을 고치면서 스캔 토큰(`*-mock` 등)을 새로 들이지 않았다는 확인이다 — 그 파일은 `check_mock_policy` 의 스캔 범위(`tests` · `.github/workflows`) 안이다.\n\n`integration tests` 는 62개 계수 줄이 찍혔고 그룹 요약이 전부 「전부 통과」다. `.go` 파일 0개 변경이라 이 잡은 애초에 부모와 같은 결과여야 했고, 실제로 그랬다."
+        },
+        "review": {
+          "required": false,
+          "status": "not_required",
+          "reason": "문서 SSOT 단일 파일을 디렉터리로 옮기는 순수 구조 이전이다 — `.go` 0개 변경, 매니페스트·이미지·클러스터 상태·데이터에 영향이 없고 트래픽 영향도 0이다. 실행 코드에 해당하는 유일한 변경은 게이트 `scripts/check_comment_policy.py` 의 파싱 경로 상수인데, 파일 이동과 같은 커밋에 묶인 자기완결적 변경이라 squash 커밋 revert 한 번이면 게이트까지 함께 옛 경로로 돌아가 CI 가 그대로 초록이다. 불가역 지점은 머지 하나뿐이고 PR #69 의 CI 세 잡(fmt+vet · unit · integration)이 이미 초록이며, 이 시도의 완료 기준인 「옮겼는데 판정 수치가 안 움직였다」가 게이트 로그에서 이전 직전 main 과 글자 그대로 재현됐다(줄 주석 지문 `7bc7ec4450bca…` · 판정 완료 1016줄 · docstring 잔량 0). riskLevel low, 대상 레포 열린 PR 0건이라 옛 파일을 편집 중인 형제 작업도 없고, 이 이전은 모델 개정(`14587f5`)이 이미 승인한 정책 범위 안에서 그 개정이 지목한 소유자가 수행하는 것이라 사람 판단이 갈릴 모호함이 없다."
         }
       }
     ]
