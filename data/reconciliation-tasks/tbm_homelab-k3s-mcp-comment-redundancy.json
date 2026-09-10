@@ -1382,12 +1382,49 @@
       "summarizedAt": "2026-09-10T13:01:00Z"
     },
     "createdAt": "2026-09-10T13:01:00Z",
-    "updatedAt": "2026-09-10T13:25:00Z",
+    "updatedAt": "2026-09-10T13:35:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "작업이 필요하다. 모델이 12:39:35Z 에 정책 SSOT 를 `docs/comment-policy/` 디렉터리로 다시 겨눴고 대상 레포에는 그 디렉터리가 없다(306줄 단일 파일). 개정 커밋 자신이 「다음 감지가 분할 이전 task 를 연다」고 이 감지를 소유자로 지목했으며 이 fire 가 그 첫 감지다.\n\n소유자 0(비-터미널 task 0 · 열린 PR 0)이고 자동 해소 경로도 없다 — to-be 는 디렉터리가 생기기 전까지 `absent` 에 고정되므로 유예해도 상태가 바뀌지 않는다. 대상 레포가 09-09 이후 정지해 있어 롤아웃 진행 중 같은 일시적 요인도 없다.\n\n범위는 「내용을 고치지 않고 옮긴다」로 좁다: 정책 문구 → `README.md`, 원장 표·합계와 머리말 → `ledger.md`, 패스별 상세 → `passes/<판정일>-<slug>.md`, 옛 파일 삭제, 게이트와 현재형 참조의 경로 갱신. 306줄로 자매 session-platform 의 1,114줄보다 작고 형제 PR 충돌도 없어 먼저 처리하기 쉽다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-10T13:01:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "정책 SSOT 를 단일 파일 `docs/comment-policy.md`(306줄) 에서 `docs/comment-policy/` 디렉터리로 **내용을 고치지 않고** 옮긴다 — 본문(복원 경로 넷·유지 대상·제거 대상 유형·판정 절차·범위·추적·지문 사각지대) 은 `README.md` 로, 두 원장(줄 주석·docstring) 의 표·머리말·합계/잔량 마커는 `ledger.md` 로 간다. `passes/` 파일은 만들지 않는다 — 이 레포의 원장 행은 결과 칸 요약과 task 기록으로 근거를 남겨 왔고 템플릿도 「상세로 적을 것이 없는 패스는 파일을 만들지 않는다」로 정한다.\n\n**이 경로를 고른 이유**: 파일을 옮기는 방법은 둘뿐이다 — ⑴ 게이트를 그대로 두고 문서만 쪼개거나 ⑵ 게이트의 파싱 대상을 함께 옮기거나. ⑴ 은 즉시 불가능하다. 게이트가 `POLICY = REPO_ROOT / \"docs\" / \"comment-policy.md\"` 로 **경로를 하드코딩**하고(`scripts/check_comment_policy.py:58`) `main()` 첫 줄이 `POLICY.exists()` 로 막아서므로, 파일만 옮기면 CI 가 `[R1] 정책 SSOT 가 없다` 로 즉시 붉어진다. 그래서 ⑵ 이고, 그 게이트가 읽는 마커 다섯(`판정-원장`·`판정-합계`·`docstring-원장`·`docstring-합계`·`docstring-잔량`) 이 전부 `ledger.md` 한 파일에 모여 있어야 한다 — 템플릿의 「파싱 대상은 `ledger.md` 이고 게이트가 읽는 마커도 거기에만 둔다」와 같은 결론이다.\n\n**완료 기준(이 시도의 범위)**: ① `docs/comment-policy/README.md` + `ledger.md` 가 존재하고 옛 `docs/comment-policy.md` 는 없다 ② 게이트가 `ledger.md` 를 읽어 rc=0 이고 **출력 수치가 이전 직전 main 과 같다**(줄 주석 판정 완료 1016줄 / 등재 범위 22 / 전체 지문 `7bc7ec44…`, docstring 판정 완료 1155줄 / 등재 범위 8 / 잔량 0) ③ 옛 경로를 가리키는 **현재형** 참조 넷(`docs/index.html` 허브 링크, `docs/doc-tracker.md` 문서 인벤토리 행, `.github/workflows/ci.yml` 스텝 주석, 게이트 모듈 docstring) 이 새 경로를 가리킨다 ④ 모델 to-be 가 `absent` → 디렉터리 tree hash 로 움직이고 **as-is 지문은 불변**이다.\n\n**범위 밖**: 주석·docstring 을 새로 판정하는 것(원장 행의 줄 수·합계·잔량은 한 자도 움직이지 않는다), `passes/` 저작, 변경 이력처럼 **당시 사실을 적은 기록**의 옛 경로(`doc-tracker.md` 의 2026-09-04 이력 행 둘), 모델 as-is 를 docstring 표면까지 넓히는 것, `DIRECTIVE_RE` 의 죽은 패턴 `검증 AC:` 정리(모델 소유 스킬 몫).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR 의 CI `fmt + vet` 잡이 초록인지 확인한다. 특히 `Comment policy ledger` 스텝의 stdout 이 이전 직전 main 과 **같은 수치**를 내는지 대조한다 — 줄 주석 `판정 완료 1016줄(100.0%) / 등재 범위 22` + `전체 지문: 7bc7ec4450bca…`, docstring `판정 완료 1155줄(100.0%) / 등재 범위 8 · 미판정 잔량 0줄`. 이 스텝은 값싼 선제 게이트다 — 여기서 갈리면 머지하지 않는다.",
+              "expectedOutcome": "`fmt + vet` 잡 success, `Comment policy ledger` stdout 의 네 수치가 위와 글자 그대로 일치. 지문이 갈리면 이전이 주석 표면을 건드린 것이므로 즉시 중단."
+            },
+            {
+              "seq": 2,
+              "action": "PR 을 **단독 한 줄** 명령으로 squash 머지한다(`gh pr merge <N> --squash`). 다른 명령과 한 호출로 묶지 말 것. 거부되면 우회(REST 머지·`main` 직접 push)나 권한 프로브를 시도하지 말고 그 자리에서 멈춰 `blocked` 로 닫는다.",
+              "expectedOutcome": "PR 이 `MERGED` 로 전이하고 `main` 에 squash 커밋 1개가 얹힌다."
+            },
+            {
+              "seq": 3,
+              "action": "머지된 `main` 을 클린 체크아웃해 **모델 두 축의 버전 스크립트를 그대로 실행**한다. to-be: `git rev-parse --verify --quiet HEAD:docs/comment-policy`. as-is: 모델 asIs.versionScript 원문.",
+              "expectedOutcome": "to-be 가 `absent` 가 아닌 tree hash(= 준비 단계가 지침에 박아 둔 기대값)로 나오고, as-is 는 `lines=1016 files=70` + `7bc7ec4450bca5b1b43accd850767c540a613b14be61101ef2aa1d6d402db7d3` 로 **바이트 불변**. as-is 불변이 「줄 주석을 한 줄도 건드리지 않았다」의 기계적 증거다."
+            },
+            {
+              "seq": 4,
+              "action": "머지된 `main` 에서 게이트 둘을 직접 돌린다: `python3 scripts/check_comment_policy.py` 와 `python3 scripts/check_mock_policy.py`. 함께 옛 파일 부재와 새 디렉터리 존재를 확인한다 (`git ls-files docs/comment-policy*`).",
+              "expectedOutcome": "둘 다 rc=0. `git ls-files` 가 `docs/comment-policy/README.md` 와 `docs/comment-policy/ledger.md` **둘만** 내고 `docs/comment-policy.md` 는 없다."
+            },
+            {
+              "seq": 5,
+              "action": "옛 경로의 **현재형** 잔존 참조가 0인지 확인한다: `grep -rn 'comment-policy\\.md' --exclude-dir=.git .` 의 히트가 `docs/doc-tracker.md` 의 **변경 이력 두 행**(2026-09-04) 뿐인지 본다. 그 둘은 당시 사실의 기록이므로 고치지 않는 것이 맞다.",
+              "expectedOutcome": "히트가 정확히 `docs/doc-tracker.md` 이력 행 2건. `docs/index.html`·`.github/workflows/ci.yml`·`scripts/check_comment_policy.py`·문서 인벤토리 행에는 0건."
+            }
+          ],
+          "plannedAt": "2026-09-10T13:35:00Z",
+          "executionGuide": "(preparation 단계에서 실측값과 함께 작성)"
+        }
+      }
+    ]
   }
 ]
