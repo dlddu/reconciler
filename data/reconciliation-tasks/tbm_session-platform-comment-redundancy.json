@@ -2248,7 +2248,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-10T10:05:00Z",
       "changedSides": [
@@ -2260,7 +2260,7 @@
       }
     },
     "createdAt": "2026-09-10T10:05:00Z",
-    "updatedAt": "2026-09-10T12:37:36Z",
+    "updatedAt": "2026-09-10T12:39:12Z",
     "stateSummary": {
       "asIs": "# as-is — 판정 대상 주석과 그 미판정 잔여 (2026-09-10T10:05Z, 트리거 `9fd0384a`)\n\n지문 `lines=2917 files=125 f8c6a43d…` (부모 `1977cb75` 에서 `lines=2840 files=124 166debdb…`).\n부모는 **기록된 baseline 전건을 바이트 동일하게 재현**한다 — 부모 선정을 먼저 증명했다.\n\n## 레포 게이트 `scripts/check_comment_policy.py` (양쪽 클린 트리 `porcelain=0`)\n\n| | 부모 `1977cb75` | 트리거 `9fd0384a` |\n| --- | ---: | ---: |\n| 판정 대상 주석 | 2814줄 / 124파일 | **2890줄 / 125파일** |\n| 판정 완료(원장 행 합) | 2724줄 (96.8%) | 2724줄 (**94.3%**) |\n| 등재 범위(원장 행 수) | 11 | 11 |\n| 미판정 잔여 | **90** | **166** |\n| rc | 0 | 0 |\n\n원장 행 11개는 **행 단위로 전부 불변**(날짜·줄 수·지문 전건 동일)이고 `판정-합계` 마커도\n2724 그대로다. 즉 **완료량은 한 줄도 늘지 않았고 분모만 +76 늘었다.**\n\n## 미판정 잔여를 파일 단위로 실측 (게이트의 `scan_files`·`comment_lines`·`parse_ledger` 재사용)\n\n| 파일 | 부모 | 트리거 | 비고 |\n| --- | ---: | ---: | --- |\n| `control-plane/test/e2e_state_api_6_stream_contract_test.go` | — | **76** | **#108 이 새로 만든 파일** |\n| `control-plane/test/harness_shared_test.go` | 54 | 54 | 공유 하네스 |\n| `control-plane/test/shared_volume_test.go` | 29 | 29 | #100 이 만들고 어느 행에도 넣지 않은 것 |\n| `web/src/design/README.md` | 6 | 6 | `COMMENT_RE` 오탐(마크다운 볼드) |\n| `data-plane/Dockerfile` | 1 | 1 | `COMMENT_RE` 오탐(셸 `case` 의 `*)`) |\n| **합** | **90** | **166** | 오탐 7 제외 시 83 → **159** |\n\nGo 테스트 주석 계수도 같은 방향으로 움직인다 — 1012 → **1088**(+76).\n\n## 다른 게이트 3종 (판정 표면 밖임을 교차 확인)\n\n- `check-fidelity-allowlist.py` — 부모/트리거 **출력 바이트 동일**, rc=0.\n- `check-render-fidelity.py` — 부모/트리거 **출력 바이트 동일**, rc=0.\n- `check-scenario-mapping.sh` — 움직였으나(저작 대기 12→11) 그 축은 자매 모델 소관.\n",
       "toBe": "# to-be — 주석 정책 SSOT (2026-09-10T10:05Z)\n\n`docs/comment-policy.md` blob `33fa1556403c843135ba10ab0c1b81efa6560ee4` — **부모와 트리거에서\n동일**하다(`to_be` side 미변경, 이 task 의 `changedSides` 는 `as_is` 하나뿐이다).\n\n정책이 요구하는 to-be 는 **스캔 범위의 모든 주석이 원장에 등재된 범위 안에서 판정을 받은\n상태**다. 게이트 R1~R5 는 *등재된* 범위의 무결성만 강제하고 **미등재 범위의 존재 자체는\n막지 않는다** — 그래서 게이트 rc=0 과 「판정 완료 94.3%」가 동시에 참일 수 있다. 이 모델이\n재는 것은 게이트의 초록이 아니라 **그 4.7%**, 즉 판정받지 못한 166줄이다.\n\n정책의 판정 절차(요약): 각 주석을 ① 코드 자체로 복원되는가 ② 레포 다른 곳이 이미 말하는가\n로 물어 제거하고, 남길 것은 **왜**만 남긴다. 판정한 범위는 원장 행으로 등재하고 줄 수·지문을\n박아 R2 가 이후 변경을 재판정 대상으로 잡게 한다.\n",
@@ -2363,6 +2363,49 @@
               "startedAt": "2026-09-10T12:34:30Z",
               "finishedAt": "2026-09-10T12:35:40Z",
               "log": "게이트의 `scan_files`/`comment_lines`/`parse_ledger` 를 import 해 재사용, 미등재 파일을 파일 단위로 셌다.\n\n```\n판정 대상 합계 : 2888줄 / 126파일\n등재(원장) 합계: 2772줄 / 원장 12행\n미판정 잔여    : 116줄\n\n   80  control-plane/test/e2e_claude_code_6_archive_freeze_test.go\n   29  control-plane/test/shared_volume_test.go\n    6  web/src/design/README.md\n    1  data-plane/Dockerfile\n  ----  합 116줄 / 4파일\n```\n\n**이 시도가 범위로 잡은 2파일은 잔여에서 완전히 사라졌다** — `e2e_state_api_6_stream_contract_test.go`(76) 와 `harness_shared_test.go`(54) 가 목록에 없다. 그 130줄이 원장 12행으로 등재됐다(제거 82 · 유지 48).\n\n계획 예측 「36줄 / 3파일」과의 차이 **+80줄 / +1파일**은 전부 `e2e_claude_code_6_archive_freeze_test.go` 하나다 — 계획(10:41Z) 이후 머지된 #110(11:09Z)의 산출물로, 이 시도가 만들지도 건드리지도 않았다.\n\n**as-is 지문 재계산** (모델 `asIs.versionScript` 를 머지된 main 에서 그대로 실행):\n`lines=2915 files=126` / `5a37f0d36cf0dffa18c8cf39a7b10c9531983ded69ef1cad74834ba29d1e371a`.\n직전 관측(`lines=2998 files=126` / `d3ad6958…`, 11:49:05Z — #110 반영 후·머지 전)에서 **−83줄**이다. 계획이 예고한 그대로다 — 게이트 기준 제거 82줄 + 하네스에서 사라진 `검증 시나리오:` 예시 1줄(모델 `DIRECTIVE` 가 아직 죽은 마커 `검증 AC:` 를 써서 그 1줄을 걸러내지 못한다) = 83. 지문이 움직였으므로 **잔여 116줄에 대한 재감지 경로가 열려 있다**."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=2915 files=126\n5a37f0d36cf0dffa18c8cf39a7b10c9531983ded69ef1cad74834ba29d1e371a",
+          "verifiedAt": "2026-09-10T12:39:12Z",
+          "checks": [
+            {
+              "name": "완료 기준 1 — PR #109 머지",
+              "status": "passed",
+              "detail": "`gh pr merge 109 --squash` 성공. squash 커밋 **`00117ab`** 가 `origin/main` 의 head 다 (「docs(comment-policy): 신규 e2e 1파일 + 공유 하네스의 주석 130줄 판정 (제거 82 · 유지 48, 94.3% → 98.7%) (#109)」). 우회 없음 — REST `PUT /merge` 미사용, `main` 직접 push 없음, 재시도 0회."
+            },
+            {
+              "name": "완료 기준 2 — 머지된 main 에서 comment-policy 게이트 rc=0 · 원장 12행 · 판정 완료 2772줄 · 12행 지문 6d39ddcbad4e",
+              "status": "passed",
+              "detail": "클린 트리(`git status --porcelain` 빈 출력)의 `00117ab` 에서 `check_comment_policy.py` **rc=0** — 「규칙 R1~R5 위반 없음 — 판정 대상 주석 2888줄 / 126파일 · 판정 완료 **2772**줄 / 등재 범위 **12**」. 12행째가 `2026-09-10(#12)  48줄  **6d39ddcbad4e**  control-plane/test/e2e_state_api_6_stream_contract_test.go control-plane/test/harness_shared_test.go` 로 **지문까지 정확히 일치**한다(squash 가 blob 을 보존했다). 전체 지문 `cdb7d03716b4…`.\n\n⚠️ 계획이 함께 적은 비율 **98.7% 는 96.0% 로 나온다.** 분자(2772)·원장 행 수(12)·12행 지문은 예측 그대로이고, 분모만 2808 → 2888 로 커졌다 — 계획(10:41Z) 이후 머지된 #110(11:09Z)이 스캔 범위에 주석 80줄을 들였기 때문이다. 실행이 만든 차이가 아니며 게이트 판정에는 영향이 없다."
+            },
+            {
+              "name": "완료 기준 3 — 이 시도가 범위로 잡은 130줄 / 2파일이 미판정 잔여에서 소멸",
+              "status": "passed",
+              "detail": "게이트의 `scan_files`/`comment_lines`/`parse_ledger` 를 재사용해 미등재 파일을 다시 세었다. `e2e_state_api_6_stream_contract_test.go`(76줄) 와 `harness_shared_test.go`(54줄) 가 **잔여 목록에서 완전히 사라졌다** — 원장 12행(48줄)으로 등재됐고, 제거 82 · 유지 48 이다. 이 시도가 소유를 선언한 범위의 잔여는 **0** 이다."
+            },
+            {
+              "name": "자매 축 무접촉 — scenario-mapping 이 머지 직전 main 과 바이트 동일",
+              "status": "passed",
+              "detail": "`check-scenario-mapping.sh` **rc=0** — 「시나리오 37개 = 매칭 파일 24 + 예외 3 + 구현 대기 0 + 저작 대기 10 + 공백 0 (매칭 단위 27개, 비-시나리오 3개)」.\n\n계획은 「부모와 같은 한 줄(저작 대기 11)」로 적었지만 그 부모는 `9fd0384a` 였다. #110 이 저작 대기를 11→10 으로 옮겼으므로 옳은 비교 대상은 **머지 직전 main `7e2a08b1`** 이고, 머지 전에 그 값을 미리 재어 두었다 — 머지 후 출력이 그것과 **바이트 동일**하다. 「이 PR 이 자매 축을 건드리지 않았다」는 기계적 증거는 그대로 성립한다. 승인 조건이던 `// 검증 시나리오: state-api.md#시나리오 6` 선언 1줄도 살아 있다(지우면 이 게이트가 rc=1 이 된다)."
+            },
+            {
+              "name": "나머지 게이트 2종 · 머지 후 main CI",
+              "status": "passed",
+              "detail": "`check-fidelity-allowlist.py` rc=0 (등재 seam 7 · 회계 행 20 == 스캔 쌍 20 · 위반 0) · `check-render-fidelity.py` rc=0 (R1~R10 전부 OK).\n\n머지가 기동한 main 의 `ci` 워크플로 run **34477246194 success**(3m17s), `Build and Push Docker Image to GHCR` run 34477246473 success. 머지된 main 이 붉지 않다.\n\n머지 전 PR 에서 끝낸 kind e2e(job 102838666189)는 로그 직접 계수로 **RUN 113 / PASS 113 / FAIL 0 / SKIP 0** — 하네스를 판정했는데 113 전건이 그대로 통과한 것이 「단언을 하나도 더하거나 빼지 않았다」의 런타임 증거다. SKIP 총계 0 이 그 초록이 vacuous 하지 않다는 증거다."
+            },
+            {
+              "name": "(정보성) 미판정 잔여 실측·귀속 — 116줄 / 4파일",
+              "status": "passed",
+              "detail": "머지된 main 의 잔여를 전량 귀속시켰다. 계획 예측은 「36줄 / 3파일」이었고 실측은 **116줄 / 4파일**이다 — 차이 +80줄/+1파일은 **전부 한 파일**이다.\n\n| 파일 | 줄 | 소유자 | 이 시도의 범위 |\n| --- | ---: | --- | --- |\n| `control-plane/test/e2e_claude_code_6_archive_freeze_test.go` | **80** | 계획(10:41Z) 이후 머지된 #110(11:09Z)이 만든 신규 파일 | **밖** — 계획 시점에 존재하지 않았다 |\n| `control-plane/test/shared_volume_test.go` | 29 | 열린 PR #101 (`tbm_session-platform-docs-impl rct_20260908-0003`, `awaiting_review`) — 살아 있는 유예 | 밖(계획이 명시적으로 제외) |\n| `web/src/design/README.md` | 6 | `COMMENT_RE` 오탐 (모델 소유) | 밖 |\n| `data-plane/Dockerfile` | 1 | 〃 | 밖 |\n\n즉 **잔여 116줄 중 이 시도의 범위에 속한 것은 0줄**이다. 스킬 규약대로 모델 전체 to-be(잔여 0)와의 차이는 수렴 판정에 넣지 않고 사실로만 남긴다 — 아래 재감지가 이어받는다.\n\n⚠️ **80줄은 지금 소유자가 없을 수 있다.** #110 의 자매 task 는 이 축의 원장에 행을 넣지 않았고, 게이트는 등재 범위의 무결성만 강제하므로 rc=0 인 채 이 80줄을 보고하지 않는다. 그 귀속 판정은 detector 의 몫이며, as-is 지문이 움직였으므로 다음 감지 주기가 실제로 이것을 본다."
+            },
+            {
+              "name": "재감지 경로 — as-is 지문 이동",
+              "status": "passed",
+              "detail": "모델 `asIs.versionScript` 를 머지된 main 에서 그대로 실행: `lines=2915 files=126` / `5a37f0d3…`. 직전 관측 `lines=2998 files=126` / `d3ad6958…`(11:49:05Z, #110 반영 후·머지 전)에서 **−83줄**. 계획 예고대로다 — 게이트 기준 제거 82줄 + 하네스에서 사라진 `검증 시나리오:` 예시 1줄(모델 `DIRECTIVE` 가 아직 죽은 마커 `검증 AC:` 를 써서 걸러내지 못하는 줄) = 83. 모델의 `lastObservedVersion` 은 건드리지 않았다 — 이 버전 변화가 다음 감지 주기의 트리거다."
             }
           ]
         }
