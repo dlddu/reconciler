@@ -3892,7 +3892,7 @@
       ]
     },
     "createdAt": "2026-09-10T11:51:20Z",
-    "updatedAt": "2026-09-10T12:03:00Z",
+    "updatedAt": "2026-09-10T12:12:00Z",
     "id": "rct_20260910-0003",
     "stateSummary": {
       "asIs": "## as-is — e2e 두 스위트 (관측 2026-09-10 11:31~11:55Z, main `846eb603` / 배포 핀 `7e2a08b1`)\n\n지문: `api:fb9f1668…` → **`api:f32d140b…`**, `web:f24855e5…` **불변**\n(`web:` 불변이 「`web/e2e` 를 하나도 건드리지 않았다」의 기계적 증거).\nto-be `docs/test` 트리: `024b28e6…` → **`3cc35af4…`**.\n\n트리거는 **PR #110 `846eb603`**(11:09:46Z) 단독이다. 부모 `9fd0384a` 에서 session-platform\n6모델 **12 side 전부**가 기록된 baseline 과 **바이트 동일**로 재현되고, 뒤따른\n`7e2a08b1`(`[skip ci]` 배포 핀)은 12 side 를 하나도 움직이지 않는다.\n\n### #110 은 이 모델 자신의 슬라이스이고 계획이 못박은 착지점에 글자 그대로 수렴했다\n\n`rct_20260910-0002` 의 준비 노트가 예고한 머지 후 지문 —\nto-be `3cc35af484665313928cc1a62e90033e1d753dc7`,\nas-is `api:f32d140bfd4d1208b77585efd194fee704f5be7696ad01b37627a4de7798848d web:f24855e5b702c33e71f8654716a6f3e9e3b20613`\n— 이 내 독립 측정과 **한 글자도 다르지 않다**. 실행 지침 §4 의 기대 출력도 마찬가지다.\n\n게이트 `scripts/e2e/check-scenario-mapping.sh` 를 부모·트리거 **양쪽 클린 트리\n(`porcelain=0`)** 에서 실행한 결과, 움직인 것은 정확히 **세 수**뿐이다:\n\n| | 부모 `9fd0384a` | 트리거 `846eb603` |\n| --- | --- | --- |\n| 시나리오 총계 | 37 | 37 |\n| 매칭 파일 | 23 | **24** |\n| 예외 | 3 | 3 |\n| 구현 대기 | 0 | 0 |\n| **저작 대기** | **11** | **10** |\n| 공백 | 0 | 0 |\n| 매칭 단위 | 26 | **27** |\n| rc | 0 | 0 |\n\n저작 대기 목록에서 `claude-code-workload.md#시나리오 6` 이 빠졌고, 신규\n`control-plane/test/e2e_claude_code_6_archive_freeze_test.go` 의 `^// 검증 시나리오:` 선언이\n정확히 1줄로 그 시나리오를 가리킨다(규칙 2 충족). 자매 축 게이트\n`check-fidelity-allowlist.py`·`check-render-fidelity.py` 는 부모/트리거 **바이트 동일**이다.\n\n### 이 축의 소유자는 0 이다\n\n`rct_20260910-0002` 의 executor 가 **11:45:05Z** 에 `succeeded` / `verification.status=passed`\n/ `converged` 로 닫았다(직전 워커가 claim 뒤 죽어 11:39 에 reclaim 된 두 번째 executor다).\n⇒ 이 모델의 **비-터미널 task 0건**. 그 verification 의 마지막 체크가 잔여를 스스로 열거하며\n**「이번 머지가 만든 지문 전진을 다음 감지 주기가 보고 후속 task 를 연다. `lastObservedVersion`\n은 건드리지 않았다」** 로 **detector 를 소유자로 지목**한다.\n\n열린 PR 셋(#101 · #106 · #109) 중 이 축의 저작 대기를 한 행이라도 줄이는 것은 **0건**이다\n(#101 · #106 은 `control-plane/test/e2e_*_test.go`·`web/e2e/` 를 **0파일** 건드린다).\n",
@@ -3905,6 +3905,47 @@
       "reason": "**작업 필요.** 소비된-트리거의 네 전건이 모두 참이고, 잔여의 유예 사유가 이 모델 안에서\n성립하지 않는다.\n\n**전건**: ⑴ 자기 슬라이스 #110 이 11:09:46Z 머지, ⑵ `rct_20260910-0002` 가 11:45:05Z\n`succeeded`/`converged` 로 닫힘, ⑶ 이 모델 비-터미널 task **0건**, ⑷ executor 자신이 잔여를\n열거하며 「다음 감지 주기가 후속 task 를 연다 — `lastObservedVersion` 은 건드리지 않았다」로\n**detector 를 소유자로 지목**.\n\n**gap 은 게이트가 아니라 정의로 잰다.** 게이트는 rc=0 이지만 그것은 레포 원장이 규칙 1 의 제외\n목록에 **저작 대기**라는 세 번째 버킷을 넣어 `37 = 24+3+0+10+0` 항등식을 만들었기 때문이다.\n모델 `definition` 의 규칙 1 은 **예외·구현 대기 둘만** 제외하므로 불변식은 `37−3−0 = 34` vs\n매칭 **24** ⇒ **10 미달**이다. 게이트는 자기 출력 첫 줄에 「저작 대기 10」을 스스로 찍으면서\n초록이고, 원장 머리말은 그 10건을 「**할 일이 확정된 잔여**」라 부르며 「선행이 `없음`인 행은\n**지금 바로 집을 수 있다**」고 적는다 — 원장 자신이 이것을 백로그가 아니라 확정된 작업으로\n선언한다.\n\n**재감지 경로는 정직하게 존재한다고 적었고, 그럼에도 열었다.** 자매 PR #109 가 이 모델의 as-is\n글롭 안 파일(`e2e_state_api_6_stream_contract_test.go`)의 주석을 고치므로 머지되면 `api:` 지문이\n움직인다(실측 `f32d140b…`→`75d31620…`). 그러나 그것은 저작 대기를 **한 행도** 줄이지 않고, 사람\n승인에 걸려 있으며(`awaiting_review` 15건, 최고령 34.2d), 다른 모델 작업의 **부수 효과**다 —\n「형제 PR 이 어차피 나를 다시 깨운다」는 이 슬라이스의 다음 칸을 여는 사건이 아니다.\n\n**착수 가능성은 실물로 재검증했다.** 「선행 = 없음」 3행 중 `approval-gated #3` 은 승인자 요구사항\n2(자매 `e2e-mock-policy` 에 두 선행 해소 task 동시 개설)가 **미충족**이다 — 그 모델의 비-터미널\ntask 를 직접 세어 **0건**을 확인했다. 남은 `claude-code #3`·`#4` 는 지금 저작할 수 있으나 각각\n원장이 2026-09-10 실측으로 적어 둔 가치 결손(뒷절반 귀속 불가·앞절반 중복 / 헤드라인 재료 부재)을\n안는다. 그래서 planner 에게 넘기는 것은 「무엇을 저작하라」가 아니라 **저작 대 예외 등재(규칙 4)의\n선택**이다 — 같은 상수-대역 벽을 사유로 `claude-code #시나리오 5` 가 이미 예외에 올라 있는 선례가\n있고, 어느 쪽이든 불변식의 양변이 한 칸 가까워진다(저작이면 24→25, 예외 등재면 34→33). 정의가\n의미적 충실도를 판정 대상에서 명시적으로 제외하므로 그 선택은 계획 단계의 판단이다.\n\n파일 충돌 금지면(PR #109 가 쥔 두 파일)·자매 주석 축 통보·seam 토큰 함정을 gap 에 제약으로\n박아 뒀다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-10T11:51:20Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**대역을 넓혀 `claude-code-workload.md#시나리오 4`의 헤드라인을 실제로 사고 그 전용 파일을 저작한다.** gap 은 「저작 대기 10」이고 그중 지금 집을 수 있는 「선행=없음」 3행(claude-code #3·#4, approval-gated #3)은 planner 가 실측한 결과 **셋 다 같은 한 파일에 막혀 있다** — `deploy/e2e-anthropic-fake.yaml` 이 프롬프트와 무관하게 상수 ASCII 32바이트를 `content_block_delta` 한 개로 낸다. 그래서 오늘 저작하면 #4 는 헤드라인이, #3 은 뒷절반이 vacuous 한 파일이 된다(#3 앞절반은 시나리오 2 의 파일이 `maxConcurrent<=1` 로 이미 산다 — 재측정으로 확인). 이 상수성은 자매 모델의 `CLAUDE-PROVIDER` 등재 행이 **자기 잔여로 이미 선언**해 둔 것이고(⑴ 응답이 프롬프트를 반영하지 않음 ⑵ invocation 당 delta 1개), 그 행 스스로 「둘 다 대역을 넓히면 풀리고 두 계획이 그 한 파일에서 만난다」고 적는다. **그래서 이 슬라이스는 저작이 아니라 벽을 먼저 없앤다.** 선택지였던 규칙 4 예외 등재는 오분류라 버렸다 — 벽이 하네스이고 제거 가능하므로 「영구 면제」가 아니며, 규칙 4 자신이 「아직 못 한다」를 예외 사유에서 배제한다(그것이 저작 대기 버킷의 존재 이유다). **범위(완료 기준)**: ⑴ 대역이 프롬프트의 지시자에 따라 다중 delta·다중바이트·64 KiB 초과 응답을 낼 수 있고 지시자가 없으면 **기존 상수 응답과 동일**하다(기존 마커 단언 3곳 무영향), ⑵ `claude-code-workload.md#시나리오 4` 전용 파일이 생겨 게이트 집계가 매칭 24→25 · 저작 대기 10→9 로 움직이고 rc=0, ⑶ 원장의 `CLAUDE-PROVIDER` 잔여와 저작 대기 #3·#4 `근거` 칸이 새 사실로 갱신된다. **범위 밖**: claude-code #3 저작(벽은 이 PR 이 없애지만 파일은 다음 슬라이스), approval-gated #3(추가로 `tool_use` 블록이 필요 — 별개 대역 확장), 제품 코드 무변경.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-10T12:12:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`deploy/e2e-anthropic-fake.yaml` 의 `server.js` 에 프롬프트 지시자 기반 응답 성형을 추가한다. 요청 본문의 **마지막 user 메시지**에서 `e2e-reply:<label>:<runes>:<deltas>` 를 찾고(`--continue` 가 히스토리를 통째로 보내므로 마지막 것만 본다), 있으면 `\"<label>:\" + \"가\".repeat(runes)` 를 `deltas` 개의 `content_block_delta` 로 나눠 낸다(문자 경계로만 자른다). 지시자가 없으면 기존 `REPLY` 상수 경로 그대로. 새 seam 토큰을 들이지 않는다 — `E2E_`(대문자)·`test-only`·`mock-exception:` 추가 금지(지시자는 소문자라 `TOKEN_RE` 에 안 걸린다).",
+              "expectedOutcome": "지시자 없는 호출의 동작이 부모와 동일(마커 `session-platform-e2e-provider-ok` 유지). 자매 모델 as-is 스크립트(seam 지문)가 부모와 **바이트 동일**이고 `check-fidelity-allowlist.py` rc=0."
+            },
+            {
+              "seq": 2,
+              "action": "`control-plane/test/e2e_claude_code_4_stream_reconnect_test.go` 를 신설한다. 헤더에 `// 검증 시나리오: claude-code-workload.md#시나리오 4` 를 **정확히 1줄** 선언. 기존 헬퍼를 재사용한다 (`claudeSession`·`writePromptOK`·`eventuallyClaudeOutput` from e2 파일, `s6Open`·`s6Output`·`nextEvent` from state-api 6 파일 — **두 파일 모두 편집하지 않는다**; `harness_shared_test.go` 와 `e2e_state_api_6_stream_contract_test.go` 는 PR #109 가 쥐고 있어 무접촉).",
+              "expectedOutcome": "새 파일 1개. 편집한 기존 e2e 파일 0개. `gofmt -l` 빈 출력, `go vet -tags=e2e ./...` 통과."
+            },
+            {
+              "seq": 3,
+              "action": "헤드라인 단언을 **비-vacuous 하게** 쓴다: 프롬프트 A(`e2e-reply:alpha:25000:12`)의 출력 75006바이트가 다 착지한 뒤 `offset=0` 으로 스트림을 열어 첫 output 이벤트의 `nextOffset == 65535` 임을 단언하고, read(0) 전체 payload 로 `full[65535]` 가 선두 바이트 · `full[65536]` 이 연속 바이트임을 확인해 **64 KiB 컷이 실제로 룬 중간이었다**(=백오프가 일어났다)를 기계적으로 증명한다.",
+              "expectedOutcome": "ASCII 였다면 `validUTF8PrefixAtMost` 가 정확히 65536 을 돌려줘 단언이 공허해지는데, 다중바이트라 65535 가 나온다 — 이 한 줄이 오늘 레포에 없는 것을 산다."
+            },
+            {
+              "seq": 4,
+              "action": "나머지 시나리오 4 절을 단언한다: 첫 이벤트 뒤 연결 중단 → query 에는 다른 offset 을 두고 `Last-Event-ID: 65535` 로 재연결(우선순위) → 프롬프트 B(`e2e-reply:beta:40:4`) 출력 수신 → 현재 길이 초과 커서로 reset(payload 없음, `lastAccess` 불변) → POST read(0) 전체 이력 → 마지막 커서 read 가 **빈 델타**. A·B 바이트가 **누락·중복 없이 한 번씩**임을 계수로 확인한다.",
+              "expectedOutcome": "`alpha:` 출현 1회 · 버퍼 총 길이가 A+B 합과 일치 ⇒ raw stream-json 의 final/result 로 text delta 가 중복 투영되지 않음(claude-code 전용 절)이 계수로 증명된다."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/test/e2e.md` 를 갱신한다: 저작 대기 표에서 `claude-code-workload.md#시나리오 4` 행 제거, `#시나리오 3` 행의 `근거` 칸에서 「귀속할 표지가 없다」 실측을 **이 PR 로 해소됨**으로 정정, `scenario-summary` 블록을 매칭 24→25 · 저작 대기 10→9 로, 그리고 `CLAUDE-PROVIDER` 등재 행의 **잔여 칸**에서 ⑵(delta 1개)를 해소로, ⑴ 은 「형태는 반영하되 **의미**는 아니다」로 좁힌다.",
+              "expectedOutcome": "`check-scenario-mapping.sh` rc=0 이고 첫 줄이 `매칭 파일 25 + 예외 3 + 구현 대기 0 + 저작 대기 9 + 공백 0 (매칭 단위 28)`. `check-fidelity-allowlist.py` rc=0(집계 R8 불변 — 잔여 산문만 바뀐다)."
+            },
+            {
+              "seq": 6,
+              "action": "로컬에서 게이트 전량을 1:1 재현한 뒤 브랜치를 push 하고 대상 레포에 PR 을 연다(머지하지 않는다). PR 본문에 task id · gap · 계획 단계 · 검증 방법 · **자매 모델에 미치는 선언된 영향**을 적는다.",
+              "expectedOutcome": "scenario-mapping · fidelity · render-fidelity · comment-policy · `gofmt -l` · `go vet` ×3태그 전부 통과. PR 이 `OPEN`/`MERGEABLE` 이고 CI 가 기동."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
