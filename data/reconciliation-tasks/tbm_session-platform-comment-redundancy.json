@@ -2473,6 +2473,57 @@
       "reason": "작업이 필요하다. 두 축 모두 유의미하고 소유자가 없다.\n\n① to-be 축: 모델이 12:40:34Z 에 정책 SSOT 를 `docs/comment-policy/` 디렉터리로 다시 겨눴고 대상 레포에는 그 디렉터리가 없다(1,114줄 단일 파일). 개정 메모 자신이 「전환 뒤 첫 감지에서 to-be 가 `absent` 로 바뀌고 그 task 가 이전을 맡는다」고 이 감지를 소유자로 지목한다 — 이 fire 가 그 첫 감지다.\n\n② as-is 축: 미판정 80줄의 유예 사유가 예고된 그대로 소멸했다(#109 머지 12:31:52Z → `rct_20260910-0002` `succeeded` 12:39:12Z). 이 모델 비-터미널 0 · 자기 소유 열린 PR 0 ⇒ 소유자 0. 유일한 재감지 경로는 자매 모델의 PR #111 이고 그것은 분모를 2888 → 2960 으로 **키우기만** 한다(분자 2772 고정). 게이트가 초록인 것은 등재된 범위의 무결성만 강제하기 때문이며 미등재 범위의 존재 자체는 막지 못한다 ⇒ CI 에 맡겨 두면 영원히 보고되지 않는다. 직전 슬라이스의 임계(오탐 제외 ≥ 100)도 109 로 발화했다.\n\n두 축을 한 PR 로 묶을지 이전을 먼저 하고 판정을 뒤에 둘지는 planner 의 몫이나, **이전이 `docs/comment-policy.md` 를 삭제하고 #101 · #106 이 바로 그 파일을 편집 중**이므로 이전 순서를 먼저 확정하지 않으면 80줄 판정이 사라질 파일에 원장 행을 쓰게 된다는 제약은 실측으로 확인해 둔다. 정의의 낡은 토큰·스크립트 경로(③)도 as-is 지문을 27줄 오염시키고 있으므로 같은 계획에서 `reconciler-tobe-modeler` 로 함께 좁힐 것.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-10T13:01:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "정책 SSOT 를 `docs/comment-policy.md`(1,114줄 단일 파일)에서 `docs/comment-policy/` 디렉터리로 이전하고, 같은 PR 의 **두 번째 커밋**에서 소유자 0 인 미판정 80줄을 13차 패스로 판정한다. 한 PR 두 커밋으로 묶는 이유는 순서 제약이 그렇게만 풀리기 때문이다 — 이전이 `docs/comment-policy.md` 를 삭제하므로, 판정을 먼저 하면 사라질 파일에 원장 행을 쓰게 된다. 커밋을 나누는 이유는 이전의 완료 기준이 「내용을 고치지 않고 옮긴다」라 **게이트 수치가 이전 직전 main 과 바이트 동일**해야 검증되는데, 판정을 섞으면 그 대조가 불가능해지기 때문이다. 대안으로 이전만 하고 판정을 다음 감지에 넘기는 것도 검토했으나 기각했다: 이전이 to-be 를 `absent` → tree hash 로 바꿔 재감지 트리거 자체는 보장되지만, #101(29줄 소유)이 머지되면 오탐 제외 잔여가 109 → 80 으로 떨어져 직전 슬라이스가 박은 임계(≥100)가 발화하지 않고, CI 는 이 줄들을 구조적으로 못 본다(초록 게이트 + #111 이 키우는 분모 2888 → 2960, 분자 2772 고정). 소유자 0 이 두 fire 째 이어진 잔여를 다시 미루면 영구 불가시로 굳는다. 롤백은 revert 하나로 끝난다(디렉터리 삭제 + 옛 파일 복원 + 게이트 되돌림이 한 커밋 안에 있다).\n\n**완료 기준(이 시도의 범위)** — 넷을 모두 만족하면 성공이다. ① `docs/comment-policy/{README.md, ledger.md, passes/*.md}` 가 서고 `docs/comment-policy.md` 는 삭제되며, 옛 파일의 본문이 세 역할로 **내용 변경 없이** 나뉜다(허용되는 유일한 내용 변경은 원장 결과 칸의 「상세 ↓」 → `passes/` 링크). ② 게이트 `scripts/check_comment_policy.py` 가 `ledger.md` 를 파싱하고 R5 는 디렉터리 전체를 스캔하며, **이전 커밋 시점의 출력이 이전 직전 main 과 동일**하다(판정 대상 2888줄/126파일 · 판정 완료 2772줄 96.0% · 등재 범위 12). ③ 옛 경로를 가리키는 **현재형** 참조 6곳이 새 경로로 옮겨진다 — `.github/workflows/ci.yml`, `Makefile`, `docs/index.html`, `docs/session-mcp-tool-surface.md`(2곳), `docs/test/e2e.md`, 게이트 docstring. 당시 사실을 적은 기록(`docs/doc-tracker.md`)의 옛 경로는 고치지 않는다. ④ `control-plane/test/e2e_claude_code_6_archive_freeze_test.go` 의 판정 대상 주석 **80줄 전량**이 판정되어 13차 원장 행 + `passes/2026-09-10-claude-code-6-archive-freeze.md` 로 등재되고, 합계 마커가 R4 를 만족하도록 함께 움직이며, CI 전 잡이 초록이다.\n\n**범위 밖(후속)** — ⓐ `control-plane/test/shared_volume_test.go` 29줄: `tbm_session-platform-docs-impl` 의 `rct_20260908-0003`(PR #101, `awaiting_review`)이 살아 있는 소유 선언을 갖는다. 이중 계상 가드로 제외한다. ⓑ 오탐 7줄(`web/src/design/README.md` 6 · `data-plane/Dockerfile` 1): 지문 정규식이 마크다운·Dockerfile 을 주석으로 오인한 것으로, 패턴을 넓히는 것은 모델 정의 변경이다. ⓒ **모델 정의 정밀도 결함(감지 ③)**: `to-be-models.json` 의 as-is versionScript 가 `DIRECTIVE` 제외 토큰으로 `검증 AC:` 를 쓰는데 대상 레포에 그 문자열은 0건이고 실제 마커는 `검증 시나리오:` 27건이다(모델 2915 − 게이트 2888 = 27 이 정확히 이 차이). `definition` 의 「`검증 AC:` 17건 — `scripts/e2e/check-ac-mapping.sh` 가 파싱한다」도 낡았다(그 스크립트는 없고 실재는 `check-scenario-mapping.sh`, 건수는 27). **레포 쪽은 이미 전부 옳다** — 게이트 `DIRECTIVE_RE` 도 `docs/comment-policy.md` 유지 대상 절도 `검증 시나리오:`/`check-scenario-mapping.sh` 다. 고칠 자리가 `to-be-models.json` 하나뿐이라 executor 가 닫을 수 없고 **`reconciler-tobe-modeler` 소관**이므로 완료 기준에서 뺐다.",
+          "riskLevel": "medium",
+          "plannedAt": "2026-09-10T13:40:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "이전 직전 main(`1142e411`) 클린 트리에서 `python3 scripts/check_comment_policy.py` 를 돌려 기준선을 채집해 고정한다. 같은 트리에서 `git hash-object docs/comment-policy.md` 와 `wc -l` 도 함께 남긴다.",
+              "expectedOutcome": "rc=0 · `판정 대상 주석 2888줄 / 126파일 · 판정 완료 2772줄(96.0%) / 등재 범위 12` · 전체 지문 `cdb7d037…` · 옛 파일 blob `412984a6`, 1114줄. 이 값이 2단계의 대조 기준이 된다."
+            },
+            {
+              "seq": 2,
+              "action": "브랜치 `reconcile/rct_20260910-0004-opus5` 에서 **커밋 A(이전)** 를 만든다. `docs/comment-policy.md` 를 줄 경계로 갈라 `docs/comment-policy/README.md`(1–83 + 752–762 「범위 밖」 절), `docs/comment-policy/ledger.md`(84–120: 원장 머리말·마커·표·합계), `docs/comment-policy/passes/<판정일>-<slug>.md` 12개(121–751, 763–1114)로 옮기고 옛 파일을 `git rm` 한다. 원장 결과 칸의 「상세 ↓」만 해당 `passes/` 파일 링크로 바꾸고, README 에 `ledger.md`·`passes/` 로 가는 링크를 둔다. 내용 변경이 그 링크뿐임을 기계로 증명한다.",
+              "expectedOutcome": "`docs/comment-policy/` 아래 14파일(README·ledger·passes 12), `docs/comment-policy.md` 삭제. 「상세 ↓」→링크 치환과 새 README 링크 블록을 되돌리면 세 파일의 이어붙인 본문이 옛 파일과 **바이트 동일**함이 diff 0 으로 확인된다."
+            },
+            {
+              "seq": 3,
+              "action": "같은 커밋 A 에서 게이트 `scripts/check_comment_policy.py` 를 옮긴다: `POLICY` 를 `docs/comment-policy/ledger.md` 로 겨누고, R5 는 `docs/comment-policy/**/*.md` 전체를 스캔하도록(파일명을 함께 출력) 바꾸며, R1 의 「정책 SSOT 가 없다」는 디렉터리·README·ledger 부재를 각각 말하게 한다. 모듈 docstring 의 `docs/comment-policy.md` 언급도 새 경로로 고친다.",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` rc=0, 출력이 1단계 기준선과 **문자 단위로 동일**(2888/126 · 2772 · 96.0% · 등재 12 · 전체 지문 `cdb7d037…`). R5 가 README·ledger·passes 12개를 모두 읽고도 위반 0."
+            },
+            {
+              "seq": 4,
+              "action": "같은 커밋 A 에서 현재형 참조 6곳을 새 경로로 옮긴다 — `.github/workflows/ci.yml` 주석, `Makefile` 의 `check-comment-policy` 설명, `docs/index.html` 허브 링크(`reader.html?doc=comment-policy/README.md`), `docs/session-mcp-tool-surface.md` 2곳(`./comment-policy.md` → `./comment-policy/README.md`), `docs/test/e2e.md` 의 등재 경로 언급(→ `docs/comment-policy/ledger.md`). `docs/doc-tracker.md` 의 과거 기록은 **건드리지 않는다**.",
+              "expectedOutcome": "`git grep -n 'comment-policy\\.md'` 가 `docs/doc-tracker.md`(과거 기록)와 `docs/comment-policy/passes/*.md` 안의 과거 서술만 남긴다. `docs/index.html` 의 링크가 `reader.html` 의 하위 디렉터리 처리(`resolveFrom`)로 정상 렌더된다."
+            },
+            {
+              "seq": 5,
+              "action": "**커밋 B(13차 판정 패스)** 를 만든다. `control-plane/test/e2e_claude_code_6_archive_freeze_test.go` 의 판정 대상 주석 80줄을 한 줄도 빠짐없이 읽고, `docs/test/claude-code-workload.md#시나리오 6` 매핑 행·예외 목록·`docs/prd/claude-code-workload.md` AC-E5 를 좌표로 삼아 복원 가능/불가능을 가른다. 제거분은 심볼 이름·AC 번호 좌표와 함께 `docs/comment-policy/passes/2026-09-10-claude-code-6-archive-freeze.md` 의 제거 근거표에 적고(R5: 줄 번호 금지), 유지분과 판단이 갈린 것도 이유와 함께 남긴다.",
+              "expectedOutcome": "80줄 전량이 제거 또는 유지로 판정되고 상세 파일이 선다. 코드 동작은 변하지 않는다 — `git diff` 의 비-주석 변경 0(주석 줄을 걷어낸 바이트 대조로 증명), `gofmt -l` 빈 출력."
+            },
+            {
+              "seq": 6,
+              "action": "커밋 B 에서 `ledger.md` 에 13차 행을 더한다: 판정일 `2026-09-10`, 범위 `control-plane/test/e2e_claude_code_6_archive_freeze_test.go`, 판정 후 남은 주석 줄 수와 게이트가 재측정한 12자리 지문, 결과 칸에 「판정 80줄, 제거 X · 유지 Y」와 `passes/` 링크. 합계 마커를 `2772 + Y` 로 함께 움직인다(R4).",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` rc=0 · 등재 범위 **13** · 판정 완료 `2772+Y`줄. R2 가 새 행의 줄 수·지문을 재측정해 통과하고 R3 이중 등재 없음, R4 합계 미러 일치."
+            },
+            {
+              "seq": 7,
+              "action": "로컬에서 정적 게이트 3종(`make check-comment-policy` · `check-scenario-mapping` · `check-fidelity`)과 `go vet ./...`(e2e 빌드 태그 포함)·`gofmt -l` 을 두 모듈 모두 돌린 뒤 브랜치를 push 하고 PR 을 연다. PR 본문에 task id·gap 요약·두 커밋의 경계·검증 방법·형제 PR(#101·#106) 재작업 절차를 적는다.",
+              "expectedOutcome": "로컬 게이트 전부 rc=0. PR 이 열리고 `ci` 워크플로 12잡 + kind `e2e` 가 기동한다."
+            },
+            {
+              "seq": 8,
+              "action": "GitHub Actions 결과를 관측해 전 잡 초록을 확인하고, 실패가 있으면 원인을 고쳐 다시 민다. 관측한 실제 수치(잡 이름·결론·게이트 출력)를 task 레코드에 못박는다.",
+              "expectedOutcome": "`comment policy ledger` 잡을 포함한 전 체크가 success. 게이트 출력의 판정 완료·등재 범위가 6단계 기대값과 일치."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
