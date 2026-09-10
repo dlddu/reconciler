@@ -2440,5 +2440,33 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-10T11:49:05Z"
     }
+  },
+  {
+    "id": "rct_20260910-0004",
+    "toBeModelId": "tbm_session-platform-comment-redundancy",
+    "status": "assessing",
+    "trigger": {
+      "detectedAt": "2026-09-10T13:01:00Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "lines=2998 files=126\nd3ad6958a17da8e8b99fce006a3ac8f09df634818a8e9d95d088001610b62ce4",
+        "currentVersion": "lines=2915 files=126\n5a37f0d36cf0dffa18c8cf39a7b10c9531983ded69ef1cad74834ba29d1e371a"
+      },
+      "toBe": {
+        "previousVersion": "33fa1556403c843135ba10ab0c1b81efa6560ee4",
+        "currentVersion": "absent"
+      }
+    },
+    "stateSummary": {
+      "asIs": "2026-09-10T13:01Z 관측 (main `1142e411`, 트리거 `00117ab1` = PR #109, 12:31:52Z 머지).\n\n- 모델 as-is 스크립트: `lines=2998 files=126` → `lines=2915 files=126` (−83).\n- 레포 게이트 `scripts/check_comment_policy.py` 를 부모(`7e2a08b1`)·트리거 양쪽 클린 트리에서 실행, **양쪽 rc=0**: 판정 대상 2970 → **2888**, 판정 완료 2724 → **2772**(91.7% → 96.0%), 등재 범위 11행 → **12행**. #109 가 원장에 `2026-09-10(#12) 48줄 6d39ddcbad4e` 행을 더했다(주석 130줄 판정 = 제거 82 · 유지 48).\n- 게이트 내부 함수를 그대로 올려(`scan_files` · `comment_lines` · `parse_ledger`) 미판정 잔여를 파일 단위로 귀속: **잔여 116줄 / 4파일** — `control-plane/test/e2e_claude_code_6_archive_freeze_test.go` **80** · `control-plane/test/shared_volume_test.go` **29** · `web/src/design/README.md` 6 · `data-plane/Dockerfile` 1. 뒤 둘 7줄은 지문 정규식이 마크다운·Dockerfile 을 주석으로 오인한 오탐이므로 **오탐 제외 잔여 = 109줄**.\n- 11:30 fire 가 「#109 머지 후 2772/2888 = 96.0%, 잔여 116(오탐 제외 109 = 신규 80 + shared_volume 29)」이라 예고한 값과 **바이트 동일**하게 착지했다.",
+      "toBe": "- to-be 가 `33fa1556…`(옛 `docs/comment-policy.md` blob) → **`absent`** 로 바뀌었다. 원인은 대상 레포의 이동이 **아니라** 2026-09-10T12:40:34Z 의 모델 개정(`98fb083`)이다: 템플릿 `7f6d8f1` 을 따라 정책 SSOT 를 단일 파일에서 `docs/comment-policy/` **디렉터리**(본문 `README.md` · 원장 `ledger.md` · 상세 `passes/<판정일>-<slug>.md`)로 다시 겨누고, `lastObservedVersion` 은 의도적으로 그대로 두어 이 감지가 이전을 맡게 했다.\n- 귀속 증명: 새 versionScript 를 부모 `7e2a08b1` · 트리거 `00117ab1` · 배포 핀 `1142e411` **세 지점 전부**에서 돌리면 모두 `absent` 다 ⇒ 이 side 의 이동은 100% 모델 재조준 탓이고 #109 는 무관하다.\n- 대상 레포 실측: `docs/comment-policy/` 디렉터리 **없음**, `docs/comment-policy.md` 가 **1,114줄** 단일 파일(blob `412984a6`)로 존재 — 개정 메모가 적어 둔 「개정 시점 1,114줄」과 정확히 일치한다.",
+      "gap": "유의미한 차이가 **두 축**에 있고 둘 다 소유자가 없다.\n\n① **정책 디렉터리 이전(to-be 축, 새 gap)** — 목표는 `docs/comment-policy/`(본문·원장·판정 상세 3역할 분리)인데 실제는 1,114줄 단일 파일이다. 실측한 제약 셋: (ㄱ) 원장 게이트 `scripts/check_comment_policy.py` 가 정책 경로를 **하드코딩**하고 있어(`POLICY` 상수가 `docs/comment-policy.md` 를 가리킨다) 파일만 옮기면 R1 「정책 SSOT 가 없다」로 즉시 붉어진다 — 게이트도 같은 PR 에서 `ledger.md` 를 읽도록 옮겨야 한다. (ㄴ) 옛 파일을 편집 중인 형제 PR **#101 · #106** 이 열려 있고 둘 다 부모·트리거 **양쪽에서 동일 충돌 집합**(#101 `docs/comment-policy.md` + `docs/doc-tracker.md`, #106 `docs/comment-policy.md`)으로 이미 DIRTY 다 ⇒ 트리거 무죄이나, 이전이 그 파일을 삭제하므로 병합 순서와 옮기는 방법을 실행 지침에 못박아야 한다(개정 메모가 이미 요구한다). (ㄷ) R5(줄 번호 좌표 금지)는 디렉터리 안 모든 문서를 스캔하므로 분할 후에도 전량 통과해야 한다.\n\n② **미판정 주석 80줄(as-is 축, 유예 소멸)** — `control-plane/test/e2e_claude_code_6_archive_freeze_test.go` 의 80줄은 어느 계획 범위에도 없다. 11:30 fire 는 이 80줄을 「자기 모델의 열린 PR #109 의 처분 뒤 범위가 확정된다」는 이유로 유예하며 **유예를 죽이는 사건을 「#109 머지면 80줄」로 못박아 뒀고**, #109 가 12:31:52Z 에 머지되고 그 task `rct_20260910-0002` 가 12:39:12Z 에 `succeeded` 로 닫히며 그 사건이 그대로 일어났다. #109 는 이 80줄을 한 줄도 판정하지 않았다(원장 12행의 범위는 `e2e_state_api_6_stream_contract_test.go` + `harness_shared_test.go`). 지금 이 모델의 비-터미널 task **0건**, 이 모델 소유의 열린 PR **0건** ⇒ 소유자 0.\n   재감지 경로는 존재하지만 **남의 것이고 gap 을 키운다**: 열린 PR #111 은 자매 `scenario-e2e` 소관이며 트리거 위 시험 병합에서 판정 대상을 2888 → **2960**(+72)으로 올린다(판정 완료는 2772 고정) — 분자가 얼어붙고 분모만 커지는 「초록 게이트 + 커지는 분모」 형태라 CI 는 이 줄들을 영원히 보고하지 않는다.\n   직전 슬라이스가 박은 임계(`rct_20260908-0004`: 오탐 제외 잔여 ≥ 100)는 **109 로 발화**했다(194 발화 → 83 미발화 → 159 발화 → 109 발화).\n   이중 계상 가드: `shared_volume_test.go` 29줄은 `tbm_session-platform-docs-impl` 의 `awaiting_review` task `rct_20260908-0003`(PR #101) 소관이라 이 범위에서 제외한다. 신규 e2e 파일의 존재·1:1 매칭은 `tbm_session-platform-scenario-e2e` 소관이고 이 레코드는 그 **주석**만 본다.\n\n③ **모델 정의 정밀도 결함(계획 단계에서 함께 좁힐 것, rival task 아님)** — as-is versionScript 의 `DIRECTIVE` 제외 토큰이 `검증 AC:` 인데 대상 레포에 그 문자열은 **0건**이고 실제 마커는 `검증 시나리오:` **27건**이다(판정 축이 AC 에서 테스트 시나리오로 옮겨간 뒤). 그래서 모델은 자기 정의가 「지문·판정 모두에서 제외한다」고 선언한 기계 판독 주석 27줄을 **세고 있다** — 모델 2915 − 게이트 2888 = **27** 로 정확히 이 차이다. 게이트는 같은 자리에 `검증 시나리오:` 를 두고 소스 주석에 「모델의 as-is 버전 스크립트와 글자 그대로 같은 정의이며 하나라도 갈리면 함께 고치라」고 적어 두었다. 같은 계열로 `definition` 의 「`검증 AC:` 17건 — `scripts/e2e/check-ac-mapping.sh` 가 파싱한다」는 서술도 낡았다: 그 스크립트는 **존재하지 않고**(실재하는 것은 `scripts/e2e/check-scenario-mapping.sh`) 건수도 27 이다. rc=0 이고 경로도 살아 있어 통상의 세 층위 점검을 전부 통과하지만 **제외 토큰이 아무것도 선택하지 못하는** 형태다.",
+      "summarizedAt": "2026-09-10T13:01:00Z"
+    },
+    "createdAt": "2026-09-10T13:01:00Z",
+    "updatedAt": "2026-09-10T13:01:00Z"
   }
 ]
