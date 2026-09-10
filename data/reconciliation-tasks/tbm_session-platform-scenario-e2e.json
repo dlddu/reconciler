@@ -3892,7 +3892,7 @@
       ]
     },
     "createdAt": "2026-09-10T11:51:20Z",
-    "updatedAt": "2026-09-10T12:12:00Z",
+    "updatedAt": "2026-09-10T12:20:00Z",
     "id": "rct_20260910-0003",
     "stateSummary": {
       "asIs": "## as-is — e2e 두 스위트 (관측 2026-09-10 11:31~11:55Z, main `846eb603` / 배포 핀 `7e2a08b1`)\n\n지문: `api:fb9f1668…` → **`api:f32d140b…`**, `web:f24855e5…` **불변**\n(`web:` 불변이 「`web/e2e` 를 하나도 건드리지 않았다」의 기계적 증거).\nto-be `docs/test` 트리: `024b28e6…` → **`3cc35af4…`**.\n\n트리거는 **PR #110 `846eb603`**(11:09:46Z) 단독이다. 부모 `9fd0384a` 에서 session-platform\n6모델 **12 side 전부**가 기록된 baseline 과 **바이트 동일**로 재현되고, 뒤따른\n`7e2a08b1`(`[skip ci]` 배포 핀)은 12 side 를 하나도 움직이지 않는다.\n\n### #110 은 이 모델 자신의 슬라이스이고 계획이 못박은 착지점에 글자 그대로 수렴했다\n\n`rct_20260910-0002` 의 준비 노트가 예고한 머지 후 지문 —\nto-be `3cc35af484665313928cc1a62e90033e1d753dc7`,\nas-is `api:f32d140bfd4d1208b77585efd194fee704f5be7696ad01b37627a4de7798848d web:f24855e5b702c33e71f8654716a6f3e9e3b20613`\n— 이 내 독립 측정과 **한 글자도 다르지 않다**. 실행 지침 §4 의 기대 출력도 마찬가지다.\n\n게이트 `scripts/e2e/check-scenario-mapping.sh` 를 부모·트리거 **양쪽 클린 트리\n(`porcelain=0`)** 에서 실행한 결과, 움직인 것은 정확히 **세 수**뿐이다:\n\n| | 부모 `9fd0384a` | 트리거 `846eb603` |\n| --- | --- | --- |\n| 시나리오 총계 | 37 | 37 |\n| 매칭 파일 | 23 | **24** |\n| 예외 | 3 | 3 |\n| 구현 대기 | 0 | 0 |\n| **저작 대기** | **11** | **10** |\n| 공백 | 0 | 0 |\n| 매칭 단위 | 26 | **27** |\n| rc | 0 | 0 |\n\n저작 대기 목록에서 `claude-code-workload.md#시나리오 6` 이 빠졌고, 신규\n`control-plane/test/e2e_claude_code_6_archive_freeze_test.go` 의 `^// 검증 시나리오:` 선언이\n정확히 1줄로 그 시나리오를 가리킨다(규칙 2 충족). 자매 축 게이트\n`check-fidelity-allowlist.py`·`check-render-fidelity.py` 는 부모/트리거 **바이트 동일**이다.\n\n### 이 축의 소유자는 0 이다\n\n`rct_20260910-0002` 의 executor 가 **11:45:05Z** 에 `succeeded` / `verification.status=passed`\n/ `converged` 로 닫았다(직전 워커가 claim 뒤 죽어 11:39 에 reclaim 된 두 번째 executor다).\n⇒ 이 모델의 **비-터미널 task 0건**. 그 verification 의 마지막 체크가 잔여를 스스로 열거하며\n**「이번 머지가 만든 지문 전진을 다음 감지 주기가 보고 후속 task 를 연다. `lastObservedVersion`\n은 건드리지 않았다」** 로 **detector 를 소유자로 지목**한다.\n\n열린 PR 셋(#101 · #106 · #109) 중 이 축의 저작 대기를 한 행이라도 줄이는 것은 **0건**이다\n(#101 · #106 은 `control-plane/test/e2e_*_test.go`·`web/e2e/` 를 **0파일** 건드린다).\n",
@@ -3944,6 +3944,14 @@
               "expectedOutcome": "scenario-mapping · fidelity · render-fidelity · comment-policy · `gofmt -l` · `go vet` ×3태그 전부 통과. PR 이 `OPEN`/`MERGEABLE` 이고 CI 가 기동."
             }
           ]
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20260910-0003-scenario-e2e",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/111",
+          "preparedAt": "2026-09-10T12:20:00Z",
+          "notes": "1커밋 3파일 (+353/−19), head `596ed3f5`. `OPEN`/`MERGEABLE`. CI 12체크 기동(kind e2e 포함).\n\n**로컬 게이트 1:1 재현 완료** — scenario-mapping rc=0 이고 첫 줄이 계획이 예고한 그대로 `시나리오 37개 = 매칭 파일 25 + 예외 3 + 구현 대기 0 + 저작 대기 9 + 공백 0 (매칭 단위 28개)` (부모 24/10/27). fidelity rc=0 이고 **회계·집계가 부모와 완전 동일**(등재 seam 7 · 회계 행 20 · 마커 9지점/9파일) — 대역을 넓혔지만 seam 을 하나도 안 들였다는 뜻. render-fidelity · comment-policy · `gofmt -l` 빈 출력 · `go vet` 3태그(기본·e2e·integration) · `go test ./...`(control-plane·data-plane) 전부 rc=0.\n\n**자매 모델 무영향을 지문으로 샀다** — `tbm_session-platform-e2e-mock-policy` 의 as-is 스크립트를 부모와 브랜치에서 각각 돌려 `seams=28 files=15 50de91af6c854b62f86d74fdd5f678cd0cd328e601eaa359b27b8375e8b4ca3a` 로 **바이트 동일**. 그쪽의 to-be(= e2e.md 충실도 절)만 움직이는데 그건 잔여가 실제로 줄었기 때문이라 옳다. ⚠️ `git ls-files` 기반이라 **stage 뒤에** 재야 신규 파일이 보인다.\n\n**머지 후 기대 지문**(squash 는 blob 보존이라 정확히 맞아야 한다): to-be `docs/test` = `f41179fe1f2a4d6308b5c95dd70e9bae17ed0798`(부모 `3cc35af4…`), as-is `api:75d860fc1d6741cc6e11b6700ca519d7695f9ae5ee4b33cad6988d4f7783e9fd`(부모 `f32d140b…`), **`web:f24855e5b702c33e71f8654716a6f3e9e3b20613` 불변**(= `web/e2e` 무접촉의 기계적 증거).\n\n**파일 충돌 금지면 준수**: PR #109 가 쥔 `harness_shared_test.go`·`e2e_state_api_6_stream_contract_test.go` 를 한 줄도 편집하지 않았다(같은 패키지라 헬퍼는 읽기로만 재사용). #106 은 `docs/test/approval-gated-workload.md` 를 만지지만 시나리오 증감 0건이라 집계 37 은 그대로다."
         }
       }
     ]
