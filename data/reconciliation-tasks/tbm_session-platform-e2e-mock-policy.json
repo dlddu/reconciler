@@ -2413,7 +2413,7 @@
       "assessedAt": "2026-09-11T05:45:31Z"
     },
     "createdAt": "2026-09-11T05:45:31Z",
-    "updatedAt": "2026-09-11T06:38:22Z",
+    "updatedAt": "2026-09-11T06:41:56Z",
     "attempts": [
       {
         "plan": {
@@ -2478,6 +2478,62 @@
           "reason": "**사람 검토 필요.** `riskLevel: medium` 이고, 실행이 건드리는 자리가 이 모델의 판정면 그 자체다.\n\n⑴ **to-be 문서를 스스로 고친다.** PR #115 는 `docs/test/e2e.md` 의 `fidelity:blockers` 2행을 **삭제**하고 `fidelity:summary` 를 차단 요인 2→1 · 착수 가능 1→0 으로 내린다 — 이 절은 이 모델의 to-be 원본이다. 머지되는 순간 원장에서 그 부채 기록이 사라지므로, 「해소했으니 지운다」와 「지워서 해소로 보이게 한다」를 가르는 것은 게이트가 아니라 **사람의 판단**이다. 게이트는 위반 0 만 재고 부채 유무는 재지 않는다고 assessment 가 명시한다. 같은 PR 이 `docs/comment-policy.md` 9차 행도 재판정한다(제거 6 · 유지 8).\n\n⑵ **`deploy/` 경계.** 변경의 핵심이 `deploy/e2e-anthropic-fake.yaml`(대역 ConfigMap 의 `server.js`)이다. 이 모델의 **직전 슬라이스 PR #113 이 정확히 같은 이유 — `deploy/` 를 만졌다 — 로 사람 승인까지 올라갔다.** 프로덕션 워크로드는 아니지만 배포 매니페스트이고, 머지는 kind 실클러스터 `e2e` CI 잡을 실제로 돌린 뒤 배포 핀 커밋을 main 에 뒤따르게 한다.\n\n⑶ **가역성은 양호하다** — 지시자(`e2e-tool:`)가 opt-in 이라 쓰지 않는 호출자에겐 부모와 동작이 같고, 되돌리기는 PR 리버트 1회다. 새 env·엔드포인트·마커가 없어 seam 집합도 불변이다. 즉 위험의 무게는 롤백 난이도가 아니라 **원장 삭제가 맞는 판단인지**에 있다.",
           "reviewer": "human",
           "reviewedAt": "2026-09-11T06:34:03Z"
+        },
+        "execution": {
+          "status": "running",
+          "startedAt": "2026-09-11T06:41:56Z",
+          "finishedAt": null,
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T06:40:00Z",
+              "finishedAt": "2026-09-11T06:41:00Z",
+              "log": "baseline `8e49927` 에서 세 게이트 실측. fidelity rc=0 — 등재 seam 7 (GATE 1 · TRIG 0 · EXT 3 · NET 3) / 회계 20==스캔 20 (귀속 14 · 위반 0 · 비-seam 6) / 마커 9지점 9파일 · 인터셉트 7 (승인 7 · 상한 0) / 차단 요인 2 · 착수 가능 1. comment-policy rc=0 — 판정 대상 3063줄 128파일 · 완료 2772줄 · #9행 423줄 `ca781b0575b5`. scenario-mapping rc=0 — 37 = 26+3+0+8+0, 저작 대기 8건. 계획 seq 1 의 expectedOutcome 과 한 글자도 다르지 않다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T06:41:00Z",
+              "finishedAt": "2026-09-11T06:42:00Z",
+              "log": "실행은 다시 저작하지 않는다 — 계획이 PR #115 로 스테이징한 산출물을 **원문으로** 확인했다. `git diff --stat origin/main...pr115` = 4파일 +126 −20 으로 preparation 기록과 일치. `deploy/e2e-anthropic-fake.yaml` 안에 `TOOL_RE = /e2e-tool:([A-Za-z0-9_][A-Za-z0-9_.-]*):(\\{.*)$/m` · `replyShape()` 의 tool_use 갈래 · `contentBlocks()` 의 shape 분기가 실재한다. 새 env 없음(`process.env` 는 PORT·EXPECTED_BEARER·REPLY_MODEL 셋 그대로), 지시자 토큰이 소문자라 `E2E_[A-Z0-9_]+` 에 안 걸린다 — seam 집합 불변이 단계 5 의 fidelity 출력으로 재확인된다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T06:52:00Z",
+              "finishedAt": "2026-09-11T06:55:00Z",
+              "log": "지침 §3.4 하네스를 **실행 단계에서 독립적으로 다시 돌렸다**(계획 시점 실측의 재현). ConfigMap `server.js` 와 Secret 의 tls.crt/tls.key 를 매니페스트에서 파싱하고 `/etc/anthropic-fake-tls` 리터럴만 임시 경로로 치환, 포트는 동적으로 빈 것을 잡았다(33825). **6/6 PASS** — ①기본 응답 `text`/`session-platform-e2e-provider-ok`/`end_turn` ②`e2e-reply:probe:9:3` → text_delta 3건, 재조립 `probe:` + 가×9 ③버퍼드 `tool_use` (name 일치 · input 딥 동등 · id `toolu_e2e000000000000000001` · `stop_reason: tool_use`) ④SSE 순서 message_start>content_block_start(tool_use)>content_block_delta(input_json_delta)>content_block_stop>message_delta(stop_reason tool_use)>message_stop, `partial_json` 재조립 == 입력 ⑤`tool_result` 뿐인 턴이 상수 응답 + `end_turn` 으로 닫힘(지시자가 history 에 남아 있어도) ⑥`e2e-tool:foo:{oops` → 400 `invalid_request_error`. 하네스는 커밋하지 않았다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T06:44:00Z",
+              "finishedAt": "2026-09-11T06:50:00Z",
+              "log": "`control-plane/test/e2e_provider_reachability_test.go` +31줄(새 파일 없음) 확인. control-plane: `gofmt -l .` 무출력 · `go vet -tags=e2e ./...` rc=0 · `go test ./...` rc=0(8패키지 ok). data-plane: `gofmt -l .` 무출력 · `go vet ./...` rc=0 · `go test ./...` rc=0. 새 파일이 없으므로 scenario-mapping 집계 불변(단계 7 에서 바이트 동일 확인)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T06:42:00Z",
+              "finishedAt": "2026-09-11T06:43:00Z",
+              "log": "`docs/test/e2e.md` −9/+? 갱신분에 대해 `diff fid.before fid.after` = **5번째 줄 한 줄만** 차이. 앞 세 줄(등재 seam 7 · 회계 20==20 귀속 14/위반 0/비-seam 6 · 마커 9지점 9파일 · 인터셉트 7 승인 7 상한 0)은 **바이트 동일** — 지침 §3.2 가 머지 금지 조건으로 건 불변식 1 이 보존됐다. 바뀐 줄: 차단 요인 2→1 · 착수 가능 1→0."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T06:43:00Z",
+              "finishedAt": "2026-09-11T06:44:00Z",
+              "log": "`check_comment_policy.py` rc=0 — 판정 대상 3071줄 128파일(Go 테스트 1261→1269) · **판정 완료 2780줄 / 등재 범위 12**(지침 §3.3 의 기대치와 일치). #9(2026-09-07) 행 423줄 `ca781b0575b5` → **431줄 `50fa7ffc546d`**. baseline 대비 diff 는 요약 줄 · #9 행 · 전체 지문 **셋뿐** — 나머지 11개 등재 행의 줄 수·지문은 불변."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T06:50:00Z",
+              "finishedAt": "2026-09-11T06:52:00Z",
+              "log": "세 게이트 + gofmt + vet 전부 rc=0 재확인. scenario-mapping 출력이 baseline 과 **완전 동일**(diff 무출력) — 37 = 26+3+0+8+0, 저작 대기 8건에 `approval-gated-workload.md#시나리오 3` 이 **남아 있다**. 범위 밖 저작을 건드리지 않았다는 뜻."
+            }
+          ]
         }
       }
     ]
