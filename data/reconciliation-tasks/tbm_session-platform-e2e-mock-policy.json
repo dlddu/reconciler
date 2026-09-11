@@ -2389,7 +2389,7 @@
   {
     "id": "rct_20260911-0003",
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
-    "status": "reviewing",
+    "status": "awaiting_review",
     "trigger": {
       "detectedAt": "2026-09-11T05:45:31Z",
       "changedSides": [
@@ -2471,6 +2471,11 @@
           "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/115",
           "preparedAt": "2026-09-11T06:26:00Z",
           "notes": "PR #115 — `reconcile/rct_20260911-0003-opus-5-1m` → `main` (base `8e49927`). 머지하지 않았다.\n\n**스테이징된 변경 4파일 / +126 −20.**\n- `deploy/e2e-anthropic-fake.yaml` — `e2e-tool:<도구명>:<JSON 입력>` 지시자와 `tool_use` 발화(버퍼드 + SSE). 새 env·엔드포인트·마커 없음. 기존 리터럴 `content: [{ type: \"text\", text }]` 가 shape 분기로 바뀌어 사라졌다(= 원장 행 삭제와 R10 이 같은 hunk 에서 맞물린다).\n- `control-plane/test/e2e_provider_reachability_test.go` — `TestProviderEmitsAToolUseBlockWhenThePromptAsksForOne` 추가(기존 3케이스·`providerReplyMarker` 무변경). 이미 「비-시나리오 파일 등재」에 있는 파일이라 시나리오 1:1 계산 불변.\n- `docs/test/e2e.md` — `fidelity:blockers` 2행 삭제 · `fidelity:summary` 차단 요인 2→1 · 착수 가능 1→0 · `CLAUDE-PROVIDER` 등재 행의 구동 구간/잔여 갱신 · 비-시나리오 등재 행 서술 보강.\n- `docs/comment-policy.md` — 9차(2026-09-07) 행 증분 재판정: **14줄 판정 — 제거 6 · 유지 8** (423 → 431, 지문 `ca781b0575b5` → `50fa7ffc546d`), 합계 2772 → 2780.\n\n**계획 시점에 이미 통과시킨 검증(실측).**\n- `check-fidelity-allowlist.py` rc=0 — baseline 대비 **차단 요인/착수 가능 한 줄만** 차이. 등재 seam 7 · 회계 20==스캔 20(귀속 14 · 위반 0 · 비-seam 6) · 마커 9지점/9파일 · 인터셉트 7(승인 7 · 상한 0) **바이트 동일**.\n- `check_comment_policy.py` rc=0 (판정 완료 2780줄 / 등재 범위 12).\n- `check-scenario-mapping.sh` 출력이 baseline 과 **완전 동일** — 저작 대기 8건, `approval-gated-workload.md#시나리오 3` 잔존(= 범위 밖 저작을 건드리지 않았다).\n- control-plane · data-plane 양쪽 `gofmt -l` 무출력 · `go vet` (control-plane 은 `-tags=e2e`) · `go test ./...` rc=0.\n- **대역 자체를 실제로 기동해 6/6 단언 통과.** ConfigMap 의 `server.js` 와 Secret 의 TLS 자료를 매니페스트에서 파싱해 띄우고(컨테이너 cert 경로 한 리터럴만 임시 경로로 치환) ①기본 응답 회귀 없음 ②`e2e-reply:` 회귀 없음 ③버퍼드 tool_use ④SSE 이벤트 순서 + `partial_json` 재조립 ⑤`tool_result` 턴이 상수 응답 + `end_turn` 으로 닫힘 ⑥깨진 도구 입력 400. 하네스는 커밋하지 않았다(임시 검증 도구).\n\n**실행 단계에 남는 것**: PR CI 초록 확인 → 머지. 클러스터는 필요 없다 — 새 Go 케이스는 kind SUT 가 없으면 기존 `curlProxy` 규약대로 skip 된다.\n\n**주의**: base 가 `8e49927` 이후 움직였으면 rebase 후 게이트를 다시 돌릴 것. 특히 `docs/test/e2e.md` 충실도 절은 이 모델의 to-be 그 자체다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "**사람 검토 필요.** `riskLevel: medium` 이고, 실행이 건드리는 자리가 이 모델의 판정면 그 자체다.\n\n⑴ **to-be 문서를 스스로 고친다.** PR #115 는 `docs/test/e2e.md` 의 `fidelity:blockers` 2행을 **삭제**하고 `fidelity:summary` 를 차단 요인 2→1 · 착수 가능 1→0 으로 내린다 — 이 절은 이 모델의 to-be 원본이다. 머지되는 순간 원장에서 그 부채 기록이 사라지므로, 「해소했으니 지운다」와 「지워서 해소로 보이게 한다」를 가르는 것은 게이트가 아니라 **사람의 판단**이다. 게이트는 위반 0 만 재고 부채 유무는 재지 않는다고 assessment 가 명시한다. 같은 PR 이 `docs/comment-policy.md` 9차 행도 재판정한다(제거 6 · 유지 8).\n\n⑵ **`deploy/` 경계.** 변경의 핵심이 `deploy/e2e-anthropic-fake.yaml`(대역 ConfigMap 의 `server.js`)이다. 이 모델의 **직전 슬라이스 PR #113 이 정확히 같은 이유 — `deploy/` 를 만졌다 — 로 사람 승인까지 올라갔다.** 프로덕션 워크로드는 아니지만 배포 매니페스트이고, 머지는 kind 실클러스터 `e2e` CI 잡을 실제로 돌린 뒤 배포 핀 커밋을 main 에 뒤따르게 한다.\n\n⑶ **가역성은 양호하다** — 지시자(`e2e-tool:`)가 opt-in 이라 쓰지 않는 호출자에겐 부모와 동작이 같고, 되돌리기는 PR 리버트 1회다. 새 env·엔드포인트·마커가 없어 seam 집합도 불변이다. 즉 위험의 무게는 롤백 난이도가 아니라 **원장 삭제가 맞는 판단인지**에 있다."
         }
       }
     ]
