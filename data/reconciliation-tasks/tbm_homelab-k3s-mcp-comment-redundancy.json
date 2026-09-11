@@ -1364,7 +1364,7 @@
   {
     "id": "rct_20260910-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-10T13:01:00Z",
       "changedSides": [
@@ -1382,7 +1382,7 @@
       "summarizedAt": "2026-09-10T13:01:00Z"
     },
     "createdAt": "2026-09-10T13:01:00Z",
-    "updatedAt": "2026-09-11T02:45:00Z",
+    "updatedAt": "2026-09-11T02:48:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "작업이 필요하다. 모델이 12:39:35Z 에 정책 SSOT 를 `docs/comment-policy/` 디렉터리로 다시 겨눴고 대상 레포에는 그 디렉터리가 없다(306줄 단일 파일). 개정 커밋 자신이 「다음 감지가 분할 이전 task 를 연다」고 이 감지를 소유자로 지목했으며 이 fire 가 그 첫 감지다.\n\n소유자 0(비-터미널 task 0 · 열린 PR 0)이고 자동 해소 경로도 없다 — to-be 는 디렉터리가 생기기 전까지 `absent` 에 고정되므로 유예해도 상태가 바뀌지 않는다. 대상 레포가 09-09 이후 정지해 있어 롤아웃 진행 중 같은 일시적 요인도 없다.\n\n범위는 「내용을 고치지 않고 옮긴다」로 좁다: 정책 문구 → `README.md`, 원장 표·합계와 머리말 → `ledger.md`, 패스별 상세 → `passes/<판정일>-<slug>.md`, 옛 파일 삭제, 게이트와 현재형 참조의 경로 갱신. 306줄로 자매 session-platform 의 1,114줄보다 작고 형제 PR 충돌도 없어 먼저 처리하기 쉽다.",
@@ -1476,6 +1476,49 @@
               "startedAt": "2026-09-11T02:44:20Z",
               "finishedAt": "2026-09-11T02:45:00Z",
               "log": "옛 경로 잔존 참조 확인 — **현재형 참조 0건**(완료 기준 충족). 다만 히트 수는 지침이 예상한 2건이 아니라 3건이다.\n\n`grep -rn 'comment-policy\\.md' --exclude-dir=.git .` 히트 3건:\n1. `docs/doc-tracker.md:474` — 변경 이력 행(2026-09-04). 예상대로, 당시 사실의 기록이라 고치지 않는 것이 맞다.\n2. `docs/doc-tracker.md:476` — 변경 이력 행(2026-09-04). 동상.\n3. **`docs/comment-policy/ledger.md:72`** — 지침이 예상하지 못한 히트. 이 PR 이 **스스로 저작한** docstring 원장 #1 의 재판정 사유 칸이며, 「이 PR 이 모듈 docstring 첫 문장의 to-be 서술을 고쳤다(`docs/comment-policy.md` 자신 → `docs/comment-policy/` 디렉터리)」로 **옛 상태를 과거형으로 서술**한다. 현재형 포인터가 아니라 변경 이력과 같은 범주(당시 사실의 기록)이므로 고치지 않는 것이 맞다 — 여기를 고치면 원장이 무엇에서 무엇으로 옮겼는지 말할 수 없게 된다.\n\n지침이 0건을 요구한 **현재형 참조 넷은 전부 새 경로**를 가리킨다(옛 경로 히트 0, grep rc=1):\n- `docs/index.html:98` → `reader.html?doc=comment-policy/README.md`\n- `.github/workflows/ci.yml:34` → `docs/comment-policy/ledger.md`\n- `scripts/check_comment_policy.py:4` → `docs/comment-policy/`\n- `docs/doc-tracker.md:36`(문서 인벤토리 행) → `comment-policy/README.md` · `comment-policy/ledger.md`"
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=1016 files=70\n7bc7ec4450bca5b1b43accd850767c540a613b14be61101ef2aa1d6d402db7d3",
+          "verifiedAt": "2026-09-11T02:48:00Z",
+          "checks": [
+            {
+              "name": "완료기준① 새 디렉터리 존재 · 옛 단일 파일 부재",
+              "status": "passed",
+              "detail": "머지된 main(`7f09bf43`) 에서 `git ls-files 'docs/comment-policy*'` → `docs/comment-policy/README.md` · `docs/comment-policy/ledger.md` **둘만**. 옛 `docs/comment-policy.md` 는 트래킹되지 않는다. SSOT 가 두 곳에 남지 않았고, 306줄 단일 파일 → 본문/원장 2파일 구조로의 이전이 성립."
+            },
+            {
+              "name": "완료기준② 게이트가 새 경로를 읽고 rc=0 · 출력 수치가 이전 직전 main 과 동일",
+              "status": "passed",
+              "detail": "`python3 scripts/check_comment_policy.py` **rc=0** (R1 `정책 SSOT 가 없다` 미발동 = 파싱 대상이 `ledger.md` 로 성공적으로 이전). 출력 네 수치가 머지 전 CI(`fmt + vet`, run 34483495849)와 **글자 그대로 동일**: 줄 주석 판정 대상 1016줄/70파일(Go 소스 292 · Go 테스트 188 · YAML 262 · Python 274) · 판정 완료 1016줄(100.0%)/등재 범위 22 · 전체 지문 `7bc7ec4450bca5b1b43accd850767c540a613b14be61101ef2aa1d6d402db7d3` · docstring 1155줄/73파일 · 판정 완료 1155줄(100.0%)/등재 범위 8 · 미판정 잔량 0줄.\n\n원장 행 대조: 줄 주석 `#11 29줄 0271fb155480`(부모와 바이트 동일 — 게이트 파일을 고쳤는데도 `#` 주석 표면 무접촉), docstring `#1 70줄 dbe3da0950b3`(줄 수 70 불변이라 합계 1155 · 잔량 0 이 함께 움직이지 않았다).\n\n자매 게이트 `python3 scripts/check_mock_policy.py` 도 **rc=0** — 등재 5(상한 5) · 모킹 지점 5 · 실재 토큰 5 · 표기 주석 5 · 미등재 0 · 고아 0. `.github/workflows/ci.yml` 주석 수정이 스캔 토큰을 새로 들이지 않았다는 확인."
+            },
+            {
+              "name": "완료기준③ 옛 경로를 가리키는 현재형 참조 0",
+              "status": "passed",
+              "detail": "지침이 지목한 현재형 참조 넷이 전부 새 경로를 가리킨다(옛 경로 히트 0): `docs/index.html:98` → `reader.html?doc=comment-policy/README.md`, `.github/workflows/ci.yml:34` → `docs/comment-policy/ledger.md`, `scripts/check_comment_policy.py:4` → `docs/comment-policy/`, `docs/doc-tracker.md:36`(문서 인벤토리 행) → `comment-policy/README.md` · `comment-policy/ledger.md`.\n\n**지침 기대와의 차이(무해)**: `grep -rn 'comment-policy\\.md'` 히트가 예상 2건이 아니라 **3건**이다. 예상된 둘은 `docs/doc-tracker.md:474`·`:476` 의 2026-09-04 변경 이력 행이고, 셋째는 `docs/comment-policy/ledger.md:72` — 이 PR 이 스스로 저작한 docstring 원장 #1 의 재판정 사유 칸으로, 「`docs/comment-policy.md` 자신 → `docs/comment-policy/` 디렉터리」처럼 **옛 상태를 과거형으로 서술**한다. 변경 이력과 같은 범주(당시 사실의 기록)이므로 고치지 않는 것이 맞고, 고치면 원장이 무엇에서 무엇으로 옮겼는지 말할 수 없게 된다. 완료 기준은 「현재형 참조 0」이고 그것은 충족됐다."
+            },
+            {
+              "name": "완료기준④-a to-be 버전 이동 (absent → 디렉터리 tree hash)",
+              "status": "passed",
+              "detail": "모델 `toBe.versionScript` 원문 실행: `git rev-parse --verify --quiet HEAD:docs/comment-policy` → **`3e19f8a4a646faa9e6db0afd5036e880bcdc28cd`**. 이전 `absent` 에서 준비 단계가 박아 둔 기대 tree hash 로 **정확히** 착지했다(squash 가 blob 을 보존). 이 이동이 이 task 가 사려던 바로 그 수렴이다."
+            },
+            {
+              "name": "완료기준④-b as-is 지문 불변 (주석 표면 무접촉의 기계적 증거)",
+              "status": "passed",
+              "detail": "모델 `asIs.versionScript` 원문 실행: `lines=1016 files=70` / `7bc7ec4450bca5b1b43accd850767c540a613b14be61101ef2aa1d6d402db7d3` — `asIs.lastObservedVersion` 과 **바이트 불변**. 이 슬라이스의 완료 기준은 「옮겼다」가 아니라 「옮겼는데 판정 수치가 하나도 안 움직였다」였고, 이 불변이 그 증거다."
+            },
+            {
+              "name": "머지 성립 · 측정 기반 청결성",
+              "status": "passed",
+              "detail": "PR #69 `merged=true` · `merged_at=2026-09-10T14:00:40Z` · squash 커밋 `7f09bf439b43db407b0659973ece8a76c44c5ebb`. 머지 전 CI 네 잡(`fmt + vet` · `unit tests` · `integration tests` · `docker build & push`) 전부 pass.\n\n측정 시점(2026-09-11T02:42Z)의 `main` HEAD 가 그 squash 커밋 **그 자체**이고 뒤에 얹힌 커밋이 없다(직전은 09-09 의 `8c64b6cb` #68). 열린 PR 0건. 따라서 위 측정값들은 오롯이 이 PR 의 결과이며 다른 작업이 섞이지 않았다.\n\n※ 머지와 재측정 사이 이 세션이 약 12.7시간 멈춰 있었으나 그 사이 대상 레포는 한 커밋도 움직이지 않아 측정에 영향이 없다."
+            },
+            {
+              "name": "범위 밖 잔여 gap 관측(정보성 — converged 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "이 시도의 plan 범위(내용을 고치지 않는 구조 이전)는 전부 달성됐다. 모델 전체 to-be 와의 잔여 항목은 계획이 명시적으로 범위 밖에 둔 것들이며 **이 판정에 넣지 않았다** — 사실만 남긴다:\n\n1. `passes/<판정일>-<slug>.md` 디렉터리 미생성. 모델 개정 메모가 「개정 시점에 옮길 passes 파일은 없다」로, 템플릿이 「상세로 적을 것이 없는 패스는 파일을 만들지 않는다」로 정한 그대로다. 다음 판정 패스가 상세를 남길 때 생긴다.\n2. 모델 as-is 가 docstring 표면을 지문에 넣지 않는 사각지대 — 지금 그 자리를 지키는 것은 게이트 R8 하나뿐이다(`README.md` 「지문의 사각지대」). 모델 소유 스킬 몫.\n3. `DIRECTIVE_RE` 의 죽은 패턴 `검증 AC:`(실제 마커는 `검증 시나리오:`). 모델 asIs 스크립트와 글자 그대로 같아야 해 한쪽만 못 고친다. 모델 소유 스킬 몫.\n4. 줄 끝 주석 사각지대 — `README.md` 가 「늘어나면 그때 다룬다」로 유예해 둔 그대로.\n\n모델의 `lastObservedVersion` 은 의도적으로 건드리지 않았다(to-be 는 `absent` 로 남아 있다). 다음 감지 주기가 `absent` → `3e19f8a4…` 이동을 보고 후속을 판단한다."
             }
           ]
         }
