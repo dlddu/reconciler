@@ -4142,7 +4142,7 @@
       "summarizedAt": "2026-09-11T03:40:00Z"
     },
     "createdAt": "2026-09-11T03:40:00Z",
-    "updatedAt": "2026-09-11T05:28:15Z",
+    "updatedAt": "2026-09-11T05:33:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "**작업 필요(`actionRequired: true`).** → status `action_required` 로 전이하고 손을 뗀다(planner 대기, 미점유).\n\n**gap 은 저작 대기 9건이고 소유자가 0이다.** 정의 문면의 불변식으로 계산하면\n`37 − 예외 3 − 구현 대기 0 = 34` 가 필요한 매칭 파일 수인데 실측은 **25** 다 ⇒ **9 미달**. 게이트가\n초록인 것은 그것이 「저작 대기」라는 **정의에 없는 제3의 제외 항**(`definition` 전문에서 문자열\n`저작 대기` **0회**)을 두고 항등식을 검사하기 때문이며, 실제로 게이트는 첫 줄에 「저작 대기 9」를\n스스로 찍으면서 rc=0 이다 — **초록은 규칙 준수의 증거이지 커버리지의 증거가 아니다.**\n\n**지금이 착수 가능한 순간이다**: 9건의 `선행` 칸을 전량 실측해 **2건이 `없음`**\n(`approval-gated-workload.md#시나리오 3` · `claude-code-workload.md#시나리오 3`)임을 확인했다.\n등재 문서 자신이 저작 대기를 「판정은 끝났고 전용 파일만 없는 시나리오」로 규정하므로 백로그가\n아니라 확정된 잔여다. 규칙 6(구현 대기)에 해당하지도 않는다 — 구현 대기 등재는 0이고 두 행의\n근거 칸이 기능의 실재를 코드 위치로 지목한다.\n\n**소유자 부재를 측정으로 확인했다**: 이 모델 비-터미널 task **0**(`rct_20260910-0003` 은 03:18:50Z\n`succeeded`), 이 모델 소관 열린 PR **0**(열린 3건은 각각 자매 `comment-redundancy` #112 · 자매\n`docs-impl` #101 · 루프 밖 #106), 그리고 #112 를 트리거 위에 시험 병합(rc=0 CLEAN)해도 주석 원장만\n움직이고 `docs/test/` 매칭 집계는 건드리지 않는다. 재감지 **경로는 살아 있지만** 그것을 밟을\n주체가 없으므로 「경로 부재」가 아니라 **「소유자 부재 + 착수 가능」**을 논거로 쓴다.\n\n자동 해소 대기(유예)를 택하지 않는다 — 저작 대기는 시간이 지나 저절로 줄지 않고, 롤아웃 진행 중\n같은 일시적 요인도 없다(대상 레포의 유일한 후속 커밋은 배포 핀이고 0 side 다).\n\n범위 권고(planner 몫): 선행 `없음` **2건 우선**. `approval-gated #3` 을 먼저 세우면 `#시나리오 6`\n의 선행(「시나리오 3 의 승인 경로 파일」)이 함께 풀려 2건 연쇄가 된다. 다만 이 루프의 산출물은\n「E2E 테스트와 등재 문서뿐」이므로, 선행이 걸린 7건(CNI 교체·타임아웃 주입·상한 배선·허용목록\n등재)으로 번지면 규칙 6 의 구현 대기 등재로 전환할 것.\n\nbaseline 은 **움직인 두 side 다** 전진시킨다(`api:` 이동 · `web:` 는 같은 값이므로 문자열 전체로\n전진, to-be `3cc35af4…` → `f41179fe…`).\n\n**이중 계상 가드**: 신규 파일의 *주석 72줄* 은 자매 `comment-redundancy` 소유, 「충실도」 절은 자매\n`e2e-mock-policy` 소유다. 여기서 그 축으로 범위를 넓히지 말 것.\n",
@@ -4219,6 +4219,76 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-11T05:20:12Z",
           "comment": "승인 — 사용자 코멘트 없음. 승인 대상은 PR #113 전체(공급자 대역 `deploy/e2e-anthropic-fake.yaml` 의 `delayMs` 확장 포함)이며, 경계 넘기 허용 범위에 대한 별도 지시는 없었다 — 이 승인은 이 task 에 대한 것이다.\n\n**승인 시점 신선도 확인(2026-09-11T05:20:12Z, 승인 세션 실측)** — executor 참고:\n- PR #113 `OPEN` / mergeable `clean`, head `50abbdc` 불변, base `9ea060c` = 현재 main(전진 없음), 리뷰·코멘트 0. CI 15체크 중 14 success · 1 skipped(main 전용 핀) · 0 fail, `e2e (kind + API + browser)` success.\n- ⚠️ **리뷰 사유의 전제 하나가 바뀌었다**: 자매 `tbm_session-platform-e2e-mock-policy/rct_20260911-0002`(PR #114)가 05:01:52Z 에 **approved** 됐다(리뷰 사유 작성 시점엔 승인 대기). #114 가 먼저 머지될 수 있다.\n- 리뷰 사유 ⑵의 측정 공백을 메웠다 — main `9ea060c` + #114 `5b93127` + #113 `50abbdc` 가상 병합: **충돌 없음**(`docs/test/e2e.md` 자동 병합). 병합 트리에서 `check-scenario-mapping.sh` rc=0(37 = 26 + 3 + 0 + 8 + 0, 단위 29) · `check-fidelity-allowlist.py`(R11 강화판) rc=0 이고 **출력이 #114 단독과 바이트 동일**(차단 요인 2 · 착수 가능 1) · `check-render-fidelity.py` rc=0 바이트 동일 · `check_comment_policy.py` rc=0(판정 대상 3063 / 완료 2772, 90.5%). 병합 기준 Go 컴파일·kind e2e 는 재실행하지 못했다(#114 는 `docs/test/e2e.md`·`scripts/check-fidelity-allowlist.py` 2파일만 변경).\n- ⚠️ **§3-b 머지 후 to-be 기대 지문은 머지 순서에 따라 갈린다**: #113 단독 착지면 지침대로 `c88213c48e4db394c19c2501a54724e7b497ef97`. **#114 가 먼저 들어간 main 위라면 `9bfb4cfd46f3648793e3041582bd2d0eefc6d70f`**(가상 병합 트리 실측). `api:399e669dbfb1ca6bcf1a866f281ffdb2cbc6d6f4c46b3c0d9905ab077dd3a0fa` 는 두 경우 동일, `web:f24855e5b702c33e71f8654716a6f3e9e3b20613` 불변. 다른 PR(#112 등)이 먼저 들어가면 지침 §0-3 대로 그 head 위에서 다시 계산할 것.\n- squash 머지 필수(앞 두 커밋 빨강) — 지침 §1 그대로."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-11T05:28:40Z",
+          "finishedAt": "2026-09-11T05:31:25Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T05:28:40Z",
+              "finishedAt": "2026-09-11T05:29:30Z",
+              "log": "**부모가 계획 시점과 달라졌고, 실행 단계가 그것을 지침 §0-3 대로 처리했다.** 계획은 부모를 `9ea060c`(main)로 잡았으나 착지 시점 main 은 `5b2aec6f` — 그 사이 자매 `tbm_session-platform-e2e-mock-policy/rct_20260911-0002`(PR #114)가 05:10:30Z 에 squash `342de29d` 로 들어오고 배포 핀 `5b2aec6f`(05:11:08Z)가 얹혔다. 승인 세션이 예고한 바로 그 순서다(「#114 가 먼저 머지될 수 있다」).\n\n그래서 부모 baseline 을 **계획서 인용이 아니라 현재 main 에서 다시 실측**했다(rc 는 전부 0):\n\n| 게이트 | 현재 main `5b2aec6f` |\n| --- | --- |\n| `scripts/e2e/check-scenario-mapping.sh` | `37 = 25 + 3 + 0 + 9 + 0` (매칭 단위 28) |\n| `scripts/check-fidelity-allowlist.py` (**#114 의 R11 강화판**) | rc=0 |\n| `scripts/check-render-fidelity.py` | rc=0 |\n| `scripts/check_comment_policy.py` | rc=0 · 판정 대상 2960 / 판정 완료 2772(93.6%) |\n\n계획서가 부모 `9ea060c` 에서 잰 값과 **네 게이트 전부 같다** — #114 는 이 모델의 두 축(`control-plane/test` blob 집합 · `docs/test` 트리) 중 매칭 집계를 건드리지 않았으므로 baseline 이 base 이동을 견뎠다. as-is `api:` 도 `3abe2c66…` 로 불변. 단 to-be `docs/test` 트리는 `f41179fe…` → **`37dfc208…`** 로 이동했고(#114 가 `e2e.md` 를 고쳤다) 이것이 §3-b 기대 지문 재계산의 방아쇠였다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T05:31:11Z",
+              "finishedAt": "2026-09-11T05:31:20Z",
+              "log": "`control-plane/test/e2e_claude_code_3_serial_queue_test.go` **299줄 신규**가 squash `7ed336b2` 로 착지했다(`git show --stat`: 3파일 **+367/−15**, 준비 노트 예고와 정확히 일치).\n\ngofmt·vet 은 **이 실행 환경에 Go 툴체인이 없어 재실행하지 못했다**(`which go` 무출력). 대신 더 강한 것을 샀다 — 착지 트리와 CI 가 실제로 돌린 PR head `50abbdc` 사이의 `git diff --name-only pr113..<착지트리>` 가 `docs/test/e2e.md` · `k8s/deployment.yaml` · `scripts/check-fidelity-allowlist.py` **3개뿐이고 그중 `.go`/`go.mod`/`go.sum` 은 0개**다. 즉 Go 컴파일·lint·vet 의 입력이 **PR CI 가 초록으로 통과시킨 트리와 바이트 동일**하다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T05:29:30Z",
+              "finishedAt": "2026-09-11T05:29:50Z",
+              "log": "`docs/test/e2e.md` +35/−4 착지. **재분류 0건을 현재 main 기준으로 다시 측정**했다 — `git diff 5b2aec6..<착지트리> -- docs/test/e2e.md | grep -c '^[-+]| \\`'` = **2** (저작 대기 행 삭제 1 + 매핑 행 추가 1). #114 가 같은 파일을 먼저 고친 뒤에도 값이 2 인 것이 「다른 저작 대기 행의 `선행`·`근거` 칸을 한 글자도 안 건드렸다」의 확인이다. 두 PR 의 hunk 는 실제로 겹치지 않았다 — `git merge --squash` 가 `docs/test/e2e.md` 를 **Auto-merging 으로 충돌 없이** 붙였다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T05:29:50Z",
+              "finishedAt": "2026-09-11T05:30:40Z",
+              "log": "**머지 전에 병합 트리를 로컬에서 만들어 게이트 4종을 1:1 재현했다** — 리뷰 사유 ⑵ 가 지적한 「R11 강화 게이트로 #113 의 대역 변경을 다시 잰 측정이 없다」를 실행 단계가 직접 메운 자리다. `git merge --squash pr113` (충돌 0) 트리에서:\n\n| 게이트 | 현재 main | **병합 트리** | 판정 |\n| --- | --- | --- | --- |\n| `check-scenario-mapping.sh` | rc=0 · 25+3+0+**9**+0 (28) | rc=0 · **26**+3+0+**8**+0 (**29**) | 계획 예고와 글자 그대로 일치 |\n| `check-fidelity-allowlist.py` (**R11 강화판**) | rc=0 | rc=0 | **출력 바이트 동일** — `deploy/` 를 고쳤는데도 새 seam 0 |\n| `check-render-fidelity.py` | rc=0 | rc=0 | **출력 바이트 동일** |\n| `check_comment_policy.py` | rc=0 · 대상 2960 (93.6%) | rc=0 · 대상 **3063** (**90.5%**) | 판정 완료 **2772 동결** · **등재 12행 바이트 동일** |\n\nR11 강화판이 병합 트리에서 부모와 **바이트 동일 출력**(등재 seam 7 · 미해소 위반 0 · 차단 요인 2 · 착수 가능 1)을 낸 것이, 승인 대상이었던 `delayMs` 대역 확장이 자매 모델의 `CLAUDE-PROVIDER` 잔여를 **하나도 건드리지 않았다**는 기계적 확인이다. 주석 정책 90.5% 는 계획서 §5 가 예고한 값 그대로다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T05:31:00Z",
+              "finishedAt": "2026-09-11T05:31:11Z",
+              "log": "PR [#113](https://github.com/dlddu/session-platform/pull/113) 은 준비 단계가 열었고(계획 step 5 는 「머지하지 않는다」), **실행 단계가 지침 §0 세 선행 조건을 통과시킨 뒤 §1 대로 squash 머지했다.**\n\n§0 계수:\n- ⑴ `OPEN` · mergeable **MERGEABLE** · mergeStateStatus **CLEAN** · head `50abbdc` 불변. 충돌 없음 (#112·#101·#106 은 여전히 열려 있어 아직 문서를 밀지 않았다).\n- ⑵ CI 15체크 = **14 success · 1 skipping**(`pin deployment images (main only)`) · **0 fail**. `e2e (kind + API + browser)` success — [run 34562413287](https://github.com/dlddu/session-platform/actions/runs/34562413287) · [ci run 34562413435](https://github.com/dlddu/session-platform/actions/runs/34562413435). rebase 하지 않았으므로 재실행 불필요 조건 충족.\n- ⑶ **여기서 어긋났다** — main:`docs/test` 가 `f41179fe…` 가 아니라 `37dfc208…` 였다. 지침이 「그대로 쓰면 거짓 실패가 난다」고 못박은 자리라 §3-b 기대 지문을 새 head 위에서 다시 계산했다(step 4 의 병합 트리에서).\n\n**머지**: `gh pr merge 113 --squash --delete-branch` → squash **`7ed336b202f6963e524ba574bb31d28ef5f01260`**, 2026-09-11T05:31:11Z, `mergedBy` = `dlddu`(사용자 토큰 — App 설치 토큰은 Actions 를 기동하지 않는다). **1커밋으로 착지**해 빨간 앞 두 커밋(`98bb510`·`2eec839`)은 main 이력에 남지 않았다 — 지침 §1 의 squash 요구 충족.\n\n착지 후 대조: main 트리 `3de3d7c08f5a…` 가 머지 전 시뮬레이션 트리와 **완전히 동일**하다 ⇒ step 4 에서 미리 잰 게이트 출력·지문이 착지 결과에 그대로 유효하다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T05:31:20Z",
+              "finishedAt": "2026-09-11T05:31:25Z",
+              "log": "준비 단계가 산 측정(1차 CI 119 PASS / 2 FAIL — 600013바이트로도 둘째 write 반환 시점에 버퍼 600148 ⇒ 「크기로는 시간을 못 산다」). 실행 단계는 이를 **재실행하지 않았다** — 그 빨강은 이미 지나간 커밋 `98bb510` 의 관측이고, squash 로 main 에 남지 않는다. 실행 단계가 확인한 것은 그 근거가 산출물에 박혀 있다는 것뿐이다: 실패 메시지가 「크기를 올리는 것은 소용없다」와 처방(`cc3SlowDelayMs` 상향, 천장 `MAX_DELAY_MS=250`)을 스스로 적는다(지침 §4)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T05:31:20Z",
+              "finishedAt": "2026-09-11T05:31:25Z",
+              "log": "`deploy/e2e-anthropic-fake.yaml` **+48/−11**(선택 넷째 칸 `delayMs`)이 착지했다. **이것이 사람 승인이 가른 바로 그 지점**이다 — 그 파일은 자매 `tbm_session-platform-e2e-mock-policy` 소관이고, 직전 슬라이스의 승인은 「이번 슬라이스에 한해」로 못박혀 이월되지 않았다. 승인 코멘트가 「승인 대상은 PR #113 **전체**(공급자 대역 `delayMs` 확장 포함)」라 명시했으므로 계획 그대로 태웠다.\n\n경계를 넘되 잔여는 안 건드렸음을 step 4 의 R11 강화 게이트 **바이트 동일 출력**이 기계적으로 확인한다 (`delayMs` 는 응답의 *구조*가 아니라 *타이밍*이다). 무변경 증명(부모/수정 대역 다섯 요청 응답 전문 79798바이트 동일)은 준비 단계의 관측을 그대로 인용하며 재실행하지 않았다."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T05:31:20Z",
+              "finishedAt": "2026-09-11T05:31:25Z",
+              "log": "프로브 계수 단위 교정(상승 에지 → 서로 다른 argv) 커밋 `50abbdc` 가 PR head 이고 그 상태로 CI 가 kind e2e **121 PASS / 0 FAIL / 0 SKIP** 을 냈다. 그 head 가 그대로 squash 됐다. main 기준 재실행은 검증 단계(§3)에서 `e2e.yml` 을 `workflow_dispatch` 로 직접 돌려 확인한다 — `e2e.yml` 은 `pull_request` + `workflow_dispatch` 트리거뿐이라 main push 로는 자동 기동하지 않는다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T05:28:40Z",
+              "finishedAt": "2026-09-11T05:28:45Z",
+              "log": "준비 단계 산출물(`plan.executionGuide`)을 실행 단계가 **그대로 따랐다**. 지침이 실제로 값을 한 자리에서 구했다 — §0-3 의 「main:`docs/test` 가 아직 `f41179fe…`인가」 검사가 이번에 **실제로 걸렸고**(#114 가 먼저 들어왔다), 지침이 그 경우의 처방(「그 head 위에서 다시 계산」)을 미리 적어 둔 덕에 거짓 실패 없이 지나갔다. §3-b 의 `git ls-tree` 글롭 경고도 그대로 지켜 `-r` + `grep` 형태로 지문을 계산했다."
+            }
+          ]
         }
       }
     ]
