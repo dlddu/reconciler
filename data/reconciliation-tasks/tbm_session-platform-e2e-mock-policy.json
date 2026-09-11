@@ -2389,7 +2389,7 @@
   {
     "id": "rct_20260911-0003",
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-11T05:45:31Z",
       "changedSides": [
@@ -2413,7 +2413,7 @@
       "assessedAt": "2026-09-11T05:45:31Z"
     },
     "createdAt": "2026-09-11T05:45:31Z",
-    "updatedAt": "2026-09-11T06:44:45Z",
+    "updatedAt": "2026-09-11T06:46:33Z",
     "attempts": [
       {
         "plan": {
@@ -2541,6 +2541,59 @@
               "log": "PR [#115](https://github.com/dlddu/session-platform/pull/115) 신선도·CI·머지.\n\n- **신선도**: `state=open` · `mergeable=true` · `mergeable_state=clean`, base `8e49927` **불변**(계획 시점 base 그대로) · head `ea7f0fe`. rebase 불필요 — 지침 §2 의 재검증 갈래로 가지 않았다.\n- **CI(머지 전, head `ea7f0fe`)**: check-run **15건 전부 success**. 지침 §3.1 이 요구한 여섯이 모두 초록 — `e2e fidelity allowlist` · `comment policy ledger` · `시나리오 ↔ e2e 1:1 mapping` · `control-plane (lint + unit)` · `data-plane (lint + unit)` · **`e2e (kind + API + browser)`**. 마지막 것이 이 슬라이스의 최종 관문이었다(kind 실클러스터 SUT 위에서 새 케이스가 실제로 구동된다).\n- **머지**: 레포 관례대로 **squash merge**, 머지 커밋 `f6308ee`. 지침 §4 의 전제(여섯 잡 초록 + §3.2 앞 세 줄 부모와 동일)를 모두 만족한 뒤에 눌렀다.\n\n계획 밖 변경은 없다 — 실행이 건드린 것은 PR 머지 하나뿐이고, 대상 레포에 별도 커밋을 만들지 않았다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "seams=29 files=15\nde1e68372a3576b45d72340088ed38d190a33c6b658ddbdb8bd17b240e8e1ec1",
+          "checks": [
+            {
+              "name": "완료기준 ① 대역이 버퍼드·SSE 양쪽에서 tool_use 를 내고 도구 결과 턴이 닫힌다",
+              "status": "passed",
+              "detail": "두 층위로 관측. **㉠ 배포 SUT** — PR head `ea7f0fe` 의 check-run `e2e (kind + API + browser)` **success**. 새 케이스 `TestProviderEmitsAToolUseBlockWhenThePromptAsksForOne`(`e2e_provider_reachability_test.go:112`, `//go:build e2e`)가 kind 클러스터의 세션 pod 에서 credential-proxy 를 거쳐 실제로 돈다. **㉡ 대역 실기동** — 머지된 main 의 `deploy/e2e-anthropic-fake.yaml` 에서 ConfigMap `server.js` 와 Secret TLS 를 파싱해 직접 띄우고(동적 빈 포트 39625) **6/6 PASS**: 기본 응답 `text`/`end_turn` 회귀 없음 · `e2e-reply:probe:9:3` → text_delta 3건 재조립 `probe:`+가×9 회귀 없음 · 버퍼드 `tool_use`(name 일치 · input 딥 동등 · id `toolu_e2e0…01` · `stop_reason: tool_use`) · SSE 순서 `message_start>content_block_start(tool_use)>content_block_delta(input_json_delta)>content_block_stop>message_delta(stop_reason tool_use)>message_stop` 에 `partial_json` 재조립 == 입력 · `tool_result` 뿐인 턴이 상수 응답 + `end_turn` 으로 닫힘(지시자가 history 에 남아 있어도 — 계획이 「새 상태 기계 없이 끝난다」고 논증한 그 성질) · 깨진 입력 400 `invalid_request_error`."
+            },
+            {
+              "name": "완료기준 ② fidelity:blockers 가 1행이고 그 행은 session_mcp_tools.go 쪽",
+              "status": "passed",
+              "detail": "머지 후 main 의 `<!-- fidelity:blockers -->` 블록을 마커로 잘라 행을 셌다 — 헤더·구분선 제외 **데이터 1행**이고 『코드 위치』가 `data-plane/cmd/agent/session_mcp_tools.go`(리터럴 `http.DefaultClient.Do(req)`, 판정 `없음`, 선행 「해소 방향 재판정」, 재검토 2026-10-11). `deploy/e2e-anthropic-fake.yaml` 행은 diff 에서 **삭제**됐다."
+            },
+            {
+              "name": "완료기준 ③ fidelity:summary 차단 요인 1 · 착수 가능 0",
+              "status": "passed",
+              "detail": "`<!-- fidelity:summary -->` 실측 — 「차단 요인 **1**건」 · 「착수 가능 **0**건 — `선행: 없음` + `소관: 이 모델` 인 행. 남은 1건은 `선행` 이 「해소 방향 재판정」이라 아직 착수 가능이 아니다」. 지침 §6 이 경고한 대로 **줄을 지우지 않고 0 으로 적었다** — R8 이 그 숫자를 키로 찾으므로 삭제했으면 게이트가 실패했을 것이다. 게이트 출력도 같은 것을 찍는다."
+            },
+            {
+              "name": "완료기준 ④ CLAUDE-PROVIDER 등재 행의 잔여에 tool_use 공백 문단이 없다",
+              "status": "passed",
+              "detail": "등재 행 『잔여』를 원문 대조. 삭제 전 문장 「아직 열리지 않은 것 하나가 더 있다 — 대역은 `tool_use` 블록을 내지 못하므로 …」가 사라지고, 그 자리에 **닫힘 기록 + 새 잔여**가 들어갔다: 「셋째 공백 … 은 2026-09-11 에 닫혔다」 뒤로 ⑴ 대역은 도구를 **지시받아서** 부르지 판단해서 부르지 않는다(언제 부르는가 · 결과를 받아 무엇을 이어서 하는가) ⑵ text 와 tool_use 가 **한 메시지에 섞이는** 형태 미모델링 ⑶ 대역이 내는 도구 이름이 세션 MCP 등재분과 같은지 미확인(대조는 `tbm_session-platform-scenario-e2e` 소관). 계획 seq 5(c) 가 적으라고 한 것과 같다."
+            },
+            {
+              "name": "완료기준 ⑤ 세 게이트 rc=0 · 불변식 1 보존",
+              "status": "passed",
+              "detail": "머지된 main 에서 직접 실행. `check-fidelity-allowlist.py` rc=0 이고 baseline `8e49927` 과의 diff 가 **5번째 줄 한 줄뿐** — 앞 세 줄 「등재 seam 7 (GATE 1 · TRIG 0 · EXT 3 · NET 3)」 「회계 행 20 == 스캔 20 (등재 귀속 14 · 미해소 위반 0 · 비-seam 6)」 「마커 9지점 / 9파일 · 인터셉트 7건 (승인 7 · 위반 0, 상한 0)」이 **바이트 동일**. `check_comment_policy.py` rc=0 — 판정 완료 **2780줄 / 등재 범위 12**, #9 행만 423→431줄 `ca781b0575b5`→`50fa7ffc546d` 로 움직이고 나머지 11행 불변. `check-scenario-mapping.sh` 출력이 baseline 과 **완전 동일**(diff 무출력) — 37 = 26+3+0+8+0, 저작 대기 8건에 `approval-gated-workload.md#시나리오 3` **잔존**."
+            },
+            {
+              "name": "머지 후 main CI",
+              "status": "passed",
+              "detail": "머지 커밋 `f6308ee` 의 check-run **17건 전부 success** — `e2e fidelity allowlist` · `comment policy ledger` · `시나리오 ↔ e2e 1:1 mapping` · `control-plane (lint + unit)` · `data-plane (lint + unit)` · `envtest` · `integration (happy path)` · `web (typecheck + build)` · `render fidelity` · 이미지 빌드·푸시 · `deploy` · `pin deployment images (main only)`. 로컬에서도 control-plane(`gofmt -l` 무출력 · `go vet -tags=e2e ./...` · `go test ./...`)과 data-plane 이 모두 rc=0."
+            },
+            {
+              "name": "배포 핀 커밋이 이 모델에 0 side",
+              "status": "passed",
+              "detail": "머지 뒤 예고대로 `af3a3e0` (`chore(deploy): … f6308ee 로 고정 [skip ci]`)이 main 에 뒤따랐다. 그 커밋까지 포함한 최신 main 에서 as-is versionScript 를 다시 돌려도 `seams=29 files=15 / de1e6837…` 로 **불변**이고 fidelity 출력도 그대로다 — 지침 §4 의 「배포 핀은 이 모델에 0 side」가 이번 구간에서도 성립한다."
+            },
+            {
+              "name": "범위 밖을 건드리지 않았다",
+              "status": "passed",
+              "detail": "정보성. `git diff --name-only 8e49927..f6308ee` = **4파일**(`e2e_provider_reachability_test.go` · `e2e-anthropic-fake.yaml` · `docs/comment-policy.md` · `docs/test/e2e.md`). ⒜ `approval-gated-workload.md#시나리오 3`·`#6` 의 e2e 파일 저작 — 손대지 않았고 scenario-mapping 이 저작 대기 8건으로 baseline 과 동일함이 그 증거(자매 `tbm_session-platform-scenario-e2e` 소관, 이제 **진입 가능**해졌다). ⒝ 저작 대기 표의 『선행』 셀 — 별도 편집 없이 원장 2행이 나가면서 자동으로 참이 됐다. ⒞ 남은 차단 요인 1행(`FETCH-ORIGIN`) — 『선행』이 「해소 방향 재판정」이라 착수 가능이 아니며 재검토 시점 **2026-10-11**. ⒟ 회계 표의 `harness_shared_test.go`·`E2E_SESSION_NAMESPACE` 비-seam 인계 — modeler 소관, 미변경."
+            },
+            {
+              "name": "모델 전체 to-be 대비 잔여 gap (정보성 — converged 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "이 task 의 완료 기준은 plan 이 그은 범위이고 그 범위는 달성됐다. 모델 전체로는 차단 요인 **1건**(`session_mcp_tools.go` 의 승인 뒤 실제 아웃바운드 호출)이 남아 있으나 『선행』이 비어 있지 않아 **착수 가능 0건**이다 — 가장 이른 재검토 시점은 이제 **2026-10-11**(2026-09-25 행이 나갔으므로). 후속은 재감지가 잇는다: to-be(`docs/test/e2e.md` 충실도 절)가 움직였으므로 다음 감지 주기가 「착수 가능 0 · 차단 요인 1」을 보게 된다. as-is 는 의도대로 불변이다."
+            }
+          ],
+          "verifiedAt": "2026-09-11T06:46:33Z"
         }
       }
     ]
