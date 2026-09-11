@@ -3892,7 +3892,7 @@
       ]
     },
     "createdAt": "2026-09-10T11:51:20Z",
-    "updatedAt": "2026-09-11T03:11:11Z",
+    "updatedAt": "2026-09-11T03:15:25Z",
     "id": "rct_20260910-0003",
     "stateSummary": {
       "asIs": "## as-is — e2e 두 스위트 (관측 2026-09-10 11:31~11:55Z, main `846eb603` / 배포 핀 `7e2a08b1`)\n\n지문: `api:fb9f1668…` → **`api:f32d140b…`**, `web:f24855e5…` **불변**\n(`web:` 불변이 「`web/e2e` 를 하나도 건드리지 않았다」의 기계적 증거).\nto-be `docs/test` 트리: `024b28e6…` → **`3cc35af4…`**.\n\n트리거는 **PR #110 `846eb603`**(11:09:46Z) 단독이다. 부모 `9fd0384a` 에서 session-platform\n6모델 **12 side 전부**가 기록된 baseline 과 **바이트 동일**로 재현되고, 뒤따른\n`7e2a08b1`(`[skip ci]` 배포 핀)은 12 side 를 하나도 움직이지 않는다.\n\n### #110 은 이 모델 자신의 슬라이스이고 계획이 못박은 착지점에 글자 그대로 수렴했다\n\n`rct_20260910-0002` 의 준비 노트가 예고한 머지 후 지문 —\nto-be `3cc35af484665313928cc1a62e90033e1d753dc7`,\nas-is `api:f32d140bfd4d1208b77585efd194fee704f5be7696ad01b37627a4de7798848d web:f24855e5b702c33e71f8654716a6f3e9e3b20613`\n— 이 내 독립 측정과 **한 글자도 다르지 않다**. 실행 지침 §4 의 기대 출력도 마찬가지다.\n\n게이트 `scripts/e2e/check-scenario-mapping.sh` 를 부모·트리거 **양쪽 클린 트리\n(`porcelain=0`)** 에서 실행한 결과, 움직인 것은 정확히 **세 수**뿐이다:\n\n| | 부모 `9fd0384a` | 트리거 `846eb603` |\n| --- | --- | --- |\n| 시나리오 총계 | 37 | 37 |\n| 매칭 파일 | 23 | **24** |\n| 예외 | 3 | 3 |\n| 구현 대기 | 0 | 0 |\n| **저작 대기** | **11** | **10** |\n| 공백 | 0 | 0 |\n| 매칭 단위 | 26 | **27** |\n| rc | 0 | 0 |\n\n저작 대기 목록에서 `claude-code-workload.md#시나리오 6` 이 빠졌고, 신규\n`control-plane/test/e2e_claude_code_6_archive_freeze_test.go` 의 `^// 검증 시나리오:` 선언이\n정확히 1줄로 그 시나리오를 가리킨다(규칙 2 충족). 자매 축 게이트\n`check-fidelity-allowlist.py`·`check-render-fidelity.py` 는 부모/트리거 **바이트 동일**이다.\n\n### 이 축의 소유자는 0 이다\n\n`rct_20260910-0002` 의 executor 가 **11:45:05Z** 에 `succeeded` / `verification.status=passed`\n/ `converged` 로 닫았다(직전 워커가 claim 뒤 죽어 11:39 에 reclaim 된 두 번째 executor다).\n⇒ 이 모델의 **비-터미널 task 0건**. 그 verification 의 마지막 체크가 잔여를 스스로 열거하며\n**「이번 머지가 만든 지문 전진을 다음 감지 주기가 보고 후속 task 를 연다. `lastObservedVersion`\n은 건드리지 않았다」** 로 **detector 를 소유자로 지목**한다.\n\n열린 PR 셋(#101 · #106 · #109) 중 이 축의 저작 대기를 한 행이라도 줄이는 것은 **0건**이다\n(#101 · #106 은 `control-plane/test/e2e_*_test.go`·`web/e2e/` 를 **0파일** 건드린다).\n",
@@ -3961,6 +3961,55 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-10T14:49:04Z",
           "comment": "승인 — 자매 모델 `tbm_session-platform-e2e-mock-policy` 소관(공급자 대역 `deploy/e2e-anthropic-fake.yaml` · 원장 `CLAUDE-PROVIDER` 행 잔여 칸)으로의 경계 넘기를 이번 슬라이스에 한해 허용한다.\n\n**승인 시점 신선도 확인(2026-09-10T14:3xZ, 승인 세션 실측)** — executor 참고:\n- PR #111 `OPEN`/mergeable `clean`, head `df04415` 불변. CI 15체크 중 14 success · 1 skipped(main 전용) · 0 fail, `e2e (kind + API + browser)` success.\n- **PR CI 이후 main 이 전진했다**: PR #109 머지(`00117ab1`, 12:31:52Z) + 배포 핀 `1142e411`([skip ci]). #109 가 만진 `e2e_state_api_6_stream_contract_test.go`·`harness_shared_test.go` 의 코드 변경은 **주석 + gofmt 정렬 1줄뿐**이고, 신규 파일이 쓰는 헬퍼 6개(`claudeSession`·`writePromptOK`·`eventuallyClaudeOutput`·`s6Open`·`s6Output`·`nextEvent`) 모두 존재. `git merge-tree` 로 main(`1142e411`)+`df04415` 가상 병합 무충돌, 병합 트리에서 scenario-mapping(매칭 25 / 저작 대기 9) · fidelity(부모와 동일 집계) · render-fidelity · comment-policy 전부 rc=0. 병합 기준 Go 컴파일·kind e2e 는 재실행하지 못했다.\n- ⚠️ **실행 지침 §3 의 머지 후 기대 `api:` 지문이 낡았다.** 지침 값 `fc6c8613449ce12d60d1fdc11afe3419b395bfee2ab945357cb3399a7e7bf371` 은 #109 이전 base 기준이다. 현재 main 위 가상 병합 트리의 실측값은 **`api:3abe2c66c0b09be1f9b742e10dace9f2ab4209c018ac675139a33cbdc0eeb5ca`** 이다(현재 main 의 api 는 `75d316201d8bede0944a38b1ecb7c7e691ed8ec60d9191188c43ad2038caa24d`). `docs/test` = `f41179fe1f2a4d6308b5c95dd70e9bae17ed0798` · `web` = `f24855e5b702c33e71f8654716a6f3e9e3b20613` 는 지침과 일치. §3 대조 시 `api:` 는 이 갱신값으로 판정할 것 — #109 선행 머지로 인한 예견된 차이이지 squash 이상이 아니다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-11T03:11:11Z",
+          "finishedAt": "2026-09-11T03:14:26Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T03:11:11Z",
+              "finishedAt": "2026-09-11T03:14:26Z",
+              "log": "`deploy/e2e-anthropic-fake.yaml` (+76/-14) 이 PR #111 로 저작돼 squash `c3ba79b6` 로 main 에 착지. 실행 단계의 확인은 **관측**이다 — ⑴ 지시자 없는 기본 경로 무회귀: kind e2e 로그에서 기존 claude-code 케이스 전부 PASS (`TestClaudeCodeFreeze_ArchivedTypeNeverCarriesTheCRIUPrivilege` · `…ArchiveRoundTripsWorkspaceHistoryAndResume` · `TestClaudePromptWrite_QueuesEveryPromptAndRunsEachOne` · `TestClaudePromptInvocation_ExactArgvOneShotAndSerialised` · `TestClaudePromptWrite_RejectsOverSizedPromptWithoutRunningIt`), playwright `j6-agent-prompt-loop.spec.ts` 2케이스 PASS. ⑵ 새 seam 무유입: 병합 트리에서 `check-fidelity-allowlist.py` rc=0 이고 집계가 부모와 동일(등재 seam 7 · 회계 행 20 · 마커 9지점/9파일 · web 인터셉트 7건)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T03:11:11Z",
+              "finishedAt": "2026-09-11T03:14:26Z",
+              "log": "`control-plane/test/e2e_claude_code_4_stream_reconnect_test.go` 신규 287줄. PR 변경 파일은 정확히 3개이고 **기존 e2e 파일 편집 0개** (`gh pr view --json files`: 신규 테스트 · 대역 yaml · `docs/test/e2e.md`). PR #109 가 쥔 `harness_shared_test.go`·`e2e_state_api_6_stream_contract_test.go` 무접촉 — 충돌 금지면 준수 확인."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T03:13:40Z",
+              "finishedAt": "2026-09-11T03:13:40Z",
+              "log": "헤드라인 단언이 비-vacuous 함을 CI 로그 줄로 확인: `e2e_claude_code_4_stream_reconnect_test.go:178: alpha reply 75007 bytes delivered as [0,65535)+[65535,75007)`. **65536 이 아니라 65535** ⇒ 64 KiB 컷이 룬 중간에 떨어져 청커가 실제로 물러섰다. 지침 §1.3 의 「`[0,65535)` 는 협상 대상이 아니다」 충족. 75007 = 75006 + 종결 개행 1바이트 ⇒ CLI 가 `message_stop` 을 forward 함도 함께 관측."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T03:13:40Z",
+              "finishedAt": "2026-09-11T03:13:40Z",
+              "log": "시나리오 4 나머지 절의 신규 케이스 3개가 kind e2e 에서 전부 PASS: `TestClaudeStream_LastEventIDBeatsQueryAndResumesWithoutReplay` (9.43s) · `TestClaudeStream_PastEndResetsWithoutTouchingLastAccess` (7.67s) · `TestClaudeStream_ReadZeroReturnsFullHistoryAndLastCursorIsEmpty` (11.85s). 헤드라인 포함 신규 4케이스 PASS 4/FAIL 0."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T03:13:40Z",
+              "finishedAt": "2026-09-11T03:13:40Z",
+              "log": "`docs/test/e2e.md` (+18/-5). 병합 트리에서 `check-scenario-mapping.sh` rc=0 이고 첫 줄이 계획 예고와 글자 그대로 일치: `시나리오 37개 = 매칭 파일 25 + 예외 3 + 구현 대기 0 + 저작 대기 9 + 공백 0 (매칭 단위 28개, 비-시나리오 3개)` (부모 24/10/27). 저작 대기 목록에서 `claude-code-workload.md#시나리오 4` 가 빠졌음을 게이트 출력 열거로 직접 확인 — 남은 9건은 approval-gated 2·2-1·3·4·6 · claude-code 3·8·9 · lifecycle 4."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-11T03:13:40Z",
+              "finishedAt": "2026-09-11T03:14:26Z",
+              "log": "PR #111 은 준비 단계가 열었고(`OPEN`/`MERGEABLE`/`CLEAN`, head `df04415` 불변 — §0.1 충족), 실행 단계가 지침 §1 게이트를 통과시킨 뒤 §2 로 **squash 머지**했다. §1 계수: CI 15체크 = 14 success · 1 skipping(main 전용) · **0 fail**, kind e2e **RUN 119 / PASS 119 / FAIL 0 / SKIP 0**. 승인자가 못 했던 **병합 기준 재확인을 실행 단계가 메웠다** — `git merge-tree main pr111` rc=0(트리 `278a0c87`, 로컬 시험 병합과 동일), #109 가 두 소관 파일에 가한 비-주석 변경은 `s6Heartbeat  =` gofmt 정렬 **1줄뿐**, 신규 파일이 쓰는 헬퍼 6개 전원 해소(`nextEvent` 는 `*s6Stream` 메서드), 패키지 내 중복 최상위 선언 0(기존 `containerNames`·`writeShell` 는 빌드 태그 분리된 선재 항목), 병합 트리에서 4게이트(scenario-mapping · fidelity · render-fidelity · comment-policy) 전부 rc=0. 머지: `gh pr merge 111 --squash` 단독 실행 → `MERGED` / squash `c3ba79b603d4b3cbfc04bc7a953a17b07bc69ea5` / 2026-09-11T03:14:26Z. `--delete-branch` 미사용(지침대로)."
+            }
+          ]
         }
       }
     ]
