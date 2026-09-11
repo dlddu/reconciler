@@ -48,7 +48,7 @@ const TASKS = {
     { id: "c", status: "succeeded" },
     { id: "d", status: "awaiting_review" }
   ],
-  // a human session already picked it up — no longer waiting in the review queue
+  // a human session picked it up but the human has not answered yet
   claimed: [{ id: "e", status: "approving" }],
   // failed is the planner's rework entry point, not a finished task
   retry: [{ id: "f", status: "failed" }],
@@ -108,7 +108,7 @@ test("the toolbar offers exactly the four requested modes, in order", () => {
 
 test("done is the terminal statuses only; review is awaiting human approval", () => {
   assert.deepEqual(Array.from(run("DONE_STATUSES")), ["succeeded", "cancelled", "no_action_needed"]);
-  assert.deepEqual(Array.from(run("REVIEW_STATUSES")), ["awaiting_review"]);
+  assert.deepEqual(Array.from(run("REVIEW_STATUSES")), ["awaiting_review", "approving"]);
 });
 
 test("every status the page names is a real schema status", () => {
@@ -143,12 +143,16 @@ test("progress mode keeps active models with any unfinished task", () => {
 });
 
 test("review mode keeps only active models with a task awaiting approval", () => {
-  assert.deepEqual(ids(run('modelsInMode("review")')), ["asking"]);
+  assert.deepEqual(ids(run('modelsInMode("review")')), ["asking", "claimed"]);
 });
 
-test("a task a human session already claimed is in progress, not waiting for review", () => {
+test("a task whose approval session is still open keeps waiting for review", () => {
+  // approving is held until the human answers; if that session is abandoned the task
+  // would otherwise vanish from the review tab while still needing a decision.
   assert.equal(run('progressTaskCount("claimed")'), 1);
-  assert.equal(run('reviewTaskCount("claimed")'), 0);
+  assert.equal(run('reviewTaskCount("claimed")'), 1);
+  assert.equal(run('reviewTaskCount("working")'), 0, "a planner lock is not a review");
+  assert.equal(run('reviewTaskCount("retry")'), 0, "a failed task is not a review");
 });
 
 test("no workflow mode surfaces a hidden model, whatever its tasks are doing", () => {
@@ -202,6 +206,7 @@ test("visibleModels applies the search filter on top of the mode", () => {
   assert.deepEqual(ids(run("visibleModels()", { mode: "progress", filter: "idle" })), []);
   assert.deepEqual(ids(run("visibleModels()", { mode: "progress", filter: "retry" })), ["retry"]);
   assert.deepEqual(ids(run("visibleModels()", { mode: "review", filter: "ask" })), ["asking"]);
+  assert.deepEqual(ids(run("visibleModels()", { mode: "review", filter: "claim" })), ["claimed"]);
   assert.deepEqual(ids(run("visibleModels()", { mode: "review", filter: "work" })), []);
 });
 
