@@ -2467,7 +2467,7 @@
       "summarizedAt": "2026-09-10T13:01:00Z"
     },
     "createdAt": "2026-09-10T13:01:00Z",
-    "updatedAt": "2026-09-11T06:13:32Z",
+    "updatedAt": "2026-09-11T06:20:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "작업이 필요하다. 두 축 모두 유의미하고 소유자가 없다.\n\n① to-be 축: 모델이 12:40:34Z 에 정책 SSOT 를 `docs/comment-policy/` 디렉터리로 다시 겨눴고 대상 레포에는 그 디렉터리가 없다(1,114줄 단일 파일). 개정 메모 자신이 「전환 뒤 첫 감지에서 to-be 가 `absent` 로 바뀌고 그 task 가 이전을 맡는다」고 이 감지를 소유자로 지목한다 — 이 fire 가 그 첫 감지다.\n\n② as-is 축: 미판정 80줄의 유예 사유가 예고된 그대로 소멸했다(#109 머지 12:31:52Z → `rct_20260910-0002` `succeeded` 12:39:12Z). 이 모델 비-터미널 0 · 자기 소유 열린 PR 0 ⇒ 소유자 0. 유일한 재감지 경로는 자매 모델의 PR #111 이고 그것은 분모를 2888 → 2960 으로 **키우기만** 한다(분자 2772 고정). 게이트가 초록인 것은 등재된 범위의 무결성만 강제하기 때문이며 미등재 범위의 존재 자체는 막지 못한다 ⇒ CI 에 맡겨 두면 영원히 보고되지 않는다. 직전 슬라이스의 임계(오탐 제외 ≥ 100)도 109 로 발화했다.\n\n두 축을 한 PR 로 묶을지 이전을 먼저 하고 판정을 뒤에 둘지는 planner 의 몫이나, **이전이 `docs/comment-policy.md` 를 삭제하고 #101 · #106 이 바로 그 파일을 편집 중**이므로 이전 순서를 먼저 확정하지 않으면 80줄 판정이 사라질 파일에 원장 행을 쓰게 된다는 제약은 실측으로 확인해 둔다. 정의의 낡은 토큰·스크립트 경로(③)도 as-is 지문을 27줄 오염시키고 있으므로 같은 계획에서 `reconciler-tobe-modeler` 로 함께 좁힐 것.",
@@ -2786,6 +2786,56 @@
               "detail": "converged 판정에 넣지 않는다. ⓐ `control-plane/test/shared_volume_test.go` 29줄 — PR #101(`tbm_session-platform-docs-impl` / `rct_20260908-0003`, `awaiting_review`) 소관, 이중 계상 가드로 제외. ⓑ 오탐 7줄(`web/src/design/README.md` 6 · `data-plane/Dockerfile` 1) — 지문 정규식이 마크다운·Dockerfile 을 주석으로 오인, 패턴 확장은 모델 정의 변경. ⓒ **모델 정의 정밀도 결함** — as-is versionScript 의 `DIRECTIVE` 제외 토큰이 `검증 AC:`(레포 0건)이고 실제 마커는 `검증 시나리오:`, `definition` 의 `scripts/e2e/check-ac-mapping.sh` 서술도 낡음(실재는 `check-scenario-mapping.sh`). 고칠 자리가 `to-be-models.json` 하나뿐이라 **`reconciler-tobe-modeler` 소관**이며 executor 가 닫을 수 없다. ⓓ 원장 → `passes/` 링크 무결성 규칙 부재 — 이전이 만든 회귀가 아니라(강제력 0 → 0) 별도 슬라이스."
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "직전 시도는 **완료 기준 여섯 중 다섯을 달성하고 머지 버튼 앞에서 서버에 거부당했다.** 이전·13차 판정·참조 이전·R5 보정은 전부 실측으로 확인됐고 대상 레포에 가한 변경은 0 이다. 막힌 것은 **머지 방법 하나**다 — `gh pr merge 112 --merge` 가 `Merge commits are not allowed on this repository.` 로 거부됐고, 레포 설정은 `allow_merge_commit=false` · `allow_rebase_merge=false` · `allow_squash_merge=true`. 계획이 「이 레포의 다른 reconcile PR 이 전부 squash 로 들어갔다」를 관측하고도 습관의 문제로 읽었는데, 실제로는 **레포가 강제한 결과**였다.\n\n그래서 이 시도의 계획은 **머지 형태를 레포가 허용하는 것으로 바꾸되, 승인이 요구한 산출물의 성질은 그대로 지키는 것**이다. 승인이 merge commit 을 요구한 이유는 형식이 아니라 **「이전」과 「판정」의 커밋 경계가 곧 *내용을 고치지 않고 옮겼다* 의 감사 증거**라는 것이었다(검토 사유 ②, 이 작업에서 유일하게 revert 로 복구되지 않는 지점). squash-only 레포에서 main 에 커밋 경계를 남기는 방법은 **PR 을 나누는 것**뿐이다 — 각 PR 이 squash 되어 main 에 각각 한 커밋으로 서므로, 요구된 경계가 그대로 `git log` 에 남는다. 오히려 revert 단위도 경계별로 쪼개져 롤백이 더 잘게 된다.\n\n그래서 승인된 PR #112 의 세 커밋을 **내용 한 바이트도 바꾸지 않고** 두 PR 로 갈랐다. **#116**(이전) = `6694ab0`(이전) + `ac50ba5`(R5 스캔 범위 보정)를 한 커밋으로 — 합치는 쪽이 옳다. `ac50ba5` 는 `6694ab0` 이 놓친 것을 고치는 커밋이라, 따로 두면 **main 이 R5 가 눈먼 상태를 한 커밋 동안 통과**하게 된다. **#117**(13차 판정) = `32985e7` 을 **그대로** cherry-pick. 분할이 내용을 바꾸지 않았다는 것은 주장이 아니라 측정이다 — #112 head `ac50ba5` 를 현재 main 위로 rebase 한 tree 와 #117 head 의 tree 가 **둘 다 `aab379ae9992` 로 동일**하다. #112 는 경위를 적은 코멘트와 함께 닫았고(재개 가능), 커밋 셋과 거기서 관측한 CI 증거는 `refs/pull/112/head` 에 그대로 남는다.\n\n**대안 셋을 저울질했고 둘은 실측으로 불가능, 하나는 승인 위반이다.** ⓐ *레포 설정을 `allow_merge_commit=true` 로* — 이 자동화의 GitHub App 에 `administration` 권한이 **없다**(토큰 발급이 `422 The permissions requested are not granted to this installation` 으로 거부됨). 가능성 자체가 없으므로 「하지 않기로 했다」가 아니라 **할 수 없다**. ⓑ *보호되지 않은 main 에 머지 커밋 직접 push* — 기술적으로 가능하지만 레포가 명시한 머지 정책의 회피이고 PR 경로를 통째로 우회한다. ⓒ *#112 를 그대로 squash* — 가장 값싸지만 승인이 금지한 바로 그 일이고, 두 경계를 main 이력에서 불가역적으로 소각한다. 증거가 `refs/pull/112/head` 에 남는다 해도 **main 의 `git log` 에서는 사라진다** — 승인이 지키라고 한 것이 정확히 그 자리다.\n\n**분할의 대가는 재검증인데, 이미 치렀다.** #116 은 B 없이 혼자 서야 하므로 그 상태의 게이트를 새로 재야 했다. 쟀고, **이전의 무결성을 이전보다 더 강하게 증명하는 값이 나왔다**: #116 에서 게이트 인구조사와 **전체 지문이 머지 전 main 과 바이트 동일**하다(판정 대상 3063줄/128파일 · 판정 완료 2772줄 · 등재 12 · 지문 `216a17ad33cd…`). 유일한 차이는 새로 실린 `R5 스캔 14파일 1106줄` 한 줄이다. 「내용을 고치지 않고 옮겼다」가 한 줄의 기계 출력으로 증명된다.\n\n**완료 기준(이 시도의 범위)** — 여섯을 모두 만족하면 성공이다. ① **#116 이 squash 로 main 에 머지**되고, 그 커밋 시점 게이트 출력의 인구조사·전체 지문이 **머지 직전 main 과 동일**하다(판정 완료 2772 · 등재 12 · 지문 `216a17ad33cd…`) — 이전이 판정 내용을 한 줄도 건드리지 않았다는 증명. ② 머지된 main 에서 **`R5 스캔 14파일 1106줄`** 이 찍히고, `passes/`·`README.md` 양쪽에 심은 위반이 rc=1 로 발화한다(강제력 축소 없음). ③ **#117 이 새 main 위로 rebase 되어 diff 가 판정 커밋 하나만** 남고, squash 로 머지된다. ④ 머지된 main 에서 **판정 완료 2786줄 · 등재 범위 13 · R5 스캔 15파일 1175줄** · 자매 게이트 3종 rc=0 · CI 전 잡 초록. ⑤ **main 의 `git log` 에 두 커밋이 각각 선다** — 「이전」과 「판정」의 경계가 승인이 요구한 대로 이력에 남는다. ⑥ to-be 가 `absent` 를 벗어나 `docs/comment-policy/` 의 tree hash 를 갖는다.\n\n**판정 대상(분모)은 완료 기준이 아니다.** 트리거 시점 2888 에서 지금 3063 으로 커졌고(#111 · #113 이 들인 새 e2e 파일), 머지 시점에 무엇이 더 들어와 있느냐에 따라 또 움직인다. 분자(판정 완료 2786) · 등재 13 · R5 스캔 범위가 기준이다. 비율(90.5% → 93.0%)도 같은 이유로 기준이 아니다 — 직전 시도가 예고한 96.0% → 98.7% 은 그때의 분모에서 나온 값이다.\n\n**범위 밖(후속)** — ⓐ `control-plane/test/shared_volume_test.go` 29줄: `tbm_session-platform-docs-impl` 의 `rct_20260908-0003`(PR #101, `awaiting_review`)이 살아 있는 소유 선언을 갖는다(이중 계상 가드). ⓑ 오탐 7줄(`web/src/design/README.md` 6 · `data-plane/Dockerfile` 1) — 패턴 확장은 모델 정의 변경이다. ⓒ **모델 정의 정밀도 결함**: as-is versionScript 의 `DIRECTIVE` 제외 토큰이 `검증 AC:`(레포에 0건)이고 실제 마커는 `검증 시나리오:`(27건)라 모델이 자기 정의상 제외한다고 선언한 27줄을 세고 있다. `definition` 의 `scripts/e2e/check-ac-mapping.sh` 서술도 낡았다(실재는 `check-scenario-mapping.sh`). 고칠 자리가 `to-be-models.json` 하나뿐이라 executor 가 닫을 수 없고 **`reconciler-tobe-modeler` 소관**이다(직전 두 시도와 같은 판단). ⓓ 원장 → `passes/` 링크 무결성 규칙 부재 — 이전 **전**에도 같은 자리가 검사되지 않는 문서 내 앵커였으므로 이전이 만든 회귀가 아니다(강제력 0 → 0). 별도 슬라이스.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "머지 전 신선도·CI 확인. `gh pr view 116` · `gh pr view 117` 로 state=OPEN · mergeable=MERGEABLE 을 확인하고, #116 head `2891584` · #117 head `350c83e` 가 계획과 일치하는지 본다. `gh pr checks` 로 두 PR 의 전 체크를 관측한다. main 이 준비 시점(`8e49927`)에서 움직였으면 `git merge-tree --write-tree origin/main <head>` 로 충돌 0 을 다시 잰다.",
+              "expectedOutcome": "두 PR 이 열려 있고 머지 가능하며, 정적 게이트 4종(`comment policy ledger` · `시나리오 ↔ e2e 1:1 mapping` · `e2e fidelity allowlist` · `render fidelity`)을 포함한 전 체크가 success. `pin deployment images (main only)` 의 skipping 은 main 전용이라 정상. failure 0. main 이 움직였어도 충돌 0."
+            },
+            {
+              "seq": 2,
+              "action": "**#116(이전)을 squash 로 머지한다**: `gh pr merge 116 --repo dlddu/session-platform --squash`. `--merge`·`--rebase` 는 레포가 거부한다(`allow_merge_commit=false` · `allow_rebase_merge=false`). squash 커밋 제목은 레포 설정(`squash_merge_commit_title=PR_TITLE`)에 따라 PR 제목이 된다.",
+              "expectedOutcome": "main 에 이전 커밋 하나가 선다. `gh pr view 116 --json mergedAt,mergeCommit` 이 값을 갖는다. `delete_branch_on_merge=true` 이므로 `reconcile/rct_20260910-0004-comment-redundancy-migrate` 는 자동 삭제되고, GitHub 이 #117 의 base 를 `main` 으로 자동 재조준한다(안 되면 step 4 에서 수동으로 바꾼다)."
+            },
+            {
+              "seq": 3,
+              "action": "머지된 main 을 clean 하게 받아 **이전의 무결성**을 잰다. `python3 scripts/check_comment_policy.py` 를 돌려 인구조사·전체 지문을 머지 **직전** main 값과 대조하고, R5 음성 테스트 2종을 돌린다 — (ㄱ) `docs/comment-policy/passes/2026-09-10-new-e2e-and-shared-harness.md` 에 `control-plane/internal/session/session.go:42` 삽입, (ㄴ) `docs/comment-policy/README.md` 에 같은 좌표 삽입. 각 테스트 후 `git checkout --` 로 원복해 트리를 clean 으로 남긴다.",
+              "expectedOutcome": "rc=0 · 판정 완료 **2772줄** · 등재 범위 **12** · **전체 지문이 머지 직전 main 과 동일** · 새로 실린 **`R5 스캔 14파일 1106줄`**. 음성 테스트 2종 모두 rc=1 로 `[R5] <레포 상대 경로> <줄> 번째 줄에 …` 발화. 원복 후 `git status --porcelain` 빈 출력 · 기저 재실행 rc=0 에 지문 불변. **지문이 다르면 이전이 내용을 건드린 것이므로 여기서 멈추고 revert 한다.**"
+            },
+            {
+              "seq": 4,
+              "action": "#117 을 새 main 위로 옮긴다: `git fetch origin && git rebase --onto origin/main 2891584 reconcile/rct_20260910-0004-comment-redundancy-pass13` 후 `git push --force-with-lease`. base 가 `main` 으로 자동 재조준되지 않았으면 `gh pr edit 117 --base main` 으로 바꾼다. rebase 후 `git diff --stat origin/main HEAD` 로 남은 diff 를 확인한다.",
+              "expectedOutcome": "#117 의 diff 가 **판정 커밋 하나**만 남는다 — 3파일(`e2e_claude_code_6_archive_freeze_test.go` · `docs/comment-policy/ledger.md` · `passes/2026-09-10-claude-code-6-archive-freeze.md`). 이전 커밋의 변경(디렉터리·게이트·참조)은 이미 main 에 있으므로 diff 에 보이지 않는다. `gh pr view 117` 이 base=main · mergeable=MERGEABLE."
+            },
+            {
+              "seq": 5,
+              "action": "force-push 가 만든 새 head 에서 CI 가 다시 도는 것을 관측하고, 전 잡 초록을 확인한 뒤 **#117 을 squash 로 머지한다**: `gh pr merge 117 --repo dlddu/session-platform --squash`.",
+              "expectedOutcome": "정적 게이트 4종을 포함한 전 체크가 success(`pin deployment images (main only)` 만 skipping), failure 0. 머지 후 main 에 판정 커밋 하나가 더 선다."
+            },
+            {
+              "seq": 6,
+              "action": "머지된 main 에서 **판정의 수렴**을 잰다. `python3 scripts/check_comment_policy.py` 와 자매 게이트 3종(`check-fidelity-allowlist.py` · `check-render-fidelity.py` · `scripts/e2e/check-scenario-mapping.sh`)을 돌리고, `git log --oneline -3` 으로 두 커밋이 각각 서 있는지 확인한다.",
+              "expectedOutcome": "rc=0 · **판정 완료 2786줄** · **등재 범위 13** · **`R5 스캔 15파일 1175줄`**. 자매 게이트 3종 rc=0(무접촉). `git log` 에 「이전」 커밋과 「판정」 커밋이 **각각 한 줄씩** 보인다 — 승인이 요구한 경계가 이력에 남았다는 증거. 판정 대상(분모)은 머지 시점 main 에 달렸으므로 완료 기준이 아니다."
+            },
+            {
+              "seq": 7,
+              "action": "모델의 `asIs`·`toBe` versionScript 를 머지된 main 에서 재실행해 두 side 의 이동을 기록한다.",
+              "expectedOutcome": "to-be 가 `absent` 를 벗어나 `docs/comment-policy/` 디렉터리의 tree hash 를 갖는다(그 사이 추가 머지가 없으면 `95d674ea5a69a6a05529e5783375858e5427b870`). as-is 는 판정이 걷어낸 66줄만큼 줄어든다. 두 값 모두 다음 감지의 트리거가 된다."
+            },
+            {
+              "seq": 8,
+              "action": "형제 PR **#101 · #106** 에 이 머지가 만든 재작업을 알린다. 두 PR 은 이제 삭제된 `docs/comment-policy.md` 를 편집 중이므로 충돌 성격이 **delete/modify** 로 바뀐다. 각 PR 에 재작업 방법(변경을 `docs/comment-policy/README.md` 또는 해당 `passes/*.md` 로 옮길 것, 원장 행을 건드리면 합계 마커도 같은 PR 에서 움직일 것 — R4)을 코멘트로 남긴다.",
+              "expectedOutcome": "두 PR 에 재작업 안내 코멘트가 달린다. **이 단계는 #101 · #106 을 대신 고치지 않는다** — #101 은 `tbm_session-platform-docs-impl` 의 `rct_20260908-0003`(`awaiting_review`) 소관이라 남의 lock 아래에 있다. step 2 가 실제로 머지된 뒤에만 보낸다 — 일어나지 않은 재작업을 통지하면 그것이 곧 오정보다."
+            }
+          ],
+          "plannedAt": "2026-09-11T06:20:00Z"
         }
       }
     ]
