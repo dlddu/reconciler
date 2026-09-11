@@ -4088,7 +4088,7 @@
   {
     "id": "rct_20260908-0003",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "awaiting_review",
+    "status": "review_rejected",
     "trigger": {
       "detectedAt": "2026-09-08T06:17:52Z",
       "changedSides": [
@@ -4117,7 +4117,7 @@
       "assessedAt": "2026-09-08T06:17:52Z"
     },
     "createdAt": "2026-09-08T06:17:52Z",
-    "updatedAt": "2026-09-08T07:14:16Z",
+    "updatedAt": "2026-09-11T08:30:51Z",
     "attempts": [
       {
         "plan": {
@@ -4188,8 +4188,11 @@
         },
         "review": {
           "required": true,
-          "status": "pending",
-          "reason": "`riskLevel: medium`이고, 실행 지침 §5가 스스로 「사람 승인 없이 머지하지 않는다」로 못박은 근거 셋이 그대로 유효하다. ⑴ **프로덕션 세션 런타임의 동작이 조건부로 바뀐다** — 승인된 `web_fetch_get` 응답이 인라인 상한을 넘으면 도구 결과의 모양이 `body` → `bodyPath`/`bodyBytes`로 달라지고, 에이전트(실제 Claude Code)가 그 모양을 어떻게 해석하는지는 이 레포가 단언할 수 없는 영역이다. ⑵ **에이전트의 파일 접근 범위를 넓힌다** — 관리 설정 `permissions.additionalDirectories`에 공유 마운트를 등재한다. 대상이 그 세션 전용 볼륨 하나뿐임을 #100의 e2e가 단언하지만 권한 확대는 사람이 한 번 봐야 한다. ⑶ **자매 PR #99와 `docs/doc-tracker.md`에서 충돌**하며(해소는 union) 머지 순서에 사람의 판단이 필요하다. 머지가 곧 반영(이미지 빌드·핀 커밋 자동)이라는 점도 사전 승인 쪽으로 기운다. 다만 되돌림은 env 주입 한 곳 revert로 완결되고 프로덕션은 스토리지 클래스 미설정이라 이 경로가 아직 켜지지 않는다."
+          "status": "rejected",
+          "reason": "`riskLevel: medium`이고, 실행 지침 §5가 스스로 「사람 승인 없이 머지하지 않는다」로 못박은 근거 셋이 그대로 유효하다. ⑴ **프로덕션 세션 런타임의 동작이 조건부로 바뀐다** — 승인된 `web_fetch_get` 응답이 인라인 상한을 넘으면 도구 결과의 모양이 `body` → `bodyPath`/`bodyBytes`로 달라지고, 에이전트(실제 Claude Code)가 그 모양을 어떻게 해석하는지는 이 레포가 단언할 수 없는 영역이다. ⑵ **에이전트의 파일 접근 범위를 넓힌다** — 관리 설정 `permissions.additionalDirectories`에 공유 마운트를 등재한다. 대상이 그 세션 전용 볼륨 하나뿐임을 #100의 e2e가 단언하지만 권한 확대는 사람이 한 번 봐야 한다. ⑶ **자매 PR #99와 `docs/doc-tracker.md`에서 충돌**하며(해소는 union) 머지 순서에 사람의 판단이 필요하다. 머지가 곧 반영(이미지 빌드·핀 커밋 자동)이라는 점도 사전 승인 쪽으로 기운다. 다만 되돌림은 env 주입 한 곳 revert로 완결되고 프로덕션은 스토리지 클래스 미설정이라 이 경로가 아직 켜지지 않는다.",
+          "reviewer": "user",
+          "reviewedAt": "2026-09-11T08:30:51Z",
+          "comment": "반려. 사용자 사유(원문): 「main 브랜치 최신화 필요」.\n\n[executor 부기 — 반려 시점의 실측]\n- PR #101 head `5c2ed6f` · base `main`, 승인 요청 시점 `mergeable: true` / `mergeable_state: clean`, main head는 `0af0440`(2026-09-08T05:40:48Z, `chore(deploy)` 핀 커밋)이었다. 즉 **충돌이 나서가 아니라 「브랜치를 최신 main 위로 올린 뒤 CI를 다시 받아라」는 요구**로 읽는다.\n- CI는 head `5c2ed6f` 기준 15개 중 14 success · 1 skipped(`pin deployment images` — main 전용)였고, `e2e` 잡 로그에서 `TestSharedVolume_*` 4 PASS / 0 SKIP / 0 FAIL, Go API 스위트 76 PASS / 0 FAIL / 0 SKIP을 executor가 직접 세어 확인했다. **이 실측은 전부 옛 base 기준이므로 재계획 후 무효**다.\n- 실행 지침 §4-3이 이미 같은 사전 조건을 적어 두었다 — 「main이 계획 이후 움직였다면 머지 전에 브랜치를 최신 main 위로 올리고 CI를 다시 돌린다」.\n- 자매 PR #99(`tbm_session-platform-scenario-e2e`, `awaiting_review`)가 여전히 열려 있고 `docs/doc-tracker.md`에서 경합한다(지침 §6, 해소는 union). #99가 먼저 착지하면 최신화 대상 main이 또 바뀌므로, 재계획은 **머지 순서를 먼저 확정한 뒤** 최신화·CI 재실행을 잡는 것이 맞다.\n\n계획 자체의 접근(AC-F5 전반만 사는 슬라이스·env 배선·스필 계약)에 대한 반려는 아니며, 재계획은 planner 몫이다."
         }
       }
     ]
