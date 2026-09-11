@@ -157,7 +157,7 @@ assert.ok(modesMatch, "the view modes block must exist in index.html");
 const enabledMatch = html.match(/  function isModelEnabled\(m\) \{[\s\S]*?\n  \}\n/);
 assert.ok(enabledMatch, "isModelEnabled must exist in index.html");
 const constsMatch = html.match(
-  /  var PLANNING_STATUSES = [\s\S]*?\n  var DEFAULT_MODE = "[a-z]+";\n/
+  /  var DONE_STATUSES = [\s\S]*?\n  var DEFAULT_MODE = "[a-z]+";\n/
 );
 assert.ok(constsMatch, "the status sets / MODES / DEFAULT_MODE must exist in index.html");
 

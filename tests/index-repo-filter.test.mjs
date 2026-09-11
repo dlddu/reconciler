@@ -6,7 +6,7 @@ import vm from "node:vm";
 const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
 const constsMatch = html.match(
-  /  var PLANNING_STATUSES = [\s\S]*?\n  var DEFAULT_MODE = "[a-z]+";\n/
+  /  var DONE_STATUSES = [\s\S]*?\n  var DEFAULT_MODE = "[a-z]+";\n/
 );
 assert.ok(constsMatch, "the status sets / MODES / DEFAULT_MODE must exist in index.html");
 
@@ -69,11 +69,11 @@ const MODELS = [
 
 const TASKS = {
   "alpha-docs": [{ id: "a", status: "planned" }],
-  "alpha-e2e": [{ id: "b", status: "planning" }],
-  "beta-docs": [{ id: "c", status: "planned" }],
+  "alpha-e2e": [{ id: "b", status: "succeeded" }],
+  "beta-docs": [{ id: "c", status: "awaiting_review" }],
   "cross-repo": [{ id: "d", status: "executing" }],
   "cluster-only": [{ id: "e", status: "planned" }],
-  "alpha-off": [{ id: "f", status: "planned" }]
+  "alpha-off": [{ id: "f", status: "awaiting_review" }]
 };
 
 function run(expression, overrides = {}) {
@@ -143,13 +143,18 @@ test("the repo filter applies inside every view mode", () => {
     "beta-docs",
     "cross-repo"
   ]);
-  assert.deepEqual(ids(run("modelsInMode('pending')", { repo: "dlddu/beta" })), [
-    "beta-docs"
-  ]);
-  assert.deepEqual(ids(run("modelsInMode('running')", { repo: "dlddu/beta" })), [
+  assert.deepEqual(ids(run("modelsInMode('progress')", { repo: "dlddu/beta" })), [
+    "beta-docs",
     "cross-repo"
   ]);
-  assert.deepEqual(ids(run("modelsInMode('planning')", { repo: "dlddu/beta" })), []);
+  assert.deepEqual(ids(run("modelsInMode('review')", { repo: "dlddu/beta" })), [
+    "beta-docs"
+  ]);
+  assert.deepEqual(ids(run("modelsInMode('progress')", { repo: "dlddu/alpha" })), [
+    "alpha-docs",
+    "cross-repo"
+  ]);
+  assert.deepEqual(ids(run("modelsInMode('review')", { repo: "dlddu/alpha" })), []);
 });
 
 test("the hidden mode is scoped to the chosen repo too", () => {
@@ -160,7 +165,7 @@ test("the hidden mode is scoped to the chosen repo too", () => {
 });
 
 test("the repo filter never resurrects a model whose detection is disabled", () => {
-  for (const mode of ["planning", "pending", "running", "active"]) {
+  for (const mode of ["progress", "review", "active"]) {
     assert.equal(
       run(`modelsInMode("${mode}")`, { repo: "dlddu/alpha" }).some((m) => m.id === "alpha-off"),
       false,
