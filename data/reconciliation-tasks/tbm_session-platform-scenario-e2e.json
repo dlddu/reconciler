@@ -4142,12 +4142,58 @@
       "summarizedAt": "2026-09-11T03:40:00Z"
     },
     "createdAt": "2026-09-11T03:40:00Z",
-    "updatedAt": "2026-09-11T03:45:00Z",
+    "updatedAt": "2026-09-11T03:52:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "**작업 필요(`actionRequired: true`).** → status `action_required` 로 전이하고 손을 뗀다(planner 대기, 미점유).\n\n**gap 은 저작 대기 9건이고 소유자가 0이다.** 정의 문면의 불변식으로 계산하면\n`37 − 예외 3 − 구현 대기 0 = 34` 가 필요한 매칭 파일 수인데 실측은 **25** 다 ⇒ **9 미달**. 게이트가\n초록인 것은 그것이 「저작 대기」라는 **정의에 없는 제3의 제외 항**(`definition` 전문에서 문자열\n`저작 대기` **0회**)을 두고 항등식을 검사하기 때문이며, 실제로 게이트는 첫 줄에 「저작 대기 9」를\n스스로 찍으면서 rc=0 이다 — **초록은 규칙 준수의 증거이지 커버리지의 증거가 아니다.**\n\n**지금이 착수 가능한 순간이다**: 9건의 `선행` 칸을 전량 실측해 **2건이 `없음`**\n(`approval-gated-workload.md#시나리오 3` · `claude-code-workload.md#시나리오 3`)임을 확인했다.\n등재 문서 자신이 저작 대기를 「판정은 끝났고 전용 파일만 없는 시나리오」로 규정하므로 백로그가\n아니라 확정된 잔여다. 규칙 6(구현 대기)에 해당하지도 않는다 — 구현 대기 등재는 0이고 두 행의\n근거 칸이 기능의 실재를 코드 위치로 지목한다.\n\n**소유자 부재를 측정으로 확인했다**: 이 모델 비-터미널 task **0**(`rct_20260910-0003` 은 03:18:50Z\n`succeeded`), 이 모델 소관 열린 PR **0**(열린 3건은 각각 자매 `comment-redundancy` #112 · 자매\n`docs-impl` #101 · 루프 밖 #106), 그리고 #112 를 트리거 위에 시험 병합(rc=0 CLEAN)해도 주석 원장만\n움직이고 `docs/test/` 매칭 집계는 건드리지 않는다. 재감지 **경로는 살아 있지만** 그것을 밟을\n주체가 없으므로 「경로 부재」가 아니라 **「소유자 부재 + 착수 가능」**을 논거로 쓴다.\n\n자동 해소 대기(유예)를 택하지 않는다 — 저작 대기는 시간이 지나 저절로 줄지 않고, 롤아웃 진행 중\n같은 일시적 요인도 없다(대상 레포의 유일한 후속 커밋은 배포 핀이고 0 side 다).\n\n범위 권고(planner 몫): 선행 `없음` **2건 우선**. `approval-gated #3` 을 먼저 세우면 `#시나리오 6`\n의 선행(「시나리오 3 의 승인 경로 파일」)이 함께 풀려 2건 연쇄가 된다. 다만 이 루프의 산출물은\n「E2E 테스트와 등재 문서뿐」이므로, 선행이 걸린 7건(CNI 교체·타임아웃 주입·상한 배선·허용목록\n등재)으로 번지면 규칙 6 의 구현 대기 등재로 전환할 것.\n\nbaseline 은 **움직인 두 side 다** 전진시킨다(`api:` 이동 · `web:` 는 같은 값이므로 문자열 전체로\n전진, to-be `3cc35af4…` → `f41179fe…`).\n\n**이중 계상 가드**: 신규 파일의 *주석 72줄* 은 자매 `comment-redundancy` 소유, 「충실도」 절은 자매\n`e2e-mock-policy` 소유다. 여기서 그 축으로 범위를 넓히지 말 것.\n",
       "assessedBy": "agent",
       "assessedAt": "2026-09-11T03:40:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`claude-code-workload.md#시나리오 3`(연속 write는 직렬 실행) **한 건만** 전용 e2e 파일로 저작하고 등재\nSSOT(`docs/test/e2e.md`)의 저작 대기 행을 매핑 표로 옮긴다 — **저작만 하고 하네스·대역·제품 코드는 한 줄도\n건드리지 않는다.**\n\n**왜 9건 중 이 한 건인가.** 저작 대기 9건의 `선행` 칸 실측에서 `없음`은 2건이고(감지가 넘긴 실측),\n남은 7건은 CNI 교체·폴링 타임아웃 주입·상한 env 배선·모킹 허용목록 등재가 선행이라 이 루프의 산출물\n(「E2E 테스트와 등재 문서뿐」) 밖이다. `없음` 2건 중 `approval-gated #3`은 **공급자 대역이 `tool_use`\n블록을 낼 수 있어야** 열리고(등재 문서가 스스로 「그것은 다음 확장」이라 적는다), 그 확장은 저작과 다른\n축이다 — 직전 슬라이스(#111)가 대역 확장 + 저작을 한 PR에 묶어야 했던 것과 같은 모양이 된다.\n반면 `claude-code #3`은 **그 #111이 벽을 이미 치웠다**: 등재 행의 `근거` 칸이 「이 행이 남아 있는 이유는\n파일이 아직 없다는 것 하나뿐이다」라고 못박는다. 그러므로 이번 슬라이스는 **단일 축(저작)** 으로 끝나고,\n`approval-gated #3` + 그것이 연쇄로 푸는 `#6`은 대역 확장을 자기 축으로 갖는 다음 슬라이스에 남긴다.\n(가역성: 테스트 파일 1개 신설 + 문서 표 이동이라 revert 한 번으로 완전히 되돌아간다.)\n\n**무엇을 사는가 — 「순서」에 둔다.** 등재 행이 지시한 그대로다. 비중첩(동시 argv 수 ≤ 1)은 시나리오 2의\n파일이 같은 프로브로 이미 사지만, **그 파일 자신의 헤더가 「invocation이 write 왕복보다 느리지 않다」고\n적는다** — 즉 #2의 조건에서는 겹칠 창 자체가 비어 있어 비중첩이 공허할 수 있다. 이 파일은 첫 프롬프트에\n대역이 허용하는 최대 응답(`e2e-reply:<label>:200000:64` → 600,013바이트)을, 둘째에 133바이트를 지시해\n**크기를 역전**시킨다. 그러면 (ㄱ) 둘째 write가 반환된 시점에 첫 응답이 아직 미완이라는 것이 관측되어\n「첫 실행이 끝나기 전에 둘째 write」라는 시나리오의 전제가 **가정이 아니라 측정**이 되고, (ㄴ) 병렬·순서\n미보장 구현이라면 133바이트 응답이 먼저 착지하므로 `read(offset=0)`의 순서 단언이 **공허하지 않다**.\n비중첩은 그 겹침 창을 먼저 세운 뒤에 재므로 #2의 사본이 아니다.\n\n**완료 기준(이 시도의 범위).** 게이트 `scripts/e2e/check-scenario-mapping.sh`가 rc=0으로 **저작 대기 9 → 8 ·\n매칭 파일 25 → 26 · 매칭 단위 28 → 29**를 찍고, 예외 3 · 구현 대기 0 · 공백 0 · 시나리오 전집 37이 불변이며,\nPR의 CI가 초록(특히 kind e2e 잡에서 새 파일의 테스트가 실제로 SUT를 상대로 PASS)인 것. 나머지 8건의 저작\n대기, 그 선행 작업, 신규 파일 주석의 판정(자매 `comment-redundancy` 소유)은 **범위 밖**이며 재감지가 다음\ntask로 잇는다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-11T03:52:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`dlddu/session-platform` main(`9ea060c`)에서 브랜치 `reconcile/rct_20260911-0001-scenario-e2e` 를 딴다. 부모에서 게이트 4종을 먼저 실행해 baseline 출력을 확보한다.",
+              "expectedOutcome": "부모 baseline: check-scenario-mapping rc=0 「37 = 25 + 3 + 0 + 9 + 0 (매칭 단위 28, 비-시나리오 3)」 · gofmt 무출력 · `go vet -tags=e2e ./test/...` rc=0."
+            },
+            {
+              "seq": 2,
+              "action": "`control-plane/test/e2e_claude_code_3_serial_queue_test.go` 를 신설한다. 헤더에 `// 검증 시나리오: claude-code-workload.md#시나리오 3` 을 **정확히 1줄** 두고, 기존 하네스(`claudeSession`·`writePromptOK`·`readShellAt`·`eventuallyClaudeOutput`·`claudeArgvProbe`·`execInContainer`)만 재사용한다. 크기 역전 프롬프트 쌍(600,013B / 133B)으로 ① `read(0)` 누적 순서 = write 순서(헤드라인) ② 겹침 창을 먼저 세운 뒤의 실행 구간 비중첩을 단언한다. 하네스·대역(`deploy/`)·제품 코드는 건드리지 않는다.",
+              "expectedOutcome": "새 파일 1개만 추가. `git diff --stat` 의 변경 경로가 `control-plane/test/` 아래 신규 1개 + `docs/test/e2e.md` 뿐이고 `deploy/`·`data-plane/`·`web/`·`scripts/`·`k8s/` 는 0줄."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/test/e2e.md` 를 갱신한다 — (ㄱ) `scenario-backlog` 블록에서 `claude-code-workload.md#시나리오 3` 행 삭제 (ㄴ) `scenario-mapping` 블록에 같은 시나리오의 행 추가(파일·스위트 go·기존 AC 키 AC-E2·무엇을 단언하나, 시나리오 2/4와의 경계 포함) (ㄷ) `scenario-summary` 의 `저작 대기: 9→8`·`시나리오 매칭 파일: 25→26` (ㄹ) 저작 대기 절 말미에 이번 슬라이스 노트를 블록쿼트로 추가. **다른 행의 `선행` 칸은 한 칸도 건드리지 않는다**(재분류 0건 — `없음`의 감소가 전부 저작 때문임을 다음 감지가 확인할 수 있게).",
+              "expectedOutcome": "`git diff docs/test/e2e.md` 가 위 네 자리에만 걸린다. 다른 저작 대기 행의 `선행`·`근거` 칸 diff 0줄."
+            },
+            {
+              "seq": 4,
+              "action": "로컬에서 CI 게이트를 1:1 재현한다: `bash scripts/e2e/check-scenario-mapping.sh`, `gofmt -l .`, `go vet -tags=e2e ./test/...`, `python3 scripts/check_comment_policy.py`, `python3 scripts/check-fidelity-allowlist.py`, `python3 scripts/check-render-fidelity.py`. 주석 정책 게이트는 `git ls-files` 기반이라 **stage 후에** 잰다.",
+              "expectedOutcome": "scenario-mapping rc=0 「37 = 26 + 3 + 0 + 8 + 0 (매칭 단위 29, 비-시나리오 3)」 · gofmt 무출력 · vet rc=0 · comment-policy rc=0(등재 범위·합계 불변, 판정 대상만 증가) · fidelity/render 출력 **부모와 바이트 동일**."
+            },
+            {
+              "seq": 5,
+              "action": "브랜치를 push 하고 PR 을 연다(머지하지 않는다). 본문에 task id·gap 요약·계획 단계·검증 방법·범위 밖 목록을 적는다. push 는 Actions 를 즉시 기동시키는 `gh auth token` 을 쓴다(App 설치 토큰은 워크플로를 기동하지 않는다).",
+              "expectedOutcome": "PR 이 열리고 `ci` 워크플로 전 잡 + `e2e`(kind) 워크플로가 기동된다(경로 필터 `control-plane/**` 에 걸린다)."
+            },
+            {
+              "seq": 6,
+              "action": "CI 결과를 관측해 계획에 못박는다. 특히 kind e2e 잡의 `API e2e (go, -tags=e2e)` 스텝에서 새 테스트 두 건의 RUN/PASS 와 겹침 창 로그(둘째 write 반환 시점의 버퍼 길이)를 읽어 지침의 기대값으로 옮긴다.",
+              "expectedOutcome": "전 잡 success, 실패 0. 새 테스트가 skip 이 아니라 PASS 이고, 겹침 전제(둘째 write 반환 시점에 첫 응답 미완)가 로그로 증명된다."
+            },
+            {
+              "seq": 7,
+              "action": "실행 지침(`plan.executionGuide`)을 작성하고 task 를 `planned` 로 전이해 lock 을 놓는다.",
+              "expectedOutcome": "attempts 마지막 항목에 plan·preparation·executionGuide 가 모두 채워지고 status=planned."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
