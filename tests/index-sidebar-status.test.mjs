@@ -54,9 +54,11 @@ function renderSidebar(tasks) {
     list,
     modeMeta: () => ({ head: "ToBeModels", empty: "없습니다." }),
     progressTaskCount: () => 0,
-    reviewTaskCount: () => 0,
+    awaitingReviewTaskCount: () => 0,
+    approvingTaskCount: () => 0,
     DONE_STATUSES: ["succeeded", "cancelled", "no_action_needed"],
-    REVIEW_STATUSES: ["awaiting_review", "approving"],
+    AWAITING_REVIEW_STATUSES: ["awaiting_review"],
+    APPROVING_STATUSES: ["approving"],
     result: undefined,
     select() {},
     state: {
@@ -118,4 +120,74 @@ test("renders a neutral status when every task needs no action", () => {
 
   assert.match(sidebar, /title="표시할 상태 없음"/);
   assert.doesNotMatch(sidebar, /title="no_action_needed"/);
+});
+
+// ---------- workflow badges ----------
+// Rendered with the real status sets and counters, so the wording on each badge is pinned
+// to the statuses it actually counts.
+const constsMatch = html.match(
+  /  var DONE_STATUSES = [\s\S]*?\n  var DEFAULT_MODE = "[a-z]+";\n/
+);
+assert.ok(constsMatch, "the status sets / MODES / DEFAULT_MODE must exist in index.html");
+const modesMatch = html.match(
+  /  \/\/ ---------- view modes ----------\n[\s\S]*?\n  function modeContaining\(modelId\) \{[\s\S]*?\n  \}\n/
+);
+assert.ok(modesMatch, "the view modes block must exist in index.html");
+
+function renderBadges(tasks) {
+  const list = { innerHTML: "", querySelectorAll() { return []; } };
+  const context = {
+    $: (selector) => selector === "#modellist" ? list : { textContent: "" },
+    escapeHtml: (value) => String(value),
+    isModelEnabled: () => true,
+    lastAction: () => null,
+    relTime: () => "방금",
+    select() {},
+    STATUS_META: {},
+    state: {
+      filter: "",
+      mode: "active",
+      repo: "",
+      models: [{ id: "model", metadata: { name: "Model", tags: [] } }],
+      selected: null,
+      tasksByModel: { model: tasks }
+    }
+  };
+  vm.runInNewContext(
+    constsMatch[0] + modesMatch[0] + functionSource + "\n" + renderSource + "\nrenderSidebar();",
+    context
+  );
+  const meta = list.innerHTML.match(/<div class="mi-meta">([\s\S]*?)<span class="taskcount">/);
+  assert.ok(meta, "the sidebar item must render its badge row");
+  return meta[1];
+}
+
+test("a task an approval session holds is badged as approval in progress, not as waiting", () => {
+  const badges = renderBadges([{ id: "a", status: "approving" }]);
+  assert.match(badges, /class="approvepill"[^>]*>승인 진행 중 1</);
+  assert.doesNotMatch(badges, /리뷰 대기/);
+});
+
+test("a task nobody has picked up yet is badged as waiting for review", () => {
+  const badges = renderBadges([{ id: "a", status: "awaiting_review" }]);
+  assert.match(badges, /class="reviewpill"[^>]*>리뷰 대기 1</);
+  assert.doesNotMatch(badges, /승인 진행 중/);
+});
+
+test("waiting and in-progress approvals are counted on separate badges", () => {
+  const badges = renderBadges([
+    { id: "a", status: "awaiting_review" },
+    { id: "b", status: "awaiting_review" },
+    { id: "c", status: "approving" },
+    { id: "d", status: "succeeded" }
+  ]);
+  assert.match(badges, />진행 중 3</);
+  assert.match(badges, />리뷰 대기 2</);
+  assert.match(badges, />승인 진행 중 1</);
+});
+
+test("a model with no review work shows neither review badge", () => {
+  const badges = renderBadges([{ id: "a", status: "planning" }]);
+  assert.match(badges, />진행 중 1</);
+  assert.doesNotMatch(badges, /리뷰 대기|승인 진행 중/);
 });

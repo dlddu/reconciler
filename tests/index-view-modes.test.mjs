@@ -111,6 +111,29 @@ test("done is the terminal statuses only; review is awaiting human approval", ()
   assert.deepEqual(Array.from(run("REVIEW_STATUSES")), ["awaiting_review", "approving"]);
 });
 
+test("the review tab is exactly the waiting and in-progress approval sets, which never overlap", () => {
+  const awaiting = run("AWAITING_REVIEW_STATUSES");
+  const approving = run("APPROVING_STATUSES");
+  assert.deepEqual(Array.from(awaiting), ["awaiting_review"]);
+  assert.deepEqual(Array.from(approving), ["approving"]);
+  assert.deepEqual(Array.from(run("REVIEW_STATUSES")), [...awaiting, ...approving]);
+  assert.equal(awaiting.filter((s) => approving.includes(s)).length, 0);
+});
+
+test("the review badges split the review tab's count between waiting and in progress", () => {
+  assert.equal(run('awaitingReviewTaskCount("asking")'), 1);
+  assert.equal(run('approvingTaskCount("asking")'), 0);
+  assert.equal(run('awaitingReviewTaskCount("claimed")'), 0);
+  assert.equal(run('approvingTaskCount("claimed")'), 1);
+  for (const id of ["asking", "claimed", "working", "idle", "nope"]) {
+    assert.equal(
+      run(`awaitingReviewTaskCount("${id}") + approvingTaskCount("${id}")`),
+      run(`reviewTaskCount("${id}")`),
+      `${id}: the two badges must add up to the review tab's count`
+    );
+  }
+});
+
 test("every status the page names is a real schema status", () => {
   for (const status of [...run("DONE_STATUSES"), ...run("REVIEW_STATUSES")]) {
     assert.ok(SCHEMA_STATUSES.includes(status), `${status} is not in the task schema`);
