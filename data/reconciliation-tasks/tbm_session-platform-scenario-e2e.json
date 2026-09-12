@@ -4417,7 +4417,7 @@
       "assessedAt": "2026-09-11T07:12:00Z"
     },
     "createdAt": "2026-09-11T07:12:00Z",
-    "updatedAt": "2026-09-12T08:52:00Z",
+    "updatedAt": "2026-09-12T08:59:27Z",
     "attempts": [
       {
         "plan": {
@@ -4493,6 +4493,51 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-12T08:43:35Z",
           "comment": "반려 — main 브랜치 최신화 필요. 승인 시점 PR #118 의 base 는 계획 시점 그대로 `af3a3e0` 였고 그것이 당시 main HEAD 와 같아 `mergeable_state=clean` 이었으나, 같은 파일(`docs/test/e2e.md`)을 건드리는 PR #116(주석 정책 SSOT 를 `docs/comment-policy.md` → `docs/comment-policy/ledger.md` 디렉터리로 이전, 같은 파일 390행 한 줄 수정)이 아직 열려 있고 먼저 머지될 예정이라, 이 PR 을 그대로 머지하면 낡은 base 위에서 나간다. 최신 main 에 rebase 한 뒤 게이트(`./scripts/e2e/check-scenario-mapping.sh` rc=0 · 항등식 `37 = 26 + 3 + 2 + 6 + 0` · ci.yml 정적 잡 전부 초록)를 다시 돌려 집계 6줄이 여전히 맞는지 확인하고 재상신할 것. ⚠️ rebase 후 「시나리오 총계」·「매칭 파일」 수는 남의 축 변경으로 달라질 수 있으므로, 판정은 절대값이 아니라 ⑴ 저작 대기 목록에서 `#시나리오 3`·`#시나리오 6` 이 빠졌는가 ⑵ 구현 대기 목록에 그 둘이 들어왔는가 ⑶ 게이트 rc=0 인가로 한다. 재분류 판정 자체(저작 대기 → 구현 대기)에 대한 반려는 아니다 — 실측 근거·담당·해제 조건은 검토에서 문제로 보지 않았다. 다만 후속으로, 머지 후 `tbm_session-platform-docs-impl` 이 이 결함(세션 MCP 가 핀된 CLI 가 읽지 않는 `$HOME/.claude/settings.json` 경로에 등록된다)을 실제로 집는지 확인이 필요하다. 그 모델의 to-be 는 `docs/` 전체 트리 해시라 이 PR 머지만으로 감지는 깨어나지만, 최근 6회 연속 `no_action_needed` 였고 `docs/test/` 는 다른 모델의 원장이라 「남의 장부 정리」로 읽힐 여지가 있다. 머지 후 docs-impl 감지를 한 번 fire 해 판정을 보고, `no_action_needed` 가 나오면 `docs/prd` 의 승인게이트 AC 에 도달 불가를 실측과 함께 명시하는 별도 슬라이스로 운반체를 올릴 것(그 PR 은 이 모델 경계 밖이므로 #118 에 끼워 넣지 않는다)."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**직전 시도(PR #118)를 철회하고, detector 가 원래 요구한 저작으로 갈아탄다.** 반려 사유는 「낡은 base — 최신 main 에 rebase 후 게이트 재확인하고 재상신」이었고 재분류 판정 자체에 대한 반려는 아니었다. rebase 는 깨끗이 됐고(`49d7465` 위, +45/−16 단일 파일, 4게이트 rc=0, 반려가 지정한 판정 기준 ⑴⑵⑶ 전부 충족) — **그런데 rebase 가 드러낸 것은 PR 내용 자체가 새 base 에서 거짓이 됐다는 것이다.** #118 이 `#시나리오 3`·`#6` 을 「구현 대기」로 내린 근거 세 개 중 둘이 오늘 아침 main 에 착지하며 소멸했다: ⑴ 「세션 MCP 가 CLI 가 읽지 않는 `$HOME/.claude/settings.json` 에 등록된다」 → **PR #120(08:11Z, `b431f36`)이 정확히 그 결함을 고쳤다** — 새 `data-plane/cmd/agent/claude_mcp_registration.go` 가 `claudeCLIConfigFile = \".claude.json\"` 로 CLI 가 읽는 파일에 등록하고, `ensureClaudeManagedSettings` 가 두 반쪽을 함께 쓴다. ⑵ 「공유 볼륨에 파일을 만드는 도구가 없다」 → **PR #101(07:22Z, `f4620c3`)의 AC-F5 전반이 `spillBody` 를 넣어** `maxInlineBodyBytes`(100 000) 초과 응답이 `bodyPath`/`bodyBytes` 로 공유 볼륨에 떨어진다. 남은 것은 `#6` 의 (c) 갈래(`POST /snapshot` 이 이 타입에서 503, `ErrCheckpointDisabled`)뿐인데 그것은 원래 저작 대기 행의 유예 사유이지 「관측 대상 자체가 없음」이 아니다. **따라서 #118 을 rebase 해 머지하면 main 의 원장에 거짓 두 행이 들어가고 측정 gap 이 근거 없이 2 줄어든다** — 검토가 우려한 「눈금을 옮긴 것」이 이번엔 실제로 참이 된다. 반대로 **main 의 현재 원장은 이미 정확하다**: 저작 대기의 `#시나리오 3` 행이 적은 `선행: 없음` 은 어제는 거짓이었지만 #120 으로 **다시 참이 됐다**. 그러므로 고칠 문서가 없고, detector 가 연 task 의 원래 의도(「`#3` 저작」)가 지금 실제로 착수 가능해졌다. **이 시도의 범위(완료 기준)**: ⓐ PR #118 을 머지하지 않고 닫아 거짓 재분류를 철회하고 ⓑ `approval-gated-workload.md#시나리오 3` 의 전용 e2e 파일을 저작해 저작 대기 8 → 7 · 매칭 파일 26 → 27 로 만든다. **범위 밖**: `#시나리오 6` 저작(이 파일이 그 행의 `선행` 을 충족시키므로 다음 감지가 새 task 로 잇는다) · 「승인 후 정확히 1회 실제 아웃바운드 GET」의 양성 단언(자매 원장 `FETCH-ORIGIN` 이 살아 있다 — `validateFetchTarget` 이 https 만 받는데 `session_mcp_tools.go:254` 의 `http.DefaultClient` 는 시스템 루트만 신뢰하고 MCP 컨테이너에 CA 를 넣을 자리가 없다; 재검토 2026-10-11) · 제품 코드·대역(`deploy/`) 변경(각각 docs-impl · e2e-mock-policy 소관). 가역성: 산출물이 테스트 파일 1개 + 등재 문서 1개뿐이라 revert 한 커밋으로 깨끗이 돌아가고, #118 은 닫아도 재개봉할 수 있다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #118 을 **머지하지 않고 닫는다**(`gh pr close 118`). 닫는 코멘트에 철회 근거를 값으로 남긴다 — #120(`b431f36`)이 등록 경로를, #101(`f4620c3`)이 공유 볼륨 파일 산출을 각각 해소했으므로 이 PR 의 「미구현 근거」 두 행이 새 base 에서 거짓이고, main 의 저작 대기 행이 적은 `선행: 없음` 이 다시 참이 됐다는 것. 브랜치 `reconcile/rct_20260911-0003-opus5-1m` 는 남겨 이력을 보존한다.",
+              "expectedOutcome": "PR #118 이 `state=closed`·`merged=false`. 거짓 두 행이 main 에 들어갈 경로가 사라진다. `docs/test/e2e.md` 는 main 에서 그대로이고 게이트 항등식은 `37 = 26 + 3 + 0 + 8 + 0` 을 유지한다."
+            },
+            {
+              "seq": 2,
+              "action": "현재 main(`49d7465` 이후 최신)에서 새 브랜치 `reconcile/rct_20260911-0003-opus5-1m-v2` 를 딴다. #118 브랜치를 재사용하지 않는다 — 그 브랜치의 커밋은 철회된 판정이고, 형제 워커의 열린 PR 브랜치와 겹치지 않게 모델 슬러그를 유지한다.",
+              "expectedOutcome": "새 브랜치가 최신 main 을 base 로 갖는다. `git merge-base` 가 main tip 과 같다."
+            },
+            {
+              "seq": 3,
+              "action": "`control-plane/test/e2e_approval_gated_3_approval_path_test.go` 를 저작한다. 사는 조항(detector 가 그은 경계 안): ⓐ 도구 호출 프롬프트 write 가 **승인을 기다리지 않고 즉시 반환** ⓑ 결정 전 SSE 와 **같은 커서의 read** 양쪽에 `awaiting approval` in-band 마커가 나타남 ⓒ 그 사이 **테스트 upstream 무도달**(음성 단언) ⓓ 승인 요청의 외부 식별자가 `{세션ID}:{요청ID}` 형태 ⓔ event id/`nextOffset`/decoded 바이트 길이 일치와 커서의 UTF-8 code-point 경계 ⓕ 게이트웨이 대역에서 승인한 뒤 **게이트를 통과했다는 데까지**의 관측. 게이트웨이 대역의 `/operator/policy`·`/operator/decide` 는 ClusterIP 라 테스트 프로세스에서 직접 못 닿는다 — 기존 `execInPod` 패턴(`f4Sh`/`f6.sh`/`curlProxy`)으로 파드 안에서 curl 한다. 공급자 대역은 프롬프트의 `e2e-tool:<도구명>:<JSON>` 지시자로 `tool_use` 를 내게 하고, 도구명은 `mcp__session-platform-session-mcp__web_fetch_get` 을 쓴다.",
+              "expectedOutcome": "새 파일 1개가 `go vet -tags=e2e ./...` 와 `gofmt -l` 를 통과하고, 파일 헤더가 `approval-gated-workload.md#시나리오 3` 을 규칙 2 형식으로 선언해 매핑 게이트가 매칭 단위로 인식한다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/test/e2e.md` 등재를 같은 PR 에서 갱신한다(규칙 5 집계 일치). ⓐ 저작 대기 표에서 `approval-gated-workload.md#시나리오 3` 행 삭제 ⓑ 커버 시나리오 표(`scenario-mapping`)에 새 파일 행 추가 ⓒ `scenario-summary` 를 `저작 대기 8 → 7` · `시나리오 매칭 파일 26 → 27` 로 갱신 ⓓ `#시나리오 6` 행의 `선행`(「시나리오 3 의 승인 경로 파일」)이 이 PR 로 충족됨을 반영 ⓔ §「남은 미검증 분기」에 **미룬 조항**(승인 후 정확히 1회 실제 아웃바운드 GET)을 `FETCH-ORIGIN` 을 가리키며 등재해, 파일이 그 조항을 사지 않는 이유가 원장에 남게 한다.",
+              "expectedOutcome": "`./scripts/e2e/check-scenario-mapping.sh` rc=0 이고 항등식이 `37 = 27 + 3 + 0 + 7 + 0`. 저작 대기 목록에서 `approval-gated-workload.md#시나리오 3` 이 사라진다."
+            },
+            {
+              "seq": 5,
+              "action": "정적 게이트 4종을 로컬에서 전부 돌린다 — `./scripts/e2e/check-scenario-mapping.sh`, `python3 scripts/check-fidelity-allowlist.py`, `python3 scripts/check-render-fidelity.py`, `python3 scripts/check_comment_policy.py`. 신규 파일은 **stage 한 뒤에** 돌린다(주석 정책 게이트는 `git ls-files` 기반이라 stage 전에는 새 파일이 보이지 않는다).",
+              "expectedOutcome": "4종 전부 rc=0. 주석 정책 게이트는 신규 파일을 **미판정**으로 남기고 실패하지 않는다(그 게이트가 보는 것은 「판정이 끝난 범위가 그 뒤로 변했는가」이고, 신규 파일의 주석 판정은 자매 모델 `tbm_session-platform-comment-redundancy` 의 후속 몫이다 — #117·#119 가 같은 분업의 선례)."
+            },
+            {
+              "seq": 6,
+              "action": "커밋·푸시하고 PR 을 연다. 본문에 task id, 철회한 #118 과의 관계, 산 조항과 미룬 조항의 경계, 검증 방법을 적는다.",
+              "expectedOutcome": "PR 이 열리고 base 가 최신 main. `mergeable_state=clean`."
+            },
+            {
+              "seq": 7,
+              "action": "CI 를 끝까지 관측한다. **이번엔 `e2e (kind + API + browser)` 잡이 반드시 뜬다** — #118 과 달리 diff 가 `docs/**` 밖(`control-plane/test/**`)을 건드리므로 path 필터에 걸린다. 그 잡이 이 계획의 **유일한 실물 검증**이다(신규 e2e 를 로컬에서 돌릴 kind SUT 가 없다).",
+              "expectedOutcome": "모든 체크 초록, 특히 `e2e (kind + API + browser)` 성공. 빨가면 그 로그가 곧 다음 수정의 입력이고, **초록이 되기 전에는 머지 대상이 아니다**."
+            }
+          ],
+          "plannedAt": "2026-09-12T08:59:15Z"
         }
       }
     ]
