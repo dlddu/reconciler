@@ -4551,5 +4551,28 @@
     "createdAt": "2026-09-12T05:52:00Z",
     "updatedAt": "2026-09-12T05:56:00Z",
     "id": "rct_20260912-0002"
+  },
+  {
+    "id": "rct_20260912-0003",
+    "toBeModelId": "tbm_session-platform-scenario-e2e",
+    "status": "assessing",
+    "createdAt": "2026-09-12T08:00:20Z",
+    "updatedAt": "2026-09-12T08:00:20Z",
+    "trigger": {
+      "detectedAt": "2026-09-12T08:00:20Z",
+      "changedSides": [
+        "as_is"
+      ],
+      "asIs": {
+        "previousVersion": "api:49ef52fedd0e4c58e091591fb24ddb4a83080fd442b415e64eb4885b4c373d39 web:f24855e5b702c33e71f8654716a6f3e9e3b20613",
+        "currentVersion": "api:66bb27e392647c74d839a6fa4cacf9e042239dcb5de4a18be18066951f601ad1 web:f24855e5b702c33e71f8654716a6f3e9e3b20613"
+      }
+    },
+    "stateSummary": {
+      "asIs": "**측정 시각 2026-09-12T08:00:20Z · HEAD `6d5b07e`(배포 핀) / 내용 커밋 `989d120`(PR #119, 07:47:57Z).**\nas-is `api:66bb27e3… web:f24855e5…` (직전 baseline `api:49ef52fe… web:f24855e5…`).\n**움직인 성분은 `api` 하나뿐이고 `web` 은 불변**이다 — 성분 분할 지문이 범인을 이름으로 알려 준다.\n\n**이 모델은 초기 sweep 에서 안정이었고 post-push 재sweep 에서 잡혔다.** 07:32 sweep 시점 HEAD 는\n`d4b1b61`(#101 직후)였고 이 모델은 움직이지 않았다 — #101 이 들인 새 테스트 두 파일\n(`approval_gated_shared_volume_test.go`·`shared_volume_test.go`)이 **일부러 `e2e_*_test.go` 가 아닌 이름**이라\n매칭 단위 밖이기 때문이다(그 슬라이스가 자매 축을 흔들지 않으려고 그렇게 지었다고 `doc-tracker.md:131` 이 적는다).\n분석 도중 07:47:57 에 머지된 **#119**(자매 `tbm_session-platform-comment-redundancy` 의 14차 주석 판정 패스)가\n`e2e_claude_code_3_serial_queue_test.go` · `e2e_claude_code_4_stream_reconnect_test.go` **두 파일의 주석을\n제거**해 blob 이 바뀌었고, 그것이 `api` 지문을 움직였다.\n",
+      "toBe": "to-be `docs/test` tree = `324ad5f109f76cb88ac64c6bf11b28b380b1055e` — **직전 baseline 과 동일, 불변**이다.\n#119 는 `docs/comment-policy/` 와 `control-plane/test/` 만 만졌고 `docs/test/` 는 0줄이다.\n시나리오 집합(37개)도 등재 문서(`docs/test/e2e.md`)도 움직이지 않았다.\n",
+      "gap": "**노이즈다 — 1:1 축은 한 칸도 움직이지 않았다. 네 가지를 실측으로 증명했다.**\n\n1. **매칭 단위 집합이 동일하다.** `git ls-tree -r <ref> -- control-plane/test | grep -E 'e2e_[a-z0-9_]*test\\.go$'`\n   를 부모 `d4b1b61` 와 트리거 `989d120` 에서 각각 떠 `diff` — **28파일 == 28파일, 차이 0줄**.\n   파일 추가·삭제·개명이 **없으므로** 전단사가 구조적으로 이동할 수 없다.\n\n2. **레포 자신의 게이트 출력이 부모·트리거에서 바이트 동일하다.** 각 커밋에서\n   `reset --hard && clean -fdx`(양쪽 `git status --porcelain` = **0줄**) 한 뒤\n   `./scripts/e2e/check-scenario-mapping.sh` 를 돌려 `diff` — **무차이**, 양쪽 **rc=0**:\n   「시나리오 37개 = 매칭 파일 **26** + 예외 **3** + 구현 대기 **0** + 저작 대기 **8** + 공백 **0**\n   (매칭 단위 29개, 비-시나리오 3개)」. 회계 다섯 칸 전부 불변이다.\n   (부모/트리거 대조 시 매 커밋 `reset --hard && clean -fdx` 후 `porcelain` 을 찍었다 —\n   `checkout` 이 남긴 untracked 파일이 게이트에게 엉뚱한 커밋을 뒤집어씌우는 자기 도구 오탐을 피한다.)\n\n3. **게이트가 파싱하는 마커가 불변이다.** `검증 시나리오:` 가 부모 **29** · 트리거 **29**.\n   주석 판정 패스가 기계가 읽는 주석을 유지 대상으로 분류하므로 예상대로다\n   (자매 모델 `DIRECTIVE` 가 그 토큰을 지문·판정 양쪽에서 제외한다).\n\n4. **의미 코드가 안 바뀌었다(산술).** `git diff -U0 989d120~1 989d120 -- control-plane` 의 모든 ± 줄에서\n   선행 공백을 걷고 `//`·`/*`·`*`·빈 줄을 거른 뒤 **남는 줄이 정확히 4줄**이고, 전부\n   `cc3SlowBytes` · `cc4AlphaBytes` 두 상수의 **gofmt 정렬 폭** `-`/`+` 쌍이다(값·식 불변).\n   자매 모델의 executor 도 같은 사실을 완료 기준 ⑤로 독립 측정해 두 파일이 **정규화 후 바이트 동일**\n   (`#3` 175→175 · `#4` 184→184)임을 기록했다 — 두 측정이 수렴한다.\n\n### 점유 중인 task 에는 한 줄도 쓰지 않았다 — 그리고 그 전제가 살아 있는지 확인했다\n\n이 모델의 `rct_20260911-0003` 은 **`approving`**(사람 승인 대기 lock, 2026-09-11T08:22:44Z 이후 **약 23.8시간**)\n이다. `approving` 은 reconciler-manual-approval 이 사람의 답을 기다리며 붙잡고 있는 점유 상태이므로\n**그 레코드를 건드리지 않았고**, 이 `no_action_needed` 는 그것과 경쟁하지 않는다(planner 에게 아무것도\n넘기지 않는다). 이 레코드의 목적은 **판정 기록 + baseline 전진**이다.\n\n**그 staged 변경의 전제가 이 트리거로 무효화되지 않았음을 확인했다**:\n- 그 PR 은 `docs/test/e2e.md` **한 파일**만 만지고(검토 기록: 「코드·매니페스트·배포 변경 0건」),\n  #119 는 `control-plane/test/` 와 `docs/comment-policy/` 만 만졌다 ⇒ **겹치는 파일 0** ⇒ 충돌 축 무관.\n- 그 계획의 산술(저작 대기 **8** 중 2건을 「구현 대기」로 재분류해 미달 8 → 6)이 딛는 수치가\n  위 2번에서 **부모·트리거 양쪽 모두 저작 대기 8 · 구현 대기 0** 으로 불변임을 게이트로 확인했다\n  ⇒ 재기준 불필요, 낡은 수치 없음.\n\n### 이중 계상 가드\n\n`e2e_claude_code_3_serial_queue_test.go` · `e2e_claude_code_4_stream_reconnect_test.go` 의 **주석 판정**은\n자매 `tbm_session-platform-comment-redundancy` 가 14차 패스(`33줄 a5f2efd9374a`)로 이미 닫았다.\n이 모델은 그 두 파일의 **시나리오 ↔ 전용 파일 1:1** 만 본다 — 주석 축을 여기서 다시 열지 말 것.\n",
+      "summarizedAt": "2026-09-12T08:00:20Z"
+    }
   }
 ]
