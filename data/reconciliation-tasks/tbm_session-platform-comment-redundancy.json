@@ -2444,7 +2444,7 @@
   {
     "id": "rct_20260910-0004",
     "toBeModelId": "tbm_session-platform-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-10T13:01:00Z",
       "changedSides": [
@@ -2467,7 +2467,7 @@
       "summarizedAt": "2026-09-10T13:01:00Z"
     },
     "createdAt": "2026-09-10T13:01:00Z",
-    "updatedAt": "2026-09-12T05:49:45Z",
+    "updatedAt": "2026-09-12T05:50:30Z",
     "assessment": {
       "actionRequired": true,
       "reason": "작업이 필요하다. 두 축 모두 유의미하고 소유자가 없다.\n\n① to-be 축: 모델이 12:40:34Z 에 정책 SSOT 를 `docs/comment-policy/` 디렉터리로 다시 겨눴고 대상 레포에는 그 디렉터리가 없다(1,114줄 단일 파일). 개정 메모 자신이 「전환 뒤 첫 감지에서 to-be 가 `absent` 로 바뀌고 그 task 가 이전을 맡는다」고 이 감지를 소유자로 지목한다 — 이 fire 가 그 첫 감지다.\n\n② as-is 축: 미판정 80줄의 유예 사유가 예고된 그대로 소멸했다(#109 머지 12:31:52Z → `rct_20260910-0002` `succeeded` 12:39:12Z). 이 모델 비-터미널 0 · 자기 소유 열린 PR 0 ⇒ 소유자 0. 유일한 재감지 경로는 자매 모델의 PR #111 이고 그것은 분모를 2888 → 2960 으로 **키우기만** 한다(분자 2772 고정). 게이트가 초록인 것은 등재된 범위의 무결성만 강제하기 때문이며 미등재 범위의 존재 자체는 막지 못한다 ⇒ CI 에 맡겨 두면 영원히 보고되지 않는다. 직전 슬라이스의 임계(오탐 제외 ≥ 100)도 109 로 발화했다.\n\n두 축을 한 PR 로 묶을지 이전을 먼저 하고 판정을 뒤에 둘지는 planner 의 몫이나, **이전이 `docs/comment-policy.md` 를 삭제하고 #101 · #106 이 바로 그 파일을 편집 중**이므로 이전 순서를 먼저 확정하지 않으면 80줄 판정이 사라질 파일에 원장 행을 쓰게 된다는 제약은 실측으로 확인해 둔다. 정의의 낡은 토큰·스크립트 경로(③)도 as-is 지문을 27줄 오염시키고 있으므로 같은 계획에서 `reconciler-tobe-modeler` 로 함께 좁힐 것.",
@@ -2995,6 +2995,54 @@
               "log": "모델 `tbm_session-platform-comment-redundancy` 의 versionScript 두 개를 머지된 main(`024a3c7`)에서 그대로 실행(rc=0).\n- **as-is**: `lines=3034 files=128` / `c51e1427018ec6519b87db49e56d4263514ad2cfa1fd680cd73e69b1097c4260`. 모델 `lastObservedVersion`(`lines=3100 files=128` / `ad8304bb98ea…`, 2026-09-11T07:12Z) 대비 **정확히 −66줄** — 13차 판정이 걷어낸 66줄과 일치.\n- **to-be**: **`796e12c567d70b178ea2227b87cd398c1019166d`** — `absent` 를 벗어나 `docs/comment-policy/` 디렉터리의 tree hash 를 갖는다.\n두 값 모두 **모델에 쓰지 않았다**(`lastObservedVersion` 미변경) — 다음 감지 주기의 트리거로 남긴다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=3034 files=128\nc51e1427018ec6519b87db49e56d4263514ad2cfa1fd680cd73e69b1097c4260",
+          "checks": [
+            {
+              "name": "① #116 squash 머지 + 이전 무결성(지문 대조)",
+              "status": "passed",
+              "detail": "#116 이 squash 커밋 `cb788ca6632806bee5b971f7c973ed6b1edc8e86` 로 main 에 섰다(05:30:24Z). 머지 **직전** main(`af3a3e0`)에서 뜬 기준선과 머지 **직후** main 의 게이트 출력을 `diff` 하면 **첫 줄 한 줄**만 다르고, 그 차이는 새로 실린 접미 ` · R5 스캔 14파일 1106줄` 뿐이다. 판정 대상 3071줄/128파일 · 판정 완료 2780줄(90.5%) · 등재 범위 12 · 원장 12행 전체 · **전체 지문 `b87fc4b003f1362e7c2c4cb4cb6ea3778920e4dc78579a230b1485b6d1b0a3d5` 가 바이트 동일**. 이전이 판정 내용을 한 줄도 건드리지 않았다는 기계 증거 — revert 조건 미발생."
+            },
+            {
+              "name": "② R5 강제력 유지 (게이트가 조용히 줄지 않았는가)",
+              "status": "passed",
+              "detail": "머지된 main 에서 `R5 스캔 14파일 1106줄` 이 찍힌다(스캔 범위가 통과 출력에 인구조사로 노출된다). 음성 테스트 2종 모두 **rc=1** — (ㄱ) `docs/comment-policy/passes/2026-09-10-new-e2e-and-shared-harness.md` **110행**, (ㄴ) `docs/comment-policy/README.md` **101행** 에서 `[R5] <경로> <줄> 번째 줄에 줄 번호 좌표 … 이 있다` 발화. 등재 파일 밖(passes)과 본문(README) 양쪽에서 발화하므로 이전이 강제력이 축소된 게이트를 들이지 않았다. 각 시험은 `cp` 백업→추가→`cp` 복원으로 수행했고 복원 후 `git status --porcelain` 빈 출력 · 기저 재실행 rc=0."
+            },
+            {
+              "name": "③ #117 rebase → diff 3파일 → squash 머지",
+              "status": "passed",
+              "detail": "`git rebase --onto origin/main a87b5c44… reconcile/…-pass13` **충돌 0**, 새 head `f25f57f`. `git diff --stat origin/main HEAD` 가 **정확히 3파일**(`control-plane/test/e2e_claude_code_6_archive_freeze_test.go` · `docs/comment-policy/ledger.md` · `docs/comment-policy/passes/2026-09-10-claude-code-6-archive-freeze.md`) — 판정 커밋 하나만 남았다. 합계 마커는 `2794` = 4단계 관측 판정 완료 `2780` + `14`(R4 오류 없이 게이트 rc=0, 손 산술 불필요). `--force-with-lease` push 후 `mergeable=MERGEABLE`·base=main, squash 커밋 `024a3c7be53fefb6afbd290627a36a3e52e14f1d`(05:48:29Z)."
+            },
+            {
+              "name": "④ 판정 수렴 — 분자 +14 · 등재 13 · R5 스캔 15파일 · 자매 게이트 3종",
+              "status": "passed",
+              "detail": "머지된 main(`024a3c7`)에서 `check_comment_policy.py` rc=0 · `판정 완료 2794줄(93.0%)`(= ①시점 2780 + 14) · `등재 범위 13` · `R5 스캔 15파일 1175줄` · 전체 지문 `f7933962b66dabc716679cc94827c406fbd609223d1caf982d8399b47f93f9f1`(준비 시점 #117 예측값과 일치). 13차 행 `14줄 157959ce7d5f control-plane/test/e2e_claude_code_6_archive_freeze_test.go`. 자매 게이트 3종 전부 rc=0 — `check-fidelity-allowlist.py` · `check-render-fidelity.py` · `scripts/e2e/check-scenario-mapping.sh`(무접촉). 판정 대상(분모) 3005줄/128파일은 완료 기준이 아니다(계획이 명시)."
+            },
+            {
+              "name": "⑤ main 이력에 「이전」·「판정」 두 커밋이 각각 선다",
+              "status": "passed",
+              "detail": "`git log --oneline -3` → `024a3c7 …판정… (2/2) (#117)` / `5037d7d chore(deploy): … [skip ci]` / `cb788ca …이전… (1/2) (#116)`. 승인이 요구한 커밋 경계가 이력에 남았다. 사이의 `5037d7d` 는 #116 머지가 자동 유발한 배포 이미지 고정 커밋으로 정책 파일을 건드리지 않는다. (레포가 squash only 라 merge commit 대신 PR 분할로 경계를 남긴 대체 방식 — 승인 세션에서 그 대체까지 포함해 승인됐다.)"
+            },
+            {
+              "name": "⑥ to-be 가 absent 를 벗어남",
+              "status": "passed",
+              "detail": "모델 `toBe.versionScript` 를 머지된 main 에서 실행 → **`796e12c567d70b178ea2227b87cd398c1019166d`**(이전 관측 `absent`). `docs/comment-policy/` 디렉터리가 실재하고 tree hash 를 갖는다 — to-be 축의 gap 이 닫혔다."
+            },
+            {
+              "name": "CI 초록의 비-vacuous 성 (잡 로그 실측)",
+              "status": "passed",
+              "detail": "#117 최종 head `f25f57f` 의 `e2e (kind + API + browser)` 잡 로그(job `103505287262`)를 `actions:read` 토큰 + `curl -L` 로 받아 실측: Go `-tags=e2e` **RUN 122 · PASS 122 · FAIL 0 · SKIP 0**. 이 레포의 e2e 는 클러스터가 없으면 스스로 `t.Skip` 하므로 SKIP 0 은 초록이 vacuous 하지 않다는 증거다. 판정 대상 파일의 두 테스트가 배포 SUT 에서 실제 통과 — `TestClaudeCodeFreeze_ArchiveRoundTripsWorkspaceHistoryAndResume (23.37s)` · `TestClaudeCodeFreeze_ArchivedTypeNeverCarriesTheCRIUPrivilege (7.22s)`. Playwright 20 passed · 3 skipped · **flaky 0**(준비 시점의 `j5-shell-interaction` flake 는 이번 head 에서 재현되지 않았다). 체크 집계 14 pass · 1 skipping(`pin deployment images (main only)`) · **0 fail**."
+            },
+            {
+              "name": "실행 후 as-is 이동 관측 · 잔여 gap (정보성 — 범위 밖)",
+              "status": "passed",
+              "detail": "as-is versionScript 재실행 → `lines=3034 files=128` / `c51e1427018ec6519b87db49e56d4263514ad2cfa1fd680cd73e69b1097c4260`. 모델 `lastObservedVersion`(`lines=3100 files=128`) 대비 **−66줄** = 13차 판정이 걷어낸 66줄과 정확히 일치.\n**잔여 gap(이 task 의 범위 밖, 정보성)**: 머지된 main 기준 판정 대상 3005 − 판정 완료 2794 = **미판정 211줄**. 계획이 범위 밖으로 명시한 것 — ⓐ `control-plane/test/shared_volume_test.go` 29줄은 `tbm_session-platform-docs-impl`/`rct_20260908-0003`(PR #101, `awaiting_review`) 소유, ⓑ 오탐 7줄(`web/src/design/README.md` 6 · `data-plane/Dockerfile` 1)은 모델 패턴 변경 소관, ⓒ as-is versionScript 의 `DIRECTIVE` 제외 토큰이 `검증 AC:`(레포 0건)인데 실제 마커는 `검증 시나리오:` 라 모델이 제외 선언한 줄을 세는 정의 결함 — 고칠 자리가 `to-be-models.json` 하나뿐이라 **`reconciler-tobe-modeler` 소관**, ⓓ 원장 → `passes/` 링크 무결성 규칙 부재(이전 전에도 없던 강제력, 별도 슬라이스). **이 잔여는 converged 판정에 넣지 않는다** — 모델의 `lastObservedVersion` 을 건드리지 않았으므로 다음 감지 주기가 as-is/to-be 두 축의 이동을 보고 후속 task 를 연다."
+            }
+          ],
+          "verifiedAt": "2026-09-12T05:50:30Z"
         }
       }
     ]
