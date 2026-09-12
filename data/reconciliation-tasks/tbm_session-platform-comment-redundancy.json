@@ -3510,7 +3510,7 @@
   {
     "id": "rct_20260912-0007",
     "toBeModelId": "tbm_session-platform-comment-redundancy",
-    "status": "assessing",
+    "status": "no_action_needed",
     "trigger": {
       "detectedAt": "2026-09-12T12:53:18Z",
       "changedSides": [
@@ -3527,6 +3527,18 @@
       }
     },
     "createdAt": "2026-09-12T12:53:18Z",
-    "updatedAt": "2026-09-12T12:53:18Z"
+    "updatedAt": "2026-09-12T12:57:22Z",
+    "stateSummary": {
+      "asIs": "**as-is (판정 대상 주석 지문) — `419eb2eb`, 관측 2026-09-12T12:50Z**\n\n`lines=3172 files=132` / `afcb7230d55b…` (이전 `lines=3172 files=132` / `7414ad479e08…`).\n\n**줄 수·파일 수는 그대로인데 지문만 바뀐** 형태다. 원인은 PR #129(`054aac9`)의 주석 증분이 **정확히 상쇄**되기 때문이고, 게이트 자신의 파서(`check_comment_policy.py` 의 `comment_lines(scan_files())`)로 부모 `e318e97d` 와 트리거 `419eb2eb` 를 각각 재어 파일 단위로 확인했다:\n\n| 파일 | 부모 | 트리거 | 증분 | 등재 여부 |\n|---|---|---|---|---|\n| `data-plane/cmd/agent/session_mcp_tools.go` | 60 | 59 | **−1** | 등재됨 |\n| `data-plane/cmd/agent/session_mcp_gate_test.go` | 22 | 23 | **+1** | 등재됨 |\n\n- **−1**: `validateFetchTarget` 위의 2줄 주석(「https only: an approval that reads as a URL should not be satisfiable by a plaintext or non-HTTP scheme the approver did not have in mind.」)이 **1줄 포인터**(「The scheme rule and why it is drawn there: `docs/session-mcp-tool-surface.md` R4.」)로 대체됐다.\n- **+1**: 신규 테스트 `TestSessionMCPAcceptsPlaintextTarget` 머리의 1줄(「Plaintext is inside R4's line, and inside the gate like everything else.」).\n\n두 파일 모두 원장 등재 경로(138개) 안에 있다 — `parse_ledger()` 의 `paths` 로 대조했고 눈으로 읽지 않았다.",
+      "toBe": "**to-be (정책 디렉터리 `docs/comment-policy/`) — tree `f35c8076`(이전 `b3955ce4`), 관측 2026-09-12T12:50Z**\n\n바뀐 파일은 `ledger.md` **한 줄**뿐이다(`README.md` · `passes/` 불변). 4차 판정 패스(데이터 플레인 전체) 행에서:\n\n- 행 지문이 `d9018a9d32b6` → **`5ee3891c5ca4`**,\n- 판정 합계는 **927 → 927 (불변)**,\n- 그리고 새 증분 재판정 문단이 붙었다: *「2026-09-12 (4) 증분 재판정: `web_fetch_get` 의 스킴 검사를 넓히는 슬라이스. `session_mcp_tools.go` 의 `validateFetchTarget` doc 과 `session_mcp_gate_test.go` 의 신규 테스트 헤더 **8줄 판정 — 제거 5 · 유지 3** (927 → 927, 앞은 -1 뒤는 +1)」*.\n\n문단은 제거 근거를 ②·③·④ 삼중 복원(같은 PR 이 고친 `session-mcp-tool-surface.md` 의 R4 · PR 본문 · 커밋 메시지)으로 적고, 테스트 헤더 1줄은 **「애매하면 남긴다」**를 들어 줄여서 남겼다고 밝힌다(자매 테스트들이 전부 「왜 이 단언인가」 한 줄을 들고 있어 그 자리만 비면 다음 판정이 누락으로 읽는다).",
+      "gap": "**유의미한 차이 없음.** 원장이 선언한 산술과 내 독립 실측이 **전건 일치**한다: 「앞은 -1 뒤는 +1」 = (`session_mcp_tools.go` 60→59, `session_mcp_gate_test.go` 22→23), 합계 927 불변, 지문만 이동. 즉 이 PR 은 자기가 만든 주석 증분을 **같은 커밋 안에서 스스로 판정하고 원장에 등재했다** — 이 모델이 요구하는 바로 그 동작이고, 남겨 둘 미판정 증분이 없다.\n\n방향도 정합적이다. 걷힌 2줄은 완화의 근거를 산문으로 되풀이한 것이고 그 문장들은 같은 PR 이 고친 R4·PR 본문·커밋 메시지로 복원된다(복원 경로 ②③④) — 정의의 「복원 가능하면 지운다」에 정확히 해당하며, 남긴 1줄은 포인터다. 이는 자매 task `rct_20260912-0011` 에서 판정한 `docs/test/e2e.md` 의 낡은 전제와 **성격이 반대**다: 저쪽은 사본이 원본과 어긋나게 남은 것이고, 이쪽은 사본을 걷고 정본을 가리키게 한 것이다.\n\n**열린 형제 task 의 산술도 훼손되지 않았다.** 게이트 파서로 미등재 주석 잔여를 부모·트리거 두 지점에서 재니 **양쪽 모두 153줄 / 4파일로 동일**하다(`e2e_approval_gated_3_approval_path_test.go` 105 · `shared_volume_test.go` 41 · `web/src/design/README.md` 6 · `data-plane/Dockerfile` 1 — 뒤 둘은 알려진 오탐). #129 가 만진 두 파일은 **이미 등재된** 경로라 미등재 잔여를 늘리지도 줄이지도 않는다. 따라서 `rct_20260912-0006`(현재 `planning`, 형제 planner 점유 중)이 딛고 선 잔여 수치는 그대로 유효하다 — 그 레코드는 점유 상태이므로 이 fire 는 한 줄도 쓰지 않았다.\n\n레포 게이트 `check_comment_policy.py` 는 부모 `e318e97d` · 트리거 `054aac9` · HEAD `419eb2eb` 에서 **rc=0 이고 출력 바이트 동일**이다.",
+      "summarizedAt": "2026-09-12T12:57:22Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "reason": "**작업 불필요(`actionRequired: false`).** 이 트리거의 주석 증분(8줄)은 **PR #129 자신이 판정·등재하며 이미 닫았다** — 제거 5 · 유지 3, 합계 927 불변, 원장 4차 행에 증분 재판정 문단으로 남았고, 그 산술을 게이트 자체 파서로 독립 재현해 전건 일치를 확인했다(파일별 −1/+1). 등재 범위 안의 변경이라 미등재 잔여(153줄/4파일)에도 영향이 없다.\n\n정책 위반이 남아 있지 않고 좁힐 gap 이 없으므로 planner 에게 넘길 것이 없다. baseline 만 전진시켜 다음 precheck 가 같은 델타로 재발사하지 않게 한다.\n\n남은 미등재 잔여 자체는 이 task 의 대상이 아니라 **이미 열려 있는 `rct_20260912-0006`(`planning`)** 의 소관이다.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-12T12:57:22Z"
+    }
   }
 ]
