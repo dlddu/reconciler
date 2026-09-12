@@ -4417,7 +4417,7 @@
       "assessedAt": "2026-09-11T07:12:00Z"
     },
     "createdAt": "2026-09-11T07:12:00Z",
-    "updatedAt": "2026-09-12T10:38:01Z",
+    "updatedAt": "2026-09-12T11:20:00Z",
     "attempts": [
       {
         "plan": {
@@ -4555,6 +4555,56 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-12T10:33:00Z",
           "comment": "반려 — main 브랜치 최신화 필요. 승인 시점 PR #123 의 base 는 `91f74dc` 로, 설명을 구성하던 10:00Z 경에는 당시 main HEAD 와 같아 `mergeable_state=clean` 이었으나, 결정을 기록하기 직전 재확인에서 main 이 `af6e5e6` 으로 이동해 있었다 — **10:30:17Z 에 머지된 PR #125 「fix(session-mcp): 등재 URL 에 /mcp 경로를 붙여 CLI 가 도구를 보게 한다」**(`data-plane/cmd/agent/claude_mcp_registration.go` +1/−1 외 5파일). 그 PR 은 `docs/test/e2e.md` 를 건드리지 않아 텍스트 충돌은 없지만, 문제는 base 가 아니라 **내용**이다.\n\n⚠️ **이 PR 이 새로 적는 「구현 대기」 행의 미구현 근거가 그 머지로 거짓이 됐을 가능성이 높다.** 그 행이 드는 근거는 정확히 「등재 URL 에 `/mcp` 가 없어 CLI 가 루트로 POST 해 404 를 받는다」이고, #125 는 바로 그 한 줄을 고쳤다. 그대로 머지하면 원장에 거짓 행이 들어가고 `#시나리오 3` 이 근거 없이 구현 대기로 내려간다 — **직전 시도(#118)가 반려된 뒤 #120·#101 로 근거가 거짓이 되어 철회된 것과 같은 실패 모드가 한 번 더 반복되는 것이다.** 이번에는 머지 전에 잡혔다.\n\n**재상신 전에 할 것(순서대로).** ⑴ 최신 main(`af6e5e6` 이후)에서 `proof/scenario-3-approval-path`(`1e94712`)를 rebase 해 **그 e2e 를 배포 SUT 에서 다시 돌린다** — 이 브랜치는 이 판정의 검증 수단으로 보존된 것이고, 지금이 그것을 되살릴 시점이다. ⑵ **초록이면 재분류는 성립하지 않는다** — 구현 대기로 내리는 대신 그 파일을 저작 PR 로 올려 저작 대기 8→7(연쇄로 `#시나리오 6` 까지면 →6)을 실제로 줄이는 것이 detector 가 이 task 를 연 원래 의도다. ⑶ **여전히 빨가면** 실패 지점이 #125 이전과 같은지(등재 URL) 다른 지점인지 코드로 다시 특정하고, 미구현 근거를 그 새 실측으로 갈아끼운 뒤 재분류를 재상신한다 — 그때는 #125 를 인용해 「이 커밋 이후에도 남는다」를 명시할 것.\n\n**재분류 판정 자체(저작 대기 → 구현 대기)에 대한 반려는 아니다.** 담당·해제 조건·보존 브랜치 설계는 검토에서 문제로 보지 않았다. 반려 사유는 오직 전제의 신선도다.\n\n참고: `tbm_session-platform-docs-impl` 이 이 결함을 실제로 집었는지 확인하라는 직전 반려의 후속 지시는 #125 머지로 사실상 이행된 것으로 보인다(그 모델은 오늘 succeeded 2건 · planning 1건으로 활발하다). 다만 #125 가 그 모델의 슬라이스로 나온 것인지, 자매 `CLAUDE-PROVIDER` 잔여 갱신이 필요한지는 재계획에서 함께 확인할 것."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**직전 두 반려가 지시한 검증을 실제로 수행했고, 그 결과가 계획을 뒤집었다 — 이번 산출물은 재분류가 아니라 저작이다.**\n\n**반려 사유는 둘 다 「판정이 틀렸다」가 아니라 「전제가 그 사이에 참이 아니게 됐다」였다.** 2차 반려는 재상신 전에 할 일을 순서까지 못박았다 — ⑴ 보존 브랜치 `proof/scenario-3-approval-path`(`1e94712`)를 #125 이후 main 에 rebase 해 **배포 SUT 에서 다시 돌린다** ⑵ 초록이면 재분류는 성립하지 않으므로 **저작 PR** 로 저작 대기를 실제로 줄인다 ⑶ 여전히 빨가면 실패 지점을 다시 특정해 재분류를 재상신한다. 이 계획은 그 절차를 그대로 실행한 것이고, **측정이 계획을 골랐다**.\n\n**측정 ①(rebase + 재실행).** rebase 는 충돌 없이 깨끗했다(`ef7d8ef` 위). 로컬 정적 게이트 4종·`gofmt`·`go vet -tags=e2e` 전부 rc=0, 게이트 항등식 `37 = 27 + 3 + 0 + 7 + 0`. PR #126 으로 올려 `e2e (kind + API + browser)` 를 돌렸다.\n\n**측정 ②(1차 실행 — 빨강이지만 결정적이었다).** [run 34689079299](https://github.com/dlddu/session-platform/actions/runs/34689079299) 에서 **대기 마커가 13.7초 만에 나왔다.** 직전 시도에서는 90초를 기다려도 한 번도 나오지 않던 바로 그 마커다. 즉 **승인 왕복이 배포 SUT 에서 실제로 돈다** — #125(`af6e5e6`, 등재 URL 에 `/mcp` 를 붙인 한 줄)가 마지막 제품 벽이었다는 직접 증거이고, 이 시점에 **재분류는 확정적으로 죽었다**(`#시나리오 3` 은 「구현 대기」가 아니다 — 구현이 돈다). 걸린 것은 단언 하나였다: 마커가 `web_fetch_get` 을 지목하는데 이 파일이 `mcp__session-platform-session-mcp__web_fetch_get` 을 기대했다. `renderApprovalNotice`(`session_mcp_notice_tail.go:130`)가 찍는 것은 **세션 MCP 가 등재한 이름**(`session_mcp_tools.go:26` `webFetchGetTool`)이고 네임스페이스 이름은 CLI 안에서만 산다. **제품 결함이 아니라 이 원장의 파일이 틀린 것**이므로 수정도 이 원장 안이다.\n\n**수정이 단언을 강하게 한다.** 기대값을 맨 이름으로 고쳤는데, 이는 약화가 아니다 — 대역은 **네임스페이스 이름으로 지시받으므로**, 맨 이름이 실린 마커는 CLI 가 그 이름을 **이 서버의 등재 도구로 해소했다**는 관측이 된다. 그리고 이것은 자매 원장의 `CLAUDE-PROVIDER` 잔여가 「대역이 내는 도구 이름이 세션 MCP 가 실제로 등재한 것과 같은지도 여기서는 확인되지 않는다 … 그 대조는 승인 왕복을 끝까지 도는 시나리오 파일의 몫이고, 저작은 `tbm_session-platform-scenario-e2e` 소관이다」라며 **이 모델을 이름으로 지목한** 바로 그 대조다. 즉 이 슬라이스가 자매 잔여 한 절까지 산다.\n\n**측정 ③(2차 실행 — 판정).** [run 34689792888](https://github.com/dlddu/session-platform/actions/runs/34689792888) — `TestApprovalGatedApprovalPath_…` **PASS (18.70s)**, 패키지 `ok (608s)`, 체크 15개 **실패 0**, `mergeable_state=clean`, base == main tip(`ef7d8ef`).\n\n**왜 이 경로인가.** 대안은 둘이었다 — ⓐ 재분류 재상신(2차 반려의 ⑶ 갈래): **측정 ②가 배제했다.** 마커가 나오는 순간 「구현이 없어서 못 산다」는 거짓이 된다. ⓑ 저작 + 단언 수정(⑵ 갈래): 선택. 가역성은 ⓑ 가 더 높다 — 산출물이 문서 1파일 + 신규 e2e 1파일이라 squash 커밋 하나를 revert 하면 원상복구고, 클러스터·데이터·트래픽 영향이 0 이다. 무엇보다 ⓑ 만이 **측정 gap 을 실제로 줄인다**(재분류는 눈금을 옮길 뿐이라는 것이 1·2차 검토가 사람 판단을 요구한 이유였다).\n\n**이 시도의 범위(완료 기준).** PR #126 이 머지되어 ① `#시나리오 3` 이 저작 대기에서 빠지고 매칭 파일이 된다 ② `check-scenario-mapping.sh` rc=0 ③ 저작 대기 **8 → 7**, 매칭 파일 26 → 27. 모델 정의 불변식 기준 gap 은 **8 미달 → 7 미달**로 준다.\n\n**범위 밖(후속).** `#시나리오 6` 저작(이 PR 이 그 선행을 `없음`으로 만든다 — 단 (c) 복원 갈래는 `POST /snapshot` 503 `ErrCheckpointDisabled` 라 여전히 막힌다) · `FETCH-ORIGIN`(승인 후 아웃바운드 GET 1회의 양성 단언, 소관 자매 모델) · 자매 `CLAUDE-PROVIDER` 잔여의 낡은 마지막 문장 · 나머지 저작 대기 6행의 선행(CNI 2 · 상한 훅 1 · 폴링 타임아웃 1 · 모킹 2). **제품 코드는 한 줄도 건드리지 않았다**(이 원장의 산출물은 e2e 파일과 등재 문서뿐).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "2차 반려의 지시 ⑴ — 보존 브랜치 `proof/scenario-3-approval-path`(`1e94712`)를 #125 머지 이후의 main(`ef7d8ef`)에 rebase 하고, 로컬 정적 게이트 4종 + `gofmt` + `go vet -tags=e2e` 를 돌린다.",
+              "expectedOutcome": "**완료** — rebase 충돌 0. `check-scenario-mapping.sh` rc=0 (`37 = 27 + 3 + 0 + 7 + 0`), fidelity·render-fidelity·comment-policy rc=0, gofmt 빈 목록, vet 무출력."
+            },
+            {
+              "seq": 2,
+              "action": "rebase 결과를 브랜치 `reconcile/rct_20260911-0003-opus5-1m-v3` 로 push 하고 PR 을 열어 `e2e (kind + API + browser)` 잡을 트리거한다. diff 가 `control-plane/**` 를 건드리므로 path 필터에 걸린다 — 이 잡이 유일한 실물 판정이다.",
+              "expectedOutcome": "**완료** — PR #126. e2e 잡이 실제로 트리거됐다(부재였다면 저작 슬라이스가 아니라는 신호)."
+            },
+            {
+              "seq": 3,
+              "action": "1차 실행 결과를 판정한다. 반려 지시 ⑵/⑶ 의 갈림길이므로 초록/빨강뿐 아니라 **어디서** 빨간지를 본다.",
+              "expectedOutcome": "**빨강이지만 결정적이었다** — run 34689079299. 대기 마커가 **13.7초 만에 등장**(직전 시도는 90초 무응답) ⇒ 승인 왕복이 실제로 돈다 ⇒ **재분류(⑶ 갈래) 배제**. 실패는 `:174` 의 도구 이름 단언 하나."
+            },
+            {
+              "seq": 4,
+              "action": "그 실패가 제품 결함인지 테스트 결함인지 소스로 가른다 — `renderApprovalNotice` 가 쓰는 `n.Tool` 의 출처를 추적한다.",
+              "expectedOutcome": "**완료 — 테스트 결함으로 확정.** `session_mcp_tools.go:143` 이 `Tool: webFetchGetTool`(= `web_fetch_get`, 같은 파일 26행)로 발행하고 `session_mcp_notice_tail.go:130` 이 그대로 찍는다. 네임스페이스 이름은 CLI 내부 표기라 마커에 실릴 수 없다. 수정은 이 원장 안(테스트 파일)이다."
+            },
+            {
+              "seq": 5,
+              "action": "단언의 기대값을 `web_fetch_get` 으로 고치고, **왜 그것이 더 강한 단언인지**를 주석으로 남긴다(대역은 네임스페이스 이름으로 지시받으므로 맨 이름의 마커 = CLI 가 등재 도구로 해소했다는 관측). 같은 사실로 등재 문서의 해당 절과 슬라이스 기록도 갱신한다.",
+              "expectedOutcome": "**완료** — 커밋 `f2f8b86`. 게이트 6종 전부 재통과."
+            },
+            {
+              "seq": 6,
+              "action": "수정 후 `e2e (kind + API + browser)` 를 다시 돌려 최종 판정을 받는다.",
+              "expectedOutcome": "**완료 — 초록.** run 34689792888, `TestApprovalGatedApprovalPath_…` PASS (18.70s), 패키지 `ok (608s)`, 체크 15개 실패 0, `mergeable_state=clean`, base == main tip."
+            },
+            {
+              "seq": 7,
+              "action": "PR 본문을 최종 상태로 갱신한다 — 벽 둘(#120·#125)의 이력, 세 번째 빨강이 제품이 아니었다는 것, 초록 판정, 범위/범위 밖.",
+              "expectedOutcome": "**완료** — 검토자·승인자가 PR 만 읽고도 세 시도의 이력과 이번 판정 근거를 갖는다."
+            },
+            {
+              "seq": 8,
+              "action": "(실행 단계 몫) §executionGuide 의 신선도 확인을 통과시킨 뒤 PR #126 을 squash 머지하고, 머지 후 main 에서 완료 기준 3조항을 재측정한다. 이어서 대체된 PR #123 을 닫는다.",
+              "expectedOutcome": "머지 후 main 에서 `check-scenario-mapping.sh` rc=0 · 저작 대기 **7** · 매칭 파일 **27** · 저작 대기 목록에 `#시나리오 3` 없음. #123 이 `state=closed`·`merged=false`."
+            }
+          ],
+          "plannedAt": "2026-09-12T11:05:00Z"
         }
       }
     ]
