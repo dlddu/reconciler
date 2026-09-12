@@ -5189,7 +5189,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-12T08:30:40Z",
       "changedSides": [
@@ -5201,7 +5201,7 @@
       }
     },
     "createdAt": "2026-09-12T08:30:40Z",
-    "updatedAt": "2026-09-12T09:20:45Z",
+    "updatedAt": "2026-09-12T09:24:30Z",
     "id": "rct_20260912-0005",
     "stateSummary": {
       "asIs": "**측정 시각 2026-09-12T08:30~08:39Z · 트리거 `35499e7`(PR #121, 08:28:47Z) · 부모 `28a01f5` · 레포 HEAD `49d7465`.**\n지문: `docs:83e83974` / `control-plane:8b1badfd data-plane:9a8b5bb3 web:5ccff10c`.\n**as-is 쪽은 이 트리거로 한 글자도 움직이지 않았다** — 모델 `asIs.lastObservedVersion` 과 현재값이\n문자 단위로 동일하고, `git diff --name-only 28a01f5 35499e7` 가 `docs/doc-tracker.md`(+1/−0) ·\n`docs/session-mcp-tool-surface.md`(+20/−11) **정확히 둘**이다(코드·테스트·매니페스트·워크플로 무접촉).\n\n**이 트리거는 소비된 트리거다 — 이 모델 자신의 슬라이스가 낸 산출이다.**\n`rct_20260912-0003`(축 1 = AC-F5 전반 착지로 거짓이 된 문서 사본 걷기)의 executor 가\n08:28:48Z 에 PR #121 을 squash 머지하고 08:31:20Z 에 `succeeded` · `verification.status: passed` ·\n`converged: true` 로 닫았다. 그 verification 의 `asIsVersionAfter` 가 내가 독립 측정한 위 지문과\n문자 단위로 일치한다. **이 모델의 열린 task 는 지금 0건이다.**\n\n**축 1 은 실제로 수렴했다(재개하지 않는다).** 완료 기준 6개를 머지된 main 에서 독립 재측정했다 —\n`grep -c` 로 `임시 대체` **0** · `아무도 쓰지 않` **0** · `첫 소비자가 된다` **0** · `소비자 부재` **0**,\n`^| 2026-09-12 (3) |` **1**, 그리고 도구 표 `:33` 「결과」 칸이 「본문 **또는** 본문이 놓인 공유 볼륨\n파일의 경로」로 넓어져 있다. 남은 `첫 소비자` 히트 1건(`:106`)은 「첫 소비자는 `web_fetch_get` 이고\n이 도구는 **둘째**가 되므로」로 **참인 새 문장**이다.\n\n**게이트 4종을 부모·트리거·HEAD 세 지점에서 전수 실행 — 전부 rc=0, 출력 불변.**\n`check_comment_policy.py` 전체 지문이 세 지점 모두 `b45cd8f23876d803c05af34e2b80019a99493d127e3a8dd07bd2603cab4606d0`\n으로 **바이트 동일**(판정 대상 주석 3026줄/131파일 · 판정 완료 2978줄 98.4% · 등재 범위 14) ·\n`check-fidelity-allowlist.py`(등재 seam 7 · 회계 행 20 · 미해소 위반 0 · 마커 9파일) ·\n`check-render-fidelity.py`(R1~R10 OK · 구현 파일 11 · mockup 6 · 정본 토큰 24) ·\n`check-scenario-mapping.sh`(시나리오 **37 = 매칭 26 + 예외 3 + 구현 대기 0 + 저작 대기 8 + 공백 0**).\n⚠️ `rct_20260912-0003` 의 verification 이 적은 지문 `b43d405ac066…` 은 **전체 지문이 아니라 같은\n출력 안의 행 단위 지문 하나**다(그 출력에 실제로 존재하는 문자열이라 거짓은 아니지만 자리를 잘못\n가리킨다). 「IDENTICAL」이라는 결론 자체는 위 실측으로 독립 확인됐다 — 다음 fire 가 그 값을\n전체 지문으로 대조하면 헛 추적을 하게 되므로 여기 정정해 둔다.\n\n**AC-F5 후반(아카이브)의 실제 구현 상태 — 코드로 확인한 것.**\n- `control-plane/cmd/control-plane/main.go:111-121` 이 `criu.NewAgentArchiveCheckpointer` 를\n  `session.WorkloadTypeClaudeCode` **하나에만** 건다(게이트 `CLAUDE_CODE_ARCHIVE_ENABLED`).\n  `WithWorkloadCheckpointer` 의 프로덕션 호출 지점은 레포 전체에서 **이 한 곳뿐**이다\n  (`grep -rn 'WithWorkloadCheckpointer' --include=*.go | grep -v _test.go` = 정의 2 + 호출 1).\n- 따라서 `control-plane/internal/service/manager.go:1007-1019` 의 `checkpointerFor` 가\n  `approval-gated` 에 대해 `s.ckpts[workload] == nil` → `session.ErrCheckpointDisabled` 를 내고,\n  공개 API 는 503 `checkpoint strategy is disabled` 로 거절한다.\n- `data-plane/cmd/agent/claude_archive.go:24` 의 `writeClaudeArchive(w, stateDir, scrollback)` 는\n  `os.OpenRoot(stateDir)` + `filepath.WalkDir(stateDir, …)` 로 **단일 루트**만 tar 로 뜬다.\n  공유 볼륨은 `control-plane/internal/adapter/k8s/shared_volume.go:33-37` 이 `SharedVolumeMountPath\n  = \"/shared\"` 로 **stateDir 밖 최상위**에 두며(그 자리 주석이 「왜 최상위인가」를 적어 둔다),\n  즉 아카이브 포함은 **둘째 루트를 넣는 tar 포맷 변경**이다.\n- 두 테스트가 이 부재를 계약으로 사고 있고, **자기 해제 조건을 스스로 문장으로 적어 두었다**:\n  `control-plane/test/e2e_f4_helper_pod_test.go:199-206` 의 `restoreTheFreezeBranches` 상수\n  (「AC-F5's archive strategy has landed for approval-gated. Delete this case and put AC-F4's own\n  freeze/restore branches back … Then drop the two rows this file owns in docs/test/e2e.md\n  § \"남은 미검증 분기\" … workload_type_test.go's TestSnapshotIsRefusedForApprovalGated turns red in\n  the same moment and wants the same edit」)와\n  `control-plane/internal/service/workload_type_test.go:290-305` 의\n  `TestSnapshotIsRefusedForApprovalGated`.\n- 부수 관측(이 모델 소관 아님): 그 테스트의 주석 첫 줄 「AC-F5 is not implemented」는 #101 로\n  **전제만 부정확**해졌다(결론 「has no archive strategy」는 여전히 참). 코드 주석 축은 자매\n  `tbm_session-platform-comment-redundancy` 소관이라 여기서 열지 않는다.",
@@ -5361,6 +5361,54 @@
               "log": "**PR #122 를 squash 로 머지했다**(레포 설정상 squash 만 허용: `allow_merge_commit=false` · `allow_rebase_merge=false` · `squash_merge_commit_title=PR_TITLE` · `squash_merge_commit_message=BLANK`). 경합 방지로 `sha=0e653a5` 를 명시해 PUT 했다. 머지 커밋 **`cdd6d4e9382b61a60470356f1b8d4480d0a5a853`** — 제목 `docs(e2e): AC-F5 전반 착지로 거짓이 된 「공유 볼륨 미구현」 진술 셋을 걷는다 (#122)`, 머지 시각 2026-09-12T09:20:26Z. 머지 직전 main `49d7465` → 머지 후 main `cdd6d4e`, **부모 1개(`49d7465`)** 이고 커밋 파일은 `docs/doc-tracker.md`(+2/−1) · `docs/test/e2e.md`(+13/−8) **둘뿐**. 브랜치는 머지와 함께 자동 삭제됨(ref 삭제 요청이 `Reference does not exist` 로 응답). 배포·클러스터 조작 0 — 코드 0줄이라 이미지 재빌드·이미지 핀 커밋이 따라오지 않는다.\n\n⚠️ `stepSeq: 10` 은 `plan.steps` 에 **없는 번호**다. plan.steps 는 「PR 을 열되 머지하지 않는다」(seq 8)까지만 열거하고 머지는 `executionGuide` §3 과 완료 기준 ⓔ 가 소유한다. 감사 이력이 끊기지 않게 그 실행 지침 단계를 seq 10 으로 이어 기록했다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:8b1badfd9e0bc69577ebc59ab0d235ee956e07f3 data-plane:9a8b5bb3a5b72aa3c73bbb916f778afee25df583 web:5ccff10ceb30519e8c61a30e795e87994982f3b8",
+          "checks": [
+            {
+              "name": "ⓐ e2e.md — 「공유 볼륨 구현이 없다/선행이다」류 진술 0건",
+              "status": "passed",
+              "detail": "머지된 main(`cdd6d4e`, 관측은 그 뒤 봇 핀 커밋 `91f74dc`)의 로컬 체크아웃에서 `grep -c`: `공유 RWX 볼륨 구현` **0** · `공유 볼륨은 구현 자체가 없` **0** · `공유 RWX 볼륨은 아직 구현되지 않았다` **0**. 범위를 넓혀 문구 전체 `구현 자체가 없` 로도 **0** 이다 — 계획이 지목한 `:667`·`:709-710`·`:730` 세 자리가 전부 사라졌다."
+            },
+            {
+              "name": "ⓑ e2e.md — 낡은 좌표 `client_orchestrator.go:685` 0건",
+              "status": "passed",
+              "detail": "`grep -c 'client_orchestrator.go:685' docs/test/e2e.md` = **0**. 그 좌표는 지금 `helperPodSpec` 이라 이름으로 댈 수 없었던 자리다."
+            },
+            {
+              "name": "ⓒ 남은 선행이 「후반」으로 적히고 ⚠️ 가 정본을 가리킴",
+              "status": "passed",
+              "detail": "`아카이브 전략이 등록돼` 가 **3건**(`:730`·`:752`·`:841`) — `:730` 이 「AC-F5는 여기에 들어가지 않는다 … 이 타입에 아카이브 전략이 등록돼 있지 않은 것이 선행이다」로 정정됐다(나머지 둘은 이번에 건드리지 않은 기존 자리: 2026-09-07 판정 문단과 §「남은 미검증 분기」 행). ⚠️ 문단은 `:778-785` 로 옮겨 앉았고 **정본 포인터**다 — 볼륨 착지 사실(`shared_volume.go` 의 ReadWriteMany 클레임 · 두 컨테이너 같은 경로 마운트 · `control-plane/test/shared_volume_test.go`)만 적고 「남은 선행은 **후반**이고, 그 상태는 여기에 베끼지 않는다 — 정본은 아래 §「남은 미검증 분기」의 두 행과 `../doc-tracker.md`의 AC-F5 항목이며, 세 자리가 같은 말을 하면 하나만 움직여도 나머지 둘이 거짓이 된다」로 끝난다. 그 문단 안에 `checkpointerFor`·`503` **재서술 0** — 네 번째 사본이 생기지 않았다."
+            },
+            {
+              "name": "ⓓ doc-tracker — 「미검증 참조 구현 전제」에서 F5 제외 + 변경 이력 1행",
+              "status": "passed",
+              "detail": "`:55` 항목 제목이 **`(AC-F2·F4)`** 로 좁혀졌고 `*2026-09-12 갱신*` 절이 「**AC-F5를 이 항목에서 뺀다**」와 그 이유(2026-09-08 행의 kind SUT 실물 관측 · 남은 것은 전제 미검증이 아니라 **후반의 미구현**이고 그 자리는 「구현 사슬 부채」 ②)를 적는다. 변경 이력 `^| 2026-09-12 (4) |` = **정확히 1건**(`:139`, 마지막 행)이고 같은 날 행은 ``·`(2)`·`(3)`·`(4)` 네 개로 키 중복 0.\n※ 정밀 단서: plan step 4 의 기대값 문장은 「본문에 「RWX 공유 볼륨」 없음」이었지만, 문자열 자체는 `:55` 에 **1건 남아 있다** — 「RWX 공유 볼륨은 … kind SUT에서 실물로 서서 … 이 항목이 말하는 \"배선된 적 없는 전제\"가 더 이상 아니다」라는 **제외 사유** 문장이다. 즉 F5 를 전제로 **주장하는** 문장은 0 이고 남은 것은 그 반대 주장이라, 완료 기준 ⓒ(「F5 제외」)는 충족이고 지침의 ⓓ 검증 커맨드도 제목·행수만 본다. 다음 fire 가 문자열 개수만으로 되짚지 않도록 여기 적어 둔다."
+            },
+            {
+              "name": "ⓔ 코드 0줄 · 게이트 4종 rc=0 · 출력 바이트 동일 · 매핑 산술 불변",
+              "status": "passed",
+              "detail": "머지 커밋 `cdd6d4e` 는 부모 1개(`49d7465`)에 파일 **둘뿐** — `docs/doc-tracker.md`(+2/−1) · `docs/test/e2e.md`(+13/−8), 합 **+15/−9 · 코드 0줄**. 게이트 4종을 **머지 후 main 과 머지 전 main(`49d7465`) 두 지점**에서 전수 실행 — 넷 다 **rc=0** 이고 출력 파일 sha256 이 **before == after** 로 전부 일치: `check_comment_policy.py` `925fc7fa…`, `check-fidelity-allowlist.py` `4acfb11c…`, `check-render-fidelity.py` `1ae50006…`, `check-scenario-mapping.sh` `4240f42c…`. comment-policy 가 자체 출력에 적는 **전체 지문**도 `b45cd8f23876d803c05af34e2b80019a99493d127e3a8dd07bd2603cab4606d0` 로 stateSummary 기록값과 문자 단위 일치(직전 task 가 적은 `b43d405a…` 가 행 단위 지문이었다는 정정이 여기서 다시 확인된다). 시나리오 매핑 요약 **`37 = 26 + 3 + 0 + 8 + 0`** 불변."
+            },
+            {
+              "name": "CI — head `0e653a5` 14개 중 13 success · 1 skipped · failure 0 + kind e2e 부재(양방향 단언)",
+              "status": "passed",
+              "detail": "`check-runs` 전수: failure **0**, skipped 1(`pin deployment images (main only)`). 게이트 4잡 전부 success. ✅ `e2e (kind + API + browser)` 가 목록에 **없다** — `e2e.yml` path 필터에 `docs/**` 가 없으므로 이것이 「diff 가 `docs/` 밖을 건드리지 않았다」의 CI 측 독립 증거다."
+            },
+            {
+              "name": "정보성 — 잔여 gap(AC-F5 후반)은 그대로다. 이 task 의 범위 밖",
+              "status": "passed",
+              "detail": "수렴 판정에 **넣지 않은** 사실 기록. 머지 후 main 에서도 `grep -rn 'WithWorkloadCheckpointer' --include=*.go | grep -v _test.go` 의 프로덕션 호출 지점은 `control-plane/cmd/control-plane/main.go:116` **한 곳**뿐이라 `approval-gated` 의 `POST /snapshot` 은 여전히 503 이고, `e2e.md` §「남은 미검증 분기」의 두 행(`:841` 동반 회수 · `:842` 복원 갈래)도 **그대로 살아 있다**. 계획이 「범위 밖」으로 명시한 그대로이며, 이 슬라이스가 산 것은 그 사실을 문서가 **정확히** 적는 상태다."
+            },
+            {
+              "name": "정보성 — 머지 뒤 `pin deployment images` 봇 커밋 1건(review 진술 정정)",
+              "status": "passed",
+              "detail": "수렴 판정에 **넣지 않은** 사실 기록. 머지 직후 main 에 `91f74dc chore(deploy): session-platform 이미지를 cdd6d4e… 로 고정 [skip ci]`(github-actions[bot], 09:21:03Z, `k8s/deployment.yaml` +4/−4)가 따라붙었다. `review.reason` 과 계획 주의사항은 「배포 파이프라인은 이 diff 를 타지 않는다 / 이미지 핀 커밋이 따라오지 않는다」고 적었지만, 이 워크플로는 **main push 마다 새 main sha 로 태그를 다시 핀**하므로 docs-only 머지에서도 발화한다(직전 `49d7465` 자체가 `35499e7` 용 같은 핀 커밋이다). **영향은 0** — `control-plane`/`data-plane`/`web` 트리 해시가 머지 전후 문자 단위로 동일해 **같은 코드가 새 태그로 다시 롤아웃**될 뿐이고, `k8s/` 는 이 모델 as-is 버전 범위에서 제외돼 있어 as-is 지문도 움직이지 않는다. 다음 fire 가 이 봇 커밋을 예상 밖 변경으로 오독하지 않도록 적어 둔다."
+            }
+          ],
+          "verifiedAt": "2026-09-12T09:24:30Z"
         }
       }
     ]
