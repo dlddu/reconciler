@@ -4088,7 +4088,7 @@
   {
     "id": "rct_20260908-0003",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-08T06:17:52Z",
       "changedSides": [
@@ -4117,7 +4117,7 @@
       "assessedAt": "2026-09-08T06:17:52Z"
     },
     "createdAt": "2026-09-08T06:17:52Z",
-    "updatedAt": "2026-09-12T07:24:00Z",
+    "updatedAt": "2026-09-12T07:28:00Z",
     "attempts": [
       {
         "plan": {
@@ -4390,6 +4390,89 @@
               "log": "**불가역 지점 — 지침 §4 를 실행했다**(plan.steps 는 13 까지이고 머지는 `executionGuide` §4 에만 있으므로 그 게이트 번호로 단다). 머지 직전 07:22:28Z 에 신선도를 **한 번 더** 쟀다 — `clean` · base `32be7ee` == main head · head `765e366` · #119 여전히 open/clean. 그 상태에서 `gh pr merge 101 --repo dlddu/session-platform --squash --delete-branch` 를 호출해 **rc=0**.\n\n착지 실측: `merged=**true**` · `merged_at=**2026-09-12T07:22:39Z**` · squash **`f4620c3cb37f9dc0d50335ca5fbf1e5a94f27a61`** · `state=closed` · 브랜치 `reconcile/rct_20260908-0003-opus5` 삭제됨(`delete_branch_on_merge`). main head 가 `32be7ee` → **`f4620c3`** 로 전진하고 커밋 제목이 PR 제목(`… (#101)`)이다 — `squash_merge_commit_title=PR_TITLE` 대로이고 본문은 비어 있어(`…=BLANK`) 측정 기록은 PR 본문·이 레코드·`docs/` 원장에만 남는다.\n\n**예고된 대가가 그대로 발생했다**: 직후 #119 가 `mergeable_state=unknown`(GitHub 재계산 중)으로 떨어졌다. 같은 `<!-- 판정-합계 -->` 줄을 다투므로 dirty 로 귀결될 것이다 — 승인 세션이 사용자에게 명시하고 승인받은 바로 그 결과이며, #119 의 task(`rct_20260912-0002`)는 `awaiting_review` 라 아직 승인된 머지 순서가 없다. 되돌림은 `git revert f4620c3` PR 한 건이고, 프로덕션은 공유 볼륨 스토리지 클래스 미설정이라 이 경로가 켜지지 않으므로 런타임 동작은 AC-F5 이전과 동일하다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:3369b0a5045d70b9c732f442718c122f099a2809 data-plane:3dcdb901c0e1e1bba56343513aa1f2f83f06499d web:5ccff10ceb30519e8c61a30e795e87994982f3b8",
+          "checks": [
+            {
+              "name": "신선도 게이트(§1) — 승인된 바이트가 그대로 착지했다",
+              "status": "passed",
+              "detail": "머지 직전(07:22:28Z) 재측정: `mergeable_state=clean` · base `32be7ee` == 같은 시각 main head · head **`765e366`** = 승인 범위의 head. 승인 코멘트가 건 조건(「재기준이 필요해지면 코드 blob 이 바이트 동일한 범위에서만 유효」)을 건드릴 일이 없었다 — 재기준도 force-push 도 하지 않았다."
+            },
+            {
+              "name": "완료기준 1 — 볼륨에 쓰는 축이 실재한다",
+              "status": "passed",
+              "detail": "`git grep -c '/shared' -- data-plane`: 머지 전 **0**(rc=1 무출력) → 머지 후 **`data-plane/cmd/agent/approval_gated_test.go:5`**. `data-plane/cmd/agent/session_mcp_files.go` (99줄 신규) 존재. 감지 단계가 gap 의 기계적 근거로 쓴 바로 그 숫자가 0 에서 벗어났다."
+            },
+            {
+              "name": "완료기준 1·2·3 — 스필 계약(상한 초과 시 `body` 키 부재 · 상한 이하 인라인 불변 · opt-in 꺼짐 시 현행 동작 + `spillError`)",
+              "status": "passed",
+              "detail": "착지한 main(`f4620c3`)에서 CI `data-plane (lint + unit)` 가 `go test ./...` → **`ok github.com/dlddu/session-platform/data-plane/cmd/agent 1.749s`**. 그 패키지에 계약을 단언하는 6함수가 실재한다(`session_mcp_files_test.go`): `TestSessionMCPSpillsLargeBodiesToTheSharedVolume`(:76) · `TestSessionMCPKeepsSmallBodiesInline` · `TestSessionMCPWithoutASharedVolumeTruncatesInline` · `TestSessionMCPFallsBackInlineWhenTheVolumeRefusesTheWrite` · `TestSpillBodyStopsAtTheFileCeiling` · `TestSpillBodyNamesTheFileAfterTheRequestID`.\n\n⚠️ **CI 는 `-v` 없이 돌아 개별 `--- PASS` 줄이 없다.** 그래서 「패키지 ok」를 「그 테스트가 돌았다」로 읽어도 되는지를 따로 확인했다 — 이 파일들에 `t.Skip` **0건** · `testing.Short` **0건** 이므로 조용히 건너뛸 경로가 없고, 하나라도 실패하면 패키지가 `FAIL` 이 된다. 지침이 kind 테스트에 요구한 「초록만으로는 돌았다가 아니다」를 같은 엄격도로 적용한 결과다."
+            },
+            {
+              "name": "완료기준 4 — 배선(env 와 마운트가 같은 분기) · 관리 설정의 `additionalDirectories` 교체",
+              "status": "passed",
+              "detail": "CI `integration (happy path)` 가 `go test -tags=integration ./...` → **`ok github.com/dlddu/session-platform/control-plane/test 0.019s`**. 지침이 지목한 `TestApprovalGated_BothMountingContainersAreToldTheSharedPath` 가 `control-plane/test/approval_gated_shared_volume_test.go:306` 에 실재하고 그 파일은 `//go:build integration` 이라 정확히 이 잡이 컴파일한다. **가짜 clientset**(`newReadyOrchestrator`)을 쓰므로 클러스터 부재로 skip 되는 경로가 없고, `t.Skip` 도 0건이다. 같은 파일이 AC-F5 볼륨 토폴로지를 10함수로 단언한다(`…UnconfiguredStorageClassTellsNoOneAPath` 등 opt-in 꺼짐 쪽 포함).\n\n관리 설정 교체는 `TestRestoredManagedSettingsDropAStaleSharedDirectory`(`data-plane/cmd/agent/approval_gated_test.go:242`)가 지고, 위 data-plane 패키지 `ok` 에 포함된다."
+            },
+            {
+              "name": "완료기준 4(배포된 SUT) — kind e2e 가 실제로 돌았음을 숫자로",
+              "status": "passed",
+              "detail": "착지한 코드와 **바이트 동일**한 head `765e366` 의 `e2e (kind + API + browser)` 잡 로그를 직접 받아 셌다(308,556바이트): Go `=== RUN Test` **123** / `--- PASS` **123** / `--- FAIL` **0** / `--- SKIP` **0**, `--- PASS: TestSharedVolume_` **4** · `--- SKIP: TestSharedVolume_` **0** — `BothPodsHoldOneReadWriteManyClaimAtTheSamePath` · `EachSessionGetsItsOwnAndSeesNoOther` · `ClaimIsReclaimedWithTheSession` · **`BothContainersAreToldWhereItIs`**(이번 슬라이스가 더한 케이스). Playwright **20 passed** · flaky 0.\n\n`control-plane/test/shared_volume_test.go` 는 `//go:build e2e` 이고 클러스터가 없으면 스스로 `t.Skip` 하므로 **SKIP 0 + PASS 4 가 「배포된 SUT 에서 관측됐다」의 증거**다. e2e 워크플로는 main push 에서 돌지 않으므로(`head_sha=f4620c3` 의 워크플로는 `ci`·docker·pages 셋뿐) 이 축의 증거는 PR head 런이며, 착지 델타 동일성(아래)이 그 유효성을 잇는다."
+            },
+            {
+              "name": "완료기준 5 — 원장의 거짓 문장 제거와 AC-F5 ② 갱신",
+              "status": "passed",
+              "detail": "착지한 main 에서: `grep -c '아직 아무도 그 볼륨에 쓰지 않는다' docs/doc-tracker.md` = **0**(거짓이 된 문장이 사라졌다) · `docs/comment-policy/ledger.md` **존재** · `grep -c '^| 2026-09-12 |'` = **1**(변경 이력 행) · `grep -c 'TestApprovalGatedHelperPod_RefusedFreezeReclaimsNeitherPod'` = **1** — AC-F5 **후반이 왜 범위 밖인지**의 기계적 근거(이 타입에 체크포인터 미등록 ⇒ `POST /snapshot` 503)가 문서에 박혀 있다. ② 항목이 「볼륨도 그 볼륨을 쓰는 축도 착지, 아카이브 반쪽만 선행 대기」로 다시 쓰였다."
+            },
+            {
+              "name": "#99 축 보존 — 남의 갱신을 덮어쓰지 않았다",
+              "status": "passed",
+              "detail": "`docs/doc-tracker.md` 착지 델타가 **+2/−1** 뿐이고, #99 가 들인 축 교체 토큰이 살아 있다 — `scenario-summary` 1회 · `check-scenario-mapping.sh` 1회. step 3 의 assert(접두·접미 main 바이트 동일)가 지키려던 결과가 착지본에서 성립한다."
+            },
+            {
+              "name": "기준 6 — PR 이 clean 한 채로 머지됐다(번호·이력 보존)",
+              "status": "passed",
+              "detail": "`merged=true` · `merged_at=2026-09-12T07:22:39Z` · squash **`f4620c3cb37f9dc0d50335ca5fbf1e5a94f27a61`** · `state=closed` · 브랜치 `reconcile/rct_20260908-0003-opus5` 삭제. PR 번호 #101 과 그 위의 검토 사유·승인 대화·executor 부기가 모두 보존됐다(닫고 새로 열지 않았다)."
+            },
+            {
+              "name": "기준 7 — 코드 델타가 머지 전후 동일하다(머지가 내용을 바꾸지 않았다)",
+              "status": "passed",
+              "detail": "`git diff --numstat 32be7ee...pr101`(머지 전)과 `git show --numstat f4620c3`(머지 후)의 코드 10파일이 **같은 10쌍**이고 지침 §5-7 의 기대값과 정확히 일치: `3/0` · `9/2` · `97/0` · `52/0` · `55/0` · `24/0` · `10/3` · `99/0` · `204/0` · `55/9`. 문서 2파일도 `4/4` ledger.md · `2/1` doc-tracker.md 동일. 전체 12파일 **+614/−19** 로 preparation 기록과 같다."
+            },
+            {
+              "name": "기준 8 — 원장이 `BASE_TOTAL + 증분` 으로 착지했다",
+              "status": "passed",
+              "detail": "`python3 scripts/check_comment_policy.py` **rc=0**. 머지 전 main 기준선 `BASE_TOTAL` = **2794줄** (지문 `f7933962b66dabc7…`) → 착지 후 **2894줄** = `2794 + 100` ⇒ 지침이 요구한 「절대값이 아니라 BASE_TOTAL + 증분」이 그대로 성립. 세 행: **#3 387→393** `c39e86b7e171` · **#4 781→865** `e5f919ad1ac7` · **#9 431→441** `b7ece033a815` — 증분 **+6/+84/+10** 이 base 의 네 번째 이동에서도 불변. 착지 전체 지문 `9848aa0cb29e9e730092d0ba4cdb4f95539f76d268aa502052b84e3e81c8efd1`. 판정 대상 3005줄/128파일 → 3117줄/130파일(신규 2파일이 #4 행에 편입). 등재 범위는 **13 유지** — 이 슬라이스가 새 행을 만들지 않았다."
+            },
+            {
+              "name": "자매 모델 축 무변경 — `check-scenario-mapping.sh` 출력이 main 과 바이트 동일",
+              "status": "passed",
+              "detail": "머지 전 main 출력과 착지 후 출력을 `diff` → **무차이**(양쪽 rc=0, 시나리오 37 = 매칭 26 + 예외 3 + 구현 대기 0 + 저작 대기 8 + 공백 0). 이 PR 이 `tbm_session-platform-scenario-e2e` 의 매핑 축을 건드리지 않았다."
+            },
+            {
+              "name": "머지 후 main CI 전수",
+              "status": "passed",
+              "detail": "`f4620c3` 의 check-runs **17개 전부 success · failure 0 · pending 0**(07:26:35Z 정착). PR 에서 skip 이던 `pin deployment images (main only)` 가 main 에서는 **success** 로 실제 실행됐고, `control-plane (lint + unit)` · `data-plane (lint + unit)` · `integration (happy path)` · `envtest (real-apiserver CAS/Lease)` · `comment policy ledger` · `시나리오 ↔ e2e 1:1 mapping` · `e2e fidelity allowlist` · `render fidelity` · `web (typecheck + build)` · 이미지 빌드 4종 · `build`/`deploy`/`report-build-status` 가 모두 초록이다."
+            },
+            {
+              "name": "GitOps 후속 — 배포 핀 커밋이 자동으로 따라왔다",
+              "status": "passed",
+              "detail": "지침 §4 가 예고한 대로 `d4b1b61 chore(deploy): session-platform 이미지를 f4620c3cb37f9dc0d50335ca5fbf1e5a94f27a61 로 고정 [skip ci]` 가 main 에 이어 붙었다(`k8s/deployment.yaml` 4±). 이 커밋은 `control-plane/`·`data-plane/`·`web/` 밖만 만지므로 as-is 지문을 움직이지 않는다(아래 재계산이 `f4620c3` 과 `d4b1b61` 에서 동일함으로 확인)."
+            },
+            {
+              "name": "경합 상대 #119 — 예고된 대가가 그대로 발생했다(정보성)",
+              "status": "passed",
+              "detail": "머지 직후 #119(`reconcile/rct_20260912-0002-comment-redundancy-pass14`)가 `mergeable=false` · **`mergeable_state=dirty`** 로 떨어졌다 — 같은 `<!-- 판정-합계 -->` 줄을 다투므로 예정된 결과이고, **승인 세션이 사용자에게 🔴 로 명시해 알린 뒤 승인을 받은 바로 그 경합**이다. #119 의 task `rct_20260912-0002` 는 `awaiting_review`(아직 승인 전)이라 선행 머지 순서가 정해져 있지 않았다. 이 dirty 의 해소는 그 task 의 재계획 몫이며 이 task 의 수렴 판정과 무관하다."
+            },
+            {
+              "name": "정보성 — 모델 전체 to-be 대비 잔여 gap(계획이 범위 밖으로 명시한 것)",
+              "status": "passed",
+              "detail": "**이 항목은 수렴 판정에 넣지 않았다**(계획이 명시적으로 범위 밖으로 뺀 것들이고, 지침 §5 가 「모델 전체 to-be 의 미달은 failed 의 근거가 아니다」를 박았다). 사실만 남긴다:\n- **AC-F5 후반**(볼륨 내용의 파일시스템 아카이브 포함) — 여전히 미구현. 선행은 `approval-gated` 에 아카이브 전략을 주는 것이고, 현재는 체크포인터 미등록 ⇒ `POST /snapshot` 503 ⇒ 코드를 넣어도 어느 환경에서도 실행되지 않는다. 착지한 `docs/doc-tracker.md` 가 이 근거를 들고 있다.\n- **프로덕션 스토리지 클래스 한 줄**(`k8s/`) — as-is 범위 밖. 자매 `tbm_session-platform-e2e-mock-policy`.\n- **FETCH-ORIGIN** — 자매 소관, 재검토 2026-10-11.\n- **`control-plane/test/shared_volume_test.go` 주석 편입** — `tbm_session-platform-comment-redundancy` 소관.\n- **`docs/test/e2e.md`·`scripts/e2e/`** — 자매 `tbm_session-platform-scenario-e2e`.\n\n이 잔여는 **다음 감지 주기가 잇는다**: 이 실행이 as-is 를 `control-plane:f2446073…` → `3369b0a5…`, `data-plane:2202f0a5…` → `3dcdb901…` 로 움직였고 to-be(`docs`) 도 `eb31e452…` 로 움직였으므로, detector 가 그 변화를 보고 후속 task 를 연다. **이 스킬은 모델의 `lastObservedVersion` 을 건드리지 않았다**(현재 `null` 그대로)."
+            }
+          ],
+          "verifiedAt": "2026-09-12T07:28:00Z"
         }
       }
     ]
