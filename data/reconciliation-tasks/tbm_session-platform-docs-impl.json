@@ -5788,7 +5788,7 @@
   {
     "id": "rct_20260912-0011",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "action_required",
+    "status": "planning",
     "trigger": {
       "detectedAt": "2026-09-12T12:53:18Z",
       "changedSides": [
@@ -5805,7 +5805,7 @@
       }
     },
     "createdAt": "2026-09-12T12:53:18Z",
-    "updatedAt": "2026-09-12T12:57:22Z",
+    "updatedAt": "2026-09-12T13:15:00Z",
     "stateSummary": {
       "asIs": "**as-is (구현) — `dlddu/session-platform` main `419eb2eb` 기준, 관측 2026-09-12T12:50Z**\n\nas-is 버전은 `data-plane` 성분만 움직였다(`b422cc38` → `6429a848`; `control-plane` `7b15af53` · `web` `5ccff10c` 불변). 원인은 **PR #129 `feat(session-mcp): web_fetch_get 이 평문 http 대상을 받는다`**(머지 커밋 `054aac9`, 2026-09-12T12:48:40Z)이고, 그 위에 배포 핀 `419eb2eb`(12:49:38Z, `k8s/deployment.yaml` — as-is 범위 밖)이 얹혀 있다.\n\n#129 가 구현에서 바꾼 것(`data-plane/cmd/agent/`):\n- `session_mcp_tools.go` / `validateFetchTarget`: 스킴 검사가 `parsed.Scheme != \"https\"` 거절에서 **`http` 와 `https` 둘 다 허용**으로 넓어졌다. 오류 문구도 `url must be http or https, got %q` 로 바뀌었다.\n- 같은 파일 `toolDefinitions()` 의 `url` 인자 description: `The https URL to fetch.` → `The http or https URL to fetch.`\n- `session_mcp_gate_test.go`: 신규 `TestSessionMCPAcceptsPlaintextTarget`(`http://rates.internal.svc.cluster.local/v1/latest` 가 승인 요청 1건을 만들고 실제로 fetch 됨을 단언). 거절 표에서 `{\"plaintext http\", …}` 행이 빠지고 `{\"ftp scheme\", …}` · `{\"no host, http\", \"http://\"}` 가 들어왔다 — 호스트 검사와 그 밖 스킴 거절은 그대로다.\n\n도구 표면 자체는 늘지 않았다: `toolDefinitions()` 가 내는 도구는 여전히 **`web_fetch_get` 하나**(자매 모델 `tbm_session-platform-mcp-tool-roadmap` 의 첫 관측으로 독립 확인).",
       "toBe": "**to-be (제품 문서 `docs/`) — tree `eba53645`(이전 `4b8ee10e`), 관측 2026-09-12T12:50Z**\n\n같은 커밋 `054aac9` 가 docs 에서 만진 파일은 **둘뿐**이다.\n\n1. `docs/session-mcp-tool-surface.md`\n   - 「지금 있는 것」 표(36행)의 `web_fetch_get` 인자 칸: `url` (https 강제, …) → **`url` (http·https만, …)**.\n   - **R4**(사람이 읽고 판정할 수 있는 컨텍스트) 산문: 「`web_fetch_get` 이 https 만 받는 이유」 → 「**http·https 밖의 스킴을 받지 않는 이유**」로 재서술하고, 거절 예를 `file://` 로 명시한 뒤 **「평문 http 는 이 선 안쪽이다」** 와 그 근거(TLS 를 세우지 않은 원본이 실제 대상이고, 스킴은 승인자가 읽는 URL 에 그대로 보인다)를 더했다. 완화 사실을 `(2026-09-12 완화 — 그 전까지는 https만 받았다)` 로 날짜와 함께 남겼다.\n   - 머리 상태 줄은 건드리지 않았고, 건드릴 이유도 없다 — **도구 1개 착지 · 등재 5개**는 여전히 참이다(실측 일치).\n2. `docs/comment-policy/ledger.md` — 4차 판정 패스 행 한 줄. 자매 모델 `tbm_session-platform-comment-redundancy` 의 to-be 이고 그쪽 `rct_20260912-0007` 에서 판정했다(요지: 이 PR 이 자기 주석 증분을 스스로 판정·등재했다).\n\n**움직이지 않은 문서 중 하나가 문제다.** `docs/test/e2e.md` 는 이 커밋이 한 글자도 만지지 않았는데, 그 파일 **218행**의 `<!-- fidelity:blockers -->` 표 행이 구현 사실을 **현재형 단언**으로 들고 있다:\n\n> 승인된 `web_fetch_get` 의 **실제 아웃바운드 호출**. **도구는 https 만 받는데(`validateFetchTarget`)**, 그 호출을 내는 MCP 컨테이너의 fetch 는 **시스템 루트만 신뢰하는 기본 클라이언트**다 … 그래서 인클러스터 https 원본을 세워도 그 인증서를 검증할 수 없고, 승인 갈래는 *게이트를 통과했다*는 데까지만 관측된다.\n\n이 문장은 함수 이름까지 지목하며 「지금 그렇다」를 말하는 살아 있는 주장이지, 날짜 붙은 과거 기록이 아니다.",
