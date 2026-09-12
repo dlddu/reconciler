@@ -5512,7 +5512,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "executing",
+    "status": "failed",
     "trigger": {
       "detectedAt": "2026-09-12T10:40:00Z",
       "changedSides": [
@@ -5536,7 +5536,7 @@
       "summarizedAt": "2026-09-12T10:48:00Z",
       "gap": "**유의미한 차이가 있다. 그런데 이번 fire 의 핵심은 잔여 gap 자체가 아니라 — 열린 task 의 스코프가 *루프 밖 PR 에 선점당했다*는 사실이다.**\n\n### ① 축 B(세션 MCP 등재 주소)는 수렴했다 — 다만 우리 PR 이 한 것이 아니다\n\n직전 task `rct_20260912-0006`(현재 `awaiting_review`)이 **축 B 하나만** 슬라이스로 집고 PR **#124**(`reconcile/rct_20260912-0006-session-platform-docs-impl`, `reconciler-bot`, 09:57:54Z)를 준비해 10:06 에 사람 승인 대기로 올렸다. 그런데 **10:11:47Z 에 다른 작성자(`Claude <claude@anthropic.com>`)가 브랜치 `fix/session-mcp-registration-path` 로 같은 결함을 고쳐 PR #125 를 열고 10:30:17Z 에 머지했다.**\n\n머지된 main 에서 실측: `claude_mcp_registration.go:57` 이 `URL: tools.sessionMCPEndpoint()` 이고, `claude.go:165-170` 의 `sessionMCPEndpoint()` 가 `t.SessionMCP + sessionMCPPath`(`session_mcp.go:26` = `\"/mcp\"`)를 돌려준다. **축 B 의 gap 은 main 에서 닫혔다.**\n\n### ② 그 결과 PR #124 는 무효가 됐다 — 세 가지를 각각 실측했다\n\n**(가) 목적이 이미 달성됐다.** #124 의 코드 델타는 `URL: tools.SessionMCP + sessionMCPPath` 로, main 의 `sessionMCPEndpoint()` 와 **의미가 같다**. #125 쪽이 진부분집합이 아니라 **진상위집합**이다 — 이름 붙은 헬퍼 + `validateHelperEndpoint` 의 bare-origin 가드(`credential_proxy.go`, #124 **무접촉**) + 거부 테이블 3케이스.\n\n**(나) 충돌이 #125 탓임을 양축으로 귀속했다.** `git merge --no-commit --no-ff pr124` 를\n- **자기 부모 `91f74dc0` 에 → `Automatic merge went well`, 충돌 0** (면책: 기존 충돌이 아니다)\n- **현재 main `ef7d8efb` 에 → 자기 파일 3개 전부 CONFLICT**: `approval_gated_test.go` · `claude_mcp_registration.go` · `docs/comment-policy/ledger.md`.\nGitHub 도 같은 답이다 — `#124 CONFLICTING/DIRTY`.\n\n**(다) 소리 없이 없어지는 것이 하나 있다.** 두 브랜치의 `approval_gated_test.go` 테스트 함수 집합을 `comm` 으로 차집합 냈다: **main 에만 있고 #124 에 없는 함수는 `TestRegisteredSessionMCPAnswersTheCLIsHandshake` 하나**다(#124 는 이름이 다른 `…AnswersWhereItSaysItDoes` 를 갖는다). 충돌 해소를 「이 PR 쪽을 취한다」로 하면 **실제 `sessionMCPRoutes` mux 를 등재 URL 로 구동하는 오라클 테스트가 조용히 사라진다.** 어느 게이트도 이것을 잡지 못한다(테스트가 없어지는 것은 빨개지지 않는다). 반대로 `ledger.md` 쪽 되돌림(927→924 · 2989→2986)은 게이트 R2 가 실측과 대조하므로 **빨개져서 잡힌다** — 즉 위험은 원장이 아니라 **테스트 축 한 곳에 정확히 몰려 있다.**\n\n**(라) 사람에게 제시된 위험 서술이 이미 거짓이다.** #124 의 `executionGuide` §3 첫 항목은 「이 PR 이 착지하는 순간 **처음으로** 세션 MCP 가 연결되어 `tools/call` 이 외부 승인 게이트웨이에 실제 요청을 만들기 시작한다 … 피크 시간대를 피하라」다. 그 **처음**은 10:30 에 #125 로 이미 일어났다. `awaiting_review` 큐의 사람은 **지금 성립하지 않는 위험 프레이밍으로 승인 여부를 묻고 있는 중**이다.\n\n### ③ 진짜 잔여 — 축 A(AC-F5 후반)는 그대로이고, 지금 **무소유**다\n\n머지된 main 에서 재측정: `WithWorkloadCheckpointer` 의 프로덕션 호출 지점은 `control-plane/cmd/control-plane/main.go:116` **한 곳뿐**이고 `session.WorkloadTypeClaudeCode` 로만 등록된다(`cfg.claudeArchiveEnabled` 게이트 뒤). `approval-gated` 는 `s.ckpts[workload]` 가 nil → `manager.go:1007-1017` 의 `checkpointerFor` 가 `session.ErrCheckpointDisabled` 를 돌려준다. **#125 는 이 축을 한 줄도 건드리지 않았다.**\n\n소관 근거는 문서에 문자로 박혀 있다 — `rct_20260912-0006` 이 기록한 대로 `docs/test/e2e.md:841` 이 「선행은 AC-F5 이고 소관은 `tbm_session-platform-docs-impl`」이라고 적는다. 그리고 `rct_20260912-0006` 의 계획서 §4 「범위 밖(후속 — 재감지의 입력)」 1번이 축 A 를 **명시적으로 다음 재감지에 넘겼다**: 「실행이 만드는 `data-plane` 트리 해시 변화가 재감지를 깨우고, 그 재감지가 새 task 로 잇는다.」 **`data-plane` 트리 해시는 실제로 움직였고(9a8b5bb3→b422cc38) 이 fire 가 그 재감지다** — 다만 해시를 움직인 것이 #124 의 실행이 아니라 #125 였을 뿐이다.\n\n축 A 의 3조각(⑴ `approval-gated` 에 아카이브 전략 등록 · ⑵ 공유 볼륨을 아카이브에 포함 — `writeClaudeArchive`(`claude_archive.go:24`)가 `os.OpenRoot` 단일 루트인데 공유 볼륨은 `SharedVolumeMountPath=\"/shared\"`(`shared_volume.go:37`)로 stateDir 밖이라 tar 포맷 변경 · ⑶ `e2e_f4_helper_pod_test.go` 거부 단언을 복원 갈래로 교체)는 **쪼개면 어느 조각도 초록으로 착지하지 못한다**(`TestSnapshotIsRefusedForApprovalGated` 가 같은 순간 빨개진다). ⚠️ 공유 볼륨 PVC 는 그 라운드 헬퍼 파드의 `ownerReferences`(`shared_volume.go:95`)에 묶여 **동결 시 함께 GC** 되므로 ⑴만 먼저 넣으면 AC-F5 의 보존이 거짓 약속이 된다.\n\n### ④ 재감지 경로가 0이라는 것이 `action_required` 의 적극적 논거다\n\n`rct_20260912-0006` 이 어떻게 끝나든 축 A 는 자동으로 열리지 않는다:\n- **승인·머지되면** → #124 의 코드 델타는 main 과 의미가 같으므로 `data-plane` 트리는 움직여도 축 A 에 대해선 아무 일도 일어나지 않고, 그 task 는 `succeeded` 로 닫힌다.\n- **취소/거부되면** → reconciler 레포에만 쓰고 **대상 레포에 커밋이 0**이다 ⇒ 어떤 side 의 버전도 움직이지 않는다 ⇒ precheck 가 영원히 조용하다.\n\n두 갈래 모두에서 축 A 는 **보이지 않게 된다.** 여기서 `no_action_needed` 를 쓰면 baseline 만 전진하고 축 A 를 여는 사건이 사라진다 — 소비된 트리거의 교과서적 함정이다. 이번엔 소비한 주체가 자기 슬라이스가 아니라 **루프 밖 PR** 이라는 점만 다르다.\n\n### ⑤ 자매 축 관측 — 기록만 하고 손대지 않는다\n\n- `tbm_session-platform-comment-redundancy`: 같은 트리거가 `docs/comment-policy/` 와 주석 지문을 함께 움직였다. **별도 `no_action_needed` 레코드**(`rct_20260912-0005`)로 판정했고 이중 계상 가드를 상호 명기한다 — `docs/comment-policy/` 의 원장 산술은 그 모델 소관이고, 이 모델은 그것을 노이즈로만 센다.\n- `tbm_session-platform-scenario-e2e`: 그 모델의 두 side 는 **불변**이라 내 트리거가 아니다. 다만 그 모델의 PR **#123**(「세션 MCP 가 자기가 서비스하지 않는 주소로 등재된다(실측)」를 근거로 #시나리오 3 을 구현 대기로 내리는 PR, 현재 `MERGEABLE/CLEAN`)의 **전제가 #125 로 거짓이 됐다.** 그 task `rct_20260911-0003` 은 10:38:01Z 부터 `planning` **점유 중**이고 그 워커가 10:40:40Z 에 PR **#126**(「승인 경로 파일을 저작한다」)을 이미 열었다 — #125 의 후속 1번과 정확히 같은 방향이다. **점유 레코드에는 한 줄도 쓰지 않는다.** 관측으로만 남긴다."
     },
-    "updatedAt": "2026-09-12T13:11:10Z",
+    "updatedAt": "2026-09-12T13:13:17Z",
     "assessment": {
       "actionRequired": true,
       "reason": "`actionRequired: true`. **잔여 gap 이 실재하고(축 A = AC-F5 후반), 지금 이 task 를 열지 않으면 그것을 여는 사건이 남지 않는다.**\n\n**1. gap 은 모델 정의의 판정 기준 1(미구현 AC)에 정면으로 걸린다.** to-be 는 「승인된 큰 결과물이 공유 볼륨에 남고 동결·복원을 건너서도 파일이 그대로 있다」를 현재형으로 단언하는데, main 실측은 `approval-gated` 에 체크포인터가 **등록되지 않아**(`main.go:116` 이 `WorkloadTypeClaudeCode` 로만 등록) `checkpointerFor`(`manager.go:1007-1017`)가 `ErrCheckpointDisabled` 를 돌려준다. #125 는 이 축을 한 줄도 건드리지 않았다.\n\n**2. 자동 해소 가능성이 없다 — 유예(recheck) 가 아니라 지금 여는 것이 맞다.** 롤아웃 진행 중도, 일시적 alert 도, 곧 재동기화될 변경도 아니다. 세 조각(⑴등록 ⑵볼륨을 아카이브에 포함 ⑶거부 단언 교체)이 함께 착지해야 하는 구현 작업이고, 공유 볼륨 PVC 가 헬퍼 파드 `ownerReferences` 에 묶여 동결 시 GC 되므로 ⑴만 먼저 넣으면 보존이 거짓 약속이 된다 — 설계 판단이 필요하다. 이것이 planner 의 몫이다.\n\n**3. 결정적으로, 재감지 경로가 0이다.** 열린 `rct_20260912-0006` 이 어느 쪽으로 끝나도 축 A 는 깨어나지 않는다 — 승인·머지되면 #124 의 델타가 main 과 의미가 같아 축 A 에 아무 일도 없이 `succeeded` 로 닫히고, 취소·거부되면 **대상 레포 커밋이 0**이라 어떤 side 도 움직이지 않아 precheck 가 영원히 조용하다. `no_action_needed` 를 쓰면 baseline 만 전진하고 축 A 는 보이지 않게 된다. 「소비된 트리거」의 교과서적 함정인데, 이번엔 소비한 주체가 자기 슬라이스가 아니라 **루프 밖 PR #125** 라는 점만 다르다. `rct_20260912-0006` 의 계획서 §4 가 축 A 를 「재감지가 새 task 로 잇는다」며 명시적으로 넘겼고 — **`data-plane` 트리 해시는 실제로 움직였으며(9a8b5bb3→b422cc38) 이 fire 가 바로 그 재감지다.**\n\n---\n\n## ⚠️ planner 에게 — 이 task 의 스코프는 축 A 하나이고, 그 전에 읽어야 할 것이 있다\n\n**(가) 스코프는 축 A 단독이다.** 축 B(세션 MCP 등재 주소)는 **이미 main 에서 닫혔다**(`claude_mcp_registration.go:57` → `sessionMCPEndpoint()`). 다시 들지 말 것. 이 task 는 `rct_20260912-0006` 의 rival 이 아니다 — 스코프가 서로소다.\n\n**(나) `rct_20260912-0006` / PR #124 는 무효다. 계획에서 그것에 의존하지 말 것.** 이 detector 는 점유·인수인계 지점의 상태를 바꾸지 않으므로 `awaiting_review` 그대로 두었고, 무효 판정만 여기 남긴다. 실측 근거 셋: ⑴ 목적 달성 완료(#124 의 `tools.SessionMCP + sessionMCPPath` 와 main 의 `sessionMCPEndpoint()` 는 의미가 같고, main 쪽이 bare-origin 가드까지 포함한 진상위집합) ⑵ `#124 CONFLICTING/DIRTY` — 자기 부모 `91f74dc0` 에는 **충돌 0 으로 깨끗이** 머지되지만 현재 main 에는 **자기 파일 3개 전부** 충돌(귀속 양축 완료: #125 탓이지 기존 충돌이 아니다) ⑶ 사람에게 제시된 위험 서술(「이 PR 이 착지하는 순간 처음으로 세션 MCP 가 연결된다」)이 10:30 부로 **거짓**이다.\n\n**(다) 🔴 #124 를 살릴 경우의 유일한 조용한 손실 지점.** 충돌 해소를 「이 PR 쪽을 취한다」로 하면 `approval_gated_test.go` 에서 **`TestRegisteredSessionMCPAnswersTheCLIsHandshake` 가 사라진다**(두 브랜치 테스트 함수 차집합 실측 결과 main 에만 있는 함수는 정확히 이 하나). 실제 `sessionMCPRoutes` mux 를 등재 URL 로 구동하는 오라클이라 이것이 없어지면 등재/서빙 불일치가 다시 공짜가 된다. 반대로 `ledger.md` 되돌림(927→924 · 2989→2986)은 게이트 R2 가 실측 대조로 **빨개져서 잡는다** — 위험은 테스트 축 한 곳에만 있다.\n\n**(라) 자매 모델 경계.** `control-plane/test/shared_volume_test.go` 의 **주석 판정**은 `tbm_session-platform-comment-redundancy` 소유다(이 task 는 그 파일의 **AC-F5 동결·복원 단언**만 소유). ⚠️ 그 모델의 트립와이어 (c)가 이 task 를 직접 겨눈다 — **이 계획이 그 파일을 「자매 comment-redundancy 가 유예 중」이라는 사유로 범위 밖에 두면 그 즉시 자매가 판정 패스를 연다**(= 동일-파일 2-PR 충돌). 범위 밖으로 뺄 거면 사유를 다르게 쓰거나, 아예 함께 들 것.\n\n**(마) `docs/test/e2e.md` 주의.** 자매 `tbm_session-platform-scenario-e2e/rct_20260911-0003` 이 10:38:01Z 부터 `planning` 점유 중이고 PR #123(CLEAN)·#126(UNSTABLE, 10:40:40Z)이 그 파일 위에 열려 있다. 축 A 는 그 파일을 건드릴 필요가 없다 — 건드리지 말 것.",
@@ -5693,6 +5693,49 @@
               "startedAt": "2026-09-12T13:07:00Z",
               "finishedAt": "2026-09-12T13:11:10Z",
               "log": "미착지 — 이 단계의 델타는 PR #127 커밋 안에 있으나 main 에 머지되지 않았다. 실행 지침 §1 1단계 신선도 게이트에서 중단(상세는 verification.checks)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "failed",
+          "converged": false,
+          "asIsVersionAfter": "control-plane:7b15af53a15ccc388a2dc7f58a4cf8d0c91d091d data-plane:6429a84851c44330dacba917f1c984fe3ed8028b web:5ccff10ceb30519e8c61a30e795e87994982f3b8",
+          "verifiedAt": "2026-09-12T13:13:17Z",
+          "checks": [
+            {
+              "name": "§1-1 신선도 — PR #127 `mergeable_state`",
+              "status": "failed",
+              "detail": "측정 2026-09-12T13:08Z · `mergeable=false` · **`mergeable_state=dirty`** · `state=open` · `merged=false` · head `5ccec915` · base `79fd1338` · `updated_at=2026-09-12T11:55:40Z`.\n\n지침이 정한 정지 조건(「`CONFLICTING`/`DIRTY` 면 여기서 멈춘다」)에 그대로 걸렸다. 따라서 §1-2(CI 전건 초록)·§1-3(squash 머지)·§1-4(배포 관측)는 **도달하지 않았고 수행하지 않았다** — 앞의 것이 뒤의 전제라고 지침이 명시한 직렬 순서이기 때문이다.\n\n승인 코멘트가 이 결과를 **미리 예고했고**(승인 시점에도 `dirty`), 「승인은 변경의 내용과 위험에 대한 것이고 충돌 해소를 실행 단계가 임의로 수행해도 좋다는 뜻이 아니다 … 그 rebase 는 재계획의 몫이다」로 선을 그었다. 실행은 그 선을 넘지 않았다."
+            },
+            {
+              "name": "충돌의 국소성 — PR #127 ∩ main(base 이후) 파일 교집합",
+              "status": "passed",
+              "detail": "**정보성 — 재계획 입력.** 계획·승인 단계의 판독이 실측으로 확인됐다.\n\nbase `79fd1338` 이후 main 이 움직인 파일 6개(`data-plane/cmd/agent/session_mcp_gate_test.go` · `session_mcp_tools.go` · `docs/comment-policy/ledger.md` · `docs/index.html` · `docs/session-mcp-tool-surface.md` · `k8s/deployment.yaml` — #128 `43ee2ebf`(12:30Z) · #129 `054aac92`(12:48Z)) 대 PR #127 의 15파일. **교집합은 `docs/comment-policy/ledger.md` 단 하나**이고 코드 델타는 한 파일도 겹치지 않는다.\n\n충돌 지점도 한 행으로 좁혀진다 — 「4차 판정 패스(data-plane 전체)」 행을 양쪽이 같은 조상 `927 / d9018a9d32b6` 에서 각각 옮긴다: main(#129) → `927 / 5ee3891c5ca4`(증분 재판정, 줄 수 불변), PR #127 → `965 / a34b6372619e`. 나머지 3행(2차 `service` · 6차 `cmd` · 9차 `control-plane/test`)과 합계 마커(`2989 → 3016`)는 PR 단독 변경이다.\n\n⚠️ **기계적 rebase 로 끝나지 않는다** — 원장 R2 게이트는 행별 지문을 보므로, 그 행의 줄 수·지문을 #129 의 재판정(`5ee3891c5ca4`) **위에서 다시 재야** 하고 합계 마커도 그 위에서 다시 유도해야 한다. 그래서 이것이 실행의 몫이 아니라 재계획의 몫이다."
+            },
+            {
+              "name": "§1-3 머지 (squash) — PR #127",
+              "status": "failed",
+              "detail": "**수행하지 않음.** §1-1 게이트에서 중단했으므로 머지를 시도하지 않았다. 대상 레포 `dlddu/session-platform` 에는 **아무 변경도 가하지 않았다** — 이 실행은 read 권한 토큰만 발급했고(`contents:read` · `pull_requests:read` · `actions:read`) write 토큰을 받지 않았다. PR #127 은 열린 채 그대로다."
+            },
+            {
+              "name": "§2-2 ① 얼음 — `approval-gated` 세션 `POST /snapshot` → 200",
+              "status": "failed",
+              "detail": "미달성. 배포된 control-plane 파드 `control-plane-97d845985-v2lwx`(ns `session-platform`, Running, started 12:51:27Z)의 이미지가 **`ghcr.io/dlddu/session-platform:054aac929ea06f289364a3bd581779f2cc6f3717`** — 즉 **#129 머지 커밋의 핀**이고 #127 을 포함하지 않는다. main HEAD `419eb2eb`(`chore(deploy): … [skip ci]`)가 가리키는 핀과도 일치한다.\n\n전략 등록(`main.go`)이 착지하지 않았으므로 `approval-gated` 의 `Snapshot` 은 여전히 부모 동작인 **503 `checkpoint strategy is disabled`** 를 낸다. API 프로브는 하지 않았다 — 관측 대상이 존재하지 않고, 살아 있는 세션을 건드릴 이유도 없다."
+            },
+            {
+              "name": "§2-2 ② 파드 쌍 회수 · ③ 복원 재배선",
+              "status": "failed",
+              "detail": "미달성 — ①과 같은 뿌리다. 동결이 503 으로 거부되는 한 파드 쌍 회수도, 새 쌍으로의 `SESSION_MCP_URL` 재배선도 일어나지 않는다.\n\n참고: 공유 볼륨 왕복(`TestSharedVolume_SurvivesFreezeAndRestore`)은 원래부터 kind SUT 전용 증거이고 프로덕션에서 재확인할 대상이 아니다(§3-3 — 프로덕션 base 가 RWX 클래스를 이름 짓지 않는다). 그 CI 증거도 이번에는 갱신되지 않았다 — §1-2 에 도달하지 못했다."
+            },
+            {
+              "name": "as-is 버전 재계산 — 이 실행의 기여",
+              "status": "failed",
+              "detail": "**기여 0.** `asIs.versionScript` 를 main(`419eb2eb`) 기준으로 다시 계산한 값이 `control-plane:7b15af53 data-plane:6429a848 web:5ccff10c` 로, 모델이 12:53:18Z 에 기록한 `asIs.lastObservedVersion` 과 **한 글자도 다르지 않다**. 트리거 시점(`data-plane:b422cc38`) 이후 data-plane 이 움직인 것은 #128·#129 이지 이 실행이 아니다.\n\n즉 이 시도는 as-is 를 단 한 비트도 옮기지 않았다. 계획이 명시한 완료 기준(「배포된 SUT 에서 `approval-gated` 가 얼고 복원되며 공유 볼륨 바이트가 살아남는다」)에 **미달**이므로 `converged=false`."
+            },
+            {
+              "name": "잔여 gap (정보성)",
+              "status": "failed",
+              "detail": "**판정에 넣지 않는 정보성 기록.** 이 시도가 겨눈 슬라이스(AC-F5 후반 · 아카이브 축)가 통째로 남아 있고, 계획이 처음부터 범위 밖으로 둔 것도 그대로다:\n① 프로덕션 `SESSION_SHARED_VOLUME_STORAGE_CLASS` 배선(대상 클러스터의 성질 · `k8s/` 는 이 모델 범위 밖)\n② `control-plane/test/shared_volume_test.go` 의 주석 원장 편입(자매 `tbm_session-platform-comment-redundancy` 소관)\n\n재작업 시 planner 가 집을 것: PR #127 브랜치를 새 main(`419eb2eb` 이상) 위로 rebase 하고 `docs/comment-policy/ledger.md` 의 4차 판정 패스 행을 #129 재판정 위에서 재측정(줄 수·지문·합계 마커) → R2/R4 게이트 통과 확인 → CI(특히 kind e2e 의 SKIP 0) 재확인. **코드 델타는 손대지 않아도 된다**(충돌 0). 승인 내용 자체는 바뀌지 않으므로 재검토 범위는 원장 재측정과 갱신된 CI 신선도에 한정된다."
             }
           ]
         }
