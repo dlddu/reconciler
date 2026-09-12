@@ -3165,7 +3165,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-comment-redundancy",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-12T05:52:00Z",
       "changedSides": [
@@ -3324,6 +3324,54 @@
               "log": "범위 밖 잔여를 결과 보고로 상신. 게이트 자기 파서로 파일 단위 귀속을 다시 재 **미등재 3파일 48줄**(= 2975 − 2927)을 확정했다: `control-plane/test/shared_volume_test.go` **41줄**(감지 시점 29줄 + #101 이 실제로 더한 12줄 — 계획이 예상한 52줄보다 적다) · 오탐 `web/src/design/README.md` 6줄 · `data-plane/Dockerfile` 1줄. **소유자가 0이던 175줄 / 2파일은 전부 닫혔다.**\n\n특히 **모델 정의 정밀도 결함**(as-is `DIRECTIVE` 의 제외 토큰이 `검증 AC:`(레포에 0건)이고 실재 마커는 `검증 시나리오:`(29건)라 모델 지문과 게이트 판정 대상이 **정확히 29줄** 어긋난다 — 실측 재확인: 모델 as-is `lines=3004` vs 게이트 판정 대상 `2975`, 차이 **29**. `definition` 이 이름으로 부르는 `scripts/e2e/check-ac-mapping.sh` 도 부재)은 **6 fire 연속 관측**이고 `to-be-models.json` 에서만 고칠 수 있어 planner·executor 가 닫을 수 없다 — `reconciler-tobe-modeler` 소관으로 사용자에게 올렸다. **이 단계는 `to-be-models.json` 을 고치지 않았다**(고치면 소유자가 둘이 된다)."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=3004 files=130\n70c080e925c1c19f9569ffed6dd43fd6f648d2be37b3c14eb02b1bd6b47e0634",
+          "checks": [
+            {
+              "name": "완료기준① #119 가 squash 로 main 에 머지",
+              "status": "passed",
+              "detail": "`mergedAt=2026-09-12T07:47:57Z` · squash 커밋 `989d1202ba2b8be0c202a013787f46b84e14d4df` · main head 가 그 커밋. `--squash` 단독 호출(레포가 merge commit·rebase 머지를 거부). 브랜치 자동 삭제(404)."
+            },
+            {
+              "name": "완료기준② 게이트 rc=0 · 등재 14 · 14차 행 33줄/a5f2efd9374a",
+              "status": "passed",
+              "detail": "머지된 main `989d120` 에서 `check_comment_policy.py` rc=0 · 등재 범위 **14** · 마지막 행 `2026-09-12(#14) 33줄 a5f2efd9374a` (두 대상 파일). R5 스캔 **16파일 1296줄**(새 `passes/` 파일이 스캔 범위에 실제로 들어갔다 — 15→16). 전체 지문 `c36ec32c93c6fa398532658b99a67003840ad2d094a1df8b7654c24fd6a90c15`."
+            },
+            {
+              "name": "완료기준③ 판정 완료 = 머지 직전 main 합계 + 33",
+              "status": "passed",
+              "detail": "머지 **직전**(4단계보다 먼저) `../base`=`d4b1b61` 에서 뜬 기준선이 **2894**, 머지 후가 **2927** → 델타 **정확히 +33**. #101 이 먼저 착지한 경로였으므로 계획이 그 경우에 예고한 수렴값 **2927**(=2894+33=2827+100)과 일치. 합계 값은 손으로 더하지 않고 게이트의 `[R4]` 발화가 찍어 준 정답을 넣었다. 판정 대상(분모 2975)·비율(98.4%)은 완료 기준이 아니다."
+            },
+            {
+              "name": "완료기준④ 자매 게이트 3종 rc=0(무접촉) · CI 전 잡 초록",
+              "status": "passed",
+              "detail": "머지된 main 에서 `check-fidelity-allowlist.py` rc=0 · `check-render-fidelity.py` rc=0 · `e2e/check-scenario-mapping.sh` rc=0(매칭 26 + 예외 3 + 구현 대기 0 + 저작 대기 8 — 부모와 회계 동일). CI: PR head `b528e80` 에서 **15잡 14 success · 1 skipped(main 전용) · 0 fail** 완주, e2e 가 `--- PASS` **123** / `--- FAIL` **0** / `--- SKIP` **0** 이고 판정 대상 두 파일의 **여섯 테스트가 실 클러스터에서 통과**(SKIP 0 이 이 초록이 공허하지 않다는 증거). 머지된 main `989d120` 도 **fail 0**(12 success; 기록 시점 3잡 `in_progress` 이나 동일 트리 `b528e80` 에서 이미 셋 다 success)."
+            },
+            {
+              "name": "완료기준⑤ 두 파일의 비-주석·비-공백 줄이 머지 전후로 동일",
+              "status": "passed",
+              "detail": "게이트와 같은 `COMMENT_RE` 로 추출해 `../base`(머지 직전 main `d4b1b61`)와 대조: `#3` **175→175** · `#4` **184→184**, 개수 동일 + 공백 정규화 후 **바이트 동일**(normalized-identical True). 정규화 전 차이는 계획이 이름까지 예고한 **상수 정렬 공백 2곳**(`cc3SlowBytes` · `cc4AlphaBytes`)뿐. 코드 동작 불변."
+            },
+            {
+              "name": "승인 범위 보전 — 코드 blob 바이트 동일성",
+              "status": "passed",
+              "detail": "승인 부기가 「코드 blob 이 바이트 동일한 범위에서만 이 승인이 유효하다」고 못박았다. rebase 후 두 테스트 파일과 새 `passes/2026-09-12-claude-code-3-and-4.md` 는 승인된 head `0221334` 와 **blob 해시 IDENTICAL**. 바뀐 것은 `ledger.md` 한 파일이고, 그 안에서 이 PR 자신의 delta 는 **14차 행 추가 + 합계 마커 2894→2927 딱 둘**(`git diff origin/main HEAD`). 3단계의 `--force-with-lease` 재push·`gh pr edit --title` 은 승인 부기가 명시적으로 열어 준 위임 범위 안이며, 제목 교정은 트리를 바꾸지 않는다."
+            },
+            {
+              "name": "(정보성) 모델 전체 to-be 와의 잔여 gap — 이 task 범위 밖",
+              "status": "passed",
+              "detail": "미등재 **3파일 48줄**(=2975−2927): `control-plane/test/shared_volume_test.go` **41줄**(이중 계상 가드로 유예 유지 — #101 이 그 파일에 실제로 더한 것은 12줄로 계획이 예상한 52줄보다 적다) · 오탐 `web/src/design/README.md` 6줄 · `data-plane/Dockerfile` 1줄. **이 시도의 범위였던 「소유자 0인 175줄 / 2파일」은 전부 닫혔다.** 잔여는 converged 판정에 넣지 않으며, 7단계가 기록한 as-is·to-be 이동을 **다음 감지 주기**가 보고 후속 task 를 연다."
+            },
+            {
+              "name": "(정보성) 모델 정의 정밀도 결함 — 6 fire 연속, 여기서 닫을 수 없다",
+              "status": "passed",
+              "detail": "as-is `DIRECTIVE` 의 제외 토큰 `검증 AC:` 는 레포에 **0건**이고 실재 마커는 `검증 시나리오:` **29건**이라, 모델 지문(`lines=3004`)과 게이트 판정 대상(**2975**)이 **정확히 29줄** 어긋난다(이번 실측으로 재확인). `definition` 이 이름으로 부르는 `scripts/e2e/check-ac-mapping.sh` 도 부재(09-08 `check-scenario-mapping.sh` 로 개명). 고칠 자리가 reconciler 의 `to-be-models.json` 하나뿐이라 planner·executor 가 닫을 수 없고 이 모델은 자기를 감시하지 않아 자동 재감지 경로가 0 — **`reconciler-tobe-modeler` 소관으로 사람에게 상신**했다(8단계). 이 task 의 완료 기준과 무관하므로 converged 판정에 넣지 않는다."
+            }
+          ],
+          "verifiedAt": "2026-09-12T07:52:00Z"
         }
       }
     ]
