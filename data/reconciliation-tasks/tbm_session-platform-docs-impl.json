@@ -5848,7 +5848,7 @@
       }
     },
     "createdAt": "2026-09-12T12:53:18Z",
-    "updatedAt": "2026-09-12T13:15:00Z",
+    "updatedAt": "2026-09-12T13:21:00Z",
     "stateSummary": {
       "asIs": "**as-is (구현) — `dlddu/session-platform` main `419eb2eb` 기준, 관측 2026-09-12T12:50Z**\n\nas-is 버전은 `data-plane` 성분만 움직였다(`b422cc38` → `6429a848`; `control-plane` `7b15af53` · `web` `5ccff10c` 불변). 원인은 **PR #129 `feat(session-mcp): web_fetch_get 이 평문 http 대상을 받는다`**(머지 커밋 `054aac9`, 2026-09-12T12:48:40Z)이고, 그 위에 배포 핀 `419eb2eb`(12:49:38Z, `k8s/deployment.yaml` — as-is 범위 밖)이 얹혀 있다.\n\n#129 가 구현에서 바꾼 것(`data-plane/cmd/agent/`):\n- `session_mcp_tools.go` / `validateFetchTarget`: 스킴 검사가 `parsed.Scheme != \"https\"` 거절에서 **`http` 와 `https` 둘 다 허용**으로 넓어졌다. 오류 문구도 `url must be http or https, got %q` 로 바뀌었다.\n- 같은 파일 `toolDefinitions()` 의 `url` 인자 description: `The https URL to fetch.` → `The http or https URL to fetch.`\n- `session_mcp_gate_test.go`: 신규 `TestSessionMCPAcceptsPlaintextTarget`(`http://rates.internal.svc.cluster.local/v1/latest` 가 승인 요청 1건을 만들고 실제로 fetch 됨을 단언). 거절 표에서 `{\"plaintext http\", …}` 행이 빠지고 `{\"ftp scheme\", …}` · `{\"no host, http\", \"http://\"}` 가 들어왔다 — 호스트 검사와 그 밖 스킴 거절은 그대로다.\n\n도구 표면 자체는 늘지 않았다: `toolDefinitions()` 가 내는 도구는 여전히 **`web_fetch_get` 하나**(자매 모델 `tbm_session-platform-mcp-tool-roadmap` 의 첫 관측으로 독립 확인).",
       "toBe": "**to-be (제품 문서 `docs/`) — tree `eba53645`(이전 `4b8ee10e`), 관측 2026-09-12T12:50Z**\n\n같은 커밋 `054aac9` 가 docs 에서 만진 파일은 **둘뿐**이다.\n\n1. `docs/session-mcp-tool-surface.md`\n   - 「지금 있는 것」 표(36행)의 `web_fetch_get` 인자 칸: `url` (https 강제, …) → **`url` (http·https만, …)**.\n   - **R4**(사람이 읽고 판정할 수 있는 컨텍스트) 산문: 「`web_fetch_get` 이 https 만 받는 이유」 → 「**http·https 밖의 스킴을 받지 않는 이유**」로 재서술하고, 거절 예를 `file://` 로 명시한 뒤 **「평문 http 는 이 선 안쪽이다」** 와 그 근거(TLS 를 세우지 않은 원본이 실제 대상이고, 스킴은 승인자가 읽는 URL 에 그대로 보인다)를 더했다. 완화 사실을 `(2026-09-12 완화 — 그 전까지는 https만 받았다)` 로 날짜와 함께 남겼다.\n   - 머리 상태 줄은 건드리지 않았고, 건드릴 이유도 없다 — **도구 1개 착지 · 등재 5개**는 여전히 참이다(실측 일치).\n2. `docs/comment-policy/ledger.md` — 4차 판정 패스 행 한 줄. 자매 모델 `tbm_session-platform-comment-redundancy` 의 to-be 이고 그쪽 `rct_20260912-0007` 에서 판정했다(요지: 이 PR 이 자기 주석 증분을 스스로 판정·등재했다).\n\n**움직이지 않은 문서 중 하나가 문제다.** `docs/test/e2e.md` 는 이 커밋이 한 글자도 만지지 않았는데, 그 파일 **218행**의 `<!-- fidelity:blockers -->` 표 행이 구현 사실을 **현재형 단언**으로 들고 있다:\n\n> 승인된 `web_fetch_get` 의 **실제 아웃바운드 호출**. **도구는 https 만 받는데(`validateFetchTarget`)**, 그 호출을 내는 MCP 컨테이너의 fetch 는 **시스템 루트만 신뢰하는 기본 클라이언트**다 … 그래서 인클러스터 https 원본을 세워도 그 인증서를 검증할 수 없고, 승인 갈래는 *게이트를 통과했다*는 데까지만 관측된다.\n\n이 문장은 함수 이름까지 지목하며 「지금 그렇다」를 말하는 살아 있는 주장이지, 날짜 붙은 과거 기록이 아니다.",
@@ -5860,6 +5860,47 @@
       "reason": "**작업 필요(`actionRequired: true`).** 거짓이 살아 있고, 재감지 경로가 없고, 고칠 대상이 한 곳으로 특정된다.\n\n- **무엇을 고치나**: `docs/test/e2e.md` 218행 `<!-- fidelity:blockers -->` 행의 『무엇이 막는가』 칸에서 **「도구는 https 만 받는데(`validateFetchTarget`)」** 전제를 현재 구현(http·https 허용, `054aac9`)에 맞게 고친다.\n- **방향은 「문서를 코드에 맞춘다」**. 이 모델의 「충돌 시 기본 방향」은 문서 우선이지만 **의도된 동작 변경이면 문서를 갱신**하는 쪽이고, #129 는 PR 제목·R4 산문의 날짜 주석(`2026-09-12 완화`)·전용 테스트로 의도성을 명시한다. 완화 자체를 되돌리는 판단이 아니다.\n- **범위 경계(중요)**: 이 task 는 **전제 문장의 정정까지**다. 그 행의 `판정`(`없음`)·`해소 시` 서술·「남은 선택 셋」을 **실제로 다시 판정하는 것은 `tbm_session-platform-e2e-mock-policy` 의 몫**이다(그 표의 ⚠️ 주석이 경과·해소 판정을 그 모델에 귀속시킨다). 평문 http 가 열렸으니 blocker 가 풀렸다고 **이 task 가 단정하지 말 것** — 다만 그 재판정의 입력이 바뀌었다는 사실은 정정 hunk 에 남겨 인계한다.\n- **부수 효과가 인계를 완성한다**: 그 절을 편집하면 `tbm_session-platform-e2e-mock-policy` 의 toBe(충실도 절 해시)가 **반드시 움직이므로**, 정정이 머지되는 순간 그 모델의 재감지가 열리고 소유권이 제자리로 돌아간다. 지금 없는 것은 그 최초의 한 번이다.\n- 함께 확인해 둔 것(추가 작업 아님): `docs/prd/` 에 스킴을 단언하는 AC 는 없고, `docs/mockups/gated-workspace.html` 의 https 예시는 목업 예시 값이라 판정 축 밖이며, `docs/doc-tracker.md` 변경 이력 행 부재는 이 레포에 그런 규범 문장이 없어 결함으로 세지 않는다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-12T12:57:22Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**이 시도의 범위: `docs/test/e2e.md` 안에서 #129 가 거짓으로 만든 「도구는 https 만 받는다」 전제를, 지금 손댈 수 있는 두 자리에서 정정한다 — 그 이상은 하지 않는다.**\n\n감지가 지목한 자리는 218행 `<!-- fidelity:blockers -->` 의 `FETCH-ORIGIN` 행이고, 같은 전제를 **현재형으로** 들고 있는 자리가 파일 안에 하나 더 있어 함께 집었다(243행 `APPROVAL-GATEWAY` 모킹 예외 행의 대조 괄호 「https 강제는 도구의 대상 URL 쪽이다」). 둘 다 `충실도` 절(7~278행) 안이라 한 hunk 성격이고, **자매 모델 `tbm_session-platform-e2e-mock-policy` 의 toBe(그 절의 해시)를 반드시 움직인다** — 감지가 적은 대로, 그 이동이 이 정정의 진짜 산출이다. 지금 이 거짓을 볼 수 있는 모델이 이 task 뿐이고, 정정이 머지되는 순간 그 모델의 재감지가 열려 소유권이 제자리로 돌아간다.\n\n**왜 「고쳐 적기」이지 「되돌리기」가 아닌가**: #129 는 PR 제목·R4 산문의 날짜 주석(`2026-09-12 완화`)·전용 테스트로 완화의 의도성을 명시한다. 이 모델의 충돌 기본 방향은 문서 우선이지만 **의도된 동작 변경이면 문서를 갱신**하는 쪽이고, 여기가 그 경우다.\n\n**완료 기준(이 범위 기준으로 수렴을 판정한다)**\n1. 218행 『무엇이 막는가』가 더 이상 「도구는 https 만 받는다」를 현재형 전제로 쓰지 않는다. 그 자리에 **정정 사실**(`validateFetchTarget` 이 `http`·`https` 를 함께 받는다, #129)과 **그로 인해 재판정의 입력이 달라졌다는 인계 문장**이 남는다.\n2. 243행의 같은 전제(대조 괄호)가 현재 구현에 맞게 고쳐진다.\n3. 정적 게이트 4종이 그대로 통과하고, `fidelity` 의 회계(차단 요인 1건 · 착수 가능 0건)가 **불변**이다 — 판정·소관·선행·재검토 시점 칸을 건드리지 않았다는 기계적 증거.\n\n**범위 밖(의도적으로 남김 — 잔여는 재감지가 새 task 로 잇는다)**\n- **판정을 뒤집지 않는다.** 평문 http 가 열렸으니 `FETCH-ORIGIN` 차단이 풀렸다고 **단정하지 않는다** — 그 행의 `판정`(`없음`)·『해소 시』의 「남은 선택 셋」 재판정은 그 표의 ⚠️ 주석이 `tbm_session-platform-e2e-mock-policy` 에 귀속시킨 몫이다. 이 정정은 그 재판정의 **입력이 달라졌다는 사실까지**만 적는다.\n- **`docs/test/e2e.md:876`**(§「남은 미검증 분기」의 같은 전제 행)과 **`docs/doc-tracker.md:56`**(「구현 사슬 부채」 항목이 `session_mcp_tools.go:184` 와 사라진 오류 문자열 `url must be https` 를 이름으로 지목하며 같은 전제를 현재형으로 단언)은 **지금 집지 않는다** — 둘 다 실행 중인 자매 PR #127(`rct_20260912-0007`, `executing`)의 열린 hunk 와 **행 단위로 겹친다**(e2e.md `@@ -875,8 +882,6 @@` 의 컨텍스트 · doc-tracker.md `@@ -52,8 +52,8 @@` 은 56행 자체를 다시 쓴다). 실측으로 확인한 것: **#127 의 새 56행은 그 거짓 문장을 축자로 그대로 들고 간다** — 즉 #127 이 착지해도 이 둘은 남고, 그때는 겹침이 사라져 후속 슬라이스가 집을 수 있다.\n- `docs/doc-tracker.md` 의 날짜 붙은 **변경 이력** 행(2026-09-04 (3), 「https만 받고…」)은 그 시점의 스냅샷이라 거짓으로 세지 않는다. 새 이력 행도 더하지 않는다 — #127 이 이미 `2026-09-12 (5)` 를 점유해 충돌면이 된다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-12T13:21:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`dlddu/session-platform` main(`419eb2eb`)에서 브랜치 `reconcile/rct_20260912-0011-session-platform-docs-impl` 를 끊고 `docs/test/e2e.md` 두 자리를 정정한다 — ⑴ 218행 `FETCH-ORIGIN` 행에서 「도구는 https 만 받는데(`validateFetchTarget`),」 절을 걷고 같은 셀 끝에 ⚠️ 전제 정정 + 인계 문장을 붙인다, ⑵ 243행 `APPROVAL-GATEWAY` 행의 괄호 「(https 강제는 도구의 대상 URL 쪽이다)」를 현재 사실로 고쳐 문장 끝으로 옮긴다. 치환은 원문 블록이 파일에 **정확히 1회** 있음을 확인하며 수행한다.",
+              "expectedOutcome": "1파일 · `+2/−2`(행 단위). 표의 칸 수(`|` 개수)와 판정·코드 위치·리터럴·판정·소관·선행·재검토 시점 칸은 **한 글자도 바뀌지 않는다**. 제품 코드 0줄."
+            },
+            {
+              "seq": 2,
+              "action": "정적 게이트 4종을 로컬에서 CI 와 같은 명령으로 재현한다: `python3 scripts/check-fidelity-allowlist.py` · `python3 scripts/check-render-fidelity.py` · `python3 scripts/check_comment_policy.py` · `./scripts/e2e/check-scenario-mapping.sh`.",
+              "expectedOutcome": "네 개 전부 `rc=0`. 특히 `fidelity` 의 마지막 줄이 **「차단 요인 1건 … 착수 가능 0건(선행 없음 + 소관 '이 모델')」로 정정 전과 동일**해야 한다 — 이것이 「칸을 건드리지 않았다 = 판정을 뒤집지 않았다」의 기계적 증거다."
+            },
+            {
+              "seq": 3,
+              "action": "브랜치를 푸시하고 PR 을 연다(머지하지 않는다). 본문에 task id · gap 요약 · 정정 전후 · 범위 밖 두 자리와 그 이유(#127 겹침)를 적는다.",
+              "expectedOutcome": "PR URL 확보. `docs/**` 만 만지므로 **`e2e.yml`(kind SUT)은 path 필터에 걸리지 않아 돌지 않고**, `ci.yml` 12잡만 돈다."
+            },
+            {
+              "seq": 4,
+              "action": "실행 단계: PR 의 `ci` 체크가 전부 초록인지 확인한다(`gh pr checks`). 특히 `fidelity` · `scenario-mapping` · `comment-policy` · `render-fidelity` 네 정적 게이트.",
+              "expectedOutcome": "실패 0. `e2e (kind + API + browser)` 는 **아예 목록에 없다**(path 필터) — 없는 것이 정상이며 「대기 중」으로 오독하지 않는다."
+            },
+            {
+              "seq": 5,
+              "action": "squash 머지한다(이 레포는 squash 만 허용). 머지 직전 `mergeable` 을 재확인하고, 그 사이 #127 이 먼저 착지했다면 `docs/test/e2e.md` 를 rebase 한다.",
+              "expectedOutcome": "main 에 정정 1커밋. `docs/test/e2e.md` 218·243 행이 정정본이다."
+            },
+            {
+              "seq": 6,
+              "action": "머지 후 수렴을 확인한다 — ⑴ main 에서 `docs/test/e2e.md` 의 `충실도` 절(7~278행)에 「도구는 https 만 받는다」를 **현재형 전제로 쓰는 문장이 0건**(218행에 남는 것은 거짓이라고 표시한 인용뿐), ⑵ 그 절의 발췌 해시가 이동해 자매 모델 `tbm_session-platform-e2e-mock-policy` 의 toBe 버전이 바뀌었는지.",
+              "expectedOutcome": "⑴ 확인되고 ⑵ 해시가 직전 값(`lines=231` / `62ba1aca…`)에서 이동한다 → 그 모델의 다음 감지가 「해소 방향 재판정」을 자기 표면에서 열 수 있다. 이 둘이면 이 task 의 완료 기준을 충족한다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
