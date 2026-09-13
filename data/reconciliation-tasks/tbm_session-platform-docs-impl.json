@@ -6139,7 +6139,7 @@
       }
     },
     "createdAt": "2026-09-13T09:26:21Z",
-    "updatedAt": "2026-09-13T09:39:00Z",
+    "updatedAt": "2026-09-13T09:52:00Z",
     "id": "rct_20260913-0002",
     "stateSummary": {
       "asIs": "## 실측 as-is (2026-09-13T09:2x UTC, `dlddu/session-platform` main `ba67081`)\n\n**구현(제품 코드)은 이번 트리거로 한 줄도 바뀌지 않았다.** asIs 지문 3성분 중 움직인 것은 `control-plane`\n하나(`7b15af53`→`84de316a`)이고, 그것을 움직인 것은 **#131(`7005b85`) 단독**이다 — 부모 `69ff764` 에서\nversionScript 를 재실행하면 저장돼 있던 baseline 과 바이트 동일이다. `data-plane`(`6429a848`)·`web`(`5ccff10c`)\n는 불변. #131 은 `git diff --stat 69ff764 7005b85 -- control-plane/internal control-plane/api control-plane/cmd\ndata-plane web/src` 가 **공집합**인 주석 판정 패스다(만진 것은 `control-plane/test/e2e_approval_gated_3_\napproval_path_test.go` 주석 · `docs/comment-policy/ledger.md` · 신규 `passes/2026-09-12-approval-gated-3.md`).\n\n**이 판정에 걸리는 코드 사실(전수 실측):**\n- `data-plane/cmd/agent/session_mcp_tools.go:229` — `return \"\", fmt.Errorf(\"url must be http or https, got %q\", parsed.Scheme)`.\n  즉 `validateFetchTarget` 은 **`http` 와 `https` 를 함께 받는다**(2026-09-12 #129 `054aac9` 이후).\n- 리터럴 `url must be https` 는 레포 **코드 전체에서 0건**(`git grep -c 'url must be https' -- data-plane control-plane web`).\n- `http.DefaultClient.Do(req)` 의 실제 위치는 같은 파일 **`:253`**.\n- AC 인벤토리 불변: `docs/prd` 의 고유 AC **27개**(A3·B3·C4·D5·E6·F6) — 트리거가 `docs/prd` 를 만지지 않았다.\n\n**레포 자체 게이트 4종을 부모(`69ff764`)·트리거(`ba67081`) 두 지점에서 실행 — 전부 `rc=0`:**\n`check-fidelity-allowlist.py` · `check-render-fidelity.py` · `check_comment_policy.py` · `check-scenario-mapping.sh`.\n`fidelity` 회계는 **두 지점 바이트 동일**(`차단 요인 1건 … 착수 가능 0건`), `check-scenario-mapping.sh` 도\n동일(`시나리오 37 = 매칭 0 + 예외 3 + 유예 34 + 공백 0`). `check_comment_policy.py` 만 최신 원장 행이\n`#14`→`#15` 로 늘었는데 그것이 #131 자신의 등재라 정상이다. ⚠️ **초록은 행의 *형태*와 주석↔원장 등재만\n증명하고 산문의 *진위* 는 보지 않는다** — 아래 gap 은 게이트가 원리적으로 못 보는 축이다.",
@@ -6152,6 +6152,42 @@
       "reason": "**작업 필요(`actionRequired: true`).** 거짓이 두 자리에 살아 있고, 그 둘을 볼 수 있는 모델이\n이 모델뿐이며, 자동으로 닫히지 않는다는 것을 실측으로 확인했다.\n\n- **무엇을 고치나(범위 제안, 두 자리)**:\n  ⑴ `docs/test/e2e.md:770` §「남은 미검증 분기」 행의 「도구는 https 만 받는데(`validateFetchTarget`)」\n     전제를 현재 구현에 맞게 정정한다(#133 이 218행에 쓴 것과 같은 형태).\n  ⑵ `docs/doc-tracker.md:56` 🟡 「구현 사슬 부채」 ③ 의 「https를 강제하는데(`…:184` — `url must be https`)」\n     를 정정하고, 함께 **밀린 좌표 둘을 심볼 이름으로 바꾼다**(`:184`→`validateFetchTarget`,\n     `:208`→`http.DefaultClient` 호출 지점) — 그 파일의 2026-09-08 행이 스스로 세운 규범이고,\n     `doc-tracker.md` 를 읽는 CI 게이트가 0개라 좌표로 두면 다시 조용히 밀린다.\n- **방향은 「문서를 코드에 맞춘다」**. #129 는 PR 제목·R4 산문의 날짜 주석·전용 테스트로 완화의\n  의도성을 명시한다. 완화를 되돌리는 판단이 아니다(`rct_20260912-0011` 과 같은 근거).\n- **판정을 뒤집지 않는다(범위 경계)**: `FETCH-ORIGIN` 행의 `판정`(`없음`)→`EXT` 전환과 「남은 선택 셋」\n  재판정은 🟠 인계 절이 자매 `tbm_session-platform-e2e-mock-policy` 에 귀속시킨 몫이다. 이 task 는\n  **전제 문장의 사실 정정과 좌표 갱신까지**다.\n- **선후 제약(계획 단계에 반드시 실을 것)**: 두 자리 모두 미머지 PR **#127** 의 열린 hunk 안에 있다\n  (`doc-tracker.md` 는 56행을 직접 다시 쓰고, `e2e.md` 는 770행을 컨텍스트로 문다). 게다가 #127 은\n  지금 `ledger.md` 에서 **CONFLICTING** 이라 어차피 rebase 가 선행이다. ⇒ **#127 착지 뒤에 집는 것이\n  안전하고**, 먼저 집어야 한다면 `doc-tracker.md` 쪽은 #127 의 56행 재작성과 충돌이 확정적이므로\n  `e2e.md:770` 한 자리로 좁히는 분할이 가능하다. 어느 쪽이든 **#127 은 이 거짓을 고쳐 주지 않으므로**\n  기다림이 해소가 아니라는 점은 분명하다(축자 잔존 실측).\n- **왜 지금 `no_action_needed` 가 아닌가**: 두 문장은 *그대로 있는 채* 거짓이 된 형태라 어떤 side 의\n  버전도 스스로 움직이지 않는다. 게이트 4종은 부모·트리거 양쪽 `rc=0` 이고 `fidelity` 회계는 바이트\n  동일이라 **초록이 이 축을 가린다**. 여기서 baseline 만 전진시키면 이 거짓을 여는 사건이 사라진다.\n- **왜 재확인 유예가 아닌가**: 자동 해소 가능성이 없다(#127 이 축자로 들고 간다는 것을 그 브랜치에서\n  직접 grep 해 확인했고, #127 자신은 `approving` 백로그에 걸려 시점이 불확정이다). 덧붙여 현 스키마의\n  `assessment` 에는 `recheckAfter` 필드가 없어 유예는 스키마 확장을 먼저 요구한다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-13T09:33:19Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "docs/doc-tracker.md:56 「🟡 구현 사슬 부채」 항목 ③이 현재형으로 단 언하는 거짓 전제 한 문장과 그것이 달고 있는 밀린 좌표 둘을, #133이 e2e.md:218에 쓴 것과 같은 형태(전제만 정정 · 판정은 하지 않음)로 고친다. **왜 이 방법인가**: ①거짓의 방향이 「문서가 코드에 뒤처짐」이다 — #129는 PR 제목·전용 테스트로 완화의 의도성을 명시하므로 모델 정의의 「의도된 동작 변경이면 문서를 코드에 맞춘다」에 해당하고, 완화를 되돌리는 판단이 아니다. ②좌표를 심볼 이름으로 옮기는 것은 이 파일 자신의 2026-09-08 규범이다(「줄 번호는 다음 편집이 조용히 밀어 버리는데 doc-tracker.md를 읽는 CI 게이트는 0개라 영영 잡히지 않는다 — 그래서 재측정이 필요 없는 심볼 이름으로 옮겼다」) — 같은 정정을 좌표로 다시 쓰면 다음 편집에 또 밀린다. ③가역성: docs 1파일 2줄이라 revert 하나로 되돌아가고 코드·클러스터·데이터에 닿지 않는다. **완료 기준(이 시도의 범위)**: `docs/doc-tracker.md`의 **살아 있는 단언 한 줄(56행 항목 ③)**에서 ⑴「https를 강제한다」가 사라지고 ⑵존재하지 않는 리터럴 `url must be https`가 사라지고 ⑶좌표 `:184`·`:208`이 심볼 이름(`validateFetchTarget`·`http.DefaultClient`)으로 바뀌고 ⑷그 정정을 기록하는 변경 이력 행이 붙는 것. 이 넷이 성립하면 성공이다. **범위 밖(경계)**: ⓐ`docs/test/e2e.md:770`·`:771` — 같은 거짓 전제의 사본이고 내 gap에도 잡혀 있으나, 자매 `tbm_session-platform-e2e-mock-policy`의 `rct_20260913-0002`가 **지금 planning 점유 중**이며 그 assessment가 항목 B로 「같은 슬라이스에 실을 것 · A(FETCH-ORIGIN 해소 방향 재판정)의 판정이 이 두 행의 논증도 바꾸므로 한 hunk로 함께 가는 것이 맞다」를 명시해 그 슬라이스에 귀속시켰다. 그 재판정은 내 몫이 아니므로 양보한다. ⓑ`FETCH-ORIGIN` 행의 판정(`없음`→`EXT`) 전환 — 2026-09-07 인계대로 자매 소관. ⓒ변경 이력 행 129·130·133의 같은 문자열 — 날짜 붙은 과거 기록이라 정정 대상이 아니다(ledger.md:35와 같은 성격). ⓓ같은 줄의 `k8s/deployment.yaml:52·62·75·70-73` 좌표 — 실측으로 여전히 참이라 건드리지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "main(`ba67081`)에서 브랜치 `reconcile/rct_20260913-0002-session-platform-docs-impl`를 딴다. 모델 슬러그를 붙이는 이유는 자매 모델의 task도 같은 id `rct_20260913-0002`를 쓰고 이미 `reconcile/rct_20260913-0002-e2e-mock-policy`를 push해 두었기 때문이다(rct id는 모델 간 유일하지 않다).",
+              "expectedOutcome": "브랜치가 `ba67081`에서 갈라져 나오고, 기존 원격 브랜치 어느 것과도 이름이 겹치지 않는다."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/doc-tracker.md` 56행 항목 ③의 전제 문장을 고친다: 「도구는 대상 URL에 https를 강제하는데(`...session_mcp_tools.go:184` — `url must be https`) … `http.DefaultClient`다(`:208`)」 → 「`http`와 `https`를 함께 받고(`validateFetchTarget`) … `http.DefaultClient`다」 + ⚠️ 전제 정정 문단(무엇이 왜 거짓이 됐는지 · 좌표를 심볼로 옮긴 근거 · **재판정은 자매 소관이라 하지 않는다**는 경계 선언).",
+              "expectedOutcome": "56행에서 `url must be https`·`session_mcp_tools.go:184`·`` `:208` ``·「https를 강제」가 모두 사라지고, 항목 ③의 결론(해소는 대역 · 소관은 자매 모델)은 한 글자도 바뀌지 않는다."
+            },
+            {
+              "seq": 3,
+              "action": "변경 이력 표 끝(139행 뒤)에 `| 2026-09-13 | **문서 정정 — …** | 이전 상태 | 이후 상태 |` 4열 행을 붙인다. 2026-09-12 (3)·(4) 행이 같은 성격의 문서 정정 슬라이스로 세워 둔 형식을 따른다.",
+              "expectedOutcome": "표가 4열 형식을 유지한 채 행이 하나 늘고, 이전/이후 열이 거짓 진술 수의 변화(1→0)를 적는다."
+            },
+            {
+              "seq": 4,
+              "action": "변경 범위를 기계적으로 검증한다: `git diff --stat`이 `docs/doc-tracker.md` 1파일뿐이고 바뀐 줄이 56행과 새 이력 행 둘뿐인지, 56행에 금지 문자열 4종이 0건인지, 129·130·133행이 바이트 불변인지 확인한다.",
+              "expectedOutcome": "1 file changed, +2/-1. 금지 문자열 4종은 56행에서 0건이고 129·130·133행에는 그대로 남는다."
+            },
+            {
+              "seq": 5,
+              "action": "브랜치를 push하고 GitHub API로 PR을 연다(머지하지 않는다). 본문에 task id, gap 요약, 계획 단계, 검증 방법, 그리고 **PR #127과의 선후 제약**을 적는다.",
+              "expectedOutcome": "PR이 열리고 `mergeable_state`가 `clean`이다(main 56행은 merge-base 이후 바뀐 적이 없다 — `base(69ff764) == main(ba67081)` 실측)."
+            }
+          ],
+          "plannedAt": "2026-09-13T09:52:00Z"
+        }
+      }
+    ]
   }
 ]
