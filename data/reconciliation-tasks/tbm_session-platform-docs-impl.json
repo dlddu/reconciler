@@ -6122,7 +6122,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "detectedAt": "2026-09-13T09:26:21Z",
       "changedSides": [
@@ -6139,7 +6139,7 @@
       }
     },
     "createdAt": "2026-09-13T09:26:21Z",
-    "updatedAt": "2026-09-13T10:20:00Z",
+    "updatedAt": "2026-09-13T10:21:00Z",
     "id": "rct_20260913-0002",
     "stateSummary": {
       "asIs": "## 실측 as-is (2026-09-13T09:2x UTC, `dlddu/session-platform` main `ba67081`)\n\n**구현(제품 코드)은 이번 트리거로 한 줄도 바뀌지 않았다.** asIs 지문 3성분 중 움직인 것은 `control-plane`\n하나(`7b15af53`→`84de316a`)이고, 그것을 움직인 것은 **#131(`7005b85`) 단독**이다 — 부모 `69ff764` 에서\nversionScript 를 재실행하면 저장돼 있던 baseline 과 바이트 동일이다. `data-plane`(`6429a848`)·`web`(`5ccff10c`)\n는 불변. #131 은 `git diff --stat 69ff764 7005b85 -- control-plane/internal control-plane/api control-plane/cmd\ndata-plane web/src` 가 **공집합**인 주석 판정 패스다(만진 것은 `control-plane/test/e2e_approval_gated_3_\napproval_path_test.go` 주석 · `docs/comment-policy/ledger.md` · 신규 `passes/2026-09-12-approval-gated-3.md`).\n\n**이 판정에 걸리는 코드 사실(전수 실측):**\n- `data-plane/cmd/agent/session_mcp_tools.go:229` — `return \"\", fmt.Errorf(\"url must be http or https, got %q\", parsed.Scheme)`.\n  즉 `validateFetchTarget` 은 **`http` 와 `https` 를 함께 받는다**(2026-09-12 #129 `054aac9` 이후).\n- 리터럴 `url must be https` 는 레포 **코드 전체에서 0건**(`git grep -c 'url must be https' -- data-plane control-plane web`).\n- `http.DefaultClient.Do(req)` 의 실제 위치는 같은 파일 **`:253`**.\n- AC 인벤토리 불변: `docs/prd` 의 고유 AC **27개**(A3·B3·C4·D5·E6·F6) — 트리거가 `docs/prd` 를 만지지 않았다.\n\n**레포 자체 게이트 4종을 부모(`69ff764`)·트리거(`ba67081`) 두 지점에서 실행 — 전부 `rc=0`:**\n`check-fidelity-allowlist.py` · `check-render-fidelity.py` · `check_comment_policy.py` · `check-scenario-mapping.sh`.\n`fidelity` 회계는 **두 지점 바이트 동일**(`차단 요인 1건 … 착수 가능 0건`), `check-scenario-mapping.sh` 도\n동일(`시나리오 37 = 매칭 0 + 예외 3 + 유예 34 + 공백 0`). `check_comment_policy.py` 만 최신 원장 행이\n`#14`→`#15` 로 늘었는데 그것이 #131 자신의 등재라 정상이다. ⚠️ **초록은 행의 *형태*와 주석↔원장 등재만\n증명하고 산문의 *진위* 는 보지 않는다** — 아래 gap 은 게이트가 원리적으로 못 보는 축이다.",
@@ -6200,6 +6200,11 @@
           "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/138",
           "preparedAt": "2026-09-13T10:05:00Z",
           "notes": "base `ba67081`. **2파일 3줄** `+3/-2` — `docs/doc-tracker.md` 56행(항목 ③ 전제 정정 + 좌표 심볼화)과 변경 이력 새 행(140행), `docs/test/e2e.md` 770행(같은 전제 사본). 브랜치명에 모델 슬러그를 붙인 이유: 자매 `tbm_session-platform-e2e-mock-policy`의 task도 같은 id `rct_20260913-0002`를 쓰고 `reconcile/rct_20260913-0002-e2e-mock-policy`를 이미 push해 두었다. 레포 게이트 4종 전부 rc=0, 충실도 회계는 main과 바이트 동일(등재 7 · 회계 20 · 차단 요인 1 · 착수 가능 0). PR 생성 후 GitHub 판정 mergeable=true. 자매 PR #137과 겹치는 줄 없음(그 PR의 e2e.md hunk는 188·215·257) 이고, 이 변경 뒤에도 자매 to-be 지문 `f7777637…`는 바이트 불변. ⚠️ 두 파일 모두 이를 읽는 CI 게이트가 0개라 초록이 이 축을 보증하지 않는다 — 범위 검증은 executionGuide의 기계 술어로 따로 한다."
+        },
+        "review": {
+          "required": false,
+          "status": "not_required",
+          "reason": "사람 검토 없이 실행 대기로 넘긴다 — 프로덕션 접점도 불가역 지점도 없다. 외부 변경은 `dlddu/session-platform` PR #138의 squash 머지 한 번뿐이고 그 diff는 `docs/doc-tracker.md`·`docs/test/e2e.md` 2파일 3줄(+3/−2)의 산문 정정이다 — 제품 코드·매니페스트·이미지·충실도 회계를 한 줄도 건드리지 않고 배포 파이프라인이 `docs/`를 읽지 않아 워크로드·트래픽·데이터에 닿는 지점이 없으며, 롤백은 squash 커밋 revert 하나로 완결된다(되돌릴 런타임 상태 없음). 정정 방향도 갈리지 않는다: #129가 `validateFetchTarget`의 평문 http 허용을 의도적으로 넓혔음이 PR 제목·전용 테스트로 명시돼 있어 「의도된 동작 변경이면 문서를 코드에 맞춘다」에 해당하고, 완화를 되돌리는 판단이 아니다(FETCH-ORIGIN 재판정은 명시적으로 범위 밖 — 자매 모델 PR #137 소관). 남은 유일한 실질 위험인 PR #127과의 `doc-tracker.md:56` 중복은 executionGuide §3이 양방향 분기 규칙으로, 전제가 흔들린 경우(#129 완화가 되돌려짐)의 중단 조건은 §2⑶ grep 술어로 기계화해 두어 실행 시점 판단으로 충분하며, 최악의 실패도 「문서 정정이 rebase에서 유실」이라 재감지가 다시 연다. 동형 선례(docs 전용 머지, 예 `tbm_feature-doc-docs-impl/rct_20260802-0001` `doc-tracker.md +6/−2`)도 not_required로 처리됐다."
         }
       }
     ]
