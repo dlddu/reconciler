@@ -5905,7 +5905,7 @@
   {
     "id": "rct_20260912-0011",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-12T12:53:18Z",
       "changedSides": [
@@ -5922,7 +5922,7 @@
       }
     },
     "createdAt": "2026-09-12T12:53:18Z",
-    "updatedAt": "2026-09-13T09:23:10Z",
+    "updatedAt": "2026-09-13T09:26:00Z",
     "stateSummary": {
       "asIs": "**as-is (구현) — `dlddu/session-platform` main `419eb2eb` 기준, 관측 2026-09-12T12:50Z**\n\nas-is 버전은 `data-plane` 성분만 움직였다(`b422cc38` → `6429a848`; `control-plane` `7b15af53` · `web` `5ccff10c` 불변). 원인은 **PR #129 `feat(session-mcp): web_fetch_get 이 평문 http 대상을 받는다`**(머지 커밋 `054aac9`, 2026-09-12T12:48:40Z)이고, 그 위에 배포 핀 `419eb2eb`(12:49:38Z, `k8s/deployment.yaml` — as-is 범위 밖)이 얹혀 있다.\n\n#129 가 구현에서 바꾼 것(`data-plane/cmd/agent/`):\n- `session_mcp_tools.go` / `validateFetchTarget`: 스킴 검사가 `parsed.Scheme != \"https\"` 거절에서 **`http` 와 `https` 둘 다 허용**으로 넓어졌다. 오류 문구도 `url must be http or https, got %q` 로 바뀌었다.\n- 같은 파일 `toolDefinitions()` 의 `url` 인자 description: `The https URL to fetch.` → `The http or https URL to fetch.`\n- `session_mcp_gate_test.go`: 신규 `TestSessionMCPAcceptsPlaintextTarget`(`http://rates.internal.svc.cluster.local/v1/latest` 가 승인 요청 1건을 만들고 실제로 fetch 됨을 단언). 거절 표에서 `{\"plaintext http\", …}` 행이 빠지고 `{\"ftp scheme\", …}` · `{\"no host, http\", \"http://\"}` 가 들어왔다 — 호스트 검사와 그 밖 스킴 거절은 그대로다.\n\n도구 표면 자체는 늘지 않았다: `toolDefinitions()` 가 내는 도구는 여전히 **`web_fetch_get` 하나**(자매 모델 `tbm_session-platform-mcp-tool-roadmap` 의 첫 관측으로 독립 확인).",
       "toBe": "**to-be (제품 문서 `docs/`) — tree `eba53645`(이전 `4b8ee10e`), 관측 2026-09-12T12:50Z**\n\n같은 커밋 `054aac9` 가 docs 에서 만진 파일은 **둘뿐**이다.\n\n1. `docs/session-mcp-tool-surface.md`\n   - 「지금 있는 것」 표(36행)의 `web_fetch_get` 인자 칸: `url` (https 강제, …) → **`url` (http·https만, …)**.\n   - **R4**(사람이 읽고 판정할 수 있는 컨텍스트) 산문: 「`web_fetch_get` 이 https 만 받는 이유」 → 「**http·https 밖의 스킴을 받지 않는 이유**」로 재서술하고, 거절 예를 `file://` 로 명시한 뒤 **「평문 http 는 이 선 안쪽이다」** 와 그 근거(TLS 를 세우지 않은 원본이 실제 대상이고, 스킴은 승인자가 읽는 URL 에 그대로 보인다)를 더했다. 완화 사실을 `(2026-09-12 완화 — 그 전까지는 https만 받았다)` 로 날짜와 함께 남겼다.\n   - 머리 상태 줄은 건드리지 않았고, 건드릴 이유도 없다 — **도구 1개 착지 · 등재 5개**는 여전히 참이다(실측 일치).\n2. `docs/comment-policy/ledger.md` — 4차 판정 패스 행 한 줄. 자매 모델 `tbm_session-platform-comment-redundancy` 의 to-be 이고 그쪽 `rct_20260912-0007` 에서 판정했다(요지: 이 PR 이 자기 주석 증분을 스스로 판정·등재했다).\n\n**움직이지 않은 문서 중 하나가 문제다.** `docs/test/e2e.md` 는 이 커밋이 한 글자도 만지지 않았는데, 그 파일 **218행**의 `<!-- fidelity:blockers -->` 표 행이 구현 사실을 **현재형 단언**으로 들고 있다:\n\n> 승인된 `web_fetch_get` 의 **실제 아웃바운드 호출**. **도구는 https 만 받는데(`validateFetchTarget`)**, 그 호출을 내는 MCP 컨테이너의 fetch 는 **시스템 루트만 신뢰하는 기본 클라이언트**다 … 그래서 인클러스터 https 원본을 세워도 그 인증서를 검증할 수 없고, 승인 갈래는 *게이트를 통과했다*는 데까지만 관측된다.\n\n이 문장은 함수 이름까지 지목하며 「지금 그렇다」를 말하는 살아 있는 주장이지, 날짜 붙은 과거 기록이 아니다.",
@@ -6039,6 +6039,54 @@
             }
           ],
           "finishedAt": "2026-09-13T09:23:00Z"
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "control-plane:84de316a4ca3c823af179fdc9bd8ffe9054dd6eb data-plane:6429a84851c44330dacba917f1c984fe3ed8028b web:5ccff10ceb30519e8c61a30e795e87994982f3b8",
+          "verifiedAt": "2026-09-13T09:26:00Z",
+          "checks": [
+            {
+              "name": "완료 기준 ① — `충실도` 절에 「도구는 https 만 받는다」를 현재형 전제로 쓰는 문장 0건",
+              "status": "passed",
+              "detail": "`main`(`ba67081b`) 체크아웃에서 `sed -n '7,278p' docs/test/e2e.md | grep -c \"도구는 https 만 받는데\\\\|https 강제는 도구의 대상 URL 쪽이다\"` → **0**. 파일 전체로 넓혀도 `https 강제는 도구의 대상 URL 쪽이다` 는 **0건**(243행 자리에서 완전히 사라졌다)이고, `도구는 https 만 받는데` 는 **770행 1건만** 남는다 — 그 행은 §「남은 미검증 분기」(745행부터) 소속이라 `충실도` 절 밖이고, 계획이 PR #127 겹침을 이유로 **명시적으로 범위 밖**에 둔 자리다."
+            },
+            {
+              "name": "완료 기준 ① — 218행에 정정 사실 + 인계 문장이 남았다",
+              "status": "passed",
+              "detail": "218행 『무엇이 막는가』 칸에서 「도구는 https 만 받는데(`validateFetchTarget`),」 절이 걷히고, 같은 셀 끝에 ⚠️ **전제 정정**(「2026-09-12 에 거짓이 됐다(#129) — `validateFetchTarget` 은 이제 `http` 와 `https` 를 함께 받는다(`url must be http or https`)」)과 **인계 문장**(「『인클러스터 원본은 https 여야 한다』는 고리가 끊기면서 검증할 인증서가 애초에 없는 평문 http 원본이 선택지에 들어왔다 … 실제로 그 길로 갈지는 『해소 시』의 ①②③ 과 함께 이 행의 `선행`(해소 방향 재판정)에 속하고 **이 정정은 그 판정을 하지 않는다**」)이 붙었다. 본문 중 남은 `https` 는 정정문 안의 인용과 「인클러스터 **https** 원본」 서술뿐이다."
+            },
+            {
+              "name": "완료 기준 ② — 243행 `APPROVAL-GATEWAY` 대조 괄호가 현재 구현에 맞게 고쳐졌다",
+              "status": "passed",
+              "detail": "「게이트웨이 클라이언트는 스킴을 강제하지 않으므로(https 강제는 도구의 대상 URL 쪽이다) 인증서를 흉내 낼 근거가 없다」 → 「게이트웨이 클라이언트는 스킴을 강제하지 않으므로 인증서를 흉내 낼 근거가 없다(**도구의 대상 URL 쪽도 2026-09-12 부터 `http`·`https` 를 함께 받는다 — `validateFetchTarget`**)」. 괄호가 문장 끝으로 옮겨지며 현재 사실로 재서술됐다."
+            },
+            {
+              "name": "완료 기준 ③ — 정적 게이트 4종 `rc=0`",
+              "status": "passed",
+              "detail": "`main`(`ba67081b`) 로컬 실행: `scripts/check-fidelity-allowlist.py` rc=0 · `scripts/check-render-fidelity.py` rc=0 · `scripts/check_comment_policy.py` rc=0 · `scripts/e2e/check-scenario-mapping.sh` rc=0. (CI 쪽도 PR head `2f165fb3` 에서 같은 4종이 pass — 13 pass · 1 skipping · 실패 0.)"
+            },
+            {
+              "name": "완료 기준 ③ — `fidelity` 회계 불변 = 판정 칸을 건드리지 않았다는 기계적 증거",
+              "status": "passed",
+              "detail": "마지막 줄이 지침이 못박은 문자열과 **글자 그대로 일치**한다: `차단 요인 1건 (아직 seam 이 아니다 — 판정만 확정돼 있다) · 착수 가능 0건 (선행 없음 + 소관 '이 모델')`. 더 강한 증거로 머지 부모 `cee3944d` 에서 같은 스크립트를 돌려 출력을 비교했고 **전체가 바이트 동일**했다(`회계 행 20 == 스캔된 (파일,토큰) 쌍 20` · `마커 9지점 / 9파일 · web 네트워크 인터셉트 7건` 포함). ⇒ `판정`(`없음`)·`소관`(`이 모델`)·`선행`(`해소 방향 재판정`)·`재검토 시점`(`2026-10-11`) 어느 칸도 움직이지 않았다. 계획이 범위 밖으로 못박은 「해소 방향 재판정」을 하지 않았다는 뜻이다."
+            },
+            {
+              "name": "지침 §④⑵ — 자매 모델 `tbm_session-platform-e2e-mock-policy` 의 toBe 해시가 이동했다(이 정정의 진짜 산출)",
+              "status": "passed",
+              "detail": "그 모델의 toBe versionScript(`docs/test/e2e.md` 의 `충실도` 절 발췌 해시)를 그대로 실행: 머지 부모 `cee3944d` → `lines=231` / `911d0dc2a4da3d9fb0eaf07d4790beebe2b7023f680e1b18674b09beb930fede`, 머지 후 `ba67081b` → `lines=231` / `f777763799185e6df1abddc4a1920bbbef613bb3c41f40b7ecf16fac8ee87db2`. **직전 값이 그 모델의 `lastObservedVersion`(2026-09-13T07:52:52Z 관측)과 정확히 일치**하므로, 이동은 확정이고 다음 감지 주기에 그 모델의 재감지가 열린다 → 「해소 방향 재판정」의 소유권이 제자리로 돌아간다. (계획이 적어 둔 예상치 `8ebc1db2…` 와는 다르다 — 그 사이 #131·#134 가 같은 절을 함께 만졌기 때문이고, 지침이 명시한 대로 판정 기준은 값의 일치가 아니라 **직전 값에서 이동했다는 사실**이다. `lines` 는 기존 행만 고쳐 231 불변.)"
+            },
+            {
+              "name": "범위 밖 잔여 — 같은 거짓 전제가 두 자리에 남아 있다(정보성, 이 task 의 판정 대상 아님)",
+              "status": "passed",
+              "detail": "계획이 PR #127 hunk 겹침을 이유로 이번 슬라이스에서 뺀 두 자리는 그대로다: ⑴ `docs/test/e2e.md:770`(§「남은 미검증 분기」 — 「도구는 https 만 받는데(`validateFetchTarget`)」), ⑵ `docs/doc-tracker.md:56`(「🆕 구현 사슬 부채」 항목). **PR #127 은 이 시점에도 열려 있어** 겹침 사유가 유지된다. ⚠️ 770행은 `충실도` 절 **밖**이라 자매 모델의 toBe 해시를 움직이지 않는다 — 이 자리를 여는 재감지는 `tbm_session-platform-docs-impl`(이 모델) 쪽뿐이다. 이 잔여는 수렴 판정에 넣지 않았다(계획 범위 밖). `lastObservedVersion` 을 건드리지 않았으므로 다음 감지 주기가 이 docs 변경을 보고 후속 task 를 연다."
+            },
+            {
+              "name": "승인이 수용한 롤아웃 부작용 — 이 시점엔 아직 발생하지 않았다(정보성)",
+              "status": "passed",
+              "detail": "검토·승인이 지목한 부작용(main 착지 → `pin deployment images` → `k8s/deployment.yaml` 이미지 핀 되커밋 → `replicas:1` control-plane 롤링 교체)은 **머지 후 약 6분 시점(09:25:36Z)까지 관측되지 않았다**: `GET /actions/runs?head_sha=ba67081b` 가 **빈 목록**이고 main 에 새 `chore(deploy): … 로 고정 [skip ci]` 커밋도 없다. 같은 시간대의 GitHub API 이상(500/502, PR 레코드 미갱신)과 같은 원인으로 보이며, 지연 복구되면 그때 핀·롤아웃이 일어난다. 직전 주기는 정상 동작했다 — control-plane 파드가 `cee3944d`(09:11:51Z 핀) 직후 09:12:33Z 에 교체됐고 현재 Running/Ready. **승인 당시 실행 중이던 `approval-gated` 세션 파드 `sess-7324bd0995aeebc22d14dc8dd49a859e` 는 그 교체 대상이 아니었고 계속 살아 있다.** 이 항목은 계획의 완료 기준이 아니라 승인이 수용한 영향의 사실 기록이다."
+            }
+          ]
         }
       }
     ]
