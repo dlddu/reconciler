@@ -1501,7 +1501,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
     "status": "executing",
     "createdAt": "2026-09-13T08:32:44Z",
-    "updatedAt": "2026-09-13T13:52:26Z",
+    "updatedAt": "2026-09-13T13:55:46Z",
     "trigger": {
       "detectedAt": "2026-09-13T08:32:44Z",
       "changedSides": [
@@ -1600,6 +1600,83 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-13T13:47:18Z",
           "comment": "사람 승인(승인 세션). 승인 시점 실측: PR #73 open·mergeable clean·CI 4잡 전부 success, base main 67764e5 미이동. 다만 PR CI 의 `docker build & push` 가 `:latest` 를 덮어, 2026-09-13T12:56:24Z 파드 재생성으로 **이 PR 의 빌드가 이미 프로덕션에서 기동**해 있다(기동 로그에 게이트 밖 3종 경고 `workload_restart`·`workload_scale`·`dear_baby_reset_user` 와 `GATEKEEPER_BASE_URL not set` 확인, 재시작 0, 정상 서빙). 검토 사유 중 CrashLoopBackOff 위험은 이 실측으로 해소된 상태이며, 남은 판단 축인 '현존 도구 중 게이트 대상 0건' 설계도 함께 승인한다. 머지는 실행 단계(reconciler-work-executor) 몫."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-13T13:52:14Z",
+          "finishedAt": "2026-09-13T13:55:46Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:53:00Z",
+              "finishedAt": "2026-09-13T13:55:20Z",
+              "log": "브랜치 `reconcile/rct_20260913-0001-homelab-k3s-mcp-docs-impl`, base `67764e5b`(#72) 에서 분기 — PR API 실측 `base.sha=67764e5ba5ea01629266d8d2ddc7159d1d389cf5`, `base.ref=main`. 베이스라인 녹색 여부는 PR head 의 CI 로 갈음: 4잡(`fmt + vet` / `unit tests` / `integration tests` / `docker build & push`) 전부 `conclusion=success`. `fmt + vet` 잡 안에서 gofmt(빈 출력)·`go vet ./...`·`go build ./...` 와 문서 게이트 3종이 모두 rc=0."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:53:00Z",
+              "finishedAt": "2026-09-13T13:55:20Z",
+              "log": "`internal/gatekeeper` 패키지가 실재하고 빌드·테스트된다 — `unit tests` 잡 로그에 `ok github.com/dlddu/homelab-k3s-mcp/internal/gatekeeper 0.042s`. `go build ./...` rc=0."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:53:00Z",
+              "finishedAt": "2026-09-13T13:55:20Z",
+              "log": "AC5 fail-closed 전수 — `--- PASS: TestEveryFailurePathRefuses` 와 하위 8 케이스가 전부 PASS: `rejected` · `expired` · `no_verdict_before_the_timeout` · `external_id_collision` · `backend_5xx` · `unreadable_response` · `response_without_a_request_id` · `auto_rejected`. 미설정이 기동 실패가 아니라는 것도 프로덕션 기동 로그로 확인 — `GATEKEEPER_BASE_URL not set: gated calls will be refused` WARN 뒤 `homelab-k3s-mcp listening addr=0.0.0.0:3000`, 서버 정상 서빙."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:53:00Z",
+              "finishedAt": "2026-09-13T13:55:20Z",
+              "log": "선언 표가 17종을 전수 등재 — `--- PASS: TestProductionRegistryMatchesAdvertisedTools`. 게이트 대상으로 판정되는 현존 도구 0종이라는 설계도 프로덕션 기동 로그로 관측: `tool exercises a gated verb but runs outside the approval gate` WARN 이 정확히 3줄이며 각각 `workload_restart`(문서 폐기 #72) · `workload_scale`(동일) · `dear_baby_reset_user`(prd-approval-gate 「남은 예외 1건」 — 소유자 판단 대기)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:53:00Z",
+              "finishedAt": "2026-09-13T13:55:20Z",
+              "log": "AC1 두 강제 확인 — 디스패처 단계 강제: `--- PASS: TestGatedCallIsRefusedBeforeKubernetes` 와 하위 5 verb (`create`·`update`·`patch`·`delete`·`deletecollection`) 전부 PASS(승인 전 k8s 호출 0). 기동 시 선언 검증: `TestProductionRegistryMatchesAdvertisedTools` PASS + 프로덕션 기동 로그에 `refusing to start` 부재."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:53:00Z",
+              "finishedAt": "2026-09-13T13:55:20Z",
+              "log": "`main.go` 배선 확인 — 게이트 미설정 환경(현재 프로덕션)에서 서버가 정상 기동하고 통합 잡이 초록. 기동 로그에 미설정 WARN 1줄 + 게이트 밖 3줄 + `listening` 이 순서대로 찍힌다. AC8 감사·AC9 자동승인 표기는 단위 테스트로 검증(아래 step 7)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:53:00Z",
+              "finishedAt": "2026-09-13T13:55:20Z",
+              "log": "`unit tests` 잡 로그 실측: `--- PASS` 244건, `--- FAIL` 0건, `--- SKIP` 0건. executionGuide 가 이름으로 지목한 4종이 모두 `--- PASS` 로 관측됨 — `TestGatedCallIsRefusedBeforeKubernetes` · `TestEveryFailurePathRefuses` · `TestApprovalCannotBeSpentTwice`(AC7) · `TestProductionRegistryMatchesAdvertisedTools`. 패키지 요약도 전건 `ok`(auth·awsconfig·gatekeeper·github·grafana·mcp·opensearch·server·sessionplatform), `FAIL` 0. 「`ok` 한 줄만 보고 통과로 치지 말 것」 지시대로 개별 `--- PASS` 로 확인했고 스킵이 없음도 확인."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:53:00Z",
+              "finishedAt": "2026-09-13T13:55:20Z",
+              "log": "`docs/doc-tracker.md` 최소 갱신이 문서 게이트를 통과 — `python3 tests/integration/check_ac_mapping.py` rc=0, 출력 카운터 `전집 80 / 예외 1 / 구현 대기 34 / 1:1 45 / 매칭 45 / 공백 0` 으로 트리거 시점과 전건 동일. 문서 편집이 의도 범위를 넘지 않았다는 증거다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:53:00Z",
+              "finishedAt": "2026-09-13T13:55:20Z",
+              "log": "CI 게이트 7종 전부 rc=0(잡 `fmt + vet` 와 `unit tests` 로 재현): gofmt·vet·build·test + `check_ac_mapping.py`(OK: 규칙 1~7 위반 없음) · `check_mock_policy.py`(OK: R1~R6, 등재 5/상한 5) · `check_comment_policy.py`(OK: R1~R8, 판정 완료 1034줄/84.3%, 등재 범위 22). `EXPECTED_TOOLS` 3자 일치는 `integration tests` 잡 success + `TestProductionRegistryMatchesAdvertisedTools` PASS 로 갈음 — 이번 슬라이스가 도구를 더하거나 빼지 않았으므로 상수는 변하지 않았다."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:55:40Z",
+              "finishedAt": "2026-09-13T13:55:46Z",
+              "log": "step 10 자체(커밋·push·PR 오픈)는 계획 단계에서 완료 — PR #73, 1커밋 `66cf3cf1`, 9파일 +1751/-75. 이 실행 단계가 더한 것은 **머지 하나**다(executionGuide 실행 순서 2번, 유일한 불가역 지점). 머지 전 사전 조건 3건 전건 충족: ⑴ CI 4잡 success, ⑵ base `main` 이 `67764e5b` 그대로(미이동, `mergeable=true`·`mergeable_state=clean`), ⑶ 머지 방식은 레포 관례 확인 후 squash — 최근 6개 main 커밋이 전부 단일 부모 + `(#NN)` 접미다. 실행: `PUT /repos/dlddu/homelab-k3s-mcp/pulls/73/merge` (merge_method=squash, sha=`66cf3cf10482491d630462459117ed8c80b939a4` 로 head 고정) → `merged=true`, squash 커밋 `76b776d82db89b55c388e5e8344c57bb86eedf1b`. 직접 액션(kubectl·flux reconcile 등)은 지침대로 하나도 수행하지 않았고, `k8s/` 와 `dear_baby_reset_user` 게이트 편입은 지침의 금지 항목대로 건드리지 않았다."
+            }
+          ]
         }
       }
     ]
