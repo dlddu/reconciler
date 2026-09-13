@@ -2658,9 +2658,9 @@
   },
   {
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
-    "status": "executing",
+    "status": "verifying",
     "createdAt": "2026-09-13T09:24:30Z",
-    "updatedAt": "2026-09-13T13:48:41Z",
+    "updatedAt": "2026-09-13T13:50:38Z",
     "trigger": {
       "detectedAt": "2026-09-13T09:24:30Z",
       "changedSides": [
@@ -2753,6 +2753,41 @@
           "reason": "머지 자체는 저위험·가역이다 — 문서 4줄 + YAML 주석 줄뿐이고 배포·클러스터·제품 코드에 닿지 않아 `git revert` 한 번으로 원복되며 트래픽·데이터 영향이 없다. 그럼에도 사람 판단이 필요한 이유는 이 변경의 내용이 재동기화가 아니라 **판정**이기 때문이다: 차단 요인의 해소 방향을 네 선택지 중 ④로 확정하고 「등재 없이 닫는다」고 선언하는데, ②를 골랐다면 같은 자리에서 대신 seam을 `EXT`로 등재해야 했다. 모델 정의의 EXT 배제 조항을 어떻게 읽느냐로 원장의 최종 상태가 갈리므로, 무인 세션이 스스로 비준하기엔 모호함이 남는 자리다. 또 이 머지는 게이트의 대표 숫자 「착수 가능」을 0→1로 올려 다음 감지가 후속 실행 슬라이스를 기계적으로 열게 하는데(후속 자체는 별도 task로 다시 승인을 받는다), 판정이 틀리면 게이트가 거짓 「착수 가능」을 보고하는 상태 — 이 모델의 불변식 2가 이름 붙여 막으려던 성질 — 가 된다.",
           "reviewer": "human",
           "reviewedAt": "2026-09-13T13:46:58Z"
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-13T13:48:50Z",
+          "finishedAt": "2026-09-13T13:50:30Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:48:50Z",
+              "finishedAt": "2026-09-13T13:49:00Z",
+              "log": "executionGuide 순서 1 — PR 신선도 확인. (plan.steps 1~9 는 준비 단계가 이미 소진했다: PR #137 @ `805269b` 가 그 산출물이고, 실행은 지침대로 「PR 을 머지하는 것」이 전부다. 그래서 entries 의 stepSeq 는 executionGuide 의 순서 번호를 가리킨다.)\n\n`gh api repos/dlddu/session-platform/pulls/137` 실측: `state=open` · `mergeable=true` · `mergeable_state=clean` · `draft=false` · `head.sha=805269b23c4a768b1fc88c05f3de5db75f87c7a5` · `changed_files=2` · `+9/-8`. 준비 레코드가 적은 커밋·규모와 바이트 일치. `dirty`/`behind` 가 아니므로 지침이 예고한 origin/main 머지 해소는 불필요 — 그대로 순서 2 로."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:49:00Z",
+              "finishedAt": "2026-09-13T13:49:50Z",
+              "log": "executionGuide 순서 2 — CI 초록 확인. head `805269b` 의 check-runs 15건 전부 `success`(+ `pin deployment images (main only)` 는 `skipped`, main 전용이라 정상). 판정면 4잡 모두 초록: `e2e fidelity allowlist (docs <-> code seams)` · `comment policy ledger (docs <-> comments)` · `render fidelity (mockups <-> SPA screens)` · `시나리오 ↔ e2e 1:1 mapping`. 워크플로 런 3건(ci · e2e · Build and Push Docker Image to GHCR) 전부 `completed/success`.\n\n지침이 요구한 핵심 산출 눈 확인 — `fidelity` 잡(job 103705163043) 로그에서:\n  `차단 요인 1건 (아직 seam 이 아니다 — 판정만 확정돼 있다) · 착수 가능 1건 (선행 없음 + 소관 '이 모델')`\n즉 CI 가 이미 「착수 가능 1건」을 찍고 있다. (부기: `gh api .../logs` 는 로그에 터미널 이스케이프가 있어 `--allow-escape-sequences` 가 필요했다.)"
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:49:50Z",
+              "finishedAt": "2026-09-13T13:50:00Z",
+              "log": "executionGuide 순서 3 — 머지(불가역 지점). `gh api -X PUT repos/dlddu/session-platform/pulls/137/merge -f merge_method=squash` → `{\"merged\":true,\"sha\":\"566c2ae80fa01e1297388591720a3dbe2ca64223\"}`. 지침대로 squash 만 썼다.\n\nmain 실측: HEAD = `566c2ae` (`docs(e2e): 차단 요인 \\`FETCH-ORIGIN\\` 의 해소 방향을 재판정해 착수 가능으로 세운다 (#137)`). 머지 직전 main 은 `068e921`(#136 계열 이미지 핀) 로 이동해 있었으나 `mergeable_state=clean` 이 유지돼 충돌 해소는 필요 없었다 — PR API 의 `base.sha`(`ba67081`) 는 생성 시점 머지베이스이지 현재 main head 가 아니다.\n\n클러스터·배포·kubectl 은 하나도 건드리지 않았다(지침의 범위 그대로)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-13T13:50:00Z",
+              "finishedAt": "2026-09-13T13:50:30Z",
+              "log": "executionGuide 순서 4 — 머지된 main(`566c2ae`) 을 새로 클론해 검증 입력을 수집. 게이트 4종 · 행 단위 단언 3건 · as-is/to-be 지문 재계산을 모두 실행했다. 결과는 이 시도의 `verification.checks[]` 에 기록."
+            }
+          ]
         }
       }
     ]
