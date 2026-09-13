@@ -1450,8 +1450,8 @@
         "code": "#!/usr/bin/env bash\n# to-be = 등재된 구현 대상. docs/session-mcp-tool-surface.md 의 「다음에 구현할 도구」 절이\n# 갖는 `### ` 항목 목록만 본다 → 같은 파일의 다른 문단(규칙·경계·산문)이 바뀌어도 움직이지 않는다.\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ndoc=docs/session-mcp-tool-surface.md\n[ -f \"$doc\" ] || { echo \"missing $doc — 등재 문서가 옮겨졌다. 모델 개정 필요.\" >&2; exit 1; }\ngrep -q '^## 다음에 구현할 도구' \"$doc\" || {\n  echo \"roadmap heading not found in $doc — 절이 개명·재구성됐다. 모델 개정 필요.\" >&2; exit 1; }\nentries=\"$(awk '\n  /^## 다음에 구현할 도구/ { inside=1; next }\n  inside && /^## / { inside=0 }\n  inside && /^### / { sub(/^### +/,\"\"); gsub(/`/,\"\"); gsub(/[[:space:]]+$/,\"\"); print }\n' \"$doc\")\"\nif [ -z \"$entries\" ]; then printf 'roadmap:0\\n'; exit 0; fi\ncount=\"$(printf '%s\\n' \"$entries\" | wc -l | tr -d ' ')\"\nprintf 'roadmap:%s %s\\n' \"$count\" \"$(printf '%s\\n' \"$entries\" | paste -sd'|' -)\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "roadmap:4 0. ping|1. git_clone|2. K3s MCP 재노출|3. gh CLI",
-      "lastObservedAt": "2026-09-13T07:52:52Z"
+      "lastObservedVersion": "roadmap:3 1. git_clone|2. K3s MCP 재노출|3. gh CLI",
+      "lastObservedAt": "2026-09-13T14:08:00Z"
     },
     "asIs": {
       "dataSource": {
@@ -1465,8 +1465,8 @@
         "code": "#!/usr/bin/env python3\n# as-is = 실제 도구 표면. data-plane/cmd/agent 의 toolDefinitions() 본문이 내는 도구 이름만 뽑는다\n# → 같은 패키지의 다른 변경(게이트 내부·파일 스풀·notice 등)은 움직이지 않는다.\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nimport pathlib, re, sys\n\npkg = pathlib.Path(\"data-plane/cmd/agent\")\nsrc_path = pkg / \"session_mcp_tools.go\"\nif not src_path.is_file():\n    sys.exit(\"missing %s — 도구 표면의 정본이 옮겨졌다. 모델 개정 필요.\" % src_path)\nsrc = src_path.read_text(encoding=\"utf-8\")\n\nm = re.search(r\"func \\([^)]*\\) toolDefinitions\\(\\)[^{]*\\{\", src)\nif not m:\n    sys.exit(\"toolDefinitions() not found — 표면 추출이 구조를 잃었다. 모델 개정 필요.\")\nstart = m.end() - 1\ndepth = 0\nend = None\nfor i in range(start, len(src)):\n    if src[i] == \"{\":\n        depth += 1\n    elif src[i] == \"}\":\n        depth -= 1\n        if depth == 0:\n            end = i\n            break\nif end is None:\n    sys.exit(\"toolDefinitions() body not balanced — 모델 개정 필요.\")\nbody = src[start : end + 1]\n\nraw = re.findall(r'\"name\"\\s*:\\s*(\"[^\"]*\"|[A-Za-z_][A-Za-z0-9_]*)', body)\n\nconsts = {}\nfor f in sorted(pkg.glob(\"*.go\")):\n    for k, v in re.findall(\n        r'^\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*\"([^\"]*)\"\\s*$',\n        f.read_text(encoding=\"utf-8\"),\n        re.M,\n    ):\n        consts.setdefault(k, v)\n\nnames = []\nfor n in raw:\n    if n.startswith('\"'):\n        names.append(n[1:-1])\n    elif n in consts:\n        names.append(consts[n])\n    else:\n        sys.exit(\"unresolved tool name identifier %r — 이름이 상수 리터럴이 아니다. 모델 개정 필요.\" % n)\n\nnames = sorted(set(names))\nprint(\"tools:%d%s\" % (len(names), (\" \" + \",\".join(names)) if names else \"\"))\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "tools:1 web_fetch_get",
-      "lastObservedAt": "2026-09-12T12:53:18Z"
+      "lastObservedVersion": "tools:2 ping,web_fetch_get",
+      "lastObservedAt": "2026-09-13T14:08:00Z"
     },
     "checkPolicy": {
       "intervalSeconds": 3600,
