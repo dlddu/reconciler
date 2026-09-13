@@ -387,7 +387,7 @@
       }
     },
     "createdAt": "2026-09-13T14:08:00Z",
-    "updatedAt": "2026-09-13T14:18:31Z",
+    "updatedAt": "2026-09-13T14:26:00Z",
     "stateSummary": {
       "asIs": "**실제 도구 표면 — 도구 2개** (`tools:2 ping,web_fetch_get`, 트리거 `e70d6e4` / main `99c2166` 실측).\n\n`data-plane/cmd/agent/session_mcp_tools.go` 의 `toolDefinitions()` 가 내는 목록:\n\n| 도구 | 게이트 | 비고 |\n|------|--------|------|\n| `web_fetch_get` | 호출마다 승인 1건 | `url` 인자 (http·https, `additionalProperties:false`) |\n| `ping` | 지나지 않는다 (파드 밖에 닿지 않아 R1 적용 범위 밖) | 인자 없음, 상수 `pong` |\n\n**`ping` 은 선언만이 아니라 실제로 호출 가능하다** — 이 문서가 스스로 세운 기준(「`tools/call` 까지 가 봐야 참이 된다」)으로 검증했다: `:98` 등재 · `:125` `switch call.Name` 의 `case webFetchGetTool, pingTool` 수용 · `:133-134` 핸들러가 `mcpToolText(pingReply)` 반환. 셋이 다 있어야 참인데 셋 다 있다.\n\n**게이트 분기 안쪽 배치도 실측 확인** — `toolDefinitions()` 첫 줄이 `if !c.gated() { return []any{} }` 라 `ping` 도 게이트웨이 미구성 시 목록에서 빠진다. 문서가 「협상 불가」로 지목한 R2(「게이트를 구성할 수 없으면 이 도구도 내지 않는다 — 그래야 빈 목록이 『게이트웨이가 없다』 하나로만 읽힌다」)가 코드로 지켜졌다.\n\n**헬퍼 파드 egress 실측**(다음 슬라이스의 전제라 재측정): `control-plane/internal/adapter/k8s/network_policy.go` 가 만드는 정책 쌍은 **egress 를 워크로드 파드에만** 건다(`PodSelector: workloadSelector`, 피어는 kube-DNS 와 자기 헬퍼 파드의 두 포트뿐). **헬퍼 파드에는 ingress 제한만 있고 egress 정책이 없다** — MCP 컨테이너가 파드 밖에 닿을 수 있는 이유이자, `git_clone` 이 AC-F2 축의 새 선행 없이 설 수 있는 근거다.",
       "toBe": "**등재된 구현 대상 — 3건** (`roadmap:3 1. git_clone|2. K3s MCP 재노출|3. gh CLI`, `docs/session-mcp-tool-surface.md` 「다음에 구현할 도구 (3)」).\n\nto-be 는 이 절이 **비어 있는 상태**다 — 등재된 모든 항목이 ⑴ 표면에 착지했거나 ⑵ **근거와 함께** 철회된 상태.\n\n| # | 항목 | 선행 | 착지 |\n|---|------|------|------|\n| 1 | `git_clone` | **없음** — 공개 레포 한정이면 R9 에 걸리지 않는다 | ❌ |\n| 2 | K3s MCP 재노출 | **R9**(AC-F6 자격 증명 배치 개정) | ❌ |\n| 3 | `gh` CLI | **R9** + R4 승인 화면 설계(이 레포 밖) | ❌ |\n\n문서가 우선순위 근거를 스스로 적는다: 「셋 중 둘(2·3)이 R9 에 걸린다 … **1번만 그 문 앞에서 설 수 있고, 그것이 1번이 먼저인 이유이기도 하다**」. 2 → 3 순서의 실질적 근거는 자격 증명이다 — 3번은 2번이 열어 줄 K3s MCP 의 GitHub App 단명 토큰을 쓰면 **자기 Secret 없이** 설 수 있다.\n\n**등재 목록 자체가 이번 트리거로 한 칸 줄었다**: 0번 `ping` 이 착지하며 빠졌다(`roadmap:4` → `roadmap:3`). 0번은 우선순위 줄에 선 적이 없어 **1~3 의 번호와 그 사이의 근거가 한 자도 움직이지 않았다** — 번호를 0 으로 둔 설계가 값을 낸 자리다.",
@@ -399,6 +399,67 @@
       "reason": "**작업 필요(`actionRequired: true`) — 판정 기준 1(미착지 등재) 3건.** 정의의 to-be 가 「등재 절이 빈 상태」이고 실측 등재는 3건인데 착지는 0건이다. 정의가 **「선행 조건이 걸려 있어도 drift 가 아닌 것이 아니다 — 선행 해소가 그 항목 계획의 첫 단계이지 면제 사유가 아니다」**로 못박고, 「충돌 시 기본 방향」이 **「등재를 조용히 방치하는 것만이 drift 다」**로 한 번 더 못박는다. 유예하지 않는다 — **자동 해소될 성질이 아니다**(문서가 등재를 걷거나 도구가 서지 않는 한 줄지 않으며, 둘 다 사람/리콘사일의 행위다).\n\n**다음 슬라이스를 하나로 특정한다: 「1. `git_clone`」.** planner 가 선행을 재조사하지 않도록 근거를 옮겨 적고, **이번 fire 에서 실측한 것은 실측이라고 표시한다.**\n\n- **1번만 지금 착수 가능하다.** 문서가 스스로 적는다: 「셋 중 둘(2·3)이 R9 에 걸린다 … **1번만 그 문 앞에서 설 수 있고, 그것이 1번이 먼저인 이유이기도 하다**」. 2·3 은 **R9 = AC-F6 자격 증명 배치 개정**이 선행이고, 3 은 추가로 **R4 승인 화면 설계**가 필요한데 그 화면은 이 레포 밖이다.\n- ✅ **「1번은 선행이 없다」를 산문으로 믿지 않고 코드에서 재측정했다**(이번 fire 의 고유 산출): `control-plane/internal/adapter/k8s/network_policy.go` 의 정책 쌍은 **egress 를 워크로드 파드에만** 건다(`PodSelector: workloadSelector`, 피어 = kube-DNS + 자기 헬퍼 파드 2포트). **헬퍼 파드에는 ingress 제한만 있고 egress 정책이 아예 없다** ⇒ MCP 컨테이너에서 `github.com` 으로 나가는 데 **AC-F2 축의 새 선행이 생기지 않는다.** 「새 도구는 헬퍼 파드의 egress 프로파일(AC-F2)을 건드린다」는 일반 경고는 이 항목에선 **비어 있다.**\n- **공개 레포 한정으로 시작한다.** private 클론은 토큰이 필요하고 그 토큰의 자연스러운 출처는 2번이 열어 줄 K3s MCP 의 단명 GitHub App 토큰이다 — **private 을 2·3 뒤로 미루는 편이 자격 증명을 하나 덜 만든다**(문서의 근거). 지금 private 을 끌어들이면 **R9 에 스스로 걸려** 이 항목의 「유일하게 착수 가능」 성질이 사라진다.\n\n**계획이 반드시 지켜야 할 제약** — 정의가 R1~R12 를 판정 대상이 아닌 **계획 제약**으로 분리해 두었고 R1·R2·R7·R9 는 위반 시 AC 가 깨져 협상 대상이 아니다. `git_clone` 에 실제로 물리는 자리:\n- **R1 — 모양만 빌리고 게이트는 새로 씌운다.** 참조 구현 `pure-agent` 의 `git_clone` 은 **gatekeeper 를 부르지 않는다**(그 레포에서 게이트를 지나는 것은 `web_fetch_get` 하나뿐). 이름·인자 모양은 따르되 **게이트는 이 레포가 새로 씌운다** — 그대로 가져오면 파드 밖에 닿는 도구가 승인 없이 선다.\n- **R4 — 승인 컨텍스트는 「원격 URL + 대상 경로」.** **경로를 에이전트가 정하게 하지 않는다** — 승인자가 볼 것이 늘어난다. **경로는 MCP 가 정하고 결과로 알려주는** 쪽이 맞다(문서 명시).\n- **R11/AC-F5 — 공유 볼륨 관례의 첫 시험.** 클론 결과물은 파일이라 `web_fetch_get` 이 낸 길을 탄다. 이 도구는 그 옆에 자기 서브트리를 갖는 **둘째**이고, **한 도구가 세운 파일 관례를 둘째가 따를 수 있는지가 여기서 처음 시험된다** — 따르지 못하면 그것은 이 도구의 문제가 아니라 **그 관례의 문제**라고 문서가 미리 적어 두었다(설계 변경의 여지를 계획에 남길 것).\n- **R2 — 게이트 미구성 시 목록에서 빠진다.** 직전 슬라이스가 `ping` 을 `toolDefinitions()` 의 `if !c.gated()` **안쪽**에 둔 이유이고, 원장이 그 배치를 「밖으로 옮기는 『단순화』를 막는 자리」로 주석에 남겼다. 새 도구도 같은 안쪽이다.\n\n⚠️ **계획 착수 전에 반드시 재측정할 것 — 경쟁 PR [#106](https://github.com/dlddu/session-platform/pull/106).** AC-F6 확정을 ①→②(skills-only plugin seed)로 뒤집으며 **이 모델의 두 정본을 다시 쓴다**: 로드맵 머리가 「2번의 R9 관문은 이미 열렸다」로, R9 규칙이 「게이트웨이 3종 + `k3s-mcp-token`」으로 바뀐다. **착지하면 2번의 선행이 사라져 우선순위가 재배열되고, 1번의 「왜」 문단도 바뀐다**(seed 가 `git-repo-cloner` 스킬은 가져다주지만 egress 가 없어 그 스킬이 매번 막히는 자리를 가리킨다 — 오히려 1번의 근거가 **강해진다**).\n  - 실측 상태(이번 fire): **open · `mergeable=false` · `dirty` · base `336bb4b` · 2026-09-12T05:33Z 이후 갱신 없음**, 그리고 **등재 4건 시절 문면**(「아래 넷이 다음 구현 대상이며」·0번 `ping`·4번 `kubectl`)이라 지금 main 과 크게 어긋난다. 5일째 정체 중이다.\n  - 3지점 시험 병합: 부모·트리거·main **전부 rc=1**, 충돌 파일 부모 7 → 트리거·main 8. **dirty 는 내 트리거 이전부터 있었고**(귀속 분리), 트리거가 새로 더한 것은 `docs/prd/approval-gated-workload.md` **한 파일**뿐이다. `session-mcp-tool-surface.md` 는 세 지점 모두에서 이미 충돌하고 있었다.\n  - ⇒ **#106 의 rebase 는 실행 내부 사안이라 경쟁 task 를 열지 않았다.** 다만 1번 슬라이스가 **같은 문서를 고치므로**, planner 는 계획 시점에 #106 의 신선도를 다시 보고 ⑴ 여전히 미착지면 그대로 진행하되 충돌면을 예측에 싣고, ⑵ 그새 착지했으면 **로드맵 절과 R9 문면을 다시 읽고** 1번의 근거 문단을 그 위에서 새로 쓴다.\n\n**자매 모델 경계(이중 계상 방지)** — 새 도구가 서면 따라 움직이지만 **이 task 의 범위가 아니다**: 전용 e2e 파일과 `docs/test/e2e.md` 등재는 `tbm_session-platform-scenario-e2e`, 새 코드의 주석 판정은 `tbm_session-platform-comment-redundancy`, R1~R12 준수·AC 일치 판정은 `tbm_session-platform-docs-impl` 기준 2 소관이다.\n\n**재감지 경로 확인** — 1번이 착지하면 등재가 3→2 로 줄어 **toBe 가 움직이고**, 표면이 2→3 으로 늘어 **asIs 도 움직인다**. 양쪽이 다 깨어나므로 이 슬라이스의 완결은 반드시 재감지되고, 잔여 2건은 그 후속 task 가 잇는다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-13T14:26:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**등재 1번 `git_clone` 하나만 표면에 세운다 — 이 시도의 완료 기준이 그것이다.**\n\n`docs/session-mcp-tool-surface.md` 의 「다음에 구현할 도구」 3건 중 **1번만** 지금 착수\n가능하다(2·3 은 R9 = AC-F6 자격 증명 배치 개정이 선행이고, 3 은 추가로 이 레포 밖의 R4 승인\n화면 설계가 필요하다). 그래서 남은 둘을 건드리지 않고 1번을 완주해 등재를 **3 → 2** 로 줄인다.\n\n**왜 이 경로인가** — 세 가지가 이 슬라이스를 로컬에서 검증 가능하게 만든다.\n1. **`git` 은 이미 이미지에 있다**(실측: `data-plane/Dockerfile` 런타임 스테이지가 `git` 을\n   설치하고 `git --version` 으로 빌드를 실패시킨다). 새 이미지 재료·새 apt 패키지가 없다.\n2. **헬퍼 파드에는 egress 정책이 없다**(`network_policy.go` 는 워크로드 egress 와 헬퍼 ingress\n   둘만 만든다) — `github.com` 으로 나가는 데 AC-F2 축의 새 선행이 생기지 않는다.\n3. **공개 레포 한정**이라 새 Secret 이 없다 ⇒ R9 에 걸리지 않는다. private 은 2번이 열어 줄\n   단명 토큰을 기다리는 편이 자격 증명을 하나 덜 만든다(문서의 근거 그대로).\n\n**접근 — 모양은 참조 구현에서, 게이트와 경로는 이 레포가 새로 씌운다.**\n참조 구현 `dlddu/pure-agent` 의 `mcp-server/src/tools/git-clone.ts` 를 실제로 읽어 이름\n(`git_clone`)·인자(`url`·`branch`)·응답 모양(`{success,message,path,url,branch}`)·5분 타임아웃을\n따른다. **세 군데서 의도적으로 벗어나고 그 이유를 문서에 함께 적는다**(도구 추가 규칙의\n「어긴다면 그 이유를 이 문서에 함께 적는다」):\n- **`directory` 인자를 버린다.** 참조 구현은 대상 디렉터리 이름을 호출자가 정하게 하는데, 이\n  문서의 R11(「파일명은 MCP 가 정한다 — 인자에서 파생한 이름은 경로 한 조각을 호출자 손에\n  쥐여 준다」)과 1번 항목 자신의 판정(「경로는 MCP 가 정하고 결과로 알려주는 쪽이 맞다」)이\n  정확히 그것을 금지한다. 경로는 `<공유볼륨>/git_clone/<요청id>` 로 **서버가 만든 요청 id\n  로만** 지어 `web_fetch_get` 이 세운 관례(`session_mcp_files.go`)를 그대로 따른다 — 이 도구가\n  그 관례의 **둘째 소비자**이고, 문서가 「한 도구가 세운 파일 관례를 둘째가 따를 수 있는지가\n  여기서 처음 시험된다」고 적은 자리다. **따를 수 있었다**는 것이 이 슬라이스의 관측 하나다.\n- **원격 URL 은 `http`·`https` 만 받는다.** 참조 구현은 SSH 형태도 받지만, SSH 는 키를\n  요구해 곧 R9 이고 승인자가 읽는 텍스트도 URL 이 아니게 된다(R4). `web_fetch_get` 의\n  `validateFetchTarget` 이 그은 선과 같은 선이다.\n- **URL 에 userinfo 가 있으면 거부한다**(`https://user:token@host/...`). 이것은 참조 구현에도\n  없는 **추가** 제약이고 근거는 R8 이다 — userinfo 를 그대로 통과시키면 토큰이 사람이 읽는\n  승인 컨텍스트와 로그에 실린다. 공개 레포 한정 범위에서 userinfo 는 쓸 일도 없다.\n\n**게이트·실패 처리는 기존 도구와 한 형태로 붙인다**: 검증 실패와 「공유 볼륨 미구성」은 승인\n요청을 만들기 **전에** `isError` 로 끊고(R3 — 성공할 수 없는 호출로 사람을 깨우지 않는다),\n대기 마커를 먼저 낸 뒤 대기에 들어가고(R6), 거절·만료·타임아웃·게이트웨이 장애는 전부\n`isError` 도구 결과다(R7). 도구 정의는 `toolDefinitions()` 의 `if !c.gated()` **안쪽**에\n둔다(R2). 실제 `git` 실행은 `fetch` 와 같은 성격의 함수 필드(seam)로 빼 단위 테스트가 승인\n왕복과 인자 구성을 실 프로세스 없이 관측하게 한다.\n\n**가역성**: 커밋 하나를 revert 하면 끝이다. 매니페스트·RBAC·NetworkPolicy·control plane 을\n건드리지 않고, 배포 이미지 핀은 이 PR 밖의 별도 커밋이 움직인다. 새 도구는 **호출마다 사람의\n승인**을 지나므로 착지 자체가 트래픽을 만들지 않는다.\n\n**범위(완료 기준)** — 아래 다섯이 모두 참이면 이 task 는 성공이다.\n1. `tools/list` 가 도구 **3개**(`web_fetch_get`·`ping`·`git_clone`)를 내고, 게이트 미구성\n   컨테이너는 여전히 **0개**를 낸다.\n2. 승인된 `git_clone` 호출만 `git` 을 실행하고, 거절·만료·타임아웃·게이트웨이 장애·인자 오류·\n   볼륨 미구성은 `git` 을 **한 번도** 실행하지 않는다(단위 테스트가 실행 횟수로 단언).\n3. 결과의 `path` 가 `<공유볼륨>/git_clone/<요청id>` 이고 호출자가 고른 조각이 **하나도** 없다.\n4. `docs/session-mcp-tool-surface.md` 의 등재가 **3 → 2**(1번 삭제, 2·3 의 번호와 근거는 불변)로\n   줄고, 사본 네 자리(머리 상태 줄 · 「지금 있는 것」 표 · `docs/index.html` 메타 ·\n   AC-F6 문장)가 함께 움직여 판정 기준 4 가 깨끗하다.\n5. 레포 게이트 4종(`check-fidelity` · `check-scenario-mapping` · `check-comment-policy` ·\n   `go vet`+`gofmt`)과 양 모듈 `go test ./...` 이 로컬에서 rc=0 이다.\n\n**범위 밖(후속)**: 등재 2번(K3s MCP 재노출)·3번(`gh` CLI) — R9 선행이 남아 있다. private 레포\n클론. 전용 e2e 파일과 `docs/test/e2e.md` 등재(`tbm_session-platform-scenario-e2e` 소관). 새 코드\n주석의 **판정 자체**(`tbm_session-platform-comment-redundancy` 소관 — 이 PR 은 CI 게이트가\n요구하는 증분 재판정만 원장에 기록한다). 클론 크기 상한(아래 지침의 「주의사항」 참조).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`data-plane/cmd/agent/session_mcp_git.go` 를 새로 만든다: 상수(`gitCloneTool`·클론 서브디렉터리·5분 타임아웃·stderr 캡), 인자 검증 `validateCloneTarget`/`validateCloneBranch`, `git` 인자 구성 함수, 실 실행 함수(`GIT_TERMINAL_PROMPT=0` + `--` 로 플래그 파싱 중단).",
+              "expectedOutcome": "새 파일이 컴파일되고 `gofmt -l` 이 빈 출력. 검증 함수는 http·https 만 통과시키고 userinfo·제어문자·선행 대시·빈 값·호스트 없음을 거부한다."
+            },
+            {
+              "seq": 2,
+              "action": "`sessionMCPConfig` 에 `clone` 함수 필드(seam)를 더하고 `newSessionMCPConfig` 가 실 구현을 넣는다. `fetch` 필드와 같은 성격·같은 자리.",
+              "expectedOutcome": "`go build` 통과. 단위 테스트가 실 `git` 프로세스 없이 클론 호출을 관측할 수 있다."
+            },
+            {
+              "seq": 3,
+              "action": "`toolDefinitions()` 의 `if !c.gated()` **안쪽** 반환 배열에 `git_clone` 정의를 더한다(`url` 필수 · `branch` 선택 · `additionalProperties:false`).",
+              "expectedOutcome": "게이트 있는 컨테이너의 `tools/list` 가 3개, 게이트 없는 컨테이너는 0개(R2)."
+            },
+            {
+              "seq": 4,
+              "action": "`callTool` 의 `switch call.Name` 에 `gitCloneTool` 을 수용하고, `ping` 조기 반환 뒤에 `callGitClone` 으로 분기한다. `callGitClone` 은 ⑴ 인자 검증 → ⑵ 공유 볼륨 전제 검사 → ⑶ 요청 id 발급 + 대상 경로 결정 → ⑷ 승인 컨텍스트(`url`·`branch`·`path`) → ⑸ awaiting notice → ⑹ await → ⑺ decided/unavailable notice → ⑻ 승인 시에만 클론 순서로 짠다.",
+              "expectedOutcome": "⑴·⑵ 실패는 승인 요청을 **만들기 전에** `isError` 로 끊긴다(R3). 거절·만료·타임아웃·게이트웨이 장애는 `isError` 이고 클론은 실행되지 않는다(R7)."
+            },
+            {
+              "seq": 5,
+              "action": "클론 성공 시 참조 구현의 응답 모양(`success`·`message`·`path`·`url`·`branch`)을 JSON 텍스트로 낸다. 실패 시 bounded stderr 를 실어 `isError` 로 내고 부분 클론 디렉터리를 지운다.",
+              "expectedOutcome": "성공 결과의 `path` 가 `<공유볼륨>/git_clone/<요청id>`. 실패 결과에는 `path` 가 없고 볼륨에 잔재 디렉터리가 남지 않는다."
+            },
+            {
+              "seq": 6,
+              "action": "`data-plane/cmd/agent/session_mcp_git_test.go` 를 새로 쓰고, 기존 `TestSessionMCPOffersItsToolsWhenTheGateExists`(도구 2개 단언)를 3개로 개정한다. 단언: 승인 후에만 클론 · 거절/만료/타임아웃/장애에서 클론 0회 · 인자 오류와 볼륨 미구성에서 승인 요청 0건 + 클론 0회 · 경로가 요청 id 로만 지어지고 두 호출이 다른 경로를 받음 · 실패가 잔재를 남기지 않음 · `git` 인자에 `--branch` 와 `--` 가 올바른 자리에 들어감.",
+              "expectedOutcome": "`cd data-plane && go test ./...` 가 ok. 새 테스트는 실 네트워크·실 `git` 없이 돈다."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/session-mcp-tool-surface.md` 를 고친다: 머리 상태 줄(도구 3개 · 등재 2개)과 개정 이력 한 줄 · 「지금 있는 것 (3개)」 표에 행 추가 · 「다음에 구현할 도구 (2)」 에서 1번 항목 삭제 및 남은 항목의 번호·근거 유지 확인 · 참조 구현에서 벗어난 세 지점(`directory` 삭제 · 스킴 제한 · userinfo 거부)과 볼륨 미구성 시 거부 판정을 산문으로 적는다. `docs/index.html` 메타(`다음 구현 대상 3`→`2`)와 `docs/prd/approval-gated-workload.md` 의 AC-F6 문장 영향도 함께 확인한다.",
+              "expectedOutcome": "모델의 to-be versionScript 재실행이 `roadmap:2 2. K3s MCP 재노출|3. gh CLI` 를 낸다. as-is 재실행이 `tools:3 git_clone,ping,web_fetch_get` 을 낸다. 문서에 사본이 새로 생기지 않는다(인자·응답 스키마를 옮겨 적지 않는다)."
+            },
+            {
+              "seq": 8,
+              "action": "주석 비중복성 원장의 증분 재판정을 같은 PR 에 담는다: 새·개정 주석을 정책 절차대로 판정해 복원 가능한 사본을 걷고, `docs/comment-policy/ledger.md` 의 data-plane 행(줄 수·지문)과 합계 마커를 재측정값으로 갱신한다. 직전 `ping` 슬라이스가 같은 형태로 했다(원장 이력의 2026-09-13 증분).",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` rc=0 이고 합계 마커가 행 합과 일치한다(R4 양방향 미러)."
+            },
+            {
+              "seq": 9,
+              "action": "로컬에서 CI 게이트를 1:1 재현한다: `check-fidelity-allowlist.py` · `check-scenario-mapping.sh` · `check_comment_policy.py` · 양 모듈 `go vet` + `gofmt -l` + `go test ./...`. base(`99c2166`)와 브랜치 양쪽에서 돌려 대조한다.",
+              "expectedOutcome": "다섯 검사 전부 base·브랜치 양쪽 rc=0. fidelity 의 seam 집합이 움직이지 않는다(새 코드가 스캔 토큰을 만들지 않는다)."
+            },
+            {
+              "seq": 10,
+              "action": "브랜치를 `dlddu/session-platform` 에 푸시하고 PR 을 연다(머지하지 않는다). 열린 PR 4건(#139·#130·#127·#106)과 **대조군 병합**으로 충돌 귀속을 가른다 — `main` 단독과 `main + 내 브랜치` 두 번 시험 병합해 충돌 집합을 비교한다.",
+              "expectedOutcome": "PR 번호와 충돌 차등이 `preparation.notes` 에 실측으로 기록된다. 내 브랜치가 새로 더하는 충돌이 무엇인지(또는 없음이) 수치로 남는다."
+            }
+          ],
+          "plannedAt": "2026-09-13T14:26:00Z"
+        }
+      }
+    ]
   }
 ]
