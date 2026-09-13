@@ -2660,7 +2660,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-09-13T09:24:30Z",
-    "updatedAt": "2026-09-13T09:35:29Z",
+    "updatedAt": "2026-09-13T09:46:07Z",
     "trigger": {
       "detectedAt": "2026-09-13T09:24:30Z",
       "changedSides": [
@@ -2683,6 +2683,62 @@
       "reason": "**작업 필요(`actionRequired: true`).** 불변식 1이 아니라 **불변식 2 — 차단 요인 `FETCH-ORIGIN`의 「해소 방향 재판정」이 지금 실행 가능해졌고, 그 재판정의 소관이 이 모델이며, 직전 판정이 그것을 명시적으로 이 task에 넘겨 두었다.**\n\n**⑴ 재판정을 막고 있던 사실이 죽었다(독립 실측).** 행의 `선행`은 「해소 방향 재판정」 하나이고, 그 재판정이 아직 안 된 이유를 같은 행이 「대역을 세워도 … 사설 CA 를 검증할 자리가 MCP 컨테이너에 없다」로 적고 있었다. 그런데 `data-plane/cmd/agent/session_mcp_tools.go:227`의 실제 코드는 `parsed.Scheme != \"https\" && parsed.Scheme != \"http\"` — **도구는 `http`도 받는다.** 평문 http 원본에는 검증할 인증서가 없으므로 그 벽은 성립하지 않는다. 그리고 평문 http 인클러스터 대역은 이 SUT가 **이미 돌리고 있다**(`deploy/e2e-approval-gateway-fake.yaml` 평문 HTTP :8080 · `url: \"http://approval-gateway-fake:8080\"`) ⇒ 가설이 아니라 선례 있는 배포 형태다.\n\n**⑵ 직전 판정이 이 task를 지명했다.** 같은 모델 `rct_20260913-0001`(오늘 08:05 종료)이 「지금 그 재판정을 미리 하지 않는다 … **재판정은 그 재감지가 여는 task 의 몫이다**」로 닫았고, 그 재감지를 여는 hunk가 PR **#133**, 그 머지 커밋 `ba67081`이 **이 task의 트리거**다. 여기서 `no_action_needed`로 닫으면 이 모델 자신이 라우팅한 인계를 받는 쪽에서 떨어뜨리는 것이고, 그것이 정확히 B1이 막으려는 실패 모드다(「넘긴 쪽은 소관을 적었으니 처리됐다고 보고, 받는 쪽은 세지 않아 인계가 유실되는 자리가 정확히 여기다」).\n\n**⑶ 기계적 규칙 다섯이 전부 거짓인데도 여는 근거.** B1 0 · gap_B2 0 · 착수 가능 0 · 재검토 시점(2026-10-11) 미도래 · B3 불변이고 레포 게이트도 부모·트리거 두 지점에서 rc=0 · 출력 바이트 동일이다. 그러나 **「착수 가능 0」이 성립하는 유일한 이유가 `선행` 칸의 문자열이고, 그 `선행`의 소관이 행의 `소관`과 같은 「이 모델」이다** — 바깥에 기다릴 것이 없다. B2는 `선행`의 **존재**만 보고 **내용**은 보지 않으므로, 자기 소유의 미결 결정을 그 칸에 적어 두면 게이트는 영원히 「착수 가능 0」을 찍는다. 이것이 정의가 불변식 2를 만들며 이름 붙여 막으려던 성질(「차단 요인을 성실히 등재할수록 문서는 충실해지는데 해소 압력은 그대로 0인」)이고, 정의의 「범위」 절이 처방까지 준다 — 「**전제를 넓히는 것이 작업이지, 원인을 표 밖에 둘 근거가 아니다**」. 「충돌 시 기본 방향」도 같다: 「차단 요인 → … **적어 두는 것으로 끝내지 않는다**」.\n\n---\n\n### planner에게 — 작업 범위와 **분기**\n\n**A. `FETCH-ORIGIN` 해소 방향 재판정 (주 슬라이스).** 행의 「남은 선택 셋」 ①공개 https 원본 실물 ②대역+CA 주입 재검토 ③관측 지점 이동 에 더해 **④ 평문 http 인클러스터 원본을 실물 배포**가 이번에 열렸다. 어느 쪽이든 **그 판정 결과를 행에 반영하는 것**까지가 작업이다:\n- **④ 또는 ①(실물 배포)로 가면** — 행의 `해소 시`가 예고한 대로 **등재 없이** 닫고 행을 지운다(MinIO · `plugin-marketplace-git` 선례). 배포가 뒤따라야 하면 그 사이 `선행`을 **「없음」**으로 고쳐 착수 가능으로 세운다.\n- **②(대역)로 가면** — `docs/doc-tracker.md:90`의 2026-09-07 인계대로 `판정: 없음` → **`EXT`**, `FETCH-ORIGIN`으로 등재하고 행을 지운다. ⚠️ 정의가 적어 둔 알려진 마찰: `해소 시` 칸에 예고 CODE를 백틱으로 적으면 게이트 R10(`PROMISED_CODE_RE`)이 「이미 등재된 CODE ⇒ 행을 지울 것」으로 실패시킨다 — 문구로 피할지 게이트를 넓힐지는 planner가 정한다.\n- **③(관측 지점 이동)으로 가면** — 행의 `소관`이 다른 모델로 넘어가므로, 받는 쪽에서 B1이 성립하도록 지목 문장과 원장 행을 **같은 hunk에** 둔다.\n- **재판정을 아직 못 하겠다고 결론 나면** — 그때는 `선행`을 **이 모델 소유가 아닌 바깥 사건**(다른 모델 task id · PR 번호 · 코드 리터럴)으로 다시 써야 한다. 자기 소유 결정을 `선행`에 두는 한 그 행은 영구히 자기 자신에 막힌다. 이 경우 산출은 「재판정 불가」가 아니라 **`선행` 칸 정정**이다.\n\n**B. 절반만 이행된 인계 — 거짓 전제 사본 2행(같은 슬라이스에 실을 것).** `docs/comment-policy/passes/2026-09-12-approval-gated-3.md:98-105`가 이 모델에 넘긴 것은 **차단 요인 행 + §「남은 미검증 분기」 두 행**인데 #133은 충실도 절 안(218·243행)만 고쳤다. `docs/test/e2e.md:770`은 부모·트리거 양쪽에서 바이트 동일하게 **여전히 「도구는 https 만 받는데(`validateFetchTarget`)」로 차단을 논증**하고, `:771`이 `〃 의 뒷면이다`로 얹혀 있다. **재감지 논거**: 그 두 행은 이 모델 toBe 슬라이스(`docs/test/e2e.md` 7~278행) **밖**이라 내가 못 본다. 자매 `scenario-e2e`(`HEAD:docs/test`)·`docs-impl`(`HEAD:docs`) 트리 해시가 파일을 덮지만 해시는 **문장이 바뀔 때** 깨어나지 **가만히 있으면서 거짓이 될 때**는 안 깨어나고, 두 자매의 판정면은 시나리오↔e2e 매핑과 문서↔구현이지 이 문장의 참·거짓이 아니다. A의 판정이 이 두 행의 논증도 바꾸므로 **한 hunk로 함께 가는 것이 맞다**.\n\n**C. 손대지 않아도 되는 것.** 불변식 1은 무손상이다 — asIs 지문 바이트 불변(`seams=29 files=15`), 등재 7 · 회계 20 · 인터셉트 7(위반 0), 게이트가 부모·트리거 두 지점에서 rc=0 · 출력 바이트 동일. 이번 작업에 seam 등재·제거는 들어가지 않는다.\n\n**잔여 관측(정의가 요구하는 기록).** 차단 요인 잔여 **1행**, 그 행의 재검토 시점 **2026-10-11** — 이것이 다음 감지의 관측 기준선이다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-13T09:33:30Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**범위(완료 기준): 차단 요인 `FETCH-ORIGIN` 의 「해소 방향 재판정」을 끝내고 그 결과를 원장 행에 반영하는 것까지.** 원본을 실제로 세우는 것은 범위 밖이다.\n\n그 행은 `선행` 이 「해소 방향 재판정」 하나이고 그 `선행` 의 소관이 행의 `소관`(`이 모델`)과 같아 바깥에 기다릴 것이 없는데, R11 이 `선행` 칸의 *존재* 만 보고 *내용* 은 보지 않아 게이트가 영원히 「착수 가능 0」을 찍는다 — 정의가 불변식 2 로 막으려던 성질이 그대로 나타난 자리다. 그 재판정을 미뤄 두던 근거(「대역을 세워도 사설 CA 를 검증할 자리가 MCP 컨테이너에 없다」)가 #129 로 죽었으므로 지금 판정할 수 있다.\n\n**판정: ④ 정적 문서를 내는 평문 http 원본을 인클러스터에 실물로 배포해 등재 없이 닫는다.** 정의의 EXT 배제 조항이 걸리고(kind 에 실물 배포 가능 — MinIO · `deploy/plugin-marketplace-git.yaml` 선례), 관찰은 원본 자신의 액세스 로그로 하므로 치환을 들이지 않는다 ⇒ `판정` 은 `없음` 유지, 예고 CODE 없음. 근거는 둘 다 실측이다: ⑴ `session_mcp_tools.go:229` 가 `url must be http or https` 이고 ⑵ 그 아웃바운드를 내는 바로 그 `session-mcp` 컨테이너가 이미 매 실행 평문 http 인클러스터 주소로 나간다(`$APPROVAL_GATEWAY_URL` = `http://approval-gateway-fake:8080`).\n\n**왜 문서 슬라이스로 끊는가.** 원본 배포까지 한 PR 에 담으면 신규 매니페스트 · kustomize 배선 · e2e 단언 저작이 함께 들어가는데 그 검증은 kind e2e(CI 전용, 왕복 15분+)뿐이라 로컬에서 아무것도 확인할 수 없다. 반면 재판정 슬라이스는 레포 자체 게이트 4종으로 **로컬 1:1 검증이 되고**(실측 전부 rc=0), 행을 「착수 가능」으로 세우는 순간 to-be 지문이 움직여 다음 감지가 그 실행 슬라이스를 기계적으로 연다 — 정의가 설계한 인계 경로 그대로다.\n\n**부수로 함께 싣는 것 1건**: `deploy/e2e-approval-gateway-fake.yaml` 의 「왜 평문 HTTP 인가」 주석이 아직 `url must be https` 를 근거로 든다(코드에 그 리터럴 0건). 그 파일은 이 모델 회계 표의 `APPROVAL-GATEWAY` 행이 서술하는 대상이고 그 행은 이미 사실을 바로 적고 있어 문서와 파일이 어긋난 상태였다. 두 감지 모두 grep 범위에 `deploy/` 를 넣지 않아 놓친 자리다. 주석 줄만 바뀐다.\n\n**범위 밖(경계)**: ⑴ 원본 실물 배포와 두 단언 저작 ⑵ `docs/test/e2e.md:770`·`:771` 과 `docs/doc-tracker.md:56` 의 같은 거짓 전제 사본 — 자매 모델 `tbm_session-platform-docs-impl` 의 열린 task 가 그 축을 들고 있고 `doc-tracker.md:56` 은 미머지 PR #127 이 그 줄을 다시 쓴다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "재판정의 사실 근거를 대상 레포에서 독립 실측한다 — `validateFetchTarget` 실제 본문, 리터럴 `url must be https` 전수 grep, 아웃바운드 호출 위치, 그리고 그 호출을 내는 컨테이너가 이미 평문 http 인클러스터 주소로 나가는지(`operator()` ↔ `$APPROVAL_GATEWAY_URL` ↔ `deploy/e2e-approval-gateway-fake.yaml`).",
+              "expectedOutcome": "`session_mcp_tools.go:229` = `url must be http or https` · `:253` = `http.DefaultClient.Do(req)` · 리터럴 `url must be https` 는 `deploy/e2e-approval-gateway-fake.yaml:22` 와 `docs/doc-tracker.md:56` 둘뿐(코드 0건) · 같은 `session-mcp` 컨테이너가 `http://approval-gateway-fake:8080` 으로 요청을 낸다."
+            },
+            {
+              "seq": 2,
+              "action": "베이스라인을 뜬다 — main 에서 게이트 4종(`check-fidelity-allowlist.py` · `check-render-fidelity.py` · `check_comment_policy.py` · `check-scenario-mapping.sh`)과 모델의 as-is/to-be `versionScript` 를 실행한다.",
+              "expectedOutcome": "4종 전부 rc=0. as-is `seams=29 files=15` / `de1e6837…`, to-be `lines=231` / `f7777637…` — 둘 다 레코드의 `lastObservedVersion` 과 바이트 동일(스캔 재현 확인)."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/test/e2e.md` 차단 요인 행(218)을 고친다: `선행` 을 「없음」으로, `무엇이 막는가` 를 「upstream 이 아직 없다 + 벽이 무너진 근거」로, `해소 시` 를 「④ 확정 · 셋이 갈린 근거 · 착수 슬라이스가 할 일」로 재작성. `판정`(`없음`)·`소관`(`이 모델`)·`재검토 시점`(2026-10-11)은 건드리지 않는다.",
+              "expectedOutcome": "행은 8칸 그대로. R10(리터럴 대조 · 예고 CODE) · R11(소관·선행·재검토 시점 형태) 통과."
+            },
+            {
+              "seq": 4,
+              "action": "같은 섹션의 판정 근거 산문(191·193)의 「https 원본」을 「http 원본」으로 고치고 재판정 기록 한 문장을 붙인다.",
+              "expectedOutcome": "섹션 안에서 행과 산문이 같은 방향을 가리킨다."
+            },
+            {
+              "seq": 5,
+              "action": "집계(260)의 「착수 가능 **0**건」을 「**1**건」으로 올리고 사유 문장을 바꾼다.",
+              "expectedOutcome": "R8 이 실제 `actionable` 과 대조해 통과. 게이트 출력이 「착수 가능 1건」으로 바뀐다."
+            },
+            {
+              "seq": 6,
+              "action": "`deploy/e2e-approval-gateway-fake.yaml` 의 「왜 평문 HTTP 인가」 주석(21~24)에서 `url must be https` 근거를 걷고 현재 사실(`validateFetchTarget` 이 둘 다 받는다)로 정정한다.",
+              "expectedOutcome": "`git diff -U0` 의 변경 줄이 전부 `#` 로 시작한다(ConfigMap `data:` 무변경). 코드에 없는 리터럴이 레포에서 1건 더 사라진다."
+            },
+            {
+              "seq": 7,
+              "action": "게이트 4종을 다시 돌리고, 모델의 as-is `versionScript` 를 재실행해 지문이 baseline 과 바이트 동일한지 확인한다.",
+              "expectedOutcome": "4종 rc=0, `check-fidelity-allowlist.py` 가 「착수 가능 1건」을 찍는다. as-is 지문 `de1e6837…` 불변(불변식 1 무손상)."
+            },
+            {
+              "seq": 8,
+              "action": "커밋 후 to-be `versionScript` 를 재실행하고, PR #127 과 시험 병합(`merge --no-commit --no-ff`)해 새 충돌을 만들지 않는지 확인한다.",
+              "expectedOutcome": "to-be `f7777637…` → `2ea053d0…`(재감지가 열릴 것). 시험 병합 충돌은 `docs/comment-policy/ledger.md` 하나뿐 — #131 이 만든 기존 충돌이고 `docs/test/e2e.md` 는 자동 병합된다."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치 `reconcile/rct_20260913-0002-e2e-mock-policy` 로 push 하고 PR 을 연다(머지하지 않는다).",
+              "expectedOutcome": "PR 이 열리고 CI 의 `fidelity`·`comment-policy`·`render-fidelity`·`scenario-mapping` 잡이 초록."
+            }
+          ],
+          "plannedAt": "2026-09-13T09:46:07Z"
+        }
+      }
+    ]
   }
 ]
