@@ -1781,7 +1781,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "executing",
+    "status": "failed",
     "createdAt": "2026-09-13T14:03:17Z",
     "updatedAt": "2026-09-13T23:50:41Z",
     "trigger": {
@@ -1975,6 +1975,104 @@
               "log": "PR #75 는 계획대로 열려 있고 CI 4잡 전부 `conclusion=success` 다(`fmt + vet`·`unit tests`·`integration tests`·`docker build & push`, head `b26ec401`). 여기까지는 step 11 의 expectedOutcome 그대로다.\n\n**그러나 실행 지침 절차 1(머지 전 신선도 확인 — 되돌릴 수 있는 마지막 지점)에서 차단 결함을 관측했고, 절차 2(머지)를 수행하지 않았다.** 지침의 검증 방법 B 를 라이브 배포에 대해 미리 돌려본 결과다.\n\n**결함: `resource_list` 가 허용된 모든 종류에 대해 빈 테이블을 돌려준다.**\n  - `v1/Namespace`(클러스터 전역) → `columns:[] rows:[]`\n  - `v1/Pod`(전 네임스페이스 / `homelab-k3s-mcp`) → `columns:[] rows:[]`\n  - `apps/v1/Deployment`(`homelab-k3s-mcp`) → `columns:[] rows:[]`\n  - `v1/Event`(`homelab-k3s-mcp`, limit=20) → `columns:[] rows:[]`\n네 종류 모두 AC3 이 `list` 를 부여한 것들이고, 클러스터에 객체가 실재한다(`resource_get v1/Namespace homelab-k3s-mcp` 와 `apps/v1/Deployment homelab-k3s-mcp` 는 실객체를 정상 반환한다 — Deployment 는 `readyReplicas:1`, `generation:420`). 권한 밖 종류는 정확히 거부되므로(`Service`·`ReplicaSet`) 요청이 RBAC 경로까지 도달한 뒤 **성공 응답으로 빈 표를 만들고 있다.**\n\n**추정 원인(코드 근거).** `internal/k8s/resource.go:28` 의 `tableAccept = \"application/json;as=Table;v=1;g=meta.k8s.io, application/json\"` 은 평문 `application/json` 을 대체안으로 함께 광고한다. apiserver 가 그 대체안을 고르면 `ListResources` 의 `json.Unmarshal(raw, &metav1.Table{})`(같은 파일 274~277줄)이 **에러 없이 성공**한다 — 평문 List 에는 `columnDefinitions`·`rows` 키가 없어 두 필드가 제로값으로 남기 때문이다. 그 결과가 관측된 `columns:[] rows:[]` 다. 비-Table 응답에 대한 가드도, 원시 폴백도 없다(지침이 「Table 전용, 원시 폴백 없음」이라 적은 대로다). 역설적으로 `resource_test.go:119` 의 주석이 이 실패 모드를 이름까지 짚어두고도(「a misnegotiated Accept」) 상수 모양만 단언한다.\n\n**파급 — 로그 축이 함께 닫힌다.** `resource_get(subresource=log)` 는 파드 **이름**을 요구하는데(지침이 「대상 해석이 없으므로 파드 이름이 필요」라고 수용한 비용), 이름을 얻는 유일한 경로가 `resource_list` 다. 실제로 이 실행에서 서버 자신의 기동 로그(지침 검증 D — `Exemptions()` 3줄·`refusing to start` 부재)를 **관측할 수 없었다.** 즉 폐기되는 `workload_logs`·`pod_describe` 의 대체 경로가 성립하지 않는다.\n\n**머지하지 않은 이유.** 지침이 머지를 「유일한 불가역 지점」으로 못박고 절차 1 을 「되돌릴 수 있는 마지막 지점」으로 둔 자리에서, 이 슬라이스 완료 기준의 중심인 읽기 축의 `list` 절반(AC2·AC17)이 미달성임이 드러났다. 머지하면 검증은 어차피 실패하는데 원복에는 revert PR 이 필요해진다. 수정(비-Table 응답 가드 또는 Accept 협상 교정)은 승인 범위 밖의 새 코드이므로 여기서 넓히지 않는다 — 재계획은 planner 의 몫이다.\n\n**부수 관측(계획 전제와 어긋남, 정보성).** 배포는 `ghcr.io/dlddu/homelab-k3s-mcp:latest` + `imagePullPolicy: Always` 를 쓰고, 라이브 `tools/list` 표면이 **이미 PR head 의 16종과 정확히 같다**(폐기 4종 부재, `resource_*` 3종 존재 — main 소스는 여전히 17종). 파드는 2026-09-13T23:35:32Z 에 떴다. 즉 PR 빌드가 머지 전에 이동 태그로 프로덕션에 도달해 있으며, 「머지가 유일한 불가역 지점」이라는 계획 전제가 실측과 어긋난다. 위 라이브 관측이 PR head 코드에 대한 것이라는 근거이기도 하다(추론이며, 이미지 다이제스트로 직접 대조하지는 못했다 — 토큰에 packages/actions 권한이 없다)."
             }
           ]
+        },
+        "verification": {
+          "status": "failed",
+          "converged": false,
+          "asIsVersionAfter": "internal:d7ae84365ff73fd9573e6001971ee017a57093c1 main.go:10cf744a330aa6357e3487a192fbb3cb6467e197",
+          "checks": [
+            {
+              "name": "PR 신선도 — CI 4잡",
+              "status": "passed",
+              "detail": "head `b26ec401` 에서 `fmt + vet`·`unit tests`·`integration tests`·`docker build & push` 전부 `conclusion=success`."
+            },
+            {
+              "name": "PR 신선도 — mergeable / base 무이동",
+              "status": "passed",
+              "detail": "`mergeable=true`, `mergeable_state=clean`, base `main` HEAD 가 계획 시점과 같은 `76b776d8`. rebase·재실행 불필요."
+            },
+            {
+              "name": "PR 신선도 — 같은 모델에 executing 없음",
+              "status": "passed",
+              "detail": "직전 `rct_20260913-0001` 은 `succeeded`. 이 task 외에 점유 중인 형제 없음."
+            },
+            {
+              "name": "F. rbac.yaml 권한 확대 0",
+              "status": "passed",
+              "detail": "PR diff 의 `k8s/rbac.yaml` +15/−5 는 전부 주석 라인. `apiGroups`/`resources`/`verbs` 무변경. 승인이 기댄 전제 그대로."
+            },
+            {
+              "name": "A. 도구 표면 16종 (−4/+3)",
+              "status": "passed",
+              "detail": "라이브 표면 16종 = `api_resources`·`aws_config_get`·`dear_baby_reset_user`·`github_app_installation_token`·`grafana_token`·`opensearch_document_{delete,put}`·`opensearch_search`·`ping`·`resource_get`·`resource_list`·`session_{list,read,write}`·`workload_{restart,scale}`. 폐기 4종 부재. main 소스(17종)와 대조해 −4/+3 확인."
+            },
+            {
+              "name": "B. api_resources 동작",
+              "status": "passed",
+              "detail": "클러스터가 서빙하는 종류를 실제로 반환(core·apps·argoproj·flux·traefik·external-secrets 등 140여 종, group/version/kind/plural/namespaced/verbs 포함)."
+            },
+            {
+              "name": "B. resource_list → Table (v1/Namespace)",
+              "status": "failed",
+              "detail": "`columns:[] rows:[]`. AC3 이 namespaces `list` 를 부여했고 클러스터에 네임스페이스가 실재하는데도 빈 표. 옛 `namespace_list` 의 대체가 성립하지 않는다."
+            },
+            {
+              "name": "B. resource_list → Table (apps/v1/Deployment)",
+              "status": "failed",
+              "detail": "`homelab-k3s-mcp` 네임스페이스에서 `columns:[] rows:[]`. 같은 Deployment 를 `resource_get` 으로는 정상 조회된다(`readyReplicas:1`). 옛 `workload_list` 대체 불성립."
+            },
+            {
+              "name": "B. resource_list → Table (v1/Pod)",
+              "status": "failed",
+              "detail": "전 네임스페이스·`homelab-k3s-mcp` 둘 다 `columns:[] rows:[]`. 파드 이름을 얻을 방법이 사라진다."
+            },
+            {
+              "name": "B. resource_list → Table (v1/Event)",
+              "status": "failed",
+              "detail": "`homelab-k3s-mcp`, limit=20 에서 `columns:[] rows:[]`. `pod_describe` 의 이벤트 절반 대체 불성립."
+            },
+            {
+              "name": "B. resource_get 객체 조회 + 잡음 제거(AC4)",
+              "status": "passed",
+              "detail": "`v1/Namespace homelab-k3s-mcp` 와 `apps/v1/Deployment homelab-k3s-mcp` 가 실객체 전문을 반환하고 `managedFields`·`last-applied-configuration` 이 없다. `spec`/`status`/라벨은 온전."
+            },
+            {
+              "name": "B. resource_get subresource=log (옛 workload_logs 대체)",
+              "status": "failed",
+              "detail": "관측 불가. 파드 이름이 필수인데 유일한 발견 경로인 `resource_list v1/Pod` 가 빈 표를 돌려줘 이름을 얻을 수 없다. 지침 검증 D(기동 로그의 `Exemptions()` 3줄·`refusing to start` 부재)도 같은 이유로 수행하지 못했다."
+            },
+            {
+              "name": "B. 권한 밖 종류 거부 (AC18)",
+              "status": "passed",
+              "detail": "`v1/Service` → 「refused: this server has no (list, services) grant. k8s/rbac.yaml is the single source for what it may do; retrying will not change the answer」. `apps/v1/ReplicaSet` 도 동일 형태. 지침이 「실패로 읽지 말 것」이라 적은 정상 동작."
+            },
+            {
+              "name": "B. 미지 kind 거부 (AC20)",
+              "status": "passed",
+              "detail": "`v1/Namspace` → 「cluster serves no kind \"Namspace\" in \"v1\"; call api_resources for the kinds this cluster serves」. 추측 호출 없이 거부. 정보성: 유사 후보를 함께 제시하지는 않는다(`similarKinds` 미발화)."
+            },
+            {
+              "name": "C. 민감 종류 게이트 (AC16 읽기 절반)",
+              "status": "passed",
+              "detail": "`resource_get v1/Secret homelab-k3s-mcp/homelab-k3s-mcp-github-app` → 「approval gate is not configured (GATEKEEPER_BASE_URL/GATEKEEPER_API_KEY): refusing」. 값 미노출, k8s 호출 도달 없음. 지침의 즉시 롤백 조건(승인 없이 값 반환)은 발생하지 않았다."
+            },
+            {
+              "name": "E. 레포 게이트 3종",
+              "status": "passed",
+              "detail": "`check_ac_mapping.py`·`check_mock_policy.py`·`check_comment_policy.py` 가 `fmt + vet` 잡 안에서 rc=0(잡 success)."
+            },
+            {
+              "name": "머지 수행 여부",
+              "status": "failed",
+              "detail": "**수행하지 않았다.** 절차 1 에서 위 4건의 `resource_list` 실패를 관측해 불가역 지점 직전에 멈췄다. main 은 `76b776d8` 그대로이고 PR #75 는 열린 채 남아 있다 — revert 없이 재계획 가능."
+            },
+            {
+              "name": "정보성: 잔여 gap · 계획 전제 어긋남",
+              "status": "passed",
+              "detail": "⑴ 배포가 `:latest`+`Always` 라 PR 빌드가 머지 전에 프로덕션에 도달해 있다(라이브 표면 = PR head 16종, 파드 기동 2026-09-13T23:35:32Z). 「머지가 유일한 불가역 지점」 전제가 실측과 어긋나며, 폐기 4종은 **머지 없이 이미** 라이브에서 사라져 있다. ⑵ 계획이 범위 밖으로 둔 것들(두 PRD 어긋남의 사람 판단, 쓰기 축 8종+`resource_watch`, AC19 정적 대조, `prd-approval-gate` AC3·AC6·AC10·AC11)은 그대로 남는다. ⑶ as-is 무변화 — converged 판정에는 넣지 않았다."
+            }
+          ],
+          "verifiedAt": "2026-09-13T23:50:41Z"
         }
       }
     ]
