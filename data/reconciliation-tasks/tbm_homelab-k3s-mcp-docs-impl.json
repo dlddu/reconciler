@@ -1783,7 +1783,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-13T14:03:17Z",
-    "updatedAt": "2026-09-13T14:30:00Z",
+    "updatedAt": "2026-09-13T14:45:00Z",
     "trigger": {
       "detectedAt": "2026-09-13T14:03:17Z",
       "changedSides": [
@@ -1811,6 +1811,72 @@
       "reason": "작업이 필요하다. 판정 기준 4개 중 **2개가 실질적으로 걸리고**, 어느 쪽도 저절로 닫히지 않는다.\n직전 슬라이스가 gap 을 좁힌 것은 사실이지만(31 → 24 미구현 AC) 잔여를 **명시적으로 범위 밖에\n두고 종료**했으므로, 지금 이 잔여를 집을 주체가 없다.\n\n**⑴ 미구현 AC 24건 (기준 1) — 정의가 「백로그로 치부해 이 루프 밖으로 빼지 않는다」고 못박은 축.**\n`prd-resource-generic` **20건 전부** + `prd-approval-gate` **AC3·AC6·AC10·AC11 4건**. 전부 부분\n구현이 아니라 **착수 0** 임을 비-테스트 전수 grep 으로 확인했다(`resource_*`·`api_resources` 0 히트,\n`resourceVersion|precondition|toctou` 0, `stringData|mask|redact` 0, `rbac.yaml|selfsubject|ownRBAC` 0).\nAC3 만 성격이 다르다 — `approvalContext()` 가 존재는 하나 `tool`·`rbac`·시각·원시 `arguments` 만\n싣고 동사별 상세·민감 값 가림·kubelet 고권한 경로 표시가 전무하므로 **AC 문언 기준 미달**이다.\n\n**⑵ 문서 없는 구현 6종 (기준 3) — 전혀 줄지 않았고 지금 프로덕션에서 살아 있다.**\n`namespace_list`·`workload_list`·`workload_logs`·`pod_describe`·`workload_restart`·`workload_scale`\n이 `toolsListJSON` 에 여전히 광고되고 대응 PRD 는 6/6 부재다. **이 수집 중 내가 직접\n`workload_list`·`pod_describe` 를 호출해 정상 응답을 받았다** — 문서상 존재하지 않는 도구가\n서빙 중이라는 직접 증거다. 그중 `workload_restart`·`workload_scale` 은 상태 변경 도구인데\n`Exemptions()` 로 **게이트 밖임이 명시적으로 선언**돼 있다(가시화이지 해소가 아니다).\ntracker 자신이 이것을 `⬜ 구현 제거 선행 대기` 로 등재하고 있고 부모·트리거 양쪽에서 `⬜` 26 개로\n불변이다.\n\n**기준 2 는 걸리지 않는다.** 광고 17 == 레지스트리 17(대칭차집합 공집합)이라 기동 검증이\n통과하고, `GATEKEEPER_*`·`RESOURCE_GATED_KINDS`·`AUTO_APPROVE` 는 모두 문서에 있다. tracker 의\n신규 노트가 코드에 대해 내건 단언 3종(착지 7건 / 게이트 대상 도구 0종 / AC6·10·11 미착수)은\n전건 실측으로 참이다 — 슬라이스가 자기 산출을 정직하게 신고했다.\n\n**기준 4 는 1건 있으나 이번 트리거 책임이 아니다.** 「허브 도달 가능 문서 33/33」 vs 실측 32\n(`comment-policy/ledger.md` 무링크)는 **부모 `67764e5` 에서도 동일**하므로 #69 이월이다. 경미하고\n선행이라 주 슬라이스에 끼워 넣지 말 것.\n\n**자동 해소 가능성 없음 → 유예하지 않는다.** `rct_20260913-0001` 의 계획서가 잔여 전부를\n「범위 밖(후속 task)」로 축자 열거했고 그 PR(#73)은 이미 머지됐다. 롤아웃 대기나 미머지 PR 로\n닫히는 종류가 아니다.\n\n---\n## planner 에게 넘기는 것 (근거와 함께)\n\n**A. 다음 슬라이스의 자연스러운 후보는 tracker 가 이미 순서로 못박았다** — 「구현 제거가 남긴 일」\n① `internal/mcp` 6종 제거 + `resource_*` 13종 등록 → ② **같은 커밋에서** `_helpers.EXPECTED_TOOLS`\n갱신(부분집합 비교라 조용히 약해진 전례 2회) → ③ `k8s/rbac.yaml` 재검토 → ④\n`resource_generic_ac{1..14}.py` 저작. ①이 닫히면 기준 1 의 20건과 기준 3 의 6건이 **동시에** 닫힌다\n— 두 gap 은 같은 작업의 양면이다.\n\n**B. 역전 금지 제약이 실측으로 아직 안전하다.** tracker 는 「게이트 구현 먼저, `secrets` RBAC 부여\n나중 — 뒤집히면 그 사이 Secret 이 무승인으로 열린다」를 못박는다. 게이트 코어는 #73 으로\n착지했고, `k8s/rbac.yaml` 에 `secrets` 는 **아직 없다**(실측) ⇒ 제약 미위반. **다만 `resource_*`\n쓰기 도구를 등록하는 슬라이스는 AC10(민감 종류 값 가림)·AC16(민감 종류 읽기도 게이트)과 같은\n커밋이어야 한다** — `readIsSensitive` 는 이미 있으나 값 가림이 없으므로, `secrets` 를 먼저 부여하고\n`resource_get` 을 열면 Secret 값이 승인 화면·푸시 알림에 평문으로 실린다(AC3·AC10 이 막으려는 것).\n\n**C. 무조건 선행 가능한 단 하나의 항목을 실측 확인했다** — `k8s/rbac.yaml:18` 의 `watch` 는\n`internal|main.go` 에 `.Watch(` 호출이 **0건**인 죽은 권한이므로 지금 제거해도 안전하다(tracker 의\n주장을 독립 재측정한 결과 참). 다른 것과 묶지 않아도 되는 저위험 항목이다.\n\n**D. 범위에서 빼야 하는 것.** ⑴ 신규 31 시나리오의 e2e 저작 — 자매 `tbm_homelab-k3s-mcp-scenario-e2e`\n소관이고 `check_ac_mapping.py` 가 `⏳ 구현 대기 34` 로 등재해 초록을 유지 중이다. ⑵ 주석 판정 —\n`tbm_homelab-k3s-mcp-comment-redundancy` 소관. ⑶ `dear_baby_reset_user` 게이트 편입 — tracker 가\n「소유자 판단 대기」로 **사람에게** 귀속시켰다. ⑷ 허브 33/33 off-by-one — 위 기준 4 참조.\n\n**E. 실행 순서 주의 — 같은 모델에 `executing` task 가 하나 살아 있다.** `rct_20260913-0001` 이\n2026-09-13T13:55:46Z 기준 `executing` 이고, 그 머지 후 검증 지침 (b)는 **아직 성립할 수 없다**:\n파드 `homelab-k3s-mcp-9fbfc5fc5-tb5mj` 의 `start_time` 이 **12:56:24Z** 로 머지(13:55:32Z)보다\n앞서고 `restart_count` 가 0 이라 #73 의 이미지가 아직 안 떴다. 그 task 가 닫히기 전에는 이\n잔여에 손대지 말 것 — 롤아웃이 실패해 revert 되면 as-is 전제가 통째로 바뀐다.\n\n---\n## ⚠️ 정정 (2026-09-13T14:22Z) — 위 인계 **E 는 두 군데가 거짓이다. E 를 따르지 말 것.**\n\n**E-1. `rct_20260913-0001` 은 이미 `succeeded` 다** (2026-09-13T14:02:30Z). 내가 그 항목을 쓴\n14:15 시점엔 이미 닫혀 있었는데 claim 직후(14:04)에 읽은 `executing` 을 그대로 들고 갔다.\n⇒ **「그 task 가 닫히기 전에는 손대지 말 것」이라는 대기 지시는 무효다. 지금 바로 계획해도 된다.**\n\n**E-2. 「#73 의 롤아웃이 아직 안 됐다」도 거짓이다.** 기동 로그 12:56:29Z 에 게이트 배선 WARN\n4줄(`workload_restart`·`workload_scale`·`dear_baby_reset_user` 면제 3줄 + `GATEKEEPER_BASE_URL\nnot set`)이 실재한다. CI 가 PR 브랜치 빌드를 머지 전에 배포했고, PR head `66cf3cf10` 와 squash\n커밋 `76b776d82` 의 tree 가 동일한 `3186554be` 이므로 **실행 중인 바이트는 머지된 트리와 같다**.\n`rct_20260913-0001` 의 verification 이 옳았고 내 추론(파드 기동 시각 < 머지 시각 ⇒ 옛 이미지)이\n틀렸다 — **CI 가 PR 빌드를 배포하는 레포에서는 그 추론이 성립하지 않는다.**\n\n**판정은 바뀌지 않는다.** 미구현 AC 24건과 문서 없는 구현 6종은 롤아웃 여부와 무관하다.\n오히려 **기준 3 의 근거가 세졌다**: `workload_restart`·`workload_scale` 이 승인 게이트 밖에서\n상태 변경 verb 를 행사하며 **프로덕션에서 서빙 중임이 기동 로그에 축자로 찍혀 있다**. 계획은\n그 두 도구가 게이트 밖에 있는 시간을 얼마나 줄일지를 함께 고려할 것.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-13T14:22:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**`prd-resource-generic` 의 읽기 축을 착지시키고, 그것이 흡수하는 읽기 전용 폐기 도구 4종을 같은 커밋에서 제거한다.**\n\n남은 24 AC 를 한 번에 닫지 않고 이 슬라이스를 고른 이유: ⑴ doc-tracker 의 「구현 제거가 남긴 일」 ①이 **기준 1(미구현 AC)과 기준 3(문서 없는 구현)을 동시에 닫는 유일한 작업**이라고 순서를 못박았고, ⑵ 그 ①을 13종 전부로 잡으면 게이트 위에 얹히는 쓰기·스트림 8종이 한 PR 에 들어와 되돌릴 지점이 없어지며, ⑶ `list`·`get`·discovery 세 도구는 **verb 자체가 게이트 밖**(`gatedVerbs` 에 없다)이라 gatekeeper 백엔드가 미구성인 현 프로덕션에서도 **그대로 동작한다** — 쓰기 축을 먼저 넣으면 착지 즉시 전부 거부되는 죽은 표면이 된다. ⑷ 세 도구가 쓰는 기계(discovery·RESTMapper·kind 해석·Table 협상)는 쓰기 축이 그대로 재사용하므로, 읽기 축이 그 토대를 먼저 세운다.\n\n**RBAC 판단(이 슬라이스의 가장 무거운 결정).** `resource_*` 는 종류를 인자로 받으므로 현재의 워크로드 한정 규칙으로는 대부분의 종류가 AC18 「권한 밖」으로 떨어진다. 그래서 `apiGroups:[\"*\"] resources:[\"*\"] verbs:[\"get\",\"list\"]` 로 **읽기 두 verb 만** 연다. 이것이 `secrets` 읽기를 포함한다는 사실을 숨기지 않는다 — doc-tracker 「방어층 축소」 행이 이를 **수용된 위험**으로 등재하며 전제 조건을 「디스패처 단계 강제(AC1)와 fail-closed(AC5)」로 적었고, 그 둘은 `rct_20260913-0001`(#73)로 이미 착지했다. 이 슬라이스는 그 위에 **런타임 kind 로 해석되는 쌍 선언**을 더해 `resource_get kind=Secret` 이 실제로 게이트를 타게 만든다(AC16 의 읽기 절반). 현 프로덕션은 `GATEKEEPER_BASE_URL` 이 미설정이라 그 경로는 **거부로 끝난다**(fail-closed 실측: `k8s/deployment.yaml` 에 `GATEKEEPER_*` env 없음). `list` 는 AC16 이 명시적으로 예외로 둔 verb 이고, 그 근거(Table 은 apiserver 가 서버 사이드로 만들어 값이 전송되지 않는다)를 이 슬라이스가 AC2/AC17 로 실제 구현한다 — **원시 목록 폴백 경로를 두지 않는다.** 쓰기 verb 는 한 줄도 부여하지 않으므로 순서 제약(게이트 먼저, `secrets` 쓰기 나중)은 유지된다. 덤으로 죽은 권한 `watch` 가 이 재작성에서 사라진다(비-테스트 `.Watch(` 호출 0건 — 감지 단계 실측).\n\n**이 시도의 완료 기준(범위)**: `prd-resource-generic` 의 **AC1·AC2·AC3·AC4·AC5·AC18·AC20 7건**이 구현되고 Go 단위 테스트로 검증되며, **AC16 의 읽기 `get` 절반**과 **AC17 의 `list` 절반**이 함께 선다. 동시에 폐기 6종 중 **읽기 전용 4종**(`namespace_list`·`workload_list`·`workload_logs`·`pod_describe`)이 등록·디스패치·핸들러·`toolsListJSON`·`k8s.Service` 에서 사라지고, `_helpers.EXPECTED_TOOLS` 가 **같은 커밋에서** 갱신된다(부분집합 비교라 조용히 약해진 전례 2회 — tracker ②). 도구 표면은 17 → 16(−4/+3).\n\n**범위 밖(후속 task)**: ⑴ 쓰기 축 `resource_create`·`update`·`patch`·`delete`·`delete_collection` 과 스트림 4종(`exec`·`attach`·`port_forward`·`proxy`) — 이들이 AC7~AC15 와 `workload_restart`·`workload_scale` 제거를 함께 닫는다. ⑵ AC6(`resource_watch`). ⑶ AC19(rbac.yaml 쌍 집합 정적 대조 — 도구 표가 완성돼야 대조 대상이 생긴다). ⑷ `prd-approval-gate` AC3(동사별 상세·민감 값 가림)·AC6(TOCTOU)·AC10·AC11. ⑸ `resource_generic_ac*.py` e2e 저작 — 자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 소관. ⑹ `dear_baby_reset_user` 게이트 편입(소유자 판단 대기). ⑺ 허브 도달 33/32 off-by-one(#69 이월).",
+          "riskLevel": "high",
+          "plannedAt": "2026-09-13T14:45:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "베이스라인 확인 — `dlddu/homelab-k3s-mcp` main(`76b776d8`)에서 분기하고, 세 문서 게이트(`tests/integration/check_ac_mapping.py`·`scripts/check_mock_policy.py`·`scripts/check_comment_policy.py`)와 `go build ./...`·`go test ./...`·`gofmt -l .`·`go vet ./...` 를 **변경 전에** 돌려 rc=0 을 기록한다.",
+              "expectedOutcome": "여덟 명령 전부 rc=0. 이후 실패는 전부 이 슬라이스의 소행으로 귀속된다."
+            },
+            {
+              "seq": 2,
+              "action": "`internal/k8s` 에 읽기 축 서비스 3종을 새 파일 `resource.go` 로 추가한다 — `APIResources`(discovery `ServerPreferredResources`), `ListResources`(RESTMapper 로 `apiVersion`+`kind` → 리소스 경로 해석, `Accept: application/json;as=Table;v=1;g=meta.k8s.io` 협상, `labelSelector`·`fieldSelector` 서버 사이드 전달, `limit`/`continue`), `GetResource`(dynamic client, `subresource` `log`/`scale`/`status`). `Service` 인터페이스와 `Unavailable` 에 세 메서드를 더하고, 흡수된 `ListNamespaces`·`ListWorkloads`·`WorkloadLogs`·`DescribePod` 를 제거한다.",
+              "expectedOutcome": "`go build ./...` rc=0. `internal/k8s` 가 새 의존성을 go.mod 에 더하지 않는다(`dynamic`·`discovery`·`restmapper` 는 이미 있는 `k8s.io/client-go v0.33.3` 의 하위 패키지)."
+            },
+            {
+              "seq": 3,
+              "action": "게이트의 쌍 선언을 **런타임 해석 가능**하게 넓힌다 — `toolDeclaration` 에 인자에서 `(verb, resource)` 를 만들어 내는 해석기를 더하고, `authorize`/`gatedPairs` 가 정적 `pairs` 와 동일하게 취급하게 한다. `resource_list` 는 `list on <해석된 리소스>`, `resource_get` 은 `get on <해석된 리소스[/서브리소스]>` 를 선언한다.",
+              "expectedOutcome": "`resource_get kind=Secret` 이 `readIsSensitive` 에 걸려 게이트를 타고, 미설정 게이트에서 **k8s 호출 0회로 거부**된다(단위 테스트). 비민감 종류의 `get` 과 모든 `list` 는 게이트를 타지 않는다. `Validate()` 가 여전히 통과해 기동이 막히지 않는다."
+            },
+            {
+              "seq": 4,
+              "action": "`internal/mcp` 에서 도구 표면을 교체한다 — `toolsListJSON` 과 `toolRegistry` 에서 `namespace_list`·`workload_list`·`workload_logs`·`pod_describe` 4종을 지우고 `api_resources`·`resource_list`·`resource_get` 3종을 더한다. 핸들러는 새 파일 `internal/mcp/resource.go` 에, 삭제되는 핸들러와 `describe.go` 는 함께 제거한다. 인자 검증은 AC 문언대로: `limit` 기본 100·상한 500, `resource_get` 의 `name` 필수(거부 메시지가 `resource_list` 로 안내), `tailLines` 기본 200·허용 1–5000 **초과는 클램프 없이 거부**, `watchSeconds` 등 범위 밖 인자는 애초에 스키마에 없다.",
+              "expectedOutcome": "`tools/list` 가 16종을 광고하고 `Validate()`(광고 ↔ 레지스트리 대칭차집합) 통과. 삭제된 4종 호출은 `unknown tool` 이다."
+            },
+            {
+              "seq": 5,
+              "action": "AC4 의 잡음 제거와 AC3 의 절단 표시를 구현한다 — `resource_get` 응답에서 `metadata.managedFields` 와 `kubectl.kubernetes.io/last-applied-configuration` 을 제거하고, `resource_list` 는 apiserver 가 준 `continue` 토큰을 응답에 그대로 실으며 절단 사실을 명시한다.",
+              "expectedOutcome": "단위 테스트: 두 필드가 사라지고 `spec`/`status` 는 온전하다. `limit` 보다 많은 항목에서 절단 표시와 `continue` 가 함께 온다."
+            },
+            {
+              "seq": 6,
+              "action": "AC18(권한 경계의 정직한 보고)을 구현한다 — apiserver 403 을 그대로 흘리지 않고 **어떤 `(verb, resource[/subresource])` 쌍이 없어서 막혔는지**를 담은 에러로 변환하고, `k8s/rbac.yaml` 이 단일 출처임을 메시지에 밝힌다. 클러스터에 없는 `kind` 는 추측 호출 없이 거부하고 비슷한 이름의 실존 종류를 후보로 제시한다(AC20).",
+              "expectedOutcome": "단위 테스트: 403 이 재시도를 유도하지 않는 명시적 에러가 되고 메시지에 쌍이 담긴다. 미지의 `kind` 가 후보와 함께 거부된다."
+            },
+            {
+              "seq": 7,
+              "action": "`k8s/rbac.yaml` 을 재작성한다 — 워크로드 한정 읽기 규칙을 `apiGroups:[\"*\"] resources:[\"*\"] verbs:[\"get\",\"list\"]` 로 바꾸고(무엇을 왜 여는지 주석으로 근거를 함께 적는다), 죽은 `watch` 를 제거하며, 남는 `workload_restart`/`workload_scale` 의 `patch`(apps 3종)와 `dear_baby_reset_user` 의 `pods/exec`(get·create)는 그대로 둔다. **쓰기 verb 는 한 줄도 더하지 않는다.**",
+              "expectedOutcome": "`kubectl apply -k tests/k8s/kind` 가 통과하고(CI 통합 잡), 부여 쌍 집합이 {get,list}×* ∪ {patch}×apps3 ∪ {get,create}×pods/exec 로 닫힌다. `watch` 가 파일에서 사라진다."
+            },
+            {
+              "seq": 8,
+              "action": "`tests/integration/_helpers.py` 의 `EXPECTED_TOOLS` 를 **같은 커밋에서** 갱신한다 — 4종을 빼고 3종을 더한다(tracker ②: 부분집합 비교라 갱신을 잊으면 깨지지 않고 조용히 약해진다).",
+              "expectedOutcome": "`smoke.py`·`platform_auth_safety_ac5.py` 의 `EXPECTED_TOOLS - names` 가 공집합. 통합 잡 green."
+            },
+            {
+              "seq": 9,
+              "action": "단위 테스트를 교체·보강한다 — `internal/server/mcp_test.go` 에서 삭제된 4종의 케이스를 지우고 신규 3종의 케이스(도구 표면·인자 검증·Table 응답·절단·서브리소스·민감 종류 거부·권한 밖 에러)를 더한다. `internal/server/fakes_test.go` 의 `fakeK8s` 를 새 인터페이스에 맞춘다.",
+              "expectedOutcome": "`go test ./... -v` rc=0, 신규 케이스가 전부 `--- PASS`. 삭제된 4종을 부르는 테스트가 남아 있지 않다."
+            },
+            {
+              "seq": 10,
+              "action": "문서 사본을 따라 움직인다 — `docs/doc-tracker.md` 의 「구현 제거가 남긴 일」에 날짜 노트로 ①의 **읽기 절반 착지**와 남은 절반을 적고, 「수용된 위험 / 미결 사항」의 「문서 없는 실행 코드」 행을 6종 → **2종**(`workload_restart`·`workload_scale`)으로 좁힌다. `docs/comment-policy/ledger.md` 의 등재 범위 중 이번에 주석이 변한 행(`internal/mcp/*`, `internal/k8s/*`, `internal/server/*`)을 **재판정**해 줄 수·지문·근거를 갱신한다(`rct_20260913-0001` 이 남긴 선례 형식 그대로).",
+              "expectedOutcome": "`python3 tests/integration/check_ac_mapping.py`·`scripts/check_mock_policy.py`·`scripts/check_comment_policy.py` 세 게이트 전부 rc=0. 신규 파일(`internal/mcp/resource.go`·`internal/k8s/resource.go`)은 등재하지 않는다 — 신규 범위의 등재는 그 판정을 한 PR 의 몫이라는 `gate.go` 선례를 따른다."
+            },
+            {
+              "seq": 11,
+              "action": "PR 을 연다(머지하지 않는다) — 브랜치 `reconcile/rct_20260913-0002-homelab-k3s-mcp-docs-impl`, 본문에 task id·gap 요약·계획 단계·검증 방법·범위 밖 목록을 싣는다.",
+              "expectedOutcome": "PR 이 열리고 CI 4잡(`fmt + vet`·`unit tests`·`integration tests`·`docker build & push`)이 전부 `conclusion=success`."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
