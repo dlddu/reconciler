@@ -4889,7 +4889,7 @@
       "gap": "**유의미한 gap 이 남아 있다 — 저작 대기 7.** 모델 정의의 불변식은\n`(시나리오 − 예외 − 구현 대기) = (매칭 파일)` 인데 실측은 `37 − 3 − 0 = 34 ≠ 27`, 차이 **7**이 곧\n전용 파일이 없는 시나리오다(규칙 1의 「0개면 누락」). **게이트 rc=0 을 수렴으로 읽지 말 것** —\n게이트의 항등식은 `저작 대기`를 완충항으로 포함하는 laxer 식이라 규칙 준수(1:1 위반 0)만 증명하고\n커버리지는 증명하지 않는다. 이번 트리거는 그 잔여를 **8→7 로 1 줄인 자기 슬라이스의 착지**이며,\n줄어든 만큼만 줄었고 나머지 7은 그대로다. e2e.md 의 변경은 전부 이 축의 부기·해제 기록이고 시나리오\n집합·예외·구현 대기는 안 움직였으므로, 판정에 영향을 주는 유일한 사실은 「매칭 파일 +1, 저작 대기 −1」이다.",
       "summarizedAt": "2026-09-12T12:33:00Z"
     },
-    "updatedAt": "2026-09-13T13:26:53Z",
+    "updatedAt": "2026-09-13T13:37:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "`actionRequired: true`. **부분 슬라이스가 닫힌 뒤의 잔여 7이 실재하고, 지금 소유자가 없다.**\n\n**1. 교과서적인 소비된 트리거다.** 트리거 #126 은 이 모델 자신의 `rct_20260911-0003` 산출이고\n(브랜치 `reconcile/rct_20260911-0003-opus5-1m-v3`), 그 task 는 11:35 에 `verify` 를 거쳐 닫혔다.\n비-터미널 task 를 전수로 훑어도 이 모델에 열린 것은 **0건**이다 ⇒ 남은 7행의 소유자가 없다.\n스킬이 적는 그대로 「슬라이스 → 재감지 → 후속 task」의 정상 진행이고, 이 fire 가 그 재감지다.\n\n**2. 잔여가 게이트에 안 보이는 것이 아니라, 게이트가 그것을 위반으로 세지 않는 것뿐이다.**\n`check-scenario-mapping.sh` 는 rc=0 이지만 그 항등식은 `저작 대기`를 완충항으로 포함한다\n(`37 = 27+3+0+7+0`). 모델 정의의 불변식은 완충항이 없다 — `37 − 3 − 0 = 34 ≠ 27`. 초록은 규칙\n준수의 증거이지 커버리지의 증거가 아니다.\n\n**3. 자동 해소 가능성 0.** 롤아웃도 일시 alert 도 아니다. 저작 대기 행이 사라지는 방법은 그\n시나리오를 선언하는 파일이 생기는 것 하나뿐이라고 등재 문서 자신이 적는다.\n\n---\n\n## ⚠️ planner 에게 — 다음 슬라이스는 하나로 정해져 있고, 그 앞에 읽을 것이 둘 있다\n\n**(가) 지금 집을 수 있는 행은 `approval-gated-workload.md#시나리오 6` 단독이다.** 저작 대기 7행 중\n`선행`이 `없음`인 것은 그 하나뿐이고(2026-09-12 에 #126 이 그 선행을 풀었다), 나머지 6은 선행 소유자가\n움직이기 전에는 못 쓴다 — CNI 2건(시나리오 2·2-1) · 폴링 타임아웃 주입 1건(시나리오 4) · 상한 주입 훅\n1건(claude-code 8) · 모킹 허용목록 2건(claude-code 9 · lifecycle 4). 「지금 바로 집을 수 있는 행」의\n정본은 표의 `선행` 칸이지 산문이 아니다 — 계획 전에 `scenario-backlog` 블록을 다시 읽을 것.\n\n**(나) 시나리오 6의 (c) 복원 갈래는 자매 PR #127 에 물려 있다 — 완료 기준을 조건부로 쓸 것.**\n그 행은 「(c) 복원 갈래 하나만 AC-F5 를 기다린다」고 스스로 적는다. AC-F5 후반의 구현은 자매 모델\n`tbm_session-platform-docs-impl` 의 `rct_20260912-0007`(12:29 `awaiting_review`) 이 소유하고, 그 PR\n**#127** 은 OPEN·MERGEABLE·CLEAN 이며 `merge-base(pr127, main) == main` 이라 **트리거 위에서 갈라져\n나왔다**(충돌 원리적 불가). 두 갈래를 미리 갈라 둘 것: **#127 착지 전**이면 (a)(b)만 저작하고 (c)는\n§「남은 미검증 분기」에 등재(그 자리에 `e2e_f4_helper_pod_test.go` 의 선례가 있다), **착지 후**면 한\n파일로 완주. 어느 쪽이든 「저작 대기 7→6」이 완료 기준이고, (c)의 처리는 그 안에서 갈린다.\n`awaiting_review` 는 미점유 인수인계 지점이므로 **#127 쪽 레코드에는 손대지 말 것** — 신선도만 다시 잰다.\n\n**(다) 원장은 이 PR 에 싣지 마라.** 신규 e2e 파일은 반드시 주석을 들여오고, 그 판정은 자매\n`tbm_session-platform-comment-redundancy` 의 몫이다(이번 fire 가 #126 몫으로 `rct_20260912-0006` 을 이미\n열었다). 지금 `docs/comment-policy/ledger.md` 의 합계 마커는 **#127 이 2989 → 3016 으로 건드리는 중**이라,\n여기서 같은 줄을 또 만지면 3자 충돌이 된다.\n\n**(라) 경계**: 이 루프의 산출은 e2e 테스트와 등재 문서뿐이다. 계획이 제품 코드 변경(예: 위 선행 6건의\n주입 훅·CNI 배선)을 포함하게 되면 경계를 넘은 것이므로 그 슬라이스를 멈추고 규칙 6 구현 대기 등재로\n전환할 것.",
@@ -4971,6 +4971,76 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-13T13:17:07Z",
           "comment": "반려 — **main 브랜치 최신화 후 다시 판단한다.** 계획의 방향(시나리오 6 에 공유 볼륨 왕복 대체 검증을 세운다)이나 개정 2 의 완료 기준에 대한 반대가 아니다. 근거가 낡은 base 위에서만 실측됐다는 것이 사유다.\n\n**관측 사실**: PR #130 의 base 는 `69ff764f` 에 고정돼 있는데 main 은 그 뒤로 계속 움직였다 — 09:1xZ 관측 시 `cee3944d`(#131 주석 정책 15차 판정: `control-plane/test/e2e_approval_gated_3_approval_path_test.go` 주석 84줄 제거 + `docs/comment-policy/ledger.md` 합계 마커, 그리고 배포 핀), 13:1xZ 재관측 시 `57a7936e`. **base 는 계속 흐르므로 재계획 시점의 main 을 다시 잴 것.** 승인 세션이 `cee3944d` 위로 로컬 시험 병합을 해 충돌 0 · 게이트 전수 rc=0(`37 = 0+3+34+0`, 주석 정책·충실도·렌더 모두 통과)을 실측하긴 했으나, **CI 가 실제로 돈 것은 여전히 낡은 base 위의 head `c729291` 이다** — 판단 근거는 실측 CI 여야 하고 로컬 시험 병합이 그것을 대신하지 않는다.\n\n**재계획 지시**: ⑴ 브랜치를 당시의 최신 main 으로 리베이스해 push ⑵ 새 base 에서 CI 를 끝까지 다시 관측 — 특히 `TestApprovalGatedSharedVolume_TheVolumeCarriesTheFileToTheAgentWithoutAFreeze` · `TestApprovalGatedSharedVolume_AnotherSessionsWorkloadDoesNotSeeIt` 둘이 SKIP 이 아니라 `--- PASS` 인지, 그리고 #131 이 ledger 합계 마커를 옮긴 뒤에도 `comment policy ledger` 잡이 초록인지 ⑶ 리베이스 뒤에는 게이트뿐 아니라 **문장이 참인지** 다시 볼 것 — 이 PR 이 이미 한 번 배운 교훈이고(#129 로 「https 만」이 거짓이 된 건), 이번에는 #131 이 시나리오 3 파일의 주석을 84줄 들어냈으므로 새 파일 헤더·유예 표 행이 그 파일을 인용하는 문장이 낡지 않았는지 확인한다 ⑷ 자매 PR #127 은 09:1xZ 기준 `dirty`(충돌) 라 executionGuide §주의 ① 은 당장 발동하지 않지만, 재계획 시 상태를 다시 잰다 ⑸ 그 상태로 다시 승인에 올린다.\n\n**다음 승인에서 갈릴 판단(이번에는 판단하지 않았다)**: 부분 커버리지((b)·(e) 두 갈래만)를 「현행 대체 검증」으로 등재해도 되는가, 그리고 그 등재가 규칙 4 예외 전환 재료가 되어 시나리오 6 이 유예 표에서 영구히 빠지는 경로를 여는 것에 동의하는가."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**반려 사유는 산출물이 아니라 신선도였다 — 접근·슬라이스·완료 기준을 그대로 승계하고, 낡은 base 위에서만 잰 근거를 새 main 에서 다시 쟀다.** 승인 세션은 계획의 방향(시나리오 6 에 공유 볼륨 왕복 대체 검증을 세운다)이나 개정 2 의 완료 기준에 반대하지 않았고, PR #130 의 base 가 `69ff764` 에 고정된 채 main 이 계속 흘렀다는 것(#131 → #133 → #138 → #136)만을 사유로 들었다. 그래서 이 시도는 **새 계획이 아니라 같은 계획의 재기준(re-basing)** 이다: 브랜치를 `068e921` 로 리베이스하고, 게이트를 전수 재현하고, **문장이 새 base 에서도 참인지** 다시 읽고, CI 를 끝까지 다시 관측한다.\n\n**리베이스는 충돌 0 이었다. 다시 돌려야 했던 것은 게이트가 아니라 문장이다** — 그리고 실제로 셋이 낡아 있었다.\n\n1. 🔴 **origin 열거가 틀렸다(앞 라운드부터).** (a) 갈래를 막는 것이 「크기」라는 논거를 세우며 「이 배포에서 GET 에 답하는 인클러스터 origin 은 세 대역의 `/healthz` 와 게이트웨이의 작은 JSON 뿐」이라고 적었는데, `deploy/kustomization.yaml` 에는 **실물로 선 GET origin 이 둘 더** 있다 — `minio.yaml` 과 `plugin-marketplace-git.yaml`. 둘 다 대역이 아니라 원본이라 seam 스캔·게이트 어디에도 걸리지 않고, 리뷰도 잡지 않았다. **결론은 살아남았고 근거를 실측으로 다시 세웠다**: MinIO 는 익명 읽기 정책을 세우지 않아 서명 없는 GET 이 작은 403 XML 로 끝나고, 마켓플레이스 원격이 smart HTTP 로 내는 저장소는 `marketplace.json` + 픽스처 SKILL.md 넷뿐이라 클론 전체가 100,000 바이트에 한참 못 미친다. 열거를 전수로 고쳤다(e2e.md 행 · Go 헤더 둘 다).\n2. **「위 두 행이 적는 사유도 그만큼 좁아졌다」는 지목이 소비됐다.** 앞 라운드는 남의 낡은 행 둘(시나리오 3 파일이 소유한 FETCH-ORIGIN 행)을 고치지 않고 **지목만** 해 다음 감지로 넘겼는데, 그 인계가 실제로 작동해 **#133·#138 이 정정을 착지시켰다**(770행에 「전제 정정(2026-09-13)」 addendum). 그래서 내 문장을 **착지한 정정을 가리키는 형태**로 고쳤다. 남의 행은 여전히 한 글자도 건드리지 않는다.\n3. **자기 착지 날짜 둘이 `2026-09-12`** 였다(그날 머지될 예정이었다) → `2026-09-13`. `2026-09-12` 로 남긴 것은 **남의 착지**를 가리키는 것들이다 — #126(선행 해제) · #132(축 개정) · #129(스킴 완화).\n\n**반려가 콕 집어 지시한 재확인 둘도 실측했다.** ⑴ #131 이 시나리오 3 파일에서 주석 84줄을 들어냈지만 이 PR 이 그 파일을 인용하는 문장은 **여전히 참**이다 — 비-주석 변경은 `f3Prompt` gofmt 정렬 한 줄뿐이고 `검증 시나리오:` 선언과 승인 왕복 단언은 그대로 산다(내 인용은 그 파일이 *무엇을 단언하는가*를 가리키지 주석을 인용하지 않는다). ⑵ #131 이 ledger 합계 마커를 2989 → **3010** 으로 옮긴 뒤에도 `comment policy ledger` 잡은 **초록**이고, 이 PR 은 `ledger.md` 를 건드리지 않는다.\n\n**이 시도의 범위(완료 기준) — 개정 2 에서 그대로 승계**: ⑴ 게이트 `scripts/e2e/check-scenario-mapping.sh` 가 rc=0 이고 항등식이 `37 = 0 + 3 + 34 + 0` ⑵ 유예 표의 `approval-gated-workload.md#시나리오 6` 행의 「현행 대체 검증」이 `없음` → `control-plane/test/e2e_approval_gated_6_shared_volume_test.go`(이관 27→28 · 미저작 6) ⑶ **새 base 위에서** kind e2e 의 새 케이스 둘이 SKIP 이 아니라 PASS ⑷ 나머지 CI 게이트 전부 통과 ⑸ PR 이 머지 가능. **유예 34 는 줄지 않는다** — 이 슬라이스는 매칭 파일 수를 바꾸지 않는다(Go 는 더 이상 매칭 단위가 아니다). 줄지 않은 수를 줄었다고 읽는 다음 감지를 막으려고 완료 기준에 그대로 적어 둔다.\n\n**범위 밖(후속)**: 시나리오 6 의 Playwright 이관 또는 규칙 4 예외 전환 판정(이 PR 은 그 재료만 놓는다) · (a) 승인된 실제 외부 호출로 파일이 만들어지는 경로 · (c) 복원 후 잔존 · (d) 동결 전·후 커서 — 셋 다 §「남은 미검증 분기」에 등재해 재감지가 잇는다. 저작 대기 나머지 6행은 각자 선행 소유자 몫이고 제품 코드는 한 줄도 고치지 않는다(모델 정의의 경계).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "새 base 를 실측한다 — `git ls-remote`/`git log` 로 main tip 을 재고(`069ff764` 이후 착지한 #131·#133·#138·#136 을 전수로 확인), 열린 PR 다섯의 `mergeable_state` 와 base 를 GitHub API 로 다시 잰다.",
+              "expectedOutcome": "main = `068e921`(= #136 `cf9101b` + 배포 핀). #127 은 여전히 `dirty`(미착지) ⇒ executionGuide §주의 ① 의 조건부 단계는 이번에도 발동하지 않는다. 반려가 관측한 `57a7936e` 보다 main 이 **또** 움직였음을 기록한다."
+            },
+            {
+              "seq": 2,
+              "action": "브랜치 `reconcile/rct_20260912-0005-opus-5-1m`(head `c729291`)를 새 main 으로 리베이스한다. 테스트 내용은 바꾸지 않는다.",
+              "expectedOutcome": "충돌 0. 파일 둘(`control-plane/test/e2e_approval_gated_6_shared_volume_test.go` 신규 · `docs/test/e2e.md`)만 남는다."
+            },
+            {
+              "seq": 3,
+              "action": "**문장 진위 재감사.** 게이트가 잡지 못하는 축이므로 손으로 전수한다 — ⑴ 내 두 파일이 인용하는 코드 심볼·리터럴을 새 base 에서 `git grep` 으로 재확인(`maxInlineBodyBytes`·`spillBody`·`spillSubdir`/`spillFileSuffix`·`ErrCheckpointDisabled`·`url must be http or https`) ⑵ #131 이 84줄을 들어낸 시나리오 3 파일이 여전히 `검증 시나리오:` 선언과 승인 왕복 단언을 갖는지 ⑶ 내가 인용한 「위 두 행」(e2e.md 770·771)이 그 사이 정정됐는지 ⑷ `deploy/kustomization.yaml` 을 **전수로 읽어** GET 에 답하는 인클러스터 origin 을 다시 센다 ⑸ `state-api.md#시나리오 6` 의 대체 검증 칸이 여전히 채워져 있는지 ⑹ 내 텍스트의 날짜가 남의 착지를 가리키는지 내 착지를 가리키는지 가른다.",
+              "expectedOutcome": "코드 심볼 전부 불변 · 시나리오 3 파일의 단언 생존 · 770행은 #138 이 정정 addendum 을 이미 달았다 · **origin 열거가 틀렸다**(MinIO·마켓플레이스 원격 누락) · state-api 6 대체 검증 유지 · 내 착지 날짜 둘이 낡음. ⑷와 ⑹, 그리고 ⑶의 소비된 지목 셋을 고칠 대상으로 확정한다."
+            },
+            {
+              "seq": 4,
+              "action": "확정된 셋을 **내 문장에만** 고친다 — origin 열거를 전수 실측으로 교체(MinIO 익명 읽기 정책 없음 → 작은 403 XML · 마켓플레이스 원격은 픽스처 저장소), 「좁아졌다」 지목을 「#133·#138 이 이미 정정으로 적었다」로, 자기 착지 날짜 둘을 2026-09-13 으로. 남의 행·남의 파일은 바이트 불변으로 둔다.",
+              "expectedOutcome": "`docs/test/e2e.md` 한 행과 Go 파일 헤더만 움직인다. 결론(「100,000 을 넘는 본문이 없다」)은 유지되고 근거만 강해진다. `git diff main..work --name-only` 가 여전히 파일 둘."
+            },
+            {
+              "seq": 5,
+              "action": "게이트를 로컬에서 전수 재현한다 — `scripts/e2e/check-scenario-mapping.sh` · `check_comment_policy.py` · `check-fidelity-allowlist.py` · `check-render-fidelity.py` · control-plane `gofmt -l`/`go vet ./...`/`go vet -tags=e2e ./...`/`go test ./...` · data-plane `gofmt`/`vet`/`test`.",
+              "expectedOutcome": "전부 rc=0. 매핑 게이트가 `37 = 0 + 3 + 34 + 0`. 주석 정책 게이트는 신규 e2e 파일을 **미판정**으로 두고 통과한다(그 판정은 자매 `tbm_session-platform-comment-redundancy` 몫이고 `ledger.md` 는 무변경)."
+            },
+            {
+              "seq": 6,
+              "action": "**게이트 음성 대조군을 새 base 에서 다시 잰다** — 유예 표 시나리오 6 행의 「현행 대체 검증」 칸을 `없음` 으로 되돌려 게이트가 붉어지는지 보고, 되돌린 뒤 파일이 바이트 동일한지 확인한다.",
+              "expectedOutcome": "rc=1 이고 diff 가 `+control-plane/test/e2e_approval_gated_6_shared_volume_test.go approval-gated-workload.md#시나리오 6` 을 정확히 지목. 복원 후 rc=0 이고 `git diff` 무출력 ⇒ 이 등재 행은 장식이 아니라 기계가 집행하는 쌍이다."
+            },
+            {
+              "seq": 7,
+              "action": "**경합면을 차등으로 측정한다** — 열린 PR 넷(#137·#127·#135·#106)을 각각 `main` 단독과 `main + 이 브랜치` 두 번 시험 병합해 충돌 파일 집합을 비교한다.",
+              "expectedOutcome": "네 PR 모두 두 집합이 **완전히 같다** ⇒ 이 PR 이 새로 만드는 충돌 표면 0. (#127 의 `ledger.md`·`doc-tracker.md` 충돌, #135·#106 의 충돌은 전부 이 브랜치 없이도 이미 있다. #137 은 같은 `docs/test/e2e.md` 를 만지지만 자동 병합된다.)"
+            },
+            {
+              "seq": 8,
+              "action": "재작성한 head 를 force-push 한다 — `ls-remote` 로 원격 tip 을 먼저 재고 `--force-with-lease=<ref>:<sha>` **명시형**을 쓴다(인라인 URL push 는 tracking ref 가 없어 맨 `--force-with-lease` 가 「stale info」로 거절된다). push 뒤 `ls-remote` 로 tip 을 **다시 재서** 착지를 증명한다.",
+              "expectedOutcome": "원격 tip 이 새 head 와 일치. 종료 코드가 아니라 `ls-remote` 대조가 착지의 증거다."
+            },
+            {
+              "seq": 9,
+              "action": "PR 본문을 3라운드 어휘로 고친다 — 반려 사유, 새 base, 고친 문장 셋과 그 근거, 반려가 지시한 재확인 둘의 실측 결과, 차등 경합면, 그리고 **승인자가 갈라 줄 판단이 그대로 남아 있다**는 것.",
+              "expectedOutcome": "PR 본문이 새 base 기준으로 참이고, 다음 승인 세션이 「무엇이 바뀌었고 무엇이 안 바뀌었는지」를 본문만으로 안다."
+            },
+            {
+              "seq": 10,
+              "action": "CI 를 **끝까지** 관측한다. 특히 ⑴ `e2e (kind + API + browser)` 의 `go test -tags=e2e` 에서 `TestApprovalGatedSharedVolume_TheVolumeCarriesTheFileToTheAgentWithoutAFreeze` · `TestApprovalGatedSharedVolume_AnotherSessionsWorkloadDoesNotSeeIt` 둘이 **SKIP 이 아니라 `--- PASS`** 인지 잡 로그에서 직접 읽고 ⑵ `comment policy ledger` 잡이 #131 의 마커 이동 뒤에도 초록인지 확인한다.",
+              "expectedOutcome": "전 잡 success(`pin deployment images (main only)` 는 skipped 가 정상). 두 케이스가 로그에 `--- PASS` 로 찍힌다. 실패하면 실패 *단계*부터 가르고(대역 지시자 미해석 / 도구 미실행 / 인프라 flake) 계획·지침을 개정해 근거를 레코드에 남긴다."
+            },
+            {
+              "seq": 11,
+              "action": "(실행 단계) 승인 후 PR 을 squash 머지한다. 머지 직전에 main 이 **또** 움직였는지 다시 재고, 움직였으면 리베이스 후 게이트뿐 아니라 **문장**을 다시 읽는다.",
+              "expectedOutcome": "머지 커밋이 main 에 들어가고 main 에서도 `ci` 초록."
+            },
+            {
+              "seq": 12,
+              "action": "(검증 단계) main 에서 게이트를 다시 돌려 `37 = 0 + 3 + 34 + 0` 과 유예 표 시나리오 6 행의 「현행 대체 검증」 값을 확인하고, 모델의 as-is/to-be versionScript 를 재실행해 지문 이동을 기록한다.",
+              "expectedOutcome": "이관 28 · 미저작 6 · 유예 34 불변 · 공백 0. **계획 범위 기준 수렴**이며, 유예 34 가 안 줄어든 것이 정상이다."
+            }
+          ],
+          "plannedAt": "2026-09-13T13:32:00Z"
         }
       }
     ]
