@@ -1781,9 +1781,9 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "reviewing",
+    "status": "awaiting_review",
     "createdAt": "2026-09-13T14:03:17Z",
-    "updatedAt": "2026-09-13T15:00:00Z",
+    "updatedAt": "2026-09-13T15:02:00Z",
     "trigger": {
       "detectedAt": "2026-09-13T14:03:17Z",
       "changedSides": [
@@ -1884,6 +1884,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/75",
           "preparedAt": "2026-09-13T14:58:00Z",
           "notes": "브랜치는 `reconcile/<rct>-<모델 슬러그>` 규약을 따랐다 — `rct` id 가 모델 간 유일하지 않아 형제 워커의 열린 PR 브랜치를 밟을 수 있기 때문이다(push 전 `ls-remote` 로 미존재 확인). PR 은 열기만 했고 머지하지 않았다. 17파일 +1561/−1560. **로컬에서 CI 게이트를 1:1 재현해 전부 rc=0 을 확인했다**: `gofmt -l .`(빈 출력) · `go vet ./...` · `go build ./...` · `go test ./...` · `check_ac_mapping.py` · `check_mock_policy.py` · `check_comment_policy.py`(등재 범위 #4·#5·#6 재판정 반영 후 R1~R8 통과, 합계 1034 → 1026). 주석 원장 재판정이 필요했던 이유는 `internal/mcp`·`internal/k8s`·`internal/server` 세 행이 등재 범위이고 이 슬라이스가 그 안의 주석을 움직였기 때문이다. 신규 파일 (`internal/k8s/resource.go`·`resource_test.go`·`internal/mcp/resource.go`)은 `gate.go` 선례대로 등재하지 않았다. ⚠️ 주석 게이트는 `git ls-files` 기반이라 **stage 전에는 삭제 파일을 못 본다** — `describe.go` 삭제에 대한 R1 위반은 `git add` 후에야 드러났다. **준비 중 계획이 한 번 바뀌었다(커밋 2개).** 첫 커밋(`5d8ae2e`)은 `k8s/rbac.yaml` 을 `get`·`list` 전 종류로 넓혔고 CI 통합 잡이 `platform_auth_safety_ac3.py` 의 ClusterRole **등가 단언**에서 실패했다(`only_in_cluster: {('*','*'): ['get','list'], ...}`). 둘째 커밋(`b26ec40`)이 규칙을 되돌리고 두 PRD 의 어긋남을 `doc-tracker.md` 미결 행으로 등재했다. **최종 상태는 권한 확대 0.** ⚠️ 로컬 재현의 사각지대였다 — `go test`·문서 게이트 3종은 전부 통과했고, RBAC 을 실제로 겨루는 것은 **kind 통합 잡뿐**이다. 다음 슬라이스는 `rbac.yaml` 을 건드릴 때 `platform_auth_safety_ac3.py` 의 `EXPECTED_GRANT` 를 먼저 대조할 것. 최종 CI: `fmt + vet`·`unit tests`·`integration tests`·`docker build & push` **4잡 전부 success**."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "프로덕션에서 서빙 중인 MCP 도구 표면을 교체한다 — 살아 있는 읽기 도구 4종(`namespace_list`·`workload_list`·`workload_logs`·`pod_describe`)을 제거하고 `resource_*` 읽기 축 3종으로 갈아끼우므로, 머지 직후 그 이름을 부르는 소비자는 `unknown tool` 을 받는다. 그 소비자 중에 정합성 루프 자신이 있다(감지 단계가 as-is 관측에 `workload_list`·`pod_describe` 를 쓴다) — 진행 중인 다른 워커의 관측이 한 번 깨질 수 있다. 불가역 지점은 머지 하나이고 권한·데이터·스키마 변경이 없어 revert 한 건으로 완전 원복되지만, 되돌리려면 revert PR 을 다시 CI·배포에 태워야 한다. 또한 민감 종류(Secret) 읽기를 승인 게이트에 태우는 변경이 들어 있는데 현 배포에 `GATEKEEPER_*` 가 미구성이라 실제 차단은 RBAC 이중 방어에 기대고 있다. 결정적으로, 계획이 `prd-platform-auth-safety` AC3(시크릿 읽기 권한 미부여를 축자로 못박음)과 `prd-resource-generic` AC19(`rbac.yaml` 이 도구 표와 정확히 일치하고 `secrets` 에 일곱 verb 부여)의 정면 충돌을 **해소하지 않고 사람 판단으로 명시 귀속**시킨 채(=`rbac.yaml` 무변경으로 우회) 착지하려 한다. 어느 문서가 이기는지는 to-be 결정이므로, 그 어긋남을 미결로 등재한 상태로 읽기 축을 먼저 착지시켜도 되는지가 이 승인에서 사람이 답해야 할 핵심이다."
         }
       }
     ]
