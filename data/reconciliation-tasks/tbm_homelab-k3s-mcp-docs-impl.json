@@ -1499,9 +1499,9 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "createdAt": "2026-09-13T08:32:44Z",
-    "updatedAt": "2026-09-13T13:55:46Z",
+    "updatedAt": "2026-09-13T14:02:30Z",
     "trigger": {
       "detectedAt": "2026-09-13T08:32:44Z",
       "changedSides": [
@@ -1677,6 +1677,104 @@
               "log": "step 10 자체(커밋·push·PR 오픈)는 계획 단계에서 완료 — PR #73, 1커밋 `66cf3cf1`, 9파일 +1751/-75. 이 실행 단계가 더한 것은 **머지 하나**다(executionGuide 실행 순서 2번, 유일한 불가역 지점). 머지 전 사전 조건 3건 전건 충족: ⑴ CI 4잡 success, ⑵ base `main` 이 `67764e5b` 그대로(미이동, `mergeable=true`·`mergeable_state=clean`), ⑶ 머지 방식은 레포 관례 확인 후 squash — 최근 6개 main 커밋이 전부 단일 부모 + `(#NN)` 접미다. 실행: `PUT /repos/dlddu/homelab-k3s-mcp/pulls/73/merge` (merge_method=squash, sha=`66cf3cf10482491d630462459117ed8c80b939a4` 로 head 고정) → `merged=true`, squash 커밋 `76b776d82db89b55c388e5e8344c57bb86eedf1b`. 직접 액션(kubectl·flux reconcile 등)은 지침대로 하나도 수행하지 않았고, `k8s/` 와 `dear_baby_reset_user` 게이트 편입은 지침의 금지 항목대로 건드리지 않았다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:d7ae84365ff73fd9573e6001971ee017a57093c1 main.go:10cf744a330aa6357e3487a192fbb3cb6467e197",
+          "checks": [
+            {
+              "name": "PR #73 머지 (executionGuide 실행 순서 2 — 유일한 불가역 지점)",
+              "status": "passed",
+              "detail": "`merged=true`, `merged_at=2026-09-13T13:55:32Z`, `state=closed`. squash 커밋 `76b776d82`, 메시지 `feat(gate): 승인 게이트의 판정 코어와 디스패처 강제를 세운다 (rct_20260913-0001) (#73)` — 최근 main 커밋 6개가 전부 단일 부모 + `(#NN)` 인 레포 관례와 일치."
+            },
+            {
+              "name": "머지 트리 == CI 가 검증한 트리 (회귀 위험 0 근거)",
+              "status": "passed",
+              "detail": "PR head `66cf3cf10` 의 tree 와 squash 커밋 `76b776d82` 의 tree 가 동일한 `3186554be`. base `main` 이 머지 직전까지 `67764e5b` 에서 움직이지 않았으므로 CI 가 초록으로 판정한 바로 그 바이트가 main 에 들어갔다."
+            },
+            {
+              "name": "머지 후 main CI 전잡 success",
+              "status": "passed",
+              "detail": "`76b776d82` 의 check-run 7종 전부 `conclusion=success` — `fmt + vet` · `unit tests` · `integration tests`(kind 통합) · `docker build & push` · `build` · `deploy` · `report-build-status`. 머지 전 PR head 의 4잡 success 와 별개로 main 에서 재실행돼 통과했다."
+            },
+            {
+              "name": "AC1 — 도구별 (verb, resource) 선언 + 디스패처 단계 강제 + 기동 시 선언 검증",
+              "status": "passed",
+              "detail": "머지된 main 의 `unit tests` 잡에서 `--- PASS`: `TestGatedCallIsRefusedBeforeKubernetes`(하위 5 verb `create`·`update`·`patch`·`delete`·`deletecollection` 전부 — 승인 없이는 k8s 호출 0) · `TestProductionRegistryMatchesAdvertisedTools` · `TestValidateRegistryRejectsMismatches`(선언 불일치 시 거부) · `TestEveryStateChangingToolIsGatedOrDocumented` · `TestDefaultHandlerHasARefusingGate` · `TestUngatedReadsStillRunWhileTheGateRefuses` · `TestExecSubresourceIsGated` · `TestSensitiveReadsAreGated`. 프로덕션 기동 로그에 `refusing to start` 없음 = 실제 레지스트리도 일치."
+            },
+            {
+              "name": "AC2 — POST /api/requests 요청 본문 계약",
+              "status": "passed",
+              "detail": "`--- PASS`: `TestAuthorizeSendsTheDocumentedRequestBody`(문서가 명시한 필드 전수) · `TestExternalIDDiffersPerCall`(호출마다 고유한 `externalId`) · `TestEmptyContextIsRefusedBeforeTheRequestIsMade`."
+            },
+            {
+              "name": "AC4 — GET /api/requests/{id} 폴링",
+              "status": "passed",
+              "detail": "`--- PASS`: `TestPendingBecomesApprovedThroughPolling`(`PENDING`→`APPROVED` 를 폴링으로 관측) · `TestExpiredVerdictIsRefused`(만료를 `EXPIRED` 로 관측)."
+            },
+            {
+              "name": "AC5 — 모든 실패 경로 fail-closed",
+              "status": "passed",
+              "detail": "`--- PASS: TestEveryFailurePathRefuses` + 하위 8 케이스 전부: `rejected` · `expired` · `no_verdict_before_the_timeout` · `external_id_collision` · `backend_5xx` · `unreadable_response` · `response_without_a_request_id` · `auto_rejected`. 추가로 `TestUnavailableGateRefuses` · `TestUnreachableBackendRefuses` · `TestUnavailableRefusesRead` · `TestUnavailableRefusesWrite`. 미설정이 기동 실패가 아니라는 설계도 프로덕션에서 확인 — `GATEKEEPER_BASE_URL not set: gated calls will be refused` WARN 뒤 정상 `listening`."
+            },
+            {
+              "name": "AC7 — 1승인 1실행",
+              "status": "passed",
+              "detail": "`--- PASS`: `TestApprovalCannotBeSpentTwice` · `TestApprovalIsSpentOnce`."
+            },
+            {
+              "name": "AC8 — 감사 로그",
+              "status": "passed",
+              "detail": "`--- PASS`: `TestGatedCallsAreAudited` · `TestApprovedCallReachesKubernetesWithAJudgeableContext`."
+            },
+            {
+              "name": "AC9 — 자동 승인/거부 표기",
+              "status": "passed",
+              "detail": "`--- PASS`: `TestAutoApprovalIsReported`(로그) · `TestAutoApprovalIsVisibleInTheToolResponse`(도구 응답 본문) — 문서가 요구한 「로그와 응답 본문 양쪽」을 각각 무는 테스트가 따로 있다."
+            },
+            {
+              "name": "단위 테스트 전수 — 스킵 없이 통과",
+              "status": "passed",
+              "detail": "머지된 main 의 `unit tests` 잡 실측: `--- PASS` 244건 / `--- FAIL` 0건 / `--- SKIP` 0건. executionGuide 의 「`ok` 한 줄만 보고 통과로 치지 말 것」 지시대로 개별 `--- PASS` 로 확인했고, 스킵 0 이므로 '조용히 안 돈' 테스트도 없다."
+            },
+            {
+              "name": "도구 표면 무변화 — 광고 17종 == 디스패처 == EXPECTED_TOOLS (3자 일치)",
+              "status": "passed",
+              "detail": "머지된 main 체크아웃에서 실측: `internal/mcp/toolslist.go` 광고 17종과 `tests/integration/_helpers.py` 의 `EXPECTED_TOOLS` 17종이 **집합으로 완전히 동일**(`aws_config_get`·`dear_baby_reset_user`·`github_app_installation_token`·`grafana_token`·`namespace_list`·`opensearch_document_delete`·`opensearch_document_put`·`opensearch_search`·`ping`·`pod_describe`·`session_list`·`session_read`·`session_write`·`workload_list`·`workload_logs`·`workload_restart`·`workload_scale`). 디스패처와의 일치는 `TestProductionRegistryMatchesAdvertisedTools` PASS 가 보증한다. `EXPECTED_TOOLS` 는 부분집합 비교라 조용히 약해진 전례가 2회 있으나, 이번 슬라이스는 도구를 더하지도 빼지도 않았고 상수도 변하지 않았다."
+            },
+            {
+              "name": "프로덕션 기동 — CrashLoopBackOff 없음 (검토가 지목한 최대 위험)",
+              "status": "passed",
+              "detail": "`workload_list(Deployment, homelab-k3s-mcp)` → `replicas=1 · ready_replicas=1 · updated_replicas=1 · available_replicas=1`. `pod_describe` → 파드 `homelab-k3s-mcp-9fbfc5fc5-tb5mj`, `phase=Running`, `restart_count=0`, `Ready=True`, `start_time=2026-09-13T12:56:24Z` 로 머지 전후 **동일 파드가 재시작 없이 유지**. 기동 시 레지스트리 검증(`os.Exit(1)`)이 실제 프로덕션 구성에서 통과했다는 뜻이다."
+            },
+            {
+              "name": "게이트 배선 로그 — 지침이 요구한 정확한 줄",
+              "status": "passed",
+              "detail": "기동 로그(12:56:29Z) 실측: `GATEKEEPER_BASE_URL not set: gated calls will be refused` **1줄**, `tool exercises a gated verb but runs outside the approval gate` **정확히 3줄** — `workload_restart`(reason: 문서에서 폐기됨(PR #72) — doc-tracker.md 「문서 없는 실행 코드」 구현 제거 대기) · `workload_scale`(동일) · `dear_baby_reset_user`(reason: prd-approval-gate 「남은 예외 1건」 — 소유자 판단 대기). `refusing to start` 부재, 이어서 `homelab-k3s-mcp listening addr=0.0.0.0:3000`. 지침이 기대한 모양과 전건 일치한다."
+            },
+            {
+              "name": "기존 도구 런타임 무변화 (이 슬라이스의 약속)",
+              "status": "passed",
+              "detail": "라이브 호출 3종 전부 변경 전과 같은 모양으로 성공 — `ping`→`pong`, `namespace_list`→36개 네임스페이스 정상 반환, `workload_list(kind=Deployment, namespace=homelab-k3s-mcp)`→1/1 정상. 지침대로 `workload_restart`·`workload_scale`·`dear_baby_reset_user` 는 **호출하지 않았다**(실제 클러스터를 바꾸므로) — 이들이 게이트 밖이라는 사실은 위 기동 로그 3줄로 이미 관측됐다."
+            },
+            {
+              "name": "문서 게이트 3종 + check_ac_mapping 카운터 불변",
+              "status": "passed",
+              "detail": "머지된 main 에서 로컬 재현, 전부 rc=0 — `check_ac_mapping.py`(전집 80 / 예외 1 / 구현 대기 34 / 1:1 45 / 매칭 45 / 공백 0 — **트리거 시점과 전건 동일**, 문서 편집이 의도 범위를 넘지 않았다) · `check_mock_policy.py`(R1~R6, 등재 5/상한 5) · `check_comment_policy.py`(R1~R8, 판정 완료 1034줄/84.3%, 등재 범위 22)."
+            },
+            {
+              "name": "as-is 버전 이동 (기록용 — 다음 감지 주기의 트리거)",
+              "status": "passed",
+              "detail": "`asIs.versionScript` 재실행: `internal:e3db6310… main.go:1c3bdc00…` → `internal:d7ae84365ff73fd9573e6001971ee017a57093c1 main.go:10cf744a330aa6357e3487a192fbb3cb6467e197`. to-be 도 함께 움직였다(`docs`: `cab7a627…` → `a56861463…`) — 이 PR 이 `doc-tracker.md` 와 `comment-policy/ledger.md` 를 건드렸기 때문이다. **모델의 `lastObservedVersion` 은 건드리지 않았다** — 이 변화가 다음 감지 주기의 트리거가 된다."
+            },
+            {
+              "name": "범위 밖 잔여 gap (정보성 — converged 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "이번 슬라이스가 닫지 않은 것을 사실로만 남긴다. 모델 전체 gap 31 AC 중 이번에 닫힌 것은 `prd-approval-gate` 7 AC 이고, 남은 것은 ⑴ `prd-resource-generic` 20 AC 전부(`resource_*` 13종 미구현 — 머지된 main 에서도 여전히 0 히트) · ⑵ `prd-approval-gate` 의 AC3(verb 카탈로그)·AC6(TOCTOU)·AC10(민감 종류 값 가림)·AC11(게이트 자신의 RBAC 대조) · ⑶ 문서 없는 실행 코드 6종(`namespace_list`·`workload_list`·`workload_logs`·`pod_describe`·`workload_restart`·`workload_scale`)이 여전히 서빙 중 · ⑷ `k8s/rbac.yaml` 재작성(`secrets` 부여는 이 게이트가 선행 조건이었고 이제 그 조건이 충족됐다, 죽은 `watch` 제거) · ⑸ `dear_baby_reset_user` 게이트 편입(사람 판단 대기) · ⑹ 허브 33/33 vs 실측 32 off-by-one(#69 선행 결함) · ⑺ 승인 게이트 e2e 저작(자매 모델 소관, kind gatekeeper 픽스처 선행). 이들은 이 task 의 완료 기준 밖이며, 위 as-is/to-be 버전 이동의 **재감지가 후속 task 로 잇는다**. 추가 관측 1건: `docker build & push` 잡에 브랜치 가드가 없어 PR CI 가 `:latest` 를 덮는 문제는 이번에도 그대로다(`.github/` 는 이 모델 범위 밖 — 사람 판단 항목으로 남김)."
+            }
+          ],
+          "verifiedAt": "2026-09-13T14:02:30Z"
         }
       }
     ]
