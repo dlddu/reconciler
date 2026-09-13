@@ -19,7 +19,7 @@
       }
     },
     "createdAt": "2026-09-12T12:53:18Z",
-    "updatedAt": "2026-09-12T13:32:11Z",
+    "updatedAt": "2026-09-13T07:51:03Z",
     "stateSummary": {
       "asIs": "**as-is (실제 도구 표면) — `419eb2eb`, 최초 관측 2026-09-12T12:50Z**\n\n`tools:1 web_fetch_get`\n\n`data-plane/cmd/agent/session_mcp_tools.go` 의 `toolDefinitions()` 본문에서 뽑은 도구 이름은 **`web_fetch_get` 하나**다. 모델 등록(2026-09-12T12:51:48Z) 직전에 머지된 **PR #129**(`054aac9`, 12:48:40Z)가 바로 이 함수를 만졌으므로 첫 관측이 낡지 않았는지 확인했다 — **부모 `e318e97d` 와 트리거 `419eb2eb` 에서 스크립트 출력이 동일**하다(`tools:1 web_fetch_get`). #129 는 `url` 인자의 description 문자열과 `validateFetchTarget` 의 스킴 검사만 바꿨고 **도구를 더하거나 빼지 않았다.**\n\n그 하나의 도구는 승인 게이트를 지나며(호출마다 승인 요청 1건), 결과는 본문 또는 공유 볼륨 파일 경로로 나간다.",
       "toBe": "**to-be (등재된 구현 대상) — `docs/session-mcp-tool-surface.md` 「다음에 구현할 도구」 절, 최초 관측 2026-09-12T12:50Z**\n\n`roadmap:5 0. ping|1. git_clone|2. K3s MCP 재노출|3. gh CLI|4. kubectl`\n\n이 side 역시 부모 `e318e97d` 와 트리거 `419eb2eb` 에서 **동일**하다 — #129 는 같은 파일의 「지금 있는 것」 표와 R4 산문만 고쳤고 등재 목록의 `### ` 항목은 건드리지 않았다.\n\n문서가 스스로 적은 **선행 지도**(이 모델 정의가 우선순위의 출발점으로 채택한 것):\n- **0. `ping`** — 인자 없는 진단 도구. 자격 증명을 요구하지 않아 R9 밖이고, 파드 밖으로 나가지 않아 R10·R12 무관, 결과가 상수 크기라 R11(공유 볼륨) 무관. 문서가 **「이 목록에서 선행이 하나도 없는 유일한 항목이고, 그래서 로드맵의 첫 관문(AC-F6 개정)과 무관하게 지금 착수할 수 있다」**고 명시한다.\n- **1. `git_clone`** — 공개 레포 한정이면 R9 에 안 걸려 「첫 관문 앞에 설 수 있는」 유일한 1~4 항목. private 클론은 2·3 뒤로 미루는 것이 문서의 권고.\n- **2. K3s MCP 재노출 · 3. gh CLI · 4. kubectl** — 셋 다 **R9 = AC-F6 자격 증명 배치 개정**이 선행. 3·4 는 승인 대상이 URL 이 아니라 명령줄이 되는 첫 자리라 **R4 승인 화면 설계**가 함께 필요하고, 그 화면은 **이 레포 밖**이다.\n\nto-be 정의상 목표 상태는 이 절이 **비는 것**(전부 착지했거나 근거와 함께 철회됨)이다.",
@@ -31,6 +31,47 @@
       "reason": "**작업 필요(`actionRequired: true`).** 등재 5건이 전부 미착지이고, 정의가 **「등재를 조용히 방치하는 것만이 drift 다」**로 못박는다. 최초 관측이지만 유예할 이유가 없다 — 자동 해소될 성질의 차이가 아니고(문서가 등재를 걷지 않는 한 줄어들지 않는다), 이 모델은 그 방치를 끝내려고 방금 등록됐다.\n\n**다음 슬라이스를 하나로 특정한다: 「0. `ping`」.** planner 가 나머지 4건의 선행을 재조사하지 않도록 근거를 옮겨 적는다.\n- 1~4 중 **2·3·4 는 R9(AC-F6 자격 증명 배치 개정)** 가 선행이라 지금 집을 수 없고, **3·4 는 추가로 R4 승인 화면 설계**가 필요한데 그 화면은 이 레포 밖이다.\n- **1(`git_clone`)** 은 공개 레포 한정이면 첫 관문 앞에 설 수 있으나, 문서가 **0 을 「1번보다도 앞」**이라 적는다.\n- **0 은 선행이 하나도 없는 유일한 항목**이다.\n\n**계획이 반드시 지켜야 할 제약(문서가 「협상 불가」로 지목한 자리)**: `ping` 은 게이트를 지나지 않지만(파드 밖에 닿지 않아 R1 적용 범위 밖) **R2 는 그대로 지킨다 — 게이트를 구성할 수 없으면 이 도구도 목록에 내지 않는다.** 그래야 「게이트가 없으면 표면이 빈다」가 유지되고 빈 목록이 계속 「게이트웨이가 없다」 하나로만 읽힌다. 이 도구를 게이트 구성 밖에 두면 **진단 도구가 진단 신호를 먼저 망가뜨린다.** 또한 **인자를 두지 않는다**(에코 인자는 승인을 지나지 않는 자리에 호출자가 정하는 문자열을 만들어 R4·R8 을 축낸다).\n\n계획 단계는 같은 문서의 **R1~R12 전체를 읽고 반영**할 것 — 정의가 그것을 판정 대상이 아닌 **계획 제약**으로 분리해 두었고, R1·R2·R7·R9 는 위반 시 AC 가 깨져 협상 대상이 아니다. 이 모델의 task 는 자매 모델 대부분과 달리 **제품 코드를 만든다**는 점도 검토 단계에서 실질적이다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-12T12:57:22Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "등재 5건(감지 시점) 중 **선행이 하나도 없는 0번 `ping`** 하나만 표면에 세운다 — 세션 MCP 의 `toolDefinitions()` 에 인자 없는 진단 도구를 더하고, 그 착지가 거짓으로 만드는 문서 자리를 같은 PR 에서 정정한다. 이 경로를 고른 이유: 1~3 은 전부 R9(AC-F6 자격 증명 배치 개정)·R4(레포 밖 승인 화면)에 걸려 지금 코드로 갈 수 없고, 0번은 게이트웨이·네트워크·공유 볼륨을 하나도 건드리지 않아 **되돌림이 revert 하나**다. 설계의 협상 불가 지점 둘을 그대로 지킨다 — ⑴ R2: 게이트가 없으면 이 도구도 목록에 내지 않는다(그래야 빈 목록이 계속 「게이트웨이가 없다」 하나로만 읽힌다), ⑵ 인자를 두지 않는다(에코 인자는 승인을 지나지 않는 자리에 호출자가 정하는 문자열을 만든다).\n\n**이 시도의 범위(완료 기준)**: ⑴ `tools/list` 가 `ping` 을 내고 `tools/call` 이 승인 요청·외부 호출 0 으로 상수 한 줄을 답한다(게이트가 구성됐을 때만), ⑵ 모델의 as-is 버전이 `tools:1 web_fetch_get` → `tools:2 ping,web_fetch_get` 로, to-be 버전이 `roadmap:4 0. ping|…` → `roadmap:3 1. git_clone|…` 로 움직인다, ⑶ 정적 게이트 4종(comment-policy · fidelity · scenario-mapping · journey-prototype)이 초록으로 남는다. **범위 밖**: 등재 1~3(`git_clone` · K3s MCP 재노출 · `gh` CLI) — 전부 AC-F6 개정이 선행이다. 전용 e2e 파일과 `docs/test/e2e.md` 등재(소관 `tbm_session-platform-scenario-e2e`), 새 주석의 다음 패스 재판정(소관 `tbm_session-platform-comment-redundancy` — 다만 게이트 R2 가 즉시 빨개지므로 **이번 증분만은 같은 PR 에서 판정**했다), `docs/doc-tracker.md` 행 추가(선례 #128·#129 모두 두지 않았다).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`data-plane/cmd/agent/session_mcp_tools.go` 에 `pingTool`·`pingReply` 상수를 더하고, `toolDefinitions()` 의 **게이트 분기 안쪽**에 인자 없는 도구 정의(`properties:{}` · `additionalProperties:false`)를 둘째로 넣는다. `callTool` 의 이름 검사를 `switch` 로 바꿔 두 이름을 받게 하고, `!gated()` 검사 **뒤에** ping 분기를 두어 상수 한 줄을 돌려준다(미설정 메시지도 「외부 호출」이 아니라 「목록이 빈다」로 넓힌다).",
+              "expectedOutcome": "`go vet ./...` · `gofmt -l .` · `go test ./...` 전부 통과. as-is 버전 스크립트가 `tools:2 ping,web_fetch_get` 를 낸다."
+            },
+            {
+              "seq": 2,
+              "action": "`session_mcp_gate_test.go` 의 「도구가 정확히 하나」 단언을 두 도구 단언으로 바꾸고(이름·인자 스키마 각각), 신규 2건을 더한다 — ⑴ ping 호출이 승인 요청 0 · upstream 0 으로 상수를 답한다, ⑵ 게이트 없는 컨테이너는 ping 도 거절한다. **음성 통제**: 세 변이(목록에서 ping 제거 · 게이트 분기 **밖**에서 등재 · 게이트 검사 **앞**에서 응답)로 각각 의도한 단언이 FAIL 하는지 확인한다.",
+              "expectedOutcome": "세 변이 각각 `OffersItsToolsWhenTheGateExists` · `OffersNoToolsWithoutAnApprovalGate` · `UngatedContainerHasNoPing` 이 그 메시지로 FAIL 하고, 되돌리면 패키지 전체가 초록."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/session-mcp-tool-surface.md` 를 정정한다 — 상태 줄(도구 1→2 · 등재 4→3), 「지금 있는 것」 표에 `ping` 행 추가와 그 절의 근거 문단(왜 프로토콜 `ping` 과 다른 명제인가 · 왜 인자를 두지 않는가 · 왜 `web_fetch_get` 으로 대신하면 안 되는가), 「게이트가 없으면 표면이 빈다」 성질에 R2 가 이 도구까지 미친다는 절, 「다음에 구현할 도구」 (4)→(3) 과 `### 0. ping` 블록 삭제, 「이 표면에 두지 않는 것」 의 예외 지시어를 등재가 아니라 표로 돌린다. `docs/index.html` 의 메타 문자열도 「다음 구현 대상 4」→「3」.",
+              "expectedOutcome": "to-be 버전 스크립트가 `roadmap:3 1. git_clone|2. K3s MCP 재노출|3. gh CLI` 를 낸다. 삭제한 0번 항목이 갖고 있던 근거 문장 둘이 문서 안 다른 절에 살아 있다(사라지지 않는다)."
+            },
+            {
+              "seq": 4,
+              "action": "게이트를 지나지 않는 도구가 처음 서면서 거짓이 되는 문장을 좁힌다 — `docs/prd/approval-gated-workload.md` AC-F6 의 「그 표면은 전부 AC-F3 의 승인 게이트를 지난다」와 surface 문서 머리의 같은 문장을 「그 표면에서 **파드 밖에 닿는 것은 전부**」로. AC-F6 의 **자격 증명 배치 결정은 건드리지 않는다**(그것은 등재 2·3 의 첫 작업이다).",
+              "expectedOutcome": "AC-F6 diff 가 정확히 한 문장(+1/−1)이고, 자격 증명·배치·확정 항목 문단은 바이트 불변."
+            },
+            {
+              "seq": 5,
+              "action": "`scripts/check_comment_policy.py` 가 4차 행에 낸 R2 실측값으로 `docs/comment-policy/ledger.md` 를 갱신한다 — 주석 줄 927→931 · 지문 `5ee3891c5ca4`→`e4e589a9e70b` · 증분 재판정 노트(13줄 판정, 제거 9 · 유지 4) · 합계 마커 2989→2993.",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` 가 `OK: 규칙 R1~R5 위반 없음 … 판정 완료 2993줄 … 등재 범위 14` 로 초록."
+            },
+            {
+              "seq": 6,
+              "action": "정적 게이트 4종과 두 모듈의 CI 동등 명령을 로컬에서 전수 통과시킨 뒤 브랜치를 push 하고 PR 을 연다(머지하지 않는다).",
+              "expectedOutcome": "comment-policy · fidelity · scenario-mapping · journey-prototype(163/163) · data-plane vet·gofmt·test · control-plane vet(기본·e2e 태그)가 전부 통과하고 PR 이 열린다."
+            }
+          ],
+          "plannedAt": "2026-09-13T07:51:03Z"
+        }
+      }
+    ]
   }
 ]
