@@ -1783,7 +1783,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-13T14:03:17Z",
-    "updatedAt": "2026-09-14T00:02:00Z",
+    "updatedAt": "2026-09-14T00:12:00Z",
     "trigger": {
       "detectedAt": "2026-09-13T14:03:17Z",
       "changedSides": [
@@ -2073,6 +2073,66 @@
             }
           ],
           "verifiedAt": "2026-09-13T23:50:41Z"
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "**1차 시도가 세운 읽기 축 슬라이스를 그대로 두고, 그것을 막은 단 하나의 결함만 고친 뒤, 같은 계열의 결함이 다시 나면 CI 가 잡도록 검증 계층을 옮긴다.**\n\n**재계획이 아니라 같은 슬라이스의 2차 시도다.** 1차 시도의 범위·설계·RBAC 판단은 전부 살아 있고(사람 검토도 그 전제 위에서 승인했다), 검증 17건 중 15건이 통과했다. 막은 것은 하나다 — `resource_list` 가 **모든 좌표에 대해 빈 표**(`columns:[] rows:[]`)를 돌려줬다.\n\n**원인(실측·1차 출처 확인).** Table 표현을 요구하는 `Accept` 파라미터의 버전이 `v=1` 이었다. 그 표현의 실제 버전은 `meta.k8s.io/**v1**` 이다(`metav1.SchemeGroupVersion`). 결정적인 것은 **apiserver 가 모르는 표현을 오류로 답하지 않는다**는 점이다 — 헤더가 `application/json` 을 함께 제시하므로 **평범한 List 로 답하고**(client-go CHANGELOG 가 이 폴백을 축자로 명시한다), 그 본문은 `metav1.Table` 로 **필드가 전부 0인 값으로** 디코드된다. 그래서 어긋남이 「실패한 호출」이 아니라 **「빈 목록」** 으로 나타났다. `resource_get` 은 dynamic client 를 쓰므로 영향이 없었고, 그래서 「get 은 되는데 list 만 빈다」는 모양이 됐다. 같은 좌표가 `resource_get` 으로는 조회되고 `resource_list` 로는 비었다는 1차 검증의 관측이 이 설명과 정확히 맞는다.\n\n**고친 것은 둘이고, 둘 다 「다시 일어나도 보이게 하는」 쪽이다.** ⑴ 파라미터를 `metav1` 에서 **파생**시켜 손으로 적지 않는다 — 손으로 적는 한 같은 오타가 다시 난다. ⑵ 본문이 Table 이 아니면 **거부한다**. 객체를 대신 렌더링하는 폴백은 두지 않는다 — 그 폴백이 곧 Secret 값을 목록에 싣는 경로이고, `list` 가 승인 게이트 밖인 근거가 바로 AC17(「Table 이라 값이 전송되지 않는다」)이기 때문이다. 즉 이 결함의 「편한 수정」이 그대로 보안 결함이 되는 자리라, 조용한 빈 표 대신 시끄러운 거부를 고른다.\n\n**이 시도의 본론은 검증 계층을 옮긴 것이다.** 1차 시도가 게이트 일곱을 전부 통과하고도 이 결함을 안은 채 검증까지 간 것은 우연이 아니다 — **Go 단위 테스트는 자기가 만든 Table 을 먹이므로 협상 실패를 원리상 볼 수 없다.** 1차의 단위 테스트는 그 헤더에 대해 「`as=Table` 로 시작하는가 · `meta.k8s.io` 를 담는가」만 물었고, `v=1` 은 두 물음을 모두 통과한다. 그래서 ⑶ 단위 테스트를 **apiserver 처럼 협상하는** 서버 앞에 세웠고(`v=1` 로 되돌리면 그 케이스가 실패함을 뮤테이션으로 확인했다), ⑷ 이 레포에서 **실 apiserver 가 도는 유일한 자리**인 통합 잡(kind 클러스터)에 스모크 한 건을 세웠다. 목록 → 이름 → `subresource=log` 를 **한 케이스로 이은** 것은, 두 도구를 따로 재면 목록이 빈 표인 동안에도 각자는 통과로 보이기 때문이다 — 1차에서 로그 경로가 관측조차 되지 못한 이유가 그것이다.\n\n**완료 기준(이 시도의 범위).** PR #75 가 머지되고 프로덕션에서 ⑴ 1차 검증이 실패로 적은 5건(`resource_list` 의 `v1/Namespace`·`apps/v1 Deployment`·`v1/Pod`·`v1/Event`, 그리고 `resource_get subresource=log`)이 전부 실제 값을 돌려주며, ⑵ 1차에서 통과한 11건이 회귀 없이 그대로 통과하면 성공이다. **구현 범위는 1차와 같다** — `prd-resource-generic` AC2·AC3·AC4·AC5·AC18·AC20 과 AC16·AC17 의 읽기 절반, 폐기 읽기 4종 제거, **권한 확대 0**.\n\n**범위 밖(후속).** 1차와 동일하다 — ⑴ 두 PRD(`prd-platform-auth-safety` AC3 ↔ `prd-resource-generic` AC19)의 어긋남 해소는 사람 판단, ⑵ 쓰기 축 8종 + `resource_watch` 와 그것이 함께 닫을 `workload_restart`·`workload_scale` 제거, ⑶ AC19 정적 대조, ⑷ `prd-approval-gate` AC3·AC6·AC10·AC11, ⑸ `resource_generic_ac*.py` 시나리오 e2e(자매 모델 `scenario-e2e` 소관 — 이번에 세운 것은 비-시나리오 스모크라 그 계수에 들어가지 않는다), ⑹ `dear_baby_reset_user` 게이트 편입(소유자 판단), ⑺ 허브 33/32 off-by-one(#69 이월). **새로 하나 더**: 이 레포 CI 가 **PR 빌드도 `:latest` 로 밀어 올린다**는 사실(아래 지침 주의사항 ①). 배포 파이프라인의 성질이지 문서 ↔ 구현 정합성이 아니므로 이 모델의 gap 은 아니나, 「머지가 유일한 불가역 지점」이라는 전제를 깨므로 별도로 제기할 값어치가 있다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #75 head `3e8e2a9` 에서 CI 4잡이 전부 `conclusion=success` 인지 확인한다. 특히 `integration tests`(kind 클러스터) 안에서 신규 `resource_read_smoke.py` 가 **실행됐고 통과했는지**를 잡 로그에서 이름으로 확인한다 — 이 슬라이스의 핵심 증거가 그 한 줄이다.",
+              "expectedOutcome": "`fmt + vet`·`unit tests`·`integration tests`·`docker build & push` 전부 success. 통합 잡 로그에 `resource_read_smoke.py` 실행과 `resource read smoke ok` 가 찍힌다."
+            },
+            {
+              "seq": 2,
+              "action": "PR 신선도 — base `main` 이 계획 시점(`76b776d8`)에서 움직이지 않았고 `mergeable=true`·`mergeable_state=clean` 인지 확인한다. 움직였으면 rebase 후 1로 돌아간다.",
+              "expectedOutcome": "base 무이동·머지 가능. 움직였다면 rebase 한 head 에서 CI 를 다시 통과시킨 뒤에만 진행한다."
+            },
+            {
+              "seq": 3,
+              "action": "**머지 전 라이브 상태를 기록한다.** `tools/list` 로 현재 도구 표면을, `resource_list v1/Namespace` 로 현재 응답을 찍어 남긴다. 이 레포는 PR 빌드가 `:latest` 를 밀므로 **머지 전에도 프로덕션이 PR 바이트일 수 있다** — 머지 전후를 구분하려면 이 관측이 먼저 있어야 한다.",
+              "expectedOutcome": "머지 직전의 표면과 `resource_list` 응답이 기록된다. (1차 검증 시점에는 16종 + 빈 표였다.)"
+            },
+            {
+              "seq": 4,
+              "action": "PR #75 를 **squash 머지**한다. 머지 커밋은 만들지 않는다.",
+              "expectedOutcome": "`main` 이 새 squash 커밋으로 이동. 이 시점 이후의 원복은 revert + 이미지 재발행이 필요하다(주의사항 ② 참조)."
+            },
+            {
+              "seq": 5,
+              "action": "머지 커밋에 대한 `main` CI 가 완주하는지 확인한다 — 특히 `docker build & push` 가 success 여야 `:latest` 가 머지된 바이트를 가리킨다.",
+              "expectedOutcome": "main CI 4잡 success. `ghcr.io/dlddu/homelab-k3s-mcp:latest` 가 머지 커밋의 이미지다."
+            },
+            {
+              "seq": 6,
+              "action": "`workload_restart` 로 `homelab-k3s-mcp` 네임스페이스의 `deploy/homelab-k3s-mcp` 를 재시작해 새 `:latest` 를 당긴다. 롤아웃이 완료되고 파드가 Ready 가 될 때까지 기다린다.",
+              "expectedOutcome": "새 파드의 `start_time` 이 docker 잡 완료 시각 이후. `restart_count` 0, CrashLoop 없음."
+            },
+            {
+              "seq": 7,
+              "action": "**검증 A — 1차에서 실패한 5건을 재측정한다.** `resource_list` 를 `v1/Namespace`(전체), `apps/v1 Deployment`(ns=homelab-k3s-mcp), `v1/Pod`(ns=homelab-k3s-mcp), `v1/Event`(ns=homelab-k3s-mcp, limit=20) 으로 부르고, 그 중 얻은 파드 이름으로 `resource_get subresource=log` 를 부른다.",
+              "expectedOutcome": "넷 다 **비어 있지 않은** `columns`·`rows` 를 돌려주고 `Name` 열이 있다. `v1/Namespace` 에 `homelab-k3s-mcp` 가 보인다. 로그 호출이 텍스트를 돌려준다. **하나라도 빈 표면 즉시 멈추고 롤백한다.**"
+            },
+            {
+              "seq": 8,
+              "action": "**검증 B — 1차에서 통과한 것들의 회귀를 본다.** 도구 표면 16종·폐기 4종 부재, `api_resources` 동작, `resource_get` 의 `managedFields`·`last-applied-configuration` 제거, AC18(권한 밖 종류 거부), AC20(미지 kind 거부), AC16(`v1/Secret` 읽기가 게이트 미구성으로 거부되고 **값이 나오지 않음**).",
+              "expectedOutcome": "1차 검증과 같은 결과. 특히 Secret 호출이 값을 한 바이트도 싣지 않는다 — 값이 보이면 **즉시 롤백**(주의사항 ③)."
+            },
+            {
+              "seq": 9,
+              "action": "**검증 C — 기동 로그**를 읽어 게이트 배선 WARN 3줄(`workload_restart`·`workload_scale`·`dear_baby_reset_user` 면제)이 그대로이고 `refusing to start` 가 없는지 확인한다. 1차에서 파드 이름을 얻지 못해 수행하지 못한 항목이다.",
+              "expectedOutcome": "면제 3줄 존재, 기동 거부 없음. 레지스트리 검증(광고 ↔ 선언 대칭차집합)이 통과해 기동이 막히지 않았다."
+            },
+            {
+              "seq": 10,
+              "action": "검증 결과를 task 에 기록하고 수렴을 판정한다. 범위 밖 잔여(계획 summary 의 목록)는 닫지 않고, 이 실행이 만든 버전 변화의 재감지가 새 task 로 잇게 둔다.",
+              "expectedOutcome": "7~9 가 전부 통과하면 `succeeded`. 7 이 하나라도 실패하면 롤백 후 `failed` 로 닫고 재계획한다."
+            }
+          ],
+          "plannedAt": "2026-09-14T00:12:00Z"
         }
       }
     ]
