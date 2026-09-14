@@ -5205,7 +5205,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
     "status": "planning",
     "createdAt": "2026-09-14T09:38:49Z",
-    "updatedAt": "2026-09-14T09:57:00Z",
+    "updatedAt": "2026-09-14T10:25:00Z",
     "trigger": {
       "detectedAt": "2026-09-14T09:38:49Z",
       "changedSides": [
@@ -5236,56 +5236,66 @@
     "attempts": [
       {
         "plan": {
-          "summary": "**범위(완료 기준) — `test-resource-generic.md#시나리오 5`(서브리소스 조회) 한 건만 닫는다.** gap 은 구현 대기 표에 「저작뿐 / 차단 요인 없음」이라 적힌 2행(시나리오 1·5)이 등재 조건을 잃은 채 1:1 계수에서 빠져 있다는 것이고, 이 시도는 그중 **시나리오 5** 만 전용 e2e 로 착지시켜 그 행을 표에서 뺀다. 둘을 한 PR 에 섞지 않는 이유는 되돌림 단위다 — 시나리오 1 은 CRD 픽스처 설치와 일곱 종류 단정이 따라오고 5 는 로그·스케일 축에서 끝나므로, 한 PR 이면 한쪽이 CI 에서 막힐 때 다른 쪽까지 함께 되감긴다(감지 인계도 같은 결론을 적었다). **5 를 먼저 고른 근거**: ⑴ 단언의 대부분이 PR #72 에서 폐기된 `workload_logs_ac{1,2,3,4}.py` 에 **이미 CI 를 통과한 형태로 존재**하고 시나리오 5 문면이 그 승계를 명시한다, ⑵ 필요한 선행이 「출력을 내는 다중 컨테이너 파드」 하나뿐이라 신규 CI 대기 스텝이 없다(파일이 자기 선행 조건을 폴링으로 성립시키는 이 레포의 규율 그대로), ⑶ 대상 코드가 전부 구현·부여돼 있음을 실측했다(`internal/mcp/resource.go:199-212` 의 tail 상한, `internal/k8s/resource.go:368-396` 의 pods/log, dynamic 경로의 `scale` 서브리소스, `k8s/rbac.yaml` 은 `cluster-admin` 바인딩). 산출물은 e2e 1 파일 + 픽스처 1 파일 + CI 적용 스텝 1 줄 + 등재 SSOT 갱신이고, **실행 코드(`internal/`·`cmd/`)는 한 줄도 건드리지 않는다**. 같은 표를 다시 쓰는 김에 감지가 「독립 gap 이 아니니 이 슬라이스에서 함께 정정하라」고 넘긴 **구현 대기 9행의 낡은 RBAC 문면**(사라진 ClusterRole 을 차단 근거로 인용)도 행별 재실측으로 바로잡는다 — 계수는 변하지 않는다. **범위 밖**: 시나리오 1(`resource_generic_ac1.py` + CRD 픽스처)은 이 PR 이 만드는 버전 변화의 재감지가 다음 task 로 잇는다.",
+          "summary": "**범위(완료 기준) — 구현 대기 표에 「저작만 남았다」라고 적힌 2행(시나리오 1·5)을 **둘 다** 그 상태에서 빼낸다. 단 방법이 행마다 다르다: 시나리오 1 은 전용 e2e 로 닫고, 시나리오 5 는 근거를 실측으로 갈아끼워 참인 차단 요인을 적는다.** ⚠️ **이 계획은 최초 초안에서 한 번 뒤집혔고, 뒤집은 것은 문면이 아니라 실측이다.** 초안은 감지 인계를 따라 「시나리오 5 를 저작하고 1 은 다음 슬라이스」로 잡았는데, 저작 직전 **이 세션의 `mcp__claude_ai_k3s__*` 도구가 트리거 커밋으로 배포된 바로 그 바이너리를 때린다**는 점을 이용해 두 행의 문면을 라이브로 검증했다. 결과: ⑴ 시나리오 5 의 「`container` 누락이 거부되고 **후보 이름이 제시됨**」이 **서지 않는다** — 컨테이너 둘인 파드를 `container` 없이 읽으면 `kubernetes api error: the server rejected our request for an unknown reason (get pods ⟨이름⟩)` 이 오고 후보가 없다(apiserver 의 「choose one of: [...]」 가 client-go 의 일반 메시지로 덮인다). 같은 파드에 `container` 를 주면 성공하므로 거부 자체는 컨테이너 모호성이 맞다. ⑵ 반면 시나리오 1 의 네 축(일곱 종류 목록 · `labelSelector` 축소 · `fieldSelector` 이벤트 좁힘 · 클러스터 스코프 + `namespace` 거부)은 **전부 라이브에서 성립했다**(CRD 목록·`deployments/scale`·Event fieldSelector 포함). ⇒ 「저작뿐」인 쪽은 **5 가 아니라 1** 이었다. 감지의 대안 갈래(「재실측해 진짜 차단 요인이 나오면 파일 대신 근거를 고친다」)를 시나리오 5 에 그대로 적용해, 그 행을 시나리오 20 ⑴ 과 같은 **문서↔구현 불일치**로 재분류했다 — 표에서 빼지 않고 근거·담당·해제 조건을 다시 썼다. 그 결과 감지가 못 박은 종료 조건(「'차단 요인 없음/저작뿐' 이라 적힌 행이 0개」)이 **두 행 모두에서** 만족된다. 실행 코드(`internal/`·`cmd/`)는 한 줄도 건드리지 않는다. **범위 밖**: 시나리오 5 의 후보 산출 구현(자매 모델 `docs-impl` 몫 — PR #82 가 `resource_list` 쪽에서 같은 계열을 이미 다룬다)과 `test-approval-gate.md` 블록 11행의 낡은 RBAC 문면 재실측.",
           "riskLevel": "low",
           "steps": [
             {
               "seq": 1,
-              "action": "`tests/k8s/kind/resource-generic-fixture.yaml` 신설 — `workload-test` 네임스페이스에 컨테이너 둘(`emitter` 20줄 방출 후 sleep · `sidecar` 3줄 방출 후 sleep)인 Deployment `resource-generic-logs` 하나. `test-deployment.yaml` 에 컨테이너를 더하지 않는다(폐기된 `workload_logs_ac2.py` 주석이 「별도 워크로드 신설이 선행」이라고 남긴 그 이유 + 그 파일은 주석 원장 등재 범위라 손대면 같은 PR 에서 재판정 의무가 붙는다).",
-              "expectedOutcome": "kind 에 적용하면 파드가 Ready 로 서고 `kubectl logs -c emitter` 가 20줄, `-c sidecar` 가 3줄을 돌려준다. 파일에 모킹 토큰(`*-mock` 등)이 없어 `check_mock_policy.py` 허용목록·상한은 불변."
+              "action": "**라이브 재실측(계획의 근거 수집).** 배포된 제품을 `resource_list`·`resource_get` 으로 직접 불러 두 행의 문면을 항목별로 검증한다 — 시나리오 1 의 네 축과 시나리오 5 의 로그·scale 축.",
+              "expectedOutcome": "시나리오 1 은 전부 성립, 시나리오 5 는 「후보 이름 제시」 하나가 불성립. 이 결과가 어느 행을 저작으로 닫고 어느 행의 근거를 고칠지를 정한다."
             },
             {
               "seq": 2,
-              "action": "`.github/workflows/ci.yml` 의 integration 잡에 `kubectl apply -f tests/k8s/kind/resource-generic-fixture.yaml` 스텝 1개를 워크로드 픽스처 적용 직후에 추가. **rollout 대기 스텝은 두지 않는다** — 준비 대기는 e2e 파일이 자기 선행 조건으로 폴링한다.",
-              "expectedOutcome": "integration 잡에서 픽스처가 적용된다. 파일별 실행 스텝은 여전히 `run_all.py` 자동 발견이 맡으므로 새 e2e 때문에 ci.yml 이 더 바뀌지는 않는다."
+              "action": "`tests/k8s/kind/resource-generic-fixture.yaml` 신설 — 픽스처 CRD 1종 + Service·ConfigMap·Ingress **각 2개**(`-selected` 에만 좁히는 레이블). CRD 인스턴스 2개는 `tests/k8s/kind/resource-generic-samples.yaml` 로 분리한다(`kubectl apply` 가 파일을 읽는 시점에 종류를 해석하므로 CRD 와 CR 을 한 파일에 두면 파일 전체가 거부된다).",
+              "expectedOutcome": "두 파일의 모든 문서가 k8s 타입으로 디코드되고(코어 종류는 strict), CRD 이름이 `plural.group` 규약과 일치한다. 종류마다 대조군이 있어 셀렉터 축소가 관측 가능해진다."
             },
             {
               "seq": 3,
-              "action": "`tests/integration/resource_generic_ac5.py` 저작 — 모듈 docstring 에 `검증 시나리오: test-resource-generic.md#시나리오 5` **한 줄만**(규칙 2·3)과 `실행 대상: primary`. 케이스 여섯: ⑴ 기본 tail 과 `tailLines=5` 의 실제 축소(반환이 전체 출력의 **접미사 5줄**임까지), ⑵ `tailLines=5001` 이 클램프가 아니라 **거부**(McpError `-32602`), ⑶ 크래시 루프 파드에 `previous=true` 가 직전 인스턴스 마커를 주고 **현재 인스턴스 마커는 없다**, ⑷ 다중 컨테이너 파드에 `container` 누락이 거부되고 **두 컨테이너 이름이 후보로** 나온다, ⑸ `subresource=scale` 이 Scale 객체를 준다(`resource == deployments/scale`, `spec.replicas == 1`, 전문 Deployment 가 아님을 `spec.template` 부재로 확인), ⑹ 대조군 — 게이트 대상(`v1/Secret` 의 `get`)은 같은 서버에서 `approval gate is not configured` 로 거부된다.",
-              "expectedOutcome": "`python3 tests/integration/check_ac_mapping.py` 가 이 파일을 시나리오 5 의 전용 파일로 세고, `run()` 이 여섯 케이스를 전부 호출한다(체커의 하네스 무결성 검사 통과). 로컬에서는 클러스터가 없어 실행 자체는 CI 의 `integration tests` 잡에서만 관측된다."
+              "action": "`.github/workflows/ci.yml` 의 integration 잡에 스텝 1개 추가 — CRD 적용 → `kubectl wait --for=condition=established` → 인스턴스 적용. rollout 대기 스텝은 두지 않는다(파일이 자기 선행 조건을 폴링으로 성립시킨다).",
+              "expectedOutcome": "ci.yml 이 YAML 로 파싱되고 integration 잡에 그 스텝이 실재한다. 파일별 실행 스텝은 여전히 `run_all.py` 자동 발견이 맡는다."
             },
             {
               "seq": 4,
-              "action": "`docs/test-resource-generic.md` — 시나리오 5 의 `자동화` 필드에서 `(미작성)` 을 지우고 `통합 tests/integration/resource_generic_ac5.py` 를 적되 Go 단위 계획은 시나리오 2·4 와 같은 표기로 남긴다(규칙 7). 「픽스처」 절에 다중 컨테이너 파드가 계획된 `resource-generic-fixture.yaml` 에 먼저 착지했다는 한 줄을 더한다.",
-              "expectedOutcome": "체커의 규칙 7 검사가 통과한다(전용 파일이 실재하는데 `(미작성)` 이 남아 있으면 실패, 없는데 파일을 참조해도 실패)."
+              "action": "`tests/integration/resource_generic_ac1.py` 저작 — 선언 한 줄(`검증 시나리오: test-resource-generic.md#시나리오 1`)과 케이스 넷: ⑴ 일곱 종류가 좌표만으로 목록 반환, ⑵ 셀렉터가 **엄격히** 줄이고 대조군이 있는 네 종류는 남은/빠진 객체를 이름으로 확인, ⑶ 이벤트가 `fieldSelector` 로 좁혀지고 **남은 행이 전부 그 파드를 가리킨다**, ⑷ 클러스터 스코프 + `namespace` 는 거부되고 **같은 종류가 `namespace` 없이는 읽힌다**(거부가 스코프 때문임을 보이는 대조군). 세는 목록은 `limit=500` 으로 뜨고 `truncated is False` 를 단정한다.",
+              "expectedOutcome": "`check_ac_mapping.py` 가 이 파일을 시나리오 1 의 전용 파일로 세고 `run()` 이 네 케이스를 전부 호출한다. 실행 자체는 클러스터가 필요하므로 CI 의 `integration tests` 잡에서 관측된다."
             },
             {
               "seq": 5,
-              "action": "`docs/doc-tracker.md` 등재 SSOT 갱신 — ⑴ 레지스트리의 시나리오 5 행을 `⏳ 구현 대기` → `✅ 전용 파일 resource_generic_ac5.py`, ⑵ ⏳ 표에서 그 행 삭제, ⑶ `<!-- scenario-e2e-집계 -->` 블록(구현 대기 31→30 · 1:1 대상 46→47 · 매칭 파일 47), ⑷ 레지스트리·⏳ 절 헤딩의 괄호 숫자와 그 아래 불변식 산문, ⑸ 변경 이력 행 1개. **숫자는 손으로 짓지 않고 `check_ac_mapping.py` 출력에서 뽑는다.**",
-              "expectedOutcome": "`check_ac_mapping.py` 가 rc=0 이고 출력이 `시나리오 전집 78 · 예외 1 · 구현 대기 30 · 1:1 대상 47 · 매칭 파일(전용) 47 · 분할 대기 0 · 공백 0`."
+              "action": "`docs/test-resource-generic.md` — 시나리오 1 의 `자동화` 필드에서 `(미작성)` 을 지우고 통합 파일을 적는다(규칙 7). 「픽스처」 절에 이번에 착지한 몫과 파일이 둘로 갈린 이유를 적는다.",
+              "expectedOutcome": "규칙 7 검사 통과(전용 파일이 실재하는데 `(미작성)` 이 남으면 실패)."
             },
             {
               "seq": 6,
-              "action": "같은 표에 남은 **구현 대기 9행의 낡은 RBAC 문면 정정**(시나리오 3·6·8·10·12·13·14·15·17, 그리고 20 의 ⑵). 각 행에서 사라진 ClusterRole 을 인용하는 대목만 걷고 **그 행의 살아 있는 차단 요인은 재실측해 그대로 둔다** — 도구 미등록은 `\"resource_*\"` Go 문자열 grep 0 히트로, gatekeeper 픽스처 부재는 `tests/k8s/kind/` 목록으로 다시 쟀다. 등재 자체는 유효하므로 **계수는 변하지 않는다**.",
-              "expectedOutcome": "⏳ 표의 어느 행도 `k8s/rbac.yaml` 의 ClusterRole 을 차단 근거·해제 조건으로 인용하지 않는다. 집계 숫자는 5단계 결과와 동일하게 유지된다(rc=0)."
+              "action": "`docs/doc-tracker.md` 등재 SSOT — 레지스트리의 시나리오 1 행을 ✅ 로, ⏳ 표에서 그 행 삭제, 집계 블록(구현 대기 31→30 · 1:1 대상 46→47 · 매칭 파일 47), 레지스트리·⏳ 헤딩의 괄호 숫자와 불변식 산문, 변경 이력 1행. **숫자는 `check_ac_mapping.py` 출력에서 뽑는다.**",
+              "expectedOutcome": "게이트 출력이 `78 · 1 · 30 · 47 · 47 · 0 · 0` 이고 rc=0."
             },
             {
               "seq": 7,
-              "action": "`docs/comment-policy/ledger.md` 의 **잔량 마커 둘**을 신규 두 파일이 들여온 실측치로 올린다(줄 주석·docstring 각각). 판정 자체는 하지 않는다 — 그것은 자매 모델 `tbm_homelab-k3s-mcp-comment-redundancy` 의 몫이고, 잔량은 「이만큼은 아직 판정받지 않았다」는 선언이다(#79 선례).",
-              "expectedOutcome": "`python3 scripts/check_comment_policy.py` 가 rc=0. R4·R8 의 「합계 + 잔량 == 실측 전체」가 닫힌다. **`git add -A` 후에 재실행해야 한다** — 게이트가 `git ls-files` 로 범위를 잡아 stage 전에는 신규 파일이 보이지 않는다."
+              "action": "**시나리오 5 행의 근거 재작성(대안 갈래).** 「남은 것은 저작뿐」을 취소하고 라이브 실측 결과(후보 이름이 실려 오지 않는다 · 원인은 client-go 가 apiserver 400 본문을 일반 메시지로 덮는 것 · `container` 를 주면 성공한다)를 적는다. 담당을 `docs-impl(후보 산출) → 이 렌즈(e2e)` 로, 해제 조건을 「거부 메시지가 후보 컨테이너 이름을 싣도록 정정되면」으로 바꾼다. **행은 표에 남으므로 계수는 이 단계로 변하지 않는다.**",
+              "expectedOutcome": "구현 대기 표에 「차단 요인 없음 / 저작뿐」이라 적힌 행이 0개가 된다. 집계는 6단계 결과 그대로."
             },
             {
               "seq": 8,
-              "action": "로컬 게이트 3종(`check_ac_mapping.py` · `check_mock_policy.py` · `check_comment_policy.py`)을 stage 후 재실행해 rc=0 을 확인하고, 브랜치를 밀어 대상 레포에 PR 을 연다(머지하지 않는다).",
-              "expectedOutcome": "세 게이트 rc=0. PR 이 열리고 CI 세 잡(`fmt + vet` · `unit tests` · kind `integration tests`)이 돈다."
+              "action": "같은 표에 남은 **낡은 RBAC 문면을 행별 재실측으로 정정** — `test-resource-generic.md` 블록 13행(3·6·7·8·9·10·12·13·14·15·16·17·20). 사라진 ClusterRole 을 인용하는 대목만 걷고 살아 있는 차단 요인은 다시 재서 그대로 둔다(도구 미등록은 `\"resource_*\"` Go 문자열 grep 0 히트, gatekeeper 픽스처 부재는 `tests/k8s/kind/` 목록). 아직 재실측하지 않은 `test-approval-gate.md` 블록 11행은 **그 사실을 표 머리에 적어** 다음 슬라이스로 넘긴다.",
+              "expectedOutcome": "resource-generic 블록의 어느 행도 `k8s/rbac.yaml` 의 ClusterRole 을 차단 근거·해제 조건으로 인용하지 않는다. 계수 불변, 게이트 rc=0."
             },
             {
               "seq": 9,
-              "action": "PR 을 연 뒤 **base 가 움직였는지 한 번 더 잰다**(형제 워커의 #80·#82 가 같은 `docs/doc-tracker.md` 를 건드린다). 움직였으면 리베이스하고 집계 숫자를 **체커 출력에서 다시 뽑는다** — 마커는 가산이 아니라 실측값이라 「양쪽 다 취함」이 틀린다.",
-              "expectedOutcome": "`mergeable` 이 clean 이고, 리베이스가 필요했다면 리베이스 후 head 에서 게이트 3종이 다시 rc=0."
+              "action": "`docs/comment-policy/ledger.md` 의 **잔량 마커 둘**을 신규 파일이 들여온 실측치로 올린다. 손으로 세지 않고 게이트 자신의 `comment_lines()`·`docstring_lines()` 로 **파일별 재계수**해 다른 파일이 안 움직였음을 함께 확인한다. 판정 자체는 자매 모델 `comment-redundancy` 의 몫이다(#79 선례).",
+              "expectedOutcome": "`check_comment_policy.py` rc=0 — R4·R8 의 「합계 + 잔량 == 실측 전체」가 닫힌다. ⚠️ `git add -A` **후에** 실행해야 한다(게이트가 `git ls-files` 로 범위를 잡아 stage 전엔 신규 파일이 안 보인다)."
+            },
+            {
+              "seq": 10,
+              "action": "로컬 게이트 5종(`check_ac_mapping.py` · `check_mock_policy.py` · `check_comment_policy.py` · `gofmt`/`go vet`/`go build`/`go test`) 을 stage 후 실행하고, 새 YAML 두 파일을 k8s 타입으로 디코드해 검증한 뒤 브랜치를 밀어 PR 을 연다(머지하지 않는다).",
+              "expectedOutcome": "게이트 전부 rc=0, YAML 9문서 전부 디코드 성공. PR 이 열리고 CI 세 잡이 돈다."
+            },
+            {
+              "seq": 11,
+              "action": "PR 을 연 뒤 **base 가 움직였는지 다시 잰다**(형제 워커의 #80·#82 가 같은 `docs/doc-tracker.md` 를 건드린다). 움직였으면 리베이스하고 집계 숫자를 **체커 출력에서 다시 뽑는다** — 마커는 가산이 아니라 실측값이라 「양쪽 다 취함」이 틀린다.",
+              "expectedOutcome": "`mergeable` 이 clean 이고, 리베이스했다면 그 head 에서 게이트가 다시 rc=0."
             }
           ],
-          "plannedAt": "2026-09-14T09:57:00Z"
+          "plannedAt": "2026-09-14T10:24:00Z"
         }
       }
     ]
