@@ -3834,13 +3834,74 @@
       "gap": "**유의미한 차이가 있고, 그중 둘은 어떤 task 도 들고 있지 않다.**\n\n- **기준 2(구현↔문서 불일치) — 위반 2건, 미소유. 이것이 이번 판정의 새 사실이다.**\n  직전 감지(`rct_20260914-0014`)는 버전 이동이 0이라 「위반 0」으로 닫았지만, 그것은 *이동분에 위반이\n  없다*는 뜻이었지 *존량이 0*이라는 뜻이 아니었다. 이번에 계약 표면을 직접 읽어 **존량 2건**을 확정했다:\n  ⑴ `limit` 상한 초과가 문서상 **하향**인데 구현은 **거부**(AC3 · 시나리오 3),\n  ⑵ `container` 누락 거부에 문서가 요구하는 **후보 이름이 없다**(시나리오 5 · 시나리오 11).\n  둘 다 `internal/mcp/resource.go`·`internal/k8s/resource.go` 의 좁은 구간이고, **열린 세 PR(#91·#92·#94)\n  어디에도 들어 있지 않다.** 게다가 `doc-tracker.md` 는 AC3 를 ✅ 구현됨으로 계상하고 있어\n  **tracker 도 이 어긋남을 보지 못한다**(기준 4 의 부수 위반).\n- **기준 1(미구현 AC) — 잔여 그대로이나 to-be 변경으로 우선순위가 선명해졌다.**\n  9 verb 미구현 + AC16·AC17 절반 + approval-gate AC6·AC11. #92 의 재실측이 의존 그래프를 명시하면서\n  **`resource_update(subresource=scale)` 가 최다 잠금 해제 지점**으로 드러났다 — AC8 을 닫고,\n  approval-gate 시나리오 6·11(b) 를 풀고, `doc-tracker.md:140` 의 순서 제약상 **`workload_scale` 제거의 선행 조건**이다.\n- **기준 3 — #91 이 `workload_restart` 를 걷어내는 중이라 2종 → 1종으로 줄어들 예정.** 남는 `workload_scale`\n  은 위 순서 제약에 걸려 있어 기준 1 과 같은 지점에서 풀린다.\n- **기준 4 — `doc-tracker.md:52` −5 는 #94 가 `executing` 으로 반영 중.**\n\n**planner 가 반드시 지켜야 할 제약(이 감지가 관측한 사실):** `rct_20260914-0011`(#91)·`rct_20260914-0012`(#94)가\n**지금 이 순간 `executing`** 이다. #91 은 `internal/mcp/{gate,mcp,toolslist}.go`·`internal/k8s/*` 를,\n#94 는 `.github/workflows/ci.yml` 에 차단형 문서 인벤토리 게이트를 얹는다. 따라서 **계획·준비는\n두 머지가 착지한 뒤의 tip 을 base 로 잡아야 하고**, `docs/` 에 파일을 추가하는 슬라이스라면\n`doc-tracker.md` 의 허브 집계 줄을 함께 올려야 CI 가 통과한다.",
       "summarizedAt": "2026-09-14T23:18:58Z"
     },
-    "updatedAt": "2026-09-14T23:22:17Z",
+    "updatedAt": "2026-09-14T23:34:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "**작업이 필요하다. 사람이 「다음 슬라이스를 미리 시작하라」고 지시했고, 그 지시와 무관하게도\n이번 감지가 **어떤 task 도 들고 있지 않은 기준 2 위반 2건**을 새로 확정했다 — 둘 중 하나만으로도\n`action_required` 다.**\n\n**⑴ 새 사실: 기준 2 존량 2건(미소유).** 직전 감지(`rct_20260914-0014`)의 「기준 2 위반 0」은\n*버전 이동분에 위반이 없다*는 판정이었지 *존량이 0*이라는 판정이 아니었다. 이번에 계약 표면을 직접 읽어\n⑴ `limit` 상한 초과의 **거부 ↔ 하향** 어긋남(`internal/mcp/resource.go:67-68` vs `prd-resource-generic` AC3 ·\n`test-resource-generic.md:80`), ⑵ `container` 누락 거부의 **후보 이름 부재**(시나리오 5·11 의 기대 결과)를\n확정했다. **열린 세 PR(#91·#92·#94) 어디에도 들어 있지 않고**, `doc-tracker.md` 는 AC3 를 ✅ 로 계상해\n이 어긋남을 보지 못한다. 모델 `definition` 의 「충돌 시 기본 방향」이 바로 이 자리를 위한 조항이다 —\n문서가 SSOT 이므로 원칙적으로 코드를 문서에 맞추되, 그 어긋남이 **의도된 동작 변경**이면\n(여기서는 `internal/k8s/resource.go:39-43` 주석이 거부를 **의도로 명시**한다) 문서를 갱신해 코드에 맞춘다.\n**어느 쪽인지는 planner 의 판단**이다.\n\n**⑵ 사람의 지시: 다음 슬라이스 선착수.** 잔여 기준 1 본체(쓰기·스트림 9 verb · approval-gate AC6·AC11)는\n재감지로 자동 인계될 예정이었으나, 소유자가 사람의 판단으로 **지금 계획 단계로 보내기로** 했다.\n`assessedBy` 를 `human` 으로 둔 이유가 이것이다.\n\n**⑶ 이번 to-be 이동이 슬라이스 선택을 도와준다.** #92 가 `test-approval-gate.md` 블록 11행의 공유 축자\n근거를 걷어내고 행별 실측으로 갈아끼우면서 **의존 그래프가 명시됐다**: 시나리오 2·4·5·7·8·9 는\n「도구 축은 더는 차단 요인이 아니다」로 풀렸고, 남은 병목이 docs-impl 의 쓰기·스트림 verb 로 집중됐다.\n그 안에서 **`resource_update(subresource=scale)` 가 최다 잠금 해제 지점**이다 — AC8 을 닫고,\napproval-gate 시나리오 6·11(b) 를 풀고, `doc-tracker.md:140` 의 순서 제약상 **`workload_scale` 제거(기준 3 의\n마지막 한 건)의 선행 조건**이다. **다만 슬라이스 확정은 planner 의 몫**이므로 여기서는 근거만 남긴다 —\n모델 `definition` 도 「무엇을 먼저 구현할지의 우선순위 판단은 각 task 의 계획 단계 몫」이라고 못박는다.\n\n**⑷ planner 에게 넘기는 제약(이 감지가 관측한 사실이므로 근거로 남긴다).**\n`rct_20260914-0011`(PR #91)·`rct_20260914-0012`(PR #94)가 **판정 시점에 둘 다 `executing`** 이다.\n#91 은 `internal/mcp/{gate,mcp,toolslist}.go`·`internal/k8s/*` 를 고치고 #94 는 `.github/workflows/ci.yml` 에\n**차단형 문서 인벤토리 게이트**를 얹는다. 따라서 ⑴ 계획·PR 준비는 **두 머지가 착지한 뒤의 tip 을 base 로**\n잡아야 하고(지금 tip `3d4ae61` 위에 준비하면 #91 과 같은 파일에서 충돌한다), ⑵ `docs/` 에 파일을 추가하는\n슬라이스라면 `doc-tracker.md` 의 허브 집계 줄을 함께 올려야 CI 가 통과한다.\n**이 제약은 계획을 막는 사유가 아니라 base 선택의 조건이다** — 그래서 유예가 아니라 `action_required` 다.",
       "assessedBy": "human",
       "assessedAt": "2026-09-14T23:19:33Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**기준 2(구현↔문서 불일치)의 미소유 존량 2건을 닫는다 — 둘 다 `resource_list`/`resource_get` 의 좁은 구간이고, 방향은 서로 반대다.** ⑴ `limit` 상한 초과: **문서를 코드에 맞춘다(거부 유지)**. ⑵ `container` 누락 거부의 후보 이름 부재: **코드를 문서에 맞춘다(apiserver 메시지 보존)**.\n\n**왜 이 슬라이스인가 — 대안 둘을 저울질했다.**\n⑴ *`resource_update(subresource=scale)` 를 먼저 세운다*(감지가 「최다 잠금 해제 지점」으로 지목한 것): **이번엔 기각.** 그 도구는 `internal/mcp/{mcp,toolslist,gate}.go` 를 건드리는데 **바로 그 세 파일이 지금 열린 PR #91(`rct_20260914-0011`, 승인·`executing`)의 변경 대상**이다. 같은 파일에 쓰기 도구 신설을 겹치면 충돌을 만들고, 게이트 선언 표면이 이동 중인 상태에서 새 선언을 얹는 것은 「RBAC 경계 소멸」(게이트 판정이 **유일한** 경계) 위에서 가장 피해야 할 순서다. #91 이 착지한 뒤의 tip 에서 자기 슬라이스로 서는 것이 맞다.\n⑵ *둘 중 하나만 닫는다*: 기각. 같은 도구군(`resource_list`/`resource_get`)의 같은 판정 기준(기준 2) 위반이고 파일 교집합이 있어 리뷰 맥락이 공유된다. 다만 **두 반쪽은 서로 독립**이라 검토자가 한쪽만 떨어뜨릴 수 있게 커밋을 갈라 둔다.\n**⑶ 채택: 기준 2 존량 2건.** 이 슬라이스는 **#91 이 건드리는 파일과 교집합이 거의 없다** — 실측으로 #91 의 변경 파일 10개 중 겹치는 것은 `docs/doc-tracker.md` 하나뿐이고, 그 파일 안에서도 #91 의 훅(18·143·223·268·664행)과 이 슬라이스의 편집 지점(424·426·475·476행)은 겹치지 않는다. 유일한 예상 충돌은 파일 끝 **「변경 이력」 표에 양쪽이 행을 덧붙이는 자리**뿐이고, 그것은 리베이스로 해소되는 부류다.\n\n**방향을 반대로 고른 근거(모델 `definition` 의 「충돌 시 기본 방향」이 정확히 이 자리를 위한 조항이다 — 문서가 SSOT 이되 어긋남이 *의도된 동작 변경*이면 문서를 갱신한다).**\n- **⑴ `limit` 은 거부가 의도다.** 감지는 「`internal/k8s/resource.go:39-43` 주석이 거부를 의도로 명시한다」고 적었으나 **실측하니 그 주석은 `// ListDefaultLimit and ListMaxLimit are AC3's bounds.` 한 줄로, 거부/클램프 중 무엇인지 말하지 않는다** — 그 근거는 서지 않는다. 대신 **서는 근거가 셋 따로 있다**: ① `internal/mcp/toolslist.go:63-67` 이 도구 스키마에 **`\"maximum\": 500`** 을 선언한다 — JSON Schema 의 `maximum` 은 「초과값은 무효」라는 뜻이고, 이것은 주석이 아니라 **MCP 클라이언트가 검증하는 공개 계약면**이다. 클램프로 가려면 이 기계 검증 제약을 **지워야** 해서 표면이 덜 정밀해진다. ② **같은 테스트 문서가 자매 상한을 반대로 못박는다** — 시나리오 5 가 `tailLines=5001` 에 「클램프되지 않고 **거부**」라고 적는다. 한 도구의 두 상한이 근거 없이 반대로 동작하게 둘 수 없다. ③ **이 레포는 이미 같은 판단을 내린 적이 있다** — `doc-tracker.md` 변경 이력 `2026-06-19` 행이 「workload_logs AC2 정정(**초과 시 클램프 → 거부**)」이다. 문서가 클램프라 적었던 같은 계열의 상한을 **문서 쪽을 고쳐** 거부로 맞춘 선례가 그대로 있다. 덧붙여 이 레포의 명시적 원칙(「drop namespace rather than having it silently ignored」)도 조용한 강제 변환에 반대한다.\n- **⑵ `container` 는 구현 결함이다.** 문서는 「후보 이름이 제시됨」을 **두 곳**(시나리오 5·시나리오 11)에서 기대 결과로 못박고, 이를 뒤집을 의도 표명이 코드 어디에도 없다. 원인도 의도가 아니라 사고다: `DoRaw` 는 **본문과 에러를 함께** 돌려주는데 `podLogs` 가 에러일 때 본문을 버리고, client-go 는 `Content-Type: application/json` 이라 본문을 텍스트로 안 읽어 400 을 「the server rejected our request for an unknown reason」 으로 일반화한다. apiserver 가 실어 보낸 「a container name must be specified for pod X, choose one of: [...]」 가 **이미 손에 있는데 버려지고 있다**. 코드를 문서에 맞춘다.\n\n**이 시도의 범위(완료 기준)** — 다음 다섯이 모두 성립하면 이 task 는 성공이다.\n1. `prd-resource-generic` AC3 와 `test-resource-generic.md` 시나리오 3 의 상한 문면이 구현(거부)과 일치하고, 그 계약을 **Go 단위 테스트가 기계로 고정**한다(거부 시 k8s 호출 0 — 클램프 구현이면 이 단언이 깨진다).\n2. 다중 컨테이너 파드를 `container` 없이 `subresource=log` 로 읽으면 응답에 **apiserver 의 후보 이름 문면이 보존**되고, Go 단위 테스트가 그것을 고정한다. 403(권한 밖) 경로의 기존 문면은 **그대로**다.\n3. `docs/doc-tracker.md` 의 구현 대기 표 두 행(시나리오 3·5)의 근거·담당·해제 조건이 이 변경 뒤의 실제 상태(= docs-impl 차단 요인 해소, 남은 것은 e2e 저작)를 말한다.\n4. CI 게이트 넷(`check_ac_mapping` · `check_mock_policy` · `check_comment_policy` · `check_doc_inventory`)과 `gofmt`/`go vet`/`go build`/`go test` 가 전부 rc=0. 주석 원장은 손대는 등재 범위(#25 `internal/k8s/resource{,_test}.go`)를 **재판정 기록으로 갱신**하고, 미등재 파일의 주석 증가분은 잔량 마커로 신고한다.\n5. **집계 일곱 숫자(78·1·29·48·48·0·0)가 하나도 움직이지 않는다** — 시나리오를 구현 대기 표에서 빼지 않고, `.md`·`.py` 파일을 추가하지 않는다.\n\n**범위 밖(근거와 함께)** — 재감지가 새 task 로 잇는다: 쓰기·스트림 9 verb 전부(특히 `resource_update(subresource=scale)` — #91 과 파일이 겹쳐 그 뒤 슬라이스다), approval-gate AC6(TOCTOU)·AC11(게이트 권한 선언), `workload_scale` 제거(대체재 선행 제약), **두 시나리오의 전용 e2e 저작(`resource_generic_ac3.py`·`resource_generic_ac5.py`)** — 자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 소관이고 그래서 두 행을 구현 대기 표에서 **빼지 않는다**(빼면 전용 파일 없는 공백이 되어 불변식이 깨진다).\n\n**가역성**: 문서 문면 + Go 한 함수의 에러 경로 + 단위 테스트뿐이다. 클러스터 상태·매니페스트·RBAC·게이트 선언·도구 표면(16/17종)을 한 줄도 건드리지 않는다. squash revert 한 번으로 완전히 되돌아가며, 되돌린 상태도 게이트 전부 rc=0 인 지금 상태다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "현재 `origin/main` tip 에서 브랜치 `reconcile/rct_20260914-0015-docs-impl` 를 딴다. 착수 전에 `git ls-tree`·전수 grep 으로 as-is 를 재실측한다: ⑴ `internal/mcp/resource.go` 의 `limit must be <= %d` 거부가 그대로인지, ⑵ `internal/mcp/toolslist.go` 의 `\"maximum\": 500` 선언이 그대로인지, ⑶ `podLogs` 가 `DoRaw` 의 에러 경로에서 본문을 버리는지. 네 게이트 + `go test ./...` 를 먼저 돌려 **머지 전 기준선이 초록**임을 기록한다.",
+              "expectedOutcome": "브랜치 생성. 세 실측이 계획의 전제와 일치. 기준선 게이트 4종 rc=0, `go test ./...` PASS, `check_comment_policy.py` 가 `주석 1456줄 / 판정 완료 1446 / 잔량 10` 을 출력."
+            },
+            {
+              "seq": 2,
+              "action": "**⑴-a 문서 문면 정정(거부)**: `docs/prd-resource-generic.md` AC3 의 「상한 500으로 강제한다」를 「상한 500을 **초과하면 거부한다**(클램프하지 않는다)」로 고치고 근거 한 줄(자매 상한 `tailLines` 와 같은 처리 · 도구 스키마 `maximum` 선언)을 붙인다. `docs/test-resource-generic.md` 시나리오 3 의 기대 결과 「`limit=1000`은 500으로 강제 하향」을 「`limit=1000`은 클램프되지 않고 **거부**」로 고친다. **시나리오 헤딩 제목과 번호는 건드리지 않는다**(`check_ac_mapping.py` 가 레지스트리 제목과 축자 대조한다).",
+              "expectedOutcome": "AC3·시나리오 3 의 상한 문면이 구현과 일치. `python3 tests/integration/check_ac_mapping.py` rc=0 이고 집계 일곱 숫자 불변."
+            },
+            {
+              "seq": 3,
+              "action": "**⑴-b 도구 스키마 자기기술 강화**: `internal/mcp/toolslist.go` 의 `limit` description `\"Page size. Default 100, maximum 500.\"` 을 초과값이 거부됨을 명시하는 문면으로 고친다(같은 레포의 `opensearch_search` `size` description 이 쓰는 「larger values are rejected, not clamped」 어법을 따른다). `\"maximum\": 500` 은 **유지**한다. 이 편집은 문자열 리터럴이라 `^\\s*(//|#)` 주석 표면을 움직이지 않는다.",
+              "expectedOutcome": "`tools/list` 의 `limit` 설명이 거부를 명시. `check_comment_policy.py` 의 주석 총계가 1456 그대로(문자열 리터럴이므로)."
+            },
+            {
+              "seq": 4,
+              "action": "**⑴-c 계약을 기계로 고정**: `internal/mcp/resource_test.go` 에 `TestListDefaultAndMaxLimit`(시나리오 3 의 `자동화` 필드가 이미 이름으로 계획해 둔 것)를 추가한다. 세 단언: ① `limit` 미지정 → 응답 `structuredContent.limit == 100`, k8s 호출 1회. ② `limit=500` → 수용, 응답 `limit == 500`. ③ `limit=1000` → `-32602` 거부이고 **k8s 호출 0회** — 클램프 구현이면 호출이 1회 일어나고 `limit` 이 500 으로 돌아오므로 이 단언이 깨진다(거부와 클램프를 구별하는 것이 이 케이스의 전부다). `internal/mcp/gate_test.go` 의 `countingK8s` 는 **건드리지 않는다**(등재 범위 #24).",
+              "expectedOutcome": "`go test ./internal/mcp/ -run TestListDefaultAndMaxLimit -v` PASS. 시험 삼아 거부를 클램프로 바꾸면 ③ 이 실패하는 것을 확인(단언이 실제로 구별한다는 증거)."
+            },
+            {
+              "seq": 5,
+              "action": "**⑵-a 코드 정정(후보 이름 보존)**: `internal/k8s/resource.go` 의 `podLogs` 에서 `DoRaw` 가 에러를 낼 때 **함께 돌려준 본문**을 `metav1.Status` 로 디코드해 그 `message` 를 살린다. 권한 경로의 기존 계약을 **깨지 않게** 우선순위를 둔다: `apierrors.IsForbidden(err)` 이면 지금처럼 `apiCallError` 의 「refused: this server has no (get, pods/log) grant」 문면을 유지하고, 그 외일 때만 본문의 `Status.message` 가 비어 있지 않으면 그것을 쓴다. 본문이 없거나(전송 계층 실패) `Status` 가 아니면 지금 경로로 폴백한다.",
+              "expectedOutcome": "`container` 누락 400 의 응답 문면에 apiserver 의 「a container name must be specified for pod ⟨이름⟩, choose one of: [...]」 가 보존된다. 403·전송 실패·정상 경로의 문면은 불변."
+            },
+            {
+              "seq": 6,
+              "action": "**⑵-b 계약을 기계로 고정**: `internal/k8s/resource_test.go` 에 httptest apiserver 를 `pods/log` 에 대해 **400 + `Status` 본문**(`message` 에 `choose one of: [app sidecar]`)으로 답하게 세우고, `KubeService` 를 그 서버에 붙여(`kubernetes.NewForConfig(&rest.Config{Host: ...})` + RESTMapper 에 `Pod` 등록) `GetResource(subresource=log)` 의 에러 문면에 후보 이름이 실리는지 단언한다. **대조군을 쌍으로 둔다**: 같은 경로가 403 을 답하면 기존 grant 문면이 그대로 나오는지도 단언한다(한쪽만 두면 「전부 본문으로 덮는다」 구현이 통과한다).",
+              "expectedOutcome": "`go test ./internal/k8s/ -v` PASS. 두 단언이 각각 새 경로와 보존된 경로를 덮는다."
+            },
+            {
+              "seq": 7,
+              "action": "**주석 원장 정합**: `python3 scripts/check_comment_policy.py` 를 돌려 위반 내용을 **출력에서 읽어** 처리한다. 등재 범위 #25(`internal/k8s/resource.go internal/k8s/resource_test.go`)의 주석이 바뀌었으면 그 행의 줄 수·지문·날짜를 **게이트가 재측정해 보고한 값 그대로** 갱신한다(손으로 짓지 않는다 — 지문은 정규화·정렬까지 같은 정의여야 한다). 미등재 파일(`internal/mcp/resource_test.go`)의 주석 증가분은 `docs/comment-policy/ledger.md` 의 `<!-- 판정-잔량 -->` 마커에 반영한다. 합계 마커도 같은 출력에서 다시 뽑는다.",
+              "expectedOutcome": "`check_comment_policy.py` rc=0. 원장의 합계 + 잔량 == 실측 전체이고, #25 행이 재판정 기록으로 갱신돼 있다."
+            },
+            {
+              "seq": 8,
+              "action": "**doc-tracker 반영**: ⑴ 구현 대기 표의 `test-resource-generic.md#시나리오 3` 행(근거·담당·해제 조건)을 「`limit` 상한 문면↔구현 불일치 해소 — 남은 차단은 전용 e2e 저작(120개 ConfigMap 픽스처 포함), 담당: 자매 렌즈」로 다시 쓴다. ⑵ `#시나리오 5` 행을 「`container` 후보 이름 부재 해소 — 남은 차단은 전용 e2e 저작, 담당: 자매 렌즈」로 다시 쓴다. ⑶ 레지스트리 두 행의 상태 괄호 `(규칙 6 — 도구 미구현)` 를 실제 사유로 고친다(`⏳` 접두는 유지 — 체커가 그것만 본다). ⑷ 「변경 이력」 표 맨 위에 이 슬라이스 행을 덧붙인다. **두 행을 표에서 빼지 않는다.**",
+              "expectedOutcome": "`check_ac_mapping.py` rc=0 이고 집계 `78·1·29·48·48·0·0` 불변. doc-tracker 가 더는 「도구 미구현」이라는 거짓 근거를 들지 않는다."
+            },
+            {
+              "seq": 9,
+              "action": "**로컬 CI 재현 전량**: `gofmt -l .`(빈 출력) · `go vet ./...` · `go build ./...` · `go test ./... -v` · 네 게이트 스크립트를 전부 돌린다. 통합 e2e(kind 필요)는 이 슬라이스가 `tests/` 를 한 줄도 바꾸지 않으므로 대상이 아니지만, 그 사실을 변경 파일 목록으로 **직접 확인**해 적는다.",
+              "expectedOutcome": "일곱 검사 전부 rc=0. 변경 파일 목록에 `tests/`·`k8s/`·`.github/workflows/`·`Dockerfile` 이 **0바이트**."
+            },
+            {
+              "seq": 10,
+              "action": "커밋을 **두 덩어리로 갈라** 푸시하고 PR 을 연다(머지하지 않는다). 커밋 A = ⑴ 상한 문면 정정 계열(단계 2·3·4), 커밋 B = ⑵ 후보 이름 계열(단계 5·6·7), 커밋 C = doc-tracker 반영(단계 8). PR 본문에 task id·gap 요약·범위·완료 기준·검증 방법·**두 반쪽이 서로 독립이라 검토자가 한쪽만 떨어뜨릴 수 있다는 사실**·#91 과의 예상 충돌 지점(변경 이력 표)을 적는다.",
+              "expectedOutcome": "PR open. `mergeable_state` 확인. CI 전 잡 초록."
+            }
+          ],
+          "plannedAt": "2026-09-14T23:34:00Z"
+        }
+      }
+    ]
   },
   {
     "id": "rct_20260914-0016",
