@@ -370,7 +370,7 @@
   {
     "id": "rct_20260913-0002",
     "toBeModelId": "tbm_session-platform-mcp-tool-roadmap",
-    "status": "approving",
+    "status": "approved",
     "trigger": {
       "detectedAt": "2026-09-13T14:08:00Z",
       "changedSides": [
@@ -387,7 +387,7 @@
       }
     },
     "createdAt": "2026-09-13T14:08:00Z",
-    "updatedAt": "2026-09-14T12:58:00Z",
+    "updatedAt": "2026-09-14T13:06:00Z",
     "stateSummary": {
       "asIs": "**실제 도구 표면 — 도구 2개** (`tools:2 ping,web_fetch_get`, 트리거 `e70d6e4` / main `99c2166` 실측).\n\n`data-plane/cmd/agent/session_mcp_tools.go` 의 `toolDefinitions()` 가 내는 목록:\n\n| 도구 | 게이트 | 비고 |\n|------|--------|------|\n| `web_fetch_get` | 호출마다 승인 1건 | `url` 인자 (http·https, `additionalProperties:false`) |\n| `ping` | 지나지 않는다 (파드 밖에 닿지 않아 R1 적용 범위 밖) | 인자 없음, 상수 `pong` |\n\n**`ping` 은 선언만이 아니라 실제로 호출 가능하다** — 이 문서가 스스로 세운 기준(「`tools/call` 까지 가 봐야 참이 된다」)으로 검증했다: `:98` 등재 · `:125` `switch call.Name` 의 `case webFetchGetTool, pingTool` 수용 · `:133-134` 핸들러가 `mcpToolText(pingReply)` 반환. 셋이 다 있어야 참인데 셋 다 있다.\n\n**게이트 분기 안쪽 배치도 실측 확인** — `toolDefinitions()` 첫 줄이 `if !c.gated() { return []any{} }` 라 `ping` 도 게이트웨이 미구성 시 목록에서 빠진다. 문서가 「협상 불가」로 지목한 R2(「게이트를 구성할 수 없으면 이 도구도 내지 않는다 — 그래야 빈 목록이 『게이트웨이가 없다』 하나로만 읽힌다」)가 코드로 지켜졌다.\n\n**헬퍼 파드 egress 실측**(다음 슬라이스의 전제라 재측정): `control-plane/internal/adapter/k8s/network_policy.go` 가 만드는 정책 쌍은 **egress 를 워크로드 파드에만** 건다(`PodSelector: workloadSelector`, 피어는 kube-DNS 와 자기 헬퍼 파드의 두 포트뿐). **헬퍼 파드에는 ingress 제한만 있고 egress 정책이 없다** — MCP 컨테이너가 파드 밖에 닿을 수 있는 이유이자, `git_clone` 이 AC-F2 축의 새 선행 없이 설 수 있는 근거다.",
       "toBe": "**등재된 구현 대상 — 3건** (`roadmap:3 1. git_clone|2. K3s MCP 재노출|3. gh CLI`, `docs/session-mcp-tool-surface.md` 「다음에 구현할 도구 (3)」).\n\nto-be 는 이 절이 **비어 있는 상태**다 — 등재된 모든 항목이 ⑴ 표면에 착지했거나 ⑵ **근거와 함께** 철회된 상태.\n\n| # | 항목 | 선행 | 착지 |\n|---|------|------|------|\n| 1 | `git_clone` | **없음** — 공개 레포 한정이면 R9 에 걸리지 않는다 | ❌ |\n| 2 | K3s MCP 재노출 | **R9**(AC-F6 자격 증명 배치 개정) | ❌ |\n| 3 | `gh` CLI | **R9** + R4 승인 화면 설계(이 레포 밖) | ❌ |\n\n문서가 우선순위 근거를 스스로 적는다: 「셋 중 둘(2·3)이 R9 에 걸린다 … **1번만 그 문 앞에서 설 수 있고, 그것이 1번이 먼저인 이유이기도 하다**」. 2 → 3 순서의 실질적 근거는 자격 증명이다 — 3번은 2번이 열어 줄 K3s MCP 의 GitHub App 단명 토큰을 쓰면 **자기 Secret 없이** 설 수 있다.\n\n**등재 목록 자체가 이번 트리거로 한 칸 줄었다**: 0번 `ping` 이 착지하며 빠졌다(`roadmap:4` → `roadmap:3`). 0번은 우선순위 줄에 선 적이 없어 **1~3 의 번호와 그 사이의 근거가 한 자도 움직이지 않았다** — 번호를 0 으로 둔 설계가 값을 낸 자리다.",
@@ -470,8 +470,11 @@
         },
         "review": {
           "required": true,
-          "status": "pending",
-          "reason": "**프로덕션 data-plane 에이전트의 도구 표면에 「파드 밖으로 나가는」 새 능력을 더하는 변경**이라 `riskLevel` 이 medium 이고, 이 도구가 공개 레포에만 닿는다는 전제가 **배포 설정이 아니라 코드 세 줄**(`-c credential.helper=` · `GIT_CONFIG_NOSYSTEM=1` · `GIT_TERMINAL_PROMPT=0`)에 걸려 있다. 계획 단계가 실측으로 남긴 자리가 정확히 그것이다 — 프롬프트만 끈 초안이 credential helper 가 구성된 환경에서 **private 레포 클론에 성공했고**, 나머지 둘을 더한 뒤에야 막혔다. 셋 중 하나라도 나중에 「단순화」로 걷히면 private 레포가 조용히 클론되는 형태이므로, 그 경계가 실제로 서 있는지는 사람이 한 번 보고 넘길 값어치가 있다.\n\n**롤백 자체는 어렵지 않다.** revert 커밋 하나로 되돌아가고, 매니페스트·RBAC·NetworkPolicy·control plane 을 건드리지 않으며, 새 도구는 호출마다 사람 승인을 지나므로 **착지만으로는 트래픽도 데이터 변경도 생기지 않는다.** 불가역한 지점은 없다.\n\n**승인 전에 두 가지를 직접 확인할 것.** ⑴ 준비 시점에 **최종 head 의 `e2e (kind + API + browser)` 가 아직 진행 중**이었다 — 직전 커밋은 체크 16개를 완주했고 둘째 커밋의 델타가 마크다운 한 파일뿐이라 통과가 유력하지만, 그 결론은 기록에 없다. ⑵ **주석 원장 파일이 다른 열린 PR 두 건과의 직렬화 지점**이라 어느 쪽이 먼저 머지되느냐에 따라 합계·행 지문을 다시 맞춰야 한다. base 신선도와 함께 봐 달라."
+          "status": "approved",
+          "reason": "**프로덕션 data-plane 에이전트의 도구 표면에 「파드 밖으로 나가는」 새 능력을 더하는 변경**이라 `riskLevel` 이 medium 이고, 이 도구가 공개 레포에만 닿는다는 전제가 **배포 설정이 아니라 코드 세 줄**(`-c credential.helper=` · `GIT_CONFIG_NOSYSTEM=1` · `GIT_TERMINAL_PROMPT=0`)에 걸려 있다. 계획 단계가 실측으로 남긴 자리가 정확히 그것이다 — 프롬프트만 끈 초안이 credential helper 가 구성된 환경에서 **private 레포 클론에 성공했고**, 나머지 둘을 더한 뒤에야 막혔다. 셋 중 하나라도 나중에 「단순화」로 걷히면 private 레포가 조용히 클론되는 형태이므로, 그 경계가 실제로 서 있는지는 사람이 한 번 보고 넘길 값어치가 있다.\n\n**롤백 자체는 어렵지 않다.** revert 커밋 하나로 되돌아가고, 매니페스트·RBAC·NetworkPolicy·control plane 을 건드리지 않으며, 새 도구는 호출마다 사람 승인을 지나므로 **착지만으로는 트래픽도 데이터 변경도 생기지 않는다.** 불가역한 지점은 없다.\n\n**승인 전에 두 가지를 직접 확인할 것.** ⑴ 준비 시점에 **최종 head 의 `e2e (kind + API + browser)` 가 아직 진행 중**이었다 — 직전 커밋은 체크 16개를 완주했고 둘째 커밋의 델타가 마크다운 한 파일뿐이라 통과가 유력하지만, 그 결론은 기록에 없다. ⑵ **주석 원장 파일이 다른 열린 PR 두 건과의 직렬화 지점**이라 어느 쪽이 먼저 머지되느냐에 따라 합계·행 지문을 다시 맞춰야 한다. base 신선도와 함께 봐 달라.",
+          "reviewer": "human",
+          "reviewedAt": "2026-09-14T13:06:00Z",
+          "comment": "승인 세션에서 전제 신선도를 재측정한 뒤 승인. ⑴ 검토 단계가 남긴 두 확인 항목이 모두 해소됐다 — 최종 head `dd5b271` 의 체크 16개가 success 15 · skipped 1 · fail 0 으로 완주했고(그중 `e2e (kind + API + browser)` success, 2026-09-13T15:04:23Z), 원장 직렬화는 실제로 발동했다(#139 가 먼저 머지). ⑵ base 가 움직였다 — main 이 `99c2166` → `283ec0e` 로 4커밋 전진해 PR 이 `mergeable=false`/`dirty`. 충돌은 `docs/comment-policy/ledger.md` 합계 마커 **한 줄**뿐이고(main 3054 vs PR 3087), 승인 세션에서 시험 병합해 `3127`(3054+73)로 풀자 `check_comment_policy.py` 를 포함한 정적 게이트 4종이 전부 rc=0, 지문도 계획대로 `tools:3 git_clone,ping,web_fetch_get` / `roadmap:2 2. K3s MCP 재노출|3. gh CLI` 가 나왔다. main 의 4커밋은 e2e·deploy·doc-tracker 쪽이라 PR 의 코드 파일과 겹치는 것은 원장 한 파일뿐. ⑶ 자격 증명 경계 세 줄을 코드에서 직접 확인 — `-c credential.helper=`(:186) · `GIT_TERMINAL_PROMPT=0`+`GIT_CONFIG_NOSYSTEM=1`(:204, 추가로 `GIT_ASKPASS=`·`GCM_INTERACTIVE=never`) · userinfo 거부(:153) · `--`(:190), 그리고 `git_clone` 정의가 `if !c.gated()` 안쪽(R2). ⇒ 실행 단계는 **리베이스 후 합계 마커를 재측정해 3127 로 맞추고 squash 머지**할 것. Go 테스트 스위트는 승인 세션에서 돌리지 않았다(툴체인 미설치) — 리베이스 후 CI 가 재실행한다."
         }
       }
     ]
