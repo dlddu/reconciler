@@ -2327,7 +2327,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "approving",
+    "status": "review_rejected",
     "trigger": {
       "detectedAt": "2026-09-14T05:14:14Z",
       "changedSides": [
@@ -2344,7 +2344,7 @@
       }
     },
     "createdAt": "2026-09-14T05:14:14Z",
-    "updatedAt": "2026-09-14T06:05:00Z",
+    "updatedAt": "2026-09-14T09:29:00Z",
     "id": "rct_20260914-0002",
     "stateSummary": {
       "asIs": "**as-is — `internal/` + `main.go` @ `9d2855fe` (2026-09-14T05:01:42Z 머지, 관측 05:20~05:28Z)**\n\n- 버전: `internal:b068b9d0… main.go:10cf744a…` (main.go 는 **불변**, `internal/` 만 이동).\n- **도구 표면 17 → 16.** 제거 4종 `namespace_list`·`workload_list`·`workload_logs`·`pod_describe`,\n  신설 3종 `api_resources`·`resource_get`·`resource_list`(`internal/mcp/resource.go` 296줄 신설,\n  `internal/k8s/resource.go` 488줄 신설, `internal/mcp/describe.go` 128줄 제거).\n- **라이브 교차확인(프로덕션 MCP 서버, 이 세션에 등록된 도구 목록):** 광고 16종이 코드 표면과\n  **전건 일치**하고 폐기 4종은 **부재**. 파드 `homelab-k3s-mcp-674dd4996f-dcm6k` Running 1/1,\n  restarts 0, age 13m(≈05:12Z) ⇒ 머지 뒤 배포 핀 `d036e07` 로 롤아웃 완료.\n- **1차 시도를 죽인 결함은 해소됐다.** `resource_list v1/Namespace` 를 직접 호출해 `columns` 3개 ·\n  `rows` **37행**(비어 있지 않음)을 받았다 — 「모든 좌표에 빈 표」 상태가 아니다.\n- **미착수 확인(비-테스트 전수 grep, `internal`+`main.go`):** `resource_apply`·`resource_delete`·\n  `resource_patch`·`resource_create`·`resource_watch`·`subresource=scale`·`resourceVersion`·\n  `precondition`·`dryRun`·`ServerSideApply|FieldManager` **전부 0 히트**. 쓰기 축은 착수 0.\n- `approvalContext()`(`internal/mcp/gate.go:383`)는 `tool`·`rbac`(verb/resource 쌍)·요청 시각 ·\n  원시 `arguments` 만 싣는다. `mask|redact|sanitize` 0 히트, `selfsubject|ownRBAC|rbac.yaml` 0 히트,\n  `kubelet` 히트는 `server.go:76` 주석 1건(무관).\n- `k8s/rbac.yaml` 은 이 슬라이스에서 **권한 확대 0**(`15/+5` 는 폐기 4종이 쓰던 권한 정리 범위).",
@@ -2423,8 +2423,11 @@
         },
         "review": {
           "required": true,
-          "status": "pending",
-          "reason": "산출물 자체는 문서 6 + e2e 1 + `k8s/rbac.yaml` 주석뿐이고 권한 규칙 줄은 바이트 불변이라 revert 하나로 원복되지만, 머지되는 실체는 `k8s/rbac.yaml` 의 소유를 `prd-platform-auth-safety` AC3 에서 `prd-resource-generic` AC19 로 옮기는 **보안 정책 결정**이다 — tracker 가 「어느 문서가 이기는지는 소유자 판단」으로 등재해 사람에게 넘긴 바로 그 항목이고, 계획은 두 대안 중 한쪽(AC19)을 골라 놓았다. 이 결정과 함께 `tests/integration/platform_auth_safety_ac3.py` 가 기대 부여 집합의 손 전사를 버리고 매니페스트에서 유도하도록 바뀌므로 **앞으로 `rbac.yaml` 을 넓히는 변경을 CI 가 더 이상 모순으로 잡지 못한다** — 수용 위험으로 등재됐던 「RBAC 백스톱 소멸」이 현실이 되고, 대신 붙인 완화(넓히는 PR 에 그 verb 의 게이트 e2e 동반)는 기계가 아니라 문언이 강제한다. 불가역성은 산출물이 아니라 하류에 있다 — 이 결정 위에 쓰기 축 PR 이 쌓이기 시작하면 되돌리기가 「revert 하나」에서 「그 PR 들을 함께 되감기」로 바뀌므로, 반려한다면 지금이 가장 싸다. `riskLevel` 이 high 이고 시크릿 쓰기·워크로드 `delete`/`create` 가 원리적으로 허용 범위 안에 들어오는 경계 이동이라, 실행 전에 소유자가 어느 문서를 이기게 할지 직접 확인해야 한다."
+          "status": "rejected",
+          "reason": "산출물 자체는 문서 6 + e2e 1 + `k8s/rbac.yaml` 주석뿐이고 권한 규칙 줄은 바이트 불변이라 revert 하나로 원복되지만, 머지되는 실체는 `k8s/rbac.yaml` 의 소유를 `prd-platform-auth-safety` AC3 에서 `prd-resource-generic` AC19 로 옮기는 **보안 정책 결정**이다 — tracker 가 「어느 문서가 이기는지는 소유자 판단」으로 등재해 사람에게 넘긴 바로 그 항목이고, 계획은 두 대안 중 한쪽(AC19)을 골라 놓았다. 이 결정과 함께 `tests/integration/platform_auth_safety_ac3.py` 가 기대 부여 집합의 손 전사를 버리고 매니페스트에서 유도하도록 바뀌므로 **앞으로 `rbac.yaml` 을 넓히는 변경을 CI 가 더 이상 모순으로 잡지 못한다** — 수용 위험으로 등재됐던 「RBAC 백스톱 소멸」이 현실이 되고, 대신 붙인 완화(넓히는 PR 에 그 verb 의 게이트 e2e 동반)는 기계가 아니라 문언이 강제한다. 불가역성은 산출물이 아니라 하류에 있다 — 이 결정 위에 쓰기 축 PR 이 쌓이기 시작하면 되돌리기가 「revert 하나」에서 「그 PR 들을 함께 되감기」로 바뀌므로, 반려한다면 지금이 가장 싸다. `riskLevel` 이 high 이고 시크릿 쓰기·워크로드 `delete`/`create` 가 원리적으로 허용 범위 안에 들어오는 경계 이동이라, 실행 전에 소유자가 어느 문서를 이기게 할지 직접 확인해야 한다.",
+          "reviewer": "human",
+          "reviewedAt": "2026-09-14T09:29:00Z",
+          "comment": "거부 — 제품 문서 최신화가 먼저 필요하다. 이 PR 이 고른 답(AC19 가 k8s/rbac.yaml 을 단독 소유하고 prd-platform-auth-safety AC3 은 열거를 위임)의 옳고 그름 이전에, 판단의 근거가 되는 제품 문서 자체가 최신 상태가 아니다. AC3 의 부여 열거가 도구 표면이 resource_* 로 옮겨 간 뒤에도 갱신되지 않은 것이 이번 교착의 직접 원인이었듯, 두 PRD 를 지금의 등록 도구 16종·게이트 선언 기준으로 먼저 최신화한 뒤에 어느 문서가 rbac.yaml 을 소유할지를 정해야 한다. 재계획 시 문서 최신화를 선행 단계로 두고, 그 결과 위에서 소유 결정을 다시 세울 것."
         }
       }
     ]
