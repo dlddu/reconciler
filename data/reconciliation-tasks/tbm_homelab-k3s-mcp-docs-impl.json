@@ -3162,7 +3162,7 @@
       }
     },
     "createdAt": "2026-09-14T12:22:16Z",
-    "updatedAt": "2026-09-14T13:24:30Z",
+    "updatedAt": "2026-09-14T13:34:10Z",
     "stateSummary": {
       "asIs": "**as-is = 구현** (`dlddu/homelab-k3s-mcp` @ `6ba0b2a5` — `internal:1b0333bc` `main.go:10cf744a`,\n2026-09-14T12:2x 관측. `ls-remote` 로 main tip 이 여전히 `6ba0b2a5` 임을 마감에 재확인).\n\n**도구 표면 16종**(`internal/mcp/toolslist.go` 전수): `ping` · `api_resources` · `resource_list` ·\n`resource_get` · `workload_restart` · `workload_scale` · `dear_baby_reset_user` · `grafana_token` ·\n`github_app_installation_token` · `aws_config_get` · `opensearch_search` ·\n`opensearch_document_put` · `opensearch_document_delete` · `session_list` · `session_read` ·\n`session_write`. `tests/integration/_helpers.py::EXPECTED_TOOLS` 와 **집합 동일**(16 == 16).\n\n**쓰기 축은 여전히 0종이다.** `resource_watch`·`create`·`apply`·`update`·`patch`·`delete`·\n`deletecollection`·`exec`·`attach`·`port_forward`·`proxy` 11개 이름을 `internal/**.go`(비-테스트)\n전수 grep → **전부 0 히트**.\n\n**이 트리거가 움직인 구현은 정확히 한 곳**(#82 `bd127aab`, 이 모델 `rct_20260914-0004` 의 산출):\n`internal/k8s/resource.go` 에 `rankSimilarKinds`·`kindEditBudget`·`editDistance`(룬 단위\nLevenshtein, 2행 롤링)를 신설해 종류 후보 산출을 부분 문자열 매칭 **단독**에서 **편집 거리와 병행**으로\n바꿨다. 후보를 거리순(동률은 이름순) 정렬한 **뒤** 상위 5개로 자른다 — 이름순 절단이 한 글자 떨어진\n종류를 긴 부분 문자열 일치에 밀리게 하던 자리다. 예산은 길이 의존(≤4→1, ≤9→2, 그 외 3).\n단위 테스트 `resource_test.go:242 TestUnknownKindSuggestsCandidates` 가 「가운데 글자가 빠진」\n`Deploymnt` 케이스를 포함해 고정한다(`:307` 에서 `rankSimilarKinds(served,\"Deploymnt\")` 직접 단언).\n\n**게이트**(`internal/mcp/gate.go`, 420줄): 선언 대상은 `resource_list`·`resource_get` **둘뿐**.\n`Validate()` 가 기동 전 advertised ↔ registered **등가**를 강제하고 불일치면 프로세스를 세운다\n(`:251-297`) — 선언 없는 도구가 배포로 새는 경로가 코드로 막혀 있다.\n\n**Table 협상**: `tableAccept` 는 `metav1.SchemeGroupVersion` 에서 **파생**되어\n`application/json;as=Table;v=v1;g=meta.k8s.io, application/json` 이고(`resource.go:33-36`),\n응답 본문의 `Kind != \"Table\"` 이면 `:352-358` 에서 **거부**한다(\"will not fall back to whole\nobjects\") — 폴백 렌더링 경로가 없다.\n\n**CI**: 트리거의 `internal/` 트리와 동일한 `e4304b3f` 에서 CI **success**(`6ba0b2a5` 는\n`[skip ci]` 배포 핀이라 `k8s/` 만 바꾼다).",
       "toBe": "**to-be = 제품 문서** (`docs/` 트리 `452997f6`).\n\n**문서 체계 실측**: 가치 **5**(V1~V5) · PRD **14**(도구 12 + 공통 2) · AC **78** · 테스트 문서 **14**.\nAC 78 은 `docs/prd-*.md` 의 `^### AC[0-9]*:` 전수 재계수이고 **부모(`8265018c`)에서도 78** 이다 —\n이 트리거는 AC 를 한 건도 늘리거나 줄이지 않았다. 결번 2(platform AC3 · resource-generic AC19)는\n`723af13`(#83, 소유자 판단)이 남긴 것으로 번호를 당기지 않았다.\n\n**이 트리거의 문서 이동은 커밋 3건**이다:\n- **#82 `bd127aab`** (이 모델 `rct_20260914-0004` 산출) — `test-resource-generic.md` 시나리오 20 의\n  `자동화` 필드, `doc-tracker.md`, `comment-policy/ledger.md`.\n- **#84 `8b5fef68`** (이 모델 `rct_20260914-0002` 산출, **`docs/` 밖 0바이트**) — 아래 본체.\n- **#86 `e4304b3f`** (자매 `scenario-e2e` `rct_20260914-0006` 산출) — 레지스트리 집계와 픽스처 산문.\n\n**#84 가 한 일(전건 재측정 완료)** — 구현된 계약에 문서를 맞췄다:\n1. `prd-resource-generic` **AC2** 의 Table `Accept` 를 `;v=1` → **`;v=v1` + 폴백 `, application/json`\n   명시**로 고치고 「손으로 적지 말고 `metav1.SchemeGroupVersion` 에서 파생」·「Table 이 아니면 **거부**,\n   폴백 경로 없음」을 문언으로 박았다. ⇒ 코드와 **바이트 일치**(위 as-is).\n2. `prd-approval-gate` **AC11** 의 PartialObjectMetadata `Accept` 도 `;v=1` → `;v=v1`. 이쪽은\n   **미구현이라 지뢰가 살아 있던** 자리다(문언대로 구현하면 apiserver 가 전체 객체로 답해 게이트가\n   승인 전에 Secret 값을 읽는다). 구현 전에 선제 정정된 셈이다.\n3. `prd-approval-gate` 「게이트 밖」 표 `list` 행의 근거 포인터를 `AC11`(컬렉션 일괄 삭제) →\n   **`AC2`·`AC17`** 로 교정.\n4. `doc-tracker.md` 수치 4건을 재도출값으로: 「폐기된 6종이 아직 살아 있고」→**남은 2종**,\n   「80개 AC」 2곳→**78개**, 「6종의 Go 구현은 아직 살아 있고」→**2종**, 「도구 표면 17종」→**16종**.\n   그리고 요약에 **「등록 도구: 16종 (`toolslist.go` = `EXPECTED_TOOLS`)」** 행을 신설해 단일 출처를 세웠다.\n5. **「구현 제거가 남긴 일」 3번(`rbac.yaml` 재검토)을 ✅ 닫았다** — #83 이 `rbac.yaml` 을\n   `cluster-admin` 바인딩으로 바꾸고 AC3·AC19 를 둘 다 결번 처리해 「재검토할 규칙도 대조할 상대도\n   없다」. 그리고 **그 항목이 걸어 두던 선행 제약 「쓰기 축은 이 결정 없이는 착수할 수 없다」가 함께\n   풀렸다**고 축자로 적는다.\n\n**tracker 가 지금 들고 있는 미결·수용 위험**: ⬜「문서 없는 실행 코드 — 남은 2종\n(`workload_restart`·`workload_scale`)」 **쓰기 축 구현 선행 대기** · ⬜「게이트 우회 가능 —\n`dear_baby_reset_user`」 소유자 판단 대기 · ⚠️「RBAC 경계 소멸」 수용(2026-09-14) — `rbac.yaml` 이\n`cluster-admin` 이라 **게이트 판정이 유일한 경계**이고 완화는 게이트 정확성 하나뿐이다.\n\n**레포 게이트 `tests/integration/check_ac_mapping.py` 는 부모·트리거 두 지점 모두 rc=0**,\n출력 델타는 자매 축 카운터 셋뿐(구현 대기 31→30 · 1:1 대상 46→47 · 매칭 파일 46→47, #86 이 시나리오 1\n전용 e2e 를 저작한 결과). 불변식 `78 − 1(예외) − 30 = 47 = 매칭 파일 47`, 공백 0.",
@@ -3250,6 +3250,48 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-14T13:19:13Z",
           "comment": "사람 승인. 제시된 설명(PR #89 = resource_patch 등록 + 민감 종류 쓰기 마스킹, riskLevel high)과 전제 신선도 확인(PR open · base c1d04727 = main tip 불변 · mergeable clean · CI 4잡 success) 위에서 승인. 실행 시 지침대로 머지 전 base 재확인과 gatekeeper autoResponseMode 확인, 머지 후 Secret 프로브로 승인 context 마스킹 실측을 수행할 것."
+        },
+        "execution": {
+          "status": "running",
+          "startedAt": "2026-09-14T13:24:45Z",
+          "finishedAt": null,
+          "entries": [
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T13:25:37Z",
+              "finishedAt": "2026-09-14T13:25:41Z",
+              "log": "**실행 1 — base 신선도 재측정: 움직였다.** PR #89 `state=open` · `merged=false` · **`mergeable=false` / `mergeable_state=dirty`** · head `6feb8fbe` · base `c1d04727`. 같은 시각 main tip 은 **`9de96c4c`** 로 계획 종료 시점(`c1d04727`)에서 두 커밋 앞서 있었다. 그 사이 들어온 것은 정확히 지침이 🔴 로 지목한 **#88**(`2d62b62c`, `rct_20260914-0009` — 자매 모델 `comment-redundancy`)이고, 예고대로 **같은 `docs/comment-policy/ledger.md` 를 건드렸다**(+30/−4). 뒤이은 `9de96c4c` 는 그 머지가 부른 `pin` 커밋이다. ⇒ 지침 2번(리베이스) 발동."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T13:26:10Z",
+              "finishedAt": "2026-09-14T13:31:20Z",
+              "log": "**실행 2 — 리베이스 + 마커 재산출.** `origin/main`(`9de96c4c`) 위로 리베이스. 충돌은 **1파일 1훵크**뿐 — `ledger.md` 의 `판정-합계`/`판정-잔량`. 지침대로 **어느 쪽도 취하지 않았다**(HEAD=main 측 1337/18 · 내 쪽 1391/86). 마커를 `0/0` 으로 두고 `check_comment_policy.py` 를 돌려 게이트가 실측을 뱉게 한 뒤 그 값만 옮겨 적었다 → **합계 1413 / 잔량 53**. 「양쪽을 합친다」(1337+1391, 18+86)도 「내 쪽을 취한다」(1391/86)도 전부 틀린 값이었음을 실측이 보인다 — #88 은 합계를 올리고 잔량을 내리는 방향, 내 쪽은 잔량을 올리는 방향이라 두 방향이 반대다. 재실행 rc=0(판정 대상 1466줄/80파일 · 판정 완료 1413줄 96.4% · 등재 범위 29 · 잔량 53). **R2(지문) 는 울리지 않았다** — 등재 행 #24 `gate.go`·#25 `resource.go`·#26 `mcp/resource.go` 의 지문을 준비 단계가 이미 갱신해 뒀고 #88 이 Go 파일을 건드리지 않아 리베이스가 흔들지 않았다. docstring 마커(1064/43)는 충돌 없이 자동 병합됐고 체커가 1107=1064+43 로 닫았다 — 무변경이 맞다. 리베이스 후 head **`4aca3f7b`**, 여전히 14파일 +750/−40(준비 시점과 동일). `--force-with-lease=refs/heads/reconcile/rct_20260914-0008-docs-impl:6feb8fbe…` **명시형**으로 force-push(`ls-remote` 로 잰 sha)."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T13:28:00Z",
+              "finishedAt": "2026-09-14T13:31:00Z",
+              "log": "**실행 3a — 로컬 게이트 7종 전량(리베이스한 새 base 에서 다시), 전부 `git add -A` 후.** `check_ac_mapping.py` rc=0 **78 · 1 · 29 · 48 · 48 · 0 · 0** — 지침이 못박은 값 그대로. 이것이 「움직이지 않았다」임을 확정하려고 **`origin/main` 을 별도 워크트리로 떼어 같은 체커를 돌려 대조**했고 일곱 숫자가 **완전히 동일**했다 ⇒ 이 슬라이스의 기여는 0(움직였다면 그 자체가 오류 신호였다). `check_mock_policy.py` rc=0(등재 5/상한 5 · 모킹 지점 5 · 미등재 0 · 고아 0). `check_comment_policy.py` rc=0. `gofmt -l .` 출력 없음 · `go vet ./...` rc=0 · `go build ./...` rc=0 · `go test ./...` **전 패키지 ok**. Go 툴체인이 실행 환경에 없어 `go1.27.1 linux-arm64` 를 내려받아 `GOTOOLCHAIN=local` 로 돌렸다(go.mod 는 `go 1.24.0`). 지침이 **이름으로** 확인하라 한 7종 전부 실재·PASS: `TestPatchTypes`(서브케이스 **10** — merge/strategic/json/apply + unknown·missing patchType·missing patch·missing name·apply without fieldManager·fieldManager outside apply) · `TestRestartPatchTouchesOnlyAnnotation` · `TestRestartPatchIsGatedLikeAnyPatch` · `TestSecretWriteContextRedactsValues` · `TestOrdinaryWriteKeepsItsBodyInTheContext` · `TestJSONPatchCredentialValuesAreMasked` · `TestPatchTypesMapToApiserverMediaTypes`. **도구 표면 파리티**: `toolslist.go` 임베드 JSON 파싱 결과 광고 17종 == `_helpers.py::EXPECTED_TOOLS` 17종(집합 동일), `resource_patch` 양쪽에 실재, annotations `readOnlyHint:false`·`destructiveHint:true`·`idempotentHint:false`, `patchType` enum 4종, required `[apiVersion,kind,name,patchType,patch]` — 계획 그대로."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T13:29:40Z",
+              "finishedAt": "2026-09-14T13:30:30Z",
+              "log": "**실행 3b — 머지 전 `autoResponseMode` 확인(지침 🔴 주의사항). 결론: `AUTO_APPROVE` 는 꺼져 있다 ⇒ 머지 가드 충족.** `autoResponseMode` 는 gatekeeper **쪽 사용자별 설정**이라 이 레포의 config·k8s 오브젝트로는 읽히지 않는다(자격증명은 `homelab-k3s-mcp-gatekeeper` Secret 이며 읽지 않았다). 그래서 **이미 배포돼 있는 읽기 게이트로 직접 측정**했다 — 존재하지 않는 이름을 겨눈 무해한 `resource_get(kind=Secret, name=…-premerge-automode-probe-does-not-exist)`. 1차 관측은 **404** 였고 이는 지침이 결함 신호로 든 「404 가 먼저 오면 게이트보다 apiserver 가 먼저 닿았다」와 형태가 같아 **머지를 멈추고 파드 로그로 판정을 확인**했다. 로그가 뒤집었다 — `approval granted tool=resource_get pairs=\"get on secrets\" request_id=cmu1a4qrx000001tlolilekfi processed_by_id=cmpjx339w000001tl4hmelg2g **auto_approved=false**`, 호출 `duration_ms=20386`. 즉 게이트가 정상 발화해 **사람이 20초에 걸쳐 승인**했고, 404 는 승인 **이후** apiserver 가 낸 것(프로브 대상이 실재하지 않으므로 정답)이다. 404 가 판정을 가린 이유도 코드에 있다 — `annotateAutoApproval` 은 **성공 결과에만** 표기를 붙여 에러 경로에서는 표기가 사라진다. 기동 로그도 함께 확인: `approval gate enabled timeout=5m0s poll_interval=2s gated_kinds=[v1/Secret] push_notifications=true`. ⚠️ 이 프로브가 사람에게 실제 승인 알림을 띄웠다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T13:32:30Z",
+              "finishedAt": "2026-09-14T13:33:10Z",
+              "log": "**실행 4 — squash 머지(이 task 의 유일한 불가역 지점).** 직전 최종 상태 재확인: `mergeable=true` / **`mergeable_state=clean`** · head `4aca3f7b` · base `9de96c4c`(= 그 시각 main tip, 리베이스 후 움직이지 않음). head `4aca3f7b` 의 CI **네 잡 전부 success** — `fmt + vet` · `unit tests` · `integration tests`(kind) · `build & push server image`. `pin deployment image (main only)` 은 **skipped** 로, `event_name=='push' && ref=='refs/heads/main'` 가드가 PR 빌드에서 의도대로 닫혀 있음을 확인(= PR 빌드는 운영 매니페스트를 건드리지 않는다). `PUT /pulls/89/merge` `merge_method=squash` + **`sha=4aca3f7b…` 핀**(검증한 바로 그 head 가 아니면 거부되게). 머지 커밋 **`cfa024e9`** → main tip."
+            }
+          ]
         }
       }
     ]
