@@ -3448,7 +3448,7 @@
       }
     },
     "createdAt": "2026-09-14T13:51:03Z",
-    "updatedAt": "2026-09-14T23:13:04Z",
+    "updatedAt": "2026-09-14T23:28:14Z",
     "stateSummary": {
       "asIs": "# as-is — 실제 구현 (`internal/` `66b4b28d` + `main.go` `10cf744a`, 트리거 `cfa024e` / HEAD `7faaa9a1`, 2026-09-14T13:55Z 측정)\n\n**도구 표면 17종**(`internal/mcp/toolslist.go` 등록 순): `ping` · `api_resources` · `resource_list` ·\n`resource_get` · **`resource_patch`(신규)** · `workload_restart` · `workload_scale` ·\n`dear_baby_reset_user` · `github_app_installation_token` · `aws_config_get` · `opensearch_search` ·\n`opensearch_document_put` · `opensearch_document_delete` · `grafana_token` · `session_list` ·\n`session_read` · `session_write`. `tests/integration/_helpers.py::EXPECTED_TOOLS` 와 **집합 동일(17==17)**.\n\n**이 트리거가 세운 것 — `resource_patch`(AC9) 한 종.** `gate.go:97` 이 `genericPairs(\"patch\")` 로\n선언하므로 `patch` verb 하나만 행사하고 `gatedVerbs` 라 **모든 호출이 게이트를 탄다**.\n네 `patchType` 이 실제 k8s 타입에 매핑되고(`k8s/resource.go:49-53` — `merge`/`strategic`/`json`/`apply`\n→ `Merge`/`StrategicMerge`/`JSON`/`ApplyPatchType`), `fieldManager` 는 `apply` 에서 **필수**이고\n그 밖에서는 **거부**된다(`mcp/resource.go:223-227`). 롤링 재시작 전용 경로는 두지 않았다.\n\n**함께 선 것 — 민감 종류 쓰기의 승인 context 값 가림**(`gate.go:397-530`). `writesASensitiveKind` 가\n참일 때만 `maskCredentialValues` 가 `data`·`stringData` 를 **임의 깊이에서** 키 이름 + 바이트 수로\n치환하고, RFC 6902 는 값이 `path` 옆에 실리는 별도 모양이라 `maskJSONPatchOps` 가 따로 다룬다.\n파싱 실패 시 블롭 전체를 `withheld` 로 돌린다(fail-safe 방향). 비-민감 종류 패치 본문은 전문 유지.\n\n**서 있지 않은 것 — 쓰기·스트림 축 9종.** `resource_watch`·`resource_create`·`resource_update`·\n`resource_delete`·`resource_delete_collection`·`resource_exec`·`resource_attach`·\n`resource_port_forward`·`resource_proxy` 전부 `internal/`+`main.go` 비-테스트 Go 전수 grep **0 히트**\n(`.Watch(` 호출도 0). `internal/gatekeeper/` 는 `gatekeeper.go` + 테스트 2파일뿐이다.\n\n**문서 없는 구현 2종 유지**: `workload_restart`·`workload_scale` 이 `toolRegistry` 에\n`outsideGate: exemptRetiredPendingRemoval`(「문서에서 폐기됨(PR #72) — 구현 제거 대기」)로 등재된 채\n**서빙 중**이다. `workload_scale` 의 선언 주석은 scale 서브리소스를 쓰지 않고 `spec.replicas` 를 직접\n패치한다고 적는다.\n\n**에러 경로**: 패치 실패는 `apiCallError(err, \"patch\", res.gvr.Resource)` 로 **verb + resource 만**\n싣는다 — 대상 객체 덤프 없음(`prd-approval-gate` AC10 의 에러 메시지 축 충족).\n\n**레포 자체 게이트** `tests/integration/check_ac_mapping.py` 트리거에서 **rc=0**\n(시나리오 78 · 예외 1 · 구현 대기 29 · 1:1 대상 48 == 매칭 파일 48 · 규칙 1~7 위반 0). 단 이 게이트는\nAC↔e2e 1:1 축이라 **구현 유무를 원리적으로 보지 못한다**(자매 `scenario-e2e` 소관).\n",
       "toBe": "# to-be — 제품 문서 (`docs/` `73538be7`, 트리거 `cfa024e`, 2026-09-14T13:55Z 측정)\n\n**문서 계층(독립 재계수, tracker 주장과 전건 일치)**: 가치 5(V1~V5) · PRD **14개**\n(도구 12 + 공통 기반 2 = `prd-platform-auth-safety` · `prd-approval-gate`) · AC **78개**\n(`### AC<n>:` 전수 계수; 결번 platform AC3 · resource-generic AC19) · 테스트 문서 **14개** ·\n등록 도구 주장 **17종** == 내 실측 17 == `EXPECTED_TOOLS` 17.\n\n**AC 분포**: `prd-resource-generic` 19 · `prd-approval-gate` 11 · `prd-platform-auth-safety` 7 ·\nopensearch 3종 14 · github-app-token 4 · grafana-token 4 · aws-config-get 3 · dear-baby-reset-user 3 ·\nsession 3종 12 · ping 1.\n\n**이 트리거가 문서에 더한 것**(`docs/` 3파일만 이동 — `prd-*.md` **무접촉**):\n- `doc-tracker.md`: 등록 도구 **16 → 17종**(「그중 게이트 대상 쓰기 도구는 `resource_patch` 1종」),\n  「구현 제거가 남긴 일」에 2026-09-14 슬라이스 기록 추가, 「문서 없는 실행 코드」 행에\n  **「`workload_restart` 는 제거 가능해졌다(대체재 `resource_patch` 실재) · `workload_scale` 은 여전히\n  대기」**와 순서 제약(**대체재가 먼저, 제거는 그 뒤**) 갱신.\n- `test-resource-generic.md`: 시나리오 18 행이 「`resource_patch` 는 2026-09-14 에 등록됐다 —\n  남은 차단은 `tests/k8s/kind/gatekeeper-fixture.yaml` 부재 하나」로 재실측됨.\n- `comment-policy/ledger.md`: 자매 모델(주석 중복) 원장의 재판정 3행 + 합계 마커 갱신.\n\n**AC9 문면과 구현의 대조**: PRD 가 요구하는 네 `patchType`·`apply`의 `fieldManager`·「`patch` verb 만」·\n「재시작은 전용 도구가 아니라 특정 내용의 patch」가 **구현과 축자 일치**한다. AC16 이 요구하는\n「쓰기 `context` 에서 `data`·`stringData` 를 키 이름 + 바이트 수로」도 구현 그대로다.\n\n**tracker 가 스스로 적은 잔여**(내 독립 측정과 일치): 「`resource_watch`·`create`·`update`·`delete`·\n`delete_collection`·`exec`·`attach`·`port_forward`·`proxy` **9종**. `prd-approval-gate`\n**AC6(TOCTOU)·AC11(게이트 권한 선언)** 은 여전히 미착수이고, 이 슬라이스가 그 상태를 악화시키지도\n개선하지도 않았다. **`workload_restart` 제거는 다음 슬라이스다.**」\n\n**건강 상태 🟡 위험 있음** — 사유 둘: ⑴ 폐기된 6종 중 2종(`workload_restart`·`workload_scale`)이\n코드에 살아 있음 ⑵ `dear_baby_reset_user` 가 게이트 밖(⬜ 소유자 판단 대기). 수용된 위험에\n**「RBAC 경계 소멸」**(`rbac.yaml` 이 `cluster-admin` 바인딩 ⇒ 게이트 판정이 **유일한** 경계)이\n2026-09-14 자로 올라 있다.\n",
@@ -3521,6 +3521,62 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-14T23:10:08Z",
           "comment": "사람 승인.\n\n**승인 직전 재실측 (2026-09-14T22:59Z / KST 09-15 07:59)** — 검토 제시(14:40Z)와 승인 응답 사이에 약 8시간이 있어 전제를 다시 쟀다. PR [#91](https://github.com/dlddu/homelab-k3s-mcp/pull/91) 은 **여전히 open · 미머지 · mergeable=true / clean** 이고 head 는 `a3a9bf8` 그대로다(CI 네 잡 success 도 그 head 의 것이라 유효). 전제는 무너지지 않았다.\n\n⚠️ **base 이동** — 준비 시점 base `7faaa9a1` 대비 main 이 **4커밋 앞서 있다**: #90(`56d88be4`) · 배포 핀(`974a7f7b`) · #93(`9178096f`) · 배포 핀(`a97a3ddc`). 그 4커밋이 건드린 6파일(`docs/comment-policy/ledger.md` · passes 2파일 · `internal/mcp/resource_test.go` · `k8s/deployment.yaml` · `tests/integration/resource_generic_ac20.py`)과 이 PR 의 10파일은 **겹침 0** 이라 리베이스는 기계적이다.\n\n**실행자 조건 3건**\n1. 실행 직전에 PR 상태를 한 번 더 잴 것(머지 여부·mergeable·CI·base). 이 승인은 22:59Z 기준이다.\n2. 리베이스한 뒤 게이트 7종을 **새 부모에서 다시 돌려** 대조군을 새로 뽑을 것. 실행 지침에 박힌 주석 원장 집계값(판정 대상 1466줄/80파일 · 등재 29 · 잔량 53줄 등)은 **저장값 그대로 쓰면 안 된다** — #90·#93 이 `ledger.md` 를 합계 +50/-5 로 움직였으므로 그 숫자들은 이동해 있다. 손으로 더하지 말고 재실행할 것.\n3. 배포 타이밍은 피크·장애 대응 중을 피하고, gatekeeper 승인 경로 생존(AUTO_APPROVE off · 승인자 응답 가능)을 배포 전에 확인할 것. 머지 즉시 `workload_restart` 호출자가 끊기고 재시작이 `resource_patch`(승인 게이트 경유)로 바뀐다.\n\n준비자가 넘긴 판단 1건(`TestToolsListAdvertisesAnnotations` 의 파괴적 도구 자리를 삭제하지 않고 `resource_patch` 로 옮긴 것)은 **그대로 둔다** — 기존 커버리지를 유지하는 최소 조치로 타당하다."
+        },
+        "execution": {
+          "status": "running",
+          "startedAt": "2026-09-14T23:13:04Z",
+          "finishedAt": null,
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T23:13:10Z",
+              "finishedAt": "2026-09-14T23:14:30Z",
+              "log": "**실행 1 — 사전 조건 재측정(승인 조건 1). PR 은 살아 있고 base 는 움직였다.** PR #91 `state=open` · `merged=false` · **`mergeable=true` / `mergeable_state=clean`** · head `a3a9bf8`(준비 시점 그대로) · base `7faaa9a1`. CI 네 잡은 그 head 에서 **전부 success**(`fmt + vet` · `unit tests` · kind `integration tests` · `build & push server image`; `pin deployment image (main only)` 는 PR 이라 skipped). ⚠️ 그러나 같은 시각 main tip 은 **`3d4ae61d`** 로 승인 시점(22:59Z 재실측이 적은 `a97a3ddc`)보다도 **두 커밋 더** 앞서 있었다 — 승인 이후 #92(`b1058900`, doc-tracker 구현 대기 표 11행 재실측)와 그 배포 핀(`3d4ae61d`)이 들어왔다. 부모 `7faaa9a1` 대비 **6커밋**. 겹치는 파일은 `docs/doc-tracker.md` 하나이고 나머지(ledger·passes 2 · `internal/mcp/resource_test.go` · `k8s/deployment.yaml` · `resource_generic_ac20.py`)는 이 PR 의 10파일과 겹치지 않는다. ⇒ 지침 0-3 발동, 리베이스로 간다."
+            },
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T23:14:30Z",
+              "finishedAt": "2026-09-14T23:17:10Z",
+              "log": "**실행 2 — 새 부모에서 대조군을 새로 뽑았다(승인 조건 2). 저장된 원장 숫자는 실제로 이동해 있었다.** 승인자가 「저장값 그대로 쓰면 안 된다」고 못박은 그대로다. `origin/main`(`3d4ae61`)에서 게이트 7종을 돌린 결과: `check_ac_mapping.py` rc=0 **78 · 1 · 29 · 48 · 48 · 0 · 0**(이쪽은 불변), `check_mock_policy.py` rc=0(등재 5/상한 5 · 모킹 지점 5 · 미등재 0 · 고아 0), `check_comment_policy.py` rc=0 **「판정 대상 1446줄 / 80파일 · 판정 완료 1446줄(100.0%) · 등재 범위 31 · 미판정 잔량 0줄」** 지문 `e976bece3b2b…` · docstring **1100줄 / 61파일 · 등재 범위 12 · 잔량 0줄** 지문 `22a7c13aeb6e…`. 실행 지침에 박힌 저장값(1466줄/80파일 · 등재 29 · 잔량 53 · 지문 `1042bde3…` / docstring 1107·11·43 · `02df8be2…`)과 **전부 다르다** — #90·#93 이 `ledger.md` 를 움직인 결과이고, 손으로 더했다면 틀린 값을 대조군으로 삼을 뻔했다. 이후의 모든 대조는 이 새 값을 기준으로 한다. `gofmt -l` 빈 출력 · `go vet` · `go build` · `go test ./...` 11패키지 ok."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T23:17:10Z",
+              "finishedAt": "2026-09-14T23:18:00Z",
+              "log": "**실행 3 — 리베이스(1차) + 게이트 재현·대조.** `origin/main`(`3d4ae61`) 위로 리베이스, **충돌 0**(예상대로 `docs/comment-policy/` 를 한 바이트도 건드리지 않는 PR 이라 충돌면이 없다). 변경 파일 **10개 · +31/−177** 로 준비 시점과 동일. 새 head `ea7ca22`. 리베이스한 트리에서 게이트 7종 전부 rc=0 이고, **`check_ac_mapping.py`·`check_mock_policy.py`·`check_comment_policy.py` 출력이 새 부모와 `diff` 기준 바이트 동일** — 이 슬라이스의 집계 기여가 0 이라는 계획의 가정이 새 base 에서도 성립했다. 추가 기계 대조 셋: ⑴ `workload_restart`·`RolloutRestart`·`restartAnnotation` 비-테스트 포함 Go 전수 grep **0 히트**, ⑵ `toolsListJSON` 파싱 집합 == `_helpers.py::EXPECTED_TOOLS` **집합 동일(16==16)** 이고 둘 다 `workload_restart` 부재·`resource_patch` 존재, ⑶ `mcp.Exemptions()` 실측 **2건**(`workload_scale`·`dear_baby_reset_user`) — 게이트 밖 예외 3 → 2. 이름으로 확인한 불변식 테스트 전부 PASS: `TestEveryStateChangingToolIsGatedOrDocumented` · `TestRestartPatchIsGatedLikeAnyPatch` · `TestToolsListIncludesAllTools` · `TestToolsListAdvertisesAnnotations` · `TestPatchTypes`(서브케이스 10)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T23:18:00Z",
+              "finishedAt": "2026-09-14T23:18:10Z",
+              "log": "**실행 4 — 리베이스 후 `docs/doc-tracker.md` 정합 재확인(완료 기준 3).** #92 가 같은 파일을 +19/−12 로 움직였으므로 병합 결과가 여전히 말이 되는지 봤다. 살아 있는 상태 넷이 전부 서 있다: ⑴ 요약 「등록 도구: **16종**(`toolslist.go` = `EXPECTED_TOOLS`) — 게이트 밖 예외는 2종(`workload_scale`·`dear_baby_reset_user`)」, ⑵ 건강 상태 사유 ⑴ 「폐기된 6종 중 **남은 1종**(`workload_scale`)」, ⑶ 「문서 없는 실행 코드」 행이 `workload_scale` 단독 기준으로 재작성되고 순서 제약(대체재가 먼저, 제거는 그 뒤)과 `workload_restart` 가 그 순서를 지킨 선례임이 기록됨, ⑷ 과거 서술 두 곳에 `[2026-09-14 정정]`·`[2026-09-14 재정정]` 만 덧붙고 원문은 고쳐 쓰지 않음(이 레포 관례) + 변경 이력에 `rct_20260914-0011` 근거 행 추가. **`docs/` 변경은 `doc-tracker.md` 한 파일뿐** — `prd-*.md`·`test-*.md`·`values.md`·`comment-policy/` 0바이트."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T23:18:10Z",
+              "finishedAt": "2026-09-14T23:19:10Z",
+              "log": "**실행 5 — 배포 전 가드 2건(승인 조건 3). 둘 다 충족.** ⑴ **장애 대응 중 아님 · 피크 아님**: Deployment `homelab-k3s-mcp` **1/1 Ready**(`availableReplicas=1` · `updatedReplicas=1` · `observedGeneration=454`), 이미지 `ghcr.io/dlddu/homelab-k3s-mcp:b1058900…` 으로 23:14:52Z 롤아웃 완료 — 진행 중인 롤아웃 없음. 클러스터 전체 Deployment 목록에 크래시루프·미가용 없음(0/0 인 것들은 sablier scale-to-zero 앱이라 정상). `gatekeeper` Deployment **1/1**. ⑵ **gatekeeper 승인 경로 생존 — `AUTO_APPROVE` 는 꺼져 있다.** 배포된 게이트에 무해한 프로브를 던졌다(존재하지 않는 이름을 겨눈 `resource_get(kind=Secret, name=…premerge-gate-probe…does-not-exist)`). 서버 로그가 **게이트가 실제로 발화했음**을 보인다 — `approval refused tool=resource_get pairs=\"get on secrets\" error=\"refusing resource_get: context canceled\"` `duration_ms=29999`. 읽을 것 셋: ⓐ `pairs=\"get on secrets\"` ⇒ 민감 종류 읽기가 게이트를 **탄다**(우회 없음), ⓑ **29999ms 를 사람 판단에 기다렸다** ⇒ `AUTO_APPROVE` 가 켜져 있었다면 즉시 승인이 떨어졌을 것이므로 **꺼져 있음이 관측됐다**, ⓒ 결정을 얻지 못하자 **거절(refusing)** 로 닫았다 ⇒ **fail-closed** 방향. 파드 기동 로그도 pre-state 를 그대로 보인다 — 「tool exercises a gated verb but runs outside the approval gate」 경고가 **정확히 3건**(`workload_restart`·`workload_scale`·`dear_baby_reset_user`)이고 `approval gate enabled timeout=5m0s poll_interval=2s gated_kinds=[v1/Secret] push_notifications=true`. ⚠️ **한계를 정직하게 남긴다**: 「승인자가 실제로 승인 버튼을 누른다」까지는 이 경로로 관측하지 못했다 — MCP 프록시가 요청을 **30초**에서 끊는데 게이트 타임아웃은 5분이라, 사람의 응답 지연이 프록시 창보다 길면 구조적으로 완주가 안 된다(프록시가 502 를 돌려준다). 대체 근거: 같은 사람이 **8분 전**(23:10:08Z·23:11:27Z) 이 두 task 의 수동 승인에 응답했고 `push_notifications=true` 이며 gatekeeper 가 1/1 이다. ⇒ 승인 경로의 **인프라와 판정 로직은 실측으로 살아 있고**, 사람의 응답 가능성은 직전 행동으로 뒷받침된다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T23:19:10Z",
+              "finishedAt": "2026-09-14T23:25:30Z",
+              "log": "**실행 6 — CI 잡 로그를 이름으로 읽다가 「집계가 움직였다」 신호를 잡았고, 추적해 base 드리프트로 규명했다(머지 멈춤 → 재리베이스).** 리베이스 head `ea7ca22` 를 푸시하니 네 잡 전부 success. 그러나 지침대로 `actions:read` + `curl -L` 로 `fmt + vet` 로그를 받아 **숫자를 눈으로 대조**하니 `check_comment_policy.py` 가 **1456줄 / 81파일 · 잔량 10줄 · 지문 `f9fe8d54…`**(docstring 1131/62 · 잔량 31 · `3519a27a…`)로, 방금 로컬에서 뽑은 새 대조군(1446/80 · 잔량 0 · `e976bece…`)과 **달랐다**. 지침은 이것을 「제거 범위가 의도보다 넓다는 신호 ⇒ 머지하지 말 것」으로 못박았으므로 **머지를 멈추고 원인을 팠다.** 로그의 checkout 줄이 답이었다 — Actions 는 `pull_request` 에서 head 가 아니라 **`refs/pull/91/merge`** 를 체크아웃하고, 그 머지 커밋은 `Merge ea7ca22 into 901947b8` 였다. `901947b8` 은 내 리베이스 base `3d4ae61` 보다 **더 새로운 main** 이다 — 23:18:23Z 에 **PR #94 가 머지됐다**(자매 task `rct_20260914-0012`, 다른 워커가 병행 실행). #94 가 더한 `scripts/check_doc_inventory.py`(+230줄, Python 1파일)가 주석 10줄·docstring 31줄을 들고 들어와 집계를 움직인 것이고, **이 PR 의 제거 범위와는 무관**하다. 검산: 새 main(`036a0e99`)만 단독으로 게이트를 돌리니 **1456/81 · 잔량 10 · `f9fe8d54…`** 로 CI 의 머지 ref 값과 **정확히 일치** ⇒ 이 PR 의 기여는 여전히 **0**. ⇒ 오탐이 아니라 지침이 의도한 대로 작동한 정지였고, 원인이 base 드리프트로 규명됐으므로 재리베이스로 진행한다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T23:25:30Z",
+              "finishedAt": "2026-09-14T23:27:00Z",
+              "log": "**실행 7 — 리베이스(2차, `036a0e99`) + 게이트 8종 재현·대조.** main 이 또 움직였으므로(#94 `901947b8` + 배포 핀 `036a0e99`) 현재 tip 에서 대조군을 **세 번째로** 새로 뽑고 그 위로 리베이스했다. 충돌 **0**, 변경 파일 **10개 · +31/−177** 로 불변, 새 head `5ae0d48`. **#94 가 차단형 게이트를 하나 늘렸으므로 이번엔 8종이다** — 기존 7종 + `scripts/check_doc_inventory.py`. 부모(`036a0e99`)와 브랜치(`5ae0d48`)에서 각각 돌려 `diff` 로 비교한 결과 **네 정책 게이트 출력이 전부 바이트 동일**: `check_ac_mapping.py` **78 · 1 · 29 · 48 · 48 · 0 · 0**, `check_mock_policy.py` 등재 5/상한 5, `check_comment_policy.py` **1456줄/81파일 · 등재 31 · 잔량 10 · 지문 `f9fe8d54…`** + docstring **1131/62 · 등재 12 · 잔량 31 · `3519a27a…`**, `check_doc_inventory.py` **「허브 도달 가능: 39 / 39 · 끊긴 링크 0」**. `gofmt -l` 빈 출력 · `go vet` · `go build` · `go test ./...` 전 패키지 ok. ⇒ **이 PR 이 네 게이트의 어떤 숫자도 움직이지 않는다**가 새 base 에서 재확인됐다. 🟢 **#94 의 신규 차단 게이트와의 상호작용도 여기서 갈렸다** — 그 게이트는 「`docs/doc-tracker.md` 의 허브 집계 줄 == `docs/` 실제 `.md` 개수」를 강제하는데, 이 PR 은 `doc-tracker.md` 를 고치되 **허브 집계 줄을 건드리지 않고 `docs/` 에 `.md` 를 더하거나 빼지도 않으므로** 39/39 가 그대로 성립한다(diff 에서 그 줄이 나오지 않음을 직접 확인). 리베이스 후 `doc-tracker.md` 의 살아 있는 상태 넷도 다시 읽어 그대로임을 확인했고, 도구 집합(16==16)·`workload_restart` Go 전수 grep 0 히트도 새 head 에서 재측정했다."
+            }
+          ]
         }
       }
     ]
