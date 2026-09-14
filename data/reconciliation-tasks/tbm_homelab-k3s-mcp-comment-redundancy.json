@@ -2591,7 +2591,7 @@
   {
     "id": "rct_20260914-0010",
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-redundancy",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "detectedAt": "2026-09-14T12:59:16Z",
       "changedSides": [
@@ -2608,7 +2608,7 @@
       }
     },
     "createdAt": "2026-09-14T12:59:16Z",
-    "updatedAt": "2026-09-14T14:16:37Z",
+    "updatedAt": "2026-09-14T14:33:45Z",
     "stateSummary": {
       "asIs": "### as-is — 판정 대상 주석의 지문 (2026-09-14T13:0xZ 관측, main tip `c1d04727`)\n\nversionScript 실측(`main.go internal tests scripts`, 기계 판독 지시자 제외, 정규화·정렬 후 sha256):\n\n```\nlines=1366 files=79\n35c236ce2949698e2a5c0fc65f93f9837ad03f7debb4c369eba63d9a0dedf77e\n```\n\n**귀속 — 이동은 #87 단독.** 부모 `6ba0b2a`(= #86 배포 핀)에서 양 side versionScript 재실행이\n저장된 baseline 과 **바이트 동일**(`lines=1348 files=78 / 1b6c1db3…`, toBe `85699598…`)이고,\n뒤따른 배포 핀 `c1d0472` 는 **0 side**(양 side 값이 트리거와 동일). 트리거는\n**`44ae81c` (PR #87, `test(resource-generic): 시나리오 20 전용 e2e — 없는 종류의 후보 제시 +\n재기동 없는 CRD 조회 (rct_20260914-0007)`)**.\n\nPR head 브랜치는 `reconcile/rct_20260914-0007-scenario-e2e` ⇒ **자매 모델\n`tbm_homelab-k3s-mcp-scenario-e2e` 의 리콘사일 산출**이지 내 모델의 in-flight 산출이 아니다\n(연쇄 판정 대상). 그 task 는 이미 `execute … verify` 까지 통과해 닫혔다.\n\n### 움직인 것 — 순수 추가 18줄, 한 파일\n\n부모·트리거 두 지점에서 **지문 원본 집합을 `comm`** 으로 비교:\n\n| | 부모 `6ba0b2a` | 트리거 `44ae81c` |\n| --- | ---: | ---: |\n| 판정 대상 줄 주석 | 1348줄 / 78파일 | **1366줄 / 79파일** |\n| 판정 완료(등재) | 1315줄 (97.6%) / 28행 | 1315줄 (96.3%) / **28행 불변** |\n| 미판정 잔량 | 33줄 | **51줄** |\n| 전체 지문 | `1b6c1db3…` | `35c236ce…` |\n\n- **대칭차집합: 추가 18 · 제거 0 · 수정 0.** 추가분 18줄이 **전부** 신규 파일\n  `tests/integration/resource_generic_ac20.py`(351줄) 한 곳이다.\n- **등재된 28행은 한 줄도 움직이지 않았다** — 게이트 출력 diff 가 인구조사 머리·전체 지문·\n  docstring 인구조사·docstring 지문 **4줄뿐**이고 행 지문 28개 전부 불변 ⇒ **R2/R6 재판정\n  의무 없음**. 파일 수만 78→79 로 늘었다(Python 280→298, Go·YAML 불변).\n\n### docstring 표면 — +43줄, 같은 파일\n\n1067줄/60파일 → **1110줄/61파일**, 판정 완료 1042(93.9%) 불변, **미판정 잔량 25→68**,\n등재 범위 10행 불변. 증분 43줄이 전부 같은 신규 파일이다 — 게이트 자신의\n`docstring_lines([\"tests/integration/resource_generic_ac20.py\"])` 를 직접 호출해 **43 을 재현**\n했다(원시 AST 기준 59줄에서 빈 줄과 기계 판독 선언 `검증 AC:`·`실행 대상:` 을 뺀 값 —\n게이트 docstring 이 「빈 줄은 세지 않는다 … 기계가 읽는 선언도 제외한다」로 그 규약을 적는다).\n\n### 게이트 — 두 지점 모두 rc=0\n\n`scripts/check_comment_policy.py` 부모·트리거 **양쪽 rc=0**(`규칙 R1~R8 위반 없음`). 게이트가\n출력한 전체 지문 `35c236ce…` == 내 독립 versionScript 실측값, docstring 지문\n`e2a9a03686c0…` 도 일치. **잔량은 규칙이 아니라 카운터라 51/68 로도 초록이다** — R8 이 강제하는\n것은 `합계 + 잔량 == 실측` 항등식뿐이고, 트리거는 그 항등식을 지키려고 잔량 마커를 올렸다.\n\n### 신규 61줄의 성격 — 1차 표본 (최종 판정은 planner 몫)\n\n**복원 가능 후보(경로 ② 문서)**: `resource_generic_ac20.py:104-105` 의 「CRD 와 그 CR 을 한\n매니페스트에 넣지 않는다 — `kubectl apply` 는 파일을 읽는 시점에 디스커버리로 종류를 해석하므로,\n아직 서지 않은 종류를 가리켜 파일 전체가 거부된다」는 **같은 주장의 다섯 번째 사본**이다:\n\n| # | 자리 | 상태 |\n| --- | --- | --- |\n| 1 | `docs/test-resource-generic.md:42-43` | 저장소 문서 = **복원 경로 ②** (원본) |\n| 2 | `docs/doc-tracker.md:634` | 변경 이력이 다시 진술 |\n| 3 | `tests/k8s/kind/resource-generic-fixture.yaml:12` | `rct_20260914-0009` 판정 범위 |\n| 4 | `tests/k8s/kind/resource-generic-samples.yaml:2-3` | `rct_20260914-0009` 판정 범위 |\n| 5 | **`tests/integration/resource_generic_ac20.py:104-105`** | **이 task 의 범위** |\n\n`-0009` 가 3·4 를 판정해도 **5 는 남는다**(그 task 의 완료 기준이 명시적으로 범위 밖에 둔다).\n\n**그 밖의 제거 후보**: `:59` 「시나리오가 이름으로 지목한 오타와, 그 오타가 데려와야 하는 실존\n종류」(바로 아래 `TYPO_KIND = \"Deploymnt\"` · `EXPECTED_CANDIDATE = \"apps/v1/Deployment\"` 와\n`docs/test-resource-generic.md#시나리오 20` 의 재진술 — 경로 ①/②), `:238-239` 의\n「`Deploymnt` 와 `Deployment` 는 한 글자 차이라 단독 최근접이다」(#82 커밋 메시지·편집거리 구현의\n재진술 — 경로 ①/④).\n\n**유지 후보(일괄 제거 금지의 근거)**: `:64-65` 「apiserver 가 CRD 를 established 로 올린 뒤에도\ndiscovery 문서에 실릴 때까지 짧은 전파 지연이 있다」(상류 API 의 문서화되지 않은 동작),\n`:199-200`·`:268-269`·`:302-303` 의 「이게 없으면 …과 구별되지 않는다」 계열(**조용히 통과하는\n실패 모드** — 정책이 이름으로 든 유지 대상), 모듈 docstring 의 설계 제약 셋(픽스처를\n`tests/k8s/kind/` 에 두지 않은 이유 · 오타 호출을 먼저 태우는 이유 · 파드 정체를 재는 이유)은\n전부 「왜 이렇게 하지 않았는가」 형태라 코드 모양으로 복원되지 않는다. 정책 §「애매하면 남긴다」가\n이 유형에 적용된다.\n",
       "toBe": "### to-be — `docs/comment-policy/` 트리 해시 (main tip `c1d04727`)\n\n```\nd6bcde4aafa9142594f6fc4b03bb8cf075ff0843   (직전 baseline 856995981108…)\n```\n\n**트리거가 이 디렉터리에 한 일은 `ledger.md` 한 파일 `+16/−2` 가 전부다**\n(`git diff --stat 6ba0b2a 44ae81c -- docs/comment-policy`). `README.md`(정책 본문)·`passes/`\n(판정 상세)는 **바이트 불변** ⇒ 정책 자체가 바뀐 것이 아니라 **원장이 자기 잔량을 갱신**한 것이다.\n구조 규칙(본문·원장·판정 상세를 한 파일에 섞지 않는다)은 유지됐다.\n\n바뀐 내용은 넷:\n\n1. `<!-- 판정-잔량 -->` **33 → 51**\n2. `<!-- docstring-잔량 -->` **25 → 68**\n3. 줄 주석 원장에 경위 문단 「**잔량 33 → 51 (2026-09-14, `rct_20260914-0007`)**」 신설\n4. docstring 원장에 경위 문단 「**잔량 25 → 68 (2026-09-14, `rct_20260914-0007`)**」 신설\n\n`<!-- 판정-합계 -->`(1315)·`<!-- docstring-합계 -->`(1042)와 등재 행(28·10)은 **불변**.\n\n### 원장이 판정 주체를 이름으로 지목한다 — 인용 가능한 인계\n\n신설된 두 문단이 **왜 자기가 판정하지 않았는지**를 스스로 적는다:\n\n> 판정이 아니라 잔량을 고른 이유는 … 주석 비중복성 판정은 자매 모델\n> **`tbm_homelab-k3s-mcp-comment-redundancy`** 의 소관이고, 이 슬라이스가 겸하면 자기 PR 에서\n> 자기 주석을 판정하는 모양이 된다. **등재된 범위는 이 PR 이 한 줄도 건드리지 않았으므로 재판정은\n> 없다** — 신규 파일 하나만 늘었다.\n\ndocstring 쪽 문단은 한 걸음 더 나아가 **왜 이 파일의 docstring 이 긴지**까지 적는다 — 「설계 제약\n셋이 전부 「왜 이렇게 하지 않았는가」의 형태」이고 「셋 다 코드 모양으로는 복원되지 않는다.\n**판정은 소관 모델의 몫으로 남긴다**」. 즉 to-be 문서가 이 task 를 **이름으로 호명하고 있고**,\n1차 표본의 유지/제거 판단과도 어긋나지 않는다.\n\n### 정합 조건 — 원장이 규정하는 「판정받았다」\n\n원장은 「**등재되지 않은 범위는 아직 판정받은 적이 없다**」로 판정 완료를 정의하고, 잔량 문단이\n「**잔량 0 은 「끝났다」가 아니라 「지금 여기서 다시 시작한다」는 뜻이다**」로 이 카운터의 성격을\n못박는다. 따라서 to-be 가 요구하는 상태는 「게이트 초록」이 아니라 **신규 61줄이 판정 상세 +\n원장 행으로 등재되어 잔량이 이 범위에 대해 0 으로 복귀한 상태**다.\n\n### 인접 상태 (판정에 영향을 주는 사실만)\n\n- **PR #88** (`reconcile/rct_20260914-0009-comment-redundancy`, 자기 모델의 앞선 task) —\n  `gh api …/pulls/88`: **`mergeable=true`·`mergeable_state=clean`**, `base.sha` =\n  **`c1d04727`** = 현재 main tip = **내 트리거의 배포 핀**. 즉 #88 은 **이미 내 트리거 위에\n  리베이스돼 있고 충돌이 없다**. 그 계획의 완료 기준 (d)가 기대하는 착지 잔량이 정확히\n  **`18 · 43`** — 내 트리거 증분이다.\n- **PR #89** (`reconcile/rct_20260914-0008-docs-impl`, 자매 모델, open) — 머지되면 판정 표면이\n  또 움직인다: 줄 주석 **1366 → 1477**(추가 116 · 제거 5, Go 6파일), 잔량 **51 → 86**, 합계\n  1315 → 1391(등재 28행 불변이나 **행 줄 수·지문이 갱신된다**). ⇒ **숫자(51/68)는 곧 낡는다.\n  이 task 의 범위는 숫자가 아니라 파일로 고정해야 한다.**\n",
@@ -2678,9 +2678,39 @@
           "comment": "승인. 복원 경로 ③(PR 제목·본문)의 경계 — ⑴ 「왜 이 PR 이 이렇게 바꿨는가」는 제거, ⑵ 앞으로의 편집을 구속하는 서 있는 불변식은 유지, ⑶ PR 본문이 docstring 을 가리키는 자리는 원본이 docstring 쪽이라 유지 — 를 이 원장의 기준으로 확정하는 데 동의한다. 이 선이 앞으로 이 축의 판정을 구속한다는 점, 그리고 게이트(R2/R6)가 그 옳고 그름을 재지 못한다는 점을 확인한 위에서의 승인이다.\n\n승인 시점 실측(2026-09-14T13:53Z): PR #90 은 head 0f8c231 에서 CI 네 잡 전부 success 이나, 형제 PR #89 착지(main tip 7faaa9a1)로 mergeable=false·dirty 다. #89 의 변경 파일 목록을 직접 확인해 판정 범위인 tests/integration/resource_generic_ac20.py 를 한 줄도 건드리지 않았음을 확인했으므로 재판정 사유가 아니다.\n\n실행 조건: 실행 지침 3 의 리베이스 + 마커 네 개 재측정(손으로 더하지 말고 check_comment_policy.py 출력에서 재수집)을 선행할 것. 두 원장 행의 줄 수·지문(14/082e1fc7e45e · 36/2412aefb8ac7)이 리베이스 전후 바이트 동일해야 하며, 깨지면 머지하지 말고 planner 로 되돌릴 것."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-14T14:16:37Z",
-          "entries": []
+          "finishedAt": "2026-09-14T14:33:40Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T14:17:00Z",
+              "finishedAt": "2026-09-14T14:19:00Z",
+              "log": "CI 초록 확인 (head `0f8c231`, run 34849597743 / 34849596163). 네 잡 전부 success — `fmt + vet` · `unit tests` · `integration tests`(kind e2e) · `build & push server image`(`pin` 잡은 main-only 라 skipped, 정상). `fmt + vet` 잡 로그(104993888121)를 `actions:read` + `curl -L` 로 받아 세 게이트 출력을 이름으로 확인: `check_ac_mapping.py` 「불변식 성립」 · `check_mock_policy.py` 「등재 5(상한 5)」 · `check_comment_policy.py` 「판정 대상 주석 1351줄 / 판정 완료 1351줄(100.0%) / 등재 범위 30 · 미판정 잔량 0줄」 + 「docstring 1100줄 / 1100줄(100.0%) / 등재 범위 12 · 잔량 0줄」, 두 신규 행 `#30 14줄 082e1fc7e45e` · `#12 36줄 2412aefb8ac7`. kind e2e 로그에서 대상 파일이 이름으로 배차돼 완주한 것도 확인(`===== resource_generic_ac20.py (시나리오: test-resource-generic.md#시나리오 20) =====` → `ok:`)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T14:19:00Z",
+              "finishedAt": "2026-09-14T14:20:00Z",
+              "log": "base 신선도 재검 — 계획·검토가 예측한 대로 **base 가 또 움직였다(여섯 사이클 연속)**. main tip 이 `9de96c4` → **`7faaa9a`** 로 이동: 형제 PR **#89**(`cfa024e9`, `rct_20260914-0008`)가 착지하고 배포 핀 `7faaa9a` 가 뒤따랐다. PR #90 은 `mergeable=false`·`dirty`. #89 의 변경 파일 14개를 직접 확인해 두 가지를 갈랐다 — ⑴ `docs/comment-policy/ledger.md` 를 건드렸다(+7/−5) ⇒ **3 으로 분기**, ⑵ 판정 범위인 `tests/integration/resource_generic_ac20.py` 는 **목록에 없다** ⇒ 재판정 사유 아님(검토자가 승인 시점에 확인한 것과 같은 결론). 열린 형제 PR 은 #91(`rct_20260914-0011`) 하나가 더 있으나 이 시점에 미착지."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T14:20:00Z",
+              "finishedAt": "2026-09-14T14:31:00Z",
+              "log": "(분기 실행) 리베이스 + 마커 재측정. `git rebase origin/main`(7faaa9a) → 예측대로 `ledger.md` **단독 충돌**, 훅은 **1개**(#88 때의 4훅보다 적다 — 줄 주석 `판정-합계`/`판정-잔량` 마커 줄 하나). 원장 행·경위 문단은 자동 병합됐고 양쪽(#89 의 4곳 · 내 두 행)이 모두 살아남은 것을 확인. **어느 쪽 마커도 취하지 않고** 자리표시자로 둔 뒤 `check_comment_policy.py` 의 FAIL 출력에서 값을 다시 뽑았다 — `[R4] 판정 합계 0 != 원장 행 줄 수 합 1427` · `실측 전체 1462` ⇒ 합계 **1427** · 잔량 **35**(손으로 더하지 않음). docstring 마커 둘(1100/0)은 충돌 없이 그대로 유효. 경위 문단 제목의 `A → B` 를 새 실측에 맞춰 갱신(`잔량 18 → 0` ⇒ **`잔량 53 → 35`**)하고, 그 문단 본문의 산술도 다시 적었다(1413 + 14 = 1427 = 원장 행 합, 1427 + 35 = 1462 = 실측). docstring 경위 문단(`43 → 0`)은 실측 그대로라 불변.\\n\\n🔴 **정지 조건 불변식 — 성립.** 리베이스 전후 두 원장 행의 줄 수·지문이 **바이트 동일**: 줄 주석 `14`/`082e1fc7e45e`, docstring `36`/`2412aefb8ac7`(게이트 자신의 `comment_lines()`·`docstring_lines()`·`fingerprint()` 를 대상 파일에 직접 호출해 실측). 움직인 것은 없다 — 서수(#30·#12)조차 이번엔 그대로였다.\\n\\n로컬 게이트 셋 전부 rc=0(`git add` 후 재측정 — 세 체커는 `git ls-files` 로 범위를 잡는다): `check_comment_policy.py` rc=0(주석 1462/1427 97.6% 잔량 35 · docstring 1100/1100 100.0% 잔량 0) · `check_ac_mapping.py` rc=0(집계 일곱 값 `78·1·29·48·48·0·0` 이 부모 main 과 **동일** — 이 슬라이스는 시나리오도 e2e 파일도 만들지 않으므로 움직이면 오류 신호다) · `check_mock_policy.py` rc=0. **gofmt/vet/build/test 는 이 환경에 Go 툴체인이 없어 로컬 재현을 하지 못했고, CI 의 `fmt + vet`·`unit tests` 잡으로 대신 확인했다**(둘 다 success). 근거는 이 PR 이 `.go`·`go.mod/sum`·`k8s/`·`.github/`·`scripts/`·`internal/` 경로에서 **변경 파일 0개**라는 실측이다(`git diff --name-only origin/main`). 실행 코드 불변도 AST 로 재확인 — docstring 을 걷어낸 `ast.dump` 가 트리거 커밋 `44ae81c` 판과 **바이트 동일**(28119자).\\n\\n푸시는 tracking ref 가 없어 명시형 lease 를 썼다: `git ls-remote` 로 remote tip 을 `0f8c2314` 로 재고 `--force-with-lease=refs/heads/<브랜치>:0f8c2314…` → `0f8c231...ae882ca (forced update)`. 맨 `--force` 는 쓰지 않았다.\\n\\nPR 본문의 낡은 수치도 선례(#88 리베이스 때와 같은 처리)대로 갱신했다 — 리베이스 노트(1회 → 2회, #89 유입과 그 35줄의 출처), 재현 커맨드 주석(`잔량 0 / 0` → `잔량 35 / 0`), 기대 게이트 출력(줄 주석 `1351/1351 100.0% 잔량 0` → `1462/1427 97.6% 잔량 35`). #89 의 경위 문단이 자기 착지값(`51 → 86` · `1315 → 1391`)과 main 마커(1413/53)가 어긋난 채 남아 있으나 **남의 패스 산문이라 손대지 않았다** — 범위를 넓히면 그 부분이 승인받지 않은 변경이 된다.\\n\\n재푸시 후 CI 재실행(run 34855103909 / 34855103836, head `ae882cab3f`) **네 잡 전부 success**. 새 로그에서 세 게이트 출력을 다시 이름으로 확인했고(`판정 완료 1427줄(97.6%) / 잔량 35` · `docstring 1100줄(100.0%) / 잔량 0`, 두 행 `#30 14줄 082e1fc7e45e` · `#12 36줄 2412aefb8ac7`), kind e2e 가 대상 파일을 이름으로 배차해 완주한 것도 재확인."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T14:33:20Z",
+              "finishedAt": "2026-09-14T14:33:40Z",
+              "log": "머지 직전 최종 게이트 통과 확인 — `mergeable=true` · `mergeable_state=clean` · base `7faaa9a159`(main tip 과 동일, 재이동 없음) · head `ae882cab3f` · 3파일 +240/−29. 실행 지침의 「머지하지 말아야 하는 경우」 셋 다 해당 없음(⑴ `fmt + vet` 초록, ⑵ 두 원장 행 지문이 준비 시점과 동일, ⑶ 준비 이후 아무도 `resource_generic_ac20.py` 의 주석을 고치지 않았다). **squash 머지 실행**(`PUT /pulls/90/merge`, `merge_method=squash`, head sha 명시) → merged=true, main 에 **`56d88be450`** 「docs(comment-policy): 시나리오 20 e2e 의 주석 61줄 판정 (rct_20260914-0010) (#90)」 착지, PR closed/merged. 이것이 이 실행의 유일한 불가역 지점이다."
+            }
+          ]
         }
       }
     ]
