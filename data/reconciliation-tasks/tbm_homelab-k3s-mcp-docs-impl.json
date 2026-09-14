@@ -2665,7 +2665,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-14T09:34:37Z",
       "changedSides": [
@@ -2677,7 +2677,7 @@
       }
     },
     "createdAt": "2026-09-14T09:34:37Z",
-    "updatedAt": "2026-09-14T10:13:30Z",
+    "updatedAt": "2026-09-14T10:14:00Z",
     "id": "rct_20260914-0006",
     "stateSummary": {
       "asIs": "## as-is — 구현(`internal/` + `main.go`), 관측 2026-09-14T09:35Z @ `85e30fd`\n\n**이 트리거는 구현을 한 바이트도 건드리지 않았다.** `internal:51b3adc1… main.go:10cf744a…` 가\n부모 `ce1848a` · 트리거 `723af13` · HEAD `85e30fd` **세 지점 모두 동일**하고 저장된 baseline 과도\n같다(`git diff --stat ce1848a 723af13 -- internal main.go` 공집합). 트리거는 docs 8 + `k8s/rbac.yaml`\n+ `tests/integration/platform_auth_safety_ac3.py` 삭제로만 이뤄졌다.\n\n### 등록된 도구 표면 — 16종 (`internal/mcp/toolslist.go`)\n`api_resources` · `aws_config_get` · `dear_baby_reset_user` · `github_app_installation_token` ·\n`grafana_token` · `opensearch_document_delete` · `opensearch_document_put` · `opensearch_search` ·\n`ping` · `resource_get` · `resource_list` · `session_list` · `session_read` · `session_write` ·\n`workload_restart` · `workload_scale`\n\n- **읽기 축 착지**: `resource_get`·`resource_list`·`api_resources`, 승인 게이트\n  `internal/gatekeeper/gatekeeper.go` 실재(`defaultGatedKind = \"v1/Secret\"`).\n- **쓰기 축 구현 0**: `resource_apply`·`update`·`scale`·`exec`·`attach`·`portforward`·`proxy`·\n  `watch`·`delete_collection`·`restart`·`logs`·`describe` 전부 비-테스트 코드에 **0 히트**.\n  `resource_delete`·`resource_patch` 는 히트가 있으나 전부 **테스트 픽스처**\n  (`gate_test.go:136,147,148` · `gatekeeper_test.go:104`)이고 실제 도구 표면에는 없다.\n- **폐기 6종 중 2종 잔존**: `workload_restart`(7) · `workload_scale`(9) 가 PRD·e2e 없이 서빙 중.\n  읽기 전용 4종(`namespace_list`·`workload_list`·`workload_logs`·`pod_describe`)은 #75 로 제거돼\n  **0 히트**로 확인.\n\n### AC18 구현 — 이번 트리거가 낡게 만든 자리\n`internal/k8s/resource.go:442-451` `apiCallError()` 가 403 을 변환해 운영자에게 내보내는 문자열:\n\n    refused: this server has no (%s, %s) grant. k8s/rbac.yaml is the single source\n    for what it may do; retrying will not change the answer\n\n그리고 `internal/k8s/resource_test.go:94` 가 이 메시지에 리터럴 `\"k8s/rbac.yaml\"` 이 담기는지를\n**단위 테스트로 고정**하며, `:109` 는 비-403 경로에 그 리터럴이 **없어야** 함을 단언한다.\n두 파일 모두 부모·트리거 사이 바이트 불변이다.\n",
@@ -2802,6 +2802,54 @@
               "startedAt": "2026-09-14T10:08:00Z",
               "finishedAt": "2026-09-14T10:13:30Z",
               "log": "머지된 main 에서 게이트 3종 + gofmt/vet/build/test 실행, 그리고 main CI 의 같은 잡들이 끝나기를 기다려 결론을 대조(=검증 (d)(e), 아래 verification.checks 에 관측값)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:12e3abd52b88b9b689a5999ba834db1301488fcc main.go:10cf744a330aa6357e3487a192fbb3cb6467e197",
+          "verifiedAt": "2026-09-14T10:14:00Z",
+          "checks": [
+            {
+              "name": "(a) 403 메시지에서 `k8s/rbac.yaml` 단일 출처 주장이 빠졌다",
+              "status": "passed",
+              "detail": "머지된 main(`e30ab73`)에서 `grep -n \"single source for what it may do\" internal/k8s/resource.go` → **0 히트**(rc=1). 같은 파일에 `rbac.yaml` 이 남은 자리도 0이다. **AC18 이 요구하는 둘은 남아 있다** — `internal/k8s/resource.go:447` 포맷 문자열이 `\"refused: this server has no (%s, %s) grant; retrying will not change the answer\"` 로, `(%s, %s) grant` 쌍과 「재시도 무의미」가 그대로다. 즉 「지목만 빠지고 계약은 남았다」가 실측으로 확인됐다."
+            },
+            {
+              "name": "(b) 그 성질이 단위 테스트로 고정됐다",
+              "status": "passed",
+              "detail": "`go test ./internal/k8s/ -run 'Forbidden' -v` → `TestForbiddenBecomesAGrantStatement` PASS · `TestNonForbiddenErrorsArePassedThrough` PASS (`ok … 0.006s`). 고정이 아니라 **부정 단언**이 됐음을 소스에서도 확인 — `resource_test.go:103` 이 `if strings.Contains(msg, \"rbac.yaml\")` 로 실패를 던지고, 비-403 대조군은 `:113` 에서 살아 있는 마커 `\"refused:\"` 를 본다(사라진 리터럴이 아니라)."
+            },
+            {
+              "name": "(b') 그 단언이 공허하지 않다 — 음성 대조군",
+              "status": "passed",
+              "detail": "머지된 main 의 `apiCallError()` 포맷 문자열에 `k8s/rbac.yaml is the single source for what it may do;` 절을 되살려 재실행 → **정확히 `resource_test.go:103` 에서 FAIL**: `message \"kubernetes api error: refused: this server has no (get, secrets) grant; k8s/rbac.yaml is the single source for what it may do; retrying will not change the answer\" sends the operator to a file that no longer decides the grant`. 같은 실행에서 `TestNonForbiddenErrorsArePassedThrough` 는 PASS 로 남아 대조군이 표적 단언만 때렸음도 보인다. 이후 `git checkout -- internal/k8s/resource.go` → `git status --porcelain` 공집합, 재실행 `ok` — **주입은 작업 트리에만 있었고 레포에 흔적이 없다**."
+            },
+            {
+              "name": "(c) `gate_test.go` 주석이 AC11 의 새 문면과 일치한다",
+              "status": "passed",
+              "detail": "`grep -n \"compare against k8s/rbac.yaml\" internal/mcp/gate_test.go` → **0 히트**(rc=1). 이 파일에도 `rbac.yaml` 잔존 0. AC11 이 검증 방법을 「요청 기록 관측」으로 개정한 뒤 홀로 죽은 소비자를 가리키던 자리가 정리됐다."
+            },
+            {
+              "name": "(d) 레포 게이트 3종 + Go 툴체인",
+              "status": "passed",
+              "detail": "머지된 main 로컬 실측 전부 rc=0 — `check_ac_mapping.py`(「규칙 1~7 위반 없음, 불변식 성립, 러너 배차 누락·케이스 미호출 없음」, 매칭 파일 46 · 규칙2 위반 0 · 공백 시나리오 0) · `check_mock_policy.py` · `check_comment_policy.py` · `gofmt -l .` **공집합** · `go vet ./...` · `go build ./...` · `go test ./...`(11패키지 전건 ok). 로컬에 Go 가 없어 `go1.27.1 linux-arm64` 를 받아 `GOTOOLCHAIN=local` 로 돌렸다(go.mod 는 `go 1.24.0`). **로컬에서 재현되지 않는 축은 머지된 main 의 CI 가 덮었다** — `e30ab73` 의 check-run 8건 전건 `success`(`fmt + vet` · `unit tests` · **`integration tests`**(kind 클러스터) · `build & push server image` · `pin deployment image (main only)` · `build` · `deploy` · `report-build-status`), 워크플로 `CI`·`Build and Push Docker Image to GHCR`·`pages build and deployment` 모두 `success`."
+            },
+            {
+              "name": "(e) comment-policy 원장 재판정이 기록됐다",
+              "status": "passed",
+              "detail": "`check_comment_policy.py` 출력이 지침이 못박은 값과 **정확히 일치** — 「판정 대상 주석 **1291줄** / 75파일 · 판정 완료 1291줄(100.0%) / 등재 범위 **28** · 미판정 **잔량 0줄**」, 행 `2026-09-13(#24) 126줄 0b4a9c7a7fc9 internal/mcp/gate.go internal/mcp/gate_test.go` · `2026-09-14(#25) 64줄 d759a1ff29e7 internal/k8s/resource.go internal/k8s/resource_test.go`. 줄 수·지문·합계·잔량 마커가 계획 시점과 같으므로 **리베이스 중 손으로 적은 값이 아님**이 확인된다(애초에 리베이스가 없었다). `ledger.md` 본문도 두 행 모두 `rct_20260914-0006` 을 든 재판정 문구를 담고 있다."
+            },
+            {
+              "name": "[정보] 롤아웃이 계획보다 한 단계를 더 거쳤다 — Flux 경유",
+              "status": "passed",
+              "detail": "계획 4번은 핀 커밋 뒤 곧바로 파드가 교체되는 것처럼 적었으나, 실제로 이 배포를 적용하는 주체는 Flux 다(`Kustomization homelab-k3s-mcp-app` ← `GitRepository homelab-k3s-mcp`, `path ./k8s`, 양쪽 `interval 5m`). 그래서 핀 커밋(`8265018`) 직후 10:08:36 재조정은 여전히 `85e30fd` 를 적용했고, 10:09:04 소스 아티팩트가 `8265018` 로 바뀐 뒤에야 반영됐다. **결과는 계획의 기대값 그대로** — 이미지 `ghcr.io/dlddu/homelab-k3s-mcp:e30ab7387c7b0acc446c3f2d8bb58081a7891f44`, `generation 435 == observedGeneration 435`, `updatedReplicas 1 == readyReplicas 1 == replicas 1`, revision 11. 다음 계획이 이 축의 지연(최대 ~5분)을 미리 적어 두면 좋다."
+            },
+            {
+              "name": "[정보·범위 밖] 모델 전체 to-be 와의 잔여 gap",
+              "status": "passed",
+              "detail": "**converged 판정에 넣지 않았다** — 이 task 의 완료 기준은 plan 이 명시한 슬라이스(a)~(e)다. 잔여는 계획이 범위 밖으로 적은 그대로다: 미구현 AC **14건**(`prd-resource-generic` AC6·AC7~AC15 + `prd-approval-gate` AC3·6·10·11, 쓰기 축 도구 12종 비-테스트 grep 0 히트) · 문서 없는 구현 **2종**(`workload_restart`·`workload_scale`) · `doc-tracker.md:22` 「폐기된 6종」(실측 2종, #75 이월) · `doc-tracker.md:439` 의 `resource.go:455-462` 줄 인용(실제 442-451 — 이 PR 이 함수 줄 수를 바꾸지 않아 낡음의 정도가 변하지 않았음을 재확인) · `test-resource-generic.md` 시나리오 18 의 `TestForbiddenIsTranslated` ↔ 실재 `TestForbiddenBecomesAGrantStatement` 이름 불일치. **후속 task 를 여기서 만들지 않는다** — 이번 실행이 as-is(`internal:51b3adc1…` → `internal:12e3abd5…`)와 to-be(`docs`: `45f42395…` → `25270795…`, `ledger.md` 가 `docs/` 아래라 함께 움직였다)를 모두 바꿨으므로 다음 감지 주기가 그 변화를 보고 잇는다. 모델의 `lastObservedVersion` 은 건드리지 않았다."
             }
           ]
         }
