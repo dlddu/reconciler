@@ -8,8 +8,9 @@ as-is 상태와 to-be(목표) 상태를 비교해, 버전이 바뀔 때마다 �
   각 `versionScript`는 stdout 마지막 줄을 버전 문자열로 사용한다
   (github = 커밋 SHA + 하위 디렉터리 tree hash, k8s = deployment revision + 이미지, monitor = 최신 alert event id).
 - **ReconciliationTask** — as-is/to-be 버전이 바뀔 때마다 생성되는 작업.
-  버전이 그대로여도 모델의 `checkPolicy.manualTriggerRequestedAt`에 시각을 적으면 사람이 감지를
-  직접 트리거할 수 있고, 그렇게 생긴 작업은 `trigger.source: "manual"`로 남는다.
+  버전이 그대로여도 모델의 `checkPolicy.manualTriggerRequestedAt`에 시각과 사유
+  (`manualTriggerReason`, 짝으로만 존재한다)를 적으면 사람이 감지를 직접 트리거할 수 있고,
+  그렇게 생긴 작업은 `trigger.source: "manual"`과 옮겨 적힌 `trigger.reason`으로 남는다.
   요약 → 판단 → 계획 → (사용자 검토) → 실행 → 검증 순으로 필드가 채워진다.
 
 ## 구조
