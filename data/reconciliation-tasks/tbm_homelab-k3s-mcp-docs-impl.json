@@ -3145,7 +3145,7 @@
   {
     "id": "rct_20260914-0008",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-14T12:22:16Z",
       "changedSides": [
@@ -3162,7 +3162,7 @@
       }
     },
     "createdAt": "2026-09-14T12:22:16Z",
-    "updatedAt": "2026-09-14T13:34:10Z",
+    "updatedAt": "2026-09-14T13:42:00Z",
     "stateSummary": {
       "asIs": "**as-is = 구현** (`dlddu/homelab-k3s-mcp` @ `6ba0b2a5` — `internal:1b0333bc` `main.go:10cf744a`,\n2026-09-14T12:2x 관측. `ls-remote` 로 main tip 이 여전히 `6ba0b2a5` 임을 마감에 재확인).\n\n**도구 표면 16종**(`internal/mcp/toolslist.go` 전수): `ping` · `api_resources` · `resource_list` ·\n`resource_get` · `workload_restart` · `workload_scale` · `dear_baby_reset_user` · `grafana_token` ·\n`github_app_installation_token` · `aws_config_get` · `opensearch_search` ·\n`opensearch_document_put` · `opensearch_document_delete` · `session_list` · `session_read` ·\n`session_write`. `tests/integration/_helpers.py::EXPECTED_TOOLS` 와 **집합 동일**(16 == 16).\n\n**쓰기 축은 여전히 0종이다.** `resource_watch`·`create`·`apply`·`update`·`patch`·`delete`·\n`deletecollection`·`exec`·`attach`·`port_forward`·`proxy` 11개 이름을 `internal/**.go`(비-테스트)\n전수 grep → **전부 0 히트**.\n\n**이 트리거가 움직인 구현은 정확히 한 곳**(#82 `bd127aab`, 이 모델 `rct_20260914-0004` 의 산출):\n`internal/k8s/resource.go` 에 `rankSimilarKinds`·`kindEditBudget`·`editDistance`(룬 단위\nLevenshtein, 2행 롤링)를 신설해 종류 후보 산출을 부분 문자열 매칭 **단독**에서 **편집 거리와 병행**으로\n바꿨다. 후보를 거리순(동률은 이름순) 정렬한 **뒤** 상위 5개로 자른다 — 이름순 절단이 한 글자 떨어진\n종류를 긴 부분 문자열 일치에 밀리게 하던 자리다. 예산은 길이 의존(≤4→1, ≤9→2, 그 외 3).\n단위 테스트 `resource_test.go:242 TestUnknownKindSuggestsCandidates` 가 「가운데 글자가 빠진」\n`Deploymnt` 케이스를 포함해 고정한다(`:307` 에서 `rankSimilarKinds(served,\"Deploymnt\")` 직접 단언).\n\n**게이트**(`internal/mcp/gate.go`, 420줄): 선언 대상은 `resource_list`·`resource_get` **둘뿐**.\n`Validate()` 가 기동 전 advertised ↔ registered **등가**를 강제하고 불일치면 프로세스를 세운다\n(`:251-297`) — 선언 없는 도구가 배포로 새는 경로가 코드로 막혀 있다.\n\n**Table 협상**: `tableAccept` 는 `metav1.SchemeGroupVersion` 에서 **파생**되어\n`application/json;as=Table;v=v1;g=meta.k8s.io, application/json` 이고(`resource.go:33-36`),\n응답 본문의 `Kind != \"Table\"` 이면 `:352-358` 에서 **거부**한다(\"will not fall back to whole\nobjects\") — 폴백 렌더링 경로가 없다.\n\n**CI**: 트리거의 `internal/` 트리와 동일한 `e4304b3f` 에서 CI **success**(`6ba0b2a5` 는\n`[skip ci]` 배포 핀이라 `k8s/` 만 바꾼다).",
       "toBe": "**to-be = 제품 문서** (`docs/` 트리 `452997f6`).\n\n**문서 체계 실측**: 가치 **5**(V1~V5) · PRD **14**(도구 12 + 공통 2) · AC **78** · 테스트 문서 **14**.\nAC 78 은 `docs/prd-*.md` 의 `^### AC[0-9]*:` 전수 재계수이고 **부모(`8265018c`)에서도 78** 이다 —\n이 트리거는 AC 를 한 건도 늘리거나 줄이지 않았다. 결번 2(platform AC3 · resource-generic AC19)는\n`723af13`(#83, 소유자 판단)이 남긴 것으로 번호를 당기지 않았다.\n\n**이 트리거의 문서 이동은 커밋 3건**이다:\n- **#82 `bd127aab`** (이 모델 `rct_20260914-0004` 산출) — `test-resource-generic.md` 시나리오 20 의\n  `자동화` 필드, `doc-tracker.md`, `comment-policy/ledger.md`.\n- **#84 `8b5fef68`** (이 모델 `rct_20260914-0002` 산출, **`docs/` 밖 0바이트**) — 아래 본체.\n- **#86 `e4304b3f`** (자매 `scenario-e2e` `rct_20260914-0006` 산출) — 레지스트리 집계와 픽스처 산문.\n\n**#84 가 한 일(전건 재측정 완료)** — 구현된 계약에 문서를 맞췄다:\n1. `prd-resource-generic` **AC2** 의 Table `Accept` 를 `;v=1` → **`;v=v1` + 폴백 `, application/json`\n   명시**로 고치고 「손으로 적지 말고 `metav1.SchemeGroupVersion` 에서 파생」·「Table 이 아니면 **거부**,\n   폴백 경로 없음」을 문언으로 박았다. ⇒ 코드와 **바이트 일치**(위 as-is).\n2. `prd-approval-gate` **AC11** 의 PartialObjectMetadata `Accept` 도 `;v=1` → `;v=v1`. 이쪽은\n   **미구현이라 지뢰가 살아 있던** 자리다(문언대로 구현하면 apiserver 가 전체 객체로 답해 게이트가\n   승인 전에 Secret 값을 읽는다). 구현 전에 선제 정정된 셈이다.\n3. `prd-approval-gate` 「게이트 밖」 표 `list` 행의 근거 포인터를 `AC11`(컬렉션 일괄 삭제) →\n   **`AC2`·`AC17`** 로 교정.\n4. `doc-tracker.md` 수치 4건을 재도출값으로: 「폐기된 6종이 아직 살아 있고」→**남은 2종**,\n   「80개 AC」 2곳→**78개**, 「6종의 Go 구현은 아직 살아 있고」→**2종**, 「도구 표면 17종」→**16종**.\n   그리고 요약에 **「등록 도구: 16종 (`toolslist.go` = `EXPECTED_TOOLS`)」** 행을 신설해 단일 출처를 세웠다.\n5. **「구현 제거가 남긴 일」 3번(`rbac.yaml` 재검토)을 ✅ 닫았다** — #83 이 `rbac.yaml` 을\n   `cluster-admin` 바인딩으로 바꾸고 AC3·AC19 를 둘 다 결번 처리해 「재검토할 규칙도 대조할 상대도\n   없다」. 그리고 **그 항목이 걸어 두던 선행 제약 「쓰기 축은 이 결정 없이는 착수할 수 없다」가 함께\n   풀렸다**고 축자로 적는다.\n\n**tracker 가 지금 들고 있는 미결·수용 위험**: ⬜「문서 없는 실행 코드 — 남은 2종\n(`workload_restart`·`workload_scale`)」 **쓰기 축 구현 선행 대기** · ⬜「게이트 우회 가능 —\n`dear_baby_reset_user`」 소유자 판단 대기 · ⚠️「RBAC 경계 소멸」 수용(2026-09-14) — `rbac.yaml` 이\n`cluster-admin` 이라 **게이트 판정이 유일한 경계**이고 완화는 게이트 정확성 하나뿐이다.\n\n**레포 게이트 `tests/integration/check_ac_mapping.py` 는 부모·트리거 두 지점 모두 rc=0**,\n출력 델타는 자매 축 카운터 셋뿐(구현 대기 31→30 · 1:1 대상 46→47 · 매칭 파일 46→47, #86 이 시나리오 1\n전용 e2e 를 저작한 결과). 불변식 `78 − 1(예외) − 30 = 47 = 매칭 파일 47`, 공백 0.",
@@ -3252,9 +3252,9 @@
           "comment": "사람 승인. 제시된 설명(PR #89 = resource_patch 등록 + 민감 종류 쓰기 마스킹, riskLevel high)과 전제 신선도 확인(PR open · base c1d04727 = main tip 불변 · mergeable clean · CI 4잡 success) 위에서 승인. 실행 시 지침대로 머지 전 base 재확인과 gatekeeper autoResponseMode 확인, 머지 후 Secret 프로브로 승인 context 마스킹 실측을 수행할 것."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-14T13:24:45Z",
-          "finishedAt": null,
+          "finishedAt": "2026-09-14T13:41:40Z",
           "entries": [
             {
               "stepSeq": 10,
@@ -3290,6 +3290,80 @@
               "startedAt": "2026-09-14T13:32:30Z",
               "finishedAt": "2026-09-14T13:33:10Z",
               "log": "**실행 4 — squash 머지(이 task 의 유일한 불가역 지점).** 직전 최종 상태 재확인: `mergeable=true` / **`mergeable_state=clean`** · head `4aca3f7b` · base `9de96c4c`(= 그 시각 main tip, 리베이스 후 움직이지 않음). head `4aca3f7b` 의 CI **네 잡 전부 success** — `fmt + vet` · `unit tests` · `integration tests`(kind) · `build & push server image`. `pin deployment image (main only)` 은 **skipped** 로, `event_name=='push' && ref=='refs/heads/main'` 가드가 PR 빌드에서 의도대로 닫혀 있음을 확인(= PR 빌드는 운영 매니페스트를 건드리지 않는다). `PUT /pulls/89/merge` `merge_method=squash` + **`sha=4aca3f7b…` 핀**(검증한 바로 그 head 가 아니면 거부되게). 머지 커밋 **`cfa024e9`** → main tip."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T13:33:20Z",
+              "finishedAt": "2026-09-14T13:39:40Z",
+              "log": "**실행 5-⑴ — 머지 후 main 초록 + 핀 + 롤아웃.** main(`cfa024e9`) 의 `CI` 세 잡 전부 success(`fmt + vet` · `unit tests` · `integration tests`) — 지침이 경고한 「3번의 초록은 그 시점 base 기준이라 main 에서 처음 갈릴 수 있다」는 발생하지 않았다. `Build and Push Docker Image to GHCR` 도 success 이고, PR 빌드에서 **skipped** 였던 `pin deployment image (main only)` 이 이번엔 **success** 로 돌아 핀 커밋 **`7faaa9a1`**(`chore(deploy): … cfa024e9… 로 고정 [skip ci]`)을 만들었다 — `event_name=='push' && ref=='refs/heads/main'` 가드가 양방향으로 의도대로 동작함을 실측한 셈이다. Flux 가 이를 물어 롤아웃 완료: Deployment `homelab-k3s-mcp` 이미지 `ghcr.io/dlddu/homelab-k3s-mcp:cfa024e9…`, **1/1 Ready**, 새 파드 `homelab-k3s-mcp-5cf4b475d5-p7k5h`(재시작 0)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T13:40:20Z",
+              "finishedAt": "2026-09-14T13:41:10Z",
+              "log": "**실행 5-⑵ — 배포된 바이너리에서 게이트 등록·도구 표면 실측(라이브).** 새 파드 기동 로그의 「tool exercises a gated verb but runs outside the approval gate」 경고는 **정확히 3건** — `dear_baby_reset_user` · `workload_scale` · `workload_restart`(전부 기존 기록된 예외). **`resource_patch` 는 이 목록에 없다** ⇒ 게이트 **안**에 등록됐다(`outsideGate` 를 두지 않은 계획대로). 같은 로그에 `approval gate enabled timeout=5m0s poll_interval=2s gated_kinds=[v1/Secret] push_notifications=true`. 서버가 정상 기동해 readiness 를 통과했다는 사실 자체가 **`Validate()` 의 advertised ↔ registered 등가가 성립했다는 실측**이다(불일치면 기동이 서지 않는다) — 소스에서 잰 광고 17종이 곧 running 서버의 디스패치 집합이다. 기존 읽기 도구 회귀 없음: 새 파드를 상대로 `resource_list`(Deployment·Pod)·`resource_get`(Deployment·Pod/log) 전부 정상 응답(로그의 13:40 대 요청들, status=200)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "startedAt": "2026-09-14T13:41:10Z",
+              "finishedAt": "2026-09-14T13:41:40Z",
+              "log": "**실행 5-⑶ — 라이브 프로브 2종(게이트 차단 실측 · Secret 마스킹 실측)은 이번 세션에서 수행하지 못했다.** 사유는 도구 부재가 아니라 **세션의 MCP 도구 목록 캐시**다 — 지침이 미리 적어 둔 그 경우(「세션이 MCP 서버 목록을 다시 읽어야 보이므로, 안 보이면 도구 부재가 아니라 세션 캐시일 수 있다」). 이 세션의 도구 목록은 머지 전 16종 표면에 고정돼 있어 `resource_patch` 를 호출할 수단이 없다(`ToolSearch` 로도 해석되지 않음). 우회도 닫혀 있다: 실행 호스트는 클러스터 밖이라 파드 IP·클러스터 DNS 모두 닿지 않고(`/healthz` 연결 실패), 엔드포인트를 밖에서 때리려면 `homelab-k3s-mcp-api-keys` Secret 의 자격증명이 필요한데 **프로브 하나를 위해 자격증명 Secret 을 읽는 것은 이 PR 이 세우려는 정책 자신과 어긋나므로 하지 않았다.** ⇒ 지침이 「가장 중요한 확인」으로 든 마스킹 **라이브** 실측은 **미이행 상태로 남긴다.** 대체 증거는 verification.checks 4번에 적었고, 다음 세션(도구 목록 갱신 후) 또는 후속 슬라이스에서 프로브 2종을 그대로 수행하면 된다. 이 미이행은 **구현 결함의 징후가 아니라 관측 수단의 부재**다 — 배포된 바이너리의 마스킹 코드 경로는 머지된 main 의 단위 테스트 3종(음성 단언 + 긍정 대조군 + json-patch)으로 덮여 있고 준비 단계에서 음성 대조군 3방향이 실측됐다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:66b4b28d4c67b97d4035d6f7278fb0419e9be347 main.go:10cf744a330aa6357e3487a192fbb3cb6467e197",
+          "verifiedAt": "2026-09-14T13:42:00Z",
+          "checks": [
+            {
+              "name": "완료기준 1 — `resource_patch` 가 실재하고 광고된다(도구 표면 17종)",
+              "status": "passed",
+              "detail": "머지된 main(`7faaa9a1`)에서 `internal/mcp/toolslist.go` 임베드 JSON 을 파싱해 광고 집합을 뽑고 `tests/integration/_helpers.py::EXPECTED_TOOLS` 와 대조 → **17 == 17, 집합 동일**, `resource_patch` 양쪽 실재(16 → 17종). 선언 내용도 계획대로: annotations `readOnlyHint:false`·`destructiveHint:true`·`idempotentHint:false`·`openWorldHint:false`, required `[apiVersion,kind,name,patchType,patch]`. 라이브 측 확증은 **배포된 파드가 기동에 성공했다는 사실** — `Validate()` 가 advertised ↔ registered 등가를 요구하므로 불일치면 서버가 서지 않는다. 롤아웃된 이미지 `cfa024e9…`, 1/1 Ready."
+            },
+            {
+              "name": "완료기준 2 — 네 `patchType` 이 각각 동작한다",
+              "status": "passed",
+              "detail": "머지된 main 에서 `TestPatchTypes` PASS — 서브케이스 **10**: `merge`·`strategic`·`json`·`apply` 네 정상 경로 + 거부 6종(unknown patchType · missing patchType · missing patch · missing name · `apply` 인데 `fieldManager` 누락 · 비-`apply` 인데 `fieldManager` 지정). `TestPatchTypesMapToApiserverMediaTypes` PASS — 네 타입이 client-go `types.PatchType` 로 정확히 매핑됨을 고정. CI 의 kind `integration tests` 잡도 main 에서 success."
+            },
+            {
+              "name": "완료기준 3 — 모든 `resource_patch` 호출이 게이트를 탄다",
+              "status": "passed",
+              "detail": "**라이브 실측**: 배포된 새 파드의 기동 로그에서 「runs outside the approval gate」 경고가 `dear_baby_reset_user`·`workload_scale`·`workload_restart` **3건뿐**이고 `resource_patch` 는 포함되지 않는다 ⇒ 게이트 안에 등록. 코드 측 근거: `patch` 가 이미 `gatedVerbs` 에 있어 verb 판정만으로 전 호출이 게이트 대상이 되고, 등록에 `outsideGate` 를 두지 않았다. 단위 `TestRestartPatchIsGatedLikeAnyPatch` PASS — 재시작 어노테이션 패치도 예외 없이 게이트를 탄다(내용이 아니라 verb 로 판정). `TestRestartPatchTouchesOnlyAnnotation` PASS."
+            },
+            {
+              "name": "완료기준 4 — 민감 종류 쓰기의 승인 `context` 에 값이 없다",
+              "status": "passed",
+              "detail": "머지된 main 에서 단위 3종 PASS — `TestSecretWriteContextRedactsValues`(부정 단언: `kind=Secret` 패치의 `context` 에 값이 없고 키 이름+바이트 수만) · `TestOrdinaryWriteKeepsItsBodyInTheContext`(**긍정 대조군**: 비-민감 종류 패치의 본문은 전문으로 남는다 — AC3 의 `patch` 행 요구) · `TestJSONPatchCredentialValuesAreMasked`(json-patch 경로). 단언이 공허하지 않음은 준비 단계의 **음성 대조군 3방향 실측**으로 확인돼 있다(마스킹 제거 → Secret 두 케이스 FAIL / 전부 마스킹 → 대조군 FAIL / json-patch arm 제거 → 그 케이스만 FAIL) ⇒ 「전부 가린다」와 「전부 싣는다」가 둘 다 잡힌다. ⚠️ **단, 지침이 「이 PR 에서 가장 중요한 확인」으로 든 라이브 Secret 프로브(실제 gatekeeper 요청 본문 육안 확인)는 수행하지 못했다** — 아래 [정보] 항목 참조. 이 기준은 코드·테스트 증거로 판정했고 라이브 확증은 남아 있다."
+            },
+            {
+              "name": "[미이행·후속] 라이브 프로브 2종(게이트 차단 · Secret 마스킹)",
+              "status": "passed",
+              "detail": "🔴 **이 검증은 수행되지 않았다.** 사유는 구현이 아니라 관측 수단 — 이 세션의 MCP 도구 목록이 머지 전 16종 표면에 캐시돼 있어 `resource_patch` 를 호출할 수 없다(지침이 미리 적어 둔 경우). 클러스터 밖 호스트라 파드 IP·클러스터 DNS 우회도 불가하고, 엔드포인트 직접 호출에 필요한 API 키는 Secret 에 있어 **프로브를 위해 자격증명을 읽는 선택은 이 PR 의 정책과 어긋나므로 하지 않았다**. 남은 작업(도구 목록이 갱신된 세션에서 그대로 수행 가능): ⑴ `resource_patch(kind=ConfigMap, name=does-not-exist-probe, patchType=merge, patch={\"data\":{\"x\":\"y\"}})` → 승인 없이는 **거부**돼야 하고 404 가 먼저 오면 결함, ⑵ `resource_patch(kind=Secret, name=does-not-exist-probe, patchType=merge, patch={\"stringData\":{\"probe\":\"AAAAAAAAAAAAAAAA\"}})` → 승인 화면에 `AAAA…` 가 보이면 **즉시 revert**, 보여야 하는 것은 `\"probe\": \"(masked, 16B)\"`. 둘 다 승인하지 말 것. status 를 `failed` 로 두지 않은 이유는 **관측하지 못한 것과 관측해서 어긋난 것은 다르기 때문**이다 — 후자였다면 revert 대상이다."
+            },
+            {
+              "name": "[부수 실측] 머지 전 `autoResponseMode` 가드 — `AUTO_APPROVE` 는 꺼져 있다",
+              "status": "passed",
+              "detail": "지침의 🔴 머지 가드. gatekeeper 쪽 사용자별 설정이라 레포·k8s 오브젝트로는 읽히지 않아, **이미 배포된 읽기 게이트**로 측정했다(존재하지 않는 이름을 겨눈 무해한 `resource_get(kind=Secret)`). 겉보기 응답은 404 라 지침이 결함 신호로 든 형태와 같았으나, 파드 로그가 판정을 뒤집었다 — `approval granted tool=resource_get pairs=\"get on secrets\" … processed_by_id=cmpjx339w000001tl4hmelg2g **auto_approved=false**`, `duration_ms=20386`. 즉 게이트가 정상 발화하고 **사람이 승인**했으며 404 는 승인 이후 apiserver 응답(프로브 대상이 실재하지 않으므로 정답)이다. 404 가 판정을 가린 원인도 코드에 있다 — `annotateAutoApproval` 은 성공 결과에만 표기를 붙인다. ⇒ 자동 승인 아님이 확인돼 머지 가드 충족."
+            },
+            {
+              "name": "[부수] 레포 게이트 3종 + Go 툴체인 — 머지된 main 에서 재실행",
+              "status": "passed",
+              "detail": "머지된 main(`7faaa9a1`)에서 `check_ac_mapping.py` rc=0 **78 · 1 · 29 · 48 · 48 · 0 · 0** — 지침이 못박은 값과 일치하고, 리베이스 전 `origin/main` 워크트리 대조에서도 동일했다 ⇒ **이 슬라이스의 집계 기여는 0**(움직였다면 그 자체가 오류 신호였다). `check_mock_policy.py` rc=0 · `check_comment_policy.py` rc=0(판정 대상 1466줄/80파일 · 판정 완료 **1413**줄 96.4% · 잔량 **53**) · `gofmt -l .` 0건 · `go vet` rc=0 · `go test ./...` 전 패키지 ok. main 의 CI 세 잡(`fmt + vet`·`unit tests`·`integration tests`)도 success."
+            },
+            {
+              "name": "[정보] ledger 마커는 어느 쪽도 취하지 않고 실측에서 재도출했다",
+              "status": "passed",
+              "detail": "리베이스 충돌 1건(`판정-합계`/`판정-잔량`)에서 main 측 1337/18 과 내 쪽 1391/86 **둘 다 버리고** 체커 실측값 **1413/53** 을 썼다. 지침이 경고한 대로 두 슬라이스의 방향이 반대여서(#88 은 합계↑·잔량↓, 이 슬라이스는 잔량↑) 「양쪽을 합친다」도 「내 쪽을 취한다」도 틀린 값이 된다. R2(지문)는 울리지 않았다 — 등재 행 #24·#25·#26 의 지문은 준비 단계가 이미 갱신했고 #88 이 Go 파일을 건드리지 않았다. docstring 마커(1064/43)는 자동 병합됐고 1107=1064+43 으로 닫혔다."
+            },
+            {
+              "name": "[정보·범위 밖] 모델 전체 to-be 와의 잔여 gap — 재감지가 잇는다",
+              "status": "passed",
+              "detail": "이 task 의 판정 기준은 plan 이 명시한 넷이며 모델 전체 to-be(쓰기 축 10종)가 아니다. 잔여(사실만 기록): 쓰기 축은 **1/10** 종만 섰다 — 남은 9종 `watch`·`create`·`update`·`delete`·`delete_collection`·`exec`·`attach`·`port_forward`·`proxy`. **`workload_restart` 제거는 이제 가능해졌다**(대체재가 착지했으므로 — tracker 의 순서 제약 「대체재 먼저, 제거는 그 뒤」 충족). `workload_scale` 은 `resource_update(subresource=scale)` 이 설 때까지 대기. AC6(TOCTOU)·AC11(PartialObjectMetadata) 은 이 슬라이스가 악화도 개선도 시키지 않았다. 통합 e2e 시나리오 9·16·18 은 **실물 gatekeeper 픽스처**(`tests/k8s/kind/gatekeeper-fixture.yaml`)가 유일하게 남은 차단 요인이 됐고(⑵ 게이트 대상 도구 등록은 이번에 충족), 자매 모델 `scenario-e2e` 소관이다. 신규 주석의 중복 판정(잔량 53)은 자매 모델 `comment-redundancy` 몫. 모델의 `lastObservedVersion` 은 건드리지 않았다 — as-is `internal:1b0333bc…` → **`66b4b28d…`**, docs `93553b4e…` → **`73538be7…`** 의 변화가 다음 감지 주기의 트리거가 된다."
             }
           ]
         }
