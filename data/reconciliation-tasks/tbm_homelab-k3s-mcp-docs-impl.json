@@ -1781,9 +1781,9 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "executing",
+    "status": "verifying",
     "createdAt": "2026-09-13T14:03:17Z",
-    "updatedAt": "2026-09-14T05:41:00Z",
+    "updatedAt": "2026-09-14T05:44:30Z",
     "trigger": {
       "detectedAt": "2026-09-13T14:03:17Z",
       "changedSides": [
@@ -2150,6 +2150,45 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-14T05:35:06Z",
           "comment": "사람 승인(옵션 2 — 승인은 기록하되 실행 단계는 라이브 검증만 수행).\n\n⚠️ 승인 기록 시점에 **PR #75 는 이미 머지돼 있었다.** dlddu 가 2026-09-14T05:01:42Z 에 squash 머지 (main `9d2855fe`), 05:03:28Z 핀 커밋 `d036e074` 가 이미지를 `9d2855fe` 로 고정해 롤아웃까지 진행됐다. 머지 직전 02:42Z 에 브랜치가 main 을 흡수(`397b2316`)해 아래 (2)(3) 의 base 이동을 반영한 뒤 착지했다. 즉 이 승인은 게이트로서는 사후 기록이며, 사람은 그 사실을 제시받은 상태에서 취소 대신 승인 기록을 선택했다.\n\n**실행 단계에 주는 지시.** 계획 steps 3~6(머지 전 라이브 관측 · squash 머지 · main CI docker 잡 대기 · workload_restart 로 롤아웃)은 **수행하지 말 것 — 이미 지나갔다.** 수행할 것은 steps 7~9 의 라이브 검증뿐이다: ⑴ 1차 시도를 멈춰 세운 5건(`resource_list` 의 v1/Namespace · apps/v1 Deployment · v1/Pod · v1/Event 가 행 있는 Table 을 돌려주는가, 그리고 그 이름으로 연 `resource_get subresource=log` 가 텍스트를 돌려주는가), ⑵ 1차에서 통과한 항목들의 회귀(도구 표면 16종 · 폐기 4종 부재 · `api_resources` · AC4 잡음 제거 · AC18 권한 밖 거부 · AC20 미지 kind 거부), ⑶ 기동 로그의 면제 WARN 3줄과 `refusing to start` 부재. 검증이 실패하면 롤백은 revert + 새 SHA 핀 커밋 + 재시작이 필요하다(아래 (2) 때문에 `:latest` 되돌리기가 아니다).\n\n**승인 시점에 확인한 전제 변화(02:20~02:27Z 실측, 지침이 아직 반영하지 못한 것).** (1) 승인의 핵심 전제였던 **권한 확대 0**(`k8s/rbac.yaml` 규칙 라인 무변경, 주석만)은 유효하다. (2) #77 로 이미지가 커밋 SHA 로만 발행되고 main 이 그 SHA 에 고정된다 ⇒ 실행 지침 주의사항 ① 의 「PR 빌드가 `:latest` 로 프로덕션에 도달한다」는 **더 이상 참이 아니다**. (3) #76 으로 승인 게이트 자격증명 Secret 이 `envFrom` 에 들어갔다 ⇒ 기동 로그가 `approval gate enabled (gated_kinds=[v1/Secret], timeout 5m, push_notifications=true)` 를 찍으므로, 검증 C 의 기대값 「approval gate is not configured … refusing」은 **낡았다** — 민감 종류 읽기는 이제 실제 승인 요청을 생성하고 대기한다. RBAC 에 `secrets` 부여가 없다는 이중 방어는 그대로다. (4) 두 PRD(`prd-platform-auth-safety` AC3 ↔ `prd-resource-generic` AC19)의 어긋남은 미결로 등재된 채 **사람 판단 대기**이며, 그 결정 없이 읽기 축을 먼저 착지시키는 것을 사람이 수용했다. 쓰기 축은 그 결정의 후속이다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-14T05:41:00Z",
+          "finishedAt": "2026-09-14T05:44:30Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T05:42:00Z",
+              "finishedAt": "2026-09-14T05:44:00Z",
+              "log": "**사후 확인 — PR head 가 아니라 머지 커밋에서 잰다.** 승인 기록 시점에 PR #75 는 이미 머지돼 있었으므로(사람 승인 comment 참조) 계획이 지정한 head `2af91e4` 는 존재 의미를 잃었다. 대신 실제로 프로덕션에 도달한 바이트, 즉 squash 머지 커밋 `9d2855fe` 의 **main CI** 를 쟀다 — 계획이 요구한 증거보다 강하다.\n\n`GET /commits/9d2855fe.../check-runs` → 8개 전부 `conclusion=success`: `fmt + vet` · `unit tests` · `integration tests` · `build & push server image` · `build` · `deploy` · `report-build-status` · `pin deployment image (main only)`.\n\n**핵심 증거를 이름으로 확인했다.** `integration tests` 잡(id 103863933870) 로그를 내려받아 grep: `러너: primary 그룹 33개 파일 — [..., 'resource_read_smoke.py', ...]` 로 **배차됐고**, 05:05:18Z 에 `resource read smoke ok` 를 찍었다. 잡 success 만으로는 파일이 배차조차 안 된 경우와 구분되지 않는다는 지침의 우려를 그대로 해소한다 — 실 apiserver(kind) 상대로 목록→이름→`subresource=log` 가 한 케이스로 이어져 통과했다.\n\n검증 E(레포 게이트 3종 `check_ac_mapping.py`·`check_mock_policy.py`·`check_comment_policy.py`)는 `fmt + vet` 잡 안에 있고 그 잡이 success 다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "log": "**머지 전 신선도 게이트라 성립하지 않는다 — 머지가 이미 지났다.** 사실만 기록한다: PR #75 는 2026-09-14T05:01:42Z 에 dlddu 가 squash 머지했고(`state=closed`, `merged=true`, `merge_commit_sha=9d2855fe`), 머지 직전 02:42Z 에 브랜치가 main 을 흡수해 head 가 `397b2316` 이었다(계획이 적은 `2af91e4` 가 아니다). 계획 시점 base `e2a195d` 에서 main 이 움직인 것은 사실이나, 흡수 후 착지했고 그 결과 커밋의 CI 가 전부 success 이므로 이 게이트가 막으려던 위험(낡은 base 위에서의 머지)은 실현되지 않았다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "log": "**승인자 지시로 수행하지 않음** — 「steps 3~6 은 수행하지 말 것 — 이미 지나갔다」. 머지 전 라이브 관측은 머지 전후를 가르기 위한 것인데 머지가 3시간 가까이 전에 끝나 관측 창 자체가 닫혔다. 지금 찍으면 「머지 전」이 아니라 「머지 후」가 된다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "log": "**이미 수행됨(이 실행이 아니라 사람이).** dlddu 가 2026-09-14T05:01:42Z squash 머지, main 이 `9d2855fe` 로 이동. 머지 커밋 없음(squash) — 계획이 요구한 형태 그대로다. 이 워커는 머지 버튼을 누르지 않았다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "skipped",
+              "log": "**이미 수행됨.** 머지 커밋 `9d2855fe` 의 main CI 에서 `build & push server image` success(05:01:49→05:03:21Z). 이어 `pin deployment image (main only)` 가 success 하며 05:03:28Z 에 핀 커밋 `d036e074`(「이미지를 9d2855fe… 로 고정 [skip ci]」)를 냈다. **주의사항 ① 이 낡았음이 여기서 확인된다** — #77 이후 이미지는 커밋 SHA 로만 발행되고 main 이 그 SHA 에 고정된다. `:latest` 경쟁은 더 이상 없다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "skipped",
+              "log": "**이미 수행됨(flux 가 핀 커밋을 반영).** `workload_restart` 를 부르지 않았다 — 부를 필요가 없었다. 라이브 실측: `apps/v1 Deployment homelab-k3s-mcp` 의 image = `ghcr.io/dlddu/homelab-k3s-mcp:9d2855fe7daa7cb87fe4c19cd903a51aabd958af`(= 머지 커밋), Ready `1/1`, Available 1, `observedGeneration=428`, Progressing=`ReplicaSet \"homelab-k3s-mcp-674dd4996f\" has successfully progressed`(05:04:34Z).\n\n파드 `homelab-k3s-mcp-674dd4996f-dcm6k` Running 1/1, **Restarts 0**, CrashLoop 없음. 이벤트 타임라인이 롤아웃을 그대로 보여준다 — 05:04 경 `Pulling/Pulled ghcr.io/...:9d2855fe...`(4.475s, 14648947 bytes) → `Created` → `Started`, 그 직전 세대 `6cb649545d-gh4xt`(image `b3751d77…`)는 `Killing`. 즉 **재시작이 이미 일어났고 새 바이트가 떠 있다.** 계획의 「새 파드 start_time 이 docker 잡 완료 시각 이후」 조건도 성립한다(docker 잡 완료 05:03:21Z < 컨테이너 기동 05:04:34Z).\n\n남은 steps 7~9(라이브 검증 A·B·C)는 승인자가 「수행할 것」으로 지정한 유일한 범위이며 `verification.checks` 에 기록했다."
+            }
+          ]
         }
       }
     ]
