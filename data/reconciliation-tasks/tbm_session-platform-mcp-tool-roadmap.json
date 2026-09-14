@@ -370,7 +370,7 @@
   {
     "id": "rct_20260913-0002",
     "toBeModelId": "tbm_session-platform-mcp-tool-roadmap",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-13T14:08:00Z",
       "changedSides": [
@@ -387,7 +387,7 @@
       }
     },
     "createdAt": "2026-09-13T14:08:00Z",
-    "updatedAt": "2026-09-14T13:35:14Z",
+    "updatedAt": "2026-09-14T13:38:00Z",
     "stateSummary": {
       "asIs": "**실제 도구 표면 — 도구 2개** (`tools:2 ping,web_fetch_get`, 트리거 `e70d6e4` / main `99c2166` 실측).\n\n`data-plane/cmd/agent/session_mcp_tools.go` 의 `toolDefinitions()` 가 내는 목록:\n\n| 도구 | 게이트 | 비고 |\n|------|--------|------|\n| `web_fetch_get` | 호출마다 승인 1건 | `url` 인자 (http·https, `additionalProperties:false`) |\n| `ping` | 지나지 않는다 (파드 밖에 닿지 않아 R1 적용 범위 밖) | 인자 없음, 상수 `pong` |\n\n**`ping` 은 선언만이 아니라 실제로 호출 가능하다** — 이 문서가 스스로 세운 기준(「`tools/call` 까지 가 봐야 참이 된다」)으로 검증했다: `:98` 등재 · `:125` `switch call.Name` 의 `case webFetchGetTool, pingTool` 수용 · `:133-134` 핸들러가 `mcpToolText(pingReply)` 반환. 셋이 다 있어야 참인데 셋 다 있다.\n\n**게이트 분기 안쪽 배치도 실측 확인** — `toolDefinitions()` 첫 줄이 `if !c.gated() { return []any{} }` 라 `ping` 도 게이트웨이 미구성 시 목록에서 빠진다. 문서가 「협상 불가」로 지목한 R2(「게이트를 구성할 수 없으면 이 도구도 내지 않는다 — 그래야 빈 목록이 『게이트웨이가 없다』 하나로만 읽힌다」)가 코드로 지켜졌다.\n\n**헬퍼 파드 egress 실측**(다음 슬라이스의 전제라 재측정): `control-plane/internal/adapter/k8s/network_policy.go` 가 만드는 정책 쌍은 **egress 를 워크로드 파드에만** 건다(`PodSelector: workloadSelector`, 피어는 kube-DNS 와 자기 헬퍼 파드의 두 포트뿐). **헬퍼 파드에는 ingress 제한만 있고 egress 정책이 없다** — MCP 컨테이너가 파드 밖에 닿을 수 있는 이유이자, `git_clone` 이 AC-F2 축의 새 선행 없이 설 수 있는 근거다.",
       "toBe": "**등재된 구현 대상 — 3건** (`roadmap:3 1. git_clone|2. K3s MCP 재노출|3. gh CLI`, `docs/session-mcp-tool-surface.md` 「다음에 구현할 도구 (3)」).\n\nto-be 는 이 절이 **비어 있는 상태**다 — 등재된 모든 항목이 ⑴ 표면에 착지했거나 ⑵ **근거와 함께** 철회된 상태.\n\n| # | 항목 | 선행 | 착지 |\n|---|------|------|------|\n| 1 | `git_clone` | **없음** — 공개 레포 한정이면 R9 에 걸리지 않는다 | ❌ |\n| 2 | K3s MCP 재노출 | **R9**(AC-F6 자격 증명 배치 개정) | ❌ |\n| 3 | `gh` CLI | **R9** + R4 승인 화면 설계(이 레포 밖) | ❌ |\n\n문서가 우선순위 근거를 스스로 적는다: 「셋 중 둘(2·3)이 R9 에 걸린다 … **1번만 그 문 앞에서 설 수 있고, 그것이 1번이 먼저인 이유이기도 하다**」. 2 → 3 순서의 실질적 근거는 자격 증명이다 — 3번은 2번이 열어 줄 K3s MCP 의 GitHub App 단명 토큰을 쓰면 **자기 Secret 없이** 설 수 있다.\n\n**등재 목록 자체가 이번 트리거로 한 칸 줄었다**: 0번 `ping` 이 착지하며 빠졌다(`roadmap:4` → `roadmap:3`). 0번은 우선순위 줄에 선 적이 없어 **1~3 의 번호와 그 사이의 근거가 한 자도 움직이지 않았다** — 번호를 0 으로 둔 설계가 값을 낸 자리다.",
@@ -508,6 +508,59 @@
               "startedAt": "2026-09-14T13:33:50Z",
               "finishedAt": "2026-09-14T13:34:10Z",
               "log": "**[executionGuide §1 #2 — PR #140 squash 머지]**\n\n`merge_method=\"squash\"` · `sha=13748f7…`(경합 방지용 기대 head 고정)로 머지. 결과 **squash 커밋 `9a591748399c15f8358299e4446193e7d673f091`**, `merged=true`.\n\n클러스터 조작·수동 배포·매니페스트 변경은 없다. 계획 범위 밖의 변경도 없다 — 머지된 diff 는 준비 시점과 같은 **7파일 / +670 −42** 이고, base 신선화가 더한 것은 원장 한 줄뿐이다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "tools:3 git_clone,ping,web_fetch_get",
+          "verifiedAt": "2026-09-14T13:38:00Z",
+          "checks": [
+            {
+              "name": "완료기준 1 — `tools/list` 가 3개, 게이트 미구성은 0개 (R2)",
+              "status": "passed",
+              "detail": "머지된 main(`e741586`) 새 체크아웃에서 모델 `asIs.versionScript` 재실행 → **`tools:3 git_clone,ping,web_fetch_get`** (계획 기대값과 일치). 코드에서도 `toolDefinitions()` 첫 줄이 `if !c.gated() { return []any{} }` 이고 `git_clone` 정의가 그 **안쪽**에 있다. 단언은 `TestSessionMCPOffersItsToolsWhenTheGateExists` 가 `len(tools) != 3` → `want exactly the three listed tools` 로 지목하고, 게이트 미구성 0개 쪽은 `TestSessionMCPUngatedContainerHasNoPing` · `TestSessionMCPUngatedContainerRefusesToolCalls` 가 덮는다. CI `data-plane (lint + unit)` success 로 실행 확인."
+            },
+            {
+              "name": "완료기준 2 — 승인된 호출만 `git` 을 실행한다",
+              "status": "passed",
+              "detail": "`session_mcp_git_test.go` 의 테스트 함수 **10개**가 실 `git`·실 네트워크 없이 실행 횟수로 단언한다 — 지침이 지목한 셋(`TestSessionMCPClonesOnlyAfterApproval`:89 · `TestSessionMCPCloneNeedsASharedVolume`:190 · `TestCloneArgsRefuseCredentialsAndStopFlagParsing`:285)과 나머지 일곱(`RefusedClonesNeverRunGit` · `CloneGatewayOutageIsAToolFailure` · `CloneRejectsUnapprovableTargets` · `CloneNamesItsOwnDestination` · `CloneGivesEachCallItsOwnDestination` · `FailedCloneLeavesNothingBehind` · `BoundedBufferCapsWhatARemoteCanSay`). CI `data-plane (lint + unit)` success."
+            },
+            {
+              "name": "완료기준 3 — 결과 `path` 가 `<공유볼륨>/git_clone/<요청id>` 이고 호출자가 고른 조각이 없다",
+              "status": "passed",
+              "detail": "`clonePath(requestID) = filepath.Join(c.sharedDir, cloneSubdir, requestID)`(`:126-127`, `cloneSubdir = \"git_clone\"`)이고 `requestID` 는 `newApprovalRequestID()`(`:64`)가 낸 **서버 생성값**이다. 도구 `inputSchema` 의 properties 는 `url`·`branch` 둘뿐이고 `additionalProperties:false` — 참조 구현의 `directory` 인자가 실제로 없다(계획이 선언한 이탈 ①이 코드로 지켜졌다). R11 · 1번 항목 자신의 판정과 일치."
+            },
+            {
+              "name": "완료기준 4 — 등재 3 → 2, 사본 네 자리가 함께 움직였다 (판정 기준 4)",
+              "status": "passed",
+              "detail": "모델 `toBe.versionScript` 재실행 → **`roadmap:2 2. K3s MCP 재노출|3. gh CLI`** (기대값 일치, 1번만 빠지고 2·3 의 번호와 근거는 불변). 사본: ⑴ 머리 상태 줄 `:3` 「도구 3개(`web_fetch_get`·`git_clone`·`ping`) 착지 · 다음 구현 대상 2개 등재」 ⑵ 표 제목 `:46` 「지금 있는 것 (3개)」 ⑶ `docs/index.html:216` 「다음 구현 대상 2」 ⑷ AC-F6 문장 — `docs/prd/approval-gated-workload.md:121` 은 도구 수를 **복사하지 않고** `../session-mcp-tool-surface.md` 의 R1·R2 로 위임하는 문면이라 옮겨 적을 사본이 없다(고쳐야 할 자리가 없는 것이 확인 결과다). 표면 문서의 `git_clone` 언급 7건. 새 사본이 생기지 않았다."
+            },
+            {
+              "name": "완료기준 5 — 레포 게이트 4종 + 양 모듈 go vet·gofmt·test",
+              "status": "passed",
+              "detail": "**정적 게이트 4종은 머지된 main 에서 로컬 rc=0**: `check_comment_policy.py`(전체 지문 `13431fa48ffaac2c93f86048ad76335784de104aa574f9323d5aaa8966e2493c` — 머지 전 측정과 동일) · `check-fidelity-allowlist.py`(등재 seam 7 · 미해소 위반 0 · 회계 행 20 == 스캔 쌍 20) · `check-render-fidelity.py`(R1–R10 OK) · `check-scenario-mapping.sh`(시나리오 37 = 예외 3 + 유예 34 + 공백 0).\n\n**Go 계열은 이 실행 환경에 툴체인이 없어 로컬 대신 CI 로 닫았다** — 승인 코멘트가 명시적으로 예고·수용한 대체 경로다(「Go 테스트 스위트는 승인 세션에서 돌리지 않았다(툴체인 미설치) — 리베이스 후 CI 가 재실행한다」). 신선화된 head `13748f7` 에서 `data-plane (lint + unit)` · `control-plane (lint + unit)` · `envtest (real-apiserver CAS/Lease)` · `integration (happy path)` 전부 success. 지침이 요구한 「로컬에서 rc=0」 중 Go 부분만 CI 실측으로 대체했고 그 사실을 여기 남긴다."
+            },
+            {
+              "name": "원장 합계 마커 R4 양방향 미러 (직렬화 지점 해소)",
+              "status": "passed",
+              "detail": "검토·승인 단계가 「다른 열린 PR 두 건과의 직렬화 지점」으로 지목한 자리. 실제로 발동했다 — #139 가 먼저 머지되며 main 값이 3014 → **3054** 로 갔고, 이 브랜치는 3014 → **3087**(증분 +73, data-plane 행 931 → 1004)이었다. 병합 충돌은 정확히 이 **한 줄**뿐이었고 **3127**(3054+73)로 재측정해 풀었다 — 승인 세션이 시험 병합으로 산출한 값과 일치. 머지된 main 에서 `check_comment_policy.py` rc=0 으로 R4 미러가 행 합과 마커의 일치를 확인한다."
+            },
+            {
+              "name": "자격 증명 경계 3줄이 머지 후에도 서 있다 (검토 단계의 핵심 우려)",
+              "status": "passed",
+              "detail": "검토가 medium 으로 올린 유일한 이유이자 사람을 부른 이유. 머지된 main 의 `session_mcp_git.go` 에서 직접 확인 — userinfo 거부 `:153`(`parsed.User != nil`) · `-c credential.helper=` `:186` · `--` 로 플래그 파싱 중단 `:190` · `GIT_TERMINAL_PROMPT=0`·`GIT_ASKPASS=`·`GCM_INTERACTIVE=never`·`GIT_CONFIG_NOSYSTEM=1` `:204`. 승인 세션이 기록한 줄 번호와 **네 자리 모두 일치**한다(병합이 `data-plane/` 을 한 줄도 건드리지 않았다). R2 배치(`if !c.gated()` 안쪽)도 유지."
+            },
+            {
+              "name": "배포 핀 커밋이 지문을 흐리지 않는다 (executionGuide §1 #5, 정보성)",
+              "status": "passed",
+              "detail": "머지 직후 `chore(deploy): … 9a591748… 로 고정 [skip ci]`(**`e741586`**)가 자동으로 따라왔다. 지침의 예측대로 as-is·to-be 어느 지문도 움직이지 않으므로 재감지의 귀속을 흐리지 않는다. 위 재측정은 전부 이 핀 커밋이 올라온 뒤의 main 에서 돌린 값이다."
+            },
+            {
+              "name": "잔여 gap — 모델 전체 to-be 와의 차이 (정보성, converged 판정 제외)",
+              "status": "passed",
+              "detail": "이 task 의 범위는 **등재 1번 `git_clone` 하나**였고 그것이 닫혔다. 모델 전체로는 등재 **2건**(2. K3s MCP 재노출 · 3. `gh` CLI)이 남아 있고 **둘 다 R9**(AC-F6 자격 증명 배치 개정) 뒤에 있다 — 1번이 빠지면서 로드맵에 남은 것이 전부 그 문 뒤가 됐으므로, 계획이 적었듯 다음 task 의 첫 단계는 도구 코드가 아니라 그 문서 개정이다. 계획이 범위 밖으로 명시한 나머지(private 레포 클론 · 전용 e2e 파일 등재 · 새 주석의 판정 · 클론 크기 상한)도 그대로 남는다. **이 잔여는 converged 판정에 넣지 않는다** — as-is `tools:2 → tools:3` · to-be `roadmap:3 → roadmap:2` 양쪽 지문이 움직였으므로 다음 감지 주기가 후속 task 를 연다. `lastObservedVersion` 은 의도적으로 건드리지 않았다.\n\n관측만 하고 안 건드린 것: PR [#106](https://github.com/dlddu/session-platform/pull/106) 은 여전히 등재 4건 시절 문면을 들고 있어 리베이스 부담이 한 칸 더 늘었다(경쟁 task 를 열지 않고 기록만 남긴다)."
             }
           ]
         }
