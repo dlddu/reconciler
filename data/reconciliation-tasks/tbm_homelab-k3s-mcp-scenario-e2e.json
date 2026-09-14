@@ -4869,7 +4869,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-14T05:06:46Z",
       "changedSides": [
@@ -4886,7 +4886,7 @@
       }
     },
     "createdAt": "2026-09-14T05:06:46Z",
-    "updatedAt": "2026-09-14T06:25:00Z",
+    "updatedAt": "2026-09-14T06:26:00Z",
     "id": "rct_20260914-0002",
     "stateSummary": {
       "asIs": "## as-is — `tests/` 트리 `bd275e9d…` (트리거 `9d2855f` = PR #75, 관측 2026-09-14T05:13:44Z)\n\n**귀속**: 부모 `011ec8e`(배포 핀)에서 두 versionScript 를 재실행하니 저장 baseline 과 바이트 동일\n(`tests`=`7c211948…`, `reg`=`d95fd55b…`). 이동은 **`9d2855f` 단독**이고, 뒤따른 배포 핀 `d036e07` 은\n`tests`·`reg` 양쪽 불변(0 side).\n\n**`tests/` 변경은 2파일뿐** (`git diff --name-status 011ec8e 9d2855f -- tests`):\n- `M tests/integration/_helpers.py` — `EXPECTED_TOOLS` 에서 `namespace_list`·`workload_list`·\n  `workload_logs`·`pod_describe` 4종 제거, `api_resources`·`resource_list`·`resource_get` 3종 추가.\n  **매칭 단위가 아니다**(`_` 접두 공유 헬퍼).\n- `A tests/integration/resource_read_smoke.py` — **신규 매칭 단위 1개.** 모듈 docstring 선언은\n  `검증 시나리오: 없음 (스모크/인프라)` (규칙 3 유형), `실행 대상: primary`, `실행 순서: 1`.\n  `resource_list` → 이름 → `subresource=log` 를 **한 케이스로 이어** 실 apiserver 에서 행이 오는지 단언한다.\n\n**매칭 단위 독립 계수** (`tests/integration/` 최상위 `*.py`, 정의 문면의 제외 `_*.py`·`check_ac_mapping.py` 적용):\n- 부모 **47** → 트리거 **48** (+1 = 신규 스모크)\n- 여기서 비-시나리오 2(`smoke.py`·`resource_read_smoke.py`)와 `run_all.py`(케이스 배차 러너)를 빼면\n  **시나리오 전용 매칭 파일 45** — 부모와 동일.\n- ⚠️ `run_all.py` 는 정의의 제외 열거에 빠져 있으나 **부모에도 동일하게 존재**하므로 이번 트리거의 산물이\n  아니다(모델 정의 문면 보정 사안, tobe-modeler 몫).\n\n**레포 게이트 `tests/integration/check_ac_mapping.py` 를 부모·트리거 두 지점에서 실행**:\n양쪽 **rc=0**, 출력 **바이트 동일** — `시나리오 전집 80 / 예외 1 / 구현 대기 34 / 1:1 대상 45 /\n매칭 파일(전용) 45 / 분할 대기 0 / 공백 0`, \"규칙 1·2·3·4·5·6·7 위반 없음, 불변식 성립\".\n내 독립 계수와 전건 일치.\n\n**구현 측 실측**(게이트가 보지 않는 축): `internal/mcp` 에서 `api_resources`·`resource_list`·\n`resource_get` 이 **트리거에서 처음 등록**됐다 — `gate.go:78·86·91`(쌍 선언) + `toolslist.go:23·38·85`.\n**부모에서는 같은 grep 이 0 히트.** 폐기 읽기 4종은 등록·디스패치·핸들러에서 제거됐다.\n쓰기 축 8종과 `resource_watch` 는 **아직 0 히트**.",
@@ -5049,6 +5049,59 @@
               "startedAt": "2026-09-14T06:20:00Z",
               "finishedAt": "2026-09-14T06:24:00Z",
               "log": "지침 1·2·4·5 — **CI 관측 → 머지 → 머지 후 재확인**. ⑴ 리베이스 헤드 `d93300d` 의 CI [run 34812082945](https://github.com/dlddu/homelab-k3s-mcp/actions/runs/34812082945) **3잡 전부 success**; `fmt + vet` 이 `80 / 1 / 32 / 47 / 47 / 0 / 0` 을 그대로 냈고 모킹 R1~R6·주석 R1~R8 위반 0(등재 27 + 9 · 잔량 9 / 50). ⑵ `integration tests` 로그에 두 파일의 실행 헤더와 전 케이스 통과가 남았다 — `table ok: columns=[...] rows=2` · `size ok: table 638B vs whole objects 5416B (8.5x)` · `shape ok` · `ok: …#시나리오 2`; `precondition ok: managedFields 2건 + last-applied-configuration` · `strip ok: metadata keys 8 (원본 9), spec 동일, status 보존` · `name-required ok` · `ok: …#시나리오 4`; `OK: primary 그룹 35개 파일 전부 통과`. ⑶ **squash 머지** — `bc87a44`. 스쿼시 메시지에 「왜 6 이 아니라 2 인가」 표와 리베이스 기록을 남겼다(지침 3-2). `main` 직접 push 없음. ⑷ 머지 후 `main` 의 CI [run 34812470947](https://github.com/dlddu/homelab-k3s-mcp/actions/runs/34812470947) **3잡 전부 success**. 뒤이은 `827b434` 는 이미지 태그 핀(`k8s/deployment.yaml` 한 파일, `[skip ci]`)이라 이 범위와 무관."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "a05b4a3ebef4bb845ba1d8ae41a8d6d96ca2f3c4",
+          "verifiedAt": "2026-09-14T06:26:00Z",
+          "checks": [
+            {
+              "name": "완료 기준 1 — PR 머지 + main CI 3잡 success",
+              "status": "passed",
+              "detail": "PR #79 가 `bc87a44` 로 squash 머지됐다(`main` 직접 push 없음). 머지 후 `main` 의 CI [run 34812470947](https://github.com/dlddu/homelab-k3s-mcp/actions/runs/34812470947) — `fmt + vet` · `unit tests` · `integration tests` **전부 success**. 리베이스 헤드 `d93300d` 의 PR CI([run 34812082945](https://github.com/dlddu/homelab-k3s-mcp/actions/runs/34812082945))도 3잡 success."
+            },
+            {
+              "name": "완료 기준 2 — 두 e2e 가 main 에 실재하고 실제로 돌았다",
+              "status": "passed",
+              "detail": "`main` 에 `tests/integration/resource_generic_ac2.py`·`resource_generic_ac4.py` 실재. `integration tests` 로그에 실행 헤더와 종료 선언이 남았다 — `===== resource_generic_ac2.py (시나리오: test-resource-generic.md#시나리오 2) =====` → `table ok: columns=['Name','Ready','Up-to-date','Available','Age','Containers','Images','Selector'] rows=2` · `size ok: table 638B vs whole objects 5416B (8.5x)` · `shape ok: rows are scalars, no object noise` · `ok: test-resource-generic.md#시나리오 2`; `resource_generic_ac4.py` → `precondition ok: managedFields 2건 + kubectl.kubernetes.io/last-applied-configuration` · `strip ok: metadata keys 8 (원본 9), spec 동일, status 보존` · `name-required ok: name is required; call resource_list first to find it — …` · `ok: test-resource-generic.md#시나리오 4`; `OK: primary 그룹 35개 파일 전부 통과`. 지침 2-2 가 요구한 `size ok` 배수는 **8.5x**(하한 4) — 「만들어 놓고 실행되지 않는 파일」도 「배차만 되고 아무것도 단언하지 않는 파일」도 아님이 실행 로그로 확인된다."
+            },
+            {
+              "name": "완료 기준 3 — 매핑 게이트 집계와 불변식",
+              "status": "passed",
+              "detail": "`main` 에서 `check_ac_mapping.py` rc=0, 출력 **`시나리오 전집 80 / 예외 1 / 구현 대기 32 / 1:1 대상 47 / 매칭 파일(전용) 47 / 분할 대기 0 / 공백 0`**. 규칙 1·2·3·4·5·6·7 위반 0, 불변식 `80 − 1 − 32 = 47 = 47` 성립, 러너 배차 누락·케이스 미호출 없음. CI `fmt + vet` 잡도 같은 일곱 숫자를 냈다."
+            },
+            {
+              "name": "완료 기준 4 — 거짓이 된 근거가 구현 대기 행에 남지 않았다",
+              "status": "passed",
+              "detail": "`main` 의 구현 대기 표를 행 단위로 검사: **옛 근거 문장(「`internal/mcp` 에 게이트를 타는 도구가 하나도 없다」)을 담은 등재 행 0개**(`main` 진입 전 31행 → 0행). 파일 전체 `grep -c` 는 **2** 이나 둘 다 등재 행이 아니라 **교체를 설명하는 노트와 변경 이력 행이 폐기된 문면을 인용**한 자리다(doc-tracker 402행·617행). 계획의 완료 기준 문면(「구현 대기 32행 어디에도 남아 있지 않다」)은 충족이고, 괄호의 `grep → 0` 프록시는 커밋 2 자신이 그 문장을 인용하므로 원리적으로 0 이 될 수 없다 — 리베이스 전 CI green 이던 `868eff7` 도 같은 값 2 였으므로 리베이스가 만든 차이가 아니다."
+            },
+            {
+              "name": "완료 기준 5 — 자동화 필드만 움직이고 시나리오 본문은 무변경",
+              "status": "passed",
+              "detail": "`docs/test-resource-generic.md` 의 시나리오 2·4 절에 `(미작성)` 없음. 두 필드가 각각 `tests/integration/resource_generic_ac2.py`·`resource_generic_ac4.py` 를 가리킨다. `git diff origin/main..HEAD -- docs/test-resource-generic.md` 가 그 두 `자동화` 필드 외의 줄을 보이지 않는다(사전 조건·실행 단계·기대 결과·검증 AC 전부 무변경)."
+            },
+            {
+              "name": "레포 3게이트",
+              "status": "passed",
+              "detail": "`check_ac_mapping.py` rc=0 · `check_mock_policy.py` rc=0(등재 5 · 미등재 0 · 고아 0 — 새 모킹 지점 없음) · `check_comment_policy.py` rc=0(등재 범위 27 + 9 지문 전부 재현, 미판정 잔량 줄 주석 9 · docstring 50). 리베이스로 잔량 산술을 `87→96`·`22→72` 에서 `0→9`·`0→50` 으로 재산출한 것이 R4·R8 의 `합계 + 잔량 == 실측` 을 양방향으로 통과한다."
+            },
+            {
+              "name": "Go 무변경",
+              "status": "passed",
+              "detail": "머지된 diff 의 변경 파일은 5개(신규 e2e 2 + `docs/test-resource-generic.md`·`docs/doc-tracker.md`·`docs/comment-policy/ledger.md`)뿐이고 `*.go`/`go.mod`/`go.sum` 변경 0개. `unit tests` 잡이 baseline 대로 통과한 것이 그 기계 확인이다. `internal/`·`k8s/` 매니페스트·RBAC·이미지 태그를 이 슬라이스가 건드리지 않았다."
+            },
+            {
+              "name": "as-is 지문 이동(다음 감지 트리거)",
+              "status": "passed",
+              "detail": "`HEAD:tests` 트리 해시가 `bd275e9d675e8e4bbd38afe43932b2aed902cf28` → **`a05b4a3ebef4bb845ba1d8ae41a8d6d96ca2f3c4`** 로 움직였다. to-be 쪽도 함께 움직였다(`sc:29c5fd87… reg:d95fd55b…`/`883c70d5…` → `sc:68e17d4f… reg:8df8bbad…`) — 시나리오 문면은 `자동화` 필드만, 레지스트리는 등재·집계·근거가 바뀐 결과다. 모델의 `lastObservedVersion` 은 건드리지 않았다 — 이 변화가 다음 감지 주기의 트리거가 되어야 한다."
+            },
+            {
+              "name": "잔여 gap (정보성 — converged 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "모델 전체 to-be 기준으로 **구현 대기 32행**이 남는다(시나리오 80 중 ✅ 47 · ⏳ 32 · 🚫 1). 계획이 명시적으로 범위 밖에 둔 것들이며 이 task 의 완료 기준이 아니다 — `k8s/rbac.yaml` 확장과 `platform_auth_safety_ac3.py::EXPECTED_GRANT` 갱신(두 PRD 충돌, ⬜ 소유자 판단 대기) · `#3` limit 상한 처리와 `#20` 후보 산출 알고리즘(자매 모델 `docs-impl`) · 쓰기·스트림 축 e2e 22건과 `tests/k8s/kind/gatekeeper-fixture.yaml`(도구 미등록) · `#19` 의 `check_rbac_matches_tools.py`(기준 자체가 미결) · 모델 정의의 매칭 단위 제외 열거에 `run_all.py` 누락(tobe-modeler 몫). 위 as-is·to-be 양쪽 지문이 움직였으므로 **다음 감지 주기가 후속 task 를 연다** — 이 실행은 후속 task 를 직접 만들지 않는다."
             }
           ]
         }
