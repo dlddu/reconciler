@@ -2665,7 +2665,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "detectedAt": "2026-09-14T09:34:37Z",
       "changedSides": [
@@ -2677,7 +2677,7 @@
       }
     },
     "createdAt": "2026-09-14T09:34:37Z",
-    "updatedAt": "2026-09-14T10:20:00Z",
+    "updatedAt": "2026-09-14T10:24:00Z",
     "id": "rct_20260914-0006",
     "stateSummary": {
       "asIs": "## as-is — 구현(`internal/` + `main.go`), 관측 2026-09-14T09:35Z @ `85e30fd`\n\n**이 트리거는 구현을 한 바이트도 건드리지 않았다.** `internal:51b3adc1… main.go:10cf744a…` 가\n부모 `ce1848a` · 트리거 `723af13` · HEAD `85e30fd` **세 지점 모두 동일**하고 저장된 baseline 과도\n같다(`git diff --stat ce1848a 723af13 -- internal main.go` 공집합). 트리거는 docs 8 + `k8s/rbac.yaml`\n+ `tests/integration/platform_auth_safety_ac3.py` 삭제로만 이뤄졌다.\n\n### 등록된 도구 표면 — 16종 (`internal/mcp/toolslist.go`)\n`api_resources` · `aws_config_get` · `dear_baby_reset_user` · `github_app_installation_token` ·\n`grafana_token` · `opensearch_document_delete` · `opensearch_document_put` · `opensearch_search` ·\n`ping` · `resource_get` · `resource_list` · `session_list` · `session_read` · `session_write` ·\n`workload_restart` · `workload_scale`\n\n- **읽기 축 착지**: `resource_get`·`resource_list`·`api_resources`, 승인 게이트\n  `internal/gatekeeper/gatekeeper.go` 실재(`defaultGatedKind = \"v1/Secret\"`).\n- **쓰기 축 구현 0**: `resource_apply`·`update`·`scale`·`exec`·`attach`·`portforward`·`proxy`·\n  `watch`·`delete_collection`·`restart`·`logs`·`describe` 전부 비-테스트 코드에 **0 히트**.\n  `resource_delete`·`resource_patch` 는 히트가 있으나 전부 **테스트 픽스처**\n  (`gate_test.go:136,147,148` · `gatekeeper_test.go:104`)이고 실제 도구 표면에는 없다.\n- **폐기 6종 중 2종 잔존**: `workload_restart`(7) · `workload_scale`(9) 가 PRD·e2e 없이 서빙 중.\n  읽기 전용 4종(`namespace_list`·`workload_list`·`workload_logs`·`pod_describe`)은 #75 로 제거돼\n  **0 히트**로 확인.\n\n### AC18 구현 — 이번 트리거가 낡게 만든 자리\n`internal/k8s/resource.go:442-451` `apiCallError()` 가 403 을 변환해 운영자에게 내보내는 문자열:\n\n    refused: this server has no (%s, %s) grant. k8s/rbac.yaml is the single source\n    for what it may do; retrying will not change the answer\n\n그리고 `internal/k8s/resource_test.go:94` 가 이 메시지에 리터럴 `\"k8s/rbac.yaml\"` 이 담기는지를\n**단위 테스트로 고정**하며, `:109` 는 비-403 경로에 그 리터럴이 **없어야** 함을 단언한다.\n두 파일 모두 부모·트리거 사이 바이트 불변이다.\n",
@@ -2743,6 +2743,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/85",
           "preparedAt": "2026-09-14T10:00:00Z",
           "notes": "head `59b8f52`, base `85e30fd`(= 준비 시점 main tip), 4파일 +13/-10, GitHub `mergeable: true`(CLEAN). 코드 `internal/k8s/resource.go` 1줄(403 포맷 문자열에서 `k8s/rbac.yaml` 단일 출처 절 제거) · 테스트 `internal/k8s/resource_test.go`(고정 → 부정 단언 전환 + 비-403 음성 대조군을 `\"refused:\"` 마커로 교체 + 머리 주석 3줄) · `internal/mcp/gate_test.go`(주석 2줄, AC11 의 새 소비자로 교정) · `docs/comment-policy/ledger.md`(행 #24·#25 재판정). **로컬 실측 전부 rc=0**: gofmt 공집합 · go vet · go build · go test ./... · check_ac_mapping · check_mock_policy · check_comment_policy(줄 주석 1291 / 잔량 0 / 등재 28 — 계획 전과 동일). **원장 지문은 손으로 짓지 않고 게이트 출력을 옮겼다**(#24 `24d5384b7ec2`→`0b4a9c7a7fc9`, #25 `c885370815a1`→`d759a1ff29e7`; 줄 수 불변이라 합계·잔량 마커는 건드리지 않았다). **음성 대조군 3건 실측**: ⑴ 단일 출처 절 복원 → `resource_test.go:103` FAIL, ⑵ 403 변환 제거 → 쌍·재시도 절 누락으로 FAIL, ⑶ 비-403 경로가 `refused:` 를 내보내게 → `:113` FAIL. **PR 빌드는 운영에 닿지 않는다** — `docker-build-push.yaml` 은 불변 `<sha>` 태그만 발행하고 `latest` 를 만들지 않으며 `pin` 잡은 main 푸시 전용이다. PR #82 와 `internal/k8s/resource{,_test}.go` 를 공유하지만 함수가 서로소(`rankSimilarKinds` ↔ `apiCallError`)이고, 겹치는 실질은 `ledger.md` 행 #25 하나다."
+        },
+        "review": {
+          "required": false,
+          "status": "not_required",
+          "reason": "저위험·가역 범위라 사람 검토 없이 실행 대기로 넘긴다. **실행 코드 변경은 Go 1줄** — 403 에러 포맷 문자열에서 `k8s/rbac.yaml` 단일 출처 절만 걷어내고 AC18 이 요구하는 `(verb, resource)` 쌍과 「재시도 무의미」는 남긴다(나머지 3파일은 테스트 단언·주석·원장 행이다). 도구 표면·매니페스트·env·RBAC·응답 JSON·성공 경로·게이트 판정에 닿는 지점이 0이고, 동작 차이는 **이미 실패한 403 호출의 문구 안에 갇혀 있다**. 게다가 그 경로는 정상 배포에서 아예 돌지 않는다 — `rbac.yaml` 이 `cluster-admin` 이라 403 조합이 성립하지 않고, 메시지는 바인딩이 없거나 좁혀진 비정상 상태에서만 출력된다.\n\n**불가역 지점 없음.** 롤백은 squash 커밋 `git revert` 1건 + 다음 이미지 핀이고, 코드와 원장 두 행이 같은 커밋에 실려 함께 되돌아가므로 revert 후에도 comment-policy 게이트가 그대로 rc=0 이다 — 중간 상태가 남지 않는다. 머지가 이미지 핀을 돌려 파드를 교체하고 그 과정에서 진행 중인 MCP 세션이 끊길 수 있으나, **이 레포의 모든 머지가 그렇고** 바이너리의 관측 가능한 동작이 에러 문구 하나로 한정되므로 사람 판단이 필요한 위험으로 보지 않는다(같은 모델 `rct_20260914-0002` 의 선례와 같은 기준).\n\n**방향에 모호함이 없다.** 문서가 SSOT 라는 이 모델의 대원칙이 방향을 정하고, #83 이 그 문장을 「거짓이므로」 축자로 지웠다. 반대 방향(문서를 되살려 코드에 맞추기)은 `rbac.yaml` 이 `cluster-admin` 인 이상 성립하지 않으므로 판단이 갈릴 여지가 없다. 검토 시점 실측으로 PR 은 `mergeable: true`/CLEAN, base 가 계획 시점 main tip `85e30fd` 그대로이고 CI 2워크플로(5잡) 전부 `success`(head `59b8f52`)이며, 계획 단계에서 단위 테스트 음성 대조군 3건이 실측돼 단언이 공허하지 않음까지 확인됐다.\n\n**실행자가 유일하게 주의할 축**은 머지 순서다 — `docs/comment-policy/ledger.md` 행 #25 가 PR #82 와 겹친다(코드는 함수가 서로소라 충돌면이 아니다). 검토 시점 #82 는 이미 `dirty` 라 어느 쪽이 먼저 들어가든 #82 가 리베이스해야 하고, #85 만 CLEAN 이다. 나중에 머지되는 쪽은 지침의 「리베이스」 절대로 지문·합계를 **손으로 적지 말고** `check_comment_policy.py` 출력값을 옮길 것."
         }
       }
     ]
