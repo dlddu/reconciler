@@ -2220,6 +2220,62 @@
       "reason": "작업이 필요하다. 판정 기준 4개 중 **1·3 이 실질적으로 걸리고, 2 가 문서↔문서 모순의 형태로 걸린다.**\n직전 슬라이스(#75)가 gap 을 실제로 줄였지만(미구현 AC 24 → 15+절반2, 문서 없는 구현 6 → 2) 잔여를\n**명시적으로 범위 밖에 두고** 종료했고, 그 계획이 「범위 밖 잔여는 닫지 않고 이 실행이 만든 버전 변화의\n재감지가 새 task 로 잇게 둔다」고 축자로 적었다 — **이 task 가 그 인계 지점이다.**\n\n**⑴ 지금 착수 가능한 것은 정확히 하나다 — `prd-platform-auth-safety` AC3 ↔ `prd-resource-generic`\nAC19 의 모순 해소.** AC3 은 `k8s/rbac.yaml` 의 부여 집합을 **축자로** 못박고 「워크로드 `delete`/\n`create`, 시크릿 읽기 권한은 부여하지 않는다」로 닫는다. AC19 는 같은 파일의 쌍 집합이 `resource_*`\n도구 표 ∪ 게이트 선언과 **정확히 같아야** 하며 「`secrets` 에는 일곱 verb 를 모두 준다」고 적는다.\n**둘을 동시에 만족하는 `rbac.yaml` 은 존재하지 않는다.** 현재 파일은 AC3 을 만족하고 AC19 를 위반한다.\n이것은 산문상의 흠이 아니라 `platform_auth_safety_ac3.py` 가 살아 있는 ClusterRole 을 **등가로\n단언**하므로 CI 가 멈추는 형태로 존재하며, #75 가 실제로 AC19 쪽으로 파일을 넓혔다가 그 게이트에\n걸려 되돌렸다. tracker 자신이 이것을 신설 `⬜ 미결 — 어느 문서가 이기는지는 소유자 판단` 행으로\n등재하고 **「`resource_*` 쓰기 축은 이 결정 없이는 착수할 수 없다」**고 못박는다.\n\n**⑵ 나머지 잔여는 전부 그 결정 뒤에 줄 서 있다** — 쓰기 축 8종 + `resource_watch`(비-테스트 grep\n0 히트 10종으로 착수 0 확인) → rbac 결정 대기; `workload_restart`·`workload_scale` 제거(기준 3 의\n남은 2종, **지금 프로덕션에서 PRD·e2e 없이 서빙 중임을 이 세션의 도구 목록으로 직접 확인**) → 쓰기\n축 대기; AC19 정적 대조와 `watch` 권한 제거 → 같은 결정. **그래서 다음 슬라이스를 하나로 특정한다:\nAC3↔AC19 결정과 그 결정을 반영한 PRD 개정.** 이것을 먼저 세우지 않으면 planner 가 집을 수 있는\n항목이 하나도 없다.\n\n**인계에 분기를 싣는다(둘 중 하나를 planner 가 골라야 한다).**\n- **AC3 이 이기면**: `prd-resource-generic` AC19 를 「도구 표 ∪ 게이트 선언과 등가」에서 **AC3 의\n  부여 집합 안으로 제한**하도록 고쳐 쓴다. 결과적으로 쓰기 축은 영구히 좁아지고(시크릿 쓰기·워크로드\n  `delete`/`create` 불가), 그 좁아진 표면에 맞춰 `prd-resource-generic` 의 도구 목록 자체를 줄여야\n  한다. RBAC 가 백스톱으로 남는다.\n- **AC19 가 이기면**: `prd-platform-auth-safety` AC3 의 부여 목록을 넓히고\n  `platform_auth_safety_ac3.py` 의 등가 단언을 함께 갱신한다. 이 경우 tracker 가 이미 등재한\n  수용된 위험 「RBAC 백스톱 소멸」이 현실이 되므로(금지 목록이 비면 게이트 결함을 apiserver 가 막아\n  주지 않는다) **AC1·AC5·AC11 의 테스트 밀도를 함께 올리는 것이 계획에 포함돼야 한다.**\n어느 쪽이든 **문서 간 모순 해소가 본체이고 코드 변경은 그 뒤**다. 정의의 「충돌 시 기본 방향」이\n문서를 SSOT 로 두지만, 여기서는 **두 문서가 서로 모순**이라 코드를 맞출 대상 자체가 없다.\n\n**기준 4 는 걸리지 않는다** — tracker 의 「17 → 16」·구현 AC 목록·잔여 목록·「남은 2종」이 내 독립\n실측과 전건 일치한다. **기준 1 의 절반 2건(AC16·AC17)도 지금은 열지 않는다** — 읽기 절반이 정상\n착지했고 쓰기 절반이 쓰기 축과 같은 결정에 묶여 있다.\n\n**`prd-approval-gate` AC3 은 이번에 열지 않는다(측정해서 물러났다).** 「읽기 축이 게이트 대상 호출을\n처음 만들었으니 AC3 이 활성화됐다」는 그럴듯한 발견이었으나 문언을 읽으니 거짓이다 — AC3 이 요구하는\n동사별 상세 중 **지금 도달 가능한 것은 「`get`·`watch`(민감 종류) — 어떤 종류의 어떤 대상을 읽는지」\n한 줄뿐이고, 그것은 `approvalContext()` 가 싣는 원시 `arguments` 전문이 이미 충족한다.** 민감 종류\n**쓰기** 값 가림도, `nodes/proxy` kubelet 경로 표시도 전부 아직 없는 verb 에 묶여 있다. AC6·10·11 도\n미착수 그대로이나 같은 결정 뒤에 있다.\n\n**재감지 경로 점검(선제 task 를 열지 않는 근거가 아니라, 여는 근거다).** 이 잔여는 스스로 깨어나지\n않는다 — 쓰기 축이 착수되지 않는 한 `internal/` 도 `docs/` 도 움직이지 않고, 움직이지 않으면 이\n모델의 두 side 가 모두 정지한다. 게다가 레포 게이트 `check_ac_mapping.py` 는 부모·트리거 양쪽\n**rc=0 · 출력 바이트 동일**이라 이 축을 **원리적으로 보지 못한다**(그 게이트는 AC↔e2e 1:1 축이다).\n⇒ 지금 열지 않으면 이 gap 은 누구의 몫도 아닌 채 남는다.\n\n**함께 보고(이 task 의 범위 밖 — 경쟁 task 를 열지 않는다).** 트리거 PR #75 는 **2026-09-14T05:01:42Z\n에 머지됐는데, 그 PR 을 소유한 `rct_20260913-0002` 는 지금도 `approving`(updatedAt 02:22:00Z)이고\n`attempts[1]` 에 `execution` 키가 없다.** 즉 레코드가 `approved`·`executing` 를 거치지 않은 채\n스테이징된 PR 이 main 에 착지했고, 그 계획의 검증 단계(7~9: 라이브 A·B·C)는 레코드상 수행 기록이\n없다. 다만 **실측으로는 그 검증이 요구한 핵심 결과가 성립한다** — `resource_list v1/Namespace` 가\n37행을 돌려주고(1차 시도를 죽인 「빈 표」 아님), 파드는 restarts 0 으로 Running 이며 광고 16종이\n코드와 일치한다. 이는 실행 내부 사안이므로 여기에 기록만 하고 별도 task 를 열지 않는다. 해당\n레코드를 집는 워커는 **PR #75 가 이미 머지됐다는 전제에서** 이어받아야 한다(계획의 step 4 는 이미\n소비됐다).",
       "assessedBy": "agent",
       "assessedAt": "2026-09-14T05:33:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**`k8s/rbac.yaml` 의 소유 문서를 하나로 정리한다 — `prd-resource-generic` AC19 가 이기고, `prd-platform-auth-safety` AC3 은 열거를 그만둔다. 권한 변경 0.**\n\n**왜 AC19 인가(대안을 저울질한 근거).** AC3 의 부여 목록은 독립적인 보안 정책이 아니라 `resource_*` 이전 도구 집합이 필요로 하던 것의 **전사(transcription)** 다. 실측 셋이 이를 뒷받침한다 — ⑴ AC3 이 요구하는 `watch` 는 코드에 `Watch(` 호출이 **0건**이라 아무도 행사하지 않는 죽은 부여이고, ⑵ AC3 이 요구하는 `pods/exec` 의 `get` 도 exec 경로가 `remotecommand.NewSPDYExecutor(..., \"POST\", ...)` 로 고정돼 있어 **`create` 만** 행사한다(주석이 말하는 WebSocket 폴백은 코드에 없다), ⑶ 워크로드에 `patch`(= 쓰기)를 주면서 `delete`/`create` 만 금지하는 경계는 원리가 아니라 「그때 도구가 필요로 한 것」의 자국이다. 반면 AC19 는 규칙이다 — 「부여 집합 = 실제로 행사되는 쌍」. 게다가 제품의 이동 방향은 이미 AC19 쪽이었고(2026-09-12 에 금지 목록이 `nodes/proxy`·`secrets` 쓰기 둘로 줄었다가 AC19 에서 비워졌고, 「RBAC 백스톱 소멸」은 tracker 에 수용 위험으로 등재됐다) **AC3 만 그 여정에서 갱신되지 않았다.** 즉 두 문서는 경쟁이 아니라 한쪽이 낡은 것이다.\n\n**그래서 무엇을 바꾸나.** AC3 은 부여 집합의 **내용**을 AC19 에 넘기고, 대신 AC19 가 원리적으로 볼 수 없는 플랫폼 불변식 하나만 책임진다 — **배포된 identity 가 `k8s/rbac.yaml` 을 넘지 않는다**(다른 ClusterRoleBinding·그룹 부여가 더 주지 않는다. 이것은 매니페스트만 읽는 정적 검사로는 관측 불가하고 SubjectAccessReview 로만 관측된다). AC19 는 파생의 기준 시점을 **등록된 도구**로 명시하고(오늘의 16종), 「`secrets` 일곱 verb·빈 금지 목록」은 로드맵이 도착할 **종착점**의 기술임을 밝히며, 넓히는 PR 에 **그 verb 의 게이트 경로 라이브 e2e 동반**을 선행 조건으로 못박는다(백스톱이 사라지는 바로 그 지점에 완화를 둔다).\n\n**함께 고치는 것(전부 같은 파일, 전부 기준 2·문서 내부 모순).** ⑴ `prd-resource-generic` AC17 의 마지막 불릿이 「`rbac.yaml` 이 `secrets` 에 쓰기 verb 를 주지 않으므로 권한 밖」이라며 **같은 문서의 AC16·AC19 와 정면으로 모순**한다(이전 판의 잔해). ⑵ 도구 개요 절이 RBAC 대조를 「AC20」이라 가리키는데 실제는 **AC19** 다. ⑶ **AC2 의 `Accept` 문언이 `;v=1` 인데 코드는 `;v=v1` 을 보낸다** — 직전 시도를 죽인 바로 그 결함의 문서판이 아직 살아 있다(구현은 `metav1.SchemeGroupVersion` 파생으로 고쳐졌다). ⑷ `prd-approval-gate` AC11 의 PartialObjectMetadata `Accept` 도 **같은 `;v=1`** 이고 이쪽은 **미구현이라 지뢰가 살아 있다** — 문언대로 구현하면 apiserver 가 오류 대신 전체 객체로 답하므로 게이트가 **승인 전에 Secret 값을 읽는다**(AC11 이 존재하는 이유가 그 자리에서 뒤집힌다).\n\n**완료 기준(이 시도의 범위).** 두 문서가 `k8s/rbac.yaml` 을 두고 서로 다른 주장을 하지 않고, 그 파일의 소유가 한 문서로 정해지며, 기계(`platform_auth_safety_ac3.py`)가 더 이상 AC 문언을 **손으로 전사한 집합**을 강제하지 않는다(전사가 곧 교착의 기전이었다 — 문서를 고쳐도 기계가 옛 문언을 강제하면 아무것도 풀리지 않는다). tracker 의 미결 행이 결정과 함께 닫히고, 그 결정이 만든 후속이 명시적으로 등재된다. **범위 밖**: `k8s/rbac.yaml` 자체(권한 확대·축소 0), AC19 정적 대조 구현, 죽은 부여 2건(`watch`·`pods/exec get`) 제거, 쓰기 축 도구 9종, `workload_restart`·`workload_scale` 제거, `dear_baby_reset_user` 게이트 편입.\n\n**가역성**: 산출물은 문서 5개 + e2e 1개이고 클러스터·이미지·권한에 닿지 않는다. revert 하나로 원복되며 되돌릴 때 재배포가 필요 없다(이 레포의 PR 빌드가 `:latest` 를 미는 것과 무관한 영역이다).",
+          "riskLevel": "high",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`docs/prd-platform-auth-safety.md` AC3 을 개정한다. 부여 집합의 축자 열거와 「워크로드 delete/create, 시크릿 읽기 권한은 부여하지 않는다」를 걷어내고, ⑴ 집합의 내용은 `prd-resource-generic` AC19 가 정한다는 위임과 ⑵ 이 문서가 지키는 불변식(배포된 identity 의 실효 권한 = `k8s/rbac.yaml` 이 선언한 것, 다른 바인딩·그룹이 더 주지 않는다)을 쓴다. 검증 방법도 SubjectAccessReview 기준으로 다시 쓴다.",
+              "expectedOutcome": "AC3 본문에 verb 열거와 금지 목록이 없고, AC19 로의 위임 문장과 SubjectAccessReview 불변식이 있다. AC 총계는 80 으로 불변(신설·삭제 없음)."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/prd-resource-generic.md` AC19 를 개정한다. 파생 기준을 **등록된 도구**(오늘 16종) ∪ 게이트 선언으로 명시하고, 「`secrets` 일곱 verb·빈 금지 목록」이 종착점의 기술임을 밝히며, 넓히는 PR 의 선행 조건에 「그 verb 의 게이트 경로를 라이브로 관측하는 e2e 가 같은 PR 에 있을 것」을 더한다. AC3 과의 관계(무엇을 누가 갖는지)를 한 문장으로 적는다.",
+              "expectedOutcome": "AC19 가 오늘의 `rbac.yaml` 과 모순되지 않고(미등록 도구의 쌍을 오늘 요구하지 않는다), AC3 과 소유가 겹치지 않는다."
+            },
+            {
+              "seq": 3,
+              "action": "같은 파일의 잔해 셋을 고친다 — AC17 마지막 불릿의 「secrets 쓰기는 권한 밖」을 AC16·AC19 와 일치시키고, 도구 개요 절의 `AC20의 RBAC 대조` 를 `AC19` 로, AC2 의 `Accept` 문언 `;v=1` 을 코드가 실제로 보내는 값으로 고친다(폴백 `, application/json` 이 붙어 있어 틀린 값이 오류가 아니라 **빈 표**로 조용히 나타난다는 것을 함께 적는다).",
+              "expectedOutcome": "`grep -n ';v=1' docs/prd-resource-generic.md` 가 0 히트. AC17 이 AC16·AC19 와 같은 것을 말한다. 대조 AC 번호가 실재 AC 를 가리킨다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/prd-approval-gate.md` AC11 의 PartialObjectMetadata `Accept` 문언을 같은 이유로 고치고, 왜 이 문자열이 틀리면 **오류가 아니라 전체 객체**로 돌아오는지(그래서 게이트가 승인 전에 값을 읽게 되는지)를 한 문장으로 박는다.",
+              "expectedOutcome": "`grep -rn ';v=1' docs/` 가 0 히트. AC11 문언대로 구현해도 승인 전 값 읽기가 발생하지 않는다."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/test-platform-auth-safety.md` 시나리오 3 의 기대 결과·자동화 서술을 개정 AC3 에 맞춘다(열거 → 매니페스트 동등 + 매니페스트 밖 거부). 시나리오 번호·개수는 건드리지 않는다.",
+              "expectedOutcome": "`python3 tests/integration/check_ac_mapping.py` rc=0 이고 시나리오 전집·매칭 수가 baseline(전집 80 · 매칭 45 · 공백 0)과 동일하다."
+            },
+            {
+              "seq": 6,
+              "action": "`tests/integration/platform_auth_safety_ac3.py` 를 **전사 제거** 방향으로 고친다. `EXPECTED_GRANT` 리터럴을 지우고 `k8s/rbac.yaml` 을 파싱해 부여 집합을 얻는다(경로는 `Path(__file__).resolve().parents[2]` 로 cwd 비의존 — `run_all.py`·`check_ac_mapping.py` 와 같은 관례). 금지 프로브는 손으로 유지하는 목록 대신 **위험 쌍 카탈로그 − 매니페스트 부여**의 차집합으로 유도해, `rbac.yaml` 이 넓어지면 그 쌍이 자동으로 금지 목록에서 허용 목록으로 옮겨 가게 한다. `tests/integration/requirements.txt` 에 `PyYAML` 을 더한다(lint 잡은 순수 stdlib 라 영향 없음).",
+              "expectedOutcome": "테스트가 AC 문언을 전사하지 않는다. 오늘 값으로는 부여 8쌍 전부 `yes`, 카탈로그 차집합 전부 `no` 로 **baseline 과 같은 판정**이 나온다(권한 변경 0이므로 결과가 달라지면 안 된다). 뮤테이션: `rbac.yaml` 에 가짜 verb 를 더하면 라이브 동등 단언이 그 쌍을 지목하며 실패한다."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/comment-policy/ledger.md` 의 영향 행을 재판정한다 — 주석 원장 #21 과 docstring 원장 #7 이 `platform_auth_safety_ac3.py` 를 범위에 포함하므로, 변경 후 줄 수·지문을 재측정해 갱신하고 결과 칸에 재판정 사유·제거 내역을 적는다. **stage 후에 측정한다**(`git ls-files` 기반이라 `git add` 전에는 눈이 멀었다 — 이 레포에서 세 번 밟은 함정).",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` rc=0 이고 R1~R8 위반 0."
+            },
+            {
+              "seq": 8,
+              "action": "`docs/doc-tracker.md` 를 갱신한다 — 「두 PRD 가 `k8s/rbac.yaml` 을 두고 어긋난다」 미결 행을 **결정과 근거로 닫고**, 「RBAC 백스톱 소멸」 수용 위험에 이번에 붙인 완화(넓히는 PR 의 e2e 동반 선행 조건)를 반영하며, 변경 이력에 이 슬라이스 행을 더하고, 이 결정이 새로 연 후속(죽은 부여 2건 · AC19 정적 대조 · 이제 착수 가능해진 쓰기 축)을 명시적으로 등재한다.",
+              "expectedOutcome": "tracker 에 미결 rbac 행이 남아 있지 않고, 죽은 부여 2건이 근거(코드 `Watch(` 0건 · exec 은 SPDY POST 고정)와 함께 등재된다."
+            },
+            {
+              "seq": 9,
+              "action": "로컬 게이트 3종(`check_comment_policy.py` · `check_ac_mapping.py` · `check_mock_policy.py`)을 **stage 후** 전부 돌리고, 브랜치를 push 해 PR 을 연다. PR 본문에 task id · 결정과 그 반대편(AC3 이 이겼다면 무엇이 달라지는지) · 권한 변경 0 이라는 사실 · 검증 방법을 적는다.",
+              "expectedOutcome": "게이트 3종 rc=0, PR 생성, CI(lint · unit · integration) 관측 가능."
+            }
+          ],
+          "plannedAt": "2026-09-14T05:36:00Z"
+        }
+      }
+    ]
   }
 ]
