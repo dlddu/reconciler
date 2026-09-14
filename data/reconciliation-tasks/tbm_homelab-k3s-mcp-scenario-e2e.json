@@ -5205,7 +5205,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
     "status": "planning",
     "createdAt": "2026-09-14T09:38:49Z",
-    "updatedAt": "2026-09-14T09:51:00Z",
+    "updatedAt": "2026-09-14T09:57:00Z",
     "trigger": {
       "detectedAt": "2026-09-14T09:38:49Z",
       "changedSides": [
@@ -5232,6 +5232,62 @@
       "reason": "작업이 필요하다. **판정 기준 5·6 에 한 건이 걸린다 — 구현 대기 등재 2행이 등재 조건을 잃은 채 표에 남아\n1:1 계수에서 빠져 있고, 그 두 행은 자기 문면으로 자신을 반증한다.**\n\n**무엇이 걸리는가.** 트리거 `723af13`(#83)이 `k8s/rbac.yaml` 을 `cluster-admin` 바인딩으로 바꾸고\n`platform_auth_safety_ac3.py` 를 지우면서 RBAC 축 차단이 일괄 해소됐고, 그 여파로\n`test-resource-generic.md#시나리오 1`·`#시나리오 5` 두 구현 대기 행이 재작성됐다. 새 문면이 스스로 적는다 —\n**「남은 것은 저작뿐이다」**, 해제 조건 **「전용 파일을 저작하면 해제된다. **차단 요인 없음** — gatekeeper\n픽스처도 rbac 도 무관하다」**, 담당 **`이 렌즈(e2e)`**. 그런데 규칙 6 은 **「하네스가 그 상태에 *도달할 수 없어*\ne2e 가 관측할 대상 자체가 없을 때」**의 임시 등재이고(표 근거 열 이름 자체가 「관측 대상이 없는 이유」),\n규칙 4 는 「아직 자동화하지 못했다」를 면제 사유에서 **명시적으로 배제**한다. **「저작만 남았다」는 정의상\n구현 대기가 아니라 규칙 1 의 공백이다.** 해제 조건도 순환형이다 — 표가 면제해 주는 바로 그 작업이 표에서\n빠지는 조건으로 적혀 있다.\n\n**독립 실측으로 「차단 요인 없음」을 확인했다**(문면을 액면으로 받지 않았다): ⑴ `resource_list`·`resource_get`\n은 `internal/mcp/toolslist.go:38,85` 에 **등록**돼 있고 `internal/server/mcp_test.go:108` 의 도구 목록 단언에도\n올라 있다, ⑵ `rbac.yaml` 은 실제로 `cluster-admin` 바인딩 하나뿐이라 `services`·`configmaps`·`ingresses`·\nCRD·`deployments/scale` 이 전부 권한 안이다, ⑶ 두 시나리오의 `자동화` 필드가 **「(미작성)」** 이고 계획 파일명\n(`resource_generic_ac1.py`·`resource_generic_ac5.py`)까지 적혀 있다. 나머지 9 개 구현 대기 행은 살아 있는\n차단 요인을 유지한다(도구 미등록 grep 0 히트 · gatekeeper 픽스처 부재 · `limit` 문서↔구현 불일치) ⇒\n**범위는 정확히 2 행이다.**\n\n**기계 축은 깨끗하다는 것을 먼저 말해 둔다(그래서 이것이 유일한 gap 이다).** 시나리오 3·19 결번과\n`platform_auth_safety_ac3.py` 삭제는 **짝의 양쪽이 함께** 사라져 전단사를 보존했고(−1 시나리오/−1 파일),\n레지스트리 행 수 78 · 집계 블록 · 게이트 출력 · 내 독립 재계수가 **78/1/31/46/46/0 으로 전건 일치**하며,\n`check_ac_mapping.py` 는 부모·트리거 양쪽 **rc=0** 이다. 규칙 2 위반 0 · 중복 전용 0 · 고아 선언 0.\n\n**왜 지금 열어야 하는가 — 재감지 경로도 소유자도 없다.**\n- **게이트가 원리적으로 못 본다.** `doc-tracker.md` 자신이 축자로 적는다 — 「집계와 게이트는 이 어긋남을\n  원리적으로 보지 못한다 — `check_ac_mapping.py` 는 행을 세고 선언↔등재를 대조할 뿐 **각 행의 근거가 코드에\n  비추어 참인지는 검사하지 않는다**」. 두 행이 표에 있는 한 불변식은 `78 − 1 − 31 = 46` 으로 **영원히 닫힌다**.\n  참 상태로 다시 세면 **1:1 대상 48 · 매칭 파일 46 · 공백 2**(규칙 5 집계 불일치)다.\n- **버전이 다시 움직일 이유가 없다.** 두 행은 정적 텍스트이고, 막던 RBAC 축은 이미 사라졌다. 누가 손대지\n  않으면 `docs/test-*.md` 도 `doc-tracker.md` 도 `tests/` 도 이 축 때문에는 움직이지 않는다.\n- **자매 축과 서로소임을 인용으로 확인했다.** 같은 트리거로 형제 detector 가 연\n  `tbm_homelab-k3s-mcp-docs-impl rct_20260914-0006`(`action_required`)의 레코드 전문에\n  `시나리오 1`·`시나리오 5`·`저작`·`resource_generic_ac1`·`resource_generic_ac5`·`차단 요인 없음`\n  **전부 0 히트**이고, 그쪽 축은 `internal/k8s/resource.go:447` 의 403 메시지 문자열이다. 트리거 자신도\n  구현 대기 표의 담당 열로 이 두 행을 **`이 렌즈(e2e)`** 에 귀속시킨다 — 인계가 레포 안에 문자로 있다.\n- **「수용된 위험 / 미결 사항」 표에 없다** ⇒ 소유자 판단 대기가 아니라 미처리 인계다.\n\n**유예(recheckAfter)를 고르지 않은 이유.** 자동 해소 가능성이 0 이다 — 롤아웃 중도 아니고, 일시적 alert 도\n아니며, 두 행을 지울 주체가 이 렌즈 자신이다. 파킹하면 4 분마다 깨어나 같은 문면을 다시 읽을 뿐이다.\n\n---\n\n## planner 인계\n\n**범위: 정확히 2 행.** `test-resource-generic.md#시나리오 1`(임의 종류를 좌표로 조회한다, 검증 AC1) ·\n`#시나리오 5`(서브리소스 조회, 검증 AC5).\n\n**기본 갈래 — 전용 파일 2개를 저작하고 두 행을 구현 대기 표에서 뺀다.**\n- `tests/integration/resource_generic_ac1.py` · `resource_generic_ac5.py` (문서의 `자동화` 계획 필드가\n  이미 이 이름을 적는다). **파일당 `검증 시나리오:` 선언은 정확히 1개**(규칙 2·3) — 둘을 한 파일에 겸하면\n  그 자체가 규칙 2 위반이다. **같은 PR 에 섞지 말 것**: 시나리오 1 은 픽스처 신설이 따라오고 5 는 기존\n  `workload-fixture` 위에서 끝나므로, 되돌릴 때 함께 되돌아간다.\n- **시나리오 1 은 픽스처 CRD 설치가 선행한다** — `tests/k8s/kind/` 에 CRD 픽스처가 **없다**(현재 11종:\n  auth·dear-baby·github-mock·grafana-mock·http-trace·kustomization·minio·oidc·opensearch·session-platform·\n  test-deployment). 이것은 차단 요인이 아니라 **이 렌즈 자신의 트리 안 저작**이다(`kustomization.yaml` 등록까지).\n  기대 결과가 **일곱 종류 모두 목록 반환**이므로 `v1/Service`·`v1/ConfigMap`·`networking.k8s.io/v1/Ingress`\n  실물도 픽스처에 있어야 「반쪽 단정」을 피한다.\n- **시나리오 5 는 `tailLines=5001` 이 「클램프되지 않고 **거부**」임에 주의** — 시나리오 3 의 `limit=1000`\n  「강제 하향」과 정반대 문면이고, 3 쪽 불일치는 자매 `docs-impl` 소관이다. 5 의 단언을 3 의 해석에 맞추지 말 것.\n  또한 이 시나리오는 **모든 호출이 `get` verb 라 승인 요청이 생기지 않아야 한다**는 것 자체가 단언 항목이다.\n- **같은 PR 에서 등재 SSOT 를 함께 갱신해야 게이트가 통과한다**(규칙 5 · 기계 검사): `<!-- scenario-e2e-집계 -->`\n  블록 · `### 시나리오 레지스트리 (78) — …` 헤딩 숫자 · 그 아래 불변식 산문 · 레지스트리 두 행의 상태 ·\n  `### ⏳ 구현 대기 (N)` 헤딩 · 변경 이력 행. **두 행이 다 빠지면 `78 − 1 − 29 = 48 = 매칭 파일 48`**.\n  한 슬라이스만 하면 `78 − 1 − 30 = 47 = 47`. **숫자는 손으로 짓지 말고 `python3 tests/integration/check_ac_mapping.py`\n  출력에서 뽑을 것**(이 레포는 원장 산문 숫자가 마커와 어긋나는 전례가 반복됐다).\n- **완료 기준**: 게이트 rc=0 · 공백 0 · 분할 대기 0 이면서, 구현 대기 표에 **「차단 요인 없음」/「저작뿐」이라\n  적힌 행이 0개**가 되는 것. 게이트 초록만으로는 이 조건이 증명되지 않으므로 표를 눈으로 확인해야 한다.\n\n**대안 갈래 — 재실측 결과 진짜 차단 요인이 나오면 파일 대신 *근거를 고친다*.** 트리거가 「각 행은 아직\n재실측하지 않았다」고 스스로 유보했으므로, planner 가 재실측해 실제 벽(예: 픽스처 CRD 를 kind 에 올리는\n경로가 없다 등)을 찾으면 산출물은 e2e 파일이 아니라 **그 벽을 적은 근거·해제 조건 재작성**이다. 어느 쪽이든\n**「저작만 남았다」라는 문장이 구현 대기 표에 남아 있는 상태는 종료 조건이 아니다.**\n\n**함께 볼 것(독립 task 로 열지 않는다 — 기록만).**\n1. **9 개 행의 낡은 산문.** 시나리오 3·6·8·12·13·14·15·17·20 이 여전히 「`k8s/rbac.yaml` 의 ClusterRole 밖」을\n   차단 근거·해제 조건으로 인용하는데 그 파일에 ClusterRole 은 **없다**. 각 행이 살아 있는 다른 차단 요인\n   (도구 미등록·gatekeeper 픽스처·`limit` 불일치)을 유지하므로 **등재 자체는 유효**하고 집계도 맞는다 ⇒\n   독립 gap 이 아니다. **어차피 그 표를 다시 쓰는 이 슬라이스에서 함께 정정하라.**\n2. **staged PR #82**(`rct_20260914-0004`, `awaiting_review`) — 부모 `ce1848a` 에서는 **rc=0 충돌 0**,\n   트리거 `723af13` 과 tip `85e30fd` 에서 **rc=1**, 충돌 파일 `docs/comment-policy/ledger.md`·`docs/doc-tracker.md`\n   ⇒ **이 트리거가 원인**이다(이전 이월 아님). 실행 내부 사안이라 경쟁 task 를 열지 않지만 두 가지를 넘긴다:\n   ⒜ #82 의 변경 이력 행이 **「⏳ 32 · 1:1 대상 47」** 을 적는데 트리거 이후 실측은 **31 · 46** 이다 — 리베이스 시\n   체커 출력으로 다시 뽑아야 한다. ⒝ #82 는 시나리오 20 의 차단 ⑴ 을 해소하는데 그 행의 ⑵ (「CRD `list` 가\n   ClusterRole 밖」)는 **이미 거짓**이다 ⇒ **#82 가 머지되는 순간 시나리오 20 이 세 번째 「차단 요인 없음」 행이\n   된다**(다음 감지에서 채점할 것).\n3. **staged PR #80**(`rct_20260914-0002`) — 자기 계획 핀 `d036e07` 에서 rc=0, 부모 `ce1848a` 에서 rc=1(2파일,\n   #78 이월), 트리거에서 rc=1(**7파일로 확대**). 더 중요한 것은 충돌이 아니라 **전제 소멸**이다(계획 요지가\n   「AC19 가 이기고 AC3 은 열거를 그만둔다·권한 변경 0」인데 #83 이 **둘 다 결번 처리**했다). **내 축의 위험은\n   조용한 되돌림이다** — #80 은 `tests/integration/platform_auth_safety_ac3.py` 와\n   `docs/test-platform-auth-safety.md` 를 수정하는데 #83 이 그 파일을 삭제하고 시나리오 3 을 제거했으므로,\n   충돌을 「이 PR 쪽을 취한다」로 풀면 **삭제된 e2e 와 시나리오 3 이 되살아난다**. 그 레코드는 점유 상태라\n   한 줄도 쓰지 않았고, 형제 `docs-impl rct_20260914-0006` 이 이미 「#83 이 질문 자체를 없애 소멸했다」로 기록했다.\n",
       "assessedBy": "agent",
       "assessedAt": "2026-09-14T09:47:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**범위(완료 기준) — `test-resource-generic.md#시나리오 5`(서브리소스 조회) 한 건만 닫는다.** gap 은 구현 대기 표에 「저작뿐 / 차단 요인 없음」이라 적힌 2행(시나리오 1·5)이 등재 조건을 잃은 채 1:1 계수에서 빠져 있다는 것이고, 이 시도는 그중 **시나리오 5** 만 전용 e2e 로 착지시켜 그 행을 표에서 뺀다. 둘을 한 PR 에 섞지 않는 이유는 되돌림 단위다 — 시나리오 1 은 CRD 픽스처 설치와 일곱 종류 단정이 따라오고 5 는 로그·스케일 축에서 끝나므로, 한 PR 이면 한쪽이 CI 에서 막힐 때 다른 쪽까지 함께 되감긴다(감지 인계도 같은 결론을 적었다). **5 를 먼저 고른 근거**: ⑴ 단언의 대부분이 PR #72 에서 폐기된 `workload_logs_ac{1,2,3,4}.py` 에 **이미 CI 를 통과한 형태로 존재**하고 시나리오 5 문면이 그 승계를 명시한다, ⑵ 필요한 선행이 「출력을 내는 다중 컨테이너 파드」 하나뿐이라 신규 CI 대기 스텝이 없다(파일이 자기 선행 조건을 폴링으로 성립시키는 이 레포의 규율 그대로), ⑶ 대상 코드가 전부 구현·부여돼 있음을 실측했다(`internal/mcp/resource.go:199-212` 의 tail 상한, `internal/k8s/resource.go:368-396` 의 pods/log, dynamic 경로의 `scale` 서브리소스, `k8s/rbac.yaml` 은 `cluster-admin` 바인딩). 산출물은 e2e 1 파일 + 픽스처 1 파일 + CI 적용 스텝 1 줄 + 등재 SSOT 갱신이고, **실행 코드(`internal/`·`cmd/`)는 한 줄도 건드리지 않는다**. 같은 표를 다시 쓰는 김에 감지가 「독립 gap 이 아니니 이 슬라이스에서 함께 정정하라」고 넘긴 **구현 대기 9행의 낡은 RBAC 문면**(사라진 ClusterRole 을 차단 근거로 인용)도 행별 재실측으로 바로잡는다 — 계수는 변하지 않는다. **범위 밖**: 시나리오 1(`resource_generic_ac1.py` + CRD 픽스처)은 이 PR 이 만드는 버전 변화의 재감지가 다음 task 로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`tests/k8s/kind/resource-generic-fixture.yaml` 신설 — `workload-test` 네임스페이스에 컨테이너 둘(`emitter` 20줄 방출 후 sleep · `sidecar` 3줄 방출 후 sleep)인 Deployment `resource-generic-logs` 하나. `test-deployment.yaml` 에 컨테이너를 더하지 않는다(폐기된 `workload_logs_ac2.py` 주석이 「별도 워크로드 신설이 선행」이라고 남긴 그 이유 + 그 파일은 주석 원장 등재 범위라 손대면 같은 PR 에서 재판정 의무가 붙는다).",
+              "expectedOutcome": "kind 에 적용하면 파드가 Ready 로 서고 `kubectl logs -c emitter` 가 20줄, `-c sidecar` 가 3줄을 돌려준다. 파일에 모킹 토큰(`*-mock` 등)이 없어 `check_mock_policy.py` 허용목록·상한은 불변."
+            },
+            {
+              "seq": 2,
+              "action": "`.github/workflows/ci.yml` 의 integration 잡에 `kubectl apply -f tests/k8s/kind/resource-generic-fixture.yaml` 스텝 1개를 워크로드 픽스처 적용 직후에 추가. **rollout 대기 스텝은 두지 않는다** — 준비 대기는 e2e 파일이 자기 선행 조건으로 폴링한다.",
+              "expectedOutcome": "integration 잡에서 픽스처가 적용된다. 파일별 실행 스텝은 여전히 `run_all.py` 자동 발견이 맡으므로 새 e2e 때문에 ci.yml 이 더 바뀌지는 않는다."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/integration/resource_generic_ac5.py` 저작 — 모듈 docstring 에 `검증 시나리오: test-resource-generic.md#시나리오 5` **한 줄만**(규칙 2·3)과 `실행 대상: primary`. 케이스 여섯: ⑴ 기본 tail 과 `tailLines=5` 의 실제 축소(반환이 전체 출력의 **접미사 5줄**임까지), ⑵ `tailLines=5001` 이 클램프가 아니라 **거부**(McpError `-32602`), ⑶ 크래시 루프 파드에 `previous=true` 가 직전 인스턴스 마커를 주고 **현재 인스턴스 마커는 없다**, ⑷ 다중 컨테이너 파드에 `container` 누락이 거부되고 **두 컨테이너 이름이 후보로** 나온다, ⑸ `subresource=scale` 이 Scale 객체를 준다(`resource == deployments/scale`, `spec.replicas == 1`, 전문 Deployment 가 아님을 `spec.template` 부재로 확인), ⑹ 대조군 — 게이트 대상(`v1/Secret` 의 `get`)은 같은 서버에서 `approval gate is not configured` 로 거부된다.",
+              "expectedOutcome": "`python3 tests/integration/check_ac_mapping.py` 가 이 파일을 시나리오 5 의 전용 파일로 세고, `run()` 이 여섯 케이스를 전부 호출한다(체커의 하네스 무결성 검사 통과). 로컬에서는 클러스터가 없어 실행 자체는 CI 의 `integration tests` 잡에서만 관측된다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/test-resource-generic.md` — 시나리오 5 의 `자동화` 필드에서 `(미작성)` 을 지우고 `통합 tests/integration/resource_generic_ac5.py` 를 적되 Go 단위 계획은 시나리오 2·4 와 같은 표기로 남긴다(규칙 7). 「픽스처」 절에 다중 컨테이너 파드가 계획된 `resource-generic-fixture.yaml` 에 먼저 착지했다는 한 줄을 더한다.",
+              "expectedOutcome": "체커의 규칙 7 검사가 통과한다(전용 파일이 실재하는데 `(미작성)` 이 남아 있으면 실패, 없는데 파일을 참조해도 실패)."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/doc-tracker.md` 등재 SSOT 갱신 — ⑴ 레지스트리의 시나리오 5 행을 `⏳ 구현 대기` → `✅ 전용 파일 resource_generic_ac5.py`, ⑵ ⏳ 표에서 그 행 삭제, ⑶ `<!-- scenario-e2e-집계 -->` 블록(구현 대기 31→30 · 1:1 대상 46→47 · 매칭 파일 47), ⑷ 레지스트리·⏳ 절 헤딩의 괄호 숫자와 그 아래 불변식 산문, ⑸ 변경 이력 행 1개. **숫자는 손으로 짓지 않고 `check_ac_mapping.py` 출력에서 뽑는다.**",
+              "expectedOutcome": "`check_ac_mapping.py` 가 rc=0 이고 출력이 `시나리오 전집 78 · 예외 1 · 구현 대기 30 · 1:1 대상 47 · 매칭 파일(전용) 47 · 분할 대기 0 · 공백 0`."
+            },
+            {
+              "seq": 6,
+              "action": "같은 표에 남은 **구현 대기 9행의 낡은 RBAC 문면 정정**(시나리오 3·6·8·10·12·13·14·15·17, 그리고 20 의 ⑵). 각 행에서 사라진 ClusterRole 을 인용하는 대목만 걷고 **그 행의 살아 있는 차단 요인은 재실측해 그대로 둔다** — 도구 미등록은 `\"resource_*\"` Go 문자열 grep 0 히트로, gatekeeper 픽스처 부재는 `tests/k8s/kind/` 목록으로 다시 쟀다. 등재 자체는 유효하므로 **계수는 변하지 않는다**.",
+              "expectedOutcome": "⏳ 표의 어느 행도 `k8s/rbac.yaml` 의 ClusterRole 을 차단 근거·해제 조건으로 인용하지 않는다. 집계 숫자는 5단계 결과와 동일하게 유지된다(rc=0)."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/comment-policy/ledger.md` 의 **잔량 마커 둘**을 신규 두 파일이 들여온 실측치로 올린다(줄 주석·docstring 각각). 판정 자체는 하지 않는다 — 그것은 자매 모델 `tbm_homelab-k3s-mcp-comment-redundancy` 의 몫이고, 잔량은 「이만큼은 아직 판정받지 않았다」는 선언이다(#79 선례).",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` 가 rc=0. R4·R8 의 「합계 + 잔량 == 실측 전체」가 닫힌다. **`git add -A` 후에 재실행해야 한다** — 게이트가 `git ls-files` 로 범위를 잡아 stage 전에는 신규 파일이 보이지 않는다."
+            },
+            {
+              "seq": 8,
+              "action": "로컬 게이트 3종(`check_ac_mapping.py` · `check_mock_policy.py` · `check_comment_policy.py`)을 stage 후 재실행해 rc=0 을 확인하고, 브랜치를 밀어 대상 레포에 PR 을 연다(머지하지 않는다).",
+              "expectedOutcome": "세 게이트 rc=0. PR 이 열리고 CI 세 잡(`fmt + vet` · `unit tests` · kind `integration tests`)이 돈다."
+            },
+            {
+              "seq": 9,
+              "action": "PR 을 연 뒤 **base 가 움직였는지 한 번 더 잰다**(형제 워커의 #80·#82 가 같은 `docs/doc-tracker.md` 를 건드린다). 움직였으면 리베이스하고 집계 숫자를 **체커 출력에서 다시 뽑는다** — 마커는 가산이 아니라 실측값이라 「양쪽 다 취함」이 틀린다.",
+              "expectedOutcome": "`mergeable` 이 clean 이고, 리베이스가 필요했다면 리베이스 후 head 에서 게이트 3종이 다시 rc=0."
+            }
+          ],
+          "plannedAt": "2026-09-14T09:57:00Z"
+        }
+      }
+    ]
   }
 ]
