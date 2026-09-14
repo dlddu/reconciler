@@ -4869,7 +4869,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "detectedAt": "2026-09-14T05:06:46Z",
       "changedSides": [
@@ -4886,7 +4886,7 @@
       }
     },
     "createdAt": "2026-09-14T05:06:46Z",
-    "updatedAt": "2026-09-14T06:00:47Z",
+    "updatedAt": "2026-09-14T06:25:00Z",
     "id": "rct_20260914-0002",
     "stateSummary": {
       "asIs": "## as-is — `tests/` 트리 `bd275e9d…` (트리거 `9d2855f` = PR #75, 관측 2026-09-14T05:13:44Z)\n\n**귀속**: 부모 `011ec8e`(배포 핀)에서 두 versionScript 를 재실행하니 저장 baseline 과 바이트 동일\n(`tests`=`7c211948…`, `reg`=`d95fd55b…`). 이동은 **`9d2855f` 단독**이고, 뒤따른 배포 핀 `d036e07` 은\n`tests`·`reg` 양쪽 불변(0 side).\n\n**`tests/` 변경은 2파일뿐** (`git diff --name-status 011ec8e 9d2855f -- tests`):\n- `M tests/integration/_helpers.py` — `EXPECTED_TOOLS` 에서 `namespace_list`·`workload_list`·\n  `workload_logs`·`pod_describe` 4종 제거, `api_resources`·`resource_list`·`resource_get` 3종 추가.\n  **매칭 단위가 아니다**(`_` 접두 공유 헬퍼).\n- `A tests/integration/resource_read_smoke.py` — **신규 매칭 단위 1개.** 모듈 docstring 선언은\n  `검증 시나리오: 없음 (스모크/인프라)` (규칙 3 유형), `실행 대상: primary`, `실행 순서: 1`.\n  `resource_list` → 이름 → `subresource=log` 를 **한 케이스로 이어** 실 apiserver 에서 행이 오는지 단언한다.\n\n**매칭 단위 독립 계수** (`tests/integration/` 최상위 `*.py`, 정의 문면의 제외 `_*.py`·`check_ac_mapping.py` 적용):\n- 부모 **47** → 트리거 **48** (+1 = 신규 스모크)\n- 여기서 비-시나리오 2(`smoke.py`·`resource_read_smoke.py`)와 `run_all.py`(케이스 배차 러너)를 빼면\n  **시나리오 전용 매칭 파일 45** — 부모와 동일.\n- ⚠️ `run_all.py` 는 정의의 제외 열거에 빠져 있으나 **부모에도 동일하게 존재**하므로 이번 트리거의 산물이\n  아니다(모델 정의 문면 보정 사안, tobe-modeler 몫).\n\n**레포 게이트 `tests/integration/check_ac_mapping.py` 를 부모·트리거 두 지점에서 실행**:\n양쪽 **rc=0**, 출력 **바이트 동일** — `시나리오 전집 80 / 예외 1 / 구현 대기 34 / 1:1 대상 45 /\n매칭 파일(전용) 45 / 분할 대기 0 / 공백 0`, \"규칙 1·2·3·4·5·6·7 위반 없음, 불변식 성립\".\n내 독립 계수와 전건 일치.\n\n**구현 측 실측**(게이트가 보지 않는 축): `internal/mcp` 에서 `api_resources`·`resource_list`·\n`resource_get` 이 **트리거에서 처음 등록**됐다 — `gate.go:78·86·91`(쌍 선언) + `toolslist.go:23·38·85`.\n**부모에서는 같은 grep 이 0 히트.** 폐기 읽기 4종은 등록·디스패치·핸들러에서 제거됐다.\n쓰기 축 8종과 `resource_watch` 는 **아직 0 히트**.",
@@ -4974,6 +4974,83 @@
           "reason": "영향 범위가 테스트·문서에 갇혀 있고 불가역 지점이 없어 사람 검토 없이 실행해도 되는 건으로 본다. PR #79 의 실제 diff 는 5파일(신규 e2e 2개 + 마크다운 3개)뿐이고 `internal/`·`k8s/` 매니페스트·RBAC·이미지 태그를 하나도 건드리지 않는다 — 새 e2e 는 `resource_list`/`resource_get` 읽기만 행사하고 CI 전용 kind 클러스터에서만 돌아 프로덕션 트래픽·데이터 영향이 0이며, 문제가 드러나면 스쿼시 커밋 revert 한 번으로 완전 복구된다(집계·레지스트리·잔량 마커가 한 커밋에 함께 들어 있어 revert 자체도 게이트를 통과한다). 판정 근거가 낡았는지도 확인했다 — 계획 핀 `d036e07` 이후 main 이 2커밋 움직였으나(PR #78 + 배포 핀) 그 `internal/` 변경은 **주석 삭제뿐**으로 실행 코드가 한 줄도 바뀌지 않았고(`ListDefaultLimit 100`·`ListMaxLimit 500` 그대로), `k8s/rbac.yaml` 과 시나리오 헤딩 80개도 불변이라 RBAC 경계에 기댄 「6→2」 재측정은 그대로 성립한다. 다만 실행 전 **리베이스가 필수**다: PR #78 이 `docs/comment-policy/ledger.md` 의 잔량을 87/22 → 0/0 으로 이미 몰아 이 PR 의 잔량 산술(87→96 · 22→72)이 어긋나고 `docs/doc-tracker.md` 도 양쪽이 만져 현재 `mergeable:false`(dirty) 다 — 둘 다 머지가 막히거나 `check_comment_policy.py` R4·R8 이 CI 를 붉게 만들어 기계로 드러나는 종류이므로 사람 판단이 필요한 위험은 아니다. 실행 지침 3-1 의 `internal/` 무변경 조건은 문면상 걸리지만 실질은 주석뿐이니 그것만으로 `failed` 로 닫지 말고 리베이스 후 게이트 재산출로 판정할 것.",
           "reviewer": "agent",
           "reviewedAt": "2026-09-14T05:58:50Z"
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-14T06:01:00Z",
+          "finishedAt": "2026-09-14T06:24:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T06:01:00Z",
+              "finishedAt": "2026-09-14T06:04:00Z",
+              "log": "재확인 — `main` 이 계획 핀 `d036e07` 에서 **두 커밋 움직여**(`cddc6b9` PR #78 + `cc5041f` 배포 핀) PR #79 가 `DIRTY` 였다. 지침 3-1 의 전제 넷을 실측: ⑴ `k8s/rbac.yaml` diff 공집합 ⑵ `internal/` 은 변경이 있으나 **전부 주석** — `-U0` diff 의 비-주석 변경 줄 0개, 주석 제거 후 `internal/k8s/resource.go`·`internal/mcp/resource.go` 바이트 동일, `ListDefaultLimit 100`·`ListMaxLimit 500` 불변 ⑶ `docs/doc-tracker.md` 를 PR #78 이 변경 이력 1행으로 만짐(충돌 예상) ⑷ `docs/test-*.md` diff 공집합·시나리오 헤딩 80 불변. review 의 판정대로 ⑵ 는 실질 무변경이므로 `failed` 로 닫지 않고 리베이스로 진행."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T06:05:00Z",
+              "finishedAt": "2026-09-14T06:06:00Z",
+              "log": "`tests/integration/resource_generic_ac2.py` — 준비 단계 산출물이 리베이스를 **무충돌로** 통과(선언 `검증 시나리오: test-resource-generic.md#시나리오 2` · `실행 대상: primary` 그대로). `run_all.py --group primary --list` 28번째에 정확히 1회 배차."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T06:05:00Z",
+              "finishedAt": "2026-09-14T06:06:00Z",
+              "log": "`tests/integration/resource_generic_ac4.py` — 리베이스 무충돌(마지막 커밋 `868eff7` 의 `--show-managed-fields` 수정 포함). 선언 정상, 29번째 1회 배차."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T06:06:00Z",
+              "finishedAt": "2026-09-14T06:07:00Z",
+              "log": "규칙 7 — 리베이스 무충돌. `main` 에서 재확인: 시나리오 2·4 절 어디에도 `(미작성)` 없음, 두 `자동화` 필드가 실제 파일을 가리킴. `git diff` 가 그 두 필드 외의 줄을 보이지 않음(시나리오 본문 무변경)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T06:07:00Z",
+              "finishedAt": "2026-09-14T06:11:00Z",
+              "log": "레지스트리 2행 ⏳→✅ + 집계 갱신은 리베이스 무충돌. **`docs/doc-tracker.md` 변경 이력에서만 충돌** — PR #78 이 같은 표에 1행을 먼저 넣었다. 해소: 두 행을 **모두 보존**하고 최신(이 슬라이스)을 위로. 두 행의 상태 칸은 서로 다른 축(주석 원장 vs 시나리오 레지스트리)이라 값 충돌 없음. 다만 이 슬라이스가 주석 잔량도 움직이므로 우리 행의 상태 칸에 `주석 잔량 0/0 → 9/45` 를 덧붙여 이력이 그 이동을 감추지 않게 했다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T06:07:00Z",
+              "finishedAt": "2026-09-14T06:11:00Z",
+              "log": "구현 대기 32행 근거 교체 — 리베이스 무충돌. `main` 에서 재확인: **구현 대기 표 34행(헤더·구분선 포함) 중 옛 근거 문장을 담은 행 0개.** 파일 전체 `grep -c` 는 2 이나 둘 다 **교체를 설명하는 노트(402행)와 변경 이력 행(617행)이 옛 문면을 인용**한 것이고 등재 행이 아니다 — `main` 기준 31 → 2. 계획의 완료 기준 문면(「32행 어디에도 남아 있지 않다」)은 충족, 괄호 안의 `grep → 0` 프록시는 커밋 2 자신이 그 문장을 인용하므로 원리적으로 0 이 될 수 없다(리베이스 전 `868eff7` 도 동일하게 2)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T06:11:00Z",
+              "finishedAt": "2026-09-14T06:16:00Z",
+              "log": "`docs/comment-policy/ledger.md` 잔량 마커 — **충돌, 재산출**. PR #78 이 두 표면의 잔량을 `87/22 → 0/0` 으로 닫아 이 PR 의 산술(`87→96`·`22→72`)이 낡았다. 더하는 줄 수(줄 주석 9 · docstring 50)는 불변이므로 `0→9`·`0→50` 으로 다시 세우고, 노트 문면도 그에 맞춰 고쳤다(`위 0→87 항목과 같은 처리` · 등재 행 수 24→27). 부수적으로 리베이스 전 브랜치가 docstring 노트를 쓰며 **다음 문단의 첫 문장을 삼켰던 자리**(「잔량 0 은 「끝났다」가 아니라」가 잘려 있었다)가 `main` 쪽 온전한 문장으로 복원됐다. `git add` 후 `check_comment_policy.py` rc=0 — 등재 27 + 9 행 지문 전부 재현, 움직인 것은 잔량뿐."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T06:16:00Z",
+              "finishedAt": "2026-09-14T06:18:00Z",
+              "log": "리베이스 후 로컬 3게이트 재산출: `check_ac_mapping.py` rc=0 **`80 / 1 / 32 / 47 / 47 / 0 / 0`** 불변식 성립 · `check_comment_policy.py` rc=0 · `check_mock_policy.py` rc=0. `origin/main..HEAD` 변경 파일 5개(신규 e2e 2 + 마크다운 3), **`*.go`/`go.mod`/`go.sum` 변경 0개** — Go 무변경이 기계로 확인된다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T06:18:00Z",
+              "finishedAt": "2026-09-14T06:20:00Z",
+              "log": "PR 은 준비 단계에서 이미 열려 있으므로(#79) 새로 만들지 않고 **리베이스 결과를 `--force-with-lease=…:868eff7` 로 같은 브랜치에 올렸다**(`868eff7` → `d93300d`, 3커밋 보존). 직후 `mergeable=MERGEABLE` / `mergeStateStatus=CLEAN`. PR 본문의 낡은 두 수치(잔량 `87→96`·`22→67`, 등재 24행)를 실제 값으로 고치고 「리베이스 기록」 절(전제 4종 실측표 + 충돌 해소 근거)을 덧붙였다."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T06:20:00Z",
+              "finishedAt": "2026-09-14T06:24:00Z",
+              "log": "지침 1·2·4·5 — **CI 관측 → 머지 → 머지 후 재확인**. ⑴ 리베이스 헤드 `d93300d` 의 CI [run 34812082945](https://github.com/dlddu/homelab-k3s-mcp/actions/runs/34812082945) **3잡 전부 success**; `fmt + vet` 이 `80 / 1 / 32 / 47 / 47 / 0 / 0` 을 그대로 냈고 모킹 R1~R6·주석 R1~R8 위반 0(등재 27 + 9 · 잔량 9 / 50). ⑵ `integration tests` 로그에 두 파일의 실행 헤더와 전 케이스 통과가 남았다 — `table ok: columns=[...] rows=2` · `size ok: table 638B vs whole objects 5416B (8.5x)` · `shape ok` · `ok: …#시나리오 2`; `precondition ok: managedFields 2건 + last-applied-configuration` · `strip ok: metadata keys 8 (원본 9), spec 동일, status 보존` · `name-required ok` · `ok: …#시나리오 4`; `OK: primary 그룹 35개 파일 전부 통과`. ⑶ **squash 머지** — `bc87a44`. 스쿼시 메시지에 「왜 6 이 아니라 2 인가」 표와 리베이스 기록을 남겼다(지침 3-2). `main` 직접 push 없음. ⑷ 머지 후 `main` 의 CI [run 34812470947](https://github.com/dlddu/homelab-k3s-mcp/actions/runs/34812470947) **3잡 전부 success**. 뒤이은 `827b434` 는 이미지 태그 핀(`k8s/deployment.yaml` 한 파일, `[skip ci]`)이라 이 범위와 무관."
+            }
+          ]
         }
       }
     ]
