@@ -2133,6 +2133,14 @@
             }
           ],
           "plannedAt": "2026-09-14T00:12:00Z"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20260913-0002-homelab-k3s-mcp-docs-impl",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/75",
+          "preparedAt": "2026-09-14T00:12:00Z",
+          "notes": "**1차 시도의 PR 을 그대로 쓰고 그 위에 커밋 2개를 얹었다**(새 PR 을 열지 않았다). ⑴ 같은 슬라이스라 변경이 하나의 diff 로 읽혀야 하고, ⑵ 이 레포는 PR 빌드도 `:latest` 를 밀어 올리므로 PR 두 개가 열려 있으면 두 빌드가 프로덕션 태그를 두고 경쟁하며, ⑶ 1차의 사람 검토 맥락이 한자리에 남는다. PR 본문에는 「2026-09-14 갱신 — 2차 시도」 절을 덧붙여 원인·수정·검토자 주의(`:latest` 전제)를 적었다. head `3e8e2a9`.\n\n커밋 2개: ⑴ `fix(resource): Table 협상을 실제로 성립시키고, 성립하지 않으면 거부한다` — `tableAccept` 를 `metav1.SchemeGroupVersion` 에서 파생, 본문이 Table 이 아니면 거부(객체 렌더링 폴백 없음 — 그 폴백이 Secret 값을 목록에 싣는 경로라서), 협상하는 httptest 서버를 상대하는 단위 케이스 2건, 실 apiserver 스모크 `tests/integration/resource_read_smoke.py` (비-시나리오, doc-tracker 등재), doc-tracker 진행 노트. ⑵ `docs(comment-policy)`: 신규 docstring 22줄을 미판정 잔량으로 선언(R8).\n\n**로컬에서 CI 게이트 7개를 1:1 재현해 전부 rc=0 을 확인했다**: `gofmt -l .`(빈 출력) · `go vet ./...` · `go build ./...` · `go test ./...` · `check_ac_mapping.py` · `check_mock_policy.py` · `check_comment_policy.py`. **뮤테이션으로 회귀 커버리지를 증명했다** — `v=%s` 를 `v=1` 로 되돌리면 신규 단위 케이스가 실패하고, 그 실패 메시지가 프로덕션 증상과 같은 원인(`apiserver answered v1 NamespaceList instead of a Table`)을 가리킨다.\n\n⚠️ **로컬 게이트의 함정을 실측했다**: 문서 게이트는 `git ls-files` 를 읽으므로 신규 파일을 stage 하기 전에는 **눈이 멀어 있다**. 커밋 전 rc=0 은 거짓 초록이었고, push 후 CI 의 `fmt + vet` 이 R8 위반으로 빨개져서야 드러났다(커밋 ⑵ 가 그 수정). 이후 stage 후 재실행으로 7개 전부 rc=0 을 재확인했다.\n\n`k8s/rbac.yaml` 의 규칙 라인은 1차·2차 통틀어 무변경 — 권한 확대 0 이라는 사람 검토의 전제가 그대로다."
         }
       }
     ]
