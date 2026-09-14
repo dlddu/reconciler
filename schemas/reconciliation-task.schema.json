@@ -43,13 +43,35 @@
     },
     "trigger": {
       "type": "object",
-      "description": "작업을 생성시킨 버전 변경 정보",
+      "description": "작업을 생성시킨 계기. 버전 변경(version_change)이거나 사람의 즉시 감지 요청(manual)이다.",
       "additionalProperties": false,
       "required": [
-        "detectedAt",
-        "changedSides"
+        "detectedAt"
       ],
+      "if": {
+        "properties": {
+          "source": {
+            "const": "manual"
+          }
+        },
+        "required": [
+          "source"
+        ]
+      },
+      "else": {
+        "required": [
+          "changedSides"
+        ]
+      },
       "properties": {
+        "source": {
+          "enum": [
+            "version_change",
+            "manual"
+          ],
+          "default": "version_change",
+          "description": "이 작업이 생긴 계기. 생략 시 version_change(버전 변경 감지). manual은 checkPolicy.manualTriggerRequestedAt로 들어온 사람의 요청이며, 이때만 changedSides 없이 생성될 수 있다."
+        },
         "detectedAt": {
           "type": "string",
           "format": "date-time"
@@ -64,7 +86,7 @@
           },
           "minItems": 1,
           "uniqueItems": true,
-          "description": "버전이 변경된 쪽"
+          "description": "버전이 변경된 쪽. source가 manual이면 생략할 수 있다(사람이 요청한 감지라 바뀐 쪽이 없을 수 있다)."
         },
         "asIs": {
           "$ref": "#/$defs/versionChange"
