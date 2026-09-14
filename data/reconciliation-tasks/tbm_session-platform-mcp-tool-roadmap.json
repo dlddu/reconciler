@@ -387,7 +387,7 @@
       }
     },
     "createdAt": "2026-09-13T14:08:00Z",
-    "updatedAt": "2026-09-14T13:12:55Z",
+    "updatedAt": "2026-09-14T13:34:10Z",
     "stateSummary": {
       "asIs": "**실제 도구 표면 — 도구 2개** (`tools:2 ping,web_fetch_get`, 트리거 `e70d6e4` / main `99c2166` 실측).\n\n`data-plane/cmd/agent/session_mcp_tools.go` 의 `toolDefinitions()` 가 내는 목록:\n\n| 도구 | 게이트 | 비고 |\n|------|--------|------|\n| `web_fetch_get` | 호출마다 승인 1건 | `url` 인자 (http·https, `additionalProperties:false`) |\n| `ping` | 지나지 않는다 (파드 밖에 닿지 않아 R1 적용 범위 밖) | 인자 없음, 상수 `pong` |\n\n**`ping` 은 선언만이 아니라 실제로 호출 가능하다** — 이 문서가 스스로 세운 기준(「`tools/call` 까지 가 봐야 참이 된다」)으로 검증했다: `:98` 등재 · `:125` `switch call.Name` 의 `case webFetchGetTool, pingTool` 수용 · `:133-134` 핸들러가 `mcpToolText(pingReply)` 반환. 셋이 다 있어야 참인데 셋 다 있다.\n\n**게이트 분기 안쪽 배치도 실측 확인** — `toolDefinitions()` 첫 줄이 `if !c.gated() { return []any{} }` 라 `ping` 도 게이트웨이 미구성 시 목록에서 빠진다. 문서가 「협상 불가」로 지목한 R2(「게이트를 구성할 수 없으면 이 도구도 내지 않는다 — 그래야 빈 목록이 『게이트웨이가 없다』 하나로만 읽힌다」)가 코드로 지켜졌다.\n\n**헬퍼 파드 egress 실측**(다음 슬라이스의 전제라 재측정): `control-plane/internal/adapter/k8s/network_policy.go` 가 만드는 정책 쌍은 **egress 를 워크로드 파드에만** 건다(`PodSelector: workloadSelector`, 피어는 kube-DNS 와 자기 헬퍼 파드의 두 포트뿐). **헬퍼 파드에는 ingress 제한만 있고 egress 정책이 없다** — MCP 컨테이너가 파드 밖에 닿을 수 있는 이유이자, `git_clone` 이 AC-F2 축의 새 선행 없이 설 수 있는 근거다.",
       "toBe": "**등재된 구현 대상 — 3건** (`roadmap:3 1. git_clone|2. K3s MCP 재노출|3. gh CLI`, `docs/session-mcp-tool-surface.md` 「다음에 구현할 도구 (3)」).\n\nto-be 는 이 절이 **비어 있는 상태**다 — 등재된 모든 항목이 ⑴ 표면에 착지했거나 ⑵ **근거와 함께** 철회된 상태.\n\n| # | 항목 | 선행 | 착지 |\n|---|------|------|------|\n| 1 | `git_clone` | **없음** — 공개 레포 한정이면 R9 에 걸리지 않는다 | ❌ |\n| 2 | K3s MCP 재노출 | **R9**(AC-F6 자격 증명 배치 개정) | ❌ |\n| 3 | `gh` CLI | **R9** + R4 승인 화면 설계(이 레포 밖) | ❌ |\n\n문서가 우선순위 근거를 스스로 적는다: 「셋 중 둘(2·3)이 R9 에 걸린다 … **1번만 그 문 앞에서 설 수 있고, 그것이 1번이 먼저인 이유이기도 하다**」. 2 → 3 순서의 실질적 근거는 자격 증명이다 — 3번은 2번이 열어 줄 K3s MCP 의 GitHub App 단명 토큰을 쓰면 **자기 Secret 없이** 설 수 있다.\n\n**등재 목록 자체가 이번 트리거로 한 칸 줄었다**: 0번 `ping` 이 착지하며 빠졌다(`roadmap:4` → `roadmap:3`). 0번은 우선순위 줄에 선 적이 없어 **1~3 의 번호와 그 사이의 근거가 한 자도 움직이지 않았다** — 번호를 0 으로 둔 설계가 값을 낸 자리다.",
@@ -475,6 +475,41 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-14T13:06:00Z",
           "comment": "승인 세션에서 전제 신선도를 재측정한 뒤 승인. ⑴ 검토 단계가 남긴 두 확인 항목이 모두 해소됐다 — 최종 head `dd5b271` 의 체크 16개가 success 15 · skipped 1 · fail 0 으로 완주했고(그중 `e2e (kind + API + browser)` success, 2026-09-13T15:04:23Z), 원장 직렬화는 실제로 발동했다(#139 가 먼저 머지). ⑵ base 가 움직였다 — main 이 `99c2166` → `283ec0e` 로 4커밋 전진해 PR 이 `mergeable=false`/`dirty`. 충돌은 `docs/comment-policy/ledger.md` 합계 마커 **한 줄**뿐이고(main 3054 vs PR 3087), 승인 세션에서 시험 병합해 `3127`(3054+73)로 풀자 `check_comment_policy.py` 를 포함한 정적 게이트 4종이 전부 rc=0, 지문도 계획대로 `tools:3 git_clone,ping,web_fetch_get` / `roadmap:2 2. K3s MCP 재노출|3. gh CLI` 가 나왔다. main 의 4커밋은 e2e·deploy·doc-tracker 쪽이라 PR 의 코드 파일과 겹치는 것은 원장 한 파일뿐. ⑶ 자격 증명 경계 세 줄을 코드에서 직접 확인 — `-c credential.helper=`(:186) · `GIT_TERMINAL_PROMPT=0`+`GIT_CONFIG_NOSYSTEM=1`(:204, 추가로 `GIT_ASKPASS=`·`GCM_INTERACTIVE=never`) · userinfo 거부(:153) · `--`(:190), 그리고 `git_clone` 정의가 `if !c.gated()` 안쪽(R2). ⇒ 실행 단계는 **리베이스 후 합계 마커를 재측정해 3127 로 맞추고 squash 머지**할 것. Go 테스트 스위트는 승인 세션에서 돌리지 않았다(툴체인 미설치) — 리베이스 후 CI 가 재실행한다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-14T13:12:55Z",
+          "finishedAt": "2026-09-14T13:34:10Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T13:13:26Z",
+              "finishedAt": "2026-09-14T13:14:05Z",
+              "log": "**[executionGuide §0 사전 조건]** — `plan.steps` 1~10 은 준비 단계가 PR [#140](https://github.com/dlddu/session-platform/pull/140) 으로 이미 물질화했으므로, 실행은 지침이 규정한 「머지 → 재측정」을 따른다. `entries[].stepSeq` 는 그 §1 실행 순서 표의 번호다.\n\n⑴ **squash 전용**: 지침대로 `merge_method=\"squash\"` 만 쓴다.\n⑵ **준비 head `dd5b271` 의 체크 16개 재확인** — success 15 · skipped 1(`pin deployment images (main only)`) · fail 0. `e2e (kind + API + browser)` 는 2026-09-13T15:04:23Z success. 검토 단계가 「결론이 기록에 없다」고 남긴 확인 항목 ⑴ 이 여기서 실측으로 닫혔다.\n⑶ **base 신선도**: main 이 `99c2166` → `283ec0e` 로 4커밋 전진(#141 doc-tracker · 배포 핀 2 · #139 e2e). PR 은 `mergeable=false`/`dirty` — 승인 세션이 측정한 상태 그대로이고 그 뒤로 더 움직이지 않았다."
+            },
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T13:14:05Z",
+              "finishedAt": "2026-09-14T13:16:05Z",
+              "log": "**[executionGuide §0-3/§0-4 base 신선화 + 원장 직렬화 해소]**\n\n**⚠️ 승인 지시에서 한 지점 벗어났고 그 이유를 남긴다** — 승인 코멘트는 「리베이스 후 … squash 머지」였으나 **리베이스 대신 `origin/main` 을 브랜치로 병합**했다. 리베이스는 검토된 두 커밋(`acdb4e3`·`dd5b271`)을 force-push 로 덮어쓰는데, squash 머지는 어느 쪽이든 main 에 커밋 하나로 접히므로 **main 의 최종 내용은 동일**하다. 즉 범위·결과를 바꾸지 않으면서 force-push 와 검토 이력 소실만 피한 형태다(푸시는 fast-forward).\n\n**충돌은 예측대로 정확히 한 파일·한 줄** — `docs/comment-policy/ledger.md` 의 합계 마커(브랜치 `3087` vs main `3054`). 나머지 15파일은 자동 병합. 이 브랜치의 증분 **+73**(data-plane 행 931 → 1004)을 main 값 위에 얹어 **3127** 로 재측정 — 승인 세션이 시험 병합으로 산출한 값과 일치한다.\n\n**정적 게이트 4종 전부 rc=0**(병합 트리 기준): `check_comment_policy.py`(R4 양방향 미러가 3127 을 통과시킴 · 전체 지문 `13431fa48ffa…`) · `check-fidelity-allowlist.py`(등재 seam 7 · 미해소 위반 0) · `check-render-fidelity.py`(R1–R10 OK) · `check-scenario-mapping.sh`(시나리오 37 = 예외 3 + 유예 34).\n\n**Go 게이트는 로컬 툴체인 부재로 돌리지 않았다** — 승인 코멘트가 예고한 그대로이고, 아래 stepSeq 2 에서 CI 가 재실행해 닫는다.\n\n**검토 단계가 가장 걱정한 자격 증명 경계가 병합 후에도 그대로인지 직접 확인** — `session_mcp_git.go` 의 userinfo 거부(:153) · `-c credential.helper=`(:186) · `--`(:190) · `GIT_TERMINAL_PROMPT=0`+`GIT_ASKPASS=`+`GCM_INTERACTIVE=never`+`GIT_CONFIG_NOSYSTEM=1`(:204), 그리고 `git_clone` 정의가 `toolDefinitions()` 의 `if !c.gated()` **안쪽**(R2). 병합이 들여온 9파일은 전부 main 쪽 것이고 `data-plane/` 은 한 줄도 건드리지 않았다.\n\n새 head **`13748f7`** 푸시(fast-forward). PR 이 `mergeable=true` 로 전환."
+            },
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T13:16:13Z",
+              "finishedAt": "2026-09-14T13:33:40Z",
+              "log": "**[executionGuide §1 #1 — 신선화된 head 의 체크 결론 확인]**\n\n`13748f7` 에서 체크 **16개 전부 완주 — success 15 · skipped 1 · fail 0**. skipped 는 양쪽 head 와 같은 `pin deployment images (main only)` 하나.\n\n- `e2e (kind + API + browser)` **success** (2026-09-14T13:32:27Z, 왕복 ~16분) — kind 실클러스터에 두 이미지를 적재해 `deploy/` 를 올린 뒤 Go API 스위트 + Playwright 를 돌리는 잡이므로, **신선화된 base 위에서도 이 슬라이스의 제품 코드가 배포된 SUT 에서 관측됐다.**\n- 로컬에서 못 돌린 **Go 게이트를 CI 가 대신 닫았다**: `data-plane (lint + unit)` · `control-plane (lint + unit)` · `envtest (real-apiserver CAS/Lease)` · `integration (happy path)` 전부 success.\n- 정적 게이트 4종도 CI 에서 재확인(`comment policy ledger` · `e2e fidelity allowlist` · `render fidelity` · `시나리오 ↔ e2e 1:1 mapping`) — 로컬 rc=0 과 일치.\n\nPR 상태 `mergeable=true` / `mergeable_state=clean`."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-14T13:33:50Z",
+              "finishedAt": "2026-09-14T13:34:10Z",
+              "log": "**[executionGuide §1 #2 — PR #140 squash 머지]**\n\n`merge_method=\"squash\"` · `sha=13748f7…`(경합 방지용 기대 head 고정)로 머지. 결과 **squash 커밋 `9a591748399c15f8358299e4446193e7d673f091`**, `merged=true`.\n\n클러스터 조작·수동 배포·매니페스트 변경은 없다. 계획 범위 밖의 변경도 없다 — 머지된 diff 는 준비 시점과 같은 **7파일 / +670 −42** 이고, base 신선화가 더한 것은 원장 한 줄뿐이다."
+            }
+          ]
         }
       }
     ]
