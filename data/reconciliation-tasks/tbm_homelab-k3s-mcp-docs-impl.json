@@ -5870,6 +5870,46 @@
           "reviewedAt": "2026-09-15T10:05:57.807712Z",
           "comment": "갱신 시 resourceVersion 충돌이 발생하면 자동으로 거부."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "Replan the update-only AC6 slice after the human rejection '갱신 시 resourceVersion 충돌이 발생하면 자동으로 거부.' Preserve attempt 1 and revise its existing PR #109 in place. Source main is 3cff9a6ad196f45d97aa5b9c53f85402a432a47a; PR head is 6b9c6f1af2d5470ed0742bcf541354885927499b. The prior implementation already returns an error on conflict and does not retry, but its user-facing instructions and evidence emphasize obtaining another approval. Make the requested terminal automatic refusal explicit in the contract and conflict response, and prove that both whole-object and scale conflicts end the current tools/call without another approval request, a replacement-version read, an unconditional write or a retry. A later caller-initiated call still needs its own approval. Reuse and fast-forward the owned PR after merging current main, preserving the earlier review history and avoiding a competing branch or expanded patch/create implementation. Completion criteria: the revised reviewed PR is merged through the executor, both PUTs retain the original approved resourceVersion, pre-write mismatches perform zero service updates and late API 409s return refusal after exactly one conditional PUT, the dispatcher returns no success payload or automatic reapproval, and Go plus structural checks pass on the merge result with accurate tracker/comment evidence. Out of scope: resource_patch preconditions; resource_create owned by awaiting_review rct_20260915-0013/PR #112; five other missing tools; real gatekeeper fixture/eight E2Es owned by planning scenario task rct_20260915-0008/PR #106; comment-removal PR #113; mock-policy PRs #108/#110; owner-policy decisions and manual deployment. This bounded attempt does not claim whole-model or live-E2E convergence.",
+          "riskLevel": "high",
+          "plannedAt": "2026-09-15T11:20:01.691691Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "Refresh the owned task, current source main and PR #109; verify the rejected head and overlapping tasks/PRs. Merge current main into the existing PR branch without force-pushing, preserving concurrent documentation and comment-policy changes.",
+              "expectedOutcome": "The previous attempt remains immutable, the branch retains its review history, and only the update-only slice is owned by this run."
+            },
+            {
+              "seq": 2,
+              "action": "Clarify approval-gate AC6 and its test document: an update resourceVersion conflict automatically refuses and ends the current call; no automatic version refresh, retry or new approval request. Make whole-object/caller-version and late-409 conflict responses explicitly describe this terminal refusal while preserving independently initiated new-approval requirements.",
+              "expectedOutcome": "The human rejection is implemented as a concrete contract and error behavior without weakening atomic version preconditions or approval gates."
+            },
+            {
+              "seq": 3,
+              "action": "Add focused dispatcher regressions for whole-object and scale pre-write mismatches and service conflict failures: nil success result, one approval request, consumed approval, zero or one update as appropriate, exactly the describe/recheck reads. Retain and strengthen HTTP-boundary assertions for one conditional PUT, sanitized 409 refusal and unchanged caller manifests. Update tracker and reconcile affected comment-ledger rows against actual merged source.",
+              "expectedOutcome": "The tests detect automatic reapproval, retry, discarded preconditions and false success; coverage evidence remains unit/HTTP-boundary evidence rather than an invented live E2E result."
+            },
+            {
+              "seq": 4,
+              "action": "Run Go formatting, go test ./..., go vet ./..., go build ./..., all four repository structural checks and git diff --check. Recheck claim, source main and exact remote PR head before fast-forward pushing the owned branch; update PR title/body and record the exact prepared head.",
+              "expectedOutcome": "An open unmerged PR contains the complete reviewable revision, current validation evidence and high-risk execution limits."
+            },
+            {
+              "seq": 5,
+              "action": "After a separate pipeline review and only an executor claim from approved, refresh task/PR/main, validate the reviewed head and applicable CI, and merge only PR #109 with an expected-head guard. Stop for changed scope/head, missing approval or failing checks.",
+              "expectedOutcome": "The reviewed revision is merged once; awaiting_review continues to require the human approval workflow."
+            },
+            {
+              "seq": 6,
+              "action": "Verify the actual returned merge commit with scoped Go and structural checks, inspect terminal refusal/version propagation and tracker residuals, and record the as-is version. Prepare a separate reviewed revert PR if needed; preserve later work and record that a revert reopens the update race.",
+              "expectedOutcome": "Verification closes only this update/automatic-refusal scope; remaining model gaps and live-E2E obligations retain their existing owners."
+            }
+          ]
+        }
       }
     ]
   },
