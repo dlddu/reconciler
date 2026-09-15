@@ -3051,7 +3051,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-15T08:19:02.837249Z",
@@ -3076,7 +3076,7 @@
       "gap": "Invariant 1 holds, but invariant 2 / B1 has one unreceived successor handoff: the configured real fetch origin returns 226 bytes, so the >100,000-byte approved-fetch-to-file prerequisite excluded by the current scenario plan remains absent from fidelity:blockers and lacks a receiving plan. The version trigger itself only removes diagnostic prefixes from unchanged hashes; the substantive gap is established by current source/configuration and the later cross-model plan, not by a hash difference.",
       "summarizedAt": "2026-09-15T08:26:40.358250Z"
     },
-    "updatedAt": "2026-09-15T09:32:10.406133Z",
+    "updatedAt": "2026-09-15T09:33:52.784307Z",
     "assessment": {
       "actionRequired": true,
       "reason": "Action is required under invariant 2 / B1: the successor to the resolved FETCH-ORIGIN prerequisite has not been received into the blocker ledger. The source evidence is concrete: the configured real origin serves 226 UTF-8 bytes, while scenario 6(a)'s approved-fetch-to-file path requires a body greater than 100,000 bytes. The ledger has zero rows, and the scenario planner's current third attempt explicitly excludes this `deploy/` harness prerequisite and leaves it for subsequent detection. Read together with that task's assignment of FETCH-ORIGIN ownership to this model and the model's explicit coverage of causes without seam tokens, this is one unreceived cause, not a new unauthorized mock.\n\nThe trigger itself is cache-format normalization: both stored hashes equal the current hashes once their old diagnostic prefixes are removed. Invariant 1 passes the repository gate (7 registered seams, 20 accounted pairs, 0 unauthorized intercepts). This does not close B1, which requires reading cross-model handoffs beyond the fingerprinted files. B2 violations among existing rows, ready rows, expired row deadlines, and B3 count changes are all 0 because the ledger remains empty; the missing row is counted once under B1.\n\nWhy this differs from `rct_20260914-0001`: that assessment at 2026-09-14T12:13:24Z left the large-body issue as a boundary observation while the scenario task was planning and might absorb it, explicitly preserving it for the next detector if it was deferred again. The third plan at 12:20:00Z subsequently declined that work and moved its slice to lifecycle scenario 2. Therefore the former expectation of an implementing owner no longer holds. Although large-body configuration adds no mocking seam, invariant 2 covers an absent real input that prevents a required path from being exercised; limiting the decision to seam equality would drop this handoff.\n\nThe necessary work is to receive this cause with a concrete resolution direction, responsible owner, prerequisite and observable review point, then resolve or explicitly hand off the real-origin input within the appropriate planning scope. No source changes, PR preparation, approval, deployment, or execution are performed in this detection stage. In particular, scenario 6's separate snapshot/archive prerequisite and both existing `awaiting_review` tasks retain their current ownership and human approval requirements. This is not transient rollout drift and has no automatic recovery mechanism, so deferral is not justified.",
@@ -3165,7 +3165,72 @@
           "finishedAt": "2026-09-15T09:31:04.078263Z"
         },
         "verification": {
-          "status": "pending"
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "de1e68372a3576b45d72340088ed38d190a33c6b658ddbdb8bd17b240e8e1ec1",
+          "checks": [
+            {
+              "name": "Reviewed PR merged on main",
+              "status": "passed",
+              "detail": "https://github.com/dlddu/session-platform/pull/147 was squash-merged at 2026-09-15T09:29:55Z with head precondition b55ab7b09b4caa0566fdabb5171b80a067f84dc2. Merge 9bb94fe592f4929c5a2fea28ecb813fbd0f3e82f was fetched and proved on origin/main. The whole merged tree equals the reviewed head; PR history retains the receive/resolve commits a8a5183 and b55ab7b."
+            },
+            {
+              "name": "Applicable exact-head CI and real kind E2E",
+              "status": "passed",
+              "detail": "Fresh pre-merge observation 2026-09-15T09:29:52.877215Z: ci https://github.com/dlddu/session-platform/actions/runs/34949217612, image https://github.com/dlddu/session-platform/actions/runs/34949217641, and e2e https://github.com/dlddu/session-platform/actions/runs/34949217616 all completed successfully for b55ab7b09b4caa0566fdabb5171b80a067f84dc2. Job 104315913788 explicitly passed kind creation, deploy SUT, API e2e, and browser e2e. Expected main-only image pin/failure diagnostics skips were not counted as tests."
+            },
+            {
+              "name": "Exact embedded server and Node syntax",
+              "status": "passed",
+              "detail": "At 2026-09-15T09:30:35.041735Z the unmodified ConfigMap server from merge 9bb94fe592f4929c5a2fea28ecb813fbd0f3e82f passed Node v22.20.0 --check and two real HTTP runs. Source SHA-256 6077c7b9edf70785b19db86a5845befeaef6a42bd852edc667b98ee8afee06f3. The official ARM64 runtime archive was verified against nodejs.org SHASUMS256.txt; no repository dependency or harness file was added."
+            },
+            {
+              "name": "Large-body readiness and document compatibility",
+              "status": "passed",
+              "detail": "Default and custom UTF-8 runs returned 131072 bytes for /large-doc, /large-doc/session-a and /large-doc/session-b?probe=1, exceeding maxInlineBodyBytes=100000; Content-Length matched actual bytes and SHA-256 was 017332cb71752e5bba87a15f650c6c9d882967df97fb35761edb266437fb88df. /doc, /doc/session-a and /doc/large retained the 226-byte default or 29-byte custom document. /missing and /large-document remained 404."
+            },
+            {
+              "name": "Keyed access logs and health/log exclusions",
+              "status": "passed",
+              "detail": "Each HTTP run logged exactly 8 served request URLs in order, including full session keys/query strings and misses; methods/timestamps were present. /healthz and repeated /access-log reads were excluded. Both bounded Node processes were terminated in finally cleanup."
+            },
+            {
+              "name": "Fidelity allowlist",
+              "status": "passed",
+              "detail": "Command: python3 scripts/check-fidelity-allowlist.py; exit 0 at 2026-09-15T09:31:03.996340Z. OK: e2e 충실도 허용목록 ↔ 코드 seam 1:1\n  등재 seam 7 (GATE 1 · TRIG 0 · EXT 3 · NET 3)\n  회계 행 20 == 스캔된 (파일,토큰) 쌍 20 (등재 귀속 14 · 미해소 위반 0 · 비-seam 6) + mock-exception: 마커 9파일\n  마커 9지점 / 9파일 · web 네트워크 인터셉트 7건 (승인 7 · 위반 0, 상한 0)\n  차단 요인 0건 (아직 seam 이 아니다 — 판정만 확정돼 있다) · 착수 가능 0건 (선행 없음 + 소관 '이 모델')"
+            },
+            {
+              "name": "Scenario mapping",
+              "status": "passed",
+              "detail": "Command: bash scripts/e2e/check-scenario-mapping.sh; exit 0 at 2026-09-15T09:31:04.078263Z. 시나리오 ↔ e2e 1:1 OK — 시나리오 37개 = 매칭 파일 0 + 예외 3 + 유예 34 + 공백 0 (매칭 단위 1개, 비-시나리오 1개)"
+            },
+            {
+              "name": "Comment policy",
+              "status": "passed",
+              "detail": "Command: python3 scripts/check_comment_policy.py; exit 0 at 2026-09-15T09:31:04.029285Z. OK: 규칙 R1~R5 위반 없음 — 판정 대상 주석 3175줄 / 134파일 (Go 소스 1792 · Go 테스트 1219 · TypeScript 122 · 기타 42) · 판정 완료 3127줄(98.5%) / 등재 범위 15 · R5 스캔 18파일 1510줄"
+            },
+            {
+              "name": "Render fidelity",
+              "status": "passed",
+              "detail": "Command: python3 scripts/check-render-fidelity.py; exit 0 at 2026-09-15T09:31:04.007320Z. R1-R5  화면 매핑 OK — 구현 파일 11개 · mockup 6종 (구현 없음 0종, 구현 신호 0 hit 확인)\nR6-R7  정본 이탈 원장 OK — HEX 14건 / INLINE 14건 / rgba 31건, EXC 마커 0건\nR8     패널 구조 OK — 쌍 4개, 차집합 15건\nR9     상한 OK — 미해소 27/27 · 패널 차집합 15/15\nR10    토큰 복제 원장 OK — 복제 파일 16개(DUP 15 · IND 1), 정본 토큰 24개, 유지비 7~16곳"
+            },
+            {
+              "name": "Merged diff whitespace",
+              "status": "passed",
+              "detail": "Command: git diff --check HEAD^ HEAD; exit 0 at 2026-09-15T09:31:03.987842Z. No whitespace errors in git diff --check HEAD^ HEAD."
+            },
+            {
+              "name": "Plan footprint and residual ownership",
+              "status": "passed",
+              "detail": "Merged change is limited to deploy/fetch-origin.yaml and docs/test/e2e.md (+39/-7). ConfigMap/Service/Deployment resources outside embedded JS are byte-identical to the pre-merge base, deploy/kustomization.yaml still includes the origin, and no production-base/product file was edited by this PR. The resolved B1 reception and consumer handoff are documented. Convergence here is real-origin input readiness only: approval-gated scenario 6/bodyPath assertions remain with tbm_session-platform-scenario-e2e; archive/shared-volume behavior and PRs #127/#130/#142 retain their separate tasks and approvals. Any residual model gap is for the next detector cycle."
+            },
+            {
+              "name": "As-is version script",
+              "status": "passed",
+              "detail": "The current ToBeModel asIs.versionScript ran successfully at the merged revision after task transition to verifying: seams=29 files=15; final stdout line de1e68372a3576b45d72340088ed38d190a33c6b658ddbdb8bd17b240e8e1ec1. This value is recorded as asIsVersionAfter; model lastObservedVersion fields were not edited."
+            }
+          ],
+          "verifiedAt": "2026-09-15T09:33:52.784307Z"
         }
       }
     ]
