@@ -6291,7 +6291,7 @@
   {
     "id": "rct_20260915-0003",
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-15T03:52:19Z",
@@ -6316,7 +6316,7 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-15T04:00:24Z"
     },
-    "updatedAt": "2026-09-15T04:27:30Z",
+    "updatedAt": "2026-09-15T04:28:40Z",
     "attempts": [
       {
         "plan": {
@@ -6374,6 +6374,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/100",
           "preparedAt": "2026-09-15T04:40:00Z",
           "notes": "산출은 **테스트·픽스처·등재 문서뿐**이고 `internal/`·`k8s/`·`main.go` 는 무접촉이다(제품 코드 0줄). 커밋 `b685572` — 5파일 `+1467 / -16`(픽스처 YAML 1208줄이 페이징 ConfigMap 120개의 기계적 블록이다).\n\n**순서 제약은 이미 충족돼 있다** — 감지가 「#98 이 먼저 착지한 뒤 그 tip 위에서 세울 것」을 못박았는데, 분기 시점의 main 이 `877f070`(= #98 `08f1ae6` + 배포 핀)이라 그 위에서 잰다. 같은 모델의 `rct_20260915-0002` 는 이미 `verifying` 이다.\n\n**로컬에서 lint 게이트 넷을 전부 재현했다(전부 rc=0)**: `check_ac_mapping.py` 일곱 값 `78 · 1 · 28 · 49 · 49 · 0 · 0`(불변식 성립) · `check_comment_policy.py` 줄 주석 1570줄/82파일 + docstring 1152줄/63파일로 **두 표면 잔량 0** · `check_mock_policy.py` 등재 5 · 모킹 지점 5(baseline 동일) · `check_doc_inventory.py` 40/40(baseline 동일). 배차도 확인 — `run_all.py --group primary --list` 에 `resource_generic_ac3.py` 가 정확히 한 번.\n\n⚠️ **함정 하나를 실제로 밟았다** — 주석 원장 게이트는 `git ls-files` 기반이라 **stage 전에는 새 파일이 보이지 않는다**. `git add` 전에는 YAML +13 만 잡히고 새 Python 파일의 6줄·23줄이 0으로 보였다. 실행자가 게이트를 다시 돌릴 때도 같다.\n\n**주석 원장 재판정 내역**: 범위 #29 를 22→31줄(지문 `7b0231b9a3d7` → `55477beaf558`)로 갱신하며 픽스처 머리말에서 4줄을 지웠다 — `remainingItemCount` 를 셀렉터 아래서 못 쓴다는 사실은 **픽스처의 성질이 아니라 그것을 세는 쪽의 사정**이라 e2e 모듈 docstring 이 소유자다. 새 범위 둘(줄 주석 6줄 `66ff2fad5f28` · docstring 23줄 `1047bcfddc79`)을 등재했다.\n\n**CI 초록 확인(head `b685572`)** — 5잡 전부 결론이 났다: `fmt + vet`(lint 게이트 넷) · `unit tests` · `integration tests`(kind 실클러스터 e2e) · `build & push server image` **success**, `pin deployment image` 는 main 전용이라 skipped.\n\n🟢 **배차만이 아니라 케이스가 실제로 돌았음을 잡 로그로 확인했다** — 러너가 primary 그룹 **37개 파일**을 돌렸고 그 목록에 `resource_generic_ac3.py` 가 있으며, `===== resource_generic_ac3.py (시나리오: test-resource-generic.md#시나리오 3) =====` 아래로 네 케이스가 전부 찍혔다:\n- `precondition ok: 120개 (resource-generic-page-000 … resource-generic-page-119)`\n- `first page ok: 100건, 절단 표시 + continue eyJ2IjoibWV0YS5rOHMuaW8v…`\n- `continue ok: 20건, 합집합 120 = 전집`\n- `over-max rejection ok: limit must be <= 500`\n\n계획 단계에서 우려했던 자리 하나가 **실측으로 해소됐다**: 셀렉터가 붙은 목록에서 apiserver 가 페이지를 덜 채워 1회차가 100건에 못 미칠 가능성(etcd 저장소는 술어를 통과한 항목이 limit 에 찰 때까지 청크를 더 읽는다)이 있었는데, 실제로 **정확히 100건**이 왔다."
+        },
+        "review": {
+          "required": false,
+          "status": "not_required",
+          "reason": "제품 코드 델타가 0이다 — `internal/`·`k8s/`·`main.go` 무접촉이고 산출이 e2e 테스트 1파일·kind 픽스처·등재 문서뿐이라, 빌드되는 이미지의 동작이 부모와 동일하고 운영 워크로드·데이터·트래픽에 닿는 변경이 없다. 페이징 픽스처(ConfigMap 120개)는 kind 전용 `workload-test` 네임스페이스에만 서므로 운영 클러스터 밖이다. 불가역 지점은 squash 머지 하나뿐이고, 테스트·픽스처·등재 문서가 한 커밋에 묶여 있어 revert 하나로 집계 불변식(`78 − 1 − 29 = 48`)까지 반쪽 없이 되돌아온다. 준비 단계에서 CI 5잡이 head `b685572`로 이미 결론났고(초록/스킵), 배차만 된 조용한 통과가 아니라 잡 로그에서 네 케이스 출력까지 실측 확인됐다 — riskLevel low, 판단이 갈릴 모호함이 남아 있지 않다. 잔여 위험은 머지가 main 전용 `build & push` + 배포 핀을 돌려 롤아웃을 일으키는 것 하나인데, 제품 소스 델타가 0이라 롤아웃 후 동작이 같고 이 레포의 모든 머지가 거치는 상시 경로다."
         }
       }
     ]
