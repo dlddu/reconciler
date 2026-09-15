@@ -6098,7 +6098,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
     "status": "planning",
     "createdAt": "2026-09-15T03:14:54Z",
-    "updatedAt": "2026-09-15T03:26:36Z",
+    "updatedAt": "2026-09-15T03:31:08Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-15T03:14:54Z",
@@ -6127,6 +6127,57 @@
       "reason": "**작업이 필요하다 — 등재 SSOT 의 `⏳ 구현 대기` 행 하나가 트리거로 거짓이 됐고, 어떤 게이트도 그 축을 보지 못하며, 살아 있는 소유자가 없다.**\n\n**⑴ 차이는 실재하고 정의의 형식 요건 위반이다.** `test-resource-generic.md#시나리오 8` 행의 근거가 「`resource_update` 가 등록돼 있지 않다(레포 전체 grep 0 히트)」인데, 트리거 `d00ab224` 가 바로 그 도구를 등록했다(실측: 부모 Go 히트 0·`toolslist.go` 0·`gate.go` 0·`EXPECTED_TOOLS` 0 → 트리거 8·1·1·1). 규칙 6 은 구현 대기 행에 **근거·담당·해제 조건**을 요구하고 규칙 5 는 등재가 **실제 상태와 일치**할 것을 요구한다. 지금 그 행은 근거가 거짓이고, 담당(`docs-impl(도구) → 이 렌즈`)이 낡았고(트리거 PR 본문 자신이 남은 통합 e2e 를 **이 모델 소관**으로 축자 귀속한다), 해제 조건 ⑴ 이 충족됐는데도 미충족으로 서 있다. **판정 축은 개수가 아니라 정의문이 요구한 형식이다** — 불변식(78−1−29=48=48)은 성립하고 개수는 한 자리도 안 움직였지만, 그것이 이 행을 적법하게 만들지 않는다.\n\n**⑵ 자동 해소를 기대할 근거가 없다(유예하지 않는 이유).** 개수가 불변이라 `check_ac_mapping.py` 는 **부모·트리거 양 지점 rc=0 에 일곱 값 바이트 동일**이고(실증), 그 체커는 행의 제목·`⏳` 표시·집계만 대조하며 **행의 근거가 코드에 비추어 참인지는 원리적으로 검사하지 않는다**. `check_doc_inventory.py`·`check_comment_policy.py` 도 이 축과 무관하게 rc=0. 즉 **앞으로도 영원히 초록**이다. 게다가 이 행을 고칠 살아 있는 소유자가 없다 — 이 모델의 비-terminal task 는 이 건뿐이고, 자매 docs-impl 의 진행 중 세 건 중 `rct_20260914-0015` 의 준비된 PR **#96** 은 구현 대기 표의 **시나리오 3·5 행만** 고치며 그 head 에도 시나리오 8 의 낡은 문면이 **그대로** 남아 있다(실측). 트리거 PR 본문은 시나리오 8 을 「⏳ 구현 대기에 **그대로 둔다**」로 명시적으로 넘겼다.\n\n**⑶ 레포가 이미 정답 형태를 갖고 있어 슬라이스가 작고 위험이 낮다.** 하루 전 `resource_patch` 착지 때 시나리오 9 행은 **같은 PR 에서** 「⑴ 이 충족됐다 … **남은 차단은 ⑵ 하나**」로 다시 쓰이고 담당이 **「이 렌즈(e2e)」 단독**으로 옮겨졌다(approval-gate 4·7·8·9 동형). 시나리오 8 을 그 형태로 맞추는 것이 이 task 의 범위다.\n\n**이 task 의 범위(planner 에게)**: `docs/doc-tracker.md` 의 `⏳ 구현 대기` 표에서 **시나리오 8 행 한 줄**을 시나리오 9 행과 같은 모양으로 갱신한다 — 근거에 ⑴ 충족과 그 증거(`internal/mcp/toolslist.go`·`gate.go` 의 `toolRegistry`·`internal/mcp/resource.go` 핸들러·`_helpers.py::EXPECTED_TOOLS` 17==17), 담당은 **「이 렌즈(e2e)」**, 해제 조건은 **「⑵ 실물 gatekeeper 픽스처」 + 「도구 축은 더는 차단 요인이 아니다」**. **개수는 움직이지 않으므로 집계 블록·불변식·게이트 일곱 값은 그대로여야 하고, 움직이면 그것이 오류 신호다.** 산출은 등재 문서 한 파일이라 이 루프의 허용 산출 안이다.\n\n**범위에 넣지 말 것(근거와 함께)**: ⓐ **실물 gatekeeper 픽스처 저작** — 정의가 픽스처를 이 루프의 허용 산출로 명시하므로 *언젠가는* 이 렌즈 몫이지만, **이 트리거가 만든 문제가 아니고** 현재 **17개 행**이 이 하나를 차단 요인으로 인용하는 구조적 선행이다. 별 슬라이스로 크기를 정하는 것이 맞고, 그때 시나리오 8·9 와 approval-gate 다수가 함께 1:1 판정으로 복귀한다. ⓑ 레지스트리 표의 괄호 라벨 「(규칙 6 — 도구 미구현)」 — **부모에서 이미** 시나리오 9 에도 붙어 있던 체커 비대조 칸이라 이 트리거의 산물이 아니다(정정하려면 별건).\n\n⚠️ **자매 모델로 넘기는 인계 한 줄(내 축 아님, 기록만)** — 트리거가 `rct_20260914-0015`(`executing`)의 준비된 PR **#96** 에 새 충돌 둘을 만들었다. 귀속 실측: `refs/pull/96/head` 를 **부모에 트리얼 머지 → 충돌 `ledger.md` 하나**(#95 소행, 직전 fire 가 이미 귀속), **트리거에 → 충돌 3건**(`ledger.md` + **`docs/doc-tracker.md`** + `internal/k8s/resource_test.go`) ⇒ 뒤 둘은 #97 소행이다. **위험한 것은 조용한 되돌림 쪽이다**: doc-tracker 충돌을 **PR 쪽으로** 순진하게 해소하면 트리거의 「등록 도구 **17종**」과 2026-09-15 변경 이력 행이 **사라지는데**(실측 확인) `check_ac_mapping.py`·`check_doc_inventory.py`·`check_comment_policy.py` **셋 다 rc=0** 이고 **「등록 도구 N종」을 `toolslist.go`/`EXPECTED_TOOLS` 와 대조하는 게이트는 레포에 없다**(전수 grep 0). 즉 이 되돌림은 **CI 가 잡지 못한다** — 직전 fire 의 #95↔#96 충돌이 「양쪽 해소 모두 게이트 rc=1」로 안전했던 것과 **반대 성질**이다. `docs/test-resource-generic.md` 는 자동 머지되며 양쪽 내용이 모두 보존됨을 확인했다(트리거의 시나리오 8 `자동화` 갱신 + #96 의 시나리오 3 문면 정정 공존). **#96 을 리베이스할 때 doc-tracker 는 한쪽을 고르지 말고 두 변경을 합쳐야 한다.** 이 축(등록 도구 집계)은 docs-impl 기준 4 소관이라 경쟁 task 를 열지 않고 기록만 남긴다.\n\n⚠️ **tobe-modeler 건(5연속 관측, 이 task 범위 밖)**: 모델 정의의 「매칭 단위가 아닌 것」 목록이 `tests/integration/run_all.py`(배차 러너)를 빠뜨려, 문면대로 세면 매칭 단위가 50(=48+스모크 2)이 아니라 51 로 읽힌다. 실행 판정은 등재 SSOT 가 적은 대로 `run_all.py::matching_unit_paths()` 가 하고 **부모 지점에도 동일**하므로 오판정은 없다. 등재 SSOT 자신이 이 결함과 「정정은 reconciler 모델 소유자의 몫」을 문서로 적어 두었다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-15T03:24:32Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`docs/doc-tracker.md` 의 `⏳ 구현 대기` 표에서 **`test-resource-generic.md#시나리오 8` 행 한 줄만** 실측에 맞게 다시 쓴다 — 트리거 `d00ab224`(PR #97)가 `resource_update` 를 등록해 그 행의 근거(「`resource_update` 가 등록돼 있지 않다(레포 전체 grep 0 히트)」)와 해제 조건 ⑴ 이 거짓이 됐고, 담당(`docs-impl(도구) → 이 렌즈`)도 낡았다. 레포가 하루 전 `resource_patch` 착지 때 시나리오 9 행에 쓴 형태(⑴ 충족과 그 증거 · 담당 「이 렌즈(e2e)」 단독 · 「남은 차단은 ⑵ 하나」 · 「도구 축은 더는 차단 요인이 아니다」)로 맞춘다. **이 방법을 고른 이유**: 대안은 ⓐ 실물 gatekeeper 픽스처를 저작해 시나리오 8 을 1:1 판정으로 복귀시키는 것, ⓑ 방치인데 — ⓐ 는 이 표의 여러 행이 함께 인용하는 구조적 선행이라 이 트리거가 만든 문제가 아니고 크기를 따로 정해야 하며(복귀하면 시나리오 8·9 와 approval-gate 다수가 함께 온다), ⓑ 는 집계가 한 자리도 움직이지 않아 `check_ac_mapping.py` 가 **원리적으로 영구 초록**이라 스스로 해소되지 않는다. 행 하나를 실측으로 다시 쓰는 것이 규칙 5·6 의 형식 요건을 되돌리는 최소 충분한 조치다. **완료 기준(이 시도의 범위)**: ⑴ 그 한 행의 근거·담당·해제 조건 세 칸이 트리거 지점 실측과 일치하고, ⑵ 집계 블록·불변식·`check_ac_mapping.py` 일곱 값(`78 · 1 · 29 · 48 · 48 · 0 · 0`)이 **한 자리도 움직이지 않으며**, ⑶ 게이트 3종(`check_ac_mapping.py` · `check_doc_inventory.py` · `check_comment_policy.py`)이 머지 후 main 에서 rc=0 인 것. **범위 밖(후속)**: 실물 gatekeeper 픽스처 저작과 전용 파일 `tests/integration/resource_generic_ac8.py` 신설(별 슬라이스), 레지스트리 표의 괄호 라벨 「(규칙 6 — 도구 미구현)」 정정(부모에서 이미 시나리오 9 에도 붙어 있던 체커 비대조 칸 — 이 트리거의 산물이 아니다), 쓰기·스트림 잔여 8종 행(등재 주장이 트리거 지점에서도 여전히 참), 모델 정의의 `run_all.py` 누락(tobe-modeler 몫).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "트리거 지점(main `f35cc168`)에서 새 행이 주장할 사실을 전부 실측한다: `resource_update` 등록(`internal/mcp/toolslist.go` 선언 · `internal/mcp/gate.go` 의 `toolRegistry`+`updatePairs()` · `internal/mcp/resource.go` 의 `resourceUpdate` 핸들러 · `tests/integration/_helpers.py::EXPECTED_TOOLS`), 실물 gatekeeper 픽스처 부재(`tests/k8s/kind/` 목록), RBAC(`k8s/rbac.yaml` = `cluster-admin`), 시나리오 8 의 사전 조건 픽스처(`workload-fixture` · `workload-fixture-ds`) 존재 여부.",
+              "expectedOutcome": "Go grep 8히트 · `toolslist.go` 1 · `gate.go` 1 · `EXPECTED_TOOLS` 에 `resource_update` 포함(17==17) / `tests/k8s/kind/gatekeeper-fixture.yaml` 없음 / `rbac.yaml` 은 `cluster-admin` 바인딩 / `test-deployment.yaml` 에 `workload-fixture`·`workload-fixture-ds` 존재 ⇒ ⑴ 충족·⑵ 유효·픽스처는 이 렌즈 자신의 저작."
+            },
+            {
+              "seq": 2,
+              "action": "브랜치 `reconcile/rct_20260915-0002-scenario-e2e` 를 main `f35cc168` 에서 떼고, `docs/doc-tracker.md` 의 `⏳ 구현 대기` 표에서 `test-resource-generic.md#시나리오 8` **행 한 줄만** 교체한다(근거: ⑴ 충족 + 증거 · 담당: 「이 렌즈(e2e)」 · 해제 조건: ⑵ 실물 gatekeeper 픽스처 + 「도구 축은 더는 차단 요인이 아니다」).",
+              "expectedOutcome": "`git diff --stat` 이 `docs/doc-tracker.md` 한 파일만 들고, 구현 대기 표에서 바뀐 줄은 시나리오 8 행 하나뿐이다(집계 블록·레지스트리 표·다른 28행 무변경)."
+            },
+            {
+              "seq": 3,
+              "action": "같은 커밋에 `## 변경 이력` 표 1행을 더해 이 정정의 시점·이전/이후 상태를 남긴다(레포 관례).",
+              "expectedOutcome": "변경 이력에 2026-09-15 행이 하나 늘고, 이전 상태=「시나리오 8 행이 `resource_update` 미등록을 근거로 세움」, 이후 상태=「⑴ 충족 · 남은 차단 ⑵ 하나 · 담당 이 렌즈」로 적힌다."
+            },
+            {
+              "seq": 4,
+              "action": "브랜치 head 에서 게이트 3종을 돌린다: `python3 tests/integration/check_ac_mapping.py` · `python3 scripts/check_doc_inventory.py` · `python3 scripts/check_comment_policy.py`.",
+              "expectedOutcome": "셋 다 rc=0 이고, `check_ac_mapping.py` 일곱 값이 `78 · 1 · 29 · 48 · 48 · 0 · 0` 로 부모와 **바이트 동일**, `check_doc_inventory.py` 는 `40/40`·끊긴 링크 0, `check_comment_policy.py` 의 docstring 지문은 `1741ca71…` 그대로(테스트 트리 무변경)."
+            },
+            {
+              "seq": 5,
+              "action": "브랜치를 푸시하고 `dlddu/homelab-k3s-mcp` 에 PR 을 연다(머지하지 않는다). 본문에 task id·gap 요약·범위·검증 방법·자매 PR #96 충돌 주의를 적는다.",
+              "expectedOutcome": "PR 이 열리고 변경 파일은 `docs/doc-tracker.md` 하나, CI 가 초록이다."
+            },
+            {
+              "seq": 6,
+              "action": "[실행 단계] 머지 직전 base 최신성을 확인한다 — `dlddu/homelab-k3s-mcp` main tip 이 PR base 와 다르면 머지하지 말고 먼저 리베이스한다. 충돌은 자리 목록이 아니라 **모양 규칙**으로 푼다(지침 참조): ⑴ add/add(표에 서로 다른 행 추가·변경 이력) → **양쪽 보존**, ⑵ 같은 항목을 양쪽이 고쳐 쓴 경우 → **쌓는다**, ⑶ 한쪽이 상대를 지워야 풀리면 → **정지·보고**.",
+              "expectedOutcome": "PR base 가 main tip 과 같아지고 diff 는 여전히 `docs/doc-tracker.md` 한 파일이며, 상대 슬라이스(자매 PR #96 등)가 같은 파일에 넣은 변경이 하나도 사라지지 않는다. 특히 「등록 도구 17종」·2026-09-15 변경 이력 행이 남아 있어야 한다(되돌림을 잡는 게이트가 레포에 없다)."
+            },
+            {
+              "seq": 7,
+              "action": "[실행 단계] PR 의 CI 초록을 확인하고 squash 머지한다.",
+              "expectedOutcome": "main tip 이 이 PR 의 커밋으로 이동하고 `docs/doc-tracker.md` blob 해시가 바뀐다(= to-be 버전 변화 ⇒ 다음 감지가 재검증한다)."
+            },
+            {
+              "seq": 8,
+              "action": "[검증 단계] 머지된 main 에서 게이트 3종을 재실행하고, 시나리오 8 행이 새 문면인지·집계 일곱 값이 그대로인지 대조한다.",
+              "expectedOutcome": "게이트 3종 rc=0, 일곱 값 `78 · 1 · 29 · 48 · 48 · 0 · 0` 불변, 구현 대기 표의 시나리오 8 행에 「레포 전체 grep 0 히트」가 더 이상 없고 담당이 「이 렌즈(e2e)」 단독이다. 하나라도 어긋나면 범위 밖 변화가 섞인 것이므로 실패로 본다."
+            }
+          ],
+          "plannedAt": "2026-09-15T03:31:08Z"
+        }
+      }
+    ]
   }
 ]
