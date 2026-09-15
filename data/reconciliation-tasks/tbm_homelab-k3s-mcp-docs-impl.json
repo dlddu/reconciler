@@ -4886,7 +4886,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-15T04:38:35Z",
-    "updatedAt": "2026-09-15T04:50:53Z",
+    "updatedAt": "2026-09-15T04:56:30Z",
     "trigger": {
       "source": "manual",
       "detectedAt": "2026-09-15T04:38:35Z",
@@ -4910,7 +4910,73 @@
       "reason": "**작업이 필요하다. `prd-resource-generic` 이 이름으로 약속한 12 도구 중 미등록 8종에 대응하는 AC 8건 가운데 **7건이 어떤 열린 task 도 덮지 않는다**. 사람의 수동 요청이 정확히 그 자리를 — 그리고 *병렬* 진행을 — 가리킨다.**\n\n### ⑴ 사람의 지시\n\n`manualTriggerReason` 축자: 「리소스 도구 병렬 구현 — 진행 중인 `rct_20260915-0002`·`0003`·`0005` 와 별개로, 리소스 계열 도구 구현을 **병렬로** 진행할 다음 작업 칸을 연다.」 요청 시각 `04:28:51Z` 는 세 task 를 이름으로 지목하며 그것들과 **별개의** 칸을 요구한다. 요청이 곧 gap 을 뜻하지는 않으므로 네 기준을 독립 재측정했고(직전 재감지 `rct_20260915-0004` 는 같은 모델에서 `no_action_needed` 였다), 이번엔 요청이 가리킨 자리에 **실측 gap 이 있었다**.\n\n### ⑵ gap 은 실측이다 — 무주공산 7건\n\n| AC | 도구 | 비-테스트 Go 히트 |\n|---|---|---|\n| AC6 | `resource_watch` | 0 |\n| AC7 | `resource_create` | 0 |\n| AC11 | `resource_delete_collection` | 0 |\n| AC12 | `resource_exec` | 0 |\n| AC13 | `resource_attach` | 0 |\n| AC14 | `resource_port_forward` | 0 |\n| AC15 | `resource_proxy` | 0 |\n\n도구 이름과 핸들러 이름(camelCase) 전수 grep 이고, **트리거 지점 `11d5be1c` 와 fire 도중 착지한 새 tip `a9afdbd8` 양쪽에서 동일**하다. 등록된 `resource_*` 는 `get`·`list`·`patch`·`update` 4종뿐이다. 모델 정의가 이 자리를 축자로 못박는다 — 「미구현 AC 는 to-be 미달 gap 이며 drift 다. 백로그로 치부해 이 루프 밖으로 빼지 않는다.」\n\n### ⑶ 소유자 부재를 레코드와 PR 로 확정했다(추측 아님)\n\n비-터미널 task 셋의 계획을 직접 읽고 스테이징된 PR 두 건의 파일 목록을 `gh api …/pulls/N/files` 로 떴다.\n\n- `rct_20260915-0002` / PR **#99**(13파일) — `workload_scale` 제거 = **기준 3**. `resource_*` 등록 0. **fire 도중 04:41:43Z 에 머지**(`a9afdbd8`)되어 기준 3 은 0종으로 닫혔다.\n- `rct_20260915-0003` / PR **#101**(13파일, `awaiting_review`) — `resource_delete` **한 도구**의 전 계층. **AC10 한 건**이고, 그 planner 는 자기 계획에서 나머지를 축자로 범위 밖에 뒀다.\n- `rct_20260915-0005`(`planning`) — **`prd-approval-gate`** AC6(TOCTOU)·AC11(게이트 권한 선언). ⚠️ `prd-resource-generic` 의 AC6·AC11 과 **번호만 같고 다른 문서의 다른 AC** 다. 이 task 의 7건과 겹치지 않는다.\n\n세 건의 합집합에 위 7건은 없다.\n\n### ⑷ 재감지 경로는 «있다» — 그런데 그 경로가 사람 승인 백로그를 통과한다\n\n여기서는 「재감지 경로 0」을 근거로 쓸 수 없다, 정직하게 적는다: #101 이 머지되면 `internal/` 이 움직여 이 모델이 다시 감지된다. **그러나 #101 은 `awaiting_review` 이고, 함대의 `awaiting_review` 는 이 fire 시점 19건, 최고령이 `tbm_pr-review-docs-impl rct_20260807-0001` 로 38.94일이다.** 즉 「#101 이 착지하면 재감지가 다음 칸을 연다」는 **움직인 적 없는 큐에 걸린 경로**이고, 요청자가 *병렬* 칸을 요구한 이유가 바로 그 직렬화다. 「기다리면 열린다」로 닫으면 요청을 무효화하면서 gap 을 큐 뒤에 세우는 셈이다.\n\n### ⑸ 자동 해소 가능성 없음 ⇒ `recheckAfter` 유예 부적절\n\n롤아웃 진행 중이거나 곧 재동기화될 성질이 아니라 **사람·에이전트가 코드를 써야** 닫히는 gap 이다.\n\n---\n\n## planner 에게 넘기는 것\n\n**슬라이스는 planner 가 고른다 — 아래는 감지의 실측 근거이고, 이전 fire 에서 planner 가 감지의 순위를 재실측해 뒤집은 전례가 있다(`-0003` 이 `resource_create` 1순위를 `resource_delete` 로 바꿨다).**\n\n구별력 있는 축을 도구별로 적는다:\n\n- **AC6 `resource_watch`** — 자기완결적이다. `watchSeconds`(기본 10 · 상한 60) 창 동안 이벤트를 모아 닫고 스트림을 호출에 걸쳐 유지하지 않으며, `resourceVersion` 이후만 받고 이벤트 수 상한을 둔다. 민감 종류는 **기존** `readIsSensitive` 경로로 게이트를 타므로 **공유 게이트 구조를 건드리지 않는다**. `-0003` 이 AC10 을 고른 기준(「게이트를 한 줄도 건드리지 않고 통째로 구현된다」)을 그대로 만족하는 후보다.\n- **AC11 `resource_delete_collection`** — verb 는 하나지만 **`-0005` 의 하류다**. 승인 `context` 에 「삭제될 대상의 수와 이름 목록」을 실어야 하고 그 수를 세는 `list` 는 이 도구가 아니라 **게이트가 행사하는 권한**(`prd-approval-gate` AC11)이며, 검증 방법의 「승인과 실행 사이에 대상이 늘면 실행이 거부된다」는 **AC6(TOCTOU)** 다. 둘 다 `-0005` 가 들고 있다 ⇒ 병렬 후보로는 나쁘다.\n- **AC7 `resource_create`** — 「여러 문서가 담긴 매니페스트는 **문서마다 별도 승인**」을 포함한다. 현재 `gate.go::authorize` 는 한 호출에 `gatekeeper.Call` 을 하나만 만들고, 문서 1 승인·문서 2 거절의 **불가역 반쪽 상태**에 대해 문서가 답을 갖고 있지 않다. `-0003` 의 planner 가 같은 이유로 기각한 자리이고, 그 판단은 여전히 유효하다(설계 질문이 미해결).\n- **AC12 `resource_exec` / AC13 `resource_attach`** — stdio 축. `exec` 은 `/var/run/secrets/**` 를 읽는다는 것이 AC17 에 명시돼 있어 승인 판단이 그 사실 위에 선다. `attach` 는 `readSeconds`(기본 5 · 상한 30) + `stdin` 1회 쓰기이고, PID 1 대화형 셸에서 `exec` 과 권능이 같다는 것이 등급 근거다.\n- **AC14 `resource_port_forward`** — 게이트가 1승인 1실행(`prd-approval-gate` AC7)이므로 **터널을 유지하지 않는 단발 왕복**으로 못박혀 있다. 검증 방법이 「호출이 끝나면 같은 승인으로 두 번째 왕복이 불가능하다」를 요구한다.\n- **AC15 `resource_proxy`** — ⚠️ **먼저 문서 결정이 필요하다. 코드 슬라이스로 들어가면 안 된다.** AC15 는 `kind` 로 `Node` 를 받고 **경로 제한을 두지 않으며** 「`nodes/proxy` 의 `/exec` 경로 호출이 **실행되되** `context` 에 경로 전문과 고권한 표시가 담긴다」를 검증 방법으로 요구한다. 반면 `docs/values.md:113`(2026-09-12)과 `docs/doc-tracker.md:139`(「수용된 위험」)은 **「`nodes/proxy` 는 열지 않는다」**고 적는다. 같은 날짜의 `values.md:112` 와 `prd-approval-gate.md:60-62`·`:150` 은 반대로 열린 것을 전제한다. RBAC 는 이미 `cluster-admin` 이라 「열지 않는다」의 실행 수단도 없다. **이 어긋남은 이번 트리거의 산물이 아니고**(그 두 파일을 만지지 않았다) 문서 계층 내부 문제라 이 모델의 주 판정 축도 아니다 — 그러나 AC15 를 구현하려면 어느 쪽이 SSOT 인지 먼저 확정해야 한다. 제품 문서 갱신(또는 tobe-modeler)의 몫이다.\n\n**리베이스·충돌 제약(반드시 읽을 것).** 어느 도구를 골라도 `internal/mcp/toolslist.go` · `internal/mcp/gate.go` · `internal/mcp/resource.go` 세 파일을 건드리는데, **PR #101 이 그 세 파일을 모두 이미 건드린다**(각 +39 / +25 / +104). 그리고 방금 머지된 #99 가 `toolslist.go` 에서 −36 을 걷었다. #101 의 step 6 이 `internal/server/mcp_test.go::TestToolsListIncludesAllTools` 의 손으로 적은 총수 `17` 을 `len(want)` 로 바꾼 이유가 정확히 이것이다 — **총수를 박아 두면 리베이스가 모양 규칙으로 풀리지 않는 산술 충돌이 된다.** 이 슬라이스는 **`a9afdbd8` 이후 tip 에서 브랜치를 따고**(등록 도구 16종 기준), 총수를 새로 박지 말고 `len(want)` 규약을 따를 것. 브랜치 이름에는 모델 슬러그를 붙인다(형제 워커가 같은 `rct` id 를 쓴다).\n\n**참고 — 이번 fire 에서 독립 검증하지 않은 tracker 주장 한 줄.** tracker 의 2026-09-13 주(09-14 정정 첨부)가 「`prd-approval-gate` AC3·AC6·AC10·AC11 도 미착수 그대로다」라고 적는다. AC6·AC11 은 `-0005` 소관이고, **AC3·AC10 의 현재 구현 상태는 이 fire 에서 측정하지 않았다**(이후 슬라이스들이 `context` 마스킹 등으로 일부 착지시킨 흔적이 tracker 안에 있어 그 주는 부분적으로 낡았을 수 있다). 계획 단계에서 필요하면 재측정할 것 — 지어내지 말 것.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-15T04:50:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`prd-resource-generic` 의 무주공산 7 AC 중 **AC6 `resource_watch` 한 도구만** 등록해 등록 도구를 16 → 17종으로 올린다. 이 시도의 **완료 기준**은 「`resource_watch` 가 `internal/mcp` 에 등록·디스패치되고, AC6 이 못박은 경계(`watchSeconds` 기본 10 · 상한 60 초과는 클램프 없이 거부 · `resourceVersion` 이후만 수신 · 이벤트 수 상한과 절단 표시)가 Go 단위로 검증되며, 민감 종류 `watch` 가 기존 `readIsSensitive` 경로로 게이트를 타고 미승인 시 k8s 호출 0 인 것이 검증되고, `toolslist.go` ≡ `EXPECTED_TOOLS` 대칭차가 공집합이며 `doc-tracker`·`test-resource-generic`·주석 원장의 등재가 실측과 일치해 lint 4종 + gofmt/vet/build/`go test ./...` 이 전부 초록인 것」이다.\n\n**왜 AC6 인가 — 감지의 1순위를 그대로 받지 않고 소스에서 재실측했다.** 판별식은 「공유 게이트 경로를 건드리는가」다. `internal/mcp/gate.go:218-226` 의 `readIsSensitive` 가 **이미 `p.Verb == \"watch\"` 를 `get` 과 나란히 다루고 있다** — AC16/AC17 이 요구하는 「민감 종류 watch 는 게이트」가 등록만으로 성립하고, `gatedVerbs` 에 `watch` 가 없으므로 `writesASensitiveKind` 도 false 라 값 가림 경로도 건드리지 않는다. 즉 이 슬라이스는 gate.go 에 **레지스트리 한 항목만** 더한다. 나머지 후보는 실제로 공유 경로를 요구한다: AC7 `create` 의 「문서마다 별도 승인」은 `authorize` 가 한 호출에 `gatekeeper.Call` 을 **하나만** 만드는 현 구조(gate.go:345-360)를 바꿔야 하고, AC11 `delete_collection` 의 승인 `context` 는 게이트가 `list` 를 행사해야 하며 그 권한 선언은 형제 task `rct_20260915-0005` 가 들고 있다. AC12/AC13/AC14 는 스트림 축이라 `ExecInPod`(라벨 셀렉터 기반, dear-baby 전용) 위에 좌표 기반 경로를 새로 깔아야 하고, AC15 는 `nodes/proxy` 를 두고 `prd-resource-generic` AC15 ↔ `values.md:113`·`doc-tracker.md:139` 가 서로 반대를 적는 **문서 내부 모순**이 먼저 풀려야 한다(코드 슬라이스 아님).\n\n**가역성.** 읽기 전용 verb 한 종을 더하는 변경이고, 되돌리기는 이 PR 의 revert 하나다. 클러스터 상태를 바꾸지 않으며, 기존 16종의 동작 경로에 손대지 않는다(레지스트리 추가 · `k8s.Service` 메서드 추가 · 새 파일 0개).\n\n**범위 밖(후속).** 통합 e2e `tests/integration/resource_generic_ac6.py` 는 자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 의 판정 대상이라 이 슬라이스에서 만들지 않는다 (시나리오 6 은 `doc-tracker` 의 「⏳ 구현 대기」 등재를 유지하고, `자동화` 필드의 `(미작성)` 표기도 통합 e2e 를 가리키는 한 그대로 둔다 — `check_ac_mapping.py` 규칙 7 은 **통합 파일** 실측 기준이라 Go 단위만 서는 것으로는 위반이 되지 않는다). AC7·AC11·AC12·AC13·AC14·AC15 여섯과 AC10(형제 PR #101)은 이 task 의 성공 판정에 포함하지 않는다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-15T04:56:30Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`internal/k8s` 에 watch 경로를 깐다 — `WatchQuery`(좌표 + Namespace + Label/FieldSelector + ResourceVersion + WatchSeconds), `WatchEvent`(Type/Object), `WatchResult`(Resource/Namespaced/Events/Truncated/ResourceVersion) 타입과 `KubeService.WatchResources` 를 더하고, `Service` 인터페이스와 `Unavailable` 에 같은 메서드를 더한다. 구현은 dynamic client 의 `Watch` 에 `TimeoutSeconds`(창) · `ResourceVersion` 을 실어 열고, 이벤트를 `WatchMaxEvents`(=100) 까지 모은 뒤 채널이 닫히거나 창이 끝나면 반환한다. 상한에 닿으면 watcher 를 `Stop()` 하고 `Truncated` 를 세운다. 403 은 기존 `apiCallError(err, \"watch\", <resource>)` 로 AC18 형식에 태운다.",
+              "expectedOutcome": "`go build ./...` rc=0. `internal/k8s` 가 `watch` verb 를 행사하는 유일한 경로를 갖고, 다른 verb 경로(List/Get/Update/Patch)의 바이트는 변하지 않는다."
+            },
+            {
+              "seq": 2,
+              "action": "`internal/mcp/resource.go` 에 `resourceWatch` 핸들러를 더한다. `parseCoordinate` 재사용 + `watchSeconds` 검증(정수 아님·<1·>60 은 각각 -32602 로 **클램프 없이 거부**, 미지정이면 기본 10) + `resourceVersion`(문자열, 선택) + `labelSelector`/`fieldSelector` 통과. 응답은 `structuredContent` 에 `events`·`truncated`·`resourceVersion`·`watchSeconds` 를, `content` 에 이벤트 요약 텍스트를 담는다.",
+              "expectedOutcome": "핸들러가 `k8s.WatchQuery` 를 만들어 서비스에 넘기고, 경계 위반 호출은 서비스에 **도달하지 않는다**(k8s 호출 0)."
+            },
+            {
+              "seq": 3,
+              "action": "`internal/mcp/gate.go` 의 `toolRegistry` 에 `\"resource_watch\": {decl: toolDeclaration{resolve: genericPairs(\"watch\")}, handle: (*Handler).resourceWatch}` 한 항목을 더한다. `readIsSensitive`·`gatedVerbs`·`authorize`·`approvalContext` 는 **한 줄도 고치지 않는다**.",
+              "expectedOutcome": "`Validate()` 가 초록(등록 ≡ 광고). `kind=Secret` watch 는 게이트 대상이 되고 평범한 종류의 watch 는 승인 없이 지나간다 — 둘 다 기존 코드의 결과이지 새 분기가 아니다."
+            },
+            {
+              "seq": 4,
+              "action": "`internal/mcp/toolslist.go` 에 `resource_watch` 항목을 더한다 — `required: [apiVersion, kind]`, `watchSeconds` 는 `minimum:1 / maximum:60` 으로 스키마에도 못박고(AC3 이 `limit` 에 대해 한 것과 같은 처리), `annotations` 는 `readOnlyHint: true`·`idempotentHint: false`·`openWorldHint: false`. 설명문에 민감 종류는 승인이 필요하다는 것과 창이 닫히면 응답이 돌아온다는 것(스트림을 유지하지 않는다)을 적는다.",
+              "expectedOutcome": "`tools/list` 가 17종을 광고하고, `advertisedToolNames()` ≡ `toolRegistry` 키 집합."
+            },
+            {
+              "seq": 5,
+              "action": "Go 단위 시험을 시나리오 6 이 계획한 이름 그대로 더한다 — `internal/mcp/resource_test.go::TestWatchWindowBounds`(기본 10 · 60 통과 · 61 거부이고 거부 시 k8s 호출 0), `::TestWatchOnGatedKindRequiresApproval`(`kind=Secret` 은 거부 게이트에서 막히고 k8s 호출 0, 승인 게이트에서는 통과하며 평범한 종류는 승인 없이 통과). `internal/mcp/gate_test.go` 의 `countingK8s` 와 `internal/server/fakes_test.go` 의 `fakeK8s` 에 `WatchResources` 를 더해 인터페이스를 다시 만족시킨다.",
+              "expectedOutcome": "`go test ./internal/...` rc=0. 두 시험은 **음성 통제까지** 확인한다 — 61 거부·미승인 거부에서 `fake.count() == 0`."
+            },
+            {
+              "seq": 6,
+              "action": "`internal/server/mcp_test.go` 의 `TestToolsListIncludesAllTools` 를 고친다. 손으로 박은 총수 `16` 을 **`len(want)`** 로 바꾸고(형제 PR #101 이 같은 이유로 같은 규약을 택했다 — 총수를 박아 두면 도구가 늘 때마다 산술 충돌이 난다) 이름 목록에 `resource_watch` 를 더한다. `TestToolsListAdvertisesResourceTools` 에 `resource_watch` 의 `required` ≡ `[apiVersion, kind]` 단언을 더한다.",
+              "expectedOutcome": "`go test ./internal/server/...` rc=0. 이후 도구가 하나 더 서도 이 시험은 이름 목록만 고치면 된다."
+            },
+            {
+              "seq": 7,
+              "action": "`tests/integration/_helpers.py::EXPECTED_TOOLS` 에 `\"resource_watch\"` 를 더한다. 이 상수는 `toolslist.go` 와의 대칭차가 공집합이어야 한다는 doc-tracker 의 주장을 지탱한다.",
+              "expectedOutcome": "`toolslist.go` 의 `\"name\"` 전수 17종 ≡ `EXPECTED_TOOLS` 17종(대칭차 공집합). 이 대조는 로컬에서 파이썬 한 줄로 잰다."
+            },
+            {
+              "seq": 8,
+              "action": "제품 문서를 실측에 맞춘다. `docs/doc-tracker.md` — 「등록 도구: **16종**」 → **17종**(게이트 대상 쓰기 2종·게이트 밖 예외 1종은 **그대로**: `watch` 는 `gatedVerbs` 가 아니다)과 2026-09-15 자 변경 기록 한 항목(무엇이 섰는지 · 이벤트 수 상한 값과 그 근거 · 게이트를 한 줄도 고치지 않았다는 사실). `docs/test-resource-generic.md` 시나리오 6 의 `자동화` 필드 — 계획으로만 적혀 있던 Go 단위 두 이름이 이제 실재함을 적고, 통합 `resource_generic_ac6.py` 는 여전히 없으므로 `(미작성)` 표기를 **유지한다**.",
+              "expectedOutcome": "`python3 tests/integration/check_ac_mapping.py` rc=0(규칙 7 위반 없음 — 통합 파일이 없는데 `(미작성)` 이 남아 있는 상태는 정상), `python3 scripts/check_doc_inventory.py` rc=0."
+            },
+            {
+              "seq": 9,
+              "action": "`docs/comment-policy/ledger.md` 를 재판정한다. 이 슬라이스가 건드리는 파일은 전부 이미 등재돼 있다(#4 server 테스트 · #5 k8s service/client/types · #6 mcp.go+toolslist.go · #24 gate.go+gate_test.go · #25 k8s/resource.go+resource_test.go · #26 mcp/resource.go · #31 mcp/resource_test.go). 게이트 실패 메시지가 「등재 N != 실측 M」 과 실측 지문을 **그대로 출력**하므로 그 값을 옮겨 적고, `판정-합계` 마커를 델타만큼 움직인다. 새 파일을 만들지 않으므로 `판정-잔량` 은 0 을 유지한다.",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` rc=0, 출력의 「미판정 잔량 0줄 · 판정 완료 100.0%」 가 유지된다."
+            },
+            {
+              "seq": 10,
+              "action": "CI 게이트를 로컬에서 1:1 재현한다 — lint 잡 4종(`tests/integration/check_ac_mapping.py` · `scripts/check_mock_policy.py` · `scripts/check_comment_policy.py` · `scripts/check_doc_inventory.py`) + `gofmt -l .` 무출력 + `go vet ./...` + `go build ./...` + `go test ./... -v`. Go 툴체인은 `/home/silas/toolchains/go/bin/go`(go1.24.7) 로 이 박스에 상주한다.",
+              "expectedOutcome": "여덟 게이트 전부 rc=0, `gofmt -l .` 빈 출력. 베이스라인(`origin/main`)도 같은 여덟이 초록임을 이미 실측했으므로 붉은 항목은 전부 내 변경 탓이다."
+            },
+            {
+              "seq": 11,
+              "action": "브랜치 `reconcile/rct_20260915-0006-docs-impl`(모델 슬러그 포함 — `rct` id 는 모델 간에 유일하지 않다)을 현재 main tip 에서 따 커밋·푸시하고 PR 을 연다. PR 본문에 task id · gap 요약 · 단계 · 검증 방법 · 범위 밖 목록 · 형제 PR #101 과의 충돌 지점을 적는다. 머지는 하지 않는다.",
+              "expectedOutcome": "PR 이 열리고 CI 3잡(lint · unit-tests · integration-tests)이 돈다. 앞 둘은 로컬 재현과 같은 결과여야 하고, kind 통합 잡은 `smoke.py`·`platform_auth_safety_ac5.py` 가 `EXPECTED_TOOLS` 17종을 실 서버의 `tools/list` 에서 확인한다."
+            }
+          ]
+        }
+      }
+    ]
   },
   {
     "id": "rct_20260915-0007",
