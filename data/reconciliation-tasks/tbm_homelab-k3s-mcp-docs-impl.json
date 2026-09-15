@@ -4659,7 +4659,7 @@
   {
     "id": "rct_20260915-0003",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "source": "manual",
       "detectedAt": "2026-09-15T03:50:33Z",
@@ -4678,7 +4678,7 @@
       }
     },
     "createdAt": "2026-09-15T03:50:33Z",
-    "updatedAt": "2026-09-15T05:25:30Z",
+    "updatedAt": "2026-09-15T05:26:00Z",
     "stateSummary": {
       "asIs": "## as-is — 구현 표면 (측정 지점 `52de32c5`, main tip `dc41ab15` = 배포 핀이라 0 side)\n\n**등록 도구 17종** (`internal/mcp/toolslist.go` 의 `\"name\"` 전수 파싱):\n`api_resources` · `aws_config_get` · `dear_baby_reset_user` · `github_app_installation_token` ·\n`grafana_token` · `opensearch_document_delete` · `opensearch_document_put` · `opensearch_search` ·\n`ping` · `resource_get` · `resource_list` · `resource_patch` · `resource_update` ·\n`session_list` · `session_read` · `session_write` · `workload_scale`\n\n- `tests/integration/_helpers.py::EXPECTED_TOOLS` 와 **대칭차집합 공집합**(17==17) — 선언면과 e2e 기대가 어긋나 있지 않다.\n- **게이트 밖 예외 2건**(`internal/mcp/gate.go`): `workload_scale`(`exemptRetiredPendingRemoval`) ·\n  `dear_baby_reset_user`(`exemptPendingOwnerDecision`).\n- 이번 트리거가 `internal/` 에 실제로 넣은 것: `podLogsError`(client-go `DoRaw` 가 JSON `Status` 본문을\n  버리던 자리를 살려 apiserver 의 「choose one of: [...]」 를 보존, 403 은 자기 grant 문면 유지) +\n  대조군 포함 단위 테스트 3종.\n\n**레포 자체 게이트 4종 — 트리거 지점 전부 rc=0**(부모 `f35cc168` 에서도 전부 rc=0):\n\n| 게이트 | 부모 `f35cc168` | 트리거 `52de32c5` |\n|---|---|---|\n| `tests/integration/check_ac_mapping.py` | `78·1·29·48·48·0·0` | `78·1·29·48·48·0·0` (**바이트 동일**) |\n| `scripts/check_doc_inventory.py` | `40/40` 끊긴 링크 0 | `40/40` 끊긴 링크 0 (**동일**) |\n| `scripts/check_comment_policy.py` | 1532줄/81파일 · 잔량 0 | 1555줄/81파일 · 잔량 0 (+23, 잔량 0 유지) |\n| `scripts/check_mock_policy.py` | 등재 5 · 미등재 0 · 고아 0 | 동일 |\n",
       "toBe": "## to-be — 제품 문서(`docs/`)가 기술하는 의도된 동작 (측정 지점 `dc273904` = 트리거의 docs 트리)\n\n- `docs/` 마크다운 **40건**(가치 1 · PRD 14 · 테스트 14 · 상태 추적 1 · 정책 10), 허브 도달 **40/40**.\n- **AC 총 78건 / PRD 14개** (독립 재계수 — `^### AC\\d+` 전수):\n  `resource-generic` 19 · `approval-gate` 11 · `platform-auth-safety` 7 · `opensearch-document-put` 5 ·\n  `opensearch-document-delete` 5 · `session-write` 5 · `github-app-installation-token` 4 ·\n  `grafana-token` 4 · `opensearch-search` 4 · `session-read` 4 · `aws-config-get` 3 ·\n  `dear-baby-reset-user` 3 · `session-list` 3 · `ping` 1.\n- 모델 정의의 to-be 3항: ⑴ 모든 AC 가 구현되고 대응 `test-<domain>.md` 대로 검증 가능 ⑵ 코드의 모든\n  사용자 대면 동작이 문서에 있다(문서 없는 구현 없음) ⑶ `doc-tracker.md` 집계가 ⑴⑵ 의 실제와 일치.\n- **이번 트리거가 to-be 를 직접 움직였다**(기준 2 를 문서 쪽으로 닫은 절반): `prd-resource-generic`\n  AC3 문면이 「상한 500으로 **강제**」 → 「초과 값은 클램프하지 않고 **거부**」로, `test-resource-generic`\n  시나리오 3 기대 결과도 같은 방향으로 정정. 근거는 코드가 아니라 **SSOT 내부 정합**이었다 — 같은 PRD 의\n  AC5 가 자매 상한 `tailLines` 에 이미 「거부」를 축자로 정해 두었고, `toolslist.go` 스키마가\n  `\"maximum\": 500` 을 선언하며, `internal/server/mcp_test.go::TestResourceListLimitDefaultsAndCeiling`\n  이 `limit=501` 거부를 이미 단언하고 있었다.\n- PRD 가 이름으로 약속한 `resource_*` **12종** 중 **4종만 등록**(`get`·`list`·`patch`·`update`),\n  **8종 미등록**: `resource_create` · `resource_delete` · `resource_delete_collection` ·\n  `resource_watch` · `resource_exec` · `resource_attach` · `resource_port_forward` · `resource_proxy`.\n- `prd-approval-gate` AC6(승인–실행 정합성/TOCTOU) · AC11(게이트 자신의 권한 선언) 미구현.\n- `workload_scale` 은 **자기 PRD·테스트 문서가 없다** — `prd-resource-generic` 에 2회 등장하지만 둘 다\n  `resource_update(subresource=scale)` 의 **대체 매핑으로만**이다(부분문자열 히트는 문서화가 아니다).\n",
@@ -4808,6 +4808,54 @@
             }
           ],
           "finishedAt": "2026-09-15T05:24:30Z"
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:57c4eae02a02b11e8fb8fdddf173f708c6f9ec43 main.go:10cf744a330aa6357e3487a192fbb3cb6467e197",
+          "verifiedAt": "2026-09-15T05:26:00Z",
+          "checks": [
+            {
+              "name": "완료 기준 ⑴ — PR #101 squash 머지",
+              "status": "passed",
+              "detail": "`merged: true`, squash 커밋 **`40168c7`**. `sha` 를 핀해 머지했으므로 경합이 있었다면 실패했을 것이다. 승인 이력이 붙은 PR 을 force-push 로 갱신해 그대로 머지했고 새 PR 은 열지 않았다(승인 지침)."
+            },
+            {
+              "name": "완료 기준 ⑵ — 머지 커밋에서 게이트 4종 + go build/vet/test",
+              "status": "passed",
+              "detail": "머지 커밋 `40168c7` 을 체크아웃해 **일곱 명령 전부 rc=0**: `gofmt -l .`(출력 없음) · `go build ./...` · `go vet ./...` · `go test ./...`(전 패키지 ok) · `check_ac_mapping.py` · `check_doc_inventory.py`(`40/40` · 끊긴 링크 0) · `check_comment_policy.py`(R1~R8 위반 0 · 주석 1626줄 판정 완료 100.0% · 잔량 0 · docstring 1152줄 잔량 0) · `check_mock_policy.py`(등재 5 · 미등재 0 · 고아 0). GitHub Actions 쪽도 머지 커밋에서 **8잡 전부 success**."
+            },
+            {
+              "name": "완료 기준 ⑶ — toolslist.go ↔ EXPECTED_TOOLS 집합 동일",
+              "status": "passed",
+              "detail": "머지 커밋에서 기계 대조: 선언 **17** == `EXPECTED_TOOLS` **17**, **대칭차집합 공집합**, `resource_delete` 가 양쪽에 존재. `workload_scale` 은 양쪽 모두에서 사라졌다(#99 의 의도 보존). 계획이 예고한 「병합 후 17 == 17」과 정확히 일치."
+            },
+            {
+              "name": "완료 기준 ⑷ — 배포 뒤 도구 표면에 resource_delete",
+              "status": "passed",
+              "detail": "Deployment 가 `ghcr.io/dlddu/homelab-k3s-mcp:40168c7…` 로 `observedGeneration == generation(467)` · `ready/updated/available 1/1/1` · `NewReplicaSetAvailable`(05:11:47Z) 롤아웃 완료, 파드 Running 1/1 재시작 0, `ping` → `pong`. `main.go:60` 이 서빙 전에 `mcp.Validate()` 를 부르고 실패 시 `os.Exit(1)` 이며 그 검사는 선언 ↔ `toolRegistry` **양방향** 집합 비교이므로 — **기동 성공 자체가 선언·등재 둘 다 섰다는 증거**다. 도구 목록의 직접 관측은 kind e2e(`smoke.py` 가 실제 서버의 `tools/list` 를 `EXPECTED_TOOLS` 에 대고 단언)가 지며, 그 잡이 PR head `ea78473` 과 머지 커밋 `40168c7` 양쪽에서 success — 두 커밋의 **트리 해시가 `71174914934f…` 로 동일**해 CI 가 검증한 트리가 곧 배포된 트리다."
+            },
+            {
+              "name": "게이트 경로 — resource_delete 는 예외가 아니다",
+              "status": "passed",
+              "detail": "새 이미지 기동 로그의 `Exemptions()` 경고가 **정확히 1건**(`dear_baby_reset_user`)이다 — 이전 2건에서 `workload_scale` 이 빠졌고 `resource_delete` 는 애초에 목록에 없다. `delete` 는 `gatedVerbs` 이므로 이 도구의 모든 호출이 승인 게이트를 탄다(검토 사유가 지목한 「불가역 verb 를 쓰기 경로에 처음 여는」 슬라이스의 유일한 경계). 단위 층에서는 `TestDeleteIsRefusedWithoutApproval` 이 게이트 미설정 시 fail-closed 를, `TestDeleteIsSingleObjectOnly` 가 「셀렉터 전용 호출 경로 없음 → 승인 요청 전에 인자 검증에서 거부(gate calls 0 · kubernetes calls 0)」를 단언한다."
+            },
+            {
+              "name": "불변식 — check_ac_mapping 일곱 값이 부모 대비 불변",
+              "status": "passed",
+              "detail": "머지 커밋 `78·1·28·49·49·0·0` == 부모 `54c1ccb` 를 **직접 체크아웃해 돌린 값과 바이트 동일**. 계획서에 적힌 `78·1·29·48·48·0·0` 과 다른 것은 이 슬라이스 탓이 아니라 그 사이 #100(시나리오 3 전용 e2e)이 착지해 「구현 대기」 1건이 「1:1 대상·매칭」으로 옮겨 간 결과다. 이 슬라이스는 시나리오도 e2e 파일도 만들지 않았으므로 **하나도 움직이지 않는 것이 정상**이고 그대로다."
+            },
+            {
+              "name": "리베이스 해소가 계획 범위를 넓히지 않았다",
+              "status": "passed",
+              "detail": "충돌 7파일 전부 지침 3절 규칙 ⑴·⑵·⑶ 안에서 헝크-로컬로 해소했다. 규칙 ⑷(상대를 지워야만 풀리는 충돌 → 정지·보고)에 해당하는 자리는 없었다. 🔴 함정으로 지목된 `git checkout --theirs` 는 쓰지 않았다. 숫자는 한 자리도 손으로 짓지 않았다 — 등록 도구 17종은 선언 전수 실측, 원장 3행(`80→88`·`169→178`·`30→44`)과 합계(`1566→1626`)는 게이트가 `등재 X != 실측 Y` 로 보고한 실측값이며, 세 행의 델타(+8·+9·+14)가 양쪽 판정문이 적은 증감의 합과 정확히 맞는다. 승인 시점 계획 밖의 코드 변경은 없다."
+            },
+            {
+              "name": "(정보성 관측 — converged 판정에 넣지 않음) 모델 전체 to-be 잔여 gap",
+              "status": "passed",
+              "detail": "이 task 의 완료 기준은 plan 이 명시한 **AC10 한 칸**이고 그것은 달성됐다. 모델 전체로는 계획서 「범위 밖」이 그대로 남아 있다 — `resource_create`(AC7, 다중 문서 승인 설계 선행) · `resource_delete_collection`(AC11, `prd-approval-gate` AC11 선행) · `resource_watch`(AC6) · `resource_exec`(AC12) · `resource_attach`(AC13) · `resource_port_forward`(AC14) · `resource_proxy`(AC15) **7종**, `prd-approval-gate` AC6(TOCTOU)·AC11, 통합 e2e `resource_generic_ac10.py` 와 실물 gatekeeper 픽스처(자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 소관), `dear_baby_reset_user` 게이트 편입(소유자 판단 대기). 📋 계획이 「보고만 한다」고 적어 둔 관측도 그대로다 — `docs/test-resource-generic.md` 시나리오 11·12 가 `검증 AC` 를 서로 바꿔 가리킨다(docs 내부 정합성이라 이 모델의 판정 대상이 아니고 `check_ac_mapping.py` 가 원리적으로 잡지 못한다). **잔여 gap 은 실패가 아니며 재감지가 후속 task 로 잇는다.**"
+            }
+          ]
         }
       }
     ]
