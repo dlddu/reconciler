@@ -4426,9 +4426,9 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "reviewing",
+    "status": "awaiting_review",
     "createdAt": "2026-09-15T03:10:10Z",
-    "updatedAt": "2026-09-15T04:05:00Z",
+    "updatedAt": "2026-09-15T04:07:00Z",
     "trigger": {
       "source": "manual",
       "detectedAt": "2026-09-15T03:10:10Z",
@@ -4521,6 +4521,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/99",
           "preparedAt": "2026-09-15T03:52:00Z",
           "notes": "PR #99 — 13파일 +41 −304, base 는 **현재 main tip `f35cc16`** 이고 GitHub 판정 `mergeable: true`. **리베이스를 실행자에게 남기지 않는다** — 준비 단계에서 tip 위에 세웠고, 실행에 남는 불가역 동작은 squash 머지 하나뿐이다.\n\n**로컬에서 완료 기준을 전부 기계로 확인했다**(Go 1.24.7 = CI 의 `go-version: '1.24'`): 비-테스트 Go 0 히트 · 등록 도구 17→16 이고 `toolslist.go` 의 `\"name\"` 전수 ≡ `EXPECTED_TOOLS`(16==16, 대칭차집합 ∅) · 게이트 밖 예외 2→1(`gate_test.go` 가 `len(exemptions)==1` 을 단언) · 레포 게이트 4종 rc=0(`check_ac_mapping.py` 일곱 값 `78·1·29·48·48·0·0` 과 `check_doc_inventory.py` `40/40` 은 부모와 동일, `check_comment_policy.py` docstring 전체 지문 `1741ca71de4bdab5…` 도 부모와 바이트 동일) · `gofmt -l` 공집합 · `go build`/`go vet`/`go test ./...` 통과.\n\n**동시 진행 중인 자매 슬라이스 1건** — `rct_20260914-0015`(PR #96)가 `internal/mcp/toolslist.go` 와 `docs/doc-tracker.md` 를 함께 건드린다(그 task 는 검증 실패 후 다른 워커가 재계획 중). 겹치는 자리는 실측으로 둘뿐이고 둘 다 **덧붙이는 자리**다 — `toolslist.go` 는 hunk 가 ~175줄 떨어져 있어(#96 은 `resource_list` 의 `limit` description, 이쪽은 `workload_scale` 블록 삭제) 텍스트 충돌이 나지 않고, `doc-tracker.md` 는 변경 이력 표 머리에 양쪽이 각자 행을 더하는 add/add 다. 어느 쪽이 먼저 머지되든 해소는 **양쪽 보존**이고 침묵 되돌림 위험이 없다. 실행 지침에는 자리 목록 대신 **모양 규칙 셋**을 적었다 — 자리 목록은 자매가 착지하는 순간 낡기 때문이다.\n\n**CI 5잡 전부 초록**(head `78bfd50`, 2026-09-15T04:00Z 확인): `fmt + vet`(레포 게이트 4종) · `unit tests` · `integration tests` · `build & push server image` 성공, `pin deployment image` 는 main 전용이라 skipped. GitHub 판정 `mergeable: true`."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "프로덕션 k3s 에 붙는 MCP 서버의 도구 표면에서 `workload_scale` 을 **제거**한다 — 이 레포는 머지가 곧 배포라(이미지 빌드 → `k8s/deployment.yaml` 핀 → 롤아웃) 사람이 멈출 수 있는 마지막 지점이 머지 승인이고, 착지 즉시 그 이름으로 오는 호출은 `unknown tool` 이 된다. 소비자 중에 이 정합성 루프 자신이 있다. 되돌리기는 순수 삭제라 revert 한 건이 그대로 복원이지만, 재빌드·재롤아웃이 끝날 때까지 프로덕션은 새 표면을 돈다 — 「가역이되 그 사이 영향이 남는」 부류다.\n\n더해 **권한 경계를 건드린다.** 운영자의 레플리카 변경 경로가 무승인에서 승인 필요로 바뀌고(`resource_update(subresource=scale)`), 이 레포는 `k8s/rbac.yaml` 이 cluster-admin 바인딩이라 apiserver 백스톱이 없고 **승인 게이트 판정이 유일한 경계**인데 이 PR 이 게이트 밖 예외를 2 → 1 로 줄인다. 같은 성질의 직전 건(`workload_restart` 제거, `rct_20260914-0011`)도 같은 근거로 사람 검토를 거쳤다 — 그 선례를 무인 세션이 스스로 뒤집을 자리가 아니다.\n\n**확인해 줄 것 하나.** 자매 슬라이스 `rct_20260914-0015`(PR #96)가 지금 `verifying` 이고 `internal/mcp/toolslist.go` · `docs/doc-tracker.md` 두 자리를 함께 건드린다. 준비 단계는 둘 다 add/add 라 양쪽 보존으로 풀린다고 실측했지만, 그쪽이 먼저 착지하면 이 PR 은 리베이스가 필요하고 원장 수치(`check_comment_policy.py`)를 다시 뽑아야 한다. 승인 시점의 PR 신선도(`baseRefOid` == main tip · CI 초록)를 한 번 확인하는 것이 좋다."
         }
       }
     ]
