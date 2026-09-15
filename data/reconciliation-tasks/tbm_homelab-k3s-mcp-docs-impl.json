@@ -4918,7 +4918,7 @@
   {
     "id": "rct_20260915-0006",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "reviewing",
+    "status": "awaiting_review",
     "createdAt": "2026-09-15T04:38:35Z",
     "updatedAt": "2026-09-15T05:20:41Z",
     "trigger": {
@@ -5017,6 +5017,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/102",
           "preparedAt": "2026-09-15T05:09:07Z",
           "notes": "13파일 · +631/-19 · 새 파일 0개. 기반 커밋 54c1ccb(= a9afdbd8 + 배포 핀), 즉 #99 머지 후 tip 이고 #101 은 포함하지 않는다. **로컬에서 CI 의 lint·unit-tests 두 잡을 1:1 재현해 여덟 게이트 전부 초록**(go1.24.7 이 /home/silas/toolchains/go/bin 에 상주): check_ac_mapping(집계 한 숫자도 안 움직임) · check_mock_policy · check_comment_policy(1566→1643줄, 등재 범위 여섯 재판정, 잔량 0 유지) · check_doc_inventory · gofmt -l . 빈 출력 · go vet · go build · go test(watch 케이스 14건 PASS). 베이스라인(origin/main)도 같은 여덟이 초록임을 먼저 실측했다. **음성 통제 3종**으로 단언이 무는지 확인했다(각각 복원 후 cmp 바이트 동일): 상한을 클램프로 바꾸면 TestWatchWindowBounds/above_the_ceiling 실패 · 레지스트리 verb 를 watch→list 로 바꾸면 TestWatchOnGatedKindRequiresApproval 실패 · 이벤트 본문을 텍스트에 덤프하면 TestResourceWatchReturnsEventsWithoutDumpingObjects 실패. 로컬에서 판정 불가한 것은 kind 통합 잡 하나뿐이고 CI 가 판정한다. **[CI 실측 2026-09-15T05:20:26Z] PR #102 의 CI 3잡이 전부 success 다** — `fmt + vet`(id 104260657972) · `unit tests`(id 104260657881) · `integration tests`(id 104260657987, kind, run 34931560699). ⚠️ 잡의 표시 이름은 `ci.yml` 의 키(`lint`·`unit-tests`·`integration-tests`)와 다르다 — API 로 조회할 때 키로 grep 하면 안 잡힌다. 통합 잡 로그(3521줄)에서 `smoke.py` 와 `platform_auth_safety_ac5.py` 가 실제로 배차·실행됐고 잡이 통과했으므로, **실 apiserver 를 띄운 서버의 `tools/list` 가 `EXPECTED_TOOLS` 17종(`resource_watch` 포함)을 전부 광고한다는 것이 실물에서 확인됐다**. 즉 로컬 재현으로 못 보던 유일한 축(등록이 실물에서 서는가)까지 계획 단계에서 닫혔다. 남은 미지수는 창 동작 자체(실 apiserver 가 창 안에서 MODIFIED 를 밀어 주는가)뿐이고, 그것은 범위 밖으로 남긴 통합 e2e `resource_generic_ac6.py` 가 선 뒤에 판정된다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "프로덕션 k3s MCP 서버의 도구 표면을 16 → 17종으로 넓히는 머지이고, `watch` 라는 **새 verb 경로를 처음 여는** 슬라이스다. 이 서버의 `k8s/rbac.yaml` 은 전용 ClusterRole 없이 `cluster-admin` 바인딩이라 권한이 경계가 아니고 **승인 게이트 판정이 사실상 유일한 경계**인데, 계획은 `gate.go` 의 `readIsSensitive` 가 이미 `watch` 를 `get` 과 나란히 다룬다는 전제로 게이트를 한 줄도 고치지 않는다 — 그 전제가 맞으면 민감 종류 watch 는 기존 경계를 그대로 타지만, 어긋나면 Secret 류의 내용이 스트림으로 흘러나오는 경로가 승인 없이 열린다. 사람이 볼 지점은 정확히 그 한 가지다.\n\n위험을 낮추는 쪽도 분명하다: 읽기 전용 verb 한 종의 추가라 클러스터 상태를 바꾸지 않고, 기존 16종의 동작 경로·응답 JSON 은 무변경이며, 롤백은 squash 커밋 revert 1건 + 다음 이미지 핀으로 끝난다(데이터 롤백이 따로 필요한 불가역 지점 없음). 다만 머지가 이미지를 굴려 파드를 교체하는 동안 **진행 중인 MCP 세션이 끊길 수 있다** — 이 레포의 모든 머지가 그렇지만, 이번엔 사용자 대면 능력이 새로 서는 변경이라 같은 모델의 선례(도구 표면이 움직인 건은 전부 사람 검토)와 기준을 맞춘다.\n\n승인 시 **순서를 함께 정해 주는 것이 좋다.** 형제 PR #101(`resource_delete`)이 현재 `executing` 이라 먼저 착지할 수 있고, 그러면 이 PR 은 `mergeable_state: dirty` 가 된다. 지침은 rebase(force-push) 대신 `origin/main` 을 브랜치로 머지해 add/add 충돌 — 문서 등재 수치·`EXPECTED_TOOLS`·테스트 이름 목록 — 을 **다시 잰 값으로** 풀라고 적어 두었고, 그 뒤 여덟 게이트가 하나라도 붉으면 멈추는 것이 정지 조건이다."
         }
       }
     ]
