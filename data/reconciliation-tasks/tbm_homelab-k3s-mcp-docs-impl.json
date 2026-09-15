@@ -3898,7 +3898,7 @@
       "gap": "**유의미한 차이가 있고, 그중 둘은 어떤 task 도 들고 있지 않다.**\n\n- **기준 2(구현↔문서 불일치) — 위반 2건, 미소유. 이것이 이번 판정의 새 사실이다.**\n  직전 감지(`rct_20260914-0014`)는 버전 이동이 0이라 「위반 0」으로 닫았지만, 그것은 *이동분에 위반이\n  없다*는 뜻이었지 *존량이 0*이라는 뜻이 아니었다. 이번에 계약 표면을 직접 읽어 **존량 2건**을 확정했다:\n  ⑴ `limit` 상한 초과가 문서상 **하향**인데 구현은 **거부**(AC3 · 시나리오 3),\n  ⑵ `container` 누락 거부에 문서가 요구하는 **후보 이름이 없다**(시나리오 5 · 시나리오 11).\n  둘 다 `internal/mcp/resource.go`·`internal/k8s/resource.go` 의 좁은 구간이고, **열린 세 PR(#91·#92·#94)\n  어디에도 들어 있지 않다.** 게다가 `doc-tracker.md` 는 AC3 를 ✅ 구현됨으로 계상하고 있어\n  **tracker 도 이 어긋남을 보지 못한다**(기준 4 의 부수 위반).\n- **기준 1(미구현 AC) — 잔여 그대로이나 to-be 변경으로 우선순위가 선명해졌다.**\n  9 verb 미구현 + AC16·AC17 절반 + approval-gate AC6·AC11. #92 의 재실측이 의존 그래프를 명시하면서\n  **`resource_update(subresource=scale)` 가 최다 잠금 해제 지점**으로 드러났다 — AC8 을 닫고,\n  approval-gate 시나리오 6·11(b) 를 풀고, `doc-tracker.md:140` 의 순서 제약상 **`workload_scale` 제거의 선행 조건**이다.\n- **기준 3 — #91 이 `workload_restart` 를 걷어내는 중이라 2종 → 1종으로 줄어들 예정.** 남는 `workload_scale`\n  은 위 순서 제약에 걸려 있어 기준 1 과 같은 지점에서 풀린다.\n- **기준 4 — `doc-tracker.md:52` −5 는 #94 가 `executing` 으로 반영 중.**\n\n**planner 가 반드시 지켜야 할 제약(이 감지가 관측한 사실):** `rct_20260914-0011`(#91)·`rct_20260914-0012`(#94)가\n**지금 이 순간 `executing`** 이다. #91 은 `internal/mcp/{gate,mcp,toolslist}.go`·`internal/k8s/*` 를,\n#94 는 `.github/workflows/ci.yml` 에 차단형 문서 인벤토리 게이트를 얹는다. 따라서 **계획·준비는\n두 머지가 착지한 뒤의 tip 을 base 로 잡아야 하고**, `docs/` 에 파일을 추가하는 슬라이스라면\n`doc-tracker.md` 의 허브 집계 줄을 함께 올려야 CI 가 통과한다.",
       "summarizedAt": "2026-09-14T23:18:58Z"
     },
-    "updatedAt": "2026-09-15T03:19:04Z",
+    "updatedAt": "2026-09-15T03:25:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "**작업이 필요하다. 사람이 「다음 슬라이스를 미리 시작하라」고 지시했고, 그 지시와 무관하게도\n이번 감지가 **어떤 task 도 들고 있지 않은 기준 2 위반 2건**을 새로 확정했다 — 둘 중 하나만으로도\n`action_required` 다.**\n\n**⑴ 새 사실: 기준 2 존량 2건(미소유).** 직전 감지(`rct_20260914-0014`)의 「기준 2 위반 0」은\n*버전 이동분에 위반이 없다*는 판정이었지 *존량이 0*이라는 판정이 아니었다. 이번에 계약 표면을 직접 읽어\n⑴ `limit` 상한 초과의 **거부 ↔ 하향** 어긋남(`internal/mcp/resource.go:67-68` vs `prd-resource-generic` AC3 ·\n`test-resource-generic.md:80`), ⑵ `container` 누락 거부의 **후보 이름 부재**(시나리오 5·11 의 기대 결과)를\n확정했다. **열린 세 PR(#91·#92·#94) 어디에도 들어 있지 않고**, `doc-tracker.md` 는 AC3 를 ✅ 로 계상해\n이 어긋남을 보지 못한다. 모델 `definition` 의 「충돌 시 기본 방향」이 바로 이 자리를 위한 조항이다 —\n문서가 SSOT 이므로 원칙적으로 코드를 문서에 맞추되, 그 어긋남이 **의도된 동작 변경**이면\n(여기서는 `internal/k8s/resource.go:39-43` 주석이 거부를 **의도로 명시**한다) 문서를 갱신해 코드에 맞춘다.\n**어느 쪽인지는 planner 의 판단**이다.\n\n**⑵ 사람의 지시: 다음 슬라이스 선착수.** 잔여 기준 1 본체(쓰기·스트림 9 verb · approval-gate AC6·AC11)는\n재감지로 자동 인계될 예정이었으나, 소유자가 사람의 판단으로 **지금 계획 단계로 보내기로** 했다.\n`assessedBy` 를 `human` 으로 둔 이유가 이것이다.\n\n**⑶ 이번 to-be 이동이 슬라이스 선택을 도와준다.** #92 가 `test-approval-gate.md` 블록 11행의 공유 축자\n근거를 걷어내고 행별 실측으로 갈아끼우면서 **의존 그래프가 명시됐다**: 시나리오 2·4·5·7·8·9 는\n「도구 축은 더는 차단 요인이 아니다」로 풀렸고, 남은 병목이 docs-impl 의 쓰기·스트림 verb 로 집중됐다.\n그 안에서 **`resource_update(subresource=scale)` 가 최다 잠금 해제 지점**이다 — AC8 을 닫고,\napproval-gate 시나리오 6·11(b) 를 풀고, `doc-tracker.md:140` 의 순서 제약상 **`workload_scale` 제거(기준 3 의\n마지막 한 건)의 선행 조건**이다. **다만 슬라이스 확정은 planner 의 몫**이므로 여기서는 근거만 남긴다 —\n모델 `definition` 도 「무엇을 먼저 구현할지의 우선순위 판단은 각 task 의 계획 단계 몫」이라고 못박는다.\n\n**⑷ planner 에게 넘기는 제약(이 감지가 관측한 사실이므로 근거로 남긴다).**\n`rct_20260914-0011`(PR #91)·`rct_20260914-0012`(PR #94)가 **판정 시점에 둘 다 `executing`** 이다.\n#91 은 `internal/mcp/{gate,mcp,toolslist}.go`·`internal/k8s/*` 를 고치고 #94 는 `.github/workflows/ci.yml` 에\n**차단형 문서 인벤토리 게이트**를 얹는다. 따라서 ⑴ 계획·PR 준비는 **두 머지가 착지한 뒤의 tip 을 base 로**\n잡아야 하고(지금 tip `3d4ae61` 위에 준비하면 #91 과 같은 파일에서 충돌한다), ⑵ `docs/` 에 파일을 추가하는\n슬라이스라면 `doc-tracker.md` 의 허브 집계 줄을 함께 올려야 CI 가 통과한다.\n**이 제약은 계획을 막는 사유가 아니라 base 선택의 조건이다** — 그래서 유예가 아니라 `action_required` 다.",
@@ -4051,6 +4051,61 @@
               "detail": "계획이 명시적으로 범위 밖에 둔 것들이고 converged 판정에 반영하지 않았다. 다만 **하나는 이번에 상태가 바뀌었다**: 「최다 잠금 해제 지점」이라던 `resource_update(subresource=scale)` 가 **자매 task `rct_20260914-0017`(PR #97) 로 2026-09-15T03:07:27Z 에 착지했다** — as-is 버전이 `internal:bc054556…` → `internal:db23889a…` 로, to-be(docs) 가 `209efca1…` → `b812e174…` 로 이동했다. 나머지 잔여 gap(쓰기·스트림 verb 잔량, approval-gate AC6·AC11, `workload_scale` 제거, 두 시나리오의 전용 e2e 저작 — 자매 모델 소관)은 그대로다. 이 버전 이동은 **다음 감지 주기의 트리거**이며, 모델의 `lastObservedVersion` 은 이 스킬이 건드리지 않았다."
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "**직전 시도는 계획의 내용이 틀려서가 아니라 착지 절차에서 실패했다. 재계획은 내용을 바꾸지 않고 착지 절차만 고친다 — 리베이스를 실행 단계에서 준비 단계로 옮기고, 충돌 해소 권한을 「미리 적어 둔 자리 목록」에서 「검증 가능한 규칙」으로 바꾼다.**\n\n**무엇이 실패했나(레코드에서 읽은 사실).** 시도 1 은 승인까지 받았고 PR #96 의 CI 다섯 잡이 전부 초록이었다. 실행자가 멈춘 지점은 단 하나다 — `git rebase origin/main` 이 `internal/k8s/resource_test.go` 에서 충돌했는데, 그 파일이 실행 지침 0-3 과 승인 조건이 열거한 두 자리(`docs/comment-policy/ledger.md`·`docs/doc-tracker.md`) 밖이었다. 실행자의 판단은 옳았다(범위를 넓히는 순간 승인받지 않은 변경이 된다). **되돌림도 완전했다** — `rebase --abort` 후 로컬·원격 모두 `114f4696` 그대로이고 푸시·머지 0건이다.\n\n**근본 원인은 이 슬라이스가 아니라 절차의 모양이다.** 자매 슬라이스들이 같은 파일 위로 연달아 착지하는 동안(#91 → #95 → #97), 이 PR 의 base 는 계속 밀렸다. 시도 1 의 지침은 **계획 시점에 계산한 충돌 자리 목록**을 실행자에게 넘겼는데, main 이 그 뒤로도 움직이므로 그 목록은 태생적으로 낡는다 — 실제로 #97 이 착지하며 `internal/k8s/resource_test.go` 라는 새 자리를 만들었다. 같은 지침을 그대로 다시 주면 다음 자매가 착지할 때 **같은 이유로 또 실패한다.**\n\n**그래서 두 가지를 바꾼다.**\n⑴ **리베이스를 준비 단계로 옮긴다.** 준비는 되돌리기 싸고 재계획도 싸다. 실행 단계에 남기는 불가역 동작은 **squash 머지 하나**뿐이다.\n⑵ **자리 목록 대신 규칙을 준다.** 이 task 이력의 충돌 넷(#91 때 `doc-tracker` 변경 이력 1건, 이번 `ledger.md` 2훵크 · `resource_test.go` 1훵크 · `doc-tracker.md` 1훵크)은 **전부 같은 모양**이다 — 양쪽이 덧붙이는 자리(표의 행, 파일 끝의 심볼, 원장의 재판정문)에서 서로를 지우지 않고 각자 추가한다. 규칙은 「**양쪽 보존, 숫자는 게이트가 다시 잰다**」이고, 정지 조건은 「**한쪽이 상대의 내용을 지워야 풀리는 충돌**(add/add 가 아닌 것)」이다. 이 규칙은 자리 이름에 의존하지 않으므로 다음 자매가 착지해도 낡지 않는다.\n\n**⑵ 의 규칙이 이번에 실제로 통하는지는 가정하지 않고 실측했다 — 준비 단계에서 리베이스를 끝까지 몰고 갔다.**\n- `internal/k8s/resource_test.go`: 순수 add/add 였다. main(#97) 쪽 `discoveryServer` + 스케일 테스트 셋, 이쪽 `podLogServer`·`logServiceAgainst`·`podLogRef` + 파드 로그 테스트 셋 — **공유 심볼 0**. 실행자가 「양쪽이 import 를 각자 늘렸을 수 있어 단순 이어붙이기가 컴파일을 보장하지 않는다」고 재계획에 넘긴 우려는 **실측으로 해소됐다**: import 블록은 충돌 없이 자동 병합됐고 `go build`·`go vet` rc=0, **여섯 테스트(양쪽 셋씩) 전부 PASS** 다.\n- `docs/comment-policy/ledger.md`: **여기만 순수 add/add 가 아니었다.** 같은 원장 행(#25 `internal/k8s/resource{,_test}.go`)을 #97 과 이 PR 이 **각자 재판정**했다. 한쪽을 고르면 다른 슬라이스의 판정문이 사라진다 — 그래서 **판정문을 쌓았다**(이 슬라이스의 것을 #97 것 위에). 줄 수·지문·합계는 손으로 더하지 않고 `check_comment_policy.py` 가 실패 메시지로 보고한 실측값에서 뽑았다(`실측 175` · `실측 전체 1555`).\n- `docs/doc-tracker.md` 변경 이력: add/add. 두 행을 나란히 두고 이 슬라이스를 위에 놓았다(오늘 착지하므로 날짜도 `2026-09-15`).\n\n**이 시도의 범위(완료 기준) — 시도 1 과 동일하다. 승인된 내용은 한 줄도 넓히지 않았다.** 기준 2 존량 2건을 닫는다: ⑴ `limit` 상한은 **문서를 코드에 맞추고**(거부 유지), ⑵ `container` 누락 거부는 **코드를 문서에 맞춘다**(apiserver 후보 이름 보존). 바뀐 것은 기준선 숫자뿐이다 — 자매 셋이 착지하며 원장 합계가 `1446 → 1555`, 허브 집계가 `39/39 → 40/40` 으로 옮겼고, 재계획은 그 값을 **게이트 출력에서 다시 뽑아** 반영했다.\n\n**범위 밖(시도 1 과 동일, 근거도 동일)**: 쓰기·스트림 잔여 8종, approval-gate AC6·AC11, **`workload_scale` 제거**(이미 `rct_20260915-0002` 가 열려 있다 — 이 PR 이 착지해야 그 슬라이스가 `internal/mcp/toolslist.go` 위에서 충돌 없이 선다), 두 시나리오의 전용 e2e 저작(자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 소관이라 두 행을 구현 대기 표에서 **빼지 않는다**).\n\n**가역성**: 불가역 지점은 squash 머지 하나이고 revert 한 커밋으로 완전히 되돌아간다. 클러스터·RBAC·매니페스트·도구 표면(17종)·`tests/`·`.github/workflows/`·`Dockerfile` 을 한 줄도 건드리지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "**[준비, 완료]** 현재 `origin/main`(`f35cc16`) 위로 브랜치를 리베이스한다. 충돌은 위 규칙으로 해소한다 — 양쪽 보존, 숫자는 게이트 재측정, add/add 가 아니면 정지. 세 커밋 구조(⑴ limit 문면 / ⑵ container 후보 이름 / ⑶ tracker 반영)는 유지해 검토자가 반쪽만 떨어뜨릴 수 있게 둔다.",
+              "expectedOutcome": "충돌 4훵크(ledger 2 · resource_test 1 · doc-tracker 1) 전부 해소, 커밋 셋 유지. 실측: `b73d5c7` · `fde7a58` · `36e9d15`, base `f35cc16`."
+            },
+            {
+              "seq": 2,
+              "action": "**[준비, 완료]** 원장 #25 행과 합계 마커를 `check_comment_policy.py` **출력에서** 다시 뽑아 채운다(손으로 더하지 않는다). 더미값을 넣고 게이트를 한 번 돌려 실패 메시지가 보고하는 실측값을 읽는 방식을 쓴다.",
+              "expectedOutcome": "#25 행 `175줄` · 지문 `62783a46735c`, 합계 마커 `1555`, 잔량 `0` 유지. `check_comment_policy.py` rc=0 이고 `판정 완료 1555줄(100.0%) / 등재 범위 32 / 잔량 0`."
+            },
+            {
+              "seq": 3,
+              "action": "**[준비, 완료]** 원장의 서술 블록 관례를 따른다 — 합계가 움직인 슬라이스는 `> **합계 X → Y ...**` 문단을 하나 남긴다(#95·#97 의 선례). baseline 이 두 번 낡았다는 사실과, 같은 행을 두 슬라이스가 연달아 재판정해 판정문을 **쌓았다**는 사실을 적는다.",
+              "expectedOutcome": "`합계 1532 → 1555, 잔량 0 그대로` 블록이 #97 블록 위에 선다. 게이트는 프로즈를 읽지 않으므로 rc 변화 없음."
+            },
+            {
+              "seq": 4,
+              "action": "**[준비, 완료]** 로컬 CI 전량 재현: `gofmt -l .` · `go vet ./...` · `go build ./...` · `go test ./...` · 게이트 넷(`check_ac_mapping` · `check_mock_policy` · `check_comment_policy` · `check_doc_inventory`). 추가로 양쪽 계약 테스트 여섯을 이름으로 지목해 돌려 「양쪽 보존」이 실제로 서는지 확인한다.",
+              "expectedOutcome": "여덟 검사 전부 rc=0. 집계 일곱 숫자 `78·1·29·48·48·0·0` 불변, 허브 `40/40`·끊긴 링크 0. `TestPodLogs*` 셋 + `TestUpdateScale*`/`TestScaleObject*` 셋 전부 PASS, `TestResourceListLimitDefaultsAndCeiling` PASS."
+            },
+            {
+              "seq": 5,
+              "action": "**[준비, 완료]** 리베이스된 브랜치를 `--force-with-lease` 로 푸시하고 PR #96 본문을 시도 2 기준으로 갱신한다(새 PR 을 열지 않는다 — 승인 이력이 그 PR 에 붙어 있다). 본문에 실패 원인·해소 규칙·재측정한 숫자·양쪽 보존 근거를 적는다.",
+              "expectedOutcome": "PR #96 head 가 리베이스 후 sha 로 갱신되고 base 가 현 main 을 가리켜 `mergeable_state` 가 `dirty` 를 벗는다. CI 다섯 잡 재실행."
+            },
+            {
+              "seq": 6,
+              "action": "**[실행]** 신선도 재확인: PR `state=open`·`merged=false`, head 가 준비 시점 sha 그대로인지, base 가 현 main 과 같은지(`git rev-parse origin/main` 과 직접 비교 — `mergeable` 이 `null` 이면 GitHub 재계산 중이므로 그 값으로 판정하지 않는다), CI 다섯 잡 전부 success 인지.",
+              "expectedOutcome": "넷 다 성립. base 가 또 밀렸으면 머지하지 말고 위 규칙으로 리베이스 → 게이트 재실행 → 재푸시를 한 바퀴 더 돈 뒤 이 단계로 돌아온다."
+            },
+            {
+              "seq": 7,
+              "action": "**[실행 · 유일한 불가역 지점]** PR #96 을 **squash 머지**한다(이 레포는 squash 만 허용). 머지 커밋 메시지에 task id 를 남긴다.",
+              "expectedOutcome": "`merged=true`. main 에 커밋 하나가 얹히고 배포 파이프라인이 이미지를 굽고 핀 커밋을 뒤따라 올린다."
+            },
+            {
+              "seq": 8,
+              "action": "**[실행 · 검증]** 머지된 main 을 새로 받아 완료 기준 다섯을 **그 tip 에서** 확인한다. 1) `prd-resource-generic` AC3 · `test-resource-generic.md` 시나리오 3 의 상한 문면이 거부인가. 2) `TestResourceListLimitDefaultsAndCeiling` 이 실재하고 시나리오 3 의 `자동화` 가 그것을 가리키는가. 3) `podLogsError` 와 `TestPodLogs*` 셋이 실재하고 통과하는가. 4) 게이트 넷 + Go 넷 rc=0. 5) 집계 일곱 숫자 불변.",
+              "expectedOutcome": "다섯 전부 성립하면 `succeeded`. 하나라도 어긋나면 그 값을 실측과 함께 적어 `failed` 로 닫는다 — 임의 보정하지 않는다."
+            },
+            {
+              "seq": 9,
+              "action": "**[실행 · 선택]** 배포가 착지한 뒤(핀 커밋이 올라온 뒤) 프로덕션에서 다중 컨테이너 파드를 `container` 없이 `subresource=log` 로 읽어, 감지가 관측했던 `the server rejected our request for an unknown reason` 이 후보 이름 문면으로 바뀌었는지 실측한다.",
+              "expectedOutcome": "응답에 `a container name must be specified for pod ⟨이름⟩, choose one of: [...]` 가 실린다. 배포 지연으로 확인이 안 되면 검증 판정을 미루지 말고 **정보성으로만** 적는다 — 완료 기준은 소스·게이트 기준이다."
+            }
+          ],
+          "plannedAt": "2026-09-15T03:25:00Z"
         }
       }
     ]
