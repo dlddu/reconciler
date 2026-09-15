@@ -4366,7 +4366,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-15T03:10:10Z",
-    "updatedAt": "2026-09-15T03:23:00Z",
+    "updatedAt": "2026-09-15T03:47:00Z",
     "trigger": {
       "source": "manual",
       "detectedAt": "2026-09-15T03:10:10Z",
@@ -4396,6 +4396,62 @@
       "reason": "**작업이 필요하다. 기준 3(문서 없는 구현)의 마지막 1종 `workload_scale` 제거가 이번 트리거로\n선행 조건을 잃었고, 그 칸을 들고 있는 주체가 지금 아무도 없으며, 트리거 자신이 그것을 **이 재감지에\n축자로 인계**했다. 사람의 수동 요청도 같은 곳을 가리킨다.**\n\n**⑴ 사람의 지시.** `manualTriggerReason` 이 「다음 슬라이스를 미리 시작하기 위한 선제 감지 — …\n다음 작업 칸을 앞당겨 연다」다. 요청 시각(`03:04:44Z`)은 #97 머지(`03:07:27Z`)보다 **앞서므로**,\n사람은 「#97 이 열어 줄 다음 칸」을 미리 겨냥한 것이다. 그 칸이 무엇인지는 이번 실측으로 확정됐다.\n\n**⑵ 지시와 무관하게도 gap 이 단독으로 `action_required` 다.** `workload_scale` 은 전용 PRD·AC·테스트\n문서가 **하나도 없이** 프로덕션에서 서빙되고(모델 정의의 기준 3 정면 해당), 게이트 **밖** 예외라\n레플리카 변경이 **무승인 상태 변경**으로 열려 있다. 코드 자신이 `outsideGate: exemptRetiredPendingRemoval`\n로 「폐기 · 제거 대기」를 선언한다 — 즉 as-is 와 to-be 가 **이것이 gap 이라는 데 이미 합의**돼 있고,\n남은 것은 실행뿐이다.\n\n**⑶ 미루던 유일한 근거가 이번에 소멸했다.** tracker 가 해제 조건을 축자로 지정했다 — 대체재\n`resource_update(subresource=scale)`. 그것이 실재하게 됐음을 as-is 에서 직접 확인했다(`scale` 서브리소스\nPUT · 음수·누락 `replicas` 를 게이트보다 **앞에서** 거부 · 레플리카 없는 종류를 discovery 로 거부).\ntracker 도 같은 커밋에서 이 행을 `⬜ 제거 대기 — **선행 조건은 해소됐다**` 로 갱신했다.\n**순서 제약(「대체재가 먼저, 제거는 그 뒤」)의 앞쪽 절반이 끝났고 뒤쪽 절반만 남았다.**\n\n**⑷ 소유자 부재를 레코드로 확정했다(추측 아님).** 열린 두 task 의 계획을 직접 읽었다 —\n`rct_20260914-0017`(PR #97 = 이 트리거)은 「`workload_scale` 제거는 이 슬라이스에 넣지 않는다」를\n제목 절로 적고, `rct_20260914-0015`(PR #96)의 「범위 밖」에도 「`workload_scale` 제거(대체재 선행 제약)」가\n있다. 그리고 트리거가 인계처를 명시했다 — 「`internal/` 이 움직였으므로 **재감지가 그 슬라이스를 연다**」.\n**그 재감지가 이 task 이므로, 여기서 닫으면 인계가 허공에 떨어진다.**\n\n**⑸ 재감지 경로가 없다 — `no_action_needed` 를 택할 수 없는 이유.** 이 gap 은 **정적**이다.\n아무도 손대지 않으면 `internal/` 도 `docs/` 도 움직이지 않으므로 스스로는 영영 신호를 내지 못한다.\n레포 게이트 3종도 이 축을 **원리적으로 보지 못한다**(부모·트리거 두 지점 전부 rc=0, 출력 바이트 동일 —\n`check_ac_mapping.py` 는 AC↔e2e 1:1 의 초록이지 「구현됐는가」가 아니다). 지금 열지 않으면\n무관한 변경이 우연히 side 를 흔들 때까지 잠긴다.\n\n**⑹ 자동 해소 가능성 없음** ⇒ `recheckAfter` 유예는 부적절하다. 롤아웃 진행 중이거나 곧 재동기화될\n성질이 아니라, 사람·에이전트가 코드를 **지워야** 닫히는 gap 이다.\n\n---\n\n### planner 에게 넘기는 것\n\n**주 슬라이스: `workload_scale` 구현 제거 — `#91`(`workload_restart` 제거)이 그대로 쓸 수 있는 선례다.**\n제거 대상 실측 좌표: `internal/mcp/toolslist.go:241` 선언 · `internal/mcp/gate.go:108-119`\n`toolRegistry` 항목(`outsideGate: exemptRetiredPendingRemoval` + `handle: (*Handler).workloadScale`) ·\n그 핸들러 본체 · `internal/k8s/service.go:24` `ScaleWorkload` 인터페이스와 두 구현\n(`Unavailable` 포함, `service.go:64`) · `tests/integration/_helpers.py::EXPECTED_TOOLS` 의 한 항목 ·\n`doc-tracker.md` 의 「문서 없는 실행 코드」 행 종결과 건강 상태 재판정.\n\n**완료 기준(제안)**: `workload_scale` 비-테스트 Go **0 히트** · 등록 도구 **17 → 16종** ·\n`toolslist.go` 의 `\"name\"` 전수 ≡ `EXPECTED_TOOLS`(대칭차집합 공집합) · 게이트 밖 예외 **2 → 1건**\n(`dear_baby_reset_user` 만 남는다) · 게이트 3종 rc=0 · `go build`/`go vet`/`go test ./...` 통과.\n\n⚠️ **순서·충돌 주의 2건.**\n① **`workload_scale` 이 하던 일이 전부 대체재로 덮이는지 먼저 확인**하라 — `workload_scale` 은 kind enum 으로\n좁혀져 있었고 `resource_update` 는 임의 좌표를 받는다. 대체재가 **더 넓으므로** 기능 손실은 없을 것으로\n보이나, 거부 문면(레플리카 없는 종류·음수 replicas)이 실제로 동등한지는 계획 단계에서 확인할 값어치가 있다.\n② **`rct_20260914-0015` 의 PR #96 이 열려 있고 `internal/mcp/toolslist.go` 를 함께 건드린다.** 이번\n트리거가 이미 #96 을 CONFLICTING 으로 만들었고(트리얼 머지 실측: 부모에서 `ledger.md` 1건 **선재**,\n트리거에서 `doc-tracker.md`·`internal/k8s/resource_test.go` 2건 **추가** — 셋 다 add/add 라 해소는\n**양쪽 보존**이고 침묵 되돌림 위험 없음), 여기에 같은 파일을 만지는 슬라이스를 겹치면 세 번째 충돌이 된다.\n`-0015` 가 지금 `executing` 이므로 **그 착지를 기다린 tip 에서 서는 쪽**을 우선 검토하라 —\n`-0015` 의 계획이 #91 을 상대로 내린 것과 정확히 같은 판단이다.\n\n**부차(이 슬라이스에 넣지 말 것 — 근거와 함께).** 기준 1 잔여는 실측으로 크다 — 쓰기·스트림 **8종**\n(`resource_watch`·`_create`·`_delete`·`_delete_collection`·`_exec`·`_attach`·`_port_forward`·`_proxy`,\n전부 비-테스트 Go 0 히트)과 `prd-approval-gate` **AC6(TOCTOU)·AC11**. 직전 세 슬라이스(#89 등록 ·\n#91 제거 · #97 등록)가 **「RBAC 경계 소멸」(게이트 판정이 유일한 경계) 위에서 선언 오류의 비용이 표면\n크기에 정비례한다**는 같은 근거로 한 도구씩 갔고, 이 슬라이스도 그 보폭을 유지하는 것이 정합적이다.\n통합 e2e `resource_generic_ac8.py` 저작은 **자매 모델 `scenario-e2e` 소관**이다(시나리오 8 은 「⏳ 구현 대기」 그대로).",
       "assessedBy": "agent",
       "assessedAt": "2026-09-15T03:16:28Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**`workload_scale` 구현을 전 계층에서 제거한다 — #72 가 문서에서 폐기한 여섯 중 마지막이고, 그 순서 제약(「대체재가 먼저, 제거는 그 뒤」)의 뒤쪽 절반이다.** 앞쪽 절반은 같은 날 `d00ab22`(#97)가 `resource_update(subresource=scale)` 를 세우며 끝냈고, 트리거 자신이 이 슬라이스를 **재감지에 축자로 인계**했다.\n\n**왜 이 방법인가 — 대안 셋을 저울질했다.**\n⑴ *문서를 코드에 맞춘다(= `workload_scale` 의 PRD·AC·테스트 문서를 새로 쓴다)*: **기각.** 모델 정의는 「구현이 어떤 AC와 어긋나거나 미달이면 원칙적으로 코드를 문서에 맞춘다, 단 그 어긋남이 **의도된 동작 변경**이면 문서를 갱신한다」고 한다. 여기서는 의도가 이미 반대쪽으로 표명돼 있다 — `values.md` 2026-09-12 행이 이 도구의 폐기를 가치 이력으로 적었고, 코드 자신이 `outsideGate: exemptRetiredPendingRemoval` 로 「폐기됨 · 제거 대기」를 선언한다. 지금 PRD 를 쓰는 것은 문서 체계가 이미 내린 결론을 뒤집는 **새 결정**이지 정합성 수렴이 아니다.\n⑵ *게이트 안으로 편입만 하고 도구는 남긴다*: **기각.** 무승인 경로는 닫히지만 「문서 없는 실행 코드」(기준 3)는 그대로 남고, 대체재와 기능이 겹치는 도구 둘을 영구히 유지하게 된다. tracker 가 지정한 해제 조건도 편입이 아니라 제거다.\n⑶ *제거한다*: **채택.** 대체재가 실재하고(계획 단계에서 **상위집합임을 실측 확인**), `workload_restart` 제거(#91)가 그대로 쓸 수 있는 선례이며, 기준 3 을 0종으로 닫는 동시에 마지막 무승인 상태 변경 경로를 닫는다. 가역성도 충분하다 — 순수 삭제라 revert 한 커밋이 곧 롤백이다.\n\n**이 시도의 범위(완료 기준).** ⑴ `workload_scale`·`workloadScale`·`ScaleWorkload`·`WorkloadKind` 가 **비-테스트 Go 에서 0 히트**, ⑵ 등록 도구 **17 → 16종**이고 `toolslist.go` 의 `\"name\"` 전수 ≡ `tests/integration/_helpers.py::EXPECTED_TOOLS`(대칭차집합 ∅), ⑶ 게이트 밖 예외 **2 → 1건**(`dear_baby_reset_user` 만 남는다), ⑷ `doc-tracker.md` 의 「문서 없는 실행 코드」 행이 닫히고 요약 수치·건강 상태가 실측과 일치, ⑸ 레포 게이트 4종(`check_ac_mapping.py`·`check_doc_inventory.py`·`check_comment_policy.py`·`check_mock_policy.py`) rc=0, ⑹ `gofmt`/`go build`/`go vet`/`go test ./...` 통과, ⑺ PR 이 squash 머지되고 main 의 as-is 버전이 실제로 이동.\n\n**범위 밖(근거와 함께 — 재감지가 잇는다).** 쓰기·스트림 잔여 **8종**(`resource_watch`·`_create`·`_delete`·`_delete_collection`·`_exec`·`_attach`·`_port_forward`·`_proxy`, 전부 비-테스트 Go 0 히트)과 `prd-approval-gate` **AC6(TOCTOU)·AC11** — 직전 세 슬라이스(#89 등록 · #91 제거 · #97 등록)가 「RBAC 경계 소멸」 (게이트 판정이 유일한 경계) 위에서 **선언 오류의 비용이 표면 크기에 정비례한다**는 같은 근거로 한 도구씩 갔고, 이 슬라이스도 그 보폭을 유지한다. `dear_baby_reset_user` 게이트 편입은 ⬜ 소유자 판단 대기. 통합 e2e `resource_generic_ac8.py` 저작은 자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 소관. `tests/` 산문이 폐기된 e2e 파일명을 역사적으로 가리키는 자리들(`_workload.py`·`session_write_ac3.py`·`test-deployment.yaml`)은 #91 이 같은 자리를 남긴 선례대로 두었다 — 완료 기준이 **비-테스트 Go** 이고, 그 문장들은 과거의 파일을 가리키는 기록이지 살아 있는 계약이 아니다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대체재가 진짜 상위집합인지 실측한다 — `workload_scale` 의 네 동작(임의 레플리카 수 적용·음수 거부·누락 거부·레플리카 없는 종류를 그 사유로 거부)이 `resource_update(subresource=scale)` 에 전부 있는지 소스에서 확인.",
+              "expectedOutcome": "넷 다 존재. 앞의 셋은 `internal/mcp/resource.go::parseUpdateTarget`(그 doc 이 「the bounds the scale half carries over from workload_scale」라고 축자로 적는다), 넷째는 `internal/k8s/resource.go::requireSubresource` (discovery 로 `<plural>/scale` 서빙 여부를 물어 「레플리카가 없다」를 사유로 거부). 후계자는 kind enum 없이 임의 좌표를 받으므로 **더 넓다** — 기능 손실 0."
+            },
+            {
+              "seq": 2,
+              "action": "main tip 에서 브랜치를 따고 도구 표면을 걷는다 — `internal/mcp/toolslist.go` 의 `workload_scale` 선언 블록과 `internal/mcp/gate.go` 의 `toolRegistry` 항목(`outsideGate: exemptRetiredPendingRemoval` 포함).",
+              "expectedOutcome": "`toolsListJSON` 파싱 결과 도구 16종. `gate.go` 에서 `exemptRetiredPendingRemoval` 상수의 마지막 사용처가 사라져 상수와 그 doc 6줄이 함께 죽는다(#91 이 「`workload_scale` 이 계속 쓰므로 남겼다」고 적어 둔 그 상수)."
+            },
+            {
+              "seq": 3,
+              "action": "실행 경로를 걷는다 — `internal/mcp/mcp.go` 의 `workloadScale` 핸들러와 그 전용 헬퍼 `parseKind`, `internal/k8s` 의 `ScaleWorkload` 3벌(`client.go` 구현 · `service.go` 인터페이스 · `Unavailable` 대역), 그리고 마지막 사용처가 사라지는 `internal/k8s/types.go` 의 `WorkloadKind` 타입군 전체.",
+              "expectedOutcome": "`go build ./...` 이 죽은 import 를 정확히 지목한다(`k8s.io/apimachinery/pkg/types` · `math`) — 그 둘을 걷고 나면 build/vet 통과. `WorkloadKind` 가 비-테스트 Go 에서 0 히트."
+            },
+            {
+              "seq": 4,
+              "action": "단위 테스트를 정리한다 — **지우기만 하지 않는다**(#91 ⑶ 의 선례). 서버 층 `TestWorkloadScale*` 넷은 단언이 이미 승계됐음을 확인한 뒤 지우고, `TestToolsListAdvertisesWorkloadScale` 의 **표기 단언은 `resource_update` 로 옮긴다**. `gate_test.go` 의 예외 수 단언과 `fakes_test.go` 의 대역을 함께 맞춘다.",
+              "expectedOutcome": "승계 근거: `internal/mcp/resource_test.go::TestUpdateScaleBounds` 가 0·음수·누락·비정수를 전부 덮고 **게이트 호출 0 까지 더** 단언하며, `internal/k8s/resource_test.go::TestUpdateScaleRejectsReplicalessKind` 가 DaemonSet 거부를 덮는다. 표기 단언을 옮기는 이유: `resource_update` 가 같은 `destructive+idempotent` 짝을 들고 있고 옆의 `resource_patch` 는 **멱등하지 않아서**, 그 자리를 비우면 「파괴적이면서 멱등」을 아무도 단언하지 않는다. `gate_test.go` 의 예외 단언이 2건 → **1건**. `go test ./...` 전 패키지 통과."
+            },
+            {
+              "seq": 5,
+              "action": "`tests/integration/_helpers.py::EXPECTED_TOOLS` 에서 `workload_scale` 을 **같은 커밋에서** 뺀다.",
+              "expectedOutcome": "`toolslist.go` 의 `\"name\"` 전수와 `EXPECTED_TOOLS` 를 파싱해 집합 동일(16 == 16, 대칭차집합 ∅). 이 상수는 부분집합이라 **깨지지 않고 조용히 약해지는** 전례가 두 번 있었다(2026-09-03 · 09-04) — 그래서 같은 커밋이어야 한다."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/doc-tracker.md` 를 실측에 맞춘다 — 요약의 등록 도구 수와 게이트 밖 예외, 건강 상태 사유 ⑴, 「수용된 위험」의 「문서 없는 실행 코드」 행 종결, 「구현 제거가 남긴 일」의 두 문단에 후속 주, 변경 이력 행 추가.",
+              "expectedOutcome": "등록 도구 **16종** · 게이트 밖 예외 **1종**(`dear_baby_reset_user`) · 「문서 없는 실행 코드」 **0종** · 건강 상태의 사유가 ⑵ 하나로 줄어든다. `check_doc_inventory.py` rc=0(`40/40 · 끊긴 링크 0` — 부모와 동일)."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/comment-policy/ledger.md` 를 재판정한다. 이 레포는 미판정 잔량이 0이라 **주석 한 줄만 움직여도** 등재 행이 깨진다. 숫자는 한 자리도 손으로 짓지 않고, 게이트를 한 번 돌려 `등재 X != 실측 Y` 형태로 실측값을 받아 적는다.",
+              "expectedOutcome": "영향 행 넷(#4 `internal/server/*` +7 · #5 `internal/k8s/{client,service,types}.go` −2 · #24 `internal/mcp/{gate,gate_test}.go` −9 · #26 `internal/mcp/resource.go` 지문만 이동)과 합계 마커 1532 → **1528**. `check_comment_policy.py` rc=0, 잔량 0 유지. **docstring 전체 지문은 부모와 바이트 동일**(`1741ca71de4bdab5…`) — 움직였다면 그것이 오류 신호다."
+            },
+            {
+              "seq": 8,
+              "action": "레포 게이트 4종과 Go 툴체인 전체를 돌려 완료 기준을 기계로 확인한 뒤, 대상 레포에 PR 을 연다(머지하지 않는다).",
+              "expectedOutcome": "`check_ac_mapping.py` 일곱 값 `78·1·29·48·48·0·0`(부모와 동일 — 이 슬라이스의 기여 0) · `check_doc_inventory.py` `40/40` · `check_comment_policy.py` rc=0 · `check_mock_policy.py` rc=0 · `gofmt -l` 공집합 · `go build`/`go vet`/`go test ./...` 통과. PR 본문에 task id·gap·완료 기준·검증 방법이 담긴다."
+            },
+            {
+              "seq": 9,
+              "action": "실행 단계에 남기는 불가역 동작이 **squash 머지 하나뿐**이 되도록, 준비 단계에서 브랜치를 main tip 위에 세워 둔다. 머지 후 재감지가 as-is 이동을 집어 잔여 gap(쓰기·스트림 8종 등)을 새 task 로 잇는다.",
+              "expectedOutcome": "PR base 가 현재 main tip(`f35cc16`)이고 mergeable. 머지 후 as-is 버전이 이동해 다음 감지 사이클이 범위 밖 잔여를 새 task 로 연다."
+            }
+          ],
+          "plannedAt": "2026-09-15T03:47:00Z"
+        }
+      }
+    ]
   }
 ]
