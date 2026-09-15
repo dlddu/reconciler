@@ -5807,7 +5807,7 @@
       "gap": "Meaningful drift remains under model criteria 1 and 2: six resource-tool ACs (AC7, AC11–AC15) are wholly unimplemented, and approval-gate AC6 still lacks atomic update/patch preconditions tied to the approved state. PRs #102/#104/#105 reduced the previous gaps and resolved create's document prerequisite, but their tasks are now succeeded, leaving the remaining implementation work without an active owner; the checked advertised-tool and live tracker counts agree.",
       "summarizedAt": "2026-09-15T08:53:37.404936Z"
     },
-    "updatedAt": "2026-09-15T12:54:43.150071Z",
+    "updatedAt": "2026-09-15T12:56:50.645254Z",
     "assessment": {
       "actionRequired": true,
       "reason": "Work is required under this model's definition, which treats unimplemented PRD ACs as drift. At source commit 5197ed32f98f56d305a98bba7038c255f32300af, resource_create (resource-generic AC7), resource_delete_collection (AC11), resource_exec (AC12), resource_attach (AC13), resource_port_forward (AC14), and resource_proxy (AC15) are absent from the advertised surface and dispatcher. Approval-gate AC6 is also incomplete: the approved version is rechecked before dispatch but is not enforced atomically by update/patch. These are concrete remaining implementation gaps, not changes that deployment or resynchronization can automatically resolve.\n\nThe latest changes reduced drift: #102 implemented resource_watch; #104 added gate-owned reads, declarations, metadata negotiation, scale context and a recheck; #105 resolved create's previously unspecified approval/failure behavior. The corresponding tasks rct_20260915-0006, -0005 and -0009 are succeeded, and a fresh read of this model's records found no other nonterminal owner. Earlier overlapping-task and unresolved-create-document reasons to defer no longer apply. The planner should choose the next bounded slice from these residuals; detection does not select an implementation plan or alter the documented human-approval requirements.\n\nEvidence consists of the exact baseline/current Git trees, source and PRD comparison, parsed tool/registry/EXPECTED_TOOLS sets, current task records, and four passing structural repository checks. Go tests could not be run because Go is unavailable; this limits runtime regression conclusions but does not prevent determining that the required tool registrations and approved-version propagation are absent. The missing functionality and atomic preconditions require work, so no automatic-healing recheck is scheduled.",
@@ -6013,6 +6013,46 @@
             }
           ],
           "verifiedAt": "2026-09-15T12:49:12.341584Z"
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "Refresh the existing update-only AC6/terminal-conflict-refusal PR #109 after executor attempt 2 stopped at a dirty merge. Reuse its owned branch and merge current main into it with a fast-forward publication, preserving resource_create (#112), mock-policy blocker handling (#110), and all prior attempt/review history. This is preferable to a replacement PR or force-push because it preserves review provenance and keeps the same bounded correction. Resolve the shared dispatcher so create retains its per-document all-approvals-before-writes path while ordinary updates receive request-local approved resourceVersion state; remeasure the combined comment ledger and validate the actual integrated head. Completion criteria for this attempt: a separately reviewed revision of #109 is merged by an executor claiming approved; whole-object and Scale PUTs retain the original approved version, gate mismatches issue zero writes, late API 409s terminate after one conditional PUT with no success result/retry/version refresh/reapproval, create batch behavior remains intact, and Go plus all four structural checks pass on the merge result. Prior human approval is historical and does not approve this new attempt or head. Out of scope: resource_patch preconditions owned by rct_20260915-0012/PR #114 (approving); five missing resource tools; PR #106 real Gatekeeper fixture/eight E2Es and dependent watch/create E2Es; PR #113 comment removal; owner-policy decisions, live-E2E claims, manual deployment and whole-model convergence.",
+          "riskLevel": "high",
+          "plannedAt": "2026-09-15T12:56:35.213028Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "Refresh the claimed task, PR #109 and source main. Require the existing owned branch/head and inspect overlapping downstream owners before merging current main into the PR branch without force-pushing.",
+              "expectedOutcome": "The executor failure is reproduced and the revision starts from the existing PR with prior attempts immutable; no other task or branch is claimed."
+            },
+            {
+              "seq": 2,
+              "action": "Resolve dispatcher and comment-ledger conflicts. Preserve the resource_create early dispatch to callCreateBatch and use the update approvalContext returned by authorize for ordinary calls. Reconcile only affected ledger rows/totals, preserving merged create/mock-policy work and documenting the refreshed evidence.",
+              "expectedOutcome": "The integrated branch contains both independent behaviors, no conflict markers, accurate policy inventory, and the same update-only user-facing scope."
+            },
+            {
+              "seq": 3,
+              "action": "Inspect and run update trusted-state/terminal-refusal and create batch regressions. Add a focused regression only if the conflict integration exposes an untested contract. Run go test ./..., go vet ./..., go build ./..., gofmt verification, all four repository structural checks and git diff --check.",
+              "expectedOutcome": "The actual integrated head proves both ordinary update safety and create non-regression with local unit/HTTP-boundary evidence and accurate structural counts; no live-cluster success is inferred."
+            },
+            {
+              "seq": 4,
+              "action": "Recheck this task claim, current main and exact remote PR head immediately before fast-forward pushing the revision and updating PR #109. Record the new immutable head, integration base, validation and CI availability.",
+              "expectedOutcome": "One open unmerged PR is concrete and reviewable; concurrent worker changes are preserved and the revised head is explicitly awaiting a new pipeline review."
+            },
+            {
+              "seq": 5,
+              "action": "After separate review and only an executor claim from approved, refresh the task/current PR/main, require applicable approval and successful required CI for the reviewed head, and merge PR #109 using an expected-head guard. Stop for conflicts, changed scope/head, missing approval or unavailable required checks.",
+              "expectedOutcome": "Only the applicable reviewed revision can be merged; earlier approval and awaiting_review cannot authorize this revised attempt."
+            },
+            {
+              "seq": 6,
+              "action": "Verify the returned merge commit against this attempt scope using the update/create tests, Go and structural checks, and record the registered as-is version. If correction is needed, prepare a separately reviewed revert that preserves concurrent work and reports that reverting update protection reopens the race.",
+              "expectedOutcome": "Task convergence is judged against the bounded update/refusal scope; production deployment and remaining model/E2E gaps are reported separately."
+            }
+          ]
         }
       }
     ]
