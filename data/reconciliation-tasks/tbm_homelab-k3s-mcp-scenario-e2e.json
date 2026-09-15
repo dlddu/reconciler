@@ -6316,7 +6316,58 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-15T04:00:24Z"
     },
-    "updatedAt": "2026-09-15T04:12:00Z"
+    "updatedAt": "2026-09-15T04:22:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`test-resource-generic.md#시나리오 3`(절단과 이어보기) **한 행만** 전용 e2e 저작으로 닫아, 정의가 허용하지 않는 사유로 `⏳ 구현 대기` 표에 서 있던 규칙 1 공백을 1:1 계수로 복귀시킨다.\n\n**왜 저작인가(대안 비교).** 이 행에 남은 차단은 「이 렌즈 자신의 e2e 저작」 하나뿐이고 기능은 이미 서 있다(실측: `internal/mcp/resource.go:63-70` 이 `limit>500` 을 `-32602` 로 거부, `internal/k8s/resource.go` 의 `ListResources` 가 apiserver Table 의 `continue` 를 그대로 싣는다). 대안 ⓐ「행의 근거만 다시 쓴다」는 규칙 4 가 「아직 자동화하지 못했다」를 예외 사유에서 배제하므로 **어떻게 고쳐 써도 규칙 6 에 맞지 않는다** — 트리거 자신이 그 행에 「이 행은 정의상 규칙 1 의 공백」이라고 적었다. ⓑ「예외(🚫)로 옮긴다」는 영구 면제가 되어 규칙 4 를 정면으로 위반한다. 남는 길은 저작뿐이고, 레포 자신이 2026-09-04 에 「선행이 구현이 아니라 저작뿐인 2건」을 같은 방식으로 닫은 선례를 갖고 있다.\n\n**왜 두 행이 아니라 한 행인가(슬라이스 경계).** 감지가 지목한 규칙 1 공백은 시나리오 3·5 두 행이고 planner 가 묶을지 나눌지 정하게 되어 있다. 나눈다 — ⑴ 두 행은 서로 독립적으로 닫히고 각각 불변식이 눈으로 닫힌다(`78 − 1 − 28 = 49 = 49`), ⑵ 시나리오 5 는 **다른 픽스처 축**(러닝 다중 컨테이너 파드)과 **삭제된 4파일(`workload_logs_ac{1,2,3,4}.py`)의 단언 승계** 라는 별개의 일을 지고 있어 성격이 다르고, ⑶ 둘을 한 PR 에 묶으면 kind 통합 잡에서 한쪽의 실패가 다른 쪽의 착지를 막는다(이 레포의 e2e 는 실클러스터라 한 번 도는 비용이 크다). 시나리오 5 는 이 슬라이스가 착지한 tip 위에서 **다음 슬라이스**로 연다.\n\n**이 시도의 완료 기준(범위)** — 아래 넷이 모두 참이면 성공이다.\n1. `tests/integration/resource_generic_ac3.py` 가 실재하고 모듈 docstring 에 `검증 시나리오: test-resource-generic.md#시나리오 3` 을 **정확히 1개** 선언한다.\n2. 페이징 픽스처(ConfigMap 120개)가 `tests/k8s/kind/resource-generic-fixture.yaml` 에 서고 CI 가 그것을 적용한다.\n3. `docs/doc-tracker.md` 에서 그 행이 `⏳ 구현 대기` 표에서 **삭제**되고 레지스트리가 `✅ 전용 파일 \\`resource_generic_ac3.py\\`` 가 되며 집계가 `구현 대기 29→28 · 1:1 대상 48→49 · 매칭 파일 48→49`(공백 0 유지)로 움직인다. `docs/test-resource-generic.md` 시나리오 3 의 `자동화` 필드에서 `(미작성)` 이 빠진다(규칙 7).\n4. CI 5잡 전부 success — 특히 `check_ac_mapping.py` 가 일곱 값 `78 · 1 · 28 · 49 · 49 · 0 · 0` 으로 rc=0, `check_comment_policy.py` 가 두 표면 모두 잔량 0 으로 rc=0.\n\n**범위 밖(후속으로 남긴다)**: ⓐ `test-resource-generic.md#시나리오 5` 행 — 같은 계열이지만 다음 슬라이스. ⓑ 실물 gatekeeper 픽스처(17행이 공유하는 구조적 선행). ⓒ 요약 표 `(규칙 6 — 도구 미구현)` 라벨 부정확 24행(부모에서 이미 있던 별건). ⓓ 모델 정의의 매칭 단위 제외 목록이 `run_all.py` 를 빠뜨린 건(tobe-modeler 몫).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "현 `main`(=PR #98 착지 + 배포 핀 `877f070`) 위에서 `reconcile/rct_20260915-0003-scenario-e2e` 브랜치를 만든다. ⚠️ 브랜치명에 모델 슬러그를 붙이는 이유는 `rct` id 가 모델 간에 유일하지 않아 형제 워커의 열린 PR 브랜치를 밟기 때문이다.",
+              "expectedOutcome": "브랜치 tip 이 `877f070`(또는 그 시점 main tip)이고, 순서 제약(#98 먼저)이 이미 충족돼 있음을 `git log` 로 확인."
+            },
+            {
+              "seq": 2,
+              "action": "`tests/k8s/kind/resource-generic-fixture.yaml` 에 페이징용 ConfigMap **120개**를 더한다(`workload-test` 네임스페이스, 이름 `resource-generic-page-000` … `-119`, 레이블 `app.kubernetes.io/part-of: homelab-k3s-mcp-tests` + 전용 `homelab-k3s-mcp.test/paging: \"true\"`). 왜 전용 레이블인가 — 그 네임스페이스에는 다른 ConfigMap(`resource-generic-selected`·`-other`·`kube-root-ca.crt`)이 이미 있어 셀렉터 없이 세면 모집단이 123 이 되고 시나리오가 요구하는 「2회차에 나머지 20건」이 성립하지 않는다.",
+              "expectedOutcome": "`kubectl apply --dry-run=client -f` 가 통과하고, 기존 파일의 다른 객체는 한 바이트도 변하지 않는다."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/integration/resource_generic_ac3.py` 를 저작한다. 모듈 docstring 에 `검증 시나리오: test-resource-generic.md#시나리오 3` · `실행 대상: primary` 를 선언하고, 케이스 셋(① 기본 100 + 절단 표시 + `continue` 토큰, ② `continue` 재조회로 나머지 20건 · 두 페이지 합집합이 픽스처 120 과 정확히 같고 겹침 0, ③ `limit=1000` 이 클램프되지 않고 `McpError(-32602)` 로 **거부**)을 모두 `run()` 에서 호출한다. 선행 조건(120개가 다 섰는가)은 도구가 아니라 kubectl 멱등 폴링으로 세운다 — 검증 대상 자신으로 전제를 세우지 않는다는 이 레포의 규약.",
+              "expectedOutcome": "`python3 -c 'import ast,sys; ast.parse(open(...).read())'` 가 통과하고, `python3 tests/integration/run_all.py --group primary --list` 출력에 새 파일이 정확히 한 번 나온다."
+            },
+            {
+              "seq": 4,
+              "action": "등재 SSOT 를 갱신한다 — `docs/doc-tracker.md`: ⑴ 레지스트리 행을 `⏳ 구현 대기 (규칙 6 — 전용 e2e 미작성)` → ``✅ 전용 파일 `resource_generic_ac3.py` ``, ⑵ `### ⏳ 구현 대기 (29)` 표에서 그 행 **삭제**하고 제목의 수를 28 로, ⑶ 집계 블록을 `구현 대기 등재 28 · 1:1 대상 49 · 매칭 파일(전용) 49`, ⑷ `### 시나리오 레지스트리 (78) — …` 제목과 그 아래 불변식 인용문을 `✅ 전용 파일 49 · ⏳ 구현 대기 28`, `78 − 1 − 28 = 49 = 매칭 파일 49` 로, ⑸ `## 변경 이력` 최상단에 1행. 그리고 `docs/test-resource-generic.md` 시나리오 3 의 `자동화` 필드에서 `(미작성)` 을 지우고 `tests/integration/resource_generic_ac3.py` 를 가리키게 한다(규칙 7).",
+              "expectedOutcome": "`python3 tests/integration/check_ac_mapping.py` rc=0, 일곱 값 `78 · 1 · 28 · 49 · 49 · 0 · 0`."
+            },
+            {
+              "seq": 5,
+              "action": "주석 원장을 재판정한다. 새 파일과 픽스처 변경이 두 표면(줄 주석·docstring)의 잔량을 움직이므로 `python3 scripts/check_comment_policy.py` 를 돌려 **게이트가 출력한 실측 줄 수·지문을 그대로** `docs/comment-policy/ledger.md` 에 반영한다 — 기존 범위 #29(`resource-generic-fixture.yaml` 포함)는 재판정으로 갱신하고, 새 파일은 새 행으로 등재하거나 인접 범위에 편입한다. 합계 마커와 잔량 마커도 함께 옮긴다.",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` rc=0, 두 표면 모두 `미판정 잔량 0줄`."
+            },
+            {
+              "seq": 6,
+              "action": "네 lint 게이트를 로컬에서 전부 재현한다: `check_ac_mapping.py` · `check_mock_policy.py` · `check_comment_policy.py` · `check_doc_inventory.py`. 모킹을 도입하지 않았으므로 `check_mock_policy.py` 는 불변이어야 하고, 문서 파일을 늘리지 않았으므로 `check_doc_inventory.py` 도 40/40 그대로여야 한다.",
+              "expectedOutcome": "넷 다 rc=0. `check_mock_policy` 는 `등재 5 · 모킹 지점 5`, `check_doc_inventory` 는 `40 / 40` 으로 baseline 과 동일."
+            },
+            {
+              "seq": 7,
+              "action": "커밋·푸시하고 GitHub API 로 PR 을 연다(머지하지 않는다). PR 본문에 task id·gap 요약·계획 단계·검증 방법·범위 밖 목록을 담는다.",
+              "expectedOutcome": "PR 이 열리고 `mergeable=true`."
+            },
+            {
+              "seq": 8,
+              "action": "CI 를 끝까지 기다려 5잡(`fmt + vet` · `unit tests` · `integration tests`(kind 실클러스터 e2e) · `build & push` · 배포 핀)의 결과를 확인한다. `integration tests` 가 실제로 새 파일을 **배차하고 그 케이스를 돌았는지** 잡 로그에서 `===== resource_generic_ac3.py` 줄로 확인한다 — 배차만 되고 아무것도 단언하지 않는 조용한 통과를 이 레포가 실제로 겪었기 때문이다.",
+              "expectedOutcome": "`fmt + vet` · `unit tests` · `integration tests` · `build & push` 전부 success 이고, 통합 잡 로그에 `resource_generic_ac3.py` 의 케이스 출력이 찍혀 있다."
+            }
+          ],
+          "plannedAt": "2026-09-15T04:22:00Z"
+        }
+      }
+    ]
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
