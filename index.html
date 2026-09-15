@@ -705,6 +705,24 @@
       (sub ? ' <span class="muted small">' + sub + "</span>" : "") + '</summary><div class="sec-body">' + bodyHtml + "</div></details>";
   }
 
+  // 조치 pill 은 `assessment.actionRequired`, 즉 **감지 시점의 판정 기록**을 비춘다. 지금
+  // 할 일이 아니다. 그런데 "조치 필요"는 현재형으로 읽히므로, 끝난 task에까지 붙여 두면
+  // 목록을 훑을 때 완료된 작업이 남은 할 일처럼 보인다(성공 task는 전부 actionRequired:true
+  // 이다 — action_required 를 거쳐야만 계획·실행에 도달하기 때문이다).
+  //
+  // 그래서 종료 상태(DONE_STATUSES)에서는 pill 을 그리지 않는다. 판정과 근거는 아래
+  // "판단(assessment)" 섹션에 그대로 남으므로 정보는 잃지 않는다. `failed`/`review_rejected`
+  // 는 planner 가 다시 집는 재작업 진입점이라 종료가 아니므로 pill 을 유지한다.
+  // `no_action_needed` 를 빼는 데는 덤이 하나 더 있다 — 상태 배지가 이미 "조치 불필요"라
+  // 같은 말이 두 번 찍히던 것이 사라진다.
+  function actionPillHtml(t) {
+    if (!t.assessment || typeof t.assessment.actionRequired !== "boolean") return "";
+    if (DONE_STATUSES.indexOf(t.status) !== -1) return "";
+    return t.assessment.actionRequired
+      ? '<span class="pill yes">조치 필요</span>'
+      : '<span class="pill no">조치 불필요</span>';
+  }
+
   function fmtTask(t) {
     var trig = t.trigger || {};
     var sides = (trig.changedSides || []).map(function (s) {
@@ -719,12 +737,7 @@
       ? ' <span class="muted">— ' + escapeHtml(trig.reason) + "</span>"
       : "";
 
-    var actionPill = "";
-    if (t.assessment && typeof t.assessment.actionRequired === "boolean") {
-      actionPill = t.assessment.actionRequired
-        ? '<span class="pill yes">조치 필요</span>'
-        : '<span class="pill no">조치 불필요</span>';
-    }
+    var actionPill = actionPillHtml(t);
 
     var sections = "";
 
