@@ -4533,7 +4533,7 @@
   {
     "id": "rct_20260915-0003",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "action_required",
+    "status": "planning",
     "trigger": {
       "source": "manual",
       "detectedAt": "2026-09-15T03:50:33Z",
@@ -4552,7 +4552,7 @@
       }
     },
     "createdAt": "2026-09-15T03:50:33Z",
-    "updatedAt": "2026-09-15T04:12:00Z",
+    "updatedAt": "2026-09-15T04:06:41Z",
     "stateSummary": {
       "asIs": "## as-is — 구현 표면 (측정 지점 `52de32c5`, main tip `dc41ab15` = 배포 핀이라 0 side)\n\n**등록 도구 17종** (`internal/mcp/toolslist.go` 의 `\"name\"` 전수 파싱):\n`api_resources` · `aws_config_get` · `dear_baby_reset_user` · `github_app_installation_token` ·\n`grafana_token` · `opensearch_document_delete` · `opensearch_document_put` · `opensearch_search` ·\n`ping` · `resource_get` · `resource_list` · `resource_patch` · `resource_update` ·\n`session_list` · `session_read` · `session_write` · `workload_scale`\n\n- `tests/integration/_helpers.py::EXPECTED_TOOLS` 와 **대칭차집합 공집합**(17==17) — 선언면과 e2e 기대가 어긋나 있지 않다.\n- **게이트 밖 예외 2건**(`internal/mcp/gate.go`): `workload_scale`(`exemptRetiredPendingRemoval`) ·\n  `dear_baby_reset_user`(`exemptPendingOwnerDecision`).\n- 이번 트리거가 `internal/` 에 실제로 넣은 것: `podLogsError`(client-go `DoRaw` 가 JSON `Status` 본문을\n  버리던 자리를 살려 apiserver 의 「choose one of: [...]」 를 보존, 403 은 자기 grant 문면 유지) +\n  대조군 포함 단위 테스트 3종.\n\n**레포 자체 게이트 4종 — 트리거 지점 전부 rc=0**(부모 `f35cc168` 에서도 전부 rc=0):\n\n| 게이트 | 부모 `f35cc168` | 트리거 `52de32c5` |\n|---|---|---|\n| `tests/integration/check_ac_mapping.py` | `78·1·29·48·48·0·0` | `78·1·29·48·48·0·0` (**바이트 동일**) |\n| `scripts/check_doc_inventory.py` | `40/40` 끊긴 링크 0 | `40/40` 끊긴 링크 0 (**동일**) |\n| `scripts/check_comment_policy.py` | 1532줄/81파일 · 잔량 0 | 1555줄/81파일 · 잔량 0 (+23, 잔량 0 유지) |\n| `scripts/check_mock_policy.py` | 등재 5 · 미등재 0 · 고아 0 | 동일 |\n",
       "toBe": "## to-be — 제품 문서(`docs/`)가 기술하는 의도된 동작 (측정 지점 `dc273904` = 트리거의 docs 트리)\n\n- `docs/` 마크다운 **40건**(가치 1 · PRD 14 · 테스트 14 · 상태 추적 1 · 정책 10), 허브 도달 **40/40**.\n- **AC 총 78건 / PRD 14개** (독립 재계수 — `^### AC\\d+` 전수):\n  `resource-generic` 19 · `approval-gate` 11 · `platform-auth-safety` 7 · `opensearch-document-put` 5 ·\n  `opensearch-document-delete` 5 · `session-write` 5 · `github-app-installation-token` 4 ·\n  `grafana-token` 4 · `opensearch-search` 4 · `session-read` 4 · `aws-config-get` 3 ·\n  `dear-baby-reset-user` 3 · `session-list` 3 · `ping` 1.\n- 모델 정의의 to-be 3항: ⑴ 모든 AC 가 구현되고 대응 `test-<domain>.md` 대로 검증 가능 ⑵ 코드의 모든\n  사용자 대면 동작이 문서에 있다(문서 없는 구현 없음) ⑶ `doc-tracker.md` 집계가 ⑴⑵ 의 실제와 일치.\n- **이번 트리거가 to-be 를 직접 움직였다**(기준 2 를 문서 쪽으로 닫은 절반): `prd-resource-generic`\n  AC3 문면이 「상한 500으로 **강제**」 → 「초과 값은 클램프하지 않고 **거부**」로, `test-resource-generic`\n  시나리오 3 기대 결과도 같은 방향으로 정정. 근거는 코드가 아니라 **SSOT 내부 정합**이었다 — 같은 PRD 의\n  AC5 가 자매 상한 `tailLines` 에 이미 「거부」를 축자로 정해 두었고, `toolslist.go` 스키마가\n  `\"maximum\": 500` 을 선언하며, `internal/server/mcp_test.go::TestResourceListLimitDefaultsAndCeiling`\n  이 `limit=501` 거부를 이미 단언하고 있었다.\n- PRD 가 이름으로 약속한 `resource_*` **12종** 중 **4종만 등록**(`get`·`list`·`patch`·`update`),\n  **8종 미등록**: `resource_create` · `resource_delete` · `resource_delete_collection` ·\n  `resource_watch` · `resource_exec` · `resource_attach` · `resource_port_forward` · `resource_proxy`.\n- `prd-approval-gate` AC6(승인–실행 정합성/TOCTOU) · AC11(게이트 자신의 권한 선언) 미구현.\n- `workload_scale` 은 **자기 PRD·테스트 문서가 없다** — `prd-resource-generic` 에 2회 등장하지만 둘 다\n  `resource_update(subresource=scale)` 의 **대체 매핑으로만**이다(부분문자열 히트는 문서화가 아니다).\n",
