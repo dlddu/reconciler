@@ -6291,7 +6291,7 @@
   {
     "id": "rct_20260915-0003",
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-15T03:52:19Z",
@@ -6316,7 +6316,7 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-15T04:00:24Z"
     },
-    "updatedAt": "2026-09-15T04:35:49Z",
+    "updatedAt": "2026-09-15T04:40:02Z",
     "attempts": [
       {
         "plan": {
@@ -6381,9 +6381,9 @@
           "reason": "제품 코드 델타가 0이다 — `internal/`·`k8s/`·`main.go` 무접촉이고 산출이 e2e 테스트 1파일·kind 픽스처·등재 문서뿐이라, 빌드되는 이미지의 동작이 부모와 동일하고 운영 워크로드·데이터·트래픽에 닿는 변경이 없다. 페이징 픽스처(ConfigMap 120개)는 kind 전용 `workload-test` 네임스페이스에만 서므로 운영 클러스터 밖이다. 불가역 지점은 squash 머지 하나뿐이고, 테스트·픽스처·등재 문서가 한 커밋에 묶여 있어 revert 하나로 집계 불변식(`78 − 1 − 29 = 48`)까지 반쪽 없이 되돌아온다. 준비 단계에서 CI 5잡이 head `b685572`로 이미 결론났고(초록/스킵), 배차만 된 조용한 통과가 아니라 잡 로그에서 네 케이스 출력까지 실측 확인됐다 — riskLevel low, 판단이 갈릴 모호함이 남아 있지 않다. 잔여 위험은 머지가 main 전용 `build & push` + 배포 핀을 돌려 롤아웃을 일으키는 것 하나인데, 제품 소스 델타가 0이라 롤아웃 후 동작이 같고 이 레포의 모든 머지가 거치는 상시 경로다."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-15T04:32:45Z",
-          "finishedAt": null,
+          "finishedAt": "2026-09-15T04:40:02Z",
           "entries": [
             {
               "stepSeq": 1,
@@ -6430,8 +6430,58 @@
             },
             {
               "stepSeq": 8,
-              "status": "skipped",
-              "log": "진행 중 — main(`fea75ac`)의 CI 완료 대기."
+              "status": "succeeded",
+              "log": "머지 커밋 `fea75ac` 위에서 main CI를 끝까지 기다렸다 — **체크런 8개 전부 결론이 났고 실패 0**: `fmt + vet`·`unit tests`·`integration tests`(kind 실클러스터 e2e)·`build & push server image`·`build`·`report-build-status`·`deploy`·`pin deployment image (main only)` 모두 **success**. PR 시점과 달리 main 전용 `pin deployment image`와 `deploy`도 돌아 성공했다(제품 소스 델타 0이라 롤아웃 후 동작 동일).\n\n**조용한 통과가 아님을 잡 로그로 실측했다**(`actions/jobs/104253966385/logs`, 256KB). 러너가 primary 그룹 **37개 파일**을 배차했고 그 목록에 `resource_generic_ac3.py`가 있으며, `===== resource_generic_ac3.py (시나리오: test-resource-generic.md#시나리오 3) =====` 아래로 지침 §2-3이 요구한 네 줄이 전부 찍혔다: `precondition ok: 120개 (resource-generic-page-000 … -119)` / `first page ok: 100건, 절단 표시 + continue eyJ2IjoibWV0YS5rOHMuaW8v…` / `continue ok: 20건, 합집합 120 = 전집` / `over-max rejection ok: limit must be <= 500`, 그리고 마지막 `ok: test-resource-generic.md#시나리오 3`.",
+              "startedAt": "2026-09-15T04:34:20Z",
+              "finishedAt": "2026-09-15T04:40:02Z"
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "9e8ff29634673beac83deeb0c8c90474dbe4da3b",
+          "verifiedAt": "2026-09-15T04:40:02Z",
+          "checks": [
+            {
+              "name": "완료기준1 — 전용 e2e 파일이 main에 실재하고 선언이 정확히 1개",
+              "status": "passed",
+              "detail": "`tests/integration/resource_generic_ac3.py` 존재(10265 bytes). `grep -c '검증 시나리오: test-resource-generic.md#시나리오 3'` = **1**. 러너 배차도 `run_all.py --group primary --list | grep -c resource_generic_ac3.py` = **1**(중복 0)."
+            },
+            {
+              "name": "완료기준2 — 페이징 픽스처 120개가 서고 CI가 적용한다",
+              "status": "passed",
+              "detail": "`grep -c 'name: resource-generic-page-' tests/k8s/kind/resource-generic-fixture.yaml` = **120**. 적용 여부는 선언이 아니라 실행으로 확인됐다 — main 통합 잡 로그의 `precondition ok: 120개 (resource-generic-page-000 … resource-generic-page-119)`가 kind 클러스터에서 실제로 120개를 세었다."
+            },
+            {
+              "name": "완료기준3 — 등재 SSOT가 규칙 1 복귀를 반영한다",
+              "status": "passed",
+              "detail": "`docs/doc-tracker.md`: 레지스트리 468행이 `| test-resource-generic.md#시나리오 3 | 절단과 이어보기 | ✅ 전용 파일 `resource_generic_ac3.py` |`, `### ⏳ 구현 대기 (28)` 상세 표에서 그 행 **삭제 확인**(해당 블록 내 grep 0히트), 집계 블록 `구현 대기 등재 28 · 1:1 대상 49 · 매칭 파일(전용) 49 · 공백 시나리오 0`, 레지스트리 제목 `(78) — ✅ 49 · ⬜ 0 · ⏳ 28 · 🚫 1`, `## 변경 이력` 1행 추가. `docs/test-resource-generic.md` 시나리오 3의 `자동화`가 `통합 tests/integration/resource_generic_ac3.py`를 가리키고 그 절 안에 `(미작성)` **0히트**(규칙 7)."
+            },
+            {
+              "name": "완료기준4 — main CI 초록",
+              "status": "passed",
+              "detail": "머지 커밋 `fea75ac`의 체크런 **8개 전부 completed/success**(실패·취소 0). `pin deployment image (main only)`와 `deploy`까지 성공."
+            },
+            {
+              "name": "게이트 — check_ac_mapping.py 일곱 값(수렴 판정의 핵심)",
+              "status": "passed",
+              "detail": "머지된 main 체크아웃에서 rc=0, 일곱 값이 지침이 못박은 값과 **정확히 일치**: `78 · 1 · 28 · 49 · 49 · 0 · 0`(시나리오 전집·예외·구현 대기·1:1 대상·매칭 파일·분할 대기·공백). 직전 `78 · 1 · 29 · 48 · 48 · 0 · 0`에서 **셋만 움직이고 넷은 불변** — 지침이 오류 신호로 지목한 「전집 78 또는 공백 0이 움직임」은 발생하지 않았다. 불변식 `78 − 1 − 28 = 49 = 49` 성립. 마지막 줄 `OK: … 불변식 성립, 러너 배차 누락·케이스 미호출 없음`."
+            },
+            {
+              "name": "게이트 — 나머지 셋(주석 원장·모킹·문서 인벤토리)",
+              "status": "passed",
+              "detail": "`check_comment_policy.py` rc=0 — 줄 주석 1570줄/82파일·docstring 1152줄/63파일로 **두 표면 모두 미판정 잔량 0줄**, 새 범위가 원장에 등재됨(줄 주석 #33 `66ff2fad5f28` · docstring #14 `1047bcfddc79`, 범위 #29는 31줄 `55477beaf558`로 재판정). `check_mock_policy.py` rc=0 — `등재 5 · 모킹 지점 5`로 baseline 불변(모킹 미도입 확인). `check_doc_inventory.py` rc=0 — `40 / 40 · 끊긴 링크 0`으로 baseline 불변(문서 파일 미증가)."
+            },
+            {
+              "name": "머지 안전성 — 리베이스 불필요, 준비 시점 전제 유지",
+              "status": "passed",
+              "detail": "머지 직전 PR #100의 `base.sha`가 준비 시점과 동일한 `877f070`이라 지침 §3의 리베이스 규칙(add/add·쌓기·정지)이 **발동할 자리가 없었다**. `mergeable=true`·`mergeable_state=clean`. 순서 제약(#98이 먼저 착지)은 `877f070 = #98 08f1ae6 + 배포 핀`으로 이미 충족돼 있었다. squash 머지만 사용(조직이 merge commit 금지)."
+            },
+            {
+              "name": "[정보성] 모델 전체 잔여 gap — 이 task의 범위 밖, 수렴 판정에 넣지 않음",
+              "status": "passed",
+              "detail": "계획이 명시적으로 후속으로 남긴 것들이 그대로 남아 있다(미달이어도 이 task의 실패가 아니다): ⓐ `test-resource-generic.md#시나리오 5` 행 — 같은 계열의 남은 한 행이자 **다음 슬라이스 1순위**. ⚠️ 그 행이 「단언 승계」로 지목하는 `workload_logs_ac{1,2,3,4}.py`는 이미 없다(`67764e5`/#72가 삭제) — 승계하려면 그 커밋의 **부모**에서 꺼내야 한다. ⓑ 실물 gatekeeper 픽스처(구현 대기 17행이 공유하는 구조적 선행). ⓒ 요약 레지스트리의 `(규칙 6 — 도구 미구현)` 라벨 부정확 24행(부모에서 이미 있던 별건). ⓓ 모델 정의의 매칭 단위 제외 목록이 배차 러너 `run_all.py`를 빠뜨린 건(tobe-modeler 몫). 구현 대기는 29→**28**로 하나만 줄었다. 이 실행이 as-is를 `71144741…` → **`9e8ff296…`**로 움직였고 to-be도 함께 움직였으므로(`reg:`가 `doc-tracker.md` 해시) **다음 감지 주기가 후속 task를 연다** — 여기서 후속 task를 만들지 않는다."
             }
           ]
         }
