@@ -6852,6 +6852,67 @@
       "reason": "구현 대기 27행 중 10행(approval-gate#2·4·5·7·8·9, resource-generic#8·9·10·18)의 유일한 차단 요인이 tests/k8s/kind/gatekeeper-fixture.yaml 부재 + CI integration-tests 잡의 GATEKEEPER_* env 미배선임을 실측. 클라이언트(internal/gatekeeper)·게이트웨이 이미지(ghcr.io/dlddu/gatekeeper)·kind 매니페스트는 모두 실재하므로 규칙 6의 도달 불가가 아니라 규칙 1의 공백 — 최소 테스트 계측(픽스처·CI 배선)으로 해소 가능. 트리거 자체(#103 resource-generic#5)는 정합 수렴하여 대응 불요. → 픽스처+배선 작업을 위해 planner 인계.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-15T06:14:29Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "[rct_20260915-0008] 실물 gatekeeper 픽스처를 kind에 세우고 CI에 배선한 뒤, 픽스처 착지만으로 해제 조건이 충족되는 대기 표 8행(approval-gate#2·4·7·8·9, resource-generic#8·9·10)의 전용 e2e를 같은 슬라이스에서 전부 저작한다. **왜 8행 전부인가**: 대기 표의 계약상 해제 조건 충족 = 1:1 판정 대상 복귀인데, 픽스처가 서는 순간 8행의 해제 조건(⑵ 실물 gatekeeper 픽스처)이 동시에 충족된다. e2e 없이 행을 빼면 불변식(78−1−19=58)이 깨지고, 행을 남기면 근거가 거짓이 된다 — 이 task가 지적한 규칙 5 집계 불일치의 재생산이다. 감지는 10행을 '픽스처 부재 하나뿐'이라 했으나 행별 원문 재실측에서 ag#5(externalId 409·5xx 주입 수단 — 담당에 mock-policy 포함)·rg#18(cluster-admin 바인딩 아래 '부여되지 않은 종류'가 없어 403 경로 부재 — 문면 판정 선행)은 제2 차단이 확인되어 이 둘은 근거만 갱신하고 남긴다. 재실측으로 밝혀진 실행-시점 사실 세 개가 설계에 들어간다: (a) `resource_generic_ac5.py` 대조군이 'approval gate is not configured'를 단언하는데 게이트를 켜면 그 단언이 깨지므로 같은 슬라이스에서 reject-댄스 거부로 옮긴다(ac5가 스스로 이 이행을 예고해 뒀다). (b) SUT 클라이언트의 폴링 마감과 gatekeeper 만료가 같은 env(GATEKEEPER_TIMEOUT_SECONDS)에서 파생해 클라이언트가 EXPIRED 상태를 자기 폴링으로 관측하는 것은 구조적 타이 레이스다 — ac4(b)는 거부 지연(≥timeout)·gatekeeper 기록의 EXPIRED(조회 시점 평가)·프록시 폴링 카운트로 관측한다. (c) GATEKEEPER_USER_ID는 users.id(cuid 랜덤)여야 하므로 CI 시드 스텝(curl 팟 → /api/me → id → secret)으로 정적 배선한다. 범위(완료 기준): CI 4잡 초록 + 8개 시나리오의 전용 e2e가 배차돼 실제로 돌았음이 잡 로그로 확인 + check_ac_mapping rc=0(구현 대기 19·매칭 파일 58) + 게이트가 켜진 primary에서 기존 e2e 무수정 통과(ac5 대조군 이행 포함). 범위 밖(후속): ag#5(409·5xx 주입 수단 — mock-policy 판정), ag#3·6·10·11·rg#6·7·11·12·13·14·15·16·17(도구 미등록 축), rg#18(시나리오 문면과 cluster-admin의 어긋남 — 제품 문서 판정), 레지스트리 `(규칙 6 — 도구 미구현)` 라벨 부정확(잔여 16행), 모델 정의의 run_all.py 누락(tobe-modeler 몫).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "tests/k8s/kind/gatekeeper-fixture.yaml 저작 — ns gatekeeper: gatekeeper Deployment(이미지 ghcr.io/dlddu/gatekeeper:sha-762fafe 핀, Recreate, PVC 100Mi, securityContext fsGroup 1001 — non-root(uid 1001) SQLite 볼륨 쓰기, /api/health 프로브) + Service(:80→3000) + PVC + 기록 프록시 gatekeeper-trace(ConfigMap python 스크립트: POST /api/requests 본문 전문·x-api-key 존재 여부·GET 폴링 카운트를 식별자와 함께 기록, :3000 전달, :8081 admin JSON) + Service. 머리말에 프록시가 필요한 이유(ac2 요청 본문 계약 관측)와 fsGroup 사유를 적는다.",
+              "expectedOutcome": "kubectl apply -f 로 문법·스키마 오류 없이 적용되고, kind에서 gatekeeper 파드가 /api/health 로 Ready 한다."
+            },
+            {
+              "seq": 2,
+              "action": "tests/k8s/kind/gatekeeper-variant.yaml 저작 — ns homelab-k3s-mcp-gatekeeper-variant: SUT 변형(이미지 homelab-k3s-mcp:ci, MCP_AUTH_DISABLED=1, homelab-k3s-mcp-gatekeeper secretRef, GATEKEEPER_BASE_URL=프록시 svc, GATEKEEPER_TIMEOUT_SECONDS=5, GATEKEEPER_POLL_INTERVAL_SECONDS=1) + Service. auth-fixture.yaml 의 변형 패턴(별도 ns·이미지 태그 ci)을 따른다.",
+              "expectedOutcome": "변형 파드 Ready, 그 배포의 tools/list 가 EXPECTED_TOOLS 와 일치(도구 총수는 이 슬라이스가 움직이지 않는다)."
+            },
+            {
+              "seq": 3,
+              "action": ".github/workflows/ci.yml 배선 — fixture apply + rollout wait(gatekeeper·trace), 시드 스텝(curl 팟에 Remote-User: gatekeeper-e2e 로 /api/me 호출해 users.id 확보), API 키 생성(openssl rand), secret homelab-k3s-mcp-gatekeeper 2곳 생성(main ns: BASE_URL=게이트키버 svc 직접 / variant ns: BASE_URL=프록시 + GATEKEEPER_USER_ID=<cuid>), run_all.py GROUPS 에 gatekeeper-variant 추가, variant pytest 스텝(port-forward 8092), failure-dump 에 gatekeeper ns 추가.",
+              "expectedOutcome": "lint 잡이 배차 누락 없이 통과하고, kind 잡에서 변형 그룹이 별도 pytest 스텝으로 돈다."
+            },
+            {
+              "seq": 4,
+              "action": "tests/integration/_gatekeeper.py 공유 헬퍼 저작 — 승인·거절 댄스(게이트키버 API 로 PENDING 요청 대기 → Remote-User PATCH approve/reject), 요청 레코드 판독(GET /api/requests/{id}·?status=PENDING), 프록시 기록 판독, 변형 SUT healthz 대기. _helpers.port_forward 재사용. 줄 주석 0줄(docstring 만).",
+              "expectedOutcome": "신규 e2e 8파일이 이 헬퍼만으로 게이트 상대를 조작하고, run_all 의 _ 접두 제외 규칙에 걸리지 않는다."
+            },
+            {
+              "seq": 5,
+              "action": "e2e 8파일 저작 — approval_gate_ac2·ac4·ac9(실행 대상: gatekeeper-variant), approval_gate_ac7·ac8(primary), resource_generic_ac8·ac9·ac10(primary). 각 파일이 시나리오 원문의 실행 단계·기대 결과를 전부 단언한다. 특이 설계: ac4(b)는 거부 지연(≥timeout 초) + 기록 EXPIRED + 프록시 폴링 카운트로 관측(클라이언트 마감==만료 타이 레이스 회피), ac9는 같은 사용자의 AUTO_APPROVE→AUTO_REJECT 모드 전환(초기화로 NONE 복원), rg#10 의 gracePeriodSeconds 는 kubectl 로 세운 일회용 파드로 관측(기준선 파드를 건드리지 않는다).",
+              "expectedOutcome": "check_ac_mapping 규칙 1·2·7 통과 — 8 시나리오가 각각 정확히 하나의 전용 파일로 매칭되고 자동화 필드와 일치한다."
+            },
+            {
+              "seq": 6,
+              "action": "resource_generic_ac5.py 대조군 이행 — Secret 읽기 거부 단언('approval gate is not configured')을 reject-댄스 거부('approval rejected')로 교체하고 docstring 의 경고 문단을 이행 근거로 갱신.",
+              "expectedOutcome": "게이트가 켜진 primary 에서 ac5 전체 통과 — 대조군이 이제 실제 거부 판정을 잰다."
+            },
+            {
+              "seq": 7,
+              "action": "문서 갱신 — docs/doc-tracker.md: 레지스트리 8행 ⏳→✅(파일명 기입), 집계(구현 대기 27→19, ✅ 50→58, 요약 헤더·불변식 문장), 대기 표 −8행, ag#5·rg#18 근거 갱신(픽스처 착지 사실 + 남은 차단만), 「⑵ 벽 붕괴」 문단 추가. docs/test-approval-gate.md·docs/test-resource-generic.md 의 자동화 필드 8행 갱신.",
+              "expectedOutcome": "python3 tests/integration/check_ac_mapping.py rc=0 — 독립 재계수(시나리오 78/예외 1/구현 대기 19/1:1 대상 58/매칭 파일 58)와 일치."
+            },
+            {
+              "seq": 8,
+              "action": "주석 원장 갱신 — docs/comment-policy.md 에 신규 .py 9파일·2 YAML·변경 ac5 의 등재·지문 갱신. 파이는 줄 주석 0줄을 유지해 지문 변화를 docstring 표면으로 한정.",
+              "expectedOutcome": "python3 scripts/check_comment_policy.py rc=0 — 실패 시 출력된 실측 지문을 옮겨 적어 재판정."
+            },
+            {
+              "seq": 9,
+              "action": "로컬 게이트 8종 — python3 tests/integration/check_ac_mapping.py·scripts/check_mock_policy.py·scripts/check_comment_policy.py·scripts/check_doc_inventory.py + gofmt -l · go vet ./... · go build ./... · go test ./... (PATH=/home/silas/toolchains/go/bin). 게이트는 git add -A 이후에 돌린다(check_comment_policy 는 ls-files 기반이라 stage 전엔 새 파일이 안 보인다).",
+              "expectedOutcome": "여덟 게이트 전부 rc=0 — CI lint·unit-tests 잡을 1:1 재현."
+            },
+            {
+              "seq": 10,
+              "action": "PR 생성·CI 관제 — 브랜치 push(gh 사용자 토큰 인라인 URL 로 pull_request 이벤트 기동), PR 본문에 task id·gap 요약·계획·검증 방법 기입, CI 4잡 대기 — /commits/<sha>/check-runs 의 details_url 로 run/job id 를 꺼내고 actions:read 토큰 + curl -L 로 잡 로그를 받아 배차 수·새 파일 실행 증거·ac5 통과를 확인한다.",
+              "expectedOutcome": "4잡 전부 success — '머지해도 되는가' 미지수가 소거되어 준비 완료."
+            }
+          ],
+          "plannedAt": "2026-09-15T06:40:00+09:00"
+        }
+      }
+    ]
   }
 ]
