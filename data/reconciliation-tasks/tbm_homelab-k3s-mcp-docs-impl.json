@@ -4659,7 +4659,7 @@
   {
     "id": "rct_20260915-0003",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "approving",
+    "status": "approved",
     "trigger": {
       "source": "manual",
       "detectedAt": "2026-09-15T03:50:33Z",
@@ -4761,8 +4761,11 @@
         },
         "review": {
           "required": true,
-          "status": "pending",
-          "reason": "프로덕션 k3s MCP 서버에 **삭제 도구(`resource_delete`)를 새로 등록**하는 쓰기 경로 확장이다. 이 서버의 `k8s/rbac.yaml` 이 `cluster-admin` 이라 승인 게이트 판정이 사실상 유일한 경계이고, 선언·게이트 등재·인자 검증 중 한 곳만 어긋나도 클러스터 임의 리소스에 `delete` 가 닿는다 — 표면을 한 칸 넓히는 것이 아니라 **불가역 verb 를 쓰기 경로에 처음 여는** 슬라이스다.\n\n삭제는 본질적으로 불가역이라 코드 롤백과 데이터 롤백이 분리된다 — PR 을 되돌리면 이후 호출만 막힐 뿐, 그 사이에 지워진 객체는 되돌아오지 않는다(게다가 finalizer·grace period 때문에 apiserver 의 200 은 「접수」이지 「지워짐」이 아니라 관측과 실제가 어긋날 수 있다). 이 서버는 reconciler 루프 자신이 도구를 공급받는 곳이기도 해서, 잘못 나가면 루프의 관측·조치 수단이 같이 흔들린다.\n\n실행 시 순서 의존이 하나 있다: 형제 PR #99(`workload_scale` 제거)가 아직 `awaiting_review` 이고 이미 자기 base 기준으로 main 과 충돌해 있다. 어느 쪽을 먼저 착지시키느냐에 따라 리베이스 주체가 달라지므로, 이 건 승인 시 #99 와의 순서를 함께 정해 주는 것이 좋다."
+          "status": "approved",
+          "reason": "프로덕션 k3s MCP 서버에 **삭제 도구(`resource_delete`)를 새로 등록**하는 쓰기 경로 확장이다. 이 서버의 `k8s/rbac.yaml` 이 `cluster-admin` 이라 승인 게이트 판정이 사실상 유일한 경계이고, 선언·게이트 등재·인자 검증 중 한 곳만 어긋나도 클러스터 임의 리소스에 `delete` 가 닿는다 — 표면을 한 칸 넓히는 것이 아니라 **불가역 verb 를 쓰기 경로에 처음 여는** 슬라이스다.\n\n삭제는 본질적으로 불가역이라 코드 롤백과 데이터 롤백이 분리된다 — PR 을 되돌리면 이후 호출만 막힐 뿐, 그 사이에 지워진 객체는 되돌아오지 않는다(게다가 finalizer·grace period 때문에 apiserver 의 200 은 「접수」이지 「지워짐」이 아니라 관측과 실제가 어긋날 수 있다). 이 서버는 reconciler 루프 자신이 도구를 공급받는 곳이기도 해서, 잘못 나가면 루프의 관측·조치 수단이 같이 흔들린다.\n\n실행 시 순서 의존이 하나 있다: 형제 PR #99(`workload_scale` 제거)가 아직 `awaiting_review` 이고 이미 자기 base 기준으로 main 과 충돌해 있다. 어느 쪽을 먼저 착지시키느냐에 따라 리베이스 주체가 달라지므로, 이 건 승인 시 #99 와의 순서를 함께 정해 주는 것이 좋다.",
+          "reviewer": "human",
+          "reviewedAt": "2026-09-15T04:53:00Z",
+          "comment": "사람 승인(대화형 세션). 승인 시점 실측 전제를 함께 남긴다 — main tip 이 계획 당시 `877f070` 에서 **`a9afdbd`** 로 두 번 이동했고(#100 `fea75ac` 착지 + 배포 핀 `11d5be1`, 이어서 형제 PR #99 squash 머지), 그 결과 **PR #101 은 현재 CONFLICT(dirty)** 다. 시험 리베이스 실측 7파일 — `internal/mcp/gate.go`(1) · `internal/mcp/toolslist.go`(1) · `internal/server/fakes_test.go`(2) · `internal/server/mcp_test.go`(1) · `tests/integration/_helpers.py`(1) · `docs/comment-policy/ledger.md`(3) · `docs/doc-tracker.md`(2). 이는 `plan.executionGuide` 3절이 「#99 가 먼저 착지하는 경우」로 미리 실측해 둔 바로 그 모양이므로 **계획을 바꾸지 않고 그 헝크-로컬 규칙으로 해소**한다. CI 4잡은 head `b44562b` 에서 success 이나 **낡은 base 기준**이라 리베이스 후 재확인이 필요하다. 실행 순서: ① 리베이스(충돌 해소) → ② force-push(**새 PR 을 열지 말 것** — 이 승인 이력이 끊긴다) → ③ CI 4잡 재확인 → ④ squash 머지. 문서 숫자는 base 이동으로 무효 — 주석 원장 합계와 「등록 도구 N종」은 지침 규칙 ③대로 **병합 후 게이트 출력의 실측값**에서 다시 뽑는다(#99 로 `workload_scale` 이 빠져 16종이 base 이므로 이 슬라이스 착지 후 17종이 된다). `internal/server/mcp_test.go` 총수를 `len(want)` 로 바꾼 계획 step 6 이 이 리베이스를 푸는 자리다. 검토 사유가 물었던 「#99 와의 순서」는 #99 가 먼저 착지해 **해소됐다** — 리베이스 부담은 이 task 몫이다. 런타임에서 실제 삭제를 태워 보지 말 것(도구 표면에 `resource_delete` 가 보이는 것까지가 범위)."
         }
       }
     ]
