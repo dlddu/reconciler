@@ -6821,7 +6821,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
-    "status": "reviewing",
+    "status": "awaiting_review",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-15T05:50:02Z",
@@ -6839,7 +6839,7 @@
       }
     },
     "createdAt": "2026-09-15T05:50:02Z",
-    "updatedAt": "2026-09-15T12:54:18Z",
+    "updatedAt": "2026-09-15T12:57:52Z",
     "id": "rct_20260915-0008",
     "stateSummary": {
       "asIs": "## as-is — `tests/` 트리 `0ad7393` (2026-09-15 관측)\n\n- **매칭 단위 파일 53** = 전용 50 + 비-시나리오 2(`smoke.py`·`resource_read_smoke.py`, 규칙 3 등재) + 러너 `run_all.py` 1.\n  - 제외: `_` 접두 헬퍼 7 + `check_ac_mapping.py`.\n  - ⚠️ 모델 `definition`의 \"매칭 단위가 아닌 것\" 목록은 `run_all.py`를 빠뜨린다(문면대로 세면 51). doc-tracker가 이 어긋남을 스스로 적고 정정을 모델 소유자 몫으로 남겼다 — tobe-modeler 건, 이번 판정에는 영향 없음.\n- **레포 게이트** `python3 tests/integration/check_ac_mapping.py` **rc=0** (부모 `49215b8`·트리거 `41ee356` 양 지점).\n  - 트리거: 시나리오 78 / 예외 1 / 구현 대기 27 / 1:1 대상 50 / 매칭 파일 50 / 규칙2 위반 0 / 공백 0\n  - 부모: 동일하되 구현 대기 **28** · 1:1 대상 **49** · 매칭 파일 **49**\n- **신규 파일 1**: `tests/integration/resource_generic_ac5.py`(+407) — `검증 시나리오: test-resource-generic.md#시나리오 5` 선언, 픽스처 `tests/k8s/kind/resource-generic-fixture.yaml`(+56, 다중 컨테이너 `resource-generic-multi`) 동반.\n- **승인 게이트 클라이언트는 구현되어 있다**: `internal/gatekeeper/gatekeeper.go`(`GATEKEEPER_BASE_URL`/`_API_KEY` 미설정 시 `ErrNotConfigured` fail-closed) + `internal/mcp/gate.go`의 `gatedVerbs`.\n- **그러나 kind 하네스에 gatekeeper가 없다**: `tests/k8s/kind/` 13개 매니페스트 어디에도 `gatekeeper-fixture.yaml`이 없고, `.github/workflows/ci.yml`의 `integration-tests` 잡은 `GATEKEEPER_*` env를 **하나도 설정하지 않는다** ⇒ 게이트 대상 호출은 kind에서 `ErrNotConfigured`로 거부된다.\n- 등록 도구 실측(`internal/` grep + `toolslist.go` + `_helpers.py::EXPECTED_TOOLS`): **등록** `resource_get`·`resource_list`·`resource_patch`·`resource_update`·`resource_delete`·`api_resources` / **미등록** `resource_watch`·`create`·`apply`·`exec`·`attach`·`port_forward`·`proxy`·`describe`·`delete_collection`.",
@@ -6920,6 +6920,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/106",
           "preparedAt": "2026-09-15T06:58:00+09:00",
           "notes": "슬라이스 = 실물 gatekeeper 픽스처 + 기록 프록시 + SUT 변형(gatekeeper-variant) + CI 배선(시크릿·시드·4그룹 배차) + 전용 e2e 8파일(approval_gate_ac{2,4,7,8,9}, resource_generic_ac{8,9,10}) + _gatekeeper.py 헬퍼 + ac5 대조군 이행 + doc-tracker(8행 폐쇄·집계 27→19·50→58·ag#5/rg#18 재근거) + 주석 원장 등재·재판정.\n\n⚠️ 인계 시점 CI 는 초록이 아니다. 준비 단계에서 CI 를 다섯 번 돌려(헤드 bab2047→6c73a6b→2ee2177→f060649→dfb6520) 다섯 개의 실제 버그를 잡아 고쳤고 여섯 번째가 남았다. 계획 시점 노트의 'CI 판정 대기 중' 은 '확인만 하면 된다' 는 뜻이었으나 그 가정이 틀렸다 — 로컬 8게이트는 하네스가 클러스터에서 무엇을 하는지 보지 못한다.\n\n실측: fmt+vet · unit tests · build&push 는 다섯 실행 전부 초록. integration tests 만 빨강. 픽스처 자체는 내내 정상이다(gatekeeper·trace·variant rollout 성공, 시드 통과, forward-auth 승인·거절 실제로 먹힘) — 깨진 것은 전부 테스트 파일의 단언이었고, 이 슬라이스의 설계는 서 있다. 배차도 정상(primary 43 + gatekeeper-variant).\n\n통과 확인 4/9: approval_gate_ac7 · approval_gate_ac8 · resource_generic_ac5(대조군 이행 포함 무수정 통과) · resource_generic_ac10. 미지수 5/9: resource_generic_ac8(현재 죽는 자리) · resource_generic_ac9(ac8 다음 차례라 미실행) · approval_gate_ac2/ac4/ac9(변형 그룹, primary 완주 선행이라 미실행).\n\n고친 다섯(전부 '서버가 무엇을 돌려주는가' 오가정, 로컬 게이트가 하나도 못 잡음): ⑴ ac8::_patch 의 async def + await 누락으로 call_tool 미전송 ⑵ 게이트 거부는 isError 결과가 아니라 McpError(errf(-32603)) — ac4(b)·ac8 두 곳 ⑶ 감사 로그 동사는 update 가 아니라 patch(Pair.String()=Verb+' on '+Resource) ⑷ 게이트 대상은 실재해야 한다 — readGateTarget 이 승인 요청 POST 전에 대상을 읽는다(ac5 대조군이 없는 이름을 겨눠 404) ⑸ ac4(b) 만료 문면은 타이 레이스라 단정 불가.\n\n남은 하나(rct 진단 완료, 미수정): resource_generic_ac8 이 AC6 재확인에 걸린다 — 'Deployment/scale workload-fixture changed after it was approved (resourceVersion 1573 → 1588)'. 제품 버그가 아니라 테스트가 정지 상태를 기다리지 않는 것이다(컨트롤러가 status 를 계속 써 rv 가 스스로 움직인다). 처방은 executionGuide 3절에 코드 형태로 박아 두었다 — 게이트 댄스 전 rv 정지 대기, 호출 자리 넷. ac9 에도 같은 함정이 있을 수 있다(롤링 재시작은 정의상 rv 를 흔든다).\n\nmain 경합: 준비 중 #111·#112·#110 이 착지해 main 을 세 번 병합했다. 충돌하면 GitHub 이 병합 커밋을 만들지 못해 CI 가 아예 기동하지 않는다(체크런 0건) — executionGuide 5절에 해소 규칙과 실측 수치를 남겼다. 현재 헤드 dfb6520 은 main(5f9ea3f) 기준 mergeable=True.\n\n로컬 8게이트는 인계 시점 전부 rc=0(check_ac_mapping 78/1/19/58/58/0/0 · 주석 합계 2090 · docstring 1356)."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "riskLevel=medium인 변경으로, 실물 gatekeeper·기록 프록시·별도 SUT와 API 키/사용자 시드를 CI에 배선해 기존 primary 그룹의 승인·거절 경로와 공유 테스트 상태를 함께 바꾸므로 회귀 영향 범위가 넓다. 준비 기록에는 integration tests 실패(resource_generic_ac8의 resourceVersion 경쟁)와 검증 미완료 5/9가 남아 있고 executionGuide가 미완성 수리를 다음 단계로 넘겨, 전체 CI 통과와 시나리오별 실제 실행이라는 계획의 완료 기준이 아직 입증되지 않았다. 계획상 범위는 kind 테스트 하네스·문서로 운영 코드·매니페스트·데이터를 바꾸지 않으며, 테스트 자원은 일회성이고 머지 커밋 revert로 되돌릴 수 있어 불가역성은 낮다. 남은 수리 범위, 승인 게이트 단언의 의미, 최신 PR/CI의 유효성을 사람이 확인해야 하므로 수동 승인 대기로 인계한다."
         }
       }
     ]
