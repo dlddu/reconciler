@@ -7254,6 +7254,37 @@
       "reason": "축-② 신규 어긋남(이번 트리거가 만든 것): PR #120이 apply 패치 와이어 프리컨디션을 resourceVersion 전용으로 수리한 뒤 PRD `prd-resource-generic.md` AC9의 두 문장(「merge·strategic·apply는 metadata에 두 값을 붙이고」 · 「apply도 승인된 uid가 들어 있어 사라진 대상을 다시 만드는 경로가 되지 않는다」)이 구현(apply=resourceVersion만, uid 미포함 — 단위 테스트 2곳이 강제)과 갈라졌다. PRD 갱신을 소유한 task·staged PR이 없고(#106은 test-*.md만, 자매 task 지침도 PRD 무계획), 코드는 이미 수리돼 이 축으로 재이동하지 않으므로 지금 열지 않으면 이 어긋남에는 재감지 경로가 영원히 없다 — 정의의 「의도된 동작 변경은 문서(PRD/AC/테스트+tracker)를 갱신해 코드에 맞춘다」 절과 「미구현·불일치를 백로그로 치부하지 않는다」 규칙이 함께 작동한다. 인계 3줄: ⑴ PRD AC9 두 문장을 새 계약으로 재작성(apply는 resourceVersion만 wire로 실고, 승인된 uid 정합은 승인/게이트 층의 대상 재독(#114)에서 행사 — merge·strategic·json은 불변)하되, apply+resourceVersion이 사라진 대상 재생성을 실제로 막는지는 SSA 거동 실측으로 확인 후 문언화(자매 task rct_20260915-0008의 verify 기록에 실측이 쌓이는 중). ⑵ `doc-tracker.md:460`의 ⬜ 등재(「apply에 resourceVersion은 충돌 조건이라 설계 질문이 하나 남는다」)를 같은 슬라이스에서 닫아라 — 같은 질문의 소유자다. ⑶ staged PR #106(mergeable=true/unstable, base=현 tip)이 `test-resource-generic.md`를 다시 쓰므로 그 머지 이후 tracker 기준으로 재검산할 것(파일 충돌은 없다 — PRD는 무접촉).",
       "assessedBy": "agent",
       "assessedAt": "2026-09-16T13:40:47Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "PRD 문서 갱신 슬라이스 — #120이 실측으로 수리한 apply 와이어 계약(apply는 resourceVersion만 주입, SSA가 applied config의 uid를 immutable 필드로 422 거부, merge/strategic/json은 불변)에 PRD `prd-resource-generic.md` AC9의 두 문장을 맞추고, doc-tracker 위험 행 「AC6 서버사이드 프리컨디션 — patch·update 구현」의 apply 절을 같은 계약으로 갱신해 「apply에 resourceVersion은 충돌 조건이라 설계 질문이 하나 남는다」 미결 질문을 닫는다. 이 방법의 근거: 축-② 정의상 의도된 동작 변경은 코드가 아니라 문서를 갱신해 수렴하고, PRD AC9 두 문장은 와이어 주입 기제를 못박은 계약 문언이라 #120의 기제 변경이 곧 어긋남이며, 주변 재실측 결과 이 어긋남의 소유자가 아무도 없다(staged PR #106은 test-*.md·doc-tracker 집계·ledger만 건드리고 PRD는 무접촉, 자매 task rct_20260915-0008 attempt-2 지침도 #120+#106 두 PR만 계획) — 지금 갱신 task를 열지 않으면 코드는 이미 수리돼 이 축으로 다시 움직이지 않으므로 재감지 경로가 영영 없다. 이 시도의 범위(완료 기준): ⑴ PRD AC9 두 문장 교체 — merge·strategic은 metadata에 두 값을 주입, apply는 resourceVersion만 주입(단위 회귀 2곳이 강제 — TestApprovedPatchPreservesDataAndConditions의 apply-no-uid, TestConditionalPatchWirePathsAndNoRetries의 rv-only), 승인된 uid 정합은 와이어 주입이 아니라 게이트 층의 실행 직전 대상 재독(prd-approval-gate AC6/#114)에서 행사함을 문언화, 호출자가 이미 적은 rv·uid가 승인 상태와 다르면 네 형식 모두 제출 전 거부는 유지, 재생성 차단 문언의 보증 층은 게이트 재독으로 명시(SSA의 applied-rv 강제 여부는 미관측이므로 와이어층 보증으로 못박지 않는다 — 자매 task step 5 관측이 채우는 자리); ⑵ doc-tracker 행 갱신 + 질문 닫음(남은 관측의 소유자를 시나리오-e2e rct_20260915-0008로 명시); ⑶ PR CI 4잡 초록 후 squash 머지. 범위 밖(후속): 테스트 문서 갱신(진행 중인 PR #106 소관 — main의 test-resource-generic.md AC9은 구 계약 문언이 없어 무접촉으로 정합), e2e 하네스 작업(자매 task executing 중), SSA applied-rv 강제 여부 관측 기록(자매 task step 5), 코드 변경(본 슬라이스에 없음).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "스테이징 PR(preparation 참조)의 CI를 관제한다 — fmt+vet·unit tests·build & push·integration 4잡을 체크런과 잡 로그로 초록 확인한다(문서 전용 변경이라 코드 잡은 무변동 통과가 기대다).",
+              "expectedOutcome": "4잡 전부 success — 문서 슬라이스가 main에 머지 가능한 상태."
+            },
+            {
+              "seq": 2,
+              "action": "수렴 근거를 머지 전에 실측한다 — 브랜치의 prd-resource-generic.md AC9 두 문장과 doc-tracker 행 갱신이 계약 문언과 글자 그대로 일치하는지 diff를 직접 읽고, 원장 문언이 남은 와이어 강제 관측의 소유자(시나리오-e2e rct_20260915-0008)를 명시하는지 확인한다.",
+              "expectedOutcome": "두 파일의 교체 문언이 완료 기준 ⑴⑵와 일치 — 문언이 SSA 미관측 거동을 보증하지 않는다."
+            },
+            {
+              "seq": 3,
+              "action": "CI 초록이면 squash 머지한다 — 머지 후 main이 새 content 커밋을 흡수하고 자동화된 deploy pin 커밋이 뒤따르는지 확인한다(문서 전용이라 이미지 재빌드 변화는 없다).",
+              "expectedOutcome": "PR merged; main의 docs 트리 해시가 이동 — 재감지가 이어서 to-be 이동을 관측한다."
+            },
+            {
+              "seq": 4,
+              "action": "verification 기록 — attempts 마지막 항목에 완료 기준 넷(문장 교체, 행 갱신+질문 닫음, CI 초록, 머지 흡수)의 실측 증거를 기입하고 범위 밖 잔여 gap(SSA applied-rv 강제 관측=자매 task step 5, 구현 대기 등재 27행은 게이트 바이트 동일로 불변)을 명시한다.",
+              "expectedOutcome": "verification.converged 판정이 가능한 기록 상태."
+            }
+          ],
+          "plannedAt": "2026-09-16T13:59:00Z"
+        }
+      }
+    ]
   }
 ]
