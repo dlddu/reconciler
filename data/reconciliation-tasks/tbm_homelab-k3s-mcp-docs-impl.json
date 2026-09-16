@@ -6742,7 +6742,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-15T14:01:26.084948Z",
@@ -6820,9 +6820,9 @@
           "reviewedAt": "2026-09-16T07:26:58Z"
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-16T07:38:26Z",
-          "finishedAt": null,
+          "finishedAt": "2026-09-16T07:58:53Z",
           "entries": [
             {
               "stepSeq": 1,
@@ -6844,6 +6844,66 @@
               "startedAt": "2026-09-16T07:51:20Z",
               "finishedAt": "2026-09-16T07:58:40Z",
               "log": "머지 결과(ed5c7c210158aaab3d3801491e0b1c6315480704) 격리 체크아웃(작업 tmp/src-0016, go1.24.7 linux/arm64)에서 전 배터리 통과.\n① 포커스 회귀: go test ./internal/k8s -run '^TestCollectionSnapshot' -count=1 → ok(0.115s).\n② 전체 스위트: go test ./... -count=1 -timeout=180s → 8패키지 전부 ok(internal/github·grafana·k8s·mcp·opensearch·server·sessionplatform, version은 테스트 없음).\n③ go vet ./... OK · go build ./... OK · gofmt -l 두 새 파일 → 빈 출력(포맷 정상) · git diff --check 클린.\n④ 구조 게이트 4종 rc=0: check_ac_mapping.py(시나리오 78 · 예외 1 · 구현 대기 27 · 1:1 대상 50 · 매칭 파일 50 — 78−1−27=50 불변식 유지), check_mock_policy.py(등재 5 · 미등재 0 · 고아 0), check_comment_policy.py(주석 2023줄 100% 판정 · docstring 1210줄 100% · 신규 행 #37=6줄 86b0510d18a0 — 기대 스냅숏과 정확히 일치), check_doc_inventory.py(41/41 도달).\n⑤ 미연결·표면 불변 확인: ListTargets/CollectionTargetReader/CollectionTargetRef의 정의·호출은 collection_precondition{,_test}.go 두 파일뿐(그리프 실측) — Service·TargetReader·dispatcher·GatePairs에 생산 호출 지점 없음. toolslist.go 등록 도구 이름 실측 19종(ping … resource_watch) — resource_delete_collection 미포함, 준비 기록의 19종 불변과 일치. PRD/test/doc-tracker의 '미연결' 서술과 머지된 문서 동일.\n⑥ asIs 버전 재계산(model.asIs.versionScript, 체크아웃에서): internal:e996412a980049f23eddd021f642d8cd61e326e3 main.go:a686818e97e7dbb2adc7f25c88f25bd6a2ad7537 — internal 트리는 두 신규 파일로 이동, main.go 불변. lastObservedVersion은 실행단계에서 갱신하지 않음(감지 주기 몫).\n⑦ 한계 기록: 로컬 HTTP 테스트는 구현 증거일 뿐 실물 Gatekeeper/apiserver·도구 경로 증거가 아니며, 컬렉션 삭제 실행으로 선행조건을 증명하지 않았다(가이드 금지 준수)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-16T07:50:49Z",
+              "finishedAt": "2026-09-16T07:58:53Z",
+              "log": "머지가 유발한 이미지 발행·핀·GitOps 롤아웃 관측 완료(운영 직접 조작 없음).\n① 이미지 워크플로(Build and Push Docker Image to GHCR, run 35070627893): completed success. build & push server image 07:51:00→07:52:42Z success, pin deployment image (main only) 07:52:46→07:52:52Z success.\n② main CI(CI run 35070628012, 머지 커밋 ed5c7c21): fmt + vet success(07:51:22Z) · unit tests success(07:51:21Z) · integration tests success(모니터 실측 — 'CI integration tests: COMPLETED SUCCESS') · build & push server image success. 핀 이후 main head가 핀 커밋 5b498370348e...에 유지됨(모니터 실측, 후속 침범 없음).\n③ 핀 연쇄 귀속 명확화: 머지(squash) ed5c7c210158aaab3d3801491e0b1c6315480704 → 핀 커밋 5b498370348e(07:52:49Z, '이미지를 ed5c7c21... 로 고정 [skip ci]') → k8s/deployment.yaml image ghcr.io/dlddu/homelab-k3s-mcp:ed5c7c210158aaab3d3801491e0b1c6315480704(라인 49 실독). 머지 SHA·핀 커밋·이미지 태그·런타임 digest를 각각 구분해 기록.\n④ GitOps 롤아웃: Flux(kustomize.toolkit.fluxcd.io/name=homelab-k3s-mcp-app)가 적용 — Deployment revision 41→42(2b5b81aa 이미지, 07:47:18Z Progressing)→43(499 generation, 07:57:28Z 'ReplicaSet homelab-k3s-mcp-7796557489 has successfully progressed'). 중간 rev 42는 #117 워커 머지(독립 승인 변경)에 귀속되고, rev 43이 본 머지의 롤아웃이다.\n⑤ 런타임 건강: pod homelab-k3s-mcp-7796557489-hfdcn(RevSet 7796557489=rev 43) — 1/1 Running, restarts=0, image ghcr.io/dlddu/homelab-k3s-mcp:ed5c7c21..., imageID digest sha256:fecb025c83349f442fc57154d088d2b4bda7c3bc4c718aa51b9e8ebb8de2ec57(이전 이미지 digest 617000388f...와 다른 새 digest로 실측 확인), Ready 07:57:28Z(프로브 /healthz liveness·/readyz readiness 통과 — Ready 조건으로 실측), replicas 1/1 ready·updated·available. crash loop·지속 건강 실패 없음.\n⑥ 롤백: 필요 없음 — preflight에서 확립한 경로(단일 부모 revert 롤백 PR / 긴급 GitOps 핀 복원)는 발동되지 않았고 운영 변경은 계획된 자동화뿐.\n⑦ 한계: 이 슬라이스는 내부 선행 리더의 범위만 수렴 판정한다. resource_delete_collection 등록·AC11 전체·실물 apiserver/Gatekeeper 검증·나머지 미구현 도구는 후속 범위로 남는다(가이드 Outside scope 준수)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:e996412a980049f23eddd021f642d8cd61e326e3 main.go:a686818e97e7dbb2adc7f25c88f25bd6a2ad7537",
+          "verifiedAt": "2026-09-16T07:58:53Z",
+          "checks": [
+            {
+              "name": "준비 헤드 CI 4잡(70c312d0)",
+              "status": "passed",
+              "detail": "머지 전 현재 헤드 체크런 실측: fmt + vet / unit tests / integration tests / build & push server image 전부 completed success; pin deployment image (main only)는 PR에서 skipped(정상)."
+            },
+            {
+              "name": "머지 실행(불변 머리 가드)",
+              "status": "passed",
+              "detail": "gh pr merge 119 --squash --match-head-commit 70c312d0e5c18b7b5c17cd0b3e66ea305e9da256 성공. mergedAt 07:50:49Z, squash 커밋 ed5c7c21(단일 부모 — 레포는 merge/rebase 머지 금지, squash-only 실측 확인 후 채택; 롤백 방식도 그에 맞게 기록)."
+            },
+            {
+              "name": "포커스 컬렉션 리더 회귀",
+              "status": "passed",
+              "detail": "머지 커밋 격리 체크아웃에서 go test ./internal/k8s -run '^TestCollectionSnapshot' -count=1 → ok. 7개 신규 Go/HTTP 테스트 함수가 협상·페이지 완결성·중복·410/오류·상한·취소를 검증."
+            },
+            {
+              "name": "전체 Go 스위트·vet·build·gofmt·공백",
+              "status": "passed",
+              "detail": "go test ./... -count=1 -timeout=180s 8패키지 전부 ok; go vet ./... OK; go build ./... OK; gofmt -l 두 신규 파일 빈 출력; git diff --check 클린."
+            },
+            {
+              "name": "구조 게이트 4종",
+              "status": "passed",
+              "detail": "check_ac_mapping(78 − 1 − 27 = 50 불변식 유지)·check_mock_policy(미등재 0·고아 0)·check_comment_policy(주석 2023줄·docstring 1210줄 100% 판정, 신규 행 #37=6줄 86b0510d18a0)·check_doc_inventory(41/41) 전부 rc=0 — 준비 단계 구조 스냅숏과 일치."
+            },
+            {
+              "name": "도구 표면 19종 불변·미연결",
+              "status": "passed",
+              "detail": "toolslist.go 등록 도구 실측 19종(resource_delete_collection 미포함); ListTargets/CollectionTargetReader 정의·호출은 collection_precondition{,_test}.go 두 파일뿐 — dispatcher·Service·TargetReader 생산 호출 지점 없음. 잔여 gap(정보성): resource_delete_collection 등록·AC11 전체·실물 apiserver/Gatekeeper 검증·나머지 4도구는 후속 감지 주기의 몫."
+            },
+            {
+              "name": "이미지 발행·핀(머지 SHA 귀속)",
+              "status": "passed",
+              "detail": "run 35070627893 completed success — build & push server image(07:52:42Z)·pin(07:52:52Z) success; 핀 커밋 5b498370(07:52:49Z)이 k8s/deployment.yaml을 ed5c7c21... 태그로 고정(실독). 머지 SHA/핀 커밋/이미지 태그 구분 기록."
+            },
+            {
+              "name": "main CI(머지 커밋 ed5c7c21)",
+              "status": "passed",
+              "detail": "CI run 35070628012: fmt + vet·unit tests·integration tests(완료 실측)·build & push 전부 success. 핀 이후 main head가 핀 커밋 5b498370에 유지."
+            },
+            {
+              "name": "GitOps 롤아웃·런타임 건강",
+              "status": "passed",
+              "detail": "Deployment rev 43(gen 499): image ed5c7c21...로 롤아웃, RS 7796557489 successfully progressed(07:57:28Z). pod 7796557489-hfdcn 1/1 Running restarts=0, 런타임 digest sha256:fecb025c...(새 digest 실측), 프로브 /healthz·/readyz 통과(Ready 조건), 1/1 ready·updated·available. 중간 rev 42(2b5b81aa)는 #117 워커 머지에 귀속 — 본 롤아웃은 rev 43."
             }
           ]
         }
