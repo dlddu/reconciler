@@ -6821,7 +6821,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
-    "status": "reviewing",
+    "status": "awaiting_review",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-15T05:50:02Z",
@@ -7097,6 +7097,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/120",
           "preparedAt": "2026-09-16T19:45:00+09:00",
           "notes": "제품 수리 슬라이스 분리(직전 시도 verification의 지시대로). PR #106은 internal/ 무변경 계약을 유지하며 하네스 완주 차량으로 남는다.\n\n변경 실측(브랜치 31bdea1, main be2aff0 기반): internal/k8s/patch_precondition.go +3줄 — apply 패치는 승인 전제 주입에서 resourceVersion만 심고 uid는 심지 않는다(사용자 metadata의 rv·uid 불일치 제출 전 거부는 유지, condition[0]=='uid' && PatchType=='apply'인 condition만 주입 생략). 단위 테스트 3곳 갱신: TestApprovedPatchPreservesDataAndConditions(apply는 uid 부재 단언), TestConditionalPatchWirePathsAndNoRetries(apply 본문 rv 있음·uid 없음), TestApprovedPatchRefusesUnsafeInputsBeforeNetwork의 apply uid 불일치 거부는 무변동 유지. 주석 0줄 추가(원장 지문·등재 범위 무변동).\n\n근거: gate.go::confirmTargetUnchanged의 실행 직전 rv·uid 재판독 거부는 patchType 불문 실측(ac8 AC6)이고, 와이어층은 rv가 update 전제 기제로 흘러 불일치 409를 내고 resource.go가 Conflict를 거부로 매핑한다. SSA가 applied config의 rv를 강제하는지는 이번이 첫 실측 — 실행 단계 관측 대상(지침 §4).\n\n로컬 8게이트 rc=0: gofmt 0행 · go vet · go build · go test ./... 전체 ok · check_ac_mapping(78/1/27/50/50/0/0, main 하네스 기준) · check_mock_policy · check_comment_policy(주석 2005·docstring 1210, 지문 무변동) · check_doc_inventory(41/41).\n\nCI 기동 확인(체크런 4): fmt+vet success · unit tests success · integration tests·build&push in_progress — integration은 main 하네스(gatekeeper 부재)를 돌리므로 이 PR의 유의미한 판정은 3잡 초록이고 apply 케이스의 실증은 PR #106이 이 수리를 병합한 뒤 rg#9 ok 라인으로 이룬다. 계획 1단계의 관제·squash 머지는 실행 몫."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "직전 시도의 사람 승인은 PR #106 'internal/ 무변경' 계약 전제로 이뤄졌는데, 이 재계획은 그 전제를 벗어나는 제품 코드 수정 PR #120(internal/k8s/patch_precondition.go — approvedPatch가 apply 형식에는 uid를 심지 않도록)을 새로 도입하므로 승인 대상이 이전과 다르다. 수리 PR 머지 시 이미지 재빌드와 deploy pin이 뒤따라 배포된 서버의 승인 패치 쓰기 경로 동작이 실제로 바뀌고, 롤백은 revert·재배포로 가능하나 그 창 동안 동작 차이가 유지된다. 대안 설계의 와이어층 보증(SSA가 applied config의 resourceVersion 불일치에 409를 내는지)은 아직 실측 전 가설이어서, 미강제로 판명되면 와이어층 보강 설계가 후속 과제로 남는다. plan.riskLevel=medium."
         }
       }
     ]
