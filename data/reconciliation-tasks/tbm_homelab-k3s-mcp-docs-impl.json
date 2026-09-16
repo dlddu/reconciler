@@ -6742,6 +6742,20 @@
           "reason": "Human review is required: riskLevel is medium and, although PR #119 adds only an internal, unwired collection-metadata reader, merging it to main triggers the unfiltered image-publish and deployment-pin automation, which rolls out a new image of the production homelab-k3s-mcp server — the same MCP control plane the reconciler loop and its rollback/observation route depend on, so a bad rollout can impair recovery tooling itself. Rollback is not a single step: reverting the merge does not by itself restore the previously pinned image, and the guide requires a separately authorized revert/GitOps pin restore coordinated with any in-flight pin job. The reader is the security-relevant prerequisite for a future destructive delete-collection approval (a complete, fail-closed target snapshot), yet its evidence is local HTTP stubs only, and at planner handoff the current-head integration tests were still in progress, so head freshness and full CI must be confirmed before approval. This review is being resumed on the user's explicit instruction after the earlier work-review session left its claim (9b73e975) unreleased.",
           "reviewer": "human",
           "reviewedAt": "2026-09-16T07:26:58Z"
+        },
+        "execution": {
+          "status": "running",
+          "startedAt": "2026-09-16T07:38:26Z",
+          "finishedAt": null,
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-16T07:38:26Z",
+              "finishedAt": "2026-09-16T07:44:30Z",
+              "log": "Preflight 전 항목 통과(머지 전 상태).\n① 소유·신선도: PR #119 open/unmerged, head 70c312d0e5c18b7b5c17cd0b3e66ea305e9da256(준비 기록과 정확히 일치), base main, mergeable=clean. 6파일 +456/-1 = internal/k8s/collection_precondition{,_test}.go + docs(prd-approval-gate/test-approval-gate/doc-tracker/comment-ledger) — 계획된 diff와 정확히 같다. 기존 Go 파일·main.go·도구 등록·RBAC·workflow·deployment 매니페스트 무변경. diff 본문 검토: CollectionTargetReader는 Service/TargetReader와 분리, 메타데이터 협상(as=PartialObjectMetadataList) 외 폴백 거부, 불완전/중복/버전 불일치/반복 커서/상한/취소 시 nil 스냅샷 반환(fail-closed), dispatcher 미연결.\n② 현재 헤드 CI(70c312d0): fmt + vet=success, unit tests=success, integration tests=success, build & push server image=success(모두 completed), pin deployment image (main only)=skipped(PR에서 정상). 기록된 run은 최종 상태, 재실행 대기 없음.\n③ 이미지 자동화·GitOps: .github/workflows/docker-build-push.yaml 실독 — main 푸시 시 SHA 태그 이미지 발행 + pin 잡이 k8s/deployment.yaml 이미지 참조를 되커밋([skip ci]), Flux가 클러스터 적용. 롤백 경로: 소스 레포에서 기록된 머지 커밋 revert -m 1 롤백 PR(별도 검토·실행 루트), 긴급 런타임 복구는 이전 핀 SHA로의 GitOps 핀 복원(진행 중 pin 잡과 조율).\n④ 머지 전 운영 실측: ns homelab-k3s-mcp Deployment homelab-k3s-mcp — image ghcr.io/dlddu/homelab-k3s-mcp:03656657e2f74e74abba71a3e332747aa89a0883(소스 main 03656657 고정, 핀 커밋 8d6f3296 07:32:59Z), running digest sha256:617000388fed7ce66d5af44e4f2eaca2a57342a8af83b0f786b6d51c50e2c0f1, revision 41, generation 497, replicas 1/1 ready·updated·available, Available/Progressing=True(07:37:16Z), pod homelab-k3s-mcp-68fbd96ff6-zz87f 1/1 Running restarts=0(07:37:15Z 시작), 프로브 /healthz(liveness)·/readyz(readiness). sablier.enable=true(유휴 시 스케일다운 가능 — 관측 시 replicas=1).\n⑤ 병행 머지 관측(다른 워커 소유, 본 슬라이스와 무관): #115 'Node proxy contract 명료화' 9bbb868f(07:19:05Z), #118 시나리오 5 라벨 교정 03656657, #117 시나리오 1 동사 정책 정합 2b5b81aa(07:42:07Z). 전부 docs 시나리오별 편집으로 collection reader 계약과 무겹치지 않음 — '독립 슬라이스가 이 슬라이스를 공급'하는 사례 아님. 머지 시점 소스 main SHA 재확인은 ②에서 기록.\n→ 모든 prerequisite 충족. 예상 머리 커밋 가드(70c312d0)로 PR #119 머지 진행."
+            }
+          ]
         }
       }
     ]
