@@ -5783,7 +5783,7 @@
   {
     "id": "rct_20260915-0011",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "executing",
+    "status": "awaiting_review",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-15T08:47:40.321713Z",
@@ -5807,7 +5807,7 @@
       "gap": "Meaningful drift remains under model criteria 1 and 2: six resource-tool ACs (AC7, AC11–AC15) are wholly unimplemented, and approval-gate AC6 still lacks atomic update/patch preconditions tied to the approved state. PRs #102/#104/#105 reduced the previous gaps and resolved create's document prerequisite, but their tasks are now succeeded, leaving the remaining implementation work without an active owner; the checked advertised-tool and live tracker counts agree.",
       "summarizedAt": "2026-09-15T08:53:37.404936Z"
     },
-    "updatedAt": "2026-09-16T08:16:37Z",
+    "updatedAt": "2026-09-16T08:20:00Z",
     "assessment": {
       "actionRequired": true,
       "reason": "Work is required under this model's definition, which treats unimplemented PRD ACs as drift. At source commit 5197ed32f98f56d305a98bba7038c255f32300af, resource_create (resource-generic AC7), resource_delete_collection (AC11), resource_exec (AC12), resource_attach (AC13), resource_port_forward (AC14), and resource_proxy (AC15) are absent from the advertised surface and dispatcher. Approval-gate AC6 is also incomplete: the approved version is rechecked before dispatch but is not enforced atomically by update/patch. These are concrete remaining implementation gaps, not changes that deployment or resynchronization can automatically resolve.\n\nThe latest changes reduced drift: #102 implemented resource_watch; #104 added gate-owned reads, declarations, metadata negotiation, scale context and a recheck; #105 resolved create's previously unspecified approval/failure behavior. The corresponding tasks rct_20260915-0006, -0005 and -0009 are succeeded, and a fresh read of this model's records found no other nonterminal owner. Earlier overlapping-task and unresolved-create-document reasons to defer no longer apply. The planner should choose the next bounded slice from these residuals; detection does not select an implementation plan or alter the documented human-approval requirements.\n\nEvidence consists of the exact baseline/current Git trees, source and PRD comparison, parsed tool/registry/EXPECTED_TOOLS sets, current task records, and four passing structural repository checks. Go tests could not be run because Go is unavailable; this limits runtime regression conclusions but does not prevent determining that the required tool registrations and approved-version propagation are absent. The missing functionality and atomic preconditions require work, so no automatic-healing recheck is scheduled.",
@@ -6113,6 +6113,59 @@
               "stepSeq": 6,
               "status": "skipped",
               "log": "이 시도의 실행 범위 밖 — 머지 결과 검증(step 6)은 다음 주기의 머지에 종속. asIsVersionAfter(기록용)만 이 시도에서 측정해 verification에 남긴다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:ff12618134e024cdab622f6a77842a58ac308dfe main.go:a686818e97e7dbb2adc7f25c88f25bd6a2ad7537",
+          "verifiedAt": "2026-09-16T08:20:00Z",
+          "checks": [
+            {
+              "name": "revised head integrated and published (plan step 1-2, 4)",
+              "status": "passed",
+              "detail": "병합 커밋 73580ab57d388d29acf9316c2f5e7a26a35a05f6(부모 f372319f4=승인 head, 5b49837=main)을 force-push 없이 소유 브랜치에 게시. GitHub API로 PR #109 head=73580ab 확인, mergeable CONFLICTING/DIRTY → MERGEABLE로 해소, state=OPEN/unmerged. 새 head CI: fmt+vet·unit·build&push pass, integration 대기, main-only pin skip(PR에서 정상) — 이전 승인은 갱신 head를 커버하지 않으므로 필수 검사 성공은 다음 리뷰·머지 주기의 전제로 기록."
+            },
+            {
+              "name": "create batch early dispatch preserved",
+              "status": "passed",
+              "detail": "internal/mcp/mcp.go: entry.createBatch → callCreateBatch 조기 분기가 일반 authorize보다 앞에 유지됨(소스 검증 + '^Test(MultiDocCreate|Create)' 회귀 ok). 문서당 승인·전량 승인 후 실행 계약 비회귀."
+            },
+            {
+              "name": "ordinary updates carry request-local approved state",
+              "status": "passed",
+              "detail": "authorize가 돌려준 approved TargetState를 approvedTargetKey로 ctx에 주입한 뒤 entry.handle에 전달 — 자동 병합이 만든 동일 주입 블록 이중화(#114 approvedTargetKey 겹침)를 하나로 정리. '^TestUpdate' 회귀(mcp·k8s)로 승인 버전 전달·1회 조건부 PUT·충돌 단말 거부·재승인 없음 검증."
+            },
+            {
+              "name": "update trusted-state / terminal-refusal + create batch regressions",
+              "status": "passed",
+              "detail": "go test ./internal/mcp -run '^TestUpdate' ok · go test ./internal/k8s -run '^TestUpdate' ok · go test ./internal/mcp ./internal/k8s -run '^Test(MultiDocCreate|Create)' ok."
+            },
+            {
+              "name": "go test ./... / vet / build / gofmt on the merge result",
+              "status": "passed",
+              "detail": "Go 1.24.7: go test ./... 10 패키지 전부 ok(rc=0) · go vet ./... rc=0 · go build ./... rc=0 · gofmt -l 빈 출력."
+            },
+            {
+              "name": "four structural checks on the merge result",
+              "status": "passed",
+              "detail": "check_doc_inventory rc=0(허브 집계=실측) · check_ac_mapping rc=0(불변식·배차·케이스 호출 위반 없음) · check_mock_policy rc=0(등록/관측·B2 블로커 유효) · check_comment_policy rc=0(줄 주석 2005줄/87파일·잔량 0, docstring 1210줄/65파일). git diff --check 깨끗."
+            },
+            {
+              "name": "ledger and tracker refreshed evidence",
+              "status": "passed",
+              "detail": "docs/comment-policy/ledger.md: gate.go 행 335/`12758fbedfde`·resource.go 행 191/`20b4d08c038d` 병합 실측 재등재(이전 판정 이력 보존), 합계 2005/잔량 0, 병합으로 붙은 행 복원 분리. docs/doc-tracker.md: AC6 프리컨디션 행 「patch·update 구현」 병합, 시도 3 이력 보존 + 2026-09-16 실행 이력 행 추가. update 전용 경계·미등록 5종(AC11-AC15)·별도 patch/E2E 소관 표기 유지."
+            },
+            {
+              "name": "as-is version re-measured (record only)",
+              "status": "passed",
+              "detail": "모델 asIs.versionScript를 병합 head에서 실행: internal:ff12618134e024cdab622f6a77842a58ac308dfe main.go:a686818e97e7dbb2adc7f25c88f25bd6a2ad7537 (main.go blob 불변). 모델 lastObservedVersion은 변경하지 않음 — 버전 변화는 다음 감지 주기의 트리거로 남는다."
+            },
+            {
+              "name": "plan-scope convergence (steps 1-4; merge deferred by design)",
+              "status": "passed",
+              "detail": "이 시도의 실행 가능 범위(step 1-4: main 재통합·충돌 해소·검증·revised head 게시)는 전부 달성. plan step 5-6(머지·머지 결과 검증)은 '별도 리뷰 후 approved claim' 전제로 이 주기에서 의도적으로 실행하지 않았다(step 4 기대 결과: revised head는 새 파이프라인 리뷰 대기). task는 succeeded가 아니라 awaiting_review로 lock을 놓는다 — 갱신된 head 73580ab에 대한 새 승인 워크플로(reconciler-manual-approval)가 다음 진입점. 잔여 모델 gap(미등록 5종 등)은 이 task 범위 밖이며 기존 소관 유지."
             }
           ]
         }
