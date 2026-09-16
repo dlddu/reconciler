@@ -5807,7 +5807,7 @@
       "gap": "Meaningful drift remains under model criteria 1 and 2: six resource-tool ACs (AC7, AC11–AC15) are wholly unimplemented, and approval-gate AC6 still lacks atomic update/patch preconditions tied to the approved state. PRs #102/#104/#105 reduced the previous gaps and resolved create's document prerequisite, but their tasks are now succeeded, leaving the remaining implementation work without an active owner; the checked advertised-tool and live tracker counts agree.",
       "summarizedAt": "2026-09-15T08:53:37.404936Z"
     },
-    "updatedAt": "2026-09-16T07:42:55Z",
+    "updatedAt": "2026-09-16T08:16:37Z",
     "assessment": {
       "actionRequired": true,
       "reason": "Work is required under this model's definition, which treats unimplemented PRD ACs as drift. At source commit 5197ed32f98f56d305a98bba7038c255f32300af, resource_create (resource-generic AC7), resource_delete_collection (AC11), resource_exec (AC12), resource_attach (AC13), resource_port_forward (AC14), and resource_proxy (AC15) are absent from the advertised surface and dispatcher. Approval-gate AC6 is also incomplete: the approved version is rechecked before dispatch but is not enforced atomically by update/patch. These are concrete remaining implementation gaps, not changes that deployment or resynchronization can automatically resolve.\n\nThe latest changes reduced drift: #102 implemented resource_watch; #104 added gate-owned reads, declarations, metadata negotiation, scale context and a recheck; #105 resolved create's previously unspecified approval/failure behavior. The corresponding tasks rct_20260915-0006, -0005 and -0009 are succeeded, and a fresh read of this model's records found no other nonterminal owner. Earlier overlapping-task and unresolved-create-document reasons to defer no longer apply. The planner should choose the next bounded slice from these residuals; detection does not select an implementation plan or alter the documented human-approval requirements.\n\nEvidence consists of the exact baseline/current Git trees, source and PRD comparison, parsed tool/registry/EXPECTED_TOOLS sets, current task records, and four passing structural repository checks. Go tests could not be run because Go is unavailable; this limits runtime regression conclusions but does not prevent determining that the required tool registrations and approved-version propagation are absent. The missing functionality and atomic preconditions require work, so no automatic-healing recheck is scheduled.",
@@ -6070,6 +6070,51 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-16T06:57:19Z",
           "comment": "승인(사용자 추가 코멘트 없음). 승인 시점에 제시된 신선도: PR #109 open/non-draft/unmerged, head f372319f4db9afe80821d28d4141bc60308a3e04 의 CI(fmt+vet, unit, integration, 이미지 빌드) 전부 성공. 단 mergeable=false/dirty — main 06a9f2e0626f19f54070fa920ed2f06f473c3bec(#114 resource_patch 전제조건, #116 이후) 대비 docs/doc-tracker.md·docs/comment-policy/ledger.md 내용 충돌, 코드(mcp.go 등)는 텍스트 자동 병합되나 #114가 이미 넣은 approvedTargetKey 컨텍스트 주입이 중복되는 의미상 겹침이 있음을 설명받은 뒤의 승인."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-16T07:42:55Z",
+          "finishedAt": "2026-09-16T08:16:37Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-16T07:44:00Z",
+              "finishedAt": "2026-09-16T07:52:00Z",
+              "log": "신규 격리 소스 checkout + 저장소별 단명 토큰. PR #109 재확인: OPEN · non-draft · unmerged · head f372319f4db9afe80821d28d4141bc60308a3e04(승인 대상 head와 동일) · base main · CI 4종 성공 · mergeable=CONFLICTING / mergeStateStatus=DIRTY 재현. main은 통합 베이스 5f9ea3fc에서 5b49837로 진행(#114 patch 원자 조건 · #115 proxy 문서 · #116 시나리오 11 · #117 시나리오 1 · #119 컬렉션 판정 · 배포 핀 5건). 파일 충돌은 ledger.md·doc-tracker.md 두 문서, 코드는 mcp.go 의미상 겹침(리뷰 코멘트 경고와 동일). 소유 외 task·브랜치는 건드리지 않음."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-16T07:52:00Z",
+              "finishedAt": "2026-09-16T08:07:00Z",
+              "log": "main을 브랜치로 병합(merge commit 73580ab57d388d29acf9316c2f5e7a26a35a05f6, 부모 f372319f4+5b49837, force-push 없음). 충돌 해소: docs/comment-policy/ledger.md — 병합으로 붙은 행 하나를 main 행과 바이트 동일 복원 분리, gate.go 행 338→335(`12758fbedfde`)·resource.go 행 206→191(`20b4d08c038d`)을 병합 트리 실측으로 재등재(판정 이력 보존 + 병합 재측정 2026-09-16 주석), 합계 2005/잔량 0. docs/doc-tracker.md — 붙은 행 복원 분리, AC6 프리컨디션 행을 「patch·update 구현」으로 병합(#114 patch 기술 + 본 PR update 기술), 시도 3 이력 행 보존 + 2026-09-16 실행 이력 행 추가. internal/mcp/mcp.go — 자동 병합이 만든 approvedTargetKey 문맥 주입 이중화를 하나로 정리, resource_create 배치 조기 분기(callCreateBatch)는 일반 authorize 앞에 유지."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-16T08:07:00Z",
+              "finishedAt": "2026-09-16T08:13:30Z",
+              "log": "병합 트리(Go 1.24.7)에서: go test ./... 10 패키지 전부 ok(rc=0) · go vet ./... rc=0 · go build ./... rc=0 · gofmt -l 빈 출력. 집중 회귀: internal/mcp·internal/k8s -run '^TestUpdate' ok, -run '^Test(MultiDocCreate|Create)' ok — update 프리컨디션/단말 거부와 create 배치 비회귀 모두 통과. 구조 검사 4종 전부 rc=0: check_doc_inventory(허브 집계 실측 일치), check_ac_mapping(불변식·배차·케이스 호출 위반 없음), check_mock_policy(등록/관측·B2 블로커 유효), check_comment_policy(줄 주석 2005줄/87파일, 잔량 0, docstring 1210줄/65파일). git diff --check 깨끗. 병합이 노출한 미테스트 계약 없음 → 신규 회귀 미추가(가이드 기준)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-16T08:13:30Z",
+              "finishedAt": "2026-09-16T08:16:00Z",
+              "log": "푸시 직전 재확인: reconciler pull→재확인(이 task 여전히 status=executing, 점유 유효) · 원격 PR head 여전히 f372319f4 · 병합 커밋 부모 확인. fast-forward push로 새 head 73580ab 게시(Pull Request 자동 갱신). GitHub API 확인: PR #109 head=73580ab, mergeable=MERGEABLE(직전 CONFLICTING/DIRTY 해소), mergeStateStatus=UNSTABLE(CI 진행 중). 새 head CI: fmt+vet·unit·build&push image 즉시 pass, integration 진행 중, main-only pin job skip(PR에서 정상). 증거 코멘트 게시: https://github.com/dlddu/homelab-k3s-mcp/pull/109#issuecomment-5694300024"
+            },
+            {
+              "stepSeq": 5,
+              "status": "skipped",
+              "log": "이 시도의 실행 범위 밖 — plan step 5가 '별도 리뷰 후 approved claim에서만 머지'로 규정하고, step 4 기대 결과가 'revised head는 새 파이프라인 리뷰 대기'를 요구한다. 갱신된 head 73580ab는 기존 승인(f372319f4 대상)으로 커버되지 않는다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "skipped",
+              "log": "이 시도의 실행 범위 밖 — 머지 결과 검증(step 6)은 다음 주기의 머지에 종속. asIsVersionAfter(기록용)만 이 시도에서 측정해 verification에 남긴다."
+            }
+          ]
         }
       }
     ]
