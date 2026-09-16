@@ -7054,6 +7054,41 @@
           ],
           "verifiedAt": "2026-09-16T08:57:00Z"
         }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "[rct_20260915-0008 재계획] 직전 시도는 자기 범위 안에서 ac8(rv 정지 수리)·ac5(대조군 이행)·병합 세계 재정합까지 실측으로 닫았고, 남은 단일 차단은 rg#9의 apply patchType 케이스다 — #114의 승인 전제 주입(approvedPatch)이 apply 형식에도 metadata.uid를 심는데 실제 apiserver(k8s 1.35 SSA)는 applied config의 uid를 immutable 필드로 422로 거부한다(kubernetes/kubernetes#127625 계열, 승인 직후 18ms isError 실측; merge/strategic/json은 동일 주입으로 성공). 이 결함은 제품 결함이고 PR #106은 internal/ 무변경이 계약이므로 테스트 측 수리가 불가하다. 대안 저울질: ⑴ PR #106에 제품 수리를 같이 넣기 — 검토가 internal/ 무변경 전제로 승인했고 제품·하네스 슬라이스가 섞이면 롤백 단위가 무너지므로 기각. ⑵ 테스트 측에서 apply 기대값을 422로 뒤집기 — 시나리오의 계약(승인 뒤 네 patchType이 각각 적용된다)과 어긋나고 결함을 기록만 남기므로 기각. ⑶ 채택: 제품 수리를 별도 PR로 분리한 뒤 PR #106이 그 수리가 포함된 main을 병합해 완주한다. 수리 설계: approvedPatch에서 apply는 resourceVersion만 심고 uid는 심지 않는다(사용자 metadata의 rv·uid 불일치는 기존과 같이 제출 전 거부 유지). 근거는 두 겹이다 — gate.go::confirmTargetUnchanged가 실행 직전에 rv·uid를 재판독해 불일치를 거부하는 게이트층 보증은 patchType 불문 이미 실측(ac8의 AC6 거부)이고, 와이어층 보증은 rv가 merge 패치와 같은 update 전제 기제로 흘러 불일치에 409 Conflict를 낸다(resource.go가 Conflict를 'approved target version or field ownership conflicts' 거부로 매핑). 단, SSA가 applied config의 rv를 실제로 강제하는지는 이번이 첫 실측이므로 실행 단계에서 관측 기록을 남긴다(지침 §4). 단위 테스트는 세 곳을 고친다 — TestApprovedPatchPreservesDataAndConditions와 TestConditionalPatchWirePathsAndNoRetries의 apply 케이스(rv 있음·uid 없음), 사용자 uid 불일치 제출 전 거부(TestApprovedPatchRefusesUnsafeInputsBeforeNetwork)는 유지. 주석 무추가(원장 판정 범위 밖, 0줄 유지). 범위(완료 기준): 제품 수리 PR이 CI 3잡 초록으로 머지되고, PR #106이 ⑴ CI 4잡 초록 ⑵ 배차 43/3 ⑶ 신규 9파일 ok(rg#9의 apply 케이스 포함) ⑷ ac5 무수정 통과 ⑸ doc-tracker 집계 일치를 채워 squash 머지된 것 — 직전 시도의 원래 완료 기준 그대로다. 범위 밖(후속): ag#5(409·5xx 주입 수단 — mock-policy 판정), rg#18(cluster-admin 문면 판정), 도구 미등록 잔여 축, 레지스트리 (규칙 6) 라벨 부정확 16행, 모델 정의 run_all.py 누락(tobe-modeler 몫), apply에 대한 rv 불일치 409가 '강제 안 됨'으로 실측될 경우의 와이어층 보강 설계.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "제품 수리 PR(preparation에 기입한 브랜치·PR)의 CI를 관제한다 — fmt+vet·unit tests·build & push 3잡을 잡 로그로 초록 확인한다(통합 잡은 main 하네스라 gatekeeper가 없어 여기서는 유의미한 신호가 아니다). 초록이면 squash 머지한다.",
+              "expectedOutcome": "3잡 전부 success → 제품 수리가 main에 착지하고 deploy pin 커밋(이미지 재빌드 자동화)이 뒤따른다."
+            },
+            {
+              "seq": 2,
+              "action": "PR #106에 최신 main을 병합한다 — #109(resource_update 버전 충돌 자동 거부)와 제품 수리가 포함된 main이다. 충돌은 docs/comment-policy/ledger.md·docs/doc-tracker.md·docs/test-approval-gate.md가 예상되며 행 단위로 해소한다(지침 §5: 이 PR이 닫는 8행=이쪽 판정, 나머지=main 최신, 원장 행은 양쪽 증가분 보존, 숫자 충돌은 게이트 실측으로). 병합 후 mergeable_state=clean을 확인한다.",
+              "expectedOutcome": "PR #106 mergeable=True, 체크런이 기동된다(0건이면 충돌 미해소 신호)."
+            },
+            {
+              "seq": 3,
+              "action": "PR #106의 CI를 관제한다 — 4잡 초록과 함께 integration 잡 로그에서 신규 9파일의 ok 라인을 확인한다. 핵심은 rg#9의 apply 케이스가 isError 없이 어노테이션을 찍는 것(제품 수리의 실증)과 ac8('ok: 시나리오 8')·ac5가 무수정 통과를 유지하는 것. 배차(primary 43 + gatekeeper-variant 3)와 variant 그룹 3파일(ag_ac2·ag_ac4·ag_ac9)의 실행도 이 로그에서 관측한다.",
+              "expectedOutcome": "4잡 전부 success; rg#9 'ok: 시나리오 9'; variant 3파일 ok 라인 관측."
+            },
+            {
+              "seq": 4,
+              "action": "완료 기준 다섯을 재판정한다(지침 §6 ⑴CI 4잡 초록 ⑵배차 43/3 ⑶신규 9파일 ok ⑷ac5 무수정 통과 ⑸doc-tracker 집계 일치 — 병합 상태에서 check_ac_mapping rc=0 재실행 포함). 전부 충족이면 squash 머지하고 머지 후 deploy pin 커밋을 확인한다.",
+              "expectedOutcome": "PR #106 merged; main이 테스트 하네스·문서 슬라이스를 흡수; 구현 대기 19·매칭 파일 58의 집계가 main에서 성립."
+            },
+            {
+              "seq": 5,
+              "action": "verification 기록 — attempts 마지막 항목에 다섯 기준의 실측 증거(잡 로그 라인·집계 수치)를 기입하고 apply에 대한 rv 불일치 강제 여부 관측을 기록한다(강제됨=409 실측이면 와이어층 보증 확정; 미강제로 관측되면 게이트층 보증만으로 남는 사실을 gap에 명시해 후속 설계의 입력으로 남긴다).",
+              "expectedOutcome": "verification.converged 판정이 가능한 기록 상태가 된다."
+            }
+          ],
+          "plannedAt": "2026-09-16T19:30:00+09:00"
+        }
       }
     ]
   },
