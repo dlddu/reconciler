@@ -2726,6 +2726,42 @@
           "reviewedAt": "2026-09-16T12:34:39Z",
           "comment": "반려 — main 브랜치 최신화 필요. PR #48(head 3ef6cca)은 main 0611e4b 기준으로 준비됐으나, 2026-09-16T07:21Z에 PR #46(와이어프레임 층 제거·화면 ID 폐지, 62파일)이 머지돼 main이 3cddd3f로 이동했다. #46은 backend/migrations/README.md·pipeline.rs·analysis.rs·App.tsx·api.ts·docs/doc-tracker.md·목업 등 PR #43과 겹치는 파일을 변경했으므로(SQL 파일은 불변), 최신 main 기준으로 통합 PR을 다시 준비해야 한다. 실행 지침의 main 고정(EXPECTED_MAIN=0611e4b) 게이트도 현재 불충족."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "Re-prepare the same branch-integration slice as attempt 1, now against current main. The human reviewer rejected attempt 1 solely because its baseline went stale: PR #46 (wireframe-layer removal, screen-ID retirement, 62 files) merged into main on 2026-09-16T07:21Z as 7992a00, moving main from the pinned 0611e4b112787103c7ee9ebf08c3117587da6e88 to 3cddd3f5edce468a12cc4b69efcf2f342d51940c, and PR #46 rewrites files that overlap PR #43 (backend/migrations/README.md, pipeline.rs, analysis.rs, App.tsx, api.ts, docs/doc-tracker.md, mockups) while leaving all seven migration SQL files byte-identical (verified: git diff 0611e4b..3cddd3f over backend/migrations/*.sql is empty). The method therefore stays the one attempt 1 planned and the reviewer implicitly re-affirmed: a fresh integration branch built from PR #43's head 4e809da728ad1124a253d7e23a89a09257709af1 plus a merge of current main, producing a head with exactly two parents; conflicts resolved so that main's PR #46 refactor and PR #43's AC2.1-2.3 feature both survive (git merge-tree predicts exactly three conflicts: backend/migrations/README.md add/add, docs/doc-tracker.md content, frontend/src/App.tsx content); backend/tests/migrations.rs carried over from PR #43 with its six stale SHA-256 pins refreshed against main's SQL bytes (main has not touched migrations.rs since the merge base, so the merge auto-selects PR #43's stale-pin version); SQL files never modified. Completion boundary for this attempt (success criteria): a reviewed integration head fast-forwarded into the PR #43 branch at execution time, with latest-main ancestry (3cddd3f or its re-verified successor), resolved README/doc-tracker/App.tsx preserving both sides, seven correct immutable-file SHA-256 assertions, passing migration/full-backend CI, existing docs mockup/journey gates, and the unchanged 13-spec kind/Playwright suite plus the three PR #43 AC2.x specs; a documented live-database preflight requirement before any eventual feature release; PR #43 left open, draft and unmerged into main pending its own human approval. Out of scope, same as attempt 1: the 14 unmet product ACs (AC2.4-2.6, AC3.1-3.5, AC4.4, AC4.6, AC4.7), main-branch UI deviations/deferred comparisons convergence, production checksum inventory/repair, PR #43's approval and main merge, and any rollout. Attempt 1's artifact PR #48 becomes superseded and is closed with a pointer to the new PR. Planner owner: reconciler planner run run-20260916-124503-295424 (claude bg).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "Refresh and re-verify entry preconditions at planning and again at execution: reconciler task state; PR #43 open/draft/unmerged with head 4e809da728ad1124a253d7e23a89a09257709af1 and base main; PR #48 (attempt 1 artifact) still open/draft so it can be closed as superseded; current main full SHA re-fetched live and pinned into preparation records (planned baseline 3cddd3f5edce468a12cc4b69efcf2f342d51940c). Stop and re-plan if any head, state or scope changed.",
+              "expectedOutcome": "Fresh live baselines recorded; attempt 1's stale artifact identified for supersession; no execution authority implied yet."
+            },
+            {
+              "seq": 2,
+              "action": "Build the integration branch in dlddu/feature-doc: branch reconcile/rct_20260915-0001-feature-doc-migration-integration-r2 from PR #43 head 4e809da, then git merge the pinned main. Resolve the three predicted conflicts: backend/migrations/README.md (add/add — combine main's current repair-procedure README, including PR #46's screen-ID note, with PR #43's migration notes), docs/doc-tracker.md (keep main's post-#46 tracker structure, re-apply PR #43's slice-5a rows and the attempt-1 migration-risk row), frontend/src/App.tsx (keep main's post-#46 routing structure, re-apply PR #43's FeatureAcceptance route/navigation). Separately set backend/tests/migrations.rs to PR #43's version with all seven SHA-256 pins recomputed from main's exact SQL bytes (expect six changes vs the branch version). All seven backend/migrations/*.sql must end byte-for-byte equal to main.",
+              "expectedOutcome": "Integration head with exactly two parents (4e809da and pinned main), all conflicts resolved, no feature-behavior drift beyond the two intended sides."
+            },
+            {
+              "seq": 3,
+              "action": "Validate locally before opening the PR: git diff --exit-code main..integration-branch -- backend/migrations/*.sql; pin-coverage and provenance checks over the seven hashes; ancestry checks (merge-base --is-ancestor for both parents); python3 tools/check-mockup-render.py and python3 tools/check-journey-mockup.py on the branch to capture the NEW expected values after PR #46's mockup/journey/checker changes; diff the AC2.1-2.3 implementation files against the original head 4e809da to confirm only intended reconciliation changes.",
+              "expectedOutcome": "Local gates green with fresh expected counts recorded; ancestry and byte-equality proven."
+            },
+            {
+              "seq": 4,
+              "action": "Push the integration branch and open a draft GitHub PR targeting reconcile/rct_20260902-0008-feature-doc-docs-impl (PR #43's branch), body containing task id, gap summary, plan steps, verification method. Wait for the three workflows (CI; docs mockup↔render; docs journey↔mockup) on the exact head and record run URLs and log evidence. Then close attempt 1's PR #48 with a supersession comment pointing at the new PR; leave PR #43 open/draft/unmerged.",
+              "expectedOutcome": "One reviewable branch-only PR with green CI on its exact head; stale artifact superseded; main and deployed manifests untouched."
+            },
+            {
+              "seq": 5,
+              "action": "Record preparation evidence in this attempt, write plan.executionGuide with the new pinned SHAs and the non-forced fast-forward method, then transition the task planning→planned for review judgment. No main merge, no rollout, no database action.",
+              "expectedOutcome": "Task parked at planned with complete plan/preparation/guide; review (reconciler-work-review) picks it up."
+            }
+          ],
+          "plannedAt": "2026-09-16T13:13:24.342857Z",
+          "executionGuide": ""
+        }
       }
     ]
   },
