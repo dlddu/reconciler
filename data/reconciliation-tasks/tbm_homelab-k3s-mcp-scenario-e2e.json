@@ -6928,6 +6928,83 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-16T06:55:47Z",
           "comment": "수동 승인. 승인 시점 신선도 확인: PR #106 은 open/미머지이나 main(06a9f2e) 대비 충돌(dirty) — #114(resource_patch 승인 rv/UID 전제조건 강제)·#116 이 doc-tracker.md·comment-policy/ledger.md·test-resource-generic.md 를 수정. 최신 헤드 dfb6520 CI 는 integration 실패(resource_generic_ac8 rv 경쟁), 신규 9파일 중 5개 미실행. 실행 단계는 main 병합·행 단위 충돌 해소, ac8(필요 시 ac9) rv 정지 대기 수리, #114 반영 상태에서 CI 재실행을 거쳐 완료 기준(4잡 초록·배차 43/3·신규 9파일 ok·집계 일치) 충족 시에만 squash 머지할 것. main push 시 이미지 핀·롤아웃 자동화가 도는 점도 관측할 것."
+        },
+        "execution": {
+          "status": "failed",
+          "startedAt": "2026-09-16T07:36:56Z",
+          "finishedAt": "2026-09-16T08:55:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-15T12:00:00Z",
+              "finishedAt": "2026-09-16T08:30:02Z",
+              "log": "게이트키버 픽스처(gatekeeper-fixture.yaml, 이미지 sha-762fafe 핀)는 준비 단계 5회 CI 전부에서 rollout·시드·승인 댄스 정상 — 8차 실행 로그에서도 gatekeeper·trace·variant 기동과 /api/me 시드·forward-auth 승인이 실측됨(CI run 34967830633 및 병합 후 헤드 fad2eb7의 integration 잡)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-15T12:00:00Z",
+              "finishedAt": "2026-09-16T08:30:02Z",
+              "log": "SUT 변형(gatekeeper-variant.yaml) 저작·배차 확인은 준비 단계 실측으로 유지 — 다만 primary가 ac9에서 중단한 8차 실행에서 variant 그룹 실행은 미관측."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-15T12:00:00Z",
+              "finishedAt": "2026-09-16T08:30:02Z",
+              "log": "ci.yml 배선(시크릿 게이트·시드·API 키·배차)은 준비 단계 5회 CI에서 정상 동작. 8차 실행: 러너가 primary 그룹 43개 파일 배차(로그 3456행) 확인."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-15T12:00:00Z",
+              "finishedAt": "2026-09-16T08:30:02Z",
+              "log": "_gatekeeper.py 공유 헬퍼(승인·거절 댄스/레코드 판독/프록시 판독)는 통과한 형제 파일들(ag#7·8, rg#5·8·10)의 CI ok 라인으로 검증."
+            },
+            {
+              "stepSeq": 5,
+              "status": "failed",
+              "startedAt": "2026-09-16T07:36:56Z",
+              "finishedAt": "2026-09-16T08:30:02Z",
+              "log": "e2e 8파일은 저작돼 있고 6파일의 ok 라인이 관측됨(ag#7·ag#8·rg#5·rg#8·rg#10 + ac5 대조군). 차단 1건: resource_generic_ac9.py의 apply patchType 케이스 — 승인 직후 18ms 만에 isError 'patch refused: invalid patch or failed approved-target precondition'(k8s 422 매핑, internal/k8s/resource.go:860). 병합 세계(k8s 1.35 kindest/node)에서 merge/strategic은 동일한 #114 전제 주입(metadata.resourceVersion·uid)으로 성공(gk-ac9-merge/strategic/json 어노테이션 착지 실측), apply만 422 — internal/k8s/patch_precondition.go의 apply 형식 주입이 실제 apiserver SSA 시맨틱과 충돌하는 제품 결함의 첫 실측(kubernetes/kubernetes#127625 계열: applied config의 metadata.uid는 field is immutable 422 유발). 이 PR은 internal/ 무변경이 계약(guide §7)이라 테스트 측 수리 불가. ac9에서 그룹이 중단되어 ag_ac2·ag_ac4·ag_ac9(variant 그룹)은 계속 미실행."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-16T08:29:10Z",
+              "finishedAt": "2026-09-16T08:29:10Z",
+              "log": "ac5 대조군 이행 통과: 'gate control ok: 민감 종류 읽기는 거부된다 — refusing resource_get: approval rejected'(8차 로그 3828행) — 무수정 통과."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-16T07:44:00Z",
+              "finishedAt": "2026-09-16T08:10:00Z",
+              "log": "문서 갱신은 병합 세계에서 재정합: 4차 병합(8d6f329 — #114 patch 전제·#116 시나리오11·#115 proxy·#118 시나리오5)과 5차 병합(5b49837 — #117 승인 시나리오1·#119 컬렉션 리더)을 행 단위 해소. 이 PR이 닫는 8행(ag#2·4·7·8·9, rg#8·9·10)=이쪽 ✅, 나머지=main 최신, ag#5 요약 칸=main(#118)·상세 근거=이쪽(픽스처 착지), ag#6·rg#11=main(#114 사실 반영). check_ac_mapping 78/1/19/58/58/0/0 병합 상태에서 성립."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-16T07:44:00Z",
+              "finishedAt": "2026-09-16T08:10:00Z",
+              "log": "주석 원장: 줄 수·지문 무변동(코드·충돌 해소만 수행) — 병합 세계에서 #114/#119가 등재 행을 움직여 합계 마커를 게이트 실측으로 재조정(2090[HEAD]/2017[main]→2082→2088). check_comment_policy R1~R8 rc=0(주석 2088·docstring 1356)."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-16T07:40:00Z",
+              "finishedAt": "2026-09-16T08:55:00Z",
+              "log": "로컬 4게이트(python) rc=0 — check_ac_mapping(78/1/19/58/58/0/0)·check_mock_policy(등재5/B2 완비)·check_comment_policy(2088/1356)·check_doc_inventory(41/41). Go 4종(gofmt·vet·build·test)은 로컬 Go 툴체인 부재로 CI가 대행: fmt+vet ✓ unit ✓ build&push ✓(head fad2eb7)."
+            },
+            {
+              "stepSeq": 10,
+              "status": "failed",
+              "startedAt": "2026-09-16T07:36:56Z",
+              "finishedAt": "2026-09-16T08:55:00Z",
+              "log": "PR 생성은 준비 단계(#106)로 완료, 브랜치 push·CI 관제 수행: rv 정지 수리(ded84e6)→CI 7차: ac8 스케일 루프 3→0→1 통과로 진전, DS 절 채널 수리(fad2eb7)→CI 8차: ac8 ok('시나리오 8'), ac5 ok, 이후 ac9 apply 케이스에서 integration failure. 4잡 초록 미달 — main 경합 2회(4차·5차 병합)를 거치며 mergeable_state=dirty→CI 미기동 증상 1회 경험 후 해소."
+            }
+          ]
         }
       }
     ]
