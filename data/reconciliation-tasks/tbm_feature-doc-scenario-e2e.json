@@ -938,6 +938,77 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-16T15:14:15Z"
     },
-    "updatedAt": "2026-09-16T16:43:57Z"
+    "updatedAt": "2026-09-16T16:43:57Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "전용 spec 없는 미매핑 6건을 0으로 만들어 모델 불변식 `(시나리오 36 − 예외 0 − 구현 대기 20) = 16`을 성립시킨다 — 5건은 기존 묶음 spec(`sc01-05`·`sc04-03`·`sc04-07`·`sc04-11`)에서 이미 존재하는 단정을 시나리오별 전용 파일로 분할하고, 1건(`01-analysis-pipeline.md#시나리오 1` 전체 파이프라인)은 기존 UI·API 표면만 걷는 중량 신설 spec으로 닫는다.\n\n**왜 이 방법인가.** ① 모델 규칙 2의 대상이 6건 전부라 부분 슬라이스는 래칫을 6→k로 낮출 뿐 불변식을 성립시키지 못하고, 소유 task `rct_20260908-0001`이 부분 슬라이스(축 이관)로 succeeded로 닫혔으므로 이 task가 이 gap을 여는 마지막 사건이다. ② 6건은 「구현은 돼 있고 단정도 이미 존재하지만 전용 파일이 없는」 집합이다(등재 표 성격란 실측 — 01#1만 '조각으로만 존재'). 즉 제품 코드·화면·엔드포인트 변경이 전혀 필요 없어, 모델이 경계 위반 신호로 못박은 「구현 신설」이 들어올 자리가 없다. ③ 묶음의 단정을 지우는 게 아니라 옮긴다: `sc01-05`의 실패·재시도 절반, `sc04-03`의 미지원 제공자·폐기 절반, `sc04-07`의 확장 절반, `sc04-11`의 로그아웃 꼬리가 각자 검증할 시나리오를 선언한 새 파일로 간다.\n\n**분할 경계 원칙.** 시나리오 원문(`docs/test/`)이 각 파일이 검증할 것을 정한다. 현재 묶음에 없는 보강은 원문이 요구하되 기존 단정이 그 요구를 덜 담은 곳에만 최소로 넣는다, 두 곳: 04#4의 「폐기」 메시지 — 제품 코드 주석(`backend/src/llmkey.rs:254`)이 스스로 test#4로 귀속해 둔 응답 본문 「키가 없거나 폐기되었습니다」를 preflight 응답에서 실측; 04#12의 「직전 세션 쿠키를 그대로 재사용」 — 현재 단정은 cookie jar가 지워진 같은 컨텍스트의 401이라 원문의 '이전 세션 쿠키'를 관측하지 못하는데, 서버측 무효화가 실측됐다(`backend/src/session.rs` `delete()` = `DELETE FROM sessions`, `auth.rs` logout 핸들러가 호출)므로 쿠키를 포착해 logout 뒤 명시적으로 재사용하는 단정으로 옮긴다. 그 외 신규 단정 없음 — 04#12의 「로그 평문 노출 부재」 중 운영 로그 절반은 클러스터 로그 수집이 필요해(선례: sc04-05) 새 매핑 행의 「자동화 밖 잔여」로 남기고, 오류 메시지(응답 본문) 절반만 검증한다.\n\n**완료 기준(이 시도의 성공 판정).** ① `e2e/tests/` 최상위 spec **16개**, 파일당 `// 검증 시나리오:` 선언 **16건**(중복·누락 0, 파일명↔선언 교차 일치) ② 등재 SSOT 갱신: 매핑 표 **16행** · 미매핑 잔여 **0건(상한 0 하향 — S5 하향 래칫 요구)** · 집계 `36 = 16 + 0 + 20 + 0` ③ `tools/check-scenario-e2e.py` rc=0, `--verbose`에서 불변식 목표 16 = 실제 매칭 파일 16 ④ 새 6 spec이 kind e2e CI에서 실제 실행(✓ 줄, skip 아님) ⑤ 원본 4 spec의 남은 단정이 각자 선언한 시나리오에 대응(제거된 단정은 새 파일에 존재) ⑥ 구현 대기 표 20건과 그 밖 절 불변. 범위 밖: 구현 대기 20건(자매 모델 슬라이스 5/6/7이 구현과 spec을 함께 만든다), 자매 모델의 AC4.1-「해제」 추적 반영(자매 모델 레코드의 몫), 제품 코드 전부.\n\n**이중 계상 경계 판정(아침 리뷰 승인 `rct_20260908-0001` review.reason이 남긴 열린 질문 — 「구현 대기 20건 ↔ 자매 모델 미구현 AC 14건」).** 두 집합은 **같은 미구현 기능을 다른 단위로 세는 것**이지 같은 단위의 이중 계상이 아니다. 단위가 다르다 — 시나리오 축은 「e2e가 관측할 대상 자체가 없는」 시나리오 수, AC 축은 「문서에 있으나 구현되지 않은」 AC 수; AC 하나가 여러 시나리오로 갈라지고(02#1~2#4가 AC2.x를 나눠 계상), 반대로 `04#2`는 AC4.1이 전용 spec을 가져 매핑됨으로 세어지는 동안 「해제」 조항만 미구현인 맹점을 시나리오 축이 드러냈다(doc-tracker 실측 문구 그대로). 소유가 단일하다 — 구현과 그 spec 신설은 전부 docs-impl 슬라이스의 몫이고 이 루프는 미구현을 해소하지 않으므로(모델 규칙 6 명문), 두 모델이 같은 기능을 두 번 구현할 경로가 없다. 해제는 자동이다 — 슬라이스가 구현+spec을 얹으면 e2e 트리가 바뀌어 재감지가 이 모델을 다시 트리거하고, 구현 대기 행은 그때 자동으로 1:1 판정 대상으로 복귀한다. 따라서 이 슬라이스의 경계 적용은: ① 미매핑 6건만 다루고 구현 대기 20건 중 하나도 해제·편집하지 않는다 ② `04#2`의 자매-모델 반영은 이미 doc-tracker 문구로 남아 있어 여기서 중복 서술하지 않는다. 이 판정은 PR 본문에도 기재해 검토자가 확인하게 한다.\n\n**가역성.** 전량 e2e 테스트 코드와 등재 문서다. revert PR 하나면 완전 되돌림이며 런타임·클러스터·프로덕션 데이터에 닿지 않는다. 임대 패턴은 기존 규약(기본 0 · 자기 블록 안에서만 가동 · `finally` 0 복귀 · `workers:1`)을 그대로 따른다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`e2e/tests/sc01-06-partial-retry.spec.ts` 신설(01#6 분할) — `sc01-05`의 시나리오 6 단정을 옮겨 자기 시나리오를 선언한다. 자기 stub 신원(sc0106), App 설치·LLM 키는 API 셋업, `checkout-web@no-such-branch` 분석 → fetch 단계 실패 사유(`github tree rejected (404)`)·`0 of 5` → retry 클릭 → startedAt이 바뀐 채 같은 사유로 재실행 폴링 → 후행 4단계(`LATER_STAGES`) pending 유지. 격리 대조용 good 분석 하나를 같이 두고 재시도가 그 fetch를 건드리지 않음을 단정. 워커 임대(자기 블록에서 1로, `finally` 0).",
+              "expectedOutcome": "파일 첫 줄에 `// 검증 시나리오: 01-analysis-pipeline.md#시나리오 6`이 정확히 1개이고, 파일명 규약 `sc01-06-<slug>.spec.ts`와 교차 일치한다."
+            },
+            {
+              "seq": 2,
+              "action": "`e2e/tests/sc04-13-unsupported-provider-rejection.spec.ts` 신설(04#13 분할) — `sc04-03`의 미지원 제공자 블록을 옮긴다. 자기 신원(sc0413), App 연결·anthropic 키 등록 뒤 Google 선택 → 형식 올바른 키(GOOGLE_KEY)로 등록 → `key-error`가 「분석 호출을 지원하지 않아」를 포함 → 활성 키 0(저장 안 됨) → preflight가 여전히 anthropic(그 자리를 빼앗지 않음) → anthropic 선택 시 활성 키 보인다.",
+              "expectedOutcome": "선언 `04-platform.md#시나리오 13` 1건. 원문의 「지원 여부는 실제 호출 구현에서 파생」을 주석으로 명시."
+            },
+            {
+              "seq": 3,
+              "action": "`e2e/tests/sc04-04-revoked-key-blocks-calls.spec.ts` 신설(04#4 분할) — `sc04-03`의 폐기 블록을 옮기고 원문이 요구하는 메시지 단정을 더한다. 자기 신원(sc0404), App 연결·anthropic 키 등록 → remove-key로 폐기 → `/api/llm-keys/preflight`가 실패하고 응답 본문에 「폐기」가 있음(제품 응답 메시지 실측) → UI의 분석 트리거가 차단(`continue` disabled).",
+              "expectedOutcome": "선언 `04-platform.md#시나리오 4` 1건. 원문 「키가 없거나 폐기되었습니다」 메시지가 기존 단정에 없어 응답 본문 실측으로 닫는다(분할 경계 원칙상 최소 보강)."
+            },
+            {
+              "seq": 4,
+              "action": "`e2e/tests/sc04-08-worker-horizontal-scale.spec.ts` 신설(04#8 분할) — `sc04-07`의 확장 블록을 옮겨 독립 버스트로 재구성한다. 자기 신원(sc0408)·자기 분석 2건 → 워커 0에서 적재 → 2로 스케일 → 전부 `awaiting_pipeline` 드레인 → `desiredWorkerReplicas()==2` → 로그에서 pod 2개·`worker started` 2건 → 분석 id당 `claimed`/`fetch stage complete` 정확히 1회(중복 처리 없음). 워커 임대(`finally` 0).",
+              "expectedOutcome": "선언 `04-platform.md#시나리오 8` 1건. exactly-once 성질이 `backend/tests/worker.rs` 게이트와 짝이 됨을 주석에 남긴다."
+            },
+            {
+              "seq": 5,
+              "action": "`e2e/tests/sc04-12-logout-session-invalidation.spec.ts` 신설(04#12 분할) — `sc04-11`의 로그아웃 꼬리를 원문 요구대로 강화해 옮긴다. 자기 신원(sc0412, 기본 사용자는 sc04-11 소유)으로 로그인 → 세션 쿠키 포착(`/api/me` 200) → logout(204) → **포착해 둔 이전 쿠키를 명시적 Cookie 헤더로 재사용**해 보호 API 재호출 → 401(서버측 무효화 — session delete 실측) → 401 응답 본문이 쿠키 토큰 값을 평문으로 담지 않는다. 운영 로그 절반은 「자동화 밖 잔여」 등재.",
+              "expectedOutcome": "선언 `04-platform.md#시나리오 12` 1건. 기존 단정(같은 컨텍스트 401)으로는 관측 불가능했던 「이전 세션 쿠키」 관측이 된다."
+            },
+            {
+              "seq": 6,
+              "action": "`e2e/tests/sc01-01-full-pipeline-run.spec.ts` 중량 신설(01#1) — 조각들(`sc01-02` 트리거·`sc01-03`~`sc01-07` 단계별 세부)의 정합성은 각자의 몫으로 남기고, 이 파일은 산출물의 순서·제시·근거 부착을 한 바퀴 걷는다. 사전 조건(App·키)은 API 셋업(신원 sc0101), 시나리오 자신의 단계는 UI로: 새 저장소 등록(`repo-url`=`stub-account/payments-api`, 기본 브랜치)·분석 시작 → 워커 임대로 2단계(횡단) 완료 대기 → 횡단 문서 화면(경로 근거 포함) → 전략 화면(경로 근거) 검토·승인(`strategy-approve`) → 재큐잉 후 4단계(feature_candidates) 실행 → 후보 화면(위치 근거) 확인 → 진행 화면에 단계가 파이프라인 순서로 `succeeded` 나열.",
+              "expectedOutcome": "선언 `01-analysis-pipeline.md#시나리오 1` 1건. 「문서 → 전략 → 후보」 순서와 각 산출물의 코드 근거가 한 파일에서 관측된다. 제품 코드 변경 0."
+            },
+            {
+              "seq": 7,
+              "action": "원본 4 spec 정리 — `sc01-05`: 시나리오 6 절반(실패 분석·retry·격리 대조) 제거, ⚠️ 헤더 안내 제거(선언·시나리오 5 단정 유지). `sc04-03`: 미지원 제공자·폐기 블록 제거(무효 키 거부→등록→교체→preflight 위임 단정 유지), ⚠️ 제거. `sc04-07`: 스케일 2 블록을 제거하고 시나리오 7 원문의 「복구 후 처리」를 스케일 1 드레인으로 닫는다(⚠️ 제거). `sc04-11`: 로그아웃 꼬리를 sc04-12로 이전(미인증·로그인·재로그인 단정 유지), ⚠️ 제거.",
+              "expectedOutcome": "4 파일 모두 선언 1건 유지, 제거된 단정은 seq 1~5의 새 파일에 존재. `playwright.config.ts`·`e2e/support/` 무변경."
+            },
+            {
+              "seq": 8,
+              "action": "`README.md`의 `e2e/tests` 트리 목록에 6개 신규 파일을 알파벳 순으로 추가(sc01-01·sc01-06·sc04-04·sc04-08·sc04-12·sc04-13; sc04-08 행에 kubectl 스케일 주석).",
+              "expectedOutcome": "목록 16행, 실제 파일 집합과 일치."
+            },
+            {
+              "seq": 9,
+              "action": "`backend/tests/worker.rs` 머리 주석의 e2e 귀속을 `sc04-07` → 클러스터 절반은 `sc04-07`(가용성·큐 보존·복구)과 `sc04-08`(확장·exactly-once)로 갱신; `backend/tests/progress.rs` 머리 주석의 e2e 귀속을 `sc01-05` → 진행 표시는 `sc01-05`, 단계 재실행은 `sc01-06`으로 갱신.",
+              "expectedOutcome": "제품 레포의 옛 spec 파일명 인용이 `docs/doc-tracker.md` 변경 이력 보존 행 밖에서 0건이 된다(grep 실측 기준)."
+            },
+            {
+              "seq": 10,
+              "action": "`docs/doc-tracker.md` 「e2e 매핑」 절 갱신 — ① 매핑 표에 6행 추가(시나리오·파일·검증 서술·자동화 밖 잔여; 새 파일 6개의 근거 서술은 원본 묶음에서 이동된 것임을 행에 명시) ② 묶음 4행의 ⚠️ 「분리 대상」 문구를 정리 후 서술로 교체 ③ 미매핑 소제목 `(6건, 상한 6)` → `(0건, 상한 0)` + 표 본문 비우기(안내 문구 1줄 유지) ④ 집계 문단 `매핑 16 · 미매핑 0`, 항등식 `36 = 16 + 0 + 20 + 0`, 불변식 문단 「목표 16 = 실제 16 — 성립」으로 갱신 ⑤ 규약의 임차인 목록을 `sc01-01`(파이프라인 산출)·`sc01-05`(진행 표현)·`sc01-06`(재시도)·`sc04-07`(토폴로지·복구)·`sc04-08`(확장)으로 갱신. 구현 대기 표·예외 목록·그 밖 절은 건드리지 않는다.",
+              "expectedOutcome": "`python3 tools/check-scenario-e2e.py` rc=0 — S0~S5 전부, `--verbose`에서 등재 대조 16/16·집계·불변식 성립·래칫 0/0."
+            },
+            {
+              "seq": 11,
+              "action": "로컬에서 게이트 1:1 재현 — ① `python3 tools/check-scenario-e2e.py --verbose` ② `npx playwright test --list`(16 files/16 tests — 브라우저·SUT 불필요) ③ 기존 게이트 회귀: `python3 tools/check-mockup-render.py` · `python3 tools/check-journey-mockup.py` · `node tools/check-journey-prototype.js`. kind e2e 실실행만 CI가 판정한다.",
+              "expectedOutcome": "시나리오 게이트 rc=0 + 목업·여정 게이트 rc=0(회귀 없음) + playwright --list가 16개 파일을 전부 트랜스파일."
+            },
+            {
+              "seq": 12,
+              "action": "브랜치 `reconcile/rct_20260916-0002-feature-doc-scenario-e2e`로 커밋·푸시하고 draft PR을 연다. 본문에 task id·gap 요약·6건 분할·신설 지도(무엇이 어디서 왔는가)·완료 기준·이중 계상 경계 판정·범위 밖·검증 방법·검토 쟁점(래칫 0 하향 = 「상한 철회」가 아니라 목표 달성, 임차인 5건으로 늘어난 CI 시간)을 적는다. 머지는 하지 않는다(executor 몫).",
+              "expectedOutcome": "PR이 열리고 CI 4 워크플로가 돈다. reconciler 레코드의 `preparation.pullRequestUrl`이 그 PR을 가리킨다."
+            }
+          ],
+          "plannedAt": "2026-09-16T16:12:00Z"
+        }
+      }
+    ]
   }
 ]
