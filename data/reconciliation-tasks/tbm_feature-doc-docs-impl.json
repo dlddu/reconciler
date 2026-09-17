@@ -2627,6 +2627,51 @@
           "status": "failed",
           "verifiedAt": "2026-09-16T13:53:49Z"
         }
+      },
+      {
+        "reason": "failed — attempt[0] 가 실행 게이트에서 중단(verification.checks 3 failed · 1 passed). 실패는 구현물의 결함이 아니라 기준선·차량의 침식이다: PR #43 head 4e809da7 을 기다리는 동안 main 이 세 번 움직였고(#44 2026-09-15T13:32Z 마이그레이션 README 신설·SQL 6파일 주석 → 체크섬 6건 변경, #46 2026-09-16T07:21Z 와이어프레임 층 제거·화면 ID 폐지, #47 2026-09-16T14:19Z e2e 매핑 축 AC→테스트 시나리오), 1차 계획의 전제(README 신설, S08 화면 ID 체계, e2e 항등식 24−0=13+11)는 모두 만료됐다. 사람 판정이 재계획을 명시했다 — 본 task 승인 2026-09-16T12:31:03Z, rct_20260915-0001 반려 comment 12:34:39Z 「#46이 PR #43과 겹치는 파일을 변경했으므로 최신 main 기준으로 통합 PR을 다시 준비해야 한다」. 그 통합 차량은 rct_20260915-0001 이 이미 준비했다(통합 head c8b22c6, CI 6검사 green 2026-09-16T16:05Z, PR #49 승인 대기). 따라서 이 시도는 코드를 다시 쓰지 않는다 — 1차 구현물 21파일(PR #43 브랜치, 소실 없음)을 그대로 쓴다.",
+        "plan": {
+          "summary": "슬라이스 5a(AC2.1·2.2·2.3)의 착지를 **동일 범위 + 새 차량**으로 마무리한다. 왜 이 방법인가: 1차 시도의 실패는 코드의 결함이 아니라 기준선 침식이고, 사람 지시가 「통합 PR 재준비」를 명시했으며 그 차량이 이미 존재한다 — rct_20260915-0001 이 만든 통합 head c8b22c6(= PR #43 head 4e809da7 + main 04453fa 를 3회 머지해 README add/add 합병, doc-tracker 시나리오 축 재해석 — 신규 3 spec 을 sc02-01/02/04 로 개명·매핑 등재하고 시나리오 3 을 미매핑 잔여 상한 6→7 로 등재, App.tsx 양측 생존, tests/migrations.rs 체크섬 핀 7건을 main SQL 기준으로 재검증)은 **CI 6검사 전부 green(2026-09-16T16:05Z)** 이고 로컬 파이썬 게이트 3종도 green 이다. 이 시도가 코드를 다시 만들면 차량이 둘로 갈라져 통합 task 의 사람 승인 기록과 어긋난다. 그래서 남은 행위는 차량 착지(게이트) → PR #43 ready 전환 → 머지 → 착지 검증뿐이다. 머지는 main 으로 가고 main 머지는 이미지 핀 봇이 deploy/k8s 를 갱신해 자동 배포로 이어진다 (머지 = 적용). **이 시도의 범위(완료 기준)**: ① 로드맵 미구현 AC 14→11(AC2.1·2.2·2.3 ✅) ② 시나리오 축 e2e — 매핑 10→13 · 구현 대기 20→16 · 미매핑 래칫 6→7(시나리오 3 등재, 상한 상향) · 항등식 36 = 13 + 0 + 16 + 7 · 매칭 파일 13 전부 1선언(1차 시도의 AC 축 항등식 24−0=13+11 은 #47 로 폐기 — 완료 기준에서 뺀다) ③ 활성 대조 5→6(FeatureAcceptance ↔ JRN-review-feature.html · STP-read-scenarios) · 대조 보류 2/2 유지 · 편차 원장 43→47 ④ main 머지 커밋에서 CI·docs-mockup-render·journey·scenario 워크플로 전부 green ⑤ 흡수 2건 착지 — backend/migrations/README.md 명문화 + tests/migrations.rs 핀 7건(main SQL 기준), doc-tracker 4b-2 산술 오류 4곳(37→36·44→43) 수정. **범위 밖**: 차량 착지 자체(rct_20260915-0001 소유 — PR #49 사람 승인 대기), PR #50(rct_20260916-0002 — 미매핑 6건 분할·신설, 본 시도 착지 후의 재감지가 새 task 로 잇는다), AC2.4~2.6(슬라이스 5b)·AC3.1~3.5(6)·AC4.4/4.6/4.7(7)·STP-verify-evidence(5b)·재개 배너·검수 상태·STP-add-missing, 운영 DB 사전 점검·롤아웃 세부(이 머지는 SQL 을 한 글자도 바꾸지 않는다).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "입장 게이트 — 차량 착지 재검증(실행 시작 시 실측): ① gh api repos/dlddu/feature-doc/pulls/43 로 PR #43 이 open 이고 head 가 통합 head c8b22c6(또는 그 트리와 동일 — 조상이 4e809da 와 main 04453fa 이상 둘 다)이며 mergeable=MERGEABLE·base=main 임을 확인 ② PR #49 가 착지됐는지 확인(merged=true 또는 base 브랜치 head==c8b22c6) ③ main 이 04453fa 이후 추가로 움직였는지 확인(움직였으면 게이트 실패). 셋 중 하나라도 미충족이면 게이트 미충족으로 중단한다 — 주인은 rct_20260915-0001(사람 승인 대기)이고 본 task 가 대신 통합해서는 차량이 갈라진다.",
+              "expectedOutcome": "세 조건이 전부 실측 확인된다. 미충족이면 중단 기록과 함께 그대로 닫혀 failed 가 남고, 직전 시도가 게이트 규정을 두므로 차량 주인의 해결 전엔 재계획하지 않는다(루프 유보)."
+            },
+            {
+              "seq": 2,
+              "action": "PR #43 본문 확정 — 2차 준비(preparation)에서 시나리오 축으로 재산정해 둔 본문을, 착지된 실제 head SHA 로 확정 갱신한다(각주의 head 값만 확정하고 기준 수치가 계획과 어긋나면 그 자리에서 중단한다).",
+              "expectedOutcome": "PR 본문이 착지된 head 를 가리키고 완료 기준 표가 시나리오 축(②의 수치)과 일치한다."
+            },
+            {
+              "seq": 3,
+              "action": "PR #43 을 ready 로 전환(PATCH draft=false). 머지는 아직이다.",
+              "expectedOutcome": "PR 이 ready 로 표시되고 리뷰 대기 상태가 된다."
+            },
+            {
+              "seq": 4,
+              "action": "머지 — PR #43 을 main 으로 squash merge(레포 설정이 squash-only). 머지 커밋 SHA 를 기록한다. 머지 = 적용: 이미지 핀 봇이 deploy/k8s 를 갱신해 자동 배포가 이어진다.",
+              "expectedOutcome": "PR #43 merged, main 새 커밋, CI 워크플로가 머지 커밋에서 실행된다."
+            },
+            {
+              "seq": 5,
+              "action": "착지 검증 ①② — merged main 의 docs/doc-tracker.md 실측: ① 「구현 수렴 로드맵」의 미구현 AC 14→11 과 AC2.1·2.2·2.3 ✅ ② 시나리오 축 집계 매핑 13 · 구현 대기 16 · 미매핑 7 · 항등식 36 = 13+0+16+7 · 매칭 파일 13(전부 1선언). e2e/tests/ 파일 목록을 함께 실측해 sc02-01/02/04 의 존재를 확인.",
+              "expectedOutcome": "문서 수치와 실제 파일 상태가 일치한다. 어긋나면 그 사실을 검증 기록에 남기고 해당 줄을 고친다(문서가 SSOT 이므로 어긋남 자체가 새 gap이다)."
+            },
+            {
+              "seq": 6,
+              "action": "착지 검증 ③ — merged main 에서 tools/check-mockup-render.py 를 로컬로 재현: rc=0 · 활성 대조 6 · 보류 2/2 · 편차 원장 상한 47 · data-sample 66건. 변경 이력의 5a 행과 원장 캡션이 어긋나지 않는지 확인.",
+              "expectedOutcome": "게이트 rc=0 이고 수치가 ③ 기준과 일치한다."
+            },
+            {
+              "seq": 7,
+              "action": "착지 검증 ④⑤ — 머지 커밋의 CI 워크플로(CI · docs mockup↔render · docs journey↔mockup · docs scenario↔e2e) 전부 green 을 gh api 로 기록하고, backend/migrations/README.md 존재 + backend/tests/migrations.rs 핀 7건(main SQL 기준) + doc-tracker 4b-2 산술 수정(37→36 · 44→43)을 확인한다. cargo/Playwright 는 CI 판정으로 충분하다(로컬 재현 불필요 — 통합 head 에서 이미 동일 내용이 green).",
+              "expectedOutcome": "워크플로 run URL 4건 기록 + 흡수 2건의 파일 실측 완료."
+            }
+          ],
+          "plannedAt": "2026-09-16T19:34:00Z"
+        }
       }
     ],
     "createdAt": "2026-09-02T13:09:26Z",
@@ -2654,7 +2699,7 @@
         "previousVersion": "d9cdc790cd47a3e5ab0315d8d18814b1d4afd82a"
       }
     },
-    "updatedAt": "2026-09-16T19:14:00Z"
+    "updatedAt": "2026-09-16T19:34:00Z"
   },
   {
     "assessment": {
