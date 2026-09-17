@@ -7181,6 +7181,46 @@
             }
           ]
         }
+      },
+      {
+        "reason": "failed — attempt[1]은 제품 수리(apply에 uid 주입만 생략, PR #120 병합)와 문서 수렴(#121)까지 마쳤으나 rg#9 apply 케이스가 400/422로 여전히 거부(2회 CI 재현, merge/strategic/json은 동일 rv 주입으로 통과). 직전 검증이 남긴 가설(apply 본문의 metadata.resourceVersion 거부)은 k8s 1.35 소스 대조로 반증됐다: 잘못된 uid→422 'field is immutable'(kubernetes#127625, 우리 버킷), 오래된 rv→409 Conflict(다른 버킷), 정합 rv→통과(apimachinery ValidateObjectMetaAccessorUpdate — update 검증은 빈 rv만 422 'must be specified for an update'). 승인된 rv·uid는 실행 시각의 live 객체와 항상 일치하므로 두 매커니즘 어느 쪽도 이 실패를 만들 수 없다. 이 시도가 주목하는 것은 구조적 사실 하나다: apply는 네 형식 중 유일하게 apiserver가 본문을 applied config '객체'로 해석하는 형식이고(manage/strategic/json은 불투명 페이로드), 스키마 타입 해석(schemeTypeConverter.ObjectToTyped)은 본문의 gvk에서 타입을 찾는데 현재 본문은 gvk 없이 나간다. 또한 raw apiserver 에러 본문이 3회 시도 모두 어디에도 기록되지 않았다 — 제품의 400/422 매핑이 응답 본문의 Status.message를 버려서다.",
+        "plan": {
+          "summary": "rg#9의 apply patchType 케이스를 닫는 슬라이스. 접근은 두 동작이 한 PR로 나간다. ⑴ approvedPatch의 apply 분기에 서버가 아는 대상 식별(apiVersion·kind)을 주입한다 — 호출자가 쓰지 않았을 때만 채우고, 호출자가 다른 값을 쓰면 rv·uid와 동일한 제출 전 거부 패턴으로 거부한다. 근거: applied config는 apiserver가 '객체'로 해석해 타입을 찾는 유일한 patch 본문이고 타입 해석은 gvk를 필요로 하며, 현재 본문은 gvk 없이 나가 merge/strategic/json과 달리 결정적으로 실패한다. identity는 좌표(apiVersion/kind/name)의 따름정리라 'apply도 기존 대상에만 쓴다' 계약의 범위 안이다. ⑵ 제품의 400/422 버킷 문구에 apiserver Status.message를 괄호로 덧붙인다 — 이번 성공/실패 어느 쪽이든 다음 판정의 근거가 되는 진단장치다(3회 연속 원인 없는 추측을 끊는다). CI integration에서 apply 케이스가 통과하면 그 증거 위에서만 PRD AC9와 doc-tracker의 문서 수렴 커밋이 같은 PR에 뒤따른다(문서는 코드 증거 전에 움직이지 않는다).\n\n**완료 기준(이 시도의 성공 판정).** ① 병합 트리(PR #106 픽스처 + 본 PR)의 CI integration에서 resource_generic_ac9.py의 apply 케이스 ok 관측 ② ok 라인 9/9(ag#7·ag#8·rg#5·rg#8·rg#9·rg#10·ac5·ac8·신규 관측 포함) ③ 배차 수 43/3 — primary 완주로 gatekeeper-variant 그룹(ag_ac2·ag_ac4·ag_ac9) 배차 관측 ④ CI 4잡(unit·fmt+vet·build&push·integration) 초록 ⑤ 로컬 4게이트(check_ac_mapping·check_mock_policy·check_comment_policy·check_doc_inventory) rc=0 ⑥ 단위 회귀 갱신(TestApprovedPatchPreservesDataAndConditions의 apply 단언 갱신 + 호출자 identity 불일치 거부 케이스) 통과 ⑦ 문서 수렴 커밋이 CI 증거 이후에 착지. 범위 밖: ag#5의 409·5xx 주입 수단, rg#18의 403 경로, 미구현 도구 5종, gatekeeper/AC6 동작, e2e 픽스처 파일(PR #106 소관), PRD의 rv 와이어 역할 변경(identity 주입으로도 실패할 경우에만 후속 계약 갱신 — §5 분기).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "main 16c5eb3 기반 브랜치 reconcile/rct_20260915-0008-apply-identity를 만들고 internal/k8s/patch_precondition.go의 apply 분기에 identity 주입을 넣는다: patch 맵 루트의 apiVersion·kind를 ref.APIVersion·Kind로 채우되(호출자가 이미 쓴 값은 그대로 두고) 호출자 값이 좌표와 다르면 'refusing patch: <필드> differs from the coordinate'로 rv·uid와 동일한 제출 전 거부를 한다.",
+              "expectedOutcome": "go build ./... && go vet ./... 통과; go test ./internal/k8s -run TestApprovedPatch 통과(단언 갱신 전에도 기존 케이스 무수정 통과 유지)."
+            },
+            {
+              "seq": 2,
+              "action": "internal/k8s/resource.go:864의 400/422 버킷에 apiserver Status.message를 덧붙인다 — 'patch refused: invalid patch or failed approved-target precondition (<apiserver: %s>); call ended without retry or automatic reapproval' (errors.As로 StatusError 추출, 실패 시 빈 괄호). conflict 버킷과 나머지 문구는 무접촉.",
+              "expectedOutcome": "기존 접두어·종결 문구 보존; go build && go test ./internal/k8s 통과."
+            },
+            {
+              "seq": 3,
+              "action": "internal/k8s/patch_precondition_test.go를 갱신한다: apply 케이스 단언을 apiVersion·kind 존재 + uid 부재 + resourceVersion 존재로 고치고, 호출자가 다른 apiVersion(예: v2)/다른 kind를 쓰는 거부 케이스 2건을 추가한다.",
+              "expectedOutcome": "go test ./internal/k8s 전체 통과."
+            },
+            {
+              "seq": 4,
+              "action": "PR을 draft로 열고 본문에 task id, gap 요약, 가설 경위(#127625·rv 가설 반증), 완료 기준, 검증 방법을 적어 CI를 돌린다(머지는 하지 않는다).",
+              "expectedOutcome": "PR URL 확보; integration 잡 결과 관측 가능."
+            },
+            {
+              "seq": 5,
+              "action": "CI integration 판정: apply 케이스 ok면 ⑥~⑦(배차 43/3·9/9·4잡 초록)으로 진행하고, 여전히 거부되면 새 문구 괄호의 raw apiserver detail을 기록해 §5 분기표로 원인을 귀속한다(제3가설 확정 → 본 시도 기록에 남기고 종료, 재감지가 후속 task를 연다).",
+              "expectedOutcome": "9파일 ok 라인 9/9 + 배차 43/3 관측, 또는 귀속된 원인 진단."
+            },
+            {
+              "seq": 6,
+              "action": "CI 증거 이후 같은 PR에 문서 수렴 커밋: PRD prd-resource-generic.md AC9의 apply 절에 identity 주입 문언을 반영하고 doc-tracker의 위험 행·변경 이력 행에 이 슬라이스를 등재한다. check_ac_mapping·check_doc_inventory·check_comment_policy rc=0 확인.",
+              "expectedOutcome": "로컬 4게이트 rc=0; 문서와 와이어 계약 일치."
+            }
+          ],
+          "plannedAt": "2026-09-17T10:20:00Z"
+        }
       }
     ]
   },
