@@ -72,7 +72,8 @@
               "expectedOutcome": "task 종료. 범위 밖 잔여(원장 R1의 착수)는 재감지로 이어짐이 명시된다."
             }
           ],
-          "plannedAt": "2026-09-17T18:36:43Z"
+          "plannedAt": "2026-09-17T18:36:43Z",
+          "executionGuide": "# 실행 지침 — rct_20260917-0001\n\n## 사전 조건\n- 준비된 PR: dlddu/feature-doc #51 (브랜치 `reconcile/rct_20260917-0001-e2e-mocking-policy`, 커밋 2건 — 96de5ee 문서 신설 · a212b4a 주석 부착)\n- 검토 통과 후에만 진행한다. 이 task는 문서 + 주석 작업이며 코드 동작 변경이 없다.\n\n## 순서 (순서가 중요한 이유 포함)\n1. **CI 확인 → PR #51 merge(squash)** — 주석·문서-only지만 merge가 첫 불가역 지점이므로 CI가 먼저다. feature-doc CI는 push마다 docker run + pull_request 2 run이 열린다; 판정은 **pull_request run의 integration 잡**만 본다. green이면 merge.\n2. **merge 후 main에서 as-is 지문 재산출** — 계획 2단계. 기대값 `sites=30 files=13` / sha `e503132a9d02e7babd7a459104799afb029d1d8a5e1f719730e8c406a9ce993e`. 어긋나면 주석 부착이 지문 규약(토큰형)을 벗어난 것이므로 merge를 롤백하고 이 단계에서 중단한다.\n3. **불변식 1 대조** — 계획 3단계. (a) 문서 허용목록 표의 17쌍(file×token)과 지문 쌍(주석 `mock-exception` 토큰 13쌍을 제외한 나머지 17쌍)이 쌍 단위로 같은지, (b) 각 파일 주석의 CODE가 허용목록의 CODE와 같은지 확인. `grep -rn 'mock-exception: ' backend/src deploy/e2e` 로 전건 열거해 문서 표와 대조.\n4. **to-be 버전 산출** — 계획 4단계. `git rev-parse HEAD:docs/e2e-mocking-policy.md` 가 blob hash를 출력하는지(absent 아님).\n5. **충실도 보증 확인** — 계획 5단계. `grep -n 'github tree rejected (404)' backend/src/repo_scan.rs` 와 `grep -n 'provider.prefix()' backend/src/llmkey.rs` 가 merge 후에도 나오는지. 이 2건이 real보다 관대한 stub 방지의 현행 보증이다.\n6. **원장 확인** — 계획 6단계. 정책 문서 차단 요인 원장의 R1 행이 해소 방향·소관·선행(없음=착수 가능)·재검토 시점(2026-12-16) 4요소를 갖추고, 가림 기록 3건(설치 토큰 만료·실 상류 왕복·구현 대기 20건)이 있는지.\n7. **verification 기록 + 종료** — 계획 7단계. 결과를 attempts 마지막 항목 verification에 쓰고 상태를 닫는다.\n\n## 검증 방법 (전체 성공 판정)\n- 이 시도의 범위 기준: ⑴ 문서 존재 ⑵ 등재 17쌍 ↔ 주석·코드 지점 일치 ⑶ 원장 R1 완비 + 가림 기록 ⑷ 충실도 보증 2건 유지. 넷 모두 참이면 `succeeded`.\n- stub LLM 결정적 실패 트리거 구현, 원장 R1의 착수는 **범위 밖** — merge로 만들어진 버전 변화의 재감지가 착수 가능 행을 gap으로 보고 후속 task를 연다. 그 task가 열리지 않았다고 이 task를 계속 붙잡지 않는다.\n- 병합 후 지문이 예상과 다르면(예: 주석 문구의 CODE가 토큰형 `[A-Z]+`를 벗어남) 실패로 기록하고 PR을 되돌린다.\n\n## 주의사항\n- **불가역 지점**: PR merge(1단계)뿐. 그 이전의 모든 것은 브랜치 폐기로 원복된다.\n- **롤백**: merge 후 문제 발견 시 revert 커밋으로 주석·문서를 되돌린다 → 지문이 `sites=17 files=13 / df9b27803a08…` 로 원복되고 to-be는 `absent`로 돌아간다(감지가 재평가).\n- **건드리지 않을 것**: `docs/doc-tracker.md`(자매 모델 `tbm_feature-doc-docs-impl`의 SSOT), stub 분기 코드 자체(충실도 결함은 현행 유지가 정답), 구현 대기 20건 관련.\n- **병렬 가능 여부**: 2~7단계는 읽기 전용이라 자유; 1단계(merge)는 다른 fire의 feature-doc push와 겹치지 않게 단독으로.\n"
         },
         "preparation": {
           "prepared": true,
@@ -84,6 +85,6 @@
         }
       }
     ],
-    "updatedAt": "2026-09-17T18:52:00Z"
+    "updatedAt": "2026-09-17T18:58:00Z"
   }
 ]
