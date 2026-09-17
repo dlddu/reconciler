@@ -1316,7 +1316,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "failed",
     "trigger": {
       "detectedAt": "2026-08-30T06:00:00Z",
       "changedSides": [
@@ -1439,7 +1439,7 @@
           "comment": "사람 승인(수동 승인 세션). 승인 시점 신선도 확인: PR #19 open·draft, head 5a62ce6 불변, head CI/Image success, mergeable clean, main은 docs·scripts 2커밋만 전진(파일 교집합 0). 가동(unsuspend)·econ-llm Secret은 이번 승인 범위 밖."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-17T12:47:30Z",
           "entries": [
             {
@@ -1525,6 +1525,52 @@
               "startedAt": "2026-08-30T06:58:00Z",
               "finishedAt": "2026-08-30T06:58:00Z",
               "log": "계획·준비 단계에서 이미 완료된 step — 준비 기록 승계. kustomize build batch 6 objects·prod 11 objects, ingest 템플릿 편집 전후 바이트 동일, prod spec.volumes[0]=econ-batch-data 확인."
+            },
+            {
+              "stepSeq": 13,
+              "status": "succeeded",
+              "startedAt": "2026-09-17T12:58:00Z",
+              "finishedAt": "2026-09-17T13:03:30Z",
+              "log": "준비 단계(1~12)가 만든 draft PR #19(head 5a62ce6)를 지침 1~3단계대로 착지시켰다. ① 머지 직전 신선도 재확인(open·mergeable clean·head 불변) 후 `gh pr ready 19` + squash 머지 → merge commit a23c19a(merged=true). 머지 전 head CI 4잡(build·e2e·publish serving/batch) 전부 success 재확인, main 전진분(2커밋)은 docs·scripts뿐이고 PR 파일 교집합 0이라 무재베이스로 머지(승인 코멘트 전제와 동일). ② main CI 관측: a23c19a의 check-runs 9건 전부 success(build·e2e·publish serving·publish batch·deploy·report-build-status·structure·flow·docs build). ③ 클러스터 관측(k3s MCP, flux 자동동기화): WorkflowTemplate econ-batch-pipeline generation 2로 갱신 — spec.entrypoint=ingest 불변, templates=ingest·pipeline·analyze 3개, analyze는 econ-llm/api-key secretKeyRef + retryStrategy expression 'lastRetry.exitCode != 2' 실측. CronWorkflow econ-pipeline-hourly 신설(creationTimestamp 2026-09-17T12:58:43Z, suspend=true, entrypoint=pipeline, schedule 0 * * * *)·econ-ingestion-hourly suspend=false 유지(failed=0·succeeded=372·phase Active). 네임스페이스 Workflows 3건 모두 econ-ingestion-hourly-*(13:00Z tick Succeeded)로 econ-pipeline-hourly-* 0개 — suspend가 의도대로 안 돼 있다. README 48행의 '페이크 LLM(기본)' 잔존은 검증 단계에서 판정(verification.checks 참조)."
+            }
+          ],
+          "finishedAt": "2026-09-17T13:03:30Z"
+        },
+        "verification": {
+          "status": "failed",
+          "converged": false,
+          "asIsVersionAfter": "contracts:b67b8ff3a7918b8df40e1a7866d3b920ad5d1abf python:ec67e20099e4e8bba909da7a7636e3c5c4c3e997 go:a180e198cdb690bb0a6821a44181b5041e775dbd web:c0299bf0806878b2cd02e40f9e9df4351038d63e deploy:26164bc235366689d146cfd5dc5f2f1578aadba9",
+          "verifiedAt": "2026-09-17T13:05:00Z",
+          "checks": [
+            {
+              "name": "main cli.py --analyzer 기본값 llm",
+              "status": "passed",
+              "detail": "main a23c19a의 cli.py 49행 default=\"llm\" 실측(choices fake,llm). 모듈 docstring도 'the real llm analyzer (the operational default)'로 정정돼 있음."
+            },
+            {
+              "name": "smoke fake 고정 + main CI green",
+              "status": "passed",
+              "detail": "main tests/smoke.sh 29행 'python -m econ_analysis --analyzer fake --data \"$DATA\"' + 사유 주석(26~28행) 실측. main a23c19a check-runs 9건 전부 completed/success(build·e2e·publish serving·publish batch·deploy·report-build-status·structure·flow·docs build)."
+            },
+            {
+              "name": "workflow-template analyze·pipeline 존재 + ingest 무변",
+              "status": "passed",
+              "detail": "클러스터 GET 실측: templates=[ingest,pipeline,analyze], spec.entrypoint=ingest 불변, analyze는 args=[](무플래그=기본 llm)+ECON_LLM_* env(모델 gpt-4o-mini·openai 엔드포인트·econ-llm/api-key secretKeyRef)+retryStrategy limit 3·expression \"lastRetry.exitCode != '2'\". 소스 diff(830a4b3→a23c19a): hunk는 헤더 주석(1~2행) 교체와 50행 이후 신규 블록 순수 삽입뿐 — ingest 템플릿 영역에 수정·삭제 hunk 없음."
+            },
+            {
+              "name": "cronworkflow-pipeline suspend:true + kustomization 등재",
+              "status": "passed",
+              "detail": "클러스터 GET 실측: econ-pipeline-hourly 신설(2026-09-17T12:58:43Z, merge 직후 flux 자동동기화, generation 1), spec.suspend=true, entrypoint=pipeline, schedule '0 * * * *', concurrencyPolicy Forbid, activeDeadlineSeconds 3300. 소스 kustomization.yaml 23행에 cronworkflow-pipeline.yaml 등재 실측."
+            },
+            {
+              "name": "README·docstring '기본은 페이크' 없음",
+              "status": "failed",
+              "detail": "README 48행(프로젝트 구조 트리)에 'packages/analysis CLI 엔트리 · 실 LLM 분석기(opt-in) + 페이크 LLM(기본) · Silver writer'가 main에 그대로 남아 있다 — 머지 후 진실(기본=llm·fake=--analyzer fake opt-in)과 정반대 서술이고 같은 파일의 92행('analysis 기본 분석기도 실 chat-completions 모델')·159~160행('실 chat-completions 분석기가 기본으로 배선됨')과 모순된다. planner의 README 수정(step 9)이 91~93·159~161행만 고치고 구조 트리 47~48행을 놓친 것이 원인. docstring은 문제 없음(cli.py·llm.py 모두 'operational default'=llm 서술 실측). 기준 5 미충족 — 이 슬라이스 범위 내 미달성."
+            },
+            {
+              "name": "as-is python·deploy 두 축 이동",
+              "status": "passed",
+              "detail": "model versionScript를 main a23c19a 체크아웃에 실행: python 83acd70a→ec67e200, deploy 78191604→26164bc2로 이동. contracts·go·web 불변(PR 의도대로). 재감지가 열린다."
             }
           ]
         }
