@@ -29,6 +29,53 @@
       "reason": "첫 관측이고 정의가 등록 시점에 예고한 초기 격차 그대로라 지금 좁히는 작업이 필요하다. 첫 task의 범위는 정의가 명시한다: ⑴ `docs/e2e-mocking-policy.md` 신설(정책·허용목록·차단 요인 원장을 한 문서에) ⑵ 실측 5종의 카테고리 판정 → 등재 또는 제거(사전 소견: ①로그인 신원·②App 설치/토큰·③트리 스캔·⑤키 검증=EXT 후보, ④LLM 호출/고정 답=LLM 후보 — 구속력 없음, task가 재판정) ⑶ 표기 주석(`mock-exception:`) 부착과 허용목록 대조 ⑷ 원장 행에 doc-tracker 「자동화 밖 잔여」 칸의 산문 후보 2개(LLM 호출 한도 초과·설치 토큰 단기 만료)를 B2 4요소(해소 방향·소관·선행·재검토 시점)로 옮기기. 5종의 충실도 점검(stub이 real보다 관대한지 — 알려진 결함 2건은 08-13·09-02에 수정돼 현 HEAD에서 유지 확인)도 task 범위다. 자동 해소 가능성 없음(정책 문서는 작업이 착지시켜야 생긴다) — 유예가 아니라 action_required.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-17T17:36:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "「정책 SSOT 부재」 초기 격차를 문서 신설로 닫는다: 등록 시점에 예고된 첫 task라 정의가 범위를 명시했고, stub 지점 17쌍(13파일)은 경계 단위로 ①로그인 신원·②App 설치/토큰/저장소·③트리 스캔·⑤LLM 키 검증=EXT, ④LLM 호출·고정 답=LLM으로 판정되며, 모드 스위치 5쌍은 경계 치환이 아니라 등재 예외를 켜는 파생 유형(SW)으로 등재한다. docs/e2e-mocking-policy.md를 신설해 정책·허용목록(17쌍)·차단 요인 원장·표기 규약을 한 문서에 두고, 같은 PR에서 13개 파일 20곳에 mock-exception 주석을 부착해 등재↔코드 양방향 1:1을 성립시킨다. 이 시도의 범위(완료 기준): ⑴ 문서 존재 ⑵ 17쌍 전건 등재 + 주석 대조 일치 ⑶ 차단 요인 원장 1행(B2 4요소) + 시나리오 1(04) 설치 토큰 만료의 '차단 요인 아님' 가림 기록 ⑷ 충실도 결함 2건(트리 스캔 404 거부·키 검증 제공자별 거부) 현행 유지 확인. stub LLM 결정적 실패 트리거 구현 등 원장 행의 착수는 범위 밖 — 행을 착수 가능(선행 없음)으로 등재해 재감지가 후속 task로 연다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "준비된 PR(dlddu/feature-doc, 브랜치 reconcile/rct_20260917-0001-e2e-mocking-policy)을 검토 통과 후 merge한다. 커밋 2건: 문서 신설 1건, mock-exception 주석 부착 1건.",
+              "expectedOutcome": "main에 docs/e2e-mocking-policy.md가 존재하고 13개 제품/배선 파일에 주석이 착지한다."
+            },
+            {
+              "seq": 2,
+              "action": "merge 후 main에서 모델의 as-is versionScript를 재실행해 지문을 다시 뽑는다.",
+              "expectedOutcome": "sites=30 files=13 (기존 17쌍 + 신규 주석 13쌍)이며 sha는 새 값 — 주석이 지문 토큰 집합에 정상 흡수됐다."
+            },
+            {
+              "seq": 3,
+              "action": "불변식 1 대조: 문서 허용목록의 쌍 목록(file×token 17쌍)과 2의 지문 쌍 집합(주석 토큰 제외한 코드 지점)이 쌍 단위로 일치하고, 주석의 CODE가 등재 코드(EXT-01..04/LLM-01/SW-01)와 일치하는지 확인한다.",
+              "expectedOutcome": "미등재 모킹 0 · 고아 등재 0 · 주석 누락 0 — 불변식 1 충족."
+            },
+            {
+              "seq": 4,
+              "action": "to-be 버전을 산출한다: git rev-parse HEAD:docs/e2e-mocking-policy.md (모델 versionScript).",
+              "expectedOutcome": "blob hash가 출력됨(absent가 아님) — 정책 SSOT 착지."
+            },
+            {
+              "seq": 5,
+              "action": "충실도 보증 확인: backend/src/repo_scan.rs의 stub_scan 비-main 브랜치 'github tree rejected (404)' 거부와 backend/src/llmkey.rs의 provider.prefix() 기반 거부가 merge 후에도 유지되는지 확인한다.",
+              "expectedOutcome": "두 충실도 수정(08-13·09-02)이 유지됨 — real보다 관대한 stub 분기 0."
+            },
+            {
+              "seq": 6,
+              "action": "원장 확인: 차단 요인 행(시나리오 6 — stub LLM이 실제 한도 초과·타임아웃 실패를 재현하지 못해 제품의 LLM 실패 분기가 E2E 미도달)이 해소 방향·소관·선행·재검토 시점 4요소를 갖추고, 시나리오 1(04) 설치 토큰 단기 만료가 '차단 요인 아님'(mint-per-use라 만료 처리 분기 부재, 실 상류 왕복의 뒷면)으로 가림 기록됐는지 확인한다.",
+              "expectedOutcome": "원장 완비 — B1 위반 0(지목 문맥 없음 확인됨), B2 미비 0."
+            },
+            {
+              "seq": 7,
+              "action": "검증 결과를 attempts 마지막 항목의 verification에 기록하고 상태를 종료한다. 착수 가능 행(선행 없음)은 남긴다 — 다음 감지가 그 행을 gap으로 보고 후속 task를 연다.",
+              "expectedOutcome": "task 종료. 범위 밖 잔여(원장 R1의 착수)는 재감지로 이어짐이 명시된다."
+            }
+          ],
+          "plannedAt": "2026-09-17T18:36:43Z"
+        }
+      }
+    ],
+    "updatedAt": "2026-09-17T18:36:43Z"
   }
 ]
