@@ -7417,6 +7417,52 @@
       "reason": "**수동 트리거(「homelab-k3s-mcp 정합성 4개 축의 현황 전체 확인」)에 대한 축별 현황 보고 → `action_required`.**\n\n**근거 1 — 정의 기준 1의 잔여 ledger가 유지 중이다.** 미구현 AC 등재 **27건**(approval-gate 11 · resource-generic 쓰기·스트림 13 · session 3)이 오늘 현재 전부 등재 그대로이고, 정의는 이것을 drift로 규정하며 「백로그로 치부해 이 루프 밖으로 빼지 않는다」고 못박는다. 게이트 rc=0은 문서↔e2e 1:1 정합만 증명할 뿐 27건의 미구현을 커버하지 않는다(초록이 커버리지를 가리는 구조 — 트래커 스스로 렌즈 차이를 명시).\n\n**근거 2 — 소유자 없는 미결 판단 1건.** 수용 위험 유일 잔여 `dear_baby_reset_user` 게이트 편입이 2026-09-12부터 ⬜ 소유자 판단 대기로 등재돼 있다 — 편입 시 `prd-dear-baby-reset-user` AC 동시 갱신이 필요한 판단이다. 09-15 유형(「선행도 무주공산이면 영구 정체」)의 현재판.\n\n**근거 3 — 새로 생긴 어긋남은 없다(수동 요청이므로 이것이 정상).** homelab main 오늘 커밋 0 · AC9 축-② 어긋남은 어제 #121로 닫힘(직전 task succeeded/no_action_needed로 결산) · 문서 없는 실행 코드 0종(히트 2건은 역사적 주석 — 줄을 읽어 확인) · 원장 집계와 게이트 출력 정합. 이 axis는 「깨진 것을 고치는」 상태가 아니라 「남은 것을 계속 줄이는」 상태다.\n\n**인계(다음 슬라이스 후보, 플래너 우선순위 판단 몫)**: ⑴ ⬜ 소유자 판단 1건 — `dear_baby_reset_user` 게이트 편입 여부+AC 문서 갱신(문서 슬라이스, 코드 0줄 가능) ⑵ resource-generic 쓰기·스트림 등 구현 대기 27건 중 다음 배치 ⑶ approval-gate e2e 자동화(시나리오 1~11, 🔴 자동화 공백 해소). Pages 설정은 사용자 작업이라 계획 대상 아님(기록만). 형제 fire가 같은 일괄 요청의 나머지 축(e2e-mock-policy · comment-redundancy)과 scenario-e2e(버전 변화 claim)를 이어받는다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-17T16:21:18Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**슬라이스: `resource_exec`(AC12) 등록 한 도구 — 쓰기·스트림 잔여 5종 중 감지 인계가 네 시나리오(approval-gate 3·6, resource-generic 11·17)에서 「docs-impl(도구)」로 지목한 것.** 왜 이것인가: (a) `dear_baby_reset_user`가 이미 `create pods/exec` 쌍으로 exec를 행사해 게이트 선언·RBAC·SPDY 경로가 모두 실재 — 공유 게이트 경로를 한 줄도 건드리지 않는 유일한 잔여 중 첫째다(착수 전 재실측: 등록 도구 중 `gatedPairs` 다중 반환은 없음을 소스에서 확인, #104의 fail-closed target 규칙은 이미 main에 착지해 있어 `genericTarget()`으로 충족). (b) 대안 저울질 — `delete_collection`은 게이트 자기 권한 list(`prd-approval-gate` AC11) 선행이 더 깊고, attach·port_forward·proxy는 스트림 표면 확대 리스크 행이 몰아주는 등급이라 exec 다음 순서다. 가역성: 미머지 PR 스테이징이라 롤백은 PR 닫기. **이 시도의 범위(완료 기준)**: AC12의 전 계층 등록(toolslist·toolRegistry·핸들러·k8s ExecResource·EXPECTED_TOOLS) + Go 단위 테스트(시나리오가 계획한 `TestExecStreamsAndCaps` 등) + 문서 원장 동기화(등록 도구 20종·⏳ 행 근거 갱신·주석 원장 재판정) + 네 게이트 통과, PR #123 스테이징까지. **범위 밖**: 나머지 도구 4종(delete_collection·attach·port_forward·proxy — 각각 별도 슬라이스), 실물 gatekeeper 픽스처와 통합 e2e `resource_generic_ac11.py`(자매 모델 scenario-e2e 소관), `dear_baby_reset_user` 게이트 편입(⬜ 소유자 판단 — executor가 판단 못 함), 배포 이미지 갱신(머지 뒤 deploy pin). 범위 밖 잔여 gap은 머지가 만든 버전 변화의 재감지가 새 task로 잇는다.",
+          "riskLevel": "high",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "착수 전 재실측: `resource_exec` 미등록 grep 0 확인, `gatedPairs` 다중 반환 등록 도구 부재 확인, #104의 fail-closed target 규칙 착지 여부 확인, PRD AC12·테스트 시나리오 11·approval-gate AC3/AC6 계약 판독",
+              "expectedOutcome": "계획의 설계 전제(공유 경로 무수정, pre-gate 인자 검증, 컨테이너 후보는 kubelet 거부 문면)가 소스와 문서 모두에 비추어 참임"
+            },
+            {
+              "seq": 2,
+              "action": "전 계층 구현: toolslist.go 선언 · gate.go toolRegistry(execPairs()+genericTarget()) · internal/mcp/exec.go 핸들러 · internal/k8s/exec.go ExecResource(discovery로 pods/exec 서빙 확인, SPDY, 256KiB/스트림·30s 상한, 잘림·시간 상한 표시) · Service 인터페이스+Unavailable · tests/integration/_helpers.py EXPECTED_TOOLS",
+              "expectedOutcome": "go build ./... 성공 — 도구 표면 19→20종"
+            },
+            {
+              "seq": 3,
+              "action": "Go 단위 테스트: TestExecStreamsAndCaps(전달·사전 거부·상한 표시) · TestExecContextCarriesTheCommand(AC3 명령 전문) · TestExecutionIsRefusedWhenTargetChangedAfterApproval exec 행(AC6 재생성 거부) · TestLimitedWriterCaps · TestToolsListIncludesAllTools 갱신",
+              "expectedOutcome": "go test ./... 전 패키지 통과(실측 10/10 ok)"
+            },
+            {
+              "seq": 4,
+              "action": "문서 원장 동기화: 등록 도구 19→20종+게이트 쓰기 도구 5종, ⏳ 시나리오 11 근거를 ⑴ 해소로 재작성, approval-gate 시나리오 1·3·6 재작성, 시나리오 17 스트림 셋, 09-15 잔여 산문에 재실측 정정, 변경 이력 등재",
+              "expectedOutcome": "원장이 새 표면을 정확히 서술 — 남은 차단은 gatekeeper 픽스처 하나로 줄어 있음"
+            },
+            {
+              "seq": 5,
+              "action": "게이트 4종: check_ac_mapping(78·1·27·50·50·0·0 불변) · check_doc_inventory(42/42) · check_mock_policy(등재 5) · check_comment_policy(재판정 3행+신설 51줄 행, 합계 2051 잔량 0)",
+              "expectedOutcome": "네 게이트 모두 rc=0"
+            },
+            {
+              "seq": 6,
+              "action": "PR 스테이징: 브랜치 reconcile/rct_20260917-0001, 커밋 368406d, 초안 PR #123 (review 승인 전 머지 금지)",
+              "expectedOutcome": "https://github.com/dlddu/homelab-k3s-mcp/pull/123 — 본문에 task id·gap·단계·검증법 기재"
+            },
+            {
+              "seq": 7,
+              "action": "(실행 단계) 리뷰 승인 후 머지 → CI pull_request run의 integration 잡 판정 → deploy pin으로 이미지 갱신 → 재감지",
+              "expectedOutcome": "docs 트리 해시 변화로 재감지가 잔여 gap(도구 4종·AC11 선행)을 새 task로 인계"
+            }
+          ],
+          "plannedAt": "2026-09-17T18:44:46Z"
+        }
+      }
+    ]
   }
 ]
