@@ -1110,7 +1110,7 @@
   {
     "id": "rct_20260918-0002",
     "toBeModelId": "tbm_econ-opinion-monitor-scenario-e2e",
-    "status": "reviewing",
+    "status": "awaiting_review",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T12:36:47Z",
@@ -1203,6 +1203,11 @@
           "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/31",
           "preparedAt": "2026-09-18T13:05:00Z",
           "notes": "변경은 `tests/e2e/` 신규 파일과 등재 문서 2종뿐 — 제품 코드·운영 매니페스트(`deploy/`)는 건드리지 않는다.\n\n**신규**: 피드 픽스처 4종(`tests/e2e/fixtures/feeds/`, RSS 110건 · Atom 60건 · 본문 미확보 3건 포함 8건 + `e2e-feeds.json`) · 배치 하네스 매니페스트 5종(`tests/e2e/k8s/batch/`: 피드 더블 Deployment/Service · PVC · Bronze 반출 대기 Pod · 수집 Job · kustomization) · spec 헬퍼 2종(`tests/e2e/lib/`) · spec 4종(`ingestion-2-top-n-cap` · `ingestion-3-axis-tagging` · `ingestion-4-link-and-body` · `ingestion-5-metadata-completeness`).\n**수정**: `tests/e2e/run.sh`(배치 이미지 빌드·kind load → 더블 기동 → 수집 Job → Bronze 반출 → `E2E_BRONZE_DIR` 로 Playwright 에 전달, 기존 서빙 경로는 무변경 추가) · `.gitignore`(`/tests/e2e/.artifacts/`) · `docs/econ-opinion-monitor-doc-tracker.md` (집계 매칭 3→7 · 공백 15→11, 매핑 표 4행, gap-list 4건 제거, 공백 해소 경로 수집 행) · `docs/econ-opinion-monitor-e2e-mocking-policy.md`(FEED-02~05 4지점 등재 + 변동 이력).\n\n**선검증(로컬)**: 제품 CLI 를 실제로 돌려 확인했다 — 로컬 HTTP 서버로 픽스처를 서빙하고 `econ-ingestion --source feed --feeds <더블 설정> --cycle 2026-01-01T00:00` 실행 → Bronze 168건(100+60+8) · 본문 165건(미확보 3 제외) · `failed_sources=[]`. 네 spec 의 단언 22개를 같은 데이터에 대해 재현해 전부 통과. `python3 tests/e2e/check_scenario_mapping.py` rc=0, 집계 `21 / 1 / 2 / 18 / 7 / 11 / 1`. `bash -n tests/e2e/run.sh` 통과.\n**미검증**: kind 클러스터·Job·`kubectl exec` 반출·Playwright 실행은 이 환경에 docker/kind/kubectl/node 가 없어 돌리지 못했다 — CI `e2e` 잡이 첫 실행 지점이다."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "머지가 프로덕션 롤아웃을 실제로 깨운다. PR 자체는 `tests/e2e/` 신규 파일과 문서 2종만 바꾸고 제품 코드·`deploy/` 는 한 줄도 건드리지 않지만, `.github/workflows/image.yml` 에 경로 필터가 없어 main 푸시마다 서빙·배치 이미지가 새 SHA 로 발행되고 pin 잡이 그 SHA 를 `deploy/` 에 커밋하며 flux-cd-apps 가 main 을 추적한다 — 기능적으로 동일한 이미지로의 재배포가 운영 트래픽 위에서 일어난다. 롤백은 revert 커밋 하나로 충분하지만(되돌릴 상태가 없다) 그 revert 역시 같은 롤아웃을 한 번 더 깨우므로, 지금 머지해도 되는 시점인지는 사람이 고를 일이다. 또한 이 슬라이스의 핵심인 kind 배치 하네스(수집 Job · PVC 바인딩 · `kubectl` 반출 · Playwright 실행)는 계획 환경에 docker/kind/kubectl/node 가 없어 한 번도 실행되지 않았고 — 로컬에서 검증된 것은 제품 수집 CLI 와 게이트 숫자뿐 — CI `e2e` 잡이 첫 실행 지점이다. 계획의 riskLevel 도 medium 이고, CI 타임아웃 상향 같은 배선 변경이 범위에 포함된다."
         }
       }
     ]
