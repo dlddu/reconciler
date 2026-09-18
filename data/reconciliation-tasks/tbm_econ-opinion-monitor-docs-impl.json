@@ -2070,7 +2070,7 @@
   {
     "id": "rct_20260918-0003",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T16:17:51Z",
@@ -2217,6 +2217,49 @@
               "log": "executionGuide 3단 실행. (1) CI 판정 — `?branch=reconcile/rct_20260918-0003` 로 조회(guide 경고대로 `head_sha=` 미사용): `Checks | pull_request | completed | success | ce108440`, PR 현재 head 와 동일 SHA 대조 완료. (2) 머지 — 재확인 `mergeable=true` · `mergeable_state=clean` · 변경 파일 정확히 5개(`deploy/batch/workflow-template.yaml` · `docs/econ-opinion-monitor-doc-tracker.md` · `python/…/pyproject.toml` · `aggregate.py` · `test_aggregate.py`), 자매 축 소유 구역(`tests/e2e/**`) 무변경 확인 후 squash 머지 → `merged=true sha=33e24ea7`. (3) main 착지 확인은 verification 참조. 계획 밖 동작 없음 — `econ-pipeline-hourly` unsuspend 등 클러스터 조작은 하지 않았다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "contracts:5a1ee3bb47ac5199a1f05129fcff8dbf783a4646 python:8b23dbde8d7d9c7685c05286b8a58e7d65b40367 go:0f51767eb86fb7f0927c5aa31db120ef91cc763e web:8dac89d5e6cd16f6fb87e9b17de5f99844bae820 deploy:7f9f28fae38c2711b305d7e9b09ef62a51e24ddb",
+          "checks": [
+            {
+              "name": "완료기준1 — as-is 지문 python·deploy 이동, contracts·go 불변",
+              "status": "passed",
+              "detail": "머지된 main tip `33e24ea7` 에서 versionScript 재실행. python `ec67e200…` → `8b23dbde…` 이동, deploy `1c145efa…` → `7f9f28fa…` 이동(PR base `2579722a` 기준). contracts `5a1ee3bb…` · go `0f51767e…` 불변 — 이 슬라이스가 건드리지 않는 성분이 그대로다. web 은 `709de76a…` → `8dac89d5…` 로 움직였으나 **이 task 의 산출물이 아니다**: 같은 구간에 자매 모델 task 의 PR #37(`be8616f4`, 목업↔구현 렌더링 규칙)이 먼저 머지됐다. 이 task 의 squash 커밋 단독 diff(`git diff 33e24ea^ 33e24ea --name-status`)는 계획한 5파일 정확히 그대로이며 web·contracts·go·.github 에 한 줄도 닿지 않는다. 계획 수립 시 baseline 으로 적힌 deploy `92264416…` 역시 그 사이 다른 머지로 `1c145efa…` 까지 이동해 있었다(핀 재작성)."
+            },
+            {
+              "name": "완료기준2 — aggregate 배선 + pipeline 3단",
+              "status": "passed",
+              "detail": "main tip 실측 `grep -c 'name: aggregate' deploy/batch/workflow-template.yaml` = **2**. review 가 미리 정정한 대로 1 이 아니라 2 가 정상이다(L85 pipeline step 참조 + L145 템플릿 정의). 판정축인 `pipeline` steps 는 `ingest` → `analyze` → `aggregate` 3단으로 확인, 마지막 step 이 `template: aggregate`."
+            },
+            {
+              "name": "완료기준3 — 페이크 제거 · 자매 축 해제 신호 생존",
+              "status": "passed",
+              "detail": "main tip `python/packages/aggregation/src/econ_aggregation/aggregate.py`: `grep -c 'skeleton placeholder'` = **0**, `grep -c 'BUCKET_UNIT = \"hour\"'` = **1**. 추가로 머지된 트리에서 `python3 tests/e2e/check_scenario_mapping.py` 재실행 rc=0 — 「규칙 1·2·3·4·5·6 위반 없음」, 규칙 6 「구현 대기 …#시나리오 3 의 해제 신호가 사라졌다」가 뜨지 않았다."
+            },
+            {
+              "name": "완료기준4 — 머지 커밋 CI success",
+              "status": "passed",
+              "detail": "PR head `ce108440` 의 `Checks | pull_request | completed | success`(단일 필수 체크 `required` 가 ci·docs·image 를 집계, `if: always()` 라 skip 통과 불가). 머지 커밋 `33e24ea7` 의 `Image | push | completed | success` 도 확인(`?head_sha=` 형태는 guide 안내대로 main push 런에는 정상 동작). CI 조회는 `actions:read` 를 명시한 토큰으로 200."
+            },
+            {
+              "name": "완료기준5 — doc-tracker 착지/잔여 분할",
+              "status": "passed",
+              "detail": "「현재 상태 요약」 착지 목록에 **AC3.2 (슬라이스 4)** 항목이 신설돼 관측 좌표 `deploy/batch/workflow-template.yaml` ∋ `name: aggregate` 와 pipeline 3단을 명시하고, 잔여 목록의 기존 「AC3.2 · AC3.3」 합본이 **AC3.3 (일·주 롤업)** 단독으로 갈라지며 자매 축 해제 신호(`BUCKET_UNIT = \"hour\"`)와의 결합이 한 줄로 적혔다. 「운영」 항목에 집계 배선 후에도 `econ-pipeline-hourly` suspend 로 프로덕션 Gold 0건임이 기재. 변경 이력 1행 추가. 「e2e 매핑」 절은 무변경(머지 커밋 docs diff 가 두 구역에만 걸림)."
+            },
+            {
+              "name": "축 침범 없음 — 자매 모델 소유 구역 무변경",
+              "status": "passed",
+              "detail": "이 task 의 squash 커밋이 건드린 파일은 정확히 5개: `deploy/batch/workflow-template.yaml` · `docs/econ-opinion-monitor-doc-tracker.md` · `python/…/pyproject.toml` · `aggregate.py` · `test_aggregate.py`. `tests/e2e/**` · `docs/comment-policy/` · `design-tracker.md` · `mockups/` · `e2e-mocking-policy.md` · doc-tracker 「e2e 매핑」 절에 한 줄도 닿지 않았다."
+            },
+            {
+              "name": "(정보) 범위 밖 잔여 — 판정에 넣지 않음",
+              "status": "passed",
+              "detail": "수렴 판정과 무관한 사실 기록. ⑴ AC3.3 일·주 롤업 미구현 — `BUCKET_UNIT = \"hour\"` 고정이라 Gold 에 day/week 레코드 0건이며, 자매 축 `tbm_econ-opinion-monitor-scenario-e2e` 소유의 구현 대기 표 재판정과 **한 슬라이스에서** 다뤄야 닫힌다. ⑵ `econ-pipeline-hourly` 가 `suspend: true` 라 프로덕션 Gold 는 여전히 0건 — 계획이 명시한 정상 상태이며, unsuspend 는 비가역·과금 운영 행위로 사람 승인 축이다(이번 실행에서 건드리지 않았다). ⑶ AC3.5 · AC3.4 · AC3.1 · 5화면 플레이스홀더는 로드맵 후속. ⑷ 이 잔여들은 이 실행이 만든 as-is 버전 변화를 다음 감지 주기가 읽어 후속 task 로 잇는다 — 모델의 lastObservedVersion 은 건드리지 않았다."
+            }
+          ],
+          "verifiedAt": "2026-09-18T17:33:00Z"
         }
       }
     ]
