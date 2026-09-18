@@ -757,6 +757,14 @@
             }
           ],
           "plannedAt": "2026-09-18T16:40:00Z"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/feature-doc",
+          "branch": "reconcile/rct_20260918-0002-per-boundary-doubles",
+          "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/60",
+          "preparedAt": "2026-09-18T16:41:00Z",
+          "notes": "**새 준비물을 만들지 않았다 — 직전 시도의 PR #60을 그대로 쓴다.** 직전 실행이 막힌 곳은 준비물의 결함이 아니라 **착지 방법**이었고(merge_method 405), 브랜치·커밋·CI는 전부 유효한 채 남아 있다. 새 PR을 열면 CI를 다시 돌리고 리뷰 맥락을 버리는 순손해다.\n\n**이번 재계획에서 유효성을 실측으로 재확인했다 (2026-09-18T16:38~16:40Z)**\n- PR #60: `state: open` · `merged: false` · `head: c0330ea`(직전 시도 이후 불변, 다른 손이 닿지 않음) · `mergeable: true` · `mergeable_state: clean` · 커밋 3개 · 27파일.\n- 레포 설정: `allow_squash_merge: true` · `allow_merge_commit: false` · `allow_rebase_merge: false` · `allow_update_branch: true` · `delete_branch_on_merge: true` · `squash_merge_commit_title: PR_TITLE` · `squash_merge_commit_message: BLANK`. **직전 지침이 지정한 두 방식이 모두 꺼져 있고 squash만 켜져 있음**이 405의 원인 그대로다.\n- 이력 확인: `git rev-list --merges --count origin/main` = **0**, 최근 12커밋 전부 단일 부모 — 이 레포는 줄곧 squash로만 착지했다. 「커밋 3개 보존」 롤백 전제는 애초에 성립 불가였다.\n- CI: head `c0330ea`의 run `35366075366`(workflow `CI`) `conclusion: success`. `GET /actions/runs?head_sha=`는 `contents`+`pull_requests`+`metadata` 토큰으로 **200**.\n- 권한 확인: `GET /branches/main/protection` **403**(App에 `administration` 없음) — 레포 설정을 바꿔 merge commit을 켜는 길은 권한상 막혀 있다. 범위 확장이기도 해 택하지 않는다.\n\n**base 이동 대응 — 리베이스 대신 시험 머지로 검증했다.** PR base는 `8dad2a6`인데 main은 그 뒤 `8b5b41e`(#61) → `d87f216`(#66) → `6bc37f9`(#65)로 3커밋 더 움직였다. `mergeable_state: clean`이라 강제 리베이스는 불필요하고, 리베이스하면 head sha가 바뀌어 **이미 green인 CI를 다시 돌려야** 하므로 하지 않았다. 대신 **현재 `origin/main`(`6bc37f9`)에 로컬 시험 머지**해 결과를 실측했다(푸시 없음):\n- 로컬 머지 **충돌 0**(`README.md`·`deploy/k8s/deployment.yaml` 자동 병합).\n- 결과 트리 지문 **`sites=25 files=11` / `fef43512ffcdf9989f0aff4c5f2049e5ad9a94393079514d7a318368a693b7ac`** — 계획 기대값과 바이트 일치.\n- 코드 지점(표기 주석 제외) **14쌍** == 허용목록 **14행**, 파일×토큰 단위 양방향 일치(미등재 0 · 고아 0).\n- `FEATUREDOC_MODE` 리터럴 코드·배포·e2e **0건**. 정책 문서 blob `e09e58d52f15196869690668651eb22b26462843`.\n- 대조군: 현재 main(`6bc37f9`)은 `sites=29 files=14` / `56e8401061ee…`, 정책 blob `d3732010…`(저장 baseline과 동일).\n\n**squash 머지의 결과 트리 = 이 시험 머지 트리**이므로, 계획의 기대값 5종은 그대로 유효하다.\n\n**PR 본문을 갱신했다.** 1차 본문의 「롤백 = 커밋 2만 revert, squash하면 이 성질이 사라진다」는 이제 사실과 반대이므로, ⑴ 「착지 방법 — squash(이 레포에서 유일하게 가능한 방식)」 절을 추가해 405 실측과 squash-only 이력을 근거로 남기고 ⑵ 롤백 절을 **squash 커밋 1개를 revert하는 PR**로 다시 썼다(main이 `ci-gate`로 보호되므로 revert도 PR로 착지한다는 점, 배포된 Deployment env는 자동으로 되돌아가지 않는다는 점 포함). 코드·커밋은 한 줄도 건드리지 않아 head는 `c0330ea` 그대로다.\n\n**미실행(실행 단계의 몫)**: 로컬 `cargo test`·`scripts/e2e.sh` — 이 호스트에 cargo·docker·kind·kubectl·node가 없다. PR CI가 같은 명령을 돌리며 판정은 필수 체크 `ci-gate`의 conclusion으로 한다. 그리고 머지 자체(불가역 지점)."
         }
       }
     ]
