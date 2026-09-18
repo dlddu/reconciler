@@ -32,7 +32,7 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-17T18:11:56Z"
     },
-    "updatedAt": "2026-09-18T06:30:00Z",
+    "updatedAt": "2026-09-18T06:40:00Z",
     "attempts": [
       {
         "plan": {
@@ -70,7 +70,8 @@
               "expectedOutcome": "to-be = 3cbf7392… (absent 아님), as-is = lines=655 files=60 / 85e08c47… (끼어든 주석 커밋이 있으면 그 델타만큼만 차이), ledger 합계 776/121/655"
             }
           ],
-          "plannedAt": "2026-09-18T06:25:00Z"
+          "plannedAt": "2026-09-18T06:25:00Z",
+          "executionGuide": "## 실행 지침 — rct_20260917-0001 (주석 정책 SSOT 신설 + 첫 전수 판정)\n\n대상: `dlddu/economic-opinion-trend-monitor` PR [#29](https://github.com/dlddu/economic-opinion-trend-monitor/pull/29)\n(base `main@9d6122b`, head `bb9605c`, 브랜치 `reconcile/rct_20260917-0001-comment-policy`)\n\n### 순서 (직렬 — 병렬 불가)\n\n1. **사전 조건 확인** — 순서가 중요한 이유: 지문 예측값은 base `9d6122b` 기준이다.\n   - PR #29 CI가 전부 green(lint · test · e2e · preview overlay build). 이 planner의 토큰엔 checks 권한이 없어 CI는 확인하지 못했다 — 실행자가 반드시 본다.\n   - `git log 9d6122b..origin/main -- contracts go python/packages web/src tests scripts deploy Makefile`에 **주석을 바꾼 커밋**이 있는지 본다(pin bot의 deploy 태그 커밋은 주석 축 0 — 무시).\n     - 없음 → 2로.\n     - 있음 → PR을 main 위로 rebase. 충돌이 나면 **이 PR의 제거분만 재적용**(passes 문서의 제거 목록 기준)하고 재측정한 값으로 아래 기대값을 갱신한 뒤 진행. 새로 들어온 주석은 판정하지 않는다(범위 밖 — 재감지가 새 task로 연다).\n2. **squash merge** PR #29. 머지 후 pin bot이 `chore(deploy): pin images …`를 되커밋하는 것은 정상(주석 축 0).\n3. **수렴 검증** — 머지된 main을 새로 체크아웃해 모델의 versionScript 두 개를 그대로 실행한다.\n\n### 검증 방법 (계획 범위 기준)\n\n| # | 검사 | 명령 | 기대값 |\n|---|------|------|--------|\n| V1 | to-be 표면 | `git rev-parse --verify --quiet HEAD:docs/comment-policy \\|\\| echo absent` | `3cbf7392d2d3c7a99cd8b3474df216eed87493f7` (absent 아님). squash라도 디렉터리 내용이 같으면 tree hash는 동일 |\n| V2 | 정책 3역할 분리 | `ls docs/comment-policy docs/comment-policy/passes` | `README.md`, `ledger.md`, `passes/2026-09-18-initial-pass.md` |\n| V3 | 원장 완전성 | ledger.md 「파일별 원장」 표 | 62개 파일 행 + 합계 행 `776 / 121 / 655` |\n| V4 | as-is 지문 | 모델 as-is versionScript | `lines=655 files=60` / `85e08c474b665211b57c07f427bdde144ef1cb4ce9e02dd1c7a72ac568294c03`. 1단계에서 끼어든 주석 커밋이 있었다면 **그 델타만큼만** 차이(이 PR 제거분 121줄이 전부 빠졌는지로 판정) |\n| V5 | 게이트 회귀 없음 | `python3 scripts/check-journey-mockup.py .` · `python3 tests/e2e/check_scenario_mapping.py` | 둘 다 exit 0 (로컬 사전 확인 완료) |\n| V6 | 동작 불변 | `git diff 9d6122b <merge> --stat -- ':!docs'` 내용 | 삭제는 주석 줄·겹친 빈 줄뿐, `nav.ts` 1줄 수정도 주석 |\n\nV1~V4가 전부 참이면 `succeeded`. V1 또는 V4가 어긋나고 원인이 이 PR 자체(제거 누락·오제거)면 `failed`.\n\n### 범위 밖(후속) — 재감지가 새 task로 잇는다\n\n- `docs/index.html` 허브에서 `docs/comment-policy/README.md` 링크(지문 표면 밖).\n- Python docstring 본문 · 줄 끝 주석의 재진술(지문 사각지대) — docstring을 별도 표면으로 더할지 판단.\n- 판단 분기로 남긴 것의 재판정: AC 번호 태그 56줄, Go export doc 주석(`New builds Handlers…` — 정의 표본 ①과 유지 규칙 충돌), preview 오버레이 머리, `(a)~(h)`·`TKN-*`/`CMP-*` 표지.\n- 머지 후 main에 새로 착지하는 주석(형제 모델 executor 병합이 계속 이 축을 깨운다 — 이미 예고된 설계된 재트리거).\n- 머지로 to-be·as-is가 모두 움직이므로 다음 detector fire가 새 task를 열 수 있다 — 그 task는 V1~V4 값을 기준선으로 읽으면 된다.\n\n### 주의사항\n\n- **되돌릴 수 없는 지점 없음.** 주석·빈 줄 삭제와 문서 추가뿐이라 롤백은 squash 커밋 `git revert` 한 번(→ to-be는 다시 `absent`, 지문은 `05369a31…`로 복귀).\n- **트래픽·데이터 영향 없음.** 다만 `deploy/` 매니페스트 파일이 바뀌므로 Flux가 prod 경로를 재적용한다 — YAML 주석만 바뀌어 렌더 결과는 동일(no-op). 실행 후 `econ-monitor` 네임스페이스 리소스에 변경 이벤트가 없는지 한 번 본다.\n- `cronworkflow-ingestion.yaml`에서 지운 \"suspend로 착지\" 문단은 **실제 스펙(`suspend: false`)과 이미 어긋나 있던 낡은 서술**이다 — 스펙을 바꾸지 않는다. 이 주석을 근거로 suspend를 켜려 들지 말 것.\n- 리뷰어가 개별 제거에 이견을 달면 **그 줄은 복원하고(애매하면 남긴다)** pass 문서의 「판단이 갈려 남긴 것」 표와 ledger 행을 같이 고친 뒤 V4 기대값을 재측정한다.\n"
         },
         "preparation": {
           "prepared": true,
