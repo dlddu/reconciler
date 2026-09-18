@@ -7616,7 +7616,7 @@
   {
     "id": "rct_20260918-0002",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "source": "manual",
       "detectedAt": "2026-09-18T12:25:08Z",
@@ -7805,6 +7805,49 @@
               "startedAt": "2026-09-18T15:41:20Z",
               "finishedAt": "2026-09-18T15:50:58Z",
               "log": "계획 11단계(PR 개설)는 준비 단계가 이미 했고, 이 단계에서 **실행 지침 1~5 를 수행**했다. 1) 신선도: `gh pr view 127` 이 `mergeable=CONFLICTING`·`mergeStateStatus=DIRTY` — 검토 코멘트가 예고한 그대로라 머지하지 않고 리베이스했다(위 9·10단계). 리베이스 결과 `f6d805e` 를 `--force-with-lease` 로 브랜치에 올렸다. 2) CI: 새 head `f6d805e` 에서 `ci passed` 포함 전 체크 SUCCESS(fmt+vet · unit tests · integration tests · build & push server image), PR 상태 `MERGEABLE`/`CLEAN`. 3) 게이트 재실행 완료(10단계). 4) 머지: `gh pr merge 127 --squash` → main `7a8edf1` (mergedAt 2026-09-18T15:50:58Z). 5) 배포 롤아웃 확인: **여기서 계획 범위 밖의 레포 인프라 고장이 드러났다.** 머지 후 `Build and Push Docker Image to GHCR` 의 `build & push server image` 잡은 success 로 이미지를 올렸으나, 뒤따르는 `pin deployment image (main only)` 잡이 failure 로 끝났다 — main 직접 push 가 `remote: error: GH013 ... Required status check \"ci passed\" is expected` 로 거절된다(run 35364914510 / job 105665424684). 그 결과 `k8s/deployment.yaml` 의 이미지 핀은 여전히 `dc86afb9...`(#128 머지분)이고, 프로덕션 Deployment `homelab-k3s-mcp` 도 같은 이미지를 굴리고 있어 새 표면이 아직 파드에 뜨지 않았다. **이 슬라이스가 만든 고장이 아니다** — 핀 잡의 push 를 막는 룰셋은 #128(`ci: required status check 를 단일 집계 잡으로 모은다`)이 세웠고, 그 직후 머지된 #129 의 핀도 같은 이유로 착지하지 못했다(main 에 #129 용 `chore(deploy)` 커밋이 없다). 계획·승인 범위가 아니므로 임의로 손대지 않았다 — 배포 파이프라인 수리는 별도 판정·계획의 몫이다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:07dd24e6e28a0d075ee734e565a6572db028a9a3 main.go:a686818e97e7dbb2adc7f25c88f25bd6a2ad7537",
+          "verifiedAt": "2026-09-18T16:06:00Z",
+          "checks": [
+            {
+              "name": "⑴ 도구가 등록·광고됐다 — tools/list 가 21종을 답한다",
+              "status": "passed",
+              "detail": "머지 head 의 CI integration 레인에서 `tests/integration/smoke.py` 가 실제 MCP 세션으로 `tools/list` 를 받아 **21종**을 출력했고 그 안에 `resource_attach` 가 있다(job 105664892764 로그: `tools/list ok: ['api_resources', 'aws_config_get', 'dear_baby_reset_user', 'github_app_installation_token', 'grafana_token', 'opensearch_document_delete', 'opensearch_document_put', 'opensearch_search', 'ping', 'resource_attach', 'resource_create', 'resource_delete', 'resource_exec', 'resource_get', 'resource_list', 'resource_patch', 'resource_update', 'resource_watch', 'session_list', 'session_read', 'session_write']`). `EXPECTED_TOOLS` 재계수도 21종으로 일치. ※ 관측 지점 정정(정보성·계획 범위 밖): 실행 지침의 표는 이 행을 **배포된 프로덕션 파드**에 물어 확인하도록 적었으나, 머지 후 `pin deployment image (main only)` 잡이 `GH013 — Required status check \"ci passed\" is expected` 로 main push 를 거절당해(run 35364914510) `k8s/deployment.yaml` 의 핀이 `dc86afb9`(#128 머지분)에 멈췄고 프로덕션 Deployment 도 같은 이미지를 굴린다. 즉 **이 도구는 아직 프로덕션 파드에 뜨지 않았다.** 이 고장은 #128 이 세운 룰셋이 원인이고 #129 의 핀도 같은 이유로 착지하지 못한 선행 고장이라 이 슬라이스의 계획 범위(완료 기준 ⑴~⑸는 전부 레포·코드 층위다) 밖이며, 그래서 아래 판정에는 넣지 않고 사실만 남긴다. 대신 같은 것을 **머지 트리로 빌드된 실제 서버 프로세스**에서 관측했다 — CI integration 레인이 kind apiserver 위에 서버를 띄우고 MCP 세션을 연다."
+            },
+            {
+              "name": "⑵ 기동 교차검사를 통과했다 — advertised/registered 불일치 없음",
+              "status": "passed",
+              "detail": "`internal/mcp/gate.go:338` 의 광고↔선언 교차검사가 불일치를 기동 실패로 만든다. CI integration 레인에서 서버가 정상 기동해 세션을 열고 전 시나리오를 통과했고, 잡 로그 전문에 `advertised but not registered` / `registered but unreachable` 문구가 **한 건도 없다**. 계획이 5·6단계를 한 커밋에 묶은 전제가 실제로 지켜졌다는 관측이다. ※ 관측 지점 정정(정보성·계획 범위 밖): 실행 지침의 표는 이 행을 **배포된 프로덕션 파드**에 물어 확인하도록 적었으나, 머지 후 `pin deployment image (main only)` 잡이 `GH013 — Required status check \"ci passed\" is expected` 로 main push 를 거절당해(run 35364914510) `k8s/deployment.yaml` 의 핀이 `dc86afb9`(#128 머지분)에 멈췄고 프로덕션 Deployment 도 같은 이미지를 굴린다. 즉 **이 도구는 아직 프로덕션 파드에 뜨지 않았다.** 이 고장은 #128 이 세운 룰셋이 원인이고 #129 의 핀도 같은 이유로 착지하지 못한 선행 고장이라 이 슬라이스의 계획 범위(완료 기준 ⑴~⑸는 전부 레포·코드 층위다) 밖이며, 그래서 아래 판정에는 넣지 않고 사실만 남긴다. 대신 같은 것을 **머지 트리로 빌드된 실제 서버 프로세스**에서 관측했다 — CI integration 레인이 kind apiserver 위에 서버를 띄우고 MCP 세션을 연다."
+            },
+            {
+              "name": "⑶ 쌍이 옳다 — resource_attach → create on pods/attach",
+              "status": "passed",
+              "detail": "머지된 main 의 `internal/mcp/gate.go:133-136` 이 `\"resource_attach\": {decl: toolDeclaration{resolve: attachPairs(), target: genericTarget()}, handle: (*Handler).resourceAttach}` 다 — 검토자가 머지 전 확인하라고 지정한 두 조건(`attachPairs()` 와 `genericTarget()` 을 **둘 다** 가질 것, 후자가 없으면 승인이 대상 uid 에 묶이지 않아 AC6 위반)이 모두 충족된다. `TestAttachRefusalsCostNoApproval` 이 쌍이 `create`/`pods/attach` 임을 단정하며 PASS."
+            },
+            {
+              "name": "⑷ AC13 문면(단위 범위) — go test 가 계획된 세 테스트를 통과",
+              "status": "passed",
+              "detail": "`go test ./...` 전 패키지 ok(CI `unit tests` 잡 SUCCESS + 리베이스 트리 로컬 재실행). 지침이 지정한 이름 그대로 PASS: `TestAttachJoinsTheRunningProcess`(좌표·컨테이너·읽기 창 전달 / `readSeconds` 미지정 시 기본 5 / stdin 전달과 written 보고 / 빈 stdin 이 부재와 구분됨 / 스트림 절단 표시 — 하위 5건), `TestAttachRefusalsCostNoApproval`(`readSeconds` 31·0·비정수, stdin 비문자열, name·kind 누락, 명시 subresource, command — 하위 8건이 **클러스터 호출 0·승인 요청 0** 으로 거부), `TestAttachContextCarriesTheStdin`. 실물 파드 stdio 왕복은 계획이 범위 밖으로 명시한 e2e 몫이라 여기서 판정하지 않는다."
+            },
+            {
+              "name": "⑸ 문서 집계가 실제와 같다 — check_doc_inventory · check_ac_mapping",
+              "status": "passed",
+              "detail": "리베이스 트리에서 재실행: `check_doc_inventory.py` rc=0(docs 44개 = 가치 1 + PRD 15 + 테스트 15 + 상태 추적 1 + 정책 12, 허브 도달 44/44, 끊긴 링크 0), `check_ac_mapping.py` rc=0(시나리오 전집 85 · 예외 1 · 구현 대기 26 · 1:1 대상 58 · 매칭 파일 58 · 분할 대기 0 · **공백 시나리오 0**, 규칙 1~7 위반 없음). 리베이스가 main 의 새 집계(#129 의 PRD 15/AC 85, #106 의 e2e 8종)와 이 슬라이스의 등록 도구 21종·게이트 쓰기 6종을 합쳤고, 시나리오 13 행은 상태를 뒤집지 않아 AC↔e2e 매칭 불변식이 그대로 성립한다."
+            },
+            {
+              "name": "⑹ 주석 원장 무결성 — check_comment_policy",
+              "status": "passed",
+              "detail": "rc=0. 병합 트리에서 재측정한 값과 원장 마커가 정확히 일치한다 — 실측 「판정 대상 주석 2212줄 / 102파일 · 판정 완료 **2203**줄(99.6%) / 등재 범위 42 · 미판정 잔량 **9**줄」, docstring 축은 1369줄 100% · 잔량 0. 지침이 경고한 대로 리베이스 전 값(브랜치 2134 / main 2121)은 둘 다 거짓이었고, 합집합 재계산(2052 + 69 + 82 = 2203)이 실측과 맞았다. 잔량 9 는 main 이 이미 들고 있던 값으로 이 슬라이스가 늘린 것이 아니다."
+            },
+            {
+              "name": "⑺ 범위 수렴 — 계획이 명시한 완료 기준 ⑴~⑸",
+              "status": "passed",
+              "detail": "계획의 완료 기준은 전부 레포·코드 층위다: ⑴ `internal/` 구현 + `toolslist.go` 광고 + `gate.go` 의 `create on pods/attach` 선언·등록 (기동 교차검사 통과) ⑵ AC13 문면 3건 ⑶ Go 단위가 그 3건과 쌍을 단정 ⑷ 문서 집계 일치 ⑸ 빌드·vet·테스트 + `check_ac_mapping.py` rc=0. 다섯 모두 충족돼 squash 머지 `7a8edf16` 으로 main 에 착지했다. 모델 as-is 가 실제로 움직였다: `internal:70321167… → internal:07dd24e6…`(main.go 는 불변), to-be(docs 트리)도 `e5aecc48… → 08b4226b…`. **남은 gap(범위 밖·재감지가 잇는다)**: resource-generic AC11 `resource_delete_collection`(선행 = approval-gate AC11) · AC14 `resource_port_forward` · AC15 `resource_proxy`, 그리고 시나리오 13 의 전용 e2e `tests/integration/resource_generic_ac13.py` 저작. **그리고 배포 파이프라인 고장**: 핀 잡이 GH013 으로 막혀 이 도구가 프로덕션 파드에 아직 뜨지 않았다 — 이 모델의 as-is 는 레포(`internal/` 트리)라 본 task 의 수렴 판정 축은 아니지만, 운영상으로는 먼저 풀려야 할 별건이다(#129 도 같은 이유로 배포가 멈춰 있다)."
             }
           ]
         }
