@@ -7616,7 +7616,7 @@
   {
     "id": "rct_20260918-0002",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "reviewing",
+    "status": "awaiting_review",
     "trigger": {
       "source": "manual",
       "detectedAt": "2026-09-18T12:25:08Z",
@@ -7715,6 +7715,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/127",
           "preparedAt": "2026-09-18T12:48:39Z",
           "notes": "계획 11단계를 전부 스테이징했다(머지하지 않음). 구현 `internal/k8s/attach.go`·`internal/mcp/attach.go`, 등록 `gate.go`(create on pods/attach + genericTarget) · 광고 `toolslist.go`, 단위 `internal/mcp/attach_test.go`, 표면 목록 `tests/integration/_helpers.py`(20→21)와 `internal/server/mcp_test.go`, 문서 `doc-tracker.md`·`test-resource-generic.md`. 15파일 +622/−25.\n\n**로컬 검증을 실제로 돌렸다**(호스트에 Go가 없어 go1.24.7 arm64 툴체인을 받아서 실행): `go build ./...`·`go vet ./...`·`go test ./...`(전 패키지) 통과, `gofmt -l` 공집합, 그리고 CI의 정책 게이트 4종 전부 rc=0 — `tests/integration/check_ac_mapping.py`(공백 0 유지)·`scripts/check_mock_policy.py`·`scripts/check_comment_policy.py`·`scripts/check_doc_inventory.py`.\n\n**계획에 없던 작업 2건을 검증이 강제했다**: ⑴ `internal/server/mcp_test.go::TestToolsListIncludesAllTools`가 광고 도구 수를 목록 길이로 단정해 `resource_attach`를 목록에 더했다(수치 리터럴이 아니라 이름 목록이라 추가가 곧 갱신이다). ⑵ `scripts/check_comment_policy.py`가 main에서는 rc=0인데 이 브랜치에서 rc=1로 떨어졌다 — 내 주석이 등재 범위 3곳(#5 types/service, #24 gate, #32 exec)의 줄 수·지문을 움직였기 때문이다. 정책이 「등재 범위를 바꾼 PR은 같은 PR에서 재판정하고 행을 갱신할 것」을 요구하므로 그 셋을 재판정해(제거 8줄 — ③ 자기 파일 중복 5·② 문서 재진술 1·① 선언 재진술 2) 행을 갱신하고, 신규 파일 3종(65줄)을 새 행으로 등재했다. 잔량 마커는 0 그대로다(미판정으로 미루지 않았다).\n\n**PR이 증명하지 않는 것**: AC13의 실물 왕복(기존 프로세스의 스트림임을 파드 로그로 확인, stdin에 대한 대상 프로세스의 반응)은 실물 gatekeeper 픽스처를 요구해 PR #106(자매 모델 소관)을 기다린다. 이 PR의 CI는 그 픽스처를 쓰는 잡을 돌리지 않으므로, executor는 CI 초록을 「AC13 전건 검증」이 아니라 「빌드·단위·정책 게이트 통과」로 읽을 것."
+        },
+        "review": {
+          "required": true,
+          "status": "pending",
+          "reason": "프로덕션 MCP 서버(`homelab-k3s-mcp`)의 도구 표면을 20종→21종으로 넓히는 변경이라 사람이 먼저 봐야 한다. 새로 붙는 `resource_attach`는 PRD가 스스로 `exec`과 같은 등급이라 적은 권능이고(대화형 셸이 PID 1인 파드에서는 attach로 stdin을 보내는 것이 exec으로 셸을 여는 것과 구별되지 않는다), 서비스 어카운트가 `cluster-admin`에 바인딩돼 있어 **승인 게이트가 유일한 경계**다. 즉 게이트 선언이 틀리면 막을 것이 없다 — 검토자는 `gate.go`의 `resource_attach` 항목이 `resolve: attachPairs()`와 `target: genericTarget()`을 둘 다 갖는지(후자가 없으면 승인이 대상 uid에 묶이지 않는다, AC6) 그리고 광고 문구가 이 권능을 정확히 알리는지를 눈으로 확인해야 한다. 롤백은 PR revert 하나로 가능하고(기존 경로를 건드리지 않는 추가 전용 변경) 되돌리면 광고·등록이 함께 사라지나, 머지가 이미지 롤아웃을 유발해 MCP 서버 파드가 교체되므로 진행 중 세션은 끊긴다. CI 초록은 빌드·단위·정책 게이트 통과까지만 뜻하고 AC13 실물 왕복은 증명하지 않는다(실물 gatekeeper 픽스처가 자매 모델 PR #106 소관)."
         }
       }
     ]
