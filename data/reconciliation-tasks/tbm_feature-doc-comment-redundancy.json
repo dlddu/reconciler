@@ -2,7 +2,7 @@
   {
     "id": "rct_20260917-0001",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "createdAt": "2026-09-17T18:18:54Z",
     "trigger": {
       "source": "version_change",
@@ -82,7 +82,7 @@
           "comment": "사람 승인(수동 승인 세션). 승인 시점 신선도 확인 결과를 인지한 상태에서 승인함: PR #54는 open·CI 통과이나 main이 2커밋(#51, 이미지 고정) 앞서 docs/index.html 문서 카운트(main 20 vs PR 22)에서 병합 충돌 발생, #51의 주석 추가로 예고 지문(lines=2719, f97e15ab…)도 더 이상 유효하지 않음 — 실행 시 리베이스·충돌 해소와 실측 지문 기록이 필요."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-18T11:55:00Z",
           "entries": [
             {
@@ -112,12 +112,63 @@
               "startedAt": "2026-09-18T12:09:00Z",
               "finishedAt": "2026-09-18T12:10:00Z",
               "log": "PR #54 갱신 — head a0f1b77 → 1243c8a(force-with-lease, base main 95b6352). 머지 전 CI 재확인 대기."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T12:12:00Z",
+              "finishedAt": "2026-09-18T12:26:00Z",
+              "log": "CI 전부 통과(pull_request run 4종 모두 completed/success — test (cargo) 3m8s · test (kind e2e) 4m2s · 문서 게이트 3종), mergeStateStatus=CLEAN. 머지 직전 게이트를 원격 ref로 재실측: backend/migrations diff 0파일 · backend/src 비주석 변경 행 0 · backend/src|docs 밖 변경 파일 0. squash 머지(레포 관례) — head 1243c8a → main 7cdebc3c. 머지 후 트리에서 수렴 실측 완료(아래 checks)."
             }
-          ]
+          ],
+          "finishedAt": "2026-09-18T12:28:00Z"
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=2731 files=89\nec12a65419f1e8b6554bb9f2fe9665563f0e4bbc6668c19a0adf165c3bd08f82",
+          "checks": [
+            {
+              "name": "to-be가 absent에서 움직임",
+              "status": "passed",
+              "detail": "머지 커밋 7cdebc3c 트리에서 `git rev-parse --verify HEAD:docs/comment-policy` = ce39cb4461a607fe04643c854b4577a834c94466. 등록 이후 유지되던 `absent`가 tree hash로 바뀌어 재감지 경로가 살아났다."
+            },
+            {
+              "name": "정책 디렉터리 구조(템플릿 준수)",
+              "status": "passed",
+              "detail": "docs/comment-policy/{README.md, ledger.md, passes/2026-09-17-backend-concentrated.md} — 본문·원장·패스 상세 3역할 분리, 진입점 README, 줄 번호 좌표 없음. 문서 허브(docs/index.html)가 세 파일을 링크하고 카운트 23으로 일치(doc-row 실측 23건)."
+            },
+            {
+              "name": "범위 지문이 원장 예고값으로 이동",
+              "status": "passed",
+              "detail": "판정 4파일 범위 지문 = aa1931952efd07b621726cc6a524f742085bbe5ebbf3e94b6e3b3c210ab375ee, lines=486 — 원장·패스가 예고한 값과 정확히 일치. 계산식은 원장 방법론 재현(정규화·정렬 후 `echo \"$HITS\" | sha256sum`). 머지 전 main에서는 85da1f07…f91ac / 544행이었다(판정 시점 5c28852d와 동일 — 판정 이후 main이 넣은 `mock-exception:` 2행은 지문에서 제외되므로 판정 전제가 흔들리지 않았다)."
+            },
+            {
+              "name": "원장 합계 = 실측",
+              "status": "passed",
+              "detail": "원장 합계(판정 4파일 / 544행 · 순 제거 58 · 유지 486)가 트리 실측과 일치: 머지 전 544 → 머지 후 486, 차 58. 미판정 잔여도 실측과 일치(전역 2731 − 범위 486 = 2,245행 / 85파일) — 리베이스로 낡은 2,233을 2,245로 보정한 뒤의 값이다."
+            },
+            {
+              "name": "전역 as-is 지문(기록용) — 예고값 대비",
+              "status": "passed",
+              "detail": "실측 lines=2731 files=89 / ec12a654…3bd08f82. 계획 시점 예고값 lines=2719 / f97e15ab…는 판정 이후 main이 #51·#52로 주석 12행을 늘려 무효가 됐고(승인 코멘트가 지목한 그 무효화), 2789(머지 전 main) − 58 = 2731로 산술이 맞는다. 예고값에 맞추려 추가 편집을 하지 않고 실측값을 남긴다(실행 지침 「지문 불일치 시」)."
+            },
+            {
+              "name": "범위 밖 변경 없음",
+              "status": "passed",
+              "detail": "머지된 diff는 backend/src 4파일(주석 행만, 비주석 변경 0)과 docs/ 문서뿐. backend/migrations diff 0파일 — 「적용된 마이그레이션」 사람 게이트는 이번 패스에서 발동하지 않았고, SQL 104행은 전용 패스로 그대로 남는다."
+            },
+            {
+              "name": "(정보성) 잔여 gap",
+              "status": "passed",
+              "detail": "모델 전체 to-be 기준 잔여는 85파일 / 2,245행(미판정)으로 이 시도의 범위 밖이다. 실행이 만든 버전 변화(to-be absent→ce39cb44, as-is efbc9e66→ec12a654)가 다음 감지 주기의 트리거가 되어 후속 슬라이스를 연다. 이 시도는 후속 task를 직접 만들지 않는다."
+            }
+          ],
+          "verifiedAt": "2026-09-18T12:28:00Z"
         }
       }
     ],
-    "updatedAt": "2026-09-18T12:10:00Z"
+    "updatedAt": "2026-09-18T12:28:00Z"
   },
   {
     "id": "rct_20260918-0001",
