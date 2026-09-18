@@ -969,7 +969,7 @@
   {
     "id": "rct_20260918-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
-    "status": "reviewing",
+    "status": "review_rejected",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T13:28:31Z",
@@ -1042,6 +1042,14 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/130",
           "preparedAt": "2026-09-18T15:56:00Z",
           "notes": "문서·주석 전용 스테이징. 변경 파일 2개(`docs/e2e-mocking-policy.md`, `tests/k8s/kind/gatekeeper-variant.yaml`)이며 코드·CI 배선·체커는 무변경이다. 브랜치에서 `check_mock_policy.py` rc=0 + `모킹 지점 6 · 표기 주석 6 · 등재 5(상한 5)`, 회귀 스위트 13 tests OK, as-is 지문 sites=34→36을 사전 확인했다. 머지는 실행 단계의 몫."
+        },
+        "review": {
+          "required": false,
+          "status": "rejected",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-18T15:58:00Z",
+          "reason": "거부 — 준비된 PR #130 이 머지 커밋에서 CI 레드다. `fmt + vet` 잡의 `Comment policy ledger` 스텝(`scripts/check_comment_policy.py`)이 3건 위반으로 exit 1 이고 집계 잡 `ci passed` 도 failure 다(run 35364492753, head `bb6110ba`). 같은 게이트가 이 PR 의 베이스인 main `f97042eb` 에서는 success 이므로(run 35363835178) 이 실패는 PR 이 새로 들인 것이다 — 추가한 YAML 주석 2줄이 주석 원장의 집계·지문을 움직였는데 같은 PR 에서 원장을 갱신하지 않았다. 계획의 본체(정합성·범위)는 문제없다: 대상 게이트 `check_mock_policy.py` 는 머지 커밋에서 `등재 5(상한 5) · 모킹 지점 6 · 실재 토큰 5 · 표기 주석 6 · 미등재 0 · 고아 0` 으로 계획이 명시한 기대값과 문자열까지 일치하고, B2 원장 줄도 기대 문면대로 갱신됐다. PR 은 열려 있고 변경 파일 2개(문서·YAML 주석)로 범위를 벗어나지 않았으며 충돌·베이스 이동도 없다(mergeable=true, base=main HEAD). 불가역 작업 없음·롤백은 revert 1회로 충분. 즉 거부 사유는 오직 하나 — 실행 지침의 완료 기준이 보지 않는 두 번째 CI 게이트에서 레드라 지금 머지하면 main 이 깨진다.",
+          "comment": "**고칠 것 1 — 주석 원장 갱신을 같은 PR 에 넣을 것(필수).** `tests/k8s/kind/gatekeeper-variant.yaml` 에 넣은 주석 2줄이 `scripts/check_comment_policy.py` 의 판정 범위에 들어간다. 체커가 지목한 3건을 그대로 닫아야 한다:\n- [R2] `2026-09-15(#37)` 행의 줄 수 등재 48 != 실측 49 → 정책의 판정 절차로 그 범위를 다시 판정해 행을 갱신.\n- [R2] 같은 행의 지문 등재 `725386b4affe` != 실측 `537a6c00d4f6` → 재판정 결과로 지문 갱신.\n- [R4] 판정 합계 2121 + 잔량 9 != 실측 전체 2131 → 새 범위를 행으로 등재하거나 잔량 마커를 움직여 diff 에 남길 것.\n브랜치에서 `python3 scripts/check_comment_policy.py` 가 rc=0 이 되는 것까지 확인한 뒤 다시 planned 로 올릴 것.\n\n**고칠 것 2 — 완료 기준·검증 표에 이 게이트를 추가할 것.** 현재 executionGuide 의 검증 표는 `check_mock_policy.py` 와 체커 회귀 스위트만 본다. 그래서 준비 단계에서 「브랜치에서 rc=0 확인」을 했는데도 CI 레드가 통과해 넘어왔다. 2단계에 `check_comment_policy.py` rc=0 을, 5단계 기대값에 `fmt + vet` 잡의 `Comment policy ledger` 스텝 success 를 명시할 것. 일반화하면 — 주석 줄을 건드리는 변경은 mock policy 게이트와 comment policy 게이트 **둘 다** 통과해야 한다.\n\n**참고(수정 불필요·문면만 정정).** 5단계의 「kind 잡」은 이 레포에 없는 잡 이름이다. `gatekeeper-variant` 의 apply·롤아웃은 `integration tests` 잡 안에서 돌고, 이번 PR 에서 `Apply gatekeeper-variant fixture`·`Wait for gatekeeper-variant rollout` 모두 success 다 — 주석 삽입이 YAML 을 깨지 않는다는 것은 이미 실환경에서 확인됐다. 잡 이름만 바로잡으면 된다.\n\n나머지(접근·범위·롤백·차단 원장 유지 판단)는 그대로 유지해도 된다. 재계획은 기존 브랜치 `reconcile/rct_20260918-0001` 에 원장 갱신 커밋을 얹는 것으로 충분하다."
         }
       }
     ]
