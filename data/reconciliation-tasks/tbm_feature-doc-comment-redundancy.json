@@ -509,6 +509,56 @@
           "reason": "주석·문서 전용 변경이고 PR #61의 diff가 계획과 정확히 일치한다 — 8파일 +338/-62, 코드 4·문서 4, `backend/migrations/*.sql` 0건 · `docs/doc-tracker.md` 0건. 되돌리기가 revert 하나뿐이라 변경 자체의 위험과 불가역성은 낮고, 검증 기준(①strip 바이트 동일 ②단언 건수 ③문서 게이트 3종)도 재실행 가능하게 명시돼 있다. 그러나 준비(15:21) 직후 main이 #62로 한 칸 움직이면서 PR 필수 상태 체크가 개별 잡들에서 집계 잡 `ci-gate` 하나로 교체됐고, 이 PR head(`1ef82b6`, 15:20 빌드)에는 옛 체크 7건만 있고 `ci-gate`가 없다 — GitHub가 `mergeable=true`(내용 충돌 없음)인데도 `mergeable_state=blocked` · `rebaseable=false`로 응답해 지금 이 PR은 머지가 거부된다. 실행 지침 5단계(squash 머지)가 그대로 막히고 이를 푸는 동작이 계획에 없어 승인하지 않는다.",
           "comment": "**막힌 지점은 내용이 아니라 머지 가능성 하나다. 검증 증거는 살아 있으니 버리지 말 것.**\n\n**1. 베이스 이동은 증거를 무효화하지 않았다(재검증 부담 없음).** `84f2734…main(42e63fa)`는 정확히 1커밋(#62)이고 건드린 파일은 `.github/workflows/*.yml` 4개뿐이다. 이 경로는 모델 as-is SSOT 범위(`backend/src backend/tests frontend/src e2e scripts tools deploy backend/migrations/*.sql`) **밖**이라 예고 지문이 그대로 유효하다 — 전역 `lines=2717 files=90`/`7b125a92…`, 범위 142행/`fb27e0db…`. 대상 5파일도 #62가 한 바이트도 건드리지 않았으므로 검증 ①의 부모 기준을 `42e63fa`로 옮겨도 결과가 같다. 계획 step 4의 「base가 밀렸으면 ①을 새 부모로 다시」는 이 경우 형식적 재실행이다.\n\n**2. 고쳐야 할 것 — 머지 전 브랜치 갱신 단계를 계획에 넣어라.** 이 환경은 git pack 업로드가 끊겨 있고(준비 노트) `rebaseable=false`라 로컬 rebase·push 경로가 없다. 대신 API 한 방으로 된다:\n  `PUT /repos/dlddu/feature-doc/pulls/61/update-branch` (main을 PR 브랜치로 머지 — head sha가 바뀐다)\n그 뒤 새 head에서 `ci-gate`가 success로 끝나는 것을 확인하고 머지한다.\n\n**3. 실행 지침 §1③의 「CI 초록은 근거로 쓰지 않는다」를 고쳐라.** 그 문장은 「App 토큰으로 CI를 못 읽는다」는 전제 위에 있는데 전제가 틀렸다 — `GET /actions/runs?head_sha=`와 `GET /commits/<sha>/check-runs` 둘 다 이 토큰으로 **200**이다(이번 검토에서 7건 판독). 더 중요한 건, `ci-gate`는 이제 판정 *근거*가 아니라 **머지 전제조건**이라는 점이다. 로컬 게이트 3종 실행은 정확성 근거로 그대로 두되, 「새 head의 `ci-gate` success 확인」을 머지 게이트로 별도 추가할 것. (branch protection 본문은 App 토큰으로 403이라 직접 못 읽지만, 나머지 체크가 전부 success인데 blocked이고 #62가 ci.yml 주석에 「PR 의 필수 상태 체크는 맨 아래 `ci-gate` 하나뿐이다」라고 명시하므로 원인은 확정적이다.)\n\n**4. step 4의 파일 수 점검은 그대로 둬도 된다.** update-branch로 main을 합쳐도 `.yml` 4파일은 base 쪽이라 PR diff는 여전히 **8파일**이다. 「8개가 아니면 중단」에 실행자가 걸려 넘어지지 않도록 이 점을 지침에 한 줄로 못박을 것.\n\n**5. 범위·판정은 재검토하지 않아도 된다.** 제외 근거(#43·#49 경합 46파일, 자매 계획 12파일)와 5파일 선정은 이번 검토에서 다시 짚어도 문제 없었고, #59·#60(자매 PR)은 아직 열려 있어 선행 머지 충돌도 없다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**주석 비중복성 3차 패스 — 재계획. 범위·PR 내용은 그대로 두고, 막혀 있던 머지 경로 하나만 연다.**\n\n**왜 재계획인가.** 직전 시도는 검토에서 `review_rejected`로 돌아왔는데, 사유는 내용이 아니라 **머지 가능성** 하나였다. 준비(15:21) 직후 main이 #62(`42e63fa`, 15:29Z)로 한 칸 움직이며 PR 필수 상태 체크가 개별 잡 7종에서 집계 잡 `ci-gate` 하나로 교체됐고, PR #61의 head(`1ef82b6`, 15:20 빌드)에는 옛 체크 7건만 있고 `ci-gate`가 없다. 그래서 GitHub이 `mergeable=true`(내용 충돌 없음)인데도 `mergeable_state=blocked` · `rebaseable=false`로 응답해 직전 계획의 머지 단계(step 5)가 그대로 막혔다. 이 재계획은 그 한 지점을 푸는 **브랜치 갱신 단계**를 넣고, 그 위에 세워졌던 지침의 틀린 전제 하나를 고친다.\n\n**범위·판정은 재검토하지 않는다 — 검토가 명시적으로 살려 둔 부분이다.** 5파일 선정 근거(⑴ 열린 draft PR #43 무접촉 → 46파일/1,440행 제외, ⑵ 자매 모델 `tbm_feature-doc-e2e-mock-policy`의 진행 중 계획이 건드릴 12파일/296행 제외, ⑶ 남은 25파일/389행 중 최대 응집 덩어리인 e2e 묶음 5파일/191행)와 검증 증거(strip 바이트 동일 · 단언 건수 불변 · 문서 게이트 3종 통과 · 지문 예고)는 이번 시도에 그대로 승계한다. PR #61의 내용은 **한 바이트도 바꾸지 않는다**.\n\n**베이스 이동은 증거를 무효화하지 않았다(재검증 부담 없음).** `84f2734…42e63fa`는 정확히 1커밋이고 건드린 파일은 `.github/workflows/` 4개뿐이다 — 모델 as-is SSOT 범위(`backend/src backend/tests frontend/src e2e scripts tools deploy backend/migrations/*.sql`) **밖**이라 예고 지문이 그대로 유효하고, 대상 5파일도 #62가 한 바이트도 건드리지 않았다. 따라서 검증 ①의 부모 기준을 `42e63fa`로 옮겨도 결과가 같다(형식적 재실행).\n\n**범위 선정의 두 전제를 이번에 재실측해 살아 있음을 확인했다.** ⑴ **#43은 여전히 열린 draft다**(base=main, head=`reconcile/rct_20260902-0008-feature-doc-docs-impl`). 이번에 `#49`가 `merged`로 보이지만 **그 머지 대상은 main이 아니라 #43의 브랜치**이므로(base=`reconcile/rct_20260902-0008-…`) main의 경합 집합은 그대로다 — 이 패스의 제외 근거는 유효하다. ⑵ 자매 PR **#59·#60은 아직 열려 있어** 선행 머지 충돌이 없다.\n\n**어떻게 여는가 — `update-branch` 한 방.** 이 환경은 git pack 업로드가 끊겨 있고(`rebaseable=false`) 로컬 rebase·push 경로가 없다. 대신 `PUT /repos/dlddu/feature-doc/pulls/61/update-branch`로 main을 PR 브랜치에 머지하면 head sha가 바뀌고, 새 `synchronize` 이벤트가 main의 새 `ci.yml`로 CI를 돌려 `ci-gate`를 만든다. **이 갱신은 이번 준비(3-2)에서 이미 실행했다** — 실행자가 기다릴 CI(최대 30분짜리 kind e2e 포함)를 검토 대기 시간과 겹쳐 태우기 위함이다. 계획의 해당 단계는 **멱등**으로 남겨, 실행 시점에 main이 또 움직여 있으면 한 번 더 돌리고 아니면 건너뛴다.\n\n**`ci-gate`는 판정 근거가 아니라 머지 전제조건이다.** 정확성 근거는 여전히 **로컬에서 재실행 가능한 게이트 3종과 바이트 대조**다. 다만 직전 지침의 「App 토큰에 checks/actions 권한이 없어 CI를 못 읽는다」는 문장은 **틀린 전제**였다 — `GET /actions/runs?head_sha=`와 `GET /commits/<sha>/check-runs` 둘 다 이 토큰으로 200이다(이번 계획에서 각각 4건·7건 판독). 그래서 「새 head의 `ci-gate`가 success」를 **머지 게이트**로 별도 단계에 세운다.\n\n**이 시도의 범위(완료 기준)** — 직전 시도와 동일한 여섯에, 머지 경로 하나가 더해진다.\n1. 범위 지문이 `a736f329…`(191행) → **`fb27e0db…`(142행)**로 이동.\n2. 전역 as-is가 `lines=2766 files=90`/`1552b5bc…` → **`lines=2717 files=90`/`7b125a92…`**로 이동(순 제거 49행).\n3. 주석·빈 줄을 걷어낸 코드가 **5파일 전부 부모와 바이트 동일**(부모 = 머지 시점 main).\n4. 단언 건수 불변(`sc01-01` 42 · `sc01-06` 30 · `smoke.sh` 6) + 기계 판독 `// 검증 시나리오:` 선언 2개 보존.\n5. `ledger.md` 3행 추가 + 1행 증분 갱신, `passes/2026-09-18-e2e-uncontested.md` 신규, `passes/2026-09-17-backend-concentrated.md`에 재판정 절 추가, `docs/index.html` R9 등재(Documents 24→25).\n6. 미판정 잔여가 **84파일 / 2,129행 → 79파일 / 1,938행**으로 실제 감소.\n7. **(신규)** PR #61이 실제로 머지된다 — 즉 머지 시점 head에서 `ci-gate`가 success다.\n\n**범위 밖(후속)** — ① #43 경합 파일(#49가 #43 브랜치로 들어가며 집합이 재편됐다 — 정확한 수치는 재감지가 갱신한다) ② 자매 계획이 건드릴 12파일 / 296행(#59·#60 뒤) ③ `backend/migrations/*.sql` 7파일 / 104행(전용 PR·수동 repair·사람 승인 게이트) ④ `llm.rs` 테스트 case 라벨 3행 ⑤ `playwright.config.ts`·`cluster.ts`의 낡은 spec 이름 — 이 모델은 주석의 정확성을 보지 않으므로 판정 표면 밖. ⑥ `docs/doc-tracker.md` L14의 「공개된 문서 22개」 부채(실측 25편) — 여전히 #43 경합 파일이라 이 PR에서 고치지 않는다.\n\n**가역성**: 변경 전체가 주석·문서뿐이고 실행 코드 바이트가 0으로 증명돼 있어, PR revert 하나로 완전히 되돌아간다. `update-branch`는 머지 전이라 되돌릴 것 자체가 없다. 롤백에 운영 조치가 없다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-18T15:48:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "**[사전 확인]** PR #61의 현재 상태를 API로 읽는다: `GET /repos/dlddu/feature-doc/pulls/61`의 `state`·`head.sha`·`base.sha`·`changed_files`·`mergeable`·`mergeable_state`, 그리고 `GET /repos/dlddu/feature-doc/pulls/61/files`로 파일 목록. 아울러 #43이 여전히 열린 draft인지, 자매 PR #59·#60이 먼저 머지되지 않았는지 확인한다.",
+              "expectedOutcome": "`state=open` · `merged=false` · **`changed_files`가 정확히 8** — 코드 4(`e2e/tests/sc01-01*`·`sc01-06*`·`e2e/utils/cluster.ts`·`scripts/smoke.sh`)와 문서 4(`docs/comment-policy/ledger.md`·`passes/2026-09-17-backend-concentrated.md`·`passes/2026-09-18-e2e-uncontested.md`·`docs/index.html`). `backend/migrations/*.sql`과 `docs/doc-tracker.md`는 **0건**이어야 하고, 하나라도 보이면 사고이므로 중단한다. `playwright.config.ts`가 diff에 없는 것은 정상(판정 범위지만 전건 유지). #59·#60이 먼저 머지됐어도 이 5파일에 `FEATUREDOC_MODE` 리터럴이 0건이라 겹치지 않는 것이 정상 — 겹쳤다면 중단하고 재계획으로 돌린다."
+            },
+            {
+              "seq": 2,
+              "action": "**[브랜치 갱신 — 멱등]** PR이 main보다 뒤면(`GET /compare/main...<head>`의 `behind_by > 0`) `PUT /repos/dlddu/feature-doc/pulls/61/update-branch`를 호출해 main을 PR 브랜치에 머지한다. **계획 단계(3-2)에서 이미 1회 수행했으므로**, 그 뒤 main이 또 움직이지 않았다면 이 단계는 건너뛴다. 로컬 rebase·force push는 쓰지 않는다 — 이 환경은 git pack 업로드가 끊겨 있고 PR도 `rebaseable=false`다.",
+              "expectedOutcome": "202와 함께 head sha가 새 머지 커밋으로 바뀌고, 새 `synchronize` 이벤트가 main의 새 `ci.yml`로 CI 실행을 띄운다. 이미 최신이면 422(`merge conflict` 아님 — 갱신할 것 없음)이고 그때는 그대로 진행한다. **갱신 후에도 `changed_files`는 여전히 8이다** — 합쳐진 `.github/workflows/*.yml` 4파일은 base 쪽이라 PR diff에 나타나지 않는다. 8이 아니면 그때 중단한다."
+            },
+            {
+              "seq": 3,
+              "action": "**[검증 ①]** 현재 PR head와 **머지 시점의 main tip**을 기준으로, 문자열·정규식·템플릿 리터럴을 인식하는 스캐너로 5파일의 주석·빈 줄을 걷어낸 결과를 `cmp`로 대조한다. 줄머리만 보는 필터는 쓰지 않는다(템플릿 `` `/#/analyses/${id}` ``·정규식 `` /#\\/analyses\\/([^/?#]+)/ ``를 오인한다).",
+              "expectedOutcome": "5파일 전부 **바이트 동일** — `sc01-01` 144 == 144 · `sc01-06` 174 == 174 · `cluster.ts` 48 == 48 · `smoke.sh` 44 == 44 · `playwright.config.ts` 19 == 19. 부모가 `84f2734`에서 `42e63fa`(또는 그 이후 main)로 옮겨가도 결과는 같다 — #62가 건드린 것은 `.github/workflows/` 4파일뿐이라 이 5파일에 무접촉이다. 하나라도 다르면 주석만 고쳤다는 전제가 깨진 것이므로 **머지하지 않고 중단**한다."
+            },
+            {
+              "seq": 4,
+              "action": "**[검증 ②]** 단언 건수와 기계 판독 주석 개수를 같은 부모와 대조한다: `expect(` 건수(`sc01-01`·`sc01-06`), `smoke.sh`의 `fail:` 건수, 그리고 `^// 검증 시나리오:` 선언 개수.",
+              "expectedOutcome": "`sc01-01` 42 == 42 · `sc01-06` 30 == 30 · `smoke.sh` 6 == 6 · 선언 각 파일 1 == 1. 선언 개수는 as-is 지문에서 제외되는 줄이라 지문이 알려주지 않으므로 이 대조가 유일한 안전장치다."
+            },
+            {
+              "seq": 5,
+              "action": "**[검증 ③]** 문서 게이트 셋을 로컬에서 직접 실행한다: `python3 tools/check-journey-mockup.py` · `python3 tools/check-scenario-e2e.py` · `python3 tools/check-mockup-render.py`. 이것이 **정확성 판정의 근거**다(CI와 별개로 재실행 가능하기 때문).",
+              "expectedOutcome": "셋 다 통과. 특히 `check-journey-mockup.py`의 **R9**가 「문서 25」와 허브 링크 집합 == `docs/**/*.md`를 확인해야 한다 — 새 패스 문서 등재와 `Documents` 24→25 갱신이 여기서 걸린다."
+            },
+            {
+              "seq": 6,
+              "action": "**[머지 게이트]** 현재 head sha에서 집계 잡 `ci-gate`가 success로 끝났는지 확인한다: `GET /repos/dlddu/feature-doc/actions/runs?head_sha=<head>`로 `CI` 워크플로 실행의 `conclusion`을, `GET /repos/dlddu/feature-doc/commits/<head>/check-runs`로 `ci-gate` 체크 자체를 읽는다(둘 다 이 App 토큰으로 200이다). 아직 `in_progress`면 끝날 때까지 기다린다 — kind e2e가 있어 최대 30분 걸린다.",
+              "expectedOutcome": "`ci-gate`가 `completed/success`. 그러면 `GET /pulls/61`이 `mergeable_state=clean`(또는 `unstable`이 아닌 머지 가능 상태)으로 바뀐다. `ci-gate`가 **없으면** 브랜치 갱신이 실제로 새 실행을 띄우지 못한 것이므로 step 2로 돌아간다. `failure`면 어느 needs 잡이 깨졌는지 로그로 확인하고 **머지하지 않는다** — 로컬 게이트 3종이 통과했는데 CI가 깨졌다면 환경 차이이므로 재계획으로 돌린다."
+            },
+            {
+              "seq": 7,
+              "action": "**[머지]** 1~6이 전부 통과한 뒤에만 PR을 머지한다(squash). 병렬 불가. `PUT /repos/dlddu/feature-doc/pulls/61/merge`에 `merge_method=squash`와 **확인한 그 head sha**를 함께 보내, 그 사이 head가 또 바뀌었으면 409로 거부되게 한다.",
+              "expectedOutcome": "머지 커밋이 새 main이 된다. `update-branch`로 브랜치에 머지 커밋이 생겼어도 squash 결과는 8파일 하나의 커밋이다. 되돌리기는 이 PR의 revert 하나이고 운영 조치는 없다."
+            },
+            {
+              "seq": 8,
+              "action": "**[수렴 재측정]** 머지 커밋에서 모델 정의의 as-is versionScript를 그대로 실행하고, 범위 지문(5파일)을 원장과 같은 방식(`grep -H` 경로 접두사 + `echo | sha256sum`으로 **후행 개행 포함**)으로 계산한다.",
+              "expectedOutcome": "전역 `lines=2717 files=90` / `7b125a92…` · 범위 `142행` / `fb27e0db…` · 미판정 잔여 79파일 / 1,938행. 전역만 어긋나면(머지 사이 main이 움직여 다른 커밋이 주석을 건드림) **범위 지문으로 판정한다** — 이 시도의 완료 기준은 모델 전체가 아니라 이 5파일이고, 차이분은 재감지가 새 task로 잇는다."
+            }
+          ]
+        }
       }
     ]
   }
