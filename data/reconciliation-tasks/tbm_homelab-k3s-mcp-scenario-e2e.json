@@ -8439,6 +8439,87 @@
       "reason": "**작업 필요(actionRequired: true) — 직전 슬라이스가 예고한 후속분이고, 그 크기는 예고된 16이 아니라 실측 7이다.**\n\n**⑴ 버전 트리거 자체는 대응 불요.** #106 머지(`fb2eeb1`)는 내 모델의 직전 task `rct_20260918-0002`가 트라이얼 머지 트리에서 예고한 대로 정확히 착지했다 — 일곱 값 `78·1·19·58·58·0·0`이 main tip 실측과 바이트 동일, 닫힌 8행이 신설 8파일과 1:1 대응, 매칭 단위 52→60에 **삭제 0**, 시나리오 전집 78 부모와 바이트 동일(서수 이동 없음), 규칙 7의 `자동화` 필드 동반 갱신 8곳 완료, 게이트 3지점 rc=0. 배포 핀 `cb14f2d`·CI 잡 `dc86afb`·배포 핀 `d96b435`는 0 side. **이 축 단독이면 `no_action_needed`였다.**\n\n**⑵ 조치가 필요한 것은 구현 대기 표의 등재 근거다: 트리거가 「픽스처 부재는 더는 차단 요인이 아니다」를 14행에 스스로 적어 놓고도, 그중 7행을 *전용 e2e 파일 저작*만을 잔여 사유로 삼아 구현 대기에 남겨 두었다.** 픽스처는 부모 `25302ec`의 `tests/k8s/kind/` 목록에 없고 tip 목록에 있다(2지점 `git ls-tree` 대조). 사유 표 19행을 부모와 행 단위 바이트 비교하면 **SAME 4 / CHANGED 15**이고, CHANGED 중 14행이 동일한 `⟨2026-09-18 갱신⟩` 주석을 새로 달았다(`git log -S`로 이 문자열의 최초 등장이 트리거 자신임을 확인). 주석 문면: 「픽스처 부재는 더는 이 행의 차단 요인이 아니고, 남은 것은 위에 적힌 나머지 조건과 **전용 e2e 파일 저작**이다.」\n\n**⑶ 판정의 실질은 「나머지 조건이 비어 있는 행」을 가른 것이다 — 7 대 12다.**\n- **차단 소멸 7행** = `test-approval-gate.md#시나리오 6` · `#시나리오 10` · `test-resource-generic.md#시나리오 6` · `#시나리오 7` · `#시나리오 11` · `#시나리오 16` · `#시나리오 18`. 이 행들은 픽스처를 **유일한** 잔여 선행으로 적었고 도구 축 충족을 스스로 명시한다(rg#6 「도구 축은 충족됐다 … 픽스처가 main에 착지하면 **도구 재등록을 기다리지 않고 1:1 대상으로 복귀**」 — 행 자신이 복귀 조건을 적었고 그 조건이 충족됐다 · rg#11 「도구 축은 더는 차단 요인이 아니다」 · rg#18 「남은 차단은 승인 쪽 하나」 · ag#10 「도구 미등록 조건은 해소됨」). ⇒ 주석대로 읽으면 남은 것은 저작뿐이다.\n- **차단 존속 12행**은 규칙 6으로 여전히 정당하다: ag#1·ag#3·rg#12·13·14·15·17은 `resource_attach`·`port_forward`·`proxy`·`delete_collection` **미등록**(grep 실측 0히트, `delete_collection`의 3히트는 전부 타 도구의 거부 문면과 그 문면을 단언하는 테스트), ag#11은 apiserver 감사 프록시 미비, ag#5는 409·5xx 주입 수단 미비, session-read#2·session-write#2·#4는 CRIU 런타임·데이터 플레인 선행 미비.\n\n**⑷ 근거는 모델 정의의 문면이다 — 저작 대기는 등재 사유가 아니다.** 규칙 6은 「기능이 아직 구현되지 않아 E2E가 **관측할 대상 자체가 없으면**」으로 등재를 한정하고, 규칙 4는 「**\"아직 구현되지 않았다\"는 예외 사유가 아니다**」로 저작 대기를 명시 배제한다. **전용 e2e 파일 저작은 이 루프 자신의 산출물이지 차단 요인이 아니다** — 저작 대기를 등재 사유로 인정하면 모든 공백을 구현 대기로 옮겨 불변식을 영구히 성립시킬 수 있어, 규칙 1이 무의미해진다.\n\n**⑸ 닫는 산술.** 7행이 1:1 대상으로 복귀해야 하는데 그 7 시나리오를 주검증으로 선언한 파일은 tip에 **0개**(58개 선언 전수 대조, 7건 모두 NONE) ⇒ `78−1−12=65≠58`, **공백 7**(규칙 1 누락) + 충족된 해제 조건을 단 행의 존속(규칙 5 집계 불일치). 등재 기준 `58=58`은 **행이 등재돼 있다는 사실만으로 맞춰진 값**이고, 게이트는 **행 수**로 검산할 뿐 **행의 해제 조건이 tip에서 충족됐는지**를 평가하지 않아 영구 `공백 0`이다.\n\n**⑹ 소유자 부재 + 직전 계획의 명시적 인계.** 내 모델의 비-터미널 task는 이 건뿐이고(`rct_20260918-0002`는 13:33:53Z `succeeded`), 직전 계획의 「범위 밖」이 **「나머지 16행은 픽스처 착지 후에 전용 e2e를 저작해야 닫힌다(다음 슬라이스)」**로 이 후속을 문면으로 예고했다. 슬라이스 → 재감지 → 후속 task는 이 루프의 정상 진행이며, 지금이 그 자리다.\n\n**⑺ 경계는 자매 모델과 정확히 맞물린다(추측 아님, 레코드 인용).** 같은 트리거로 형제 detector가 연 `tbm_homelab-k3s-mcp-e2e-mock-policy` `rct_20260918-0001`(`action_required`)의 `assessment.reason`을 직접 읽었다 — 그쪽이 차단 원장 `approval-gate-ac5-http-failures`(소관 = 그 모델)의 재검토 사건 도래를 근거로 삼으며 **ag#5의 409·5xx 주입 수단을 자기 축으로 가져간다**. 내 직전 계획도 그 항목을 「범위 밖」에 이름으로 제외했다. ⇒ ag#5는 내 7행에서 제외한 것이 옳고 **중복 계상 0**이다. 미등록 도구 4종(attach·port_forward·proxy·delete_collection)의 구현은 규칙 6이 `tbm_homelab-k3s-mcp-docs-impl` 소관으로 명시한다.\n\n**계획 단계로 넘기는 인계**\n- **슬라이스 크기는 7이다 — 직전 계획이 적은 「16」을 그대로 받지 말 것.** 16 중 9는 도구 미등록·자매 축이라 지금 저작하면 관측 대상이 없는 e2e가 된다. 7행 각각에 전용 파일 1개를 저작하고(규칙 2: 파일당 시나리오 정확히 1개), 레지스트리 행을 `✅ 전용 파일 …`로, 사유 표에서 해당 행 삭제, 집계를 `구현 대기 19→12 · 1:1 대상 58→65 · 매칭 파일 58→65`로 함께 옮긴다. 규칙 7에 따라 `docs/test-*.md`의 해당 `자동화` 필드에서 `(미작성)`도 같은 PR에서 지워야 한다.\n- **행에 달린 `⟨2026-09-18 갱신⟩` 주석은 지우고 행을 옮기는 것이 정합이다.** 주석만 남기고 행을 구현 대기에 두면 이 판정이 그대로 재발한다 — 주석이 잔여로 지목한 「전용 e2e 파일 저작」은 규칙 4가 배제한 사유이기 때문이다.\n- **부분 슬라이스도 정합이다** — 7을 한 번에 다 저작하지 않더라도, 닫는 행만큼만 표를 옮기면 불변식은 매 지점에서 성립한다. 다만 **닫지 않을 행의 사유 문장은 반드시 고쳐 써라**(픽스처 부재 → 실제 잔여 사유). 사유를 고치지 않고 남기면 같은 판정이 재발한다.\n- **완료 기준에 「main 착지」를 넣을 것.** 직전 사고(`rct_20260915-0008`이 PR head에서만 검증하고 닫아 산출물이 3일 방치)의 재발 방지점이고, 직전 계획이 그것을 기준 ⑵·⑶으로 박아 이번에 실제로 작동했다.\n- **CI 전건 초록을 완료 기준으로 쓰지 말 것.** 이 호스트의 App installation 토큰에 `checks`/`actions` 권한이 없어 `check-runs`·`gh pr checks`가 403이고, `statuses` API는 GitHub Actions가 쓰지 않아 `{state:pending, total_count:0}`를 준다 — `pending`은 「체크 없음」이지 실패가 아니다(같은 날 econ executor가 정확히 이 지점에서 `failed`로 닫힌 선례가 있다). 로컬 재현 가능한 부분집합은 `python3 tests/integration/check_ac_mapping.py`(stdlib만 사용, 3지점 실행 확인)이고, kind 통합 잡은 이 환경에 docker·go가 없어 재현 불가다. ⚠️ 트리거 이후 `dc86afb`(#128)가 **required status check를 단일 집계 잡(`ci passed`)으로 모았다** — 지침에 CI 게이트를 적는다면 이 변화를 반영할 것.\n- **알려진 문면 결함(이번 트리거 무관, tobe-modeler 몫)**: 모델 정의의 매칭 단위 제외 열거가 `tests/integration/run_all.py`(배차 러너)를 빠뜨려 문면대로 세면 61이 된다. 부모 지점에도 동일하고 게이트는 러너를 배차 검사 대상으로만 다뤄 오판정은 없다.\n\n**⚠️ 이 판정의 이력**: 13:45~13:52Z에 tip `cb14f2d`에서 작성됐으나 push 장애로 착지하지 못했고, 15:40Z에 tip `d96b435`에서 재검증해 기록한다. 재검증에서 **직전 판정문의 사실 오류 한 건을 바로잡았다** — 「사유 표 19행 중 18행 SAME / 갱신 1행이고 7행의 차단 사유가 갱신되지 않은 채 방치됐다」는 틀렸다. 실측은 **SAME 4 / CHANGED 15이며 트리거가 14행에 갱신 주석을 달았다.** 즉 문제는 *방치*가 아니라 **충족된 해제 조건을 스스로 적고도 행을 옮기지 않은 것**이다. 판정(`action_required`)과 슬라이스 크기(7)와 산술(공백 7)은 재측정에서 그대로 유지됐다. 양 side versionScript는 claim 시각 값과 바이트 동일하다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-18T15:46:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**범위(완료 기준): 「픽스처 부재」만을 잔여 차단으로 달고 있던 구현 대기 7행을 전용 e2e 파일 7개 저작으로 닫고, 그 7행을 레지스트리·구현 대기 표·집계·테스트 문서 자동화 필드에서 함께 옮긴다. 한 PR로 스테이징하고 그 PR이 **main에 착지**해 main tip에서 `python3 tests/integration/check_ac_mapping.py`가 rc=0으로 `85 · 1 · 19 · 65 · 65 · 0 · 0`을 출력하면 이 task는 성공이다.**\n\n대상 7행: test-approval-gate.md#시나리오 6·10, test-resource-generic.md#시나리오 6·7·11·16·18. 감지가 실측한 대로 이 7행은 `⟨2026-09-18 갱신⟩` 주석으로 「픽스처 부재는 더는 차단 요인이 아니다」를 스스로 적었고 「위에 적힌 나머지 조건」이 비어 있다 — 남은 사유가 *전용 e2e 파일 저작*뿐인데, 규칙 4가 그것을 등재 사유에서 명시적으로 배제한다(규칙 6은 「관측할 대상 자체가 없을 때」로 한정). 그래서 이 7행은 지금 등재 근거가 없다.\n\n**왜 7 전부인가(부분 슬라이스를 고르지 않은 이유).** 모델 정의상 부분 슬라이스도 불변식은 성립하지만, 닫지 않는 행은 사유를 실제 잔여 사유로 고쳐 써야 한다. 그런데 이 7행의 실제 잔여 사유는 *저작 대기* 하나뿐이고 그것은 규칙 4가 배제한 사유다 — 즉 어떤 문장으로 고쳐 써도 정당한 등재가 되지 않는다. 부분 슬라이스는 「알면서 부당한 행을 남기는」 결과라 채택하지 않는다.\n\n**baseline은 감지 시점(d96b435)이 아니라 현재 tip(f97042e)이다.** 감지 뒤 #129가 머지되어 시나리오 전집이 78→85, 구현 대기가 19→26으로 움직였다(신규 도구 문서 `test-github-commit-status.md` 6 + app-token #5 — 전부 도구 미등록으로 규칙 6 정당, 내 7행과 교집합 0). 슬라이스 크기 7과 산술 구조는 그대로이고 집계 출발값만 바뀐다: `구현 대기 26→19 · 1:1 대상 58→65 · 매칭 파일 58→65`, 불변식 `85 − 1 − 19 = 65 = 65`.\n\n**범위 밖(후속으로 남긴다)**: ⑴ 도구 미등록 12행(ag#1·#3·#11, rg#12·13·14·15·17, github-commit-status 6행 등) — `resource_attach`·`resource_port_forward`·`resource_proxy`·`resource_delete_collection`·`github_commit_status_create` 구현은 `tbm_homelab-k3s-mcp-docs-impl` 소관이고, 지금 저작하면 관측 대상 없는 e2e가 된다. ⑵ ag#5(409·5xx 주입 수단) — 자매 모델 `tbm_homelab-k3s-mcp-e2e-mock-policy`가 자기 축으로 가져갔다(중복 계상 0). ⑶ session-read#2·session-write#2·#4 (CRIU·데이터 플레인 선행). ⑷ apiserver 감사 프록시(ag#11 (a)) — 이 슬라이스는 그것을 만들지 않는다. ⑸ 모델 정의의 매칭 단위 제외 열거가 `run_all.py`를 빠뜨린 문면 결함(tobe-modeler 몫).\n\n**산출물은 e2e 테스트와 등재 문서뿐이다** — `internal/`·`cmd/`·`k8s/`의 제품 코드와 사용자 대면 동작은 한 줄도 바꾸지 않는다(모델 정의의 경계 조항). 기존 픽스처(`gatekeeper-fixture.yaml`·`resource-generic-fixture.yaml`)와 `_gatekeeper.py` 헬퍼만 쓰고, 각 파일은 자기 테스트 입력(ConfigMap·Secret 등)을 스스로 만든다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "tip(f97042e)에서 baseline 재측정: `python3 tests/integration/check_ac_mapping.py` 실행, 대상 7행이 구현 대기 표에 그대로 있고 잔여 차단이 저작뿐인지 행 문면 재확인, 7 시나리오를 주검증 선언한 파일이 0개임을 `run_all.py` 선언 전수로 확인.",
+              "expectedOutcome": "rc=0, 집계 `85 · 1 · 26 · 58 · 58 · 0 · 0`. 7행 모두 `⏳ 구현 대기`이고 전용 파일 0개."
+            },
+            {
+              "seq": 2,
+              "action": "브랜치 `reconcile/rct_20260918-0003` 생성(base = main tip f97042e).",
+              "expectedOutcome": "main과 동일한 트리에서 출발하는 브랜치."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/integration/approval_gate_ac6.py` 저작 — patch·scale(update)·Secret get·exec·create 다섯 케이스. 각 케이스는 도구 호출을 create_task로 띄우고 PENDING을 잡은 뒤 **승인 전에 외부(kubectl)에서 대상을 움직이고** 승인한다. patch/scale/get은 `resourceVersion` 변경, exec는 파드 삭제·재생성(uid 불일치), create는 승인 전 같은 이름 객체를 외부 생성. 기대: 앞 넷은 `refusing …: … changed after it was approved (resourceVersion X → Y)` 거부 + 대상 무변경 + Secret 값 미반환, create는 재확인이 아니라 apiserver **409** 경로이고 승인 요청 context에 대상 resourceVersion이 실리지 않음.",
+              "expectedOutcome": "파일 1개 신설, docstring에 `검증 시나리오: test-approval-gate.md#시나리오 6` · `실행 대상: primary` 선언."
+            },
+            {
+              "seq": 4,
+              "action": "`tests/integration/approval_gate_ac10.py` 저작 — 난수 토큰 Secret 1개를 만들고 `resource_get`(승인) → `resource_create`·`resource_patch`(쓰기 경로) → 대상 삭제 후 재실행으로 에러 경로 → `resource_list`. 네 표면(승인 요청 context / SUT 로그(`kubectl -n homelab-k3s-mcp logs deploy/homelab-k3s-mcp`) / 에러 메시지 / list 응답)에서 토큰 문자열 부재를 단언하고, 승인 후 정상 `resource_get` 응답에만 등장함을 단언. 쓰기 경로 context에는 키 이름과 바이트 수만 있음을 단언.",
+              "expectedOutcome": "파일 1개 신설, 네 표면 전부를 한 파일에서 단언(반쪽 단정 없음)."
+            },
+            {
+              "seq": 5,
+              "action": "`tests/integration/resource_generic_ac6.py` 저작 — Deployment를 `watchSeconds=10`으로 관측하는 동안 kubectl로 레플리카 변경 → MODIFIED 관측·창 종료 확인, `watchSeconds=61` 거부, 마지막 이벤트의 `resourceVersion` 이후 재관측, `kind=Secret` 미승인 거부(자동 응답 REJECT) 후 승인 재호출로 이벤트 수신 + 창·수 상한 유지 확인.",
+              "expectedOutcome": "파일 1개 신설. 실 apiserver가 창 안에서 MODIFIED를 실제로 밀어 주는지가 관측된다(Go 단위가 못 보던 축)."
+            },
+            {
+              "seq": 6,
+              "action": "`tests/integration/resource_generic_ac7.py` 저작 — 신규 ConfigMap 생성(승인) → 같은 이름 재호출(승인 후 409, 기존 객체 무변경) → Deployment+Service 2문서(승인 요청 2건) → 2문서 중 둘째 승인 **거절**(아무것도 생성되지 않음: 첫째 객체조차 부재) → 둘 다 승인하되 둘째 이름을 기존 것으로 두어 실행 409(첫 객체는 남고 응답이 created/failed/unattempted를 좌표로 보고).",
+              "expectedOutcome": "파일 1개 신설. 승인 전량 선행·거절 시 무생성·부분 실패 무롤백이 실물 apiserver+gatekeeper에서 관측된다."
+            },
+            {
+              "seq": 7,
+              "action": "`tests/integration/resource_generic_ac11.py` 저작 — 픽스처 `workload-test/resource-generic-multi`(컨테이너 `chatty`·`quiet`) 파드를 대상으로 `resource_exec` echo(승인) → stderr를 내는 명령 → `container` 생략 호출(승인 뒤 apiserver 거부 문면에 후보 이름) → `yes` 무한 출력(바이트 상한 256KiB에서 잘림, `stdoutTruncated: true` 표시) 검증.",
+              "expectedOutcome": "파일 1개 신설. stdout/stderr 분리·후보 이름 제시·잘림 표시가 실물 kubelet 경로에서 관측된다."
+            },
+            {
+              "seq": 8,
+              "action": "`tests/integration/resource_generic_ac16.py` 저작 — `kind=Secret`의 get·watch·create·update·patch·delete 여섯 verb를 자동 응답 REJECT로 각각 미승인 거부시키고 **관측 가능한 무효과**(객체 미생성·resourceVersion 불변·미삭제)를 단언, create를 승인 흐름까지 태워 context에 키 이름·바이트 수만 있고 토큰 부재임을 확인, 승인 후 값 반영 확인, `kind=Secret` `list`는 승인 없이 동작, `kind=ConfigMap` get은 승인 요청을 만들지 않음을 확인.",
+              "expectedOutcome": "파일 1개 신설. 여섯 verb 전부를 한 파일에서 태운다(일부만 떼지 않는다). 시나리오 문면의 「k8s 호출 카운트 0」은 e2e가 직접 셀 수 없으므로 docstring에 그 절이 Go 단위(`TestGatedKindsGateEveryVerbButList` 계열) 몫임과 e2e가 그 자리에서 무엇을 대신 관측하는지를 명시한다."
+            },
+            {
+              "seq": 9,
+              "action": "`tests/integration/resource_generic_ac18.py` 저작 — RBAC 밖 종류(`rbac.authorization.k8s.io/v1` `ClusterRole`)에 승인을 받은 뒤 `resource_patch` → apiserver 403을 그대로 흘리지 않고 「부여된 권한 밖」을 밝히는 에러이며 그 메시지에 누락된 `(verb, resource)` 쌍이 담김을 단언. 현재 RBAC가 cluster-admin이므로 403을 실제로 만들 수 있는 좌표를 먼저 실측으로 고르고(`kubectl auth can-i`), 만들 수 없으면 이 파일은 저작하지 않고 그 행의 사유를 실측 근거로 고쳐 써 구현 대기에 남긴다(그 경우 슬라이스는 6, 집계는 20/64/64).",
+              "expectedOutcome": "파일 1개 신설 또는 (403 좌표 부재가 실측되면) 사유를 고쳐 쓴 행 유지 + 계획 범위 축소 기록."
+            },
+            {
+              "seq": 10,
+              "action": "규칙 7 동반 갱신 — `docs/test-approval-gate.md`(시나리오 6·10)·`docs/test-resource-generic.md`(시나리오 6·7·11·16·18)의 `자동화` 필드에서 `(미작성)`을 지우고 실제 파일 경로로 바꾼다. 기존의 Go 단위 배정 문장은 지우지 않고 남긴다(층 구분이 그 문장의 내용이다).",
+              "expectedOutcome": "7곳의 `(미작성)` 제거. 규칙 7 위반 0."
+            },
+            {
+              "seq": 11,
+              "action": "`docs/doc-tracker.md` 등재 갱신 — 레지스트리 7행을 `✅ 전용 파일 …`로, 구현 대기 표에서 같은 7행 **삭제**(`⟨2026-09-18 갱신⟩` 주석도 함께 사라진다), 집계 블록을 `구현 대기 등재 19 · 1:1 대상 65 · 매칭 파일(전용) 65`로, 레지스트리 절 제목과 불변식 문장의 숫자도 같이 옮긴다.",
+              "expectedOutcome": "집계·행 상태가 실측과 일치. 규칙 5·6 위반 0."
+            },
+            {
+              "seq": 12,
+              "action": "로컬 게이트 실행 — `python3 tests/integration/check_ac_mapping.py`(stdlib 전용, 클러스터 불필요)와 `python3 tests/integration/run_all.py --group primary --list`(배차 드라이런). 레포에 린터 설정이 있으면 함께 돌린다.",
+              "expectedOutcome": "체커 rc=0, 집계 `85 · 1 · 19 · 65 · 65 · 0 · 0`. 신규 7파일이 primary 그룹에 각각 정확히 한 번 배차."
+            },
+            {
+              "seq": 13,
+              "action": "브랜치 push 후 `dlddu/homelab-k3s-mcp`에 PR 생성(머지하지 않음). 본문에 task id·gap 요약·단계·검증 방법·범위 밖 목록을 적는다.",
+              "expectedOutcome": "PR URL 확보, `preparation.pullRequestUrl`에 기록."
+            },
+            {
+              "seq": 14,
+              "action": "(실행 단계) CI의 kind 통합 잡이 신규 7파일을 실제로 돌려 초록인지 확인하고 PR을 main에 머지한 뒤, **main tip에서** 체커를 다시 돌려 `85 · 1 · 19 · 65 · 65 · 0 · 0`을 재확인한다.",
+              "expectedOutcome": "main 착지 + main tip 실측 일치. 이 지점이 완료 기준이다(PR head 초록만으로 닫지 않는다)."
+            }
+          ],
+          "plannedAt": "2026-09-18T16:05:00Z"
+        }
+      }
+    ]
   }
 ]
