@@ -8208,7 +8208,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
     "status": "planning",
     "createdAt": "2026-09-18T12:28:54Z",
-    "updatedAt": "2026-09-18T12:40:00Z",
+    "updatedAt": "2026-09-18T12:50:00Z",
     "trigger": {
       "source": "manual",
       "detectedAt": "2026-09-18T12:28:54Z",
@@ -8232,6 +8232,52 @@
       "reason": "**작업 필요(actionRequired: true) — 사용자 요청의 전제가 실측으로 전부 참이고, 재감지 경로가 0이다.**\n\n**⑴ 버전 트리거(#126)는 대응 불요.** 매칭 단위 53==53(대칭차집합 공집합) · 선언 53줄 부모↔트리거 바이트 동일 · 게이트 두 지점 rc=0에 출력 바이트 동일(`78·1·27·50·50·0·0`) · 새 `병렬 레인` 필드는 선택이라 미선언 파일을 거부하지 않는다. 이 축 단독이면 `no_action_needed`였다.\n\n**⑵ 그러나 수동 트리거가 지목한 gap은 실재한다.** 담당 task `rct_20260915-0008`이 2026-09-17T13:26Z에 `succeeded`/`converged:true`로 닫혔는데 그 검증은 전부 PR head `5dcca9b`에서 측정됐고, 같은 레코드의 `verification.asIsVersionAfter`가 `6f2a5343`(= 그 작업 전 main의 tests 트리) — **main은 한 바이트도 안 움직였다.** 완료 기준 ①~⑦에 **main 착지가 들어 있지 않았던 것**이 원인이다. 그 결과 산출물(실물 gatekeeper 픽스처 2종 + 전용 e2e 8파일 + `_gatekeeper.py` + CI 배선)은 CI 4잡 초록인 채 **소유자 없는 open PR에 3일째 잠겨** 있다(함대 비종결 20건 중 #106·#122를 든 task 0건).\n\n**⑶ 병합이 닫는 양을 병합 트리에서 실측했다 — 산문 주장이 아니다.** tip에 #106을 트라이얼 머지하면 충돌은 `docs/doc-tracker.md`·`docs/comment-policy/ledger.md` **2건뿐**이고 e2e·픽스처·CI는 자동 병합된다. 그 2건을 해소한 진단 트리에서 게이트 rc=0, 일곱 값 **`78·1·19·58·58·0·0`** ⇒ **구현 대기 27→19(8행 폐쇄) · 매칭 파일 50→58**, 불변식 성립. 배차 드라이런 **primary 43 · gatekeeper-variant 3** — 종결된 task의 완료 기준 ③이 요구한 바로 그 수치다. **즉 병합이라는 한 동작만으로 8행이 닫힌다.**\n\n**⑷ 지금 열지 않으면 영영 안 깨어난다(재감지 경로 0).** 27행이 규칙 6으로 정상 등재돼 불변식이 tip에서 성립하므로 **이 모델은 픽스처가 영영 없어도 초록으로 읽힌다.** 픽스처는 미병합 PR에만 존재해 main에 이 축을 깨울 예정 변화가 없고, 자매 SSOT `docs/e2e-mocking-policy.md`의 차단 원장 행 `approval-gate-ac5-http-failures`는 재검토 시점 **2026-10-15**를 달고 이 모델을 소관으로 지목한 채 도과를 기다린다. 「gap 실재 + 게이트 초록 + 재감지 경로 없음」은 `action_required`의 적극적 근거다.\n\n**⑸ 내 트리거는 무죄(귀속 분리).** #106의 충돌 집합은 부모·트리거 두 지점에서 동일({doc-tracker, ledger}) ⇒ #126이 만든 새 충돌 0. 다만 **차량은 이미 main보다 8커밋 뒤**이고 계속 낡으므로 시급성은 시간에 비례해 커진다.\n\n**planner 인계 사항(4건).**\n- **범위**: #106의 리베이스 → 문서 2건 충돌 해소(둘 다 원장/집계 표라 **union이 정답**, 한쪽 통째 채택 금지) → CI 재확인 → 머지. 완료 기준에 **「main tip에서 게이트 일곱 값이 `78·1·19·58·58·0·0`」와 「`tests/` 지문이 실제로 이동」을 반드시 넣을 것** — 이번 사고의 재발 방지점이 정확히 거기다.\n- **경계 주의**: #106은 `internal/k8s/patch_precondition.go`·`resource.go`(+테스트) **제품 수리 3파일**을 함께 싣는다. 이 모델의 정의는 산출물을 「E2E 테스트와 등재 문서뿐」으로 못박고 제품 동작 변경을 경계 이탈 신호로 삼는다 ⇒ planner가 ⓐ 제품 수리를 `tbm_homelab-k3s-mcp-docs-impl` 쪽으로 분리해 선행 착지시킬지 ⓑ 번들을 근거와 함께 수용할지 **명시적으로 판단**해야 한다(수리 자체는 rg#9 apply 케이스를 초록으로 만든 필수 선행이라 분리 시 순서 역전 금지).\n- **#122의 처분**: 3개 수리 커밋은 #106에 **내용 동등하게 체리픽되어 이미 실려 있다**(SHA만 상이). #122 고유분은 문서 수렴 커밋 `98e239f` 하나뿐 ⇒ 별도 머지 대상이 아니라 **#106 착지 후 닫거나 `98e239f`만 흡수**하는 것이 정합이다. 두 PR을 각각 머지하려 하면 같은 수리가 두 번 들어간다.\n- **잔여의 정확한 크기**: 픽스처를 막는 27행 중 이번 병합이 닫는 것은 **8행**이고, 픽스처 부재를 차단 요인으로 적은 **24행** 중 나머지 16행은 픽스처 착지 **후에** 전용 e2e를 저작해야 닫힌다 ⇒ 이 task는 「픽스처 착지」 슬라이스이고 후속 슬라이스가 남는다는 것을 계획에 적을 것(사용자 요청의 '최소 24건'은 최종 해제량이지 이번 병합의 양이 아니다).",
       "assessedBy": "agent",
       "assessedAt": "2026-09-18T12:35:30Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "PR #106(실물 gatekeeper 픽스처 2종 + 승인 댄스 전용 e2e 8파일 + `_gatekeeper.py` + CI 배선 + 등재 문서)을 **main에 착지**시켜, `docs/doc-tracker.md` 구현 대기 표의 8행을 닫는다. 이 산출물은 `rct_20260915-0008`이 이미 저작해 CI 4잡 초록까지 받았으나 그 task의 완료 기준에 「main 착지」가 없어 소유자 없는 open PR로 3일째 방치됐다 — 그래서 이번 계획은 **새로 만드는 일이 아니라 착지시키는 일**이고, 리베이스·충돌 해소·CI 재확인·머지가 전부다. 대안(픽스처를 다시 저작하거나, 정의의 처방대로 슬라이스를 중단하고 구현 대기로 되돌리는 것)은 각각 중복 저작과 gap 영구 동결이라 택하지 않았다. 가역성: 머지 후 문제가 생기면 GitHub의 revert PR 한 번으로 되돌아가고, 제품 수리 +32줄 외에는 테스트·문서라 런타임 영향이 없다.\n\n**이 시도의 범위(완료 기준)** — ⑴ PR #106이 main에 머지되고, ⑵ **main tip에서** `check_ac_mapping.py`가 rc=0으로 일곱 값 `78 · 1 · 19 · 58 · 58 · 0 · 0`을 출력하며, ⑶ 모델의 asIs 지문(`git rev-parse HEAD:tests`)이 `f5e11289e843d60fc52d1a18cca9bdc2decb8e39`에서 **실제로 이동**하고, ⑷ main tip의 CI 4잡이 초록이며, ⑸ #122가 닫힌다. ⑵·⑶을 완료 기준에 박는 것이 이번 사고(PR head에서만 검증하고 닫은 것)의 재발 방지점이다.\n\n**범위 밖** — 픽스처 부재를 차단 요인으로 적은 24행 중 이번에 닫히는 것은 8행이고, 나머지 16행은 픽스처 착지 **후에** 전용 e2e를 저작해야 닫힌다(다음 슬라이스). `docs/e2e-mocking-policy.md` 차단 원장의 409·5xx 주입 수단, 그리고 #122 고유분 `98e239f`의 PRD AC9 수렴(`tbm_homelab-k3s-mcp-docs-impl` 소관)도 범위 밖이다.\n\n**경계 판단(정의상 명시 필요)** — #106은 `internal/k8s/patch_precondition.go`·`resource.go` 제품 수리 +32줄을 함께 싣는다. 모델 정의는 이 루프의 산출물을 「E2E 테스트와 등재 문서뿐」으로 못박으므로 경계 이탈이지만, **근거를 달아 번들을 수용(ⓑ)한다**: ① 그 수리는 `resource_generic_ac9.py`의 apply 케이스를 초록으로 만드는 필수 선행이라 빼면 깨진 동작을 단언하는 e2e가 된다, ② 분리 경로(#122 선행 머지)를 실측했더니 같은 문서 2건 충돌을 **두 번** 풀고 CI도 두 번 돌아야 하며 얻는 것은 커밋 귀속뿐이고 3일 묵은 PR만 더 낡는다, ③ 정의의 처방(「중단하고 구현 대기 등재로 전환」)은 해당 8행이 이미 구현 대기라 **무동작**이고 gap을 영구 동결시킨다, ④ 수리는 +32줄·가드돼 있고 Go 단위가 덮는다. 귀속은 PR 본문에 남겼고, PRD 수렴은 docs-impl로 넘긴다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "[계획 단계에서 이미 수행] main `25302ec`을 PR #106 브랜치 `reconcile/rct_20260915-0008-glm53-flash`에 병합하고 문서 원장 2건 충돌을 해소해 push한다. doc-tracker 구현 대기 표는 이 PR이 닫는 8행의 삭제를 취하고 살아남는 행은 main의 최신 문면을 취한다(한쪽 통째 채택 금지). ledger는 병합 트리에서 재측정한다.",
+              "expectedOutcome": "커밋 `d483c15`가 브랜치에 올라가고 PR #106의 `mergeable`이 `false`(dirty) → **`true`**로 바뀐다. 로컬 병합 트리에서 4게이트(`check_ac_mapping.py`·`check_mock_policy.py`·`check_comment_policy.py`·`check_doc_inventory.py`) 전부 rc=0."
+            },
+            {
+              "seq": 2,
+              "action": "PR #106 head `d483c15`의 CI 4잡(lint / unit tests / integration tests / build-and-push)이 전부 초록인지 확인한다. `gh pr checks 106` 또는 `gh api repos/dlddu/homelab-k3s-mcp/commits/d483c15/check-runs`.",
+              "expectedOutcome": "4잡 conclusion=success. lint 잡의 `AC <-> e2e file mapping` 스텝 로그에 일곱 값 `78 · 1 · 19 · 58 · 58 · 0 · 0`이 찍힌다. integration 잡의 배차는 primary 43 · gatekeeper-variant 3."
+            },
+            {
+              "seq": 3,
+              "action": "PR #106을 main에 머지한다(merge commit). `gh pr merge 106 --merge`. 머지 직전 `mergeable`을 재확인해 그 사이 main이 또 전진했으면 1단계를 반복한다.",
+              "expectedOutcome": "PR #106이 `merged` 상태가 되고 main tip이 전진한다."
+            },
+            {
+              "seq": 4,
+              "action": "**main tip에서** 모델의 두 versionScript를 직접 재실행한다: asIs `git rev-parse HEAD:tests`, toBe `git ls-tree -r HEAD -- docs | grep -E '[[:blank:]]docs/test-[^/]*\\.md$' | sha256sum` + `git rev-parse HEAD:docs/doc-tracker.md`.",
+              "expectedOutcome": "asIs 지문이 `f5e11289e843d60fc52d1a18cca9bdc2decb8e39`가 **아닌** 새 값이다(= main의 tests 트리가 실제로 움직였다). 이 단계가 이번 사고의 직접 재발 방지점이므로, 지문이 그대로면 머지가 반영되지 않은 것이니 실패로 판정한다."
+            },
+            {
+              "seq": 5,
+              "action": "main tip을 체크아웃해 `python3 tests/integration/check_ac_mapping.py`를 실행한다.",
+              "expectedOutcome": "rc=0, 일곱 값 `78 · 1 · 19 · 58 · 58 · 0 · 0`. 불변식 `78 − 1 − 19 = 58 = 매칭 파일`. 구현 대기가 19가 아니면(예: 27 그대로) 머지가 doc-tracker를 반영하지 못한 것이다."
+            },
+            {
+              "seq": 6,
+              "action": "main tip의 push CI가 초록인지 확인한다(`gh api repos/dlddu/homelab-k3s-mcp/commits/main/check-runs`).",
+              "expectedOutcome": "main tip에서 4잡 초록. PR head에서만이 아니라 **병합된 트리에서** 초록임을 확인하는 단계다."
+            },
+            {
+              "seq": 7,
+              "action": "#122를 닫는다(`gh pr close 122`). 닫는 코멘트에 「수리 3커밋은 #106에 내용 동등하게 실려 이미 착지했고, 고유분 `98e239f`의 PRD AC9 수렴은 `tbm_homelab-k3s-mcp-docs-impl` 소관으로 넘긴다」를 남긴다.",
+              "expectedOutcome": "#122가 closed(merged 아님). 같은 수리가 두 번 들어가는 경로가 제거된다."
+            }
+          ],
+          "plannedAt": "2026-09-18T12:50:00Z"
+        }
+      }
+    ]
   }
 ]
