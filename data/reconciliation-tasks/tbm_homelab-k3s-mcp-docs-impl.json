@@ -8152,6 +8152,66 @@
           "reason": "거부 — 준비물이 신선하지 않다. PR #136(head `029df44c`)은 **지금 conflicted 다**: `mergeable=false` · `mergeable_state=dirty` · `rebaseable=false`. 계획 뒤 4.4h 사이에 main 이 `ec18e759` → `a7300cdd`(#132, 자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 의 `rct_20260918-0003` 착지, 21:49:59Z)로 움직였고, 그 커밋이 이 PR 이 건드리는 7파일 중 `docs/comment-policy/ledger.md` · `docs/doc-tracker.md` 둘을 같이 고쳤다. 읽기 전용 test-merge 로 충돌 지점을 확정했다 — 두 파일 모두 content conflict. CI 는 초록이지만(`/actions/runs?head_sha=029df44c…` → `CI completed/success`) 그 판정은 사라진 base 에서 난 것이고, 충돌 상태에서는 `on:pull_request` 가 재디스패치조차 되지 않으므로 병합 결과에 대한 판정이 없다. 덧붙여 실행 지침의 완료 기준이 이제 사실과 어긋난다 — `check_ac_mapping.py` 일곱 값을 `85·1·26·58·58·0·0` 불변으로 못박았으나 현재 main 실측은 `85·1·21·63·63·0·0` 이다(#132 가 구현 대기 26→21, 전용 파일 58→63 으로 옮겼다). 지침대로면 실행자가 정상 병합을 실패로 오판한다. 위험도 medium·불가역 지점(머지) 하나·롤백 절차는 구체적이라 설계 자체엔 문제가 없다 — 전제만 무너졌으므로 rebase 후 재판정 대상이다.",
           "comment": "**PR #136 을 버리지 말고 rebase 로 살릴 것.** `internal/github/github.go`(AC5 세 조항) · `internal/github/github_test.go`(단위 5종) · `tests/k8s/kind/github-mock.yaml` · `docs/test-github-app-installation-token.md` · `docs/prd-resource-generic.md` 다섯 파일은 #132 와 겹치지 않아 그대로 간다. 고쳐야 할 것은 넷이다.\n\n1. **`git rebase origin/main`(현재 tip `a7300cdd`) 후 두 충돌 파일을 손으로 푼다.** 충돌은 `docs/comment-policy/ledger.md` 와 `docs/doc-tracker.md` 뿐이다.\n2. **ledger.md 는 어느 한쪽을 고르면 안 된다** — 합계 마커가 래칫이다. PR 은 2216(행 #9 재판정 19줄 `3e94443eb4d1` → 31줄 `54ab0b16d60a`, 부모 2204 기준), main 은 #132 의 신규 행 #17(87줄 `16c9f3161b60`)까지 얹혀 2224 다. 두 행을 **모두 남긴 뒤** `python3 scripts/check_comment_policy.py` 를 다시 돌려 그것이 출력하는 합계·지문으로 마커를 갱신하고, 잔량 0 을 재확인한다. `internal/github` 범위 주석을 다시 만지면 행 #9 를 또 재판정해야 하니 rebase 중엔 코드 주석을 건드리지 말 것.\n3. **doc-tracker.md 변경 이력은 두 행을 시간순으로 병치한다** — #132 의 행을 지우면 자매 모델의 기록이 사라진다. 그리고 이 PR 행의 집계 문장 「`85·1·26·58·58·0·0` — 한 숫자도 움직이지 않는다」를 **`85·1·21·63·63·0·0` 불변**으로 고쳐 쓴다(이 슬라이스가 시나리오·e2e 파일을 만들지 않는다는 주장 자체는 여전히 참이다 — 기준선만 #132 가 옮겼다). 레지스트리의 `test-github-app-installation-token.md#시나리오 5` 행을 `⏳ 구현 대기` 로 두는 결정은 유지.\n4. **`plan.executionGuide` 의 단계 2·5 에 박힌 일곱 값도 같은 값으로 고친다.** 지침에 「일곱 값이 움직였다면 그것이 오류 신호」라고 적혀 있어, 숫자를 안 고치면 실행자가 올바른 병합을 `failed` 로 닫는다. 단계 4 의 baseline 도 함께 갱신할 것 — `HEAD:docs` 는 `75cee803…` 가 아니라 #132 이후 값이고, `HEAD:internal`(`07dd24e6…`)·`HEAD:main.go`(`a686818e…`)는 #132 가 제품 코드를 0줄 건드렸으므로 그대로다.\n\n**재계획 시 같이 볼 것(범위 판단은 planner 몫)**: #132 가 `test-resource-generic.md#시나리오 11` 을 구현 대기로 되돌리며 **`docs-impl`(이 모델) 소관으로 명시 인계**했다 — `internal/k8s/exec.go` 가 종료 코드를 `StreamWithContext` 의 에러에서만 뽑아 성공한 exec 가 `exitCode: null · success: false` 로 오는 제품 결함이다. 축 ⑴ 미구현 AC 집계(이 PR 이 10→9 로 적은 값)가 그만큼 달라진다. 이 슬라이스에 섞을지 다음 슬라이스로 뺄지는 planner 가 정하되, tracker 문장이 새 사실과 어긋나지 않게 할 것."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**시도 2 — 범위는 시도 1과 같다(토큰 도구 AC5 3조항 + PRD AC13 문면 보강 1건). 바뀐 것은 준비물의 기준선뿐이다.** 검토가 설계를 거부한 것이 아니라 **전제(base)의 신선도**를 거부했다 — 계획 뒤 4.4h 사이 #132(`a7300cd`, 자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e`/`rct_20260918-0003`)가 착지해 PR #136 이 `mergeable_state=dirty` 가 됐고, 충돌 상태에서는 `on: pull_request` 가 재디스패치조차 되지 않아 **병합 결과에 대한 판정이 하나도 없는 상태**였다. 그래서 새 계획을 세우지 않고 **PR #136 을 rebase 로 살리는 것**을 이번 시도의 전부로 잡는다 — 검토가 명시적으로 「버리지 말고 rebase 로 살릴 것」을 지시했고, 7파일 중 다섯(`internal/github/github.go`·`github_test.go`·`tests/k8s/kind/github-mock.yaml`·`docs/test-github-app-installation-token.md`·`docs/prd-resource-generic.md`)은 #132 와 겹치지 않아 그대로 간다.\n\n**왜 이 접근인가(대안 저울질)**: ⓐ 새 브랜치로 다시 저작 — 같은 diff 를 손으로 재현하는 비용만 들고 원 PR 의 검토 맥락(본문·기록)이 끊긴다. ⓑ main 을 브랜치로 **merge** — 충돌은 같은 둘이고 이력에 병합 커밋이 남아 단일 커밋 PR 관례에서 벗어난다. ⓒ **rebase**(택함) — 커밋 하나가 새 base 위에 그대로 올라앉아 리뷰어가 보는 diff 가 「이 슬라이스가 더하는 것」만으로 유지되고, 실패해도 원격 브랜치를 옛 sha 로 되돌리면 끝이라 **가역적**이다 (`--force-with-lease` 로 남의 push 를 덮지 않게 잠근다).\n\n**충돌 해소의 원칙 — 어느 한쪽도 버리지 않는다.** 겹친 둘은 모두 *누적 원장*이라 「한쪽 고르기」가 곧 남의 기록 삭제다. `ledger.md` 는 합계 마커가 래칫이므로 두 행(이 PR 의 #9, #132 의 #17)을 모두 남기고 **합계는 고르지 않고 게이트 실측으로 재산출**한다. `doc-tracker.md` 변경 이력은 두 행을 시간순으로 병치한다.\n\n**집계 기준선을 #132 뒤 실측으로 고쳐 적는다.** 시도 1 이 「한 숫자도 안 움직인다」의 기준으로 못박은 `85·1·26·58·58·0·0` 은 이제 낡았다 — #132 가 구현 대기 26→21, 전용 파일 58→63 으로 옮겨 **`85·1·21·63·63·0·0`** 이 새 기준선이다. 이 값이 doc-tracker 행과 `plan.executionGuide` 두 자리에 박혀 있어, 고치지 않으면 실행자가 **정상 병합을 `failed` 로 오판한다**(지침이 「일곱 값이 움직였다면 오류 신호」라고 적었다).\n\n**범위 결정 — #132 가 인계한 제품 결함은 이 슬라이스에 섞지 않는다.** #132 는 `test-resource-generic.md#시나리오 11` 을 구현 대기로 되돌리며 이 모델(`docs-impl`)로 명시 인계했다: `internal/k8s/exec.go` 가 종료 코드를 `StreamWithContext` 의 에러에서만 뽑아 **성공한 exec 가 `exitCode: null · success: false`** 로 온다. 뺀 이유 셋 — ⑴ 검토를 통과한 설계(토큰 AC5)에 성격이 다른 제품 수정을 얹으면 판정이 처음부터 다시 서고 이번 거부의 원인인 **신선도 문제를 또 한 바퀴 키운다**, ⑵ 이 호스트에 Go 도구체인이 없어 **미검증 Go 변경이 둘로 는다** — CI 가 유일한 판정자인 상황에서 실패 원인 분리가 어려워진다, ⑶ 전용 e2e 재저작은 자매 모델 소관이라 **수정만 먼저 착지해도 그 구현 대기 행은 닫히지 않는다**(이 슬라이스의 완료 기준에 넣을 수 없는 항목이다). 대신 doc-tracker 범위 밖 목록에 ⓔ 로 등재해 **소관이 이 모델임**을 명시했다 — 재감지가 다음 task 로 잇는다.\n\n**완료 기준(이 시도의 성공 판정 범위)** — 시도 1 의 넷을 그대로 두되 넷째의 수치만 새 기준선으로 바꾼다:\n1. `internal/github` 가 AC5 세 조항을 구현한다(명시 `statuses: write` 거부 · 생략 시 설치 권한 조회 후 `read` 로 낮춘 명시 맵, 조회 실패 시 발급 없이 거부 · write 혼입 토큰 `DELETE /installation/token` 폐기).\n2. `docs/test-github-app-installation-token.md` 시나리오 5 가 지목한 Go 단위 5종이 이름 그대로 실재한다.\n3. `docs/doc-tracker.md` 가 새 사실과 일치한다 — 「문서 선행(미구현)」에서 토큰 AC5 가 빠지고, 레지스트리 행이 `✅ 완전`, 「배포 순서 역전」 행에 전반부 충족, **그리고 이 시도의 행이 기준선 `85·1·21·63·63·0·0` 과 ⓔ 인계를 담는다**.\n4. 순수 python 게이트 4종 rc=0 이고 `check_ac_mapping.py` 일곱 값이 **`85·1·21·63·63·0·0` 으로 불변**이다(main tip 실측과 동일).\n\n**범위 밖(후속 · 소유자 명시)** — 시도 1 의 ⓐ~ⓓ(통합 e2e `github_app_installation_token_ac5.py` + mock 확장은 자매 모델 소관 · (A) 묶음 3건 · (B) 나머지 6건 · `checks` 권한)에 **ⓔ 시나리오 11 의 exec 종료 코드 제품 결함(이 모델 소관, 다음 슬라이스)** 을 더한다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #136 의 실제 상태를 먼저 재확인한다 — `GET /repos/dlddu/homelab-k3s-mcp/pulls/136` 의 `mergeable`·`mergeable_state`·`base.sha`, 그리고 `git log ec18e759..origin/main` 으로 그 사이 착지한 커밋과 파일을 센다. 검토 코멘트의 진단(충돌 2파일)을 읽기 전용 실측으로 재현해야 리베이스 범위가 확정된다.",
+              "expectedOutcome": "`mergeable=false`·`mergeable_state=dirty`·base `ec18e759`, main tip `a7300cdd`(#132 단독), 겹치는 파일은 `docs/comment-policy/ledger.md`·`docs/doc-tracker.md` 둘뿐."
+            },
+            {
+              "seq": 2,
+              "action": "브랜치를 `origin/main`(`a7300cdd`) 위로 `git rebase` 한다. 충돌이 그 둘에서만 나는지 확인하고, 다른 파일에서 났다면 즉시 멈추고 재계획한다(전제가 다르다는 뜻).",
+              "expectedOutcome": "`UU docs/comment-policy/ledger.md` · `UU docs/doc-tracker.md` 둘만, 나머지 5파일은 깨끗이 적용됨."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/comment-policy/ledger.md` 충돌을 푼다 — 충돌 구간은 합계 마커 한 줄이고, 두 원장 행(#9 `54ab0b16d60a` 31줄 · #17 `16c9f3161b60` 87줄)은 자동 병합으로 살아남았는지 먼저 확인한다. 합계는 **고르지 않는다**: main 쪽 값을 임시로 둔 뒤 `python3 scripts/check_comment_policy.py` 를 돌려 게이트가 출력하는 실측 합계로 마커를 갱신한다. `internal/github` 범위 주석은 리베이스 중 한 줄도 건드리지 않는다(건드리면 행 #9 를 또 재판정해야 한다).",
+              "expectedOutcome": "두 행 모두 보존. 마커 `2224 → 2236`(= main 2224 + 이 PR 의 +12). `check_comment_policy.py` rc=0, 「미판정 잔량 0줄 · 판정 완료 100.0%」 유지."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/doc-tracker.md` 충돌을 푼다 — 변경 이력 표에서 두 PR 이 같은 자리에 행을 넣은 것이므로 **두 행을 모두 남기고 시간순으로 병치**한다(이 PR 이 뒤에 착지하므로 위, #132 행이 아래). #132 의 행을 지우면 자매 모델의 기록이 사라진다.",
+              "expectedOutcome": "표에 두 행이 모두 있고 충돌 마커 0개. 다른 절(레지스트리·구현 대기·미결 표)은 무접촉."
+            },
+            {
+              "seq": 5,
+              "action": "`check_ac_mapping.py` 의 일곱 값을 **리베이스한 트리와 main tip 양쪽에서 실측**해 기준선을 확정한 뒤, 이 PR 의 doc-tracker 행에 박힌 `85·1·26·58·58·0·0` 을 실측값으로 고쳐 쓴다. 다른 행(2026-09-19 문서 선행 행 · #132 행 · 그 이전 행)의 같은 문자열은 **당시 사실의 기록이므로 건드리지 않는다**.",
+              "expectedOutcome": "두 트리 모두 `85·1·21·63·63·0·0`(이 슬라이스가 시나리오·e2e 파일을 0건 만들므로 불변). 이 PR 행만 새 값으로 바뀌고 역사 행 3개는 그대로."
+            },
+            {
+              "seq": 6,
+              "action": "#132 가 인계한 `test-resource-generic.md#시나리오 11` 제품 결함(`internal/k8s/exec.go` 의 `exitCode: null`)의 범위 결정을 doc-tracker 에 명시한다 — 범위 밖 목록에 ⓔ 로 등재하고, 뺀 이유 셋과 **소관이 이 모델임**, 그리고 to-be 칸의 잔여 집계에 「미구현 AC 9건 + 인계 제품 결함 1건(범위 밖)」을 적는다. 시나리오 11 행 자체와 레지스트리·구현 대기 표는 **한 줄도 건드리지 않는다**(집계를 움직이면 자매 모델의 단일 사실 원천을 침범한다).",
+              "expectedOutcome": "tracker 가 새 사실과 어긋나지 않고, `check_ac_mapping.py` 일곱 값은 여전히 불변."
+            },
+            {
+              "seq": 7,
+              "action": "리베이스를 마치고 순수 python 게이트 4종을 순서대로 재실행한다 — `tests/integration/check_ac_mapping.py` · `scripts/check_mock_policy.py` · `scripts/check_comment_policy.py` · `scripts/check_doc_inventory.py`. Go 도구체인·docker 가 이 호스트에 없으므로 `gofmt`/`go vet`/`go test`/kind e2e 는 돌리지 않고 PR CI 에 맡긴다.",
+              "expectedOutcome": "넷 다 rc=0 — `85·1·21·63·63·0·0` · 등재 5·모킹 6 · 2236줄/잔량 0/등재 44 · 44/44."
+            },
+            {
+              "seq": 8,
+              "action": "원격 브랜치를 `--force-with-lease` 로 갱신한다. 원격추적 ref 가 없으면 lease 기준이 없어 무조건 거부되므로 `--force-with-lease=refs/heads/<branch>:$(git ls-remote origin refs/heads/<branch> | cut -f1)` 형태로 **실측 sha 를 기준으로 못박아** 남의 push 를 덮지 않게 한다.",
+              "expectedOutcome": "`029df44... → 3c27a14`(forced update). 원격 sha 가 새 커밋과 일치."
+            },
+            {
+              "seq": 9,
+              "action": "PR #136 본문에 리베이스 기록 절을 덧붙인다 — 왜 거부됐는지, 충돌 둘을 어떻게(어느 쪽도 버리지 않고) 풀었는지, 새 집계 기준선, ⓔ 범위 결정과 그 근거. 본문 안의 낡은 수치(합계 2216 · 일곱 값 `85·1·26·58·58·0·0`)도 같이 고친다. **머지하지 않는다.**",
+              "expectedOutcome": "PR 본문이 실측과 일치하고 검토자가 리베이스 전후를 대조할 수 있다."
+            },
+            {
+              "seq": 10,
+              "action": "리베이스 후 준비물의 기계적 상태를 재확인한다 — `mergeable`·`mergeable_state`·`base.sha` 와 새 head 에 대한 `/actions/runs?head_sha=<new>` 의 디스패치 여부. `gh pr checks`·`/check-runs` 는 이 App 에 `checks` 권한이 없어 403 이므로 쓰지 않는다(403 을 「CI 를 못 읽는다」로 읽지 말 것).",
+              "expectedOutcome": "`mergeable=true` · base `a7300cdd` · `/actions/runs?head_sha=` 에 `CI` 1건 디스패치. `mergeable_state=blocked` 는 필수 체크 미완의 정상 표시다."
+            }
+          ],
+          "plannedAt": "2026-09-18T22:00:00Z"
+        }
       }
     ]
   }
