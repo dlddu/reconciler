@@ -799,7 +799,7 @@
   {
     "id": "rct_20260918-0004",
     "toBeModelId": "tbm_econ-opinion-monitor-mockup-render",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T16:01:04Z",
@@ -938,6 +938,54 @@
               "startedAt": "2026-09-18T17:20:00Z",
               "finishedAt": "2026-09-18T17:22:00Z",
               "log": "[순서 4] 머지. `PUT /pulls/37/merge` `merge_method=squash` + `sha=1b80bff…`(head 고정으로 경합 차단) → `merged: true`, squash 커밋 `be8616f4cbda7455e7358f1538957ee8db357d9f`. 계획 커밋 3개(게이트 + 수렴 + 등재)가 main 이력에 한 줄로 착지했다. 불가역 지점 통과."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "screens:431c16c2d032cd571ac188c33019237b733716ac shell:0ed5b3a7e5a705d7b5960e919f5bab39a74a3bab tokens:86d0b1d602b183518455af9e666e48cfc030ec3d",
+          "verifiedAt": "2026-09-18T17:26:00Z",
+          "checks": [
+            {
+              "name": "(선행) 머지된 main 에서 신설 게이트 재실행",
+              "status": "passed",
+              "detail": "main tip `be8616f`(squash, #37)에서 `python3 scripts/check-mockup-render.py .` exit 0. 출력 4줄이 실행 지침 1번의 기대값과 글자까지 동일: 「[R3] in-scope 21종(compare ∪ dash) — 이름 대조 성립 18 · 등재 예외 3 · 구현 전용 1」 / 「[R5] 값 충돌 0건 = 상한 0」 / 「[R5] 목업 전용 선언 0건 = 상한 0」 / 「[R5] 구현 전용 선언 0건 = 상한 0」. 브랜치 tip · 로컬 병합 트리 · 머지된 main 세 지점에서 수치가 동일하다."
+            },
+            {
+              "name": "(A) 판정 기계화 — 스크립트 존재 + required 체인 편입",
+              "status": "passed",
+              "detail": "main 에 `scripts/check-mockup-render.py` 존재. `.github/workflows/checks.yml:56` 이 `needs: [ci, docs, render, image]` 로 `render` 를 물고 있어 단일 required 체크에 편입됐다 — 규칙 3·5 가 이제 매 PR 자동 재판정된다(「재감지 경로 0」의 근본 원인이 닫혔다). 게이트가 빈 껍데기가 아님은 실행 순서 2의 음성 시험 2건(R5·R3 각각 exit 1)으로 확인."
+            },
+            {
+              "name": "(B) 규칙 3 종결 — 이름 대조 성립 18",
+              "status": "passed",
+              "detail": "게이트 R3 줄 실측: 「이름 대조 성립 18 · 등재 예외 3 · 구현 전용 1」 — 기대값과 일치(수렴 전 기준선 15)."
+            },
+            {
+              "name": "(C) 규칙 5 종결 — 세 상한 모두 0",
+              "status": "passed",
+              "detail": "게이트 R5 3줄 실측: 값 충돌 0=상한 0 · 목업 전용 선언 0=상한 0 · 구현 전용 선언 0=상한 0. 수렴 전 기준선(화면 2개 합 42/96/56) 대비 전건 수렴."
+            },
+            {
+              "name": "(D) 「후속 판정 대기」 처분 — 표 행 0",
+              "status": "passed",
+              "detail": "`grep -c '^|.*후속 판정 대기' docs/econ-opinion-monitor-design-tracker.md` = **0**. 문서에 남은 등장은 139행(행 형식 설명 문구) 하나뿐으로 표의 「종류」 칸 행이 아니다 — 이 task 를 재검토 시점으로 지목하던 자기지시가 해소됐다."
+            },
+            {
+              "name": "(E) 파킹 해제 — 「구현 수렴 대기」 표 행 0 + Compare.tsx 카피 존재",
+              "status": "passed",
+              "detail": "`grep -c '^|.*구현 수렴 대기' …tracker.md` = **0**(남은 등장 139·141·221행은 각각 행 형식 설명 · 종류 정의 주석 · 파킹 해제 경위 서술로 표 행이 아니다). `web/src/screens/Compare.tsx:126` 에 「…0%로 그리지 않고 <b>비교에서 제외</b>합니다」 카피 존재 — 직전 사이클이 「검증 불가」로 파킹했던 변경분이 CI green 과 함께 착지했다."
+            },
+            {
+              "name": "(부수·정보성) 배포 착지 — deploy 브랜치 pin",
+              "status": "passed",
+              "detail": "머지 후 main 의 `Image` 워크플로 run `35373218475` 가 completed/success 이고, `deploy` 브랜치 tip 이 `f390713` 「deploy: econ-monitor 이미지를 be8616f… 로 고정」 — `ce54a57` 가 도입한 pin 방식대로 배포가 착지했다. 완료 기준 A~E 밖의 확인이다."
+            },
+            {
+              "name": "(정보성) 계획이 범위 밖으로 명시한 잔여 gap",
+              "status": "passed",
+              "detail": "converged 판정에 넣지 않은 사실 기록. 실행 지침 「범위 밖(후속)」 6건이 그대로 남아 있다: ① `CMP-btn` 의 디자인 시스템 문서 등재(= to-be 지문 편집이라 다른 슬라이스 몫) ② `CMP-norm-toggle` 의 실제 토글 구현(서빙 파라미터 선행) ③ `CMP-table` 매트릭스(대상 축 분류 선행) ④ `dash` 축 세그·정규화 토글의 토프바 이관(셸 컨트롤 슬롯 계약 선행) ⑤ `.note .ic` 선택자 단위 차이(게이트 판정면 밖) ⑥ `BUILT` 밖 5화면(`trend`·`sentiment`·`fairness`·`trace`·`reprocess` — `tbm_econ-opinion-monitor-docs-impl` 소관). 이들은 이 시도의 완료 기준이 아니며, 남은 3건은 tracker 에 사유·재검토 시점과 함께 등재돼 규칙 6 위반 0 이다. as-is 버전이 바뀌었으므로 후속은 다음 감지 주기가 연다."
             }
           ]
         }
