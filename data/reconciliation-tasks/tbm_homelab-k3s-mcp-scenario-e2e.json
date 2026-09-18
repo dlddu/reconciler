@@ -8704,6 +8704,83 @@
           "reviewedAt": "2026-09-18T21:44:00Z",
           "reason": "**승인 — 직전 거부의 유일한 블로커가 닫혔고, 준비물 3축을 PR head 에서 직접 재측정해 전부 초록임을 확인했다.**\n\n**블로커(2차 거부 사유) 해소를 실측했다.** head `0a57d06` 의 `docs/doc-tracker.md` 708행이 `85 − 1(예외) − 21(구현 대기) = 63 = 매칭 파일 63` 으로 바뀌어 같은 문서의 집계 블록·절 제목·표 행 수와 일치한다. 옛 값 전수 grep(`20(구현 대기)|매칭 파일 64|1:1 대상: 64|= 64|⏳ 구현 대기 20|전용 파일 64`)은 `docs/` 전체에서 **0건**(rc=1)이고, `git diff ec18e75..0a57d06` 는 직전 판본 대비 이 한 줄만 움직였다(전체 9파일 = e2e 신규 5 + `docs/` 4, `internal/`·`cmd/`·`k8s/` 0줄).\n\n**네 게이트를 리뷰어가 직접 돌렸다(전부 rc=0).** `check_ac_mapping.py` 일곱 값 `85 · 1 · 21 · 63 · 63 · 0 · 0` — 계획·준비·문서 산문이 모두 이 값으로 일치한다. `check_mock_policy.py`(R1~R6 위반 0 · 등재 5/5 · 미등재 0 · 고아 0 · B2 차단 원장 1행 완비), `check_comment_policy.py`(초록, docstring 원장 #17 지문 `16c9f3161b60` 불변 · 미판정 잔량 0 — 이 레포의 주석 원장 래칫이 충족됐다), `check_doc_inventory.py`(D1~D4 위반 0 · 허브 도달 44/44 · 끊긴 링크 0).\n\n**준비물 신선도 — 세 축 모두 살아 있다.** PR #132 `state:open · merged:false · mergeable:true · mergeable_state:clean`, base `ec18e75` = main tip(같은 sha, 검토 시점까지 main 움직임 없음). head `0a57d06` 의 required check `ci passed` = **success**(run 35374017227, 17:29:12Z 종료) — 같은 run 의 `unit tests`·`integration tests`·`fmt + vet`·`image build` 전부 success. `rebaseable:false` 는 squash 머지 경로에 무관하고 `mergeable:true`·`clean` 이 판정 기준이다.\n\n**직전 두 거부가 짚은 실행 함정을 이번 run 로그로 직접 확인했다.** 준비는 「.py 무접촉이니 이전 run 근거를 재사용한다」고 했지만, 이 슬라이스는 「중단으로 아예 실행되지 않은 파일」에 두 번 데였으므로 run 35374017227 의 `integration tests` 잡 로그를 내려받아 신규 5파일(`approval_gate_ac6`·`approval_gate_ac10`·`resource_generic_ac6`·`ac7`·`ac16`)이 각각 `===== <파일>.py` 헤더로 시작해 자기 `ok:` 줄로 끝났음을 **파일 이름 전수로** 재확인했다(`primary 48` 배차 목록에 5파일 전부 포함 · 전 그룹 통과 · `FAIL` 0건).\n\n**정합성·위험·불가역성.** 닫는 5행·근거를 다시 쓴 1행(시나리오 18: RBAC `cluster-admin` 바인딩이라 403 좌표 부재)·구현 대기로 되돌린 1행(시나리오 11: 실물 CI 가 드러낸 `internal/k8s/exec.go` 제품 결함, 소관 `docs-impl` 로 인계)이 gap(「저작 대기는 규칙 6 등재 사유가 아니다」)과 1:1로 대응하고 범위 밖 항목은 소관과 함께 열거돼 있다. 제품 코드 무접촉이라 배포 이미지·트래픽·데이터 영향 0. 되돌릴 수 없는 지점은 squash 머지 하나이며 롤백은 revert PR(신규 e2e 5 삭제 + 문서 4 원복) — medium 위험에 걸맞다. executionGuide 의 완료 기준(main tip 에서 일곱 값 + 708행 + 옛 값 grep 0건)도 구체적이고 검증 가능하다.",
           "comment": "**executor 에게 — 승인이지만 세 가지만 기억할 것(범위를 넓히라는 뜻이 아니다).**\n\n① **머지 직전 base 재확인은 생략하지 말 것.** 검토 시점(2026-09-18T21:44Z) main tip 은 `ec18e75` 로 PR base 와 동일하고 `mergeable:true · clean` 이었다. 다만 이 레포의 main 은 이 슬라이스 동안만 여섯 번 움직였다 — 움직였으면 executionGuide ② 대로 **머지 커밋으로** 병합하고(리베이스·force-push 금지) 네 게이트를 커밋 뒤 다시 돌린 뒤 머지하라.\n\n② **게이트 스크립트 경로.** 계획 step 6 이 이름만 적은 셋은 `tests/integration/` 이 아니라 **`scripts/`** 아래에 있다(`scripts/check_mock_policy.py`·`scripts/check_comment_policy.py`·`scripts/check_doc_inventory.py`). `check_ac_mapping.py` 만 `tests/integration/` 이다(guide ④ 의 경로는 이미 맞다). 병합이 없으면 재실행 자체가 불필요하다.\n\n③ **완료 판정은 main tip 에서.** guide ④ 의 셋(일곱 값 `85·1·21·63·63·0·0` · 708행 `21 · 63 · 63` · 옛 값 grep 0건)을 새로 받은 main 체크아웃에서 확인해야 `succeeded` 다. PR head 초록만으로 닫지 말 것 — 이 세 값은 검토가 head 에서 이미 확인했으므로 main 에서 어긋난다면 그것은 병합이 만든 차이다.\n\n참고: 머지 후 main 에서 도는 `image / pin deployment image (main only)` 잡은 이 레포의 기존 이슈(#128 필수 체크가 핀 봇 push 를 막는다)이며 이 task 의 완료 기준과 무관하다. 실패해도 이 task 의 판정 근거로 삼지 말고 별도 사안으로 남겨라."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-18T21:49:09Z",
+          "finishedAt": "2026-09-18T21:51:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:49:25Z",
+              "finishedAt": "2026-09-18T21:49:40Z",
+              "log": "준비물 3축 재실측 — `GET /repos/dlddu/homelab-k3s-mcp/pulls/132`: `state:open · merged:false · mergeable:true · mergeable_state:clean · changed_files:9`, head `0a57d06fe8f27e9ac0706d0083a4a65a6cc1c93c`, base `ec18e759591575860217045aabd81ff4f9ecc093`. `GET /repos/.../commits/main` = `ec18e759591575860217045aabd81ff4f9ecc093`. **base = main tip 으로 동일** — 검토 시점(21:44Z) 그대로이고 승인 코멘트 ① 이 경고한 main 이동이 이번엔 없었다. `mergeable_state` 는 준비 시점의 `blocked` 에서 이미 `clean` 으로 바뀌어 있었다(CI 초록 반영). `rebaseable:false` 는 squash 경로에 무관."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "startedAt": "2026-09-18T21:49:40Z",
+              "finishedAt": "2026-09-18T21:49:40Z",
+              "log": "옛 값 전수 grep 의 **사전** 실행(블로커가 한 줄뿐인지 확인)은 준비 단계가 이미 수행했다(히트 1건 = `doc-tracker.md:708`). 실행 단계가 관측해야 하는 것은 **사후** 0건이며, 그것은 guide ④㉰ = step 10 에서 main tip 기준으로 수행했다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "startedAt": "2026-09-18T21:49:40Z",
+              "finishedAt": "2026-09-18T21:49:40Z",
+              "log": "708행에 적을 숫자의 출처로서의 게이트 실행은 준비 단계가 수행했다(일곱 값 `85 · 1 · 21 · 63 · 63 · 0 · 0`). 실행 단계의 동일 관측은 step 10(main tip 재측정)이 대체한다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "startedAt": "2026-09-18T21:49:40Z",
+              "finishedAt": "2026-09-18T21:49:40Z",
+              "log": "산출물 변경(`docs/doc-tracker.md` 708행 한 줄)은 준비 단계가 이미 커밋·push 해 head `0a57d06` 에 들어 있다(`7cbc02e` → `0a57d06`, fast-forward). 실행 단계는 코드·문서를 한 줄도 새로 쓰지 않았다 — executionGuide 가 명시한 대로 남은 일은 확인·머지·재측정 셋뿐이다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:49:40Z",
+              "finishedAt": "2026-09-18T21:49:45Z",
+              "log": "base 재확인(승인 코멘트 ① 이 생략 금지로 못박은 단계). main tip `ec18e75` = PR base `ec18e75` 로 **동일 sha** 이므로 head `0a57d06` 는 main tip 을 조상으로 포함한다(조상 관계 자명). 따라서 **머지 커밋 병합 불필요** — 리베이스·force-push 는 애초에 수행하지 않았고 검토가 본 14커밋은 그대로 보존된다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "skipped",
+              "startedAt": "2026-09-18T21:49:45Z",
+              "finishedAt": "2026-09-18T21:49:45Z",
+              "log": "네 게이트 재실행은 **병합이 발생한 경우에만** 요구되는 조건부 단계다(executionGuide ② 「병합했다면 ④ 의 게이트·grep 를 병합 커밋 위에서 다시 돌린 뒤 머지하라」, 승인 코멘트 ② 「병합이 없으면 재실행 자체가 불필요하다」). step 5 에서 병합이 불필요했으므로 재실행하지 않았다. 준비 단계의 커밋 후 실행 결과(넷 다 rc=0, `check_comment_policy.py` 원장 #17 지문 `16c9f3161b60` 불변)와 검토자의 독립 재실행이 head `0a57d06` 에 대한 근거로 유효하다. 준비 단계(2026-09-18T17:24:00Z, head `0a57d06`)에서 이미 수행·커밋됨 — base 가 움직이지 않아(step 5 실측) 실행 단계에서 재수행할 근거가 없다. 재수행은 계획이 병합을 전제로만 지시한 조건부 단계다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "skipped",
+              "startedAt": "2026-09-18T21:49:45Z",
+              "finishedAt": "2026-09-18T21:49:45Z",
+              "log": "커밋 후 옛 값 grep 0건 확인은 준비 단계가 head `0a57d06` 에서 수행하고 검토자가 재확인했다. 실행 단계는 같은 관측을 **머지 후 main tip** 에서 다시 수행했다(step 10 = guide ④㉰, 0건). 재발 방지 관측은 그쪽이 더 강한 근거다."
+            },
+            {
+              "stepSeq": 8,
+              "status": "skipped",
+              "startedAt": "2026-09-18T21:49:45Z",
+              "finishedAt": "2026-09-18T21:49:45Z",
+              "log": "브랜치 push 는 준비 단계가 완료했다(원격 ref = `0a57d06`, force 없음). 실행 단계가 새로 push 할 커밋이 없다. 준비 단계(2026-09-18T17:24:00Z, head `0a57d06`)에서 이미 수행·커밋됨 — base 가 움직이지 않아(step 5 실측) 실행 단계에서 재수행할 근거가 없다. 재수행은 계획이 병합을 전제로만 지시한 조건부 단계다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:49:45Z",
+              "finishedAt": "2026-09-18T21:50:10Z",
+              "log": "head `0a57d06` 의 CI 실측 — `GET /repos/dlddu/homelab-k3s-mcp/actions/runs?head_sha=0a57d06…` 는 run **35374017227**(`CI`, 17:23:10Z 디스패치 → 17:29:12Z 종료) 단 1건이며 `status:completed · conclusion:success`. 잡별로도 전수 확인: `unit tests` success · `integration tests` success · `fmt + vet` success · `image / build & push server image` success · **`ci passed` success**(required check) · `image / pin deployment image (main only)` skipped(PR 컨텍스트라 정상). 계획대로 신규 5파일의 `ok:` 전수 재확인은 하지 않았다 — 이번 판본이 `.py` 를 한 줄도 건드리지 않았고, 검토가 이 동일 run 의 `integration tests` 로그로 5파일 전수를 이미 확인했다(`primary 48 · auth-variant 13 · oauth-variant 1 · gatekeeper-variant 3`, `FAIL` 0)."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:50:10Z",
+              "finishedAt": "2026-09-18T21:51:00Z",
+              "log": "**squash 머지 완료 — 되돌릴 수 없는 유일한 지점을 통과했다.** `PUT /repos/dlddu/homelab-k3s-mcp/pulls/132/merge` (`merge_method=squash`) → `{\"merged\": true, \"sha\": \"a7300cddf30bd16399b971f850a41451134d7062\"}`. main tip = `a7300cd`. 이어 **새 얕은 클론**(기존 작업 트리 재사용 금지)에서 main tip 을 재측정: `python3 tests/integration/check_ac_mapping.py` rc=0 · 일곱 값 `시나리오 전집 85 · 예외 등재 1 · 구현 대기 등재 21 · 1:1 대상 63 · 매칭 파일(전용) 63 · 분할 대기 0 · 공백 0` — 계획·준비·검토 실측과 전건 일치. `doc-tracker.md` 708행 = `> 불변식이 여기서 눈으로 닫힌다: **85 − 1(예외) − 21(구현 대기) = 63 = 매칭 파일 63**, 공백 **0**.` 로 게이트 값과 일치. 보강 확인으로 신규 5파일(`approval_gate_ac6`·`approval_gate_ac10`·`resource_generic_ac6`·`ac7`·`ac16`)이 main 의 `tests/integration/` 에 전부 존재하고, 구현 대기로 되돌린 `resource_generic_ac11.py` 는 계획대로 부재다. 승인 코멘트 ③ 대로 PR head 초록만으로 닫지 않고 main tip 에서 판정했다."
+            }
+          ]
         }
       }
     ]
