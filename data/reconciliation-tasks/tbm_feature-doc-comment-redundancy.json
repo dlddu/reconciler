@@ -62,15 +62,8 @@
               "expectedOutcome": "verification.converged=true — 이 시도의 범위 기준 수렴; 잔여 85파일은 재감지가 후속 task로 연다"
             }
           ],
-          "plannedAt": "2026-09-18T01:38:00Z"
-        },
-        "preparation": {
-          "prepared": true,
-          "repository": "dlddu/feature-doc",
-          "branch": "reconcile/rct_20260917-0001",
-          "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/54",
-          "preparedAt": "2026-09-18T06:55:00Z",
-          "notes": "PR #54 — 커밋 2개(주석 제거 e852b32 · 정책 디렉터리 a0f1b77) + 허브 R9 정합(문서 22). 로컬 게이트 3종(journey-mockup R0~R10 · mockup-render · scenario-e2e) 통과 실측. 사람 게이트는 마이그레이션 전용 패스에만 발동 — 이 PR에는 .sql diff가 없다."
+          "plannedAt": "2026-09-18T01:38:00Z",
+          "executionGuide": "## 전제\n\n- 이 task는 검토 통과(`approved`) 후 실행한다. 마이그레이션 SQL은 이 시도의 diff에 없으므로 사람 수동 게이트는 발동하지 않는다(범위 밖 — 다음 마이그레이션 패스의 몫).\n- PR: https://github.com/dlddu/feature-doc/pull/54 — head `reconcile/rct_20260917-0001`(커밋 2개: 주석 제거 `e852b32`, 정책 디렉터리 `a0f1b77`), base main `5c28852d`.\n\n## 순서 (병렬 불가 — 각 단계가 다음의 근거)\n\n1. **CI 확인** — PR checks에서 pull_request run의 integration 잡(`cargo test`) 통과. 실패 시 머지 금지, 실패 내용을 task에 남긴다(주석 전용 변경이라 실패는 머지 충돌·게이트 문제일 가능성이 높다).\n2. **diff 성격 재확인 (머지 직전)** — `gh pr diff 54`가 주석·docs 행만 바꾸는지, 특히 `backend/migrations/`에 diff가 0인지 확인. 한 바이트라도 바뀌었으면 머지 금지·사람에게 보고.\n3. **머지** — 레포 관례(squash)로 머지하고 main HEAD를 기록한다.\n4. **수렴 검증 (계획 범위 기준)** — 병합 커밋 트리에서:\n   a. `git rev-parse --verify HEAD:docs/comment-policy` 성공 → to-be가 `absent`에서 움직임.\n   b. 전역 as-is 지문 재계산(모델 `asIs.versionScript`) → `lines=2719 files=89`, 해시 `f97e15abab8277664b29f9c7dc98fcc10c465582dfc1f4f740c3ee7f966955c7`.\n   c. 범위 지문 재계산(같은 스크립트를 4파일에 국한) → `aa1931952efd07b621726cc6a524f742085bbe5ebbf3e94b6e3b3c210ab375ee` (원장이 예고한 값).\n   d. `docs/comment-policy/ledger.md` 합계(판정 4파일/544행 · 순 제거 58 · 유지 486)가 행·passes와 일치.\n5. **검증 기록** — attempts 마지막 항목의 `verification`에 checks(a~d) 결과와 `asIsVersionAfter`를 남긴다. a~d 전부 통과면 `converged=true`로 task를 `succeeded`로 닫는다.\n6. **인계** — 실행이 만든 버전 변화(to-be 움직임 + as-is 지문 이동)로 재감지가 잔여 85파일을 다음 task로 연다. 이 시도는 잔여를 직접 열지 않는다.\n\n## 주의사항\n\n- **롤백**: 주석·문서 전용이므로 revert 커밋 하나로 완전 가역. 머지 뒤 문제 발견 시 PR revert가 1차 대응.\n- **지문 불일치 시**: 병합 커밋 트리의 실측 지문이 예고값과 다르면(= 예상 밖 주석 변동) 무리하게 맞추지 말고 실측값을 verification에 남겨 재감지에 맡긴다.\n- **게이트 읽기**: PR 상태·checks 읽기는 App 토큰이 403이므로 `gh`(dlddu)로 읽고, 머지는 App `contents:write`로 한다. 실행 전 토큰 재발급.\n- **마이그레이션 게이트 보존**: 이후 마이그레이션 주석 정리 패스는 정책 README 「적용된 마이그레이션」 절 절차를 따른다 — 이 시도와 섞지 않는다.\n"
         }
       }
     ]
