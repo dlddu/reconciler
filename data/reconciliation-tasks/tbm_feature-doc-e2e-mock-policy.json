@@ -885,7 +885,7 @@
       ]
     },
     "createdAt": "2026-09-18T15:53:38Z",
-    "updatedAt": "2026-09-18T17:09:12Z",
+    "updatedAt": "2026-09-18T17:10:10Z",
     "stateSummary": {
       "asIs": "## as-is — 코드에 실재하는 모킹 지점 (dlddu/feature-doc @ `6484e21`, 2026-09-18T15:52Z 관측)\n\n지문 `sites=29 files=14` / `56e8401061ee3b21a8f11532b32526e80cbcd2564dcd748eccd5b7c0b1463a24`\n(직전 baseline `sites=27 files=13` / `a0d4d5ac…`). **모델 정의의 as-is versionScript를 독립 클론에서 그대로 재실행**한 값이며 precheck 출력과 바이트 동일.\n\n**귀속: 이동은 트리거 단독이다.** baseline 관측(07:38:42Z) 이후 main에 15커밋이 쌓였는데, 각 커밋에서 versionScript를 재실행하니 **부모 `42e63fa`까지 14커밋 전부 `a0d4d5ac…` 바이트 동일**이고, `6484e21`(\"feat: AC2.1~2.3 인수 시나리오 도출·보강·문서화 + S08 (슬라이스 5a)\", PR #43)에서만 값이 움직였다. 그 사이 머지된 #52·#53·#54(주석 1차 패스)·#55(원장 R1 해소)·#56·#57·#58(주석 2차 패스)·#62(ci-gate 통합)는 모킹 지점을 하나도 건드리지 않았다.\n\n**지문 델타 = 순증 2쌍, 삭제 0.** 부모·트리거의 hit 집합을 `comm`으로 비교한 결과:\n\n| 방향 | 항목 |\n|------|------|\n| 추가 | `backend/src/acceptance.rs` × `stub: stub_logic`, `backend/src/acceptance.rs` × `stub: stub_tests` |\n| 삭제 | (없음) |\n\n파일 13 → 14도 이 신규 파일 하나로 설명된다. 기존 17쌍은 파일×토큰 단위로 **전건 생존**(고아 0).\n\n**현재 19쌍의 내역** (지문 29 = 코드 지점 19 + 표기 주석 10, 산술 일치):\n\n- **등재 12쌍 / 10파일** — `auth.rs`·`github_api.rs`(EXT-01), `github.rs`·`github_app.rs`(EXT-02), `repo_scan.rs`(EXT-03), `llmkey.rs`(EXT-04), `llm.rs`·`cross_cutting.rs`×2·`discovery_strategy.rs`×2·`feature_candidates.rs`(LLM-01). 각 파일에 `mock-exception:` 주석 실재(10파일 = 주석 10쌍).\n- **미등재 5쌍 — 모드 스위치**(`config.rs`×2 · `bin/worker.rs`×2 · `deploy/e2e/kustomization.yaml`). 정책의 「stub mode 제거 계획」이 의도적으로 미등재로 둔 것이고, 소유자는 이 모델의 `rct_20260918-0002`(15:52 검토 거부 → 15:55 planner 재점유, staged PR #60).\n- **미등재 2쌍 — 이번 트리거가 추가한 신규**(`backend/src/acceptance.rs`). 아래 참조.\n\n**신규 2쌍의 내용**: 5단계(인수 시나리오 도출) 파이프라인이 LLM 경계에 거는 **결정적 고정 답 공급 자리**다. `derive()`가 `llm::ask(…, Ask{ …, stub: stub_logic(subjects,&paths) })`(AC2.1 로직 패스, L414)와 `stub: stub_tests(subjects,&test_paths)`(AC2.2 테스트 패스, L435)를 넘긴다. 형태·역할이 등재행 7·9·11(`cross_cutting`·`discovery_strategy`·`feature_candidates`의 `stub: stub_answer`)과 동일하다. `acceptance.rs`에는 `Mode::Stub` 분기가 **없고**(`llm::ask` 안의 등재된 디스패치 1곳을 그대로 탄다) `mock-exception:` 주석도 **없다**.\n\n**충실도(real보다 관대한 분기) 점검 — 결함 없음**: ⑴ stub 답도 real 답과 동일한 사후 검증을 받는다(근거 경로가 분석이 실제로 본 트리 안인지 검사, 모순 판정은 Rust 규칙이라 양쪽에 동일 적용). ⑵ R1 해소로 들어온 실패 트리거(`FEATUREDOC_STUB_LLM_FAIL`)는 `stub_answer` 진입점에 있어 **모든 Ask에 일반적으로 적용**되므로, 신규 5단계도 실 LLM의 한도 초과 실패를 표현할 수 있다 — 이 트리거가 새 차단 요인을 만들지 않았다는 근거다. ⑶ 신규 spec 3건(`sc02-01`·`sc02-02`·`sc02-04`)에 `page.route`·`route.fulfill` 계열 **0건**(브라우저 인터셉트 여전히 0).",
       "toBe": "## to-be — `docs/e2e-mocking-policy.md` (blob `d3732010043dd7fcf50228db01205bbb8095a532`, **이번 트리거에 불변**)\n\ntoBe side는 이번에 움직이지 않았다(baseline == 현재, `changedSides: [\"as_is\"]`). 내용 판독(115줄):\n\n- **허용목록**: 「2026-09-18 재등재, **12쌍 / 10파일**」. 표는 파일×토큰 12행 + 등재 사유 5행(EXT-01~04 · LLM-01).\n- **자기 산술 서술**: 「코드 실재 지점은 **17쌍**이지만 등재 집합은 카테고리가 성립하는 12쌍으로 한정한다 — 남는 **5쌍**(모드 스위치)은 의도적으로 미등재」. ⇒ 문서가 적은 코드 실재 수 17은 **이번 트리거로 19가 되어 낡았다**(문서 갱신 없이 코드만 앞섰다).\n- **stub mode 제거 계획 표**(5행): 해소 방향 = 경계별 선택 활성화 배선 착지 후 전역 스위치 제거, 소관 = feature-doc 백엔드·e2e 배선, 선행 = 「없음(후속 task 착수 가능)」, 재검토 = 2026-12-16. 이 표는 문서가 명시적으로 **차단 요인 원장과 별개**라고 못박는다(B1/B2/B3 판정 대상 아님).\n- **차단 요인 원장**: **열린 행 0**(마지막 해소 R1, 2026-09-18 `rct_20260918-0001`). 가림 기록 3건(설치 토큰 단기 만료 · 실 저장소 fetch/LLM 산출물 의미 품질 · 구현 대기 20건)은 모두 「차단 요인 아님」으로 판정 완료.\n- **표기 규약**: 등재 지점에만 `mock-exception: <CODE> — <사유>`를 직전 줄에 붙인다. 미등재 스위치 5쌍에는 붙이지 않는다.\n\n**불변식 2 재측정(이번 fire, 트리거 텍스트 기준)** — 전항 통과:\n- **B1 인계 수신 위반 0**: 트리거가 추가한 텍스트 전체에서 이 모델/정책 문서를 소관으로 지목한 문장 **0건**(`git diff` 추가줄 grep). reconciler 레포의 다른 모델 task가 이 모델을 언급하는 대목도 재판독했으나 전부 **범위 귀속**(「미구현은 docs-impl 몫」·「그 축은 e2e-mock-policy 소관」)이지 차단 요인 인계가 아니다. 트리거가 doc-tracker 「자동화 밖 잔여」 칸에 새로 적은 두 줄 — ⓐ 「LLM 산출물의 의미적 품질」 ⓑ 「비개발자가 읽고 설명할 수 있는가」 — 은 각각 정책의 가림 기록이 이미 「차단 요인 아님」으로 판정한 유형(ⓐ 정책 대상 밖의 산출 품질)과 **사람 판정**(ⓑ spec이 필요조건인 개발자 어휘 부재를 실제로 밟고 단정한다 ⇒ 「E2E가 밟지 못하는 경로」가 아니다)이다.\n- **B2 미비 0 · 착수 가능 행 0 · 재검토 도과 0**: 원장에 열린 행이 없다.\n- **B3**: 직전 관측(12:56:57Z) 대비 원장 행 수 **불변(0)**, 감소 예고 미반영 없음.\n\n⇒ **이번 판정의 gap은 전적으로 불변식 1 축이다.**",
@@ -1007,6 +1007,55 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-18T17:04:17Z",
           "reason": "**승인.** 전제를 실측으로 다시 확인했고, 계획이 예측한 값과 **바이트 단위로 일치**한다. 다만 계획 시점 대비 종속 상태가 한 칸 **전진**했다: PR #60이 2026-09-18T16:58:41Z에 머지돼 main tip = `ebe8657`이 됐고(`state:closed · merged:true`), 자매 task `rct_20260918-0002`는 17:02:30Z에 `succeeded`로 닫혔다. 이 계획은 그 경로를 미리 그어 두었다 — 지침 §2 분기표의 `merged:true` 행(→ §3을 main 기준, §5는 기대값 B)이 정확히 지금 상태이고, 나는 그 분기를 그대로 밟아 4개 관문을 전부 통과시켰다. ⓑ(해소 실재): main에서 `backend/src/acceptance.rs` 414·436행에 `mock-exception: LLM-01` 주석 2건, `docs/e2e-mocking-policy.md` 허용목록 75·76행(13·14번, CODE `LLM-01`), 표제 「14쌍 / 11파일」 — 전부 참. ⓐ(정체성): 지침 §4의 `owner.py`를 원문 그대로 실행 — 매칭 ref 1건(`reconcile/rct_20260918-0003`, 맨 이름)이 `tbm_feature-doc-scenario-e2e / rct_20260918-0003`(PR #67)에 귀속, `unattributed=0`, `<-- THIS TASK` **0건**. §5 지문: 현재 main에서 versionScript 원문 실행 결과 `sites=25 files=11` / `fef43512ffcd…` = 기대값 **B와 정확히 일치**, to-be blob도 계획이 예고한 `e09e58d5…`. 즉 이 task가 만든 델타는 0이다.\n\n**직전 거부(16:33)가 지적한 3건이 실제로 고쳐졌고, 고쳐진 것을 실행해 확인했다.** ⑴ 정체성 검사가 ref 이름 매칭에서 **레코드 귀속**으로 교체됐다 — 검토가 권고한 「모델 슬러그로 좁히기」는 맨 이름 ref 때문에 원리적으로 불가능했는데, planner가 그 사실을 실측으로 반박하며 더 강한 쪽(귀속)을 택한 것이 맞다. ⑵ 거부의 핵심이던 **「0이 아니면 그 브랜치/PR을 닫는다」 지시가 삭제**됐고, §8-3에 「어떤 ref도 닫거나 지우지 마라」와 「맨 이름 `reconcile/rct_20260918-0003`은 이 task와 무관하다」가 명시적으로 들어갔다. read-only 토큰 정책과의 내부 모순도 함께 해소됐다. ⑶ 거짓이던 안전망 서술(「#60 거부 시 재감지가 잇는다」)이 관측 사실(0002의 재작업 루프)로 교체됐다.\n\n**위험·불가역성: 이 slice는 대상 레포에 단 한 바이트도 쓰지 않는다.** 실행은 읽기·대조·기록뿐이고 토큰도 read 스코프로 못박혀 있어 롤백 대상이 0이다(직전 시도에선 §4에 교차 task 쓰기가 숨어 있어 이 문장이 거짓이었으나, 그 분기가 제거돼 이제 참이다). 완료 기준 ⓐⓑⓒ가 명시적이고 현재 셋 다 참이므로 실행자가 오판정으로 `failed`를 낼 여지도 없다. riskLevel `low` 타당.\n\n**「gap이 이미 해소됐으니 거부」를 적용하지 않는 이유**: 이 계획의 결론 자체가 「중복을 만들지 않고 해소를 자매 task에 귀속시켜 기록한다」이고, #60 머지·0002 succeeded는 전제 붕괴가 아니라 이 계획이 명시적으로 예비한 **성공 경로**다. 여기서 거부하면 planner는 「#60 open」을 「#60 merged」로 바꾼 같은 no-op 계획을 다시 내놓을 뿐이고, 이 task는 연속 2회째 거부로 취소 한도에 다가선다 — 실제 상태가 「해소 완료·할 일 없음」인 건에 대해 잘못된 종착이다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-18T17:08:30Z",
+          "finishedAt": "2026-09-18T17:10:10Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:08:30Z",
+              "finishedAt": "2026-09-18T17:08:40Z",
+              "log": "종속 레코드 rct_20260918-0002 (tbm_feature-doc-e2e-mock-policy) 판독: status=`succeeded`, attempts=3, 마지막 attempt의 execution.status=`succeeded`(finishedAt 16:59:30Z), verification.status=`passed`·converged=true(verifiedAt 17:02:30Z), asIsVersionAfter=`sites=25 files=11`/`fef43512ffcd…`, preparation.branch=`reconcile/rct_20260918-0002-per-boundary-doubles`·PR #60.\n\n계획 시점(16:52) 실측은 `planned`(attempt #2 재검토 대기)였으나 그 뒤 재검토·실행·검증이 전부 끝나 **`succeeded`로 전진**했다. 지침 §2가 허용한 값 집합(`planned`/`reviewing`/`approved`/`executing`/`succeeded`) 중 **가장 좋은 쪽**이고 `cancelled`가 아니므로 종속 전제 성립. 전제 붕괴 분기 해당 없음."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:08:40Z",
+              "finishedAt": "2026-09-18T17:08:50Z",
+              "log": "`GET /repos/dlddu/feature-doc/pulls/60` → `state=closed · merged=true · head=c0330ead1b3e91692c3aa6c123080bcf45777be3 · merge_commit=ebe8657830732f03e5304e9e83ee7c25cddeee9f · merged_at=2026-09-18T16:58:42Z` (`mergeable_state=unknown` — 머지된 PR이라 GitHub이 더 계산하지 않는 정상값).\n\n지침 §2 분기표의 **`merged: true` 행**에 해당 → §3을 **main 기준**으로, §5는 기대값 **B**로 진행한다고 확정했다. head가 계획이 지목한 `c0330ea` 그대로이므로 「0002가 브랜치를 더 밀었다」 분기도 아니다. **이 slice는 머지를 하지 않았다** — 착지는 16:58:42Z에 자매 task가 이미 끝낸 것이고(이 claim은 17:08), 여기서는 읽기만 했다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:08:50Z",
+              "finishedAt": "2026-09-18T17:09:20Z",
+              "log": "해소 실재 대조(ⓑ) — §2가 `merged:true`이므로 `pr60` 대신 **main**(`ebe8657`, \"feat(e2e): 전역 FEATUREDOC_MODE 스위치 제거, 경계별 테스트 더블 선택 (#60)\") 기준.\n\n(a) 코드 주석 2건 — `backend/src/acceptance.rs`:\n  · 414행 `// mock-exception: LLM-01 — 실 LLM 산출물에 대한 결정적 단정을 위해 고정 답을 공급` / 415행 `stub: stub_logic(subjects, &paths),`\n  · 436행 동일 주석 / 437행 `stub: stub_tests(subjects, &test_paths),`\n  파일 내 `mock-exception: LLM-01` 총 2건. **두 `stub: stub_*` 각각의 직전 줄**이라는 표기 규약 충족.\n\n(b) 허용목록 2행 — `docs/e2e-mocking-policy.md`:\n  · 75행 `| 13 | \\`backend/src/acceptance.rs\\` | \\`stub: stub_logic\\` | LLM-01 | \\`FEATUREDOC_DOUBLE_LLM\\` | 인수 기준 로직 패스(AC2.1) Ask의 고정 답 공급(제품 경로) |`\n  · 76행 `| 14 | ... \\`stub: stub_tests\\` | LLM-01 | ... 인수 기준 테스트 패스(AC2.2) ... |`\n  · 표제 57행 `## 허용목록 (등재 집합 — 2026-09-18 재등재, 14쌍 / 11파일)`\n  · 변동 이력 146행에 `rct_20260918-0002` 명의의 등재 경위 1행(「허용목록 12→14쌍(10→11파일)」).\n\n계획의 기대값과 대비: 행번호가 pr60 실측(415·437 주석)에서 main(414·436 주석)으로 1 내려갔는데, 이는 `c0330ea` 이후 base가 전진하며 squash 착지한 결과일 뿐 **내용은 바이트 동일**이다. 허용목록 75·76행·표제 「14쌍 / 11파일」은 계획 기대값 그대로.\n\n(a)·(b) **둘 다 참** → ⓑ 충족. 계획이 예고한 대조군(main 주석 0건·표제 「12쌍/10파일」)은 이제 관측되지 않는데, 그것이 바로 **#60이 착지하며 gap이 닫혔다**는 뜻이다 — `merged:true` 분기에서 기대되는 정상 결과다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:09:20Z",
+              "finishedAt": "2026-09-18T17:09:50Z",
+              "log": "정체성 검사(ⓐ) — **이름 매칭이 아니라 레코드 귀속**. 읽기만 했고 **어떤 ref도 닫거나 지우지 않았다**(토큰도 contents/pull_requests **read** 스코프로만 발급).\n\n(i) 레코드: 이 task의 **모든** attempt가 스스로 아무것도 만들지 않았다고 기록.\n  · attempt #0 — prepared=true, `branch` **키 없음**, pullRequestUrl=`null`, repository=`dlddu/feature-doc`\n  · attempt #1 — 동일(prepared=true, `branch` 키 없음, pullRequestUrl=`null`)\n\n(ii) 귀속: `git ls-remote --heads origin 'refs/heads/reconcile/rct_20260918-0003*'`로 실재 ref를 전수 조회(브랜치 API의 페이지네이션 사각지대를 피하려 ls-remote 사용) → **1건**: `reconcile/rct_20260918-0003` (맨 이름, `b8ab7ae05ce35c4e618e772a4c70cdc6a54afc05`).\n지침 §4의 `owner.py`를 **원문 그대로** 실행:\n```\nreconcile/rct_20260918-0003\n    owner: tbm_feature-doc-scenario-e2e / rct_20260918-0003 [planned]  pr=https://github.com/dlddu/feature-doc/pull/67\n\nunattributed=0\n```\n`<-- THIS TASK` **0건**, `unattributed=0` → **ⓐ 참**.\n\n계획 시점 대비 유일한 차이는 소유 task의 status가 `reviewing` → `planned`로 바뀐 것인데(재검토 루프), **소유자는 그대로**이고 ⓐ 판정에 무관하다. 계획이 경고한 대로 이 맨 이름 ref는 이 task와 아무 관계가 없으며 손대지 않았다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:09:50Z",
+              "finishedAt": "2026-09-18T17:10:05Z",
+              "log": "as-is 지문 재측정 — 모델 `tbm_feature-doc-e2e-mock-policy`의 `asIs.versionScript.code`를 레코드에서 **원문 그대로** 추출해(손으로 재작성하지 않음) main 체크아웃(`ebe8657`)에서 실행:\n```\nsites=25 files=11\nfef43512ffcdf9989f0aff4c5f2049e5ad9a94393079514d7a318368a693b7ac\n```\n지침 §5 **기대값 B**(`sites=25 files=11` / `fef43512ffcd…`)와 **바이트 일치**. 자매 task 0002의 `verification.asIsVersionAfter`와도 동일하다 — 즉 16:58 착지 이후 지문은 그 값에 멈춰 있고 **이 task가 만든 델타는 0**이다. 저장된 `asIs.lastObservedVersion`은 여전히 `sites=29 files=14` / `56e8401…`(트리거 시점 값)이라 다음 감지 주기가 이 이동을 보게 된다 — 이 task는 그 값을 건드리지 않았다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:10:05Z",
+              "finishedAt": "2026-09-18T17:10:10Z",
+              "log": "수렴 판정과 기록 — ⓐⓑⓒ 전부 참으로 확정하고 `verification`에 관측값·종속 관계·진짜 안전망·범위 밖 잔여를 기록했다(다음 커밋 `verify`). 대상 레포 쓰기 0건."
+            }
+          ]
         }
       }
     ]
