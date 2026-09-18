@@ -8045,7 +8045,7 @@
   {
     "id": "rct_20260918-0004",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T16:41:07Z",
@@ -8063,7 +8063,7 @@
       ]
     },
     "createdAt": "2026-09-18T16:41:07Z",
-    "updatedAt": "2026-09-18T22:15:10Z",
+    "updatedAt": "2026-09-18T22:17:30Z",
     "stateSummary": {
       "asIs": "**as-is = `dlddu/homelab-k3s-mcp` main `6268dd8`의 구현** (`internal:07dd24e6…` + `main.go:a686818e…`, 16:44Z 실측; 부모 `d96b435`의 재실행이 저장 baseline `internal:70321167…`와 **바이트 동일**이라 귀속은 기계적이다).\n\n**등록 도구 21종** (`internal/mcp/toolslist.go`의 `\"name\"` 전수 == `tests/integration/_helpers.py::EXPECTED_TOOLS`, 집합 동일):\n`api_resources`·`aws_config_get`·`dear_baby_reset_user`·`github_app_installation_token`·`grafana_token`·`opensearch_document_delete`·`opensearch_document_put`·`opensearch_search`·`ping`·**`resource_attach`**·`resource_create`·`resource_delete`·`resource_exec`·`resource_get`·`resource_list`·`resource_patch`·`resource_update`·`resource_watch`·`session_list`·`session_read`·`session_write`.\n\n**이번 창에서 움직인 구현은 단 한 커밋 #127 `7a8edf1`**(`feat(resource): resource_attach … (AC13)`, 15:50Z) — `internal/` 11파일 +591/−18. 나머지 4커밋(#129 `f97042e`·#131 `29d5651`·#133 `f6cd432`·#134 `6268dd8`)은 `internal`·`main.go` 트리 해시 불변 ⇒ **as-is 0-side**.\n\n`resource_attach` 실측(AC13 문면 대조):\n- `internal/k8s/attach.go`(신규 111줄) SPDY attach + `internal/mcp/attach.go`(신규 158줄) 핸들러 + `gate.go:133` `\"resource_attach\": {resolve: attachPairs(), target: genericTarget()}` ⇒ `create on pods/attach` 선언·게이트 대상.\n- `readSeconds` 기본 5(`k8s.AttachDefaultReadSeconds`)·상한 30(`AttachMaxReadSeconds`), 범위 밖은 `-32602`로 **클러스터 호출 전** 거부(`attach.go:63-65`), `stdin`은 붙은 직후 1회 주입.\n- 출력은 스트림당 `streamMaxOutputBytes`(256KiB) 상한, `stdoutTruncated`/`stderrTruncated`로 잘림 표시.\n- **`exec`의 사용자 대면 문면은 불변**: 공유 헬퍼 일반화(`execServed`→`streamSubresourceServed`, `execMaxOutputBytes`→`streamMaxOutputBytes`)에도 `exec.go:105`가 `\"exec\"`을 그대로 넘겨 렌더 문구가 같고, 부모·트립의 `exec.go` 문자열 리터럴 집합 비교에서 실질 델타는 템플릿화 1건뿐(`has no replicas`는 이동).\n\n**미구현(코드 0히트, 전수 grep)**: `resource_delete_collection`·`resource_port_forward`·`resource_proxy` (등록·핸들러·k8s 경로 전부 부재), **`github_commit_status_create`**(`internal`·`main.go`에 `commit_status|commitstatus|statuses` **0히트**), **토큰 도구의 `statuses` 배제 로직 부재**(`internal/github/github.go:152 CreateInstallationToken`은 호출자의 `permissions` 맵을 **그대로 전달**할 뿐 — `statuses: write` 사전 거부·설치 권한 조회 후 다운그레이드·발급 후 폐기 어느 것도 없다).\n\n**부분 구현(선행만 착지)**: `prd-approval-gate` AC11 — 선언(`gate.go::GatePairs()` = `get`/`list` on `⟨kind⟩`, 기동 시 출력)과 민감 종류 프리컨디션(`k8s/precondition.go` PartialObjectMetadata, 폴백 없음), 컬렉션 메타데이터 목록 읽기(`k8s/collection_precondition.go::ListTargets`)는 실재하나, tracker 자신이 「실제 게이트/도구 경로에는 아직 연결하지 않았다 … AC11 전체는 후속」이라 적는다(런타임 `list` 행사 0).",
       "toBe": "**to-be = 같은 레포 `docs/` 트리 `75cee803…`**(부모 `e5aecc48…`). 이번 창에서 `docs/`를 움직인 커밋은 **넷**이다 — #129 `f97042e`(`e5aecc48→5f15db59`) · #127 `7a8edf1`(`→08b4226b`) · #131 `29d5651`(`→d0d75da8`) · #130 `6958350`(`→75cee803`). #133·#134는 `.github/`만 만져 **0-side**.\n\n문서 체계 실측(tip, `scripts/check_doc_inventory.py` rc=0): 마크다운 **44**(가치 1 · PRD **15** · 테스트 **15** · 상태추적 1 · 정책 12), 허브 도달 44/44 · 끊긴 링크 0. 부모는 42(PRD 14 · 테스트 14) ⇒ **PRD·테스트 각 +1**.\n\n**⑴ to-be가 새로 커진 지점 — #129(`f97042e`, docs-only)**:\n- **신설 `docs/prd-github-commit-status.md`(112줄, AC 6건)** + `docs/test-github-commit-status.md`(78줄) — 새 도구 `github_commit_status_create`(커밋 status 기록 · 내부 토큰 최소 스코프 · 입력 검증 선행 · context 네임스페이스 fail-closed · 미설정 graceful 거부 · 비파괴 외부 쓰기 광고).\n- **`prd-github-app-installation-token.md`에 AC5 추가**(`commit status 쓰기 권한 배제 — 읽기는 발급`): `permissions`에 `statuses: write`가 있으면 상류 호출 **전에** 거부, `permissions` 생략 시 설치 권한을 읽어 `statuses: read`로 낮춘 **명시적 맵**으로 요청(목록을 못 읽으면 발급 거부, 생략 폴백 금지), 돌려받은 토큰에 `statuses: write`가 남아 있으면 **폐기 후 에러**.\n- `values.md` V2에 commit status 목표와 원칙(「권한을 토큰째 내주기 vs 도구가 좁은 동작으로 대신 행사」) 추가 — 새 가치 추가는 없다.\n- PRD 「배포 순서(필수)」가 순서를 못박는다: **① 토큰 도구 AC5 배포 → ② GitHub App에 Commit statuses 권한 추가(사람의 UI 작업) → ③ 새 도구 배포.** ②를 먼저 하면 `permissions` 생략 호출이 그 순간부터 `statuses: write`를 받는다.\n\n**⑵ 직전 슬라이스의 문서 수렴 착지 — #131(`29d5651`, 이 모델 `rct_20260918-0003`의 실행 산출)**: `prd-resource-generic.md` AC9에 apply 좌표 identity 주입·불일치 제출 전 거부 계약, `doc-tracker.md` AC6 위험 행에 같은 계약 + 400/422 진단장치, 변경 이력 1행. tip에서 `applied config '객체'` 히트 1 ⇒ 지난 fire가 연 축 ⑵/⑶은 **닫혔다**.\n\n**⑶ #127이 함께 갱신한 문서**: `test-resource-generic.md` 시나리오 13의 자동화 필드(Go 단위 3종 착지, 전용 e2e는 미저작), `doc-tracker.md`의 등록 도구 20→21·게이트 대상 쓰기 도구 5→6·잔여 목록 갱신.\n\n**⑷ 자매 축(참고)**: #130은 `e2e-mocking-policy.md`·`doc-tracker.md` B2 차단 원장(모킹 정책 축, `tbm_homelab-k3s-mcp-e2e-mock-policy` 소관).\n\n**tracker 자신의 현행 선언**(`doc-tracker.md:22`): 「문서 선행(미구현): `github_commit_status_create`(PRD AC 6개)와 `github_app_installation_token` AC5는 2026-09-19 문서만 섰다 — 등록 도구 수 21종에 들어가지 않으며, 두 PRD의 시나리오 7개는 「⏳ 구현 대기」에 등재했다」 / 건강 상태 🟡.",
@@ -8267,6 +8267,49 @@
               "startedAt": "2026-09-18T22:14:45Z",
               "finishedAt": "2026-09-18T22:15:10Z",
               "log": "**main 착지 확인(as-is 이동) — 세 값 모두 기대치와 정확히 일치.** `git fetch origin main` 후 tip `05ef0979`(부모 `a7300cdd`, 선형):\n- `HEAD:internal` `d85409ba0a38…` → **`972b621c2274549ad7d2ac7cd8d52dd35a592649`** (= 브랜치 트리, **이동함**)\n- `HEAD:main.go` **`a686818e97e7dbb2adc7f25c88f25bd6a2ad7537`** (**불변**, 기대대로)\n- `HEAD:docs` `c87d395a18f2…` → **`b4db1144721e48233d81a6736c2aec8f5142e1f7`** (= 브랜치 트리, **이동함**)\n\n판정 기준을 `trigger.asIs.currentVersion`(`internal:07dd24e6…`, 감지 시점 `6268dd8` 스냅샷)이 아니라 **머지 직전 main(`a7300cdd`) 실측**으로 잡으라는 지침을 따랐다 — 그 사이 #135·#132 가 이미 두 트리를 움직여 놓았기 때문이다.\n\n**배포(운영 파드 롤아웃)는 이 task 의 완료 기준이 아니다**(판정 대상이 as-is=코드 트리). 이 레포의 이미지 핀은 `refs/heads/deploy` 로 발행된다(#133)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:972b621c2274549ad7d2ac7cd8d52dd35a592649 main.go:a686818e97e7dbb2adc7f25c88f25bd6a2ad7537",
+          "verifiedAt": "2026-09-18T22:17:30Z",
+          "checks": [
+            {
+              "name": "머지 착지 — as-is 트리가 실제로 이동했다 (실행 지침 단계 4)",
+              "status": "passed",
+              "detail": "`origin/main` tip `a7300cdd` → **`05ef097920913f03608e0b8a1e05163e9872d6d0`**(부모 `a7300cdd`, squash 단일 커밋 `feat(github): 토큰 발급에서 statuses:write 를 배제한다 (AC5) — 배포 순서 ① (#136)`). 세 값 모두 지침의 기대치와 **정확히 일치**: `HEAD:internal` `d85409ba…` → **`972b621c2274549ad7d2ac7cd8d52dd35a592649`**(이동), `HEAD:main.go` **`a686818e97e7dbb2adc7f25c88f25bd6a2ad7537`**(불변), `HEAD:docs` `c87d395a…` → **`b4db1144721e48233d81a6736c2aec8f5142e1f7`**(이동). 기준선은 `trigger.asIs.currentVersion`(감지 시점 `6268dd8` 스냅샷)이 아니라 **머지 직전 main(`a7300cdd`) 실측**을 썼다 — 그 사이 #135·#132 가 두 트리를 이미 움직여 놓았기 때문이다."
+            },
+            {
+              "name": "완료 기준 ⑴ — AC5 세 조항이 main 의 internal/github/github.go 에 구현돼 있다",
+              "status": "passed",
+              "detail": "머지된 `origin/main` 에서 네 심볼 전부 히트(총 12회): `statusesPermission` 5 · `effectivePermissions` 2 · `installationPermissions` 2 · `revokeToken` 3. 조항별 런타임 동작(명시 `statuses:write` 거부 / 생략 시 설치 권한을 읽어 `write→read` 하향 / 응답 토큰에 write 혼입 시 `DELETE /installation/token` 후 반환 거부)의 판정은 지침이 정한 대로 **CI 의 `go test` 로 갈음**한다 — 이 호스트에 go 도구체인이 없다."
+            },
+            {
+              "name": "완료 기준 ⑵ — Go 단위 5종이 문서와 글자 그대로 같은 이름으로 실재한다",
+              "status": "passed",
+              "detail": "`internal/github/github_test.go` 에서 다섯 이름(`TestGitHubTokenRejectsStatusesWrite` · `AllowsStatusesRead` · `DefaultDowngradesStatusesToRead` · `RefusesWhenInstallationUnreadable` · `RevokesTokenCarryingStatusesWrite`) 매치 수 **5** — 기대값과 동일."
+            },
+            {
+              "name": "완료 기준 ⑶ — doc-tracker 가 새 사실과 일치하고 자매 모델 기록이 보존됐다",
+              "status": "passed",
+              "detail": "넷을 각각 실측했다. ⑴ 「문서 선행(미구현)」 줄(L22)에 **「`github_app_installation_token` AC5 는 문서 선행에서 빠졌다 — 구현이 `internal/github` 에 착지했다(`rct_20260918-0004`)」** 가 적혀 있다. ⑵ 레지스트리 행 L131 `| github_app_installation_token | V2, V3 | 5 | … | ✅ 완전 |` — **괄호 없는 완전**. ⑶ 「배포 순서 역전」 행 L178 에 `⬜ 미결(2026-09-19) · **전반부 충족(2026-09-18, rct_20260918-0004)**` 과 ①이 닫혔다는 근거가 있다. ⑷ 변경 이력에 이 시도의 행(L1036)이 `85·1·21·63·63·0·0` 과 ⓔ 인계 결정을 담고 **#132 의 두 행(L1037·L1038, `rct_20260918-0003`)은 그대로 남아 있다**(시간순 병치, 이 PR 이 위).\n\n**어느 한쪽도 버리지 않았음의 기계적 확인** — `git diff a7300cdd..HEAD`: `ledger.md` **4줄(+2/−2) = 정확히 2줄 변경**(행 #9 `19줄 3e94443eb4d1` → `31줄 54ab0b16d60a`, 합계 마커 `2224` → `2236`)뿐이고 #132 의 행 #17(87줄 `16c9f3161b60`)은 무접촉. `doc-tracker.md` 는 +4/−3 으로 **이 시도의 행 하나만 추가**됐다. 낡은 기준선 문자열 `85·1·26·58·58·0·0` 의 출현 수는 머지 전 main 과 같은 **3**(전부 역사 행 — 역사를 고쳐 쓰지 않았다)이고, 새 기준선은 1→**2**(#132 행 + 이 PR 행)로만 늘었다."
+            },
+            {
+              "name": "완료 기준 ⑷ — python 게이트 4종 rc=0 · 일곱 값이 그 시점 main 과 같다",
+              "status": "passed",
+              "detail": "**머지된 main(`05ef0979`)에서 재실행 — 넷 다 rc=0**: `check_ac_mapping.py` **`85·1·21·63·63·0·0`** · `check_mock_policy.py` 등재 5(상한 5)·모킹 지점 6·미등재 0·고아 0 · `check_comment_policy.py` **2236줄**/104파일·판정 완료 100.0%·등재 44·**미판정 잔량 0줄** · `check_doc_inventory.py` 허브 도달 **44/44**·끊긴 링크 0.\n\n**「일곱 값 불변」은 절대값이 아니라 대조로 확인했다** — 머지 전 `git worktree` 로 편 main(`a7300cdd`)과 브랜치 head(`3c27a140`) 양쪽이 **동일한 `85·1·21·63·63·0·0`** 이었고, 머지 후 main 도 같다. 이 슬라이스가 시나리오·e2e 파일을 0건 만든다는 전제가 성립. 주석 원장도 같은 성질로 main 2224 → 2236(= +12, `internal/github` 증분)."
+            },
+            {
+              "name": "CI — 새 head 기준 판정이 초록이다 (Go 검증의 유일한 판정자)",
+              "status": "passed",
+              "detail": "`/actions/runs?head_sha=3c27a14062f3…` → `total_count=1`, `CI` **`completed`/`success`**(22:04:47Z, run 35399420995). 시도 1 의 `029df44` 초록은 사라진 base 의 판정이라 쓰지 않았다. 이 호스트엔 go·node·docker 가 없어 `gofmt`/`go vet`/`go test`/kind e2e 는 CI 만이 판정자이며, `gh pr checks`·`/check-runs` 는 이 App 에 `checks` 권한이 없어 403 이므로 지침대로 쓰지 않았다(403 을 「CI 를 못 읽는다」로 읽지 않는다)."
+            },
+            {
+              "name": "(정보) 범위 밖 잔여 — converged 판정에 넣지 않음",
+              "status": "passed",
+              "detail": "모델 전체 to-be 와의 잔여 gap 은 **이 task 의 범위가 아니며** 다음 감지 주기가 후속 task 로 잇는다. 사실만 기록한다: ⓐ 통합 e2e `github_app_installation_token_ac5.py` + github-mock 확장(자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 소관 — 레지스트리의 시나리오 5 행은 `⏳ 구현 대기` 그대로, 차단 근거만 「도구 선행 미충족」→「mock 확장+e2e 저작」으로 이동) · ⓑ (A) 3건(`resource_port_forward` AC14 · `resource_proxy` AC15 · `resource_delete_collection` AC11) · ⓒ (B) 6건(`github_commit_status_create` AC1~AC6 — **사람의 GitHub UI 작업이 선행**) · ⓓ `checks` 권한(운영자 판단 대기) · ⓔ `test-resource-generic.md#시나리오 11` 제품 결함(`internal/k8s/exec.go` 의 `exitCode: null`) — 소관은 이 모델이며 **다음 슬라이스의 1순위 후보**로 tracker 에 등재돼 있다.\n\n**배포(운영 파드 롤아웃)도 이 task 의 완료 기준이 아니다** — 판정 대상이 as-is=코드 트리이기 때문이다. 인계 사항: 이 레포의 이미지 핀은 `refs/heads/deploy` 로 발행되므로(#133) main 의 태그가 아니라 그 ref 를 읽어야 하고, **App 에 `Commit statuses` 권한을 추가하는 배포 순서 ②의 해제 조건은 머지가 아니라 「운영 파드가 이 커밋을 싣고 있음」**이다."
             }
           ]
         }
