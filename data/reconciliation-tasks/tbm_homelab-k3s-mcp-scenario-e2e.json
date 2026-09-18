@@ -8536,6 +8536,66 @@
           "reason": "**거부 — 준비물이 유효하지 않다. 세 축이 각각 독립적으로 승인을 막는다.**\n\n⑴ **필수 체크가 빨갛다.** PR #132 head `c98d465` 의 required check `ci passed` 가 `failure` 다(run 35366489300 — `fmt + vet`·`unit tests` 초록, **`integration tests` 실패**). 실패 지점은 신규 파일 `tests/integration/resource_generic_ac11.py` 의 `_pod_name()`: `kubectl -n workload-test get pods -l app.kubernetes.io/name=resource-generic-multi --field-selector=status.phase=Running -o jsonpath={.items[0].metadata.name}` 가 **빈 목록**을 받아 jsonpath 가 `array index out of bounds` 로 rc=1 → `subprocess.CalledProcessError`. 계획이 전제한 「픽스처는 더 이상 차단 요인이 아니다」가 실물 레인에서 성립하지 않았다.\n\n⑵ **증거가 절반도 서지 않았다.** 레인이 ac11 에서 중단돼 신규 6파일 중 **3개(`resource_generic_ac6.py`·`ac7.py`·`ac16.py`)가 한 번도 실행되지 않았다**(로그 전수 확인 — 실행된 것은 `approval_gate_ac10`·`approval_gate_ac6`(둘 다 ok)과 `resource_generic_ac11`(FAIL)뿐). 이 PR 의 유일한 새 관측이 kind 실물 실행인데, 대상 6 중 2 만 초록이다. ac11 을 고쳐도 나머지 3 은 여전히 미관측이라 「승인 후 executor 가 CI 만 읽고 머지」로 닫을 수 없다.\n\n⑶ **base 가 또 움직였고 이번엔 충돌이다.** PR base 는 `7a8edf1` 인데 main tip 은 `29d5651`(#131, 2026-09-18T16:10:06Z 머지). GitHub 판정은 `mergeable:false · mergeable_state:dirty · rebaseable:false` — #131 이 `docs/doc-tracker.md` 의 AC6 위험 행과 날짜 절을 고쳤고 PR #132 도 같은 파일을 14+/19- 고친다. 충돌 해소 뒤 네 게이트를 **다시** 돌려야 하고, 계획이 완료 기준으로 못박은 일곱 값 `85·1·20·64·64·0·0` 도 그 트리에서 재도출해야 한다(#131 은 집계 불변을 주장하지만 실측으로 확인할 일이다).\n\n**불가역성·위험 자체는 문제가 아니다.** 산출물이 `tests/integration/` 6파일 + `docs/` 4파일이고 `internal/`·`cmd/`·`k8s/` 무접촉이라 트래픽·데이터 영향 0, 되돌리기는 revert PR 하나다. executionGuide 의 검증 기준(main tip 실측 일곱 값)과 롤백 서술도 medium 위험에 걸맞게 구체적이다. 정합성도 인정된다 — 닫는 행과 gap 이 1:1 이고 범위 밖 목록이 근거와 함께 열거돼 있다. 오직 **준비물 신선도** 하나가 무너져서 거부한다.",
           "comment": "**planner 가 재계획에서 고칠 것 — 셋 다 브랜치 안에서 끝나는 일이다. 계획 방향(6행을 전용 e2e 로 닫는다)은 그대로 유효하니 폐기하지 말고 같은 브랜치 `reconcile/scenario-e2e-rct_20260918-0003` 에 얹어라.**\n\n**① `resource_generic_ac11.py` 의 픽스처 대기 결여를 고칠 것(실패 직접 원인).** 현재 `_pod_name()` 은 Running 파드를 **한 번만** 조회하고 끝난다 — 대기도 재시도도 없고, 빈 결과일 때 의도한 `assert name, '... Running 파드를 찾지 못했다'` 에 닿지도 못한다(`check_output` 이 rc=1 에서 먼저 `CalledProcessError` 를 던진다). 자매 파일 `resource_generic_ac5.py` 는 같은 `resource-generic-multi` 를 쓰면서 `_helpers` 의 `ensure_workload_fixture_baseline`·`wait_for_*` 를 import 해 대기를 태우고 **통과했다** — 그 선례를 그대로 따르면 된다. 구체적으로: ⓐ `kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=resource-generic-multi -n workload-test --timeout=...` 또는 `_helpers` 의 기존 대기 헬퍼로 **조회 전에 Ready 를 보장**하고, ⓑ `check_output` 을 `check=False`+빈 문자열 판정으로 감싸 실패 시 의도한 문면이 나오게 하고, ⓒ 왜 대기가 필요한지(이 파일은 `병렬 레인:` 선언이 없어 `resource-generic` 레인과 **동시에** 도는데, 그 레인이 같은 워크로드를 만지므로 파드가 순간적으로 Running 이 아닐 수 있다)를 docstring 에 적을 것. 레인 선언을 `병렬 레인: resource-generic` 으로 맞추는 것도 대안이니 둘 중 어느 쪽인지 계획에 근거와 함께 고정할 것.\n\n**② 나머지 3파일이 실제로 CI 에서 도는 것을 이번 계획의 완료 조건에 넣을 것.** `resource_generic_ac6`·`ac7`·`ac16` 은 레인 중단으로 **한 번도 실행되지 않았다.** ①을 고친 뒤 CI 가 초록이 되면 `integration tests` 로그에서 신규 6파일이 각각 `ok:` 로 끝났는지를 **파일 이름 전수로** 확인하는 절차를 executionGuide 에 넣어라(지금 지침은 `ci passed` 초록만 본다 — 그것만으로는 중단으로 안 돈 파일과 돌아서 통과한 파일을 구분하지 못한다). 특히 `ac16` 의 자동 거부 모드 `finally` 복구는 이번에 **한 번도 검증되지 않았으므로** 그 파일이 실제로 돈 뒤에야 지침의 경고가 의미를 갖는다.\n\n**③ main `29d5651`(#131) 을 브랜치에 병합하고 네 게이트를 재측정할 것.** 현재 `mergeable:false · dirty`. 충돌은 `docs/doc-tracker.md` 에서 나고(#131 이 AC6 위험 행 + 날짜 절을 고쳤다), 지침이 이미 정한 대로 **행 단위로 양쪽 판정을 보존**하고 집계 숫자는 어느 쪽 값도 산술도 아닌 **게이트 출력값**으로 다시 적어라. 리베이스·force-push 금지(머지 커밋으로 이을 것 — 이번 준비가 `7a8edf1` 을 그렇게 이었다). 병합 후 `check_ac_mapping.py`·`check_mock_policy.py`·`check_comment_policy.py`·`check_doc_inventory.py` 넷을 **커밋한 뒤** 다시 돌리고(`check_comment_policy.py` 는 `git ls-files` 만 본다 — 준비 단계가 이미 한 번 밟은 함정), 일곱 값이 여전히 `85·1·20·64·64·0·0` 인지 실측으로 확인해 완료 기준 표를 그 값으로 다시 적을 것. 신규 주석·docstring 이 늘면 `docs/comment-policy/ledger.md` 재판정도 함께 간다.\n\n**④ 계획 문면의 잔여 불일치 하나.** step 11·12 가 아직 7행 시절 값 `19 · 65 · 65` 로 적혀 있다 — summary·preparation·executionGuide 는 모두 6행 기준 `20 · 64 · 64` 다. 실행자가 step 을 그대로 읽고 움직이면 게이트가 잡는 숫자를 손으로 적게 되니 재계획 때 step 문면도 함께 맞출 것.\n\n**제품 결함은 아직 하나도 관측되지 않았다.** ac11 실패는 SUT 동작이 아니라 테스트 하네스의 전제 문제이므로 지침 3의 「테스트가 틀린 경우」에 해당한다 — `tbm_homelab-k3s-mcp-docs-impl` 로 넘길 사유가 아니고 이 렌즈 안에서 닫힌다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**재계획 — 계획 방향은 유지, 준비물만 되살린다.** 거부는 「계획이 틀렸다」가 아니라 「준비물 신선도」 하나였다(검토 문면: *\"오직 준비물 신선도 하나가 무너져서 거부한다\"*). 그래서 슬라이스 범위·완료 기준·산출물 경계는 직전 시도 그대로 두고, 같은 브랜치 `reconcile/scenario-e2e-rct_20260918-0003`(PR #132)에 세 축을 얹어 되살렸다.\n\n**범위(완료 기준 — 직전 시도와 동일): 「픽스처 부재」만을 잔여 차단으로 달고 있던 구현 대기 7행 중 6행**을 전용 e2e 파일 6개 저작으로 닫고, 나머지 1행(`test-resource-generic.md#시나리오 18`)은 **행의 근거를 실제 차단(cluster-admin 아래서는 403 을 받을 좌표가 없다)으로 고쳐 써** 구현 대기에 남긴다. PR #132 가 **main 에 착지**해 main tip 에서 `check_ac_mapping.py` 가 rc=0 으로 `85 · 1 · 20 · 64 · 64 · 0 · 0` 을 내고, **CI 의 `integration tests` 로그에서 신규 6파일이 각각 `ok:` 로 끝났음이 파일 이름 전수로 확인되면** 이 task 는 성공이다.\n\n**완료 기준이 한 칸 엄격해졌다(검토 지적 ②).** 직전 지침은 `ci passed` 초록만 봤는데, 그것만으로는 **중단으로 한 번도 안 돈 파일**과 **돌아서 통과한 파일**을 구분하지 못한다. 실제로 직전 CI(run 35366489300)는 `resource_generic_ac11` 에서 레인이 끊겨 `resource_generic_ac16`·`ac6`·`ac7` 셋이 **한 줄도 실행되지 않았다**(로그 전수 확인: 실행된 신규 파일은 `approval_gate_ac10`·`approval_gate_ac6` 둘뿐). 이 슬라이스의 유일한 새 관측이 kind 실물 실행이므로, 「6파일이 각각 돌아서 `ok:` 를 냈다」를 완료 조건으로 승격했다.\n\n**① ac11 실패의 실제 원인은 대기 결여가 아니라 레이블이었다(검토 지적 ①의 정정).** 검토는 「Running 파드를 한 번만 조회하고 대기가 없다」를 직접 원인으로 지목했고 대기 추가를 처방했는데, **매니페스트를 실측하니 그 대기만으로는 고쳐지지 않는다**: `tests/k8s/kind/resource-generic-fixture.yaml` 은 `app.kubernetes.io/name: resource-generic-multi` 를 **Deployment 메타데이터에만** 달고, 파드 템플릿이 다는 레이블은 `app: resource-generic-multi` 하나다(fixture 155~168행). 즉 `kubectl get pods -l app.kubernetes.io/name=…` 은 클러스터가 아무리 건강해도 **항상 빈 목록**이고, 검토가 제안한 `kubectl wait -l app.kubernetes.io/name=…` 를 그대로 넣었다면 대기 시간을 다 쓴 뒤 같은 자리에서 다시 깨졌을 것이다. 그래서 **파드 레이블(`app=`)로 고치고**, 그 위에 대기를 얹었다. 자매 파일 `resource_generic_ac5.py` 가 같은 워크로드를 `app=` 로 찾아 자기 사전 조건 루프로 기다려 **통과한** 것이 그 선례다.\n\n**대기는 여전히 필요하다 — 이유가 검토의 것과 다를 뿐이다.** 검토는 「`병렬 레인:` 선언이 없어 `resource-generic` 레인과 동시에 돈다」를 대기의 근거로 들었는데, 러너 문면은 반대다: **레인을 선언하지 않은 파일은 레인 단계가 끝난 뒤 단독으로 돈다**(`run_all.py` 머리말·`_run_lanes` 배차). 실제 대기 근거는 CI 쪽에 있다 — `ci.yml` 은 `resource-generic-fixture.yaml` 을 **apply 만** 하고 `rollout status` 는 `workload-fixture` 에만 건다(398행). 픽스처가 아직 스케줄되기 전에 이 파일이 시작될 수 있으므로 두 컨테이너가 다 Ready 가 될 때까지 180s 기다린다. **레인 선언은 더하지 않는다**(검토가 제시한 대안 중 이쪽을 버린 근거가 위 배차 규칙이다 — 경합이 없으므로 레인으로 풀 문제가 아니고, 레인에 넣으면 오히려 ac5 와 같은 파드를 동시에 만지게 된다).\n\n**② `check_output` 이 의도한 단언 문면을 삼키던 것도 같이 고쳤다.** 빈 목록에 걸린 `jsonpath={.items[0]…}` 은 rc=1 이라, 호출자는 「픽스처를 찾지 못했다」가 아니라 kubectl 인자 덤프(`CalledProcessError`)를 읽었다. `run(check=False)` + 빈 문자열 판정으로 바꿨다.\n\n**③ main `29d5651`(#131) 을 머지 커밋으로 병합하고 일곱 값을 재측정했다.** 충돌은 `docs/doc-tracker.md` 변경 이력의 같은 날짜 행 하나뿐이었고 **행 단위로 양쪽을 보존**했다(리베이스·force-push 없음 — 리뷰가 본 커밋을 남긴다). 병합 트리에서 네 게이트를 **커밋한 뒤** 다시 돌려 전부 rc=0 이고, 일곱 값은 `85 · 1 · 20 · 64 · 64 · 0 · 0` 으로 **#131 병합 전과 같다**(#131 의 「집계 불변」 주장이 실측으로 확인됐다). 신규 docstring 18줄은 `docs/comment-policy/ledger.md` #17 행 재판정(88→106 · 지문 `a28a9f894ef0`→`1c28beafaf75` · 합계 1457→1475)으로 닫았다.\n\n**④ 계획 문면의 잔여 불일치(검토 지적 ④)도 고쳤다.** 직전 판 step 11·12 가 7행 시절 값 `19 · 65 · 65` 를 들고 있었다 — 이 판의 모든 단계·지침·완료 기준은 **`20 · 64 · 64`** 하나로 통일했다.\n\n**범위 밖(후속으로 남긴다 — 직전 시도와 동일)**: ⑴ `test-resource-generic.md#시나리오 18`(좁은 ClusterRole 을 가진 SUT 변형 배포 선행 — 이 렌즈 소관이나 다음 슬라이스) ⑵ 도구 미등록 12행(`resource_port_forward`·`resource_proxy`·`resource_delete_collection`·`github_commit_status_create` — `tbm_homelab-k3s-mcp-docs-impl` 소관) ⑶ `test-approval-gate.md#시나리오 5`(409·5xx 주입 — `tbm_homelab-k3s-mcp-e2e-mock-policy` 소관) ⑷ `test-approval-gate.md#시나리오 11`(apiserver 감사 프록시 선행) ⑸ `test-session-read.md#시나리오 2`·`test-session-write.md#시나리오 2·4`(CRIU·데이터 플레인 선행) ⑹ 모델 정의의 매칭 단위 제외 열거가 `run_all.py` 를 빠뜨린 문면 결함(tobe-modeler 소관).\n\n**산출물 경계 불변**: `internal/`·`cmd/`·`k8s/` 제품 코드 0줄. 이번 재계획이 더한 것도 e2e 1파일 수정과 등재 문서 2개(`doc-tracker.md` 병합 · `ledger.md` 재판정)뿐이다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "거부 3축을 실측으로 재확인한다 — PR #132 의 `mergeable:false · dirty`(base `7a8edf1` vs main tip `29d5651`), required check `ci passed` = failure(run 35366489300), 그리고 `integration tests` 잡 로그 전수 판독으로 신규 6파일 중 실제로 실행된 것이 둘뿐임을 확인.",
+              "expectedOutcome": "세 축 모두 재현. 실행된 신규 파일은 `approval_gate_ac10`·`approval_gate_ac6`(둘 다 `ok:`), `resource_generic_ac11` 은 FAIL, `ac16`·`ac6`·`ac7` 은 로그에 등장조차 하지 않음."
+            },
+            {
+              "seq": 2,
+              "action": "ac11 실패의 원인을 **로그 한 줄이 아니라 매니페스트로** 확정한다 — `resource-generic-fixture.yaml` 에서 `resource-generic-multi` 의 Deployment 메타데이터 레이블과 **파드 템플릿 레이블**을 따로 읽고, 통과한 자매 파일 `resource_generic_ac5.py` 가 어느 쪽을 쓰는지 대조한다. 함께 `run_all.py` 의 레인 배차 규칙을 읽어 「레인 경합」 가설을 검증한다.",
+              "expectedOutcome": "파드 템플릿 레이블은 `app=resource-generic-multi` 뿐이고 `app.kubernetes.io/name` 은 Deployment 메타데이터 전용 — 실패는 타이밍이 아니라 **결정적 빈 목록**임이 확정. ac5 는 `app=` 를 쓴다. 레인 미선언 파일은 단독 실행이므로 경합 가설은 기각."
+            },
+            {
+              "seq": 3,
+              "action": "main `29d5651`(#131)을 브랜치에 **머지 커밋으로** 병합한다(리베이스·force-push 금지). 충돌은 `docs/doc-tracker.md` 변경 이력의 같은 날짜(2026-09-18) 행 — 양쪽 행을 **둘 다 보존**하고(이번 슬라이스 행을 위, #131 행을 아래) 집계 숫자는 어느 쪽 값도 산술도 아닌 게이트 출력으로 다시 적는다.",
+              "expectedOutcome": "충돌 0 잔여, `| 2026-09-18 |` 행 2개 공존. `docs/prd-resource-generic.md` 는 #131 판정을 그대로 받음(자동 병합)."
+            },
+            {
+              "seq": 4,
+              "action": "`tests/integration/resource_generic_ac11.py` 의 `_pod_name()` 을 고친다 — ⓐ 셀렉터를 파드 레이블 `app=` 로 교체, ⓑ 두 컨테이너(`chatty`·`quiet`)가 다 Ready 인 Running 파드가 나올 때까지 180s 대기(3s 간격), ⓒ `check_output` → `run(check=False)` 로 감싸 빈 목록에서 의도한 문면이 나오게 한다. ⓓ **왜** 기다리는지(레이블 분기 + `ci.yml` 이 이 픽스처에 `rollout status` 를 걸지 않음)와 **왜 레인을 선언하지 않는지**(레인 미선언 = 단독 실행)를 docstring 에 적는다.",
+              "expectedOutcome": "파일 1개 수정(`+18` docstring 줄 포함). 다른 5파일과 제품 코드는 무접촉. 실패 시 메시지가 kubectl 인자 덤프가 아니라 픽스처 문면."
+            },
+            {
+              "seq": 5,
+              "action": "신규 docstring 을 `docs/comment-policy/ledger.md` #17 행에 **재판정**한다(R6 래칫). 줄 수·지문·합계는 손으로 짓지 않고 `check_comment_policy.py` 출력에서 옮긴다.",
+              "expectedOutcome": "#17 행 `88 → 106` · 지문 `a28a9f894ef0 → 1c28beafaf75` · docstring 합계 마커 `1457 → 1475`, 잔량 0 유지."
+            },
+            {
+              "seq": 6,
+              "action": "병합·수정을 **커밋한 뒤** 네 게이트를 다시 돌린다 — `check_ac_mapping.py` · `check_mock_policy.py` · `check_comment_policy.py` · `check_doc_inventory.py`. (`check_comment_policy.py` 는 `git ls-files` 만 보므로 커밋 전 초록은 근거가 되지 않는다 — 직전 준비가 밟은 함정이다.)",
+              "expectedOutcome": "넷 다 rc=0. 일곱 값 `85 · 1 · 20 · 64 · 64 · 0 · 0` — #131 병합 전과 동일(불변식 `85 − 1 − 20 = 64 = 64`)."
+            },
+            {
+              "seq": 7,
+              "action": "`python3 tests/integration/run_all.py --group primary --list` 로 신규 6파일이 primary 그룹에 **각각 정확히 한 번** 배차되는지 확인한다.",
+              "expectedOutcome": "`approval_gate_ac6`·`approval_gate_ac10`·`resource_generic_ac6`·`ac7`·`ac11`·`ac16` 여섯 줄이 각각 한 번씩."
+            },
+            {
+              "seq": 8,
+              "action": "브랜치를 push 하고(같은 브랜치·force 없음) PR #132 의 신선도를 확인한다 — 원격 ref 가 새 head 인지, main 이 head 의 조상인지, GitHub 이 `mergeable` 을 다시 계산했는지.",
+              "expectedOutcome": "원격 ref = 새 head, `git merge-base --is-ancestor <main tip> <head>` 성립. GitHub 의 `mergeable` 은 비동기 재계산이라 지연될 수 있으므로 **조상 관계를 1차 근거로** 삼고 API 값은 뒤따라 확인한다."
+            },
+            {
+              "seq": 9,
+              "action": "(실행 단계) 새 head 의 CI 를 `/actions/runs?head_sha=` 로 읽어 `ci passed` 가 초록인지 보고, **그것만으로 닫지 말고** `integration tests` 잡 로그에서 신규 6파일의 `ok:` 줄을 **파일 이름 전수로** 확인한다.",
+              "expectedOutcome": "`ci passed` = success **이고** 여섯 파일 각각의 `ok:` 줄이 로그에 존재. 특히 `resource_generic_ac16` 의 자동 거부 모드 `finally` 복구는 이번에 처음 관측된다."
+            },
+            {
+              "seq": 10,
+              "action": "(실행 단계) PR 을 squash 머지하고 **main tip 에서** `check_ac_mapping.py` 를 다시 돌려 일곱 값을 재확인한다.",
+              "expectedOutcome": "main 착지 + main tip 실측 `85 · 1 · 20 · 64 · 64 · 0 · 0`. 이 지점이 완료 기준이다(PR head 초록만으로 닫지 않는다)."
+            }
+          ],
+          "plannedAt": "2026-09-18T16:30:00Z"
+        }
       }
     ]
   }
