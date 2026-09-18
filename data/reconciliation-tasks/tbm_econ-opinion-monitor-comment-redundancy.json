@@ -484,7 +484,7 @@
   {
     "id": "rct_20260918-0005",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T17:17:08Z",
@@ -662,6 +662,59 @@
               "startedAt": "2026-09-18T22:18:06Z",
               "finishedAt": "2026-09-18T22:18:20Z",
               "log": "**머지(executionGuide 3단계) — 이 task의 유일한 불가역 지점.** 머지 직전 `mergeable_state`를 한 번 더 읽어 `clean`을 확인한 뒤 `PUT /pulls/41/merge -f merge_method=squash` → HTTP **200**, `merged=true`, squash 커밋 **`0125cae798f032ec5bdd8a0e8c912bebd666bd48`**. 머지 후 `git fetch origin main` 실측 tip = `0125cae docs(comments): 초기 패스가 지운 두 제거 유형의 재발 판정 (rct_20260918-0005) (#41)`, 그 부모가 `a62eae1`. 계획 범위를 넓히지 않았다 — PR에 커밋을 더하지 않았고(head는 머지 시점까지 `b39481d` 그대로), 새 주석 문면을 한 글자도 쓰지 않았으며, 「범위 밖」 6항목은 한 줄도 건드리지 않았다. 롤백 경로: `git revert 0125cae`(런타임·배포·데이터 무관)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=953 files=80\n1b34764abc24d47b658f3cf1ed791eeaa8bab2761e0a01128ff2bc0d386dea98",
+          "verifiedAt": "2026-09-18T22:19:15Z",
+          "checks": [
+            {
+              "name": "(a) 지문 재측정 — 완료 기준 1",
+              "status": "passed",
+              "detail": "머지된 main(`0125cae`)에서 모델 `asIs.versionScript`를 문면 그대로 실행(해싱 `printf '%s' | sha256sum`): **`lines=953 files=80` / `1b34764abc24d47b658f3cf1ed791eeaa8bab2761e0a01128ff2bc0d386dea98`**. executionGuide 완료 기준 1의 기대값과 **해시까지 바이트 일치**. 델타도 성립한다 — 머지 직전 실측 `960/81 / 55a0dc3f…`(base `a62eae1`, plan step 1·모델 `lastObservedVersion`과 동일) 대비 **−7줄 / −1파일**로, 이 PR이 base와 무관하게 만드는 변화와 정확히 같다. base가 움직이지 않았으므로 절대값 판정이 유효했고 「base가 움직였을 때」 분기는 쓰이지 않았다."
+            },
+            {
+              "name": "(b) 파일별 주석 줄 수 — 완료 기준 2",
+              "status": "passed",
+              "detail": "지문과 같은 규칙(PATTERN·DIRECTIVE 동일)으로 main에서 센 값: `scripts/check-mockup-render.py` **0**(기대 0 — 지문 대상 주석이 사라져 파일이 지문에서 빠졌고, 그래서 files가 81→80), `scripts/journey-scenarios/JRN-spike-verification.js` **25**(기대 25). 유지 판정 3파일도 불변임을 함께 확인: `check-journey-mockup.py` **42** · `web/src/tokens/tokens.css` **38** · `web/src/screens/Compare.tsx` **10** — 원장 재판정 3행의 42/0/42 · 38/0/38 · 10/0/10과 전건 일치."
+            },
+            {
+              "name": "(c) 재발 잔존 0 — 완료 기준 3",
+              "status": "passed",
+              "detail": "`git grep -nE '^[[:space:]]*(#|//|/\\*)[[:space:]]*[-=─]{4,}' -- scripts/check-mockup-render.py` → **0건(exit 1)**. `git grep -n '범용 러너' -- scripts/journey-scenarios/` → **0건(exit 1)**. 정책이 이름을 대어 적은 두 제거 유형(구분선 배너 · 러너/시나리오 역할 분담 재진술)이 이번 귀속 창의 재발 지점에서 모두 사라졌다."
+            },
+            {
+              "name": "(d) 정책 SSOT 착지 — 완료 기준 4",
+              "status": "passed",
+              "detail": "`docs/comment-policy/passes/2026-09-18-regression-pass.md` **실재(127줄)**. `ledger.md`의 `regression-pass` 언급 실측 5행: 22행 패스 이력(`| 2026-09-18 | [regression-pass](passes/2026-09-18-regression-pass.md) | a62eae1 | 960 | 7 | 953 | 81 → 80 |`), 65·68행 신규 2행(3/3/0 · 29/4/25), 64·83·91행 재판정 3행, 92행 합계(960/7/953 · 64개 파일). **산술이 닫힌다**: 패스 제거 합 7 = 3(구분선) + 4(역할 분담), 960 − 7 = 953으로 (a)의 지문과 일치. 표 행 수 71행 중 파일별 원장이 계획대로 62→64행. 링크 해석은 (e)의 R8이 기계로 재확인했다."
+            },
+            {
+              "name": "(e) 로컬 게이트 회귀 없음 — 완료 기준 5",
+              "status": "passed",
+              "detail": "`python3 scripts/check-mockup-render.py .` → **exit 0**, 마지막 줄 「목업 ↔ 구현 렌더링 정합성(규칙 3·5) 통과」(R3 이름 대조 18 · 등재 예외 3 · 구현 전용 1 / R5 충돌·목업 전용·구현 전용 모두 0 = 상한 0). 배너를 걷어낸 파일 자신이 정상 구동한다. `python3 scripts/check-journey-mockup.py .` → **exit 0**, 「PASS — 여정 6개 · 여정 페이지 3개 · 미이관 3(상한 3) · 규칙 5 미충족 페이지 3(상한 3) · 링크 87건」, R8이 docs/ 상대 링크 **87건 전부 해석**(새 패스 문서 링크 포함, 계획 시점 85→87)."
+            },
+            {
+              "name": "제거가 주석에만 닿았다 (check-journey-flow.js 대체 증명)",
+              "status": "passed",
+              "detail": "`git diff -U0 a62eae1..0125cae -- scripts/`: 추가 줄(`^+`, `+++` 제외) **0건**, 삭제 10줄을 분류해 **주석 7 · 빈 줄 3 · 그 외 0**. ⇒ `scripts/` 아래 실행 코드 바이트가 불변이므로, node·jsdom이 없어 이 호스트에서 돌릴 수 없는 `scripts/check-journey-flow.js`의 동작은 정의상 바뀌지 않는다(executionGuide가 지정한 대체 증명). 레포 전체 변경도 preparation 기재와 일치: 4파일 / +138 −15."
+            },
+            {
+              "name": "CI 필수 체크 (soft gate)",
+              "status": "passed",
+              "detail": "`actions:read`를 명시한 토큰으로 `GET /actions/runs?head_sha=b39481dc…` → HTTP 200, 워크플로 `Checks` **completed/success**(run 35399434796). 지침대로 차단 게이트로 세우지 않았으나 이번엔 초록이라 로컬 측정과 어긋나는 지점이 없었다. 준비 시점 `mergeable_state=blocked`가 「필수 체크 pending」이었다는 판독도 사실로 확인됐다."
+            },
+            {
+              "name": "범위 준수 — 계획 밖 변경 0",
+              "status": "passed",
+              "detail": "PR에 커밋을 더하지 않았다(머지된 head는 준비 시점 `b39481d` 그대로). 새 주석 문면 **0바이트**(삭제 전용이라 리뷰가 자매 task에 남긴 「개수·메커니즘에 기대는 가드 문면 금지」를 구조적으로 위반할 수 없다). executionGuide 「범위 밖」 6항목(#38·#39의 164줄/8파일, `JRN-sentiment-shift.js` 머리 훅 목록, `check-journey-flow.js`의 `(a)~(h)` 구분선, `deploy/` 핀 가드 주석, 원장 커버리지, 지문 사각지대)은 **한 줄도 건드리지 않았다** — 변경 4파일이 모두 대상 목록 안이다."
+            },
+            {
+              "name": "[정보성] 모델 전체 to-be 잔여 gap",
+              "status": "passed",
+              "detail": "**converged 판정에 넣지 않은 정보성 관측.** 머지 후에도 레포에는 이 패스가 판정하지 않은 주석이 남아 있다: 지문 953줄/80파일 대비 원장은 64행(64파일)이고, 특히 `#38`(`33e24ea`)·`#39`(`a62eae1`)이 들인 `tests/e2e/` 아래 164줄/8파일은 이번 트리거의 귀속 창(`ce54a57`..`be8616f`) 밖이라 행을 만들지 않았다. 이는 실패가 아니라 설계다 — 이 슬라이스의 완료 기준 5개는 모두 참이다. 머지가 만든 지문 변화(`55a0dc3f…` → `1b34764a…`)를 다음 감지 주기가 보고 후속 task를 연다."
             }
           ]
         }
