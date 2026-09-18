@@ -3233,7 +3233,7 @@
   {
     "id": "rct_20260918-0002",
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "assessing",
+    "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T12:00:53Z",
@@ -3246,12 +3246,18 @@
       }
     },
     "createdAt": "2026-09-18T12:00:53Z",
-    "updatedAt": "2026-09-18T12:00:53Z",
+    "updatedAt": "2026-09-18T12:05:17Z",
     "stateSummary": {
       "asIs": "측정 tip 95b6352(= deploy 핀, 0 side) 기준 asIs 지문 backend:9bf9dd09 frontend:cca92c1a(불변). 이동은 PR #52 `17b7d28`(fix(worker): SIGTERM을 받으면 클레임 사이에서 종료한다 — e2e 스케일다운 30초 대기 제거, 작성자 dlddu-k3s-homelab-k3s-mcp[bot], 11:33:35Z) 단독이고 3파일 +60/-5: `backend/src/bin/worker.rs`(+38/-4) · `Cargo.toml`(tokio features 에 `signal` 추가) · `Cargo.lock`(+21 — errno·signal-hook-registry 유입). 주석 제거 후 코드 줄 424→447 ⇒ 주석 전용이 아닌 실동작 변경이다. 내용: 워커가 컨테이너 PID 1 이라 핸들러 없는 시그널이 커널에서 버려지던 것을 `tokio::signal::unix` 로 SIGTERM/SIGINT 를 잡아 **클레임 사이에서만** 종료(`biased` select 로 작업 뒤 0-pause 보다 stop 우선)하게 바꿨다 — 진행 중 잡은 끝까지 돌리거나 유예기간의 SIGKILL 로 죽고 그 경우는 기존 lease 가 복구한다. frontend·docs 무접촉. 이 트리를 담은 45ff9f8 에서 CI(cargo test + kind e2e 분리 병렬) 전건 success(17b7d28 자신의 런은 후속 푸시의 concurrency 로 cancelled — backend 트리 해시는 두 지점 동일).",
       "toBe": "docs/ 트리 `863c12ac` **불변**(baseline 과 바이트 동일, 이번 트리거는 as_is 단측). SSOT 현황: AC 24개(가치 연결 24/24) · 테스트 문서 4개(AC 커버 24/24) · 테스트 시나리오 36개 · 공개 문서 19개. 워커 종료·시그널 축을 규정하는 문면은 `prd/04-platform.md` AC4.5(API/워커 워크로드 분리, 검증 방법 「워커가 다운되어도 API 는 응답 가능 · 워커는 수평 확장 가능」)와 `test/04-platform.md` 시나리오 7(워커 파드 모두 강제 종료 → API 200·큐 보존·복구 후 처리)·시나리오 8(replica 증가 → 처리량 비례)뿐이다. `docs/` 전수 grep 에 SIGTERM·graceful·유예기간 문면 **0 히트** ⇒ 새 동작과 충돌하는 단정이 문서에 없다. 트래커가 AC4.5 를 「사용자에게 보이지 않는 운영 배경」으로 명시(여정 커버 23/24 의 유일 미커버 사유)한다.",
       "gap": "정의 축에서 유의미한 차이 없음. ⑴ 귀속 단일 — 저장 baseline == 부모 `c9a1648` 지문(양 side 바이트 동일)이고 커밋별 지문 walk 상 `17b7d28`(#52)만 asIs 를 움직였다(#53 CI 분리·핀 `95b6352` 모두 0 side). ⑵ 기준 2(구현↔문서 불일치) 불발화 — 새 종료 동작은 AC4.5 의 검증 방법과 test/04 시나리오 7·8 의 기대(강제 종료 시 API 가용·큐 보존, 수평 확장)를 그대로 만족하고, 문서에 SIGTERM/유예기간을 규정한 문면이 0 이라 어긋날 단정 자체가 없다. ⑶ 기준 3(문서 없는 구현) 불발화 — 변경은 사용자 대면 표면(API·프론트) 무접촉이고 그 축은 트래커가 「AC4.5 = 사용자에게 보이지 않는 운영 배경」으로 이미 분류해 둔 운영 영역이다. ⑷ 기준 1(미구현 AC) 잔여는 불변 — 미구현 14건(AC2.1~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7) + AC4.1 「해제」 조항(시나리오 축이 드러낸 구멍)이 그대로이고 이 트리거는 그 집합을 늘리거나 줄이지 않았다. ⑸ 스테이징 무해 — 잔여 gap 소유 task `rct_20260902-0008`(현재 `approving`, 11:38:52Z 갱신)의 통합 차량 PR #49(head c8b22c6e, r2)를 **부모 `c9a1648` 와 트리거 포함 tip `95b6352` 두 지점에서 trial-merge** 하니 충돌 집합이 `docs/doc-tracker.md` 한 파일(4 hunk)로 **동일** ⇒ #52 는 새 충돌을 만들지 않았고 기존 doc-tracker 충돌의 이월이다. 자동 병합된 `worker.rs` 를 직접 읽어 #52 의 시그널 처리(SignalKind·biased select·stop 로그)와 슬라이스 5a 의 단계 코드(acceptance·feature_candidates)가 **둘 다 보존**됨을 확인(조용한 되돌림 없음), `Cargo.toml` 도 `signal` feature 보존.",
       "summarizedAt": "2026-09-18T12:04:40Z"
+    },
+    "assessment": {
+      "actionRequired": false,
+      "reason": "정의의 세 판정 기준 어디에도 새 어긋남이 없다. ⑴ 귀속 단일 — 부모 c9a1648 에서 versionScript 재실행이 저장 baseline 과 양 side 바이트 동일이고 커밋별 지문 walk 로 #52(17b7d28)만 asIs 를 움직였음을 확정(#53 CI 병렬화·배포 핀 95b6352 는 0 side). ⑵ 기준 2(구현↔문서 불일치) 불발화 — #52 는 워커가 PID 1 로서 버리던 SIGTERM/SIGINT 를 받아 클레임 사이에서 종료하게 만든 것이고, 진행 중 잡은 끝까지 돌거나 유예기간 SIGKILL 로 죽어 기존 lease 가 복구한다. 이는 AC4.5 의 검증 방법(워커 다운 시 API 가용·수평 확장)과 test/04 시나리오 7·8 의 기대를 그대로 만족하며, docs/ 전수 grep 상 SIGTERM·graceful·유예기간을 규정한 문면이 0 이라 어긋날 단정 자체가 존재하지 않는다. 트리거 트리를 담은 45ff9f8 에서 CI(cargo test + kind e2e) 전건 success 로 회귀 없음도 기계 확인(17b7d28 자신의 런은 후속 푸시 concurrency 로 cancelled, backend 트리 해시는 두 지점 동일). ⑶ 기준 3(문서 없는 구현) 불발화 — API·프론트 등 사용자 대면 표면 무접촉이고, 이 축은 트래커가 「AC4.5 는 사용자에게 보이지 않는 운영 배경」으로 이미 분류한 운영 영역이다(여정 커버 23/24 의 유일 미커버 사유). 구현 동작이 아니라 컨테이너 수명주기 신호 처리이므로 문서화 의무가 발생하는 사용자 대면 동작이 아니다. ⑷ 기준 1(미구현 AC) 잔여 불변 — 미구현 14건(AC2.1~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7) + AC4.1 「해제」 조항이 그대로이고 이 트리거가 늘리거나 줄이지 않았다. 그 gap 의 소유자 rct_20260902-0008 이 생존(현재 approving, 2026-09-18T11:38:52Z 갱신)하므로 중복 task 를 열지 않는다. ⑸ 스테이징 무해(귀속까지 실측) — 소유 task 의 통합 차량 PR #49(head c8b22c6e) 를 부모 c9a1648 와 트리거 포함 tip 95b6352 두 지점에서 trial-merge 한 충돌 집합이 docs/doc-tracker.md 한 파일(4 hunk)로 동일 ⇒ #52 가 만든 충돌이 아니라 계획이 이미 아는 이월이다. 게다가 #52 와 PR #43 은 backend/src/bin/worker.rs 를 함께 만지는데도 자동 병합되며, 병합 결과물을 직접 읽어 #52 의 시그널 처리와 슬라이스 5a 의 단계 코드가 둘 다 보존됨을 확인했다(조용한 되돌림 없음; Cargo.toml 의 signal feature 도 보존). ⑹ 인계 — 소유 task 의 재통합 기준선 표기(main c9a1648b)가 현 main(95b6352)보다 2커밋 낡았다. 계획이 이미 채택한 「새 기준선 + 재통합」 절차가 실행 단계에서 재기준하면 되는 사항이고, 새 기준선에서도 충돌은 doc-tracker.md 단일로 동일하며 worker.rs 는 자동 병합된다 — 다만 Cargo.lock 이 #52 로 +21 되었으므로 재통합 시 lock 재생성은 main 쪽을 취하는 것이 안전하다.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-18T12:05:17Z"
     }
   }
 ]
