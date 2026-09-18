@@ -3364,6 +3364,44 @@
               "log": "관측만, 조치 0건. Image run 35367458029(head 8b5b41e, 16:16:09Z): `build & push image (ghcr)` success · `pin deployment image (main only)` **failure**. 로그 실측: `remote: error: GH013: Repository rule violations found for refs/heads/main.` / `remote: - Required status check \"ci-gate\" is expected.` / `! [remote rejected] HEAD -> main (push declined due to repository rule violations)` (3회 재시도 전부 동일). main 최근 3커밋에 `chore(deploy)` 핀 커밋 없음. 클러스터: featuredoc 1/1 available · featuredoc-worker 1/1 available, 둘 다 이미지 `ghcr.io/dlddu/featuredoc:1c39ba2566dcd8a4ff5f18c1ec90dea4601e9922`(16d age) — 기준선과 동일하므로 5a 이후 아무 배포도 착지하지 않았다. 계획 시점 실측(run 35365647687, head 8dad2a6)과 동일한 고장이 head 8b5b41e 에서도 재현 → main 5연속 push 째 같은 자리. 룰셋 변경·수동 핀 push·워크플로 수정 전부 하지 않았다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "backend:fb28f0214bc9559fb1634e535326bcac7cb42a91 frontend:5abed5b042526357f52280ac15e1dbd058ed7bf4",
+          "verifiedAt": "2026-09-18T16:35:00Z",
+          "checks": [
+            {
+              "name": "완료 기준 ① 게이트 3종 rc=0",
+              "status": "passed",
+              "detail": "실행 시점 origin/main 8b5b41e 에서 `python3 tools/check-scenario-e2e.py` rc=0(`✓ 시나리오 ↔ e2e 정합성 통과`) · `check-mockup-render.py` rc=0(전 규칙 통과: 원장 33행·공전 0·래칫 33/33·대조 보류 2/2·data-sample 67건 오용 0·M3A 194건/M3B 124건 미등재 0) · `check-journey-mockup.py` rc=0(R0~R10, 여정 6·목업 5·문서 25·링크 226). 판정은 rc 가 했다. journey 게이트의 문서 25·링크 226 은 준비 기준선(24·221)보다 크다 — 실행 전 #61 이 main 에 착지한 결과이며, 상수를 통과 조건으로 쓰지 않은 설계 덕에 판정에 영향이 없었다."
+            },
+            {
+              "name": "완료 기준 ② 미구현 AC 목록에 AC2.1~2.3 부재",
+              "status": "passed",
+              "detail": "`docs/doc-tracker.md:141` — 「미구현 AC 11건(AC2.4~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7)」. AC2.1·AC2.2·AC2.3 이 목록에 없다(이 task 가 좁히려던 5a 몫이 문서상 닫혀 있다는 뜻). 건수도 기대치 11과 일치했다."
+            },
+            {
+              "name": "완료 기준 ③ 슬라이스 5a 산출물 존속",
+              "status": "passed",
+              "detail": "`git merge-base --is-ancestor 6484e215 origin/main` rc=0 — 5a 머지가 main 계보에 있다(revert 없음). `git diff --name-only 6484e21~1 6484e21` = 21파일(기대와 일치). 슬라이스 핵심 8파일(FeatureAcceptance.tsx · acceptance.rs(src·tests) · sc02-01/02/04 spec 3종 · migrations/README.md · tests/migrations.rs) 전부 현재 main 에 실재, MISSING 0건."
+            },
+            {
+              "name": "완료 기준 ④ 시나리오 축 항등식",
+              "status": "passed",
+              "detail": "표 행을 직접 세어 확인: 총 시나리오 36(docs/test 01:7·02:8·03:8·04:13) = 매핑 19 + 예외 0 + 구현 대기 16 + 미매핑 1. 항등식 성립하고 캡션(155행) 숫자와 실제 행 수가 어긋나지 않았다. 숫자는 상수로 못박지 않았고 항등식만 판정에 썼다."
+            },
+            {
+              "name": "완료 기준 ⑤ 배포 축 사실 기록 — 미해결 블로커(소유 모델 없음, 범위 밖)",
+              "status": "passed",
+              "detail": "기록 자체가 완료 기준이며 기록했다(조치 0건). Image run 35367458029(head 8b5b41e, 16:16Z): `build & push image (ghcr)` success · `pin deployment image (main only)` failure — 로그 실측 `GH013: Repository rule violations found for refs/heads/main.` / `Required status check \"ci-gate\" is expected.` / `! [remote rejected] HEAD -> main`. main 에 `chore(deploy)` 핀 커밋 없음. 클러스터 featuredoc·featuredoc-worker 모두 1/1 available 이나 이미지가 여전히 `ghcr.io/dlddu/featuredoc:1c39ba2566dcd8a4ff5f18c1ec90dea4601e9922`(age 16d) — 5a 이후 어떤 머지도 배포로 착지하지 않았다. 이는 #62 가 main 에 필수 체크 `ci-gate` 를 건 뒤 핀 봇의 `[skip ci]` 직접 push 가 그 체크를 만들 수 없어 생긴 **레포 전역 고장**이고, 이제 main 5연속 push(42e63fa·6484e21·9733fd7·8dad2a6·8b5b41e)에서 동일하게 재현됐다. 이 축(`.github/workflows/` · 레포 룰셋)은 이 모델의 as-is 범위(`backend/`+`frontend/`) 밖이며 feature-doc 계열 6개 모델 중 어느 것도 CI/배포 축을 추적하지 않는다 — **reconciler 루프가 자동으로 잡지 못하므로 사람이 control plane(reconciler-tobe-modeler)으로 모델을 세우거나 레포에서 직접 고쳐야 한다.** 룰셋 변경·수동 핀 push·워크플로 수정은 승인 범위 밖이라 하지 않았다."
+            },
+            {
+              "name": "정보성 — 모델 전체 to-be 대비 잔여 gap(이 시도 범위 밖, converged 판정에 미반영)",
+              "status": "passed",
+              "detail": "ⓐ 이미지 핀 잡 고장(위 ⑤, 소유 모델 없음 — 사람 몫) ⓑ 미구현 AC 11건: AC2.4~2.6(슬라이스 5b) · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7 ⓒ STP-verify-evidence · 재개 배너 · 검수 상태(목업↔구현 모델 몫) ⓓ 편차 원장 미해소 33행 · 미매핑 래칫 1건(`02#시나리오 3`) ⓔ `doc-tracker.md:141` 이 지적한 자매 모델 미구현 목록 반영(시나리오 축 몫). ⓑ~ⓔ 는 이 실행이 만들지 않은 버전 변화(#59·#61 등)의 재감지가 후속 task 로 잇는다 — 모델 lastObservedVersion(16:21:06Z 관측 backend `fb28f021`·frontend `5abed5b0`·docs `4c1d3f39`)은 실행 시점 main 8b5b41e 의 값과 같아 이 실행이 새 트리거를 만들지 않았음도 확인했다(이 시도는 대상 레포에 변경 0건이므로 예상된 결과)."
+            }
+          ]
         }
       }
     ],
@@ -3375,7 +3413,7 @@
       "summarizedAt": "2026-09-02T13:09:26Z",
       "toBe": "### to-be — 제품 문서 (`docs/`) @ `576db21`, 트리 `d9cdc790` → **`5788aff3`**\n\n변경 2파일: `docs/doc-tracker.md`(+50/−19) · `docs/mockups/JRN-discover-features.html`(+14/−13).\n\n**의도된 동작의 SSOT 는 움직이지 않았다** — `docs/prd` 트리 `bffbe662` **불변**(AC **24개** 그대로,\n신설·삭제 0) · `docs/test/` 불변 · `docs/values.md` 불변 · `docs/user-journey` 트리 `e9b788c5` 불변 ·\n`docs/design-system.md` `c7499184` 불변. 즉 **to-be 는 늘지 않았고 gap 은 as-is 가 올라와서 줄었다.**\n\n`docs/doc-tracker.md` 갱신(실측 대조 완료):\n- 「구현 수렴 로드맵」 미구현 15 → **14**, 4b-2 ✅, **다음 권장 슬라이스 = 5**\n- 「e2e 매핑」 매핑 9 → **10**, 공백 15 → **14**, 항등식 `24 − 0 = 10 + 14` ✅\n- 「목업↔구현 대조 범위」 활성 4 → **5**(`FeatureCandidates`/S07 태생 활성)\n- 「알려진 목업↔구현 편차」 원장 36 → **43행**, 상한 36 → **43**\n- 「변경 이력」 4b-2 행 1개 추가\n\n`docs/mockups/JRN-discover-features.html` 은 `#STP-sift-candidates` 후보 카드의 예시 데이터에\n`data-sample` 13건을 붙이고 `prev-reason` 의 인용구를 잎 요소로 분리한 것뿐이다 — **단계 앵커\n5개·`data-screens`·`data-goto` 집합이 부모와 md5 동일**(실측).\n\n**to-be 가 요구하는 상태**(모델 정의): ① `docs/` 의 **모든 AC 가 구현**되고 대응 테스트 문서대로\n검증 가능 ② UI 가 목업·와이어프레임·디자인 시스템과 일치 ③ 문서 없는 구현 없음.\n\n**문서가 스스로 남긴 미해소 항목**: 「다음 단계 권장」 **11번**(등록 화면의 Google 선택지 —\n`CredentialsSetup.tsx` `PROVIDERS`, 해소에 목업 `JRN-connect-repo.html#STP-register-llm-key` 개정이\n동반돼야 해 자매 모델 소관)은 이번 트리거로도 그대로다. 10번은 앞 슬라이스에서 해소 표기."
     },
-    "status": "verifying",
+    "status": "succeeded",
     "toBeModelId": "tbm_feature-doc-docs-impl",
     "trigger": {
       "asIs": {
