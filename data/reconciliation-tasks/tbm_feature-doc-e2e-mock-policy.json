@@ -454,7 +454,7 @@
   {
     "id": "rct_20260918-0002",
     "toBeModelId": "tbm_feature-doc-e2e-mock-policy",
-    "status": "reviewing",
+    "status": "review_rejected",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T12:56:57Z",
@@ -532,6 +532,14 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/60",
           "preparedAt": "2026-09-18T13:47:00Z",
           "notes": "기준 커밋 `84f2734`(main tip). 커밋 2개 — `2507508` 무동작 재배선(Config.mode/Worker.mode → 경계별 Doubles/WorkerDoubles, 여전히 FEATUREDOC_MODE 하나에서 채움), `b8da1c2` 전역 스위치 제거(5개 전용 env + 오버레이·운영 매니페스트·README·spec 주석·정책 문서 + provider_for 충실도 결함 제거 + sc04-07·sc04-08 키 셋업). 26파일 +257/-107.\n\n**지문 실측 완료**: 모델 정의의 as-is versionScript를 브랜치 tip에서 그대로 실행해 `sites=22 files=10` / `818d4d1a8ab48810944ed7acc3961a6b1a06ea0924b976ccc876479feca8ae21` 확인(before `sites=27 files=13` / `a0d4d5ac…`). 남은 12쌍이 허용목록 12행과 파일×토큰 단위로 양방향 일치, 미등재 0 · 고아 0. `FEATUREDOC_MODE` 리터럴 레포 전체 0건(정책 문서의 이력 서술 제외).\n\n**미실행**: 계획 환경에 Rust 툴체인이 없어 `cargo test`·`scripts/e2e.sh`를 로컬에서 돌리지 못했다. PR CI(`test (cargo)` + `test (kind e2e)`)가 그 역할이며, App 토큰에는 checks/actions 권한이 없어 자동으로 초록을 읽을 수 없으므로 **실행 단계가 두 명령을 직접 재실행하거나 사람이 PR 페이지에서 확인**해야 한다. 이것이 이 준비의 유일한 미검증 구간이다."
+        },
+        "review": {
+          "required": false,
+          "status": "rejected",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-18T15:52:00Z",
+          "reason": "**거부 — 준비물이 지금 그대로는 머지 불가이고, 지침이 명령한 검증을 실행 환경에서 수행할 수 없다.**\n\n**신선도 실측(2026-09-18T15:50Z)**: PR #60 open·merged=false·mergeable=true(파일 충돌 없음), head `b8da1c2`의 CI는 4개 워크플로 전량 success(`test (cargo)` 3m08s · `test (kind e2e)` 4m17s 포함). 계획 내용 자체와 지문 실측(`sites=22 files=10`)에는 이견이 없다.\n\n**베이스가 이동했다.** PR 기준 `84f2734` 이후 main이 1커밋 앞섰다 — `42e63fa` \"ci: PR 필수 상태 체크를 ci-gate 하나로 통합 (#62)\". 이 커밋은 `.github/workflows/*.yml` 4개만 고쳐 PR의 26파일과 텍스트 충돌은 없지만, **필수 상태 체크를 `ci-gate` 단일 잡으로 바꿨다**(`ci.yml` L149-152, `needs: [cargo, e2e, push, docs-*]`). head `b8da1c2`는 그 이전 워크플로 배치에서 빌드돼 `ci-gate`가 한 번도 보고되지 않았고, 그래서 GitHub이 `mergeable_state: \"blocked\"`를 반환한다 — **리베이스 없이는 머지 자체가 막힌다.**\n\n**지침이 요구한 머지 전 검증이 이 환경에서 불가능하다.** executionGuide 2절은 `cargo test`와 `scripts/e2e.sh`를 **직접 재실행**해 판정하라고 하고, 5절 「사전 조건」은 그 도구가 없으면 「**머지하지 말고** 사람에게 PR CI 초록 확인을 요청」하라고 못박았다. 실행 호스트에는 `cargo`·`docker`·`kind`·`kubectl`·`node`가 **전부 없다**(command -v 5/5 MISSING). 무인 루프에는 요청받을 사람이 없으므로 executor는 막다른 길에 선다.",
+          "comment": "**planner가 고쳐야 할 것 — 계획 내용이 아니라 지침의 사실관계와 브랜치 상태다.**\n\n**1) CI 판독 불가 전제가 사실과 다르다 — 지침 2절 머리글을 바로잡을 것.** 「App 토큰에 checks/actions 권한이 없어 PR의 CI 결과를 프로그램으로 읽을 수 없다」고 적혀 있으나, 이번 검토에서 `contents:read`+`pull_requests:read` 토큰만으로 다음 두 경로가 **HTTP 200**으로 읽혔다:\n  - `GET /repos/dlddu/feature-doc/actions/runs?head_sha=<sha>` → 워크플로별 `status`/`conclusion`\n  - `GET /repos/dlddu/feature-doc/actions/runs/<run_id>/jobs` → 잡별 결과(`test (cargo)`·`test (kind e2e)` 각각의 success 확인)\n  읽히지 않을 수 있는 것은 `/commits/<sha>/check-runs`(403) 쪽이다. 이 구분을 지침에 반영하고, **로컬 툴체인이 없는 실행 환경의 1차 검증 근거를 「head sha 기준 actions/runs 조회」로 명시**할 것. 지금처럼 「CI를 근거로 쓰지 말라 + 로컬 실행도 못 하면 사람에게 넘겨라」로 두면 무인 executor가 반드시 정지한다.\n\n**2) 브랜치를 `origin/main`(`42e63fa`)에 리베이스해 PR을 다시 머지 가능 상태로 만들 것.** main이 건드린 파일은 `.github/workflows/` 4개뿐이고 PR은 그 트리를 건드리지 않으므로 충돌 없이 올라간다. 리베이스 후 새 head에서 CI 1회가 돌면 신설 필수 체크 `ci-gate`가 보고되고 `mergeable_state`의 blocked가 풀린다. **커밋 2개(`2507508`/`b8da1c2`)는 반드시 보존**할 것 — 「`b8da1c2`만 revert」라는 롤백 절차가 그 분리에 의존한다.\n\n**3) 지침 5절 「사전 조건」의 막다른 길을 무인 경로로 교체할 것.** 「도구 없으면 사람에게 요청」 대신, ⑴ 리베이스된 head에서 `ci-gate`와 `cargo`/`e2e` 잡이 success인지 actions API로 확인 → ⑵ 지문 재측정(`git ls-files`+`grep`만 쓰므로 툴체인 불필요, 이 환경에서 실행 가능) → ⑶ 머지, 순서로 적을 것. 지문 기대값 `sites=22 files=10` / `818d4d1a…`와 「코드 12줄 == 허용목록 12행」 대조는 그대로 두면 된다 — 이 부분은 실행 가능하고 완료 기준으로 충분하다.\n\n**유지해도 되는 것**: 경계별 `FEATUREDOC_DOUBLE_*` 설계와 대안 3건의 기각 근거, `provider_for` 관용 제거, sc04-07·sc04-08 키 셋업, 정책 문서 동시 갱신(고아 등재 방지), 지문 사각지대 고지, 롤백 절차 — 모두 타당하고 범위도 gap을 넘지 않는다. 계획을 다시 세우기보다 **위 3점만 반영해 재준비**하면 된다."
         }
       }
     ]
