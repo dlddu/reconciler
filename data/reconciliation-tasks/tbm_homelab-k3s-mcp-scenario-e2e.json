@@ -8208,7 +8208,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
     "status": "executing",
     "createdAt": "2026-09-18T12:28:54Z",
-    "updatedAt": "2026-09-18T13:24:57Z",
+    "updatedAt": "2026-09-18T13:32:51Z",
     "trigger": {
       "source": "manual",
       "detectedAt": "2026-09-18T12:28:54Z",
@@ -8295,9 +8295,60 @@
           "comment": "사람 승인(수동 승인 세션). 승인 시점 신선도 재확인: PR #106 open·mergeable=clean·main 대비 behind 0(main tip 25302ec4 불변), head d483c15의 CI 4잡(fmt+vet/unit/integration/build&push) 전부 success — 준비 단계에서 미확인이던 Go 게이트·kind 통합·합쳐진 배차도 통과. 제품 수리 +32줄(patch_precondition.go·resource.go, 사용자 가시 동작 변경) 번들 수용 경계 판단을 승인함. #122는 머지 아닌 close."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-18T13:24:57Z",
-          "entries": []
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "skipped",
+              "startedAt": "2026-09-18T13:21:00Z",
+              "finishedAt": "2026-09-18T13:21:00Z",
+              "log": "계획 단계에서 이미 수행됨(preparation). 실행 시작 시점에 결과만 재확인했다: PR #106 open·draft 아님·head `d483c15a41ed774f4971ab5947844cf78fad7f6c`·`mergeable=true`·`mergeable_state=clean`, main 대비 `behind_by=0 / ahead_by=27`. 재병합 불필요 — 2단계로 바로 진입."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T13:21:00Z",
+              "finishedAt": "2026-09-18T13:23:00Z",
+              "log": "PR head `d483c15`의 check-runs 전건 확인. `fmt + vet`·`unit tests`·`integration tests`·`build & push server image` **4잡 전부 conclusion=success**(`pin deployment image (main only)`는 main 전용이라 skipped — 기대대로).\n\n지침이 요구한 로그 실측 두 가지도 직접 읽어 확인했다.\n- lint 잡(105603997087)의 `check_ac_mapping.py` 스텝: 일곱 값 **`78 · 1 · 19 · 58 · 58 · 0 · 0`** — 기대값과 일치.\n- integration 잡(105603996745) 배차: `OK: primary 그룹 43개 파일 전부 통과` · `OK: gatekeeper-variant 그룹 3개 파일 전부 통과`(추가로 auth-variant 13 · oauth-variant 1). **primary 43 · gatekeeper-variant 3** — 기대값과 일치.\n\n최대 미지수로 지목됐던 두 자리(로컬 미실행 Go 게이트, #126과 #106이 각각 고친 `run_all.py` 배차의 합산 결과)가 모두 통과했다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T13:23:00Z",
+              "finishedAt": "2026-09-18T13:25:00Z",
+              "log": "머지 직전 재확인: `mergeable=true` · `mergeable_state=clean` · main tip `25302ec4256b477ac1f78f01b1da27d244a780be`(준비 시점과 동일, 1단계 반복 불필요).\n\n**계획에서 벗어난 점 — 머지 방식.** 지침이 명시한 `gh pr merge 106 --merge`가 레포 설정에 막혔다: `GraphQL: Merge commits are not allowed on this repository.` 레포 설정 실측은 `allow_merge_commit=false` · `allow_rebase_merge=false` · `allow_squash_merge=true` — **squash가 유일하게 허용된 방식**이라 계획이 지정한 방식은 실행 불가능한 지시였다.\n\n그래서 `--squash`로 머지했다. 이 선택의 근거: (a) main에 착지하는 **트리는 두 방식이 바이트 동일**하고 승인된 변경 내용이 그대로 들어간다 — 범위가 넓어지지 않는다; (b) 계획이 `--merge`를 고른 이유였던 26커밋 감사 이력은 **PR #106에 그대로 보존**되며 GitHub에서 계속 읽힌다; (c) 완료 기준(4·5·6단계의 지문 이동·게이트 일곱 값·main CI)은 머지 방식과 무관하게 동일하게 판정된다; (d) 여기서 중단하면 PR이 다시 열린 채 방치되는데, **그 방치가 바로 이 task가 없애려던 실패 형태**다(지침도 「빨리 닫는 것이 곧 위험 감소」라고 적었다). 직접 push로 merge commit을 만드는 우회는 레포 소유자가 설정한 정책을 뚫는 것이라 하지 않았다.\n\n부수 효과 하나: 롤백 절차가 `git revert -m 1 <merge-sha>`에서 **단일 커밋 revert**로 단순해진다(계획의 롤백 절차보다 쉬워지는 방향).\n\n결과: PR #106 **merged** · state=closed · squash 커밋 `fb2eeb15b064111970348365584c314908db2d58`. main tip `25302ec4` → **`fb2eeb15`**로 전진."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T13:25:00Z",
+              "finishedAt": "2026-09-18T13:27:00Z",
+              "log": "main tip을 새로 클론·체크아웃(`HEAD=fb2eeb15b064111970348365584c314908db2d58`)한 뒤 모델의 두 versionScript를 **원문 그대로** 재실행했다(레코드의 `asIs.versionScript`·`toBe.versionScript`와 대조 확인).\n\n- asIs `git rev-parse HEAD:tests` → **`05314de3969d4d8d3261224e9824d4ac69d7bc51`**. 병합 전 값 `f5e11289e843d60fc52d1a18cca9bdc2decb8e39`와 **다르다** ⇒ main의 tests 트리가 실제로 움직였다. 실패 조건 미해당.\n- toBe → `sc:f5e4548989406933e56eb6f13fb893c62ca48ffdd0579ed4ffaca27c88602f2a reg:b07cbc2ddb8d7b910923db6a8525f7f04834c43e`. `reg:`가 `4fbcc273bc02804cd03e2ad5092260db357b0a22`에서 이동 — doc-tracker 반영 확인.\n\n직전 task `rct_20260915-0008`이 이 자리에 병합 전 값을 적고 닫은 것이 이번 사고의 형태였다. 이번에는 **머지 후 main tip에서** 쟀고 값이 실제로 이동했다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T13:27:00Z",
+              "finishedAt": "2026-09-18T13:28:00Z",
+              "log": "main tip 체크아웃 상태에서 4게이트 전부 실행, **전건 rc=0**.\n\n- `check_ac_mapping.py` rc=0 — 일곱 값 **`78 · 1 · 19 · 58 · 58 · 0 · 0`**. 불변식 `78 − 1 − 19 = 58 = 매칭 파일(전용) 58` 성립. 실패 조건으로 지목된 두 가지 모두 미해당: 구현 대기가 27이 아니라 **19**(doc-tracker 반영됨), 매칭 파일이 50이 아니라 **58**(e2e 8파일 착지됨).\n- `check_mock_policy.py` rc=0 — R1~R6 위반 0, 등재 5(상한 5)·미등재 0·고아 0. B2 차단 원장 1행 완비.\n- `check_comment_policy.py` rc=0 — 준비 단계에서 재측정한 원장 수치가 병합 트리에서 그대로 성립(마커 보정 후속 커밋 불필요).\n- `check_doc_inventory.py` rc=0 — D1~D4 위반 0, 허브 도달 42/42 · 끊긴 링크 0."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T13:28:00Z",
+              "finishedAt": "2026-09-18T13:40:00Z",
+              "log": "main tip `fb2eeb15`의 push CI가 settle할 때까지 폴링(30s 간격)한 뒤 판정. **8잡 전부 conclusion=success**: `fmt + vet` · `unit tests` · `integration tests` · `build & push server image` · `pin deployment image (main only)` · `build` · `deploy` · `report-build-status`.\n\nPR head가 아니라 **병합된 트리에서** 초록임을 확인하는 단계였고, main 전용 잡(`pin deployment image` 등 PR head에서 skipped였던 것들)까지 포함해 전건 통과했다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T13:29:00Z",
+              "finishedAt": "2026-09-18T13:30:00Z",
+              "log": "PR #122를 **close**했다(merged 아님 — `state=closed` · `merged=false` 재확인). `gh pr merge 122`는 쓰지 않았다.\n\n닫는 코멘트에 지침이 요구한 내용을 담았다: 수리 3커밋(`2114dcc`·`2254750`·`73532db`)은 #106에 내용 동등하게 실려 이미 착지했고(`internal/` 3파일 blob 해시 일치로 준비 단계에서 확인), 고유분은 문서 수렴 커밋 `98e239f`(`docs/prd-resource-generic.md` AC9 apply 절 + doc-tracker 3줄) 하나뿐이며, 그 PRD↔구현 수렴은 PRD를 SSOT로 갖는 `tbm_homelab-k3s-mcp-docs-impl` 소관으로 넘긴다는 것.\n\n같은 수리가 두 번 들어가는 경로가 제거됐다."
+            }
+          ],
+          "finishedAt": "2026-09-18T13:32:51Z"
         }
       }
     ]
