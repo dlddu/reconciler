@@ -2297,6 +2297,77 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-18T22:08:00Z",
       "reason": "actionRequired=**true**. 이번 버전 델타는 gap을 줄였지만(새 위반 0), 그 델타가 재검증을 요구한 **기준 1이 tip에서 실제로 깨져 있고, 직전 슬라이스가 명시적으로 범위 밖에 둔 그 잔여를 집어갈 소유자가 함대에 없다.**\n\n**근거 1 — 델타 무죄를 먼저 확정했다.** 저장 baseline 보유 지점(as-is `46c8f24` · to-be `ce54a57`)에서 양 side versionScript 재실행이 저장값과 **바이트 동일** ⇒ 이동은 `ce54a57`(#35 deploy 2줄) + #36 + #37 + #38 + #39 **5커밋 단독**. 그중 #38이 AC3.2를 착지시켰고(`workflow-template.yaml` ∋ `name: aggregate`, `pipeline`이 ingest→analyze→aggregate 3단, `aggregate.py`의 `(skeleton placeholder)`·가짜 램프 `_spark()` 소멸 — tip 전수 grep 0히트), 기준 3은 계약 대조로 초록이다(`subject_trend.avsc`의 `delta` doc \"in percentage points\" ↔ 구현 `(현재−직전)×100`, `spark` doc \"recent share values\" ↔ 최근 6버킷 실 share). #37의 web 델타는 목업 카피·토큰 흡수라 **구현이 문서 쪽으로** 이동했고(기준 2 방향 일치), #39 산출은 전량 `tests/e2e/`로 as-is 범위 밖이다. 레포 게이트 3종(`check_scenario_mapping.py` · `check-mockup-render.py` · `check-journey-mockup.py`) tip 전건 rc=0 ⇒ 기준 5 신규 위반 0.\n\n**근거 2 — 기준 1 위반이 상시 상태로 서 있다(좌표 전건 tip 재확인).** AC 21건 중 **4건 미구현**: AC3.3(`aggregate.py`:30 `BUCKET_UNIT = \"hour\"` — Gold에 `day`/`week` 0건) · AC3.5(`handlers.go`:107 `stub: single-bucket skeleton data`) · AC3.4·AC3.1(`App.tsx`:9 `BUILT = new Set([\"dash\",\"compare\"])` — 5화면 Placeholder). 모델 정의는 「미구현 AC를 백로그로 예외 처리하지 않는다(2026-07-12 사용자 결정)」이므로 이 자체가 drift다.\n\n**근거 3 — 인수자 부재.** 직전 task `rct_20260918-0003`은 슬라이스 4를 **「AC3.2 배선 + 페이크 제거」로만 잘라** 실행하고 AC3.3을 계획서에서 명시적으로 범위 밖에 두고 `succeeded`(17:20:56Z)했다. 지금 이 모델에 열린 task는 없고, 자매 축(scenario-e2e · mockup-render · journey-mockup · comment-redundancy · e2e-mock-policy)은 전부 관측·문서 축이라 **AC 구현을 지지 않는다** — `doc-tracker.md`:215 이 그것을 문면으로 못박는다(\"미구현의 해소는 이 모델의 몫이 아니다 — 구현은 `tbm_econ-opinion-monitor-docs-impl` 이 진다\").\n\n---\n**planner 인계 — 다음 슬라이스 선택지와 제약(직접 실측한 것만 적는다).**\n\n① **AC3.5(로드맵 슬라이스 5) — 결합 없음, 기본 권고.** `/api/trend`가 자기선언 스텁이고 `/trend`는 Placeholder다. 집계가 이제 `delta`·`spark` 실값을 산출하므로(#38) 서빙이 읽을 입력이 처음으로 생겼다 — 전제가 방금 갖춰진 쪽이다. 변경 면은 `go/internal/handlers/` + `web`(BUILT 집합에 `trend` 편입)이고 자매 축 표를 건드리지 않는다.\n\n② **AC3.3(슬라이스 4 잔여) — 자매 축과 기계적으로 결합돼 있다(게이트 코드로 확인).** 일·주 롤업을 구현해 `BUCKET_UNIT = \"hour\"`를 걷으면, 그 문자열이 `doc-tracker.md`:232 구현 대기 행(`test-aggregation-viz.md#시나리오 3`)의 **해제 신호**로 등재돼 있어 `tests/e2e/check_scenario_mapping.py`의 규칙6(321~339행: 해제 신호 문자열이 사라지면 \"재판정할 것\"으로 실패)이 **CI에서 깨진다**. 즉 구현과 그 표의 재판정을 **한 슬라이스로 묶어야** 한다. 주의: 그 등재 행이 사는 문서의 e2e 매핑 절은 자매 모델 `tbm_econ-opinion-monitor-scenario-e2e` 소관이고, **그 모델에 지금 열린 감지 task가 있다**(`rct_20260918-0005`, 21:53 claim, `assessing`) — 같은 표를 양쪽이 동시에 고치지 않도록 계획 단계에서 경계를 확정할 것.\n\n③ **운영(`cronworkflow-pipeline.yaml`:29 `suspend: true`) — 코드 슬라이스가 아니다.** analyze·aggregate는 배선만 됐을 뿐 프로덕션 스케줄로 한 번도 돌지 않아 Gold 0건이고, 서빙은 그래서 빈 데이터셋으로 뜬다. 켜는 것은 `econ-llm` Secret 선행 + `econ-ingestion-hourly` suspend 전환 순서가 있는 **비가역 운영 행위**이며 그 절차가 매니페스트 머리 주석에 있다. 자동 실행 대상으로 잡지 말고 **사람 결정**으로 분리할 것.\n\n권고 순서는 ①(결합 없음·전제 충족) → ②(자매 축 경계 확정 후) 이고, ③은 별도 인간 승인 트랙이다. 최종 절단은 planner 판단."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**슬라이스 5 — AC3.5「서술 대상별 추세 시계열 시각화」를 서빙+화면 한 벌로 착지시킨다.**\n\n*왜 이 절단인가.* 남은 미구현 4건(AC3.1·3.3·3.4·3.5) 중 AC3.5만 **전제가 방금 갖춰졌다** — #38이 집계를 DAG에 배선하며 `delta`·`spark`를 실값화해 서빙이 읽을 시계열 입력이 처음 생겼다. 나머지는 전제가 더 멀거나(AC3.1 정규화 공식 재설계) 산출 계층을 바꾼다(AC3.3 롤업). 또한 AC3.5는 `/api/trend` 스텁과 `/trend` Placeholder라는 **두 좌표가 한 화면으로 닫히는** 단위라 검증 가능한 최소 슬라이스다.\n\n*감지 인계와 다른 점(실측으로 정정).* 감지는 ①(AC3.5)을 「자매 축 표를 건드리지 않는다」고 넘겼으나 **그렇지 않다.** `doc-tracker.md` 구현 대기 표의 시나리오 5 행이 해제 신호로 `handlers.go ∋ stub: single-bucket skeleton data` **와** `App.tsx ∋ const BUILT = new Set([\"dash\", \"compare\"]);` 둘을 등재하고 있어, AC3.5 착지는 `check_scenario_mapping.py` 규칙6을 AC3.3과 **똑같이** 깨뜨린다. 더해 `design-tracker.md`의 `PAT-line-chart` 예외가 재검토 시점을 「`trend`가 `BUILT`에 들어올 때」로 문면에 못박고 있다. 그래서 이 슬라이스는 **구현 + 두 원장의 재판정을 한 PR로 묶는다** — 자매 모델 `tbm_econ-opinion-monitor-scenario-e2e`의 진행 중 task(`rct_20260918-0005`)가 구현 대기 해제를 명시적으로 범위 밖에 두고 「자매 모델의 구현 착지와 내 등재 표 갱신이 한 슬라이스로 묶여야 한다」고 인계했으므로 소유권 충돌이 아니라 규약대로의 인수다.\n\n*설계 결정 — 허위 컨트롤을 만들지 않는다.* 목업 `trend.html`은 시간/일/주 세그 컨트롤을 그리지만 AC3.3(롤업)은 이 슬라이스 범위 밖이라 누를 대상이 없다. 레포 자신의 선례(`design-tracker`의 `CMP-norm-toggle` 미구현 등재: 「누르면 아무것도 달라지지 않는 스위치를 다는 것은 허위 컨트롤이다」)를 따라 **버킷 단위는 API가 돌려준 basis를 되비추는 정적 표시**로 그리고, `CMP-seg`는 실제로 동작하는 **축 선택(KR/US/GLOBAL)**에 쓴다.\n\n**완료 기준(이 task의 성공 판정 범위).**\n1. `GET /api/trend?subject=&axis=`가 스텁 note 없이 **대상별 버킷 순 시계열**(선택 대상 + 상위 비교 대상 N, basis 포함)을 돌려준다.\n2. `/trend`가 Placeholder가 아닌 실화면으로 착지한다(`BUILT ∋ \"trend\"`, 라인 차트 + 대상 선택 + 상위 대상 비교).\n3. 게이트 3종(`check_scenario_mapping.py` · `check-mockup-render.py` · `check-journey-mockup.py`)이 tip에서 rc=0을 유지한다 — 해제된 등재는 래칫대로 걷고 카운터를 실측에 맞춘다.\n4. `make lint` · `make test`가 CI에서 green.\n\n**범위 밖(잔여 — 재감지가 새 task로 잇는다).** AC3.3 일·주 롤업(`BUCKET_UNIT = \"hour\"` 유지, 시나리오 3 등재 **무접촉**) · AC3.1 정규화 공식 재설계 · AC3.4/3.6/3.7/3.8이 기다리는 나머지 4화면(sentiment·fairness·trace·reprocess는 Placeholder 유지) · 시나리오 5 전용 e2e spec 저작(자매 모델의 하네스 몫 — 이 PR은 그 시나리오를 구현 대기에서 **공백**으로 옮겨 그 모델의 백로그에 얹는다) · `cronworkflow-pipeline.yaml`의 `suspend: true` 해제(비가역 운영 행위, 사람 결정 트랙).",
+          "riskLevel": "medium",
+          "plannedAt": "2026-09-18T22:20:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 `dlddu/economic-opinion-trend-monitor`를 main tip(`a62eae1`)에서 브랜치 `reconcile/econ-docs-impl-rct_20260918-0004`로 딴다. (브랜치명에 모델 조각을 넣는 이유: 한 레포를 6개 모델이 추적해 `reconcile/<rct_id>`만으로는 자매 모델 PR과 충돌한다.)",
+              "expectedOutcome": "브랜치가 main tip 위에 서고, 기존 자매 PR과 이름이 겹치지 않는다."
+            },
+            {
+              "seq": 2,
+              "action": "**서빙** — `go/internal/handlers/handlers.go`의 `trend` 핸들러를 실구현으로 교체한다. Gold `SubjectTrend`를 (axis, subject)별로 모아 `time_bucket` 오름차순 points 시계열을 만들고, `subject` 쿼리로 선택 대상을, 나머지는 최신 버킷 점유율 상위 N을 비교 계열로 내린다. 응답에 `basis`(time_bucket 범위·bucket_unit·normalized)를 싣고 `note` 스텁 문구를 제거한다. 단위가 섞인 Gold가 들어와도 한 계열에 다른 단위가 섞이지 않도록 **최신 버킷의 단위로 필터**한다(AC3.3이 나중에 롤업을 넣어도 계열이 오염되지 않게 하는 선행 방어).",
+              "expectedOutcome": "`/api/trend`가 대상별 다중 포인트 계열을 돌려주고, 응답 어디에도 `stub:` 문구가 없다."
+            },
+            {
+              "seq": 3,
+              "action": "**서빙 테스트** — `go/internal/handlers/handlers_test.go`에 trend 핸들러 테스트를 더한다: (a) 버킷 순서 정렬, (b) `subject` 필터, (c) 비교 계열 상위 N 선정, (d) 단위 혼재 시 최신 단위만 채택, (e) 빈 Gold에서 200 + 빈 계열.",
+              "expectedOutcome": "`go test ./...` green (로컬 Go 툴체인 부재 → CI에서 판정)."
+            },
+            {
+              "seq": 4,
+              "action": "**웹 타입·클라이언트** — `web/src/api/types.ts`에 `TrendPoint`·`TrendSeries`·`TrendResponse`를, `web/src/api/client.ts`에 `api.trend(axis, subject)`를 더한다(기존 `screen()` 범용 스텁 호출을 대체).",
+              "expectedOutcome": "타입이 Go 응답 JSON 태그와 1:1로 대응한다."
+            },
+            {
+              "seq": 5,
+              "action": "**화면** — `web/src/screens/Trend.tsx`를 신설한다. 목업 `docs/mockups/trend.html` 기준: SVG 라인 차트(`PAT-line-chart`, 그리드라인·축 레이블·계열 폴리라인·최신 포인트 강조) + 축 세그(`CMP-seg`, 실동작) + 선택 대상 점유율 메트릭(`CMP-metric`/`CMP-delta`) + 비교 대상 목록(`CMP-kv`) + 범례(`CMP-legend`) + `MapStrip`(`CMP-mapstrip`). 버킷 단위는 **정적 표시**(basis 되비추기)로 그리고 시간/일/주 전환 버튼은 만들지 않는다. 대상 선택은 비교 목록 행 클릭으로 동작시킨다.",
+              "expectedOutcome": "`/trend`가 실데이터를 그리고, 누르면 아무 일도 안 하는 컨트롤이 하나도 없다."
+            },
+            {
+              "seq": 6,
+              "action": "**라우팅** — `web/src/App.tsx`에서 `BUILT`에 `\"trend\"`를 더하고 `/trend` 라우트를 `Trend`로 연결한다.",
+              "expectedOutcome": "`/trend`가 Placeholder를 렌더하지 않는다."
+            },
+            {
+              "seq": 7,
+              "action": "**스타일** — `web/src/tokens/tokens.css`에 `/* ---- PAT-line-chart ---- */` 구획을 더한다. **규칙5 상한이 0/0/0이므로**, 목업 인라인 `<style>`과 **공통이 되는 선택자**(`.gridline`·`.axlab` 등)는 목업의 선언을 그대로 옮겨 값 충돌·한쪽 전용 선언을 0으로 유지한다.",
+              "expectedOutcome": "`python3 scripts/check-mockup-render.py .`가 R5 3종 모두 `0건 = 상한 0`으로 통과."
+            },
+            {
+              "seq": 8,
+              "action": "**웹 테스트** — `web/src/screens/Trend.test.tsx`를 더한다: 계열이 버킷 순으로 폴리라인 points에 반영되는지, 대상 선택이 강조 계열을 바꾸는지, 빈 응답에서 빈 상태 카피가 뜨는지.",
+              "expectedOutcome": "`npm run test` green (CI 판정)."
+            },
+            {
+              "seq": 9,
+              "action": "**원장 ① 디자인** — `docs/econ-opinion-monitor-design-tracker.md`의 「규칙 3·5 기계 판정」 절을 재판정한다: 「판정 범위」의 `BUILT`를 `dash`·`compare`·`trend`로 갱신, **`PAT-line-chart` 예외 행 삭제**(구현이 이름을 가지므로 래칫이 걷으라고 요구), `CMP-table` 행의 사유에서 「`trend` 귀속이라 범위 밖」 절을 실측에 맞게 다시 쓴다.",
+              "expectedOutcome": "`check-mockup-render.py`가 「허용목록에 있는데 실측에서는 해소된 항목」으로 실패하지 않고 R3가 통과."
+            },
+            {
+              "seq": 10,
+              "action": "**원장 ② e2e 매핑** — `docs/econ-opinion-monitor-doc-tracker.md`의 「구현 대기」 표에서 **시나리오 5 행만** 걷고(시나리오 3 행은 손대지 않는다), `gap-list` 마커 안에 `econ-opinion-monitor-test-aggregation-viz.md#시나리오 5`를 더한 뒤 본문 카운터를 실측에 맞춘다(구현 대기 2→1 · 1:1 대상 18→19 · 공백 9→10).",
+              "expectedOutcome": "`python3 tests/e2e/check_scenario_mapping.py`가 규칙 1~6 위반 0으로 통과하고 집계 3종이 일치."
+            },
+            {
+              "seq": 11,
+              "action": "**게이트 3종 로컬 재실행** — `check_scenario_mapping.py` · `check-mockup-render.py` · `check-journey-mockup.py`를 모두 rc=0으로 확인한 뒤 커밋·푸시한다(세 게이트는 stdlib 전용이라 Go/Node 툴체인 없이 로컬 판정 가능).",
+              "expectedOutcome": "세 게이트 전건 rc=0."
+            },
+            {
+              "seq": 12,
+              "action": "**PR 개설** — task id·gap 요약·완료 기준·범위 밖·검증 방법을 본문에 담아 draft가 아닌 일반 PR로 연다(머지는 하지 않는다). 자매 task `rct_20260918-0005`와 `doc-tracker.md`를 함께 건드리므로 **나중에 머지되는 쪽이 rebase 후 게이트 재실행** 필요함을 본문에 명시한다.",
+              "expectedOutcome": "PR URL 확보. CI(`required` 단일 체크 + CI 잡)가 돌기 시작한다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
