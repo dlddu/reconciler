@@ -286,7 +286,7 @@
   {
     "id": "rct_20260918-0001",
     "toBeModelId": "tbm_feature-doc-e2e-mock-policy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T07:38:42Z",
@@ -407,6 +407,44 @@
               "startedAt": "2026-09-18T12:17:30Z",
               "finishedAt": "2026-09-18T12:34:03Z",
               "log": "docs/doc-tracker.md 「e2e 매핑」 sc01-06 행이 두 arc(트리-404 · LLM-기원)를 기술하고 stale 문구('stub 경로 밖')가 교체됐음을 확인. 매핑 집계(파일 16·시나리오 36·예외 0·구현 대기 20) 불변. 머지: squash 커밋 270a091eca616dcfc4bd42e3c426f04cb3088036 (PR #55, 브랜치 삭제). main push run 35344854183 전 잡 녹색 — test (cargo) · test (kind e2e) · build & push image (ghcr) · pin deployment image → 배포 핀 커밋 2bf88ef. 실행 전 신선도 처리: 승인 시점 대비 main이 더 앞서 있어(#52 worker SIGTERM · #53 CI 분리 · #54 주석 패스) force-push 없이 main을 브랜치로 머지해 정렬한 뒤 진행했다. CI: https://github.com/dlddu/feature-doc/actions/runs/35344854183"
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "sites=27 files=13\na0d4d5acdd24a56499c85dca60f73f3527b51ae4304da84546bd2cb13f02ac93",
+          "verifiedAt": "2026-09-18T12:34:32Z",
+          "checks": [
+            {
+              "name": "(1) 트리거 충실성 — 단위 테스트 3단정",
+              "status": "passed",
+              "detail": "main push run 35344854183의 test (cargo) 잡에서 llm::tests::stub_llm_fail_trigger_fires_only_on_the_named_input ... ok. env 무설정→결정적 답 / env+needle 일치→'LLM rejected the request (429)' 문자열 정확 일치 / needle 불일치→결정적 답. cargo 스위트 전체 0 failed."
+            },
+            {
+              "name": "(1) 트리거 충실성 — sc01-06 LLM arc 실관측",
+              "status": "passed",
+              "detail": "tests/sc01-06-partial-retry.spec.ts:171 통과(7.1s). stub 모드에서 관측한 것: 단계 1-3 (fetch·cross_cutting·discovery_strategy) succeeded → 전략 읽기·승인으로 재큐 → feature_candidates가 'LLM rejected the request (429)' 사유로 실패 → 화면에 사유 표시 + pipeline-count '3 of 5' 유지 → '이 단계만 다시 시도'로 같은 사유 재실행('failed (reran)', startedAt 변화) → 선행 3단계 startedAt·detail 무이동 → acceptance_dependencies pending. needle 'end-user feature candidates'는 backend/src/feature_candidates.rs의 stage-4 프롬프트에만 실재(레포 전체 1건)라 단계 1-3 ask에는 발화하지 않음이 실행으로 확인됐다."
+            },
+            {
+              "name": "(2) 회귀 없음",
+              "status": "passed",
+              "detail": "같은 spec의 첫 선언(트리-404 arc, :77) 통과(4.6s). kind e2e 스위트 17개 전부 통과, 0 failed — 트리거 env가 임대 창 밖으로 새지 않았다. main push run도 동일 녹색."
+            },
+            {
+              "name": "(3) 원장 반영 — R1 행 해소가 실제 반영으로 기록됨",
+              "status": "passed",
+              "detail": "docs/e2e-mocking-policy.md: 차단 요인 원장에 R1 행이 없고 '현재 열린 행 없음'(열린 행 0) 표기. 사라진 방향이 실제 반영임이 ⑴ 충실도 보증 bullet(llm::stub_answer의 트리거 보증 — 일치 입력에서 real과 같은 429, 그 밖은 결정적 답) ⑵ 변동 이력 2026-09-18 / rct_20260918-0001 행으로 남아 있다 — 예고만 하고 조용히 사라지는 영구 면제가 아니다. docs/doc-tracker.md sc01-06 행도 두 arc로 갱신."
+            },
+            {
+              "name": "(머지 전 게이트) 모킹 지점 지문 불변",
+              "status": "passed",
+              "detail": "모델 as-is versionScript를 ⑴ 수정 적용 브랜치 ⑵ 머지 후 main에서 각각 실행 → 둘 다 sites=27 files=13 / a0d4d5acdd24a56499c85dca60f73f3527b51ae4304da84546bd2cb13f02ac93 — 등록 시점과 동일. diff 점검도 통과: 새 Mode::Stub 분기 파일 없음(llm.rs는 이미 등재 파일이라 테스트 모듈의 Mode::Stub 추가가 파일×토큰 유일 집합을 바꾸지 않음) · mock-exception: 신규 주석 없음 · FEATUREDOC_MODE 신규 발생 없음 · page.route/route.fulfill 계열 없음. 즉 불변식 1의 등재↔코드 1:1(12쌍)은 그대로다."
+            },
+            {
+              "name": "(정보성) 범위 밖 잔여 gap",
+              "status": "passed",
+              "detail": "모델 전체 to-be와의 잔여: 불변식 1의 미등재 모드 스위치 5쌍(deploy/e2e/kustomization.yaml · backend/src/config.rs · backend/src/bin/worker.rs)은 이 시도의 계획 범위 밖으로 명시돼 있고 손대지 않았다 — 문서의 stub mode 제거 계획 표가 계속 소유한다(재검토 2026-12-16). 차단 요인 원장은 이제 열린 행 0이라 다음 감지는 B1 지목 문맥·B2·B3만 본다. to-be blob 6ea05564 → d3732010, as-is 지문은 불변이므로 다음 감지는 to-be side 단독 이동으로 뜬다. 배포 반영: 핀 커밋 2bf88ef가 main에 있고 클러스터 Deployment는 관측 시점(12:34Z) 아직 직전 핀 7cdebc3 — GitOps 재수렴 대기이며 이 시도의 완료 기준이 아니다."
             }
           ]
         }
