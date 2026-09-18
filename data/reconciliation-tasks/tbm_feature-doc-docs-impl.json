@@ -3308,6 +3308,13 @@
           "pullRequestUrl": null,
           "preparedAt": "2026-09-18T16:14:00Z",
           "notes": "**PR 없음 — 이번 시도는 대상 레포에 바꿀 것이 없다.** 이 task 가 좁히려던 gap(슬라이스 5a: AC2.1·2.2·2.3)의 구현물은 이미 main 에 있다: PR #43(head `1c9a42d`)이 `6484e21` 로 squash 머지됐고(21파일), 차량 PR #49(head `c8b22c6`)는 `1c9a42d` 로 흡수돼 closed·merged 다. 실측 2026-09-18T16:0xZ — 둘 다 `state=closed`, `merged=true`. 따라서 스테이징할 변경이 없고, 「PR 을 위한 억지 변경」을 만들지 않는다. 실행은 읽기 전용 검증 액션이다.\n\n## 준비한 것 — 실행이 그대로 재생할 수 있는 관측 기준선(main `8dad2a6`, 2026-09-18T16:0xZ)\n| 관측 | 값 | 판정에서의 쓰임 |\n|---|---|---|\n| `tools/check-scenario-e2e.py` | rc=0 (통과) | 완료 기준 ① |\n| `tools/check-mockup-render.py` | rc=0 (원장 33행·공전 0 · 래칫 33/33 · 대조 보류 2/2 · `data-sample` 67건 오용 0) | 완료 기준 ① |\n| `tools/check-journey-mockup.py` | rc=0 (여정 6 · 목업 5 · 문서 24 · 링크 221) | 완료 기준 ① |\n| `docs/doc-tracker.md:141` | 미구현 AC **11건**(AC2.4~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7) — AC2.1~2.3 부재 | 완료 기준 ② |\n| `git merge-base --is-ancestor 6484e21 origin/main` | rc=0 · `git diff --name-only 6484e21~1 6484e21` = 21파일 | 완료 기준 ③ |\n| 시나리오 축 | 36 = 매핑 19 + 예외 0 + 구현 대기 16 + 미매핑 1 | 완료 기준 ④(항등식만, 숫자는 기대치) |\n| `Image` run 35365647687(head `8dad2a6`) | `build & push image (ghcr)` success · `pin deployment image (main only)` **failure** | 완료 기준 ⑤(사실 기록) |\n| 클러스터 | `featuredoc` 1/1 available, 이미지 `ghcr.io/dlddu/featuredoc:1c39ba25…`(핀 커밋 없음) | 완료 기준 ⑤(사실 기록) |\n\n**숫자는 통과 조건이 아니라 기대치다.** main 은 분 단위로 움직인다(계획 도중에도 #63·#59 가 착지했다). 판정은 게이트 rc 와 「AC2.1~2.3 이 미구현 목록에 없다」·「`6484e21` 이 main 의 조상이다」처럼 **main 이동에 무관한 술어**로만 한다 — 상수를 못박아 다음 main 이동에 만료되는 것이 이 task 가 다섯 번 죽은 방식이다.\n\n## 준비 단계에서 확인한 미해결 블로커(이 시도의 범위 밖)\n`pin deployment image (main only)` 잡은 #62 가 main 에 필수 상태 체크 `ci-gate` 를 건 뒤로 항상 실패한다 — 핀 봇의 `[skip ci]` 직접 push 는 `ci-gate` 체크를 만들지 않아 룰이 거부한다(`GH013`). #63 이 빌드·핀을 `image.yml` 로 분리했지만 핀 경로는 그대로라 `9733fd7`·`8dad2a6` 에서도 같은 실패가 재현됐다. **결과적으로 이 레포는 지금 「머지해도 배포가 착지하지 않는」 상태이며, 이는 5a 뿐 아니라 이후 모든 머지에 해당한다.** 이 축(`\\.github/workflows/` · 레포 룰셋)을 추적하는 to-be 모델이 현재 하나도 없어 reconciler 루프가 자동으로 잡지 못한다. 실행 단계는 이 사실을 `verification.checks` 에 남기기만 하고 **고치지 않는다** — 룰셋 변경·수동 핀 push 는 승인 범위 밖이다."
+        },
+        "review": {
+          "required": false,
+          "status": "approved",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-18T16:20:00Z",
+          "reason": "읽기 전용 검증 실행이라 불가역 지점이 없다 — 계획·지침이 커밋·push·PR·머지·kubectl·룰셋 변경을 전부 금지하고 쓰기는 reconciler 레코드에만 한다. 되돌릴 대상이 생기지 않으므로 롤백 절차 부재는 결함이 아니며, 완료 기준 ①~⑤가 게이트 rc와 main 이동에 무관한 술어로 명시돼 있다(riskLevel=low 타당).\n\n신선도 — 준비물은 PR이 아닌 직접 액션이고, 계획이 기대는 술어를 검토 시점 main에서 전부 재확인했다(2026-09-18T16:19Z, main `8b5b41e`, 계획 시점 `8dad2a6`에서 두 번 이동): PR #43 merged(`6484e21`)·#49 merged, `6484e21`이 main 조상(compare behind_by=0), 슬라이스 핵심 8파일 전부 실재(HTTP 200), `docs/doc-tracker.md:141` 미구현 AC 11건이며 AC2.1~2.3 부재. 상수 대신 main 이동 무관 술어를 쓴 설계가 실제로 두 번의 main 이동을 견뎠다.\n\n범위 — 배포 착지를 완료 기준에서 뺀 것은 임의 축소가 아니라 모델 정의 복원이다. 정의가 `deploy/`를 as-is 범위에서 명시적으로 제외하고 as-is 버전 스크립트도 `backend/`+`frontend/` 트리 해시뿐이라, 직전 시도가 자기에게 얹은 그 기준이 경계 밖이었다. 핀 잡 고장은 삭제되지 않고 `verification.checks`에 소유 모델 없는 미해결 블로커로 남는다.\n\n잔여 AC 11건 인계 경로도 실재를 확인했다 — 모델 `lastObservedVersion`(12:49:27Z 관측)이 현재 main의 backend `fb28f021`·frontend `5abed5b0`·docs `4c1d3f39`와 전부 다르므로 재감지가 새 task를 연다. 잔여를 백로그로 빼는 것이 아니라 루프 안에 남기는 처리다."
         }
       }
     ],
@@ -3319,7 +3326,7 @@
       "summarizedAt": "2026-09-02T13:09:26Z",
       "toBe": "### to-be — 제품 문서 (`docs/`) @ `576db21`, 트리 `d9cdc790` → **`5788aff3`**\n\n변경 2파일: `docs/doc-tracker.md`(+50/−19) · `docs/mockups/JRN-discover-features.html`(+14/−13).\n\n**의도된 동작의 SSOT 는 움직이지 않았다** — `docs/prd` 트리 `bffbe662` **불변**(AC **24개** 그대로,\n신설·삭제 0) · `docs/test/` 불변 · `docs/values.md` 불변 · `docs/user-journey` 트리 `e9b788c5` 불변 ·\n`docs/design-system.md` `c7499184` 불변. 즉 **to-be 는 늘지 않았고 gap 은 as-is 가 올라와서 줄었다.**\n\n`docs/doc-tracker.md` 갱신(실측 대조 완료):\n- 「구현 수렴 로드맵」 미구현 15 → **14**, 4b-2 ✅, **다음 권장 슬라이스 = 5**\n- 「e2e 매핑」 매핑 9 → **10**, 공백 15 → **14**, 항등식 `24 − 0 = 10 + 14` ✅\n- 「목업↔구현 대조 범위」 활성 4 → **5**(`FeatureCandidates`/S07 태생 활성)\n- 「알려진 목업↔구현 편차」 원장 36 → **43행**, 상한 36 → **43**\n- 「변경 이력」 4b-2 행 1개 추가\n\n`docs/mockups/JRN-discover-features.html` 은 `#STP-sift-candidates` 후보 카드의 예시 데이터에\n`data-sample` 13건을 붙이고 `prev-reason` 의 인용구를 잎 요소로 분리한 것뿐이다 — **단계 앵커\n5개·`data-screens`·`data-goto` 집합이 부모와 md5 동일**(실측).\n\n**to-be 가 요구하는 상태**(모델 정의): ① `docs/` 의 **모든 AC 가 구현**되고 대응 테스트 문서대로\n검증 가능 ② UI 가 목업·와이어프레임·디자인 시스템과 일치 ③ 문서 없는 구현 없음.\n\n**문서가 스스로 남긴 미해소 항목**: 「다음 단계 권장」 **11번**(등록 화면의 Google 선택지 —\n`CredentialsSetup.tsx` `PROVIDERS`, 해소에 목업 `JRN-connect-repo.html#STP-register-llm-key` 개정이\n동반돼야 해 자매 모델 소관)은 이번 트리거로도 그대로다. 10번은 앞 슬라이스에서 해소 표기."
     },
-    "status": "reviewing",
+    "status": "approved",
     "toBeModelId": "tbm_feature-doc-docs-impl",
     "trigger": {
       "asIs": {
@@ -3336,7 +3343,7 @@
         "previousVersion": "d9cdc790cd47a3e5ab0315d8d18814b1d4afd82a"
       }
     },
-    "updatedAt": "2026-09-18T16:18:05Z"
+    "updatedAt": "2026-09-18T16:20:00Z"
   },
   {
     "assessment": {
