@@ -329,6 +329,62 @@
       "reason": "actionRequired=true — **직전 판정 패스가 \"유지\"로 확정한 편집 지점 가드 3곳 중 2곳이 이번 트리거로 거짓이 됐고, 그 상태를 되돌릴 재감지 경로가 스스로 발화하지 않는다.** 근거 다섯.\n\n**⑴ 귀속이 단독이고 델타가 한 블록이다.** 부모 `46c8f24`에서 versionScript 재실행 = 저장 baseline과 바이트 동일(`lines=748 files=71 / 7f86d9e8…`), 그 앞 6지점도 전건 재현 ⇒ 이동은 `ce54a57`(#35) 단독. 지문 줄 집합의 대칭차집합은 `deploy/base/deployment.yaml` −2/+4 하나뿐이고 산술이 닫힌다(748−2+4=750, 파일 71 불변). 자매 모델 간섭 0.\n\n**⑵ 트리거가 원본을 옮겼다 — 되풀이된 주석이 \"조용히 거짓이 되는\" definition의 그 자리.** #35는 핀 메커니즘을 **main 되커밋 → `deploy` 브랜치 force-push(Flux가 `deploy` 추적)**로 바꾸며 원본 둘을 갱신했다: 코드 `.github/workflows/image.yml`(+34/−20)와 저장소 문서 `README.md` 「운영 고정(`pin` job)」(+6/−3, \"main은 ruleset으로 보호되어 되커밋하지 않고 … main에 남은 태그는 운영과 무관\"). 그러나 그 메커니즘을 되풀이하던 범위 내 주석 **세 곳 중 하나만** 따라 움직였다.\n\n**⑶ 남은 둘이 거짓임을 브랜치 실측으로 기계 증명했다.** `refs/heads/deploy` = `08d0d0c`(16:27:48Z, 트레일러 `Source-Commit: ce54a571…`)의 `deploy/` 이미지 태그 3곳 전부 `ce54a571…`인 반면, **main의 같은 3곳은 `b5a91d6…`에 동결**(`deployment.yaml:22`, `workflow-template.yaml:47,96`).\n  - `deploy/batch/workflow-template.yaml:13-15` \"Both `image:` lines below are **pinned to a main commit SHA by CI's `pin` job** … do not edit the tags by hand\" → CI는 더 이상 main의 그 줄을 쓰지 않는다.\n  - `deploy/base/kustomization.yaml:6-7` \"(**where CI's `pin` job writes the main SHA**)\" → 동일한 이유로 거짓.\n  - 반면 `deploy/base/deployment.yaml:16-19`는 이번에 \"The value left on main is not what production runs\"로 정정됐다 ⇒ **같은 디렉터리 안에서 세 자리가 서로 모순**이다.\n\n**⑷ 이것은 정확성 축(판정 표면 밖)이 아니라 중복 축이다 — definition 문면이 이 경로를 직접 연다.** 두 문장은 복원 경로 ①(코드 `image.yml` — 주석이 그 파일명을 스스로 지목한다)과 ②(저장소 문서 README — `deploy/batch/workflow-template.yaml`을 **이름으로** 열거한다) 양쪽에서 복원 가능한 내용의 재진술이다. definition은 정확성을 표면에서 빼면서도 **\"되풀이된 주석이 낡아 틀려 있으면 그것은 제거 근거를 강화한다\"**고 명시한다. 그리고 유지 근거였던 타이브레이크 **\"애매하면 남긴다\"는 여기서 성립하지 않는다** — 그 규칙은 *유일한* 지식을 지키는 비대칭 비용에 근거하는데, 이 지식은 유일하지 않고(README·워크플로가 더 정확히 담는다) 현재 틀렸다. 즉 definition의 1차 규칙(\"복원 가능하면 → 주석을 지운다\")이 그대로 적용되는 자리다.\n\n**⑸ 직전 판정의 명시 전제가 깨졌고(선례가 아니라 재측정 대상), 자동 회복 경로가 없다.** `passes/2026-09-18-initial-pass.md:65`가 `deployment.yaml`·`workflow-template.yaml` 두 파일을 **한 줄로 묶어** \"핀 태그는 CI가 쓴다 — 손으로 고치지 않는다\"는 가드로서 유지 판정했고, `ledger.md:26·27·33`이 세 파일 모두 제거 0으로 적는다. 그 전제가 `ce54a57`에서 거짓이 됐다. **재감지 경로 검산**: 이 잘못된 두 주석은 누가 고치기 전에는 글자가 변하지 않으므로 as-is 지문이 **스스로 움직이지 않고**, to-be(`docs/comment-policy/` tree)도 다음 패스가 열려야 움직인다 ⇒ 이 상태를 가리키는 트리거는 존재하지 않는다(다른 주석 변경으로 모델이 깨어나더라도 이 자리를 다시 발견할 보장은 없다 — 실제로 `rct_20260918-0003`까지는 아직 참이어서 보이지 않았다). **소유자 부재 확인**: econ 함대의 열린 task 중 주석 축은 없고, `tbm_econ-opinion-monitor-docs-impl rct_20260918-0003`(action_required)은 문서↔구현 축이며 `deploy/`를 as-is에 담되 주석 문면을 판정하지 않는다.\n\n**작업 범위(planner 인계)**\n1. **세 자리를 한 규약으로 정리한다.** `deploy/batch/workflow-template.yaml:13-15`와 `deploy/base/kustomization.yaml:6-7`의 \"CI가 main에 핀을 쓴다\" 재진술을 제거하거나(권장 — README·`image.yml`이 더 정확하게 담는다) `deployment.yaml`과 동일한 사실로 정정한다. 남길 경우에도 **복원 불가능한 부분만** 남긴다: `kustomization.yaml`의 \"base에 `images:` 트랜스포머를 두지 않는 이유(프리뷰·e2e 재태깅과의 중첩)\"와 `workflow-template.yaml`의 엔트리포인트·`imagePullSecrets` 근거는 이번 건과 무관하게 유지 대상이다.\n2. **판단 분기(내가 단정하지 않는다)**: 이번에 새로 들어온 `deployment.yaml` 4줄 중 앞 3줄(`deploy` 브랜치 발행 메커니즘 서술)은 그 자체가 README 「운영 고정」 절의 재진술에 가깝다. 반대로 같은 블록의 \"불변 태그 ⇒ IfNotPresent\"·\"프리뷰·e2e는 `images:`로 재태깅\"은 복원 불가능한 근거다. **\"main의 값은 운영값이 아니다\"라는 경고 한 줄만 남기고 메커니즘 설명은 README에 위임**하는 안을 우선 검토할 것.\n3. **원장 갱신은 같은 PR에서**: `ledger.md`의 세 행(26·27·33)이 전부 이번 판정으로 바뀐다. 원장 규약상 이것은 \"다음 패스\"의 일이므로 `passes/`에 새 파일을 만들지 말고 **기존 패스 행에 절을 추가**하는 형태를 따를 것(`rct_20260918-0003` 인계와 동일). 이참에 원장이 아직 덮지 못한 11파일(`tests/e2e/k8s/batch/` 5 · `tests/e2e/lib/` 2 · `tests/e2e/specs/ingestion-*` 4 + 재작성된 `run.sh`)을 함께 판정 범위에 넣을지는 planner 재량이다(범위가 커지면 분리 슬라이스 권장).\n4. **실행 환경 제약(실측)**: 이 호스트의 App installation 토큰에는 `checks`/`actions` 권한이 없어 **\"CI 전건 초록 확인\"을 실행 게이트로 적으면 그 지점에서 반드시 실패한다**(econ `rct_20260918-0002` executor가 같은 자리에서 `failed`). 재현 가능한 것은 순수 python 게이트뿐이다. 다만 #35 이후 `required` 집계 잡이 commit status를 남기므로 `GET /commits/<sha>/status`로 읽히는지 확인할 여지가 생겼다.\n\n**부수 관측(조치 불요, 기록)**: #35는 자매 task `rct_20260918-0003`(docs-impl)이 16:17Z에 \"선행 차단 요인 — 이미지 핀 루프가 끊겼다(GH013, `deploy/`가 `b5a91d6`에 동결)\"로 올린 블로커를 **레포 스스로 해소한 것**이다(16:27:48Z `deploy` 브랜치 발행 성공). 그 task의 planner는 배포 사실을 트리거 SHA가 아니라 실행 시점의 main/`deploy`에서 다시 읽어야 한다. 또한 그 모델의 완료 기준에 \"`deploy/` 핀 이동\"을 수렴 신호로 쓰면 **main에서는 영영 충족되지 않는다** — 이제 핀은 `deploy` 브랜치에만 착지한다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-18T16:43:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "세 자리를 **같은 규약 하나**로 정리한다 — 「가드는 남기고, 메커니즘 서술은 지운다」. 이번 트리거가 드러낸 것은 '주석이 낡았다'가 아니라 **핀 메커니즘을 되풀이한 주석은 메커니즘이 바뀔 때마다 조용히 거짓이 된다**는 구조다. 그래서 거짓이 된 두 줄을 새 메커니즘으로 '재동기화'하지 않는다 — 그건 같은 덫을 다시 장전하는 것이고, 복원 경로 ①(`.github/workflows/image.yml`)·②(README 「운영 고정(`pin` job)」, 세 파일을 이름으로 열거한다)가 이미 더 정확하게 담은 내용을 세 번째로 되풀이하는 것이다. 대신 세 자리 모두에서 메커니즘 서술(어디에 커밋되는지·무엇을 Flux가 추적하는지·어느 값이 운영값인지)을 지우고, 정책 SSOT가 유지 대상으로 명시한 **편집 지점 가드**(`docs/comment-policy/README.md` 「유지 대상 > 복원 불가능한 지식」 마지막 항목)만 **메커니즘 비의존 문면**으로 남긴다(\"CI가 이 태그를 관리한다 — 손으로 고치지 않는다\" + README 절 이름). 이렇게 하면 다음에 핀 경로가 또 바뀌어도 세 주석은 참으로 남는다. 복원 불가능해 이미 유지 판정을 받은 근거(불변 태그 ⇒ IfNotPresent가 옳다, 프리뷰·e2e는 `images:`로 재태깅, base에 `images:` 트랜스포머를 두지 않는 이유)는 그대로 둔다.\n\n**이 시도의 범위(완료 기준)** — 아래 넷을 모두 만족하면 이 task는 성공이다.\n(1) 범위 내 주석 3자리(`deploy/base/deployment.yaml` 핀 블록, `deploy/base/kustomization.yaml:5-9`의 괄호절, `deploy/batch/workflow-template.yaml:13-15`)에 **핀 메커니즘을 되풀이하는 문장이 한 줄도 남지 않는다** — 기계 확인: 범위(`contracts go python/packages web/src tests scripts deploy Makefile`)에 `pin` job 메커니즘을 서술하는 주석이 0건.\n(2) 세 자리의 남은 문면이 **현 main에서 실측상 참**이다(거짓 주석 0건).\n(3) 정책 절차(`docs/comment-policy/README.md` 「판정 절차」 3)대로 `ledger.md`의 해당 3행이 이 패스 기준으로 갱신되고, 판정 상세가 `passes/2026-09-18-pin-guard-pass.md`로 남는다.\n(4) 변경이 PR로 스테이징되어 단일 필수 체크 `required`가 green.\n\n**범위 밖(후속으로 남긴다)**: ⓐ `#36`(`2579722`)이 새로 들인 33줄/1파일(`scripts/journey-scenarios/JRN-spike-verification.js`)의 복원 가능성 판정 — 이번 트리거의 귀속(`ce54a57`) 밖이고, 원장 규약상 다음 패스의 몫이다. ⓑ 원장이 아직 덮지 않은 나머지 파일들. ⓒ Python docstring 본문·줄 끝 주석(지문 사각지대). ⓓ 자매 task `rct_20260918-0003`의 블로커 해소 사실 재확인 — 그 task의 planner 몫.\n\n**기준점(실측, 2026-09-18T17:1xZ)**: main tip `2579722`, 지문 `lines=783 files=72` / `a96a7f6e958b7dc1ad6783f68de9c1ba81977bd581af48c03a09ab71817670b8`. detector가 판정한 `ce54a571`(750/71) 이후 `#36`이 착지해 풀이 커졌다 — **검증은 지문 값 일치가 아니라 위 (1)~(4)로 한다.** 예상 지문 이동은 `783 → 780`(deployment.yaml 11→9, workflow-template.yaml 36→35, kustomization.yaml 9→9), 파일 수 72 불변.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-18T17:20:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "main tip `2579722`에서 브랜치 `reconcile/comment-redundancy-rct_20260918-0004`를 딴다(task id는 모델 안에서만 유일하고 이 레포는 6개 모델이 추적하므로 브랜치 이름에 모델 조각을 넣는다). 착수 전 세 자리의 현재 문면과 파일별 주석 줄 수(11 / 9 / 36)를 모델 versionScript로 재측정해 기준점을 고정한다.",
+              "expectedOutcome": "브랜치가 `2579722`에서 갈라지고, 재측정값이 `lines=783 files=72 / a96a7f6e…`와 일치한다(불일치면 main이 또 움직인 것 — 기준점을 다시 적고 진행)."
+            },
+            {
+              "seq": 2,
+              "action": "`deploy/base/deployment.yaml:16-21`의 6줄을 4줄로 줄인다. 지운다: `deploy` 브랜치 발행 메커니즘 3.5줄(\"The production value lives on the `deploy` branch … The value left on main is not what production runs\"). 남긴다(문면 유지): \"The tag is immutable, so the default imagePullPolicy (IfNotPresent) is correct. Previews and e2e retag it by image name via `images:`.\" 더한다(가드, 메커니즘 비의존): \"CI owns this tag — do not edit it by hand. Which commit production actually runs is README 「운영 고정(`pin` job)」.\"",
+              "expectedOutcome": "이 파일의 범위 내 주석 11 → 9줄. `deploy`·`Flux`·`main commit SHA`를 언급하는 주석 0건. `image:` 값(`b5a91d6…`)은 **한 글자도 건드리지 않는다**."
+            },
+            {
+              "seq": 3,
+              "action": "`deploy/base/kustomization.yaml:5-9`에서 거짓이 된 괄호절 `(where CI's \\`pin\\` job writes the main SHA)`만 삭제하고 문장을 5줄로 다시 흘린다. 나머지(base에 `images:` 트랜스포머를 두지 않는 이유, 프리뷰·e2e 재태깅과의 중첩)는 복원 불가능 근거이므로 문면 그대로 유지한다.",
+              "expectedOutcome": "이 파일의 범위 내 주석 9 → 9줄(수 불변, 문면만 정정). \"the single source of the tag is the `image:` line in deployment.yaml\"은 남고, 그 태그를 누가 쓰는지에 대한 서술은 사라진다."
+            },
+            {
+              "seq": 4,
+              "action": "`deploy/batch/workflow-template.yaml:13-15`의 3줄을 2줄 가드로 교체한다. 지운다: \"pinned to a main commit SHA by CI's `pin` job (.github/workflows/image.yml)\". 남긴다: \"in step with the serving image in deploy/base — do not edit the tags by hand\"의 취지 + README 절 이름 포인터.",
+              "expectedOutcome": "이 파일의 범위 내 주석 36 → 35줄. 두 `image:` 값(47·96행)은 건드리지 않는다. 같은 파일의 나머지 유지 주석(엔트리포인트 2개 근거, imagePullSecrets 선언 위치, exit 2 재시도 금지)은 무변화."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/comment-policy/README.md` 「유지 대상 > 복원 불가능한 지식」의 편집 지점 가드 **예시 문장**을 메커니즘 비의존 문면으로 고친다: \"이 태그는 CI가 다시 쓴다 — 손으로 고치지 않는다\" → \"이 태그는 CI가 관리한다 — 손으로 고치지 않는다\". 이 한 문장이 지금 고치는 바로 그 덫(메커니즘을 담은 가드)을 SSOT가 모범으로 가르치고 있고, `#35` 이후 실측상 거짓이기 때문이다. 정책의 판정 규칙 자체는 바꾸지 않는다.",
+              "expectedOutcome": "정책 본문의 예시가 이 패스의 판정과 일치한다. 표·절 구조·다른 문장은 무변화(diff 1줄)."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/comment-policy/ledger.md`를 갱신한다. ⑴ 「패스 이력」에 행 추가: `2026-09-18 | pin-guard-pass | 2579722 | 783 | 3 | 780 | 72 → 72`. ⑵ 「파일별 원장」 제목의 `(2026-09-18 initial-pass 기준)` 고정 표기를 걷고, 「읽는 법」에 \"각 행은 그 파일을 **마지막으로 판정한 패스** 기준이며, initial-pass가 아니면 판정 칸 머리에 패스 이름을 적는다\" 한 줄을 더한다. ⑶ 세 파일 행을 이 패스 기준으로 갱신한다 — `deploy/base/deployment.yaml` 11/2/9, `deploy/base/kustomization.yaml` 9/0/9(문면 정정), `deploy/batch/workflow-template.yaml` 36/1/35. 각 판정 칸에 제거 근거(복원 경로 ①②)와 유지 항목을 적는다.",
+              "expectedOutcome": "원장이 세 파일에 대해 현행 실측과 맞는다. 다른 행·다른 파일은 무변화."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/comment-policy/passes/2026-09-18-pin-guard-pass.md`를 새로 쓴다. initial-pass 문서의 절 구성을 따르되 **표적 재판정**(전수 아님)임을 머리에 명시한다: 기준 커밋 `2579722`, 대상 3파일, 촉발 `#35`(`ce54a57`), 추적 `rct_20260918-0004`. 절: 「무엇이 바뀌었나」(메커니즘 전환과 갱신 누락 2곳), 「제거 — 복원 경로별 근거」(①`.github/workflows/image.yml` ②README 「운영 고정」), 「유지 — 가드를 메커니즘 비의존으로 다시 쓴 이유」, 「판단이 갈려 남긴 것」(deployment.yaml의 IfNotPresent 근거를 가드와 한 덩어리로 둘지), 「범위 밖(후속)」(위 ⓐ~ⓓ).",
+              "expectedOutcome": "판정 상세가 남아, 다음 패스가 '왜 이 세 자리가 이 모양인지'를 문서에서 복원할 수 있다."
+            },
+            {
+              "seq": 8,
+              "action": "지문을 재측정하고(모델 asIs versionScript 그대로), 범위 내에 핀 메커니즘 서술 주석이 0건인지 grep으로 확인한다: `git grep -nE \"pin\\` job|pinned to a main commit|writes the main\" -- contracts go python/packages web/src tests scripts deploy Makefile`.",
+              "expectedOutcome": "지문 `lines=780 files=72`, grep 결과 0건. (줄 수가 예상과 다르면 되돌아가 어느 자리가 어긋났는지 확인 — 값 자체가 합격 조건은 아니다.)"
+            },
+            {
+              "seq": 9,
+              "action": "커밋·푸시하고 PR을 연다(머지하지 않는다). 본문에 task id·gap 요약·판정 규약·검증 방법·범위 밖 목록을 적는다.",
+              "expectedOutcome": "PR이 열리고 단일 필수 체크 `required`(checks.yml)가 green. `image.yml`은 PR head SHA 태그만 발행하고 매니페스트는 건드리지 않는다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
