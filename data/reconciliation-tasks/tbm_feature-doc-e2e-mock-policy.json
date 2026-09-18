@@ -713,6 +713,51 @@
           ],
           "verifiedAt": "2026-09-18T16:47:00Z"
         }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "**직전 시도는 계획도 준비물도 옳았고, 오직 「착지 방법」 하나에서 막혔다 — 그 한 줄만 고친다: merge commit / rebase-merge 금지·squash 금지였던 지침을 **squash 머지**로 교체하고, 롤백을 그 방식에 맞게 다시 정의한다.**\n\n**무엇이 실패했나 (재계획 입력).** 직전 실행은 지침 §1~§3(신선도·CI 판독·지문 대조)을 전부 기대값대로 통과한 뒤 §5(머지)에서 `PUT /pulls/60/merge {\"merge_method\":\"merge\"}` → **HTTP 405 `Merge commits are not allowed on this repository.`** 로 멈췄다. 레포 설정 실측이 원인을 그대로 설명한다: `allow_merge_commit:false` · `allow_rebase_merge:false` · `allow_squash_merge:true`. **지침이 허용한 두 방식이 레포에서 둘 다 꺼져 있고, 켜져 있는 유일한 방식을 지침이 두 번 명시 금지했다** — 즉 직전 계획은 이 레포에서 실행 불가능한 착지 경로를 지정했다. 실행자는 승인 범위를 넘지 않으려 squash·설정 변경·main 직접 push 어느 것도 하지 않고 멈췄고, 그 판단은 옳다(불가역 지점 미진입, 부작용 0).\n\n**squash 금지의 근거였던 전제가 애초에 성립하지 않았다.** 직전 지침 §7이 squash를 금지한 유일한 이유는 「커밋 3개를 보존해야 롤백이 *커밋 2만 revert*로 끝난다」였다. 그러나 이 레포는 **줄곧 squash로만 착지해 왔다** — `git rev-list --merges --count origin/main` = **0**, 최근 12커밋 전부 단일 부모(PR 번호가 제목에 붙은 squash 형식). 애초에 「커밋 3개가 main에 남는」 상태가 이 레포에서 발생한 적이 없으므로, 그 롤백 성질은 처음부터 가질 수 없는 것이었다. 설정을 바꿔 merge commit을 켜는 길은 ⑴ 이 App에 `administration` 권한이 없고(`/branches/main/protection` 403 실측) ⑵ 정합성 작업이 대상 레포의 협업 규약을 바꾸는 것은 gap을 넘는 범위 확장이라 택하지 않는다. **남는 정답은 squash 하나뿐이고, 그것이 이 레포의 정상 경로다.**\n\n**대안 저울질** — ⓐ *squash 머지*(채택): 레포가 허용하는 유일한 방식, 이 레포의 관행과 일치, PR 단위 revert로 롤백 가능. ⓑ *레포 설정 변경 후 merge commit*: 권한 없음 + 범위 확장. ⓒ *브랜치를 커밋 3개로 쪼개 3번 PR*: 같은 파일(`config.rs`·`worker.rs`·정책 문서)을 연쇄로 건드려 매 단계 CI 재대기 + 중간 상태가 컴파일되지 않을 수 있고(커밋 1만으로는 `FEATUREDOC_MODE` 경로가 남는다), 얻는 것은 이미 CI green인 준비물의 해체뿐이다. ⓓ *main 직접 push*: 필수 체크 `ci-gate`가 막고, 검토받은 경로가 아니다.\n\n**롤백은 이렇게 바뀐다(가역성은 유지된다).** squash 후 main에는 커밋 **1개**가 남으므로 롤백은 「커밋 2만 revert」가 아니라 **그 squash 커밋 1개를 revert하는 PR**이다. main이 `ci-gate` 필수 체크로 보호되므로 revert도 PR로 착지한다. 세 커밋은 원래 **하나의 일관된 단위**(경계별 재배선 → 전역 스위치 제거 → #43이 들여온 2쌍 등재)이고 중간 상태만 떼어내면 불변식 1이 닫히지 않으므로, 통째 revert가 오히려 의미적으로 정확하다 — 되돌리면 main은 머지 직전과 **트리 단위로 동일**해진다. 세분 롤백을 잃는 것은 **의도적으로 수용한 교환**이며, 그 대가로 실행 가능한 착지 경로를 얻는다.\n\n**준비물은 다시 만들지 않는다 — 이번 재계획에서 여전히 유효함을 실측했다.** PR #60 `open · merged:false · head c0330ea`(직전 시도 이후 한 손도 닿지 않음) · `mergeable:true · mergeable_state:clean`. head `c0330ea`의 CI run `35366075366` `conclusion:success`. 그리고 **base가 `8dad2a6`인 채 main은 `6bc37f9`까지 3커밋 더 움직였으므로**, 현재 main에 시험 머지해 다시 쟀다: **충돌 0**이고 결과 트리의 지문이 `sites=25 files=11` / `fef43512ffcdf9989f0aff4c5f2049e5ad9a94393079514d7a318368a693b7ac`로 **기대값과 바이트 일치**, 코드 지점 **14쌍 == 허용목록 14행**(양방향, 미등재 0 · 고아 0), `FEATUREDOC_MODE` 리터럴 **0건**, 정책 문서 blob `e09e58d`. squash 머지의 결과 트리는 이 시험 머지 트리와 같으므로 **기대값은 그대로 유효하다.**\n\n**이 시도의 범위(완료 기준)** — 불변식 1을 **main 기준 실측으로** 닫는다:\n1. main의 as-is 지문이 `sites=29 files=14`/`56e8401…` → **`sites=25 files=11` / `fef43512ffcdf9989f0aff4c5f2049e5ad9a94393079514d7a318368a693b7ac`** 로 이동.\n2. main에서 코드 지점(표기 주석 제외) **14쌍 == 허용목록 14행**, 파일×토큰 단위 양방향 일치(미등재 0 · 고아 0).\n3. main에서 `FEATUREDOC_MODE` 리터럴이 코드·배포·e2e **0건**(정책 문서의 이력 서술은 `.md`라 지문 대상 밖).\n4. to-be 정책 문서 blob이 `d3732010…`에서 이동(= 코드만 바뀌고 문서가 유실돼 고아 등재로 뒤집힌 상태가 아님).\n5. 머지 전 게이트로 PR CI 필수 체크 `ci-gate`가 success.\n\n**범위 밖**(지침 §8에 목록): 지문 패턴에 새 `FEATUREDOC_DOUBLE_*` env를 넣는 모델 개정, 이 계획 이후 main이 새로 들여오는 미등재 지점, EXT/LLM 카테고리 재판정, 불변식 2 원장(이번 감지에서 전항 통과).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "**[신선도]** PR #60의 현재 상태를 다시 읽는다 — `GET /repos/dlddu/feature-doc/pulls/60` 으로 `state`·`merged`·`head.sha`·`mergeable`·`mergeable_state`. 그리고 `GET /repos/dlddu/feature-doc` 으로 `allow_squash_merge`·`allow_merge_commit`·`allow_rebase_merge`를 확인해 이번 계획이 전제한 「squash만 켜짐」이 여전히 참인지 본다. `mergeable`이 `null`이면 GitHub이 비동기 계산 중이므로 몇 초 뒤 재조회한다.",
+              "expectedOutcome": "`state:open` · `merged:false` · `head.sha == c0330ead1b3e91692c3aa6c123080bcf45777be3` · `mergeable:true` · `mergeable_state: clean`(또는 `unstable`). 레포 설정은 `allow_squash_merge:true`, 나머지 둘 false. head가 다르면 다른 손이 브랜치를 건드린 것이므로 중단하고 `failed`로 닫는다."
+            },
+            {
+              "seq": 2,
+              "action": "**[CI 판독]** `GET /repos/dlddu/feature-doc/actions/runs?head_sha=<head>` → `GET /actions/runs/<run_id>/jobs` 로 PR head의 CI 결론을 읽는다. 이 호스트에 cargo·docker·kind·kubectl·node가 없어 테스트를 직접 돌릴 수 없으므로, 이것이 테스트 통과의 1차 근거다. 토큰 권한 요청에 `checks`·`actions`를 넣지 말 것(App에 없어 422로 발급 자체가 실패한다).",
+              "expectedOutcome": "워크플로 `CI`의 `conclusion: success`, 잡 단위로 `test (cargo)`·`test (kind e2e)`·`docs-*` 3종·`push / build & push image (ghcr)` success, `push / pin deployment image (main only)`는 PR이라 skipped, **필수 체크 `ci-gate` success**. 계획 시점 실측은 run `35366075366` 전량 success. `ci-gate`가 failure면 머지 금지 → `failed`로 닫아 재계획으로 보낸다."
+            },
+            {
+              "seq": 3,
+              "action": "**[머지 전 지문 대조 — 현재 main에 시험 머지]** feature-doc을 클론해 `origin/main`에서 분기한 임시 브랜치에 PR head를 로컬 머지하고(푸시하지 않는다), 그 트리에서 모델 정의의 as-is `versionScript` 원문을 실행한다. squash 머지의 결과 트리는 이 시험 머지 트리와 같으므로, 이것이 「머지하면 무엇이 되는가」의 사전 확인이다. 이어서 코드 지점 목록(표기 주석 제외)과 정책 문서 허용목록 표를 파일×토큰 단위로 대조한다.",
+              "expectedOutcome": "로컬 머지 **충돌 0**. 지문 `sites=25 files=11` / `fef43512ffcdf9989f0aff4c5f2049e5ad9a94393079514d7a318368a693b7ac`. 코드 지점 **14줄** == 허용목록 **14행**(양방향 일치, 미등재 0 · 고아 0). `FEATUREDOC_MODE` 리터럴 0건. 정책 문서 blob `e09e58d52f15196869690668651eb22b26462843`. 충돌이 나거나 지문이 어긋나면 **머지하지 않고** `failed`로 닫는다(봉합 금지)."
+            },
+            {
+              "seq": 4,
+              "action": "**[머지 — squash]** `PUT /repos/dlddu/feature-doc/pulls/60/merge` 에 `{\"merge_method\":\"squash\", \"commit_title\":\"...\", \"commit_message\":\"...\"}` 를 보낸다. 레포 기본값이 `squash_merge_commit_message: BLANK`이라 본문을 주지 않으면 세 커밋의 제목이 통째로 사라지므로, **커밋 본문에 세 커밋 제목과 task id를 명시해 감사 이력을 보존한다**(지침 §5에 문안 제시). 이것이 이 계획의 **불가역 지점**이다.",
+              "expectedOutcome": "HTTP 200, `merged: true`, `sha`(= main에 새로 생긴 squash 커밋) 반환. 405가 다시 나면 레포 설정이 또 바뀐 것이므로 즉시 중단하고 `failed`로 닫는다(다른 방식으로 우회하지 않는다)."
+            },
+            {
+              "seq": 5,
+              "action": "**[머지 후 재측정 — 완료 판정의 본체]** `git fetch && git checkout origin/main` 한 tip에서 seq 3의 측정을 **그대로 한 번 더** 돌린다. 이 값이 원장에 적히고 다음 감지의 as-is baseline이 된다. to-be 쪽도 `git rev-parse HEAD:docs/e2e-mocking-policy.md` 로 함께 확인한다.",
+              "expectedOutcome": "main 지문 `sites=25 files=11` / `fef43512ffcdf…b7ac`, 코드 14쌍 == 허용목록 14행, `FEATUREDOC_MODE` 0건, 정책 blob이 `d3732010043dd7fcf50228db01205bbb8095a532`가 **아님**(= `e09e58d…`). 정책 blob이 그대로면 문서 변경이 유실돼 없앤 5쌍이 고아 등재로 뒤집힌 상태이므로 `failed`."
+            },
+            {
+              "seq": 6,
+              "action": "**[머지 후 부작용 확인]** main push를 받는 워크플로가 정상 동작했는지 확인한다 — #63 이후 `ci.yml`은 PR에서만 돌고 main push는 `image.yml`이 단독으로 받으며, #66 이후 이미지 pin은 **main 되커밋이 아니라 `deploy` 브랜치 발행**이다. 또 `delete_branch_on_merge: true`라 `reconcile/rct_20260918-0002-per-boundary-doubles` 브랜치는 머지와 함께 삭제된다.",
+              "expectedOutcome": "main의 `image.yml` 런이 성공하거나 진행 중. **이 결과는 이 task의 완료 기준이 아니다** — 불변식 1은 레포 상태만 본다. 실패해도 seq 5가 통과했으면 `succeeded`로 닫고, 배포 착지 문제는 기록만 남긴다. PR 브랜치 삭제는 정상(롤백은 브랜치가 아니라 squash 커밋 revert로 한다)."
+            },
+            {
+              "seq": 7,
+              "action": "**[수렴 판정·기록]** seq 5의 다섯 기대값(지문 이동 · 14==14 양방향 · `FEATUREDOC_MODE` 0 · 정책 blob 이동 · `ci-gate` success)을 `verification.checks`에 각각 실측값과 함께 남기고, `asIsVersionAfter`에 머지 후 main 지문을 적는다. 전부 통과면 `succeeded`.",
+              "expectedOutcome": "`converged: true`, `status: succeeded`. 하나라도 미달이면 `failed`로 닫아 재계획으로 보낸다 — 실행 단계에서 코드를 고쳐 숫자를 맞추지 않는다."
+            }
+          ],
+          "plannedAt": "2026-09-18T16:40:00Z"
+        }
       }
     ]
   },
