@@ -2161,6 +2161,62 @@
           "reviewedAt": "2026-09-18T17:17:16Z",
           "reason": "전제 신선도 재확인(2026-09-18T17:15Z): PR #38 open · mergeable=true · mergeable_state=clean · base 가 현재 main tip `2579722a` 라 베이스 이동 없음 · head `ce108440` 의 `Checks` 런이 completed success(ci build·ci e2e·docs flow·docs structure·image publish 2건 전부 success, 단일 필수 체크 `required` success). 변경 5파일이 계획 step 1~6 과 정확히 일치하고 자매 축 소유 구역(`tests/e2e/**` · doc-tracker 「e2e 매핑」 절)에 한 줄도 닿지 않으며, 해제 신호 `BUCKET_UNIT = \"hour\"` 가 생존하고 `(skeleton placeholder)` 는 제거됐다(diff 전건 대조). 위험은 low — 이 변경은 `pipeline` 엔트리포인트만 확장하고 그 스케줄 `econ-pipeline-hourly` 는 suspend:true 로 남으므로 프로덕션 동작은 바뀌지 않는다. 불가역 지점은 squash 머지 하나뿐이고 롤백이 main revert PR 로 구체적이다. deploy/ 이미지 참조 4건이 모두 같은 SHA `b5a91d64` 로 일관돼 핀 재작성과도 충돌하지 않는다.",
           "comment": "승인이되 완료 기준 한 줄에 오기가 있으니 실행 단계는 이렇게 읽을 것. executionGuide 「완료 기준」 2번과 plan.steps[0].expectedOutcome 의 `grep -c 'name: aggregate' deploy/batch/workflow-template.yaml` = **1** 은 틀렸다 — step 2 가 `pipeline` 에 `- - name: aggregate` 步 참조를 더하므로 머지된 main 에서 이 grep 은 **2 가 정상**이다(PR head `ce108440` 실측: L85 step 참조, L145 템플릿 정의). 이 한 줄을 1 로 읽어 `failed` 판정하지 말 것 — 해당 기준의 판정축은 같은 문장 뒷절, 즉 `pipeline` 의 steps 가 ingest → analyze → aggregate 3단인지다. 나머지 완료 기준 4개(지문 python·deploy 이동 / `skeleton placeholder` 0 · `BUCKET_UNIT` 1 / Checks success / doc-tracker 착지·잔여 분할)는 그대로 유효하다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-18T17:21:00Z",
+          "finishedAt": "2026-09-18T17:31:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:21:00Z",
+              "finishedAt": "2026-09-18T17:31:00Z",
+              "log": "준비 단계에서 PR #38 에 스테이징된 `aggregate` 템플릿 신설이 squash 머지 `33e24ea7` 로 main 에 착지. 머지된 main tip 실측: `grep -c 'name: aggregate' deploy/batch/workflow-template.yaml` = 2(L85 step 참조 + L145 템플릿 정의 — review 정정대로 2 가 정상). 컨테이너 이미지 태그는 `…-batch:b5a91d64…` 로 기존 ingest/analyze 와 동일 SHA 유지."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:21:00Z",
+              "finishedAt": "2026-09-18T17:31:00Z",
+              "log": "`pipeline` 템플릿 steps 가 main tip 에서 ingest → analyze → aggregate 3단으로 확인됨(마지막 step `template: aggregate`)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:21:00Z",
+              "finishedAt": "2026-09-18T17:31:00Z",
+              "log": "`aggregate.py` main tip 실측: `grep -c 'skeleton placeholder'` = 0(페이크 자기선언 제거), `grep -c 'BUCKET_UNIT = \"hour\"'` = 1(자매 축 해제 신호 생존). delta/spark 실값화 diff 가 머지 커밋에 그대로 포함(+40/−12)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:21:00Z",
+              "finishedAt": "2026-09-18T17:31:00Z",
+              "log": "다중 버킷 테스트가 `test_aggregate.py` 에 +51/−2 로 착지. 실행 판정은 PR CI 의 `Checks` 워크플로(= ci build 안의 pytest)가 맡았고 head `ce108440` 에서 completed success."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:21:00Z",
+              "finishedAt": "2026-09-18T17:31:00Z",
+              "log": "로컬 게이트는 준비 단계에서 선통과(ruff·pytest 53 passed·check_scenario_mapping rc=0). 실행 단계에서 머지된 main tip 을 다시 클론해 `python3 tests/e2e/check_scenario_mapping.py` 재실행 → rc=0, 「규칙 1·2·3·4·5·6 위반 없음」(규칙 6 구현 대기 해제 신호 생존 확인). go·node 게이트는 PR CI 가 판정."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:21:00Z",
+              "finishedAt": "2026-09-18T17:31:00Z",
+              "log": "doc-tracker 「현재 상태 요약」이 AC3.2 착지(관측 좌표 `workflow-template.yaml` ∋ `name: aggregate`) / AC3.3 일·주 롤업 잔여(자매 축 `BUCKET_UNIT = \"hour\"` 해제 신호와 결합 명시)로 갈라졌고, 「운영」 항목에 `econ-pipeline-hourly` suspend 로 프로덕션 Gold 0건임이 기재됨. 변경 이력 1행 추가. 머지 커밋 diff 대조 결과 `docs/` 변경은 「현재 상태 요약」과 변경 이력에만 걸렸고 「e2e 매핑」 절은 무변경."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:21:00Z",
+              "finishedAt": "2026-09-18T17:31:00Z",
+              "log": "executionGuide 3단 실행. (1) CI 판정 — `?branch=reconcile/rct_20260918-0003` 로 조회(guide 경고대로 `head_sha=` 미사용): `Checks | pull_request | completed | success | ce108440`, PR 현재 head 와 동일 SHA 대조 완료. (2) 머지 — 재확인 `mergeable=true` · `mergeable_state=clean` · 변경 파일 정확히 5개(`deploy/batch/workflow-template.yaml` · `docs/econ-opinion-monitor-doc-tracker.md` · `python/…/pyproject.toml` · `aggregate.py` · `test_aggregate.py`), 자매 축 소유 구역(`tests/e2e/**`) 무변경 확인 후 squash 머지 → `merged=true sha=33e24ea7`. (3) main 착지 확인은 verification 참조. 계획 밖 동작 없음 — `econ-pipeline-hourly` unsuspend 등 클러스터 조작은 하지 않았다."
+            }
+          ]
         }
       }
     ]
