@@ -2823,6 +2823,76 @@
           "reviewedAt": "2026-09-18T12:11:16Z",
           "comment": "반려 — 계획 기준선 c9a1648b에서 main이 이동해 입장 게이트 ②가 이미 깨졌으므로, 현재 main 45ff9f81 기준으로 재계획할 것. 승인 세션 실측(2026-09-18T11:4xZ): (1) main이 c9a1648b → 17b7d288(#52 fix(worker): SIGTERM을 받으면 클레임 사이에서 종료 — backend/src/bin/worker.rs·scripts/e2e.sh·README.md·Cargo.toml/lock) → 45ff9f81(#53 ci: cargo test와 kind e2e를 병렬 job으로 분리 + Rust 빌드 캐시 — .github/workflows/ci.yml)로 2커밋 이동(11:33Z, 계획 09:38Z 이후). 지침 §4상 승인해도 실행은 재통합 커밋 없이 failed로 닫힌다. (2) 재통합 파일(c8b22c6e diff 21파일)과 겹치는 파일은 worker.rs·scripts/e2e.sh 2개 — merge-tree c8b22c6e×45ff9f81 결과 텍스트 충돌은 여전히 docs/doc-tracker.md 단일, worker.rs·e2e.sh는 자동 병합. 단 PR #43의 5단계 실행 arm과 #52의 SIGTERM 종료 처리가 의미상 맞물리는지는 미검증. (3) #53이 CI job 구조를 바꿔 계획 3단계의 'kind e2e 잡 로그' 판정 방법이 만료. 45ff9f81의 CI는 승인 세션 시점 in_progress. (4) PR #43 open/draft/head 4e809da7, PR #49 open/draft/head c8b22c6e, 차량 rct_20260915-0001 cancelled — 그 외 전제는 유효. 재계획에 포함할 것: #52·#53 흡수(새 기준선 45ff9f81), worker.rs 의미 충돌 확인(SIGTERM 경로에서 5단계 실행 중 종료·리스 회수 동작), CI job 분리에 맞춘 3단계 판정 방법(job 이름·로그 위치) 수정, doc-tracker 해소 레시피와 완료 기준 수치를 새 main에서 재실측. 구현물 21파일(PR #43)은 유효 — 취소가 아니라 재계획이다."
         }
+      },
+      {
+        "reason": "review_rejected — attempt[3] 사람 반려(2026-09-18T12:11:16Z, reviewer=human). 반려 사유는 단 하나, **입장 게이트 ②(main == c9a1648b)가 승인 전에 이미 깨졌다**는 것이다: main 이 계획 시각(09:38Z) 이후 17b7d288(#52 worker SIGTERM) → 45ff9f81(#53 CI cargo/e2e 잡 분리)로 이동했고, 지침 §4상 승인해도 실행은 재통합 없이 failed 로 닫힌다. 반려 코멘트가 재계획에 넣으라고 지시한 넷: (i) #52·#53 흡수 (ii) worker.rs 의미 충돌 확인(SIGTERM 경로 × 5단계 실행 arm) (iii) CI 잡 분리에 맞춘 3단계 판정 방법 수정 (iv) doc-tracker 해소 레시피·완료 기준 수치 재실측. 구현물 21파일(PR #43)은 유효 — 취소가 아니라 재계획이다.\n\n**이번 재계획은 그 넷을 처리하되, 다섯 번째 문제를 함께 고친다 — 계획이 죽는 방식 자체다.** 반려 시점 기준선 45ff9f81 은 이 계획을 짜는 동안 또 만료됐다(실측 2026-09-18T12:1xZ: 45ff9f81 → 7cdebc3c(#54 주석 비중복성 첫 패스) → 이미지 핀 7e96021b). attempt[1] 은 #44·#46·#47 로, attempt[2] 는 #50 으로, attempt[3] 은 #52·#53 으로, 그리고 지금 #54 로 — **네 시도 연속 같은 死因**이다. 원인은 구현물도 충돌 해소도 아니라 「계획이 main sha 를 상수로 못박고, 계획→검토→승인 지연 동안 main 이 움직인다」는 구조다. 게다가 지금 열린 비-draft PR 이 둘 더 있다(#55 — doc-tracker 를 만진다 · #56) 이므로 다음 승인 지연에도 같은 일이 난다. 그래서 이 시도는 기준선을 상수가 아니라 **입장 봉투(envelope)** 로 정의한다 — 재통합을 실행 시점의 살아 있는 main 에 대해 다시 계산하고, 봉투(충돌 집합 · 21파일 · 게이트 3종 · 목표 수치)가 유지되면 진행, 벗어나면 중단한다. 실측 기준선 7e96021b 는 '이 봉투가 성립함을 확인한 지점'이지 통과 조건이 아니다.",
+        "plan": {
+          "summary": "슬라이스 5a(AC2.1·2.2·2.3)를 동일 구현물 + **실행 시점 재통합**으로 착지시킨다. 왜 이 방법인가: 구현물 21파일(PR #43 head 4e809da7)과 사람 승인을 받은 차량 head c8b22c6e 는 네 시도 내내 유효했고, 매번 죽은 것은 「계획이 못박은 main sha」뿐이다. 그래서 재통합 머지를 **계획이 고정한 sha 가 아니라 실행 시점 origin/main 에 대해 다시 계산**하고, 진행 여부는 sha 일치가 아니라 **봉투 4조건**으로 판정한다 — (a) 텍스트 충돌이 `docs/doc-tracker.md` 한 파일 (b) 재통합 결과가 main 대비 정확히 21파일 (c) 대상 레포 자체 게이트 3종 rc=0 (d) 목표 수치(매핑 19 · 예외 0 · 구현 대기 16 · 래칫 1/1 · 활성 대조 6 · 보류 2/2 · 편차 47/47) 성립. 하나라도 벗어나면 그 자리에서 중단하고 재계획으로 돌린다(지침 §4). 반려가 지시한 넷은 전부 실측으로 처리했다: **#52 흡수** — 머지 트리에 SIGTERM 핸들러와 5단계 arm 이 함께 있고(worker.rs L41·130·335·360), 두 변경 지점이 `main()` 루프 × `impl Worker` 로 **분리**돼 자동 병합된다. 의미도 충돌하지 않는다: #52 는 정지를 **claim 사이에서만** 받고 진행 중인 job 은 끝까지 돌리므로(lease 180s 가 SIGKILL 을 덮는다) 5단계가 붙어도 규약이 그대로다 — 유일한 의미적 변화는 job 최대 길이가 LLM 호출 1회만큼 늘어 유예 30초(deploy 에 override 없음) 안에 못 끝낼 확률이 커지고, 그때 재클레임이 5단계를 다시 돌려 사용자 LLM 키를 한 번 더 쓴다는 것이다. 이는 2~4단계가 이미 갖고 있던 성질이라 이 머지가 만드는 퇴행이 아니며, 실행 단계에서 관측으로 확인한다. **#53 흡수** — CI 가 `test (cargo)` · `test (kind e2e)` · `build & push image (ghcr)` · `pin deployment image (main only)` 4잡으로 쪼개져, 3단계 판정을 워크플로 결론이 아니라 **잡 단위**로 고쳤다. **#54 흡수**(반려 이후 착지) — 주석 비중복성 첫 패스가 지운 주석 60줄이 재통합으로 되살아나지 않음을 실측(부활 0건)해 자매 모델 `tbm_feature-doc-comment-redundancy` 를 drift 로 되돌리지 않는다. **수치 재실측** — 새 기준선에서 드라이런을 끝까지 돌려 게이트 3종 rc=0 을 확인했고(참조 머지 97fdaea2599fd, 부모 c8b22c6e × 7e96021b, main 대비 21파일), 그 과정에서 **충돌 밖에 있는 만료 수치 1곳을 새로 찾았다** — 변경 이력 5a 행이 브랜치를 딸 때의 산술(매핑 10 · 공백 14 · spec 10 → 13)을 그대로 들고 있다. 게이트가 산문 행을 읽지 않아 영원히 green 인 채 틀리는 자리이고, 이 시도가 4b-2 행의 같은 오류를 고치는 만큼 새로 심지 않는다 — 해소 레시피에 편입했다. **이 시도의 범위(완료 기준)**: ① 미구현 AC 표기 14→11(AC2.1·2.2·2.3 ✅) ② 시나리오 축 e2e — 매핑 19 · 예외 0 · 구현 대기 16 · 미매핑 래칫 1(상한 0→1 명시적 상향, 5b 가 회수) · 항등식 36 = 19+0+16+1 · 불변식 (36−0−16)=20 vs 매칭 파일 19 · spec 19개 전부 1선언 ③ 활성 대조 6 · 보류 2/2 · 편차 원장 47/47 ④ 재통합 head 와 머지 후 main 에서 워크플로 4종 green (`CI` 의 `test (cargo)`·`test (kind e2e)` 잡 포함) ⑤ 흡수 3건 착지 — migrations 불변성 명문화 + 체크섬 핀 테스트 · 4b-2 산술 4곳 · **5a 행 수치 정정** ⑥ 배포 착지 — 이미지 핀 커밋 → featuredoc·featuredoc-worker 롤아웃 성공. **범위 밖**: AC2.4~2.6(5b — `02#시나리오 3` 전용 spec 분할 포함) · AC3.1~3.5 · AC4.4/4.6/4.7 · `STP-verify-evidence` · 재개 배너 · 검수 상태 · `STP-add-missing`, 운영 DB 사전 점검(이 머지도 SQL 을 한 글자 바꾸지 않는다), main 의 자체 계수 차이(허브 게이트 「문서 23」 vs 요약 「공개된 문서 22」 — 재통합 전 main 에서도 동일하므로 이 시도가 만든 것이 아니다), 머지가 만든 버전 변화의 재감지.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "입장 봉투를 실측한다(= 이 계획의 유일한 진입 조건, sha 상수 아님). ① reconciler 레코드 pull --rebase 후 이 task 가 approved 인지 확인 ② 대상 레포를 새로 클론하고 `git fetch origin refs/pull/43/head:pr43 refs/pull/49/head:pr49` ③ PR #43 이 open·head=4e809da7, PR #49 가 open·head=c8b22c6e 인지 확인(구현물·차량 불변) ④ `git merge-tree --write-tree --name-only pr49 origin/main` 으로 충돌 집합을 뽑아 **`docs/doc-tracker.md` 한 파일인지** 확인. main sha 는 기록만 하고 비교하지 않는다. ③ 또는 ④ 가 어긋나면 진행하지 않고 지침 §4 절차로 중단·기록한다.",
+              "expectedOutcome": "PR #43 head 4e809da7 · PR #49 head c8b22c6e 불변이고 merge-tree 충돌이 doc-tracker.md 단일 — 봉투 성립(계획 시 실측 기준선 main 7e96021b, 실행 시 값은 달라도 된다)"
+            },
+            {
+              "seq": 2,
+              "action": "재통합 머지 커밋을 만든다(이 계획이 만드는 유일한 대상 레포 커밋). `git checkout -b re-int pr49 && git merge origin/main` → 충돌은 doc-tracker.md 단일 → 지침 §3 의 해소 스크립트를 그대로 실행한다(4 충돌 hunk + 산문 1곳 + 변경 이력 5a 행). 스크립트는 `--cargo-before/--cargo-after` 를 요구하므로 3단계에서 CI 수치를 읽은 뒤 확정하거나, 먼저 임시값으로 돌린 뒤 3단계 수치로 amend 한다(지침 §3 주석 참조).",
+              "expectedOutcome": "충돌 해소 후 `git diff --name-only origin/main...HEAD` 가 21파일, 머지 커밋 부모가 (c8b22c6e, 그 시점 origin/main) — 계획 시 참조 커밋 97fdaea2599fd (부모 c8b22c6e × 7e96021b)"
+            },
+            {
+              "seq": 3,
+              "action": "푸시 전에 로컬에서 게이트 3종을 돌려 봉투 조건 (c)(d)를 확인한다: `python3 tools/check-scenario-e2e.py --verbose` · `tools/check-mockup-render.py` · `tools/check-journey-mockup.py`. 세 개 모두 rc=0 이고, scenario 게이트가 「등재 대조 — 매핑 19 · 선언 19」·「래칫 미매핑 1/1」·「불변식 … 구현 대기 16) = 20 · 실제 19」를, mockup 게이트가 「활성 6 · 보류 2 · 편차 47」·「M5 47/47」·「M5 대조 보류 2/2」를 찍어야 한다. 어긋나면 푸시하지 않고 중단한다(지침 §4).",
+              "expectedOutcome": "게이트 3종 rc=0 + 목표 수치 일치 — 계획 시 드라이런과 동일"
+            },
+            {
+              "seq": 4,
+              "action": "`git push origin re-int:reconcile/rct_20260902-0008-feature-doc-docs-impl` 로 PR #43 브랜치를 갱신하고, PR #43 이 mergeable=true(mergeable_state=clean)가 되는지 재조회로 확인한다.",
+              "expectedOutcome": "PR #43 head 가 재통합 머지 커밋으로 갱신되고 mergeable_state=clean"
+            },
+            {
+              "seq": 5,
+              "action": "푸시된 head 의 CI 를 **잡 단위로** 판정한다(#53 이 잡을 쪼갰으므로 워크플로 결론만으로는 cargo/e2e 를 구분할 수 없다). `gh api 'repos/dlddu/feature-doc/actions/runs?branch=reconcile/rct_20260902-0008-feature-doc-docs-impl&per_page=20'` 로 run 을 찾고, 각 run 의 `/jobs` 에서 이름별 conclusion 을 읽는다: 워크플로 `CI` 의 `test (cargo)`·`test (kind e2e)`, 그리고 워크플로 `docs — mockup ↔ render` · `docs — journey ↔ mockup` · `docs — scenario ↔ e2e`. `test (kind e2e)` 잡 로그에서 spec 19개 실행·통과를, `test (cargo)` 잡 로그에서 `cargo test` 보고 수를 직접 읽는다(스킵 오독 방지). 같은 방법으로 main 마지막 run 의 `test (cargo)` 수도 읽어 2단계 해소 스크립트의 `--cargo-before/--cargo-after` 를 확정한다.",
+              "expectedOutcome": "`test (cargo)`·`test (kind e2e)` + docs 워크플로 3종이 전부 success, e2e 로그에 spec 19개 실행·통과, cargo 테스트 수 2개(main / 재통합) 확보 — 참고 실측(선언 수 기준) 113 → 128"
+            },
+            {
+              "seq": 6,
+              "action": "PR #43 본문에 「2026-09-18 갱신 — 실행 시점 재통합(5차 계획)」 절을 신설한다: (i) 재통합 머지 커밋 sha 와 부모 (c8b22c6e, <실행 시점 main>) (ii) 흡수한 main 변화 목록 (#52 SIGTERM · #53 CI 잡 분리 · #54 주석 패스 및 그 이후 착지분) (iii) worker.rs 의미 확인 결과 (iv) 완료 기준 ② 최종 수치 (v) 래칫 상한 0→1 이 명시적 부채이고 5b 가 회수한다는 것. 이전 갱신 절은 지우지 않고 보존한다. 그 뒤 `PATCH /pulls/43 {draft:false}` 로 ready 전환하고 재조회 왕복으로 반영을 확인한다.",
+              "expectedOutcome": "PR #43 이 ready(draft=false)이고 본문에 5차 갱신 절이 들어간다(HTTP 200 + 재조회 일치)"
+            },
+            {
+              "seq": 7,
+              "action": "**머지 직전 봉투 재확인** — main 이 5·6단계 사이에 또 움직였을 수 있다. `GET /pulls/43` 의 mergeable_state 가 clean 인지, 그리고 5단계에서 green 을 확인한 head 가 여전히 PR #43 의 head 인지 본다. clean 이 아니면(=main 이 다시 충돌을 만들었으면) 머지하지 말고 2단계로 돌아가 재통합을 다시 계산한다 — 봉투가 유지되는 한 이 되감기는 실패가 아니라 정상 경로다.",
+              "expectedOutcome": "mergeable_state=clean 이고 head 가 CI green 을 받은 그 커밋 — 아니면 2단계로 되감기"
+            },
+            {
+              "seq": 8,
+              "action": "PR #43 을 squash 머지한다: `PUT /repos/dlddu/feature-doc/pulls/43/merge {merge_method:'squash'}`. 직전 슬라이스들과 같은 방식(4b-2 = PR #40 squash 576db21). **여기가 불가역 경계다 — 머지 = 적용이다**(지침 §0).",
+              "expectedOutcome": "main 에 squash 커밋 1개 생성(응답 sha), PR #43 state=merged"
+            },
+            {
+              "seq": 9,
+              "action": "배포 착지를 확인한다. main push 로 CI 가 다시 돌고 `pin deployment image (main only)` 잡이 `chore(deploy): featuredoc 이미지를 <sha> 로 고정 [skip ci]` 커밋을 만든다. 그 커밋을 기다린 뒤 `kubectl rollout status deployment/featuredoc --timeout=300s` 와 `kubectl rollout status deployment/featuredoc-worker --timeout=300s` 를 확인한다. 워커 롤아웃은 #52 의 SIGTERM 경로를 처음 실제로 태우는 지점이기도 하다 — 구 파드가 유예 30초를 다 쓰지 않고 내려가는지, 진행 중 분석이 있었다면 재클레임으로 5단계를 다시 돌렸는지 로그로 본다.",
+              "expectedOutcome": "이미지 핀 커밋 생성 + 두 Deployment 가 새 이미지로 롤아웃 성공(ready replicas 정상), 워커 종료가 claim 사이에서 일어난 로그 관측"
+            },
+            {
+              "seq": 10,
+              "action": "지침 §2 검증 표(완료 기준 ①~⑥)를 머지된 main 에서 실측한다: doc-tracker 의 요약 라인 (e2e spec 19 · 공개 문서 22 · 수용된 위험 2건) · 집계(19/0/16/1 + 항등식 + 불변식) · 래칫 표 1행 · 구현 수렴 로드맵 미구현 11 · 원장 47/47 · 대조 6/2/2 · 4b-2 산술 4곳 · **5a 행 수치 정정**, `ls e2e/tests/*.spec.ts | wc -l` = 19 및 선언 19·중복 0, 그리고 게이트 3종을 main 체크아웃에서 rc=0 으로 재확인한다(kind e2e 는 CI 판정을 근거로 삼는다).",
+              "expectedOutcome": "검증 표 6행 전부 충족"
+            },
+            {
+              "seq": 11,
+              "action": "차량 PR #49 를 정리한다. 4단계의 푸시로 c8b22c6e 가 PR #43 브랜치의 조상이 되므로 GitHub 이 #49 를 merged 로 표기했을 수 있다 — `GET /pulls/49` 로 확인하고 여전히 open 이면 close 하되 「차량 task rct_20260915-0001 취소(2026-09-17T12:57:10Z) — 해소 내용(c8b22c6e)은 PR #43 의 재통합 머지에 그대로 흡수됨」 댓글을 남긴다.",
+              "expectedOutcome": "PR #49 가 merged 또는 closed 로 정리되고 근거가 기록에 남는다"
+            },
+            {
+              "seq": 12,
+              "action": "종료 판정한다. 검증 표 전부 충족이면 succeeded 로 닫고(verification.checks 에 각 기준의 실측 근거), 미충족이 있으면 failed 로 닫되 어느 기준이 어떻게 미달인지 남긴다. 잔여 미구현 AC 11건(5b 이상)과 래칫 1건은 이 task 의 실패가 아니라 **범위 밖**이며, 머지가 만든 버전 변화의 재감지가 새 task 로 잇는다.",
+              "expectedOutcome": "task 가 succeeded(또는 사유 명시된 failed)로 닫히고 verification 레코드가 완성된다"
+            }
+          ],
+          "plannedAt": "2026-09-18T12:32:00Z"
+        }
       }
     ],
     "createdAt": "2026-09-02T13:09:26Z",
