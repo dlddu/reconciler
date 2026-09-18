@@ -3212,6 +3212,49 @@
               "log": "차량 PR #49 — 6단계 푸시로 `c8b22c6e` 가 PR #43 브랜치의 조상이 되면서 GitHub 이 자동으로 `closed`·`merged=true` 처리. 열린 채 방치된 것 없음."
             }
           ]
+        },
+        "verification": {
+          "status": "failed",
+          "converged": false,
+          "asIsVersionAfter": "backend:fb28f0214bc9559fb1634e535326bcac7cb42a91 frontend:91df9203f24b86e201893be677c0bc124f569049",
+          "checks": [
+            {
+              "name": "① 게이트 3종 rc=0 (머지 후 main `6484e21`)",
+              "status": "passed",
+              "detail": "새 클론에서 실측 — `tools/check-scenario-e2e.py` rc=0(통과) · `tools/check-mockup-render.py` rc=0(M0 활성 6·보류 2·편차 41 / M1 화면 8·dangling 0 / M2 토큰 21 / M3A 활성 단계 7·카피 194·미등재 0 / M3B 활성 쌍 6·카피 129·미등재 0 / M4 행 41·공전 0 / M5 41/41·대조 보류 2/2 / M6 67건·오용 0) · `tools/check-journey-mockup.py` rc=0(여정 6·목업 5·문서 24·링크 221). 재통합 head 에서도 동일하게 rc=0 이었다. **이것이 계획이 말한 유일한 수렴 판정이며 통과했다.**"
+            },
+            {
+              "name": "② doc-tracker 미구현 AC 표기 14 → 11",
+              "status": "passed",
+              "detail": "`docs/doc-tracker.md:141` — `> 이 16건은 자매 모델이 추적하는 **미구현 AC 11건**(AC2.4~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7)`. AC2.1·2.2·2.3 이 목록에서 빠졌다."
+            },
+            {
+              "name": "③ 시나리오 축 항등식·불변식 (관측 기대치)",
+              "status": "passed",
+              "detail": "`docs/doc-tracker.md:155-156` — 시나리오 **36** · 매핑 **19** · 예외 **0** · 구현 대기 **16** · 미매핑(래칫) **1**, 항등식 `36 = 19 + 0 + 16 + 1` ✅. 계획의 기대치와 일치. 편차 원장은 41행·상한 41(37→41 명시적 상향, 4행 전부 `FeatureAcceptance` 몫이며 해소는 5b)."
+            },
+            {
+              "name": "④ CI 4잡 잡 단위 green",
+              "status": "failed",
+              "detail": "main push run 35364589917 — `test (cargo)` success · `test (kind e2e)` success · `build & push image (ghcr)` success · docs 3잡 success · `ci-gate` success, 그러나 **`pin deployment image (main only)` failure**. 잡 로그: `GH013: Repository rule violations found for refs/heads/main` / `Required status check \"ci-gate\" is expected.` / `! [remote rejected] HEAD -> main`. #62 가 main 에 필수 체크 `ci-gate` 를 건 뒤 핀 봇의 `[skip ci]` 직접 push 가 규칙에 막힌다. PR head `1c9a42d` 의 run 35363823201 에서는 나머지 7잡 전부 success(핀 잡은 PR 이라 skipped)였다."
+            },
+            {
+              "name": "⑤ 배포 착지 — 이미지 핀 커밋 + 두 Deployment 롤아웃",
+              "status": "failed",
+              "detail": "이미지 핀 커밋 **없음** — main 최신은 squash 커밋 `6484e21` 그대로이고 그 뒤에 `chore(deploy): featuredoc 이미지를 … 로 고정 [skip ci]` 가 생기지 않았다(직전 핀 커밋은 `84f2734`, 대상 `1c39ba25`). 클러스터 실측: `featuredoc` 1/1 available · `featuredoc-worker` 1/1 available, **둘 다 이미지 `ghcr.io/dlddu/featuredoc:1c39ba2566dcd8a4ff5f18c1ec90dea4601e9922`** — 즉 롤아웃이 일어나지 않았고 슬라이스 5a 코드는 아직 실사용 워크로드에 반영되지 않았다. 이미지 자체는 GHCR 에 올라가 있다(`build & push image (ghcr)` success). **원인은 이 슬라이스 밖이다** — #62 자신의 머지(`42e63fa8`, run 35362763302)에서도 같은 잡이 이미 failure 였다. 4-2 에서 우려한 워커 리스 만료 → 재클레임은 롤아웃이 없었으므로 발생하지 않았다."
+            },
+            {
+              "name": "⑥ 대상 레포 변경 21파일",
+              "status": "passed",
+              "detail": "`git diff --name-only 6484e21~1 6484e21 | wc -l` = **21**. 계획이 못박은 경계와 동일하며, 해소 스크립트는 레포 밖에 두어 커밋하지 않았다."
+            },
+            {
+              "name": "(정보) 잔여 gap — 이 task 의 범위 밖",
+              "status": "passed",
+              "detail": "모델 전체 to-be 대비 미구현 AC 11건(AC2.4~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7) · `STP-verify-evidence` · 재개 배너 · 검수 상태 · 편차 원장의 「구현 수렴 대기」 22건 · 미매핑 래칫 1건(`02#시나리오 3`, 5b 가 회수). converged 판정에 넣지 않으며 재감지가 후속 task 로 잇는다."
+            }
+          ],
+          "verifiedAt": "2026-09-18T16:02:00Z"
         }
       }
     ],
@@ -3223,7 +3266,7 @@
       "summarizedAt": "2026-09-02T13:09:26Z",
       "toBe": "### to-be — 제품 문서 (`docs/`) @ `576db21`, 트리 `d9cdc790` → **`5788aff3`**\n\n변경 2파일: `docs/doc-tracker.md`(+50/−19) · `docs/mockups/JRN-discover-features.html`(+14/−13).\n\n**의도된 동작의 SSOT 는 움직이지 않았다** — `docs/prd` 트리 `bffbe662` **불변**(AC **24개** 그대로,\n신설·삭제 0) · `docs/test/` 불변 · `docs/values.md` 불변 · `docs/user-journey` 트리 `e9b788c5` 불변 ·\n`docs/design-system.md` `c7499184` 불변. 즉 **to-be 는 늘지 않았고 gap 은 as-is 가 올라와서 줄었다.**\n\n`docs/doc-tracker.md` 갱신(실측 대조 완료):\n- 「구현 수렴 로드맵」 미구현 15 → **14**, 4b-2 ✅, **다음 권장 슬라이스 = 5**\n- 「e2e 매핑」 매핑 9 → **10**, 공백 15 → **14**, 항등식 `24 − 0 = 10 + 14` ✅\n- 「목업↔구현 대조 범위」 활성 4 → **5**(`FeatureCandidates`/S07 태생 활성)\n- 「알려진 목업↔구현 편차」 원장 36 → **43행**, 상한 36 → **43**\n- 「변경 이력」 4b-2 행 1개 추가\n\n`docs/mockups/JRN-discover-features.html` 은 `#STP-sift-candidates` 후보 카드의 예시 데이터에\n`data-sample` 13건을 붙이고 `prev-reason` 의 인용구를 잎 요소로 분리한 것뿐이다 — **단계 앵커\n5개·`data-screens`·`data-goto` 집합이 부모와 md5 동일**(실측).\n\n**to-be 가 요구하는 상태**(모델 정의): ① `docs/` 의 **모든 AC 가 구현**되고 대응 테스트 문서대로\n검증 가능 ② UI 가 목업·와이어프레임·디자인 시스템과 일치 ③ 문서 없는 구현 없음.\n\n**문서가 스스로 남긴 미해소 항목**: 「다음 단계 권장」 **11번**(등록 화면의 Google 선택지 —\n`CredentialsSetup.tsx` `PROVIDERS`, 해소에 목업 `JRN-connect-repo.html#STP-register-llm-key` 개정이\n동반돼야 해 자매 모델 소관)은 이번 트리거로도 그대로다. 10번은 앞 슬라이스에서 해소 표기."
     },
-    "status": "executing",
+    "status": "failed",
     "toBeModelId": "tbm_feature-doc-docs-impl",
     "trigger": {
       "asIs": {
