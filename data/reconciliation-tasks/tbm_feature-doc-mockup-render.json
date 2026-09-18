@@ -1494,7 +1494,7 @@
   {
     "id": "rct_20260918-0003",
     "toBeModelId": "tbm_feature-doc-mockup-render",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T15:50:20Z",
@@ -1577,6 +1577,13 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/65",
           "preparedAt": "2026-09-18T16:30:00Z",
           "notes": "base main `8dad2a6` (= #59 머지 후 tip, as-is `frontend-src:fadc2424`), head `db8c8c2`, 3파일.\n⑴ `frontend/src/FeatureAcceptance.tsx` — `Appbar` 를 목업 3슬롯으로 교체(`<header className=\"appbar\">` + `icon-btn ghost` 자리표시자 + `span.appbar-title` 직계 자식 + `icon-btn aria-label=\"나가기\"` ✕ → `onLeave={onBack}`). 호출부 3곳 prop 이름만 `onBack`→`onLeave`.\n⑵ `tools/check-mockup-render.py` — **계획에 없던 추가 변경.** ⑴ 을 넣자 M3B 가 `[FeatureAcceptance.tsx] 나가기` 를 「목업에 없는 카피」로 **가짜 양성** 판정했다. 원인은 추출기 비대칭이다: `impl_copy()` 는 한글 든 문자열 리터럴을 속성 값이어도 카피로 세어 `aria-label=\"나가기\"` 를 집는데, `mockup_steps()` 는 `re.sub(r'<[^>]+>', …)` 로 태그를 통째로 지워 **같은 목업의 `aria-label=\"나가기\"` 를 못 본다**. 목업측 추출을 `placeholder` 와 같은 방식으로 `aria-label` 까지 넓혀 대칭을 맞췄다(1줄 + 머리말 주석). 대조 카피 194→198, 새로 대조된 4건(`back` 3 · `나가기` 1)은 전부 구현에 실재. **이것은 새 검출력이 아니다** — 이 수정만 두고 앱바를 되돌려 실측하니 게이트는 여전히 rc=0 이다(M3A 건초더미가 화면 전역 부분 문자열이라 `앱 닫고 나가기` 가 `나가기` 를 덮는다). 가짜 양성 제거일 뿐이며 그 한계를 스크립트 머리말에 명시했다. **측정 도구 변경이므로 리뷰가 따로 판단해야 한다.**\n⑶ `docs/doc-tracker.md` — 5a 행 산술 3곳 정정(`편차 43`→`37`, `상한을 43 → 47 로 올렸다`→`37 → 41`, `편차 47`→`41`) + 이번 슬라이스 변경 이력 1행 추가. 원장 편차 표는 **손대지 않았다**(33행 불변).\n검증 실측: mockup-render rc=0 · journey-mockup rc=0 · scenario-e2e rc=0. 카운터 전부 기준선과 동일(편차 33/33 · 활성 6 · 보류 2 · `data-sample` 67 · M3A/M3B 미등재 0). `tsc -b` 는 이 환경에 node 가 없어 미실행 — CI `test (kind e2e)` 가 판정한다."
+        },
+        "review": {
+          "required": false,
+          "status": "approved",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-18T16:28:48Z",
+          "reason": "앱바 3슬롯 이탈 1건을 닫는 프런트엔드 렌더링 변경으로, 백엔드·마이그레이션·API 계약·배포 매니페스트 무접촉이라 데이터 영향이 없고 되돌릴 수 없는 지점은 머지 하나뿐이다(3파일 전부 `git revert -m 1` 로 원상복구). 신선도 실측: PR #65 open·not merged, `mergeable_state=clean`, head `db8c8c2` 의 CI 런 하나가 전 job success (`ci-gate`·`test (cargo)`·`test (kind e2e)`·문서 게이트 3종) — 계획이 유일한 실제 리스크로 꼽은 `tsc -b` 미실행이 e2e job 의 프런트 빌드에서 이미 초록으로 해소됐다. base 는 계획 시점 `8dad2a6` 에서 `8b5b41e`(#61) 로 1커밋 이동했으나 #61 이 건드린 8파일은 `docs/comment-policy/ledger.md`·e2e 하네스로 이 PR 의 3파일과 교집합이 0이고, `docs/doc-tracker.md` 는 손대지 않아 완료 기준의 편차 33/33 기준선이 유효하다(PR CI 는 merge ref 에서 도므로 이 tip 을 이미 포함). diff 는 33+/13− 3파일로 gap 밖 변경이 없고, 나머지 4개 화면의 선재 이탈은 범위 밖으로 명시 분리됐다. 따로 본 지점 — 이 PR 은 판정 도구 `tools/check-mockup-render.py` 를 함께 바꾼다(자기 채점표 수정). 실측으로 완화가 아님을 확인했다: 래칫·상한·임계값은 한 줄도 건드리지 않고 목업측 추출에 `aria-label` 1줄을 더해 구현측과 대칭을 맞출 뿐이며, 그 결과 M3A(목업→구현)는 대조 카피가 194→198 로 늘어 **더 엄격해지고** M3B 의 가짜 양성 1건만 사라진다. 검출력이 늘지 않는다는 한계도 스크립트 머리말에 남겼다. 롤백은 머지 전(브랜치 수정)·머지 후(revert) 둘 다 구체적이고, 완료 기준이 게이트 rc=0 이 아니라 DOM 3슬롯 단언 + 카운터 불변으로 잡혀 있어 검증이 실제 전진을 본다. 승인한다."
         }
       }
     ]
