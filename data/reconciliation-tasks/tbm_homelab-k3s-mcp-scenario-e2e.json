@@ -8628,6 +8628,66 @@
           "reason": "**거부 — 준비물 신선도는 이번엔 세 축 모두 살아났으나, 산출물 자체가 자기모순을 안고 착지한다.**\n\n**신선도는 재확인했다(직전 거부 사유 3축 전부 닫힘).** PR #132 `state:open · mergeable:true · mergeable_state:clean`, base `ec18e75` = main tip(같은 sha), required check `ci passed` = success(run 35371871989). `integration tests` 잡 로그를 직접 내려받아 신규 5파일이 각각 `===== <파일>.py` 로 시작해 자기 `ok:` 줄로 끝났음을 파일 이름 전수로 재확인했다(`approval_gate_ac6`·`approval_gate_ac10`·`resource_generic_ac6`·`ac7`·`ac16`, `FAIL` 0건, `primary 48 · auth-variant 13 · oauth-variant 1 · gatekeeper-variant 3` 전부 통과). 변경 9파일은 e2e 신규 5 + `docs/` 4뿐이고 `internal/`·`cmd/`·`k8s/` 는 0줄이다.\n\n**막는 것은 하나다 — 등재 문서가 자기 자신과 어긋난 채 머지된다.** head `7cbc02e` 의 `docs/doc-tracker.md` 708행 불변식 문장이 범위 축소 전 값 `85 − 1(예외) − 20(구현 대기) = 64 = 매칭 파일 64` 그대로인데, 같은 문서의 집계 블록(693~699행)·레지스트리 절 제목(706행)·구현 대기 절 제목(800행)·실제 표 행 수는 모두 `21 · 63 · 63` 이다. 시나리오 11 을 슬라이스에서 뺄 때(step 11) 이 한 줄만 따라오지 못했다. **게이트가 이 산문 문장을 읽지 않는다는 것은 CI 초록이 증명한다** — `check_ac_mapping.py` 는 매칭 파일 63 을 세고 rc=0 을 냈다. 즉 머지 뒤에는 아무도 잡지 않고, 이 모델이 to-be SSOT 로 삼는 바로 그 등재 문서에 거짓 불변식이 굳는다. 다음 감지가 같은 문서를 읽어 판정하므로 오염이 그대로 다음 슬라이스의 입력이 된다.\n\n**위험·불가역성 자체는 문제가 아니다.** 제품 코드 무접촉이라 배포 이미지·트래픽·데이터 영향 0이고, 되돌릴 수 없는 지점은 머지 하나이며 되돌리기는 revert PR 이다. 완료 기준(main tip 실측 일곱 값 + 5파일 `ok:` 전수)도 medium 위험에 걸맞게 구체적이다. 정합성도 큰 틀에서는 인정된다 — 닫은 5행과 되돌린 1행·다시 쓴 1행이 gap 과 1:1이고 범위 밖은 소관과 함께 열거돼 있다. **오직 위 한 줄의 문서 자기모순 때문에 거부한다.**",
           "comment": "**고칠 것은 한 줄이다. 계획 방향·범위·브랜치는 전부 유효하니 폐기하지 말고 같은 브랜치 `reconcile/scenario-e2e-rct_20260918-0003`(PR #132)에 얹어라.**\n\n**① `docs/doc-tracker.md` 708행을 고칠 것(유일한 블로커).** `> 불변식이 여기서 눈으로 닫힌다: **85 − 1(예외) − 20(구현 대기) = 64 = 매칭 파일 64**, 공백 **0**.` → `21 · 63 · 63` 으로. 숫자는 손으로 짓지 말고 `python3 tests/integration/check_ac_mapping.py` 출력값을 옮긴다. 집계 블록(693~699)·레지스트리 절 제목(706)·구현 대기 절 제목(800)·표 행 수 21은 **이미 맞으므로 건드리지 말 것**이고, 게이트 일곱 값도 `85 · 1 · 21 · 63 · 63 · 0 · 0` 그대로다(이 수정으로 측정값이 움직이지 않는다).\n\n**② 같은 부류의 재발을 막는 단계를 지침에 넣을 것.** 직전 검토 지적 ④가 「계획 문면에 옛 값이 남았다」였고 이번엔 **산출물 문서**에 남았다 — 범위가 step 11 에서 `20 · 64 · 64` → `21 · 63 · 63` 으로 줄 때 문서와 계획이 같이 따라오지 못한 것이 두 번 다 같은 원인이다. 계획 step 6 도 아직 `20 · 64 · 64` 를 들고 있으니 함께 고치고, **축소·재측정 직후 옛 값 문자열을 전수 grep 해 0건임을 확인**하는 단계를 executionGuide 에 못박아라(예: `grep -rn -E '20\\(구현 대기\\)|매칭 파일 64|1:1 대상: 64|= 64' docs/`). 「게이트가 잡는다」는 전제는 이 자리에서 깨졌다 — 게이트는 집계 블록만 읽고 산문 불변식 문장은 읽지 않는다. 그 사실도 주의사항에 적어라.\n\n**③ 절차.** 리베이스·force-push 금지(리뷰가 본 커밋을 남긴다). 수정을 **커밋한 뒤** 네 게이트를 다시 돌린다 — `check_comment_policy.py` 는 `git ls-files` 를 보므로 커밋 전 초록은 근거가 아니다. 한 줄 문서 수정이라 주석·docstring 표면은 변하지 않으므로 주석 원장 재판정은 불필요하다. CI 는 이미 5파일 전수 초록을 냈으니 이번 재푸시에서는 `ci passed` 초록만 다시 확인하면 된다.\n\n**④ base 를 다시 볼 것.** main 은 이 슬라이스 동안만 여섯 번 움직였다(`f97042e`→`7a8edf1`→`29d5651`→`f6cd432`→`6268dd8`→`ec18e75`). push 전에 `git merge-base --is-ancestor <main tip> <head>` 를 먼저 보고, 움직였으면 **머지 커밋으로** 병합한 뒤 게이트를 재측정하라. `mergeable:false · dirty` 를 API 지연으로 읽지 말 것.\n\n**⑤ 이번이 이 스킬의 연속 2회째 거부다.** 다음 판정이 또 거부면 한도(3회)에 걸려 이 task 는 `cancelled` 로 닫히고 사람이 직접 봐야 한다. 남은 블로커가 위 한 줄뿐이라는 뜻이기도 하니, 이 기회에 다른 것을 함께 손대 범위를 넓히지 말 것."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**재계획 — 고칠 것은 한 줄이다. 방향·범위·브랜치는 그대로 두고 그 한 줄만 얹는다.** 직전 거부는 「계획이 틀렸다」도 「준비물이 죽었다」도 아니었다. 검토가 준비물 3축(PR #132 `open·mergeable:true·clean`, base = main tip, required check `ci passed` 초록, `integration tests` 로그에서 신규 5파일 각각 `ok:` 전수)을 **직접 재확인해 전부 살아 있다고 못박았고**, 막은 것은 산출물 문서의 자기모순 한 줄이었다: head `7cbc02e` 의 `docs/doc-tracker.md` **708행** 불변식 산문이 범위 축소 전 값 `85 − 1(예외) − 20(구현 대기) = 64 = 매칭 파일 64` 를 들고 있는데, 같은 문서의 집계 블록(693~699)·레지스트리 절 제목(706)·구현 대기 절 제목(800)·표 행 수는 모두 이미 `21 · 63 · 63` 이다. **그래서 이번 시도의 산출물 변경은 그 한 줄뿐이다.**\n\n**범위(완료 기준) — 직전 시도와 동일하고, 넓히지 않는다.** 「픽스처 부재」만을 잔여 차단으로 달고 있던 구현 대기 7행 중 **5행**을 전용 e2e 파일 5개 저작으로 닫고(`approval_gate_ac6`·`approval_gate_ac10`·`resource_generic_ac6`·`ac7`·`ac16`), **1행**(`test-resource-generic.md#시나리오 18`)은 근거를 실제 차단으로 고쳐 써 구현 대기에 남기며, **1행**(`#시나리오 11`)은 실물 CI 가 드러낸 제품 결함 때문에 구현 대기로 되돌려 소관 모델(`docs-impl`)에 인계한다. PR #132 가 **main 에 착지**해 main tip 에서 `check_ac_mapping.py` 가 rc=0 으로 **`85 · 1 · 21 · 63 · 63 · 0 · 0`** 을 내고, 같은 tip 의 `doc-tracker.md` 708행이 그 값과 일치하면 이 task 는 성공이다.\n\n**왜 이 경로인가 — 새 브랜치가 아니라 같은 브랜치에 얹는다.** 검토가 본 14커밋·9파일은 이미 CI 로 전수 초록을 냈고(run 35371871989: `primary 48 · auth-variant 13 · oauth-variant 1 · gatekeeper-variant 3`, `FAIL` 0), 그 관측이 이 슬라이스의 유일한 새 근거다. 리베이스·force-push 는 검토가 본 커밋을 지워 그 근거를 무효화하므로 금지한다. 되돌리기 경로는 머지 뒤 revert PR 하나이고, 제품 코드(`internal/`·`cmd/`·`k8s/`)는 이번에도 0줄이라 배포 이미지·트래픽·데이터 영향이 없다.\n\n**재발 방지를 이번 계획 안에 넣는다(검토 지적 ②).** 같은 사고가 두 번 났다 — step 11 에서 범위를 `20 · 64 · 64` → `21 · 63 · 63` 으로 줄일 때 **직전 계획 문면**이 따라오지 못했고(1차 거부 지적 ④), 이번엔 **산출물 문서**가 따라오지 못했다(2차 거부). 원인은 하나다: **게이트가 산문 불변식 문장을 읽지 않는다.** `check_ac_mapping.py` 는 `<!-- scenario-e2e-집계 -->` 블록과 표만 세고 708행 산문은 파싱하지 않으므로, 이 어긋남에 CI 는 영원히 초록이다. 그래서 ⑴ 이 계획의 모든 숫자를 게이트 실측값 `85 · 1 · 21 · 63 · 63 · 0 · 0` 으로 통일하고, ⑵ 옛 값 문자열 전수 grep 이 0건임을 확인하는 단계를 계획과 지침 양쪽에 못박는다.\n\n**이번이 연속 3회째 판정이다.** 2회 연속 거부 상태이므로 다음 거부는 한도(3회)에 걸려 task 가 `cancelled` 로 닫힌다. 남은 블로커가 위 한 줄뿐이라는 검토의 진단을 그대로 받아, 이 기회에 다른 것을 함께 손대지 않는다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "준비물 3축의 신선도를 실측으로 재확인한다 — `GET /repos/dlddu/homelab-k3s-mcp/pulls/132` 로 `state·mergeable·mergeable_state·head.sha·base.sha`, `GET /repos/.../commits/main` 으로 main tip. 검토가 본 head `7cbc02e` 와 base `ec18e75` 가 그대로인지, base 가 여전히 main tip 과 같은 sha 인지 본다.",
+              "expectedOutcome": "`state:open · mergeable:true · mergeable_state:clean`, head `7cbc02e`, base `ec18e75` = main tip. 세 축 모두 검토 시점 그대로 — base 가 움직였으면 step 5 의 머지 커밋 경로로 간다."
+            },
+            {
+              "seq": 2,
+              "action": "블로커가 **정말로 한 줄뿐인지** 옛 값 문자열을 전수 grep 으로 확인한다: `grep -rn -E '20\\(구현 대기\\)|매칭 파일 64|1:1 대상: 64|= 64|⏳ 구현 대기 20|전용 파일 64' docs/`.",
+              "expectedOutcome": "히트 1건 — `docs/doc-tracker.md:708` 뿐. 다른 문서·다른 절에는 옛 값이 남아 있지 않다(검토의 「집계 블록·절 제목·표 행 수는 이미 맞다」가 실측으로 확인된다)."
+            },
+            {
+              "seq": 3,
+              "action": "숫자를 **손으로 짓지 말고 게이트 출력에서 가져온다**: `python3 tests/integration/check_ac_mapping.py` 를 돌려 일곱 값을 그대로 읽는다.",
+              "expectedOutcome": "rc=0, 출력 `시나리오 전집 85 · 예외 등재 1 · 구현 대기 등재 21 · 1:1 대상 63 · 매칭 파일(전용) 63 · 분할 대기 0 · 공백 0`. 이 값이 708행에 적을 숫자의 유일한 출처다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/doc-tracker.md` **708행 한 줄만** 고친다 — `> 불변식이 여기서 눈으로 닫힌다: **85 − 1(예외) − 20(구현 대기) = 64 = 매칭 파일 64**, 공백 **0**.` 를 step 3 실측값으로 `**85 − 1(예외) − 21(구현 대기) = 63 = 매칭 파일 63**` 으로 바꾼다. 집계 블록(693~699)·레지스트리 절 제목(706)·구현 대기 절 제목(800)·표 행 수 21 은 **이미 맞으므로 건드리지 않는다**.",
+              "expectedOutcome": "`git diff --stat` = `docs/doc-tracker.md | 2 +- (1 insertion, 1 deletion)`. 그 외 파일 무접촉 — 특히 `tests/integration/*.py` 와 `internal/`·`cmd/`·`k8s/` 는 0줄. 측정값은 이 수정으로 움직이지 않는다(게이트가 이 산문을 읽지 않으므로)."
+            },
+            {
+              "seq": 5,
+              "action": "base 를 다시 본다(검토 지적 ④). `git fetch origin main` 후 `git merge-base --is-ancestor origin/main HEAD` 로 main tip 이 head 의 조상인지 확인하고, 움직였으면 **머지 커밋으로** 병합한다. 리베이스·force-push 는 금지 — 검토가 본 14커밋을 남겨야 한다.",
+              "expectedOutcome": "조상 관계 성립(rc=0). 움직였다면 머지 커밋 1개가 추가되고 충돌은 `docs/doc-tracker.md` 변경 이력의 같은 날짜 행뿐이며, 양쪽 행을 둘 다 보존하고 숫자는 다시 게이트 출력에서 옮긴다."
+            },
+            {
+              "seq": 6,
+              "action": "수정을 **커밋한 뒤** 네 게이트를 다시 돌린다 — `check_ac_mapping.py` · `check_mock_policy.py` · `check_comment_policy.py` · `check_doc_inventory.py`. (`check_comment_policy.py` 는 `git ls-files` 를 보므로 커밋 전 초록은 근거가 아니다 — 직전 준비가 밟은 함정이다.)",
+              "expectedOutcome": "넷 다 rc=0, 일곱 값은 `85 · 1 · 21 · 63 · 63 · 0 · 0` 으로 **불변**. 주석·docstring 표면이 변하지 않았으므로 주석 원장(`docs/comment-policy/ledger.md`) 재판정은 불필요하고, `check_comment_policy.py` 초록이 그것을 증명한다."
+            },
+            {
+              "seq": 7,
+              "action": "step 2 의 옛 값 grep 을 **커밋 뒤 한 번 더** 돌려 0건임을 확인한다. 이 단계가 재발 방지의 실체다 — 게이트는 산문 불변식을 읽지 않으므로 이 grep 이 유일한 관측 수단이다.",
+              "expectedOutcome": "히트 0건. 708행이 새 값으로 바뀌었고 다른 어디에도 옛 값이 남지 않았다."
+            },
+            {
+              "seq": 8,
+              "action": "같은 브랜치 `reconcile/scenario-e2e-rct_20260918-0003` 에 push 한다(force 없음). 원격 ref 가 새 head 인지, main tip 이 그 head 의 조상인지 확인한다.",
+              "expectedOutcome": "`git ls-remote` 의 브랜치 ref = 새 head, `merge-base --is-ancestor <main tip> <head>` 성립. GitHub 의 `mergeable` 은 비동기 재계산이라 지연될 수 있으므로 **조상 관계를 1차 근거로** 삼고 API 값은 뒤따라 확인한다(`dirty` 를 즉시 충돌로 읽지 않는다)."
+            },
+            {
+              "seq": 9,
+              "action": "(실행 단계) 새 head 의 CI 를 `GET /repos/dlddu/homelab-k3s-mcp/actions/runs?head_sha=<head>` 로 읽어 required check `ci passed` 가 초록인지 확인한다. 신규 5파일의 `ok:` 전수 확인은 **이번에는 다시 하지 않아도 된다** — 검토가 run 35371871989 로 이미 파일 이름 전수로 확인했고, 이번 변경은 `.py` 를 한 줄도 건드리지 않기 때문이다.",
+              "expectedOutcome": "`ci passed` = success. 실패하면 그 원인이 이번 한 줄 수정과 무관한 인프라 요동인지부터 가리고, 재실행으로 풀리지 않으면 머지하지 않는다."
+            },
+            {
+              "seq": 10,
+              "action": "(실행 단계) PR #132 를 squash 머지하고 **main tip 에서** `check_ac_mapping.py` 를 다시 돌려 일곱 값과 708행을 재확인한다.",
+              "expectedOutcome": "main 착지 + main tip 실측 `85 · 1 · 21 · 63 · 63 · 0 · 0` (rc=0), 그리고 main tip 의 708행이 `21 · 63 · 63`. 이 두 지점이 완료 기준이다 — PR head 초록만으로 닫지 않는다."
+            }
+          ],
+          "plannedAt": "2026-09-18T17:22:00Z"
+        }
       }
     ]
   },
