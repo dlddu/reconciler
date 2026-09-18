@@ -2909,6 +2909,77 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-18T12:52:27Z",
           "comment": "승인 — 실행 시점 재통합(봉투 4조건) 방식에 동의. 승인 세션 실측(2026-09-18T12:4xZ): main 이 계획 기준선 7e96021b → 2bf88ef4(#56 API SIGTERM · #55 stub LLM 429 재현 · 이미지 핀)로 이동했으나 현재 main 대상 드라이런에서 봉투 성립 — 충돌 docs/doc-tracker.md 단일 · main 대비 21파일 · 해소 스크립트 assert 무위반 · 게이트 3종 rc=0(매핑 19 · 래칫 1/1 · 활성 6 · 보류 2/2 · 편차 47/47) · SQL 무변경. PR #43 head 4e809da7 · PR #49 head c8b22c6e 불변. 주의: 비-draft PR #57(doc-tracker·목업 2개, 편차 원장 재판정)이 재통합 결과와 doc-tracker 충돌 — 먼저 머지되면 봉투 (d) 가 깨져 푸시 전 중단될 수 있음."
+        },
+        "execution": {
+          "status": "aborted",
+          "startedAt": "2026-09-18T12:57:16Z",
+          "finishedAt": "2026-09-18T13:04:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T12:57:16Z",
+              "finishedAt": "2026-09-18T12:59:30Z",
+              "log": "입장 봉투 실측 — ① reconciler pull --rebase 후 status=approved 확인, claim.py 로 approved→executing (reconciler 47de0129). ② dlddu/feature-doc 새 클론 + `git fetch origin refs/pull/43/head:pr43 refs/pull/49/head:pr49`. ③ **구현물·차량 불변 확인**: PR #43 open·head=4e809da728ad1124a253d7e23a89a09257709af1, PR #49 open·head=c8b22c6ed2bc04b6270be6460c4446dad023ab2b — 승인 시점과 동일. ④ `git merge-tree --write-tree --name-only pr49 origin/main` → 충돌 파일 **`docs/doc-tracker.md` 단일**(rc=1, 나머지 analysis.rs·worker.rs·worker_api.rs·e2e.sh 자동 병합) — 봉투 (a) 성립. 병합 트리 a7956b6d 대비 `git diff --name-only origin/main` = **21파일** — 봉투 (b) 성립.\n\n실행 시점 main = **246b2884**(승인 세션 실측 2bf88ef4 에서 2커밋 이동: `f9a7f27` docs: 문서 권위 순서 확정 + 목업 갱신, 편차 원장 재판정 (#57) → `246b288` 이미지 핀). 계획대로 main sha 는 기록만 하고 통과 조건으로 쓰지 않았다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "failed",
+              "startedAt": "2026-09-18T12:59:30Z",
+              "finishedAt": "2026-09-18T13:03:10Z",
+              "log": "재통합 머지 계산 중 **봉투 (d) 위반으로 중단**. `git checkout -b re-int pr49 && git merge origin/main` → 충돌 파일은 예상대로 `docs/doc-tracker.md` 단일이나 **충돌 hunk 가 4개가 아니라 6개**(파일 내 위치 L10·L95·L158·L170·**L479**·**L494**). §3 해소 스크립트를 그대로 실행하니 첫 단정에서 즉시 죽었다:\n\n```\nAssertionError: expected 4 conflict hunks, found 6\n```\n\n스크립트 설계대로 **절반만 적용된 경로는 없다**(실행 전후 `docs/doc-tracker.md` 바이트 동일 — diff 무변화 확인).\n\n**새 hunk 2개의 정체 — 승인 코멘트가 예고한 바로 그것이다.** 승인 시 「비-draft PR #57(doc-tracker·목업 2개, 편차 원장 재판정)이 재통합 결과와 doc-tracker 충돌 — 먼저 머지되면 봉투 (d) 가 깨져 푸시 전 중단될 수 있음」이라 적혀 있었고, #57 이 `f9a7f27` 로 먼저 착지했다(doc-tracker.md +88/−? · JRN-connect-repo.html · JRN-discover-features.html 3파일). hunk 5·6 은 계획된 4 hunk(시나리오 축 요약·임차인·래칫 헤딩·래칫 표)와 **다른 축인 편차 원장 표**에서 새로 열렸다:\n- hunk 5(L479): `AnalysisProgress.tsx` 3행 — 차량은 유형 「데이터 부재」·해소 조건 「카피 확정 시」로, main 은 「구현 수렴 대기」·「구현 수렴 PR (2026-09-18 권위 순서 재판정 ②)」로 같은 행을 서로 다르게 재판정.\n- hunk 6(L494): 차량 17줄(`FeatureCandidates.tsx` 이름 변경·병합·추출 전 상태, `FeatureAcceptance.tsx` 재개 배너·검수 상태 …) 대 main 4줄 — #57 이 **6건을 닫고 22건의 유형을 「구현 수렴 대기」로 바꿔** 원장 자체가 `알려진 편차 47건 · 상한 47` → **`37건 · 상한 37`** 으로 재판정됐다.\n\n어느 줄을 남길지는 프리픽스로 고를 수 있는 기계적 병합이 아니라 **어느 판정이 옳은가**의 재판정이다 — §3 레시피에 그 규칙이 없고, 즉흥 해소는 §4 가 금지한다.\n\n**§4 중단 절차대로 대상 레포에 아무것도 남기지 않았다**: `git merge --abort`, 푸시·PR 변경·머지 없음. 실행 후 `git ls-remote` 로 `refs/heads/reconcile/rct_20260902-0008-feature-doc-docs-impl` 가 여전히 **4e809da7**(=PR #43 head 불변)임을 확인했다. 로컬 클론만 버린다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "log": "2단계 중단 — 재통합 트리가 없어 게이트를 돌릴 대상이 없다. 대신 **현재 main(246b288)에서** 게이트 3종을 읽기 전용으로 실측해 재계획의 새 기준선으로 남긴다(전부 rc=0): scenario-e2e ✓ 통과 · mockup-render 「M0 활성 **5** · 보류 2 · 편차 **37**」「M4 행 **37** · 공전 0」「M5 래칫 **37/37**」「M5 대조 보류 2/2」「M3A 활성 단계 6 / 카피 156건」「M3B 활성 쌍 5 / 카피 106건」 · journey-mockup 「여정 6 · 목업 5 · 이관 대기 0 · 문서 **23** · 링크 **216건**」. 계획 §2 ③ 의 기대값(활성 6 · 편차 47 · M4 47 · M5 47/47)은 #57 재판정으로 더 이상 도달 대상이 아니다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "log": "푸시 없음 — §4 가 (c)(d) 위반 시 푸시를 금지한다. PR #43 브랜치 head 4e809da7 불변."
+            },
+            {
+              "stepSeq": 5,
+              "status": "skipped",
+              "log": "재통합 head 가 푸시되지 않아 CI run 이 없다. `--cargo-before/--cargo-after` 도 미확정."
+            },
+            {
+              "stepSeq": 6,
+              "status": "skipped",
+              "log": "PR #43 본문·draft 상태 미변경(draft=true 유지)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "skipped",
+              "log": "머지 직전 봉투 재확인 — 8단계에 도달하지 못함."
+            },
+            {
+              "stepSeq": 8,
+              "status": "skipped",
+              "log": "**머지하지 않았다.** 불가역 경계(§0)를 넘지 않았고 배포도 일어나지 않았다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "skipped",
+              "log": "머지가 없어 이미지 핀 커밋·롤아웃이 없다. kubectl 미실행."
+            },
+            {
+              "stepSeq": 10,
+              "status": "skipped",
+              "log": "검증 표 실측 대상(머지된 main)이 없다. verification 에 미달성 근거만 남긴다."
+            },
+            {
+              "stepSeq": 11,
+              "status": "skipped",
+              "log": "PR #49 는 open·head c8b22c6e 그대로 둔다 — 재통합이 흡수하지 못했으므로 닫으면 차량을 잃는다."
+            },
+            {
+              "stepSeq": 12,
+              "status": "failed",
+              "log": "종료 판정: 검증 표 6행 중 달성 0 → **failed**. 잔여 미구현 AC 는 범위 밖 문제가 아니라, 이 시도가 계획한 범위조차 착지시키지 못했다. 재계획은 planner 의 몫이다."
+            }
+          ]
         }
       }
     ],
