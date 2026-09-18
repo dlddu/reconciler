@@ -969,7 +969,7 @@
   {
     "id": "rct_20260918-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T13:28:31Z",
@@ -1166,6 +1166,69 @@
               "startedAt": "2026-09-18T16:45:30Z",
               "finishedAt": "2026-09-18T16:47:10Z",
               "log": "머지된 main 에서 모델 `asIs.versionScript` 재실행 → `sites=36 files=20` / `e6b905187ddc6113c37675a8e9b28f168680ad64d0ea15db3b67717847706352`. 계획의 예측값과 **정확히 일치**(직전 `sites=34 files=20` / `1741ad928d…`). 측정 시점 main tip 은 `f6cd432`(#133, 머지 후 착지한 배포 핀 워크플로 변경)이며 그 커밋은 이 지문 토큰에 0-side 라 값에 영향이 없다. 지문이 전진했으므로 범위 밖 잔여 gap 의 재감지 경로가 열린 채 남는다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "sites=36 files=20\ne6b905187ddc6113c37675a8e9b28f168680ad64d0ea15db3b67717847706352",
+          "verifiedAt": "2026-09-18T16:52:00Z",
+          "checks": [
+            {
+              "name": "2 · check_mock_policy.py 수치 문자열 (머지 커밋 6958350b)",
+              "status": "passed",
+              "detail": "rc=0 이고 첫 줄이 `OK: 규칙 R1~R6 위반 없음 — 등재 5(상한 5) · 모킹 지점 6 · 실재 토큰 5 · 표기 주석 6 · 미등재 0 · 고아 0` — 기대 문자열과 글자까지 일치. 지침의 경고대로 rc 가 아니라 수치로 판정했다(이 체커는 머지 전에도 rc=0 이었다). 등재 **행** 5 · 상한 5 불변인 채 지점만 6 으로 늘었다 ⇒ 완료 기준 1·2 충족, R6 상한 래칫 무영향."
+            },
+            {
+              "name": "2 · B2 차단 원장 행 (머지 커밋)",
+              "status": "passed",
+              "detail": "`approval-gate-ac5-http-failures: 소관=tbm_homelab-k3s-mcp-e2e-mock-policy · 선행=tbm_homelab-k3s-mcp-scenario-e2e: 409·5xx 재현 가능성의 관측 로그 (실물 tests/k8s/kind/gatekeeper-fixture.yaml 은 PR #106 에서 충족) · 재검토=2026-10-15` — 기대값 일치. 행이 **삭제되지 않고 유지**된 채 선행 셀만 남은 절반을 담고, 재검토 날짜 `2026-10-15` 가 미뤄지지 않았다(B3 준수)."
+            },
+            {
+              "name": "2 · check_comment_policy.py 합계·잔량 (머지 커밋)",
+              "status": "passed",
+              "detail": "rc=0 이고 `OK: 규칙 R1~R8 위반 없음 — 판정 대상 주석 2213줄 / 102파일 (Go 소스 954 · Go 테스트 578 · YAML 352 · Python 329) · 판정 완료 2204줄(99.6%) / 등재 범위 42 · 미판정 잔량 9줄` — 기대값 일치. 판정 합계가 `2203→2204` 로 움직이고 **잔량 마커 9 는 불변**(등재 범위가 1줄 늘었을 뿐 미판정 범위가 늘지 않았다). 직전 시도의 유일한 거부 사유(R2·R4 레드)가 닫혔다."
+            },
+            {
+              "name": "2 · 주석 원장 행 #37 재판정 (머지 커밋)",
+              "status": "passed",
+              "detail": "`2026-09-15(#37)    49줄  537a6c00d4f6  tests/k8s/kind/gatekeeper-fixture.yaml tests/k8s/kind/gatekeeper-variant.yaml` — 기대값 일치(`48→49줄`, 지문 `725386b4affe→537a6c00d4f6`). 수치는 손으로 쓰지 않고 체커 출력 실측값이다 ⇒ 완료 기준 5 충족."
+            },
+            {
+              "name": "3 · 체커 회귀 스위트",
+              "status": "passed",
+              "detail": "`python3 -m unittest discover -s scripts -p test_check_mock_policy.py` → `Ran 13 tests` / `OK`. 체커·상한·CI 배선 무변경이므로 회귀 0 이 기대값이고 그대로다."
+            },
+            {
+              "name": "4 · 불변식 1 독립 집합 대조 (체커 밖)",
+              "status": "passed",
+              "detail": "`git ls-files -- tests .github/workflows | grep -v '_test\\.go$' | xargs grep -Hn MCP_AUTH_DISABLED` 17히트 중 **정의 지점 정확히 2곳** — `kustomization.yaml:19`, `gatekeeper-variant.yaml:110`. 나머지 15 는 픽스처 머리말·e2e docstring 의 참조다. 두 지점 모두 허용목록 행의 지점 열에 있고, `gatekeeper-variant.yaml:109` 가 `# mock-exception: GATE — …` 로 정의 줄 **바로 앞**에 있다. 등재 집합 = 코드 집합(양방향 1:1 복원) ⇒ 완료 기준 1·2 를 체커와 독립으로 재확인."
+            },
+            {
+              "name": "6 · 머지 커밋의 CI (스텝 단위)",
+              "status": "passed",
+              "detail": "머지 커밋 `6958350b` 의 CI run 35368083907 = success. `fmt + vet` 잡의 **`E2E mocking policy`** 와 **`Comment policy ledger`** 두 스텝 모두 success(두 게이트 동시 초록 — 직전 시도가 놓친 지점), `Doc hub inventory`·`AC <-> e2e file mapping` 도 success. `integration tests` 잡 success 이고 그 안의 `Apply gatekeeper-variant fixture`·`Wait for gatekeeper-variant rollout`·`Run integration tests (gatekeeper-variant deployment)` 모두 success — YAML 주석 삽입이 실환경 배포를 깨지 않음이 확인됐다. `unit tests` success, 집계 잡 **`ci passed` = success**."
+            },
+            {
+              "name": "6 · (정보) GHCR 이미지 핀 워크플로 failure — 이 PR 의 회귀 아님",
+              "status": "passed",
+              "detail": "같은 sha 의 `Build and Push Docker Image to GHCR`(run 35368083883)는 failure 다. 검토 코멘트가 미리 지목한 **기존 고장**으로, 머지 전 main HEAD `29d5651` 에서 이미 failure 였고 PR head `1da8d22` 에서는 success 였다. 필수 체크는 CI 워크플로의 집계 잡 `ci passed` 이며 그쪽은 success 다. 머지 직후 이 축을 다루는 #133(`ci: 운영 이미지 pin 을 main 되커밋 대신 deploy 브랜치로 발행`)이 별도로 착지했다 — 이 task 의 범위 밖이다."
+            },
+            {
+              "name": "7 · as-is 지문 전진 (재감지 경로)",
+              "status": "passed",
+              "detail": "머지된 main 에서 모델 `asIs.versionScript` 재실행 → `sites=36 files=20` / `e6b905187ddc6113c37675a8e9b28f168680ad64d0ea15db3b67717847706352`. 계획 예측값과 정확히 일치(직전 `sites=34 files=20` / `1741ad928d…`). 모델의 `lastObservedVersion` 은 의도적으로 건드리지 않았다 — 이 변화가 다음 감지 주기의 트리거가 된다."
+            },
+            {
+              "name": "신선도 · 베이스 이동 흡수 (계획 1단계 분기 실행)",
+              "status": "passed",
+              "detail": "계획 수립 이후 PR base `7a8edf16` → main HEAD `29d5651`(#131) 로 베이스가 움직여 있었다. 계획 1단계의 분기대로 바로 머지하지 않고 로컬 머지 트리(`32bda52`)에서 2단계부터 재측정했으며, 두 게이트 수치가 전부 불변임을 실측으로 확인한 뒤 머지했다(#131 은 `docs/` 마크다운 2파일 = 두 스캔 범위 밖). 자매 PR #132 는 머지 직전까지 open·`dirty` 라 원장 합계를 낡게 하지 않았다 — 원장 재측정 후 갱신은 불필요했다."
+            },
+            {
+              "name": "(정보) 범위 밖 잔여 gap — 이 판정에 넣지 않음",
+              "status": "passed",
+              "detail": "이 슬라이스가 의도적으로 남긴 것들이며 converged 판정에 넣지 않았다: ⑴ `docs/test-approval-gate.md` 시나리오 5 사전 조건의 스텁 처방(소관 `tbm_homelab-k3s-mcp-scenario-e2e`), ⑵ 409·5xx 재현 가능성 관측 로그와 `tests/integration/approval_gate_ac5.py`(원장 행의 남은 선행, 소관 scenario-e2e), ⑶ 차단 원장 행 `approval-gate-ac5-http-failures` 자체의 해소(⑵가 선행, backstop `2026-10-15`), ⑷ 주석 원장 미판정 잔량 9줄(소관 `tbm_homelab-k3s-mcp-comment-redundancy`). as-is 지문이 전진했으므로 다음 감지 주기가 이들을 후속 task 로 집을 경로가 열려 있다."
             }
           ]
         }
