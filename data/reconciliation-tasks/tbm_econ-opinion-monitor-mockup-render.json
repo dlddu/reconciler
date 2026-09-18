@@ -812,7 +812,7 @@
       ]
     },
     "createdAt": "2026-09-18T16:01:04Z",
-    "updatedAt": "2026-09-18T16:40:00Z",
+    "updatedAt": "2026-09-18T16:47:00Z",
     "stateSummary": {
       "asIs": "## as-is — 구현 렌더링 소스 (main `46c8f24`, 2026-09-18T16:0xZ 관측)\n\n지문: `screens:dbe04db8 shell:0ed5b3a7 tokens:ac853025` — **이번 트리거로 한 바이트도 움직이지 않았다**\n(부모 `2998a87`와 tip `46c8f24`에서 세 성분 모두 동일). 직전 이동은 `1590050`(#29, 주석 정책)이었고\n`rct_20260918-0003`이 노이즈로 판정해 닫았다.\n\n- **판정 대상 화면**: `App.tsx:9` `const BUILT = new Set([\"dash\", \"compare\"])` — 그대로 2개.\n  `Dashboard.tsx`(`dash`) · `Compare.tsx`(`compare`) + 공유 셸(`AppShell`·`Sidebar`·`Topbar`·`MapStrip`).\n  나머지 5개(`trend`·`sentiment`·`fairness`·`trace`·`reprocess`)는 `Placeholder` → 이 모델의 drift 아님.\n- **규칙 3 표면(`CMP-*`/`PAT-*` 마커)**: `web/src/tokens/tokens.css`가 구획 주석 11개로 **13종**을 이름 지어\n  갖는다(`PAT-screen-shell`·`CMP-card`·`CMP-metric`·`CMP-delta`·`CMP-ranklist`·`CMP-sentbar / legend`·\n  `CMP-note`·`CMP-axpill / badge`·`CMP-seg`·`CMP-btn`·`CMP-kv`). 결합 마커(`/ legend`·`/ badge`)를\n  정규화하지 않으면 2종을 부재로 오계수한다.\n- **구현 전용 1종**: `CMP-btn`은 디자인 시스템 정의에 없는 이름이다(역방향 차집합).\n- **미반영으로 남은 수렴 1건**: `Compare.tsx`에 `비교에서 제외`·`수집이 없는 것과 관심이 없는 것은 다릅니다`\n  **부재**(grep 0). 직전 task가 의도적으로 뺀 것이며 변경분은 브랜치 `reconcile/rct_20260918-0002`(PR #30, closed)에 보존.\n\n## as-is 문서 평면(판정 지문 밖이지만 판정의 전제)\n\n`docs/econ-opinion-monitor-design-tracker.md` 허용목록 실측 — `compare` **15행**(구조 7 · 카피 7 ·\n구현 수렴 대기 1) · `dash` **5행**(구조 2 · 카피 2 · 후속 판정 대기 1). 이 파일은 `docs/` 루트라 양 side\nversionScript 범위 밖이다(= 여기만 바뀌면 재감지가 걸리지 않는다).\n",
       "toBe": "## to-be — 목업 SSOT (main `46c8f24`)\n\n지문: `mockups:b6fbe651 design-system:4a6b5c53`. **`design-system`은 불변, `mockups`만 이동**했다.\n\n- **귀속 100%**: 부모 `2998a87`에서 `git rev-parse HEAD:docs/mockups` = `80142de8…` = 저장 baseline과\n  **바이트 동일**, `2998a87..HEAD`에서 `docs/mockups`·`docs/design-system`을 건드린 커밋은 `46c8f24` 단 하나.\n- **트리거 `46c8f24`(#33, 15:54:52Z)** = 직전 task `rct_20260918-0002`(succeeded 15:45Z)의 실행 산출.\n  2파일 `+66/−5`: `econ-opinion-monitor-mockup-index.md` `+25`(to-be 지문 이동의 유일 원인) ·\n  `econ-opinion-monitor-design-tracker.md` `+41/−5`(지문 밖).\n- **인덱스에 들어온 것**: 「흡수된 화면의 판정 경계」 절 — 여정 페이지가 화면을 흡수해도 모든 단계가 그 화면은\n  아니라는 규약 + 단계↔화면 id 귀속 표 2개(`JRN-axis-contrast` 5단계 중 4단계 → `compare`,\n  `STP-verify-in-trend` → `trend`(승계 계약은 `compare` 인계) / `JRN-sentiment-shift` 4단계 → `sentiment`).\n  기존 표·상한 래칫(미이관 4 · 규칙 5 미충족 5)·mockup HTML 7종은 무접촉.\n- **디자인 시스템 정의**: `CMP-*` 19종 + `PAT-*` 9종 = **28종**(불변).\n- **목업 파일**: `dashboard`·`trend`·`fairness`·`trace`·`reprocess` + 여정 2종(`JRN-sentiment-shift`·\n  `JRN-axis-contrast`) + `index.html`. 등록 시점 현황과 동일.\n- 레포 게이트 `python3 scripts/check-journey-mockup.py` → tip에서 **PASS**(R1~R9, 링크 95건).\n  단 이 게이트는 여정↔목업 축 전용이라 목업↔구현 렌더링 정합은 원리적으로 보지 않는다.\n",
@@ -824,6 +824,72 @@
       "reason": "**작업 필요 → `action_required`.** 이 트리거가 *만든* 어긋남은 없다. 그러나 이 트리거는 직전 슬라이스가\n설계대로 열어 둔 후속 판정(슬라이스 ⓑ = 규칙 3·5 전면 판정)의 재감지 신호이고, 그 잔여에는 지금 소유자가 없다.\n\n**⑴ 잔여 gap이 실재하고 판정 축이 이름으로 특정돼 있다.** 규칙 3(컴포넌트·패턴 `CMP-*`/`PAT-*` 대조)과\n규칙 5(구조·수치)는 이 모델 등록 이래 한 번도 전면 판정된 적이 없다. 직전 task `rct_20260918-0002`가\n계획 문면에 「규칙 3과 규칙 5는 이번에 판정하지 않는다 … 허용목록 7행의 `후속 판정 대기`도 그 슬라이스 ⓑ에서\n종결한다」고 **명시적으로 범위 밖**으로 인계했다. 실측 기준선: 디자인 시스템 정의 28종(`CMP-*` 19 + `PAT-*` 9)\n중 `tokens.css`가 이름 지어 갖는 것 12종, **미마킹 16종**, 정의에 없는 구현 전용 1종(`CMP-btn`).\nCMP만 세면 **11/19** — 직전 계획이 선행 조건으로 적어 둔 수치와 독립 재측정이 정확히 일치한다.\n\n**⑵ 대상 레포 문서가 이 task를 호명한다.** 허용목록의 `dash` 행(축 세그·정규화 토글 배치면)은 종류가\n`후속 판정 대기`이고 스스로 「수용된 편차가 아니라 아직 판정하지 않은 편차이므로, **다음 사이클이 반드시 다시\n집어야 한다**」·재검토 시점 「**규칙 3·5 전면 판정 task**」라고 적는다. 이번 트리거가 새로 등재한 `compare`\nmapstrip 메타 노출 행도 재검토 시점이 「셸 차원에서 정할 때(**규칙 3·5 슬라이스**)」다. 즉 잔여의 처분 시점이\n문서상 **바로 이 task**로 지정돼 있다.\n\n**⑶ 재감지 경로 0 — 지금 열지 않으면 무기한 미판정으로 남는다.** 잔여를 닫는 편집 대상은 `tokens.css` 마커와\n`Dashboard.tsx`/`Compare.tsx`/셸의 구조인데 어느 쪽도 저절로 움직이지 않는다(목업은 이번 이동으로 예정된\n변경을 마쳤고 구현은 #29 이후 정지). 잔여를 기록한 `docs/econ-opinion-monitor-design-tracker.md`는 양 side\nversionScript 범위 **밖**(`docs/` 루트)이라 그 파일이 바뀌어도 감지가 걸리지 않는다. 레포 게이트\n`check-journey-mockup.py`는 tip에서 PASS이지만 여정↔목업 축 전용이라 이 어긋남을 기계로 잡지 못한다.\n직전 task의 계획이 「이 PR이 to-be 지문을 움직이므로 슬라이스 ⓑ는 재감지로 반드시 새 task가 열린다」고\n적은 그 재감지가 이 task다 — 슬라이스 → 재감지 → 후속 task는 이 루프의 정상 진행 경로다.\n\n**⑷ 자동 해소 가능성 없음.** 롤아웃·일시적 alert 유형이 아니라 양쪽 파일이 정지한 상태의 정적 차이다.\n(덧붙여 이 스키마에는 `assessment.recheckAfter`가 없어 유예 파킹 자체가 불가능하다 —\n「`assessment.recheckAfter` 스키마 확장 필요 — control plane의 reconciler-task-schema-updater 몫」.)\n\n**⑸ 이 gap은 대상 레포 안에서 닫힌다** — 모델 레코드(versionScript·definition) 수정이 필요한 종류가 아니므로\nplanner 인계가 맞다(모델 기구 결함이면 `no_action_needed` + tobe-modeler 보고가 정답이지만 여기는 해당 없음).\n\n---\n\n### planner 인계 — 범위와 주의\n\n**슬라이스 ⓑ의 범위**: `BUILT` 2화면(`dash`·`compare`)과 공유 셸에 대한 규칙 3·5 판정. `Placeholder`\n5화면(`trend`·`sentiment`·`fairness`·`trace`·`reprocess`)은 모델 정의상 이 모델의 drift가 아니다\n(`tbm_econ-opinion-monitor-docs-impl` 소관) — 미마킹 16종 중 `PAT-line-chart`·`PAT-donut`·`PAT-lineage`·\n`PAT-integrity-panel`·`PAT-before-after`·`PAT-raw-vs-norm`·`PAT-stacked-sentiment` 등은 그쪽 화면 소관일\n가능성이 높으니 **먼저 화면 귀속으로 분해**하고 범위 안 집합을 확정할 것.\n\n**⚠️ 마커 부재를 컴포넌트 부재로 읽지 말 것.** `CMP-sidebar`·`CMP-topbar`·`CMP-mapstrip`은 셸에 실재하는데\n`tokens.css` 구획 주석이 없을 뿐이다. 또 결합 마커(`/* ---- CMP-sentbar / legend ---- */`,\n`/* ---- CMP-axpill / badge ---- */`)를 **정규화하지 않으면 `CMP-legend`·`CMP-badge` 2종을 부재로 오계수**한다\n(이번 측정에서 실제로 한 번 밟았다). 규칙 3의 1차 산출은 「없는 컴포넌트」가 아니라 **「이름 대조가 성립하도록\n마커를 채우는 것」**일 수 있다 — 직전 계획이 이를 선행 조건으로 지목했다.\n\n**⚠️ 실행 지침에 「CI 전건 초록 확인」을 게이트로 넣지 말 것.** 이 호스트의 App 토큰에는 `checks`/`actions`\n권한이 부여되어 있지 않고(`checks:read` 요청이 발급 단계에서 422), Actions는 commit status API에 아무것도\n쓰지 않아 `statuses:read`로는 `{state:pending, total_count:0}`(= 체크 없음, 실패 아님)만 나온다. 이 레포에서\n같은 지침이 이미 한 번 실행을 막았고(`rct_20260918-0002` 시도 0 `failed`, PR #30 closed), 재계획이 그것을\n「구조적으로 영원히 통과 불가」로 규정하며 코드 변경을 PR에서 걷어내 우회했다. 또 이 환경엔 **node가 없어**\n`tsc`·`eslint`·`vitest`·번들 빌드를 로컬 재현할 수도 없다 ⇒ **`web/src` 코드 변경을 포함하는 슬라이스는\n지금 검증 수단이 없다.** 현실적인 설계는 둘 중 하나다: ⓐ 이번 슬라이스를 **문서·판정 산출물 중심**(마커 보강은\n`tokens.css` = 코드이므로 주의 — CSS 주석만 바꾸는 변경도 `build` 잡의 입력이다)으로 좁히거나,\nⓑ 로컬에서 python stdlib로 재현 가능한 검증기만 게이트로 삼는다(선례: `scripts/check-journey-mockup.py`,\n`tests/e2e/check_scenario_mapping.py`).\n\n**함께 딸려 있는 항목(이번 슬라이스에서 처분하지 말 것)**: 허용목록의 `구현 수렴 대기` 1건\n(축 결측 안내 방침 문장 → `Compare.tsx` `AxisRows` 빈 상태)은 재검토 조건이 「CI 결과 판독 경로나 node\n툴체인 중 하나가 생겼을 때」인데 **아직 충족되지 않았다**. 변경분은 브랜치 `reconcile/rct_20260918-0002`\n(PR #30, closed)에 보존돼 있으니 조건이 생기면 그대로 재사용한다. 이 조건을 충족시키는 것 자체\n(Actions 결론의 commit status 미러링, 또는 토큰 권한 확장)는 이 레포/이 루프 밖의 **사용자 결정 사항**이다.\n",
       "assessedBy": "agent",
       "assessedAt": "2026-09-18T16:15:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**슬라이스 ⓑ — 규칙 3(컴포넌트·패턴)·규칙 5(구조·수치)의 전면 판정을, 다시는 손으로 세지 않도록 기계화하면서 종결한다.**\n\n**왜 이 접근인가.** 잔여가 이 모델 등록 이래 한 번도 판정되지 못한 근본 원인은 「아무도 안 집어서」가 아니라 **규칙 3·5에 기계가 없어서**다. 잔여를 적어 둔 tracker 는 양 side versionScript 범위 밖(`docs/` 루트)이라 그 파일이 바뀌어도 재감지가 걸리지 않고, 레포 게이트 `check-journey-mockup.py` 는 여정↔목업 축 전용이라 목업↔구현 렌더링을 원리적으로 보지 않는다. 그래서 사이클마다 사람이 새로 세고, 셀 때마다 수가 달라진다 — 이번 감지가 적은 「마커 12종 / 미마킹 16종」도 `tokens.css` 만 본 수치이고, `web/src` 전체를 보면 셸 TSX 가 `CMP-sidebar`·`CMP-topbar`·`CMP-mapstrip` 를 주석으로 이미 갖고 있어 **15종**이다(독립 재측정). 값 자체보다 「측정면이 사람마다 다르다」가 진짜 결함이다.\n\n따라서 CSS 값을 몇 개 맞추는 것으로 끝내지 않고, **규칙 3·5를 매 PR 재실행하는 게이트를 세워 판정면을 고정**한 뒤 그 게이트가 뱉는 전건을 이번에 처분한다. 게이트는 레포의 기존 관용(`check-journey-mockup.py` — stdlib python, SSOT 파싱, 상한 래칫)을 그대로 따르고 단일 required 체크에 얹는다. 목업이 시각 SSOT 이므로 수렴 방향은 **구현 → 목업**이고, 맞추지 않기로 한 것만 허용목록에 사유·재검토 시점과 함께 남긴다.\n\n**전제 하나가 이번에 바뀌었다.** 직전 사이클이 코드 수렴을 미룬 사유는 판정이 아니라 **검증 불가**였다(「App 토큰에 checks/actions 권한이 없어 CI 결과를 읽을 수 없고 node 툴체인도 없다」). 이번 계획 중 실측으로 **판독 경로가 있음을 확인했다** — `actions:read` 를 포함해 발급한 설치 토큰으로 `GET /repos/dlddu/economic-opinion-trend-monitor/actions/runs?head_sha=<sha>` 가 **200**이고 각 run 의 `conclusion` 이 그대로 읽힌다(`/commits/<sha>/check-runs` 는 여전히 403 — 이 경로로 「못 읽는다」고 결론내면 안 된다). 그래서 이 슬라이스는 **코드 변경을 포함해도 검증 가능**하고, 그 사유로 파킹돼 있던 「구현 수렴 대기」 1건도 함께 푼다.\n\n**이 시도의 범위(완료 기준).** 아래 A~E 가 모두 착지하면 이 task 는 성공이다.\n  **(A) 판정 기계화** — `scripts/check-mockup-render.py` 신설 + `docs-journey-mockup.yml` 에 잡으로 연결. 규칙 3(정의 28종 ↔ mockup 인덱스의 화면별 사용처 ↔ `App.tsx` 의 `BUILT` 로 좁힌 in-scope 집합 ↔ `web/src` 마커)과 규칙 5(각 in-scope 목업의 인라인 `<style>` ↔ `web/src/tokens/tokens.css` 의 정규화 선언 대조)를 기계로 재실행하고, 기대값은 언제나 SSOT(디자인 시스템 문서·mockup 인덱스·허용목록)에서 파싱한다. 미등재 차이가 있으면 실패한다.\n  **(B) 규칙 3 종결** — 결합 마커(`CMP-sentbar / legend`·`CMP-axpill / badge`)를 이름별로 분해해 기계 대조가 성립하게 하고, 구현은 있는데 이름이 없던 in-scope 3종(`CMP-nav-item`·`CMP-spark`·`PAT-axis-compare`)에 마커를 단다. 구현이 실제로 없는 것(`CMP-table`·`CMP-norm-toggle`)·구현 전용 이름(`CMP-btn`)·이름 충돌(`.crumb` 를 셸 토프바가 쓰는데 정의상 `CMP-crumb` 는 `trace` 의 계보 크럼)은 허용목록에 등재한다.\n  **(C) 규칙 5 종결** — 정규화(hex 대소문자·선행 0·따옴표·shorthand↔longhand) 후 남는 실측 차이를 전건 처분한다. 실측 기준선(dashboard 기준): 공통 선택자 94개에서 **값 충돌 22건**(그중 3건은 폰트 스택 따옴표 표기라 정규화로 소거) · **목업에만 있는 선언 48건** · **구현에만 있는 선언 28건**(다수는 리셋 관용 차이). 목업이 옳고 서빙 API 에 의존하지 않는 것은 `tokens.css` 를 목업에 수렴시키고(예: `.delta.up/dn/fl` 의 `--*-soft` 배경·패딩·라운드 누락 — 구현에 토큰은 이미 있는데 규칙만 빠져 증감 필이 민짜로 렌더된다), 나머지는 사유와 함께 등재한다.\n  **(D) 「후속 판정 대기」 2행 처분** — 허용목록이 스스로 「**규칙 3·5 전면 판정 task**」를 재검토 시점으로 지목한 `dash` 의 「축 세그·정규화 토글 배치면」과, 이번 트리거가 등재하며 「셸 차원에서 정할 때(규칙 3·5 슬라이스)」로 적은 `compare` 의 「mapstrip 메타 노출」. 그 슬라이스가 이 task 이므로 여기서 판정해 종류를 확정한다(미루면 자기지시 루프가 된다).\n  **(E) 파킹 해제 + 수렴** — 「구현 수렴 대기」 축 결측 안내 방침 문장. 재검토 조건(「CI 결과 판독 경로나 node 툴체인 중 하나가 생겼을 때 — 보존된 브랜치를 그대로 재사용한다」)이 위 실측으로 충족됐으므로, 보존 브랜치 `reconcile/rct_20260918-0002` 의 `Compare.tsx` 변경분을 그대로 재적용하고 허용목록에서 그 행을 걷는다.\n\n**범위 밖(후속).** ① `trend`·`sentiment`·`fairness`·`trace`·`reprocess` — `BUILT` 밖이라 이 모델의 drift 가 아니다(`tbm_econ-opinion-monitor-docs-impl` 소관). ② 목업 소스 수정 — 목업이 SSOT 이므로 이번에 목업은 한 줄도 고치지 않는다. ③ 이미 허용목록에 등재된 서빙 API 의존 구조 항목(기간·단위 컨트롤, 축 스냅샷 카드, 비교 기준 컨트롤, 격차 패널 등) — 재검토 시점이 API 변경이라 이 슬라이스가 열 수 없다. ④ 실행 스크린샷 픽셀 비교 — 모델 정의가 범위 밖으로 못박았다. ⑤ 게이트가 새로 드러낼 수 있는 `JRN-axis-contrast` 고유 선택자(목업 전용 160개) 중 in-scope 단계 귀속이 애매한 것 — 상한 래칫으로 수를 고정해 다음 사이클이 줄이도록 남긴다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 `reconcile/rct_20260918-0004` 를 main tip 에서 딴다. 먼저 tip 을 고정하고(`git rev-parse HEAD`) 이번 판정의 모든 실측이 그 SHA 기준임을 PR 본문에 적는다.",
+              "expectedOutcome": "판정 기준 SHA 가 고정되고, 이후 단계의 실측이 전부 같은 지점에서 나온 것임이 기록된다."
+            },
+            {
+              "seq": 2,
+              "action": "규칙 3 판정면을 기계로 고정한다 — `scripts/check-mockup-render.py` 의 R3 파트: 디자인 시스템 문서에서 `CMP-*`/`PAT-*` 정의 집합(28종)을, mockup 인덱스의 화면별 「디자인 시스템 항목」에서 사용처를, `web/src/App.tsx` 의 `BUILT` 에서 판정 대상 화면을 파싱해 **in-scope 집합**을 계산하고, `web/src` 전체(CSS 구획 주석 + TSX 주석)의 마커와 대조한다. 결합 마커는 `/` 로 분해해 정규화한다.",
+              "expectedOutcome": "in-scope 21종(`dash` 16 ∪ `compare` 14) · 범위 밖 7종(Placeholder 화면 소관) · 구현 전용 1종(`CMP-btn`)이 기계로 재현되고, 미마킹이 이름으로 열거된다."
+            },
+            {
+              "seq": 3,
+              "action": "규칙 3 수렴: `tokens.css` 의 결합 마커 2개를 이름별 구획으로 분해하고, 구현이 실재하는데 이름이 없던 `CMP-nav-item`(`.nav-item`)·`CMP-spark`(`.spark`)·`PAT-axis-compare`(`.cmpcol`/`.cmprow` 구획, 현재 주석은 `compare columns (3-axis view)`)에 마커를 단다. 목업·디자인 시스템은 건드리지 않는다.",
+              "expectedOutcome": "in-scope 21종 중 이름 대조가 성립하는 것이 15 → 18종. R3 의 미마킹 잔여가 `CMP-table`·`CMP-norm-toggle`·`PAT-line-chart` 3종으로 줄고, 그 3종은 마커가 아니라 구현 부재/귀속 문제임이 분리된다."
+            },
+            {
+              "seq": 4,
+              "action": "규칙 5 판정면을 기계로 고정한다 — 같은 스크립트의 R5 파트: in-scope 목업(`dashboard.html`·`JRN-axis-contrast.html`)의 인라인 `<style>` 과 `tokens.css` 를 파싱해 선택자별 선언 맵을 만들고, 정규화(hex 소문자화·선행 0 보정·따옴표 통일·`margin`/`padding` shorthand→longhand 전개·공백 축약) 후 (값 충돌 / 목업에만 있음 / 구현에만 있음) 3분류로 차이를 낸다.",
+              "expectedOutcome": "정규화 전 47선택자로 부풀던 차이가 정규화 후 실제 항목(값 충돌 22 → 따옴표 3건 소거 시 19 · 목업 전용 선언 48 · 구현 전용 선언 28)으로 좁혀지고, 같은 명령으로 누구나 같은 수를 얻는다."
+            },
+            {
+              "seq": 5,
+              "action": "규칙 5 수렴: 목업이 옳고 서빙 API 에 의존하지 않는 선언만 `tokens.css` 를 목업 값으로 맞춘다. 최소한 `.delta`(패딩·라운드·`--pos/neg/neu-soft` 배경) · `.card-b`/`.card-h` 패딩·gap · `.metric .mv`/`.md` 색·간격 · `.rankrow` grid 컬럼·커서·트랜지션 · `.rankrow .nm` flex · `.card-h .r` flex · `.badge` font-family · `.b-pos/neu/mix` 색 · `.note` border-left 색 · `.norm-flag` 필 스타일 · `.btn` 패딩·트랜지션·ghost 테두리 · `.crumb h2` 말줄임 · `.seg button` nowrap · `.brand h1` 여백·자간. **TSX 구조는 이 단계에서 바꾸지 않는다**(CSS 값 수렴만).",
+              "expectedOutcome": "R5 의 값 충돌·목업 전용 선언이 허용목록에 등재할 잔여만 남기고 사라진다. 시각 변화는 전부 목업 방향이라 회귀가 아니다."
+            },
+            {
+              "seq": 6,
+              "action": "남는 차이를 허용목록(`docs/econ-opinion-monitor-design-tracker.md` 「등재된 편차」)에 **항목·화면·종류·사유·재검토 시점** 형식으로 등재한다: 규칙 3 잔여(`CMP-table` 부재, `CMP-norm-toggle` 이 토글이 아니라 정적 `.norm-flag`, `PAT-line-chart` 의 단계 귀속, 구현 전용 `CMP-btn`, `.crumb` 이름 충돌) + 규칙 5 잔여(구현 전용 리셋 관용, `.grid` 12컬럼 등).",
+              "expectedOutcome": "규칙 6(미문서화 이탈) 위반이 0 이 된다 — 남은 모든 차이가 사유와 재검토 시점을 갖는다."
+            },
+            {
+              "seq": 7,
+              "action": "「후속 판정 대기」 2행을 판정해 종류를 확정한다. ⑴ `dash` 축 세그·정규화 토글 배치면(목업 토프바 `.ctl` ↔ 구현 캔버스 `.dash-controls`) — 토프바로 옮기면 셸 전역이 바뀌고 `Placeholder` 5화면도 함께 영향받으므로 화면별 컨트롤을 셸이 떠안는 설계 결정이 선행한다는 사유로 **구조**로 확정하고 재검토 시점을 「셸이 화면별 컨트롤 슬롯을 갖게 될 때(= `CMP-norm-toggle` 이 실제 토글로 구현될 때)」로 적는다. ⑵ `compare` mapstrip 메타 노출 — 목업은 메타를 접힌 `<details data-meta-layer>` 로 옮겼고 구현은 제품 평면에 노출하는데, `CMP-mapstrip` 은 디자인 시스템이 「각 화면 하단 고정 · 추적성」으로 정의한 전역 컴포넌트이므로 제거가 아니라 **유지**로 판정하고 종류를 **카피**로 확정한다.",
+              "expectedOutcome": "허용목록에서 「후속 판정 대기」 종류가 0 행이 된다 — 이 task 를 재검토 시점으로 지목하던 자기지시가 해소된다."
+            },
+            {
+              "seq": 8,
+              "action": "파킹 해제: 보존 브랜치 `origin/reconcile/rct_20260918-0002` 의 `web/src/screens/Compare.tsx` 변경분(축 결측 안내를 `{axisName} 축은 이 시점에 수집된 항목이 없습니다. 0%로 그리지 않고 비교에서 제외합니다 — 수집이 없는 것과 관심이 없는 것은 다릅니다.` 로)을 그대로 재적용하고, 허용목록의 「구현 수렴 대기」 행을 걷는다. 재검토 조건이 무엇으로 충족됐는지(Actions runs API 200, `actions:read` 토큰)를 허용목록 머리글 또는 변경 이력에 남겨 다음 사이클이 같은 사유로 다시 파킹하지 않게 한다.",
+              "expectedOutcome": "「구현 수렴 대기」 행이 0 이 되고, 판독 경로가 문서에 기록돼 재파킹이 차단된다."
+            },
+            {
+              "seq": 9,
+              "action": "게이트를 CI 에 건다 — `.github/workflows/docs-journey-mockup.yml` 에 `render` 잡을 추가해 `python3 scripts/check-mockup-render.py .` 를 돌린다(stdlib 전용이라 설치 없음). `checks.yml` 의 `required` 는 이 워크플로를 이미 `needs` 로 물고 있으므로 브랜치 보호 설정 변경은 불필요하다.",
+              "expectedOutcome": "규칙 3·5 가 매 PR 재판정된다 — 「재감지 경로 0」의 근본 원인이 닫힌다."
+            },
+            {
+              "seq": 10,
+              "action": "변경분을 브랜치에 커밋·푸시하고 PR 을 연다(머지하지 않는다). PR 본문에 task id, gap 요약, 판정 기준 SHA, 단계별 실측 수치(전/후), 검증 방법을 적는다.",
+              "expectedOutcome": "실행자가 맥락을 갖고 검토·머지할 수 있는 PR 이 서고, `preparation.pullRequestUrl` 에 기록된다."
+            },
+            {
+              "seq": 11,
+              "action": "**게이트가 제 브랜치에서 green 인지** PR CI 로 확인한다: `actions:read` 토큰으로 `GET /repos/dlddu/economic-opinion-trend-monitor/actions/runs?head_sha=<PR head SHA>` 를 폴링해 `Checks` run 의 `conclusion == success` 를 읽는다. red 면 게이트 자신의 결함인지(스크립트 버그) 실제 미등재 차이인지 가려 고친 뒤 재푸시한다.",
+              "expectedOutcome": "머지 전에 `required` 가 green 임이 확인된다 — 새 게이트가 main 을 막는 사고가 원천 차단된다."
+            }
+          ],
+          "plannedAt": "2026-09-18T16:47:00Z"
+        }
+      }
+    ]
   }
 ]
