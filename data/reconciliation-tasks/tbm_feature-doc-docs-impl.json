@@ -3911,7 +3911,78 @@
       "reason": "작업 필요 → **`action_required`**(planner 대기, 미점유). 근거는 전부 이번 fire 의 실측이다.\n\n**근거 1 — 잔여 gap 이 실재하고 정의가 그것을 drift 로 못박았다.** 미구현 AC **11건**\n(AC2.4~2.6 · AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7) + `doc-tracker.md` 가 지목한 **AC4.1 「해제」 조항**\n(`04-platform.md#시나리오 2` — 설치 해제·범위 축소 수신 경로와 진행 중 분석 중단·통지). 모델 정의\n판정 기준 1: 「문서에 있으나 아직 구현되지 않은 AC 는 to-be 미달 gap 이며 drift 다. **백로그로 치부해\n이 루프 밖으로 빼지 않는다**」. 독립 실측 둘이 같은 집합을 가리킨다 — 로드맵 「구현 대기」 표 16 시나리오\n(AC 11건 + AC4.1 해제 1건)와 시나리오 축 항등식 `36 = 19 + 0 + 16 + 1`.\n\n**근거 2 — 「소비된 트리거」다. 직전 소유자가 이 재감지에 명시적으로 인계했다.** `rct_20260902-0008` 의\n범위는 슬라이스 5a(AC2.1~2.3)였고 그 구현물은 `6484e21` 로 main 에 착지했다(21파일, `merge-base\n--is-ancestor` rc=0). 그 task 의 8차(현행) 계획은 **검증 전용**으로 「대상 레포·클러스터에 아무 변경도\n가하지 않는다」고 스스로 규정하고, 범위 밖 ⓑ 에 미구현 AC 11건을 적은 뒤 **「ⓑ~ⓔ 는 `6484e21`·`8dad2a6`\n가 만든 버전 변화의 재감지가 새 task 로 잇는다」**고 못박았다. 내 트리거의 `changedSides` 양쪽이 정확히\n그 두 커밋에서 나왔다 — **이 task 가 그 인계 지점이다.**\n\n**근거 3 — 재감지 경로 검산: 지금 닫으면 인수 사건이 사라진다.** `rct_20260902-0008` 은 16:25:15Z 에\n`executing` 으로 들어갔고(검증 전용), 그 실행은 읽기 전용이라 `succeeded` 로 닫혀도 `backend/`·`frontend/`·\n`docs/` 어느 트리도 움직이지 않는다 ⇒ 그 경로로 이 모델이 다시 트리거될 수 없다. 남는 것은 자매\n모델(mockup-render · scenario-e2e · e2e-mock-policy · comment-redundancy)이 `docs/` 를 건드리는 부수\n효과뿐이고, 그건 남의 작업의 부산물이라 재감지 경로로 치지 않는다.\n\n**근거 4 — 중복이 아니다(경계 실측).** `rct_20260902-0008` 이 `executing` 이지만 그 점유가 지키는 범위는\n**슬라이스 5a 의 수렴 확인과 task 종료**이고, 그 계획이 잔여 11건을 스스로 「범위 밖(후속)」으로 배제했다.\n이 task 는 그 레코드의 status 를 **건드리지 않으며**(lock 은 실행자 소유로 그대로 둔다) 배제된 잔여만\n인수한다. 자매 축과도 겹치지 않는다 — 편차 원장 33행·대조 보류 2·래칫 33/33 은 `tbm_feature-doc-mockup-render`\n(`rct_20260918-0003`, 현재 planning) 소유이고, 미매핑 래칫 1건은 시나리오 축 문서가 「분할은 5b 몫」으로\n이 모델에 배정한 것이다.\n\n**근거 5 — 기준 2·3 은 불발화**(닫을 사유가 아니라 「무엇이 남았는지」를 좁히는 사실). 게이트 3종이 부모\n`2bf88ef4` 와 트리거 `8b5b41e` 두 지점 전부 rc=0, 트리거 지점에서 `check-mockup-render` 「전 규칙 통과 ·\nM3A/M3B 미등재 0 · M4 공전 0 · M1 화면 8 · dangling 0」. #58 은 주석 전용(strip 후 md5 동일), #59 는 카피를\n목업 쪽으로 수렴시켰고 제거된 대기 카피를 단정하는 문면이 `docs/`·`e2e/` 에 0건. 5a 신규 표면\n(`FeatureAcceptance.tsx`·`acceptance.rs`)은 목업 등재 + 전용 spec 3종으로 문서화돼 있다.\n\n---\n\n### planner 가 알아야 할 제약 (전부 실측)\n\n**1. 다음 구획은 문서가 이미 지정했다 — 슬라이스 5b.** 로드맵 해제 조건 열 기준:\nAC2.4(`02#시나리오 5` 종단 의존성 추출·저장) · AC2.5(`02#시나리오 6` 역방향 질의 · `#시나리오 7` export) ·\nAC2.6(`02#시나리오 8` 재분석 diff). 여기에 **미매핑 래칫 1건**(`02-feature-representation.md#시나리오 3`\n로직↔테스트 모순 — 단정은 `sc02-02-acceptance-from-tests.spec.ts` 안에 이미 있고 전용 파일 분할만 남음)이\n문서 문면상 **5b 몫**으로 배정돼 있다. 5b 가 착지하면 불변식 `(36 − 0 − 구현대기) = 매칭파일` 이 성립하고\n래칫이 1 → 0 으로 내려간다. 슬라이스 6(AC3.1~3.5, 8시나리오)·7(AC4.4·4.6·4.7)은 그 다음이다.\n\n**2. 완료 기준에 배포 롤아웃을 넣지 말 것 — 직전 소유자가 그 자리에서 4연속 죽었다.**\n`pin deployment image (main only)` 잡이 main push 마다 `GH013: Repository rule violations found for\nrefs/heads/main` / `Required status check \"ci-gate\" is expected` 로 거부돼 이미지 핀이 착지하지 않았고,\n`deploy/k8s` 는 `1c39ba2`(13:03Z) 에 고정된 채였다. 모델 정의가 `deploy/`·`e2e/`·`scripts/`·`tools/` 를\nas-is 에서 명시 제외하므로 이 축은 이 모델의 완료 기준이 될 수 없다. **다만 이 fire 중(16:2xZ) 레포가\n스스로 고쳤다** — 2파도 `d87f216`(#66 「운영 이미지 pin 을 main 되커밋 대신 deploy 브랜치로 발행」)이\n`.github/workflows/image.yml`·`deploy/k8s` 를 바꿨다. 이 커밋은 이 모델의 **0 side**(`backend`·`frontend`·\n`docs` 세 트리가 `8b5b41e` 와 바이트 동일)라 판정에 영향이 없지만, 배포 착지 여부를 실행 지침에 참고\n사실로 적을 거라면 **`8b5b41e` 가 아니라 실행 시점 main 에서 다시 읽어야 한다.**\n\n**3. 계획이 main sha 를 상수로 못박지 말 것.** `rct_20260902-0008` 이 7번 시도 중 5번을 「계획이 고정한\nmain sha 가 검토·승인 지연 동안 무효화됨」으로 잃었다. 성공한 7차의 방식은 **실행 시점 origin/main 에\n대해 재통합을 다시 계산하고 봉투 조건(충돌 파일 집합 · 변경 파일 수 · 게이트 rc)으로 판정**하는 것이었다 —\n이 레포는 분 단위로 움직이므로(이번 fire 4분 창에도 2파도) 같은 방식을 쓸 것.\n\n**4. 기준선 수치(트리거 `8b5b41e` 실측, 통과 조건이 아니라 관측 기대치).** 게이트 3종 rc=0 ·\nmockup-render 활성 6 · 보류 2 · 편차 33 · 화면 8 · M4 공전 0 · M5 래칫 33/33 · M6 `data-sample` 67 ·\njourney-mockup 여정 6 · 목업 5 · 문서 25 · 링크 226 · scenario-e2e 통과 · AC 총량 24 · e2e spec 19.\n\n**5. 열린 자매 task 와의 경계.** `tbm_feature-doc-mockup-render rct_20260918-0003`(planning, 편차 원장\n축) · `tbm_feature-doc-e2e-mock-policy rct_20260918-0002/-0003` · `tbm_feature-doc-comment-redundancy\nrct_20260918-0003`(executing) · `tbm_feature-doc-scenario-e2e rct_20260918-0003`(action_required) 이\n동시에 살아 있고 전부 `docs/` 를 만진다 — 5b 의 통합 차량은 `doc-tracker.md` 충돌을 **실행 시점에** 다시\n계산해야 한다(직전 소유자의 死因이 전부 이 파일이었다).\n\n**6. 문서 갱신 한 건이 코드 없이 닫힌다.** `doc-tracker.md` 스스로 「AC4.1 「해제」 조항이 자매 모델의\n미구현 목록에도 반영돼야 한다」고 적는다 — 이 모델의 미구현 목록(11건)에 그 조항을 반영하는 것은 구현\n슬라이스와 별개로 문서 축에서 처리 가능하다. 5b 에 끼워 넣을지, 별도로 둘지는 planner 판단.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-18T16:34:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "슬라이스 5b 를 문서가 이미 그어 둔 경계선(PRD-2 「AC2.4 → AC2.5 는 의존성 추출과 저장의 두 단계」)을 따라 **5b-1 = AC2.4 + AC2.5** 로 좁혀 구현한다 — feature 1건 단위의 종단 의존성 추출(7종 카테고리 + 코드 근거)과, 그것을 텍스트 문서가 아니라 **행(row)** 으로 적재해 역방향 질의·export 가 성립하게 하는 것까지. 함께 미매핑 래칫 1건(`02#시나리오 3` 전용 spec 분할)을 내려 모델 불변식 `(36 − 예외 − 구현대기) = 매칭파일` 을 성립시킨다.\n\n**이 방법을 고른 이유.** ① 의존성은 파이프라인 단계가 아니라 **feature 단위 행동**이라고 `docs/test/02 시나리오 5`·`pipeline.rs` 주석·Analysis Progress 목업(「Pipeline · 3 of 5」)이 셋 다 못박고 있다 — 그래서 6번째 STAGES 항목을 만들지 않고, 이미 있는 **게이트 재큐잉 기계**(승인 → `requeue` → 다음 claim 이 그 일을 제안)를 한 칸 더 쓰는 쪽을 골랐다. 새 큐·새 리스를 만들지 않으므로 워커 동시성·리스 회수·LLM 키 전달 경로가 전부 그대로다. ② 적재는 `discovery_strategies`(JSON) 가 아니라 `feature_candidates`(행) 의 형태를 따른다 — AC2.5 의 검증 방법이 「데이터 모델 X 를 쓰는 feature 전부」라는 **행 선택 질의**라, JSON blob 으로 두면 모든 분석의 blob 을 파싱해야 답이 나온다(0007 마이그레이션이 같은 이유로 행을 골랐다). ③ 화면은 `FeatureAcceptance` 에 붙이지 않고 **새 화면 `FeatureDependencies.tsx`** 로 낸다 — 2026-09-18 「문서 권위 순서」 결정이 *목업 구성을 따른다* 이고, 목업의 `STP-trace-dependencies` 는 자기 앱바(「종단 의존성」)를 가진 독립 화면 카드이기 때문이다.\n\n**완료 기준(이 task 의 성공 조건).** `dlddu/feature-doc` main 에 다음이 착지: (1) AC2.4 — 확정된 feature 1건에 대해 7종 카테고리로 분리된 의존성이 각 항목의 코드 근거(또는 명시적 「근거 없음」)와 함께 추출·저장·표시된다. (2) AC2.5 — 그 데이터가 행으로 적재돼 카테고리+이름 기준 **역방향 질의**와 **JSON export** 가 동작한다. (3) `docs/test/02` 시나리오 5·6·7 이 각각 전용 e2e spec 을 얻고, `02#시나리오 3` 분할로 미매핑 래칫이 1 → 0 이 된다. (4) 게이트 4종(cargo test · kind e2e · docs 3종)이 그린이고 `doc-tracker.md` 의 미구현 AC 가 11 → 9 로, 구현 대기 시나리오가 16 → 13 으로 내려간다.\n\n**범위 밖(재감지가 새 task 로 잇는다).** ⓐ AC2.6 재분석 diff(`02#시나리오 8`) = 5b-2 — PRD 자신이 「AC2.6 은 (AC2.3, AC2.5) 의 재실행 가능성을 보장하는 요구」라고 적어 AC2.5 착지를 선행으로 둔다. ⓑ `STP-verify-evidence`(근거 파일 **내용** 읽기) — 대조 범위 문서가 5b 몫으로 적어 두었으나 저장소 파일 내용 fetch 라는 별개 능력이라 분리한다. ⓒ 의존성 **그래프 뷰**(「그림으로 보기」) — 여정이 좁은 화면 기본을 카테고리 목록으로 못박으므로 목록만 구현하고 그래프는 편차 원장에 등재한다. ⓓ AC3.1~3.5(슬라이스 6) · AC4.4·4.6·4.7(슬라이스 7) · AC4.1 「해제」 조항 구현. ⓔ `deploy/` 롤아웃 착지 — 모델 정의가 as-is 범위에서 명시 제외한다(직전 소유자가 이 자리에서 4연속 죽었다).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "실행 시점 `origin/main` 에서 재통합 기준점을 잡는다 — 브랜치 `reconcile/rct_20260918-0004-slice-5b1` 을 그 시점 main 에서 따고, 게이트 3종(`tools/check-*.py`)을 **변경 전** 에 돌려 기준선 rc 를 기록한다. main sha 를 계획에 상수로 박지 않는다.",
+              "expectedOutcome": "게이트 3종 rc=0 (기준선). 브랜치가 그 시점 origin/main 위에 있다."
+            },
+            {
+              "seq": 2,
+              "action": "마이그레이션 `backend/migrations/0008_feature_dependencies.sql` 신설 — 두 테이블. `feature_dependency_requests(analysis_id, feature_key, status, error, requested_at, updated_at, UNIQUE(analysis_id, feature_key))` 가 「이 feature 의 의존성 분석을 요청했다」는 사실과 그 실행 상태를 들고, `feature_dependencies(id, analysis_id, feature_key, seq, category, name, evidence NULL 허용, created_at, UNIQUE(analysis_id, feature_key, category, name))` 가 구조화 데이터 본체다. `category` 는 7종 CHECK 제약. 적용된 마이그레이션 불변성 규약(`backend/migrations/README.md`)에 따라 기존 파일은 한 바이트도 고치지 않는다.",
+              "expectedOutcome": "`cargo test` 의 `backend/tests/migrations.rs` 체크섬 고정 테스트가 기존 7개에 대해 그대로 통과하고, 0008 이 새 항목으로 추가된다."
+            },
+            {
+              "seq": 3,
+              "action": "`backend/src/dependencies.rs` 신설 — AC2.4 의 추출 경계. `CATEGORIES` 7종을 **한 곳**에 정의하고(마이그레이션 CHECK·프롬프트·검증·화면이 전부 이 하나를 본다), `derive()` 가 `llm::ask` 로 1회 호출해 `{items:[{category,name,evidence}]}` 를 받는다. 근거 검증은 `acceptance.rs` 와 같은 규칙 — 이 분석이 실제로 본 경로가 아니면 **항목을 버리지 않고 근거만 `None`(「근거 없음」)으로 떨어뜨린다**(여정 `JRN-review-feature` 예외 표가 「근거 없음으로 명시, 임의로 채우지 않음」을 요구). 결정적 stub 은 스캔된 경로에서 파생한다(`deploy/*` → 인프라, `src/domain/*` → 데이터, `src/middleware/*` → 미들웨어, `Cargo.toml`/`package.json` → 프레임워크, `src/api/*` → 인터페이스, 나머지 `src/*` → 로직·아키텍처). 단위 테스트를 같은 파일에 둔다(카테고리 분류·근거 탈락·중복 접힘).",
+              "expectedOutcome": "`cargo test` 신규 단위 테스트 통과. 고정 문자열이 아니라 스캔 경로에서 파생되므로 픽스처를 바꿔도 단정이 옳다."
+            },
+            {
+              "seq": 4,
+              "action": "`backend/src/worker_api.rs` 확장 — claim 이 `dependencyRequests: [{key,name,location,symbol}]` 를 함께 싣는다(`approvedCandidates` 와 같은 이유: 게이트와 입력이 같은 읽기에서 나와야 한다). 술어는 `dependencies_pending()` — 「요청됐고 아직 `succeeded` 가 아닌 행이 있는가」. `work_remains()` 에 이 술어를 더해, 리스가 살아 있는 동안 도착한 요청이 재큐잉을 잃지 않게 한다. 결과 적재용 내부 라우트 `POST /internal/analyses/{id}/features/{key}/dependencies` 를 신설한다 — `submit_document` 는 `kind` 가 파이프라인 단계일 때만 받으므로(의존성은 단계가 아니다) 그 경로를 쓰지 않는다. 적재는 한 트랜잭션에서 해당 feature 의 기존 행 삭제 후 재삽입(재추출이 곧 갱신).",
+              "expectedOutcome": "claim 응답에 `dependencyRequests` 가 실리고, 요청 없는 분석에는 빈 배열이다. 기존 5단계 게이트 동작은 불변(`backend/tests/worker.rs`·`acceptance.rs` 그대로 통과)."
+            },
+            {
+              "seq": 5,
+              "action": "`backend/src/analysis.rs` 에 공개 라우트 4개 — `POST /api/analyses/{id}/features/dependencies`(본문에 candidate key; 요청 행 upsert + `requeue` 를 **한 트랜잭션**으로, 후보 승인이 5단계를 여는 것과 같은 이유), `GET /api/analyses/{id}/features/dependencies?key=…`(카테고리별 묶음 + 실행 상태), `GET /api/dependencies/features?category=…&name=…`(AC2.5 역방향 질의 — 호출자 소유 분석으로 한정), `GET /api/analyses/{id}/dependencies/export`(AC2.5 export — `Content-Disposition: attachment` 인 JSON). 후보 key 는 경로에 들어갈 수 없으므로(경로 구분자 포함) 기존 candidates 라우트와 같이 본문·쿼리로 받는다.",
+              "expectedOutcome": "`backend/tests/dependencies.rs` 통합 테스트: 요청→큐 재진입, 추출 후 카테고리 7종 조회, 역방향 질의가 같은 데이터 모델을 쓰는 feature 둘을 돌려주고, export 가 재사용 가능한 JSON 을 내려준다. 남의 분석은 404."
+            },
+            {
+              "seq": 6,
+              "action": "`backend/src/bin/worker.rs` 에 `run_dependencies()` — `run_acceptance` 와 같은 모양(리스 갱신 → `derive` → 적재 → 상태 보고). 요청된 feature 를 순서대로 돌되 한 건 실패가 잡 전체를 죽이지 않고 그 feature 의 요청 행만 `failed` 로 남긴다(다른 feature 의 문서를 인질로 잡지 않는다). `analysis_stages` 행은 만들지 않는다 — 파이프라인 단계가 아니므로 Analysis Progress 의 「5 of 5」가 흔들리지 않는다.",
+              "expectedOutcome": "kind e2e 에서 요청한 feature 의 의존성이 실제로 적재된다. 진행 화면의 단계 수는 5 그대로."
+            },
+            {
+              "seq": 7,
+              "action": "프론트 — 새 화면 `frontend/src/FeatureDependencies.tsx`(S09) + 해시 라우트 `#/analyses/{id}/features/{key}/dependencies` + `api.ts` 호출 4종. 카피는 목업 `JRN-review-feature.html#STP-trace-dependencies` 에서 그대로 옮긴다(분류 칩 7종 + 전체, 「이 기능이 기대고 있는 것들」, 「근거를 찾지 못한 항목은 근거 없음으로 그대로 두고 임의로 채우지 않아요」, 「보이는 항목 N개」). 좁은 화면 기본은 **카테고리 목록**(여정 지시). `FeatureAcceptance.tsx` 에는 이 화면으로 가는 진입만 붙인다.",
+              "expectedOutcome": "`tools/check-mockup-render.py` M1 이 화면 9개·dangling 0·범위 표 일치를 내고, M3A/M3B 미등재 0건."
+            },
+            {
+              "seq": 8,
+              "action": "목업·대조 범위 정비 — `STP-trace-dependencies` 의 예시 데이터(`카드 저장소 (암호화 컬럼)`·`db/schema.sql:120` 등 7행과 그림 라벨)를 `data-sample` 로 마킹하고(규약: `docs/mockups/README.md`), 활성 대조 표에 `(FeatureDependencies.tsx, STP-trace-dependencies)` 를 등재한다. 이번 슬라이스가 그리지 않는 것 — 그래프 뷰(「그림으로 보기」·「연결 그림」)와 AC3.1 CTA(「어색한 표현 고쳐 달라 하기」) — 은 **편차 원장에 행으로 등재**하고 상한을 그만큼 올린다. 「대조 보류」는 늘리지 않는다(상한 2 유지).",
+              "expectedOutcome": "`check-mockup-render.py --verbose` 전 규칙 통과, M5 래칫이 새 상한과 정확히 일치."
+            },
+            {
+              "seq": 9,
+              "action": "e2e — `sc02-05-dependency-extraction.spec.ts`(시나리오 5: 7종 분리 + 각 항목 근거 또는 명시적 「근거 없음」), `sc02-06-dependency-reverse-query.spec.ts`(시나리오 6: 같은 데이터 모델을 쓰는 feature 전부), `sc02-07-dependency-export.spec.ts`(시나리오 7: 구조화 형식 내려받기) 신설 + **`sc02-03-logic-test-contradiction.spec.ts` 분할**(현재 `sc02-02` 안에 있는 모순 분리 단정을 옮겨 1:1 성립). 각 파일 첫 줄 `// 검증 시나리오: 02-feature-representation.md#시나리오 N` 선언. 기대값은 상수가 아니라 스캔된 저장소 기준으로 판정한다.",
+              "expectedOutcome": "`ls e2e/tests/*.spec.ts | wc -l` 19 → 23, 파일별 선언 중복 0·고아 0. `check-scenario-e2e.py --verbose` S0~S5 통과, 미매핑 래칫 0/0."
+            },
+            {
+              "seq": 10,
+              "action": "`docs/doc-tracker.md` 갱신 — ① 「구현 대기」 표에서 `02#시나리오 5·6·7` 3행 제거(16 → 13), ② 집계·항등식 `36 = 22 + 0 + 13 + 1`… 이 아니라 분할까지 반영해 `36 = 23 + 0 + 13 + 0` 과 불변식 `(36 − 0 − 13) = 23 = 매칭 파일` 성립, ③ 미구현 AC 11 → **9**(AC3.1~3.5 · AC4.4 · AC4.6 · AC4.7), ④ 로드맵에 5b-1 완료·5b-2(AC2.6) 다음 기록, ⑤ 변경 이력 1행(reconciler `rct_20260918-0004`), ⑥ 현재 상태 요약 갱신, ⑦ 문서 자신이 요구한 **AC4.1 「해제」 조항을 미구현 목록에 반영**(코드 없이 닫히는 문서 축 한 건).",
+              "expectedOutcome": "게이트 3종이 새 숫자로 그린. 재감지 시 to-be 의 미구현 표기가 9 로 내려가 as-is 상승이 기계로 읽힌다."
+            },
+            {
+              "seq": 11,
+              "action": "게이트 로컬 재실행 — `python3 tools/check-scenario-e2e.py --verbose` · `python3 tools/check-mockup-render.py --verbose` · `python3 tools/check-journey-mockup.py`. (이 실행 환경에는 cargo·node 가 없어 `cargo test` 와 kind e2e 는 **PR 의 CI 가 유일한 검증 경로**다 — 이 사실을 PR 본문과 실행 지침에 명시한다.)",
+              "expectedOutcome": "python 게이트 3종 rc=0. 나머지 2종은 PR CI 의 `ci-gate` 가 판정."
+            },
+            {
+              "seq": 12,
+              "action": "PR 생성(머지하지 않음) — 본문에 task id, gap 요약, 이 계획의 단계, 완료 기준·범위 밖, 검증 방법, 그리고 「로컬에 cargo·node 가 없어 CI 가 컴파일러 역할을 한다」는 사실을 적는다.",
+              "expectedOutcome": "PR URL 확보. `ci-gate` 가 돌기 시작하고, 실패 시 어느 칸인지 체크 이름으로 드러난다."
+            }
+          ],
+          "plannedAt": "2026-09-18T17:05:00Z"
+        }
+      }
+    ]
   },
   {
     "id": "rct_20260918-0005",
