@@ -304,7 +304,7 @@
   {
     "id": "rct_20260918-0004",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T16:36:55Z",
@@ -469,6 +469,14 @@
           "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/40",
           "preparedAt": "2026-09-18T22:30:00Z",
           "notes": "직전 시도의 PR #40을 리베이스해 재사용했다(새 PR을 열지 않았다 — 리뷰 이력이 이어져야 거부 4건 대응이 검토자에게 보인다). base=main tip `a62eae1`, head `77be3cf` → **`44c49eb`**(1커밋, --force-with-lease 재푸시). 리베이스는 충돌 없음 — #38은 workflow-template.yaml의 136행 이후만 건드렸고 이 PR은 머리 13-15행만 만진다. 스테이징한 diff 6파일/+117-17.\n\n실측(리베이스 후 워킹트리에서 모델 asIs versionScript 그대로 재실행): 기준 `a62eae1` = `lines=960 files=81 / 55a0dc3f24d5cb9a74031245621103d309e3500cbecc4fb1dc38116e77930161` (모델 asIs.lastObservedVersion과 바이트 동일) → 판정 후 `lines=957 files=81 / 1607776a2288ed9ba83fefb42311762ad89ca96a9c956c86b564c5d64da4eede`. 파일별 주석: deployment.yaml 11→9, kustomization.yaml 9→9(문면만), workflow-template.yaml **46→45**(리뷰가 지적한 36이 아니라 46이 현 실측).\n\n거부 4건 대응 실측: ⑴ 가드 문면 'CI owns **both** `image:` tags below' → 'The `image:` tags in this file are CI-owned and move in step with the serving image in deploy/base — do not edit them by hand (README 「운영 고정(`pin` job)」).' — 개수 표현 0건. 정책 README 가드 항에 개수·열거·행 위치 금지 추가. ⑵ 원장 workflow-template.yaml 행 36/1/35 → 46/1/45 + 미판정 10줄(#38 AC3.2 블록)과 추적처 `rct_20260918-0006` 명시. ⑶ 패스 이력 행 `a62eae1` 960/3/957 81→81, pass 문서 기준 커밋·지문 갱신(폐기 수치 2579722/783/780/72 잔존 0건). ⑷ 재푸시 후 `Checks` completed/**success**, PR `mergeable=true` / `mergeable_state=clean` (직후 blocked → CI 완료 후 clean, 비동기 판정).\n\n이미지 태그 값 불변 확인: main·워킹트리 양쪽에서 `image:` 값 4줄 전부 `b5a91d64132381dc8c0cb22abb1e5d5e08c77f4b` 바이트 동일(줄 번호만 주석 삭제만큼 당겨짐). 기계 확인: 메커니즘 되풀이 grep(`pinned to a main commit|writes the main SHA|\\`deploy\\` branch|Flux tracks|not what production runs`) 0건. 머지는 하지 않았다.\n\n리뷰 권고 (2)(a) 대신 (b)를 고른 근거는 plan.summary에 적었다 — 요약하면, 리뷰 코멘트(21:50Z) 이후 판정된 `rct_20260918-0006`(22:02Z, 미점유)이 그 10줄 중 `workflow-template.yaml:136-141` 3줄을 자기 gap으로 이미 잡아, (a)는 이중 판정·머지 레이스가 된다."
+        },
+        "review": {
+          "required": false,
+          "status": "approved",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-18T22:25:00Z",
+          "reason": "승인. 직전 거부의 사유(베이스 이동으로 무너진 전제)가 실측으로 닫혔고, 준비물이 지금 유효하다 — PR #40 open, head `44c49eb`, base `a62eae1`가 **현 main tip과 동일**(리베이스 후 main 무이동), mergeable=true/clean, 단일 필수 체크 `Checks` completed/success. 지문을 직접 재측정해 대조했다: main `a62eae1` = `lines=960 files=81 / 55a0dc3f…`(모델 lastObservedVersion과 바이트 동일), PR head = `lines=957 files=81 / 1607776a…` — preparation.notes 수치와 전건 일치. 거부 4건 대응도 실측으로 확인했다: ⑴ 가드 문면에서 `Both`가 사라지고 개수 비의존(\"The `image:` tags in this file are CI-owned…\")으로 재작성, ⑵ 원장 3행이 리베이스 후 실측과 일치(deployment.yaml 11/2/9 · kustomization.yaml 9/0/9 · workflow-template.yaml **46/1/45** — 직접 센 값과 동일), ⑶ 패스 이력·pass 문서가 새 기준 `a62eae1`(960→957/81)로 갱신되고 폐기 수치(`2579722`/783/780/72) 잔존 0건, ⑷ 정책 SSOT 가드 항이 메커니즘에 더해 개수·열거·행 위치까지 금지. 위험 통제: 변경 6파일/+117-17이 전부 주석·정책 문서이고 `image:` **값** 줄은 diff에 0건(세 태그 `b5a91d6…` 불변) — 직접 확인했다. 불가역 지점은 머지 하나뿐이고 롤백은 revert PR로 구체적이며, executionGuide가 완료 기준 5개를 기계 확인 명령과 함께 명시한다. 범위 정합성: 기계 확인 `git grep -nE 'pinned to a main commit|writes the main SHA|\\`deploy\\` branch|Flux tracks|not what production runs'`가 범위 내 0건이고, gap이 지목한 세 자리 밖으로 번진 변경이 없다.",
+          "comment": "승인이지만 실행자가 알아둘 점 둘.\n\n⑴ **완료 기준 (2)의 판정 범위는 '세 가드 블록'이다** — executionGuide 표 (2)행이 그렇게 적었고 그것이 유효한 문면이다. plan.summary의 축약(\"세 파일의 주석에 계수 표현 0건\")을 파일 전수 grep으로 읽지 말 것: `deploy/batch/workflow-template.yaml`에는 가드와 무관한 자리에 계수 표현이 정상적으로 남아 있다(76행 \"all three share the one `data`\", 139행 \"rewrites both Gold datasets\" — 이 패스의 판정 대상이 아니고 정책의 금지는 **가드**에 걸린다). 전수 grep으로 보면 참인 결과를 `failed`로 오판한다.\n\n⑵ **리뷰 권고 (2)(a) 대신 (b)를 고른 판단을 인정한다.** 근거를 실측으로 확인했다 — `rct_20260918-0006`의 gap이 `deploy/batch/workflow-template.yaml:136-141`(#38 AC3.2 블록) 3줄을 이름 대어 자기 범위로 잡았고, 그 task는 현재 `planning` 점유 중이다. (a)를 택했으면 같은 줄을 두 task가 판정하는 이중 판정이 됐다. 원장 행이 미판정 10줄과 추적처를 명시해 「각 행은 마지막으로 판정한 패스 기준」 규칙의 오독 위험도 닫혔으므로, 직전 거부가 지적한 원장 무결성 문제는 해소로 본다. 다만 그 task가 같은 파일을 만지므로, 이 PR이 먼저 머지되면 그쪽 브랜치 리베이스가 필요할 수 있다(블록이 120행 넘게 떨어져 충돌 가능성은 낮다)."
         }
       }
     ]
