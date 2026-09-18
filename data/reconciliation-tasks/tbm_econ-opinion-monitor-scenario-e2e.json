@@ -1393,6 +1393,72 @@
       "reason": "**작업 필요 — 잔여 공백 11건이 모델 불변식을 깨고 있고, 자동 해소 경로가 없다.**\n\n**왜 지금인가.** 이번 트리거(#31 `b5a91d6`)는 `rct_20260918-0002` 슬라이스의 실행 산출이 착지한\n것으로, 공백을 15 → 11로 **정확히 4건 줄인 정상 수렴**이다. 그러나 슬라이스는 부분 슬라이스였고\ntask는 `succeeded`로 닫혔으므로, 잔여 11건은 **지금 이 재감지가 후속 task로 잇지 않으면 아무도\n집지 않는다**(executor는 `lastObservedVersion`을 건드리지 않고 후속 task도 만들지 않는다).\n슬라이스 → 재감지 → 후속 task는 이 루프의 정상 진행 방식이고, 여기가 그 이음매다.\n\n**자동 해소 가능성 없음(유예 부적합).** 공백은 시간이 지나 사라지는 종류가 아니다 — 닫으려면\n`tests/e2e/`에 spec과 하네스를 신설해야 하고, 그 산출물이 곧 이 모델의 as-is다. 롤아웃 진행 중도,\n일시적 alert도 아니다. (부기: 스키마에 `assessment.recheckAfter`가 없어 유예 자체가 불가능한데,\n이 건은 유예가 오답이므로 제약이 판정에 영향을 주지 않았다.)\n\n**범위가 이 모델 것임을 확인했다.** 잔여 11건은 전부 등재 SSOT가 「구현은 이미 main에 있고 관측\n경로만 없다」로 분류한 **하네스 확장** 건이라 산출물이 `tests/e2e/` 안에 머문다. 미구현이라 관측\n대상이 없는 2건(aggregation-viz 3·5)은 구현 대기로 정당하게 빠져 있고(해제 신호 3종 전부 생존 확인)\n`tbm_econ-opinion-monitor-docs-impl` 몫이며, 예외 1건(ingestion 1)도 정당하다 ⇒ **중복 계상 없음.**\n\n**planner 인계 — 다음 슬라이스는 「분석 묶음」이 강제된다.**\n- 등재 SSOT의 「공백 해소 경로」표가 **수집 → 분석 → 집계** 순서를 메달리온 계층 의존으로 못박는다.\n  공유 하네스(배치 이미지 kind 로드 · 산출물 PVC · 호스트 반출 경로)는 수집 슬라이스에서 **이미 섰다**.\n- 따라서 분석 묶음(`…-test-analysis.md#시나리오 1~6`, 6건)이 더할 것은 **LLM 더블(chat-completions 응답\n  고정) + 분석 Job 한 단계 + Silver 산출물 단언**뿐이다. 이것이 가장 값싸고 가장 크게 닫는 슬라이스다.\n- 나머지: 집계 묶음(aggregation-viz 1·2·4)은 분석 뒤에 서며 「픽스처 Gold 대신 파이프라인이 만든\n  Gold로 서빙을 띄우는」 경로가 핵심. ingestion 6·7은 피드 더블에 **동적 행위**(오류·타임아웃·중복\n  링크 주입 / 3주기 연속 실행)를 넣어야 해서 정적 더블만 선 지금 하네스로는 아직 못 닫는다.\n- ⚠️ **산출물 경계 고정부**: 계획이 화면·엔드포인트·비즈니스 로직 신설을 포함하면 경계를 넘은 것이다\n  (2026-08 AC3.7 슬라이스가 실제로 넘어 docs-impl과 중복된 전례가 있어 정의가 이를 명시적 고정부로\n  둔다). 허용되는 예외는 사용자 가시 동작을 바꾸지 않는 최소 테스트 계측(testID·훅·픽스처·CI 배선)뿐.\n- ⚠️ **analysis 2·3·5는 「예외 후보 중 미등재」 판정 레지스트리에 올라 있다** — 의미적 품질은 오프라인\n  골든 평가가 맡고, 이 모델이 닫아야 하는 것은 **라벨 전파·분리 계약을 단언하는 배치 경로 spec**이다.\n  골든 평가 하네스만 지어서는 매칭 단위(spec 파일)가 생기지 않아 계수가 움직이지 않는다.\n- 계획·PR과 함께 등재 SSOT(`docs/econ-opinion-monitor-doc-tracker.md`의 「e2e 매핑」 절)의 집계 표 ·\n  시나리오↔파일 표 · `gap-list` 마커 안 목록을 **함께** 갱신해야 한다(규칙 5). `make lint-scenario-mapping`\n  = `tests/e2e/check_scenario_mapping.py`가 CI에서 그 정합을 강제한다.\n\n**부수(비차단) — 모델 정의 문면이 낡았다**: `범위 밖/비고` 절이 체커를 `tests/e2e/check_ac_mapping.py`\n(AC 기준)로 적지만 실제 게이트는 #24(2026-09-09 축 이관)에서 **`tests/e2e/check_scenario_mapping.py`**\n(시나리오 기준)로 개정·개명돼 있다. 정의가 요구한 개정은 이미 이뤄졌으므로 drift가 아니라 **정의 문면\n보정** 건이며, data plane은 모델을 고치지 않으므로 `reconciler-tobe-modeler`(control plane) 몫으로 남긴다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-18T16:16:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "수집 배치 하네스를 '정적 1주기'에서 '고장 주입 + 다주기'로 넓혀 ingestion 시나리오 6·7 전용 spec 2개를 착지시킨다. 두 시나리오를 한 슬라이스로 묶는 이유는 둘이 같은 하네스 확장(제어 가능한 더블 + 여러 주기 Job + Job 로그의 호스트 반출)을 공유하기 때문이다 — 따로 자르면 같은 하네스를 두 번 설계하게 된다. 수집을 먼저 잡는 것은 트래커의 공백 해소 경로가 수집→분석→집계 순서를 메달리온 계층 의존으로 강제하고, 그 셋 중 수집 하네스만 이미 서 있기 때문이다(rct_20260918-0002, #31). 대안으로 '분석 묶음 6건'을 먼저 집는 것을 저울질했으나, 그쪽은 LLM 더블이라는 새 카테고리를 세워야 해 전제(수집 산출 Silver 입력)와 신규 mock 카테고리가 동시에 붙는다 — 이미 선 하네스 위에 두 건만 얹는 이번 경로가 되돌리기도 쉽고(테스트 전용 PR revert) 검증선도 짧다. 산출물은 tests/e2e/ 와 등재 문서뿐이며 제품 코드(go/ python/ web/)는 건드리지 않는다 — 시나리오 6·7이 요구하는 관측 대상(failed_sources·duplicates_skipped·재시도·본문 content-addressed merge)은 전부 이미 main의 수집 CLI에 있고 없는 것은 관측 경로뿐이다.\n\n**이 시도의 범위(완료 기준)**: 공백 11건 중 ingestion 6·7 **두 건만** 닫는다. 성공 판정은 ⑴ tests/e2e/specs/ 에 시나리오 6·7을 각각 주검증으로 선언한 spec 파일이 정확히 1개씩 새로 생기고, ⑵ `python3 tests/e2e/check_scenario_mapping.py` 가 rc=0 이면서 매칭 파일 7→9 · 공백 11→9 로 집계되고, ⑶ doc-tracker 「e2e 매핑」의 집계표·시나리오↔spec 표·gap-list 마커가 그 실측과 일치하고, ⑷ `make e2e` 가 새 spec 2개를 포함해 통과하며, ⑸ 새로 붙는 mock-exception 주석이 mocking-policy 허용목록에 1:1로 등재된다. **범위 밖(후속)**: analysis 1~6 (LLM 더블 필요) · aggregation-viz 1·2·4 (집계 Job → 파이프라인 Gold 필요) 의 공백 9건, 구현 대기 2건의 해제(tbm_econ-opinion-monitor-docs-impl 소관), 예외 등재 1건의 재판정, ac3-* 파일 개명, 원장 R1 판정 갱신(자매 모델 tbm_econ-opinion-monitor-e2e-mock-policy 소관). 모델 불변식 (18 = 매칭)은 이번 슬라이스로 성립하지 않는다(18 ≠ 9) — 잔여 9건은 이 PR이 만드는 tests/e2e 트리 변화의 재감지가 새 task로 잇는다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-18T16:58:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "피드 더블을 정적 서버에서 제어 가능한 더블로 교체한다. tests/e2e/fixtures/feeds/ 에 stdlib 전용 서버 스크립트를 추가하고(ConfigMap으로 마운트되므로 readOnlyRootFilesystem·runAsNonRoot 와 양립한다), k8s/batch/feed-double.yaml 의 command 를 `python -m http.server` 에서 그 스크립트로 바꾼다. 서버가 제공할 표면: (a) 주기별 디렉터리 서빙(주기 id → 서로 다른 피드 내용), (b) 항상 5xx 를 내는 경로, (c) 처음 N회만 5xx 를 내고 그 뒤 200 을 내는 경로(요청 카운터 in-memory), (d) 타임아웃을 넘기도록 응답을 지연하는 경로. 기존 정적 픽스처 3종의 경로·내용은 그대로 두어 이미 착지한 ingestion 2·3·4·5 spec 의 입력이 변하지 않게 한다.",
+              "expectedOutcome": "econ-feed-double 이 Ready 가 되고, 기존 3개 피드 URL 이 이전과 바이트 동일하게 응답한다. 새 경로들은 각각 5xx / N회 후 200 / 지연 응답을 결정적으로 낸다."
+            },
+            {
+              "seq": 2,
+              "action": "시나리오 6 전용 피드 설정과 픽스처를 추가한다. 고장 주입용 e2e-feeds-faults.json 에 (i) 정상 소스 1개 이상, (ii) 항상 실패하는 소스, (iii) 처음 N회 실패 후 성공하는 소스, (iv) 타임아웃 경로 소스, (v) 정상 소스의 링크를 중복 노출하는 소스를 등재한다. 중복은 run_feed_ingestion 이 source_url 로 거르므로 소스 간 같은 링크가 두 번 나오게 구성한다.",
+              "expectedOutcome": "설정 파일이 수집 CLI 의 [{source_id, axis, feed_url, limit}] 계약을 만족하고, 중복 링크가 정확히 몇 건인지 픽스처에서 유도 가능하다."
+            },
+            {
+              "seq": 3,
+              "action": "시나리오 6 의 고장 주입 수집 Job 매니페스트를 추가한다(k8s/batch/ingest-job-faults.yaml). 기존 ingest-job.yaml 의 컨테이너 계약(같은 배치 이미지·econ-ingestion·ECON_DATA_ROOT)을 그대로 쓰되 --feeds 를 고장 설정으로, --cycle 을 전용 주기 id 로, --fetch-timeout 을 지연 경로보다 짧게 준다. 산출물이 정상 주기의 Bronze 와 섞이지 않도록 ECON_DATA_ROOT 를 PVC 안의 별도 하위 경로로 분리한다.",
+              "expectedOutcome": "Job 이 완료(condition=complete)되고 — 한 소스의 실패가 전체를 중단시키지 않는다는 것 자체가 첫 관측 — 로그에 failed_sources 가 비어 있지 않게, duplicates_skipped 가 0보다 크게 찍힌다."
+            },
+            {
+              "seq": 4,
+              "action": "시나리오 7 의 3주기 연속 수집 Job 매니페스트를 추가한다. 같은 ECON_DATA_ROOT(정상 경로)에 주기 1·2·3 을 순차 실행하되, 주기 1·2 는 동일 본문을, 주기 3 은 수정된 본문을 받도록 더블의 주기별 디렉터리를 가리킨다. 서로 다른 링크로 같은 본문을 전재한 기사 쌍을 세 주기 모두에 포함시킨다.",
+              "expectedOutcome": "세 Job 이 모두 완료되고 news_body.jsonl 이 주기 1·2 에서는 늘지 않다가 주기 3 에서만 새 해시 1건이 추가된다(각 Job 로그의 `bodies: N new / M deduplicated` 로도 교차 관측)."
+            },
+            {
+              "seq": 5,
+              "action": "run.sh 를 확장해 새 Job 들을 순서대로 돌리고 산출물을 호스트로 반출한다. (a) 기존 1주기 수집과 failed_sources=[] 가드는 그대로 둔다(정상 경로의 회귀 탐지선이다), (b) 시나리오 7 의 주기별 Bronze 와 시나리오 6 의 분리된 Bronze 를 각각 별도 디렉터리로 꺼내고, (c) 각 Job 의 로그를 파일로 저장해 spec 이 읽을 수 있게 새 환경변수로 넘긴다. 고장 주입 Job 에는 failed_sources=[] 가드를 적용하지 않는다 — 그쪽은 비어 있지 않은 것이 기대값이다.",
+              "expectedOutcome": "make e2e 가 기존 단계를 모두 통과한 뒤 새 산출물 디렉터리와 로그 파일이 생성되고, 비어 있으면 명확한 메시지로 조기 실패한다."
+            },
+            {
+              "seq": 6,
+              "action": "spec 이 읽을 헬퍼를 lib/ 아래에 추가한다(specs/ 밖이어야 매칭 단위로 오인되지 않는다). Job 로그에서 duplicates_skipped·failed_sources·bodies new/deduplicated 를 파싱하는 함수와, 주기별 Bronze 디렉터리를 읽는 함수를 lib/bronze.ts 의 기존 규약(E2E_BRONZE_DIR 미설정 시 하네스 미경유로 진단)과 같은 방식으로 만든다.",
+              "expectedOutcome": "헬퍼가 specs/ 밖에 있어 check_scenario_mapping.py 의 매칭 단위 집계가 변하지 않고, 기대값을 상수로 박지 않고 픽스처에서 유도한다."
+            },
+            {
+              "seq": 7,
+              "action": "시나리오 6 전용 spec 을 신설한다. 헤더에 `// 검증 시나리오: econ-opinion-monitor-test-ingestion.md#시나리오 6` 을 정확히 한 줄 둔다. 단정: ⑴ 실패 소스가 있어도 정상 소스의 관측 레코드가 Bronze 에 남는다(부분 장애 격리), ⑵ failed_sources 에 항상-실패 소스와 타임아웃 소스가 들어간다, ⑶ 처음 N회 실패 후 성공하는 소스는 failed_sources 에 **없고** 그 레코드가 Bronze 에 있다(재시도 동작), ⑷ duplicates_skipped 가 픽스처에서 유도한 중복 건수와 같고 중복 링크의 레코드가 Bronze 에 1건만 있다.",
+              "expectedOutcome": "spec 이 통과하고, grep '^// 검증 시나리오:' 에서 시나리오 6 선언이 정확히 1줄 나온다."
+            },
+            {
+              "seq": 8,
+              "action": "시나리오 7 전용 spec 을 신설한다. 헤더 선언은 `#시나리오 7`. 단정: ⑴ 주기 1·2 의 해당 본문은 news_body 에 1건만 존재한다(재저장 없음), ⑵ 주기 3 에 새 해시 레코드가 추가되고 기존 버전 레코드가 그대로 보존된다(first_seen_cycle 이 주기 1 인 행이 살아 있다), ⑶ 각 주기의 news_item.body_hash 가 그 주기에 관측된 본문의 해시를 가리킨다, ⑷ 전재 기사 쌍은 source_url 이 다르지만 body_hash 가 같고 news_body 레코드를 1건 공유한다.",
+              "expectedOutcome": "spec 이 통과하고 시나리오 7 선언이 정확히 1줄 나온다."
+            },
+            {
+              "seq": 9,
+              "action": "등재 SSOT 를 실측에 맞춰 갱신한다(doc-tracker 「e2e 매핑」): 집계표의 '시나리오 매칭 spec 파일' 7→9 · '공백' 11→9, 시나리오↔spec 실측표에 두 행 추가, gap-list 마커 안에서 ingestion 6·7 두 줄 삭제(마커 안에는 목록 외의 것을 쓰지 않는다), 불변식 현황 문장의 18 ≠ 7 을 18 ≠ 9 로, 회계 검산식(21 = 9 + 1 + 2 + 9)과 「공백 해소 경로」 표의 수집 배치 행을 '착지'로 갱신한다.",
+              "expectedOutcome": "python3 tests/e2e/check_scenario_mapping.py 가 rc=0 이고 매칭 9 / 공백 9 / 전집 21 로 회계가 닫힌다."
+            },
+            {
+              "seq": 10,
+              "action": "새로 붙는 mock-exception 주석을 mocking-policy 허용목록에 1:1 로 등재한다(파일 × 토큰 쌍 단위, FEED 카테고리 다음 번호부터). 등재 사유는 기존 FEED 행과 같은 축으로 적는다 — 수집 로직은 제품 경로 그대로이고 상류만 더블이다. 변경 이력 표에 이 task id 행을 추가한다. 원장 R1 의 판정과 GOLD 카테고리 소멸 여부는 건드리지 않는다(자매 모델 소관).",
+              "expectedOutcome": "(허용목록 쌍 집합) == (코드 지점 쌍 집합) 이 유지되고, 주석만 있고 미등재이거나 등재만 있고 코드에 없는 쌍이 0 이다."
+            },
+            {
+              "seq": 11,
+              "action": "전체 게이트를 로컬에서 돌려 초록을 확인한 뒤 PR 로 스테이징한다: make lint (lint-scenario-mapping 포함) · make e2e. 제품 코드 무접촉을 git diff --stat origin/main -- go python web src 가 공집합인 것으로 확인한다.",
+              "expectedOutcome": "make lint rc=0, make e2e rc=0, 제품 경로 diff 공집합. PR 이 열리고 CI 의 단일 required 체크가 초록."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
