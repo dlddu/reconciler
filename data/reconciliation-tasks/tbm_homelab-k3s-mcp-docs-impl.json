@@ -7942,6 +7942,49 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-18T16:04:00Z",
           "reason": "문서 전용 수렴 슬라이스이고 전제를 실측으로 재확인해 승인한다. PR #131은 open·`mergeable:true`·`mergeable_state:clean`이고 base가 준비 시점의 main tip `7a8edf1` 그대로라 베이스 이동·충돌이 없다; head `2212ed6`의 check-runs 6건은 전부 success/skipped(`ci passed`·`unit tests`·`integration tests`·`fmt + vet`·`build & push server image`)로, CI를 완료 기준으로 쓰지 않더라도 깨진 곳이 없음은 확인된다. diff는 `docs/` 2파일 +8/-2로 `plan.steps` 2~4와 축자 일치하고 `internal/`·`main.go`·`tests/`·`k8s/` 히트 0 — 이미지 재빌드·deploy pin 변화가 없어 범위 초과분이 없다. 완료 기준인 게이트 4종을 브랜치와 부모에서 직접 재실행해 **출력이 바이트 동일**함을 독립 확인했다(`check_ac_mapping.py` rc=0 85·1·26·58·58·0·0 · `check_doc_inventory.py` 허브 44/44·끊긴 링크 0 · `check_comment_policy.py` rc=0 지문 `8b0860703698208d5b3888284a999a14922f669aff97a034d6ba9ff25783e4d6` · `check_mock_policy.py` rc=0); 계획이 인용했던 78·1·19… 는 preparation이 실측으로 이미 갱신해 둔 값이라 불일치가 아니다. 계획이 스스로 지목한 두 취약점도 실물에서 닫혔음을 확인했다 — `98e239f`의 결함이던 `` `fieldManager`는 …`` 줄이 2칸 들여쓰기를 유지해 문단이 깨지지 않았고, `doc-tracker.md` 표는 파이프 히스토그램이 부모 대비 4열 행 +1건만 늘어(115→116) 열 구조가 불변이며 변경 이력도 09-19→09-18→09-17 내림차순을 지킨다. 위험은 riskLevel `low`에 걸맞게 통제된다: 불가역 지점은 머지 하나뿐이고, `docs/`만 바뀌어 롤백이 `git revert <머지 SHA>` 한 번이며 배포·재시작·핀 갱신이 필요 없다(런타임 영향 0). 방향도 타당하다 — 이 문서 변경은 구현을 정당화하는 것이 아니라 CI 실측(kindest/node v1.35.0 SSA가 apply 본문 gvk로 타입 해석)이 강제해 #106으로 이미 main에 착지한 동작을 SSOT에 기록하는 것이고, #122가 close로 끝나 소유자가 없어진 자리를 이 task가 받은 것이 기록으로 확인된다. executionGuide는 완료 기준(로컬 재현 가능한 게이트 4종 + 머지 후 grep 수렴 대조)과 롤백을 모두 명시하고, 자매 슬라이스에서 `failed`를 유발했던 「CI 초록을 완료 기준으로 삼기」를 명시적으로 배제해 같은 함정을 피했다. 실행자 유의: PR이 draft이므로 머지 전 draft 해제가 필요하다(지침 4에 있음)."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-18T16:09:00Z",
+          "finishedAt": "2026-09-18T16:22:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T16:09:30Z",
+              "finishedAt": "2026-09-18T16:11:00Z",
+              "log": "executionGuide 1(머지 전 재확인). PR #131 = open · draft:true · mergeable:true · mergeable_state:`clean` · rebaseable:false · base `7a8edf1667c55ff2851c7d5b4e4a92ba0d79fd4c`(준비 시점 부모 그대로, 베이스 이동 없음) · head `2212ed6416e437c75c7110e7d8f91cf2543b5cfa` · docs 2파일 +8/−2. `dirty`가 아니므로 「충돌 시」 경로로 가지 않는다. plan.steps 1~5(브랜치 생성·문서 편집·게이트 대조)는 preparation 단계에서 이미 수행돼 커밋 `2212ed6`으로 스테이징돼 있었다 — 이 실행은 그 산출물을 재검증하고 머지하는 것이 전부이며 새 편집은 하지 않았다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "log": "`docs/prd-resource-generic.md` AC9 apply 절 편집은 **preparation 단계에서 이미 수행**돼 커밋 `2212ed6`에 실려 있다(PR #131). 이 실행은 새로 편집하지 않고 산출물을 축자 재검증만 했다 — +5/−1, identity 계약 문단 존재, `` `fieldManager`는 …`` 줄 2칸 들여쓰기 보존(= `98e239f` 결함 수정 확인), AC 헤더·달성 가치·검증 방법 줄 무접촉(AC 전집 85 불변)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "log": "`docs/doc-tracker.md` AC6 위험 행 편집도 preparation 산출물(`2212ed6`). 재검증: 190행 한 줄만 변경, 계약 열에 identity 계약 + 400/422 `Status.message` 첨부 문장이 붙고 상태 열에 #106(`fb2eeb1`) 착지·#122 close 귀속이 적혔다. 표 4열 구조 불변(`awk -F'|' NF!=6` 히트 0), 셀 안 `|` 미도입."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "log": "변경 이력 +1행도 preparation 산출물(`2212ed6`). 재검증: 2026-09-18 행이 2026-09-19 행 뒤·2026-09-17 행 앞에 들어가 내림차순 유지, 기존 행 무접촉, 4열 유지. 날짜는 원 커밋의 09-17이 아니라 실제 착지일 09-18."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T16:11:00Z",
+              "finishedAt": "2026-09-18T16:16:00Z",
+              "log": "executionGuide 2~3(로컬 게이트 4종 + 변경 범위) — 이 슬라이스의 완료 기준. 브랜치 `2212ed6`과 부모 `7a8edf1`에서 각각 4종을 돌려 **출력 전문을 diff해 바이트 동일**함을 확인(diff 0줄). 값: check_ac_mapping.py rc=0 `85·1·26·58·58·0·0` · check_doc_inventory.py rc=0 `허브 44/44 · 끊긴 링크 0` · check_comment_policy.py rc=0 `전체 docstring 지문 8b0860703698208d5b3888284a999a14922f669aff97a034d6ba9ff25783e4d6`(주석 원장 미판정 잔량 9줄도 부모와 동일 — `docs/`만 만져 원장 무변동) · check_mock_policy.py rc=0. 범위: `git diff --name-only 7a8edf1 2212ed6 | grep -v '^docs/'` 출력 0줄, `--stat`은 docs/doc-tracker.md(3 ++-)·docs/prd-resource-generic.md(7 ++++++-) 2파일 +8/−2 ⇒ `internal/`·`main.go`·`tests/`·`k8s/` 히트 0, 이미지 재빌드·deploy pin 변화 없음. 문면도 축자 확인 — PRD AC9에 identity 계약 문단이 서고 `98e239f`의 결함이던 `` `fieldManager`는 …`` 줄의 2칸 들여쓰기가 보존됐으며, doc-tracker AC6 위험 행에 계약+`Status.message` 진단장치 문장이 붙고, 변경 이력에 2026-09-18 행이 09-19 뒤·09-17 앞으로 들어가 내림차순을 지킨다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T16:16:00Z",
+              "finishedAt": "2026-09-18T16:22:00Z",
+              "log": "executionGuide 4(머지) — 유일한 불가역 지점. GraphQL `markPullRequestReadyForReview`로 draft 해제(isDraft:false) → 재확인(draft:false · mergeable:true · mergeable_state:`clean` · head `2212ed6` 불변) → `PUT /pulls/131/merge`를 `sha=2212ed6…`로 고정해 squash 머지. **머지 커밋 `29d5651473864d71ed2dd8105cafd2aca29de207`** (`merged:true`). 머지 후 main tip = `29d5651`, 부모 `7a8edf1`. 계획 밖 변경 0 — 새 편집·재계획·범위 확장 없이 스테이징된 커밋 그대로 착지했다. 롤백은 `git revert 29d5651` 한 번(docs/ 3곳, 런타임 영향 0)."
+            }
+          ]
         }
       }
     ]
