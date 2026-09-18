@@ -8063,7 +8063,7 @@
       ]
     },
     "createdAt": "2026-09-18T16:41:07Z",
-    "updatedAt": "2026-09-18T22:13:16Z",
+    "updatedAt": "2026-09-18T22:15:10Z",
     "stateSummary": {
       "asIs": "**as-is = `dlddu/homelab-k3s-mcp` main `6268dd8`의 구현** (`internal:07dd24e6…` + `main.go:a686818e…`, 16:44Z 실측; 부모 `d96b435`의 재실행이 저장 baseline `internal:70321167…`와 **바이트 동일**이라 귀속은 기계적이다).\n\n**등록 도구 21종** (`internal/mcp/toolslist.go`의 `\"name\"` 전수 == `tests/integration/_helpers.py::EXPECTED_TOOLS`, 집합 동일):\n`api_resources`·`aws_config_get`·`dear_baby_reset_user`·`github_app_installation_token`·`grafana_token`·`opensearch_document_delete`·`opensearch_document_put`·`opensearch_search`·`ping`·**`resource_attach`**·`resource_create`·`resource_delete`·`resource_exec`·`resource_get`·`resource_list`·`resource_patch`·`resource_update`·`resource_watch`·`session_list`·`session_read`·`session_write`.\n\n**이번 창에서 움직인 구현은 단 한 커밋 #127 `7a8edf1`**(`feat(resource): resource_attach … (AC13)`, 15:50Z) — `internal/` 11파일 +591/−18. 나머지 4커밋(#129 `f97042e`·#131 `29d5651`·#133 `f6cd432`·#134 `6268dd8`)은 `internal`·`main.go` 트리 해시 불변 ⇒ **as-is 0-side**.\n\n`resource_attach` 실측(AC13 문면 대조):\n- `internal/k8s/attach.go`(신규 111줄) SPDY attach + `internal/mcp/attach.go`(신규 158줄) 핸들러 + `gate.go:133` `\"resource_attach\": {resolve: attachPairs(), target: genericTarget()}` ⇒ `create on pods/attach` 선언·게이트 대상.\n- `readSeconds` 기본 5(`k8s.AttachDefaultReadSeconds`)·상한 30(`AttachMaxReadSeconds`), 범위 밖은 `-32602`로 **클러스터 호출 전** 거부(`attach.go:63-65`), `stdin`은 붙은 직후 1회 주입.\n- 출력은 스트림당 `streamMaxOutputBytes`(256KiB) 상한, `stdoutTruncated`/`stderrTruncated`로 잘림 표시.\n- **`exec`의 사용자 대면 문면은 불변**: 공유 헬퍼 일반화(`execServed`→`streamSubresourceServed`, `execMaxOutputBytes`→`streamMaxOutputBytes`)에도 `exec.go:105`가 `\"exec\"`을 그대로 넘겨 렌더 문구가 같고, 부모·트립의 `exec.go` 문자열 리터럴 집합 비교에서 실질 델타는 템플릿화 1건뿐(`has no replicas`는 이동).\n\n**미구현(코드 0히트, 전수 grep)**: `resource_delete_collection`·`resource_port_forward`·`resource_proxy` (등록·핸들러·k8s 경로 전부 부재), **`github_commit_status_create`**(`internal`·`main.go`에 `commit_status|commitstatus|statuses` **0히트**), **토큰 도구의 `statuses` 배제 로직 부재**(`internal/github/github.go:152 CreateInstallationToken`은 호출자의 `permissions` 맵을 **그대로 전달**할 뿐 — `statuses: write` 사전 거부·설치 권한 조회 후 다운그레이드·발급 후 폐기 어느 것도 없다).\n\n**부분 구현(선행만 착지)**: `prd-approval-gate` AC11 — 선언(`gate.go::GatePairs()` = `get`/`list` on `⟨kind⟩`, 기동 시 출력)과 민감 종류 프리컨디션(`k8s/precondition.go` PartialObjectMetadata, 폴백 없음), 컬렉션 메타데이터 목록 읽기(`k8s/collection_precondition.go::ListTargets`)는 실재하나, tracker 자신이 「실제 게이트/도구 경로에는 아직 연결하지 않았다 … AC11 전체는 후속」이라 적는다(런타임 `list` 행사 0).",
       "toBe": "**to-be = 같은 레포 `docs/` 트리 `75cee803…`**(부모 `e5aecc48…`). 이번 창에서 `docs/`를 움직인 커밋은 **넷**이다 — #129 `f97042e`(`e5aecc48→5f15db59`) · #127 `7a8edf1`(`→08b4226b`) · #131 `29d5651`(`→d0d75da8`) · #130 `6958350`(`→75cee803`). #133·#134는 `.github/`만 만져 **0-side**.\n\n문서 체계 실측(tip, `scripts/check_doc_inventory.py` rc=0): 마크다운 **44**(가치 1 · PRD **15** · 테스트 **15** · 상태추적 1 · 정책 12), 허브 도달 44/44 · 끊긴 링크 0. 부모는 42(PRD 14 · 테스트 14) ⇒ **PRD·테스트 각 +1**.\n\n**⑴ to-be가 새로 커진 지점 — #129(`f97042e`, docs-only)**:\n- **신설 `docs/prd-github-commit-status.md`(112줄, AC 6건)** + `docs/test-github-commit-status.md`(78줄) — 새 도구 `github_commit_status_create`(커밋 status 기록 · 내부 토큰 최소 스코프 · 입력 검증 선행 · context 네임스페이스 fail-closed · 미설정 graceful 거부 · 비파괴 외부 쓰기 광고).\n- **`prd-github-app-installation-token.md`에 AC5 추가**(`commit status 쓰기 권한 배제 — 읽기는 발급`): `permissions`에 `statuses: write`가 있으면 상류 호출 **전에** 거부, `permissions` 생략 시 설치 권한을 읽어 `statuses: read`로 낮춘 **명시적 맵**으로 요청(목록을 못 읽으면 발급 거부, 생략 폴백 금지), 돌려받은 토큰에 `statuses: write`가 남아 있으면 **폐기 후 에러**.\n- `values.md` V2에 commit status 목표와 원칙(「권한을 토큰째 내주기 vs 도구가 좁은 동작으로 대신 행사」) 추가 — 새 가치 추가는 없다.\n- PRD 「배포 순서(필수)」가 순서를 못박는다: **① 토큰 도구 AC5 배포 → ② GitHub App에 Commit statuses 권한 추가(사람의 UI 작업) → ③ 새 도구 배포.** ②를 먼저 하면 `permissions` 생략 호출이 그 순간부터 `statuses: write`를 받는다.\n\n**⑵ 직전 슬라이스의 문서 수렴 착지 — #131(`29d5651`, 이 모델 `rct_20260918-0003`의 실행 산출)**: `prd-resource-generic.md` AC9에 apply 좌표 identity 주입·불일치 제출 전 거부 계약, `doc-tracker.md` AC6 위험 행에 같은 계약 + 400/422 진단장치, 변경 이력 1행. tip에서 `applied config '객체'` 히트 1 ⇒ 지난 fire가 연 축 ⑵/⑶은 **닫혔다**.\n\n**⑶ #127이 함께 갱신한 문서**: `test-resource-generic.md` 시나리오 13의 자동화 필드(Go 단위 3종 착지, 전용 e2e는 미저작), `doc-tracker.md`의 등록 도구 20→21·게이트 대상 쓰기 도구 5→6·잔여 목록 갱신.\n\n**⑷ 자매 축(참고)**: #130은 `e2e-mocking-policy.md`·`doc-tracker.md` B2 차단 원장(모킹 정책 축, `tbm_homelab-k3s-mcp-e2e-mock-policy` 소관).\n\n**tracker 자신의 현행 선언**(`doc-tracker.md:22`): 「문서 선행(미구현): `github_commit_status_create`(PRD AC 6개)와 `github_app_installation_token` AC5는 2026-09-19 문서만 섰다 — 등록 도구 수 21종에 들어가지 않으며, 두 PRD의 시나리오 7개는 「⏳ 구현 대기」에 등재했다」 / 건강 상태 🟡.",
@@ -8227,6 +8227,48 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-18T22:12:00Z",
           "reason": "승인 — 직전 거부가 지목한 **신선도 결함 넷이 모두 닫혔고, 넷을 각각 실측으로 재현해 확인했다.** ⑴ PR #136 은 지금 `state=open` · `mergeable=true` · **`mergeable_state=clean`** · base `a7300cdd` = **현재 main tip 과 동일**이고, `merge-base(origin/main, 브랜치) == a7300cdd` 라 리베이스가 선형으로 얹혔다(충돌 0). ⑵ CI 는 **새 head `3c27a140` 기준**으로 판정이 있다 — `/actions/runs?head_sha=3c27a140…` → runs 1 · `CI` `completed`/`success`(22:04:47Z). 사라진 base 의 초록이 아니다. ⑶ 낡은 기준선이 실제로 고쳐졌다 — 브랜치와 main tip 양쪽에서 `check_ac_mapping.py` 를 직접 돌려 **둘 다 `85·1·21·63·63·0·0`**(불변식 성립)을 확인했고, `check_comment_policy.py` 는 main 2224 · 브랜치 **2236**(= 2224+12, 잔량 0줄 · 100.0%)이다. 순수 python 게이트 4종 전부 rc=0(등재 5·모킹 6 / 44·44). ⑷ 「어느 한쪽도 버리지 않는다」가 지켜졌다 — `ledger.md` 의 변경은 **정확히 2줄**(행 #9 `19→31줄`·지문 `3e94443eb4d1→54ab0b16d60a`, 합계 마커 `2224→2236`)뿐이고 #132 의 행 #17(87줄 `16c9f3161b60`)은 무접촉이다. `doc-tracker.md` 는 +4/−3 으로 **이 시도의 행 하나만 추가**됐고 `rct_20260918-0003` 행은 남아 있으며, 낡은 문자열 `85·1·26·58·58·0·0` 의 출현 수가 main 과 같은 3(전부 역사 행)이고 새 기준선은 이 PR 행에만 더해졌다 — 역사 행을 고쳐 쓰지 않았다. \n\n**정합성·범위**: 변경은 7파일 +378/−14 로 전부 AC5 슬라이스 안이다 — `internal/github/github.go` 가 세 조항을 실제로 구현하고(명시 `statuses:write` 거부 = `kindRejected`, 생략 시 `GET /app/installations/{id}` 로 읽어 `write→read` 로 낮춘 **명시 맵**, 응답 토큰에 write 가 섞이면 `DELETE /installation/token` 후 반환 거부), `github_test.go` 에 지침이 글자 그대로 grep 하는 단위 5종이 실재한다. gap 무관 변경은 없다. #132 가 인계한 `exec.go` 제품 결함을 섞지 않고 ⓔ 로 등재만 한 범위 결정도 타당하다 — 성격이 다른 Go 수정을 얹으면 이 task 가 또 한 바퀴 낡는다. \n\n**위험·불가역성**: riskLevel medium, 불가역 지점은 **머지 하나**다. 실행 지침의 완료 기준 넷이 전부 실행 가능한 명령으로 적혀 있고 그 안의 수치·해시가 실측과 일치한다 — 단계 4 의 baseline `HEAD:internal d85409ba…` · `main.go a686818e…` · `HEAD:docs c87d395a…`(main `a7300cdd` 실측)와 머지 후 기대값 `internal 972b621c…` · `docs b4db1144…`(브랜치 트리)를 직접 대조해 맞음을 확인했다. 롤백은 3단(머지 전 PR 닫기 / 머지 후·배포 전 revert PR / 배포 후 revert 머지 + `refs/heads/deploy` 핀 확인)으로 구체적이고 실제로 가능하다. 생략 호출이 설치 조회에 의존해 **fail-closed** 가 되는 것은 AC5.2 가 요구한 설계이고, 영향 범위(reconciler-* 스킬은 전부 `permissions` 명시 → 영향 0)와 첫 의심 대상이 지침에 명시돼 있다. 단계 0 이 「머지 직전 main 재확인」을 맨 앞에 못박아 이번 거부의 재발 경로도 막아 뒀다. 승인한다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-18T22:13:16Z",
+          "finishedAt": "2026-09-18T22:15:10Z",
+          "entries": [
+            {
+              "stepSeq": 0,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:13:20Z",
+              "finishedAt": "2026-09-18T22:13:35Z",
+              "log": "**베이스 신선도 재확인 — 통과.** (seq 는 `plan.steps`(리베이스 준비 1~10, 계획 단계에서 완료)가 아니라 **`plan.executionGuide` 2절의 실행 단계 0~4** 를 가리킨다. 실행자가 실제로 밟은 것이 그 다섯이다.)\n\n`GET /pulls/136` → `state=open` · `merged=false` · **`mergeable=true`** · **`mergeable_state=clean`** · base `a7300cddf30b` · head `3c27a14062f3` · `changed_files=7` (+378/−14). `GET /commits/main` → **`a7300cddf30bd16399b971f850a41451134d7062`** = PR base 와 동일, 즉 **계획 이후 main 이 움직이지 않았다**. 지난 시도를 거부시킨 베이스 이동(#132 착지)의 재발 없음. 리베이스 재계획 경로로 빠질 필요 없이 그대로 진행."
+            },
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:13:40Z",
+              "finishedAt": "2026-09-18T22:13:50Z",
+              "log": "**CI 판정 확인 — 초록.** `/actions/runs?head_sha=3c27a14062f3dd4a973d4c066c6993c5017dc210` → `total_count=1`, `CI` **`completed` / `success`** (22:04:47Z, run 35399420995). **새 head 기준 판정**이라 시도 1 의 사라진 base(`029df44`) 초록에 기대지 않았다. 이 호스트엔 go·node·docker 가 없어 `gofmt`/`go vet`/`go test`/kind e2e 는 CI 가 유일한 판정자이며, 지침대로 `gh pr checks`·`/check-runs`(403)는 쓰지 않았다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:13:55Z",
+              "finishedAt": "2026-09-18T22:14:30Z",
+              "log": "**순수 python 게이트 4종 로컬 재현 — 넷 다 rc=0.** 브랜치 head `3c27a140` 체크아웃 후 실행:\n- `tests/integration/check_ac_mapping.py` → **`85·1·21·63·63·0·0`** (시나리오 전집 85 · 예외 1 · 구현 대기 21 · 1:1 대상 63 · 전용 파일 63 · 분할 대기 0 · 공백 0), 불변식 성립.\n- `scripts/check_mock_policy.py` → 등재 5(상한 5) · 모킹 지점 6 · 미등재 0 · 고아 0 · B2 차단 원장 1행.\n- `scripts/check_comment_policy.py` → **2236줄** / 104파일 · 판정 완료 100.0% · 등재 44 · **미판정 잔량 0줄**.\n- `scripts/check_doc_inventory.py` → 허브 도달 **44/44** · 끊긴 링크 0.\n\n**「일곱 값 불변」을 절대값이 아니라 대조로 확인했다** — `git worktree` 로 `origin/main`(`a7300cdd`)을 따로 펴서 같은 게이트를 돌린 결과 **동일한 `85·1·21·63·63·0·0`**. 이 슬라이스가 시나리오·e2e 파일을 0건 만든다는 전제가 실측으로 성립. 주석 원장도 같은 성질로 main **2224** → 브랜치 **2236**(= +12, 이 PR 의 `internal/github` 증분)이라 마커가 맞다. (지침 경고대로 `git stash` 는 쓰지 않았다.)"
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:14:35Z",
+              "finishedAt": "2026-09-18T22:14:40Z",
+              "log": "**머지 — 유일한 불가역 지점을 통과.** 머지 직전 `GET /commits/main` 을 한 번 더 찍어 tip 이 여전히 `a7300cdd` 임을 확인한 뒤 실행했다.\n\n`PUT /pulls/136/merge` with `merge_method=squash` · `sha=3c27a14062f3…`(head 고정으로 그 사이 push 가 끼면 409 로 거부되게) → **`merged=true`**, squash 커밋 **`05ef097920913f03608e0b8a1e05163e9872d6d0`**.\n\n**squash 를 고른 근거는 레포 관례 실측**이다 — main 최근 5커밋이 전부 부모 1개에 제목이 `… (#NNN)` 으로 끝나는 단일 커밋(`#132`·`#135`·`#134`·`#133`·`#130`). 병합 커밋 이력이 없다. 커밋 제목: `feat(github): 토큰 발급에서 statuses:write 를 배제한다 (AC5) — 배포 순서 ① (#136)`."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:14:45Z",
+              "finishedAt": "2026-09-18T22:15:10Z",
+              "log": "**main 착지 확인(as-is 이동) — 세 값 모두 기대치와 정확히 일치.** `git fetch origin main` 후 tip `05ef0979`(부모 `a7300cdd`, 선형):\n- `HEAD:internal` `d85409ba0a38…` → **`972b621c2274549ad7d2ac7cd8d52dd35a592649`** (= 브랜치 트리, **이동함**)\n- `HEAD:main.go` **`a686818e97e7dbb2adc7f25c88f25bd6a2ad7537`** (**불변**, 기대대로)\n- `HEAD:docs` `c87d395a18f2…` → **`b4db1144721e48233d81a6736c2aec8f5142e1f7`** (= 브랜치 트리, **이동함**)\n\n판정 기준을 `trigger.asIs.currentVersion`(`internal:07dd24e6…`, 감지 시점 `6268dd8` 스냅샷)이 아니라 **머지 직전 main(`a7300cdd`) 실측**으로 잡으라는 지침을 따랐다 — 그 사이 #135·#132 가 이미 두 트리를 움직여 놓았기 때문이다.\n\n**배포(운영 파드 롤아웃)는 이 task 의 완료 기준이 아니다**(판정 대상이 as-is=코드 트리). 이 레포의 이미지 핀은 `refs/heads/deploy` 로 발행된다(#133)."
+            }
+          ]
         }
       }
     ]
