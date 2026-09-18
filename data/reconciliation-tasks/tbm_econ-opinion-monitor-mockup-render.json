@@ -907,9 +907,39 @@
           "comment": "실행자 주의 2건. ⑴ base 가 이미 한 번 움직였다 — 머지 직전에 `git fetch && git merge origin/main` 후 `python3 scripts/check-mockup-render.py .` 를 한 번 더 돌려 4줄 숫자가 그대로인지 확인할 것. 달라지면 상한을 올리지 말고 수렴시키거나 등재한다(실행 지침 3번 분기 그대로). ⑵ 이 검토는 병합 트리를 로컬에서 재실측했을 뿐 원격 CI 를 base 이동 후로 재실행시키지는 않았다 — 머지 API 가 재판정한 결과를 한 번 더 읽고 들어갈 것."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-18T17:14:00Z",
-          "entries": []
+          "finishedAt": "2026-09-18T17:22:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:15:00Z",
+              "finishedAt": "2026-09-18T17:17:00Z",
+              "log": "stepSeq는 **실행 지침(executionGuide)의 「순서」 번호**다 — plan.steps 1~11은 계획 단계가 이미 소진했고(PR 스테이징까지), 이 단계의 실행 단위는 실행 지침이 정의한 1~4다.\n[순서 1] 브랜치 `reconcile/rct_20260918-0004`(tip `1b80bff`) 체크아웃 후 로컬 게이트 재현. `check-mockup-render.py` exit 0, 출력 4줄이 기대값과 글자까지 동일 — 「R3 in-scope 21종 · 이름 대조 성립 18 · 등재 예외 3 · 구현 전용 1」, R5 값 충돌/목업 전용/구현 전용 모두 0=상한 0. `check-journey-mockup.py` 도 exit 0(PASS — 미이관 4/상한 4 · 규칙 5 미충족 5/상한 5 · 링크 95건).\n검토 코멘트 ⑴ 이행: base 가 `ce54a57`→`2579722`(#36)로 움직였으므로 `git merge origin/main`(충돌 0, `design-tracker.md` auto-merge) 한 **병합 트리에서 재실측** — 신설 게이트 4줄이 병합 전과 완전히 동일(숫자 불변)하여 상한 조정이 필요 없음을 확인. 병합 트리에서 `check-journey-mockup.py` 도 exit 0 (PASS — 미이관 3/상한 3 · 규칙 5 미충족 3/상한 3 · 링크 85건; 수치 변화는 #36 이 여정 페이지를 이관하며 제 상한을 함께 내린 것으로 이 PR 의 회귀가 아니다). 병합 커밋은 실측용 로컬 전용이며 push 하지 않고 `git reset --hard origin/reconcile/rct_20260918-0004` 로 폐기했다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:17:00Z",
+              "finishedAt": "2026-09-18T17:18:00Z",
+              "log": "[순서 2] 게이트 음성 시험 — 「통과만 하는 빈 게이트」 배제. 병합 트리에서 두 축을 각각 한 번씩 깼다. ⑴ R5: `tokens.css` 의 `padding: 16px` → `14px 16px` 되돌림 → exit 1, 「[R5] 값 충돌 4건이 상한 0 을 넘는다」(실행 지침의 기대 문구는 2건이었는데 병합 트리라 4건 — shorthand 전개가 longhand 2종×2선택자를 잡은 것으로, 게이트가 무는 사실 자체는 동일하다). ⑵ R3: `---- CMP-spark ----` 마커 삭제 → exit 1, 「[R3] 구현에 이름이 없는 in-scope 항목이 허용목록에 없다: CMP-spark」(성립 18→17). 두 번 모두 `git checkout --` 로 원복, `git status --short` 출력 없음, 재실행 exit 0 확인."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:18:00Z",
+              "finishedAt": "2026-09-18T17:20:00Z",
+              "log": "[순서 3] 원격 CI 결론 판독(머지 전 필수). `actions:read` 포함 설치 토큰으로 `GET /actions/runs?head_sha=1b80bff…` → 200, run `35371702627` `Checks` 가 completed/success(attempt 1, 폴링 불필요). 잡별: `ci/build` success · `ci/e2e` success · `docs/structure` success · `docs/flow` success · **`render/render` success**(이 PR 이 추가한 게이트가 제 브랜치에서 green) · `image/publish(serving)` success · `image/publish(batch)` success · `image/pin deploy images (main only)` skipped · **`required` success**. 검토 코멘트 ⑵ 이행: base 이동 후 머지 API 의 재판정을 머지 직전 재조회 — `state=open, merged=false, mergeable=true, mergeable_state=clean, head=1b80bff`."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:20:00Z",
+              "finishedAt": "2026-09-18T17:22:00Z",
+              "log": "[순서 4] 머지. `PUT /pulls/37/merge` `merge_method=squash` + `sha=1b80bff…`(head 고정으로 경합 차단) → `merged: true`, squash 커밋 `be8616f4cbda7455e7358f1538957ee8db357d9f`. 계획 커밋 3개(게이트 + 수렴 + 등재)가 main 이력에 한 줄로 착지했다. 불가역 지점 통과."
+            }
+          ]
         }
       }
     ]
