@@ -812,6 +812,61 @@
           "reason": "**거부 — 변경 자체는 건전하나 완료 기준 (a)가 곧 일어날 사건 하나로 거짓 실패를 낸다.**\n\n신선도 확인(17:26Z): PR #68 `open`·`draft=false`, head `cb92bf4`, base `ebe8657` = 현재 main tip(이동 없음), `mergeable=true`·`mergeable_state=clean`, CI 워크플로 `completed/success`(head_sha 조회). diff 12파일(470/-210)을 직접 파싱해 **docs/ 밖 6개 코드 파일에서 주석·빈 줄이 아닌 ± 행이 0건**임을 확인했고, `backend/migrations/*.sql`은 한 줄도 없다(정책의 사람 게이트 우회 없음). 기계 판독 주석 `// 검증 시나리오:`(sc02-01·sc02-04)와 `mock-exception:` 2건은 diff에서 문맥 행으로 남아 보존된다. 계획 step 2~4의 산출물(주석 6파일 · 원장 증분 2파일 · ledger.md · 신규 패스 문서 · 2026-09-17 패스 절 추가 · docs/index.html)이 전건 실재하고 범위 밖 변경이 섞여 있지 않다. riskLevel low·실행 코드 무변경·squash 1커밋 revert 롤백은 영향 범위에 걸맞다.\n\n**거부 사유는 하나다 — executionGuide 4(a)의 절대 지문 `lines=3055 files=97`/`b1f90262…`가 이 PR 자신의 델타가 아니라 main 전역 상태에 묶여 있는데, 재계산 트리거는 「base가 움직였고 그 커밋이 이 PR의 파일을 건드렸으면」으로 좁게 걸려 있다.** 자매 task `rct_20260918-0003`(tbm_feature-doc-scenario-e2e)의 PR **#67이 지금 열려 있고 그 task는 이미 `approved`로 실행 큐 맨 앞에 있다**. #67은 `sc02-02`를 전용 spec으로 쪼개 `e2e/tests/` 파일 수·행수를 바꾸지만 #68의 12파일과는 무접촉이다 — 즉 #67이 먼저 머지되면 base는 움직이고 전역 지문도 움직이는데 가이드는 재계산을 **지시하지 않는다**. 그 상태에서 가이드 4는 「하나라도 어긋나면 `failed`」이므로, 올바르게 착지한 머지가 `failed`로 기록되고 불필요한 재작업이 돈다. 가정이 아니라 다음 executor 사이클에서 거의 확실히 밟는 경로라 지금 그대로 승인할 수 없다.",
           "comment": "PR #68은 그대로 두고 **executionGuide만 고치면 승인된다**(재작성·재푸시 불필요).\n\n1. **완료 기준 (a)를 절대 지문에서 상대 기준으로 바꿀 것.** `lines=3055 files=97`/`b1f90262…`는 base가 `ebe8657`로 고정될 때만 참이다. 대신 「머지 **직전** base에서 asIs versionScript를 재실행해 얻은 값 대비 **순 −137행**(인수 축 −127 · 원장 1행 증분 −10), 파일 수 불변」을 기준으로 적고, 절대값은 「base가 `ebe8657`일 때의 참고값」으로만 남길 것. 판정은 **머지 전후 delta 대조**로 한다.\n\n2. **재계산 트리거를 넓힐 것.** 현재 「그 커밋이 이 PR의 파일을 건드렸으면」은 너무 좁다 — 전역 지문은 범위(`backend/src backend/tests frontend/src e2e scripts tools deploy` + `backend/migrations/*.sql`) 안 **어느 파일**이 움직여도 바뀐다. 「base가 `ebe8657`에서 조금이라도 움직였으면 머지 전에 base 지문을 재계측하고 기대값을 다시 세운다」로 쓸 것. 특히 **#67(rct_20260918-0003, `approved`)이 먼저 머지될 공산이 크다**는 것을 가이드 본문에 명시할 것 — 현재 「#67이 먼저 머지되면 1의 대조를 다시 한다」까지만 적혀 있고 **4의 기대값도 다시 세워야 한다**는 말이 빠져 있다.\n\n3. **지문 불일치의 오진 방지 문구 추가.** (a)가 어긋났을 때 곧바로 `failed`로 가지 말고 ⑴ 해싱 방식(전역 `printf '%s'` vs 원장 `echo` — 후행 개행), ⑵ base 이동분, ⑶ 이 PR의 델타를 순서대로 분리해 **이 PR의 델타가 −137행에 맞으면 `succeeded`**로 판정하도록 적을 것.\n\n4. (사소) `preparation.notes`와 가이드 본문이 「10파일」이라 적지만 실제 PR은 **12파일**이다(주석 6 + 원장 증분 2 + 정책 문서 3 + `docs/index.html` = 12). 가이드의 `migrations` 확인 절차가 「10파일 중」을 기준으로 삼으므로 숫자를 12로 맞출 것."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**직전 시도의 PR #68을 그대로 쓰고, 거부가 지목한 실행 지침만 고친다.** 판정 대상·변경 내용은 바뀌지 않는다 — #43(슬라이스 5a)의 인수(acceptance) 축 신규 7파일 중 열린 PR #67과 무접촉인 6파일을 판정해 복원 가능한 주석을 제거하고, 원장 1행의 증분 40행을 함께 재판정한 12파일 변경이다. 리뷰는 변경 자체를 건전하다고 확인했고(코드 ± 행 0건, 마이그레이션 0줄, 기계 판독 주석 보존, CI green) 거부 사유는 하나였다: 완료 기준이 절대 지문 `lines=3055 files=97`에 묶여 있는데 그것은 base가 `ebe8657`일 때만 참이고, 같은 큐의 #67(`approved`)·신규 #69가 먼저 머지되면 올바르게 착지한 머지가 `failed`로 기록된다. 그래서 이번 재계획은 **지침만** 고친다 — ⑴ 완료 기준을 절대값에서 **머지 전후 delta(순 −137행 · 파일 수 불변)**로 바꾸고, ⑵ base 재계측 트리거를 「base가 조금이라도 움직였으면」으로 넓혀 4의 기대값까지 다시 세우게 하고, ⑶ 지문 불일치를 해싱 방식→base 이동분→이 PR의 델타 순서로 분해해 오진을 막고, ⑷ 파일 수를 10→12로 바로잡았다. 여기에 리뷰가 짚지 않은 **같은 유형의 결함 1건**을 함께 고쳤다 — 게이트 수치 `M3A 198 · M3B 125`도 base 의존인데 신규 PR #69가 바로 그 `tools/check-mockup-render.py`와 `frontend/src/*.tsx`를 바꾸므로, 판정 기준을 「3종 통과」로 낮추고 숫자는 참고값으로 내렸다. 재푸시 대신 지침 수정을 고른 이유는 PR이 여전히 `clean`·CI green이고 (계획 시점 실측: head `cb92bf4`, base `ebe8657` = main tip, 12파일) 되돌릴 것이 없기 때문이다 — 가역성은 squash 1커밋 revert 그대로다. **완료 기준**: PR #68이 머지되고, 머지 직전 base 대비 asIs 지문이 **순 −137행 · 파일 수 불변**이며, `docs/comment-policy/` 트리 해시가 `2a160db5…`에서 움직여 원장에 인수 축 4행이 등재된다. **범위 밖(후속)**: `sc02-02`(PR #67 경합) · 원장 2행의 미판정 증분 23행(#60의 config.rs) · #26/#17 draft 접촉 4파일 · `backend/migrations/*.sql` 7파일(사람 게이트 별도 패스) · 나머지 자유 풀. 이들은 이 task의 성공 판정에 넣지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "[직전 시도에서 이미 완료 — PR #68에 반영돼 있고 재실행하지 않는다] 판정 대상 선정: main tip에서 전역 지문과 파일별 주석 줄 수를 재계측하고, 열린 PR의 변경 파일과 교차해 경합을 제외했다.",
+              "expectedOutcome": "인수 축 7파일 중 #67이 건드리는 `sc02-02`를 뺀 6파일(268행)이 범위로 확정됨. (재계획 시점 재확인: base `ebe8657` 지문 `lines=3192 files=97` / `f724aab9…`.)"
+            },
+            {
+              "seq": 2,
+              "action": "[직전 시도에서 이미 완료] 6파일의 주석을 정책 README의 복원 경로 넷 기준으로 판정해 제거 대상만 편집. 기계 판독 주석(`// 검증 시나리오:`·`mock-exception:`)과 동시성 계약·stub 충실도 경계는 유지.",
+              "expectedOutcome": "268행 → 141행(순 제거 127행), 실행 코드 바이트 무변경. (재계획 시점 재확인: PR head에서 `검증 시나리오:` sc02-01·sc02-04 각 1건, `acceptance.rs`의 `mock-exception:` 2건 잔존.)"
+            },
+            {
+              "seq": 3,
+              "action": "[직전 시도에서 이미 완료] 원장 1행의 증분 40행(#43이 `analysis.rs`·`worker_api.rs`에 더한 것)을 재판정하고, README 「판정 절차 3」대로 `passes/2026-09-17-backend-concentrated.md`에 절을 추가.",
+              "expectedOutcome": "547행 → 537행(순 제거 10행). 2와 합쳐 순 −137행."
+            },
+            {
+              "seq": 4,
+              "action": "[직전 시도에서 이미 완료] 판정 상세 `docs/comment-policy/passes/2026-09-18-acceptance-axis.md` 작성, 원장에 4행 등재, 원장 1·2행 갱신, `docs/index.html` 등재.",
+              "expectedOutcome": "원장 합계가 판정 17파일 · 순 제거 누적 279행으로 닫힘. (재계획 시점 재확인: PR head의 `docs/comment-policy` 트리 해시 `812819c6…`.)"
+            },
+            {
+              "seq": 5,
+              "action": "[재계획에서 재실행함] 검증 — base `ebe8657`과 PR head `cb92bf4` 양쪽에서 모델 `asIs.versionScript`를 독립 재실행해 델타를 실측하고, 레포 게이트 3종을 PR head에서 돌린다.",
+              "expectedOutcome": "실측 완료: `lines=3192 files=97`/`f724aab9…` → `lines=3055 files=97`/`b1f90262…` = **순 −137행 · 파일 수 불변**. 게이트 3종 전부 통과(M3A 198 · M3B 125 · 여정 문서 26 — 단 이 수치는 base 의존이라 판정 기준이 아니다)."
+            },
+            {
+              "seq": 6,
+              "action": "[직전 시도에서 이미 완료 — 재푸시하지 않는다] 브랜치 `reconcile/comment-redundancy-rct_20260918-0004`로 커밋·푸시하고 base `main`으로 PR을 연다.",
+              "expectedOutcome": "PR #68이 열려 있고 재계획 시점에도 `open`·`draft=false`·`mergeable=true`·`mergeable_state=clean`·12파일(+470/−210)."
+            },
+            {
+              "seq": 7,
+              "action": "[재계획의 실질 산출물] 거부 사유 4건 + 같은 유형의 미지적 결함 1건(게이트 수치)을 반영해 `plan.executionGuide`를 다시 쓴다. PR은 건드리지 않는다.",
+              "expectedOutcome": "지침의 완료 기준이 delta 기준으로 바뀌고, base 재계측 트리거가 「base가 조금이라도 움직이면」으로 넓어지고, 지문 불일치 분해 절차와 12파일 표기가 들어간다."
+            },
+            {
+              "seq": 8,
+              "action": "[실행 단계] 머지 전 head/base·mergeable 대조 → **base가 움직였으면 base 지문 재계측 후 기대값 재수립** → `ci-gate` green 확인 → squash 머지.",
+              "expectedOutcome": "PR #68이 main에 머지되고, 머지 직전 base 지문이 기록돼 있다."
+            },
+            {
+              "seq": 9,
+              "action": "[실행 단계] 머지 후 main에서 asIs 지문 delta·to-be 트리 해시 이동·게이트 3종을 확인한다. 지문이 어긋나면 해싱 방식 → base 이동분 → 이 PR의 델타 순서로 분해한다.",
+              "expectedOutcome": "이 PR의 델타가 −137행 · 파일 수 불변이고, `docs/comment-policy` 트리 해시가 `2a160db5…`에서 이동했으며, 게이트 3종 통과 → `succeeded`."
+            }
+          ],
+          "plannedAt": "2026-09-18T21:47:00Z"
+        }
       }
     ]
   }
