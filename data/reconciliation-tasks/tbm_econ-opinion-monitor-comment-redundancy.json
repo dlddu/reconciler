@@ -580,6 +580,90 @@
           "reviewedAt": "2026-09-18T22:15:00Z",
           "reason": "주석 7줄 삭제 + 정책 문서 2개가 전부이고 실행 코드 바이트는 불변이라 위험이 구조적으로 낮다 — `git diff -U0 a62eae1..b39481d -- scripts/`의 추가 줄 0건을 직접 재현했다(삭제 10줄 = 주석 7 + 딸린 빈 줄 3). 준비물 신선도 실측(22:12Z): PR #41 open, mergeable=true, mergeable_state=**clean**(준비 시점의 blocked는 `Checks` pending이었고 22:04Z에 completed/success로 닫혔다), base `a62eae1`이 현재 main tip과 동일해 베이스 이동·충돌 없음, 변경 4파일/+138−15가 preparation 기재와 일치. 원장 산술을 모델 `asIs.versionScript`로 직접 재측정해 계획값과 전건 일치를 확인했다: base 960/81·`55a0dc3f…` → PR head 953/80·`1b34764abc24d47b658f3cf1ed791eeaa8bab2761e0a01128ff2bc0d386dea98`(executionGuide 완료 기준 1과 동일), 파일별 `check-mockup-render.py` 3→0 · `JRN-spike-verification.js` 29→25 · 유지 3파일(42/38/10) 불변, 재발 잔존 grep 2건 모두 0(exit 1), 로컬 게이트 2개 exit 0. 자매 task rct_20260918-0004가 21:50Z에 거부된 두 사유가 이 계획에서는 닫혀 있다: ⑴ base가 main tip이라 낡은 base 문제가 없고 ⑵ 원장 5행의 「판정 전」 수치가 그 파일 전량임을 `be8616f...a62eae1` compare로 확인했다(#38·#39가 건드린 27파일에 대상 5파일이 하나도 없다) — 미판정 잔여가 행에 섞이지 않는다. 불가역 지점은 머지 하나뿐이고 롤백은 `git revert <merge-sha>` 한 번으로 런타임·배포·데이터에 닿지 않으며, executionGuide가 완료 기준 5개와 base 이동 시 델타(−7줄/−1파일) 판정법까지 명시해 low risk에 걸맞은 대비가 있다. 새 주석 문면을 한 글자도 쓰지 않아(삭제 전용) 자매 task 리뷰가 남긴 「개수·메커니즘에 기대는 가드 문면 금지」 지침을 구조적으로 위반할 수 없다.",
           "comment": "승인이지만 실행 시 두 가지를 지킬 것. ⑴ **머지 직전 `mergeable_state` 재확인** — 자매 task rct_20260918-0004의 재계획 PR이 같은 `ledger.md`의 패스 이력 표·「읽는 법」 절을 고친다. `dirty`로 바뀌어 있으면 상대가 먼저 들어간 것이므로 머지하지 말고 재계획으로 넘긴다(executionGuide 주의사항과 동일). ⑵ **base 이동 시 절대값 대신 델타로 판정** — 이번 리뷰가 검증한 953/80·`1b34764a…`는 base가 `a62eae1`에 머문 경우의 값이다. main이 움직였으면 대상 5파일·`docs/comment-policy/`를 건드린 커밋이 있는지 먼저 보고, 1건이라도 있으면 원장 행이 '판정하지 않은 줄을 판정한 것처럼' 읽히므로 머지하지 말고 `failed`로 닫는다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-18T22:17:12Z",
+          "finishedAt": "2026-09-18T22:19:00Z",
+          "entries": [
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:17:20Z",
+              "finishedAt": "2026-09-18T22:17:45Z",
+              "log": "**신선도 재확인(executionGuide 1단계) — 전건 통과, 머지 조건 성립.** `GET /pulls/41` 실측: state=open · merged=false · mergeable=**true** · mergeable_state=**clean** · changed_files=4 · +138 −15 (preparation 기재와 전건 일치). head `b39481dc84519ac94c5595aec66e97f21bcbce6b`, base `a62eae101f58ff344bec33e79f30945b7c4775d4`. **base가 움직이지 않았다** — `GET /commits?sha=main` 의 tip이 `a62eae10`(21:42:01Z, #39)으로 base.sha와 동일해, 리뷰 코멘트 ⑵가 경고한 「base 이동 시 델타 판정」 분기에 들어가지 않았고 절대값 기대치를 그대로 쓸 수 있었다. 리뷰 코멘트 ⑴이 지목한 자매 task `rct_20260918-0004` 재계획 PR의 `ledger.md` 선착 여부도 같은 조회로 배제됐다 — mergeable_state가 `dirty`가 아니라 `clean`이므로 상대가 먼저 들어가지 않았다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:17:46Z",
+              "finishedAt": "2026-09-18T22:17:55Z",
+              "log": "**CI 확인(executionGuide 2단계, soft gate) — green.** `actions:read`를 명시한 토큰으로 `GET /actions/runs?head_sha=b39481dc…` → HTTP **200**, total_count=1: 워크플로 `Checks` = **completed / success** (run 35399434796). 준비 시점(22:01Z)의 `blocked`는 이 체크가 pending이었기 때문이라는 preparation·review의 판독이 사실로 확인됐다. CI 초록을 차단 게이트로 세우지 않는다는 지침대로였으나, 이번엔 소프트 게이트도 통과해 추가 판단이 필요 없었다."
+            },
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:17:56Z",
+              "finishedAt": "2026-09-18T22:18:05Z",
+              "log": "**머지 직전 기준점 고정 — 계획·리뷰 값과 전건 일치.** base `a62eae1` 체크아웃에서 모델 `asIs.versionScript`를 문면 그대로(해싱은 `printf '%s' | sha256sum`) 실행: `lines=960 files=81` / `55a0dc3f24d5cb9a74031245621103d309e3500cbecc4fb1dc38116e77930161`. plan step 1의 기대값·모델 `asIs.lastObservedVersion`(21:49:34Z 관측)과 바이트 단위로 같다. ⇒ 원장 「판정 전 960」의 분모가 머지 순간에도 유효함이 실측으로 확정됐고, 4단계 사후 측정의 델타(−7줄/−1파일)를 절대값으로 판정할 수 있게 됐다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:18:06Z",
+              "finishedAt": "2026-09-18T22:18:30Z",
+              "log": "**`scripts/check-mockup-render.py` 구분선 배너 3줄 제거 — 머지(`0125cae`)로 main 착지.** 실행 단계가 새로 편집한 바이트는 없다(계획 단계가 PR #41에 스테이징한 것을 그대로 landing). 머지 후 main 실측: 이 파일의 지문 대상 주석 **3 → 0**, diff `-6`(주석 3줄 + 배너에 딸린 빈 줄 3줄). 재발 잔존 grep 0건은 verification (c)에 기록."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:18:06Z",
+              "finishedAt": "2026-09-18T22:18:30Z",
+              "log": "**`scripts/journey-scenarios/JRN-spike-verification.js` 머리 역할 분담 블록 4줄 제거 — 머지로 main 착지.** 머지 후 main 실측 주석 **29 → 25**, diff `-4`. 삭제 줄 형태를 기계로 확인했다 — 빈 ` *` 1줄 + 역할 분담 산문 3줄(`* 범용 러너(check-journey-flow.js)가 SSOT 만으로 판정할 수 없는 것만 여기 둔다:` 이하)이고, 훅별 `(c)(d)(e)(h)` 주석·조작별 의도·jsdom `.value` 함정은 한 줄도 건드리지 않았다. 지침대로 훅 목록을 새로 지어 넣지 않았다(새 주석 문면 0바이트)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:18:06Z",
+              "finishedAt": "2026-09-18T22:18:30Z",
+              "log": "**`docs/comment-policy/ledger.md` 갱신 착지(+16 −?, 표 행 62→64).** 머지 후 main 실측: 패스 이력 행 22행 `| 2026-09-18 | [regression-pass](passes/2026-09-18-regression-pass.md) | a62eae1 | 960 | 7 | 953 | 81 → 80 |`, 신규 2행(65행 `check-mockup-render.py` 3/3/0 · 68행 `JRN-spike-verification.js` 29/4/25), 재판정 3행(64행 `check-journey-mockup.py` 42/0/42 · 83행 `Compare.tsx` 10/0/10 · 91행 `tokens.css` 38/0/38, 모두 판정 칸 머리가 `regression-pass —`), 합계 행 92행 960/7/953·64개 파일. 제거 합 산술이 닫힌다: 3+4=7. `tests/e2e/` 8파일 행은 만들지 않았다(자매 task #40 거부 사유 회피)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:18:06Z",
+              "finishedAt": "2026-09-18T22:18:30Z",
+              "log": "**`docs/comment-policy/passes/2026-09-18-regression-pass.md` 신규 127줄 착지.** 원장 22행의 상대 링크가 실재 파일을 가리킨다(`test -f` 통과). 링크 해석은 `check-journey-mockup.py`의 R8이 기계로 재확인했다 — docs/ 상대 링크 **87건 전부 해석**(계획 시점 85→87, 새 패스 문서 링크까지 포함)."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:18:35Z",
+              "finishedAt": "2026-09-18T22:18:45Z",
+              "log": "**머지 후 지문 재측정 — 완료 기준 1과 바이트 일치.** `lines=953 files=80` / `1b34764abc24d47b658f3cf1ed791eeaa8bab2761e0a01128ff2bc0d386dea98`. 델타도 기대대로 −7줄 / −1파일(`check-mockup-render.py`가 지문에서 빠짐). 실측값은 verification.asIsVersionAfter·checks (a)에 기록."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:18:46Z",
+              "finishedAt": "2026-09-18T22:18:55Z",
+              "log": "**제거가 주석에만 닿았음을 기계로 확인 — `scripts/` 추가 0줄.** `git diff -U0 a62eae1..HEAD -- scripts/`의 `^+`(`+++` 제외) **0건**, 삭제 10줄을 분류해 주석 7 · 빈 줄 3 · **그 외 0**. ⇒ 실행 코드 바이트 불변이므로 node·jsdom이 없는 이 호스트에서 `check-journey-flow.js`를 못 돌려도 러너 동작은 정의상 불변이다(지침이 지정한 대체 증명). 재발 잔존 grep 2건도 이 단계에서 같이 확인해 둘 다 0건(exit 1)."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:18:56Z",
+              "finishedAt": "2026-09-18T22:19:10Z",
+              "log": "**로컬 게이트 2개 회귀 없음 — 둘 다 exit 0.** `python3 scripts/check-mockup-render.py .` → 마지막 줄 「목업 ↔ 구현 렌더링 정합성(규칙 3·5) 통과」(R3 이름 대조 18 · 등재 예외 3 · 구현 전용 1, R5 충돌 0). `python3 scripts/check-journey-mockup.py .` → 「PASS — 여정 6개 · 여정 페이지 3개 · 미이관 3(상한 3) · 규칙 5 미충족 페이지 3(상한 3) · 링크 87건」. 내가 배너를 걷어낸 `check-mockup-render.py` 자신이 정상 구동한다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T22:18:06Z",
+              "finishedAt": "2026-09-18T22:18:20Z",
+              "log": "**머지(executionGuide 3단계) — 이 task의 유일한 불가역 지점.** 머지 직전 `mergeable_state`를 한 번 더 읽어 `clean`을 확인한 뒤 `PUT /pulls/41/merge -f merge_method=squash` → HTTP **200**, `merged=true`, squash 커밋 **`0125cae798f032ec5bdd8a0e8c912bebd666bd48`**. 머지 후 `git fetch origin main` 실측 tip = `0125cae docs(comments): 초기 패스가 지운 두 제거 유형의 재발 판정 (rct_20260918-0005) (#41)`, 그 부모가 `a62eae1`. 계획 범위를 넓히지 않았다 — PR에 커밋을 더하지 않았고(head는 머지 시점까지 `b39481d` 그대로), 새 주석 문면을 한 글자도 쓰지 않았으며, 「범위 밖」 6항목은 한 줄도 건드리지 않았다. 롤백 경로: `git revert 0125cae`(런타임·배포·데이터 무관)."
+            }
+          ]
         }
       }
     ]
