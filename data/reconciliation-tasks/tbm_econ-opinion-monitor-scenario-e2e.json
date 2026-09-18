@@ -1474,6 +1474,90 @@
           "reviewedAt": "2026-09-18T17:31:00Z",
           "reason": "테스트·문서 전용 슬라이스라 위험이 낮고 되돌리기가 PR revert 한 번이다 — 변경 23파일이 전부 tests/e2e/ 와 doc-tracker·mocking-policy 두 문서이고 제품 경로(go/ python/ web/ contracts/ deploy/ Makefile/ Dockerfile*/ .github/) 접촉이 공집합임을 PR 파일 목록으로 직접 확인했다. 불가역 지점은 머지뿐이고 프로덕션·클러스터·데이터 영향이 없다. 신선도: PR #39 open·non-draft·mergeable=clean, CI 런 8잡 전부 성공(ci/e2e 201s — 20분 예산 안, 실행 지침이 지목한 세 marker 라인과 `28 passed` 를 로그에서 실물 확인)이라 'make e2e 미검증'이라는 준비 단계의 유일한 공백이 메워졌다. 다만 CI 이후 main 이 2커밋 전진했으므로(#37 be8616f·#38 33e24ea, doc-tracker 를 함께 수정) head 를 현재 main 에 로컬 머지해 재검증했다: 충돌 없이 머지되고 `check_scenario_mapping.py` 가 rc=0 으로 매칭 9 · 공백 9 · 회계 21=9+1+2+9 를 내며 공백 목록에서 ingestion 6·7 이 사라진다 — 계획이 명시한 완료 기준의 수치와 정확히 일치한다. mock-exception 지점 18 ↔ 허용목록 18행 1:1 도 병합 트리에서 재확인했다. 완료 기준·롤백·실패 분류(증상→원인)가 executionGuide 에 구체적으로 있고, 모델 불변식 미성립(18≠9)이 슬라이스 범위상 실패가 아님을 계획이 선언해 두어 실행 단계의 오판 여지도 닫혀 있다.",
           "comment": "실행 단계 주의 2건(거부 사유가 아니라 인수인계 메모). ⑴ **base 이동**: CI 런은 base 2579722 기준이고 현재 main 은 33e24ea 다. 검토가 현재 main 과의 머지 결과로 게이트를 재검증했으므로 추가 rebase 없이 머지해도 회계는 닫히지만, 머지 직전 main 이 또 움직였다면(특히 tests/e2e/** 또는 doc-tracker 「e2e 매핑」 절을 건드리는 커밋) `check_scenario_mapping.py` 를 머지 후 main 에서 한 번 더 돌려 9/9/21 을 확인할 것. ⑵ **required 체크 구성 변경**: #37 이 main 의 checks.yml 에 `render` 잡(docs-mockup-render.yml)을 추가해 `needs: [ci, docs, render, image]` 가 됐다. #39 의 런은 그 이전 구성이라 render 를 돌지 않았고, main push 에서는 테스트가 재실행되지 않으므로 이 커밋은 render 게이트를 영영 거치지 않는다. #39 는 web/src·목업을 건드리지 않아 그 게이트가 판정할 대상이 없다고 봤지만, PR 상태가 blocked 로 보이면 체크 구성 변경에 따른 비동기 재판정일 수 있으니 재조회부터 하고 필요하면 update-branch 로 head 를 밀어 새 구성으로 한 번 돌릴 것. ⑶ 머지 대상 브랜치는 `reconcile/scenario-e2e/rct_20260918-0004`(eef3aa5) 다 — 같은 id 의 `reconcile/rct_20260918-0004` 는 자매 모델 mockup-render 의 것이니 건드리지 말 것."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-18T21:40:55Z",
+          "finishedAt": "2026-09-18T21:41:40Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:41:00Z",
+              "finishedAt": "2026-09-18T21:41:40Z",
+              "log": "계획 단계가 PR #39(브랜치 reconcile/scenario-e2e/rct_20260918-0004, 커밋 eef3aa5)로 스테이징한 산출물이 squash 머지 a62eae1 로 main 에 착지했다. 피드 더블 교체(tests/e2e/fixtures/feeds/server.py + k8s/batch/feed-double.yaml command). CI e2e 로그에서 더블이 기동해 5개 수집 Job 이 모두 완료됐음을 확인(https://github.com/dlddu/economic-opinion-trend-monitor/actions/runs/35372851165) — 정적 경로 회귀 없음(기존 ingestion 2~5 spec 포함 28 passed)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:41:00Z",
+              "finishedAt": "2026-09-18T21:41:40Z",
+              "log": "고장 주입 피드 설정 e2e-feeds-faults.json 착지. CI 에서 duplicates_skipped·failed_sources 관측이 성립했다(시나리오 6 spec 통과)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:41:00Z",
+              "finishedAt": "2026-09-18T21:41:40Z",
+              "log": "k8s/batch/ingest-job-faults.yaml 착지. CI 로그 `[e2e] bronze (faults) exported -> tests/e2e/.artifacts/bronze-faults` 로 Job 완료·반출 확인."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:41:00Z",
+              "finishedAt": "2026-09-18T21:41:40Z",
+              "log": "3주기 연속 수집 Job 매니페스트 착지. CI 로그 `[e2e] bronze (3 cycles) exported -> tests/e2e/.artifacts/bronze-cycles` 확인."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:41:00Z",
+              "finishedAt": "2026-09-18T21:41:40Z",
+              "log": "run.sh 확장(새 Job 순차 실행 + Bronze·Job 로그 호스트 반출) 착지. 반출 마커 2줄이 로그에 실물로 찍혔고 조기 실패 없음."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:41:00Z",
+              "finishedAt": "2026-09-18T21:41:40Z",
+              "log": "lib/ 헬퍼(Job 로그 파서·주기별 Bronze 리더) 착지. specs/ 밖이라 매핑 집계 단위 불변 — check_scenario_mapping.py 가 매칭 9 로 집계(9,10 참조)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:41:00Z",
+              "finishedAt": "2026-09-18T21:41:40Z",
+              "log": "시나리오 6 전용 spec 신설·통과. CI e2e 28 passed 및 `[e2e] OK: fault injection + 3 sequential cycles -> Bronze + Job logs`."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:41:00Z",
+              "finishedAt": "2026-09-18T21:41:40Z",
+              "log": "시나리오 7 전용 spec 신설·통과. 같은 런의 28 passed 에 포함."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:41:00Z",
+              "finishedAt": "2026-09-18T21:41:40Z",
+              "log": "doc-tracker 「e2e 매핑」 갱신(집계 7→9 · 공백 11→9 · 실측표 2행 추가 · gap-list 에서 ingestion 6·7 삭제 · 불변식 18≠9 · 회계 21=9+1+2+9) 착지. 머지 후 main 재측정은 verification 참조."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:41:00Z",
+              "finishedAt": "2026-09-18T21:41:40Z",
+              "log": "mock-exception 주석 ↔ mocking-policy 허용목록 1:1 등재(FEED 축) + 변경 이력 행 착지. CI docs 잡 초록."
+            },
+            {
+              "stepSeq": 11,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T21:41:00Z",
+              "finishedAt": "2026-09-18T21:41:40Z",
+              "log": "게이트 전량 초록 확인 후 머지. CI 런 https://github.com/dlddu/economic-opinion-trend-monitor/actions/runs/35372851165 8잡 중 skip 1(main 전용 pin) 제외 전부 success — `required` 체크 success, `ci / e2e` 201s(20분 예산 내). 머지 커밋 a62eae1 (squash)."
+            }
+          ]
         }
       }
     ]
