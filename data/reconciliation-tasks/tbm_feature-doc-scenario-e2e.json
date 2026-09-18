@@ -1309,6 +1309,66 @@
           "reason": "**거부 — 준비된 PR #67 이 지금 머지 불가 상태이고, 분할의 유일한 증명인 CI 가 한 번도 돌지 않았다.** 계획 자체의 정합성·범위·불가역성은 문제가 없다: 변경 파일 3개(제품 코드 0줄)로 규칙 1 위반 1건을 닫고 래칫 상한을 함께 내리며, riskLevel=low 에 롤백은 커밋 revert 하나이고 완료 기준 4개가 게이트 출력 문구까지 못박아 검증 가능하다. 거부 사유는 전제 신선도 두 건이다. ⑴ **베이스 이동으로 충돌** — 브랜치는 `d87f216` 위에 섰는데 PR 생성 1분 44초 전(16:33:37Z) `#65`(`6bc37f99`)가 main 에 들어와 `docs/doc-tracker.md` 의 **변경 이력 표**를 고쳤다(5a 행 편차 산술 정정 + 새 행 1개). 이 PR 의 step 8 이 같은 표에 행을 더하므로 GitHub 는 `mergeable=false · mergeable_state=dirty · rebaseable=false` 로 보고한다(2회 조회 동일 — 계산 지연이 아니다). `mergeable=true` 인데 blocked 인 낡은-필수체크 사례가 아니라 실제 텍스트 충돌이므로 `update-branch` API 로도 풀리지 않는다. ⑵ **CI 미실행** — head `fe78db0` 에 워크플로 런이 **0건**(`/actions/runs?head_sha=` 및 `?branch=` 모두 total 0, combined status `state=pending · total 0`)이다. 같은 시간대 다른 브랜치(`reconcile/rct_20260918-0003-appbar` 16:21)에는 CI 가 돌았으므로 레포 전역 장애가 아니다. 실행 지침 스스로 「`ci-gate` 의 `test (kind e2e)` 가 분할의 진짜 증명이고 로컬 rc=0 은 합격 신호가 아니다」라고 적고, 완료 기준 ④ 가 그 잡의 통과를 요구하는데 그 증거가 존재하지 않는다. 준비 노트도 `e2e/node_modules` 부재로 로컬 Playwright 실행을 못 했다고 적는다 — 즉 분할된 두 spec 이 실제로 초록인지는 **아무도 확인하지 않았다**. 여기에 판정을 더 어렵게 하는 사실 하나: `#65` 는 `frontend/src/FeatureAcceptance.tsx` 의 앱바를 3슬롯으로 교체했고(+22−11) `tools/check-mockup-render.py` 도 고쳤다. 그 화면이 바로 새 `sc02-03` 이 `data-testid=\"contradictions\"` 렌더와 목록 분리를 단정하는 S08 이라, 브랜치에서 얻은 로컬 게이트 rc=0 과 단정의 유효성은 모두 `#65` **이전** 베이스에서 얻은 것이다. 충돌 해소 후 새 베이스에서 다시 확인해야 한다.\n\n**⑴ 과 ⑵ 는 독립 결함이 아니라 인과다(추가 확인).** `.github/workflows/ci.yml` 은 `on: pull_request` **단독**이고 (머리말도 「PR 에서만 돈다」), 충돌 상태의 PR 은 `refs/pull/67/merge` 를 만들 수 없어 `pull_request` 이벤트가 디스패치되지 않는다 — 그래서 런이 0건이다. 커밋 신원은 CI 가 돈 `reconcile/rct_20260918-0003-appbar`(`db8c8c2`)와 동일(`reconciler-bot`)하므로 워크플로 트리거 조건·브랜치 이름·토큰 문제가 아니다. **충돌을 풀면 CI 가 돌기 시작한다.** 따라서 거부의 단일 근본 원인은 베이스 이동이고, 승인 가능 상태의 조건은 「rebase 후 `ci-gate` 초록」이다.",
           "comment": "**planner 가 고칠 것 — 계획의 내용은 유지하고 스테이징만 새 베이스로 다시 올린다.**\n\n1. **베이스를 `#65`(`6bc37f99`, 현재 main tip) 위로 rebase 한다.** 충돌 지점은 `docs/doc-tracker.md` 변경 이력 표 한 곳이다 — `#65` 가 5a 행의 편차 산술을 `43→37 · 47→41` 로 고치고 새 행(앱바 3슬롯)을 더해 두었으니, 그 정정을 **살린 채** 이번 슬라이스 행을 뒤에 붙인다. `update-branch` API 로는 안 풀리는 실제 충돌이므로 로컬 rebase 가 필요하다.\n2. **새 베이스에서 게이트를 다시 돌려 숫자를 재확인한다** — `python3 tools/check-scenario-e2e.py --verbose` 가 `매핑 20 · 선언 20` / `(36 − 0 − 16) = 20 · 실제 매칭 파일 20` / `래칫 미매핑 0/0` 을 그대로 적는지. `#65` 는 `e2e/tests/` 최상위를 건드리지 않았으니 숫자는 유지될 것으로 보이지만, 캡션·래칫 소제목·집계 블록·상단 요약 불릿 **네 자리**가 rebase 로 어긋나지 않았는지 확인한다.\n3. **형제 게이트를 다시 돌린다** — `#65` 가 `tools/check-mockup-render.py` 자신을 고쳤으므로 `check-mockup-render.py`·`check-journey-mockup.py` rc=0 을 새 베이스에서 재확인한다.\n4. **`#65` 의 `FeatureAcceptance.tsx` 앱바 3슬롯 변경이 `sc02-02`/`sc02-03` 의 단정을 깨지 않는지 확인한다.** 두 spec 은 그 화면(S08)에서 `data-testid=\"contradictions\"` 렌더와 `scenario-list` 분리를 관측한다. 앱바 교체가 `contradictions`·`scenario-list` testid 를 건드리지 않았음을 diff 로 확인하고, 필요하면 셀렉터를 맞춘다.\n5. **CI 를 실제로 돌려 초록을 받아 온다 — 이것이 이번 거부의 핵심이다.** rebase·force-push 후 `/repos/dlddu/feature-doc/actions/runs?head_sha=<새 head>` 로 `CI` 런이 **생성됐는지부터** 확인한다(이번엔 0건이었다). `ci-gate` 아래 `test (kind e2e)` 가 통과하고 로그에 `sc02-02`·`sc02-03` 이 **각각 passed** 로 찍혀야 하며, 그 사실(런 id·결론)을 `preparation.notes` 에 적어 다음 검토가 재확인할 수 있게 한다. **런이 0건이었던 원인은 이미 규명됐으니 따로 쫓지 않아도 된다** — `ci.yml` 이 `on: pull_request` 단독이고 충돌 PR 은 merge ref 를 만들 수 없어 이벤트가 디스패치되지 않았을 뿐이다. 1번의 rebase 로 충돌이 풀리면 런은 자동으로 생성된다.\n\n계획의 분기 선택 (A)·범위·완료 기준·롤백은 그대로 두어도 된다 — 다시 판정할 때 문제 삼지 않는다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**계획 내용은 직전 시도 그대로 유지하고(분기 (A) 「지금 분할」), 스테이징만 새 베이스 위로 다시 올린다.** 직전 시도는 계획·범위·완료 기준·롤백이 검토에서 문제되지 않았고(검토 코멘트 마지막 줄이 명시), 거부의 단일 근본 원인은 **베이스 이동**이었다 — PR 생성 1분 44초 전에 `#65`(`6bc37f99`)가 main 에 들어와 `docs/doc-tracker.md` 변경 이력 표를 고치는 바람에 PR #67 이 `mergeable=false · mergeable_state=dirty` 가 됐고, `ci.yml` 이 `on: pull_request` 단독이라 충돌 PR 은 merge ref 를 못 만들어 **CI 런이 0건**이 됐다. 즉 ⑴ 충돌과 ⑵ CI 미실행은 인과 하나이고, rebase 로 충돌을 풀면 런은 자동 생성된다.\n\n**그래서 이번 시도의 작업은 「내용 재설계」가 아니라 「재기초 + 증명 확보」다** — ① 브랜치를 현재 main tip `6bc37f9` 위로 로컬 rebase(충돌 지점은 변경 이력 표 한 곳: `#65` 가 5a 행 편차 산술을 `43→37 · 47→41` 로 고치고 새 행을 더했으니 그 정정을 **살린 채** 이번 슬라이스 행을 뒤에 붙인다 — 실제 텍스트 충돌이라 `update-branch` API 로는 풀리지 않는다), ② 새 베이스에서 게이트 3종을 다시 돌려 숫자 네 자리(상단 요약 불릿 · 매핑 캡션 · 래칫 소제목 · 집계 블록)가 어긋나지 않았는지 재확인, ③ `#65` 가 바꾼 `FeatureAcceptance.tsx` 앱바 3슬롯이 `sc02-02`/`sc02-03` 이 관측하는 `data-testid=\"contradictions\"`·`scenario-list` 를 건드리지 않았는지 diff 로 확인, ④ force-push 후 **CI 런이 실제로 생성되고 `ci-gate`/`test (kind e2e)` 가 초록인지**를 런 id 와 함께 `preparation.notes` 에 남긴다 — 이것이 이번 거부의 핵심 요구다.\n\n**작업 내용(무엇을 고치는가)은 불변이다**: `02-feature-representation.md#시나리오 3`(로직과 테스트가 모순되는 경우)의 모순 분리 단정을 `sc02-02-acceptance-from-tests.spec.ts` 에서 떼어 전용 파일 `sc02-03-contradiction-separation.spec.ts` 로 옮기고, 등재 SSOT(`docs/doc-tracker.md` 「e2e 매핑」)의 매핑 표·래칫 표·집계를 함께 갱신해 모델 불변식을 `(36 − 0 − 16) = 20 = 20` 으로 성립시킨다. (A)를 택한 근거도 그대로다 — 모델의 「충돌 시 기본 방향」이 분기 기준을 「그 시나리오의 기능이 이미 구현되어 있는지」로 못박는데 02#3 의 주 관측면은 이미 구현돼 있고 지금 단정되고 있다. (B)(구현 대기 환원)는 살아 있는 단정을 무주공산으로 만든다. 제품 코드 0줄 · 사용자 관측 동작 무변경 · 롤백은 커밋 revert 하나.\n\n**이 시도의 범위(완료 기준)** — 아래 넷이 모두 참이면 성공이다: ① `e2e/tests/` 최상위 매칭 단위 파일이 20개이고 `02#시나리오 3` 을 선언한 파일이 정확히 1개다. ② `docs/doc-tracker.md` 「e2e 매핑」의 매핑 20 · 예외 0 · 구현 대기 16 · 미매핑(래칫) **0건/상한 0** 이고 항등식 `36 = 20 + 0 + 16 + 0` 과 불변식 `(36 − 0 − 16) = 20` vs 실제 파일 20 이 **성립**으로 적힌다. ③ `python3 tools/check-scenario-e2e.py --verbose` 가 rc=0 이며 그 출력이 「래칫 미매핑 0/0」과 「불변식 … = 20 · 실제 매칭 파일 20」을 적는다. ④ CI `test (kind e2e)` 가 통과해 분할된 두 spec 이 실제로 초록이다. **직전 시도와 달라진 것은 ④ 의 증거를 planner 가 미리 확보해 기록한다는 점**이다(거부 사유가 바로 그 증거의 부재였다).\n\n**범위 밖(후속)** — ⓐ 시나리오 3 기대 결과 ⑵ 「사용자는 어느 쪽을 정설로 채택할지 결정할 수 있다」의 **구현**은 자매 모델 `tbm_feature-doc-docs-impl`(AC3.x · 슬라이스 6)의 몫이다. 이 루프는 화면·엔드포인트를 신설하지 않고, 매핑 표 02#3 행의 「자동화 밖 잔여」 칸에 담당과 함께 남긴다. ⓑ 구현 대기 16건은 한 건도 다루지 않는다. ⓒ `#65` 가 남긴 「나머지 4개 화면의 우측 자리표시자 부재」는 목업 축(`tbm_feature-doc-mockup-render`)의 몫으로 이 축이 아니다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 `reconcile/rct_20260918-0003`(tip `fe78db0`)를 현재 main tip `6bc37f9`(#65) 위로 **로컬 rebase** 한다. `git rebase origin/main`. 충돌은 `docs/doc-tracker.md` 하단 **변경 이력 표** 한 곳뿐이다 — `#65` 가 같은 표에서 ⑴ 5a 행의 편차 산술을 `편차 43 → 37` · `상한을 43 → 47` → `37 → 41` · `편차 47 → 41` 로 정정하고 ⑵ 새 행(목업 수렴 슬라이스 ② 앱바 3슬롯)을 더했다. **양쪽 다 살린다**: `#65` 의 정정과 새 행을 그대로 둔 채 이번 슬라이스 행을 표 끝에 붙인다. 어느 한쪽을 통째 채택(`--ours`/`--theirs`)하지 않는다.",
+              "expectedOutcome": "rebase 완료, 브랜치가 `6bc37f9` 를 조상으로 갖고 커밋 1개. `git diff --stat origin/main...HEAD` 가 여전히 **파일 3개**(`e2e/tests/sc02-03-*.spec.ts` 신설 · `sc02-02-*.spec.ts` 축소 · `docs/doc-tracker.md`)이고, `git diff origin/main...HEAD -- frontend backend docs/prd docs/test` 는 빈 출력."
+            },
+            {
+              "seq": 2,
+              "action": "rebase 결과 `docs/doc-tracker.md` 에서 **#65 의 정정이 살아 있는지** 확인한다: 5a 행에 `편차 43`·`43 → 47`·`편차 47` 이 남아 있으면 정정을 되돌린 것이다(`grep -c '편차 43' docs/doc-tracker.md` = 0). 또 `#65` 가 더한 앱바 3슬롯 행과 이번 슬라이스 행이 **둘 다** 표에 있는지 센다.",
+              "expectedOutcome": "`grep -n '앱바 3슬롯' docs/doc-tracker.md` 1건 · `grep -n 'rct_20260918-0003.*분할\\|02#시나리오 3' 변경 이력 행` 1건, 5a 행 산술은 `37`/`37 → 41`/`41` 로 유지."
+            },
+            {
+              "seq": 3,
+              "action": "숫자가 사는 **네 자리**가 rebase 로 어긋나지 않았는지 확인한다 — 상단 요약 불릿(`docs/doc-tracker.md:10`) · 매핑 표 캡션 `**매핑 (20건)**` · 래칫 소제목 `(0건, 상한 0)` · 집계 블록(`시나리오 36 · 매핑 20 · 예외 0 · 구현 대기 16 · 미매핑 0`, 항등식 `36 = 20 + 0 + 16 + 0`, 불변식 `(36 − 0 − 16) = 20` vs 실제 20 **성립**). 직전 시도가 캡션을 빠뜨려 게이트 S3 에 한 번 걸린 자리다.",
+              "expectedOutcome": "네 자리의 숫자가 서로 일치하고 rebase 전 값과 같다."
+            },
+            {
+              "seq": 4,
+              "action": "`#65` 가 `frontend/src/FeatureAcceptance.tsx` 의 앱바를 3슬롯으로 교체했으므로, 두 spec 이 그 화면(S08)에서 관측하는 셀렉터가 살아 있는지 diff 로 확인한다: `git show 6bc37f9 -- frontend/src/FeatureAcceptance.tsx | grep -E '^[+-].*data-testid'` 가 빈 출력인지, 그리고 현 main 의 그 파일에 `data-testid=\"contradictions\"` 와 `scenario-list` 가 그대로 있는지. 변경이 있었다면 `sc02-02`/`sc02-03` 의 셀렉터를 새 구조에 맞춘다.",
+              "expectedOutcome": "`#65` 의 diff 에 `data-testid` 줄이 없고, main 의 `FeatureAcceptance.tsx` 에 `contradictions`·`scenario-list` testid 가 존재한다 → spec 수정 불필요."
+            },
+            {
+              "seq": 5,
+              "action": "새 베이스에서 선언 게이트를 다시 돌린다: `python3 tools/check-scenario-e2e.py --verbose`. **rc 만 보지 않는다** — 출력이 `등재 대조 — 매핑 20 · 선언 20` / `불변식 목표 (시나리오 36 − 예외 0 − 구현 대기 16) = 20 · 실제 매칭 파일 20` / `래칫 미매핑 0/0` 을 그대로 적어야 한다(직전 gap 은 rc=0 인 채로 열렸다 — 완충항 위의 초록이었다).",
+              "expectedOutcome": "rc=0 이고 위 세 줄이 출력에 포함된다."
+            },
+            {
+              "seq": 6,
+              "action": "형제 게이트를 새 베이스에서 재확인한다 — `python3 tools/check-mockup-render.py` 와 `python3 tools/check-journey-mockup.py`. `#65` 가 `check-mockup-render.py` **자신을** 고쳤고(목업측 `aria-label` 추출 추가, 대조 카피 194 → 198), 이번 변경이 그 세 모델이 공유하는 `docs/doc-tracker.md` 를 건드리므로 옆 칸을 깨지 않았는지 본다.",
+              "expectedOutcome": "둘 다 rc=0."
+            },
+            {
+              "seq": 7,
+              "action": "rebase 한 브랜치를 force-push 하고(`git push --force-with-lease`) PR #67 의 머지 가능 상태를 재조회한다(`GET /repos/dlddu/feature-doc/pulls/67`). `mergeable_state=dirty` 가 해소돼야 한다.",
+              "expectedOutcome": "PR #67 이 같은 번호로 살아 있고 head 가 새 sha, `mergeable=true`, `mergeable_state` 가 `dirty` 가 아니다(`clean`/`blocked`/`unstable` 중 하나), 변경 파일 3개."
+            },
+            {
+              "seq": 8,
+              "action": "**CI 런이 실제로 생성됐는지부터** 확인한다 — `GET /repos/dlddu/feature-doc/actions/runs?head_sha=<새 head>`. 직전 시도는 여기서 `total_count=0` 이었고 그것이 거부 사유였다. 원인(`ci.yml` 은 `on: pull_request` 단독 · 충돌 PR 은 `refs/pull/67/merge` 를 못 만들어 이벤트 미디스패치)은 이미 규명됐으므로, 충돌이 풀린 지금 런은 자동 생성돼야 한다. 생성되지 않으면 그 사실 자체를 기록하고 멈춘다(추측으로 트리거를 손대지 않는다).",
+              "expectedOutcome": "`total_count >= 1` 이고 `CI` 워크플로 런이 새 head sha 로 존재한다."
+            },
+            {
+              "seq": 9,
+              "action": "그 런이 끝날 때까지 기다려 `ci-gate` 필수 체크와 그 아래 **`test (kind e2e)`** 의 결론을 확인한다. e2e 잡만이 kind 클러스터에서 Playwright 를 실제로 실행하므로 분할의 진짜 증명이다 — 로그에 `sc02-02` 와 `sc02-03` 이 **각각 passed** 로 찍히는지 본다. 런 id·결론·확인 시각을 `preparation.notes` 에 적어 다음 검토가 재확인할 수 있게 한다.",
+              "expectedOutcome": "런 `conclusion=success`(또는 최소한 `test (kind e2e)` 잡이 success)이고, 그 근거가 런 id 와 함께 `preparation.notes` 에 남는다."
+            },
+            {
+              "seq": 10,
+              "action": "(실행 단계의 몫) PR #67 을 머지하고, main 에서 `python3 tools/check-scenario-e2e.py --verbose` 를 다시 돌려 착지 상태에서도 세 줄이 같은지 확인한다. 이어 버전 성분이 움직였는지 본다: `git rev-parse HEAD:e2e`(변해야 함) · `HEAD:docs/doc-tracker.md`(변해야 함) · `HEAD:docs/test`(불변이어야 함).",
+              "expectedOutcome": "main 에서 게이트 rc=0 · 「래칫 미매핑 0/0」 · 「실제 매칭 파일 20」. as-is(`HEAD:e2e`)와 to-be 의 `reg` 성분이 트리거 값에서 변하고 `sc` 성분은 불변 — 다음 감지가 착지를 본다."
+            }
+          ],
+          "plannedAt": "2026-09-18T16:52:00Z"
+        }
       }
     ]
   }
