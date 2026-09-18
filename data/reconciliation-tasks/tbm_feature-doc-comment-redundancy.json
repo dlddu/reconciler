@@ -422,7 +422,7 @@
   {
     "id": "rct_20260918-0003",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "reviewing",
+    "status": "review_rejected",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T13:08:45Z",
@@ -500,6 +500,14 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/61",
           "preparedAt": "2026-09-18T15:21:30Z",
           "notes": "PR #61 — base 84f2734dda5c10f06b771c7bb6a8ca36995a91fe, head 1ef82b6ca28ff7541d2115997de5ff32397d0bbb (단일 커밋). 변경 8파일 +338 / -62: 코드 4파일(+3/-52 — sc01-01 1/-18 · sc01-06 0/-22 · cluster.ts 1/-5 · smoke.sh 1/-7)과 문서 4파일(ledger.md 25/-9 · passes/2026-09-17-backend-concentrated.md +40(증분 재판정 절) · passes/2026-09-18-e2e-uncontested.md +263(신규) · docs/index.html 7/-1(R9 등재, Documents 24→25)). playwright.config.ts는 판정했으나 전건 유지라 diff에 없다. `.sql` 0건 · `docs/doc-tracker.md` 0건(의도적) — API로 재확인함. 계획 단계에서 검증 전항을 이미 실행해 통과시켰다: strip 후 코드 바이트 동일(5파일 144/174/48/44/19 전부 일치) · 단언 건수 불변(42/30/6) · `// 검증 시나리오:` 선언 2개 보존 · 문서 게이트 3종 로컬 통과 · 범위 지문 a736f329…(191행) → fb27e0db…(142행) · 전역 as-is lines=2717 files=90 / 7b125a92…. 머지는 하지 않았다(실행 단계의 몫). 주: 이 환경의 git pack 전송과 100-continue 업로드가 끊겨, 브랜치·커밋은 Git Data API로, reconciler 레코드 커밋은 Contents API로 올렸다(curl --http1.1 -H 'Expect:')."
+        },
+        "review": {
+          "required": false,
+          "status": "rejected",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-18T15:44:30Z",
+          "reason": "주석·문서 전용 변경이고 PR #61의 diff가 계획과 정확히 일치한다 — 8파일 +338/-62, 코드 4·문서 4, `backend/migrations/*.sql` 0건 · `docs/doc-tracker.md` 0건. 되돌리기가 revert 하나뿐이라 변경 자체의 위험과 불가역성은 낮고, 검증 기준(①strip 바이트 동일 ②단언 건수 ③문서 게이트 3종)도 재실행 가능하게 명시돼 있다. 그러나 준비(15:21) 직후 main이 #62로 한 칸 움직이면서 PR 필수 상태 체크가 개별 잡들에서 집계 잡 `ci-gate` 하나로 교체됐고, 이 PR head(`1ef82b6`, 15:20 빌드)에는 옛 체크 7건만 있고 `ci-gate`가 없다 — GitHub가 `mergeable=true`(내용 충돌 없음)인데도 `mergeable_state=blocked` · `rebaseable=false`로 응답해 지금 이 PR은 머지가 거부된다. 실행 지침 5단계(squash 머지)가 그대로 막히고 이를 푸는 동작이 계획에 없어 승인하지 않는다.",
+          "comment": "**막힌 지점은 내용이 아니라 머지 가능성 하나다. 검증 증거는 살아 있으니 버리지 말 것.**\n\n**1. 베이스 이동은 증거를 무효화하지 않았다(재검증 부담 없음).** `84f2734…main(42e63fa)`는 정확히 1커밋(#62)이고 건드린 파일은 `.github/workflows/*.yml` 4개뿐이다. 이 경로는 모델 as-is SSOT 범위(`backend/src backend/tests frontend/src e2e scripts tools deploy backend/migrations/*.sql`) **밖**이라 예고 지문이 그대로 유효하다 — 전역 `lines=2717 files=90`/`7b125a92…`, 범위 142행/`fb27e0db…`. 대상 5파일도 #62가 한 바이트도 건드리지 않았으므로 검증 ①의 부모 기준을 `42e63fa`로 옮겨도 결과가 같다. 계획 step 4의 「base가 밀렸으면 ①을 새 부모로 다시」는 이 경우 형식적 재실행이다.\n\n**2. 고쳐야 할 것 — 머지 전 브랜치 갱신 단계를 계획에 넣어라.** 이 환경은 git pack 업로드가 끊겨 있고(준비 노트) `rebaseable=false`라 로컬 rebase·push 경로가 없다. 대신 API 한 방으로 된다:\n  `PUT /repos/dlddu/feature-doc/pulls/61/update-branch` (main을 PR 브랜치로 머지 — head sha가 바뀐다)\n그 뒤 새 head에서 `ci-gate`가 success로 끝나는 것을 확인하고 머지한다.\n\n**3. 실행 지침 §1③의 「CI 초록은 근거로 쓰지 않는다」를 고쳐라.** 그 문장은 「App 토큰으로 CI를 못 읽는다」는 전제 위에 있는데 전제가 틀렸다 — `GET /actions/runs?head_sha=`와 `GET /commits/<sha>/check-runs` 둘 다 이 토큰으로 **200**이다(이번 검토에서 7건 판독). 더 중요한 건, `ci-gate`는 이제 판정 *근거*가 아니라 **머지 전제조건**이라는 점이다. 로컬 게이트 3종 실행은 정확성 근거로 그대로 두되, 「새 head의 `ci-gate` success 확인」을 머지 게이트로 별도 추가할 것. (branch protection 본문은 App 토큰으로 403이라 직접 못 읽지만, 나머지 체크가 전부 success인데 blocked이고 #62가 ci.yml 주석에 「PR 의 필수 상태 체크는 맨 아래 `ci-gate` 하나뿐이다」라고 명시하므로 원인은 확정적이다.)\n\n**4. step 4의 파일 수 점검은 그대로 둬도 된다.** update-branch로 main을 합쳐도 `.yml` 4파일은 base 쪽이라 PR diff는 여전히 **8파일**이다. 「8개가 아니면 중단」에 실행자가 걸려 넘어지지 않도록 이 점을 지침에 한 줄로 못박을 것.\n\n**5. 범위·판정은 재검토하지 않아도 된다.** 제외 근거(#43·#49 경합 46파일, 자매 계획 12파일)와 5파일 선정은 이번 검토에서 다시 짚어도 문제 없었고, #59·#60(자매 PR)은 아직 열려 있어 선행 머지 충돌도 없다."
         }
       }
     ]
