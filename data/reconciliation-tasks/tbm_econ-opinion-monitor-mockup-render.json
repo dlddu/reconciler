@@ -394,7 +394,7 @@
   {
     "id": "rct_20260918-0002",
     "toBeModelId": "tbm_econ-opinion-monitor-mockup-render",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T11:57:14Z",
@@ -484,9 +484,53 @@
           "reviewer": "human",
           "reviewedAt": "2026-09-18T12:50:47Z",
           "comment": "사람 승인(수동 승인 세션). 승인 시점 확인: PR #30 open·mergeable clean. 단 base가 main보다 2커밋 뒤처짐(#29 주석 정책·이미지 pin — Compare.tsx·check-journey-mockup.py 포함, 텍스트 충돌 없음)이고, 승인 세션 토큰으로는 CI 결과를 읽지 못했다 — 실행 단계는 머지 전 최신 base 기준 CI 전건 초록과 검증기 PASS를 반드시 확인할 것. 참고: AxisRows에 추가된 3줄 주석은 #29 주석 정책상 복원 가능 주석으로 판정될 소지가 있음."
+        },
+        "execution": {
+          "status": "aborted",
+          "startedAt": "2026-09-18T12:53:00Z",
+          "finishedAt": "2026-09-18T13:02:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "failed",
+              "startedAt": "2026-09-18T12:53:00Z",
+              "finishedAt": "2026-09-18T12:59:00Z",
+              "log": "실행 지침 §1 「CI 확인 (머지 전, 필수)」 — **통과시키지 못했다. 결과가 빨개서가 아니라 읽을 수 없어서다.**\n\nPR #30 은 살아 있다: state=open · merged=false · draft=false · mergeable=true · mergeable_state=clean · head `fdcef6ab` · base `9d6122b` · 3파일 +83/−11(계획 시점과 동일). 현재 `main` 은 `24d909b` 로 계획 시점(`9d6122b`)에서 2커밋 앞서 있으나(#29 주석 정책 + 이미지 pin), `origin/main` 위 로컬 test-merge 결과 **충돌 없음(MERGE CLEAN)**.\n\n**막힌 지점**: 이 레포의 PR 체크는 전부 GitHub Actions 이고 Actions 는 commit status 가 아니라 **check-run** 으로 보고한다. 그런데 이 세션이 발급할 수 있는 App installation 토큰에 `checks` 권한 자체가 **부여돼 있지 않다** — `permissions:{checks:read}` 로 토큰을 요청하면 발급 단계에서 422 `The permissions requested are not granted to this installation`, `actions:read` 도 동일. 그래서 아래가 전부 막힌다:\n  - `GET /commits/fdcef6ab/check-runs` → 403 Resource not accessible by integration\n  - `gh pr checks 30` → GraphQL 403 (`statusCheckRollup`)\n  - `GET /actions/runs?head_sha=…` → 403 · `GET /branches/main/protection` → 403\n`statuses:read` 는 발급되지만 `GET /commits/fdcef6ab/status` 는 `{state:pending, total_count:0, statuses:[]}` — Actions 가 이 API 로는 아무것도 쓰지 않으므로 초록/빨강의 근거가 되지 못한다(pending 은 '체크 없음'이지 '실패'가 아니다). 레포가 private 이라 비인증 경로도 없다(api.github.com 404).\n\n**대체 검증도 성립하지 않는다**: PR 체크는 `build`(make setup/gen-check/lint/test — Go 1.24 + Node 22 + uv) · `e2e`(kind 클러스터 + Playwright) · `docs — journey ↔ mockup: structure`/`flow`(flow 는 node + jsdom) · `Image: publish`×2(docker buildx) 다. 이 실행 환경에는 **node·go·docker 가 모두 없다**(`node: command not found`, 시스템 전역에 node 바이너리 없음). 즉 계획 지침이 이 게이트의 「유일한 근거」로 지목한 CI 를 대신할 수단이 없다.\n\n**로컬에서 돌릴 수 있었던 한 조각은 통과**: `python3 scripts/check-journey-mockup.py .` 를 PR head(`fdcef6ab`)에서 실행 → **PASS**(여정 6 · 여정 페이지 2 · 미이관 4/상한 4 · 규칙 5 미충족 5/상한 5 · 링크 89건, R1~R9 전부 ok). 이는 `structure` 잡 1개에 해당할 뿐 `build`·`flow`·`e2e`·`Image` 를 대신하지 않는다.\n\n**정적 대조(참고, 근거 아님)**: 리뷰어가 지목한 위험인 `AxisRows` 새 prop `axisName` 은 diff 상 자기완결적이다 — `AXES` 타입 리터럴에 `name: string` 추가 + 3개 항목 전부에 값 부여, 유일한 호출부에 `axisName={a.name}` 전달, 함수 시그니처에 `axisName: string` 선언. 눈으로는 타입 구멍이 보이지 않지만, **지침이 요구한 것은 육안 대조가 아니라 CI 전건 초록**이므로 이것으로 게이트를 대신하지 않는다.\n\n**판단**: 사람 승인은 조건부였다 — review.comment 가 「실행 단계는 머지 전 최신 base 기준 CI 전건 초록과 검증기 PASS 를 반드시 확인할 것」이라고 못박았고, 지침 §1 도 필수로 표시하며 미충족 시 「머지하지 말고 failed 로 닫아 planner 재계획으로 넘긴다」는 경로를 명시한다. 확인할 수 없는 상태에서 머지하면 승인 조건 밖의 불가역 행위가 된다. 따라서 **머지하지 않고 여기서 중단한다.**"
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "log": "머지 — 실행하지 않았다. §1 게이트 미통과. PR #30 은 open 상태 그대로이고 `main`(`24d909b`)에는 이 변경이 반영되지 않았다. 불가역 지점은 이 머지 하나뿐이었으므로 브랜치를 남긴 현재 상태는 흔적 없이 되돌릴 수 있다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "log": "수렴 판정 — 머지 전이라 `main` 기준으로 판정할 대상이 없다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "log": "머지 후 `main` 에서의 `scripts/check-journey-mockup.py` 재확인 — 머지가 없었으므로 미실행. (PR head 기준 PASS 는 seq1 로그 참조.)"
+            },
+            {
+              "stepSeq": 5,
+              "status": "skipped",
+              "log": "계획 단계에서 이미 PR #30 에 반영된 항목(코드 작성분). 실행 단계가 새로 할 일은 없었고, 머지되지 않아 `main` 에는 없다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "skipped",
+              "log": "계획 단계에서 이미 PR #30 에 반영된 항목. 머지되지 않아 `main` 에는 없다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "skipped",
+              "log": "PR 생성은 계획 단계에서 완료(preparation.pullRequestUrl). 실행 단계 몫 아님."
+            }
+          ]
         }
       }
     ],
-    "updatedAt": "2026-09-18T12:53:12Z"
+    "updatedAt": "2026-09-18T12:59:30Z"
   }
 ]
