@@ -572,6 +572,51 @@
             }
           ]
         }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "**슬라이스 ⓐ′ — 직전 시도의 판정 내용은 그대로 두고, 「실행이 원리적으로 확인할 수 없는 게이트」를 설계에서 걷어낸다.**\n\n직전 시도(`failed`)는 판정이 틀려서가 아니라 **실행이 자기 게이트를 통과시킬 수단을 갖지 못해서** 중단됐다. 지침 §1이 머지 전 필수로 지목한 「CI 전건 초록」은 이 레포에서 전부 GitHub Actions의 **check-run**으로만 보고되는데, 이 루프가 발급할 수 있는 App installation 토큰에는 `checks`/`actions` 권한이 **부여 자체가 되어 있지 않다.** 이번 계획에서 재확인했다 — `permissions:{checks:read}`로 토큰을 요청하면 발급 단계에서 422 `The permissions requested are not granted to this installation`. `statuses:read`는 발급되지만 Actions가 그 API로 아무것도 쓰지 않아 `GET /commits/<sha>/status`는 `total_count:0`이다. 즉 이 게이트는 **이번에 실패한 것이 아니라 구조적으로 영원히 통과 불가**이며, 같은 계획을 다시 실행하면 같은 자리에서 또 멈춘다. 재계획의 본체는 여기다.\n\n**접근 — 게이트를 낮추지 않고, 게이트가 요구하는 신호를 이 환경에서 재현 가능한 것으로 바꾼다.** 수단은 PR의 변경 표면을 「로컬에서 실제로 돌릴 수 있는 검증기만이 입력으로 읽는 것」으로 좁히는 것이다:\n\n- **`web/src/screens/Compare.tsx` 수렴 1건을 이번 PR에서 뺀다.** 확인 불가한 CI 표면 — `build`의 tsc·eslint·vitest, `e2e`의 Playwright 카피 단언, `Image`의 web 번들 빌드 — 은 실측상 **전부 이 한 파일에서 나온다.** 이 파일을 빼면 PR은 마크다운 2개가 되고, 그 잡들의 입력이 `main`과 **동일**해져 머지가 그것들을 회귀시킬 수 없다. 덤으로 리뷰어가 지목한 위험 2건(`AxisRows` 새 prop `axisName`의 타입 구멍 · 추가된 3줄 영어 주석이 #29 주석 정책에 걸릴 소지)이 함께 사라진다.\n- 남는 마크다운 2개가 실제로 CI 입력이 되는 지점은 정확히 3곳이고, 셋 다 이 환경에서 판정된다: ⑴ `docs — journey ↔ mockup / structure` = `python3 scripts/check-journey-mockup.py`(stdlib — 실행 가능) ⑵ `build`의 `lint-scenario-mapping` = `python3 tests/e2e/check_scenario_mapping.py`(stdlib — 실행 가능). **마크다운이라고 무해한 것이 아니다**: 이 잡이 `docs/econ-opinion-monitor-design-tracker.md`의 「e2e 매핑」 절을 파싱한다. ⑶ `flow` = `node scripts/check-journey-flow.js`(node 부재 — 실행 불가). 다만 이 잡이 인덱스에서 읽는 것은 `readStates()`가 잘라내는 `idxMd.split('### 상태 변형 등재')[1]` 이후뿐이고, 이번 추가 절은 그보다 **위**(`### 여정 페이지` 안, 인덱스 42~66행)에 들어간다. 이 불변성을 말로 주장하지 않고 **같은 파서를 python으로 옮겨 base↔head 출력이 동일함을 실측**해 게이트 항목으로 만든다.\n\n**왜 수렴 1건을 버리지 않고 등재로 돌리나**: 그 카피 차이는 여전히 실재한다. 다만 지금 고치면 PR이 확인 불가 영역으로 들어간다. 그래서 허용목록에 **「구현 수렴 대기」**로 등재해 *미분류 0*을 유지하고(레포에 이미 선례가 있는 범주다 — `check_scenario_mapping.py`가 「구현 대기 등재」를 세고 있다), 실제 반영은 툴체인 게이트가 생긴 뒤의 슬라이스로 넘긴다. 직전 계획이 tracker에 써 둔 「방침 문장은 rct_20260918-0002에서 수렴시켰고 기간 표현만 남았다」는 서술도 그대로 두면 사실과 어긋나므로 함께 고친다.\n\n**재감지 경로는 유지된다.** 이 모델의 to-be는 `docs/mockups` 트리 해시이고 PR이 `econ-opinion-monitor-mockup-index.md`를 바꾸므로 머지 즉시 to-be 지문이 움직여 슬라이스 ⓑ의 새 task가 열린다. 직전 계획이 「양 side가 모두 움직여야 한다」고 적은 것은 과한 요구였다 — detector는 한쪽만 움직여도 `changedSides:[\"to_be\"]`로 트리거한다(형제 모델 `tbm_feature-doc-mockup-render`의 이번 트리거가 실례다). as-is는 이미 #29로 움직인 상태다.\n\n**이 시도의 완료 기준(범위)**: ⑴ 흡수된 화면의 단계↔화면 id 경계 규약이 mockup 인덱스에 서 있다. ⑵ `compare` 화면 표면의 카피 차이가 양방향 전수 분류되어 미분류 0건(제외 / 등재 / 구현 수렴 대기 중 하나). ⑶ tracker의 「`compare`는 아직 등재 대상이 아니다」 유보 문단이 사라지고 `compare` 등재 행이 선다. ⑷ 위가 `main`에 머지돼 있고, **머지 판단의 근거가 전부 이 환경에서 재실행 가능한 명령이었다.**\n\n**범위 밖(후속)**: ⓐ `Compare.tsx` 축 결측 안내 카피 수렴 — 툴체인(node) 게이트가 생긴 뒤. ⓑ 규칙 3(컴포넌트·패턴 `CMP-*`/`PAT-*`)·규칙 5(구조·수치) 전면 판정과 허용목록 「후속 판정 대기」 1행의 종결. ⓒ **CI 결과 판독 경로 신설** — Actions의 결론을 commit status로 미러링하는 잡(워크플로 자체 `permissions: statuses: write`, App 권한 변경 불필요)을 추가하면 `statuses:read`만으로 CI를 읽을 수 있게 된다. 이 task의 gap(목업↔구현 렌더링)과 무관한 인프라 변경이라 여기에 묶지 않는다 — 다만 이 루프 전체가 같은 벽에 계속 부딪히므로 별도로 다뤄야 한다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "현재 `origin/main`(`24d909b`)에서 새 브랜치 `reconcile/rct_20260918-0002-docs`를 끊고, PR #30(`fdcef6ab`)의 변경 중 **마크다운 2개만** 이식한다 — `docs/mockups/econ-opinion-monitor-mockup-index.md`(흡수된 화면의 판정 경계 절)와 `docs/econ-opinion-monitor-design-tracker.md`(제품 표면 추출 규칙 · 제외 범주 5행 · `compare` 등재 14행 · 유보 문단 삭제). `web/src/screens/Compare.tsx`는 **가져오지 않는다.**",
+              "expectedOutcome": "브랜치가 최신 `main` 위에 서고(직전 PR이 안고 있던 2커밋 base 지연이 소멸), diff가 마크다운 2파일로 한정된다. 코드 잡(`build`·`e2e`·`Image`)의 입력이 `main`과 동일해진다."
+            },
+            {
+              "seq": 2,
+              "action": "tracker 「등재된 편차」의 축 결측 안내 행을 사실에 맞게 고친다. 직전 계획은 방침 문장(`0%로 그리지 않고 비교에서 제외합니다 — 수집이 없는 것과 관심이 없는 것은 다릅니다`)을 코드로 수렴시키는 전제로 「기간 표현만 남았다」고 적었는데, 그 코드 변경을 빼므로 행 전체를 **종류 「구현 수렴 대기」**로 돌리고 사유에 왜 지금 반영하지 않는지(node 툴체인 부재로 타입체크·번들 빌드를 확인할 수 없어 확인 가능한 표면 밖) 와 재검토 시점을 적는다.",
+              "expectedOutcome": "허용목록이 PR 내용과 모순되지 않는다. `compare` 표면의 모든 차이가 제외 / 등재 / 구현 수렴 대기 중 하나에 속해 미분류가 0으로 유지된다."
+            },
+            {
+              "seq": 3,
+              "action": "`flow` 잡 입력 불변을 **실측**한다. `scripts/check-journey-flow.js`의 `readStates()`와 동형인 추출기를 python으로 작성해(`idxMd.split('### 상태 변형 등재')[1]` → `#### \\`<jid>\\`` 절 → 표 첫 칸의 백틱 id) base(`origin/main`)와 head 양쪽 인덱스에 돌리고, 모든 여정 id에 대해 출력 리스트가 동일한지 비교한다.",
+              "expectedOutcome": "두 출력이 완전히 동일 → node 없이도 「`flow`가 소비하는 입력이 이 PR로 바뀌지 않는다」가 실측으로 선다. 다르면 추가 절의 위치를 `### 상태 변형 등재` 위로 옮겨 동일해질 때까지 고친다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs — journey ↔ mockup / structure` 잡을 그대로 재현한다: 브랜치 체크아웃 상태에서 `python3 scripts/check-journey-mockup.py .`.",
+              "expectedOutcome": "`PASS`(R1~R9 ok). 이 잡은 stdlib만 쓰므로 CI와 동일한 코드가 동일 입력으로 돌아간다 — 재현이 아니라 사실상 같은 실행이다."
+            },
+            {
+              "seq": 5,
+              "action": "`build` 잡 중 마크다운을 입력으로 받는 유일한 단계를 재현한다: `python3 tests/e2e/check_scenario_mapping.py`(= `make lint`의 `lint-scenario-mapping`). tracker를 건드리는 PR이므로 생략하지 않는다.",
+              "expectedOutcome": "rc=0 · 「규칙 1·2·3·4·5·6 위반 없음」. `build`의 나머지 단계(go·node·uv)는 입력이 `main`과 동일하므로 회귀 가능성이 없다."
+            },
+            {
+              "seq": 6,
+              "action": "브랜치를 푸시하고 `dlddu/economic-opinion-trend-monitor`에 PR을 연다(머지하지 않는다). 본문에 task id, 직전 시도가 멈춘 이유(체크 판독 불가)와 이번 PR이 그 의존을 어떻게 제거했는지, 분류 표(제외/등재/구현 수렴 대기), **재실행 가능한 검증 명령 3종과 그 출력**, 범위 밖 항목을 적는다.",
+              "expectedOutcome": "리뷰어와 실행자가 CI를 읽지 않고도 머지 안전성을 스스로 재확인할 수 있는 PR이 열리고 `preparation.pullRequestUrl`에 기록된다."
+            },
+            {
+              "seq": 7,
+              "action": "직전 시도가 남긴 PR #30을 닫는다. 같은 task가 두 개의 열린 PR을 갖지 않게 하고, 코멘트로 새 PR 번호와 대체 사유(코드 변경분 분리)를 남긴다. 브랜치 `reconcile/rct_20260918-0002`는 삭제하지 않는다 — 후속 슬라이스 ⓐ가 그 커밋의 `Compare.tsx` 변경을 그대로 재사용한다.",
+              "expectedOutcome": "열린 PR은 새 것 하나뿐이고, #30의 코드 변경분은 삭제되지 않고 브랜치에 보존돼 후속 슬라이스가 집어갈 수 있다."
+            }
+          ],
+          "plannedAt": "2026-09-18T13:20:00Z"
+        }
       }
     ],
     "updatedAt": "2026-09-18T13:07:16Z"
