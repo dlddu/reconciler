@@ -1135,6 +1135,67 @@
       "reason": "**작업 필요(`actionRequired: true`). 이번 버전 델타 때문이 아니라, 소유자 없는 gap 15건이 서 있기 때문이다.**\n\n**근거 ① gap 이 실재하고 정의가 그것을 drift 라 부른다.** 공백 15 = 규칙 1 위반 15건,\n불변식 `(21 − 1 − 2) = 18 ≠ 3`. 등재 SSOT 자신이 「불변식은 아직 성립하지 않는다」라고 적는다.\n\n**근거 ② 소유자가 없다 — 이것이 결정적이다(실측).** 이 모델의 비-터미널 task 는 이 건 외 **0**\n(직전 `rct_20260909-0001` 축 이관 슬라이스가 2026-09-18T00:40:05Z `succeeded`/`converged:true` 로\n닫히며 공백 15를 잔여로 남겼다). 자매 `tbm_econ-opinion-monitor-docs-impl` 비-터미널 **0**.\n대상 레포 open PR 6건 중 이 축의 하네스를 나르는 것 **0**(#30 은 자매 mockup-render, #18 은 08-30\n`cancelled` task 의 유기 차량, 나머지 4건은 7~8월 잔재). 즉 **함대 어디에도 이 15건을 집어갈 상태의\ntask 가 없다.**\n\n**근거 ③ 「재감지 경로 생존」이 이 gap 에는 소유 경로를 뜻하지 않는다.** 공백을 닫는 산출물은\n`tests/e2e/` 안, 곧 **이 모델 자신의 as-is** 다. 그러므로 외부에서 이 축을 깨우는 사건은 존재하지\n않고, 실제로 최근 두 fire(`rct_20260917-0001` 09-17T20:12 · `rct_20260918-0001` 09-18T02:24)는 둘 다\n**노이즈 트리거를 `no_action_needed`** 로 닫았다. 직전 판정이 「잔여 공백 15는 원장 소유 · 구현 착지\n시 docs-impl 축으로 재발화」라 적었는데 **그 귀속은 사실과 다르다** — 등재 문서의 「공백 해소 경로\n(이 모델 소관)」 절이 공백을 이 루프에 배정하고, docs-impl 이 지는 것은 **구현 대기 2건뿐**이다.\n노이즈마다 `no_action_needed` 로 닫는 동안 이 gap 은 구조적으로 영영 소유자를 얻지 못한다.\n\n**근거 ④ 지금 착수 가능하다(선행 조건 충족).** 등재가 주장하는 「구현은 이미 main 에 있고 관측\n경로만 없다」를 좌표 표본으로 검증했다 — `--source feed`(수집) · `econ_analysis/llm.py`(분석) ·\n`econ_aggregation/aggregate.py`(집계) 실재. 막힌 것은 `tests/e2e/run.sh` 가 **픽스처 Gold ConfigMap +\n서빙만** 띄운다는 하네스 한계 하나뿐이다.\n\n**근거 ⑤ 자동 해소 기전이 없다** ⇒ `recheckAfter` 파킹은 부적합. 정적 격차다.\n\n---\n\n**계획 제약(planner 에게).**\n\n1. **산출물 경계는 `tests/e2e/` + 등재 문서뿐이다.** 정의의 「이 루프의 산출물은 E2E 테스트와 등재\n   문서뿐」 + 2026-08 `AC3.7` 슬라이스가 화면 구현까지 손대 docs-impl 과 중복된 전례가 고정부다.\n   계획이 화면·엔드포인트·비즈니스 로직 신설을 포함하면 경계를 넘은 신호이므로 그 슬라이스를 끊고\n   규칙 6 구현 대기 등재로 전환할 것. 허용 예외는 무동작 테스트 계측(testID·픽스처·CI 배선)뿐.\n2. **슬라이스 순서가 문서로 강제돼 있다**: 수집 → 분석 → 집계(메달리온 계층이 앞 단계 산출물을\n   입력으로 쓴다). **첫 슬라이스는 「수집 배치 하네스 + 피드 더블」** 이 되어야 하고, 그 하네스가\n   서면 분석·집계는 spec 신설로 이어진다. 15건을 한 슬라이스에 묶지 말 것.\n3. **구현 대기 2건(aggregation-viz 3·5)은 범위 밖이다** — 담당이 자매 `…-docs-impl` 이고 등재가\n   해제 신호 문자열까지 박아 뒀다. 이중 계상 금지.\n4. **완료 기준에 게이트를 넣어라**: `python3 tests/e2e/check_scenario_mapping.py` rc=0 **+ 집계 표의\n   「공백」 값이 슬라이스가 닫은 만큼 줄어 실측과 일치**. 게이트는 공백을 실패로 만들지 않으므로\n   rc=0 만으로는 전진을 증명하지 못한다 — **숫자를 완료 기준에 명시할 것.**\n5. **등재 문서를 함께 갱신**해야 한다(집계 표 · 시나리오↔spec 표 · `gap-list` 마커 안 목록). 마커\n   밖 산문의 식별자는 목록으로 세지 않는다는 규약을 지킬 것.\n\n**기록만(이번 판정의 근거 아님)**: 「예외 후보 중 미등재」 표 5행(ingestion 2·6, analysis 2·3·5)은\n공백에 계수되는 것이 정상이고 규칙 4 가 CI 에서 강제한다 — 예외로 되돌리는 것은 명시적 변경이 필요한\n판정 뒤집기이므로 슬라이스에 끼워 넣지 말 것.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-18T12:40:39Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**수집(ingestion) 배치를 e2e 하네스 안으로 들이고, 그 위에서 단일 주기·Bronze 관측만으로 닫히는 ingestion 시나리오 2·3·4·5 네 건의 전용 spec 을 신설한다.** 공백 15 중 4건을 닫는 슬라이스다.\n\n**왜 이 경로인가.** 등재 SSOT(`docs/econ-opinion-monitor-doc-tracker.md` 「공백 해소 경로」)가 공백 15를 세 묶음(수집→분석→집계)으로 나누고 메달리온 계층 의존 때문에 **수집이 먼저**라고 순서를 강제한다. 막힌 것은 단 하나 — `tests/e2e/run.sh` 가 픽스처 Gold ConfigMap + 서빙만 띄워 배치 3단을 한 번도 실행하지 않는다는 하네스 한계다. 수집 CLI(`econ-ingestion --source feed --feeds <파일>`)와 배치 이미지(`Dockerfile.batch`)는 이미 main 에 있으므로, **제품 코드는 한 줄도 건드리지 않고** kind 안에 (a) 정적 피드 더블, (b) 수집 Job, (c) Bronze 호스트 반출 경로만 추가하면 수집 경로가 열린다.\n\n**왜 하필 2·3·4·5 인가(슬라이스 경계의 근거).** 이 넷은 **단일 주기 1회 실행의 Bronze 레코드**(`bronze/news_item.jsonl` · `bronze/news_body.jsonl`)만으로 기대 결과 전부를 단언할 수 있어 **정적 피드 더블**(고정 XML 파일 서빙) 하나면 닫힌다. 남는 6·7 은 더블에 **동적 행위**를 요구한다 — 6은 오류·타임아웃 주입과 Job 로그(중복·실패 통계) 관측 표면이, 7은 본문이 주기마다 달라지는 3주기 연속 실행이 필요하다. 하네스 종류가 다르므로 같은 슬라이스에 묶지 않는다.\n\n**대안 비교.** ① 하네스 + spec 1건(최소 증명)만: 하네스가 비용의 대부분인데 같은 픽스처 위에 3건을 더 얹는 한계비용이 거의 0이라 루프를 3회 더 돌리는 값이 이득보다 크다. ② ingestion 6건 전부: 동적 더블(오류 주입·주기별 변조)과 로그 관측 표면이 더해져 리뷰 단위가 커지고, 배치 하네스 자체의 실패와 더블 행위의 실패가 한 PR 에서 섞인다. ③ 집계 배치 먼저(파이프라인 Gold 로 서빙 기동): 등재가 강제하는 계층 순서를 위반하고 GOLD 픽스처 제거까지 끌려 들어온다. **가역성**: 산출물이 전부 `tests/e2e/` 신규 파일 + 문서 표 행이라 되돌리기는 PR revert 단일 동작이고, 실패해도 기존 서빙 e2e 경로는 건드리지 않는다(추가만, 변경 최소).\n\n**이 시도의 범위(완료 기준).** `make e2e` 가 kind 안에서 수집 배치 Job 을 실제로 돌려 Bronze 를 산출하고, ingestion 시나리오 2·3·4·5 의 전용 spec 4개가 그 Bronze 를 단언하며 통과한다. 게이트 `python3 tests/e2e/check_scenario_mapping.py` 가 rc=0 이고 집계 표가 **시나리오 21 / 예외 1 / 구현 대기 2 / 1:1 대상 18 / 매칭 spec 7 / 공백 11 / 비-시나리오 1** 로 실측과 일치한다(현행 `… / 3 / 15 / 1` → 매칭 3→7, 공백 15→11). 새로 생기는 모킹 지점(`--feeds` 상류 재배선)은 `docs/econ-opinion-monitor-e2e-mocking-policy.md` 허용목록에 FEED 카테고리로 등재하고 코드에 `# mock-exception:` 주석을 단다.\n\n**범위 밖(후속).** ingestion 6·7(동적 피드 더블) · analysis 1~6(LLM 더블 + Silver) · aggregation-viz 1·2·4(파이프라인 Gold) → 공백 11 로 남는다. 구현 대기 2건(aggregation-viz 3·5)은 자매 `tbm_econ-opinion-monitor-docs-impl` 소관이라 손대지 않는다. GOLD 픽스처 제거와 모킹 정책 원장 R1 행의 판정 갱신, spec 파일명 개명(`ac3-6…` → 시나리오 키)도 범위 밖이다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "피드 더블 픽스처를 `tests/e2e/fixtures/feeds/` 에 만든다: `kr_wire.rss.xml`(KR 축, 110 entry, `<views>` 로 순위 결정 가능) · `us_markets.atom.xml`(US 축, 60 entry) · `global_desk.rss.xml`(GLOBAL 축, 소수 entry 중 일부는 본문 없음 = `body_available:false` 관측용). 축 3종·상위 N 절단·본문 미확보를 한 픽스처 세트로 덮는다.",
+              "expectedOutcome": "XML 3종이 `xml.etree` 로 파싱되고, `parse_feed` 가 각각 110/60/N 건의 `ParsedArticle` 을 내며 본문 없는 entry 는 `body_available=False` 로 나온다(로컬 파이썬 확인)."
+            },
+            {
+              "seq": 2,
+              "action": "피드 설정 `tests/e2e/fixtures/feeds/e2e-feeds.json` 을 만든다 — `[{source_id, axis, feed_url, limit}]` 형태로 소스 A(`limit:100`, KR) · 소스 B(`limit:100`, US, 60건만 제공) · 소스 C(GLOBAL)를 in-cluster 피드 더블 Service URL(`http://econ-feed-double:8080/...`)로 가리킨다.",
+              "expectedOutcome": "`load_feed_configs` 가 3개의 `FeedConfig` 를 오류 없이 만든다(로컬 확인). 시나리오 2의 사전 조건(A=N100 설정 / B=60건만 제공)이 설정 파일에서 그대로 읽힌다."
+            },
+            {
+              "seq": 3,
+              "action": "배치 하네스 매니페스트를 `tests/e2e/k8s/batch/` 에 신설한다: ① `feed-fixtures` ConfigMap 마운트 + 배치 이미지로 `python -m http.server` 를 띄우는 피드 더블 Deployment/Service, ② Bronze 를 담을 PVC(kind 기본 local-path), ③ `econ-ingestion --source feed --feeds /feeds/e2e-feeds.json --cycle <고정값>` 을 실행하는 수집 Job, ④ 같은 PVC 를 마운트한 채 대기하는 반출용 Pod. 제품 매니페스트(`deploy/`)는 건드리지 않는다.",
+              "expectedOutcome": "`kubectl kustomize tests/e2e/k8s/batch` 가 오류 없이 렌더되고, 수집 Job 이 `deploy/batch/workflow-template.yaml` 과 동일한 이미지·CLI·`ECON_DATA_ROOT` 계약을 쓴다(Argo 컨트롤러만 부재 — 그 사실을 주석에 명시)."
+            },
+            {
+              "seq": 4,
+              "action": "`tests/e2e/run.sh` 를 확장한다: 서빙 이미지에 더해 `Dockerfile.batch` 로 배치 이미지를 빌드해 `kind load` → 피드 더블 기동·대기 → 수집 Job 실행·완료 대기 → 반출 Pod 에서 `kubectl cp` 로 `bronze/news_item.jsonl`·`news_body.jsonl` 을 `tests/e2e/.artifacts/bronze/` 로 꺼내고 `E2E_BRONZE_DIR` 로 Playwright 에 넘긴다. 기존 픽스처 Gold → 서빙 경로는 그대로 둔다(이 슬라이스는 추가만 한다).",
+              "expectedOutcome": "`make e2e` 로그에 수집 Job 의 `ingestion[feed]: wrote N bronze records` 가 찍히고, 호스트 `tests/e2e/.artifacts/bronze/news_item.jsonl` 이 비어 있지 않다. 실패 시 Job 로그를 덤프하고 종료한다."
+            },
+            {
+              "seq": 5,
+              "action": "spec 이 Bronze 를 읽는 공용 헬퍼 `tests/e2e/specs/_bronze.ts`(또는 `tests/e2e/lib/bronze.ts`)를 추가한다 — `E2E_BRONZE_DIR` 의 JSONL 을 파싱해 `newsItems()`·`newsBodies()` 로 돌려주고, 파일이 없으면 하네스 미구동으로 명시적으로 실패시킨다. 파일명이 `*.spec.ts` 가 아니어야 매칭 단위로 오인되지 않는다(게이트 규칙 2·3).",
+              "expectedOutcome": "`python3 tests/e2e/check_scenario_mapping.py` 의 매칭 단위 집계가 헬퍼 파일 때문에 늘지 않는다(`specs/*.spec.ts` 만 센다)."
+            },
+            {
+              "seq": 6,
+              "action": "spec 4건을 신설한다 — 각각 헤더에 `// 검증 시나리오: econ-opinion-monitor-test-ingestion.md#시나리오 N` 을 **정확히 한 줄**: ①#2 소스별 상위 N 절단(A=100건 정확히, B=제공분 60건, 패딩 없음) ②#3 축 태깅(모든 레코드가 KR/US/GLOBAL 중 하나이고 소스→축 매핑과 일치) ③#4 링크·본문 저장(본문 확보분은 `body_hash` 로 `news_body` 에서 원문 복원 일치, 미확보분은 링크 보존 + `body_available:false` + `body_hash` 빈 값) ④#5 메타데이터 완전성(조회수·수집 시각·소스 식별자·축·순위 전부 채워지고 `collection_cycle` 로 시간대 묶음 식별).",
+              "expectedOutcome": "`npx playwright test` 가 새 4건을 포함해 전부 통과하고, 기대값을 상수로 박지 않고 픽스처·설정에서 유도해 단언한다(기존 spec 의 관례)."
+            },
+            {
+              "seq": 7,
+              "action": "등재 SSOT `docs/econ-opinion-monitor-doc-tracker.md` 「e2e 매핑」 절을 갱신한다: 집계 표(매칭 3→7, 공백 15→11), 「시나리오 ↔ spec 파일」 표에 4행 추가, `gap-list` 마커 **안**에서 ingestion 2·3·4·5 제거(마커 밖 산문은 목록으로 세지 않는다), 「공백 해소 경로」 표의 수집 배치 행에 착지 사실 반영.",
+              "expectedOutcome": "`python3 tests/e2e/check_scenario_mapping.py` rc=0, 출력 집계가 `21 / 1 / 2 / 18 / 7 / 11 / 1`."
+            },
+            {
+              "seq": 8,
+              "action": "`docs/econ-opinion-monitor-e2e-mocking-policy.md` 허용목록에 새 모킹 지점을 FEED 카테고리로 등재하고(피드 더블 상류 재배선 `--feeds` · 피드 픽스처 ConfigMap), 코드의 해당 줄 바로 위에 `# mock-exception: FEED-0N — <사유>` 주석을 단다. 변동 이력에 이번 task 행을 추가하되, **원장 R1 행의 판정(해소 여부)은 자매 모델 몫이므로 바꾸지 않고** 수집 경로만 착지했다는 사실만 적는다. GOLD-01~03 은 집계 배치가 아직 e2e 밖이라 그대로 유지한다.",
+              "expectedOutcome": "허용목록의 (파일 × 토큰) 쌍 집합과 코드 주석 지점 집합이 1:1 로 일치한다(자매 모델 `tbm_econ-opinion-monitor-e2e-mock-policy` 의 판정 입력)."
+            },
+            {
+              "seq": 9,
+              "action": "CI 배선을 확인·조정한다 — `.github/workflows/ci.yml` 의 `e2e` 잡에 배치 이미지 빌드(uv sync)와 수집 Job 이 더해지므로 `timeout-minutes: 20` 이 빠듯하면 상향하고, 실패 시 Job 로그가 아티팩트로 남게 한다. 제품 매니페스트·코드는 건드리지 않는다(모델이 허용하는 예외는 무동작 테스트 계측·CI 배선뿐).",
+              "expectedOutcome": "PR 의 `CI / e2e` 잡이 타임아웃 없이 성공하고, `CI / build` 잡의 `make lint`(= `lint-scenario-mapping` 포함)도 성공한다."
+            },
+            {
+              "seq": 10,
+              "action": "위 변경을 브랜치 하나에 담아 `dlddu/economic-opinion-trend-monitor` 에 PR 로 올린다(머지하지 않는다). 본문에 task id·gap 요약·계획 단계·검증 방법·범위 밖 잔여 공백 11건을 적는다.",
+              "expectedOutcome": "PR 이 열리고 CI 두 잡이 초록. 실행 단계(reconciler-work-executor)가 머지·검증만 하면 되는 상태."
+            }
+          ],
+          "plannedAt": "2026-09-18T12:50:00Z"
+        }
+      }
+    ]
   }
 ]
