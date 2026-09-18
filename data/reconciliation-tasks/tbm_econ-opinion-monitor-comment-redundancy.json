@@ -401,6 +401,66 @@
           "reason": "주석·문서만 바꾸는 저위험 계획이고(매니페스트 값 불변, 롤백=revert PR) 준비물 자체의 기계적 상태도 건강하다 — PR #40은 open, mergeable=true/clean, 단일 필수 체크 `Checks`가 head `77be3cf`에서 success. 거부 사유는 베이스 이동으로 무너진 전제다: PR base `2579722` 이후 main이 3커밋 전진했고(`be8616f`·`33e24ea`·`a62eae1`, 현재 tip `a62eae1`), 그중 #38이 `deploy/batch/workflow-template.yaml`에 세 번째 `image:` 줄(150행, aggregate 템플릿)과 주석 10줄을 들였다. 그래서 이 PR이 새로 쓰는 가드 \"CI owns both `image:` tags below\"는 착지하는 순간 거짓이 되고(실측 main의 `image:`는 47·99·150 세 줄), 원장의 `workflow-template.yaml` 행 36/1/35도 실측(그 파일 주석 46줄)과 어긋난다 — 계획이 스스로 정한 완료 기준 (2)·(3)을 머지 전부터 위반한다. 개수를 담은 가드가 파일이 늘자 조용히 거짓이 되는 것은 이 task가 고치려던 바로 그 실패 모드이므로, 같은 덫을 새로 심는 머지를 승인하지 않는다. git 충돌이 아니라 내용 신선도 문제라 실행자가 clean 머지로 통과시킬 수 있다는 점에서 더 위험하다.",
           "comment": "PR #40을 main tip `a62eae1`로 리베이스한 뒤 아래 넷을 고치면 승인 가능하다. 판정 규약(메커니즘 서술 제거, 가드 유지)과 deployment.yaml·kustomization.yaml 두 자리의 문면은 그대로 유효하다 — main이 두 파일을 건드리지 않았다.\n\n1) `deploy/batch/workflow-template.yaml` 가드에서 **개수 표현을 없앤다**. 현재 문면 \"CI owns both `image:` tags below\"는 #38이 세 번째 `image:`(aggregate 템플릿)를 들이면서 거짓이 됐다. 개수 비의존으로 다시 쓸 것(예: \"이 파일의 `image:` 태그는 CI가 관리한다 — 손으로 고치지 않는다\" + README 절 이름 포인터). 이번 판정의 교훈이 '메커니즘을 담지 말라'였다면 **개수·위치도 같은 부류**다(파일이 자라면 조용히 거짓이 된다) — 정책 SSOT(`docs/comment-policy/README.md` 「유지 대상 > 복원 불가능한 지식」)에 이미 추가한 '가드는 메커니즘을 담지 않는다' 문장에 개수·열거도 포함되도록 한 줄 넓힐 것.\n\n2) `docs/comment-policy/ledger.md`의 `deploy/batch/workflow-template.yaml` 행을 **리베이스 후 실측으로 다시 산출**한다. 현재 행은 `2579722` 기준 36/1/35인데 `a62eae1`에서 그 파일 주석은 46줄이다. 같은 커밋에서 이 원장이 새로 도입한 규칙(\"각 행은 그 파일을 마지막으로 판정한 패스 기준\") 때문에, 수치를 그대로 두면 #38이 들인 AC3.2 aggregate 주석 10줄을 이 패스가 판정한 것처럼 읽힌다. 둘 중 하나를 고를 것: (a) 그 10줄까지 이번 패스 범위에 넣어 판정하고 행·패스 문서에 근거를 적는다, 또는 (b) 범위를 세 자리로 유지하되 행 수치를 리베이스 후 값으로 맞추고 미판정 10줄이 남아 있음을 판정 칸에 명시한다. (a)가 원장 무결성 면에서 낫다.\n\n3) 「패스 이력」 행과 `passes/2026-09-18-pin-guard-pass.md`의 기준 커밋·지문을 리베이스 기준으로 갱신한다(`2579722` / 783→780/72 는 폐기). 새 기준 커밋에서 지문을 재측정해 적을 것.\n\n4) 재푸시 후 `Checks`가 green인지, `mergeable_state`가 clean인지 다시 확인하고 preparation.notes의 base·커밋·지문 수치를 실측으로 갱신한다. (원격추적 ref가 없으면 `--force-with-lease=refs/heads/reconcile/comment-redundancy/rct_20260918-0004:$(git ls-remote origin ... | cut -f1)` 형태를 쓸 것.)\n\n예방 차원: 이 레포는 하루에 여러 PR이 착지하므로, 계획 단계에서 가드 문면을 쓸 때 '파일 안의 대상 수'에 의존하지 않는 표현을 기본값으로 삼으면 다음 리베이스에서 같은 거부가 반복되지 않는다."
         }
+      },
+      {
+        "reason": "review_rejected — reconciler-work-review가 2026-09-18T21:50:00Z에 거부했다. 판정 규약(메커니즘 서술 제거, 가드 유지)과 `deployment.yaml`·`kustomization.yaml` 두 자리의 문면은 유효하다고 인정받았고, 거부 사유는 베이스 이동(`2579722` → `a62eae1`, 3커밋)으로 무너진 전제다: `#38`이 `workflow-template.yaml`에 세 번째 `image:` 줄과 주석 10줄을 들여, 새로 쓴 가드의 개수 표현(\"both\")과 원장 행(36/1/35)이 머지 전부터 거짓이 됐다. 이 시도는 리베이스와 함께 거부 지적 넷을 닫는다.",
+        "plan": {
+          "summary": "**재계획(2번째 시도) — 판정 규약은 유지하고, 거부 사유 넷을 모두 리베이스와 함께 닫는다.** 직전 시도의 판정 자체는 살아 있다(「가드는 남기고, 메커니즘 서술은 지운다」 — 핀 메커니즘을 되풀이한 주석은 메커니즘이 바뀔 때마다 조용히 거짓이 되므로, 새 메커니즘으로 '재동기화'하지 않고 메커니즘 비의존 가드만 남긴다). 거부는 판정이 아니라 **베이스 이동으로 무너진 전제**에 대한 것이었다: PR #40의 베이스(`2579722`) 이후 main이 3커밋(`be8616f`·`33e24ea`·`a62eae1`) 전진했고, `#38`이 `deploy/batch/workflow-template.yaml`에 **세 번째 `image:` 줄(150행, aggregate 템플릿)과 주석 10줄**을 들였다. 그래서 PR이 새로 쓴 가드 \"CI owns **both** `image:` tags below\"는 착지하는 순간 거짓이 되고, 원장의 그 파일 행(36/1/35)도 현 실측(46줄)과 어긋난다.\n\n**이번 시도의 교정은 넷이다.** ⑴ 가드 문면에서 **개수·열거 표현을 없앤다** — \"both\"를 지우고 대상을 세지 않는 문면으로 다시 쓴다. 직전 판정의 교훈이 '가드는 메커니즘을 담지 않는다'였다면 **개수·위치도 같은 부류**다(파일이 자라면 조용히 거짓이 된다). 그래서 코드 한 줄을 고치는 데 그치지 않고 정책 SSOT(`docs/comment-policy/README.md` 「유지 대상 > 복원 불가능한 지식」)의 가드 항에 **개수·열거·행 위치**까지 금지 목록에 넣어 같은 거부가 재발하지 않게 한다. ⑵ 원장 행을 **리베이스 기준(`a62eae1`) 실측으로 재산출**한다. ⑶ 「패스 이력」 행과 `passes/2026-09-18-pin-guard-pass.md`의 기준 커밋·지문을 새 기준으로 갱신한다(`2579722` / 783→780/72 는 폐기). ⑷ 재푸시 후 `Checks` green·`mergeable_state=clean`을 재확인하고 `preparation.notes` 수치를 실측으로 갱신한다.\n\n**리뷰어의 권고 (2)(a) 대신 (b)를 고른다 — 근거가 리뷰 이후에 바뀌었다.** 리뷰어는 `#38`이 들인 10줄까지 이번 패스가 판정하는 (a)를 원장 무결성 면에서 선호했는데, 그 코멘트(21:50Z) 이후 **같은 모델의 새 task `rct_20260918-0006`(22:02Z 판정, 미점유)이 그 10줄 중 `deploy/batch/workflow-template.yaml:136-141`의 3줄을 자기 gap으로 이미 이름 대어 잡았다.** 여기서 (a)를 택하면 같은 3줄을 두 task가 동시에 판정하고 두 PR이 같은 블록을 고치는 **이중 판정·머지 레이스**가 된다 — 리뷰어가 막으려던 원장 무결성 훼손을 다른 형태로 만드는 셈이다. 그래서 범위를 세 자리로 유지하되(b), 행 수치를 리베이스 후 실측으로 맞추고 **미판정 10줄이 남아 있다는 것과 그 추적처(`rct_20260918-0006`)를 판정 칸에 명시**한다. 원장의 「각 행은 마지막으로 판정한 패스 기준」 규칙이 그 10줄을 '판정된 것처럼' 읽히게 하는 위험은 이 명시로 닫힌다.\n\n**이 시도의 범위(완료 기준)** — 아래 다섯을 모두 만족하면 이 task는 성공이다.\n(1) 범위 내 주석 3자리(`deploy/base/deployment.yaml` 핀 블록, `deploy/base/kustomization.yaml:5-9` 괄호절, `deploy/batch/workflow-template.yaml:13-15` 머리 가드)에 **핀 메커니즘을 되풀이하는 문장이 한 줄도 남지 않는다** — 기계 확인: `git grep -nE \"pin\\` job|pinned to a main commit|writes the main|deploy\\` branch\" -- <범위>` 0건.\n(2) 세 자리의 남은 문면이 **현 main(`a62eae1`) 실측상 참이고, 개수·행 위치에 의존하지 않는다** — 기계 확인: 세 파일의 주석에 `both|two|세 곳|3곳|lines? \\d+` 류 대상 계수 표현 0건.\n(3) 원장 3행과 「패스 이력」 행이 **리베이스 기준 실측**과 맞고, `workflow-template.yaml` 행이 미판정 10줄과 그 추적 task를 명시한다.\n(4) 정책 SSOT의 가드 항이 메커니즘에 더해 **개수·열거·행 위치**도 금지한다.\n(5) 변경이 PR #40(리베이스된 head)으로 스테이징되어 단일 필수 체크가 green이고 `mergeable_state=clean`.\n\n**범위 밖(후속으로 남긴다)**: ⓐ `#38`이 `workflow-template.yaml`에 들인 AC3.2 aggregate 주석 10줄 — `rct_20260918-0006`의 몫(위 참조). ⓑ `#39`가 들인 e2e spec 주석과 `#37`의 목업 게이트 주석. ⓒ `#36`(`2579722`)이 들인 `scripts/journey-scenarios/JRN-spike-verification.js` 33줄. ⓓ 원장이 아직 덮지 않은 나머지 파일들. ⓔ Python docstring 본문·줄 끝 주석(지문 사각지대). 잔여는 재감지가 새 task로 잇는다.\n\n**기준점(실측, 2026-09-18T22:0xZ)**: main tip `a62eae1`, 지문 `lines=960 files=81` / `55a0dc3f24d5cb9a74031245621103d309e3500cbecc4fb1dc38116e77930161` — 모델 `asIs.lastObservedVersion`과 바이트 동일. 파일별 주석: `deploy/base/deployment.yaml` 11 · `deploy/base/kustomization.yaml` 9 · `deploy/batch/workflow-template.yaml` 46. 예상 이동은 `960 → 957`(11→9, 9→9, 46→45), 파일 수 81 불변. **검증은 지문 값 일치가 아니라 위 (1)~(5)로 한다.**",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-18T22:12:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "기준점을 고정한다. 대상 레포를 클론해 `origin/main`(`a62eae1`)에서 모델 asIs versionScript를 그대로 재실행하고, 세 파일의 주석 줄 수를 따로 센다. PR 브랜치 `reconcile/comment-redundancy/rct_20260918-0004`(head `77be3cf`)를 fetch한다.",
+              "expectedOutcome": "지문 `lines=960 files=81` / `55a0dc3f…`가 모델 `asIs.lastObservedVersion`과 바이트 동일. 파일별 11 / 9 / 46. 불일치면 main이 또 움직인 것 — 기준점을 다시 적고 진행한다(값 일치는 합격 조건이 아니다)."
+            },
+            {
+              "seq": 2,
+              "action": "PR 브랜치를 `origin/main`(`a62eae1`) 위로 리베이스한다. 직전 커밋 `77be3cf` 하나뿐이므로 `git rebase origin/main`. 충돌은 `deploy/batch/workflow-template.yaml` 머리 블록에서만 날 수 있다(#38은 그 파일의 136행 이후만 건드렸으므로 충돌 없이 지나갈 가능성이 높다).",
+              "expectedOutcome": "브랜치가 `a62eae1` 위 1커밋. `git diff origin/main...HEAD` 가 6파일로 유지되고, `image:` **값** 줄은 diff에 0건(세 태그 `b5a91d6…` 전부 불변)."
+            },
+            {
+              "seq": 3,
+              "action": "`deploy/batch/workflow-template.yaml` 머리 가드(13-15행)를 **개수 비의존** 문면으로 다시 쓴다. 지운다: \"Both `image:` lines below are pinned to a main commit SHA by CI's `pin` job (.github/workflows/image.yml)\" — 개수(`Both`)와 메커니즘(어디에 커밋되는지)을 함께 담고 있어 파일이 자라거나 경로가 바뀌면 둘 다 거짓이 된다. 남긴다(2줄): 이 파일의 `image:` 태그는 CI가 관리하니 손으로 고치지 않는다는 금지 + `deploy/base` 서빙 이미지와 보조를 맞춘다는 사실 + 출처 포인터 README 「운영 고정(`pin` job)」. 대상을 세지 않고 열거하지 않는다.",
+              "expectedOutcome": "이 파일의 범위 내 주석 46 → 45줄. `Both`·행 번호·태그 개수를 언급하는 주석 0건. `image:` 값 세 줄(47·99·150)은 한 글자도 안 바뀐다."
+            },
+            {
+              "seq": 4,
+              "action": "`deploy/base/deployment.yaml`(핀 블록)과 `deploy/base/kustomization.yaml:5-9`(괄호절)의 문면은 직전 시도의 것을 **그대로 유지**한다 — 리뷰어가 두 자리의 문면은 유효하다고 명시했고, main 3커밋이 두 파일을 건드리지 않았다. 리베이스 후 두 파일의 diff가 직전과 동일한지만 확인한다.",
+              "expectedOutcome": "`deployment.yaml` 11 → 9줄(메커니즘 서술 2줄 제거, 가드는 메커니즘 비의존으로 유지), `kustomization.yaml` 9 → 9줄(줄 수 불변, 거짓이 된 괄호절만 삭제). 두 파일 모두 `deploy` 브랜치·Flux·main SHA 언급 0건."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/comment-policy/README.md` 「유지 대상 > 복원 불가능한 지식」의 가드 항을 한 줄 넓힌다. 현재 문면은 '가드는 **메커니즘을 담지 않는다**'까지만 금지하는데, 여기에 **개수·열거·행 위치**를 더한다 — 이번 거부가 정확히 그 형태였다(파일이 자라 `both`가 거짓이 됨). 가드는 금지만 말하고 출처를 가리킨다는 결론 문장은 유지.",
+              "expectedOutcome": "정책 SSOT가 이번 거부의 실패 모드를 이름으로 담는다. diff는 해당 항 1~2줄, 표·절 구조·다른 문장 무변화."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/comment-policy/ledger.md`를 **리베이스 기준 실측**으로 다시 쓴다. ⑴ 「패스 이력」 행을 `2026-09-18 | pin-guard-pass | a62eae1 | 960 | 3 | 957 | 81 → 81`로 교체(`2579722`/783/780/72 폐기). ⑵ 파일별 원장 3행: `deployment.yaml` 11/2/9, `kustomization.yaml` 9/0/9, `workflow-template.yaml` **46/1/45**. ⑶ `workflow-template.yaml` 판정 칸에 **미판정 10줄**(`#38`이 들인 AC3.2 aggregate 블록)이 이 패스의 범위 밖이며 `rct_20260918-0006`이 추적한다고 명시한다 — 「각 행은 마지막으로 판정한 패스 기준」 규칙이 그 10줄을 판정된 것처럼 읽히게 하는 것을 막는다. ⑷ 표적 재판정 설명 문단의 커밋·줄 수도 새 기준으로 맞춘다.",
+              "expectedOutcome": "원장 3행이 리베이스 후 실측과 일치하고, 미판정 10줄이 추적처와 함께 드러난다. 다른 행·다른 파일은 무변화."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/comment-policy/passes/2026-09-18-pin-guard-pass.md`의 기준 커밋·지문을 갱신한다: 기준 `a62eae1`, 지문 `960/81 55a0dc3f…` → 판정 후 `957/81`(재측정값으로 확정). 「무엇이 바뀌었나」에 베이스 이동(`be8616f`·`33e24ea`·`a62eae1`)과 그 때문에 가드 문면에서 개수 표현을 걷었다는 경위를 한 절로 남기고, 「범위 밖」 절에 미판정 10줄과 `rct_20260918-0006`을 적는다.",
+              "expectedOutcome": "판정 상세가 '왜 이 세 자리가 이 모양인지'와 '왜 개수를 쓰지 않는지'를 문서만으로 복원 가능하게 한다. 폐기된 `2579722`/783 수치가 문서에 남아 있지 않다."
+            },
+            {
+              "seq": 8,
+              "action": "지문을 재측정하고 기계 확인 둘을 돌린다. ⑴ `git grep -nE \"pin\\` job|pinned to a main commit|writes the main|\\`deploy\\` branch\" -- contracts go python/packages web/src tests scripts deploy Makefile` ⑵ 세 파일 주석에 대상 계수 표현(`Both|both|two tags|3곳`)이 있는지 grep.",
+              "expectedOutcome": "지문 `lines=957 files=81`, 파일별 9 / 9 / 45. grep ⑴ 0건, ⑵ 0건. 줄 수가 예상과 다르면 어느 자리가 어긋났는지 확인 후 되돌아간다."
+            },
+            {
+              "seq": 9,
+              "action": "리베이스된 브랜치를 강제 푸시해 PR #40 head를 갱신한다. 원격추적 ref가 없으므로 `--force-with-lease=refs/heads/reconcile/comment-redundancy/rct_20260918-0004:$(git ls-remote origin refs/heads/reconcile/comment-redundancy/rct_20260918-0004 | cut -f1)` 형태를 쓴다(ref 없이 `--force-with-lease`만 주면 lease 기준이 없어 무조건 거부된다). PR 본문을 새 기준점·판정 규약·범위 밖 목록·거부 4건 대응으로 갱신한다. 머지하지 않는다.",
+              "expectedOutcome": "PR #40 head가 리베이스된 새 커밋. 베이스가 `a62eae1`."
+            },
+            {
+              "seq": 10,
+              "action": "PR 상태를 재확인한다: 단일 필수 체크 green, `mergeable=true`/`mergeable_state=clean`. 판정이 비동기라 직후 `blocked`로 보이면 몇 분 뒤 재조회한다. 확인된 실측값으로 `preparation.notes`(베이스 커밋·head 커밋·지문 수치·파일별 줄 수)를 갱신한다.",
+              "expectedOutcome": "`Checks` success, `mergeable_state=clean`. notes의 수치가 전부 실측 출처를 갖는다."
+            }
+          ]
+        }
       }
     ]
   },
