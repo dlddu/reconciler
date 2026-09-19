@@ -287,7 +287,7 @@
       ]
     },
     "createdAt": "2026-09-19T00:22:31Z",
-    "updatedAt": "2026-09-19T00:31:05Z",
+    "updatedAt": "2026-09-19T00:33:51Z",
     "stateSummary": {
       "asIs": "## as-is — E2E 모킹 지점 지문 (dlddu/economic-opinion-trend-monitor @ `feb454b`, 관측 2026-09-19T00:2xZ)\n\n**버전**: `sites=25 files=14` / `4b884933…` (이전 `sites=17 files=10` / `5890c6b2…`)\n\n**귀속 — 트리거 단독.** 부모 `e29dddd`(#42)에서 versionScript 재실행이 저장된 baseline과 **바이트 동일**(`sites=17 files=10\\n5890c6b2…`). 이동은 `feb454b`(PR #44, \"test(e2e): analysis 시나리오 1·2·3·6 전용 spec 착지 (rct_20260918-0005)\") 단독이고, 그 뒤 `88f5b6f`(#40)는 양 side 불변. 이 트리거는 **자매 모델 `tbm_econ-opinion-monitor-scenario-e2e` `rct_20260918-0005`의 실행 산출**이다(슬라이스 → 재감지의 정상 경로).\n\n**지문 델타(집합 비교)**: 추가 8 · 삭제 0.\n```\n+ tests/e2e/k8s/batch/analyze-job-v2.yaml:ECON_LLM_BASE_URL\n+ tests/e2e/k8s/batch/analyze-job-v2.yaml:mock-exception: LLM\n+ tests/e2e/k8s/batch/analyze-job.yaml:--analyzer fake      <- 팬텀(아래)\n+ tests/e2e/k8s/batch/analyze-job.yaml:ECON_LLM_BASE_URL\n+ tests/e2e/k8s/batch/analyze-job.yaml:mock-exception: LLM\n+ tests/e2e/k8s/batch/ingest-job-analysis.yaml:mock-exception: FEED\n+ tests/e2e/k8s/batch/llm-double.yaml:mock-exception: LLM\n+ tests/e2e/run.sh:mock-exception: LLM\n```\n\n**실제 코드 지점 집합(표기 주석 기준) = 25** — FEED 16 · LLM 6 · GOLD 3, 14파일. 신설 하네스: `analyze-job.yaml`·`analyze-job-v2.yaml`·`ingest-job-analysis.yaml`·`llm-double.yaml`(+ `fixtures/llm/{server.py,responses.json}`·`lib/llmdouble.ts`·`lib/silver.ts`·spec 4종).\n\n⚠️ **팬텀 1건 — `analyze-job.yaml:--analyzer fake`는 모킹 지점이 아니다.** 그 히트는 파일 **6행의 산문 주석**이다: 「인자를 주지 않으므로 분석기는 기본값인 **실 llm 분석기**다(`--analyzer fake` 가 아니다)」. 실제 `args: []`이고 `--analyzer` 인자는 없다(28행). versionScript가 `grep -EHo`로 산문 속 토큰까지 잡아 지문에 섞인 것이며, **판정 집합에는 넣지 않았다.** (지문의 과탐지일 뿐 모델 파손은 아니다 — 재감지를 깨우는 방향이라 안전측이다.)\n\n**카테고리 4종 원시 스캔(전수)**: 브라우저 인터셉트(`page.route`·`context.route`·`route.fulfill`·`route.abort`·`routeFromHAR`) **0건** — 정책 문면의 「0건」과 일치. `--source`는 6개 수집 Job 전부 **`feed`**(제품 경로)이고 `fake`가 아니다 — `--source fake`는 `tests/smoke.sh` 한 곳뿐(FEED-01). `--analyzer fake`도 스모크 한 곳뿐(LLM-01).\n\n**신설 `lib/llmdouble.ts`는 지점이 아니다** — 더블의 응답 픽스처를 spec이 **읽어 기대값을 유도**하는 헬퍼이고(기대값 하드코딩 회피), 상류를 바꾸거나 응답을 가로채지 않는다. 자신도 「`specs/` 밖이라 매칭 단위가 아니다」를 주석에 명시한다.\n\n**레포 게이트 없음** — `scripts/`에는 journey/mockup 게이트 3종뿐이고 `tests/e2e/check_scenario_mapping.py`는 자매 모델(시나리오↔spec) 축이다. `grep -rl 'mocking-policy|mock-exception' scripts/ .github/workflows` **0 히트** ⇒ 이 모델의 불변식 1·2는 **레포 안에 기계적 강제가 없고 이 감지가 유일한 검사**다.\n",
       "toBe": "## to-be — 모킹 정책·허용목록 SSOT (`docs/econ-opinion-monitor-e2e-mocking-policy.md`)\n\n**버전**: blob `bb66cd1d…` (이전 `2e04f4be…`). 같은 트리거 `feb454b`가 as-is와 **한 커밋에** 담았다.\n\n**문서 델타**: 허용목록 헤더 `18지점/10파일/3종` → `25지점/14파일/3종`, 행 **19~25 신설**(FEED-15·16 · LLM-02·03·04·05·06), 범위 경계 3번(상류 재배선)·마무리 산문·변동 이력 1행 갱신. **LLM 카테고리가 처음 e2e 지점을 갖는다**(그 전까지 스모크 `--analyzer fake` 1건뿐).\n\n**허용목록 = 25행** (파일 × 토큰 × CODE), FEED 16 · LLM 6 · GOLD 3 · 14파일.\n\n**차단 요인 원장 — 트리거가 건드리지 않았다.** `## 차단 요인 원장` ~ `## 변동 이력` 구간 md5가 부모·트리거 **동일**(`0fe8f85e…`). 행은 여전히 **R1 하나**:\n- R1 차단 요인: 「**수집·분석 배치를 e2e에 들이는 하네스(배치 이미지 · Job · 제어 가능한 피드/LLM 더블)가 없어**, E2E가 수집→분석→집계 배치 경로를 **한 번도 밟지 못한다**」(출처: doc-tracker 공백 산문, AC1.2~1.7·AC2.1~2.6 12건)\n- 해소 방향: 「배치를 FEED·LLM 더블 **상류**로 E2E 안에서 구동한다」 · 소관: doc-tracker 슬라이스 2(실수집→실 Bronze)·3(실분석→실 Silver) · 선행: 「없음」 · 재검토 시점: **2026-12-16**\n- B1 절 문면: 「현재 **지목 문맥 0건**(2026-09-17 전수 확인) — B1 위반 0」\n\n**GOLD 소멸 조건 문면**: 「R1이 닫히면 GOLD 카테고리의 전제도 함께 사라진다」 + 이번에 추가된 「남은 단계가 하나뿐이라 **소멸 조건에 한 걸음 더 가까워졌다**(**판정은 이 모델의 다음 재감지 몫**)」 — 트리거가 이 판정을 **이번 감지에 명시적으로 넘겼다**.\n",
@@ -299,6 +299,62 @@
       "reason": "actionRequired=**true**. 불변식 1은 완전 초록이고(등재↔코드 25:25 양방향 공집합차 0), 이번 트리거의 모킹 확장 자체도 정책 문면에 정확히 부합한다 — **문제는 차단 요인 원장 한 곳이다.**\n\n**근거 ⑴ (B1 인계 수신 위반 — 정의가 지정한 `action_required` 조건에 직접 해당).** 원장 B1 절은 「지목 문맥 0건(2026-09-17 전수 확인)」이라 적지만, 그 뒤 자매 모델 `tbm_econ-opinion-monitor-scenario-e2e`가 `rct_20260918-0002`·`-0004`·`-0005` **세 건**에서 이 모델을 축자 소관으로 지목했다(「원장 R1 판정·GOLD 카테고리 소멸 여부 — `tbm_econ-opinion-monitor-e2e-mock-policy` 소관」). 지목된 원인 중 **「집계 배치가 e2e 밖」**에 대응하는 행이 원장에 **없다** — 문서가 AC3.x를 「다른 갈래」로 원장 밖에 둔 채 「다음 감지가 재판정」으로 미뤄 뒀기 때문이다. 정의는 「지목됐는데 행이 없으면 gap」 · 「B1 위반 ≥ 1이면 `action_required`」로 못 박았고, 이 상황을 정확히 「인계가 유실되는 자리」라 부른다.\n\n**근거 ⑵ (R1 서술이 자기 해소로 거짓이 됐고 원장이 그것을 기록하지 않았다).** R1은 「수집·분석 배치 하네스가 없어 E2E가 그 경로를 한 번도 밟지 못한다」고 단언하는데, 이번 트리거가 분석 하네스 4종(`analyze-job`·`analyze-job-v2`·`ingest-job-analysis`·`llm-double`)을 세워 **R1이 적은 해소 방향이 자기 범위에서 완료**됐다(수집은 앞선 슬라이스로 이미 완료). 원장 구간은 부모와 md5 동일 — 즉 부채가 실질적으로 감소했는데 원장은 한 글자도 움직이지 않았다.\n\n**근거 ⑶ (트리거 자신이 이 판정을 이번 감지에 넘겼다).** 문서에 새로 추가된 문장이 「남은 단계가 하나뿐이라 소멸 조건에 한 걸음 더 가까워졌다(**판정은 이 모델의 다음 재감지 몫**)」이다. 미루지 않고 지금 판정하는 것이 인계를 받는 방식이다.\n\n**근거 ⑷ (기계적 강제가 없다).** 이 레포에 모킹 정책 게이트가 **없다**(`scripts/`·`.github/workflows` 전수 0 히트; `check_scenario_mapping.py`는 자매 축). 불변식 2는 원리적으로 CI가 못 보는 축이고, 원장이 to-be 문서 안에 있어 재감지 경로는 살아 있지만 **판정은 오직 이 단계만 한다**.\n\n**즉시 대응이 필요한 이유(자동 해소 없음)**: R1 텍스트는 정적이라 스스로 참이 되지 않고, 자매 모델들은 이미 「우리 몫 아님」을 명시해 손을 뗐다. 방치하면 재검토 시점 2026-12-16까지 거짓 서술이 유지되고, 그 사이 누군가 R1을 닫으면 문서가 묶어 둔 「R1이 닫히면 GOLD 전제도 사라진다」가 **아직 필요한 GOLD-01~03을 제거 후보로 만드는 거짓 귀결**을 낳는다(집계 Job은 여전히 e2e 밖임을 실측 확인).\n\n**planner 인계 — 범위는 문서 한 곳(`docs/econ-opinion-monitor-e2e-mocking-policy.md`)이고 코드·하네스 무접촉이다.**\n1. **R1 행을 현행화**한다 — 수집·분석 두 단계가 e2e 안으로 들어왔다는 사실과 근거 task(`rct_20260918-0002`·`-0004`·`-0005`)를 적는다. **닫을지/축소할지는 계획의 판단**이되, 닫는다면 아래 3을 **같은 변경 안에서** 해야 한다(순서 역전 금지 — R1만 닫으면 GOLD 귀결이 거짓이 된다).\n2. **집계 차단 요인 행(R2 등)을 신설**한다 — 원인은 「집계 Job이 e2e 하네스에 없어 서빙 입력 Gold를 배치 산출물로 만들 수 없다」, 출처는 자매 `rct_20260918-0005`의 인계와 doc-tracker 공백 5건(analysis 4·5 + aggregation-viz 1·2·4). B2 4요소(해소 방향·소관·선행·재검토 시점 — 등재일로부터 **최장 90일**)를 행 안에서 기계 판독 가능하게 채울 것. 소관은 자매 `tbm_econ-opinion-monitor-scenario-e2e`(집계 하네스 슬라이스)가 자연스럽다.\n3. **GOLD 소멸 조건의 연결 대상을 R1에서 집계 행으로 옮긴다** — 「R1이 닫히면」이 아니라 「집계 행이 닫히면」이 참이다. 이것이 이번 판정의 실질 산출이다.\n4. **B1 절의 「지목 문맥 0건(2026-09-17 전수 확인)」을 재확인 일자와 함께 갱신**한다(실측: 자매 레코드 3건 지목, 대응 행 신설 후 위반 0).\n\n**건드리지 말 것**: 허용목록 25행과 코드의 `mock-exception` 주석 25건은 1:1로 정합하므로 손대면 불변식 1을 깬다. GOLD-01~03은 **유지**한다(집계 Job 부재를 실측 확인). `analyze-job.yaml` 6행의 「`--analyzer fake` 가 아니다」 주석은 팬텀 지문의 원인이지만 **내용은 옳고 정보 가치가 있다** — 지우지 말 것(지우면 지문만 흔들리고 판정은 그대로다).\n\n측정 근거는 `stateSummary`에 전부 남겼다. 이 판정은 트리거 `feb454b` 단독 귀속(부모 `e29dddd`에서 baseline 바이트 동일)이며, ⑴은 부모에서도 이미 참이던 누적 인계다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-19T00:34:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근**: 차단 요인 원장을 실측에 맞게 현행화하는 **문서 단독 변경**(`docs/econ-opinion-monitor-e2e-mocking-policy.md` 1파일)으로 닫는다. 코드·하네스·허용목록 (파일·토큰·CODE) 쌍은 한 글자도 건드리지 않는다 — 불변식 1이 25:25 양방향 공집합차 0으로 완전 초록이므로 손대면 그것을 깬다. gap은 전부 불변식 2(원장) 한 곳에 있고, 원장이 to-be 문서 안에 있어 문서 편집만으로 판정·추적이 동시에 갱신된다.\n\n**왜 이 경로인가**: 대안 두 가지를 저울질했다. ⑴ *집계 하네스를 실제로 세워 R1/GOLD를 한꺼번에 닫는다* — 이것이 근본 해소지만 소관이 자매 모델 `tbm_econ-opinion-monitor-scenario-e2e`(doc-tracker 「공백 해소 경로」가 명시)이고, 이 모델은 「카테고리와 등재 규약이라는 판단 기준」만 고정한다. 여기서 하네스를 만들면 모델 경계를 넘고 되돌리기도 비싸다. ⑵ *R1 텍스트만 고쳐 집계까지 포괄하게 넓힌다* — 「인계가 유실되는 자리」를 한 행에 뭉쳐 B3(개수 변화) 감사 흔적을 지운다. 그래서 **R1은 자기 범위대로 닫고(해소 근거를 남긴 채) 집계 원인을 별도 행 R2로 신설하는** 경로를 택한다. 되돌리기는 PR revert 한 번이며 코드·CI·런타임 영향이 0이라 가역성이 가장 높다.\n\n**범위(완료 기준)** — 아래 6개가 문서에 반영되고 불변식 1이 불변이면 이 task는 성공이다:\n1. **R1 마감** — 「수집·분석 배치 하네스가 없어」는 거짓이 됐다(`tests/e2e/k8s/batch/`에 ingest 6종 + analyze/llm-double 4종 실재). R1을 열린 표에서 내리고 **「해소된 차단 요인」** 소절에 근거(`rct_20260918-0002`·`-0004`·`-0005`, 커밋 `feb454b`)와 함께 남긴다 — 조용히 지우면 B3가 금지한 「예고만 하고 행이 사라지는」 영구 면제가 된다.\n2. **R2 신설** — 원인 「집계 Job이 e2e 하네스에 없어 서빙 입력 Gold를 배치 산출물로 만들 수 없다」. B2 4요소를 행 안에서 기계 판독 가능하게 채운다(해소 방향·소관=자매 `tbm_econ-opinion-monitor-scenario-e2e`·선행=없음·재검토 시점=`2026-12-18`, 등재일 2026-09-19 + 90일 상한 준수).\n3. **GOLD 소멸 조건의 연결 대상을 R1 → R2로 이설** — 이번 판정의 실질 산출. 「R1이 닫히면 GOLD 전제도 사라진다」를 그대로 둔 채 R1을 닫으면 **아직 필요한 GOLD-01~03이 제거 후보가 되는 거짓 귀결**이 즉시 성립한다(집계 Job 부재를 `ls tests/e2e/k8s/batch/`로 실측 확인). 그래서 1과 3은 **같은 변경 안**에 있어야 한다(순서 역전 금지).\n4. **허용목록 GOLD-01·GOLD-03의 「원장 R1」 참조를 R2로 재지시** — 45·47행 **`실환경 불가 사유` 열만**. `파일`·`토큰`·`CODE` 열은 불변이므로 1:1 판정 입력이 바뀌지 않는다.\n5. **B1 절 갱신** — 「지목 문맥 0건(2026-09-17 전수 확인)」은 거짓이다. 재확인 일자(2026-09-19)와 실측(reconciler 자매 모델 `tbm_econ-opinion-monitor-scenario-e2e`의 `rct_20260918-0002`·`-0004`·`-0005` 3건이 이 모델을 축자 지목)을 적고, R2 신설로 **위반 0**이 됨을 명시한다.\n6. **산문 판정 확정 + 변동 이력 1행** — 77행의 「판정은 이 모델의 다음 재감지 몫」(트리거가 넘긴 인계)을 여기서 받아 **GOLD 카테고리 유지**로 확정하고, 변동 이력에 `rct_20260919-0001` 행을 더한다.\n\n**범위 밖(후속)** — 재감지가 새 task로 잇는다: 집계 Job e2e 하네스 구축 자체(자매 모델 소관, R2 행이 추적) · 픽스처 Gold(GOLD-01~03) 제거(R2가 닫힌 뒤) · doc-tracker 편집(`tbm_econ-opinion-monitor-docs-impl` 축) · 허용목록 25행 증감 · `analyze-job.yaml` 6행의 팬텀 지문(`--analyzer fake` 산문 주석 — 내용이 옳으므로 유지).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`dlddu/economic-opinion-trend-monitor` main tip에서 브랜치 `reconcile/econ-e2e-mock-policy-rct_20260919-0001`을 만들고, 변경 전 기준선을 기록한다 — 문서 blob 해시, as-is versionScript 출력, 허용목록 (파일·토큰·CODE) 25쌍.",
+              "expectedOutcome": "기준선: to-be blob `bb66cd1d…`, as-is `sites=25 files=14` / `4b884933…` (모델 `lastObservedVersion`과 바이트 동일). 이후 단계의 회귀 판정 기준이 된다."
+            },
+            {
+              "seq": 2,
+              "action": "`## 차단 요인 원장`의 열린 표에서 R1 행을 내리고, 바로 아래 **`### 해소된 차단 요인`** 소절을 신설해 R1을 해소일(2026-09-19)·해소 근거(`tests/e2e/k8s/batch/` 신설 파일 목록, 자매 task `rct_20260918-0002`·`-0004`·`-0005`, 커밋 `feb454b`)와 함께 옮긴다.",
+              "expectedOutcome": "열린 표에 R1이 없고, 해소 소절에 R1 한 행이 근거와 함께 존재한다. B3 「감소면 해소 방향이 실제 반영됐는지 확인」이 문서에서 직접 읽힌다 — 조용한 영구 면제가 아님이 증명된다."
+            },
+            {
+              "seq": 3,
+              "action": "열린 표에 **R2** 행을 신설한다. 차단 요인=「집계 Job이 e2e 하네스에 없어 서빙 입력이 되는 Gold 분포를 배치 산출물로 만들 수 없다 — 출처: doc-tracker 「공백 해소 경로」 '집계 배치' 묶음(analysis 4·5 · aggregation-viz 1·2·4, 공백 5건)과 자매 `rct_20260918-0005` 인계」, 해소 방향=「실환경 대체 — 집계 Job 한 단계를 e2e 하네스에 더해 파이프라인 산출 Gold로 서빙을 띄운다」, 소관=`tbm_econ-opinion-monitor-scenario-e2e`(집계 하네스 슬라이스), 선행=「없음」, 재검토 시점=`2026-12-18`.",
+              "expectedOutcome": "R2 행에서 B2 4요소가 전부 열 단위로 읽힌다. 소관이 본 모델이 아니므로 「착수 가능 행(선행 없음 ∧ 소관 이 모델) ≥ 1」 조건은 발동하지 않는다. 재검토 시점이 등재일(2026-09-19) + 90일 상한(2026-12-18) 이내다."
+            },
+            {
+              "seq": 4,
+              "action": "GOLD 소멸 조건의 연결 대상을 R1에서 R2로 옮긴다 — 91행 「**R1이 닫히면 GOLD 카테고리의 전제도 함께 사라진다**」를 R2 기준으로 고쳐 쓰고, 77행 산문의 「(판정은 이 모델의 다음 재감지 몫)」을 이 task의 판정(**GOLD 카테고리 유지 — GOLD-01~03은 그대로 필요**, 근거: `tests/e2e/k8s/batch/`에 집계 Job 없음)으로 확정한다.",
+              "expectedOutcome": "문서 어디에도 「R1이 닫히면 GOLD가 사라진다」가 남지 않는다. R1이 닫힌 지금 GOLD-01~03을 제거 후보로 만드는 거짓 귀결이 성립하지 않는다."
+            },
+            {
+              "seq": 5,
+              "action": "허용목록 45행(GOLD-01)·47행(GOLD-03)의 `실환경 불가 사유` 열에서 「원장 R1」 참조를 R2로 재지시한다. `파일`·`토큰`·`CODE` 열과 나머지 23행은 건드리지 않는다.",
+              "expectedOutcome": "(파일 × 토큰 × CODE) 25쌍 집합이 변경 전과 바이트 동일. 불변식 1의 판정 입력이 불변이므로 등재↔코드 1:1이 유지된다."
+            },
+            {
+              "seq": 6,
+              "action": "B1 절의 「현재 **지목 문맥 0건**(2026-09-17 전수 확인) — B1 위반 0」을 2026-09-19 실측으로 갱신한다: 자매 모델 `tbm_econ-opinion-monitor-scenario-e2e`의 `rct_20260918-0002`·`-0004`·`-0005` 3건이 이 모델을 소관으로 축자 지목했고, 그 원인에 대응하는 행이 R2로 신설돼 **위반 0**임을 적는다.",
+              "expectedOutcome": "B1 절이 거짓 주장을 담지 않는다. 지목 3건 ↔ 대응 행 R2가 문서에서 대조 가능하다."
+            },
+            {
+              "seq": 7,
+              "action": "`## 변동 이력`에 `2026-09-19 | rct_20260919-0001` 행을 추가한다 — R1 마감·R2 신설·GOLD 연결 이설·B1 갱신을 요약하고, 허용목록은 25지점 불변임을 명시한다.",
+              "expectedOutcome": "이력 표 최상단(기존 정렬 관례에 맞춰)에서 이번 판정의 사유와 무엇을 바꾸지 않았는지가 읽힌다."
+            },
+            {
+              "seq": 8,
+              "action": "회귀 검증: as-is versionScript를 브랜치 tip에서 재실행해 기준선과 대조하고, 허용목록 25쌍 집합 ↔ 코드 `mock-exception:` 주석 25건 집합의 양방향 공집합차를 다시 계산한다. `git diff --stat`으로 변경 파일이 1개인지 확인한다.",
+              "expectedOutcome": "as-is 지문 `sites=25 files=14` / `4b884933…` **불변**(문서는 `.md`라 as-is 스캔 범위 밖). 미등재 0 · 고아 등재 0. `git diff --stat` = `docs/econ-opinion-monitor-e2e-mocking-policy.md` 1파일."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치를 푸시하고 PR을 연다(머지하지 않는다). 본문에 task id·gap 요약·6개 완료 기준·검증 방법·범위 밖 항목을 적는다.",
+              "expectedOutcome": "PR이 열리고 diff가 문서 1파일이다. 실행 단계(reconciler-work-executor)가 머지·검증할 수 있는 상태."
+            }
+          ],
+          "plannedAt": "2026-09-19T00:45:00Z"
+        }
+      }
+    ]
   }
 ]
