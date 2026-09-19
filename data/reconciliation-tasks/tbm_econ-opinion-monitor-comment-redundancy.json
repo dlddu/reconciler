@@ -477,6 +477,63 @@
           "reviewedAt": "2026-09-18T22:25:00Z",
           "reason": "승인. 직전 거부의 사유(베이스 이동으로 무너진 전제)가 실측으로 닫혔고, 준비물이 지금 유효하다 — PR #40 open, head `44c49eb`, base `a62eae1`가 **현 main tip과 동일**(리베이스 후 main 무이동), mergeable=true/clean, 단일 필수 체크 `Checks` completed/success. 지문을 직접 재측정해 대조했다: main `a62eae1` = `lines=960 files=81 / 55a0dc3f…`(모델 lastObservedVersion과 바이트 동일), PR head = `lines=957 files=81 / 1607776a…` — preparation.notes 수치와 전건 일치. 거부 4건 대응도 실측으로 확인했다: ⑴ 가드 문면에서 `Both`가 사라지고 개수 비의존(\"The `image:` tags in this file are CI-owned…\")으로 재작성, ⑵ 원장 3행이 리베이스 후 실측과 일치(deployment.yaml 11/2/9 · kustomization.yaml 9/0/9 · workflow-template.yaml **46/1/45** — 직접 센 값과 동일), ⑶ 패스 이력·pass 문서가 새 기준 `a62eae1`(960→957/81)로 갱신되고 폐기 수치(`2579722`/783/780/72) 잔존 0건, ⑷ 정책 SSOT 가드 항이 메커니즘에 더해 개수·열거·행 위치까지 금지. 위험 통제: 변경 6파일/+117-17이 전부 주석·정책 문서이고 `image:` **값** 줄은 diff에 0건(세 태그 `b5a91d6…` 불변) — 직접 확인했다. 불가역 지점은 머지 하나뿐이고 롤백은 revert PR로 구체적이며, executionGuide가 완료 기준 5개를 기계 확인 명령과 함께 명시한다. 범위 정합성: 기계 확인 `git grep -nE 'pinned to a main commit|writes the main SHA|\\`deploy\\` branch|Flux tracks|not what production runs'`가 범위 내 0건이고, gap이 지목한 세 자리 밖으로 번진 변경이 없다.",
           "comment": "승인이지만 실행자가 알아둘 점 둘.\n\n⑴ **완료 기준 (2)의 판정 범위는 '세 가드 블록'이다** — executionGuide 표 (2)행이 그렇게 적었고 그것이 유효한 문면이다. plan.summary의 축약(\"세 파일의 주석에 계수 표현 0건\")을 파일 전수 grep으로 읽지 말 것: `deploy/batch/workflow-template.yaml`에는 가드와 무관한 자리에 계수 표현이 정상적으로 남아 있다(76행 \"all three share the one `data`\", 139행 \"rewrites both Gold datasets\" — 이 패스의 판정 대상이 아니고 정책의 금지는 **가드**에 걸린다). 전수 grep으로 보면 참인 결과를 `failed`로 오판한다.\n\n⑵ **리뷰 권고 (2)(a) 대신 (b)를 고른 판단을 인정한다.** 근거를 실측으로 확인했다 — `rct_20260918-0006`의 gap이 `deploy/batch/workflow-template.yaml:136-141`(#38 AC3.2 블록) 3줄을 이름 대어 자기 범위로 잡았고, 그 task는 현재 `planning` 점유 중이다. (a)를 택했으면 같은 줄을 두 task가 판정하는 이중 판정이 됐다. 원장 행이 미판정 10줄과 추적처를 명시해 「각 행은 마지막으로 판정한 패스 기준」 규칙의 오독 위험도 닫혔으므로, 직전 거부가 지적한 원장 무결성 문제는 해소로 본다. 다만 그 task가 같은 파일을 만지므로, 이 PR이 먼저 머지되면 그쪽 브랜치 리베이스가 필요할 수 있다(블록이 120행 넘게 떨어져 충돌 가능성은 낮다)."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-18T22:30:20Z",
+          "finishedAt": "2026-09-19T00:14:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "log": "기준점 재확인. 점유 시점 main tip은 준비 때의 `a62eae1`이 아니라 **`0125cae`**였다(#41 regression-pass가 22:18Z 착지). `0125cae` 실측 = `lines=953 files=80 / 1b34764a…`, 세 대상 파일 주석은 11 / 9 / 46으로 **불변**. PR #40 head `44c49eb` · base `a62eae1` · Checks completed/success."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "log": "리베이스. `44c49eb`를 `0125cae` 위로 리베이스하니 `docs/comment-policy/ledger.md`에서 충돌(#41이 같은 표를 고쳤다) — 로컬 test-merge로 재현 확인 후 해소. 해소 원칙: ⑴ 「읽는 법」 규약 줄은 main 쪽(상위 집합)을 남기고 PR의 중복 문장 폐기, ⑵ 패스 이력은 regression-pass 행을 보존하고 그 **아래** pin-guard-pass 행을 새로 추가. 나머지 5파일은 충돌 없음."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "log": "`deploy/batch/workflow-template.yaml` 머리 가드 — 준비 단계 문면(개수 비의존)을 그대로 이어받았다. #41·#42·#44 어느 것도 이 파일을 건드리지 않아 재작성 불필요. 46 → 45줄."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "`deploy/base/deployment.yaml`(11 → 9) · `deploy/base/kustomization.yaml`(9 → 9, 괄호절만 삭제) — 준비 단계 diff 그대로. 두 파일 모두 `deploy` 브랜치·Flux·main SHA 언급 0건."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "`docs/comment-policy/README.md` 가드 항 — 준비 단계 diff 그대로(메커니즘 + **개수·열거·행 위치** 금지). 착지 후 실측 확인."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "`ledger.md` 재판정 수치를 **머지 직전 main 실측**으로 두 번 다시 맞췄다. ⑴ `0125cae` 기준 953/3/950(80→80) → ⑵ #42(`e29dddd`)가 `scripts/journey-scenarios/JRN-daily-scan.js`를 들여 풀 값이 움직이자 **`e29dddd` 기준 982/3/979(81→81)**로 재측정·교체(합계 행 포함). 파일별 3행 11/2/9 · 9/0/9 · 46/1/45와 미판정 10줄·`rct_20260918-0006` 명시는 준비 때 값이 끝까지 실측과 일치했다(끼어든 3개 PR 모두 `deploy/`를 건드리지 않았다)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "log": "`passes/2026-09-18-pin-guard-pass.md` 기준 커밋·지문을 `e29dddd` 982/81 `1a2f4fc2…` → 979/81 `62796561…`로 갱신. 「기준 커밋이 세 번 움직였다」 절을 추가해 `be8616f`→`33e24ea`→`a62eae1`→`0125cae`→`e29dddd` 이동과 '가드 문면은 이동마다 손댈 필요가 없었다'는 요점을 남겼다. 범위 밖 절에서 #36·#37 항목은 **#41이 이미 판정**했으므로 그 사실로 교체하고, #42가 들인 새 파일을 다음 패스 몫으로 추가."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "log": "지문 재측정 + 기계 확인. 리베이스된 브랜치에서 `lines=979 files=81 / 62796561…`, 파일별 9 / 9 / 45. 메커니즘 되풀이 grep(`pin\\` job` 제외 패턴) **0건**. 세 가드 블록에 계수·행 번호 표현 0건. `git diff origin/main...HEAD -- deploy/`의 `image:` **값** 줄 0건."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "log": "`--force-with-lease=refs/heads/<브랜치>:$(git ls-remote …)` 로 두 번 재푸시(`44c49eb`→`5f567dc`→`63439b4`). 두 번째는 #42 착지에 맞춰 원장 수치를 다시 맞춘 커밋. 최종 head `63439b4`, 6파일 +122-17."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "log": "PR 상태 재확인 후 **머지(불가역 지점)**. `63439b4`의 `Checks` completed/**success**(22:41:55Z), `mergeable=true` / `mergeable_state=clean`, base `e29dddd`. `gh pr merge 40 --squash` → merge commit **`88f5b6f`**, merged_at 2026-09-19T00:13:37Z. 머지 직전 main tip은 `feb454b`(#44, 22:5xZ 착지)였으나 `deploy/`·`docs/comment-policy/`를 건드리지 않아 가드·원장 3행 전제는 유지 — executionGuide 「베이스가 또 움직였을 때」의 ①② 조건을 실측으로 확인하고 진행했다."
+            }
+          ]
         }
       }
     ]
