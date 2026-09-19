@@ -2011,6 +2011,51 @@
           "reason": "**거부 — 준비물이 유효하지 않다. 필수 체크 `required` 가 빨갛고, 빨간 원인이 이 PR 이 저작한 새 spec 자신이다.**\n\n⑴ **CI 실측**: PR #50 head `4911074e` 의 유일한 런 `Checks`(run `35411769537`, 01:13:54Z) 가 `failure` 다. 잡별로 `ci / e2e` **failure**, 나머지(`ci / build`·`docs / structure`·`docs / flow`·`render / render`·`image / publish ×2`)는 success, 집계 잡 `required` 가 **failure**. `ci / e2e` 는 새 spec 이 실제 클러스터에서 도는 **유일한** 자리이고, 계획 자신의 실행 지침이 「`ci / e2e` 가 초록이 아니면 **어떤 이유로도 머지하지 않는다**」를 머지 선행 조건으로 못박았다.\n\n⑵ **flake 가 아니다**: 실패한 단정은 이 PR 이 새로 만든 `tests/e2e/specs/analysis-5-low-confidence-separation.spec.ts:113`(`analysis: aggregation separates the unanalyzed from the analyzed items`) 한 건이고 나머지 64건은 통과했다(1 failed / 64 passed, 9.9s). 실패 형태가 `Expected: 5 / Received: 0` 인 **구조적 불일치**라 재실행으로 뒤집히지 않는다. 재실행하지 않았다.\n\n⑶ **하네스 자체는 섰다 — 완료 기준 ⑴ 은 충족**: 로그에 `[e2e] aggregation (baseline) done in /data/aggregation` · `[e2e] gold exported -> …` · `[e2e] aggregation (skewed) done in /data/aggregation-skew` · `[e2e] gold (skewed volume) exported -> …` 가 모두 찍혔고, `run.sh` 가 세운 가드 3종(`failed_sources=[]` · `failed=0` · `wrote 0`) 중 어느 것도 걸리지 않았다. 즉 배선·픽스처·Job 은 정상이고 **남은 것은 단정 1개**다. 다른 신규 spec 4개(`aggregation-1`·`-2`·`-4`, `analysis-4`)와 `analysis-5` 의 다른 4개 단정도 전부 초록이다.\n\n⑷ **준비 기록이 CI 결과보다 늦는데도 CI 를 반영하지 않았다**: `preparedAt` 01:22:00Z 인데 런은 01:13:54Z 에 이미 failure 로 끝나 있었다. 완료 기준 ⑸(「PR CI `required` 전건 초록」)이 준비 시점에 **실측되지 않은 채** `prepared:true` 가 됐다. 로컬 dry-run(상류만 교체한 제품 경로 실행)은 값을 맞췄지만 클러스터 실행이 이 한 단정에서 갈렸다 — 지침이 경고한 바로 그 자리다.\n\n⑸ **base 이동**(참고, 단독 거부 사유는 아님): 계획 base `705ebe1` → 현재 main `111777c0`, 자매 머지 5건(#48·#46·#49·#47·#43). 이 5건은 `tests/e2e/specs/`·`run.sh`·`lib/`·`check_scenario_mapping.py`·`docs/econ-opinion-monitor-doc-tracker.md` 를 **하나도** 건드리지 않아 게이트 절대값(매칭 18 · 공백 1)은 보존됐을 가능성이 높다. 규칙 6 해제 신호 `aggregate.py ∋ BUCKET_UNIT = \"hour\"` 도 main 에 **생존**한다(#43 이 건드린 것은 같은 파일의 주석 1줄뿐, `+0/-1`). 다만 `rebaseable:false` 이고 절대값은 텍스트가 같으면 충돌 없이 조용히 통과하므로, 재작업 때 리베이스 후 게이트 재실행으로 반드시 재측정해야 한다.\n\n불가역성·위험 통제 자체는 문제없었다(산출물이 `tests/e2e/` + doc-tracker 뿐, 25 files 전부 경계 안, revert 1회로 롤백, 트래픽·데이터 영향 0). 거부는 오직 **준비물 무효(필수 체크 red)** 때문이다.",
           "comment": "**고칠 것은 하나 — `tests/e2e/specs/analysis-5-low-confidence-separation.spec.ts` 의 마지막 교차표 단정이다. 픽스처·Job·`run.sh`·다른 spec 4개는 손대지 말 것(전부 초록이다).**\n\n**깨진 지점**(spec:104-113):\n- `mentionsInAxis` 는 축 전체 합이다 — `items.filter(other => other.axis === item.axis)` 로 **버킷 필터가 없다**.\n- `tabulated` 는 단일 버킷 합이다 — `key.startsWith(`${item.axis} ${bucketOf(item)} `)` 로 **NO_BODY 기사 자신의 버킷**으로 자른다.\n- 이 둘은 「그 축의 모든 아이템이 한 버킷을 공유한다」가 참일 때만 같다. 실측은 `Received: 0` — 부분 불일치가 아니라 **그 접두사에 해당하는 칸이 한 개도 없다**.\n\n**원인 후보를 이 순서로 가를 것**(추측으로 픽스처를 고치지 말 것 — 지침의 고정부다):\n1. CI 가 올린 Playwright 리포트 아티팩트(run `35411769537`, `Upload Playwright report` 는 success)에서 `$E2E_BRONZE_AGG_DIR` 의 `본문 없는 속보` 레코드의 **`collected_at` 실값**을 본다. `bucketOf()` 가 `collected_at.slice(0,13)` 이므로 이 값이 비었거나(→ 접두사가 `KR  ` 로 어긋남) 다른 시(hour)면 0 이 그대로 설명된다.\n2. 그 값이 다른 아이템과 동일하다면 원인은 단정의 구성 자체다 — 축 전체 합 vs 단일 버킷 합을 **같은 기준으로** 맞춰야 한다(양쪽 다 버킷 필터를 걸거나, `tabulated` 를 축 전체로 합산).\n3. 자매 spec `aggregation-2-subject-cross-dimension.spec.ts:70`(교차표 = 원천 독립 재계수) 과 `:102`(모든 Gold 행이 원천 버킷을 갖는다)가 **통과**했다 ⇒ `crossTab()`·`cellKey()`·Gold 자체는 건전하다. 결함은 이 단정의 버킷 결합에 있지 `lib/gold.ts` 의 재계산에 있지 않다.\n\n**재계획에 반드시 포함할 것**:\n- ⓐ 수정 후 **`ci / e2e` 초록을 실측으로 확인한 뒤에** `prepared:true` 를 기록할 것. 이번 시도는 런이 failure 로 끝난 8분 뒤에 준비 완료가 기록됐다. 확인 경로: `gh api repos/dlddu/economic-opinion-trend-monitor/actions/runs?head_sha=<전체 SHA>` (축약 SHA 금지) → `required` 와 `ci / e2e` 둘 다 success.\n- ⓑ **리베이스 후 게이트 재실행**: base 가 `705ebe1` → `111777c0` 로 5건 앞섰다. 자매 5건이 e2e·doc-tracker 무접촉이라 매칭 18 · 공백 1 이 살아 있을 공산이 크지만, 절대값은 충돌 없이 조용히 낡으므로 `git rebase origin/main && python3 tests/e2e/check_scenario_mapping.py` 로 rc=0 과 **숫자 자체**(매칭·공백)를 다시 읽고, 어긋나면 doc-tracker 의 집계표·매핑표·gap-list 를 실측에 맞춘다(회계 `21 = 매칭+예외+구현대기+공백` 이 닫히는지 확인). `rebaseable:false` 이므로 로컬 리베이스 후 force-push 가 필요하고, 원격추적 ref 가 없으면 `--force-with-lease=refs/heads/reconcile/scenario-e2e-rct_20260919-0001:$(git ls-remote origin …)` 형태로 쓸 것.\n- ⓒ 범위는 **넓히지 말 것**. 계획의 범위 밖 목록(agg-viz#5 · GOLD 카테고리 소멸 · 구현 대기 1건 · 예외 재판정 · `ac3-*` 개명)은 그대로 후속이다. 규칙 6 해제 신호(`BUCKET_UNIT = \"hour\"`)는 main 에 생존하므로 구현 대기 행을 걷지 말 것."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**거부 사유 한 건만 닫는다 — `analysis-5` 마지막 교차표 단정의 기준 불일치.** 준비물(PR #50)의 하네스·픽스처·Job·다른 spec 4개는 같은 런에서 전부 초록이었고, 빨간 원인은 단정 1개였다(`ci / e2e`: Expected 5 / Received 0). 그 단정은 왼쪽을 **축 전체 합**, 오른쪽을 **(축, 버킷) 단일 셀 합**으로 재고 있어 「축의 모든 관측이 한 버킷을 공유한다」를 암묵 전제로 깔았다. 오른쪽도 축 전체 합으로 맞춘다(셀 키 첫 토큰 정확 비교 — 축 이름엔 공백이 없다).\n\n**왜 이 방법인가**: 시나리오 5의 판정 대상은 「미분석이 서술 대상 집계에 끼어들지 않는다」이고, 그 회계는 **축 단위**로 닫힌다. 버킷 절단은 판정에 아무 것도 더하지 않으면서(e2e corpus 는 한 주기다) 기준만 갈랐다. 제품 경로를 그대로 돌린 로컬 dry-run(상류만 로컬 피드·LLM 더블로 교체, `uv` 워크스페이스로 수집→분석→집계 실행)에서 corpus 의 `collected_at` 이 10건 전건 동일이고 **두 형태 모두 5로 통과**함을 실측했다 — 즉 클러스터에서만 기준이 갈렸다. 그 divergence 를 추측으로 덮지 않기 위해 계측 커밋 한 번(클러스터 실측 버킷·셀 키 로그)을 끼워 원인을 판독하고, 그 다음 커밋에서 계측을 걷는다.\n\n**완료 기준(이 시도의 범위)**: ⑴ `analysis-5` 의 6개 단정 전건 초록, 특히 실패했던 `aggregation separates the unanalyzed from the analyzed items`. ⑵ 산출물은 그 spec 파일 하나(+계측 제거 커밋) — 픽스처·Job·`run.sh`·다른 spec 4개 무접촉. ⑶ 현재 main tip 위로 리베이스한 상태에서 `python3 tests/e2e/check_scenario_mapping.py` rc=0 이고 **절대값이 매칭 18 · 공백 1 · 회계 21 = 18+1+1+1** 로 실측 일치. ⑷ PR CI `required` **와** `ci / e2e` 둘 다 success 를 `actions/runs?head_sha=<전체 SHA>` 로 실측 확인한 **뒤에** `prepared:true` 를 기록. ⑸ PR 이 main tip 위에서 `mergeable_state != dirty`.\n\n**범위 밖(후속, 직전 시도와 동일)**: ⓐ `…-test-aggregation-viz.md#시나리오 5`(순수 서빙·시각화) ⓑ 서빙 입력을 픽스처 Gold → 파이프라인 Gold 로 교체(모킹 정책 GOLD 카테고리 소멸, 자매 모델 소관) ⓒ 구현 대기 1건(agg-viz 3 일·주 롤업 — 해제 신호 `aggregate.py ∋ BUCKET_UNIT = \"hour\"` 가 main 에 생존하므로 걷지 않는다) · 예외 1건 재판정 · `ac3-*` 개명.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "현재 main tip 위로 리베이스하고 게이트 절대값을 다시 잰다. 계획 시점 base 는 두 번 움직였다: `705ebe1`(직전 시도) → `111777c`(자매 5건) → `6875f5c`(#51 — doc-tracker 를 **월별 폴더**로 쪼개고 `check_scenario_mapping.py` 가 최신 월 파일을 읽도록 바꿨다). rename 을 따라 우리 hunk 가 `docs/econ-opinion-monitor-doc-tracker/2026-09.md` 로 이동했는지 확인한다.",
+              "expectedOutcome": "`git rebase origin/main` 충돌 0, `python3 tests/e2e/check_scenario_mapping.py` rc=0 이고 출력이 매칭 18 · 공백 1 · 공백 목록 `aggregation-viz#시나리오 5` 한 건. `git diff --stat origin/main..HEAD -- docs/` 가 월별 파일 한 개만 든다."
+            },
+            {
+              "seq": 2,
+              "action": "실패 기준을 로컬에서 실측한다 — `uv sync` 후 피드 더블·LLM 더블을 localhost 로 띄우고 `econ-ingestion --feeds <agg 설정> --cycle 2026-03-02T09:00` → `econ-analysis`(ECON_LLM_MODEL=e2e-llm-agg) → `econ-aggregation` 을 제품 경로 그대로 돌려 Bronze·Silver·Gold 를 만든다. 그 위에서 단정의 두 형태(축 전체 합 / (축,버킷) 셀 합)를 각각 계산한다.",
+              "expectedOutcome": "corpus 10건(본문없음 1 · 판단유보 1 · 저신뢰 1 · 본문 9), KR 축 서술 대상 합 5, 셀 7칸. `collected_at` 이 전건 동일(단일 버킷)이어서 **두 형태가 모두 5** — 즉 버킷 절단은 로컬에서 실패를 재현하지 못하고, 클러스터에서만 기준이 갈렸음이 확정된다."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/e2e/specs/analysis-5-low-confidence-separation.spec.ts` 의 ⑶ 블록만 고친다: `tabulated` 를 `key.split(\" \")[0] === item.axis` 로 축 전체 합산하고, 왜 (축,버킷)이 아니라 축 기준인지·왜 접두사 비교가 아니라 첫 토큰 정확 비교인지 주석으로 남긴다. 다른 5개 단정과 다른 파일은 건드리지 않는다.",
+              "expectedOutcome": "diff 가 그 spec 파일 한 개. 로컬 실측 데이터에서 두 미분석 기사(`본문 없는 속보`·`해석이 엇갈리는 지표 발표`) 모두 5 == 5."
+            },
+            {
+              "seq": 4,
+              "action": "같은 커밋에 계측 한 줄(`console.log` 로 실측 버킷 집합 · 셀 키·건수 전체 · 본문 없는 기사의 Bronze 레코드)을 넣어 force-push 하고, `ci / e2e` 잡 로그에서 클러스터 실측값을 판독한다. 단정 자체는 이미 고쳐져 있으므로 이 런은 **초록이면서** 원인을 남긴다.",
+              "expectedOutcome": "`Checks` 런이 디스패치되고(PR 이 `dirty` 면 런이 0건이므로 리베이스가 선행 조건이다) `ci / e2e` 로그에 `[diag] buckets=… cells=… noBody=…` 가 찍혀, 버킷이 갈렸는지/무엇이 갈랐는지가 실측으로 드러난다."
+            },
+            {
+              "seq": 5,
+              "action": "판독한 실측을 근거로 계측 줄을 걷고(주석은 실측 사실만 남긴다) 다시 force-push 한다. 로직 변경이 없는 print 제거이므로 앞 런의 초록이 그대로 재현돼야 한다.",
+              "expectedOutcome": "diff 가 계측 제거뿐이고, 새 head 의 `ci / e2e` 가 다시 success. 최종 트리에 디버그 출력이 남지 않는다."
+            },
+            {
+              "seq": 6,
+              "action": "`GET /repos/dlddu/economic-opinion-trend-monitor/actions/runs?head_sha=<최종 전체 SHA>`(축약 SHA 금지) 로 런을 집고 `.../jobs` 에서 `ci / e2e` 와 집계 잡 `required` 가 **둘 다 success** 임을 확인한다. 그 확인 뒤에야 `preparation.prepared:true` 와 `preparedAt` 을 기록한다.",
+              "expectedOutcome": "두 잡 모두 `conclusion=success`. 직전 시도처럼 「런이 failure 로 끝난 뒤에 prepared 기록」이 재발하지 않는다."
+            },
+            {
+              "seq": 7,
+              "action": "핸드오프 직전 PR 상태를 재확인한다 — base 가 또 움직였으면 리베이스 + 게이트 재측정 + force-push(`--force-with-lease=refs/heads/<브랜치>:$(git ls-remote …)`)를 반복하고, `mergeable_state` 가 `dirty` 가 아닌 상태로 둔다.",
+              "expectedOutcome": "`mergeable=true` 이고 `mergeable_state` 가 `dirty` 아님. 실행자가 리베이스 없이 머지 판단에 들어갈 수 있다."
+            }
+          ],
+          "plannedAt": "2026-09-19T01:47:00Z"
+        }
       }
     ]
   },
