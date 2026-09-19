@@ -8712,7 +8712,7 @@
   {
     "id": "rct_20260919-0002",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-19T02:12:32Z",
@@ -8866,6 +8866,59 @@
               "startedAt": "2026-09-19T02:49:30Z",
               "finishedAt": "2026-09-19T03:08:30Z",
               "log": "executionGuide 의 실행 순서 1~3 을 수행했다.\n\n**지침 1 — 신선도: base 가 움직였다(검토가 예고한 그 경로).** 관측 시점 `mergeable_state=dirty`, PR base `286a091` 이지만 main tip 은 `880fe2a` — 자매 PR #145(`scenario-e2e`, 시나리오 12 를 구현 대기에서 제거)가 먼저 머지됐다. 지침대로 로컬 리베이스로 충돌 헝크를 실측했다(job tmp 재클론 + `refs/pull/146/head` fetch → `git rebase origin/main`).\n  - 충돌 **1개 파일, 1 헝크**: `docs/comment-policy/ledger.md` 의 합계 마커 한 줄뿐. `docs/doc-tracker/2026-09.md` 는 자동 병합됐다(양쪽이 서로 다른 행·문단을 건드림).\n  - 합계 마커는 지침대로 **양쪽 증분의 합**으로 풀었다: base `286a091`=2444 · main `880fe2a`=2455(#145 증분 **+11**) · PR head `b17c42a`=2589(이 PR 증분 **+145**) → 2444+11+145 = **2600**. `check_comment_policy.py` rc=0 으로 실측 동치 확인(전체 docstring 지문 `fa338abf3f55…`).\n  - doc-tracker 자동 병합 결과 육안 확인: #145 의 시나리오 12 행 철거(`✅ 전용 파일 resource_generic_ac12.py`)와 이 PR 의 「등록 도구 **23종**」·「현재 잔여는 `resource_proxy`(AC15) 하나」가 **둘 다 살아 있다**.\n  - 리베이스 커밋 `e13465d`, `--force-with-lease=refs/heads/…:b17c42a…`(원격 실측 sha 를 lease 기준으로 명시) 로 PR 브랜치에 푸시.\n\n**리베이스 트리 로컬 게이트 8종 전부 rc=0** (Go 1.24.7, `PATH=/home/silas/toolchains/go/bin`): `gofmt -l .` 출력 없음 · `go vet ./...` · `go build ./...` · `go test ./...` 전 패키지 ok · `tests/integration/check_ac_mapping.py`(스크립트는 `scripts/` 가 아니라 `tests/integration/` 에 있다) · `check_mock_policy.py` · `check_comment_policy.py` · `check_doc_inventory.py`(49/49).\n\n**지침 2 — CI 재수령(리베이스했으므로 필수).** 새 head `e13465d…` 전체 SHA 로 조회, 런 1건 완주. 잡 6개 전부 판정: `fmt + vet` success · `unit tests` success · `integration tests` success(`EXPECTED_TOOLS` ↔ `toolslist.go` 동치를 실물로 재는 자리) · `image / build & push server image` success · `image / pin deployment image (main only)` **skipped**(main 전용) · 집계 `ci passed` **success**. run id `35416911563`. flake 없음 — `rerun-failed-jobs` 미사용.\n\n**지침 3 — 머지.** 직전 재확인에서 `mergeable=true`·`mergeable_state=clean`·base `880fe2a` = 당시 main tip(그 사이 추가 자매 머지 없음). 머지 방식은 지침의 `squash` 를 레포 설정으로 교차 확인해 확정했다(`allow_merge_commit=false`·`allow_squash_merge=true`, 최근 main 커밋 부모 수 전부 1). squash 머지 성공 → main `0b01f08d504309f4e6bc74ca2a1f8f3d00f3de6d`.\n\n계획 밖 변경 없음 — 실행자가 쓴 것은 충돌 헝크 1줄(합계 마커 2589→2600)뿐이고, 그것도 지침이 미리 정한 합산 규칙을 그대로 적용한 값이다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:14084f6b575ade0f6f92c1a91d73ea71d19af30b main.go:9525c1baad8fb1a5817558f36f46de779fea4528",
+          "verifiedAt": "2026-09-19T03:12:00Z",
+          "checks": [
+            {
+              "name": "⑴ 도구가 코드에 선다 (세 파일 히트)",
+              "status": "passed",
+              "detail": "머지된 main `0b01f08` 에서 `grep -rn resource_port_forward` 가 세 파일 모두 히트: `internal/mcp/toolslist.go:488`(`\"name\": \"resource_port_forward\"` 광고) · `internal/mcp/gate.go:153`(레지스트리 등록 = 게이트 대상) · `tests/integration/_helpers.py:60`(EXPECTED_TOOLS)."
+            },
+            {
+              "name": "⑵ 실행 경로가 있다 · go build",
+              "status": "passed",
+              "detail": "`internal/k8s/port_forward.go`(8115B) · `internal/mcp/port_forward.go`(6896B) 존재. `go build ./...` rc=0 (Go 1.24.7). 주의: linked worktree 라 VCS 스탬핑이 `exit status 128` 을 내므로 `-buildvcs=false` 로 실측했다 — 컴파일 실패가 아니며, 같은 트리의 `go test`(아래 ⑶)가 전부 컴파일·통과하는 것으로 교차 확인된다. CI 의 `fmt + vet` 잡은 일반 클론에서 스탬핑 포함으로 success 다. `gofmt -l .` 출력 없음 · `go vet ./...` rc=0 도 함께 확인."
+            },
+            {
+              "name": "⑶ 단위가 돈다",
+              "status": "passed",
+              "detail": "`go test ./internal/k8s/... ./internal/mcp/... ./internal/server/...` 전부 ok(k8s 0.173s · mcp 0.012s · server 0.021s). 리베이스 트리에서는 `go test ./...` 전 패키지 ok 로 더 넓게 돌렸고 CI `unit tests` 잡도 success."
+            },
+            {
+              "name": "⑷ 레포 게이트 4종 rc=0",
+              "status": "passed",
+              "detail": "머지된 main 에서 전부 rc=0 — `tests/integration/check_ac_mapping.py` · `scripts/check_mock_policy.py` · `scripts/check_comment_policy.py` · `scripts/check_doc_inventory.py`. **지침의 경로 오기 1건**: `check_ac_mapping.py` 는 `scripts/` 가 아니라 `tests/integration/` 에 있다(ci.yml 34행이 그렇게 부른다). 게이트 자체는 정상이고 판정에 영향 없다."
+            },
+            {
+              "name": "⑸ 집계가 이 PR 때문에 움직이지 않았다 (동치 판정)",
+              "status": "passed",
+              "detail": "**기대값을 박지 않고 머지 직전 main 과의 동치로 쟀다**(지침 4-⑸). 머지 직전 main `880fe2a` = `85·1·18·66·66·0·0`, 머지 후 main `0b01f08` = `85·1·18·66·66·0·0` — **완전 동치**. 준비 시점에 적힌 `85·1·19·65·65·0·0` 에서 셋째~다섯째가 이동한 것은 **자매 PR #145** 가 시나리오 12 를 구현 대기에서 빼며 만든 변화이지 이 PR 의 것이 아니다(이 PR 은 시나리오 14·17 행의 차단 근거만 고쳐 행 수를 바꾸지 않았다). 검토가 예고한 그 시나리오가 실제로 발생했고 지침이 정한 동치 판정법으로 통과했다."
+            },
+            {
+              "name": "⑹ 문서가 실측과 같다",
+              "status": "passed",
+              "detail": "doc-tracker `2026-09.md:24` 「등록 도구: **23종**」 ↔ 실측 `toolslist.go` 광고 23 · `_helpers.py::EXPECTED_TOOLS` 23 (세 값 일치). 동치 자체는 레포의 `TestToolsListIncludesAllTools`(PASS)와 CI `integration tests` 잡(success, `smoke.py` 가 실물 `tools/list` 로 잰다)이 집행한다. `2026-09.md:272` 「현재 잔여는 `resource_proxy`(AC15) 하나」 등재 확인 — 축 ⑴ 이 8 → 7 로 줄었다."
+            },
+            {
+              "name": "자매 머지 충돌 해소의 정확성 (합계 마커)",
+              "status": "passed",
+              "detail": "정보성 교차 확인. 머지된 main 의 `docs/comment-policy/ledger.md` 합계 마커 = **2600** = base 2444 + #145 증분 11 + 이 PR 증분 145. 지침의 「합계 마커 충돌은 고르기가 아니라 양쪽 증분의 합」 규칙 그대로이고, `check_comment_policy.py` 가 실측 주석과 동치임을 rc=0 으로 확인한다(마커가 틀렸다면 이 게이트가 레드다)."
+            },
+            {
+              "name": "CI 초록의 신선도 (리베이스 후 재수령)",
+              "status": "passed",
+              "detail": "리베이스했으므로 준비·검토 시점의 초록(head `b17c42a`)을 재사용하지 않고 새 head `e13465d` 로 **CI 를 다시 받았다**. run `35416911563` 잡 6종: `fmt + vet` success · `unit tests` success · `integration tests` success · `image / build & push server image` success · `image / pin deployment image (main only)` skipped(main 전용) · 집계 `ci passed` **success**. `always()+needs` 집계가 success 로 닫혔으므로 skipped 가 의존 잡을 뒤집지 않았다. flake 없음 — `rerun-failed-jobs` 미사용."
+            },
+            {
+              "name": "(정보성) 모델 전체 to-be 잔여 gap — 이 task 범위 밖",
+              "status": "passed",
+              "detail": "converged 판정에 넣지 않는 관측 사실만 남긴다. ⓐ `resource_proxy`(AC15) — 축 ⑴ 의 마지막 도구, 다음 슬라이스. ⓑ 시나리오 14 전용 e2e `resource_generic_ac14.py` 저작 + 실물 왕복 관측 — 자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 소관이라 행을 ⏳ 로 남겼다(그래서 「구현 대기 18」이 이 PR 로는 안 움직인다). ⓒ `prd-github-commit-status` AC1~AC6 6건 — 「배포 순서 ②」가 사람이 GitHub UI 에서 App 에 `Commit statuses: Read and write` 를 주는 작업이라 코드만으로 완료 기준을 세울 수 없다. 이 실행이 as-is 버전을 `internal:a4c29eec…` → `internal:14084f6b…` 로 움직였으므로 **다음 감지 주기가 후속 task 를 연다**(`lastObservedVersion` 은 건드리지 않았다)."
             }
           ]
         }
