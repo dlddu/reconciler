@@ -1131,7 +1131,7 @@
   {
     "id": "rct_20260919-0001",
     "toBeModelId": "tbm_feature-doc-e2e-mock-policy",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-19T00:41:04Z",
@@ -1144,7 +1144,7 @@
       ]
     },
     "createdAt": "2026-09-19T00:41:04Z",
-    "updatedAt": "2026-09-19T01:09:00Z",
+    "updatedAt": "2026-09-19T01:16:00Z",
     "stateSummary": {
       "asIs": "**측정** 2026-09-19T00:41Z · **대상** `dlddu/feature-doc@2c7a6d3`(#71 「AC2.4·AC2.5 종단 의존성 추출·구조화 적재 (슬라이스 5b-1)」 — 자매 `tbm_feature-doc-docs-impl` `rct_20260918-0004`의 실행 산출)\n\n- **지문 이동** `sites=25 files=11 / fef43512…` → `sites=26 files=12 / 6c7243fd…`. **귀속은 #71 단독**: 부모 `e89e676`에서 versionScript를 재실행하면 저장 baseline과 **바이트 동일**이고, 그 앞 `dbde01c`·`fb040b9`도 같은 값이다.\n- **지문 집합 차분(부모 vs 트리거) = 추가 1쌍 · 삭제 0**: `backend/src/dependencies.rs:mock-exception: LLM`.\n- **실제 지점**: `backend/src/dependencies.rs:374-380`의 `Ask { …, // mock-exception: LLM-01 — 실 LLM 산출물에 대한 결정적 단정을 위해 고정 답을 공급, stub: stub(subject, &paths) }`. 활성 배선은 **기존 `FEATUREDOC_DOUBLE_LLM`**(워커 `doubles.llm` → `dependencies::derive(mode)` `worker.rs:440-442`) — 새 env·새 배선 0.\n- **독립 광역 재측정**(부모·트리거 두 지점, `Mode::Stub` · `stub: *(` · `FEATUREDOC_(MODE|DOUBLE_[A-Z_]+)` · `page/context.route` · `route.fulfill/abort` 전수): 새 `Mode::Stub` 분기 **0** · 새 브라우저 인터셉트 **0**(`e2e/` 히트는 전부 spec 헤더 주석) · `deploy/e2e/kustomization.yaml` **5 env 불변**.\n- **파일×토큰 코드 지점 14쌍 → 15쌍**(auth·github·github_api·github_app·repo_scan·llm·llmkey `Mode::Stub` 7 + cross_cutting·discovery_strategy `Mode::Stub` 2 + cross_cutting·discovery_strategy·feature_candidates `stub: stub_answer` 3 + acceptance `stub: stub_logic`·`stub_tests` 2 + **dependencies `stub: stub` 1**).\n- **충실도**: stub 답도 real과 같은 `derive()` 후처리(스캔 경로에 없는 근거는 `evidence=None`으로 떨어뜨리고 빈 결과는 오류)를 통과한다 ⇒ real보다 관대한 분기 아님.",
       "toBe": "**`docs/e2e-mocking-policy.md` = blob `e09e58d5…`(2026-09-18 재등재판) — 트리거가 한 바이트도 건드리지 않았다.** `git diff e89e676 2c7a6d3 -- docs/e2e-mocking-policy.md` 빈 출력, blob 두 지점 동일. #71의 `docs/` 접촉은 `doc-tracker.md`·`mockups/JRN-review-feature.html` 둘뿐이다.\n\n- **허용목록**: **14행 / 11파일**(EXT-01~04 · LLM-01). 문서가 스스로 「코드 실재 지점 **14쌍 == 등재 14쌍**(미등재 0 · 고아 0)」이라 선언한다.\n- 「모킹으로 세는 것」 2번이 고정 답 공급자를 **`Ask { stub: stub_*(...) }` — 현재 `stub_answer` · `stub_logic` · `stub_tests`**로 열거한다.\n- **표기 규약**: 「주석은 **등재된 지점에만** 붙인다 … 주석만 있고 미등재이거나, 등재만 있고 코드에 없으면 drift다.」\n- **차단 요인 원장**: 열린 행 **0**(마지막 해소 R1, 2026-09-18 `rct_20260918-0001`). B1(인계 수신)·B2(계획 완비)·B3(개수 변화) 판정은 gap 절.\n- 레포 안에 이 축을 보는 **게이트는 없다** — `grep -rl 'mock-exception|e2e-mocking' tools/ .github/workflows/ scripts/` **0 히트**. 이 감지가 유일한 검사다.",
@@ -1226,6 +1226,76 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-19T01:12:00Z",
           "reason": "위험 낮음·되돌릴 수 있음: 변경은 `docs/e2e-mocking-policy.md` 등재 1행·수치 정합과 `backend/src/dependencies.rs`의 비공개 `fn stub` → `stub_dependencies` 개명(정의·호출·단위 테스트 4곳)뿐이고, 배포·마이그레이션·데이터·공개 API 변경 0이다(불가역 지점은 squash 머지 하나, 롤백은 두 변경이 한 커밋이라 `git revert <merge sha>` 한 번으로 닫힌다). 신선도 재확인(2026-09-19T01:0x): PR #73 open·mergeable=true·mergeable_state=clean, base `2c7a6d3` == main tip(베이스 이동 0), CI run 35411099905 **완료·success** — cargo test·kind e2e·ci-gate 전부 초록이라 계획이 실행 단계로 남겨 둔 빌드·테스트 검증이 이 head에서 이미 근거를 갖는다. 열린 자매 PR #72·#64·#26·#17의 `/files`를 재실측해 두 대상 파일 겹침 0건을 재확인했다(집계가 절대값이라 텍스트 충돌 없이 숨는 형태를 배제). 정합성 실측(브랜치 트리 = 베이스 무이동이라 머지 트리와 동치): 코드 지점 15쌍/12파일 == 허용목록 15행, 파일×토큰 양방향 차집합 ∅(표의 토큰 문자열이 코드와 글자 동일), 문서의 `14쌍|11파일` 잔존 2곳은 모두 시점이 붙은 이력 문장, 새 근거 시나리오 sc02-05·sc02-06·sc02-07은 `e2e/support/dependencies.ts`를 쓰는 전용 spec 3건으로 실재한다. 등재와 개명을 한 커밋에 묶은 것이 옳다 — 쪼개면 고아 등재 또는 무등재 재발화로 어느 쪽이든 불변식 1이 깨진다. 범위 밖(as-is 지문 패턴 확장=모델러 소관, 구현 수렴, doc-tracker 수치)이 섞이지 않았다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-19T01:09:00Z",
+          "finishedAt": "2026-09-19T01:15:30Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T01:10:00Z",
+              "finishedAt": "2026-09-19T01:15:00Z",
+              "log": "머지 트리 실측으로 재확인. base `2c7a6d3` == main tip(베이스 무이동)이라 브랜치 트리 = 머지 트리다. `git diff 2c7a6d3..origin/main -- backend/src frontend/src deploy/e2e scripts .github/workflows e2e | grep -E 'Mode::Stub|stub: *stub|mock-exception|FEATUREDOC_(MODE|DOUBLE)'` **0줄**. 열린 자매 PR #72·#64·#26·#17의 `/pulls/<n>/files` 재실측 — `docs/e2e-mocking-policy.md`·`backend/src/dependencies.rs` 겹침 **0건**(각 6·3·2·20 파일). 코드 지점 **15쌍 / 12파일**, 허용목록 **15행**, 차집합은 이미 닫힌 상태(PR가 등재를 담고 있음)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T01:10:00Z",
+              "finishedAt": "2026-09-19T01:15:00Z",
+              "log": "개명 착지 확인: `grep -n 'stub_dependencies' backend/src/dependencies.rs` → **4곳**(정의 318 · 호출 379 `stub: stub_dependencies(subject, &paths),` · `#[cfg(test)]` 518·536). 옛 이름 잔존 0(`grep -nE '\\bfn stub\\b|[^_a-z]stub\\('` 무출력). 호출부가 지문 패턴 `stub: *stub_[a-z_]+`에 걸린다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T01:10:00Z",
+              "finishedAt": "2026-09-19T01:15:00Z",
+              "log": "로컬 cargo 툴체인이 없어 PR CI로 대체. run **35411099905**(head `ab44e6cb1e14…` 전체 SHA 조회, total_count=1) completed/**success** — 잡 단위: `test (cargo)` success, `test (kind e2e)` success, `ci-gate` success, docs-* 게이트 3종 success, `push / build & push image (ghcr)` success. 개명이 빌드·단위 테스트를 깨지 않음이 근거를 갖는다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T01:10:00Z",
+              "finishedAt": "2026-09-19T01:15:00Z",
+              "log": "허용목록 15행 등재 확인(머지 트리): 15행이 `| 15 | backend/src/dependencies.rs | stub: stub_dependencies | LLM-01 | FEATUREDOC_DOUBLE_LLM | 종단 의존성 추출(AC2.4) Ask의 고정 답 공급(제품 경로) |`. 토큰 문자열이 코드와 글자 동일."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T01:10:00Z",
+              "finishedAt": "2026-09-19T01:15:00Z",
+              "log": "문서 자기 선언 수치 확인: 절 제목 57행 「2026-09-19 증분 등재, 15쌍 / 12파일」, 59행 「코드 실재 지점 15쌍 == 등재 15쌍(미등재 0 · 고아 0)」. 잔존 `14쌍|11파일`은 **2곳뿐이며 둘 다 시점이 붙은 과거 기록**(95행 「**2026-09-18 시점**의 불변식 1」 절 안, 156행 변동 이력 2026-09-18 행). 95행 괄호가 「현재 수치는 위 허용목록 절이 갖는다 — 2026-09-19 … 15쌍이다」로 현재값을 명시 참조한다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T01:10:00Z",
+              "finishedAt": "2026-09-19T01:15:00Z",
+              "log": "「모킹으로 세는 것」 2번 열거 확인(25행): `Ask { stub: stub_*(...) }` — `stub_answer` · `stub_logic` · `stub_tests` · **`stub_dependencies`** 4종. 코드 실재 4종과 일치."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T01:10:00Z",
+              "finishedAt": "2026-09-19T01:15:00Z",
+              "log": "「등재 사유」표 LLM-01 행(87행) 근거 시나리오 = sc01-01, sc01-03, sc01-04, sc01-07, sc02-01, sc02-02, sc02-04, **sc02-05, sc02-06, sc02-07**. 새 3건은 `e2e/support/dependencies`를 쓰는 전용 spec `e2e/tests/sc02-05-dependency-extraction.spec.ts`·`sc02-06-dependency-reverse-query.spec.ts`·`sc02-07-dependency-export.spec.ts`로 실재 확인."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T01:10:00Z",
+              "finishedAt": "2026-09-19T01:15:00Z",
+              "log": "변동 이력 마지막 행(157행)에 2026-09-19 / rct_20260919-0001 행 확인 — 14→15쌍(11→12파일) 등재, 근거 시나리오 3건 추가, `stub` → `stub_dependencies` 개명이 「지문 사각지대 고지」의 **두 번째 사례**로 118~127행 본문과 상호 참조된다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T01:15:00Z",
+              "finishedAt": "2026-09-19T01:15:30Z",
+              "log": "PR #73(`reconcile/rct_20260919-0001-e2e-mock-policy`, head `ab44e6cb1e14…`) **squash 머지**. 머지 직전 상태: open · mergeable=true · mergeable_state=**clean** · changed_files=2 · base `2c7a6d3` == main tip. 머지 커밋 **`f357f12353f0459ef7041a12af3b82574f4a227e`** — `docs(e2e-mocking-policy): 종단 의존성 추출 고정 답 공급 등재 + stub_dependencies 개명 (#73)`. 계획 밖 변경 0(파일 2개 그대로), 배포·마이그레이션·데이터 변경 없음. 롤백은 `git revert f357f12` 한 번."
+            }
+          ]
         }
       }
     ]
