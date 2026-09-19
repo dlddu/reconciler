@@ -8946,7 +8946,7 @@
   {
     "id": "rct_20260918-0005",
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T22:26:06Z",
@@ -9034,6 +9034,13 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/138",
           "preparedAt": "2026-09-19T00:10:40Z",
           "notes": "계획 1~7단계를 그대로 스테이징했다(7파일 · +310/−26). 브랜치 이름에 모델 조각(`scenario-e2e`)을 넣었다 — task id는 모델 안에서만 유일해서 한 레포를 여러 모델이 추적하면 `reconcile/<rct_id>`가 남의 PR과 충돌한다. **계획 2단계에서 한 가지를 좁혔다**: `github_mock_url()`을 `_helpers.py`에 두려던 것을 새 파일 안의 `MOCK_URL`로 국소화했다. 이 노브를 쓰는 파일이 이 하나뿐인데 `_helpers.py`를 건드리면 주석 원장의 공유 행 두 개(줄 주석 132줄 `5aa2ddea6731` · docstring 220줄 `1f77587a4101`)를 함께 재판정해야 하고, 그 행들은 이 슬라이스와 무관한 10여 파일을 묶고 있다. ci.yml 포트포워드(8093)와 `GITHUB_MOCK_URL`은 계획대로 들어갔다. **로컬 검증(클러스터 불요)**: 네 게이트 전부 rc=0 — `check_ac_mapping`(집계 실측 `85 · 1 · 20 · 64 · 64 · 0 · 0`) · `check_mock_policy` · `check_comment_policy`(판정 완료 2254줄 100.0% · 잔량 0) · `check_doc_inventory`. `run_all.py --group primary --list`에 새 파일이 정확히 한 번(레인 `github-app`) 배차. 확장한 `server.py`를 떼어 단독 기동해 스톡 응답 5종과 시나리오 5의 세 노브·폐기 경로·요청 기록을 14항목으로 확인했다. **막힌 것**: 이 환경에 Go 툴체인도 kind도 없어 배포된 서버에 실제로 물어본 단언은 세울 수 없다 — `integration-tests` 잡이 유일한 실검증 지점이고, 단언 문자열은 `mcp.go`의 `installationTokenEnv`(권한은 알파벳 정렬 · `, ` 조인)와 `github.go`의 `Error()` 접두사(`github token request rejected: ` · `github api error: `)를 읽어 맞췄다. mock policy 게이트가 처음에 레드였다 — 포트포워드 로그 파일명 `/tmp/pf-github-mock.log`가 `ID_TOKEN_RE`에 미등재 모킹 토큰 `pf-github-mock`으로 잡혀서, `pf-ghmock.log`로 바꿔 해소했다(허용목록은 건드리지 않았다)."
+        },
+        "review": {
+          "required": false,
+          "status": "approved",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-19T00:20:05Z",
+          "reason": "준비물 실측 전건 유효: PR #138 `state=open` · `mergeable=true` · `mergeable_state=clean`, base `05ef097`가 현재 main tip과 동일해 베이스 이동 0. head `c533a5e`의 CI 런 1건이 `conclusion=success`이고 잡 6개 전부 초록(`integration tests`·`fmt + vet`·`unit tests`·image build·`ci passed`; pin 잡만 main-only skip). 이 슬라이스의 유일한 실검증인 kind `integration-tests` 로그에서 `github_app_installation_token_ac5.py [레인 github-app]` → `ok: github-app-installation-token/AC5`를 확인했고, 같은 레인 회귀 지점인 ac1·ac2·ac4도 모두 `ok`라 mock 노브 기본 꺼짐 + `finally` 복원 설계가 원격에서 검증됐다. 범위 정합: 7파일 +311/−26이 계획 1~7단계와 1:1로 대응하고(github-mock.yaml·ci.yml·신규 ac5 e2e·doc-tracker·test-github-app-installation-token·e2e-mocking-policy·comment ledger) `internal/`·`cmd/`·`main.go` 제품 코드는 0줄이다. doc-tracker 집계 diff가 계획이 명시한 목표값 `85 · 1 · 20 · 64 · 64 · 0 · 0`과 축자 일치하고, 레지스트리 행 전환과 「⏳ 구현 대기」 표 삭제가 둘 다 들어가 한쪽만 옮긴 상태가 아니다. 위험 통제: riskLevel medium에 걸맞게 executionGuide가 ①CI 초록 확인을 다른 단계의 선행으로 못박고, ③착지 판정을 `trigger.asIs` 스냅샷이 아니라 머지된 origin/main 실측 4조건으로 두었다. 불가역 지점은 머지 하나뿐이고 롤백은 revert이며, 제품 코드 0줄이라 런타임 영향이 없고 되돌리면 집계가 `21 · 63 · 63`으로 함께 돌아가 게이트가 계속 초록이라는 점까지 확인돼 있다(되돌릴 경우 시나리오 5 행의 거짓 근거를 고쳐 쓰는 후속을 같이 연다는 조건도 명시). 파괴적 마이그레이션·데이터 삭제·외부 부작용 없음. 유의점 인계: 같은 모델의 자매 PR #139(`rct_20260918-0004`, 시나리오 13)가 열려 있고 같은 doc-tracker 집계 블록을 건드린다 — 나중에 머지되는 쪽은 `check_ac_mapping`이 빨개지므로 충돌 해결이 아니라 `git rebase origin/main` 후 집계 재계산이 답이고, executionGuide가 이미 그 처방과 `mergeable_state=dirty`면 런 0건이 되는 오진 주의까지 적어 두었다. 승인."
         }
       }
     ]
