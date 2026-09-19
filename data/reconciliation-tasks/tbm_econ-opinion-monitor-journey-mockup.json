@@ -1574,6 +1574,61 @@
           "reviewedAt": "2026-09-19T00:48:00Z",
           "reason": "**승인.** 위험 낮고 되돌릴 수 있으며, 베이스 이동에도 전제가 살아 있음을 실측으로 확인했다.\n\n**신선도 — 베이스가 움직였고 그 커밋이 대상 파일을 건드렸다.** PR #47 의 base 는 `88f5b6f` 였으나 현재 main 은 `705ebe1`(PR #45 `feat(trend): AC3.5` 머지, 00:42:20Z)이고, 그 커밋은 이 PR 이 정정하는 `docs/econ-opinion-monitor-design-tracker.md` 를 +17/-4 로 수정했다. executionGuide 자신의 판정 규칙이 「건드렸으면 기존 초록을 근거로 쓰지 말라」이므로 head 의 초록(run 35409233436, 전 잡 success)만으로는 부족하다고 보고 **시험 머지 트리를 만들어 직접 측정**했다: auto-merge 는 `design-tracker.md` 에서 충돌 0으로 성립하고(GitHub 도 `mergeable=true`·`mergeable_state=clean`), 그 트리에서 `scripts/check-journey-mockup.py` **rc=0 PASS** — R10 ok(이관 4/6 · 여정 페이지 4 · 화면 단위 1 · 미시각화 3단계) · R11 ok(문서 목록 6건 == 실파일 6건) · R1 래칫 2(상한 2) · 규칙 5 상한 1 불변 · R1~R9 ok 집합이 머지 전 main 과 동일. 자매 게이트 `scripts/check-mockup-render.py` 도 머지 트리에서 rc=0(in-scope 21종 불변)이라 화면 id 표 보존 요구가 실제로 지켜졌음이 집행 장치로 확인된다.\n\n**정합성 — 계획이 gap 을 실제로 닫고, 새 검사가 장식이 아니다.** 머지 트리에서 정정한 두 문서만 main 상태로 되돌려 새 게이트를 돌리면 **rc=1** 로 R11 2방향(`dashboard.html`·`trend.html` 등재 / `JRN-daily-scan.html` 미등재) + R10 10건을 지목하고, 정정본 복귀 시 rc=0 이다. 즉 이 PR 은 서술 7곳을 실측에 맞추는 동시에 그 축을 기계화하며, R10 이 새로 들어온 #45 의 tracker 신규 문장에 **오탐을 내지 않는다**는 것도 같은 머지 트리 실행으로 확인됐다(계획이 스스로 지목한 유일한 잔여 위험의 첫 실전 반례). 범위도 넘지 않는다 — 래칫을 내리지 않았고, 규칙 1 잔여 2건은 명시적으로 후속으로 남겼으며, 변경은 문서 2 + 게이트 스크립트 1로 3파일이다.\n\n**위험·불가역성.** riskLevel medium 에 걸맞게 완료 기준 5항목 표와 롤백(squash 커밋 1개 revert)이 executionGuide 에 구체적으로 있고 실제로 가능하다. 불가역 지점은 머지 한 곳뿐이며 배포·데이터·트래픽 영향이 없다(`docs/` 문서와 CI 검사 스크립트). node 부재로 로컬 재현이 안 된 DOM 하네스는 이 PR 이 여정 페이지·시나리오·하네스를 한 줄도 건드리지 않고 #45 도 마찬가지라 영향 경로가 없으며, head 의 `docs / flow` 잡 success 가 근거로 유효하다.",
           "comment": "승인이지만 실행 전 확인할 것 둘(거부 사유는 아니고, executionGuide 가 이미 지시하는 절차다).\n\n⑴ **rebase 후 CI 재취득.** base `88f5b6f` → 현재 main `705ebe1` 로 이동했고 끼어든 #45 가 `design-tracker.md` 를 수정했다. 검토는 시험 머지 트리 실측(두 게이트 rc=0 · 회귀 rc=1→rc=0)으로 전제 유효를 확인했으나, 머지 버튼을 누르기 전 `git rebase origin/main` 으로 head 를 올려 `on: pull_request` 런을 새로 받는 것이 가이드가 명시한 경로다.\n\n⑵ **자매 PR 3건이 같은 파일을 두고 열려 있다.** #48(`design-tracker.md`)·#46(`design-tracker.md` + `mockup-index.md` + 여정 페이지 4개 + `check-mockup-render.py`)·모두 base `88f5b6f`. 어느 쪽이 먼저 머지되면 #47 의 R10 실측 기준(여정 페이지 수·이관 진척)이 움직일 수 있고, 특히 #46 은 여정 페이지 전부를 건드린다. 머지 직전 base 를 다시 재고, 움직였으면 **머지 직전 main 기준으로 게이트를 다시 돌려** 판정할 것 — `trigger.asIs` 스냅샷이나 이 검토 시점 측정값을 착지 기준으로 쓰지 말 것."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-19T00:53:10Z",
+          "finishedAt": "2026-09-19T01:04:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T00:53:10Z",
+              "finishedAt": "2026-09-19T00:53:40Z",
+              "log": "기준 실측을 **계획이 적은 `88f5b6f`가 아니라 실행 시점 main**에서 고정했다 — 승인(00:48Z) 이후 base가 또 움직였기 때문이다. 실행 시점 main = `06ea1e7`(`88f5b6f`보다 3커밋 앞: #45 AC3.5 · #48 dash 허용목록 재판정 · #46 네비 복원). 그중 #46은 검토가 「머지되면 R10 실측 기준이 움직일 수 있다」고 명시적으로 경고한 자매 PR이고, 이 세션이 claim한 지 13초 뒤(00:52:48Z) 머지됐다. 세 커밋이 합쳐 이 PR의 대상 파일 2개를 건드렸다 — `design-tracker.md` +74/-16, `mockup-index.md` +15/-1(여정 페이지 4개·`reprocess.html`도 수정, 단 페이지 **수**는 불변). `check-journey-mockup.py`는 무변경.\n`06ea1e7`에서 `python3 scripts/check-journey-mockup.py` → **rc=0 PASS**, R1~R9 ok 23줄. 요약줄 「여정 6 · 여정 페이지 4 · 미이관 2(상한 2) · 규칙 5 미충족 1(상한 1) · 링크 92건」 — 링크 수가 계획 시점 83 → 92로 이동(자매 머지 영향, 래칫 아님).\n지문: mockups `c5c6e7c`(trigger 스냅샷 `579d1557`에서 이미 이동) · hub `891de31a`(불변) · journeys-tree `9c9935e1`(불변) · reg `293c6114`(스냅샷 `12ca8207`에서 이동). **trigger.asIs/toBe 스냅샷은 착지 기준으로 쓰지 않았다.**"
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "log": "R11 작성은 계획 단계가 PR #47 커밋 `9d6370d`에 이미 포함. 실행자가 새로 작성할 코드는 없다(executionGuide: 「코드 변경은 이미 PR 안에 있으므로 실행자가 새로 작성할 것은 없다」). 회귀 증명은 step 7에서 **실행 시점 main 기준으로 다시** 수행."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "log": "R10 작성도 동일하게 PR #47 커밋에 포함. step 2와 같은 사유."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "log": "`mockup-index.md` 서술 2곳 정정은 PR #47 커밋에 포함. 단 #46이 같은 파일을 +15/-1 수정했으므로 **리베이스로 합류시켜** step 6에서 재측정했다(텍스트만 보고 넘기지 않았다)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "skipped",
+              "log": "`design-tracker.md` 서술 5곳 정정도 PR #47 커밋에 포함. #48·#46·#45가 같은 파일을 합계 +74/-16 수정 — step 6의 리베이스·게이트 재실행이 유일한 검출기다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T00:53:40Z",
+              "finishedAt": "2026-09-19T00:58:30Z",
+              "log": "**리베이스 후 게이트 재실행(실제로 한 일).** `git rebase origin/main`: `9d6370d` → `792c8f4`, **충돌 0**. 다만 깨끗한 auto-merge는 집계 정합의 증거가 아니므로(자매 PR이 같은 문자열을 쓰면 충돌 없이 숫자가 틀어진다) 머지 트리에서 게이트를 직접 돌렸다.\n`792c8f4`에서 `check-journey-mockup.py` → **rc=0 PASS**. R10 ok(이관 4/6 · 여정 페이지 4 · 화면 단위 1 · 미시각화 3단계) · R11 ok(문서 목록 6건 == 실파일 6건) · **R1~R9 ok 집합이 `06ea1e7` 기준선과 동일** · 래칫 「미이관 2(상한 2) · 규칙 5 미충족 1(상한 1)」 **불변** · 링크 92건(기준선과 동일).\n자매 게이트 `scripts/check-mockup-render.py` → **rc=0**(값 충돌 0 · 목업 전용 0 · 구현 전용 0) — 화면 id 표 보존 요구가 #46의 네비 복원 변경과 함께 지켜졌음이 집행 장치로 확인된다.\nDOM 하네스 `check-journey-flow.js`는 이 환경에 node가 없어 로컬 실행 불가 — CI `docs / flow` 잡으로 대체(step 8)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T00:58:30Z",
+              "finishedAt": "2026-09-19T00:59:10Z",
+              "log": "**회귀 증명을 계획 시점이 아니라 실행 시점 main(`06ea1e7`) 대비로 재수행.** 정정한 두 문서만 `git checkout origin/main --` 로 되돌리고 새 게이트 실행 → **rc=1, FAIL 위반 3건**:\n  · [R11] 등재됐으나 미실재 `dashboard.html`·`trend.html`\n  · [R11] 실재하나 미등재 `JRN-daily-scan.html`\n  · [R10] 서술 숫자 **10건** 불일치 — `mockup-index.md:268`(3/6→4/6, 나머지 3개→2), `:270`(미시각화 4→3), `design-tracker.md:12`(여정 페이지 3→4, 화면 3→1), `:32`(이관된 3→4, 나머지 3→2), `:80`(여정 페이지 3→4, 화면 3→1), `:81`(여정 페이지 3→4) — 전부 행 번호와 함께 지목.\n정정본 복귀 → rc=0, 워킹트리 clean. 새 검사가 통과만 하는 장식이 아니라 이 결함을 실제로 집행함이, **자매 3건이 머지된 뒤의 문서 상태에서도** 재확인됐다."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T00:59:10Z",
+              "finishedAt": "2026-09-19T01:04:00Z",
+              "log": "PR은 계획 단계가 이미 열어 뒀으므로(#47) 이 step은 **리베이스된 head push → CI 재취득 → 머지**로 수행했다.\n⑴ push: `--force-with-lease=refs/heads/reconcile/journey-mockup-rct_20260918-0004:9d6370d…`(ls-remote로 잡은 실제 원격 SHA를 lease 기준으로 명시 — 원격추적 ref 없이 fetch한 브랜치는 lease 기준이 없어 무조건 거부되기 때문) → `9d6370d...792c8f4 (forced update)`.\n⑵ CI 재취득: `actions/runs?head_sha=792c8f42821fee30e08a3c796a55dcf4dc81fcf0`(**전체 SHA**) → run `35410921527` `Checks` **completed/success**. 잡 9개 — `docs / structure` success(R1~R11 정적 판정) · **`docs / flow` success**(DOM 하네스, 로컬에서 node 부재로 못 돌린 검증이 여기서 채워짐) · `render / render` · `ci / build` · `ci / e2e` · `image / publish (serving|batch)` · `required` 전부 success, `image / pin deploy images (main only)` skipped(정상 — main 전용).\n⑶ **머지 직전 base 재확인에서 main이 또 움직였다**: `06ea1e7` → `2acca02`(#49, `docs/econ-opinion-monitor-e2e-mocking-policy.md` +18/-7). 대상 파일은 아니지만 R8이 `docs/` 전체 링크를 세므로 가정하지 않고 **시험 머지 트리를 만들어 게이트를 다시 돌렸다** → rc=0 PASS, R10·R11 ok, 래칫 2·1 불변, **링크 92건 유지**.\n⑷ `mergeable` 재조회: 최초 `unknown`(비동기 판정) → 5회 폴링 전부 `true`/`clean`. squash 머지 실행 → **머지 커밋 `e7fbcae`**.\n주의사항 준수: `.github/workflows/` 무변경(push가 workflows permission으로 거부되지 않음) · 화면 id↔파일 표 무변경(자매 render 게이트 rc=0으로 확인) · 래칫 무변경."
+            }
+          ]
         }
       }
     ]
