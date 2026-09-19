@@ -2204,5 +2204,28 @@
       "assessedAt": "2026-09-19T01:50:00Z",
       "reason": "**작업 불필요 — 이번 트리거는 판정 축에 새 위반을 더하지 않았고, 실재하는 공백 6건은 전건 소유자가 있다.**\n\n⑴ **트리거 귀속과 무죄.** 창은 부모 `88f5b6f` → 트리거 `6875f5c`의 7커밋이다(부모에서 양 side versionScript 재실행이 저장 baseline과 바이트 동일 — `asIs ce604629` · `reg 65d69415`). 그중 내 축을 움직인 것은 **셋뿐**이고 전부 무죄다: `705ebe1`(#45)은 등재 집계만 이동(아래 ⑵), `111777c`(#43)은 `tests/e2e/k8s/batch/feed-double.yaml` **주석**만(정의가 `tests/e2e/k8s/`를 매칭 단위에서 명시 제외), `6875f5c`(#51)은 doc-tracker 월별 폴더 전환 + 그에 따른 `check_scenario_mapping.py` TRACKER 경로 1줄(정의가 「체커 자체는 매칭 단위가 아니다」로 명시 제외). **시나리오 집합은 창 전체에서 바이트 불변**(`sc:965459bb…` 동일)이고 **spec 파일 목록도 부모·트리거 대칭차집합 공집합**(14개) ⇒ 1:1 판정 공간의 양쪽이 모두 제자리다. 게이트는 부모·트리거 두 지점 모두 rc=0, 규칙 1~6 위반 0이며 그 카운터가 doc-tracker·내 독립 재계수와 **삼중 일치**한다.\n\n⑵ **공백 5→6은 악화가 아니라 설계된 복귀다.** `#45`(자매 `docs-impl`의 `rct_20260918-0004` 산출)가 AC3.5(대상별 추세 시계열 서빙+화면)를 착지시켜 `aggregation-viz#시나리오 5`의 관측 대상을 만들었고, 그 결과 그 시나리오가 규칙 6의 구현 대기에서 빠져나와 이 모델의 1:1 대상으로 돌아왔다(구현 대기 2→1 · 1:1 대상 18→19 · 공백 5→6, **매칭 13 불변**). 정의가 「구현이 착지하면 다음 감지에서 자동으로 1:1 판정 대상으로 복귀한다」고 적은 바로 그 경로이고, 등재 표·집계·gap-list가 그 이동을 스스로 기록하므로 규칙 5 위반도 아니다.\n\n⑶ **tracker 이설(#51)은 등재 소실이 아니다.** 레거시 단일 파일이 `docs/econ-opinion-monitor-doc-tracker/2026-09.md`로 이설됐고 versionScript가 설계대로 폴더 모드로 넘어갔다(값 형식이 40자 blob → 64자 섹션 sha256으로 바뀐 이유). 「## e2e 매핑」 절을 두 지점에서 떠서 `diff`하니 **유일한 차이가 `<!-- registry: … -->` 마커 1줄**이고 표·집계·gap-list·해소 경로는 바이트 그대로 이월됐다 ⇒ 정의의 「최신 월 파일에 그 섹션이 그대로 있어야 한다」 충족, 「전환 커밋에서 한 번 감지되는 것은 정상」에 정확히 해당.\n\n⑷ **결정타 — 공백 6건에 소유자가 있고, 그 소유자가 이번 트리거를 이미 흡수했다.** 같은 모델의 `rct_20260919-0001`이 `planning`으로 살아 있고(review 거부 후 planner 재점유, `updatedAt` 01:27:29Z) 5건(`analysis#4·5` · `aggregation-viz#1·2·4`)을 닫는 계획을 들고 있다. 준비된 PR **#50**을 실측하니 **내 트리거 위로 이미 리베이스돼 있다**: `base.sha = 6875f5c`(= 트리거 tip), head `50dfc496`의 부모가 `3ecf390`→`6875f5c`, doc-tracker 편집이 **새 폴더 경로로 이설**됐고 레거시 파일을 되살리지 않는다(`pr50:docs` ls-tree 확인 — 되살렸다면 versionScript는 레거시를, 게이트는 폴더를 읽어 두 SSOT 해석이 갈렸을 자리다). 현재 main 대비 **trial merge 충돌 0**, PR head에서 게이트 **rc=0 · 매칭 13→18 · 공백 6→1**. ⇒ 「계획이 더 이상 존재하지 않는 것을 대상으로 한다」는 신규 task 사유가 **성립하지 않는다**(측정 시점에 이미 해소돼 있었다). 남는 1건 `aggregation-viz#시나리오 5`는 그 계획이 「순수 서빙·시각화라 집계 하네스를 쓰지 않는다」는 근거로 명시 후속 처리한 건이고, 착지하면 `tests/e2e` 트리가 움직여 **재감지가 새 task로 잇는다**(경로 생존 확인) — 지금 경쟁 task를 여는 것은 중복 계상일 뿐이다.\n\n⑸ **유예(재확인)를 택하지 않은 이유.** 공백은 시간이 지나 사라지는 종류가 아니고, 이번 판정은 유예가 아니라 「소유자가 있다」는 확정이므로 파킹이 오답이다. 덧붙여 스키마에 `assessment.recheckAfter`가 없어 파킹 자체가 불가능하다(아래 부기).\n\n**부기(사용자 보고용, 이번 판정에는 영향 없음)**: `assessment.recheckAfter` 스키마 확장 필요 — control plane의 `reconciler-task-schema-updater` 몫. data plane은 스키마를 고치지 않으므로 지금은 유예 대신 즉시 판정한다.\n\n**baseline 전진**: 이 판정으로 양 side `lastObservedVersion`이 트리거 tip으로 전진해(claim 커밋에서 이미 기록) 같은 변화가 precheck를 다시 깨우지 않는다."
     }
+  },
+  {
+    "id": "rct_20260919-0003",
+    "toBeModelId": "tbm_econ-opinion-monitor-scenario-e2e",
+    "status": "assessing",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-19T02:49:04Z",
+      "asIs": {
+        "currentVersion": "22ec248d3ea7b95233e1c9dde98b1ed2ea771f4c",
+        "previousVersion": "f23a9ff19a6c79f082db2da56476e98bebfc08a0"
+      },
+      "toBe": {
+        "currentVersion": "sc:965459bbee867d0e1b346b543e8398d284c5578c27927c1efaedbbe5af475443 reg:efa62417ee50d2013cbe58bfb1031dc01d6e946afdbc93d08be50849e99a0d4b",
+        "previousVersion": "sc:965459bbee867d0e1b346b543e8398d284c5578c27927c1efaedbbe5af475443 reg:f701c21ee700586cf056354ecbc1eb75d540fb8ccabc1b46f05fe58456120b60"
+      },
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ]
+    },
+    "createdAt": "2026-09-19T02:49:04Z",
+    "updatedAt": "2026-09-19T02:49:04Z"
   }
 ]
