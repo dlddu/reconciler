@@ -8958,6 +8958,57 @@
       "reason": "**actionRequired=true — 「소비된 트리거가 잔여를 소유자 없이 남긴」형에, 이번에는 **직전 두 판정이 세지 않은 축 ⑵ 결함 1건**이 더해진다.** 내 as-is 트리거 `0b01f08`(#146)은 직전 task `rct_20260919-0002` 의 실행 산출이고 그 슬라이스는 **무죄이자 성공**이다(AC14 다섯 조항이 코드에 다 선다). 그럼에도 `action_required` 인 이유는 「트리거가 무죄인가」와 독립한 셋이다 — **잔여 8건 · 소유자 0 · 재감지 경로 0**.\n\n**닫는 근거 6종**\n\n⑴ **귀속이 기계적이다.** 부모 `286a091` 에서 두 versionScript 재실행이 저장 baseline(`internal:a4c29eec… main.go:9525c1ba…` · `docs:91aef1ed…`)과 **세 값 모두 바이트 동일**. 창 두 커밋을 side 별로 갈랐다 — as-is 무버는 **#146 하나**(#145 는 `-- internal main.go` diff 공집합), to-be 는 둘 다 기여. 판정 중 `ls-remote` 재판독도 `0b01f08` 그대로라 2파도 없이 측정이 살아 있다.\n\n⑵ **축 ⑴ 이 8 → 7 로 실제로 줄었고, 남은 7 이 정확히 세어진다.** `prd-resource-generic` AC14 가 닫혔다(쌍 `create on pods/portforward` 하나 · 단발 왕복 후 `defer conn.Close()` · 시간·바이트 상한 둘 · 승인 전 `-32602` 인자 거부 · 승인 context verbatim). 남은 7 = `resource_proxy`(AC15) + `prd-github-commit-status` AC1~AC6. 앞 하나는 `internal`+`main.go` 전수 grep **0히트**, 뒤 여섯은 도구 미등록이고 `internal/github` 의 히트는 **안내 문면과 그 문면을 단언하는 테스트**다.\n\n⑶ **축 ⑵ 가 0 → 1 로 열렸다 — 그리고 이것이 이번 판정의 새로운 부분이다.** 이미 프로덕션에서 서빙 중인 `resource_attach` 가 AC13 의 두 계약 중 하나를 깬다: `attach.go:91` 의 `strings.NewReader(*stdin)` 가 즉시 EOF 를 만들어 `readSeconds` 창을 0.016초로 걷는다. **근거는 내 추론이 아니라 대상 레포가 CI 로 관측해 문서에 적어 둔 실측**이다(tracker 시나리오 13 행 · run 35408563767: stdin 없는 접속 3.00초 vs stdin 실은 접속 0.016초 `stdout:\"\"`). 더 나쁜 것은 그것이 **성공 응답**이라(`isError:false`·`stdinWritten:true`) 어떤 자동 검사도 실패로 세지 않는다는 점이다. **직전 두 판정은 이 건을 세지 않았다** — 두 레코드 전문에 `AC13`·`stdin` **0히트**이고 축 ⑵ 를 「0건」으로 적었다(#140 의 등재는 `rct_20260919-0002` 의 창 *안*이었다 ⇒ 놓친 것이지 새로 생긴 것이 아니다).\n\n⑷ **소관이 문서에 못박혀 있다 — 발견 조작이 아니다.** tracker 시나리오 13 행의 담당 칸이 `docs-impl(제품 수정) → 그 뒤 이 렌즈(e2e 저작)` 이고, 해제 조건 ⑴ 이 처방까지 적는다(「페이로드를 한 번 흘린 뒤 **창의 `context` 가 끝날 때까지 EOF 를 미루는 리더**로 바꾸면 『한 번만 써 넣는다』는 그대로 유지된다」, 재발 방지 단언은 `AttachResource` 안이 아니라 **그 리더 자체**에 걸 것 — SPDY 실행기 없이 단위가 닿는 자리다). 코드 주석(`attach.go:31-34`)은 같은 동작을 「AC13 문자 그대로」라 주장하지만, 정의상 **문서가 SSOT** 이므로 tracker 의 제품-결함 판정이 이긴다.\n\n⑸ **축 ⑶·⑷ 는 초록이고 레포 게이트가 뒷받침하되, 초록은 이 gap 에 원리적으로 맹목이다.** 순수 python 게이트 4종이 **부모·tip 두 지점 모두 rc=0**, 값 이동은 #145 가 선언한 델타와 정확히 일치(`85·1·19·65·65·0·0` → `85·1·18·66·66·0·0`). tracker 집계(도구 23 · AC 85 · PRD 15 · 테스트 15 · 허브 49/49 · 잔여 「proxy 하나」)가 내 독립 재계수와 전건 일치. 그러나 **네 게이트 어느 것도 「AC 가 구현됐는가」(축 ⑴)·「구현이 AC 문면대로 동작하는가」(축 ⑵)를 재지 않는다** — 축 ⑵ 의 결함이 실물 CI 에서 성공으로 통과한 것이 그 증거다.\n\n⑹ **소유자 0 · 재감지 경로 0 이므로 지금 열지 않으면 아무도 보지 않는다.** 이 모델의 비-터미널 task 는 내 것 하나뿐이고, 같은 레포 자매 3모델은 **전부 터미널**이다. 잔여 7 은 미구현인 한 as-is 트리를 움직이지 않고, `attach.go` 는 누가 고치기 전까지 불변이다 ⇒ 이 gap 자신의 재트리거는 없다.\n\n**planner 로의 인계 — 세 묶음은 성격이 다르다. 섞지 말 것.**\n- **(A) 권고 기본값: `resource_attach` 의 AC13 stdin 창 수정(축 ⑵ 1건).** 이유 셋 — ⓐ **이미 서빙 중인 도구가 계약을 깬다**(미구현 AC 는 아무도 쓰지 못하지만 이것은 운영자가 승인을 태워 호출하면 조용히 빈 출력을 돌려준다) ⓑ **표면이 가장 작고 처방이 문서에 적혀 있다**(EOF 를 창 끝까지 미루는 리더 하나, 재발 방지 단언은 그 리더에) ⓒ **자매 축의 재저작을 막고 있는 선행**이다(시나리오 13 전용 e2e 판본은 PR #139 `aeb7d4d` 에 이미 있고, 제품 수정만 서면 그쪽이 바로 닫는다). ⚠️ 완료 기준에 **「`readSeconds=3` 접속이 stdin 유무와 무관하게 창을 지킨다」를 단위로 잴 수 있는 형태**를 명시할 것 — 이 호스트에 Go 도구체인이 없어 로컬 판정이 불가능하므로(직전 자매 시도 1 이 정확히 그 자리에서 막혔다) 단위가 SPDY 없이 닿는 리더 층에 단언을 거는 것이 실행 가능성의 전제다.\n- **(B) `resource_proxy`(AC15) 한 종 등록 — 축 ⑴ 의 유일한 코드로 열 수 있는 건.** 이 레포의 확립된 보폭은 「한 슬라이스 한 도구」(#127 `resource_attach` · #143 `resource_delete_collection` · #146 `resource_port_forward` 선례). 단 **선언 표면이 지금까지 중 가장 크다** — Pod·Service·Node 3종 × HTTP 메서드→verb 사상이라 쌍 집합이 인자마다 갈라지고, AC15 자신이 「`(verb, resource)` 쌍이 호출을 한정하지 못한다」고 자인한다. tracker 「수용된 위험」의 **RBAC 경계 소멸**(게이트 판정이 유일한 경계) 행을 착수 전에 읽을 것 — 선언 오류의 비용이 표면 크기에 정비례한다. 기댈 형판은 셋으로 늘었다(`exec`·`attach`·`port_forward` 의 discovery 확인·상한 둘·쌍 선언·승인 전 인자 거부).\n- **(C) `prd-github-commit-status` AC1~AC6 — 계획 대상이 아니라 사용자에게 올릴 선행 요청.** 「배포 순서」 ①(토큰 AC5, 닫힘) → **②(사람이 GitHub UI 에서 App 에 `Commit statuses: Read and write` 부여)** → ③(새 도구). ②가 서기 전에는 도구를 만들어도 CI 가 그 동작을 판정할 수 없어 **완료 기준으로 쓸 수 없다**(직전 두 판정과 같은 결론 — 3연속).\n\n**범위 밖(부채, 축이 다름)**: AC14 의 실물 왕복 관측(「같은 승인으로 두 번째 왕복 불가」)은 전용 e2e `resource_generic_ac14.py` 저작이라 자매 `tbm_homelab-k3s-mcp-scenario-e2e` 소관이고, 그 행은 ⏳ 로 남아 있다(집계 무이동, 중복 계상 아님).",
       "assessedBy": "agent",
       "assessedAt": "2026-09-19T03:11:53Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "이번 시도의 범위는 **축 ⑵(구현 ↔ 문서 불일치) 1건의 완전한 해소 하나**다 — `internal/k8s/attach.go` 가 `stdin` 이 주어지면 AC13 이 계약한 `readSeconds` 창을 깨는 결함을 고치고, 그 수정이 끌고 오는 원장·tracker 의무를 같은 PR 에서 닫는다. 이 경로를 고른 이유는 셋이다. ⑴ **처방이 문서에 이미 적혀 있다** — tracker 시나리오 13 행의 해제 조건 ⑴ 이 「페이로드를 한 번 흘린 뒤 창의 `context` 가 끝날 때까지 EOF 를 미루는 리더로 바꿀 것」과 「재발 방지 단언은 그 리더 자체에 걸 것(`execStreamOutcome` 선례)」까지 지정하므로, planner 가 설계를 새로 고를 자리가 없고 실행자는 문면을 따르면 된다. ⑵ **선행 조건이 코드 밖에 없다** — 축 ⑴ 의 잔여 7건 중 `prd-github-commit-status` AC1~AC6 은 사람이 GitHub UI 에서 App 에 `Commit statuses: Read and write` 를 부여하는 배포 순서 ②가 선행이라 코드만으로 완료 기준을 세울 수 없고, AC15(`resource_proxy`) 는 도구 한 종을 새로 세우는 큰 슬라이스다. 반면 이 건은 리더 타입 하나로 닫히고 자매 모델의 e2e 재저작을 **해금**한다. ⑶ **가역성이 가장 높다** — 변경 표면이 `internal/k8s/attach.go` 의 `opts.Stdin` 배선 한 줄 + 신규 타입 하나이고, 롤백은 `strings.NewReader` 로 되돌리는 것뿐이며 등록 도구 23종·AC 85·PRD 15·테스트 15 어느 집계도 움직이지 않는다.\n\n**완료 기준(이 범위 안)** — 다음 다섯이 모두 성립하면 이 task 는 성공이다: ⓐ `internal/k8s/attach.go` 가 `stdin` 이 주어져도 `readSeconds` 창 만료(또는 바이트 상한에 의한 조기 취소)까지 원격 stdin 스트림을 열어 둔다, ⓑ 「한 번만 써 넣는다」가 유지된다(페이로드는 정확히 한 번, 순서대로, 그 뒤 재전송 없음), ⓒ 재발 방지 단언이 **리더 자체**에 걸려 SPDY 실행기 없이 단위로 돈다, ⓓ `attach.go:31-34` 의 주석이 더 이상 결함을 「AC13 문면 그대로」라 주장하지 않고, 주석 원장이 그 범위를 재판정해 게이트가 초록이다, ⓔ tracker 시나리오 13 행이 해제 조건 ⑴ 을 충족으로 기록하고 차단을 ⑵(e2e 저작) 하나로 좁히되 ⏳ 를 유지해 집계가 무이동이다.\n\n**범위 밖(후속)** — 축 ⑴ 미구현 AC 7건(`prd-resource-generic` AC15 프록시 1건, `prd-github-commit-status` AC1~AC6 6건: 후자는 사람의 App 권한 부여가 선행), 그리고 tracker 해제 조건 ⑵ 인 전용 e2e `resource_generic_ac13.py` 재저작 — 그 행의 담당 칸이 「docs-impl(제품 수정) → 그 뒤 이 렌즈(e2e 저작)」 로 소관을 자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 에 명시적으로 넘긴다. 이 셋은 재감지가 새 task 로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "main tip(`0b01f08`, 감지 시점 as-is `internal:14084f6b… main.go:9525c1ba…` · to-be `docs:c5a4bb35…` 와 바이트 동일)에서 브랜치 `reconcile/rct_20260919-0003-docs-impl-attach-stdin-window` 를 딴다. 모델 조각을 이름에 넣는 이유는 한 레포를 네 모델이 추적해 `reconcile/<rct_id>` 만으로는 자매 모델 PR 과 충돌하기 때문이다(기존 브랜치 `reconcile/scenario-e2e-rct_20260918-0004` 가 그 예).",
+              "expectedOutcome": "브랜치가 `0b01f08` 을 base 로 서고, 열린 PR 0건이 확인돼(실측) 겹칠 자매 슬라이스가 없다."
+            },
+            {
+              "seq": 2,
+              "action": "`internal/k8s/attach.go` 에 창을 지키는 리더 타입 `attachStdinReader{payload []byte; off int; done <-chan struct{}}` 를 추가한다. `Read` 는 페이로드가 남아 있으면 그만큼 복사해 돌려주고, 다 흘린 뒤에는 `<-r.done` 으로 막힌 채 창이 끝나기를 기다렸다가 `0, io.EOF` 를 돌려준다. 그리고 `opts.Stdin` 배선을 `strings.NewReader(*stdin)` 에서 `&attachStdinReader{payload: []byte(*stdin), done: ctx.Done()}` 으로 바꾼다 — `done` 은 58행에서 `readSeconds` 로 파생한 그 `ctx` 의 것이라 창 만료와 바이트 상한 조기 취소(`stdoutBuf.onFull = cancel`) 양쪽에 함께 풀린다. 쓰이지 않게 된 `strings` import 를 빼고 `io` 를 넣는다.",
+              "expectedOutcome": "`stdin` 이 실린 접속에서 client-go 의 stdin 복사 goroutine 이 창이 끝날 때까지 EOF 에 닿지 않으므로 원격 stdin 스트림이 닫히지 않고, 서버가 그 닫힘을 접속 종료로 읽을 일이 없어 창이 끝까지 산다. 창이 풀리면 리더가 EOF 를 돌려주므로 그 goroutine 도 같이 끝난다(누수 없음). `gofmt -l` 이 이 파일을 내지 않고 `go vet ./internal/k8s` 가 조용하다."
+            },
+            {
+              "seq": 3,
+              "action": "신규 `internal/k8s/attach_test.go` 에 **리더 자체**에 걸리는 단언을 쓴다(패키지 `k8s`, SPDY 실행기·클러스터 불필요): ⑴ 페이로드를 정확히 한 번·순서대로 흘리고 그 동안 EOF 에 닿지 않는다, ⑵ 다 흘린 뒤 `Read` 가 `done` 이 닫히기 전에는 돌아오지 않고 닫힌 뒤 `0, io.EOF` 를 돌려준다, ⑶ 빈 `stdin`(`\"\"`)도 즉시 EOF 가 아니라 창이 끝날 때까지 스트림을 열어 둔다. 단언을 `AttachResource` 안에 두지 않는 이유는 tracker 가 지목한 그대로다 — 분류를 그 안에 두면 SPDY 실행기 없이는 단위가 닿지 못해 결함이 실물 왕복 전까지 감시되지 않는다(`execStreamOutcome` 선례).",
+              "expectedOutcome": "`go test ./internal/k8s/ -run TestAttachStdinReader -v` 가 세 부분테스트 모두 PASS. 결함 버전(`strings.NewReader`)으로 되돌리면 ⑵·⑶ 이 실패한다 — 즉 이 단언이 재발을 실제로 잡는다."
+            },
+            {
+              "seq": 4,
+              "action": "`internal/k8s/attach.go:31-34` 의 주석을 재작성한다. 현재 문면은 이 동작을 「AC13 이 말하는 대로 문자 그대로」라 적어 **결함을 정당화**하고 있으므로(정의상 문서가 SSOT 이고 tracker 가 같은 동작을 제품 결함으로 판정했다) 그대로 둘 수 없다. 새 문면은 ⓐ 페이로드를 한 번만 쓴다는 계약이 유지된다는 것, ⓑ 즉시 EOF 가 왜 창을 무효로 만드는지(client-go 의 stdin 복사 종료 → 원격 stdin 스트림 닫힘 → 서버가 접속 종료로 읽음), ⓒ 달라지는 것은 대상 프로세스가 EOF 대신 침묵을 보는 것뿐이고 AC13·PRD 어느 쪽도 EOF 를 계약하지 않는다는 것을 담는다.",
+              "expectedOutcome": "주석이 코드가 실제로 하는 일과 그것을 고른 이유를 적고, AC13 문면과 어긋나지 않는다(축 ⑵ 의 「코드 주석이 문서와 어긋나 있다」 부분이 함께 닫힌다)."
+            },
+            {
+              "seq": 5,
+              "action": "주석 비중복성 원장(`docs/comment-policy/ledger.md`)을 **같은 PR 에서** 재판정한다. 2026-09-18 행(범위 `internal/k8s/attach.go` · `internal/mcp/attach.go` · `internal/mcp/attach_test.go`, 등재 65줄 · 지문 `5b986dac5727`)이 대상이다. ⓐ 범위에 신규 `internal/k8s/attach_test.go` 를 더한다(다른 행에 그 경로가 없어 R3 이중 등재에 걸리지 않고, 어느 행에도 없으면 R4 의 「합계 + 잔량 == 실측 전체」가 깨진다 — 현재 잔량 0), ⓑ `python3 scripts/check_comment_policy.py` 를 돌려 실패 메시지가 내놓는 실측 줄 수·지문으로 2·4열을 갱신, ⓒ 판정 칸의 항목 ⑵ 「stdin 을 한 번만 쓰는 이유 — 페이로드만 건넨 리더는 쓰고 EOF 라…」를 개정한다(그 문장이 지금 결함의 근거로 서 있다), ⓓ `<!-- 판정-합계 -->` 마커를 새 행 합으로 갱신하고 `<!-- 판정-잔량 -->` 은 0 을 유지한다.",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` rc=0 (R1~R4·R5~R8 위반 0). 지문은 게이트가 제 함수로 계산한 값을 쓴다 — 손으로 `sha256sum` 을 흉내내지 않는다(추출·정규화·정렬·무개행 join 이 전부 일치해야 한다)."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/doc-tracker/2026-09.md` 의 구현 대기 표에서 `test-resource-generic.md#시나리오 13` 행을 갱신한다 — 해제 조건 ⑴(제품 수정)이 이 PR 로 충족됐음을 그 PR 번호·근거와 함께 적고, 남은 차단을 ⑵(전용 e2e `resource_generic_ac13.py` 재저작, 소관은 `tbm_homelab-k3s-mcp-scenario-e2e`) 하나로 좁힌다. **상태 표기 ⏳ 는 유지한다** — 시나리오가 전용 e2e 로 닫히지 않았으므로 레지스트리 행(`⏳ 구현 대기 (규칙 6 — 제품 결함)`)도 그대로 두고, 그래서 `check_ac_mapping.py` 의 집계(1:1 대상 66 · 매칭 66 · 공백 0)는 무이동이다. #146 이 시나리오 17 행에 ⟨2026-09-19 갱신⟩ 을 덧붙여 차단만 좁힌 것과 같은 형태다.",
+              "expectedOutcome": "`python3 tests/integration/check_ac_mapping.py` rc=0 이고 집계 숫자가 base 와 동일(`85·1·18·66·66·0·0`). tracker 가 다음 슬라이스(e2e 저작)의 입력으로 정확한 상태를 들고 있다."
+            },
+            {
+              "seq": 7,
+              "action": "순수 python 게이트 4종을 로컬에서 전수 실행해 rc=0 을 확인한다 — `scripts/check_comment_policy.py` · `scripts/check_mock_policy.py` · `scripts/check_doc_inventory.py` · `tests/integration/check_ac_mapping.py`. Go 게이트(`gofmt`·`go vet`·`go test ./...`)와 kind e2e 는 **호스트에 Go 툴체인이 없어 로컬 dry-run 이 불가**하므로 CI 가 유일한 집행자다.",
+              "expectedOutcome": "python 4종 rc=0. base(`0b01f08`)에서 같은 4종이 이미 rc=0 임을 실측했으므로, 이 단계의 rc=0 은 내 변경이 그 넷을 깨지 않았다는 뜻이다."
+            },
+            {
+              "seq": 8,
+              "action": "커밋·푸시하고 PR 을 연다(머지하지 않는다). PR 본문에 task id, gap 요약(축 ⑵ 1건), 계획 단계, 검증 방법, 범위 밖 후속을 적는다. 그 뒤 `actions/runs?head_sha=<전체 SHA>` 로 CI 런을 찾아 `ci passed` 집계 체크까지 초록을 확인한다(축약 SHA 는 빈 배열을 돌려준다).",
+              "expectedOutcome": "PR 이 열리고 `mergeable_state` 가 clean, CI 의 lint(python 4종 + gofmt/vet) · go test · kind e2e · `ci passed` 가 모두 성공. 실행 단계는 이 초록 위에서 머지만 하면 된다."
+            }
+          ],
+          "plannedAt": "2026-09-19T03:22:00Z"
+        }
+      }
+    ]
   }
 ]
