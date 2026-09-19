@@ -26,7 +26,7 @@
 | `{{IMPL_DESC}}` | 구현 디렉터리와 역할 | `app/` RN 앱 · `backend/` Go API · `worker/` Go 워커 |
 | `{{IMPL_PATHS}}` | as-is 버전 범위 디렉터리 목록 | `app`, `backend`, `worker` |
 | `{{OUT_OF_SCOPE}}` | as-is 범위에서 빼는 것(운영·검증·빌드 인프라)과 이유 | `e2e/`·`k8s/`·`scripts/`·compose·`CLAUDE.md` |
-| `{{TRACKER_PATH}}` | 문서 체계 상태 추적 파일 [선택] | `docs/doc-tracker.md` |
+| `{{TRACKER_PATH}}` | 문서 체계 상태 추적 [선택]. 레거시 파일 형태로 적는다 — 월별 폴더(`<경로에서 .md 뗀 것>/`)면 최신 `YYYY-MM.md`를 뜻한다(README 「doc-tracker 경로 해석」) | `docs/doc-tracker.md` |
 | `{{IMPL_EXCEPTIONS}}` | "문서 없는 구현"의 명시적 예외 [선택] | (tessera의 auto-update처럼 제품 가치 밖 플랫폼 인프라) |
 | `{{DRAFT_POLICY}}` | draft PRD 취급 [선택] | draft PRD-009는 확정 전까지 to-be 제외 |
 | `{{INITIAL_STATE}}` | 등록 시점 **스냅샷**: 구현 수준 + 규모 숫자 | 확정 PRD-001~008의 AC 55개, 프로덕션 운영 중 — 최초 gap 산정은 첫 task 몫 |

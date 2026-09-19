@@ -148,3 +148,75 @@ definition을 크게 개정할 일이 생기면 템플릿 구조로 수렴시키
 건드리지 않는다 — 전환 뒤 첫 감지에서 to-be가 옛 blob hash에서 `absent`로 바뀐 것이 트리거가 되고,
 그 task가 대상 레포의 단일 파일을 디렉터리로 옮긴다. 대상 레포에서 이 모델의 task가 실행 중이면
 실행자의 수렴 검증이 바뀐 스크립트를 읽지 않도록 그 task가 닫힌 뒤에 전환한다.
+
+## doc-tracker 경로 해석 (월별 폴더 대응)
+
+`product-doc-engineer`는 문서 체계 상태 추적을 단일 파일(`<x>-doc-tracker.md`)이 아니라
+**폴더 아래 월별 파일**(`<x>-doc-tracker/` + `index.md` + `YYYY-MM.md`)로 관리한다. 여러 유형이
+tracker 안의 섹션(e2e 매핑·예외·구현 대기 표, 모킹 경계 레지스트리, 여정 mockup 예외, 목업↔구현
+편차 허용목록 등)을 SSOT로 쓰므로, 모델은 두 형태를 모두 읽을 수 있어야 한다. 규약은 다음과 같다.
+
+- **경로 슬롯은 레거시 파일 형태로 적는다**(`docs/doc-tracker.md`). 폴더는 그 경로에서 `.md`를
+  뗀 것(`docs/doc-tracker/`)으로 유도한다 — `product-doc-engineer`의 전환 절차가 이 이름을 보장한다.
+  처음부터 폴더로 시작한 레포도 슬롯에는 `<폴더>.md`를 적는다.
+- **레거시 파일이 있으면 기존 방식 그대로**(blob 해시 또는 섹션 추출) 버전을 낸다. 전환 전까지 버전
+  값이 바이트 동일해야 불필요한 재감지가 없다.
+- **폴더 모드**에서는 가장 최근 `YYYY-MM.md`(`index.md`가 아니다)에서 **등재 섹션만** 잘라
+  sha256을 낸다. 파일 전체나 폴더 트리 해시를 쓰지 않는다 — 월 파일은 요약·위험·변경 이력이 매번
+  바뀌고, 월 경로 자체도 달마다 바뀐다. 등재 섹션은 `<!-- registry: <tbm id> -->` 표식과 함께
+  롤오버 때 **바이트 그대로 이월**되므로(스킬 규약), 등재 내용이 같으면 해시도 같다.
+- 섹션 = 제목 줄부터 같은 레벨 이상의 다음 제목 직전까지(하위 제목 포함, 코드 블록 안 `#` 줄 무시).
+  제목은 **접두 일치**로 찾는다. 폴더·월 파일·섹션이 없으면 `absent`(조용한 상수 금지).
+- 전환 커밋에서 버전이 한 번 바뀌는 것은 정상이다(기준이 파일 전체 → 섹션으로 바뀐다).
+- 등재 SSOT가 tracker 안에 있는 모델은 definition에 "폴더 모드에서는 최신 월 파일의 「<섹션>」"을
+  명시하고, 대상 레포의 그 섹션에 표식이 달려 있는지 확인한다.
+
+versionScript에는 아래 조각을 `set -euo pipefail` 바로 다음에 **그대로** 붙이고 쓴다(런타임에
+공유 라이브러리가 없으므로 인라인 복사가 원본이다 — 고칠 때는 여기와 사용 중인 모델을 함께 고친다).
+
+```bash
+# ── doc-tracker 해석 (templates/README.md 「doc-tracker 경로 해석」 공통 조각 — 수정 시 그쪽과 함께) ──
+# 레거시 단일 파일(<x>.md)이 HEAD에 있으면 그대로 쓴다(기존 버전 값과 바이트 동일 유지).
+# 없으면 월별 폴더 모드: <x>/ 아래 가장 최근 YYYY-MM.md 에서 등재 섹션만 잘라 해시한다.
+# 등재 섹션은 product-doc-engineer 규약상 롤오버 때 바이트 그대로 이월되므로, 달이 바뀌어도
+# 섹션 내용이 같으면 해시가 같다(월 파일 경로는 버전에 넣지 않는다).
+tracker_has_legacy() { git cat-file -e "HEAD:$1" 2>/dev/null; }
+tracker_month() {  # $1 = 레거시 경로 → 폴더 모드의 최신 월 파일 경로(없으면 빈 출력)
+  local dir="${1%.md}" f
+  f="$(git ls-tree --name-only "HEAD:$dir" 2>/dev/null | grep -E '^[0-9]{4}-[0-9]{2}\.md$' | LC_ALL=C sort | tail -n1 || true)"
+  if [ -n "$f" ]; then printf '%s/%s\n' "$dir" "$f"; fi
+}
+tracker_section() {  # $1 = 파일 경로, $2 = 제목 접두(예: '## e2e 매핑') → 섹션 본문
+  # 섹션 = 제목 줄부터 같은 레벨 이상(# 개수 ≤)의 다음 제목 직전까지. 코드 블록 안의 # 줄은 제목이 아니다.
+  git show "HEAD:$1" 2>/dev/null | awk -v t="$2" '
+    /^(```|~~~)/ { fence = !fence }
+    function lvl(s) { match(s, /^#+/); return RLENGTH }
+    !f && !fence && index($0, t) == 1 { f = 1; L = lvl($0); print; next }
+    f && !fence && /^#+ / && lvl($0) <= L { exit }
+    f { print }' || true
+}
+tracker_registry_hash() {  # $1 = 레거시 경로, $2 = 폴더 모드 등재 섹션 제목 접두 → sha256 | absent
+  local m sec
+  m="$(tracker_month "$1")"
+  if [ -z "$m" ]; then echo absent; return; fi
+  sec="$(tracker_section "$m" "$2")"
+  if [ -z "$sec" ]; then echo absent; return; fi
+  printf '%s' "$sec" | sha256sum | cut -d' ' -f1
+}
+# ── /doc-tracker 해석 ──
+```
+
+사용 예(scenario-e2e 조합형의 reg 성분):
+
+```bash
+TRACKER={{TRACKER}}
+if tracker_has_legacy "$TRACKER"; then
+  t="$(git rev-parse "HEAD:$TRACKER")"                        # 레거시: 기존 값 그대로
+else
+  t="$(tracker_registry_hash "$TRACKER" '{{REG_TITLE}}')"      # 폴더: 최신 월 파일의 등재 섹션
+fi
+```
+
+2026-09 도입 시점에 tracker를 버전에 쓰는 기존 모델 9개(scenario-e2e 6, `tbm_dear-baby-e2e-mock-policy`,
+`tbm_feature-doc-journey-mockup`, `tbm_tessera-journey-mockup`)를 이 조각으로 옮겼고, 대상 레포
+전부가 아직 단일 파일이라 **레거시 모드 출력이 기존 스크립트와 바이트 동일함**을 실측으로 확인했다.

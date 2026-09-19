@@ -48,7 +48,7 @@ definition이 사실과 어긋난다. 숫자는 definition의 "등록 시점 현
 | `{{MAPPING_SSOT}}` | 여정↔mockup 매핑을 기계적으로 확인하는 곳(인덱스) | `docs/mockup-index.md` |
 | `{{HARNESS}}` | 규칙 5를 집행하는 DOM 하네스와 그 CI 게이트 | `tools/journey-prototype.test.mjs` + `.github/workflows/docs-journey-mockup.yml` |
 | `{{HUB}}` | Pages 진입 허브(인덱스의 반영물) | `docs/index.html` |
-| `{{EXCEPTION_SSOT}}` | 여정 예외·비-여정 페이지 등재 위치 | `docs/doc-structure-state.md`의 "여정 mockup 예외" 섹션 |
+| `{{EXCEPTION_SSOT}}` | 여정 예외·비-여정 페이지 등재 위치. doc-tracker 안이고 to-be에 묶으면 README 「doc-tracker 경로 해석」 조각을 쓴다(구현 예: `tbm_feature-doc-journey-mockup`) | `docs/doc-structure-state.md`의 "여정 mockup 예외" 섹션 |
 | `{{EXCLUDED_STATES}}` | 판정 대상에서 빼는 여정 상태 | `폐기`(무조건), `초안`(예외 등재 시) |
 | `{{TOBE_EXTRA}}` | to-be 버전에 함께 묶을 파일 [선택] | `docs/doc-structure-state.md` blob(예외 등재 변경도 감지) |
 | `{{ASIS_COMMON}}` | as-is 경로들의 공통 상위(dataSource.subPath) | `docs` |

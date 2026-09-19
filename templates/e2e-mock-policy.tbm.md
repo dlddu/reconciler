@@ -21,7 +21,7 @@
 | `{{SLUG}}` | id·이름용 소문자 레포명 | `kubernetes-dashboard` | `dear-baby` |
 | `{{REAL_BASELINE}}` | "실제로 구동한다"의 기준선(실환경 하네스) | kind 실클러스터 + 실 fixture | 실 백엔드·Postgres·Redis·MinIO + `reset-user`/`seed-diary` 시드 |
 | `{{MOCK_KINDS}}` | 이 레포에서 "모킹"으로 세는 것 | Playwright 네트워크 인터셉트(`page.route` 계열) | 빌드타임 E2E 플래그, fixture 구현체, 외부 서비스 mock 서버 |
-| `{{POLICY_SSOT}}` | 정책·허용목록의 위치 (파일 또는 파일 내 섹션) | `docs/e2e-mocking-policy.md` | `docs/doc-tracker.md`의 "외부 호출 모킹 경계 레지스트리" 섹션 |
+| `{{POLICY_SSOT}}` | 정책·허용목록의 위치 (파일 또는 파일 내 섹션) | `docs/e2e-mocking-policy.md` | `docs/doc-tracker.md`(월별 폴더면 최신 월 파일)의 "외부 호출 모킹 경계 레지스트리" 섹션 |
 | `{{CATEGORIES}}` | 허용 예외 카테고리 체계 | `ERR`·`LAT`·`ABS`·`DES` 코드 | 외부 호출 경계 ID `MB-N` |
 | `{{FORBIDDEN}}` | 명시적 불허 | 데이터 모킹, 플레이키 회피, 백엔드 미구현 우회 | 〃 (대상에 맞게) |
 | `{{ANNOTATION}}` | 코드 쪽 표기 규약 | `// mock-exception: <CODE> — <사유>` | `// mock-exception: MB-N — <사유>` |
@@ -91,6 +91,10 @@ export LC_ALL=C
 SEC=$(git show "HEAD:{{POLICY_SSOT의 파일}}" 2>/dev/null \
   | awk '/^### <섹션 제목>/{f=1; print; next} f && /^##/{exit} f{print}')
 if [ -z "$SEC" ]; then echo "absent"; exit 0; fi
+# ↑ 문서가 doc-tracker면 README 「doc-tracker 경로 해석」 조각을 붙이고 SEC를 이렇게 구한다:
+#   레거시 파일이 있으면 위 awk 그대로, 없으면
+#   M_FILE="$(tracker_month "$TRACKER")"; SEC=""; [ -n "$M_FILE" ] && SEC="$(tracker_section "$M_FILE" '### <섹션 제목>')"
+#   (구현 예: tbm_dear-baby-e2e-mock-policy). 이때 dataSource.subPath는 tracker의 상위 디렉터리로 둔다.
 echo "entries=$(printf '%s\n' "$SEC" | grep -cE '<등재 행 패턴>' || true)"   # 진단용
 printf '%s' "$SEC" | sha256sum | cut -d' ' -f1
 ```

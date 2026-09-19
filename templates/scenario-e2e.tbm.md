@@ -46,11 +46,12 @@ E2E가 관측할 대상 자체가 없는 시나리오는 이 모델의 drift가 
 | `{{E2E_UNIT}}` | 매칭 단위(파일 유형·위치) | `e2e/` 최상위 `*.spec.ts` (Playwright) |
 | `{{NON_UNIT}}` | E2E 루트 안이지만 매칭 단위가 아닌 것 | `e2e/helpers/`·`e2e/k8s/`(공유 헬퍼·픽스처) |
 | `{{MAPPING_SSOT}}` | 시나리오↔파일 매핑을 기계적으로 확인하는 곳 | 각 시나리오의 `자동화:` 필드 (또는 파일 헤더의 `검증 시나리오:` 선언) |
-| `{{EXCEPTION_SSOT}}` | 예외·구현 대기·비-시나리오 파일 등재 위치 | `docs/product/doc-tracker.md`의 "e2e 매핑" 섹션 |
+| `{{EXCEPTION_SSOT}}` | 예외·구현 대기·비-시나리오 파일 등재 위치. tracker 안이면 "(월별 폴더면 최신 월 파일의) 「섹션」"으로 적는다 | `docs/product/doc-tracker.md`(월별 폴더면 최신 월 파일)의 "e2e 매핑" 섹션 |
 | `{{SIBLING_DOCS_IMPL}}` | 미구현 기능의 구현을 담당하는 자매 docs-impl 모델 id | `tbm_kubernetes-dashboard-docs-impl` (없으면 "담당 모델 미등록") |
 | `{{NON_SCENARIO_TYPES}}` | 허용하는 비-시나리오 파일 유형 [선택] | 스모크/인프라(health, 부팅 배선) |
 | `{{EXCEPTION_HINTS}}` | 예외 목록 후보(자동화 곤란 시나리오 유형) | 푸시 실수신, 실물 배송, AI 산출물 품질, 외부 OAuth |
-| `{{TOBE_EXTRA}}` | to-be 버전에 함께 묶을 파일 [선택] | `docs/product/doc-tracker.md` blob 해시(예외 등재 변경도 감지) |
+| `{{TOBE_EXTRA}}` | to-be 버전에 함께 묶을 등재 파일 [선택]. doc-tracker면 레거시 파일 형태로 적고 `{{REG_TITLE}}`과 함께 tracker 조각을 쓴다 | `docs/product/doc-tracker.md` (레거시: blob 해시 / 월별 폴더: 등재 섹션 해시) |
+| `{{REG_TITLE}}` | `{{TOBE_EXTRA}}`가 doc-tracker일 때, 폴더 모드에서 해시할 등재 섹션 제목 접두 [선택] | `## e2e 매핑` |
 | `{{INITIAL_STATE}}` | 등록 시점 **스냅샷**: 다대다 정도, 공백·묶음·중복 예시 | 시나리오 54 vs spec 12, 묶음·중복 존재 |
 | `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
 
@@ -117,8 +118,14 @@ git rev-parse "HEAD:{{TEST_DOCS_PATH}}"
 # 파일이 새로 추가돼도 정규식이 자동 포함한다. ls-tree 출력은 경로 정렬이라 결정적이다.
 # 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
 set -euo pipefail
+# (TOBE_EXTRA가 doc-tracker면 여기에 README 「doc-tracker 경로 해석」 조각을 붙인다)
 s="$(git ls-tree -r HEAD -- {{TEST_DOCS_DIR}} | grep -E '{{TEST_DOCS_RE}}' | sha256sum | cut -d' ' -f1)"
-t="$(git rev-parse "HEAD:{{TOBE_EXTRA}}")"
+TRACKER={{TOBE_EXTRA}}
+if tracker_has_legacy "$TRACKER"; then
+  t="$(git rev-parse "HEAD:$TRACKER")"
+else
+  t="$(tracker_registry_hash "$TRACKER" '{{REG_TITLE}}')"
+fi
 printf 'sc:%s reg:%s\n' "$s" "$t"
 ```
 
@@ -170,7 +177,7 @@ git rev-parse "HEAD:{{E2E_PATH}}"
 **이 루프의 산출물은 E2E 테스트와 등재 문서뿐이다.** 계획이 화면·엔드포인트·비즈니스 로직의 신설이나 동작 변경을 포함하게 되면 경계를 넘었다는 신호이므로, 그 슬라이스를 중단하고 규칙 6의 구현 대기 등재로 전환한다. 예외는 사용자에게 보이는 동작을 바꾸지 않는 **최소 테스트 계측**(testID·테스트 훅·픽스처·CI 배선)뿐이며, 계획에 그 사실과 무변경 근거를 명시한다.
 
 ## 추적 방식 (요약)
-- **to-be** = github `{{REPO}}` `{{TEST_DOCS_PATH}}` 트리·blob 해시<!-- [선택] TOBE_EXTRA 쓰면 --> + `{{TOBE_EXTRA}}` blob 해시 조합(시나리오 집합 또는 예외/매핑 등재가 바뀌면 변함). **PRD·가치 문서 변경은 이 모델을 트리거하지 않는다.**
+- **to-be** = github `{{REPO}}` `{{TEST_DOCS_PATH}}` 트리·blob 해시<!-- [선택] TOBE_EXTRA 쓰면 --> + `{{TOBE_EXTRA}}` 지문 조합(레거시 파일이면 blob 해시, 월별 폴더면 최신 월 파일의 「{{REG_TITLE}}」 섹션 해시)(시나리오 집합 또는 예외/매핑 등재가 바뀌면 변함). **PRD·가치 문서 변경은 이 모델을 트리거하지 않는다.**
 - **as-is** = github `{{REPO}}` `{{E2E_PATH}}` 하위 트리 해시(파일 추가·수정·삭제 시 변함).
 - 어느 한쪽 버전이 바뀌면 task가 생성되어 1:1 매칭을 재검증한다.
 
