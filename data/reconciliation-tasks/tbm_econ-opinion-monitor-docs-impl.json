@@ -2384,6 +2384,81 @@
           "reason": "거부 — 계획의 절단과 구현 자체는 타당하나 **준비물이 상했다(베이스 이동)**. 브랜치는 main `a62eae1` 위에서 떴는데 그 뒤 main에 3커밋이 들어왔다: #41 `0125cae`(22:18) · #42 `e29dddd`(22:34) · #44 `feb454b`(자매 `rct_20260918-0005` 산출). PR #45의 유일한 CI 런(`Checks` id=35401507513, 22:25:53Z, `required` success)은 **#42·#44보다 앞서** 돌았고 `on: pull_request`는 베이스가 움직여도 재실행되지 않는다(push 0건, `updated_at`이 생성시각 그대로) ⇒ 그 초록은 낡았다. GitHub이 보고한 `mergeable_state: clean`도 #44 착지 이전 값이다.\n\n**추정이 아니라 실행으로 확인했다.** origin/main을 PR head에 로컬 시험 머지한 결과 `docs/econ-opinion-monitor-doc-tracker.md`에 **충돌 3덩이**(카운터 블록·`gap-list` 마커·「공백 해소 경로」 표)가 났고, 충돌을 뺀 나머지 머지 트리에서 `python3 scripts/check-mockup-render.py .`가 **rc=1**로 떨어진다 — `FAIL [R3] BUILT 의 화면 trend 가 mockup 인덱스에 디자인 시스템 항목 절을 갖지 않는다`. #42가 `docs/mockups/trend.html`을 **삭제**하고 `trend`를 `JRN-daily-scan.html`로 흡수하면서 인덱스에서 그 화면의 항목 절이 사라졌는데, 이 PR이 `trend`를 `BUILT`에 넣어 그 화면을 게이트 판정 범위로 끌어들이기 때문이다. 즉 지금 머지하면 필수 체크가 빨개진다(현재 main 단독으로는 게이트 3종 전건 rc=0 — 깨는 것은 이 PR이다).\n\n불가역성·위험 통제 축은 문제없다: 배포 매니페스트 무접촉, `BUCKET_UNIT`·`suspend: true` 무접촉, 롤백은 머지 전 브랜치 폐기 / 머지 후 revert 1커밋으로 executionGuide에 구체적으로 적혀 있다. 거부 사유는 오직 전제 신선도다.",
           "comment": "구현 축(Go 서빙 + `Trend.tsx` + 테스트)은 살려서 재사용할 것. 고쳐야 할 것은 **원장 2건과 베이스**다.\n\n1) **`git rebase origin/main` (현재 tip `feb454b`)**. executionGuide §4가 예고한 「나중에 머지되는 쪽이 rebase」가 실제로 발생했다 — 자매 `rct_20260918-0005`가 #41·#44로 먼저 착지했다.\n\n2) **`design-tracker.md` 판정 절을 새 목업 실측으로 다시 쓸 것.** 현재 초안은 삭제된 파일을 근거로 삼는다 — 「`trend` 가 선언한 9종」·「목업 `trend.html` 의 인라인 `<style>`」·「화면 목업 `trend.html` 의 `<table>` 도 0건」은 `docs/mockups/trend.html`이 main에서 사라져(참조 0건) 전부 검증 불가다. 실측 기준은 이제 `JRN-daily-scan.html`이고, 그 인덱스의 귀속 표는 `STP-drill-trend`(라인 차트 + **상위 대상 비교 표**)·`STP-shortlist`를 `trend`에 귀속시킨다 — 표가 0건이라는 전제가 뒤집히므로 `CMP-table` 사유도 그 위에서 다시 판단할 것.\n\n3) **게이트 R3 실패를 닫을 것(필수).** `trend`를 `BUILT`에 넣으려면 `docs/mockups/econ-opinion-monitor-mockup-index.md`의 「화면 → 여정 단계 → 가치 → 디자인 시스템 항목」 절에 `trend` 화면의 **디자인 시스템 항목 절**이 있어야 한다(#42가 화면 파일 삭제와 함께 걷어갔다). 다만 그 인덱스는 to-be(목업) side SSOT라 손대면 이 모델의 재감지를 새로 연다 — 인덱스를 고칠지, 아니면 `trend`의 `BUILT` 편입을 그 절이 복구되는 슬라이스까지 미룰지를 **계획 단계에서 먼저 결정**할 것. 이 결정이 이 슬라이스가 성립하는지 자체를 가른다.\n\n4) **`doc-tracker.md` 카운터를 새 main 실측으로 다시 계산할 것.** 초안은 `구현 대기 1 · 1:1 대상 19 · 매칭 9 · 공백 10`이지만 현재 main은 `구현 대기 2 · 1:1 대상 18 · 매칭 13 · 공백 5`다(#44가 analysis spec 4건을 착지시켜 매칭 9→13). 시나리오 5 행을 구현 대기에서 공백으로 옮기는 편집 자체는 유효하되 산술은 전부 다시 맞춰야 한다.\n\n5) 재푸시 후 **CI를 다시 받아** `required` success와 게이트 3종 rc=0을 새 베이스 위에서 확인할 것. 이번처럼 낡은 초록을 근거로 올리지 말 것."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**슬라이스 5 재계획 — AC3.5「서술 대상별 추세 시계열 시각화」. 절단과 구현 축은 유지하고, 거부 사유 3건(낡은 베이스·낡은 원장 근거·게이트 R3 실패)을 실측으로 닫는다.**\n\n*직전 시도가 거부된 이유와 이번에 달라지는 것.* 검토는 「계획의 절단과 구현 자체는 타당하나 준비물이 상했다」로 거부했다 — 브랜치가 `a62eae1` 위에 떴는데 그 뒤 main 에 #41·#42·#44 가 들어와 tip 이 `feb454b` 가 됐고, PR #45 의 유일한 CI 런은 #42·#44 보다 앞서 돌아 초록이 낡았다. 그래서 **구현 축(Go 서빙 + `Trend.tsx` + 양쪽 테스트)은 살리고, 베이스와 원장 2건을 새 main 실측 위에서 다시 만든다.**\n\n*거부 사유 ③(게이트 R3)의 원인을 다시 판정했다 — 검토가 제시한 두 선택지는 둘 다 필요 없다.* 검토는 「인덱스를 고칠지(= to-be 를 건드려 재감지를 새로 연다), 아니면 `trend` 의 `BUILT` 편입을 미룰지(= 슬라이스가 무너진다)를 계획에서 먼저 정하라」고 했고 이 결정이 슬라이스 성립 자체를 가른다고 봤다. **실측 결과 제3의 답이 있고, 그쪽이 옳다 — 인덱스는 이미 옳고 게이트 파서가 틀렸다.**\n\n- `docs/mockups/econ-opinion-monitor-mockup-index.md` 의 「Mockup 파일」 표에는 **`trend` 행이 그대로 살아 있다**(`docs/mockups/JRN-daily-scan.html` (흡수)). 표 바로 밑의 표기 규약이 「화면 파일이 삭제돼도 id 행을 지우지 않는다 — 시각이 사라진 것이 아니라 거처가 옮겨간 것」이라고 못박아 둔 그대로다. `JRN-daily-scan` 절은 `PAT-line-chart`·`CMP-table` 을 포함한 항목을 선언하고 있다. **문서에 빠진 것은 없다.**\n- 실패하는 것은 `scripts/check-mockup-render.py` 의 `absorbed_screens()` 다. 정규식 `^\\|\\s*`(JRN-…)`\\s*\\|\\s*`[^`]+`\\s*\\|\\s*`([a-z]+)`` 가 「흡수한 화면」 칸의 **첫 id 하나만** 집는다 ⇒ `| JRN-daily-scan | … | `dash`, `trend` |` 에서 `trend` 를 버리고(`JRN-spike-verification` 의 `trace` 도 같이 버린다), 그 결과 `items_by_screen()` 이 `trend` 키를 만들지 못해 `BUILT ∋ trend` 가 되는 순간 「인덱스에 디자인 시스템 항목 절이 없다」로 떨어진다.\n- **재현·수정을 실행으로 확인했다.** 현 main(`feb454b`)에서 `BUILT` 에 `trend` 만 넣으면 게이트가 검토가 보고한 그 문구로 rc=1. 파서를 「칸 전체에서 id 집합을 읽기」로 고치면 **rc=0 이고 in-scope 가 한 종도 변하지 않는다** — 고치기 전 clean main 이 `in-scope 21종(compare ∪ dash) — 성립 18 · 예외 3 · 구현 전용 1`, 고친 뒤 `trend` 포함이 `in-scope 21종(compare ∪ dash ∪ trend) — 성립 18 · 예외 3 · 구현 전용 1` 로 **수치가 동일**하다. `dash` 와 `trend` 가 같은 여정 페이지 절을 공유하므로 `trend` 가 새로 들여오는 항목이 0종이기 때문이다. 래칫도 허용목록도 움직이지 않는다.\n- **이 수정은 어느 모델의 지문도 움직이지 않는다.** `scripts/` 는 이 모델의 as-is(`contracts`+`python`+`go`+`web`+`deploy`)·to-be(`docs`) 어느 쪽에도 없고, 자매 `tbm_econ-opinion-monitor-mockup-render` 의 as-is(`web/src/{screens,shell,tokens}`)·to-be(`docs/mockups`+`docs/design-system`) 에도 없다. 즉 검토가 걱정한 「to-be 를 건드려 재감지를 새로 연다」가 **발생하지 않는다.** 목업 SSOT 무접촉으로 게이트를 닫는 길이 있으므로 `BUILT` 편입을 미룰 이유도 없다.\n\n*설계 변경 — 「상위 대상 비교」를 목업대로 표로 그린다(`CMP-kv` → `CMP-table`).* 직전 초안은 비교 목록을 `CMP-kv` 로 그렸는데, 목업 `JRN-daily-scan.html` 의 `STP-drill-trend` 는 「상위 대상 비교」를 **`<table class=\"tbl\" id=\"trendtable\">`** 로 그리고 인덱스 귀속 표도 그 단계를 「라인 차트 + **상위 대상 비교 표**」로 적는다. 검토가 지적한 대로 `CMP-table` 의 「표가 0건」 전제가 뒤집혔으므로, 목업에 수렴하는 쪽(표)으로 구현한다 — 자매 모델(목업↔구현 렌더링)의 SSOT 가 목업이라 이쪽이 미래 drift 를 만들지 않고 줄인다. 행 클릭이 대상 선택이 되며(목업이 `table.tbl tr.click` 을 이미 스타일링한다) 별도 picker 를 만들지 않는다.\n\n*허위 컨트롤 방침은 유지.* 목업의 시간/일/주 세그는 AC3.3(롤업) 몫이라 만들지 않고 버킷 단위는 API `basis` 를 되비추는 정적 표시로 둔다. `CMP-seg` 는 실동작하는 축 선택(KR/US/GLOBAL)에 쓴다.\n\n**완료 기준(이 task 의 성공 판정 범위).**\n1. `GET /api/trend?subject=&axis=` 가 스텁 `note` 없이 **대상별 버킷 순 시계열**(선택 대상 + 상위 비교 대상 N, `basis` 포함)을 돌려준다.\n2. `/trend` 가 Placeholder 가 아닌 실화면으로 착지한다(`BUILT ∋ \"trend\"`, 라인 차트 + 상위 대상 비교 **표** + 행 클릭 대상 선택).\n3. 게이트 3종(`check_scenario_mapping.py` · `check-mockup-render.py` · `check-journey-mockup.py`)이 **새 베이스 위에서** rc=0. 해소된 등재(`PAT-line-chart` · `CMP-table`)는 래칫대로 걷고, `doc-tracker` 카운터는 새 main 실측으로 다시 계산한다.\n4. `required` 체크가 **새 head 에서 새로 돈 런**으로 success(낡은 초록을 근거로 올리지 않는다).\n\n**범위 밖(잔여 — 재감지가 새 task 로 잇는다).** AC3.3 일·주 롤업(`BUCKET_UNIT = \"hour\"` 유지, 시나리오 3 등재 **무접촉**) · AC3.1 정규화 공식 재설계 · AC3.4/3.6/3.7/3.8 이 기다리는 나머지 4화면(sentiment·fairness·trace·reprocess 는 Placeholder 유지) · 시나리오 5 전용 e2e spec 저작(자매 모델의 하네스 몫 — 이 PR 은 그 시나리오를 구현 대기에서 **공백**으로 옮겨 그 모델의 백로그에 얹는다) · `cronworkflow-pipeline.yaml` 의 `suspend: true` 해제(비가역 운영 행위, 사람 결정 트랙) · `docs/mockups/` 와 `docs/design-system/` **무접촉**(목업 side SSOT).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 `reconcile/econ-docs-impl-rct_20260918-0004` 를 **현재 main tip `feb454b` 위로 다시 세운다.** 충돌 3덩이가 난 `doc-tracker.md` 는 어차피 이번에 새 실측으로 다시 쓰므로, 충돌 해소로 끌고 가지 않고 `git reset --hard origin/main` 후 **코드 5파일만 직전 커밋 `5911318` 에서 그대로 복원**(`git checkout 5911318 -- go/… web/…`)하고 원장은 새 베이스 위에서 새로 저작한다.",
+              "expectedOutcome": "브랜치가 `feb454b` 를 부모로 갖고, 구현 축은 직전 시도와 동일한 내용으로 살아 있으며, 원장 2파일은 main 원본 상태에서 출발한다."
+            },
+            {
+              "seq": 2,
+              "action": "**게이트 파서 수정** — `scripts/check-mockup-render.py` 의 `absorbed_screens()` 가 「흡수한 화면」 칸 **전체**에서 화면 id 집합을 읽도록 고치고(`JRN-daily-scan` ∋ `dash`,`trend` / `JRN-spike-verification` ∋ `fairness`,`trace`), `items_by_screen()` 이 그 집합의 **모든** 화면에 절의 항목을 귀속시키게 한다. 왜 문서가 아니라 파서를 고치는지(인덱스는 이미 `trend` 행과 항목 절을 갖고 있다)를 docstring 에 남긴다.",
+              "expectedOutcome": "`trend` 를 넣기 전 clean main 에서 게이트 출력이 수정 전과 동일(`in-scope 21종 · 성립 18 · 예외 3 · 구현 전용 1`) — 회귀 0."
+            },
+            {
+              "seq": 3,
+              "action": "**서빙** — `go/internal/handlers/handlers.go` 의 `trend` 핸들러 실구현(직전 시도분 재사용). Gold `SubjectTrend` 를 (axis, subject)별로 모아 `time_bucket` 오름차순 points 를 만들고, `subject` 쿼리로 선택 대상을, 나머지는 **최신 버킷** 점유율 상위 N 을 비교 계열로 내린다. 응답에 `basis`(버킷 목록·단위·정규화 여부)를 싣고 `stub: single-bucket skeleton data` 문구를 제거한다. 단위 혼재 시 **가장 고운 단위**로 필터한다(버킷 키는 단위 안에서만 비교 가능 — `\"2026-W26\"` 은 `'W' > '0'` 때문에 어떤 시각 키보다 크게 정렬된다).",
+              "expectedOutcome": "`/api/trend` 가 대상별 다중 포인트 계열을 돌려주고 응답 어디에도 `stub:` 이 없다."
+            },
+            {
+              "seq": 4,
+              "action": "**서빙 테스트** — `handlers_test.go` 의 trend 테스트(직전 시도분 재사용): 버킷 정렬 · `subject` 필터 · 비교 계열 상위 N · 단위 혼재 시 최고 해상도 채택 · 빈 Gold 에서 200 + 빈 계열.",
+              "expectedOutcome": "`go test ./...` green (로컬 Go 툴체인 부재 → CI 판정)."
+            },
+            {
+              "seq": 5,
+              "action": "**웹 타입·클라이언트** — `web/src/api/types.ts` 의 `TrendPoint`·`TrendSeries`·`TrendResponse` 와 `web/src/api/client.ts` 의 `api.trend(axis, subject)`(직전 시도분 재사용).",
+              "expectedOutcome": "타입이 Go 응답 JSON 태그와 1:1."
+            },
+            {
+              "seq": 6,
+              "action": "**화면 — 비교 표면을 `CMP-kv` 에서 `CMP-table` 로 바꾼다.** `web/src/screens/Trend.tsx` 의 「상위 대상 비교」를 목업 `STP-drill-trend` 와 같이 `<table class=\"tbl\">`(헤더 th·수치 열 `th.num`/`td.num`·행 `tr.click`)로 그리고, **행 클릭을 대상 선택**으로 건다. 직전 시도의 `.trend-picker` 계열 마크업·CSS 는 걷는다. 라인 차트(`PAT-line-chart`)·범례(`CMP-legend`)·축 세그(`CMP-seg`)·메트릭(`CMP-metric`/`CMP-delta`)·`MapStrip`(`CMP-mapstrip`)은 유지. 버킷 단위는 `basis` 되비추는 정적 표시.",
+              "expectedOutcome": "`/trend` 가 실데이터를 라인 차트 + 비교 표로 그리고, 표의 행 클릭이 강조 계열을 바꾼다. 누르면 아무 일도 안 하는 컨트롤이 0개."
+            },
+            {
+              "seq": 7,
+              "action": "**라우팅** — `web/src/App.tsx` 의 `BUILT` 에 `\"trend\"` 를 더하고 `/trend` 를 `Trend` 로 연결한다.",
+              "expectedOutcome": "`/trend` 가 Placeholder 를 렌더하지 않는다."
+            },
+            {
+              "seq": 8,
+              "action": "**스타일 (R5 상한 0 — 가장 날카로운 지점)** — `web/src/tokens/tokens.css` 에 `/* ---- PAT-line-chart ---- */` 와 `/* ---- CMP-table ---- */` 구획을 더한다. 이 구획이 들여오는 선택자 중 **목업에도 있는 것**(`.gridline` · `.gridline.zero` · `.axlab` · `table.tbl` · `table.tbl th` · `table.tbl td` · `table.tbl th.num` · `table.tbl td.num` · `table.tbl tr.click` · `table.tbl tr.click:hover td` · `table.tbl tr:last-child td`)은 지금까지 **목업 전용**이라 비교 대상이 아니었다 — 추가하는 순간 공통 선택자가 되어 **선언값이 목업과 완전히 일치해야 한다**(값 충돌·목업 전용·구현 전용 상한이 전부 0). 목업 인라인 `<style>` 의 선언을 그대로 옮긴다. 구현 전용 선택자(`.trend-chart` 등)는 목업에 없어 비교되지 않으므로 자유롭다.",
+              "expectedOutcome": "`check-mockup-render.py` 의 R5 3종이 모두 `0건 = 상한 0`."
+            },
+            {
+              "seq": 9,
+              "action": "**웹 테스트** — `web/src/screens/Trend.test.tsx` 를 비교 **표** 기준으로 고친다: 계열이 버킷 순으로 폴리라인 points 에 반영되는지 · **표의 행 클릭**이 강조 계열을 바꾸는지 · 빈 응답에서 빈 상태 카피가 뜨는지.",
+              "expectedOutcome": "`npm run test` green (CI 판정)."
+            },
+            {
+              "seq": 10,
+              "action": "**원장 ① 디자인** — `docs/econ-opinion-monitor-design-tracker.md` 「규칙 3·5 기계 판정」 절을 **새 main 실측으로** 다시 쓴다: 「판정 범위」의 `BUILT` 를 `dash`·`compare`·`trend` 로 갱신(항목 수는 21종 그대로 — `trend` 가 `dash` 와 같은 여정 페이지 절을 공유해 새로 들여오는 항목이 0종임을 근거로 적는다), **`PAT-line-chart` 「귀속」 행 삭제**(재검토 시점이 「`trend` 가 `BUILT` 에 들어올 때」로 문면에 박혀 있고 구현이 이름을 가졌다), **`CMP-table` 「미구현」 행 삭제**(구현이 `CMP-table` 구획과 실제 표를 가졌다 — 래칫이 「허용목록에 있는데 실측에서 해소된 항목」으로 강제한다). `CMP-norm-toggle`·`CMP-btn` 은 유지. 파서를 고쳤다는 사실과 그 근거(인덱스는 무접촉)를 한 단락으로 남긴다. **삭제된 `trend.html` 을 근거로 삼는 문장은 남기지 않는다.**",
+              "expectedOutcome": "`check-mockup-render.py` 가 rc=0 이고 출력이 `예외 1 · 구현 전용 1` 로 줄어든다(등재가 래칫대로 걷혔다)."
+            },
+            {
+              "seq": 11,
+              "action": "**원장 ② e2e 매핑** — `docs/econ-opinion-monitor-doc-tracker.md` 「구현 대기」 표에서 **시나리오 5 행만** 걷고(시나리오 3 행 무접촉), `gap-list` 마커 안에 `econ-opinion-monitor-test-aggregation-viz.md#시나리오 5` 를 더한 뒤 카운터를 **새 main 실측**으로 다시 계산한다: 구현 대기 **2→1** · 1:1 대상 **18→19** · 매칭 **13(불변)** · 공백 **5→6**, 전집 `21 = 13 + 1(예외) + 1(구현 대기) + 6(공백)`. (직전 초안의 `매칭 9 · 공백 10` 은 #44 착지 이전 수치라 전부 폐기한다.)",
+              "expectedOutcome": "`python3 tests/e2e/check_scenario_mapping.py` 가 규칙 1~6 위반 0 이고 집계 3종이 일치."
+            },
+            {
+              "seq": 12,
+              "action": "**게이트 3종 로컬 재실행 후 강제 푸시** — 세 게이트 전건 rc=0 을 확인하고 커밋한 뒤, 원격추적 ref 가 없을 수 있으므로 `--force-with-lease=refs/heads/<브랜치>:$(git ls-remote origin <브랜치> | cut -f1)` 형태로 푸시한다.",
+              "expectedOutcome": "세 게이트 rc=0, 푸시 성공, PR #45 의 head 가 새 커밋으로 바뀐다."
+            },
+            {
+              "seq": 13,
+              "action": "**PR #45 본문 갱신** — 같은 PR 을 재사용하고(새 PR 을 열지 않는다) 본문을 이번 판정으로 고쳐 쓴다: 거부 사유 3건과 각각의 처리, 파서 수정의 근거(인덱스 무접촉·지문 무이동), `CMP-kv`→`CMP-table` 설계 변경, 새 카운터, 그리고 **이 PR 의 CI 초록은 새 head 에서 새로 돈 런이어야 한다**는 판정 조건.",
+              "expectedOutcome": "PR #45 가 새 head 를 갖고 본문이 현재 계획과 일치하며, 새 `required` 런이 시작된다."
+            }
+          ],
+          "plannedAt": "2026-09-19T00:22:00Z"
+        }
       }
     ]
   },
