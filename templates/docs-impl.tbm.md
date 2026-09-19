@@ -26,7 +26,7 @@
 | `{{IMPL_DESC}}` | 구현 디렉터리와 역할 | `app/` RN 앱 · `backend/` Go API · `worker/` Go 워커 |
 | `{{IMPL_PATHS}}` | as-is 버전 범위 디렉터리 목록 | `app`, `backend`, `worker` |
 | `{{OUT_OF_SCOPE}}` | as-is 범위에서 빼는 것(운영·검증·빌드 인프라)과 이유 | `e2e/`·`k8s/`·`scripts/`·compose·`CLAUDE.md` |
-| `{{TRACKER_PATH}}` | 문서 체계 상태 추적 [선택]. 레거시 파일 형태로 적는다 — 월별 폴더(`<경로에서 .md 뗀 것>/`)면 최신 `YYYY-MM.md`를 뜻한다(README 「doc-tracker 경로 해석」) | `docs/doc-tracker.md` |
+| `{{TRACKER_DIR}}` | 문서 체계 상태 추적 폴더 [선택]. 판정 대상은 그 폴더의 최신 `YYYY-MM.md`(README 「doc-tracker 경로 해석」) | `docs/doc-tracker` |
 | `{{IMPL_EXCEPTIONS}}` | "문서 없는 구현"의 명시적 예외 [선택] | (tessera의 auto-update처럼 제품 가치 밖 플랫폼 인프라) |
 | `{{DRAFT_POLICY}}` | draft PRD 취급 [선택] | draft PRD-009는 확정 전까지 to-be 제외 |
 | `{{INITIAL_STATE}}` | 등록 시점 **스냅샷**: 구현 수준 + 규모 숫자 | 확정 PRD-001~008의 AC 55개, 프로덕션 운영 중 — 최초 gap 산정은 첫 task 몫 |
@@ -104,7 +104,7 @@ printf '{{IMPL_PATH_1}}:%s {{IMPL_PATH_2}}:%s\n' "$a" "$b"
   2. UI가 대응 목업·사용자 여정·디자인 시스템 문서와 일치한다. <!-- [선택] UI 문서가 없는 레포면 삭제. mockup-render 모델을 함께 등록했다면 "단 이미 구현된 화면의 화면 단위 시각 대조는 `tbm_<slug>-mockup-render`가 담당한다"를 덧붙여 중복 계상을 막는다 -->
   3. 구현이 엔지니어링 노트가 기술하는 계약·프로세스와 일치한다. <!-- [선택] ENG 노트가 없으면 삭제 -->
   4. 코드에 존재하는 모든 사용자 대면 동작이 문서에 표현되어 있다(문서 없는 구현 없음). {{IMPL_EXCEPTIONS}} <!-- [선택] 예외 없으면 슬롯 삭제. 있으면 "단 하나의 명시적 예외: ..." 형식으로 무엇이 왜 docs 범위 밖인지 명시 -->
-  5. `{{TRACKER_PATH}}`의 상태 집계가 1~4의 실제 상태와 일치한다. <!-- [선택] tracker 없으면 삭제 -->
+  5. `{{TRACKER_DIR}}` 최신 월 파일의 상태 집계가 1~4의 실제 상태와 일치한다. <!-- [선택] tracker 없으면 삭제 -->
 - **draft PRD의 취급**: {{DRAFT_POLICY}} <!-- [선택] draft 문서가 없으면 삭제. draft 해제·수정은 docs 변경이므로 to-be 버전을 바꿔 재평가를 트리거한다는 문장 포함 -->
 - **부분 구현은 as-is다, to-be가 아니다.** {{INITIAL_STATE}} to-be를 현 구현 수준으로 낮춰 잡지 않는다.
   이 문장의 숫자는 **스냅샷일 뿐 판정 기준이 아니다** — AC·PRD가 추가·삭제되면 to-be 버전이 바뀌어 재평가가 트리거되고, 새 AC도 확정 PRD에 속하는 순간 자동으로 판정 대상이 된다. 현황 숫자 갱신은 각 task의 몫이다.
@@ -114,7 +114,7 @@ as-is(구현)가 to-be(문서 전체)에 미달하거나 어긋나면 drift다:
 1. **미구현 AC**: 문서에 있으나 구현되지 않은 AC는 to-be 미달 gap이며 **drift다**. 백로그로 치부해 이 루프 밖으로 빼지 않는다. (무엇을 먼저 구현할지의 우선순위 판단은 각 task의 계획 단계 몫이다.)
 2. **구현 ↔ 문서 불일치**: 구현된 동작이 대응 AC·테스트 문서·목업·여정·디자인 시스템·엔지니어링 노트와 어긋나면 drift.
 3. **문서 없는 구현**: 코드에 존재하는 사용자 대면 동작이 문서에 없으면 drift(명시된 예외 제외).
-4. **tracker 불일치**: `{{TRACKER_PATH}}`의 집계·상태가 실제와 어긋나면 drift. <!-- [선택] tracker 없으면 삭제 -->
+4. **tracker 불일치**: `{{TRACKER_DIR}}` 최신 월 파일의 집계·상태가 실제와 어긋나면 drift. <!-- [선택] tracker 없으면 삭제 -->
 
 각 task는 직전 관측 대비 "gap이 줄었는가 / 새 어긋남·문서 없는 구현이 생겼는가 / 문서 변경으로 to-be가 달라졌는가"를 평가하되, 남은 gap 전체(미구현 AC 목록 포함)를 상태 요약에 유지한다.
 
