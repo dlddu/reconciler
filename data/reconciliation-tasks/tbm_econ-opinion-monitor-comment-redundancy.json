@@ -834,7 +834,7 @@
   {
     "id": "rct_20260918-0006",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T21:49:34Z",
@@ -1151,6 +1151,49 @@
               "startedAt": "2026-09-19T01:26:00Z",
               "finishedAt": "2026-09-19T01:28:00Z",
               "log": "2단계 재판정 후 3단계 머지. 머지 **직전** 0단계 판정식을 한 번 더 돌렸다 — main tip 여전히 `e7fbcae`, 실측 `1317/94` `b1caefaa…`, 파일별 45·12·9 ⇒ **0-A(A·B 모두 일치)**. 지침은 merge commit을 지시했으나 이 레포는 `allow_merge_commit=false`로 **squash만 허용**한다(API 405 `Merge commits are not allowed`). main 이력이 전부 단일 부모 `(#NN)` 커밋인 것과 함께 보면 이 레포의 관행이 squash이므로, 지침의 의도(레포 관행을 따른다)대로 squash로 머지했다 — 착지 내용은 동일하고 범위는 넓히지 않았다. 머지 커밋 **`111777c`** `docs(comment-policy): 집계·수집 하네스 주석 3자리 판정 (rct_20260918-0006) (#43)`."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=1312 files=94\nc519bc3bdcb6178d2f84f09502ab7345e92558563f170c0259837e74c27b74d1",
+          "verifiedAt": "2026-09-19T01:31:00Z",
+          "checks": [
+            {
+              "name": "main tip 지문 == 원장 「판정 후」",
+              "status": "passed",
+              "detail": "머지 후 `origin/main` = `111777c`에서 모델 asIs.versionScript를 문면 그대로 재실행: **`lines=1312 files=94` `c519bc3bdcb6178d…`**. 원장 패스 이력 행·푸터의 「남음」 1312 / `94 → 94`와 일치하고, 판정문서 머리 표의 「판정 후」(`1312줄 / 94파일` `c519bc3b…`)와도 일치한다."
+            },
+            {
+              "name": "원장 산술이 닫힌다 (「판정 전」 == 머지 직전 main 실측)",
+              "status": "passed",
+              "detail": "`1317 − 5 = 1312` · 파일 수 `94 → 94`. 「판정 전」 1317/94 `b1caefaa…`는 **머지 직전 main `e7fbcae`에서 실제로 잰 값**이다(3단계 직전 0단계 재실행 결과 = 0-A). 즉 원장의 출발점이 머지 시점 main과 바이트 동치이며, 다음 패스가 거짓 출발점을 읽지 않는다."
+            },
+            {
+              "name": "파일별 3행 산술 == main tip 파일별 실측",
+              "status": "passed",
+              "detail": "main tip 실측 `deploy/batch/workflow-template.yaml` **42** · `python/packages/aggregation/src/econ_aggregation/aggregate.py` **11** · `tests/e2e/k8s/batch/feed-double.yaml` **8**. 원장 파일별 행의 `판정 전 − 제거 = 남음`(45−3=42 · 12−1=11 · 9−1=8)과 전건 일치 ⇒ 제거 델타 **−3 · −1 · −1** 이 착지에서도 재현."
+            },
+            {
+              "name": "재발 grep 3건 0",
+              "status": "passed",
+              "detail": "main tip에서 `git grep -c 'rct_2026' -- tests/e2e/k8s/batch/feed-double.yaml` = 0, `git grep -cE 'Until this template existed|gets its own entrypoint' -- deploy/` = 0, `git grep -c 'matching the contract' -- python/` = 0."
+            },
+            {
+              "name": "실행 코드·매니페스트 필드 바이트 불변",
+              "status": "passed",
+              "detail": "`git diff -U0 e7fbcae..origin/main -- deploy python tests`의 `^+` 중 **비주석 0건**. 착지한 것은 주석 5줄 제거 + 정책 문서 2개뿐이며 런타임·배포·데이터 경로에 닿지 않는다(롤백 안전성의 근거; 되돌림은 `git revert 111777c`)."
+            },
+            {
+              "name": "CI — 필수 게이트 `Checks`",
+              "status": "passed",
+              "detail": "머지 대상 head `fd378ad`(40자 전체 SHA로 `GET /actions/runs?head_sha=`)에서 런 1건 `Checks`가 `completed` / `conclusion=success`. 이 레포의 워크플로는 `on: pull_request` 전용이라 머지된 main에는 런이 붙지 않으므로, 머지 후 main에 초록 런이 없는 것은 실패 근거가 아니다(지침 4단계). 로컬 게이트도 리베이스된 트리에서 전부 통과했다 — python 게이트 3개 exit 0 · ruff check/format · pytest 4 passed."
+            },
+            {
+              "name": "[정보성] 범위 밖 잔여 gap — 미판정 주석 367줄 / 신규 14파일",
+              "status": "passed",
+              "detail": "수렴 판정에 넣지 않는 사실 기록. main tip 1312줄 중 이 패스가 판정하지 않은 면이 **367줄**(#42 `JRN-daily-scan.js` 29 · #44 analysis 하네스·spec 193 · #45 AC3.5 추세 서빙·화면 134 · #47 `check-journey-mockup.py` 11) 남아 있고, #40이 새로 쓴 머리 가드 2줄·지문 사각지대(docstring·줄 끝 주석)·원장 미등재 파일(94 중 등재 65)도 범위 밖이다. 이 착지가 만든 as-is 버전 변화(`lastObservedVersion` 미갱신)를 **다음 감지 주기가 보고 후속 task를 연다**."
             }
           ]
         }
