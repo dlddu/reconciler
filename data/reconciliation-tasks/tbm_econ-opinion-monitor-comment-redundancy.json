@@ -1233,6 +1233,57 @@
       "reason": "**작업 필요.** 정합 조건은 「범위 주석 중 복원 가능한 내용을 담은 것이 없음」이고, 그 판정의 기록\n단위는 원장(`ledger.md`)의 파일별 행 + `passes/<판정일>-<slug>.md`다(README 「판정 절차」 3).\n현재 지문 1859줄 / 111파일 중 **888줄 / 49파일(47.8%)에 원장 행이 없다 = 한 번도 판정된 적이 없다**\n(원장 `:19~21`이 「판정하지 않은 파일은 행을 만들지 않는다」로 이 대조를 스스로 규약화한다).\n직전 패스 기준 커밋 `e7fbcae`의 443줄/32파일에서 이번 창에 **2배**가 됐고(+445줄/+17파일), 여기에\n이미 판정된 파일로 들어온 108줄이 더해진다(원장 `:18`이 재판정을 예약한 몫).\n\n**미판정을 곧 drift로 보지 않는다** — 근거 셋을 함께 둔다:\n1. 판정한 4개 창 **전부**에서 제거분이 나왔다(initial −121 · regression −7 · pin-guard −3 ·\n   aggregation-harness −5). 「새 창엔 제거할 것이 없다」가 성립한 적이 없다.\n2. 이번 창에도 구체적 재발 후보가 있다 — 새 `JRN-daily-scan.js`·`JRN-ingestion-recovery.js`·\n   `JRN-logic-backfill.js` 셋이 모두 머리에 **훅 목록 4줄**을 달고 왔고, regression-pass가\n   `JRN-spike-verification.js`의 같은 자리를 「같은 파일의 `module.exports` 선언과 훅별 `/* (c) … */`\n   주석이 두 번 복원한다」는 근거로 전량 제거했다.\n3. **재감지는 살아 있으나 판정 누락을 드러내지 못한다.** as-is 지문은 주석이 움직일 때마다 바뀌지만\n   「어느 파일이 아직 판정되지 않았는가」는 지문이 답하지 않고, 이 레포에는 comment-policy를 읽는\n   CI 게이트가 **없다**(`git grep -l comment-policy -- scripts Makefile .github tests` 공집합).\n   즉 다음 fire도 「지문이 움직였다」만 알 뿐이고, 누적 미판정분은 **아무도 닫지 않으면 계속 쌓인다**\n   (443 → 888이 그 증거다).\n\n**작업 단위**는 이 레포가 이미 네 번 돌린 **판정 패스**다: 미판정 49파일/888줄(또는 이번 창의\n17파일/445줄로 슬라이스)에 복원 경로 넷을 대고 → 제거/유지를 가른 뒤 → `ledger.md` 행 갱신 +\n`passes/2026-09-19-*.md` 신설. **부분 슬라이스로 닫아도 정상이다**(재감지가 잔여를 다음 task로 잇는다).\n\n**planner 인계 — 갈래 둘을 함께 싣는다.**\n⑴ `JRN-*.js` 훅 목록 머리 4줄의 선례가 **갈려 있다**: `spike-verification`은 전량 제거(regression-pass),\n   `sentiment-shift`는 훅 목록 유지, `axis-contrast`는 머리 1줄(원장이 판정 후 형태로 못박음).\n   새 3파일을 `axis-contrast` 형태로 줄이려면 **`sentiment-shift`의 유지 판정도 함께 재판정**해야\n   원장 안에서 같은 유형이 두 형태로 남지 않는다. 반대 갈래(훅 목록을 규약으로 승격)를 택하면\n   regression-pass의 spike 제거 판정을 뒤집는 것이므로 그 근거를 passes 문서에 명시해야 한다.\n⑵ 「애매하면 남긴다」가 이 유형의 기본값이다 — `tests/e2e/lib/*.ts`·`k8s/batch/*.yaml`의 하네스\n   주석은 직전 패스가 「픽스처가 실환경과 갈리는 지점 / 테스트가 왜 그 모양인지」로 대거 유지 판정한\n   유형과 같은 계열이라, **제거 쪽으로 기울지 말 것**. 실제 제거 후보는 구분선·README 재진술·\n   작업 흔적·다른 파일 재진술 넷에 한정해 판별식을 그대로 대는 것이 앞선 네 패스의 방식이다.\n\n**주의 — 지문 사각지대**: Python docstring 본문·줄 끝 주석·줄 중간 블록 주석은 지문에 보이지 않는다.\n`tests/e2e/fixtures/llm/server.py`·`feeds/server.py` 같은 새 파일의 docstring 재진술은 판정해도\n지문이 움직이지 않으므로, 그 작업을 하면 **완료 기준을 지문 값이 아닌 원장 행으로 잡아야 한다**.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-19T06:06:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "이 레포가 네 번 돌린 **판정 패스**를 다섯 번째로 돌리되, 미판정 888줄/49파일 전체가 아니라 **이번 창이 들인 「제품 표면」 7파일 / 224줄**만 슬라이스로 판정한다 — `scripts/journey-scenarios/{JRN-daily-scan,JRN-ingestion-recovery,JRN-logic-backfill}.js`(100줄)와 `web/src/screens/{Sentiment.tsx,Sentiment.test.tsx,Trend.tsx,Trend.test.tsx}`(124줄). 이 경계를 고른 것은 detector가 인계한 갈래 ⑴(JRN 머리 형태)이 이 두 축 중 하나에 정확히 놓여 있고, 나머지 미판정분(e2e 하네스 축 — specs 14파일·lib 6파일·k8s/batch 14파일·fixtures 2파일, 42파일/664줄)은 한 덩어리로 다음 task에 넘길 수 있기 때문이다.\n\n**판정 결과(계획 시점 실측, PR에 그대로 반영):** 제거 2줄 · 문면 정정 1줄 · 나머지 222줄 유지.\n⑴ `Sentiment.tsx:12-13` AC 머리 배너 2줄 제거 — `// AC3.4 (…) + AC3.6 (…)` + 매달린 `//`. initial-pass가 `Compare.tsx`에서 `AC3.7 … (J2 / V2)` 배너를 같은 근거로 지웠고(제거 유형 「작업 흔적」), AC↔화면 대응은 `docs/econ-opinion-monitor-design-tracker.md:214`와 doc-tracker e2e 매핑이 복원한다(경로 ②). 판정 후 형태는 배너 없이 바로 설계 근거로 들어가는 `Compare.tsx` 머리와 같아진다.\n⑵ `Trend.tsx:6` 문면 정정(줄 수 불변) — `AC3.5 — 대상 추세 상세.` 접두만 덜어낸다. 같은 배너가 산문과 한 줄에 붙어 있어 줄 삭제로는 근거까지 지워진다. 선례는 `deploy/base/kustomization.yaml`(pin-guard-pass, 9|0|9 문면 정정). 이걸 함께 하지 않으면 같은 유형이 자매 화면 둘에 두 형태로 남는다.\n⑶ 나머지 전량 유지 — JRN 3파일은 조작별 의도·상태 라벨·jsdom 함정뿐이고, 화면 2파일은 「왜 이 모양으로 그리는가」(미분석을 분모에 섞지 않는 이유, 스케일 상수가 상쇄되는 단언 설계 등)로 정책의 유지 대상에 정면으로 해당한다.\n\n**detector가 인계한 갈래 ⑴은 「선례가 갈렸다」가 아니라 오독이었다 — 이 패스가 git으로 확정해 기록한다.** `git show 2579722:…JRN-spike-verification.js`와 `9d6122b:…JRN-axis-contrast.js`를 보면 두 파일은 **훅 목록 4줄을 애초에 가진 적이 없다**. regression-pass가 spike에서 지운 것은 훅 목록이 아니라 **러너/시나리오 역할 분담 산문 3줄 + 매달린 ` *`**이고, 훅 목록을 가졌던 `JRN-sentiment-shift.js`에서는 initial-pass가 역할 분담 7줄만 지우고 **훅 목록은 명시적으로 유지**했다(원장 `:74`). 즉 선례는 일관되며(역할 분담=제거 · 훅 목록=유지), 새 3파일은 역할 분담 산문 없이 훅 목록만 달고 왔으므로 **이미 판정 후 형태를 따르고 있다**. `JRN-sentiment-shift.js` 재판정도, 훅 목록 승격/철회 결정도 필요 없다.\n\n**완료 기준(범위)** — 이 7파일이 `ledger.md`에 행을 갖고(현재 0행), 판정 상세가 `passes/2026-09-19-product-surface-pass.md`로 남고, 위 제거 2줄·정정 1줄이 main에 착지하는 것. 지문 값은 `lines=1859 files=111` → `lines=1857 files=111`(해시는 정정분까지 반영해 이동)이지만, **수렴 판정의 1차 기준은 지문이 아니라 원장 행**이다(detector 주의: 지문은 「어느 파일이 미판정인가」를 답하지 않는다).\n\n**범위 밖(후속 재감지가 새 task로 잇는다)** — e2e 하네스 축 42파일/664줄(`tests/e2e/specs` 14파일 250줄 · `tests/e2e/lib` 6파일 167줄 · `tests/e2e/k8s/batch` 14파일 130줄 · `tests/e2e/fixtures/*/server.py` 2파일 24줄), 그리고 이미 판정된 파일에 들어온 108줄의 재판정(원장 `:12`가 예약한 몫). 계획 시점에 이 축을 표본 조사한 결과 구분선 재발 0건이고 문면은 「픽스처가 실환경과 갈리는 지점」 계열이라 제거율이 낮을 것으로 보이지만, 판정하지 않은 것을 판정했다고 적지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`dlddu/economic-opinion-trend-monitor` main(`d4a4cd2`)에서 브랜치 `reconcile/rct_20260919-0001-comment-redundancy`를 딴다.",
+              "expectedOutcome": "base가 현재 main tip과 같은 새 브랜치."
+            },
+            {
+              "seq": 2,
+              "action": "`web/src/screens/Sentiment.tsx`의 12~13행(`// AC3.4 (축별·분위기별 비율 집계, 미분석 분리) + AC3.6 (분위기 비율 시각화).`와 뒤따르는 빈 주석 `//`) 2줄을 삭제한다. 코드·JSX는 건드리지 않는다.",
+              "expectedOutcome": "머리 주석이 `// The screen answers two questions…`로 시작한다(=`Compare.tsx`와 같은 형태). `git diff --stat`이 `1 file changed, 2 deletions(-)`."
+            },
+            {
+              "seq": 3,
+              "action": "`web/src/screens/Trend.tsx` 머리 주석의 `AC3.5 — 대상 추세 상세. ` 접두를 덜어내고 남은 산문을 같은 **3줄**로 재배치한다(줄 수 불변). 뒤따르는 `//` 절 구분은 그대로 둔다.",
+              "expectedOutcome": "주석 줄 수가 35로 불변이고 머리가 `// The chart's job is to answer …`로 시작한다."
+            },
+            {
+              "seq": 4,
+              "action": "2단계가 만든 −2줄 시프트에 맞춰 `docs/econ-opinion-monitor-design-tracker.md`의 `Sentiment.tsx` 줄 인용 8곳(`:26-31` · `:32-35` · `:57-60` · `:61` · `:81-92` · `:265` · `:313-317` · `:396-398`)을 전부 −2 보정한다. 행 개수·처분·산문 숫자는 건드리지 않는다.",
+              "expectedOutcome": "보정 후 각 인용이 가리키는 줄이 보정 전과 같은 내용을 가리킨다(단계별 검증에 대조 명령 제시). 「등재된 편차」 표의 행 수 불변."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/comment-policy/ledger.md`에 이번 패스가 판정한 7파일의 행을 파일별 원장 표에 알파벳 순서 자리에 끼워 넣고, 「패스 이력」에 `2026-09-19 | product-surface-pass | d4a4cd2 | 1859 | 2 | 1857 | 111 → 111` 행을 더한다. 맨 아래 레포 전체 집계 행을 이 패스 기준(`1859 | 2 | 1857`, 표가 덮는 파일 수 65 → 72)으로 갱신한다.",
+              "expectedOutcome": "파일별 원장 행 65 → 72. 미판정 파일이 49 → 42, 미판정 줄이 888 → 664가 된다(원장 행 대조 스크립트로 실측)."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/comment-policy/passes/2026-09-19-product-surface-pass.md`를 신설한다. 담을 것: 슬라이스 경계와 그 이유, 제거 2줄·정정 1줄의 복원 경로별 근거, 유지 222줄의 근거, **갈래 ⑴ 오독 정정(git 증거 3개 커밋)**, 판단이 갈려 남긴 것(design-tracker가 승격 등재한 `Sentiment.tsx` 두 블록·`Trend.tsx` 생략 서술), 범위 밖 목록.",
+              "expectedOutcome": "`passes/`가 5개가 되고 README 「판정 절차」 3의 기록 요건을 이 패스가 충족한다."
+            },
+            {
+              "seq": 7,
+              "action": "커밋 후 push 하고 PR을 연다(머지하지 않는다). 본문에 task id·gap 요약·판정 결과표·검증 방법·범위 밖을 적는다.",
+              "expectedOutcome": "PR URL이 생기고 `on: pull_request` 게이트가 디스패치된다."
+            },
+            {
+              "seq": 8,
+              "action": "(실행 단계) CI 필수 체크가 전부 초록인지 확인한 뒤 머지하고, 머지된 main에서 as-is versionScript와 원장 행 대조를 재실행한다.",
+              "expectedOutcome": "지문 `lines=1857 files=111`, 원장 행 72, 미판정 42파일/664줄. 이 값이 완료 기준을 만족하면 task를 succeeded로 닫는다."
+            }
+          ],
+          "plannedAt": "2026-09-19T06:05:00Z"
+        }
+      }
+    ]
   }
 ]
