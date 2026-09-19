@@ -821,6 +821,66 @@
           "reason": "거부 — 계획·PR 자체가 아니라 **준비물의 신선도**가 불합격이다. PR #43은 건강하다: open · `mergeable=true` · `mergeable_state=clean`(첫 조회의 `unknown`은 비동기 계산 중이었고 재조회에서 clean) · 필수 체크 `Checks`가 head `2fa82dc`에서 `completed/success` · 변경 5파일 +159/−14로 `plan.steps`와 일치 · 추가분 전부 주석. 그러나 base `0125cae` 이후 #42(`e29dddd`, 2026-09-18T22:34:36Z)가 머지되면서 **지문 범위 안의 `scripts/`**에 `scripts/journey-scenarios/JRN-daily-scan.js`(주석 29줄)가 새로 들어왔다. 그래서 머지 직전 main 실측 지문은 `982줄/81파일`인데, 스테이징된 `ledger.md`의 **레포 전체 2행**(패스 이력 행 · 푸터 행)은 `0125cae` 기준 `953 | 5 | 948 · 80 → 80`으로 굳어 있다 — 지금 머지하면 원장의 레포 전체 산술이 29줄·1파일만큼 거짓이 되고, 다음 패스가 `948`을 출발점으로 읽는다. 불가역성·롤백은 문제없고(주석 6줄 + 문서 2개, `git revert` 한 번, 런타임·배포·데이터 영향 0) riskLevel `low`도 타당하다. 거부하는 이유는 오직 이 한 가지 — 이 계획이 스스로 완료 기준으로 세운 「원장 산술이 닫힌다」가 지금 그대로 실행하면 깨지기 때문이다.",
           "comment": "**고칠 것은 원장의 레포 전체 2행과 executionGuide의 신선도 분기뿐이다. 주석 편집 3자리와 판정 서술은 손대지 말 것.**\n\n1. **리베이스만 하면 되는 부분** — #43을 현재 main(`e29dddd`)으로 리베이스한다. #42는 `docs/comment-policy/`도, 대상 주석 3파일도 건드리지 않았으므로 충돌 면적이 없다. **파일별 원장 3행은 그대로 유효하다**: main tip 실측이 `workflow-template.yaml` 46 · `aggregate.py` 12 · `feed-double.yaml` 9로 스테이징된 「판정 전」과 바이트 일치한다 (`46|3|43` · `12|1|11` · `9|1|8` 유지).\n\n2. **재측정해 다시 쓸 두 행** — 실측값은 이미 나와 있다(모델 `asIs.versionScript` 문면 그대로 실행): `0125cae`=953/80, `e29dddd`=**982/81**, PR head 기준=948/80 ⇒ 새 base에 얹으면 **977/81**. 증분 29줄·1파일은 전량 `scripts/journey-scenarios/JRN-daily-scan.js`다.\n   - 패스 이력 행: 기준 커밋 `0125cae` → 새 base, `953 | 5 | 948` → **`982 | 5 | 977`**, 파일 수 `80 → 80` → **`81 → 81`**.\n   - 푸터 행: `**953** | **5** | **948**` → **`982 | 5 | 977`**, 괄호 안 기준 커밋도 새 base로. 표 커버리지 `65개 파일`은 행 수 기준이라 그대로 맞다(64→65행).\n\n3. **executionGuide 1단계(신선도 재확인)의 판정 기준을 넓힌다 — 이번 누락의 진짜 원인이다.** 현재 분기는 「대상 주석 3파일」과 「`docs/comment-policy/`」 둘만 보고, 그 외에는 *0건이면 그대로 진행(지문 기대값만 델타로 이동)* 으로 보낸다. 이번처럼 **지문 범위(`contracts go python/packages web/src tests scripts deploy Makefile`)의 다른 파일**이 움직이면 어느 가드에도 걸리지 않은 채 레포 전체 행만 조용히 거짓이 된다. 분기 조건을 「머지 직전 main에서 versionScript를 실행한 실측 `lines/files` == 원장 레포 전체 행의 「판정 전」 값」 대조로 바꾸고, 어긋나면 (자매 PR이 `ledger.md`를 건드렸는지와 무관하게) 리베이스 + 2항 재측정을 거치게 한다. 「base가 움직였을 때의 기대값 이동」 절의 트리거도 지금은 *`ledger.md`를 고치는 자매 PR이 먼저 들어가면*으로 한정돼 있으니 같이 넓힌다.\n\n4. **완료 기준에 그 대조를 추가한다.** 현 기준 1은 델타(−5줄·파일 수 불변)만 보고 기준 5는 「3행 외 무변경」 존재 검사라 둘 다 이번 오류를 통과시킨다. 「원장 레포 전체 행의 판정 전 값 == 머지 직전 main 실측 지문」을 기준으로 세워야 executor가 4-4에서 잡는다.\n\n5. **범위는 넓히지 말 것(참고).** `JRN-daily-scan.js`의 29줄은 정책 발효 후 들어온 **미판정** 주석 면이지만 이 표적 패스가 판정할 자리가 아니다 — 재감지가 새 task로 잇게 둔다. 이번에 필요한 것은 그 29줄을 판정하는 게 아니라, 레포 전체 숫자가 그 29줄이 **아직 미판정인 채로 거기 있다**는 사실과 어긋나지 않게 만드는 것뿐이다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**접근 — 「주석 편집 3자리는 한 글자도 건드리지 않고, 원장·판정문서의 *레포 전체* 산술만 새 base로 이동시킨다. 그리고 이번 누락을 낳은 신선도 게이트를 지문 대조로 넓힌다.」** 거부 사유는 계획·PR의 내용이 아니라 **준비물의 신선도**였다(`review.reason`). 직전 시도가 스테이징한 diff는 리뷰가 실측으로 건강 판정했다 — open·`mergeable=true`·`mergeable_state=clean`·필수 체크 `Checks` 성공·5파일 +159/−14·추가분 전부 주석. 문제는 그 PR이 base `0125cae`에 얹혀 있는 동안 #42(`e29dddd`)가 머지되며 지문 범위 안의 `scripts/journey-scenarios/JRN-daily-scan.js`(주석 29줄·신규 1파일)가 들어온 것이다. 그래서 스테이징된 `ledger.md`의 레포 전체 2행이 `0125cae` 기준 `953 | 5 | 948 · 80 → 80`으로 굳어 있고, 지금 머지하면 원장의 레포 전체 산술이 29줄·1파일만큼 거짓이 되며 다음 패스가 `948`을 출발점으로 읽는다.\n\n**왜 「재계획」이 아니라 「이동」인가.** 판정 자체(무엇을 지우고 무엇을 남기는가)는 detector가 실측으로 닫아 놓은 6줄에 대한 것이고, 리뷰도 그 부분은 통과시켰다. 재판단하면 같은 결론을 더 비싸게 다시 낼 뿐이고, 문면을 다시 건드리면 리뷰가 이미 확인한 「추가분 전부 주석·실행 코드 바이트 불변」을 처음부터 다시 세워야 한다. 실측으로도 이동만으로 충분함이 확인된다 — `0125cae`와 `e29dddd` 사이 지문 범위의 파일별 델타는 `JRN-daily-scan.js` +29 단 하나이고, 대상 3파일의 「판정 전」 값은 `workflow-template.yaml` 46 · `aggregate.py` 12 · `feed-double.yaml` 9로 **바이트 일치**한다. 즉 파일별 원장 3행은 그대로 유효하고, 움직일 것은 레포 전체 2행과 판정문서 머리 3행뿐이다.\n\n**세 번째 일 — 게이트를 넓힌다(이번 누락의 진짜 원인).** 직전 `executionGuide` 1단계는 「대상 주석 3파일」과 「`docs/comment-policy/`」 둘만 보고 그 외엔 그대로 진행시켰다. 이번처럼 **지문 범위의 다른 파일**이 움직이면 어느 가드에도 걸리지 않은 채 레포 전체 행만 조용히 거짓이 된다. 분기 조건을 「머지 직전 main 실측 지문 == 원장 레포 전체 행의 「판정 전」 값」 **동치 대조**로 바꾸고, 같은 대조를 완료 기준에 세워 executor가 4-4에서 잡게 한다. 이렇게 하면 이 PR이 다음에 또 밀려도 게이트가 먼저 울린다.\n\n**이 시도의 범위(완료 기준).** ⑴ PR #43이 `e29dddd`에 리베이스돼 있고 ⑵ `ledger.md`의 레포 전체 2행과 `passes/2026-09-18-aggregation-harness-pass.md` 머리 3행이 새 base 실측(`982 | 5 | 977`, `81 → 81`)으로 갱신되고 ⑶ 머지 직전 main 실측 지문 == 원장의 「판정 전」 값이 성립하면 성공이다. **범위 밖**: `JRN-daily-scan.js`의 29줄은 정책 발효 후 들어온 **미판정** 주석 면이지만 이 표적 패스가 판정할 자리가 아니다 — 재감지가 새 task로 잇는다. 이번에 필요한 것은 그 29줄을 판정하는 게 아니라, 레포 전체 숫자가 그 29줄이 **아직 미판정인 채로 거기 있다**는 사실과 어긋나지 않게 만드는 것뿐이다. 주석 편집 3자리·판정 서술·파일별 원장 3행도 범위 밖(무변경)이다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 checkout에서 `git fetch origin`으로 최신화하고, `origin/main` tip과 `origin/reconcile/comment-redundancy/rct_20260918-0006` tip을 확인한다. 리뷰 시점 실측(main=`e29dddd`, PR head=`2fa82dc`)과 같은지 대조한다.",
+              "expectedOutcome": "main tip이 `e29dddd`이면 아래 수치를 그대로 쓴다. 더 움직였으면 2단계 재측정으로 모든 수치를 새 tip에서 다시 뽑는다(수치는 하드코딩이 아니라 측정값이다)."
+            },
+            {
+              "seq": 2,
+              "action": "모델 `asIs.versionScript` 문면 그대로를 main tip과 PR head에서 각각 실행해 `lines/files/지문`을 뽑고, 같은 필터의 파일별 집계로 `0125cae`→main tip 사이의 파일별 델타를 낸다.",
+              "expectedOutcome": "main tip(`e29dddd`) = `982 / 81` · `1a2f4fc2…`, PR head(`2fa82dc`) = `948 / 80` · `9bc06bfa…`, 옛 base(`0125cae`) = `953 / 80` · `1b34764a…`. 파일별 델타는 `scripts/journey-scenarios/JRN-daily-scan.js` +29(신규 1파일) **단 하나**. 대상 3파일의 「판정 전」은 46 · 12 · 9로 불변."
+            },
+            {
+              "seq": 3,
+              "action": "PR 브랜치를 `origin/main`(새 tip)으로 리베이스한다. #42는 `docs/comment-policy/`도 대상 주석 3파일도 건드리지 않으므로 충돌 면적이 없어야 한다.",
+              "expectedOutcome": "충돌 0건으로 리베이스 완료. 리베이스 후 `git diff --stat origin/main..HEAD`가 리베이스 전과 같은 5파일 +159/−14."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/comment-policy/ledger.md`의 **레포 전체 2행만** 새 base 실측으로 바꾼다. 패스 이력 행: 기준 커밋 `0125cae`→`e29dddd`, `953 | 5 | 948`→`982 | 5 | 977`, 파일 수 `80 → 80`→`81 → 81`. 푸터 행: `**953** | **5** | **948**`→`**982** | **5** | **977**`, 괄호 안 기준 커밋도 `e29dddd`로. 표 커버리지 `65개 파일`은 행 수 기준이라 유지.",
+              "expectedOutcome": "`git diff` 상 `ledger.md` 변경이 그 2행뿐. 파일별 원장 3행(`46|3|43` · `12|1|11` · `9|1|8`)과 나머지 62행은 바이트 불변."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/comment-policy/passes/2026-09-18-aggregation-harness-pass.md` 머리 표의 세 행을 새 base로 옮긴다 — 기준 커밋 `0125cae`→`e29dddd`, 판정 전 `953줄 / 80파일 · 1b34764a…`→`982줄 / 81파일 · 1a2f4fc2…`, 판정 후 `948줄 / 80파일 · 9bc06bfa…`→`977줄 / 81파일 · <리베이스 후 실측 지문>`. 그리고 **base가 귀속 창 밖의 미판정 면을 포함한다**는 한 줄을 명시한다(`JRN-daily-scan.js` 29줄은 #42가 들인 미판정 면으로, 이 표적 패스의 판정 대상이 아니며 재감지가 잇는다).",
+              "expectedOutcome": "판정문서의 base·지문이 리베이스 후 실측과 일치하고, 「귀속 창(`be8616f`..`a62eae1`)과 base 커밋이 다르다」는 사실이 문서에 명시돼 다음 패스가 오독하지 않는다. 귀속 창·판정 3자리 서술·유지 166줄 근거는 무변경."
+            },
+            {
+              "seq": 6,
+              "action": "리베이스·편집 후 HEAD에서 `asIs.versionScript`를 재실행하고, 새 base 대비 델타와 원장 산술을 기계로 대조한다: 실측 `lines/files` == 원장 「판정 후」 값, main 실측 == 원장 「판정 전」 값, 제거 수 == 판정 전 − 판정 후.",
+              "expectedOutcome": "HEAD = `977 / 81`. `982 − 5 = 977` · 파일 수 `81 → 81` 불변. 세 대조 전건 일치."
+            },
+            {
+              "seq": 7,
+              "action": "내용 불변 검사: `git diff -U0 origin/main..HEAD -- deploy python tests`의 `^+` 줄이 전부 주석인지, 재발 grep 3건(`rct_2026` in `tests/e2e/k8s/batch/feed-double.yaml` · `Until this template existed|gets its own entrypoint` in `deploy/` · `matching the contract` in `python/`)이 0건인지 확인한다.",
+              "expectedOutcome": "비주석 추가 0건(실행 코드·매니페스트 필드 바이트 불변), 재발 grep 3건 모두 0건. 직전 시도의 검증과 동일 결과."
+            },
+            {
+              "seq": 8,
+              "action": "레포 게이트를 다시 돌린다: `scripts/check-mockup-render.py`, `scripts/check-journey-mockup.py`, `tests/e2e/check_scenario_mapping.py`, `uv run ruff check .` + `ruff format --check .`, `uv run pytest packages/aggregation -q`.",
+              "expectedOutcome": "전부 exit 0 / 통과. #42가 들어온 뒤에도 게이트가 녹색인지 확인하는 것이 목적이다(리베이스가 새 파일을 base에 들였다)."
+            },
+            {
+              "seq": 9,
+              "action": "`--force-with-lease=refs/heads/reconcile/comment-redundancy/rct_20260918-0006:<ls-remote로 읽은 현재 sha>`로 푸시한다. PR #43은 그대로 열려 있고 새 head로 갱신된다. 푸시 후 `GET /repos/dlddu/economic-opinion-trend-monitor/actions/runs?head_sha=<새 head>`로 필수 체크 `Checks` 결과를 읽는다.",
+              "expectedOutcome": "#43 head가 새 커밋으로 갱신되고 base가 `e29dddd`. `mergeable=true`, 필수 체크 `Checks`가 `completed/success`(직후엔 `in_progress`일 수 있으며 그 동안 `mergeable_state=blocked`는 정상)."
+            },
+            {
+              "seq": 10,
+              "action": "`plan.executionGuide`의 1단계 신선도 게이트를 **지문 동치 대조**로 바꾸고(「대상 3파일·`docs/comment-policy/` 변경 여부」 →「머지 직전 main 실측 `lines/files` == 원장 레포 전체 행의 「판정 전」 값」), 「base가 움직였을 때의 기대값 이동」 절의 트리거도 `ledger.md`를 고치는 자매 PR로 한정하지 않게 넓힌다. 같은 대조를 완료 기준에 한 항으로 세운다.",
+              "expectedOutcome": "executor가 머지 직전에 실측 1회로 신선도를 판정할 수 있고, 지문 범위의 **어느** 파일이 움직여도 게이트에 걸린다. 4-4 검증이 이번과 같은 누락을 잡는다."
+            }
+          ],
+          "plannedAt": "2026-09-19T00:12:00Z"
+        }
       }
     ]
   },
