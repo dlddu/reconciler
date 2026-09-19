@@ -2662,7 +2662,7 @@
   {
     "id": "rct_20260919-0002",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-19T01:17:12Z",
@@ -2850,6 +2850,59 @@
               "log": "**머지(executionGuide §3).** 머지 직전 main tip 이 `d422b38` 로 그대로임을 재확인한 뒤 `gh pr merge 53 --squash`. 머지 커밋 **`b30a321de4919105d05e118efdded5eeadcbb0b4`** (`feat(sentiment): AC3.4 축별·분위기별 비율 — 서빙 + 화면 (slice 6, reconcile rct_20260919-0002) (#53)`). main 직접 push 없음. `deploy/` 무접촉 — `suspend: true` 는 그대로 두었다(사람 결정 사항)."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "contracts:5a1ee3bb47ac5199a1f05129fcff8dbf783a4646 python:70726f468d374dad982013be73b6e30b390008a4 go:c7b611e82ae7592a945c2cfdb4d6aab130f86b9c web:c7e1e016094989015a050d6ea22151ec38b94ffd deploy:b2081631e3c8958a9c6c9c7e480202137d1c2d2f",
+          "checks": [
+            {
+              "name": "머지 착지",
+              "status": "passed",
+              "detail": "PR #53 `merged=true` · 머지 커밋 **`b30a321de4919105d05e118efdded5eeadcbb0b4`** (squash). 머지 직전 main tip `d422b38` 을 재확인한 뒤 머지했고, base.sha 도 `d422b38` 이었다 — 낡은 base 위 머지 아님."
+            },
+            {
+              "name": "CI 전건 초록 (node·go 잡 근거화)",
+              "status": "passed",
+              "detail": "호스트에 go·node 가 없어 `make lint-go`·`make test-go`·eslint·vitest·`tsc -b`·jsdom 하네스는 로컬 재현이 불가하다. 따라서 근거는 run/job id 다 — run **`35415491052`** (head 전체 SHA `fc6aef945d8db75dd2ea323d8b1f84f3f175058a`, `conclusion=success`). 잡별: `required` success · `ci / build` success(make gen-check·lint·test) · `ci / e2e` success(kind) · `render / render` success · `docs / structure` success · `docs / flow` success(jsdom) · `image / publish (serving)` success(tsc strict) · `image / publish (batch)` success · `image / pin deploy images (main only)` skipped(main 전용). 집계 잡 `required` 가 `always()+needs` 형태인데 success 이므로 의존 잡 skipped 로 인한 뒤집힘 없음. 이 초록은 **현재 main `d422b38` 위에서 난 것**이다(리베이스 후 재실행)."
+            },
+            {
+              "name": "완료기준① 서빙 — `/api/sentiment` Gold 파생",
+              "status": "passed",
+              "detail": "머지된 main `b30a321` 새 체크아웃 실측: `grep -c 'func sentimentByAxis' go/internal/handlers/handlers.go` = **1**, `grep -c 'by_axis' go/internal/handlers/handlers.go` = **1**(≥1). 단일 버킷 단위·단일 기준 버킷·축별 `present`·`series`·`basis` 는 새 Go 단위 4케이스(`handlers_test.go` +152)가 CI `ci / build` 에서 집행했다."
+            },
+            {
+              "name": "완료기준② 화면 — `BUILT` ∋ sentiment · 두 패턴 마킹",
+              "status": "passed",
+              "detail": "`web/src/App.tsx:11` = `const BUILT = new Set([\"dash\", \"compare\", \"trend\", \"sentiment\"]);` (계획이 선언한 좌표 문자열 그대로 히트). `grep -c 'PAT-donut\\|PAT-stacked-sentiment' web/src/screens/Sentiment.tsx` = **2**."
+            },
+            {
+              "name": "완료기준③ 게이트 3종 — 머지 트리에서 rc=0",
+              "status": "passed",
+              "detail": "머지된 main `b30a321` 에서 실행: `scripts/check-mockup-render.py .` **rc=0** · `tests/e2e/check_scenario_mapping.py` **rc=0** · `scripts/check-journey-mockup.py .` **rc=0**. 출력 실측 — `[R3] in-scope 23종(compare ∪ dash ∪ sentiment ∪ trend) — 이름 대조 성립 22 · 등재 예외 1 · 구현 전용 1`, `[R4] 0/0/0 = 상한`, `[R5] 0/0/0 = 상한`; `scenario-mapping: 규칙 1·2·3·4·5·6 위반 없음(전집 21 · 예외 1 · 구현 대기 1 · 1:1 대상 19 · 매칭 18 · 공백 1)`; `journey-mockup: PASS — 여정 6개 · 여정 페이지 5개 · 미이관 1(상한 1) · 규칙 5 미충족 페이지 1(상한 1) · 링크 110건`. `make lint`·`make test` 는 CI `ci / build` success 로 집행(위 check 참조)."
+            },
+            {
+              "name": "집계 수치 동치 대조 (절대값이 아니라 머지 트리 기준)",
+              "status": "passed",
+              "detail": "계획서의 `23종`·`성립 22` 는 절대 집계라 승인~실행 사이 자매 머지로 이동할 수 있으므로 **머지 직전/직후 main 에서 재측정**해 대조했다. 머지 직전 main `d422b38` 게이트 출력 = `in-scope 21종(compare ∪ dash ∪ trend) — 성립 20 · 예외 1 · 구현 전용 1`, 머지 후 `b30a321` = `23종 — 성립 22 · 예외 1 · 구현 전용 1`. design-tracker 판정 범위 문장(`:236-243`)이 적은 값(`BUILT` = dash·compare·trend·sentiment · **23종** · `21종 → 23종` · `성립만 20 → 22` · `등재 예외 1 · 구현 전용 1 · R4·R5 상한 전건 0 그대로`)과 **전부 일치**. 허용목록 표·상한 숫자는 무접촉(자매 `mockup-render` 소유)."
+            },
+            {
+              "name": "완료기준④ doc-tracker 재분할 + 좌표 생존",
+              "status": "passed",
+              "detail": "`docs/econ-opinion-monitor-doc-tracker/2026-09.md` 실측: 「착지」에 `AC3.4 (슬라이스 6)` 1건 등재(관측 좌표 `App.tsx` ∋ 새 `BUILT` 문자열 · `handlers.go` ∋ `func sentimentByAxis`), 「잔여」의 화면 행이 `:68` 「실화면은 `dash`·`compare`·`trend`·`sentiment` 넷이다」 로 3→4·플레이스홀더 4→3 재분할, 「대상별 분위기」 잔여 신설(좌표 `go/gen/gold.go` ∋ `AxisSentiment`), 「이번 달 변경 이력」에 task id 행 1건 추가. AC↔e2e 1:1 매핑표는 무접촉(자매 `scenario-e2e` 소유)."
+            },
+            {
+              "name": "자매 PR 충돌 재측정 (#54·#50)",
+              "status": "passed",
+              "detail": "승인~실행 사이 main 이 `3f9b2dd` → `d422b38` 로 2커밋 이동했고 둘 다 이 PR 의 판정면을 건드렸다 — `ff534f4`(#54: design-tracker 41+/4-, doc-tracker 46+/23-, mockup-index 1+/1-) · `d422b38`(#50: tests/e2e/**). GitHub 는 `mergeable_state=clean` 이었지만 게이트가 래칫이라 텍스트 충돌 0 으로도 값이 어긋날 수 있어 **리베이스 후 게이트를 재실행**했다. 리베이스 충돌 0 · 게이트 3종 rc=0 · R4·R5 상한 이동 0 — 숨은 집계 어긋남 없음."
+            },
+            {
+              "name": "(정보성) 범위 밖 잔여 gap — 이 판정에 넣지 않음",
+              "status": "passed",
+              "detail": "모델 전체 to-be 와의 잔여는 남아 있고, 이는 계획이 슬라이스 6 으로 범위를 좁힌 결과라 converged 판정에 넣지 않는다. 잔여: ① AC3.3 일·주 롤업(해제 신호 `BUCKET_UNIT = \"hour\"` 가 자매 `scenario-e2e` 원장의 「구현 대기」 표와 결합) ② `ac3-4-axis-sentiment-ratio.spec.ts` 신설(같은 자매 소유 — scenario-mapping 공백 1건은 `aggregation-viz#시나리오 5` 로 이 슬라이스와 무관) ③ AC3.1 `fairness` 화면(슬라이스 8) ④ 대상별 분위기 도넛(Gold 키가 `(axis,bucket)` 이라 집계 계층 선행) ⑤ `deploy/batch/cronworkflow-pipeline.yaml` ∋ `suspend: true` 해제(비가역 운영 행위 · 사람 결정) ⑥ `sentiment` 화면의 카피·구조 판정(자매 `mockup-render` 몫 — 이 머지가 `web/src/screens` 지문을 움직였으므로 그 모델 재감지가 연다). `deploy/` 무접촉이라 프로덕션 배치는 꺼진 채이고 화면이 빈 것은 이 슬라이스의 실패가 아니다."
+            }
+          ],
+          "verifiedAt": "2026-09-19T02:30:00Z"
         }
       }
     ]
