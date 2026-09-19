@@ -8712,7 +8712,7 @@
   {
     "id": "rct_20260919-0002",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-19T02:12:32Z",
@@ -8805,6 +8805,13 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/146",
           "preparedAt": "2026-09-19T02:45:00Z",
           "notes": "base `286a091`(머지 직전 main 과 동일 — 푸시 직후 재확인), 15파일 +1031/−9. 계획 단계 1~9 를 모두 수행해 스테이징했다 — 머지는 하지 않았다.\n\n**로컬 실측(Go 1.24.7 — 호스트 `/home/silas/toolchains/go/bin` 에 이미 있었다)**: `gofmt -l .` 출력 없음 · `go vet ./...` · `go build ./...` · `go test ./...` 전 패키지 ok · 신규 단위 18종 전건 PASS. 레포 게이트 4종 전부 rc=0 이고 `check_ac_mapping.py` 는 `85·1·19·65·65·0·0` 으로 **머지 직전 main 과 동치**(시나리오 14·17 행을 ⏳ 유지한 채 차단 근거만 고쳐 행 수가 19 그대로다).\n\n**계획에 없던 판단 1건(단계 2 에서 확장)**: 응답을 문자열로만 실으면 Go 의 JSON 인코더가 유효하지 않은 바이트를 **말없이** U+FFFD 로 바꿔 「망가진 본문이 본문처럼」 돌아온다. 그래서 `responseEncoding`(`utf-8`|`base64`)을 응답에 두고 송신 쪽도 `payload`/`payloadBase64` 로 대칭을 맞췄으며, 둘 다 주면 **해석하지 않고 거부**한다(둘 중 하나를 골라 주면 아무도 승인하지 않은 바이트를 보내게 된다). 근거는 코드 주석·PR 본문·doc-tracker 이력에 남겼다.\n\n**계획에 없던 필수 작업 3건**: ⑴ `internal/k8s/service.go` 의 `Service` 인터페이스와 `Unavailable` 구현에 메서드 추가(인터페이스라 페이크 셋 — `countingK8s`·`fakeK8s` — 도 함께 구현해야 컴파일된다) ⑵ `internal/server/mcp_test.go::TestToolsListIncludesAllTools` 의 `want` 목록에 이름 추가(그 케이스는 수를 목록에서 뽑으므로 목록만 고치면 된다) ⑶ 주석 원장 재판정 — 신규 4파일이 초안 132줄을 들고 와 `check_comment_policy.py` 가 R2 6건 + R4 1건으로 레드였다. 정책 절차대로 판정해 **8줄을 지운 뒤**(② 문서 재진술 — AC14 본문이 한국어로 이미 적는 「터널을 유지하지 않는다 … `kubectl port-forward` 의 일」 4줄, 슬라이스 순서의 근거 4줄은 doc-tracker 가 진다) 124줄로 등재했고, 기존 행 #5·#24·#32 도 같은 PR 에서 재판정했다(#5 는 `Response` 필드 doc 1줄을 ① 선언 재진술로 제거, #24·#32 는 유지 판정). 합계 마커 2444 → 2589, 잔량 0 유지.\n\n**함정 하나(실행자·검토자 모두 알아 둘 것)**: `check_comment_policy.py` 는 `git ls-files` 로 범위를 잡는다 — **`git add` 전에는 신규 파일의 주석이 보이지 않아** R4 가 실제보다 작은 차이를 보고한다(여기서도 staging 전 +22, 후 +154 였다). 원장 재판정은 반드시 staging 뒤에 측정할 것.\n\n**검토자가 볼 곳**: ⑴ `roundTrip` 이 쓰기 반쪽을 닫는 자리와 그 이유(닫지 않으면 EOF 까지 읽는 상대가 영영 답하지 않아 창을 통째로 태운다), ⑵ 에러 스트림을 데이터 스트림보다 먼저 여는 순서(홀로 도착한 데이터 스트림은 apiserver 가 reset 한다), ⑶ 위 인코딩 판단."
+        },
+        "review": {
+          "required": false,
+          "status": "approved",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-19T02:47:30Z",
+          "reason": "`resource_port_forward`(AC14) 한 종을 등록해 축 ⑴ 잔여 8 → 7 로 줄이는 계획이고, 슬라이스 보폭은 이 레포의 확립된 「한 슬라이스 한 도구」(#127·#143) 선례와 같다. **신선도 실측(2026-09-19T02:45Z)**: PR #146 열림·`mergeable_state=clean`·base `286a091` 이 **현재 main tip 과 동일**(이동 없음)이고, head `b17c42a` 의 체크 5종이 전부 초록이다 — `fmt + vet`·`unit tests`·`integration tests`·`image / build & push server image` success, 집계 게이트 `ci passed` success(`image / pin deployment image (main only)` 는 main 전용 skip 이나 집계가 success 로 닫혔다). 판정 시점에 `blocked` 였던 것은 CI 진행 중이었기 때문이고, 완주 후 `clean` 으로 풀린 것을 재조회로 확인했다. **범위 실측**: 15파일 +1031/−9 가 전부 계획 단계 1~9 안이고 gap 밖 변경이 없다(신규 4파일 + `gate.go`/`toolslist.go`/`_helpers.py`/`mcp_test.go` 등록 몇 줄 + 단위 테스트 + 문서). 원장 증분 14+3+4+124=145 가 합계 마커 2444 → 2589 과 정확히 맞고, doc-tracker 「구현 대기」 표는 시나리오 14·17 **두 행의 차단 근거만** 고쳐 행 수가 불변이라(수정 2·증감 0) 집계가 움직이지 않는다. **위험(medium) 통제**: 불가역점은 머지 하나뿐이고 순수 추가라 revert 로 완전히 돌아가며, 지침이 「코드만 되돌리면 원장 2589 가 어긋나 게이트가 멈춘다」며 원장·doc-tracker 동반 revert 를 명시한다. 런타임 위험(`rbac.yaml` 이 cluster-admin 이라 게이트가 유일 경계)의 완화가 **코드에 실재함을 직접 확인**했다 — `internal/k8s/port_forward.go` 에 `defer conn.Close()` 가 있어 터널이 왕복 뒤 닫히고(1승인 1왕복), 쌍이 `create on pods/portforward` 하나로 `genericTarget()` 승인을 타며, 에러 스트림을 데이터 스트림보다 먼저 열고 쓰기 반쪽을 닫는 순서·읽기 상한 둘(시간·256KiB)·UTF-8/base64 인코딩 분기가 계획대로 들어 있다. 완료 기준 6종과 롤백이 executionGuide 에 구체적으로 적혀 있어 승인한다. **실행자 주의(거부 사유는 아님)**: 같은 base 위에 자매 PR #145(`scenario-e2e`, 시나리오 12 를 구현 대기에서 제거)가 열려 있어 그쪽이 먼저 머지되면 「구현 대기」 표·원장 합계 마커에서 충돌한다. 지침이 그 경로를 이미 다룬다 — 리베이스 후 마커는 양쪽 증분을 **더하고**(이 PR 분 +145), 집계는 `85·1·19·65·65·0·0` 를 기대값으로 박지 말고 머지 직전 main 과의 **동치**로 재측정하며, CI 를 다시 받는다."
         }
       }
     ]
