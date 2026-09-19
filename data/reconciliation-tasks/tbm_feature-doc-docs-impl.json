@@ -4534,5 +4534,28 @@
       "assessedAt": "2026-09-19T02:25:00Z",
       "reason": "작업 불필요 → **`no_action_needed`**(종료, lock 해제). 근거는 전부 이번 fire 의 독립 실측이다.\n\n**근거 1 — 귀속이 깨끗하고, 내 판정 집합은 창 전체에서 바이트 불변이다.** 부모 `2c7a6d3` 에서 양 side versionScript 를 재실행해 저장된 baseline 과 **바이트 동일**함을 확인했으므로 이번 이동은 이 창(3커밋) 단독이다. 그 창을 통과해도 판정 지표는 전건 동일하다 — `시나리오 36 · 매핑 23 · 예외 0 · 구현 대기 13 · 미매핑 0`, 「구현 대기」 13행 내용 동일, `미구현 AC 9건 + AC4.1 「해제」 = 10항목` 동일. 이 창은 **AC 를 하나도 구현하지 않았고 하나도 추가하지 않았다** ⇒ 기준 1 의 gap 이 늘지도 줄지도 않았다.\n\n**근거 2 — 기준 2·3 도 불발화(기계 확인).** 게이트 3종(`check-scenario-e2e` · `check-mockup-render` · `check-journey-mockup`)을 **부모·트리거 두 지점에서 독립 재실행해 전건 rc=0**. 그리고 두 지점의 출력 차이가 **전부 자매 축으로 설명된다**: 원장 37→35 와 래칫 37/37→35/35 는 #72(mockup-render 축)가 2행을 해소하며 래칫을 함께 내린 것이고, 문서 27→31 · 링크 237→249 는 #74 가 더한 tracker 월 파일 4개와 정확히 일치한다. 기준 3 은 두 겹으로 닫힌다 — `check-mockup-render` M3B 「구현→목업 카피 151건 대조, **미등재 0건**」이 양 지점 동일이고, 신규 백엔드 표면이 원리적으로 0 이다(`lib.rs` 라우트 1==1, #72 구간 backend 트리 `ef96c20e` 바이트 불변). 신설 `api.ts::logout()` 은 **기존** `/api/auth/logout` 호출이며 그 시나리오 `04#시나리오 12` 는 이미 매핑 23 안에 전용 spec 을 갖고 있다.\n\n**근거 3 — 「초록이 커버리지를 가렸나」도 닫았다.** 이 게이트 3종은 문서↔파일 대조 축이라 「AC 가 실제로 구현됐는가」를 원리적으로 보지 않고, 「구현 대기」 13행은 게이트 안에서 **합법적 완충항**이다. 그래서 초록만으로 닫지 않고 지표 줄을 부모·트리거에서 직접 떠서 대조했다(근거 1). 두 방법이 같은 답을 준다.\n\n**근거 4 — 이 창에서 침묵 파손이 일어날 수 있던 단 한 지점은 #74 였고, 실측으로 무죄다.** `R079 docs/doc-tracker.md → docs/doc-tracker/2026-09.md` 는 「정의가 가리키는 경로가 사라져 판정 집합이 ∅ 가 되는」 layer-3 파손의 교과서적 후보였다. 그러나 **모델 정의가 이 사건을 미리 흡수해 두었고**(「doc-tracker 경로 해석 (월별 폴더 대응)」), 그 절이 요구하는 세 가지가 모두 성립했다: ⑴ 최신 월 파일 `2026-09.md` 가 tracker 이고 `index.md`(12줄 목차)가 아니다, ⑵ 등재 섹션이 이월됐다(568→583줄, `diff` 143줄의 내역은 헤더 4줄 · **상대 링크 깊이 보정**(한 단계 깊어졌으므로 정정이 맞다) · `registry` 표식 4개 신설 · #72 의 편차 원장 블록뿐 — **판정 지표 줄은 한 줄도 안 건드렸다**), ⑶ 등재 소실 0.\n\n**근거 5 — 잔여 gap 10항목은 실재하지만 무주공산이 아니고, 소유자의 준비물이 내 트리거 시점에 유효하다.** 같은 모델 `rct_20260919-0001` 이 슬라이스 5b-2(AC2.6)를 겨냥해 열려 있고, 그 staged PR **#75** 를 실측했다: `mergeable_state=clean` · **`base.sha` == `02692c0` == 내 트리거 == 현재 main tip**(「트리거 대비 충돌」 질문이 이미 해소돼 있다) · `ci-gate` **success**(attempt #0 을 거부시킨 `cargo` 4건·`e2e` 1건 실패가 attempt #1 `686b26f` 에서 전건 초록). 무엇보다 **#74 의 경로 이동을 이 PR 이 따라갔다** — tracker 편집 대상이 옛 `docs/doc-tracker.md` 가 아니라 **신 경로 `docs/doc-tracker/2026-09.md`** 이고(옛 경로 부활 0), patch 의 산술이 `36 = 24 + 0 + 12 + 0` · 미구현 AC 9→8 · 10항목→9항목으로 일관된다(지침 산문이 아니라 `pulls/75/files` 의 patch 에서 직접 뽑았다). ⇒ 새 task 를 정당화하는 유일한 사유인 **「계획이 더 이상 존재하지 않는 것 위에서 작동한다」가 성립하지 않는다.** 실제로 이 fire 진행 중(02:2x) 리뷰어가 그 task 를 **approved** 로 올렸다 — 인계가 살아서 전진하고 있다.\n\n**근거 6 — 재감지 경로 검산: 지금 닫아도 gap 이 영영 안 보이게 되지 않는다.** `rct_20260919-0001` 이 approved 로 실행을 기다리고 있고, PR #75 가 머지되면 `backend/`·`frontend/`(as-is)와 `docs/`(to-be)가 **동시에** 움직여 양 side 해시가 바뀐다 ⇒ 다음 스윕이 반드시 이 모델을 깨운다. 「지금 안 열면 못 본다」는 논거가 성립하지 않으므로 선제 task 를 열지 않는다.\n\n**왜 `no_action_needed` 를 *만드는가*(무기록이 아니라).** 이 판정 자체가 감사 기록이고, 동시에 claim 커밋에서 전진시킨 baseline 을 정당화한다. 기록 없이 물러나면 baseline 이 정체돼 dumb precheck 가 4분마다 detector 를 재발사한다.\n\n---\n\n**tobe-modeler 참고(이 task 의 drift 아님, 기록만).** #74 가 신설한 `<!-- registry: … -->` 표식 4개는 `tbm_feature-doc-scenario-e2e` · `tbm_feature-doc-mockup-render`(2) · `tbm_feature-doc-journey-mockup` 을 가리키고 **이 모델 이름은 없다**. 현재 이 모델의 to-be 는 `docs/` 전체 트리 해시라 표식에 의존하지 않으므로 지금은 무해하다. 다만 정의의 「범위 밖 / 비고」가 노이즈 감축을 위해 to-be 를 `docs/prd`·`docs/test`·`docs/values.md` 로 좁힐 여지를 열어 두었는데, 그 개정을 실제로 하려면 이 모델 몫의 표식(「구현 대기」 표)을 대상 레포에 함께 요청해야 한다."
     }
+  },
+  {
+    "id": "rct_20260919-0003",
+    "toBeModelId": "tbm_feature-doc-docs-impl",
+    "status": "assessing",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-19T03:12:41Z",
+      "asIs": {
+        "currentVersion": "backend:b80ed546021cb637705eb4c8ae291ac4468c540f frontend:925a141ceb2e67298cb7681d9b1f32ee5a18d85e",
+        "previousVersion": "backend:ef96c20e18d01c49cb7caa64dbe6bfa524c0c091 frontend:8973d4b074649092b8aa2027a2acd3907742a88b"
+      },
+      "toBe": {
+        "currentVersion": "2755413fa0c9cc9426569402ae9c00e2cea4b53a",
+        "previousVersion": "059d8d84f87c55a38e5cb9558af81529181a3503"
+      },
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ]
+    },
+    "createdAt": "2026-09-19T03:12:41Z",
+    "updatedAt": "2026-09-19T03:12:41Z"
   }
 ]
