@@ -1150,7 +1150,7 @@
       ]
     },
     "createdAt": "2026-09-19T00:17:20Z",
-    "updatedAt": "2026-09-19T00:49:13Z",
+    "updatedAt": "2026-09-19T00:51:00Z",
     "stateSummary": {
       "asIs": "## as-is — 구현 화면(이번 트리거가 건드리지 않은 side)\n\n측정 시각 2026-09-19T00:2xZ · 대상 레포 tip `88f5b6f` · as-is 지문 `screens:431c16c2 shell:0ed5b3a7 tokens:86d0b1d6`(**baseline 과 바이트 동일 — 이번 트리거는 as-is 무접촉**).\n\n- `git diff --name-status 0125cae e29dddd -- web/src` **빈 출력** ⇒ 트리거 `e29dddd`(#42)는 구현 트리를 한 바이트도 건드리지 않았다. 이번 이동은 순수 to-be(시각 SSOT) 이동이다.\n- 판정 대상: `App.tsx` 의 `BUILT = {\"dash\", \"compare\"}` 두 화면(`Dashboard.tsx`·`Compare.tsx`)과 공유 셸(`AppShell`·`Sidebar`·`Topbar`·`MapStrip`). `nav.ts` 의 `SCREENS` 는 7화면 전부를 라우트로 선언하고 나머지 5(`trend`·`sentiment`·`fairness`·`trace`·`reprocess`)는 `Placeholder` — 모델 정의상 `tbm_econ-opinion-monitor-docs-impl` 소관.\n- `Dashboard.tsx` + 셸의 한글 리터럴 **42종**. 이 파일들은 `be8616f`(#37, `rct_20260918-0004` 실행 산출) 이후 정지 상태다.\n- `web/src/tokens/tokens.css` `:root` 변수 **43종**.",
       "toBe": "## to-be — 목업(시각 SSOT)\n\n`mockups:9b057af0 → 579d1557` · `design-system:4a6b5c53` **불변**.\n\n**귀속은 단일 커밋으로 닫힌다.** 부모 `0125cae` 에서 `docs/mockups` 트리 해시가 저장 baseline `9b057af0` 과 바이트 동일하고, 최근 12커밋을 훑어 `docs/mockups` 를 움직인 커밋은 **`e29dddd`(PR #42, `docs(daily-scan): 여정 페이지 이관 + dash·trend 흡수`, `tbm_econ-opinion-monitor-journey-mockup rct_20260918-0003` 의 실행 산출) 하나뿐**이다. 뒤따른 `feb454b`·`88f5b6f` 는 0 side.\n\n**#42 가 한 일**: `dashboard.html`(520줄)·`trend.html`(494줄) **삭제**, `JRN-daily-scan.html`(1345줄) **신설**, 인덱스 70줄·tracker 갱신. 화면 `dash`·`trend` 가 여정 페이지 하나에 **2:1 로 흡수**됐다(이 레포 첫 2:1 흡수이며, 흡수된 쪽 하나가 `BUILT` 안이다).\n\n**인덱스·tracker 는 스스로 정합하게 갱신됐다** — 화면 id ↔ 파일 표 7행 유지(`dash`·`trend` → `JRN-daily-scan.html (흡수)`), 「흡수된 화면의 판정 경계」 5행 신설, 래칫 3→2 및 3→1, 커버리지 24/30→25/30, tracker 건강 서술 3/6→4/6 · 미시각화 4→3. (자매 모델 `journey-mockup` 에서 문제가 된 「표만 고치고 산문을 남김」 패턴은 **이 모델의 판정면에서는 재발하지 않았다**.)\n\n### 판정 기준별 실측\n- **기준 1(매핑) 🟢** — `nav.ts` `SCREENS` id 7종 == 인덱스 표 id 7종. `BUILT` 2화면 모두 실재 목업 파일로 해소(`dash`→`JRN-daily-scan.html`, `compare`→`JRN-axis-contrast.html`).\n- **기준 2(토큰) 🟢** — 토큰 보유 목업 5페이지의 `:root` **단일 서명**(`bc3e544ad661`, 43선언), 부모·tip 동일 ⇒ #42 무접촉. `tokens.css` 와 43==43, 이름 차집합 양방향 0, **정규화 후 의미상 값 충돌 0**(원시 31건은 전부 hex 대소문자 + 따옴표/공백 표기).\n- **기준 3·5 🟢** — 레포 게이트 `scripts/check-mockup-render.py` 를 **네 지점**(`0125cae`·`e29dddd`·`feb454b`·`88f5b6f`)에서 실행: 전부 **rc=0, 출력 바이트 동일**(`in-scope 21종(compare ∪ dash)` · R5 값 충돌 0 · 목업 전용 0 · 구현 전용 0).\n- **기준 4·6 🔴** — 아래 gap.",
@@ -1212,6 +1212,48 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-19T00:52:00Z",
           "reason": "**승인.** 문서 1파일(`docs/econ-opinion-monitor-design-tracker.md` +19-4)만 바꾸는 저위험 변경이고, 불가역 지점은 머지 하나이며 되돌리기는 `git revert <merge-sha>` 한 줄이다. 코드·배포·데이터 접촉 0이고 `docs/` 루트는 이 모델 양 side versionScript 범위 밖이라 이 머지는 재감지조차 열지 않는다. 범위는 감지가 넘긴 셋 중 B(허용목록 `dash` 4행 재판정) 하나로 좁혀져 있고, 실측상 gap과 무관한 변경은 섞여 있지 않다 — 게이트가 SSOT로 읽는 「규칙 3·5 기계 판정」 절은 무접촉이다.\n\n**신선도 — 전제가 움직였고, 다시 재서 여전히 유효하다.** 계획 시점 base `88f5b6f`는 낡았다: 자매 슬라이스 **#45가 머지돼** main이 `705ebe14`로 전진했고, 그 커밋이 같은 tracker 파일(+17-4)·`scripts/check-mockup-render.py`(+16-6)·`web/src`를 함께 건드렸다. 그래서 계획의 초록을 그대로 쓰지 않고 executionGuide 1단계가 지시한 대로 **현재 origin/main 기준으로 근거를 새로 세웠다**: (1) 재조회 결과 `mergeable=true`·`mergeable_state=clean`(첫 조회는 비동기 판정 중이라 `unknown`이었다), (2) `actions/runs?head_sha=1e27690728b4c731087caed94a27f31deef6419d`(40자) 런 1건 `Checks` **success**, (3) `merge-tree(origin/main, #48)` 트리를 실제로 풀어 게이트 2종 재실행 — `check-mockup-render.py` rc=0 이고 stdout이 **새 main 기준선과 바이트 동일**(`in-scope 21종(compare ∪ dash ∪ trend) — 성립 20 · 예외 1 · 구현 전용 1`), `check-journey-mockup.py` rc=0, (4) 착지 기준 (a)(b)(c) 전부 기대대로(존속 인용 6종 전부 >0, 구현 인용 1건, 소멸 4종 전부 0). 충돌 0으로 갈음하지 않고 트리를 풀어 돌렸으므로 「같은 값 auto-merge가 집계를 감추는」 함정도 배제된다. #48은 문서만 더하므로 node·go 축의 근거는 main이 #45의 required 체크로 이미 세운 것이 그대로 유효하다.\n\n**위험 통제.** executionGuide에 검증 지점 6종(PR 초록 / 머지 트리 게이트 2종 / 착지 4종)과 롤백(`git revert`)이 명시돼 있고, 착지 (a)(c)가 어긋나면 `failed`로 닫지 말고 재감지로 잇도록 실패 경로까지 적혀 있다. node 툴체인 부재를 실행 게이트에 넣지 않은 것도 이 호스트에서 재현 가능한 범위와 맞다.\n\n**실행자 주의 2건(승인을 막지는 않는다).** ⑴ executionGuide 3단계의 기대 stdout 문자열(`compare ∪ dash` · 성립 18 · 예외 3)은 **옛 base `88f5b6f`의 계획 시점 스냅샷**이다. 구속력 있는 불변식은 「PR **자신의 머지 시점 base**와 바이트 동일」이고, 1단계가 base 이동 시 근거 재수립을 이미 지시한다 — 위 (3)에서 재수립했고 성립한다. 그 리터럴 숫자와 다르다는 이유로 거부로 돌리지 말 것. ⑵ 자매 PR **#46**(`rct_20260918-0005`, 현재 `reviewing`)은 base `feb454b8`로 낡아 **#48과 무관하게 이미 현재 main과 충돌한다**(#45가 :181~215를 건드렸고 #46의 훅이 :187~206에 있다). #48은 main 위에 단독 clean이므로 순서 제약은 #48이 만드는 것이 아니다. 다만 #46이 먼저 착지하면 #48은 `git rebase origin/main` 후 1·3단계를 다시 돌려야 한다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-19T00:49:13Z",
+          "finishedAt": "2026-09-19T00:51:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T00:49:30Z",
+              "finishedAt": "2026-09-19T00:50:05Z",
+              "log": "base 재고정 + 충돌 재실측. **계획 시점 base `88f5b6f`는 낡아 있었다** — `git log --oneline 88f5b6f..origin/main`이 1커밋(`705ebe1` = #45 squash, rct_20260918-0004)을 내놓았고, `git diff --name-only`가 `docs/econ-opinion-monitor-design-tracker.md`·`web/src/App.tsx`·`api/client.ts`·`api/types.ts`·`screens/Trend*.tsx`·`tokens/tokens.css` 접촉을 보고했다. 지침 1의 분기대로 **초록을 그대로 쓰지 않고 3의 머지 트리 검증을 origin/main 기준으로 다시 돌렸다**. `git merge-tree --write-tree origin/main pr48` rc=0 (tree `88ad49b1`) — 충돌 헝크 0건. 자매 #46(`42cf21a8`)은 아직 open(`blocked`)이라 이번 머지의 전제가 아니다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T00:50:05Z",
+              "finishedAt": "2026-09-19T00:50:20Z",
+              "log": "존속 2행 재귀속·재인용 — 문면은 준비 단계(#48 head `1e276907`)에서 작성됐고, 이 단계는 **이동한 base 위에서 결과를 재측정**했다. 머지 트리 실측: 존속 행이 인용한 목업 문자열 전부 실재(`최근 24시간`=8, `최근 7일`=12, `최근 30일`=4, `기간 적용`=3, `집계 단위`=1, `한국 축 &middot; 최근 7일`=1), 구현 측 대응 `관심 점유율 · 정규화 비율 기준`=1. 착지 후 `9ec9d24` 실측도 동일. 두 행의 종류(구조/카피)·재검토 시점은 불변이고 처분도 그대로다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T00:50:20Z",
+              "finishedAt": "2026-09-19T00:50:35Z",
+              "log": "소멸 2행의 「해소된 등재 (이력)」 절 이설 — 착지 tree에서 `:166`에 절이 실재하고 두 행이 소멸 커밋 `e29dddd`(#42)·근거와 함께 보존됐다. 「등재된 편차」 표는 `git diff 705ebe1 9ec9d24` 기준 +19-4, 삭제된 4행 중 2행은 갱신본으로 대체, 2행은 이력 절로 이동. 옛 문자열 `docs/mockups/` 실측 전부 0건(`단계 2 기간·단위 조정`·`축 스냅샷`·`동일 시점 · 상위 1위`·`한국 축 · 7일`)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T00:50:35Z",
+              "finishedAt": "2026-09-19T00:50:45Z",
+              "log": "게이트 무회귀 — **base를 `88f5b6f`가 아니라 이동한 `origin/main`(`705ebe1`)으로 다시 잡아** 양쪽에서 돌렸다. `check-mockup-render.py` rc=0 · `check-journey-mockup.py` rc=0, 그리고 base 출력과 머지 트리 출력이 **바이트 동일**(`diff` 무출력). 기대값도 #45 착지에 맞춰 이동해 있었다 — `in-scope 21종(compare ∪ dash ∪ trend) — 성립 20 · 예외 1 · 구현 전용 1`(계획 시점 `88f5b6f` 기준 `21종(compare ∪ dash) · 성립 18 · 예외 3`이 아니다). R5 상한 3종 모두 0=0. 게이트가 SSOT로 읽는 절을 이 PR이 무접촉임이 바이트 동치로 확인된다 — 「같은 값 auto-merge」로 집계가 조용히 틀어지는 경우까지 트리를 풀어 실측했다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T00:50:45Z",
+              "finishedAt": "2026-09-19T00:51:00Z",
+              "log": "PR 개설은 준비 단계에서 끝났고(#48), 이 단계의 실제 실행은 **머지 하나**다. 지침 2대로 `GET /actions/runs?head_sha=1e27690728b4c731087caed94a27f31deef6419d`(전체 40자)로 판독 — 런 1건 `Checks` `completed`/`success`. PR 상태 `mergeable=true`·`mergeable_state=clean`. squash 머지 성공: main `9ec9d24` (`docs(tracker): dash 허용목록 4행 재판정 — 재귀속 2 · 해소 이력 2 (rct_20260919-0001) (#48)`) — 커밋 메시지에 task id 보존. 되돌리기는 `git revert 9ec9d24` 한 줄. **#45는 손대지 않았다**(지침 주의사항)."
+            }
+          ]
         }
       }
     ]
