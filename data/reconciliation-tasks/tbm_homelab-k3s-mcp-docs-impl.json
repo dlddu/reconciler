@@ -9247,6 +9247,41 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-19T06:30:00Z",
           "reason": "**승인 — 준비물 신선도·범위·위험 통제 셋을 모두 실측으로 확인했다.**\n\n⑴ **신선도(판정 시점 재측정)**: PR #150 `state=open` · `mergeable=true` · `mergeable_state=clean` · `merged=false`, head `a7bc868e`, base `36656aa` 로 **base 가 계획 시점에서 움직이지 않았다**(`/commits/main` 재판독도 `36656aa` 동일). CI 는 계획이 `in_progress` 로 남긴 런 **35425907210 이 `completed/success` 로 settled** 됐고, check-run 6종에서 `ci passed`·`unit tests`·`fmt + vet`·`integration tests`·`image / build & push` 전부 `success`(유일한 `skipped` 는 `image / pin deployment image (main only)` 로 main 전용이며 집계 `ci passed` 를 뒤집지 않았다). `fmt + vet` 잡 스텝 로그에서 **게이트 넷이 실제로 돌아 전부 success** 임을 확인했다 — `AC <-> e2e file mapping` · `E2E mocking policy` · `Comment policy ledger` · `Doc hub inventory` + `gofmt`/`go vet`/`go build`. 즉 로컬 rc=0 여덟이라는 preparation 주장이 CI 에서도 독립 재현됐고, 로컬 불가였던 통합(kind) 잡도 초록이다.\n\n⑵ **범위 정합(15파일 전수 대조)**: 계획 단계 2~13 과 실제 diff 가 일치한다. 계획에 이름이 없던 둘도 **컴파일·단언이 강제한 기계적 변경**임을 헝크로 확인했다 — `internal/server/fakes_test.go` 는 단계 4 가 `Service` 인터페이스에 `ProxyResource` 를 더한 결과의 fake 구현(+14), `internal/server/mcp_test.go` 는 단계 7 의 광고 집합에 맞춘 기대 목록 **한 줄**이다. `tests/integration/_helpers.py` 도 단계 9 대로 `EXPECTED_TOOLS` 한 줄뿐이고 **`tests/integration/` 에 신규 파일이 없다** — 자매 모델(`scenario-e2e`) 소관인 전용 e2e 저작을 끌어오지 않아 중복 계상이 없다. gap 과 무관한 변경은 없다.\n\n⑶ **위험 통제 — 핵심 두 주장을 코드로 검증했다.** `gate.go` 헝크 실측: ⓐ `gatedPairs` 의 새 분기는 `d.alwaysGated != \"\"` 일 때 `pairs` **전건**을 반환하므로 `GET`→`get on pods/proxy` 도 승인을 탄다(AC15 검증 방법의 「승인 없는 GET 도 거부된다」 충족). ⓑ 그 필드를 세운 도구는 `resource_proxy` 하나뿐이고, `proxyPathDetail` 은 `name != \"resource_proxy\"` 에서 **즉시 빈 문자열**을 돌려주므로 「다른 도구의 승인 `context` 문자열은 한 바이트도 바뀌지 않는다」는 주장이 참이다 — 되돌리기 안전성의 근거가 실제로 성립한다. `kubeletHighPowerEndpoint` 는 AC3 여섯 경로를 **표시만 하고 막지 않으며**(denylist 아님), 경로 허용목록을 두지 않은 것도 AC15 가 명시적으로 거부한 설계라 계약대로다.\n\n⑷ **불가역성 없음 · 롤백 구체적**: 클러스터·데이터 변경이 0이고 레포 머지뿐이다. 롤백은 `git revert <sha>`(직전 착지 셋이 squash 이므로 단일 커밋)이고, 위 ⑶ⓑ 때문에 되돌려도 기존 23종 도구의 거동·승인 문면이 원상이다. 신규 도구는 **등록만으로는 아무 일도 하지 않고 모든 호출이 게이트를 탄다**. 완료 기준(검증 4항 표)과 검증 명령이 executionGuide 에 명시돼 있고, 「머지된 main 에는 `on: pull_request` CI 가 붙지 않으므로 PR head 잡 로그가 Go 게이트의 정본」이라는 판독법까지 적혀 있어 실행자가 초록을 오판할 여지가 닫혀 있다.\n\n⑸ **자매 PR 합산 위험은 남아 있으나 지침이 이미 그 형태로 처방한다.** 판정 시점 열린 PR 은 **셋(#149·#150·#151) 이고 전부 같은 base `36656aa`**, 셋 다 `docs/comment-policy/ledger.md` 와 `docs/doc-tracker/2026-09.md` 를 건드린다(preparation 이 「생성 직전 열린 PR 0건」으로 적은 상황은 이미 낡았다). 특히 #151 은 게이트 스크립트 `scripts/check_comment_policy.py` 자체를 +35/−1 로 고쳐 R9 래칫을 더한다. 그러나 이는 **먼저 머지되는 쪽에는 발생하지 않고**, 늦게 머지되는 쪽에 대해 executionGuide 단계 2 가 정확히 이 함정을 이름으로 지목해 처방한다 — 「base 가 움직였으면 `refs/pull/150/merge` 부모로 초록 신선도를 판정하고, 아니면 리베이스 후 push 하고 1로 돌아간다(=CI 전체 재실행)」 + 「합계 마커 2835 와 `check_ac_mapping.py` 일곱 값 `85·1·17·67·67·0·0` 을 **머지 트리에서 게이트를 돌린 결과로** 재측정하라 · 같은 문자열이면 충돌 0으로 조용히 머지되어 숫자만 틀린다」. 리베이스 후 CI 재실행 경로가 #151 의 새 R9 까지 자동으로 태우므로 게이트 스크립트 교체 케이스도 덮인다. 승인 시점 기준으로 전제는 전부 유효하므로 승인하되, 이 합산 위험이 실행 단계의 주 감시 지점이다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-19T06:28:50Z",
+          "finishedAt": "2026-09-19T06:29:30Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "skipped",
+              "startedAt": "2026-09-19T06:28:50Z",
+              "finishedAt": "2026-09-19T06:28:50Z",
+              "log": "단계 1~13 은 계획·준비(3-2)에서 이미 착지한 것들이다. PR #150(head a7bc868e, base 36656aa, 1커밋·15파일)이 열려 있고 로컬 게이트 여덟이 rc=0 으로 기록돼 있어, 실행자는 executionGuide 가 규정한 대로 '머지 + 수렴 측정'만 한다. 코드 변경 0."
+            },
+            {
+              "stepSeq": 13,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T06:29:00Z",
+              "finishedAt": "2026-09-19T06:29:10Z",
+              "log": "지침 순서 1 — CI settled 확인. actions/runs?head_sha=a7bc868e98e9b297c111caa07f0d860595156d12(전체 40자) → 런 1건 35425907210 'CI' status=completed conclusion=success(event=pull_request). check-runs 6종: 'ci passed' success · 'unit tests' success · 'fmt + vet' success · 'integration tests' success · 'image / build & push server image' success · 유일한 skipped 는 'image / pin deployment image (main only)' 로 main 전용이라 집계 'ci passed' 를 뒤집지 않았다(always()+needs 집계가 skipped 를 실패로 세는 함정에 걸리지 않음). 빨간 체크 0 → flake 분기·rerun 불필요."
+            },
+            {
+              "stepSeq": 13,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T06:29:10Z",
+              "finishedAt": "2026-09-19T06:29:20Z",
+              "log": "지침 순서 2 — base 신선도. 머지 직전 GET /commits/main = 36656aa24da5128e5a622420852c6cbb9185125a 로 PR base.sha 와 동일, PR 은 mergeable=true·mergeable_state=clean·merged=false. **base 가 움직이지 않았으므로 리베이스도, 합계 마커(2835)·check_ac_mapping 일곱 값(85·1·17·67·67·0·0) 재측정 경로도 발동하지 않는다.** 열린 자매 PR 둘(#149 f19cdb78 · #151 fa4916ea)은 이 시점까지 미머지이고 둘 다 같은 base 36656aa 위에 있어, 먼저 머지되는 이 PR 에는 자매 집계 합산 위험이 발생하지 않는다(늦게 머지될 #149·#151 쪽의 숙제로 남는다)."
+            },
+            {
+              "stepSeq": 13,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T06:29:20Z",
+              "finishedAt": "2026-09-19T06:29:30Z",
+              "log": "지침 순서 3 — 머지. 머지 방식은 지침 문구가 아니라 레포 설정으로 갈랐다: GET /repos 에서 allow_merge_commit=false · allow_squash_merge=true · allow_rebase_merge=false 이고 직전 착지 넷(36656aa·1ee9ca8·0b01f08·880fe2a) 전부 부모 1개(squash). → PUT /pulls/150/merge merge_method=squash, sha=a7bc868e…(레이스 가드) → merged=true, **머지 커밋 ac9f9d3472be4e8991a5654c19b6282d6cf71d3f**. 토큰은 대상 레포용(homelab-k3s-mcp, contents+pull_requests write)을 reconciler 토큰과 분리해 사용."
+            }
+          ]
         }
       }
     ]
