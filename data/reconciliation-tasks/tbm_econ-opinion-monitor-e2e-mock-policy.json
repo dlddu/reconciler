@@ -538,7 +538,7 @@
   {
     "id": "rct_20260919-0004",
     "toBeModelId": "tbm_econ-opinion-monitor-e2e-mock-policy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-19T02:21:34Z",
@@ -713,6 +713,49 @@
               "startedAt": "2026-09-19T02:59:05Z",
               "finishedAt": "2026-09-19T03:00:30Z",
               "log": "PR #55는 준비 단계에서 이미 열려 있었다 — 실행자는 상태·초록을 재확인한 뒤 지침 §4의 **머지**를 수행했다.\n\n**PR 상태 실측**: `state=open` · `mergeable=true` · `mergeable_state=clean` · `changed_files=6` · base `b30a321`(= 재확인 시점 main tip). `rebaseable=false`지만 `refs/pull/55/merge` 부모가 `b30a321 731b164` = **현재 main tip + PR head**이므로 head의 초록이 머지 트리를 이미 검증한 것이다.\n\n**CI 초록(head `731b164` 전체 40자 SHA로 조회)**: run `35416473365`(`Checks`) conclusion **success**. 잡별 — `ci / e2e` **success** job `105826010084`(kind 클러스터에 실 하네스를 세워 `make e2e` 완주 = `run.sh` 주석 변경의 유일한 실행 증거; 이 호스트엔 kind·docker가 없어 로컬 dry-run 불가) · `ci / build` success `105826010100` · `docs / flow` success `105826010056` · `docs / structure` success `105826010005` · `render / render` success `105826010092` · `image / publish (serving)` success `105826010154` · `image / publish (batch)` success `105826010111` · `image / pin deploy images (main only)` skipped `105826077396`(메인 전용) · 필수 집계 체크 **`required` success** job `105826570146`. (`/commits/<sha>/check-runs`와 `/status`는 앱 권한상 403 — 판독은 `/actions/runs?head_sha=<full-sha>` + `/jobs` 경로로 했다.)\n\n**자매 PR 겹침 0(머지 직전 재확인)**: 승인 후 새로 열린 #57·#56을 포함해 열린 PR 7건(#57·#56·#18·#15·#10·#9·#5)의 `/pulls/<n>/files`를 전수 재조회 — 이 PR의 6파일(`docs/econ-opinion-monitor-e2e-mocking-policy.md` · `tests/e2e/k8s/batch/{ingest,analyze}-job-agg{,-skew}.yaml` · `tests/e2e/run.sh`)을 건드리는 PR **0건**. #57·#56은 `docs/econ-opinion-monitor-design-tracker.md` 계열이라 집계 합산·같은 값 auto-merge 위험이 없다.\n\n**머지**: 레포 설정 실측 `allow_squash_merge=true` / `allow_merge_commit=false` / `allow_rebase_merge=false`이고 main 최근 커밋이 전부 부모 1개라 지침의 squash 관례와 일치 → `PUT /pulls/55/merge merge_method=squash` → `merged=true`, main tip **`afc9692`**. `delete_branch_on_merge=true`로 브랜치 자동 삭제. 되돌리기는 `git revert afc9692` 1회(부모 1개)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "sites=31 files=18\n46c549f18c84b47dea8646b11479a921d2b0c4a7ed88b34f65f86f9c9c548004",
+          "verifiedAt": "2026-09-19T03:01:30Z",
+          "checks": [
+            {
+              "name": "불변식 1 닫힘 — 허용목록 (파일,CODE) == 코드 지점 (양방향 차집합 공집합)",
+              "status": "passed",
+              "detail": "머지된 `main` `afc9692` 실측(브랜치 로컬 값 아님): `allowlist rows=31 unique=31 code=31`, 미등재 `[]` · 고아 `[]`. 중복 CODE 검사 `grep -ho 'mock-exception: *[A-Z]+-[0-9]+' | sort | uniq -d` **빈 출력**. 계획 전 상태(코드 31쌍 vs 등재 25행, 차이 6건)가 닫혔다 — #50이 새 4파일에서 재사용했던 FEED-15·16·LLM-05를 FEED-17~20·LLM-07~08로 재번호하고 6행을 등재한 결과."
+            },
+            {
+              "name": "as-is 지문 불변 — 모킹 지점 증감 0의 기계 증명",
+              "status": "passed",
+              "detail": "머지된 `main`에서 모델 `asIs.versionScript` 재실행 → `sites=31 files=18` / `46c549f18c84b47dea8646b11479a921d2b0c4a7ed88b34f65f86f9c9c548004`. 실행 전 `main`(`b30a321`)·PR head(`731b164`)·머지 후(`afc9692`) **세 시점 모두 바이트 동치**이고 저장된 `trigger.asIs.currentVersion`과도 같다. 지문 패턴이 `mock-exception: *[A-Z]+`로 숫자를 보지 않으므로 CODE 재번호가 지문을 움직이지 않는 것이 정상이고, 이 동치가 「이 task가 모킹 지점을 늘리지도 줄이지도 않았다」를 기계 증명한다. (해싱은 `printf '%s' \"$HITS\" | sha256sum` — 파이프로 넘기면 후행 개행이 섞여 `b0b27eb2…`가 나온다.)"
+            },
+            {
+              "name": "불변식 2 — 열린 원장·판정 단락의 거짓 서술 소멸 (R2 마감 → R3 신설)",
+              "status": "passed",
+              "detail": "열린 원장 구간 `grep -c '집계 Job이 없\\|한 번도 실행되지 않는다'` = **0**, `grep -c '배치 경로 부재' tests/e2e/run.sh` = **0**. 동시에 「해소된 차단 요인」 표에 **R1·R2 2행**이 원문 인용과 함께 남아 있고 「변동 이력」에도 보존됐다 — 조용히 지우지 않았으므로 B3가 금지한 영구 면제가 아니다. 열린 원장은 **R3 1행**뿐. GOLD 카테고리는 유지하되 판정 사유가 「만들 수 없다」(거짓) → 「만들 수 있으나 아직 잇지 않았다」로 교체되고 GOLD-01~03이 제거 후보로 재분류됐다(L85)."
+            },
+            {
+              "name": "B1 위반 0 — 지목 문맥 4건이 R3 1행으로 수신되고 B2 4요소가 열 안에서 판독",
+              "status": "passed",
+              "detail": "`grep -n '^| R3 |' … | awk -F'|' '{print NF-2}'` = **6 columns**. 네 칸 판독: 해소 방향 = 실환경 대체(서빙 Gold 입력을 집계 Job 산출물로 전환 + GOLD-01~03 제거) · 소관 = `tbm_econ-opinion-monitor-scenario-e2e` · 선행 = 「없음」 · 재검토 = `2026-12-18`. B1 절(L91)이 지목 문맥 **4건**(자매 `rct_20260919-0001`의 「GOLD 카테고리 소멸 판정은 이 모델 소관」 추가)으로 갱신되고 그 지목을 받는 행이 R3이므로 위반 0."
+            },
+            {
+              "name": "무해성 — 하네스 동작 불변",
+              "status": "passed",
+              "detail": "`bash -n tests/e2e/run.sh` rc=0. `git diff -U0 origin/main...HEAD -- tests/`에서 `#` 주석이 아닌 변경 **0줄**(PR 6파일 중 `tests/` 5개는 전부 주석 한 줄씩). PR `changed_files=6` / `+30 −20`이고 제품 코드·매니페스트·spec(`go`·`python`·`web`·`deploy`·`contracts`·`tests/e2e/specs`) 무접촉."
+            },
+            {
+              "name": "실행 증거 — `ci / e2e` 초록 (로컬 재현 불가)",
+              "status": "passed",
+              "detail": "`make e2e`는 kind 클러스터 + docker 빌드가 필요해 이 호스트에서 dry-run이 불가하다. PR head `731b164`(전체 40자 SHA로 조회) run **`35416473365`** conclusion success, 그 안의 **`ci / e2e` success job `105826010084`** 가 kind에 실 하네스를 세워 완주한 것이 `run.sh` 주석 변경의 유일한 실행 증거다. 필수 집계 체크 **`required` success job `105826570146`**. `refs/pull/55/merge` 부모가 `b30a321 731b164` = 머지 시점 main tip + PR head 였으므로 이 초록은 **머지 트리를 그대로 검증한 것**이다. 머지 후 `main` `afc9692`에는 `Image` success(run `35417272073`) · `pages build and deployment` success(run `35417271374`)만 붙는다 — `checks.yml`이 `on: pull_request` 전용이라 정상이다."
+            },
+            {
+              "name": "(정보성) 모델 전체 to-be 잔여 gap — 이 task의 범위 밖",
+              "status": "passed",
+              "detail": "수렴 판정에 넣지 않는 사실 기록. 열린 원장 R3(서빙 스택 입력이 여전히 `gold-fixtures` ConfigMap이라 AC3.6~3.8 단정이 배치 산출물 분포 위에서 돌지 않음)가 남아 있고, 그 소관은 자매 `tbm_econ-opinion-monitor-scenario-e2e`다. **이 모델 소관의 착수 가능 행은 0건**이다. 또 as-is 지문 패턴이 YAML 리스트형 `- --feeds`(값이 다음 줄)를 못 잡는 사각지대가 있는데 `ingest-job-analysis.yaml`도 같아 이번에 생긴 것이 아니고, 패턴 확장은 모델 개정이라 `reconciler-tobe-modeler` 몫이다. 둘 다 계획이 명시한 범위 밖이며 후속은 재감지가 잇는다."
             }
           ]
         }
