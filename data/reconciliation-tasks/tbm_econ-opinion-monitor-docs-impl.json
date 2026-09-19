@@ -2778,6 +2778,78 @@
           "reviewedAt": "2026-09-19T02:16:20Z",
           "reason": "**승인.** 판정 근거는 전부 `refs/pull/53/merge` 실측이다 — 그 merge ref 의 부모가 `3f9b2dd`(현재 main tip) + `89f1cfc`(head)라, 초록 run `35414634055` 이 검증한 트리가 곧 지금 머지될 트리다. PR 은 open·non-draft·`mergeable=true`·`mergeable_state=clean` 이고 `base.sha == 3f9b2dd == main tip` 이라 베이스 이동분이 0 이다. 잡 전건 success (`required`·`ci / build`·`ci / e2e`·`render`·`docs / structure`·`docs / flow`·`image / publish (serving|batch)`; `image / pin` 은 main 전용 skipped 이고 집계 잡 `required` 가 그 위에서 success 이므로 skipped 가 집계를 뒤집지 않았다). 계획 호스트에 go·node 가 없어 `lint-go`·`test-go`·`lint-web`·`test-web`·`tsc`·jsdom 은 이 run 이 유일한 집행 근거다.\n\n**집계는 숫자 대조가 아니라 머지 트리 재실행으로 확인했다.** 파이썬 게이트 3종을 merge ref 에서 직접 돌려 전건 rc=0: `check-mockup-render` = `[R3] in-scope 23종(compare ∪ dash ∪ sentiment ∪ trend) — 이름 대조 성립 22 · 등재 예외 1 · 구현 전용 1`, R4 0/0/0 · R5 0/0/0(래칫 상한·허용목록 무이동); `check_scenario_mapping` 규칙 1~6 위반 0(1:1 대상 19 · 매칭 13 · 공백 6 · 구현 대기 1); `check-journey-mockup` PASS(이관 5/6 · 미이관 1 = 상한 1 · 링크 110). design-tracker 가 새로 적은 「23종 / 성립 22 / 등재 예외 1 / 구현 전용 1」이 이 출력과 **동치**다 — 자매 #52 머지로 목업이 5→6 페이지가 된 뒤의 값이다.\n\n**정합성·범위**: 10파일 diff 가 `plan.steps` 의 면과 정확히 일치하고, 자매 소유 면은 전건 무접촉이다 — `tests/e2e/`·`docs/econ-opinion-monitor-test-*.md`(e2e 매핑, scenario-e2e 소유)·`deploy/`·`contracts/`·`python/` 의 merge-tree diff 가 0줄이다. 완료 기준 좌표도 merge ref 에서 전건 히트: `func sentimentByAxis` 1 · `by_axis` 1 · `App.tsx:11 const BUILT = new Set([\"dash\", \"compare\", \"trend\", \"sentiment\"]);` · `PAT-donut|PAT-stacked-sentiment` 2 · doc-tracker 의 「AC3.4 (슬라이스 6)」 1 · 「실화면은 … 넷이다」 1. 즉 지침 §4 의 grep 기대값이 실제로 성립한다.\n\n**위험·불가역성**: 전부 레포 변경이고 비가역 지점이 0 이다 — `deploy/batch/cronworkflow-pipeline.yaml:29 suspend: true` 는 이 diff 밖이라 프로덕션 스케줄·LLM 아웃바운드는 켜지지 않는다. medium 위험에 걸맞은 롤백(revert PR 을 같은 CI 에 태움, main 직접 push 금지)과 머지 직후 main 실측 완료 기준 4종이 `executionGuide` §4~§6 에 구체적으로 있다.",
           "comment": "승인 조건은 아니고 실행 시 주의 2건. ⑴ **지침 머리말의 SHA 가 낡았다** — §0 위 「준비물」이 head `672ab8e` · base `6875f5c` 로 적혀 있는데, 그 뒤 자매 #52 머지로 리베이스한 현재 값은 head `89f1cfc` · base `3f9b2dd` 다(`preparation.notes` 가 정본). 지침 §1 이 어차피 실측 재측정을 강제하므로 판정에는 영향이 없지만, §1 의 「`base.sha` 가 `6875f5c` 가 아니면」 조건을 문자 그대로 따르면 이미 처리된 리베이스를 또 하게 된다 — 비교 기준은 `6875f5c` 가 아니라 `3f9b2dd` 다. ⑵ **자매 PR #50**(scenario-e2e, base `6875f5c` 로 한 번 낡음)이 아직 open·clean 이다. 그쪽이 먼저 머지되면 이 PR 의 base 가 움직이므로 §1·§2-A 대로 재측정하고, 특히 design-tracker 의 「23종 / 성립 22」 문장은 **절대 집계**라 머지 직전 main 에서 게이트를 다시 돌려 동치를 재확인한 뒤 어긋나면 그 한 문장만 정정할 것(허용목록 표·상한은 자매 mockup-render 소유 — 무접촉)."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-19T02:21:04Z",
+          "finishedAt": "2026-09-19T02:28:20Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "log": "브랜치 `reconcile/docs-impl-rct_20260919-0002` 존재·모델 조각 포함. 계획 단계 준비(PR #53, head `89f1cfc`, base `3f9b2dd`)에서 이미 착지한 단계다. 이번 실행에서 **현재 main `d422b38` 위로 리베이스**해(끼어든 커밋 2개: `ff534f4`(#54 design-tracker 판정 경계 정정 + 편차 14행) · `d422b38`(#50 집계 배치 e2e)) 충돌 0으로 이식됐고, 리베이스 트리에서 이 단계의 산출물이 그대로 성립함을 재측정으로 확인했다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "log": "`go/internal/handlers/handlers.go` ∋ `func sentimentByAxis` 1건 · `by_axis` 응답 키 존재(리베이스 트리 실측). 계획 단계 준비(PR #53, head `89f1cfc`, base `3f9b2dd`)에서 이미 착지한 단계다. 이번 실행에서 **현재 main `d422b38` 위로 리베이스**해(끼어든 커밋 2개: `ff534f4`(#54 design-tracker 판정 경계 정정 + 편차 14행) · `d422b38`(#50 집계 배치 e2e)) 충돌 0으로 이식됐고, 리베이스 트리에서 이 단계의 산출물이 그대로 성립함을 재측정으로 확인했다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "log": "`handlers_test.go` +152줄(4케이스). 호스트에 go 가 없어 로컬 재현 불가 — CI `ci / build` 잡(run `35415491052`)이 `make test` 로 집행해 success."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "`web/src/api/types.ts` +32 · `client.ts` +10(`api.sentiment(axis)`). `tsc -b` 는 CI `image / publish (serving)` 에서 돌아 success."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "`web/src/screens/Sentiment.tsx` 신설(+412). 리베이스 트리에서 `PAT-donut|PAT-stacked-sentiment` 마킹 2줄 히트. 계획 단계 준비(PR #53, head `89f1cfc`, base `3f9b2dd`)에서 이미 착지한 단계다. 이번 실행에서 **현재 main `d422b38` 위로 리베이스**해(끼어든 커밋 2개: `ff534f4`(#54 design-tracker 판정 경계 정정 + 편차 14행) · `d422b38`(#50 집계 배치 e2e)) 충돌 0으로 이식됐고, 리베이스 트리에서 이 단계의 산출물이 그대로 성립함을 재측정으로 확인했다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "허위 컨트롤 0개 — 단위 라디오/기간 셀렉트는 `basis.bucket_unit` 정적 반영, 도넛은 축 단위(Gold 키가 `(axis,bucket)`). 사유가 화면 주석·`note` 카피에 남아 있다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "log": "`web/src/screens/Sentiment.test.tsx` 신설(+147, 4케이스). node 부재로 로컬 재현 불가 — CI `ci / build` 의 vitest 로 집행해 success."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "log": "`web/src/App.tsx` ∋ `const BUILT = new Set([\"dash\", \"compare\", \"trend\", \"sentiment\"]);` · `tokens.css` +134(공통 선택자 무접촉). 리베이스 트리에서 `check-mockup-render.py` rc=0, R4·R5 상한 전건 0 유지."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "log": "`docs/econ-opinion-monitor-doc-tracker/2026-09.md` 갱신(+20/-4): 「착지」에 AC3.4 등재 · 「잔여」 AC3.4 행 제거 · 화면 3→4 · 「대상별 분위기」 잔여 신설 · 변경 이력 1행. 「e2e 매핑」 절 무접촉. #54·#50 이 같은 파일을 46+/23- 로 고쳤으나 리베이스 충돌 0."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "log": "`docs/econ-opinion-monitor-design-tracker.md` 판정 범위 문장만 실측으로 정정(+11/-3): `BUILT` 열거에 `sentiment` 추가 · 21종 → **23종**. 허용목록 표·상한 숫자 무접촉. #54 가 같은 파일을 41+/4- 로 고쳤으나 충돌 0."
+            },
+            {
+              "stepSeq": 11,
+              "status": "succeeded",
+              "log": "**이번 실행의 작업.** base 가 `3f9b2dd` → `d422b38` 로 움직였고 끼어든 커밋이 판정면(`design-tracker` · `doc-tracker/2026-09.md` · `mockups/…-index.md` · `tests/e2e/**`)을 건드렸으므로 executionGuide §1 규정대로 **리베이스 + CI 재실행을 강제**했다. `git rebase origin/main` 충돌 0 → `--force-with-lease=refs/heads/reconcile/docs-impl-rct_20260919-0002:89f1cfc…` 로 `fc6aef945d8db75dd2ea323d8b1f84f3f175058a` 푸시. PR #53 `mergeable_state=clean`, `base.sha=d422b38`."
+            },
+            {
+              "stepSeq": 12,
+              "status": "succeeded",
+              "log": "**이번 실행의 작업.** 새 head 전체 SHA 로 CI 재확인 — run `35415491052` `conclusion=success`. 잡별: `required` · `ci / build` · `ci / e2e` · `render / render` · `docs / structure` · `docs / flow` · `image / publish (serving)` · `image / publish (batch)` 전건 success, `image / pin deploy images (main only)` 만 skipped(main 전용이라 정상). 집계 잡 `required` 가 success 이므로 의존 잡 skipped 로 인한 뒤집힘 없음."
+            },
+            {
+              "stepSeq": 11,
+              "status": "succeeded",
+              "log": "**머지(executionGuide §3).** 머지 직전 main tip 이 `d422b38` 로 그대로임을 재확인한 뒤 `gh pr merge 53 --squash`. 머지 커밋 **`b30a321de4919105d05e118efdded5eeadcbb0b4`** (`feat(sentiment): AC3.4 축별·분위기별 비율 — 서빙 + 화면 (slice 6, reconcile rct_20260919-0002) (#53)`). main 직접 push 없음. `deploy/` 무접촉 — `suspend: true` 는 그대로 두었다(사람 결정 사항)."
+            }
+          ]
         }
       }
     ]
