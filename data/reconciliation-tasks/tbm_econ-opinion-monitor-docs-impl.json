@@ -3000,6 +3000,62 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-19T03:18:36Z",
           "reason": "승인. 문서 한 파일(`docs/econ-opinion-monitor-doc-tracker/2026-09.md`) +29/−2, 4헝크뿐인 회계 정정이라 불가역 작업이 없고, 되돌림은 커밋 1개 revert 로 끝난다(게이트가 base 에서 이미 rc=0 이라 revert 가 게이트를 깨지 않는다).\n\n**신선도 — base 가 움직였으나 초록이 살아 있음을 머지 트리 실측으로 확정했다.** 계획이 선 base `b30a321` 이후 main 이 `afc9692`(#55) → `96ac1cb`(#57) 로 두 칸 이동했고, `refs/pull/58/merge` 의 부모가 `afc9692` 라 merge-ref 초록은 한 칸 낡았다. 그러나 ⑴ 두 커밋 모두 이 PR 의 대상 파일을 **무접촉**(#55=mocking-policy·tests/e2e/k8s, #57=design-tracker·mockups)이고 `mergeable_state=clean`(rebaseable=false 는 무해), ⑵ main tip 위에 PR 을 실제로 시험 머지해 게이트 3종을 직접 돌린 결과 `check-mockup-render`·`check-journey-mockup`·`check_scenario_mapping` **전건 rc=0**, ⑶ 시험 머지 트리는 main tip 과 **이 md 한 파일 말고 바이트 동일**(`git diff --numstat origin/main..trial` 이 1행)이라 로컬 재현 불가한 잡(ci 의 build/lint-web/kind e2e · image)의 입력 집합이 main tip 과 동치다 — 그 트리는 #57 이 `required` 를 통과해 착지시킨 것이다. PR head `b7275be` 의 단일 집계 체크 `Checks` 는 success (run 35417406865).\n\n**정합성 — 정정의 근거를 문서 주장이 아니라 원문·구현으로 확인했다.** planner 가 감지에게서 넘겨받은 분기(「AC3.1 의 의도가 `fairness` 화면 표시까지인가」)를 PRD 원문으로 재검했다: `econ-opinion-monitor-prd-aggregation-viz.md:20` AC3.1 본문은 정규화 계산과 「정규화 방식은 명시되고 일관 적용된다」만 요구하고 검증 방법도 데이터 층위(한 소스 수집량만 늘렸을 때 흔들림)이며, **화면을 요구하지 않는다** — 표시 요구는 `:62` AC3.8(「정규화된 비율 표시」)의 몫이고 그 AC3.8 은 이미 `Dashboard.tsx` 를 표면으로 착지 인정돼 있다. 구현도 실재를 머지 직전 main 에서 전건 재확인했다(`aggregate.py` ∋ `Normalization (AC3.1)` · `subject_trend.avsc` ∋ 해당 문면 · `handlers.go` ∋ `share-normalized` · `aggregation-1-volume-normalization.spec.ts` 존재, 5 test **skip 0**). 코드를 읽어 스텁이 아님도 확인했다 — 소스 내 점유율 → 소스 수 평균 → 대상 간 재정규화가 실제로 계산된다.\n\n**범위 — 넘치지 않는다.** 착지 목록 추가 · 잔여 AC3.1 행 제거 · 「화면」 항목 재서술 · 변경 이력 1행, 의도한 4헝크뿐이고 `contracts/python/go/web/deploy` diff 0줄. 자매 소유 구간은 절 단위 sha256 이 base 와 동일(`## e2e 매핑` `dc6c534c38de` · `## 구현 수렴 로드맵` `fbe6e3ebeb0d`) — 슬라이스 표·AC↔e2e 매핑표 무접촉이라 「21개 AC 가 각각 한 슬라이스에 소유된다」 불변식이 산다. 동시에 열린 자매 PR #56(design-tracker)·#59(e2e spec)와 **파일 겹침 0** 이라 같은 문자열을 서로 쓰는 집계 은폐 위험도 없다. AC3.3 롤업은 자매 게이트 해제 신호와 결합돼 있어 범위 밖으로 남긴 판단도 타당하다.\n\n**페이크 경계 — 뭉개지 않고 드러냈다.** `aggregate.py` docstring 이 스스로 `deliberately simple placeholder` 라고 적는 점을 PR 이 **원문 그대로 인용한 채** 착지 근거를 댄다(AC3.1 은 특정 공식을 규정하지 않고, 이 경로는 슬라이스 4 가 걷어낸 `_spark()` 가짜 램프처럼 값을 꾸며내지 않고 실 데이터에서 계산돼 편향 대조를 통과한다). 기준 1 의 「페이크/스텁은 충족으로 세지 않는다」와의 경계를 문서가 스스로 설명하므로, 이 판정이 나중에 재검될 때 근거와 반대 증거가 같은 자리에 남는다.\n\n**실행 지침 검증 가능성.** 완료 기준 4종이 전부 기계 판독이고, 실행자가 돌릴 3-1~3-4 를 내가 머지 트리에서 먼저 돌려 전건 통과를 확인했다 — 승인이 곧 실행 허가인 만큼 실행자가 붉은 것을 떠안지 않는다. 한 가지만 일러둔다: 지침 3-4 의 sha256 기대값은 base `b30a321` 기준이며 지금도 두 절 다 SAME 이지만, 자매 PR 이 먼저 머지되면 `CHANGED` 가 정상이므로 지침이 안내한 대로 **이 커밋 `b7275be` 의 헝크 실측**(`git show -U0 b7275be -- <파일> | grep -c '^@@'` == 4, 파일 1개 — 지금 값 그대로 확인)으로 좁혀 판정할 것."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-19T04:21:30Z",
+          "finishedAt": "2026-09-19T04:39:50Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T04:30:00Z",
+              "finishedAt": "2026-09-19T04:34:00Z",
+              "log": "전제 재확인(읽기 전용) — **tip 은 계획이 잰 `b30a321` 이 아니라 `8fbf43c`** 로 3커밋 움직여 있었다(`afc9692` #55 e2e mocking-policy+배치 yaml · `96ac1cb` #57 JRN-logic-backfill 이관 · `8fbf43c` #56 sentiment 전수 판정). 셋 다 `docs/econ-opinion-monitor-doc-tracker/2026-09.md` **무접촉**(파일 목록 실측) ⇒ 지침이 경고한 「착지/잔여 판정 겹침 → planner 반송」 조건은 성립하지 않는다. 게이트 3종을 **머지 트리**에서 실행: `check-mockup-render.py` rc=0 · `check-journey-mockup.py` rc=0 · `tests/e2e/check_scenario_mapping.py` rc=0. 근거 좌표 4개를 머지 직전 main tip `8fbf43c` 에서 전건 재확인: `aggregate.py` ∋ `Normalization (AC3.1)` 1 · `contracts/gold/subject_trend.avsc` ∋ `Source-deviation-normalized interest share (AC3.1, AC3.8).` 1 · `go/internal/handlers/handlers.go` ∋ `share-normalized` 1 · `tests/e2e/specs/aggregation-1-volume-normalization.spec.ts` 존재(test 5건, skip 0). 4/4 hit — 정정 근거 유지."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T04:34:00Z",
+              "finishedAt": "2026-09-19T04:34:00Z",
+              "log": "「착지」 목록 AC3.1 (슬라이스 8) 항목 신설. 계획 단계(preparation)가 커밋 `b7275be` 로 이미 산출해 둔 내용이다. 실행자는 새로 만들지 않고, 머지 직전 **실제 머지 트리**(origin/main `8fbf43c` + PR head `b7275be` 로컬 병합, 충돌 0) 위에서 재실측해 확인했다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T04:34:00Z",
+              "finishedAt": "2026-09-19T04:34:00Z",
+              "log": "「잔여」 목록에서 AC3.1 행 제거 + 「화면」 항목을 `fairness` = 화면 잔여로 재서술. 계획 단계(preparation)가 커밋 `b7275be` 로 이미 산출해 둔 내용이다. 실행자는 새로 만들지 않고, 머지 직전 **실제 머지 트리**(origin/main `8fbf43c` + PR head `b7275be` 로컬 병합, 충돌 0) 위에서 재실측해 확인했다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T04:34:00Z",
+              "finishedAt": "2026-09-19T04:34:00Z",
+              "log": "슬라이스 표·AC↔e2e 매핑표 무접촉 유지. 절 단위 sha256 동치로 확인(base `b30a321` 대비): `## e2e 매핑` `dc6c534c38de` · `## 구현 수렴 로드맵` `fbe6e3ebeb0d` — 계획이 잰 값 그대로. 계획 단계(preparation)가 커밋 `b7275be` 로 이미 산출해 둔 내용이다. 실행자는 새로 만들지 않고, 머지 직전 **실제 머지 트리**(origin/main `8fbf43c` + PR head `b7275be` 로컬 병합, 충돌 0) 위에서 재실측해 확인했다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T04:34:00Z",
+              "finishedAt": "2026-09-19T04:34:00Z",
+              "log": "「이번 달 변경 이력」 표 끝에 2026-09-19 행(task id `rct_20260919-0003`) 덧붙임. 계획 단계(preparation)가 커밋 `b7275be` 로 이미 산출해 둔 내용이다. 실행자는 새로 만들지 않고, 머지 직전 **실제 머지 트리**(origin/main `8fbf43c` + PR head `b7275be` 로컬 병합, 충돌 0) 위에서 재실측해 확인했다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T04:34:00Z",
+              "finishedAt": "2026-09-19T04:36:00Z",
+              "log": "머지 트리 실측: 변경 파일은 `docs/econ-opinion-monitor-doc-tracker/2026-09.md` **1개**(`git diff --numstat origin/main HEAD` → `29 2` 한 줄), `git diff --numstat origin/main HEAD -- contracts python go web deploy` **빈 출력** = as-is 5트리 바이트 불변. 게이트 3종 rc=0(위 seq1)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T04:36:00Z",
+              "finishedAt": "2026-09-19T04:39:50Z",
+              "log": "PR #58(`reconcile/rct_20260919-0003-docs-impl`, head `b7275be`)은 계획 단계가 이미 열어 두었다 — 자매 `tbm_econ-opinion-monitor-scenario-e2e` 와 브랜치 충돌 없음. **실행자의 몫은 지침대로 머지 하나**이고, 그것을 했다. 머지 전 판정: `mergeable=true` · `mergeable_state=clean`(최초 조회는 `unknown` 이라 재조회로 확정) · 단일 집계 체크 `Checks` = **success** (run `35417406865`). **초록 신선도**: `refs/pull/58/merge` 부모가 `afc9692` 로 현재 main tip `8fbf43c` 보다 낡아 merge-ref 기준으로는 이식되지 않는다. 그래서 **잡 입력 집합**으로 갈랐다 — 머지 트리는 main tip 대비 `2026-09.md` **단 한 파일**만 다르고, 그 파일을 읽는 CI 잡은 `check_scenario_mapping.py`(`## e2e 매핑` 절) 하나뿐이며(`grep -rn doc-tracker` 로 워크플로·Makefile·스크립트 전수 확인, `check-mockup-render`/`check-journey-mockup`/node·web·kind e2e 는 무참조), 그 게이트를 머지 트리에서 직접 돌려 rc=0 을 실측했다. 나머지 잡의 입력은 main tip 과 바이트 동일하므로 그 초록이 그대로 유효하다. **머지 방식은 레포 설정으로 결정**: `allow_merge_commit=false`·`allow_rebase_merge=false`·`allow_squash_merge=true` ⇒ squash(지침 본문의 「머지 커밋」 문구가 아니라 설정을 따름; 최근 착지 5건이 전부 부모 1개인 것과도 일치). 머지 결과 squash 커밋 **`61da31b8`** (`merged=true`). ※ 롤백이 필요하면 부모 1개이므로 `git revert 61da31b8` (`-m 1` 아님)."
+            }
+          ]
         }
       }
     ]
