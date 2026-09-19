@@ -8742,6 +8742,62 @@
       "reason": "**actionRequired=true — 「직전 슬라이스가 자기 완료 기준을 전건 충족하고 `succeeded` 로 닫히며 잔여 8건을 소유자 없이 남긴」형(소비된 트리거).** 내 as-is 트리거 `286a091`(#143)은 직전 task `rct_20260919-0001` 의 실행 산출이고 그 슬라이스는 **무죄이자 성공**이다 — 그럼에도 `action_required` 인 이유는 「트리거가 무죄인가」와 독립한 두 가지(**소유자 부재** · **gap 자신의 재감지 경로 없음**)다. 「gap 이 줄었다」는 닫을 근거가 아니라 다음 슬라이스를 열 근거다.\n\n**닫는 근거 5종**\n\n⑴ **귀속이 기계적이다.** 부모 `cba91ac` 에서 두 versionScript 를 재실행하면 저장 baseline(`internal:52b3333f… main.go:a686818e…` · `docs:909b2377…`)과 **세 값 모두 바이트 동일**이다. 창 5커밋을 side 별로 갈랐다 — **as-is 를 움직인 것은 #143 하나**(#140·#141·#142·#144 는 `-- internal main.go` diff 가 전부 공집합), to-be 는 다섯 모두 기여. 판정 중 `ls-remote` 재판독도 `286a091` 그대로라 2·3파도가 없고 측정이 살아 있다.\n\n⑵ **축 ⑴ 이 9 → 8 로 실제로 줄었고, 남은 8 이 정확히 세어진다.** `prd-resource-generic` AC11 이 네 조항(verb 전용 · `namespace` 필수 · 대상 수/앞 20개 이름 context · 0건 무승인)과 짝 AC(`prd-approval-gate` AC11 의 컬렉션 읽기 경로 · `PartialObjectMetadataList` 강제 · 승인 후 TOCTOU 재확인)까지 코드에서 실측된다. 남은 8 = `resource_port_forward`(AC14) · `resource_proxy`(AC15) + `prd-github-commit-status` AC1~AC6. 앞 둘은 `internal`+`main.go` 전수 grep **0히트**, 뒤 여섯은 도구 미등록이고 `internal/github` 의 2히트는 **안내 문면과 그 문면을 단언하는 테스트**다.\n\n⑶ **축 ⑵·⑶·⑷ 는 초록이고, 그것을 레포 자신의 게이트가 뒷받침한다.** 순수 python 게이트 4종이 HEAD 에서 전부 rc=0 이고(`check_ac_mapping.py` 불변식 `85−1−19=65=65` 공백 0 · `check_doc_inventory.py` 허브 49/49 · `check_comment_policy.py` · `check_mock_policy.py`), tracker 의 집계(등록 도구 22 · AC 85 · PRD 15 · 테스트 15 · 잔여 「AC14·AC15 둘」)가 내 독립 재계수와 **전건 일치**한다. 다만 **초록은 문서 계층·등재 무결성을 증명할 뿐 구현을 증명하지 않는다** — 이 fire 의 gap 은 게이트가 원리적으로 못 보는 축이다.\n\n⑷ **잔여 8 을 소유한 열린 task 가 0건이다.** 같은 모델의 비-터미널 task 는 내 것 하나뿐이고(직전 소유자는 `succeeded`, 그 계획 범위는 「한 도구 등록」뿐), 같은 레포에서 열린 자매는 `tbm_homelab-k3s-mcp-scenario-e2e` `rct_20260919-0002` 하나인데 그 축은 **AC ↔ e2e 1:1** 이라 모델 정의가 귀속을 명시적으로 갈라 둔다. 중복 계상 없이 경계가 맞물린다.\n\n⑸ **재감지 경로가 이 gap 자신에게는 없다.** 미구현 AC 는 *미구현인 한* as-is 트리를 스스로 움직이지 않는다. 지금 닫으면 이 잔여를 깨우는 것은 **다른 축의 문서 노이즈가 우연히 to-be 를 흔들어 주는 경우뿐**이고, 그것은 설계된 재감지가 아니다.\n\n**planner 에게 넘기는 것(범위는 planner 가 자른다, 여기서 자르지 않는다)**\n- **(A) 스트림 표면 잔여 2종** — `resource_port_forward`(AC14) · `resource_proxy`(AC15). tracker 290-291행이 왜 이 둘이 남았는지를 적는다: `port_forward` 는 전송 계층이 다르고(단발 왕복·터널 비유지), `proxy` 는 Pod·Service·Node 3종 × 메서드→verb 사상과 kubelet 고권한 경로 표시가 필요하다. ⚠️ **`proxy`(AC15)에는 문서 내부 모순이 하나 서 있다** — tracker 440-446행이 「AC15 는 `nodes/proxy` 를 경로 제한 없이 열라고 적는 반면 `values.md`(2026-09-12 행)와 「수용된 위험」의 「스트림 표면 확대」 행은 종전에 그것을 열지 않겠다고 적었다」고 자인하고 **「`proxy` 는 코드 슬라이스로 들어가면 안 된다」**고 못박는다(194행이 그 문구를 「현행 아님」으로 정정했으나 tracker 자신은 여전히 코드 진입을 막는다). ⇒ **AC15 는 코드가 아니라 문서 방향 확정이 선행**이고, 코드로 갈 수 있는 것은 `port_forward`(AC14) 쪽이다.\n- **(B) `github_commit_status_create` AC1~AC6** — **사람 선행이 미해소다.** PRD 「배포 순서(필수)」 ①(토큰 AC5, 닫힘) → **②(GitHub UI 에서 App 에 `Commit statuses: Read and write` 부여 — 사람 작업)** → ③(새 도구). ②가 서기 전에는 도구를 만들어도 CI 가 그 동작을 판정할 수 없으므로 **완료 기준으로 쓸 수 없다**. 이 건은 계획 대상이 아니라 **사용자에게 올릴 선행 요청**으로 다루는 편이 맞다.\n- 이 레포의 확립된 보폭은 **「한 슬라이스 한 도구」**다(#127 `resource_attach` · #143 `resource_delete_collection` 선례). ⇒ 권고 기본값은 **(A) 중 `resource_port_forward`(AC14) 한 종**이고, 착수 전에 tracker 「수용된 위험」의 「RBAC 경계 소멸」 행(게이트가 유일한 경계 = 테스트 밀도를 높게 잡을 것)을 읽는 것을 전제로 둔다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-19T02:17:17Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`resource_port_forward`(`prd-resource-generic` AC14) 한 종을 등록해 축 ⑴ 잔여 8건 중 **하나**를 닫는다. 코드를 문서에 맞추는 방향(모델 「충돌 시 기본 방향」)이고, 슬라이스 보폭은 이 레포의 확립된 「한 슬라이스 한 도구」(#127 `resource_attach`, #143 `resource_delete_collection` 선례)를 따른다.\n\n**왜 남은 둘 중 port_forward 를 먼저 고르는가 — 선언하는 표면이 더 작다.** doc-tracker 의 「쓰기·스트림 축의 잔여」가 일곱을 한 슬라이스에 묶지 않는 근거로 적은 것은 「RBAC 경계 소멸」이다 — 게이트 판정이 유일한 경계인 동안 **선언 오류의 비용이 표면 크기에 정비례한다**. 그 기준으로 둘을 재면 갈린다: `port_forward` 는 쌍이 **하나**(`create on pods/portforward`)에 대상도 Pod 하나지만, `proxy`(AC15)는 Pod·Service·Node **3종 × HTTP 메서드→verb 사상**이라 한 도구가 선언하는 쌍의 집합이 인자에 따라 갈라지고, 거기에 kubelet 고권한 경로 표시(AC15 가 「`(verb, resource)` 쌍이 호출을 한정하지 못한다」고 자인하는 그 지점)까지 얹힌다. 더 작은 표면을 먼저 세워 두면 `proxy` 슬라이스가 기댈 형판(스트림 서브리소스 discovery·상한·쌍 선언)이 하나 더 는다.\n\n**이 시도의 범위(완료 기준) — 코드에서 `resource_port_forward` 가 서고 문서가 그것과 일치하는 것.** 구체적으로 ⑴ `k8s` 계층의 단발 왕복 포트 포워드 경로(SPDY 터널 개설 → 페이로드 1회 송신 → 상한 안에서 응답 수신 → **터널 닫기**) ⑵ 도구 등록(`toolslist.go` 광고 + `gate.go` 선언·핸들러, 쌍은 `create on pods/portforward`, `port` 필수) ⑶ 승인 전에 걸러야 할 인자 거부(`port` 범위 밖·`readSeconds` 상한 초과가 **승인 요청을 만들기 전에** -32602 로 떨어진다 — `attach`/`exec` 의 `parse*Target` 선례) ⑷ 위 셋의 Go 단위 단언 ⑸ `tests/integration/_helpers.py::EXPECTED_TOOLS` 에 이름 추가(doc-tracker 가 `toolslist.go` 와 이 상수의 동치를 선언한다) ⑹ doc-tracker 를 실측에 맞춤(등록 도구 22→23, 잔여 「둘」→「`resource_proxy`(AC15) 하나」, 시나리오 14·17 의 **차단 근거만** 다시 씀) ⑺ 주석 원장 재판정 ⑻ 레포 게이트 4종 초록 + `check_ac_mapping.py` 일곱 값이 **머지 직전 main 과 동치**(현재 main 실측 `85·1·19·65·65·0·0`).\n\n**범위 밖(경계를 여기서 긋는다)**: ⓐ 전용 e2e 파일 저작(`resource_generic_ac14.py`) — 자매 `tbm_homelab-k3s-mcp-scenario-e2e` 의 축이라 ⑹에서 시나리오 14 행을 **⏳ 유지**한 채 근거만 바꾼다(행 수 불변 ⇒ `check_ac_mapping.py` 의 「구현 대기 등재 19」가 움직이지 않는다). 실물 apiserver 위의 왕복 검증(「같은 승인으로 두 번째 왕복이 불가능하다」를 실물 gatekeeper 로 재는 것)도 같은 이유로 그쪽 몫이다. ⓑ `resource_proxy`(AC15) — 다음 슬라이스. ⓒ `prd-github-commit-status` AC1~AC6(6건) — 「배포 순서 ②」가 **사람이 GitHub UI 에서 App 에 `Commit statuses: Read and write` 를 주는 작업**이라 코드만으로 완료 기준을 세울 수 없다. ⓓ RBAC 변경 — `k8s/rbac.yaml` 은 2026-09-14 이래 `cluster-admin` 바인딩이라 `pods/portforward` 가 이미 권한 안이고, 애초에 `k8s/` 는 as-is 버전 범위 밖이다.\n\n**가역성**: PR 한 건이고 순수 추가(새 파일 3개 + 기존 파일에 등록 한 줄씩)라 revert 로 완전히 되돌아간다. 실행 시점의 런타임 위험은 이 도구가 **네트워크 정책이 막아 둔 파드 포트에 도달한다**는 점인데, 완화가 설계에 들어 있다 — 쌍이 게이트 대상이라 첫 호출부터 사람 승인을 타고, 승인 `context` 의 verbatim arguments 블록이 **포트와 페이로드를 그대로** 싣고(AC14 가 AC3 를 지목하는 그 요구), 터널은 왕복 뒤 닫혀 1승인 1왕복(`prd-approval-gate` AC7)을 코드로도 지킨다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`internal/k8s/port_forward.go` 신설 — `PortForwardResource(ctx, ref, port, payload, readSeconds)`. kind 를 resolve 해 core/v1 `pods` 가 아니면 거부하고, 기존 `streamSubresourceServed(ctx, gvr, kind, \"portforward\")` 로 이 클러스터가 `pods/portforward` 를 서빙하는지 discovery 로 확인한다(권한 질문이 아님을 문면에 유지). 그다음 `transport/spdy` 로 `POST .../pods/<name>/portforward` 를 업그레이드해 `portforward.PortForwardProtocolV1Name` 으로 dial 하고, 같은 `requestID`·`port` 헤더로 error 스트림과 data 스트림을 열어 **페이로드를 한 번 쓰고 쓰기 반쪽을 닫은 뒤** 상한 안에서 읽는다. 읽기 상한은 시간(`readSeconds`, 기본 5·최대 30)과 바이트(기존 `streamMaxOutputBytes` 256KiB) 둘 다. 함수를 빠져나가기 전에 스트림과 connection 을 **반드시 닫는다**(defer).",
+              "expectedOutcome": "`go build ./...` 통과. 터널 수명이 이 함수 하나에 갇혀 호출이 끝나면 닫힌다(AC14 「터널을 걸쳐 유지하지 않는다」)."
+            },
+            {
+              "seq": 2,
+              "action": "같은 파일에 응답 인코딩 결정을 넣는다 — 수신 바이트가 유효 UTF-8 이면 `response` 에 그대로, 아니면 base64 로 담고 `responseEncoding` 이 `\"utf-8\"`/`\"base64\"` 로 어느 쪽인지 말한다. 송신도 대칭으로 `payload`(문자열) 또는 `payloadBase64` 중 하나만 받는다. error 스트림이 말한 것(예: 대상 포트 connection refused)은 삼키지 않고 오류 문면에 싣는다.",
+              "expectedOutcome": "바이너리 응답이 JSON 직렬화에서 U+FFFD 로 **조용히 망가지지 않는다**. 포트가 닫혀 있을 때 「빈 응답」이 아니라 거부 사유가 돌아온다."
+            },
+            {
+              "seq": 3,
+              "action": "`internal/mcp/port_forward.go` 신설 — `parsePortForwardTarget`(`attach` 선례대로 쌍 resolver 와 핸들러가 **둘 다** 호출)에서 `apiVersion`·`kind`·`name` 필수, `namespace` 는 pods 라 필수, `port` 정수 1..65535 필수, `readSeconds` 1..30, `payload`/`payloadBase64` 상호 배타를 검사한다. `subresource`·`command` 인자는 명시적으로 거부한다. `portForwardPairs()` 는 좌표에 `subresource:\"portforward\"` 를 박아 `genericPairs(\"create\")` 로 넘겨 쌍을 `create on pods/portforward` 하나로 만든다.",
+              "expectedOutcome": "`port=70000`·`readSeconds=31` 같은 인자 오류가 **승인 요청을 만들기 전에** -32602 로 거부된다(AC14 「상한 초과가 거부된다」)."
+            },
+            {
+              "seq": 4,
+              "action": "`internal/mcp/gate.go` 레지스트리에 `\"resource_port_forward\": {decl: toolDeclaration{resolve: portForwardPairs(), target: genericTarget()}, handle: (*Handler).resourcePortForward}` 를 `resource_attach` 옆에 등록한다. `genericTarget()` 을 쓰므로 AC6 의 승인 직전 재조회(파드 uid 대조)가 그대로 걸린다.",
+              "expectedOutcome": "도구가 게이트 대상이 되어 승인 없이는 실행되지 않고, 승인 `context` 의 verbatim arguments 블록에 `port` 와 페이로드가 그대로 실린다(AC14 → AC3)."
+            },
+            {
+              "seq": 5,
+              "action": "`internal/mcp/toolslist.go` 에 `resource_port_forward` 광고를 추가한다 — 단발 왕복이라는 점, 지속 세션은 `kubectl port-forward` 의 일이라는 점, 쌍이 `create on pods/portforward` 하나이고 항상 승인을 탄다는 점, 상한(포트 1..65535 · `readSeconds` 기본 5 최대 30 · 256KiB)을 description 과 inputSchema 에 적는다. `tests/integration/_helpers.py::EXPECTED_TOOLS` 에도 같은 이름을 더한다.",
+              "expectedOutcome": "`tools/list` 표면이 22→23 종. 통합 하네스의 도구 표면 확인(`smoke.py`)이 레드가 되지 않는다."
+            },
+            {
+              "seq": 6,
+              "action": "Go 단위 테스트 추가(`internal/k8s/port_forward_test.go`·`internal/mcp/port_forward_test.go`) — ⑴ 인자 검증 전건(포트 범위·`readSeconds` 범위·payload 상호 배타·`subresource`/`command` 거부·`name` 누락) ⑵ 쌍 resolver 가 `create on pods/portforward` 하나를 내고, 인자가 틀리면 **쌍 단계에서** 실패함 ⑶ 응답 인코딩 분기(유효 UTF-8 ↔ 바이너리) ⑷ 바이트 상한에서 `responseTruncated` 가 참이 됨.",
+              "expectedOutcome": "`go test ./...` 전 패키지 ok, 신규 단위 전건 PASS."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/doc-tracker/2026-09.md` 를 실측에 맞춘다 — ⑴ 등록 도구 수 22→23 ⑵ 「현재 잔여는 `resource_port_forward`(AC14)·`resource_proxy`(AC15) 둘」을 이번 슬라이스 재실측 문단으로 갱신해 **잔여를 `resource_proxy`(AC15) 하나**로 적고 왜 port_forward 를 먼저 골랐는지(선언 표면 크기)를 남긴다 ⑶ 시나리오 14 행과 시나리오 17 행의 **차단 근거만** 다시 쓴다(14: 「도구 미등록」→「도구 착지, 남은 것은 전용 e2e 저작 — 소관 자매 모델」 / 17: (c) 의 차단이 `proxy` 하나로 좁혀짐). 행은 ⏳ 그대로 두어 행 수를 바꾸지 않는다.",
+              "expectedOutcome": "`check_ac_mapping.py` 일곱 값이 머지 직전 main 과 동치(`85·1·19·65·65·0·0`), `check_doc_inventory.py` rc=0(새 md 파일 없음)."
+            },
+            {
+              "seq": 8,
+              "action": "주석 원장(`docs/comment-policy/`) 재판정 — 신규 주석이 등재 범위의 지문을 움직이므로 `check_comment_policy.py` 를 돌려 레드가 된 행을 정책 절차대로 판정하고(② 문서 재진술·① 코드 재진술은 지운다) 해당 행과 합계 마커를 갱신한다.",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py` rc=0."
+            },
+            {
+              "seq": 9,
+              "action": "로컬에서 전 게이트를 돌린다 — `gofmt -l .`(출력 없음)·`go vet ./...`·`go build ./...`·`go test ./...`·`check_ac_mapping.py`·`check_mock_policy.py`·`check_comment_policy.py`·`check_doc_inventory.py`. 그다음 `reconcile/docs-impl-rct_20260919-0002` 브랜치로 푸시하고 PR 을 연다(머지하지 않는다).",
+              "expectedOutcome": "로컬 8종 전부 rc=0. PR 이 열리고 본문에 task id·gap 요약·범위·검증 방법이 담긴다."
+            }
+          ],
+          "plannedAt": "2026-09-19T02:35:00Z"
+        }
+      }
+    ]
   }
 ]
