@@ -9842,6 +9842,47 @@
       "reason": "**작업 필요 — 규칙 1 공백 1건(`test-resource-generic.md#시나리오 14`).**\n\n**근거(측정):** 이 트리거의 #146이 `resource_port_forward`를 등록해(5지점 실측 히트: `internal/k8s/port_forward.go`·`internal/mcp/port_forward.go`·`gate.go:153`·`toolslist.go:488`·`tests/integration/_helpers.py:60`) 그 행의 등재 선행 ⑴이 닫혔고, 선행 ⑵(실물 gatekeeper 픽스처)은 #106으로 이미 닫혀 있다(`tests/k8s/kind/gatekeeper-fixture.yaml`·`gatekeeper-variant.yaml` 실재). 등재 행 자신이 「남은 차단은 전용 e2e 저작 하나뿐」·「둘 다 닫혔으므로 남은 것은 저작뿐이다」라고 적는다. 그런데 모델 `definition` 규칙 6은 구현 대기를 「기능이 아직 구현되지 않아 E2E가 관측할 대상 자체가 없는」 경우로만 한정하고 「구현이 착지하면 … 자동으로 1:1 판정 대상으로 복귀한다」고, 「충돌 시 기본 방향」은 「구현되어 있으면 전용 파일을 신설한다」고 명시한다. ⇒ 저작 대기는 등재 사유가 아니므로 이 행은 ⏳에서 나와야 하고, 나오면 **85 − 1 − 17 = 67 ≠ 66** 으로 **공백 1 · 규칙 1 위반**이 드러난다(`resource_generic_ac14.py` 부재, 테스트 문서 `자동화` 필드도 `(미작성)`).\n\n**왜 지금인가(재감지 경로 없음):** 이 판정을 깨울 버전 이동은 바로 이 트리거다. 집계(85/1/18/66/0)도 레포 게이트 `check_ac_mapping.py`(트리거에서 rc=0, 카운터가 내 독립 재계수와 전건 일치)도 **행을 셀 뿐 각 행의 등재 자격을 검사하지 않으므로**(등재 문서 자신이 그 한계를 적는다) 여기서 `no_action_needed`로 닫으면 이 어긋남은 이후 어느 축도 깨우지 않는다.\n\n**자동 해소 가능성 없음:** 롤아웃 진행·일시적 alert 류가 아니라 문서·파일의 정적 상태이고, 해소하려면 전용 e2e 저작이라는 실제 작업이 필요하다. (스키마에 `assessment.recheckAfter`가 없어 유예 자체가 불가능한 것과도 무관하게, 유예할 사유가 없다.)\n\n**계획 단계에 넘기는 범위 — 이 렌즈의 산출물(E2E + 등재 문서)만으로 닫힌다:**\n1. `tests/integration/resource_generic_ac14.py` 신설 — 시나리오 14(단발 왕복·같은 승인 id 재왕복 불가·읽기 상한 절단·승인 `context`에 포트/페이로드 전문)를 주검증으로 선언(`검증 시나리오: test-resource-generic.md#시나리오 14`, 파일당 1개). HTTP 서빙 파드 픽스처는 행 자신이 「이 렌즈 소관의 저작, 차단 요인 아님」이라 적었다. 승인 갈래는 `gatekeeper-variant` 배차를 쓴다.\n2. `docs/doc-tracker/2026-09.md` 등재 섹션에서 그 행을 ⏳에서 제거하고 시나리오 레지스트리의 ✅로 옮긴 뒤 집계를 **구현 대기 18→17 · 1:1 대상 66→67 · 매칭 파일 66→67**로 갱신(공백 0 유지).\n3. `docs/test-resource-generic.md` 시나리오 14의 `자동화` 필드에서 `(미작성)`을 지우고 신설 파일을 참조(게이트 규칙 7이 같은 PR에서 이를 강제한다).\n4. **같은 표의 모순 정리(부수)**: `시나리오 14` 행이 읽은 「규칙 4는 저작 대기를 배제하지 않는다」와 `시나리오 18` 행의 「규칙 4가 저작 대기를 등재 사유에서 배제한다」가 정면 충돌한다 — 모델 정의 쪽(배제)이 맞으므로 그 문면을 정리한다. 함께 `approval-gate 시나리오 1`·`3` 행의 낡은 잔여 도구 목록(`resource_delete_collection`·`resource_attach`·`resource_port_forward`는 모두 등록됨)을 `resource_proxy` 하나로 좁힌다 — 두 행의 ⏳ 자격 자체는 유지된다(`resource_proxy` 전수 0 히트 + apiserver 감사 프록시 부재).\n\n**경계 확인:** 산출물은 e2e 파일과 등재·테스트 문서뿐이고 화면·엔드포인트·비즈니스 로직을 건드리지 않는다. 미구현 해소(`resource_proxy` 등록 등)는 `tbm_homelab-k3s-mcp-docs-impl`의 몫이며 이 task에 섞지 않는다 — 나머지 17개 구현 대기 행은 재실측 결과 전부 살아 있는 차단을 유지한다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-19T03:28:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`test-resource-generic.md#시나리오 14` 를 구현 대기(규칙 6) 등재에서 빼고 전용 e2e `tests/integration/resource_generic_ac14.py` 를 신설해 규칙 1 공백 1건을 닫는다. 이 접근을 고른 이유: 모델 정의의 「충돌 시 기본 방향」이 「구현되어 있으면 전용 파일을 신설한다」로 못박고 있고, 이 행의 등재 선행 둘(⑴ `resource_port_forward` 등록 — #146, ⑵ 실물 gatekeeper 픽스처 — #106)이 모두 닫혀 남은 것이 저작뿐인데 규칙 4·6 은 저작 대기를 등재 사유에서 배제하기 때문이다. 대안이던 「행을 ⏳ 에 두고 근거 문면만 갱신」은 #146 이 이미 시도했다가 부당 등재를 남긴 경로라 채택하지 않았다 — 게이트가 행을 세기만 하므로 그 상태로는 어느 축도 이 어긋남을 다시 열지 않는다. **이 시도의 범위(완료 기준)**: PR #148 이 main 에 착지하고, 머지 직전 main 대비 「구현 대기 −1 · 1:1 대상 +1 · 매칭 파일 +1 · 공백 0 유지」가 재측정으로 확인되며, `check_ac_mapping.py`·`check_comment_policy.py`·`check_mock_policy.py`·`check_doc_inventory.py` 넷이 main 에서 rc=0 이고 PR head 의 `integration-tests` 가 초록이면 성공이다. **범위 밖**: 나머지 구현 대기 16행(재실측 결과 전부 살아 있는 차단 유지 — `resource_proxy` 미등록·좁은 ClusterRole 변형 배포 부재·attach 제품 결함·commit-status 도구 선행), 미구현 해소 일체(`tbm_homelab-k3s-mcp-docs-impl` 소관), 그리고 다른 ⏳ 행들이 같은 방식으로 자격을 잃었는지의 전수 재판정. 이 task 는 `rg#14` 한 행과 그에 딸린 부수 문면 정리만 닫는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "전용 e2e `tests/integration/resource_generic_ac14.py` 신설 — 모듈 docstring 에 `검증 시나리오: test-resource-generic.md#시나리오 14` · `실행 대상: primary` 를 선언(파일당 정확히 1개)하고, busybox:1.36 `httpd` 파드를 파일이 스스로 세워 네 케이스를 단언한다: ⑴ 단발 왕복 + 승인 화면의 포트·페이로드 전문 ⑵ 두 번째 왕복은 새 승인 id 를 받고 거절되면 일어나지 않는다 ⑶ 상한 초과 응답이 정확히 256 KiB 에서 잘리고 responseTruncated 로 표시 ⑷ 창 상한 초과 readSeconds 는 승인 요청 0건으로 거부",
+              "expectedOutcome": "`python3 -m py_compile` 통과. `check_ac_mapping.py` 가 매칭 파일 67 을 실측하고 러너 배차·케이스 호출 누락을 보고하지 않는다. 픽스처 YAML·`ci.yml` 무변경(러너 자동 발견)."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/test-resource-generic.md` 시나리오 14 의 `자동화` 필드에서 `(미작성)` 을 지우고 착지한 단위 여덟과 신설 통합 파일이 각각 무엇을 재는지로 교체 (규칙 7 이 같은 PR 에서 이를 강제한다)",
+              "expectedOutcome": "`check_ac_mapping.py` 규칙 7 위반 0건."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/doc-tracker/2026-09.md` 등재 갱신 — 레지스트리 행을 ⏳ 에서 `✅ 전용 파일 resource_generic_ac14.py` 로, ⏳ 구현 대기 상세 표에서 `rg#14` 행 철거, 집계 블록·레지스트리 제목·불변식 줄을 `구현 대기 18→17 · 1:1 대상 66→67 · 매칭 파일 66→67`(공백 0 유지)로, 변경 이력 1행 추가",
+              "expectedOutcome": "`check_ac_mapping.py` 일곱 값 `85·1·17·67·67·0·0`, 불변식 성립, rc=0."
+            },
+            {
+              "seq": 4,
+              "action": "(부수) 같은 표의 낡은 문면 정리 — `approval-gate 시나리오 1`·`3` 행이 남은 도구로 들던 `resource_delete_collection`·`resource_attach`·`resource_port_forward` 를 실측(각 3지점 히트)으로 걷어내고 `resource_proxy` 하나로 좁힌다. 두 행의 ⏳ 자격 자체는 유지한다. `rg#14` 와 `rg#18` 의 규칙 4 독법 충돌은 `rg#14` 행 철거로 함께 해소된다",
+              "expectedOutcome": "`resource_proxy` 만 등록 0히트로 남고, 두 행의 ⏳ 등재는 그대로라 집계 불변(구현 대기 계수는 3에서 계산한 17 그대로)."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/comment-policy/ledger.md` 재판정·등재 — 신규 파일의 두 표면(줄 주석·docstring)을 정책 판정 절차로 훑어 ①/②/③ 경로에 걸리는 줄을 지운 뒤, 남은 줄 수와 지문을 각 원장에 행으로 더하고 합계 마커를 옮긴다",
+              "expectedOutcome": "`check_comment_policy.py` R1~R8 rc=0, 두 표면 모두 미판정 잔량 0."
+            },
+            {
+              "seq": 6,
+              "action": "브랜치 `reconcile/scenario-e2e-rct_20260919-0003` 로 커밋·푸시하고 대상 레포에 PR 을 연다(머지하지 않는다)",
+              "expectedOutcome": "PR 이 열리고 `on: pull_request` CI 가 디스패치된다(`lint` + `integration-tests`)."
+            }
+          ],
+          "plannedAt": "2026-09-19T04:52:00Z"
+        }
+      }
+    ]
   }
 ]
