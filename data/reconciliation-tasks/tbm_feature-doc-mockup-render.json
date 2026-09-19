@@ -1941,7 +1941,7 @@
   {
     "id": "rct_20260919-0001",
     "toBeModelId": "tbm_feature-doc-mockup-render",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-19T00:24:55Z",
@@ -2162,9 +2162,9 @@
           "reason": "**승인 — 3차 개정이 2차 거부가 지목한 지점을 정확히 고쳤고, 그 수정이 실제로 base 이동에 면역인지까지 직접 재현해 확인했다. 계획·PR·완료 기준은 지금(2026-09-19T01:3xZ, main `f357f12`) 전부 유효하다.**\n\n**신선도 실측 (전부 이번 검토에서 재측정)**\n- main `f357f12353f0459ef7041a12af3b82574f4a227e` — 3차 계획이 잰 그 지점에서 **더 움직이지 않았다**. PR #72 `open` · head `63b1fea997de…` 무이동 · base `2c7a6d3459ac…`(한 칸 뒤처짐) · `mergeable=true` · `mergeable_state=blocked`(막는 것은 빨간 `ci-gate` 하나) · 6파일 `+135/−19`(`docs/doc-tracker.md` + `frontend/src/` 5) ⇒ `backend/`·`e2e/` **0건**.\n- **시험 머지 직접 실행**: `Automatic merge went well`(충돌 0), 가져오는 파일은 위 6개뿐. `git diff --name-only f357f12..HEAD -- e2e/ backend/` **빈 diff** ⇒ 완료 기준 4 성립.\n- **−2 증분 직접 실측**: main 단독 `M5 래칫 37/37` · 캡션 `알려진 편차 37건 · 상한 37` → 시험 머지 `M5 35/35` · 캡션 `35건`. 게이트 3종(`check-mockup-render`·`check-journey-mockup`·`check-scenario-e2e`) **전부 rc=0**, `M2 21개` · `M3A 미등재 0`(활성 8/222) · `M3B 미등재 0`(활성 7/151) · `M7 불일치 0` — 이 넷이 main 단독과 **수치까지 동일**하다. 즉 원장 2행 삭제가 「등재만 지운 것」이 아니라 구현이 실제로 수렴했다는 증거다(M3A 가 미수렴이면 잡는다).\n\n**2차 거부 사유의 해소 — 고친 형식이 면역인지 같은 트리에서 대조했다**\n- 낡은 형식 `git diff --name-only origin/main..pr72 -- backend/ e2e/` → `backend/src/dependencies.rs`(=#73 머지의 **역방향**, 이 PR 의 변경이 아니다) **깨짐 재현**.\n- 새 형식 `git diff --name-only $(git merge-base origin/main pr72)..pr72 -- backend/ e2e/` → **빈 diff**. `GET /pulls/72/files` 도 `backend/` 0건. `backend/src/llm.rs` sha256 이 main·PR 양쪽 `4b78b016f065…10e` 로 **동일**. 셋 다 base 가 움직여도 값이 변하지 않는다.\n\n**빨간 `ci-gate` 는 무관한 flake 임을 판별 3종으로 확인했다** — 런 `35410741991`(`run_attempt=1`, 재실행 이력 없음)의 실패 잡은 `test (cargo)` 하나이고 잡 로그가 `test result: FAILED. 50 passed; 1 failed`, 실패 테스트는 `llm::tests::stub_is_deterministic_for_the_same_ask` 단 1건(`src/llm.rs:485`, `LLM rejected the request (429)`); `test (kind e2e)`·docs 게이트 3종은 success, `push` 는 `skipped`. 같은 base `2c7a6d3` 위의 런 `35411099905`(#73 head)의 `test (cargo)` = **success** 이며 #73 머지 뒤에도 조회된다. `ci-gate` 는 `if: always()` + `needs` 6개 전부 `success` 요구라 `push` 가 `skipped` 로 남으면 다시 빨갛다 — 지침이 그 확인과 전체 재실행 fallback, **재실행 2회 상한 · 3회째 중단·인계**까지 명시했다.\n\n**위험·불가역성** — riskLevel low 에 부합한다. 불가역 지점은 머지 하나뿐이고 프런트 4파일 + 원장 1파일이라 revert PR 로 되돌아간다(래칫 상한을 함께 되돌려야 한다는 단서도 4절에 있다). DB 마이그레이션·API 계약 변경·데이터 삭제 없음. 범위 이탈도 없다 — `backend/src/llm.rs` 의 실재하는 테스트 env 경합은 「고치지 말 것」으로 명시해 as-is 범위(`frontend/src` 트리) 밖으로 정확히 밀어냈다.\n\n**실행자에게 넘기는 단서 (거부 사유 아님 — 지침이 이미 절차로 덮는다)**: 3차 계획이 열린 PR 을 센 직후인 **01:26:38Z 에 #74 가 새로 열렸다**. `docs/doc-tracker.md` 를 `docs/doc-tracker/2026-09.md` 로 **이름을 바꾸고** 게이트 3종 스크립트를 전부 고치며 지금 `mergeable_state=clean` 이다. 이것이 먼저 머지되면 #72 는 rename/modify 충돌이 되고 집계 규칙도 달라진다. 지침 2절의 「머지 직전 main 재측정 + 시험 머지」와 1절 2행의 충돌 시 리베이스 경로가 그 상황을 그대로 덮지만, #26·#17 에 더해 **#74 까지 `docs/doc-tracker.md` 경합자**이므로 서두르는 편이 비용이 싸다. 완료 기준을 절대값 35 가 아니라 **머지 직전 main 대비 −2 증분**으로 둔 선택이 이 경합을 흡수한다."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-19T01:38:06Z",
-          "finishedAt": null,
+          "finishedAt": "2026-09-19T01:53:40Z",
           "entries": [
             {
               "stepSeq": 1,
@@ -2221,6 +2221,66 @@
               "startedAt": "2026-09-19T01:41:50Z",
               "finishedAt": "2026-09-19T01:41:50Z",
               "log": "`plan.executionGuide` 3차 개정은 **계획 단계의 산출물**이며 실행 시점에 다시 할 일이 없다 — 실행자는 그 지침을 소비했다. 결과적으로 개정의 목적이 그대로 증명됐다: base 가 또 움직였는데(#74) 판별 기준 3종이 전부 살아남아 재량 없이 절차를 적용할 수 있었다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T01:41:50Z",
+              "finishedAt": "2026-09-19T01:53:40Z",
+              "log": "**머지 — 이 시도의 유일한 불가역 지점.** ① 리베이스 head `9cef1051` 를 `--force-with-lease=refs/heads/reconcile/rct_20260919-0001-mockup-render:63b1fea997de…`(원격추적 ref 가 없어 명시적 lease sha 를 씀) 로 푸시. ② PR #72 가 `dirty` → **`mergeable=true` · `mergeable_state=clean`** 으로 뒤집혔다. ③ 새 head 의 CI 런 `35413445115` 가 **전 잡 success** — `test (cargo)` 가 이번엔 1회차에 통과해 지침 1절 ⑴ 의 `rerun-failed-jobs` 를 **한 번도 쓰지 않았다**(재실행 상한 2회 중 0회 소비). `push / build & push image` success, `push / pin deployment image (main only)` 는 설계상 `skipped`(main 전용 잡이라 PR 에선 안 돈다), `ci-gate` success. ④ 머지 직전 main 이 `66bb7a5a` 에서 **더 움직이지 않았음**을 재확인하고 squash 머지(레포가 squash 만 허용) → main `02692c05bf4c2212f74d746fe14f18ac44cb66b7`."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "frontend-src:25302a7173952b69193c6794471586897d748bb9",
+          "verifiedAt": "2026-09-19T01:57:00Z",
+          "checks": [
+            {
+              "name": "완료 기준 1 — M5 래칫 −2 증분(절대값 아님)",
+              "status": "passed",
+              "detail": "머지 직전 main `66bb7a5a` 단독 `M5 래칫 — 미해소 편차 37/37` · 캡션 `> 알려진 편차: **37건** · 미해소 편차 상한: **37**.` → 머지된 main `02692c05` `M5 래칫 — 미해소 편차 35/35` · 캡션 `35건`. **정확히 −2.** 원장 표에서 `구현 수렴 대기` 를 담은 행도 19 → 17 로 2줄 줄었다. 완료 기준을 절대값 35 가 아니라 증분으로 둔 선택이 이번 base 두 칸 이동(`f357f12` → `66bb7a5a`)과 #74 의 원장 파일 rename·게이트 스크립트 교체를 모두 흡수했다."
+            },
+            {
+              "name": "완료 기준 2 — M3A 미등재 0건(등재 삭제가 아니라 실제 수렴이라는 증거)",
+              "status": "passed",
+              "detail": "머지된 main 에서 `M3A 목업→구현 — 활성 단계 8개 / 카피 222건 대조, 미등재 0건`. 원장 2행을 지웠으므로 목업의 `로그아웃` 이 구현에 실재해야만 통과한다 — `frontend/src/HomeRepositories.tsx:130` 에 `await logout()` 이 실재하고 `api.ts` 가 그 함수를 내보낸다. `M3B 구현→목업` 도 `활성 쌍 7개 / 카피 151건, 미등재 0건`. `M7 앱바 슬롯 — 대조 5쌍 · 면제 2화면 · 불일치 0건`, `M5 대조 보류 2/2`."
+            },
+            {
+              "name": "완료 기준 3 — M2 토큰 21개 1:1 유지",
+              "status": "passed",
+              "detail": "`M2 토큰 1:1 — 21개 이름·값 일치`. `index.css` 에 `.btn-link` 를 이식했지만 팔레트에 새 값이 들어가지 않았다(머지 전 시험 측정과 수치 동일)."
+            },
+            {
+              "name": "완료 기준 4 — 머지가 가져온 파일에 `e2e/`·`backend/` 0건",
+              "status": "passed",
+              "detail": "기록해 둔 머지 직전 main sha 상대로 측정(움직이는 `origin/main` 이 아니다): `git diff --name-only 66bb7a5a9e70598c625986c19866e48eccaf725c..02692c05 -- e2e/ backend/` **빈 diff**. 머지가 가져온 파일은 `docs/doc-tracker/2026-09.md` + `frontend/src/{App.tsx,CredentialsSetup.tsx,HomeRepositories.tsx,api.ts,index.css}` **6개뿐**. `GET /pulls/72/files` 도 같은 6건."
+            },
+            {
+              "name": "완료 기준 5 — CI `ci-gate` 그린",
+              "status": "passed",
+              "detail": "리베이스 head `9cef1051` 런 `35413445115` = success, 잡 8개 전부 success(`push / pin deployment image (main only)` 만 설계상 `skipped` — main 전용). `test (cargo)` 가 1회차에 통과해 **flake 재실행을 0회 소비**했다(상한 2회). 참고: 리베이스 전 head `63b1fea` 의 런 `35410741991` 이 `test (cargo)` 하나로 빨갰던 것은 `llm::tests::stub_is_deterministic_for_the_same_ask` 의 env 경합 flake 였고, 이번 통과가 그 판정을 뒷받침한다."
+            },
+            {
+              "name": "형제 게이트 2종 무회귀",
+              "status": "passed",
+              "detail": "머지된 main 에서 `tools/check-journey-mockup.py` rc=0 · `tools/check-scenario-e2e.py` rc=0. `e2e/` 무변경이므로 시나리오 매핑도 불변. PR CI 의 docs 게이트 3종도 전부 success."
+            },
+            {
+              "name": "(정보성) 게이트는 PR 전용 — 머지된 main 런",
+              "status": "passed",
+              "detail": "`on: pull_request` 전용이라 머지 커밋 `02692c05` 에 붙은 런은 `Image`(success) 와 `pages build and deployment`(success) 둘뿐이다. 그래서 완료 기준 1~3·형제 게이트는 머지된 main 을 체크아웃해 **직접 실행한 결과**로 세웠다."
+            },
+            {
+              "name": "(정보성) 계획 밖 잔여 — 이 task 의 범위가 아니다",
+              "status": "passed",
+              "detail": "⑴ 원장 `구현 수렴 대기` **잔여 17행**(이 PR 이 추가한 `### 구현 수렴 대기 잔여` 절이 선결 조건별 분류를 들고 있다: 홈·연결 화면 병합 6 · 앱바 동선 결정 2 · e2e 단정 동시 개정 4 · 앞 행 노출 조건 1 · 백엔드 문자열 소유 1). ⑵ `backend/src/llm.rs` 의 테스트 env 경합(`#55 270a091e` 가 들여온 실재 버그)은 이 모델 as-is 지문(`frontend/src` 트리) 밖이라 고쳐도 내 재감지가 열리지 않는다 — `backend/` 를 as-is 로 갖는 모델 쪽 몫이다. 둘 다 converged 판정에 넣지 않았다(계획이 슬라이스로 범위를 명시했다)."
+            },
+            {
+              "name": "(정보성) as-is 지문 전진 → 다음 감지 주기가 후속을 연다",
+              "status": "passed",
+              "detail": "`asIs.versionScript` 재실행: `frontend-src:25302a7173952b69193c6794471586897d748bb9`(저장된 `lastObservedVersion` `frontend-src:f648a6bb74dcb48ce43da983e9400037f0a3db45` 와 다름) ⇒ 다음 detector 가 이 변화를 보고 후속 task 를 연다. **`lastObservedVersion` 은 건드리지 않았다.** 덧붙여 to-be 도 `mockups:ed3a8970048d98b01441471613d2d37f4c7881e7`(저장값 `2c29ee6c…`)로 전진해 있다 — #74 가 `docs/mockups/README.md` 를 고쳤다. 원장만 고치는 PR 로는 재감지가 깨어나지 않지만 이 PR 은 `frontend/src` 를 움직였으므로 그 조건을 만족한다."
             }
           ]
         }
