@@ -9127,7 +9127,7 @@
   {
     "id": "rct_20260919-0004",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-19T05:08:34Z",
@@ -9280,6 +9280,39 @@
               "startedAt": "2026-09-19T06:29:20Z",
               "finishedAt": "2026-09-19T06:29:30Z",
               "log": "지침 순서 3 — 머지. 머지 방식은 지침 문구가 아니라 레포 설정으로 갈랐다: GET /repos 에서 allow_merge_commit=false · allow_squash_merge=true · allow_rebase_merge=false 이고 직전 착지 넷(36656aa·1ee9ca8·0b01f08·880fe2a) 전부 부모 1개(squash). → PUT /pulls/150/merge merge_method=squash, sha=a7bc868e…(레이스 가드) → merged=true, **머지 커밋 ac9f9d3472be4e8991a5654c19b6282d6cf71d3f**. 토큰은 대상 레포용(homelab-k3s-mcp, contents+pull_requests write)을 reconciler 토큰과 분리해 사용."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:be2085323047c5c63b59b7786e82bdb1be703b8c main.go:9525c1baad8fb1a5817558f36f46de779fea4528",
+          "verifiedAt": "2026-09-19T06:38:00Z",
+          "checks": [
+            {
+              "name": "⑴ resource_proxy 가 5지점에 섰다",
+              "status": "passed",
+              "detail": "머지된 main(ac9f9d34)에서 실측. MCP 도구명 리터럴 `resource_proxy`: internal/mcp/proxy.go 1 · internal/mcp/gate.go 3 · internal/mcp/toolslist.go 1 · tests/integration/_helpers.py 1. k8s 층 internal/k8s/proxy.go 는 리터럴 0인데 **이것이 이 레포의 규약이다** — 자매 셋(internal/k8s/exec.go·attach.go·port_forward.go)도 `resource_*` 리터럴이 0이고, k8s 층은 Go 이름으로만 계약한다(`func (s *KubeService) ProxyResource(...)` proxy.go:50, `ProxyRef`/`ProxyOutcome` types.go). 즉 지침 검증표 ⑴ 의 `grep \"resource_proxy\"` 문자열 기대는 k8s 층에 한해 명명 규약과 어긋난 기대였고, 다섯째 지점은 지침 자신의 ⑵ 패턴(`ProxyResource`)으로 성립한다. 광고면도 일치: tools/list 24종 · EXPECTED_TOOLS 24종에 resource_proxy 포함(validateRegistry 가 런타임 강제)."
+            },
+            {
+              "name": "⑵ 축 ⑴ 미구현 AC 잔여 7 → 6",
+              "status": "passed",
+              "detail": "`grep -rnE \"resource_proxy|ResourceProxy|nodes/proxy|ProxyResource\" internal/ main.go` = **35히트 / 11파일**(부모 36656aa 에서는 **0히트**). AC15 가 닫혔다. 남은 축 ⑴ 은 `prd-github-commit-status` AC1~AC6 **6건**뿐이며, internal/github/github.go:201 이 여전히 `github_commit_status_create` 를 **이름으로만** 가리키고 구현은 없다(도구 등록 0). 정보성: 모델 전체 to-be 와의 잔여 gap 6건은 이 시도의 범위 밖이라 converged 판정에 넣지 않았다 — 재감지가 잇는다."
+            },
+            {
+              "name": "⑶ 게이트 전수 rc=0 (머지 트리 실측)",
+              "status": "passed",
+              "detail": "머지된 main 을 클론해 로컬 실행(PATH=/home/silas/toolchains/go/bin, go1.24.7 linux/arm64): `gofmt -l .` 무출력 · `go vet ./...` rc=0 · `go build ./...` rc=0 · `go test ./...` rc=0(11패키지 ok). 계획 단계 8 이 이름으로 예고한 테스트가 실재·통과: TestProxyAllPathsGated(11 서브 — GET 포함 메서드→verb 다섯 쌍, 거부가 클러스터 도달 전 차단, 경로 전문 전달, 바디 절단 표기) · TestProxyKubeletHighPowerPathFlagged(4 서브 — AC3 여섯 경로 두 표기 모두 표시, 관측 엔드포인트는 미표시, pod 동일 경로는 kubelet 아님) · TestProxyWideningIsDocumented. python 게이트 넷: tests/integration/check_ac_mapping.py rc=0 **85·1·17·67·67·0·0** — 부모 36656aa 에서 같은 일곱 값을 재측정해 **완전 동일**(기여 0 실증) · scripts/check_comment_policy.py rc=0 잔량 0줄 커버리지 100.0% 합계 **2835줄/120파일**(부모 2654/116 → 계획한 +181) · check_mock_policy.py rc=0(R1~R6 무위반, 등재 5/상한 5) · check_doc_inventory.py rc=0(허브 49/49, 끊긴 링크 0)."
+            },
+            {
+              "name": "⑷ CI 초록 — 정본은 PR head 잡 로그",
+              "status": "passed",
+              "detail": "PR head a7bc868e(전체 40자로 조회): 런 1건 **35425907210 'CI' completed/success**(event=pull_request), check-runs 6종 — `ci passed`·`unit tests`·`fmt + vet`·`integration tests`·`image / build & push server image` 전부 success, 유일한 skipped 는 main 전용 `image / pin deployment image (main only)` 로 집계를 뒤집지 않았다. 지침대로 머지된 main 에는 `on: pull_request` 인 ci.yml 이 붙지 않으므로 Go·통합 게이트의 정본은 이 run id 다. 머지 커밋 ac9f9d34 에 붙은 런 둘은 **35426736214 'Build and Push Docker Image to GHCR' completed/success**(잡 둘 — `build & push server image` success, `pin deployment image (main only)` **success**)와 pages build success. 로컬 재현 불가였던 통합(kind) 잡도 PR head 에서 초록이다."
+            },
+            {
+              "name": "⑸ base 신선도 · 자매 PR 집계 합산 위험",
+              "status": "passed",
+              "detail": "머지 직전 GET /commits/main = 36656aa 로 PR base.sha 와 동일 · mergeable_state=clean → **리베이스 경로(지침 단계 2)도, 절대 기준 재측정 경로도 발동하지 않았다**. 열린 자매 둘(#149 f19cdb78 · #151 fa4916ea)은 머지 시점까지 미머지이고 둘 다 같은 base 위에 있어, 먼저 착지한 이 PR 에는 합산 오염이 없다. ⚠️ 뒤집힌 숙제: **#149·#151 이 이제 낡은 base 위에 있다** — 특히 #151 은 scripts/check_comment_policy.py 자체를 고치고(R9 래칫) 이 PR 이 합계 마커를 2654→2835 로 옮겼으므로, 그쪽 실행자는 반드시 머지 트리에서 게이트를 다시 돌려 숫자를 재측정해야 한다(같은 문자열이면 충돌 0으로 조용히 머지되어 숫자만 틀린다). 그 판정은 각 task 의 몫이다."
             }
           ]
         }
