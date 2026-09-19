@@ -2940,6 +2940,52 @@
       "reason": "actionRequired=**true**. 이번 델타는 gap 을 줄였고 새 위반을 0 개 만들었지만, **기준 1 위반이\ntip 에서 실제로 깨져 있고, 직전 소유자가 내 claim 16분 전에 `succeeded` 로 닫으며 남긴 잔여를 집어갈\n소유자가 함대에 없다.** 더해 측정 과정에서 **기준 5 위반 1건을 새로 확인**했다. 「gap 이 줄었다」는\n닫을 근거가 아니라 다음 슬라이스를 열 근거다.\n\n**근거 1 — 델타 자체는 무죄이고 귀속이 단독이다.** 저장 baseline 양 side 가 `111777c` 에서 동시에\nversionScript 재실행값과 **바이트 동일** ⇒ 창 `111777c..b30a321` 5커밋, as-is 무버는 `b30a321`(#53)\n하나. 기준 3 은 `contracts/` 가 창 전체 5지점 `5a1ee3bb` **바이트 불변**이라 원리적으로 불가, 기준 4 는\n라우트 집합 부모==tip **동일**(diff 공집합)이라 문서 없는 **신규** 표면 0, 기준 2·5 는 레포 게이트 3종을\n**부모·tip 두 지점에서 전건 rc=0** 이며 **대조 면이 넓어진 채** 초록이다(mockup-render R3 in-scope\n21→23 · journey-mockup 여정 페이지 4→5, 미이관 래칫 2→1 · scenario-mapping 매칭 13→18, 공백 6→1).\n\n**근거 2 — 착지를 문서 주장이 아니라 구현으로 확인했다.** #53 은 이 모델 직전 task\n`rct_20260919-0002` 의 슬라이스 6 산출물이고(커밋 제목이 `reconcile rct_20260919-0002` 를 직접 적는다),\n그 task 는 **02:21:04Z `succeeded`**, 내 claim 은 **02:37:07Z** — **16분 03초** 차의 **소비된 트리거**다.\nAC3.4 는 실재한다: `handlers.go:609 sentimentByAxis`(Gold `AxisSentiment` 파생, 무행 축을\n`Present:false` 로 구분) · `Sentiment.tsx` **412줄 실화면**(`:54` 가 미분석을 네 분류에서 분리) ·\n`App.tsx:11 BUILT` 4원소 · 회귀 테스트 +299줄 동반. **분모도 안 움직였다** — AC 식별자 집합 부모==tip\n**21 == 21**(집합 diff 공집합)이므로 미구현 감소는 목표선 하락에 의한 착시가 아니다.\n\n**근거 3 — 기준 1 위반 1건(AC3.3)이 좌표로 서 있다.** `aggregate.py:30 BUCKET_UNIT = \"hour\"` 로 산출\n단위가 고정돼 Gold 에 `day`/`week` 0건이다. 모델 정의의 「미구현 AC를 백로그로 예외 처리하지 않는다」가\n이것을 drift 로 못박는다.\n\n**근거 4 — 기준 5 위반 1건(AC3.1)을 새로 확인했다. 종전 판정들이 물려받아 온 오계상이다.**\ndoc-tracker `2026-09.md:67` 이 AC3.1 을 「잔여」로 올리지만 정규화 계산·계약·서빙·활성 e2e 가 전부 tip 에\n실재한다(`aggregate.py:10`·`:57~71` · `subject_trend.avsc:36` · `handlers.go:325` 가 실 Gold 에서\n`normalized:true` · `aggregation-1-volume-normalization.spec.ts` 5 test 활성, AC3.1 의 검증 방법을 그대로\n재는 편향-피드 비교 하네스). AC3.1 본문은 화면을 요구하지 않는다. 같은 tracker 가 AC3.6·AC3.8 을\n**소유 슬라이스의 화면보다 먼저** ✅착지로 인정한 잣대(`:459`, AC3.8 의 표시 표면은 `fairness` 가 아니라\n`Dashboard.tsx:121~123`)를 AC3.1 에 적용하면 잔여는 **AC 가 아니라 `fairness` 화면**이다. 이 모순은\n이번 트리거의 산물이 아니지만(창 전체 `python` 트리 `70726f46` 바이트 불변) **이 모델의 기준 5 그대로**다.\n직전 판정들(`rct_20260918-0004`·`rct_20260919-0002`)이 「미구현 4건/3건」에 AC3.1 을 포함해 세어 온 것도\n같은 오계상을 물려받은 결과다 — **실제 미구현은 이번 tip 기준 AC3.3 1건이다.**\n\n**근거 5 — 인수자 부재 + 재감지 경로 0 이 결정타다.** 이 모델에 열린 비-터미널 task 는 이 task 하나뿐이고\n(`rct_20260919-0002` 02:21:04Z `succeeded`), 대상 레포 열린 PR 5건은 전부 7~8월 구 reconcile 브랜치로\n이 잔여를 겨냥하지 않는다. 그리고 **미구현 AC 는 미구현인 한 스스로 트리를 움직이지 않는다** — 지금\n`no_action_needed` 로 닫으면 AC3.3 을 깨울 사건이 이 축에 없고, AC3.1 오계상은 문서 줄이라 더더욱 없다.\n「재감지가 후속 task 로 잇는다」가 여기서는 성립하지 않으므로 지금 넘긴다.\n\n---\n\n**planner 인계 — 두 갈래이고, 한쪽에 선결 제약이 있다.**\n\n**① AC3.3(슬라이스 4 잔여) — 자매 축과 *결합된* 잔여다. 혼자 닫을 수 없다.**\n롤업을 구현해 `BUCKET_UNIT = \"hour\"` 상수를 걷으면 `make lint-scenario-mapping`\n(`tests/e2e/check_scenario_mapping.py`)이 **규칙 6 으로 실패한다** — 그 문자열이 doc-tracker 「e2e 매핑」\n절 **구현 대기 표의 유일한 행**(`…-test-aggregation-viz.md#시나리오 3`)의 **해제 신호**로 등재돼 있기\n때문이다(tip 실측: 구현 대기 등재 1 · 그 행의 「해제 신호」 열 == `aggregate.py` ∋ `BUCKET_UNIT = \"hour\"`).\n그 표의 소유는 자매 모델 **`tbm_econ-opinion-monitor-scenario-e2e`** 다. 다만 같은 행의 「담당」 열은\n**이 모델(`tbm_econ-opinion-monitor-docs-impl`)을 명시**하므로 구현 책임은 여기다. ⇒ 계획은 **구현 +\n그 표의 재판정을 한 슬라이스로 묶어야** 하고, 그러지 않으면 게이트가 머지를 막는다.\n\n**② AC3.1 — 구현 작업이 아니라 *문서 정정*이다(싸고 선행 가능).**\ndoc-tracker `2026-09.md:67` 의 AC3.1 항목을 「잔여」에서 「착지」로 옮기고, 잔여로 남는 것은\n**`fairness` 화면**임을 분리해 적는다(AC3.6·AC3.8 선례와 같은 형식). 로드맵 슬라이스 8 의 「대상 AC」\n열도 함께 읽어 AC3.1 이 이미 충족임을 반영할지 planner 가 판단한다. **모델 정의의 「충돌 시 기본 방향」이\n이 경우를 직접 규정한다** — 「그 격차가 의도된 동작 변경·AC 폐기라면 문서를 갱신해 실제 의도에 맞춘다」가\n아니라, 여기서는 **구현이 이미 AC 를 충족하므로 문서(회계)가 틀린 것**이다.\n⚠️ 다만 **분기를 함께 실어 둔다**: 만약 AC3.1 의 의도가 「정규화된 비율을 `fairness` 화면으로 *보여주는*\n것까지」였다면 정정 대상은 tracker 가 아니라 **AC3.1 본문**이다(그 경우 산출은 AC 문면 보강이고 잔여는\n유지). 어느 쪽인지는 PRD 본문과 V4 의도를 읽어 planner 가 가른다 — 한쪽만 적으면 질문이 보이지 않는다.\n\n**권고 순서**: ②를 먼저(문서 전용·게이트 무관·저위험, 회계를 바로잡아야 이후 슬라이스의 완료 기준이\n정확해진다) → ①은 자매 축 표 재판정을 포함한 슬라이스로 별도 계획. 한 task 에 둘을 묶으면\n`aggregate.py` 와 `2026-09.md` 를 동시에 고치면서 자매 게이트까지 통과해야 해 위험이 곱해진다.\n\n**측정 재현 명령**(planner 가 전제를 재확인할 때): 부모 `111777c` · tip `b30a321`,\n게이트 3종 = `python3 scripts/check-mockup-render.py` · `python3 scripts/check-journey-mockup.py` ·\n`python3 tests/e2e/check_scenario_mapping.py`(tip 전건 rc=0), AC 전집 =\n`git grep -hoE '\\bAC[0-9]+\\.[0-9]+' -- docs | sort -u | wc -l` → 21.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-19T02:52:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "AC3.1(소스별 수집량 차이 정규화)의 **회계 정정** 한 건만 하는 문서 전용 슬라이스다. 감지가 남긴 인계 두 갈래(① AC3.3 롤업 · ② AC3.1 회계) 중 ②만 집는다 — ①은 자매 모델 소유의 「구현 대기」 표 재판정을 같은 슬라이스에 묶어야 해서(해제 신호가 `aggregate.py` ∋ `BUCKET_UNIT = \"hour\"`) 위험이 곱해지고, ②는 게이트 무접촉·코드 무변경이라 먼저 회계를 바로잡아야 이후 슬라이스의 완료 기준이 정확해진다. **감지가 planner 에게 넘긴 분기(「AC3.1 의 의도가 fairness 화면 표시까지인가」)는 문서 실측으로 닫았다: 아니다.** ⑴ AC3.1 본문(prd-aggregation-viz.md:20~24)은 정규화 계산과 「정규화 방식은 명시되고 일관 적용된다」만 요구하고 화면을 요구하지 않는다 — 표시 요구는 AC3.8(「정규화된 비율 표시」)의 몫이고, 그 AC3.8 은 이미 `fairness` 가 아니라 `Dashboard.tsx`(원시 건수 + 정규화 비율 병치, :117·:122)를 표시 표면으로 삼아 ✅착지로 인정돼 있다. ⑵ AC3.1 의 검증 방법(「한 소스의 수집량만 인위적으로 늘렸을 때 정규화된 비율이 과도하게 흔들리지 않는지」)을 그대로 재는 활성 하네스가 tip 에 있다 — `tests/e2e/specs/aggregation-1-volume-normalization.spec.ts` 5 test(편향 피드 `agg_kr_wire_skew.rss.xml` 로 기준/부풀린 두 Gold 를 만들어 대조). ⑶ 계산·계약·서빙이 전부 실재한다(`aggregate.py` 소스 내 점유율→소스 평균→재정규화 · `contracts/gold/subject_trend.avsc:36` 이 `normalized_share` 를 AC3.1·3.8 로 문서화 · `handlers.go:170·175` 가 `normalized:true` 와 「정규화 기준: 소스 내 점유율」 을 내려준다). ⇒ 잔여는 **AC 가 아니라 `fairness` 화면**이고, 그 화면은 이미 「화면」 잔여 항목이 좌표와 함께 들고 있다. 따라서 산출은 AC 본문 보강이 아니라 doc-tracker 회계 정정이다 — 모델 정의 기준 5(문서 내부 모순)를 닫는다. **완료 기준**: `docs/econ-opinion-monitor-doc-tracker/2026-09.md` 에서 ⒜ AC3.1 이 「잔여」에서 「착지」로 옮겨져 관측 좌표(파일 ∋ 문자열)를 갖고, ⒝ 「화면」 잔여 항목이 `fairness` 를 **AC 잔여가 아닌 화면 잔여**로 분리해 적고(슬라이스 8 이 소유 AC 를 둘 다 착지시킨 순수 화면 슬라이스임을 명시), ⒞ 변경 이력에 이 정정이 한 행으로 남고, ⒟ 게이트 3종이 전건 rc=0 을 유지하며 ⒠ `docs/` 밖 트리(contracts·python·go·web·deploy)가 **바이트 불변**인 것. **범위 밖**: AC3.3 롤업 구현(자매 결합 — 별도 슬라이스), `fairness` 화면 자체(슬라이스 8), 자매 소유 「e2e 매핑」 절과 전용 spec `ac3-1-source-volume-normalization.spec.ts` 신설, mocking-policy R2 행의 신선도, `aggregate.py` 의 docstring 문면.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-19T03:05:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "전제 재확인(읽기 전용). tip 이 `b30a321` 인지, 게이트 3종(`python3 scripts/check-mockup-render.py` · `python3 scripts/check-journey-mockup.py` · `python3 tests/e2e/check_scenario_mapping.py`)이 손대기 전에 전건 rc=0 인지, 그리고 정정의 근거 좌표 4개가 tip 에 실재하는지 확인한다: `aggregate.py` 의 정규화 블록 · `contracts/gold/subject_trend.avsc` ∋ `Source-deviation-normalized interest share (AC3.1, AC3.8).` · `go/internal/handlers/handlers.go` ∋ `share-normalized` · `tests/e2e/specs/aggregation-1-volume-normalization.spec.ts` 존재.",
+              "expectedOutcome": "게이트 3종 rc=0(정정 전 기준선) · 좌표 4개 전건 hit. 하나라도 빗나가면 정정 근거가 무너진 것이므로 멈추고 재계획한다."
+            },
+            {
+              "seq": 2,
+              "action": "`docs/econ-opinion-monitor-doc-tracker/2026-09.md` 의 「현재 상태 요약 > 착지」 목록에 **AC3.1 (슬라이스 8)** 항목을 신설한다. AC3.6·3.7·3.8 항목과 같은 형식으로, 구현 좌표(`aggregate.py` ∋ `Normalization (AC3.1)` · `subject_trend.avsc` ∋ `normalized_share` · `handlers.go` ∋ `share-normalized`)와 검증 좌표(`aggregation-1-volume-normalization.spec.ts` 5 test)를 단다. **AC 본문이 화면을 요구하지 않는다는 점과, 표시 요구는 AC3.8 이 `Dashboard.tsx` 표면으로 이미 충족한다는 점을 한 문장으로 못 박는다.** 더해 `aggregate.py` docstring 의 「deliberately simple placeholder」 문면을 **인용한 채로**, AC3.1 이 특정 공식을 규정하지 않고 「방식이 명시·일관 적용」 만 요구하므로 이 문면이 충족을 무르지 않는다고 적는다(뭉개지 않고 드러낸다 — 기준 1 의 페이크/스텁 배제와의 경계를 문서가 스스로 설명하게 한다).",
+              "expectedOutcome": "착지 목록에 AC3.1 항목이 생기고, 그 안에 관측 좌표 3개 + 검증 좌표 1개 + 화면 비요구 근거 + placeholder 문면 해명이 모두 들어간다."
+            },
+            {
+              "seq": 3,
+              "action": "같은 파일 「잔여」 목록에서 `- **AC3.1 (슬라이스 8)**: 담당 화면(`fairness`)이 아직 플레이스홀더다.` 줄을 제거하고, 바로 아래 「화면」 잔여 항목을 **`fairness` 가 AC 잔여가 아니라 화면 잔여임**이 드러나게 고쳐 쓴다 — 슬라이스 8 은 소유 AC(AC3.1·3.8)를 둘 다 착지시킨 **순수 화면 슬라이스**가 됐고, 남은 것은 `/api/fairness`·`fairness` 화면이라는 점을 AC3.6·3.7 선례와 같은 잣대로 적는다. 화면 좌표(`web/src/App.tsx` ∋ `const BUILT = new Set([\"dash\", \"compare\", \"trend\", \"sentiment\"]);`)는 그대로 둔다.",
+              "expectedOutcome": "잔여 목록에서 AC3.1 행이 사라지고 `fairness` 잔여는 「화면」 항목 안에 좌표와 함께 살아남는다. 잔여로 남는 미구현 AC 는 AC3.3 한 건이 된다."
+            },
+            {
+              "seq": 4,
+              "action": "「구현 수렴 로드맵」의 슬라이스 표(슬라이스 8 행)와 「AC↔e2e 1:1 매핑표」의 AC3.1 행은 **건드리지 않는다**. 소유(ownership)와 착지(landing)는 다른 축이고, 「21개 AC 가 각각 정확히 한 슬라이스에 소유된다」 불변식이 슬라이스 8 의 대상 AC 열에 AC3.1 이 남아 있기를 요구하기 때문이다(AC3.8 도 착지한 채 그 열에 남아 있는 것이 선례다). 매핑표의 `✅ 착지` 는 **전용 spec 파일**의 착지 표식이고 `ac3-1-source-volume-normalization.spec.ts` 는 아직 없으므로 붙이지 않는다 — 직전 task `rct_20260919-0002` 가 AC3.4 를 착지시키면서 전용 spec 미착지를 이유로 「e2e 매핑」 절을 무접촉으로 둔 것과 같은 처리다.",
+              "expectedOutcome": "슬라이스 표·매핑표·「e2e 매핑」 절 diff 0줄. `git diff` 가 이 세 구간에 헝크를 만들지 않는다."
+            },
+            {
+              "seq": 5,
+              "action": "같은 파일 「이번 달 변경 이력」 표 **끝에** 2026-09-19 행을 한 줄 덧붙인다(기존 행은 과거 상태의 기록이므로 수정 금지). 4열 형식(시점 · 변경 내용 · 이전 상태 · 이후 상태)에 맞춰, 이전 상태 = 「AC3.1 이 담당 화면 플레이스홀더를 사유로 잔여에 등재(직전 두 판정이 미구현 4건·3건을 셀 때 포함해 온 오계상)」, 이후 상태 = 「AC3.1 착지(좌표 명시) / 잔여 미구현 AC 는 AC3.3 1건 · `fairness` 는 화면 잔여로 분리」 로 적고 task id `rct_20260919-0003` 을 남긴다.",
+              "expectedOutcome": "변경 이력이 6행이 되고 마지막 행이 이 정정을 가리킨다. 이 행이 과거 문면을 인용하므로 문자열 `grep -c` 기대값은 인용분만큼 늘어난다 — 검증은 원시 grep 수가 아니라 절(section) 단위 실측으로 한다."
+            },
+            {
+              "seq": 6,
+              "action": "게이트 3종을 재실행하고(전건 rc=0 유지), `git diff --stat` 으로 변경 파일이 `docs/econ-opinion-monitor-doc-tracker/2026-09.md` **단 하나**인지, `git diff --numstat -- contracts python go web deploy` 가 **빈 출력**인지 확인한다(as-is 트리 바이트 불변 = 이 슬라이스가 문서 전용임의 기계 증명).",
+              "expectedOutcome": "게이트 3종 rc=0 · 변경 파일 1개 · as-is 5디렉터리 diff 0줄."
+            },
+            {
+              "seq": 7,
+              "action": "`reconcile/rct_20260919-0003-docs-impl` 브랜치로 커밋·푸시하고 PR 을 연다(머지하지 않는다). 브랜치 이름에 모델 조각(`docs-impl`)을 넣는다 — `rct_` id 는 모델 안에서만 유일해서 자매 모델 `tbm_econ-opinion-monitor-scenario-e2e` 의 같은 id task 와 브랜치가 충돌하기 때문이다(자매도 `rct_20260919-0003` 을 들고 있다). PR 본문에 task id · gap 요약 · 분기 판정 근거 · 완료 기준 · 범위 밖을 적는다.",
+              "expectedOutcome": "PR 이 열리고 `required` 체크가 돌기 시작한다. 자매 브랜치와 이름 충돌 없음."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
