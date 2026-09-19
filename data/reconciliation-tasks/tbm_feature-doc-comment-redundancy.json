@@ -988,7 +988,7 @@
   {
     "id": "rct_20260918-0005",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-18T22:05:02Z",
@@ -1177,6 +1177,59 @@
               "log": "머지된 main tip `dbde01c`에서 모델 versionScript 재실행 → `lines=2948 files=98` / `b76bbf30d9fc78cb2ee00e7971c205b8503e50d98f02d6c7d75b69f0a220c6e4`. 계획 예고값 `lines=2920 files=97` / `d4c000e4…`와 다르지만, 이는 부모가 `fae3e17`일 때의 값이고 실제 부모는 `fb040b91`(#67 머지 후)이기 때문이다. **이 PR의 기여는 예고대로 정확히 −135행**: 머지 직전 main 실측 3083행 → 머지 후 2948행. 머지 전 로컬 병합 시뮬레이션이 산출한 값과 실제 main 값이 지문까지 전건 일치해, 그 사이 다른 커밋이 끼어들지 않았음도 함께 증명된다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=2948 files=98\nb76bbf30d9fc78cb2ee00e7971c205b8503e50d98f02d6c7d75b69f0a220c6e4",
+          "checks": [
+            {
+              "name": "완료기준1 — PR #70이 main에 머지됐다",
+              "status": "passed",
+              "detail": "squash 머지 성공. main tip = `dbde01c643a3f442b1d4b7d0ca39083733fa9ed1` 「주석 비중복성 5차 패스 — 워커·더블 배선 축 비경합 7파일 + 원장 2행 증분 재판정 ① (rct_20260918-0005) (#70)」. `git log fae3e17..HEAD`는 `dbde01c`(이 PR)와 `fb040b91`(#67) 둘뿐이다."
+            },
+            {
+              "name": "완료기준2 — 전역 as-is 지문이 순 제거 135행을 반영한다",
+              "status": "passed",
+              "detail": "예고값 자체와는 불일치, 그러나 executionGuide가 명시한 신선도 판정 절차로 수렴이다. 실측: 머지 직전 main(`fb040b91`) `lines=3083 files=98` → 머지 후 main(`dbde01c`) `lines=2948 files=98` / `b76bbf30d9fc78cb2ee00e7971c205b8503e50d98f02d6c7d75b69f0a220c6e4`. 차이 **정확히 −135행**으로 계획의 순 제거량과 전건 일치한다. 예고값 `lines=2920 files=97` / `d4c000e4…`가 어긋난 이유는 부모 이동 하나뿐이다 — 계획은 부모를 `fae3e17`로 잡았으나 실제 부모는 `fb040b91`이고, 그 사이 #67이 `sc02-03` spec을 신설해 **+1파일 / +28행**을 들였다(3055+28=3083, 2920+28=2948, 97+1=98로 양쪽 다 정확히 설명된다). 머지 전에 `fb040b91`+PR head를 로컬 병합해 산출한 예상 지문이 머지 후 실제 main 지문과 **해시까지 전건 일치**해, 머지 사이에 제3의 커밋이 끼어들지 않았음도 함께 증명된다."
+            },
+            {
+              "name": "완료기준2 보강 — 판정 범위 지문 동치(코드 무접촉의 직접 증거)",
+              "status": "passed",
+              "detail": "머지된 main에서 원장의 두 범위 지문을 재계산해 선언값과 대조(원장 방식 `echo \"$HITS\" | sha256sum`, 후행 개행 포함). 새 행(워커·더블 배선 축 7파일) = 185행 / `96569bfb7a4c6bc102f7c3c975841eb01b365fca9a5576707b22eaa588b1ca2d` — 선언값과 일치. 원장 2행(`check-journey-prototype.js`·`config.rs`) = 140행 / `ddacce0b4fcb83672a018383ad5845e7a63cbce655d520c31e06643debf6329f` — 선언값과 일치. 판정 8파일이 계획한 바이트 그대로 착지했다는 뜻이며, 전역 합계만 어긋난 것이 base 이동 때문임을 범위 단위로 재확인해 준다."
+            },
+            {
+              "name": "완료기준3 — 원장 갱신 + 패스 상세 2편이 main에 있다",
+              "status": "passed",
+              "detail": "main의 `docs/comment-policy/ledger.md`가 「합계: 판정 24파일 · 판정 대상 누적 1,582행 · 순 제거 414행 · 현재 1,145행」과 「미판정 잔여: 73파일 / 1,775행」을 선언한다. 패스 상세: `passes/2026-09-18-worker-double-axis.md` 신설(224행) · `passes/2026-09-18-uncontested-harness-config.md`에 증분 재판정 절 추가(+52행) 모두 main에 존재."
+            },
+            {
+              "name": "완료기준4 — check-journey-mockup이 main tip에서 통과(허브 집계 27)",
+              "status": "passed",
+              "detail": "머지된 main tip에서 `python3 tools/check-journey-mockup.py` rc=0 — 「통과 — 여정 ↔ 목업 정합성 규칙 R0~R10 이상 없음」. `docs/**/*.md` 실측 27과 `docs/index.html`의 집계 27이 일치한다(#67은 md를 신설하지 않아 26→27 전제가 유지됐다)."
+            },
+            {
+              "name": "부수 확인 — 나머지 문서 게이트 2종도 main tip에서 통과",
+              "status": "passed",
+              "detail": "`tools/check-mockup-render.py` rc=0 · `tools/check-scenario-e2e.py` rc=0. 후자가 그린이라는 것은 보존하기로 한 기계 판독 `// 검증 시나리오:` 선언이 실제로 살아 있다는 직접 증거다."
+            },
+            {
+              "name": "부수 확인 — PR head CI 전수 그린 및 초록 신선도 보강",
+              "status": "passed",
+              "detail": "head `8a7132c`의 `CI` 런 `conclusion=success`, 잡 전수 그린(`ci-gate` · `test (cargo)` · `test (kind e2e)` · 문서 게이트 3종 · ghcr push). base가 `fae3e17`→`fb040b91`로 움직였고 끼어든 #67이 비주석 변경을 포함하므로 초록을 그대로 살려 쓰지 않고 보강했다 — #67 자신의 head `b8ab7ae` CI도 `success`, 두 PR의 파일 교집합 0, 이 PR의 비주석 diff 0행. 더해 병합 결과 트리에서 문서 게이트 3종을 직접 재실행해 그린을 확인했다(execution step 8). `sc04-07`·`sc04-08`이 kind e2e에서 그린이라 워커 리스·스케일 경로 무손상의 직접 증거가 선다."
+            },
+            {
+              "name": "정보성 — 이 실행이 유발한 롤아웃",
+              "status": "passed",
+              "detail": "머지가 `image.yml` pin 잡을 통해 `deploy` 브랜치로 이미지 고정 커밋을 발행하고 Flux가 그걸 추적한다(#66). 검증 시점 `Image` 워크플로(run 35408679626)는 `build & push image (ghcr)` 단계에서 `in_progress`였고, 직전 머지(#67, `fb040b91`)의 pin 커밋은 `deploy` 브랜치에 정상 착지해 있다(`2d274309`). 주석만 바뀐 빌드라 동작 변화는 없다. 이 항목은 계획의 완료 기준 넷에 포함되지 않아 수렴 판정에 넣지 않는다."
+            },
+            {
+              "name": "정보성 — 범위 밖 잔여 gap",
+              "status": "passed",
+              "detail": "모델 전체 to-be(복원 가능한 주석 0)에 대한 잔여는 main 실측 `lines=2948 files=98` 기준 **73파일 / 1,775행 + #67이 새로 들인 미판정 증분**이다. 갈래는 셋 — ⑴ `backend/migrations/*.sql` 7파일/104행(사람 승인 게이트·수동 repair 대상, 다섯 패스 연속 이월), ⑵ 열린 PR 경합분(#69·#64·#26·#17), ⑶ 자유 풀 나머지. 여기에 이번에 base로 끼어든 #67의 `sc02-02` 재작성·`sc02-03` 신설분(+28행)이 새 미판정으로 더해졌다. 계획이 명시한 범위 밖이므로 converged 판정에 넣지 않으며, 이 실행이 만든 버전 변화의 **재감지가 후속 task로 잇는다**. 원장 L25의 괄호 「전역 `lines=2920 files=97`」은 #67 머지로 이미 낡았다(실측 2948/98) — 전역 합계 줄은 지문 범위에 무엇이 머지돼도 낡는 성질이라 다음 패스가 갱신할 몫이다."
+            }
+          ],
+          "verifiedAt": "2026-09-19T00:23:00Z"
         }
       }
     ]
