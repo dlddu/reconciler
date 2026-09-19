@@ -8901,6 +8901,57 @@
       "reason": "**작업 필요(actionRequired: true) — 버전 트리거의 두 커밋 자체는 대응 불요이나(#132는 내 직전 슬라이스가 예고한 대로 착지, #136의 asIs 이동은 픽스처 한 파일뿐인 설계된 과탐지), #136이 `test-github-app-installation-token.md#시나리오 5`의 차단 근거 ⑴을 실제로 해소하고 「근거 갱신을 이 모델에 인계한다」를 변경 이력에 스스로 적고도 그 행을 지금 거짓인 문면으로 구현 대기에 남겨 두었다. 어느 열린 task도 그 행을 들고 있지 않고, 레포 게이트는 이 축을 원리적으로 보지 못한다.**\n\n**⑴ 왜 유의미한가.** 규칙 6은 「기능이 아직 구현되지 않아 E2E가 관측할 대상 자체가 없을 때」만 구현 대기 등재를 허용하고 규칙 4는 「아직 자동화하지 못했다」를 사유에서 배제한다. 시나리오 5의 관측 대상은 지금 main에 실재한다 — `internal/github/github.go:200-201`(명시 `statuses: write` 거부) · `:215-216`(생략 시 `read` 강등) · `:299-300`(write 혼입 토큰 폐기). 행이 적은 근거 두 문장은 실측과 정면으로 어긋난다: 「`internal/github`에 … 경로가 없고」는 **거짓**, 「`github-mock`은 토큰 발급 엔드포인트 하나만 서빙한다」도 **거짓**(#136이 `GET /app/installations/{id}`를 추가했다). ⇒ 참값은 `구현 대기 20 · 1:1 대상 64 · 매칭 파일 63 · 공백 1`이고 표의 `21 · 63 · 63 · 공백 0`은 규칙 5 위반이다.\n\n**⑵ 지금이어야 하는 이유 — 자동 해소·재감지 경로가 둘 다 없다.** `check_ac_mapping.py`는 제목·`⏳` 표시·집계 산술·`자동화` 필드만 대조하고 근거 산문의 진위를 파싱하지 않아 부모·#132·#136 **세 지점 모두 rc=0**이다(자매 게이트 셋도 rc=0). 행 수가 움직이지 않으면 등재 절 지문(`reg:`)도 저절로는 움직이지 않으므로 방치하면 영구히 초록이다. 자매 `tbm_homelab-k3s-mcp-e2e-mock-policy`도 깨어나지 않는다(asIs는 모킹 지점 토큰 지문, toBe는 `e2e-mocking-policy.md` blob — #136은 등재된 mock 안에 엔드포인트만 늘렸고 정책 문서는 무접촉, precheck 실측 양 side unchanged). 롤아웃 진행 중·일시 alert 같은 자동 해소 여지가 없으므로 유예가 아니라 판정이 맞다(덧붙여 스키마에 `assessment.recheckAfter`가 없어 유예 자체가 불가하다).\n\n**⑶ 중복 계상 아님(실측).** 같은 모델의 열린 `planning` `rct_20260918-0004`의 범위는 `test-resource-generic.md#시나리오 13` **한 행**이고 그 레코드의 gap·assessment에 app-token 시나리오 5는 0회 등장한다. `tbm_homelab-k3s-mcp-docs-impl`의 미점유 `action_required` `rct_20260918-0005`는 도구 구현 축인데 시나리오 5의 도구 축은 이미 닫혔다 — 남은 잔여는 전적으로 e2e 축(mock 확장 3종 + 전용 파일 저작)이고 tracker가 그 소관을 축자로 이 모델로 적었다.\n\n**⑷ planner에게 넘기는 분기 — 한쪽만 적지 않는다.**\n- **(a) 닫는 쪽(이 레포의 선례에 부합):** `tests/k8s/kind/github-mock.yaml`에 `DELETE /installation/token`·요청 기록 엔드포인트·statuses 혼입 모드 3종을 얹고 전용 `tests/integration/github_app_installation_token_ac5.py`를 저작해 행을 닫는다. 목표 집계 `85 · 1 · 20 · 64 · 64 · 0 · 0`. 이 레포는 **픽스처·mock 확장이 이 렌즈 자신의 저작이며 차단 요인이 아니라고 이미 자기 표에 판정**해 두었다(시나리오 13 행: 「stdio 파드 픽스처는 이 렌즈 자신의 저작이라 차단 요인이 아니다」) — `rct_20260918-0003`이 7행 중 5행에 적용한 처방과 같다. 행의 해제 조건 ⑵가 `docs/e2e-mocking-policy.md`의 github-mock 「대상」 확장을 **같은 PR**에서 요구하므로, ⑸의 부수 발견도 여기서 함께 닫힌다.\n- **(b) 남기는 쪽:** mock 확장 3종을 「하네스가 도달할 수 없는 선행」으로 판정한다면 행을 구현 대기에 두되 **근거를 실제 잔여로 고쳐 쓴다**(「도구 선행 미충족」·「문서로만 섰다」·「엔드포인트 하나만」 세 문면 전부 폐기, 담당·해제 조건 재기입). 이는 `rct_20260918-0003`이 시나리오 18에 적용한 처방이다. 어느 쪽이든 **지금 문면을 그대로 두는 선택지는 없다** — 그것이 규칙 5·6 위반의 실체다.\n\n**⑸ 부수 인계(둘, 내 산출물 범위 밖).** ⓐ `docs/e2e-mocking-policy.md:99-100`의 github-mock 「대상」이 `POST …/access_tokens` 하나만 열거하는데 mock은 `GET /app/installations/{id}`도 서빙한다(소관 자매 `e2e-mock-policy`, `check_mock_policy.py` rc=0으로 재감지 경로 없음) — (a)를 택하면 같은 PR에서 정정된다. ⓑ 열린 `planning` `rct_20260918-0004`의 산술이 #132 착지로 낡았다(적힌 「참값 59 · 58 · 공백 1」 → 실제 `64 · 63 · 공백 1`). 범위·논증은 유효하고 숫자만 재기입하면 된다 — 점유 레코드이므로 한 줄도 쓰지 않았다.\n\n**산출물 경계 재확인:** (a)든 (b)든 산출물은 e2e 테스트·픽스처(mock)·등재 문서뿐이고 `internal/`·`cmd/`·`main.go`의 제품 코드는 0줄이다. AC5 구현은 이미 착지했으므로 이 슬라이스가 제품 동작을 바꿀 이유가 없다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-18T22:45:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`test-github-app-installation-token.md#시나리오 5` 한 행을 **닫는다**(분기 (a)). AC5 구현이 #136으로 main에 착지해 시나리오가 기술하는 대상(명시 write 거부 · 생략 시 read 강등 · 혼입 토큰 폐기)이 `internal/github/github.go:196-216,297-306`에 실재하므로, 규칙 6의 등재 자격(「하네스가 도달할 수 없어 관측 대상 자체가 없다」)이 사라졌다. 남은 유일한 잔여는 github-mock 확장과 전용 e2e 저작인데 **둘 다 이 렌즈 자신의 저작**이고, 이 레포는 같은 상황을 이미 두 번 「차단 요인 아님」으로 판정했다(시나리오 13 행의 stdio 파드 픽스처 · rct_20260918-0003이 7행 중 5행에 적용한 처방). 규칙 4가 「아직 자동화하지 못했다」를 사유에서 배제하므로 근거만 고쳐 남기는 분기 (b)는 같은 위반을 문면만 바꿔 유지하는 선택이 되어 채택하지 않는다. mock 확장은 **기존 단언을 깨지 않는 모드 토글**로 설계한다 — 설치 권한 응답에 `statuses: write`를 상시 섞으면 `github_app_installation_token_ac1/ac2`의 `# Permissions:` 축자 단언이 깨지므로, 관리 엔드포인트로 켜고 끄고 테스트가 끝나며 되돌린다(같은 `병렬 레인: github-app`이라 레인 안에서 한 번에 한 파일만 돌아 상태 경합이 없다). **이 시도의 완료 기준(범위)**: ⑴ 시나리오 5가 전용 파일 `github_app_installation_token_ac5.py`를 갖고, ⑵ `docs/doc-tracker.md`의 집계가 `85 · 예외 1 · 구현 대기 20 · 1:1 대상 64 · 매칭 파일 64 · 분할 대기 0 · 공백 0`이 되고, ⑶ 그 행이 「⏳ 구현 대기」 표에서 빠지고, ⑷ 시나리오 5의 `자동화` 필드에서 통합 e2e의 `(미작성)`이 지워지고, ⑸ 행의 해제 조건 ⑵가 요구한 `docs/e2e-mocking-policy.md`의 github-mock 「대상」 확장이 같은 PR에 들어가고, ⑹ lint 잡 4개 게이트(`check_ac_mapping` · `check_mock_policy` · `check_comment_policy` · `check_doc_inventory`)와 `integration-tests` 잡이 모두 초록인 것. **범위 밖(후속)**: 나머지 구현 대기 20행, 특히 `test-github-commit-status.md` 6행(도구 자체가 미구현 — docs-impl 몫)은 건드리지 않는다. 열린 `planning` `rct_20260918-0004`(시나리오 13)의 낡은 산술(적힌 「59 · 58 · 공백 1」 → 실제 「64 · 63 · 공백 1」)은 **다른 워커가 점유한 레코드라 이 슬라이스가 고치지 않는다** — 단, 이 PR이 먼저 머지되면 그 task의 출발 산술이 또 한 번 움직이므로(64 → 65 · 64) 그 사실을 PR 본문에 적어 인계한다. 모델 정의 텍스트의 매칭 단위 제외 열거 결함(`run_all.py` 누락)은 tobe-modeler 몫이다. **제품 코드(`internal/`·`cmd/`·`main.go`)는 0줄 변경** — AC5 구현은 이미 착지했고 이 렌즈의 산출물은 e2e·픽스처·등재 문서뿐이다.",
+          "riskLevel": "medium",
+          "plannedAt": "2026-09-19T00:03:26Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`tests/k8s/kind/github-mock.yaml`의 ConfigMap 안 `server.py`를 확장한다. ⑴ 요청 기록: 모든 핸들러가 (method, path, headers 일부, body)를 메모리 리스트에 append하고 `GET /_admin/requests` → `{\"requests\": [...]}`, `DELETE /_admin/requests` → 초기화로 노출한다(형태는 http-trace의 `GET /requests` → `{\"requests\": …}` 선례와 같게 맞춘다 — `_helpers.fetch_trace` 참조). ⑵ 모드 토글: `POST /_admin/config`로 `installation_status`(설치 권한 조회를 500으로 만든다)와 `mint_extra_permissions`(발급 응답에 `statuses: write`를 섞는다)와 `installation_permissions`(설치 권한 목록에 `statuses: write`를 포함시킨다)를 켜고 끈다. **기본값은 전부 꺼짐** — `DEFAULT_PERMISSIONS`는 `{contents: read, metadata: read}` 그대로 둔다. ⑶ `DELETE /installation/token`: `Authorization: Bearer <token>`을 기록하고 204를 돌려준다. `/healthz`와 기존 `POST …/access_tokens`·`GET /app/installations/{id}`의 기존 응답 형태는 건드리지 않는다.",
+              "expectedOutcome": "기본 상태에서 mock의 기존 응답이 한 바이트도 달라지지 않아 `github_app_installation_token_ac1/ac2/ac4`가 그대로 통과한다. 관리 표면은 `/_admin/` 접두사 아래에만 있어 GitHub API 경로와 겹치지 않는다."
+            },
+            {
+              "seq": 2,
+              "action": "테스트가 mock 관리 표면에 닿을 배선을 깐다. `.github/workflows/ci.yml`의 `Run integration tests (primary deployment)` 스텝에 `kubectl -n github-mock port-forward svc/github-mock 8093:80` 재시도 루프를 http-trace와 같은 형태로 추가하고(trap의 kill/pkill 목록에도 넣는다), `GITHUB_MOCK_URL=http://127.0.0.1:8093`을 그 스텝의 env로 둔다. `tests/integration/_helpers.py`에 `github_mock_url()`을 `trace_url()`과 같은 꼴로 추가한다(env `GITHUB_MOCK_URL`, 기본 `http://127.0.0.1:8093`). **`run_all.py`의 인자 파싱은 건드리지 않는다** — argv[1]/argv[2]는 이미 base/trace가 쓰고 있어 세 번째 위치 인자를 늘리면 러너·CI·체커가 함께 움직여야 하는데, env 한 개로 충분하다.",
+              "expectedOutcome": "primary 그룹이 도는 동안 CI 호스트에서 `curl http://127.0.0.1:8093/healthz`가 200이고, `run_all.py`와 다른 어떤 테스트 파일의 동작도 바뀌지 않는다."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/integration/github_app_installation_token_ac5.py`를 저작한다. 모듈 docstring에 `검증 시나리오: test-github-app-installation-token.md#시나리오 5` **정확히 1개**, `실행 대상: primary`, `병렬 레인: github-app`을 선언한다(규칙 2·3 · 레인이 mock 상태의 경계다). 시나리오의 다섯 단계를 그대로 단언한다 — ① `permissions={statuses: write}`와 `{contents: read, statuses: write}` 둘 다 도구 에러이고 에러 문구가 `github_commit_status_create`를 안내하며 기록에 `POST …/access_tokens` 0건, ② `permissions={statuses: read}`는 발급되고 `# Permissions:` 주석에 `statuses=read`, ③ 인자 없는 호출은 기록된 발급 요청 **본문**에 `permissions`가 명시돼 있고 그 안의 `statuses`가 `read`이며 응답 주석도 `statuses=read`(이 단계만 `installation_permissions` 모드를 켜서 설치 권한에 `statuses: write`가 있게 만든다), ④ `installation_status=500` 모드에서 인자 없는 호출은 도구 에러이고 발급 요청 0건, ⑤ `mint_extra_permissions` 모드에서 `permissions={contents: read}` 호출은 도구 에러이고 `DELETE /installation/token` 1건이 기록되며 `result.model_dump_json()` 어디에도 발급된 토큰 문자열이 없다. 각 단계는 `DELETE /_admin/requests`로 기록을 비우고 시작하며, **`try/finally`로 모드를 반드시 기본값으로 되돌린다** (같은 레인의 뒤 파일이 켜진 모드를 물려받지 않게 한다). `run()`은 파일이 정의한 `test_*`를 전부 호출한다(체커가 강제한다).",
+              "expectedOutcome": "`python tests/integration/run_all.py --group primary --list`에 새 파일이 정확히 한 번 배차되고, kind CI에서 다섯 단계가 모두 통과한다. 같은 레인의 ac1/ac2/ac4는 영향 없이 초록."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/doc-tracker.md`의 「테스트 시나리오 ↔ e2e 1:1 정합성」 절을 갱신한다. ⑴ 레지스트리 행(724줄 부근)을 `⏳ 구현 대기 (규칙 6 — 도구 선행 미충족)` → `✅ 전용 파일 \\`github_app_installation_token_ac5.py\\``로 바꾼다(제목 칸은 헤딩과 축자 동일하게 유지 — 체커가 대조한다). ⑵ `<!-- scenario-e2e-집계 -->` 블록을 `구현 대기 등재: 20` · `1:1 대상: 64` · `매칭 파일(전용): 64`로 고친다(시나리오 85 · 예외 1 · 분할 대기 0 · 공백 0은 불변). ⑶ 「⏳ 구현 대기」 표에서 833줄의 시나리오 5 행을 **삭제**하고, 표 제목 `### ⏳ 구현 대기 (21)`과 레지스트리 제목 `### 시나리오 레지스트리 (85) — ✅ 전용 파일 63 · … ⏳ 구현 대기 21 …`, 그 아래 불변식 프로즈(`85 − 1(예외) − 21(구현 대기) = 63 = 매칭 파일 63`)의 숫자를 함께 옮긴다. ⑷ 「변경 이력」에 이 슬라이스 항목을 더해 **왜 닫았는지**(규칙 6 등재 자격 상실 · 근거 두 문장이 #136 이후 거짓)를 남긴다.",
+              "expectedOutcome": "`python3 tests/integration/check_ac_mapping.py`가 rc=0이고 집계 항목별 등재값이 실측과 일치한다."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/test-github-app-installation-token.md#시나리오 5`의 `자동화` 필드에서 통합 e2e의 `(미작성)` 문장을 `github_app_installation_token_ac5.py` 참조로 교체한다(규칙 7 — 전용 파일이 실재하는데 `(미작성)`이 남으면 위반). Go 단위 5건 열거는 그대로 두고, 「github-mock 확장이 선행이고 소유자는 자매 모델」이라던 문장은 그 선행이 이 PR로 해소됐으므로 지운다.",
+              "expectedOutcome": "`check_ac_mapping.py`의 규칙 7 검사가 통과한다(문서가 말하는 e2e 현황 == 실측 파일 집합)."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/e2e-mocking-policy.md`의 `github-mock` 「대상」(99-100줄)을 실제 서빙 집합으로 넓힌다 — `POST /app/installations/<id>/access_tokens` 외에 `GET /app/installations/{id}`(#136이 이미 추가했고 문서만 낡았다) · `DELETE /installation/token` · 관리 표면(`/_admin/requests` 기록, `/_admin/config` 모드)을 적는다. 행의 해제 조건 ⑵가 「같은 PR에서 넓힌다」를 명시하므로 이 PR에 넣는다. 허용목록 표·상한은 **건드리지 않는다**(모킹 지점이 늘어난 게 아니라 기존 지점의 표면이 넓어진 것이라 R6 래칫 대상이 아니다).",
+              "expectedOutcome": "`python3 scripts/check_mock_policy.py`가 rc=0이고 허용목록 행 수·상한이 그대로다."
+            },
+            {
+              "seq": 7,
+              "action": "주석 원장(`docs/comment-policy/ledger.md`)을 재판정한다. 두 표면 모두 **미판정 잔량이 현재 0**이라 새 파일의 주석/docstring 한 줄만 들어와도 R4·R8이 깨진다. ⑴ 줄 주석 표면: `tests/k8s/kind/github-mock.yaml`이 이미 등재된 행(`minio.yaml · opensearch.yaml · github-mock.yaml · grafana-mock.yaml · dear-b…`, 17줄, `4b9ee1aa233b`)에 들어 있으므로 그 행의 줄 수·지문을 재측정값으로 갱신하고 사유를 적는다. `_helpers.py`(132줄 `5aa2ddea6731`)를 건드리면 그 행도 같이 갱신한다. ⑵ docstring 표면: 새 파일 `github_app_installation_token_ac5.py`의 docstring을 판정해 **새 행으로 등재**한다(R3·R7 — 이미 등재된 행에 파일을 끼워 넣어 이중 계상하지 않는다). `_helpers.py` 수정 시 220줄 행(`1f77587a4101`)도 갱신. ⑶ 합계 마커를 행 합과 맞추고 잔량은 0을 유지한다. 줄 수·지문은 **추측하지 말고 게이트가 출력하는 값을 읽어 적는다**.",
+              "expectedOutcome": "`python3 scripts/check_comment_policy.py`가 rc=0이고 출력 인구조사에서 두 표면 모두 미판정 잔량 0 · 판정 커버리지 100.0%."
+            },
+            {
+              "seq": 8,
+              "action": "네 게이트를 로컬에서 차례로 돌려 전부 rc=0을 확인한 뒤(`tests/integration/check_ac_mapping.py` · `scripts/check_mock_policy.py` · `scripts/check_comment_policy.py` · `scripts/check_doc_inventory.py`), 브랜치를 push하고 PR을 연다. kind `integration-tests` 잡이 유일한 실검증 지점이므로 **CI 초록을 확인하기 전에는 머지하지 않는다**.",
+              "expectedOutcome": "PR의 lint 잡과 integration-tests 잡이 모두 초록. 실패하면 로그를 읽고 3~7을 고쳐 다시 push한다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
