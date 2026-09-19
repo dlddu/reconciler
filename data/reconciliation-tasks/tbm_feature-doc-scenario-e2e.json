@@ -1385,6 +1385,83 @@
           "reviewedAt": "2026-09-18T17:24:03Z",
           "reason": "**승인 — 1차 거부의 두 사유가 모두 해소됐고, 그 사이 base 가 한 번 더 움직인 것까지 직접 확인해 영향 없음을 실측했다.** PR #67 은 open · `mergeable=true · mergeable_state=clean`(첫 조회는 `unknown` 이었고 재조회에서 확정 — 계산 지연이었다) · 변경 파일 3개(`docs/doc-tracker.md` · `sc02-02` 축소 · `sc02-03` 신설, 제품 코드 0줄)이고, head `b8ab7ae` 의 CI 런 `35370921123` 이 `conclusion=success`(`ci-gate`·`test (kind e2e)`·`test (cargo)`·게이트 3종 전부 success)다. 1차 시도의 `dirty`·CI 0건은 사라졌다.\n\n**핵심 확인 — 그 CI 초록은 base `6bc37f9` 기준인데, 그 뒤 `#60`(`ebe86578`, 16:58:41Z)이 main 에 들어왔다.** 「전역 FEATUREDOC_MODE 제거 · 경계별 테스트 더블」이라 e2e 하네스를 건드린 변경이어서 초록의 신선도를 그대로 믿지 않고 현재 tip 위에서 직접 재현했다: ⑴ `origin/main`(ebe8657)에 PR head 를 로컬 머지 → **충돌 없음 · 파일 3개 그대로**, ⑵ 머지 트리에서 `tools/check-scenario-e2e.py --verbose` rc=0 이며 출력이 완료 기준 그대로 `매핑 20 · 선언 20` / `(36 − 0 − 16) = 20 · 실제 매칭 파일 20` / **`래칫 미매핑 0/0`** — 완충항이 빈 채로 통과한다(같은 게이트를 머지 전 `origin/main` 에서 돌리면 `매핑 19 · 실제 19 · 래칫 1/1` 로, gap 이 지금도 살아 있고 이 PR 이 그것을 닫는다), ⑶ 형제 게이트 `check-mockup-render.py`·`check-journey-mockup.py` 둘 다 rc=0, ⑷ 실측 spec 20개 · 중복 선언 0 · `02#시나리오 3` 선언 파일 정확히 1개 · `docs/test` 트리 `c3859fed` 불변(경계 준수).\n\n**`#60` 의 영향 범위도 파일 단위로 갈랐다 — 이 PR 과 겹치지 않는다.** `#60` 은 `e2e/support/*`·`frontend/*`·`docs/doc-tracker.md`·`docs/test/*`·`sc02-02` 를 **하나도 건드리지 않았고**, 다른 spec 들에 남긴 변경은 대부분 헤더 주석의 환경변수 이름 교체다. sc02-03 이 새로 요구하는 전제도 충족된다: `#60` 이 「일이 실제로 돌려면 LLM 키 등록이 필요하다」를 들여왔지만 sc02-03 이 쓰는 공용 헬퍼 `signInWithCredentials`(현재 main 기준)가 이미 키를 등록한다(`an active LLM key is 분석의 진입 조건`) — `#60` 이 직접 손본 것은 그 헬퍼를 우회해 엔드포인트를 직접 호출하는 sc04-07/08 뿐이다. 관측면인 `data-testid=\"contradictions\"`·`scenario-list` 도 `#60` 의 diff 밖이다.\n\n**스테일 초록이 덮지 못하는 단정은 정확히 하나였고, 그것도 새 base 에서 고정돼 있다.** sc02-03 은 sc02-02 의 `contradictions.length > 0` 을 **`=== 1`** 로 조인다. 이 성질은 현재 `origin/main` 의 `backend/src/acceptance.rs` 단위 테스트 `assert_eq!(contradictions.len(), 1, \"the stub disagrees exactly once\")` 가 지키고, `#60` 자신의 CI 런 `35366075366`(head `c0330ead`)이 `test (cargo)`·**`test (kind e2e)` 모두 success** 였다 — 즉 `#60` 이후 하네스에서 sc02-02 의 모순 단정 전체가 이미 초록으로 돌았다. 나머지 단정은 sc02-02 에서 문구 그대로 옮겨온 것이다.\n\n**위험·불가역성**: riskLevel=low 에 걸맞다 — 제품 코드·PRD·시나리오 문서 0줄, 트래픽·데이터·사용자 관측 동작 영향 없음, 불가역 지점은 머지 하나뿐이고 롤백은 커밋 1개 revert 로 완전 복구된다. 완료 기준 4개가 게이트 출력 문구까지 못박아 검증 가능하고, 그 중 1~3 은 위 ⑵⑷ 로 **이미 머지 트리에서 참**임을 확인했다.",
           "comment": "**실행자에게 넘기는 조건 하나 — 머지 직전에 신선도를 한 번 더 본다.** 이 레포의 main 은 30분 안에 세 번(`d87f216`·`6bc37f9`·`ebe86578`) 움직였고, `ci.yml` 이 `on: pull_request` 단독이라 **base 가 움직여도 PR 의 CI 는 다시 돌지 않는다**(머지 후 main 에서도 돌지 않는다). 검토 시점의 tip 은 `ebe86578` 이고, 위 판정은 그 tip 기준 로컬 머지·게이트 재현으로 얻은 것이다.\n\n- 머지 전 `GET /repos/dlddu/feature-doc/pulls/67` 로 `mergeable_state` 가 여전히 `clean`(최소한 `dirty` 아님)인지, head 가 `b8ab7ae` 그대로인지 확인한다. `mergeable`/`mergeable_state` 가 `null`/`unknown` 으로 오면 계산 중이니 **몇 초 뒤 재조회**한다(이번 검토에서도 첫 조회가 `unknown` 이었다).\n- 그 사이 main 이 또 움직였으면, 새 tip 으로 `git merge` 를 로컬에서 시연해 충돌 없음과 `check-scenario-e2e.py --verbose` 의 세 줄(`매핑 20 · 선언 20` / `실제 매칭 파일 20` / `래칫 미매핑 0/0`)을 다시 확인한 뒤 머지한다. `dirty` 로 바뀌었으면 로컬 rebase 로 풀고 force-push 해 CI 를 새로 받는다(`update-branch` API 는 실제 텍스트 충돌에 듣지 않는다).\n- 완료 기준 ④(`test (kind e2e)`)의 증거는 런 `35370921123` 이다. 새로 force-push 했다면 그 런은 무효이므로 새 head 의 런을 기다린다. force-push 없이 머지한다면 위 근거(`#60` 영향 범위 + `#60` 자신의 e2e 초록)로 ④ 를 충족한 것으로 본다.\n- 머지 후 B-2·B-3 대로 main 에서 게이트 rc=0 과 세 줄을 재확인하고, `HEAD:e2e`(`ca1106bc` 에서 변해야 함)·`HEAD:docs/doc-tracker.md`(`b06fb4d3` 에서 변해야 함)·`HEAD:docs/test`(`c3859fed` 불변)를 확인한다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-18T17:29:27Z",
+          "finishedAt": "2026-09-19T00:09:30Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "skipped",
+              "startedAt": "2026-09-18T17:31:10Z",
+              "finishedAt": "2026-09-18T17:31:40Z",
+              "log": "rebase 불필요 — planner 가 이미 `6bc37f9` 위로 재기초해 두었고(head `b8ab7ae`), 머지 직전 조회에서 PR #67 이 `mergeable=true · mergeable_state=clean · changed_files=3` 이었다. 실행 중 main 이 `ebe8657` → `fae3e17`(#68) 로 한 번 더 움직였으나 `git merge` 를 새 tip 위에서 로컬 시연한 결과 **충돌 없음**(변경 파일 3개 그대로)이라 force-push 하지 않았다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "startedAt": "2026-09-18T17:31:40Z",
+              "finishedAt": "2026-09-18T17:31:50Z",
+              "log": "planner 의 rebase 결과 확인 단계 — 재현 불필요(step 1 이 skipped). 대신 머지 트리에서 doc-tracker 네 자리를 직접 재확인했다(step 3)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:32:00Z",
+              "finishedAt": "2026-09-18T17:33:00Z",
+              "log": "숫자가 사는 네 자리가 서로 일치: 상단 요약 불릿 `:10` = 「매핑 20건 · 예외 0건 · 구현 대기 16건 · 미매핑 잔여 0건(래칫 상한 0)」 · 매핑 캡션 `:88` = `**매핑 (20건)**` · 래칫 소제목 `:144` = `(0건, 상한 0)` · 집계 블록 동일. 1차 시도가 빠뜨려 S3 에 걸렸던 캡션이 이번엔 20 으로 맞다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:33:00Z",
+              "finishedAt": "2026-09-18T17:34:00Z",
+              "log": "`git show 6bc37f9 -- frontend/src/FeatureAcceptance.tsx | grep -cE '^[+-].*data-testid'` = **0**. 현재 main 의 그 파일에 네 셀렉터가 모두 실재: `scenario-list`(:117) · `contradictions`(:124) · `contradiction`(:199) · `contradiction-test`(:210). spec 셀렉터 수정 불필요."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:35:00Z",
+              "finishedAt": "2026-09-18T17:36:00Z",
+              "log": "머지 트리(base `ebe8657`)에서 `tools/check-scenario-e2e.py --verbose` rc=0 이며 출력 세 줄이 완료 기준 그대로: `등재 대조 — 매핑 20 · 선언 20` / `불변식 목표 (시나리오 36 − 예외 0 − 구현 대기 16) = 20 · 실제 매칭 파일 20` / `래칫 미매핑 0/0`. 대조군으로 같은 게이트를 머지 전 `origin/main` 에서 돌리면 `매핑 19 · 실제 19 · 래칫 1/1` 이라 **gap 이 머지 직전까지 살아 있었고 이 PR 이 그것을 닫는다**는 것이 실측으로 확인된다(rc 는 양쪽 다 0 — 완충항 위의 초록이라 rc 만으로는 구분되지 않는다)."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-18T17:36:00Z",
+              "finishedAt": "2026-09-18T17:37:00Z",
+              "log": "형제 게이트 `check-journey-mockup.py` rc=0 · `check-mockup-render.py` rc=0 (머지 트리 기준, 그리고 새 tip `fae3e17` 머지 트리에서도 재확인해 둘 다 rc=0)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "skipped",
+              "startedAt": "2026-09-19T00:04:31Z",
+              "finishedAt": "2026-09-19T00:05:00Z",
+              "log": "force-push 불필요 — PR #67 은 머지 직전에도 head `b8ab7ae` 그대로이고 `mergeable=true · mergeable_state=clean · changed_files=3`. 계획이 force-push 를 요구한 전제(`dirty`)가 성립하지 않았다."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T00:05:00Z",
+              "finishedAt": "2026-09-19T00:06:00Z",
+              "log": "`GET /actions/runs?head_sha=b8ab7ae0…` → `total_count=1`, run **`35370921123`**(`CI`, event `pull_request`, `conclusion=success`, 16:51:21Z→16:55:36Z). 1차 시도의 0건이 해소된 상태 그대로다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T00:06:00Z",
+              "finishedAt": "2026-09-19T00:08:00Z",
+              "log": "**CI 증거의 신선도를 base 이동분만큼 따로 세웠다.** run `35370921123` 의 base 는 `6bc37f9` 이고 머지 시점 main 은 `fae3e17` 이라 그 사이 `#60`(`ebe8657`)·`#68`(`fae3e17`) 두 커밋이 끼었다. ⑴ `#60` 은 검토가 이미 파일 단위로 영향 범위를 갈라 이 PR 과 겹치지 않음을 판정했고(`e2e/support/*`·`sc02-02`·`docs/doc-tracker.md` 미변경, 관측 testid 미변경), 그 자신의 run `35366075366` 이 `test (kind e2e)` success 였다. ⑵ `#68` 은 주석 비중복성 패스라 `git show fae3e17 -- frontend backend e2e` 의 **비주석 변경 줄이 0**이다(실측: 주석·빈 줄을 제외하면 diff 가 비어 있음) — 즉 하네스·백엔드·프론트의 실행 의미가 `ebe8657` 과 동일하다. sc02-03 이 의존하는 두 파일은 특히 비주석 변경 0 이다(`e2e/support/acceptance.ts` · `backend/src/acceptance.rs`), `contradictions.len() == 1` 을 지키는 단위 테스트(`backend/src/acceptance.rs:573` `the stub disagrees exactly once`)도 그대로다. ⑶ `#68` 자신의 run **`35373754767`** 이 `test (kind e2e)` success(job `105693527855`)·`ci-gate` success 로, 현재 하네스에서 e2e 스위트가 실제로 도는 것이 확인된다. 따라서 검토가 남긴 조건(「force-push 없이 머지하면 영향 범위 + 뒤 커밋 자신의 e2e 초록으로 ④ 를 충족한 것으로 본다」)을 그대로 적용해 ④ 의 증거로 삼았다. 분할된 두 spec 의 직접 증거는 run `35370921123` 의 e2e 잡 로그 — `✓ 10 … sc02-02-acceptance-from-tests.spec.ts:42:3 (8.8s)` · `✓ 11 … sc02-03-contradiction-separation.spec.ts:48:3 (9.1s)`, 잡 전체 `21 passed (1.7m)` · 실패 0."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-19T00:08:30Z",
+              "finishedAt": "2026-09-19T00:09:30Z",
+              "log": "PR #67 을 squash 머지(`sha=b8ab7ae0…` 고정) → main 커밋 **`fb040b91`**. 머지 후 main 에서 `check-scenario-e2e.py --verbose` rc=0 이고 세 줄이 A-1 과 동일(`매핑 20 · 선언 20` / `실제 매칭 파일 20` / `래칫 미매핑 0/0`), 형제 게이트 둘 다 rc=0. 버전 성분: `HEAD:e2e` `5ace3862`→**`3381edab`**(변함, 트리거값 `8f807f48` 과도 다름) · `HEAD:docs/doc-tracker.md` `b06fb4d3`→**`a6640e46`**(변함) · `HEAD:docs/test` **`c3859fed` 불변**(경계 준수)."
+            }
+          ]
         }
       }
     ]
