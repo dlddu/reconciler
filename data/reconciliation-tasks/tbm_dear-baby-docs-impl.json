@@ -1063,6 +1063,51 @@
             }
           ]
         }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "직전 시도는 계획한 코드를 다 만들어 놓고도 **머지 자체가 거부돼** 실패했다(HTTP 405, 필수 집계 체크 `CI Success` red). 그 red 는 이 PR 의 변경과 무관한 **레포 전역 외부 고장**이다 — 업스트림이 `dl.min.io` 다운로드 경로를 내렸고(410 Gone) `docker.io/minio/*` 익명 pull 을 막아, e2e-ios·e2e-android 는 `Setup MinIO` 에서, integration 은 `Wait for MinIO rollout` 에서 앱이 뜨기도 전에 죽는다. 직전 실행자는 이 조달 경로 교체를 승인 범위 밖으로 보고 재계획에 넘겼다. 그래서 이번 시도는 **선행 차단 요인을 먼저 제거하고, 이미 만들어진 슬라이스를 착지시키는** 2단 구성이다: ① CI 의 MinIO 조달 경로를 살아 있는 출처로 바꾸는 최소 PR(#185, 3파일 4줄 — 제품 코드 0줄)을 머지해 `CI Success` 를 되살리고, ② 그 위에서 PR #172(커뮤니티 탭 메인 화면, 18파일 +1671/-16)를 갱신·머지해 main 의 as-is 에 실제로 착지시킨다. 대안이었던 '조달 경로는 그대로 두고 e2e 를 필수 체크에서 빼기'는 검증 면적을 영구히 줄이는 비가역적 후퇴라 택하지 않았고, '재실행으로 푼다'는 410/인증거부의 성격상 성립하지 않는다(직전 시도가 실측). 출처 교체는 커밋 1개 revert 로 되돌아간다. **완료 기준(이 시도의 범위)**: (A) #185 가 main 에 착지해 main 의 e2e·integration 잡이 MinIO 조달 스텝을 통과한다, (B) PR #172 의 필수 집계 체크 `CI Success` 가 초록이 된다, (C) #172 가 main 에 머지돼 커뮤니티 탭 본체(AC-009-02·03·06·13 계열, M-43 목업 기준)가 main 의 as-is 에 존재한다. **범위 밖(후속 재감지 몫)**: AC-009-04·05·07·08·09·11·12(공감/댓글 write 경로 등), ENG-011 시기 가중 랭킹, PRD-003/004/005 계열 standing gap. 이들은 이번 판정에 넣지 않는다.",
+          "riskLevel": "medium",
+          "plannedAt": "2026-09-20T08:56:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #185(`reconcile/rct_20260807-0003-dear-baby-docs-impl-ci-minio`, head `53f24c01`)의 CI 결과를 확인한다. 이 PR 은 `.github/actions/setup-minio/**` 와 `.github/workflows/integration.yml`·`scripts/minio/**` 를 건드리므로 paths-filter 의 `e2e`·`integration` 축이 켜져 고장 난 세 잡이 모두 돈다. `app`·`ci`·`backend`·`worker` 축은 켜지지 않아 이미지 빌드·TestFlight·Play internal 은 skip 된다(`ci` 필터는 `.github/workflows/ci.yml` 한 줄뿐).",
+              "expectedOutcome": "`E2E Tests (iOS)`·`E2E Tests (Android)`·`Integration Tests` success, 집계 `CI Success` success. 배포 잡 4종은 skipped(=집계에서 실패로 치지 않음)."
+            },
+            {
+              "seq": 2,
+              "action": "#185 를 main 에 squash 머지한다(`PUT /repos/dlddu/dear-baby/pulls/185/merge`, `merge_method=squash`, `sha=<확인한 head>`). 레포 설정상 `allow_squash_merge=true` / `allow_merge_commit=false` / `allow_rebase_merge=false` 이라 squash 가 유일한 방식이다.",
+              "expectedOutcome": "200 merged=true. main tip 이 이동하고 브랜치는 자동 삭제(`delete_branch_on_merge=true`)."
+            },
+            {
+              "seq": 3,
+              "action": "머지 후 main push 로 도는 CI 런을 `GET /repos/dlddu/dear-baby/actions/runs?head_sha=<전체 40자 SHA>` 로 조회해 settled 까지 기다린다(queued·in_progress·pending·waiting·requested 는 모두 미settled).",
+              "expectedOutcome": "main 에서도 e2e·integration 이 MinIO 조달 스텝을 통과해 `CI Success` success. 이로써 조달 고장이 레포 전역에서 해소됐음이 실측된다."
+            },
+            {
+              "seq": 4,
+              "action": "PR #172(`reconcile/rct_20260807-0003`, head `996a24a1`)의 브랜치를 새 main 으로 갱신한다. **rebase·force-push 를 쓰지 않고** update-branch API(`PUT /repos/dlddu/dear-baby/pulls/172/update-branch`, `expected_head_sha=<현재 head>`)로 main 을 브랜치에 **머지**한다 — 직전 시도가 쓴 것과 같은 방식이다.",
+              "expectedOutcome": "새 head 커밋(부모 2개: 기존 head + 새 main), 충돌 0. 파일 수는 변하지 않는다. 이 push 가 #172 의 CI 를 재발화시킨다."
+            },
+            {
+              "seq": 5,
+              "action": "#172 의 새 head 에서 도는 CI 를 settled 까지 기다려 `CI Success` 를 확인한다. #172 는 `app/**` 를 바꾸므로 이번엔 `deploy-testflight`·`deploy-play-internal`(staging lane)과 이미지 빌드가 **실제로 발화한다** — 레포의 정상 동작이며, CI 가 빨갰던 동안 멈춰 있던 것이 복구와 함께 돌아오는 것이다.",
+              "expectedOutcome": "`CI Success` success. 실패 시 그 원인이 MinIO 조달 스텝인지 아닌지를 먼저 가른다(조달이면 이 계획의 결함, 그 외면 범위 밖)."
+            },
+            {
+              "seq": 6,
+              "action": "#172 를 draft 에서 ready 로 전환한 뒤 squash 머지한다(`sha=<확인한 head>`). ready 전환은 새 런을 만들지 않는다(어떤 워크플로도 `ready_for_review` 를 트리거로 쓰지 않음 — 직전 시도가 실측).",
+              "expectedOutcome": "200 merged=true. 커뮤니티 탭 슬라이스가 main 에 착지."
+            },
+            {
+              "seq": 7,
+              "action": "검증(4-4): 모델의 as-is versionScript 를 재실행해 `lastObservedVersion` 에서 실제로 움직였는지 확인하고, main 에서 커뮤니티 탭 구현의 존재(예: `app/` 커뮤니티 화면·컴포넌트와 그 테스트)와 무회귀(앱 유닛 테스트 수 감소 0, backend 전 패키지 ok)를 실측한다.",
+              "expectedOutcome": "as-is 버전이 이전 값과 달라지고, 완료 기준 A·B·C 가 모두 충족 → task `succeeded`. 하나라도 어긋나면 그 지점을 근거로 `failed`."
+            }
+          ]
+        }
       }
     ]
   },
