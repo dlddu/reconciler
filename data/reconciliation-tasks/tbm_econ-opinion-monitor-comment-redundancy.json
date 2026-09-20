@@ -1595,7 +1595,7 @@
   {
     "id": "rct_20260920-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-20T09:20:34Z",
@@ -1673,6 +1673,14 @@
           "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/67",
           "preparedAt": "2026-09-20T09:52:00Z",
           "notes": "head f9d5510 (base 7386301). 17파일 +154/-60 — spec 15 · ledger.md · 패스 문서 신설. 로컬 게이트 3종 rc=0, 비주석 바이트 동일성 15/15. `make lint`의 ruff·gofmt·go vet·eslint는 .py/.go/web/ 무접촉이라 무관하고, `make e2e`는 kind 클러스터가 없어 로컬 실행 불가라 V3(비주석 동일성)로 대체 확증했다. 원장에 적은 절대 수치(1942→1900 · 잔여 507 · 109행)는 base 7386301 기준이라 자매 PR(#65·#66·#18)이 먼저 머지되면 낡는다 — 실행자가 머지 직전 main에서 재측정할 것(지침의 「수치 재측정」 표에 무엇이 움직이는지 적어 뒀다). 판정 범위 19파일과 파일별 109행 자체는 자매와 겹침 0이라 움직이지 않는다."
+        },
+        "review": {
+          "required": false,
+          "status": "approved",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-20T10:05:00Z",
+          "reason": "주석·문서만 바꾸는 저위험 변경이고, 계획이 주장한 수치를 대상 레포에서 독립 재측정해 전건 일치를 확인했다 — base `7386301` 지문 `lines=1942 files=112`/`12282c69…`가 레코드와 바이트 동일, PR head 지문 `1900/112`(제거 42줄), 원장 행 90→109(추가 19행 = spec 16 · fixtures server.py 2 · cli.py 1로 계획과 동일), 잔여 ⑴ 6파일 180줄 + ⑵ 9파일 327줄 = 507로 원장 말미 요약과 일치. 안전 근거인 V3(비주석 바이트 동일성)를 15/15 직접 재현했고 `// 검증 시나리오:` 선언 손실 0건이라 실행 가능 코드 변경이 0바이트다 — 그래서 CI 초록(`ci / e2e` 포함, head `f9d5510`)이 머지 ref 부모(`d3c9e6c`) 기준으로 main tip(`ddaef4f`)보다 1커밋 낡았어도 무해하다. PR #67은 open·`mergeable_state=clean`이고 로컬 시험 머지도 충돌 0(자매가 `ledger.md`를 건드리지 않았다), 합친 트리에서 게이트 3종(check_scenario_mapping · check-journey-mockup · check-mockup-render) 전부 rc=0. 불가역 지점은 머지 하나뿐이고 직전 착지 4건이 모두 부모 2개인 머지 커밋이라 `revert -m 1` 롤백이 실제로 성립한다. 자매 #65·#66 머지로 원장의 **절대 집계 수치만** 낡았으나, executionGuide가 「수치 재측정」을 머지의 선행 단계로 못박고 무엇이 움직이는지 표로 적어 둬 거부 사유가 아니다 — 측정값은 comment에 실어 보낸다.",
+          "comment": "승인이지만 **머지 전 정정 필수**. 계획 작성 후 자매 #65(`d3c9e6c`)·#66(`ddaef4f`)이 머지돼 원장·패스 문서의 절대 수치가 낡았다. 검토가 합친 트리(pr67 + main `ddaef4f`, 충돌 0)에서 실측한 값을 그대로 쓸 것 — 재측정을 생략하지 말고 머지 직전 main으로 한 번 더 확인하되, 바뀐 게 없으면 아래가 참값이다.\n\n1) 지문: `lines=1942 files=112` → **`lines=2201 files=118`**(머지 전 main), 이 패스 후 **`lines=2159 files=118`**. 원장 말미 집계 행의 `1942 | 42 | 1900`을 **`2201 | 42 | 2159`**로, 패스 문서 머리의 `1942 → 1900`도 **`2201 → 2159`**로 고칠 것. 제거 42줄은 불변이다.\n2) 잔여 507 → **766**. ⑴ 행 없는 파일 6개 180줄 → **12개 332줄**: 기존 `tests/e2e/lib/` 6파일이 자라고(gold 58→77 · silver 43→47 · bronze 19→22 · feeds 16 · llmdouble 24 · ingestlog 20 = 206) **신규 6파일 126줄**이 들어왔다 — `tests/e2e/k8s/batch/aggregate-job-rollup.yaml` 10 · `timeshift-job.yaml` 20 · `tests/e2e/specs/aggregation-3-bucket-rollup.spec.ts` 36 · `tests/e2e/tools/timeshift_bronze.py` 10 · `web/src/screens/Fairness.tsx` 34 · `Fairness.test.tsx` 16. 계획의 표가 신규 파일 유입을 예상하지 못했으나 ⑴ 계수 규약(행 없는 파일) 자체가 기계적으로 이들을 잡는다.\n3) ⑵ 행보다 자란 증가분 9파일 327줄 → **10파일 434줄**: `handlers.go` 24→197(+173) · `handlers_test.go` 14→100(+86) · `run.sh` 12→96(+84) · `check-journey-mockup.py` 42→65(+23) · `test_aggregate.py` 1→19(+18) · `web/src/api/types.ts` 5→24(+19) · `tokens.css` 38→49(+11) · `client.ts` 5→12(+7) · `aggregate.py` 11→15(+4) · **신규 `tests/e2e/specs/ac3-8-normalized-ratio.spec.ts` 22→31(+9)**. 332+434=766.\n4) **지침 V2의 기대값 20은 합친 트리에서 21이다**(오류는 기대값 쪽). #65가 들인 `aggregation-3-bucket-rollup.spec.ts`가 `// 검증 시나리오:` 선언을 1건 더하기 때문이고, 이 PR이 바꾼 15파일의 선언 손실은 0건으로 검토가 확인했다. **21이 나왔다고 실패 판정하지 말 것** — 보존 성립 판별은 「변경 파일별 선언 수가 부모와 동일」로 볼 것.\n5) 게이트 3종은 검토가 합친 트리에서 이미 rc=0을 확인했다. 원장 충돌은 현재 없다(자매 무접촉) — 다만 머지 직전에 다시 생기면 「내 쪽 채택」이 아니라 양쪽 증분의 합으로 병합할 것.\n6) 완료 기준 3번(잔여가 두 몫의 합)의 판정은 507이 아니라 **머지 직후 실측값**과 대조해야 한다. 위 766은 main이 더 움직이지 않았을 때의 값이다."
         }
       }
     ]
