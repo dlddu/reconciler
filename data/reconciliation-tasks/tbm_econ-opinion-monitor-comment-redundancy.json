@@ -1961,7 +1961,7 @@
   {
     "id": "rct_20260920-0003",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "createdAt": "2026-09-20T11:26:26Z",
     "trigger": {
       "source": "version_change",
@@ -2117,6 +2117,54 @@
               "startedAt": "2026-09-20T22:34:30Z",
               "finishedAt": "2026-09-20T22:40:00Z",
               "log": "리베이스+정정분을 `--force-with-lease=refs/heads/...:343c000`(추적 ref 부재 대비 명시 sha)로 push → head `9d5dd33`. CI 폴링 ~5분 후 `Checks:completed:success`, `mergeable_state=blocked` → **clean**. 머지 직전 main tip 을 한 번 더 실측해 `9a5d32e` 불변임을 확인하고 **squash 머지**(레포가 squash 전용) → 착지 커밋 **`6a0b464`**.\n계획의 step 9 는 「PR 을 열고 머지하지 않는다」였으나 그것은 계획 단계 몫이고, 실행 지침 1절이 실행자의 불가역 지점으로 이 머지를 지정한다. 되돌리기는 `git revert 6a0b464`."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=2454 files=124\n6a8124bdeb28607a8008d7a1247c2e1ef250dc9d6a59b48c13867f2262ecb01f",
+          "verifiedAt": "2026-09-20T22:44:00Z",
+          "checks": [
+            {
+              "name": "완료 기준 1 — PR #78 이 main 에 착지했다",
+              "status": "passed",
+              "detail": "squash 머지 성공, 착지 커밋 `6a0b464`(`merged=true`). 레포가 squash 전용이라 `allow_merge_commit=false`·`allow_rebase_merge=false` — `merge_method=squash` 로 머지했고 405 없이 통과했다. 되돌리기는 머지 커밋이 아니므로 `git revert 6a0b464` (`-m 1` 불필요). 머지 직전 main tip 을 다시 실측해 `9a5d32e` 불변임을 확인한 뒤 눌렀다."
+            },
+            {
+              "name": "완료 기준 2 — 4파일이 전부 원장에 행을 갖고 lineage-surface-pass 기준이다",
+              "status": "passed",
+              "detail": "착지한 `origin/main`(`6a0b464`) 의 `docs/comment-policy/ledger.md` 실측: `Trace.tsx`·`Trace.test.tsx`·`store_test.go`·`store.go` 네 경로 모두 파일별 원장에 행 1개씩 존재(`grep -c` 각 1). `store.go` 는 신설이 아니라 **갱신**으로 `12|0|12` → **`29|0|29`**. 파일별 원장 행 수는 절 경계로 끊어 세어 `origin/main`(머지 전) **121** → 착지 후 **124** — 완료 기준이 적은 그대로다. (행은 지문으로 키 삼지 않고 리스트로 다뤘다.)"
+            },
+            {
+              "name": "완료 기준 3 — 지문 실측값이 원장 세 자리와 바이트 일치",
+              "status": "passed",
+              "detail": "모델 `asIs.versionScript` 를 **그대로 파일로 빼** 착지한 main 에서 실행: `lines=2454 files=124` / `6a8124bd…`. 원장의 세 자리와 대조 — ⑴ 「패스 이력」 lineage-surface-pass 행의 「남음」 = **2454**, ⑵ 말미 집계 행 = **2454**, ⑶ 실측 = **2454**. 셋 일치. 판정 전 값도 `9a5d32e` 에서 `2467/124` 로 재현돼 원장의 「판정 전 2467」과 일치하고, 제거분 13 = 2467 − 2454 가 diff 의 실제 제거 줄 수와 같다.\n**포지티브 컨트롤(측정 생존)**: 같은 스크립트가 네 지점에서 네 값을 낸다 — `cfe9f8b` 2428/123 · `9a5d32e` 2467/124 · 리베이스 head 2454/124 · 착지 main 2454/124. 그중 `cfe9f8b` 의 해시 `83ca4d86…` 는 모델 `lastObservedVersion` 과 **바이트 동일**이다."
+            },
+            {
+              "name": "완료 기준 4 — 잔여 재계수가 원장 말미의 383(⑴44 + ⑵339)과 일치",
+              "status": "passed",
+              "detail": "원장을 **독립 파서**로 읽어(「파일별 원장」 절을 다음 헤딩 경계로 끊고, escape 된 `\\|` 는 셀 구분자에서 제외, 행은 dict 가 아니라 리스트로, 경로는 1열의 백틱에서 추출) 「읽는 법」의 두 몫 규약대로 재계수했다. 입력 규모도 같이 찍었다 — 지문 124파일 2454줄 · 파일 행 124 · 집계 행 1.\n⑴ 행 없는 파일 **2개 44줄**(`Fairness.tsx` 38 · `Compare.test.tsx` 6), ⑵ 행보다 자란 파일 **22개 339줄**, 합 **383** — 정정한 원장 말미의 주장과 일치.\n**계수법 포지티브 컨트롤**: 「원장에 행이 있으나 지문에 없는 파일」이 정확히 남음 0 인 2행(`Makefile` · `scripts/check-mockup-render.py`)이고, 그중 남음≠0 인 것은 0건. 지침이 예고한 집합과 같다."
+            },
+            {
+              "name": "회귀 — go test ./... · web vitest",
+              "status": "passed",
+              "detail": "`go test ./...` rc=0 (`internal/handlers` ok 0.018s · `internal/store` ok 0.003s; `-buildvcs=false` 로 linked-worktree 스탬핑 실패 회피). `npx vitest run` rc=0 — **8파일 44테스트 통과**(착지한 main `6a0b464` 트리에서 재실행): `Compare.test.tsx` 2 · `Fairness.test.tsx` 4 · **`Trace.test.tsx` 5**(판정 대상이자 테스트) · `Sentiment.test.tsx` 7 · `Dashboard.test.tsx` 8 · `Trend.test.tsx` 15 · `client.test.ts` 2 · `MapStrip.test.tsx` 1. 지침의 기대값 「7파일 38테스트」는 #76 착지 **전** 값이고, #76 이 `Compare.test.tsx` 를 신설하고 기존 스위트를 늘린 결과라 미달이 아니다(증가 방향)."
+            },
+            {
+              "name": "무결성 — 주석 제거 후 소스 바이트 동일",
+              "status": "passed",
+              "detail": "「비주석 diff 0줄」은 머리 주석 재작성에 딸려 선언이 지워지는 것을 못 잡으므로, 블록 주석 상태 기계 stripper 로 부모(`origin/main` = `9a5d32e`)와 브랜치 head 를 대조했다: `web/src/screens/Trace.tsx` 326→313줄(주석 제거 후 **282→282줄 · 10097→10097바이트**), `go/internal/store/store_test.go` 156→152줄(제거 후 **150→150줄 · 5018→5018바이트**). 둘 다 바이트 동일 — 실행 코드 경로는 한 글자도 바뀌지 않았다. 이 PR 이 건드린 파일은 소스 둘과 `docs/comment-policy/` 둘, 총 4개뿐이다."
+            },
+            {
+              "name": "신선도 — 승인 후 움직인 base 를 머지 전에 잡아 수치를 재계산",
+              "status": "passed",
+              "detail": "검토가 유보로 지목한 그대로 base 가 낡아 있었다(`cfe9f8b` vs main tip `9a5d32e`). 지침 0→2절대로 머지 **전에** 리베이스(충돌 0)하고 원장·패스 문서의 집계를 전면 재측정했다. 자매 #76 이 판정 대상 4파일을 건드리지 않았음은 `git diff cfe9f8b..9a5d32e -- <4파일>` **빈 출력**으로 실측했으므로 판정 내용·제거 13줄은 손대지 않았고, 검토 comment 가 예고한 수치(⑴ `Fairness.tsx` 37→38 · `Compare.test.tsx` 신규 6 · rowed 5파일 +32)가 독립 재측정과 **전부 일치**했다. ⑵ 는 총계 가산이 아니라 파일별 현재 줄 수 vs 행의 「남음」으로 다시 쟀다(18파일 307 → 22파일 339). 원장 충돌은 없었으나 있었더라도 「내 쪽 채택」은 쓰지 않았을 것이다. 수치 정정은 리베이스와 **같은 push** 에 실어 CI 대기 중 base 재이동을 피했다."
+            },
+            {
+              "name": "정보성 — 범위 밖 잔여(수렴 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "plan 이 명시한 범위는 계보 표면 4파일이고 그 범위는 닫혔다. 모델 전체 to-be 와의 잔여 **383줄**은 이 task 의 범위 밖이며 재감지가 후속 task 로 잇는다:\n⑴ 행 없는 파일 2개 44줄 — `Fairness.tsx` 38(막던 #76 이 착지해 **제약이 풀렸다**, 다음 패스가 바로 집을 수 있다) · `Compare.test.tsx` 6(#76 이 새로 편입시켰다)\n⑵ 행보다 자란 22파일 339줄 — 상위 다섯(`run.sh` +84 · `types.ts` +43 · `Trend.tsx` +25 · `check-journey-mockup.py` +23 · `tokens.css` +22)이 197줄로 58%\n더해 **잔여에 들어가지 않는 재판정 후보 둘** — 이 패스가 방금 행을 준 `Trace.tsx` 27줄 · `Trace.test.tsx` 22줄(#77·#79 가 판정 종료 후 복원 경로 ②를 열었다. 줄이 자란 것이 아니라 복원 경로가 자란 것이라 계수 규약이 세지 않는다)\nPython docstring 표면은 지문이 원리적으로 못 보고 표면 추가는 tobe-modeler 몫이다.\n착지 시점 열린 PR 은 #75 하나로 ⑴·⑵ 어느 파일도 건드리지 않는다(착지하면 신설 `scripts/check-data-format-change.py` 가 ⑴ 에 새로 들어온다)."
             }
           ]
         }
