@@ -2104,7 +2104,7 @@
   {
     "id": "rct_20260919-0003",
     "toBeModelId": "tbm_econ-opinion-monitor-journey-mockup",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-19T06:00:43Z",
@@ -2244,6 +2244,49 @@
               "startedAt": "2026-09-20T08:22:10Z",
               "finishedAt": "2026-09-20T08:23:20Z",
               "log": "**CI settled 확인(지침 단계 1)** — 전체 40자 head sha 로 조회: `Checks completed success` run `35427879004` 1건. `/jobs` 전수도 확인 — `docs / structure` `105856900253` success(python 게이트·R12 포함) · `docs / flow` `105856900247` success(jsdom, 이 호스트 재현 불가 → CI 가 유일 집행자) · `ci / e2e` `105856900265` success(계획 시점 in_progress 였던 잡이 초록으로 settled) · `render / render` `105856900110` · `ci / build` `105856900212` · `image / publish (batch)` `105856900386` · `(serving)` `105856900450` 전부 success · 집계 `required` `105857383757` **success** · `image / pin deploy images (main only)` `105857000970` skipped(main 전용, 정상). 비-success 는 그 skipped 하나뿐.\n\n**신선도 확인(지침 단계 2)** — PR #61 `state=open` · `mergeable=true` · `mergeable_state=clean` · `base.sha=fc428dd…` 이고 현재 main tip 도 `fc428dd6d93e3c6cda1e499db0ffdcecd362f13f` 로 동일. `refs/pull/61/merge` 부모 실측 = `fc428dd…`(현재 main tip) + `743598a7…`(PR head) → 그 초록은 **머지 트리 자체를 검증**한 것이라 리베이스 불필요. 추가로 머지 트리(`42db0a8`)를 아카이브해 게이트를 직접 돌려 rc=0 이고, 출력이 base(`fc428dd`)와 **`ok [R12] …` 1줄 추가만** 다름(R1~R11 바이트 동일)을 머지 **전에** 확인했다.\n\n**머지(지침 단계 3, 유일한 불가역 지점)** — 레포 설정이 진실이라는 지침대로 먼저 확인: `allow_merge_commit=false` · `allow_squash_merge=true` · `allow_rebase_merge=false` (직전 착지 `fc428dd` 도 parents=1). 지침 본문의 `merge_method=merge` 는 레포 설정과 어긋나므로 **squash** 로 머지했다. `PUT /pulls/61/merge -f merge_method=squash -f sha=743598a731484506b6d9e4a35ab5d052700735c3` → `{merged:true, sha:\"e75b254176e7d7c99b07553a212c804c4c0d9140\"}`. **되돌리기 문구 정정**: squash 착지이므로 지침의 `git revert -m 1 <머지커밋>` 은 틀리다 — `git revert e75b254` (부모 1개)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "mockups:ed4bcff7f524b9a428e60f3dd8d23f5a716d38bf hub:19932ee41fb89a3a2bf05bcc11bbe3bbe2c75b10",
+          "verifiedAt": "2026-09-20T08:30:00Z",
+          "checks": [
+            {
+              "name": "① 현재형 dangling 참조 0건 (게이트 R12)",
+              "status": "passed",
+              "detail": "머지 후 `origin/main`=`e75b254176e7d7c99b07553a212c804c4c0d9140` 에서 `python3 scripts/check-journey-mockup.py .` rc=0, 출력에 `ok  [R12] 현재형 서술 행 42건의 mockup 파일 참조 전부 실재`. **독립 재측정**(지침의 스크립트를 스크립트 신뢰 없이 직접 실행)도 `dangling: 0`. 행 수 42 는 부수 수치이고 판정 기준인 **위반 0** 불변식이 성립한다."
+            },
+            {
+              "name": "② README 현행화 + R10 스캔 편입",
+              "status": "passed",
+              "detail": "`ok  [R10] 서술 절의 재진술 숫자 전부 실측과 일치 (이관 6/6 · 여정 페이지 6 · 화면 단위 0 · 미시각화 0단계)`. `grep -nE '4/6|25/30|화면 단위 mockup\\(`reprocess`\\)에 걸쳐' docs/user-journeys/README.md` **0히트**(rc=1). R10 스캔 편입도 소스로 확인 — `scripts/check-journey-mockup.py:34 JREADME = D(\"docs\",\"user-journeys\",\"README.md\")` · `:501 for path, body in ((IDX, idx), (TRACKER, tracker), (JREADME, _jreadme))` 로 3문서를 돈다."
+            },
+            {
+              "name": "③ 게이트 rc=0 · R1~R11 불변",
+              "status": "passed",
+              "detail": "머지 후 main rc=0 · `PASS — 여정 6개 · 여정 페이지 6개 · 미이관 0(상한 0) · 규칙 5 미충족 페이지 0(상한 0) · 링크 114건`. 머지 직전 base(`fc428dd`) 출력과의 `diff` 는 **`ok  [R12] …` 1줄 추가(33a34)가 전부** — R1~R11 문구 바이트 동일. 사전 실측한 머지 트리(`42db0a8`) 출력과 머지 후 main 출력은 **완전 동일**(squash 가 같은 트리를 착지시켰다는 증거). 링크 수는 지침 기대 문구의 113 이 아니라 114 인데, 리뷰 comment ⑴ 이 예고한 base 이동(#60)분이고 판정 기준은 rc=0·R12 위반 0 이다."
+            },
+            {
+              "name": "④ 사료(史料) 불변",
+              "status": "passed",
+              "detail": "`git diff --stat fc428dd..e75b254` = 5파일 65+/23- 로 계획한 범위와 정확히 일치(`docs/mockups/…index.md` 6 · `JRN-ingestion-recovery.md` 13 · `JRN-logic-backfill.md` 13 · `docs/user-journeys/README.md` 14 · `scripts/check-journey-mockup.py` 42). `docs`·`scripts` 를 제외한 diff 는 **공집합** — 제품·목업 HTML·구현 트리 바이트 불변. 인덱스는 `@@ -299 +299`·`-311 +311`·`-317 +317` **3줄만** 바뀌어 사료 줄 `:107`·`:113`·`:120`·`:140`·`:335` 가 fc428dd 판과 **문자열 동일하게 보존**됨을 줄 단위로 확인(5/5 preserved). 트래커(`docs/econ-opinion-monitor-design-tracker.md`)는 변경 파일 목록에 **없다**(reg blob `0a358e20…` 무이동). 여정 문서 diff 의 hunk 는 `:13`(연결 문서)·`:45·52·59·66·73`(터치포인트)·`:101`(변경 이력 **추가** 1행, 과거형)뿐이고 `### \\`STP-` 헤딩 변경 **0줄** — R3·R4 입력 불변."
+            },
+            {
+              "name": "⑤ 래칫 음성 대조(규칙이 실제로 잡는가)",
+              "status": "passed",
+              "detail": "머지 직전 main(`fc428dd`) 문서 트리 + 이 PR 의 스크립트로 실행 → **rc=1** · `FAIL — 위반 2건` · `[R12] 현재형 서술이 실재하지 않는 mockup 파일 16건을 가리킨다` · `[R10] docs/user-journeys/README.md:38 [이관 진척] 「재편이 **4/6」 — 실측 6/6`. 계획의 음성 대조가 그대로 재현된다 — 래칫이 살아 있다."
+            },
+            {
+              "name": "CI 집행(jsdom 포함) — 로컬 재현 불가 축",
+              "status": "passed",
+              "detail": "`Checks` run `35427879004` 가 `completed/success` 로 settled. 이 호스트에서 재현 불가한 jsdom 하네스 `docs / flow` job `105856900247` 도 **success**(규칙 5(c)(d)(e)). 집계 체크 `required` job `105857383757` success. `image / pin deploy images (main only)` `105857000970` 만 skipped(main 전용). merge ref 부모가 현재 main tip(`fc428dd`)을 포함했으므로 이 초록은 머지 트리 자체의 검증이다. 참고: `Checks` 는 `on: pull_request` 전용이라 머지된 main 에는 붙지 않는다 — 머지 후 main 의 게이트 판정 근거는 위 ①③ 의 로컬 실측이다."
+            },
+            {
+              "name": "(정보성) 재감지 트리거 — 범위 밖",
+              "status": "passed",
+              "detail": "실행이 양쪽 지문을 움직였다: as-is `mockups:dd5e13b0… → ed4bcff7…`, to-be `journeys-tree:9c9935e1… → b03d1d04…`(reg 는 무이동). 설계된 동작이며 `lastObservedVersion` 은 **건드리지 않았다** — 다음 감지 주기가 이 변화를 보고 수렴을 확정하거나 후속 task 를 연다. 계획이 범위 밖으로 명시한 ⓐ 트래커 「목업↔구현 편차 허용목록」·AC 회계는 자매 축 소유이며 이번 판정에 넣지 않았다."
             }
           ]
         }
