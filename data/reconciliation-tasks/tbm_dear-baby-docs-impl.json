@@ -1172,7 +1172,7 @@
       }
     },
     "createdAt": "2026-08-08T02:07:15Z",
-    "updatedAt": "2026-09-20T12:53:12Z",
+    "updatedAt": "2026-09-20T12:57:02Z",
     "stateSummary": {
       "asIs": "**as-is 무변경** — `app:19ce469f98b2e8c1d56f23d676c3e3fa0e99cd0c backend:9aa34539f9a6a07595e4e62249e236e315c999e9 worker:613d4709f465471e4c…`, baseline과 바이트 동일. #174는 docs 전용 커밋이다.\n\n개정된 PRD-002/ENG-001/ENG-013이 요구하는 것과 대조하기 위해 **구현 실측**(`9f8cfc2` 트리):\n\n- **질문 선정 = 단계 무관 단일 풀.** `app/src/data/dailyQuestions.ts` — `DAILY_QUESTIONS` 12문항 고정 배열 + `getDailyQuestionTriplet(date, pool)`가 `dayOfYear(date) % pool.length`로 시작 인덱스를 정해 3개를 고른다. **아이·단계·기준값을 입력으로 받지 않는다.** 소비처는 `app/app/(tabs)/index.tsx:63` `getDailyQuestionTriplet()` (인자 없음) → `HomeQuestionCard`.\n- **그 12문항은 전부 태아 1인칭이다** — \"엄마, 오늘은 제가 **엄마 배 속에서** 어떤 꿈을 꿨을까요?\" 등. 카드 렌더는 `activeChild.kind`로 분기하지 않으므로 **양육(child) 활성 아이에게도 임신 축 문항이 그대로 노출된다.**\n- **단계 배지는 이미 양축 분기한다** — `index.tsx:98` `contextLabel` = `kind==='fetus' ? formatPregnancyLabel(dueOrBirthDate) : formatChildAgeLabel(dueOrBirthDate)`, 활성 아이가 없으면 `null`(미표시). `HomeQuestionCard`는 `contextLabel`이 null이면 배지를 그리지 않는다(`testID=\"home-question-card-context\"`).\n- **단계 스냅샷 컬럼 없음** — `backend/internal/migrations/` 0001~0012 전수 확인. `records`는 `id · user_id · content · created_at`(0004) + `question_text`(0007, nullable) + `subject_id`·`visibility`(0012)뿐이고, **단계/주차/생후개월을 저장하는 컬럼이 없다.** 0007 주석이 스스로 \"AC-002-02(주차 매칭 카탈로그)가 들어오면 후속 마이그레이션으로 정규화 컬럼 추가\"라고 미래형으로 적어 둔 상태다.\n- 생후 나이 산출 자체는 존재한다 — `backend/internal/records/community.go`가 AC-009-14 카드용으로 \"임신 N주차 / 생후 N개월 / N살\"을 ENG-001 식으로 포맷(단위 테스트 있음). 즉 **계산 로직은 있고, 그것을 기록에 못 박아 두는 저장·재계산 계약이 없다.**",
       "toBe": "**to-be 변경** — `docs` 트리 `b0b573fb…`→`3d39cd9e…`. 단일 커밋 **#174 `9f8cfc2`** (2026-08-08T01:47:51Z), docs 18개 파일 +596/-91. 이 모델의 to-be는 `docs/` 전체이므로 아래가 전부 스펙 이동이다.\n\n**이번 개정은 북키핑이 아니라 스펙 본체의 이동이다:**\n\n1. **V-005 개정(VDOC-001)** — \"임신 주차별 맞춤 질문\" → \"**아이 단계별 맞춤 질문**\" (ID 유지).\n2. **PRD-002 전면 개정** (+168줄) — \"질문 모델\" 절 신설: 단계를 아이의 **기본 속성**으로 규정, **두 축(임신 주차 | 생후 나이) 배타 · 케이스 혼합 금지**, 단계 스냅샷은 작성 당시 기준. AC-002-01·02·03·04를 양축으로 **재작성**하고 **AC-002-05(단계 산출 불가 시 폴백 — 단계 무관 공용 풀 + 단계 표시 생략) 신설**. 양육 축 질문 풀 구간을 1년차 1개월 · 2년차 3개월 · 3년차 6개월 · 4년차 이후 1년 티어(반개구간 `[시작, 끝)`)로 확정.\n3. **ENG-013 `stage-snapshot-persistence.md` 신설 — `status: active`, 본문이 스스로 \"확정 문서다\"라고 선언.** 열려 있던 \"물리 저장 vs 소급 계산\" 구현 재량을 **물리 저장 + 기준값 정정 시 재계산(백필)** 으로 닫았다. 계약: 재계산 트리거 T1 `due_date` 수정 · T2 `birth_date` 수정 · T3 컬럼 도입 마이그레이션(1회) / **전량 재산출(델타 이동 금지)** / **컬럼 nullable 필수**(AC-002-05 단계 없음 작성분) / **출산 전환은 백필 비대상** — 놓치면 임신기 기록 전체가 \"생후 -N개월\"로 오염된다고 경고.\n4. **ENG-001 확장** — 제목 \"아이 단계 산출 정책\", 생후 나이 산출(출생 당일=1일째, **달력 기준** 개월, 상한 없음) · 양축 비교표 · 단계 산출 불가 판정 추가. ENG-011의 죽은 참조 해소.\n5. **ENG-002(`status: deferred`) 일반화** — 개정 후 gap 표를 문서가 직접 명시: AC-002-02 단계별 풀 매칭 ❌(기존) · **임신·양육 풀 분리 ❌(개정으로 추가된 gap)** · 반복 방지 ❌ · **AC-002-05 ⚠️ \"우연히 충족 — 분기가 존재하지 않는다\"** · AC-002-01 단계 표시 ✅(배지).\n6. **TEST-002 4 → 11 TC** (임산부/양육자 분기, 케이스 혼합 금지, 스냅샷 불변성·정정 반영 TC-002-03-C, 폴백 2건).\n7. **용어집** — `DailyQuestion` 정의 갱신 + `ChildStage` · `PostnatalAge` · `StageSnapshot` 3행 신설. 하위 참조 정합: PRD-006/007/009 제공 가치 문구, PRD-007 AC-007-04, 여정 4편, mockups README, design-system 카피.\n\n확정 AC 총계 69 → **70**.",
@@ -1492,7 +1492,99 @@
         "execution": {
           "status": "running",
           "startedAt": "2026-09-20T12:53:12Z",
-          "entries": []
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "log": "저작(계획 1~12번)은 1차 시도에서 끝나 PR #175에 담겨 있었고, 이 실행이 그것을 **squash 머지로 main에 적용**했다 — 머지 커밋 `0282fab893dbb495b3dc87b8df0690be45d2dc37`(부모 1개 `eb988c0` = squash 확증, 14파일 +1626/-34). `backend/internal/migrations/0013_records_stage_snapshot.{up,down}.sql`가 main에 착지. up=96줄(ALTER ADD COLUMN ×3 · `idx_records_stage` · T3 백필 2 UPDATE), down=8줄(DROP INDEX + DROP COLUMN ×3). up 상단 주석에 '이 두 UPDATE는 1회성 역사 산출물이고 앞으로의 권위는 stage.go의 Go 계산기'가 축자로 있음을 머지 후 트리에서 재확인."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "log": "저작(계획 1~12번)은 1차 시도에서 끝나 PR #175에 담겨 있었고, 이 실행이 그것을 **squash 머지로 main에 적용**했다 — 머지 커밋 `0282fab893dbb495b3dc87b8df0690be45d2dc37`(부모 1개 `eb988c0` = squash 확증, 14파일 +1626/-34). `backend/internal/records/stage.go` 283줄 착지. 머지 후 트리에서 `go build ./...` rc=0."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "log": "저작(계획 1~12번)은 1차 시도에서 끝나 PR #175에 담겨 있었고, 이 실행이 그것을 **squash 머지로 main에 적용**했다 — 머지 커밋 `0282fab893dbb495b3dc87b8df0690be45d2dc37`(부모 1개 `eb988c0` = squash 확증, 14파일 +1626/-34). `RecomputeSnapshotsForSubjectTx` 착지. **기준값 행 부재 가드 실측** — `loadSubjectStageBasis`가 `sql.ErrNoRows`와 `kind`별 `hasFetus/hasChild.Valid`로 `found`를 세우고, 본문이 `if !basis.found { return 0, nil }`로 **아무것도 쓰지 않는다**. 행은 있고 날짜만 NULL이면 `found=true`라 정상적으로 NULL로 덮인다 — 두 경우가 코드상 갈린다. 재산출은 `SELECT id, created_at FROM records WHERE subject_id = ?` 전량 → 행마다 `computeStageSnapshot` → `UPDATE ... WHERE id = ?`(델타 이동 없음)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "저작(계획 1~12번)은 1차 시도에서 끝나 PR #175에 담겨 있었고, 이 실행이 그것을 **squash 머지로 main에 적용**했다 — 머지 커밋 `0282fab893dbb495b3dc87b8df0690be45d2dc37`(부모 1개 `eb988c0` = squash 확증, 14파일 +1626/-34). `records/{model,store}.go` 착지(+12/-0, +53/-6). 세 조회 경로 스냅샷 반환은 `TestReadPaths_AllReturnStageSnapshot`으로 머지 후 트리에서 pass."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "저작(계획 1~12번)은 1차 시도에서 끝나 PR #175에 담겨 있었고, 이 실행이 그것을 **squash 머지로 main에 적용**했다 — 머지 커밋 `0282fab893dbb495b3dc87b8df0690be45d2dc37`(부모 1개 `eb988c0` = squash 확증, 14파일 +1626/-34). `onboarding/store.go` 착지(+68/-14). 임포트 순환 없음 — `go build ./...` rc=0."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "저작(계획 1~12번)은 1차 시도에서 끝나 PR #175에 담겨 있었고, 이 실행이 그것을 **squash 머지로 main에 적용**했다 — 머지 커밋 `0282fab893dbb495b3dc87b8df0690be45d2dc37`(부모 1개 `eb988c0` = squash 확증, 14파일 +1626/-34). 하네스 DDL 동기화 2파일(`records/handlers_test.go` +3, `onboarding/store_test.go` +3) 착지. 머지 후 전체 스위트에 `no such column` 0건."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "log": "저작(계획 1~12번)은 1차 시도에서 끝나 PR #175에 담겨 있었고, 이 실행이 그것을 **squash 머지로 main에 적용**했다 — 머지 커밋 `0282fab893dbb495b3dc87b8df0690be45d2dc37`(부모 1개 `eb988c0` = squash 확증, 14파일 +1626/-34). `records/stage_migration_test.go` 315줄 착지. 머지 후 트리에서 `go test ./internal/records/ -run TestMigration0013` → 최상위 **3 pass / 0 fail**(`_BackfillMatchesGoCalculator`·`_BackfillPopulatesAndLeavesUnknowable`·`_DownDropsColumns`). 단, up.sql 주석은 이 테스트를 'db 패키지의 등가성 테스트'라 부르는데 실제 위치는 `internal/records` 다 — 사실관계 오류가 아니라 패키지 이름만 어긋난 주석(정보성)."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "log": "저작(계획 1~12번)은 1차 시도에서 끝나 PR #175에 담겨 있었고, 이 실행이 그것을 **squash 머지로 main에 적용**했다 — 머지 커밋 `0282fab893dbb495b3dc87b8df0690be45d2dc37`(부모 1개 `eb988c0` = squash 확증, 14파일 +1626/-34). `records/stage_test.go` 395줄 · `onboarding/stage_recalc_test.go` 297줄 착지. 머지 후 트리에서 C2 3 pass(`TestCreate_StampsPregnancy/PostnatalStageSnapshot`·`TestCreate_NoDerivableStage_LeavesSnapshotNull`), C3 5 pass(`UpsertCaseA_DueDateCorrection`·`UpsertCaseC_BirthDateCorrection`·`UpsertCaseA_DueDateCleared`·`UpsertCaseB_AddingChild_DoesNotRepaintPregnancyRecords`·`UpsertCaseA_SubjectDroppedFromList_PreservesSnapshot`)."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "log": "저작(계획 1~12번)은 1차 시도에서 끝나 PR #175에 담겨 있었고, 이 실행이 그것을 **squash 머지로 main에 적용**했다 — 머지 커밋 `0282fab893dbb495b3dc87b8df0690be45d2dc37`(부모 1개 `eb988c0` = squash 확증, 14파일 +1626/-34). 문서 3건 착지 — ENG-013(+75/-10) · ENG-001(+15/-1) · glossary(+3/-3). `docs/doc-tracker.md`·`docs/index.html`·`.github/workflows/**`·app 파일은 머지된 14파일 목록에 **없다**(의도대로)."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "log": "planner가 3차 준비에서 수행. 실행자가 **머지 후 main(`0282fab`)에서 재현** — go1.24.7(go.mod toolchain 고정값)로 `go build ./...` rc=0 · `go vet ./internal/...` rc=0 · `go test ./... -count=1 -v` **136 pass / 1 skip / 0 fail**(rc=0). `gofmt -l .`은 `internal/storage/s3.go`·`internal/users/handlers_test.go` 2건을 내지만 **부모 `eb988c0`에서도 같은 2건**이라 이 슬라이스가 들여온 것이 아니고, 둘 다 머지된 14파일에 없다(선행 debt, 정보성)."
+            },
+            {
+              "stepSeq": 11,
+              "status": "succeeded",
+              "log": "1차 시도에서 planner가 수행한 네거티브 컨트롤 8건. 제품 코드는 원상 복구돼 최종 diff(14파일 +1626/-34)에 남지 않았고, 그 사실은 머지된 파일 목록으로 재확인했다. 실행 단계에서 재주입하지 않았다(계획 범위 밖의 소스 변경이 된다)."
+            },
+            {
+              "stepSeq": 12,
+              "status": "succeeded",
+              "log": "planner가 수행 — 브랜치 `reconcile/docs-impl-rct_20260808-0001-stage-snapshot` · PR #175. 실행자는 이 PR을 머지했다."
+            },
+            {
+              "stepSeq": 13,
+              "status": "succeeded",
+              "log": "planner 실측(#185 머지 확인) 이후 상태 변화 없음. 실행자 재확인은 불필요했다 — #185는 이미 `eb988c0`로 착지해 이 PR의 base가 돼 있었다."
+            },
+            {
+              "stepSeq": 14,
+              "status": "succeeded",
+              "log": "planner가 리베이스·force-push를 이미 수행. 실행자의 §0-A 신선도 재확인(2026-09-20 12:54Z) — PR #175 `state=open` · `draft=false` · `mergeable=true` · **`mergeable_state=clean`** · head **`d2340fe53e5afdcfb40d3a3efc11f602bf893b39`**(planner 실측과 동일) · base **`eb988c0…`** · `changed_files=14 +1626/-34`. `git/ref/heads/main`도 **`eb988c0…`** 로 base와 동일 → 자매 머지 없음이라 지침 §0-B(리베이스·재측정 경로)는 발동하지 않았다. **실행자가 다시 push한 일 없음.**"
+            },
+            {
+              "stepSeq": 15,
+              "status": "succeeded",
+              "log": "planner의 기준선을 실행자가 **머지 후 main에서 독립 재측정**해 확인: `0282fab` **136 pass / 1 skip / 0 fail** — planner가 리베이스 트리 `d2340fe`에서 잰 값과 일치하고, 머지 전 main `eb988c0`의 120에서 **테스트가 줄지 않았다**(+16 신규, 회귀 0). `go build`·`go vet` 양쪽 rc=0. 세는 법은 `go test ./... -count=1 -v`의 최상위 `^--- PASS`/`^--- SKIP` 행 수(서브테스트 제외)."
+            },
+            {
+              "stepSeq": 16,
+              "status": "succeeded",
+              "log": "머지 직전 main tip이 planner 측정 시점(`eb988c0`)에서 **한 칸도 움직이지 않아** 자매 간섭 재측정 조건 자체가 발생하지 않았다. 머지는 `sha=d2340fe…`를 명시한 조건부 머지라 그 사이 head가 바뀌었다면 409로 거부됐을 것이다."
+            },
+            {
+              "stepSeq": 17,
+              "status": "succeeded",
+              "log": "planner가 확인한 새 head 런 2건을 실행자가 **독립 재조회**(`actions/runs?head_sha=<full sha>`) — `total_count=2`, 둘 다 `completed/success`: `CI` **35505533299**(잡 12건 — `Detect Changes`·`Backend Unit Tests`·`Integration Tests / integration`·`E2E Tests (Android)`·`E2E Tests (iOS)`·`All prechecks passed`·`Build & Push Backend Image / build-push` **success**, `App Unit Tests`·`Build & Push Worker Image`·`Deploy Android to Play Store (Internal)`·`Deploy iOS to TestFlight` **skipped**, 집계 **`CI Success` success**)와 `Mockup ↔ Route Map` **35505533195** success. draft는 이미 해제돼 있었다."
+            },
+            {
+              "stepSeq": 12,
+              "status": "succeeded",
+              "finishedAt": "2026-09-20T12:57:02Z",
+              "log": "**머지 실행 — 이 단계의 되돌릴 수 없는 지점.** 지침 §2-0 관문 6개를 실행자가 전부 재확인한 뒤 `PUT /repos/dlddu/dear-baby/pulls/175/merge`를 `merge_method=squash` + `sha=d2340fe53e5afdcfb40d3a3efc11f602bf893b39`(조건부)로 호출 → `merged=true`, squash 커밋 **`0282fab893dbb495b3dc87b8df0690be45d2dc37`**. 레포 설정 실측으로 `allow_merge_commit=false`·`allow_squash_merge=true`라 squash가 유일한 경로이고, 착지 커밋의 **부모가 1개**(`eb988c0`)임을 재조회로 확증했다(롤백 시 `revert`에 `-m 1`을 붙이지 않는 근거). 머지 후 `git/ref/heads/main` = `0282fab…`. 커밋에 실린 파일 **14개**로 PR diff와 동일. 덧붙여 §2-2 검토 포인트 4개를 머지 전에 head 트리에서 직접 읽어 확인했다 — ⑴기준값 행 부재 가드 존재 ⑵재계산 스코프가 `WHERE subject_id = ?`(user_id로 넓어지지 않음) ⑶백필 SQL의 '1회성 역사 산출물 / 권위는 Go 계산기' 주석과 등가성 테스트 존재 ⑷3컬럼 근거와 `stage_kind` 어휘 분리 근거가 up.sql 머리주석과 ENG-013 본문 양쪽에 축자로 있음."
+            }
+          ]
         }
       }
     ]
