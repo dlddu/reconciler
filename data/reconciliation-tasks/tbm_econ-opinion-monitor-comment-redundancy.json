@@ -2248,6 +2248,57 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-20T15:48:16Z",
       "reason": "**작업 필요 — `Dashboard.tsx`(+3) · `Dashboard.test.tsx`(7) 10줄에 소유자가 0이고, 그중 최소 5줄은 복원 경로 ③(PR #81 본문)이 축자로 열려 있다.**\n\n**⑴ 왜 지금 새 task인가 — 열린 두 task가 이 10줄을 덮지 않는다.** `rct_20260920-0003`(PR #78)의 슬라이스는 `Trace.tsx`·`Trace.test.tsx`·`store.go`·`store_test.go`이고, `rct_20260920-0006`(PR #82)의 슬라이스는 `Trend.tsx`·`Trend.test.tsx`다. 내 28줄 중 18줄은 후자와 겹치므로 **그쪽에 남기고**(그 task는 15:38:27Z 리뷰 거부 → 15:43:28Z planner 재점유로 #81 이후 트리에서 재계획 중이고, 거부 사유가 정확히 이 18줄이었다), 이 task는 **`Dashboard` 쪽 10줄만** 집는다. 슬라이스가 겹치지 않으므로 두 패스가 같은 트리를 놓고 경합하지 않는다.\n\n**⑵ 제거 근거(경로 ③ 축자 대조).** `#81` 본문 표의 `Dashboard.tsx` 행 「대상과 함께 축을 넘긴다 … 축을 빼면 받는 쪽이 축을 추측해야 하고, 그 추측이 틀리면 그 축에 없는 대상을 묻게 된다」 ↔ `Dashboard.tsx` 주석 3줄이 거의 축자 재진술이고, 같은 문장이 `Dashboard.test.tsx`에 세 번째로 적혔다. 한 계약의 근거가 **PR 본문 + 소스 3파일에 네 벌**로 존재한다 — 정의가 적은 실패 모드(「원본만 고쳐질 때 조용히 거짓이 된다」)가 3중으로 열린 자리다. ③·④가 복원 경로라는 것은 2026-09-20 사용자 판정으로 확정돼 있다.\n\n**⑶ 일괄 제거는 답이 아니다 — 유지 후보가 섞여 있다.** `Dashboard.test.tsx`의 vitest 자동 cleanup 부재 주석은 `Sentiment.test.tsx`·`Fairness.test.tsx`가 원장에서 「전량 유지」를 받은 것과 같은 유형(「테스트가 왜 그 모양으로 단언하는지」)이고, 「도착 주소를 링크 문자열이 아니라 라우트로 읽는다」 JSDoc 1줄도 유지 대상 형태다. **「애매하면 남긴다」**를 적용해 판정 분기를 패스 문서에 남길 것.\n\n**⑷ 완료 기준의 형태(planner 몫).** 정합 상태는 「지운 것」이 아니라 「판정돼 원장에 행이 있는 것」이다 — `Dashboard.test.tsx`는 **행 신설**, `Dashboard.tsx`는 `남음=0` 행의 **갱신**이 필요하고(그대로 두면 원장이 「0줄」이라 계속 주장한다), 말미 요약의 잔여 세 숫자를 착지 직전 main 기준으로 재계산해야 한다. 이 task가 닫으면 잔여는 740 → 730이 된다.\n\n**⑸ 긴급도 근거.** 자력 재발화는 없다 — 내 claim이 baseline을 `lines=2398`로 전진시켰으므로 이 10줄은 스스로 다시 지문을 움직이지 않는다. 원장의 ⑴·⑵ 계수 규약이 이들을 셈에 잡으므로 「영영 보이지 않음」은 아니지만, 도달하려면 누군가 슬라이스로 집어야 하고 지금 소유자가 0이다.\n\n**⑹ planner에게 넘기는 주의 — 슬라이스 겹침을 착수 직전에 재조회할 것.** 이 모델의 열린 task 둘이 **연달아 자매 PR에 슬라이스를 무효화당했다**(#76이 `rct_20260920-0003`의 `Fairness.tsx`를, #81이 `rct_20260920-0006`의 두 파일을). 제품 PR이 주석을 들이는 속도가 판정 속도를 앞서므로(3.5h에 659→740), `Dashboard.*` 를 건드리는 열린 PR이 있는지 `state=open`에서 반드시 재확인하고, 있으면 그 파일을 빼고 진행할 것.\n\n**범위 밖(보고만, 이 축 아님).** `Trend.tsx`·`Trend.test.tsx`의 증가분은 `rct_20260920-0006`의 몫이다. 잔여 740의 나머지(가장 큰 `handlers.go` +228 · `handlers_test.go` +106 · `run.sh` +84)는 이후 재감지가 새 task로 잇는다.\n\n**참고 — `assessment.recheckAfter`가 스키마에 없어 유예(파킹)는 선택지가 아니었다.** 확장은 control plane의 reconciler-task-schema-updater 몫이다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**`Dashboard` 표면 2파일의 소유자 없는 주석 10줄을 판정해 원장에 등재한다 — 제거 5 · 유지 5, 패스 문서 `dashboard-surface-pass` 한 벌.**\n\n**왜 이 슬라이스인가.** 잔여 740줄 중 이 10줄만이 **열린 어느 PR·task 에도 소유자가 없다**. 계획 직전 열린 PR 여섯(#82·#78·#76·#75·#73·#72) 전부의 `/pulls/<n>/files` 를 재조회해 `web/src/screens/Dashboard.tsx`·`Dashboard.test.tsx` 와 **겹침 0**을 실측했다(자매 `rct_20260920-0006`=#82 는 `Trend.*` 둘, `rct_20260920-0003`=#78 은 `Trace.tsx`·`store_test.go`). 슬라이스를 이 둘로 좁히면 두 패스가 같은 소스 파일을 놓고 경합하지 않는다.\n\n**왜 「제거 5 · 유지 5」인가 — 일괄 제거가 아니다.** 제거 5줄은 복원 경로 ③(PR #81 본문)이 **축자로** 열어 둔 승계 계약 근거다: #81 본문 표의 `Dashboard.tsx` 행 「대상과 함께 축을 넘긴다 … 축을 빼면 받는 쪽이 축을 추측해야 하고, 그 추측이 틀리면 그 축에 없는 대상을 묻게 된다」가 `Dashboard.tsx` 주석 3줄과 `Dashboard.test.tsx` 78–79행 2줄을 함께 복원하고, 경로 ②(design-tracker `:309`)가 `/trend?axis=<축>&subject=<대상>` 계약과 두 테스트 이름을 다시 적는다 — 한 계약의 근거가 네 벌로 존재하던 자리다. 나머지 5줄(vitest 자동 cleanup 부재 2 · 도착 주소 JSDoc 1 · 축 전환 스텁 설계 2)은 **「테스트가 왜 그 모양으로 단언하는지」** 유형이라 `Sentiment.test.tsx`·`Fairness.test.tsx`·`Trend.test.tsx` 의 「전량 유지」 판정과 같은 근거로 유지하고, JSDoc 1줄은 정책의 **「애매하면 남긴다」**를 적용한 판단 분기로 패스 문서에 남긴다.\n\n**완료 기준(이 task 의 수렴 판정 대상).** ⑴ `Dashboard.tsx` 3줄·`Dashboard.test.tsx` 7줄 **열 줄 전부**가 판정돼 원장에 행으로 존재한다 — `Dashboard.test.tsx` **행 신설**, `Dashboard.tsx` **행 갱신**(지금 `남음=0` 이라 원장이 「0줄」을 계속 주장한다). ⑵ 패스 문서 `docs/comment-policy/passes/2026-09-20-dashboard-surface-pass.md` 가 제거 근거·유지 목록·판단 분기를 담는다. ⑶ 「패스 이력」 표에 행이 하나 늘고, 말미 요약 행과 잔여 세 숫자가 **머지 직전 main 기준 재측정값**으로 갱신된다. ⑷ 제품 동작 무변경 — `npm test`·`tsc -b`·`lint` 와 문서 게이트 둘의 출력이 부모와 같다.\n\n**범위 밖(후속 재감지 몫).** 잔여의 나머지 730줄 — ⑴ `Fairness.tsx` 37(열린 PR #76 이 수정 중) · `Trace.tsx` 36 · `Trace.test.tsx` 22(#78 이 판정 중) · `store_test.go` 6, ⑵ `handlers.go` +228 · `handlers_test.go` +106 · `run.sh` +84 등 16파일. 이 task 는 그 어느 것도 건드리지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 `dlddu/economic-opinion-trend-monitor` 를 main(`473b3cc`)에서 클론하고 모델 `asIs.versionScript` 를 그대로 재실행해 기준 지문을 재현한다.",
+              "expectedOutcome": "`lines=2398 files=123` / `69d72a0d29fc…` — task `trigger.asIs.currentVersion` 과 바이트 동일. (실측 완료: 계획 시점 재현됨.)"
+            },
+            {
+              "seq": 2,
+              "action": "잔여를 독립 파서로 재계수한다 — 원장 「파일별 원장」 절만 읽어 (파일, 남음)을 뽑고 현재 지문과 대조해 ⑴ 행 없는 파일 전량 · ⑵ 행보다 자란 증가분을 각각 센다.",
+              "expectedOutcome": "⑴ 5파일 108줄 · ⑵ 16파일 632줄 · 합 **740** — 감지 브리프 수치와 전건 일치하고, 그 안에서 `Dashboard.test.tsx` 7(⑴) · `Dashboard.tsx` 0→3(⑵)이 이 슬라이스 10줄임을 확인. (실측 완료.)"
+            },
+            {
+              "seq": 3,
+              "action": "열린 PR 전수의 파일 목록을 재조회해 `Dashboard.tsx`·`Dashboard.test.tsx` 겹침을 확인한다 (감지 브리프 ⑹의 지시 — 이 모델의 열린 task 둘이 연달아 자매 PR 에 슬라이스를 무효화당했다).",
+              "expectedOutcome": "열린 PR 여섯(#82·#78·#76·#75·#73·#72) 중 두 파일을 건드리는 것 **0건**. 겹치는 PR 이 나타나면 그 파일을 빼고 남은 쪽만 판정한다. (실측 완료 — 겹침 0.)"
+            },
+            {
+              "seq": 4,
+              "action": "브랜치 `reconcile/rct_20260920-0007-comment-redundancy` 에서 제거 5줄을 지운다 — `Dashboard.tsx:112-114`(승계 계약 근거 3줄), `Dashboard.test.tsx:78-79`(같은 문장의 세 번째 사본 2줄). 유지 5줄은 건드리지 않는다.",
+              "expectedOutcome": "`git diff --stat` 이 2파일 **5줄 삭제 · 0줄 추가**. 지문 재실행값 `lines=2393 files=122` / `64fe64d275cf…` — 파일 수가 하나 주는 것은 `Dashboard.tsx` 가 남음 0 이 되어 지문 파일 집합에서 빠지기 때문이다."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/comment-policy/passes/2026-09-20-dashboard-surface-pass.md` 를 쓴다 — 왜 이 범위인가(소유자 0 · 겹침 0 실측), 제거한 것(경로 ③ 축자 대조 인용), 유지한 것, 판단이 갈려 남긴 것(JSDoc 1줄), 범위 밖.",
+              "expectedOutcome": "기존 패스 문서와 같은 절 구성이고, 제거 근거가 **인용 대조**(PR #81 본문 ↔ 주석 원문)로 검증 가능하다."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/comment-policy/ledger.md` 를 갱신한다 — ⑴ 「패스 이력」 표에 `dashboard-surface-pass` 행 추가, ⑵ 표적 패스 설명 문단 추가, ⑶ `Dashboard.tsx` 행 갱신(`3|3|0`)과 `Dashboard.test.tsx` 행 신설(`7|2|5`), ⑷ 말미 요약 행을 `dashboard-surface-pass 기준`으로 다시 쓰고 잔여를 재계수값으로 갱신.",
+              "expectedOutcome": "독립 파서 재실행이 잔여 **730**(⑴ 4파일 101 · ⑵ 15파일 629)을 내고 원장 문면의 세 숫자와 일치. 판정 10줄이 모두 행에 들어와 ⑴·⑵ 어느 몫에도 남지 않는다."
+            },
+            {
+              "seq": 7,
+              "action": "로컬 검증 — `web/`에서 `npm ci && npm test`, `npx tsc -b`, `npm run lint`; 레포 루트에서 `python3 scripts/check-mockup-render.py .` · `python3 scripts/check-journey-mockup.py .` 를 돌려 출력을 부모(`473b3cc`) 실행과 바이트 대조.",
+              "expectedOutcome": "`npm test` 7파일 30건 통과 · `tsc -b` rc=0 · `lint` rc=0 · 문서 게이트 둘 rc=0 이고 출력이 부모와 **바이트 동일**. (실측 완료 — 계획 단계에서 전부 초록.)"
+            },
+            {
+              "seq": 8,
+              "action": "브랜치를 push 하고 PR 을 연다(머지하지 않는다). 본문에 task id · gap 요약 · 판정 근거 · 검증 실측값 · 범위 밖을 적는다.",
+              "expectedOutcome": "PR 이 열리고 CI 가 붙는다. 실행 단계가 그 PR 을 머지 대상으로 받는다."
+            }
+          ],
+          "plannedAt": "2026-09-20T16:05:00Z"
+        }
+      }
+    ]
   }
 ]
