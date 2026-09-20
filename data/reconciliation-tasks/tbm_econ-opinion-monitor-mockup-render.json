@@ -2245,6 +2245,87 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-20T11:21:38Z"
     },
-    "updatedAt": "2026-09-20T11:22:58Z"
+    "updatedAt": "2026-09-20T11:22:58Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`trace` 가 #70(슬라이스 9)으로 `BUILT` 에 들어와 자동 판정 대상이 됐는데 원장 「등재된 편차」의 `trace` 행이 0이었다. 그 화면에 귀속된 2단계(`STP-open-origin`·`STP-judge`)의 카피·구조를 양방향 전수 판정해 원장에 등재한다(PR #77, 문서 전용).\n\n**왜 이 방법인가 — 문서 전용으로 긋는다.** 선행 네 화면(`compare`·`trend`·`sentiment`·`fairness`)이 전부 「등재 먼저, 수렴은 후속」이었고, 정방향 부재 24종의 처분이 행마다 갈려(목업 전용 시연 장치 / 백로그 파킹 / 구현 유지 / 수렴 대기) 일괄 수정이 성립하지 않는다. `web/src` 를 건드리면 판정 도중 이 모델의 as-is 지문이 움직여 재감지가 열린다. 가역성도 문서 쪽이 압도적이다(revert 하나).\n\n**범위(완료 기준)**: ⑴ 신설 11행이 실측 잔여를 전건 받는다(정방향 24종 · 역방향 25종, 미귀속 0). ⑵ 원장 총행 63 → 74, `trace` 0 → 12(mapstrip 행 합류 포함). ⑶ `check-mockup-render.py` 출력이 등재 전후 **바이트 동일**하고 rc=0, `check-journey-mockup.py` rc=0. ⑷ mockup 인덱스의 낡은 두 문장(`trace` 가 `BUILT` 밖 / `PAT-lineage` R3 예외 등재 중)이 정정된다. 이 넷이 머지 직전 main 기준으로 서면 성공이다.\n\n**범위 밖**: ⓐ 링크 만료 배너 카피의 실제 구현 수렴(「구현 수렴 대기」 1행으로 등재만 한다) · ⓑ `STP-judge` 표면 구현(영속화 백로그) · ⓒ `STP-drilldown-articles` 기여 뉴스 목록. 셋 다 재감지가 새 task 로 잇는다 — 그리고 이 PR 이 `docs/mockups/` 를 건드리므로 to-be 지문이 움직여 **그 재감지 경로가 실제로 열린다**(gap ⑸ 가 적은 「재감지 0」의 해소책이기도 하다).\n\n**감지 수치 2건을 정정했다.** ⒜ 감지는 `STP-open-origin` 하나만 세어 리터럴 12종이라 했으나, 귀속 표(단일 소스)가 `STP-judge` 도 `trace` 로 적으므로 모집단은 2단계·28종이다. ⒝ 감지가 적은 「등재 44행」은 절 경계 실측과 다르다 — base `4ddbdaa` 에서 **63행**이었다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "귀속 표(`docs/mockups/econ-opinion-monitor-mockup-index.md` 「흡수된 화면의 판정 경계」)에서 `trace` 모집단을 확정한다.",
+              "expectedOutcome": "`STP-open-origin`·`STP-judge` 2단계. 감지가 센 1단계가 아니다 — 같은 페이지의 나머지 4단계는 `dash`(1)·`fairness`(3) 귀속."
+            },
+            {
+              "seq": 2,
+              "action": "정방향(목업→구현) 차집합 실측. 「제품 표면 추출 규칙」대로 `<style>`·`<script>`·`<head>`·HTML 주석·`<details data-meta-layer>` 제거 후 텍스트 노드 + 사람이 읽는 속성을 뽑아 `web/src` 전건(주석 제거)에 대조. 엔티티·NFKC·공백 정규화 포함.",
+              "expectedOutcome": "리터럴 28종(13+15) · 실재 3종 · 부재 25종. 워크스루 CTA `판정하고 마치기` 1종 제외 → 제품 잔여 24종."
+            },
+            {
+              "seq": 3,
+              "action": "포지티브 컨트롤 — 같은 코드를 이미 판정이 끝난 `STP-check-normalized`(`fairness`)에 돌려 측정이 살아 있는지 확인한다.",
+              "expectedOutcome": "PRESENT > 0 (실측 20종 중 7종). 절대수가 `fairness` 전문의 19·11 과 어긋나는 것은 토큰화 경계 차이이고, 판정 불변식은 「PRESENT > 0」 하나다."
+            },
+            {
+              "seq": 4,
+              "action": "실재 3종이 진짜 수렴인지 부분 문자열인지 각각 소재를 확인한다.",
+              "expectedOutcome": "3종 전부 부분 문자열 — `원문`은 `원문 주소`/`원문까지 내려가기`의 꼬리, `판정`·`판정 기록`은 구현이 그 단계를 **열지 않은 사유**를 적은 note 안. ⇒ 진짜 수렴 0항목. 셋 다 해당 행에 귀속시키고 수렴으로 세지 않는다."
+            },
+            {
+              "seq": 5,
+              "action": "역방향(구현→목업) 차집합 실측. `Trace.tsx`(블록·행·JSX 주석 제거)를 모집단으로, `JRN-spike-verification.html` 파일 전체를 존재 판정 모집단으로(엔티티 해제 후).",
+              "expectedOutcome": "고유 한글 43종 중 목업 부재 27종. mapstrip 칩 2종(`추적 키 · 원문 보존` · 런타임 조립 `{N}/3 계층 · {record_id}`)은 기존 214행이 받는다 → 잔여 25종."
+            },
+            {
+              "seq": 6,
+              "action": "게이트 기준선을 base `4ddbdaa` 에서 잡는다 — `scripts/check-mockup-render.py` 출력을 파일로 보존.",
+              "expectedOutcome": "rc=0, R3 in-scope 25종 · 성립 25 · 등재 예외 0 · 구현 전용 1, R4·R5 6개 카운터 전부 `0건 = 상한 0`. 이 출력이 등재 후 동치 대조의 기준이 된다."
+            },
+            {
+              "seq": 7,
+              "action": "원장 행 수 기준선 실측 — 「### 등재된 편차」 절 경계 안의 데이터 행만 센다(다음 `#` 제목에서 끊고, 헤더·구분선 제외, escape 된 `\\|` 고려).",
+              "expectedOutcome": "총 63행 · `trace` 0행. 감지가 적은 44행은 실측과 다르다."
+            },
+            {
+              "seq": 8,
+              "action": "원장에 `trace` 실측 근거 산문 블록을 신설한다 — 모집단 2단계, 정·역방향 수치, 제외 범주, 부분 문자열 경고, 포지티브 컨트롤, 감지 수치 정정을 담는다.",
+              "expectedOutcome": "선행 4화면 전문과 같은 형식. 다음 판정자가 수치를 재현할 수 있다."
+            },
+            {
+              "seq": 9,
+              "action": "신설 11행을 표에 등재한다 — 정방향 5행(`STP-judge` 전면 부재 13종 / 링크 상태 select 3종 / `보존된 원문` 카드 2종 / 만료 배너 카피 5종 / 카드 머리 1종), 역방향 6행(조회 폼 3 / 계보 결측 3 / 분석 카드 kv 10 / 수집 메타 6 / lede 1 / 상태 문구 2).",
+              "expectedOutcome": "24 + 25 = 49종 전건 귀속, 미귀속 0. 「구현 수렴 대기」는 1행뿐이고 그 사유 칸에 왜 반영하지 않았는지와 목표 문면의 소재를 적는다."
+            },
+            {
+              "seq": 10,
+              "action": "기존 mapstrip 행(214행)에 `trace` 를 합치고, 절 머리의 「등재 화면」 목록에 `trace`(rct_20260920-0004)를 더한다.",
+              "expectedOutcome": "행을 늘리지 않고 화면 칸이 `… + `trace` + 셸`로. `fairness` 합류와 같은 처리."
+            },
+            {
+              "seq": 11,
+              "action": "mockup 인덱스의 낡은 두 문장을 정정한다 — ⑴ 「`trace`는 아직 밖이다(`Placeholder`만 렌더)」, ⑵ 「`PAT-lineage`가 규칙 3 예외에 등재돼 있다」.",
+              "expectedOutcome": "둘 다 #70 이후 거짓. 인덱스가 귀속 표의 단일 소스이므로 거짓 문장을 남기지 않는다. 이 파일은 to-be 범위 안이라 재감지가 열린다 — 의도한 것."
+            },
+            {
+              "seq": 12,
+              "action": "게이트 재실행 + 동치 대조: `check-mockup-render.py` 출력을 기준선과 `diff`, `check-journey-mockup.py` 실행, 신설 행의 5셀 파싱 확인.",
+              "expectedOutcome": "mockup-render rc=0 이고 출력 **바이트 동일**(diff 빈 출력), journey-mockup rc=0 (PASS · 링크 121건), 행 파싱 malformed 0. 총 74행 · `trace` 12행."
+            },
+            {
+              "seq": 13,
+              "action": "계획 시점 열린 PR 전수(#72·#73·#74·#75)의 `files` 를 재조회해 내 두 파일과의 겹침을 잰다.",
+              "expectedOutcome": "겹침 0 — 넷 다 `docs/econ-opinion-monitor-design-tracker.md` 도 `docs/mockups/` 도 건드리지 않는다. #75 만 새 필수 체크를 신설하므로 지침의 주의사항으로 넘긴다."
+            },
+            {
+              "seq": 14,
+              "action": "브랜치 `reconcile/mockup-render-rct_20260920-0004` 를 push 하고 PR 을 연다.",
+              "expectedOutcome": "PR #77. 본문에 task id · gap · 실측 수치 · 검증 · 범위 밖을 적는다."
+            }
+          ],
+          "plannedAt": "2026-09-20T11:24:00Z"
+        }
+      }
+    ]
   }
 ]
