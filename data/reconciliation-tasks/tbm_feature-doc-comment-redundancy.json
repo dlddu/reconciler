@@ -1860,7 +1860,7 @@
   {
     "id": "rct_20260919-0005",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-19T06:08:42Z",
@@ -1987,6 +1987,54 @@
               "startedAt": "2026-09-20T08:39:00Z",
               "finishedAt": "2026-09-20T08:41:00Z",
               "log": "지침 3번(머지). 머지 방식은 지침 문구(`--merge`)가 아니라 레포 설정을 진실로 삼았다 — GET /repos/dlddu/feature-doc 가 allow_merge_commit=false / allow_squash_merge=true / allow_rebase_merge=false 이므로 squash 로 머지(지침도 「레포 설정이 허용하는 방식으로」라고 못박았고 최근 착지 #79·#80·#81 도 PR 번호가 제목에 붙은 단일 커밋이다). PUT /pulls/82/merge merge_method=squash, sha=a61637b6... 로 낙관적 잠금 → merged=true, 머지 커밋 f4f6fe9c780af2877ca8cba1aee63821da3979b4. main tip 이 48a4a87 → f4f6fe9 로 이동했고 squash 라 부모가 하나 — 되돌리기는 `git revert f4f6fe9`(-m 옵션 불필요)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=2885 files=110\nd9be3f73e9d286504b208e95cb6a01294f3ebbc3f8eb400baf56e7b20aea4bac",
+          "verifiedAt": "2026-09-20T08:48:00Z",
+          "checks": [
+            {
+              "name": "완료 기준 ① 순 제거 201행 (머지 직전 main 대비)",
+              "status": "passed",
+              "detail": "머지 직전 main tip = 48a4a87(= PR base.sha, 베이스 이동 0)에서 모델 asIs.versionScript 실측 `lines=3086 files=110` / 701de5be…, 머지된 main tip f4f6fe9 에서 `lines=2885 files=110` / d9be3f73e9d286504b208e95cb6a01294f3ebbc3f8eb400baf56e7b20aea4bac. 3086-2885 = **201** 로 완료 기준과 정확히 일치하고, 두 지문 모두 executionGuide 표와 바이트 동일. 머지 전 시험 머지 트리에서 잰 값과 머지 후 실측이 같아 자매 간섭 0."
+            },
+            {
+              "name": "완료 기준 ② 원장 9행 전건 일치",
+              "status": "passed",
+              "detail": "머지된 트리에서 9행 전건을 원장 규약(경로 접두사 포함·후행 개행 포함 `echo \"$HITS\" | sha256sum`)으로 재계산해 **9/9 줄수·지문 일치**. 지침이 못박은 두 행을 포함한다 — 3행 = 142 / 0e5c3d31474b356f84960e1be87169d5c72d693b41ac26263ddec5deebec5e4f(#79 이전 값 fb27e0db… 로 돌아가지 않았다), 9행 = 139 / b313af22be5ab70962138ca67e50503c5a39a21699c55a0642c58457005b8f01. 나머지 7행(587·140·141·190·112·132·140)도 부모와 동일. 회계도 닫힌다: 합 1,723행 / 55파일, 전역 2,885 - 1,723 = 잔여 1,162행, 110 - 55 = 잔여 55파일 — 원장 합계·미판정 잔여 문장과 동일."
+            },
+            {
+              "name": "완료 기준 ③ 게이트 초록 (ci-gate)",
+              "status": "passed",
+              "detail": "PR head 전체 SHA a61637b65688731740291749e5eff453660eda52 의 런 1건(`CI` 35499068423) completed/success, 잡 8건 중 ci-gate·test (cargo)·test (kind e2e)·docs-journey-mockup·docs-mockup-render·docs-scenario-e2e·push(build & push image) 모두 success이고 skipped 는 `pin deployment image (main only)` 하나뿐이라 always()+needs 집계를 뒤집지 않았다. 머지 후 main f4f6fe9 의 런 2건(`Image` push · `pages build and deployment`)도 completed/success — ci.yml 전체 게이트가 PR 전용인 것과 일관. 추가로 머지된 트리에서 문서 게이트 3종을 로컬 실행해 전부 rc=0(check-mockup-render 전 규칙 통과 · check-scenario-e2e 통과 · check-journey-mockup R0~R11 통과, 허브 상대 링크 270건 확인)."
+            },
+            {
+              "name": "완료 기준 ④ 코드 무변경 (주석 제거 후 바이트 동일)",
+              "status": "passed",
+              "detail": "변경된 소스 10파일 각각에서 줄·블록·JSX 주석과 빈 줄을 제거한 소스를 부모 48a4a87 판과 대조해 **10/10 바이트 동일**(cross_cutting.rs 240행 · pipeline.rs 35 · documents.rs 244 · progress.rs 331 · CrossCuttingConcerns.tsx 187 · sc01-01 143 · sc01-02 37 · sc01-03 96 · sc01-05 72 · sc02-03 57). 검사가 실제로 잡는다는 음성 대조도 함께 했다 — progress.rs 에서 `mod common;` 한 줄만 지우면 해시가 갈린다(9c5942e9 → d81bbf45). 첫 실행에서 pipeline.rs·progress.rs 가 불일치로 나왔으나 원인은 파서였다: 임시 파일이 확장자를 잃어 Rust 분기가 꺼진 탓에 라이프타임 `&'static` 을 char 리터럴로 읽고 그 뒤 `///` 주석을 문자열 본문으로 삼켰다. 확장자를 보존해 재실행하니 10/10."
+            },
+            {
+              "name": "마이그레이션 무접촉 · 기계 판독 주석 보존",
+              "status": "passed",
+              "detail": "`git diff --name-only 48a4a87 f4f6fe9 -- 'backend/migrations/*.sql'` 0건 — 정의의 사람 승인 게이트 절이 발동하지 않는다. 보존 대상 주석은 부모와 동수다: `// 검증 시나리오:` 27 = 27 · `mock-exception:` 18 = 18 · `frontend/src/*.tsx` 머리의 `docs/mockups/*.html#STP-` 매핑 10파일 = 10파일(check-mockup-render.py::discover_screens() 가 앞 2,000자에서 읽는 M1 입력)."
+            },
+            {
+              "name": "머지 방식 — 지침 문구가 아니라 레포 설정을 따랐다",
+              "status": "passed",
+              "detail": "executionGuide 예시는 `gh pr merge 82 --merge` 였으나 같은 절이 「레포 설정이 진실이다」라고 못박았고, GET /repos/dlddu/feature-doc 가 allow_merge_commit=false · allow_squash_merge=true · allow_rebase_merge=false 이므로 **squash** 로 머지했다(최근 착지 #79·#80·#81 도 PR 번호가 제목에 붙은 단일 커밋). 머지 커밋 f4f6fe9c780af2877ca8cba1aee63821da3979b4 는 부모가 하나이므로 되돌리기는 `git revert f4f6fe9`(`-m 1` 불필요) — 지침의 「부모가 둘이면 -m 1」 분기가 예정한 그대로다."
+            },
+            {
+              "name": "승인 코멘트가 경고한 자매 #83 간섭",
+              "status": "passed",
+              "detail": "review.comment 가 지목한 #83(rct_20260919-0007, sc01-01·sc01-02·sc01-05 3파일 겹침)은 머지 시점에 여전히 open·미착지였고 main tip 이 base.sha 와 같아 간섭이 발화하지 않았다(mergeable_state=clean). 판별식인 「순 제거 201」이 그대로 성립했으므로 지침의 재계획 분기는 발동하지 않는다. 다만 이 머지로 main 이 48a4a87 → f4f6fe9 로 움직였으므로 **#83 쪽이 지침 1번을 다시 돌아야 한다** — 이 task 의 범위 밖이다. 부수로 확인한 preparation.notes 의 「변경 12파일」은 실제 13파일로, 리뷰 지적대로 수치만 어긋난 오기다(열거 10+3 과는 일치)."
+            },
+            {
+              "name": "범위 밖 잔여 gap (정보성 — converged 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "모델 전체 to-be(잔여 0) 기준으로는 **미판정 잔여 55파일 / 1,162행**이 남는다 — 마이그레이션 8파일/139행(사람 게이트 별도 패스) · 경합 4파일/217행(#26·#17) · 자유 풀 43파일/806행. plan 이 명시한 범위 밖이므로 수렴 판정에 넣지 않았고, 이 실행이 만든 전역 버전 변화(701de5be… → d9be3f73…)를 다음 감지 주기가 보고 후속 task 를 연다. 모델의 lastObservedVersion 은 건드리지 않았다."
             }
           ]
         }
