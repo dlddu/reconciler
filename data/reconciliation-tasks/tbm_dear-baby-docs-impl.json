@@ -1107,6 +1107,14 @@
               "expectedOutcome": "as-is 버전이 이전 값과 달라지고, 완료 기준 A·B·C 가 모두 충족 → task `succeeded`. 하나라도 어긋나면 그 지점을 근거로 `failed`."
             }
           ]
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/dear-baby",
+          "branch": "reconcile/rct_20260807-0003-dear-baby-docs-impl-ci-minio",
+          "pullRequestUrl": "https://github.com/dlddu/dear-baby/pull/185",
+          "preparedAt": "2026-09-20T08:52:00Z",
+          "notes": "선행 차단 요인(MinIO 조달 경로) 제거용 PR 을 새로 열었다. 3파일 56+/5- · 제품 코드(app/·backend/·worker/·docs/) 0줄. 브랜치 이름에 모델 조각을 넣어 직전 시도의 `reconcile/rct_20260807-0003`(PR #172, 그대로 살아 있다)과 충돌하지 않게 했다.\n\n변경: ① `.github/actions/setup-minio/action.yml` — 호스트 바이너리 출처를 410 Gone 인 dl.min.io 에서 GitHub 릴리스 자산으로 옮기고(minio `RELEASE.2024-09-13T20-26-02Z`, mc `RELEASE.2025-08-13T08-35-41Z` 명시 고정), 함께 게시된 `.sha256sum` 으로 검증한다. 체크섬 파일이 가리키는 이름에 플랫폼 접미사가 없어 `sha256sum -c` 가 파일명에서 깨지므로 해시 필드만 비교하고, 다이제스트 도구는 ubuntu(`sha256sum`)/macOS(`shasum -a 256`)를 분기한다. ② `scripts/minio/deployment.yaml` — 이미지 레지스트리를 docker.io → `quay.io/minio/minio`(태그 불변). ③ `.github/workflows/integration.yml` 2곳 — `--image=minio/mc:latest` → `quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z`.\n\n출처 생존 실측(2026-09-20T08:45Z): dl.min.io server/client **410**, docker.io minio/minio·minio/mc 익명 **401**, quay.io minio/minio:RELEASE.2024-09-13T20-26-02Z **200**(digest sha256:cd04ea40…), quay.io minio/mc:RELEASE.2025-08-13T08-35-41Z **200**, GH 릴리스 자산 linux-amd64·darwin-arm64 ×(minio·mc) **206**. 러너 플랫폼 4종 모두 자산과 체크섬이 존재한다.\n\n로컬 검증: 액션 4개 스텝을 inputs 기본값으로 치환해 그대로 재현한 스크립트를 돌려(linux-arm64) URL 구성 → 다운로드 → 체크섬 일치(minio f05a91d7…, mc 14c8c961…) → `minio server` 기동(2초) → `mc mb local/dear-baby-ci` 까지 완주했다. 변경·인접 YAML 6개(setup-minio/action.yml, integration.yml, scripts/minio/deployment.yaml, e2e-ios.yml, e2e-android.yml, ci.yml) 파서 통과, 실패 0.\n\n직전 시도가 만든 PR #172(커뮤니티 탭 슬라이스, head 996a24a1, 18파일 +1671/-16, mergeable=true·blocked·draft)는 **그대로 둔다** — 내용은 이미 검토 승인분이고 이번 계획은 그 앞을 막던 것만 치운 뒤 갱신·머지한다. 이번 시도의 준비물은 PR 2개(#185 신규, #172 기존)다."
         }
       }
     ]
