@@ -779,7 +779,7 @@
   },
   {
     "toBeModelId": "tbm_dear-baby-docs-impl",
-    "status": "verifying",
+    "status": "failed",
     "trigger": {
       "detectedAt": "2026-08-07T20:39:48Z",
       "changedSides": [
@@ -1012,6 +1012,54 @@
               "startedAt": "2026-09-20T08:37:05Z",
               "finishedAt": "2026-09-20T08:37:40Z",
               "log": "지침 §1-6(검증 4-4) — verification 절 참조. 완료 기준 A~E 를 머지 트리에서 실측했다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "failed",
+          "converged": false,
+          "asIsVersionAfter": "app:ddae9a8b16fdfb1f99d0a1686cd8c670571f31e5 backend:9aa34539f9a6a07595e4e62249e236e315c999e9 worker:c6d4a19258461341bed746b21dd46699dd1b6738",
+          "verifiedAt": "2026-09-20T08:37:40Z",
+          "checks": [
+            {
+              "name": "착지(main 반영)",
+              "status": "failed",
+              "detail": "as-is versionScript 재실행 결과가 모델 lastObservedVersion 과 **완전히 동일**(app:ddae9a8b…/backend:9aa34539…/worker:c6d4a192…). PR #172 는 여전히 open·draft 이고 main(2ee25b3)에 이 슬라이스의 코드는 한 줄도 없다. 계획 §1-5 머지가 거부됐으므로 사용자 대면 gap 은 하나도 닫히지 않았다 — 이것이 이 시도의 실패 사유다."
+            },
+            {
+              "name": "필수 집계 체크 CI Success (지침 §3-1)",
+              "status": "failed",
+              "detail": "run 35499734812(head 996a24a1)에서 E2E iOS · E2E Android · Integration 세 잡이 실패해 집계 잡 CI Success 가 red → 브랜치 보호 규칙이 머지를 405 로 거부. 지침 §3-1 의 4단 증거로 판정: ① **단정 실패가 아니다** — 두 e2e 모두 앱 빌드·Maestro 이전의 `Setup MinIO` 스텝에서 죽었다(`curl https://dl.min.io/server/minio/release/linux-amd64/minio` → **HTTP 410 Gone**), Integration 은 `Wait for MinIO rollout` 에서 `docker.io/minio/minio:RELEASE.2024-09-13T20-26-02Z` pull 이 `insufficient_scope: authorization failed` 로 거부돼 ImagePullBackOff. ② 앱이 뜨지도 않아 백엔드 요청 자체가 없다. ③ **반대 플랫폼도 같은 스텝에서 실패** — 게다가 이 PR 과 무관한 PR(`docs/doc-tracker-monthly-folder`)의 2026-09-19 런 35412648682 도 동일하게 `Setup MinIO` 에서 실패했다(마지막 초록 e2e = 2026-09-08 런 34177905005). ④ 410/인증거부는 업스트림이 아티팩트를 내린 결과라 코드 변경 없는 재실행으로 뒤집히지 않는다 — 게다가 재실행은 지침 §0 의 배포 트리거라 돌리지 않았다. **결론: 이 PR 의 변경과 무관한 레포 전역 외부 고장.** MinIO 조달 경로 교체는 승인 범위 밖이라 실행자가 넓히지 않았다(재계획 몫)."
+            },
+            {
+              "name": "(E) 무회귀 — §3-3 diff 0줄",
+              "status": "passed",
+              "detail": "머지 트리(996a24a1)에서 `git diff origin/main -- app/src/components/OtherEntryCard.tsx app/src/components/__tests__/OtherEntryCard.test.tsx 'app/app/(tabs)/index.tsx' docs` **출력 완전히 빈 상태**. 변경은 18파일 +1671/-16(app 15 · backend 3)으로 전부 커뮤니티 축."
+            },
+            {
+              "name": "(E) 무회귀 — 앱 테스트 감소 0 · 라우트 수 불변",
+              "status": "passed",
+              "detail": "CI App Unit Tests(success) 로그 실측: `라우트 28개 · 고유 URL 27개`, `Test Suites: 28 passed, 28 total`, `Tests: 189 passed, 189 total` — 지침 §3-2 가 적어 둔 기대값과 정확히 일치(기준선 origin/main 23 suites/141 tests 대비 감소 0)."
+            },
+            {
+              "name": "(E) 무회귀 — backend 전 패키지 ok",
+              "status": "passed",
+              "detail": "CI Backend Unit Tests success. 추가로 머지 트리를 로컬 클론해 go1.24.7 로 `go build ./... && go vet ./internal/... && go test ./...` 재현 — auth/db/onboarding/records/storage/tasks/users 전 패키지 ok, 실패 0."
+            },
+            {
+              "name": "(A)~(D) 내용 기준 (M-43 시각 정합 · AC-009-03 · 06 · 13)",
+              "status": "passed",
+              "detail": "정보성 기록. 내용 판정 자체는 검토 단계가 머지 트리에서 이미 내렸고(approved, 대조표 18행·이탈 4건·설계 판단 4건), 그 단언들을 고정하는 앱 유닛 테스트 (community.test.tsx · CommunityHeader/TypeFilter/FeedCard 테스트 · typography 토큰 테스트)가 이번 머지 트리에서 전부 초록이다. 다만 **머지가 되지 않아 이 내용은 main 에 존재하지 않으므로** 수렴 판정(converged)에는 넣지 않는다."
+            },
+            {
+              "name": "Mockup ↔ Route Map 게이트 (#179 신설)",
+              "status": "passed",
+              "detail": "이 PR 의 초록보다 나중에 신설된 게이트라 검토 단계가 머지 트리에서 수동 재현했던 그 체크가, 이번 브랜치 갱신으로 실제 run 35499734506 으로 돌아 **success**. 수동 재현 판정이 실측으로 확인됐다."
+            },
+            {
+              "name": "잔여 gap (정보성 — 이 task 범위 밖)",
+              "status": "passed",
+              "detail": "지침 §5 의 범위 밖 목록(AC-009-04·05·07·08·09·11·12, ENG-011 유사 시기 가중 랭킹, PRD-003/004/005 계열 standing gap)은 이번 슬라이스 판정에 넣지 않는다. 이번 실행이 main 의 as-is 를 바꾸지 않았으므로 재감지 트리거도 생기지 않았다."
             }
           ]
         }
