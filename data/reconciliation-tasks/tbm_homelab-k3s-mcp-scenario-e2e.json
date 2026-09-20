@@ -10957,7 +10957,7 @@
   {
     "id": "rct_20260920-0004",
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-20T13:00:43Z",
@@ -11101,6 +11101,54 @@
               "log": "실행자 몫. ⑴ 신선도: 머지 직전 main tip 이 PR base 와 같은 20939fcf 로 **베이스 무이동**(자매 #160 은 아직 열린 채)이고, refs/pull/161/merge 의 부모가 (20939fcf, 213f072f) 라 초록이 머지 트리를 그대로 검증한 것이다. ⑵ CI: 런 35513716069 전 잡 success(fmt+vet · unit · integration · image build · ci passed; pin 스텝만 main-only skipped), 필수 체크는 /rules/branches/main 기준 `ci passed` 하나이고 success. `integration tests` 잡의 'Run integration tests (gatekeeper-variant deployment)' 스텝 success. 잡 로그(177,404B — gh api --allow-escape-sequences 로 받음)에서 (a)·(b)·(c)·(c')·(d) 다섯 마커가 모두 찍히고 `ok: test-resource-generic.md#시나리오 17` 1회 — 지침이 「머지하지 말라」고 못박은 (d) 403 갈래가 실측으로 닫혔다(로그의 FAIL/Traceback 3히트는 전부 무해: actions 입력 `ignore_failed_clean`, 워크플로 주석의 'A Failed pod', 테스트 출력 'reset failure path ok'). ⑶ 게이트 넷을 origin/main 과 pr161merge 양쪽에서 돌려 기여분 실측. ⑷ 머지: 레포 최근 착지 5건이 전부 부모 1 이라 squash, `PUT /pulls/161/merge merge_method=squash sha=213f072f` → merged, 착지 커밋 7a1abb41(부모 1개 = 20939fcf)."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "7594be0d7c556bfb7e1d056213997f1a2a930f53",
+          "checks": [
+            {
+              "name": "완료기준⑴ 전용 e2e 파일이 main 에 실재하고 시나리오 17 하나만 선언한다",
+              "status": "passed",
+              "detail": "착지 main 7a1abb41 에서 tests/integration/resource_generic_ac17.py 실재(24,236B). 3행 `검증 시나리오: test-resource-generic.md#시나리오 17` 단독 · 4행 `실행 대상: gatekeeper-variant`. 다섯 갈래는 CI 잡 로그에서 마커 다섯 줄((a) 목록은 게이트를 타지 않는다 / (b) 민감 종류가 된 CRD / (c) 스트림 넷 / (c') 노드 프록시 / (d) 직접 watch)이 모두 실행되고 `ok: test-resource-generic.md#시나리오 17` 로 끝난 것으로 확인(로그 177,404B, gh api --allow-escape-sequences)."
+            },
+            {
+              "name": "완료기준⑵ ⏳ 표에서 rg#17 행 철거 · 레지스트리 ✅ 전용 파일",
+              "status": "passed",
+              "detail": "착지 main 에서 check_ac_mapping.py 의 「구현 대기 등재」가 11 → 10, 「1:1 대상」 73 → 74, 「매칭 파일(전용)」 73 → 74. 표 제목·레지스트리 제목·집계 블록·불변식 문장이 함께 움직이지 않았다면 이 게이트가 rc≠0 이 된다(85 − 1 − 10 = 74 성립)."
+            },
+            {
+              "name": "완료기준⑶ 시나리오 17 `자동화` 에서 `(미작성)` 제거 (규칙 7)",
+              "status": "passed",
+              "detail": "docs/test-resource-generic.md 의 해당 줄이 `(미작성) — 계획: Go 단위 resource_test.go::TestSecretListCarriesNoValues…` → `통합 tests/integration/resource_generic_ac17.py 가 다섯 갈래를 각각 단언한다`. 문서에 남은 `미작성` 1건(448행)은 시나리오 18 로 이 슬라이스 범위 밖."
+            },
+            {
+              "name": "완료기준⑷ 머지 직전 main 대비 check_ac_mapping 기여분",
+              "status": "passed",
+              "detail": "머지 직전 main(20939fcf, PR base 와 동일 — 베이스 무이동) 실측 85·1·11·73·73·0·0 → 머지 트리(refs/pull/161/merge) 85·1·10·74·74·0·0 → 착지 main(7a1abb41) 85·1·10·74·74·0·0. 기여분은 구현 대기 −1 · 1:1 대상 +1 · 매칭 파일 +1 로 계획이 예고한 것과 한 자리도 어긋나지 않는다. 세 지점 모두 rc=0."
+            },
+            {
+              "name": "완료기준⑸ 나머지 세 게이트 rc=0 · CI 전 잡 초록",
+              "status": "passed",
+              "detail": "착지 main 에서 check_mock_policy.py · check_comment_policy.py · check_doc_inventory.py 전부 rc=0(머지 트리에서도 동일). CI 런 35513716069(head 213f072f) 은 fmt+vet · unit tests · integration tests · image build&push · ci passed 전부 success 이고 pin 스텝만 main-only skipped. 필수 체크는 /rules/branches/main 기준 `ci passed` 하나이며 success. integration tests 잡의 'Run integration tests (gatekeeper-variant deployment)' 스텝 success."
+            },
+            {
+              "name": "무접촉 경계 (internal/ · main.go · k8s/** · .github/workflows/ci.yml)",
+              "status": "passed",
+              "detail": "git diff --name-only 20939fcf..213f072f 가 다섯 파일뿐이고 ^(internal/|main\\.go|k8s/|\\.github/) 매칭 0히트: docs/comment-policy/ledger.md · docs/doc-tracker/2026-09.md · docs/test-resource-generic.md · tests/integration/resource_generic_ac17.py · tests/k8s/kind/gatekeeper-variant.yaml. 계획 7단계가 예고한 여섯 파일과 갈린 것은 tests/k8s/kind/resource-generic-fixture.yaml 무접촉(픽스처를 e2e 파일이 스스로 세우는 1단계 수정) 하나이고 preparation.notes 에 축자로 기록돼 있다 — 범위를 넓힌 것이 아니라 좁힌 방향이다."
+            },
+            {
+              "name": "착지 · 롤백 가능성",
+              "status": "passed",
+              "detail": "squash 머지로 착지(커밋 7a1abb41, 부모 1개 = 20939fcf). 지침의 롤백 절차 `git revert <sha>`(부모 1, -m 1 아님)가 그대로 성립한다. 배차 확인: run_all.py --group gatekeeper-variant --list 가 착지 main 에서 approval_gate_ac2/ac4/ac9 와 resource_generic_ac17.py 를 낸다."
+            },
+            {
+              "name": "(정보) 모델 전체 잔여 gap · 다음 재감지 입력",
+              "status": "passed",
+              "detail": "이 task 의 범위 밖. ⏳ 구현 대기는 11 → 10 행으로 줄었고 남은 10행 중 규칙 1 공백으로 계수되던 2행 중 하나(rg#17)가 닫혔다. 남은 하나 `test-approval-gate.md#시나리오 1` 은 (c) 의 「미선언 도구 기동 변형」이 toolRegistry/toolsListJSON 이 컴파일 시점 상수라 제품 훅 없이는 태울 수 없어 이 렌즈의 경계 밖이고, 이 PR 이 그 행의 근거·해제 조건 칸을 정정하며 ⑶ 제품 훅을 새 선행으로 적었다. 나머지 9행은 하네스 도달 불가로 규칙 6 자격 유지. 실행이 만든 버전 이동(as-is 3db62000 → 7594be0d, to-be sc:2e4a5e3a→sc:5404b934 · reg:141efff1→reg:8ab1d2bd)은 다음 감지 주기의 트리거가 되며 lastObservedVersion 은 건드리지 않았다."
+            }
+          ],
+          "verifiedAt": "2026-09-20T13:44:30Z"
         }
       }
     ]
