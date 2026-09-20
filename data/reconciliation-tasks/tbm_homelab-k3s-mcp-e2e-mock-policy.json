@@ -1363,6 +1363,67 @@
       "reason": "**작업 필요(`actionRequired: true`) — 불변식 2의 B1(인계 수신) 위반 1건. 불변식 1은 깨끗하고, 지문 이동 자체는 노이즈다.**\n\n**⑴ 지문 이동은 설계된 과탐지다(이것만으로는 작업 사유가 아니다).** `sites 37→38`의 델타는 파일×토큰 쌍 **추가 1 · 삭제 0 · 수정 0**이고 그 1건은 신규 e2e `tests/integration/github_commit_status_ac3.py`가 스텁의 `/_admin/requests`를 읽는 **클라이언트 참조**다. 모킹 *지점*은 6곳 불변, 게이트는 부모 `da22caa`·트리거 `20939fc` 양 지점에서 rc=0에 **출력 바이트 동일**(등재 5=상한 5 · 미등재 0 · 고아 0 · 표기 주석 6), 회귀 13/13. 2026-09-19 `rct_20260919-0001`과 동형이며 같은 결론이다.\n\n**⑵ 작업 사유 — 자매 모델이 네 번 이름으로 넘긴 차단 요인에 원장 행이 없다.** `tbm_homelab-k3s-mcp-docs-impl`의 `rct_20260919-0006`·`rct_20260920-0001`·`-0002`·`-0003`이 모두 「`github-mock`이 `POST /repos/{owner}/{repo}/statuses/{sha}`·요청 기록·422 모드를 서빙하고 `docs/e2e-mocking-policy.md`의 `github-mock` 「대상」을 **같은 PR에서** 넓히는 것 = 자매 `tbm_homelab-k3s-mcp-e2e-mock-policy`의 표면」이라 적었고, `-0002`는 **「착지 후 그 축의 소유자가 0이면 자매 모델 쪽 gap으로 세워야 한다」**고 조건까지 달았다. **그 조건이 충족됐다**: 선행인 도구 등록은 PR #155(`48bb9b7`, 09-20T09:54)로 닫혔고, 이 모델과 자매 `scenario-e2e` 모두 열린 task가 **0**이었다. 차단은 실재한다 — 스텁에 그 라우트가 없고(`do_POST` 미매치 404, 기록도 안 됨) `GET /app/installations/{id}` 응답에 구현이 요구하는 `account.login`이 없어(`internal/github/github.go:174-175,227-228`) tracker 766·767·769행의 시나리오 **1·2·4**가 `⏳ 구현 대기`로 막혀 있다(해제 조건 876·877·878행이 그 두 결함을 축자로 지목하고, `account.login` 항은 **이 트리거가 새로 등재했다**). 정책의 B1은 「지목됐는데 행이 없으면 gap」이고 원장에는 무관한 `approval-gate-ac5-http-failures` 1행뿐이다 ⇒ **판정 규칙 첫 항이 참**.\n\n**⑶ 지금 열지 않으면 재감지 경로가 0이다.** as-is는 **파일×토큰 쌍** 지문이라 `github-mock.yaml`에 라우트·필드를 더해도 (같은 파일·같은 토큰) 움직이지 않고, to-be는 정책 blob이라 「대상」을 고치지 않으면 움직이지 않으며, 게이트 R3는 「대상」 문면의 참·거짓을 보지 않는다. 자매 슬라이스가 스텁만 넓히고 「대상」을 두고 가면 **어떤 축도 깨우지 못한다** — 정책이 B1을 둔 이유(「넘긴 쪽은 처리됐다고 보고 받는 쪽은 세지 않는 자리」)가 정확히 이 자리다.\n\n---\n\n## planner에게 남기는 제약\n\n1. **산출의 필수 최소는 차단 원장 행 1건 신설**(마커 안 7열 형식 준수: `ID` · `출처`=`tbm_homelab-k3s-mcp-docs-impl/rct_20260920-0003` · `등록일`=`2026-09-20` · `해소 방향` · `소관` · `선행` · `재검토`). 재검토는 등록일부터 **90일 이내 날짜** 또는 관측 가능한 사건(`file:tests/integration/github_commit_status_ac1.py` 류 · `task:…` · `pr:dlddu/homelab-k3s-mcp#N`) 하나여야 게이트 B2를 통과한다.\n2. **분기를 그대로 실어 둔다.** ⓐ 이 슬라이스를 **원장 행 + 해소 방향 확정**까지로 끊는 쪽(내 축만 닫고 스텁 확장은 사건으로 건다), ⓑ 같은 PR에서 **스텁 확장 + 「대상」 확대**까지 가는 쪽. 결합 제약(「같은 PR」)은 ⓑ를 택할 때만 발동한다.\n3. **등재 상한 5를 건드리지 말 것.** 이것은 새 등재가 아니라 **이미 등재된 `github-mock`(UPS) 행의 「대상」 확대**다 — 선례: `rct_20260919-0001` ⑶ 「등재된 스텁 안에서 엔드포인트·노브가 는 것은 새 지점이 아니다」. 상한을 올리면 게이트 R6가 즉시 깨진다.\n4. **「대상」 절의 단언 문장을 함께 고칠 것.** 현재 문면은 「셋은 `github_app_installation_token`의 AC5 경로가 실제로 거치는 상류 호출 **전부**다」인데, statuses 라우트가 서빙되는 순간 거짓이 된다. 스텁을 넓히는 PR은 이 문장을 같은 커밋에서 갱신해야 한다.\n5. **이중 계상 금지 — 전용 e2e 저작은 이 task가 아니다.** tracker 25행이 「그 저작은 자매 렌즈 `tbm_homelab-k3s-mcp-scenario-e2e` 소관」이라 적는다. 이 task는 **정책 표면(원장 행 · 등재 「대상」)과 그에 필요한 스텁 판정**까지만 다룬다.\n6. **기존 행 `approval-gate-ac5-http-failures`는 범위 밖.** B2 완비 · 선행 미충족(`approval_gate_ac5.py` 부재) · 재검토 `2026-10-15` 미도래 ⇒ 이번에 건드리지 않는다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-20T11:39:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "감지가 인계한 B1 위반 1건(자매 docs-impl 네 task + tracker 3행 + 테스트 문서 픽스처 절이 같은 차단 요인을 이 모델 이름으로 넘긴 것)을 **차단 원장 행 신설이 아니라 해소로** 닫는다. 감지가 남긴 두 분기 중 ⓑ(같은 PR 에서 스텁 확장 + 「대상」 확대)를 택했다. 근거 셋: ⑴ 인계의 선행이던 도구 등록이 PR #155(2026-09-20)로 닫혔고 소관이 이 모델 자신이라 **오늘 착수 가능한 부채**이며, 정책의 「충돌 시 기본 방향」이 그 경우를 「착수 가능하면 해당 소관이 착수한다」로 정한다. ⑵ B1 이 「이미 해소된 이력은 새 인계로 세지 않는다」고 적으므로, 같은 PR 에서 해소되는 차단 요인의 행은 main 의 어느 시점에도 참이 아니다 — 행을 세우는 쪽과 해소하는 쪽은 **구성적으로 양립하지 않는다**. ⑶ ⓐ(행만 신설)를 택하면 `선행=없음`+`소관=이 모델` 이 B2 자신의 말로 「착수 가능한 부채」가 되고 B3 가 다음 주기에 즉시 되열어 같은 일을 두 번 한다. **완료 기준(이 시도의 범위)**: ⑴ `github-mock` 이 `POST /repos/{owner}/{repo}/statuses/{sha}` 를 서빙·기록하고(`201` 생성 응답, `sha`=`f`×40 일 때만 GitHub 모양 `422`) `GET /app/installations/{id}` 가 `account.login` 을 돌려준다. ⑵ `docs/e2e-mocking-policy.md` 의 `github-mock` 「대상」이 같은 PR 에서 그 넷을 담고, 거짓이 되는 단언 문장(「셋은 … 상류 호출 전부다」)이 정정된다. ⑶ 게이트 4종(`check_mock_policy`·`check_comment_policy`·`check_doc_inventory`·`check_ac_mapping`)이 rc=0 이고 출력이 **머지 직전 main 과 바이트 동일**하다(등재 5·상한 5·모킹 지점 6·차단 원장 1행·허브·구현 대기 전부 무이동). ⑷ 체커 회귀 13/13. **범위 밖**: 전용 e2e 6개 저작과 ⏳ 3행 철거(`tbm_homelab-k3s-mcp-scenario-e2e` 소관 — 규칙 4·6 이 「저작 대기」를 등재 사유에서 배제하므로 그 렌즈가 저작과 철거를 같은 PR 에서 한다), 시나리오 4(b) 의 접두사 env 미설정 배포 변형, 실 GitHub create-status 응답의 top-level `sha` 여부 대조. **차단 원장에 새 행을 넣지 않는 것이 이 계획의 의도적 산출**이며, 그 판단이 틀렸다고 보면 거부 사유는 「행이 없다」가 아니라 「해소가 불완전하다」여야 한다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-20T22:20:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "인계·차단을 코드에서 재확인한다: github-mock.yaml 의 do_POST 가 statuses 경로에 미매치(404·기록 없음)인지, GET /app/installations/{id} 가 {id, permissions} 만 돌려주는지, internal/github 의 installationOwner 가 account.login 을 요구하는지, 차단 원장 마커 안 행이 approval-gate-ac5-http-failures 1건뿐인지.",
+              "expectedOutcome": "네 사실 전부 확인. 차단은 실재하고 원장에는 그 행이 없다."
+            },
+            {
+              "seq": 2,
+              "action": "게이트 4종 + 체커 회귀의 base 기준선을 뜬다(브랜치 작업 전 main 에서).",
+              "expectedOutcome": "네 게이트 rc=0, 등재 5(상한 5)·모킹 지점 6·차단 원장 1행, 회귀 13/13. 이후 동일성 대조의 기준."
+            },
+            {
+              "seq": 3,
+              "action": "github-mock.yaml 의 GET /app/installations/{id} 200 본문에 account: {login: \"dlddu\"} 를 더한다. 기존 installation_status·installation_permissions 노브 갈래는 건드리지 않는다.",
+              "expectedOutcome": "설치 조회가 account.login 을 돌려준다. 노브 갈래(500 등)는 그대로."
+            },
+            {
+              "seq": 4,
+              "action": "github-mock.yaml 의 do_POST 에 COMMIT_STATUS_RE 매치 갈래를 더한다 — 본문을 읽어 record() 로 기록한 뒤 Authorization/X-GitHub-Api-Version/Accept 를 기존 mint 갈래와 같은 순서로 검사하고, sha 가 f×40 이면 GitHub 모양 422 Validation Failed, 그 밖이면 201 + 생성된 status(id 고정 1, state·context·sha·created_at, 보낸 description·target_url). 새 주석은 달지 않는다.",
+              "expectedOutcome": "statuses 경로가 서빙·기록되고 미매치 경로의 404 갈래는 보존된다. 주석 0줄 변경이라 comment ledger 무이동."
+            },
+            {
+              "seq": 5,
+              "action": "ConfigMap 의 server.py 를 들여쓰기로 뽑아 로컬에서 실제로 기동하고 curl 로 여섯 경로(201·422·401·400·404·기록 로그)와 /_admin/config 노브 원복을 실측한다.",
+              "expectedOutcome": "여섯 경로가 기대대로. 클러스터 없이 스텁 계약이 증명된다."
+            },
+            {
+              "seq": 6,
+              "action": "docs/e2e-mocking-policy.md 의 github-mock 「대상」을 상류 4종으로 넓히고, statuses 가 서빙되는 순간 거짓이 되는 「셋은 github_app_installation_token 의 AC5 경로가 실제로 거치는 상류 호출 전부다」를 정정한다. 422 를 노브가 아니라 sha 로 가른 이유도 적는다. 허용목록 행과 등재 상한 5 는 손대지 않는다.",
+              "expectedOutcome": "「대상」이 실제 서빙과 일치하고 거짓 단언이 사라진다. check_mock_policy 출력은 main 과 바이트 동일(R6 상한 무이동)."
+            },
+            {
+              "seq": 7,
+              "action": "docs/test-github-commit-status.md 픽스처 절의 「남은 것은 … 둘이다」를 정정하고, e2e 가 그대로 기대할 스텁 계약 표(owner=dlddu · 201 응답 모양 · 422 를 여는 sha)와 id 를 1 로 고정한 이유를 적는다. 각 시나리오의 `자동화` 필드와 `(미작성)` 표기는 건드리지 않는다.",
+              "expectedOutcome": "픽스처 선행이 0 임이 문서에 반영된다. check_ac_mapping 규칙 7 무영향(자동화 필드 불변)."
+            },
+            {
+              "seq": 8,
+              "action": "docs/doc-tracker/2026-09.md 의 시나리오 1·2·4 해제 조건 칸에 ⑵ 가 닫혔음을 ⟨날짜 갱신 · rct⟩ 선례 형식으로 덧붙이고, 변경 이력 표에 이 슬라이스 1행을 더한다. ⏳ 상태 표기와 집계는 건드리지 않는다.",
+              "expectedOutcome": "해제 조건이 실측과 일치한다. check_ac_mapping·check_doc_inventory 출력 무이동."
+            },
+            {
+              "seq": 9,
+              "action": "머지 직전 main 을 재조회해 리베이스한 뒤, 게이트 4종을 브랜치와 origin/main 각각 체크아웃해 돌려 출력을 diff 한다(git stash 는 리베이스 후 트리가 깨끗해 공허하게 통과하므로 쓰지 않는다). 체커 회귀와 go build 도 돌린다.",
+              "expectedOutcome": "네 게이트 rc=0 이고 출력이 main 과 바이트 동일, 회귀 13/13, go build rc=0."
+            },
+            {
+              "seq": 10,
+              "action": "대상 레포에 PR 을 열고 본문에 인계 근거·ⓑ 선택 이유·설계 지점 넷·실측 검증표·범위 밖·되돌리기를 담는다.",
+              "expectedOutcome": "검토자가 「왜 행이 아니라 해소인가」를 PR 본문만으로 판정할 수 있다."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
