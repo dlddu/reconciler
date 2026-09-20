@@ -163,7 +163,7 @@
   {
     "id": "rct_20260807-0001",
     "toBeModelId": "tbm_pr-review-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-07T01:36:32Z",
       "changedSides": [
@@ -313,6 +313,74 @@
               "startedAt": "2026-09-20T08:18:25Z",
               "finishedAt": "2026-09-20T08:18:53Z",
               "log": "병합된 main(5411a54b)에서 계획 범위 기준 수렴 검증 수행 — 상세는 verification.checks. 착지 트리는 시험한 머지 트리와 바이트 동일(git diff a1c4d25..5411a54b 공집합)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "backend:590efd161f67d7f462065165179373263b4dd916 frontend:d1e9dcb2d2ed89a6dd4e4cdf0a8cb21f79522496 packages:e38868989e5fb0c731d0b2ba21f4d9dd70f4a859",
+          "verifiedAt": "2026-09-20T08:19:30Z",
+          "checks": [
+            {
+              "name": "착지 실측 — PR #3 squash 병합",
+              "status": "passed",
+              "detail": "merged=true, state=closed, merge_commit_sha=5411a54b2a620f591b6a1952f398e451f8999c53(부모 1개 = squash, 레포 설정 allow_squash_merge=true·allow_merge_commit=false 와 일치). origin/main tip = 5411a54b. 착지 트리는 내가 게이트를 돌린 머지 트리 a1c4d25 와 바이트 동일(git diff a1c4d25..5411a54b 공집합) — 시험한 것이 그대로 착지했다."
+            },
+            {
+              "name": "CI 4게이트 — 착지한 main 에서 재현",
+              "status": "passed",
+              "detail": "origin/main(5411a54b) 체크아웃 후 CI 와 동일 조건(node v22.14.0 = .nvmrc 의 22, pnpm 10.33.0)으로 pnpm install --frozen-lockfile → lint rc=0 / typecheck rc=0 / test rc=0 / build rc=0. 객관 게이트도 일치: 병합이 만든 push 런 35499195581 (workflow CI, event=push) conclusion=success."
+            },
+            {
+              "name": "AC2-1 의도 파악 (시나리오 1·2)",
+              "status": "passed",
+              "detail": "spec 'AC2-1: 의도 파악 — 추출되면 입력 전달, 불명확 시 공백 탐지로' pass. 본문 의도 → confirmed=true(:32), 서술적 제목만 있어도 확정(:39), WIP/misc 플레이스홀더 → confirmed=false·text=undefined(:44~45), 템플릿 체크리스트·HTML 주석만 남은 본문도 프로즈로 치지 않음(confirmed=false, :51)."
+            },
+            {
+              "name": "AC2-2 관련 이슈 연결 (시나리오 3)",
+              "status": "passed",
+              "detail": "spec pass. 세 경로 모두 'linear:ENG-42' 로 정규화 — 본문 Closes(:59)·브랜치명 csj/eng-42-fix-auth-guard(:61~62)·linear.app URL(:65~67). 회귀 가드 실측: 'AC2-1'·'UTF-8' 유사 문자열은 이슈로 오인하지 않음 → [](:79~80). 참조 부재 시 [](:83)."
+            },
+            {
+              "name": "AC2-3 관련 스레드 연결 (시나리오 4)",
+              "status": "passed",
+              "detail": "spec pass. Slack permalink 있으면 relatedThreads 에 실리고, 없으면 [](:100) — 부재가 예외가 아니라 명시적 '없음'."
+            },
+            {
+              "name": "AC2-4 변경 규모 측정 (시나리오 5)",
+              "status": "passed",
+              "detail": "spec pass. measureChangeSize → {additions:128, deletions:37}(:105~106) 이고 collect().changeSize 에도 동일 수치가 실려 하위 단계로 전달됨(:109~111)."
+            },
+            {
+              "name": "AC2-5 일정·데드라인 컨텍스트 (시나리오 6)",
+              "status": "passed",
+              "detail": "spec pass. 연결 이슈 마감일이 schedule.deadline 으로 기록(:123 '2026-08-10'), 신호가 여럿이면 가장 임박한 것 선택(:133·:139 → '2026-08-09'), 신호 전무 시 undefined(:142)."
+            },
+            {
+              "name": "AC2-6 optional 부재 처리 (시나리오 7)",
+              "status": "passed",
+              "detail": "spec pass. optional 전부 부재 PR 에서 collect() 가 예외 없이 완주하고 relatedIssues=[]·relatedThreads=[]·schedule=undefined(:150~152). 컨텍스트가 다 갖춰진 PR 도 같은 경로로 합성(:162·:170)."
+            },
+            {
+              "name": "전체 테스트 수치 — 계획 기대값 일치",
+              "status": "passed",
+              "detail": "backend 13 passed / 23 todo (36) — 계획이 예고한 '7 passed/29 todo → 13 passed/23 todo' 와 정확히 일치(증가분 6 = context (PRD-2) 스위트). frontend 5 passed. Test Files: backend 3 passed | 4 skipped."
+            },
+            {
+              "name": "보존 불변식 1 — AC6-5 머지금지 경계",
+              "status": "passed",
+              "detail": "gap-detection.test.ts 의 'AC6-5 boundary (regression seam)' 3 assertion 전건 green(never permits codebase mutation / allows only review-only actions / rejects a non-review action at the guard). 착지한 main 에서 grep -rnE '\\b(merge|approve|push|createReview|submitReview|comment)\\b' backend/src/adapters/ → 무히트. GithubAdapter 인터페이스 메서드는 fetchPullRequest(ref)/fetchDiff(ref) 2개 그대로 — mutating 0개."
+            },
+            {
+              "name": "보존 불변식 2 — tokens.css 정식 토큰 소스 무변경",
+              "status": "passed",
+              "detail": "git diff 5dca441(병합 직전 main)..5411a54b -- frontend/src/styles/tokens.css → 0줄. 착지 diff 는 정확히 계획한 4파일뿐(backend/src/adapters/github/index.ts +26-1, backend/src/context/context.test.ts +167-8, backend/src/context/index.ts +206-14, packages/shared/src/context.ts +6-0) — 무관한 변경 0건."
+            },
+            {
+              "name": "[정보성] 범위 밖 잔여 gap",
+              "status": "passed",
+              "detail": "converged 판정에는 넣지 않는 사실 기록. 이 슬라이스로 33 AC 중 10개 구현(PRD-1 4 + PRD-2 6). 잔여: PRD-3·4·5·6·7 의 23개 AC 미구현(vitest todo 23건, backend/src 의 notImplemented 33곳). as-is 버전이 backend fce9690c→590efd16, packages ac15382c→e38868989 으로 이동했으므로 다음 감지 주기가 이 변화를 보고 후속 task 를 연다. 모델의 lastObservedVersion 은 건드리지 않았다. 또한 planner 가 남긴 부수 보고 사항 — docs/doc-tracker.md 의 '변경 이력'이 #2(PRD-1) 이후 갱신되지 않은 상태 — 는 이번 범위 밖이며 이번 병합으로도 해소되지 않았다."
             }
           ]
         }
