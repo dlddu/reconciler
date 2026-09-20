@@ -2613,6 +2613,55 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-20T14:05:00Z",
           "reason": "승인 — 완료 기준 다섯 항목을 리뷰가 독립 재측정해 전건 일치했고, 불가역 지점은 squash 머지 하나뿐이며 그 되돌리기가 실제로 가능하다.\n\n**준비물 신선도(실측 2026-09-20T13:5xZ).** PR #94 `state=open` · `mergeable=true` · `mergeable_state=clean` · head `8f668ec` · base `f5a2937` = **현재 main tip**(merge-base도 동일) 이라 베이스 이동·충돌 없음. 필수 체크는 `/rules/branches/main` 실측으로 `ci-gate` · `review/data-format` 둘이고 둘 다 **success**(런 35514121841 / 35514121720). `ci-gate` 는 집계 잡이라 런 이름에 안 뜨므로 `/jobs` 로 확인했다 — kind e2e · cargo · 게이트 3종 · 이미지 push 전부 success, skipped 는 `pin deployment image (main only)` 하나로 main 전용이라 정상. 열린 자매는 #91·#92·#93 셋이고 `/pulls/<n>/files` 전수 대조로 판정 14파일과 **겹침 0**(10·17·6파일), 셋 다 base 가 같은 `f5a2937`.\n\n**정합성 — 계획 수치를 리뷰가 재측정해 전건 일치.** ① 모델 versionScript 를 `f5a2937`·`pr94` 두 지점에서 돌려 `lines=2653 files=111`/`15cb6b24…` → `lines=2501 files=111`/`4e81c916…`, **순 제거 정확히 152행·파일 수 불변**. ② 14파일 범위 주석 **223 → 71**. ③ 범위 지문(`echo` 규약·후행 개행 포함) `261ad97902dd63b0f049c13eed08d8c02118e7c2074b965ebeb7a99136967259` — 원장 12행 값과 일치. ④ 원장 80파일을 전역 파일 목록에서 집합으로 빼 **잔여 32파일/514행**(마이그레이션 8/139 + 자유 풀 24/375), 교차검산 `514 == 2501 − 1987` 성립. ⑤ `check-journey-mockup.py` 가 양 지점 rc=0 이고 출력이 「문서 37 · 상대 링크 285」 → 「문서 38 · 상대 링크 289」 로만 움직인다. 원장 구조도 건전하다 — 표 데이터행 11 → 12, 제목 수(`^#`) 2 로 불변, `미판정 잔여` 문단 정확히 1벌(옛 합계 문단은 덮어쓰기가 아니라 **교체**돼 중복 절이 없다). 변경 17파일은 주석 14 + 판정 상세 1 + 원장 1 + 허브 1 로 범위 밖 변경이 없다.\n\n**위험 통제 — 핵심 안전 주장을 리뷰가 직접 재현했다.** 「동작 코드 무접촉」이 이 계획의 프로덕션 안전성 전부이므로 계획의 자기 보고를 믿지 않고 **리터럴 인식 stripper 를 따로 구현해** 줄·블록 주석을 걷어낸 뒤 부모와 비교했다 — **14/14 IDENTICAL**. (첫 구현이 Rust 수명 `&'a str` 을 char 리터럴로 오인해 `installations.rs` 에서 거짓 불일치를 냈고, 수명/char 판별을 고친 뒤 14/14 가 됐다. 「비주석 diff 0줄」이 아니라 stripper 대조여야 한다는 계획의 판단은 옳다.) 따라서 이미지가 재빌드·롤아웃돼도 동작은 동일하고 트래픽·데이터 영향이 0 이다. `backend/migrations/` 는 diff 에 없어 sqlx 체크섬 repair(사람 게이트) 경로가 발동하지 않는다.\n\n**불가역성.** 되돌릴 수 없는 지점은 4단계 머지 하나이고 그 앞은 전부 읽기다. 레포는 `required_linear_history` · `non_fast_forward` 규칙이라 squash 경로가 맞고, 되돌리기가 `git revert <squash-sha>` 에 **`-m 1` 금지**라는 지침 문구도 부모 하나인 squash 착지와 정합한다. 데이터 삭제·파괴적 마이그레이션·외부로 나가는 부작용이 없다.\n\n**실행 지침의 대비가 실제로 충분하다.** settled 판독에 `pending`·`waiting`·`requested` 까지 포함하고, combined commit status 0건을 red 로 오독하지 말라고 못박고, `head_sha` 전체 40자 요구·`gh` 로그의 `--allow-escape-sequences`·`--force-with-lease` 의 ls-remote 형태·토큰 경계 갈아쓰기까지 함정이 짚여 있다. 완료 기준을 **절대 지문이 아니라 순 제거 152행**으로 잡고 ①이 어긋나면 자매 머지·②③이 어긋나면 착지 실패로 원인을 가르는 판별식을 준 것도 자매 3건이 열려 있는 현 상황에 맞다. `stub_is_deterministic_for_the_same_ask` 는 부모에서도 재현되는 pre-existing flake 로 식별돼 재실행 상한 2회가 명시돼 있고, 그 밖의 결정적 실패는 머지 금지로 닫혀 있다.\n\n**실행자에게 남기는 단서 둘.** ⑴ 이 검토 시점에 main 은 아직 `f5a2937` 이지만 자매 셋이 열려 있으므로 지침 3단계의 **머지 직전 BEFORE 재측정과 `/pulls/<n>/files` 재대조를 생략하지 말 것** — 검토가 잰 겹침 0 은 13:5x 시점 값이다. ⑵ 원장·판정 상세의 산문 집계(복제 명제 6건 내역 등)는 어떤 게이트도 읽지 않으므로 검증 ①~⑤ 의 기계 판독값만으로 수렴을 판정하면 된다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-20T13:57:09Z",
+          "finishedAt": "2026-09-20T14:03:30Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "skipped",
+              "startedAt": "2026-09-20T13:58:00Z",
+              "finishedAt": "2026-09-20T13:58:00Z",
+              "log": "준비 단계(3-2)가 이미 착지시킨 몫. PR #94 head `8f668ec` 가 14파일 주석 편집을 담고 있고, 실행 지침이 명시한 대로 실행자는 소스를 고치지 않는다. 읽기로만 확인: `/pulls/94` changed_files=17 · +413/−226(주석 14 + 판정 상세 1 + 원장 1 + 허브 1)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "startedAt": "2026-09-20T13:58:00Z",
+              "finishedAt": "2026-09-20T13:58:00Z",
+              "log": "동上 — `docs/comment-policy/passes/2026-09-20-github-app-auth-axis.md` 가 PR #94 파일 목록에 신규로 들어 있다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "startedAt": "2026-09-20T13:58:00Z",
+              "finishedAt": "2026-09-20T13:58:00Z",
+              "log": "동上 — `docs/comment-policy/ledger.md` 가 PR #94 파일 목록에 포함."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "startedAt": "2026-09-20T13:58:00Z",
+              "finishedAt": "2026-09-20T13:58:00Z",
+              "log": "동上 — `docs/index.html` 가 PR #94 파일 목록에 포함."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T13:58:10Z",
+              "finishedAt": "2026-09-20T14:01:40Z",
+              "log": "머지 전 게이트 판독(지침 1~3).\n· CI settled: `actions/runs?head_sha=8f668ec964552570580f4e1da0a7b3f80730103f`(전체 40자) → 런 2건 모두 `status=completed`. 35514121841 `CI`(pull_request) success · 35514121720 `review — data format`(pull_request_target) success.\n· 필수 체크는 `/rules/branches/main` 실측으로 `ci-gate` · `review/data-format` 둘. `ci-gate` 는 `ci.yml` 집계 잡이라 런 이름에 안 뜨므로 `/runs/35514121841/jobs` 로 확인 — 잡 8개 중 7 success(test(kind e2e) · docs-scenario-e2e · docs-mockup-render · docs-journey-mockup · test(cargo) · push/build & push image · **ci-gate**), skipped 1 은 `push / pin deployment image (main only)` 로 main 전용이라 정상. 빨간 체크 0 이므로 flake 판별·rerun 경로는 발동하지 않았다.\n· 머지 직전 BEFORE 재측정: main tip 이 여전히 `f5a2937`(= PR base, 자매 3건 미머지)이라 모델 versionScript 실측 `lines=2653 files=111` / `15cb6b241b0c…` — 계획이 적은 값과 바이트 동일.\n· PR head `8f668ec` 실측 `lines=2501 files=111` / `4e81c916e413…` ⇒ 예상 순 제거 152행 · 파일 수 불변.\n· `refs/pull/94/merge`(`739c3158`) 부모 = `f5a2937`(현 main tip) + `8f668ec` ⇒ 그 초록은 실제 머지 트리를 검증한 것. 리베이스 불필요.\n· 자매 겹침 **재대조**(검토 13:5x 값이 낡았을 수 있으므로 `/pulls/<n>/files` 전수 재조회): 열린 PR 은 #91(10파일)·#92(17)·#93(6) 셋이고 셋 다 base `f5a2937`. #94 의 17파일과 `comm -12` 교집합이 **91:0 · 92:0 · 93:0**. 겹침 0 유지 ⇒ 재계획 분기 미발동."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T14:02:00Z",
+              "finishedAt": "2026-09-20T14:03:30Z",
+              "log": "PR #94 를 **squash** 로 머지(`PUT /pulls/94/merge` `{\"merge_method\":\"squash\"}`) → `\"merged\": true`. 착지 확인: `/pulls/94` `state=closed` · `merged=true` · `merge_commit_sha=4a4b593901f935fca6c96427314fc3edb48a4614`, `/commits/main` tip = `4a4b5939` · **parents=1**(squash 착지이므로 되돌리기는 `git revert 4a4b5939`, `-m 1` 금지) · 제목 「주석 비중복성 12차 패스 — GitHub App · 인증 경계 축 14파일 (rct_20260920-0005) (#94)」. 계획 step 6 은 「PR 을 연다」였고 준비 단계가 이미 열어 둔 것을 실행 지침(4단계)대로 여기서 머지했다."
+            }
+          ]
         }
       }
     ]
