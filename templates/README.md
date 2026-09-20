@@ -15,6 +15,7 @@
 | `mockup-render.tbm.md` | 목업 ↔ 구현 렌더링 정합성 | 목업이 정의한 화면과 이미 구현된 화면의 시각적 일치(코드 정적 대조) |
 | `journey-mockup.tbm.md` | 사용자 여정 ↔ 목업 1:1 정합성 | 여정 문서와 여정 mockup 페이지의 여정·단계 두 층위 완전 1:1(전단사) |
 | `comment-redundancy.tbm.md` | 주석 비중복성 (복원 가능한 주석 제거) | 코드·문서·PR·커밋 이력으로 복원되는 내용이 주석에 남아 있지 않음 |
+| `pr-manual-approval.tbm.md` | PR 수동 승인 라우팅 정합성 | 사람 승인이 필요한 PR 관점의 정책 ↔ 판정기 1:1(불변식 1), 그리고 판정기 규칙이 코드베이스를 따라가는가 — 앵커 실재·표면 포괄·제외 트립와이어·재검토 기한(불변식 2) |
 
 한 레포에 docs-impl·scenario-e2e 두 유형을 등록하는 것이 기본이며, 이때 역할
 분담은: **docs-impl**은 "문서 ↔ 구현 코드"의 일치를, **scenario-e2e**는 "테스트
@@ -79,6 +80,18 @@ CI 게이트로 집행한다. 여백과 색은 여전히 보지 않는다.
 나눠 두고 to-be는 그 디렉터리의 트리 해시로 본다 — 패스가 쌓이며 한 파일에서 본문이 판정 기록에
 묻히던 것을 구조로 막는 고정부다.
 
+**pr-manual-approval**은 PR 단위 자동 판정기(commit status `review/<관점>`)를 둔 레포에 얹는
+일곱 번째 유형으로, 앞의 여섯이 **레포의 내용**을 본다면 이쪽은 **레포에 들어오는 변경의 경로**를
+본다 — 어떤 PR이 사람 승인을 거쳐야 하는가. 정책 문서(관점 레지스트리 · 규칙 · 표면/앵커 블록 ·
+의도적 제외 · 미탐 원장)가 SSOT이고, 판정기 헤더 주석은 SSOT가 아니다. 불변식 1이 "사람 승인
+대상"의 정책↔판정기 1:1을, 불변식 2가 **판정기의 신선도**를 본다: 낡은 판정기는 실패하지 않고
+조용히 success를 계속 붙이며 새기 때문에, 규칙이 지목한 경로의 실재(anchors)와 위험 신호가 새
+파일에 나타나는 순간(surface)을 지문화하고, 지문이 볼 수 없는 사각지대는 관점별 재검토 기한
+(최장 90일, `recheckAfter`)으로 덮는다. 표면·앵커 블록을 모델이 아니라 **대상 레포의 정책
+문서**에 두는 것이 고정부다 — 표면이 낡았을 때의 수정이 대상 레포 PR로 끝나야 data plane이
+스스로 수렴시킬 수 있다. 판정기 헤더가 정책을 되풀이하면 comment-redundancy와 겹치므로, 규칙
+본문은 정책 문서에 두고 판정기에는 규칙 ID와 링크만 남기는 쪽으로 두 모델이 수렴한다.
+
 ## 고정부와 가변부
 
 각 템플릿은 두 부분으로 나뉜다:
@@ -104,11 +117,11 @@ CI 게이트로 집행한다. 여백과 색은 여전히 보지 않는다.
 
 | 항목 | 규약 |
 |---|---|
-| id | `tbm_<slug>-docs-impl` / `tbm_<slug>-scenario-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` / `tbm_<slug>-journey-mockup` / `tbm_<slug>-comment-redundancy` (slug = 소문자 레포명) |
-| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> 테스트 시나리오 ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` / `<slug> 사용자 여정 ↔ 목업 1:1 정합성` / `<slug> 주석 비중복성 (복원 가능한 주석 제거)` |
-| metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, test-scenario, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` / `[<slug>, journey, mockup, ux, consistency]` / `[<slug>, comments, documentation, consistency]` (+ 필요 시 도구·언어 태그: maestro, playwright, go, python 등) |
+| id | `tbm_<slug>-docs-impl` / `tbm_<slug>-scenario-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` / `tbm_<slug>-journey-mockup` / `tbm_<slug>-comment-redundancy` / `tbm_<slug>-pr-manual-approval` (slug = 소문자 레포명) |
+| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> 테스트 시나리오 ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` / `<slug> 사용자 여정 ↔ 목업 1:1 정합성` / `<slug> 주석 비중복성 (복원 가능한 주석 제거)` / `<slug> PR 수동 승인 라우팅 정합성` |
+| metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, test-scenario, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` / `[<slug>, journey, mockup, ux, consistency]` / `[<slug>, comments, documentation, consistency]` / `[<slug>, pr, review, manual-approval, ci, consistency]` (+ 필요 시 도구·언어 태그: maestro, playwright, go, python 등) |
 | checkPolicy | `{"intervalSeconds": 3600}` |
-| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·scenario-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(글롭이면 `ls-tree` 지문, 복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60`. comment-redundancy는 as-is에 e2e-mock-policy와 같은 grep 지문(sha256)을 쓰되 주석 줄만 추출하고 `timeoutSeconds: 120`, to-be는 `docs/comment-policy` 트리 해시(부재는 `absent`)에 `timeoutSeconds: 60` |
+| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·scenario-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(글롭이면 `ls-tree` 지문, 복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60`. comment-redundancy는 as-is에 e2e-mock-policy와 같은 grep 지문(sha256)을 쓰되 주석 줄만 추출하고 `timeoutSeconds: 120`, to-be는 `docs/comment-policy` 트리 해시(부재는 `absent`)에 `timeoutSeconds: 60`. pr-manual-approval은 to-be에 정책 문서 blob hash(부재는 `absent`, `timeoutSeconds: 60`), as-is에 `judges=…;surface=…;anchors=…` 라벨 조합(판정기 blob hash · 정책이 선언한 표면의 토큰형 grep 지문 · 앵커 실재 여부)에 `timeoutSeconds: 120` |
 | lastObservedVersion/At | 등록 시 생략(첫 감지 sweep이 채운다) |
 
 ## 인스턴스화 절차
