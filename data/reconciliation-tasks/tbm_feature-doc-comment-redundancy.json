@@ -2528,7 +2528,7 @@
   {
     "id": "rct_20260920-0005",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-20T13:12:49Z",
@@ -2606,6 +2606,13 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/94",
           "preparedAt": "2026-09-20T14:05:00Z",
           "notes": "base `f5a2937` (main, 계획 시점 tip). 17파일 변경(+413/−226): 주석 편집 14 + 판정 상세 신규 1 + 원장 1 + 허브 1. 머지 커밋 SHA 는 `8f668ec`(PR head). 열린 자매 PR #91·#92·#93 과 파일 겹침 0(각 /pulls/<n>/files 전수 대조) — 셋 다 base 가 같은 `f5a2937` 이라 먼저 머지되면 전역 지문 절대값이 움직이므로 완료 판정은 순 제거 152행으로 한다. 로컬 검증 전건 통과: 주석 제거 후 부모와 바이트 동일 14/14, cargo test 통과, 게이트 3종 rc=0."
+        },
+        "review": {
+          "required": false,
+          "status": "approved",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-20T14:05:00Z",
+          "reason": "승인 — 완료 기준 다섯 항목을 리뷰가 독립 재측정해 전건 일치했고, 불가역 지점은 squash 머지 하나뿐이며 그 되돌리기가 실제로 가능하다.\n\n**준비물 신선도(실측 2026-09-20T13:5xZ).** PR #94 `state=open` · `mergeable=true` · `mergeable_state=clean` · head `8f668ec` · base `f5a2937` = **현재 main tip**(merge-base도 동일) 이라 베이스 이동·충돌 없음. 필수 체크는 `/rules/branches/main` 실측으로 `ci-gate` · `review/data-format` 둘이고 둘 다 **success**(런 35514121841 / 35514121720). `ci-gate` 는 집계 잡이라 런 이름에 안 뜨므로 `/jobs` 로 확인했다 — kind e2e · cargo · 게이트 3종 · 이미지 push 전부 success, skipped 는 `pin deployment image (main only)` 하나로 main 전용이라 정상. 열린 자매는 #91·#92·#93 셋이고 `/pulls/<n>/files` 전수 대조로 판정 14파일과 **겹침 0**(10·17·6파일), 셋 다 base 가 같은 `f5a2937`.\n\n**정합성 — 계획 수치를 리뷰가 재측정해 전건 일치.** ① 모델 versionScript 를 `f5a2937`·`pr94` 두 지점에서 돌려 `lines=2653 files=111`/`15cb6b24…` → `lines=2501 files=111`/`4e81c916…`, **순 제거 정확히 152행·파일 수 불변**. ② 14파일 범위 주석 **223 → 71**. ③ 범위 지문(`echo` 규약·후행 개행 포함) `261ad97902dd63b0f049c13eed08d8c02118e7c2074b965ebeb7a99136967259` — 원장 12행 값과 일치. ④ 원장 80파일을 전역 파일 목록에서 집합으로 빼 **잔여 32파일/514행**(마이그레이션 8/139 + 자유 풀 24/375), 교차검산 `514 == 2501 − 1987` 성립. ⑤ `check-journey-mockup.py` 가 양 지점 rc=0 이고 출력이 「문서 37 · 상대 링크 285」 → 「문서 38 · 상대 링크 289」 로만 움직인다. 원장 구조도 건전하다 — 표 데이터행 11 → 12, 제목 수(`^#`) 2 로 불변, `미판정 잔여` 문단 정확히 1벌(옛 합계 문단은 덮어쓰기가 아니라 **교체**돼 중복 절이 없다). 변경 17파일은 주석 14 + 판정 상세 1 + 원장 1 + 허브 1 로 범위 밖 변경이 없다.\n\n**위험 통제 — 핵심 안전 주장을 리뷰가 직접 재현했다.** 「동작 코드 무접촉」이 이 계획의 프로덕션 안전성 전부이므로 계획의 자기 보고를 믿지 않고 **리터럴 인식 stripper 를 따로 구현해** 줄·블록 주석을 걷어낸 뒤 부모와 비교했다 — **14/14 IDENTICAL**. (첫 구현이 Rust 수명 `&'a str` 을 char 리터럴로 오인해 `installations.rs` 에서 거짓 불일치를 냈고, 수명/char 판별을 고친 뒤 14/14 가 됐다. 「비주석 diff 0줄」이 아니라 stripper 대조여야 한다는 계획의 판단은 옳다.) 따라서 이미지가 재빌드·롤아웃돼도 동작은 동일하고 트래픽·데이터 영향이 0 이다. `backend/migrations/` 는 diff 에 없어 sqlx 체크섬 repair(사람 게이트) 경로가 발동하지 않는다.\n\n**불가역성.** 되돌릴 수 없는 지점은 4단계 머지 하나이고 그 앞은 전부 읽기다. 레포는 `required_linear_history` · `non_fast_forward` 규칙이라 squash 경로가 맞고, 되돌리기가 `git revert <squash-sha>` 에 **`-m 1` 금지**라는 지침 문구도 부모 하나인 squash 착지와 정합한다. 데이터 삭제·파괴적 마이그레이션·외부로 나가는 부작용이 없다.\n\n**실행 지침의 대비가 실제로 충분하다.** settled 판독에 `pending`·`waiting`·`requested` 까지 포함하고, combined commit status 0건을 red 로 오독하지 말라고 못박고, `head_sha` 전체 40자 요구·`gh` 로그의 `--allow-escape-sequences`·`--force-with-lease` 의 ls-remote 형태·토큰 경계 갈아쓰기까지 함정이 짚여 있다. 완료 기준을 **절대 지문이 아니라 순 제거 152행**으로 잡고 ①이 어긋나면 자매 머지·②③이 어긋나면 착지 실패로 원인을 가르는 판별식을 준 것도 자매 3건이 열려 있는 현 상황에 맞다. `stub_is_deterministic_for_the_same_ask` 는 부모에서도 재현되는 pre-existing flake 로 식별돼 재실행 상한 2회가 명시돼 있고, 그 밖의 결정적 실패는 머지 금지로 닫혀 있다.\n\n**실행자에게 남기는 단서 둘.** ⑴ 이 검토 시점에 main 은 아직 `f5a2937` 이지만 자매 셋이 열려 있으므로 지침 3단계의 **머지 직전 BEFORE 재측정과 `/pulls/<n>/files` 재대조를 생략하지 말 것** — 검토가 잰 겹침 0 은 13:5x 시점 값이다. ⑵ 원장·판정 상세의 산문 집계(복제 명제 6건 내역 등)는 어떤 게이트도 읽지 않으므로 검증 ①~⑤ 의 기계 판독값만으로 수렴을 판정하면 된다."
         }
       }
     ]
