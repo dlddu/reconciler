@@ -808,7 +808,7 @@
       ]
     },
     "createdAt": "2026-09-20T08:32:49Z",
-    "updatedAt": "2026-09-20T09:13:10Z",
+    "updatedAt": "2026-09-20T09:15:14Z",
     "stateSummary": {
       "asIs": "## as-is — E2E 하네스의 모킹 지점 (무변경)\n\n- **측정 시각** 2026-09-20T08:35Z · 대상 `dlddu/economic-opinion-trend-monitor@main` tip `32faf64`(트리거).\n- **지문** `sites=31 files=18` / `46c549f18c84b47dea8646b11479a921d2b0c4a7ed88b34f65f86f9c9c548004` —\n  저장 baseline(`2026-09-19T02:21:34Z`)과 **바이트 동일**. 부모 `e75b254`에서 재실행한 값도 동일이고\n  두 지점의 HITS 원본 `diff`가 **공집합**이다 ⇒ 이 트리거는 모킹 지점을 늘리지도 줄이지도 않았다.\n- **불변식 1(지점 1:1) 실측** — 허용목록 CODE 집합(정책 문서 `## 허용목록` 절) **31**개 vs 코드의\n  `mock-exception: <CODE>` 주석 집합 **31**개, **대칭차집합 공집합** ⇒ 미등재 0 · 고아 0.\n  종류 3종(GOLD·FEED·LLM) 불변, 재배선 `--feeds` 8 · `ECON_LLM_BASE_URL` 4, 인터셉트 0건.\n- **트리거가 코드에 한 일**: `git diff --stat e75b254 32faf64`의 12파일 중 `tests/` 접촉은\n  `tests/e2e/lib/gold.ts`(+36/−?)와 `tests/e2e/specs/aggregation-2-…spec.ts` 둘뿐이고, 둘 다\n  모킹 지점 토큰을 건드리지 않았다(지문 불변이 그 기계 증명이다).\n\n### 새로 관측된 하네스 표현력 한계 (아래 gap의 근거)\n- **구현은 착지했다**: `python/packages/aggregation/src/econ_aggregation/aggregate.py:44` ∋\n  `BUCKET_UNITS = (\"hour\", \"day\", \"week\")`, `_bucket()`이 단위를 인자로 받는다(트리거가 착지시킨 AC3.3).\n- **그런데 E2E는 그 경로를 밟지 못한다**: 수집 CLI가 `collected_at`을 **실행 시각**으로 찍는다\n  (`python/packages/ingestion/src/econ_ingestion/cli.py:81` `collected_at = now.replace(microsecond=0).isoformat()`\n  — `--cycle`은 cycle id만 정하고 `collected_at`에 관여하지 않는다). 따라서 한 수집 Job의 레코드가\n  전부 같은 시간 버킷에 떨어지고, 「일 버킷 = 시간 버킷들의 합」이 버킷 **하나**의 합이라 시나리오의\n  기대 결과를 시험할 수 없다.\n- **대체 경로도 없다**: `tests/e2e/k8s/batch/` 19개 매니페스트에 수집 시각 주입도, 반출 Bronze를\n  다시 심는 루트도 없다(`bronze-shell.yaml`은 반출용 셸이다).\n- **결과로 생긴 커버리지 공백**: 레포 게이트 `python3 tests/e2e/check_scenario_mapping.py`를\n  부모·트리거 두 지점에서 실행 — 양쪽 **rc=0**, 카운터는 부모 `21/1/1/19/19/0/1` → 트리거\n  `21/1/0/20/19/**1**/1`, 공백 목록은 정확히 한 건 `econ-opinion-monitor-test-aggregation-viz.md#시나리오 3`\n  (`gap-list` 마커 안의 실측과 일치).",
       "toBe": "## to-be — `docs/econ-opinion-monitor-e2e-mocking-policy.md` (blob `27ad0f7e`)\n\n- **귀속은 단독이다**: 부모 `e75b254`에서 toBe versionScript 재실행 = `55198ade4f89…`로 **저장\n  baseline과 바이트 동일** ⇒ `55198ade → 27ad0f7e` 이동은 트리거 `32faf64`(#62) 단독의 산물이다.\n  baseline이 온 `afc9692`(#55) 이후 이 파일을 만진 커밋은 트리거뿐이다.\n- **델타는 한 문단, 정확히 1줄 교체**(`+1/−1`)다. 위치는 `## 차단 요인 원장` 절 안, 원장 표 **아래**의\n  「AC3.3·AC3.5는 R3의 대상이 아니다」 문단. 허용목록·원장 표·「해소된 차단 요인」·표기 규약·변동\n  이력은 **무접촉**이다.\n- **문단이 말하는 것**: ⑴ AC3.3·AC3.5가 「구현 대기」였던 이유(관측 대상 부재)가 해소됐다\n  (AC3.5는 `rct_20260919-0003`, AC3.3 롤업은 `rct_20260919-0006`) ⑵ 「그래서 두 시나리오는 이제\n  **공백**이고, 닫는 일은 이 모델의 하네스 몫이다(시나리오 3은 **다중 시간 버킷 corpus**가 선행)」\n  ⑶ 「그래도 **R3의 대상은 아니다**」.\n- **원장 현황(트리거 시점)**: 열린 행 **1**(R3 — 서빙 입력이 아직 픽스처 Gold, 해소 방향=실환경 대체,\n  소관=`tbm_econ-opinion-monitor-scenario-e2e`, 선행=없음, 재검토 시점=**2026-12-18**) · 해소된 행\n  **2**(R1 수집·분석 하네스 부재 / R2 집계 Job 부재). B1 지목 문맥은 문서 기준 4건이고 전부 R1·R2·R3가\n  받았다. **새 문단이 만든 원인에 대응하는 행은 없다.**\n- **자매 축 확인(추측이 아니라 실측)**: reconciler 레포 전 task 레코드를 훑어 이 모델(`tbm_econ-opinion-monitor-e2e-mock-policy`)\n  또는 「차단 요인 원장」을 언급하는 레코드를 전수 추출했다 — 트리거를 낳은 docs-impl `rct_20260919-0006`\n  (현재 `verifying`)은 **이 모델도 원장도 언급하지 않는다**. 즉 이번 인계는 reconciler 레코드 경로가\n  아니라 대상 레포 문서 경로로만 들어왔다.\n- **자매 SSOT에는 행이 있다**: `docs/econ-opinion-monitor-doc-tracker/2026-09.md`의\n  「공백 해소 경로 (이 모델 소관)」 표에 **「롤업 (미해소) | aggregation-viz 3 | … | 다중 시간 버킷\n  corpus」** 행이 신설됐다. 이 행에는 해소 방향(두 갈래: 수집 시각 주입 / Bronze 재심기)과 사실상의\n  소관은 있으나 **재검토 시점이 없다**.",
@@ -881,6 +881,62 @@
           "reviewedAt": "2026-09-20T09:09:00Z",
           "reason": "**승인 — 문서 1파일·되돌리기 1커밋·게이트 무영향 슬라이스이고, 준비물 신선도를 머지 트리에서 직접 재측정해 전부 일치했다.**\n\n**신선도(직접 실측).** PR #64 `open`·`mergeable=true`·`mergeable_state=clean`, base `15f46b5` == 현재 main tip(베이스 이동 0), 파일 1개 `docs/econ-opinion-monitor-e2e-mocking-policy.md` `+5/−3`로 `preparation` 기재와 동일. CI는 `Checks` 런 1건이 `completed/success`이고 잡 전수(`ci/build`·`ci/e2e`·`docs/flow`·`docs/structure`·`render`·`image/publish(batch·serving)`·집계 `required`)가 success — `skipped`는 main 전용 `image/pin deploy images` 하나뿐이라 `always()+needs` 집계 게이트가 뒤집힌 자리가 없다. 결정적으로 `refs/pull/64/merge`의 부모가 `15f46b5`(현재 main tip) + `4ee7088`(head)이라 **이 초록은 실제로 착지할 머지 트리를 이미 검증한 것**이다. 열린 PR 전수(#64·#18·#15)를 재조회해 파일 겹침 0을 확인했다(지침이 적은 목록 #5·#9·#10은 이미 닫혀 낡았다).\n\n**완료 기준 8건을 머지 트리(`5dd0b75`)에서 재측정 — 전부 기대값 일치.** V1 변경 파일 1개 · V2 `^| R[34] ` 2행 · V3 R4 행 6열에서 B2 4필드 기계 판독(해소 방향 ∋ `실환경 대체` · 소관 `tbm_econ-opinion-monitor-scenario-e2e` · 선행 `없음` · 재검토 `2026-12-19`, `date -d '2026-09-20 +90 days'`와 동일해 90일 상한 준수) · V4 볼드 원문 `두 시나리오는 이제 **공백**` 0건(잔존 1건은 변동 이력의 자기인용으로, 지침이 함정으로 미리 지목한 그 건이다) · V5 `^| 2026-09` 6→7행이고 최신 행 task가 `rct_20260920-0001` · V6 `check_scenario_mapping.py` rc=0 `공백 1` 목록 `aggregation-viz#시나리오 3` 단건 · V7 as-is 지문 `sites=31 files=18` / `46c549f1…c548004`로 **main과 바이트 동일**(불변식 1 무접촉의 기계 증명) · V8 정책 문서 blob이 `27ad0f7e…` → `bde8c258…`로 이동해 재감지 경로가 열린다.\n\n**정합성.** gap은 「트리거가 만든 차단 요인이 원장 밖(자매 doc-tracker)에만 적히고 재검토 시점도 없어 해소 압력 0」이었고, 슬라이스는 그 원인을 R4로 받아 4필드를 갖추게 한다 — 정의가 요구한 「원장을 정책 문서 안에 두고, 그 부류라면 빠짐없이 행으로 갖는다」를 그대로 충족한다. 사실 오류 정정(공백 「두 건」→「한 건」)도 게이트 실측으로 참임을 확인했다: `시나리오 5`는 `tests/e2e/specs/aggregation-5-subject-trend-chart.spec.ts` 1행 `// 검증 시나리오: …#시나리오 5`로 이미 매칭돼 있다. B1/B3 갱신·변동 이력 행은 같은 문서의 기존 규약(앞선 6건 전부 이력 행을 남겼다)을 따르는 부수 변경이고, 범위를 넘는 변경은 없다 — 하네스 구축·doc-tracker·R3·허용목록·코드 주석은 전부 무접촉이며 V7이 그것을 바이트로 증명한다.\n\n**위험 통제·불가역성.** riskLevel low가 타당하다. 정책 문서를 읽는 레포 게이트는 0건(`grep -rn 'mocking-policy' scripts/ Makefile .github/ tests/e2e/*.py` 무히트)이고, 실제로 `check_scenario_mapping.py`·`check-journey-mockup.py`를 main과 머지 트리 양쪽에서 돌려 rc=0이며 **출력이 바이트 동일**이다. 배포 산출물·트래픽·데이터 영향 0, 불가역 작업 없음, 되돌릴 수 없는 지점은 머지 하나뿐이고 되돌리기는 문서 1파일 revert 1커밋이다. 검증 방법(V1~V8 표, 기대값 명시)과 롤백이 executionGuide에 구체적으로 있고, 파이프+heredoc 공허 통과 함정까지 지침이 미리 막아 뒀다.\n\n**한 가지 정정은 comment에 남겼다** — 머지 방식·롤백 문구. 지침 §0이 「레포 설정이 진실」이라는 판별 절차를 이미 갖고 있어 거부 사유가 아니고, 내가 이미 실측했으므로 실행자가 다시 재지 않게 결과만 넘긴다.",
           "comment": "**실행자에게 넘기는 정정 1건(계획 결함이 아니라 실측 결과 전달 — planner 재계획 대상이 아니다).**\n\n**머지 방식은 merge commit이 아니다.** 지침 §1 단계 2의 예시 명령 `-f merge_method=merge`와 §3의 롤백 문구 `git revert -m 1 <머지커밋>`을 **그대로 쓰지 말 것**. 지침 §0이 「레포 설정이 진실이고 롤백 문구도 그 결과에 따라 달라진다」는 판별 절차를 이미 지시하고 있고, 내가 그 판별을 실행한 결과는 다음과 같다:\n\n- `GET /repos/dlddu/economic-opinion-trend-monitor`의 `allow_merge_commit`·`allow_squash_merge`·`allow_rebase_merge`는 이 앱 토큰 권한에선 전부 `null`로 와서 **설정으로는 판별되지 않는다**.\n- 대신 착지 실측이 명확하다 — `origin/main` 최근 5커밋(`15f46b5`·`32faf64`·`e75b254`·`fc428dd`·`d4a4cd2`)이 **전부 부모 1개**다. 이 레포는 squash/rebase로 착지한다.\n\n따라서 ⑴ 머지는 `merge_method=merge`가 거부될 수 있으니 `squash`(또는 레포가 받는 방식)로 내고, ⑵ **롤백은 `git revert <착지커밋>`이다 — `-m 1`을 붙이면 단일 부모 커밋이라 실패한다.** ⑶ 착지 후 V1(`git diff --name-only $BASE_BEFORE..origin/main`)은 squash 착지에서도 그대로 1파일이어야 한다.\n\n**나머지 V1~V8은 내가 머지 트리 `5dd0b75`에서 이미 전부 기대값대로 통과시켰다**(reason 참조). 실행자는 머지 직전 main이 `15f46b5`에서 움직였는지만 재확인하고(움직였으면 V1~V8 재측정), 움직이지 않았으면 그 실측을 그대로 4-4의 입력으로 써도 된다."
+        },
+        "execution": {
+          "status": "running",
+          "startedAt": "2026-09-20T09:15:13Z",
+          "finishedAt": null,
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T09:15:13Z",
+              "finishedAt": "2026-09-20T09:15:13Z",
+              "log": "머지 직전 main(`15f46b5a8c21cc914b23f03d87d2c79b560df44c`, = PR #64 base, 베이스 이동 0)에서 전제 4건 재실측 — 전부 기대값 일치. ⑴ as-is 지문 `sites=31 files=18` / `46c549f18c84b47dea8646b11479a921d2b0c4a7ed88b34f65f86f9c9c548004`(baseline 바이트 동일 ⇒ 불변식 1 gap 0) ⑵ `HEAD:docs/econ-opinion-monitor-e2e-mocking-policy.md` = `27ad0f7e54e09d9cabe8ffd473d3f13bbe671ca1`(= toBe currentVersion, 트리거 이후 정책 문서 무변경) ⑶ `python3 tests/e2e/check_scenario_mapping.py` rc=0, `공백 (1:1 대상 중 파일 없음) 1`, 목록 `econ-opinion-monitor-test-aggregation-viz.md#시나리오 3` 단건 ⑷ `grep -c '^| 2026-09' <doc>` = 6. 부수로 base의 `^| R[34] ` = 1(R3만) · 볼드 원문 `두 시나리오는 이제 **공백**` = 1(아직 미정정)도 확인했다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T09:15:13Z",
+              "finishedAt": "2026-09-20T09:15:13Z",
+              "log": "준비 단계(3-2)가 브랜치 `reconcile/e2e-mock-policy-rct_20260920-0001`(head `4ee7088c97a9122397ddad9bcffec7b8896a7e40`)에 이미 착지시킨 변경이다 — R4 행 신설. 실행 단계는 새로 쓰지 않고 그 PR을 머지한다. 머지 트리 `refs/pull/64/merge`의 부모가 `15f46b5`(현재 main tip) + `4ee7088`이라, 착지할 트리가 곧 검증된 트리다. 기대값 실측은 4-4의 V2·V3에서 머지된 main 기준으로 다시 잰다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T09:15:13Z",
+              "finishedAt": "2026-09-20T09:15:13Z",
+              "log": "같은 PR에 포함(사실 오류 정정 — 「두 시나리오는 이제 **공백**」). 실측 근거는 단계 1 ⑶으로 재확인: 공백은 1건(`aggregation-viz#시나리오 3`)뿐이다. 착지 확인은 V4."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T09:15:13Z",
+              "finishedAt": "2026-09-20T09:15:13Z",
+              "log": "같은 PR에 포함(B1·B3 서술 갱신). 착지 확인은 머지 후 문서 본문 검사."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T09:15:13Z",
+              "finishedAt": "2026-09-20T09:15:13Z",
+              "log": "같은 PR에 포함(`## 변동 이력` 행 1건 추가). base 실측 6행이므로 착지 후 7행이어야 한다 — V5."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T09:15:13Z",
+              "finishedAt": "2026-09-20T09:15:13Z",
+              "log": "게이트 무영향 확인. PR의 `Checks` 런(35500967706) 전수 success — `render`·`docs/flow`·`docs/structure`·`image/publish(batch·serving)`·`ci/build`·`ci/e2e`·집계 `required`. `skipped`는 main 전용 `image/pin deploy images (main only)` 하나뿐이라 `always()+needs` 집계가 뒤집힌 자리가 없다. `changed_files=1`. 로컬 base에서도 `check_scenario_mapping.py` rc=0으로 동일."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T09:15:13Z",
+              "finishedAt": "2026-09-20T09:15:13Z",
+              "log": "PR #64가 열려 있고(`state=open`·`mergeable=true`·`mergeable_state=clean`) 필수 체크가 settled 초록이다. 이 step의 expectedOutcome이 지목한 대로 머지는 실행 단계(4-3)의 몫 — 다음 항목에서 수행한다."
+            }
+          ]
         }
       }
     ]
