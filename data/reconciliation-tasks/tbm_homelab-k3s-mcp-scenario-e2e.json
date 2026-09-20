@@ -10996,8 +10996,8 @@
           "steps": [
             {
               "seq": 1,
-              "action": "픽스처를 늘린다 — `tests/k8s/kind/resource-generic-fixture.yaml` 에 ⑴ 고유 토큰을 값으로 갖는 Secret `rg-ac17-token`(namespace `workload-test`)과 ⑵ 그 Secret 을 `/var/run/secrets/rg-ac17` 에 마운트하고 HTTP 로 서빙하는 파드 `rg-ac17-token-server`(`python:3.12-alpine` — `grafana-mock.yaml` 선례와 같은 이미지라 새 pull 배선이 없다)를 더한다. 시나리오의 사전 조건(「값이 고유 난수 토큰인 Secret, 그 토큰을 서빙하는 HTTP 파드」)이 이 둘이다.",
-              "expectedOutcome": "`kubectl apply --dry-run=client -f` 가 통과하고, CI 는 이미 이 파일을 통째로 apply 하므로 `ci.yml` 은 무변경이다(`git diff --stat` 에 `.github/` 없음). `python3 scripts/check_mock_policy.py` rc=0 — 이 둘은 상류를 흉내 내지 않는 대상 픽스처라 등재 대상이 아니다."
+              "action": "사전 조건(토큰 Secret · 그 토큰을 서빙하는 HTTP 파드 · 대조군 ConfigMap)을 **e2e 파일이 스스로 세우게** 한다 — `resource_generic_ac15.py`·`approval_gate_ac3.py` 가 `busybox:1.36` 파드를 세우는 방식 그대로다. 계획 초안은 `tests/k8s/kind/resource-generic-fixture.yaml` 을 늘리려 했으나, 저작하며 두 선례를 재어 보니 파일이 스스로 세우는 쪽이 ⑴ 새 이미지 pull 이 없고 ⑵ 대상의 수명이 그 파일 안에서 끝나 같은 네임스페이스를 보는 다른 파일의 전제를 흔들지 않으며 ⑶ 주석 원장에 픽스처 파일 재판정 행을 하나 덜 만든다. `docs/test-resource-generic.md` 의 「픽스처」 절에 그 독법을 명시해 문서가 실측과 어긋나지 않게 한다.",
+              "expectedOutcome": "`tests/k8s/kind/resource-generic-fixture.yaml` 과 `.github/workflows/ci.yml` 이 **무변경**이고 (`git diff --stat` 에 둘 다 없음), 파일은 `_fixtures()` 에서 Secret·ConfigMap·파드를 세운 뒤 파드 Ready 를 180초 예산으로 기다린다."
             },
             {
               "seq": 2,
@@ -11036,6 +11036,14 @@
             }
           ],
           "plannedAt": "2026-09-20T13:17:27Z"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/hk3s-scenario-e2e-rct_20260920-0004",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/161",
+          "preparedAt": "2026-09-20T13:31:14Z",
+          "notes": "네 게이트 전부 로컬 rc=0 (base 20939fc): check_ac_mapping `85 · 1 · 10 · 74 · 74 · 0 · 0`(부모 대비 구현 대기 −1 · 1:1 대상 +1 · 매칭 파일 +1), check_mock_policy(등재 5/상한 5 무이동), check_comment_policy(주석 3002줄 · docstring 1814줄 · 판정 완료 100% · 복원경로 ③④ 10/57행 — 잔량 47 무이동), check_doc_inventory(허브 수치 무이동). `run_all.py --group gatekeeper-variant --list` 에 resource_generic_ac17.py 가 배차된다. 파일 다섯만 건드린다 — ci.yml·internal/·main.go·k8s/ 무접촉이라 push 에 workflows:write 가 필요 없었다(#159 와 다른 점). kind 통합 e2e 는 호스트에 docker 가 없어 로컬 실행 불가 — CI integration-tests 의 gatekeeper-variant 그룹이 유일한 판정자다. 계획 대비 갈린 것 하나: 픽스처를 YAML 에 더하지 않고 파일이 스스로 세운다(1단계 수정, 위 참조). 부수로 ⏳ 표의 `test-approval-gate.md#시나리오 1` 행 두 칸을 정정했다 — 도구 선행은 #150 으로 전부 닫혔으나 (c) 의 「미선언 도구 기동 변형」은 `toolRegistry`·광고면이 컴파일 시점 상수라 env·매니페스트·CI 로는 태울 수 없고, 제품 측 훅이 새 선행(⑶)이다. 그래서 그 행은 ⏳ 자격을 유지하며 이 렌즈의 다음 슬라이스가 아니다 — 감지 브리프가 두 행 모두 「저작만 남았다」로 읽은 부분과 갈리는 지점이라 원장에 축자로 남겼다."
         }
       }
     ]
