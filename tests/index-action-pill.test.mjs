@@ -26,56 +26,54 @@ vm.runInContext(doneMatch[0] + needsMatch[0] + pillMatch[0], ctx);
 const DONE = vm.runInContext("DONE_STATUSES", ctx);
 const actionPillHtml = vm.runInContext("actionPillHtml", ctx);
 
-function pill(status, actionRequired) {
+function pill(status, assessment) {
   const t = { id: "x", status };
-  if (actionRequired !== undefined) t.assessment = { actionRequired, reason: "r" };
+  if (assessment !== undefined) t.assessment = assessment;
   return actionPillHtml(t);
 }
 
-test("terminal tasks carry no pill, whatever the assessment said", () => {
+test("terminal tasks carry no pill", () => {
   for (const status of DONE) {
-    for (const actionRequired of [true, false]) {
-      assert.equal(
-        pill(status, actionRequired),
-        "",
-        `${status} (actionRequired=${actionRequired}) must not show a pill`
-      );
-    }
+    assert.equal(pill(status), "", `${status} must not show a pill`);
+    assert.equal(pill(status, { reason: "r" }), "", `${status} must not show a pill`);
   }
 });
 
 test("succeeded is the case that motivated hiding it", () => {
-  // every succeeded task is actionRequired:true — it can only get there via action_required
-  assert.equal(pill("succeeded", true), "");
-  assert.match(pill("executing", true), /조치 필요/);
+  assert.equal(pill("succeeded"), "");
+  assert.match(pill("executing"), /조치 필요/);
 });
 
 test("rework entry points keep the pill", () => {
   // failed / review_rejected are picked back up by the planner, so they are not done
   for (const status of ["failed", "review_rejected"]) {
     assert.equal(DONE.includes(status), false, `${status} must not be a terminal status`);
-    assert.match(pill(status, true), /조치 필요/);
+    assert.match(pill(status), /조치 필요/);
   }
 });
 
-test("an unassessed task reads 조치 필요 while it is still open", () => {
-  // no judgement yet is not a verdict of 조치 불필요 — it is a task nobody has resolved,
-  // so it keeps the pill (with a tooltip saying why) until the assessment lands
-  const open = pill("assessing", undefined);
+test("an assessing task reads 조치 필요 with a 판단 전 tooltip", () => {
+  // no judgement yet is not a verdict of 조치 불필요 — it is a task nobody has resolved
+  const open = pill("assessing");
   assert.match(open, /조치 필요</);
   assert.match(open, /title="아직 판단 전/);
-  assert.doesNotMatch(open, /조치 불필요/);
   // terminal wins over it: a task cancelled before assessment carries no pill at all
-  assert.equal(pill("cancelled", undefined), "");
+  assert.equal(pill("cancelled"), "");
 });
 
-test("a judged 조치 필요 carries no 판단 전 tooltip", () => {
-  assert.doesNotMatch(pill("action_required", true), /title=/);
+test("a parked assessing task says when it will be re-checked", () => {
+  const parked = pill("assessing", { reason: "r", recheckAfter: "2026-09-21T09:00:00Z" });
+  assert.match(parked, /조치 필요</);
+  assert.match(parked, /title="재확인 대기 — 2026-09-21T09:00:00Z/);
+});
+
+test("a judged 조치 필요 carries no tooltip", () => {
+  assert.doesNotMatch(pill("action_required", { reason: "r" }), /title=/);
 });
 
 test("every schema status shows a pill exactly when it is not terminal", () => {
   for (const status of SCHEMA_STATUSES) {
-    const shown = pill(status, true) !== "";
+    const shown = pill(status) !== "";
     assert.equal(
       shown,
       !DONE.includes(status),
@@ -84,6 +82,8 @@ test("every schema status shows a pill exactly when it is not terminal", () => {
   }
 });
 
-test("a non-terminal false assessment still reads 조치 불필요", () => {
-  assert.match(pill("assessing", false), /조치 불필요/);
+test("the pill never reads 조치 불필요 — that verdict is the no_action_needed status", () => {
+  for (const status of SCHEMA_STATUSES) {
+    assert.doesNotMatch(pill(status, { reason: "r" }), /조치 불필요/);
+  }
 });

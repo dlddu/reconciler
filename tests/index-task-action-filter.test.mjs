@@ -38,10 +38,8 @@ const taskSectionTitleHtml = vm.runInContext("taskSectionTitleHtml", ctx);
 const taskListHtml = vm.runInContext("taskListHtml", ctx);
 const state = vm.runInContext("state", ctx);
 
-function task(id, status, actionRequired) {
-  const t = { id, status };
-  if (actionRequired !== undefined) t.assessment = { actionRequired, reason: "r" };
-  return t;
+function task(id, status) {
+  return { id, status };
 }
 
 function render(tasks, actionOnly) {
@@ -58,42 +56,24 @@ test("조치 필요 means exactly what the pill means", () => {
   // If the two ever drift, the toggle labelled 조치 필요만 would hide or show tasks
   // that carry the opposite pill.
   for (const status of SCHEMA_STATUSES) {
-    for (const actionRequired of [true, false, undefined]) {
-      const t = task("x", status, actionRequired);
-      assert.equal(
-        taskNeedsAction(t),
-        /조치 필요</.test(actionPillHtml(t)),
-        `${status} (actionRequired=${actionRequired}) must agree with its pill`
-      );
-    }
+    const t = task("x", status);
+    assert.equal(taskNeedsAction(t), /조치 필요</.test(actionPillHtml(t)), `${status} must agree with its pill`);
   }
 });
 
-test("terminal tasks never count as 조치 필요, whatever they were judged", () => {
-  for (const status of DONE) {
-    for (const actionRequired of [true, false, undefined]) {
-      assert.equal(taskNeedsAction(task("x", status, actionRequired)), false);
-    }
+test("조치 필요 is decided by status alone", () => {
+  for (const status of SCHEMA_STATUSES) {
+    assert.equal(taskNeedsAction(task("x", status)), !DONE.includes(status), status);
   }
   assert.equal(taskNeedsAction(null), false);
 });
 
-test("an open task with no judgement yet counts as 조치 필요", () => {
-  // nobody has decided about it, so it stays in the filtered view rather than
-  // dropping out as if it were settled
-  for (const status of SCHEMA_STATUSES.filter((s) => !DONE.includes(s))) {
-    assert.equal(taskNeedsAction(task("x", status, undefined)), true, `${status} is unresolved`);
-    assert.equal(taskNeedsAction({ id: "x", status, assessment: { reason: "r" } }), true);
-  }
-  assert.equal(taskNeedsAction(task("x", "planning", false)), false);
-});
-
 const TASKS = [
-  task("open", "action_required", true),     // 조치 필요
-  task("rework", "failed", true),            // 재작업 진입점 — 종료가 아니므로 조치 필요
-  task("done", "succeeded", true),           // 끝난 건
-  task("clear", "planning", false),          // 조치 불필요 판정
-  task("fresh", "assessing", undefined)      // 아직 판단 전 — 판정이 날 때까지 조치 필요
+  task("open", "action_required"),   // 조치 필요
+  task("rework", "failed"),          // 재작업 진입점 — 종료가 아니므로 조치 필요
+  task("done", "succeeded"),         // 끝난 건
+  task("clear", "no_action_needed"), // 조치 불필요 판정
+  task("fresh", "assessing")         // 아직 판단 전 — 판정이 날 때까지 조치 필요
 ];
 
 test("off shows every task, on shows only the ones needing action", () => {
@@ -116,7 +96,7 @@ test("the title keeps the full count so the filter never hides the total", () =>
 });
 
 test("filtering down to nothing says it was filtered, not that there are no tasks", () => {
-  const none = [task("done", "succeeded", true), task("clear", "planning", false)];
+  const none = [task("done", "succeeded"), task("clear", "no_action_needed")];
   const out = render(none, true);
   assert.deepEqual(drawnIds(out), []);
   assert.match(out, /조치가 필요한 작업이 없습니다/);

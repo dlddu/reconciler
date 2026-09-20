@@ -103,23 +103,21 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
   **리뷰 대기**는 아직 아무도 집지 않은 건(`awaiting_review`), **승인 진행 중**은 승인 세션이
   붙잡고 사람의 답만 기다리는 건(`approving`)이라 사람이 할 일이 다르다.
 
-- **조치 pill (종료 상태에선 숨김)**: task 헤더의 **조치 필요 / 조치 불필요** pill은
-  `assessment.actionRequired`, 즉 **감지 시점에 내린 판정 기록**을 비춘다. "지금 조치해야
-  한다"가 아니다. 그런데 라벨이 현재형으로 읽히는 탓에, 끝난 task에까지 붙여 두면 목록을
-  훑을 때 완료된 작업이 남은 할 일처럼 보인다. 성공 task는 예외 없이 `actionRequired:true`
-  이므로(계획·실행에 도달하려면 `action_required`를 거쳐야 한다) 그 오해가 특히 크다.
+- **조치 pill (종료 상태에선 숨김)**: task 헤더의 **조치 필요** pill은 **status만으로** 정한다.
+  감지 판정은 status 전이(`assessing` → `no_action_needed` | `action_required`)로 남고, 계획·실행
+  경로의 모든 상태는 `action_required`를 거쳐야만 도달하므로 "종료가 아닌 상태 = 조치 필요"가
+  성립한다. (예전의 `assessment.actionRequired`는 status와 중복이라 스키마에서 뺐다.)
 
-  그래서 **종료 상태(`DONE_STATUSES`)에서는 pill을 그리지 않는다.** 판정과 근거는 상세의
-  **판단(assessment)** 섹션에 그대로 남으므로 정보는 잃지 않는다. `failed`/`review_rejected`
-  는 planner가 다시 집는 재작업 진입점이라 종료가 아니므로 pill을 유지한다. `no_action_needed`
-  를 빼면 덤으로 상태 배지와 pill에 "조치 불필요"가 두 번 찍히던 중복도 사라진다.
+  **종료 상태(`DONE_STATUSES`)에서는 pill을 그리지 않는다.** 라벨이 현재형으로 읽히는 탓에 끝난
+  task에까지 붙여 두면 완료된 작업이 남은 할 일처럼 보이기 때문이다. 판단 근거는 상세의
+  **판단(assessment)** 섹션에 그대로 남는다. `failed`/`review_rejected`는 planner가 다시 집는
+  재작업 진입점이라 종료가 아니므로 pill을 유지한다. "조치 불필요"는 `no_action_needed` 상태 배지가
+  이미 말해 주므로 pill로는 그리지 않는다.
 
-  `assessment`가 아직 없는 task는 종료 상태가 아니라면 **조치 필요** pill을 단다(툴팁으로
-  `아직 판단 전`임을 밝힌다). 판정이 없다는 것은 조치가 필요 없다는 결론이 아니라 아직 아무도
-  결론을 내지 않았다는 뜻이고, 그런 건을 무표시로 두면 판단 단계에서 멈춰 선 task가 목록에서
-  가장 조용해진다 — 손이 가장 필요한 건이 가장 안 보이는 셈이다. 판정이 서면 그때부터
-  `actionRequired`가 pill을 결정하므로, 이 취급은 판정 전까지의 잠정값이다. 판단 전에 취소된
-  건은 종료 상태라 pill이 없다.
+  아직 판단 전인 `assessing` task도 **조치 필요** pill을 단다(툴팁으로 `아직 판단 전`임을 밝히고,
+  `assessment.recheckAfter`로 파킹된 건은 재확인 시각을 적는다). 판정이 없다는 것은 조치가 필요
+  없다는 결론이 아니라 아직 아무도 결론을 내지 않았다는 뜻이고, 그런 건을 무표시로 두면 판단
+  단계에서 멈춰 선 task가 목록에서 가장 조용해진다. 판단 전에 취소된 건은 종료 상태라 pill이 없다.
 
 - **조치 필요만 토글**(작업 목록): 상세의 `정합성 작업` 제목 오른쪽 **조치 필요만 N** 버튼으로
   작업 목록을 **조치 필요 pill이 붙은 작업**만으로 좁힌다. 버튼의 N은 그 모델의 조치 필요 건수고,
@@ -128,8 +126,8 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
   거르는 기준은 pill과 **같은 함수**(`taskNeedsAction`)다. 목록과 pill이 어긋나면 "조치 필요만"이
   거짓말이 되므로 판정을 한 곳에만 적고 둘이 그 함수를 부른다(`tests/index-task-action-filter.test.mjs`가
   스키마의 모든 상태에 대해 둘의 일치를 검사한다). 따라서 종료 상태(`succeeded`·`cancelled`·
-  `no_action_needed`)와 `actionRequired:false` 판정만 걸러지고, `failed`·`review_rejected`
-  (재작업 진입점)와 **아직 판단 전인 task**는 남는다.
+  `no_action_needed`)만 걸러지고, `failed`·`review_rejected`(재작업 진입점)와 **아직 판단 전인
+  `assessing` task**는 남는다.
 
   토글을 켠 채로 조치 필요 건이 없으면 "작업이 없다"가 아니라 **필터 때문에 비었다**고 적어
   전체 건수를 함께 보여준다. 작업이 하나도 없는 모델에는 토글 자체를 그리지 않는다.
