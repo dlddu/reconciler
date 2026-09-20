@@ -1378,6 +1378,101 @@
           "reason": "거부 — **준비물이 1차 거부 때와 바이트 동일**하다. 계획·저작물은 다시 봐도 유효하지만(검토 실측: main `2ee25b30`에 `backend/internal/records/stage.go` 404 · `backend/internal/migrations/0013_records_stage_snapshot.up.sql` 404 = gap 존속, PR diff 14파일 +1626/-34 불변), PR #175는 여전히 head `53aa24f4`·base `9f8cfc2`(main은 6커밋 앞선 `2ee25b30`)·`mergeable=false`/`mergeable_state=dirty`·draft이고, 그 head의 런은 2026-08-08의 `31250454163` 하나뿐이다 — 그 뒤 #179가 신설한 `Mockup ↔ Route Map`은 별도 워크플로 런으로 뜨는데 이 head에는 없다(#185 head에는 `35500586527`로 존재). 즉 베이스 이동·충돌 표시·신선한 초록 부재가 모두 그대로다.\n\n**차단도 그대로다(2026-09-20T09:36Z 실측).** #185는 `open`/`mergeable_state=blocked`이고 자기 런 `35500586628`의 `E2E Tests (iOS)`가 아직 `in_progress`다(08:49Z 시작). `Integration`·`E2E (Android)`·`Detect Changes`는 success라 MinIO 복구가 작동한다는 계획의 실측은 맞지만, **착지하지 않았다.**\n\n**결정적 사유 — 이 계획의 1번 스텝이 「멈춰라」다.** 지침 §0-A는 실행자에게 '#185 미착지면 force-push도 머지도 하지 말고 다음 사이클로 넘기라'고 지시한다. 그러나 reconciler-work-executor에는 park 상태가 없다 — 입구는 `approved` 하나이고 출구는 `succeeded`/`failed`/`cancelled`뿐이라, 지금 승인하면 그 세션은 완료 불가능한 작업을 집어 `failed`로 떨어지거나 빨개질 것이 확정된 런을 하나 태운다. `approved`는 「초록 PR을 머지하는」 입구이지 「차단 해제를 기다리는」 입구가 아니다.\n\n위험축 자체(프로덕션 마이그레이션 0013 + T3 전량 백필)는 1차 판정과 같이 승인 가능한 수준이다 — 파생값 캐시라 down으로 잃는 정보가 없고, `DROP COLUMN` 3회 down·`TestMigration0013_DownDropsColumns`·revert→재배포→down 3단계 롤백·완료 기준 6개가 지침에 명시돼 있다. 막는 것은 오직 준비물 신선도와 차단이다.",
           "comment": "**재설계하지 말 것. 그리고 이번 사이클에는 이 task를 집지도 말 것.** 이 거부는 저작물·설계·위험 통제의 문제가 아니다. 2차 판이 재측정한 값은 검토가 교차 확인한 범위에서 전부 맞다(main `stage.go`·`0013` 부재, PR 14파일 +1626/-34, 원격 head가 lease 기준 `53aa24f4…` 그대로, #185 head에서 MinIO 복구 실증).\n\n**1. 1차 검토의 지시 ⑵는 잘못된 지시였다 — 정정한다.** 1차 comment는 '#185가 아직이면 그 사실을 `preparation.notes`에 차단 요인으로 적어 다음 사이클로 넘길 것'이라고 했는데, planner의 출구는 `planning → planned` 하나뿐이다. 그래서 그 지시를 따르면 **준비물이 한 글자도 안 바뀐 채 검토로 되돌아오고**, 검토는 같은 근거로 다시 거부할 수밖에 없다(이번이 정확히 그 왕복이다). 차단 상태를 `planned`로 표현하지 말 것.\n\n**2. 차단이 풀릴 때까지 이 task는 `review_rejected`에 그대로 둔다.** planner의 다음 fire는 이 task를 건너뛰고 다른 ready task(`action_required`/`review_rejected`/`failed`)를 고르는 것이 올바른 행동이다. 재계획 사이클을 왕복에 태우지 말 것.\n\n**3. 재계획 착수 조건 — 아래 넷이 전부 실측으로 충족된 판만 `planned`로 올릴 것.**\n  ⑴ **#185가 main에 머지됨**(`gh pr view 185 --json state,mergedAt,mergeCommit`). 이 task가 대신 고치지 말 것 — `rct_20260807-0003`의 슬라이스다.\n  ⑵ `git rebase origin/main` 후 `--force-with-lease=reconcile/docs-impl-rct_20260808-0001-stage-snapshot:53aa24f434bacd1eaea0841907de14b467faadb0`로 force-push(**gh 사용자 토큰** — installation 토큰은 Actions를 발화시키지 않는다). 리베이스가 no-op이면 close→reopen으로 `pull_request(reopened)`를 발화시킬 것.\n  ⑶ **새 head의 런에서** `Detect Changes`·`Backend Unit Tests`·`App Unit Tests`(skipped 정상)·`Integration Tests`·`E2E (iOS)`·`E2E (Android)`·집계 `CI Success`, 그리고 **별도 워크플로 런** `Mockup ↔ Route Map`까지 전량 초록. 로컬 `node scripts/check-mockup-route-map.mjs` rc=0은 예고일 뿐 근거가 아니다 — 그 게이트는 이 head에서 한 번도 돈 적이 없다.\n  ⑷ `mergeable_state`가 `dirty`를 벗고 draft 해제가 가능한 상태.\n  → 즉 **지침에서 §0-A(차단 대기 관문) 자체가 사라져야** 승인 가능한 판이다. 실행자에게 '조건을 보고 멈춰라'를 남기지 말 것.\n\n**4. 리베이스 시점에 main이 또 움직였으면 §2-1 6번 기준선을 다시 잴 것.** 이번에 잰 main 120 pass/1 skip · 리베이스 트리 136 pass/1 skip은 base `2ee25b30` 기준이다. #185 머지만으로도 base가 움직이므로 양쪽을 재측정해 기대값을 갱신할 것(옛 숫자를 그대로 두면 무회귀 판정이 거짓 초록이 된다).\n\n**5. ⚠️ 반복 거부 한도 — 이번이 연속 2회째다.** 차단이 안 풀린 채 같은 준비물로 한 번 더 올라오면 3회째 거부로 이 task는 `cancelled`가 되고 사람이 직접 들여다봐야 한다. 슬라이스는 멀쩡하니 그렇게 태우지 말 것 — **#185 착지 후에 올릴 것.**\n\n**6. 다시 손대지 않아도 되는 것들**(1차와 동일, 이번에도 재확인됨): 마이그레이션 번호 `0013`(main 최신 `0012`), `records/stage.go` 부재로 gap 존속, 롤백 3단계와 `:latest` 덮어쓰기 경고, 검토 포인트 4개, 자매 PR 파일 교집합 0."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**재계획(3차 시도) — 차단이 걷혔고, 이번엔 준비물을 planner가 실제로 회수했다.** 2차 거부의 결정적 사유는 설계가 아니라 **계획의 1번 스텝이 「멈춰라」였다**는 것이었다(실행자에겐 park 상태가 없어 승인하면 완료 불가능한 작업을 집는다). 그 관문이던 **#185가 2026-09-20T10:33:27Z에 머지**(`eb988c0`)돼 조건 ⑴이 충족됐고, 나머지 ⑵⑶⑷는 이 세션이 직접 처리했다 — **실행자에게 남긴 대기 관문은 없다.**\n\n**설계·저작물은 세 판 내내 한 글자도 바뀌지 않았다**(PR #175, 14파일 +1626/-34 바이트 불변). 이 시도가 한 일은 준비물 회수뿐이다: ⑵ `9f8cfc2`→`eb988c0` 리베이스 **rc=0·충돌 0건** 후 lease(`53aa24f4…`) 지정 force-push를 **gh 사용자 토큰**으로 실행 → 새 head **`d2340fe5`**; ⑷ `mergeable=MERGEABLE`로 **dirty 해소**; ⑶ 새 head에서 CI 런 2건이 발화해 `Mockup ↔ Route Map`(#179가 신설해 옛 head가 한 번도 통과한 적 없던 게이트)이 **런 `35505533195`로 success**, `CI` 런 `35505533299`는 전량 초록까지 확인한 뒤에야 `planned`로 올린다.\n\n**움직인 base에서 재측정한 불변 6개**(2차 검토 지시 4번): main `eb988c0` **120 pass/1 skip** · 리베이스 트리 **136 pass/1 skip** · `go build ./...` rc=0 · `go vet ./internal/...` rc=0(양쪽) · 마이그레이션 번호 `0013` 여전히 비어 있음(main 최신 `0012`) · `backend/internal/records/stage.go` main에 부재로 **gap 존속**. 자매 간섭은 파일 교집합 0(열린 PR 6건 전수)에 더해 #181과의 합친 트리 게이트 출력 **바이트 동일성**까지 확인했다.\n\n---\n\nENG-013(단계 스냅샷 저장·재계산 정책, `status: active`·\"확정 문서\")을 **백엔드 데이터 계층에 착지**시킨다. 개정된 to-be가 만든 gap 4종(A ENG-013 계약 0% · B AC-002-05 · C AC-002-02 풀 분리 · D 양육자에게 태아 문항 노출) 중 **A만** 이번 슬라이스로 닫는다 — B·C·D는 전부 ENG-002(프롬프트 엔지니어링 선행, 문서가 스스로 연기 선언)에 물려 있어 지금 손대면 문항 구성이 미정인 스키마를 박게 된다. A는 반대로 결정이 이미 닫혔고(재량 → 물리 저장 확정), 계산식(ENG-001)과 포맷터가 이미 존재하며, 프롬프트와 무관하다.\n\n**이 시도의 범위(= 완료 기준)** — 아래 6개를 만족하면 성공이다(1·2차와 동일, 한 글자도 바꾸지 않았다).\n(1) **마이그레이션 0013** — `records`에 `stage_kind`/`stage_days`/`stage_months` **nullable** 컬럼 + 조회 인덱스 + **T3 1회 백필**, down으로 되돌아간다.\n(2) **쓰기 시 산출** — `records.Store.Create`가 같은 트랜잭션에서 `f(작성일, 기준값)`을 계산해 박고, 산출 불가면 세 컬럼 NULL.\n(3) **T1/T2 재계산** — 온보딩 기준값 변경 시 해당 subject 기록 전량 재산출(기준값 행 부재면 보존).\n(4) **Record JSON 노출** — 세 읽기 경로가 스냅샷을 되돌려준다.\n(5) **문서 반영** — ENG-013 저장 스키마 절 · 용어집 3행 · ENG-001 \"미구현\" 서술 소멸.\n(6) **무회귀** — `make test` **136 pass / 1 skip / 0 fail**(main 기준선 120/1).\n\n**범위 밖**: AC-002-02 본체·풀 분리·AC-002-05 폴백 분기·태아 문항 노출(전부 ENG-002 선행) · 스냅샷 소비처 전환(#172 소유 포함) · ENG-011 본 구현 · 설정 탭 수정 UI · `doc-tracker.md` 갱신. 지침 §4에 목록으로 남겨 재감지가 새 task로 잇게 한다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`backend/internal/migrations/0013_records_stage_snapshot.{up,down}.sql` 신규. up: `records`에 `stage_kind`(TEXT, 'pregnancy'|'postnatal')·`stage_days`(INTEGER)·`stage_months`(INTEGER) 를 `ALTER TABLE ADD COLUMN` 3회로 추가(테이블 재작성 금지) + `idx_records_stage(stage_kind, stage_months, stage_days)` + **T3 1회 백필** SQL(임신: `max(0, 280 - (julianday(due)-julianday(date(created_at))))`, 경계 −35/+315일 밖은 미채움 / 양육: daysOld + 달력 만개월(ENG-001 **말일 절사** 포함), 미래 출생일 제외). down: `DROP INDEX` + `DROP COLUMN` 3회. up 상단 주석에 '이 SQL은 1회성 역사 산출물이고 앞으로의 권위는 Go 계산기'라고 명시.",
+              "expectedOutcome": "`go test ./internal/db/...` 가 통과하고, 마이그레이션이 0012 상태의 DB에 적용된다. 기존 어떤 컬럼·인덱스도 변경되지 않는다."
+            },
+            {
+              "seq": 2,
+              "action": "`backend/internal/records/stage.go` 신규. `community.go`의 `gestationDays`·`pregnancyPastCapDays`·`pregnancyFutureCapDays`·`dateLayout` 상수를 재사용(재선언 금지)하고, ENG-001 말일 절사를 반영한 `calendarMonthsBetween`(기존 `monthsBetween` 재사용 금지)과 `computeStageSnapshot(kind, dueDate, birthDate, at)` 를 구현한다. 경계 판정은 ENG-001 경계값 표 그대로(기준값 없음·5주 초과 과거·45주 초과 미래·미래 출생일 → 단계 없음 / `daysPregnant<0` → 0 clamp / 생후 상한 없음).",
+              "expectedOutcome": "`go build ./...` 통과. 계산기가 ENG-001 표의 모든 분기를 커버하고, 상수 중복 선언이 없다."
+            },
+            {
+              "seq": 3,
+              "action": "같은 파일에 `RecomputeSnapshotsForSubjectTx(ctx, tx, subjectID) (int, error)` 추가. subject의 kind·기준값을 한 번 읽고, **기준값 행 자체가 없으면 아무것도 쓰지 않고 반환**(스냅샷 보존 가드). 행은 있고 날짜만 NULL이면 정상적으로 NULL로 덮는다. 대상 기록 전량을 `(id, created_at)`으로 읽어 행마다 재산출해 UPDATE(델타 이동 금지).",
+              "expectedOutcome": "기준값 행 부재/날짜 NULL 두 경우가 코드상 명확히 갈리고, 재계산이 subject_id로만 스코프된다."
+            },
+            {
+              "seq": 4,
+              "action": "`records/model.go` `Record`에 `StageKind *string`·`StageDays *int`·`StageMonths *int`(JSON `stage_kind`/`stage_days`/`stage_months`) 추가. `records/store.go`: `Create`가 같은 트랜잭션에서 `created_at` 재조회 뒤 스냅샷을 계산해 UPDATE 하고 반환 `Record`에도 채운다. `GetByIDForUser`·`ListForUser`·`AttachAudio` 세 경로의 SELECT·Scan에 세 컬럼을 더한다(셋 다 — 하나만 빠져도 그 경로만 조용히 null).",
+              "expectedOutcome": "POST/GET `/v1/records`·GET `/v1/records/{id}`·PATCH 응답에 세 필드가 실린다. 기존 필드는 이름·타입·값 모두 무변경."
+            },
+            {
+              "seq": 5,
+              "action": "`onboarding/store.go`: `insertFetusTx`/`insertChildTx`가 subject id를 반환하도록 바꾸고, `UpsertCaseA`/`UpsertCaseB`/`UpsertCaseC` 각각이 insert 완료 후 **commit 전에** 이번에 심은 subject 전부에 `records.RecomputeSnapshotsForSubjectTx`를 호출한다. 옛값-새값 비교를 넣지 않는다(멱등이므로 무조건 재산출 — 비교 누락 = 트리거 누락).",
+              "expectedOutcome": "`go build ./...` 통과(임포트 순환 없음: onboarding → records). 기준값 write 경로 3개 전부가 재계산을 거친다."
+            },
+            {
+              "seq": 6,
+              "action": "테스트 하네스의 손으로 든 DDL을 동기화한다 — `backend/internal/records/handlers_test.go`와 `backend/internal/onboarding/store_test.go`의 `newTestDB` 안 `CREATE TABLE records`에 세 컬럼 추가.",
+              "expectedOutcome": "기존 backend 테스트 전부가 `no such column` 없이 그대로 통과한다(무회귀 기준선)."
+            },
+            {
+              "seq": 7,
+              "action": "`backend/internal/db/`에 마이그레이션 백필 테스트 추가. `iofs`+`msqlite`로 마이그레이터를 직접 만들어 `m.Migrate(12)` → 레거시 행 시드 → `m.Migrate(13)`. (a) 임신/양육/기준값없음/범위밖 각각이 기대대로 채워지거나 NULL로 남는지, (b) **SQL ≡ Go 등가성** — 말일 출생(1/31·5/31)·윤년 2/29·예정일 경계(−35/−36/+315/+316일)·40주 초과 미래·출생 당일·미래 출생일을 포함한 입력 매트릭스에서 행마다 (kind, days, months) 3튜플이 Go 계산기와 완전히 일치하는지 단정.",
+              "expectedOutcome": "등가성 테스트가 불일치 0으로 통과. 이후 백필 SQL은 '검증된 1회성 산출물'이 된다."
+            },
+            {
+              "seq": 8,
+              "action": "`records` 단위 테스트: ENG-001 경계값 전수 + 말일 절사(1/31생이 2/28에 months=1, 2/27에 0) + 단계 없는 subject 작성 시 세 컬럼 NULL(AC-002-05) + 세 조회 경로 모두 스냅샷 반환. `onboarding` 단위 테스트: T1(예정일 2주 앞당김 → 기존 기록 재계산, `created_at` 불변)·되돌림 멱등·T2(출생일 정정)·**출산 전환 비트리거**(child 추가 upsert 후 fetus 기록 스냅샷 바이트 동일)·**기준값 행 소멸 시 보존**·기준값만 NULL로 비우면 NULL로 덮임.",
+              "expectedOutcome": "`go test ./...` 전부 통과. TC-002-03-B(불변성)·TC-002-03-C(정정 반영·되돌림 멱등·전환 비트리거)의 백엔드 몫이 단위 테스트로 관측된다."
+            },
+            {
+              "seq": 9,
+              "action": "문서 3건 갱신 — ENG-013 `stage-snapshot-persistence.md` 저장 스키마 절(컬럼명·타입 확정, 3컬럼 근거, `stage_kind` 어휘 분리 근거, 재계산 진입점, 기준값 행 부재 보존 가드, 향후 설정 탭 수정·출산 전환 UI도 같은 지점을 통과할 것, UTC 기준일 한계) · `docs/glossary.md`의 `ChildStage`·`PostnatalAge`·`StageSnapshot` 3행 · ENG-001 `pregnancy-week-calc.md` 코드 위치 절('생후 나이 산출: 미구현' 정정 + 말일 규칙이 기존 두 소급 계산기에 미반영이라는 사실 표기). **`docs/doc-tracker.md`는 건드리지 않는다**(PR #170·#173 동시 편집).",
+              "expectedOutcome": "문서에 적힌 컬럼명·타입이 `0013_*.up.sql`과 문자열 단위로 일치하고, 이제 거짓인 서술이 남지 않는다."
+            },
+            {
+              "seq": 10,
+              "action": "CI 게이트를 로컬에서 1:1 재현한다 — go1.24.7 dist(`backend/go.mod`의 toolchain 고정값)로 `cd backend && go build ./... && go vet ./internal/... && gofmt -l . && make test && go test -count=1 ./...`. 앱은 무변경이라 `App Unit Tests`는 skip 대상임을 확인만 한다.",
+              "expectedOutcome": "전부 통과, `gofmt -l` 무출력. 기존 backend 테스트 수가 줄지 않는다."
+            },
+            {
+              "seq": 11,
+              "action": "네거티브 컨트롤 8건을 하나씩 주입해 **의도한 테스트만** 실패하는지 확인하고 매번 복원 후 baseline green 재확인한다: ①임신 clamp 제거 ②말일 절사 되돌림 ③5주 과거 컷 완화 ④`Create`의 스냅샷 UPDATE 제거 ⑤**기준값 행 부재 가드 제거** ⑥`UpsertCaseA` 재계산 호출 제거 ⑦재계산을 사용자 전체 스코프로 확대 ⑧`ListForUser` SELECT에서 세 컬럼 제거.",
+              "expectedOutcome": "8건 전부 non-zero로 실패했다가 복원 후 green. 제품 코드는 원상 복구돼 최종 diff에 남지 않는다."
+            },
+            {
+              "seq": 12,
+              "action": "`reconcile/docs-impl-rct_20260808-0001-stage-snapshot` 브랜치로(계획 당시 적었던 `reconcile/rct_20260808-0001`은 **PR #173이 이미 점유** — task id가 모델별 발급이라 한 대상 레포 안에서 충돌한다) 커밋·푸시(**gh 사용자 토큰**)하고 `dlddu/dear-baby`에 **draft PR**을 연다. 본문에 task id·gap(A~D 중 A만 닫음)·완료 기준·범위 밖·검증 방법·`:latest` 발행 부수효과 경고·열린 PR(#170/#172/#173)과 파일 교집합 0임을 적는다. `.github/workflows/**`와 `docs/doc-tracker.md`는 diff에 없어야 한다.",
+              "expectedOutcome": "draft PR이 열리고 `CI | pull_request`가 queued 된다. Backend Unit Tests·Integration·E2E 결과를 확인할 수 있는 상태."
+            },
+            {
+              "seq": 13,
+              "action": "**차단 해제를 실측으로 확인한다.** 2차 거부의 결정적 사유는 '계획의 1번 스텝이 멈춰라'였고, 그 관문은 #185(MinIO 조달 경로 복구, `rct_20260807-0003` 소유)의 착지였다. `GET /repos/dlddu/dear-baby/pulls/185`로 상태를 직접 재고, 머지된 경우에만 이 재계획을 진행한다. 미착지면 이 task를 claim조차 하지 않고 다음 fire로 넘긴다(park).",
+              "expectedOutcome": "실측 완료 — #185는 `merged=true`, `merged_at=2026-09-20T10:33:27Z`, 머지 커밋 **`eb988c0`**. 차단 해제 확인. (이 fire는 10:34:03에 떴으므로 착지 36초 뒤다.)"
+            },
+            {
+              "seq": 14,
+              "action": "**리베이스 + force-push를 planner가 직접 수행한다**(2차 판은 실행자에게 미뤘고 그래서 준비물이 한 글자도 안 바뀐 채 왕복했다). `9f8cfc2` 기준의 브랜치를 새 main `eb988c0` 위로 `git rebase origin/main` 하고, lease 기준 `reconcile/docs-impl-rct_20260808-0001-stage-snapshot:53aa24f434bacd1eaea0841907de14b467faadb0`로 **gh 사용자 토큰(dlddu)** 으로 force-push 한다(installation 토큰은 Actions를 발화시키지 않는다).",
+              "expectedOutcome": "실측 완료 — rebase **rc=0 · 충돌 0건**, diff **14파일 +1626/-34로 세 판 내내 불변**. push `53aa24f...d2340fe forced update`. 새 head **`d2340fe53e5afdcfb40d3a3efc11f602bf893b39`**, base `eb988c0`. PR #175는 `mergeable=MERGEABLE`로 **dirty 해소**(정체는 충돌이 아니라 #178의 rename이었다)."
+            },
+            {
+              "seq": 15,
+              "action": "**완료 기준 6번(무회귀) 기준선을 움직인 base에서 다시 잰다**(2차 검토 지시 4번). base가 `2ee25b30`→`eb988c0`로 움직였으므로 옛 숫자를 그대로 쓰면 무회귀 판정이 거짓 초록이 된다. go1.24.7로 main과 리베이스 트리 **양쪽에서** `go test ./... -count=1 -v`(= CI의 `make test`) + `go build ./...` + `go vet ./internal/...`. 함께 완료 기준 1~5번의 테스트 부분집합과 문서-스키마 문자열 일치도 리베이스 트리에서 직접 돌린다.",
+              "expectedOutcome": "실측 완료 — main `eb988c0` **120 pass / 1 skip / 0 fail**, 리베이스 트리 `d2340fe` **136 pass / 1 skip / 0 fail**(양쪽 `build`·`vet` rc=0). 기대값 불변이 확인됐다. 완료 기준 1~4번 부분집합 전부 pass, 5번은 ENG-013 컬럼명 3종이 `0013_*.up.sql`과 문자열 일치 · 용어집 3행 존재. 마이그레이션 번호도 main 최신 `0012`라 충돌 없고, `records/stage.go`는 main에 **여전히 부재**해 gap 존속."
+            },
+            {
+              "seq": 16,
+              "action": "**자매 간섭을 파일 교집합 + 합친 트리 두 겹으로 다시 잰다.** 열린 PR 전수(#184·#183·#181·#180·#172·#170)의 `pulls/<n>/files`를 재조회해 이 PR의 14파일과 `comm -12`. 파일이 안 겹쳐도 게이트 입력은 겹칠 수 있으므로, 새 게이트 `check-journey-mockup-map.mjs`를 들고 오는 **#181**에 대해서는 「main+#181」(A)과 「main+#181+이 PR」(B) 두 트리에서 게이트를 돌려 **출력 바이트 동일성**으로 간섭 0을 증명한다.",
+              "expectedOutcome": "실측 완료 — 교집합 **6건 전부 0**. A/B 게이트 출력 **바이트 동일**(양쪽 위반 106건·rc=1) → 그 빨강은 #181-vs-main 문제(`docs/index.html` 재빌드 debt)이지 이 PR의 간섭이 아니다. `check-mockup-route-map.mjs`는 합친 트리에서도 rc=0·위반 0건."
+            },
+            {
+              "seq": 17,
+              "action": "**새 head의 런이 전량 초록이 될 때까지 기다린 뒤에만 `planned`로 올린다**(2차 검토 지시 3번: 로컬 rc=0은 예고일 뿐 근거가 아니다). `CI` 런의 6잡(`Detect Changes`·`Backend Unit Tests`·`App Unit Tests`(skipped 정상)·`Integration Tests`·`E2E (iOS)`·`E2E (Android)`)과 집계 `CI Success`, 그리고 별도 워크플로 `Mockup ↔ Route Map` 런까지 확인한다. 초록이면 draft를 해제해 `mergeStateStatus`의 `BLOCKED`가 CI가 아니라 draft 때문이 아님을 없애고, 실행자에게 넘긴다.",
+              "expectedOutcome": "새 head `d2340fe`의 런 2건이 전량 성공. 이 초록만이 머지 근거이며 옛 런 `31250454163`(base `9f8cfc2`)은 폐기. 지침에서 §0-A(차단 대기 관문)가 사라져 실행자가 '조건을 보고 멈출' 지점이 없다."
+            }
+          ],
+          "plannedAt": "2026-09-20T10:50:00Z"
+        }
       }
     ]
   },
