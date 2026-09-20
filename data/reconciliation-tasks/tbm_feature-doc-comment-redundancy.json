@@ -3043,6 +3043,67 @@
       "reason": "**작업이 필요하다 — 무인 정리 가능한 자유 풀 185줄 / 12파일이 판정조차 닿은 적이 없고, 지금 경합이 0이다.**\n\n근거 넷:\n\n1. **차이는 실재하고 독립 재계수로 확인됐다.** 판정 범위 안 미판정 주석 **368줄 / 24파일**\n   (전역 2,397줄의 15.4%). 원장 주장을 옮긴 것이 아니라 지문 파일 목록에서 판정 파일 집합을\n   뺀 값이며 원장과 전건 일치한다(368 == 2,397 − 2,029; 분류 차인 `crypto.rs` 13줄까지 설명됨).\n   definition 의 정합 조건은 「범위 안에 복원 가능한 주석이 없음」이므로 미판정 잔여는 곧 미확인\n   gap 이다.\n\n2. **자동 해소 경로가 없다.** 주석은 스스로 사라지지 않고, 열린 PR 3건(#91·#92·#93)은 자유 풀\n   12파일과 **파일 겹침이 0** 이다(각 PR `/pulls/<n>/files` 전수 대조). 유예할 이유가 없다.\n   (스키마에 `assessment.recheckAfter` 가 없어 파킹 자체가 불가한 것과도 방향이 같다.)\n\n3. **지금이 싸다.** 자유 풀 전량이 비경합이라 슬라이스를 떼도 충돌하지 않는다. 반대로 미루면\n   비싸진다 — #92·#93 이 머지되면 `backend/src`·`e2e` 에 주석이 더해져 자유 풀이 커지고, #92 의\n   새 마이그레이션 `0009_feature_doc_edits.sql` 은 사람 게이트 풀을 키운다.\n\n4. **트리거는 잔여를 줄였을 뿐 닫지 않았다.** `#95`(직전 reconcile `rct_20260920-0006` 의 착지)는\n   자격증명·LLM 키 경계 8파일에서 순 제거 104줄을 냈고 전역 델타와 정확히 일치하지만, 자유 풀은\n   185줄 그대로다. 원장 자신이 「디렉터리 단위 종료를 선언하지 않는다」고 적는다.\n\n**planner 에게 넘기는 슬라이스 후보**(원장이 지목한 순서 + 내 실측):\n- **① `tools/check-data-format-change.py` 58줄** — 단일 파일 최대. `#64` 가 들여놓았고 아직\n  아무도 판정하지 않았다. 단일 파일이라 슬라이스 경계가 가장 깨끗하다.\n- **② 테스트 하네스 축 3파일 58줄** — `backend/tests/worker.rs` 35 · `common/mod.rs` 16 ·\n  `analyses.rs` 7. ⚠️ **`backend/tests/migrations.rs` 13 을 이 축에 섞지 말 것** — D2 다섯 중\n  하나라 섞으면 필수 체크 `review/data-format` 이 붙지 않아 축 전체가 `mergeable_state=blocked`\n  에 막힌다(13차 패스가 `crypto.rs` 로 겪은 벽).\n- 그 다음: `sc02-02` 23 · `deploy/k8s/kustomization.yaml` 15 · `util.rs` 12 · `scripts/e2e.sh` 7 ·\n  `error.rs` 5 · `main.rs` 5 · `state.rs` 1 · `deploy/k8s/pvc.yaml` 1.\n\n**범위에서 빼야 할 것(사람 게이트 — 이 task 의 슬라이스에 넣지 말 것)**: 마이그레이션 8파일\n139줄(definition 「적용된 마이그레이션」 절의 전용 PR · 수동 repair · 사람 승인 절차를 따르는\n별도 패스)과 D2 저장 계층 4파일 44줄(`db.rs` 17 · `crypto.rs` 13 — 13차 패스가 판정은 마쳐 뒀다\n(제거 6 · 유지 7) · `tests/migrations.rs` 13 · `models.rs` 1). 둘 다 무시 가능한 차이가 아니라\n**사람 손이 있어야 닫히는 몫**이므로, 남겨 두되 셋 이상 모아 한 번의 사람 리뷰로 끝내는 편이 싸다.\n\n**완료 기준은 절대 지문이 아니라 「부모 대비 순 제거 N행」으로 잡을 것** — 열린 PR 3건이 언제든\n머지돼 전역 지문의 절대값을 움직인다(원장 13행이 같은 이유로 그렇게 적는다).",
       "assessedBy": "agent",
       "assessedAt": "2026-09-20T15:32:30Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "판정이 한 번도 닿지 않은 주석 368행/24파일 중 **테스트 하네스 축 5파일 88행**을 슬라이스로 떼어 복원 가능한 주석을 제거한다(`backend/tests/worker.rs` 35 · `e2e/tests/sc02-02-acceptance-from-tests.spec.ts` 23 · `backend/tests/common/mod.rs` 16 · `backend/tests/analyses.rs` 7 · `scripts/e2e.sh` 7). 이 축을 고른 것은 다섯 모두 판정기 `tools/check-data-format-change.py` 의 어떤 규칙에도 걸리지 않아 **무인 머지 경로가 있고**, 열린 PR 3건(#91·#92·#93)과 파일 겹침이 0이기 때문이다.\n\n**원장이 지목한 후보 ①은 쓰지 않았다.** `tools/check-data-format-change.py`(58행)는 판정기 자신의 **D6** 규칙에, `deploy/k8s/pvc.yaml`(1행)은 **D5 `is_pvc()`** 에 **경로로** 걸린다 — D3 와 달리 「주석 아닌 줄」 예외가 없어 주석 한 줄만 고쳐도 필수 체크 `review/data-format` 이 붙지 않고 `mergeable_state=blocked` 가 풀리지 않는다(음성 대조로 실측). 그래서 무인 자유 풀은 원장이 적은 12파일 185행이 아니라 **10파일 126행**이었고, 이 정정을 원장에 등재한다.\n\n**완료 기준(이 시도의 범위)**: PR #96 이 머지돼 main 에서 ⑴ 이 5파일의 범위 지문이 `8b8764df…`(20행/4파일) ⑵ 부모 대비 **순 제거 68행** ⑶ 게이트 4종 + `cargo test --tests` 159 passed 가 성립하는 것. **절대 전역 지문은 기준이 아니다** — 열린 PR 3건이 먼저 머지되면 절대값이 움직인다.\n\n**범위 밖(후속 재감지의 몫)**: 잔여 19파일 280행 — 사람 게이트 14파일 242행(마이그레이션 8/139 · D2 4/44 · D6·D5 2/59)과 무인 자유 풀 5파일 38행(`kustomization.yaml` 15 · `util.rs` 12 · `main.rs` 5 · `error.rs` 5 · `state.rs` 1).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "감지 브리프의 모집단을 독립 재측정한다 — as-is versionScript 재실행, 지문 파일 목록에서 원장 판정 파일 집합을 빼 잔여를 집합 차로 계산.",
+              "expectedOutcome": "전역 `lines=2397 files=110` / `8ef1c694…` 재현. 잔여 368행/24파일, 자유 풀 185행/12파일이 브리프·원장과 전건 일치(내 파서 355/23 과의 차이는 원장이 D2 잔여로 분류한 `crypto.rs` 13행 하나로 설명됨)."
+            },
+            {
+              "seq": 2,
+              "action": "후보 축을 집기 전에 판정기 `tools/check-data-format-change.py` 의 규칙을 읽고, 자유 풀 각 파일이 경로 규칙(D1·D2·D5-pvc·D6)에 걸리는지 확인한다.",
+              "expectedOutcome": "원장의 후보 ① `tools/check-data-format-change.py` 가 D6 `SELF_PATHS` 에, `deploy/k8s/pvc.yaml` 이 D5 `is_pvc()` 에 걸리는 것을 발견 — 둘 다 무인 슬라이스 불가로 재분류."
+            },
+            {
+              "seq": 3,
+              "action": "음성 대조로 그 발견을 실측한다 — 부모 `7415771` 에서 두 파일 각각 주석 줄만 지운 probe 커밋을 만들어 판정기를 돌린다.",
+              "expectedOutcome": "둘 다 `⚠️ 사람 리뷰 필요 (status 미부여)` — D6 1건 / D5 1건. 같은 트리에서 이 패스의 5파일은 `✅ 변경 없음`."
+            },
+            {
+              "seq": 4,
+              "action": "열린 PR 전수(`/pulls?state=open`)의 `/pulls/<n>/files` 를 슬라이스 5파일과 대조한다.",
+              "expectedOutcome": "#91·#92·#93 모두 겹침 0."
+            },
+            {
+              "seq": 5,
+              "action": "5파일의 주석을 README 의 복원 경로 넷으로 판정하고 주석 행만 편집한다. 기계 판독 주석(`// 검증 시나리오:`)과 복원 불가능한 지식(stub↔real 충실도 · 동시성 계약 · 실패 모드 함정)은 유지·압축한다.",
+              "expectedOutcome": "88행 → 20행(순 제거 68행). 범위 지문 `ce6ef17f…` → `8b8764df…`. `analyses.rs` 는 0행이 되어 지문 파일 집합에서 빠진다."
+            },
+            {
+              "seq": 6,
+              "action": "주석을 걷어낸 소스가 부모와 동일한지 확인한다(블록 주석까지 제거한 뒤 해시 대조 — 「비주석 diff 0행」은 머리 주석에 딸려 지워진 선언을 못 잡는다).",
+              "expectedOutcome": "5/5 동일."
+            },
+            {
+              "seq": 7,
+              "action": "로컬 검증 — `cargo test --tests`, 문서 게이트 4종, 판정기.",
+              "expectedOutcome": "159 passed(3회 연속) · 게이트 4종 rc=0(프로토타입 단언 408건) · 판정기 `✅ 변경 없음`. 무관한 기존 flake `llm::tests::stub_is_deterministic_for_the_same_ask` 는 부모 3/12 · 브랜치 2/12 로 동률임을 확인."
+            },
+            {
+              "seq": 8,
+              "action": "대상 레포에 브랜치를 push 하고 PR 을 연다(코드 커밋).",
+              "expectedOutcome": "PR #96 생성."
+            },
+            {
+              "seq": 9,
+              "action": "판정 상세 `passes/2026-09-20-test-harness-axis.md` 작성 · 원장 14행 등재 · 합계/잔여 절을 **옛 판을 지우고** 재작성 · `docs/index.html` 에 링크 +1 및 Documents 39 → 40.",
+              "expectedOutcome": "원장 표 14행, 제목 수 불변(중복 절 없음). R9 통과."
+            },
+            {
+              "seq": 10,
+              "action": "CI 가 settled 될 때까지 기다려 필수 체크 둘을 확인한다.",
+              "expectedOutcome": "`ci-gate` success · `review/data-format` success · `mergeable_state=clean`."
+            }
+          ],
+          "plannedAt": "2026-09-20T16:05:00Z"
+        }
+      }
+    ]
   }
 ]
