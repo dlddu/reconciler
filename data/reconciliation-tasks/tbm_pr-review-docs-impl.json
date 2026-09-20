@@ -163,7 +163,7 @@
   {
     "id": "rct_20260807-0001",
     "toBeModelId": "tbm_pr-review-docs-impl",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "detectedAt": "2026-08-07T01:36:32Z",
       "changedSides": [
@@ -187,7 +187,7 @@
       "assessedAt": "2026-08-07T01:36:32Z"
     },
     "createdAt": "2026-08-07T01:36:32Z",
-    "updatedAt": "2026-09-20T08:20:00Z",
+    "updatedAt": "2026-09-20T08:14:51Z",
     "attempts": [
       {
         "plan": {
@@ -247,9 +247,11 @@
           "notes": "PRD-2 컨텍스트 수집 슬라이스를 DRAFT PR #3로 스테이징. 4파일: backend/src/context/index.ts(AC2-1~2-6 구현), backend/src/context/context.test.ts(it.todo 6 -> 실제 6 spec, docs/tests/context.md 7 시나리오 전부), backend/src/adapters/github/index.ts(RawPullRequest에 read-only optional headRef·contextSignals 추가 — mutating 메서드 0개, AC6-5 경계 보존), packages/shared/src/context.ts(IssueLink에 optional dueDate — AC2-5 마감일 출처). **blind 저작이 아니다**: 아키텍처 매칭 standalone Node 22(aarch64, nodejs.org tar.gz — 이 박스에 xz가 없어 tar.xz는 못 푼다) + npm으로 pnpm 10.33.0을 받아 CI와 동일한 4게이트를 로컬 재현했고 전부 green(backend 7 passed/29 todo -> 13 passed/23 todo). 변경 파일 prettier --check clean(레포 전역 format:check는 baseline부터 33파일 warn — 무관하며 CI 게이트도 아님). 저작 중 로컬에서 잡은 실패 1건: 이슈 멘션 정규식이 대소문자 구분이라 'Closes ENG-42'를 놓쳤고, 로컬 테스트가 잡아 CI 왕복 없이 수정. push는 gh 사전인증(user token dlddu)으로 해서 workflow가 실제로 트리거됐다 — CI 'verify' job green 확인(run 31151380891, 19s), PR mergeable=MERGEABLE, draft 상태. tokens.css diff 없음."
         },
         "review": {
-          "required": true,
-          "status": "pending",
-          "reason": "riskLevel은 low이고 롤백도 단순(revert)하지만, planner가 실행 지침 4-1에 '정의만으로 판단이 갈리는' 설계 판단 1건을 명시적으로 검토에 올렸다: ContextModule 시그니처를 스캐폴드의 (ref: PullRequestRef)에서 (pr: RawPullRequest)로 좁힌 결정. 이는 docs/(SSOT)가 규정한 계약이 아니라 부트스트랩 스캐폴드가 둔 인터페이스를 구현 편의에 맞춰 바꾼 것이라, 단순 재동기화가 아니라 사람의 동의가 필요한 설계 선택이다. 병합은 main HEAD를 바꿔 as-is 트리 해시를 움직이므로 재감지 트리거이기도 하다. 기계적 확인(AC6-5 mutating 메서드 0개, tokens.css 무변경, CI verify green)은 executor가 선행 완료했다."
+          "required": false,
+          "status": "approved",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-20T08:14:51Z",
+          "reason": "**신선도 — 6주 묵은 준비물이지만 유효하다(실측).** PR #3 open·`mergeable=true`·`mergeable_state=clean`. base 가 `49d3531`→`5dca441` 로 1커밋 움직였으나 그 커밋(#4)이 만진 것은 `docs/.nojekyll`·`docs/index.html`·`docs/reader.html` 뿐이고, `pnpm-workspace.yaml` 의 워크스페이스는 `backend`·`frontend`·`packages/*` 라 **CI 잡이 읽는 입력 집합 밖**이다(lockfile 무변경). merge ref `a1c4d25`(부모 = 현재 main tip `5dca441` + head `6f924e89`)와 시험된 head 트리의 diff 는 그 docs 3파일뿐 — `git diff pr3 pr3merge -- . ':(exclude)docs'` 공집합. 그래서 계획 시점 CI(run `31151380891`, `verify` success)는 여전히 이 머지 트리를 덮는다.\n\n**스스로 재현했다 — 낡은 초록에 기대지 않았다.** 호스트 toolchain(node v22.14.0 + pnpm 10.33.0)으로 **merge ref `a1c4d25` 자체**를 체크아웃해 CI 4게이트를 그대로 돌렸고 전부 rc=0: lint·typecheck·build green, test = backend **13 passed / 23 todo**(계획 기대값과 일치, 이전 7/29) · frontend 5 passed. `context (PRD-2)` 스위트 6 spec 전건 pass(AC2-1~AC2-6), **AC6-5 회귀 seam 3 assertion green**.\n\n**보존 불변식 2건 실측 유지.** `GithubAdapter` 메서드는 `fetchPullRequest`/`fetchDiff` **2개 그대로**이고 `grep -rnE '\\b(merge|approve|push|createReview|submitReview|comment)\\b' backend/src/adapters/` **무히트** — 추가분은 read-only optional 데이터 필드(`headRef`·`contextSignals`)뿐이라 AC6-5 경계가 산다. `frontend/src/styles/tokens.css` diff 없음.\n\n**정합성·범위.** main 의 `contextModule` 은 아직 `notImplemented` 를 throw 하므로 gap 은 열려 있고, 이 PR 이 PRD-2 6개 AC 를 닫는다. 변경은 정확히 4파일(`backend/src/context/{index,context.test}.ts`·`backend/src/adapters/github/index.ts`·`packages/shared/src/context.ts`)로 계획 집합과 일치하고 무관한 변경 0건. `packages/shared` 변경은 optional `IssueLink.dueDate` 1필드 추가라 하위호환이다. 열린 자매 PR #5 는 `docs/`+`README.md` 만 만져 파일 겹침 0.\n\n**레거시 review 가 사람 동의를 요청한 설계 판단 1건을 여기서 해소한다.** `ContextModule` 시그니처를 `(ref: PullRequestRef)` → `(pr: RawPullRequest)` 로 좁힌 결정인데, `docs/` 전체에 `ContextModule`·`PullRequestRef`·`RawPullRequest` 가 **0히트**다 — 즉 그 시그니처는 이 모델이 재는 SSOT 계약이 아니라 부트스트랩 스캐폴드의 임의 산물이라 문서↔구현 괴리를 만들지 않는다. 게다가 main 에 이미 착지한 PRD-1(`#2`)이 `classifyWorkType(pr: RawPullRequest)`·`extract(pr: RawPullRequest)` 로 같은 선례를 세웠고, ref 로 충분한 `identifyRepository(ref: PullRequestRef)` 는 그대로 둔 혼합 패턴까지 승계한다. 범위 안의 판단으로 본다.\n\n**위험·불가역성.** riskLevel low 에 값한다 — 순수 추가 코드이고 제품·데이터·클러스터 부작용 0, 불가역 지점은 머지 하나뿐이다. 레포 착지 이력(#1·#2·#4)이 전부 **부모 1개** = squash 관례이므로 지침의 `gh pr merge --squash` 와 롤백 `git revert <merge-commit>`(`-m 1` 없음)이 서로 맞는다. 검증 기준도 AC별로 명시돼 있다. 승인."
         }
       }
     ]
