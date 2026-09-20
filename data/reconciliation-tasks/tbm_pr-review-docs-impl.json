@@ -252,6 +252,69 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-20T08:14:51Z",
           "reason": "**신선도 — 6주 묵은 준비물이지만 유효하다(실측).** PR #3 open·`mergeable=true`·`mergeable_state=clean`. base 가 `49d3531`→`5dca441` 로 1커밋 움직였으나 그 커밋(#4)이 만진 것은 `docs/.nojekyll`·`docs/index.html`·`docs/reader.html` 뿐이고, `pnpm-workspace.yaml` 의 워크스페이스는 `backend`·`frontend`·`packages/*` 라 **CI 잡이 읽는 입력 집합 밖**이다(lockfile 무변경). merge ref `a1c4d25`(부모 = 현재 main tip `5dca441` + head `6f924e89`)와 시험된 head 트리의 diff 는 그 docs 3파일뿐 — `git diff pr3 pr3merge -- . ':(exclude)docs'` 공집합. 그래서 계획 시점 CI(run `31151380891`, `verify` success)는 여전히 이 머지 트리를 덮는다.\n\n**스스로 재현했다 — 낡은 초록에 기대지 않았다.** 호스트 toolchain(node v22.14.0 + pnpm 10.33.0)으로 **merge ref `a1c4d25` 자체**를 체크아웃해 CI 4게이트를 그대로 돌렸고 전부 rc=0: lint·typecheck·build green, test = backend **13 passed / 23 todo**(계획 기대값과 일치, 이전 7/29) · frontend 5 passed. `context (PRD-2)` 스위트 6 spec 전건 pass(AC2-1~AC2-6), **AC6-5 회귀 seam 3 assertion green**.\n\n**보존 불변식 2건 실측 유지.** `GithubAdapter` 메서드는 `fetchPullRequest`/`fetchDiff` **2개 그대로**이고 `grep -rnE '\\b(merge|approve|push|createReview|submitReview|comment)\\b' backend/src/adapters/` **무히트** — 추가분은 read-only optional 데이터 필드(`headRef`·`contextSignals`)뿐이라 AC6-5 경계가 산다. `frontend/src/styles/tokens.css` diff 없음.\n\n**정합성·범위.** main 의 `contextModule` 은 아직 `notImplemented` 를 throw 하므로 gap 은 열려 있고, 이 PR 이 PRD-2 6개 AC 를 닫는다. 변경은 정확히 4파일(`backend/src/context/{index,context.test}.ts`·`backend/src/adapters/github/index.ts`·`packages/shared/src/context.ts`)로 계획 집합과 일치하고 무관한 변경 0건. `packages/shared` 변경은 optional `IssueLink.dueDate` 1필드 추가라 하위호환이다. 열린 자매 PR #5 는 `docs/`+`README.md` 만 만져 파일 겹침 0.\n\n**레거시 review 가 사람 동의를 요청한 설계 판단 1건을 여기서 해소한다.** `ContextModule` 시그니처를 `(ref: PullRequestRef)` → `(pr: RawPullRequest)` 로 좁힌 결정인데, `docs/` 전체에 `ContextModule`·`PullRequestRef`·`RawPullRequest` 가 **0히트**다 — 즉 그 시그니처는 이 모델이 재는 SSOT 계약이 아니라 부트스트랩 스캐폴드의 임의 산물이라 문서↔구현 괴리를 만들지 않는다. 게다가 main 에 이미 착지한 PRD-1(`#2`)이 `classifyWorkType(pr: RawPullRequest)`·`extract(pr: RawPullRequest)` 로 같은 선례를 세웠고, ref 로 충분한 `identifyRepository(ref: PullRequestRef)` 는 그대로 둔 혼합 패턴까지 승계한다. 범위 안의 판단으로 본다.\n\n**위험·불가역성.** riskLevel low 에 값한다 — 순수 추가 코드이고 제품·데이터·클러스터 부작용 0, 불가역 지점은 머지 하나뿐이다. 레포 착지 이력(#1·#2·#4)이 전부 **부모 1개** = squash 관례이므로 지침의 `gh pr merge --squash` 와 롤백 `git revert <merge-commit>`(`-m 1` 없음)이 서로 맞는다. 검증 기준도 AC별로 명시돼 있다. 승인."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-20T08:16:51Z",
+          "finishedAt": "2026-09-20T08:18:53Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T08:17:20Z",
+              "finishedAt": "2026-09-20T08:18:10Z",
+              "log": "계획 단계(3-2)에서 PR #3에 저작된 변경. 이번 실행에서 머지 트리(refs/pull/3/merge = a1c4d25, 부모 = 현재 main tip 5dca441 + head 6f924e89)를 체크아웃해 재확인: packages/shared/src/context.ts +6-0, IssueLink에 optional dueDate 추가뿐. pnpm -r typecheck rc=0, pnpm -r build rc=0."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T08:17:20Z",
+              "finishedAt": "2026-09-20T08:18:10Z",
+              "log": "머지 트리 실측: backend/src/adapters/github/index.ts +26-1. GithubAdapter 인터페이스 메서드는 fetchPullRequest(ref)/fetchDiff(ref) 2개 그대로(grep -nE 로 인터페이스 본문 확인), 추가분은 read-only optional 데이터 필드뿐. AC6-5 경계 가드 grep -rnE '\\b(merge|approve|push|createReview|submitReview|comment)\\b' backend/src/adapters/ → 무히트(rc=1)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T08:17:20Z",
+              "finishedAt": "2026-09-20T08:18:10Z",
+              "log": "backend/src/context/index.ts +206-14. 머지 트리에서 pnpm -r typecheck·build rc=0, context 스위트 6 spec 전건 pass → contextModule 6개 메서드가 더 이상 notImplemented 를 throw 하지 않음을 실행으로 확인."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T08:17:20Z",
+              "finishedAt": "2026-09-20T08:18:10Z",
+              "log": "backend/src/context/context.test.ts +167-8. vitest --reporter=verbose 로 6 spec 이름 전건 확인(AC2-1~AC2-6). backend 합계 13 passed / 23 todo (36) — 계획 기대값(이전 7 passed/29 todo)과 일치."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T08:17:05Z",
+              "finishedAt": "2026-09-20T08:18:10Z",
+              "log": "CI 4게이트를 머지 트리 a1c4d25 에서 로컬 재현(node v22.14.0 = .nvmrc 의 22, pnpm 10.33.0 = CI 와 동일). pnpm install --frozen-lockfile rc=0, 이어서 lint rc=0 / typecheck rc=0 / test rc=0 / build rc=0. test: backend 13 passed·23 todo, frontend 5 passed."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-08-07T05:41:00Z",
+              "finishedAt": "2026-08-07T05:41:00Z",
+              "log": "계획 단계에서 완료됨(preparation): 브랜치 reconcile/rct_20260807-0001, draft PR https://github.com/dlddu/pr-review/pull/3. 이번 실행 시작 시점에 state=open·draft=true·mergeable=true·mergeable_state=clean·changed_files=4 로 전제 유효 확인."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T08:18:10Z",
+              "finishedAt": "2026-09-20T08:18:22Z",
+              "log": "CI green 확인 후 병합. 근거 2겹: (a) head 6f924e89 의 CI 런 31151380891 conclusion=success, 그 런이 검증한 merge ref 의 1번 부모가 **현재 main tip 5dca441** 이라 낡지 않음; (b) 같은 머지 트리에서 4게이트를 직접 재현해 전부 rc=0. 병합 직전 재조회 draft=false·mergeable=true·mergeable_state=clean. 레포 설정 allow_squash_merge=true / allow_merge_commit=false / allow_rebase_merge=false → 지침대로 squash. PUT /pulls/3/merge merge_method=squash → merged=true, sha=5411a54b2a620f591b6a1952f398e451f8999c53(부모 1개). 병합 후 main push 런 35499195581 conclusion=success."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T08:18:25Z",
+              "finishedAt": "2026-09-20T08:18:53Z",
+              "log": "병합된 main(5411a54b)에서 계획 범위 기준 수렴 검증 수행 — 상세는 verification.checks. 착지 트리는 시험한 머지 트리와 바이트 동일(git diff a1c4d25..5411a54b 공집합)."
+            }
+          ]
         }
       }
     ]
