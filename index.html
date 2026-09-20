@@ -739,18 +739,28 @@
   // "조치 필요"의 정의는 pill 과 목록 필터가 함께 쓴다 — 토글로 걸러낸 목록이 pill 이 붙은
   // task 집합과 정확히 같아야 "조치 필요만"이라는 라벨이 거짓말이 되지 않기 때문이다.
   // 그래서 판정을 여기 한 번만 적고 양쪽이 이 함수를 부른다.
+  //
+  // 아직 판단이 없는(assessment 가 없거나 actionRequired 가 안 채워진) task 도 종료 상태가
+  // 아니면 조치 필요로 본다. "판정 없음"은 "조치가 필요 없다"가 아니라 아직 아무도 결론을
+  // 내지 않았다는 뜻이고, 그런 건을 빼면 판단 단계에서 멈춰 선 task 가 조치 필요만 보기에서
+  // 통째로 사라진다 — 가장 손이 필요한 건이 가장 안 보이게 된다. 판정이 서면 actionRequired
+  // 가 그대로 이어받으므로 이 취급은 판정 전까지의 잠정값이다.
   function taskNeedsAction(t) {
-    if (!t || !t.assessment || typeof t.assessment.actionRequired !== "boolean") return false;
+    if (!t) return false;
     if (DONE_STATUSES.indexOf(t.status) !== -1) return false;
+    if (!t.assessment || typeof t.assessment.actionRequired !== "boolean") return true;
     return t.assessment.actionRequired;
   }
 
   function actionPillHtml(t) {
-    if (!t.assessment || typeof t.assessment.actionRequired !== "boolean") return "";
     if (DONE_STATUSES.indexOf(t.status) !== -1) return "";
-    return taskNeedsAction(t)
-      ? '<span class="pill yes">조치 필요</span>'
-      : '<span class="pill no">조치 불필요</span>';
+    if (!taskNeedsAction(t)) return '<span class="pill no">조치 불필요</span>';
+    // 판정 전 건에는 근거를 툴팁으로 달아 둔다 — 같은 pill 이라도 기록된 판정이 아니라
+    // 판정이 아직 없어서 붙은 것임을 상세를 열지 않고도 알 수 있게.
+    var pending = !t.assessment || typeof t.assessment.actionRequired !== "boolean";
+    return '<span class="pill yes"' +
+      (pending ? ' title="아직 판단 전 — 판정이 나올 때까지 조치 필요로 둡니다"' : "") +
+      ">조치 필요</span>";
   }
 
   function fmtTask(t) {

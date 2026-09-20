@@ -69,11 +69,23 @@ test("조치 필요 means exactly what the pill means", () => {
   }
 });
 
-test("terminal and unassessed tasks never count as 조치 필요", () => {
-  for (const status of DONE) assert.equal(taskNeedsAction(task("x", status, true)), false);
-  assert.equal(taskNeedsAction(task("x", "assessing", undefined)), false);
-  assert.equal(taskNeedsAction(task("x", "planning", false)), false);
+test("terminal tasks never count as 조치 필요, whatever they were judged", () => {
+  for (const status of DONE) {
+    for (const actionRequired of [true, false, undefined]) {
+      assert.equal(taskNeedsAction(task("x", status, actionRequired)), false);
+    }
+  }
   assert.equal(taskNeedsAction(null), false);
+});
+
+test("an open task with no judgement yet counts as 조치 필요", () => {
+  // nobody has decided about it, so it stays in the filtered view rather than
+  // dropping out as if it were settled
+  for (const status of SCHEMA_STATUSES.filter((s) => !DONE.includes(s))) {
+    assert.equal(taskNeedsAction(task("x", status, undefined)), true, `${status} is unresolved`);
+    assert.equal(taskNeedsAction({ id: "x", status, assessment: { reason: "r" } }), true);
+  }
+  assert.equal(taskNeedsAction(task("x", "planning", false)), false);
 });
 
 const TASKS = [
@@ -81,19 +93,19 @@ const TASKS = [
   task("rework", "failed", true),            // 재작업 진입점 — 종료가 아니므로 조치 필요
   task("done", "succeeded", true),           // 끝난 건
   task("clear", "planning", false),          // 조치 불필요 판정
-  task("fresh", "assessing", undefined)      // 아직 판단 전
+  task("fresh", "assessing", undefined)      // 아직 판단 전 — 판정이 날 때까지 조치 필요
 ];
 
 test("off shows every task, on shows only the ones needing action", () => {
   assert.deepEqual(drawnIds(render(TASKS, false)), ["open", "rework", "done", "clear", "fresh"]);
-  assert.deepEqual(drawnIds(render(TASKS, true)), ["open", "rework"]);
+  assert.deepEqual(drawnIds(render(TASKS, true)), ["open", "rework", "fresh"]);
 });
 
 test("the toggle reports the count and its pressed state", () => {
   const off = render(TASKS, false);
   assert.match(off, /id="taskfilter"/);
   assert.match(off, /aria-pressed="false"/);
-  assert.match(off, /조치 필요만 <span class="n">2<\/span>/);
+  assert.match(off, /조치 필요만 <span class="n">3<\/span>/);
   assert.match(render(TASKS, true), /aria-pressed="true"/);
 });
 

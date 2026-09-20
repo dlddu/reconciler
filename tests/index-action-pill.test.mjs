@@ -58,10 +58,19 @@ test("rework entry points keep the pill", () => {
   }
 });
 
-test("an unassessed task shows nothing rather than 조치 불필요", () => {
-  for (const status of ["assessing", "cancelled"]) {
-    assert.equal(pill(status, undefined), "");
-  }
+test("an unassessed task reads 조치 필요 while it is still open", () => {
+  // no judgement yet is not a verdict of 조치 불필요 — it is a task nobody has resolved,
+  // so it keeps the pill (with a tooltip saying why) until the assessment lands
+  const open = pill("assessing", undefined);
+  assert.match(open, /조치 필요</);
+  assert.match(open, /title="아직 판단 전/);
+  assert.doesNotMatch(open, /조치 불필요/);
+  // terminal wins over it: a task cancelled before assessment carries no pill at all
+  assert.equal(pill("cancelled", undefined), "");
+});
+
+test("a judged 조치 필요 carries no 판단 전 tooltip", () => {
+  assert.doesNotMatch(pill("action_required", true), /title=/);
 });
 
 test("every schema status shows a pill exactly when it is not terminal", () => {
