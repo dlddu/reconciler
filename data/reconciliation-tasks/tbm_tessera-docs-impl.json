@@ -1317,7 +1317,7 @@
   },
   {
     "toBeModelId": "tbm_tessera-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-13T06:35:00Z",
       "changedSides": [
@@ -1645,6 +1645,64 @@
               "log": "**§2-1 신선도 재확인(실측)** — `gh pr view 48`: state=OPEN · isDraft=false · mergeable=MERGEABLE · mergeStateStatus=CLEAN · head `64d0d66484cd0ee16464525be9fac1b06ccb5325`(계획값 불변) · base `3127cc31e82b49cb9ec36220f6d071a48ce996a1`. `repos/dlddu/tessera/commits/main` = `3127cc31…` → **base == main tip, 즉 base 가 움직이지 않았다**. 계획 §2-2(머지 트리 게이트 재실행)의 발동 조건 미성립이나, 아래 트래커 정정 때문에 어차피 로컬 게이트를 전부 돌렸다. head `64d0d664` 의 CI 런 `35504128843`(`CI & Release`/`pull_request`) conclusion=success, 잡 실측 `typecheck · lint · test · build`=success · `detect release-worthy changes`=success · `gate`=skipped · `build · sign · notarize · publish (arm64)`=skipped.\n\n**검토가 지시한 정정 1건 적용** — 승인 사유의 '남은 흠'대로, 트래커가 링크 검사 규모를 `206건` 으로 적은 2곳(`docs/tessera-doc-tracker.md` 헤더 4행 · 변동 이력 194행)을 **머지 트리 실측값으로** 고쳤다. 로컬 실행(node 22 = `.nvmrc`, `npm ci --ignore-scripts` rc=0): `node scripts/check-docs-links.mjs` → `docs 링크 208건 검사 — 깨진 참조 0건`, rc=0. 레포 전수 `grep -o '206건' | wc -l` = 2 (둘 다 트래커) → 둘 다 `208건` 으로 치환, 치환 후 `208건` 2건. 계획 §2-2 가 명시적으로 허용한 경로다(\"criterion ④ 는 '집계가 실제와 일치'이지 '343'이 아니다\"). 커밋 `fbe0fc9d05eb370855aade1e93c459d257657fac` — `docs/tessera-doc-tracker.md` 1파일 / +2 -2, docs 전용이라 범위 확대 아님.\n\n**정정 커밋 후 로컬 게이트 전수(base `3127cc31`, node 22)**: `npm run typecheck` rc=0 · `npm run lint` rc=0 · `npm test` rc=0 → **Test Files 25 passed (25) / Tests 343 passed (343)** · `npm run build` rc=0 · `node scripts/check-docs-links.mjs` rc=0(208건/깨짐 0) · `git diff --name-only origin/main -- src test | wc -l` = **0**.\n\n**새 head 의 CI 를 실측으로 재확인** — push 후 head `fbe0fc9d…` 의 런 `35504878717`(`CI & Release`/`pull_request`) conclusion=**success**. 잡: `typecheck · lint · test · build`=success · `detect release-worthy changes`=success · `gate`=**skipped** · `build · sign · notarize · publish (arm64)`=**skipped**. 그 잡 로그 마지막 줄 실측 `Release-worthy change: false`(변경 17파일 전부 `docs/`·`scripts/`) → 서명·공증 빌드가 사용자 auto-updater 로 나가지 않는다. 재조회한 PR: mergeable=MERGEABLE · mergeStateStatus=CLEAN · base 여전히 `3127cc31…` = main tip.\n\n**머지** — `gh api repos/dlddu/tessera` 로 머지 방식 실측(`allow_merge_commit=false` · `allow_rebase_merge=false` · `allow_squash_merge=true`) 후 `gh pr merge 48 --squash --delete-branch` rc=0. 착지: main tip `dcea8c2bf4403aefbb8e839b211cc94af40352da` (`docs: 폴더 체계 정비 + 플랫폼 인프라 표면 등재 (criterion ③·④) (#48)`, **부모 1개** = squash 확인).\n\n**계획 §4 준수** — 자매 PR #47(bot 소유·정합성 task 미소유)·#44(`rct_20260815-0001` 소유)는 건드리지 않았다.\n**계획 §3 준수** — 여정 문서 5건(`docs/tessera-journey-*.md` 4 + `docs/tessera-user-journeys.md`)은 root 에 그대로 두었다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "src:f1e2601aedff2145a1156be444018272a8a71b6a test:3be61331125d1ac394b52f1e645e61ceba99b19e",
+          "checks": [
+            {
+              "name": "완료기준 1 — `docs/` 가 종류당 디렉터리 하나로 배치",
+              "status": "passed",
+              "detail": "머지된 main `dcea8c2bf4403aefbb8e839b211cc94af40352da` 에서 `git ls-tree -r --name-only origin/main -- docs/values docs/prd docs/tests docs/platform` = **10파일** (values 1 `tessera-values.md` · prd 4 `tessera-prd-{backend,browser-routing,layout,state-restoration}.md` · tests 4 `tessera-test-{backend,browser-routing,layout,state-restoration}.md` · platform 1 `tessera-platform-infrastructure.md`) = 계획 기대값과 일치. 옛 평면 경로 잔존 확인: `git ls-tree -r --name-only origin/main -- docs | grep -E '^docs/tessera-(values|prd|test)-?'` = **0히트**."
+            },
+            {
+              "name": "완료기준 2 — criterion ③ 가치 사슬 밖 표면 등재",
+              "status": "passed",
+              "detail": "`git show origin/main:docs/platform/tessera-platform-infrastructure.md | grep -c '^## PI-'` = **2**. 실제 절: `## PI-1 진단(diagnostics) — 패키징 빌드의 관측 수단`, `## PI-2 auto-update — 앱 자체의 최신성`. '문서 없는 구현' 2표면이 등재돼 0건이 됐다."
+            },
+            {
+              "name": "완료기준 3 — criterion ④ 트래커 유닛 집계가 실측과 일치",
+              "status": "passed",
+              "detail": "머지된 main 을 체크아웃해 `npm test` 실행(node 22 = `.nvmrc`, rc=0) → **`Test Files 25 passed (25)` · `Tests 343 passed (343)`**. 트래커 표기 실측: `343건` 3회 · `25파일` 3회, 본문 문면 `**305 → 343건 / 25파일**로 재동기화했다` 및 `유닛 집계 343건/25파일 실측` — **두 숫자가 같다**. 완료 기준은 '집계가 실제와 일치'이지 특정 상수가 아니며, 여기서는 343/25 로 일치한다."
+            },
+            {
+              "name": "완료기준 4 — `node scripts/check-docs-links.mjs` rc=0",
+              "status": "passed",
+              "detail": "머지된 main 에서 `node scripts/check-docs-links.mjs` → `docs 링크 208건 검사 — 깨진 참조 0건`, **rc=0**. 즉 구획 이동·허브 갱신으로 깨진 참조가 없다."
+            },
+            {
+              "name": "검토 지시 정정 — 트래커 링크 규모 206 → 실측값",
+              "status": "passed",
+              "detail": "승인 사유가 '남은 흠'으로 지목하고 머지 전 수정을 지시한 항목. 머지된 main 트래커에서 `206건` **0회** · `208건` **2회**(헤더 4행 · 변동 이력 194행)이고, 같은 트리의 링크 검사 실측이 **208건** 이라 표기와 실측이 일치한다. 정정 커밋 `fbe0fc9d05eb370855aade1e93c459d257657fac`(1파일 +2 -2, docs 전용)."
+            },
+            {
+              "name": "범위 준수 — `src/`·`test/` 무접촉 (as-is 축 불변)",
+              "status": "passed",
+              "detail": "머지 전 브랜치에서 `git diff --name-only origin/main -- src test | wc -l` = **0**. 머지 후 모델 `asIs.versionScript` 재실행값 = `src:f1e2601aedff2145a1156be444018272a8a71b6a test:3be61331125d1ac394b52f1e645e61ceba99b19e` 로 기록된 `asIs.lastObservedVersion` 과 **바이트 일치** = 코드 축이 한 줄도 움직이지 않았다. CI 실측도 같은 결론 — `detect release-worthy changes` 잡 로그 마지막 줄 `Release-worthy change: false`, `gate`·`build · sign · notarize · publish (arm64)` **skipped** → 서명·공증 빌드가 사용자 auto-updater 로 나가지 않았다."
+            },
+            {
+              "name": "지침 §3 준수 — 여정 문서를 `journeys/` 로 옮기지 않았다",
+              "status": "passed",
+              "detail": "머지된 main 에서 `git ls-files -- 'docs/tessera-journey-*.md' 'docs/tessera-user-journeys.md'` = **5파일** (journey-backend·browser-routing·layout·state-restoration + user-journeys) 로 root 에 그대로 있다. 레포 밖 모델 `tbm_tessera-journey-mockup` 의 to-be 평면 glob 이 계속 5건을 집으므로 그 모델의 지문이 조용히 비지 않는다."
+            },
+            {
+              "name": "지침 §4 준수 — 자매 PR 무접촉",
+              "status": "passed",
+              "detail": "#47(`dlddu-k3s-homelab-k3s-mcp[bot]` 소유, 정합성 task 미소유)·#44(`rct_20260815-0001` 소유, draft) 둘 다 건드리지 않았다. 이 실행이 만진 것은 #48 과 그 브랜치뿐이다."
+            },
+            {
+              "name": "머지 방식 — 레포 설정대로 squash",
+              "status": "passed",
+              "detail": "`gh api repos/dlddu/tessera` 실측 `allow_merge_commit=false` · `allow_rebase_merge=false` · `allow_squash_merge=true` → `--squash --delete-branch`. 착지 커밋 `dcea8c2b…` 의 **부모 1개** 로 squash 확인 (되돌리기는 `git revert <sha>`, `-m` 불필요)."
+            },
+            {
+              "name": "잔여 gap (정보성 — 이 slice 범위 밖, 재감지가 잇는다)",
+              "status": "passed",
+              "detail": "converged 판정에 넣지 않은 사실 기록. ⑴ criterion ① 미구현 AC **7건**(◐ AC2.2·AC2.3·AC4.5 / ✗ AC3.3·AC3.4·AC4.2·AC4.6) — 코드 축이고 이 slice 는 `src/`·`test/` 를 건드리지 않았다. ⑵ 여정 문서 5건의 `journeys/` 이관 — `tbm_tessera-journey-mockup` 의 to-be 버전 스크립트가 평면 경로 glob 을 쓰고 빈 매칭에도 exit 0 을 내므로, **control plane(reconciler-tobe-modeler)의 모델 정의 개정이 선행**이다(data plane 이 열 수 없다). ⑶ playwright e2e spec 19개가 `ci.yml` 어디서도 실행되지 않음 — 트래커에 한계로 이미 기재. 이 머지로 모델의 to-be 지문이 `3471958c79b097b9f1ef0d28c8122e996002068f` → **`f9885d00d32ed84cae11621b839d94d8747f361b`** 로 1회 변했다(`git rev-parse HEAD:docs`). `lastObservedVersion` 은 건드리지 않았으므로 다음 감지 주기가 이 변화를 보고 후속 task 를 연다."
+            }
+          ],
+          "verifiedAt": "2026-09-20T10:40:00Z"
         }
       }
     ]
