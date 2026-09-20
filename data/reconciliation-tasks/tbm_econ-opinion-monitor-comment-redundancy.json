@@ -2929,5 +2929,23 @@
       "assessedAt": "2026-09-20T20:58:30Z",
       "reason": "**작업 불필요 — 차이는 실재하나(미판정 잔여 414 → 425줄), 이 잔여 *전체*를 범위로 하는 미점유 `action_required` task `rct_20260920-0009`가 살아 있고 여전히 claim 가능하다. 내 증분 11줄은 그 task가 착수 시 재측정하면 자동으로 들어온다 — 새 task는 planner 경합만 만든다.**\n\n**근거 ①(소유자 실재 — 추측이 아니라 레코드를 읽고, 쓰기 직전에 다시 읽어 확인).** `rct_20260920-0009`: `status=action_required` · `attempts=0` · 미점유 · 3.47h. 그 task의 gap이 적은 대상은 「지문 2400줄 중 **미판정 397줄**」이고 assessment는 「그중 337줄은 어느 열린 task도 덮지 않는다」이다 — **파일 슬라이스가 아니라 잔여 *계층 전체*가 범위**다. 내 11줄은 그 계층의 정의(⑴ 행 없는 파일 전량 + ⑵ 행보다 자란 증가분)에 **구성상 포함**된다: 네 파일 모두 원장 행이 있으므로 전량이 ⑵다. 게다가 `-0009` 자신이 인계에 「어떤 슬라이스를 고르든 말미 요약의 잔여 세 숫자는 **착지 직전 main에서 재측정**해 쓸 것」을 명시했다 — 재측정하면 425가 나온다(내 파서로 실측).\n\n**근거 ②(중복 범위).** 지금 `action_required`를 하나 더 열면 같은 모델에 **미점유 `action_required`가 둘**이 되고 범위는 포함관계다(내 11줄 ⊂ `-0009`의 425줄). 16:2x fire의 선례(`tbm_econ-opinion-monitor-docs-impl`)와 같은 자리다 — 「새 task를 열면 진행 중인 task와 범위가 중복」이면 열지 않는다. 3.0h 전 같은 모델의 `rct_20260920-0010`(#87, +17줄)도 동일 구조에서 같은 판정을 내렸고, 그 판정의 전제(「`-0009`가 살아 있고 착수 시 재측정한다」)는 지금도 참이다.\n\n**근거 ③(자매 슬라이스와의 교집합 0 — 그러나 그것이 새 task의 근거는 아니다).** 열린 PR 4건 전부와 내 4파일의 집합 교집합이 공집합이다(#78 `Trace.tsx`·`store_test.go` / #76 `web/src/screens/{Compare,Fairness,Sentiment}.*`·`tokens.css` / #75 `scripts/check-data-format-change.py` / #72 `deploy/batch/cronworkflow-*.yaml` — 내 것은 `deploy/batch/workflow-template.yaml`로 **다른 파일**이다). 즉 「스테이징된 작업이 내 줄을 건드려 충돌한다」도, 「조용한 되돌림」도 없다. 동시에 `-0009`의 **권고 슬라이스**(하네스·API 3파일 137줄: `tests/e2e/run.sh`·`web/src/api/types.ts`·`web/src/api/client.ts`)에도 내 4파일은 들어 있지 않다 — 권고는 범위가 아니라 순서 제안이므로 판정을 바꾸지 않지만, **planner가 권고만 보고 슬라이스를 고르면 이 11줄은 다음 패스로 밀린다**. 밀려도 손실은 없다(근거 ④).\n\n**근거 ④(재감지 경로 살아 있음).** as-is 지문은 주석이 추가·수정·삭제될 때만, 그러나 그때는 **반드시** 움직인다. 이 레포는 20~40분마다 제품 커밋이 착지해 실제로 매번 이 모델을 깨운다(오늘만 `-0002`~`-0011`). 「지금 열지 않으면 영영 안 보인다」가 성립하지 않으므로 선제 task를 열지 않는다. 또한 이 축에는 CI 게이트가 없어(`git grep -l comment-policy -- scripts Makefile .github tests` 공집합) 「초록이 커버리지를 가린다」 문제도 없다 — 유일한 관측자가 이 감지다.\n\n**자동 해소 가능성** 없음(주석은 판정 패스가 닫아야만 준다). 재확인 유예를 택하지 않은 이유는 그것과 별개로 **`assessment.recheckAfter`가 스키마에 없기 때문**이다 — 파킹하면 아무도 풀 수 없는 lock이 된다. ⚠️ **사용자 보고: `assessment.recheckAfter` 스키마 확장은 control plane(`reconciler-task-schema-updater`)의 몫이다.**\n\n**인계/보고(detector가 건드리지 않는 것들)**\n- ⚠️ `rct_20260920-0003`이 **`planning`으로 9.37h 정지**(`updatedAt` 11:35:10Z, attempts=1). 그 staged PR **#78**(`lineage-surface-pass`)은 base가 뒤처진 채 11:50 이후 갱신이 없다. `-0009`가 5.9h 시점에 이미 올린 건이고 지금 9.4h다. `planning`은 detector의 회수 대상이 아니며(precheck의 `occupied`는 `assessing`만 센다 ⇒ 감지가 굶지 않는다) planner가 자기 release 경로를 갖는다 — **보고만 한다.** 같은 시간대(11:19~11:51Z)에 멈춘 함대 전역의 `planning`/`executing` 6건과 같은 코호트다.\n- ⚠️ **함대 무음 2.95h**: reconciler 커밋이 **17:53:17 → 20:50:23**로 비어 있다. `-0009`가 3.47h 미점유로 남아 있는 것은 planner의 태만이 아니라 이 공백으로 설명된다(20:50 이후 타이머 재개 확인 — 내 fire와 자매 detector가 정상 발사).\n- 지문 사각지대(Python docstring)가 이번 창에서 실제로 발화했다 — `llm.py`·`domain.py`의 변경이 전부 docstring으로 들어가 지문 델타 0. 표면 확장은 모델 정의가 **tobe-modeler 몫**으로 못박았다."
     }
+  },
+  {
+    "id": "rct_20260920-0012",
+    "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
+    "status": "assessing",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-20T22:33:43Z",
+      "asIs": {
+        "currentVersion": "lines=2467 files=124\n66bdb49f26739f36afc2979f33fe84831d0a26e129b2ab5bc2c4ccfb8aafae8d",
+        "previousVersion": "lines=2428 files=123\n83ca4d868392c3e4f5ae147a6c5bf90d33b1d7037ea6330c7d1b0abeebdd9b6b"
+      },
+      "changedSides": [
+        "as_is"
+      ]
+    },
+    "createdAt": "2026-09-20T22:33:43Z",
+    "updatedAt": "2026-09-20T22:33:43Z"
   }
 ]
