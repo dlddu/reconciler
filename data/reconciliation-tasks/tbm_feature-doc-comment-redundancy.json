@@ -3405,7 +3405,7 @@
   {
     "id": "rct_20260920-0009",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "reviewing",
+    "status": "review_rejected",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-20T17:00:39Z",
@@ -3488,6 +3488,14 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/98",
           "preparedAt": "2026-09-20T17:45:00Z",
           "notes": "전용 PR #98 (`reconcile/comment-redundancy-rct_20260920-0009`, base `7724b46`). 11파일 변경 — `.sql` 7개(주석·빈 줄만) · `backend/tests/migrations.rs`(`APPLIED` 고정값 7개 + 출처 주석) · 원장 · 패스 상세 신설 · 문서 허브(문서 41→42). **머지 전 사람 몫이 남아 있다**: 운영 DB `_sqlx_migrations` 의 SHA-384 7건 repair, 그리고 필수 체크 `review/data-format` 을 사람이 직접 올려 주는 것(D1 이라 자동으로 안 붙는다 — probe 로 `⚠️ 사람 리뷰 필요` 실측). repair 표(version·파일·현재/새 SHA-384)와 절차는 PR 본문과 `docs/comment-policy/passes/2026-09-20-migrations-axis.md` 양쪽에 있다. **repair 완료 근거(실행자·시각·version 별 UPDATE 전/후 checksum·`.bak` 경로)가 이 레코드에 축자로 적히기 전에는 승인해도 실행해선 안 된다.** 로컬 실측: SQL문 무변경 8/8(주석·빈 줄 제거 후 부모와 바이트 동일) · 전역 지문 `lines=2310 files=108` → `lines=2294 files=108` · 문서 게이트 3종 rc=0(`check-journey-mockup` 문서 42 · `check-mockup-render` · `check-scenario-e2e`). `check-journey-prototype.js` 는 node_modules 미설치로 로컬 실행 불가(CI 가 돌린다), `cargo test` 는 이 호스트의 루트 디스크(`/dev/vdb`)가 쓰기 I/O 오류로 죽어 있어 빌드를 올릴 수 없다 — ci-gate 가 돌린다. **그 디스크 고장 때문에 이번 fire 는 인자로 받은 checkout 경로에 clone 조차 할 수 없어, reconciler·feature-doc 두 레포를 tmpfs(`/dev/shm`)에 내려받아 작업했다.** 자매 경합: #91·#93 겹침 0, #92 는 `backend/tests/migrations.rs` 에서 겹치고 시험 머지 결과 `APPLIED` 배열에서 **실제로 충돌**한다(해소법은 executionGuide §3). **CI 실측(head `ef46fd87`)**: `ci-gate` = success — `test (cargo)`(갱신한 `APPLIED` 고정값을 `applied_migrations_are_never_edited` 가 검증하는 잡) · `test (kind e2e)` · 문서 게이트 3종 · `push / build & push image` 전부 success. `review — data format` 워크플로도 success 로 끝났지만 **설계대로 status 를 붙이지 않았다**(D1). 그래서 PR 은 `mergeable=true · mergeable_state=blocked` 이고, 막고 있는 것은 오직 결번인 필수 체크 `review/data-format` 하나다 — 즉 **사람 게이트 말고는 다 초록이다**."
+        },
+        "review": {
+          "required": false,
+          "status": "rejected",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-20T17:40:00Z",
+          "reason": "거부 — 준비물 자체는 유효하나(PR #98 open · mergeable=true · base `7724b46`가 main tip과 동일해 베이스 이동 없음 · head `ef46fd87`에서 `CI`와 `review — data format` 워크플로 둘 다 success · 변경 11파일이 마이그레이션 축 8파일 + 원장 + 패스 상세 + 문서 허브로 계획 범위와 정확히 일치), 실행의 전제인 **운영 DB repair가 끝났다는 근거가 레코드에 없다**. 모델 정의 「적용된 마이그레이션」 4항이 「repair 완료가 적혀 있지 않은 승인은 실행하지 않는다」고 못박았고, `preparation.notes` 자신도 repair와 필수 체크 `review/data-format` 올리기가 아직 사람 몫으로 남아 있다고 적고 있다. 실제로 head의 combined status는 statuses 0건이라 그 필수 체크는 결번이고 PR은 `mergeable_state=blocked`다 — 지금 승인하면 executor는 executionGuide 2단계에서 멈추거나(무의미한 승인), 강행하면 운영 파드가 `VersionMismatch`로 부팅 실패한다(되돌림은 `.bak` 복원뿐인 불가역 지점). 위험도 high 자체가 아니라 **불가역 전제의 미이행**이 거부 사유다. 정의 4항의 `awaiting_review` 전이는 현재 스킬 계약에 없어 시도하지 않았다.",
+          "comment": "계획·PR·범위·CI는 문제없다. 고칠 것은 하나 — **repair 완료 근거를 레코드에 축자로 남긴 뒤 재계획**이다.\n\n1. 사람이 PR #98 본문의 repair 표대로 운영 DB `featuredoc.db`의 `_sqlx_migrations.checksum` 7건(`0001`·`0003`·`0004`·`0005`·`0006`·`0007`·`0008`)을 고치고, 필수 체크 `review/data-format`을 직접 올린다.\n2. 그 결과를 `preparation.notes`에 축자로 적는다: 실행한 사람 · 시각(UTC) · version별 UPDATE 전/후 checksum · `.bak` 경로 · Flux suspend/resume 시각.\n3. 재계획 시 `review/data-format`이 head `ef46fd87`에 success로 붙었는지(combined status에 실제로 나타나는지)를 실측값으로 함께 적는다 — 지금은 statuses 0건이라 결번이다.\n\n**이 근거가 기록되기 전에는 planner가 이 task로 할 수 있는 일이 없다.** 왕복 재계획을 새로 만들지 말고 파킹으로 보고 건너뛸 것(3회 연속 거부는 `cancelled`). 계획 내용 자체를 고칠 필요는 없다.\n\n머지 시점에 자매 #92가 먼저 착지해 있으면 `backend/tests/migrations.rs`의 `APPLIED` 충돌 해소와 원장 절대 수치 재측정이 추가로 필요하다(executionGuide §2·§3에 이미 있음). 현재는 #92·#91·#93 모두 open이다."
         }
       }
     ]
