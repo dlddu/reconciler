@@ -34,30 +34,7 @@ status)이다 — 승인 경로는 이것 하나뿐이다.
 | P5 자기 참조 | 판정기·그 워크플로·정책 문서를 바꾸는 PR은 **수동 승인 케이스**다(케이스로 명시). | P4 때문에 판정기 변경 PR은 옛 판정기로 판정된다 — 그 변경 자체는 사람 눈에 올린다. |
 | P6 미탐 비대칭 | 판단이 갈리면 **사람 승인 쪽으로** 기운다(케이스를 넓게 잡는다). | 미탐(위험한데 success → 자동 머지 가능)은 운영 사고, 오탐(무해한데 승인 대기)은 승인 한 번이다. |
 | P7 수동 status | 사람 승인은 **항상 수동 status**다: 사람이 PR을 검토한 뒤 head 커밋에 **같은 context `{{STATUS_CONTEXT}}`** = success를 직접 붙인다. description은 `수동 승인`으로 시작하고 승인자를 적는다. ruleset bypass·관리자 머지·required check 해제는 승인 경로가 아니다. | status는 커밋에 붙으므로 승인 뒤 새 푸시가 오면 head가 바뀌어 **승인이 자동으로 무효**가 되고, 판정기가 다시 판정한다 — 승인이 검토한 코드에 묶인다. bypass는 코드에 아무 흔적을 남기지 않아 어떤 PR이 사람을 거쳤는지 사후에 알 수 없다. |
-| P9 케이스 중립 이름 | status context 이름은 **케이스를 가리키지 않는다**. 기본값 `review/manual-approval`을 쓰고, 다르게 정하더라도 특정 케이스 이름(예: `review/data-format`)은 피한다. | 이름이 케이스를 가리키면 케이스가 넓어질 때마다 개명이 필요하고, 개명은 워크플로·ruleset·정책을 동시에 건드리는 위험한 작업이다. 이름은 "사람 승인이 필요한가"만 뜻해야 한다. |
 | P8 사람만 승인한다 | 수동 status는 **사람만** 붙인다. 루프(reconciler)·봇·에이전트·CI는 판정기 워크플로를 제외하고 `{{STATUS_CONTEXT}}`를 붙이지 않는다. required check는 **특정 앱(integration)에 고정하지 않는다**. | 자동화가 수동 status를 붙이면 사람 승인이 형식만 남는다. 반대로 required check가 판정기 앱에 고정되면 사람이 붙인 status가 인정되지 않아 P7이 불가능해진다. |
-
-## 기본값
-
-status context는 슬롯이되 **기본값이 있다**. 레포 사정이 없으면 그대로 쓰고, 다르게 둘 때는 정책
-문서의 프로세스 표에 그 이유를 적는다.
-
-| 슬롯 | 기본값 | 쓰이는 곳 |
-|---|---|---|
-| `{{STATUS_CONTEXT}}` | `review/manual-approval` | 판정기가 붙이는 success, 사람이 붙이는 수동 status, ruleset의 required status check |
-| `{{CONTEXT_ERE}}` | `context[^a-z/]{1,4}review/[a-z0-9-]+` | as-is `judges` 성분이 워크플로에서 승인 계열 context 선언을 찾을 때. 이름 하나가 아니라 `review/…` 계열을 잡으므로 **두 번째 신호가 생기면(P1 위반) 드러난다**. `context=review/x`·`context: review/x`·`"context": "review/x"`를 모두 잡는다. `{{STATUS_CONTEXT}}`를 기본값 밖으로 정했다면 이 ERE도 그 계열에 맞춘다 |
-
-기본값을 쓰기로 했는데 레포가 이미 다른 이름을 쓰고 있으면 첫 task에서 개명한다. 순서를 지키지
-않으면 열린 PR이 전부 막히므로 반드시 이 순서로 한다.
-
-1. ruleset의 required status check에 새 이름을 **추가**한다(옛 이름은 둔 채). 사람이 한다.
-2. 판정기 워크플로의 context를 새 이름으로 바꾼다. 워크플로 파일이라 GitHub App 권한으로는 push가
-   막힐 수 있어 사람 손이 필요할 수 있다.
-3. 열린 PR들이 새 status를 받은 뒤(필요하면 빈 커밋으로 재판정), ruleset에서 옛 이름을 뺀다.
-4. 정책 문서의 프로세스 표와 수동 status 명령을 새 이름으로 고친다.
-
-2와 3 사이에는 계열 context가 둘이라 R2가 일시적으로 위반 상태다. task의 계획에 그 구간을 적고,
-같은 task 안에서 닫는다.
 
 ## 정책 문서 (고정부)
 
@@ -115,17 +92,31 @@ SSOT다 — 헤더에만 있으면 판정기를 고치는 사람만 보고, 무�
 | 슬롯 | 의미 | 예 (feature-doc) |
 |---|---|---|
 | `{{REPO}}` | owner/repo | `dlddu/feature-doc` |
-| `{{STATUS_CONTEXT}}` | 수동 승인 판정 status context (하나). 기본값 `review/manual-approval` — 바꾸려면 P9를 지킬 것 | `review/manual-approval` (레포 현행은 옛 이름 `review/data-format`) |
-| `{{CONTEXT_ERE}}` | 워크플로에서 승인 계열 context 선언을 찾는 ERE. 기본값 `context[^a-z/]{1,4}review/[a-z0-9-]+`. **작은따옴표를 쓰지 않는다** | 기본값 그대로 |
+| `{{STATUS_CONTEXT}}` | 수동 승인 판정 status context (하나). **케이스를 가리키는 이름은 피한다** — 케이스가 넓어질 때마다 개명해야 하고, 개명은 워크플로·ruleset·정책을 동시에 건드린다 | `review/manual-approval` (레포 현행은 `review/data-format`이라 첫 task에서 개명) |
+| `{{CONTEXT_ERE}}` | 워크플로에서 승인 계열 context 선언을 찾는 ERE. 이름 하나가 아니라 `{{STATUS_CONTEXT}}`가 속한 **계열**을 잡는다 — 그래야 두 번째 신호가 생길 때(P1 위반) 지문이 움직인다. **작은따옴표를 쓰지 않는다** | `context[^a-z/]{1,4}review/[a-z0-9-]+` (`context=review/x`·`context: review/x`·`"context": "review/x"`를 모두 잡는다) |
 | `{{SLUG}}` | id·이름용 소문자 레포명 | `feature-doc` |
 | `{{POLICY_SSOT}}` | 정책 문서 경로 | `docs/review-policy.md` |
 | `{{JUDGE_REF_ERE}}` | 워크플로가 부르는 판정기 경로를 뽑는 ERE | `tools/[A-Za-z0-9_./-]+\.(py\|js\|mjs\|sh)` |
 | `{{JUDGE}}` | 판정기 · 워크플로 · 등록 시점 케이스 ID | `tools/check-data-format-change.py` · `.github/workflows/data-format-review.yml` · D1~D6 |
-| `{{RULESET}}` | 게이트 ruleset | `default` (id 23666120, 기본 브랜치, required: `ci-gate`(integration 15368)·`review/data-format`(integration 없음) — **옛 이름이므로 첫 task에서 `{{STATUS_CONTEXT}}`(기본값 `review/manual-approval`)로 개명**) |
+| `{{RULESET}}` | 게이트 ruleset | `default` (id 23666120, 기본 브랜치, required: `ci-gate`(integration 15368)·`review/data-format`(integration 없음) — **첫 task에서 `{{STATUS_CONTEXT}}`로 개명**) |
 | `{{TOKEN_REF}}` | ruleset 조회용 토큰 참조 (사실상 필수) | `secretRef:<이름>` — 공개 레포는 무토큰으로도 읽히지만 무인증 한도(60/h)를 egress 전체가 공유해 등록 전 실측에서 소진됐다. metadata:read 권한이면 충분하다 |
 | `{{SIBLING_MODEL}}` | 판정기 헤더를 함께 보는 자매 모델 [선택] | `tbm_feature-doc-comment-redundancy` |
-| `{{INITIAL_STATE}}` | 등록 시점 현황 | 정책 문서 없음 · 케이스는 판정기 헤더 주석에만 · status가 옛 이름 `review/data-format`(기본값으로 개명 필요) · ruleset은 이미 required(integration 미고정) · 수동 status 절차 미기재 |
+| `{{INITIAL_STATE}}` | 등록 시점 현황 | 정책 문서 없음 · 케이스는 판정기 헤더 주석에만 · status가 `review/data-format`(개명 필요) · ruleset은 이미 required(integration 미고정) · 수동 status 절차 미기재 |
 | `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
+
+### 개명 순서
+
+정한 `{{STATUS_CONTEXT}}`가 레포의 현행 이름과 다르면 첫 task에서 개명한다. 순서를 지키지
+않으면 열린 PR이 전부 막히므로 반드시 이 순서로 한다.
+
+1. ruleset의 required status check에 새 이름을 **추가**한다(옛 이름은 둔 채). 사람이 한다.
+2. 판정기 워크플로의 context를 새 이름으로 바꾼다. 워크플로 파일이라 GitHub App 권한으로는 push가
+   막힐 수 있어 사람 손이 필요할 수 있다.
+3. 열린 PR들이 새 status를 받은 뒤(필요하면 빈 커밋으로 재판정), ruleset에서 옛 이름을 뺀다.
+4. 정책 문서의 프로세스 표와 수동 status 명령을 새 이름으로 고친다.
+
+2와 3 사이에는 계열 context가 둘이라 R2가 일시적으로 위반 상태다. task의 계획에 그 구간을 적고,
+같은 task 안에서 닫는다.
 
 ## 모델 JSON 골격
 
