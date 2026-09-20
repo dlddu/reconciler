@@ -3381,7 +3381,7 @@
   {
     "id": "rct_20260920-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-20T08:48:58Z",
@@ -3399,7 +3399,7 @@
       ]
     },
     "createdAt": "2026-09-20T08:48:58Z",
-    "updatedAt": "2026-09-20T09:52:00Z",
+    "updatedAt": "2026-09-20T09:55:00Z",
     "stateSummary": {
       "asIs": "**구현 @ `32faf64`(as-is 핀, tip `15f46b5`의 구현 트리와 바이트 동일 — #63은 `docs/`·`tests/`만 건드렸다)**\n\n- **집계(python)**: `aggregate.py` ∋ `BUCKET_UNITS = (\"hour\", \"day\", \"week\")` · `_bucket()`이 단위 인자를 받고 `build_subject_trends_all_units`/`build_axis_sentiment_all_units`가 같은 원천 레코드를 세 단위로 자른다. `uv run pytest -q` **60 passed**(그중 `test_aggregate.py` 11).\n  - **네거티브 컨트롤(신규 실측)**: 부모 `fc428dd`의 `aggregate.py`·`cli.py`만 되돌린 **새 클론**에서 같은 테스트가 `ImportError: cannot import name 'BUCKET_UNITS'`로 **수집 자체가 실패**한다 ⇒ 11건의 단정은 동어반복이 아니라 신 API에 묶인 검출기다. (⚠️ 트리를 `cp -r`로 복사해 재면 복사된 `.venv`의 editable `.pth`가 **원본 경로**를 가리켜 구버전 소스를 두고도 11건이 초록으로 통과한다 — 이 fire에서 실제로 한 번 속았다. 네거티브 컨트롤은 반드시 새 클론에서.)\n- **서빙(go)**: `handlers.go`가 화면당 1개씩 **GET 7 라우트** + health를 연다. Gold 파생 5(`dashboard`·`trend`·`compare`·`sentiment`·`fairness`), **자기선언 stub 2**(`trace` ∋ `\"stub: 원문 역추적 자리…\"` · `reprocess` ∋ `\"stub: 재처리 콘솔 자리…\"`). `finestUnit`이 단위를 먼저 정착시켜 롤업이 들어와도 `compare`의 기준 버킷이 주 버킷으로 튀거나 `dashboard`가 같은 레코드를 3회 계상하지 않는다. `go test ./...` ok(handlers·store) · `gofmt -l .` 공집합.\n- **화면(web)**: `App.tsx:11` ∋ `const BUILT = new Set([\"dash\", \"compare\", \"trend\", \"sentiment\"]);` · `nav.ts`의 `SCREENS`는 **7화면**을 선언 ⇒ `fairness`·`trace`·`reprocess`는 `Placeholder`만 렌더. `Trend.tsx:190`·`Sentiment.tsx:225`의 버킷 단위 note가 「일·주 롤업도 집계되지만 서빙 API가 단위를 고르는 파라미터를 받지 않아 전환 컨트롤을 두지 않았습니다」로 현행화돼 있다(문면이 실제 구현 상태와 일치).\n- **계약(contracts)**: Gold는 `subject_trend.avsc`·`axis_sentiment.avsc` 둘. 분위기 레코드 키가 `(axis, time_bucket)`이라 **서술 대상 차원이 없다**(`go/gen/gold.go:5-6`).\n- **배포(deploy)**: `cronworkflow-ingestion.yaml` ∋ `suspend: false`(수집만 상시 가동) · `cronworkflow-pipeline.yaml:29` ∋ `suspend: true` ⇒ 실 LLM 분석·집계는 프로덕션 스케줄로 실행된 적이 없다.",
       "toBe": "**문서 @ `6ceb03a6`(toBe 핀 = #62 지점. tip은 `47df2ef5`이나 #63의 델타는 `docs/comment-policy/`뿐으로 판정면 무접촉)**\n\n- **AC 전집 21건** — 독립 재계수: `grep '^### AC' docs/econ-opinion-monitor-prd-*.md` = ingestion 7 · analysis 6 · aggregation-viz 8. doc-tracker 요약(21/21 가치 연결·테스트 커버)과 일치.\n- **doc-tracker `2026-09.md` 「현재 상태 요약」**(착지/잔여 2분할 + 관측 좌표): **「미구현 AC는 없다 — PRD의 `### AC` 21건이 전건 착지했다」**. 잔여는 AC가 아닌 셋 — ⑴ **화면 3종**(`fairness`·`trace`·`reprocess`, 좌표 `App.tsx` ∋ `BUILT` 문자열), ⑵ **대상별 분위기 집계 부재**(좌표 `go/gen/gold.go` ∋ `AxisSentiment`가 유일한 분위기 레코드), ⑶ **운영**(`cronworkflow-pipeline.yaml` ∋ `suspend: true`).\n- **`## 구현 수렴 로드맵`**(이 절의 출처가 **이 모델의 task `rct_20260712-0001`**이다 — 즉 이 모델 자신의 등재 표): 슬라이스 **8 `fairness` 화면**(대상 AC3.1·3.8 — 둘 다 2026-09-19에 착지 확정 ⇒ **순수 화면 슬라이스**) · **9 `trace`**(신규 AC 소유 없음, `/api/trace` 현 더미) · **10 `reprocess`**(신규 AC 소유 없음, `/api/reprocess` 현 더미) · 마무리.\n- **design-tracker**: 트리거 #62가 **4행의 처분 조건을 정정**했다 — 「AC3.3 롤업이 착지할 때」 → 「**서빙이 기간·단위 파라미터를 받아 단위가 선택 가능해질 때**」(산출은 생겼으나 고를 수단이 없다는 사실을 문면에 반영). 별도로 `sentiment`의 여정 이탈 카드 행은 처분 조건을 **「`fairness`·`trace`·`reprocess` 중 하나라도 `BUILT`에 들어올 때」**로 적는다 ⇒ 자매 `mockup-render` 축이 이 모델의 화면 착지를 **명시적으로 기다린다**.\n- **여정 문서**: `JRN-spike-verification`이 구 `fairness`·`trace` 화면을, `JRN-logic-backfill`이 구 `reprocess` 화면을 흡수했다(`user-journeys/README.md:44,48`) — 화면 단위 목업은 사라졌지만 **그 표면이 해야 할 일은 여정 페이지 안에 그대로 살아 있다**.\n- **e2e 매핑 절**(자매 SSOT): `python3 tests/e2e/check_scenario_mapping.py` **부모·tip 두 지점 rc=0**, 카운터가 갈린다 — 부모 `구현 대기 1 · 1:1 대상 19 · 공백 0` → tip `구현 대기 0 · 1:1 대상 20 · 매칭 19 · 공백 1`(`aggregation-viz#시나리오 3`). 트리거가 해제 신호(`BUCKET_UNIT = \"hour\"`)를 걷으며 같은 커밋에서 재판정한 결과다.",
@@ -3564,6 +3564,59 @@
               "log": "머지 트리(`pr66 + origin/main`) 전수 재실행 rc=0: `gofmt -l go` 공집합 · `go vet` · `go test ./...` ok · `eslint` · `tsc --noEmit` · `vitest` 15 passed · `uv run pytest -q` **60 passed** · `ruff check`/`format --check` 통과 · `tests/smoke.sh` OK · 게이트 3종 rc=0. **네거티브 컨트롤 재현(1-3)**: 416행을 `inBucket`→`inAxis` 로 되돌리자 `TestFairnessCarriesBothCountingModesForTheSameSubject` 가 `want the 2 subjects … got 6`, `TestFairnessSettlesOneUnitAndOneBucket` 이 중복 subject 3건 + 「지난 시간 1위」 1위 점거로 red ⇒ 새 테스트는 동어반복이 아닌 검출기. 확인 후 원복(`git status` 공집합). **CI**: 검토가 읽은 초록(런 35502071984)은 merge-ref 부모가 낡은 main `7386301` 이라 #65 착지 이후 트리를 검증하지 못했고, #65 가 공유 e2e 하네스(`run.sh`·`lib/gold.ts`·`lib/bronze.ts`·`lib/silver.ts`)를 바꿔 로컬 불가 영역이 미검증이었다 → 지침 §0-2·검토 comment ⑴ 이 허용한 리베이스로 main 을 브랜치에 머지해 push(head `6523db7`), **새 런 35502925007 잡 9건 전수 success**(`required` · `ci/e2e` · `ci/build` · `render` · `docs/flow` · `docs/structure` · image 2종; `pin deploy images (main only)` 만 skipped=main 전용 정상). **머지**: 레포 설정 실측 `allow_merge_commit=false · allow_squash_merge=true` + 기존 착지 커밋 부모 1개 ⇒ **squash** 로 머지(지침 §4 의 `revert -m 1` 문구는 어긋나므로 되돌리기는 인자 없이). 착지 `ddaef4f8`."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "contracts:5a1ee3bb47ac5199a1f05129fcff8dbf783a4646 python:c2df7dfc026ec568163ad56a872d027a3994aee6 go:4ca81987afca39b0c21d52dc77949ecf20b312c3 web:882416c36df29858a19772b031961ab109443235 deploy:b2081631e3c8958a9c6c9c7e480202137d1c2d2f",
+          "checks": [
+            {
+              "name": "완료기준 1 — `/fairness` 가 실화면으로 붙었다",
+              "status": "passed",
+              "detail": "착지 main `ddaef4f8` 실측: `web/src/App.tsx:12` ∋ `const BUILT = new Set([\"dash\", \"compare\", \"trend\", \"sentiment\", \"fairness\"]);` · `App.tsx:23` ∋ `<Route path=\"/fairness\" element={<Fairness />} />` · `App.tsx:5` 가 `./screens/Fairness` 를 import ⇒ `Placeholder` 가 아니다."
+            },
+            {
+              "name": "완료기준 2 — `/api/fairness` 가 단위·기준 버킷을 정착시킨 타입 응답을 낸다",
+              "status": "passed",
+              "detail": "main `handlers.go` ∋ `fairnessResponse`(177) · `fairnessBasis`(153) · `fairnessRow`. 한 행에 `raw_count`(int64) · `raw_share`(float64) · `normalized_share`(float64) 가 **서로 다른 필드**로 공존하고 basis 가 `bucket_unit`·`time_bucket`·`raw_total`·`normalized`·`method` 를 싣는다. 검증 좌표 두 테스트 실재(`handlers_test.go:747`·`:800`) + `go test ./...` ok. **네거티브 컨트롤로 검출력 확인**: 416행 `topSubjects(inBucket,…)`→`inAxis` 로 되돌리면 `want the 2 subjects … got 6` · 중복 subject 3건 · 지난 버킷 1위(raw 500) 점거로 red ⇒ 롤업 중복 계상 결함이 실재했고 이 PR 이 닫았다."
+            },
+            {
+              "name": "완료기준 3 — `check-mockup-render.py` in-scope 25종 · 성립 24 · 예외 1 · 구현 전용 1 · R4·R5 상한 0",
+              "status": "passed",
+              "detail": "착지 main 에서 rc=0 · 출력 바이트 대조: `[R3] in-scope 25종(compare ∪ dash ∪ fairness ∪ sentiment ∪ trend) — 이름 대조 성립 24 · 등재 예외 1 · 구현 전용 1`, R4 4줄·R5 3줄 전부 `= 상한 0`. 계획 기대값과 완전 일치(양방향 래칫이라 밑돌아도 실패하는데 그러지 않았다)."
+            },
+            {
+              "name": "완료기준 4 — doc-tracker 화면 잔여 2 + 「소스 차원」 잔여 등재",
+              "status": "passed",
+              "detail": "main `docs/econ-opinion-monitor-doc-tracker/2026-09.md:118~124` ∋ 「실화면은 `dash`·`compare`·`trend`·`sentiment`·`fairness` 다섯 … 밖의 2화면(trace·reprocess)은 `Placeholder`」 + `BUILT` 인용이 `App.tsx` 실측과 바이트 일치. `:125~` 에 「**소스 차원**」 잔여 신설(키 `(subject, axis, bucket_unit, time_bucket)` 에 수집원 분해 없음 → `STP-inspect-sources`·`STP-drilldown-articles` 표면째 비어 있음)."
+            },
+            {
+              "name": "자매 게이트 — `check-journey-mockup.py` · `check_scenario_mapping.py`",
+              "status": "passed",
+              "detail": "착지 main 두 게이트 rc=0. journey: `PASS — 여정 6개 · 여정 페이지 6개 · 미이관 0(상한 0) · 규칙 5 미충족 페이지 0(상한 0) · 링크 117건`(R10 재진술 숫자 8종 무이동). mapping: `시나리오 전집 21 · 예외 1 · 구현 대기 0 · 1:1 대상 20 · 매칭 20 · 공백 0`. **계획 §1-1 표의 기대값 `공백 1` 과 갈리지만 회귀가 아니다** — 검토 comment ⑴ 이 예고한 대로 자매 #65 가 먼저 착지해 `aggregation-viz#시나리오 3` 공백을 자기 spec 으로 메운 값이고, #66 은 `## e2e 매핑` 절을 건드리지 않는다(파일 목록 실측 겹침은 doc-tracker 1건뿐)."
+            },
+            {
+              "name": "CI required 체크 — 머지 트리 실측(신선도 보정)",
+              "status": "passed",
+              "detail": "검토가 읽은 초록(런 35502071984 / head `90779c1`)은 `refs/pull/66/merge` 부모가 **낡은 main `7386301`** 이라 #65 착지 후 트리를 검증하지 못했다. #65 가 공유 e2e 하네스(`tests/e2e/run.sh`·`lib/gold.ts`·`lib/bronze.ts`·`lib/silver.ts`)를 바꾸고 #66 이 `ac3-8-normalized-ratio.spec.ts` 를 확장하므로 **그 조합은 한 번도 CI 를 탄 적이 없었다** → 지침 §0-2·검토 comment ⑴ 이 허용한 리베이스로 main 을 브랜치에 머지(head `6523db7`)해 새 런 확보. **런 35502925007 잡 9건 전수 success** — `required`·`ci/e2e`(kind, 로컬 불가 영역)·`ci/build`·`render`·`docs/flow`·`docs/structure`·image 2종, `pin deploy images (main only)` 만 skipped(main 전용이라 정상)."
+            },
+            {
+              "name": "로컬 검증 전수 — 머지 트리",
+              "status": "passed",
+              "detail": "`gofmt -l go` 공집합 · `go vet ./...` rc=0 · `go test ./...` ok · `npx eslint .` rc=0 · `npx tsc --noEmit` rc=0 · `npx vitest run` **15 passed**(기존 12 + 신규 Fairness 3) · `uv run pytest -q` **60 passed**(python 무접촉 회귀 확인) · `ruff check`/`ruff format --check` 통과 · `tests/smoke.sh` `OK: Python Gold -> Go API end to end`. 준비 노트의 기준선과 전건 일치."
+            },
+            {
+              "name": "머지 방식 — 레포 설정 실측",
+              "status": "passed",
+              "detail": "`GET /repos/…` 실측 `allow_merge_commit=false · allow_squash_merge=true · allow_rebase_merge=false`, 기존 착지 커밋(`d3c9e6ce`·`15f46b5`·`32faf64`) 부모 수 전부 1 ⇒ **squash** 로 머지했다(착지 `ddaef4f8`, 부모 1). **지침 §4 의 「머지 커밋이면 `-m 1`」 문구는 이 레포에 어긋난다** — 되돌리기는 `git revert ddaef4f8` 로 인자 없이 해야 한다(정보성)."
+            },
+            {
+              "name": "범위 밖 잔여(정보성, converged 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "모델 전체 to-be 와의 잔여는 그대로 남아 다음 감지 주기가 잇는다: ⑴ 화면 2종(`trace`·`reprocess`) — 둘 다 서빙이 자기선언 stub 이라 화면만 붙이는 슬라이스가 아니다(로드맵 9·10). ⑵ **소스 차원 부재** — Gold 키에 수집원이 없어 `STP-inspect-sources`·`STP-drilldown-articles` 가 열리지 않는다(이번에 doc-tracker 잔여로 등재됨). ⑶ 대상별 분위기 집계 부재. ⑷ `?unit=` 서빙 파라미터(design-tracker 4행 별건). ⑸ 운영 `suspend: true` 해제(비가역). **자매 축 인계**: 이 착지로 design-tracker 「등재된 편차」 두 행의 재검토 시점이 충족됐다 — `compare` 여정 이탈 컨트롤과 `sentiment` 의 `STP-confirm-cause` 이탈 카드(조건 「셋 중 하나라도 `BUILT`에」). 둘 다 `mockup-render` 축의 몫이라 이 task 에서 처분하지 않았다."
+            }
+          ],
+          "verifiedAt": "2026-09-20T09:55:00Z"
         }
       }
     ]
