@@ -9681,6 +9681,68 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-20T09:49:30Z",
           "reason": "**승인.** 실행 대상은 PR #155(13파일 +805/−69)의 머지뿐이고, 직접 실측으로 세 축을 확인했다.\n\n⑴ **신선도 — 초록이 머지 트리를 검증했다.** PR 은 `open·mergeable=true·clean` 이고 base(`17efb59`)가 **현재 main tip 과 동일**하며 `refs/pull/155/merge` 의 부모가 `[17efb59, a82b1d5]` 다. 체크 6종 중 `fmt + vet`·`unit tests`·`integration tests`(kind)·`image / build & push`·필수 `ci passed` 전부 success(`pin deployment image` 는 main 전용 skipped), 런 `35502669830` completed. 자매 #153 은 이미 머지돼 그 위로 리베이스된 상태다.\n\n⑵ **정합성·범위 — 완료 기준을 PR head 에서 재측정해 전건 일치.** 등록 세 지점 `toolslist.go` · `EXPECTED_TOOLS` · `mcp_test.go` want 가 **25 == 25 == 25 이고 대칭차 공집합**(`github_commit_status_create` 3곳 전부 존재, `gate.go:195` 등록). 문서가 이름을 댄 Go 단위 **9/9 실재**. 게이트 넷을 main 워크트리와 PR head 두 트리에서 돌려 `check_ac_mapping.py`·`check_mock_policy.py`·`check_doc_inventory.py` **출력 바이트 동일**(무이동 = 시나리오·e2e 파일을 만들지 않았다는 슬라이스 경계의 증거), `check_comment_policy.py` rc=0 · 행 53→54 · 2873→2921줄 · **미판정 잔량 0** 으로 지침 표와 정확히 일치. 자매 행 지문 `17850d2eae26` 과 내 행 `46c572eb457a` 이 **둘 다 원장에 살아 있어** 충돌 해소가 자매 판정을 지우지 않았다. `tests/integration/` 접촉은 `EXPECTED_TOOLS` 한 줄, `k8s/`·시크릿 무접촉이다.\n\n⑶ **위험·불가역성 — 머지가 외부로 나가는 쓰기를 만들지 않는다.** 새 도구는 GitHub 에 commit status 를 쓰는 외부 부작용 경로지만, 코드를 직접 읽어 fail-closed 를 확인했다 — `CreateCommitStatus` 는 입력 검증과 접두사 판정을 **`appJWT`·HTTP 이전**에 수행하고, `GITHUB_COMMIT_STATUS_CONTEXT_PREFIXES` 가 비면 `checkContextPrefix` 가 모든 context 를 거부한다(AC3·AC4). 운영 시크릿에 그 env 가 없으므로 착지만으로 쓰이는 status 는 0건이다. AC5 가드(`statuses: write` 토큰을 호출자에게 주지 않음)는 `CreateInstallationToken` 에 그대로 남아 있고 새 경로는 공유 저수준 `mintInstallationToken` 만 쓴다 — 가드 약화 없음. 응답 payload 에 토큰·JWT·PEM 이 없다(AC2). 되돌리기는 머지 커밋 revert 로 충분하고 지침이 명시한다.\n\n잔여 리스크 1건은 지침이 이미 다룬다: 열린 자매 #154 가 `docs/doc-tracker/2026-09.md` 를 만지지만 헝크가 L831·L885 로 이 PR(L21·141·187·763·873)과 떨어져 있고, 먼저 머지되면 리베이스 후 게이트 재측정하라는 절차가 executionGuide 에 있다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-20T09:52:52Z",
+          "finishedAt": "2026-09-20T10:05:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "log": "준비 단계에서 PR #155(`reconcile/hk3s-docs-impl-rct_20260920-0001`, head `a82b1d5`)에 이미 스테이징돼 있었고, 이번 squash 머지 `48bb9b7` 로 main 에 착지했다. 착지 직전 main tip 은 `17efb59`(자매 #153)이고 PR base 가 그와 동일했다. 머지 시점 열린 자매는 #156(주석 원장 R10)·#154(port-forward PRD) 둘이며 이번 머지 전에는 둘 다 미머지 — 겹친 두 파일(`docs/comment-policy/ledger.md`·`docs/doc-tracker/2026-09.md`)은 리베이스된 상태 그대로 충돌 없이 착지했다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "log": "준비 단계에서 PR #155(`reconcile/hk3s-docs-impl-rct_20260920-0001`, head `a82b1d5`)에 이미 스테이징돼 있었고, 이번 squash 머지 `48bb9b7` 로 main 에 착지했다. 착지 확인: `internal/github/commitstatus.go` 가 입력 검증(AC3)·접두사 판정(AC4)을 상류 HTTP 이전에 수행하고 `Unavailable` 은 기존 `unavailable(reason)` 로 거부(AC5). `TestCommitStatusValidatesBeforeGitHub`·`RejectsForeignContext`·`RefusesWhenNoPrefixConfigured`·`UnavailableReturnsToolError` 가 머지 트리에서 PASS."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "log": "준비 단계에서 PR #155(`reconcile/hk3s-docs-impl-rct_20260920-0001`, head `a82b1d5`)에 이미 스테이징돼 있었고, 이번 squash 머지 `48bb9b7` 로 main 에 착지했다. 성공 경로 착지 확인: `TestCommitStatusCreatesStatus`·`MintsNarrowToken`·`NeverReturnsToken`·`SurfacesGitHubError` PASS, 그리고 계획에 없던 `TestCommitStatusDiscardsItsToken` 도 실재·PASS(토큰 폐기 경로)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "준비 단계에서 PR #155(`reconcile/hk3s-docs-impl-rct_20260920-0001`, head `a82b1d5`)에 이미 스테이징돼 있었고, 이번 squash 머지 `48bb9b7` 로 main 에 착지했다. `internal/mcp` 핸들러 + `gate.go` `toolRegistry` 등록, `toolslist.go` 어노테이션 착지. `TestToolsListAdvertisesCommitStatus`(internal/server/mcp_test.go:751) PASS."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "준비 단계에서 PR #155(`reconcile/hk3s-docs-impl-rct_20260920-0001`, head `a82b1d5`)에 이미 스테이징돼 있었고, 이번 squash 머지 `48bb9b7` 로 main 에 착지했다. 문서가 이름을 댄 Go 단위 9종이 머지된 main 에 전부 실재하고 9/9 PASS."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "준비 단계에서 PR #155(`reconcile/hk3s-docs-impl-rct_20260920-0001`, head `a82b1d5`)에 이미 스테이징돼 있었고, 이번 squash 머지 `48bb9b7` 로 main 에 착지했다. 등록 세 지점 재측정: `toolslist.go`=25 · `EXPECTED_TOOLS`=25 · `internal/server/mcp_test.go` want=25, 세 쌍 모두 대칭차 공집합이고 `github_commit_status_create` 가 셋 다에 있다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "log": "머지된 main(`48bb9b7`)에서 재실행 — `gofmt -l .` 무출력 · `go vet ./...` rc=0 · `go build ./...` rc=0 · `go test ./...` rc=0(11패키지 ok). 게이트 넷도 전부 rc=0."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "log": "준비 단계에서 PR #155(`reconcile/hk3s-docs-impl-rct_20260920-0001`, head `a82b1d5`)에 이미 스테이징돼 있었고, 이번 squash 머지 `48bb9b7` 로 main 에 착지했다. `check_comment_policy.py` rc=0 — 등재 범위 54행 · 판정 대상 2921줄 · 판정 완료 100% · 미판정 잔량 0줄 · 복원경로 ③④ 5/54(잔량 49). 자매 행 지문 `17850d2eae26` 과 내 행 `46c572eb457a` 이 둘 다 살아 있다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "log": "준비 단계에서 PR #155(`reconcile/hk3s-docs-impl-rct_20260920-0001`, head `a82b1d5`)에 이미 스테이징돼 있었고, 이번 squash 머지 `48bb9b7` 로 main 에 착지했다. doc-tracker 갱신 착지. `check_ac_mapping.py` 는 머지 전 main 과 **출력 바이트 동일**(85·1·15·69·69·0·0), `check_doc_inventory.py` 도 바이트 동일(50/50 · 끊긴 링크 0)."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "log": "준비 단계에서 PR #155(`reconcile/hk3s-docs-impl-rct_20260920-0001`, head `a82b1d5`)에 이미 스테이징돼 있었고, 이번 squash 머지 `48bb9b7` 로 main 에 착지했다. `check_ac_mapping.py` 규칙 7 위반 0(출력 무이동으로 확인) — 통합 쪽 `(미작성)` 표기가 유지됐다."
+            },
+            {
+              "stepSeq": 11,
+              "status": "succeeded",
+              "log": "실행자 몫. ⑴ CI settled 초록 확인 — run `35502669830`(head `a82b1d5` 전체 SHA 조회) completed/success, 잡 6종 `fmt + vet`·`unit tests`·`integration tests`(kind)·`image / build & push server image`·필수 `ci passed` 전부 success(`pin deployment image` 는 main 전용 skipped). ⑵ 신선도 — PR `mergeable=true·clean`, base `17efb59` == 당시 main tip, `refs/pull/155/merge` 부모 `[17efb59, a82b1d5]` 로 초록이 머지 트리를 검증했음을 확인(리베이스 불필요). ⑶ 머지 방식은 레포 설정으로 판정 — `allow_merge_commit=false`·`allow_squash_merge=true`, 최근 main 커밋 전부 부모 1 → **squash** 로 머지. 결과 `48bb9b7`, `merged=true`."
+            }
+          ]
         }
       }
     ]
