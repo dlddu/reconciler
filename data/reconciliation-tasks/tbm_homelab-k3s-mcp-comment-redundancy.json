@@ -5063,7 +5063,7 @@
   {
     "id": "rct_20260919-0004",
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-redundancy",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-19T05:05:28Z",
@@ -5228,6 +5228,14 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/151",
           "preparedAt": "2026-09-20T08:25:00Z",
           "notes": "직전 시도가 연 PR #151 을 **제자리 갱신**했다(새 번호를 만들지 않았다). 브랜치를 현재 main `e494171` 위에 다시 세우고 force-with-lease 로 밀어, base 가 2커밋 낡아 `dirty` 였던 상태를 `mergeable=true` 로 되돌렸다. head `cbbab675c692ca1bfaae54087a9a5ac6e1516ef6`.\n\n5파일 · **`.go` 0개** — `scripts/check_comment_policy.py`(R9) · `docs/comment-policy/ledger.md` · `docs/comment-policy/README.md` · `docs/doc-tracker/2026-09.md` · 신규 판정 상세 `docs/comment-policy/passes/2026-09-20-restoration-paths-3-4-window-146-147.md`. 클러스터·런타임·데이터 영향 없음. 판정 대상 주석 제거 **0줄**.\n\n직전 판과 달라진 점 셋: ⑴ R9 판별식이 「토큰의 존재」가 아니라 **행의 현재 지문에 묶인 판정**이다 — 재판정이 옛 결과 칸을 접미사로 보존하는 이 레포의 실제 관례 아래서 토큰 존재만 세면 묻지 않은 줄이 거짓 초록을 얻기 때문이다(`ac9f9d3` 두 행에서 접미사 보존 실측). ⑵ 판정 범위를 창 5행에서 **무이동 3행 + 게이트 자기 행**으로 좁혔고, `ac9f9d3` 이 +57줄과 함께 재판정한 두 행은 고의로 잔량에 남겼다. ⑶ 「잔량은 줄어들기만 한다」는 거짓 약속을 「판정하지 않은 내용이 판정 완료로 계수되지 않는다」로 정정해 세 곳에 명시했다.\n\n로컬 실측(base `e494171`): 게이트 5종 전부 rc=0 — `check_comment_policy.py` 는 `R1~R9 위반 없음 · 2849줄 / 52행 · 잔량 0 · 복원경로 ③④ 판정 4/52행(잔량 48)`, `check_doc_inventory.py` 허브 `50 / 50`, `check_mock_policy.py`·`test_check_mock_policy.py`·`check_ac_mapping.py` 무이동. **음성 확인 2종**으로 R9 가 무는 것을 실측했다 — 토큰 제거 rc=1, 지문 셀만 이동(토큰 보존) rc=1. 두 번째가 이 PR 이 막으려는 거짓 초록 그 자체다.\n\nCI(run `35499291865`, head `cbbab67`): `fmt + vet` **success**(이 잡이 `check_comment_policy.py` 를 집행한다) · `unit tests` **success** · `image / build & push` **success** · `integration tests` 는 실행 중이었다 — 머지 전 settled 확인은 실행 지침 1번."
+        },
+        "review": {
+          "required": false,
+          "status": "approved",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-20T08:33:00Z",
+          "reason": "**승인.** 직전 판의 거부 사유(신선도)가 해소됐고 ①②③ 셋이 전건 반영됐다. PR #151 은 열려 있고 `mergeable_state=clean` · base `e494171` == **현재 main tip**(판정 시점 실측, 자매 머지 0건) · head `cbbab67` 의 CI run `35499291865` 가 6잡 전건 settled 이고 집계 체크 `ci passed` 를 포함해 success 다(`image / pin deployment` 만 main-only skipped — 의존 잡 뒤집힘 없음). \n\n**독립 재측정(로컬, PR head 체크아웃).** 게이트 5종 전부 rc=0 이고 출력이 계획 주장과 자릿수까지 일치한다 — `R1~R9 위반 없음 · 2849줄/121파일 · 잔량 0 · 복원경로 ③④ 판정 4/52행(잔량 48)`, 허브 `50/50`, `check_mock_policy`·`test_check_mock_policy`(13 tests)·`check_ac_mapping` rc=0. main `e494171` 기준선과 대조해 증분도 실측 확인했다: 주석 2845→2849 · 허브 49/49→50/50(정책 13→14) · `check_ac_mapping` 무이동(구현 대기 16 · 1:1 68 · 매칭 68 · 공백 0). 완료 기준 2 의 항등식 4+48==52 성립. \n\n**래칫이 실제로 무는지 음성 2종으로 직접 잰다.** ⑴ `복원경로 ④:` 토큰 1개 제거 → rc=1, `[R9]` 가 위반 행을 이름까지 찍는다. ⑵ **지문 셀만 이동시키고 토큰은 보존**(= `ac9f9d3` 식 자매 재판정) → rc=1, `[R9] ③④ 판정이 현재 지문에 묶여 있지 않은 행 1개: …`. 직전 판(토큰 존재만 세는 R9)이 rc=0 으로 통과시켰을 자리이고, 이 task 가 연 gap(묻지 않은 줄의 거짓 초록)을 실제로 닫는 지점이다. ⒝ 로 좁힌 범위도 실측 일치한다 — 무이동 3행(`aa46a5d651db`·`92477ed3e3e2`·`3d7f820c8536`)의 판정일·범위·줄 수 셀이 main 과 **바이트 동일**하고, 고의로 남긴 2행(`010bbf3e1e73`·`92a3ce829b84`)은 잔량 48 안에 드러나 있다. \n\n**위험·불가역성.** 5파일 · `.go` 0개 · 주석 제거 0줄 — 클러스터·배포·런타임·데이터 영향 없음. README 변경은 「추적」 절에 R9 를 덧붙인 가산이고 to-be 정의 표(복원 경로 넷)는 건드리지 않아 범위를 넘지 않는다. 불가역 지점은 머지 하나이며 착지가 squash 임을 최근 4건으로 확인 가능하고, 롤백이 구체적이다(R9 블록·`PATHS34_*`·잔량 마커 제거 + 게이트 2행·합계 복원, 판정 기록은 존치). 검증·음성 확인·머지 직전 재측정 절차가 executionGuide 에 기계 실행 가능한 형태로 있다.",
+          "comment": "승인이므로 재계획 입력은 없다. 실행자에게 넘기는 실측 2건만 남긴다.\n\n**⑴ 자매 간섭 — 열린 PR 은 #152·#153 둘이고 `ledger.md` 를 건드리는 것은 #153 하나다**(#152 는 `prd-/test-resource-generic.md` + doc-tracker 라 R9 와 무관). #153(`resource_generic_ac15.py` 신설)이 먼저 머지되면 원장 행이 52→53 이 되어 `[R4]`·`[R8]`·`[R9]` 가 함께 빨개진다 — 합친 트리에서 실측했고 `[R9] 완료 4 + 잔량 48 != 전체 53` 으로 잔량을 **49 로 올리라**고 실패 메시지가 직접 안내한다. 이건 executionGuide §2 가 이미 덮는 envelope(게이트 출력이 참값 → 마커를 그 값으로 옮겨 재푸시)이다. 다만 `ledger.md` 는 **텍스트 충돌**이 나므로 리베이스가 필요하다. **§2 의 ⚠️ 갈림(자매가 판정한 네 행 자신을 재판정한 경우)에 해당하면 ⒜ 를 실행자 재량으로 지어내지 말 것** — 그건 거부 사유로 올려 재계획에 넘기라는 지침이 맞다.\n\n**⑵ 머지 직전 재측정 대상 4종의 현재값**(base `e494171` 기준 실측): `판정-합계` 2849 · `docstring-합계` 1626 · `복원경로-잔량` 48 · 허브 `50/50`(정책 14). 완료 판정은 절대값이 아니라 `완료 + 잔량 == 전체` 항등식으로 읽을 것."
         }
       }
     ]
