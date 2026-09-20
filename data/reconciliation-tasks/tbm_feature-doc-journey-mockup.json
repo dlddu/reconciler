@@ -2562,5 +2562,23 @@
       "reason": "작업 불필요 — 이번 버전 이동은 **판정 축 밖 성분(`hub:`) 단독**이고, 8개 판정 규칙이 부모·트리거 두 지점에서 전건 동일하게 초록이다. 근거 6종:\n\n⑴ **귀속(단독)** — 부모 `3fbf9b2`에서 `asIs` versionScript를 재실행한 값이 저장 baseline과 **바이트 동일**(`mockups:cf23ae59… hub:72a5b0b1…`) ⇒ 이 이동은 트리거 `f5a2937`(#90) 단독이다. 마감 `ls-remote` 상 `dlddu/feature-doc` main tip 도 여전히 `f5a2937`(2파도 없음).\n\n⑵ **판정 집합 무접촉(가장 강한 논증)** — `git diff --stat 3fbf9b2 f5a2937 -- docs/mockups docs/user-journey docs/doc-tracker .github/workflows tools/check-journey-prototype.js` 가 **공집합**. 즉 규칙 1~5·8이 읽는 재료(목업 페이지·여정 문서·예외 등재·CI 배선·DOM 하네스)에 델타가 0이다. `asIs` 의 `mockups:` 성분이 `cf23ae59` 로 불변인 것이 같은 사실의 해시 형태다.\n\n⑶ **허브 델타 격리(규칙 7 축)** — 움직인 `docs/index.html` 의 실제 차이는 ⓐ `Documents` 요약 `36`→`37`, ⓑ 신규 주석 정책 패스 문서 1행 추가뿐이다. doc-row 블록과 `Documents` 수치만 치환하면 부모·트리거가 **바이트 동일**(sha256 `5588389fe4ff…` 양쪽 동일)이고, 목업 관련 줄은 **35 == 35 · 해시 동일**(`525f4cb1e4560b6a`) ⇒ 여정↔페이지 링크·단계 앵커·`Mockup pages` 수치·R11 단계 주석 23건이 전부 불변. 추가된 행도 `reader.html?doc=` 경유라 규칙 6(`.nojekyll` 직결 금지)을 지킨다.\n\n⑷ **게이트를 부모·트리거 두 지점에서** — 레포 자신의 정합 게이트 `tools/check-journey-mockup.py`(R0~R11)가 양쪽 **rc=0**, 판정 집합 출력 동일: `여정 6 (예외 1 · 이관 완료 5 · 이관 대기 0) · 목업 페이지 5`. 두 실행의 유일한 차이는 게이트가 부수로 세는 `문서 36→37` · `docs/ 상대 링크 278→285`이며 둘 다 판정 집합이 아니다. 정의의 전단사 항등식 **6 − 1 = 5 = 5** 실측 성립.\n\n⑸ **게이트 자신이 줄어든 자리를 따로 닫았다(이번 fire 의 핵심 확인)** — 트리거는 내 축의 게이트 스크립트 `tools/check-journey-mockup.py` 를 **−33줄** 했다. 주석 패스가 판정 로직을 함께 걷었다면 「초록인데 규칙이 사라진」 무증상 파손이 된다. `tokenize` 로 주석·독스트링을 제거한 토큰 열이 **부모 4366 == 트리거 4366, 전건 동일** ⇒ 순수 주석 삭제이고 집행 로직 불변. ⑷의 초록이 「규칙이 남아 있는 상태의 초록」임이 기계로 확정된다.\n\n⑹ **정적 게이트가 못 보는 축도 이 트리거로 움직일 수 없다** — 규칙 5(c)(d)(e)는 DOM 하네스 `tools/check-journey-prototype.js` 가 집행하는데, 그 파일과 `.github/workflows/docs-journey-mockup.yml`(`python3 tools/check-journey-mockup.py` + `node tools/check-journey-prototype.js` 둘 다 실행) 이 **부모 대비 무변경**이고 대상인 목업 페이지도 바이트 불변이다. (이 환경엔 node 가 없어 하네스를 직접 굴리지는 못했으나, 입력·하네스·배선이 모두 불변이므로 그 판정이 달라질 여지가 원리적으로 없다. 이 호스트 토큰에 `checks`/`actions` 권한이 없어 CI 실행 결과 자체는 읽을 수 없다는 기존 제약도 함께 적어 둔다.)\n\n**재감지 경로 확인** — 이 판정이 무언가를 묻어 두지 않는다: 여정·단계가 바뀌면 `toBe`(`journeys:`), 목업 페이지가 바뀌면 `asIs`(`mockups:`), 예외 등재가 바뀌면 `reg:` 가 움직여 각각 재트리거된다. 하네스 회귀는 CI 게이트가 머지 전에 잡는다.\n\n**모델 개정 제안(사용자·tobe-modeler 몫, 이번 판정과 무관)** — 이 모델의 `asIs` 에 든 `hub:` 는 `docs/index.html` **blob 전체**라, 자매 모델 산출물이 허브 문서 목록에 등재될 때마다 판정 축 밖 이유로 detector 를 깨운다. 최근 9건 중 다수가 이 형태의 churn 이었다(`rct_20260919-0004`·`-0005`·`rct_20260920-0001`·`-0002`, 그리고 이 건). 규칙 7·R11 때문에 허브를 축에서 빼는 것은 옳지 않으므로, **허브 blob 전체 대신 목업 관련 구간(목업 링크·단계 앵커·`Mockup pages` 요약)만 해시하도록 `asIs` versionScript 를 좁히는 개정**을 제안한다 — 이번 fire 의 ⑶에서 쓴 측정(목업 관련 35줄 해시)이 그 구간이 기계적으로 분리 가능함을 보인다.",
       "assessedAt": "2026-09-20T11:47:33Z"
     }
+  },
+  {
+    "id": "rct_20260920-0006",
+    "toBeModelId": "tbm_feature-doc-journey-mockup",
+    "status": "assessing",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-20T14:04:50Z",
+      "asIs": {
+        "currentVersion": "mockups:cf23ae591ddc121a037f4a8c27a88b7ed9771d43 hub:38f1dfd7e8a52b9c5358c5e5cc227e95fbfe757d",
+        "previousVersion": "mockups:cf23ae591ddc121a037f4a8c27a88b7ed9771d43 hub:b1a5516ae61767deb04bec60a6240c4c12effb99"
+      },
+      "changedSides": [
+        "as_is"
+      ]
+    },
+    "createdAt": "2026-09-20T14:04:50Z",
+    "updatedAt": "2026-09-20T14:04:50Z"
   }
 ]
