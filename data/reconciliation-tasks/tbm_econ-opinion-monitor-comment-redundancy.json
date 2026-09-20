@@ -2430,7 +2430,7 @@
   {
     "id": "rct_20260920-0007",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-20T15:44:42Z",
@@ -2523,8 +2523,9 @@
           "comment": "승인 조건이 아니라 실행 시 주의 — 머지 직전 main tip 을 다시 재고, 자매 #78·#82 가 먼저 착지했으면 executionGuide §1·§3 대로 리베이스 후 지문·잔여·원장 세 숫자를 재측정할 것(요약 행은 합이 참값이라 같은 문자열을 쓰면 충돌 없이 틀린 값이 남는다). 또 열린 #75 가 `review-gate/data-format` status 를 붙이는 워크플로를 들이므로, 그것이 먼저 머지되고 필수 컨텍스트가 늘면 이 head 에는 그 status 가 영구 결번이 된다 — 그때는 리베이스 push 로 새 런을 받을 것."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-20T16:12:57Z",
+          "finishedAt": "2026-09-20T16:29:40Z",
           "entries": [
             {
               "stepSeq": 1,
@@ -2564,7 +2565,55 @@
             {
               "stepSeq": 8,
               "status": "succeeded",
-              "log": "리베이스한 브랜치를 `--force-with-lease=refs/heads/<br>:a29dbd3`(ls-remote 실측 sha 를 lease 기준으로 명시)로 push — `a29dbd3 → ba8ee4a` forced update, rc=0. PR #83 은 계속 열려 있고 base 가 새 main 을 가리킨다. 머지는 CI settle 확인 후 다음 항목에서 한다."
+              "log": "push → CI settle → 머지. ⑴ 리베이스한 브랜치를 `--force-with-lease=refs/heads/<br>:a29dbd3`(ls-remote 실측 sha 를 lease 기준으로 명시)로 push, `a29dbd3 → ba8ee4a` forced update rc=0. ⑵ CI 는 `head_sha=ba8ee4a…`(40자 전체 SHA) 로 조회한 런 1건 `Checks` 가 settle 될 때까지 폴링해 success — 잡 9개 중 `ci/build`·`ci/e2e`·`docs/structure`·`docs/flow`·`render/render`·`image/publish (batch)`·`image/publish (serving)`·집계 `required` 가 전부 success 이고 skipped 는 main 전용 핀 잡 하나뿐. ruleset 필수 컨텍스트는 `/rules/branches/main` 실측으로 `required` 하나이고 그것이 success. 머지 직전 재조회에서 PR #83 은 mergeable=true·mergeable_state=clean·base `50dbd2d`(= 당시 main tip)였고 #84 는 여전히 열려 있었다. ⑶ `allow_merge_commit=false`·`allow_squash_merge=true` 이므로 **squash 머지** — 착지 커밋 `4772128` (#83), 부모 1개(`50dbd2d`)라 롤백은 `git revert 4772128`."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=2355 files=122\ncf139a539c55d11ba62249f468b0700a1f92d31ccf5dc80fbb82f31288a975d3",
+          "verifiedAt": "2026-09-20T16:31:10Z",
+          "checks": [
+            {
+              "name": "착지 ⑴ 소스 — 제거 5줄이 main 에 반영됐고 유지 5줄은 그대로",
+              "status": "passed",
+              "detail": "머지된 main(`4772128`)에서 `web/src/screens/Dashboard.tsx` 주석 **0줄**(계획 기대 0), `Dashboard.test.tsx` 주석 **5줄**(기대 5 — `:9-10` cleanup 2 · `:53` JSDoc 1 · 축 전환 스텁 2). 제거 대상 문장 「축을 추측해야」 는 두 파일 모두 `grep -c` **0**. 테스트 이름·단언은 건드리지 않았다(design-tracker `:309` 가 검증 좌표로 인용하는 두 이름 보존)."
+            },
+            {
+              "name": "착지 ⑵ 원장 — 행 신설·갱신과 요약 행 유일성",
+              "status": "passed",
+              "detail": "「패스 이력」의 `dashboard-surface-pass` 링크 행 **1개**, 파일별 `` | `web/src/screens/Dashboard.tsx` | 3 | 3 | 0 | `` **1개** · `` | `web/src/screens/Dashboard.test.tsx` | 7 | 2 | 5 | `` **1개**. 레포 전체 요약 행은 `grep -c '기준 · 레포 전체'` = **1** 이고 옛 두 판(`unrowed-files-pass …` · `trend-surface-pass …`)은 각 **0** — 절 재작성이 옛 사본을 남기지 않았다. `Dashboard.tsx` 는 남음 0 이지만 행을 **남겼다**(지침 주의사항)."
+            },
+            {
+              "name": "착지 ⑶ 패스 문서 — 필수 절 구성",
+              "status": "passed",
+              "detail": "`docs/comment-policy/passes/2026-09-20-dashboard-surface-pass.md` 존재(11,429바이트). 절 구성: 「왜 이 범위인가」(기준 커밋 이동 인용 블록 + #84 겹침 근거 소절 포함) · 「제거한 것 (5줄)」 · 「유지한 것 (5줄)」 · 「판단이 갈려 남긴 것」 · 「범위 밖 관측」 · 「다음 패스로 넘기는 것 (범위 밖)」."
+            },
+            {
+              "name": "착지 ⑷ 잔여 동치 — 원장 문면 숫자 == 머지된 main 재측정값",
+              "status": "passed",
+              "detail": "머지된 main 에서 파서를 다시 돌려 **667**(⑴ 행 없는 **4파일 101줄** + ⑵ 행보다 자란 **13파일 566줄**), 표가 덮는 행 수 **121**. 원장 말미 요약 행이 적은 네 숫자(`두 몫을 합쳐 667줄` · `4개 101줄` · `13파일 566줄` · `121개 파일`)와 **전건 일치**. 지문도 `lines=2355 files=122`/`cf139a539c55…` 로 원장 머리 집계(`2360 → 2355`, `123 → 122`)와 일치하며 base 대비 정확히 -5줄이다."
+            },
+            {
+              "name": "착지 ⑸ 판정 커버리지 — 두 파일이 ⑴·⑵ 어느 몫에도 없다 (핵심 단정)",
+              "status": "passed",
+              "detail": "파서 출력에서 `web/src/screens/Dashboard.tsx`(행 남음 0 / 현재 0)와 `Dashboard.test.tsx`(행 남음 5 / 현재 5) 모두 **⑴·⑵ 어느 목록에도 없다**. 「지웠는가」가 아니라 「판정돼 행이 있는가」가 이 task 의 정합 조건이며, 열 줄 전부가 행으로 닫혔다."
+            },
+            {
+              "name": "CI — PR head 잡 단위 초록",
+              "status": "passed",
+              "detail": "`checks.yml` 이 `on: pull_request` 전용이라 근거는 PR head(`ba8ee4a…`) 런이다. 런 1건 `Checks` success, 잡 9개: `ci/build`·`ci/e2e`·`docs/structure`·`docs/flow`·`render/render`·`image/publish (batch)`·`image/publish (serving)`·집계 `required` 전부 success, `image/pin deploy images (main only)` 만 skipped(main 전용). 필수 컨텍스트는 `/rules/branches/main` 실측으로 `required` 하나이고 success. 재실행·우회는 쓰지 않았다."
+            },
+            {
+              "name": "자매 간섭 — #82 착지분 보존 (되돌림 0)",
+              "status": "passed",
+              "detail": "리베이스 충돌 4곳을 전부 **양쪽 합치기**로 풀었고 「내 쪽 채택」을 쓰지 않았다. 이 레포엔 원장을 읽는 게이트가 없어 조용한 되돌림을 아무 검사도 못 잡으므로 grep 으로 직접 확인: 머지된 main 에서 `trend-surface-pass` 6히트, 자매의 재판정 행 `` `Trend.tsx` | 75 | 25 | 47 `` · `` `Trend.test.tsx` | 35 | 8 | 25 `` 각 1히트로 보존. `git diff origin/main` 도 내 추가분 + 교체한 낡은 두 행뿐이었다."
+            },
+            {
+              "name": "정보성 — 범위 밖 잔여 667줄과 #84 의 31줄 (converged 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "이 task 의 완료 기준은 **열 줄의 판정**이지 잔여 전체가 아니다. 머지 후에도 667줄이 남는다 — ⑵ `handlers.go` +228 · `handlers_test.go` +106 · `run.sh` +84(셋 다 소유자 없음, 418줄로 다음 패스의 가장 큰 덩어리) · `types.ts` +43 등 13파일 566줄, ⑴ `Fairness.tsx` 37(#76) · `Trace.tsx` 36 · `Trace.test.tsx` 22(#78) · `store_test.go` 6. 또한 열린 #84 가 판정한 두 파일에 주석 31줄을 더하는 중이며, 착지하면 두 파일 모두 행이 있으므로 계수 규약 ⑵ 로 잡힌다. 이 변화들은 다음 감지 주기가 후속 task 로 잇는다 — 모델 `lastObservedVersion` 은 건드리지 않았다."
             }
           ]
         }
