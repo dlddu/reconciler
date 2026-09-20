@@ -9352,7 +9352,7 @@
   {
     "id": "rct_20260919-0006",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-19T06:44:25Z",
@@ -9435,6 +9435,14 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/152",
           "preparedAt": "2026-09-20T08:16:00Z",
           "notes": "순수 문서 변경 3파일(`docs/prd-resource-generic.md`·`docs/test-resource-generic.md`·`docs/doc-tracker/2026-09.md`, +34 −7). **새 구현 0 · 새 테스트 0** — 새로 적은 기대값 넷은 전부 이미 착지한 단위 아홉이 덮는다(`internal/mcp/proxy_test.go:258-259`·`:83`, `internal/k8s/proxy_test.go:93`·`:108`). head `e137e218f2e6164a8ef03570cd8515809b8eef3e`, base `e494171` — 계획 수립 후 하루가 지났으나 `git fetch` 로 origin/main 이 `e494171` 그대로임을 재확인하고 푸시했다. \n\n**로컬 실측(base ↔ tip)**: AC15 절 `grep -cE 'readSeconds|256|상한|기본|truncat|잘'` **0 → 8** (네거티브 컨트롤 — 측정법이 부재를 실제로 잡는다). AC 전집 85 불변 · 시나리오 전집 85 불변 · `docs/**.md` 49 불변(새 문서 없어 허브 등재 불필요). 레지스트리 `도구 미구현` 잔량 3 → 0. 게이트 4종(`check_ac_mapping`·`check_doc_inventory`·`check_mock_policy`·`check_comment_policy`)이 두 지점 전부 rc=0 이고 **출력 바이트 동일** — 집계 무이동의 기계적 증거다. \n\n**미검증 명시**: 이 호스트에 Go 툴체인이 없어 `go test` 로컬 실행 불가. `docs/**` 만 바뀌므로 Go 잡은 변경 없이 통과해야 하며 판정은 CI 필수 체크로 갈음한다. \n\n**자매 PR #151**(`chore(comment-policy)`): 같은 `docs/doc-tracker/2026-09.md` 를 만지지만 **줄 겹침 0** — #151 은 허브 집계(`:102`)·변동 이력 표(`:1069`), 이 PR 은 레지스트리 행(`:835`·`:837`·`:838`). #151 이 세우는 R9 게이트는 주석 원장(`docs/comment-policy/ledger.md`) 행만 읽고 이 PR 은 그 파일을 건드리지 않아 무관하다. 어느 쪽이 먼저 머지돼도 자동 병합되어야 하지만, 나중 PR 은 머지 직전 게이트 4종을 **머지 트리에서** 재실행할 것."
+        },
+        "review": {
+          "required": false,
+          "status": "approved",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-20T08:46:00Z",
+          "reason": "순수 문서 3파일(+34 −7)로 런타임·클러스터·매니페스트에 닿는 것이 0이고 되돌리기는 revert 하나 — 불가역 지점 없음, riskLevel low 타당. **신선도는 직접 실측했다**: PR #152 는 열려 있고 `mergeable_state=clean`(mergeable=true), head `e137e218` CI 런 1건의 잡 6개 전건 success(`ci passed`·`unit tests`·`fmt + vet`·`integration tests`·`build & push server image`, 핀 잡은 main 전용 skipped). 다만 그 초록은 낡았다 — base 는 `e494171` 인데 그 뒤 자매 #151 이 머지돼 main tip 이 `6b41d86` 이고, `refs/pull/152/merge` 의 부모가 여전히 `[e494171, e137e21]` 이라 머지 트리를 검증하지 못했다. 그래서 현재 main 위에 시험 머지(충돌 0)해 게이트 4종을 직접 돌렸다: `check_ac_mapping`·`check_doc_inventory`·`check_mock_policy`·`check_comment_policy` 전부 rc=0 이고 **출력이 origin/main 단독과 바이트 동일** — #151 이 새로 세운 R9 래칫(`check_comment_policy.py` +71)까지 합친 트리에서 통과하며, 집계·판정은 한 칸도 움직이지 않았다(완료 기준 ⑸). 완료 기준 ⑴~⑷ 도 머지 트리에서 전건 성립: AC15 절 토큰 **0→8**(네거티브 컨트롤로 측정법이 부재를 실제로 잡음), AC15 `readSeconds` 3, 시나리오 15 기대값 7(≥3), 레지스트리 `도구 미구현` 잔량 0. 불변식도 무이동 — AC 85 · 시나리오 85 · `docs/**.md` 50(= main 과 동수, 새 문서 없어 허브 등재 불필요). **문서가 주장하는 값은 코드 실측과 일치한다**: 기본 10·상한 30(`internal/k8s/proxy.go:28-29`), 256KiB(`internal/k8s/exec.go:21` → 프록시 본문에도 `proxy.go:129` 로 적용), 응답 `bodyEncoding`/`truncated`/`readSeconds`(`internal/mcp/proxy.go:195-197`), `readSeconds=31` 은 `internal/mcp/proxy.go:76` 의 인자 파싱에서 거부돼 클러스터 호출 전에 끊긴다. 인용 대상이 실재하게 되는 두 자리(`internal/k8s/proxy.go:55`·`internal/mcp/proxy.go:76` 의 `(prd-resource-generic AC15)`)와 지목된 단위 넷(`TestProxyRefusalsCostNoApproval`·`TestProxyAllPathsGated`·`TestProxyOutcomeReportsItsEncoding`·`TestProxyOutcomeMarksACutBody`)도 전부 실재를 확인했다. 변경 범위는 3파일 그대로이고 `⏳` 접두·표 위치·집계 블록·게이트 스크립트는 건드리지 않아 범위 초과가 없다. gap 축 ②·③·④ 를 좁히는 데 필요한 만큼만 담겼으므로 **승인**한다.",
+          "comment": "실행 시 주의 — **executionGuide §4 의 자매 목록이 낡았다.** 지침은 #151 만 다루지만, 승인 시점에 **새 자매 PR #153**(`test(e2e): 시나리오 15 를 구현 대기에서 빼고 전용 e2e 로 닫는다`, 자매 task `rct_20260919-0005` / `tbm_homelab-k3s-mcp-scenario-e2e`)이 열려 있고 이 PR 과 파일 셋이 겹친다(`docs/doc-tracker/2026-09.md`·`docs/test-resource-generic.md`, #153 은 추가로 `docs/comment-policy/ledger.md`). 실측 결과: ⑴ **#153 은 이미 origin/main 단독과도 충돌한다**(`ledger.md` — #151 의 R9 등재와 부딪힘). 즉 #153 의 낡음은 이 PR 탓이 아니고, 이 PR 을 먼저 머지해도 #153 이 새로 지는 부담은 `doc-tracker` 시나리오 15 행과 `test-resource-generic.md` 뿐이다(#153 은 그 ⏳ 행을 철거하는 쪽이라 이 PR 이 고친 사유 칸은 어차피 #153 에서 사라진다 — 순서 의존이지 정보 손실이 아니다). ⑵ 따라서 **#152 를 먼저 머지하고, #153 은 리베이스 후 게이트 4종을 머지 트리에서 재실행**하는 순서를 권한다. ⑶ 지침 §4 의 `dirty` 분기는 #151 대신 **#153 기준으로 읽을 것** — 머지 직전 열린 PR 전수의 `/pulls/<n>/files` 를 다시 재라(이 승인 시점 실측도 곧 낡는다). 그 밖에 §0~§3 은 그대로 유효하다. 참고로 `preparation.notes` 의 「이 호스트에 Go 툴체인이 없다」는 사실과 다르다(`/home/silas/toolchains` 를 PATH 에 넣으면 `go test` 가 돈다) — 다만 `docs/**` 만 바뀌어 Go 잡 입력이 불변이고 CI 가 초록이므로 판정에는 영향이 없다."
         }
       }
     ]
