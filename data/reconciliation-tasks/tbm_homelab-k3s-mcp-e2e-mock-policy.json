@@ -1338,7 +1338,7 @@
   {
     "id": "rct_20260920-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-20T11:32:34Z",
@@ -1493,6 +1493,84 @@
               "stepSeq": 10,
               "status": "succeeded",
               "log": "PR #164는 준비 단계에서 이미 열려 있었다(본문에 인계 근거·ⓑ 선택 이유·설계 지점·검증표·범위 밖·되돌리기 포함). 실행은 그 PR의 머지다 — 레포 설정이 allow_merge_commit=false·allow_squash_merge=true라 squash로 머지했고 착지 커밋은 3a10d9b1(부모 1개, 7a1abb41)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "sites=38 files=22\n77e9917ea7561e9dafd3811e0c1718aeb7b1f28805f97d447f741211859db84b",
+          "verifiedAt": "2026-09-20T22:50:00Z",
+          "checks": [
+            {
+              "name": "착지 — main tip에 이 슬라이스가 있다",
+              "status": "passed",
+              "detail": "squash 머지 성공, 착지 커밋 3a10d9b10bd8943a469c2cf1798c9ba0659adf1b(제목 말미 (#164), 부모 1개 = 7a1abb41). git log --oneline -3 origin/main 최상단. 레포 설정이 allow_merge_commit=false·allow_squash_merge=true라 squash가 정본."
+            },
+            {
+              "name": "완료 기준 ⑴ — 스텁이 statuses를 서빙·기록하고 422를 sha로 가른다",
+              "status": "passed",
+              "detail": "머지된 main(3a10d9b)의 github-mock.yaml에서 server.py(235줄)를 뽑아 로컬 기동해 실측: GET /app/installations/42 → 200 {\"id\":42,\"account\":{\"login\":\"dlddu\"},\"permissions\":{…}} · POST …/statuses/<0×40> → 201 {\"id\":1,\"state\":\"success\",\"context\":\"ci/x\",\"sha\":\"0…0\",\"created_at\":\"2026-01-01T00:00:00Z\"} + 보낸 description·target_url 반향 · POST …/statuses/<f×40> → 422 {\"message\":\"Validation Failed\",\"errors\":[{\"resource\":\"Status\",\"code\":\"custom\",…}]} · Accept 누락 → 400 · 인증 누락 → 401 · POST /repos/dlddu/test/nope → 404(기존 미매치 갈래 보존) · /_admin/requests에 5건 기록(404는 기록 대상 아님) · /_admin/config {\"installation_status\":500} → 설치 조회 500, {}로 원복 → 200. 지침 3번 표 8행 전건 일치."
+            },
+            {
+              "name": "완료 기준 ⑴ — GET /app/installations/{id}의 account.login",
+              "status": "passed",
+              "detail": "account.login == \"dlddu\" 반환(위 첫 행). internal/github의 installationOwner가 owner를 읽는 필드가 채워졌다."
+            },
+            {
+              "name": "완료 기준 ⑵ — 모킹 정책 「대상」이 같은 PR에서 넓어지고 거짓 단언이 정정됐다",
+              "status": "passed",
+              "detail": "git show 3a10d9b --stat에 docs/e2e-mocking-policy.md(+18 −2)가 같은 커밋으로 들어 있다. 「대상」이 상류 4종으로 확대되고, 「셋은 github_app_installation_token 의 AC5 경로가 실제로 거치는 상류 호출 전부다」가 「앞의 셋은 AC5 경로가 거치는 전부이고, 넷 전부가 github_commit_status_create 가 거치는 전부」로 정정됐다. 422를 노브가 아니라 sha로 가른 이유(시나리오 2가 한 구성 상태에서 성공·실패 호출을 차례로 함)도 기재됐다. 등재 상한 5·허용목록 행 무접촉."
+            },
+            {
+              "name": "완료 기준 ⑶ — 게이트 4종 rc=0이고 출력이 머지 직전 main과 바이트 동일",
+              "status": "passed",
+              "detail": "머지 직전: BR과 origin/main(7a1abb41)을 각각 체크아웃해(git stash 아님 — 리베이스 후 트리가 깨끗해 공허하게 통과하는 함정) 4종(check_mock_policy·check_comment_policy·check_doc_inventory·check_ac_mapping) 실행 → rc=0 ×4, 출력 파일 양쪽 15512바이트, diff 무출력(IDENTICAL). 입력 크기를 같이 재 공허한 통과가 아님을 확인. 머지 후 main(3a10d9b)에서 재실행 → 4종 전부 rc=0. 따라서 등재 5(상한 5)·모킹 지점 6·차단 원장 1행·허브·구현 대기·1:1 대상·공백 시나리오 0이 전부 무이동."
+            },
+            {
+              "name": "완료 기준 ⑷ — 체커 회귀 13/13",
+              "status": "passed",
+              "detail": "python3 -m unittest discover -s scripts -p test_check_mock_policy.py → Ran 13 tests, OK. 머지 전(브랜치)·머지 후(main 3a10d9b) 양쪽에서 통과."
+            },
+            {
+              "name": "인계 해소 완전성 — 다섯 항 전수",
+              "status": "passed",
+              "detail": "B1 인계가 요구한 항: ⑴ POST /repos/{owner}/{repo}/statuses/{sha} 서빙 → 201 실측 ✅ ⑵ 요청 기록 → /_admin/requests 5건 ✅ ⑶ 422 모드 → f×40에서 422 ✅ ⑷ GET /app/installations/{id}의 account.login → \"dlddu\" ✅ ⑸ 「대상」을 같은 PR에서 확대 → 머지 커밋 stat에 docs/e2e-mocking-policy.md 동반 ✅. 다섯 항 전부 참이므로 차단 원장 행 신설이 불필요하다는 계획의 의도적 산출이 성립한다(원장은 1행 그대로 무이동)."
+            },
+            {
+              "name": "불변식 — 시나리오 1·2·4의 ⏳ 상태 표기 보존",
+              "status": "passed",
+              "detail": "doc-tracker 2026-09.md의 ⏳ 전체 수가 44→45로 +1이나, 절 단위로 가르면 「변경 이력」 절 안이 19→20이고 그 밖(⏳ 상태 표) 25→25로 무이동이다. +1은 새 변경 이력 행의 산문 「⏳ 3행 철거」(범위 밖 후속 서술)이지 상태 표기가 아니다. test-github-commit-status.md#시나리오 1·2·4 세 행이 ⏳ 표에 그대로 있고(grep 3건), (미작성) 표기도 3→3 불변이라 check_ac_mapping 규칙 7 무영향. 게이트 출력 바이트 동일성이 이를 독립적으로 증명한다."
+            },
+            {
+              "name": "comment ledger 재판정 면제 성립",
+              "status": "passed",
+              "detail": "github-mock.yaml의 주석 줄 수가 main 8 == 브랜치 8(추가 0줄). 스텁 새 코드에 주석을 달지 않았다는 설계 제약이 지켜졌고, check_comment_policy 출력도 바이트 동일이라 ledger.md 행의 줄 수·지문이 움직이지 않았다."
+            },
+            {
+              "name": "자매 변경 이력 행 보존",
+              "status": "passed",
+              "detail": "브랜치가 머지 직전 main tip 위에 직접 얹혀 있어(merge-base == 7a1abb41) 리베이스·충돌 해소가 없었다. 그럼에도 머지 후 main에서 직전 자매 슬라이스의 고유 문자열 생존을 확인: rct_20260920-0004 1건, rct_20260920-0003 2건, rct_20260919-0004 5건 — 「내 쪽 채택」으로 자매 행이 조용히 사라지는 경로가 없었음을 실측."
+            },
+            {
+              "name": "CI — 머지 트리가 검증된 초록",
+              "status": "passed",
+              "detail": "런 35541313552(head e0a53f79) completed/success. 잡 6건: unit tests ✅ · integration tests(kind) ✅ · fmt + vet ✅ · image build & push ✅ · ci passed ✅ · pin deployment image (main only) skipped(main 전용 잡이라 PR에서 정상 skip). github-mock.yaml을 실제로 행사하는 잡은 integration 하나뿐인데 그것이 초록. refs/pull/164/merge의 부모가 [7a1abb41(=머지 직전 main tip), e0a53f79]라 그 초록이 실제 머지 트리를 검증한 것이다."
+            },
+            {
+              "name": "빌드·단위 무회귀",
+              "status": "passed",
+              "detail": "go build -buildvcs=false ./... rc=0(머지 전 브랜치·머지 후 main 양쪽), go test ./internal/github/... ok 2.760s. 제품 코드(internal/·main.go) 변경 0줄이므로 회귀 여지 자체가 없다(머지 커밋 stat 4파일 전부 docs/ 3 + tests/ 1)."
+            },
+            {
+              "name": "as-is 지문 재계산(기록용)",
+              "status": "passed",
+              "detail": "모델 asIs.versionScript를 머지된 main(3a10d9b)에서 실행 → sites=38 files=22 / 77e9917ea7561e9dafd3811e0c1718aeb7b1f28805f97d447f741211859db84b. lastObservedVersion과 동일하다 — 그 지문은 상류 스텁 '이름'·충실도 저하 스위치·예외 주석 토큰만 뽑으므로, 기존 github-mock 스텁 '안에' 라우트를 더한 이 슬라이스에는 설계상 반응하지 않는다(자매 모델과의 중복 트리거 회피 의도). 수렴 판정의 근거가 아니라 기록용이며, 판정은 위 완료 기준 넷으로 한다. 모델의 lastObservedVersion은 건드리지 않았다."
+            },
+            {
+              "name": "잔여 gap(정보성 — 이 task 범위 밖)",
+              "status": "passed",
+              "detail": "plan이 명시한 범위 밖으로 남은 것: ⓐ 전용 e2e 6개 저작과 시나리오 1·2·4의 ⏳ 3행 철거 — tbm_homelab-k3s-mcp-scenario-e2e 소관(규칙 4·6이 「저작 대기」를 등재 사유에서 배제하므로 그 렌즈가 저작과 철거를 같은 PR에서 한다). ⓑ 시나리오 4(b)의 GITHUB_COMMIT_STATUS_CONTEXT_PREFIXES 미설정 배포 변형. ⓒ 실 GitHub create-status 응답의 top-level sha 여부 대조(제품 문서·docs-impl 쪽). 세 항 모두 converged 판정에 넣지 않았고, 후속은 다음 감지 주기가 연다."
             }
           ]
         }
