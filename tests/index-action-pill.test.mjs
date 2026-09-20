@@ -12,11 +12,16 @@ const SCHEMA_STATUSES = schema.properties.status.enum;
 const doneMatch = html.match(/  var DONE_STATUSES = \[[^\]]*\];\n/);
 assert.ok(doneMatch, "DONE_STATUSES must exist in index.html");
 
+// actionPillHtml delegates the "조치 필요" judgement to taskNeedsAction — the task list
+// filter reads the same function, so both must agree by construction.
+const needsMatch = html.match(/  function taskNeedsAction\(t\) \{[\s\S]*?\n  \}\n/);
+assert.ok(needsMatch, "taskNeedsAction must exist in index.html");
+
 const pillMatch = html.match(/  function actionPillHtml\(t\) \{[\s\S]*?\n  \}\n/);
 assert.ok(pillMatch, "actionPillHtml must exist in index.html");
 
 const ctx = vm.createContext({});
-vm.runInContext(doneMatch[0] + pillMatch[0], ctx);
+vm.runInContext(doneMatch[0] + needsMatch[0] + pillMatch[0], ctx);
 
 const DONE = vm.runInContext("DONE_STATUSES", ctx);
 const actionPillHtml = vm.runInContext("actionPillHtml", ctx);

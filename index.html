@@ -193,6 +193,23 @@
   a.chip.prchip:hover { text-decoration: underline; }
 
   .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; margin: 26px 0 10px; }
+  .section-title.with-toggle { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  /* ---- 작업 목록 필터 토글 (조치 필요만) ---- */
+  .toggle {
+    margin-left: auto; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    background: var(--panel-2); color: var(--muted);
+    border: 1px solid var(--border-strong); border-radius: 999px;
+    height: 28px; padding: 0 11px; cursor: pointer;
+    font: inherit; font-size: 11.5px; font-weight: 700; letter-spacing: .02em; text-transform: none;
+  }
+  .toggle:hover { color: var(--text); border-color: var(--accent); }
+  .toggle[aria-pressed="true"] { background: var(--accent-weak); color: var(--accent); border-color: var(--accent); }
+  .toggle .n {
+    font-size: 11px; line-height: 16px; min-width: 18px; text-align: center;
+    padding: 0 5px; border-radius: 999px; background: var(--bg); color: var(--muted); font-weight: 700;
+  }
+  .toggle[aria-pressed="true"] .n { background: var(--panel); color: var(--accent); }
 
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
   .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -435,6 +452,9 @@
     // (init()에서 저장값을 읽어 mode/modePinned를 채운다.)
     modePinned: false,
     repo: "",           // 대상 레포 필터. ""(빈 문자열) = 전체 레포. 역시 저장·복원된다.
+    // 상세의 작업 목록을 "조치 필요"(taskNeedsAction)인 것만으로 좁히는 토글. 모델을 옮겨도,
+    // 새로고침해도 유지된다 — 조치가 밀린 건을 훑는 동안 모델마다 다시 켜지 않게.
+    tasksActionOnly: false,
     view: DEFAULT_VIEW,
     templates: null,        // README 표 파싱 결과 (null = 아직 안 불러옴)
     templatesError: null,
@@ -715,10 +735,20 @@
   // 는 planner 가 다시 집는 재작업 진입점이라 종료가 아니므로 pill 을 유지한다.
   // `no_action_needed` 를 빼는 데는 덤이 하나 더 있다 — 상태 배지가 이미 "조치 불필요"라
   // 같은 말이 두 번 찍히던 것이 사라진다.
+  //
+  // "조치 필요"의 정의는 pill 과 목록 필터가 함께 쓴다 — 토글로 걸러낸 목록이 pill 이 붙은
+  // task 집합과 정확히 같아야 "조치 필요만"이라는 라벨이 거짓말이 되지 않기 때문이다.
+  // 그래서 판정을 여기 한 번만 적고 양쪽이 이 함수를 부른다.
+  function taskNeedsAction(t) {
+    if (!t || !t.assessment || typeof t.assessment.actionRequired !== "boolean") return false;
+    if (DONE_STATUSES.indexOf(t.status) !== -1) return false;
+    return t.assessment.actionRequired;
+  }
+
   function actionPillHtml(t) {
     if (!t.assessment || typeof t.assessment.actionRequired !== "boolean") return "";
     if (DONE_STATUSES.indexOf(t.status) !== -1) return "";
-    return t.assessment.actionRequired
+    return taskNeedsAction(t)
       ? '<span class="pill yes">조치 필요</span>'
       : '<span class="pill no">조치 불필요</span>';
   }
@@ -1221,6 +1251,7 @@
     var tasks = (state.tasksByModel[m.id] || []).slice().sort(function (a, b) {
       return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
     });
+    var needAction = tasks.filter(taskNeedsAction);
     var lastAct = lastAction(m.id);
 
     var checkPolicy = "";
@@ -1256,8 +1287,8 @@
       '<details class="block"><summary>정의 <span class="muted small">definition (markdown)</span></summary>' +
         '<div class="block-body prose">' + md(m.definition) + "</div></details>" +
 
-      '<div class="section-title">정합성 작업 · ' + tasks.length + "건 (reconciliation tasks)</div>" +
-      (tasks.length ? tasks.map(fmtTask).join("") : '<div class="empty small">아직 생성된 작업이 없습니다.</div>') +
+      taskSectionTitleHtml(tasks, needAction) +
+      taskListHtml(tasks, needAction) +
 
       '<details class="raw"><summary>원본 JSON 보기 (raw)</summary>' +
         '<pre class="code"><code>' + escapeHtml(JSON.stringify(m, null, 2)) + "</code></pre>" +
@@ -1265,7 +1296,30 @@
       "</details>";
 
     detail.innerHTML = html;
+    var toggle = $("#taskfilter", detail);
+    if (toggle) toggle.addEventListener("click", function () { setTasksActionOnly(!state.tasksActionOnly); });
     detail.scrollTop = 0;
+  }
+
+  // 토글은 작업이 하나라도 있을 때만 의미가 있다 — 작업이 없는 모델에선 그리지 않는다.
+  function taskSectionTitleHtml(tasks, needAction) {
+    var title = "정합성 작업 · " + tasks.length + "건 (reconciliation tasks)";
+    if (!tasks.length) return '<div class="section-title">' + title + "</div>";
+    return '<div class="section-title with-toggle"><span>' + title + "</span>" +
+      '<button type="button" id="taskfilter" class="toggle" aria-pressed="' + (state.tasksActionOnly ? "true" : "false") +
+      '" title="조치가 필요한 작업만 보기">조치 필요만 <span class="n">' + needAction.length + "</span></button></div>";
+  }
+
+  function taskListHtml(tasks, needAction) {
+    if (!tasks.length) return '<div class="empty small">아직 생성된 작업이 없습니다.</div>';
+    if (!state.tasksActionOnly) return tasks.map(fmtTask).join("");
+    // 토글을 켠 채 조치 필요 건이 없으면 "작업이 없다"가 아니라 "걸러져 비었다"라고 적는다 —
+    // 아래 N건이 필터 때문에 안 보이는 것임을 알려, 모델에 작업이 없다는 오해를 막는다.
+    if (!needAction.length) {
+      return '<div class="empty small">조치가 필요한 작업이 없습니다. ' +
+        "전체 " + tasks.length + "건은 토글을 끄면 보입니다.</div>";
+    }
+    return needAction.map(fmtTask).join("");
   }
 
   function renderTemplateSidebar() {
@@ -1430,11 +1484,21 @@
     renderAll();
   }
 
+  // 토글은 상세의 작업 목록만 바꾼다 — 사이드바·모드·선택은 그대로이므로 상세만 다시 그린다.
+  function setTasksActionOnly(on) {
+    on = !!on;
+    if (state.tasksActionOnly === on) return;
+    state.tasksActionOnly = on;
+    setStoredTasksActionOnly(on);
+    renderDetail();
+  }
+
   // ---------- 사용자 선택 저장 (새로고침해도 유지) ----------
   // 테마와 같은 자리(localStorage)에 모드와 레포도 남긴다. 저장이 막힌 환경(사파리 프라이빗 등)에서는
   // 조용히 무시하고 기본값으로 동작한다 — 페이지가 저장 실패로 깨지지 않게.
   var STORE_MODE = "reconciler-mode";
   var STORE_REPO = "reconciler-repo";
+  var STORE_TASKS_ACTION_ONLY = "reconciler-tasks-action-only";
 
   function storeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function storeSet(key, value) { try { localStorage.setItem(key, value); } catch (e) {} }
@@ -1449,6 +1513,11 @@
   // 레포는 값 목록을 미리 알 수 없으므로 그대로 읽고, 데이터에 없으면 renderRepoFilter가 되돌린다.
   function storedRepo() { return storeGet(STORE_REPO) || ""; }
   function setStoredRepo(repo) { storeSet(STORE_REPO, repo); }
+
+  // 저장값이 "1"일 때만 켠다 — 알 수 없는 값은 꺼짐(전체 보기)으로 떨어뜨려, 저장소가 오염돼도
+  // 작업이 숨겨진 채로 열리지 않게 한다.
+  function storedTasksActionOnly() { return storeGet(STORE_TASKS_ACTION_ONLY) === "1"; }
+  function setStoredTasksActionOnly(on) { storeSet(STORE_TASKS_ACTION_ONLY, on ? "1" : "0"); }
 
   // 딥링크(#modelId)로 들어온 모델이 저장된 레포 필터 밖이면 링크가 이긴다 — 필터를 푼다.
   // (아니면 공유받은 링크가 "빈 목록"으로 열려 원인을 알 수 없다.)
@@ -1603,6 +1672,7 @@
     var savedMode = storedMode();
     if (savedMode) { state.mode = savedMode; state.modePinned = true; }
     state.repo = storedRepo();
+    state.tasksActionOnly = storedTasksActionOnly();
 
     renderLegend();
     renderModes();
