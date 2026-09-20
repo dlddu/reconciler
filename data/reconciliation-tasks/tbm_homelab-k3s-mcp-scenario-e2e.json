@@ -10831,6 +10831,62 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-20T11:26:00Z",
           "reason": "**승인.** 위험 낮음·불가역 지점은 머지 하나뿐이고 프로덕션 무접촉을 실측으로 확인했다 — `git diff origin/main..pr159 -- internal/ main.go k8s/` 가 **빈 diff**이고, `.github/workflows/ci.yml` +1줄은 kind 테스트 클러스터 시크릿 생성 스텝 안(`Iv1.testclientid12345` 등 테스트 리터럴과 같은 줄묶음)에 `GITHUB_COMMIT_STATUS_CONTEXT_PREFIXES=homelab-k3s-mcp/` 를 더하는 것뿐이라 운영 배포의 「접두사 미설정 = 전건 거부」 동작은 그대로다. 롤백은 revert PR 1건으로 가능하고 지침이 squash 착지·부분 revert 금지까지 구체적으로 적어 뒀다.\n\n**신선도(재측정, 승인 시점)**: PR #159 `state=open` · `mergeable=true` · `mergeable_state=clean` · `base.sha=da22caa0e4b8` = **현재 main tip 그대로**(베이스 무이동). head `b6d4807`의 CI 런 1건이 `completed/success`, 잡 6개 전부 초록이고 필수 체크 `ci passed`(`/rules/branches/main` 로 확인한 유일 필수)도 success다. combined commit status 가 `pending`/statuses 0건인 것은 Actions 레포의 기본값이라 red 가 아니다.\n\n**로컬 재실측** — 이 슬라이스의 kind e2e 는 호스트에 docker/kind 가 없어 CI 가 유일 판정자이므로, 잡 로그(176,046 B)를 직접 grep 해 `ok: github-commit-status/AC3` · `refusal ok: github-commit-status/AC5` · `ok: github-commit-status/AC6` 세 줄을 확인했다. 문서·게이트 축은 머지 트리에서 네 게이트를 돌려 전부 rc=0, `check_ac_mapping.py` 가 main 단독 `1·14·70·70·0·0` → 머지 트리 `1·11·73·73·0·0` 으로 **계획이 예고한 기여분 구현 대기 −3 · 1:1 대상 +3 · 매칭 파일 +3, 분할·공백 무이동**과 한 자리도 어긋나지 않는다(main 단독 대조가 네거티브 컨트롤). 완료 기준 ⑴⑵⑶ 도 실측: 세 파일 실재 + 각각 `검증 시나리오:` 로 자기 시나리오 하나만 선언, ⏳ 상세행 철거 후 등재 절엔 `✅ 전용 파일` 레지스트리 3행만 남음, `docs/test-github-commit-status.md` 의 `(미작성)` 6→3(남은 셋은 시나리오 1·2·4 것).\n\n**자매 간섭(열린 PR 전수 재조회)** — 열린 PR 은 #159·#158 둘뿐이고 #158 은 `docs/comment-policy/ledger.md` · `docs/doc-tracker/2026-09.md` 를 **파일 단위로 겹친다**. 같은 base 위 원장 합계가 조용히 한쪽만 채택되는 형태를 배제하려고 #158 head 를 머지 트리에 합쳐 같은 네 게이트를 다시 돌렸다: 충돌 없이 auto-merge 되고 **네 게이트 전부 rc=0**, `check_ac_mapping.py` 일곱 값도 #159 단독 머지 트리와 **동일**(`1·11·73·73·0·0`). 마커도 갈라져 움직인다 — `복원경로-잔량` 은 #158 만 49→47, `docstring-합계` 는 #159 만 1720→1751 이고 합친 트리에 **둘 다 보존**되므로 「내 쪽 채택」 식 되돌림이 없다. 머지 순서와 무관하다.\n\n**경계 판정 1건의 근거도 실측으로 섰다** — 계획이 `#시나리오 3` 의 두 어긋난 칸 중 근거 칸을 정본으로 택한 판단(여섯 무효 호출이 상류에 닿지 않으므로 `POST …/statuses/{sha}` 핸들러는 선행이 아니다)은, 바로 그 「github-mock 요청 로그가 비어 있다」를 단언하는 `github_commit_status_ac3.py` 가 CI 에서 초록인 것으로 경험적으로 확증된다. 범위도 계획이 선언한 7파일과 정확히 일치해 gap 밖 변경이 섞이지 않았다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-20T11:25:03Z",
+          "finishedAt": "2026-09-20T11:34:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T11:26:30Z",
+              "finishedAt": "2026-09-20T11:30:00Z",
+              "log": "준비 단계(planner)에서 완료 — PR #159 `reconcile/hk3s-scenario-e2e-rct_20260920-0003`. 실행자는 머지 직전 실측으로 이 산출물을 재확인했다: `git diff origin/main..HEAD --stat` 7파일(+295 −20)로 계획이 선언한 범위와 일치. 세 전용 파일 실재 확인(`github_commit_status_ac3.py` 143줄 · `_ac5.py` 57줄 · `_ac6.py` 67줄). 배차 재실측: `run_all.py --group primary --list` → `github_commit_status_ac3.py [레인 github-app]` · `_ac6.py [레인 github-app]`, `--group auth-variant --list` → `github_commit_status_ac5.py`. 계획의 expectedOutcome 과 일치."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T11:26:30Z",
+              "finishedAt": "2026-09-20T11:30:00Z",
+              "log": "`.github/workflows/ci.yml` +1 −0 — 「Create test GitHub App secret」 스텝에 `--from-literal=GITHUB_COMMIT_STATUS_CONTEXT_PREFIXES=homelab-k3s-mcp/` 한 줄. 프로덕션 무접촉 실측: `git diff origin/main..HEAD -- internal/ main.go k8s/` 가 **0줄**. `check_mock_policy.py` rc=0."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T11:26:30Z",
+              "finishedAt": "2026-09-20T11:30:00Z",
+              "log": "`docs/test-github-commit-status.md` +14 −(일부). 머지 후 main 실측 `grep -c '미작성'` = **3**, 남은 셋은 `awk` 로 소속 절을 확인해 시나리오 1·2·4 의 것임을 확정(「status 기록과 GitHub 오류 전달」·「내부 토큰 스코프와 비노출」·「context 네임스페이스 밖은 거부」). 시나리오 3·5·6 의 `(미작성)` 은 사라졌다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T11:26:30Z",
+              "finishedAt": "2026-09-20T11:30:00Z",
+              "log": "`docs/doc-tracker/2026-09.md` +25 −(일부). 머지 트리에서 `check_ac_mapping.py` rc=0, 일곱 값 `85 · 1 · 11 · 73 · 73 · 0 · 0` — 계획이 예고한 절대값과 한 자리도 어긋나지 않는다. `grep 'test-github-commit-status.md#시나리오 [356]'` 히트 3건이 **전부 레지스트리 `✅ 전용 파일` 행**이고 ⏳ 표엔 남은 행이 없다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T11:26:30Z",
+              "finishedAt": "2026-09-20T11:30:00Z",
+              "log": "`docs/comment-policy/ledger.md` +8 −(일부). `check_comment_policy.py` rc=0 — 원장 행 `2026-09-20(#25) 31줄 c758d02a514b` 가 세 파일을 한 행으로 등재하고 있음을 출력에서 확인. `check_doc_inventory.py` rc=0(허브 52/52 · 끊긴 링크 0) — 새 pass 문서를 만들지 않아 허브 수치 무이동."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T11:26:30Z",
+              "finishedAt": "2026-09-20T11:26:30Z",
+              "log": "준비 단계에서 완료 — PR #159 open, head `b6d48072806faf8ea5f63d49ee312952f8bc805d`, CI 디스패치됨."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T11:26:30Z",
+              "finishedAt": "2026-09-20T11:34:00Z",
+              "log": "**(실행자 몫) 머지 직전 재측정 → 머지.**\n⑴ CI settled: `actions/runs?head_sha=b6d48072…`(전체 40자) → 런 1건 `CI` `completed/success`. `/jobs` 6건 전부 settled — fmt+vet · unit tests · **integration tests** · image build 초록, `image / pin deployment image (main only)` 는 `skipped`(main 전용이라 정상), 필수 체크 `ci passed`(`/rules/branches/main` 로 확인한 유일 필수) success.\n⑵ 통합 e2e 판정자 로그 직접 확인: `gh api --allow-escape-sequences .../jobs/106068598824/logs` → **176,046 B**, `ok: github-commit-status/AC3` 1히트 · `refusal ok: github-commit-status/AC5` 1히트 · `ok: github-commit-status/AC6` 1히트.\n⑶ **자매 #158 이 실행 중 머지됐다**(11:25:29Z, main `da22caa` → `30b2588`). 지침이 경고한 그 상황이라 절대값이 아니라 **기여분**으로 판정했다. PR head 에 새 main 을 머지한 트리(`03716c44`)에서 네 게이트 전부 rc=0, `check_ac_mapping.py` = `85·1·11·73·73·0·0`; 같은 커맨드를 `origin/main`(30b2588) 단독에서 돌린 네거티브 컨트롤은 `85·1·14·70·70·0·0`. 차는 **구현 대기 −3 · 1:1 대상 +3 · 매칭 파일 +3 · 분할 대기 0 무이동 · 공백 0 무이동** 으로 계획의 예고와 정확히 같다. 주석 원장 합계 마커도 자매 머지 후 그대로 rc=0 이라 재조정이 불필요했다.\n⑷ CI 초록 이식 판정: main 이동분 `da22caa..30b2588` 은 **docs/ 3파일 뿐**(ledger.md · passes/2026-09-20-*.md · doc-tracker/2026-09.md). `integration tests` 잡 스텝에 `docs/` 참조가 **0건**이고 Go 소스 무이동이라 통합·단위·이미지 잡의 초록은 그대로 이식된다. docs/ 를 읽는 것은 `fmt + vet` 잡의 네 게이트인데, 그 넷은 위 ⑶에서 머지 트리 로컬로 직접 재현해 rc=0 을 받았다.\n⑸ 머지: 레포 설정 실측 `allow_merge_commit=false · allow_squash_merge=true` 에 따라 **squash**. `mergeable=true · mergeable_state=clean` 확인 후 `sha=b6d4807…` 을 명시해 PUT → merged, main tip = **`20939fcf1dad9764cae728c0952eae43127631ab`** (부모 1개, 착지 커밋 본문 비공백 1줄)."
+            }
+          ]
         }
       }
     ]
