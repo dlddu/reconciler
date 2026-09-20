@@ -4874,5 +4874,28 @@
       "assessedAt": "2026-09-20T14:18:00Z",
       "reason": "작업 불필요 → **`no_action_needed`**(종료, lock 해제). 이 트리거가 이 모델의 판정 축에 만든 변화가 **없고**, 살아 있는 잔여 gap 에는 **이미 소유자가 있다**. 근거는 전부 이번 fire 의 독립 실측이다.\n\n**근거 1 — 트리거는 순수 주석 패스다(기계 확인, 산문 논증 아님).** 부모 `f5a2937` 에서 양 side versionScript 재실행 결과가 저장된 baseline 과 **바이트 동일** ⇒ 이동은 `4a4b593`(#94) 단독. 그 창의 `git diff -U0 -- backend e2e` 변경 **268줄 중 비주석 줄 0건**이고, 주석 제거 대조에서도 backend 11파일 전부 코드 동일. 구현이 주석 밖에서 안 바뀌었으므로 as-is 의 **동작**은 부모와 같다.\n\n**근거 2 — 목표선도 안 움직였다.** `docs` 트리 해시는 움직였으나 그 델타는 `comment-policy/ledger.md`·신설 패스 문서·`index.html` 세 파일뿐이고, **SSOT 6개 트리(`prd`·`test`·`mockups`·`values.md`·`design-system.md`·`doc-tracker`)가 전부 바이트 동일**이다. AC 재계수도 `24 == 24`. 그러므로 「미구현 AC 가 줄어 보이거나 늘어 보이는」 착시조차 원리적으로 생길 수 없다.\n\n**근거 3 — 판정 기준 3개가 모두 불발화.** 기준 1: 잔여 9항목이 부모와 **동일 집합**(6개 패턴 전수 grep 양 지점 0히트, AC4.1 「해제」 그대로). 기준 2: 대조의 양변이 둘 다 불변이고, `check-scenario-e2e`·`check-mockup-render` 가 부모·트리거 두 지점에서 **rc=0 + 출력 바이트 동일**. 기준 3: 새 사용자 대면 표면 0(코드 비주석 델타 0 ⇒ 라우트 집합 정의상 불변).\n\n**근거 4 — 「소비된 트리거」 함정이 아니다: 잔여 gap 에 살아 있는 소유자가 있다.** 「지금 닫으면 무엇이 잔여 9항목을 여는가」를 검산했다. 답은 **이미 열려 있다** — 같은 모델의 `rct_20260919-0003` 이 `action_required` → **`planning`(2026-09-20T11:19:10Z 갱신, 신선)** 으로 planner 에게 점유돼 있고, 그 task 의 `assessment.reason` 이 이 잔여 9항목을 축으로 슬라이스 6(AC3.1~3.5) · 슬라이스 7(AC4.4·AC4.6·AC4.7) · AC4.1 「해제」로 이미 갈라 두었다. 여기서 **경쟁 task 를 새로 여는 것은 중복 계상**이고, 반대로 `no_action_needed` 는 planner 에게 아무것도 넘기지 않으므로 그 진행을 방해하지 않는다. 그 task 는 아직 `preparation`(staged PR)이 없어 **#94 의 주석 변경이 훼손할 스테이징 산출물도 없다**(계획 전제도 무사하다 — 그 계획이 딛고 선 잔여 집합·항등식·게이트 상태가 이번 창에서 전부 불변임을 위에서 재측정했다).\n\n**근거 5 — 조용히 깨질 수 있던 단 한 지점을 닫았다.** #94 가 e2e spec 3파일의 주석을 만졌으므로 `// 검증 시나리오:` **선언 줄**이 함께 지워졌을 위험이 있었다(그랬다면 자매 `scenario-e2e` 의 규칙 2 가 게이트 초록 밑에서 깨진다). 부모·트리거의 선언 집합을 떠서 `diff` 한 결과 **24 == 24 완전 동일**. 무죄다.\n\n**근거 6 — 노이즈의 귀속처가 전부 실재한다.** `index.html` 문서 37→38(그리고 `check-journey-mockup` 의 유일한 출력 델타 285→289 링크)은 자매 `tbm_feature-doc-journey-mockup` `rct_20260920-0006`(14:04:50Z `assessing`)이 **같은 hub 해시 이동**(`b1a5516→38f1dfd`)으로 이미 점유했다. 주석·원장 축은 `tbm_feature-doc-comment-redundancy` `rct_20260920-0005` 가 13:57:09Z `succeeded` 로 닫으며 낸 산출물이다. 이 레코드는 어느 자매 레코드의 status 도 건드리지 않는다.\n\n**이 판정이 baseline 을 전진시킨다.** claim 커밋에서 asIs `backend:43659238` · toBe `fe305088` 로 갱신했으므로 dumb precheck 가 같은 노이즈로 detector 를 재발사하지 않는다. #94 의 주석 변경이 나중에 실구현으로 이어지면 backend 트리가 다시 움직여 재감지된다(재감지 경로 생존).\n\n**사용자 보고용 부수 관측 2건**(이 task 의 축이 아니므로 여기서 작업으로 열지 않는다): ⑴ `tbm_econ-opinion-monitor-mockup-render` `rct_20260920-0005` 가 **11:48:41Z 부터 `assessing` 으로 2.4h 정체**돼 있고 `assessment.recheckAfter` 가 없어 **아무도 이어받을 수 없는 lock** 이다(detector 발사 간격이 4분인 점을 감안하면 고아). ⑵ `tbm_feature-doc-comment-redundancy` 는 #94 로 양 side 가 움직였는데 비-터미널 task 가 0건 — 미점유 후보로 남아 있다(single in-flight 규약상 이번 fire 에서 집지 않는다)."
     }
+  },
+  {
+    "id": "rct_20260920-0006",
+    "toBeModelId": "tbm_feature-doc-docs-impl",
+    "status": "assessing",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-20T15:25:03Z",
+      "asIs": {
+        "currentVersion": "backend:9c209777e54325cb6db10a1074a55d8ec09d6bf5 frontend:4f9fa625e2f92152b0e799a1bc6b0f7484fe1832",
+        "previousVersion": "backend:436592382141db4a1b15c9b92e3c256414333957 frontend:4f9fa625e2f92152b0e799a1bc6b0f7484fe1832"
+      },
+      "toBe": {
+        "currentVersion": "2d696eb7393688a734f8f5b14e80acf5b889b216",
+        "previousVersion": "fe305088eb142aca300f2ab3c4521e696f2d66f4"
+      },
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ]
+    },
+    "createdAt": "2026-09-20T15:25:03Z",
+    "updatedAt": "2026-09-20T15:25:03Z"
   }
 ]
