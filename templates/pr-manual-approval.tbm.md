@@ -3,7 +3,7 @@
 한 레포에서 **어떤 PR이 사람의 승인을 받아야 하는가**를 판정기 하나가 가르고, 그 판정이
 **코드베이스가 자라는 동안에도 낡지 않게** 유지하는 모델. 수동 승인은 레포당 **하나의 프로세스**다
 — 판정기 하나, status 하나, 케이스 목록 하나. 판정기는 PR이 어떤 수동 승인 케이스에도 **닿지 않았다고
-확인되면** head 커밋에 commit status `{{STATUS_CONTEXT}}` = success를 붙이고, 닿았을 가능성이 있으면
+확인되면** head 커밋에 commit status `review/manual-approval` = success를 붙이고, 닿았을 가능성이 있으면
 아무것도 붙이지 않는다. 그 status는 기본 브랜치 ruleset의 **required status check**이므로, 붙지 않은
 PR은 머지되지 않는다. 사람의 승인은 **사람이 PR을 검토한 뒤 같은 status를 직접 붙이는 것**(수동
 status)이다 — 승인 경로는 이것 하나뿐이다.
@@ -33,8 +33,30 @@ status)이다 — 승인 경로는 이것 하나뿐이다.
 | P4 base 실행 | 판정기는 **PR이 아니라 base 쪽 코드**로 돈다(`pull_request_target` + base 체크아웃). PR의 코드는 실행하지 않고 diff 입력(데이터)으로만 쓴다. | PR이 판정기를 고쳐 자기에게 success를 붙이지 못하게. |
 | P5 자기 참조 | 판정기·그 워크플로·정책 문서를 바꾸는 PR은 **수동 승인 케이스**다(케이스로 명시). | P4 때문에 판정기 변경 PR은 옛 판정기로 판정된다 — 그 변경 자체는 사람 눈에 올린다. |
 | P6 미탐 비대칭 | 판단이 갈리면 **사람 승인 쪽으로** 기운다(케이스를 넓게 잡는다). | 미탐(위험한데 success → 자동 머지 가능)은 운영 사고, 오탐(무해한데 승인 대기)은 승인 한 번이다. |
-| P7 수동 status | 사람 승인은 **항상 수동 status**다: 사람이 PR을 검토한 뒤 head 커밋에 **같은 context `{{STATUS_CONTEXT}}`** = success를 직접 붙인다. description은 `수동 승인`으로 시작하고 승인자를 적는다. ruleset bypass·관리자 머지·required check 해제는 승인 경로가 아니다. | status는 커밋에 붙으므로 승인 뒤 새 푸시가 오면 head가 바뀌어 **승인이 자동으로 무효**가 되고, 판정기가 다시 판정한다 — 승인이 검토한 코드에 묶인다. bypass는 코드에 아무 흔적을 남기지 않아 어떤 PR이 사람을 거쳤는지 사후에 알 수 없다. |
-| P8 사람만 승인한다 | 수동 status는 **사람만** 붙인다. 루프(reconciler)·봇·에이전트·CI는 판정기 워크플로를 제외하고 `{{STATUS_CONTEXT}}`를 붙이지 않는다. required check는 **특정 앱(integration)에 고정하지 않는다**. | 자동화가 수동 status를 붙이면 사람 승인이 형식만 남는다. 반대로 required check가 판정기 앱에 고정되면 사람이 붙인 status가 인정되지 않아 P7이 불가능해진다. |
+| P7 수동 status | 사람 승인은 **항상 수동 status**다: 사람이 PR을 검토한 뒤 head 커밋에 **같은 context `review/manual-approval`** = success를 직접 붙인다. description은 `수동 승인`으로 시작하고 승인자를 적는다. ruleset bypass·관리자 머지·required check 해제는 승인 경로가 아니다. | status는 커밋에 붙으므로 승인 뒤 새 푸시가 오면 head가 바뀌어 **승인이 자동으로 무효**가 되고, 판정기가 다시 판정한다 — 승인이 검토한 코드에 묶인다. bypass는 코드에 아무 흔적을 남기지 않아 어떤 PR이 사람을 거쳤는지 사후에 알 수 없다. |
+| P9 고정 이름 | status context는 **모든 레포에서 `review/manual-approval`** 한 값이다. 레포마다 케이스에 맞춰 이름을 짓지 않는다. | 이름이 케이스를 가리키면(예: `review/data-format`) 케이스가 넓어질 때마다 개명이 필요하고, 개명은 워크플로·ruleset·정책을 동시에 건드리는 위험한 작업이다. 이름은 "사람 승인이 필요한가"만 뜻해야 한다. 값이 하나로 고정되어야 지문의 신호 계열 ERE도 고정된다. |
+| P8 사람만 승인한다 | 수동 status는 **사람만** 붙인다. 루프(reconciler)·봇·에이전트·CI는 판정기 워크플로를 제외하고 `review/manual-approval`를 붙이지 않는다. required check는 **특정 앱(integration)에 고정하지 않는다**. | 자동화가 수동 status를 붙이면 사람 승인이 형식만 남는다. 반대로 required check가 판정기 앱에 고정되면 사람이 붙인 status가 인정되지 않아 P7이 불가능해진다. |
+
+## 고정값
+
+레포마다 정하지 않는다. 인스턴스가 바꿀 수 있는 값이 아니다.
+
+| 항목 | 값 | 쓰이는 곳 |
+|---|---|---|
+| status context | `review/manual-approval` | 판정기가 붙이는 success, 사람이 붙이는 수동 status, ruleset의 required status check |
+| 신호 계열 ERE | `context[^a-z/]{1,4}review/[a-z0-9-]+` | as-is `judges` 성분이 워크플로에서 승인 계열 context 선언을 찾을 때. 이름 하나가 아니라 `review/…` 계열을 잡으므로 **두 번째 신호가 생기면(P1 위반) 드러난다**. `context=review/x`·`context: review/x`·`"context": "review/x"`를 모두 잡는다 |
+
+이미 다른 이름을 쓰고 있는 레포는 첫 task에서 개명한다. 순서를 지키지 않으면 열린 PR이 전부
+막히므로 반드시 이 순서로 한다.
+
+1. ruleset의 required status check에 `review/manual-approval`을 **추가**한다(옛 이름은 둔 채). 사람이 한다.
+2. 판정기 워크플로의 context를 새 이름으로 바꾼다. 워크플로 파일이라 GitHub App 권한으로는 push가
+   막힐 수 있어 사람 손이 필요할 수 있다.
+3. 열린 PR들이 새 status를 받은 뒤(필요하면 빈 커밋으로 재판정), ruleset에서 옛 이름을 뺀다.
+4. 정책 문서의 프로세스 표와 수동 status 명령을 새 이름으로 고친다.
+
+2와 3 사이에는 계열 context가 둘이라 R2가 일시적으로 위반 상태다. task의 계획에 그 구간을 적고,
+같은 task 안에서 닫는다.
 
 ## 정책 문서 (고정부)
 
@@ -49,7 +71,7 @@ SSOT다 — 헤더에만 있으면 판정기를 고치는 사람만 보고, 무�
 
    | 항목 | 값 |
    |---|---|
-   | status context | `{{STATUS_CONTEXT}}` |
+   | status context | `review/manual-approval` |
    | 판정기 | 판정기 경로 |
    | 워크플로 | 워크플로 경로 |
    | 게이트 | 기본 브랜치 ruleset의 required status check (ruleset 이름) |
@@ -94,14 +116,12 @@ SSOT다 — 헤더에만 있으면 판정기를 고치는 사람만 보고, 무�
 | `{{REPO}}` | owner/repo | `dlddu/feature-doc` |
 | `{{SLUG}}` | id·이름용 소문자 레포명 | `feature-doc` |
 | `{{POLICY_SSOT}}` | 정책 문서 경로 | `docs/review-policy.md` |
-| `{{STATUS_CONTEXT}}` | 수동 승인 판정 status context (하나) | `review/data-format` (등록 시점 이름 — 케이스가 저장 형식 밖으로 넓어지면 개명 여부를 사용자에게 묻는다) |
-| `{{CONTEXT_ERE}}` | 워크플로에서 **승인 판정 계열** context 선언을 찾는 ERE. P1 위반(두 번째 신호)도 잡도록 이름 하나가 아니라 계열로 쓴다. **작은따옴표를 쓰지 않는다** | `context[^a-z/]{1,4}review/[a-z0-9-]+` |
 | `{{JUDGE_REF_ERE}}` | 워크플로가 부르는 판정기 경로를 뽑는 ERE | `tools/[A-Za-z0-9_./-]+\.(py\|js\|mjs\|sh)` |
 | `{{JUDGE}}` | 판정기 · 워크플로 · 등록 시점 케이스 ID | `tools/check-data-format-change.py` · `.github/workflows/data-format-review.yml` · D1~D6 |
-| `{{RULESET}}` | 게이트 ruleset | `default` (id 23666120, 기본 브랜치, required: `ci-gate`(integration 15368)·`review/data-format`(integration 없음)) |
+| `{{RULESET}}` | 게이트 ruleset | `default` (id 23666120, 기본 브랜치, required: `ci-gate`(integration 15368)·`review/data-format`(integration 없음) — **옛 이름이므로 첫 task에서 `review/manual-approval`로 개명**) |
 | `{{TOKEN_REF}}` | ruleset 조회용 토큰 참조 (사실상 필수) | `secretRef:<이름>` — 공개 레포는 무토큰으로도 읽히지만 무인증 한도(60/h)를 egress 전체가 공유해 등록 전 실측에서 소진됐다. metadata:read 권한이면 충분하다 |
 | `{{SIBLING_MODEL}}` | 판정기 헤더를 함께 보는 자매 모델 [선택] | `tbm_feature-doc-comment-redundancy` |
-| `{{INITIAL_STATE}}` | 등록 시점 현황 | 정책 문서 없음 · 케이스는 판정기 헤더 주석에만 · ruleset은 이미 required(integration 미고정) · 수동 status 절차 미기재 |
+| `{{INITIAL_STATE}}` | 등록 시점 현황 | 정책 문서 없음 · 케이스는 판정기 헤더 주석에만 · status가 옛 이름 `review/data-format`(개명 필요) · ruleset은 이미 required(integration 미고정) · 수동 status 절차 미기재 |
 | `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
 
 ## 모델 JSON 골격
@@ -111,7 +131,7 @@ SSOT다 — 헤더에만 있으면 판정기를 고치는 사람만 보고, 무�
   "id": "tbm_{{SLUG}}-pr-manual-approval",
   "metadata": {
     "name": "{{SLUG}} PR 수동 승인 정합성",
-    "description": "{{REPO}}의 PR 수동 승인은 판정기 하나가 {{POLICY_SSOT}}의 케이스에 닿지 않았다고 확인할 때만 {{STATUS_CONTEXT}} = success를 붙이고, 기본 브랜치 ruleset이 그 status를 required로 요구하는 단일 프로세스다. 케이스·신호·게이트 정합(불변식 1)과 케이스의 신선도 — 앵커 실재·표면 포괄·제외 트립와이어·재검토 기한(불변식 2)을 추적한다.",
+    "description": "{{REPO}}의 PR 수동 승인은 판정기 하나가 {{POLICY_SSOT}}의 케이스에 닿지 않았다고 확인할 때만 review/manual-approval = success를 붙이고, 기본 브랜치 ruleset이 그 status를 required로 요구하는 단일 프로세스다. 케이스·신호·게이트 정합(불변식 1)과 케이스의 신선도 — 앵커 실재·표면 포괄·제외 트립와이어·재검토 기한(불변식 2)을 추적한다.",
     "tags": ["{{SLUG}}", "pr", "review", "manual-approval", "ci", "consistency"],
     "createdAt": "{{NOW_ISO}}"
   },
@@ -148,7 +168,7 @@ git rev-parse --verify --quiet "HEAD:{{POLICY_SSOT}}" || echo "absent"
 
 | 성분 | 무엇의 지문인가 | 무엇에 반응하나 | 반응하지 않는 것 |
 |---|---|---|---|
-| `judges` | `{{CONTEXT_ERE}}`에 걸리는 워크플로 + 그 워크플로가 부르는 판정기의 blob hash | 케이스 수정, **두 번째 판정기·두 번째 신호의 등장**(P1) | 다른 워크플로 변경 |
+| `judges` | `context[^a-z/]{1,4}review/[a-z0-9-]+`에 걸리는 워크플로 + 그 워크플로가 부르는 판정기의 blob hash | 케이스 수정, **두 번째 판정기·두 번째 신호의 등장**(P1) | 다른 워크플로 변경 |
 | `ruleset` | 기본 브랜치에 적용되는 required status check (context, 고정 integration) 집합(레포·조직 ruleset 합산) | 승인 status가 required에서 빠짐·개명·다른 context 추가·**특정 앱에 고정됨** | ruleset의 다른 규칙(삭제 금지 등) |
 | `surface` | 정책 ```` ```surface ```` 블록에 걸리는 (파일, 토큰) 쌍 집합 | 위험 신호가 **새 파일에 나타나거나 사라짐**, 새 종류의 토큰 등장 | 이미 표면인 파일 안의 로직·주석 변경 |
 | `anchors` | 정책 ```` ```anchors ```` 블록 경로별 실재 여부(present/absent) | 케이스가 지목한 경로의 삭제·이동 | 앵커 파일의 내용 변경 |
@@ -160,7 +180,7 @@ git rev-parse --verify --quiet "HEAD:{{POLICY_SSOT}}" || echo "absent"
 set -euo pipefail
 export LC_ALL=C
 POLICY='{{POLICY_SSOT}}'
-CONTEXT_ERE='{{CONTEXT_ERE}}'
+CONTEXT_ERE='context[^a-z/]{1,4}review/[a-z0-9-]+'
 JUDGE_REF_ERE='{{JUDGE_REF_ERE}}'
 REPO='{{REPO}}'
 h() { sha256sum | cut -c1-16; }
@@ -244,11 +264,11 @@ printf 'judges=%s;ruleset=%s;surface=%s;anchors=%s\n' \
 # {{SLUG}} PR 수동 승인 정합성
 
 ## 목표
-`{{REPO}}`의 PR 수동 승인은 **하나의 프로세스**다. 판정기 하나가 PR이 수동 승인 케이스 어디에도 닿지 않았다고 확인될 때만 `{{STATUS_CONTEXT}}` = success를 붙이고, 기본 브랜치 ruleset이 그 status를 required로 요구한다. 붙지 않은 PR은 사람이 검토한 뒤 **같은 status를 직접 붙여(수동 status)** 승인해야 머지된다. 이 모델은 (1) **무엇이 사람 승인 대상인가**가 정책·판정기·ruleset 사이에서 어긋나지 않는지, (2) **케이스가 코드베이스의 현재 모양을 따라가는지**를 추적한다.
+`{{REPO}}`의 PR 수동 승인은 **하나의 프로세스**다. 판정기 하나가 PR이 수동 승인 케이스 어디에도 닿지 않았다고 확인될 때만 `review/manual-approval` = success를 붙이고, 기본 브랜치 ruleset이 그 status를 required로 요구한다. 붙지 않은 PR은 사람이 검토한 뒤 **같은 status를 직접 붙여(수동 status)** 승인해야 머지된다. 이 모델은 (1) **무엇이 사람 승인 대상인가**가 정책·판정기·ruleset 사이에서 어긋나지 않는지, (2) **케이스가 코드베이스의 현재 모양을 따라가는지**를 추적한다.
 
 ## 무엇이 "맞는 상태"인가 (SSOT)
 - **정책의 SSOT**는 `{{POLICY_SSOT}}`다: 프로세스 표 · 수동 승인 케이스 · 표면/앵커 블록 · 의도적 제외 · 미탐 원장.
-- **구현의 SSOT**는 `{{STATUS_CONTEXT}}`를 붙이는 워크플로와 그것이 부르는 판정기다.
+- **구현의 SSOT**는 `review/manual-approval`를 붙이는 워크플로와 그것이 부르는 판정기다.
 - **게이트의 SSOT**는 기본 브랜치에 적용되는 ruleset의 required status check다.
 - **현실의 SSOT**는 코드다: 정책의 surface 블록에 걸리는 파일들과 anchors 블록이 지목한 경로들.
 - 정합 상태 = **불변식 1 ∧ 불변식 2**. 어느 하나만 참인 것은 정합이 아니다.
@@ -265,11 +285,11 @@ P1 단일 프로세스(판정기 하나 · status 하나) · P2 긍정 확인(su
 ## 불변식 1 — 케이스 · 신호 · 게이트 정합 ("사람 승인이 필요한 케이스"의 추적·관리)
 
 - **R1 케이스 1:1** — 정책 케이스 표의 ID 집합 == 판정기가 판정 근거로 쓰는 ID 집합. 판정기의 케이스 본문(대상 경로·패턴)이 정책과 다르면 drift이며 **정책이 SSOT**다. 판정기에만 있는 케이스는 정책 밖의 판정, 정책에만 있는 케이스는 **판정기가 보지 않는 수동 승인 케이스**(= 새는 케이스)다 — 후자가 더 위험하다.
-- **R2 신호 단일성** — `{{CONTEXT_ERE}}` 계열 context가 워크플로 전체에서 정확히 하나(`{{STATUS_CONTEXT}}`)이고, 그것을 붙이는 판정기도 하나다(as-is 진단 `contexts=1`). 두 번째 판정기·두 번째 status가 생기면 P1 위반이다: 그 판정을 기존 판정기의 케이스로 합친다.
+- **R2 신호 단일성** — `review/…` 계열 context가 워크플로 전체에서 정확히 하나(`review/manual-approval`, P9의 고정값)이고, 그것을 붙이는 판정기도 하나다(as-is 진단 `contexts=1`). 두 번째 판정기·두 번째 status가 생기면 P1 위반이다: 그 판정을 기존 판정기의 케이스로 합친다.
 - **R3 원칙 준수** — 판정기가 P2~P6을 지킨다. 특히 P4(워크플로 트리거·체크아웃 ref·PR 코드 비실행)와 P5(판정기·워크플로·정책 문서 자기 경로가 케이스에 포함)는 파일을 읽어 확인한다.
 - **R4 문서 완비** — 프로세스 표의 모든 칸이 채워져 있고, 케이스 표·surface 블록·anchors 블록이 **기계 판독 가능한 형식으로** 있다. as-is 지문의 surface가 `malformed`면 위반이다.
-- **R5 게이트 정합** — 기본 브랜치의 required status check에 `{{STATUS_CONTEXT}}`가 **있고**, 그 항목이 **특정 앱(integration)에 고정되어 있지 않으며**(as-is `integration=any`, P8), `{{CONTEXT_ERE}}` 계열의 다른 context는 **없다**. 앱에 고정되면 수동 status가 인정되지 않아 수동 승인 케이스 PR이 영원히 막힌다. 빠지면 수동 승인 프로세스가 통째로 꺼진 것이다(판정기는 돌지만 아무도 요구하지 않는다). 정책의 프로세스 표 `게이트` 칸이 실제 ruleset과 맞아야 한다.
-- **R6 수동 status 절차** — 정책 프로세스 표의 `사람 승인` 칸이 수동 status 절차(승인할 수 있는 사람, 붙이는 명령)를 담고 있다. 판정기 워크플로 밖의 자동화(다른 워크플로·스크립트·루프 설정)가 `{{STATUS_CONTEXT}}`를 붙이면 P8 위반이다 — as-is `judges`가 `{{CONTEXT_ERE}}`에 걸리는 모든 워크플로를 보므로 레포 안의 것은 R2로 함께 드러난다. ruleset bypass 목록이 비어 있는지는 admin 권한이 필요해 지문에 들어가지 않는다 — O4 재검토 때 사람이 확인하고 날짜를 남긴다.
+- **R5 게이트 정합** — 기본 브랜치의 required status check에 `review/manual-approval`가 **있고**, 그 항목이 **특정 앱(integration)에 고정되어 있지 않으며**(as-is `integration=any`, P8), `context[^a-z/]{1,4}review/[a-z0-9-]+` 계열의 다른 context는 **없다**. 앱에 고정되면 수동 status가 인정되지 않아 수동 승인 케이스 PR이 영원히 막힌다. 빠지면 수동 승인 프로세스가 통째로 꺼진 것이다(판정기는 돌지만 아무도 요구하지 않는다). 정책의 프로세스 표 `게이트` 칸이 실제 ruleset과 맞아야 한다.
+- **R6 수동 status 절차** — 정책 프로세스 표의 `사람 승인` 칸이 수동 status 절차(승인할 수 있는 사람, 붙이는 명령)를 담고 있다. 판정기 워크플로 밖의 자동화(다른 워크플로·스크립트·루프 설정)가 `review/manual-approval`를 붙이면 P8 위반이다 — as-is `judges`가 `context[^a-z/]{1,4}review/[a-z0-9-]+`에 걸리는 모든 워크플로를 보므로 레포 안의 것은 R2로 함께 드러난다. ruleset bypass 목록이 비어 있는지는 admin 권한이 필요해 지문에 들어가지 않는다 — O4 재검토 때 사람이 확인하고 날짜를 남긴다.
 
 ## 불변식 2 — 신선도 ("수동 승인 프로세스가 outdated 되지 않도록" 추적·관리)
 
@@ -296,7 +316,7 @@ R1~R6 · O1~O5 중 **하나라도** 위반이면 `action_required`. 전부 충�
 
 ## 추적 방식 (요약)
 - **to-be** = `{{POLICY_SSOT}}`의 blob hash. 없으면 `absent`.
-- **as-is** = `judges=…;ruleset=…;surface=…;anchors=…`. judges는 `{{CONTEXT_ERE}}` 계열 context를 붙이는 워크플로와 그 판정기의 blob hash, ruleset은 기본 브랜치 required status check (context, 고정 integration) 집합(GitHub API, 읽기 실패 시 비0 종료), surface는 정책 surface 블록에 걸리는 (파일, 토큰) 집합, anchors는 정책 anchors 블록 경로의 실재 여부. 정책 문서가 없으면 surface·anchors는 `absent`.
+- **as-is** = `judges=…;ruleset=…;surface=…;anchors=…`. judges는 `context[^a-z/]{1,4}review/[a-z0-9-]+` 계열 context를 붙이는 워크플로와 그 판정기의 blob hash, ruleset은 기본 브랜치 required status check (context, 고정 integration) 집합(GitHub API, 읽기 실패 시 비0 종료), surface는 정책 surface 블록에 걸리는 (파일, 토큰) 집합, anchors는 정책 anchors 블록 경로의 실재 여부. 정책 문서가 없으면 surface·anchors는 `absent`.
 - **O4 재검토 기한**과 **R6의 bypass 목록 확인**은 지문이 아니라 `recheckAfter`와 재검토로 추적한다.
 
 ## 초기 상태 메모 (등록 시점 {{NOW_ISO}})
