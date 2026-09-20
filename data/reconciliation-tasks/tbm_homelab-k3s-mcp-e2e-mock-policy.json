@@ -1438,6 +1438,63 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-20T22:30:00Z",
           "reason": "PR #164(dlddu/homelab-k3s-mcp) 승인. **신선도**: state=open·draft 아님·mergeable=true·mergeable_state=clean이고 base.sha 7a1abb41이 **머지 직전 재조회한 main tip과 동일**(pulls API 스냅샷이 아니라 branches/main 재조회로 확인) — 베이스 이동·충돌 없음. CI 런 35541313552 completed/success이고 unit·fmt+vet·image build·**integration(kind)**·`ci passed` 전부 success다 — github-mock.yaml 변경을 실제로 행사하는 잡은 integration 하나뿐인데 그것이 초록이다. **정합성**: diff는 4파일 +102 −13으로 plan.steps 3·4·6·7·8과 정확히 일치하고 범위 밖 변경이 없다(internal/·main.go 0줄, 운영 배포·클러스터 무접촉). **독립 재측정(검토자가 직접 실행)**: ⑴ 게이트 4종을 PR head와 origin/main에 각각 체크아웃해 돌려 rc=0 ×4 · 출력 **바이트 동일**(양쪽 15512바이트 — 공허한 통과가 아님을 입력 크기로 확인), 즉 등재 5=상한 5·모킹 지점 6·차단 원장 1행·허브가 전부 무이동이다. ⑵ 체커 회귀 13/13. ⑶ ConfigMap에서 server.py를 뽑아 로컬 기동해 여섯 경로를 curl로 실측: 설치 조회 200 `account.login=dlddu` · statuses 201(`id`=1) · sha=f×40에 422 Validation Failed · Accept 누락 400 · 인증 누락 401 · 미매치 404 · `/_admin/requests`에 5건 기록 · `/_admin/config` 노브 500→원복 200. ⑷ github-mock.yaml의 주석 줄 수 8→8(추가 0)이라 comment ledger 재판정 면제가 성립한다. **「차단 원장 행을 세우지 않은 것」이 이 PR의 의도적 산출**인데, 계획이 든 근거를 정책 SSOT에서 원문 대조했다 — B1이 실제로 「단순한 소관 언급과 **이미 해소된 이력은 새 인계로 세지 않는다**」라고 적고 있어, 같은 PR에서 해소하는 쪽과 행을 세우는 쪽은 양립하지 않는다. 인계가 요구한 다섯 항(statuses 서빙·요청 기록·422 모드·account.login·같은 PR에서 「대상」 확대)이 위 실측으로 **전부 참**이므로 해소는 완전하다. **위험 통제·불가역성**: riskLevel low가 타당하다 — 불가역 지점 0(문서 3 + 테스트 픽스처 1), revert 한 건으로 완전히 되돌아가며 executionGuide에 완료 기준 넷과 되돌리기가 명시돼 있다. 시나리오 1·2·4의 ⏳ 표기를 건드리지 않아 `공백 시나리오` 불변식도 유지된다(게이트 출력 동일성이 이를 증명)."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-20T22:33:00Z",
+          "finishedAt": "2026-09-20T22:46:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "skipped",
+              "log": "계획·준비 단계에서 이미 수행된 재확인(차단 실재·원장 1행). 실행 지침이 '머지가 실행의 전부'라 규정하므로 재실행하지 않았다. 대신 지침 3번의 재측정 넷으로 같은 사실을 머지 직전 트리에서 다시 확인했다(stepSeq 9 참조)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "log": "base 기준선 뜨기는 계획 단계 산출물. 머지 직전 origin/main(7a1abb41) 기준선을 stepSeq 9에서 새로 떠 대조했다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "log": "PR #164 head e0a53f79에 이미 반영돼 있음을 diff로 확인. docs/e2e-mocking-policy.md·github-mock.yaml 포함 4파일 +102 −13, 브랜치가 머지 직전 main tip 7a1abb41 위에 직접 얹혀 있어(merge-base == 7a1abb41) 리베이스 불필요."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "같음 — PR head에 반영. github-mock.yaml +68 −1. 주석 줄 수 main 8 == 브랜치 8(추가 0)이라 comment ledger 재판정 면제 성립."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "ConfigMap에서 server.py(235줄)를 4칸 벗겨 추출·AST 파싱 후 로컬 기동(stdlib, 포트 8080). 여섯 경로 + 기록 로그 + 노브 원복을 curl로 실측 — 전부 기대대로. 상세는 verification.checks."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "docs/e2e-mocking-policy.md +18 −2: 「대상」이 상류 4종(access_tokens·installations/<id>(account.login 포함)·DELETE installation/token·POST statuses/<sha>)으로 넓어졌고, 거짓이 되는 「셋은 … 상류 호출 전부다」가 「앞의 셋은 AC5 경로 전부이고 넷 전부가 github_commit_status_create 가 거치는 전부」로 정정됐다. 422를 노브 아닌 sha로 가른 이유도 기재. 등재 상한 5·허용목록 행 무접촉."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "log": "docs/test-github-commit-status.md +22 −13(픽스처 절 정정 + 스텁 계약 표). `(미작성)` 표기 3건이 main·브랜치·머지 후 main 모두 3으로 불변 — check_ac_mapping 규칙 7 무영향."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "log": "docs/doc-tracker/2026-09.md +7 −3: 시나리오 1·2·4 해제 조건 칸에 ⟨2026-09-20 갱신 · rct_20260920-0001(mock-policy)⟩ 3행 + 변경 이력 1행. ⏳ 상태 표기 무이동(아래 검증 참조)."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "log": "머지 직전 재측정: GET /repos/.../branches/main 재조회 tip == PR base.sha == 7a1abb41(pulls API 스냅샷이 아닌 재조회값)이라 base 이동 없음 → 리베이스 불필요. 게이트 4종을 브랜치·origin/main에 각각 체크아웃(git stash 아님)해 돌려 rc=0 ×4, 출력 15512바이트로 양쪽 바이트 동일(IDENTICAL). 체커 회귀 13/13 OK, go build -buildvcs=false ./... rc=0, go test ./internal/github/... ok 2.760s. CI 런 35541313552 completed/success이고 잡 6건 중 unit·integration(kind)·fmt+vet·image build·ci passed 전부 success(pin deployment는 main-only라 skipped). refs/pull/164/merge 부모가 [7a1abb41, e0a53f79] — 그 초록이 실제 머지 트리를 검증한 것."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "log": "PR #164는 준비 단계에서 이미 열려 있었다(본문에 인계 근거·ⓑ 선택 이유·설계 지점·검증표·범위 밖·되돌리기 포함). 실행은 그 PR의 머지다 — 레포 설정이 allow_merge_commit=false·allow_squash_merge=true라 squash로 머지했고 착지 커밋은 3a10d9b1(부모 1개, 7a1abb41)."
+            }
+          ]
         }
       }
     ]
