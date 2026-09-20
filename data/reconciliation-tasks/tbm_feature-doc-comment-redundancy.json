@@ -2104,6 +2104,71 @@
       "reason": "작업 필요. 판정 범위 2,944행 중 **1,216행 / 56파일(41%)이 아직 한 번도 복원 가능성 판정을 받지 않았고**, 이 잔여를 맡은 열린 task 가 **0건**이다(직전 `rct_20260919-0005` 는 `succeeded`, `rct_20260920-0001` 은 `no_action_needed`). 「슬라이스 → 재감지 → 후속 task」가 이 모델의 정상 진행이고 지금이 그 인계 지점이다.\n\n**근거**\n1. **직전 슬라이스는 성공했고, 잔여는 그 성공이 남긴 것이다.** #82(`f4f6fe9`)에서 versionScript 를 재실행한 값이 계획의 완료 기준 문자열 `lines=2885 files=110` / `d9be3f73e9d286504b208e95cb6a01294f3ebbc3f8eb400baf56e7b20aea4bac` 과 **바이트 동일**(순 제거 201행 = 새 범위 198 + 증분 재판정 3). 네거티브 컨트롤: 부모 `48a4a87` 에서 같은 스크립트는 `lines=3086 files=110`/`701de5be…` 로 **다르다**. 즉 수렴 검증은 실제로 변화를 구분한다. 원장도 잔여를 숨기지 않고 「미판정 55파일/1,162행」으로 적었다.\n2. **자매 모델의 #83(수렴 슬라이스 ⑦, `rct_20260919-0007`)이 잔여를 늘렸다.** `CredentialsSetup.tsx` → `GrantRepoAccess.tsx`+`RegisterLlmKey.tsx` 분할로 주석 줄 **추가 107 · 제거 48 = 순증 59행**. 새 75행은 이 모델이 열거한 중복 유형 그대로다 — 작업 흔적(`Split out of CredentialsSetup.tsx by 수렴 슬라이스 ⑦ (rct_20260919-0007)`, `슬라이스 ⑦ 이전의 별도 continue 버튼이 하던 일이다`, `2026-09-18 authority-order ruling`) · AC 꼬리표(`(AC4.1)`, `(AC4.2 · AC4.3)`) · 목업 인용 · 선언 재진술(`// undefined = still loading the session`). 이것들은 커밋 메시지 #83 과 `docs/doc-tracker/2026-09.md`, 목업 파일에서 복원된다.\n3. **원장의 두 단언이 지금 거짓이다.** ⑴ 「판정 범위 안에 남은 미판정 증분은 없다」 → 원장 9행 전건을 HEAD `79c1cb4` 에서 재계산하니 판정 범위가 1,723 → **1,728행**, 행 3(e2e 하네스) 142→144 · 행 9(파이프라인·횡단) 139→142 로 **미판정 증분 5행**이 열려 있다(나머지 7행은 바이트 동일). ⑵ 「열린 PR 접촉(경합) 4파일/217행 — 각 PR 이 닫힌 뒤 나머지를 집는다」 → `gh pr list` 실측 열린 PR 은 **#64 하나**뿐이고 #17·#26 은 **CLOSED**(머지 아님) ⇒ **경합 0**, 자유 풀이 48파일/1,077행으로 등록 이래 최대다.\n4. **재감지만으로는 안 닫힌다.** 주석을 아무도 지우지 않으면 지문은 다음 슬라이스가 올 때까지 움직이지 않고, 잔여는 자매 모델의 화면 작업이 들어올 때마다 오히려 늘어난다(이번 트리거가 그 실례다 — 1,162 → 1,216).\n\n**계획 단계에 넘기는 것**\n- 다음 패스의 범위 후보는 **프런트 데이터·셸 계층 한 축**이다: `api.ts` 96 · `App.tsx` 65 · `RegisterLlmKey.tsx` 53 · `GrantRepoAccess.tsx` 22 · `index.css` 45 · `HomeRepositories.tsx` 42(합 323행). 6차 패스가 예고한 「프런트 데이터 계층을 한 범위로」가 #17 종료로 비로소 가능해졌고, #83 이 낳은 새 화면 2종이 같은 축에 붙는다. **원장 행 3·행 9 의 미판정 증분 5행(`sc01-01` 2 · `sc01-02` 1 · `sc01-05` 2)은 증분 재판정으로 같은 패스에서 닫는다.**\n- **보존해야 하는 줄 — 지우면 자매 게이트가 깨진다.** `tools/check-mockup-render.py::discover_screens()` 가 `frontend/src/*.tsx` 머리 2,000자에서 목업 매핑을 읽는다(실측: `SRC_DIR.glob(\"*.tsx\")` + `MAPPING_REF`). 따라서 `GrantRepoAccess.tsx` 의 `// Grant Repository Access — the screen behind` + `// docs/mockups/JRN-connect-repo.html#STP-grant-repo-access (AC4.1).` 와 `RegisterLlmKey.tsx` 의 대응 2행은 **M1 의 입력이므로 제거 후보가 아니다**. 그 아래 산문은 입력이 아니다. `// 검증 시나리오:` · `mock-exception:` 선언은 기계 판독이라 지문·판정 모두에서 제외된다(`sc04-*` 편집 시 주의).\n- **범위 밖(이번 패스에 섞지 말 것)**: `backend/migrations/*.sql` 8파일/139행 — 정의 「적용된 마이그레이션」 절의 전용 PR · 수동 repair · 사람 승인 게이트를 거치는 별도 패스다. 이번 트리거로 움직이지 않았다.\n- **완료 기준은 절대 지문이 아니라 「부모 `79c1cb4` 대비 순 제거 N행」으로 적을 것.** 이 레포는 자매 모델 3종이 같은 트리를 10분 단위로 움직이므로(이번 fire 안에서만 #82→#83 두 번) 절대값은 계획~머지 사이에 반드시 낡는다. 원장의 「범위 지문은 후행 개행 포함(`echo`), 모델의 전역 지문은 제외(`printf '%s'`)」 규약도 그대로 지킬 것.\n- **애매하면 남긴다**는 정의의 비대칭 비용 원칙을 유지하고, 갈린 건은 `passes/` 에 남긴다.\n\n**사용자 보고**: 함대 유일한 고령 lock `tbm_feature-doc-docs-impl` `rct_20260919-0003` `planning` 이 **30.1h** 째다(이 fire 09:20 기준, 여전히 `attempts` 0). planner 몫이라 재배정하지 않고 계속 표면화한다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-20T09:17:13Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`frontend/src` 의 미판정 잔여 **전량 8파일**(`api.ts` · `App.tsx` · `RegisterLlmKey.tsx` · `GrantRepoAccess.tsx` · `HomeRepositories.tsx` · `SignIn.tsx` · `index.css` · `format.ts`, 340행)을 한 범위로 판정해 복원 가능한 주석을 지우고, #83 이 원장 3행(+2)·9행(+3)에 다시 연 미판정 증분 5행을 같은 패스에서 증분 재판정으로 닫는다. **이 방법을 고른 이유**: detector 브리프는 프런트 데이터 계층 6파일/323행을 넘겼지만 `frontend/src` 전수를 재보니 미판정이 그 6개 + `SignIn.tsx`(12) + `format.ts`(5) 뿐이었다 — 17행을 더 넣으면 **디렉터리 단위로 완결되는 범위**가 되어 다음 패스의 범위가 「나머지 조각」이 되지 않는다. 대안(브리프 그대로 6파일)은 12·5행짜리 꼬리를 남기고, 또 다른 대안(자유 풀 40파일 전부)은 한 PR 이 감당할 판정 품질을 넘는다. 원장 증분을 같은 패스에 넣는 것은 5~9차 패스가 매번 해 온 규약이다 — 열어 둔 채 넘기면 원장이 「현재 상태의 표면」이기를 그만둔다. **완료 기준(이 시도의 범위)**: 부모 `79c1cb4` 대비 **전역 순 제거 264행**(새 범위 260 + 증분 재판정 4)이 머지된 main 에서 성립하고, 원장 3행 `93be69ea…`(142) · 9행 `03babd78…`(140) · 새 행 `641e9457…`(80) 지문이 일치하며, 게이트 4종과 프런트 빌드가 초록일 것. 절대 지문은 자매 머지로 낡으므로 판정 근거로 쓰지 않는다. **범위 밖(후속 재감지의 몫)**: `backend/migrations/*.sql` 8파일/139행(전용 PR·수동 repair·사람 승인 게이트)과 자유 풀 나머지 40파일/737행. 이 task 는 잔여 전체를 닫지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "계획 직전 `/pulls?state=open` 을 전수 실측해 경합을 다시 잰다(원장의 경합 분류는 낡는다).",
+              "expectedOutcome": "열린 PR 은 #64 하나뿐이고 in-scope 주석 파일에 신규 추가만 한다 → 경합 0. 원장이 적어 둔 「경합 4파일/217행」은 #17·#26 이 CLOSED 되어 무효."
+            },
+            {
+              "seq": 2,
+              "action": "`frontend/src` 전수에 versionScript 추출을 돌려 미판정 파일과 행수를 확정하고, 원장 9행 전건을 `79c1cb4` 에서 재계산해 미판정 증분을 찾는다.",
+              "expectedOutcome": "미판정 8파일/340행(`35e21e7b…` 6파일 323행 + SignIn 12 + format 5). 원장 3행 142→144, 9행 139→142 로 증분 5행 확인, 나머지 7행은 바이트 동일."
+            },
+            {
+              "seq": 3,
+              "action": "8파일의 주석을 README 「복원 경로 넷」 기준으로 한 줄씩 판정해 제거·재작성한다. 화면 머리의 목업 매핑 4건은 M1 입력이므로 바이트 그대로 보존한다.",
+              "expectedOutcome": "범위 340 → 80행(순 제거 260) / `641e9457…`. `format.ts` 는 전건 제거로 주석 0행이 되어 지문 파일 집합에서 빠진다(files 8 → 7)."
+            },
+            {
+              "seq": 4,
+              "action": "원장 3행(`sc01-01` +2)·9행(`sc01-02` +1 · `sc01-05` +2)의 증분을 재판정한다.",
+              "expectedOutcome": "3행 144→142 / `93be69ea…`(지문은 #83 이전 값으로 돌아가지 않는다), 9행 142→140 / `03babd78…`. 합 순 제거 4행."
+            },
+            {
+              "seq": 5,
+              "action": "주석 제거 stripper 로 11개 코드 파일을 부모 `79c1cb4` 와 대조한다(「비주석 diff 0줄」로는 재작성에 딸려 지워진 선언을 못 잡는다).",
+              "expectedOutcome": "11파일 전건 바이트 동일 · 비주석 차이 0."
+            },
+            {
+              "seq": 6,
+              "action": "판정 상세 `docs/comment-policy/passes/2026-09-20-frontend-shell-axis.md` 를 쓰고, 원장에 새 행 등재 + 3·9행 증분 기록 + 합계·잔여 갱신 + 10차 패스 기준 갱신 블록을 더한다.",
+              "expectedOutcome": "판정 63파일 / 1,804행, 미판정 잔여 48파일 / 876행(마이그레이션 8/139 + 자유 풀 40/737), 경합 0."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/index.html` 에 새 판정 상세 링크를 넣고 `Documents` 집계를 35 → 36 으로 올린다.",
+              "expectedOutcome": "`check-journey-mockup.py` 의 R8·R9 통과(빠뜨리면 실패한다). 허브는 주석 지문 범위 밖이라 판정 수치에는 무영향."
+            },
+            {
+              "seq": 8,
+              "action": "게이트 4종과 프런트 빌드를 이 head 에서 돌린다: check-mockup-render · check-journey-mockup · check-scenario-e2e · check-journey-prototype · `tsc -b` · `vite build`.",
+              "expectedOutcome": "전부 rc=0."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치를 푸시하고 PR 을 연다(머지하지 않는다).",
+              "expectedOutcome": "https://github.com/dlddu/feature-doc/pull/84 · base `main` · 부모 `79c1cb4`."
+            }
+          ],
+          "plannedAt": "2026-09-20T09:55:00Z",
+          "executionGuide": "# 실행 지침 — 주석 비중복성 10차 패스 (PR #84)\n\n## 0. 실행 전에 한 번만 확인할 것\n\n- **PR**: https://github.com/dlddu/feature-doc/pull/84\n  (`reconcile/comment-redundancy-rct_20260920-0002-frontend-shell`, base `main`, 부모 `79c1cb4`)\n- **필수 상태 체크는 `ci-gate` 하나**다(`.github/workflows/ci.yml`). 이 잡은 `if: always()` 로\n  돌면서 `needs` 전부가 `success` 인지 직접 판정한다 — **`skipped` 도 실패로 친다.** 따라서\n  「`ci-gate` 초록」 하나만 보면 되고, 빨갛다면 `cargo` · `e2e` · `push` ·\n  `docs-journey-mockup` · `docs-mockup-render` · `docs-scenario-e2e` 중 어느 칸인지 잡 목록에서\n  가른다.\n- **`docs-*` 세 잡은 `workflow_call` 전용**이라 head_sha 런 목록에 자기 이름으로 뜨지 않는다.\n  호출자(`CI`) 런의 `/jobs` 로 볼 것.\n- **열린 PR 을 다시 전수 실측할 것.** 계획 시점(2026-09-20T09:2xZ)의 실측은 **#64 하나**였다.\n  그 사이에 자매 PR 이 늘었으면 아래 §3 의 신선도 재판정이 필요하다.\n\n## 1. 실행 순서\n\n순서가 중요한 이유는 하나뿐이다 — **머지 직전에 수치를 다시 재야 한다.** 이 레포는 자매\n모델 3종이 같은 트리를 분 단위로 움직이므로, 계획이 적은 절대 지문은 승인~실행 사이에 낡는다.\n\n| seq | 할 일 | 병렬 |\n|---|---|---|\n| 1 | `ci-gate` 가 settled + success 인지 확인 | — |\n| 2 | 머지 직전 main tip 에서 **순 제거 264행**이 여전히 성립하는지 재측정 (§2) | 1 뒤 |\n| 3 | base 가 움직였으면 원장의 절대값·잔여 수치를 재계산해 커밋 (§3) | 2 뒤 |\n| 4 | **머지 커밋으로** 머지 (§4) | 3 뒤 |\n| 5 | 머지된 main 에서 수렴 검증 (§5) | 4 뒤 |\n\n## 2. 완료 기준 — 절대 지문이 아니라 「순 제거 264행」\n\n**이 슬라이스가 성공했다는 판정은 다음 등식으로 한다.**\n\n```\n(머지 직전 main 의 전역 lines) − (머지 후 main 의 전역 lines) == 264\n```\n\n전역 지문은 모델의 `asIs.versionScript` 를 그대로 돌려 잰다(후행 개행 **제외**, `printf '%s'`).\n**원장의 범위 지문은 후행 개행을 포함한다**(`echo \"$HITS\" | sha256sum`) — 같은 입력에도 두 값이\n다르니 섞지 말 것.\n\n판정 시점(부모 `79c1cb4`)의 실측값은 참고로만 쓴다:\n\n| | 값 |\n|---|---|\n| 부모 `79c1cb4` 전역 | `lines=2944 files=111` / `60ff1f0f66722a14c27dcbbb49bde52f55379cd2161de8c4c438dfd9e199a338` |\n| PR head 전역 | `lines=2680 files=110` / `fc595b135d11891f70047d2232698ef69d0f3336163cf469002f9e7c59cfffff` |\n| 새 범위 8파일 | 340 → **80** / `641e9457a5fe0b1592e0953c6f3b2b21b9f25665540441df7388ece3c1804668` |\n| 원장 3행 | 144 → **142** / `93be69ea2cff032c6bac2c4d0585d801aa22e392856891e1ce2e42f4d9aa243a` |\n| 원장 9행 | 142 → **140** / `03babd782b097f5022f5b81b1954b83ab20584408db686318656aa4cc8b1142a` |\n\n`files` 가 111 → 110 인 것은 `format.ts` 가 **주석 0행이 되어 파일 집합에서 빠지기** 때문이다.\n판정한 파일은 8개인데 지문은 `files=7` 이다 — 두 수를 같은 값으로 읽지 말 것.\n\n### 범위 밖(후속) — 이번 task 로 닫지 않는다\n\n- `backend/migrations/*.sql` 8파일 / 139행 — 전용 PR · 수동 repair · 사람 승인 게이트.\n- 자유 풀 40파일 / 737행(머지 후 기준). 다음 축 후보는 `tools/` 체커 전량.\n- 이 둘은 머지가 만드는 버전 변화의 **재감지가 새 task 로 잇는다.**\n\n## 3. base 가 움직였을 때 (가장 흔한 경우)\n\n**자매 PR 이 먼저 머지되면 원장에 적은 절대값이 낡는다. 그건 실패가 아니다** — 순 제거 264행만\n그대로면 된다. 다만 **원장 본문의 숫자는 고쳐야 한다**:\n\n1. 머지 트리(= `main` 에 head 를 머지한 로컬 트리)에서 versionScript 를 돌려 전역 실측.\n2. 원장 `ledger.md` 의 **10차 패스 기준 갱신 블록**에서 판정 시점 절대값\n   (`lines=2680 files=110` / `fc595b13…`)을 그 실측으로 갱신.\n3. **합계·잔여 줄도 같이 재계산**한다 — 「판정 63파일 · 누적 1,460행 · 현재 합계 1,804행」과\n   「미판정 잔여 48파일 / 876행」, 「자유 풀 40파일 / 737행」. 끼어든 커밋이 in-scope 주석을\n   더했으면 잔여가 그만큼 늘어난다.\n4. 판정 상세 `passes/2026-09-20-frontend-shell-axis.md` 의 「이 패스 뒤의 잔여」 절도 같은 값으로.\n5. **원장 9행 전건을 머지 트리에서 재계산해 줄수·지문을 대조**한다. 끼어든 커밋이 판정 범위를\n   건드렸으면 **미판정 증분이 새로 열린 것**이고, 그건 이 PR 이 닫을 것이 아니라 다음 감지의\n   몫이다 — 원장의 「미판정 증분 없음」 문구를 그 행에서 **지워야** 한다(거짓 단언을 남기지 말 것).\n\n`mergeable_state=dirty` 가 뜨면 충돌 헝크를 실제로 재 볼 것. 이 PR 이 건드리는 코드 파일 11개는\n**주석 줄만** 바꾸므로 코드 충돌은 구조상 나올 수 없다. 충돌이 난다면 거의 확실히\n`ledger.md` · `docs/index.html` 이고, **둘 다 병합해야 한다**:\n\n- `ledger.md` — 자매 패스가 행을 갱신했으면 **양쪽 증분을 합쳐** 적는다. 「내 쪽 채택」은 자매의\n  판정을 조용히 되돌리고도 게이트를 통과한다.\n- `docs/index.html` — `Documents` 집계는 **base 대비 양쪽 증분의 합**이다. 자매가 35 → 36 을\n  했으면 이 PR 은 37이 되어야 한다. 같은 숫자를 양쪽이 쓰면 충돌 없이 머지되고 값만 틀린다.\n\n## 4. 머지\n\n- **머지 방식은 지침 문구가 아니라 레포 설정으로 가른다.** 머지 직전\n  `GET /repos/dlddu/feature-doc` 의 `allow_merge_commit` / `allow_squash_merge` 와 기존 착지\n  커밋의 부모 수를 확인하고 그 레포가 실제로 쓰는 방식으로 머지한다.\n- 머지 전 **`ci-gate` 가 settled 인지** 볼 것. `queued` · `in_progress` · `pending` · `waiting` ·\n  `requested` 는 전부 미settled 다. 진행 중이라 `blocked` 인 것은 거부 사유가 아니라 **대기**다.\n\n## 5. 수렴 검증 (이 task 를 `succeeded` 로 닫는 근거)\n\n머지된 `main` 에서:\n\n1. **전역 순 제거 264행** — §2 의 등식. 이게 이 슬라이스의 완료 기준이다.\n2. **원장 3행 · 9행 · 새 행의 지문 일치** — 각각 `93be69ea…`(142) · `03babd78…`(140) ·\n   `641e9457…`(80). base 가 움직여 이 셋 중 하나가 어긋나면, 어긋난 원인이 **끼어든 커밋인지\n   이 PR 인지**를 부모 기준 재계산으로 가른다.\n3. **네거티브 컨트롤** — 머지 직전 부모에서 같은 스크립트를 돌려 값이 **다른지** 확인한다.\n   같은 값이 나오면 검증이 변화를 구분하지 못한다는 뜻이다.\n4. **게이트 4종이 머지된 main 에서도 초록**: `check-mockup-render.py` · `check-journey-mockup.py` ·\n   `check-scenario-e2e.py` · `check-journey-prototype.js`. 특히 `check-mockup-render.py` 의 **M1**\n   은 화면 머리의 목업 매핑을 읽으므로, 보존한 4건이 살아 있는지의 실질 검사다.\n5. **주석 제거 후 부모와 바이트 동일** — 코드 파일 11개. 계획 단계에서 이미 통과했지만\n   리베이스가 끼었다면 다시 돌린다.\n\n## 6. 주의사항\n\n- **되돌릴 수 없는 지점은 없다.** 주석 제거뿐이고 `git revert` 로 전량 복원된다. 운영 영향 ·\n  데이터 변경 · 마이그레이션 · 트래픽 영향 모두 없다. 위험도가 `low` 인 이유다.\n- **`backend/migrations/*.sql` 은 한 글자도 건드리지 않았다.** 이 PR 의 diff 에 `.sql` 이 나타나면\n  머지하지 말 것 — sqlx 체크섬이 운영 파드를 `VersionMismatch` 로 부팅 실패시킨다.\n- **화면 머리의 목업 매핑 4건을 지우지 말 것**(`GrantRepoAccess.tsx:2` · `RegisterLlmKey.tsx:2` ·\n  `HomeRepositories.tsx:2,3` · `SignIn.tsx:2`). `check-mockup-render.py::discover_screens()` 가\n  `frontend/src/*.tsx` 의 **앞 2,000자**에서 읽는 M1 의 입력이고, 지우면 그 화면이 발견 집합에서\n  빠져 게이트가 붉어진다. 리베이스로 머리 문단을 다시 만질 일이 생기면 이 4줄부터 확인한다.\n- **`index.css:48` 의 `* {` 은 코드다.** 지문이 주석으로 세는 오탐이지 제거 후보가 아니다.\n- **`cargo` 와 kind e2e 는 로컬에서 돌릴 수 없다**(클러스터 필요). 이 PR 은 동작 코드가 부모와\n  바이트 동일이므로 두 잡의 결과가 달라질 경로가 없지만, **그 근거로 빨간 체크를 통과로 읽지는\n  말 것** — 빨갛다면 자매 PR 의 같은 잡이 초록인지, 실패 테스트가 이 PR 과 무관한지를 먼저 본다.\n"
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/feature-doc",
+          "branch": "reconcile/comment-redundancy-rct_20260920-0002-frontend-shell",
+          "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/84",
+          "preparedAt": "2026-09-20T09:55:00Z",
+          "notes": "PR head `c78030c`, base `main` `79c1cb4`. 14파일 변경 — 코드 11파일(주석 줄만) + `docs/comment-policy/ledger.md` + `docs/comment-policy/passes/2026-09-20-frontend-shell-axis.md`(신규) + `docs/index.html`. `backend/migrations/*.sql` 무접촉. 이 head 에서 실측한 게이트: check-mockup-render rc=0 · check-journey-mockup rc=0(R0~R11) · check-scenario-e2e rc=0 · check-journey-prototype rc=0(단언 408건) · `npx tsc -b` rc=0 · `npx vite build` rc=0 · 주석 제거 후 부모와 바이트 동일 11/11. 로컬에서 돌릴 수 없는 CI 잡은 `cargo` 와 kind `e2e` 둘뿐이고, 동작 코드가 부모와 바이트 동일이라 결과가 달라질 경로가 없다(그래도 빨간 체크를 이 근거로 통과로 읽지 말 것). 필수 상태 체크는 `ci-gate` 하나이며 `always()+needs` 집계라 `skipped` 도 실패로 친다. 경합 0 — 계획 직전 전수 실측에서 열린 PR 은 #64 하나이고 in-scope 주석 파일에 신규 추가만 한다."
+        }
+      }
+    ]
   }
 ]
