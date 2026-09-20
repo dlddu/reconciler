@@ -10601,6 +10601,76 @@
           "reviewedAt": "2026-09-20T10:22:00Z",
           "reason": "**승인.** 위험은 낮고 불가역 지점은 머지 하나다 — PR #157 은 문서 3 + 신규 e2e 1 의 4파일이고 `internal/`·`main.go`·`.github/`·`tests/k8s/`·`k8s/` 는 **0바이트 변경**(diff 실측). e2e 가 클러스터에 남기는 것은 `workload-test` 네임스페이스의 파드 1 + ConfigMap 5 이고 게이트 호출을 전부 거부로 닫으므로 픽스처 상태가 바뀌지 않는다. 되돌리기는 squash 착지에 대한 `revert <sha>` 한 번.\n\n**신선도 — 검토 중 base 가 움직였고, 그 자리에서 다시 쟀다.** 계획의 base `48bb9b70` 위로 자매 #156(R10 docstring ③④ 래칫)이 `4942f4c4` 로 착지해 PR 이 `mergeable_state=dirty` 가 됐다. 충돌 헝크를 로컬에서 실측한 결과 **`ledger.md` 의 집계 마커 두 줄뿐**(`판정-합계` · `docstring-합계`)이고 `doc-tracker/2026-09.md` 는 자동 병합됐다 — 판정(③④)·원장 행·게이트 로직 충돌은 **0건**. 마커 참값은 자매 증분의 합이며 손으로 더할 필요가 없다: 게이트가 FAIL 에 실측값을 찍는다(`[R4] … != 2941`, `[R8] … != 1720`). 그 값을 넣은 **합친 트리에서 게이트 다섯이 전부 rc=0** — `check_comment_policy`(**R1~R10**) · `check_doc_inventory`(51/51) · `check_mock_policy` · `test_check_mock_policy`(13 tests) · `check_ac_mapping`.\n\n**완료 기준이 합친 트리에서 그대로 성립한다.** `check_ac_mapping` 일곱 값 = **85 · 1 · 14 · 70 · 70 · 0 · 0** — 계획이 적은 값과 한 자리도 어긋나지 않는다. 자매의 래칫도 무회귀다: 줄 주석 ③④ **잔량 49 무이동**(R9), docstring **잔량 22 무이동**(R10, 등재 24 · 완료 2/24 로 불변식 성립 — 이 PR 의 신규 docstring 행 `3e527a96e1ce` 가 ③④ 앵커를 달고 들어온다). 러너 배차도 합친 트리에서 정확히 1회.\n\n**CI 초록이 머지 트리에 유효하다.** head `08eb7955` 의 런 35504147604 는 전 잡 success(`ci passed` 포함)이고, merge-ref 부모가 `48bb9b70` 로 낡았지만 **base 이동분(#156)이 건드린 파일은 `docs/comment-policy/*` 와 `scripts/check_comment_policy.py` 뿐으로 e2e 잡 입력(`tests/`·`internal/`·`.github/`·`k8s/`·`go.mod`)과 교집합이 0**(diff 실측) — 로컬 불가한 kind e2e 의 초록이 그대로 이식된다. 그 초록은 문서 대조가 아니라 실행 근거다: 잡 로그에 `러너: primary 55개 파일` 안의 `approval_gate_ac3.py` 배차와 `ok: test-approval-gate.md#시나리오 3`(26.3s)가 찍혔다.\n\n**남은 자매 #154** 는 base 가 `17efb597`(#149·#150·#153 이전)이라 main 과도 충돌 상태이므로 이 PR 보다 먼저 착지할 수 없다. 착지 순서가 뒤집히면 레지스트리 표를 다시 읽을 것.",
           "comment": "승인이지만 **실행 전 리베이스가 필수**다(자매 #156 착지로 `dirty`). 검토가 합친 트리에서 실측한 해소법을 그대로 쓸 것 — 재판정·재계획이 아니라 기계적 절차다.\n\n⑴ 충돌은 `docs/comment-policy/ledger.md` 의 집계 마커 **두 줄뿐**이다: `판정-합계` 2939(내 쪽) vs 2923(main), `docstring-합계` 1706 vs 1679. **「내 쪽 채택」 금지** — 참값은 양쪽 증분의 합이다. 손으로 더하지 말고 게이트 FAIL 이 찍는 실측값을 넣을 것: **`판정-합계` → 2941**, **`docstring-합계` → 1720**(검토가 `4942f4c4` 기준으로 실측한 값이다. 그 사이 또 자매가 착지하면 숫자는 움직이므로 **반드시 그 시점 게이트 출력으로 재확정**할 것).\n⑵ `docs/doc-tracker/2026-09.md` 는 자동 병합된다(충돌 아님).\n⑶ 리베이스 뒤 게이트 다섯 rc=0 과 `check_ac_mapping` 일곱 값 `85·1·14·70·70·0·0`, 그리고 래칫 무회귀 둘(줄 주석 ③④ 잔량 **49**, docstring 잔량 **22**)을 확인할 것 — 이 셋이 흔들리면 그때는 판정 표면이므로 `failed` 로 닫고 재감지에 넘긴다.\n⑷ force-push 는 원격추적 ref 가 없어 명시형 lease 가 필요하다: `--force-with-lease=refs/heads/reconcile/hk3s-scenario-e2e-rct_20260920-0002-ag3:$(git ls-remote origin -h refs/heads/reconcile/hk3s-scenario-e2e-rct_20260920-0002-ag3 | cut -f1)`.\n⑸ 리베이스 후 **새 head 의 CI(특히 e2e 잡)가 초록이 될 때까지 기다렸다가** 머지할 것 — 옛 head 의 초록은 이 검토가 base `4942f4c4` 에 대해서만 이식을 증명한 것이다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-20T10:25:00Z",
+          "finishedAt": "2026-09-20T10:34:30Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "skipped",
+              "startedAt": "2026-09-20T10:25:00Z",
+              "finishedAt": "2026-09-20T10:25:00Z",
+              "log": "슬라이스 선정은 계획 단계에서 끝났다(시나리오 3). 실행자는 준비된 PR #157 을 머지할 뿐 선정을 다시 하지 않는다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "startedAt": "2026-09-20T10:25:00Z",
+              "finishedAt": "2026-09-20T10:25:00Z",
+              "log": "기대 문면 확정은 저작(준비)에 포함돼 PR #157 에 이미 반영돼 있다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "startedAt": "2026-09-20T10:25:00Z",
+              "finishedAt": "2026-09-20T10:25:00Z",
+              "log": "`tests/integration/approval_gate_ac3.py`(558줄) 저작은 준비 단계 산출물이다. 실행에서 재저작하지 않았고, 리베이스에서도 이 파일은 충돌 0·무변경이었다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "startedAt": "2026-09-20T10:25:00Z",
+              "finishedAt": "2026-09-20T10:25:00Z",
+              "log": "`docs/test-approval-gate.md` 규칙 7 갱신도 준비 산출물(PR diff 14줄). 리베이스 자동 병합."
+            },
+            {
+              "stepSeq": 5,
+              "status": "skipped",
+              "startedAt": "2026-09-20T10:25:00Z",
+              "finishedAt": "2026-09-20T10:25:00Z",
+              "log": "`docs/doc-tracker/2026-09.md` 갱신도 준비 산출물. 리베이스에서 **자동 병합**됐다(충돌 0) — 검토 comment ⑵ 의 예측과 일치."
+            },
+            {
+              "stepSeq": 6,
+              "status": "skipped",
+              "startedAt": "2026-09-20T10:25:00Z",
+              "finishedAt": "2026-09-20T10:25:00Z",
+              "log": "주석 비중복성 판정(원장 행 등재)도 준비 산출물. 실행에서 한 일은 아래 리베이스의 **합계 마커 재확정**뿐이고 판정 칸·행은 건드리지 않았다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T10:26:10Z",
+              "finishedAt": "2026-09-20T10:26:40Z",
+              "log": "리베이스 트리에서 게이트 재실행 — `check_comment_policy.py` rc=0 · `check_doc_inventory.py` rc=0(허브 51/51, 끊긴 링크 0) · `check_mock_policy.py` rc=0 · `check_ac_mapping.py` rc=0(일곱 값 `85·1·14·70·70·0·0`). 러너 배차 `approval_gate_ac3.py` 정확히 1회. 네거티브 컨트롤은 준비 단계에서 이미 실측했고 재현하지 않았다(지침 §3 이 「재현이 필요할 때만」으로 명시)."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T10:25:30Z",
+              "finishedAt": "2026-09-20T10:26:10Z",
+              "log": "자매 간섭 실측 — 실행 시점 main tip `4942f4c4`(#156 착지)로 **리베이스가 필수**였다(`mergeable_state=dirty`, `rebaseable=false`). 충돌은 검토가 예고한 그대로 `docs/comment-policy/ledger.md` 의 집계 마커 **두 줄뿐**: `판정-합계` 2939(내 쪽) vs 2923(main), `docstring-합계` 1706 vs 1679. 「내 쪽 채택」을 하지 않고 양쪽 증분의 합으로 해소했으며, 값은 손으로 더하지 않고 게이트 FAIL 이 찍은 실측값을 그대로 썼다(`[R4] … != 2941`, `[R8] … != 1720`) — 검토가 예고한 숫자와 일치. 되돌림이 없었음을 `git diff origin/main -- ledger.md` 로 증명: 삭제 줄은 그 **마커 두 줄뿐**(6 insertions / 2 deletions)이고 #156 이 넣은 docstring 원장 행은 전부 보존됐다. #154 는 여전히 열려 있으나 base 가 `17efb597` 로 main 과도 충돌 상태라 이 PR 보다 먼저 착지하지 않았다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T10:26:40Z",
+              "finishedAt": "2026-09-20T10:34:30Z",
+              "log": "PR 은 준비 단계에서 이미 열려 있었으므로 이 step 은 **머지**로 수행했다. ⑴ force-push(명시형 lease `--force-with-lease=refs/heads/reconcile/hk3s-scenario-e2e-rct_20260920-0002-ag3:08eb7955`) → 새 head `c302036`. ⑵ 새 head 의 CI 런 [35505061417](https://github.com/dlddu/homelab-k3s-mcp/actions/runs/35505061417) 이 settled 될 때까지 폴링 — 결론 `success`, 잡 전량 `fmt + vet`·`unit tests`·`integration tests`·`image / build & push server image` success, `image / pin deployment image (main only)` skipped(main 전용), 집계 `ci passed` success. ⑶ `mergeable_state` `blocked`→`clean` 확인 후 **squash 머지**(레포 설정 `allow_squash_merge=true`, `allow_merge_commit=false` — 지침이 요구한 대로 레포 설정으로 갈랐고 원장 ③④ 의 「squash 착지」 근거가 유지된다). 착지 `da22caa0e4b81a5442f2c6e69d26244f2fa757e3`, 머지 직전 main = `4942f4c4`(= 리베이스 base, 그 사이 자매 착지 0)."
+            }
+          ]
         }
       }
     ]
