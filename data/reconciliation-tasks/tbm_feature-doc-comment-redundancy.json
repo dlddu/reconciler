@@ -2717,7 +2717,7 @@
   {
     "id": "rct_20260920-0006",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-20T14:16:40Z",
@@ -2943,6 +2943,69 @@
               "log": "step 9 의 실행자 몫(새 head 의 commit status 확인) + 실행 지침 0~2절(머지 경로 확인 · base 신선도 · 머지).\n\n· **머지 경로(0절)**: `/rules/branches/main` 실측으로 필수 체크는 여전히 `ci-gate` · `review/data-format` 둘. head `360f56dc628e42256968c8f93831ddf9ea404cf5` 의 combined status 가 `state=success` 이고 `review/data-format=success` 가 실제로 붙어 있다 — 직전 시도를 막았던 영구 결번이 해소됐음이 API 로 확인된다.\n· **CI settled(0절)**: `actions/runs?head_sha=<40자>` → 런 2건 모두 `completed/success`(35518174444 `CI` · 35518173756 `review — data format`). `ci-gate` 는 집계 잡이라 런 이름에 안 뜨므로 `/runs/35518174444/jobs` 로 판독 — 잡 8개 중 7 success(`ci-gate` · `test (cargo)` · `test (kind e2e)` · docs 3종 · `push`), `skipped` 는 `push / pin deployment image (main only)` 하나뿐이라 집계 잡을 뒤집지 않았다.\n· **base 신선도(1절)**: 머지 직전 `/commits/main` 재조회 tip = `4a4b593901f935fca6c96427314fc3edb48a4614` 로 계획 base 와 동일 — 자매 PR #91·#92·#93 은 아직 미머지라 base 가 움직이지 않았다. PR 은 `mergeable=true` · `mergeable_state=clean`.\n· **머지(2절)**: 머지 방식은 지침 문구가 아니라 레포 설정으로 갈랐다 — `{allow_merge_commit:false, allow_rebase_merge:false, allow_squash_merge:true}` 라 **squash 가 유일**. `PUT /pulls/95/merge {merge_method:squash, sha:360f56d…}` → `merged:true`.\n· **착지**: `merge_commit_sha` = `7415771cc96fb7ac672a5395ffb4c6dbbc3101d4`, `/pulls/95` `state=closed` · `merged=true`, `/commits/main` tip = `7415771c` · **parents=1**(squash) — 되돌리기는 `git revert 7415771c`(`-m 1` 불필요). 제목 「주석 비중복성 13차 패스 — 자격증명 · LLM 키 경계 축 8파일 (rct_20260920-0006) (#95)」."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=2397 files=110\n8ef1c6940c9b1c73284cced8decdf071271fa097cc1a73dcb2979c2cd91c6141",
+          "checks": [
+            {
+              "name": "V1 범위 지문(완료 기준)",
+              "status": "passed",
+              "detail": "머지된 main `7415771c` 에서 모델 `asIs.versionScript` 를 판정 8파일로 좁혀 실행 — **`lines=42 files=7`** · `96636e7917d30bcacf740813a2cafe519bba1d3638f2644f38f628029856a22a`. 계획의 완료 기준과 **바이트 동일**. 해시는 전역 스크립트와 같은 `printf '%s' | sha256sum`(개행 없음) 으로 계산했고, 같은 하네스를 부모 `4a4b593` 에 먼저 걸어 원장 기재값(146행 `cdd213b0…`)을 재현해 검증했다."
+            },
+            {
+              "name": "V2 순 제거(완료 기준)",
+              "status": "passed",
+              "detail": "부모 `4a4b593` 에서 같은 8파일 지문 재실행 → 146행 `cdd213b0301a9d8d97e70a71557913b1e18a0ac29a5444481276bf13bb370586`. 146 − 42 = **104행 순 제거** — 계획값과 일치. `backend/tests/crypto.rs` 는 주석이 0행이 되어 지문 파일 집합에서 빠졌다(8파일 판정 → `files=7`)."
+            },
+            {
+              "name": "V3 전역 지문",
+              "status": "passed",
+              "detail": "`lines=2501 files=111` → **`lines=2397 files=110`** · `8ef1c6940c9b1c73284cced8decdf071271fa097cc1a73dcb2979c2cd91c6141`. 전역 델타 104 == 범위 델타 104 ⇒ **범위 밖 주석 이동 0**. 자매 #91·#92·#93 이 이 패스보다 먼저 머지되지 않아(머지 직전 재조회한 main tip = base `4a4b593`) 절대값도 계획값 그대로 섰다."
+            },
+            {
+              "name": "V4 잔여 집합 차",
+              "status": "passed",
+              "detail": "전역 지문의 파일 목록(110) − 원장 등재 판정 88파일 = **24파일 / 368행**. 뺄셈(2,397 − 2,029 = 368)과 일치. 원장 13행의 1열에서 경로를 기계 추출하면 89개가 나오는데, 그중 `backend/src/crypto.rs` 는 행 본문이 「**D2 사람 게이트 풀로 보류**」라고 명시한 **미판정** 파일이다 — 그것을 빼면 판정 88파일 · 범위 합계 2,029행 · 잔여 24파일/368행이 전건 성립한다(빼지 않으면 88/23파일/355행으로 어긋난다). 「행 없는 파일」 세기로 하지 않았다 — `frontend/src/format.ts` · `backend/tests/crypto.rs` 는 주석 0행이 되어 지문 집합에서 빠진 **판정** 파일이므로 지문 집합 기준 판정 파일은 86 이다(원장 기재와 일치)."
+            },
+            {
+              "name": "V5 잔여 3분할",
+              "status": "passed",
+              "detail": "원장 「미판정 잔여」 절의 세 몫을 실측 파일별 행 수로 대조 — 전건 일치. 마이그레이션 **8파일/139행**(0001 12 · 0002 4 · 0003 6 · 0004 13 · 0005 16 · 0006 21 · 0007 32 · 0008 35), D2 **4파일/44행**(`db.rs` 17 · `crypto.rs` 13 · `tests/migrations.rs` 13 · `models.rs` 1), 자유 풀 **12파일/185행**(`check-data-format-change.py` 58 · `worker.rs` 35 · `sc02-02` 23 · `common/mod.rs` 16 · `deploy/k8s/kustomization.yaml` 15 · `util.rs` 12 · `analyses.rs` 7 · `scripts/e2e.sh` 7 · `error.rs` 5 · `main.rs` 5 · `state.rs` 1 · `pvc.yaml` 1). 합 24파일 / 368행."
+            },
+            {
+              "name": "V6 원장 13행",
+              "status": "passed",
+              "detail": "`docs/comment-policy/ledger.md` 표의 **13번째 데이터 행**(파일 28행째) — 8파일(`llmkey.rs`·`sc04-13`·`sc04-04`·`sc04-03`·`sc04-05`·`security.rs`·`audit.rs`·`tests/crypto.rs`) · 유지 **42** · 지문 `96636e7917d30bca…` · **순 제거 104행**. 행 수는 표 블록을 절 경계로 끊어 셌다(`awk ,0` 로 뒷 표까지 쓸지 않았다) — 구분선·헤더 제외 정확히 13행."
+            },
+            {
+              "name": "V7 원장 합계",
+              "status": "passed",
+              "detail": "같은 파일 합계 절 — 판정 **88파일**(지문 집합 **86**) · 순 제거 누적 **1,824행**(1,720 + 104) · 판정 범위 현재 합계 **2,029행**. 셋 모두 V4 의 독립 재계산값과 일치."
+            },
+            {
+              "name": "V8 패스 상세 · 허브",
+              "status": "passed",
+              "detail": "`docs/comment-policy/passes/2026-09-20-credential-llm-key-axis.md` 가 main 에 존재하고, `docs/index.html` 의 Documents 수치가 **39**(`summary-value`), doc-row 링크(`reader.html?doc=comment-policy/passes/2026-09-20-credential-llm-key-axis.md`)도 등재돼 있다. `check-journey-mockup.py` R9 포함 rc=0."
+            },
+            {
+              "name": "V9 문서 게이트 3종",
+              "status": "passed",
+              "detail": "머지된 main 트리에서 직접 실행 — `tools/check-scenario-e2e.py` rc=0 · `tools/check-mockup-render.py` rc=0 · `tools/check-journey-mockup.py` rc=0."
+            },
+            {
+              "name": "착지 후 main 파이프라인(정보성)",
+              "status": "passed",
+              "detail": "완료 기준 밖이지만 확인했다 — 착지 커밋 `7415771c` 의 push 런 `Image`(35518956059) 가 `completed/success` 이고 두 잡 모두 success(`build & push image (ghcr)` · **`pin deployment image (main only)`**). `pages build and deployment` 도 success. PR 런과 달리 main 에서만 도는 핀 잡이 정상 동작했다."
+            },
+            {
+              "name": "잔여 gap(정보성 — 이 task 범위 밖)",
+              "status": "passed",
+              "detail": "모델 전체 to-be 기준 잔여는 **24파일 / 368행**이며, 그중 **12파일 / 183행**(마이그레이션 8/139 + D2 4/44)은 `review/data-format` 필수 status 구조상 **무인 슬라이스가 머지될 수 없는 사람 게이트 풀**이다. 무인으로 닫을 수 있는 자유 풀은 **12파일 / 185행** — 다음 축 후보는 `tools/check-data-format-change.py` 58 과 테스트 하네스 3파일 58행(`worker.rs` 35 · `common/mod.rs` 16 · `analyses.rs` 7, D2 인 `tests/migrations.rs` 13 은 제외). converged 판정에는 넣지 않았다 — 다음 감지 주기가 후속 task 로 잇는다."
+            }
+          ],
+          "verifiedAt": "2026-09-20T15:20:00Z"
         }
       }
     ]
