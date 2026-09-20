@@ -2819,6 +2819,61 @@
           "reason": "**거부 — 준비물이 무인 실행 경로에서 머지 불가다.** 계획의 실질은 전건 검증을 통과했다: 머지 트리(`origin/main` 4a4b593 + PR head df0252a, 충돌 없음)에서 범위 지문이 계획이 적은 `db8a6b4164a1b7fc…` / 49행으로 **바이트 동일**하고, 전역은 `lines=2501 files=111` → `lines=2391 files=110`으로 **부모 대비 순 제거 110행**(완료 기준과 일치, 범위 밖 주석 이동 0 — 159→49 범위 델타가 전역 델타와 같은 값). 주석 제거 후 비주석 소스가 부모와 **9/9 바이트 동일**(문자열 리터럴 보존 스트리퍼 + 빈 줄 정규화), 문서 게이트 3종 rc=0, `// 검증 시나리오:` spec당 정확히 1건 보존. 원장 수치도 머지 트리에서 독립 재계산해 전건 일치(원장 13행 · 판정 89파일 · 지문 집합 87 · 범위 합계 2,036 · 잔여 23파일/355행, 집합 차 == 뺄셈 355 == 2,391 − 2,036 · 누적 1,830 = 1,720 + 110). CI 도 settled 전건 초록(ci-gate success, test(cargo)·test(kind e2e)·docs 3종·push 모두 success). base 도 안 움직였다(PR base.sha == 측정 직전 main tip).\n\n**그런데 필수 commit status `review/data-format` 이 이 head 에 영구 결번이다.** `/repos/dlddu/feature-doc/rules/branches/main` 의 active 룰셋(23666120, `bypass_actors: null`)이 `ci-gate` 와 `review/data-format` 둘을 필수로 걸고 있는데, 후자는 `data-format-review.yml` 이 **판정 결과가 「변경 없음」일 때만** 붙이는 적극적 확인이다. 이 PR 의 판정은 `needs_review=true` — 잡 로그에 `D2 저장 계층 핵심 — 1건: backend/src/crypto.rs` 가 찍혔고, 스텝 `note (changed → no status)` 가 실행됐다. D2 는 `CORE_FILES` **경로 소속만 보는 규칙**이라 주석 한 줄만 바꿔도 걸린다(D3 와 달리 「주석 아닌 줄」 예외가 없다). 그래서 `mergeable_state=blocked` 는 CI 지연도 비동기 판정도 아니고 **해소되지 않는 상태**다 — 사람이 status 를 직접 붙이거나 룰을 풀기 전까지, 무인 실행자에게 머지 경로가 없다. 자매 대조가 이를 뒷받침한다: #91 은 status success·`clean`, D2/D3 에 걸린 #92·#93 은 둘 다 status 부재·`blocked`. 직전 12차 패스 #94 가 머지된 것은 14파일 어디도 `CORE_FILES` 가 아니었기 때문이다.\n\n계획의 실행 지침은 이 체크를 「합격/불합격 검사가 아니라 리뷰 라우팅 신호」로만 적어 **필수 체크 목록에 올라 있다는 사실을 놓쳤다**. 승인은 곧 실행 허가인데 실행이 성립하지 않으므로 거부한다.",
           "comment": "**한 파일만 슬라이스에서 빼면 그대로 통과한다 — 계획 전체를 다시 세울 필요는 없다.**\n\n1. **`backend/src/crypto.rs` 를 이번 슬라이스에서 제외**하고 PR 을 9파일 → 8파일로 줄일 것. 판정기 D2 의 `CORE_FILES` = {`backend/src/db.rs`, `backend/src/crypto.rs`, `backend/src/models.rs`, `backend/src/pipeline.rs`, `backend/tests/migrations.rs`} 는 **경로 소속만** 보므로 이 다섯은 주석만 고쳐도 필수 status 를 영구히 못 받는다. 나머지 8파일은 안전하다 — `backend/src/audit.rs` 는 D3 대상이지만 비주석 줄이 안 바뀌어 걸리지 않고, `backend/tests/**`(migrations.rs 제외)·`e2e/**`·`docs/**` 는 판정기가 아예 보지 않는다.\n   **실측 확인**: PR head 에서 `crypto.rs` 만 부모로 되돌린 트리에 판정기를 돌리니 `✅ 변경 없음 (review/data-format = success)` 로 뒤집혔다(검사 파일 11개). 현재 head 로는 `⚠️ 사람 리뷰 필요` 가 그대로 재현된다.\n\n2. **8파일로 줄였을 때의 수치(머지 트리 실측 — 그대로 쓸 수 있다)**: `crypto.rs` 는 부모 13행 → head 7행이므로 이 파일이 갖고 있던 제거분 6행이 빠진다. 범위 지문 **42행 / `96636e7917d30bca…`**, 전역 **`lines=2397 files=110`**, **부모 대비 순 제거 104행**, 원장 13행의 판정 **88파일**(지문 집합 86 — `backend/tests/crypto.rs` 가 전건 제거로 0행이 되어 빠지는 것은 그대로), 누적 순 제거 **1,824**(1,720 + 104), 판정 범위 합계 **2,029**, 잔여 **24파일 / 368행**(= 2,397 − 2,029, 집합 차와 일치). `ledger.md`·`passes/2026-09-20-credential-llm-key-axis.md`·`docs/index.html` 의 수치와 파일 목록을 이 값으로 고치고, 패스 상세에서 `crypto.rs` 절은 「D2 보류」로 옮길 것.\n\n3. **`crypto.rs` 를 포함한 D2 다섯 파일은 무인 슬라이스에서 영구 제외로 원장에 등재할 것.** `backend/migrations/*.sql` 8파일과 같은 성격의 **사람 게이트 풀**이지 자유 풀이 아니다 — 잔여 24파일/368행 중 `crypto.rs` 13 · `db.rs` 17 · `models.rs` 1 · `tests/migrations.rs` 13 = **4파일 / 44행**이 여기에 해당한다(`pipeline.rs` 는 범위에 주석 0행). 지금 원장의 「자유 풀」 분류가 이들을 섞어 놓고 있어 다음 패스가 같은 벽에 부딪힌다.\n\n4. **원장이 제안한 다음 축도 지금 그대로면 같은 이유로 막힌다.** 「테스트 하네스 축 71행」에 `backend/tests/migrations.rs` 13행이 들어 있는데 그것이 D2 `CORE_FILES` 다. 그 축을 잡을 때 `worker.rs` 35 · `common/mod.rs` 16 · `analyses.rs` 7 = 3파일 58행으로 좁힐 것.\n\n5. **실행 지침의 「`review/data-format` 은 합격/불합격 검사가 아니다」 문단을 고칠 것.** 룰셋상 **필수 체크**이므로 없으면 머지가 막힌다. 슬라이스를 고르는 단계에서 `python3 tools/check-data-format-change.py --base <main tip> --head <PR head>` 를 돌려 `✅` 를 확인하는 절차를 지침에 넣으면 이 유형이 재발하지 않는다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "직전 시도(#95, 9파일)는 **계획의 실질이 전건 검증을 통과했으나 머지 경로가 없어** 거부됐다 — 필수 commit status `review/data-format` 이 head 에 영구 결번이었기 때문이다. 판정기 `tools/check-data-format-change.py` 의 D2 「저장 계층 핵심」 규칙은 `backend/src/db.rs` · `backend/src/crypto.rs` · `backend/src/models.rs` · `backend/src/pipeline.rs` · `backend/tests/migrations.rs` 의 **경로 소속만** 보므로(D3 와 달리 「주석 아닌 줄」 예외가 없다) 주석 한 줄만 고쳐도 `needs_review=true` 가 되고 워크플로가 status 를 붙이지 않는다. 그 status 는 main 룰셋(23666120)의 **필수 체크**라 `mergeable_state=blocked` 이 해소되지 않는다.\n\n**그래서 계획을 다시 세우지 않고 슬라이스에서 `backend/src/crypto.rs` 한 파일만 뺐다**(9파일 → 8파일). 검토 코멘트가 지시한 그대로이며, 실측으로 뒤집혔다 — 같은 브랜치에서 `crypto.rs` 만 부모로 되돌리니 판정기가 `⚠️ 사람 리뷰 필요` 에서 **`✅ 변경 없음 (review/data-format = success)`** 로 바뀌었고, push 후 실제 head 에 그 status 가 **success 로 붙었다**(combined state=success). 나머지 8파일이 안전한 이유도 확인했다: `backend/src/audit.rs` 는 D3 대상이나 비주석 줄이 안 바뀌어 걸리지 않고, `backend/tests/**`(migrations.rs 제외) · `e2e/**` · `docs/**` 는 판정기가 보지 않는다.\n\n부수적으로 검토가 지시한 원장 구조 수정도 함께 넣었다 — **D2 다섯 파일을 `backend/migrations/*.sql` 과 같은 「사람 게이트 풀」로 등재**해, 잔여 24파일/368행을 마이그레이션 8/139 · D2 4/44 · 자유 풀 12/185 세 몫으로 다시 갈랐다. 지금 원장이 이들을 자유 풀에 섞어 놓아 다음 패스가 같은 벽에 부딪히기 때문이다(원장이 제안하던 「테스트 하네스 축 71행」에 D2 인 `tests/migrations.rs` 13 이 들어 있었다 → **3파일 58행**으로 좁혔다).\n\n**완료 기준(범위)**: PR #95 가 머지되어 판정 **8파일**에서 부모 `4a4b593` 대비 **순 제거 104행**이 착지하고, 범위 지문이 **42행 / `96636e79…`** 로 서며, 원장 13행(88파일 · 누적 1,824 · 범위 합계 2,029 · 잔여 24파일/368행 3분할) + 패스 상세 + 허브 등재가 함께 main 에 있는 상태. 완료 기준을 전역 절대 지문(`lines=2397 files=110`)으로 잡지 않은 것은 자매 PR #91·#92·#93 이 먼저 머지되면 절대값이 움직이기 때문이다 — 범위 지문은 이 8파일만의 값이라 자매 머지에 무관하다.\n\n**범위 밖(후속 재감지의 몫)**: `backend/migrations/*.sql` 8파일/139행(사람 게이트) · **D2 4파일/44행**(사람 게이트 — `crypto.rs` 13행은 판정까지 마쳐 패스 상세 「보류분의 판정 결과」에 보존했다) · 자유 풀 12파일/185행 · `backend/src` 종료 선언.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "검토 거부 사유를 재현한다 — PR #95 의 이전 head `df0252a` 트리에서 `python3 tools/check-data-format-change.py --base 4a4b593 --head <head> --verbose` 를 돌린다.",
+              "expectedOutcome": "`⚠️ 사람 리뷰 필요` 와 `D2 저장 계층 핵심 — 1건: backend/src/crypto.rs` 가 그대로 재현 — 거부 사유가 이 PR 고유의 것임을 확인."
+            },
+            {
+              "seq": 2,
+              "action": "`backend/src/crypto.rs` 를 부모 `4a4b593` 으로 되돌려 슬라이스를 8파일로 줄이고, 같은 판정기를 다시 돌린다.",
+              "expectedOutcome": "**`✅ 변경 없음 (review/data-format = success)`** 로 뒤집힘(검사 파일 11개). 나머지 8파일 중 D2/D3 에 걸리는 것이 없음이 판정기 출력으로 확증된다."
+            },
+            {
+              "seq": 3,
+              "action": "줄인 슬라이스의 수치를 머지 트리에서 **직접 재측정**한다 — 모델 `asIs.versionScript` 로 전역 지문, 같은 스크립트를 8파일로 좁혀 범위 지문, 부모에서도 같은 값.",
+              "expectedOutcome": "범위 146행 `cdd213b0…` → **42행 `96636e79…`**(files 8 → 7) · 전역 `lines=2501 files=111` → **`lines=2397 files=110`**. 범위 감소 104 == 전역 감소 104 ⇒ **범위 밖 주석 이동 0**. crypto.rs 는 부모에서 13행."
+            },
+            {
+              "seq": 4,
+              "action": "원장 잔여를 **집합 차로 독립 재계산**한다 — 전역 지문 파일 목록에서 원장이 등재한 판정 파일 집합을 뺀다.",
+              "expectedOutcome": "판정 **88파일**(지문 집합 86 — `format.ts`·`tests/crypto.rs` 가 0행이라 빠짐) · 범위 합계 **2,029** · 잔여 **24파일 / 368행**. 뺄셈(2,397 − 2,029 = 368)과 일치. 세 몫의 합도 일치(139 + 44 + 185 = 368, 8 + 4 + 12 = 24)."
+            },
+            {
+              "seq": 5,
+              "action": "원장·패스 상세·허브의 수치와 파일 목록을 8파일 판으로 고친다. 패스 상세에는 `crypto.rs` 절을 「D2 보류」로 옮기고 그 13행의 판정 결과(제거 6 · 유지 7)를 별도 절로 보존한다.",
+              "expectedOutcome": "원장 13행이 8파일 · 42 · `96636e79…` · 순 제거 104 로 서고, 합계·잔여 절이 88파일 · 1,824 · 2,029 · 24파일/368행(3분할)로 선다. 패스 상세 제목·집계표·검증표·범위 밖이 같은 값."
+            },
+            {
+              "seq": 6,
+              "action": "**D2 다섯 파일을 사람 게이트 풀로 원장에 등재**하고, 원장이 제안하던 다음 축에서 D2 를 뺀다.",
+              "expectedOutcome": "잔여가 「마이그레이션 8/139 · D2 4/44 · 자유 풀 12/185」로 갈리고, 「테스트 하네스 축 71행」이 `tests/migrations.rs` 13 을 뺀 **3파일 58행**으로 좁혀진다 — 다음 패스가 같은 벽에 부딪히지 않는다."
+            },
+            {
+              "seq": 7,
+              "action": "주석만 바꿨는지 검증한다 — 문자열 리터럴을 토큰화해 보존하는 스트리퍼로 stripped(parent) vs stripped(head) 를 sha256 대조한다(「비주석 diff 0줄」로 대신하지 않는다).",
+              "expectedOutcome": "**8/8 바이트 동일**(입력 26,505바이트). 주석 블록에 딸려 지워진 선언이 없음이 증명된다."
+            },
+            {
+              "seq": 8,
+              "action": "`cargo test --no-run` 으로 컴파일하고 영향 받은 세 스위트를 실행한다. 문서 게이트 3종도 전체 변경 위에서 돌린다.",
+              "expectedOutcome": "컴파일 rc=0 · **16 passed / 0 failed**(crypto 5 · llmkey 8 · security 3) · 문서 게이트 3종 모두 rc=0 · `// 검증 시나리오:` spec 당 정확히 1건 보존. crypto 의 5 passed 가 `tests/crypto.rs` 머리의 「셋」이 거짓임을 실측한다."
+            },
+            {
+              "seq": 9,
+              "action": "같은 브랜치를 amend 해 force-with-lease 로 push 하고, PR #95 의 제목·본문을 8파일 판으로 갱신한다(머지하지 않는다). push 후 새 head 의 commit status 를 확인한다.",
+              "expectedOutcome": "head `df0252a` → **`360f56d`**. 새 head 에 **`review/data-format = success`** 가 붙고 combined state=success — 거부 사유가 실제로 해소됐음이 API 로 확인된다."
+            }
+          ],
+          "plannedAt": "2026-09-20T15:02:00Z"
+        }
       }
     ]
   }
