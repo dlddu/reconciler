@@ -1595,7 +1595,7 @@
   {
     "id": "rct_20260920-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-20T09:20:34Z",
@@ -1683,9 +1683,9 @@
           "comment": "승인이지만 **머지 전 정정 필수**. 계획 작성 후 자매 #65(`d3c9e6c`)·#66(`ddaef4f`)이 머지돼 원장·패스 문서의 절대 수치가 낡았다. 검토가 합친 트리(pr67 + main `ddaef4f`, 충돌 0)에서 실측한 값을 그대로 쓸 것 — 재측정을 생략하지 말고 머지 직전 main으로 한 번 더 확인하되, 바뀐 게 없으면 아래가 참값이다.\n\n1) 지문: `lines=1942 files=112` → **`lines=2201 files=118`**(머지 전 main), 이 패스 후 **`lines=2159 files=118`**. 원장 말미 집계 행의 `1942 | 42 | 1900`을 **`2201 | 42 | 2159`**로, 패스 문서 머리의 `1942 → 1900`도 **`2201 → 2159`**로 고칠 것. 제거 42줄은 불변이다.\n2) 잔여 507 → **766**. ⑴ 행 없는 파일 6개 180줄 → **12개 332줄**: 기존 `tests/e2e/lib/` 6파일이 자라고(gold 58→77 · silver 43→47 · bronze 19→22 · feeds 16 · llmdouble 24 · ingestlog 20 = 206) **신규 6파일 126줄**이 들어왔다 — `tests/e2e/k8s/batch/aggregate-job-rollup.yaml` 10 · `timeshift-job.yaml` 20 · `tests/e2e/specs/aggregation-3-bucket-rollup.spec.ts` 36 · `tests/e2e/tools/timeshift_bronze.py` 10 · `web/src/screens/Fairness.tsx` 34 · `Fairness.test.tsx` 16. 계획의 표가 신규 파일 유입을 예상하지 못했으나 ⑴ 계수 규약(행 없는 파일) 자체가 기계적으로 이들을 잡는다.\n3) ⑵ 행보다 자란 증가분 9파일 327줄 → **10파일 434줄**: `handlers.go` 24→197(+173) · `handlers_test.go` 14→100(+86) · `run.sh` 12→96(+84) · `check-journey-mockup.py` 42→65(+23) · `test_aggregate.py` 1→19(+18) · `web/src/api/types.ts` 5→24(+19) · `tokens.css` 38→49(+11) · `client.ts` 5→12(+7) · `aggregate.py` 11→15(+4) · **신규 `tests/e2e/specs/ac3-8-normalized-ratio.spec.ts` 22→31(+9)**. 332+434=766.\n4) **지침 V2의 기대값 20은 합친 트리에서 21이다**(오류는 기대값 쪽). #65가 들인 `aggregation-3-bucket-rollup.spec.ts`가 `// 검증 시나리오:` 선언을 1건 더하기 때문이고, 이 PR이 바꾼 15파일의 선언 손실은 0건으로 검토가 확인했다. **21이 나왔다고 실패 판정하지 말 것** — 보존 성립 판별은 「변경 파일별 선언 수가 부모와 동일」로 볼 것.\n5) 게이트 3종은 검토가 합친 트리에서 이미 rc=0을 확인했다. 원장 충돌은 현재 없다(자매 무접촉) — 다만 머지 직전에 다시 생기면 「내 쪽 채택」이 아니라 양쪽 증분의 합으로 병합할 것.\n6) 완료 기준 3번(잔여가 두 몫의 합)의 판정은 507이 아니라 **머지 직후 실측값**과 대조해야 한다. 위 766은 main이 더 움직이지 않았을 때의 값이다."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-20T09:57:00Z",
-          "finishedAt": null,
+          "finishedAt": "2026-09-20T10:05:30Z",
           "entries": [
             {
               "stepSeq": 1,
@@ -1714,6 +1714,61 @@
               "startedAt": "2026-09-20T10:21:00Z",
               "finishedAt": "2026-09-20T10:24:00Z",
               "log": "합친 트리에서 게이트 3종 재실행 — check_scenario_mapping.py rc=0(시나리오 21 · 예외 1 · 1:1 대상 20 · 매칭 20 · 공백 0), check-journey-mockup.py rc=0, check-mockup-render.py rc=0. 지침 V2 의 기대값 20 은 합친 트리에서 21 이며 이는 기대값 쪽 오류다 — 자매 #65 가 들인 `aggregation-3-bucket-rollup.spec.ts` 가 선언을 1건 더한다. 보존 성립은 위 stepSeq 4 의 「변경 파일별 선언 수 동일」로 판정했다(손실 0건)."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-20T10:02:00Z",
+              "finishedAt": "2026-09-20T10:05:30Z",
+              "log": "착지. 정정 커밋 `9550d59` 의 CI settled 까지 폴링(blocked → clean) — 런 35503883902 의 잡 9개가 `ci / e2e` · `ci / build` · `render` · `docs / flow` · `docs / structure` · `image / publish`×2 · 집계 `required` 전부 success, `image / pin deploy images (main only)` 만 skipped(main 전용). 머지 방식은 지침의 「`revert -m 1`」 전제를 그대로 쓰지 않고 레포 설정으로 확정했다 — `allow_merge_commit=false` · `allow_squash_merge=true` 이고 직전 착지 4건(`ddaef4f`·`d3c9e6c`·`7386301`·`15f46b5`)의 부모가 전부 1개라 squash 가 이 레포의 실제 착지 방식이다. squash 로 머지 → main `3c42437`(부모 1개, `ddaef4f`). **롤백은 `git revert -m 1` 이 아니라 `git revert 3c42437` 이다** — 지침 주의사항의 전제가 틀렸고, 가역성 자체는 그대로 성립한다. 머지 직전 main 이 `ddaef4f` 그대로여서 위 재측정값이 착지 시점 참값이 됐다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=2159 files=118\n9f18f5a8ae8ce568f4712178714b753e1801d3bf5f28bae25729b088b3a73f9b",
+          "verifiedAt": "2026-09-20T10:07:00Z",
+          "checks": [
+            {
+              "name": "완료기준1 — 19파일이 원장 행을 갖는다",
+              "status": "passed",
+              "detail": "머지된 main `3c42437` 의 ledger.md 에서 판정 칸에 `scenario-spec-pass` 가 박힌 행이 정확히 19개: 시나리오 spec 16(aggregation-1·2·4·5, analysis-1~6, ingestion-2~7) + `tests/e2e/fixtures/feeds/server.py` · `tests/e2e/fixtures/llm/server.py` + `python/packages/aggregation/src/econ_aggregation/cli.py`. 19개 전부 워킹 트리에 실존(부재 0). 원장 총 행 수 109개, 중복 경로 0."
+            },
+            {
+              "name": "완료기준2 — 패스 문서 존재",
+              "status": "passed",
+              "detail": "`docs/comment-policy/passes/2026-09-20-scenario-spec-pass.md` 존재."
+            },
+            {
+              "name": "완료기준3 — 잔여가 두 몫의 합이고 실측과 일치",
+              "status": "passed",
+              "detail": "머지 직후 main 에서 독립 재계산: ⑴ 행 없는 파일 12개 332줄 + ⑵ 행보다 자란 10파일 434줄 = **766**. 원장 말미 집계 행이 적은 값과 동일하고, 그 행의 굵은 세 숫자도 실측 `2201 | 42 | 2159` 와 일치한다. 포지티브 컨트롤(행은 있으나 지문에 없는 파일) 3건 (Makefile · check-mockup-render.py · Dashboard.tsx)로 계수기가 공허하지 않음을 확인."
+            },
+            {
+              "name": "완료기준4 — 「읽는 법」에 잔여 계수 규약",
+              "status": "passed",
+              "detail": "「읽는 법」 절에 ⑴·⑵ 두 몫의 계수 규약이 명시돼 있다."
+            },
+            {
+              "name": "완료기준5 — 머지된 main 에서 V1·V2·V4 rc=0",
+              "status": "passed",
+              "detail": "`check_scenario_mapping.py` rc=0 · `check-journey-mockup.py` rc=0 · `check-mockup-render.py` rc=0. V2 는 합계 21 로 지침 기대값 20 과 다르나 검토가 짚은 대로 **기대값 쪽 오류**다 — 자매 #65 가 들인 `aggregation-3-bucket-rollup.spec.ts` 가 선언을 1건 더한다. 보존 성립은 「변경 파일별 선언 수가 부모와 동일」로 판정했고 15/15 에서 1→1, 손실 0건이다."
+            },
+            {
+              "name": "V3 — 코드 무접촉(비주석 바이트 동일성)",
+              "status": "passed",
+              "detail": "PR 이 건드린 소스 15파일에서 줄머리 `//` 를 걷어낸 뒤 sha256 을 참 기준 `merge-base(head, main)` = `7386301` 과 대조 → 불일치 0. 주의: PR API 의 `base.sha`(`d3c9e6c`)를 기준으로 재면 자매 변경이 섞여 거짓 불일치 8건이 나온다(base 상대 판별식의 함정). 이 검사가 로컬 실행 불가인 `make e2e` 를 대신하는 안전 근거이고, 실제로 `ci / e2e` 도 PR 에서 success 였다."
+            },
+            {
+              "name": "지문 이동(기록용)",
+              "status": "passed",
+              "detail": "머지 전 main `ddaef4f` = `lines=2201 files=118` / `7ffcb11f…` → 머지된 main `3c42437` = `lines=2159 files=118` / `9f18f5a8…`. 제거 42줄, 파일 수 불변(주석이 0행이 된 파일 없음). 머지 전 로컬 합친 트리에서 예측한 값과 바이트 동일. 레코드의 `lastObservedVersion`(`lines=1942 files=112`)은 **의도적으로 그대로 둔다** — 이 이동이 다음 감지 주기의 트리거다."
+            },
+            {
+              "name": "범위 밖 잔여(정보성 — converged 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "모델 전체로는 766줄이 미판정으로 남는다: ⑴ 행 없는 12파일 332줄(`tests/e2e/lib/` 6파일 206 + 자매가 들인 6파일 126 — `aggregation-3-bucket-rollup.spec.ts` 36 · `Fairness.tsx` 34 · `timeshift-job.yaml` 20 · `Fairness.test.tsx` 16 · `aggregate-job-rollup.yaml` 10 · `timeshift_bronze.py` 10), ⑵ 자란 10파일 434줄. 계획이 명시적으로 범위 밖에 둔 축이고 (`tests/e2e/lib/` · 자란 행 재판정 · Python docstring 표면), 이 패스가 고친 계수 규약 덕에 원장만 읽어도 도달할 수 있게 됐다. 이 gap 은 지문 이동을 본 다음 감지 주기가 후속 task 로 잇는다. 슬라이스를 막던 자매 PR(#65·#66·#18)이 전부 착지해 열린 PR 은 현재 0건이므로, 다음 패스는 겹침 없이 `lib/` 를 디렉터리 단위로 닫을 수 있다."
             }
           ]
         }
