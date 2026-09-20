@@ -2478,7 +2478,7 @@
   {
     "id": "rct_20260920-0005",
     "toBeModelId": "tbm_econ-opinion-monitor-mockup-render",
-    "status": "assessing",
+    "status": "cancelled",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-20T11:48:41Z",
@@ -2491,6 +2491,12 @@
       ]
     },
     "createdAt": "2026-09-20T11:48:41Z",
-    "updatedAt": "2026-09-20T11:48:41Z"
+    "updatedAt": "2026-09-20T11:48:41Z",
+    "stateSummary": {
+      "asIs": "**측정하지 않았다.** 이 task 는 2026-09-20T11:48:41Z 에 점유(claim)된 직후 소유 세션이 중단돼\n`stateSummary`·`assessment` 가 한 번도 채워지지 않았다(`updatedAt` == `createdAt`).\nas-is 수집은 시작조차 되지 않았으므로 여기에 적을 관측값이 없다.",
+      "toBe": "**측정하지 않았다.** 위와 같다 — 트리거가 기록한 버전 변화\n(`mockups:f3e23d94…` → `mockups:c4e3f485…`, `design-system` 은 불변)만 남아 있고\n그 변화가 무엇인지 읽은 기록이 없다.",
+      "gap": "**판정 불가 — 이 task 는 판정된 적이 없다. 유기된 lock 을 회수하기 위해 취소한다.**\n\n**무슨 일이 있었나(실측).** 소유 fire 는 job `5be21a55`(checkout `run-20260920-114705-2328238`)이고,\n그 job 의 `state.json` 이 사유를 축자로 적는다 — **`state: blocked` · `detail: \"You've hit your session\nlimit · resets 12:50pm (UTC)\"`**. job 디렉터리의 마지막 파일 활동은 **11:51:18** 이다. 한도 해제\n시각(12:50Z)은 이미 3시간 넘게 지났으나 그 세션은 재개되지 않았다 ⇒ **소유자는 죽었고 lock 만 남았다.**\n\n**왜 방치할 수 없나.** `assessment.recheckAfter` 가 스키마에 없어 이 `assessing` 은 **만료가 없는\nlock** 이고, detector 외에는 아무도 `assessing` 을 읽지 않으므로 스스로 풀릴 경로가 없다. 게다가\n`precheck-drift.py` 는 점유 모델을 스윕에서 제외하므로 **이 모델은 lock 이 풀릴 때까지 원리적으로\n감지 불가**다. 실해를 수치로 확정했다 — 저장된 as-is baseline\n(`screens:2c9000b4… shell:0ed5b3a7… tokens:2d971513…`, 11:17:20Z 관측)과 대상 레포 tip `473b3cc` 의\n실측이 이미 어긋나 있다(`#79`·`#80`·`#81` 세 커밋이 `web/src/screens/` 를 움직였다). 즉 **점유 4.1h\n동안 착지한 세 커밋이 이 모델에 대해 보이지 않는 상태**였다.\n\n**처분.** 앞선 fire 들이 이 lock 의 무진행을 **5연속 관측**하며(1.6h → 2.23h → 2.5h → 3.93h → 4.1h)\n「3h 초과 시 `release stale claim` 대상」이라는 임계를 세워 두었다. 그 임계를 넘겼고 소유자 사망이\n증거로 확정됐으므로 여기서 회수한다:\n- 이 레코드를 `cancelled` 로 닫아 lock 을 해제한다. **삭제하지 않는다** — 유기가 실제로 있었다는\n  감사 기록이 남는 편이 낫다.\n- 모델의 `toBe.lastObservedVersion` 을 claim 직전 값(`mockups:f3e23d94…`, 관측 시각\n  `2026-09-20T09:50:15Z`)으로 **되돌린다**. 이 트리거는 **아무도 판정하지 않았으므로** baseline 을\n  전진시킨 채 닫으면 그 변화가 영영 묻힌다(중복 task 를 취소하는 경우와 반대다 — 그때는 형제가 이미\n  판정했으므로 되돌리지 않는 것이 맞다).\n- 결과: 다음 fire 가 `mockups` 변화를 **새 task 로 다시 열어 정상 판정**하고, 같은 스윕에서 그동안\n  가려져 있던 as-is 3성분 이동도 함께 본다.\n\n**새 원인 기록.** stale lock 의 원인이 세션 정체·인프라 무음이 아니라 **소유 세션의 사용량 한도\n차단**인 첫 사례다. 판별법이 싸다 — `~/.claude/jobs/<id>/state.json` 의 `state`/`detail` 한 줄.",
+      "summarizedAt": "2026-09-20T16:02:00Z"
+    }
   }
 ]
