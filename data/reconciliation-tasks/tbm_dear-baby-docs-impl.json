@@ -1160,7 +1160,7 @@
   {
     "id": "rct_20260808-0001",
     "toBeModelId": "tbm_dear-baby-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-08T02:07:15Z",
       "changedSides": [
@@ -1172,7 +1172,7 @@
       }
     },
     "createdAt": "2026-08-08T02:07:15Z",
-    "updatedAt": "2026-09-20T12:57:02Z",
+    "updatedAt": "2026-09-20T15:06:07Z",
     "stateSummary": {
       "asIs": "**as-is 무변경** — `app:19ce469f98b2e8c1d56f23d676c3e3fa0e99cd0c backend:9aa34539f9a6a07595e4e62249e236e315c999e9 worker:613d4709f465471e4c…`, baseline과 바이트 동일. #174는 docs 전용 커밋이다.\n\n개정된 PRD-002/ENG-001/ENG-013이 요구하는 것과 대조하기 위해 **구현 실측**(`9f8cfc2` 트리):\n\n- **질문 선정 = 단계 무관 단일 풀.** `app/src/data/dailyQuestions.ts` — `DAILY_QUESTIONS` 12문항 고정 배열 + `getDailyQuestionTriplet(date, pool)`가 `dayOfYear(date) % pool.length`로 시작 인덱스를 정해 3개를 고른다. **아이·단계·기준값을 입력으로 받지 않는다.** 소비처는 `app/app/(tabs)/index.tsx:63` `getDailyQuestionTriplet()` (인자 없음) → `HomeQuestionCard`.\n- **그 12문항은 전부 태아 1인칭이다** — \"엄마, 오늘은 제가 **엄마 배 속에서** 어떤 꿈을 꿨을까요?\" 등. 카드 렌더는 `activeChild.kind`로 분기하지 않으므로 **양육(child) 활성 아이에게도 임신 축 문항이 그대로 노출된다.**\n- **단계 배지는 이미 양축 분기한다** — `index.tsx:98` `contextLabel` = `kind==='fetus' ? formatPregnancyLabel(dueOrBirthDate) : formatChildAgeLabel(dueOrBirthDate)`, 활성 아이가 없으면 `null`(미표시). `HomeQuestionCard`는 `contextLabel`이 null이면 배지를 그리지 않는다(`testID=\"home-question-card-context\"`).\n- **단계 스냅샷 컬럼 없음** — `backend/internal/migrations/` 0001~0012 전수 확인. `records`는 `id · user_id · content · created_at`(0004) + `question_text`(0007, nullable) + `subject_id`·`visibility`(0012)뿐이고, **단계/주차/생후개월을 저장하는 컬럼이 없다.** 0007 주석이 스스로 \"AC-002-02(주차 매칭 카탈로그)가 들어오면 후속 마이그레이션으로 정규화 컬럼 추가\"라고 미래형으로 적어 둔 상태다.\n- 생후 나이 산출 자체는 존재한다 — `backend/internal/records/community.go`가 AC-009-14 카드용으로 \"임신 N주차 / 생후 N개월 / N살\"을 ENG-001 식으로 포맷(단위 테스트 있음). 즉 **계산 로직은 있고, 그것을 기록에 못 박아 두는 저장·재계산 계약이 없다.**",
       "toBe": "**to-be 변경** — `docs` 트리 `b0b573fb…`→`3d39cd9e…`. 단일 커밋 **#174 `9f8cfc2`** (2026-08-08T01:47:51Z), docs 18개 파일 +596/-91. 이 모델의 to-be는 `docs/` 전체이므로 아래가 전부 스펙 이동이다.\n\n**이번 개정은 북키핑이 아니라 스펙 본체의 이동이다:**\n\n1. **V-005 개정(VDOC-001)** — \"임신 주차별 맞춤 질문\" → \"**아이 단계별 맞춤 질문**\" (ID 유지).\n2. **PRD-002 전면 개정** (+168줄) — \"질문 모델\" 절 신설: 단계를 아이의 **기본 속성**으로 규정, **두 축(임신 주차 | 생후 나이) 배타 · 케이스 혼합 금지**, 단계 스냅샷은 작성 당시 기준. AC-002-01·02·03·04를 양축으로 **재작성**하고 **AC-002-05(단계 산출 불가 시 폴백 — 단계 무관 공용 풀 + 단계 표시 생략) 신설**. 양육 축 질문 풀 구간을 1년차 1개월 · 2년차 3개월 · 3년차 6개월 · 4년차 이후 1년 티어(반개구간 `[시작, 끝)`)로 확정.\n3. **ENG-013 `stage-snapshot-persistence.md` 신설 — `status: active`, 본문이 스스로 \"확정 문서다\"라고 선언.** 열려 있던 \"물리 저장 vs 소급 계산\" 구현 재량을 **물리 저장 + 기준값 정정 시 재계산(백필)** 으로 닫았다. 계약: 재계산 트리거 T1 `due_date` 수정 · T2 `birth_date` 수정 · T3 컬럼 도입 마이그레이션(1회) / **전량 재산출(델타 이동 금지)** / **컬럼 nullable 필수**(AC-002-05 단계 없음 작성분) / **출산 전환은 백필 비대상** — 놓치면 임신기 기록 전체가 \"생후 -N개월\"로 오염된다고 경고.\n4. **ENG-001 확장** — 제목 \"아이 단계 산출 정책\", 생후 나이 산출(출생 당일=1일째, **달력 기준** 개월, 상한 없음) · 양축 비교표 · 단계 산출 불가 판정 추가. ENG-011의 죽은 참조 해소.\n5. **ENG-002(`status: deferred`) 일반화** — 개정 후 gap 표를 문서가 직접 명시: AC-002-02 단계별 풀 매칭 ❌(기존) · **임신·양육 풀 분리 ❌(개정으로 추가된 gap)** · 반복 방지 ❌ · **AC-002-05 ⚠️ \"우연히 충족 — 분기가 존재하지 않는다\"** · AC-002-01 단계 표시 ✅(배지).\n6. **TEST-002 4 → 11 TC** (임산부/양육자 분기, 케이스 혼합 금지, 스냅샷 불변성·정정 반영 TC-002-03-C, 폴백 2건).\n7. **용어집** — `DailyQuestion` 정의 갱신 + `ChildStage` · `PostnatalAge` · `StageSnapshot` 3행 신설. 하위 참조 정합: PRD-006/007/009 제공 가치 문구, PRD-007 AC-007-04, 여정 4편, mockups README, design-system 카피.\n\n확정 AC 총계 69 → **70**.",
@@ -1490,7 +1490,7 @@
           "reason": "승인 — 2차 거부가 건 착수 조건 ⑴⑵⑶⑷를 검토가 독립 재측정해 **전부 충족**을 확인했고, 차단 대기 관문이 지침에서 실제로 사라졌다.\n\n**신선도 실측(2026-09-20 11:47~11:52Z).** PR #175는 `state=open` · `draft=false` · `mergeable=true` · **`mergeable_state=clean`** · head **`d2340fe53e5afdcfb40d3a3efc11f602bf893b39`** · base **`eb988c0bde5c19bed32463db83749d4e2d31f954`**이고, `git/ref/heads/main`을 판정 직전 두 번 재조회해 main tip이 **base와 완전히 같다**(자매 머지 없음). diff는 14파일 +1626/-34로 세 판 내내 불변. CI 근거도 새 head의 것만 존재한다 — `actions/runs?head_sha=<full sha>`가 런 2건을 돌려주고 둘 다 `completed/success`다: `CI` **`35505533299`**(잡 12건 전수 — `Detect Changes`·`Backend Unit Tests`·`Integration Tests`·`E2E (iOS)`·`E2E (Android)`·`All prechecks passed`·`Build & Push Backend Image` success, `App Unit Tests`·`Build & Push Worker`·`Deploy *` skipped, 집계 **`CI Success` success**)와 `Mockup ↔ Route Map` **`35505533195`** success. **#179가 신설해 옛 head가 한 번도 통과한 적 없던 그 게이트가 이번엔 실제로 돌아 초록이다.** `mergeable_state=clean`이라 결번 필수 체크도 없다.\n\n**정합성·범위.** gap A(ENG-013 계약)가 main에 그대로 살아 있다 — `backend/internal/records/stage.go`는 `eb988c0`에서 **404**, `internal/migrations` 최신이 **0012**라 `0013` 번호 충돌도 없다. PR 14파일은 backend 11(migrations 0013 ×2 · records `stage.go`/`model.go`/`store.go` · onboarding `store.go` · 테스트 5) + docs 3(ENG-013 · ENG-001 · glossary)뿐이고 **`.github/workflows/**`·`docs/doc-tracker.md`·`docs/index.html`·app 파일은 diff에 없다**(= `App Unit Tests` skipped가 정상 경로임이 파일 목록으로 확증된다). B·C·D는 ENG-002 선행에 물려 있어 범위 밖으로 남겼고, 열린 PR 6건(#184·#183·#181·#180·#172·#170)을 판정 직전 재조회해 파일 교집합이 **전부 0**임을 다시 쟀다.\n\n**완료 기준이 실행 가능한지까지 검증했다.** 지침 §2-1이 지목한 테스트 이름이 브랜치에 축자로 존재한다 — `TestMigration0013_*` 3건(백필·Go 등가성·down) · `TestCreate_Stamps{Pregnancy,Postnatal}`·`TestCreate_NoDerivableStage_LeavesSnapshotNull` 3건 · onboarding `Correction`/`Cleared`/`AddingChild`/`Dropped` 5건 · `TestReadPaths_AllReturnStageSnapshot`. 즉 실행자의 검증 명령이 빈 `-run` 매치로 거짓 초록이 될 여지가 없다.\n\n**위험·불가역성(medium).** 되돌릴 수 없는 지점은 프로덕션 마이그레이션 0013 적용이지만 세 컬럼은 `f(작성일, 기준값)`의 파생 캐시이고 nullable이라 down(`DROP COLUMN` ×3)으로 잃는 정보가 없으며, `TestMigration0013_DownDropsColumns`가 down 경로와 행 무손실을 단정한다. 롤백은 revert→재배포→0013 down 3단계로 구체적이다. **롤백 문구의 `-m 1` 생략도 실측으로 맞다** — main 최근 착지 6건이 전부 **부모 1개**(squash 전용)다. `:latest`가 이 PR 빌드로 이미 덮여 있다는 부수효과와 그 원복 조건도 지침에 명시돼 있고, 프로덕션은 Flux SHA pin이라 즉시 영향이 없다."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-20T12:53:12Z",
           "entries": [
             {
@@ -1583,8 +1583,83 @@
               "status": "succeeded",
               "finishedAt": "2026-09-20T12:57:02Z",
               "log": "**머지 실행 — 이 단계의 되돌릴 수 없는 지점.** 지침 §2-0 관문 6개를 실행자가 전부 재확인한 뒤 `PUT /repos/dlddu/dear-baby/pulls/175/merge`를 `merge_method=squash` + `sha=d2340fe53e5afdcfb40d3a3efc11f602bf893b39`(조건부)로 호출 → `merged=true`, squash 커밋 **`0282fab893dbb495b3dc87b8df0690be45d2dc37`**. 레포 설정 실측으로 `allow_merge_commit=false`·`allow_squash_merge=true`라 squash가 유일한 경로이고, 착지 커밋의 **부모가 1개**(`eb988c0`)임을 재조회로 확증했다(롤백 시 `revert`에 `-m 1`을 붙이지 않는 근거). 머지 후 `git/ref/heads/main` = `0282fab…`. 커밋에 실린 파일 **14개**로 PR diff와 동일. 덧붙여 §2-2 검토 포인트 4개를 머지 전에 head 트리에서 직접 읽어 확인했다 — ⑴기준값 행 부재 가드 존재 ⑵재계산 스코프가 `WHERE subject_id = ?`(user_id로 넓어지지 않음) ⑶백필 SQL의 '1회성 역사 산출물 / 권위는 Go 계산기' 주석과 등가성 테스트 존재 ⑷3컬럼 근거와 `stage_kind` 어휘 분리 근거가 up.sql 머리주석과 ENG-013 본문 양쪽에 축자로 있음."
+            },
+            {
+              "stepSeq": 17,
+              "status": "succeeded",
+              "finishedAt": "2026-09-20T15:06:07Z",
+              "log": "**머지 후 main CI 관측 — 1회 재실행으로 전량 초록.** 머지가 발화시킨 `CI` 런 **35511964979**(push, `0282fab`)의 **시도 1**은 `E2E Tests (Android)` 하나가 실패해 집계 `CI Success`가 failure였다(12:54:35Z→14:09:50Z). 지침 §0-C가 요구한 **단정 실패 vs 드라이버 장애 판별**을 잡 로그(2.37MB) 실측으로 수행: 실패는 `maestro.android.DeviceCallFailedException: 'viewHierarchy' failed: INTERNAL - UiAutomation not connected` — `AndroidDriver.callViewHierarchy`에서 난 **드라이버 호출** 실패이지 제품 단정 실패가 아니다. 근거 넷: ⑴ 직전까지 maestro 단정이 전부 COMPLETED(tester-login·onboarding caseC 전 구간·`home-header`·`home-header-bell`) ⑵ 실패 지점이 `Run flow when \"isn't responding\" is visible` 의 viewHierarchy 프로브 ⑶ `Clear keychain`(13:20:51Z)과 `Launch app`(13:32:41Z) 사이 **12분 정체** = 에뮬레이터 행 ⑷ 백엔드 쪽 ERROR·5xx·`no such column` 0건(grep 히트는 전부 go 모듈 캐시 tar 잡음). 게다가 **머지 커밋의 트리가 PR head 트리와 바이트 동일**(`0282fab^{tree}` = `d2340fe^{tree}` = `61c1286c0c322fe968f6b2de3e95b2009bd07d7d`)이라, 같은 트리가 11:40Z에 E2E Android 초록을 받은 적이 있고 같은 커밋의 iOS E2E도 초록이다. → flake로 판별해 §0-C가 허용한 **1회** `rerun-failed-jobs`(HTTP 201, 시도 2)를 돌렸고 **시도 2 = completed/success**(15:03:42Z): `E2E Tests (Android)` **success**로 뒤집혔고 `All prechecks passed` ✅ · `Build & Push Backend Image / build-push` ✅ · 집계 **`CI Success` ✅**. 부수효과로 `:latest`가 **main 빌드로 덮여** 지침 §3의 '미머지 브랜치 빌드가 latest에 실려 있다' 경고도 해소됐다. (코드 변경 0으로 뒤집혔으므로 '같은 지점에서 같은 이유로 또 죽는' 경우가 아니다 — 계획 재개방 불필요.)"
             }
-          ]
+          ],
+          "finishedAt": "2026-09-20T15:06:07Z"
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "app:ddae9a8b16fdfb1f99d0a1686cd8c670571f31e5 backend:2b294e039610206f5622552efd2a26b0b7d3bfc6 worker:c6d4a19258461341bed746b21dd46699dd1b6738",
+          "checks": [
+            {
+              "name": "C1 — 마이그레이션 0013 + T3 백필 + down",
+              "status": "passed",
+              "detail": "머지된 main `0282fab`에서 `go test ./internal/records/ -run TestMigration0013 -count=1 -v` → **최상위 3 pass / 0 fail**: `TestMigration0013_BackfillMatchesGoCalculator`(SQL≡Go 등가성) · `TestMigration0013_BackfillPopulatesAndLeavesUnknowable`(채움/NULL 유지) · `TestMigration0013_DownDropsColumns`(down 경로·행 무손실). 기대값 ok(3케이스)와 일치. 파일 실측: up 96줄(`ALTER TABLE records ADD COLUMN stage_kind TEXT`/`stage_days INTEGER`/`stage_months INTEGER` + `CREATE INDEX idx_records_stage`), down 8줄(`DROP INDEX IF EXISTS` + `DROP COLUMN` ×3). 테이블 재작성 없음."
+            },
+            {
+              "name": "C2 — 쓰기 시 산출, 산출 불가면 NULL",
+              "status": "passed",
+              "detail": "`-run 'TestCreate_Stamps|TestCreate_NoDerivable'` → **최상위 3 pass**(`_StampsPregnancyStageSnapshot`·`_StampsPostnatalStageSnapshot`·`_NoDerivableStage_LeavesSnapshotNull`). 기대값 3과 일치."
+            },
+            {
+              "name": "C3 — T1/T2 재계산(전량 재산출)",
+              "status": "passed",
+              "detail": "`./internal/onboarding/ -run 'Correction|Cleared|AddingChild|Dropped'` → **최상위 5 pass**: `TestUpsertCaseA_DueDateCorrection_RecomputesSnapshots` · `TestUpsertCaseC_BirthDateCorrection_RecomputesSnapshots` · `TestUpsertCaseA_DueDateCleared_NullsSnapshot` · `TestUpsertCaseB_AddingChild_DoesNotRepaintPregnancyRecords`(출산 전환 비트리거) · `TestUpsertCaseA_SubjectDroppedFromList_PreservesSnapshot`(기준값 행 소멸 시 보존). 기대값 5와 일치."
+            },
+            {
+              "name": "C4 — Record JSON 노출(세 조회 경로)",
+              "status": "passed",
+              "detail": "`-run TestReadPaths` → `TestReadPaths_AllReturnStageSnapshot` pass. 소스 실측상 세 경로가 서브테스트가 아니라 한 테스트 안 순차 단정이다 — `GetByIDForUser`·`ListForUser`·`AttachAudio` 각각에 `assertPregnancyDays(..., 180)`(stage_test.go:249/255/264). 3경로 전부 커버 확인."
+            },
+            {
+              "name": "C5 — 문서 반영(ENG-013·용어집·ENG-001)",
+              "status": "passed",
+              "detail": "ENG-013 「저장 스키마 (2026-08-08 확정)」 절의 컬럼 표가 `0013_*.up.sql`과 **문자열 일치** — `stage_kind` TEXT · `stage_days` INTEGER · `stage_months` INTEGER · `idx_records_stage`(4종 전부 양쪽 존재). 용어집 3행 존재(glossary.md:48 `ChildStage` · :50 `PostnatalAge` · :51 `StageSnapshot`)이고 세 컬럼명을 축자로 싣는다. ENG-001의 「생후 나이 산출: 미구현」 **능동 서술은 소멸**했다 — 남은 유일한 `미구현` 히트(:126)는 *(2026-08-08 정정: 기존 \"생후 나이 산출: **미구현**\" 서술은 이 구현으로 해소됐다)* 라는 **정정 이력의 자기인용**이라 거짓 주장이 아니다. 불일치 0."
+            },
+            {
+              "name": "C6 — 무회귀(make test)",
+              "status": "passed",
+              "detail": "go1.24.7(`backend/go.mod` toolchain 고정값)로 머지된 main `0282fab`에서 `go test ./... -count=1 -v`(= CI `make test`) rc=0 → **136 pass / 1 skip / 0 fail**. 기대값 136/1/0과 정확히 일치하고, 머지 전 main `eb988c0`의 120에서 **줄지 않았다**(+16 신규, 회귀 0). 세는 법은 최상위 `^--- PASS`/`^--- SKIP` 행 수(서브테스트 제외). `go build ./...` rc=0 · `go vet ./internal/...` rc=0. 패키지 전부 ok(auth·db·onboarding·records·storage·tasks·users)."
+            },
+            {
+              "name": "머지 착지 — squash·부모 1개·14파일",
+              "status": "passed",
+              "detail": "PR #175 `state=closed` · `merged=true` · `merge_commit_sha=0282fab893dbb495b3dc87b8df0690be45d2dc37`이고 main tip이 그 값이다. 착지 커밋의 **부모 1개**(`eb988c0`) — 레포 설정 `allow_merge_commit=false`·`allow_squash_merge=true`와 일치하며, 롤백 문구가 `revert`에 `-m 1`을 붙이지 않는 근거가 착지 후에도 유효함을 재확인. 파일 14개(+1626/-34)로 PR diff와 동일하고 `.github/workflows/**`·`docs/doc-tracker.md`·`docs/index.html`·app 파일은 들어 있지 않다(의도)."
+            },
+            {
+              "name": "머지 후 main CI 전량 초록 (1회 재실행)",
+              "status": "passed",
+              "detail": "런 35511964979 **시도 2 = completed/success**. 잡 12건: `Detect Changes`·`Backend Unit Tests`·`Integration Tests / integration`·`E2E Tests (iOS)`·`E2E Tests (Android)`·`All prechecks passed`·`Build & Push Backend Image / build-push` **success**, `App Unit Tests`(앱 무변경이라 정상)·`Build & Push Worker Image`·`Deploy Android/iOS` **skipped**, 집계 **`CI Success` success**. 시도 1의 Android 실패는 `UiAutomation not connected` 드라이버 장애로 판별해 §0-C가 허용한 1회만 재실행했고 코드 변경 0으로 뒤집혔다. **`Integration Tests` 초록이 마이그레이션 0013이 실제 기동에서 도는지에 답하는 잡**이며 시도 1·2 양쪽에서 success였다."
+            },
+            {
+              "name": "자매 간섭 — 머지 전후 main 무이동",
+              "status": "passed",
+              "detail": "머지 직전 `git/ref/heads/main` = `eb988c0…` 로 PR base와 **완전히 동일**했고(자매 머지 0건), 머지는 `sha=d2340fe…`를 명시한 조건부 호출이라 그 사이 head가 움직였다면 409로 거부됐을 것이다. 따라서 지침 §0-B(리베이스·재측정 경로)는 발동 조건 자체가 없었고 planner의 자매 교집합 0 측정이 그대로 유효하다. 검증 시점 main tip은 여전히 `0282fab…`(이 슬라이스 착지 이후 무이동)."
+            },
+            {
+              "name": "(정보성) 프로덕션 롤아웃은 이 머지로 일어나지 않는다",
+              "status": "passed",
+              "detail": "**지침 §2-3의 배포 관측은 이번 머지로는 성립하지 않는다 — 사실을 그대로 남긴다.** `pin-prod-image.yml`은 `on: workflow_call` **전용**이고 호출자는 `closed-beta.yml`(PR에 `closed-beta` 라벨이 붙을 때 발화)이다. main push는 `ci.yml`의 `build-image`까지만 돌려 `ghcr.io/dlddu/dear-baby:{latest,0282fab…}`를 밀 뿐, flux-cd-apps의 `dear-baby-prod-app` Kustomization `newTag`를 건드리지 않는다. 클러스터 실측으로 확인 — prod `dear-baby` 디플로이먼트는 여전히 `ghcr.io/dlddu/dear-baby:4569b0bb3a889dbdfa5197741571dc26dc626607`(age 18d, 1/1 Ready)에 pin된 채다. **따라서 마이그레이션 0013은 아직 프로덕션에 적용되지 않았고, 지침 §3이 말한 '되돌릴 수 없는 지점'에 도달하지 않았다** — 다음 closed-beta 롤아웃 전까지 되돌리기는 squash 커밋 `revert`(부모 1개) 한 단계로 싸다. 이 사실은 완료 기준 6개 어디에도 들어 있지 않으므로 수렴 판정을 바꾸지 않는다."
+            },
+            {
+              "name": "(정보성) 이 슬라이스가 닫지 않은 잔여",
+              "status": "passed",
+              "detail": "계획이 gap A(ENG-013 저장·재계산 계약)만 슬라이스로 잡았고 B·C·D는 ENG-002 선행에 물려 범위 밖으로 남겼다. 남은 것: 스냅샷 **소비처 전환 3곳**(`records/community.go` `childStatusText` — PR #172 소유이고 아직 열려 있음 · `app/src/components/diary/subjectLookup.ts` · `app/src/api/types.ts`)이 끝나야 세 컬럼이 write-only를 벗어난다. ENG-001 말일 절사 규칙이 `community.go` `monthsBetween`·`app/src/utils/childLabel.ts`에 미반영. AC-002-02 본체(단계별 질문 풀)·AC-002-05 폴백 분기·설정 탭 아이 정보 수정/출산 전환 UI·ENG-011 본 구현·UTC vs 단말 로컬 타임존 정합·`docs/doc-tracker.md` 갱신도 후속. **모델 lastObservedVersion은 건드리지 않았다** — as-is가 `backend:9aa34539…`→`backend:2b294e03…`로, to-be(docs)가 `eda0c541…`→`9292ad18…`로 움직였으므로 다음 감지 주기가 이 변화를 보고 후속 task를 연다."
+            },
+            {
+              "name": "(정보성) gofmt 선행 debt · 주석 패키지명 오기",
+              "status": "passed",
+              "detail": "⑴ 머지된 main에서 `gofmt -l .`이 `internal/storage/s3.go`·`internal/users/handlers_test.go` 2건을 내지만 **부모 `eb988c0`에서도 동일한 2건**이고 둘 다 이 슬라이스의 14파일에 없다 → 선행 debt이지 이 머지가 들여온 것이 아니다(CI 게이트도 아니다). ⑵ `0013_*.up.sql` 머리주석이 등가성 테스트를 '**db 패키지**의 등가성 테스트'라 부르지만 실제 위치는 `backend/internal/records/stage_migration_test.go`다(계획 7번은 `internal/db/`에 두려 했다). 테스트는 존재·통과하므로 사실관계 오류가 아니라 패키지 이름만 어긋난 주석 — 후속에서 정리할 사소한 건."
+            }
+          ],
+          "verifiedAt": "2026-09-20T15:06:07Z"
         }
       }
     ]
