@@ -2837,7 +2837,7 @@
   {
     "id": "rct_20260919-0007",
     "toBeModelId": "tbm_feature-doc-mockup-render",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-19T06:40:36Z",
@@ -2977,6 +2977,64 @@
               "log": "**⓪ 리베이스(검토 comment 가 지시한 선행 절차).** 계획 이후 자매 PR #82 가 머지돼 main 이 `48a4a87` → `f4f6fe9` 로 1커밋 움직였고 PR #83 은 `mergeable_state=dirty` 였다. `f4f6fe9` 위로 리베이스하니 충돌은 검토가 예고한 그 둘뿐 — `sc01-01-full-pipeline-run.spec.ts` · `sc01-02-repo-out-of-scope.spec.ts`. 검토가 「해소 A/B 어느 쪽이든 게이트 출력 바이트 동일」을 증명해 뒀으므로 **해소 A**(코드는 PR 쪽 `register-key`, 주석은 #82 가 줄인 main 쪽)로 풀었다 — 주석 축약은 다른 모델(`tbm_feature-doc-comment-redundancy`)이 방금 내린 판정이라 그쪽을 살리는 것이 맞다. 원본 커밋 패치와 리베이스된 패치의 ± 라인 차분은 **주석 3줄뿐**(sc01-02 의 주석 2줄 추가 + sc01-01 주석 1줄 축약판 채택)이고 코드 라인 차분은 0 이다. `docs/comment-policy/ledger.md` 는 건드리지 않았다(변경 파일 13건에 없음). `getByTestId('continue')`·`('ready')` 참조 0 확인 후 `--force-with-lease=refs/heads/<br>:20c2701` 로 push → 새 head `0f93fea4`.\n\n**① CI 정착 확인.** 리베이스로 head 가 바뀌어 검토 근거 런 `35499188760`(head `20c2701`)은 낡았으므로 새 head 전체 sha 로 다시 밟았다. `GET /actions/runs?head_sha=0f93fea453e56b85249173f85b1f9fcf3017b846` → 런 **`35500668059`** 1건. queued/in_progress/pending/waiting/requested 가 모두 빠질 때까지 20초 간격 폴링 (약 5분, 08:50:45Z→08:55:31Z) → `completed`/**success**.\n\n**② `test (kind e2e)` 직접 확인.** job **`106051750757` success** — 준비가 「CI 가 유일한 집행자」라 남긴 면 중 검토가 로컬에서 닫지 못한 **Playwright 실런타임(kind)** 이 여기서 닫혔다. 같은 런의 나머지: `test (cargo)` `106051750883` · `docs-journey-mockup` `106051751042` · `docs-mockup-render` `106051751072` · `docs-scenario-e2e` `106051751123` · `push / build & push image (ghcr)` `106052264994` 전부 success, 필수 체크 **`ci-gate` `106052319031` success**(`push / pin deployment image` 는 main 전용이라 skipped — `ci-gate` 의 needs 밖). 판정은 개별 잡이 아니라 `ci-gate` 결론으로 했다.\n\n**③ 머지.** 레포 설정 실측 — `allow_merge_commit=false` · `allow_squash_merge=true` · `allow_rebase_merge=false` 이므로 지침의 「머지 커밋」 문구가 아니라 설정을 따라 **squash** 로 머지했다 (되돌리기도 그래서 `-m 1` 이 아닌 평범한 revert 다 — 머지 커밋 `79c1cb44` 의 부모는 `f4f6fe9` 하나). 머지 직전 PR 은 `mergeable=true`/`clean`, base 는 여전히 `f4f6fe9`(그 사이 자매 머지 없음)였고 `sha=0f93fea4` 를 조건으로 걸어 PUT 했다. main tip `f4f6fe9c` → **`79c1cb4477e1bab7800993ec54e7764865175617`**. main push 로 `Image` 워크플로 `35500916741` 이 디스패치됐다(이미지 빌드 → `deploy` 브랜치 핀; 이 task 의 완료 기준 밖이라 착지는 기다리지 않았다).\n\n**④ 완료 기준 재측정**은 verification 에 기록했다(PR 브랜치 초록으로 갈음하지 않고 머지된 main 을 새로 클론해 측정)."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "frontend-src:1faf1752ab362f40b4f335755c243915f471113d",
+          "checks": [
+            {
+              "name": "check-mockup-render.py (머지된 main `79c1cb44`)",
+              "status": "passed",
+              "detail": "rc=0. M0 활성 **11** · 보류 **0** · 편차 34 / M1 화면 **11** · dangling 앵커 0 · 범위 표 일치 / M2 토큰 21/21 / M3A 활성 단계 **12** · 카피 **275** · 미등재 0 / M3B 활성 쌍 **11** · 카피 **221** · 미등재 0 / M4 행 34 · 공전 0 / M5 미해소 편차 34/34 · **대조 보류 0/0** / M6 `data-sample` 97 · 오용 0 / M7 대조 **9쌍** · 면제 1 · 불일치 0. executionGuide 의 기대값 표와 **전 항목 일치**한다."
+            },
+            {
+              "name": "check-journey-mockup.py (형제 게이트)",
+              "status": "passed",
+              "detail": "rc=0. R0~R11 통과 — 여정 6(예외 1 · 이관 완료 5 · 이관 대기 0) · 목업 페이지 5 · 문서 35 · docs/ 상대 링크 270 · 허브 단계 링크 23 주석 대조."
+            },
+            {
+              "name": "check-scenario-e2e.py (형제 게이트)",
+              "status": "passed",
+              "detail": "rc=0. 시나리오 ↔ e2e 정합성 통과 — e2e spec 6건을 동반 개정했음에도 매핑·선언·래칫이 모두 성립한다."
+            },
+            {
+              "name": "완료 기준 ⑴ — 「대조 보류」 상한 0 · 표 철거",
+              "status": "passed",
+              "detail": "`grep -c '^### 대조 보류' docs/doc-tracker/2026-09.md` = **0**(절 철거) · `grep -c '대조 보류 상한: \\*\\*0\\*\\*'` = **1**(산문으로 이관). M0 가 보류 0 · M5 래칫이 0/0 으로 같은 사실을 기계 판독으로 확증한다."
+            },
+            {
+              "name": "완료 기준 ⑵ — 활성 대조에 두 쌍 등재",
+              "status": "passed",
+              "detail": "`docs/doc-tracker/2026-09.md` 382–383행에 `frontend/src/GrantRepoAccess.tsx` ↔ `STP-grant-repo-access`, `frontend/src/RegisterLlmKey.tsx` ↔ `STP-register-llm-key` 두 행이 활성 대조 표에 있다. M3B 활성 쌍이 9 → **11** 로 늘어 이 등재가 게이트 입력으로 실제 소비됨을 보인다."
+            },
+            {
+              "name": "완료 기준 ⑶ — 게이트 3종 rc=0",
+              "status": "passed",
+              "detail": "위 세 check 로 성립. **PR 브랜치의 초록으로 갈음하지 않고** 머지된 main(`79c1cb44`)을 새로 클론해 재측정했다 — 그 사이 자매 머지는 없었고 base 는 `f4f6fe9` 그대로였다."
+            },
+            {
+              "name": "편차 원장 총계 불변 (34) — 수렴의 척도는 면제 면적",
+              "status": "passed",
+              "detail": "M4 행 34 · M5 34/34 로 **총계 34 불변**. 계획대로 `STP-grant-repo-access (단계 전체)` 면제 행을 닫고 그 자리에 제공자 변이 1행(`RegisterLlmKey.tsx` 의 키 형식 안내 — 목업 정적 HTML 이 첫 제공자 한 벌만 그리고 나머지 두 벌은 프로토타입 script `KEY_RULES` 안에만 있다)을 넣은 **교체**다. 래칫상 총행은 늘릴 수 없으므로 수렴은 총계가 아니라 「(단계 전체)」 면제가 좁은 1행으로 바뀐 **면제 면적**으로 읽는다."
+            },
+            {
+              "name": "구조 단정 5종 (executionGuide)",
+              "status": "passed",
+              "detail": "`^### 대조 보류` 0 · `대조 보류 상한: **0**` 1 · `^### 구현 수렴 대기 잔여` **1**(옛 판이 남지 않았다) · `frontend/src/CredentialsSetup.tsx` 부재 · `GrantRepoAccess.tsx`·`RegisterLlmKey.tsx` 둘 다 실재. 추가로 `getByTestId('continue')`·`('ready')` 참조가 `e2e/`·`frontend/src/` 전체에서 **0건**이다."
+            },
+            {
+              "name": "CI 집행 — `test (kind e2e)` (로컬에서 닫을 수 없는 유일한 면)",
+              "status": "passed",
+              "detail": "리베이스된 head `0f93fea4` 의 런 `35500668059` 에서 job `106051750757` **success**. docker/kind 가 호스트에 없어 Playwright 실런타임은 CI 가 유일한 집행자였고, 이 PR 이 고친 spec 6건이 그 안에서 실제로 통과했다. 필수 체크 `ci-gate`(`106052319031`)도 success — `if: always()` + needs 집계라 `skipped` 하나만 섞여도 뒤집히는 게이트다."
+            },
+            {
+              "name": "[정보성] 모델 전체 to-be 와의 잔여 gap (이 task 의 범위 밖)",
+              "status": "passed",
+              "detail": "converged 판정에 넣지 않은 사실 기록. 편차 원장에 34행이 남아 있고 그 중 `구현 수렴 대기` 는 **7행**이다 (e2e 단정 동반 3 · 노출 조건이 앞 행에 묶임 1 · 앱바 슬롯이 동선 결정에 묶임 1 · 문자열 소유자 범위 밖 1 · 선결 화면 부재 1 — 「구현 수렴 대기 잔여」 절이 이 다섯 통으로 다시 쓰였고 제목 개수는 1). 이번에 새로 등재한 제공자 변이 1행은 `목업 미갱신` 유형이라 목업이 제공자 변이를 표기 규약으로 그릴 때 닫힌다. **남은 다섯 통에는 선결이 다 풀린 축이 하나도 없다** — 가장 앞 후보는 「e2e 단정 동반 3행」이고 그 축의 판단 지점은 spec 개정이 시나리오 원문의 요구를 줄이지 않는가다. 이 잔여는 이번 머지가 만든 `frontend/src` 버전 변화 (`89c52785…` → `1faf1752…`)의 **재감지**가 후속 task 로 잇는다."
+            }
+          ],
+          "verifiedAt": "2026-09-20T08:57:30Z"
         }
       }
     ]
