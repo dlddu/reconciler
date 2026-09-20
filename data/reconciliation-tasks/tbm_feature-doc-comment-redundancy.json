@@ -2070,5 +2070,28 @@
       "assessedAt": "2026-09-20T08:15:30Z",
       "reason": "**작업은 필요하지 않다(`no_action_needed`) — 이번 트리거가 만든 두 변화가 *전부* 이미 열려 있는 `rct_20260919-0005`(planning, 9차 패스)의 인계문에 이름과 분기까지 적혀 있기 때문이다. 잔여 자체는 여전히 크지만(64파일 / 1,499행) 그것을 들고 있는 주체가 있다.**\n\n**1. 귀속이 기계적이다(단일 커밋).** 부모 `072d8b6` 에서 as-is versionScript 재실행 = 저장 baseline 과 바이트 동일, 그 앞 `667b8b8` 은 다른 값 ⇒ 무버는 **#79 `48a4a87`** 하나. to-be tree hash `404e04ae…` 는 세 지점 동일(정책 디렉터리 무접촉). 대상 레포 tip 은 2026-09-19T06:22Z 이후 무이동이라 2파도도 없다.\n\n**2. 소유자가 있고, 그 소유자가 이 트리거를 *미리 호명했다*.** `rct_20260919-0005` 의 `assessment.reason` 이 축자로 적는다 — 「**#79가 머지되면 원장 3행에 증분 재판정이 열린다** — `e2e/tests/sc01-01-full-pipeline-run.spec.ts`를 건드린다 … 이 패스의 범위 밖이면 그대로 두고, 범위에 넣는다면 **증분 재판정으로 원래 행을 갱신한다**(새 행을 만들지 않는다)」. 예고 `+6 −4` vs 실측 지문 `+4 −1` 로 대상 파일·방향이 일치한다. 두 번째 변화인 경합 재분할도 같은 인계문의 「**경합 목록은 계획 직전에 다시 재라**」가 지시해 둔 항목이고, 이번 트리거는 경합을 **7파일/296행 → 4파일/217행으로 줄였다**(#79 가 묶고 있던 `App.tsx` 53 · `sc01-02` 35 가 자유 풀로 복귀). ⇒ 지금 새 task 를 열면 같은 잔여에 소유자가 둘이 된다.\n\n**3. 앞선 판정을 무효화하는 요소 0, 계획 전제 무효화도 원리적으로 0.** 판정 46파일 중 **45파일 지문 바이트 불변**, 유일한 유입은 `sc01-01` 순증 3행이다(판정 범위 1,584 → 1,587). 그리고 `rct_20260919-0005` 에는 `attempts` 가 **아직 없다** — 계획이 작성되기 전이므로 「삭제된 파일을 들고 실행한다」 유형의 전제 무효화가 성립할 여지가 없다. 원장에 이름이 적힌 `frontend/src/ConnectRepository.tsx`(경합 12행)가 이번에 삭제됐지만, 그것은 원장의 **경합 인벤토리**이고 원장 자신이 「경합 분류는 다음 감지가 다시 나눈다」로 재측정을 규약화해 둔 칸이다.\n\n**4. 삭제로 판정 내용이 소실되지 않았다.** `ConnectRepository.tsx` −12행은 전부 미판정 범위였고, 같은 커밋에서 `HomeRepositories.tsx` 가 +24/−9(순 +15)로 그 화면 서술을 이어받았다. 판정 완료 범위에서 사라진 줄은 **0**이다.\n\n**5. 재감지 경로가 살아 있다.** 이 claim 으로 baseline 이 `lines=3086 files=110`/`701de5be…` 로 전진했고, 이 축은 누가 주석을 건드릴 때마다 깨어난다(직전 3일간 1~8차 패스가 매번 이 경로로 열렸다). 9차 패스가 진행하면 그 산출이 다시 이 모델을 깨운다 ⇒ 「지금 안 열면 영영 못 본다」가 성립하지 않는다.\n\n**6. 유예(park)를 택하지 않은 이유**: 스키마에 `assessment.recheckAfter` 가 없어 파킹 자체가 불가능하다(`claim.sh detect-recheck` 가 rc=4 로 막힌다). 유예가 가능했더라도 이 건의 답은 유예가 아니라 종료다 — 소유자가 이미 있다.\n\n---\n\n**⚠️ 별건으로 보고 — 함대가 25.15시간 정지했고, 그 여파로 잠긴 task 9건이 남아 있다(이 판정과 독립, detector 는 재배정하지 않는다).**\n\n`dlddu/reconciler` 의 마지막 활동은 **2026-09-19T07:00:42Z**(`a98c2bb5`)이고 다음 활동이 **2026-09-20T08:09:51Z**(오늘 planner claim)다 — 네 단계 타이머가 통째로 **25.15h** 무음이었다. 대상 레포 `dlddu/feature-doc` 도 같은 창에서 무이동(tip `48a4a87`, 2026-09-19T06:22Z). 그 결과 **2026-09-19T03:19~07:00Z 에 얼어붙은 비-터미널 lock 9건**이 남았다:\n\n- `planning` **7**: `tbm_feature-doc-docs-impl` `rct_20260919-0003`(28.87h) · **`tbm_feature-doc-comment-redundancy` `rct_20260919-0005`(25.95h — 이 판정이 소유자로 지목한 바로 그 건, `attempts` 0)** · `tbm_econ-opinion-monitor-docs-impl` `rct_20260919-0006`(25.55h) · `tbm_feature-doc-mockup-render` `rct_20260919-0007`(25.33h) · `tbm_homelab-k3s-mcp-docs-impl` `rct_20260919-0006`(25.22h) · `tbm_homelab-k3s-mcp-comment-redundancy` `rct_20260919-0004`(25.21h) · (오늘 재개분 1건은 신선)\n- `assessing` 고아 **1**: `tbm_homelab-k3s-mcp-comment-redundancy` `rct_20260919-0006`(25.19h) — `recheckAfter` 스키마 부재로 **아무도 못 푸는 종류**이고, precheck 가 그 모델을 스윕에서 통째로 제외한다(이번 fire 의 `1 occupied` 가 이것이다 ⇒ **그 모델은 잠긴 동안 재감지 불가**).\n- `planned` 1(econ-journey-mockup `rct_20260919-0003`, 25.27h) · `action_required` 1(econ-comment-redundancy `rct_20260919-0002`, 25.32h) — 이 둘은 미점유라 각 단계가 집어가면 풀린다.\n\n**소유자 지목의 단서를 함께 남긴다**: 위 2의 논증은 `rct_20260919-0005` 가 *진행할 수 있는* 주체임을 전제한다. 오늘 planner 타이머가 재개됐으므로(08:09:51 claim) 정상 경로는 그쪽이 이어받는 것이지만, 그 건이 계속 `planning` 에 `attempts` 0 으로 머물면 **고아 lock 이고 그때는 이 축의 잔여 1,499행에 실소유자가 없어진다.** 회수 절차는 이미 실측된 형태가 있다 — `detect(<tbm>/<rct>): release stale claim`(09-19 05:49 `5cf1a439`·`54e81fa1`). 다만 이 건은 `assessment` 가 유효하므로 **레코드 삭제가 아니라 `planning` → `action_required` 되돌리기**가 맞다(그러면 planner 가 재claim 한다). 판단·실행은 detector 의 몫이 아니므로 **올리기만 한다.**\n\n**⚠️ 종전 보고 유지**: `assessment.recheckAfter` 스키마 확장 필요(control plane 의 `reconciler-task-schema-updater` 몫). 위 고아 `assessing` 1건이 정확히 그 부재 때문에 잠겨 있다.\n\n**기록만(내 축 아님, 발견 조작 금지)**: M1 이 읽는 목업 매핑 머리 주석이 11 → **10 tsx** 로 줄었다 — `ConnectRepository.tsx` 의 `docs/mockups/JRN-connect-repo.html#STP-confirm-cost` 가 파일과 함께 사라졌고, 병합된 `HomeRepositories.tsx` 는 `#STP-pick-target` 만 들고 있다. `STP-confirm-cost` 터치포인트의 매핑 소실 여부는 `tbm_feature-doc-mockup-render` 축이다(그 모델의 `rct_20260919-0007` 이 열려 있다). 내 축에서의 함의는 **「지우면 게이트가 붉어지는 주석」 목록이 10개로 갱신됐고 그중 자유 풀은 `CrossCuttingConcerns.tsx` · `SignIn.tsx` 둘**이라는 것뿐이다(직전 인계와 동일)."
     }
+  },
+  {
+    "id": "rct_20260920-0002",
+    "toBeModelId": "tbm_feature-doc-comment-redundancy",
+    "status": "assessing",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-20T09:12:49Z",
+      "asIs": {
+        "currentVersion": "lines=2944 files=111\n60ff1f0f66722a14c27dcbbb49bde52f55379cd2161de8c4c438dfd9e199a338",
+        "previousVersion": "lines=3086 files=110\n701de5bebc420c0f30b432499e974d7fa40bfcc53a4c9235b9eb3eb2f38646c0"
+      },
+      "toBe": {
+        "currentVersion": "06adc6b94f35be6dbe1c0e89d4c331b060bcedde",
+        "previousVersion": "404e04ae1e5d1a917bac100349646c77e1eeec3f"
+      },
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ]
+    },
+    "createdAt": "2026-09-20T09:12:49Z",
+    "updatedAt": "2026-09-20T09:12:49Z"
   }
 ]
