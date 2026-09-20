@@ -2717,7 +2717,7 @@
   {
     "id": "rct_20260920-0006",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-20T14:16:40Z",
@@ -2882,6 +2882,13 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/95",
           "preparedAt": "2026-09-20T15:04:00Z",
           "notes": "**직전 시도의 PR #95 를 재사용해 amend·force-push 했다**(새 PR 을 열지 않았다 — 계획의 실질이 전건 검증을 통과했고 거부는 슬라이스 구성 한 가지였기 때문). head `df0252a` → **`360f56d`**, base `4a4b593`(= 측정 직전 main tip 재조회로 확인, 안 움직였다). 8개 소스 파일 + `docs/comment-policy/ledger.md` + 신설 `docs/comment-policy/passes/2026-09-20-credential-llm-key-axis.md` + `docs/index.html` = **11파일**, 125행 삭제 · 18행 재작성.\n\n**거부 사유 해소가 API 로 확인된다**: 새 head 의 combined status 가 `state=success` 이고 `review/data-format = success` 가 붙어 있다(이전 head 는 영구 결번이었다). 워크플로 `review — data format` 런도 `completed/success`.\n\n판정 시점 로컬 실측: 판정기 `✅ 변경 없음 (review/data-format = success)` · 주석 제거 후 부모와 **바이트 동일 8/8**(문자열 리터럴 토큰화 스트리퍼, 입력 26,505바이트) · `cargo test --no-run` rc=0 · `cargo test --test crypto --test security --test llmkey` **16 passed / 0 failed** · 문서 게이트 3종 rc=0 · 범위 지문 **42행 `96636e79…`**(부모 146행 `cdd213b0…`) · 전역 `lines=2501 files=111` → **`lines=2397 files=110`** · 잔여 집합 차 **24파일 / 368행** == 2,397 − 2,029.\n\nkind e2e(Playwright)는 호스트에 docker/kind 가 없어 로컬 불가 — CI 가 유일한 집행자이나, 네 spec 의 변경이 주석 제거 후 바이트 동일이므로 실행 의미는 바뀌지 않는다.\n\n경합: 열린 PR #91·#92·#93 전수(`/pulls?state=open` 재조회 — 셋 다 head 불변, base 는 여전히 `f5a2937`)와 판정 8파일의 파일 겹침 0. `crypto.rs` 를 뺐으므로 겹침은 줄어들 뿐이다."
+        },
+        "review": {
+          "required": false,
+          "status": "approved",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-20T15:10:03Z",
+          "reason": "**승인 — 직전 거부 사유가 실제로 해소됐고, 계획의 실질을 머지 트리에서 전건 재현했다.**\n\n**거부 사유 해소(핵심).** 직전 시도는 필수 commit status `review/data-format` 이 head 에 영구 결번이라 무인 머지 경로가 없다는 이유로 거부됐다. 지금은 열렸다 — 룰셋 23666120 의 필수 체크는 여전히 `ci-gate`·`review/data-format` 둘인데, 새 head `360f56d` 에 **`review/data-format=success`** 가 붙어 combined `state=success` 다. 판정기를 로컬에서 직접 돌려도 `✅ 변경 없음`(검사 파일 11개)이라 status 가 우연히 붙은 것이 아님을 확인했다. `backend/src/crypto.rs` 한 파일만 빠졌고(9→8파일), D2 `CORE_FILES` 나머지 넷도 슬라이스에 없다.\n\n**신선도.** PR #95 open · `mergeable=true` · `mergeable_state=clean` · base `4a4b593` 가 **판정 직전 재조회한 main tip 과 동일**(자매 #91·#92·#93 은 모두 옛 base `f5a2937` 에 머물러 아직 미머지). CI 는 settled 전건 초록 — `ci-gate`·`test (cargo)`·`test (kind e2e)`·docs 3종·`push` 모두 success이고, `skipped` 는 `pin deployment image (main only)` 하나뿐이라 집계 잡을 뒤집지 않았다.\n\n**정합성·범위 실측(머지 트리 `origin/main` + `360f56d`, 충돌 없음).** 전역 지문 `lines=2501 files=111` → `lines=2397 files=110`, 범위 지문 146행 `cdd213b0…` → **42행 `96636e7917d30bca…`**(files 8→7) — 계획이 적은 완료 기준과 **바이트 동일**. 범위 델타 104 == 전역 델타 104 ⇒ **범위 밖 주석 이동 0**. 원장 수치도 집합 차로 독립 재계산해 전건 일치했다(표 13행 · 판정 88파일 · 지문 집합 86 · 범위 합계 2,029 · 잔여 24파일/368행 == 2,397−2,029 · 3분할 8/139 + 4/44 + 12/185 · 누적 1,824 = 1,720+104). `backend/src/crypto.rs` 를 판정이 아니라 **D2 보류**로 세어야 이 값들이 서며, 그렇게 세면 전부 맞는다.\n\n**위험 통제·불가역성.** 주석과 문서만 바뀐다 — 문자열 리터럴 보존 스트리퍼로 stripped(parent) vs stripped(head) 를 sha256 대조해 **8/8 바이트 동일**(부모 입력 34,948바이트)이므로 주석 블록에 딸려 지워진 선언이 없다. `cargo test` **16 passed / 0 failed**(crypto 5 · llmkey 8 · security 3 — crypto 의 5 가 `tests/crypto.rs` 머리의 「셋」이 거짓임을 실측), 문서 게이트 3종 rc=0, `// 검증 시나리오:` spec 당 정확히 1건 보존(S1), 허브 Documents 38→39 + doc-row 등재로 R9 통과. `.sql` 은 한 글자도 안 건드려 sqlx 체크섬 경로 밖이고, 불가역 지점은 머지 하나뿐이며 #94 가 squash(부모 1개)로 착지했으므로 되돌리기는 `git revert <착지 SHA>` 한 번이다. executionGuide 에 V1~V9 검증표와 롤백이 명시돼 있고, 완료 기준을 전역 절대값이 아니라 **범위 지문**으로 잡아 자매 머지에 무관하게 판정 가능하다 — 자매가 먼저 머지될 경우의 재측정 절차도 지침 1절에 있다."
         }
       }
     ]
