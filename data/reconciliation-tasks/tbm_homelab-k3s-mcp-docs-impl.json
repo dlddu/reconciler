@@ -9979,5 +9979,27 @@
       "assessedAt": "2026-09-20T22:57:00Z",
       "reason": "**작업 불필요 — 이 트리거는 내 판정축(docs↔impl)에 gap 을 0 만들었고, 근거 6종이 전부 실측이다.**\n\n⑴ **귀속이 단일하다.** 트리거 `3a10d9b1`(#164)은 baseline 커밋 `7a1abb41`(#161, docs 트리 `07c8d839…`)의 **직계 자식**이고 사이에 다른 커밋이 없다 — 이 이동은 이 커밋 단독의 산물이다.\n\n⑵ **구현이 한 바이트도 안 움직였다.** `git diff --stat 7a1abb41 3a10d9b1 -- internal main.go` 가 **빈 출력**이고, 대상 tip 에서 as-is 지문을 재실행하니 저장된 baseline(`internal:9e1f366c… main.go:9525c1ba…`)과 바이트 동일. ⇒ 기준 3(문서 없는 구현)은 새 표면 0 이고, 기준 1(미구현 AC)은 구현 쪽 증감 0.\n\n⑶ **판정 표면(SSOT)에 무접촉.** `prd-*.md` 15파일 전건 · `values.md` · 나머지 `test-*.md` 14파일이 바이트 불변이라 AC 집합 **85 무변동**. 독립 재계수가 tracker 헤드라인과 전건 일치(가치 5 · PRD 15 · AC 85 · 테스트 문서 15 · 등록 도구 25) ⇒ 기준 4(tracker 불일치) 초록.\n\n⑷ **docs-only 트리거에서 유일하게 위험한 축을 실측으로 닫았다.** 「문서만 바뀌었으니 노이즈」는 정반대일 수 있다(to-be 가 혼자 앞서 가는 형태). 이번에 들어온 **구현 계약 단언 1건** — `e2e-mocking-policy.md` 의 「구현은 owner 를 호출자에게서 받지 않고 `GET /app/installations/<id>` 응답의 `account.login` 에서 읽는다(`internal/github` 의 `installationOwner`)」 — 을 코드에서 확인: `internal/github/github.go:222` 에 `installationOwner` 정의, `:173-174` 에 `Account struct { Login string json:\"login\" }`, `commitstatus.go:137` 이 호출. **문면 == 코드** ⇒ 기준 2(구현↔문서 불일치) 초록. 새 문면이 기술하는 것은 *앞으로 만들 것*이 아니라 **이미 서 있는 구현**이다.\n\n⑸ **레포 게이트 4종을 부모·트리거 두 지점에서** 돌려 전부 `rc=0` + **출력 바이트 동일**(md5): `check_ac_mapping`(85·1·10·74·74·0·0) · `check_doc_inventory`(`308e0e97e527`, 허브 52/52 끊긴 링크 0) · `check_mock_policy`(`084bfbeb1c98`, 등재 5 · 모킹 6 · 차단 원장 1) · `check_comment_policy`(`431ba11f8cb6`, 87줄). 트리거 변경 이력 행이 스스로 주장한 「넷 다 무이동 · 주석 원장 무이동 · 허브 무이동」이 독립 확인됐다. 초록이 커버리지를 가린 경우가 아니다 — 게이트 수치가 **내 독립 재계수와 일치**한다.\n\n⑹ **재감지 경로가 살아 있다 — 「지금 안 열면 영영 못 본다」가 성립하지 않는다.** 남은 gap 셋은 전건 소유자가 있고 각자 재감지 경로를 갖는다: ⓐ ⏳ 구현 대기 10행의 전용 e2e 저작은 정의가 **명시적으로 자매 `tbm_homelab-k3s-mcp-scenario-e2e` 에 귀속**한 축이고(이번 트리거는 그중 3행의 차단을 「픽스처 선행」에서 「저작뿐」으로 **줄였다** — 자매 축에서는 전진), 그 모델은 지금 `rct_20260920-0006` 으로 **살아 점유 중**이다. ⓑ 미결 ⬜ 4건(배포 순서 ② · `checks` 권한 · `dear_baby_reset_user` 게이트 밖 · Pages 설정)은 전부 **사람·운영자 판단** 항이라 코드로 닫는 대상이 아니고 tracker 에 등재돼 있다. ⓒ 자매 `rct_20260920-0003`(PR #165)이 `internal/k8s/` 를 건드리므로 머지되면 내 as-is 지문이 움직여 재감지가 정상적으로 열린다.\n\n**발견-조작 함정 회피**: `tests/k8s/kind/github-mock.yaml` 이 이번에 함께 바뀌었고 그 스텁 계약을 실측 검증했지만(라우트 정규식 · `UNPROCESSABLE_SHA = \"f\"*40` · `account.login` · `id: 1` 전건 일치), 모델 정의가 `tests/` 를 as-is 지문에서 **명시 제외**하므로 이 관측은 `action_required` 근거가 못 된다 — 기록으로만 남긴다.\n\n**자매 staged PR 무죄**: `rct_20260920-0003`(`approved`, PR #165)이 트리거와 `docs/doc-tracker/2026-09.md` 를 공유하고 base 가 정확히 트리거의 부모지만, `gh api …/pulls/165` 가 현재 base tip 기준으로 `mergeable=true`·`mergeable_state=clean` ⇒ 충돌·조용한 되돌림 둘 다 무죄. 「staged work 가 리베이스를 필요로 한다」도 아니다.\n\n**후속(내 축 아님, 보고만)**: 모델 `definition` 의 등록 시점 스냅샷이 낡았다 — 「PRD 18 · AC 64 · 테스트 문서 18 · session-* 3종(AC 12건) 미구현」 vs 실측 「PRD 15 · AC 85 · 테스트 문서 15 · session-* **구현 완료**(`internal/sessionplatform/` · `gate.go:199-212` · `toolslist.go:825-868`)」. 정의가 스스로 「스냅샷일 뿐 판정 기준이 아니다」라 적으므로 drift 로 올리지 않는다. 고치는 자리는 **reconciler-tobe-modeler**. 같은 계열로 tracker 본문 546~549행의 「AC6 둘째 문단 미착수」는 2026-09-15 시점 이력 문면이고 실제로는 착지했다(`internal/k8s/patch_precondition.go`, #106) — 같은 파일 미결 행 202 가 이미 갱신돼 있어 모순은 아니다."
     }
+  },
+  {
+    "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
+    "status": "assessing",
+    "createdAt": "2026-09-21T00:52:50Z",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-21T00:52:50Z",
+      "changedSides": [
+        "as_is",
+        "to_be"
+      ],
+      "asIs": {
+        "previousVersion": "internal:9e1f366cab6b15e1c0ac3abd768b090b1ddf65e8 main.go:9525c1baad8fb1a5817558f36f46de779fea4528",
+        "currentVersion": "internal:96f97e470007cca68240327115ddd66f8fd2cca1 main.go:9525c1baad8fb1a5817558f36f46de779fea4528"
+      },
+      "toBe": {
+        "previousVersion": "f0ff20ac8b6ec19019169a088bcc09dd5f37e0ec",
+        "currentVersion": "f8674901e680e4b470b99b4c830ea22722675e45"
+      }
+    },
+    "id": "rct_20260921-0001"
   }
 ]
