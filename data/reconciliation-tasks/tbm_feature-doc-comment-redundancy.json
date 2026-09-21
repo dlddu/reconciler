@@ -3477,6 +3477,56 @@
           "reason": "거부 — 준비물 자체는 유효하나(PR #98 open · mergeable=true · base `7724b46`가 main tip과 동일해 베이스 이동 없음 · head `ef46fd87`에서 `CI`와 `review — data format` 워크플로 둘 다 success · 변경 11파일이 마이그레이션 축 8파일 + 원장 + 패스 상세 + 문서 허브로 계획 범위와 정확히 일치), 실행의 전제인 **운영 DB repair가 끝났다는 근거가 레코드에 없다**. 모델 정의 「적용된 마이그레이션」 4항이 「repair 완료가 적혀 있지 않은 승인은 실행하지 않는다」고 못박았고, `preparation.notes` 자신도 repair와 필수 체크 `review/data-format` 올리기가 아직 사람 몫으로 남아 있다고 적고 있다. 실제로 head의 combined status는 statuses 0건이라 그 필수 체크는 결번이고 PR은 `mergeable_state=blocked`다 — 지금 승인하면 executor는 executionGuide 2단계에서 멈추거나(무의미한 승인), 강행하면 운영 파드가 `VersionMismatch`로 부팅 실패한다(되돌림은 `.bak` 복원뿐인 불가역 지점). 위험도 high 자체가 아니라 **불가역 전제의 미이행**이 거부 사유다. 정의 4항의 `awaiting_review` 전이는 현재 스킬 계약에 없어 시도하지 않았다.",
           "comment": "계획·PR·범위·CI는 문제없다. 고칠 것은 하나 — **repair 완료 근거를 레코드에 축자로 남긴 뒤 재계획**이다.\n\n1. 사람이 PR #98 본문의 repair 표대로 운영 DB `featuredoc.db`의 `_sqlx_migrations.checksum` 7건(`0001`·`0003`·`0004`·`0005`·`0006`·`0007`·`0008`)을 고치고, 필수 체크 `review/data-format`을 직접 올린다.\n2. 그 결과를 `preparation.notes`에 축자로 적는다: 실행한 사람 · 시각(UTC) · version별 UPDATE 전/후 checksum · `.bak` 경로 · Flux suspend/resume 시각.\n3. 재계획 시 `review/data-format`이 head `ef46fd87`에 success로 붙었는지(combined status에 실제로 나타나는지)를 실측값으로 함께 적는다 — 지금은 statuses 0건이라 결번이다.\n\n**이 근거가 기록되기 전에는 planner가 이 task로 할 수 있는 일이 없다.** 왕복 재계획을 새로 만들지 말고 파킹으로 보고 건너뛸 것(3회 연속 거부는 `cancelled`). 계획 내용 자체를 고칠 필요는 없다.\n\n머지 시점에 자매 #92가 먼저 착지해 있으면 `backend/tests/migrations.rs`의 `APPLIED` 충돌 해소와 원장 절대 수치 재측정이 추가로 필요하다(executionGuide §2·§3에 이미 있음). 현재는 #92·#91·#93 모두 open이다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**재계획(2차 시도) — 계획·PR 내용은 1차와 동일하고, 거부 사유였던 「운영 DB repair 완료 근거 부재」가 해소됐음을 실측으로 기록해 실행을 여는 것이 이번 시도의 전부다.** 사람 게이트가 2026-09-21T15:14:30Z 에 풀렸다: PR #98 head `6ef9e8e9` 에 필수 체크 `review/data-format` = success 가 사람 손으로 붙었고(설명 「사람 확인: 운영 _sqlx_migrations v1,3-8 repair 완료(9행 전부 이 커밋 SHA-384와 일치), .bak-202609211511」), PR 은 `MERGEABLE / clean`, check-runs 8/8 success(pin 은 main 전용이라 skipped). 사람은 그 전에(14:43Z·14:46Z) main(#92 착지분)을 브랜치에 머지해 `ledger.md` 합계와 `backend/tests/migrations.rs` `APPLIED` 충돌을 직접 풀어 두었다(길이 9, 9파일 sha256 전부 현재 바이트와 일치 — 내가 재계산). 내가 PR head 의 `.sql` 7개 SHA-384 를 재계산한 값은 PR 본문 repair 표의 「새 SHA-384」와 7/7 바이트 단위로 일치하고, `0002`·`0009` 는 main 과 동일하다. **⚠️ 긴급성**: DB repair(15:11Z) 직후 자매 #105 착지(15:10:22Z)의 pin→Flux 롤아웃(15:13:26Z)이 구 바이트 이미지 `c9398e69` 로 새 파드를 띄워 `Error: migration 1 was previously applied but has been modified` 로 CrashLoopBackOff 중이다 — README repair 절 2단계가 예고한 「구 이미지 파드가 롤아웃 전에 재기동되는」 노출 구간에 실제로 들어와 있어, **#98 squash 머지가 곧 운영 복구**다. 그래서 브랜치에 새 커밋을 얹지 않는다(commit status 는 SHA 에 묶이므로 head 가 바뀌면 사람 게이트가 다시 잠긴다 — 리베이스 불필요, main 과의 차이는 `docs/e2e-mocking-policy.md` 1파일뿐이고 `.sql` 은 무접촉). **완료 기준(1차와 동일)**: 마이그레이션 8파일의 주석 순 제거 16행(범위 지문 `1b35c33a8217…` · 123행)이 main 에 착지하고, 운영 파드가 새 바이트로 `VersionMismatch` 없이 부팅해 `/hello` 가 응답하며, 원장에 그 행이 살아 있는 것. **범위 밖**: D2·D6·D5 잔여, `migrations.rs` 주석 13행, #92 유입 188행(자매 `rct_20260921-0007` 이 planning 중). 대안 비교: (a) 브랜치를 main 에 리베이스해 깨끗이 하기 — status 소실로 게이트 재잠금 + 운영 다운 연장이라 기각, (b) 사람에게 롤백(.bak 복원) 요청 — 이미 정합한 DB 를 되돌리는 것이라 기각, (c) 현 head 그대로 squash 머지 — 채택.",
+          "riskLevel": "high",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "실행 직전 PR #98 을 재조회한다: `state=open` · `head.sha == 6ef9e8e92cde3d64600c7c086c7c7a7930cb03b8` · `mergeable_state == clean`. head 가 바뀌어 있으면 즉시 중단한다(사람 게이트 status 가 그 SHA 에만 붙어 있다).",
+              "expectedOutcome": "head 불변 · clean. 아니면 실행 중단, task 는 failed 가 아니라 planning 재진입 대상으로 보고."
+            },
+            {
+              "seq": 2,
+              "action": "head `6ef9e8e9` 의 combined status 에 `review/data-format` = success 가 실제로 나타나는지(statuses ≥ 1, context 일치), check-runs 의 `ci-gate`·`test (cargo)`·`test (kind e2e)`·문서 게이트 3종·`데이터 저장 형식 변경 판정`·`push / build & push image` 가 전부 success 인지 확인한다.",
+              "expectedOutcome": "`review/data-format` success 1건 + check-runs 8 success(pin skipped). 하나라도 빠지면 머지 금지."
+            },
+            {
+              "seq": 3,
+              "action": "PR head 의 `backend/migrations/000{1,3,4,5,6,7,8}_*.sql` SHA-384 를 재계산해 PR 본문 repair 표 「새 SHA-384」와 바이트 단위로 대조하고, `0002`·`0009` 가 PR diff 에 없는지(main 과 동일한지) 확인한다.",
+              "expectedOutcome": "7/7 일치 · `0002`·`0009` 무접촉. 하나라도 다르면 머지 금지(운영 DB 는 이미 표의 값이다)."
+            },
+            {
+              "seq": 4,
+              "action": "운영 상태를 기록한다: `kubectl -n feature-doc get pod` — 현재 `featuredoc-*` 가 CrashLoopBackOff(로그 `migration 1 was previously applied but has been modified`)이면 그것이 곧 「DB 는 repair 됐고 이미지만 구 바이트」의 증거이므로 머지를 지체하지 않는다. Running 이면(사람이 그 사이 복구했으면) 이미지 태그를 적고 진행한다.",
+              "expectedOutcome": "파드 상태·이미지 태그·마지막 로그 한 줄이 execution 기록에 남는다."
+            },
+            {
+              "seq": 5,
+              "action": "PR #98 을 **squash** 로 머지한다(`allow_merge_commit=false`, `allow_squash_merge=true` 실측). 브랜치에 커밋을 추가하거나 리베이스하지 않는다.",
+              "expectedOutcome": "main tip 이 #98 squash 커밋 · `pin` 잡이 deploy 브랜치에 새 이미지 SHA 를 커밋."
+            },
+            {
+              "seq": 6,
+              "action": "롤아웃을 관측한다: `kubectl -n feature-doc rollout status deploy/featuredoc --timeout=300s`(이미지 빌드 ~5분 뒤 시작) · 새 파드 로그에 `previously applied but has been modified` 0건 · `/hello` 200.",
+              "expectedOutcome": "rollout 완료 · 부팅 로그 정상 · `/hello` 응답 → 운영 복구."
+            },
+            {
+              "seq": 7,
+              "action": "수렴을 판정한다: 머지된 main 에서 8파일 범위 지문 `1b35c33a821701c748cc127e43169b26f3b1b7f586c29f75e2fa7b1f0d3fe878`(123행) · 머지 직전 main 대비 8파일 주석 순 −16 · `ledger.md` 에 그 지문 행 생존 · `python3 tools/check-journey-mockup.py` rc=0.",
+              "expectedOutcome": "지문 일치 · 순 −16 · 원장 행 생존 · 문서 게이트 rc=0."
+            },
+            {
+              "seq": 8,
+              "action": "6 에서 새 파드도 `VersionMismatch` 로 죽으면 운영 DB 를 직접 만지지 말고, `/data/featuredoc.db.bak-202609211511` 복원 + 이미지 태그 직전 SHA 되돌리기를 사람에게 요청하고 task 를 failed 로 둔다.",
+              "expectedOutcome": "운영 복구는 사람이 수행, 실패 사유·관측값이 레코드에 남는다."
+            }
+          ],
+          "plannedAt": "2026-09-21T15:19:00Z"
+        }
       }
     ]
   },
