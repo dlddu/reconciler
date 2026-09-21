@@ -5986,6 +5986,47 @@
       "assessedBy": "agent",
       "reason": "**status → `action_required`.** 트리거(#92, 이 모델 `rct_20260921-0002` 실행 산출) 자체는 수렴 — 창 안 판정 기준 1~5 위반 0, 직전 task 가 지목한 기준 2 위반 1자리(PRD-3 「Gold 를 시각화로 서빙」 흐름의 프로덕션 단절)가 **해소**됐다. 조치가 필요한 것은 그 착지가 **마지막 선결이던 잔여 1행 — 화면 `reprocess`(로드맵 슬라이스 10, `/api/reprocess` 자기선언 stub + `Placeholder`)** 이며, 「해소 시점 도래 · 선결 없음 · 소유자 0 · 재감지 경로 0」 4연언을 전건 만족한다. 실측 근거는 `stateSummary.gap` ⑴~⑸.\n\n**무엇이 어긋나나(기준 2·4·목업 일치 축)**: 문서 측 의도는 실재하고 구체적이다 — `values.md` V5 「원문 추적성과 **재처리 가능성**」, 여정 `JRN-logic-backfill.md`(`STP-scope-range`·`STP-dry-run`·`STP-run-reprocess`·`STP-compare-before-after`·`STP-publish`)와 `JRN-ingestion-recovery.md`(`STP-spot-anomaly`·`STP-locate-gap`·`STP-diagnose-source`·`STP-backfill`·`STP-verify-integrity`), 목업 `mockups/JRN-logic-backfill.html`·`JRN-ingestion-recovery.html`(인덱스가 화면 id `reprocess` 로 매핑), 디자인 시스템 `PAT-before-after`. 구현은 `go/internal/handlers/handlers.go:670` 이 `{\"status\":\"idle\",\"note\":\"stub: 재처리 콘솔 자리…\"}` 를 돌려주고 `web/src/App.tsx:13` `BUILT` 6종 밖이라 `Placeholder` 만 렌더한다 — 모델 정의가 「골격의 페이크/스텁(더미 JSON 라우트)은 충족으로 보지 않는다」로 못박은 그 형태이고, 등록 시점 스냅샷 「목업 7화면」 중 마지막 미구현 1화면이다.\n\n**왜 지금인가(4연언)**: ⓐ 직전 detect 가 이 행을 파킹한 유일한 근거는 「재처리는 재분석·재집계를 *일으키는* 쓰기 동작이라 산출이 서빙에 닿아야 관측 가능 ⇒ 서빙 Gold 연결 **뒤**」였고, 그 연결이 이 트리거로 착지했다(라이브 Deployment `claimName == econ-batch-data`, 09:22Z 재확인). 로드맵 선결 「상류 전 계층 실구현(운영 P2)」은 슬라이스 2~4 + 09-20 스케줄 전환 + #92 로 전건 충족, 「최후」= 2~9 전부 착지(`BUILT` 6화면 · AC 21/21)라 남은 번호가 10 뿐. 트래커 잔여 문면 자신이 「남은 선행은 `/api/reprocess` 가 stub 이라는 사실 자체다」라고 적는다 — 선행이 곧 작업 대상이면 외부 선결은 0. ⓑ 재분석 수단은 이미 CLI 에 있다(`python/packages/analysis/src/econ_analysis/cli.py:56` `--analyzer-version` 「bump to reprocess (AC2.6)」), 배치는 프로덕션에서 매시간 가동, 목업·여정·패턴 전건 실재 ⇒ 제품 결정 대기 항목이 아니다(번호 있는 슬라이스; 「소스 차원」·「대상별 분위기」와 성질이 다르다). ⓒ 함대 비-터미널 task 7건 전수 `reprocess|슬라이스 10|재처리` 0히트, 자매 모델 정의가 미구현 화면의 구현 의무를 이 모델에 명시 귀속(`mockup-render`·`e2e-mock-policy`), 대상 레포 열린 PR #93·#75 는 `go/`·`web/` 무접촉. ⓓ 잔여 행의 관측 좌표(`BUILT` 6종 · `\"stub: 재처리 콘솔 자리…\"`)는 현재 참이라 to-be 에서 스스로 틀려질 수 없고 as-is(`go/`·`web/`)는 이 슬라이스 밖에서 안 움직인다 ⇒ 여기서 닫으면 영구 침묵.\n\n**planner 를 위한 범위 — 로드맵 슬라이스 10(`reprocess` 콘솔), 신규 AC 소유 없음**: Go `/api/reprocess` 를 stub 에서 실계약으로(재처리 범위 선택·표본 실행(dry-run)·전량 재분석 트리거·전후 비교·반영 — 여정 단계 슬러그를 화면/응답 계약의 기계 판독 키로 쓸 것), `web/src/screens/` 에 `reprocess` 화면을 세워 `BUILT` 에 편입(목업 `JRN-logic-backfill.html`·`JRN-ingestion-recovery.html` 의 문면·구조를 바이트 수준으로 옮기고 자매 `mockup-render` 게이트 `check-mockup-render.py` R3~R5 를 부모와 대조), 재분석 트리거는 기존 `--analyzer-version` bump 경로와 프로덕션 파이프라인(`deploy/batch/workflow-template.yaml`, Argo WorkflowTemplate)에 배선 — **서빙 Pod 가 배치를 어떻게 일으키는지(Argo submit 권한·RBAC·`readOnly` 데이터 마운트)** 가 이 슬라이스의 설계 결정점이고, 「재분석 도중 실패 시 체크포인트 유지 후 재개(전량 재실행 금지)」(`JRN-logic-backfill.md:82`) 와 「추적 키 보존율 100%(AC2.6)」 가 여정이 못박은 제약이다. 범위가 크면 planner 가 (i) Go 계약 + 화면 읽기 표면(`STP-spot-anomaly`·`STP-locate-gap`·`STP-diagnose-source`·`STP-scope-range`·`STP-compare-before-after` 등 *읽는* 단계) 과 (ii) 쓰기 트리거(`STP-run-reprocess`·`STP-backfill`·`STP-publish`)로 분할해도 된다 — 단, 분할 시 (ii) 를 tracker 잔여에 **관측 좌표와 함께 자기 명명**해 재감지·다음 task 입력으로 넘길 것(이번 fire 가 그 문장을 4연언 ⓐ 근거로 읽는다). **완료 기준**: `BUILT` 에 `reprocess` 편입(`Placeholder` 렌더 0) + `handlers.go` 의 `stub:` 문자열 소멸 + `web/`·`go/` 지문 이동으로 이 모델 재감지 + tracker 「현재 상태 요약」 잔여 3→2(화면 행 → 착지) + 변경 이력 1행 + `check-mockup-render.py`·`check-journey-mockup.py` rc=0. 신규 AC 를 소유하지 않으므로 전용 e2e spec 은 AC↔e2e 1:1 규칙상 대상 아님(자매 scenario-e2e 축).\n\n**동승 후보(기록만 — 정의 기준 발화 0)**: `LocalFsStore.write_records`(`python/packages/core/src/econ_core/storage.py:57-66`) truncate+write 창 — SSOT 에 원자성 요구 0히트라 drift 아님이나, 재처리가 Gold 를 다시 쓰는 빈도를 높이므로 슬라이스 10 이 `python/` 을 만진다면 임시 파일→`rename` 교체를 함께 닫는 것이 자연스럽다(planner 판단). README `:166` 「집계 스케줄과 원격 스토리지는 후속 작업이다」 낡은 문장(양 side 밖) — 같은 PR 이 README 를 만진다면 정정. 직전 task verification ④ 사람 게이트(서빙을 깨워 `/api/dashboard` Gold 배열 비어 있지 않음 실측)는 여전히 미실측 — 슬라이스 10 계획 실측 단계에서 같이 확인하면 닫힌다.\n\n**유예(recheckAfter)를 택하지 않은 이유**: 자동 해소 가능성 0 — 잔여는 코드 부재이고, 아무 배치·스케줄·자매 슬라이스도 `go/`·`web/` 의 이 자리를 움직이지 않는다.\n\n**경합·인계**: 이 모델의 열린 task 는 본 건뿐. 같은 창의 자매 축 이동(`deploy/overlays/prod/` 주석 → `tbm_econ-opinion-monitor-comment-redundancy`, 이미 `rct_20260921-0002` `planning`·PR #93)은 이 fire 가 점유하지 않았다. 「소스 차원」·「대상별 분위기」는 제품 결정 선결로 파킹 유지(직전 두 detect 와 동일).",
       "assessedAt": "2026-09-21T09:26:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "로드맵 슬라이스 10(`reprocess` 콘솔)을 감지가 제안한 대로 (i) 읽기 계약·읽기 표면 / (ii) 쓰기 트리거로 갈라 **이번 시도는 (i) 만 닫는다**. 근거: 실측상 `python/` 의 Silver 는 매시간 `write_records` 로 **통째 교체**되고(`analysis/cli.py` docstring 「write_records *replaces* the Silver dataset」) 분석 CLI 에 범위(기간·축·소스)·표본 선택이 없으며 서빙 Pod 에 Argo 제출 RBAC 도 없다 — 여정이 못박은 「로직 버전 병존 · 체크포인트 재개」(`STP-run-reprocess`, §4 2행)는 `python/` 저장 의미론 + CLI + RBAC + Go POST 를 한꺼번에 바꾸는 별도 슬라이스라 이번 fire 에 넣으면 품질 없이 커진다. (i) 의 완료 기준: ① `go/internal/handlers/handlers.go` 의 `/api/reprocess` 가 자기선언 stub(`\"stub: 재처리 콘솔 자리…\"`)을 버리고 Bronze `news_item` + Silver `analysis` 를 실제로 읽어 **범위(기간·축·소스)별 원문 보유량 · 목표 analyzer 버전 기준 「이미 새 로직 / 재분석 대상」 · 수집 주기별 구간 표 · 관측 처리량에서 유도한 예상 소요 · Silver 에 실재하는 analyzer 버전 목록 · 두 버전이 병존할 때의 전후 언급 점유율 비교**를 내려준다(단일 버전이면 `compare.available=false` 를 사유와 함께 — 빈 표를 꾸며내지 않는다) ② `web/src/screens/Reprocess.tsx` 가 여정 `STP-scope-range`(범위 선택 + 구간 표 + 고른 범위 KV) 와 `STP-compare-before-after`(`PAT-before-after` 전후 표 · 주목 임계 · 정렬) 두 읽기 단계를 실화면으로 세우고 `web/src/App.tsx` 의 `BUILT` 에 `\"reprocess\"` 가 들어가 `Placeholder` 렌더가 0 이 된다 ③ 실행 트리거(`STP-dry-run`·`STP-run-reprocess`·`STP-publish`)와 수집 무결성 패널(`JRN-ingestion-recovery` 다섯 단계, `PAT-integrity-panel`)은 **허위 컨트롤을 그리지 않고** 응답의 `trigger.available=false` + 화면의 CMP-note 로 「후속 슬라이스」임을 드러내며, doc-tracker 「현재 상태 요약」 잔여의 화면 행을 착지로 옮기는 대신 **「재처리 실행 트리거 (슬라이스 10 후반부)」 행을 관측 좌표와 함께 새로 적는다**(잔여 3 → 3, 행 교체) ④ `check-mockup-render.py` R3 in-scope 25 → 27 종에서 `PAT-before-after` 는 마커 성립, `PAT-integrity-panel` 은 설계 트래커 허용목록에 「미구현」으로 등재(등재 예외 0 → 1) 해 게이트 rc=0 ⑤ `go test`·`go vet`·`gofmt`·vitest·eslint·`tsc -b`·`check-journey-mockup.py`·`check_scenario_mapping.py` 전건 통과 + PR CI `required` success. 범위 밖(후속): (ii) 쓰기 트리거 전체(Silver 버전 병존 저장 · CLI 범위/표본 플래그 · Argo 제출 RBAC · Go POST · 화면 2·3·5) · `JRN-ingestion-recovery` 읽기 표면(Bronze 에 시도/실패 메타가 없어 `STP-spot-anomaly` 의 「시도 0 vs 성공 0」 구분이 데이터로 성립하지 않는다 — 수집 CLI 는 `failed_source` 를 stdout 에만 찍는다) · `LocalFsStore.write_records` 원자성 · README `:166` 낡은 문장 · 사람 게이트(`/api/dashboard` Gold 실측).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 `dlddu/economic-opinion-trend-monitor` main(`da51edd`) 에서 브랜치 `reconcile/rct_20260921-0004-econ-docs-impl` 을 끊고, `go/internal/handlers/handlers.go` 의 `reprocess()` stub 을 Bronze·Silver 파생 읽기 계약으로 교체한다(쿼리 `range=24h|7d|30d` · `axis` · `source` · `version`; 응답 `scope`·`target_version`·`versions`·`compare`·`trigger`). 패키지 머리 주석의 「Only reprocess still returns a shaped placeholder」 문장을 정정한다.",
+              "expectedOutcome": "`grep -n 'stub:' go/internal/handlers/handlers.go` 0건. `go build ./...` 성공."
+            },
+            {
+              "seq": 2,
+              "action": "`go/internal/handlers/handlers_test.go` 에 범위 계수(축·소스·기간 필터, 주기별 구간, 목표 버전 기준 done/todo), 단일 버전일 때 `compare.available=false`, 두 버전 병존 픽스처의 전후 점유율·delta 정렬, 빈 레이크 생존, 처리량→예상 소요 유도를 재는 테스트를 더한다.",
+              "expectedOutcome": "`cd go && gofmt -l . ` 빈 출력, `go vet ./...` rc=0, `go test ./...` 전건 PASS(신규 5건 포함)."
+            },
+            {
+              "seq": 3,
+              "action": "`web/src/api/types.ts` 에 `ReprocessResponse` 계열 타입, `client.ts` 에 `api.reprocess(range, axis, source)` 를 더하고 `web/src/screens/Reprocess.tsx` 를 세운다 — 범위 컨트롤(CMP-seg/CMP-kv) · 구간 표(CMP-table) · 빈 범위 상태 · 버전 표 · `PAT-before-after` 전후 표(정렬·임계·판정 배지) · 트리거 CMP-note. `App.tsx` 의 `BUILT` 에 `\"reprocess\"` 를 넣고 `/reprocess` 라우트를 실컴포넌트로 잇는다. 화면 전용 클래스는 `.rp-` 접두사로 목업 인라인 CSS 와 교집합을 만들지 않는다.",
+              "expectedOutcome": "`web/src/screens/Reprocess.test.tsx` 통과(범위 전환이 fetch 쿼리를 바꾼다 · 빈 범위는 표 대신 빈 상태 · 단일 버전은 비교 표 대신 사유 · 두 버전은 delta 순 정렬과 임계 배지). `npm run lint`·`npm run test`·`npm run build` rc=0."
+            },
+            {
+              "seq": 4,
+              "action": "설계 트래커 `docs/econ-opinion-monitor-design-tracker.md` 「규칙 3·4(네비)·5 기계 판정」 절: 판정 범위 문면 25 → 27 종, `PAT-integrity-panel` 을 「미구현」 사유(Bronze 에 시도·실패 메타 부재)와 함께 등재, 슬라이스 10 전반부 단락 추가. doc-tracker `docs/econ-opinion-monitor-doc-tracker/2026-09.md` 「현재 상태 요약」: 착지에 「슬라이스 10 전반부 (`reprocess` 읽기 계약·화면)」 항목, 잔여의 화면 행을 「재처리 실행 트리거」 행(관측 좌표 `handlers.go ∋ reprocessTriggerNote` · `App.tsx ∋ BUILT ∋ \"reprocess\"` · `analysis/cli.py ∋ write_records`)으로 교체, 변경 이력 1행.",
+              "expectedOutcome": "`python3 scripts/check-mockup-render.py .` rc=0(R3 in-scope 27 · 등재 예외 1 · 구현 전용 1 · R4/R5 0), `python3 scripts/check-journey-mockup.py .` rc=0, `python3 tests/e2e/check_scenario_mapping.py` rc=0, `NODE_PATH=… node scripts/check-journey-flow.js .` rc=0."
+            },
+            {
+              "seq": 5,
+              "action": "브랜치를 push 하고 PR 을 연다(본문: task id · gap 요약 · 계획 단계 · 검증 방법 · 범위 밖). `preparation` 에 PR URL 기록.",
+              "expectedOutcome": "PR OPEN · CI `required` success · mergeable clean."
+            },
+            {
+              "seq": 6,
+              "action": "실행자: PR squash 머지 → `image.yml` `pin deploy images` → Flux 롤아웃 → 프로덕션 `/api/reprocess` 응답에 `scope.total`·`target_version` 이 실재하고 `stub:` 문자열이 없음을 실측(서빙이 scale-to-zero 라 깨워야 한다면 사람 게이트로 남긴다).",
+              "expectedOutcome": "as-is `go`·`web` 지문 이동으로 이 모델 재감지 → 다음 detect 가 잔여 「재처리 실행 트리거」 행을 4연언으로 판정."
+            }
+          ],
+          "plannedAt": "2026-09-21T09:52:00Z"
+        }
+      }
+    ]
   }
 ]
