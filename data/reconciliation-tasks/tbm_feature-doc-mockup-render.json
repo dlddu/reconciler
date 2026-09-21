@@ -3800,6 +3800,47 @@
       "assessedBy": "agent",
       "assessedAt": "2026-09-21T07:46:00Z",
       "reason": "**작업 필요 — 트리거(이 모델 자신의 수렴 슬라이스 ⑩, PR #99)는 완료 기준 5종을 전건 충족하며 착지해 새 gap 0 · 편차 31→27 이지만, 잔여 `구현 수렴 대기` 3행 중 ⑽(파이프라인 5단계 제목)이 *해소 시점 도래 · 선결 없음 · 소유자 0 · 재감지 경로 0* 상태다. 슬라이스 ⑪ = ⑽ 수렴(백엔드 시드 축).**\n\n**판정 근거**\n\n⑴ **트리거는 무해를 넘어 정합 방향이다.** 부모 `3567755` 재실행 == baseline(바이트 동일)이라 이동은 `899800e` 단독이고, 그것은 직전 task `rct_20260920-0005` 의 계획을 그대로 이행한 squash 머지다(`git diff <PR head 3cc8836> 899800e` 공집합 → PR 체크 초록 = 머지 트리 초록). 게이트 부모·트리거 양쪽 rc=0, M1·M2·M6·M7 바이트 동일, M3B −3 = 제거 문면 3, 원장 −4 = 구현 수렴 대기 7→3(다른 유형 불변). 기준 1~6 어디에도 새 위반 없음 — 트리거 자체만 보면 `no_action_needed` 감이다.\n\n⑵ **그럼에도 작업이 필요한 이유는 게이트가 원리적으로 못 보는 축에 있고, 그것이 슬라이스 → 재감지 → 후속 task 루프의 정상 인계 지점이기 때문이다.** 슬라이스 ⑩ 의 계획서는 ⑽ 을 「범위 밖(후속) — 다음 슬라이스 ⑪」로 명시했고 「이 PR 이 `frontend/src` 를 움직이므로 잔여는 재감지로 자동 인계된다」고 적었다 — 지금이 그 재감지다. 원장 `### 구현 수렴 대기 잔여` 절도 ⑽ 을 「유일하게 제품 결정을 기다리지 않는 축」으로 지목한다.\n\n⑶ **⑽ 은 지금도 참이다(스냅샷이 아니라 코드에서 재측정).** `backend/src/pipeline.rs:34-38` 시드 영문 5제목 vs 목업 `JRN-discover-features.html` 한국어 5제목(기준 4 카피 불일치, 판정은 2026-09-18 권위 순서 재판정 ②에서 「목업의 한국어 제목으로」 확정). 영문을 단정하는 자리 2곳(`backend/tests/progress.rs:178`, `e2e/tests/sc01-05-resume-after-app-exit.spec.ts:60`)도 실재.\n\n⑷ **재감지 경로 0 이 결정타다.** ⑽ 의 착지 파일(`backend/src/pipeline.rs` · `backend/tests/progress.rs` · `e2e/tests/sc01-05` · `docs/doc-tracker/2026-09.md`)은 이 모델 as-is(`frontend/src`)·to-be(`docs/mockups`+`design-system.md`) **양쪽 versionScript 밖**이다. 이번에 열지 않으면 ⑽ 은 게이트 영구 초록 아래 보이지 않는다(전례 `rct_20260902-0004`, 직전 판정 `rct_20260920-0005` ⑷).\n\n⑸ **소유자 0 을 실측했다.** 이 모델 열린 task = 이 건뿐. 대상 레포 열린 PR #92·#98 의 변경 파일에 ⑽ 착지 파일 없음. 나머지 2행은 지금 손댈 수 없다 — ㉕ 는 사유 자신이 「동선을 어디로 보낼지가 선결」(미결정), ㉛ 은 `STP-notice-change` 화면 구현에 묶임.\n\n**planner 인계 — 범위와 주의**\n\n- **대상 1행(원장 ⑽)**: `AnalysisProgress` 파이프라인 5단계 제목을 목업의 한국어(`저장소 내려받기` · `횡단 관심사 추출` · `탐색 전략 생성` · `feature 후보 추출` · `인수 시나리오 생성`)로. **문자열 소유자는 `backend/src/pipeline.rs:34-38` 시드**이므로 화면만 고쳐서는 닫히지 않는다. 함께 옮길 단정: `backend/tests/progress.rs:178`(`Fetch repository`), `e2e/tests/sc01-05…spec.ts:60`(`toContainText('Fetch repository')`). 시나리오 원문(`docs/test/01-analysis-pipeline.md#시나리오 5`)의 요구를 줄이지 않고 문면만 옮길 것.\n- **함정(원장 자신이 적음)**: `인수 시나리오 생성` 은 `FeatureAcceptance` 의 다른 문장(`인수 시나리오 생성 단계가 아직 끝나지 않았어요.`)에 부분 문자열로 들어 있어 **M3A 가 이미 통과로 본다** — 게이트만 믿으면 그 한 제목이 번역되지 않은 채 닫힌다. 완료 기준에 「시드 5제목을 눈으로 셈」을 넣을 것.\n- **원장 정정 동반**: ⑽ 행 「현재 구현」 칸의 5번째 영문 `Acceptance & dependencies` 는 실제 시드 `Acceptance scenarios`(`6484e21`, 09-18)와 다르다 — 행을 삭제하면서 변경 이력 줄에 실제 값을 적을 것.\n- **완료 기준 후보(측정 가능)**: 원장 행 −1 · 캡션·상한 동반 하향(절대값 27→26 으로 못박지 말 것 — #92 가 같은 표를 만지므로 리베이스 후 실측) · `### 구현 수렴 대기 잔여` 세 통 → **두 통**(남는 둘 다 선결 미해소) · M3A 273 → 273 또는 +Δ(새 문장 등재 없이) · M3B 219 → 219+5 이하(한국어 제목이 화면 카피로 잡히면 목업 단계에 존재해야 미등재 0) · M0~M7 rc=0 · `cargo test progress` 초록 · CI `test (kind e2e)` 초록(sc01-05 포함). **이 PR 은 `frontend/src` 를 움직이지 않을 수 있다** — 그러면 as-is 는 이동하지 않으므로 완료 판정은 원장 행 삭제 + 게이트 수치 + `git show <머지 커밋>:backend/src/pipeline.rs` 직접 grep 으로 명시할 것(executor 의 「as-is 불변 = 통과」 오독 방지).\n- **제외 2행**: ㉕(앱바 동선 선결) · ㉛(`STP-notice-change` 선결) — 건드리지 말 것.\n- **자매 PR**: #92(docs-impl 슬라이스 6a, `docs/doc-tracker/2026-09.md`·`docs/mockups/JRN-review-feature.html`·`frontend/src` 4파일)가 열려 있다. 같은 표를 만지므로 캡션·상한은 리베이스 후 게이트 재실행 실측으로."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "슬라이스 ⑪ — 원장 ⑽(`AnalysisProgress` 파이프라인 5단계 제목)을 닫는다. 단, detector 가 인계한 경로(백엔드 시드 `backend/src/pipeline.rs:34-38` 을 한국어로)는 준비 단계 재실측에서 두 벽에 막혔다: ⑴ 2026-09-20 #64 가 세운 `review/data-format` 필수 status(main 룰셋)는 판정기 규칙 D2 로 `pipeline.rs` 의 **모든** 변경을 사람 리뷰로 보내 무인 루프가 머지할 수 없고(선례 rct_20260919-0003 파킹, 봇 부착 금지) ⑵ 게이트 M3A 의 건초더미가 `frontend/src` 뿐이라 시드를 옮겨도 원장 행을 지우는 순간 5건 미등재로 rc=1 이 된다(프로브 실측). 두 벽은 원장 판정(09-18)보다 뒤에 생긴 것이라 **표시 제목의 소유자를 화면으로 옮긴다**: `AnalysisProgress.tsx` 에 stage `key` → 목업 한국어 제목 5개 매핑을 두고 서버 `title` 은 미지 key 의 fallback 으로만 쓴다. 백엔드·DB·API 는 한 바이트도 안 바뀌며(→ `review/data-format` 자동 success), 이미 시드된 과거 분석 행(영문 title 영속)도 같은 화면에서 함께 수렴한다 — 시드만 바꾸면 과거 행은 데이터 마이그레이션(D1 벽) 없이는 영문으로 남는다. 완료 기준: (a) 원장 ⑽ 행 삭제 · `구현 수렴 대기` 3→2행 · 캡션·상한 27→26(#92 리베이스 뒤 실측) (b) `tools/check-mockup-render.py` rc=0 · M3A 미등재 0(한국어 제목 5개가 `frontend/src` 리터럴로 실재) (c) `git show <머지 커밋>:frontend/src/AnalysisProgress.tsx` 에서 한국어 제목 5개를 눈으로 셈(`인수 시나리오 생성` 부분 문자열 함정 무효화 확인) (d) `e2e/tests/sc01-05` 단정이 `저장소 내려받기` 로 바뀌고 CI `test (kind e2e)`·`ci-gate`·`review/data-format` success (e) `backend/**` diff 공집합. 범위 밖: ㉕(앱바 동선 선결) · ㉛(`STP-notice-change` 선결) · 백엔드 `title` 영문 라벨 자체(API 계약, 이 모델 밖).",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-21T07:58:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`frontend/src/AnalysisProgress.tsx`: `STAGE_TITLES: Record<string,string>` (fetch→저장소 내려받기 · cross_cutting→횡단 관심사 추출 · discovery_strategy→탐색 전략 생성 · feature_candidates→feature 후보 추출 · acceptance_dependencies→인수 시나리오 생성) 와 `titleOf(stage)` (매핑 없으면 `stage.title`) 를 추가하고, 단계 카드 라벨(`stage.title`)과 실패 안내(`failed.title`) 두 자리를 `titleOf` 로 교체",
+              "expectedOutcome": "`git grep -c` 로 한국어 제목 5개가 각각 `frontend/src/AnalysisProgress.tsx` 에 1회 이상 실재; `stage.title` 직접 렌더 0곳; `tsc -b && vite build` 통과"
+            },
+            {
+              "seq": 2,
+              "action": "`e2e/tests/sc01-05-resume-after-app-exit.spec.ts:60` 의 `toContainText('Fetch repository')` → `toContainText('저장소 내려받기')`. 시나리오 5 원문 요구(진행률·현재 단계 보존)는 줄이지 않는다",
+              "expectedOutcome": "`git grep 'Fetch repository' -- e2e frontend` 0건; `tools/check-scenario-e2e.py` rc=0(spec 등재 불변)"
+            },
+            {
+              "seq": 3,
+              "action": "`docs/doc-tracker/2026-09.md`: 원장 ⑽ 행 삭제 · 캡션 `알려진 편차`/`미해소 편차 상한` 하향 · `### 구현 수렴 대기 잔여` 를 2통으로 재작성(소유자 재판정 사유 명시 — 다음 감지가 「백엔드 시드」 후보를 다시 올리지 않게) · 「현재 상태 요약」 갱신 · 「이번 달 변경 이력」 행 추가(실제 시드값 `Acceptance scenarios` 정정 포함)",
+              "expectedOutcome": "`python3 tools/check-mockup-render.py` rc=0: M0 편차 26 · M3A 미등재 0 · M3B 미등재 0 · M4 행 26 공전 0 · M5 26/26; `check-journey-mockup.py`·`check-scenario-e2e.py` rc=0"
+            },
+            {
+              "seq": 4,
+              "action": "브랜치 `reconcile/rct_20260921-0002-mockup-render` 를 push 하고 PR 을 연다(머지 안 함). 리베이스는 준비 단계에서 끝낸다(자매 #92·#98 이 먼저 착지하면 원장 캡션·상한은 게이트 실측값으로 재기입)",
+              "expectedOutcome": "PR 체크 `ci-gate`(needs: cargo · kind e2e · docs 3종) success, commit status `review/data-format` = success(판정기 검사 파일 0 — backend 무접촉), `mergeable=true`"
+            },
+            {
+              "seq": 5,
+              "action": "[executor] PR 을 squash 머지하고 `main` 의 CI(build · deploy · pin) 를 확인",
+              "expectedOutcome": "머지 커밋에서 `git diff <부모> -- backend` 공집합; 원장 ⑽ 부재; `docs-mockup-render` 워크플로 success"
+            },
+            {
+              "seq": 6,
+              "action": "[executor] 완료 기준 (a)~(e) 를 머지 커밋에서 재측정한다 — 특히 (c) `git show <머지>:frontend/src/AnalysisProgress.tsx | grep -c` 로 한국어 제목 5개 각각 실재 확인. as-is(`frontend/src`) 가 움직이므로 잔여 2행(㉕·㉛)은 재감지로 자동 인계된다",
+              "expectedOutcome": "5제목 전부 히트; 게이트 rc=0; task `succeeded`"
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
