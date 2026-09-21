@@ -5337,7 +5337,7 @@
   {
     "id": "rct_20260921-0007",
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-21T15:01:59Z",
@@ -5453,6 +5453,59 @@
               "startedAt": "2026-09-21T16:26:10Z",
               "finishedAt": "2026-09-21T16:28:01Z",
               "log": "지침 0절 사람 게이트 판독: 이전 fire(16:14Z)는 `GET /commits/1a54059d/status` total_count=0 으로 머지하지 않고 approved 로 되돌렸다. 이번 fire 의 claim 전 읽기 전용 재판독(16:26:10Z)에서 관측이 바뀜 — state=**success** · total_count=**1** · statuses=[`review/data-format`=success, created_at 16:22:14Z] · mergeable_state=**clean**. 사람이 이 head(`1a54059d`)를 승인한 것이므로 지침 0절 3항 「붙어 있으면 3절로 진행」에 따라 claim(c45561eb, 16:26:48Z) 후 3절 머지 실행: `PUT /pulls/107/merge` merge_method=squash · sha=`1a54059d` 핀 → 첫 시도(16:27:33Z, gh api)는 클라이언트가 응답 본문을 못 읽어 `unexpected end of JSON input` 을 냈고 PR 은 merged=false 로 남아 있었음(서버 측 무변화 확인: main tip `24f488d` 그대로) → curl 로 동일 요청 재시도(16:27:57Z) http=200 `{merged:true, sha:89a16256}`. 머지 커밋 **`89a16256737804a424672a2cfd694b6b1406f34f`**(main, 부모 `24f488d` 단일 = squash 선형) · merged_at 16:28:01Z · merged_by 앱 봇. 브랜치 `reconcile/docs-impl-rct_20260921-0007` 은 레포 자동 삭제로 이미 소멸(DELETE ref 422 Reference does not exist). 봇은 `review/data-format` 을 붙이지도 우회하지도 않았고, 브랜치에 커밋을 얹지 않았다. 되돌리기: `git revert 89a16256`(단일 squash, `-m 1` 아님)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "backend:cdb7aece0b02a92659a68502d241bd32d9b1d6de frontend:efe3842077bacf2e28907207e09a5d6c9d330332",
+          "verifiedAt": "2026-09-21T16:31:00Z",
+          "checks": [
+            {
+              "name": "0. 검증 대상 트리 = CI 가 돈 트리",
+              "status": "passed",
+              "detail": "머지된 main `89a16256`(부모 `24f488d` 단일, squash) 의 트리 `19d0f575` == `refs/pull/107/merge`(`fe14f7db`, 부모 {24f488d,1a54059d}) 트리 == `git merge-tree 24f488d 1a54059d` 결과. backend 트리 `cdb7aece` · e2e 트리 `2304161b` 도 test-merge 와 동일 → PR 런 35621745027 의 cargo·kind e2e 로그가 머지 트리의 것이다(feature-doc ci.yml 은 pull_request 전용이라 main 런은 없다). 24f488d 대비 17파일 +1937/−24."
+            },
+            {
+              "name": "1. check-scenario-e2e.py --verbose",
+              "status": "passed",
+              "detail": "rc=0 · 등재 대조 매핑 28 · 선언 28 · 불변식 (시나리오 36 − 예외 0 − 구현 대기 8) = 28 · 실제 매칭 파일 28 · 래칫 미매핑 0/0"
+            },
+            {
+              "name": "2. e2e spec 파일 수",
+              "status": "passed",
+              "detail": "`ls e2e/tests/*.spec.ts | wc -l` = 28 · `sc03-03-manual-feature-add-with-evidence.spec.ts` · `sc03-04-manual-feature-add-no-evidence.spec.ts` 실재"
+            },
+            {
+              "name": "3. check-mockup-render.py --verbose",
+              "status": "passed",
+              "detail": "rc=0 · M0 활성 14(`AddFeature.tsx ↔ JRN-discover-features.html#STP-add-missing` 포함) · 보류 0 · 편차 26 · M3A 320건 미등재 0 · M3B 273건 미등재 0 · M5 래칫 26/26 · 0/0 · M7 12쌍 불일치 0(`AddFeature.tsx` 슬롯 3 ok) · 「전 규칙 통과」"
+            },
+            {
+              "name": "4. check-journey-mockup.py · check-journey-prototype.js",
+              "status": "passed",
+              "detail": "check-journey-mockup.py rc=0(R0~R11 이상 없음) · `npm ci --prefix tools` rc=0 (node v22.14.0) · check-journey-prototype.js rc=0 — 프로토타입 5 · 단언 408건"
+            },
+            {
+              "name": "5. 구현 실재",
+              "status": "passed",
+              "detail": "`git grep -c 'feature_additions\\|features/additions'` → backend/src/feature_add.rs:9 · frontend/src/api.ts:4 · `backend/migrations/0010_feature_additions.sql`(3439B) · `backend/src/feature_add.rs`(30799B) · `frontend/src/AddFeature.tsx`(9434B) 세 파일 실재"
+            },
+            {
+              "name": "6. 백엔드 계약 — cargo 전 스위트",
+              "status": "passed",
+              "detail": "PR 런 35621745027 잡 `test (cargo)`(106406219131) success 로그: `test result: ok` 21건 · FAILED 0 · 합계 194 passed / 0 failed · `tests/feature_add.rs` 통합 6 ok(취소 최종성 · 남의 분석 404 · 근거 경로 검증+확정 등록 · 추가된 feature 편집 가능 · 문서 무관 등록 · 근거 없음→빈 초안+direct 출처) · 단위 `feature_add::tests::*` 7 ok · `tests/migrations.rs` 5 ok(0010 핀). 머지 트리 backend == test-merge backend(check 0)."
+            },
+            {
+              "name": "7. e2e 계약 — kind e2e",
+              "status": "passed",
+              "detail": "PR 런 잡 `test (kind e2e)`(106406219464) success 로그: **29 passed (3.1m)** · failed/flaky 0 · ✓ #19 `sc03-03 … 초안과 의존성 후보가 트리의 경로를 근거로 들고, 확정하면 새 feature 로 등록된다`(8.9s) · ✓ #20 `sc03-04 … 근거 없는 요청은 초안 0건으로 표시되고, 그대로 추가하거나 취소할 수 있다`(1.0s)"
+            },
+            {
+              "name": "(정보) 버전 이동 · 잔여 gap",
+              "status": "passed",
+              "detail": "as-is `backend:2804b02c… frontend:9d8c0517…`(24f488d, 모델 lastObservedVersion 16:24:55Z) → `backend:cdb7aece… frontend:efe38420…`(89a16256). to-be docs 트리 `392d4726…` → `20fcffea…`(원장·목업 data-sample 갱신, AC 표면 무이동). 모델 `lastObservedVersion` 은 건드리지 않음 — 다음 감지 주기가 이 변화를 본다. 범위 밖 잔여(재감지가 후속 task 로 연다): AC3.3(03#5·6) · AC3.5(03#7) · AC3.4 임의 시점 복원(03#8) · 슬라이스 7(AC4.4·4.6·4.7) · AC4.1 해제 조항; `docs/e2e-mocking-policy.md` 새 쌍 등재는 `tbm_feature-doc-e2e-mock-policy` 몫. 운영 롤아웃은 main push 의 image.yml → pin 경로로 이어지며 0010 최초 적용이 그 시점(이 task 의 완료 기준 밖, 되돌리기는 `git revert 89a16256` + 표는 잔존·무해)."
             }
           ]
         }
