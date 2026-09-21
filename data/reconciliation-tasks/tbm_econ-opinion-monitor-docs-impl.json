@@ -5710,7 +5710,7 @@
       ]
     },
     "createdAt": "2026-09-21T07:49:37Z",
-    "updatedAt": "2026-09-21T08:54:32Z",
+    "updatedAt": "2026-09-21T09:03:20Z",
     "stateSummary": {
       "asIs": "**as-is(구현) — 트리거에서 바이트 불변.** 대상 레포 `dlddu/economic-opinion-trend-monitor` main `695ed06`(#89 squash, 2026-09-21T07:46:55Z 머지). versionScript 재실행: `contracts:5a1ee3bb python:b96e1e1b go:30dd9abe web:a0fcce2e deploy:c5916949` — 모델 `lastObservedVersion` 과 **5성분 전부 동일**. `git diff --stat 6a0b464 695ed06 -- contracts python go web deploy` **공집합**(docs-only 커밋, 변경 파일 1건 `docs/econ-opinion-monitor-doc-tracker/2026-09.md` +45/−14).\n\n**이번 판정의 입력이 되는 as-is 실측(트리거 시점 `deploy/` + 클러스터 `econ-monitor`, 2026-09-21T07:5xZ):**\n- `deploy/overlays/prod/kustomization.yaml`: 서빙 Deployment `econ-serving` 의 `data` 볼륨 → `claimName: econ-serving-data`; WorkflowTemplate `econ-batch-pipeline` 의 `/spec/volumes/0` → `claimName: econ-batch-data`. 두 patch 가 **서로 다른 claim** 을 준다.\n- `deploy/overlays/prod/batch-pvc.yaml` 머리 주석: 「`separate from the serving claim on purpose` … the serving stack only ever reads Gold, so nothing needs the two to share a volume yet」 — `accessModes: [ReadWriteOnce]` 를 요청하나 클러스터 실측은 두 PVC 모두 **`Bound` · `RWX` · storageClass `efs`**(`econ-batch-data` pvc-112620e1, `econ-serving-data` pvc-c63a4371, 19d).\n- `deploy/batch/workflow-template.yaml`: `gold|serving|copy` grep 히트 0 — Gold 를 서빙 볼륨으로 옮기는 스텝 없음. `deploy/base/deployment.yaml:2-3`: 서빙은 `<ECON_DATA_ROOT>/gold/*.jsonl` 을 읽고 「treats missing files as empty datasets」.\n- 라이브 Deployment `econ-serving`(revision 61, image `…:695ed06…`): `volumes[0].persistentVolumeClaim.claimName=econ-serving-data`(`/data` readOnly), `replicas: 0`(sablier scale-to-zero). 배치 CronWorkflow 는 직전 task(`rct_20260920-0012`) 실측대로 `econ-pipeline-hourly` 가 매시간 `ingest→analyze→aggregate` 를 돌려 `econ-batch-data` 아래 `/data/gold/*.jsonl` 에 Gold 를 쓴다(07:00Z 런 aggregate 로그 「wrote 3534 subject_trend + 9 axis_sentiment gold records」).\n- `go/internal/handlers/handlers.go:673` `\"stub: 재처리 콘솔 자리…\"` — `/api/reprocess` 자기선언 stub 은 그대로(슬라이스 10 잔여, 이번 트리거와 무관).\n- 대상 레포 열린 PR 4건(#91 trend 온도차 · #90·#88 comment-policy · #75 ci) 중 **`deploy/` 를 만지는 PR 0건**.",
       "toBe": "**to-be(문서) — `docs` 트리 `aa2a3f81` → `79c4f6ea`, 이동 전량이 트리거 `695ed06` 단독.** 부모 `6a0b464` 의 `HEAD:docs` 가 저장 baseline `aa2a3f81` 과 바이트 동일(귀속 확정). 변경 파일은 `docs/econ-opinion-monitor-doc-tracker/2026-09.md` 하나 — PRD 3종·테스트 문서 3종·values·mockups·design-system·user-journeys·design-tracker 는 `git diff --stat` **공집합**(SSOT 무접촉). `### AC` 21건(6+7+8) 불변.\n\n**트리거는 이 모델 자신의 `rct_20260920-0012` 실행 산출(#89)이다** — 계획 완료 기준 ⑴~⑹ 이 전부 착지: ⑴ 슬라이스 2 증거 좌표 교체(`cronworkflow-pipeline.yaml ∋ suspend: false`, 수집 전용은 `suspend: true`) ⑵ 슬라이스 3 「아직 꺼져 있다」 해소 ⑶ AC3.2 「풀린 뒤다」 해소 ⑷ `reprocess` 매듭 서술을 「운영 선행 P2 충족, 남은 선행은 stub 자체」로 ⑸ 「운영」 잔여 → 착지 「운영 — 상시 스케줄 전환」 이동 + **새 잔여 「운영 — 서빙 Gold 연결」 등재** ⑹ 변경 이력 1행(2026-09-21) 추가. 트리거 후 「잔여」 절은 4항목: 화면(`reprocess`, 슬라이스 10) · 소스 차원 · 대상별 분위기 · **운영 — 서빙 Gold 연결**.\n\n새 잔여 행의 문면: 「파이프라인이 매시간 쓰는 Gold 를 **서빙이 읽지 않는다** — 배치와 서빙이 서로 다른 PVC 를 마운트한다 … `batch-pvc.yaml` 의 근거 「서빙은 Gold 만 읽으므로 둘이 볼륨을 공유할 필요가 아직 없다」는 파이프라인이 수집 전용이던 때의 문장이고 … 지금은 전제가 뒤집혔다. 그래서 서빙은 여전히 빈 데이터셋으로 뜬다 … 해소는 볼륨 공유(두 claim 모두 RWX `efs`) 또는 Gold 복사 스테이지 중 하나이며, 배포 매니페스트(as-is `deploy/`)를 바꾸는 일이라 **별도 슬라이스로 연다**」. 같은 task 의 verification 도 「다음 감지는 to-be 단측 이동으로 열리고, 새 잔여 「운영 — 서빙 Gold 연결」이 그 판정의 입력이다」라고 이 fire 를 예고했다.\n\nPRD-3(`econ-opinion-monitor-prd-aggregation-viz.md:14`): 「Silver 계층의 분석 결과를 정규화·집계하여 Gold 계층에 적재하고, **이를 시각화로 서빙한다**」. 레포 게이트 `tests/e2e/check_scenario_mapping.py` 부모·트리거 **양쪽 rc=0**, 집계 동일(자매 축, 이 fire 의 판정면 밖 — 정보로만).",
@@ -5836,9 +5836,9 @@
           "comment": "실행 시 유의: 열린 #75(ci/review-gate-data-format)가 README.md를 건드리므로 머지 직전 mergeable을 다시 확인하고, 충돌이면 지침 §0대로 즉석 해소 없이 재준비로 되돌릴 것. 5단계 기능 실측은 MCP 승인 게이트에 막히면 경로 B(구조 수렴 + 사람 게이트 등재)가 계획이 명시한 정상 판정이다."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-21T08:53:30Z",
-          "finishedAt": null,
+          "finishedAt": "2026-09-21T09:05:00Z",
           "entries": [
             {
               "stepSeq": 1,
@@ -5846,6 +5846,41 @@
               "startedAt": "2026-09-21T08:53:30Z",
               "finishedAt": "2026-09-21T08:54:05Z",
               "log": "사전 조건 재실측: PR #92 open · head e76085f · base 48d1dba == main tip · mergeable true/clean · check-run `required` success(+docs/structure·docs/flow·render·ci/build·ci/e2e·image/publish ×2 success). 열린 PR 은 #75 뿐이고 main 은 재준비 뒤 이동 없음 → 충돌 없음. PR files 5개(README +8/-4 · batch-pvc.yaml +7/-9 · kustomization.yaml +9/-11 · pvc.yaml 삭제 · tracker 2026-09.md +21/-17) 가 plan.steps[1] 과 1:1. squash 머지 → main `60a8176b`(부모 48d1dba). `compare 48d1dba...60a8176b` 에서 contracts/python/go/web/tests 접촉 0(공집합). 브랜치는 머지 시 자동 삭제됨. image.yml run 35580307657 queued(08:54:01Z)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-21T08:54:05Z",
+              "finishedAt": "2026-09-21T08:56:10Z",
+              "log": "image.yml run 35580307657(main push) completed success 08:55:03Z — publish(batch)·publish(serving)·pin 전부 success. `deploy` tip `653c3657`(08:54:40Z) 의 부모 == 머지 SHA `60a8176b`, 메시지 `deploy: econ-monitor 이미지를 60a8176b… 로 고정`. `compare 60a8176b...653c3657` 는 deploy/base/deployment.yaml(+1/-1)·deploy/batch/workflow-template.yaml(+3/-3) 이미지 태그뿐 — deploy/overlays/prod/ 는 PR 과 동일(kustomization 에 pvc.yaml 없음·Recreate op 없음·claimName econ-batch-data, 디렉터리에 pvc.yaml 없음)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-21T08:56:10Z",
+              "finishedAt": "2026-09-21T08:58:40Z",
+              "log": "Flux Kustomization econ-monitor-app(ns econ-monitor): 08:55:33Z 에 lastAppliedRevision == deploy@sha1:653c36571c274c9e1e1a03ce419c5f64ee70f762, Ready=True ReconciliationSucceeded(634ms), history 신규 항목 totalReconciliations 1. inventory 10→9: econ-monitor_econ-serving-data__PersistentVolumeClaim 항목 소멸, 나머지 9 항목 그대로. 에러·prune 대기 없음(서빙 replicas 0 이라 옛 claim 을 문 Pod 없음)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-21T08:58:40Z",
+              "finishedAt": "2026-09-21T08:59:30Z",
+              "log": "Deployment econ-serving(generation 70, 08:55:33Z 갱신): volumes[0].persistentVolumeClaim.claimName == econ-batch-data · volumeMounts[/data].readOnly == true · strategy.type == RollingUpdate(25%/25%) · replicas 0(sablier) · image :60a8176b…. PVC 목록(econ-monitor): econ-batch-data Bound pvc-112620e1-cdaa-4f41-bc48-5ed48d2932a6 1Gi RWX efs 19d 단 1행, econ-serving-data 없음. PVC econ-batch-data metadata.uid == 112620e1-cdaa-4f41-bc48-5ed48d2932a6 · resourceVersion 12471(2026-09-02 생성 그대로, 재생성 아님). PV 목록에 pvc-c63a4371(옛 serving PV) 없음(reclaim Delete 로 소멸), pvc-112620e1 Bound econ-monitor/econ-batch-data 유지. 넷 다 기대 일치 → 구조 수렴."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-21T08:59:30Z",
+              "finishedAt": "2026-09-21T09:03:30Z",
+              "log": "경로 A 시도: resource_patch(Deployment econ-serving replicas 0→1, merge) 를 08:59:39Z·09:01:43Z 두 번 호출 — 둘 다 MCP 게이트에서 502(승인 미개방, 무인 실행), scale 서브리소스 재확인 replicas 0·resourceVersion 8472020 불변 → 패치 미적용, 클러스터 무변경. 지침대로 경로 B: 서빙 Pod 는 없음(replicas 0, phase!=Succeeded Pod 0건). 대체 근거 — ⓐ 4단계 구조 수렴, ⓑ Go 스토어 `go/internal/store/store.go`@60a8176b 가 요청마다 `os.Open` 으로 gold/subject_trend·axis_sentiment jsonl 을 읽음(readJSONL, 캐시 없음), ⓒ 09:00Z 배치 econ-pipeline-hourly-1789981200 aggregate Pod(Completed 09:01:04Z) 로그: 「wrote 3531 subject_trend + 9 axis_sentiment gold records → /data/gold/subject_trend.jsonl · /data/gold/axis_sentiment.jsonl」 — 서빙이 지금 마운트하는 바로 그 claim(econ-batch-data) 에 Gold 가 있음, ⓓ efs access point uid/gid 50000 고정 매핑(계획 실측). `/api/dashboard` 200 + 비어 있지 않은 Gold 배열의 직접 실측은 사람 게이트 항목으로 verification 에 남김(계획이 명시한 대체 판정 — 실패 아님)."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-21T09:03:30Z",
+              "finishedAt": "2026-09-21T09:05:00Z",
+              "log": "main 60a8176b 트리 해시: deploy c5916949→f6339c5b(as-is 5성분 중 deploy 만 이동, contracts/python/go/web 불변), docs ab22cc42→38fd3311(to-be 이동) — 모델 lastObservedVersion(08:45:57Z 관측 deploy:c591…/docs ab22…) 과 달라 다음 detector fire 가 새 task 를 연다(lastObservedVersion 은 건드리지 않음). tracker 2026-09.md@main: 「현재 상태 요약」 착지에 「운영 — 서빙 Gold 연결 (2026-09-21, #92)」 존재, 잔여 3항목(1화면 reprocess · 소스 차원 · 대상별 분위기), 변경 이력 2026-09-21 행 「운영 — 서빙 Gold 연결 착지 — 잔여 4 → 3」 추가됨. 자매 comment-redundancy 모델은 deploy/overlays/prod/ 주석 이동으로 재감지 예상(정상)."
             }
           ]
         }
