@@ -4827,7 +4827,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-scenario-e2e",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-12T12:31:00Z",
       "changedSides": [
@@ -4851,7 +4851,7 @@
       "gap": "**유의미한 gap 이 남아 있다 — 저작 대기 7.** 모델 정의의 불변식은\n`(시나리오 − 예외 − 구현 대기) = (매칭 파일)` 인데 실측은 `37 − 3 − 0 = 34 ≠ 27`, 차이 **7**이 곧\n전용 파일이 없는 시나리오다(규칙 1의 「0개면 누락」). **게이트 rc=0 을 수렴으로 읽지 말 것** —\n게이트의 항등식은 `저작 대기`를 완충항으로 포함하는 laxer 식이라 규칙 준수(1:1 위반 0)만 증명하고\n커버리지는 증명하지 않는다. 이번 트리거는 그 잔여를 **8→7 로 1 줄인 자기 슬라이스의 착지**이며,\n줄어든 만큼만 줄었고 나머지 7은 그대로다. e2e.md 의 변경은 전부 이 축의 부기·해제 기록이고 시나리오\n집합·예외·구현 대기는 안 움직였으므로, 판정에 영향을 주는 유일한 사실은 「매칭 파일 +1, 저작 대기 −1」이다.",
       "summarizedAt": "2026-09-12T12:33:00Z"
     },
-    "updatedAt": "2026-09-21T07:21:28Z",
+    "updatedAt": "2026-09-21T07:56:00Z",
     "assessment": {
       "reason": "`actionRequired: true`. **부분 슬라이스가 닫힌 뒤의 잔여 7이 실재하고, 지금 소유자가 없다.**\n\n**1. 교과서적인 소비된 트리거다.** 트리거 #126 은 이 모델 자신의 `rct_20260911-0003` 산출이고\n(브랜치 `reconcile/rct_20260911-0003-opus5-1m-v3`), 그 task 는 11:35 에 `verify` 를 거쳐 닫혔다.\n비-터미널 task 를 전수로 훑어도 이 모델에 열린 것은 **0건**이다 ⇒ 남은 7행의 소유자가 없다.\n스킬이 적는 그대로 「슬라이스 → 재감지 → 후속 task」의 정상 진행이고, 이 fire 가 그 재감지다.\n\n**2. 잔여가 게이트에 안 보이는 것이 아니라, 게이트가 그것을 위반으로 세지 않는 것뿐이다.**\n`check-scenario-mapping.sh` 는 rc=0 이지만 그 항등식은 `저작 대기`를 완충항으로 포함한다\n(`37 = 27+3+0+7+0`). 모델 정의의 불변식은 완충항이 없다 — `37 − 3 − 0 = 34 ≠ 27`. 초록은 규칙\n준수의 증거이지 커버리지의 증거가 아니다.\n\n**3. 자동 해소 가능성 0.** 롤아웃도 일시 alert 도 아니다. 저작 대기 행이 사라지는 방법은 그\n시나리오를 선언하는 파일이 생기는 것 하나뿐이라고 등재 문서 자신이 적는다.\n\n---\n\n## ⚠️ planner 에게 — 다음 슬라이스는 하나로 정해져 있고, 그 앞에 읽을 것이 둘 있다\n\n**(가) 지금 집을 수 있는 행은 `approval-gated-workload.md#시나리오 6` 단독이다.** 저작 대기 7행 중\n`선행`이 `없음`인 것은 그 하나뿐이고(2026-09-12 에 #126 이 그 선행을 풀었다), 나머지 6은 선행 소유자가\n움직이기 전에는 못 쓴다 — CNI 2건(시나리오 2·2-1) · 폴링 타임아웃 주입 1건(시나리오 4) · 상한 주입 훅\n1건(claude-code 8) · 모킹 허용목록 2건(claude-code 9 · lifecycle 4). 「지금 바로 집을 수 있는 행」의\n정본은 표의 `선행` 칸이지 산문이 아니다 — 계획 전에 `scenario-backlog` 블록을 다시 읽을 것.\n\n**(나) 시나리오 6의 (c) 복원 갈래는 자매 PR #127 에 물려 있다 — 완료 기준을 조건부로 쓸 것.**\n그 행은 「(c) 복원 갈래 하나만 AC-F5 를 기다린다」고 스스로 적는다. AC-F5 후반의 구현은 자매 모델\n`tbm_session-platform-docs-impl` 의 `rct_20260912-0007`(12:29 `awaiting_review`) 이 소유하고, 그 PR\n**#127** 은 OPEN·MERGEABLE·CLEAN 이며 `merge-base(pr127, main) == main` 이라 **트리거 위에서 갈라져\n나왔다**(충돌 원리적 불가). 두 갈래를 미리 갈라 둘 것: **#127 착지 전**이면 (a)(b)만 저작하고 (c)는\n§「남은 미검증 분기」에 등재(그 자리에 `e2e_f4_helper_pod_test.go` 의 선례가 있다), **착지 후**면 한\n파일로 완주. 어느 쪽이든 「저작 대기 7→6」이 완료 기준이고, (c)의 처리는 그 안에서 갈린다.\n`awaiting_review` 는 미점유 인수인계 지점이므로 **#127 쪽 레코드에는 손대지 말 것** — 신선도만 다시 잰다.\n\n**(다) 원장은 이 PR 에 싣지 마라.** 신규 e2e 파일은 반드시 주석을 들여오고, 그 판정은 자매\n`tbm_session-platform-comment-redundancy` 의 몫이다(이번 fire 가 #126 몫으로 `rct_20260912-0006` 을 이미\n열었다). 지금 `docs/comment-policy/ledger.md` 의 합계 마커는 **#127 이 2989 → 3016 으로 건드리는 중**이라,\n여기서 같은 줄을 또 만지면 3자 충돌이 된다.\n\n**(라) 경계**: 이 루프의 산출은 e2e 테스트와 등재 문서뿐이다. 계획이 제품 코드 변경(예: 위 선행 6건의\n주입 훅·CNI 배선)을 포함하게 되면 경계를 넘은 것이므로 그 슬라이스를 멈추고 규칙 6 구현 대기 등재로\n전환할 것.",
       "assessedBy": "agent",
@@ -5143,7 +5143,67 @@
           "finishedAt": "2026-09-21T07:39:56Z"
         },
         "verification": {
-          "status": "pending"
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "api:723129cbf22cb59bedc1fa9edb4a7ce61ba7405ecd2c59fcc818af219013f9c3 web:da4b72aa737edbea75a4cad99c6e653b1d8ed4c1",
+          "verifiedAt": "2026-09-21T07:56:00Z",
+          "checks": [
+            {
+              "name": "1 check-scenario-mapping.sh (main 580402e)",
+              "status": "passed",
+              "detail": "rc=0 — 「시나리오 ↔ e2e 1:1 OK — 시나리오 37개 = 매칭 파일 1 + 예외 3 + 유예 33 + 공백 0 (매칭 단위 2개, 비-시나리오 1개)」. 기대 항등식 37 = 1 + 3 + 33 + 0 그대로."
+            },
+            {
+              "name": "2 매핑 표 행 존재",
+              "status": "passed",
+              "detail": "scenario-mapping 블록에 `lifecycle.md#시나리오 2` ↔ `web/e2e/lifecycle-2-snapshot-restore.spec.ts`(playwright) 행 1건."
+            },
+            {
+              "name": "3 유예 표 행 부재·분해 문단",
+              "status": "passed",
+              "detail": "scenario-deferred 블록에 `lifecycle.md#시나리오 2` 0건. 뒤 문단 분해 「이관 26(…)과 미저작 7」."
+            },
+            {
+              "name": "4 Go 파일 제거",
+              "status": "passed",
+              "detail": "`git ls-files control-plane/test/e2e_b2_snapshot_restore_test.go` 무출력. e2e_*_test.go 29 → 28 파일."
+            },
+            {
+              "name": "5 kind e2e 로그 — Playwright",
+              "status": "passed",
+              "detail": "PR head d6db381 의 잡 106247473976(16m33s success): 「✓ 23 [chromium] › e2e/lifecycle-2-snapshot-restore.spec.ts:30:1 › accessing a snapshot session restores it into a new pod (9.1s)」· 요약 「21 passed / 3 skipped」(직전 20/3 에서 +1). 새 케이스는 skip 아닌 pass. e2e 워크플로는 PR 트리거라 머지 커밋 580402e 는 같은 트리(squash, base 67b1898 불변)의 이 런으로 갈음."
+            },
+            {
+              "name": "6 kind e2e 로그 — Go",
+              "status": "passed",
+              "detail": "--- RUN 123 / PASS 123 / FAIL 0 / SKIP 0. `TestSnapshotRestore_AccessRestoresIntoANewPod` 로그 0건. 최상위 Test 함수 main 70 → 69 = b2 하나만 감소."
+            },
+            {
+              "name": "7 check_comment_policy.py (main 580402e)",
+              "status": "passed",
+              "detail": "rc=0 — 「판정 완료 3124줄(97.7%) / 등재 범위 15」. 지침의 3051 은 base 283ec0e 기준 값이고 리뷰가 예고한 대로 main 3127 − 3 = 3124(게이트가 R4 로 알려준 값 그대로 씀)."
+            },
+            {
+              "name": "8 나머지 CI",
+              "status": "passed",
+              "detail": "PR(d6db381): 15체크 success 14 · skipped 1(`pin deployment images (main only)`) · fail 0. main(580402e): ci 워크플로 11잡 전부 success, Build and Push Docker Image to GHCR success, pages success."
+            },
+            {
+              "name": "9 as-is / to-be 지문",
+              "status": "passed",
+              "detail": "머지 후 main: as-is `api:723129cbf22c… web:da4b72aa` — 지침 표의 「이 브랜치 = 머지 후 기대값」과 정확히 일치(둘 다 움직임, 이 축의 정상). 직전 main 67b1898 은 `api:772920af… web:f24855e5`(지침의 가운데 줄과 일치). to-be `docs/test` 는 152eaee4(67b1898) → b9f78b1b(580402e) — 지침의 64ebea85 는 base 283ec0e 기준이고 그 뒤 #140·#147·#148 이 docs/test 를 만져 값이 다르나, 이동 자체(이 PR 의 e2e.md 편집)는 확인됨. 모델 lastObservedVersion 은 건드리지 않음."
+            },
+            {
+              "name": "(정보) 문장 감사",
+              "status": "passed",
+              "detail": "main 에서 `git grep -n e2e_b2_snapshot_restore` 는 허용된 두 곳(docs/test/e2e.md:518 의 2026-09-14 노트 · 새 spec 헤더)뿐."
+            },
+            {
+              "name": "(정보) 잔여 gap — 범위 밖",
+              "status": "passed",
+              "detail": "유예 33(이관 26 + 미저작 7)이 남아 있으나 이 task 의 범위 밖. 후속은 재감지가 잇는다 — 단, 모델 checkPolicy.enabled=false 라 자동 감지가 꺼져 있다. #130(시나리오 6)은 이 착지로 docs/test/e2e.md 리베이스가 필요해졌고(예고된 충돌), AC-F5(#127, 여전히 OPEN) 착지 시 그 슬라이스가 함께 처리한다."
+            }
+          ]
         }
       }
     ]
