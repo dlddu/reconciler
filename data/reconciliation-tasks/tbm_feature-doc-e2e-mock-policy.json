@@ -1418,7 +1418,7 @@
   {
     "id": "rct_20260921-0001",
     "toBeModelId": "tbm_feature-doc-e2e-mock-policy",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-21T14:41:06Z",
@@ -1431,7 +1431,7 @@
       ]
     },
     "createdAt": "2026-09-21T14:41:06Z",
-    "updatedAt": "2026-09-21T15:06:09Z",
+    "updatedAt": "2026-09-21T15:07:16Z",
     "stateSummary": {
       "asIs": "**관측 2026-09-21T14:45Z, `dlddu/feature-doc@main` = `51daa9c`(`ls-remote` == 트리거, 2파도 0, 열린 PR 없음).**\n\n- as-is 지문 `sites=27 files=12 fbc4031…` → **`sites=29 files=13 b9411fc…`**. 귀속: 부모 `19d58fa` 에서 versionScript 재실행 == 저장된 baseline **바이트 동일** ⇒ 이동은 **#92 `51daa9c` 단독**(「슬라이스 6a — AC3.1 LLM 보조 문서 수정 (rct_20260919-0003)」, 2026-09-21T14:35:48Z 머지 — 자매 `tbm_feature-doc-docs-impl` `rct_20260919-0003` 의 executor 착지, reconciler HEAD `cbe8f1f3` verify).\n- 히트 집합 diff(부모 vs 트리거): **추가 2행 / 삭제 0** — 둘 다 신설 파일 `backend/src/doc_edit.rs`: `mock-exception: LLM`(`:232` `// mock-exception: LLM-01 — 실 LLM 산출물에 대한 결정적 단정을 위해 고정 답을 공급`) + `stub: stub_edit`(`:233`, `Ask { … stub: stub_edit(&before, &request, &avoid) }`). 즉 **코드 실재 지점 15쌍 → 16쌍(12 → 13파일)**, 새 쌍 = `backend/src/doc_edit.rs × stub: stub_edit`. 기존 15쌍은 무이동. `e2e/` 네트워크 인터셉트 0건 유지(`page.route`/`route.fulfill` 히트 0).\n- 배선: `deploy/e2e/kustomization.yaml` **API 패치**에 `FEATUREDOC_DOUBLE_LLM: \"stub\"` 한 칸 추가(+4, 주석 「편집 제안(AC3.1)은 워커가 아니라 이 프로세스가 모델을 부른다」), `backend/src/config.rs` `Doubles` 에 `llm: Mode::from_env(\"FEATUREDOC_DOUBLE_LLM\")` 추가 — API 프로세스가 이제 LLM 더블 env 를 읽는다(지문 패턴 밖 — 정책 문서 「지문 사각지대 고지」가 예고한 대로 `FEATUREDOC_DOUBLE_*` 는 지문에 침묵).\n- `stub_edit`(`doc_edit.rs:644-662`): 요청문을 then 에 덧붙인 결정적 문장을 만들고 `avoid`(거부된 문장) 와 같으면 회차를 붙여 다르게 쓴다 · `ADD_HINT` 면 원 시나리오 + 신규 시나리오. 빈 요청 거부(`:197-201`)는 `llm::ask` **앞**에서 모드 무관하게 실행 ⇒ stub 이 real 보다 관대한 지점 없음. 실패 전파는 `llm::stub_answer` 의 `FEATUREDOC_STUB_LLM_FAIL` 트리거가 모든 Ask 에 공통 적용되므로 이 경로도 도달 가능.\n- 이 지점에 기대는 spec: `e2e/tests/sc03-01-llm-assisted-edit.spec.ts`(108줄, 「시나리오가 하나 늘고 원래 시나리오는 남는다」) · `sc03-02-rejected-suggestion-avoided.spec.ts`(73줄, 「두 번째 제안의 문면이 거부한 것과 다르다」) — 둘 다 **산출물 내용에 대한 결정적 단정**.\n- 레포에 불변식 1 게이트 스크립트 없음(`scripts/` = `e2e.sh` 뿐) — 지문이 유일한 검출기.",
       "toBe": "**관측 2026-09-21T14:45Z, `docs/e2e-mocking-policy.md` blob `b705be74`(부모·트리거·baseline 3지점 동일, to-be 무이동).**\n\n- 허용목록 절 「등재 집합 — 2026-09-19 증분 등재, **15쌍 / 12파일**」: 1~15행에 `doc_edit.rs` 없음. 문서 자신이 「코드 실재 지점 15쌍 == 등재 15쌍(미등재 0 · 고아 0)」 을 주장.\n- 「모킹으로 세는 것」 1번 배선 표: `FEATUREDOC_DOUBLE_LLM` | LLM 호출·고정 답 공급 | LLM-01 | **읽는 프로세스: 워커** — 그리고 「API Deployment에는 워커 더블을 켤 수단이 없고 그 역도 같아서…」. 2번 stub 분기: `stub_*` 현행 목록 = `stub_answer · stub_logic · stub_tests · stub_dependencies`(`stub_edit` 없음).\n- 「표기 규약」: 「주석만 있고 미등재이거나, 등재만 있고 코드에 없으면 drift다.」\n- 「차단 요인 원장」: 열린 행 0(마지막 해소 R1 2026-09-18). B1 지목 문맥: 자매 `rct_20260919-0003`(succeeded) 레코드 전문 grep — 이 모델·정책 문서·`stub_edit` 지목 **0건**(plan 은 `FEATUREDOC_DOUBLE_LLM=stub` 한 칸 추가만 언급, 등재 인계 없음). `docs/doc-tracker/2026-09.md` 의 #92 변경(+32/−…)도 모킹 정책 언급 0(sc03-01/02 매핑 행 2 + 목업↔구현 표 2행 + 이력).\n- 변동 이력 마지막 행 2026-09-19 `rct_20260919-0001`(#71 `dependencies.rs` 1쌍 사후 등재 — 「표기 주석은 규약대로 달았고 등재만 빠뜨렸다」) — 이번과 **같은 형태의 두 번째 사례**.",
@@ -1485,6 +1485,13 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/105",
           "preparedAt": "2026-09-21T14:58:00Z",
           "notes": "PR #105 head `2debed1` base `51daa9c`(= 감지 as-is tip, #92 착지). 변경 `docs/e2e-mocking-policy.md` 1파일 +10/−7, 코드 무접촉. 준비 중 재실측: 코드 쌍 16/13파일(지문 스크립트 동일 패턴) · 등재 행 15→16 · 열린 PR #98 뿐(이 파일 무접촉). 편집 8곳: 허용목록 제목·설명(16쌍/13파일) · 16행 `doc_edit.rs × stub: stub_edit × LLM-01 × FEATUREDOC_DOUBLE_LLM(API)` · 2번 `stub_*` 목록 · 1번 배선 표 「API · 워커」 + 소유 문단 정정 · LLM-01 사유 AC3.1 조항 + `sc03-01`·`sc03-02` · 완료 기록 현재 수치 포인터 16쌍 · 가림 기록(파서 실패 분기 — 차단 요인 아님) · 변동 이력 행. 편집 스크립트는 `count==1` 치환으로 한 곳씩 적용. **check-runs(lock 해제 직전 15:12Z)**: 1차 run 의 `test (kind e2e)` 가 22초 만에 failure — `curl kind.sigs.k8s.io … 504`(kind 바이너리 다운로드 인프라 플레이크, 문서 전용 PR 이라 코드 인과 0). `rerun-failed-jobs` 로 재실행 → attempt 2 전건 success(kind e2e · cargo · docs 게이트 3종 · 데이터 저장 형식 판정 · ci-gate · push/build), pin skipped. PR OPEN · MERGEABLE · main 은 base 그대로(`51daa9c`)."
+        },
+        "review": {
+          "required": false,
+          "status": "approved",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-21T15:07:16Z",
+          "reason": "정책 문서 1파일(docs/e2e-mocking-policy.md)만 바꾸는 사후 등재로 코드·배포 무접촉, riskLevel low. 신선도 실측(2026-09-21T15:14Z): PR #105 OPEN·MERGEABLE·mergeStateStatus CLEAN, head 2debed1·base 51daa9c == 현재 main tip(베이스 무이동), check-runs 9건 전부 success/skipped·failure 0(준비 노트의 kind 504 플레이크는 재실행으로 해소 확인), 이 파일을 건드리는 다른 열린 PR 없음(#98은 마이그레이션 축). diff 는 plan.steps[2]의 편집 8곳(16행 등재·제목 16쌍/13파일·stub_* 목록·배선 표 API·워커·LLM-01 사유 sc03-01/02·완료 기록 포인터·가림 기록·변동 이력)과 일치하고 무관 변경 없음; gap 실재 재확인 — main 등재 15행·stub_edit 0건 vs backend/src/doc_edit.rs:232-233 에 LLM-01 주석+stub: stub_edit 실재, PR head 는 등재 16행. 불가역 지점은 squash 머지 하나뿐이고 롤백은 revert 1회로 구체적·실행 가능하며, executionGuide 에 완료 기준·검증 명령·기대값(16/13, blob 이동, as-is 불변)이 명시돼 있어 승인."
         }
       }
     ]
