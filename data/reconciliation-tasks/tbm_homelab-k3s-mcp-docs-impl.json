@@ -10659,7 +10659,53 @@
       "reason": "**작업 필요 — 「내 슬라이스 착지 재감지」 정석형: 자기 슬라이스(PR #174, `prd-event-log` AC5)는 완료 기준 ⓐ~ⓓ 를 이 fire 가 독립 재현해 정합이지만, 그 task 가 「범위 밖 · 다음 슬라이스」로 명시해 밀어낸 잔여 `prd-metrics` AC1~AC5 가 소유자 0 · 재감지 경로 0 으로 남았다.** 닫는 순서: ⑴ 귀속 — 단일 커밋 f52f6a8, 부모 `586e338` 의 `docs/` == baseline, `internal/`·`main.go` 0바이트(as-is 지문 불변). ⑵ 착지분 판정 — ⓐ 교체 전 파드 `5797746969-6kncn` 레코드 64건이 파드 소멸 뒤에도 Loki 에서 조회(시나리오 9) ⓑ 새 파드 `69c747b554-2kcc6` 1/1 Running, 이 fire 의 `resource_list` 1회 → stdout 1줄 · Loki 1건(11:46:31Z, 이중 적재 없음) ⓒ 머지 커밋 check-runs 전건 success(pin 11:33:35Z) ⓓ 게이트 4종 부모·트리거 rc=0 + md5 동일(99·1·18·80·80·0·0 · 59/59) + tracker 「구현 5/10 · 잔여 5 AC · ⏳ 12」 == 실측. 기준 2·3 은 코드 이동 0 이라 발화 불가, 기준 4 는 게이트 실측 일치. ⑶ 잔여 4연언 — **해소 시점**: tracker 「닫는 순서 제안」 `AC1→AC3→AC2→AC4→AC5→메트릭` 의 앞 다섯이 착지, 남은 칸이 메트릭 하나 · **선결 0**: PRD 「같은 지점에서 파생」의 자리 `internal/eventlog/eventlog.go:145 Sink` · `internal/mcp/mcp.go:119 WithEventSink` · 사유 집합 `Reasons` 8값이 이미 코드에 있고 tracker 잔여 5 절이 「`eventlog.Sink` 팬아웃 + `/metrics`」로 다음 슬라이스의 형태까지 적어 둠 · **소유자 0**: 열린 task 셋(scenario-e2e -0006 executing = e2e 저작 축, plan 「`internal/` 무접촉」 자기 선언 · comment-redundancy -0006 planned, PR #176 `internal/` 0 · dear-baby 타 레포) 어느 것도 메트릭을 지지 않고 대상 레포 열린 PR 은 #176 하나 · **재감지 경로 0**: as-is 는 `internal/`+`main.go` 만 읽는데 그것을 움직일 계획이 없다(자매 PR 의 `docs/` 이동은 부수 효과이지 슬라이스를 여는 경로가 아니다 — 소비된 트리거 규칙). 구현 부재 실측: `go.mod` prometheus/client_golang 0 · promhttp/expvar 0 · `\"/metrics\"` 8히트 전부 `proxy_test.go` 픽스처. 정의 기준 1 「백로그로 치부해 루프 밖으로 빼지 않는다」 ⇒ `action_required`. **인계(planner)**: 슬라이스 = `prd-metrics` AC1~AC5(한 PRD, 파생 지점 하나이므로 한 슬라이스가 자연스럽지만 AC4 비노출·AC5 인증 경계는 계획에서 분리 가능) — ⓐ `eventlog.Sink` 팬아웃(Log + 메트릭 sink)으로 「같은 지점 파생」 충족, 계열 전집 4종·라벨·상한(등록 도구 수 × 3/8/버킷 · 6 × 버킷) 은 PRD 「표면 개요」 표를 닫힌 집합으로 ⓑ `/metrics` 노출 + 인증 경계(AC5 문면)와 `go.mod` client_golang 편입 ⓒ AC2 불변식 `sum(refusals_total) == calls_total{result=\"refused\"}` 는 `Reasons` 닫힌 집합 위에서 단위 테스트로 ⓓ tracker: 잔여 5→0 · 구현 10/10 · 「구현 없는 문서」 🔴 해소 · ⏳ metrics 1~5 행과 event-log 1 행(메트릭 AC1 대기)의 해제 조건 재기술(metrics 2·3 은 gatekeeper 픽스처가 별도 선결이라 규칙 6 잔류 가능 — 자매 렌즈 몫) · `check_ac_mapping`·`check_doc_inventory`·`check_comment_policy`(신규 Go 파일 주석은 원장 등재) rc=0. 충돌 예고: 2파도 #175(11:45:51Z, `tests/`+`docs/` 9파일) 위에서 브랜치를 시작할 것 · PR #176 이 tracker 변경 이력에 행을 더하므로 같은 표 인접 hunk. 기록만: 자매 #175 착지가 다음 fire 의 to-be 트리거(이 모델 판정면은 `test-event-log` 자동화 칸 이동뿐일 것) · 모델 `definition` 스냅샷 낡음(tobe-modeler).",
       "assessedBy": "agent",
       "assessedAt": "2026-09-21T11:49:26Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`prd-metrics` AC1~AC5 를 한 슬라이스로 닫는다 — 파생 지점이 하나(`eventlog.Sink`)라 갈라 낼 이음새가 없고, 다섯 AC 가 서로를 전제한다(AC2 불변식은 AC1 위에, AC4 는 라벨 집합 전체에, AC5 는 표면이 있어야 성립). 접근: 새 패키지 `internal/metrics` 가 `eventlog.Sink` 를 구현해 레코드 한 건 = 카운터 한 번으로 네 계열(`mcp_tool_calls_total{tool,result}` · `mcp_tool_refusals_total{tool,reason}` · `mcp_tool_duration_seconds{tool}` · `mcp_gate_wait_seconds{decision}`)을 파생하고, `main.go` 가 `eventlog.Fanout{Log{}, metrics}` 를 디스패처(`mcp.WithEventSink`)와 인증 층(`auth.Config.RecordTo` 신설 — 401 레코드도 같은 sink)에 꽂는다. 계열은 전부 기동 시점 선등록(`mcp.ToolNames()` × `eventlog.Results` 3 / `eventlog.Reasons` 8 / `gatekeeper.Verdicts` 6 — 닫힌 목록 셋을 각 패키지에 신설해 둘째 목록이 생기지 않게). 미등록 도구 이름은 `tool=\"unregistered\"` 한 값으로 접는다(호출자 문자열은 AC4 상 라벨이 될 수 없고, 버리면 그 거부가 AC2 불변식에서 빠진다). AC3 는 재는 자리에서 가른다 — 게이트를 부르는 세 경로가 `askGate` 하나를 지나며 대기를 `callNote.gateWait` 에 더하고 `toolsCall` 이 `Record.Duration`(총 − 대기)·`Record.GateWait` 로 싣는다(로그 줄에는 렌더하지 않는다 — 레코드 필드 계약 불변, stdout 바이트 무변경). AC5 는 구조로: `/metrics` 는 `App` 의 mux 가 아니라 둘째 리스너(`server.MetricsApp`, `METRICS_LISTEN_ADDR` 기본 `:9090`, `METRICS_DISABLED=1` 이면 리스너 없음 · bind 실패는 로그 뒤 계속)의 유일한 경로 — 인그레스(IngressRoute → Service `http`:80, 클러스터 실측)는 이 포트를 모르고 그 mux 에 `/mcp` 가 없다. 전용 레지스트리라 노출은 정확히 네 패밀리. 버린 대안: ⓐ `/metrics` 를 같은 mux 에 두고 인증 미들웨어 뒤에 — 스크레이퍼에 자격증명을 줘야 하고 인그레스로 공개된다 ⓑ 핸들러마다 카운터 — 두 표면이 갈릴 수 있다(「표면 개요」 위반) ⓒ 기본 레지스트리 — `go_*`·`process_*` 가 AC4 밖 라벨 이름을 싣는다. **완료 기준(이 시도의 범위)**: ⑴ PR #177 이 main 에 squash 착지(CI 6잡 전건 success) ⑵ 착지 커밋에서 `go test ./...` 전건 ok · 문서 게이트 4종 rc=0 ⑶ 배포된 파드에서 `:9090/metrics` 가 네 패밀리를 노출하고 `mcp_tool_calls_total{tool=\"ping\",result=\"success\"}` 이 `ping` 1회 뒤 1 오른다 · 같은 파드의 `:3000/metrics` 가 404 · `/mcp` 무자격 401 유지 ⑷ tracker 「구현 없는 문서」 ✅ · V6 구현 10/10 ⑸ 원장 게이트 rc=0(재판정 7행 + 신규 1행). **범위 밖**: Alloy `prometheus.scrape` 블록(flux-cd-apps · 관측 스택) · 메트릭 e2e 다섯 저작 + `METRICS_DISABLED` 변형(자매 렌즈 `tbm_homelab-k3s-mcp-scenario-e2e`) · 메트릭 시나리오 3 의 지연 주입 픽스처 · PRD AC4 「라벨은 세 개뿐」 vs 표의 `decision` 문면 정리(문서 소유자).",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-21T12:20:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #177(`reconcile/rct_20260921-0008-docs-impl-metrics`, head `b7a88be`, base = main tip `7d19322`/#176)의 CI 6잡(lint · unit · integration · image 등)이 전건 success 이고 `mergeable=MERGEABLE`·`mergeStateStatus=CLEAN` 인지 실행 직전 재확인한다. 자매 PR 이 먼저 착지해 DIRTY 면 지침 §4 의 리베이스 규칙으로 해소한 뒤 CI 재대기.",
+              "expectedOutcome": "check-runs 전건 success, CLEAN."
+            },
+            {
+              "seq": 2,
+              "action": "PR #177 을 **squash** 머지한다(머지 커밋 금지 — 레포 관례). 커밋 제목은 PR 제목 그대로.",
+              "expectedOutcome": "main 에 새 커밋 1개; `internal/metrics/` 신설 · `main.go`·`internal/{auth,eventlog,gatekeeper,mcp,server}` · `k8s/{deployment,service}.yaml` · `go.mod`/`go.sum` · docs 5파일 반영."
+            },
+            {
+              "seq": 3,
+              "action": "머지 커밋의 `docker-build-push.yaml`(build → build & push → pin) 이 success 로 끝나 deploy 브랜치에 `k8s/deployment.yaml` image 줄이 그 SHA 로 고정되는 것을 기다린다(≈3분).",
+              "expectedOutcome": "pin 커밋이 deploy 브랜치 tip; Flux 가 그 커밋을 적용."
+            },
+            {
+              "seq": 4,
+              "action": "`homelab-k3s-mcp` ns 의 새 파드가 1/1 Running · restarts 0 이고 기동 로그에 `metrics listening addr=0.0.0.0:9090` 이 있는지 본다(`resource_list` Pod + `resource_get subresource=log`).",
+              "expectedOutcome": "새 ReplicaSet 파드 Running, 로그에 `metrics listening`, `refusing to start` 없음."
+            },
+            {
+              "seq": 5,
+              "action": "완료 기준 ⑶ 실측: `resource_exec`(또는 임시 파드 `curl`)로 `http://<pod-ip>:9090/metrics` 를 긁어 네 패밀리(`# TYPE mcp_tool_calls_total counter` 등 4줄)를 확인 → `k3s:ping` 1회 → 다시 긁어 `mcp_tool_calls_total{result=\"success\",tool=\"ping\"}` 이 1 증가 → `http://<pod-ip>:3000/metrics` 404 → `POST http://<pod-ip>:3000/mcp`(무자격) 401. 파드 stdout 의 `msg=\"tool call\"` 줄 수 == 스크레이프 증가분(이중 적재 없음).",
+              "expectedOutcome": "패밀리 4 · ping 카운터 +1 · 3000/metrics 404 · /mcp 401 · 레코드 1줄 = 카운터 +1."
+            },
+            {
+              "seq": 6,
+              "action": "착지 커밋에서 문서 게이트 4종(`tests/integration/check_ac_mapping.py` · `scripts/check_doc_inventory.py` · `scripts/check_comment_policy.py` · `scripts/check_mock_policy.py`) rc=0 과 tracker 「구현 없는 문서」 ✅ · `구현 10/10` 문면을 확인한다.",
+              "expectedOutcome": "rc=0 ×4, 원장 판정 완료 3454줄(100%) · 65행 · ③④ 38/65."
+            },
+            {
+              "seq": 7,
+              "action": "task 를 `succeeded` 로 닫고, 범위 밖 넷(Alloy scrape 블록 · e2e 다섯 저작 + `METRICS_DISABLED` 변형 · 시나리오 3 지연 주입 픽스처 · AC4 문면)을 검증 기록에 남긴다. 재감지는 `docs/`(to-be)·`internal/`(as-is) 양쪽 이동으로 열린다.",
+              "expectedOutcome": "status=succeeded; 다음 fire 의 to-be 트리거는 이 착지."
+            }
+          ]
+        }
+      }
+    ]
   },
   {
     "id": "rct_20260921-0009",
