@@ -895,6 +895,48 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-20T22:50:09Z",
           "reason": "Preparation is fresh and fully green on the exact head. PR #219 is open, `mergeable=true`/`mergeable_state=clean`, and its base `5b25a6d2` **is still the current main tip** (main has not moved since 2026-09-09), so the head tree and the merge tree are the same thing. Every check on head `bec5acb5` is now completed success — E2E Tests (`kind (default)` **and** `kind (no-metrics)`) plus all seven CI jobs (FluxCD/Argo fixture validation, Frontend, Kubernetes manifest validation, Go, Integration, Docker Build). The planner handed off with the full default profile and Integration still in progress; both have since landed green, which closes the executor prerequisite it wrote.\nThe scope matches the plan — six files, all tests/fixtures/policy docs, zero product or deployment source. The change replaces synthetic status-200 mutation fulfills with real disposable fixtures and repairs the namespace-filter race by awaiting the actual filtered GET, which is exactly the drift the assessment named (DES permission and synthetic success rationales that the model removed on 2026-08-01).\nThe irreversibility concern the earlier (human-era) review raised does not survive measurement: the real Workflow create/readback/delete and the zero-replica Deployment restart annotation run **inside CI's disposable kind cluster**, not a production cluster, the template is suspended, cleanup is response-name-scoped with readback/404 checks, and the plan forbids production kubectl. Rollback is a normal revert PR.\n⚠️ Disclosed, not a blocker: `.github/workflows/ci.yaml`'s `docker-build` job pushes `ghcr.io/${{ github.repository }}:latest` with no branch condition, so it publishes that mutable tag on **every** PR run — it already did so for this head on 2026-09-15. That is a pre-existing repository-wide defect, not something this PR introduces, and this PR changes no application source, so the published image content is unchanged. Fixing that workflow is out of scope here and belongs to its own task.\nExecutor notes: merge **#219 only** — historical PR #218 must stay open and unmerged. Open sibling #220 (doc-tracker month split) shares no file with this PR, so no ordering constraint applies. Since base is still main tip, no rebase is needed; if main moves before merge, re-run the required checks on the new merge tree before merging."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-21T07:30:46Z",
+          "finishedAt": "2026-09-21T07:35:30Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-21T07:30:46Z",
+              "finishedAt": "2026-09-21T07:31:20Z",
+              "log": "Claimed approved→executing via claim.sh (reconciler commit 2040b2c380d9; first push lost a ref race and the CAS was rerun cleanly). Review record read only: attempt 2 approved by reconciler-work-review at 2026-09-20T22:50:09Z. Rechecked PR https://github.com/dlddu/kubernetes-dashboard/pull/219: OPEN, not draft, base main, head exactly bec5acb52582f43ed81895f8a2035232655a2565, mergeable=MERGEABLE, mergeStateStatus=CLEAN, six files as prepared (docs/e2e-mocking-policy.md, e2e/argo-submit.spec.ts, e2e/argo-templates.spec.ts, e2e/workloads-restart-confirm.spec.ts, test/fixtures/apply-all.sh, test/fixtures/mock-policy-mutation-fixtures.yaml). main still at 5b25a6d2b2d174328d17afe6f6540046f0f450ba (the PR base), so head tree == merge tree. Historical PR #218 OPEN and unmerged at 220aa2e439157388e9d390f01f96b243ca28ff64, left untouched. Repository allows squash merge only (delete_branch_on_merge=true); branch-protection endpoint not readable by the app token (403), so the stricter executionGuide gate was applied as-is. This host has no Docker/kind/kubectl; no disposable-cluster run was attempted."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-21T07:31:20Z",
+              "finishedAt": "2026-09-21T07:32:40Z",
+              "log": "Static validation on an isolated exact-head checkout (bec5acb5) in this job's tmp dir: git diff --check origin/main...HEAD clean; bash -n test/fixtures/apply-all.sh OK; guide's multiset audit PASS (29 route registrations = 29 adjacent mock-exception comments = 29 allowlist rows, ERR 15/LAT 14, no \\bDES\\b in policy, no route.fulfill({status:200 in argo-submit/workloads-restart-confirm specs, route.continue() present); no routeFromHAR/routeWebSocket/route.abort/msw/nock/sinon/vi.mock anywhere under e2e/. Fixture YAML via yaml.safe_load_all: exactly Namespace dashboard-mock-policy, WorkflowTemplate submit-policy-template (suspend:true, entrypoint:main), Deployment restart-policy-target (replicas 0, selector == pod labels); apply-all.sh references it exactly once (line 145), which runs after scripts/kind-cluster.sh install_argo_crds (line 99). Namespace test inspected: waitForResponse registered before the option click, awaits GET /api/argo/workflow-templates?ns=dashboard-test, asserts ok/nonempty/smaller/all-dashboard-test, selected label + URL, exact toHaveCount and namespace list; requires both fixture namespaces visible first; no sleeps/skips/retry changes. With checksum-verified run-local Node v20.19.0 (linux-arm64) and PyYAML 6.0.2: npm ci --ignore-scripts OK; bash test/argo_cluster_script_test.sh → PASS 44 / FAIL 0 / SKIP 0; Playwright --list → 21 tests in the three files."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-21T07:32:40Z",
+              "finishedAt": "2026-09-21T07:33:10Z",
+              "log": "Fresh CI on the prepared head already complete and green; no later runs exist for head bec5acb5. E2E Tests run 34968108870 (attempt 1, conclusion success): job 104377374188 'E2E Tests with kind (default)' checked out merge commit b68868d = 'Merge bec5acb5 into 5b25a6d2' and reported 639 passed / 0 failed (8.6m) — the prior attempt's 638 pass/1 fail namespace regression is closed; the four scope-critical cases passed: argo-templates.spec.ts:144 namespace filter (2.6s), argo-submit.spec.ts:273 ERR retry, argo-submit.spec.ts:324 LAT submit, workloads-restart-confirm.spec.ts:55 LAT restart (1.6s). Job 104377373846 'E2E Tests with kind (no-metrics)' 2 passed. CI run 34968108883 (conclusion success): FluxCD Fixture Validation, Frontend Tests, Argo Fixture Validation, Kubernetes Manifest Validation, Go Tests, Integration Tests, Docker Build all pass. gh pr checks 219 → 9/9 pass. Because main == PR base, the CI-tested merge tree is byte-identical to the tree this merge produces. No local kind reproduction (no Docker/kind/kubectl on host); none claimed."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-21T07:33:12Z",
+              "finishedAt": "2026-09-21T07:33:28Z",
+              "log": "Final pre-merge recheck (state OPEN, head bec5acb5, CLEAN, main 5b25a6d2) then `gh pr merge 219 --squash --match-head-commit bec5acb52582f43ed81895f8a2035232655a2565` through the normal merge path (squash is the repository's only enabled method; no force push, admin bypass or skipped checks). Result: PR #219 MERGED at 2026-09-21T07:33:25Z, merge (squash) commit 8ceb429746964302b8c406945ea80fa77971717b, main now 8ceb4297 with parent 5b25a6d2. PR #218 remains OPEN at 220aa2e4, not merged. No production kubectl or cluster operation performed."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-21T07:33:28Z",
+              "finishedAt": "2026-09-21T07:35:30Z",
+              "log": "Refreshed main (8ceb4297): tree hash IDENTICAL to prepared head bec5acb5^{tree}; diff vs 5b25a6d2 = exactly the six files (207+/74-). Reran the multiset/fixture audits on the merged tree: PASS 29=29=29, ERR15/LAT14, no DES, no synthetic 200; fixture shell suite 44/0/0; Playwright discovery 21 tests. Policy blob on main = de41b840f532a94c404058c587a3915cbdb72e71 (matches prepared). Model version scripts on merged main: asIs → sites=71 files=11 / c1d830cba78b80158d77704985cb831e3d9f09b5b1958a429bd88983387881ef (was 32f67af7… on 5b25a6d2), toBe → de41b840f532a94c404058c587a3915cbdb72e71. Observation cache (lastObservedVersion) not touched — next detection cycle owns it. No rollback needed; a rollback would be a normal revert PR of 8ceb4297."
+            }
+          ]
         }
       }
     ]
