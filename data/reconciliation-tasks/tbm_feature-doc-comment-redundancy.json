@@ -3815,6 +3815,46 @@
           "reason": "신선도: PR #102 OPEN · head `a79be76` 기록과 일치 · mergeable=true/clean · CI 9건 전건 success(`test (cargo)`·`test (kind e2e)` 포함, 08:21Z 완료) · `review/data-format` success. 시도 1 거부 사유는 해소됐다(head ledger 「증분 밖에서 진짜로 남은 일은」 1벌, 빈 줄 24==base 24, executionGuide §1 헝크 B 1벌+경고). index.css 헝크는 주석 9줄 삭제뿐이라 gap(5행 → 제거 4·유지 1)은 계획대로 닫히고 롤백(revert PR)·운영 영향 0도 유효하다. 그러나 **베이스가 움직였다**: main tip 이 `f24bb33` → `3d147d6`(08:29:06Z, 자매 task tbm_feature-doc-mockup-render/rct_20260921-0002 의 슬라이스 ⑪ 머지)이고, 그 커밋이 `frontend/src/AnalysisProgress.tsx`(원장 5행 「재분석 diff 축」 범위)에 `//` 주석 2줄을 더했다. 실측(지침 fp.sh): main `lines=2345`/`286e346d…`, PR 시험 병합 트리 `lines=2341 files=108`/`7637d0d7…`(차분 −4 는 성립, 10행 81/`af9fbb9d…` 도 성립). 그런데 PR 의 원장 합계 문단은 「전역 lines=2339 · 판정 범위 2,097 · 미판정 증분 25행 · 유입 한 건 #99 · 242 == 2,339 − 2,097」을 병합 후 트리 기준이라고 단정해 적고 있어, 지금 머지하면 그 문장이 **머지 시점에 이미 거짓**(실측 2341 · 2,099 · 27 = #99 25 + 3d147d6 2)이 된다. 계획의 완료 기준 ⑷·seq 6(「원장 합계 문단이 머지 시점 트리의 실측값과 일치」)이 불성립이고, 지침 §0.2 는 main 이 움직여도 CLEAN 이면 seq 2 를 건너뛰고 곧장 비가역 머지(seq 3)로 가므로 실행자는 계획대로 하면 머지 뒤 seq 6 에서 `failed` 로 닫게 된다. 위험도는 낮지만(주석·문서 전용) 원장 자체에 낡은 단정을 실어 머지하는 것은 시도 1 을 거부한 것과 같은 결함이라 그대로 실행 허가할 수 없다.",
           "comment": "고칠 것 셋, 코드(index.css −9)·패스 문서·판정(제거 4·유지 1)·롤백은 그대로 둔다. ⑴ PR #102 를 현재 main `3d147d6` 위로 리베이스(또는 amend)하고 원장 합계 문단(헝크 A)·「다음 무인 패스」 문단(헝크 B)의 숫자를 fp.sh 실측으로 다시 쓴다 — 시험 병합 트리 기준 전역 `lines=2341 files=108`/`7637d0d7e8e7c15989de79d9114ba3656c6e44adbd62c73e70c1ad2281c75ede`, 판정 범위 2,099(= 2,341 − 242), 판정 완료 2,072, 미판정 증분 27 (#99 25 + `3d147d6` 슬라이스 ⑪이 5행 `frontend/src/AnalysisProgress.tsx` 에 더한 2 — 감지가 새 task 를 열 것이므로 소관은 「감지 대기」로 적는다), 후보 풀 27, 「242 == 2,341 − 2,099」. 행 열의 합 2,083 · 10행 81/`af9fbb9d…` 는 3d147d6 의 영향이 없어 그대로. 문장 1벌·빈 줄 수 규칙(grep -c)은 지금처럼 유지. ⑵ steps/executionGuide 를 **베이스 이동에 일반적으로** 견디게 고친다: seq 1 에서 main tip 이 기록된 base 와 다르면 DIRTY 여부와 무관하게 시험 병합 트리에서 fp.sh 전역 지문을 재측정하고, 원장 합계 문단의 「전역 lines=…」와 다르면 머지 **전에** 헝크 A·B 숫자를 실측으로 다시 써서 push·CI 재확인 뒤에만 seq 3 으로 간다(CLEAN 이라도 건너뛰지 않는다). seq 4·6 의 기대값도 절대값 대신 「머지 직전 main 실측 − 4」·「실측 − 242」 같은 차분식으로 적고, 절대값은 참고로만 둔다 — 같은 레포에 자매 task 실행자(mockup-render, 현재 executing)가 계속 main 을 움직이고 있어 고정 수치는 다시 낡는다. ⑶ 기록의 시각을 실측으로: `plan.plannedAt`·`preparation.preparedAt` 09:05:00Z 와 notes 의 「CI(a79be76, 09:1xZ)」는 실제(head 커밋 08:15:31Z, CI 완료 08:15~08:21Z)보다 미래다 — 다음 판정이 신선도를 시각으로 대조하므로 실제 시각으로 적는다. 이 세 가지를 반영해 `planned` 로 넘기면 승인 가능하다. 참고: 이번이 이 시도 계열의 연속 2회째 거부다 — 3회째 거부면 cancelled 로 닫힌다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**재계획(시도 3, 08:34Z 거부 사유 반영)**: 코드(`index.css` −9)·패스 문서·판정(제거 4·유지 1)·롤백은 그대로이고 고친 것은 리뷰가 지목한 셋뿐 — ⑴ PR #102 를 현재 main `3d147d6`(자매 mockup-render 슬라이스 ⑪, 08:29Z — `frontend/src/AnalysisProgress.tsx` 에 `//` 주석 +2) 위로 리베이스(파일 겹침 0 · 충돌 0)하고 원장 합계 문단(헝크 A)·「다음 무인 패스」 문단(헝크 B)의 숫자를 fp.sh 실측으로 다시 썼다: 전역 `lines=2341 files=108`/`7637d0d7…`(main 2345 − 4) · 판정 범위 2,099(= 2,341 − 242) · 판정 완료 2,072 · 미판정 증분 27(#99 25 → `rct_20260921-0003` · `3d147d6` 2 → 감지 대기) · 후보 풀 27 · 「242 == 2,341 − 2,099」; 행 열의 합 2,083 · 10행 81/`af9fbb9d…` · 문장 1벌 · 빈 줄 24 == base 24 는 불변. head `a79be76` → `091ecbf`(rebase + amend, `--force-with-lease=<ref>:<sha>`). ⑵ steps·executionGuide 를 **베이스 이동에 일반적으로** 견디게 고쳤다 — seq 1 에서 main tip 이 기록된 base 와 다르면 DIRTY 여부와 무관하게 시험 병합 트리에서 전역 지문을 재측정하고, 원장의 「전역 lines=…」와 다르면 머지 **전에** 차분 규칙(판정 범위 = 실측 − 242 · 판정 완료 = main 원장 값 + 1 · 순 제거 누적 = main 값 + 4 · 미판정 증분 = 판정 범위 − 판정 완료)으로 헝크 A·B 를 다시 써 push·CI 재확인 뒤에만 머지한다(CLEAN 이라도 건너뛰지 않는다). seq 4·6 의 기대값은 「머지 직전 main 실측 − 4」·「실측 − 242」 같은 차분식이고 절대값은 참고. 같은 레포에서 자매 실행자(mockup-render, executing)와 자매 PR #103(`rct_20260921-0003`, 원장 헝크 A·B 를 함께 고친다)이 main 을 계속 움직이므로 고정 수치는 다시 낡는다. ⑶ `plannedAt`·`preparedAt`·notes 의 시각을 실측(커밋·CI 완료 시각)으로 적었다. 이번이 이 시도 계열의 3회째 — 다시 거부되면 cancelled. --- 이하 시도 1 요약 그대로 --- #91(`3567755`)이 원장 10행(프런트 데이터·셸 축 8파일) 범위의 `frontend/src/index.css` 반응형 블록에 들여온 주석 5행(지문 기준 · 물리 9줄)을 「증분 재판정 ②」 한 패스로 닫는다 — 새 행·새 패스 파일 없이 10행의 결과 칸과 원래 패스 파일(`2026-09-20-frontend-shell-axis.md`)에 절을 더하는 원장 규약 그대로. 판정: 제거 4 · 유지 1. 제거 4행은 전부 **같은 커밋이 신설한 `docs/design-system.md` §3.4·§4.7·§5.4 의 축자 재진술**(② — 블록 머리는 절 제목 ⑤ 겸)이거나 바로 아래 선택자·선언의 재진술(①)이라 갈릴 여지가 없다. 유지 1행(`:326`, `.screen > .tabbar { animation: none }` 위 — `rise` 의 `transform` 이 탭바의 `translateX(-50%)` 를 덮어쓴다)은 감지가 「PR 본문에도 없다」고 넘겼지만 **PR #91 본문 「기존 버그 수정」 절에 있음을 실측했다(③)**; 그래도 ③ 은 정책이 「작업 흔적의 자리」로 이름 붙인 경로이고 이 문장은 경위가 아니라 CSS 한 줄을 지키는 「실패 모드의 함정」(같은 파일의 기존 유지 11번 `.esrc` 와 같은 형)이라 「애매하면 남긴다」로 보존하고, 뒤집으려면 정책 개정이 선행이라고 패스 문서에 못박았다. 대안 「블록 머리를 1줄 포인터(`/* Responsive layout — design-system §3.4 */`)로 남기기」는 이 패스가 같은 파일에서 절 제목 33행을 지운 선례와 §5.4 가 이미 이 자리를 역참조한다는 사실로 기각했고, 「전건 유지 + 원장 계수만 갱신」은 정의가 이름으로 든 제거 유형을 판정 완료로 등재하는 셈이라 택하지 않았다. **완료 기준(이 시도의 범위)**: ⑴ PR #102 가 main 에 머지돼 부모 대비 전역 as-is 순 제거 **4행**(`lines` 2349→2345 형태 — 절대값은 자매 #100 착지로 움직이므로 차분으로 판정) ⑵ 원장 10행의 줄 수·지문이 병합 트리 실측 **81 / `af9fbb9d…`** 로 재현(80 / `641e9457…` 로 돌아가지 않는다 — 유지 1행) ⑶ 비주석 코드 무접촉(스트립 잔여 바이트 동일 · 빌드 CSS 산출물 sha256 동일) ⑷ 원장 합계 문단이 머지 시점 트리의 실측값(자매 #100 미착지면 판정 완료 2,069 · 미판정 증분 34, 착지 뒤면 2,072 · 25)과 일치. **범위 밖**: #93 의 Rust 9행(`rct_20260921-0001` / PR #100) · #99 의 e2e·프런트 25행(`rct_20260921-0003`) · 마이그레이션 축(PR #98, 사람 게이트) · 「③ 만으로 복원되는 함정」의 정책 판단(개정 사안).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "선결 확인: `gh pr view 102 -R dlddu/feature-doc --json state,mergeable,mergeStateStatus,headRefOid,baseRefName` — OPEN · head 가 기록(`091ecbf`, 또는 seq 2 를 거쳤다면 그 새 head)과 일치 · CI(`test (cargo)` · `test (kind e2e)` · `ci-gate` · 문서 게이트 3워크플로 · `데이터 저장 형식 변경 판정` · `review/data-format`) 전건 success. 그리고 `git fetch origin main && git rev-parse --short origin/main` 을 기록된 base **`3d147d6`** 과 비교한다 — **다르면 mergeStateStatus 가 CLEAN 이라도 seq 2 로 간다**(DIRTY 여부와 무관).",
+              "expectedOutcome": "CI 전건 success · `mergeable=MERGEABLE`. main tip == `3d147d6` 이면 seq 2 를 건너뛰고 seq 3. main 이 움직였으면 seq 2."
+            },
+            {
+              "seq": 2,
+              "action": "(main tip ≠ 기록된 base 인 경우 — CLEAN 이라도) 지침 §1 대로: 브랜치를 `origin/main` 위로 리베이스(충돌은 `ledger.md` 헝크 A·B 안에서만 · add/add 양쪽 보존 · `checkout --ours/--theirs` 금지 · 그 밖은 정지) → 리베이스된 트리에서 지침 `fp.sh` 로 전역 지문을 재측정 → 원장 합계 문단의 「전역 `lines=…`」 와 **다르면** 헝크 A·B 의 숫자를 차분 규칙(§1 표)으로 다시 쓰고 자기 일관성 스크립트(행 합 · 문장 1벌 · 빈 줄 == base)와 문서 게이트 3종 rc=0 을 확인 → `--force-with-lease=<ref>:<sha>` 로 push → CI 전건 success 재확인. 실측이 원장과 같으면(main 이 비주석 파일만 움직였고 원장 무충돌) 리베이스 push 없이 seq 3 으로 가도 된다.",
+              "expectedOutcome": "PR #102 head 가 새 sha · base == 현재 main tip · 원장의 「전역 lines=…」 == 시험 병합 트리 실측 · CI 재실행 전건 success. diff 는 여전히 `index.css −9` + 원장 + 패스 문서뿐(fork point 기준 `index.css`·패스 문서 바이트 불변)."
+            },
+            {
+              "seq": 3,
+              "action": "머지 직전 main 전역 지문을 한 번 더 실측해 적어 둔다(`fp.sh <checkout> origin/main` → `M_lines`). 그 뒤 PR #102 를 squash 머지한다(`gh pr merge 102 -R dlddu/feature-doc --squash --delete-branch`).",
+              "expectedOutcome": "main 이 한 커밋 전진. 비가역 지점(되돌림은 revert PR). `M_lines` 가 기록돼 있다(현재 기준 2345 — 참고값)."
+            },
+            {
+              "seq": 4,
+              "action": "머지된 main 을 체크아웃해 모델 `asIs.versionScript`(= `fp.sh` 전역 모드)와 원장 10행 8파일 범위 지문(row 모드)을 재계산한다.",
+              "expectedOutcome": "전역 `lines` == **`M_lines` − 4**(차분식 — 현재 기준 2341/`7637d0d7…`, 참고값) · `files=108`. 10행 **`lines=81 files=7` / nl `af9fbb9d…`**(3d147d6·#99 의 영향 없음 — 절대값 유효). 80/`641e9457…` 로 돌아가면 실패."
+            },
+            {
+              "seq": 5,
+              "action": "비주석 코드 무접촉 확인: `git show <merge>^:frontend/src/index.css` 와 머지 후 파일에서 블록 주석·빈 줄을 걷어 낸 잔여를 비교하고, `frontend/` 에서 `npm ci && npm run build` 뒤 `dist/assets/*.css` sha256 을 부모 빌드와 대조한다.",
+              "expectedOutcome": "스트립 잔여 바이트 동일(17,220자) · CSS 산출물 `index-BmaRMcZ8.css` sha256 `b8d0f4e5…` 부모와 동일."
+            },
+            {
+              "seq": 6,
+              "action": "원장 자기 일관성을 **차분식**으로 대조한다: 표 2열 합(스크립트) == 「행 열의 합」 문면 · 「판정 범위의 현재 합계」 == seq 4 실측 전역 − 242 · 「미판정 증분」 == 판정 범위 − 「판정 완료」 · 「전역 `lines=…`」 문면 == seq 4 실측 · 「242 == 실측 − 판정 범위」. 문장 「증분 밖에서 진짜로 남은 일은」 `grep -c` == 1. 문서 게이트 3종(`check-mockup-render` · `check-journey-mockup` · `check-scenario-e2e`) rc=0.",
+              "expectedOutcome": "전부 성립(현재 기준 참고값: 행 합 2,083 · 판정 범위 2,099 · 판정 완료 2,072 · 증분 27 · 전역 2341). 게이트 rc=0."
+            }
+          ],
+          "plannedAt": "2026-09-21T08:44:00Z"
+        }
       }
     ]
   },
