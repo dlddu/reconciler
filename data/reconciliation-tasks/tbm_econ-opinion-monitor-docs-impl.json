@@ -5957,7 +5957,7 @@
   {
     "id": "rct_20260921-0004",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-21T09:17:51Z",
@@ -6060,6 +6060,44 @@
               "startedAt": "2026-09-21T10:03:30Z",
               "finishedAt": "2026-09-21T10:11:50Z",
               "log": "[6-1 머지] `gh pr merge 94 --squash` 단독 호출 → MERGED at 10:03:37Z, M=`2fede441cf174a4a78ffa164e54452a6005743e9`(부모 da51edd7 단일). `ls-remote main` tip == M. 트리 동일: `M^{tree}` == `cef811e^{tree}` == 36fb172b(자매 착지 없음). [6-2 이미지 핀·롤아웃] main push `Image` run 35586679045(10:03:40Z 시작) publish(serving) · publish(batch) · pin deploy images 3잡 전건 success, 10:05:04Z 완료. 지침 문면(「main tip 이 pin 커밋으로 전진」)과 달리 image.yml 의 실제 산출은 **`deploy` 브랜치**(main@M + pin 1커밋)로의 force-push 다 — `deploy` tip `374d7181`(부모 M, `Source-Commit: M` 트레일러, `deploy/base/deployment.yaml` image `:2fede441…`). main tip 은 M 그대로(as-is `deploy:` 성분 불변, 정상). Flux GitRepository `econ-monitor`(ref deploy) artifact revision `deploy@sha1:374d7181` 10:06:11Z 저장 → Kustomization `econ-monitor-app` 적용 → Deployment `econ-serving` revision 67 · `spec.template.spec.containers[0].image` = `ghcr.io/dlddu/economic-opinion-trend-monitor:2fede441cf174a4a78ffa164e54452a6005743e9`(10:06:12Z progressed), replicas 0(sablier scale-to-zero, 정상). [6-3 기능 실측] `GET /api/reprocess?range=7d&axis=KR` 를 Service proxy 로 시도 → MCP 승인 게이트 502(직전 task 와 동일한 사람 게이트) → 지침대로 **구조 수렴으로 대체 판정**: M 클론에서 `grep -c 'stub:' go/internal/handlers/handlers.go` = 0(handlers/ 전체 0) · `grep -c reprocessTriggerNote go/internal/handlers/reprocess.go` = 2 · `grep -c '\"reprocess\"' web/src/App.tsx` = 1(`BUILT` Set 에 포함). 실응답 실측(scope.total · target_version · compare.available=false)은 사람 게이트로 남긴다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "contracts:5a1ee3bb47ac5199a1f05129fcff8dbf783a4646 python:b96e1e1b2de2bacc7be9658268d42901d935321c go:eb056b6423f86a462dacd2a8245a297ac439dad3 web:ecc7783c33dc560f01d9394e4baf07f53f3e4647 deploy:f6339c5ba987f6c065e178b45e5046057745a6d0",
+          "verifiedAt": "2026-09-21T10:13:30Z",
+          "checks": [
+            {
+              "name": "① main handlers/ 에 stub 0 + /api/reprocess 실계약",
+              "status": "passed",
+              "detail": "M=2fede441 클론: `grep -rc 'stub:' go/internal/handlers/` 전체 0 · 머리 주석 「Only reprocess still returns…」 0건(정정됨) · `reprocess.go` 응답 키 `scope`·`target_version`·`versions`·`compare`·`trigger` 각 1건, `single-version` 사유 3건 · `handlers.go:43` `GET /api/reprocess` → `h.reprocess`(reprocess.go). `reprocessTriggerNote` 2건."
+            },
+            {
+              "name": "② App.tsx BUILT ∋ \"reprocess\" (Placeholder 렌더 0)",
+              "status": "passed",
+              "detail": "`web/src/App.tsx:14` `const BUILT = new Set([\"dash\",\"compare\",\"trend\",\"sentiment\",\"fairness\",\"trace\",\"reprocess\"])` — `\"reprocess\"` 1건. SCREENS 7종 전부 BUILT 이므로 `:28` Placeholder 필터 결과 0."
+            },
+            {
+              "name": "③ doc-tracker 잔여 화면 행 → 재처리 실행 트리거 행 교체",
+              "status": "passed",
+              "detail": "`docs/econ-opinion-monitor-doc-tracker/2026-09.md`: `grep -c '재처리 실행 트리거 (슬라이스 10 후반부)'` = 1 · `grep -c '\\*\\*화면\\*\\*: 실화면은'` = 0."
+            },
+            {
+              "name": "④ 문서 게이트 3종 (M 클린 트리)",
+              "status": "passed",
+              "detail": "`check-mockup-render.py .` rc=0 — `[R3] in-scope 27종(compare ∪ dash ∪ fairness ∪ reprocess ∪ sentiment ∪ trace ∪ trend) — 이름 대조 성립 26 · 등재 예외 1 · 구현 전용 1`, R4/R5 0. `check-journey-mockup.py .` PASS(여정 6 · 미이관 0 · 링크 139). `tests/e2e/check_scenario_mapping.py` OK(규칙 1~6 위반 0)."
+            },
+            {
+              "name": "⑤ CI required success → squash 머지 → pin deploy images success → as-is go·web 지문 이동",
+              "status": "passed",
+              "detail": "PR head `Checks` run 35585363293 `required` success → M=2fede441 (10:03:37Z) → main push `Image` run 35586679045 publish×2 + pin 전건 success(10:05:04Z) → `deploy` 브랜치 tip 374d7181(image `:2fede441…`) → Flux Deployment `econ-serving` rev 67 image `:2fede441…`(10:06:12Z). as-is 이동: go `30dd9abe`→`eb056b64`, web `4a92f8c7`→`ecc7783c`; contracts·python·deploy 불변(pin 은 deploy 브랜치에만 있으므로 main 의 `deploy/` 트리는 그대로 — 정상). to-be `HEAD:docs` `7f1a78da`(lastObserved 09:57:31Z) → `1dfddd0a`(tracker 2파일). 이 모델·mockup-render·journey-mockup·comment-redundancy 자매의 재감지 입력 성립."
+            },
+            {
+              "name": "(정보) 프로덕션 /api/reprocess 실응답 실측",
+              "status": "passed",
+              "detail": "Service proxy GET 은 MCP 승인 게이트(502)로 이번 fire 에서 실측 불가 — 지침 6-3 의 대체 규칙(구조 수렴)으로 판정했고 ①의 grep 값이 그 근거. 실응답(`scope.total` 정수 · `target_version` · `compare.available=false`/`reason=single-version` · `trigger.available=false`) 확인은 사람 게이트로 남는다(범위 판정에는 불산입). 잔여(범위 밖, 재감지 입력): 슬라이스 10 후반부 실행 트리거 행 · `JRN-ingestion-recovery` 읽기 표면 · `LocalFsStore.write_records` 원자성 · README `:166` · mockup 인덱스 `STP-backfill` 낡은 문장(자매 소유)."
             }
           ]
         }
