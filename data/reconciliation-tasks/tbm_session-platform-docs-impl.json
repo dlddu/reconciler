@@ -6849,6 +6849,46 @@
           "reason": "PR #149 에 계획 범위 밖의 파일이 섞여 있다. 신선도 실측(2026-09-21T08:20Z): PR open · mergeable=true · mergeable_state=clean · base=main tip `200230f`(베이스 이동 없음) · head `2e60442` · check-runs 14 = success 13 + skipped 1(`pin deployment images (main only)`) · #146 closed(unmerged). 그러나 `pulls/149/files` 는 **2파일**이다 — `docs/doc-tracker/2026-09.md`(+2/−1, 계획대로 59행 교체 + 이력 행 1건)와 레포 루트의 **`old_line59.txt`(+1, 신규)** — 후자는 59행 원문 한 줄을 담은 planner 의 작업용 스크래치 파일이 커밋에 딸려 들어간 것이다. 이는 plan 완료 기준 ⑷(「변경 파일 `docs/doc-tracker/2026-09.md` 단 하나」)·preparation.notes(「한 파일 · 두 훅」·numstat `2 1`)와 어긋나고, executionGuide §0.3 선결(`gh pr diff 149 --name-only` 가 그 파일 하나)에서 executor 가 어차피 멈춘다. 판정 내용(사본 제거 + 정본 포인터)·위험도 low·롤백(revert 1건)·검증표 V1~V9 는 타당하다 — 막는 것은 gap 과 무관한 파일 1건뿐이다.",
           "comment": "재계획 시 고칠 것:\n1. **`old_line59.txt` 를 브랜치에서 제거할 것.** 브랜치 `reconcile/rct_20260914-0002-session-platform-docs-impl-r2` 에서 그 파일을 빼고(커밋 amend 후 `--force-with-lease=<ref>:<현재 원격 SHA>` 명시형 push, 또는 삭제 커밋 1건) `pulls/149/files` 가 `docs/doc-tracker/2026-09.md` **하나**, `git diff --numstat main` 이 `2 1` 임을 재확인할 것. plan step 4 의 무변경 단언(`git diff --name-only main` = 1파일)이 실제로 통과했는지 push 전에 다시 돌릴 것 — 이번엔 통과했다고 적혔지만 PR 에는 2파일이 올라갔다.\n2. **head 가 바뀌므로 executionGuide §0.3 의 고정 head SHA(`2e60442…`)와 preparation.notes 의 CI 실측(런 id·head)을 새 head 값으로 갱신하고 CI(14 check)를 다시 실측할 것.** 새 PR 을 만들 필요는 없다 — #149 를 그대로 고쳐 쓰면 된다(#146 승계 코멘트·closed 처리도 유효).\n3. (사소) attempt 의 `preparedAt`(08:22Z)·notes 의 「CI 실측 08:3xZ」가 레코드 커밋 시각(08:16:49Z)보다 미래다 — 시각은 실제 관측 시각으로 적을 것.\n4. plan.summary·steps·executionGuide 본문(판정·검증표·리베이스 규칙·롤백)은 그대로 살려도 된다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**3차 시도 — 2차 시도의 판정·문면·PR 을 그대로 쓰고, 거부 사유 한 가지(스크래치 파일 `old_line59.txt` 가 PR #149 에 딸려 들어감)만 고친다.** 08:20Z 리뷰는 판정 내용·위험도·롤백·검증표 V1~V9 를 전부 타당하다고 적었고 막는 것은 gap 과 무관한 파일 1건뿐이었다. 새 PR 을 만들지 않고 #149 를 그대로 고쳐 쓴다(리뷰 코멘트 2). 재계획 시 실측(2026-09-21T08:24Z): main tip 여전히 `200230f`(베이스 이동 없음) · 59행 사본 문장 **1건 그대로**(gap 살아 있음) · #146 closed. 고친 방법: 브랜치 `reconcile/rct_20260914-0002-session-platform-docs-impl-r2` 의 단일 커밋 `2e60442` 에서 `git rm old_line59.txt` 후 `--amend --no-edit` → 새 head **`eb7a9c4a9f430594dbb9b336c546f124d376ad74`**, `--force-with-lease=<ref>:2e60442…` 명시형 push(08:25:30Z). push 뒤 `pulls/149/files` = `docs/doc-tracker/2026-09.md` **하나**(+2/−1), `git diff --numstat origin/main` = `2 1` 한 줄. 로컬 게이트 4종은 브랜치·main 양쪽 rc=0 · 출력 sha256 동일(재실행). 리뷰 코멘트 3(시각): 이 시도의 시각은 전부 실제 관측 시각(UTC)으로 적는다.\n\n**완료 기준(이 시도의 범위)** 은 2차와 동일하되 ⑷ 를 「`pulls/149/files` 가 `docs/doc-tracker/2026-09.md` 단 하나」로 실측 조건으로 못박는다. 이하는 2차 시도의 summary 원문(판정·근거·충돌면·범위 밖)이다.\n\n---\n\n직전 시도(#146)의 판정 내용은 그대로 살리고 **준비물의 신선도만 다시 세운다**: `docs/doc-tracker.md`가 main에서 삭제돼(#148, 2026-09-19) `docs/doc-tracker/`(`index.md` + 월별)로 갈렸으므로, 같은 두 훅을 **실측한 새 주소** — ⑴ `docs/doc-tracker/2026-09.md:59`(§「위험 진단」 「구현 사슬 부채 — `approval-gated`의 도구 표면과 프로덕션 활성화 (AC-F3·F5)」 머리 문장) ⑵ 같은 파일 §「이번 달 변경 이력」 표 꼬리(현재 마지막 행 `2026-09-19`, 125행) — 로 옮겨 **새 브랜치·새 PR**로 다시 스테이징한다(리뷰 코멘트 1·2·3 그대로: 현 브랜치는 버린다 · 차등 시험 병합 재측정 · 새 산문은 옛 경로를 인용하지 않는다).\n\n**gap은 살아 있다(2026-09-21T08:0xZ 재실측, main `200230f`)**: 59행에 「세션 MCP는 이제 외부 도구 `web_fetch_get` 하나를 내고 … **APPROVED일 때만** 실제 외부 GET을 한다」가 **그대로 1건** 있고(월별 전환 #148은 본문을 「그대로 옮긴」 것이라 문장이 바이트 동일), 표면은 `session_mcp_tools.go::toolDefinitions`가 **3종**(`web_fetch_get`·`git_clone`·`ping`)을 내며 `callTool`은 `ping`을 `gateway.await` **이전에** 상수(`pingReply`)로 답하고 `git_clone`은 `callGitClone`→`gateway.await`(`session_mcp_git.go`)를 지난다. `session-mcp-tool-surface.md`는 §「지금 있는 것 (3개)」·§「다음에 구현할 도구 (2)」 — 등재 2건이 남아 있어 오늘의 값으로 덮으면 다음 착지에서 또 거짓이 된다는 직전 판정의 전제도 불변이다. 이 문서를 읽는 CI 게이트는 여전히 **0건**(`git grep -l doc-tracker -- .github scripts Makefile` = 0).\n\n**왜 갱신이 아니라 사본 제거인가**는 직전 시도와 같다 — 같은 절의 2026-09-07 선례(「사본을 갱신하지 않고 **없앴다**」)와 2026-09-12 (3) 행(「처방은 갱신이 아니라 사본 제거다」)이 월 파일에 그대로 있고, 리뷰도 「판정 방향 자체에는 반대하지 않는다」고 적었다. 대체 문면은 #146의 것을 **그대로 옮기되** 날짜 표기(「2026-09-14 정정」→「2026-09-21 정정」)만 바꾸고, 새 이력 행은 `2026-09-21`로 쓰며 「직전 PR #146이 옛 경로 위에 서 있어 착지하지 못했다」를 이력 사실로 함께 적는다.\n\n**충돌면(실측)**: 열린 PR 중 tracker를 건드리는 #146·#144·#127·#106은 전부 **삭제된 옛 경로 `docs/doc-tracker.md`**를 고치므로 main 대비 delete/modify 충돌이 **나와 무관하게** 이미 확정돼 있고, `docs/doc-tracker/2026-09.md`를 건드리는 열린 PR은 **0건**이다 — 내 변경은 어느 PR의 충돌도 넓히지 않는다(준비 단계에서 차등 시험 병합으로 재확인). 자매 모델 `tbm_session-platform-comment-redundancy`는 `ledger.md`만 움직이고 이 슬라이스는 코드 주석 0줄이라 원장이 안 움직인다.\n\n**완료 기준(이 시도의 범위)**: ⑴ `2026-09.md:59` 머리 문장에 도구 **목록·개수 사본 0**, 자리는 정본 포인터(`session-mcp-tool-surface.md` §「지금 있는 것」) + 성질 진술 ⑵ 같은 문장의 「실제 외부 GET」이 `git_clone`·`ping`까지 참인 표현(AC-F6 문면)으로 정정 ⑶ §「이번 달 변경 이력」 표 끝에 `2026-09-21` 행 1건 추가 ⑷ 변경 파일 **`docs/doc-tracker/2026-09.md` 단 하나**, 코드·집계·`index.md`·`index.html` 무변경 ⑸ 새 PR이 `mergeable_state=clean`이고 CI 전 잡 success ⑹ 옛 PR #146은 새 PR을 가리키는 코멘트와 함께 닫힘(브랜치는 남긴다).\n\n**범위 밖(다른 소유자)**: ① 등재 2·3 착지와 AC-F6 자격 증명 배치 개정 — `tbm_session-platform-mcp-tool-roadmap` `rct_20260914-0001`(#144, 같은 delete/modify 이관 필요) ② AC-F5 후반 — `rct_20260912-0007`(#127) ③ `session-mcp-tool-surface.md` — 이미 정합 ④ `ledger.md` — 자매 comment-redundancy ⑤ `index.md`의 월 표 — 집계 불변이라 건드릴 것이 없다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 토큰(`contents:write`·`pull_requests:write`)으로 `dlddu/session-platform` 을 clone 하고 PR #149 의 브랜치 `reconcile/rct_20260914-0002-session-platform-docs-impl-r2`(head `2e60442`)를 받는다. main tip 을 기록하고 브랜치가 그 위에 단일 커밋으로 서 있는지 확인한다.",
+              "expectedOutcome": "main tip `200230f`, 브랜치 = main + 1 커밋, `git diff --name-only origin/main` 이 `docs/doc-tracker/2026-09.md` + `old_line59.txt` 두 파일(거부 사유 재현)."
+            },
+            {
+              "seq": 2,
+              "action": "`git rm old_line59.txt` → `git commit --amend --no-edit`(커밋 메시지·문서 변경 바이트 불변). 무변경 단언을 다시 돌린다: `git diff --name-only origin/main` = 1파일, `git diff --numstat origin/main` = `2 1`, `git status --short` 공집합.",
+              "expectedOutcome": "새 head 1개(부모 = main tip), 문서 diff 는 2차 시도와 동일(59행 교체 ±1 · 이력 행 +1)."
+            },
+            {
+              "seq": 3,
+              "action": "gap 생존 재확인: `git grep -c '외부 도구 `web_fetch_get` 하나를 내고' origin/main -- docs/doc-tracker/2026-09.md` 와 main 59행 grep.",
+              "expectedOutcome": "각각 1 — 아무도 먼저 고치지 않았다."
+            },
+            {
+              "seq": 4,
+              "action": "로컬 게이트 4종(`check-fidelity-allowlist.py` · `check-render-fidelity.py` · `check_comment_policy.py` · `e2e/check-scenario-mapping.sh`)을 브랜치와 pristine main 에서 돌려 rc 와 출력 sha256 을 비교하고, `git grep -l doc-tracker -- .github scripts Makefile` = 0 을 재확인한다.",
+              "expectedOutcome": "네 게이트 rc=0, 출력 지문 양쪽 동일, tracker 를 읽는 게이트 0건."
+            },
+            {
+              "seq": 5,
+              "action": "`git ls-remote` 로 원격 브랜치 tip(`2e60442…`)을 재고 `git push --force-with-lease=refs/heads/<branch>:<그 sha> HEAD:refs/heads/<branch>` 명시형으로 push 한다(인라인 토큰 URL — tracking ref 가 없어 맨 `--force-with-lease` 는 stale info 로 거절된다). 원격이 이미 움직였으면 멈춘다.",
+              "expectedOutcome": "`ls-remote` 가 새 head 를 가리키고, `pulls/149/files` 가 `docs/doc-tracker/2026-09.md` 하나(+2/−1)."
+            },
+            {
+              "seq": 6,
+              "action": "PR #149 의 CI 를 재실측한다(`gh pr checks 149` / `/commits/<새 head>/check-runs`). 실패가 있으면 원인을 밝혀 고치고 재측정. head SHA · 잡 목록 · 런 id · 관측 시각(UTC)을 `preparation.notes` 에 축자로 적고, `executionGuide` §0.3 의 고정 head SHA 를 새 값으로 갱신한다.",
+              "expectedOutcome": "required 체크 전부 success(`pin deployment images (main only)` skipped 정상), `mergeable_state=clean`, 지침·notes 의 head 가 실측값과 일치."
+            }
+          ],
+          "plannedAt": "2026-09-21T08:27:00Z"
+        }
       }
     ]
   },
