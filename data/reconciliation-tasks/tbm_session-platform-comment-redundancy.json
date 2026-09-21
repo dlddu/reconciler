@@ -3844,6 +3844,59 @@
           "reason": "준비물이 유효하지 않다 — PR #143 은 `mergeable=false`/`mergeable_state=dirty` 이고, 충돌 지점이 **원장 합계 마커**다. base `283ec0e8` 이후 main 이 6커밋 움직이며 `docs/comment-policy/ledger.md` 를 고쳤고, main 의 `판정-합계` 는 지금 **3127** 이다 — 계획이 기준선으로 삼은 **3054**(→ 3043 목표)에서 +73 움직였다. 완료 기준이 절대 숫자로 적혀 있어 그대로는 판정이 불가능하다.\nexecutionGuide 가 그 상황을 다루지 않는다는 것이 결정적이다 — 지침은 「실행은 PR #143 한 건을 **머지**하는 것이 전부」라고 적고 **리베이스 단계도 재측정 단계도 두지 않았다**. 사전 조건 4번(「이 PR 이 새로 더하는 충돌 파일은 없다」)은 지금 거짓이다. 실행자가 dirty 를 만나면 지침에 절차가 없어 즉시 막힌다.\n변경 자체는 저위험이 맞다(주석 11줄 제거 + 원장 재등재, 코드·매니페스트·클러스터 무접촉, 되돌림은 revert 1회). CI 도 head 기준 3건 초록이다. 하지만 그 초록은 옛 트리의 런이고, 합계 마커가 움직인 지금 이 PR 의 원장 행과 마커는 **다시 계산돼야** 한다 — 판정 숫자를 다시 세는 일은 실행자가 지침 없이 임의로 할 일이 아니다.",
           "comment": "재계획 시 고칠 것:\n1. **executionGuide 에 리베이스 + 재측정 단계를 넣을 것.** 지금은 「머지 한 건이 전부」라 dirty 를 만나면 실행자가 멈춘다. `main` 을 리베이스하고 주석 게이트를 돌려 나온 값을 원장 마커에 적는 절차를 순서표에 명시할 것.\n2. **합계 절대값을 완료 기준에서 뺄 것.** main 의 `판정-합계` 는 이미 3054 → **3127** 이다. 자매 PR(#142·#145 등)이 같은 마커를 움직이므로 참값은 어느 한쪽의 절대값이 아니라 **base 대비 양쪽 증분의 합**이다. 완료 기준은 「합계 3043」이 아니라 「이 PR 이 **−11** 을 만든다 + 15차 행이 61→50 + 그 행 지문이 실측과 일치 + 게이트 rc=0」처럼 **증분·불변식**으로 쓸 것.\n3. **사전 조건 4번을 다시 실측할 것.** 「#142 가 아직 머지되지 않았는지」는 여전히 유효하지만(#142 도 open·dirty), 「이 PR 이 새로 더하는 충돌 파일은 없다」는 거짓이 됐다. 계획 시점의 열린 PR 목록(#106·#127·#130·#142·#144·#145·#146)을 `files` 로 다시 재고 겹침을 계산할 것.\n4. 판정 내용(②로 복원되는 11줄을 걷고 포인터만 남긴다) 자체에는 반대 근거를 찾지 못했다 — 선례(15차가 같은 e2e.md 행을 근거로 헤더를 걷은 것)와 일치한다. 위 셋만 고치면 승인 가능한 형태다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "2차 시도(직전 review_rejected). 판정 내용은 1차와 동일하게 유지한다 — 리뷰가 「판정(②로 복원되는 11줄을 걷고 포인터만 남긴다)에 반대 근거 없음, 아래 셋만 고치면 승인 가능」이라 적었고, gap 을 main(200230fd, 2026-09-21T08:04Z)에서 재실측하니 그대로다(헤더 문단 8줄·f3OriginBase doc 3줄 모두 현존, 원장 15차 행 61·d8468a7fdfc6, 합계 마커 3117). 고친 것 셋: ⑴ PR #143 을 main 위로 리베이스한 승계 PR #150 을 준비 단계에서 만들어 실행자에게 리베이스를 남기지 않는다(충돌은 ledger.md 합계 마커 한 헝크뿐, 3117−11=3106 으로 풀고 게이트로 확인) — #143 은 승계 코멘트 후 closed. ⑵ 완료 기준을 합계 절대값(3043)이 아니라 증분·불변식(이 PR 의 합계 마커 diff = −11 · 15차 행 50/25e339686c67 · 게이트 rc=0 · 포인터 잔존)으로 다시 쓴다 — 자매 PR 이 같은 마커를 움직여도 참인 기준. ⑶ 열린 PR 전부(#149·#144·#130·#127·#106)와 3지점 시험 병합으로 「이 PR 이 새로 더하는 충돌 파일 0」을 재실측했다(다섯 쌍 모두 main-vs-PR == 이 브랜치-vs-PR). 대안으로 「#143 브랜치를 force-push 로 갱신」도 있었으나 리뷰가 새 PR 번호를 preparation 에 적으라 했고 08:02Z 자매 시도(#146→#149)의 선례가 새 PR 승계라 같은 형을 따랐다. 가역성: 주석·문서만 바뀌므로 squash 커밋 revert 1회.\n\n【이 시도의 범위(완료 기준)】 PR #150 이 squash 머지되어 (1) 그 커밋의 ledger.md 합계 마커 diff 가 정확히 −11 이고(부모 값 무관), (2) 원장 15차 행이 `2026-09-14 | … | 50 | 25e339686c67 | **16차 범위 재재판정**` 이며, (3) 파일 헤더가 5줄(`// 검증 시나리오:` + AC 포인터 + §「남은 미검증 분기」)·f3OriginBase doc 이 2줄로 남고, (4) main 에서 scripts/check_comment_policy.py 가 rc=0 이면 성공.\n\n【범위 밖】 ⓐ 증분 나머지 29줄(15차 재판정의 유지 판정에 동의). ⓑ 모델 lastObservedVersion(3205/8e125c3d, 09-16)이 main(3221/b68d03cf)보다 낡은 것 — 감지가 09-19 부터 꺼져 있어(checkPolicy.enabled=false) 재감지는 사람이 켤 때 일어난다; 이 PR 이 만드는 지문 이동(3221→3210 · 6b22947f…)은 지침에 적어 둔다. ⓒ control-plane/test/shared_volume_test.go 미판정 잔여 — 열린 PR #127(docs-impl) 소유. ⓓ #127 의 ledger.md 충돌은 main 과의 기존 충돌이지 이 PR 의 산물이 아니다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-09-21T08:32:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "dlddu/session-platform 을 클론하고 main(200230fd)에서 gap 재실측 — 테스트 파일 헤더 문단(「The approved call now ends somewhere real」)·f3OriginBase doc 3줄의 현존, 원장 15차 행(61·d8468a7fdfc6)·합계 마커(3117), scripts/check_comment_policy.py rc=0 기준선.",
+              "expectedOutcome": "gap 현존 확인. 게이트 기준선: 판정 완료 3117줄 / 등재 15 · R5 스캔 19파일, 15차 행 61줄 d8468a7fdfc6."
+            },
+            {
+              "seq": 2,
+              "action": "PR #143 head(d5a483b2, base 283ec0e8)를 새 브랜치 reconcile/rct_20260914-0001-session-platform-comment-redundancy-r2 로 받아 origin/main 위로 rebase. 충돌 헝크는 ledger.md 합계 마커뿐이므로 main 값 − 11(3117→3106)로 해소. 코드·15차 행·패스 문서는 충돌 없이 그대로.",
+              "expectedOutcome": "리베이스 완료(단일 커밋 f5f17be). diff 4파일 +113/−14. 비-주석·비-공백 267줄이 main 과 바이트 동일."
+            },
+            {
+              "seq": 3,
+              "action": "게이트를 브랜치에서 재실측: python3 scripts/check_comment_policy.py · gofmt -l control-plane · go vet -tags=e2e ./test/ · ./scripts/e2e/check-scenario-mapping.sh · check-fidelity-allowlist.py · check-render-fidelity.py.",
+              "expectedOutcome": "전부 rc=0. 주석 게이트 「판정 완료 3106줄 / 등재 범위 15 · R5 스캔 20파일」, 15차 행 50줄 25e339686c67. 시나리오 매핑 37 = 1+3+33+0 (main 과 동일)."
+            },
+            {
+              "seq": 4,
+              "action": "열린 PR 전부(#149·#144·#130·#127·#106)에 대해 git merge-tree 3지점 시험 병합(main-vs-PR / 브랜치-vs-PR)으로 이 PR 이 새로 더하는 충돌 파일을 계산.",
+              "expectedOutcome": "다섯 쌍 모두 대조군 == 실험군 — 신규 충돌 파일 0. #149 는 양쪽 rc=0. #127 의 ledger.md 충돌은 main 과의 기존 충돌."
+            },
+            {
+              "seq": 5,
+              "action": "브랜치 push → PR #150 개설(base main, 본문에 task id·gap·변경·리베이스 내역·로컬 검증·증분형 완료 기준·머지 주의) → #143 에 승계 코멘트 후 close.",
+              "expectedOutcome": "PR #150 OPEN · MERGEABLE · author app/dlddu-k3s-homelab-k3s-mcp. CI(ci·e2e·docker) 런 기동. #143 CLOSED."
+            },
+            {
+              "seq": 6,
+              "action": "[실행 단계] PR #150 을 squash 머지한다(머지 직전 mergeStateStatus CLEAN 확인 · CI 전 잡 settled 확인).",
+              "expectedOutcome": "main 에 squash 커밋 1개. 후속 배포 핀 커밋이 붙어도 무관(이미지 내용 불변)."
+            },
+            {
+              "seq": 7,
+              "action": "[실행 단계] main 에서 완료 기준 4가지를 실측한다(지침 2-2).",
+              "expectedOutcome": "합계 마커 diff −11 · 15차 행 50/25e339686c67 · 헤더 5줄+doc 2줄 · 게이트 rc=0."
+            }
+          ]
+        },
+        "preparation": {
+          "prepared": true,
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20260914-0001-session-platform-comment-redundancy-r2",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/150",
+          "preparedAt": "2026-09-21T08:31:00Z",
+          "notes": "PR #143(base 283ec0e8, dirty)의 승계 — 같은 커밋을 main 200230fd 위로 리베이스한 단일 커밋 f5f17be(4파일 +113/−14: 테스트 주석 −11 · ledger.md 15차 행 61→50 + 합계 3117→3106 · 패스 문서 신설 106줄 · 09-13 패스 머리 포인터 3줄). #143 은 승계 코멘트 후 closed. 리베이스 충돌은 합계 마커 한 헝크뿐. 로컬 게이트 6종 전부 rc=0(주석 게이트 3106/15/R5 20파일, 15차 행 50·25e339686c67). 열린 PR 5건과 시험 병합: 신규 충돌 0. as-is 지문 main 3221/b68d03cf… → head 3210/6b22947f…, to-be tree f9239045… → 6cb8ae51…. 개설 시점 MERGEABLE/UNSTABLE(CI 진행 중: ci queued · e2e in_progress · docker in_progress) — planned 전이 전에 CI 결과를 재확인해 notes 에 덧붙인다."
+        }
       }
     ]
   },
