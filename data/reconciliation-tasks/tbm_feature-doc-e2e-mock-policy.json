@@ -1418,7 +1418,7 @@
   {
     "id": "rct_20260921-0001",
     "toBeModelId": "tbm_feature-doc-e2e-mock-policy",
-    "status": "assessing",
+    "status": "action_required",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-21T14:41:06Z",
@@ -1437,6 +1437,11 @@
       "toBe": "**관측 2026-09-21T14:45Z, `docs/e2e-mocking-policy.md` blob `b705be74`(부모·트리거·baseline 3지점 동일, to-be 무이동).**\n\n- 허용목록 절 「등재 집합 — 2026-09-19 증분 등재, **15쌍 / 12파일**」: 1~15행에 `doc_edit.rs` 없음. 문서 자신이 「코드 실재 지점 15쌍 == 등재 15쌍(미등재 0 · 고아 0)」 을 주장.\n- 「모킹으로 세는 것」 1번 배선 표: `FEATUREDOC_DOUBLE_LLM` | LLM 호출·고정 답 공급 | LLM-01 | **읽는 프로세스: 워커** — 그리고 「API Deployment에는 워커 더블을 켤 수단이 없고 그 역도 같아서…」. 2번 stub 분기: `stub_*` 현행 목록 = `stub_answer · stub_logic · stub_tests · stub_dependencies`(`stub_edit` 없음).\n- 「표기 규약」: 「주석만 있고 미등재이거나, 등재만 있고 코드에 없으면 drift다.」\n- 「차단 요인 원장」: 열린 행 0(마지막 해소 R1 2026-09-18). B1 지목 문맥: 자매 `rct_20260919-0003`(succeeded) 레코드 전문 grep — 이 모델·정책 문서·`stub_edit` 지목 **0건**(plan 은 `FEATUREDOC_DOUBLE_LLM=stub` 한 칸 추가만 언급, 등재 인계 없음). `docs/doc-tracker/2026-09.md` 의 #92 변경(+32/−…)도 모킹 정책 언급 0(sc03-01/02 매핑 행 2 + 목업↔구현 표 2행 + 이력).\n- 변동 이력 마지막 행 2026-09-19 `rct_20260919-0001`(#71 `dependencies.rs` 1쌍 사후 등재 — 「표기 주석은 규약대로 달았고 등재만 빠뜨렸다」) — 이번과 **같은 형태의 두 번째 사례**.",
       "gap": "**유의미 — 불변식 1 위반(미등재 1쌍).** 코드 실재 16쌍/13파일 vs 등재 15쌍/12파일: `backend/src/doc_edit.rs × stub: stub_edit`(AC3.1 LLM 보조 편집의 고정 답 공급, `:232` 주석은 LLM-01 로 부착됨)이 `docs/e2e-mocking-policy.md` 허용목록에 **없다** — 정책 문면 「주석만 있고 미등재 … drift」에 정확히 해당하고, #71→`rct_20260919-0001` 과 같은 「자매 docs-impl 슬라이스가 주석은 달고 등재는 빠뜨린」 재발이다. 고아 등재 0 · 충실도 결함 발견 0(빈 요청 거부는 ask 앞에서 모드 무관, `avoid` 회피는 stub 이 real 의 프롬프트 요구를 결정적으로 이행). 함께 낡은 문면: 배선 표의 `FEATUREDOC_DOUBLE_LLM` 「읽는 프로세스: 워커」·「API 에는 워커 더블을 켤 수단이 없다」 — #92 이후 API 도 이 env 를 읽는다(`config.rs` `Doubles.llm` + e2e API 패치). 불변식 2: 원장 행 0 · B1 위반 0 · 재검토 도과 0 · B3 불변 ⇒ 기준 없음(비고: `doc_edit.rs:239-240` 「모델이 고쳐 쓴 문장을 읽을 수 없었습니다」 분기는 stub 이 항상 스키마 적합 답을 내므로 E2E 가 밟지 못한다 — 원장 행 후보로 planner 가 가릴 것, 이번 판정 근거 아님).",
       "summarizedAt": "2026-09-21T14:43:56Z"
+    },
+    "assessment": {
+      "reason": "**조치 필요(`action_required`) — 불변식 1 위반이 tip 에 실재하고, 지금 열지 않으면 재감지 경로가 없다.** 4연언: ⑴ **실재** — `main`=`51daa9c` 에서 코드 16쌍 vs 등재 15쌍, 미등재 = `backend/src/doc_edit.rs × stub: stub_edit`(#92 `51daa9c`, 부모 지문 == baseline 바이트 동일로 귀속 확정). 정책 「주석만 있고 미등재 … drift」 문면 그대로. ⑵ **선행 없음** — 해소는 `docs/e2e-mocking-policy.md` 편집(허용목록 16행 추가: `doc_edit.rs` | `stub: stub_edit` | LLM-01 | `FEATUREDOC_DOUBLE_LLM`(API) | AC3.1 편집 제안 Ask 의 고정 답 공급(제품 경로) · 「모킹으로 세는 것」 2번 `stub_*` 목록에 `stub_edit` 추가 · 1번 배선 표 `FEATUREDOC_DOUBLE_LLM` 읽는 프로세스 워커→**API·워커** 와 「API 에는 워커 더블을 켤 수단이 없다」 문장 정정 · LLM-01 근거 시나리오에 `sc03-01`·`sc03-02` 추가 · 변동 이력 행)이며 코드 무접촉 — 카테고리 판정은 planner 가 재판정하되 사전 소견은 **LLM-01 적합**(sc03-01「시나리오가 하나 늘고 원래는 남는다」·sc03-02「두 번째 제안 문면이 거부한 것과 다르다」 = 산출물 내용 단정, LLM 카테고리 사유와 동형; 기존 7·9·11·13·14·15행과 같은 경계·같은 `Ask{stub:}` 메커니즘). 충실도 결함 0(빈 요청 거부 `:197` 는 ask 앞·모드 무관, `FEATUREDOC_STUB_LLM_FAIL` 실패 전파 공통 적용) 이라 제거·수정 선행 없음. ⑶ **소유자 0** — 이 모델 열린 task 없음(직전 `rct_20260919-0003` `no_action_needed` 종료) · 자매 docs-impl `rct_20260919-0003` 은 `succeeded` 로 닫혔고 레코드에 등재 인계 0건 · 다른 feature-doc 자매 열린 task(comment-redundancy `rct_20260920-0009` `action_required`)는 주석 중복 축이라 무관. ⑷ **재감지 경로 0** — to-be(정책 문서) 는 무이동이고 as-is baseline 은 이 claim 으로 `29/13 b9411fc…` 로 전진했으므로 아무도 손대지 않으면 precheck 는 영구 침묵한다. 불변식 2 는 판정 기준 전건 거짓(원장 0행 · B1 0 · 도과 0 · B3 불변). **planner 인계**: (a) 위 편집 항목으로 등재 — #71→`rct_20260919-0001` 과 동형의 사후 등재이며 이번엔 공급자 이름이 `stub_edit` 로 규약을 지켜 지문이 두 축(주석+토큰) 모두로 잡았다 → 개명 불필요 (b) 완료 기준: 정책 문서 허용목록 「16쌍 / 13파일」 + 배선 표 정정, 코드 무변경, to-be blob 이동으로 재감지 시 코드 16 == 등재 16 (c) 차단 요인 원장 후보 1건 가림: `doc_edit.rs:239-240` 「모델이 고쳐 쓴 문장을 읽을 수 없었습니다」 분기는 stub 이 항상 스키마 적합 답을 내 E2E 가 밟지 못한다 — 원장 행(해소 방향·소관·선행·재검토) 신설인지 「가림 기록」(단위 테스트가 지키는 파서 경로) 인지 planner 가 판정 (d) **동일 형태 2연속**(#71·#92 모두 docs-impl 슬라이스가 LLM 단계를 들이며 등재 누락) — docs-impl 슬라이스의 실행 지침에 「`stub:` 공급 자리를 들이면 같은 PR 에서 정책 문서 허용목록에 등재」 를 넣는 것이 근인 해소이나 그것은 자매 모델 정의/플래너 규약 사항이라 이 task 범위 밖, 사용자에게 보고.",
+      "assessedBy": "agent",
+      "assessedAt": "2026-09-21T14:44:29Z"
     }
   }
 ]
