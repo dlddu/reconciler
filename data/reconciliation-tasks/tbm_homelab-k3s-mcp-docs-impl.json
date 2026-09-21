@@ -10204,7 +10204,7 @@
   {
     "id": "rct_20260921-0004",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-21T09:25:28Z",
@@ -10335,6 +10335,49 @@
               "startedAt": "2026-09-21T10:49:30Z",
               "finishedAt": "2026-09-21T10:50:30Z",
               "log": "execution 확정(이 커밋, status→verifying) 뒤 verification 기록·succeeded 전이(다음 커밋). 범위 밖 잔여는 verification.checks 의 정보성 항목에 남김(스키마에 verification.notes 없음). 모델 lastObservedVersion 은 건드리지 않음 — as-is(internal 0ffedbcc→096846cd)·to-be(docs 22a9559b→e1ee44c3) 지문 이동은 다음 detector fire 의 트리거."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "internal:096846cd51922554a044a138583508ce6c1be46d main.go:9525c1baad8fb1a5817558f36f46de779fea4528",
+          "verifiedAt": "2026-09-21T10:50:30Z",
+          "checks": [
+            {
+              "name": "ⓐ 단위 — 12 케이스 PASS + 11 패키지 ok",
+              "status": "passed",
+              "detail": "main 7065a14 클린 클론, Go 1.24.7 GOTOOLCHAIN=local: go test ./... -v rc=0, 11패키지 ok(auth·awsconfig·eventlog·gatekeeper·github·grafana·k8s·mcp·opensearch·server·sessionplatform), --- FAIL 0. 12 케이스 전부 --- PASS: TestLogRendersReasonAndGateAsFields · TestReasonsAreTheEightOfPRDMetricsAC2 · TestEveryFailurePathRefuses(9 서브) · TestRefusalsBeforeAVerdictAreTypedToo(4) · TestRefusalRecordsCarryTheirReason(9) · TestApprovedRecordsCarryTheRequestIdAndTheAutoApprovalFlag(2) · TestASpentApprovalIsRefusedWithTheVerdictKept · TestRequireBearerRecordsTheCallItRefuses(3) · TestRequireBearerRecordsOnlyToolCalls(4) · TestRefusedToolCallIsRecordedOnStdoutWithoutTheCredential · TestRecordResultFollowsHowTheCallEnded · TestToolCallIsRecordedOnStdoutWithThePrincipal. gofmt -l 빈 출력 · go vet rc=0 · 실행 후 go.mod 무변경."
+            },
+            {
+              "name": "ⓑ 인증 실패 — 401 레코드 1줄",
+              "status": "passed",
+              "detail": "배포 파드 homelab-k3s-mcp-6689c66994-xrr7t(image :7065a144…) 로그, 창 10:48:35.909Z~10:48:46.311Z. 공개 URL 로 가짜 bearer + tools/call ping 1회 → HTTP 401. 줄 1: `tool=ping principal=unauthenticated target.apiVersion=\"\" target.kind=\"\" target.namespace=\"\" target.name=\"\" result=refused reason=auth_failed gate.request_id=\"\" gate.decision=\"\" gate.auto_approved=false`(10:48:36.060Z, 직후 http request status=401). 기대 문면과 필드 단위로 동일."
+            },
+            {
+              "name": "ⓒ 정상·검증 거부 — 호출당 정확히 한 줄",
+              "status": "passed",
+              "detail": "같은 창, 커넥터(OAuth JWT 주체) ping 1회 → `tool=ping principal=jwt:f760e6ae-… result=success reason=\"\" gate.request_id=\"\" gate.decision=\"\" gate.auto_approved=false`(10:48:38.761Z). resource_get {kind:ConfigMap, apiVersion 빈값} 1회 → 도구 오류 'apiVersion and kind are required before this call can be judged', 줄 `tool=resource_get principal=jwt:f760e6ae-… target.apiVersion=\"\" target.kind=ConfigMap target.namespace=homelab-k3s-mcp target.name=homelab-k3s-mcp-oauth result=refused reason=invalid_input gate.*=\"\"/false`(10:48:42.739Z). 창 안 msg=\"tool call\" 줄 = 정확히 3(ⓑ 1 + ⓒ 2), 게이트를 타지 않음(approval 로그 0건, gate.request_id 빈값). 편차(기록): 계획의 `{kind:ConfigMap}` 대신 클라이언트 스키마상 apiVersion 을 빈 문자열로 보냈고 name/namespace 를 채웠다 — 거부 사유는 같은 invalid_input 경로."
+            },
+            {
+              "name": "ⓓ 자격증명 비노출",
+              "status": "passed",
+              "detail": "같은 파드 로그 전문(기동 10:45:45Z~10:48:46Z): 프로브 문자열 executor-probe-not-a-key 0건 · eyJ(JWT 원문) 0건 · Bearer 0건 · Authorization 0건 · ghs_(이 세션이 이 창 전후로 발급받은 토큰) 0건. principal 은 unauthenticated / jwt:<uuid> 로만 렌더."
+            },
+            {
+              "name": "ⓔ 문서 게이트 4종",
+              "status": "passed",
+              "detail": "main 7065a14: check_ac_mapping rc=0 99·1·18·80·80·0·0(기대값 동일, 공백 0·분할 대기 0) · check_mock_policy rc=0 · check_comment_policy rc=0 판정 3332줄/141파일 · 완료 3332(100%) · 미판정 잔량 0 · ③④ 20/63(잔량 43)(기대값 동일) · check_doc_inventory rc=0 허브 58/58 · 끊긴 링크 0."
+            },
+            {
+              "name": "롤아웃 (정보성)",
+              "status": "passed",
+              "detail": "PR #172 squash 머지 7065a144(10:42:30Z, tree == PR head f8908f1 tree) → build&push 10:44:27Z · pin 10:44:37Z(deploy 96fcfc82) → Flux → Deployment revision 89, image :7065a144…, 1/1 Ready 10:45:47Z, 기동 로그 refusing to start 0건, 이전 파드 종료, /readyz 200. 이전 두 head 와 동일 코드라 CI 다섯 잡 success 도 그대로."
+            },
+            {
+              "name": "범위 밖 잔여 — 후속 재감지 (정보성, 판정 제외)",
+              "status": "passed",
+              "detail": "이 task 범위(prd-event-log AC2·AC4)는 닫혔다. 모델 전체 gap 잔여: prd-event-log AC5(stdout 너머 보존·수집기 graceful, tracker 순서상 다음 슬라이스) · prd-metrics AC1~AC5(eventlog.Sink 파생 지점, prometheus 0·/metrics 0) · ⏳ event-log 2·3·6·7 행 전용 e2e 저작(자매 scenario-e2e 몫) · 모델 definition 스냅샷 노후(tobe-modeler 몫). as-is 지문 internal:0ffedbcc→096846cd, to-be docs 22a9559b→e1ee44c3 로 둘 다 움직였고 lastObservedVersion(10:32:49Z 값)은 갱신하지 않았으므로 다음 detector fire 가 후속 task 를 연다."
             }
           ]
         }
