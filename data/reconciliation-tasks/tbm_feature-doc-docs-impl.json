@@ -6510,6 +6510,101 @@
           "reason": "계획의 내용이 아니라 **준비물이 무효가 되어** 거부한다. 판정 중에 #125(`chore(review): 저장 형식 리뷰 게이트를 D1·D6만으로 축소`)가 2026-09-22T12:19:20Z main 에 착지(78183d2d)했고, PR #126 은 그 즉시 `mergeable=CONFLICTING`(dirty)이 됐다 — 충돌 파일은 `docs/doc-tracker/2026-09.md` 하나다(#125 가 그 파일에 1행을 더했고 이 PR 은 같은 집계 블록을 +27 −13 으로 다시 쓴다). 지금 상태로는 머지 자체가 불가능하다. 품질 신호는 거부 사유가 아니다 — head bd9233e 에서 `ci-gate` 를 포함한 check-run 9건이 모두 success 였고 (cargo · kind e2e · docs 게이트 3종), 마이그레이션 0014 는 CREATE TABLE + INDEX + nullable 열 추가뿐이라 기존 행의 의미를 바꾸지 않으며 executionGuide 가 sqlx 체크섬 제약과 「롤백은 revert 가 아니라 전진 수정(0015)」을 명시하고 있다. 문제는 오직 신선도다. 특히 이 건은 리베이스를 미룰 수 없다: `review/data-format` 은 main 의 필수 status 이면서 사람 리뷰 라우팅 신호이고(워크플로 `data-format-review.yml` — 형식을 건드렸을 가능성이 있으면 아무 status 도 붙이지 않는다), 새 마이그레이션 때문에 D1 에 걸려 bd9233e 에 실제로 붙어 있지 않다(commit statuses 0건). 여기서 `manualApproval` 로 승인하면 **곧 버려질 sha 에 사람 승인을 요청**하게 되고, 리베이스로 head 가 움직이는 순간 그 승인이 무효가 된다 — executionGuide 자신이 「리베이스가 필요하면 그 시점에 review/data-format 은 무효」라고 못박은 경우다. 그래서 사람을 부르기 전에 계획 단계가 준비물을 다시 세우는 것이 맞다.",
           "comment": "재계획이라기보다 **재준비(3-2)**다. 계획의 접근·범위·위험 판단에는 고칠 것이 없다 — 그대로 두고 브랜치만 다시 세운다.\n\n1. `reconcile/rct_20260922-0005-docs-impl` 을 현재 main `78183d2d`(#125 착지) 위로 리베이스한다. 충돌은 `docs/doc-tracker/2026-09.md` 하나이고, #125 가 그 파일에 더한 1행을 흡수한 뒤 이 PR 의 집계 4줄(시나리오 37 · 매핑 33 · 구현 대기 4 · 매칭 단위 파일 33)을 다시 맞추면 된다. 나머지 14파일은 겹치지 않는다.\n2. 리베이스 후 게이트 6종을 **다시** 굴린다(cargo · npm run build · check-scenario-e2e · check-mockup-render · check-journey-mockup · check-journey-prototype). 특히 check-scenario-e2e 의 S4 는 「매칭 단위 파일」 줄까지 대조하므로 1 에서 집계를 어긋나게 흡수하면 여기서 rc=1 로 잡힌다.\n3. ⚠️ #125 가 판정기 `tools/check-data-format-change.py` 를 **D1·D6만으로 축소**했다(−212/+25). 새 head 에서 `review/data-format` 이 여전히 안 붙는지(= 0014 가 D1 에 걸리는지) 판정기 출력으로 **다시 실측**해 preparation.notes 에 적을 것. 규칙 집합이 바뀌었으니 「6a~6d 선례」를 근거로 그대로 가정하지 말 것.\n4. executionGuide 의 「순서가 흔들리는 단 하나의 경우」를 #121 단독이 아니라 **열린 자매 PR 일반**으로 고쳐 쓸 것. 이번에 무너뜨린 것은 예고된 #121 이 아니라 계획 시점에 표에 없던 #125 였다. 리베이스 필요성 판정을 머지 직전 `mergeable` 재조회로 바꾸면 같은 식으로 다시 놓치지 않는다.\n5. 새 head 가 선 뒤에야 사람 승인을 요청한다 — status 는 sha 에 묶이므로 순서를 뒤집으면 한 번 더 버려진다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**슬라이스 6e — AC3.4 의 남은 절반 「임의 시점 복원」 (03#시나리오 8). 재계획이 아니라 재준비(3-2)다.**\n\n직전 시도는 계획의 내용이 아니라 **준비물의 신선도**로 거부됐다 — 판정 중 #125 가 착지해 PR #126 이 `CONFLICTING` 이 됐고, 사람 승인 status 는 sha 에 묶이므로 곧 버려질 head 에 사람을 부르는 형국이었다. 거부 코멘트 자신이 「접근·범위·위험 판단에는 고칠 것이 없다 — 그대로 두고 브랜치만 다시 세운다」이므로 **접근·범위·위험도·12개 구현 단계를 문면 그대로 이어받고**, 거부가 지시한 재준비 네 가지(리베이스 · 게이트 재실행 · 축소된 판정기 재실측 · 지침의 일반화)를 단계 13~17 로 덧붙인다.\n\n**접근(불변)**: 자동 문서를 고치지 않고 읽는 자리에서 겹치는 6a~6d 의 축을 그대로 쓴다. 복원은 문서를 다시 쓰는 일이 아니라 **재생 구간을 자르는 일**이라, 복원 한 번을 `feature_doc_restores` 의 한 행(마이그레이션 0014)으로 남기고 유효 편집 집합의 규칙 한 줄만 바꾼다. 그래서 복원의 복원이 저절로 성립하고, 보상 편집이었다면 거짓이 됐을 출처 어휘(AC3.4 자신의 요구)가 참으로 남는다.\n\n**이번 시도에서 실제로 새로 안 것 — 충돌은 이 PR 의 성질이 아니라 구조다.** 재준비 중에 #127 이 또 착지해 **두 번째 리베이스**가 필요했다(`77158c2` → `78183d2` → `df5afd5`). 두 번 모두 충돌 파일은 `docs/doc-tracker/2026-09.md` **하나**뿐이었고, 열린 PR 셋(#121·#124·#126)을 쌍으로 재보니 **세 쌍 모두** 같은 파일에서 충돌한다 — 각자 main 과는 clean 인데도. 모든 PR 이 변경 이력 표 **맨 끝에 행을 덧붙이기** 때문이다. 즉 「#121 이 먼저 착지하면」이라는 직전 지침의 특정 PR 조건은 처음부터 틀린 모양이었다(무너뜨린 것도 예고된 #121 이 아니라 표에 없던 #125·#127 이었다). 그래서 지침의 그 절을 **열린 PR 일반 + 머지 직전 `mergeable` 재조회**로 바꿔 쓴다.\n\n**사람 게이트도 재실측했다** — #125 가 판정기를 D1·D6 으로 축소했으므로(−212/+25) 6a~6d 선례를 가정하지 않고 새 판정기를 이 head 에 직접 굴렸다: 여전히 「사람 리뷰 필요」이고 걸린 규칙은 **D1 하나**다. 반대 방향(마이그레이션 없는 #124 head)에서는 `✅ 해당 없음` 이 나와 판정기가 양쪽으로 작동함을 확인했다. ⚠️ 한편 #127 이 context 를 `review/data-format` → `review/manual-approval` 로 **개명**했고 룰셋 교체는 사람 작업이라 아직 옛 이름이다 — 그래서 지침은 이름을 못박지 않고 **머지 시점에 룰셋에서 읽게** 한다.\n\n**이 시도의 범위(완료 기준, 불변)**: ① 03#시나리오 8 이 전용 e2e spec 으로 관측 가능해진다(구현 대기 5 → 4 · 매핑 32 → 33 · 매칭 단위 파일 32 → 33 · 항등식 `37 = 33+0+4+0`) ② AC3.4 가 미구현 목록에서 빠진다(미구현 AC 4건/5항목 → 3건/4항목) ③ 게이트 4종 + `cargo test` + `npm run build` rc=0.\n\n**범위 밖(후속, 불변)**: AC4.4(모바일 우선) · AC4.6(비용 가시성) · AC4.7(워커 격리) — 로드맵 슬라이스 7; AC4.1 「해제」 조항; 편차 원장의 `STP-notice-change` 알림 화면; `JRN-restore-history` 목업 제작(수용된 위험 유지). **룰셋의 필수 status 이름을 `review/manual-approval` 로 교체하는 일(#127 의 사람 작업 2번)도 범위 밖이다** — App 에 administration 권한이 없고, 이 PR 은 옛 이름이든 새 이름이든 룰셋이 요구하는 것 하나만 있으면 머지된다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`backend/migrations/0014_feature_doc_restores.sql` — 복원 한 번을 한 행으로 남기는 표를 만든다. `analysis_id` · `feature_key` · `cutoff_edit_id`(NULL 이면 자동 기준선) · `cutoff_at`(그 시점의 created_at, 자동 기준선이면 0) · `created_at`. 0009~0013 과 같은 방식으로 **왜 자동 문서를 고치지 않는가**와 **왜 보상 편집이 아니라 자르는 지점인가**를 주석으로 남긴다.",
+              "expectedOutcome": "`cargo test --test migrations` 가 새 체크섬으로 통과하고, 기존 마이그레이션의 체크섬은 한 글자도 바뀌지 않는다(`backend/migrations/README.md` 의 불변성 제약)."
+            },
+            {
+              "seq": 2,
+              "action": "`backend/src/doc_edit.rs` — 승인 편집을 고르는 자리를 `effective_edits(state, analysis_id, feature_key?)` 한 곳으로 모으고, 그 안에서 마지막 복원 행을 읽어 `(created_at ≤ cutoff_at) ∪ (created_at > restore.created_at)` 만 남긴다. `overlay` 가 그 헬퍼를 쓰게 바꾼다.",
+              "expectedOutcome": "복원 행이 없으면 지금과 **완전히 같은 집합**이 나온다 — 기존 `cargo test` 가 한 건도 깨지지 않는다."
+            },
+            {
+              "seq": 3,
+              "action": "6d 가 다음 분석으로 편집을 이월·충돌 재생하는 자리(`worker_api::submit_document` → `doc_conflict`)도 같은 헬퍼를 쓰게 한다. 복원으로 잘려 나간 편집이 다음 재분석에서 되살아나면 복원이 한 분석짜리 거짓말이 된다.",
+              "expectedOutcome": "`cargo test --test doc_conflict` 통과 + 새 단위/통합 테스트가 「복원으로 잘린 편집은 이월되지 않는다」를 단정한다."
+            },
+            {
+              "seq": 4,
+              "action": "`backend/src/doc_history.rs` 신설 — `GET /api/analyses/{id}/features/{key}/history`(자동 기준선 + 승인 편집 + 복원 행을 시간순으로, 각 항목에 `source`·`at`·`summary`·`carriedFrom`), `GET …/history/{entry}/preview`(그 시점의 시나리오와 지금 문서의 diff — 여정의 「복원 결과를 미리 볼 수 없으면 아무도 복원하지 않는다」), `POST …/history/{entry}/restore`(복원 행 삽입 → 갱신된 문서 반환).",
+              "expectedOutcome": "`cargo test --test doc_history`(신설) 통과. 남의 분석을 겨눈 호출은 `owned_analysis` 로 404, 없는 항목도 404."
+            },
+            {
+              "seq": 5,
+              "action": "`frontend/src/FeatureHistory.tsx` 신설 + `#/analyses/{id}/features/{key}/history` 해시 라우트. 여정 세 단계를 한 화면에 접는다 — 시간순 목록(각 항목에 출처 배지 3종) · 항목을 고르면 미리보기 diff · 「이 시점으로 복원」. **목업 매핑 주석을 달지 않는다**(목업이 없다 — 달면 M1 이 유령 화면으로 실패한다).",
+              "expectedOutcome": "`npm run build` rc=0 · `python3 tools/check-mockup-render.py` 의 활성 대조가 **15 불변**이고 M1 누락·유령 0."
+            },
+            {
+              "seq": 6,
+              "action": "`frontend/src/FeatureAcceptance.tsx` 에 이력 진입점 CTA 한 칸을 더한다(여정 `STP-open-history` 의 「진입점을 feature 상세에서 한 번에 닿는 위치에 둔다」).",
+              "expectedOutcome": "그 카피가 목업에 없으므로 M3B 가 붉어지고, 원장 1행 등재로 다시 rc=0 이 된다(편차 28 → 29 · 상한 29)."
+            },
+            {
+              "seq": 7,
+              "action": "`e2e/tests/sc03-08-history-and-point-in-time-restore.spec.ts` 신설 — 헤더 선언 `// 검증 시나리오: 03-doc-management.md#시나리오 8`. 사전 조건은 6d 의 경로로 결정적으로 만든다(분석 → `user_llm` 편집 승인 → 리비전 3 재분석 → 충돌 「내 문장 유지」 = `user_direct`) → 이력에 **출처 3종이 구분되어** 서는 것 → 두 번째 변경 시점 선택 → 미리보기 → 복원 → 문서가 **그 시점의 문장**으로 정확히 선다 → 복원 자체가 이력에 남고 다시 되돌릴 수 있다.",
+              "expectedOutcome": "spec 파일명과 헤더가 교차 확인되고 `python3 tools/check-scenario-e2e.py --verbose` rc=0. 실제 실행은 CI 의 kind e2e 가 집행자."
+            },
+            {
+              "seq": 8,
+              "action": "`docs/doc-tracker/2026-09.md` 갱신 — 구현 대기 표에서 `03-doc-management.md#시나리오 8` 행을 꺼내고(5 → 4) 매핑 표에 1행을 더한다(32 → 33). 집계 4줄(시나리오 37 · 매핑 33 · 예외 0 · 구현 대기 4 · 미매핑 0 · 항등식 · 불변식 · **매칭 단위 파일 33**)을 함께 고친다 — #122 가 「매칭 단위 파일」 줄도 게이트 S4 의 대조 집합에 넣었으므로 이 줄을 빠뜨리면 rc=1 이다.",
+              "expectedOutcome": "`python3 tools/check-scenario-e2e.py --verbose` rc=0."
+            },
+            {
+              "seq": 9,
+              "action": "같은 파일의 목업 축 갱신 — 편차 원장에 진입점 1행(유형 「목업 미갱신」, 사유는 권위 순서: 목업 없는 여정의 화면이라 여정 문서가 이긴다)과 상한 28 → 29, 「활성 대조 대상」 절 산문에 **`FeatureHistory` 가 표에 없는 이유**(목업 부재 · M4 로 원장에도 넣을 수 없음)를, 「수용된 위험」 행에 **화면은 구현됐고 목업은 여전히 없다**를 명시한다.",
+              "expectedOutcome": "`python3 tools/check-mockup-render.py` rc=0(M4 공전 행 0 · M5 편차 29/29 · 활성 대조 15)."
+            },
+            {
+              "seq": 10,
+              "action": "같은 파일의 현재 상태 요약·이번 달 변경 이력 행을 더한다 — e2e spec 32 → 33 · 마이그레이션 0013 → 0014 · 미구현 AC 4건/5항목 → **3건/4항목**(AC4.4 · AC4.6 · AC4.7 + AC4.1 해제 조항) · 남은 슬라이스는 7.",
+              "expectedOutcome": "`python3 tools/check-journey-mockup.py` 의 R9 집계 일치 통과(여정·목업 수는 불변이라 움직이지 않아야 한다)."
+            },
+            {
+              "seq": 11,
+              "action": "호스트에서 게이트 전부를 굴린다 — `cargo test` · `npm run build` · `python3 tools/check-scenario-e2e.py --verbose` · `check-mockup-render.py` · `check-journey-mockup.py` · `node tools/check-journey-prototype.js`. 그다음 `origin/main` 최신에서 `merge-tree` 로 열린 자매 PR(#121 · #123)과의 헝크 겹침을 재측정한다.",
+              "expectedOutcome": "여섯 게이트 rc=0 · clean merge. 어긋나면 PR 을 열기 전에 흡수한다."
+            },
+            {
+              "seq": 12,
+              "action": "브랜치 `reconcile/rct_20260922-0005-opus5-1m` 로 push 하고 PR 을 연다(머지하지 않는다). 본문에 task id · gap · 계획 단계 · 검증 방법 · **새 마이그레이션이라 `review/data-format` 이 자동으로 붙지 않는다**는 사실을 적는다.",
+              "expectedOutcome": "PR 이 열리고 `ci-gate` 가 초록. `review/data-format` 은 사람이 붙일 때까지 비어 있다 — 그것이 이 슬라이스의 사람 게이트다(6a~6d 선례)."
+            },
+            {
+              "seq": 13,
+              "action": "브랜치 `reconcile/rct_20260922-0005-docs-impl` 을 `origin/main` 최신 위로 리베이스한다. 충돌은 `docs/doc-tracker/2026-09.md` 의 변경 이력 표 **맨 끝 add/add** 하나이므로 두 행을 시간순으로 나란히 남긴다(양쪽 다 살린다 — `checkout --theirs` 금지). 리베이스가 내 변경을 건드리지 않았음을 **파일별 diff md5 대조**로 확인한다.",
+              "expectedOutcome": "코드·e2e·목업 파일 14개의 패치 md5 가 리베이스 전과 동일하고, `docs/doc-tracker/2026-09.md` 만 컨텍스트 이동으로 달라진다(추가·삭제 줄 집합의 md5 는 동일)."
+            },
+            {
+              "seq": 14,
+              "action": "내가 새로 더하는 doc-tracker 행이 **수동 승인 status 의 옛 이름**을 쓰고 있으면 고친다. #127 의 규약상 **이전 행은 당시 사실이라 고치지 않지만**, 이 행은 지금 적용될 게이트를 서술하는 새 행이다.",
+              "expectedOutcome": "내 행이 `review/manual-approval`(개명 전 이름 병기)을 가리키고, 룰셋 교체가 사람 작업이라 머지 시점에 이름을 룰셋에서 읽는다는 사실이 행 안에 남는다. 과거 행 문면은 무변경."
+            },
+            {
+              "seq": 15,
+              "action": "리베이스된 head 에서 게이트 6종을 **다시** 굴린다 — `cargo test --release` · `npm run build` · `check-scenario-e2e.py` · `check-mockup-render.py` · `check-journey-mockup.py` · `check-journey-prototype.js`.",
+              "expectedOutcome": "여섯 전부 rc=0 이고 수치가 준비 때와 같다(cargo 229/0 · 매핑 33 · 편차 29/29 · 활성 15 · 프로토타입 5·단언 413)."
+            },
+            {
+              "seq": 16,
+              "action": "#125 로 **축소된** 판정기 `tools/check-data-format-change.py` 를 새 head 에 직접 굴려 `review/data-format` 이 여전히 붙지 않는지 재실측한다. 선례(6a~6d)를 근거로 가정하지 않는다. 판정기가 초록도 낼 수 있는지 **반대 방향**(마이그레이션 없는 자매 PR head)으로도 굴린다.",
+              "expectedOutcome": "내 head → 「⚠️ 사람 리뷰 필요」, 걸린 규칙은 **D1 하나**(근거 `backend/migrations/0014_…sql`). 자매 head → 「✅ 해당 없음」. 두 방향이 다 나와야 status 부재가 판정기 고장이 아님이 선다."
+            },
+            {
+              "seq": 17,
+              "action": "`--force-with-lease=<ref>:<실측 tip>` 으로 push 하고 PR 본문의 낡은 두 절(사람 게이트 · 자매 PR 표)을 재실측 값으로 고쳐 쓴다. 그다음 `mergeable` 과 check-run 을 다시 조회한다. 지침(3-3)의 「순서가 흔들리는 경우」는 **특정 PR 번호가 아니라 열린 PR 일반 + 머지 직전 `mergeable` 재조회**로 바꿔 쓴다.",
+              "expectedOutcome": "PR 이 `MERGEABLE`(`BLOCKED` 은 사람 status 하나뿐)이고 `ci-gate` 를 포함한 check-run 전부 success. 지침에 특정 PR 번호로 된 조건이 남지 않는다."
+            }
+          ],
+          "plannedAt": "2026-09-22T12:46:10Z"
+        }
       }
     ]
   },
