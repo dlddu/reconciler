@@ -37,6 +37,25 @@ tests/                              # index.html 동작 테스트 (node --test)
 .nojekyll                           # Pages가 data/*.json을 그대로 서빙하도록 Jekyll 우회
 ```
 
+## 실행 전 사람 승인 (review.manualApproval)
+
+대상 레포가 PR 머지에 사람 승인용 required status(예: `pr-manual-approval` 유형의 `review/manual-approval`)를
+요구하고, 리뷰 시점에 그 status가 PR head에 success로 붙어 있지 않으면, 리뷰는 status를 `approved`로
+전이하면서 마지막 attempts 항목의 `review`에 `required: true`와 `manualApproval`을 함께 남긴다.
+
+```json
+"manualApproval": { "sha": "<리뷰 시점 PR head>", "context": "review/manual-approval" }
+```
+
+`manualApproval`이 있는 `approved` task는 다음이 모두 참일 때만 실행 대상이다.
+
+- `preparation.pullRequestUrl`의 PR이 열려 있고 head가 `sha` 그대로다 — 승인은 리뷰한 커밋에 묶이므로,
+  새 커밋이 올라오면 이전 승인은 무효다.
+- `sha`에 붙은 `context`의 최신 commit status가 `success`다 — 사람이 대상 레포의 승인 절차대로 붙인다.
+
+`manualApproval`이 없는 `approved`(과거 사람 승인 기록인 `required: true` 포함)는 사람 승인이 필요 없거나
+이미 끝난 것이다. 스키마는 `manualApproval`이 있으면 `required: true`를 강제한다.
+
 ## 모델 템플릿
 
 레포마다 반복 등록되는 정합성 유형 — **제품 문서 ↔ 구현**(docs-impl),
