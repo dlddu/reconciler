@@ -6394,7 +6394,7 @@
   {
     "id": "rct_20260922-0005",
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "reviewing",
+    "status": "review_rejected",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-22T11:41:07Z",
@@ -6501,6 +6501,14 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/126",
           "preparedAt": "2026-09-22T12:12:38Z",
           "notes": "계획 12단계를 그대로 구현해 `origin/main` `77158c2` 위에 단일 커밋 `bd9233e` 로 스테이징했다(리베이스 완료 — #123 이 그 사이 착지).\n\n**호스트에서 실제로 굴린 게이트 6종 전부 rc=0**: `cargo test --release` **229 passed / 0 failed**(이 슬라이스가 +7 — 신설 `backend/tests/doc_history.rs` 6 · `doc_conflict.rs` 1) · `npm run build` · `check-scenario-e2e.py --verbose`(매핑 33 · 선언 33 · 불변식 `(37−0−4)=33` · 래칫 0/0) · `check-mockup-render.py`(활성 15 · 편차 29/29 · M3A 347 미등재 0 · M3B 315 미등재 0 · M4 공전 0 · M7 불일치 0) · `check-journey-mockup.py`(R0~R11) · `node check-journey-prototype.js`(프로토타입 5 · 단언 413). 게이트가 **실제로 잡는지**도 확인했다 — 편차 원장 행을 넣기 전 M3B 가 진입점 카피 한 줄을 정확히 붉혔고(`✗ 위반 1건`), 행을 넣은 뒤 rc=0 이 됐다.\n\n**사람 게이트**: 새 마이그레이션 `0014_feature_doc_restores.sql` 이 판정기 규칙 D1 에 걸려 워크플로가 `review/data-format` 을 붙이지 않는다. 그 status 는 `ci-gate` 와 함께 `rules/branches/main` 의 필수 status 이므로(실측: ruleset 23666120) **사람이 붙여야 머지된다** — 6a~6d 와 같은 절차다. 리뷰 단계는 `review.manualApproval`(sha `bd9233e5c8e77c420818f29eb43edc2e3fe51eea` · context `review/data-format`)로 넘기면 된다.\n\n**열린 자매 PR 재실측(PR 직전)**: #124(주석 비중복성)는 `doc_conflict.rs`·`tests/doc_conflict.rs`·`api.ts` 를 함께 만지지만 헝크가 겹치지 않아 내 브랜치와도 `origin/main` 과도 **clean**(착지 순서 자유). #121(AC1.5 확장)은 `docs/doc-tracker/2026-09.md` 에서 충돌하지만 **이 PR 과 무관한 선행 충돌**이다 — base 가 `e86af06` 이라 `origin/main` 과 **이미** 같은 파일에서 충돌한다(#120·#122·#123 이 그 사이에 착지). 같은 파일 하나이고 #121 이 리베이스하면 함께 풀린다."
+        },
+        "review": {
+          "required": false,
+          "status": "rejected",
+          "reviewer": "reconciler-work-review",
+          "reviewedAt": "2026-09-22T12:23:50Z",
+          "reason": "계획의 내용이 아니라 **준비물이 무효가 되어** 거부한다. 판정 중에 #125(`chore(review): 저장 형식 리뷰 게이트를 D1·D6만으로 축소`)가 2026-09-22T12:19:20Z main 에 착지(78183d2d)했고, PR #126 은 그 즉시 `mergeable=CONFLICTING`(dirty)이 됐다 — 충돌 파일은 `docs/doc-tracker/2026-09.md` 하나다(#125 가 그 파일에 1행을 더했고 이 PR 은 같은 집계 블록을 +27 −13 으로 다시 쓴다). 지금 상태로는 머지 자체가 불가능하다. 품질 신호는 거부 사유가 아니다 — head bd9233e 에서 `ci-gate` 를 포함한 check-run 9건이 모두 success 였고 (cargo · kind e2e · docs 게이트 3종), 마이그레이션 0014 는 CREATE TABLE + INDEX + nullable 열 추가뿐이라 기존 행의 의미를 바꾸지 않으며 executionGuide 가 sqlx 체크섬 제약과 「롤백은 revert 가 아니라 전진 수정(0015)」을 명시하고 있다. 문제는 오직 신선도다. 특히 이 건은 리베이스를 미룰 수 없다: `review/data-format` 은 main 의 필수 status 이면서 사람 리뷰 라우팅 신호이고(워크플로 `data-format-review.yml` — 형식을 건드렸을 가능성이 있으면 아무 status 도 붙이지 않는다), 새 마이그레이션 때문에 D1 에 걸려 bd9233e 에 실제로 붙어 있지 않다(commit statuses 0건). 여기서 `manualApproval` 로 승인하면 **곧 버려질 sha 에 사람 승인을 요청**하게 되고, 리베이스로 head 가 움직이는 순간 그 승인이 무효가 된다 — executionGuide 자신이 「리베이스가 필요하면 그 시점에 review/data-format 은 무효」라고 못박은 경우다. 그래서 사람을 부르기 전에 계획 단계가 준비물을 다시 세우는 것이 맞다.",
+          "comment": "재계획이라기보다 **재준비(3-2)**다. 계획의 접근·범위·위험 판단에는 고칠 것이 없다 — 그대로 두고 브랜치만 다시 세운다.\n\n1. `reconcile/rct_20260922-0005-docs-impl` 을 현재 main `78183d2d`(#125 착지) 위로 리베이스한다. 충돌은 `docs/doc-tracker/2026-09.md` 하나이고, #125 가 그 파일에 더한 1행을 흡수한 뒤 이 PR 의 집계 4줄(시나리오 37 · 매핑 33 · 구현 대기 4 · 매칭 단위 파일 33)을 다시 맞추면 된다. 나머지 14파일은 겹치지 않는다.\n2. 리베이스 후 게이트 6종을 **다시** 굴린다(cargo · npm run build · check-scenario-e2e · check-mockup-render · check-journey-mockup · check-journey-prototype). 특히 check-scenario-e2e 의 S4 는 「매칭 단위 파일」 줄까지 대조하므로 1 에서 집계를 어긋나게 흡수하면 여기서 rc=1 로 잡힌다.\n3. ⚠️ #125 가 판정기 `tools/check-data-format-change.py` 를 **D1·D6만으로 축소**했다(−212/+25). 새 head 에서 `review/data-format` 이 여전히 안 붙는지(= 0014 가 D1 에 걸리는지) 판정기 출력으로 **다시 실측**해 preparation.notes 에 적을 것. 규칙 집합이 바뀌었으니 「6a~6d 선례」를 근거로 그대로 가정하지 말 것.\n4. executionGuide 의 「순서가 흔들리는 단 하나의 경우」를 #121 단독이 아니라 **열린 자매 PR 일반**으로 고쳐 쓸 것. 이번에 무너뜨린 것은 예고된 #121 이 아니라 계획 시점에 표에 없던 #125 였다. 리베이스 필요성 판정을 머지 직전 `mergeable` 재조회로 바꾸면 같은 식으로 다시 놓치지 않는다.\n5. 새 head 가 선 뒤에야 사람 승인을 요청한다 — status 는 sha 에 묶이므로 순서를 뒤집으면 한 번 더 버려진다."
         }
       }
     ]
