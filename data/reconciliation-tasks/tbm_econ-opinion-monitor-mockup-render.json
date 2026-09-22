@@ -3569,6 +3569,57 @@
       "reason": "**조치 필요.** 목업이 시각 SSOT인데 `#114`(`bfb5334`)가 6개 여정 목업 전부에 `@media (max-width:720px)` 폰 폭 레이아웃 45행씩(+270행)을 세운 반면, 구현에는 ≤720px 규칙이 **0건**이다(`web/src` 전수 실측 — 미디어 쿼리는 `tokens.css:1888` 의 1180px 하나뿐). 판정 기준 5(구조·수치 불일치) + 6(미문서화 이탈)에 걸린다.\n\n**지금 필요하다고 본 근거 4단**\n\n1. **자동 해소 경로가 없다.** 대상 레포 열린 PR **0건**(`gh pr list --state open`) ⇒ 파킹할 대상이 없다. as-is 지문은 baseline 과 바이트 동일이라 구현이 뒤따르는 중도 아니다. 롤아웃·일시 alert 류의 「기다리면 닫히는」 형태가 전혀 아니다.\n2. **기계 게이트가 원리적으로 못 잡는다** ⇒ 방치하면 영구 미검출. `check-mockup-render.py` 는 트리거에서 rc=0 이지만 `css_index()`(`:271-275`)가 `@media` 를 대조 집합에서 **명시 제외**하고, design-tracker `:644-647` 이 「게이트가 보지 못하는 것 … `@media` 블록. 그 범주는 「등재된 편차」 표가 계속 맡는다」로 **이 모델의 판정 몫이라고 축자 위임**한다. 게이트 초록을 근거로 닫으면 위임된 표면을 통째로 버리는 것이 된다.\n3. **선례가 이 표면을 수렴면으로 확정했다.** 구현 1180px 블록은 목업 1180px 블록과 선택자·값이 일치하고, 과거 task 둘이 그 블록을 직접 편집했다(`rct_20260831-0001` 「미디어 쿼리가 뒤에 오는 순서를 깨지 말 것」 · `rct_20260920-0007` 자매 PR 충돌을 `.col-3…col-8` 합집합으로 해소). 「반응형은 원래 안 맞춘다」는 해석은 실측과 어긋난다.\n4. **영향면이 넓고 이미 등재 공백이다.** 블록이 다루는 선택자 17개 중 14개가 구현에 실재하고 그중 셸(`.app`·`.sidebar`·`.nav*`·`.topbar`)은 `BUILT` **7화면 전부**가 공유한다. design-tracker 「등재된 편차」·「해소된 등재」에 반응형/미디어쿼리/폰 폭 행은 **0건**이라, 수용도 미수렴도 아닌 **무기록 상태**다.\n\n**소관 경계(다른 모델이 아니다)**: 화면 단위 시각 대조는 mockup 인덱스·tracker가 이 모델로 못박았다. 자매 `tbm_econ-opinion-monitor-journey-mockup`(`rct_20260922-0001`, 같은 트리거로 12:33:17Z 점유 중)의 축은 **여정 문서 ↔ 여정 목업**이라 구현을 보지 않고, `tbm_econ-opinion-monitor-docs-impl` 은 **미구현 화면 세우기** 몫이다(여기 7화면은 이미 `BUILT`). ⇒ 이 잔여를 완료 기준으로 덮는 열린 task 없음.\n\n**계획 단계로 넘기는 판단 재료(미결)**: 수렴 방향이 두 갈래다 — ⑴ `tokens.css` 에 ≤720px 블록을 이식(목업이 SSOT이므로 원칙 방향. `.ctl`·`.formrow`·`.scrolly` 3개는 목업 전용 선택자라 구현 대응물 확인이 선행) ⑵ 일부를 「등재된 편차」에 사유와 함께 등재. 특히 **랭킹 행 2줄 재배치**(`grid-template-areas`)는 구현 `.rankrow` 의 DOM 순서에 의존하므로 CSS만 옮겨서 성립하는지 확인이 필요하고, 목업 블록의 `.rankrow:not([style])` 한정자는 인라인 style 을 쓰는 목업 사정에서 온 것이라 구현에 그대로 옮길 값이 아닐 수 있다. **미디어 쿼리 순서 제약**(1180px 뒤에 720px)은 `rct_20260831-0001` 이 남긴 주의사항 그대로 유효하다. 어느 갈래든 `@media` 는 게이트 밖이므로 **검증은 게이트 rc=0 이 아니라 선언 대조로 직접** 해야 한다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-22T12:43:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**목업이 `#114` 로 세운 폰 폭(`≤720px`) 레이아웃을 구현 `web/src/tokens/tokens.css` 에 이식하고, 그 이식이 성립하기 위한 선결 두 가지(`≤1180px` 블록의 값 갈림 · `.col-9` 선언 부재)를 같은 슬라이스에서 닫아 `@media` 표면 전체를 목업에 수렴시킨다. 옮길 수 없는 선언은 사유와 함께 design-tracker 「등재된 편차」에 등재한다.**\n\n**왜 이 경로인가.** 감지가 남긴 두 갈래(⑴ 전량 이식 ⑵ 일부 등재) 중 ⑴ 을 기본으로 잡되, 실측으로 「옮길 수 없는 것」이 정확히 무엇인지 잘라 그만 ⑵ 로 보냈다. 목업이 시각 SSOT이고 반응형 규칙이 이 모델의 수렴면이라는 선례(rct_20260831-0001·rct_20260920-0007 이 1180px 블록을 직접 편집)가 이미 서 있으므로, 목업 전용 선택자(`.ctl`·`.scrolly`)와 목업 전용 DOM 사정에서 온 한정자만 남기고 나머지는 전부 옮기는 것이 원칙 방향이다. 가역성: CSS 한 파일 + 문서 한 파일이라 PR revert 한 번으로 완전히 되돌아간다.\n\n**계획 단계 재실측 — 감지의 인계 두 항목이 뒤집혔다.**\n1. 감지는 「구현 1180px 블록이 목업과 선택자·값까지 일치」라고 적었으나 **실측 불일치 9건**이다 — `.col-3`·`.col-4`·`.col-5` 가 목업 `span 6`(지표 타일 2열) ↔ 구현 `span 12`, 목업이 숨기는 `.brand .kicker`·`.nav .gl span:not(.vtag)` 와 `.nav-item{justify-content:center;padding:10px 0}` 이 구현에 부재, 구현 전용 `.nav-group .gl`. 이건 곁가지가 아니라 **선결**이다 — 폰 폭 블록은 1180px 블록 위에 쌓여 결과가 정해지므로, 1180px 을 둔 채 720px 만 옮기면 `.col-3`(지표 타일)이 목업의 2열이 아니라 1열이 되고 목업 블록이 `.col-4`·`.col-5` 만 다루는 이유 자체가 성립하지 않는다.\n2. 같은 실측에서 **`.col-9` 가 `tokens.css` 에 아예 선언되지 않은 것**을 잡았다 — `Fairness.tsx:157`·`Trend.tsx:213` 이 `className=\"card col-9\"` 를 쓰는데 규칙이 없어 두 카드가 격자 폭을 못 받고 자동 배치로 떨어진다. 「한쪽에만 있는 선택자」라 게이트가 원리적으로 못 보는 종류이고(트래커 자신이 `:646` 에서 명시), 수렴시킬 1180px 블록이 `.col-9` 를 호명하므로 이 슬라이스 안에서 닫는다.\n\n**범위(완료 기준)** — 아래 네 가지가 모두 성립하면 이 task 는 성공이다.\n① 구현 `tokens.css` 의 `@media` 두 블록(1180px·720px)이 목업 블록과 선언 단위로 일치한다(등재된 예외 5행 제외 · 검증은 지침의 대조 스크립트 rc=0).\n② `.col-9{grid-column:span 9}` 가 선언돼 있다.\n③ 옮기지 않거나 모양을 바꾼 선언 5건이 design-tracker 「등재된 편차」에 사유·재검토 시점과 함께 등재됐다.\n④ 기존 게이트 4종(`check-mockup-render.py`·`check-journey-mockup.py`·`npm run lint`·`npm test`)이 변경 전과 같이 전부 통과한다(회귀 0).\n\n**범위 밖(후속)** — ⓐ 목업 `@media (max-width:900px)` 블록(`.jrail`·`.jr-item`·`.br-row`)은 트래커 「판정에서 제외하는 범주」의 여정 워크스루 진행 장치라 대조하지 않는다. ⓑ 실행 스크린샷·픽셀 회귀 대조는 모델 정의가 범위 밖으로 못박았다 — 이 슬라이스의 검증은 선언 대조까지다. ⓒ `.ctl`·`.scrolly` 의 구현 대응 표면을 새로 세우는 일(등재 행의 재검토 시점이 조건을 적었다). ⓓ `@media` 표면을 기계 게이트로 승격하는 것 — 게이트 확장은 부수 효과를 따로 재야 하고 트래커가 이 표면을 명시적으로 표에 위임해 두었다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 `dlddu/economic-opinion-trend-monitor` 를 `main`(`bfb5334`) 에서 체크아웃하고, 변경 전 기준선을 네 게이트로 기록한다 — `python3 scripts/check-mockup-render.py .`, `python3 scripts/check-journey-mockup.py .`, `cd web && npm ci && npm run lint`, `npm test`.",
+              "expectedOutcome": "네 명령 모두 rc=0. mockup-render 는 R3 in-scope 27종 · R4 3축 0건 · R5 3축 0건, journey-mockup 은 PASS(링크 164건), vitest 는 9 files / 56 tests 통과. 이 값이 회귀 판정의 기준선이다."
+            },
+            {
+              "seq": 2,
+              "action": "`web/src/tokens/tokens.css` 의 `.col-8` 규칙 바로 뒤에 `.col-9 { grid-column: span 9; }` 를 추가한다(`.col-12` 앞).",
+              "expectedOutcome": "`grep -c 'col-9' web/src/tokens/tokens.css` 가 0 → 1 이상. `Fairness.tsx`·`Trend.tsx` 의 `card col-9` 가 12칸 격자에서 9칸을 받는다."
+            },
+            {
+              "seq": 3,
+              "action": "`@media (max-width: 1180px)` 블록을 목업(`docs/mockups/JRN-daily-scan.html:295`)의 같은 블록과 선언이 일치하도록 고친다 — `.brand .kicker` 를 숨김 목록에 추가, `.nav-group .gl` 을 `.nav .gl span:not(.vtag)` 로 교체, `.nav-item{justify-content:center;padding:10px 0}` 추가, `.col-3,.col-4,.col-5` 를 `span 6` 으로 분리하고 `.col-6,.col-7,.col-8,.col-9` 를 `span 12` 로 둔다.",
+              "expectedOutcome": "지침의 대조 스크립트에서 1180px 블록의 FAIL 8건이 0건이 된다. 화면상으로는 ≤1180px 에서 지표 타일이 1열 → 2열로 돌아가고 사이드바 아이콘 레일이 그룹 태그(P1·P2)를 남긴다."
+            },
+            {
+              "seq": 4,
+              "action": "그 블록 **뒤에** `@media (max-width: 720px)` 블록을 새로 넣는다. 목업 블록(6장 바이트 동일, 추가분 md5 `55c1728e3cb6a26df9f558798db196de`)을 옮기되 구현 사정에 맞춰 넷을 조정한다 — ⑴ `.rankrow:not([style])` 계열 6선택자는 한정자를 떼고 `.rankrow …` 로, ⑵ `> .rk ~ .rk` 규칙은 넣지 않는다, ⑶ `.ctl`·`.scrolly` 는 넣지 않는다, ⑷ `.formrow > *` 는 `.trend-ov-row > *, .trace-lookup > *, .rp-form > *` 로 옮기고 `.trace-lookup{flex-wrap:wrap}` 한 선언을 더한다. 서식은 파일의 기존 관례(2칸 들여쓰기·한 선언 한 줄)를 따른다.",
+              "expectedOutcome": "`tokens.css` 의 `@media` 가 2개가 되고 선후가 1180 → 720 이다. 대조 스크립트 720px 블록 FAIL 0건."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/econ-opinion-monitor-design-tracker.md` 「등재된 편차」에 ⑴ `@media` 표면을 이 표가 맡는다는 근거와 이번 실측을 적은 인용 블록 1개(「행 형식」 줄 바로 뒤)와 ⑵ 옮기지 않거나 모양을 바꾼 5건의 표 행(표 맨 끝, 「### 해소된 등재」 앞)을 넣고, 절 머리의 등재 이력 목록에 `반응형 @media 표면(rct_20260922-0001)` 을 덧붙인다.",
+              "expectedOutcome": "표 행 5건 추가. `check-journey-mockup.py` 의 R8·R10·R12 가 그대로 통과한다(R10 은 표 행의 숫자 표현을 실측과 대조하므로 「여정 페이지 N」·「화면 N개」·「나머지 N개」·「이관 N/M」 꼴을 쓰지 않는다)."
+            },
+            {
+              "seq": 6,
+              "action": "`@media` 표면 선언 대조를 직접 돌린다(게이트가 보지 못하는 면이므로 게이트 rc=0 은 이 단계의 증거가 아니다). 지침에 실은 대조 스크립트를 임시 파일로 저장해 `python3 <script> .` 로 실행한다.",
+              "expectedOutcome": "`PASS — @media 표면 수렴 (1180px · 720px 두 블록, 등재된 편차 5행 제외)` · rc=0. 변경 전 같은 스크립트는 FAIL 9건 / rc=1 이다(양방향 확인)."
+            },
+            {
+              "seq": 7,
+              "action": "1단계의 네 게이트를 다시 돌려 기준선과 같은지 대조한다.",
+              "expectedOutcome": "네 명령 모두 rc=0이고 출력 수치가 1단계와 동일(회귀 0). `@media` 는 `css_index()` 가 대조 집합에서 빼므로 R5 세 상한은 0 그대로여야 한다 — 값이 움직였다면 블록 밖으로 선언이 새어 나간 것이다."
+            },
+            {
+              "seq": 8,
+              "action": "브랜치 `reconcile/rct_20260922-0001-econ-opinion-monitor-mockup-render` 로 커밋·푸시하고 PR 을 연다(머지는 실행 단계의 몫).",
+              "expectedOutcome": "PR 이 열리고 필수 status 두 개(`required`·`review/manual-approval`)가 붙는다. 변경이 `web/src/tokens/tokens.css` + `docs/*.md` 뿐이라 `check-data-format-change.py` 가 `format_changed=false` 로 판정해 `review/manual-approval` 이 자동 success 다(계획 단계 실측)."
+            }
+          ],
+          "plannedAt": "2026-09-22T12:53:12Z"
+        }
+      }
+    ]
   }
 ]
