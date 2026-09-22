@@ -1815,7 +1815,7 @@
   {
     "id": "rct_20260922-0001",
     "toBeModelId": "tbm_feature-doc-e2e-mock-policy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-22T11:21:37Z",
@@ -1972,6 +1972,54 @@
               "log": "준비 단계의 로컬 예측대로 review/data-format 이 PR head 에 success 로 자동 착지했다('DB 스키마·데이터 저장 형식 변경 없음 (자동 판정)'). 사람이 풀어야 할 required context 는 없었다 — review.manualApproval 필드도 이 레코드에 없다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "sites=33 files=15\n87acbddfe3eb55e624fd2305cb04ca11ba055a4a3c1c67881245ce2f6113f1f4",
+          "checks": [
+            {
+              "name": "V1 가림 기록에 수신·판정 행 신설",
+              "status": "passed",
+              "detail": "main 77158c2 실측: 가림 기록 절 불릿 6 -> 7(절 범위 awk 계수, 변동 이력 표 시작 전까지). 새 불릿이 'llm::tests' · 차단 요인 **아님** · '코드 수정 소관은 이 모델' 을 함께 담는다. 지침 V1 의 '5 -> 6' 은 기준선 표기가 하나 낮았던 것이고(base 5166415 실측 = 6), 요구한 증분 +1 은 그대로 달성."
+            },
+            {
+              "name": "V2 거짓 문장 제거 + 재실측·세는 법 기재",
+              "status": "passed",
+              "detail": "구 단정문 '현재 **지목 문맥 0건**(2026-09-17 전수 확인) — B1 위반 0.' 은 main 에서 0히트. B1 절에 '2026-09-22 재실측'(정확 id sweep — 15 레코드 28 언급, 실 미수신 인계 1건) 과 '세는 법' 이 모두 있다. 주의: 낱말만 grep 하면 2히트가 남는데(세는 법 경고문 1 + 변동 이력 행 1), 둘 다 '그 문장이 거짓이었다' 를 기록하는 인용이지 단정이 아니다 — 지침의 리터럴 grep 0히트 기대는 이 인용을 예상하지 못한 프록시였고, 기대 문면('재실측'과 '세는 법' 존재)은 충족."
+            },
+            {
+              "name": "V3 소관이 부정문이 아니라 모델 이름",
+              "status": "passed",
+              "detail": "새 불릿이 '**코드 수정 소관은 이 모델**이다' 로 적고 근거(트리거와 그 주석이 이 모델의 원장 R1 해소 산출물 — 변동 이력 2026-09-18 rct_20260918-0001 행)를 같이 남긴다. 정의 B2 가 금한 '이 표의 소관이 아니다' 류 부정문 형태가 아니다."
+            },
+            {
+              "name": "V4 env 레이스 실제 해소",
+              "status": "passed",
+              "detail": "main 에서 'cannot race on it' 0히트. 트리거 테스트 needle 이 'stub-llm-fail-needle-rct20260922' 로 비중첩화됐고 공유 픽스처 an_ask() 의 user 는 569행 'a\\nb\\nc' 원형 그대로 — 부분열 검사 결과 an_ask() user 가 새 needle 을 담지 않는다. 형제 stub_is_deterministic_for_the_same_ask 무접촉. cargo 실증: PR 런 test (cargo) pass 5m18s 이고, 머지 후 main 의 backend 트리 해시(e8fec0b2…)가 PR head 것과 **동일**하므로 그 런이 main 트리에 그대로 적용된다(이 레포 CI 는 PR 전용 — main push 엔 Image 만 돈다)."
+            },
+            {
+              "name": "V5 원장 표 불변 (열린 행 0)",
+              "status": "passed",
+              "detail": "차단 요인 원장 표는 헤더 2행 + '(현재 열린 행 없음 — 마지막 해소: R1, 2026-09-18 …)' 1행 그대로. 이 PR 은 원장 행을 만들지 않았다."
+            },
+            {
+              "name": "V6 불변식 1 무접촉 (as-is 지문 동일)",
+              "status": "passed",
+              "detail": "모델 asIs.versionScript 를 main 77158c2 체크아웃에서 재실행: sites=33 files=15\n87acbddfe3eb55e624fd2305cb04ca11ba055a4a3c1c67881245ce2f6113f1f4 — 저장값과 바이트 일치. 허용목록 표·등재 사유 표·표기 주석 무접촉이 실측으로 확인된다."
+            },
+            {
+              "name": "머지 전 전제 재확인",
+              "status": "passed",
+              "detail": "머지 직전 실측: PR #123 OPEN · head 020528a(승인 시점 그대로) · mergeable MERGEABLE · mergeStateStatus CLEAN · 필수 status 2종 success. base 는 승인 이후 5166415 -> 1bb68d0 으로 **움직였다**(#122 착지, doc-tracker 와 tools/check-scenario-e2e.py 만 변경 — 두 대상 파일과 0히트). 낡은 test-merge ref 를 믿지 않고 git merge-tree --merge-base=5166415 로 병합 트리를 만들어 충돌 0 을 확인한 뒤, 그 트리에서 #122 가 갱신한 게이트를 포함해 문서 게이트 3종(rc=0)과 as-is 지문(바이트 일치)을 재실행했다. squash 머지 (--squash, 제목 미지정)로 착지, main 제목에 (#123) 유지."
+            },
+            {
+              "name": "범위 밖 잔여 (정보성 — converged 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "모델 전체 to-be 기준 잔여 2건은 모두 **reconciler-tobe-modeler 소관의 모델 정의 개정**이라 이 slice 범위 밖이다: ⑴ 지문 사각지대 — FEATUREDOC_DOUBLE_* 가 현행 as-is 패턴에 안 걸린다, ⑵ 'stub: *stub_[a-z_]+' 패턴이 stub_* 를 벗어난 공급자 이름을 못 잡는다. 둘 다 문서 '지문 사각지대 고지' 절에 이미 기재돼 있다. 이 PR 은 원장 행을 만들지 않았으므로 B2·B3 상태는 불변이고, 다음 감지는 B1 을 새 '세는 법' 으로 다시 세면 된다."
+            }
+          ],
+          "verifiedAt": "2026-09-22T12:08:00Z"
         }
       }
     ]
