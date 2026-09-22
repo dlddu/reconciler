@@ -5238,6 +5238,62 @@
       "reason": "**작업 필요(`action_required`).** 판정 근거는 넷:\n\n1. **차이가 정의를 실제로 어긴다** — 정합 상태는 「복원 가능한 내용을 담은 주석이 없음」인데, 위 gap 의 1~3 이 복원 경로 ①(코드 자체)로 확인되는 주석을 실측으로 짚는다. 특히 한 명제의 6~7벌 복제는 원장 12차 패스가 이미 같은 잣대로 닫은 유형이다.\n2. **소유자 0** — 이 모델의 열린 task 는 없다(직전 `rct_20260921-0013` 은 `no_action_needed` 로 닫혔고 그 잔여는 전부 사람 게이트였다). 자매 `tbm_feature-doc-docs-impl rct_20260921-0012`(`executing`, PR #114)는 **주석을 더하는 쪽**이지 판정하는 쪽이 아니다.\n3. **무인 경로가 열려 있다** — 72행이 걸친 11파일 중 `tools/check-data-format-change.py` 의 사람 게이트(D1 `backend/migrations/` · D2 `CORE_FILES` = `db.rs`·`crypto.rs`·`models.rs`·`pipeline.rs`·`tests/migrations.rs` · D5 pvc · D6 판정기 자신)에 걸리는 파일은 **0개**이고, D3/D4 는 `is_comment_only` 로 주석 전용 줄을 제외하므로 주석만 걷는 PR 은 `✅ 변경 없음` 으로 지나간다. 직전 두 패스(#111 167행 · #113 93행)와 같은 모양의 무인 패스가 가능하다.\n4. **재감지 경로 0** — to-be 불변이라 원장이 이 72행을 덮은 적이 없고, baseline 전진 뒤에는 어떤 지문도 이 잔여를 다시 깨우지 않는다. 여기서 닫으면 영구 미판정이 된다.\n\n**planner 인계 사항:**\n- **범위**: 무인 72행 / 11파일. 기판정 행 안의 증분 41행은 **새 행을 만들지 말고 원장의 해당 행(①·⑤·⑩·⑰·⑱)을 증분 재판정으로 갱신**하고 패스 상세는 원래 패스 파일에 절을 더한다(원장 「읽는 법」). 신규 3파일 31행(`backend/src/settings.rs` · `backend/tests/settings.rs` · `e2e/tests/sc04-14-llm-output-language.spec.ts`)은 **새 행**이다.\n- **마이그레이션 `0012_llm_language.sql` 14행은 이 패스에서 제외** — 정책의 「전용 PR · 수동 repair · 사람 승인」 절차 몫이고, 잔여 `0009`(30)·`0010`(30)·`0011`(25) 와 합쳐 **99행 한 배치**로 다뤄야 repair 가 한 번으로 끝난다.\n- **열린 PR #114 와 3파일이 겹친다**(`backend/src/doc_edit.rs` · `backend/src/worker_api.rs` · `frontend/src/api.ts`). #114 는 `base == b1c4efe`(내 트리거 tip) · `mergeable=true` · `blocked`(사람 `data-format` status 대기)다. 원장 2행의 「열린 통합 PR 무접촉」 선례대로 **이 3파일을 이번 패스에서 빼거나 #114 착지 뒤로 순서를 두는 것** 중 하나를 계획에서 명시할 것. 빼면 무인 범위는 72 → 66행이 된다.\n- **뒤집지 말 것(선례 고정)**: `sc04-14` 머리의 `// Runs against the e2e deployment (FEATUREDOC_DOUBLE_LLM_KEY=stub)…` 블록은 9차 패스가 `sc01-02` 에서 같은 모양을 「유지」로 닫아 두었다 — 뒤집으려면 `sc01-02` 를 포함한 증분 재판정으로 한 번에 해야 한다. `// 검증 시나리오:` 1줄은 기계 판독 주석이라 지문·판정 모두에서 제외된다.\n- **유지 쪽이 유력한 것**: 「stage 들은 게이트마다 따로 claim 되므로 언어가 그 사이에 움직이면 안 된다 — 그래서 참조가 아니라 복사」(`analysis.rs`·`bin/worker.rs`), 「프롬프트는 경로·심볼·glob·enum·JSON 키를 축자로 고정한다 — 번역하면 조인이 깨진다」(`llm.rs`), 「저장은 키 등록 폼과 독립이라 '저장하고 계속' 을 기다리거나 그것과 함께 잃으면 안 된다」(`RegisterLlmKey.tsx`). 애매하면 남긴다는 정책의 비대칭 비용 조항을 적용할 자리다.\n- **잔여 현황(이 패스 뒤 예상)**: 사람 게이트 잔여 = 마이그레이션 99행(`0009`·`0010`·`0011`·`0012`) + D2 풀 `db.rs` 17 · `models.rs` 1 · `tests/migrations.rs` 14 · `crypto.rs` 13 · D5 `deploy/k8s/pvc.yaml` 1 · D6 `tools/check-data-format-change.py` 58 — 해제 조건은 모두 사람 쪽이라 이번 계획 범위 밖이다.",
       "assessedBy": "agent",
       "assessedAt": "2026-09-22T06:46:30Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**#108(`b1c4efe`) 유입 86행 중 무인 72행을 판정해 순 제거 40행**을 한 PR 로 스테이징한다.\n\n**왜 이 방법인가.** 이 모델은 판정 원장(`docs/comment-policy/ledger.md`)을 쌓아 온 축이고, 직전 세 패스(#106 슬라이스 6a · #111 6b · #113 6c)가 「유입 증분만 판정 → 원장 갱신 → 순 제거」라는 같은 모양으로 닫혔다. 이번 트리거도 같은 형(사람 PR #108 의 AC4.9 유입)이라 **새 판정 축을 만들지 않고 그 형을 그대로 잇는 것**이 선례 일관성(같은 명제를 패스마다 반대로 판정하지 않는다)과 검증 가능성(지문 산술이 딱 맞는다) 둘 다에 유리하다. 대안이던 「0012 마이그레이션까지 한 PR 에」는 정책 본문의 「전용 PR · 수동 repair · 사람 승인」 조항이 금지한다.\n\n**이 시도의 범위(완료 기준).**\n- 판정 대상 = 부모 `710c3df` → 트리거 tip `b1c4efe` 의 지문 증분 **순 추가 86행 / 제거 0행**(실측 재현) 중 **무인 72행**.\n  - **기판정 행 안의 증분 41행** — 원장 ①(`analysis.rs` 5 · `llm.rs` 18 · `worker_api.rs` 3 = 26) · ⑤(`bin/worker.rs` 7) · ⑩(`api.ts` 2 · `RegisterLlmKey.tsx` 4 = 6) · ⑰(`doc_edit.rs` 1) · ⑱(`feature_add.rs` 1). **새 행을 만들지 않고 해당 행의 결과 칸을 증분 재판정으로 갱신**하고, 근거는 각 행의 원래 패스 파일에 절을 더한다(원장 「읽는 법」).\n  - **신규 3파일 31행** — `backend/src/settings.rs` 15 · `backend/tests/settings.rs` 4 · `e2e/tests/sc04-14-llm-output-language.spec.ts` 12 → **원장 새 행 1개**(출력 언어 설정 축) + 새 패스 파일 1개.\n- 판정 결과: **제거 40행 / 유지 32행**(기판정 행 41 = 제거 27 · 유지 14 / 새 행 31 = 제거 13 · 유지 18).\n- 착지 기대값: 지문 `lines=2593 files=130` → **`lines=2553 files=129`**. 파일 수가 주는 것은 `backend/tests/settings.rs` 의 주석이 4행 전건 제거되어 0행이 되기 때문이다(10차 패스의 `format.ts` 와 같은 어긋남 — 산술에 미리 넣는다).\n- 성공 = 이 PR 이 준비되고(코드 8파일은 주석 줄만, 비주석 바이트 불변) 원장·패스·허브가 함께 갱신되며 CI 게이트가 통과하는 것. **머지는 실행 단계의 몫**이다.\n\n**범위 밖(후속).**\n- **마이그레이션 `0012_llm_language.sql` 14행** — 정책의 사람 게이트(전용 PR · 수동 repair · 사람 승인). 이미 잔여인 `0009`(30) · `0010`(30) · `0011`(25) 와 합쳐 **99행 한 배치**로 다뤄야 repair 가 한 번에 끝나므로 이번 무인 패스에 섞지 않는다.\n- D2 `CORE_FILES` 풀(`db.rs` 17 · `models.rs` 1 · `tests/migrations.rs` 14 · `crypto.rs` 13) · D5 `deploy/k8s/pvc.yaml` 1 · D6 `tools/check-data-format-change.py` 58 — 해제 조건이 모두 사람 쪽이다.\n\n**판정의 축(선례 고정분 포함).**\n1. **한 명제의 7벌 복제는 「정본을 어디에 둘 것인가」로 판정한다**(원장 12차 패스 선례). 「`None`/`null` = 설정이 생기기 전에 시작된 분석」은 `analysis.rs` · `bin/worker.rs` · `worker_api.rs` · `settings.rs` · `tests/settings.rs` · `api.ts` · `llm.rs` 일곱 벌 → **정본은 `settings.rs::analysis_language`**(설정↔분석 의미의 소유자, 모든 호출자가 지나는 한 함수), 나머지 여섯 벌 제거. 「스테이지가 게이트마다 따로 claim 되므로 언어가 그 사이에 움직이면 안 된다 — 그래서 참조가 아니라 복사」는 **정본이 `analysis.rs::create` 의 복사 지점**(불변식을 만드는 코드 옆), `bin/worker.rs::language_for` · `settings.rs` 모듈 머리의 재진술 제거.\n2. **뒤집지 않는다** — `sc04-14` 머리의 `// Runs against the e2e deployment (FEATUREDOC_DOUBLE_LLM_KEY=stub)…` 블록(7행)은 9차 패스가 `sc01-02` 에서 같은 모양을 「유지」로 닫아 두었다. 여기서 뒤집으면 그 자체가 drift 다. **전건 유지.**\n3. **단정 재진술은 제거**(13차 패스 선례) — `sc04-14` 한국어 한 줄 주석 5개. 🔴 **감지 단계의 「시나리오 원문에 없다(grep 0히트) ⇒ 복원 경로는 ①뿐」은 재실측에서 뒤집혔다**: `docs/test/04-platform.md#시나리오 14` 의 기대 결과가 「선택은 **누르는 즉시 저장**되어 **다시 열어도 유지**된다」 · 「지원하지 않는 언어 값은 거부되고 저장된 설정은 바뀌지 않는다」 · 「기본값은 한국어다」로 **다섯 중 넷을 축자에 가깝게 복원**한다(`docs/prd/04-platform.md` 에 「고른 적 없는 사용자」도 있다). 즉 복원 경로는 ①(바로 아래 `toHaveAttribute` 단정)**과** ②(시나리오 문서) **둘 다**이고, 제거 근거는 감지가 본 것보다 강하다.\n4. **rustdoc 링크만의 교차 참조는 링크를 위해 문장을 남기지 않는다**(정책 본문 · 증분 ③ 선례) — `llm.rs::anthropic_body` 의 「for the same reason as [`openai_body`]」 2행, `settings.rs::SettingsView.llm_language` 의 「the codes [`Language::parse`] accepts」 1행, `worker_api.rs` 의 「see the column's note in the analysis module」 3행.\n5. **애매하면 남긴다**(정책의 비대칭 비용) — 「경로·심볼·glob·enum·JSON 키를 축자로 고정한다, 번역하면 조인이 깨진다」(`llm.rs` 4행: 지시문 문자열이 *무엇*을 말하는지는 복원되지만 *조인이 깨진다*는 이유는 어디에도 없다) · 「저장은 키 등록 폼과 독립이라 '저장하고 계속' 을 기다리거나 그것과 함께 잃으면 안 된다」(`RegisterLlmKey.tsx` 2행) · 「`null` until the stored value arrives」 1행 · 「the user turn is where the input lives; the language must not leak into it」 1행(단정은 값만 말하고 금지는 말하지 않는다 — **판단 갈림 1건으로 기록**) · `settings.rs::llm_language` 의 「모르는 값은 실패가 아니라 기본값으로 읽는다 — 움직인 쪽은 코드다」 3행.\n\n**열린 자매 PR 과의 관계(실측).** `dlddu/feature-doc` 열린 PR 3건. #114(docs-impl 슬라이스 6d)가 내 편집 대상과 **파일 3개를 공유**하지만 **헝크는 겹치지 않는다**(실측: #114 의 `doc_edit.rs` 헝크는 `@@ -25`·`-68`·`-396` 이후, 내 대상은 `:191` / `worker_api.rs` 는 `@@ -666`, 내 대상은 `:142-145` / `api.ts` 는 `@@ -771`, 내 대상은 `:35`·`:143`). #115·#116 은 `docs/mockups/*.html` 과 `tools/check-journey-prototype.js` 로 내 범위와 교집합 0. 그러므로 **감지가 제안한 「3파일 제외(72→66)」는 하지 않는다** — 대신 PR 을 열기 직전에 `merge-tree` 로 셋 다 clean 임을 다시 재고, 그때 겹치면 **겹친 헝크만** 보류해 해당 원장 행 비고에 이월로 적는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "판정 입력을 실측으로 고정한다. 모델 `asIs.versionScript` 를 바이트 그대로 옮긴 `hits.sh` 로 부모 `710c3df` 와 트리거 tip `b1c4efe` 의 히트 집합을 뽑고, `diff` 로 증분을 센다. `git ls-remote origin main` 으로 tip 이 아직 `b1c4efe` 인지(준비 중 자매 착지 0) 확인한다.",
+              "expectedOutcome": "`710c3df` = `lines=2507 files=126` / `3d9af1f4…`, `b1c4efe` = `lines=2593 files=130` / `ebd57171…` 로 저장 baseline 과 **바이트 동일**. 증분은 `>` 86행 · `<` 0행, 파일 12개(`llm.rs` 18 · `settings.rs` 15 · `0012_llm_language.sql` 14 · `sc04-14` 12 · `bin/worker.rs` 7 · `analysis.rs` 5 · `RegisterLlmKey.tsx` 4 · `tests/settings.rs` 4 · `worker_api.rs` 3 · `api.ts` 2 · `feature_add.rs` 1 · `doc_edit.rs` 1). `ls-remote` == `b1c4efe`."
+            },
+            {
+              "seq": 2,
+              "action": "복원 경로를 파일을 열어 판정한다(지문 줄만 보지 않는다 — 정책 「지문과 사각지대」). 7벌 복제 명제의 정본 선정, `docs/test/04-platform.md#시나리오 14`·`docs/prd/04-platform.md` grep 으로 경로 ② 재실측, `openai_body`·`provider_for` doc 을 읽어 링크 전용 교차 참조 여부 확인.",
+              "expectedOutcome": "72행이 제거 40 / 유지 32 로 갈린다(기판정 행 41 = 27/14, 새 행 31 = 13/18). 경로 ② 실측: 「누르는 즉시 저장」·「다시 열어도 유지」가 `docs/test/04-platform.md` 에 축자, 「고른 적 없는 사용자」가 `docs/prd/04-platform.md` 에 축자로 존재. `openai_body` doc 이 「built apart from the call so a test can read it without a network」를 이미 말하므로 `anthropic_body` 의 「for the same reason as」는 링크 전용."
+            },
+            {
+              "seq": 3,
+              "action": "브랜치 `reconcile/rct_20260922-0001-feature-doc-comment-redundancy` 를 `b1c4efe` 에서 끊고, 코드 8파일에서 제거 40행을 **문자열 일치 치환(count==1 강제)** 으로 걷는다. 줄 번호로 지우지 않는다. 재작성 4자리(`llm.rs` 3 · `settings.rs` 1)는 남길 문장만 남기는 축소 치환이다.",
+              "expectedOutcome": "8파일이 바뀐다: `analysis.rs` −2 · `llm.rs` −10 · `worker_api.rs` −3 · `bin/worker.rs` −7 · `api.ts` −2 · `RegisterLlmKey.tsx` −1 · `doc_edit.rs` −1 · `feature_add.rs` −1 · `settings.rs` −4 · `tests/settings.rs` −4 · `sc04-14` −5 = 40. (`0012_llm_language.sql` 은 **한 글자도** 건드리지 않는다.)"
+            },
+            {
+              "seq": 4,
+              "action": "비주석 바이트 불변을 증명한다. 문자열·문자 리터럴을 인식하는 stripper 로 각 파일의 줄 주석(`//`·`///`·`//!`)과 블록 주석을 걷어낸 뒤 편집 전후를 바이트 비교한다(「비주석 diff 0줄」은 쓰지 않는다 — 10차 패스 경고).",
+              "expectedOutcome": "편집한 11파일 전부 stripper 출력 **IDENTICAL**. `git diff --stat` 의 삭제 줄이 정확히 40, 추가 줄은 재작성 4줄뿐."
+            },
+            {
+              "seq": 5,
+              "action": "지문을 재계산해 산술을 맞춘다: 전역 지문(`hits.sh`)과 원장 행별 지문(후행 개행 **포함** `echo | sha256sum`).",
+              "expectedOutcome": "전역 `lines=2553 files=129` — 130→129 는 `backend/tests/settings.rs` 가 주석 0행이 되어 빠지기 때문. 원장 행 ①·⑤·⑩·⑰·⑱ 과 새 행의 줄 수·지문이 새 값으로 갱신된다."
+            },
+            {
+              "seq": 6,
+              "action": "문서를 갱신한다 — (a) 새 패스 파일 `docs/comment-policy/passes/2026-09-22-output-language-axis.md`(새 행 31행의 근거), (b) 기존 패스 5개에 **증분 재판정 절**을 덧붙임(`2026-09-17-backend-concentrated.md` · `2026-09-18-worker-double-axis.md` · `2026-09-20-frontend-shell-axis.md` · `2026-09-21-doc-edit-axis.md` · `2026-09-21-feature-add-axis.md`), (c) `ledger.md` 의 행 ①·⑤·⑩·⑰·⑱ 결과 칸 갱신 + 새 행 1개 등재, (d) `docs/index.html` 에 새 패스 링크 + `Documents` 45 → 46.",
+              "expectedOutcome": "원장 행 20개. 허브 등재를 빠뜨리면 `check-journey-mockup.py` 의 R8·R9 가 실패하므로 (d)는 필수다."
+            },
+            {
+              "seq": 7,
+              "action": "게이트를 로컬에서 굴린다: `cargo test --offline`(CARGO_TARGET_DIR 캐시) · `npm run build`(frontend) · `tools/check-mockup-render.py` · `tools/check-journey-mockup.py` · `tools/check-scenario-e2e.py` · `tools/check-data-format-change.py`.",
+              "expectedOutcome": "cargo 전건 통과 · 프런트 빌드 0 · 체커 3종 rc=0 · `check-data-format-change.py` 는 `✅ 변경 없음`(주석 전용 줄은 `is_comment_only` 로 제외되므로 D3/D4 에 안 걸리고, D1·D2·D5·D6 대상 파일은 0개). ⚠️ `tools/check-journey-prototype.js` 는 `tools/npm ci`(jsdom) 없이는 main 에서도 rc=1 이므로 게이트 실패로 오독하지 않는다."
+            },
+            {
+              "seq": 8,
+              "action": "PR 을 열기 직전에 열린 자매 PR 을 다시 잰다: `gh pr list` + `git merge-tree --write-tree --name-only <base> <PR head>` 로 #114·#115·#116 과의 충돌을, `ls-remote origin main` 으로 base 무이동을 확인한다.",
+              "expectedOutcome": "셋 다 충돌 0, `main` == `b1c4efe` 무이동. 겹치는 헝크가 생겼으면 그 헝크만 되돌리고 해당 원장 행 비고에 이월로 적은 뒤 합계를 재계산한다."
+            },
+            {
+              "seq": 9,
+              "action": "PR 을 연다(머지하지 않는다). 본문에 task id · gap 요약 · 판정 표(행별 제거/유지) · 지문 전후 · 검증 방법 · 범위 밖 잔여를 적는다. CI 를 기다려 check-runs 와 `mergeable` 을 실측한다.",
+              "expectedOutcome": "PR 이 열리고 check-runs 전건 success · `MERGEABLE`. `review/data-format` 은 봇이 success 로 채운다(마이그레이션 무접촉이므로 사람 게이트가 붙지 않는다)."
+            }
+          ],
+          "plannedAt": "2026-09-22T06:59:32Z"
+        }
+      }
+    ]
   }
 ]
