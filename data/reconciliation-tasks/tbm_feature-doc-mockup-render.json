@@ -4631,7 +4631,7 @@
       ]
     },
     "createdAt": "2026-09-22T07:48:48Z",
-    "updatedAt": "2026-09-22T08:18:28Z",
+    "updatedAt": "2026-09-22T08:20:45Z",
     "stateSummary": {
       "asIs": "## as-is — 구현 화면 (`frontend/src`, 트리거 `1289a7fa`, 트리 `e89b79c4`, 관측 2026-09-22T07:55Z)\n\n**이번 트리거의 as-is 델타는 판정 축 무영향이다.** `7758e705 → 1289a7fa`(#117 주석 비중복성 무인 패스) 는 `frontend/src` 에서 **주석 3행 삭제만** 한다 — `RegisterLlmKey.tsx` 의 `LANGUAGES` 위 1행, `api.ts` 2행(`api.ts` 는 정의상 비렌더링 모듈이라 판정 대상 밖). 마크업·CSS·코드 바이트는 불변이고, 상단 매핑 주석 `// docs/mockups/JRN-connect-repo.html#STP-register-llm-key (AC4.2 · AC4.3)` 도 그대로다.\n\n**활성 대조 쌍 `RegisterLlmKey.tsx` ↔ `#STP-register-llm-key` 의 「출력 언어」 컨트롤(`RegisterLlmKey.tsx:280-294`)**\n\n```tsx\n<span className=\"caps\">출력 언어</span>\n<div className=\"segment\" style={{ marginTop: 4 }}>\n  {LANGUAGES.map((l) => (\n    <button type=\"button\" className={`seg${l.id === language ? ' active' : ''}`}\n            onClick={() => selectLanguage(l.id)} disabled={language === null}\n            aria-pressed={l.id === language} data-testid={`lang-${l.id}`}>{l.label}</button>\n  ))}\n</div>\n<p className=\"body sm\">분석 결과의 문장을 이 언어로 받아요. 다음에 시작하는 분석부터 적용됩니다.</p>\n```\n\n- 고르는 주체가 `<button type=\"button\" aria-pressed>` 2개다. 폼 요소(radio)는 없고 선택 상태는 React state(`language`)와 `aria-pressed`·`.active` 클래스로만 표현된다.\n- `index.css:262-283` 의 `.segment` / `.segment .seg` / `.segment .seg.active` 선언은 목업의 같은 이름 선언과 **선언 단위로 동일**하다(`background: transparent` · `font-family: var(--font-sans)` 포함 — 2026-09-22 07:03 `b287638b`(#116, 직전 mockup-render task `rct_20260922-0001`)이 목업 쪽에 이 2줄을 넣어 맞춘 결과다). `.segment .seg input` 에 해당하는 규칙은 **없다**(구현에 input 이 없으므로 일관적이다).\n- e2e `e2e/tests/sc04-14-llm-output-language.spec.ts` 가 `data-testid=\"lang-ko|lang-en\"` 를 클릭하고 `aria-pressed` 를 6회 단정한다 — 현재 구현 형태에 묶여 있다.\n\n**게이트 실측(트리거 HEAD)**: `tools/check-mockup-render.py` **rc=0** — M0 활성 14 · 보류 0 · 편차 29, M1 dangling 0, M2 토큰 21개 일치, M3A 324건/M3B 286건 미등재 0, M4 공전 행 0, M5 29/29 · 0/0, M6 오용 0, M7 불일치 0. 단 이 게이트는 **규칙 5(구조·수치) 중 앱바 슬롯(M7) 하나만 자동화한다**고 자기 머리주석(29-34행)에 명시한다 — 나머지 CSS 클래스·요소 계층 대조는 사람 몫이다.",
       "toBe": "## to-be — 목업 SSOT (`docs/mockups` `25436ff4`, `docs/design-system.md` `492ae3ae`, 트리거 `7758e705` = #115)\n\n`b287638b → 7758e705` 의 to-be 델타는 **`docs/mockups/JRN-connect-repo.html` 한 파일 +29/−10** 이고, 전부 `#STP-register-llm-key` 의 「출력 언어」 자리다. `design-system.md` blob 은 **불변**(`492ae3ae`) — 토큰 축은 움직이지 않았다.\n\n**마크업 (JRN-connect-repo.html:1217-1223)**\n\n```html\n<div class=\"segment\" id=\"lang-seg\" style=\"margin-top:4px\">\n  <label class=\"seg active\"><input type=\"radio\" name=\"out-lang\" value=\"ko\" checked>한국어</label>\n  <label class=\"seg\"><input type=\"radio\" name=\"out-lang\" value=\"en\">English</label>\n</div>\n```\n\n직전(부모 `b287638b`)은 `<button type=\"button\" class=\"seg\" data-lang aria-pressed>` 2개였다.\n\n**CSS** — `.segment .seg input { position: absolute; opacity: 0; width: 0; height: 0 }` 1규칙 신설. 커밋 자신이 의도를 적는다: 「세그먼트는 보기일 뿐이고 고르는 주체는 그 안의 radio 다 … 모양은 그대로 두고 실제 폼 요소를 되찾기 위한 것이라 `.seg`/`.seg.active` 선언은 건드리지 않는다」. 실제로 `.seg`·`.seg.active` 선언은 바이트 불변이다.\n\n**프로토타입 script** — `state.outputLang` · `syncLang()` 도입(선택의 정본은 radio 의 `checked`, `.active` 는 거기서 파생), 리셋·진입 경로에 `syncLang()` 연결.\n\n**카피** — `출력 언어` · `한국어` · `English` · `분석 결과의 문장을 이 언어로 받아요. 다음에 시작하는 분석부터 적용됩니다.` 전부 불변. 기준 4(카피)는 양방향 일치 유지(M3A/M3B 미등재 0건이 재확인).\n\n**같은 커밋이 게이트도 함께 올렸다** — `tools/check-journey-prototype.js` 에 P3 단정 5개 추가: `#lang-seg input[name=\"out-lang\"]` 2개가 실제 `radio` 인지, 초기 선택이 화면에 드러나는지, radio 를 체크하면 `.active` 가 따라오는지. 머리주석이 사유를 적는다 — 「`<button aria-pressed>` 은 눌린 티만 내는 비대화형 요소라 포커스·선택이 폼 상태로 남지 않는다」. 즉 **목업이 방금 버린 형태가 구현이 지금 쓰고 있는 형태다.**\n\n**등재 현황** — `docs/doc-tracker/2026-09.md` 「알려진 목업↔구현 편차」 29행 중 이 자리를 덮는 행은 **없다**. AC4.9(2026-09-21) 기록은 「출력 언어 세그먼트를 목업과 구현에 **같은 카피로** 들였다 · 새 편차는 0」이라 적는데, 그 등식은 #115 이전까지만 참이었다.",
@@ -4697,6 +4697,55 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-22T08:18:00Z",
           "reason": "프론트엔드 화면 컨트롤 1개의 DOM 요소 교체(3파일 +22/−12, 순증 10행)이고 데이터·마이그레이션·API 계약을 건드리지 않는다 — 그 사실이 필수 status review/data-format 의 `✅ 변경 없음` 으로 못박혀 있어 불가역 지점이 없고, 롤백은 squash 커밋 1개 revert 로 끝나며 되돌려도 목업↔구현이 #115 직후의 어긋난 상태로 돌아갈 뿐 제품 기능(PUT /api/settings 경로)을 깨지 않는다. 신선도 재확인(2026-09-22T08:18Z): PR #119 열림·MERGEABLE·mergeStateStatus=CLEAN, base 1289a7fa 가 여전히 main tip 이라 베이스 이동·충돌 없음, 필수 status 2건 모두 초록(ci-gate pass — 계획이 유일한 집행자로 지목한 kind e2e 6m14s 포함, review/data-format pass), diff 3파일이 plan.steps 1~3 과 정확히 일치하고 gap 밖 변경이 섞이지 않았다(LLM Provider 컨트롤·편차 원장·doc-tracker 무접촉). 계획 이후 새로 열린 자매 PR #118 은 docs/comment-policy/ 2파일뿐이라 #114 와 함께 파일 교집합이 0 이고, 계획이 그 비겹침을 이미 전제했다. executionGuide 에 완료 기준 4건과 기대값이 명시된 검증 명령 6종·머지 후 수렴 판정(grep aria-pressed 0히트)·리베이스 금지와 squash 전용 같은 착지 제약이 구체적으로 적혀 있어 low 위험도에 걸맞은 대비가 선다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-22T08:18:28Z",
+          "finishedAt": "2026-09-22T08:20:40Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-22T08:18:30Z",
+              "finishedAt": "2026-09-22T08:19:05Z",
+              "log": "선행 확인(지침 1단계) — 코드는 준비 단계가 PR #119 에 이미 스테이징했으므로 실행자가 새로 쓴 코드는 없다. claim 직후 08:18:19Z 재실측이 계획·검토 시점과 전건 일치:\n- PR #119 open · merged=false · head f3f7a1e8cc8501931ddd0c711f922b18974f6662 (준비 이후 push 없음) · base 1289a7fae7b599733fd4f6cb8361eaf1953ab856 · mergeable=true · mergeable_state=clean · 3파일 +22/-12\n- diff 3파일이 plan.steps 1~3 과 정확히 일치: e2e/tests/sc04-14-llm-output-language.spec.ts(+5/-5) · frontend/src/RegisterLlmKey.tsx(+11/-7) · frontend/src/index.css(+6/-0). 범위 밖 파일 0.\n- main tip 1289a7fa 로 base 와 동일(베이스 이동 없음).\n- 열린 자매 PR 재계수: #114(docs-impl 슬라이스 6d, 사람 게이트 파킹 중) · #118(주석 원장 복구, docs/comment-policy/ 2파일). 이 PR 의 3파일과 교집합 0 — 착지 순서 자유.\n- git merge-tree --write-tree --merge-base=1289a7fa origin/main f3f7a1e8 → rc=0, 트리 fd5152a22fe70fcfdd9e75a2a89512b98450026b (충돌 0). base==main tip 이라 흡수할 자매 착지가 없어 지침 1단계의 origin/main 머지 분기는 불발 — 브랜치 무변경(리베이스 금지 주의사항 ② 준수)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-22T08:18:19Z",
+              "finishedAt": "2026-09-22T08:18:25Z",
+              "log": "필수 status 2건 초록 확인(지침 2단계) — head f3f7a1e8 실측:\n- combined status: state=success · total_count=1 · review/data-format=success (사람만 풀 수 있는 status 는 없다는 준비 단계의 ruleset 실측과 일치).\n- check-runs 9건 전건 완료: ci-gate success · test (cargo) success · test (kind e2e) success (계획이 유일한 집행자로 지목한 sc04-14 를 포함) · docs-scenario-e2e success · docs-mockup-render success · docs-journey-mockup success · 데이터 저장 형식 변경 판정 success · push / build & push image (ghcr) success · push / pin deployment image skipped(main 전용).\n지침의 App 토큰 403 주의는 이번 실측에서 발생하지 않았다(combined status 정상 응답)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-22T08:19:12Z",
+              "finishedAt": "2026-09-22T08:19:20Z",
+              "log": "squash 머지(지침 3단계 · 주의사항 ⑥). PUT /repos/dlddu/feature-doc/pulls/119/merge merge_method=squash, sha=f3f7a1e8cc8501931ddd0c711f922b18974f6662 (경합 방지용 head 고정). merge commit 은 required_linear_history 로 금지돼 쓰지 않았다.\n응답: merged=true · sha=61570828292f2062653743880d4b840ee5621c9a.\ncommit_title 을 넘기지 않아 기본 제목이 유지됐다 — main 커밋 제목의 (#119) 접미사 보존 확인."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-22T08:19:25Z",
+              "finishedAt": "2026-09-22T08:20:30Z",
+              "log": "머지 후 origin/main 최신(61570828)에서 게이트 6종 재측정 — 전부 지침의 기대값과 일치. 클론 /home/ubuntu/.claude/jobs/fcf34a1f/tmp/fd, node v22.14.0, TMPDIR 을 job 전용으로 고정.\n1) check-mockup-render.py --verbose rc=0 — 부모 1289a7fa 의 같은 명령 출력과 diff 무출력(바이트 동일). M0 활성 14 · 보류 0 · 편차 29 · M5 래칫 미해소 편차 29/29 · 대조 보류 0/0 · M7 대조 12쌍 면제 1 불일치 0.\n2) check-journey-prototype.js rc=0 — 여정 5개 · 단언 413건 · 규칙 5 (b)(c)(d)(e)(f)(g)(h) 이상 없음.\n3) check-scenario-e2e.py rc=0. 4) check-journey-mockup.py rc=0 (R0~R11).\n5) check-data-format-change.py --base 1289a7fa --head HEAD --verbose rc=0 — 판정 '변경 없음'(review/data-format=success), 검사 파일 3개.\n6) frontend: npm ci rc=0 · npm run build rc=0 (tsc -b + vite build, built in 85ms)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "skipped",
+              "startedAt": "2026-09-22T08:19:20Z",
+              "finishedAt": "2026-09-22T08:19:22Z",
+              "log": "PR 생성은 준비 단계(2026-09-22T08:04:25Z)가 이미 끝냈다 — 브랜치 reconcile/rct_20260922-0003-mockup-render, PR #119. 실행 단계에서 새로 할 일이 없어 skipped. head 는 준비 이후 한 번도 움직이지 않았다(f3f7a1e8 불변)."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-22T08:19:20Z",
+              "finishedAt": "2026-09-22T08:20:40Z",
+              "log": "착지 확인. main tip 1289a7fa -> 61570828292f2062653743880d4b840ee5621c9a, 제목 '목업↔구현 수렴 — 출력 언어 선택을 실제 폼 요소로 (rct_20260922-0003) (#119)', 3파일 +22/-12.\n머지 커밋 트리 fd5152a2 == PR head f3f7a1e8 의 트리 == 머지 전 merge-tree 결과 — PR 런의 초록(kind e2e sc04-14 포함)이 지금 main 트리에 그대로 적용된다.\nas-is 축(frontend/src) 이동: e89b79c4 -> 0d0b628cdf4b8cf288baa76691d27276f4fe9114.\ngrep -rn aria-pressed frontend/ e2e/ → 0히트. 남은 히트는 docs/comment-policy/passes/ 4건과 tools/check-journey-prototype.js 1건으로, 전자는 범위 밖 ②(착지한 패스 기록의 인용, 소급 개정 안 함), 후자는 목업 쪽 래칫이라 정상이다.\nmain push 워크플로: Image push success · pages build and deployment success. (이 레포의 Checks 워크플로는 PR 전용이라 main push 에는 돌지 않는다 — 그래서 위 트리 동일성으로 판정했다.)"
+            }
+          ]
         }
       }
     ]
