@@ -5434,7 +5434,7 @@
   {
     "id": "rct_20260922-0003",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-22T07:46:42Z",
@@ -5452,7 +5452,7 @@
       ]
     },
     "createdAt": "2026-09-22T07:46:42Z",
-    "updatedAt": "2026-09-22T08:32:10Z",
+    "updatedAt": "2026-09-22T08:36:40Z",
     "stateSummary": {
       "asIs": "## as-is — `dlddu/feature-doc` main `1289a7f` (2026-09-22T07:38:51+09:00, 관측 07:50Z)\n\n지문 `lines=2553 files=129` / `4402bff944986ab33373dfebc766263530f071a48d20bf11811cd37fa9506cdc` — 부모 `7758e70`(`lines=2594 files=130` / `48a71c56…`)에서 **순 제거 41행 · 파일 −1**. 두 side 모두 **단일 커밋** `1289a7f`(PR #117, `reconcile(rct_20260922-0001)`)에서만 움직였다(양 지점 versionScript 재실행으로 확인).\n\n### 원장 대비 실측 (원장이 스스로 지시한 재계산 절차)\n\n원장 「자유 풀」 절: *\"다음 감지는 절대 수치를 믿지 말고 전역 지문의 파일 목록에서 판정 파일을 집합으로 빼서 잔여를, 행 열의 합과 「전역 − 잔여」의 차로 미판정 증분을 다시 계산해야 한다\"*. 그대로 실행했다.\n\n- 판정 행 **20행 / 124파일**, 행 열(현재 주석 줄 수) 합 **2,349행**\n- **19/20 행이 실측과 정확히 일치.** 유일한 불일치는 **2행**(`tools/check-journey-prototype.js` · `backend/src/config.rs`): 원장 **140** / `ddacce0b…` vs 실측 **141** / `f9af32efe86eec6fad0875a7f259f36f12386aa7de41d6fb588240cb893c3a05`\n- 미판정 잔여 = 전역 파일집합 − 판정 파일집합 = **10파일 / 203행**\n  - `backend/migrations/` `0009`(30) · `0010`(30) · `0011`(25) · **`0012_llm_language.sql`(14, 이번에 새로 진입)** = 99행 — 사람 게이트(전용 PR · 수동 repair · 사람 승인)\n  - D2 저장 계층 4파일 45행(`db.rs` 17 · `crypto.rs` 13 · `tests/migrations.rs` 14 · `models.rs` 1)\n  - D6 `tools/check-data-format-change.py` 58 · D5 `deploy/k8s/pvc.yaml` 1 = 59행\n- **미판정 증분 = (전역 2,553 − 잔여 203) − 행 열 합 2,349 = 1행**\n\n### 그 1행의 정체 (귀속 완료)\n\n`tools/check-journey-prototype.js` 90→91. **PR #115**(`7758e70`, 이번 트리거의 부모)가 더한 4행 블록 주석의 `/*` 여는 줄이고, 이어지는 3행은 `*`로 시작하지 않아 지문에 들어오지 않는다. 내용은 「`<button aria-pressed>` 가 한 번 들어왔던 자리 — 그래서 형태(실제 radio)와 폼 상태 지배를 함께 본다」는 **사고 기록 · 검사 존재 이유 · 뮤테이션 내성 근거**이고, 직전 fire 의 `rct_20260922-0002`가 이미 **「전건 유지」**로 판정했다(소스 편집 불필요). 다만 그 판정이 원장 2행에는 반영되지 않아 증분이 열린 채 남았다.\n\n### 트리거가 실제로 한 일 (#117 = `rct_20260922-0001`의 산출)\n\n11파일 45행 삭제 · 4행 삽입(재작성) → 순 제거 41행. `backend/tests/settings.rs`가 주석 0행이 되어 파일 수 130→129. `backend/migrations/` 무접촉(`git diff --name-only` 확인). 패스 문서 `passes/2026-09-22-output-language-axis.md`(신규 182행)와 증분 재판정 5절(원장 1·5·10·17·18행의 원래 패스 파일)이 함께 들어왔고, 원장 행 5개 갱신 + 신규 행 1개(출력 언어 설정 축, 17행 / `94587951…`)가 등재됐다. 이 행들은 전부 실측과 일치한다.",
       "toBe": "## to-be — `docs/comment-policy/` tree `fd7df8a73865e4990f72036fc83a8f52ae083333` (직전 `63b9c4bc…`)\n\n정합 상태의 정의(모델 `definition`): 판정 대상 범위의 주석 중 **네 복원 경로(① 코드 ② 저장소 문서 ③ PR ④ 커밋 메시지) 어디서든 확인되는 내용을 담은 것이 없음**. 정책 디렉터리의 역할 분담은 reconciler `templates/comment-redundancy.tbm.md`「정책 디렉터리」절이 SSOT다:\n\n| 파일 | 담아야 하는 것 |\n|---|---|\n| `README.md` | 정책 본문 (진입점) |\n| **`ledger.md`** | 판정 범위 · **그 범위의 현재 주석 줄 수** · 지문 · 결과 요약의 표, **합계**, 원장 읽는 법 |\n| `passes/<판정일>-<slug>.md` | 한 패스의 근거표 · 유지 목록 · 판단이 갈린 것 · 증분 재판정 |\n\n- 같은 범위의 **증분 재판정은 새 행을 만들지 않고 원래 행의 결과 칸을 갱신**하며 상세는 원래 패스 파일에 절을 더한다(원장 「읽는 법」).\n- `ledger.md`의 **합계**는 템플릿이 이름 붙인 필수 성분이고, 이 원장에서는 「판정 N파일 · 순 제거 누적 · 판정 범위 현재 합계 · 미판정 잔여 · 미판정 증분 · 다음 무인 패스 후보 풀」의 형태로 쓰이며 **패스마다 갱신돼 왔다**(현재 문면도 \"직전 2,182 + 이 패스 77\"처럼 직전 값에서 이어 적는 누적 서술이다).\n\n### 트리거 시점 `ledger.md`의 합계 문면 (갱신되지 않음)\n\n- 판정 **121파일** · 순 제거 누적 **2,259행** · 판정 범위 현재 합계 **2,318행**(전역 `lines=2507` − 잔여 189)\n- **미판정 잔여 9파일 / 189행** (이 패스 트리 기준 — 전역 `lines=2507 files=126`), 분해 `1+1+1+4+2 = 9파일 · 30+30+25+45+59 = 189행`\n- **미판정 증분은 0행**\n- **다음 무인 패스의 후보 풀은 비어 있다**(#112 의 무인 93행은 이 패스가 닫았다)\n\n### 이번 패스가 남긴 정확한 기록 (대조용)\n\n신규 패스 문서 `passes/2026-09-22-output-language-axis.md`는 「범위 밖 (후속)」에서 잔여를 **정확히** 적는다 — `0012_llm_language.sql` 14행 + `0009`(30)·`0010`(30)·`0011`(25) = **99행 한 배치**, D2 4파일 45행, D6·D5 59행. 즉 올바른 현재 값은 **패스 문서에는 있고 원장 합계에는 없다**.",
@@ -5545,9 +5545,9 @@
           "reason": "문서 2파일(`docs/comment-policy/ledger.md`·`passes/2026-09-18-uncontested-harness-config.md`) 편집으로 원장 자기모순을 닫는 계획이고, 소스 주석·`backend/migrations/`는 무접촉이라 gap 범위를 넘지 않는다. 신선도 재확인: PR #118 OPEN · MERGEABLE/CLEAN · head `10e53349` (preparation 기록과 동일) · CI 전건 SUCCESS(계획 시점 진행 중이던 `test (cargo)`·`test (kind e2e)` 포함, `push / pin deployment image`만 main-only SKIPPED) · base `main` tip 이 계획이 잰 `1289a7f` 그대로라 원장 수치의 전제가 아직 참이다. PR head 의 ledger 를 직접 재계산해 완료 기준을 실측 검증했다 — 행 20개 · 행 열 합 2,350 · 원장 2행 141/`f9af32ef…` · 미판정 증분 (2553−203)−2350 = **0**, 남은 stale 문자열 2건은 executionGuide §4-b 가 정상으로 예정한 누적 서술·경위 서술 자리뿐이다. 위험: riskLevel low 에 걸맞게 불가역 지점은 squash 머지 하나이고 롤백이 revert PR 하나로 끝난다 — 데이터·롤아웃·클러스터 영향 없음. 검증 기준(5종 산술)과 `origin/main` 이 움직였을 때의 분기(2-b)까지 executionGuide 에 구체적으로 적혀 있어 승인한다. 참고: preparation.notes 의 `ledger.md +88/−36` 은 실제 +52/−36 과 다르나 총계 2파일 +92/−36 은 일치하는 기재 오차라 판정에 영향 없다."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-22T08:23:25Z",
-          "finishedAt": null,
+          "finishedAt": "2026-09-22T08:36:30Z",
           "entries": [
             {
               "stepSeq": 1,
@@ -5562,6 +5562,20 @@
               "startedAt": "2026-09-22T08:31:30Z",
               "finishedAt": "2026-09-22T08:32:00Z",
               "log": "지침 §2 2단계 — PR #118 head 10e53349 의 필수 체크 전건 실측(추정 금지, foreground 로 API 직접 조회 08:22Z·08:31Z 두 번 동일).\n- check-runs 9건: ci-gate success · test (cargo) success · test (kind e2e) success · docs-scenario-e2e success · docs-mockup-render success · docs-journey-mockup success · 「데이터 저장 형식 변경 판정」 success · push / build & push image (ghcr) success · push / pin deployment image (main only) skipped(main 전용).\n  계획 시점에 진행 중이었던 test (cargo) · test (kind e2e) 는 둘 다 success 로 끝났다 — 선재 실패 대조 불필요.\n- combined status: state=success · total_count=1 · review/data-format=success. 이 PR 은 backend/migrations/ 를 건드리지 않지만 판정기 규약대로 status 가 부여돼 있어 사람 게이트가 남아 있지 않다.\n→ §2·§3 의 선행 조건 전건 충족. squash 머지로 진행."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-22T08:32:10Z",
+              "finishedAt": "2026-09-22T08:33:00Z",
+              "log": "지침 §3 — PR #118 squash 머지(이 슬라이스의 유일한 불가역 지점).\n- 머지 직전 재실측(추정 금지): PR #118 state=open · merged=false · head 10e53349 불변 · mergeable=true · mergeable_state=clean · combined status success(1건, review/data-format) · main tip 61570828 불변.\n- PUT /repos/dlddu/feature-doc/pulls/118/merge {\"merge_method\":\"squash\",\"sha\":\"10e53349…\"} → {\"merged\":true,\"sha\":\"e86af06f53aca77363b25afaaed1d7f3fee9af57\"}.\n  commit_title 을 넘기지 않았다 — 제목을 지정하면 (#118) 접미사가 사라지므로 기본값을 그대로 썼다. 착지 커밋 제목: 「reconcile(rct_20260922-0003): 주석 원장 합계 정합 복구 — 증분 재판정 ④(전건 유지) (#118)」.\n- 착지 확인: PR state=closed · merged=true · merge_commit e86af06f · merged_at 2026-09-22T08:29:03Z. origin/main 61570828 → e86af06f (ahead 1).\n- **main 의 트리 해시 f796f42e00fcf8d6bfad69f6c7a948e77d8ce4da == 머지 전에 선검증한 머지 트리와 바이트 동일** — 즉 §2 에서 그 트리 위에 돌린 게이트 5종과 원장 산술 5종의 실측값이 착지한 main 에 그대로 적용된다.\n- merge commit 을 쓰지 않았고(레포 규약: reconcile 착지는 전부 squash), 브랜치·마이그레이션·클러스터에는 손대지 않았다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-22T08:33:00Z",
+              "finishedAt": "2026-09-22T08:36:30Z",
+              "log": "지침 §4 — 머지 후 확인(origin/main e86af06f 체크아웃 실측, 08:33~08:36Z).\n- §4-a 전역 지문: lines=2553 files=129 / 2b67d32d8c79d9639911bcc83bacf29c9c98686fef6ceb1aeb8e2f1b62183f4c.\n  행·파일 수는 슬라이스 정의대로 불변(주석을 한 줄도 걷지 않았다). 해시는 4402bff9… 가 아니다 — 지침 §4-a 가 단 괄호 조건(「#118 이외의 커밋이 함께 들어오지 않았다면」)대로, 사이에 착지한 #119 가 frontend/src/RegisterLlmKey.tsx 의 주석 1행을 낱말만 고쳤기 때문이다(button → option). 원장 산술이 쓰는 값은 lines/files 뿐이라 전부 유효하다.\n- §4-b #1 행 표 20행 · 행 열 합 2,350 (지침 스크립트 그대로).\n- §4-b #2 원장 2행 재계산: 141행 / sha256 f9af32efe86eec6fad0875a7f259f36f12386aa7de41d6fb588240cb893c3a05 — 원장 문면과 바이트 일치.\n- §4-b #3 합계 문단: 판정 124파일 · 순 제거 누적 2,300행 · 현재 합계 2,350행 · 미판정 증분 0행.\n- §4-b #4 미판정 잔여: 10파일 / 203행 · 분해식 1+1+1+1+4+2 = 30+30+25+14+45+59.\n- §4-b #5 stale 문자열: 121파일 0건 · 2,318행 0건 · 9파일 / 189행 0건 · #112 의 무인 93행 0건 · lines=2507 files=126 은 경위를 밝히는 한 자리에만 1건(규약대로 정상). 과거 패스 인용 블록은 손대지 않았다.\n- §4-c 증분: (2553 − 203) − 2350 = 0.\n- 패스 문서: passes/2026-09-18-uncontested-harness-config.md 에 「증분 재판정 ④ — #115 가 check-journey-prototype.js 에 더한 4행」 절이 착지(①②③ 뒤 ④).\n- 후보 풀 문단: #108 의 무인 72행은 17차 패스가 닫았다 · 124파일 · 마이그레이션 축 99행(0009~0012) 으로 갱신, 후속 후보 3종(마이그레이션 사람 게이트 · spec 12개 Isolation 블록 · 원장 2행 17행 묶음 재판정)이 좌표와 함께 등재.\n- main push 워크플로(레포 규약상 main push 엔 Image 계열만 돈다): 「Image push」 success · 「pages build and deployment」 success. PR 런의 필수 체크 7종은 §2 에서 head 10e53349 로 전건 success 실측."
             }
           ]
         }
