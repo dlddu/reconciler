@@ -55,6 +55,12 @@ tests/                              # index.html 동작 테스트 (node --test)
 
 `manualApproval`이 없는 `approved`는 사람 승인이 필요 없거나 이미 끝난 것이다.
 
+사람 승인은 사람 세션에서 `reconciler-manual-approval`(control plane)로 처리한다. 대상 레포 판정기를 PR diff에
+돌려 걸린 파일·규칙을 설명하고, 승인이면 `sha`에 `context` success를 붙인다(task는 바뀌지 않는다). 거부면
+`approved → review_rejected`로 전이하고 사유를 `review.comment`에 남겨 planner 재계획으로 넘긴다 —
+`manualApproval`이 남은 채 `rejected`인 기록이 곧 사람의 거부다. 이 전이는 그 context가 아직 success가 아닐
+때만 쓰므로 executor의 점유(`approved → executing`)와 겹치지 않는다.
+
 ## 모델 템플릿
 
 레포마다 반복 등록되는 정합성 유형 — **제품 문서 ↔ 구현**(docs-impl),
