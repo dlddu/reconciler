@@ -4,6 +4,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "succeeded",
     "trigger": {
+      "detectedAt": "2026-08-08T01:33:51Z",
       "asIs": {
         "previousVersion": null,
         "currentVersion": "seams=18 files=8\nf8e44c553069a30a34d4ccd26c1512da124ae45b2218532cb67fc9372ce16c87"
@@ -13,7 +14,6 @@
         "currentVersion": "lines=19\ncee6f846679ad14d64ac6ef6c3533ed16c4b7eca1381d64d233c50410034f675"
       }
     },
-    "createdAt": "2026-08-08T01:33:51Z",
     "updatedAt": "2026-08-14T00:44:56Z",
     "stateSummary": {
       "asIs": "## as-is — e2e SUT 경로의 충실도 seam 실측 (dlddu/session-platform@main `6a48f60`)\n\n버전: `seams=18 files=8` / `f8e44c55…` (최초 관측, previous=null)\n\n지문 18건(파일,토큰)의 **실제 내용을 하나씩 확인**한 결과, 판정 대상이 되는 실 seam은\n**2종**이고 나머지는 그 2종의 중복 토큰·산문·배선이다.\n\n**진짜 seam ①  `GATE` 후보 — CRIU 게이트**\n`control-plane/cmd/control-plane/main.go:74` `var ckpt criu.Checkpointer = criu.NewStubCheckpointer(false)`,\n`cfg.criuEnabled`가 참일 때만 실 체크포인터로 교체.\n- base `k8s/deployment.yaml:42` → `CRIU_ENABLED: \"false\"` (주석: \"gated off until a verified runtime exists\")\n- overlay `deploy/kustomization.yaml:68-70` → env/2를 `\"true\"`로 **replace**\n- e2e SUT는 항상 `scripts/e2e/up.sh:62` `kubectl apply -k deploy/`로 뜬다 → **e2e는 게이트 ON, 실 CRIU 경로를 탄다.**\n\n**진짜 seam ②  `TRIG` 후보 — test-only snapshot 트리거**\n`E2E_TEST_ENDPOINTS`(main.go:195 · api.go) → `api.WithTestEndpoints(cfg.testEndpoints)`(main.go:102),\n켜졌을 때만 `POST /api/v1/sessions/{id}/snapshot`(api.go:170 `snapshotSession`) 등록.\noverlay가 `E2E_TEST_ENDPOINTS: \"1\"` 주입, `e2e_deferred_test.go`가 이 엔드포인트로 동결을 유발.\n- **운영 트리거는 실재한다**: `service.NewIdleReaper(mgr, session.MaxIdle, …)`가 main.go:93에서 배선됨\n  (`internal/service/reaper.go` = \"the operational idle->snapshot trigger (AC-B1)\").\n  잔여는 트리거 부재가 아니라 **세밀한 타이밍 정책 미확정**(`TODO(policy)` — session.go:48, reaper.go:27:\n  grace period · per-session override · AC-D5 클라이언트-유휴 중 장기 포그라운드 작업 처리).\n\n**seam이 아닌 것 (등재 대상 아님 / 지문 오탐)**\n- `control-plane/test/e2e_deferred_test.go:38` `E2E_SESSION_NAMESPACE` — 어서션용 kube 클라이언트가\n  볼 **namespace 지정**일 뿐(기본 `default`), SUT 충실도를 낮추지 않는다. `E2E_BASE_URL`과 동일 성격\n  → **지문 제외 대상**(모델 정의 개정 사안).\n- `Makefile:59` `CRIU_ENABLED` — `test-integration`(`//go:build integration`, **명시적 범위 밖**)\n  설명 주석.\n- `deploy/minio.yaml:8` `test-only` — MinIO가 test-only 저장소가 **아니라** 프로덕션과 같은 S3\n  코드 경로를 탄다는 서술(= 실환경 준비, 모킹 아님).\n- `web/e2e/deferred.spec.ts:9` `test-only` — skip 사유 산문.\n- `main.go:99` · `api.go:23,169` · `e2e_deferred_test.go:133,137,154,158` 의 `test-only` — seam ②를\n  설명하는 주석/스킵 가드로, 독립 seam이 아니다.\n\n**표기 규약 채택률 0** — `mock-exception:` 토큰 레포 전체 **0건**.\n**web 네트워크 인터셉트 0건** — `web/e2e/*.spec.ts`에 `page.route`/`routeFromHAR` 류 호출 없음(재확인).\n",
@@ -280,6 +280,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-08-13T06:35:00Z",
       "asIs": {
         "previousVersion": "seams=18 files=8\nf8e44c553069a30a34d4ccd26c1512da124ae45b2218532cb67fc9372ce16c87",
         "currentVersion": "seams=16 files=11\n225c98d22aecfdb92e39515021b14a15c13b2d86bfa327c2e03e0683220a5800"
@@ -289,7 +290,6 @@
         "currentVersion": "lines=18\n1fb20cb85b8359ba3553eff165e0441cdbf8d9cd1e7976030867f8bbef33e3ad"
       }
     },
-    "createdAt": "2026-08-13T06:35:00Z",
     "id": "rct_20260813-0001",
     "updatedAt": "2026-08-13T06:55:00Z",
     "stateSummary": {
@@ -307,6 +307,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "succeeded",
     "trigger": {
+      "detectedAt": "2026-08-14T13:07:00Z",
       "asIs": {
         "previousVersion": "seams=16 files=11\n225c98d22aecfdb92e39515021b14a15c13b2d86bfa327c2e03e0683220a5800",
         "currentVersion": "seams=19 files=11\nbe0a2baf55a1f626a8735e282df41f42f4018245e5470033083bd8b48c7b894f"
@@ -316,7 +317,6 @@
         "currentVersion": "lines=107\n72e2df8dfa4981d1d763ee207b8990721b113bf0ca2a52cdeaa2f32eb7d69db4"
       }
     },
-    "createdAt": "2026-08-14T13:07:00Z",
     "id": "rct_20260814-0001",
     "stateSummary": {
       "asIs": "## as-is — e2e SUT 경로의 seam 지문 @ `7cd13a9d` (2026-08-14T00:39Z)\n\n지문 `seams=19 files=11 / be0a2baf…` (직전 기준선 `seams=16 files=11 / 225c98d2…`). 델타는 **PR #40 `7cd13a9d`** — 이 모델 자신의 직전 task `rct_20260808-0001`(succeeded, 00:44Z 검증)의 reconcile 산출물이다. seam 3건 증가는 새 모킹이 아니라 **`// mock-exception: CRIU-GATE` 마커 3지점 신설**(그 토큰 자체가 지문 대상)이다.\n\n레포에서 체커(`scripts/check-fidelity-allowlist.py`)를 직접 돌려 재도출:\n\n```\nOK: e2e 충실도 허용목록 ↔ 코드 seam 1:1\n  등재 seam 1 (GATE 1 · TRIG 0 · EXT 0 · NET 0)\n  회계 행 16 == 스캔된 (파일,토큰) 쌍 16 (등재 귀속 4 · 미해소 위반 6 · 비-seam 6) + mock-exception: 마커 3파일\n  마커 3지점 / 3파일 · web 네트워크 인터셉트 6건 (승인 0 · 위반 6, 상한 6)\n```\n\n- 승인된 seam은 `CRIU-GATE`(GATE) 1건뿐 — 프로덕션 base는 `CRIU_ENABLED:\"false\"`(no-op 스텁), e2e 오버레이만 on.\n- **정책이 금지하는 치환이 코드에 6쌍 실재한다**: `web/e2e/j6-agent-prompt-loop.spec.ts` · `web/e2e/manual-archive.spec.ts` · `web/e2e/session-deletion.spec.ts` × (`.route(`, `route.fulfill(`).\n- 과거의 `SNAPSHOT-TRIG`(test-only `/snapshot` 트리거)는 소멸했다 — 제품 `POST /api/v1/sessions/{id}/snapshot`으로 승격돼 `E2E_TEST_ENDPOINTS`/`WithTestEndpoints`가 레포에서 사라졌다.",
@@ -504,9 +504,9 @@
   {
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "succeeded",
-    "createdAt": "2026-08-20T06:06:42Z",
     "updatedAt": "2026-09-04T14:48:02Z",
     "trigger": {
+      "detectedAt": "2026-08-20T06:06:42Z",
       "asIs": {
         "previousVersion": "seams=19 files=11\nbe0a2baf55a1f626a8735e282df41f42f4018245e5470033083bd8b48c7b894f",
         "currentVersion": "seams=21 files=11\n0ed3e2b90b7c09dec67265e17e07587be08714eddc67a9ff1856a6c3ba0034f1"
@@ -977,6 +977,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-03T11:52:00Z",
       "asIs": {
         "previousVersion": "seams=21 files=11\n0ed3e2b90b7c09dec67265e17e07587be08714eddc67a9ff1856a6c3ba0034f1",
         "currentVersion": "seams=20 files=11\ne0cc92035700bf5cfcd15398358d420042107c2b675f0ac28226b7b40413afe2"
@@ -996,19 +997,18 @@
       "reason": "**작업 불필요.** 정책 축의 격차 수치가 이동하지 않았다 — HEAD에서\n`check-fidelity-allowlist.py`를 직접 돌려 **rc=0 · 미해소 위반 4(상한 4) · 승인 3**을 확인했고\n직전 관측과 같다. PR #23은 seam을 **삭제·이동**했을 뿐 새 seam을 만들지 않았다(21→20 순감소,\n파일 수 11 불변). 남은 위반 4쌍은 경로에 `journeys/`가 붙었을 뿐 같은 두 파일·같은 두 토큰이다.\n\n**열린 task에 손대지 않는 이유 — 워커가 나보다 앞서 있다.** `rct_20260820-0001`을 쥔 planner가\n내 감지 중 실시간으로 `claim`(11:22:31Z)부터 `ready for execution`(11:39:01Z)까지 진행했고,\n그 계획이 이번 트리거를 명시적으로 흡수했다: main `89c56a8`을 브랜치에 **머지**해 head\n`376a66b`로 올리고 CI를 새로 발화시켰으며, #23의 `e2e_deferred_test.go` 삭제로 **비-seam\n회계 행이 6→5가 되어 완료 기준을 15에서 14로 스스로 정정**했고, 스펙 전량의 `journeys/` 이동과\n「커버 시나리오」·「Deferred 시드」 표 소멸(→ 직전 계획 5단계 폐기)까지 반영했다. 반려 사유였던\n#23과의 머지 순서도 #23이 먼저 머지되며 사실로 결정됐다. **내가 보고할 만한 것을 그쪽이 먼저\n다 기록했다.** 그 task는 내가 기록하는 사이 executor가 집어가 **`awaiting_review`(점유)** 가\n됐으므로, 거기에 쓰면 붙잡고 있는 워커와 경합한다.\n\n**consumed trigger가 아닌 근거**: PR #42가 미머지다. 그 머지가 `manual-archive`의 인터셉트를\n제거하고 `docs/test/e2e.md` 충실도 회계를 갱신해 as-is·to-be를 함께 움직인다 — 재감지 경로가\n살아 있다.\n\n**이 task를 여는 이유(기록 목적)**: 점유 중이라 아무것도 안 쓰면 baseline이 낡은 채 남아\n5분 precheck가 같은 해시로 계속 재발화한다. `no_action_needed`가 노이즈 판정을 감사 가능하게\n남기고 baseline을 전진시킨다.\n\n**형제 모델과의 연결(정보)**: 이 task가 쥔 「미해소 위반」 4쌍의 해소는 형제 모델\n`tbm_session-platform-ac-e2e`의 **잔여 공백 AC-E1~E6의 선결 조건**이다 — 그쪽 원장이 \"실 SUT\n전환이 먼저\"라고 적어 두었다. PR #42가 `manual-archive` 2쌍을 닫으면 그만큼 E 계열의 문이\n열린다(오늘 연 `tbm_session-platform-ac-e2e/rct_20260903-0002`에 그 의존을 기록해 뒀다).",
       "assessedAt": "2026-09-03T11:52:00Z"
     },
-    "createdAt": "2026-09-03T11:52:00Z",
     "updatedAt": "2026-09-03T11:52:00Z"
   },
   {
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-03T23:11:00Z",
       "toBe": {
         "previousVersion": "lines=114\n5529d34f3de312a5f99bdbc4bd743f842da6bdfd1457ec893edeb621b2ee9b3d",
         "currentVersion": "lines=121\na45ce524ffc60184f6b45ce324f8b76dad8a20dc5c4241df4b3e81b668feac44"
       }
     },
-    "createdAt": "2026-09-03T23:11:00Z",
     "updatedAt": "2026-09-03T23:11:00Z",
     "stateSummary": {
       "asIs": "## as-is — seam 지문 **불변** (`seams=20 files=11` / `e0cc9203…`, main `269bc5c`)\n\n버전 스크립트를 현재 main에서 재실행했다 — `previousVersion`과 **문자 단위로 동일**하다.\n즉 e2e SUT 경로(`control-plane/cmd` · `control-plane/internal/api` · `control-plane/test` ·\n`data-plane/cmd` · `deploy` · `k8s` · `scripts/e2e` · `web` · `Makefile` ·\n`.github/workflows/e2e.yml`)의 (파일, seam 토큰) 쌍 집합이 하나도 움직이지 않았다.\n`changedSides`가 `to_be` 단독인 이유다.\n\n레포 자체 게이트 `scripts/check-fidelity-allowlist.py`를 HEAD에서 직접 돌렸다 — **rc=0**:\n\n```\nOK: e2e 충실도 허용목록 ↔ 코드 seam 1:1\n  등재 seam 2 (GATE 1 · TRIG 0 · EXT 0 · NET 1)\n  회계 행 16 == 스캔된 (파일,토큰) 쌍 16 (등재 귀속 7 · 미해소 위반 4 · 비-seam 5) + mock-exception: 마커 4파일\n  마커 4지점 / 4파일 · web 네트워크 인터셉트 7건 (승인 3 · 위반 4, 상한 4)\n```",
@@ -1027,6 +1027,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "succeeded",
     "trigger": {
+      "detectedAt": "2026-09-04T14:55:35Z",
       "asIs": {
         "previousVersion": "seams=20 files=11\ne0cc92035700bf5cfcd15398358d420042107c2b675f0ac28226b7b40413afe2",
         "currentVersion": "seams=23 files=13\nc6ca4c4ffbc061982dea5d33481fef5aa8665bc54fa27c2934c527785ea4bd5b"
@@ -1046,7 +1047,6 @@
       "reason": "**작업이 필요하다(`actionRequired: true`).**\n\n1. **소비된 트리거 + 열린 task 0.** 트리거 #62는 이 모델 자신의 슬라이스이고 그 task는 이 fire 분석 도중(14:48:02Z) `succeeded`/`converged`로 닫혔다. executor가 「후속은 다음 감지 주기가 새 task로 연다」고 명시하고 `lastObservedVersion`을 남겨 두었다.\n2. **잔여 1건의 유예 사유가 슬라이스 경계였고, 그 경계의 선행이 이 머지로 발화했다.** 계획이 「부트스트랩 순서상 앞의 둘(①②)까지가 범위」라고 적었고, ①②가 착지해 **세션 pod가 SUT에서 실제로 선다**(CI `e2e (kind + API + browser)` success + `e2e_e1_workload_type_test.go`의 pod 안 `claude --version` 단언). 원장 자신이 위반 표의 제거 경로를 「남은 선결조건은 ③ 하나」로 다시 썼다.\n3. **③은 판정 확정·실행만 남았다.** `EXT` 자격이 원장에서 결론났고 게이트도 「판정만 확정돼 있다」로 출력한다. 대상 경로 `deploy/`는 이 모델 as-is SSOT 안이며 선례가 둘(MinIO · `e2e-k3s-mcp-fake`) 있다. 외부 승인·타 모델 대기 없음.\n4. **상한 4/4가 이 하나에 병목돼 있다** — 위반 4행 전부의 제거 경로가 ③을 가리키고, 그 상한은 **일방향 래칫**이라 줄일 길이 ③뿐이다.\n5. **재감지 경로가 0이다** — 게이트 3종 rc=0이고 R10은 「고쳐졌을 때」만 빨개진다(원장: 「R5는 이것들에 대해 영원히 침묵한다」). baseline이 전진하면 이 잔여를 여는 사건이 없다.\n\n**범위·완료 기준 제약(계획 단계에 넘긴다)**\n\n- **범위는 ③ 해소까지로 끊을 것** — 인클러스터 가짜 provider를 `deploy/`에 배포 · `claude-code-credentials`의 `base-url`(`https://127.0.0.1:9`)을 그리로 전환 · `CLAUDE-PROVIDER`(EXT) 등재 · 차단 요인 표에서 ③ 행 제거. **완료 기준에 「위반 4 → 0」을 넣지 말 것**: 원장이 「전량 제거가 목표가 아니다」라고 명시했고, 재작성 뒤에도 `NET` 자격을 만족하는 주입(config 503 · 응답 보류 · past-end cursor `reset` 재생 · Archiving 지연)이 남아 **행 단위 승인 등재**로 닫히는 것이 정본 방향이다. 상한을 얼마로 내릴지는 재작성 결과가 정한다.\n- ⚠️ **워크로드를 `shell`로 바꿔 우회하지 말 것** — 원장이 이 함정을 이름으로 적어 두었다(「대상을 바꾸면 위반은 사라져도 그 경로는 영영 미검증으로 남는다」). `j6`·`manual-archive` 모두 검증 대상이 claude-code 세션이다.\n- **R10이 리터럴을 지킨다** — `https://127.0.0.1:9`를 지우는 순간 게이트가 빨개지므로, 차단 요인 행 제거와 `CLAUDE-PROVIDER` 등재를 **같은 PR에서** 해야 한다.\n- ⚠️ **파일 공유 충돌 주의**: 같은 fire에서 `tbm_session-platform-ac-e2e/rct_20260904-0001`(`action_required`)도 **같은 파일 `docs/test/e2e.md`**를 고친다. 다만 섹션이 갈린다 — 이 task는 **충실도 섹션**(`:7-183`), 저쪽은 **`## 집계` 절의 F 계열 판정문**(`:355-390`)이다. 두 PR이 동시에 열리면 house style대로 **main을 브랜치에 머지**(rebase·force-push 금지)하고, 섹션 교집합 0을 확인할 것.\n- **`e2e` 잡이 실제로 발화하는지 확인할 것** — 직전 두 반려의 사유가 「e2e가 낡은 트리에서 돌았다/아예 돌지 않았다」였다. main이 전진할 때마다 브랜치를 갱신해 재발화시키는 것이 이 레포의 확립된 절차다.",
       "assessedAt": "2026-09-04T14:55:35Z"
     },
-    "createdAt": "2026-09-04T14:55:35Z",
     "updatedAt": "2026-09-04T22:01:44Z",
     "attempts": [
       {
@@ -1210,6 +1210,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "succeeded",
     "trigger": {
+      "detectedAt": "2026-09-04T22:04:00Z",
       "asIs": {
         "previousVersion": "seams=23 files=13\nc6ca4c4ffbc061982dea5d33481fef5aa8665bc54fa27c2934c527785ea4bd5b",
         "currentVersion": "seams=25 files=14\n21dc4fcbe1f9006061f86e59c110d79d8983e714e6ce87ba2aaaf6a16ea4ebe2"
@@ -1229,7 +1230,6 @@
       "reason": "**작업 필요(actionRequired: true).** 범위는 **미해소 위반 4행의 실 SUT 재작성**으로 끊는다.\n\n1. **잔여가 실재하고 정의상 drift다** — 승인 등재되지 않은 네트워크 인터셉트 4행(`j6-agent-prompt-loop.spec.ts` · `manual-archive.spec.ts`)이 게이트 회계에 그대로 있다.\n2. **선행이 소멸했고 원장이 그것을 문면으로 확정했다** — 「선결조건은 없다 … 남은 것은 재작성 노동뿐이다」, 게이트 「차단 요인 0건」. 이 fire의 앞선 트리거들에서는 ③이 살아 있어 같은 항목을 미발화로 제외했었다(전건이 바뀌었다).\n3. **재감지 경로가 0이다** — 열린 task 0 · executor가 detector를 소유자로 지목 · 상한 4에 4건이라 게이트는 초록이고 R5는 이 축에 침묵한다.\n\n**계획 단계 제약 5가지**:\n- **전량 제거를 목표로 삼지 말 것.** 원장이 못박았다 — 재작성 뒤에도 실 SUT가 낼 수 없는 주입(config 503 · 응답 보류 · past-end cursor `reset` 재생 · 「Archiving…」 지연)은 남고, 그것들은 `session-deletion` 선례대로 **행 단위로 좁혀 `NET` 승인 등재**로 닫는다.\n- **워크로드를 shell로 바꿔 우회하지 말 것** — `manual-archive`의 검증 대상은 claude-code 아카이브 UI 경로다. 대상을 바꾸면 위반은 사라져도 그 경로가 영영 미검증으로 남는다(원장 명문).\n- **상한 4는 일방향 래칫이고 지금 만석이다** — 재작성 도중 새 인터셉트를 추가하면 즉시 rc=1이다. 승인 등재로 옮기는 것과 상한을 내리는 것을 **같은 PR에서** 함께 하라.\n- **첫 단계는 실 Claude CLI(2.1.220) 프롬프트 루프의 대역 표면 만족 여부 확인이다** — 등재 행이 그 계약을 미검증으로 남겨 두었고 재작성이 그 위에 선다. 만족하지 못하면 대역을 넓히고 등재 행의 '구동 구간'을 함께 갱신한다.\n- **완료 기준은 게이트 수치로** — `check-fidelity-allowlist.py` rc=0에서 미해소 위반 4 → 0(또는 승인 등재로 이동한 만큼 상한 동반 하향), 차단 요인 0건 유지, 회계 행 == 스캔 쌍 항등 유지.\n\n**경계 — 자매 모델과 이중 계상 금지.** 같은 트리거가 두 모델의 잔여를 동시에 열었고, 두 축은 다르다: **`tbm_session-platform-ac-e2e`** = 「AC-E2~E6에 **전용 e2e 파일**이 정확히 하나씩 있는가」(1:1 매핑 축, `rct_20260904-0003`), **`tbm_session-platform-e2e-mock-policy`** = 「`web/e2e`의 **미해소 위반 4행**을 실 SUT 위 재작성으로 없애는가」(모킹 허용목록 축, `rct_20260904-0002`). 실무적으로는 같은 SUT 배선 위에 서므로 **mock-policy의 j6 재작성이 먼저 또는 함께** 가는 것이 자연스럽다 — 두 계획이 서로를 읽고 순서를 맞출 것. 어느 쪽도 상대의 완료 기준을 자기 것으로 삼지 말 것.\n",
       "assessedAt": "2026-09-04T22:04:00Z"
     },
-    "createdAt": "2026-09-04T22:04:00Z",
     "updatedAt": "2026-09-04T23:26:36Z",
     "id": "rct_20260904-0002",
     "attempts": [
@@ -1367,6 +1367,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "succeeded",
     "trigger": {
+      "detectedAt": "2026-09-04T23:31:00Z",
       "asIs": {
         "previousVersion": "seams=25 files=14\n21dc4fcbe1f9006061f86e59c110d79d8983e714e6ce87ba2aaaf6a16ea4ebe2",
         "currentVersion": "seams=23 files=13\n1539d2c6d0438f39fa42cc57a7e40bd73ff7a229b489333855da031116168f8e"
@@ -1386,7 +1387,6 @@
       "reason": "**작업 필요(actionRequired: true).** 범위는 **`web/e2e/journeys/j6-agent-prompt-loop.spec.ts`의 미해소 위반 2행**으로 끊는다.\n\n1. **잔여가 실재하고 모델 정의에 정면으로 걸린다** — to-be는 「미해소 위반 0」인데 게이트 실측이 `미해소 위반 2 · 상한 2`다. 원장 자신이 그 두 행을 「정당화가 아니라 회계」로 올려 두고 「정책 위반이며 제거 대상」이라고 못박는다. 실물도 확인했다(j6에 인터셉트 토큰 3개 실재, `manual-archive`는 0건).\n\n2. **유예 사유가 「선행 미발화」가 아니라 「슬라이스 경계」였고, 그 경계가 이번 트리거로 사라졌다.** 원장의 제거 경로는 「**선결조건은 없다** … 남은 것은 재작성 노동뿐」이고, 직전 슬라이스가 j6를 뺀 이유는 「파일 분할 설계를 이 슬라이스에 끌고 들어오면 완주할 수 없다」는 **완주 가능성** 판단이었다. 그 슬라이스(#73)가 머지된 순간 사유가 소멸한다. 게다가 원장이 「재작성에 앞서 확인하라」고 지정한 단 하나의 캐비엇 — 실 Claude CLI가 그 대역 표면으로 프롬프트 루프를 도는가 — 은 자매 `rct_20260904-0003`의 계획·PR #75 CI가 **측정으로 확인**했다(실 CLI 2.1.220, exact argv, `is_error=false · exit 0`; 배포 SUT e2e 3케이스 PASS).\n\n3. **재감지 경로가 0이다** — 열린 task 0 · executor가 「다음 감지 주기가 후속 task로 잇는다」로 detector를 소유자 지목 · 게이트는 위반 2 == 상한 2에서 **rc=0으로 영원히 초록**(잔여를 실패가 아니라 회계 카운터로만 표시). 이 task를 열지 않고 baseline만 전진시키면 다음 트리거가 없다.\n\n**계획 제약은 `stateSummary.gap`에 여섯 가지로 못박아 두었다.** 특히 두 가지가 중요하다: ⓐ 완료 기준을 「위반 0 **그리고** 등재 seam 불변」으로 잡으면 닫을 수 없는 task가 된다(원장이 「전량 제거가 목표가 아니다」라고 명시했고 남는 주입은 `NET` 승인 등재로 닫는다), ⓑ 직전 executionGuide의 「상한은 일방향 만석」은 게이트 소스와 다르다 — `check-fidelity-allowlist.py:454-468`의 R9는 **양방향 미러**(`budget != len(violations)`가 fail)라 상한==위반은 초록일 때 항상 참이며, 일방향 규율은 정책 산문이지 기계가 아니다. 이 정정을 계획 입력으로 넘긴다.",
       "assessedAt": "2026-09-04T23:53:02Z"
     },
-    "createdAt": "2026-09-04T23:53:02Z",
     "updatedAt": "2026-09-05T01:37:17Z",
     "attempts": [
       {
@@ -1537,6 +1537,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-05T00:43:00Z",
       "toBe": {
         "previousVersion": "lines=169\n7c9fa887db2fa7607976bfaeab6df9404a62fa5245d4ce035bd007369b50cc5d",
         "currentVersion": "lines=169\n1b96b71f242f1b239eec96a1189fb5e44410704c434d9b68026487ffb83afb96"
@@ -1552,7 +1553,6 @@
       "reason": "**작업 불필요(actionRequired: false).** 근거 셋.\n\n1. **판정 대상이 한 글자도 움직이지 않았다** — `scripts/check-fidelity-allowlist.py`가 부모 `3b591bd`와\n   트리거 `c36dcd4`에서 rc=0이고 **출력 바이트 동일**이다(등재 seam 4 · 회계 행 17 · 등재 귀속 9 ·\n   미해소 위반 2 · 비-seam 6 · 차단 요인 0). as-is 지문도 불변 — #75가 스캔 범위에 더한 두 파일\n   (`e2e_e2_prompt_invocation_test.go`, `e2e.yml`)의 seam 토큰이 **0건**이다. 움직인 것은 to-be의\n   `CLAUDE-PROVIDER` 등재 행 **서술문 1행**(`lines=169` 불변, −1/+1)뿐이고, 이 모델의 정의는 그 산문의\n   정확성이 아니라 **등재 ↔ 코드 seam의 1:1**을 본다.\n\n2. **열린 task가 이미 이 트리거를 흡수했다** — `rct_20260904-0003`이 `planning`(점유)이고 claim 시각\n   00:22:06이 트리거 머지 00:20:01보다 **뒤**이며, 그 계획이 #75를 번호로 인용해 자기 착수 근거로 쓴다.\n   점유 워커와 경쟁하지 않는다.\n\n3. **그럼에도 이 레코드를 남기는 이유** — 노이즈 판정을 감사 가능하게 기록하고 `lastObservedVersion`을\n   전진시키기 위해서다. 전진시키지 않으면 precheck가 5분마다 감지를 재기동한다. 종료 상태이므로 점유\n   task와 경쟁하지 않는다(planner에게 아무것도 넘기지 않는다).\n\n**남긴 것**: 이 트리거가 「미해소 위반」 j6 두 행의 제거-경로 문장을 **거짓으로 만들었다**(등재 행이\n미검증이라고 적는데 같은 PR이 그 행을 '구동된다'로 재작성). 게이트가 읽지 않는 산문이라 영원히 초록이지만,\n**점유 task의 완료 기준이 그 두 행의 전량 삭제(미해소 위반 2→0)**이므로 자연 소멸한다. 경쟁 task 대신\n`stateSummary.gap`에 **두 분기 트립와이어**(머지-무수정 / `CLOSED`+`null` 잔존)를 기계 조건과 함께 박아 뒀다.",
       "assessedAt": "2026-09-05T00:43:00Z"
     },
-    "createdAt": "2026-09-05T00:43:00Z",
     "updatedAt": "2026-09-05T00:43:00Z",
     "id": "rct_20260905-0001"
   },
@@ -1561,6 +1561,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-05T02:17:44Z",
       "asIs": {
         "previousVersion": "seams=23 files=13\n1539d2c6d0438f39fa42cc57a7e40bd73ff7a229b489333855da031116168f8e",
         "currentVersion": "seams=27 files=14\n27ffb86572fd61056d90f4aca1af801b41fdb71c4a4d62e1cfba1865778b421a"
@@ -1570,7 +1571,6 @@
         "currentVersion": "lines=186\n4c87810e2b89fd178383353faf9a704d9a99ebaae50170cb7583013a7e6c4d16"
       }
     },
-    "createdAt": "2026-09-05T02:17:44Z",
     "updatedAt": "2026-09-05T02:17:44Z",
     "stateSummary": {
       "asIs": "**as-is = seam 지문 `seams=23 files=13`/`1539d2c6…` → `seams=27 files=14`/`27ffb865…`.**\n\n**단일 트리거: PR #78 (`3b39ee3`, 2026-09-05T01:35:20Z, 「e2e: j6 의 통짜 API 인터셉트를 걷어낸다 — 미해소 위반 2 → 0, 상한 동반 하향」).**\n귀속을 커밋별 재계산으로 확정했다(매 커밋 `reset --hard && clean -fdx`, `porcelain=0`):\n\n| 커밋 | as-is | to-be |\n| --- | --- | --- |\n| `cb6a990`(트리거의 부모) | `seams=23 files=13`/`1539d2c6…` = **baseline 바이트 동일** | `lines=169`/`1b96b71f…` = **baseline 바이트 동일** |\n| `3b39ee3`(#78) | `seams=27 files=14`/`27ffb865…` | `lines=186`/`4c87810e…` |\n| `0810014`(배포 핀 `[skip ci]`) | 불변 | 불변 |\n\n즉 baseline 이 stale 하지 않았고 배포 핀은 어느 축도 움직이지 않았다 — **#78 단독**.\n\n`git diff --numstat cb6a990 3b39ee3` = 4파일 **+658/−654**:\n`docs/test/e2e.md`(+57/−36) · `web/e2e/journeys/j6-agent-prompt-loop.spec.ts`(+111/−618) ·\n`j6-model-selection.spec.ts`(+258/−0 신설) · `j6-stream-recovery.spec.ts`(+232/−0 신설).\n\n**게이트 실측(클린 트리, 부모 → 트리거)** — `python3 scripts/check-fidelity-allowlist.py` 양쪽 rc=0:\n\n```\n- 등재 seam 4 (GATE 1 · TRIG 0 · EXT 2 · NET 1)          →  등재 seam 6 (GATE 1 · TRIG 0 · EXT 2 · NET 3)\n- 회계 행 17 == 쌍 17 (등재 귀속 9 · 미해소 위반 2 · 비-seam 6)  →  회계 행 19 == 쌍 19 (등재 귀속 13 · 미해소 위반 0 · 비-seam 6)\n- 마커 6지점 / 6파일 · 인터셉트 5건 (승인 3 · 위반 2, 상한 2)  →  마커 8지점 / 8파일 · 인터셉트 7건 (승인 7 · 위반 0, 상한 0)\n- 차단 요인 0건                                            →  차단 요인 0건\n```\n\n새로 잡힌 (파일,토큰) 쌍 4개는 전부 신설 두 spec 의 `.route(`·`route.fulfill(` 이고 회계 원장\n`:186-189` 에 `MODEL-CONFIG-STATE`·`STREAM-RESET-REPLAY` 로 귀속돼 있다. 사라진 쌍 2개는\n`j6-agent-prompt-loop.spec.ts` 의 통짜 인터셉트다(그 파일의 인터셉트 토큰 **0건**).\n머지 커밋 `3b39ee3` 의 GitHub check-runs **17/17 success**(비-green 0).",
@@ -1588,6 +1588,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-05T08:56:18Z",
       "toBe": {
         "previousVersion": "lines=186\n4c87810e2b89fd178383353faf9a704d9a99ebaae50170cb7583013a7e6c4d16",
         "currentVersion": "lines=187\ne60213f00c6d4b3bb0f43659b9c9ff1a203b46dfc638fdefd2b9f9f9d432e054"
@@ -1603,16 +1604,15 @@
       "reason": "**작업 불필요(actionRequired: false).** 근거 넷.\n\n1. **as-is가 글자 그대로 불변이다.** `seams=27 files=14` · 지문 `27ffb865…`가 부모/트리거에서 문자열 동일. 코드를 만진 두 머지(#77 주석 전용 · #79 e2e 파일 신설) 어디에도 seam 토큰 변화가 없고, #77은 계획 주의사항에 「`mock-exception: CRIU-GATE` 블록은 자매 모델 소관이라 건드리지 않았다」고 적고 실제로 지켰다.\n\n2. **to-be의 이동은 판정면 밖 산문 한 문단이다.** 충실도 절을 부모/트리거에서 각각 잘라 diff하니 **2줄이 3줄로 바뀐 한 문단**이 전부이고, 그 내용은 「AC-E1이 공백을 벗은 뒤 무엇이 남았나」라는 **자매 `ac-e2e`의 공백 목록 축**이다(저자는 #80, 자매의 `rct_20260905-0003` 슬라이스). 이 모델이 보는 등재 seam·회계·미해소 위반·차단 요인은 한 글자도 안 바뀌었다.\n\n3. **게이트가 그것을 두 겹으로 증명한다.** 머지된 main에서 `check-fidelity-allowlist.py` rc=0이고 「등재 seam 6 · **회계 행 19 == 스캔된 (파일,토큰) 쌍 19** · 미해소 위반 0 · 차단 요인 0」이다. 이 게이트는 미등재 seam도 고아 등재도 R5가 잡는 **양방향 대조**라 그 등식은 「초록이니 괜찮다」가 아니라 **집합 동치의 적극 증명**이다(공백을 카운터로만 찍는 `check-ac-mapping.sh`와 성격이 반대). 그 위에 부모(`457d49d`)/트리거(`af002f8`) 출력이 **`cmp -s` 바이트 동일** ⇒ 변경 영역이 비교 집합 밖.\n\n4. **열린 축이 없다.** 직전 슬라이스 `rct_20260904-0003`(#78)이 `succeeded`/`converged`이고 열린 task 0이며, 그 executor가 남긴 잔여 다섯은 직전 fire가 전부 **축 밖**으로 확인했다 — 이번 트리거는 as-is를 한 비트도 안 움직였으므로 그중 어느 선행도 건드리지 않았다.\n\n**계획 입력 하나를 남긴다**(열지는 않는다): **페이크 provider 대역(`deploy/e2e-anthropic-fake.yaml`) 확장은 여전히 무소유**다 — 이 모델의 계획은 자매 `ac-e2e` 몫이라 밀어냈고 자매의 계획은 이 모델 소유라 밀어냈다. 실측으로 그 대역은 `const REPLY` 상수 하나에 `content_block_delta` 1회 발행이 전부이고 그것이 자매의 AC-E3/E4/E5를 막는다(#66 이후 무변경). 파일이 **이 모델의 as-is 안**이므로 다음 슬라이스에서 둘 중 하나가 완료 기준에 넣지 않으면 영구 무소유로 남는다 — 자매 레코드에 같은 기계 조건(`grep -c 'const REPLY' …` == 0, 현재 1)으로 트립와이어를 박아 두었다. 확장하는 쪽은 그것이 승인된 mock exception `CLAUDE-PROVIDER`(EXT)의 **행위 확대**이므로 등재 사유를 함께 갱신해야 한다.\n\n**이 레코드의 두 번째 목적은 baseline 전진이다** — 쓰지 않으면 precheck가 5분마다 claude를 다시 띄운다.",
       "assessedAt": "2026-09-05T08:56:18Z"
     },
-    "createdAt": "2026-09-05T08:56:18Z",
     "updatedAt": "2026-09-05T08:56:18Z"
   },
   {
     "id": "rct_20260906-0001",
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "succeeded",
-    "createdAt": "2026-09-06T02:09:53Z",
     "updatedAt": "2026-09-07T01:29:43Z",
     "trigger": {
+      "detectedAt": "2026-09-06T02:09:53Z",
       "asIs": {
         "previousVersion": "seams=27 files=14\n27ffb86572fd61056d90f4aca1af801b41fdb71c4a4d62e1cfba1865778b421a",
         "currentVersion": "seams=27 files=14\n27ffb86572fd61056d90f4aca1af801b41fdb71c4a4d62e1cfba1865778b421a"
@@ -1915,9 +1915,9 @@
     "id": "rct_20260906-0002",
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
-    "createdAt": "2026-09-06T05:19:27Z",
     "updatedAt": "2026-09-06T05:19:27Z",
     "trigger": {
+      "detectedAt": "2026-09-06T05:19:27Z",
       "asIs": {
         "previousVersion": "seams=27 files=14\n27ffb86572fd61056d90f4aca1af801b41fdb71c4a4d62e1cfba1865778b421a",
         "currentVersion": "seams=29 files=15\nde1e68372a3576b45d72340088ed38d190a33c6b658ddbdb8bd17b240e8e1ec1"
@@ -1942,9 +1942,9 @@
     "id": "rct_20260907-0001",
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
-    "createdAt": "2026-09-07T01:48:00Z",
     "updatedAt": "2026-09-07T12:53:45Z",
     "trigger": {
+      "detectedAt": "2026-09-07T01:48:00Z",
       "toBe": {
         "previousVersion": "lines=189\n2d4c35abef11e8af8d43fd9c5f066029b98af99a982665fbf326a7687ef4d218",
         "currentVersion": "lines=196\n7eb1180327d9f9f7760f6b9346417849000f0fbbd8991bcb4aa0229525173ed4"
@@ -1966,12 +1966,12 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-08T08:00:43Z",
       "toBe": {
         "previousVersion": "lines=196\n7eb1180327d9f9f7760f6b9346417849000f0fbbd8991bcb4aa0229525173ed4",
         "currentVersion": "lines=197\n2450648c0197a74b2ced7be1ed9650379e9b21935d0e5d774f4553ce6000c4a7"
       }
     },
-    "createdAt": "2026-09-08T08:00:43Z",
     "updatedAt": "2026-09-08T08:00:43Z",
     "stateSummary": {
       "asIs": "## as-is — **한 비트도 안 움직였다**\n\n이 모델의 as-is 는 코드 seam(모킹 지점) 지문이고, 트리거로 **불변**이다(sweep 이 asIs side 를\n변경 없음으로 읽었고, 부모에서 재계산한 값이 baseline 과 글자 그대로 같다).\n\n게이트 `scripts/check-fidelity-allowlist.py` 를 부모·트리거 두 클린 워크트리에서 실행한 출력이\n**바이트 동일**하다:\n\n    OK: e2e 충실도 허용목록 ↔ 코드 seam 1:1\n      등재 seam 7 (GATE 1 · TRIG 0 · EXT 3 · NET 3)\n      회계 행 20 == 스캔된 (파일,토큰) 쌍 20 (등재 귀속 14 · 미해소 위반 0 · 비-seam 6)\n        + mock-exception: 마커 9파일\n      마커 9지점 / 9파일 · web 네트워크 인터셉트 7건 (승인 7 · 위반 0, 상한 0)\n      차단 요인 1건 (아직 seam 이 아니다 — 판정만 확정돼 있다)\n\n이 게이트의 R5 는 **양방향**이다(미등재 seam 도 고아 등재도 잡는다) ⇒ 「회계 행 20 == 스캔된 쌍\n20」은 카운터의 침묵이 아니라 **집합 동치의 적극 증명**이다.",
@@ -1989,6 +1989,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-11T03:40:00Z",
       "toBe": {
         "previousVersion": "lines=197\n2450648c0197a74b2ced7be1ed9650379e9b21935d0e5d774f4553ce6000c4a7",
         "currentVersion": "lines=197\n1c652aeeb1777da362f1c35f2eb7a95712e94b791c9042a7cc8f2e61cd33fabe"
@@ -2000,7 +2001,6 @@
       "gap": "**유의미한 gap 없음 — 두 불변식을 각각 재서 전건 성립이다. 움직인 것은 이미 등재된 seam 행의 서술뿐이다.**\n\n## ① 불변식 1 (seam 1:1) — 게이트 출력 바이트 동일\n\n`scripts/check-fidelity-allowlist.py` 가 부모·트리거 rc=0 이고 **출력이 바이트 동일**하다:\n등재 seam **7** · 회계 행 **20 == 스캔된 (파일,토큰) 쌍 20** · 등재 귀속 14 · **미해소 위반 0** ·\n비-seam 6 · `mock-exception:` 마커 9지점/9파일 · web 인터셉트 7(승인 7 · 위반 0). 양방향 대조형\n게이트이므로 「미등재 치환」도 「코드에 없는 고아 등재」도 0 이다.\n\nas-is 지문도 **바이트 동일**(`seams=29 files=15` / `de1e6837…`) — #111 이 `deploy/` 를 +90줄 고쳤는데\nseam 이 안 늘어난 것이 **정확**하다: 확장이 **이미 등재된 대역의 내부 동작**을 넓힌 것이고\n(프롬프트의 `e2e-reply:` 지시자 — 소문자라 `E2E_[A-Z0-9_]+` 에도 안 걸린다) 새 치환 지점을\n만들지 않았다. 모델 정의에서 **대역 하나 = seam 하나**이므로 대역을 똑똑하게 만드는 것은 seam\n추가가 아니다. 「versionScript 가 자기 슬라이스 표면에 눈이 멀었다」(break 계열)와 구별되는\n지점은, 바뀐 표면에 그 스크립트가 해시하는 토큰이 **0건**임을 실측했고 게이트가 같은 결론을\n독립적으로 낸다는 것이다.\n\n## ② 불변식 2 (차단 요인 = 부채) — 1건, 부모·트리거 동일\n\n정의는 「등재↔코드가 1:1이어도 차단 요인이 **해소 계획 없이** 남아 있으면 drift」다. 게이트가\n차단 요인 **1건**을 부모·트리거 양쪽에서 같은 문구로 찍는다 — `차단 요인 1건 (아직 seam 이\n아니다 — 판정만 확정돼 있다)`. 즉 **판정이 확정돼 있다** = 해소 계획이 있는 부채로 판정면에\n올라와 있는 상태이고, 그것이 이 불변식이 요구하는 형태다. 건수·문구 모두 이 트리거가 바꾸지\n않았다.\n\n## ③ to-be 이동의 실체 — 등재 원장을 현실에 맞춘 편집\n\n절 줄 수 197 불변, 해시만 이동. 바뀐 것은 `CLAUDE-PROVIDER`(EXT) 한 행의 서술과 잔여 칸이다.\n그 행이 스스로 「둘 다 대역을 넓히면 풀린다」고 적어 두었던 잔여를 #111 이 실행하고 같은 행에\n반영했다. **원장이 낡는 것을 막는 편집**이므로 이 모델이 원하는 방향이고, 등재 집합·카테고리\n분포·회계는 한 건도 움직이지 않았다.\n\n## ④ 이중 계상 가드 (자매 레코드와 서로 가리킴)\n\n- **「충실도」 절과 seam 등재·회계·차단 요인** = 이 모델.\n- **같은 `e2e.md` 의 매칭 등재 표·집계(저작 대기 9)** = `tbm_session-platform-scenario-e2e`\n  (이 fire 에서 `action_required` — `claude-code #9`·`lifecycle #4` 가 「모킹 허용목록 등재」를\n  선행으로 지목하므로 **그 등재가 필요해지면 이 모델의 축**이 된다. 지금은 그 선행이 아직\n  요구되지 않았고 게이트도 침묵하지 않는다).\n- **신규 e2e 파일의 주석** = `tbm_session-platform-comment-redundancy`.\n- **제품 구현 코드** = `tbm_session-platform-docs-impl`.\n\n\n---\n\n**[2026-09-11T2026-09-11T03:46:37Z 후속 fire 의 델타 — 판정이 갈렸다]** 같은 트리거를 독립 측정한 03:30 fire 가\n이 모델에 **`rct_20260911-0002` (`action_required`)** 를 열었다. 위 측정(차단 요인 1건 불변 ·\n문구 동일 · 게이트 출력 바이트 동일 · 불변식 1 성립)은 **전건 독립 재현돼 참**이고, 갈린 것은\n잰 축이다: 이 레코드는 B3(건수·문구 변화) 하나로 판정했고, 정의 §「판정 규칙」은 **B1 · gap_B2 ·\n착수 가능 · 재검토 경과 · B3 의 논리합**을 요구한다. 기계 측정 결과 `fidelity:blockers` 표에\n`소관`·`선행`·`재검토 시점` **열 자체가 없어** `gap_B2 = 1` 이고(정의: 산문 혼재는 「미비로\n센다」), 「대역이 `tool_use` 를 못 내 `approval-gated #3` 진입이 불가능」이라는 원인이 두\n출처에서 이 모델로 지목되는데 행이 없어 **B1 위반 1건**이다. 상세·근거·planner 제약은\n`rct_20260911-0002` 에 있다 — **이 gap 을 여기서 다시 파지 말 것.**",
       "summarizedAt": "2026-09-11T03:40:00Z"
     },
-    "createdAt": "2026-09-11T03:40:00Z",
     "updatedAt": "2026-09-11T03:40:00Z",
     "assessment": {
       "reason": "**작업 불필요(`actionRequired: false`).**\n\n이 모델의 두 불변식을 각각 재서 전건 성립이다.\n\n**불변식 1(seam 1:1)**: 레포 게이트 `scripts/check-fidelity-allowlist.py` 가 부모·트리거 rc=0 이고\n**출력이 바이트 동일**하다 — 등재 seam 7 · 회계 행 20 == 스캔 쌍 20 · 미해소 위반 0 · 고아 0 ·\n마커 9/9 · web 인터셉트 7(승인 7 · 위반 0). as-is 지문도 바이트 불변(`seams=29 files=15`).\n\n**불변식 2(차단 요인 = 부채)**: 차단 요인 **1건**이 부모·트리거 양쪽에서 같은 문구\n(`아직 seam 이 아니다 — 판정만 확정돼 있다`)로 찍힌다 = 판정이 확정된 부채로 판정면에 올라와\n있는 상태이며, 정의가 drift 로 보는 「**해소 계획 없이** 남은 차단 요인」이 아니다. 이 트리거가\n건수·문구를 바꾸지 않았다.\n\nto-be 가 움직인 이유는 「충실도」 절의 **줄 수는 197 로 불변**인데 `CLAUDE-PROVIDER`(EXT) **한\n등재 행의 서술·잔여 칸**이 갱신된 것이다. #111 이 그 대역을 넓히면서 같은 행이 스스로 적어 둔\n잔여를 실행하고 반영했다 — **원장을 현실에 맞추는 편집**이므로 이 모델이 원하는 방향이고, 등재\n집합·카테고리 분포·회계는 한 건도 움직이지 않았다.\n\n`deploy/e2e-anthropic-fake.yaml` 이 **+90줄** 고쳐졌는데 seam 이 안 늘어난 것도 확인했다 —\n확장이 이미 등재된 대역의 **내부 동작**을 넓힌 것이고 새 치환 지점을 만들지 않았다(지시자\n`e2e-reply:` 는 소문자라 토큰 목록의 `E2E_[A-Z0-9_]+` 에도 걸리지 않는다). 모델 정의에서 대역\n하나 = seam 하나이므로 대역을 똑똑하게 만드는 것은 seam 추가가 아니며, 게이트가 같은 결론을\n독립적으로 낸다.\n\n자동 해소 대기(유예)를 택하지 않는다 — 닫을 gap 이 없다. 재감지 경로는 실재한다(「충실도」 절\n또는 seam 토큰 집합이 움직이면 깨어난다).\n\nbaseline 은 **움직인 `to_be` side 만** 전진시킨다(`lines=197` / `2450648c…` → `1c652aee…`).\n`asIs` 는 바이트 불변이라 손대지 않는다.\n\n**이중 계상 가드**: 같은 `e2e.md` 의 매칭 등재 표·집계는 자매 `scenario-e2e` 소유다(이 fire 에서\n`action_required`). 그 잔여 중 `claude-code #9`·`lifecycle #4` 는 「모킹 허용목록 등재」를 선행으로\n지목하므로, **그 등재가 실제로 요구되는 시점에 이 모델의 축**이 된다 — 지금은 아니다.\n",
@@ -2010,9 +2010,9 @@
   {
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "succeeded",
-    "createdAt": "2026-09-11T03:46:36Z",
     "updatedAt": "2026-09-11T05:16:00Z",
     "trigger": {
+      "detectedAt": "2026-09-11T03:46:36Z",
       "toBe": {
         "previousVersion": "lines=197\n2450648c0197a74b2ced7be1ed9650379e9b21935d0e5d774f4553ce6000c4a7",
         "currentVersion": "lines=197\n1c652aeeb1777da362f1c35f2eb7a95712e94b791c9042a7cc8f2e61cd33fabe"
@@ -2224,6 +2224,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "succeeded",
     "trigger": {
+      "detectedAt": "2026-09-11T05:45:31Z",
       "toBe": {
         "previousVersion": "lines=197\n1c652aeeb1777da362f1c35f2eb7a95712e94b791c9042a7cc8f2e61cd33fabe",
         "currentVersion": "lines=232\neac90420b390a318d54c936e0d8ac19bc252e2a06beb45dd84009d35c365840e"
@@ -2239,7 +2240,6 @@
       "reason": "**작업 필요(`actionRequired: true`).** → status `action_required` 로 전이하고 손을 뗀다\n(planner 대기, 미점유).\n\n**정의 §「판정 규칙」의 다섯 논리합 중 「착수 가능 행 ≥ 1」이 참이다** — `fidelity:blockers` 2행\n중 `deploy/e2e-anthropic-fake.yaml` 행이 `선행` = **`없음`** · `소관` = **`이 모델`** 이다(열\n파싱으로 확인, 산문 판독 아님). 나머지 넷은 전부 거짓이다: B1 위반 **0**(지목된 원인 둘 다 행이\n있다) · gap_B2 **0**(2행 × 3칸 = 6/6) · 재검토 시점 경과 **0**(2026-09-25 · 2026-10-11 둘 다 미래) ·\nB3 는 1→2 **증가**(감소 분기 아님, 새 행에 B1·B2 적용 완료).\n\n**소비된 트리거다.** to-be 를 움직인 것은 이 모델 자신의 직전 슬라이스 PR #114(`342de29`)\n단독이고(커밋별 지문 재계산으로 귀속: `342de29` 에서만 `lines=197`→`232`, 배포 핀 2개는 0 side),\n그 task `rct_20260911-0002` 는 05:16:00Z `succeeded`/`converged` 로 닫혔다 — 이 모델의 비-터미널\ntask 는 **0**이다. 그리고 그 슬라이스의 범위가 정확히 「원장에 세 칸을 더하고 게이트가 그것을\n읽게 하기」였으므로, **그 머지가 착수 가능 행을 만든 사건 자체**다. 즉 지금이 이 부채에 착수할 수\n있는 첫 순간이다.\n\n**게이트는 이것을 영원히 잡지 못한다.** `check-fidelity-allowlist.py` 는 트리거에서 rc=0 이고\n「차단 요인 2건 · **착수 가능 1건**」을 성실히 찍는다 — R11 은 세 칸의 **형태만** 보고(소스\n`:40` 이 스스로 「경과 판정은 정합성 감지의 몫」이라 적는다) 착수 가능 여부를 실패로 만들지\n않는다. 불변식 1 도 성립한다(게이트 출력이 부모와 「차단 요인」 줄 하나만 빼고 **바이트 동일**:\n등재 seam 7 · 회계 20==20 · 미해소 위반 0 · 인터셉트 7). 그래서 CI 초록은 「위반 없음」이지\n「부채 없음」이 아니다.\n\n**사실 재확인(원문 판독).** 대역 파일에 `tool_use` **0회**이고, 낼 수 있는 content 는\n`messageBody()` 의 `text` 한 블록(`:179`)과 `text_delta`(`:210`) 뿐이다. 레포 전체에서 `tool_use`\n는 `docs/test/e2e.md` 1파일 5줄(전부 이 공백을 서술하는 산문)에만 있다 — 트리거 #113 이 같은\n파일을 +36/−12 로 고쳤지만 `delayMs`(타이밍)였고 구조는 그대로다.\n\n**작업의 최소 범위**(행 자신과 정의가 함께 못박은 것): 대역에 `tool_use` 블록 발화를 **opt-in**\n으로 더하고 → 원장 2행을 지우고 → 같은 내용을 `CLAUDE-PROVIDER` 등재 행의 『잔여』에서 덜어낸다.\n등재 seam 7 · 회계 20==20 · 인터셉트 7 불변을 완료 기준에 넣을 것. `scenario-backlog` 표의\n`선행` 셀은 **건드리지 말 것**(자매 판정면 · 사람 승인이 가른 경계) — 행을 지우면 자동으로 참이\n된다. 상세 근거·이중 계상 가드·계획 제약 넷은 `stateSummary.gap` 에 있다.\n",
       "assessedAt": "2026-09-11T05:45:31Z"
     },
-    "createdAt": "2026-09-11T05:45:31Z",
     "updatedAt": "2026-09-11T06:46:33Z",
     "attempts": [
       {
@@ -2426,6 +2426,7 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-11T07:12:00Z",
       "toBe": {
         "previousVersion": "lines=232\neac90420b390a318d54c936e0d8ac19bc252e2a06beb45dd84009d35c365840e",
         "currentVersion": "lines=231\n62ba1aca6cbfbbdd663447e25c481d82d4306a380580636b04ec115c124a212f"
@@ -2441,7 +2442,6 @@
       "reason": "**작업 불필요(`actionRequired: false`) — 「차이가 없다」가 아니라 「정의가 정한 다섯 판정\n규칙이 전부 거짓이고, 감소한 차단 요인의 예고가 실제로 반영됐다」다.**\n\n**소비된 트리거이므로 전건이 아니라 규칙을 쟀다.** 직전 fire 가 연 `rct_20260911-0003` 의 슬라이스\nPR #115 가 06:42:12Z 머지됐고 그 변화가 나를 깨웠다. 정의 §「판정 규칙」의 다섯 디스정션을 전수로\n재니 **B1 위반 0 · gap_B2 0 · 착수 가능 0 · 재검토 경과 0 · B3 예고 미반영 거짓** 이다.\n\n**가장 무거운 것은 다섯째다** — 차단 요인 2 → 1 **감소**는 정의가 「조용한 영구 면제」로 의심하라고\n못박은 분기라, 삭제된 행의 `해소 시` 가 예고한 셋을 전부 실측했다: ⑴ 대역의 `tool_use` 발화\n(`deploy/e2e-anthropic-fake.yaml` 에서 `tool_use` 0 → 7회, `input_json_delta` 0 → 1, `stop_reason`\n포함) ⑵ **opt-in 이라 기존 등재의 마커 단언 불변**(`TOOL_RE` 지시자가 있을 때만 갈라지고, 충실도\n게이트 출력이 부모와 바이트 동일: 등재 seam 7 · 회계 20 · 위반 0 · 인터셉트 7) ⑶ `CLAUDE-PROVIDER`\n등재 행의 『잔여』에서 같은 내용을 덜어냄. **예고만 하고 행이 사라진 것이 아니다.** 게다가 같은 PR\n이 회귀 방지선을 함께 들였다(`TestProviderEmitsAToolUseBlockWhenThePromptAsksForOne` — 버퍼드·SSE\n양쪽 단언, 파일 헤더가 「멈춰도 seam 집합과 허용목록은 둘 다 가만히 있어 모든 게이트가 초록인 채\n진입 불가로 돌아간다」는 조용한 회귀 경로를 스스로 적는다).\n\n**착수 가능이 1 → 0 이 된 것이 직전 fire 와의 유일한 차이다.** 직전 `action_required` 의 근거는\n「`선행: 없음` + `소관: 이 모델` 인 행 1건」이었고, 그 행이 해소로 사라졌다. 남은 1행은 `선행` 이\n「해소 방향 재판정」이라 착수 가능이 아니다.\n\n**as-is 는 한 글자도 안 움직였다** — 대역을 +102/−20 으로 넓혔는데도 seam 지문이 불변인 것은 정의가\n예고한 성질이다(트리 해시가 아니라 `(파일,토큰)` 쌍, 이미 등재된 치환의 표현력만 넓혔다). 불변식 1은\n게이트로 부모·트리거 양쪽에서 동일 출력·rc=0 임을 확인했다.\n\n**gap 은 0이 아니고, 정의가 요구한 대로 남겼다** — 잔여 차단 요인 **1행**(승인 후 아웃바운드 호출),\n행별 재검토 시점 **`2026-10-11` 1건**, 가장 이른 재검토 시점 **`2026-10-11`**(다음 감지의 관측\n기준선). 그날 이후의 감지는 규칙 ④로 이 행을 `action_required` 로 올린다. 재검토 때 먼저 닫아야 할\n**해소 방향 모순**(행은 제품 변경 · `doc-tracker.md:90` 은 대역 `FETCH-ORIGIN` 등재)도 `stateSummary.gap`\n에 적어 두었다 — 행의 `선행` 이 스스로 그것을 지목하므로 지금은 drift 가 아니다.\n\n**이중 계상 가드.** 이 트리거가 깨운 이 레포 4모델 중 이 모델의 몫은 **대역 확장과 원장 갱신의 판정**\n하나다. 저작(`#시나리오 3`·`#6`)은 `tbm_session-platform-scenario-e2e`\n(`rct_20260911-0003`, **action_required** — 이 fire 가 열었다), 신규 주석 8줄은\n`tbm_session-platform-comment-redundancy`(`rct_20260911-0003`), 제품 구현 코드는\n`tbm_session-platform-docs-impl`(이번 구간 **0줄**, `rct_20260911-0003`).",
       "assessedAt": "2026-09-11T07:12:00Z"
     },
-    "createdAt": "2026-09-11T07:12:00Z",
     "updatedAt": "2026-09-11T07:12:00Z"
   },
   {
@@ -2449,12 +2449,12 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-13T07:52:52Z",
       "toBe": {
         "previousVersion": "lines=231\n62ba1aca6cbfbbdd663447e25c481d82d4306a380580636b04ec115c124a212f",
         "currentVersion": "lines=231\n911d0dc2a4da3d9fb0eaf07d4790beebe2b7023f680e1b18674b09beb930fede"
       }
     },
-    "createdAt": "2026-09-13T07:52:52Z",
     "updatedAt": "2026-09-13T08:05:14Z",
     "stateSummary": {
       "asIs": "**as-is (e2e SUT 의 충실도 seam) — 움직이지 않았다.** `seams=29 files=15` 지문 불변\n(감지 side 는 `to_be` 단독). 이번 두 파도는 **문서 전용**이라 seam 토큰\n(`CRIU_ENABLED|E2E_*|NewStub*|WithTestEndpoints|test-only|mock-exception:|.route(|…`)을 하나도\n건드리지 않는다. 읽은 시각 2026-09-13T07:55Z, `dlddu/session-platform@69ff764f`.",
@@ -2470,9 +2470,9 @@
   {
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "succeeded",
-    "createdAt": "2026-09-13T09:24:30Z",
     "updatedAt": "2026-09-13T13:52:00Z",
     "trigger": {
+      "detectedAt": "2026-09-13T09:24:30Z",
       "toBe": {
         "previousVersion": "lines=231\n911d0dc2a4da3d9fb0eaf07d4790beebe2b7023f680e1b18674b09beb930fede",
         "currentVersion": "lines=231\nf777763799185e6df1abddc4a1920bbbef613bb3c41f40b7ecf16fac8ee87db2"
@@ -2651,12 +2651,12 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "succeeded",
     "trigger": {
+      "detectedAt": "2026-09-13T13:55:30Z",
       "toBe": {
         "previousVersion": "lines=231\nf777763799185e6df1abddc4a1920bbbef613bb3c41f40b7ecf16fac8ee87db2",
         "currentVersion": "lines=231\n2ea053d027f6307030a0409874a01940ada7d4891858102e915bf13dee91b3d4"
       }
     },
-    "createdAt": "2026-09-13T13:55:30Z",
     "updatedAt": "2026-09-14T12:03:59Z",
     "stateSummary": {
       "asIs": "## as-is — e2e SUT 의 seam 지문 **불변**, 승인 후 아웃바운드 경로는 여전히 공백 (main `dcb2fdd4`, 관측 2026-09-13T13:5xZ)\n\n- **seam 지문 한 글자도 안 움직였다**: `seams=29 files=15 · de1e6837…` — 저장 baseline 과 바이트 동일.\n  트리거 #137 이 `deploy/e2e-approval-gateway-fake.yaml` 을 만졌지만(+5/−4) **주석 산문뿐**이라\n  `(파일,토큰)` 쌍이 하나도 변하지 않았다. 정의가 예고한 성질 그대로다.\n- **불변식 1(seam 1:1) 무손상** — 레포 게이트 `scripts/check-fidelity-allowlist.py` 를 부모 `068e921`·\n  트리거 `566c2ae` **두 지점에서** 돌려 양쪽 rc=0, 출력은 **단 한 줄(착수 가능 카운터)을 빼고 바이트 동일**:\n  등재 seam **7**(GATE 1 · TRIG 0 · EXT 3 · NET 3) · 회계 행 **20** == 스캔된 쌍 20(등재 귀속 14 ·\n  미해소 위반 **0** · 비-seam 6) · `mock-exception:` 마커 9지점/9파일 · web 인터셉트 **7**(승인 7 · 위반 0, 상한 0).\n- **막고 있는 것의 실체(코드 재측정 — 행이 자기 논증에 인용한 사실 전건 참)**:\n  ⑴ `data-plane/cmd/agent/session_mcp_tools.go:228` `parsed.Scheme != \"https\" && parsed.Scheme != \"http\"`\n  ⇒ 도구는 **평문 http 를 받는다**(#129). ⑵ 같은 `session-mcp` 컨테이너가 **이미 평문 http 인클러스터\n  주소로 나간다** — `deploy/e2e-approval-gateway-fake.yaml:196` `url: \"http://approval-gateway-fake:8080\"`,\n  `APPROVAL_GATEWAY_URL` 은 `client_orchestrator.go:157` 로 헬퍼 pod 에 배선된다.\n  ⑶ `control-plane/test/e2e_approval_gated_3_approval_path_test.go:29` `f3Prompt` 의 대상이\n  `https://example.test/doc` — **클러스터에 실재하지 않는 주소**라 승인 뒤 GET 은 관측될 수 없다.\n  ⑷ 실물 배포 선례 실재: `deploy/plugin-marketplace-git.yaml` 이 Deployment(:200)+Service(:262) 로\n  평문 http 를 낸다. ⑸ §「남은 미검증 분기」 770·771 행(「승인 후 GET 정확히 1회」·「결정 전 무도달」)이\n  그 공백을 등재한 채 살아 있다.\n- **자매의 staged PR 무손상** — `#130`·`#127`(둘 다 base `068e921b`) 을 부모·트리거·main tip **세 지점**에서\n  `git merge --no-commit --no-ff` ⇒ **전부 rc=0 · 충돌 파일 0**. 내 트리거는 어느 것도 깨뜨리지 않았다.",
@@ -2815,12 +2815,12 @@
     "toBeModelId": "tbm_session-platform-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-14T12:03:37Z",
       "toBe": {
         "previousVersion": "lines=231\n2ea053d027f6307030a0409874a01940ada7d4891858102e915bf13dee91b3d4",
         "currentVersion": "lines=234\n5cdf96a23523ba61730fd38e97bfb8dc6121b85800c2526ba1e1334ffa570895"
       }
     },
-    "createdAt": "2026-09-14T12:03:37Z",
     "updatedAt": "2026-09-14T12:13:24Z",
     "id": "rct_20260914-0001",
     "stateSummary": {
@@ -2839,6 +2839,7 @@
     "status": "succeeded",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-15T08:19:02.837249Z",
       "asIs": {
         "previousVersion": "seams=29 files=15\nde1e68372a3576b45d72340088ed38d190a33c6b658ddbdb8bd17b240e8e1ec1",
         "currentVersion": "de1e68372a3576b45d72340088ed38d190a33c6b658ddbdb8bd17b240e8e1ec1"
@@ -2848,7 +2849,6 @@
         "currentVersion": "5cdf96a23523ba61730fd38e97bfb8dc6121b85800c2526ba1e1334ffa570895"
       }
     },
-    "createdAt": "2026-09-15T08:20:59.577248Z",
     "id": "rct_20260915-0001",
     "stateSummary": {
       "asIs": "## Observed repository state\n\nRead on 2026-09-15 at `dlddu/session-platform@e74158613787c2246a6324b938ae8ed860d664a0` (main). These are source and configuration observations, not a live-cluster or E2E execution result.\n\n- The as-is script reports `seams=29 files=15`; its final-line version is `de1e68372a3576b45d72340088ed38d190a33c6b658ddbdb8bd17b240e8e1ec1`. The previous cache included the diagnostic line; its hash is identical. The ToBeModel schema explicitly uses only stdout's last line as the version. This explains the trigger without implying a source change.\n- `python3 scripts/check-fidelity-allowlist.py` exits 0: 7 registered seams (GATE 1, TRIG 0, EXT 3, NET 3); 20 accounting pairs (14 registered, 0 violations, 6 non-seams); 9 markers in 9 files; 7 authorized web intercepts and 0 unauthorized intercepts. Invariant 1 holds.\n- `deploy/fetch-origin.yaml:45-50` defines a default document of exactly **226 UTF-8 bytes**. The Deployment at lines 130-137 sets only `PORT`, with no `DOCUMENT` override. `/doc` and `/doc/<key>` both return that same document (lines 89-95). The origin is included by `deploy/kustomization.yaml:59`.\n- `data-plane/cmd/agent/session_mcp_tools.go:38` sets `maxInlineBodyBytes = 100_000`; lines 220-255 return an inline body at or below that threshold and reach `spillBody`/`bodyPath` only above it with a shared volume configured. Thus the configured document cannot exercise the approved-fetch-to-file branch requested by `docs/test/approval-gated-workload.md:57-60` scenario 6(a).\n- The ordinary approved GET path is present in `control-plane/test/e2e_approval_gated_3_approval_path_test.go`, including the fetch-origin target and access-log assertions. The old absence-of-origin cause was resolved; the outstanding cause is the missing large-body input, not origin reachability or the snapshot implementation.\n\n## Cross-model handoff checked\n\nSearched other models' task records for this model id: 72 historical records, of which 2 are nonterminal. The current `tbm_session-platform-scenario-e2e/rct_20260912-0005` is `awaiting_review`; its third attempt (`plannedAt=2026-09-14T12:20:00Z`, after our prior assessment) explicitly measures this 226-byte/100,000-byte gap, excludes the large-body origin as a `deploy/` harness prerequisite, and leaves it for subsequent detection. Its current slice is lifecycle scenario 2 migration; scenario 6/PR #130 remains parked. It does not implement the large-body prerequisite.\n\n`tbm_session-platform-docs-impl/rct_20260912-0007` is also `awaiting_review`; its current third attempt implements the independent snapshot/archive gate with zero manifest changes. Its historical reference to this model is a scope boundary, not a competing implementation of this cause. Other historical references concern resolved prerequisites. Both review-waiting tasks remain untouched.",
@@ -3014,12 +3014,12 @@
     "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-15T10:35:45.473426Z",
       "toBe": {
         "previousVersion": "5cdf96a23523ba61730fd38e97bfb8dc6121b85800c2526ba1e1334ffa570895",
         "currentVersion": "e1bc26366a544e79157b5c8b8a03f61fb2488a3b43878d886051f6d562b4283c"
       }
     },
-    "createdAt": "2026-09-15T10:35:45.473426Z",
     "id": "rct_20260915-0002",
     "stateSummary": {
       "asIs": "Observed dlddu/session-platform main at 2878fc3185588c687b99876d04d734bdd22de177. Initial source read: 2026-09-15T10:33:15Z; the shared version checker fetched the same commit and both versions again at 2026-09-15T10:38:25Z, with exit 0 and no undetermined sides.\n\n- The as-is fingerprint is unchanged: de1e68372a3576b45d72340088ed38d190a33c6b658ddbdb8bd17b240e8e1ec1 (diagnostic: seams=29 files=15). Diagnostics are excluded from the version.\n- The repository's existing check, python3 scripts/check-fidelity-allowlist.py, passed: 7 registered seams (GATE 1, TRIG 0, EXT 3, NET 3), 20 accounting pairs (14 registered, 0 violations, 6 non-seams), 9 markers in 9 files, and 7 authorized web intercepts with 0 unauthorized. Invariant 1 holds.\n- Source inspection confirms the formerly missing large input: deploy/fetch-origin.yaml:52-55 allocates a fixed 128 * 1024 = 131,072-byte Buffer; lines 94-101 serve it for /large-doc and /large-doc/<key> with byte-accurate Content-Length. Existing /doc paths retain DOCUMENT; logging occurs before document handling and excludes /healthz and /access-log. The origin remains in deploy/kustomization.yaml:59 and readiness is awaited in scripts/e2e/up.sh:94.\n- The product's unchanged maxInlineBodyBytes is 100,000 (data-plane/cmd/agent/session_mcp_tools.go:38,220-255). The new input exceeds it, so the prior 226-byte input-size obstacle is resolved at the repository source/configuration level. Actual bodyPath creation additionally requires the existing shared-volume branch; this detection does not claim a live MCP, approval, archive, or full E2E run.\n- Direct comparison with the prior observed source e74158613787c2246a6324b938ae8ed860d664a0 shows the two-file change from PR #147 (merge 9bb94fe592f4929c5a2fea28ecb813fbd0f3e82f), followed by an image-pin-only k8s/deployment.yaml change. control-plane/, data-plane/, web/, and the fidelity checker are unchanged.",
@@ -3039,6 +3039,7 @@
     "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-16T06:24:21Z",
       "asIs": {
         "previousVersion": "de1e68372a3576b45d72340088ed38d190a33c6b658ddbdb8bd17b240e8e1ec1",
         "currentVersion": "seams=29 files=15\nde1e68372a3576b45d72340088ed38d190a33c6b658ddbdb8bd17b240e8e1ec1"
@@ -3048,7 +3049,6 @@
         "currentVersion": "lines=254\ne1bc26366a544e79157b5c8b8a03f61fb2488a3b43878d886051f6d562b4283c"
       }
     },
-    "createdAt": "2026-09-16T06:24:21Z",
     "stateSummary": {
       "asIs": "**dlddu/session-platform@main `2878fc31`(2026-09-15T09:30:34Z, 새 클론, 2026-09-16T06:2xZ 독립 측정)** — e2e 충실도 seam 지문: `seams=29 files=15` + sha256 `de1e6837…`. 09-15 08:19:02Z 관측값과 **바이트 동일**. 그 시각 이후 레포 활동 2건: `9bb94fe`(#147, 09:29:54Z — e2e 승인 fetch 파일에 실제 origin 대형 입력 제공)와 배포 핀 `2878fc31` — 둘 다 seam 지문을 움직이지 않았다(HEAD 측정이 사전 값과 동일). 레포 자체 게이트 `scripts/check-fidelity-allowlist.py` 를 HEAD에서 직접 실행: **rc=0**, `등재 seam 7(GATE 1 · TRIG 0 · EXT 3 · NET 3) · 회계 행 20 == 스캔 쌍 20(등재 귀속 14 · 미해소 위반 0 · 비-seam 6) · 승인 7/7 · 차단 요인 0 · 착수 가능 0` — 어제 `rct_20260915-0002` 판정과 카운터 전건 동일.",
       "toBe": "**`docs/test/e2e.md` 원장 지문**: `lines=254` + sha256 `e1bc2636…` — 09-15 10:33:15Z 관측값과 **바이트 동일**(precheck·독립 클론 양쪽 일치).",

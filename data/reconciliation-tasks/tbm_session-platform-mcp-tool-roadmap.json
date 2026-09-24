@@ -4,6 +4,7 @@
     "toBeModelId": "tbm_session-platform-mcp-tool-roadmap",
     "status": "succeeded",
     "trigger": {
+      "detectedAt": "2026-09-12T12:53:18Z",
       "asIs": {
         "previousVersion": null,
         "currentVersion": "tools:1 web_fetch_get"
@@ -13,7 +14,6 @@
         "currentVersion": "roadmap:5 0. ping|1. git_clone|2. K3s MCP 재노출|3. gh CLI|4. kubectl"
       }
     },
-    "createdAt": "2026-09-12T12:53:18Z",
     "updatedAt": "2026-09-13T14:05:00Z",
     "stateSummary": {
       "asIs": "**as-is (실제 도구 표면) — `419eb2eb`, 최초 관측 2026-09-12T12:50Z**\n\n`tools:1 web_fetch_get`\n\n`data-plane/cmd/agent/session_mcp_tools.go` 의 `toolDefinitions()` 본문에서 뽑은 도구 이름은 **`web_fetch_get` 하나**다. 모델 등록(2026-09-12T12:51:48Z) 직전에 머지된 **PR #129**(`054aac9`, 12:48:40Z)가 바로 이 함수를 만졌으므로 첫 관측이 낡지 않았는지 확인했다 — **부모 `e318e97d` 와 트리거 `419eb2eb` 에서 스크립트 출력이 동일**하다(`tools:1 web_fetch_get`). #129 는 `url` 인자의 description 문자열과 `validateFetchTarget` 의 스킴 검사만 바꿨고 **도구를 더하거나 빼지 않았다.**\n\n그 하나의 도구는 승인 게이트를 지나며(호출마다 승인 요청 1건), 결과는 본문 또는 공유 볼륨 파일 경로로 나간다.",
@@ -191,12 +191,12 @@
     "toBeModelId": "tbm_session-platform-mcp-tool-roadmap",
     "status": "succeeded",
     "trigger": {
+      "detectedAt": "2026-09-13T07:52:52Z",
       "toBe": {
         "previousVersion": "roadmap:5 0. ping|1. git_clone|2. K3s MCP 재노출|3. gh CLI|4. kubectl",
         "currentVersion": "roadmap:4 0. ping|1. git_clone|2. K3s MCP 재노출|3. gh CLI"
       }
     },
-    "createdAt": "2026-09-13T07:52:52Z",
     "updatedAt": "2026-09-13T13:26:00Z",
     "stateSummary": {
       "asIs": "**as-is (실제 도구 표면) — 움직이지 않았다.** `tools:1 web_fetch_get` 불변(감지 side 는 `to_be` 단독).\n`data-plane/cmd/agent/session_mcp_tools.go` 의 `toolDefinitions()` 는 여전히 도구 **1개**만 낸다.\n문서의 「지금 있는 것 (1개)」 표도 그 1개와 일치한다. 읽은 시각 2026-09-13T07:58Z,\n`dlddu/session-platform@69ff764f`.",
@@ -351,6 +351,7 @@
     "toBeModelId": "tbm_session-platform-mcp-tool-roadmap",
     "status": "succeeded",
     "trigger": {
+      "detectedAt": "2026-09-13T14:08:00Z",
       "asIs": {
         "previousVersion": "tools:1 web_fetch_get",
         "currentVersion": "tools:2 ping,web_fetch_get"
@@ -360,7 +361,6 @@
         "currentVersion": "roadmap:3 1. git_clone|2. K3s MCP 재노출|3. gh CLI"
       }
     },
-    "createdAt": "2026-09-13T14:08:00Z",
     "updatedAt": "2026-09-14T13:38:00Z",
     "stateSummary": {
       "asIs": "**실제 도구 표면 — 도구 2개** (`tools:2 ping,web_fetch_get`, 트리거 `e70d6e4` / main `99c2166` 실측).\n\n`data-plane/cmd/agent/session_mcp_tools.go` 의 `toolDefinitions()` 가 내는 목록:\n\n| 도구 | 게이트 | 비고 |\n|------|--------|------|\n| `web_fetch_get` | 호출마다 승인 1건 | `url` 인자 (http·https, `additionalProperties:false`) |\n| `ping` | 지나지 않는다 (파드 밖에 닿지 않아 R1 적용 범위 밖) | 인자 없음, 상수 `pong` |\n\n**`ping` 은 선언만이 아니라 실제로 호출 가능하다** — 이 문서가 스스로 세운 기준(「`tools/call` 까지 가 봐야 참이 된다」)으로 검증했다: `:98` 등재 · `:125` `switch call.Name` 의 `case webFetchGetTool, pingTool` 수용 · `:133-134` 핸들러가 `mcpToolText(pingReply)` 반환. 셋이 다 있어야 참인데 셋 다 있다.\n\n**게이트 분기 안쪽 배치도 실측 확인** — `toolDefinitions()` 첫 줄이 `if !c.gated() { return []any{} }` 라 `ping` 도 게이트웨이 미구성 시 목록에서 빠진다. 문서가 「협상 불가」로 지목한 R2(「게이트를 구성할 수 없으면 이 도구도 내지 않는다 — 그래야 빈 목록이 『게이트웨이가 없다』 하나로만 읽힌다」)가 코드로 지켜졌다.\n\n**헬퍼 파드 egress 실측**(다음 슬라이스의 전제라 재측정): `control-plane/internal/adapter/k8s/network_policy.go` 가 만드는 정책 쌍은 **egress 를 워크로드 파드에만** 건다(`PodSelector: workloadSelector`, 피어는 kube-DNS 와 자기 헬퍼 파드의 두 포트뿐). **헬퍼 파드에는 ingress 제한만 있고 egress 정책이 없다** — MCP 컨테이너가 파드 밖에 닿을 수 있는 이유이자, `git_clone` 이 AC-F2 축의 새 선행 없이 설 수 있는 근거다.",
@@ -540,6 +540,7 @@
     "toBeModelId": "tbm_session-platform-mcp-tool-roadmap",
     "status": "succeeded",
     "trigger": {
+      "detectedAt": "2026-09-14T13:38:45Z",
       "asIs": {
         "previousVersion": "tools:2 ping,web_fetch_get",
         "currentVersion": "tools:3 git_clone,ping,web_fetch_get"
@@ -549,7 +550,6 @@
         "currentVersion": "roadmap:2 2. K3s MCP 재노출|3. gh CLI"
       }
     },
-    "createdAt": "2026-09-14T13:38:45Z",
     "updatedAt": "2026-09-21T09:07:09Z",
     "stateSummary": {
       "asIs": "**as-is = 세션 MCP 가 실제로 내는 도구 표면** (`data-plane/cmd/agent/session_mcp_tools.go` 의 `toolDefinitions()`).\n측정 시각 2026-09-14T13:42:20Z · `dlddu/session-platform@main` = `e741586`(그 앞의 `9a59174` 가 트리거, `e741586` 은 배포 핀이라 0 side).\n\n**`tools:3 git_clone,ping,web_fetch_get`** (이전 `tools:2 ping,web_fetch_get`).\n\n- **트리거 `9a59174`(#140) 「`git_clone` 을 표면에 세운다 (등재 3→2)」가 한 커밋에 양쪽을 움직였다.**\n  신설 `session_mcp_git.go` 248줄 · `session_mcp_git_test.go` 315줄 · `session_mcp_tools.go` +42 ·\n  `session_mcp_gate_test.go` +27.\n- **게이트를 지난다**: `session_mcp_tools.go:104` 가 `gitCloneTool` 을 등재하고, `:152`\n  (`case webFetchGetTool, gitCloneTool, pingTool:`) · `:163`(`if call.Name == gitCloneTool`) 가\n  게이트 디스패치에 태운다. 파일 머리 주석도 「두 번째 gated handler」로 적는다.\n- **사본 세 자리가 전부 따라 움직였다**(판정 기준 4): 머리 상태 줄 「도구 3개(`web_fetch_get`·`git_clone`·`ping`)\n  착지 · 다음 구현 대상 2개 등재」 · 「지금 있는 것 (3개)」 표(정확히 그 셋) · `docs/index.html:216` 메타\n  (`다음 구현 대상 3`→`2`, 트리거 diff 로 확인).\n\n**귀속 확인**: 부모 `283ec0e` 에서 두 versionScript 를 재실행하니 저장된 baseline 과 **바이트 동일**\n(`tools:2 ping,web_fetch_get` · `roadmap:3 1. git_clone|2. K3s MCP 재노출|3. gh CLI`) ⇒ 이동은 트리거 `9a59174` 단독.",

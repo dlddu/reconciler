@@ -4,6 +4,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
     "status": "succeeded",
     "trigger": {
+      "detectedAt": "2026-09-03T12:00:00Z",
       "asIs": {
         "previousVersion": null,
         "currentVersion": "sites=13 files=11\n2984f782a64dd1a0eaf0d8bbd4208e133252cd7bf6ad7767ec174930094c68ab"
@@ -23,7 +24,6 @@
       "reason": "**작업 필요 — 최초 관측이고, 정책 SSOT 자체가 부재해 판정 축의 한쪽이 통째로 비어 있다.**\n\n**무엇이 격차인가**: `docs/e2e-mocking-policy.md`가 없어 **등재 0건**인데 코드에는 모킹 지점\n**5종이 11파일 13지점**에 실재한다(상류 스텁 `github-mock`·`grafana-mock`·dear-baby busybox,\n충실도 저하 스위치 `MCP_AUTH_DISABLED`·`DISABLE_SECURITY_PLUGIN`). 표기 주석\n`# mock-exception:`도 0 hit이다. 양방향 1:1에서 좌변이 공집합이므로 미등재 5종 전부가 drift다.\n\n**닫을 수 있는가: 열려 있다.** definition이 첫 task의 작업 목록을 직접 지정했다 —\n*\"(1) `docs/e2e-mocking-policy.md` 신설 (2) 기존 5종의 카테고리 판정 → 등재 또는 제거\n(3) 표기 주석 부착\"*. 셋 다 문서 작성 + 주석 부착 + 카테고리 판단이며 새 제품 기능이 필요\n없다. 특히 `GATE` 카테고리가 요구하는 전제(게이트를 켠 별도 배포 변형)가 실물로 이미 존재함을\n확인했다(`tests/k8s/kind/auth-fixture.yaml:73`, `tests/integration/auth.py:12-14`) — 즉\n`MCP_AUTH_DISABLED`는 지금 바로 등재 가능하다.\n\n**소유자가 없다**: 등록 12분 만의 첫 관측으로 이 모델의 task는 **0건**이다.\n\n**자동 해소 가능성 0**: 정책 문서가 저절로 생기지 않는다. to-be가 `absent`인 한 버전이 움직일\n경로도 없다 — 누군가 그 파일을 만들어야만 to-be가 처음으로 값을 갖는다.\n\n**planner 유의**\n- **사전 소견은 구속력이 없다**(definition이 명시). 특히 **`DISABLE_SECURITY_PLUGIN` 한 건은\n  실제로 갈린다** — `GATE`로 등재할지, http-trace가 SigV4 서명을 별도 관측하고 있으니 서명\n  검증을 켜서 **제거**할지. definition의 \"충돌 시 기본 방향\"이 *\"카테고리 판정이 애매하면\n  제거 쪽으로 기운다. 예외는 늘지 않는 방향으로만 관리한다\"* 이므로 제거 가능성을 먼저 따질 것.\n- **`GATE` 등재 요건을 개별 확인할 것**: `MCP_AUTH_DISABLED`는 `auth-fixture.yaml`이 게이트를\n  켠 검증을 제공하므로 요건 충족(확인함). `DISABLE_SECURITY_PLUGIN`에 대응하는 \"보안 켠 변형\"이\n  있는지는 별도로 확인해야 한다 — 없으면 `GATE` 등재 불가이고 제거 쪽이다.\n- **집행 수단도 함께 세울지 결정할 것.** 이 레포에는 정책을 집행하는 CI 체커가 없다. 자매\n  레포 `dlddu/session-platform`의 `scripts/check-fidelity-allowlist.py`가 같은 문제를 푸는\n  선례이며(등재↔코드 1:1을 회계 행 수로 대조하고 상한 래칫을 건다), 그 레포에서는 체커가\n  **정책 산문이 낡는 것을 막지 못하는 한계**도 함께 드러났다 — 게이트가 파싱하는 블록과 산문\n  copy가 어긋난 사례가 오늘 감지됐다. 체커를 세운다면 집계를 두 곳에 적지 않게 설계할 것.\n- **범위 경계 재확인**: `internal/`의 Go 단위 테스트(httptest·fakes)는 대상이 아니고,\n  MinIO·OpenSearch·워크로드·auth 픽스처와 http-trace 프록시는 모킹이 아니라 이 정책이 권장하는\n  실환경 수단이다.",
       "assessedAt": "2026-09-03T12:00:00Z"
     },
-    "createdAt": "2026-09-03T12:00:00Z",
     "updatedAt": "2026-09-03T12:00:00Z",
     "attempts": [
       {
@@ -185,12 +185,12 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-03T15:45:43Z",
       "asIs": {
         "previousVersion": "sites=13 files=11\n2984f782a64dd1a0eaf0d8bbd4208e133252cd7bf6ad7767ec174930094c68ab",
         "currentVersion": "sites=22 files=20\n9e1ba980a9c3276bea93cc18fe2e955c2ed1960a08a6e39fe661d1f2f8d4d00c"
       }
     },
-    "createdAt": "2026-09-03T15:45:43Z",
     "updatedAt": "2026-09-03T15:45:43Z",
     "stateSummary": {
       "asIs": "## as-is — 모킹 지점 지문 (`sites=13 files=11` → `sites=22 files=20`, main `4e00d36`)\n\n지문은 `git ls-files -- tests .github/workflows`(`*_test.go` 제외)에서 상류 스텁 이름·충실도 저하\n스위치·예외 주석 토큰을 **파일×토큰 쌍**으로 뽑아 정렬·해시한 값이다. 부모(`4c77989`)와\n트리거(`4e00d36`)에서 같은 스크립트를 돌려 쌍 목록을 직접 차집합했다:\n\n**추가 10건 — 전부 `MCP_AUTH_DISABLED` 한 종류이고, 전부 PR #44가 새로 만든 e2e 파일이다**\n`_auth_variant.py` · `aws_config_get_ac3.py` · `github_app_installation_token_ac3.py` ·\n`grafana_token_ac3.py` · `opensearch_document_delete_ac5.py` · `opensearch_document_put_ac5.py` ·\n`opensearch_search_ac4.py` · `platform_auth_safety_ac1.py` · `platform_auth_safety_ac5.py` ·\n`platform_auth_safety_ac7.py`\n\n**삭제 1건** — `tests/integration/auth.py:MCP_AUTH_DISABLED`(PR #44가 파일을 분할·삭제).\n\n순증 +9 지점 / +9 파일. **새로 등장한 모킹 종류는 0개다.**\n\n결정적 관측 — 이 10건은 전부 **모듈 docstring의 산문 언급**이지 모킹을 만드는 자리가 아니다.\n문구는 모두 *\"This runs against the deployment variant in `tests/k8s/kind/auth-fixture.yaml`:\nauth is on (`MCP_API_KEYS` set, `MCP_AUTH_DISABLED` unset) …\"* 꼴로, 자기가 도는 배포 변형을\n설명한다. 이 스위치를 **실제로 켜는 자리는 레포 전체에서 `tests/k8s/kind/kustomization.yaml:17`\n(`- MCP_AUTH_DISABLED=1`) 하나뿐**이고, `auth-fixture.yaml`의 3건도 \"여기서는 일부러 unset\"이라는\n주석이다.",
@@ -207,6 +207,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-03T23:12:00Z",
       "asIs": {
         "previousVersion": "sites=22 files=20\n9e1ba980a9c3276bea93cc18fe2e955c2ed1960a08a6e39fe661d1f2f8d4d00c",
         "currentVersion": "sites=33 files=20\nf18c92ba5d08fa261661eb18df0a3493b2eb2f46da29a7e94fcaad09c8cb5ba3"
@@ -216,7 +217,6 @@
         "currentVersion": "e933220f9367d357f30eb0343f53934d7f7b675a"
       }
     },
-    "createdAt": "2026-09-03T23:12:00Z",
     "updatedAt": "2026-09-03T23:12:00Z",
     "stateSummary": {
       "asIs": "## as-is — 모킹 지점 지문 `sites=22 files=20` → `sites=33 files=20` (main `ed8d0c5`, PR #47)\n\n부모(`4e00d36`)와 트리거(`ed8d0c5`)에서 같은 스크립트를 돌려 (파일, 토큰) 쌍 목록을 직접\n차집합했다.\n\n**순증 11쌍 · 순감 0쌍.** 전부 이번 트리거 자신이 만든 것이다:\n- `e2e-mock` **6쌍** — 정책 문서 경로(`docs/e2e-mocking-policy.md`)를 가리키는 주석이\n  `.github/workflows/ci.yml:28` + kind 픽스처 5개에 붙었다. 실재하는 모킹이 아니라 **등재를\n  가리키는 주석**이며, 정책 문서 자신이 이 오탐 가능성을 ℹ️ 항목으로 미리 적어 두었다.\n- `mock-exception` **5쌍** — 표기 규약 주석이 정의 지점 5곳에 붙었다.\n\n`files`는 20에서 변하지 않았다(11개 새 쌍이 전부 이미 세어진 파일 안에서 생겼다).\n\n### 실재 모킹 지점을 **정의 기준으로** 다시 셌다 (자기신고가 아니라 실측)\n\n지문은 `(파일, 토큰)` 쌍이라 판정 단위(모킹의 **종류**)보다 거칠다. 그래서 각 종류가\n**실제로 정의되는 자리**를 개별 grep으로 확인했다:\n\n| ID | 정의 지점 (실측) | 나머지 히트의 정체 |\n| --- | --- | --- |\n| `MCP_AUTH_DISABLED` | `tests/k8s/kind/kustomization.yaml:19` (`- MCP_AUTH_DISABLED=1`) **1곳뿐** | 나머지 11건은 e2e 모듈 docstring의 산문(\"auth is on … `MCP_AUTH_DISABLED` unset\")과 `auth-fixture.yaml`의 \"일부러 unset\" 주석 |\n| `DISABLE_SECURITY_PLUGIN` | `tests/k8s/kind/opensearch.yaml:42` **1곳뿐** | — |\n| `github-mock` | `tests/k8s/kind/github-mock.yaml` | `ci.yml`은 배포·재배선(참조) |\n| `grafana-mock` | `tests/k8s/kind/grafana-mock.yaml` | `ci.yml` 배포·재배선 + `grafana_token_ac4.py` 어서션(참조) |\n| `dear-baby-fixture` | `tests/k8s/kind/dear-baby-fixture.yaml` | `ci.yml` + `dear_baby_reset_user_ac1/ac2.py`(참조) |\n\n**새로 등장한 모킹 종류는 0개다.** 실재 종류는 여전히 5종.",
@@ -234,12 +234,12 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-04T05:44:00Z",
       "asIs": {
         "previousVersion": "sites=33 files=20\nf18c92ba5d08fa261661eb18df0a3493b2eb2f46da29a7e94fcaad09c8cb5ba3",
         "currentVersion": "sites=35 files=22\n56b2181eb0a3238ed6af5c6baed7cc923c9351d4029ac7ba1864442aaef3e4f1"
       }
     },
-    "createdAt": "2026-09-04T05:44:00Z",
     "updatedAt": "2026-09-04T05:44:00Z",
     "stateSummary": {
       "asIs": "**as-is (실측 2026-09-04T05:35Z · `dlddu/homelab-k3s-mcp` main `9116ac1`)**\n\n모킹 지문 = `sites=35 files=22` / `56b2181e…` (직전 `sites=33 files=20` / `f18c92ba…`).\n\n**지문 이동의 출처를 커밋 단위로 특정했다** — 지문을 `4e00d36`(#44) · `ed8d0c5`(#47) ·\n`7456a46`(#49) · `0378f8d`(#48) · `9116ac1`(#50)에서 각각 재계산했다(각 커밋마다\n`reset --hard && clean -fdx`, 잔여 `porcelain=0` 확인):\n\n| 커밋 | 지문 |\n| --- | --- |\n| `4e00d36` (#44) | `sites=22 files=20` |\n| `ed8d0c5` (#47) | `sites=33 files=20` ← 직전 baseline |\n| `7456a46` (#49) | `sites=33 files=20` (불변) |\n| `0378f8d` (#48) | `sites=33 files=20` (불변) |\n| `9116ac1` (#50) | **`sites=35 files=22`** |\n\n⇒ **PR #50 단독**이 옮겼다(자매 모델 `tbm_homelab-k3s-mcp-ac-e2e`의 슬라이스 산출물, 05:14:26Z 머지).\n\n**늘어난 2 site를 토큰 목록 diff로 정확히 지목했다**(부모 대비 추가만 2줄, 삭제 0줄):\n\n```\n> tests/integration/session_list_ac3.py:MCP_AUTH_DISABLED\n> tests/k8s/kind/session-platform.yaml:e2e-mock\n```\n\n**레포 자체 게이트 `scripts/check_mock_policy.py`를 부모와 트리거 양쪽에서 실행 — rc=0 · 출력\n바이트 동일**:\n\n```\nOK: 규칙 R1~R6 위반 없음 — 등재 5(상한 5) · 모킹 지점 5 · 실재 토큰 5 · 표기 주석 5 · 미등재 0 · 고아 0\n  UPS  github-mock              대체 검증: —\n  UPS  grafana-mock             대체 검증: —\n  IMG  dear-baby-fixture        대체 검증: —\n  GATE MCP_AUTH_DISABLED        대체 검증: tests/k8s/kind/auth-fixture.yaml\n  GATE DISABLE_SECURITY_PLUGIN  대체 검증: tests/k8s/kind/http-trace.yaml\n```",
@@ -257,6 +257,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-04T07:59:09Z",
       "asIs": {
         "previousVersion": "sites=35 files=22\n56b2181eb0a3238ed6af5c6baed7cc923c9351d4029ac7ba1864442aaef3e4f1",
         "currentVersion": "sites=39 files=25\nc8be744eac5b1f369371cc717ad5d79b3730a7c2888d8cae0bf737b760549515"
@@ -272,12 +273,12 @@
       "reason": "**작업이 필요하지 않다(`actionRequired: false`).**\n\n지문은 `sites=35 files=22` → `sites=39 files=25`로 올랐지만, 부모/트리거 양쪽에서 site 목록을 산출해\n차집합을 뜬 결과 **추가 4건 전부가 정의가 아니라 언급**이다 — docstring 산문 2건, YAML 주석 1건\n(그중 둘은 오히려 「미설정」을 선언), 그리고 정규식이 `docs/e2e-mocking-policy.md`라는 **정책 문서\n파일명**을 잡은 오탐 1건. `MCP_AUTH_DISABLED`가 실제로 SET되는 자리는 레포 전체에서\n`tests/k8s/kind/kustomization.yaml:19` 하나이고 이번에 늘지 않았다.\n\n신규 `oidc-fixture.yaml`은 실 OIDC 발급자(dex)라 정책상 모킹이 아니며, `check_mock_policy.py`가\n트리거에서 rc=0으로 `등재 5 · 미등재 0 · 고아 0`을 재도출해 이를 확인한다. ⇒ 판정 대상 5종 불변,\n순수 지문 노이즈.\n\n다음 fire를 위해: 「등재 5(상한 5)」는 R6이 양방향 미러라 **만석이 아니라 선언==실측**이라는 뜻이다.",
       "assessedAt": "2026-09-04T07:59:09Z"
     },
-    "createdAt": "2026-09-04T07:59:09Z",
     "updatedAt": "2026-09-04T07:59:09Z",
     "id": "rct_20260904-0002"
   },
   {
     "trigger": {
+      "detectedAt": "2026-09-04T09:17:30Z",
       "asIs": {
         "previousVersion": "sites=39 files=25\nc8be744eac5b1f369371cc717ad5d79b3730a7c2888d8cae0bf737b760549515",
         "currentVersion": "sites=40 files=26\nc59493cb4b36715b3e047862db81e59edb98f3c803ff634af967b035cc51d766"
@@ -299,7 +300,6 @@
     },
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
     "status": "no_action_needed",
-    "createdAt": "2026-09-04T09:17:30Z",
     "updatedAt": "2026-09-04T09:17:30Z",
     "id": "rct_20260904-0003"
   },
@@ -308,6 +308,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
     "status": "no_action_needed",
     "trigger": {
+      "detectedAt": "2026-09-04T14:44:04Z",
       "asIs": {
         "previousVersion": "sites=40 files=26\nc59493cb4b36715b3e047862db81e59edb98f3c803ff634af967b035cc51d766",
         "currentVersion": "sites=41 files=27\ne3c327045893cf6c68913ff1afe9ef62035e70388bfcf465c6931e5a44edba09"
@@ -323,15 +324,14 @@
       "reason": "**작업 불필요(`actionRequired: false`).**\n\n1. **정의가 요구하는 등식이 성립한다** — `check_mock_policy.py`가 부모·트리거에서 rc=0, 출력 바이트 동일(`등재 5 · 실재 5 · 표기 주석 5 · 미등재 0 · 고아 0`). 미등재 모킹도 고아 등재도 0건이다.\n2. **지문 +1은 판정 단위가 아니다** — `comm` 차집합으로 단 1건(`session_write_ac5.py:MCP_AUTH_DISABLED`)임을 특정했고, 원문은 그 env가 **미설정임을 선언하는** 모듈 docstring이다. 실제 SET 지점은 `tests/k8s/kind/kustomization.yaml:19` 하나로 불변.\n3. **to-be 불변** — `docs/e2e-mocking-policy.md` blob이 baseline과 동일하다. 허용목록·카테고리 판정이 재검토를 요구하지 않는다.\n4. **이 레코드가 baseline을 전진시킨다** — 판정을 남기고 baseline을 `sites=41 files=27` 지문으로 옮겨 5분 precheck의 헛 재발사를 끊는다. 열린 task가 0개라 경쟁하는 작업도 없다.\n\n노이즈 판정이지만 **모킹이 는 것이 아니라 관용구를 담은 e2e 파일이 는 것**이라는 근거를 남긴다 — 다음 fire가 같은 스파이크를 다시 파지 않도록 절차(`comm` 차집합 + 원문 맥락)까지 함께 적었다.",
       "assessedAt": "2026-09-04T14:44:04Z"
     },
-    "createdAt": "2026-09-04T14:44:04Z",
     "updatedAt": "2026-09-04T14:44:04Z"
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
     "status": "no_action_needed",
-    "createdAt": "2026-09-07T03:47:08Z",
     "updatedAt": "2026-09-07T03:47:08Z",
     "trigger": {
+      "detectedAt": "2026-09-07T03:47:08Z",
       "asIs": {
         "previousVersion": "sites=41 files=27\ne3c327045893cf6c68913ff1afe9ef62035e70388bfcf465c6931e5a44edba09",
         "currentVersion": "sites=33 files=19\n00233827aa7182879e564ee818739eb980622c8a5391a44a03d8ff26ef8d4ab7"
@@ -354,12 +354,12 @@
     "status": "succeeded",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-15T08:05:51.606153Z",
       "asIs": {
         "previousVersion": "sites=33 files=19\n00233827aa7182879e564ee818739eb980622c8a5391a44a03d8ff26ef8d4ab7",
         "currentVersion": "00233827aa7182879e564ee818739eb980622c8a5391a44a03d8ff26ef8d4ab7"
       }
     },
-    "createdAt": "2026-09-15T08:07:33.482386Z",
     "updatedAt": "2026-09-15T12:13:20.187434Z",
     "id": "rct_20260915-0001",
     "stateSummary": {
@@ -818,12 +818,12 @@
     "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-15T12:25:32.733462Z",
       "toBe": {
         "previousVersion": "e933220f9367d357f30eb0343f53934d7f7b675a",
         "currentVersion": "32ff4ea61319e7f3004dad07d326ce5d35996a22"
       }
     },
-    "createdAt": "2026-09-15T12:27:29.699658Z",
     "id": "rct_20260915-0002",
     "stateSummary": {
       "asIs": "## Observed source and change\n- Fetched dlddu/homelab-k3s-mcp main at 5f9ea3fc71125289935f9989e32b57a87f8dcdf0; the shared version checker independently fetched the same commit again at 2026-09-15T12:30:51.071053Z.\n- as-is remains 00233827aa7182879e564ee818739eb980622c8a5391a44a03d8ff26ef8d4ab7. Its preceding stdout line, \"sites=33 files=19\", is diagnostic and includes references; it is not a count of actual mocking definitions.\n- The policy blob changed from e933220f9367d357f30eb0343f53934d7f7b675a to 32ff4ea61319e7f3004dad07d326ce5d35996a22. Compared the fetched prior source 877d854087d7eb824f0a639fcad56a8519e5c5c6 with current source and the fetched ledger merge 4825c81d0a4243d56d13e1ec4e61a144482f1cc9 (PR #110, \"Receive AC5 blocker and validate blocker plans\"). The merge's policy is byte-identical to current policy. Approved exception rows and cap are unchanged; the blocker ledger was added with one row.\n\n## Actual policy checks\n- `python3 scripts/check_mock_policy.py` exited 0 on the inspected source: R1-R6 pass; five registered exceptions, cap five, five definition sites, five actual tokens, five annotations, zero unregistered and zero orphaned entries. UPS: github-mock and grafana-mock; IMG: dear-baby-fixture; GATE: MCP_AUTH_DISABLED and DISABLE_SECURITY_PLUGIN, with auth-fixture.yaml and http-trace.yaml present as their alternative evidence.\n- B2 passes for the one blocker row. `python3 -B -m unittest discover -s scripts -p test_check_mock_policy.py` passed all 13 existing regressions. CI's lint job invokes the actual policy checker. This is a source/policy assessment; no live cluster E2E run was performed.\n- Independently audited all other models' task-record string fields for this model ID: 18 explicit references, of which 17 concern history, ownership boundaries, or resolved/noise observations. The one unresolved blocker handoff is scenario-e2e/rct_20260914-0011, attempts[0].plan.executionGuide, out-of-scope item 2 (409/5xx injection for approval-gate scenario 5). The new row receives that handoff. A registry refresh to 90661e667b07c8e6013c48debe57fc0a4929817c left all 18 reference fields unchanged.\n- Current docs/doc-tracker.md:731 corroborates the same remaining dependency. tests/k8s/kind/gatekeeper-fixture.yaml and tests/integration/approval_gate_ac5.py are absent. The prerequisite owner, tbm_homelab-k3s-mcp-scenario-e2e/rct_20260915-0008, remains another worker's planning task with PR #106; its plan leaves AC5's injection decision as follow-up. No prerequisite arrival is established.\n\n## Blocker state\n`approval-gate-ac5-http-failures` is one remaining debt, registered 2026-09-15. Direction: real-environment. Receiving owner: tbm_homelab-k3s-mcp-e2e-mock-policy. Prerequisite: the scenario-e2e model's real gatekeeper fixture plus observed feasibility evidence for 409/5xx through the actual approval client. Review: 2026-10-15, or earlier real-fixture arrival as stated by the policy.\nThe prior policy had zero blocker rows and no ledger; current policy has one complete row receiving an existing handoff. No row was removed and no resolution is claimed. The prerequisite is not \"없음\" and is still unmet; the review date has not arrived.",
@@ -840,9 +840,9 @@
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
     "status": "no_action_needed",
-    "createdAt": "2026-09-16T06:20:34Z",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-16T06:20:34Z",
       "asIs": {
         "previousVersion": "00233827aa7182879e564ee818739eb980622c8a5391a44a03d8ff26ef8d4ab7",
         "currentVersion": "sites=33 files=19\n00233827aa7182879e564ee818739eb980622c8a5391a44a03d8ff26ef8d4ab7"
@@ -865,9 +865,9 @@
     "id": "rct_20260917-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
     "status": "no_action_needed",
-    "createdAt": "2026-09-17T16:14:57Z",
     "trigger": {
       "source": "manual",
+      "detectedAt": "2026-09-17T16:14:57Z",
       "reason": "homelab-k3s-mcp 정합성 4개 축의 현황 전체 확인을 위한 일괄 수동 재감지"
     },
     "stateSummary": {
@@ -887,12 +887,12 @@
     "status": "succeeded",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-18T13:28:31Z",
       "asIs": {
         "currentVersion": "sites=34 files=20\n1741ad928d796152233570347c9cd7eb38ed05d71245ffea9514c271a158a4fa",
         "previousVersion": "sites=33 files=19\n00233827aa7182879e564ee818739eb980622c8a5391a44a03d8ff26ef8d4ab7"
       }
     },
-    "createdAt": "2026-09-18T13:28:31Z",
     "updatedAt": "2026-09-18T16:20:59Z",
     "stateSummary": {
       "asIs": "## as-is — 코드에 실재하는 모킹 지점 (`dlddu/homelab-k3s-mcp` `fb2eeb1`, 측정 2026-09-18T13:30Z)\n\n지문 `sites=34 files=20 / 1741ad92…` (직전 baseline `sites=33 files=19 / 00233827…`).\n\n**귀속: 트리거는 단독 커밋 #106 `fb2eeb1`**(「test(e2e): 실물 gatekeeper 픽스처 + 전용 e2e 8종 착지」).\nbaseline 지점(09-16T06:20)부터 tip까지 **24지점에서 asIs versionScript를 재실행**했고, 부모 `25302ec`까지\n전 지점이 저장 baseline과 **바이트 동일**, `fb2eeb1`에서만 이동, 뒤따른 배포 핀 `cb14f2d`는 0-side.\n(#123 `resource_exec`·#124 CI 가속·#126 병렬 레인 등 그 사이 커밋 전부 이 축에 0-side.)\n\n**지문 집합 대칭차 = 추가 1 · 제거 0**:\n\n    + tests/k8s/kind/gatekeeper-variant.yaml:MCP_AUTH_DISABLED\n\n**그 추가가 무엇인가 — 참조가 아니라 \"정의\"다.** 스캔 범위에서 `MCP_AUTH_DISABLED`를 실제로\n*설정하는* 파일을 부모·트리거 두 지점에서 세면 **1 → 2**로 늘었다(나머지 히트 9개는 전부 `#` 주석·\ndocstring의 언급 = 정책이 말하는 「참조」):\n\n| 지점 | 실제 설정 위치 |\n| --- | --- |\n| 부모 `25302ec` | `tests/k8s/kind/kustomization.yaml:19` (`MCP_AUTH_DISABLED=1`) |\n| 트리거 `fb2eeb1` | 위 + **`tests/k8s/kind/gatekeeper-variant.yaml:108` (`- name: MCP_AUTH_DISABLED / value: \"1\"`)** |\n\n`gatekeeper-variant.yaml`은 승인 게이트 e2e(AC2·AC4(b)·AC9) 전용으로 **새로 선 별도 배포 변형**이고,\n그 Deployment env가 직접 인증 게이트를 내린다. 표기 규약이 요구하는 `# mock-exception: GATE — …`\n주석은 **108행 바로 앞에 없다**(파일 머리말 25–29행 산문이 \"the allowlisted GATE relaxation\"이라고\n적을 뿐이다).\n\n**모킹이 아닌 것으로 확인된 것들(이번 트리거의 나머지 전량)**\n- `tests/k8s/kind/gatekeeper-fixture.yaml`(신설 316줄) = **실물** gatekeeper `ghcr.io/dlddu/gatekeeper:sha-762fafe`\n  + SQLite PVC. 상류 스텁이 아니다 → 정책이 권장하는 실환경 하네스.\n- 같은 파일의 `gatekeeper-trace`(python:3.12-slim) = `http-trace`와 같은 계열의 **기록 프록시**(요청 본문만\n  기록, 동작 치환 없음) → 모킹 아님.\n- 신설 e2e 8종·`_gatekeeper.py`·`ci.yml` +89줄 = 실물 배선(secret 생성·롤아웃 대기·forward-auth로 e2e\n  사용자 시딩). **지문 사각지대 전수 스캔**(`stub|fake|mock|dummy|_DISABLED|SKIP_|faux|placeholder|monkeypatch`)\n  결과 변경 파일에서 새 스텁·새 충실도 스위치 **0건**(히트는 전부 k8s `patch` 호출명).\n\n**게이트 실측 — 부모·트리거·tip 3지점 `scripts/check_mock_policy.py` rc=0, 출력 바이트 동일**:\n`등재 5(상한 5) · 모킹 지점 5 · 실재 토큰 5 · 표기 주석 5 · 미등재 0 · 고아 0` + `B2 차단 원장 1행 완비`.\n",
@@ -1143,6 +1143,7 @@
     "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-18T16:29:26Z",
       "asIs": {
         "currentVersion": "sites=36 files=20\ne6b905187ddc6113c37675a8e9b28f168680ad64d0ea15db3b67717847706352",
         "previousVersion": "sites=34 files=20\n1741ad928d796152233570347c9cd7eb38ed05d71245ffea9514c271a158a4fa"
@@ -1152,7 +1153,6 @@
         "previousVersion": "32ff4ea61319e7f3004dad07d326ce5d35996a22"
       }
     },
-    "createdAt": "2026-09-18T16:29:26Z",
     "updatedAt": "2026-09-18T16:29:26Z",
     "stateSummary": {
       "asIs": "# as-is — 2026-09-18T16:36Z 관측, `dlddu/homelab-k3s-mcp` main `f6cd432`\n\n지문 `sites=36 files=20` / `e6b90518…`(직전 `sites=34 files=20` / `1741ad92…`).\n\n## 귀속 — 두 side 이동은 `6958350`(PR #130) 단독\n부모 `29d5651`에 클론을 핀하고 두 versionScript를 원문(`runtime: bash`) 실행하니 **저장 baseline과 바이트 동일**이었다(asIs `sites=34 … 1741ad92…`, toBe `32ff4ea6…`). `6958350`에서 두 side가 함께 움직이고, 그 뒤 tip `f6cd432`(#133, deploy 브랜치 이미지 핀 발행)는 **0 side**다. ⇒ 트리거는 #130 하나다.\n\n**#130은 이 모델 자신의 `rct_20260918-0001`(현재 `executing`)이 스테이징한 reconcile PR이다** — 그 task가 판정한 gap 두 축(⑴ `gatekeeper-variant.yaml:108`의 미등재 모킹 지점, ⑵ AC5 차단 원장 재검토)을 그대로 착지시켰다. 변경 3파일 `+46/−10`: `docs/e2e-mocking-policy.md`(+50/−10) · `tests/k8s/kind/gatekeeper-variant.yaml`(+2) · `docs/comment-policy/ledger.md`(자매 모델 소관, 판정 원장 행 갱신).\n\n## 실측 모킹 지점 — 독립 열거 6곳 (게이트 출력에 의존하지 않음)\n정의의 「모킹 지점 = 스위치를 **정의**하는 파일 · 상류 스텁 서버」로 `tests`·`.github/workflows`를 전수 grep했다.\n\n| # | 지점 | 종류 | 표기 주석 |\n| --- | --- | --- | --- |\n| 1 | `tests/k8s/kind/github-mock.yaml:5` | 상류 스텁(python:3.12-alpine) | `UPS` ✅ |\n| 2 | `tests/k8s/kind/grafana-mock.yaml:5` | 상류 스텁(python:3.12-alpine) | `UPS` ✅ |\n| 3 | `tests/k8s/kind/dear-baby-fixture.yaml:12` | busybox 스텁 | `IMG` ✅ |\n| 4 | `tests/k8s/kind/kustomization.yaml:19` | `MCP_AUTH_DISABLED=1` 정의 | `GATE` ✅ |\n| 5 | `tests/k8s/kind/gatekeeper-variant.yaml:110` | `MCP_AUTH_DISABLED` env 정의 | `GATE` ✅ **(이번 트리거가 부착)** |\n| 6 | `tests/k8s/kind/opensearch.yaml:42` | `DISABLE_SECURITY_PLUGIN` | `GATE` ✅ |\n\n`MCP_AUTH_DISABLED`의 나머지 grep 히트 12건은 전부 **참조**다 — docstring의 「주 배포는 `MCP_AUTH_DISABLED=1`이다」 설명, `auth-fixture.yaml`·`oidc-fixture.yaml`의 「일부러 두지 않는다」 주석, `platform_auth_safety_ac8.py`의 미설정 단언. 정의 지점이 아니다.\n\n## 모킹이 아닌 것(실환경 하네스) — 사각지대 재확인\n`tests/k8s/kind` 전 매니페스트의 `image:`를 훑어 스텁 후보를 재판정했다: `minio`(pgsty/silo·mc 실물 다이제스트 핀) · `opensearch`(opensearchproject/opensearch:2 실물) · `gatekeeper-fixture`(`ghcr.io/dlddu/gatekeeper:sha-762fafe` **실물** + python 기록 프록시) · `oidc-fixture`(`ghcr.io/dexidp/dex:v2.44.0` **실물 OIDC 발급자** — 파일 머리말이 「UPS도 IMG도 성립하지 않으므로 스텁을 두면 등재 불가능한 모킹이 된다」를 스스로 논증한다) · `session-platform`(실 이미지) · `resource-generic-fixture`·`test-deployment`(busybox/pause **실 워크로드 픽스처**) · `auth-fixture`(게이트를 **켠** 실배포 = 대체 검증) · `http-trace`(기록면). 전부 정의가 「모킹이 아니라 실환경 수단·대안」으로 명시한 부류다. ⇒ 지문 패턴 밖의 미등재 스텁 **0건**.\n\n## 레포 게이트 `scripts/check_mock_policy.py` — 부모·트리거 두 지점\n| | 부모 `29d5651` | 트리거 `6958350` |\n| --- | --- | --- |\n| rc | 0 | 0 |\n| R1~R6 | 위반 0 | 위반 0 |\n| 등재 / 상한 | 5 / 5 | 5 / 5 |\n| 모킹 지점 · 표기 주석 | 5 · 5 | **6 · 6** |\n| 미등재 · 고아 | 0 · 0 | 0 · 0 |\n| B2 원장 | 1행 완비 | 1행 완비 |\n\n⚠️ **부모에서도 게이트는 초록이었다.** 게이트는 지점을 `# mock-exception:` **지시어로** 세므로, 주석 없는 정의 지점(당시의 `gatekeeper-variant.yaml`)은 원리적으로 보이지 않았다 — `rct_20260918-0001`이 잡아낸 것이 정확히 이 사각지대이고, 지금은 주석이 붙어 게이트 계수(6)와 내 독립 계수(6)가 처음으로 일치한다.",
@@ -1171,6 +1171,7 @@
     "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-19T00:29:34Z",
       "asIs": {
         "currentVersion": "sites=37 files=21\n1a9467dd41fbe3be9238d29a3122acc929eb01fd9cec7d353f077254fec07d03",
         "previousVersion": "sites=36 files=20\ne6b905187ddc6113c37675a8e9b28f168680ad64d0ea15db3b67717847706352"
@@ -1180,7 +1181,6 @@
         "previousVersion": "2660ed30dbfad2cb020de9d7c4f37f2a239b7675"
       }
     },
-    "createdAt": "2026-09-19T00:29:34Z",
     "updatedAt": "2026-09-19T00:29:34Z",
     "stateSummary": {
       "asIs": "**관측 2026-09-19T00:3xZ · `dlddu/homelab-k3s-mcp` main `00c6a113` (= 트리거, fire 내내 불변)**\n\n지문 `sites=37 files=21` / `1a9467dd…` (baseline `sites=36 files=20` / `e6b90518…`).\n\n### 모킹 지점(정의 지점) — 6곳, 부모와 동일\n`# mock-exception:` 주석 실측 6건, 등재 5행이 빠짐없이 덮는다(`MCP_AUTH_DISABLED`가 2지점):\n\n| 지점 | 카테고리 |\n| --- | --- |\n| `tests/k8s/kind/github-mock.yaml` | `UPS` |\n| `tests/k8s/kind/grafana-mock.yaml` | `UPS` |\n| `tests/k8s/kind/dear-baby-fixture.yaml` | `IMG` |\n| `tests/k8s/kind/kustomization.yaml` | `GATE` (`MCP_AUTH_DISABLED`) |\n| `tests/k8s/kind/gatekeeper-variant.yaml` | `GATE` (`MCP_AUTH_DISABLED`) |\n| `tests/k8s/kind/opensearch.yaml` | `GATE` (`DISABLE_SECURITY_PLUGIN`) |\n\n### 지문 이동의 정체 — 대칭차집합이 정확히 1건, 그것은 *참조*다\n부모 `05ef097` 대 트리거의 파일×토큰 쌍 집합을 `diff` 하면 **추가 1 · 삭제 0 · 수정 0**:\n\n```\n> tests/integration/github_app_installation_token_ac5.py:github-mock\n```\n\n신규 e2e 파일(188줄)이 `httpx` 로 포트포워드된 URL(`GITHUB_MOCK_URL`)을 때리는 **클라이언트 참조**이고, 스텁을 정의하지 않으며 `# mock-exception:` 주석도 담지 않는다(주석 수 6 = 부모와 동일). ⇒ 모킹 *지점* 은 늘지 않았다.\n\n### 등재된 `github-mock` 안에서 일어난 일 (`tests/k8s/kind/github-mock.yaml` +95줄)\n- 상류 엔드포인트 추가: `GET /app/installations/<id>`(부모에 이미 있었음) · **`DELETE /installation/token`**(신규).\n- **테스트 전용 관리 표면 신설**: `GET|DELETE /_admin/requests`(요청 기록 조회·초기화) · `POST /_admin/config`(응답 모드 설정).\n- 노브 3종, **전부 기본 off**(`installation_status:200` · `installation_permissions:None` · `mint_extra_permissions:None`) — 코드 주석이 \"All three default to off so every other e2e sees the stock GitHub shapes\" 라 적고 실측 일치. 다른 github-app e2e 3종의 단언은 불변.\n\n### 배선 (`.github/workflows/ci.yml`)\nport-forward 1개(`svc/github-mock 8093:80`) + `GITHUB_MOCK_URL` env 추가뿐. **실서버·실픽스처의 충실도를 낮추는 스위치는 0건 추가**(auth/보안 계층 무접촉).\n\n### 레포 게이트 `scripts/check_mock_policy.py`\n부모 `05ef097` · 트리거 `00c6a113` **양 지점 rc=0, 출력 바이트 동일**:\n`등재 5(상한 5) · 모킹 지점 6 · 실재 토큰 5 · 표기 주석 6 · 미등재 0 · 고아 0` + `B2 차단 원장 1행 완비`.",
@@ -1199,12 +1199,12 @@
     "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-19T01:53:10Z",
       "toBe": {
         "currentVersion": "d5d3421bc3647853ebc4eb75232939e355d0c778",
         "previousVersion": "02bd5b0cc885af4a961a0ba79c4301a7a0adb64f"
       }
     },
-    "createdAt": "2026-09-19T01:53:10Z",
     "updatedAt": "2026-09-19T01:53:10Z",
     "stateSummary": {
       "asIs": "**관측 2026-09-19T01:5xZ · `dlddu/homelab-k3s-mcp` main `8532a79e`(= 트리거, fire 내내 불변 — 마감 `ls-remote` 재확인)**\n\n지문 **`sites=37 files=21` / `1a9467dd…` — 저장 baseline 과 바이트 동일**(precheck 도 asIs `unchanged`). 이 side 는 이번 트리거로 **움직이지 않았다**. 부모 `88d9e8c1` · 트리거 `8532a79e` · HEAD 세 지점에서 versionScript 를 원문 재실행해 셋 다 같은 값임을 확인했다.\n\n### 모킹 지점 — 6곳, 등재 5행이 빠짐없이 덮는다\n\n| 지점 | 카테고리 | 등재 ID |\n| --- | --- | --- |\n| `tests/k8s/kind/github-mock.yaml` | `UPS` | `github-mock` |\n| `tests/k8s/kind/grafana-mock.yaml` | `UPS` | `grafana-mock` |\n| `tests/k8s/kind/dear-baby-fixture.yaml` | `IMG` | `dear-baby-fixture` |\n| `tests/k8s/kind/kustomization.yaml:19` (`MCP_AUTH_DISABLED=1`) | `GATE` | `MCP_AUTH_DISABLED` |\n| `tests/k8s/kind/gatekeeper-variant.yaml:110` (`env: MCP_AUTH_DISABLED`) | `GATE` | `MCP_AUTH_DISABLED` |\n| `tests/k8s/kind/opensearch.yaml` | `GATE` | `DISABLE_SECURITY_PLUGIN` |\n\n### 지문 37건의 정체를 전수 분해했다 — 실제 게이트 완화 설정은 위 2곳뿐\n\n`MCP_AUTH_DISABLED` 토큰은 **11 파일**에서 잡히지만, 비-주석 실설정은 `kustomization.yaml:19` 과 `gatekeeper-variant.yaml:110` **둘뿐**이다. 나머지 9건은 전부 **산문·주석의 언급**이다:\n- `tests/k8s/kind/auth-fixture.yaml:3,6` — 「주 배포는 `MCP_AUTH_DISABLED=1` … 이 변형은 **unset** 으로 둔다」(정책 문서가 대체 검증으로 지목한 바로 그 파일이고, 문면과 실측이 일치한다).\n- `tests/k8s/kind/oidc-fixture.yaml:5,26,380` — 「주 배포는 `…=1`」 · 「(d) `MCP_AUTH_DISABLED` **미설정**, 기동 실패가 단언이다」. **세 번째 게이트 완화 배포가 아니다** — env 블록에 실설정 0건.\n- `tests/integration/*_ac*.py` 7건 — docstring 의 배포 맥락 설명.\n\n⇒ 정책의 `MCP_AUTH_DISABLED` 행이 선언한 **두 지점이 실제 완화 지점 전부**이고, 「새 배포가 게이트 완화를 넣으면 이 행의 지점 열에 자기를 추가해야 한다」는 요건 위반은 **0건**이다. (`e2e-mock` 토큰 6건도 마찬가지로 실 모킹이 아니라 **`e2e-mocking-policy.md` 경로 문자열** 이며, 체커가 `(?![A-Za-z0-9_])` 로 그 오탐을 명시적으로 막는다.)\n\n### 레포 게이트 `scripts/check_mock_policy.py`\n부모 `88d9e8c1` · 트리거 `8532a79e` **양 지점 rc=0, 출력 바이트 동일**:\n`등재 5(상한 5) · 모킹 지점 6 · 실재 토큰 5 · 표기 주석 6 · 미등재 0 · 고아 0` + `B2 차단 원장 1행 완비`.",
@@ -1223,12 +1223,12 @@
     "status": "succeeded",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-20T11:32:34Z",
       "asIs": {
         "currentVersion": "sites=38 files=22\n77e9917ea7561e9dafd3811e0c1718aeb7b1f28805f97d447f741211859db84b",
         "previousVersion": "sites=37 files=21\n1a9467dd41fbe3be9238d29a3122acc929eb01fd9cec7d353f077254fec07d03"
       }
     },
-    "createdAt": "2026-09-20T11:32:34Z",
     "updatedAt": "2026-09-20T22:25:58Z",
     "stateSummary": {
       "asIs": "**관측 2026-09-20T11:33Z · `dlddu/homelab-k3s-mcp` main `20939fc`**(fire 내내 불변 — 마감 `ls-remote` 2파도 0)\n\n- **지문**: `sites=38 files=22` / `77e9917e…` (baseline `sites=37 files=21` / `1a9467dd…`).\n- **귀속 — 이동은 `20939fc`(PR #159) 단독.** baseline 관측 시점의 tip `00c6a11`부터 부모 `da22caa`까지 **12지점에서 versionScript를 원문 재실행**하니 전부 `sites=37 files=21` / `1a9467dd…`로 **저장 baseline과 바이트 동일**이고, 트리거에서만 움직인다.\n- **델타는 파일×토큰 쌍 1건, 추가뿐**(대칭차집합 = 추가 1 · 삭제 0 · 수정 0): `tests/integration/github_commit_status_ac3.py:github-mock`. 이 파일은 `httpx`로 포트포워드된 `/_admin/requests`를 읽는 **클라이언트 참조**이지 스텁을 정의하지 않고 `# mock-exception:` 주석도 담지 않는다(주석 수 6 = 부모와 동일). 정책이 「모킹 지점 = 스텁·스위치를 **정의**하는 파일 / 소비만 하는 곳은 참조」로 가르므로 **지점 집합은 6곳 불변**이다.\n- **레포 게이트 `scripts/check_mock_policy.py`를 부모·트리거 두 지점에서 실행**: 양쪽 **rc=0**, 출력 **바이트 동일** — `등재 5(상한 5) · 모킹 지점 6 · 실재 토큰 5 · 표기 주석 6 · 미등재 0 · 고아 0`, B2 차단 원장 1행 완비. 회귀 스위트 `test_check_mock_policy.py` **13/13 OK**.\n- **트리거의 실제 내용**(7파일): 신규 e2e 3종(`github_commit_status_ac{3,5,6}.py`) · `ci.yml`에 `GITHUB_COMMIT_STATUS_CONTEXT_PREFIXES` 한 줄 · `test-github-commit-status.md` 자동화 필드 3행 · `comment-policy/ledger.md`·`doc-tracker/2026-09.md` 갱신. **모킹 지점 파일(`tests/k8s/kind/*`)은 무접촉.**\n- **스텁 실측(다음 절의 gap 근거)**: `tests/k8s/kind/github-mock.yaml`이 서빙하는 것은 `POST /app/installations/<id>/access_tokens` · `GET /app/installations/<id>` · `DELETE /installation/token` · `/_admin/{requests,config}` 뿐이다. ⑴ `POST /repos/{owner}/{repo}/statuses/{sha}` 라우트가 **없고**(`do_POST`가 미매치를 기록 없이 404), ⑵ `GET /app/installations/{id}` 응답이 `{id, permissions}`만 돌려줘 **`account.login`이 없다** — 구현 `internal/github/github.go:174-175`가 그 필드를 읽고 `:227-228`이 비면 `returned no account login`으로 실패한다. 신규 `github_commit_status_ac3.py` 자신이 docstring에 「`POST …/statuses/{sha}` 핸들러는 아직 시나리오 1의 몫」이라 적는다.",
@@ -1454,12 +1454,12 @@
     "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-20T22:40:44Z",
       "toBe": {
         "previousVersion": "d5d3421bc3647853ebc4eb75232939e355d0c778",
         "currentVersion": "6579f10a9cbfcf784044442cbaa25f007fa7b87f"
       }
     },
-    "createdAt": "2026-09-20T22:40:44Z",
     "id": "rct_20260920-0002",
     "stateSummary": {
       "asIs": "**측정 지점**: `dlddu/homelab-k3s-mcp` main = `3a10d9b`(#164, \"github-mock 을 commit-status 상류 전부로 넓히고 등재 「대상」을 함께 고친다 (rct_20260920-0001)\"), 부모 `7a1abb4`. 관측 2026-09-20T22:39~22:50Z.\n\n**⑴ 모킹 지점 지문 — 이동 0.** as-is versionScript 재실행 결과가 저장된 baseline과 **바이트 동일**하다: `sites=38 files=22` · `77e9917ea7561e9dafd3811e0c1718aeb7b1f28805f97d447f741211859db84b`. 즉 이번 트리거는 **as-is를 전혀 움직이지 않았다**(#164의 `tests/k8s/kind/github-mock.yaml` +68줄은 *이미 등재된* 같은 파일·같은 토큰 안의 라우트 증설이라 파일×토큰 쌍 집합이 불변이다). precheck·내 독립 재계산 두 경로에서 같은 값.\n\n**⑵ 레포 게이트 `scripts/check_mock_policy.py` — 부모·트리거 두 지점에서 rc=0이고 출력이 바이트 동일.**\n```\nOK: 규칙 R1~R6 위반 없음 — 등재 5(상한 5) · 모킹 지점 6 · 실재 토큰 5 · 표기 주석 6 · 미등재 0 · 고아 0\n  UPS  github-mock / grafana-mock, IMG dear-baby-fixture,\n  GATE MCP_AUTH_DISABLED (대체 검증 tests/k8s/kind/auth-fixture.yaml),\n  GATE DISABLE_SECURITY_PLUGIN (대체 검증 tests/k8s/kind/http-trace.yaml)\nOK: B2 차단 원장 1행 완비 (등재 상한과 별도; B1·B3는 reconciler 판정)\n  approval-gate-ac5-http-failures: 소관=tbm_homelab-k3s-mcp-e2e-mock-policy · 선행=tbm_homelab-k3s-mcp-scenario-e2e: 409·5xx 재현 가능성의 관측 로그 (실물 gatekeeper-fixture.yaml 은 PR #106 에서 충족) · 재검토=2026-10-15\n```\n\n**⑶ 스텁이 실제로 무엇을 서빙하는가(코드 실측).** `tests/k8s/kind/github-mock.yaml`: `ACCESS_TOKENS_RE`(발급) · `INSTALLATION_RE`(설치 조회, 200 본문에 `account: {login: \"dlddu\"}` — `:31 INSTALLATION_ACCOUNT_LOGIN`, `:101`) · `DELETE /installation/token`(폐기) · **신설 `COMMIT_STATUS_RE`**(`^/repos/<owner>/<repo>/statuses/<40 hex>$`, `:27-28`) — 본문을 `record()`로 기록한 뒤 `Authorization`·`X-GitHub-Api-Version`·`Accept`를 검사하고, `sha == \"f\"*40`(`:32 UNPROCESSABLE_SHA`, `:151`)이면 GitHub 모양 `422 Validation Failed`, 그 밖이면 `201` + 생성된 status(`id` 고정 1 · `state`·`context`·`sha`·`created_at` · 보낸 `description`). `/_admin/requests`·`/_admin/config` 관리 표면은 그대로.\n\n**⑷ 소비자 구현 실측** — `internal/github/commitstatus.go:137` `installationOwner`(`github.go:219-222`, 설치 조회 응답의 `account.login`) → `:144` `mintInstallationToken`(`statuses` 권한) → `:157` `postCommitStatus`(`:161` `%s/repos/%s/%s/statuses/%s`) → `:154` `revokeToken`(defer). 즉 `github_commit_status_create`가 거치는 상류는 **정확히 네 개**다.\n\n**⑸ 차단 원장 실재 행 1건** — `approval-gate-ac5-http-failures`(출처 `tbm_homelab-k3s-mcp-scenario-e2e/rct_20260914-0011`, 등록일 2026-09-15, `real-environment`, 소관 = 이 모델, 선행 = 자매 모델의 409·5xx 재현 가능성 관측 로그(미착지), 재검토 `2026-10-15`). 부모·트리거에서 셀 전건 동일.",
@@ -1479,12 +1479,12 @@
     "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-21T08:18:15Z",
       "asIs": {
         "currentVersion": "sites=42 files=25\ndb43d22a9fa916ceee39da922303c52af9e6d17bc6195def25362b386e5b2ce7",
         "previousVersion": "sites=38 files=22\n77e9917ea7561e9dafd3811e0c1718aeb7b1f28805f97d447f741211859db84b"
       }
     },
-    "createdAt": "2026-09-21T08:18:15Z",
     "updatedAt": "2026-09-21T08:22:39Z",
     "stateSummary": {
       "asIs": "## as-is — E2E 모킹 지점 지문 `sites=42 files=25 · db43d22a…`(이전 `sites=38 files=22 · 77e9917e…`), 대상 `dlddu/homelab-k3s-mcp@main` = `59e1492`(관측 2026-09-21T08:21:56Z)\n\n**귀속**: baseline(09-20 11:32Z) 이후 main 의 8커밋(#158·#159·#161·#164·#163·#166·#162·#168)에서 지문을 커밋별로 재실행 — `f5ca0bd`(#162, 트리거의 부모)까지 **baseline 과 바이트 동일**, 이동은 **#168 `59e1492`(08:10:39Z, \"test(e2e): github-commit-status 시나리오 1·2·4 를 구현 대기에서 빼고 전용 e2e 로 닫는다\", 자매 `tbm_homelab-k3s-mcp-scenario-e2e/rct_20260920-0006` 산출) 단독**이다. `ls-remote` main = `59e1492` 불변(2파도 0). PR #168 head(`refs/pull/168/head`) 트리 == 머지 트리(`git diff --stat` 공집합) ⇒ PR 체크(fmt+vet · unit · integration · ci passed 전부 SUCCESS)가 머지 트리의 초록이다.\n\n**지문 델타(부모 → 트리거, 파일×토큰 쌍 `sort -u` diff) = 추가 4 / 제거 0**:\n| 새 쌍 | 실체(줄을 직접 읽음) |\n|---|---|\n| `tests/integration/github_commit_status_ac1.py:github-mock` | 모듈 docstring·주석(`:7` \"the github-mock request log\", `:26` \"github-mock.yaml 의 admin 표면\") — **등재된 `github-mock`(UPS) 스텁의 요청 기록을 *소비*하는 참조**, 새 스텁 정의 아님 |\n| `tests/integration/github_commit_status_ac2.py:github-mock` | docstring `:9` \"body the github-mock recorded\" — 동상 |\n| `tests/k8s/kind/commit-status-variant.yaml:MCP_AUTH_DISABLED` | **머리말 주석 `:23`** \"Auth stays ON (MCP_API_KEYS …) rather than relaxed with MCP_AUTH_DISABLED, so this file adds no GATE entry\" — 실제 `env` 블록(`:76-100`)은 `LISTEN_ADDR`·`LOG_LEVEL`·`MCP_API_KEYS=ci-e2e-key`·`MCP_K8S_DISABLED=1` + `envFrom secretRef homelab-k3s-mcp-github-app`; ci.yml 이 그 네임스페이스에 만드는 시크릿도 `GITHUB_*` 4키뿐 ⇒ **`MCP_AUTH_DISABLED` 를 넣는 지점이 아니다(인증 ON)** |\n| `tests/k8s/kind/commit-status-variant.yaml:e2e-mock` | 같은 머리말 `:24` 의 `docs/e2e-mocking-policy.md` 경로 자체 — 정책 문서가 스스로 예고한 지문 오탐(「`e2e-mock` 이 나타나면 등재를 가리키는 주석이니 새 스텁으로 오해하지 말 것」) |\n\n비-주석 줄에서 `MCP_AUTH_DISABLED|e2e-mock|github-mock` 히트 **0**(신규 4파일 전수). `# mock-exception:` 주석 신설 0(게이트 「표기 주석 6」 불변). ci.yml 델타는 변형 네임스페이스 시크릿 생성 · apply · rollout 대기 3스텝뿐이고, 그 시크릿의 `GITHUB_API_BASE_URL=http://github-mock.github-mock.svc.cluster.local` 은 이미 등재된 `github-mock` 행이 「배선」으로 적은 바로 그 재배선(새 스텁·새 정의 파일 아님; `ci.yml:github-mock` 쌍은 부모에도 있어 지문 델타에 없음). `MCP_K8S_DISABLED=1` 은 인증·보안 계층이 아니라 k8s 도구군 비활성(`auth-fixture.yaml:93` 이 같은 값을 부모에서부터 가짐 — 정의 범위 경계 2「인증·보안 계층」밖, 지문 패턴 밖, 선례 동일).\n\n**변경 파일 집합(#168, 8파일 +640/−22)**: `tests/integration/github_commit_status_ac{1,2,4}.py`(신설 3) · `tests/k8s/kind/commit-status-variant.yaml`(신설) · `.github/workflows/ci.yml`(+19) · `docs/test-github-commit-status.md` · `docs/doc-tracker/2026-09.md` · `docs/comment-policy/ledger.md`. **`internal/`·`main.go`·`k8s/`·`docs/e2e-mocking-policy.md` 무접촉.**\n\n**레포 게이트 `scripts/check_mock_policy.py`** — 부모 `f5ca0bd`·트리거 `59e1492` 두 지점 **rc=0, 출력 바이트 동일**: 「등재 5(상한 5) · 모킹 지점 6 · 실재 토큰 5 · 표기 주석 6 · 미등재 0 · 고아 0」 + 「B2 차단 원장 1행 완비」. ⚠️ 게이트가 *보지 않는* 축을 손으로 닫았다: 체커 R2 는 주석 속 토큰과 실제 env 주입을 구분하지 않고 R4 는 *등재 행이 선언한* 지점 파일만 검사하므로, 새 배포가 `MCP_AUTH_DISABLED=1` 을 env 로 넣으면서 행의 지점 열에 자기를 안 적어도 초록이다 — 그래서 변형의 env 블록을 직접 읽어 「인증 ON」을 확인한 것이 판정면의 실제 근거다.",
@@ -1503,12 +1503,12 @@
     "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-21T09:38:50Z",
       "asIs": {
         "currentVersion": "sites=43 files=26\na9f6190f0f971555e4af7c36e2f7a569f254d661b834fc915a00c73a88c946c5",
         "previousVersion": "sites=42 files=25\ndb43d22a9fa916ceee39da922303c52af9e6d17bc6195def25362b386e5b2ce7"
       }
     },
-    "createdAt": "2026-09-21T09:38:50Z",
     "updatedAt": "2026-09-21T09:43:23Z",
     "stateSummary": {
       "asIs": "## as-is — E2E 모킹 지점 지문 `sites=43 files=26 · a9f6190f…`(이전 `sites=42 files=25 · db43d22a…`), 대상 `dlddu/homelab-k3s-mcp@main` = `91c3831`(관측 2026-09-21T09:38Z, `ls-remote` 09:40:53Z 불변 — 2파도 0)\n\n**귀속**: baseline(09-21 08:18Z, 당시 HEAD `59e1492` #168) 이후 main 의 3커밋(#167 `6680a4c` · #169 `930ad8f` · #170 `91c3831`)에서 지문을 커밋별로 재실행(매 지점 `reset --hard && clean -fdx`, porcelain 0) — `59e1492`·`6680a4c`·`930ad8f` 세 지점 전부 **baseline 과 바이트 동일**(`sites=42 files=25 / db43d22a…`), 이동은 **#170 `91c3831`(09:34:28Z, \"test(e2e): resource-generic 시나리오 18 을 구현 대기에서 빼고 전용 e2e 로 닫는다\", 자매 `tbm_homelab-k3s-mcp-scenario-e2e/rct_20260921-0002` 산출 — 이 fire 도중 09:35:30Z `succeeded`/`converged` 로 닫힘) 단독**이다. PR #170 head `189adf1` 의 tree sha == 머지 커밋 `91c3831` 의 tree sha(`e6a08699…`, `git diff --stat` 공집합) ⇒ PR head 의 체크런(fmt+vet · unit tests · integration tests(kind e2e) · image build · `ci passed` 전부 SUCCESS, 09:14~09:21Z)이 머지 트리의 초록이다.\n\n**지문 델타(부모 `930ad8f` → 트리거, 파일×토큰 쌍 `sort -u` 의 `comm`) = 추가 1 / 제거 0**:\n| 새 쌍 | 실체(줄을 직접 읽음) |\n|---|---|\n| `tests/k8s/kind/rbac-narrow-fixture.yaml:e2e-mock` | 신규 픽스처 **머리말 주석 `:37`** 의 `docs/e2e-mocking-policy.md` 경로 자체 — 정규식 `[A-Za-z0-9_-]*-mock` 이 정책 문서 파일명 속 `e2e-mock` 을 잡은 것. 직전 두 문장(`:35-37`)이 \"Auth stays ON (MCP_API_KEYS, the throwaway key of auth-fixture.yaml), like commit-status-variant.yaml, so this file adds no GATE entry to docs/e2e-mocking-policy.md\" 이다. 정책 문서가 스스로 예고한 지문 오탐(#168 의 `commit-status-variant.yaml:24` 와 동일 계열의 반복) |\n\n신규·변경 파일 전수(`tests/integration/resource_generic_ac18.py` 237줄 · `tests/k8s/kind/rbac-narrow-fixture.yaml` 200줄 · `.github/workflows/ci.yml` +20)에서 패턴 5종의 **비-주석 히트 0**, 유일 히트가 위 `:37` 한 줄. `# mock-exception:` 주석 부모 6 == 트리거 6(신설 0). `resource_generic_ac18.py` 에 `stub|fake|monkeypatch|mock` 0히트 — 실물 gatekeeper(`_gatekeeper` 헬퍼, `wait_for_pending`/`decide`)와 자기 port-forward 로 변형에 닿는 실물 e2e 다.\n\n**새 배포 변형 `rbac-narrow-fixture.yaml` 의 실체(정의 범위 경계 2종에 대조)**: 같은 `homelab-k3s-mcp:ci` 이미지 · `env` 블록(`:134-146`) = `LISTEN_ADDR`·`LOG_LEVEL`·`MCP_API_KEYS=ci-e2e-key`(**인증 ON**) + `envFrom secretRef homelab-k3s-mcp-gatekeeper` · ci.yml 이 그 네임스페이스에 만드는 시크릿(`:327-332`) = `GATEKEEPER_BASE_URL=http://gatekeeper.gatekeeper.svc.cluster.local`(실물 `gatekeeper-fixture.yaml` 의 Service — `ghcr.io/dlddu/gatekeeper:sha-762fafe`, 스텁 아님) + `GATEKEEPER_API_KEY` ⇒ `MCP_AUTH_DISABLED` 를 넣는 지점 아님, 상류 스텁 재배선 아님. 유일한 차이는 ClusterRoleBinding 의 `roleRef` 가 `cluster-admin` 대신 좁은 ClusterRole(core/apps/rbac get·list·watch + configmaps patch, networking.k8s.io 0) — 인증·보안 계층을 **끄는** 것이 아니라 SA 권한을 **좁혀** 시나리오 18 의 사전 조건(「RBAC 에 없는 종류」)을 실물 apiserver 403 으로 만드는 구성이다. 충실도 저하(범위 경계 2「인증·보안 계층을 꺼서」)에 해당하지 않으며, 「게이트를 켠 별도 배포 변형」과 같은 실환경 수단 쪽이다. ci.yml 델타 = 변형 네임스페이스·시크릿 생성 · apply · rollout 대기 · 실패 시 로그 덤프 4스텝뿐.\n\n**변경 파일 집합(#170, 6파일 +481/−13)**: `tests/integration/resource_generic_ac18.py`(신설) · `tests/k8s/kind/rbac-narrow-fixture.yaml`(신설) · `.github/workflows/ci.yml`(+20) · `docs/test-resource-generic.md` · `docs/doc-tracker/2026-09.md` · `docs/comment-policy/ledger.md`. `internal/`·`main.go`·`k8s/`·`docs/e2e-mocking-policy.md` **무접촉**. `docs/test-resource-generic.md` 의 새 `자동화` 문장이 적는 Go 단위 `TestForbiddenBecomesAGrantStatement`(「가짜 403」)는 `internal/` 단위 테스트 층위 = 정의 「범위 밖」(그리고 #170 은 `internal/` 을 만지지도 않았다).\n\n**게이트 `scripts/check_mock_policy.py`**: 부모 `930ad8f` · 트리거 `91c3831` 두 지점(클린 워크트리) **rc=0 · 출력 바이트 동일(md5 `084bfbeb`)** — 「등재 5(상한 5) · 모킹 지점 6 · 실재 토큰 5 · 표기 주석 6 · 미등재 0 · 고아 0」 + 「B2 차단 원장 1행 완비」. 단 게이트는 주석 속 토큰과 env 주입을 가르지 못하므로(R2·R4 는 등재 행 기준 재측정) 위 env 블록 손 확인이 실제 근거이고 게이트 초록은 보강 증거다.",
@@ -1527,12 +1527,12 @@
     "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-21T13:33:47Z",
       "asIs": {
         "currentVersion": "sites=44 files=27\n2933a9ee8eec43dee24050ab0611c4607038e659af15c366d6aee7493cb0dacf",
         "previousVersion": "sites=43 files=26\na9f6190f0f971555e4af7c36e2f7a569f254d661b834fc915a00c73a88c946c5"
       }
     },
-    "createdAt": "2026-09-21T13:33:47Z",
     "updatedAt": "2026-09-21T13:38:00Z",
     "stateSummary": {
       "asIs": "## as-is — E2E 모킹 지점 지문 `sites=44 files=27 · 2933a9ee…`(이전 `sites=43 files=26 · a9f6190f…`), 대상 `dlddu/homelab-k3s-mcp@main` = `2e3c2f1`(관측 2026-09-21T13:33Z, `ls-remote` 13:33Z == `2e3c2f1` — 2파도 0)\n\n**귀속**: baseline(09-21 09:38:50Z, 당시 HEAD `91c3831` #170) 이후 main 의 11커밋(#165 `c3a44a3` · #171 `7a65b16` · #172 `7065a14` · #173 `586e338` · #174 `f52f6a8` · #175 `6ca5ec3` · #176 `7d19322` · #177 `42441d6` · #178 `d8a605a` · #179 `2d5aa24` · #181 `2e3c2f1`)에서 지문을 커밋별로 재실행(12지점 `checkout`, 신규 클론이라 porcelain 0) — `91c3831`~`2d5aa24` **11지점 전부 baseline 과 바이트 동일**(`sites=43 files=26 / a9f6190f…`), 이동은 **#181 `2e3c2f1`(13:31:13Z, \"test(e2e): metrics 시나리오 1~5 와 event-log 시나리오 1 을 전용 e2e 로 닫는다\", 자매 `tbm_homelab-k3s-mcp-scenario-e2e/rct_20260921-0010` 산출 — 이 fire 도중 13:33:45Z `succeeded` 로 닫힘) 단독**이다. PR #181 head `884e7be` 의 tree sha == 머지 커밋 `2e3c2f1` 의 tree sha(`3efc4b53…`) ⇒ PR head 의 체크런(fmt+vet · unit tests · integration tests(kind e2e) · image build · `ci passed` 전부 SUCCESS, 13:17~13:25Z)이 머지 트리의 초록이다.\n\n**지문 델타(부모 `2d5aa24` → 트리거, 파일×토큰 쌍 `sort -u` 의 `diff`) = 추가 1 / 제거 0**:\n| 새 쌍 | 실체(줄을 직접 읽음) |\n|---|---|\n| `tests/integration/event_log_ac1_records.py:grafana-mock` | 신규 e2e 파일 **모듈 docstring `:7`** 의 산문 「외부 시스템을 쓰는 ``grafana_token``(주 배포는 grafana-mock 이 배선돼 성공한다)」 — 이미 등재된 `grafana-mock`(UPS, 지점 `tests/k8s/kind/grafana-mock.yaml`) 을 **소비하는 테스트가 그 사실을 서술**한 것. 정책 `:70-71` 「모킹 지점 = 스텁·스위치를 정의하는 파일이다. 그 스텁을 소비하기만 하는 곳(테스트의 어서션…)은 지점이 아니라 참조이며 주석을 달지 않는다」에 정확히 해당(선례: 부모에도 있는 `grafana_token_ac4.py:grafana-mock` 과 같은 종류) |\n\n#181 이 만진 스캔 범위 파일 8개(`tests/integration/_metrics.py` 212 · `event_log_ac1_records.py` 119 · `metrics_ac1_results.py` 105 · `metrics_ac2_reasons.py` 223 · `metrics_ac3_gate_wait.py` 135 · `metrics_ac4_cardinality.py` 146 · `metrics_ac5_boundary.py` 156 · `tests/k8s/kind/metrics-off-variant.yaml` 116, 전부 신설)에서 패턴 5종의 히트는 위 `:7` 한 줄뿐(비-주석·비-docstring 히트 **0**). `# mock-exception:` 주석 부모 **6 == 6** 트리거(신설 0). 신규 py 7파일에 `stub|fake|monkeypatch|mock` 히트는 같은 `:7` 한 줄뿐. `.github/workflows/ci.yml` · `internal/` · 기존 픽스처 **0바이트**(`git diff --stat 2d5aa24 2e3c2f1 -- .github/workflows` 빈 출력).\n\n**새 배포 변형 `tests/k8s/kind/metrics-off-variant.yaml` 의 실체(정의 범위 경계 2종에 대조)**: 같은 `homelab-k3s-mcp:ci` 이미지 · `env`(`:53-63`) = `LISTEN_ADDR` · `LOG_LEVEL` · `MCP_API_KEYS=ci-e2e-key`(**인증 ON**, `MCP_AUTH_DISABLED` 부재) · `MCP_K8S_DISABLED=1` · `METRICS_DISABLED=1`. 두 `*_DISABLED` 는 **제품 스위치**(`main.go:150`·`:171`, 부모에도 존재)이고 인증·보안 계층이 아니다 — `MCP_K8S_DISABLED` 는 부모의 `auth-fixture.yaml:93` · `commit-status-variant.yaml:87` 이 이미 같은 이유(시크릿이 아니라 ServiceAccount 를 읽는 통합)로 세우던 값이며, `METRICS_DISABLED=1` 은 **검증 대상 그 자체**(`docs/test-metrics.md` 시나리오 5 「노출을 끈 변형 … `METRICS_DISABLED is set` 줄로 끈 것이 실재함을 먼저 확인」)라 충실도 저하가 아니라 사전 조건 제작이다. 상류 스텁 재배선 0(`GRAFANA_*`/`GITHUB_*`/`secretRef` 부재). 변형은 ci.yml 상시 픽스처가 아니라 `metrics_ac5_boundary.py` 가 apply 하고 `finally` 에서 네임스페이스째 거둔다(`:41-43`, 머리말 `:1-2`). ⇒ #168 `commit-status-variant.yaml` · #170 `rbac-narrow-fixture.yaml` 과 같은 계열의 실환경 수단이며, 이번엔 지문조차 그 파일에 반응하지 않았다(패턴 히트 0).\n\n**변경 파일 집합(#181, 12파일 +1284/−46)**: 위 8 + `docs/test-metrics.md` · `docs/test-event-log.md` · `docs/doc-tracker/2026-09.md` · `docs/comment-policy/ledger.md`(자매 렌즈 몫). `docs/e2e-mocking-policy.md` 무접촉.",
@@ -1551,12 +1551,12 @@
     "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
+      "detectedAt": "2026-09-21T20:45:08Z",
       "asIs": {
         "currentVersion": "sites=43 files=26\nb84d9d57361ecd1ceea09ca3b5a6f7da2f73c16438263be8423b69325839fe79",
         "previousVersion": "sites=44 files=27\n2933a9ee8eec43dee24050ab0611c4607038e659af15c366d6aee7493cb0dacf"
       }
     },
-    "createdAt": "2026-09-21T20:45:08Z",
     "updatedAt": "2026-09-21T20:47:18Z",
     "stateSummary": {
       "asIs": "**as-is (dlddu/homelab-k3s-mcp@main `15c9a07` = PR #190 merge, 읽은 시각 2026-09-21T20:47:18Z)** — 모킹 지점 지문 `sites=43 files=26 / b84d9d57…` (baseline `sites=44 files=27 / 2933a9ee…`, −1 쌍).\n\n- **귀속**: 부모 `405edb4`(#189)·`b8a75c9`·`2b9b5c3`·`932e94c` 4지점 worktree 에서 versionScript 재실행 = baseline 과 **바이트 동일** ⇒ 이동은 #190 단독. PR #190 `base.sha == 405edb4`, `merge_commit_sha == 15c9a07 == ls-remote main`.\n- **델타의 실체 (부모·트리거 히트 집합 `diff`)**: 사라진 쌍 **1개뿐** — `tests/integration/grafana_token_ac4.py:grafana-mock`. 그 파일의 diff 는 모듈 상단 **주석 3줄 → 1줄**(「The grafana-mock only ever returns the minted read token (token=glc_mock_<name>), so the issuer credential must never surface…」 2줄 제거) 이고 코드 변경 0. 같은 PR 의 `github_app_installation_token_ac4.py` 는 주석 1줄 축약(패턴 히트 없음). `tests/` 외 변경은 `docs/comment-policy/ledger.md`·`passes/…slice-13.md`(신규)·`doc-tracker/2026-09.md` 뿐(자매 `tbm_homelab-k3s-mcp-comment-redundancy/rct_20260921-0019` 의 슬라이스 13).\n- **실재 모킹 지점 집합은 불변**: `grafana-mock` 은 여전히 `tests/k8s/kind/grafana-mock.yaml`(정의 지점, `mock-exception: UPS`)·`.github/workflows/ci.yml`·`event_log_ac1_records.py`(소비 참조) 에 존재. `# mock-exception:` 히트 **6 == 6**. 새 스텁·새 스위치·새 GATE 배포 변형 0.\n- **레포 게이트 `scripts/check_mock_policy.py`** 를 부모·트리거 두 worktree 에서 실행: 둘 다 **rc=0, 출력 md5 `084bfbeb` 동일** — 「등재 5(상한 5) · 모킹 지점 6 · 실재 토큰 5 · 표기 주석 6 · 미등재 0 · 고아 0」 + 「B2 차단 원장 1행 완비」.\n- CI: PR head `4e812c8` check-runs 5/5 success(1 skipped = main-only image pin) · main `15c9a07` Build/Pages success.",

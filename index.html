@@ -880,7 +880,7 @@
 
     return '<div class="task">' +
       '<div class="task-head">' + statusBadge(t.status) + ' <code class="task-id">' + escapeHtml(taskDisplayId(t)) + "</code> " + actionPill + prChip +
-        '<span class="spacer"></span><span class="muted small">detected ' + fmtDate(t.createdAt) + "</span></div>" +
+        '<span class="spacer"></span><span class="muted small">detected ' + fmtDate(trig.detectedAt) + "</span></div>" +
       '<div class="task-trigger">' + triggerLabel + triggerReason + " " + fmtTriggerVersions(trig) + "</div>" +
       (sections ? '<div class="task-body">' + sections + "</div>" : "") +
       "</div>";
@@ -1103,7 +1103,7 @@
     (state.tasksByModel[modelId] || []).forEach(function (t) {
       if (t.status === "no_action_needed") return;
       take(t.updatedAt, "기록 갱신", t.id);
-      take(t.createdAt, "작업 생성", t.id);
+      take(t.trigger && t.trigger.detectedAt, "감지", t.id);
       take(t.stateSummary && t.stateSummary.summarizedAt, "상태 요약", t.id);
       take(t.assessment && t.assessment.assessedAt, "판단", t.id);
       (t.attempts || []).forEach(function (a) {
@@ -1132,7 +1132,7 @@
     });
     if (!arr.length) return null;
     return arr.slice().sort(function (a, b) {
-      return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+      return String((b.trigger && b.trigger.detectedAt) || "").localeCompare(String((a.trigger && a.trigger.detectedAt) || ""));
     })[0];
   }
 
@@ -1258,7 +1258,7 @@
     var md_ = m.metadata || {};
     var tags = (md_.tags || []).map(function (t) { return '<span class="tag">' + escapeHtml(t) + "</span>"; }).join(" ");
     var tasks = (state.tasksByModel[m.id] || []).slice().sort(function (a, b) {
-      return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+      return String((b.trigger && b.trigger.detectedAt) || "").localeCompare(String((a.trigger && a.trigger.detectedAt) || ""));
     });
     var needAction = tasks.filter(taskNeedsAction);
     var lastAct = lastAction(m.id);

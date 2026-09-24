@@ -82,9 +82,9 @@ function renderSidebar(tasks) {
 
 test("uses the latest non-no-action task for the sidebar status", () => {
   const result = selectDisplayTask([
-    { id: "older", status: "succeeded", createdAt: "2026-07-30T00:00:00Z" },
-    { id: "latest", status: "no_action_needed", createdAt: "2026-08-02T00:00:00Z" },
-    { id: "visible", status: "planned", createdAt: "2026-08-01T00:00:00Z" }
+    { id: "older", status: "succeeded", trigger: { detectedAt: "2026-07-30T00:00:00Z" } },
+    { id: "latest", status: "no_action_needed", trigger: { detectedAt: "2026-08-02T00:00:00Z" } },
+    { id: "visible", status: "planned", trigger: { detectedAt: "2026-08-01T00:00:00Z" } }
   ]);
 
   assert.equal(result.id, "visible");
@@ -93,8 +93,8 @@ test("uses the latest non-no-action task for the sidebar status", () => {
 
 test("returns no display task when every task needs no action", () => {
   const result = selectDisplayTask([
-    { id: "first", status: "no_action_needed", createdAt: "2026-08-01T00:00:00Z" },
-    { id: "second", status: "no_action_needed", createdAt: "2026-08-02T00:00:00Z" }
+    { id: "first", status: "no_action_needed", trigger: { detectedAt: "2026-08-01T00:00:00Z" } },
+    { id: "second", status: "no_action_needed", trigger: { detectedAt: "2026-08-02T00:00:00Z" } }
   ]);
 
   assert.equal(result, null);
@@ -102,8 +102,8 @@ test("returns no display task when every task needs no action", () => {
 
 test("renders the prior meaningful status instead of no action", () => {
   const sidebar = renderSidebar([
-    { id: "visible", status: "planned", createdAt: "2026-08-01T00:00:00Z" },
-    { id: "latest", status: "no_action_needed", createdAt: "2026-08-02T00:00:00Z" }
+    { id: "visible", status: "planned", trigger: { detectedAt: "2026-08-01T00:00:00Z" } },
+    { id: "latest", status: "no_action_needed", trigger: { detectedAt: "2026-08-02T00:00:00Z" } }
   ]);
 
   assert.match(sidebar, /title="planned"/);
@@ -112,7 +112,7 @@ test("renders the prior meaningful status instead of no action", () => {
 
 test("renders a neutral status when every task needs no action", () => {
   const sidebar = renderSidebar([
-    { id: "latest", status: "no_action_needed", createdAt: "2026-08-02T00:00:00Z" }
+    { id: "latest", status: "no_action_needed", trigger: { detectedAt: "2026-08-02T00:00:00Z" } }
   ]);
 
   assert.match(sidebar, /title="표시할 상태 없음"/);
