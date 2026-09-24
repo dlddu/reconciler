@@ -6654,7 +6654,7 @@
       ]
     },
     "createdAt": "2026-09-22T14:01:50Z",
-    "updatedAt": "2026-09-24T05:45:09Z",
+    "updatedAt": "2026-09-24T06:34:00Z",
     "stateSummary": {
       "asIs": "## as-is — 판정 대상 주석 지문 (dlddu/feature-doc@main `074c325`, 2026-09-24T05:0xZ 관측)\n\n- 전역 지문 **`lines=2654 files=135` / `9f44d030…e710904`** (모델 `asIs.versionScript` 재실행).\n  저장 baseline(= 트리거 `currentVersion`) 은 `lines=2646 files=135` / `bb3c1bf9…63bda2`.\n- **트리거의 정체 = 내 모델 자신의 직전 슬라이스**: `27d9b81`(#129 `reconcile(rct_20260922-0006)`,\n  09-22 13:59:36Z) 에서 두 versionScript 를 재실행하면 asIs `bb3c1bf9…` · toBe `aa34feca…` 로\n  **트리거 값이 바이트 재현**된다. `rct_20260922-0006` 은 `succeeded` — 소진된 트리거다.\n- **트리거 이후 39h 동안 main 이 6커밋 더 움직였다**(#131 `65f2494` · #133 `243d58c` · #132 `c063d0f`\n  · #134 `28ba332` · #135 `e40857e` · #136 `074c325`). 이 구간에서 판정 대상 주석이\n  **+8줄 유입, 제거 0**(집합 차 실측: `comm -13` 8건 / `comm -23` 0건 ⇒ 제자리 수정도 없다).\n\n### 유입 8줄 (전량 미판정)\n| 파일 | 줄 | 유입 커밋 |\n|---|---|---|\n| `backend/src/cross_cutting.rs` | 3 (`AXIS_GUIDE` 의 `///` 3줄) | #134 `28ba332` |\n| `frontend/src/CrossCuttingConcerns.tsx` | 3 (`//` 2줄 + `{/* */}` 1줄) | #132 `c063d0f` |\n| `frontend/src/index.css` | 2 (`/* */` 2줄) | #132 `c063d0f` |\n\n(TSX 의 `// One path per line…` 2줄은 삼항 else 가지의 **JS 표현식 문맥** 안이라 화면에 렌더되지\n않는다 — JSX children 오배치가 아님을 `sed -n '145,175p'` 로 확인했다.)\n\n- **기계 게이트 없음**: feature-doc 레포에 주석 정책을 검사하는 스크립트·워크플로가 **0건**\n  (`grep -rln 'comment-policy|comment_policy|주석 비중복|주석 원장'` 전 확장자 무히트).\n  `tools/` 의 게이트 5종은 전부 다른 모델 소유. ⇒ 이 모델의 판정 표면은 **원장뿐**이다.\n",
       "toBe": "## to-be — 주석 정책 SSOT (`docs/comment-policy/`, tree `aa34feca20d48d8d390cff4a1fc79d022ac1b901`)\n\n- **트리거 시점(`27d9b81`)과 HEAD(`074c325`) 의 tree hash 가 동일** — 정책 본문·원장·판정 상세는\n  39h 동안 **한 바이트도 움직이지 않았다**. 즉 유입된 8줄을 받아 적은 패스가 없다.\n- 구성: `README.md`(정책 본문) · `ledger.md`(판정 원장, 표 **22행**) · `passes/`(판정 상세 12+건,\n  최신 `2026-09-22-*` 3건).\n- 정의상 정합 상태 = 「판정 대상 주석 중 **복원 가능한 내용을 담은 것이 없음**」이고, 그 판정의\n  표면이 원장이다. 원장 규약: *「같은 범위의 증분 재판정은 새 행을 만들지 않고 원래 행의 결과 칸을\n  갱신하며, 패스 상세는 원래 패스 파일에 절을 더한다」* ⇒ 이미 판정된 범위로 들어온 주석은\n  **증분 재판정으로만** 닫힌다.\n\n### 유입 8줄을 담는 원장 행 2개 — 지문 3지점 대조\n| 원장 행 | 범위 | 원장 기재 | 트리거 `27d9b81` 재현 | HEAD `074c325` 실측 |\n|---|---|---|---|---|\n| 34행 | 파이프라인·횡단 축 9파일 (`pipeline.rs`·`cross_cutting.rs`·`CrossCuttingConcerns.tsx` 등) | 142 / `5a4aea6e…d739` | **142 / `5a4aea6e…d739` (일치)** | **148 / `26eaec9f…50b9` (불일치)** |\n| 35행 | 프런트 데이터·셸 축 8파일 (`index.css` 포함) | 88 / `7e6915aa…6bd60` | **88 / `7e6915aa…6bd60` (일치)** | **90 / `fa276b84…f672c` (불일치)** |\n\n두 행 모두 **트리거 시점에는 정확히 재현**되므로 재현 규약(행 지문은 후행 개행 **포함**\n`printf '%s\\n' | sha256sum`)이 옳고, HEAD 불일치는 규약 오차가 아니라 **실제 미판정 유입**이다.\n증분 합 `+6 +2 = +8` 이 전역 지문의 `2646 → 2654` 와 **정확히 일치**한다(설명 안 되는 잔차 0).\n",
@@ -6730,6 +6730,53 @@
           "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-24T05:45:00Z",
           "reason": "승인. 정합성·범위: 변경 6파일이 모두 gap 범위 안이다 — 코드 3파일은 diff가 주석 줄만 (cross_cutting.rs +1/-3 · CrossCuttingConcerns.tsx -4 · index.css -4)이고 나머지는 원장 1 + 기존 패스 파일 2에 절 추가라 새 .md 0건(허브 R9 불변), 런타임·스키마·저장 형식 무변경. 준비물 신선도(2026-09-24T05:45Z 실측): PR #139 OPEN · MERGEABLE/CLEAN · 필수 status 둘 다 success(ci-gate, review/manual-approval) — 사람 승인 context가 이미 success라 4-2 해당 없음. 계획이 적은 원장 9행 143/`515d540a…` · 10행 89/`39baa2ff…`를 head 516d82df 트리에서 재현 하네스로 직접 돌려 바이트 일치 확인했다(계획의 실측이 정직하다). 신선도 경고 — 자매 PR #137이 base 074c325 이후 main(fd6cdad)에 05:38:02Z 착지했다. git 머지는 충돌 없이 깨끗하지만, 머지 결과 트리에서 원장 9행은 173/`f18488742...`라 PR이 적는 143/`515d540a…`와 어긋난다(#137이 cross_cutting.rs에 주석 30행 유입). 10행 89/`39baa2ff…`는 머지 후에도 그대로다. 이를 거부 사유로 보지 않는 근거: executionGuide 1단계가 머지 직전 재실측을 '필수·가장 먼저'로 두고 3단계가 '판정이 아니라 재고정' 절차를 실행 가능한 하네스와 함께 제시하며, 이는 원장에 이미 두 번 기재된 관례(「자매 착지 재실측」 2026-09-22 · #121)와 같고, PR 본문·원장이 #137·#138을 「미판정으로 남는 것」으로 선등재했다. 머지 트리를 직접 봐도 #137이 PR이 걷어낸 명제를 되살리지 않아 같은 단언이 두 벌 서는 자리는 없다(line 173 히트는 PR이 정본으로 남긴 프롬프트 리터럴 자신). 위험 통제·불가역성: riskLevel low에 걸맞게 완료 기준이 바이트 일치 대조로 명시돼 있고 (guide 4단계), 불가역 지점은 squash 머지 하나뿐이며 롤백은 revert PR로 구체적·실제 가능하다(문서·주석만이라 운영 영향 없음). 실행자 유의: 1단계 재실측에서 9행은 반드시 재고정 경로로 빠진다 — 173/`f18488742...`는 #138 미착지 기준이므로 머지 시점 트리에서 다시 재다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-24T05:45:09Z",
+          "finishedAt": "2026-09-24T06:34:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "log": "재현 하네스를 실행 시점에 다시 굴려 계획의 실측을 확인했다. base 074c325 에서 원장 9행 148 / 26eaec9f… · 10행 90 / fa276b84… · 전역 2654 / 9f44d030… 으로 바이트 일치했고, 전역값은 모델 lastObservedVersion 과도 동일하다(하네스가 모델 versionScript 를 충실히 재현함)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "log": "복원 경로 판정은 계획 시점에 확정된 것이라 실행 단계에서 다시 하지 않았다. 이번 fire 의 재고정은 판정이 아니라 줄 수·지문의 재측정이며, 원장 규약이 그렇게 규정한다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "log": "로컬 문서 게이트 4종을 재고정한 트리에서 두 차례(1차·2차 재고정 각각) 실행해 전부 rc=0: check-journey-mockup.py(R0~R11) · check-mockup-render.py · check-scenario-e2e.py · check-journey-prototype.js(프로토타입 5 · 단언 417). cargo/kind e2e 는 PR CI 가 담당했다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "log": "주석 편집 4건은 PR #139 head 에 이미 실려 있었고, 머지 전 diff 를 직접 확인했다 — git diff 074c325..516d82df 가 cross_cutting.rs(AXIS_GUIDE doc 3행→1행) · CrossCuttingConcerns.tsx(-4) · index.css(-4) 의 주석 줄만 보이고 비주석 코드 무접촉. index.css 의 iOS Safari 유지 1행도 그대로다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "log": "원장 9·10행과 패스 파일 갱신. 자매 착지로 9행 값을 두 번 재고정했다(아래 seq7): 143/515d540a… → 173/f1848874…(#137) → 199/db92b240…(#138). 10행 89/39baa2ff… 는 두 착지 모두 범위를 건드리지 않아 불변. 새 행·새 .md 0건이라 허브 R9 불변이고, 원장 행은 4칸 파싱을 유지한다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "log": "재고정 커밋마다 게이트 재실행 rc=0, PR CI 는 head 5a52f849 에서 전부 초록(ci-gate · test (cargo) · test (kind e2e) · 문서 게이트 3종 · 데이터 저장 형식 변경 판정 · 이미지 push). 필수 status 둘 다 success — review/manual-approval 은 계획 예측대로 자동으로 붙었다(사람 게이트 해당 없음)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "log": "머지 직전 자매 착지 재실측에서 두 건을 잡았다. 1차: #137(fd6cdad) 착지 → 9행 148→178(+30). 2차: 1차 재고정 push 직후 #138(95d3395) 착지 → 178→204(+26). 두 번 모두 판정하지 않고 머지 시점 트리에서 줄 수·지문만 재고정했고(원장 규약 「자매 착지 재실측」 · 2026-09-22 #121 선례), 원장·패스 파일·PR 본문 세 표면을 함께 갱신했다. 로컬 merge-tree 는 매번 CLEAN."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "log": "PR #139 를 squash 머지했다(main 은 linear history 필수, commit_title 미지정). 머지 커밋 6e6478af4fdb385805b421430dccd9ed2c2085d6. 머지 직전 origin/main 이 95d3395 그대로임과 mergeable_state=clean 을 라이브로 재확인했다. 재고정 커밋 2건: 51d5add(#137) · 5a52f84(#138)."
+            }
+          ]
         }
       }
     ]
