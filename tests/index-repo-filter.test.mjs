@@ -67,13 +67,15 @@ const MODELS = [
   }
 ];
 
+const MANUAL_ATTEMPT = { review: { status: "approved", manualApproval: { sha: "a".repeat(40), context: "review/manual-approval" } } };
+
 const TASKS = {
   "alpha-docs": [{ id: "a", status: "planned" }],
   "alpha-e2e": [{ id: "b", status: "succeeded" }],
-  "beta-docs": [{ id: "c", status: "awaiting_review" }],
+  "beta-docs": [{ id: "c", status: "approved", attempts: [MANUAL_ATTEMPT] }],
   "cross-repo": [{ id: "d", status: "executing" }],
   "cluster-only": [{ id: "e", status: "planned" }],
-  "alpha-off": [{ id: "f", status: "awaiting_review" }]
+  "alpha-off": [{ id: "f", status: "approved", attempts: [MANUAL_ATTEMPT] }]
 };
 
 function run(expression, overrides = {}) {

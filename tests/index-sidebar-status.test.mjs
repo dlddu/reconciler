@@ -54,12 +54,8 @@ function renderSidebar(tasks) {
     list,
     modeMeta: () => ({ head: "ToBeModels", empty: "없습니다." }),
     progressTaskCount: () => 0,
-    awaitingReviewTaskCount: () => 0,
-    approvingTaskCount: () => 0,
     manualApprovalTaskCount: () => 0,
     DONE_STATUSES: ["succeeded", "cancelled", "no_action_needed"],
-    AWAITING_REVIEW_STATUSES: ["awaiting_review"],
-    APPROVING_STATUSES: ["approving"],
     result: undefined,
     select() {},
     state: {
@@ -163,32 +159,17 @@ function renderBadges(tasks) {
   return meta[1];
 }
 
-test("a task an approval session holds is badged as approval in progress, not as waiting", () => {
-  const badges = renderBadges([{ id: "a", status: "approving" }]);
-  assert.match(badges, /class="approvepill"[^>]*>승인 진행 중 1</);
-  assert.doesNotMatch(badges, /리뷰 대기/);
-});
-
-test("a task nobody has picked up yet is badged as waiting for review", () => {
-  const badges = renderBadges([{ id: "a", status: "awaiting_review" }]);
-  assert.match(badges, /class="reviewpill"[^>]*>리뷰 대기 1</);
-  assert.doesNotMatch(badges, /승인 진행 중/);
-});
-
-test("waiting and in-progress approvals are counted on separate badges", () => {
+test("a task waiting for manual approval is badged as such", () => {
   const badges = renderBadges([
-    { id: "a", status: "awaiting_review" },
-    { id: "b", status: "awaiting_review" },
-    { id: "c", status: "approving" },
-    { id: "d", status: "succeeded" }
+    { id: "a", status: "approved", attempts: [{ review: { status: "approved", manualApproval: { sha: "a".repeat(40), context: "review/manual-approval" } } }] },
+    { id: "b", status: "succeeded" }
   ]);
-  assert.match(badges, />진행 중 3</);
-  assert.match(badges, />리뷰 대기 2</);
-  assert.match(badges, />승인 진행 중 1</);
+  assert.match(badges, />진행 중 1</);
+  assert.match(badges, /class="manualpill"[^>]*>수동 승인 대기 1</);
 });
 
 test("a model with no review work shows neither review badge", () => {
   const badges = renderBadges([{ id: "a", status: "planning" }]);
   assert.match(badges, />진행 중 1</);
-  assert.doesNotMatch(badges, /리뷰 대기|승인 진행 중/);
+  assert.doesNotMatch(badges, /리뷰 대기|승인 진행 중|수동 승인 대기/);
 });

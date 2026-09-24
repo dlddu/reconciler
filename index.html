@@ -162,18 +162,12 @@
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
   .taskcount { font-size: 11px; color: var(--muted); }
   .progpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #e0e7ff; color: #4338ca; }
-  .reviewpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #fef3c7; color: #b45309; }
-  .approvepill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #ffedd5; color: #c2410c; }
   .manualpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #cffafe; color: #0e7490; }
   .hidepill { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: var(--code-bg); color: var(--muted); }
   :root[data-theme="dark"] .progpill { background: #221f4d; color: #a5b4fc; }
-  :root[data-theme="dark"] .reviewpill { background: #3d2a06; color: #fcd34d; }
-  :root[data-theme="dark"] .approvepill { background: #431a07; color: #fdba74; }
   :root[data-theme="dark"] .manualpill { background: #083344; color: #67e8f9; }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .progpill { background: #221f4d; color: #a5b4fc; }
-    :root:not([data-theme="light"]) .reviewpill { background: #3d2a06; color: #fcd34d; }
-    :root:not([data-theme="light"]) .approvepill { background: #431a07; color: #fdba74; }
     :root:not([data-theme="light"]) .manualpill { background: #083344; color: #67e8f9; }
   }
 
@@ -274,11 +268,9 @@
   .b-action_required { background: #f97316; color: #3a1c00; }
   .b-planning { background: #8b5cf6; }
   .b-planned { background: #0ea5e9; color: #04283a; }
-  .b-awaiting_review { background: #f59e0b; color: #3a2a00; }
   .b-review_rejected { background: #c026d3; }
   .b-approved { background: #22d3ee; color: #04303a; }
   .b-reviewing { background: #a3e635; color: #1a2e05; }
-  .b-approving { background: #fb923c; color: #431407; }
   .b-executing { background: #6366f1; }
   .b-verifying { background: #14b8a6; color: #04302c; }
   .b-succeeded { background: #16a34a; }
@@ -399,8 +391,6 @@
     planning:         { label: "계획 중",     cls: "b-planning",       color: "#8b5cf6" },
     planned:          { label: "검토 판단 대기", cls: "b-planned",      color: "#0ea5e9" },
     reviewing:        { label: "검토 판단 중", cls: "b-reviewing",      color: "#a3e635" },
-    awaiting_review:  { label: "승인 대기",   cls: "b-awaiting_review", color: "#f59e0b" },
-    approving:        { label: "승인 진행 중", cls: "b-approving",      color: "#fb923c" },
     review_rejected:  { label: "검토 반려",   cls: "b-review_rejected", color: "#c026d3" },
     approved:         { label: "실행 대기",   cls: "b-approved",       color: "#22d3ee" },
     executing:        { label: "실행 중",     cls: "b-executing",      color: "#6366f1" },
@@ -419,25 +409,16 @@
   // 완료 = 워크플로가 더 이상 집어가지 않는 종료 상태. failed·review_rejected는 planner가
   // 다시 집는 재작업 진입점이므로 완료가 아니라 진행 중이다.
   //
-  // 리뷰 대기 중 = 사람의 승인 결정을 기다리는 작업이 있는 모델. 진행 중의 부분집합이다.
-  // 사람 세션이 집어가 답을 기다리는 approving도 포함한다 — 승인 창을 닫아 그대로 멈춘 건이
-  // 이 탭에서 사라지면, 아무도 답하지 않은 승인이 목록 어디에서도 눈에 띄지 않게 된다.
-  //
-  // 탭은 두 상태를 함께 담지만 사이드바 배지는 나눠 보여준다 — 아직 아무도 집지 않은 승인
-  // 대기와, 승인 세션이 이미 붙잡고 사람의 답만 기다리는 건은 사람이 할 일이 다르다.
-  //
-  // 수동 승인 대기도 이 탭에 담는다 — status는 approved(실행 대기)지만 마지막 시도의
+  // 리뷰 대기 중 = 사람의 승인을 기다리는 작업이 있는 모델. 진행 중의 부분집합이다.
+  // 사람 승인은 수동 승인 대기 하나뿐이다 — status는 approved(실행 대기)지만 마지막 시도의
   // review.manualApproval이 있으면, 대상 레포의 사람 승인 status가 붙기 전까지 실행되지 않는다.
   // 승인 status가 붙었는지는 GitHub에서만 알 수 있으므로 페이지는 확인하지 않는다 — 실행되어
   // approved를 벗어나면 탭에서 빠진다. 상태만으로는 가려지지 않아 task 단위로 판정한다.
   var DONE_STATUSES = ["succeeded", "cancelled", "no_action_needed"];
-  var AWAITING_REVIEW_STATUSES = ["awaiting_review"];   // 배지 "리뷰 대기"
-  var APPROVING_STATUSES = ["approving"];               // 배지 "승인 진행 중"
-  var REVIEW_STATUSES = AWAITING_REVIEW_STATUSES.concat(APPROVING_STATUSES);
   var MODES = [
     { id: "progress", label: "진행 중",      head: "진행 중 모델",      hint: "완료(" + DONE_STATUSES.join("/") + ")되지 않은 작업이 있는 모델만",
       empty: "진행 중인 작업이 없습니다." },
-    { id: "review",   label: "리뷰 대기 중", head: "리뷰 대기 중 모델", hint: "사람의 승인을 기다리는(" + REVIEW_STATUSES.join("/") + ", 수동 승인 대기 approved) 작업이 있는 모델만",
+    { id: "review",   label: "리뷰 대기 중", head: "리뷰 대기 중 모델", hint: "대상 레포의 사람 승인을 기다리는(수동 승인 대기 approved) 작업이 있는 모델만",
       empty: "리뷰를 기다리는 작업이 없습니다." },
     { id: "active",   label: "활성 전체",    head: "ToBeModels",        hint: "감지가 활성인 모델 전체",
       empty: "감지 활성 모델이 없습니다." },
@@ -885,7 +866,6 @@
         }).join("");
         var vbody =
           '<div class="kv"><span>상태</span><span>' + escapeHtml(v.status || "—") + "</span></div>" +
-          (typeof v.converged === "boolean" ? '<div class="kv"><span>converged</span><span>' + (v.converged ? "true" : "false") + "</span></div>" : "") +
           (v.asIsVersionAfter !== undefined ? '<div class="kv"><span>as-is 이후</span><span>' + fmtVersion(v.asIsVersionAfter) + "</span></div>" : "") +
           (checks ? '<ol class="checks">' + checks + "</ol>" : "") +
           '<div class="meta small muted">' + fmtDate(v.verifiedAt) + "</div>";
@@ -900,7 +880,7 @@
 
     return '<div class="task">' +
       '<div class="task-head">' + statusBadge(t.status) + ' <code class="task-id">' + escapeHtml(taskDisplayId(t)) + "</code> " + actionPill + prChip +
-        '<span class="spacer"></span><span class="muted small">detected ' + fmtDate(trig.detectedAt) + "</span></div>" +
+        '<span class="spacer"></span><span class="muted small">detected ' + fmtDate(t.createdAt) + "</span></div>" +
       '<div class="task-trigger">' + triggerLabel + triggerReason + " " + fmtTriggerVersions(trig) + "</div>" +
       (sections ? '<div class="task-body">' + sections + "</div>" : "") +
       "</div>";
@@ -925,10 +905,6 @@
     }).length;
   }
 
-  function countTasksIn(modelId, statuses) {
-    return countTasks(modelId, function (s) { return statuses.indexOf(s) !== -1; });
-  }
-
   // 진행 중 = 완료(종료 상태)가 아닌 작업 수. 리뷰 대기 작업도 여기 함께 센다.
   function progressTaskCount(modelId) {
     return countTasks(modelId, function (s) { return DONE_STATUSES.indexOf(s) === -1; });
@@ -946,14 +922,10 @@
     return (state.tasksByModel[modelId] || []).filter(awaitsManualApproval).length;
   }
 
-  // 리뷰 대기 중 탭 = 승인 대기 + 승인 진행 중 + 수동 승인 대기 작업 수.
+  // 리뷰 대기 중 탭 = 수동 승인 대기 작업 수.
   function reviewTaskCount(modelId) {
-    return countTasksIn(modelId, REVIEW_STATUSES) + manualApprovalTaskCount(modelId);
+    return manualApprovalTaskCount(modelId);
   }
-
-  // 배지용: 아직 아무도 집지 않은 승인 대기 / 승인 세션이 붙잡고 있는 건.
-  function awaitingReviewTaskCount(modelId) { return countTasksIn(modelId, AWAITING_REVIEW_STATUSES); }
-  function approvingTaskCount(modelId) { return countTasksIn(modelId, APPROVING_STATUSES); }
 
   // ---------- 대상 레포 필터 ----------
   // 모델의 "대상 레포" = as-is/to-be 데이터 소스가 가리키는 github repository.
@@ -1132,7 +1104,6 @@
       if (t.status === "no_action_needed") return;
       take(t.updatedAt, "기록 갱신", t.id);
       take(t.createdAt, "작업 생성", t.id);
-      take(t.trigger && t.trigger.detectedAt, "감지", t.id);
       take(t.stateSummary && t.stateSummary.summarizedAt, "상태 요약", t.id);
       take(t.assessment && t.assessment.assessedAt, "판단", t.id);
       (t.attempts || []).forEach(function (a) {
@@ -1251,10 +1222,6 @@
       var count = (state.tasksByModel[m.id] || []).length;
       var progress = progressTaskCount(m.id);
       var progpill = progress ? '<span class="progpill" title="완료(' + DONE_STATUSES.join("/") + ')되지 않은 작업">진행 중 ' + progress + "</span>" : "";
-      var awaiting = awaitingReviewTaskCount(m.id);
-      var reviewpill = awaiting ? '<span class="reviewpill" title="아직 아무도 집지 않은 승인 대기 작업(' + AWAITING_REVIEW_STATUSES.join("/") + ')">리뷰 대기 ' + awaiting + "</span>" : "";
-      var approving = approvingTaskCount(m.id);
-      var approvepill = approving ? '<span class="approvepill" title="승인 세션이 사람의 답을 기다리는 작업(' + APPROVING_STATUSES.join("/") + ')">승인 진행 중 ' + approving + "</span>" : "";
       var manual = manualApprovalTaskCount(m.id);
       var manualpill = manual ? '<span class="manualpill" title="실행 대기(approved)지만 대상 레포의 사람 승인 status를 기다리는 작업(review.manualApproval)">수동 승인 대기 ' + manual + "</span>" : "";
       var hide = isModelEnabled(m) ? "" : '<span class="hidepill" title="감지 비활성">숨김</span>';
@@ -1268,7 +1235,7 @@
       return '<button class="model-item' + (m.id === state.selected ? " active" : "") + '" data-id="' + escapeHtml(m.id) + '">' +
         '<div class="mi-name">' + dot + "<span>" + escapeHtml((m.metadata && m.metadata.name) || m.id) + "</span></div>" +
         '<div class="mi-id">' + escapeHtml(m.id) + "</div>" +
-        '<div class="mi-meta">' + progpill + reviewpill + approvepill + manualpill + hide + '<span class="taskcount">작업 ' + count + "</span> " + tags + "</div>" +
+        '<div class="mi-meta">' + progpill + manualpill + hide + '<span class="taskcount">작업 ' + count + "</span> " + tags + "</div>" +
         acted +
         "</button>";
     }).join("");

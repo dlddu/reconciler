@@ -86,7 +86,7 @@ test("the newest moment across every task of the model is used", () => {
 test("a no-op detection is not an action", () => {
   const result = lastAction([
     { id: "real", status: "succeeded", createdAt: "2026-08-01T00:00:00Z" },
-    { id: "noop", status: "no_action_needed", createdAt: "2026-08-30T10:12:12Z", trigger: { detectedAt: "2026-08-30T10:12:12Z" } }
+    { id: "noop", status: "no_action_needed", createdAt: "2026-08-30T10:12:12Z" }
   ]);
 
   assert.equal(result.at, "2026-08-01T00:00:00Z");

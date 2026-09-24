@@ -32,24 +32,27 @@ const source =
 const MODELS = [
   { id: "working", metadata: { name: "Working", tags: [] } },
   { id: "asking", metadata: { name: "Asking", tags: ["k8s"] } },
-  { id: "claimed", metadata: { name: "Claimed", tags: [] } },
+  { id: "queued", metadata: { name: "Queued", tags: [] } },
   { id: "retry", metadata: { name: "Retry", tags: [] } },
   { id: "idle", metadata: { name: "Idle", tags: [] } },
   { id: "empty", metadata: { name: "Empty", tags: [] } },
   { id: "off", metadata: { name: "Off", tags: [] }, checkPolicy: { enabled: false } }
 ];
 
+const MANUAL_ATTEMPT = { review: { status: "approved", manualApproval: { sha: "a".repeat(40), context: "review/manual-approval" } } };
+
 const TASKS = {
   working: [
     { id: "a", status: "succeeded" },
     { id: "b", status: "planning" }
   ],
+  // approved, but the target repo's human approval status has to land first
   asking: [
     { id: "c", status: "succeeded" },
-    { id: "d", status: "awaiting_review" }
+    { id: "d", status: "approved", attempts: [MANUAL_ATTEMPT] }
   ],
-  // a human session picked it up but the human has not answered yet
-  claimed: [{ id: "e", status: "approving" }],
+  // approved without manual approval: runs without a human
+  queued: [{ id: "e", status: "approved", attempts: [{ review: { status: "approved" } }] }],
   // failed is the planner's rework entry point, not a finished task
   retry: [{ id: "f", status: "failed" }],
   idle: [
@@ -58,7 +61,7 @@ const TASKS = {
     { id: "i", status: "cancelled" }
   ],
   off: [
-    { id: "j", status: "awaiting_review" },
+    { id: "j", status: "approved", attempts: [MANUAL_ATTEMPT] },
     { id: "k", status: "planning" }
   ]
 };
@@ -106,31 +109,20 @@ test("the toolbar offers exactly the four requested modes, in order", () => {
   ]);
 });
 
-test("done is the terminal statuses only; review is awaiting human approval", () => {
+test("done is the terminal statuses only; review is manual approval only", () => {
   assert.deepEqual(Array.from(run("DONE_STATUSES")), ["succeeded", "cancelled", "no_action_needed"]);
-  assert.deepEqual(Array.from(run("REVIEW_STATUSES")), ["awaiting_review", "approving"]);
+  // No status means "waiting for a human" any more: the only human approval is review.manualApproval
+  // on an approved task, so the page keeps no review status set.
+  assert.doesNotMatch(html, /REVIEW_STATUSES|awaiting_review|approving/);
 });
 
-test("the review tab is exactly the waiting and in-progress approval sets, which never overlap", () => {
-  const awaiting = run("AWAITING_REVIEW_STATUSES");
-  const approving = run("APPROVING_STATUSES");
-  assert.deepEqual(Array.from(awaiting), ["awaiting_review"]);
-  assert.deepEqual(Array.from(approving), ["approving"]);
-  assert.deepEqual(Array.from(run("REVIEW_STATUSES")), [...awaiting, ...approving]);
-  assert.equal(awaiting.filter((s) => approving.includes(s)).length, 0);
-});
-
-test("the review badges split the review tab's count between waiting, in progress and manual approval", () => {
-  assert.equal(run('awaitingReviewTaskCount("asking")'), 1);
-  assert.equal(run('approvingTaskCount("asking")'), 0);
-  assert.equal(run('awaitingReviewTaskCount("claimed")'), 0);
-  assert.equal(run('approvingTaskCount("claimed")'), 1);
+test("the review tab counts exactly the tasks waiting for manual approval", () => {
   const withGated = { tasksByModel: { ...TASKS, ...MANUAL_TASKS } };
-  for (const id of ["asking", "claimed", "working", "idle", "nope", "gated", "ready", "moved"]) {
+  for (const id of ["asking", "queued", "working", "idle", "nope", "gated", "ready", "moved"]) {
     assert.equal(
-      run(`awaitingReviewTaskCount("${id}") + approvingTaskCount("${id}") + manualApprovalTaskCount("${id}")`, withGated),
+      run(`manualApprovalTaskCount("${id}")`, withGated),
       run(`reviewTaskCount("${id}")`, withGated),
-      `${id}: the three badges must add up to the review tab's count`
+      `${id}: the review tab must count manual approvals only`
     );
   }
 });
@@ -172,9 +164,13 @@ test("manual approval tolerates tasks without attempts or review", () => {
 });
 
 test("every status the page names is a real schema status", () => {
-  for (const status of [...run("DONE_STATUSES"), ...run("REVIEW_STATUSES")]) {
+  for (const status of run("DONE_STATUSES")) {
     assert.ok(SCHEMA_STATUSES.includes(status), `${status} is not in the task schema`);
   }
+  const block = html.match(/  var STATUS_META = \{([\s\S]*?)\n  \};/);
+  assert.ok(block, "STATUS_META must exist in index.html");
+  const named = [...block[1].matchAll(/^    ([a-z_]+):/gm)].map((m) => m[1]);
+  assert.deepEqual([...named].sort(), [...SCHEMA_STATUSES].sort(), "STATUS_META must name exactly the schema statuses");
 });
 
 test("every non-terminal schema status counts as in progress", () => {
@@ -189,28 +185,22 @@ test("every non-terminal schema status counts as in progress", () => {
 });
 
 test("waiting for review is a subset of in progress", () => {
-  const done = run("DONE_STATUSES");
-  for (const status of run("REVIEW_STATUSES")) {
-    assert.equal(done.includes(status), false, `${status} cannot be both done and awaiting review`);
-  }
   const review = ids(run('modelsInMode("review")'));
   const progress = ids(run('modelsInMode("progress")'));
   for (const id of review) assert.ok(progress.includes(id), `${id} is awaiting review but not in progress`);
 });
 
 test("progress mode keeps active models with any unfinished task", () => {
-  assert.deepEqual(ids(run('modelsInMode("progress")')), ["working", "asking", "claimed", "retry"]);
+  assert.deepEqual(ids(run('modelsInMode("progress")')), ["working", "asking", "queued", "retry"]);
 });
 
-test("review mode keeps only active models with a task awaiting approval", () => {
-  assert.deepEqual(ids(run('modelsInMode("review")')), ["asking", "claimed"]);
+test("review mode keeps only active models with a task awaiting manual approval", () => {
+  assert.deepEqual(ids(run('modelsInMode("review")')), ["asking"]);
 });
 
-test("a task whose approval session is still open keeps waiting for review", () => {
-  // approving is held until the human answers; if that session is abandoned the task
-  // would otherwise vanish from the review tab while still needing a decision.
-  assert.equal(run('progressTaskCount("claimed")'), 1);
-  assert.equal(run('reviewTaskCount("claimed")'), 1);
+test("an approved task that needs no human is in progress but not in review", () => {
+  assert.equal(run('progressTaskCount("queued")'), 1);
+  assert.equal(run('reviewTaskCount("queued")'), 0);
   assert.equal(run('reviewTaskCount("working")'), 0, "a planner lock is not a review");
   assert.equal(run('reviewTaskCount("retry")'), 0, "a failed task is not a review");
 });
@@ -229,7 +219,7 @@ test("active mode is every model whose detection is enabled", () => {
   assert.deepEqual(ids(run('modelsInMode("active")')), [
     "working",
     "asking",
-    "claimed",
+    "queued",
     "retry",
     "idle",
     "empty"
@@ -242,8 +232,8 @@ test("hidden mode is only the models whose detection is disabled", () => {
 
 test("each counter counts every matching task of the model", () => {
   const busy = { tasksByModel: { m: [
-    { id: "1", status: "awaiting_review" },
-    { id: "2", status: "awaiting_review" },
+    { id: "1", status: "approved", attempts: [MANUAL_ATTEMPT] },
+    { id: "2", status: "approved", attempts: [MANUAL_ATTEMPT] },
     { id: "3", status: "executing" },
     { id: "4", status: "succeeded" }
   ] } };
@@ -266,7 +256,7 @@ test("visibleModels applies the search filter on top of the mode", () => {
   assert.deepEqual(ids(run("visibleModels()", { mode: "progress", filter: "idle" })), []);
   assert.deepEqual(ids(run("visibleModels()", { mode: "progress", filter: "retry" })), ["retry"]);
   assert.deepEqual(ids(run("visibleModels()", { mode: "review", filter: "ask" })), ["asking"]);
-  assert.deepEqual(ids(run("visibleModels()", { mode: "review", filter: "claim" })), ["claimed"]);
+  assert.deepEqual(ids(run("visibleModels()", { mode: "review", filter: "queue" })), []);
   assert.deepEqual(ids(run("visibleModels()", { mode: "review", filter: "work" })), []);
 });
 
