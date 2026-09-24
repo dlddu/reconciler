@@ -6636,7 +6636,7 @@
   {
     "id": "rct_20260922-0009",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-22T14:01:50Z",
@@ -6654,7 +6654,7 @@
       ]
     },
     "createdAt": "2026-09-22T14:01:50Z",
-    "updatedAt": "2026-09-24T06:34:00Z",
+    "updatedAt": "2026-09-24T06:41:00Z",
     "stateSummary": {
       "asIs": "## as-is — 판정 대상 주석 지문 (dlddu/feature-doc@main `074c325`, 2026-09-24T05:0xZ 관측)\n\n- 전역 지문 **`lines=2654 files=135` / `9f44d030…e710904`** (모델 `asIs.versionScript` 재실행).\n  저장 baseline(= 트리거 `currentVersion`) 은 `lines=2646 files=135` / `bb3c1bf9…63bda2`.\n- **트리거의 정체 = 내 모델 자신의 직전 슬라이스**: `27d9b81`(#129 `reconcile(rct_20260922-0006)`,\n  09-22 13:59:36Z) 에서 두 versionScript 를 재실행하면 asIs `bb3c1bf9…` · toBe `aa34feca…` 로\n  **트리거 값이 바이트 재현**된다. `rct_20260922-0006` 은 `succeeded` — 소진된 트리거다.\n- **트리거 이후 39h 동안 main 이 6커밋 더 움직였다**(#131 `65f2494` · #133 `243d58c` · #132 `c063d0f`\n  · #134 `28ba332` · #135 `e40857e` · #136 `074c325`). 이 구간에서 판정 대상 주석이\n  **+8줄 유입, 제거 0**(집합 차 실측: `comm -13` 8건 / `comm -23` 0건 ⇒ 제자리 수정도 없다).\n\n### 유입 8줄 (전량 미판정)\n| 파일 | 줄 | 유입 커밋 |\n|---|---|---|\n| `backend/src/cross_cutting.rs` | 3 (`AXIS_GUIDE` 의 `///` 3줄) | #134 `28ba332` |\n| `frontend/src/CrossCuttingConcerns.tsx` | 3 (`//` 2줄 + `{/* */}` 1줄) | #132 `c063d0f` |\n| `frontend/src/index.css` | 2 (`/* */` 2줄) | #132 `c063d0f` |\n\n(TSX 의 `// One path per line…` 2줄은 삼항 else 가지의 **JS 표현식 문맥** 안이라 화면에 렌더되지\n않는다 — JSX children 오배치가 아님을 `sed -n '145,175p'` 로 확인했다.)\n\n- **기계 게이트 없음**: feature-doc 레포에 주석 정책을 검사하는 스크립트·워크플로가 **0건**\n  (`grep -rln 'comment-policy|comment_policy|주석 비중복|주석 원장'` 전 확장자 무히트).\n  `tools/` 의 게이트 5종은 전부 다른 모델 소유. ⇒ 이 모델의 판정 표면은 **원장뿐**이다.\n",
       "toBe": "## to-be — 주석 정책 SSOT (`docs/comment-policy/`, tree `aa34feca20d48d8d390cff4a1fc79d022ac1b901`)\n\n- **트리거 시점(`27d9b81`)과 HEAD(`074c325`) 의 tree hash 가 동일** — 정책 본문·원장·판정 상세는\n  39h 동안 **한 바이트도 움직이지 않았다**. 즉 유입된 8줄을 받아 적은 패스가 없다.\n- 구성: `README.md`(정책 본문) · `ledger.md`(판정 원장, 표 **22행**) · `passes/`(판정 상세 12+건,\n  최신 `2026-09-22-*` 3건).\n- 정의상 정합 상태 = 「판정 대상 주석 중 **복원 가능한 내용을 담은 것이 없음**」이고, 그 판정의\n  표면이 원장이다. 원장 규약: *「같은 범위의 증분 재판정은 새 행을 만들지 않고 원래 행의 결과 칸을\n  갱신하며, 패스 상세는 원래 패스 파일에 절을 더한다」* ⇒ 이미 판정된 범위로 들어온 주석은\n  **증분 재판정으로만** 닫힌다.\n\n### 유입 8줄을 담는 원장 행 2개 — 지문 3지점 대조\n| 원장 행 | 범위 | 원장 기재 | 트리거 `27d9b81` 재현 | HEAD `074c325` 실측 |\n|---|---|---|---|---|\n| 34행 | 파이프라인·횡단 축 9파일 (`pipeline.rs`·`cross_cutting.rs`·`CrossCuttingConcerns.tsx` 등) | 142 / `5a4aea6e…d739` | **142 / `5a4aea6e…d739` (일치)** | **148 / `26eaec9f…50b9` (불일치)** |\n| 35행 | 프런트 데이터·셸 축 8파일 (`index.css` 포함) | 88 / `7e6915aa…6bd60` | **88 / `7e6915aa…6bd60` (일치)** | **90 / `fa276b84…f672c` (불일치)** |\n\n두 행 모두 **트리거 시점에는 정확히 재현**되므로 재현 규약(행 지문은 후행 개행 **포함**\n`printf '%s\\n' | sha256sum`)이 옳고, HEAD 불일치는 규약 오차가 아니라 **실제 미판정 유입**이다.\n증분 합 `+6 +2 = +8` 이 전역 지문의 `2646 → 2654` 와 **정확히 일치**한다(설명 안 되는 잔차 0).\n",
@@ -6775,6 +6775,49 @@
               "stepSeq": 8,
               "status": "succeeded",
               "log": "PR #139 를 squash 머지했다(main 은 linear history 필수, commit_title 미지정). 머지 커밋 6e6478af4fdb385805b421430dccd9ed2c2085d6. 머지 직전 origin/main 이 95d3395 그대로임과 mergeable_state=clean 을 라이브로 재확인했다. 재고정 커밋 2건: 51d5add(#137) · 5a52f84(#138)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "converged": true,
+          "asIsVersionAfter": "lines=2720 files=135\nb7939b8773e88b4bc43eea29d77eb7373343df5eed1609679cb292c0e923ca28",
+          "verifiedAt": "2026-09-24T06:41:00Z",
+          "checks": [
+            {
+              "name": "원장 9행 — 트리 실측 == 기재값",
+              "status": "passed",
+              "detail": "머지된 main 6e6478af 에서 행 하네스(개행 포함 해시) 실측 lines=199 files=9 / db92b2402cc84340e14148375e64e4080cdb16b1ad27b631ab7997c0cc2d669c, 원장 34행(데이터 9행) 기재 199 / db92b240… 와 바이트 일치. 계획의 기대값 143/515d540a… 는 base 074c325 기준이었고, 자매 #137·#138 착지로 두 번 재고정한 최종값이 이 값이다."
+            },
+            {
+              "name": "원장 10행 — 트리 실측 == 기재값",
+              "status": "passed",
+              "detail": "실측 lines=89 files=7 / 39baa2ff0e02877a92978a28d415bf7c128f75fc4dfd1fbf396948b781f8c5d6, 원장 35행 기재와 바이트 일치. 계획의 기대값과도 동일하다 — 두 자매 착지 모두 10행 범위를 건드리지 않았다."
+            },
+            {
+              "name": "잔차 검산 — 행 합 −6 == 전역 −6",
+              "status": "passed",
+              "detail": "최종 착지분 기준(origin/main 95d3395, PR 미포함): 9행 204 · 10행 90 · 전역 2726. 머지 후(6e6478af): 9행 199 · 10행 89 · 전역 2720. 행 합 −6 == 전역 −6 으로 잔차 0. 이 PR 의 순 제거 −5(9행)·−1(10행) 은 두 차례 재고정에도 불변이었다."
+            },
+            {
+              "name": "주석 편집 4건 착지 · 유지 2행 보존",
+              "status": "passed",
+              "detail": "머지된 main 에서 제거 대상 4건 전건 부재(AXIS_GUIDE doc 머리 「What each axis asks for」 · ' · ' join 실패 모드 · legend 배치 · index.css .ev 이관 블록 = grep 0건), 유지분은 존재(cross_cutting.rs 「A concrete path here is one the model can cite…」 1건 · index.css iOS Safari text-size-adjust 주석). 머지 전 diff 실측으로 비주석 코드 무접촉도 확인했다."
+            },
+            {
+              "name": "문서 게이트 4종 (머지된 main)",
+              "status": "passed",
+              "detail": "check-journey-mockup.py(R0~R11) · check-mockup-render.py · check-scenario-e2e.py · check-journey-prototype.js 전부 rc=0, 프로토타입 단언 417건으로 계획 베이스라인과 동일. 새 .md 0건이라 허브 R9 불변."
+            },
+            {
+              "name": "PR CI · 필수 status",
+              "status": "passed",
+              "detail": "head 5a52f849 에서 ci-gate=success · review/manual-approval=success(자동, 사람 게이트 해당 없음) · test (cargo)=success · test (kind e2e)=success · 문서 게이트 3종 success · 데이터 저장 형식 변경 판정=success. squash 머지 커밋 6e6478af4fdb385805b421430dccd9ed2c2085d6."
+            },
+            {
+              "name": "범위 밖 잔여 gap (정보성 — 판정에 넣지 않음)",
+              "status": "passed",
+              "detail": "자매 #137(30행)·#138(26행)이 cross_cutting.rs 에 들인 합 56행은 줄 수·지문만 재고정하고 미판정으로 남겼다. #121 이 연 progress.rs 2행, 열린 PR #126 이 들일 api.ts·App.tsx 주석, 자유 풀 33행(자매 task rct_20260922-0008 / PR #130), design-system §5.3 보강도 이 슬라이스 범위 밖이다. 모두 다음 감지 주기가 후속 task 로 잇는다 — 전역 지문이 2654 → 2720 으로 움직였으므로 detector 가 트리거를 본다."
             }
           ]
         }
