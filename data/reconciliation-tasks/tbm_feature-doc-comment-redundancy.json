@@ -6696,6 +6696,52 @@
       "reason": "**조치 필요(`action_required`).** 범위는 **원장 「테스트 하네스 축 5파일」 행의 증분 재판정 1행** 하나다\n(`scripts/e2e.sh:10` — `# CI 는 e2e 의존성과 Playwright 브라우저를 앞 단계에서 (캐시와 함께) 설치해 둔다.`).\n\n**근거 1 — 정의 위반이 실재한다(핀 2지점 대조).** 원장 기재 `20` / `e8a9deb5…` 는 부모 `6e6478a`(#139)에서\n**바이트 일치로 재현**되고 HEAD `82be2f4`(#142)에서 `21` / `5f016e49…` 로 깨진다. 행 델타 `+1` ==\n전역 델타 `2720→2721`, **잔차 0** — 이 창의 유입이 이 한 줄뿐이며 다른 행은 무접촉임이 같이 증명된다.\n\n**근거 2 — 복원 경로 넷 중 셋에서 확인된다.** ① `.github/workflows/ci.yml` 135~161행이 브라우저 캐시 복원\n스텝 + `SKIP_PLAYWRIGHT_INSTALL: '1'` 을 그대로 적고 ci.yml 자신의 주석이 같은 문장을 담는다 ·\n② `README.md` §CI 가 **같은 커밋에서** 같은 내용으로 갱신됐다 · ③ PR #142 본문 §4 가 축자로 서술한다.\n줄 자체는 호출자가 플래그를 왜 켜는지만 말하고 *무엇을* 하는지는 바로 아래 선언과 `if` 블록이 이미 말한다\n(유형 ① 선언 재진술 + ② 문서 재진술). 정의가 열거한 유지 대상(상류 API 미문서화 동작 · 저장소 제약 ·\n동시성 계약 · 실패 모드 함정 · stub↔real 충실도 경계) 어디에도 해당하지 않으므로 **「애매하면 남긴다」의\n보호 대상이 아니다.** 대조군이 같은 파일 안에 있다 — 60·61행의 `kubectl rollout` 조기 반환 주석은\n「실패 모드의 함정」이라 유지가 맞고, 이번 줄은 그 성격이 없다.\n\n**근거 3 — 소유자가 0이다(열린 task 둘의 완료 기준을 직접 읽었다).**\n· `rct_20260922-0008`(`approved`, PR #130): 완료 기준이 **무인 자유 풀 4파일 33행**\n  (`backend/src/db.rs`·`backend/tests/migrations.rs`·`backend/src/models.rs`·`deploy/k8s/pvc.yaml`). 접촉 0.\n· `rct_20260924-0001`(`approved`, PR #143): 완료 기준이 **원장 5·7·9행 78행**\n  (`cross_cutting.rs`·`repo_scan.rs`·`bin/worker.rs`). 접촉 0.\n대상 레포 열린 PR 6건(#144·#143·#141·#140·#130·#126)의 `--name-only` 실측에서 **`scripts/e2e.sh` 를 만지는\nPR 0건**, 「테스트 하네스 축」 행을 갱신하는 PR 0건. 파킹(`recheckAfter`)이 부적합한 이유도 같다 —\n자동 해소될 진행 중 작업이 없다.\n\n**근거 4 — 소진된 트리거가 아니고, 닫으면 재감지도 안 된다.** 창은 커밋 1개이고 그 제목은\n`ci: e2e 이미지 재사용 push, cargo ci 프로필, main 캐시 저장`(bot 저자, reconcile task id 없음) — 이 모델\n어느 task 의 산출물도 아닌 **외부 기능 PR 의 유입**이다. 이 claim 이 as-is baseline 을 `2267a4ac…` 로\n전진시켰으므로 이 줄은 as-is 축에서 스스로 다시 움직이지 않고, to-be(정책 디렉터리 tree)는 **누군가 이\n유입을 원장에 적을 때만** 움직이므로 역시 깨우지 못한다. 지금 닫으면 이 어긋남은 원장 어디에도 남지 않는다.\n\n**근거 5 — 원장 자신이 이 형태를 정규 절차로 둔다.** 「같은 범위의 증분 재판정은 새 행을 만들지 않고 원래\n행의 결과 칸을 갱신하며, 패스 상세는 원래 패스 파일에 절을 더한다」. 같은 형태가 이 모델에서 이미 여러 번\n`action_required` 로 열렸다(#123 4행 → 20차 패스의 「증분 재판정 ⑪」, #121 39행 → `rct_20260922-0009`,\n#137·#138 72행 → `rct_20260924-0001`).\n\n---\n\n**planner 인계**\n\n1. **1행짜리 마이크로 슬라이스다.** 판정 자체는 근거 2 로 사실상 끝나 있다(제거). 남은 일은\n   ⓐ `scripts/e2e.sh:10` 삭제 ⓑ 원장 「테스트 하네스 축 5파일」 행의 줄 수·지문을\n   `20`/`e8a9deb55b008ab2f51615e749372a44ceb40cd2c200be800852a7b38c18017a` 로 **되돌아가는지 확인**\n   (제거하면 부모 값과 같아진다 — 재고정이 아니라 원복이다) ⓒ `passes/2026-09-20-test-harness-axis.md`\n   에 증분 재판정 절 1개 추가. **원장에 새 행 금지 · `docs/` 에 새 `.md` 금지**(허브 R9 「문서 48건」이\n   깨져 필수 `ci-gate` 가 막힌다)는 이 모델의 기존 제약 그대로다.\n2. **합류 가능성**: 비용 대비 가장 싼 경로는 아직 열려 있는 `rct_20260924-0001` 의 PR **#143** 에 얹는\n   것이지만, 그 task 는 이미 `approved` 라 범위를 넓히면 리뷰 근거가 어긋난다. 독립 PR 이 원칙이다.\n3. **in-flight 충돌 집합**: `docs/comment-policy/ledger.md` 가 #143(원장 5·7·9 + 34·35행)·#130(자유 풀 행)과\n   **공유**된다. 내 헝크는 「테스트 하네스 축」 행 하나뿐이라 행이 겹치지 않지만, 착지 순서에 따라\n   리베이스가 필요하다. `passes/2026-09-20-test-harness-axis.md` 는 열린 PR 6건 중 **무접촉**이다.\n4. **게이트**: 이 모델 전용 기계 게이트는 레포에 0건(원장이 유일한 판정 표면). 필수 status 는\n   `ci-gate` · `review/manual-approval` 둘이고, 주석·문서만 바꾸는 이 슬라이스는 후자가 자동 `success` 다.\n   `scripts/e2e.sh` 는 CI 가 실제로 실행하는 파일이므로 **주석 줄만** 지우고 로직·빈 줄 배치는 건드리지 말 것.\n\n**범위 밖 관측(판정 아님).** 같은 PR 이 `.github/workflows/`(ci.yml·cache-warm.yml·image.yml)에 주석\n**59줄**을 더했고 그중 135~137행은 이번에 지울 줄과 **같은 사실을 서술**한다. 정의가 `.github/workflows` 를\n판정 범위에서 명시 제외하므로 지문에도 판정에도 들어오지 않는다 — 범위를 넓힐지는 이 모델이 아니라\n`reconciler-tobe-modeler` 의 몫이다. `backend/Cargo.toml`·`README.md` 변경도 같은 이유로 범위 밖이다.",
       "assessedAt": "2026-09-24T09:16:16Z"
     },
-    "updatedAt": "2026-09-24T09:18:49Z"
+    "updatedAt": "2026-09-24T09:29:01Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "원장 14행(테스트 하네스 축 5파일)의 증분 재판정 1행. #142(`82be2f4`)가 `scripts/e2e.sh` 에 더한 주석 1행(`# CI 는 e2e 의존성과 Playwright 브라우저를 앞 단계에서 (캐시와 함께) 설치해 둔다.`)을 전건 제거한다. 복원 경로 셋이 동시에 서 있어 판정이 갈리지 않는다 — ① ci.yml 138~161행(+ 그 파일 137행 주석) ② README.md 179행(같은 커밋에서 갱신) ③ PR #142 §4. 플래그가 무엇을 하는지는 바로 아래 선언과 `if [ \"${SKIP_PLAYWRIGHT_INSTALL}\" != \"1\" ]` 블록이 이미 말하므로 유형 ①+② 재진술이고, 정책의 유지 대상 다섯 항목 어디에도 걸리지 않아 「애매하면 남긴다」의 보호 대상이 아니다. 독립 PR 로 가는 이유는 가장 싼 합류처인 #143 이 이미 approved 라 범위를 넓히면 리뷰 근거가 어긋나기 때문이다.\n\n**곁들인 정정 1건** — 원장 13·14행의 2026-09-22 「지문 정정」이 적은 사유가 거짓임을 실측했다. 두 값(`96636e79…`·`8b8764df…`)은 「한 번도 재현되지 않은 등재 시점 계산 오류」가 아니라 원장이 스스로 구분해 둔 **전역 규약**(`printf '%s'`)으로 계산된 값이고, 각자의 등재 커밋 `7415771`·`445ec57` 에서 바이트 일치로 재현된다. 14행의 정정문이 13행을 번호로 인용하므로(「13행과 같은 …」) 한 쪽만 고치면 인용된 근거가 거짓인 채 남아 두 행을 함께 고쳤다. 핀 값(행 규약)은 맞으므로 그대로 두고 **사유만** 정정했으며 발견 기록은 지우지 않았다.\n\n**완료 기준(이 시도의 범위).** ⑴ `scripts/e2e.sh:10` 1행 제거로 범위 지문이 부모 `6e6478a` 값과 **두 규약 모두 바이트 동일**하게 복귀(20 / `e8a9deb5…` · 전역 `8b8764df…`) — 원복이므로 원장의 줄 수·지문 칸은 무변경. ⑵ 원장 14행 결과 칸에 「증분 재판정 ①」 + 13·14행 사유 정정. ⑶ `passes/2026-09-20-test-harness-axis.md` 에 절 추가(**새 `.md` 금지 · 원장 새 행 금지**). ⑷ 게이트 4종 rc=0 + `review/manual-approval` 자동 success. ⑸ PR #145 머지.\n\n**범위 밖(후속).** `.github/workflows/` 주석 59줄(`ci.yml` 135~137행은 지울 줄과 같은 사실을 서술하지만 정의가 이 경로를 명시 제외 — 확장은 reconciler-tobe-modeler 의 몫) · 원장 16행의 「#98 은 리베이스 전 계산」(다른 종류의 주장이라 재지 않았다 — 미측정) · `backend/Cargo.toml`·`README.md` 변경.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #145 의 `ci-gate` 와 `review/manual-approval` 이 둘 다 success 인지 확인한다. head SHA 를 고정해 둔다(`gh pr view 145 --json headRefOid`).",
+              "expectedOutcome": "두 status 모두 success. `review/manual-approval` 은 data-format 판정기가 자동으로 붙인다(로컬 실측 `✅ 해당 없음`)."
+            },
+            {
+              "seq": 2,
+              "action": "머지 직전 `gh pr list` 로 자매 PR 착지 여부를 재확인하고, `mergeStateStatus` 가 BEHIND/DIRTY 면 `origin/main` 을 머지해 해소한 뒤 range-diff 로 내 헝크가 그대로인지 확인한다. 리베이스했으면 3·4를 다시 잰다.",
+              "expectedOutcome": "CLEAN 또는 리베이스 후 CLEAN. 내 diff 는 여전히 `scripts/e2e.sh` 1행 삭제 + ledger 2행 + 패스 파일 1절."
+            },
+            {
+              "seq": 3,
+              "action": "범위 지문을 두 규약으로 재현해 부모 `6e6478a` 값과 대조한다(PR head 트리에서).",
+              "expectedOutcome": "`lines=20 files=4` · 행 규약 `e8a9deb55b008ab2f51615e749372a44ceb40cd2c200be800852a7b38c18017a` · 전역 규약 `8b8764df56b28c69c1419f82a0f65c23c0316815315a37e6b0e9d09af544fc9c`. 둘 다 부모와 바이트 동일."
+            },
+            {
+              "seq": 4,
+              "action": "`bash -n scripts/e2e.sh` 와 `git diff --stat origin/main -- scripts/e2e.sh` 로 로직 무변경을 확인한다.",
+              "expectedOutcome": "rc=0 · `1 file changed, 1 deletion(-)`. 빈 줄·변수 선언 배치 무변경."
+            },
+            {
+              "seq": 5,
+              "action": "문서 게이트 3종을 굴린다: `tools/check-journey-mockup.py` · `tools/check-mockup-render.py` · `tools/check-scenario-e2e.py`.",
+              "expectedOutcome": "셋 다 rc=0. 새 `.md` 를 만들지 않았으므로 허브 R9(문서 건수)은 불변."
+            },
+            {
+              "seq": 6,
+              "action": "PR #145 를 **squash** 로 머지한다.",
+              "expectedOutcome": "main 에 착지. 머지 커밋 1개."
+            },
+            {
+              "seq": 7,
+              "action": "머지 후 `origin/main` 에서 범위 지문(3)과 전역 지문을 다시 재고, 전역 지문이 `2267a4ac…`(as-is baseline) 에서 이동했는지 확인한다.",
+              "expectedOutcome": "범위 지문 20/`e8a9deb5…` 유지. 전역 줄 수 2721→2720(자매 착지가 없었다면). 자매가 먼저 착지했으면 절대값은 다르나 **부모 대비 순 제거 1행**은 불변 — 이쪽이 완료 기준이다."
+            }
+          ],
+          "plannedAt": "2026-09-24T09:29:01Z"
+        }
+      }
+    ]
   }
 ]
