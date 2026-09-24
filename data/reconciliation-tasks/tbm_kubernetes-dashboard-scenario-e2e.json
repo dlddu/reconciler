@@ -8,10 +8,6 @@
         "currentVersion": "92de231491202b49c08c7f9eec13fa41997ed253",
         "previousVersion": null
       },
-      "changedSides": [
-        "as_is",
-        "to_be"
-      ],
       "detectedAt": "2026-07-12T06:18:19Z",
       "toBe": {
         "currentVersion": "3f496307661656b007558107e0ab641a630abb17",
@@ -26,7 +22,6 @@
     },
     "assessment": {
       "assessedAt": "2026-07-12T06:19:15Z",
-      "assessedBy": "agent",
       "reason": "정의가 요구하는 파일 단위 양방향 1:1(53:53)에 크게 미달하는 구조적 drift가 확인됐다 — 공백 8건(OV7·PD6·SC3·FX3~6 + CM3 간접커버), 1:N 9건, N:1 15건, 고아 스펙 7건(debug-* 6건은 PRD/AC 자체가 없는 기능, health 1건), 깨끗한 1:1은 11/53. 정적 문서·스펙 구조라 자동 해소 가능성이 없고(진행 중 롤아웃·일시적 alert 아님), 방치하면 매핑 SSOT(test-*.md 자동화 필드)의 추적 가능성이 계속 훼손되므로 지금 작업이 필요하다. definition이 예고한 대로 첫 task는 상당한 규모의 분할·병합·신규 작성을 다룬다: ① 공유 스펙 15건을 AC 경계로 분할, ② 중복 커버 9건 병합, ③ 공백 8건 전용 스펙 신설(또는 CM3처럼 간접커버 정리), ④ 고아 7건은 PRD에 AC 신설(debug 페이지가 의도된 동작이면) 또는 스펙 제거 — 순서·우선순위·파일명 규칙 확정은 planner 몫. AR4의 '라이브 폴링 보강 권장'도 계획에 포함할지 planner가 판단한다."
     },
     "attempts": [
@@ -72,7 +67,6 @@
         "preparation": {
           "branch": "reconcile/rct_20260712-0001",
           "notes": "재작업 스테이징. 기존 PR #207에 격리 회귀 수정 커밋 d2091696 추가: FX3·FX4 클러스터 변경 스펙을 fluxcd-kustomizations.spec.ts로 재병합(파일 내 직렬화), 매핑 문서 갱신. 테스트 로직 무변경(병합만)이라 완전 가역(revert). push로 CI(E2E Tests kind) 재실행 트리거됨 — 머지 전 그린 필수. 물리 파일 1:1을 FX3·FX4에서 완화하는 거버넌스 성격이라 executor 4-1에서 검토 필요(승인 전 머지 금지).",
-          "prepared": true,
           "preparedAt": "2026-07-15T06:40:00Z",
           "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/207",
           "repository": "dlddu/kubernetes-dashboard"
@@ -92,10 +86,8 @@
           "status": "aborted"
         },
         "review": {
-          "required": true,
           "status": "rejected",
           "reason": "검토 필요. 근거: ① riskLevel=medium — 대상 레포(kubernetes-dashboard) main에 머지되는 실변경. ② 거버넌스 결정 포함 — 수정 커밋 d2091696은 FX3·FX4를 fluxcd-kustomizations.spec.ts로 재병합해 모델 정의의 물리 파일 1:1을 cluster-stateful 스펙에 한해 완화한다(한 파일이 FX2·FX3·FX4 3개 AC를 담음). 정의 예외 도입 여부는 사람이 결정할 사안이며, 대안(변경 스펙을 전용 네임스페이스/리소스로 격리해 엄격 1:1 유지)과의 선택이 필요하다. ③ plan step 4·preparation.notes가 '승인 전 머지 금지'를 명시. 가역성은 좋으나(테스트 전용, revert 가능) 정의 형성 판단이라 승인 게이트를 둔다. 검토 요청 시점: 2026-07-19T03:01:24Z",
-          "reviewer": "user",
           "reviewedAt": "2026-07-19T03:30:36Z",
           "comment": "거부 — cluster-stateful 공존 예외(물리 파일 1:1 완화)를 도입하지 않는다. 대안 채택: FX3(reconcile)·FX4(suspend/resume) 변경 스펙이 FX2 리더가 관측하는 리소스가 아닌 전용 네임스페이스/리소스만 만지도록 픽스처를 격리해, 별도 파일 유지 + 엄격한 파일 단위 1:1을 지키는 방향으로 재계획할 것. 레이스 원인(파일 분리→병렬 실행→공유 클러스터 동시 변경)은 검토 과정에서 코드 수준으로 확인·공유됨. 재계획은 reconciler-work-planner 몫."
         }
@@ -141,7 +133,6 @@
           "executionGuide": "# 실행 지침 — rct_20260712-0001 (재작업 2: 검토 거부 반영 — 픽스처 격리)\n\n대상 PR: https://github.com/dlddu/kubernetes-dashboard/pull/207 (base `main`, head `reconcile/rct_20260712-0001`, **draft**).\n\n## 배경 (직전 거부)\n직전 시도(공존 커밋 d209169)는 FX3·FX4를 fluxcd-kustomizations.spec.ts로 재병합해 물리 파일 1:1을 완화하려 했고, 사용자 검토에서 **거부**됐다. 지시: *\"FX3(reconcile)·FX4(suspend/resume) 변경 스펙이 FX2 리더가 관측하는 리소스가 아닌 전용 네임스페이스/리소스만 만지도록 픽스처를 격리, 별도 파일 유지 + 엄격한 파일 단위 1:1 보존\"*.\n\n## 레이스 근본 원인 (검토 과정에서 코드 수준 확인됨)\n- playwright.config.ts: `fullyParallel:false`, `workers:4`(CI) → **파일 단위 병렬**.\n- FX3(reconcile)·FX4(suspend/resume)는 실제 request.post로 공유 `app-ready`/`app-suspended` Kustomization·`flux-system` GitRepository(모두 dashboard-test)를 변경. 특히 `app-ready`는 `targetNamespace: default`.\n- 파일 분리 후 이 변경 스펙들이 **읽기 전용 FX2 목록 리더**(fluxcd-kustomizations.spec.ts)와 동시 실행 → 공유 kind 클러스터에서 카드 상태/네임스페이스가 요동 → fluxcd-kustomizations 비결정 실패(namespace 필터 테스트가 팬텀 `default` 카드 관측).\n\n## 스테이징된 수정 (커밋 2개)\n1. `e173eb6` — 공존 커밋 revert(별도 파일 복원, 엄격한 1:1).\n2. `dd2201a` — **픽스처 격리**:\n   - `test/fixtures/fluxcd-mut-fixtures.yaml`: 전용 `git-repo-mut`, `kust-mut-reconcile`(FX3), `kust-mut-suspend`·`kust-mut-resume`(FX4). **`targetNamespace: default` 없음** → reconcile가 `default`로 스필/팬텀 카드 미발생.\n   - `apply-all.sh`: 전용 픽스처 apply + status 패치.\n   - `fluxcd-reconcile.spec.ts`/`fluxcd-suspend-resume.spec.ts`: 실제 mutation POST 대상이 전용 리소스뿐 → FX2가 관측하는 `app-ready`/`app-suspended`/`flux-system`과 완전 분리.\n   - docs: 격리 주석, 물리 파일 1:1 예외 없음.\n\n## 게이트 (반드시, 순서대로)\n1. **강한 게이트 — `E2E Tests (kind)` 잡 green.** 파일 레이아웃·픽스처 변경은 런타임 격리를 바꾸므로 `npx playwright test --list`(수집)만으로는 검증 불가 — 반드시 실제 kind e2e 잡 success를 확인한다. red면 머지 금지. (push 시점 CI run: actions/runs/29716568020)\n2. **사용자 승인 — 필수.** dlddu/kubernetes-dashboard `main`에 머지되는 실변경이고 riskLevel=medium이라 executor 4-1에서 검토 요청. 이번엔 정의 예외를 도입하지 않으므로 거버넌스 부담은 낮지만, 프로덕션 레포 머지라 승인 게이트 유지. draft 상태이므로 승인 후 `gh pr ready 207`.\n3. **머지.** 게이트 1·2 충족 후 squash 머지.\n4. **병합 후 재감지.** as-is 버전 스크립트 `git rev-parse HEAD:e2e`가 바뀐다(수렴 이동). 연결 AC 48↔전용 스펙 48(전단사) 대조.\n\n## 검증 방법\n- 게이트1: GitHub Actions `E2E Tests (kind)` = success, 실패 0. (이전 실패 job 86647976238의 fluxcd-kustomizations 레이스가 재현되지 않아야 함.)\n- 정적: `grep -c 'dashboard-test/\\(app-ready\\|app-suspended\\|flux-system\\)' e2e/fluxcd-reconcile.spec.ts e2e/fluxcd-suspend-resume.spec.ts` = 0. `FluxCD Fixture Validation` 잡 pass.\n- 병합 후: e2e/ 최상위에 fluxcd-reconcile·fluxcd-suspend-resume 파일 존재(별도 파일 유지), test-fluxcd.md 자동화 필드가 실존 파일만 가리킴, 물리 파일 1:1 예외 문구 없음.\n- 전체 수렴(4-4): 연결분 전단사면 성공. 커버리지 공백 5(OV6·OV7·PD6·SC3·CM3)는 범위 밖 → converged=false가 정상.\n\n## 주의 / 롤백\n- 롤백: 병합 전이면 PR close 또는 커밋 revert(무영향). 병합 후 문제 시 머지 커밋 `git revert`(테스트/픽스처 전용, 제품 코드 무변경이라 안전).\n- 블라인드 저작(로컬에 node/kind 없음) — CI가 유일한 런타임 검증. E2E green을 반드시 확인.\n- 재시도 안전성: 전용 suspend/resume 픽스처는 테스트 내 cleanup으로 원상 복구, kind 잡 retries:2에서도 파일 내 직렬(fullyParallel:false)이라 자기 파일 안에서는 결정적.\n"
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/kubernetes-dashboard",
           "branch": "reconcile/rct_20260712-0001",
           "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/207",
@@ -149,10 +140,8 @@
           "notes": "기존 PR #207에 커밋 2개 추가: e173eb6(공존 커밋 revert → 별도 파일·엄격 1:1 복원), dd2201a(전용 픽스처 격리). PR을 draft로 전환하고 재작업 설명 코멘트 게시. push로 E2E(kind) CI 재실행 — 머지 전 green 필수. 제품 코드 무변경(테스트·픽스처·문서 전용)이라 완전 가역. riskLevel=medium(main 머지), executor 4-1에서 사용자 승인 게이트."
         },
         "review": {
-          "required": true,
           "status": "approved",
           "reason": "검토 필요. 근거: ① riskLevel=medium — dlddu/kubernetes-dashboard main에 머지되는 실변경(PR #207 squash 머지). ② 직전 시도가 사용자 검토에서 거부된 재작업 — 거부 시 지시(공존 예외 불도입, FX3·FX4를 전용 픽스처로 격리해 별도 파일 + 엄격한 파일 단위 1:1 유지)를 이번 스테이징(e173eb6 revert + dd2201a 격리)이 충족하는지 지시 당사자의 확인이 필요하다. ③ plan.executionGuide 게이트 2가 '사용자 승인 — 필수'를 명시하고 draft PR을 승인 후 ready 전환하도록 규정. 가역성은 좋으나(테스트·픽스처·문서 전용, revert 가능) main 머지 + 거부 재작업 확인이라 승인 게이트를 둔다. 검토 요청 시점: 2026-07-22T04:18:58Z",
-          "reviewer": "dlddu",
           "reviewedAt": "2026-07-22T07:13:04Z",
           "comment": "채팅 검토에서 승인. 변경 내용 요약(재구조화 3갈래 + 픽스처 격리 재작업분)과 PR #207 링크 확인 후 '승인' 응답. 게이트 1(CI 8/8 green, E2E kind 포함) 충족 상태에서 승인됨."
         },
@@ -239,10 +228,6 @@
     "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-07-22T12:06:11Z",
-      "changedSides": [
-        "as_is",
-        "to_be"
-      ],
       "asIs": {
         "previousVersion": "92de231491202b49c08c7f9eec13fa41997ed253",
         "currentVersion": "b4a59ef98736f4947b572e5fd64181ccda3bea1a"
@@ -261,7 +246,6 @@
       "gap": "두 side가 함께 움직인 것은 reconcile PR #207(`rct_20260712-0001`, succeeded, verification.converged=false)이 머지된 결과다 — 독립 변경 2건이 아니라 재구조화의 착지다. **등록 시점의 대규모 구조 drift(AC 53 vs 스펙 35, 다대다: 공백 8·1:N 9·N:1 15·고아 7, 깨끗한 1:1은 11)는 해소**되어, 48개 AC가 전용 스펙과 깨끗한 파일 단위 전단사(48↔48, 공유·고아·1:N·유령 0)를 이룬다. **그러나 정의의 53:53 목표 대비 유의미한 잔여 drift 존재**: 5개 AC(OV6·OV7·PD6·SC3·CM3)가 전용 e2e 스펙이 없는 공백 = 정의상 drift(AC 53 ≠ 전용 스펙 48; 53 = 48 + 5). 정적 구조 gap이라 자동 해소 여지 없음. 이 판정은 doc-tracker 자기보고가 아니라 raw prd/test/e2e 파일에 대한 독립 감사로 확인했다(집계도 실제와 일치)."
     },
     "assessment": {
-      "assessedBy": "agent",
       "assessedAt": "2026-07-22T12:13:30Z",
       "reason": "정의의 파일 단위 양방향 1:1(#AC=#스펙, 53:53) 대비 5개 AC(OV6·OV7·PD6·SC3·CM3)가 전용 e2e 스펙이 없는 공백 = drift로 잔존한다(53 = 전용 스펙 48 + 공백 5). 나머지 48 AC는 전용 스펙과 깨끗한 전단사(48↔48, 공유·고아·1:N·유령 0)로 수렴했고, 등록 시점의 대규모 구조 drift(53:35, 공백 8·1:N 9·N:1 15·고아 7)는 reconcile #207(rct_20260712-0001, succeeded, converged=false)로 해소됐다. 남은 5개 공백은 정적 구조 gap이라 자동 해소(진행 중 롤아웃·5분 미만 일시 alert) 가능성이 없고, 방치하면 정의가 요구하는 AC=스펙 전단사가 계속 미달이므로 지금 작업이 필요하다. 작업 = 5개 전용 e2e 신규 작성(SC3 ESO 대상 Secret 삭제→재동기화 통합, OV6 오버뷰 네임스페이스 스코프, OV7 메트릭 서버 부재 폴백, PD6 완료 파드 숨김 토글, CM3 상단 바 전용 검증) + 각 test-*.md 자동화 필드·doc-tracker 갱신. FX6·AR4의 라이브 폴링 직접 검증 보강은 파일 단위 공백이 아니라 완전성 성격이므로 포함 여부는 planner 판단(직전 task도 AR4를 보강 권장으로만 취급). 공백 5건은 doc-tracker '다음 단계 제안'이 예고한 후속 task이며, doc-tracker 집계(53 AC = 48 전용 스펙 + 5 공백)가 raw 파일과 일치함을 독립 감사로 확인했다. → action_required로 전이, planner 인수인계."
     },
@@ -296,7 +280,6 @@
           "executionGuide": "## 실행 순서 · 검증 방법 · 주의사항 — CM3 상단 바 전용 e2e (PR #208)\n\n### 순서 (의존성)\n1. **PR #208 상태 확인** — `gh pr view 208 --repo dlddu/kubernetes-dashboard`. draft·MERGEABLE·3파일(신규 `e2e/top-bar.spec.ts` + `test-common.md` + `doc-tracker.md`) 확인. base main.\n2. **E2E(kind) CI green 대기·확인** (순서 중요: 병합 전 필수 게이트) — `gh pr checks 208`로 \"E2E Tests with kind\" 결과 확인. run: actions/runs/29973965846. 이 스펙은 로컬 빌드 도구 부재로 **미실행 상태로 작성**됐으므로 CI가 유일한 실측 게이트다.\n3. **사용자 승인** (병렬 불가, CI green 이후) — 이 모델은 과거 review_rejected 이력(엄격 리뷰어). executor는 검토 필요로 판단하고 승인받아야 한다.\n4. **squash merge** → 재감지 대기.\n\n### 검증 방법 (단계별)\n- **스펙 실측**: `top-bar.spec.ts` 5개 test 모두 green. 단정 대상은 전부 정적 셸 마크업이라 픽스처 무의존 — TopBar.tsx `<h1>Kubernetes Dashboard</h1>`, ClusterStatus.tsx `data-testid=cluster-status`+\"Cluster Connected\", 반응형 컨테이너 `flex flex-col sm:flex-row`. 실 소스에서 셀렉터 확인 완료.\n- **무회귀**: 기존 e2e 스위트가 이전과 동일하게 green(신규 파일만 추가, 기존 스펙·픽스처·CI run-list 불변 — playwright 자동 발견이라 배선 변경 없음).\n- **수렴(범위 기준)**: 병합 후 `e2e/` 최상위 `*.spec.ts` 중 CM3 전용(`top-bar.spec.ts`) 존재 → 전용 스펙 48→49, 공백 5→4. doc-tracker `현재 상태 요약`/인덱스/`자동화 공백`/변경 이력이 실제와 일치.\n\n### 주의사항 · 롤백\n- **되돌릴 수 없는 지점 없음**: 순수 additive(테스트 1 + 문서 2). 앱/프로덕션/클러스터 코드 변경 0, 클러스터 mutation 0. 롤백 = PR 미병합 또는 병합 후 revert.\n- **CI red 시**: 신규 스펙 단정이 실 셀렉터와 어긋났을 가능성 → 실패 test의 셀렉터/뷰포트 확인 후 브랜치에 수정 push(재계획 불필요, 같은 슬라이스 내 보정). geometric 단정(모바일 스택/데스크톱 가로)은 tolerance 있음.\n- **범위 밖(후속)**: OV6(오버뷰 ns 스코프)·OV7(metrics 폴백)·PD6(완료 파드 숨김)·SC3(ESO 재동기화) 4 공백 + FX6·AR4 보강. 각각 재감지가 새 task로 열어 one-per-cycle로 처리. to-be(53:53) 하향 금지.\n- **사전 조건**: 병합 전 CI green + 사용자 승인(엄격 리뷰어) 필수.\n\n### 실행 전 관측 (planner, CI run 29973965846 · PR #208)\n- **CM3 신규 스펙 `e2e/top-bar.spec.ts` = 5/5 PASS** (chromium tests 594·598·602·607·611). blind 작성이었으나 실 셀렉터(TopBar.tsx/ClusterStatus.tsx) 정확 → 이 슬라이스 산출물은 CI 실측 green. 슬라이스 완료 기준 충족.\n- **단, E2E(kind) 전체 job = FAIL** (1 failed·1 flaky·629 passed, 8.6m). 실패는 **CM3와 무관**한 `e2e/fluxcd-kustomizations.spec.ts:203`(FluxCD Kustomization 네임스페이스 필터링)이 3회(초기+retry×2) 실패. 이 diff는 fluxcd를 전혀 건드리지 않음(top-bar.spec + 문서 2건뿐). `pod-logs.spec.ts:893`은 flaky(재시도 통과).\n- **원인 추정(오귀속 방지)**: 직전 main HEAD `404b8d9`(run 29899437792, 07-22T07:13Z)에서 이 FX 테스트는 **green**이었고, 내 브랜치의 유일 변화는 스펙 파일 1개 추가다. playwright `workers:4` 병렬 샤딩이 파일 추가로 재배치되며 기존 **FX 네임스페이스-필터링 레이스**(메모리의 FX2 리더 vs FX3/FX4 변경 계열, 공유 클러스터 상태)를 표면화한 것으로 추정. top-bar 스펙은 `goto('/')`+정적 셸 읽기뿐이라 네임스페이스/kustomization 상태를 오염시키지 않음(공유 상태 간섭 아님, 타이밍/샤딩 재배치만).\n- **executor 주의**: 이 PR의 E2E red를 **CM3 산출물 결함으로 오귀속하지 말 것.** 병합 게이트(E2E green)는 별개의 **FX-kustomizations 레이스 해소가 선행**돼야 하며, 이는 CM3 슬라이스 범위 밖의 별도 gap(같은 모델 `tbm_kubernetes-dashboard-ac-e2e`, 다른 슬라이스)으로 재감지/후속 task 대상. 단순 재실행은 샤딩이 결정적이라 동일 실패 가능성이 큼 — FX 스펙 격리(전용 네임스페이스/픽스처, 07-20 FX3/FX4 격리와 동종 처방) 또는 quarantine이 필요."
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/kubernetes-dashboard",
           "branch": "reconcile/rct_20260722-0001",
           "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/208",
@@ -304,10 +287,8 @@
           "notes": "단일 AC(CM3) 슬라이스. 신규 `e2e/top-bar.spec.ts` + 문서 2건. 이 환경에 node 빌드/실행 도구가 없어 로컬 실행 없이 기존 컨벤션(polling-indicator.spec.ts 뷰포트/boundingBox 패턴, `// Verifies:` 헤더 규약)을 따라 작성 — E2E(kind) CI가 객관적 게이트. 실 소스(TopBar.tsx/ClusterStatus.tsx)에서 셀렉터 확인, 정적 셸 마크업 기반이라 픽스처 무의존. author email=noreply(dlddu 프라이버시 보호로 naver 이메일 push 거부됨)."
         },
         "review": {
-          "required": true,
           "status": "rejected",
           "reason": "검토 필요. 근거: ① plan step 3·executionGuide 게이트 3이 사용자 승인을 명시적 필수로 규정 — dlddu/kubernetes-dashboard main에 머지되는 실변경(PR #208 squash)이고, 이 모델은 과거 review_rejected 이력이 있는 엄격 리뷰어 대상. riskLevel=low(순수 additive: 테스트 1+문서 2, 제품 코드 0)만으로는 불필요 신호이나 계획이 승인 게이트를 못박음. ② 실행 전 확인(head 46cf907a, 2026-07-25) 결과 강한 게이트 'E2E Tests with kind'가 미충족 — 체크 8개 중 7 success, E2E failure(2026-07-23T02:28:34Z 완료, 이후 재실행 없음, main 404b8d9 불변). planner 실측 분석상 실패는 CM3 산출물이 아닌 범위 밖 fluxcd-kustomizations.spec.ts:203 레이스(top-bar.spec.ts 자체는 5/5 PASS)이며, 단순 재실행은 샤딩 결정성으로 동일 실패 가능성이 큼(guide 명시). red 게이트에서의 진행 방식(강행/반려 후 FX 레이스 선행 해소/취소)은 사람이 결정할 사안. 검토 요청 시점: 2026-07-25T01:57:47Z",
-          "reviewer": "dlddu",
           "reviewedAt": "2026-07-25T02:34:30Z",
           "comment": "반려(버튼 선택: '반려 — FX 레이스 해소 선행 후 재계획'). E2E(kind) red 게이트 상태로는 병합 불가 — 실패는 CM3 산출물이 아닌 범위 밖 fluxcd-kustomizations.spec.ts:203(FX2 네임스페이스 필터링) 레이스이며, 샤딩 결정성으로 단순 재실행도 동일 실패 가능성이 큼. FX2 레이스 격리(#207의 FX3·FX4 전용 픽스처 격리와 동종 처방 또는 quarantine)를 선행 슬라이스로 해소한 뒤, 이 브랜치(reconcile/rct_20260722-0001, CM3 작업물 보존)의 CI green을 확인하고 재승인을 요청할 것. 재계획은 reconciler-work-planner 몫."
         }
@@ -348,7 +329,6 @@
           "executionGuide": "## 실행 지침 — FX2 레이스 안정화로 CM3 PR #208 green화\n\n### 배경 (재계획 이유)\nPR #208(CM3 상단 바 전용 e2e)은 직전 리뷰에서 **반려**됐다. 반려 사유는 CM3 산출물 결함이\n아니라, **범위 밖 FX2 레이스**(`e2e/fluxcd-kustomizations.spec.ts:203` 네임스페이스 필터)로\nE2E(kind) 게이트가 red였기 때문. 리뷰어 지시대로 FX2를 선행 해소하고 **동일 브랜치 green** 후\n재승인 요청한다. 준비 단계(planner)에서 아래 1~3을 이미 브랜치에 스테이징(커밋 `c4f24ab`)했다.\n\n### 순서 (의존성)\n1. **[완료·planner]** FX2 테스트측 스냅샷 레이스 수정 — `expect.poll` 정착 대기로 교체.\n2. **[완료·planner]** doc-tracker changelog 1행 추가.\n3. **[완료·planner]** 브랜치 커밋·푸시 → PR #208 갱신(head=`c4f24ab`) + E2E 재실행.\n4. **[executor]** E2E(kind) 잡 green 확인 → 사용자 재승인 요청 → (승인 후) draft 해제·머지.\n\n1→2→3 은 한 커밋으로 이미 반영됨(병렬 무관). 4 는 CI 결과에 **의존** — green을 눈으로 확인한\n뒤에만 승인 요청으로 진행한다.\n\n### 검증 방법 (완료 기준 = 계획 범위)\n- **게이트**: `gh pr checks 208 --repo dlddu/kubernetes-dashboard` 의 **\"E2E Tests with kind\" = pass**.\n- **FX2 통과 확인**: 잡 로그에서 `fluxcd-kustomizations.spec.ts:203 … Namespace Filtering … ✓`\n  (retry 없이 1회 통과). 실패 시 로그의 실패 파일명이 **본인 스펙인지** 반드시 확인 —\n  `grep -nE \"✘|failed\" <log>` 로 파일 단위 귀속(과거 오귀속 사례 있음).\n- **CM3 회귀 없음**: 같은 로그에서 `top-bar.spec.ts … ✓` 5/5 유지.\n- **범위 밖(후속, 이 시도로 닫지 않음)**: 자동화 공백 4건(OV6·OV7·PD6·SC3). 재감지가\n  다음 계획 입력으로 잇는다.\n\n### 주의사항 / 롤백\n- **커버리지 불변**: 이 수정은 픽스처·앱 코드·다른 테스트를 건드리지 않고 FX2 assert 블록\n  하나만 교체한다. FX2는 게이트에 **그대로 유지**(quarantine/skip 아님) — 커버리지 손실 없음.\n- **blind 한계**: kind 클러스터를 로컬에서 못 돌린다(node/toolchain 부재). 검증은 CI 게이트가\n  단일 진실. `expect.poll`은 필터가 정착하면(정상 샤드에선 항상 통과했으므로) 수렴 — 게이트로 확인.\n- **되돌리기**: 문제가 있으면 `git revert c4f24ab` 한 커밋이면 CM3-only 상태로 복귀(비가역 지점 없음,\n  트래픽·데이터 영향 없음 — 테스트 전용).\n- **재승인 전제**: E2E green을 **확인한 뒤** 사용자에게 무엇을·왜(범위 밖 FX2 안정화 포함) 바꿨는지\n  설명하고 승인받는다. 승인 없이는 draft 해제·머지 금지.\n- **가짜 red 주의**: 만약 다른 스펙에서 새 red가 뜨면 본인 변경과 무관한 별도 레이스일 수 있으니\n  파일 단위로 귀속부터 확인(FX 레이스는 샤드 순서 의존).\n"
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/kubernetes-dashboard",
           "branch": "reconcile/rct_20260722-0001",
           "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/208",
@@ -356,10 +336,8 @@
           "notes": "기존 CM3 브랜치/PR #208에 FX2 안정화 커밋 `c4f24ab` 추가(CM3 top-bar 스펙 보존, 신규 PR 아님). 2 파일: `e2e/fluxcd-kustomizations.spec.ts`(FX2 assert 블록 count()+nth() → `expect.poll` 정착 대기), `docs/product/doc-tracker.md`(changelog +1행). push로 PR #208 head=c4f24ab 갱신 & E2E(kind) 게이트 재실행. 픽스처·앱 코드·AC 커버리지 무변(FX2 게이트 유지, quarantine 아님). PR 본문에 재계획 노트 추가."
         },
         "review": {
-          "required": true,
           "status": "approved",
           "reason": "검토 필요. 근거: ① plan step 5·executionGuide가 사용자 재승인을 명시적 필수 게이트로 규정('승인 없이는 draft 해제·머지 금지') — dlddu/kubernetes-dashboard main에 머지되는 실변경(PR #208 squash)이며, 직전 시도가 reviewer(dlddu)에 의해 review_rejected된 이력이 있고 반려 코멘트가 'CI green 확인 후 재승인 요청'을 명시적으로 지시함. riskLevel=low(순수 additive: 테스트 2·문서 2, 앱/클러스터 코드 0)만으로는 불필요 신호이나 계획과 반려 지시가 승인 게이트를 못박음. ② 실행 전 확인(2026-07-26T09:44Z, head c4f24ab): 반려의 원인이던 'E2E Tests with kind' 게이트가 FX2 안정화 커밋 반영 후 pass로 전환됨(run 30194081557, 11m51s, 전 체크 8/8 pass). 재승인 전제 조건(동일 브랜치 CI green) 충족 상태로 승인 요청 가능. 검토 요청 시점: 2026-07-26T09:47:00Z",
-          "reviewer": "dlddu",
           "reviewedAt": "2026-07-26T09:52:00Z",
           "comment": "승인(버튼 선택: '승인 — 병합 진행'). E2E 포함 CI 8/8 green 확인 상태에서 PR #208 병합 승인."
         },
@@ -445,10 +423,6 @@
     "toBeModelId": "tbm_kubernetes-dashboard-scenario-e2e",
     "status": "succeeded",
     "trigger": {
-      "changedSides": [
-        "as_is",
-        "to_be"
-      ],
       "toBe": {
         "previousVersion": "e6e76093aec102dd84d3413a1e7e71e47323efbe",
         "currentVersion": "f49dd9f7c02e1c123d7649b77b85334aed2739b3"
@@ -470,7 +444,6 @@
     "id": "rct_20260726-0001",
     "assessment": {
       "reason": "트리거는 자체 슬라이스 착지(슬라이스→재감지→후속 task의 정상 흐름)이나, 정의가 요구하는 파일 단위 전단사가 여전히 4건 미달이다: OV6(오버뷰 네임스페이스 스코프)·OV7(메트릭 서버 부재 폴백)·PD6(완료 파드 숨김 토글)·SC3(ESO 대상 Secret 삭제→재동기화). 정적 구조 gap이라 자동 해소(진행 중 롤아웃·일시 alert) 여지가 없고, 방치하면 전단사 미달이 지속된다. 직전 task의 assessment가 예고한 후속 그대로 — 남은 4건 전용 e2e 신설 + 각 test-*.md 자동화 필드·doc-tracker 갱신 작업이 필요하다. 현재 이 모델에 다른 열린 task 없음.",
-      "assessedBy": "agent",
       "assessedAt": "2026-07-26T10:06:33Z"
     },
     "attempts": [
@@ -509,7 +482,6 @@
           "executionGuide": "## 실행 지침 — PD6 완료 파드 숨김 토글 전용 e2e (rct_20260726-0001)\n\n준비 완료: Draft PR **#209** (`reconcile/pd6-hide-completed-e2e` → `main`). 실행자는 아래 순서로 검증→승인→머지한다. **코드 변경은 이미 스테이징됨** — 실행 단계는 CI 확인·사용자 승인·머지가 전부다.\n\n### 순서 (의존성)\n1. **[게이트 관측]** PR #209의 **E2E Tests with kind** 워크플로 완료 대기(약 10~12분). 이게 PD6의 실게이트 — `testDir: ./e2e` + bare `npx playwright test` 라 신규 스펙이 auto-discover 되어 실제 실행된다.\n2. **[게이트 판정]** E2E green → 3으로. red → §red-triage.\n3. **[사용자 승인]** 무엇을·왜(문서 체계 밖 e2e 커버리지 보강, 앱 무변) 설명하고 재승인 요청. (reconciler-work-executor 4-2)\n4. **[머지]** 승인 후 draft 해제 → squash 머지. 머지 순간 as-is(e2e 트리)·to-be(docs/product 트리) 양쪽 버전이 바뀌어 재감지가 걸린다(정상).\n5. **[수렴 검증]** §완료 기준 확인 → task `succeeded`.\n\n> 1→2→3→4 는 **엄격 순차**(E2E green 전 승인·머지 금지). 병렬 불가.\n\n### 검증 방법 (완료 기준 = PD6 슬라이스 범위)\n- **신규 스펙 실제 실행 확인**: E2E 로그/리포트에서 `pods-hide-completed.spec.ts` 3 테스트가 **실행+통과**했는지 확인(스킵/미발견이면 게이트 무의미). 파일이 실행 목록에 있는지 먼저 grep.\n- **문서-실측 정합**(머지 후 raw 파일 독립 감사):\n  - `ls e2e/*.spec.ts | wc -l` = **50**.\n  - `grep -c \"Verifies: PD6\" e2e/*.spec.ts` 합계 = **1**(내 파일만).\n  - `// Verifies:` AC 코드 중복 0·고아 0 유지.\n  - `test-pods.md` 시나리오7 자동화 = `e2e/pods-hide-completed.spec.ts` (PD6 전용), 커버리지 요약 공백=없음.\n  - `doc-tracker.md`: 공백 3(OV6·OV7·SC3), 연결 AC 50↔전용 스펙 50.\n- **회귀 없음**: E2E 전체 통과(신규 스펙 추가로 인한 무관 스펙 실패 없음), ci.yaml(frontend/go/integration) green.\n\n### red-triage (E2E red 시 — 07-26 FX2 교훈)\n`workers:4`+`fullyParallel:false` 라 스펙 파일 추가는 샤드 분포를 바꾼다. **실패 목록을 먼저 파일명으로 분류**:\n- 실패가 **`pods-hide-completed.spec.ts`** → 본 슬라이스 결함. 후보: (a) testid 오타/변경, (b) `/api/pods/all` 글롭 미스매치(실제 요청 경로 확인), (c) 로딩/폴링 타이밍(→ `expect...toHaveCount` 는 auto-retry 라 대개 무관). 같은 브랜치에서 스펙 수정 후 재푸시(계획·문서 무변).\n- 실패가 **무관 스펙**(예: 지난번 `fluxcd-kustomizations.spec.ts:203` 류) → 샤드 재편이 재노출한 **기존 레이스**, 본 슬라이스 밖. PR red 를 내 스펙 탓으로 오귀속 금지. 별도 안정화 슬라이스로 분리(재감지가 새 task 로 잇거나, PR #208·#207 처럼 동일 브랜치 격리 수정). 내 스펙 자체는 route-mock 브라우저 인터셉트라 다른 스펙에 레이스를 **유발하지 않음**.\n\n### 주의사항 / 롤백\n- **되돌릴 수 없는 지점 없음** — 테스트+문서 추가뿐, 프로덕션/클러스터/앱코드/픽스처 무변. 롤백 = PR 닫기 또는 머지 후 revert 커밋(문서 집계도 함께 되돌림).\n- **머지 전 draft 유지** — E2E green + 사용자 승인 전 머지 금지.\n- 커밋 author 는 noreply(`39251873+dlddu@users.noreply.github.com`) — dlddu 계정 naver-email push 차단 회피. 추가 커밋 시 동일 author 유지.\n- to-be 를 낮추지 않았다(53 AC 정의 불변). 이 슬라이스는 as-is e2e 커버리지를 to-be 로 끌어올림.\n\n### 범위 밖 (후속 — 재감지가 새 task 로 연다)\n- **OV6** 오버뷰 네임스페이스 스코프 재조회(`GET /api/overview?ns=`) 직접 단정 — 요청 인터셉트 방식.\n- **OV7** metrics-server 부재 폴백 — Go 핸들러(`getMetricsClientSafe()` nil) 관심사, e2e 보다 핸들러 테스트가 적합할 수 있음.\n- **SC3** ESO 대상 Secret 삭제→External Secret 재동기화 — ESO 연동 통합 테스트(실환경 의존 최대).\n- (보강 권장) FX6·AR4 상세 라이브 폴링 직접 검증.\n"
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/kubernetes-dashboard",
           "branch": "reconcile/pd6-hide-completed-e2e",
           "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/209",
@@ -517,10 +489,8 @@
           "notes": "Draft PR #209 (base main). 3파일: 신규 e2e/pods-hide-completed.spec.ts(PD6 유일 전용, // Verifies: PD6) + test-pods.md 시나리오7 자동화 연결 + doc-tracker 집계(공백 4→3, 연결 AC/스펙 49→50). 커밋 author noreply(39251873+dlddu@users.noreply.github.com, naver-email push 차단 회피). route.fulfill('**/api/pods/all**')로 결정적 목킹 — 실클러스터/ESO/metrics 무의존, 브라우저 인터셉트라 workers:4 레이스 무관. CI 트리거됨: E2E Tests with kind=pending(실게이트), ci.yaml(frontend/go)은 무관 대상. 머지 안 함(draft)."
         },
         "review": {
-          "required": true,
           "status": "approved",
           "reason": "리스크 자체는 low(테스트+문서 3파일 추가, 앱코드·클러스터·프로덕션 무변, 롤백=PR 닫기/revert)이나 실행 액션이 dlddu/kubernetes-dashboard main 브랜치로의 squash 머지다 — 대상 레포 기본 브랜치를 바꾸고 as-is/to-be 양측 버전을 움직여 재감지를 유발하는 공용 자산 변경이므로 사람 확인을 받는다. 계획의 executionGuide도 4단계 머지 전 사용자 승인을 명시적 게이트로 지정했다.",
-          "reviewer": "user",
           "reviewedAt": "2026-07-27T13:18:27Z",
           "comment": "승인 — 머지 진행. 버튼 UI로 승인 선택(추가 코멘트 없음). 승인 시점 근거: PR #209 체크 8건 전원 green(실게이트 E2E Tests with kind 포함), 변경 3파일 +147/-9로 테스트·문서 한정, 앱코드·클러스터 무변."
         },
@@ -622,10 +592,6 @@
     "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-07-29T11:31:23Z",
-      "changedSides": [
-        "as_is",
-        "to_be"
-      ],
       "asIs": {
         "previousVersion": "8956195f8d8b1869a2ee559d1c8b50a9784ce3ff",
         "currentVersion": "87697b0e6cd494c29050edb83367b5d4a70f1608"
@@ -646,7 +612,6 @@
     },
     "assessment": {
       "reason": "정의가 엄격한 파일단위 전단사 AC=스펙(53:53)을 요구하나 현 상태는 50 connected↔50 dedicated로 3 AC 미커버(OV6 overview 네임스페이스 스코프 직접 어서션, OV7 metrics-server 부재 fallback, SC3 ESO resync). 이들은 자동 해소 경로 없는 정적 구조 gap(진행 롤아웃·일시 alert 아님)으로 방치 시 전단사 미달이 무기한 지속된다. 해소에는 전용 e2e 스펙 3개 신설 + 각 test-*.md 자동화 필드 + doc-tracker 갱신 필요. 직전 task가 예측한 후속(PD6 제외)과 동일. 이 모델에 다른 열린 task 없음.",
-      "assessedBy": "agent",
       "assessedAt": "2026-07-29T11:31:23Z"
     },
     "attempts": [
@@ -695,7 +660,6 @@
           "executionGuide": "# 실행 지침 — OV6/OV7/SC3 전용 e2e 신설 (rct_20260729-0001)\n\n준비된 PR: **dlddu/kubernetes-dashboard#211** (branch `reconcile/rct_20260729-0001-ov6-ov7-sc3`). 신규 스펙 3개 + 문서 3개 갱신. **완료 기준(범위)**: AC↔스펙 파일 전단사 50:50 → **53:53**, 자동화 공백 0. 코드/런타임 변경 없음(테스트+문서만) → 프로덕션·클러스터 영향 없음.\n\n## 실행 순서 (의존성)\n단일 PR이라 병렬 항목 없음. 스펙 3개·문서 3개는 한 커밋에 함께 있어 원자적으로 머지된다.\n1. **PR 검토** — 각 스펙이 `// Verifies: <AC>` 헤더로 정확히 1 AC를 선언하는지, `test-*.md` 자동화 필드가 그 파일을 가리키는지(양방향 1:1), `doc-tracker.md` 집계(53↔53, 공백 0)가 raw `test-*.md` 실제와 정합인지 확인.\n2. **로컬 kind e2e 검증**(머지 전 권장) — 아래 \"검증 방법\".\n3. **머지** — main 머지 후 as-is(e2e 트리)·to-be(docs/product 트리) 해시가 함께 바뀌어 재감지가 트리거되고, 재감지가 53:53 전단사를 확인해 이 task 범위의 수렴을 재확인한다.\n\n## 검증 방법\n### 사전: kind 하네스 기동 (`e2e/README.md`)\n```bash\n./scripts/kind-cluster.sh create\n./test/fixtures/apply-all.sh\ncd frontend && npm ci && npm run build && cd ..\ngo build -o kubernetes-dashboard .\n./scripts/kind-cluster.sh export-kubeconfig ./kubeconfig\nexport KUBECONFIG=$(pwd)/kubeconfig\n./kubernetes-dashboard &            # :8080\nnpm ci && npx playwright install --with-deps chromium\n```\n### 단계별\n- **OV6** `npm run test:e2e -- overview-namespace-scope` → 2 pass. 네임스페이스 전환 시 `GET /api/overview?ns=dashboard-test` / `?ns=dashboard-empty` 발행, `summary-cards-container` 재렌더, `summary-cards-error` 없음. **모킹 없음** — 실 백엔드/픽스처 의존.\n- **OV7** `npm run test:e2e -- overview-metrics-fallback` → 2 pass. route-mock로 metrics-부재 폴백 응답 주입 → 4개 카드 수치%(`12.5%`/`34.2%`/`1 / 1`) 렌더, 에러/빈화면 없음.\n- **SC3** `npm run test:e2e -- secrets-delete-resync` → 3 pass. 삭제 확인 다이얼로그(`test-secret`/`dashboard-test`/\"cannot be undone\"), Cancel 시 DELETE 없음, Confirm 시 `DELETE /api/secrets/dashboard-test/test-secret` 발행.\n### 전체(전단사 감사)\n`npm run test:e2e` 전체 그린 + AC↔스펙 감사에서 **연결 AC 53 ↔ 전용 스펙 53, 공유·중복·고아·broken-ref 0**, in-scope 최상위 `e2e/*.spec.ts` 50→53. (드리프트 감지 versionScript가 쓰는 것과 동일 감사.)\n### 완료 판정(범위 기준)\n이 task는 **53:53 전단사 달성 시 `succeeded`**. e2e 실행 통과 자체가 목표가 아니라(그건 CI 게이트), AC↔스펙 파일 1:1 구조가 53:53인지가 완료 기준. **범위 밖(후속·타모델)**: 실 ESO 컨트롤러 통합 테스트, metrics-server 실제 부재 백엔드 e2e — 이 전단사 모델의 to-be 아님(재감지가 필요 시 새 task로 잇는다).\n\n## 주의사항\n- **가역성**: 테스트·문서만 추가. 런타임/매니페스트/프로덕션 무변. 롤백 = PR 미머지 또는 revert 커밋. 불가역 지점 없음.\n- **CI 게이트**: 신규 e2e가 kind CI(`.github/workflows/e2e.yaml`)에서 실행됨. 머지 전 CI 그린 확인. OV6은 실 클러스터 의존 — 네임스페이스 셀렉터 옵션(`dashboard-test`/`dashboard-empty`)이 픽스처로 존재해야 함(`apply-all.sh`가 생성). 픽스처 누락 시 OV6 실패.\n- **레이스**: playwright `workers:4`. OV7·SC3의 route-mock는 page-scoped라 병렬 안전(pods-hide-completed와 동일). OV6은 실 요청 관측만 → 상태 변이 없음.\n- **형제 모델 조율**: OV7·SC3의 신규 route-mock 사이트는 `tbm_kubernetes-dashboard-e2e-mock-policy` 재감지 대상. 그 정책(`docs/e2e-mocking-policy.md`) 정립 시 ABS/DES류 정당 예외로 허용목록+`// mock-exception:` 주석 등재 필요(현재 정책 미착지라 기존 컨벤션 유지). PR 본문에 명시됨.\n- **사전조건**: 없음. 프로덕션 무영향이라 피크시간 회피 등 불필요.\n"
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/kubernetes-dashboard",
           "branch": "reconcile/rct_20260729-0001-ov6-ov7-sc3",
           "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/211",
@@ -703,10 +667,8 @@
           "notes": "3개 신규 전용 e2e 스펙(overview-namespace-scope=OV6, overview-metrics-fallback=OV7, secrets-delete-resync=SC3) + test-overview.md·test-secrets.md 자동화 필드 + doc-tracker.md 집계(연결 AC 50→53↔전용 스펙 50→53, 공백 3→0)를 담은 PR. OV6은 실 클러스터(모킹 없음), OV7·SC3은 하네스 제약(metrics-server 상주·ESO 컨트롤러 부재)상 기존 route-mock 컨벤션. 머지 안 함 — executor 검토/실행 대기. 신규 route-mock 2건은 형제 모델 mock-policy 조율 노트를 PR 본문에 기재."
         },
         "review": {
-          "required": true,
           "reason": "본질 리스크는 low(테스트 3파일+문서 3파일, 앱코드·클러스터·프로덕션 무변, 롤백=PR revert)이나, 실행 액션이 dlddu/kubernetes-dashboard main으로의 PR #211 머지 — 공용 레포 기본 브랜치를 바꾸고 as-is/to-be 양측 버전을 움직여 재감지를 유발하는 공용 자산 변경이다. 이 모델의 선례(rct_20260722·rct_20260726, 반려 이력 포함)가 main 머지에 일관되게 사람 검토를 요구했으므로 동일 기준을 적용한다. 부가적으로 OV7·SC3의 신규 route-mock 2건이 형제 모델 mock-policy(현재 awaiting_review)의 재감지 대상이라는 조율 지점도 사람이 인지할 가치가 있다.",
           "status": "approved",
-          "reviewer": "dlddu",
           "reviewedAt": "2026-07-30T23:02:14Z",
           "comment": "채팅 승인('승인'). 설명 블록(모바일 UI 렌더 이슈로 2회 재전송) 확인 후 PR #211 main 머지 승인."
         },
@@ -841,7 +803,6 @@
           "executionGuide": "# 실행 지침 — rct_20260729-0001 재작업 (OV6·SC3 착지, OV7 제외)\n\n계획·준비는 끝났고 PR #211(head `d02c760`)에 재스테이징 완료. executor는 **검토→CI green 확인→머지→검증**만 하면 된다. 새 코드 작성은 없다.\n\n## 순서 (의존성)\n1. **PR #211 재검토** — 직전 시도가 사용자 승인 후 실행됐다가 CI red로 failed했다. 이번엔 내용이 바뀌었으므로(아래 \"무엇이 바뀌었나\") 재검토 대상이다. 단일 PR·단일 커밋이라 순서 분기 없음.\n2. **CI green 확인 (하드 게이트)** — `gh pr checks 211 --repo dlddu/kubernetes-dashboard`. 8개 체크 전원 success, 특히 **`E2E Tests with kind`**(직전 실패 지점). 이게 green이 되기 전에는 **머지 금지**. 직전 failed의 직접 원인이 이 게이트였다.\n3. **머지** — green이면 main으로 머지. 머지 후 검증(4-4)으로 넘어간다.\n4. (머지 후) **재감지 트리거** — main 버전 변화로 detector가 OV7 잔여 gap을 새 task로 이어받는다(범위 밖).\n\n## 검증 방법 (완료 기준 = 이 슬라이스 범위 52:52)\n- **CI (필수)**: `E2E Tests with kind` 포함 전 체크 success. 직전엔 SC3 `SyntaxError: Unterminated template (19:33)`로 Playwright 수집이 red였다 → 이번엔 로컬 esbuild 0.28.1(aarch64)로 SC3·OV6 파싱 clean 확인됨. green이면 구문·정책 원인 해소가 객관 입증된다.\n- **구조 전단사 (머지 후 main)**: `e2e/` 최상위 `*.spec.ts`가 각 AC와 파일단위 1:1. 이번 슬라이스는 **연결 52 ↔ 전용 스펙 52, 잔여 공백 1(OV7)**. 확인: `docs/product/doc-tracker.md` 헤더가 \"연결 AC 52 ↔ 전용 최상위 스펙 52, 자동화 공백 1(OV7)\". OV6·SC3가 각각 `overview-namespace-scope.spec.ts`·`secrets-delete-resync.spec.ts`에 연결, 공유·중복·고아·broken-ref 0.\n- **형제 모델(mock-policy) 무drift**: `grep -c \"mock-exception:\" e2e/*.spec.ts`의 합(=5)이 `docs/e2e-mocking-policy.md` 허용목록 행 수(=5)와 일치하고 각 주석↔행이 대응. SC3가 새로 추가한 인터셉트 1건은 DES 행 #5로 등재됨. 브랜치가 새로 도입한 미등재 인터셉트 0(OV7 삭제로). → 머지해도 `tbm_kubernetes-dashboard-e2e-mock-policy` 즉시 drift 없음.\n- **SC3 스펙 정합**: 목록 GET route-mock 없음(실 fixture), `page.route`는 DELETE 전용 정규식 1곳. 3개 테스트(다이얼로그·취소·확인+재조회)가 실 `test-secret` fixture로 통과.\n\n## 범위 밖 (후속 — 재감지가 새 task로)\n- **OV7 (잔여 공백 1)**: 메트릭 서버 부재 폴백. 완전 53:53은 아래 선결 결정 중 하나 이후 별도 슬라이스로 달성:\n  - (a) **metrics-server 부재 kind 프로파일** 신설 → 실환경에서 부재 분기 재현(모킹 불요), 또는\n  - (b) `tbm_kubernetes-dashboard-e2e-mock-policy` 모델을 통해 `/api/overview` 데이터-모킹을 **명시적 예외로 승인**(정책이 현재 명시적 불허하므로 정책 개정 결정 필요).\n  이 결정 전에는 OV7을 억지로 데이터-모킹으로 착지시키지 않는다(형제 모델 drift + 정책의 \"예외는 늘지 않는 방향\" 위배).\n- (선택) FX6·AR4 상세 라이브 폴링 보강.\n\n## 주의사항\n- **CI green 전 머지 금지.** 직전 failed의 원인이 정확히 이 게이트다. `E2E Tests with kind`가 red면 SC3 런타임 신호(예: 실 UI에서 삭제 버튼이 아코디언 확장 후에만 노출, fixture 명명 불일치 등)일 수 있으니 플레이키로 넘기지 말고 원인 수정.\n- **SC3는 로컬 빌드 없이(blind) 작성됨** — 이 레포엔 node/Playwright가 없어 런타임 단정은 CI가 유일한 객관 게이트다. esbuild로 구문만 로컬 확인됨. 런타임은 CI로 판정.\n- **PR 본문·제목이 stale**: 여전히 \"53:53\"이라고 되어 있고 이번 세션에서 편집 불가(정책 게이트 — 이번 세션에 연 PR이 아님). 정확한 서술(52:52·OV7 제외)은 **커밋 메시지 `d02c760`·docs·이 task 레코드**에 있다. executor/사용자가 머지 전 본문을 갱신하면 좋다.\n- **이 PR은 형제 모델의 SSOT(`docs/e2e-mocking-policy.md`)를 건드린다** — 의도된 조율이다(인터셉트+주석+허용목록 행이 같은 PR에서 1:1로 함께 착지해 drift를 막음). 머지 후 mock-policy detector가 이를 감지하면 as-is=to-be로 `no_action_needed`가 정상.\n- **되돌리기**: 머지 전이면 main 무영향(브랜치 폐기/재작업으로 끝). 머지 후 문제 시 단일 커밋 revert로 안전 롤백 가능 — 변경은 **e2e 테스트 스펙 + 문서뿐**(앱·런타임·클러스터·데이터 코드 무변)이라 되돌림이 비파괴적이다. 프로덕션/클러스터 트래픽 영향 없음.\n"
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/kubernetes-dashboard",
           "branch": "reconcile/rct_20260729-0001-ov6-ov7-sc3",
           "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/211",
@@ -849,10 +810,8 @@
           "notes": "직전 시도의 PR #211 브랜치를 재계획대로 고쳐 재스테이징(force-push, head d02c760, author 39251873+dlddu noreply=이메일 프라이버시). 변경: (1) 브랜치를 origin/main(#210 mock-policy 착지본) 위로 rebase해 docs/e2e-mocking-policy.md를 브랜치에 반영(무충돌). (2) OV7 스펙 e2e/overview-metrics-fallback.spec.ts 삭제 — 유일 수단인 /api/overview 전체 데이터-모킹이 정책의 명시적 불허에 해당·승인 카테고리 부재(약한 ABS)로 이 슬라이스에서 제외. (3) SC3 스펙 재작성 — docstring의 '*/'(백틱 글롭) 구문 결함 제거 + 목록 GET 모킹 삭제(실 fixture dashboard-test/test-secret 사용)+ 파괴적 DELETE만 정규식 경로로 인터셉트(가짜 200·실삭제 없음). 로컬 esbuild 0.28.1(aarch64)로 SC3·OV6 파싱 clean 확인. (4) docs/e2e-mocking-policy.md 허용목록에 SC3 DES 행 #5 추가 — 코드 '// mock-exception: DES' 주석과 양방향 1:1(형제 모델 tbm_kubernetes-dashboard-e2e-mock-policy 무drift 유지). 브랜치 신규 인터셉트는 SC3 1건뿐. (5) doc-tracker.md·test-overview.md를 53:53→52:52로 정정(OV6·SC3 연결, OV7 잔여 공백 1). test-secrets.md는 이미 SC3 연결(무변). 머지하지 않음 — force-push로 CI 재트리거(E2E Tests with kind 포함 pending). PR 본문/제목은 여전히 '53:53'로 stale이며 이번 세션에서 편집 불가(정책 게이트: 내가 이번에 연 PR 아님) — 정확한 52:52·OV7 제외 서술은 커밋 메시지·docs·이 task 레코드에 있음. executor가 CI green 확인 후 머지, 필요시 PR 본문 갱신."
         },
         "review": {
-          "required": true,
           "reason": "실행 액션이 dlddu/kubernetes-dashboard main으로의 PR #211 머지로, 공용 레포 기본 브랜치와 as-is/to-be 양측 버전을 움직이는 공용 자산 변경이다. riskLevel medium이며, 직전 시도(attempts[0])가 사용자 승인 후 CI red로 failed했고 이번 재시도는 승인받았던 내용과 실질이 다르다(OV7 스펙 삭제로 범위 53:53→52:52 축소, 형제 모델 SSOT docs/e2e-mocking-policy.md에 DES 허용목록 행 추가, SC3 전면 재작성). 이 모델의 선례(rct_20260722·rct_20260726, 반려 이력 포함)가 main 머지에 일관되게 사람 검토를 요구하고, executionGuide 자체가 '내용이 바뀌었으므로 재검토 대상'으로 지정한다.",
           "status": "rejected",
-          "reviewer": "dlddu",
           "reviewedAt": "2026-08-01T00:14:20Z",
           "comment": "채팅 반려. SC3(e2e/secrets-delete-resync.spec.ts)를 DELETE 인터셉트(모킹)로 표현하는 접근을 반려 — 모킹하지 말고, 다른 테스트에 영향받지 않는 별도 전용 fixture(Secret)를 추가해 그 fixture를 대상으로 실제 삭제 흐름을 테스트하도록 재작업 요청. (원문: '반려. secret delete resync 이거 모킹하지 말고 다른 테스트에 영향 안받는 별도 fixture 추가해서 그걸로 테스트하도록 해줘')"
         }
@@ -898,7 +857,6 @@
           "executionGuide": "# 실행 지침 — rct_20260729-0001 재작업 (SC3 real-delete, OV6 유지, OV7 제외)\n\n계획·준비 완료. PR **#211** (branch `reconcile/rct_20260729-0001-ov6-ov7-sc3`, head **da0c012**)에 재스테이징됨. executor는 **재검토 → CI green 확인 → 머지 → 검증**만 하면 된다. 새 코드 작성 없음.\n\n## 무엇이 바뀌었나 (직전 반려 대비)\n직전 시도(attempts[1])는 사용자 검토에서 반려됐다 — SC3를 DELETE 인터셉트(모킹)로 표현한 것을 \"모킹하지 말고 다른 테스트에 영향 안 받는 별도 fixture로 실제 삭제 테스트\"하도록 요청. 이번 재작업:\n- **SC3 spec을 인터셉트 0으로 재작성** — 전용 fixture `secret-mut-delete`(`test/fixtures/secret-mut-fixtures.yaml`, dashboard-test)를 **실제로** DELETE하고, 앱 refetch 후 대상 아코디언이 사라짐을 단정. `page.route`/mock 전무.\n- **전용 fixture 신설 + apply-all.sh 적용** — `fluxcd-mut-fixtures.yaml` 격리 선례를 따름. SC1/SC2/SC4는 `test-secret`/`tls-secret`만 testid로 지목하고 `>= 2` 아코디언만 단정 → 세 번째 fixture 실삭제에 무영향.\n- **mock-policy DES 행 #5 제거** — `docs/e2e-mocking-policy.md`가 origin/main과 완전 동일해짐(브랜치 diff 0). 브랜치 신규 인터셉트 0 → 형제 모델 `tbm_kubernetes-dashboard-e2e-mock-policy` 무drift.\n- OV6(실 클러스터·무모킹)·OV7(descope)은 그대로. 범위 52:52 유지(공백 1=OV7).\n\n## 순서 (의존성)\n1. **PR #211 재검토** — 반려 사유가 반영됐는지 확인: SC3에 모킹이 전혀 없고(전용 fixture 실삭제), fixture가 다른 스펙과 disjoint(`secret-mut-delete`)인지. 단일 PR·단일 커밋(da0c012)이라 순서 분기 없음.\n2. **CI green 확인 (하드 게이트)** — `gh pr checks 211 --repo dlddu/kubernetes-dashboard`. 8개 체크 전원 success, 특히 **`E2E Tests with kind`**(직전 두 시도의 실패 지점). green 전에는 **머지 금지**.\n3. **머지** — green이면 main 머지. 머지 후 검증(4-4)으로.\n4. (머지 후) **재감지 트리거** — main 버전 변화로 detector가 잔여 gap을 새 task로 잇는다(범위 밖: OV7).\n\n## 검증 방법 (완료 기준 = 이 슬라이스 범위 52:52)\n- **CI (필수·객관 게이트)**: `E2E Tests with kind` 포함 전 체크 success. 이 레포엔 node/Playwright/Go 빌드가 로컬에 없어 런타임 단정은 CI가 유일한 객관 게이트다. 로컬은 esbuild 0.28.1(aarch64)로 SC3·OV6 **구문만** clean 확인됨(직전 `SyntaxError: Unterminated template` 재현 안 됨).\n- **SC3 real-delete 동작(CI e2e 안에서)**: 3 테스트 pass — (a) 삭제 버튼→`delete-confirm-dialog`가 `secret-mut-delete`/`dashboard-test`/\"cannot be undone\" 표시, (b) cancel 시 무삭제·아코디언 잔존, (c) confirm 시 **실 `DELETE /api/secrets/dashboard-test/secret-mut-delete`** 200 + refetch 후 `secret-accordion-secret-mut-delete` 소멸 + `test-secret` 아코디언 잔존(공유 fixture 무오염 sanity).\n- **구조 전단사 (머지 후 main)**: `e2e/` 최상위 `*.spec.ts`가 각 AC와 파일단위 1:1. 이번 슬라이스 = **연결 52 ↔ 전용 스펙 52, 잔여 공백 1(OV7)**. 확인: `docs/product/doc-tracker.md` 헤더 \"연결 AC 52 ↔ 전용 최상위 스펙 52, 자동화 공백 1(OV7)\". OV6·SC3가 각각 `overview-namespace-scope.spec.ts`·`secrets-delete-resync.spec.ts`에 연결.\n- **형제 모델(mock-policy) 무drift**: `git diff origin/main HEAD -- docs/e2e-mocking-policy.md`가 **비어 있음**(변경 0). 브랜치 e2e 스펙의 신규 `page.route` 등록 0 → 머지해도 `tbm_kubernetes-dashboard-e2e-mock-policy` 즉시 drift 없음. (직전 시도가 넣었던 DES #5·mock-exception 주석은 모두 제거됨.)\n\n## 범위 밖 (후속 — 재감지가 새 task로)\n- **OV7 (잔여 공백 1)**: 메트릭 서버 부재 폴백. 완전 53:53은 선결 결정 후 별도 슬라이스 — (a) metrics-server 부재 kind 프로파일 신설(실환경 재현), 또는 (b) mock-policy 모델을 통해 `/api/overview` 데이터-모킹을 명시적 예외로 승인(정책 개정). 결정 전 억지 데이터-모킹 금지.\n- **SC3의 ESO 재동기화 '재생성' 단정**: kind가 ExternalSecret CRD만 설치하고 컨트롤러가 없어(`scripts/kind-cluster.sh install_external_secrets_crds`) 삭제 후 재생성을 실환경에서 재현 불가. 이 슬라이스는 app이 소유한 '실삭제'까지 검증. 재생성 검증은 실 ESO 컨트롤러를 돌리는 하네스 확장이 선결.\n\n## 주의사항\n- **CI green 전 머지 금지.** 직전 두 시도의 실패 원인이 정확히 이 게이트다(att0: SC3 SyntaxError, att1: 리뷰 반려). `E2E Tests with kind` red면 SC3 런타임 신호(예: 실 UI에서 삭제 버튼 위치/노출 조건, fixture 명 불일치, refetch 타이밍)일 수 있으니 플레이키로 넘기지 말고 원인 수정.\n- **파괴적 테스트의 retry 특성**: SC3 confirm 테스트는 전용 fixture를 **실제로 소비**한다. happy-path면 1회 pass. 그러나 이 테스트가 실삭제 후 단정에서 실패해 CI 재시도(`retries:2`)되면, 재시도 진입 시 fixture가 이미 없어 상단 `expect(accordion).toBeVisible()`에서 즉시 실패한다 — 이는 **자기치유되지 않는 진짜 실패 신호**이니 원인 조사 대상(정상 fixture 재적용 후 재현). 다른 두 테스트(다이얼로그·취소)는 무삭제라 무관.\n- **blind 작성**: 로컬 빌드/런타임 없음 → 구문만 로컬 확인. 런타임은 CI로 판정.\n- **PR 본문·제목 stale**: 여전히 \"53:53\"이며 이번 세션에서 편집 불가(정책 게이트 — 이번에 연 PR 아님). 정확한 서술(52:52·SC3 real fixture·OV7 제외)은 **커밋 da0c012 메시지·docs·이 task 레코드**에 있다. 머지 전 본문/제목 갱신 권장(executor/사용자).\n- **되돌리기**: 변경은 **e2e 스펙 + fixture + 문서뿐**(앱·런타임·클러스터·데이터 코드 무변). 머지 전이면 main 무영향, 머지 후 문제 시 단일 커밋 revert로 비파괴적 롤백. 프로덕션/클러스터 트래픽 영향 없음.\n"
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/kubernetes-dashboard",
           "branch": "reconcile/rct_20260729-0001-ov6-ov7-sc3",
           "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/211",
@@ -906,10 +864,8 @@
           "notes": "리뷰 반려(attempts[1])를 반영해 PR #211 브랜치를 재스테이징(force-push, head da0c012, author 39251873+dlddu@users.noreply.github.com=이메일 프라이버시). SC3를 mock→real dedicated fixture로 전환. 변경 7파일: (1) test/fixtures/secret-mut-fixtures.yaml 신설 — dashboard-test 전용 Secret 'secret-mut-delete'(SC3 real-delete 대상). fluxcd-mut-fixtures.yaml 격리 선례를 따름. (2) test/fixtures/apply-all.sh — 신규 fixture apply 라인 추가. (3) e2e/secrets-delete-resync.spec.ts 전면 재작성 — 인터셉트 0(page.route/route.fulfill/mock-exception 완전 제거), 실 DELETE /api/secrets/dashboard-test/secret-mut-delete를 waitForResponse로 관측하고 앱 refetch 후 대상 아코디언 toHaveCount(0) 소멸 단정. 3 테스트(다이얼로그·취소·확인후실삭제), 파괴 테스트 마지막(fullyParallel:false 파일 내 순차). 로컬 esbuild 0.28.1(aarch64) 파싱 clean — 직전 SyntaxError(Unterminated template) 재현 안 됨. (4) docs/e2e-mocking-policy.md 허용목록 DES 행 #5 제거 → 이 파일이 origin/main과 완전 동일(브랜치 diff 0), 신규 인터셉트 0 → 형제 모델 tbm_kubernetes-dashboard-e2e-mock-policy 무drift. (5) docs/product/doc-tracker.md — SC3 서술 real-fixture로 정정 + 2026-08-01 재작업 변경이력 행. (6~7) test-overview.md·test-secrets.md는 직전 브랜치 상태 유지(OV6 연결·SC3 연결). 머지하지 않음 — force-push로 CI 8개 체크 재트리거(E2E Tests with kind 포함 pending). SC1/SC2/SC4는 test-secret/tls-secret를 testid로 지목하고 '>= 2' 아코디언만 단정하므로 3번째 전용 fixture 실삭제에 무영향(레이스 없음). ESO 재동기화 재생성은 kind에 ESO 컨트롤러가 없어 하네스 밖(app 소유 실삭제까지만 검증). PR 본문·제목은 여전히 '53:53'로 stale이며 이번 세션에서 편집 불가(정책 게이트: 내가 이번에 연 PR 아님) — 정확한 서술(52:52·SC3 real fixture·OV7 제외)은 커밋 da0c012 메시지·docs·이 task 레코드에 있다. executor가 CI green 확인 후 머지, 가능하면 머지 전 PR 제목/본문 갱신."
         },
         "review": {
-          "required": true,
           "reason": "실행 액션이 dlddu/kubernetes-dashboard main으로의 PR #211 머지 — 공용 레포 기본 브랜치를 바꾸고 as-is/to-be 양측 버전을 움직이는 공용 자산 변경이며 plan.riskLevel=medium이다. 결정적으로 이번 시도는 사용자가 직전 시도(attempts[1])에서 명시적으로 반려한 접근(SC3를 DELETE 인터셉트로 모킹)을 재작업한 것이므로, 반려 사유가 요구한 대로 '모킹 없이 별도 전용 fixture로 실제 삭제'가 구현됐는지는 반려한 당사자만 확정할 수 있다. 이 모델의 선례(rct_20260722·rct_20260726·본 task attempts[0..1])가 main 머지에 일관되게 사람 검토를 요구했고, executionGuide도 '반려 사유 반영 재검토'를 1번 단계로 지정한다.",
           "status": "approved",
-          "reviewer": "dlddu",
           "reviewedAt": "2026-08-01T06:03:00Z",
           "comment": "채팅 승인('승인'). 반려 사유(SC3 모킹) 반영 확인 후 PR #211 main 머지 승인 — 승인 전 executor가 브랜치 head da0c012에서 secrets-delete-resync.spec.ts의 page.route/route.fulfill/mock-exception 0건, 전용 fixture secret-mut-delete 실삭제 단정, docs/e2e-mocking-policy.md 브랜치 diff 0, CI 8체크 전원 success(E2E Tests with kind 포함), mergeable_state=clean을 독립 확인해 설명에 제시함."
         },
@@ -1005,9 +961,6 @@
     "createdAt": "2026-07-31T23:35:04Z",
     "trigger": {
       "detectedAt": "2026-07-31T23:35:04Z",
-      "changedSides": [
-        "as_is"
-      ],
       "asIs": {
         "previousVersion": "87697b0e6cd494c29050edb83367b5d4a70f1608",
         "currentVersion": "0ffb5407b8e7e15114bb15bfc99d951111214d5f"
@@ -1021,7 +974,6 @@
     },
     "assessment": {
       "reason": "트리거 변경(PR #210의 mock-exception 주석 + e2e/README 정책 포인터)은 AC↔스펙 파일단위 전단사에 무의미하다 — 스펙 로직·개수 불변, 커버리지 gap 불변. 실질 잔여 gap(OV6·OV7·SC3)은 정적 구조 gap이지만 이미 이 모델의 열린 LOCKED task rct_20260729-0001(awaiting_review)이 계획·PR까지 완료해 커버 중이다: PR #211 open, CI 8/8 green, OV6+SC3 신설로 52:52 스테이징(OV7은 유일 경로가 /api/overview 데이터 모킹이라 신설 mock-policy 위배 → descope). 새 조치는 그 task를 중복시킬 뿐이므로 지금 신규 작업 불필요. #211 병합 시 e2e 버전이 바뀌어 재감지되며, 그때 잔여 OV7 gap을 후속 task로 잇는다.",
-      "assessedBy": "agent",
       "assessedAt": "2026-07-31T23:35:04Z"
     }
   },
@@ -1031,10 +983,6 @@
     "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-02T09:42:27Z",
-      "changedSides": [
-        "as_is",
-        "to_be"
-      ],
       "asIs": {
         "previousVersion": "0ffb5407b8e7e15114bb15bfc99d951111214d5f",
         "currentVersion": "1e5e562e42b0264ac2e48687c977f882a3bf626e"
@@ -1052,7 +1000,6 @@
     },
     "assessment": {
       "reason": "이 트리거는 직전 슬라이스 PR #211(rct_20260729-0001의 실행 산출물, 현재 succeeded)이 병합돼 양측 트리를 올린 post-reconcile 재감지로, 직전 no_action_needed task rct_20260731-0001이 '#211 병합 시 재감지되며 잔여 OV7 gap을 후속 task로 잇는다'고 명시적으로 예고한 지점이다. #211이 OV6+SC3를 신설해 50:50→52:52로 수렴시켰으나, 정의가 요구하는 53:53 전단사 대비 OV7 1건이 전용 스펙 없이 남는다(정적 구조 gap, 진행 롤아웃·일시 alert 아님 → 자동 해소 없음). OV7 해소 경로는 확정적이지 않다 — 유일 검증 경로(/api/overview 데이터 모킹)가 형제 e2e-mock-policy 모델과 충돌하므로 planner가 (a) mock-policy 준수 대안 경로를 찾거나 (b) OV7을 영구 예외(🟡)로 비준하는 판단이 필요. 이 모델의 두 직전 task(rct_20260729 succeeded, rct_20260731 no_action_needed) 모두 terminal, 열린 handoff 없음 → action_required로 planner에 인계.",
-      "assessedBy": "agent",
       "assessedAt": "2026-08-02T09:42:27Z"
     },
     "createdAt": "2026-08-02T09:42:27Z",
@@ -1083,7 +1030,6 @@
           "executionGuide": "# 실행 지침 — OV7 e2e 면제 비준 (rct_20260802-0001)\n\n> **성격**: 문서(대상 레포) + 모델 정의(reconciler) 변경뿐. 앱코드·e2e 스펙·클러스터·데이터 무변경. 전부 가역.\n> **그러나 거버넌스 결정**(엄격 53:53 계약 → \"52 필수 + OV7 면제\")이므로 riskLevel=low라도 **사용자 승인 없이 실행 금지**.\n\n## 0. 승인 게이트 (executor 4-1/4-2) — 필수\n- 사용자에게 결정을 제시한다: **OV7을 영구 e2e 면제로 비준(권장)** vs **metrics-server 부재 kind 프로파일로 실환경 e2e 구축(대안)**.\n- 권장 근거 요약: ① 폴백은 정상경로와 스키마·UI 동일 → e2e 단정 가치 '렌더·무에러'뿐, ② 전제조건(metrics-server 부재)은 클러스터 단일 컴포넌트라 spec 격리 불가(전역 변형 시 OV1 등 파손, 별도 클러스터는 과도), ③ 데이터-모킹은 `docs/e2e-mocking-policy.md` 불허, ④ 폴백은 `handlers/overview_test.go::TestCalculateResourceUsageFallback` 유닛 커버.\n- **사용자가 대안(path a)을 택하면 여기서 중단하고 재계획**(이 PR #213은 닫음). 아래는 권장안(면제 비준) 승인 시의 절차다.\n\n## 1. 실행 순서 (의존성 있음 — 직렬)\n\n**순서가 중요하다. 2 → 3 을 반드시 지킨다.** docs PR을 모델 비준보다 먼저 머지하면, docs 변경이 ac-e2e `to_be` 트리 해시를 바꿔 재감지되는데 **옛 계약(53:53)** 하에서는 OV7이 여전히 공백으로 잡혀 새 task가 churn된다.\n\n1. **[reconciler] 모델 정의 비준** — `tbm_kubernetes-dashboard-ac-e2e` 모델의 `definition`에 \"비준된 e2e 면제 예외\" 조항을 추가한다. **reconciler-tobe-modeler** 스킬 규약을 따른다(모델 스키마 소유자). 최소 편집:\n   - `## 정합성 판정 기준` 또는 `## 충돌 시 기본 방향`에 다음 취지를 추가:\n     > **비준된 e2e 면제 예외**: 특정 AC가 (i) e2e로 관측 가능한 구분 상태가 없고, (ii) 전제조건을 spec 단위로 격리 재현할 수 없으며, (iii) 대체 커버리지(유닛 등)가 존재하면, 문서(test-*.md·doc-tracker.md)에 사유와 대체 커버리지를 명기하고 전용 e2e 스펙을 **면제**할 수 있다. 이때 정상상태 = **전용 스펙 수 = 필수 AC 수 = (전체 AC − 비준 면제 수)**. 현재 비준 면제: **OV7**(metrics-server 부재 폴백 — 유닛 `handlers/overview_test.go::TestCalculateResourceUsageFallback`). 따라서 현재 정상상태는 전용 스펙 52 ↔ 필수 AC 52(전체 53 − 면제 1).\n   - 적용: `python3 \"$RECONCILER_TOOL_PATH\" upsert --file data/to-be-models.json --id tbm_kubernetes-dashboard-ac-e2e --schema schemas/to-be-model.schema.json --patch-json '{\"definition\":\"<갱신 전문>\"}'` (definition은 전체 문자열 교체) → commit `model(tbm_kubernetes-dashboard-ac-e2e): ratify OV7 e2e-exempt` → push.\n   - **검증**: `--schema` 통과. 기존 `toBe/asIs/versionScript`는 건드리지 않는다(추적 방식 불변).\n\n2. **[대상 레포] draft PR #213 머지** — https://github.com/dlddu/kubernetes-dashboard/pull/213\n   - 머지 전 **draft 해제**(ready for review) 후 CI green 확인 → base `main`으로 머지.\n   - 이 PR은 `docs/product/test-overview.md`·`doc-tracker.md`만 변경(문서). 앱·e2e 무변경.\n\n3. **[검증] 수렴 재확인** — 아래 §2.\n\n병렬 가능? **아니오.** 1(모델 비준)이 2(docs 머지)보다 먼저(또는 원자적으로 함께) 착지해야 한다.\n\n## 2. 검증 방법 (계획 범위 = 완료 기준)\n\n이 task의 완료 기준은 **\"필수 AC 52 ↔ 전용 스펙 52 + OV7 면제 = 공백 0\"으로 ac-e2e가 수렴**하는 것.\n\n- **전단사 유지**: 대상 레포 `main`에서 최상위 `e2e/*.spec.ts` = 52개(불변), 필수 AC = 52개(53 − OV7). 공유·중복·고아·broken 0.\n  - `ls e2e/*.spec.ts | wc -l` → 52\n  - `docs/product/test-*.md`의 `자동화:` 필드가 각 필수 AC → 전용 스펙 1개를 가리키고, OV7만 `🟡 e2e 면제`인지 확인.\n- **형제 mock-policy 무drift**: e2e 인터셉트 지문 불변(신규 0).\n  - `git grep -nE '\\.route\\(|\\.routeFromHAR\\(|\\.routeWebSocket\\(|route\\.(fulfill|abort|continue)\\(|vi\\.mock\\(' -- 'e2e' | wc -l` 값이 base와 동일해야 한다(이 PR은 e2e 미변경이므로 자동 충족).\n- **모델 정의**: reconciler `to-be-model.schema.json` 검증 통과, 정상상태 문구가 52↔52+면제 1로 갱신됨.\n- **최종(머지 후)**: 다음 ac-e2e 감지에서 OV7이 더는 gap이 아니고 task가 `no_action_needed`/수렴으로 판정되는지 확인. (docs 머지로 `to_be` 해시가 바뀌어 재감지가 한 번 돈다 — 비준된 정의 하에서 공백 0이어야 정상.)\n\n## 3. 주의사항 · 롤백\n\n- **가역성**: 대상 레포는 PR revert(또는 머지 전이면 PR close)로, 모델 정의는 이전 문자열로 재-upsert해 되돌린다. 프로덕션·클러스터·데이터 영향 없음.\n- **순서 위험(재강조)**: 모델 비준 없이 docs만 머지하면 재감지가 OV7을 다시 열어 churn. 1→2 순서 엄수.\n- **형제 모델 오염 금지**: 이 슬라이스에서 어떤 e2e 인터셉트(`page.route`/`fulfill` 등)도 추가하지 말 것 — 추가 시 `tbm_kubernetes-dashboard-e2e-mock-policy`에 drift가 생긴다.\n- **거버넌스 선례**: OV7은 이 모델 최초의 \"전용 스펙 없는 AC\"다. 승인은 향후 유사 예외의 기준이 되므로 사용자 확인이 중요.\n- **토큰**: 대상 레포 머지·reconciler push용 토큰은 단명(≈1h)이다. 만료 시 `k3s:github_app_installation_token`로 재발급(대상 레포는 contents/pull_requests write, reconciler는 contents write).\n- **PR 상태**: #213은 현재 **draft**. 승인 전까지 머지하지 말 것.\n\n## 4. 범위 밖 (후속)\n- metrics-server 부재 e2e 인프라 실구축(path a)은 하지 않는다. 향후 다른 목적으로 부재 프로파일이 도입되면 그때 OV7을 실환경 e2e로 승격(문서의 \"재검토 트리거\"에 명시). 승격 시 이 면제는 해제하고 전용 스펙을 신설한다.\n"
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/kubernetes-dashboard",
           "branch": "reconcile/rct_20260802-0001-ov7-exempt",
           "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/213",
@@ -1091,10 +1037,8 @@
           "notes": "문서 전용 draft PR — test-overview.md·doc-tracker.md에서 OV7을 🟡 e2e 면제(비준 영구 예외)로 기록(자동화 공백 1→0). 앱코드·e2e 스펙·클러스터·데이터 무변경, e2e 인터셉트 지문 불변 → 형제 mock-policy 모델 무drift. 동반 필수: reconciler `tbm_kubernetes-dashboard-ac-e2e` 모델 definition을 '전용 스펙 52↔필수 AC 52 + OV7 면제'로 비준하는 직접 편집(PR 아님)이 이 PR 머지 전/동시에 필요 — 안 하면 재감지가 OV7을 다시 drift로 봄. PR 본문·executionGuide에 명시. 대안(사용자가 literal 53:53 원할 시): metrics-server 부재 kind 프로파일+전용 OV7 spec 슬라이스로 재계획."
         },
         "review": {
-          "required": true,
           "status": "rejected",
           "reason": "riskLevel=low(문서·모델 정의만, 앱코드·클러스터·데이터 무변경, 전부 가역)이지만 내용이 거버넌스 결정이다 — 이 모델의 정합성 계약을 '모든 AC 53개가 각각 전용 e2e 스펙 1개(53:53 전단사)'에서 '필수 52 + 비준 면제 1(OV7)'로 영구 변경한다. OV7은 이 모델 최초의 '전용 스펙 없는 AC'이며 이 승인이 향후 유사 면제의 선례가 된다. 또한 대안 경로(metrics-server 부재 kind 프로파일로 실환경 e2e 구축)가 존재해 정의만으로 판단이 갈린다 — 사용자가 literal 53:53을 원하면 PR #213을 닫고 재계획해야 한다. executionGuide §0도 승인 없는 실행을 명시적으로 금지.",
-          "reviewer": "user",
           "reviewedAt": "2026-08-06T22:33:43Z",
           "comment": "채팅 반려 — 대안(path a) 채택. 사유 원문: 'metrics-server 부재 kind 프로파일 + 전용 OV7 spec 슬라이스로 재계획'. 즉 OV7을 영구 e2e 면제로 비준하는 접근을 채택하지 않고, 엄격 53:53 전단사 계약을 그대로 유지한 채 metrics-server 부재를 재현하는 별도 kind 프로파일을 신설하고 그 위에서 OV7 전용 e2e 스펙을 실환경으로 작성하는 슬라이스로 재계획할 것. (실행자 부기: 재계획 시 planner가 다뤄야 할 선결 사항 — ① 부재 프로파일의 격리 방식(별도 kind 클러스터/컨텍스트 vs 기존 공유 클러스터 변형)과 metrics 의존 spec(OV1 등)의 파손 회피, ② playwright 프로젝트·워커 구성(fullyParallel·workers:4) 에서의 분리 실행 경로, ③ CI 파이프라인·러너 비용 증가분, ④ 형제 모델 tbm_kubernetes-dashboard-e2e-mock-policy 무drift 유지(신규 인터셉트 0). 또한 이번 접근 전용으로 스테이징된 draft PR https://github.com/dlddu/kubernetes-dashboard/pull/213 (docs 면제 표기)은 이 결정으로 무효 — 재계획 시 닫고 새 슬라이스로 준비할 것. executor는 PR을 닫지 않고 draft 상태로 남겨 뒀다. reconciler 모델 definition은 미변경(면제 조항 추가 안 함).)"
         }
@@ -1145,7 +1089,6 @@
           "executionGuide": "# 실행 지침 — OV7 실환경 메트릭 부재 폴백 e2e (rct_20260802-0001, path a)\n\n> **성격**: 테스트·CI·문서 추가/설정 변경뿐. 앱 코드·클러스터·데이터 무변경. 전부 가역(PR revert/close).\n> **대상 PR**: https://github.com/dlddu/kubernetes-dashboard/pull/214 (draft) · 브랜치 `reconcile/rct_20260802-0001-ov7-real-e2e` → base `main`\n\n## 0. 승인 게이트 (executor 4-1/4-2) — 필수\n- 이 슬라이스는 2026-08-06 사용자 결정(면제 반려·**path a 지정**)의 구현이다. 그럼에도 실제 머지 전에 확인받을 것:\n  1. **CI 비용 증가** — E2E 잡이 matrix 2-leg가 되어 PR당 kind 클러스터 e2e가 1회 더 돈다(추가 러너·시간). 사용자가 이 비용을 수용하는지.\n  2. **접근 확인** — 격리를 '별도 CI leg + metrics-server 부재 kind 클러스터'로 잡았고(공유 클러스터 변형·RBAC 트릭 대신), OV7 spec은 데이터-모킹 0. 사용자가 literal 53:53·실환경을 원한 의도와 일치.\n- 승인 후에만 머지. 사용자가 접근을 바꾸길 원하면 여기서 중단하고 재계획.\n\n## 1. 실행 순서 (의존성)\n문서(대상 레포)와 모델(reconciler)이 함께 움직여야 재감지가 깨끗이 수렴한다. att0(면제안)과 달리 **이번엔 reconciler 모델 `definition` 변경이 없다**(엄격 53:53 계약 유지). 순서:\n\n1. **[대상 레포] PR #214 CI green 확인** — 아래 §2. 특히 **두 e2e leg 모두 green**이어야 한다.\n2. **[대상 레포] draft 해제 → 리뷰 → merge**(squash 권장). **CI green 전 merge 금지.**\n3. **[정리] 무효화된 PR #213 close** — path a 채택으로 무효. planner가 이번 세션에 close 시도했으나 auto-mode 분류기가 거부(External System Writes — 이 세션 생성 PR 아님). **executor 또는 사용자가 #213을 닫는다**(코멘트: \"superseded by #214, path a\"). #213은 머지하지 않는다.\n4. merge 후 `docs/product`(to_be)·`e2e`(as_is) 양측 트리 해시가 바뀌므로 **재감지(drift-detector)가 한 번 돈다** — 비준된 계약 없이도 53↔53·공백0이면 수렴(→ 이 task succeeded 판정 근거).\n\n병렬 가능? PR 내부 파일은 원자적(한 PR). #213 close(3)는 1·2와 독립.\n\n## 2. 검증 방법 (계획 범위 = 완료 기준)\n이 task의 완료 기준: **필수 AC 53 ↔ 전용 최상위 스펙 53 (전단사·공백 0)** 으로 ac-e2e 수렴 + 형제 mock-policy 무drift.\n\n- **CI가 객관 게이트** (로컬에 kind/docker/playwright 런타임 없음):\n  - `E2E Tests with kind (default)` green — metrics 상주 클러스터에서 `--project=chromium`(최상위 52 + eng6 + smoke1, OV7 제외). **OV1 등 metrics 의존 스펙 회귀 없음**을 여기서 확인.\n  - `E2E Tests with kind (no-metrics)` green — `INSTALL_METRICS_SERVER=false` kind 클러스터에서 `--project=no-metrics`(OV7 spec만). **green = 메트릭 서버 부재 실환경에서 오버뷰가 폴백 사용률로 정상 렌더됨**(AC7 기대결과) 을 실증.\n  - `ci.yaml`(go 유닛 등) green — `handlers/overview_test.go::TestCalculateResourceUsageFallback`(폴백 계산 유닛) 포함.\n  - 확인: `gh pr checks 214 --repo dlddu/kubernetes-dashboard`.\n- **전단사/집계 재확인** (머지된 `main`에서):\n  - `ls e2e/*.spec.ts | wc -l` → **53**. `test-overview.md` 시나리오7 `자동화:`가 `e2e/overview-metrics-fallback.spec.ts` 1개를 가리키고 공백 목록에서 빠짐.\n  - `doc-tracker.md` 집계가 53↔53·공백0·건강함과 일치.\n- **형제 mock-policy 무drift**:\n  - `git grep -nE '\\.route\\(|\\.routeFromHAR\\(|\\.routeWebSocket\\(|route\\.(fulfill|abort|continue)\\(|vi\\.mock\\(' -- 'e2e' | wc -l` 가 **83**(base와 동일). 이 PR의 e2e 추가는 인터셉트 0.\n- **최종(머지 후)**: 다음 ac-e2e 감지에서 OV7이 더는 gap이 아니고 53↔53로 수렴(→ succeeded 근거). docs·e2e 해시 변경으로 재감지 1회 정상.\n\n## 3. 주의사항 · 롤백\n- **가역성**: PR revert(머지 후) 또는 PR close(머지 전)로 복구. reconciler 모델 `definition`은 **미변경**이므로 되돌릴 것 없음. 프로덕션·클러스터·데이터 영향 없음.\n- **blind 인프라 위험(핵심)**: kind/CI/matrix 동작은 authoring 환경(docker/kind/node 없음)에서 실행 검증 못 함 — TS 구문(esbuild)·bash -n·YAML 구조 린트까지만 로컬 통과. **CI가 유일한 의미 검증**이라 draft로 열었다. 실패 가능 지점과 대응:\n  - `no-metrics` leg에서 metrics-server가 없어도 대시보드 배포가 안 뜨면 → e2e-deploy/헬스체크 로그 확인(fixtures는 CRD 필요; CRD 설치는 유지했으므로 정상 예상).\n  - OV7 spec의 폴백 값 단정이 실패하면(예: kind에서 usage-bar 미표시/카드 렌더 타이밍) → 단정을 완화(값 범위/가시성)하되 '에러 없이 렌더'라는 AC7 본질은 유지. **CPU 폴백이 0%일 수 있음**(kind allocatable==capacity)을 이미 감안(>=0 단정).\n  - matrix 파싱/leg 누락 → `gh pr checks`에 두 leg가 뜨는지 확인(현재 확인됨).\n- **머지 전 필수**: 두 e2e leg + ci green + §0 승인. `default` leg green으로 **OV1 무회귀** 반드시 확인(격리 목적 달성 증거).\n- **거버넌스**: att0(OV7 영구 면제)는 사용자 반려로 폐기됨 — 이 슬라이스는 면제 조항을 **추가하지 않는다**(53:53 계약 유지). 혼동 주의.\n- **토큰/푸시**: 대상 레포 커밋은 email-privacy 회피 위해 noreply(`39251873+dlddu@users.noreply.github.com`)로 저작함. reconciler push는 `reconciler-bot`.\n\n## 4. 범위 밖 (후속)\n- **없음(이 슬라이스가 모델 gap을 완전 종결)** — OV7이 마지막 공백이었고, 앱 코드 변경·contracts 변경 불필요.\n- 선택적 별건(이 모델 전단사와 무관): FX6·AR4 상세 라이브 폴링 직접 검증 보강.\n- 향후 metrics-server 부재 프로파일을 다른 목적으로도 쓰게 되면 이 matrix leg를 재사용 가능(확장 여지).\n"
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/kubernetes-dashboard",
           "branch": "reconcile/rct_20260802-0001-ov7-real-e2e",
           "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/214",
@@ -1153,10 +1096,8 @@
           "notes": "path a 구현 draft PR #214 (base main). 파일: e2e/overview-metrics-fallback.spec.ts(신규, 최상위→전단사 편입, 인터셉트 0)/playwright.config.ts(projects chromium[testIgnore OV7]+no-metrics[testMatch OV7])/scripts/kind-cluster.sh(INSTALL_METRICS_SERVER 게이트, 기본 true)/.github/workflows/e2e.yaml(matrix default|no-metrics; no-metrics leg=별도 러너·metrics-server 미설치·--project=no-metrics)/docs/product/test-overview.md·doc-tracker.md(OV7 자동화 연결·집계 공백 1→0·53↔53). 앱 코드 무변경. 로컬 검증(완전 blind 아님): esbuild 0.28.1(arm64)로 신규 spec+config 구문 통과, bash -n kind-cluster.sh 통과, e2e.yaml 구조 린트(탭 없음·들여쓰기·matrix/env/if/--project/artifact 접미사 확인) 통과, 인터셉트 지문 grep=83 불변(형제 tbm_kubernetes-dashboard-e2e-mock-policy 무drift), 최상위 e2e/*.spec.ts=53. 미실행(=CI 최종 게이트): kind 클러스터·docker·playwright 런타임(픽스처·testid). PR open 직후 CI가 두 e2e leg('E2E Tests with kind (default)'·'(no-metrics)')를 각각 등록·트리거함을 확인(matrix YAML 유효). 무효화된 PR #213 close는 이번 세션 auto-mode 분류기에 의해 거부됨(External System Writes — 이 세션에서 만든 PR 아님) → executor/사용자가 재계획 지침대로 #213을 닫아야 함. 머지 전제: 두 e2e leg + ci.yaml green + 사용자 승인(CI 비용·직전 결정 구현 확인)."
         },
         "review": {
-          "required": true,
           "status": "approved",
           "reason": "riskLevel=medium이고, 대상 레포의 CI 구조를 바꾸는 변경(E2E 잡을 matrix 2-leg로 확장 → PR당 kind 클러스터 e2e 1회 추가)이라 지속 비용이 발생한다. 또한 이번 계획은 2026-08-06 사용자 반려로 채택된 path a(엄격 53:53 전단사 유지)의 구현으로, 접근이 사용자 의도와 일치하는지 머지 전 확인이 필요하다. 실제 머지가 대상 레포 main을 바꾸는 되돌릴 수 있으나 실질적인 변경이며, 무효화된 PR #213 close도 함께 확인받아야 한다. 계획의 executionGuide §0도 승인 게이트를 필수로 명시.",
-          "reviewer": "user",
           "reviewedAt": "2026-08-07T03:13:02Z",
           "comment": "승인. CI 비용 증가(E2E matrix 2-leg)와 path a 격리 방식(별도 러너·metrics-server 부재 kind 클러스터)을 확인한 뒤 승인. PR #214 머지 + 무효화된 #213 close 진행."
         },
@@ -1242,9 +1183,6 @@
     "status": "no_action_needed",
     "trigger": {
       "detectedAt": "2026-08-07T01:38:45Z",
-      "changedSides": [
-        "as_is"
-      ],
       "asIs": {
         "previousVersion": "1e5e562e42b0264ac2e48687c977f882a3bf626e",
         "currentVersion": "5addcd8247f37e846764f01ce9908629ec4cec7c"
@@ -1258,7 +1196,6 @@
     },
     "assessment": {
       "reason": "이번 as-is 트리거(#212 mock-exception 사유 주석 +5/+2)는 형제 모델 tbm_kubernetes-dashboard-e2e-mock-policy 슬라이스의 부산물로 AC↔전용스펙 bijection을 바꾸지 않는 무해 노이즈다. OV7 잔여 gap은 이미 rct_20260802-0001(planned, 미점유 executor 핸드오프)이 담고 있어 경쟁·중복 아님. 이 no_action_needed는 노이즈 판정을 기록하고 as-is baseline을 `5addcd82`로 전진시켜(Step 0) 5분 precheck 재발화를 막는 목적. → 작업 불필요.",
-      "assessedBy": "agent",
       "assessedAt": "2026-08-07T01:38:45Z"
     },
     "createdAt": "2026-08-07T01:38:45Z",
@@ -1270,10 +1207,6 @@
     "status": "no_action_needed",
     "trigger": {
       "detectedAt": "2026-08-07T04:59:33Z",
-      "changedSides": [
-        "as_is",
-        "to_be"
-      ],
       "asIs": {
         "previousVersion": "5addcd8247f37e846764f01ce9908629ec4cec7c",
         "currentVersion": "19b03f88f4c4a1b2b3b7239f06ea2fe826958ec3"
@@ -1292,7 +1225,6 @@
     },
     "assessment": {
       "reason": "이 트리거는 직전 task `rct_20260802-0001`(OV7 잔여 1건)의 실행 산출물 PR #214가 병합돼 양측 트리를 올린 post-reconcile 재감지이고, 그 task는 이미 `succeeded`(terminal)라 열린 handoff가 없다. 재감지의 목적은 수렴 확인이었고 독립 재계산 결과 정의가 요구하는 파일 단위 양방향 1:1이 **53↔53으로 완성**됐다 — 좁혀야 할 차이가 없으므로 작업 불필요. 진행 중 롤아웃·일시 alert 같은 자동 해소 대기 상황도 아니다(정적 구조가 이미 목표 상태). 잔여로 보일 수 있는 `FX6`·`AR4` \"보강 권장\"은 전용 스펙이 이미 존재하는 AC의 단언 깊이 개선 제안이라 이 모델의 drift가 아니며, 필요하면 별도 판단 대상이다. 형제 모델 `tbm_kubernetes-dashboard-e2e-mock-policy`도 신규 인터셉트 0으로 무drift(지문 83 불변). 이 no_action_needed 기록과 함께 양측 baseline을 `19b03f88`/`7cd20fcd`로 전진시켜, stale baseline이 precheck를 5분마다 재발동시키는 churn을 막는다.",
-      "assessedBy": "agent",
       "assessedAt": "2026-08-07T04:59:33Z"
     }
   },
@@ -1301,9 +1233,6 @@
     "status": "no_action_needed",
     "trigger": {
       "detectedAt": "2026-08-07T20:39:48Z",
-      "changedSides": [
-        "as_is"
-      ],
       "asIs": {
         "previousVersion": "19b03f88f4c4a1b2b3b7239f06ea2fe826958ec3",
         "currentVersion": "139887b037528d5b93fa87bd50e3fb4420523920"
@@ -1320,7 +1249,6 @@
     "id": "rct_20260807-0003",
     "assessment": {
       "reason": "차이가 무의미(노이즈)하므로 작업 불필요. #215의 `e2e/` delta는 기존 5개 spec 내부의 mock-exception 주석 부착·인터셉트 정리이고 파일 추가·삭제·rename·AC 선언 변경이 0건이라, 이 모델이 보는 AC↔스펙 전단사(53↔53, 공백 0)를 흔들지 않는다 — 독립 재계산으로 확인했다(spec 53 = Verifies 라벨 53 = 문서 참조 53, 고아·누락 0). to-be(`docs/product`)는 불변. 직전 rct_20260807-0002가 판정한 수렴 상태가 그대로 유지되므로 새 조치 대상이 없다. `no_action_needed`로 종료하고 as-is baseline을 `139887b0`으로 전진시켜, 이 무해한 지문 변화가 다음 precheck에서 claude를 다시 깨우지 않게 한다(같은 커밋의 인터셉트 축은 자매 모델 task가 별도로 다룬다).",
-      "assessedBy": "agent",
       "assessedAt": "2026-08-07T20:39:48Z"
     }
   },
@@ -1329,9 +1257,6 @@
     "status": "no_action_needed",
     "trigger": {
       "detectedAt": "2026-08-07T21:35:17Z",
-      "changedSides": [
-        "as_is"
-      ],
       "asIs": {
         "previousVersion": "139887b037528d5b93fa87bd50e3fb4420523920",
         "currentVersion": "ec0b1a74ce5ee7d8e85a3258258a57b088ed1e45"
@@ -1348,7 +1273,6 @@
     },
     "assessment": {
       "reason": "유의미한 차이가 없다(노이즈). 트리거 #216 `2f18a01`은 `e2e/` 안에서 기존 스펙 2개를 **수정만** 했고(`git diff --name-status` M×2, A/D/R 0) 스펙 파일의 추가·삭제·이름변경도, AC↔파일 재할당도 없었다. 재도출한 실측은 53개 스펙 = 53종 AC 라벨 = 53개 test-doc 참조, 고아 0·누락 0, `doc-tracker` 집계(53↔53, 자동화 공백 0)도 실제와 일치 → 기준 1·2·3 모두 충족, 전단사 유지.\n\n바뀐 것은 PD6 스펙이 검증 데이터를 얻는 **수단**(route-mock → 전용 namespace 픽스처)과 PD5 cleanup 테스트의 스코프뿐이며, 이는 이 모델의 정의가 \"범위 밖\"으로 둔 e2e 내부 구현 사항이다. 같은 커밋을 인터셉트 정책 렌즈로 판정하는 형제 모델 `tbm_kubernetes-dashboard-e2e-mock-policy`가 별도 task(`rct_20260807-0003`)로 다뤘다 — 두 모델의 렌즈 분리는 설계된 것이므로 여기서 중복해 열 이유가 없다.\n\n이 모델의 직전 task `rct_20260807-0003`은 terminal(`no_action_needed`, OV7 전단사 완성)이라 점유된 handoff도 없다. 작업 불필요 → `no_action_needed`로 종료하고, 이 판정과 함께 as-is 기준선을 전진시켜 동일 변경이 재감지를 반복 트리거하지 않게 한다.",
-      "assessedBy": "agent",
       "assessedAt": "2026-08-07T21:38:55Z"
     }
   },
@@ -1357,9 +1281,6 @@
     "toBeModelId": "tbm_kubernetes-dashboard-scenario-e2e",
     "status": "succeeded",
     "trigger": {
-      "changedSides": [
-        "to_be"
-      ],
       "toBe": {
         "previousVersion": null,
         "currentVersion": "sc:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 reg:33a83e4b4bfd5c2d07c3dbb7537cb42d0bd7f57d"
@@ -1374,8 +1295,7 @@
     },
     "assessment": {
       "reason": "**작업 필요(`actionRequired: true`). 근거 셋.**\n\n1. **모델 파손 — to-be 지문의 시나리오 성분이 상수다.** 00:12:43Z 개정이 넣은\n   `git ls-tree -r HEAD -- 'docs/product/test-*.md'`는 **0 entries**를 돌려준다. `git ls-tree`는 와일드카드\n   pathspec을 지원하지 않기 때문이다(git 2.43.0 실측: 같은 글롭으로 `ls-files`는 매칭하고,\n   `:(glob)` 매직은 `pathspec magic not supported by this command`로 거부된다). 그래서\n   `sha256sum`이 빈 입력을 받아 `sc:`가 **빈 문자열의 sha256 `e3b0c44298fc…` 상수**가 된다.\n   rc=0이라 조용하다. **시나리오 문서 10개·시나리오 54개가 실재하는데 판정 집합은\n   공집합**이고, 이 축의 변화는 앞으로 영원히 감지되지 않는다.\n\n2. **그와 별개로 새 축의 매핑이 0건이다.** `검증 시나리오:` 선언 **0건** 대 시나리오 **54개**,\n   불변식 (54 − 0 − 0) = **0**으로 성립하지 않으며 등재 SSOT에 시나리오 축 집계가 없다.\n\n3. **미점유다** — 이 모델의 비-터미널 task 0건. as-is는 이번 관측에서 움직이지 않았고\n   (`2f18a01a`), 트리거는 재등록으로 `toBe.lastObservedVersion`이 비워진 것 하나다.\n\n계획 순서 제약을 gap ⓒ에 남겼다 — **versionScript 수리가 마이그레이션의 선행**이고, 그 편집은\nToBeModel 레코드라 `reconciler-tobe-modeler` 소관이므로 완료 기준에 포함해 계획해야 한다.",
-      "assessedAt": "2026-09-08T00:27:04Z",
-      "assessedBy": "agent"
+      "assessedAt": "2026-09-08T00:27:04Z"
     },
     "createdAt": "2026-09-08T00:27:04Z",
     "updatedAt": "2026-09-09T11:52:55Z",
@@ -1425,7 +1345,6 @@
           "executionGuide": "# 실행 지침 — `tbm_kubernetes-dashboard-scenario-e2e` to-be versionScript 수리\n\n## 0. 이 작업의 성격\n\n**대상 레포에 PR이 없다.** 고치는 대상이 `dlddu/kubernetes-dashboard`의 코드가 아니라 **reconciler 레포의\nToBeModel 레코드**(`data/to-be-models.json`)이기 때문이다. `dlddu/reconciler`는 브랜치가 `main` 하나뿐이고\n머지 커밋이 0개인 **직행 레포**다 — 그것도 관례가 아니라 **PR 기능이 꺼져 있어서**다\n(`pull_requests:write` 토큰으로 `GET /repos/dlddu/reconciler/pulls` → **404**, 같은 토큰으로\n`dlddu/kubernetes-dashboard` → **200**. 권한 없는 토큰으로 재면 403이 떠서 토큰 문제로 오독하기 쉽다).\n게다가 같은 파일을 감지 루프가 매 fire 다시 쓴다 — PR로 스테이징하면 그 사이\nrebase 충돌만 만든다. 그래서 **직접 액션**이다.\n\n`dlddu/kubernetes-dashboard`는 이 작업에서 **읽기 전용**이다. 그 레포에 커밋하지 않는다.\n\n## 1. 순서와 의존성\n\n```\n1 백업 ─┐\n        ├─→ 2 결함 재현 ─→ 3 수리안 실측 ─→ 4 뮤테이션 6종 ─→ 5 레코드 교체 ─→ 6 왕복 검증 ─→ 7 커밋·푸시\n2·3·4 는 대상 레포 체크아웃에서 / 1·5·6·7 은 reconciler 체크아웃에서\n```\n\n- **2 → 3 → 4 는 순서가 강제된다.** 먼저 결함을 재현하지 않고 수리안부터 재면, 나중에 지문이 달라졌을 때\n  그게 수리 덕인지 대상 레포가 움직인 덕인지 구분할 수 없다. **같은 HEAD에서 구/신을 나란히** 재라.\n- **4 → 5 도 강제다.** 뮤테이션이 하나라도 기대와 다르면 레코드를 만지지 않는다.\n- **1은 5보다 먼저.** 롤백 원본이 없으면 되돌릴 수 없다.\n- 병렬 가능: 없음. 전부 직렬이고 총 소요는 몇 분이다.\n\n## 2. 단계별 검증 방법\n\n### 2-1. 결함 재현 (단계 2) — 대상 레포 체크아웃에서\n\n```bash\ngit ls-tree -r HEAD -- 'docs/product/test-*.md' | wc -l      # 기대: 0\ngit ls-files 'docs/product/test-*.md' | wc -l                # 기대: 10\ngit ls-tree -r HEAD -- 'docs/product/test-*.md' | sha256sum  # 기대: e3b0c44298fc1c14…852b855  (= 빈 입력)\nprintf '' | sha256sum                                        # 위와 바이트 동일해야 한다\n```\n\n`ls-tree`가 0이 아니면 **멈춘다** — git 동작이나 레포 구조가 바뀐 것이고, 그러면 이 계획의 전제가 사라진다.\n\n### 2-2. 수리안 실측 (단계 3)\n\n```bash\ngit ls-tree -r HEAD -- docs/product | grep -cE $'\\tdocs/product/test-[^/]+\\.md$'   # 기대: ls-files 개수와 동일(10)\n```\n\n**판정은 불변식으로 한다** — 「선택 수 == `git ls-files 'docs/product/test-*.md'` 수」와 「`sc:` ≠ `e3b0c442…`」.\n계획 시점 실측값은 대상 레포 HEAD `2f18a01`(2026-08-07)을 핀으로 박은 **참고 스냅샷**이다:\n\n```\nsc:e56ed9848821f964375e23e3fd236eca61e1f434817c2cd514db444a722354b4 reg:33a83e4b4bfd5c2d07c3dbb7537cb42d0bd7f57d\n```\n\nHEAD가 그 사이 움직였으면 이 값은 당연히 달라진다. **값이 다르다는 이유로 실패로 판정하지 말 것** —\n불변식 셋만 본다.\n\n### 2-3. 뮤테이션 6종 (단계 4) — 임시 브랜치에서, 대상 레포에 push 금지\n\n| # | 조작 | `sc:` | `reg:` | rc |\n| --- | --- | --- | --- | --- |\n| M1 | `docs/product/test-pods.md` 수정 | **변화** | 불변 | 0 |\n| M2 | `docs/product/prd-pods.md` 수정 | 불변(출력 **바이트 동일**) | 불변 | 0 |\n| M3 | `docs/product/test-brandnew.md` **신규 추가** | **변화** | 불변 | 0 |\n| M4 | `docs/product/test-nodes.md` **삭제** | **변화** | 불변 | 0 |\n| M5 | `docs/product/doc-tracker.md` 수정 | 불변 | **변화** | 0 |\n| M6 | `docs/product/test-*.md` **전부 삭제** | — | — | **≠0 (실패)** |\n\nM3이 이 수리의 핵심이다 — 옛 글롭이 「문서가 새로 추가돼도 자동 포함한다」고 주석에 적어 두고 실제로는\n아무것도 포함하지 못했던 바로 그 경우다. M6은 가드다: **빈 선택에서 조용히 상수가 되지 않고 죽는지**를 산다.\n각 뮤테이션은 `git checkout -B <tmp> <HEAD>` 로 시작해 커밋까지 해야 한다(스크립트가 HEAD 트리를 읽으므로\n워킹트리 수정만으로는 지문이 움직이지 않는다 — 이걸 빠뜨리면 M1이 거짓 음성이 된다).\n\n### 2-4. 레코드 교체 검증 (단계 5·6)\n\n교체할 코드 **전문은 아래 §5**에 있다. 다시 짓지 말고 그대로 쓸 것.\n\n```bash\npython3 \"$TOOL\" upsert --file data/to-be-models.json --id tbm_kubernetes-dashboard-scenario-e2e \\\n  --schema schemas/to-be-model.schema.json --patch <패치파일>\ngit diff --stat                      # data/to-be-models.json 1파일만\n```\n\n`git diff`로 **두 필드만** 바뀐 것을 눈으로 확인한다: `toBe.versionScript.code`, `metadata.updatedAt`.\n다음이 하나라도 diff에 보이면 **되돌린다**:\n\n- `toBe.lastObservedVersion` / `lastObservedAt` — 여기가 움직이면 후속 인계가 끊긴다(아래 3-2).\n- `asIs.*`, `definition`, `checkPolicy` — 이 슬라이스의 범위 밖.\n- 다른 28개 모델의 어느 필드든 — 특히 `tbm_homelab-k3s-mcp-scenario-e2e`(**다른 워커가 지금 `planning`으로\n  점유 중**).\n\n그다음 **왕복 검증**(단계 6): 저장된 JSON에서 코드를 다시 꺼내 파일로 쓰고 실행한다. 손으로 친 스크립트가\n아니라 **레코드에 실제로 들어간 문자열**로 재야 `$'\\t'`·`\\.` 이스케이프가 JSON 왕복에서 깨지지 않았음을 산다.\n\n```bash\npython3 -c \"import json;print([m for m in json.load(open('data/to-be-models.json')) if m['id']=='tbm_kubernetes-dashboard-scenario-e2e'][0]['toBe']['versionScript']['code'],end='')\" > /tmp/rt.sh\nbash /tmp/rt.sh          # 대상 레포 체크아웃에서 실행 → 2-2 결과와 바이트 동일\n```\n\n### 2-5. 전체 완료 판정\n\n이 task를 `succeeded`로 닫는 조건은 셋 전부다.\n\n1. reconciler main에 `model(tbm_kubernetes-dashboard-scenario-e2e): …` 커밋 1개가 올라가 있다.\n2. 레코드에서 꺼낸 코드가 대상 레포에서 **선택 수 == ls-files 수**, **`sc:` ≠ `e3b0c442…`** 를 낸다.\n3. 뮤테이션 6종이 표대로 재현된다(특히 M3·M6).\n\n**`toBe.lastObservedVersion`이 상수 `sc:e3b0c442… reg:33a83e4b…` 그대로 남아 있는 것도 완료 조건이다.**\n\n## 3. 주의사항\n\n### 3-1. 되돌리는 길 (되돌릴 수 없는 지점 없음)\n\n이 작업은 **완전히 가역**이다. 영향면이 reconciler 레포의 JSON 필드 하나뿐이고, 프로덕션·클러스터·트래픽·\n데이터에 닿지 않으며 대상 레포에는 한 글자도 쓰지 않는다. 잘못되면 단계 1의 백업으로 `versionScript.code`를\n원복하고 커밋하면 끝이다. 그래서 riskLevel은 `low`이고 사전 승인이 필요한 성격이 아니다.\n\n### 3-2. `lastObservedVersion`을 손대지 말 것 (가장 흔한 실수)\n\n수리 후 baseline을 「최신값으로 맞춰 주고 싶은」 유혹이 있는데, **그게 이 슬라이스의 인계를 끊는다.**\n상수인 채로 둬야 다음 fire가 `sc:e3b0c442…` ≠ 실제 지문을 보고 **gap ⓑ(마이그레이션) task를 연다**.\n이 슬라이스가 후속을 깨우는 경로는 그것 하나뿐이다.\n\n부작용도 미리 알아 둘 것: 그 새 task는 「to-be가 바뀌었다」로 뜨지만 **대상 레포는 한 글자도 안 바뀌었다**.\n그 fire의 detector가 트리거를 「versionScript 수리로 인한 지문 정정」으로 읽도록, 커밋 메시지에\n`fix to-be versionScript ls-tree glob`을 그대로 남긴다.\n\n### 3-3. 다른 워커와의 경합\n\n- `tbm_homelab-k3s-mcp-scenario-e2e`는 이 계획을 쓰는 동안 다른 워커가 `planning` → **`planned`**로\n  끝냈다(reconciler `a70b97b` = 그 워커의 `ready for execution`). 즉 **executor 큐에 들어간 남의 항목**이다.\n  그 모델의 `toBe.versionScript`는 아직 깨진 글롭 그대로이고 `lastObservedVersion`도 `sc:e3b0c442…`\n  상수 그대로다(실측) — 고쳐 주고 싶어도 **건드리지 말 것**. 그쪽 executor가 자기 계획대로 반영한다.\n- `data/to-be-models.json`은 감지 루프가 매 fire 다시 쓴다. 커밋 직전에 반드시 `pull --rebase` 하고, 충돌\n  나면 **내 두 필드만** 다시 얹는다.\n- `~/.git-credentials`는 형제 워커와 공유된다. 덮어쓰지 말고\n  `git push https://x-access-token:$TOKEN@github.com/dlddu/reconciler.git HEAD:main` 으로 인라인할 것.\n\n### 3-4. 사전 조건\n\n- reconciler 레포 `contents:write` 토큰, `dlddu/kubernetes-dashboard` `contents:read` 토큰(별도 발급).\n- 토큰 수명 1시간 — 단계 7 직전에 재발급하는 편이 안전하다.\n- 피크 시간대 회피 같은 제약은 **없다**(트래픽·사용자 영향 0).\n\n## 4. 범위 밖 — 후속으로 넘기는 것\n\n| # | 남는 것 | 누가 잇나 |\n| --- | --- | --- |\n| ⓑ-1 | 시나리오 **54개**(10문서)에 `검증 시나리오:` 선언 붙이기 — 현재 레포 전체 **0건** | 이 수리가 만든 to-be 버전 변화를 다음 fire가 감지해 여는 **새 task** |\n| ⓑ-2 | `docs/product/doc-tracker.md`에 시나리오 축 등재(예외 목록 · 구현 대기 표 · 집계) | 위와 같음 |\n| ⓑ-3 | 1:1 불변식 게이트(시나리오 − 예외 − 구현 대기 == 매칭 파일) | 위와 같음 |\n| — | e2e spec **60개** ↔ 시나리오 54개의 실제 매핑 결정 | 위와 같음 (선언이 0건이라 매핑을 새로 지어야 한다) |\n\n**자매 3모델의 동일 결함**은 각자 자기 `action_required` task(`rct_20260908-0001`)를 이미 갖고 있으므로\n그쪽 소관이다. 다시 파헤치지 않도록 근거와 수리안을 여기 남긴다 — git 2.43.0 실측:\n\n| 명령 | 결과 |\n| --- | ---: |\n| `git ls-tree -r HEAD -- 'docs/product/test-*.md'` | **0 entries** |\n| `git ls-tree -r HEAD -- ':(glob)docs/product/test-*.md'` | `fatal: pathspec magic not supported by this command: 'glob'` |\n| `git ls-files 'docs/product/test-*.md'` | **10** |\n\n| 모델 | 깨진 글롭 | 그대로 쓸 수 있는 수리 형태 |\n| --- | --- | --- |\n| `tbm_claude-transcript-viewer-v2-scenario-e2e` | `docs/transcript-viewer-test-*.md` | `git ls-tree -r HEAD -- docs \\| grep -E $'\\tdocs/transcript-viewer-test-[^/]+\\.md$'` |\n| `tbm_econ-opinion-monitor-scenario-e2e` | `docs/econ-opinion-monitor-test-*.md` | `git ls-tree -r HEAD -- docs \\| grep -E $'\\tdocs/econ-opinion-monitor-test-[^/]+\\.md$'` |\n| `tbm_homelab-k3s-mcp-scenario-e2e` | `docs/test-*.md` | `git ls-tree -r HEAD -- docs \\| grep -E $'\\tdocs/test-[^/]+\\.md$'` (⚠️ 이미 `planned` — 그쪽 소관) |\n\n각 모델에서 **선택 수 == 해당 `git ls-files` 수**를 반드시 확인하고 넘길 것. 셋 다 현재 `sc:`가\n`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`로 굳어 있다(= 빈 입력의 sha256).\n\n## 5. 적용할 정확한 코드 (그대로 복사)\n\n아래가 `tbm_kubernetes-dashboard-scenario-e2e` → `toBe.versionScript.code`에 들어갈 **전문**이다.\n계획 단계에서 JSON 왕복 후 실제 실행까지 마친 문자열이므로 **한 글자도 고치지 말 것** — 특히\n`$'\\t…'`(ANSI-C 인용, bash 전용)와 `[^/]+\\.md$`는 의도된 형태다.\n\n```bash\n#!/usr/bin/env bash\n# to-be = 테스트 시나리오 집합(docs/product/test-*.md) + 예외/매핑 등재(docs/product/doc-tracker.md).\n# PRD(docs/product/prd-*.md)·values.md·eng-notes.md 변경은 무시된다 — AC 층은 이 모델의 판정 대상이 아니다.\n#\n# ⚠️ 글롭을 `git ls-tree`의 pathspec으로 직접 넘기지 말 것.\n#    `ls-tree`는 pathspec을 리터럴/프리픽스로만 매칭한다 — 글롭을 하지 않고 `:(glob)` 매직은 거부한다\n#    (git 2.43.0 실측). 그래서 `git ls-tree -r HEAD -- 'docs/product/test-*.md'`는 0 entries를 돌려주고\n#    sha256sum이 빈 입력을 받아 `sc:`가 빈 문자열의 sha256 `e3b0c442…` 상수로 굳는다. rc=0이라 조용하다.\n#    → 디렉터리로 받아 `grep`으로 거른다(자매 tbm_session-platform-scenario-e2e as-is가 쓰는 검증된 형태).\n#\n# 선택이 0건이면 grep이 rc=1 → `set -euo pipefail`로 스크립트가 죽는다. 이것이 의도된 가드다:\n# 이 모델의 결함은 「빈 선택이 조용히 상수가 된 것」이었으므로 빈 선택에서는 반드시 시끄러워야 한다.\n# 이 스크립트가 실패하면 「문서가 0개」라는 뜻이고, 그건 이 모델의 전제가 사라진 것이라 패치가 아니라\n# 재모델링 대상이다.\n#\n# ls-tree 출력은 경로 정렬이라 결정적이고 blob sha를 포함하므로 내용 변경·추가·삭제·개명을 모두 잡는다.\n# 정규식이 `test-[^/]+\\.md`라 docs/product 직계 파일만 고른다(옛 글롭이 의도한 것과 같은 집합).\n# 런타임이 dataSource.repository(dlddu/kubernetes-dashboard)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ns=\"$(git ls-tree -r HEAD -- docs/product | grep -E $'\\tdocs/product/test-[^/]+\\.md$' | sha256sum | cut -d' ' -f1)\"\nt=\"$(git rev-parse \"HEAD:docs/product/doc-tracker.md\")\"\nprintf 'sc:%s reg:%s\\n' \"$s\" \"$t\"\n```\n\n주석을 지우지 말 것. 이 결함이 다시 들어오는 가장 그럴듯한 경로는 누군가가 「`grep` 파이프가 지저분하니\n`ls-tree`에 글롭을 도로 넘기자」고 정리하는 것이고, 그걸 막는 것이 그 주석 블록이다.\n\n패치 파일은 이렇게 만든다(코드를 셸에 인라인하지 말 것 — 따옴표가 깨진다):\n\n```bash\npython3 - <<'EOF' > /tmp/patch_model.json\nimport json\ncode = open('/path/to/fixed_script.sh').read()   # 위 블록을 그대로 저장한 파일\njson.dump({\"toBe\": {\"versionScript\": {\"code\": code}},\n           \"metadata\": {\"updatedAt\": \"<실행 시각 ISO8601 Z>\"}},\n          open('/tmp/patch_model.json','w'), ensure_ascii=False, indent=2)\nEOF\n\npython3 \"$TOOL\" upsert --file data/to-be-models.json \\\n  --id tbm_kubernetes-dashboard-scenario-e2e \\\n  --schema schemas/to-be-model.schema.json --patch /tmp/patch_model.json\n```\n\n`versionScript`의 `runtime`(`bash`)·`timeoutSeconds`(60)는 딕셔너리 재귀 병합이라 그대로 보존된다.\n"
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/reconciler",
           "branch": "main",
           "pullRequestUrl": null,
@@ -1433,7 +1352,6 @@
           "notes": "**PR 없음 — 직접 액션이다.** 고치는 대상이 대상 서비스 레포의 코드가 아니라 **reconciler 레포의 ToBeModel 레코드**(`data/to-be-models.json` 의 `tbm_kubernetes-dashboard-scenario-e2e.toBe.versionScript.code`)이기 때문이다. 근거 셋을 실측했다: ⑴ `dlddu/reconciler`는 원격 브랜치가 `main` 하나뿐이고 머지 커밋이 **0개**인 직행 레포다, ⑵ 같은 파일을 감지 루프가 **매 fire 다시 쓴다**(직전 6커밋이 전부 그 파일을 건드렸다) — PR 브랜치는 한 시간 안에 낡아 rebase 충돌만 만든다, ⑶ ToBeModel 편집은 `reconciler-tobe-modeler` 규약상 원래 직접 커밋이다. 「PR을 위한 억지 변경」을 만들지 않았다.\n\n**`dlddu/kubernetes-dashboard`는 이 task에서 읽기 전용이다** — 그 레포에는 한 글자도 쓰지 않는다.\n\n**스테이징한 것**: 교체할 `versionScript.code` **전문**을 `plan.executionGuide` §5에 그대로 복사할 수 있는 형태로 박아 뒀다. 실행자가 스크립트를 다시 짓지 않아도 되게 하려는 것이고, 그 문자열은 계획 단계에서 이미 검증을 마쳤다: ⑴ JSON 인코드/디코드 왕복 후에도 바이트 동일(`$'\\t'`·`\\.` 이스케이프 보존), ⑵ 왕복해 나온 문자열을 `dlddu/kubernetes-dashboard` HEAD `2f18a01`에서 실행 → `sc:e56ed9848821f964375e23e3fd236eca61e1f434817c2cd514db444a722354b4 reg:33a83e4b4bfd5c2d07c3dbb7537cb42d0bd7f57d` (현행 스크립트의 `sc:e3b0c442…` 상수와 다름), ⑶ 뮤테이션 6종(M1~M6) 전부 기대대로 — 특히 신규 문서 추가에서 `sc:` 변화(옛 글롭이 놓치던 바로 그 경우)와 문서 전멸에서 **rc=1 실패**(상수 퇴화 방지 가드).\n\n실행자는 §5의 코드를 그대로 얹고 §2의 검증을 재현하기만 하면 된다.\n\n**추가 실측 — `dlddu/reconciler`는 PR 자체가 불가능하다(추론이 아니라 측정).** 위 근거 셋은 「관례상 직행」까지만 말하는데, 대조군을 두고 재 보니 더 강한 사실이 나왔다. `pull_requests:write`를 실제로 받은 **같은 토큰**으로:\n\n| 요청 | 결과 |\n| --- | ---: |\n| `GET /repos/dlddu/reconciler/pulls` | **404 Not Found** |\n| `GET /repos/dlddu/kubernetes-dashboard/pulls` | **200** (빈 배열) |\n\n즉 권한 부족이 아니라 **그 레포에서 PR 기능이 꺼져 있다**(`has_issues: false`와 같은 결). ⚠️ 권한 없는 토큰으로 재면 **403 `Resource not accessible by integration`**이 떠서 「토큰 문제」로 오독하기 쉽다 — 반드시 `pull_requests` 권한을 받은 토큰과 **대조군 레포**로 확인할 것. 따라서 이 task에서 PR을 만들려는 시도는 실패한다. 직접 액션이 유일한 실행 형태다."
         },
         "review": {
-          "required": false,
           "status": "not_required",
           "reason": "reconciler 레포 자신의 ToBeModel 레코드 1건에서 `toBe.versionScript.code`와 `metadata.updatedAt` 두 필드만 바꾸는 직접 액션이다 — 대상 레포 `dlddu/kubernetes-dashboard`는 읽기 전용이고 클러스터·배포·프로덕션 워크로드나 데이터에 닿는 경로가 없다. 고치는 대상이 `git ls-tree`가 와일드카드 pathspec을 지원하지 않아 선택 집합이 공집합으로 퇴화한 (그래서 `sc:`가 빈 문자열 sha256 `e3b0c442…` 상수로 굳은) **이미 조용히 죽어 있는 감지 축**이라, 적용 후가 적용 전보다 나빠질 수 있는 경로가 없다. 판정 기준 자체는 불변이다 — `definition`·`checkPolicy`·`toBe.lastObservedVersion`을 모두 건드리지 않으므로 이 변경이 무엇을 '맞다'고 볼지 바꾸지 않고, baseline을 손대지 않는 것은 다음 fire가 후속 gap을 task로 열게 하려는 의도된 인계다. 계획 단계에서 JSON 왕복(이스케이프 보존)·대상 레포 HEAD 실측 지문·뮤테이션 6종(선택 0건이면 rc≠0으로 죽는 가드 포함)까지 재현을 마쳤고, 틀렸을 때 최대 피해는 이 모델 한 건의 지문이 다음 fire에서 어긋나는 것으로 커밋 1건 `git revert`로 원복된다."
         },
@@ -1541,9 +1459,6 @@
     "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-09-09T12:16:37Z",
-      "changedSides": [
-        "to_be"
-      ],
       "toBe": {
         "currentVersion": "sc:e56ed9848821f964375e23e3fd236eca61e1f434817c2cd514db444a722354b4 reg:33a83e4b4bfd5c2d07c3dbb7537cb42d0bd7f57d",
         "previousVersion": "sc:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 reg:33a83e4b4bfd5c2d07c3dbb7537cb42d0bd7f57d"
@@ -1559,7 +1474,6 @@
     "updatedAt": "2026-09-09T14:03:00Z",
     "assessment": {
       "reason": "**작업 필요(`actionRequired: true`).**\n\n**근거 ① gap이 실재한다.** 규칙 2 위반 1건(`e2e/pods.spec.ts`를 `test-pods.md#시나리오 1`과\n`#시나리오 2`가 함께 지목) + 규칙 5 위반(등재 SSOT `docs/product/doc-tracker.md`에 시나리오 축\n집계·예외 목록·구현 대기 표가 **부재**하고, 실려 있는 「자동화 공백 0 · 전단사 완성」은 AC 축\n문장이라 판정 축에서는 거짓). 불변식 54 − 0 − 0 = 54 ≠ 53.\n\n**근거 ② 미점유다.** 이 모델의 비-터미널 task **0건**. 직전 `rct_20260908-0001`은 11:52:55Z에\n`succeeded`/`converged: true`로 닫혔고, 그 계획이 gap ⓑ(마이그레이션)를 **처음부터 범위 밖**으로\n선언했으며 verification ④가 「`toBe.lastObservedVersion`을 전진시키지 않은 것이 의도이고 다음 감지\n주기가 이 차이를 보고 gap ⓑ task를 연다」로 **detector를 소유자로 지목**했다.\n\n**근거 ③ 지금이 착수 가능한 첫 순간이다.** 11:50:11Z 이전에는 `sc:` 성분이 빈 문자열의 sha256\n상수라 시나리오 축이 **구조적으로 관측 불가**였다. 잔여를 막던 선행이 「이 모델 자신의 눈」이었고\n그 수리가 10분 전에 착지했다.\n\n**근거 ④ 아무도 이 자리를 다시 보지 않는다(보조).** 이 레포에는 매핑을 검사하는 CI 게이트가\n**0개**이고(`ci.yaml`·`e2e.yaml`, `scripts/` 2개, `doc-tracker`를 읽는 코드 0), 위반 두 건은\n스스로 어떤 지문도 움직이지 않는 **정적 상태**다. 다만 계측기가 수리됐으므로 「재감지 경로 0」을\n논거로 **쓰지는 않는다** — 문서가 다른 이유로 움직이면 이 모델은 깨어난다.\n\n---\n\n**계획 제약(planner에게).**\n\n1. **범위는 두 가지다** — (a) `e2e/pods.spec.ts` 분할: 시나리오 1(목록·카드 정보 표시)과\n   시나리오 2(네임스페이스 스코프 반영)가 각각 전용 파일을 갖게 하고 두 시나리오의 `자동화:`\n   항목을 갱신, (b) `doc-tracker.md`에 **시나리오 축** 등재 쓰기: 집계(시나리오 54 · 예외 0 ·\n   구현 대기 0 · 매칭 파일 54 · 공백 0)와 **예외 목록/구현 대기 표를 별도 표로**(규칙 4·6).\n2. **완료 기준은 절대 수치가 아니라 불변식으로 쓸 것** — `(시나리오 수 − 예외 수 − 구현 대기 수)\n   == (매칭 파일 수)` 와 「한 spec을 둘 이상이 지목하지 않는다」. 대상 레포가 그 사이 움직여도\n   기준이 배신당하지 않는다.\n3. **모델 `definition` 개정은 완료 기준에 넣지 말 것.** 「매칭 단위가 아닌 것」 열거가 `e2e/eng/`·\n   `e2e/smoke/`를 빠뜨리는 것은 실제 오분류 0의 정밀도 문제이고 `reconciler-tobe-modeler` 소관이다.\n4. **경계**: 이 루프의 산출물은 E2E 테스트와 등재 문서뿐이다. 분할이 화면·엔드포인트·앱 코드 변경을\n   요구하기 시작하면 경계를 넘은 것이다 — `pods.spec.ts`의 기존 단언을 두 파일로 나누는 일이며,\n   기존 픽스처(`unhealthy-pod.yaml` 등)를 공유해도 좋다.\n5. **`자동화:` 괄호 표기(`(PD1 전용)`)를 시나리오 표기로 다듬는 것은 선택**이며 그 자체는 위반이\n   아니다(위 gap ⑥). 넣더라도 완료 기준이 아니라 부수 정리로 둘 것.\n",
-      "assessedBy": "agent",
       "assessedAt": "2026-09-09T12:16:40Z"
     },
     "attempts": [
@@ -1608,7 +1522,6 @@
           "executionGuide": "# 실행 지침 — rct_20260909-0001 (kubernetes-dashboard 시나리오 축 1:1)\n\n준비된 것: draft PR **#217** (`dlddu/kubernetes-dashboard`, base `main`=`2f18a01a`,\nhead `reconcile/rct_20260909-0001-opus-5`=`1224ebc`). 실행자가 할 일은 **CI 확인 → 머지 →\n머지 결과에서 불변식 재측정** 뿐이다. 로컬에서 다시 저작할 것은 없다.\n\n## 0. 사전 조건 (머지 전에 반드시)\n\n1. **PR 이 아직 유효한가** — `main` 이 준비 이후 움직였는지 본다.\n   ```bash\n   gh pr view 217 --repo dlddu/kubernetes-dashboard --json mergeable,mergeStateStatus,headRefOid,baseRefOid\n   ```\n   `mergeable: MERGEABLE` 이 아니면 `main` 을 리베이스해 충돌을 푼 뒤 CI 를 다시 기다린다.\n   충돌 위험이 있는 파일은 사실상 `docs/product/doc-tracker.md` 하나다(형제 슬라이스도 이 파일의\n   집계·변경 이력을 건드린다). 충돌 시 **집계 수치는 손으로 고르지 말고 §2 의 레시피를 다시 돌려\n   나온 값**을 쓴다.\n2. **다른 워커가 같은 자리를 건드리지 않았는가** — `docs/product/test-*.md` 나 `e2e/` 가\n   `2f18a01a` 이후 움직였으면 시나리오/스펙 수가 달라졌을 수 있다. 그때도 판정은 절대 수치가 아니라\n   §2 의 **불변식**으로 한다.\n3. **CI 두 워크플로가 모두 초록인가** (아래 §1). 이 레포는 blind 검증 영역이 넓어 CI 가 유일한\n   동적 근거다. 초록 없이 머지하지 않는다.\n\n## 1. 실행 순서\n\n순서가 중요하다. 1 → 2 → 3 은 **의존적**이며 병렬 불가다.\n\n| # | 단계 | 명령 / 동작 | 성공 판정 |\n|---|------|-------------|-----------|\n| 1 | CI 확인 | `gh pr checks 217 --repo dlddu/kubernetes-dashboard --watch` | `CI` 와 `E2E Tests`(profile **default** · **no-metrics** 둘 다)가 전부 success |\n| 2 | 머지 | `gh pr ready 217 --repo dlddu/kubernetes-dashboard` 후 `gh pr merge 217 --repo dlddu/kubernetes-dashboard --squash --delete-branch` | `main` 에 squash 커밋 1개가 착지, 브랜치 삭제 |\n| 3 | 머지 결과에서 재측정 | `main` 을 새로 fetch 한 트리에서 §2 의 세 측정을 다시 실행 | 세 측정이 모두 기대치와 일치 |\n\n> **draft 해제(`gh pr ready`)를 잊지 말 것** — draft 상태로는 머지되지 않는다.\n\n## 2. 검증 방법 (이 시도의 완료 기준)\n\n판정은 **절대 수치가 아니라 불변식**으로 한다. 아래 세 측정이 모두 통과하면 이 시도는 수렴이다.\n\n### ① 매핑 불변식 (주 판정)\n\n`docs/product/doc-tracker.md` 의 「기계 확인 레시피」 코드블록을 **그대로 복사해** 레포 루트에서 실행한다\n(문서가 싣고 있는 명령이 곧 검증 도구다).\n\n```\n시나리오 54 | 지목 spec 54 | 매칭 파일 54\n선언 0/2+ : []\n중복(2+ 시나리오가 한 파일): []\ndangling: [] | 고아: []\n```\n\n**합격 조건**(수치가 아니라 관계):\n- `(시나리오 수) − (예외 수) − (구현 대기 수) == (매칭 파일 수)`\n  — 예외·구현 대기는 현재 둘 다 0행이므로 첫 줄의 `시나리오 == 매칭 파일` 이면 성립.\n- 나머지 세 줄이 **모두 빈 목록**(선언 0/2+ 0건 · 중복 0 · dangling 0 · 고아 0).\n- 위 출력이 `doc-tracker.md` 「집계」 표의 값과 **일치**(규칙 5).\n\n### ② 테스트 무손실 (분할이 잃은 것이 없는가)\n\n```bash\nnpm ci\nnpx playwright test --list --project=chromium   # 브라우저 불필요, 수집 단계만\n```\n\n**합격 조건**: `Total: 639 tests in 60 files`.\n준비 시점 실측 — before(`2f18a01`) **639 tests / 59 files** → after **639 tests / 60 files**.\n파일만 +1, 테스트 수 동일. `pods.spec.ts`(33/1) → 두 파일 합 **33/2**(31 + 2).\n`--project=no-metrics` 는 `2 tests / 1 file` 로 불변.\n**머지 사이에 다른 PR 이 스펙을 추가했다면 총수가 달라진다** — 그때는 절대값이 아니라\n「머지 직전 `main` 의 총수 == 머지 결과의 총수」 로 비교한다(이 PR 은 테스트를 더하지도 빼지도 않는다).\n\n### ③ CI (유일한 동적 근거)\n\n`ci` 와 `E2E Tests with kind` **두 profile 전부** success. 실패하면 §4 를 읽는다.\n\n### ④ 형제 모델 무drift (부수 확인)\n\n```bash\ngrep -rn \"page.route\\|mock-exception\" e2e/pods.spec.ts e2e/pods-namespace-scope.spec.ts\n```\n**0건**이어야 한다(이 PR 은 인터셉트를 더하지 않는다 → `tbm_kubernetes-dashboard-e2e-mock-policy` 무drift).\n\n### 범위 밖(후속) — 이 기준에 넣지 말 것\n\n닫을 수 없는 것을 완료 기준에 넣으면 executor 가 task 를 닫지 못한다.\n\n- 나머지 **52개** 최상위 spec 헤더의 AC 축 선언(`// Verifies: <AC> …`) → 시나리오 축 일괄 이관.\n  매핑의 확인 지점은 `자동화:` 필드라 **정합성 판정에 영향 없다**(표기 통일 목적).\n- `test-pods.md#시나리오 2` 두 번째 테스트(`Namespace Context Integration`)의 약한 단언 보강.\n  이 모델에는 완전성 규칙이 없어 판정 대상이 아니다(`doc-tracker.md` 「다음 단계 제안」에 등재).\n- 모델 `definition` 의 「매칭 단위가 아닌 것」 열거가 `e2e/eng/`·`e2e/smoke/` 를 빠뜨리는 정밀도 문제\n  (실제 오분류 0, `reconciler-tobe-modeler` 소관).\n- FX6 · AR4 폴링 보강(기존 백로그).\n\n## 3. 주의사항\n\n- **되돌릴 수 없는 지점은 §1-2(머지)뿐**이고, 그조차 `git revert` 한 번으로 원복된다\n  (앱 코드·픽스처·CI 배선 무변경, 순수 이동 + 문서). 프로덕션 트래픽·데이터 영향 **없음** —\n  이 PR 은 런타임 아티팩트를 만들지 않는다.\n- **⚠️ 샤드 재편으로 무관한 flake 가 붉어질 수 있다.** 이 레포는 spec 자동 탐색 + `workers: 4` 라\n  **파일이 하나만 늘어도** 4개 워커의 배분이 바뀐다. e2e 가 실패하면 **반드시 실패 파일명을 먼저 본다** —\n  이 PR 이 건드린 두 파일(`pods.spec.ts`·`pods-namespace-scope.spec.ts`)이 아니면 이 변경의 결함이\n  아니라 재편이 드러낸 기존 레이스다(선례: #208 의 `fluxcd-kustomizations.spec.ts:203`,\n  `expect.poll` 로 안정화한 이력이 `doc-tracker.md` 2026-07-26 행에 있다).\n  그 경우 **retry 로 넘기지 말고** 원인 파일을 별도로 고치거나, 이 슬라이스를 유지한 채 그 flake 를\n  후속 task 로 분리한다.\n- **⚠️ 파괴적 spec 의 사정권**: `pod-cleanup.spec.ts`(PD5)는 `/pods` 무스코프에서 확인을 눌러\n  terminal pod 를 **클러스터 전역** 삭제한다. 이 PR 은 픽스처를 더하지 않으므로 새 사정권은 없지만,\n  이후 pods 계열 spec 에 픽스처를 추가할 때는 이 범위를 먼저 확인할 것.\n- **머지 방식은 squash** (레포 관례, `main` 에 branch protection 없음). `--delete-branch` 로\n  브랜치를 정리해 형제 워커가 같은 이름을 재사용할 수 있게 한다.\n- **머지 후 재감지가 뜬다** — to-be·as-is 지문이 **둘 다** 이동한다\n  (to-be `sc:e56ed984…`→`sc:b85b252a…` / `reg:33a83e4b…`→`ad29bff7…`, as-is `ec0b1a74…`→`ddb71866…`).\n  다음 감지 주기가 이 모델을 깨워 수렴을 독립적으로 재측정하므로, 그 새 task 를 「또 drift」로 읽지 말 것.\n  이 시도의 판정은 §2 기준이다.\n- **토큰 주의**: 대상 레포 push 는 `gh` 사용자 토큰으로 했다 — GitHub App 설치 토큰으로 push 하면\n  Actions 가 기동하지 않아 CI 초록을 살 수 없다. `~/.git-credentials` 는 형제 워커와 공유되므로\n  덮어쓰지 말고 인라인 토큰 URL 을 쓴다.\n\n## 4. 실패 시 롤백 절차\n\n| 실패 지점 | 조치 |\n|-----------|------|\n| CI red — 실패 파일이 `pods*.spec.ts` | 이 변경의 결함이다. 머지하지 말고 실패 단언을 읽어 브랜치에서 고치거나, 고칠 수 없으면 task 를 `failed` 로 닫아 재계획으로 보낸다. |\n| CI red — 실패 파일이 무관한 spec | 샤드 재편이 드러낸 기존 flake. 재실행으로 확정하고(`gh run rerun`), 지속되면 그 파일을 별도 후속으로 분리한 뒤 이 PR 은 유지한다. **retry 로 덮어 머지하지 않는다.** |\n| 머지 후 §2 ① 불변식 불성립 | `git revert <squash-sha>` → `main` 복구 → task `failed`. 되돌리면 `doc-tracker.md` 도 함께 되돌아가 등재와 실제가 다시 일치한다(부분 원복 금지 — 문서만 남기면 규칙 5 위반이 새로 생긴다). |\n| 머지 후 §2 ② 총수 불일치 | 다른 PR 이 사이에 들어왔는지 먼저 확인(`git log 2f18a01..HEAD`). 이 PR 탓이면 revert. |\n"
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/kubernetes-dashboard",
           "branch": "reconcile/rct_20260909-0001-opus-5",
           "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/217",
@@ -1616,9 +1529,7 @@
           "notes": "`e2e/pods.spec.ts` 분할 + 시나리오 축 등재를 한 커밋(`1224ebc`)으로 스테이징했다. base `main` = `2f18a01a`.\n\n**변경 7파일 (+246 / −113), 앱 코드·픽스처·CI 배선 무변경.**\n- 신설 `e2e/pods-namespace-scope.spec.ts` — `pods.spec.ts` 말미의 describe 2개\n  (`BottomTabBar - Namespace Context Integration`, `Namespace Context Integration`) 를 이동.\n  `diff` 로 이동 블록이 원본과 **바이트 동일**함을 확인(단언 신설·수정·삭제 0).\n- `e2e/pods.spec.ts` — 그 2개 제거 + 헤더 시나리오 선언(나머지 876줄은 원본과 바이트 동일).\n- `docs/product/test-pods.md` — 시나리오 1·2 `자동화:` 를 각 전용 파일로.\n- `docs/product/doc-tracker.md` — 시나리오 축 절 신설(집계·예외 표 0행·구현 대기 표 0행·매칭 대상 밖\n  등재·기계 확인 레시피) + 분할로 거짓이 된 AC 축 문장 정정 + 변경 이력 1행.\n- `e2e/README.md`·`docs/product/eng-notes.md`·`docs/product/prd-pods.md` — 낡은 축 포인터 정리.\n\n**준비 중 실측(추정 아님, 이 환경엔 kind·브라우저가 없어 정적 검증으로 대체):**\n1. 매핑 체커 — `시나리오 54 | 지목 spec 54 | 매칭 파일 54`, 선언 0/2+ 0건 · 중복 0 · dangling 0 · 고아 0.\n   **doc-tracker.md 에 실은 레시피 코드블록을 문서에서 다시 파싱해 그대로 실행**해 얻은 출력이다\n   (문서가 싣고 있는 명령이 실제로 도는지까지 산다).\n2. `npx playwright test --list` — before(`2f18a01`) chromium **639 tests / 59 files** →\n   after **639 tests / 60 files**. `pods.spec.ts` 33/1 → 두 파일 합 **33/2**. 테스트 무손실이 산술로 확인.\n   `no-metrics` 프로젝트는 2 tests / 1 file 로 불변.\n3. 모델 자신의 versionScript 를 브랜치 HEAD 에 실행 —\n   to-be `sc:b85b252a…7820c6c7 reg:ad29bff7…b2b602`(baseline `sc:e56ed984… reg:33a83e4b…`),\n   as-is `ddb718667c4ee8daf6f5619dac3ba40b44fb9c4e`(baseline `ec0b1a74…`). **양쪽 다 이동**하므로\n   머지 후 재감지가 이 모델을 깨워 수렴을 독립적으로 재측정한다.\n4. `grep 'page.route|mock-exception'` — 두 pods 스펙 모두 **0**. 형제 모델\n   `tbm_kubernetes-dashboard-e2e-mock-policy` 는 이 PR 로 drift 하지 않는다.\n\n**PR**: draft #217. push 는 `gh` 사용자 토큰으로 했다(App 설치 토큰은 Actions 를 기동시키지 않는다) —\n`CI`·`E2E Tests` 두 워크플로가 즉시 떴다. 브랜치 이름에 모델 슬러그(`-opus-5`)를 붙여 형제 워커의\n같은 rct id 브랜치와 충돌하지 않게 했다. 머지는 하지 않았다(실행 단계 몫).\n\n---\n\n**관측된 CI (2026-09-09, head `1224ebc`) — 9/9 초록.**\n\n| 체크 | 결과 |\n|------|------|\n| `CI` 워크플로 (run `34351774598`) — Frontend Tests · Go Tests · Integration Tests · Docker Build · Argo/FluxCD Fixture Validation · Kubernetes Manifest Validation | **전부 pass** |\n| `E2E Tests with kind (default)` (job `102467721681`) | **pass** 11m28s |\n| `E2E Tests with kind (no-metrics)` (job `102466540360`) | **pass** 3m18s |\n\n**초록을 「실제로 돌았다」로 바꾸는 계수** — Playwright 로그 실측:\n`Running 639 tests using 4 workers` → **`639 passed (8.6m)`** (failed 0 · flaky 0 · skipped 0).\n이 639가 로컬 `--list` 실측(639 tests / 60 files)과 **정확히 일치**하므로 스킵 없이 전량 배차됐음이\n산술로 확인된다. 이동한 두 테스트도 새 파일에서 실행·통과했다:\n`✓ 515 [chromium] › e2e/pods-namespace-scope.spec.ts:18:3 › BottomTabBar - Namespace Context Integration …` ·\n`✓ 517 [chromium] › e2e/pods-namespace-scope.spec.ts:73:3 › Namespace Context Integration …`.\n\n⚠️ **첫 시도의 `E2E Tests with kind (default)` 는 1m24s 만에 red 였다** — 원인은 이 변경과 무관한\n**`go mod download` 의 네트워크 오류**(`proxy.golang.org` 에서 `k8s.io/metrics@v0.27.0` 다운로드 중\n`stream error: INTERNAL_ERROR`), Docker 빌드 `[backend-builder 6/10]` 단계. 이 PR 은 Go 코드·`go.mod` 를\n건드리지 않고 같은 커밋의 `no-metrics` leg 는 그 시점에 이미 pass 였다. `gh run rerun --failed` 로\n재실행해 초록을 얻었다. **샤드 재편이 드러낸 flake 가 아니라 인프라 일시 오류**이므로 지침 §4 의\n「무관한 실패」 항목으로 처리했다."
         },
         "review": {
-          "required": false,
           "status": "not_required",
-          "reviewer": "agent",
           "reviewedAt": "2026-09-09T12:56:40Z",
           "reason": "**검토 불필요 — 자동 승인.**\n\n변경 범위가 `e2e/` 테스트와 `docs/` 문서 7파일(+246/−113)뿐이고 앱 코드·픽스처·CI 배선을 건드리지 않아 런타임 아티팩트를 만들지 않는다 ⇒ 프로덕션 워크로드·데이터·트래픽 영향 **없음**. 핵심 변경인 `e2e/pods.spec.ts` 분할은 describe 2개의 **순수 이동**이고(단언 신설·수정·삭제 0, 이동 블록이 원본과 바이트 동일함을 `diff`로 확인), 준비 단계에서 PR #217의 CI가 9/9 초록 — Playwright 실측 `639 passed · failed 0 · flaky 0 · skipped 0`이 로컬 `--list` 639와 일치해 테스트 무손실이 동적으로도 확인됐다.\n\n불가역성도 낮다. 실행 지침의 유일한 되돌리기 어려운 지점인 squash 머지조차 `git revert` 한 번으로 원복되고(문서만 남기는 부분 원복 금지 조건까지 명시), 완료 기준이 절대 수치가 아니라 불변식(`시나리오 − 예외 − 구현 대기 == 매칭 파일`, 중복·dangling·고아 0)으로 쓰여 있어 판정이 갈리는 모호함이 없다. `plan.riskLevel: low`이며 모델 `definition`의 「충돌 시 기본 방향」이 처방한 분할을 그대로 따르는 **정책 범위 내** 작업이다 — 계획이 예외 등재 같은 부정직한 우회를 명시적으로 기각한 점도 확인했다.\n\n실행자는 지침 §3의 두 경고를 그대로 지킬 것: 샤드 재편(파일 +1, `workers: 4`)이 무관한 기존 flake를 붉힐 수 있으므로 e2e 실패 시 **실패 파일명을 먼저 보고** `pods*.spec.ts`가 아니면 retry로 덮어 머지하지 말 것."
         },
@@ -1702,10 +1613,6 @@
     "status": "no_action_needed",
     "trigger": {
       "detectedAt": "2026-09-09T14:05:00Z",
-      "changedSides": [
-        "as_is",
-        "to_be"
-      ],
       "asIs": {
         "previousVersion": "ec0b1a74ce5ee7d8e85a3258258a57b088ed1e45",
         "currentVersion": "ddb718667c4ee8daf6f5619dac3ba40b44fb9c4e"
@@ -1725,7 +1632,6 @@
     "updatedAt": "2026-09-09T14:14:00Z",
     "assessment": {
       "reason": "**작업 불필요(`actionRequired: false`).**\n\n**근거 ① 판정 축의 gap이 실측으로 0이다.** 정의의 규칙 1~6을 문서의 레시피가 아니라 **내 파서로\n독립 측정**했고, 부모에서는 규칙 2 위반 1건 + 불변식 54 ≠ 53으로 **재현**되던 것이 트리거에서는\n중복 0 · dangling 0 · 고아 0 · 0/2+ 지목 0 · 예외 0 · 구현 대기 0 · **불변식 54 − 0 − 0 = 54** 로\n닫힌다. 규칙 5의 집계 일치도 문서별 10행 전건이 실측과 일치한다.\n\n**근거 ② 이것은 「소비된 트리거」다.** 전건이 참이다 — 트리거 #217은 **이 모델 자신의\n`rct_20260909-0001` 슬라이스**이고(커밋 제목이 그 rct id를 달고 있다), 그 task는 14:03:00Z에\n`succeeded`/`converged: true`로 닫혔으며, 이 모델의 **비-터미널 task는 0건**이다. executor가\n`lastObservedVersion`을 의도적으로 건드리지 않아(verification ⑦) 다음 감지 주기가 수렴을 독립\n재측정하도록 넘긴 것이고, 이 레코드가 그 재측정이다. **「또 drift」가 아니다.**\n\n**근거 ③ 그럼에도 executor를 믿고 닫은 것이 아니다.** executor는 `doc-tracker.md`에 실린 「기계 확인\n레시피」를 문서에서 파싱해 그대로 돌렸다 — 레시피가 틀리면 그 오류를 재현한다. 나는 그 레시피를\n쓰지 않고 별도 파서로 재었고(다중 행 `자동화:` 이어짐까지 흡수), 결과가 일치했다. 순수 이동\n주장도 재계수해 확인했다(33 = 31 + 2 테스트 · 11 = 9 + 2 describe · 인터셉트 0).\n\n**근거 ④ 이 변경이 다른 곳을 깨지 않는다.** 대상 레포의 **열린 PR 0건** — 이 트리거가 충돌시킬\n스테이징 작업이 없다. 자매 모델 `tbm_kubernetes-dashboard-e2e-mock-policy`는 지문 불변 +\n비-터미널 task 0건이고, 그 불변은 설계상 정확하다(인터셉트 0건 추가). 이 레포에 매핑을 검사하는\nCI 게이트는 여전히 **0개**이므로 「게이트가 초록이라 괜찮다」는 논거는 쓰지 않았고, 판정은 전부\n내 직접 실측에 기댄다.\n\n**따라서 이 레코드의 역할은 두 가지다** — (1) 「트리거가 gap을 닫았다」는 판정을 감사 가능하게\n남기고, (2) 그와 함께 모델의 `lastObservedVersion`을 양쪽 다 전진시켜, 이미 해소된 차이로\nprecheck가 감지를 계속 재발화시키는 것을 멈춘다. 잔여 네 건(a~d)은 전부 판정 축 밖이라\n후속 task를 열지 않는다 — 특히 (d)는 `reconciler-tobe-modeler` 소관의 정의 문면 정밀도 문제다.\n",
-      "assessedBy": "agent",
       "assessedAt": "2026-09-09T14:14:00Z"
     }
   }

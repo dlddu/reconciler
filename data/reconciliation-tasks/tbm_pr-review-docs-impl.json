@@ -5,10 +5,6 @@
     "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-07-30T04:17:33Z",
-      "changedSides": [
-        "as_is",
-        "to_be"
-      ],
       "asIs": {
         "previousVersion": null,
         "currentVersion": "backend:ebf8681c70273edb3950c10225a563d958bfe600 frontend:d1e9dcb2d2ed89a6dd4e4cdf0a8cb21f79522496 packages:ac15382ca41df10ee715a5ac581f56a74295b9bc"
@@ -27,7 +23,6 @@
     },
     "assessment": {
       "reason": "최초 관측으로 baseline을 확정: 확정 PRD 7개의 33개 AC 전부 미구현(it.todo), 기능 코드 0 — 정의상 최대 규모의 drift이며 미구현 AC는 backlog가 아니라 drift다. 이 최초 task의 역할은 gap 산정과 planner 인수인계이며, planner가 어느 PRD/AC부터 구현할지 우선순위를 정한다. 진행 중 반드시 보존해야 할 회귀 검증 불변식 2개(AC6-5 머지금지 경계, tokens.css 정식 토큰 소스 일치)는 현재 충족 상태로, feature 작업 중에도 유지되어야 한다. → 작업 필요.",
-      "assessedBy": "agent",
       "assessedAt": "2026-07-30T04:22:40Z"
     },
     "updatedAt": "2026-08-06T22:01:26Z",
@@ -62,7 +57,6 @@
           "executionGuide": "# 실행 지침 — PRD-1 metadata 슬라이스 (rct_20260730-0001)\n\n## 순서 (dependencies)\n1. **리뷰 필요성 판단 (4-1)** — 변경은 리뷰 도구 레포 자체에 대한 순수 추가(leaf `metadata` 모듈 구현 + 테스트)이고 프로덕션/데이터/불가역 요소 없음. 그래도 **최초 baseline 구현**이며 두 불변식을 보존해야 하므로 diff를 1회 검토한다. 특히 `backend/src/adapters/github/index.ts`에 **mutating 메서드가 추가되지 않았는지**(optional read-only 필드 추가뿐인지) 확인.\n2. **CI green 확인 — 필수 게이트, 병합 전 선행.** 코드가 로컬 node 툴체인 없이 작성됨. `gh pr checks 2 --repo dlddu/pr-review`로 lint/typecheck/test/build 4개 job이 모두 통과할 때까지 병합 금지.\n3. **병합** — 4개 job green이면 PR #2 병합(`gh pr merge 2 --repo dlddu/pr-review --squash` 또는 레포 관례). 병합은 main HEAD를 바꿔 as-is backend 트리 해시(현재 `ebf8681...`)를 변경한다.\n4. **수렴 검증 (4-4)** — 아래 \"검증 방법\"으로 **계획 범위(AC1-1..1-4) 기준** 판정.\n\n(순서 강제: 2 → 3. CI 미확인 병합 금지. 1은 2와 병렬 가능.)\n\n## 검증 방법 (계획 범위 = 완료 기준)\n- **AC1-1**: `classifyWorkType`이 버그성 PR → `'버그 수정'` 포함, 불명확 PR → `['미분류']`. (오류로 끝나지 않음)\n- **AC1-2**: 봇 PR + `inferenceSignals.commitAuthors:['Alice']` → `inferredHuman.key==='alice'`, `basis[0].kind==='commit-author'`; 흔적 없는 봇 → `inferredHuman` 부재(\"추정 불가\").\n- **AC1-3**: `identifyRepository({repository:'dlddu/PR-Review'})` → `key==='dlddu/pr-review'`(KB 저장소 키와 일치).\n- **AC1-4**: 직접 PR의 `author.key` == 봇 PR의 `author.inferredHuman.key`(`'octocat'`); `extract` 합성이 저장소/작업유형 정규화 포함.\n- **전체 게이트**: CI test job에서 `metadata (PRD-1)` 스위트 **4 passing**(이전 4 pending). `pnpm -r build`/`typecheck` green.\n- **불변식(작업 중 유지 확인)**: `gap-detection.test.ts`의 AC6-5 회귀 seam 3 assertion green; 레포 전역 merge/approve/push 호출부 여전히 없음; `frontend/src/styles/tokens.css` diff 없음.\n\n## 주의사항 · 롤백\n- **CI 없이는 병합하지 않는다.** 로컬 타입/린트/테스트 미검증 — CI가 유일한 객관 게이트. 가장 가능성 높은 실패 지점은 `typecheck`(exactOptionalPropertyTypes / verbatimModuleSyntax) — 실패 시 로그 확인 후 재작업(planner로 되돌아옴).\n- **AC6-5 제품 경계 보존**: 이 변경의 adapter 수정은 optional read-only 필드뿐. mutating 메서드가 보이면 병합 거부. (주의: PR #2를 main에 **머지**하는 것은 리뷰 도구 레포 자체의 형상관리이며, \"제품이 리뷰 대상 코드베이스를 변경하지 않는다\"는 AC6-5와 무관하다.)\n- **범위 밖(후속 재감지)**: PRD-2..PRD-7의 나머지 29개 AC, `inferenceSignals`의 실제 GitHub API 연결, frontend 라우트/목업/디자인시스템 정합. 이번 슬라이스 범위 아님 — 병합으로 as-is 버전이 바뀌면 재감지가 새 task로 잇는다. 이 task의 succeeded/failed는 **오직 AC1-1..1-4 기준**으로 닫는다.\n- **롤백**: 문제 시 `git revert <merge-commit>` 또는 PR revert. 순수 추가라 되돌리기 안전 — `backend/src/index.ts`가 `metadataModule`을 이미 import하지만 `MetadataModule` 인터페이스는 불변이라 되돌려도 컴파일 유지.\n"
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/pr-review",
           "branch": "reconcile/rct_20260730-0001",
           "pullRequestUrl": "https://github.com/dlddu/pr-review/pull/2",
@@ -70,10 +64,8 @@
           "notes": "PRD-1 metadata slice staged as a DRAFT PR (#2). 3 files: backend/src/metadata/index.ts (impl AC1-1..1-4), backend/src/adapters/github/index.ts (add optional read-only inferenceSignals to RawPullRequest for AC1-2 — no mutating method, AC6-5 preserved), backend/src/metadata/metadata.test.ts (4 it.todo -> real assertions, 6 scenarios). Authored without a local node toolchain; TS syntax verified locally via standalone esbuild (aarch64), but lint/typecheck/tests are only verifiable in CI. Executor MUST merge only when CI is green. tokens.css / frontend untouched."
         },
         "review": {
-          "required": true,
           "status": "approved",
           "reason": "riskLevel은 low이고 revert로 되돌릴 수 있지만, 이 병합은 pr-review 레포의 '최초 기능 구현'을 main에 영구 반영하는 변경이고(골격→AC1-1..1-4 실제 로직), 코드가 로컬 툴체인 없이 작성돼 CI 외 사전 검증이 없다. 또한 diff가 AC6-5(제품이 리뷰 대상 코드베이스를 변경하지 않는다) 불변식을 지키는 adapter 파일을 건드리므로, executionGuide 1번이 병합 전 adapter diff에 mutating 메서드가 없는지 사람이 한 번 확인하도록 명시하고 있다. 자동 재동기화 범주가 아니라 사람 검토 후 병합이 맞다.",
-          "reviewer": "user",
           "reviewedAt": "2026-08-06T21:55:43Z",
           "comment": "승인 (대화 승인). PR #2 CI green(install/lint/typecheck/test/build), adapter diff는 optional read-only 필드 추가뿐이라 AC6-5 불변식 보존 확인됨."
         },
@@ -165,9 +157,6 @@
     "status": "succeeded",
     "trigger": {
       "detectedAt": "2026-08-07T01:36:32Z",
-      "changedSides": [
-        "as_is"
-      ],
       "asIs": {
         "previousVersion": "backend:ebf8681c70273edb3950c10225a563d958bfe600 frontend:d1e9dcb2d2ed89a6dd4e4cdf0a8cb21f79522496 packages:ac15382ca41df10ee715a5ac581f56a74295b9bc",
         "currentVersion": "backend:fce9690c95e8920faa0ce65fd6b474a532b9b702 frontend:d1e9dcb2d2ed89a6dd4e4cdf0a8cb21f79522496 packages:ac15382ca41df10ee715a5ac581f56a74295b9bc"
@@ -181,7 +170,6 @@
     },
     "assessment": {
       "reason": "#2는 최초 baseline 이후 첫 실기능 슬라이스로 수렴 방향이나, 6개 PRD/~29 AC가 미구현으로 남아 정의상 최대 규모 drift가 지속된다. post-reconcile 재트리거, 직전 task terminal, 열린 task 없음 → action_required로 planner 인계(다음 PRD/AC 우선순위는 planner 몫). 정적 문서↔코드 격차라 재확인 유예 부적합.",
-      "assessedBy": "agent",
       "assessedAt": "2026-08-07T01:36:32Z"
     },
     "createdAt": "2026-08-07T01:36:32Z",
@@ -237,7 +225,6 @@
           "executionGuide": "# 실행 지침 — PRD-2 컨텍스트 수집 슬라이스 (rct_20260807-0001)\n\n## 순서 (dependencies)\n1. **리뷰 필요성 판단 (4-1)** — 변경은 리뷰 도구 레포 자체에 대한 순수 추가(leaf `context` 모듈 구현 + 테스트 + 타입 2건)이고 프로덕션·데이터·불가역 요소가 없다. 다만 **두 보존 불변식**과 **설계 판단 1건**이 걸려 있으므로 diff를 1회 검토한다:\n   - `backend/src/adapters/github/index.ts`에 **mutating 메서드가 추가되지 않았는지**(read-only optional 데이터 필드 `headRef`·`contextSignals` 추가뿐인지) 확인 — AC6-5 경계.\n   - `ContextModule` 시그니처를 `(ref: PullRequestRef)` → `(pr: RawPullRequest)`로 좁힌 판단에 동의하는지 확인. 근거: 스캐폴드 시그니처로는 라이브 어댑터 없이 구현이 불가능하고, PRD-1이 이미 같은 선례(`RawPullRequest` 수용)를 세웠다. 이 시그니처는 `docs/`(SSOT)가 규정한 것이 아니라 부트스트랩 스캐폴드가 임의로 둔 것이라 문서 변경을 요구하지 않는다.\n2. **CI green 확인** — `gh pr checks 3 --repo dlddu/pr-review`. **작성 시점에 이미 green**(CI `verify` job, run `31151380891`, 19s, `mergeable=MERGEABLE`). 병합 직전 최신 상태를 한 번 더 확인한다(그 사이 main이 움직였을 수 있다).\n3. **병합** — `gh pr ready 3 --repo dlddu/pr-review`로 draft 해제 후 병합(`gh pr merge 3 --repo dlddu/pr-review --squash`, 레포 관례 따름). 병합은 main HEAD를 바꿔 as-is의 backend·packages 트리 해시를 변경한다(재감지 트리거).\n4. **수렴 검증 (4-4)** — 아래 \"검증 방법\"으로 **계획 범위(AC2-1~AC2-6) 기준** 판정.\n\n(순서 강제: 2 → 3. CI 미확인 병합 금지. 1은 2와 병렬 가능.)\n\n## 검증 방법 (계획 범위 = 완료 기준)\n\n`docs/tests/context.md`의 7개 시나리오가 `backend/src/context/context.test.ts`의 6개 spec에 1:1로 대응한다. CI test job 로그에서 확인:\n\n- **AC2-1 (시나리오 1·2)**: 의도 섹션이 있는 PR → `intent.confirmed === true`이고 `intent.text`에 본문 의도가 담긴다. 서술적 제목만 있어도 확정된다. 본문이 비고 제목이 `WIP`/`misc` 같은 플레이스홀더면 `confirmed === false`, `text === undefined`(= \"의도 불명확\", PRD-6 공백 대상). 템플릿 체크리스트·HTML 주석만 남은 본문도 프로즈로 치지 않는다.\n- **AC2-2 (시나리오 3)**: `Closes ENG-42`(본문) · `csj/eng-42-...`(브랜치명) · `https://linear.app/dlddu/issue/ENG-42/...`(URL) 세 경로 모두 `linear:ENG-42`로 정규화된다. 해석된 이슈 제목이 있으면 실린다. **회귀 가드**: `AC2-1`·`UTF-8` 같은 유사 문자열은 이슈로 오인하지 않는다(빈 배열). 참조가 없으면 `[]`.\n- **AC2-3 (시나리오 4)**: Slack permalink가 본문에 있으면 `relatedThreads` 1건 + 해석된 요약이 실린다. 없으면 `[]`.\n- **AC2-4 (시나리오 5)**: `measureChangeSize` → `{additions:128, deletions:37}`, 그리고 `collect().changeSize`에도 동일 수치가 실려 하위 단계로 전달된다.\n- **AC2-5 (시나리오 6)**: 연결 이슈 마감일이 `schedule.deadline`으로 기록되고 `note`에 출처 이슈가 담긴다. 신호가 여럿이면 **가장 임박한 것**이 선택된다(`2026-08-09`). 신호가 전무하면 `undefined`.\n- **AC2-6 (시나리오 7)**: optional이 전부 부재한 PR에서 `collect()`가 **예외 없이** 완주하고 `relatedIssues === []`, `relatedThreads === []`, `schedule === undefined`, `intent.confirmed === false`. 컨텍스트가 다 갖춰진 PR도 같은 경로로 합성된다.\n- **전체 게이트**: CI `verify` job 4스텝(lint/typecheck/test/build) 전부 통과. backend 테스트가 **13 passed / 23 todo**(이전 7 passed / 29 todo) — `context (PRD-2)` 스위트 6 passing이 근거다.\n\n### 보존 불변식 (작업 중 유지 확인)\n- `gap-detection.test.ts`의 **AC6-5 회귀 seam 3 assertion green** (13 passed 안에 포함).\n- `GithubAdapter` 메서드는 `fetchPullRequest`/`fetchDiff` **2개 그대로** — merge/approve/push류 0개. (`grep -rnE \"\\b(merge|approve|push|createReview|submitReview|comment)\\b\" backend/src/adapters/` → no hit)\n- `frontend/src/styles/tokens.css` **diff 없음**.\n\n## 주의사항 · 롤백\n- **CI 없이는 병합하지 않는다.** 다만 이번 슬라이스는 blind가 아니다 — 로컬에서 CI와 동일한 4게이트를 재현해 전부 통과시켰고(standalone Node 22 aarch64 + pnpm 10.33.0), 실패 1건(대소문자 구분 정규식이 `Closes ENG-42`를 놓침)은 push 전에 로컬에서 잡아 고쳤다. 그래도 CI가 객관 게이트다.\n- **AC6-5 제품 경계 보존**: mutating 어댑터 메서드가 보이면 병합 거부. (주의: PR #3을 main에 *머지*하는 것은 리뷰 도구 레포 자체의 형상관리이며, \"제품이 리뷰 대상 코드베이스를 변경하지 않는다\"는 AC6-5와 무관하다.)\n- **문서 변경 없음이 의도적이다.** 이 슬라이스는 구현을 문서에 맞춘 것이므로 `docs/`의 AC·테스트 문서는 건드리지 않았다. 다만 `docs/doc-tracker.md`의 \"변경 이력\"이 **#2(PRD-1 구현)부터 이미 갱신되지 않은 상태**다(구현 진행이 트래커에 반영되지 않음). 이는 이 모델의 주 판정 대상(문서↔구현 정합)이 아니라 문서 체계 내부 bookkeeping이므로 이번 범위에 넣지 않았다 — **부수 보고 사항으로만 남긴다.**\n- **범위 밖(후속 재감지)**: PRD-3·4·5·6·7의 나머지 **23개 AC**, GitHub/Linear/Slack 어댑터의 실제 API 연결(원자료를 실제로 채우는 일), 프론트엔드 라우트↔목업·여정·디자인 시스템 정합. 이 task의 succeeded/failed는 **오직 AC2-1~AC2-6 기준**으로 닫는다.\n- **롤백**: 문제 시 `git revert <merge-commit>`. 순수 추가이고 `ContextModule` 인터페이스를 소비하는 곳은 `backend/src/index.ts`의 파이프라인 조립(타입만 참조)뿐이라 되돌려도 컴파일이 유지된다. 되돌리면 `contextModule` 메서드는 다시 `notImplemented`를 throw한다(스캐폴드 상태).\n"
         },
         "preparation": {
-          "prepared": true,
           "repository": "dlddu/pr-review",
           "branch": "reconcile/rct_20260807-0001",
           "pullRequestUrl": "https://github.com/dlddu/pr-review/pull/3",
@@ -245,9 +232,7 @@
           "notes": "PRD-2 컨텍스트 수집 슬라이스를 DRAFT PR #3로 스테이징. 4파일: backend/src/context/index.ts(AC2-1~2-6 구현), backend/src/context/context.test.ts(it.todo 6 -> 실제 6 spec, docs/tests/context.md 7 시나리오 전부), backend/src/adapters/github/index.ts(RawPullRequest에 read-only optional headRef·contextSignals 추가 — mutating 메서드 0개, AC6-5 경계 보존), packages/shared/src/context.ts(IssueLink에 optional dueDate — AC2-5 마감일 출처). **blind 저작이 아니다**: 아키텍처 매칭 standalone Node 22(aarch64, nodejs.org tar.gz — 이 박스에 xz가 없어 tar.xz는 못 푼다) + npm으로 pnpm 10.33.0을 받아 CI와 동일한 4게이트를 로컬 재현했고 전부 green(backend 7 passed/29 todo -> 13 passed/23 todo). 변경 파일 prettier --check clean(레포 전역 format:check는 baseline부터 33파일 warn — 무관하며 CI 게이트도 아님). 저작 중 로컬에서 잡은 실패 1건: 이슈 멘션 정규식이 대소문자 구분이라 'Closes ENG-42'를 놓쳤고, 로컬 테스트가 잡아 CI 왕복 없이 수정. push는 gh 사전인증(user token dlddu)으로 해서 workflow가 실제로 트리거됐다 — CI 'verify' job green 확인(run 31151380891, 19s), PR mergeable=MERGEABLE, draft 상태. tokens.css diff 없음."
         },
         "review": {
-          "required": false,
           "status": "approved",
-          "reviewer": "reconciler-work-review",
           "reviewedAt": "2026-09-20T08:14:51Z",
           "reason": "**신선도 — 6주 묵은 준비물이지만 유효하다(실측).** PR #3 open·`mergeable=true`·`mergeable_state=clean`. base 가 `49d3531`→`5dca441` 로 1커밋 움직였으나 그 커밋(#4)이 만진 것은 `docs/.nojekyll`·`docs/index.html`·`docs/reader.html` 뿐이고, `pnpm-workspace.yaml` 의 워크스페이스는 `backend`·`frontend`·`packages/*` 라 **CI 잡이 읽는 입력 집합 밖**이다(lockfile 무변경). merge ref `a1c4d25`(부모 = 현재 main tip `5dca441` + head `6f924e89`)와 시험된 head 트리의 diff 는 그 docs 3파일뿐 — `git diff pr3 pr3merge -- . ':(exclude)docs'` 공집합. 그래서 계획 시점 CI(run `31151380891`, `verify` success)는 여전히 이 머지 트리를 덮는다.\n\n**스스로 재현했다 — 낡은 초록에 기대지 않았다.** 호스트 toolchain(node v22.14.0 + pnpm 10.33.0)으로 **merge ref `a1c4d25` 자체**를 체크아웃해 CI 4게이트를 그대로 돌렸고 전부 rc=0: lint·typecheck·build green, test = backend **13 passed / 23 todo**(계획 기대값과 일치, 이전 7/29) · frontend 5 passed. `context (PRD-2)` 스위트 6 spec 전건 pass(AC2-1~AC2-6), **AC6-5 회귀 seam 3 assertion green**.\n\n**보존 불변식 2건 실측 유지.** `GithubAdapter` 메서드는 `fetchPullRequest`/`fetchDiff` **2개 그대로**이고 `grep -rnE '\\b(merge|approve|push|createReview|submitReview|comment)\\b' backend/src/adapters/` **무히트** — 추가분은 read-only optional 데이터 필드(`headRef`·`contextSignals`)뿐이라 AC6-5 경계가 산다. `frontend/src/styles/tokens.css` diff 없음.\n\n**정합성·범위.** main 의 `contextModule` 은 아직 `notImplemented` 를 throw 하므로 gap 은 열려 있고, 이 PR 이 PRD-2 6개 AC 를 닫는다. 변경은 정확히 4파일(`backend/src/context/{index,context.test}.ts`·`backend/src/adapters/github/index.ts`·`packages/shared/src/context.ts`)로 계획 집합과 일치하고 무관한 변경 0건. `packages/shared` 변경은 optional `IssueLink.dueDate` 1필드 추가라 하위호환이다. 열린 자매 PR #5 는 `docs/`+`README.md` 만 만져 파일 겹침 0.\n\n**레거시 review 가 사람 동의를 요청한 설계 판단 1건을 여기서 해소한다.** `ContextModule` 시그니처를 `(ref: PullRequestRef)` → `(pr: RawPullRequest)` 로 좁힌 결정인데, `docs/` 전체에 `ContextModule`·`PullRequestRef`·`RawPullRequest` 가 **0히트**다 — 즉 그 시그니처는 이 모델이 재는 SSOT 계약이 아니라 부트스트랩 스캐폴드의 임의 산물이라 문서↔구현 괴리를 만들지 않는다. 게다가 main 에 이미 착지한 PRD-1(`#2`)이 `classifyWorkType(pr: RawPullRequest)`·`extract(pr: RawPullRequest)` 로 같은 선례를 세웠고, ref 로 충분한 `identifyRepository(ref: PullRequestRef)` 는 그대로 둔 혼합 패턴까지 승계한다. 범위 안의 판단으로 본다.\n\n**위험·불가역성.** riskLevel low 에 값한다 — 순수 추가 코드이고 제품·데이터·클러스터 부작용 0, 불가역 지점은 머지 하나뿐이다. 레포 착지 이력(#1·#2·#4)이 전부 **부모 1개** = squash 관례이므로 지침의 `gh pr merge --squash` 와 롤백 `git revert <merge-commit>`(`-m 1` 없음)이 서로 맞는다. 검증 기준도 AC별로 명시돼 있다. 승인."
         },
@@ -390,9 +375,6 @@
     "status": "no_action_needed",
     "trigger": {
       "detectedAt": "2026-08-30T06:00:00Z",
-      "changedSides": [
-        "to_be"
-      ],
       "toBe": {
         "previousVersion": "a3fffbbab4ff37e4c91e1edbdbb89d69b58e1c5d",
         "currentVersion": "4e73786ce9c2e41f9e10d4c7115dec8a10d23a02"
@@ -409,7 +391,6 @@
     "id": "rct_20260830-0001",
     "assessment": {
       "reason": "작업 불필요. to-be 지문이 `docs/` 트리 전체라 허브·리더 신설만으로 재감지가 걸렸으나, 문서 내용과 구현이 둘 다 불변이다.\n\n**⚠️ 함께 남기는 관측(작업 판정과 별개, 사람의 조치가 필요하다)**: 열린 task `rct_20260807-0001`이 **2026-08-07 이후 22일째 `awaiting_review`** 에 멈춰 있다. `awaiting_review`는 executor 점유 상태이므로 detector의 점유 규칙상 이 모델은 그 task가 풀릴 때까지 계속 비켜서게 된다 — 즉 **이 모델은 3주째 실질적으로 정지 상태**이고, 그 사이 구현 커밋도 없었다. 이 레코드는 점유한 워커와 경합하지 않기 위해 그 task를 건드리지 않고 사실만 남긴다. 되살리려면 사람이 그 task의 검토를 처리하거나 상태를 미점유로 되돌려야 한다.\n\n이 레코드 자체는 판정을 남기고 베이스라인을 전진시키기 위한 것이다.",
-      "assessedBy": "agent",
       "assessedAt": "2026-08-30T06:00:00Z"
     }
   }
