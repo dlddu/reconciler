@@ -6336,6 +6336,42 @@
     "assessment": {
       "reason": "**작업 필요 → `action_required`**(planner 대기, 미점유). 양측 baseline 은 claim 커밋에서 이미 전진했다(as-is `backend:f9f4e63a frontend:69f47ea2` → `backend:b13306f8 frontend:aa3056a6`, to-be `82667f37` → `4cc467ad`). 근거는 전부 이번 fire 의 독립 실측이다(08:08~08:30Z, 전체 클론 `6e6478a` · side 별 baseline 부모 `074c325` 대조).\n\n**근거 1 — 귀속이 깨끗하고 창이 작다.** 양측 baseline 과 트리 해시가 바이트 일치하는 마지막 커밋은 둘 다 `074c325` ⇒ 창은 3커밋(#137·#138·#139)이고, 그중 행동을 바꾼 것은 **#137·#138** 둘이다(#139 는 자매 주석 패스 — `cross_cutting.rs` 주석 스트립 md5 가 `95d3395`↔HEAD 동일 `f80e9843`, 프런트 −8행 전부 주석).\n\n**근거 2 — 기준 1 은 원리적으로 불발화한다.** 판정 표면 5개(`docs/prd` `edf4f65e` · `docs/test` `09744489` · `docs/user-journey` `a02c845e` · `docs/values.md` `3d1be55f` · `docs/doc-tracker` `911d5111`)와 `docs/mockups` `42b1f8ea` · `docs/design-system.md` `95b8c254` 가 **양 지점 바이트 동일**. `docs/` 20 엔트리 중 움직인 것은 자매 표면 2개(`comment-policy` · `e2e-mocking-policy.md`)뿐이다.\n\n**근거 3 — 기준 3 은 닫힌다.** #137·#138 이 더한 것은 프롬프트 입력(본문 발췌 ≤8파일×4000B · 경로 표본 규칙)과 답 후처리뿐이고 새 화면·조작·API 필드·오류 문구가 0이다. AC1.2 가 추출 수단을 「LLM 의 도움을 받아」로 **일반항** 위임했으므로 프롬프트 문면은 문서화 대상이 아니다(직전 task 의 #134 판단과 같은 축). 새 외부 경계(contents API)는 `docs/e2e-mocking-policy.md` 에 **같은 PR(#137) 로 등재**된 채 착지했다.\n\n**근거 4 — 기준 2 에서 새 어긋남 1건이 태어났고, 그 태어난 시점을 baseline 에서 고정했다.** #137 의 `keep_listed_evidence` 는 보여 준 경로 목록 밖의 근거를 지우고 **근거가 0이 된 항목을 항목째 지운다**(`cross_cutting.rs:420`, 단위 테스트 `…and_so_is_an_item_left_with_none` 이 `Dropped{paths:2,items:1}` 로 단정). baseline `074c325:backend/src/cross_cutting.rs` 에는 `retain`·`keep_listed_evidence` **0건**이고 프로바이더 JSON Schema 의 `evidence` 에는 **양 지점 모두 `minItems` 가 없다** ⇒ 어제까지 합법이던 `evidence: []` 항목이 오늘은 존재할 수 없다.\n\n**근거 5 — 그 결과 목업이 규범으로 그린 화면 상태가 도달 불가가 됐다.** `docs/mockups/JRN-discover-features.html` `STP-review-landscape`(1092-1122)는 미들웨어 카드에 **근거 없는 항목 1건 + `근거 없음` 태그 + 범례**를 그리고, 태그·범례에는 `data-sample` 이 **없다**(예시값이 아니라 규범). 구현 화면도 그 규범을 그대로 들고 있다(`CrossCuttingConcerns.tsx:151-155` `data-testid=\"concern-no-evidence\"` · `:168-171` 범례 `items.some(evidence.length === 0)`) — **두 분기 모두 이제 상수 false** 다. 이틀 전 `#132` 가 바로 그 범례를 「`근거 없음` 이 실제로 있는 축에만」으로 목업에 수렴시킨 작업이 무효가 됐다. 이것이 정의의 판정 기준 2(「구현된 동작이 대응 AC·테스트 문서·**목업**·디자인 시스템과 어긋나면 drift」)에 정확히 해당한다.\n\n**근거 6 — 표시 문제에 그치지 않는다.** 근거 대조의 기준이 **상한 400 으로 잘린 경로 목록**이고 #138 이 그 표본 규칙을 바꿨으므로, 큰 레포에서는 **실재하지만 표본에 안 뽑힌 파일**을 근거로 든 항목이 통째로 사라진다. 삭제는 `tracing::warn!` 한 줄로만 남고 산출물·화면엔 흔적이 없다 — 사용자에게 알릴 자리가 목업의 `근거 없음` 칸 말고는 없는데 그 칸을 방금 막았다.\n\n**근거 7 — 소유자가 없고, 자매 모델은 원리적으로 못 본다(⇒ 여기서 닫으면 영구 미탐지).** 원인은 `backend/src/cross_cutting.rs` 인데 `tbm_feature-doc-mockup-render` 의 as-is 범위는 `frontend/src` 라 그 모델의 지문은 이 커밋을 읽지 않고, 화면 코드는 목업과 여전히 1:1 이라 정적 대조도 통과한다. 원장이 이 상황을 위해 둔 유형(「**범위 밖 소유**」)이 실재하지만 해당 행은 **0건**이다(편차 28행 전수 확인). 이 모델의 열린 task 는 `rct_20260922-0005`(`approved`, PR #126) 하나뿐이고 그 완료 기준은 **슬라이스 6e = AC3.4 임의 시점 복원**으로, 본문이 AC4.4·AC4.6·AC4.7 을 「범위 밖(후속)」으로 못박았을 뿐 이 건은 언급조차 없다. 열린 PR 중 `cross_cutting.rs` 를 만지는 것은 #143 하나인데 자매 **주석 축**이라 행동을 되돌리지 않고, 목업 `JRN-discover-features.html` 을 만지는 열린 PR 은 **0**이다 ⇒ 판정 3단의 ⑶ 이 「덮는 task 없음」으로 떨어진다.\n\n**근거 8 — 게이트 초록은 이 축을 보지 않는다.** #137·#138·#139 는 head SHA 기준 CI **8 success / 1 skipped** 로 전부 초록이지만, `check-mockup-render.py` 의 as-is 표면은 `frontend/src` 뿐이고(백엔드 도달 가능성은 검사 라벨에 없다) `check_doc_inventory.py`·주석 게이트·e2e 매핑 게이트 어느 것도 「목업이 그린 상태를 파이프라인이 만들 수 있는가」를 묻지 않는다. 초록은 「우리 층의 자기일관성」만 증명한다.\n\n**planner 에게 넘기는 것**: ① 방향은 레포 자신의 문서 권위 순서(`가치 > PRD > 테스트 > 여정 > 목업 > 구현`)가 정한다 — AC1.2「각 항목에 근거가 첨부된다」가 목업을 이기므로 **기본은 목업·화면에서 죽은 상태를 걷는 쪽**이고, 항목을 남겨 `근거 없음` 으로 표시하려면 AC1.2 개정이 선행이다. ② 삭제된 항목을 사용자에게 알릴지(축 카드의 제외 건수 등)는 제품 결정이며, 안 알리기로 하면 편차 원장에 사유·해소 시점과 함께 등재해야 한다. ③ **in-flight 충돌 집합**: #140(`doc-tracker/2026-09.md`·`CrossCuttingConcerns.tsx`·`index.css`, 같은 화면의 다른 편차를 원장에 새 행으로 등재 중) · #143(`cross_cutting.rs` 주석) · #126(`doc-tracker/2026-09.md` 변경 이력 표 말미 add/add). ④ 승계 잔여(이번 창 불변): 미구현 AC 4건/5항목 + 편차 원장 1행(`STP-notice-change`).",
       "assessedAt": "2026-09-24T08:17:30Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#137 이 들인 `keep_listed_evidence` 가 근거 0인 항목을 항목째 버리면서, `STP-review-landscape` 가 규범으로 그리던 **항목 단위 「근거 없음」 상태가 도달 불가**가 됐다(목업의 태그·범례 + 구현의 대응 분기 둘이 상수 false). 방향은 레포 자신의 문서 권위 순서가 정한다 — AC1.2 검증 방법(「각 항목에는 근거가 첨부된다」, PRD 2순위)과 여정 `JRN-discover-features` `STP-review-landscape` 페인포인트의 **선언지**(「표시하지 않거나 『근거 없음』으로 명시」, 4순위)가 둘 다 목업(5순위)보다 위이고, 파이프라인은 그 선언지의 앞 갈래를 골랐으므로 **여정은 이미 참이다**. 따라서 목업을 상위 문서에 맞춰 갱신하고 구현이 목업을 따른다 — 죽은 상태를 양쪽에서 대칭으로 걷는다. 반대 방향(항목을 남겨 표시)은 AC1.2 개정이 선행이라 이 슬라이스가 택할 수 없다.\n\n**완료 기준(이 시도의 범위)**: ⑴ `docs/mockups/JRN-discover-features.html` `STP-review-landscape` 미들웨어 카드에서 `근거 없음` 태그 항목과 범례가 사라지고, ⑵ `frontend/src/CrossCuttingConcerns.tsx` 의 대응 분기 두 곳이 사라지며, ⑶ 축 단위 빈 상태(`axis-empty`)는 목업·구현 양쪽에 그대로 남고, ⑷ 네 게이트(`check-mockup-render` · `check-journey-mockup` · `check-scenario-e2e` · `check-data-format-change`)와 `tsc -b && vite build` 가 rc=0 이며, ⑸ 판정 근거와 범위 밖 항목이 `docs/doc-tracker/2026-09.md` 에 남는다. PR #144 가 main 에 착지하면 성공이다.\n\n**범위 밖(후속)**: ① 버려진 항목을 사용자에게 알릴지 — 현재 `tracing::warn!` 한 줄뿐이고 경로 표본이 상한 400 으로 잘려 있어 조용한 소실이 가능하다. 알리기로 하면 AC1.2 검증 방법 · 여정 · 목업을 함께 움직여야 하는 제품 결정이라 이 슬라이스에 넣지 않고 `doc-tracker` 「다음 단계 권장」에 등재했다. ② 승계 잔여(이번 창 불변): 미구현 AC 4건/5항목 + 편차 원장 1행(`STP-notice-change`).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #144 (`reconcile/rct_20260924-0002-docs-impl`)의 필수 체크가 전부 초록인지 확인한다 — `docs-journey-mockup` · `docs-mockup-render` · `docs-scenario-e2e` · `test (cargo)` · `test (kind e2e)` · `ci-gate`, 그리고 commit status `review/manual-approval`.",
+              "expectedOutcome": "`gh pr checks 144` 전 항목 pass. `review/manual-approval` 은 자동 판정으로 이미 success(「DB 스키마·데이터 저장 형식 변경 없음」) — 사람 승인 대기가 아니다."
+            },
+            {
+              "seq": 2,
+              "action": "머지 직전에 `gh pr view 144 --json mergeStateStatus` 로 DIRTY 여부를 재확인하고, DIRTY 면 `origin/main` 을 머지해 해소한다. 충돌은 `docs/doc-tracker/2026-09.md` 변경 이력 표 말미에서만 날 수 있다(#126 과 add/add).",
+              "expectedOutcome": "`mergeStateStatus` 가 `CLEAN` 또는 `BLOCKED`(= 필수 체크 대기)다. 충돌이 있었다면 해소 뒤 양쪽 행이 모두 남고 날짜 순으로 정렬돼 있다."
+            },
+            {
+              "seq": 3,
+              "action": "PR #144 를 **squash 머지**한다(이 레포의 reconcile PR 관례).",
+              "expectedOutcome": "main 에 커밋 1개가 얹히고 PR 이 닫힌다."
+            },
+            {
+              "seq": 4,
+              "action": "main 체크아웃에서 `python3 tools/check-mockup-render.py --verbose` 를 돌려 완료 기준 ⑷와 수치를 재확인한다.",
+              "expectedOutcome": "rc=0 · M3A 346 · M3B 313 · `data-sample` 128 · 편차 원장 28행/상한 28 · 공전 행 0."
+            },
+            {
+              "seq": 5,
+              "action": "main 에서 도달 불가 상태가 실제로 사라졌는지 직접 센다 — `grep -c 'concern-no-evidence' frontend/src/CrossCuttingConcerns.tsx` 와 `grep -c '근거를 찾지 못한 항목은 지어내지 않고 그대로 표시합니다' docs/mockups/JRN-discover-features.html`.",
+              "expectedOutcome": "둘 다 0. 같은 명령을 `axis-empty` / `이 저장소에서는 근거를 찾지 못했어요` 로 바꾸면 각각 1 이상(축 단위 빈 상태는 유지)."
+            }
+          ],
+          "plannedAt": "2026-09-24T08:27:06Z"
+        }
+      }
+    ]
   }
 ]
