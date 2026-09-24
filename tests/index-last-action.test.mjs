@@ -38,13 +38,13 @@ function relTime(iso, now) {
   return context.result;
 }
 
-test("a task with no updatedAt still reports the time it was detected", () => {
+test("a task with no updatedAt still reports the time it was created", () => {
   const result = lastAction([
-    { id: "rct_a", trigger: { detectedAt: "2026-08-05T11:08:13Z" } }
+    { id: "rct_a", createdAt: "2026-08-05T11:08:13Z" }
   ]);
 
   assert.equal(result.at, "2026-08-05T11:08:13Z");
-  assert.equal(result.label, "감지");
+  assert.equal(result.label, "작업 생성");
   assert.equal(result.taskId, "rct_a");
 });
 
@@ -52,7 +52,7 @@ test("a step recorded after updatedAt wins over the stale updatedAt", () => {
   const result = lastAction([
     {
       id: "rct_a",
-      trigger: { detectedAt: "2026-08-01T00:00:00Z" },
+      createdAt: "2026-08-01T00:00:00Z",
       updatedAt: "2026-08-01T00:00:00Z",
       attempts: [
         {
@@ -74,9 +74,9 @@ test("a step recorded after updatedAt wins over the stale updatedAt", () => {
 
 test("the newest moment across every task of the model is used", () => {
   const result = lastAction([
-    { id: "old", trigger: { detectedAt: "2026-07-01T00:00:00Z" }, updatedAt: "2026-07-02T00:00:00Z" },
-    { id: "new", trigger: { detectedAt: "2026-08-30T10:12:12Z" } },
-    { id: "middle", trigger: { detectedAt: "2026-08-01T00:00:00Z" } }
+    { id: "old", createdAt: "2026-07-01T00:00:00Z", updatedAt: "2026-07-02T00:00:00Z" },
+    { id: "new", createdAt: "2026-08-30T10:12:12Z" },
+    { id: "middle", createdAt: "2026-08-01T00:00:00Z" }
   ]);
 
   assert.equal(result.at, "2026-08-30T10:12:12Z");
@@ -85,8 +85,8 @@ test("the newest moment across every task of the model is used", () => {
 
 test("a no-op detection is not an action", () => {
   const result = lastAction([
-    { id: "real", status: "succeeded", trigger: { detectedAt: "2026-08-01T00:00:00Z" } },
-    { id: "noop", status: "no_action_needed", trigger: { detectedAt: "2026-08-30T10:12:12Z" } }
+    { id: "real", status: "succeeded", createdAt: "2026-08-01T00:00:00Z" },
+    { id: "noop", status: "no_action_needed", createdAt: "2026-08-30T10:12:12Z", trigger: { detectedAt: "2026-08-30T10:12:12Z" } }
   ]);
 
   assert.equal(result.at, "2026-08-01T00:00:00Z");
@@ -95,8 +95,8 @@ test("a no-op detection is not an action", () => {
 
 test("a model whose every task needed no action reports nothing", () => {
   const result = lastAction([
-    { id: "noop1", status: "no_action_needed", trigger: { detectedAt: "2026-08-01T00:00:00Z" } },
-    { id: "noop2", status: "no_action_needed", trigger: { detectedAt: "2026-08-30T10:12:12Z" } }
+    { id: "noop1", status: "no_action_needed", createdAt: "2026-08-01T00:00:00Z" },
+    { id: "noop2", status: "no_action_needed", createdAt: "2026-08-30T10:12:12Z" }
   ]);
 
   assert.equal(result, null);
@@ -108,7 +108,7 @@ test("a model with no task at all reports nothing", () => {
 
 test("unparseable timestamps are ignored rather than displayed", () => {
   const result = lastAction([
-    { id: "rct_a", trigger: { detectedAt: "2026-08-01T00:00:00Z" }, updatedAt: "not-a-date" }
+    { id: "rct_a", createdAt: "2026-08-01T00:00:00Z", updatedAt: "not-a-date" }
   ]);
 
   assert.equal(result.at, "2026-08-01T00:00:00Z");
@@ -186,9 +186,9 @@ const plainModels = (...ids) =>
 test("the model acted on most recently is listed first", () => {
   assert.deepEqual(
     orderedIds(plainModels("stale", "fresh", "middle"), {
-      stale: [{ id: "a", trigger: { detectedAt: "2026-07-01T00:00:00Z" } }],
-      fresh: [{ id: "b", trigger: { detectedAt: "2026-09-01T00:00:00Z" } }],
-      middle: [{ id: "c", trigger: { detectedAt: "2026-08-01T00:00:00Z" } }]
+      stale: [{ id: "a", createdAt: "2026-07-01T00:00:00Z" }],
+      fresh: [{ id: "b", createdAt: "2026-09-01T00:00:00Z" }],
+      middle: [{ id: "c", createdAt: "2026-08-01T00:00:00Z" }]
     }),
     ["fresh", "middle", "stale"]
   );
@@ -196,17 +196,17 @@ test("the model acted on most recently is listed first", () => {
 
 test("a step buried in an attempt still lifts its model to the top", () => {
   assert.deepEqual(
-    orderedIds(plainModels("recent-detected", "recent-step"), {
-      "recent-detected": [{ id: "a", trigger: { detectedAt: "2026-08-20T00:00:00Z" } }],
+    orderedIds(plainModels("recent-createdAt", "recent-step"), {
+      "recent-createdAt": [{ id: "a", createdAt: "2026-08-20T00:00:00Z" }],
       "recent-step": [
         {
           id: "b",
-          trigger: { detectedAt: "2026-01-01T00:00:00Z" },
+          createdAt: "2026-01-01T00:00:00Z",
           attempts: [{ verification: { verifiedAt: "2026-08-25T00:00:00Z" } }]
         }
       ]
     }),
-    ["recent-step", "recent-detected"]
+    ["recent-step", "recent-createdAt"]
   );
 });
 
@@ -218,17 +218,17 @@ test("models with no recorded action sink below the ones that have acted", () =>
         {
           id: "a",
           status: "no_action_needed",
-          trigger: { detectedAt: "2026-09-08T00:00:00Z" }
+          createdAt: "2026-09-08T00:00:00Z"
         }
       ],
-      acted: [{ id: "b", trigger: { detectedAt: "2026-01-01T00:00:00Z" } }]
+      acted: [{ id: "b", createdAt: "2026-01-01T00:00:00Z" }]
     }),
     ["acted", "never", "noop-only"]
   );
 });
 
 test("models that tie keep the order they have in the data file", () => {
-  const same = { id: "x", trigger: { detectedAt: "2026-08-01T00:00:00Z" } };
+  const same = { id: "x", createdAt: "2026-08-01T00:00:00Z" };
   assert.deepEqual(
     orderedIds(plainModels("first", "second", "third"), {
       first: [{ ...same }],
@@ -246,9 +246,9 @@ test("the search filter narrows the list without disturbing the order", () => {
     { id: "docs-new", metadata: { name: "docs new", tags: [] } }
   ];
   const tasks = {
-    "docs-old": [{ id: "a", trigger: { detectedAt: "2026-07-01T00:00:00Z" } }],
-    "e2e-new": [{ id: "b", trigger: { detectedAt: "2026-09-01T00:00:00Z" } }],
-    "docs-new": [{ id: "c", trigger: { detectedAt: "2026-08-01T00:00:00Z" } }]
+    "docs-old": [{ id: "a", createdAt: "2026-07-01T00:00:00Z" }],
+    "e2e-new": [{ id: "b", createdAt: "2026-09-01T00:00:00Z" }],
+    "docs-new": [{ id: "c", createdAt: "2026-08-01T00:00:00Z" }]
   };
 
   assert.deepEqual(orderedIds(models, tasks), ["e2e-new", "docs-new", "docs-old"]);
