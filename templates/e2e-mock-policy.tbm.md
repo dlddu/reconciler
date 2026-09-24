@@ -54,8 +54,7 @@
   "asIs": {
     "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "{{MOCK_SCOPE}}" },
     "versionScript": { "runtime": "bash", "code": "<as-is 스크립트>", "timeoutSeconds": 120 }
-  },
-  "checkPolicy": { "intervalSeconds": 3600 }
+  }
 }
 ```
 

@@ -36,7 +36,7 @@ test("shows models whose detection is explicitly enabled", () => {
 });
 
 test("treats a missing enabled flag as enabled", () => {
-  assert.equal(isModelEnabled({ id: "no-flag", checkPolicy: { intervalSeconds: 300 } }), true);
+  assert.equal(isModelEnabled({ id: "no-flag", checkPolicy: {} }), true);
   assert.equal(isModelEnabled({ id: "no-policy" }), true);
 });
 
@@ -45,7 +45,7 @@ test("keeps only enabled models in the sidebar list", () => {
     { id: "a" },
     { id: "b", checkPolicy: { enabled: false } },
     { id: "c", checkPolicy: { enabled: true } },
-    { id: "d", checkPolicy: { intervalSeconds: 600 } }
+    { id: "d", checkPolicy: {} }
   ]);
 
   assert.deepEqual(visible, ["a", "c", "d"]);

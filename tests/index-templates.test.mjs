@@ -80,7 +80,7 @@ test("ignores table rows that do not name a template file", () => {
       "| 항목 | 규약 |",
       "|---|---|",
       "| id | `tbm_<slug>-docs-impl` |",
-      "| checkPolicy | `{\"intervalSeconds\": 3600}` |",
+      "| checkPolicy | `{\"enabled\": true}` |",
       "",
       "| 파일 | 유형 | 대상 |",
       "|---|---|---|",

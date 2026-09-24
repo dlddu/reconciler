@@ -769,9 +769,19 @@
     return '<span class="pill yes"' + (title ? ' title="' + title + '"' : "") + ">조치 필요</span>";
   }
 
+  // 바뀐 쪽은 따로 기록하지 않는다 — 각 side의 previousVersion≠currentVersion에서 도출한다(단일 진실 공급원).
+  function changedSides(trig) {
+    var out = [];
+    [["as_is", "asIs"], ["to_be", "toBe"]].forEach(function (p) {
+      var vc = trig && trig[p[1]];
+      if (vc && vc.previousVersion !== vc.currentVersion) out.push(p[0]);
+    });
+    return out;
+  }
+
   function fmtTask(t) {
     var trig = t.trigger || {};
-    var sides = (trig.changedSides || []).map(function (s) {
+    var sides = changedSides(trig).map(function (s) {
       return '<span class="chip side">' + (s === "as_is" ? "as-is" : "to-be") + "</span>";
     }).join(" ");
     // 수동 트리거는 바뀐 쪽이 없을 수 있다 — "변경: —"로 두면 감지가 헛돈 것처럼 보이므로 계기를 그대로 적는다.
@@ -802,7 +812,7 @@
       var abody =
         (a.reason ? '<div class="prose">' + md(a.reason) + "</div>" : "") +
         (a.recheckAfter ? '<div class="kv" style="margin-top:8px"><span>재확인</span><span>' + fmtDate(a.recheckAfter) + "</span></div>" : "") +
-        '<div class="meta small muted">' + (a.assessedBy ? "by " + escapeHtml(a.assessedBy) + " · " : "") + fmtDate(a.assessedAt) + "</div>";
+        '<div class="meta small muted">' + fmtDate(a.assessedAt) + "</div>";
       sections += sec("판단", "assessment", abody);
     }
 
@@ -828,8 +838,6 @@
         var repoUrl = pp.repository ? "https://github.com/" + pp.repository : null;
         var branchUrl = repoUrl && pp.branch ? repoUrl + "/tree/" + pp.branch : null;
         var ppbody =
-          '<div class="kv"><span>prepared</span><span>' +
-            (pp.prepared === true ? "true" : pp.prepared === false ? "false" : '<span class="muted">—</span>') + "</span></div>" +
           (pp.repository ? '<div class="kv"><span>레포</span><span>' +
             (repoUrl ? '<a href="' + escapeHtml(repoUrl) + '" target="_blank" rel="noopener">' + escapeHtml(pp.repository) + "</a>"
                      : escapeHtml(pp.repository)) + "</span></div>" : "") +
@@ -846,11 +854,13 @@
       if (at.review) {
         var r = at.review;
         var rbody =
-          '<div class="kv"><span>필요</span><span>' + (r.required ? "예" : "아니오") + "</span></div>" +
+          '<div class="kv"><span>사람 승인</span><span>' + (r.manualApproval
+            ? "<code>" + escapeHtml(r.manualApproval.context) + "</code> @ <code>" + escapeHtml(String(r.manualApproval.sha).slice(0, 7)) + "</code>"
+            : '<span class="muted">불필요</span>') + "</span></div>" +
           '<div class="kv"><span>상태</span><span>' + escapeHtml(r.status || "—") + "</span></div>" +
           (r.reason ? '<div class="prose" style="margin-top:6px">' + md(r.reason) + "</div>" : "") +
           (r.comment ? '<div class="prose" style="margin-top:6px">' + md(r.comment) + "</div>" : "") +
-          '<div class="meta small muted">' + (r.reviewer ? escapeHtml(r.reviewer) + " · " : "") + fmtDate(r.reviewedAt) + "</div>";
+          '<div class="meta small muted">' + fmtDate(r.reviewedAt) + "</div>";
         sections += sec("검토" + atag, "review · " + (r.status || ""), rbody);
       }
 
@@ -1290,7 +1300,6 @@
     if (m.checkPolicy) {
       checkPolicy = '<div class="checkpolicy">' +
         (m.checkPolicy.enabled === false ? "<span>감지: 비활성</span>" : "") +
-        (m.checkPolicy.intervalSeconds != null ? "<span>점검 주기: " + m.checkPolicy.intervalSeconds + "s</span>" : "") +
         (m.checkPolicy.webhookEnabled != null ? "<span>webhook: " + (m.checkPolicy.webhookEnabled ? "on" : "off") + "</span>" : "") +
         "</div>";
     }

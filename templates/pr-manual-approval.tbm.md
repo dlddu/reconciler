@@ -137,8 +137,7 @@ SSOT다 — 헤더에만 있으면 판정기를 고치는 사람만 보고, 무�
   "asIs": {
     "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main" },
     "versionScript": { "runtime": "bash", "code": "<as-is 스크립트>", "timeoutSeconds": 120, "env": { "GITHUB_TOKEN": "{{TOKEN_REF}}" } }
-  },
-  "checkPolicy": { "intervalSeconds": 3600 }
+  }
 }
 ```
 

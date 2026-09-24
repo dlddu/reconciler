@@ -69,8 +69,7 @@
   "asIs": {
     "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "<렌더링 소스의 공통 상위 경로>" },
     "versionScript": { "runtime": "bash", "code": "<as-is 스크립트>", "timeoutSeconds": 60 }
-  },
-  "checkPolicy": { "intervalSeconds": 3600 }
+  }
 }
 ```
 

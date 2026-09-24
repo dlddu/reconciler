@@ -138,19 +138,19 @@ test("the review badges split the review tab's count between waiting, in progres
 // approved + review.manualApproval on the latest attempt = waiting for the target repo's human approval status.
 const MANUAL = { sha: "a".repeat(40), context: "review/manual-approval" };
 const MANUAL_TASKS = {
-  gated: [{ id: "m1", status: "approved", attempts: [{ review: { required: true, status: "approved", manualApproval: MANUAL } }] }],
-  // approved without manualApproval (incl. legacy required:true) needs no human
+  gated: [{ id: "m1", status: "approved", attempts: [{ review: { status: "approved", manualApproval: MANUAL } }] }],
+  // approved without manualApproval needs no human
   ready: [
-    { id: "m2", status: "approved", attempts: [{ review: { required: false, status: "approved" } }] },
-    { id: "m3", status: "approved", attempts: [{ review: { required: true, status: "approved", reviewer: "human" } }] }
+    { id: "m2", status: "approved", attempts: [{ review: { status: "approved" } }] },
+    { id: "m3", status: "approved", attempts: [{ review: { status: "approved", comment: "human" } }] }
   ],
   // only the latest attempt counts
   moved: [{ id: "m4", status: "approved", attempts: [
-    { review: { required: true, status: "approved", manualApproval: MANUAL } },
-    { review: { required: false, status: "approved" } }
+    { review: { status: "approved", manualApproval: MANUAL } },
+    { review: { status: "approved" } }
   ] }],
   // once it runs, it leaves approved and the review tab
-  ran: [{ id: "m5", status: "executing", attempts: [{ review: { required: true, status: "approved", manualApproval: MANUAL } }] }]
+  ran: [{ id: "m5", status: "executing", attempts: [{ review: { status: "approved", manualApproval: MANUAL } }] }]
 };
 const MANUAL_MODELS = Object.keys(MANUAL_TASKS).map((id) => ({ id, metadata: { name: id, tags: [] } }));
 

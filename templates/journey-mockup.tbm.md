@@ -78,8 +78,7 @@ definition이 사실과 어긋난다. 숫자는 definition의 "등록 시점 현
   "asIs": {
     "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "{{ASIS_COMMON}}" },
     "versionScript": { "runtime": "bash", "code": "<as-is 스크립트>", "timeoutSeconds": 60 }
-  },
-  "checkPolicy": { "intervalSeconds": 3600 }
+  }
 }
 ```
 

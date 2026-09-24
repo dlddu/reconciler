@@ -83,8 +83,7 @@ task에서 매핑 선언과 등재 표를 함께 갱신해야 한다(개명과 �
   "asIs": {
     "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "{{E2E_PATH}}" },
     "versionScript": { "runtime": "bash", "code": "<as-is 스크립트>", "timeoutSeconds": 60 }
-  },
-  "checkPolicy": { "intervalSeconds": 3600 }
+  }
 }
 ```
 
