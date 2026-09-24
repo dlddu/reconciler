@@ -56,6 +56,7 @@ function renderSidebar(tasks) {
     progressTaskCount: () => 0,
     awaitingReviewTaskCount: () => 0,
     approvingTaskCount: () => 0,
+    manualApprovalTaskCount: () => 0,
     DONE_STATUSES: ["succeeded", "cancelled", "no_action_needed"],
     AWAITING_REVIEW_STATUSES: ["awaiting_review"],
     APPROVING_STATUSES: ["approving"],

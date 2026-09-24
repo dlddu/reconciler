@@ -120,18 +120,55 @@ test("the review tab is exactly the waiting and in-progress approval sets, which
   assert.equal(awaiting.filter((s) => approving.includes(s)).length, 0);
 });
 
-test("the review badges split the review tab's count between waiting and in progress", () => {
+test("the review badges split the review tab's count between waiting, in progress and manual approval", () => {
   assert.equal(run('awaitingReviewTaskCount("asking")'), 1);
   assert.equal(run('approvingTaskCount("asking")'), 0);
   assert.equal(run('awaitingReviewTaskCount("claimed")'), 0);
   assert.equal(run('approvingTaskCount("claimed")'), 1);
-  for (const id of ["asking", "claimed", "working", "idle", "nope"]) {
+  const withGated = { tasksByModel: { ...TASKS, ...MANUAL_TASKS } };
+  for (const id of ["asking", "claimed", "working", "idle", "nope", "gated", "ready", "moved"]) {
     assert.equal(
-      run(`awaitingReviewTaskCount("${id}") + approvingTaskCount("${id}")`),
-      run(`reviewTaskCount("${id}")`),
-      `${id}: the two badges must add up to the review tab's count`
+      run(`awaitingReviewTaskCount("${id}") + approvingTaskCount("${id}") + manualApprovalTaskCount("${id}")`, withGated),
+      run(`reviewTaskCount("${id}")`, withGated),
+      `${id}: the three badges must add up to the review tab's count`
     );
   }
+});
+
+// approved + review.manualApproval on the latest attempt = waiting for the target repo's human approval status.
+const MANUAL = { sha: "a".repeat(40), context: "review/manual-approval" };
+const MANUAL_TASKS = {
+  gated: [{ id: "m1", status: "approved", attempts: [{ review: { required: true, status: "approved", manualApproval: MANUAL } }] }],
+  // approved without manualApproval (incl. legacy required:true) needs no human
+  ready: [
+    { id: "m2", status: "approved", attempts: [{ review: { required: false, status: "approved" } }] },
+    { id: "m3", status: "approved", attempts: [{ review: { required: true, status: "approved", reviewer: "human" } }] }
+  ],
+  // only the latest attempt counts
+  moved: [{ id: "m4", status: "approved", attempts: [
+    { review: { required: true, status: "approved", manualApproval: MANUAL } },
+    { review: { required: false, status: "approved" } }
+  ] }],
+  // once it runs, it leaves approved and the review tab
+  ran: [{ id: "m5", status: "executing", attempts: [{ review: { required: true, status: "approved", manualApproval: MANUAL } }] }]
+};
+const MANUAL_MODELS = Object.keys(MANUAL_TASKS).map((id) => ({ id, metadata: { name: id, tags: [] } }));
+
+test("an approved task waiting for manual approval shows in the review tab", () => {
+  const o = { models: MANUAL_MODELS, tasksByModel: MANUAL_TASKS };
+  assert.deepEqual(ids(run('modelsInMode("review")', o)), ["gated"]);
+  assert.equal(run('manualApprovalTaskCount("gated")', o), 1);
+  assert.equal(run('reviewTaskCount("gated")', o), 1);
+  for (const id of ["ready", "moved", "ran"]) {
+    assert.equal(run(`manualApprovalTaskCount("${id}")`, o), 0, `${id} is not waiting for manual approval`);
+  }
+  const progress = ids(run('modelsInMode("progress")', o));
+  assert.ok(progress.includes("gated"), "manual approval is still in progress");
+});
+
+test("manual approval tolerates tasks without attempts or review", () => {
+  const o = { tasksByModel: { x: [{ id: "1", status: "approved" }, { id: "2", status: "approved", attempts: [] }, { id: "3", status: "approved", attempts: [{}] }] } };
+  assert.equal(run('manualApprovalTaskCount("x")', o), 0);
 });
 
 test("every status the page names is a real schema status", () => {

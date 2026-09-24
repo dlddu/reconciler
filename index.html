@@ -164,14 +164,17 @@
   .progpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #e0e7ff; color: #4338ca; }
   .reviewpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #fef3c7; color: #b45309; }
   .approvepill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #ffedd5; color: #c2410c; }
+  .manualpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #cffafe; color: #0e7490; }
   .hidepill { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: var(--code-bg); color: var(--muted); }
   :root[data-theme="dark"] .progpill { background: #221f4d; color: #a5b4fc; }
   :root[data-theme="dark"] .reviewpill { background: #3d2a06; color: #fcd34d; }
   :root[data-theme="dark"] .approvepill { background: #431a07; color: #fdba74; }
+  :root[data-theme="dark"] .manualpill { background: #083344; color: #67e8f9; }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .progpill { background: #221f4d; color: #a5b4fc; }
     :root:not([data-theme="light"]) .reviewpill { background: #3d2a06; color: #fcd34d; }
     :root:not([data-theme="light"]) .approvepill { background: #431a07; color: #fdba74; }
+    :root:not([data-theme="light"]) .manualpill { background: #083344; color: #67e8f9; }
   }
 
   .legend { margin-top: auto; border-top: 1px solid var(--border); padding: 10px 14px; font-size: 12px; color: var(--muted); }
@@ -422,6 +425,11 @@
   //
   // 탭은 두 상태를 함께 담지만 사이드바 배지는 나눠 보여준다 — 아직 아무도 집지 않은 승인
   // 대기와, 승인 세션이 이미 붙잡고 사람의 답만 기다리는 건은 사람이 할 일이 다르다.
+  //
+  // 수동 승인 대기도 이 탭에 담는다 — status는 approved(실행 대기)지만 마지막 시도의
+  // review.manualApproval이 있으면, 대상 레포의 사람 승인 status가 붙기 전까지 실행되지 않는다.
+  // 승인 status가 붙었는지는 GitHub에서만 알 수 있으므로 페이지는 확인하지 않는다 — 실행되어
+  // approved를 벗어나면 탭에서 빠진다. 상태만으로는 가려지지 않아 task 단위로 판정한다.
   var DONE_STATUSES = ["succeeded", "cancelled", "no_action_needed"];
   var AWAITING_REVIEW_STATUSES = ["awaiting_review"];   // 배지 "리뷰 대기"
   var APPROVING_STATUSES = ["approving"];               // 배지 "승인 진행 중"
@@ -429,7 +437,7 @@
   var MODES = [
     { id: "progress", label: "진행 중",      head: "진행 중 모델",      hint: "완료(" + DONE_STATUSES.join("/") + ")되지 않은 작업이 있는 모델만",
       empty: "진행 중인 작업이 없습니다." },
-    { id: "review",   label: "리뷰 대기 중", head: "리뷰 대기 중 모델", hint: "사람의 승인을 기다리는(" + REVIEW_STATUSES.join("/") + ") 작업이 있는 모델만",
+    { id: "review",   label: "리뷰 대기 중", head: "리뷰 대기 중 모델", hint: "사람의 승인을 기다리는(" + REVIEW_STATUSES.join("/") + ", 수동 승인 대기 approved) 작업이 있는 모델만",
       empty: "리뷰를 기다리는 작업이 없습니다." },
     { id: "active",   label: "활성 전체",    head: "ToBeModels",        hint: "감지가 활성인 모델 전체",
       empty: "감지 활성 모델이 없습니다." },
@@ -916,8 +924,22 @@
     return countTasks(modelId, function (s) { return DONE_STATUSES.indexOf(s) === -1; });
   }
 
-  // 리뷰 대기 중 탭 = 승인 대기 + 승인 진행 중 작업 수.
-  function reviewTaskCount(modelId) { return countTasksIn(modelId, REVIEW_STATUSES); }
+  // 수동 승인 대기 = approved이면서 마지막 시도의 review에 manualApproval이 있는 작업.
+  function awaitsManualApproval(t) {
+    if (!t || t.status !== "approved") return false;
+    var attempts = Array.isArray(t.attempts) ? t.attempts : [];
+    var last = attempts.length ? attempts[attempts.length - 1] : null;
+    return !!(last && last.review && last.review.manualApproval);
+  }
+
+  function manualApprovalTaskCount(modelId) {
+    return (state.tasksByModel[modelId] || []).filter(awaitsManualApproval).length;
+  }
+
+  // 리뷰 대기 중 탭 = 승인 대기 + 승인 진행 중 + 수동 승인 대기 작업 수.
+  function reviewTaskCount(modelId) {
+    return countTasksIn(modelId, REVIEW_STATUSES) + manualApprovalTaskCount(modelId);
+  }
 
   // 배지용: 아직 아무도 집지 않은 승인 대기 / 승인 세션이 붙잡고 있는 건.
   function awaitingReviewTaskCount(modelId) { return countTasksIn(modelId, AWAITING_REVIEW_STATUSES); }
@@ -1223,6 +1245,8 @@
       var reviewpill = awaiting ? '<span class="reviewpill" title="아직 아무도 집지 않은 승인 대기 작업(' + AWAITING_REVIEW_STATUSES.join("/") + ')">리뷰 대기 ' + awaiting + "</span>" : "";
       var approving = approvingTaskCount(m.id);
       var approvepill = approving ? '<span class="approvepill" title="승인 세션이 사람의 답을 기다리는 작업(' + APPROVING_STATUSES.join("/") + ')">승인 진행 중 ' + approving + "</span>" : "";
+      var manual = manualApprovalTaskCount(m.id);
+      var manualpill = manual ? '<span class="manualpill" title="실행 대기(approved)지만 대상 레포의 사람 승인 status를 기다리는 작업(review.manualApproval)">수동 승인 대기 ' + manual + "</span>" : "";
       var hide = isModelEnabled(m) ? "" : '<span class="hidepill" title="감지 비활성">숨김</span>';
       var tags = ((m.metadata && m.metadata.tags) || []).slice(0, 3).map(function (t) { return '<span class="tag">' + escapeHtml(t) + "</span>"; }).join(" ");
       var la = lastAction(m.id);
@@ -1234,7 +1258,7 @@
       return '<button class="model-item' + (m.id === state.selected ? " active" : "") + '" data-id="' + escapeHtml(m.id) + '">' +
         '<div class="mi-name">' + dot + "<span>" + escapeHtml((m.metadata && m.metadata.name) || m.id) + "</span></div>" +
         '<div class="mi-id">' + escapeHtml(m.id) + "</div>" +
-        '<div class="mi-meta">' + progpill + reviewpill + approvepill + hide + '<span class="taskcount">작업 ' + count + "</span> " + tags + "</div>" +
+        '<div class="mi-meta">' + progpill + reviewpill + approvepill + manualpill + hide + '<span class="taskcount">작업 ' + count + "</span> " + tags + "</div>" +
         acted +
         "</button>";
     }).join("");
