@@ -6646,7 +6646,7 @@
       ]
     },
     "createdAt": "2026-09-22T14:01:50Z",
-    "updatedAt": "2026-09-24T05:11:17Z",
+    "updatedAt": "2026-09-24T05:30:19Z",
     "stateSummary": {
       "asIs": "## as-is — 판정 대상 주석 지문 (dlddu/feature-doc@main `074c325`, 2026-09-24T05:0xZ 관측)\n\n- 전역 지문 **`lines=2654 files=135` / `9f44d030…e710904`** (모델 `asIs.versionScript` 재실행).\n  저장 baseline(= 트리거 `currentVersion`) 은 `lines=2646 files=135` / `bb3c1bf9…63bda2`.\n- **트리거의 정체 = 내 모델 자신의 직전 슬라이스**: `27d9b81`(#129 `reconcile(rct_20260922-0006)`,\n  09-22 13:59:36Z) 에서 두 versionScript 를 재실행하면 asIs `bb3c1bf9…` · toBe `aa34feca…` 로\n  **트리거 값이 바이트 재현**된다. `rct_20260922-0006` 은 `succeeded` — 소진된 트리거다.\n- **트리거 이후 39h 동안 main 이 6커밋 더 움직였다**(#131 `65f2494` · #133 `243d58c` · #132 `c063d0f`\n  · #134 `28ba332` · #135 `e40857e` · #136 `074c325`). 이 구간에서 판정 대상 주석이\n  **+8줄 유입, 제거 0**(집합 차 실측: `comm -13` 8건 / `comm -23` 0건 ⇒ 제자리 수정도 없다).\n\n### 유입 8줄 (전량 미판정)\n| 파일 | 줄 | 유입 커밋 |\n|---|---|---|\n| `backend/src/cross_cutting.rs` | 3 (`AXIS_GUIDE` 의 `///` 3줄) | #134 `28ba332` |\n| `frontend/src/CrossCuttingConcerns.tsx` | 3 (`//` 2줄 + `{/* */}` 1줄) | #132 `c063d0f` |\n| `frontend/src/index.css` | 2 (`/* */` 2줄) | #132 `c063d0f` |\n\n(TSX 의 `// One path per line…` 2줄은 삼항 else 가지의 **JS 표현식 문맥** 안이라 화면에 렌더되지\n않는다 — JSX children 오배치가 아님을 `sed -n '145,175p'` 로 확인했다.)\n\n- **기계 게이트 없음**: feature-doc 레포에 주석 정책을 검사하는 스크립트·워크플로가 **0건**\n  (`grep -rln 'comment-policy|comment_policy|주석 비중복|주석 원장'` 전 확장자 무히트).\n  `tools/` 의 게이트 5종은 전부 다른 모델 소유. ⇒ 이 모델의 판정 표면은 **원장뿐**이다.\n",
       "toBe": "## to-be — 주석 정책 SSOT (`docs/comment-policy/`, tree `aa34feca20d48d8d390cff4a1fc79d022ac1b901`)\n\n- **트리거 시점(`27d9b81`)과 HEAD(`074c325`) 의 tree hash 가 동일** — 정책 본문·원장·판정 상세는\n  39h 동안 **한 바이트도 움직이지 않았다**. 즉 유입된 8줄을 받아 적은 패스가 없다.\n- 구성: `README.md`(정책 본문) · `ledger.md`(판정 원장, 표 **22행**) · `passes/`(판정 상세 12+건,\n  최신 `2026-09-22-*` 3건).\n- 정의상 정합 상태 = 「판정 대상 주석 중 **복원 가능한 내용을 담은 것이 없음**」이고, 그 판정의\n  표면이 원장이다. 원장 규약: *「같은 범위의 증분 재판정은 새 행을 만들지 않고 원래 행의 결과 칸을\n  갱신하며, 패스 상세는 원래 패스 파일에 절을 더한다」* ⇒ 이미 판정된 범위로 들어온 주석은\n  **증분 재판정으로만** 닫힌다.\n\n### 유입 8줄을 담는 원장 행 2개 — 지문 3지점 대조\n| 원장 행 | 범위 | 원장 기재 | 트리거 `27d9b81` 재현 | HEAD `074c325` 실측 |\n|---|---|---|---|---|\n| 34행 | 파이프라인·횡단 축 9파일 (`pipeline.rs`·`cross_cutting.rs`·`CrossCuttingConcerns.tsx` 등) | 142 / `5a4aea6e…d739` | **142 / `5a4aea6e…d739` (일치)** | **148 / `26eaec9f…50b9` (불일치)** |\n| 35행 | 프런트 데이터·셸 축 8파일 (`index.css` 포함) | 88 / `7e6915aa…6bd60` | **88 / `7e6915aa…6bd60` (일치)** | **90 / `fa276b84…f672c` (불일치)** |\n\n두 행 모두 **트리거 시점에는 정확히 재현**되므로 재현 규약(행 지문은 후행 개행 **포함**\n`printf '%s\\n' | sha256sum`)이 옳고, HEAD 불일치는 규약 오차가 아니라 **실제 미판정 유입**이다.\n증분 합 `+6 +2 = +8` 이 전역 지문의 `2646 → 2654` 와 **정확히 일치**한다(설명 안 되는 잔차 0).\n",
@@ -6657,6 +6657,57 @@
       "reason": "**조치 필요(`action_required`).** 범위는 **원장 34·35행의 증분 재판정 — 3파일 8줄**\n(`backend/src/cross_cutting.rs` 3 · `frontend/src/CrossCuttingConcerns.tsx` 3 · `frontend/src/index.css` 2)\n하나다. 자유 풀 33행은 내 범위가 아니다(아래 근거 3).\n\n**근거 1 — 정의 위반이 실재한다(3지점 지문 대조).** 원장 34행 기재 `142 / 5a4aea6e…` · 35행 기재\n`88 / 7e6915aa…` 는 트리거 커밋 `27d9b81` 에서 **바이트 일치로 재현**되고 HEAD `074c325` 에서는\n`148 / 26eaec9f…` · `90 / fa276b84…` 로 **둘 다 깨진다**. 재현 규약(행 지문은 후행 개행 포함)이\n트리거 지점에서 검증됐으므로 이 불일치는 계산 오차가 아니라 실제 유입이다. 증분 `+6 +2 = +8` 이\n전역 지문 `2646 → 2654` 와 정확히 일치해 **설명 안 되는 잔차가 0** 이다. 그 8줄은 복원 경로 넷\n(코드·저장소 문서·PR 본문·커밋 메시지) 중 무엇으로 복원되는지 **한 번도 검토된 적이 없다**.\n\n**근거 2 — 트리거는 소진됐지만 잔여가 남았고, 그 잔여를 깨울 축이 이것뿐이다(판단 3단).**\n⑴ 트리거 `27d9b81` = #129 = 내 직전 task `rct_20260922-0006`(`succeeded`) 의 산출 ⇒ 소진.\n⑵ 그럼에도 **잔여 8줄**이 트리거 *이후* 유입됐다(#132 `c063d0f` · #134 `28ba332`) — 소진된 트리거의\n산출이 아니다. ⑶ 나머지 side 가 깨울 수 있나: to-be tree `aa34feca` 는 39h 불변이고, 이 모델의\nto-be 트리거는 정책 디렉터리 자신의 편집뿐이라 **as-is 쪽이 또 움직이기 전에는 자가 재감지 경로가\n없다**. 지금 닫으면 baseline 이 `9f44d030` 으로 전진해 이 8줄은 원장에 등재되지 않은 채 시야에서\n사라진다.\n\n**근거 3 — 소유자가 0 이다.** 같은 모델의 열린 `rct_20260922-0008`(`planning`, PR **#130** open,\nbase=main) 의 완료 기준은 「무인 자유 풀 **4파일 33행** — `db.rs` 17 · `migrations.rs` 14 ·\n`models.rs` 1 · `deploy/k8s/pvc.yaml` 1, 지문 `4ffcc6f9…`」라는 **절대 지문**이다. 이번 3파일은 그\n목록에 없고, 절대 기준이라 새 유입을 삼키지도 않는다. 열린 PR 4건(#126 · #130 · #137 · #138) 중\n**내 위반을 닫는 것은 하나도 없다**(#137 · #138 은 오히려 주석을 더 들일 파이프라인 기능 PR).\n파킹이 정답인 형태가 아니다.\n\n**근거 4 — 기계 게이트로 대신 닫을 수 없다.** feature-doc 레포에는 이 모델용 검사기가 **0건**\n(`grep -rln 'comment-policy|comment_policy|주석 비중복|주석 원장'` 전 확장자 무히트; `tools/` 의\n게이트 5종은 전부 자매 모델 소유). 원장이 유일한 판정 표면이므로 **원장 편집 없이는 닫히지 않는다.**\n\n**계획 단계 유의사항 3가지.**\n① 원장 규약상 **새 행을 만들지 말고 34·35행의 줄 수·지문·결과 칸을 갱신**하고, 판정 상세는 각\n원래 패스 파일(`passes/2026-09-20-pipeline-cross-cutting-axis.md` · `2026-09-20-frontend-shell-axis.md`)에\n**절을 더한다**. ② 지문 재고정 시 **행 지문은 후행 개행 포함**(`printf '%s\\n' | sha256sum`),\n전역 지문은 **미포함**(`printf '%s'`) — 두 규약이 다르다. ③ 정의의 「애매하면 남긴다」가 이 8줄에\n그대로 걸린다: `index.css` 2줄은 iOS Safari text-autosizing 이라는 **문서화되지 않은 브라우저 동작**,\nTSX 2줄은 **왜 `' · '` join 을 버렸는지**(경로 중간 줄바꿈 + 구분자가 다음 줄 머리로)라는 실패 모드\n서술로, 유지 쪽 선례에 가깝다. `cross_cutting.rs` 3줄은 `AXES`·`AXIS_GUIDE` 코드와 바로 옆\n테스트 `the_prompt_describes_every_axis_in_screen_order` 로 복원되는 부분이 있는지가 쟁점이다.\n\n**부수 관측(범위 밖, 기록만) — 이 판정과 독립적으로 사람이 봐야 한다.** 09-22 14:01 이후 **39h 동안\nreconciler 레포에 커밋이 0건**이었다. 원인은 감지·계획 로직이 아니라 **Claude 로그인 만료**다:\n`~/.claude/jobs/*/state.json` 기준 09-22T13:00 이후 생성된 860 세션 중 **806 건이\n`blocked / \"Login expired\"`**(+2 건 `weekly limit`). 타이머 4종과 `precheck-drift.py`(rc=10)는\n정상이었다. 그 결과 이 task 를 포함해 **비종료 lock 3건이 39h 방치**됐다\n(`rct_20260922-0008` `planning` 39.2h · `tbm_homelab-k3s-mcp-comment-redundancy` `rct_20260922-0008`\n`planning` 39.2h · 이 task 의 `assessing` 고아 38.9h — 고아는 이번 fire 가 인수해 해소).",
       "assessedBy": "agent",
       "assessedAt": "2026-09-24T05:08:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "원장(docs/comment-policy/ledger.md)이 이미 판정한 두 범위로 트리거 27d9b81 이후 유입된 주석 8행(지문 6행)을 증분 재판정해 원장 9·10행의 줄 수·지문을 재고정하고, 판정 상세를 원래 패스 파일 두 곳에 절로 더한다. 이 방법을 고른 이유: (1) 레포에 이 모델용 기계 게이트가 0건이라 원장이 유일한 판정 표면이고, (2) 원장 규약이 '같은 범위의 증분은 새 행을 만들지 말고 원래 행의 결과 칸을 갱신'이라고 못박고 있으며, (3) 새 .md 를 만들면 허브 R9(문서 48건)이 깨져 필수 ci-gate 가 막히므로 기존 패스 파일에 절만 더하는 형태가 게이트와 규약을 동시에 만족하는 유일한 형태다. 완료 기준(범위): 원장 9행(파이프라인·횡단 관심사 9파일)과 10행(프런트 데이터·셸 8파일)에 #134·#132 가 들인 3파일 8행(지문 6행)의 재판정 하나 — 순 제거 6행·유지 2행(판단 갈림 1건), 9행 142→143/515d540a…, 10행 88→89/39baa2ff…, 전역 2654→2648/05cf4026…(행 합 −6, 잔차 0), 로컬 게이트 5종 + data-format 게이트 유지. 범위 밖: 자유 풀 33행(자매 task rct_20260922-0008/PR #130 의 절대 지문 범위), #121 이 연 progress.rs 2행(9행에 이관으로 이미 등재), 열린 PR #126·#137·#138 이 들일 주석, design-system §5.3 문서 보강 — 모두 재감지의 몫이다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "판정 전 재현으로 근거를 고정한다. 모델 asIs.versionScript 의 추출을 행 범위로 좁힌 하네스로 트리거 27d9b81 과 HEAD 074c325 에서 9·10행 지문을 행 규약(printf '%s\\n')과 전역 규약(printf '%s') 양쪽으로 계산해 기재값과 대조한다.",
+              "expectedOutcome": "27d9b81 에서 9행 142/5a4aea6e… · 10행 88/7e6915aa… 가 행 규약으로 바이트 일치(= 재현 규약 문제가 아니라 실제 유입), HEAD 에서 148/26eaec9f… · 90/fa276b84…. 증분 +6+2=+8 이 전역 2646→2654 와 일치해 잔차 0. [실측 완료]"
+            },
+            {
+              "seq": 2,
+              "action": "유입 8행의 정규화된 주석 줄 집합을 트리거↔HEAD 로 차집합해 자리를 특정하고, 각 자리의 복원 경로 넷(① 코드 ② 저장소 문서 ③ PR 본문 ④ 커밋 메시지)을 소스에서 직접 확인한다. 특히 prompt() 리터럴, AXES doc, section.items.some 가드, design-system §5.3, PR #132·#134 본문, tsx 머리의 유지된 정본을 읽는다.",
+              "expectedOutcome": "제거 6행은 복원 경로가 실재(프롬프트 리터럴이 '예시는 종류' 를 모델에게 그대로 말하고, legend 배치는 바로 아래 가드가 그 문장 자체이며, .ev 블록은 네 겹 복원). 유지 2행은 강제 테스트·이유 서술이 어디에도 없음(design-system §5.3 은 선언만 옮겨 적어 ② 가 반쪽). [실측 완료]"
+            },
+            {
+              "seq": 3,
+              "action": "로컬 게이트 5종을 수정 전 origin/main 에서 먼저 굴려 베이스라인을 잡는다: check-journey-mockup.py · check-journey-prototype.js(npm ci --prefix tools) · check-mockup-render.py --verbose · check-scenario-e2e.py --verbose · cargo test --release.",
+              "expectedOutcome": "5종 전부 rc=0 (이후 실패가 나면 내 변경 탓임을 귀속할 수 있다). [실측 완료]"
+            },
+            {
+              "seq": 4,
+              "action": "주석 편집 4건을 적용한다 — cross_cutting.rs AXIS_GUIDE doc 3행→1행 재작성, CrossCuttingConcerns.tsx 의 ' · ' join 실패 모드 2행 제거, 같은 파일 legend 배치 블록 제거, index.css .ev 이관 블록 제거. index.css 의 iOS Safari 블록은 건드리지 않는다.",
+              "expectedOutcome": "지문 재측정에서 9행 143/515d540a… · 10행 89/39baa2ff… · 전역 2648/05cf4026…. 행 합 −6 == 전역 −6 으로 잔차 0. [실측 완료]"
+            },
+            {
+              "seq": 5,
+              "action": "원장 9·10행의 줄 수·지문 칸을 실측값으로 갱신하고 결과 칸에 '증분 재판정 ③'(9행)·'증분 재판정 ⑨'(10행)을 덧붙인다. 새 행을 만들지 않는다. 판정 상세는 원래 패스 파일 passes/2026-09-20-pipeline-cross-cutting-axis.md(9행) 과 passes/2026-09-20-frontend-shell-axis.md(10행) 에 절로 더한다. 새 .md 를 만들지 않는다.",
+              "expectedOutcome": "원장 행 파싱이 4칸을 유지하고 갱신값이 재추출로 확인된다. 새 .md 0건이므로 허브 R9(문서 48건) 불변. 패스 파일의 행 호칭은 레포 관례인 데이터 행 서수(9행·10행)를 쓴다(파일 줄 번호 34·35 와 같은 행). [실측 완료]"
+            },
+            {
+              "seq": 6,
+              "action": "게이트 5종을 변경 후 다시 굴리고, 커밋한 뒤 check-data-format-change.py 를 base=origin/main head=내 커밋 범위로 굴려 review/manual-approval 이 자동으로 붙는지 확인한다.",
+              "expectedOutcome": "5종 전부 rc=0 유지, data-format 판정 '해당 없음 ⇒ review/manual-approval = success' (= 사람 게이트 없이 착지 가능한 슬라이스). [실측 완료]"
+            },
+            {
+              "seq": 7,
+              "action": "PR 을 열기 직전에 열린 자매 PR 을 재실측한다: gh pr list 로 목록을 다시 받고, 각 PR 의 실제 merge-base 로 git merge-tree 를 굴려 충돌을, 파일·헝크 범위로 겹침을 확인한다(강제 --merge-base origin/main 은 main 에 뒤처진 PR 에서 거짓 충돌을 만든다).",
+              "expectedOutcome": "#130·#137·#138 CLEAN, #126 은 내 파일과 겹침 0이고 자기 충돌은 bare main 대비에서도 나는 선재 문제. #137 헝크(1..12 · 51..56 …)가 내 줄(20~22)과 겹치지 않음. [실측 완료]"
+            },
+            {
+              "seq": 8,
+              "action": "브랜치를 푸시하고(원격 tip == 로컬 HEAD 대조) PR 을 연다. PR 본문에 task id, gap 표(기재/트리거 재현/HEAD), 범위와 완료 기준, 판정 근거 표, 게이트 베이스라인 대조표, 지문 재현 명령, 열린 PR 관계표, 범위 밖 목록을 적는다.",
+              "expectedOutcome": "PR 이 열리고 ci-gate·review/manual-approval 두 필수 status 가 붙는 경로가 확보된다. [완료: #139]"
+            }
+          ],
+          "plannedAt": "2026-09-24T05:30:19Z"
+        }
+      }
+    ]
   }
 ]
