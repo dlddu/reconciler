@@ -1621,7 +1621,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-09-25T23:41:20Z",
-    "updatedAt": "2026-09-25T23:47:13Z",
+    "updatedAt": "2026-09-25T23:56:10Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T23:41:20Z",
@@ -1639,6 +1639,62 @@
     "assessment": {
       "reason": "**작업 필요 — 모델 정의의 불변식 2 판정 규칙이 「착수 가능 행 ≥ 1」로 참이 됐다.**\n\n다섯 항 중 넷은 거짓이다: B1 위반 0(직전 관측 2026-09-25T21:36:39Z 이후 이 모델을 소관으로\n지목하며 갱신된 자매 task 0건, assess 직전 재판독에서도 0) · B2 미비 0(게이트가 「1행 완비」) ·\n재검토 도과 0(`2026-10-15` 미도래) · B3 불변(1 → 1). 참이 된 하나가\n**착수 가능 행 = 1**(유일 행 `approval-gate-ac5-http-failures` 의 **선행 `없음`** ∧ **소관 = 이 모델**)이고,\n정의가 「하나라도 참이면 `action_required`」로 못 박았다.\n\n**유예(recheckAfter)를 택하지 않는 이유**: 이 gap 은 시간이 지나 저절로 닫히는 종류가 아니다.\n남은 것은 롤아웃도 일시적 alert 도 아닌 **이 모델이 내려야 할 판정**(문서 3번)이고, 선행이\n이미 이행돼 지금 착수 가능하다. 정의가 불변식 2를 세운 취지 자체가\n「차단 요인은 적어 두는 칸이 아니라 닫아야 하는 부채」이며, 선행이 열렸는데 다시 파킹하면\n직전 5회(`rct_20260921-0001`~`rct_20260925-0001`)가 「선행 미착지」로 정당하게 닫아 온 것과 달리\n**정당한 사유 없는 유예**가 된다.\n\n**무엇을 할 일로 넘기는가(문서 3번)**: `84db94e`(#221)가 남긴 「2번 관측 로그」를 증거로 받아\n⑴ 실환경 대체를 확정하거나 ⑵ 불가능 사유·대안·최소 치환 범위를 `UPS`·`IMG`·`GATE` 요건과\n대조해 별도 등재를 판단한다. 핵심 쟁점은 문서가 3번에 명시 이관한 것 그대로다 — 마커 한정\n`BEFORE INSERT` 트리거 주입은 상류 스텁도 충실도 저하 스위치도 아니지만(409·500 을 실물 핸들러와\n실물 고유 인덱스가 만든다), **테스트가 실물 저장소의 스키마 객체를 조작**한다는 점에서 명시적\n불허 조항 「실 저장소가 이미 떠 있는데도 응답을 흉내 내는 데이터 모킹」과의 경계 판정이 필요하다.\n등재로 끝나는 결론이면 현재 **등재 5 == 상한 5** 라 상한 취급이 함께 걸리고, 등재 시 표기 규약\n(`# mock-exception: <CODE> — <사유>`)과 불변식 1 의 1:1 도 동시에 만족시켜야 한다.\n\n**계획 단계에 넘기는 제약(문서가 스스로 미해결로 남긴 것)**: kind 에서의 실행 가능성\n(주입기가 `gatekeeper-pvc` 를 함께 마운트할 수 있는지, uid 1001 로 DB·저널 디렉터리에 쓸 수 있는지)과\n대상 리소스 미변경의 클러스터 관측은 **4번 e2e 몫**으로 이 task 의 완료 기준이 아니다. 커밋 제목의\n`(1/2)` 가 가리키는 후속도 그쪽이다. 이 task 는 3번(판정)까지다.\n\n**현재 코드 상태는 건드릴 것이 없다**: 불변식 1 성립(등재 5 == 실재 5, 미등재 0 · 고아 0,\n게이트 rc=0, CI `fmt + vet` success @ PR #221 head `089ac13d`), as-is 지문은 baseline 과 바이트 동일.\n주입 수단은 아직 **문서상의 제안**이라 코드 표면에 없다 — 3번 판정이 먼저고 구현이 나중이다.",
       "assessedAt": "2026-09-25T23:45:16Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`docs/e2e-mocking-policy.md` **한 파일만** 고쳐 차단 원장 유일 행 `approval-gate-ac5-http-failures` 의 「해소 순서 3번 = 이 모델의 판정」을 내리고, 그 결과에 맞춰 원장 행의 `소관` 을 자매 모델로 넘긴다. 판정 내용: 마커 한정 `BEFORE INSERT` 트리거 주입은 이 정책이 세는 두 모킹 부류(상류 스텁 서버 · 충실도 저하 스위치) 어느 쪽도 아니고, 명시적 불허 조항 「실 저장소가 이미 떠 있는데도 **응답을 흉내 내는** 데이터 모킹」에도 걸리지 않는다 — 409 의 status·본문을 실물 `store.isUniqueViolation` → 실물 핸들러가, 500 을 실물 `httpx.InternalError` 가 만들고 주입은 **응답이 아니라 전제**(고유 인덱스 충돌 / 저장소 오류)만 만들기 때문이다. 따라서 `해소 방향` 은 `real-environment` 로 **확정**하고 허용목록에 행을 늘리지 않는다(등재 5 · 상한 5 불변). 단 무조건 허용이 아니라 **조건부**이며, 주입이 지켜야 할 조건 C1~C5(응답 출처 · 마커 한정 · 제품 무변경 · 잔여 0 · 클러스터 관측)를 4번이 따를 스펙으로 문서에 못박는다.\n\n**왜 이 경로인가**: 대안은 ⑴ `GATE` 로 등재, ⑵ 불허로 판정해 주입을 금지, ⑶ 새 체커 규칙(R7)까지 함께 세우기였다. ⑴ 은 요건이 성립하지 않는다 — 끄는 인증·보안 계층이 없고 배포 구성이 실제와 같다(`UPS` 는 gatekeeper 가 CI 에서 실물로 돌아 불성립, `IMG` 는 이미지가 이미 있어 불성립). ⑵ 는 불허 조항의 판별식이 「누가 응답을 만드는가」인데 응답을 실물이 만들므로 근거가 없고, 대안이 「난수 ID 고정 제품 스위치」뿐이라 3번 문면이 명시로 금지한 제품 개작으로 몰린다. ⑶ 은 **실측으로 배제했다** — `scripts/check_mock_policy.py` 에 주석 한 줄만 넣어도 `scripts/check_comment_policy.py` 가 rc=0 → rc=1 로 깨지고(그 파일은 `docs/comment-policy/ledger.md` 36·422행에 지문으로 등재돼 있다), 그 원장은 자매 모델 `tbm_homelab-k3s-mcp-comment-redundancy` 소관이며 지금 그 축에 열린 PR #222 가 있다. 주입 코드는 아직 레포에 **존재하지 않아**(as-is 지문 `sites=40 files=23` 불변) 새 규칙은 공전만 하고, 4번이 어떤 토큰으로 구현할지 모른 채 세운 토큰 목록은 「덮은 척」만 남긴다. 이 계열에 대한 판정 지점은 이미 불변식 2 안에 있다 — 행 삭제 시 B3 의 「증거 없는 삭제」 확인과 `2026-10-15` 재검토 backstop.\n\n**완료 기준(이 시도의 범위)**: ⑴ 정책 문서에 3번 판정이 근거·조건과 함께 실리고 3번이 닫힌다. ⑵ 원장 행의 `소관` 이 `tbm_homelab-k3s-mcp-scenario-e2e` 로 바뀌어, 이 모델 기준 **착수 가능 행 = 0** 이 된다(선행 `없음` · 재검토 `2026-10-15` · 등록일 · 해소 방향 · ID · 출처 다섯 셀은 **불변**). ⑶ `lint` 잡의 네 게이트(`check_ac_mapping.py` · `check_mock_policy.py` · `check_comment_policy.py` · `check_doc_inventory.py`)가 전부 rc=0 을 유지하고 as-is 지문이 바이트 불변이다. **범위 밖**: 주입기 구현 · kind 실행 가능성(`gatekeeper-pvc` 마운트 · uid 1001 쓰기) · 대상 리소스 미변경의 클러스터 관측 · `approval_gate_ac5.py` 착지 · `docs/doc-tracker/2026-09.md` 의 「⏳ 구현 대기」 행과 `test-approval-gate.md` 의 `자동화` 필드 — 전부 4번이고 자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 소관이다(doc-tracker 2026-09.md 가 축자로 그렇게 적는다). 체커 규칙 신설(R7류)도 범위 밖이다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 `dlddu/homelab-k3s-mcp` 를 `main`(= `84db94e`) 에서 확보하고 `docs/e2e-mocking-policy.md` 의 blob 이 `45e43e3c29d2e0b8b72b8d16f3baa56fd9609091` 인지 확인한다. 이어 `lint` 잡의 네 게이트와 체커 회귀 스위트를 **편집 전에** 돌려 baseline 을 기록한다: `python3 tests/integration/check_ac_mapping.py` · `python3 scripts/check_mock_policy.py` · `python3 scripts/check_comment_policy.py` · `python3 scripts/check_doc_inventory.py` · `python3 -m unittest discover -s scripts -p test_check_mock_policy.py`.",
+              "expectedOutcome": "blob 해시 일치. 네 게이트 전부 rc=0, 회귀 스위트 13 tests OK. `check_mock_policy.py` 출력에 `등재 5(상한 5) · 모킹 지점 6 · 미등재 0 · 고아 0` 과 `B2 차단 원장 1행 완비 … 소관=tbm_homelab-k3s-mcp-e2e-mock-policy · 선행=없음 · 재검토=2026-10-15`."
+            },
+            {
+              "seq": 2,
+              "action": "브랜치 `reconcile/rct_20260925-0002-opus5` 를 `origin/main` 에서 만든다.",
+              "expectedOutcome": "`git status` clean, HEAD == origin/main."
+            },
+            {
+              "seq": 3,
+              "action": "`docs/e2e-mocking-policy.md` 의 「`approval-gate-ac5-http-failures` 해소 순서」 **3번 항목**을 `~~취소선~~` + `**충족 (2026-09-26)**` 으로 닫고, 바로 아래에 판정 결과 요약 문단을 붙인다: 해소 방향 `real-environment` **확정** · 허용목록 행 증가 0 · 상한 5 불변 · 남은 것은 4번뿐 · 원장 행의 소관을 자매 모델로 이전. 1·2번의 기존 취소선·「충족」 문면과 「⚠️ 선행 미해소가 만드는 위험」 블록·「2번 관측 로그」 절은 **한 줄도 지우지 않는다**(2번 로그가 이 판정의 유일한 증거다).",
+              "expectedOutcome": "3번이 1·2번과 같은 모양(취소선 + 충족 + 날짜)으로 닫히고, 삭제된 기존 줄은 0줄이다(`git diff` 의 `-` 줄이 4번 문면 수정과 원장 행 한 줄 외에 없다)."
+            },
+            {
+              "seq": 4,
+              "action": "「2번 관측 로그」 절 **뒤**에 새 절 `### 실환경 주입 판정 (3번 결과, 2026-09-26)` 을 신설한다. 담을 것: ⑴ 판정 한 줄 · ⑵ 정책 문면과 1:1 대조한 근거 5항(부류1 아님 / 부류2 아님 / 「응답을 흉내 내는」 불허 조항의 판별식과 불성립 근거 / http-trace·MinIO 선례와 같은 축 / 편의 목적 세 가지 어디에도 없음) · ⑶ **조건 C1~C5** · ⑷ 등재하지 않는 이유(`UPS`·`IMG`·`GATE` 요건 각각 불성립 + 「애매하면 제거 쪽으로 기운다」도 같은 방향) · ⑸ 집행 한계: 주입은 지문·R2·R4 가 인식하는 토큰을 남기지 않아 **불변식 1 이 구조적으로 침묵**하므로, 이 계열의 판정 지점은 행 삭제 시 B3 의 해소 증거 확인과 `2026-10-15` 재검토 backstop이다. 절 안에서 `tbm_homelab-k3s-mcp-e2e-mock-policy` 는 **판정 주체(과거형)로만** 적고 어떤 미해결 항목의 `소관` 으로도 적지 않는다(적으면 B1 인계가 새로 생겨 다음 감지가 즉시 다시 열린다).",
+              "expectedOutcome": "절이 추가되고, `grep -n 'tbm_homelab-k3s-mcp-e2e-mock-policy' docs/e2e-mocking-policy.md` 의 히트가 미해결 항목의 소관 지목을 포함하지 않는다(원장 행 1건은 자매 모델로 바뀌어 있고, 나머지는 판정·재검토 기록과 지문 범위 서술)."
+            },
+            {
+              "seq": 5,
+              "action": "해소 순서 **4번** 문면에 조건 참조를 한 절 더한다 — 「위 `실환경 주입 판정` 의 조건 C1~C5 를 만족하는 범위에서만 주입을 쓴다」. 4번의 소관(`tbm_homelab-k3s-mcp-scenario-e2e`)·해소 조건·행 삭제 시 근거 연결 요구는 **그대로 둔다**. 마지막 문단의 「이 원장을 받는 슬라이스는 E2E 구현 대기 행을 해제하거나 새 모킹을 승인하지 않는다」도 그대로 둔다.",
+              "expectedOutcome": "4번에 조건 참조 한 절이 추가되고 나머지 문면은 불변."
+            },
+            {
+              "seq": 6,
+              "action": "차단 원장 표(`<!-- mock-blocker-원장 -->` 안)의 `approval-gate-ac5-http-failures` 행에서 **`소관` 셀만** `tbm_homelab-k3s-mcp-e2e-mock-policy` → `tbm_homelab-k3s-mcp-scenario-e2e` 로 바꾼다. ID·출처·등록일(`2026-09-15`)·해소 방향(`real-environment`)·선행(`없음`)·재검토(`2026-10-15`) 여섯 셀은 **바이트 불변**. 재검토 날짜는 옮기지 않는다 — 이 문서가 2026-09-18 재검토 기록에서 「날짜는 사건이 오지 않을 때의 backstop이고 미룰수록 조용한 영구 면제에 가까워진다」로 이미 판정했다. 행 수도 1 → 1 불변(B3).",
+              "expectedOutcome": "`git diff docs/e2e-mocking-policy.md` 의 원장 표 부분이 정확히 한 줄 교체(`-`1/`+`1)이고, 그 줄의 차이가 소관 셀 하나뿐이다."
+            },
+            {
+              "seq": 7,
+              "action": "네 게이트를 다시 돌리고 baseline 과 대조한다. 추가로 as-is 지문을 직접 재계산해 바이트 불변을 확인한다(모델 `asIs.versionScript` 의 코드를 그대로 실행 — `tests`·`.github/workflows` 만 스캔하므로 `docs/` 편집에 반응하지 않아야 한다).",
+              "expectedOutcome": "네 게이트 rc=0. `check_mock_policy.py` 의 B2 출력이 `소관=tbm_homelab-k3s-mcp-scenario-e2e · 선행=없음 · 재검토=2026-10-15` 로 바뀌고 `등재 5(상한 5) · 미등재 0 · 고아 0` 은 그대로. as-is 지문 == `sites=40 files=23` / `8703646ea7a52623d45f49bba3b6009a460e6454ba767c175a696d8002b9f5ae`. `check_doc_inventory.py` 의 `허브 도달 가능: 92 / 92 · 끊긴 링크 0` 과 카테고리 집계(테스트 17 · 상태 추적 5 · 정책 52) 불변."
+            },
+            {
+              "seq": 8,
+              "action": "`docs/e2e-mocking-policy.md` **한 파일만** 스테이징돼 있는지 확인하고 커밋·푸시한다(`git status --porcelain` 이 그 한 줄뿐).",
+              "expectedOutcome": "커밋 1개, 변경 파일 1개. `git diff --stat origin/main` 이 `docs/e2e-mocking-policy.md` 만."
+            },
+            {
+              "seq": 9,
+              "action": "PR 을 연다(머지하지 않는다). 본문에 task id · gap 요약 · 판정과 근거 · 조건 C1~C5 · 원장 행 변화(소관 이전, 나머지 6셀 불변) · 게이트 실측 결과 · 범위 밖(4번과 그 소관)을 적는다.",
+              "expectedOutcome": "PR URL 확보. 필수 체크 `ci passed` 가 green(`lint` = `fmt + vet` success, `unit tests`·`integration tests` 는 docs-only 라 skipped)."
+            }
+          ],
+          "plannedAt": "2026-09-25T23:56:10Z"
+        }
+      }
+    ]
   }
 ]
