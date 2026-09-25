@@ -7304,9 +7304,9 @@
   },
   {
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "createdAt": "2026-09-25T14:37:27Z",
-    "updatedAt": "2026-09-25T16:31:30Z",
+    "updatedAt": "2026-09-25T16:40:00Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T14:37:27Z",
@@ -7475,6 +7475,53 @@
               "log": "지침 「머지 전 확인」 3항 + 「머지」를 그대로 굴렸다.\n\n**1. 필수 status 2종 — head `2953c7f` 에서 combined state = success.**\n`gh api repos/dlddu/feature-doc/commits/2953c7f.../status` → `state=success`, `statuses=[review/manual-approval success @15:34:25Z]`\n(지침 경고대로 statuses 가 비어 있지 않음을 직접 확인). `gh pr checks 149` → 8건 전건 pass:\n`ci-gate` pass · `test (cargo)` pass 46s · `test (kind e2e)` pass 6m53s · `docs-journey-mockup` pass ·\n`docs-mockup-render` pass · `docs-scenario-e2e` pass · `review/manual-approval` pass(자동 판정 — 「DB 스키마·데이터 저장 형식 변경 없음」) ·\n`데이터 저장 형식 변경 판정` pass. `mergeStateStatus=CLEAN` · `mergeable=MERGEABLE` · `state=OPEN`.\nci-gate 가 빨간 경우의 분기(rerun)는 **발동하지 않았다**.\n\n**2. 26차 패스인지 — 그대로다.** `gh pr view` 의 `baseRefOid` == origin/main tip == `39ee044`\n(준비 시점 base 와 바이트 동일)로 **준비 이후 자매 착지 0건**을 확인했다. main tip 직전 두 커밋은\n`39ee044`(#146 · 목업↔구현) · `f32a085`(#147 · 25차 패스)이므로 26차를 가져간 패스가 없다 →\n차수·원장·PR 제목 정정 불필요.\n\n**3. squash 머지.** `gh pr merge 149 --repo dlddu/feature-doc --squash` (rc=0). 제목은 **넘기지 않았다**\n— 지정하면 `(#149)` 접미사가 사라지기 때문. 착지 확인: `state=MERGED` · `mergedAt=2026-09-25T16:31:10Z` ·\n**머지 커밋 `4457c95ee35f19ca8dceca847fe57e65352e776d`** ·\n제목 `reconcile(rct_20260925-0002): 주석 비중복성 — 원장 행 1·4 의 미판정 증분 33행 증분 재판정 (26차 패스) (#149)` ·\n첫 부모 `39ee044`(= 준비 시점 base, 머지 창에 자매가 끼어들지 않았다는 증거).\n착지 diff 는 6파일 116+/37− 로 준비 기록과 동일 — 코드 3파일 · 원장 1 · 패스 상세 2, 새 파일 0.\n`.sql` 무접촉(D1 사람 게이트 미발동 — 그래서 무인 머지가 열렸다)."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "lines=2615 files=136\n1450b317c93b4838b875eca5f276be224dc29d07795a4f7b298cde95a9ce5237",
+          "checks": [
+            {
+              "name": "⑴ 코드 무접촉 — 세 파일의 비주석 줄 md5 가 부모와 동일",
+              "status": "passed",
+              "detail": "착지 커밋 `4457c95` 와 첫 부모 `39ee044` 양쪽에서 세 파일의 비주석 줄(전역 주석 PATTERN 에 걸리지 않는 줄)만 뽑아 md5 를 냈다. `backend/src/analysis.rs` `288aae8bec5423951e40cf52630383e2` · `backend/src/worker_api.rs` `221faecd0dcccd31062aff4f4def4962` · `backend/tests/acceptance.rs` `8db37bcfa5c50de8db43c05cbaa1a8b1` — **세 쌍 IDENTICAL** 이고 계획이 적어 둔 기대값과도 바이트 동일. 정의와 무관한 교차 검산으로 머지 diff 자체도 재봤다: 세 코드 파일의 diff 는 +2 −22(순 −20)이고 **제거된 22줄 전부가 주석 PATTERN 에 걸린다(비주석 제거 0줄)** ⇒ 런타임 바이트 불변 · `cargo test` 대상 집합 불변."
+            },
+            {
+              "name": "⑵ 주석 델타 — 전역 lines 정확히 −20 · files 불변",
+              "status": "passed",
+              "detail": "모델 `asIs.versionScript`(bash) 를 부모·착지 두 트리에서 각각 굴렸다. 부모 `39ee044` → `lines=2635 files=136` / `d50f9ea79d642044fa28d100114440d0238cc030068abde3a1855b1138272067` (25차 패스가 남긴 값과 동일) · 착지 `4457c95` → `lines=2615 files=136` / `1450b317c93b4838b875eca5f276be224dc29d07795a4f7b298cde95a9ce5237`. **files 136 불변 · lines 정확히 −20** = 계획이 선언한 순 제거 20행. 계획의 절대값 `lines=2615` 와도 일치."
+            },
+            {
+              "name": "⑶ 원장 행 1 재고정 — 616 / df4a5627…",
+              "status": "passed",
+              "detail": "행 규약(전역과 같은 PATTERN·DIRECTIVE 제외·공백 정규화·sort, 단 `printf '%s\\n'` 개행 **포함** sha256)으로 행 1 의 4파일(`analysis.rs`·`llm.rs`·`worker_api.rs`·`llmkey.rs`)을 착지 트리에서 재현 → **616 / `df4a5627c1acc0ae760914c1362c336a461e0a3670e050917ed36c59352a7696`**. 원장 행 1 의 기재값과 바이트 동일(계획 기대값과도 동일). 판정 전 629 → 616 = −13."
+            },
+            {
+              "name": "⑷ 원장 행 4 — #121 이전 값에 바이트 동일 복귀 (142 / 2ff8f6ff…)",
+              "status": "passed",
+              "detail": "같은 행 규약으로 행 4 의 6파일(`backend/src/acceptance.rs`·`backend/tests/acceptance.rs`·`e2e/support/acceptance.ts`·`sc02-01-acceptance-from-logic.spec.ts`·`sc02-04-user-facing-acceptance-doc.spec.ts`·`frontend/src/FeatureAcceptance.tsx`)을 재현 → **142 / `2ff8f6ff8251699d1571004d3ebb518ebcc373bed06bf175d5f8a40e17dba5d3`**. 149 → 142 = −7 이고 #121 직전 값에 **바이트 동일 복귀**. #121 이 이 행에 더한 7행뿐이고 제거분이 0이었으므로 이 복귀가 곧 「빠뜨린 줄도 더 걷은 줄도 없다」의 기계적 증명이다(지침이 지목한 이 슬라이스의 최강 검산)."
+            },
+            {
+              "name": "⑸ 검산 — 행 합 Δ −20 == 전역 Δ −20 · 잔차 0",
+              "status": "passed",
+              "detail": "원장 표 24행의 줄 수 칸 합을 부모·착지 양쪽에서 파싱했다(표 마지막 행들이 빈 줄 뒤에 떨어져 있어 빈 줄은 건너뛰고 본문에서 멈추는 파서 — 24행 전건 인식). 부모 **2,476** → 착지 **2,456**, **행 합 Δ = −20 == 전역 Δ −20**. 잔여는 양쪽 159 로 불변이며 착지 트리에서 **2,456 + 159 = 2,615 = 전역 lines** · 부모에서 **2,476 + 159 = 2,635** ⇒ **설명되지 않는 잔차 0**. 원장 합계 문단의 기재(현재 합계 2,456 · 검산 2,456+159=2,615 · 순 제거 누적 2,499)와 실측 일치."
+            },
+            {
+              "name": "⑹ 문서 게이트 3종 rc=0",
+              "status": "passed",
+              "detail": "착지 트리에서 직접 굴렸다(rc 를 파이프로 가리지 않고 파일로 받아 따로 읽음). `tools/check-journey-mockup.py` **rc=0**(R0~R11 이상 없음 · docs 상대 링크 423건 · 허브 단계 링크 23건 대조) · `tools/check-mockup-render.py` **rc=0**(M0~M7 · `data-sample` 128건 · `data-variant` 11건 오용 0 · 앱바 13쌍 불일치 0) · `tools/check-scenario-e2e.py` **rc=0**. 머지 전 PR 런에서도 같은 3종이 pass 였다."
+            },
+            {
+              "name": "(정보) 원장 행 전수 재현 24/24",
+              "status": "passed",
+              "detail": "판정 범위 밖 행까지 전수로 재현했다 — **24/24 바이트 일치**. 파싱은 원장 「읽는 법」의 함정을 반영해야 맞는다: 행 13 은 `backend/src/crypto.rs`(D2 보류)를, 행 21 은 `backend/migrations/0013_feature_doc_conflicts.sql` 을 목록에서 빼고, 행 16(마이그레이션 축)의 파일명 표기에는 `backend/migrations/` 접두를 붙인다. 첫 시도에 행 2 가 141 ↔ 51 로 어긋난 것은 **내 확장자 화이트리스트에 `.js` 가 없어** `tools/check-journey-prototype.js` 가 빠진 것이었고, 넣으니 141 / `f9af32efe86eec6fad0875a7f259f36f12386aa7de41d6fb588240cb893c3a05` 로 기재값과 일치했다 — 원장 쪽 어긋남이 아니다."
+            },
+            {
+              "name": "(정보) 잔여 gap — 이 task 범위 밖",
+              "status": "passed",
+              "detail": "착지 트리의 잔여 **159행**은 무인 경로가 없는 몫이다 — D1 사람 게이트 (`backend/migrations/0009`~`0013` 123행)와 D6 판정기 자신(`tools/check-data-format-change.py` 36행). 열린 자매 PR **#126**(행 4·7·10·21 + 새 파일 5개)·**#148**(행 3)이 착지하며 새 증분을 연다. 원장 행 12·23·24 등 자매가 닫은 자리의 재판정과 지문 사각지대(줄 끝 주석 · 줄 중간 시작 블록 주석) 패턴 조정도 범위 밖이다. 이 task 의 완료 기준은 「행 1·4 의 미판정 증분 33행 증분 재판정」 하나이고 그것은 달성됐다 — 잔여는 판정에 넣지 않고 **다음 감지 주기가 후속 task 를 연다**(모델 `lastObservedVersion` 은 건드리지 않았다)."
+            }
+          ],
+          "verifiedAt": "2026-09-25T16:40:00Z"
         }
       }
     ]
