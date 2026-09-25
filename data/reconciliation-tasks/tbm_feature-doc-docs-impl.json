@@ -7631,7 +7631,7 @@
     "toBeModelId": "tbm_feature-doc-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-25T20:08:41Z",
-    "updatedAt": "2026-09-25T21:27:26Z",
+    "updatedAt": "2026-09-25T21:33:30Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T20:08:41Z",
@@ -7781,6 +7781,13 @@
             }
           ],
           "plannedAt": "2026-09-25T21:27:26Z"
+        },
+        "preparation": {
+          "repository": "dlddu/feature-doc",
+          "branch": "feat/ac41-revocation-policy",
+          "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/158",
+          "preparedAt": "2026-09-25T21:33:30Z",
+          "notes": "PR #158 을 닫지 않고 **고쳐 썼다**(브랜치 `feat/ac41-revocation-policy`, 새 head **`69db1c5`**, 부모 = `origin/main` **`4d2cc84`** 를 머지한 트리). 거부된 head 는 `47bc453` 이었다.\n\n**고친 것은 e2e 하니스 두 파일 + 모킹 정책 등재 한 곳뿐이고, 백엔드·프론트는 거부된 head 와 동일하다.** `git diff 47bc453 69db1c5 -- backend/ frontend/` 의 유일한 차이는 자매 #159 가 main 에 올린 `frontend/src/index.css` 주석 삭제다 ⇒ 직전 시도의 음성 프로브 4종 감도가 그대로 유효하다.\n\n- `scripts/e2e.sh` — 포워드를 **감시 루프**로 띄워 `kubectl port-forward` 가 종료하면 현재 ready pod 로 다시 붙는다. 종료 트랩이 감시자와 자식을 함께 정리하고 **포워드 로그를 덤프**한다(kind e2e 는 CI 가 유일한 집행자라 이 로그가 런 중 pod 교체의 유일한 기록이다 — 이번 진단 자체를 트랩 출력의 *부재*로 했다).\n- `e2e/support/cluster.ts` — `setApiEnv` 의 계약을 「반환 시점엔 `BASE_URL` 이 새 값을 실은 pod 로 살아 있다」로 세웠다(`metadata.generation` 변화 → 롤아웃 → pod 교체 → `/hello` 200; no-op 편집은 롤아웃이 없어 기다리지 않는다). 비동기가 되어 `sc04-02` 호출부 3곳에 `await` 를 붙였다 — **시나리오 흐름은 한 줄도 바뀌지 않았다.**\n- `docs/e2e-mocking-policy.md` — 이 슬라이스가 들인 `FEATUREDOC_STUB_REPO_ACCESS` 를 **EXT-02** 에 등재하고 근거 시나리오에 `sc04-02` 추가 + 변동 이력 1행. EXT-03 의 `FEATUREDOC_STUB_REPO_REVISION` 과 같은 유형(새 `Mode::Stub` 분기가 아니라 기존 Stub arm 이 읽는 값)이라 **허용목록 18쌍 · 4행 「6곳」 불변**(실측: `grep -c 'Mode::Stub' backend/src/github_app.rs` = 6, 부모와 동일).\n\n**착지 벽**: 필수 status 는 룰셋 실측으로 `ci-gate` + `review/manual-approval` 둘. 후자는 `backend/migrations/**` **0건 접촉**이라 자동 success 로 붙었다(check-run 실측) ⇒ **사람 승인 없이 착지 가능**.\n\n**완료 기준 ⒣ 를 실제로 충족했다 — `ci-gate` = success (head `69db1c5`, run 36191195536).** 거부 사유가 「로컬 게이트만 보고 planned 로 넘겼다」를 지적했으므로, 이번에는 PR 을 올린 뒤 CI 를 기다려 실측했다:\n\n| 항목 | 실측 |\n|---|---|\n| `ci-gate` | **success** |\n| `test (kind e2e)` | **38 passed (4.6m) / 0 failed** — `✘` 마크 0건 |\n| **완료 기준 ⒢** `sc04-*` 전건 | `sc04-01`~`sc04-08` · `sc04-10`~`sc04-14` **전건 그린**. `sc04-02` 자체 **14.9s 통과**(직전에는 8.3s 에 실패) |\n| `ECONNREFUSED` | **0건** (직전 런은 12건 연쇄) |\n| 감시 루프가 실제로 일했는가 | `[pf] forward exited — re-establishing against the current pod` **정확히 3건** = `setApiEnv` 호출 3회와 1:1. 즉 롤아웃마다 포워드가 죽었고 매번 되살아났다 |\n| 종료 트랩 | `[cleanup] stop port-forward supervisor (pid 7623)` **출력됨** — 직전 실패 런에서는 이 줄이 **아예 없었다**(프로세스가 이미 죽어 있었다는 증거였다) |\n| `test (cargo)` | success |\n| `review/manual-approval` | success (자동 — 데이터 형식 변경 없음) |\n\n**로컬 실측(커밋 뒤, 병합 트리에서 전수)**: `check-data-format-change.py --base origin/main --head HEAD` rc=0 · `✅ 해당 없음` · `check-scenario-e2e.py` rc=0(매핑 **37** · 구현 대기 **1** · 미매핑 0/0 · 불변식 `38−0−1=37` = 실제 37) · `check-mockup-render.py` rc=0(편차 **33/33** · M3A **346** · M3B **314**) · `check-journey-mockup.py` rc=0 · `cargo test --profile ci` **248 passed / 0 failed** · `tsc --strict --noEmit`(e2e 전체) rc=0 · `npx playwright test --list` = 38 tests in 37 files.\n\n**부모값을 직접 재서 델타로 확인했다**(절대 지문을 믿지 않았다). 준비 중 `origin/main` 이 #159 로 전진했고 그 PR 이 **`tools/check-mockup-render.py` 와 `frontend/src/index.css` 를 건드렸다** — 게이트 자신이 움직였으므로 `origin/main` tip 에서 같은 게이트를 굴려 부모값을 다시 쟀다: 매핑 36 · 구현 대기 2 · 편차 33 · M3A 346 · M3B 314 ⇒ **델타 `+1 / −1 / 0 / 0 / 0`**(#159 의 변경은 주석 삭제뿐이라 수치를 움직이지 않았다).\n\n**감시 루프의 클러스터 없는 로컬 실측**: `kubectl` 을 「2초 살고 죽는 port-forward」 스텁으로 갈아 7초간 굴려 재기동 3회 · 종료 트랩이 감시자와 자식 함께 정리 · `pgrep kubectl` 0건(고아 없음) · 로그 덤프 정상을 확인했다(CI 한 사이클보다 싸게 기구 자체를 검증한 것이다).\n\n**열린 자매 PR 재실측(PR 갱신 직전)**: #148(`ci/e2e-speedup-2`)은 **교집합 0**. **#160**(주석 비중복성 32차, 준비 중 새로 열렸다)과 `backend/tests/worker.rs` 를 공유하지만 헝크가 떨어져 있고(#160: 14·44·480+ / 이 PR: 300 한 블록) **두 패치를 실제로 적용해 순서 무관 clean** 을 확인했다. #160 이 물고 있는 `docs/comment-policy/ledger.md` 충돌은 **#160 ↔ main(#159)** 사이의 것이고 이 PR 은 그 파일 무접촉 ⇒ **착지 순서 자유**(단 #160 이 먼저 들어오면 같은 파일이 움직이므로 `cargo test` 재실행).\n\n**리베이스 시 낡을 수 있는 자리**: `docs/doc-tracker/2026-09.md` 의 집계 수치(매핑 37 · 구현 대기 1 · spec 37)와 「마지막 검증 시점」 줄 — 자매가 같은 표를 움직이면 충돌 없이 낡으므로 머지 직전 `check-scenario-e2e.py --verbose` 로 재계산할 것. 코드 쪽 불변(편차 33 · M3A 346 · M3B 314)은 base 이동과 무관하다. **head 를 바꾸면 `ci-gate` 를 다시 기다려야 한다** — kind e2e 는 로컬로 대신할 수 없다."
         }
       }
     ]
