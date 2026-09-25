@@ -963,7 +963,7 @@
     "toBeModelId": "tbm_econ-opinion-monitor-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-09-25T15:40:40Z",
-    "updatedAt": "2026-09-25T15:55:23Z",
+    "updatedAt": "2026-09-25T16:11:25Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T15:40:40Z",
@@ -981,6 +981,72 @@
     "assessment": {
       "reason": "**조치 필요(`action_required`).** 세 질문에 순서대로 답한 결과다.\n\n**⑴ 내 창이 drift 를 만들었는가 — 그렇다, 그리고 그것이 이 모델이 받기로 한 몫이다.** 창은 커밋 정확히 1개(`e85bad0`, PR #136 — 자매 `tbm_econ-opinion-monitor-scenario-e2e` 의 `rct_20260925-0001` 착지분)이고, 그 착지가 새 모킹 지점 6쌍(FEED-21~24 · LLM-09~10)을 하네스에 들였는데 허용목록(`docs/econ-opinion-monitor-e2e-mocking-policy.md`)은 무접촉이다. **불변식 1(등재 집합 == 코드 지점 집합)이 31 vs 37 로 깨졌다** — 미등재 6 · 고아 0. 정의가 「주석만 있고 미등재이거나, 등재만 있고 코드에 없으면 drift 다」라고 이름 붙인 바로 그 상태다.\n\n**⑵ 잔여가 실재하는가 — 실측으로 그렇다.** 산문 승계가 아니라 CODE 전수 대조로 쟀다: 코드 `mock-exception: <CODE>` 37건(FEED-01~24 · LLM-01~10 · GOLD-01~03, 파일당 중복 0) vs 허용목록 번호 행 31건(FEED-01~20 · LLM-01~08 · GOLD-01~03). 차집합이 정확히 위 6건이고 역방향 차집합은 공집합이다. 지문 계수(37/22)와 표제 계수(31/18)의 어긋남도 같은 사실의 다른 표면이다.\n\n**⑶ 열린 task 가 이미 덮는가 — 아니다.** ⒜ 이 모델의 기존 task 11건은 **전부 종료 상태**다. ⒝ 창을 만든 자매 task `rct_20260925-0001` 은 `succeeded` 로 닫혔고, 그 계획서가 **범위 밖 ⑶ 으로 이 등재를 명시 제외**하면서 「자매 모델 `tbm_econ-opinion-monitor-e2e-mock-policy` 의 SSOT … 이 착지로 자동 재감지된다(선례: `rct_20260919-0001` 이 6지점을 들이고 등재는 `rct_20260919-0004` 가 했다)」라고 이 task 를 예고했다 — 지금 열린 이 task 가 그 예고의 수신자다. ⒞ 대상 레포의 열린 PR 은 **#135 하나**뿐이고 그 `pulls/135/files` 9개는 내 잔여 표면과 **겹침 0** 이라 기다릴 이유도, 훼손을 의심할 이유도 없다. ⒟ 이 레포의 다른 열린 task(`comment-redundancy` 2건 · `docs-impl` 1건 · `scenario-e2e` 1건) 어느 것도 이 문서를 산출물에 두지 않는다.\n\n**자동 해소 불가.** 지점 6개는 이미 main 에 머지돼 있고, 허용목록은 사람·planner 가 판정해 쓰는 문서다. 롤아웃 진행 중도, 곧 재동기화될 변경도 아니므로 재확인 유예는 오답이다.\n\n**닫으면 재감지 경로 0.** as-is 지문은 이 claim 커밋에서 이미 `0ed3c48b…` 로 전진했고, to-be(정책 문서)는 **누군가 판정을 쓸 때만** 움직인다. 지금 `no_action_needed` 로 닫으면 이 6건을 깨울 트리거가 영영 없다.\n\n**작업 범위(planner 에게) — 문서 단독, 코드 무접촉이 기본선이다.** 선례 `rct_20260919-0004`(집계 하네스 6지점 등재)와 같은 모양이다.\n1. **허용목록 6행 추가** — FEED-21(`ingest-job-ops.yaml`×`--feeds`) · FEED-22(같은 파일×`feed-fixtures`) · FEED-23·FEED-24(`ingest-job-ops-2.yaml`의 같은 두 토큰) · LLM-09(`analyze-job-ops.yaml`×`ECON_LLM_BASE_URL`) · LLM-10(`analyze-job-ops-stopped.yaml`×`ECON_LLM_BASE_URL`). 표제 계수를 **31지점/18파일 → 37지점/22파일**(3종 불변)로 갱신하고 변동 이력 행을 더한다. **CODE 재번호는 불필요**하다(코드가 이미 연속·유일하게 붙여 두었다 — `rct_20260919-0004` 때와 다른 점).\n2. **카테고리 판정은 task 가 다시 한다**(구속력 없는 사전 소견): FEED-21~24 는 상류 재배선·마운트라 `FEED`, LLM-09 는 클러스터 안 더블 재배선이라 `LLM`. **LLM-10 은 한 번 더 볼 자리** — 「해석되지 않는 주소로 돌려 호출 전건 실패를 주입」이라 내용이 아니라 **가용성**을 재배선하는 쪽이고, 원장이 FEED-06(고장 주입 서버)을 같은 논리로 받아 둔 전례가 있다. 불허 목록의 「플레이키 회피」·「어서션 단순화」와는 다르며, 자매 시나리오가 「분석 중단 실행의 실패 단계와 사유」를 사전 조건으로 요구한다는 점이 실환경 불가 사유가 된다.\n3. **차단 요인 원장 R4 를 「해소된 차단 요인」으로 옮긴다** — R4 의 해소 방향 ②(반출 Bronze 재적재 + 집계 단독 실행)가 `tests/e2e/tools/timeshift_bronze.py` · `tests/e2e/k8s/batch/aggregate-job-rollup.yaml` 로 실재하고(둘 다 `d3c9e6c`/PR #65 신규), 그 결과 `aggregation-viz#시나리오 3` 이 `tests/e2e/specs/aggregation-3-bucket-rollup.spec.ts` 로 매칭돼 게이트 공백 목록에서 빠졌다. 해소일 **2026-09-20**, 관측 좌표는 위 세 경로 + 게이트 출력(`공백 1` · 목록 `pipeline-ops#시나리오 2` 단건). 함께 **R4 문면의 거짓 2곳**(「결과로 남은 공백 1건 = aggregation-viz#시나리오 3」 · 「닫히면 공백이 1 → 0」)을 해소 당시 문면으로 옮기고 **B3 열린 행 수를 2 → 1(R3 단독)** 로 정정한다.\n4. **B1 계수에 각주를 남긴다** — 자매 `rct_20260925-0001` 의 지목은 **허용목록 등재**(불변식 1)이지 차단 요인 인계가 아니므로 **지목 문맥은 4건 불변**이고 5번째 인계로 세면 오독이다. R4 를 「직접 관측이 만든 행」으로 못박아 둔 것과 같은 자리이므로 같은 방식으로 적는다.\n\n**범위 밖(후속 task 로)**: R3(서빙 입력 배선 — 소관 자매 모델, 선행 없음, 재검토 2026-12-18) · `pipeline-ops#시나리오 2` 공백(자매 `scenario-e2e` 의 `rct_20260925-0003` 이 `planning` 으로 이미 집었다) · 이 루트를 PR #131 의 배치 체인으로 옮기는 정리(자매 하네스 몫).\n\n**위험**: 문서 단독 변경이라 낮다. 주의 하나 — 이 문서를 고치면 to-be 지문이 움직여 다음 감지가 반드시 재발화한다(설계된 정상 경로). 그때 등재 37 == 코드 37 이 성립하면 `no_action_needed` 로 닫히는 것이 기대 경로다.",
       "assessedAt": "2026-09-25T15:48:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**허용목록에 미등재 6지점(FEED-21~24 · LLM-09~10)을 등재하고, 같은 문서의 차단 요인 원장에서 실질 해소된 R4를 「해소된 차단 요인」으로 옮긴다 — 대상 파일은 `docs/econ-opinion-monitor-e2e-mocking-policy.md` 하나이고 코드·`tests/**`는 한 줄도 건드리지 않는다.** 선례 `rct_20260919-0004`(집계 하네스 6지점 등재)와 같은 모양이며, 등재는 정의가 정한 정합 조건(불변식 1)을 직접 복구하는 최소 수단이다. 코드에는 이미 `mock-exception:` 주석이 연속·유일한 CODE로 붙어 있으므로 **재번호는 불필요**하고(그것이 `rct_20260919-0004`와 다른 점), 문서 쪽만 움직이면 1:1이 성립한다.\n\n**감지 인계 중 두 건은 재실측에서 뒤집혔다(계획에 반영).** ⑴ 감지는 R4 문면의 「결과로 남은 공백 1건 = `aggregation-viz#시나리오 3`」·「닫히면 공백이 1 → 0」 **두 곳을 「거짓」이라 보고 정정을 지시**했다. 그러나 해소 커밋 `d3c9e6c`(#65, 2026-09-20)의 **부모에서 게이트를 직접 돌리면 `공백 1` · 목록이 그 시나리오 단건**이고, `d3c9e6c`에서는 **`공백 0`**이다 — 두 문장은 해소 당시 참이었고 두 번째는 **예고한 대로 실현됐다**. 「해소된 차단 요인」 표의 규약이 「해소 당시 문면」이므로 이것은 정정 대상이 아니라 **축자 이월** 대상이고, 1 → 0 실현 자체가 가장 강한 해소 근거다. 지금 `공백 1`인 것은 자매 `rct_20260925-0001`(#136, 09-25)이 **새로 연** `pipeline-ops#시나리오 2`이며 R4의 몫이 아니다. ⑵ 감지는 「B1 지목 문맥 4건 불변」이라 했지만, 전체 id 기준 전수 sweep에서 2026-09-20 재확인 이후 **원장 부류의 지목 2건이 더 있다**: 자매 `rct_20260920-0002`(서빙 입력 교체 = R3의 주제) · 자매 `rct_20260924-0001`(**「R4 행이 낡았다 … 그 문서는 이 모델의 SSOT이고 양측 unchanged라 자기 재감지로는 깨어나지 않는다」**). 후자는 이 슬라이스가 집행하는 바로 그 인계이므로, R4 마감의 출처는 「직접 관측」이 아니라 **수신한 인계**로 적는다. 둘 다 이미 행이 있어 **위반은 0**이고 계수만 4 → 6으로 움직인다.\n\n**완료 기준(이 범위 안에서만 판정한다) — 절대 지문이 아니라 부모 대비 델타로 적는다.**\n(a) 변경 파일 정확히 1개(`docs/econ-opinion-monitor-e2e-mocking-policy.md`), `tests/**`·`scripts/**`·`contracts/**`·제품 코드 델타 0.\n(b) 허용목록 행 +6, 그 6행의 (파일, 토큰, CODE) 3튜플이 코드 주석의 바인딩과 **정확히 일치**(FEED-21=`ingest-job-ops.yaml`×`--feeds` · FEED-22=같은 파일×`feed-fixtures` · FEED-23=`ingest-job-ops-2.yaml`×`--feeds` · FEED-24=같은 파일×`feed-fixtures` · LLM-09=`analyze-job-ops.yaml`×`ECON_LLM_BASE_URL` · LLM-10=`analyze-job-ops-stopped.yaml`×`ECON_LLM_BASE_URL`), 고아 신설 0.\n(c) 문서가 선언하는 수치가 **이 PR의 base 트리에서 측정한 값과 일치**: 허용목록 37행 / 22파일 / 3종, `--feeds` 10건, `ECON_LLM_BASE_URL` 6건. 표제에 관측 기준 커밋 sha를 함께 적어 뒤 착지에도 문장이 참으로 남게 한다.\n(d) 원장 열린 행 2 → 1(R3 단독), 「해소된 차단 요인」 3행(R1·R2·**R4**), R4를 지목하던 문면 전수(파일 5곳: B1 절·B3 절·R4 행·「AC3.3·AC3.5는 R3의 대상이 아니다」 문단·변동 이력)가 새 상태와 정합.\n(e) 게이트 4종 rc=0: `scripts/check-journey-mockup.py` · `scripts/check-mockup-render.py` · `tests/e2e/check_scenario_mapping.py` · `scripts/check-data-format-change.py`(=`format_changed=false` ⇒ 필수 status `review/manual-approval` 자동 부착).\n\n**범위 밖(후속 — 재감지의 입력)**: ⑴ 자매 `rct_20260925-0003`(scenario-e2e, 현재 `planning`)이 예고한 **새 모킹 지점 5건**(FEED 2 · LLM 3) — 그 착지가 등재 37 ≠ 코드 42를 열고 이 문서의 to-be 지문이 이미 움직여 있어 자동 재감지된다. **머지 직전 코드 지점이 37을 넘어서도 이 계획의 실패로 판정하지 말 것.** ⑵ `pipeline-ops#시나리오 2` 공백 — 자매 `rct_20260925-0003`이 점유 중이고, 치환이 실재·표현 가능해 **원장 행 대상이 아니다**(이 판정을 문면에 남긴다). ⑶ `pipeline-ops#시나리오 3` — 구현 대기, `tbm_econ-opinion-monitor-docs-impl` 소관. ⑷ R3(서빙 입력 배선) — 소관 자매, 재검토 2026-12-18. ⑸ **`tests/e2e/k8s/batch/timeshift-job.yaml`의 「시간 이동」이 네 부류 밖의 다섯째 치환 축인지** — 그 파일은 스스로 「상류 더블을 타지 않으므로 `mock-exception:` 주석이 붙지 않는다」고 선언하고 지문에도 안 잡히지만, 반출 Bronze의 시각을 옮겨 심는 것은 「배치 산출물 치환」과 「실환경 하네스」 사이에 있다. **판정 기준(네 부류)은 모델 definition의 고정부이므로 planner가 넓힐 수 없다** — 모델 개정(`reconciler-tobe-modeler`) 몫으로 남기고 좌표만 적어 둔다(`timeshift-job.yaml:5` · `aggregate-job.yaml:9`는 같은 형식의 무접촉 선언).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "기준선 확정 — 대상 레포를 `origin/main`에 맞추고, 이 슬라이스의 모든 선언 수치를 측정해 base sha와 함께 고정한다. ① 코드 지점: `git ls-files -- tests .github/workflows Makefile | grep -vE '(^|/)node_modules/|(^|/)package(-lock)?\\.json$|\\.md$' | sort | xargs grep -nE 'mock-exception: *[A-Z]+'` 로 CODE·파일·줄 전수 ② 등재 행: 허용목록 표의 `| N |` 행 수와 파일 칸 유일 집합 ③ 토큰별: 표의 `--feeds` 행 수 · `ECON_LLM_BASE_URL` 행 수 ④ as-is 지문: 모델 `asIs.versionScript`를 그대로 실행.",
+              "expectedOutcome": "코드 37지점 / 22파일(FEED-01~24 · GOLD-01~03 · LLM-01~10, 중복 0) · 등재 31행 / 18파일 · `--feeds` 8 · `ECON_LLM_BASE_URL` 4 · 차집합이 정확히 {FEED-21,22,23,24,LLM-09,10}이고 역방향 공집합 · 지문 `sites=37 files=22` / `0ed3c48b…512b77`(트리거 `currentVersion`과 바이트 일치). base sha를 기록한다."
+            },
+            {
+              "seq": 2,
+              "action": "게이트 4종을 base에서 굴려 초록 기준선을 잡는다: `python3 scripts/check-journey-mockup.py .` · `python3 scripts/check-mockup-render.py .` · `python3 tests/e2e/check_scenario_mapping.py` · `python3 scripts/check-data-format-change.py <base> <head>`.",
+              "expectedOutcome": "앞 셋 rc=0, `check_scenario_mapping.py`는 `공백 1` · 목록 `econ-opinion-monitor-test-pipeline-ops.md#시나리오 2` 단건. 데이터 형식 게이트는 `format_changed=false`(docs 전용 diff는 `SENSITIVE_PATHS` 5항 어디에도 걸리지 않는다)."
+            },
+            {
+              "seq": 3,
+              "action": "R4 해소를 **해소 커밋에서** 증명한다 — `d3c9e6c`(#65)와 그 부모에 각각 worktree를 붙여 `python3 tests/e2e/check_scenario_mapping.py`를 돌리고, R4가 해소 방향으로 지목한 두 갈래 중 ②가 실물로 착지했는지 파일로 확인한다(`tests/e2e/tools/timeshift_bronze.py` · `tests/e2e/k8s/batch/aggregate-job-rollup.yaml` · `tests/e2e/specs/aggregation-3-bucket-rollup.spec.ts` 의 추가 커밋).",
+              "expectedOutcome": "부모에서 `공백 1` · 목록 `aggregation-viz#시나리오 3` 단건 / `d3c9e6c`에서 `공백 0`. 세 파일 모두 `d3c9e6c` 에서 신규 추가. ⇒ R4 문면의 두 문장은 해소 당시 참이고 「1 → 0」은 실현됐다 ⇒ **정정이 아니라 축자 이월**이 맞다는 판정이 닫힌다."
+            },
+            {
+              "seq": 4,
+              "action": "6지점의 카테고리를 **이 task가 다시 판정한다**(감지 소견은 구속력 없음). 4개 매니페스트(`ingest-job-ops.yaml` · `ingest-job-ops-2.yaml` · `analyze-job-ops.yaml` · `analyze-job-ops-stopped.yaml`)와 그 주석·헤더 산문을 읽고, 특히 LLM-10(해석되지 않는 주소 `econ-llm-absent.invalid`로 호출 전건 실패를 주입)이 `LLM`인지 판정한다.",
+              "expectedOutcome": "FEED-21~24 = `FEED`(상류 재배선 + 그 마운트 지점) · LLM-09 = `LLM`(클러스터 안 더블 재배선) · **LLM-10 = `LLM`** — 근거는 문서 「모킹으로 세는 것」 ③의 기존 판정: 「더블이 **오류·지연을 내는 것**(FEED-06)도 이 범주로 본다 — 상류의 내용이 아니라 가용성을 재배선하는 자리다」. 즉 카테고리는 **어느 상류를 돌리는가**로 갈리고 내용/가용성 축으로 갈리지 않는다. 불허 목록의 「플레이키 회피」와도 반대 방향(실패를 결정적으로 만든다)임을 사유 칸에 적는다."
+            },
+            {
+              "seq": 5,
+              "action": "허용목록에 6행을 추가한다(표 32~37행). 각 행의 (파일, 토큰, CODE) 3튜플을 코드 주석의 바인딩 그대로 쓰고, `지점 내용`·`실환경 불가 사유`는 각 매니페스트 헤더 산문에서 근거를 끌어온다(FEED-21: 실패 소스 1개를 포함한 실행 기록 전용 상류 / FEED-23: 「앞 실행이 다루지 않은 기사」 / LLM-09: 응답 묶음 `e2e-llm-agg` 공유 이유 / LLM-10: 404 경로를 의도적 실패에 재사용하지 않은 이유). **CODE 재번호·코드 주석 수정은 하지 않는다.**",
+              "expectedOutcome": "표 행 31 → 37, `| 37 |`이 마지막 행. 6행의 3튜플이 step 1이 뽑은 코드 전수와 1:1. 고아 0."
+            },
+            {
+              "seq": 6,
+              "action": "선언 수치를 한꺼번에 맞춘다 — ① 허용목록 표제(`## 허용목록 (등재 집합 — 2026-09-19 관측, 31지점 / 18파일 / 3종)` → 2026-09-25 관측 · 37지점 / 22파일 / 3종 + 관측 기준 커밋 sha) ② 「모킹으로 세는 것」 ③의 `--feeds` 8건 → 10건(+FEED-21·23) · `ECON_LLM_BASE_URL` 4건 → 6건(+LLM-09·10) ③ 허용목록 말미 문단의 「6지점이 더해져 현재 31지점 / 18파일 … `--feeds` 8건 · `ECON_LLM_BASE_URL` 4건」에 2026-09-25 착지(#136 `e85bad0`) 문장 추가 ④ `FEED-06~20` → `FEED-06~24` ⑤ `LLM-02~08이 대체하는 것은 chat-completions 엔드포인트 하나` → `LLM-02~09`로 좁히고 **LLM-10은 엔드포인트 대체가 아니라 가용성 재배선**임을 한 절로 분리.",
+              "expectedOutcome": "문서 안의 모든 선언 수치가 step 1 실측과 일치. `grep -c '^| [0-9]\\+ |'`로 37, 파일 칸 유일 집합 22, 토큰 칸 `--feeds` 10 · `ECON_LLM_BASE_URL` 6. LLM 범위 문장이 LLM-10을 잘못 포괄하지 않는다."
+            },
+            {
+              "seq": 7,
+              "action": "원장에서 R4를 마감한다 — 열린 표에서 R4 행을 내리고 「해소된 차단 요인」 표에 **해소 당시 문면 그대로**(두 문장을 고치지 않는다) 옮기며, 해소일 `2026-09-20`, 해소 근거에 ⑴ 세 파일의 추가 커밋 `d3c9e6c`(#65, 자매 `rct_20260920-0001`의 산출) ⑵ 게이트 `공백 1`(`d3c9e6c^`) → `공백 0`(`d3c9e6c`) 실측 — **R4가 예고한 「1 → 0」의 실현** ⑶ 지금 `공백 1`인 것은 #136이 새로 연 `pipeline-ops#시나리오 2`이고 R4의 몫이 아니라는 구분을 적는다.",
+              "expectedOutcome": "열린 표 1행(R3 단독), 「해소된 차단 요인」 3행(R1·R2·R4). R4 문면은 이월된 칸에서 바이트 그대로 읽히고, 「거짓이었다」는 서술은 문서 어디에도 생기지 않는다."
+            },
+            {
+              "seq": 8,
+              "action": "B1·B3 절과 R4를 지목하던 나머지 문면을 새 상태에 맞춘다 — ① B1: 지목 문맥 **4 → 6**(신규 2건 = 자매 `rct_20260920-0002`→R3 · 자매 `rct_20260924-0001`→R4)이고 둘 다 행이 실재해 **위반 0**. R4의 출처를 「직접 관측」에서 **「수신한 인계(`rct_20260924-0001`)」**로 바꿔 적되, 09-20 슬라이스가 남긴 「행이 빠진 경우는 지목 수로 안 잡힌다」는 논거는 지우지 않고 유지한다. 자매 `rct_20260925-0001`·`-0003`의 지목은 **불변식 1(허용목록 등재)**이지 차단 요인 인계가 아니므로 계수에 넣지 않는다는 각주를 남긴다. ② B3: 열린 행 **2 → 1 감소**이므로 「해소 방향이 실제 반영됐는지」를 step 3 실측으로 확인했음을 적고, 재검토 도과 0(가장 이른 2026-12-18)을 갱신. ③ 「AC3.3·AC3.5는 R3의 대상이 아니다」 문단의 「남은 한 건(AC3.3)은 원장 R4가 받는다」를 **AC3.3은 닫혔고 남은 공백은 `pipeline-ops#시나리오 2` 한 건**으로 갱신하고, 그 공백이 **원장 부류가 아닌 이유**(치환이 실재·표현 가능하며 자매 `rct_20260925-0003`이 하네스를 세우는 중)를 판정으로 적는다.",
+              "expectedOutcome": "R4를 언급하는 문면 5곳(B1 절·B3 절·R4 행·AC3.3 문단·변동 이력)이 전부 새 상태와 정합. 변동 이력의 2026-09-20 행은 **당시 기록이라 손대지 않는다**."
+            },
+            {
+              "seq": 9,
+              "action": "변동 이력에 2026-09-25 / `rct_20260925-0001` 행을 표 맨 위에 추가한다 — 등재 6행(31→37지점 / 18→22파일 / 3종 불변) · 재번호 0 · 코드 무접촉 · R4 마감(정정이 아니라 축자 이월인 이유) · B1 4→6 · B3 2→1 · 범위 밖 5항목.",
+              "expectedOutcome": "이력 표 최신 행이 이 task를 가리키고, 앞선 7건과 같은 서식(날짜 · task · 내용)."
+            },
+            {
+              "seq": 10,
+              "action": "게이트 4종을 편집 후 트리에서 다시 굴리고, 변경 표면을 델타로 재측정한다: `git diff --stat`(1 파일) · `git diff --numstat -- tests scripts contracts go python web deploy`(빈 출력) · as-is 지문 재실행(바이트 불변) · 허용목록/토큰 계수 재측정.",
+              "expectedOutcome": "게이트 전건 rc=0(R8 링크 200건 불변 — 새 마크다운 링크를 만들지 않으므로), `format_changed=false`, 변경 파일 1개, 코드 델타 0, **as-is 지문 `sites=37 files=22` / `0ed3c48b…512b77` 바이트 불변**(이 슬라이스가 모킹을 늘리지도 줄이지도 않았다는 기계 증명 — 선례 `rct_20260919-0004`·`rct_20260920-0001`과 같은 검산)."
+            },
+            {
+              "seq": 11,
+              "action": "브랜치 `reconcile/rct_20260925-0001-econ-e2e-mock-policy`에 단일 커밋으로 push하고 PR을 연다(머지는 실행 단계 몫). PR 본문에 task id · gap · 6행의 3튜플 표 · R4 마감의 실측 근거(부모/해소 커밋 게이트 출력) · B1 재계수 · 완료 기준 · 범위 밖 5항목을 적는다.",
+              "expectedOutcome": "PR 1건. `Checks/required` 진행, `review/manual-approval` = success가 head에 자동 부착(docs 전용). 열린 자매 PR #137과 파일 겹침 0."
+            }
+          ],
+          "plannedAt": "2026-09-25T16:11:25Z"
+        }
+      }
+    ]
   }
 ]
