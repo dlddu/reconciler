@@ -7260,7 +7260,7 @@
     "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
     "status": "planning",
     "createdAt": "2026-09-25T18:00:49Z",
-    "updatedAt": "2026-09-25T18:15:08Z",
+    "updatedAt": "2026-09-25T18:22:39Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T18:00:49Z",
@@ -7282,6 +7282,62 @@
     "assessment": {
       "reason": "잔여 11줄(`scripts/check-data-format-change.py`)은 실재하고, 이번에 닫으면 **아무도 열지 않는다** — 그래서 조치 필요.\n\n**⑴ 덮는 task 가 없다.** 이 모델의 비종결 task 는 이 건뿐이다. 대상 레포의 유일한 열린 PR #137(econ-docs-impl `rct_20260925-0003` `approved` 가 참조)은 `pulls/137/files` 14파일에 **`scripts/check-data-format-change.py` 0건**(`comm -12` 공집합) ⇒ 비피복. 동시에 **굶길 대상도 아니다**(45차/51차): 내 잔여 표면과 파일 겹침이 0이라 task 를 열어도 #137 과 경쟁하지 않고, #137 은 다른 모델 소유다.\n\n**⑵ 내 창은 #137 을 훼손하지 않았다**(35차 2단). `merge-tree` 를 창 **양 끝**(부모 `f7c7d60` · tip `2164bbc`)에서 돌려 **충돌집합이 동일**(changed-in-both 4건, 파일 목록 축자 동일) — #137 은 창 이전부터 `dirty` 였다. 47차의 「직전 무죄는 승계되지 않는다」에 따라 이번 창에서 재측정한 값이다.\n\n**⑶ 재감지 경로는 이 11줄을 열지 못한다 — 이것이 결정타.** 재감지 캐리어는 실재한다(#137 head 가 `llm.py` +11 · `test_llm_call_record.py` +1 = 주석 12줄을 더하므로 착지 즉시 ⑵ 가 자라 모델이 재발사된다). 그러나 그 캐리어가 여는 것은 **새로 자란 무인 표면**이지 이 11줄이 아니다. 11줄은 ⑴ 항(원장에 행이 없다)이고, **2026-09-21 이래 최소 4개 패스가 이름을 들어 명시적으로 제외해 왔다**(`ledger.md:374·391·394·499·695`) — 사람 게이트 때문에 무인 몫과 묶을 수 없다는 것이 매번의 제외 사유였다. 원장 자신이 그 결과를 「가벼운 쪽이 사람 일정에 묶여 **영구 이월**」로 명명한다. 여기서 `no_action_needed` 를 쓰면 33차(범위 밖 이월 잔여 생존)가 그대로 서고, 그 영구 이월이 확정된다.\n\n**⑷ 사람 레인은 실재하고 완주한다 — 좀비가 아니다.** 이 루프에는 `review.manualApproval`(sha·context) + reconciler-manual-approval 경로가 있고, 같은 벽이 걸렸던 `deploy/overlays/prod/batch-pvc.yaml` 은 **#127(`6b3a264`, `rct_20260924-0001`)이 `SENSITIVE_PATHS` 를 10항→5항으로 줄여 해소**한 전례가 있다(`ledger.md:535`). 51차의 「착수 가능 0 이라 task 열면 좀비」와 다른 점은 **착수가 금지된 것이 아니라 머지에 사람 서명이 필요할 뿐**이라는 것이다.\n\n---\n\n**planner 에게 넘기는 제약 3가지.**\n\n1. **범위는 이 11줄 단독으로 묶어라 — 무인 몫과 섞지 말 것.** 섞는 순간 무인 몫까지 사람 일정 뒤로 간다(원장이 벽 종류로 가르라고 명시). 대상은 `scripts/check-data-format-change.py` 의 행 42·51·54·55·56·59·66·69·147·148·149.\n2. **`SENSITIVE_PATHS` 에서 이 스크립트를 빼는 것은 해법이 아니다.** 자기등재는 의도된 보안 속성이다 — `review-gate.yml:14-17` 이 「status 는 『사람이 안 봐도 된다』는 신호라 PR 이 게이트 자체를 고쳐 스스로 success 를 받을 수 있으면 안 된다」고 적는다(그래서 `pull_request_target` 으로 **base 쪽 판정기**를 돌린다). #127 이 뺀 것은 `deploy/**/*pvc*.yaml` 같은 **부수 경로**였지 판정기 자신이 아니다. 따라서 이 PR 은 사람 승인을 **우회하지 말고 통과**해야 한다 ⇒ review 단계에서 `review.manualApproval`(sha + context `review/manual-approval`)을 남기는 것이 정상 경로다.\n3. **완료 기준은 절대 지문이 아니라 델타로 써라**(원장이 같은 이유로 그렇게 쓴다 — 자매 리베이스로 요약이 태어나자마자 낡는다). 권장형: 「부모 대비 `scripts/check-data-format-change.py` 주석 줄 −N · 파일 수 ±0 · 주석 걷어낸 본문 md5 부모와 바이트 동일 · diff 의 비주석 삭제 0」. 착지 후 원장에 이 파일의 **행을 신설**해야 ⑴ 에서 빠진다.\n\n**복원처 후보**(앞선 패스가 이미 지목): PR #75 · 같은 파일 docstring(`ledger.md:374`). 다만 정의의 「애매하면 남긴다」가 이 모델의 기본 방향이고, 이 11줄 중 `:147-149` 는 `ruff format` 이 강제하는 모양에 기대는 **편집 지점 가드**형이라 #143 이 세운 판정 규칙(「서사는 ③ 로 닫고, 편집 지점 가드는 남긴다」)에 따라 유지 쪽으로 기울 수 있다 — 제거 건수를 미리 못박지 말 것.\n\n**각주(판정면 아님, 다음 감지가 재계상하지 않도록 남긴다).** ⒜ `econ_core/calllog.py` 66줄 전량 docstring · 이번 창의 `server.py` 모듈 docstring 3줄 등은 지문 사각지대(줄머리가 `#` 이 아니다) — 해소는 `versionScript` 개정이라 **tobe-modeler 소관(data plane 밖)**. ⒝ `# shellcheck disable=` 2줄은 린터 지시자라 정책의 유지 대상인데 모델 정의 DIRECTIVE 정규식에 `shellcheck` 가 없어 판정 집합에 들어온다(오탐) — 같은 이유로 tobe-modeler 몫. ⒞ `lib/llmdouble.ts` 의 `rawReplyValue`·`hasCannedReply` 미사용 export 는 죽은 코드라 이 모델의 판정 표면이 아니다.",
       "assessedAt": "2026-09-25T18:05:59Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**범위(완료 기준) = `scripts/check-data-format-change.py` 의 미판정 주석 11줄 전량 판정 한 건.** 이 파일은 원장에 행 자체가 없는 ⑴ 항 마지막 1파일이고, 2026-09-21 이래 최소 6개 패스가 「사람 게이트 뒤라 무인 몫과 묶을 수 없다」는 같은 사유로 이름을 들어 제외해 와 원장 자신이 그 결과를 「가벼운 쪽이 사람 일정에 묶여 영구 이월」로 명명했다. 이번 슬라이스는 그 이월을 끝내되 **우회하지 않고 사람 레인을 정면으로 통과**한다 — `SENSITIVE_PATHS` 에서 판정기 자신을 빼는 것은 `review-gate.yml:14-17` 이 명시한 의도된 보안 속성(PR 이 게이트를 고쳐 스스로 success 를 받지 못하게 한다)을 허무는 것이라 해법이 아니다. 따라서 이 PR 은 `review/manual-approval` 이 붙지 않은 채 열리고, review 단계가 `review.manualApproval`(sha + context)을 남겨 사람 승인 뒤에만 착지한다.\n\n**판정 결과는 제거 9 · 유지 2.** 제거 9줄은 전부 서사형 재진술이고 복원처를 실측으로 짚었다 — 저작 PR #75 본문(③, 「경로 규칙 — 파일이 바뀌면 곧 형식 변경」·「내용 규칙 — 추가·삭제된 줄(주석·테스트 제외)이 …」·「필드 이름은 contracts/에서 직접 읽음」이 축자에 가깝다), 같은 파일 모듈 docstring `:14-27`(②, 「배치 생산자(…)에서 계약 필드에 값을 대입하는 줄(주석 줄 제외 — `bucket_unit=unit`, `\"bucket_unit\": unit` 처럼)」), 그리고 선언 자신(①, `SENSITIVE_PATHS`·`PATH_EXCLUDES`·`CONTENT_RULES` 의 타입 주석과 `= []`·`CONTENT_EXCLUDES` 의 값 3개·`COMMENT_LINE` 과 `evaluate():213-214`). 유지 2줄(`:147-148`)은 #143 이 세운 판정 규칙 「서사는 ③ 로 닫고, 편집 지점 가드는 남긴다」의 가드 쪽이다 — 정규식이 `ruff format` 이 강제하는 모양(`field=value` 공백 없음)에 기대고 지역 변수 대입 `field = value` 는 **일부러 잡지 않는다**는 부재 진술이며, `ruff format` 의 이 근거는 레포 전수 grep 에서 이 두 줄이 **유일 언급**이라 경로 ①~④ 어디에도 없다. `:149`(dict 리터럴)만 같은 블록에서 갈라 제거한 것은 그 명제가 정규식 둘째 대안·docstring·#75 본문 셋에 모두 있어 서사이기 때문이다.\n\n**완료 기준은 절대 지문이 아니라 부모 대비 델타로 적는다**(자매 리베이스로 요약이 태어나자마자 낡는 것을 반복하지 않기 위해 원장이 같은 이유로 그렇게 쓴다): ⑴ 부모 대비 지문 **−9줄 · 파일 ±0**, ⑵ 주석 걷어낸 본문 md5 부모와 **바이트 동일**, ⑶ diff 의 비주석 추가·삭제 **0줄**, ⑷ 원장 파싱 기준 **미판정 잔여 0**(⑴ 행 없는 파일 0 · ⑵ 행보다 자란 파일 0). **범위 밖(후속)**: 지문 사각지대(Python docstring 본문·줄 끝 주석) 확장과 `shellcheck disable` 오탐 제외는 `versionScript` 개정이라 tobe-modeler 소관(data plane 밖)이고, 이 슬라이스가 건드리지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "복원 경로 넷을 줄마다 실측해 11줄을 판정한다 — 저작 PR #75 본문(③)·같은 파일 모듈 docstring `:14-27`(②)·선언과 `evaluate()` 본문(①)을 각각 대조하고, `ruff format` 근거는 레포 전수 grep 으로 유일 언급인지 확인한다. ③ 모집단은 저작 PR 만 세고 판정 패스 PR(#135·#139·#143 …)의 인용은 제외한다.",
+              "expectedOutcome": "제거 9(`:42`·`:51`·`:54`·`:55`·`:56`·`:59`·`:66`·`:69`·`:149`) · 유지 2(`:147-148`). `grep -rn 'ruff format'` 히트 중 `scripts/` 는 이 한 줄뿐."
+            },
+            {
+              "seq": 2,
+              "action": "`scripts/check-data-format-change.py` 에서 그 9줄만 지운다. 편집은 줄 번호 + 고유 문자열 이중 단정 스크립트로 재생 가능하게 하고, 안전망은 「비주석 diff 0줄」로 둔다(들여쓰기를 먹는 매치를 단정만으로는 못 잡는다).",
+              "expectedOutcome": "`git diff --stat` = 1 file changed, 9 deletions(-), 0 insertions. 주석(`^\\s*#`) 아닌 diff 줄 0개."
+            },
+            {
+              "seq": 3,
+              "action": "코드 무영향을 툴체인 없이 닫는다 — 주석 줄을 걷어낸 본문의 md5 를 부모와 대조한다. 이 파일은 `make lint-py`(범위 `python/`) 밖이고 테스트도 없으므로 md5 동일이 곧 무영향 증명이다.",
+              "expectedOutcome": "부모·편집본 모두 `4210bf104c8489aaf8f209c719c3c135`(바이트 동일)."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/comment-policy/ledger.md` 에 이 파일의 **행을 신설**(판정 전 11 · 제거 9 · 남음 2)하고, 「패스 이력」에 새 패스 행을, 말미 요약 행을 이 패스 기준으로 갈아 끼운다. 새 판정 상세는 `docs/comment-policy/passes/2026-09-25-format-gate-pass.md` 에 둔다(세 역할을 한 파일에 섞지 않는다).",
+              "expectedOutcome": "원장 행 164 → 165. 잔여 계수기(원장 `|` split 파싱 + live 지문 대조, 정규식 금지)가 ⑴ 0개·⑵ 0개 = **미판정 잔여 0** 을 낸다."
+            },
+            {
+              "seq": 5,
+              "action": "게이트 4종을 로컬에서 직접 굴려 새 `passes/*.md` 와 원장 편집이 아무것도 깨지 않음을 확인한다: `python3 scripts/check-mockup-render.py .` · `python3 scripts/check-journey-mockup.py .` · `node scripts/check-journey-flow.js .`(선행 `npm install --no-save jsdom@29`) · `python3 tests/e2e/check_scenario_mapping.py`.",
+              "expectedOutcome": "4종 전부 rc=0, 편집 전 baseline 과 같은 출력(여정 7 · 여정 페이지 7 · 링크 205 · 710 passed)."
+            },
+            {
+              "seq": 6,
+              "action": "브랜치 `reconcile/rct_20260925-0006-econ-comment-redundancy` 를 밀고 PR 을 연다. PR 본문에 task id·판정 표(줄↔복원 경로↔처분)·완료 기준 델타·게이트 실측값을 적고, **사람 승인이 왜 정상 경로인지**(게이트 자기등재는 의도된 보안 속성)를 명시한다.",
+              "expectedOutcome": "PR 이 열리고 `required` 는 초록. `review/manual-approval` 은 **붙지 않는다** — 이 PR 이 `SENSITIVE_PATHS` 의 판정기 자신을 건드리기 때문이며, 이것이 기대 상태다."
+            },
+            {
+              "seq": 7,
+              "action": "(review 단계) `review.manualApproval` 에 PR head sha 와 context `review/manual-approval` 을 남겨 사람 승인 뒤에만 executor 가 집게 한다.",
+              "expectedOutcome": "task 가 `approved` + `review.manualApproval` 로 넘어가고, 사람이 그 sha 에 status 를 붙이기 전까지 executor 가 집지 않는다."
+            },
+            {
+              "seq": 8,
+              "action": "(실행) 사람이 `review/manual-approval` = success 를 head sha 에 붙인 것을 확인한 뒤 **squash 머지**한다. 승인은 sha 에 묶이므로 확인 → 머지 사이에 리베이스·커밋을 끼우지 않는다.",
+              "expectedOutcome": "PR 이 main 에 squash 로 착지하고 착지 tip 의 지문이 `lines=2660 files=159`."
+            },
+            {
+              "seq": 9,
+              "action": "(검증) 착지 tip 에서 지문과 잔여 계수기를 재실행해 범위 기준 수렴을 판정한다.",
+              "expectedOutcome": "부모 대비 **−9줄 · 파일 ±0**, 미판정 잔여 **0**(⑴ 0 · ⑵ 0). 음성 프로브로 원장 「남음」을 2→11 로 되돌리면 계수기가 잔여 9 를 보고해야 한다(계수기가 공전하지 않음)."
+            }
+          ],
+          "plannedAt": "2026-09-25T18:22:39Z"
+        }
+      }
+    ]
   }
 ]
