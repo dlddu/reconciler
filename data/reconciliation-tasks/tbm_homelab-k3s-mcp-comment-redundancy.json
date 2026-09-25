@@ -11227,7 +11227,7 @@
   {
     "id": "rct_20260925-0005",
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "createdAt": "2026-09-25T18:12:21Z",
     "updatedAt": "2026-09-25T18:46:44Z",
     "trigger": {
@@ -11408,6 +11408,68 @@
               "log": "준비가 연 PR #214 를 지침 순서대로 착지시켰다(step 11 의 산출물이 PR 이고, 지침이 실행자에게 남긴 몫은 그 PR 의 착지다). ⑴ 착지 직전 재확인: gh pr view 214 -> state=OPEN, isDraft=false, base=main, headRefOid=80a26022584bc15001b485bbc3915ec9f1ae2d27(준비 시점 head 와 동일, 리뷰 이후 새 커밋 없음), mergeStateStatus=CLEAN. statusCheckRollup 6건 COMPLETED 에 실패 0: 'fmt + vet' SUCCESS, 'unit tests' SUCCESS, 'integration tests' SUCCESS, 'image / build & push server image' SUCCESS, 'image / pin deployment image (main only)' SKIPPED(main 전용 잡이라 PR 런에서 정상), 'ci passed' SUCCESS. 필수 status 는 지침 실측대로 'ci passed' 하나이고 사람 승인 status 는 요구되지 않았다 — review.manualApproval 도 없다. combined status API 는 state=pending / statuses=[] 를 냈지만 이는 필수 게이트가 commit status 가 아니라 check-run 이기 때문이고, 머지 가능 판정은 mergeStateStatus=CLEAN 으로 읽었다. ⑵ DIRTY 아님: 지침의 planner 반환 분기(리베이스는 실행자 몫이 아님)에 걸리지 않았다. ⑶ 착지 직전 부모 기준선을 실측: git fetch 후 origin/main tip = f681f9fa480779947801cfcfb4fc23ad16339f69 (= 준비가 가정한 부모 그대로, 머지 창에 자매 PR #208·#210 이 착지하지 않았다). 그 tip 에서 게이트를 돌려 기준선을 고정했다 — check_comment_policy.py rc=0, 줄 주석 표면 3337줄/149파일 · 67/67행(잔량 0), docstring 표면 1979줄/109파일 · ③④ 31/32행(잔량 1), 원장 행 2026-09-07(#6) = 100줄 / 지문 0cd15939e543. 이 값들이 아래 델타 판정의 기준이다(리뷰 시점 캐시가 아니라 진짜 머지 직전 tip). ⑷ 머지: gh pr merge 214 --repo dlddu/homelab-k3s-mcp --squash, rc=0. --subject 를 넘기지 않아 커밋 제목의 (#214) 접미사가 보존됐다. PR state=MERGED, mergedAt 2026-09-25T18:47:47Z. 착지 커밋은 단일 squash 커밋 fa1b75ca9a17918500372fc164c47579d6840d05 이고 그 유일한 부모가 f681f9f — 기준선을 잰 그 tip 이므로 델타 대조가 성립한다. 되돌릴 수 없는 지점은 이 머지 하나였고, 롤백 경로(revert 후 게이트 네 종 rc=0, 잔량 1 로 복귀)는 그대로 열려 있다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "lines=3337 files=149 / 91d88b628c41514bc48d59ac4f0ffad6ae54499fd7dcaecd1feb6429fce08571",
+          "checks": [
+            {
+              "name": "완료기준 ⑴ docstring ③④ 판정 잔량 1 -> 0 (부모 대비 델타)",
+              "status": "passed",
+              "detail": "착지 main fa1b75ca9a17918500372fc164c47579d6840d05 의 check_comment_policy.py 헤드라인: '복원경로 ③④ 판정 32/32행(잔량 0)'. 부모 f681f9fa480779947801cfcfb4fc23ad16339f69 에서는 '31/32행(잔량 1)' 이었으므로 잔량이 정확히 1 줄어 0 이 됐다. 머지 창에 자매가 착지하지 않아 절대값도 계획 예고치와 같다. 다만 R10 은 '판정 완료 + 잔량 == 전체 행' 항등식이라 이 항만으로는 부족하다 — ⑶·⑷ 가 함께 선다."
+            },
+            {
+              "name": "완료기준 ⑵ docstring 합계 1979 -> 1975줄 / 109파일",
+              "status": "passed",
+              "detail": "같은 헤드라인 줄: '판정 대상 docstring 1975줄 / 109파일 · 판정 완료 1975줄(100.0%) / 등재 범위 32'. 부모는 1979줄 / 109파일 이었다 — 정확히 4줄 감소로 계획 예고치와 일치한다. 파일 수 109 와 등재 범위 32 는 불변이므로 docstring 표면이 통째로 늘거나 빠진 곳은 없다."
+            },
+            {
+              "name": "완료기준 ⑶ 원장 행 #6 줄 수·지문 이동 (핵심 항)",
+              "status": "passed",
+              "detail": "행 '2026-09-07(#6)' 이 착지 main 에서 96줄 / 지문 32876b76fbbc 로 읽힌다(대상 14파일 목록은 불변: opensearch_document_delete_ac1~5 · opensearch_document_put_ac1~5 · opensearch_search_ac1~4). 부모에서는 100줄 / 0cd15939e543 이었다 — 줄 수(-4)와 지문 둘 다 계획·준비가 예고한 값에 바이트 단위로 들어맞는다. 즉 잔량 마커의 산술만 맞춘 것이 아니라 판정 대상 자체가 실제로 움직였다."
+            },
+            {
+              "name": "완료기준 ⑷ 줄 주석 표면 무이동",
+              "status": "passed",
+              "detail": "줄 주석 표면 헤드라인이 부모와 착지 main 에서 바이트 동일하다: '판정 대상 주석 3337줄 / 149파일 (Go 소스 1585 · Go 테스트 853 · YAML 421 · Python 478) · 판정 완료 3337줄(100.0%) / 등재 범위 67 · 미판정 잔량 0줄 · 복원경로 ③④ 판정 67/67행(잔량 0)' 이고 전체 지문도 91d88b628c41514bc48d59ac4f0ffad6ae54499fd7dcaecd1feb6429fce08571 그대로다. 이 슬라이스가 docstring 표면만 만졌다는 뜻이다."
+            },
+            {
+              "name": "완료기준 ⑸ 부모 대비 코드 순 제거 4줄 / 2파일",
+              "status": "passed",
+              "detail": "git diff --shortstat f681f9fa480779947801cfcfb4fc23ad16339f69 fa1b75ca9a17918500372fc164c47579d6840d05 -- tests/ = '2 files changed, 5 deletions(-)' — 판정 대상 docstring 4줄 + 빈 줄 1줄로 계획 예고치와 일치한다. 파일별 원시 줄 수는 opensearch_document_put_ac1.py 91->88, opensearch_document_put_ac4.py 67->65. 착지 커밋이 만진 파일은 총 5개이고 나머지 셋은 기록물이다(ledger.md M · passes/2026-09-25-paths-3-4-slice-31.md A · doc-tracker/2026-09.md M). 추가된 줄은 tests/ 에 0줄이다."
+            },
+            {
+              "name": "완료기준 ⑹ 게이트 네 종 rc=0",
+              "status": "passed",
+              "detail": "착지 main fa1b75ca9a17918500372fc164c47579d6840d05 체크아웃에서 네 종 전부 rc=0(각 rc 는 파일 리다이렉트로 따로 받았다 — 파이프로 종료코드를 가리지 않았다): scripts/check_comment_policy.py rc=0 ('OK: 규칙 R1~R10 위반 없음'), scripts/check_doc_inventory.py rc=0, scripts/check_mock_policy.py rc=0, tests/integration/check_ac_mapping.py rc=0. doc_inventory 의 rc=0 은 지침이 따로 경고한 항목 — doc-tracker 집계 줄(87/87 정책 47 -> 88/88 정책 48)이 자매의 조용한 자동 병합으로 낡지 않았음을 D4 가 실측 대조로 확인했다는 뜻이다."
+            },
+            {
+              "name": "게이트 출력 델타가 정확히 3줄",
+              "status": "passed",
+              "detail": "부모와 착지 main 의 check_comment_policy.py 전체 출력을 diff 하면 움직인 줄이 정확히 셋이다 — docstring 헤드라인(1979->1975, 31/32->32/32), 원장 행 #6(100줄 0cd15939e543 -> 96줄 32876b76fbbc), 전체 docstring 지문(5d162920ba43 -> e7c06e4bd91c). 그 밖에 움직인 항이 없으므로 범위 밖 표면이 함께 흔들린 곳은 없다."
+            },
+            {
+              "name": "음성 프로브 — 게이트가 공전하지 않음 (R10)",
+              "status": "passed",
+              "detail": "착지 커밋 트리에서 원장의 docstring-복원경로-잔량 마커를 0 -> 1 로만 되돌리자(치환 건수 1 단정) check_comment_policy.py 가 rc=1 로 발화하며 정확히 R10 을 지목했다: '[R10] docstring 표면의 ③④ 판정 완료 32행 + 잔량 1행 != 원장 전체 32행'. 원본 복구 후 다시 rc=0 이고 작업 트리에 잔여 diff 는 없다. 지침의 권장 실측이다."
+            },
+            {
+              "name": "런타임 무영향 — docstring 제외 AST 부모 동일",
+              "status": "passed",
+              "detail": "만진 두 파일 모두 docstring 노드를 걷어낸 ast.dump 가 부모 f681f9fa480779947801cfcfb4fc23ad16339f69 와 착지 main 사이에서 바이트 동일하다 (opensearch_document_put_ac1.py · opensearch_document_put_ac4.py). 제품 코드·매니페스트 경로(main.go · internal/ · scripts/ · k8s/)는 착지 커밋에서 0파일이고, check_ac_mapping.py 가 읽는 기계 판독 선언 줄(검증 AC: · 실행 대상: · 병렬 레인: · 실행 순서:)의 diff 도 0줄이다. 트래픽·데이터 영향이 없다."
+            },
+            {
+              "name": "as-is 지문 재계산 (기록용)",
+              "status": "passed",
+              "detail": "모델 asIs.versionScript(bash)를 착지 main 에서 다시 돌려 rc=0, 결과 'lines=3337 files=149 / 91d88b628c41514bc48d59ac4f0ffad6ae54499fd7dcaecd1feb6429fce08571' — 부모와 바이트 불변이다. 이 값이 안 움직이는 것은 정상이고 이 모델이 문서화한 '지문의 사각지대'다 — 패턴 ^[[:space:]]*(//|#) 가 docstring 본문을 원리적으로 보지 못하기 때문이다. 판정 근거는 이 지문이 아니라 게이트 실측(⑴~⑷)이다."
+            },
+            {
+              "name": "잔여 gap (정보성 — 이 task 의 판정 밖)",
+              "status": "passed",
+              "detail": "③④ 축은 두 표면 모두 잔량 0 으로 닫혔다(줄 주석 67/67 · docstring 32/32). 계획이 명시적으로 범위 밖으로 둔 후속은 남아 있다 — ①② 축 재판정을 위해 이 패스가 기록만 해 둔 셋 (delete_ac1·search_ac3 머리말의 자기 파일 중복, put_ac1 케이스의 AC 검증 방법 절 따라가기), README.md 개정(정책 소유자 몫), 주석의 정확성(이 모델의 판정 표면 밖), 지문 패턴 확장(tobe-modeler 소관). 이 항은 판정에 넣지 않았고 사실만 남긴다. lastObservedVersion 은 건드리지 않았으므로 후속은 재감지가 잇는다 — 지침이 예고한 다음 감지의 정상 결론은 no_action_needed 다."
+            }
+          ],
+          "verifiedAt": "2026-09-25T18:50:00Z"
         }
       }
     ]
