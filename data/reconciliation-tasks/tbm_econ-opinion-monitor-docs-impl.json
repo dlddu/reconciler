@@ -7192,9 +7192,9 @@
   {
     "id": "rct_20260925-0003",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "failed",
     "createdAt": "2026-09-25T15:32:40Z",
-    "updatedAt": "2026-09-25T22:47:30Z",
+    "updatedAt": "2026-09-25T22:49:00Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T15:32:40Z",
@@ -7357,6 +7357,48 @@
               "log": "착수 조건 3건 중 2건은 통과, 3건째에서 중단했다.\n(1) 사람 승인: OK — head b7c7c26 에 review/manual-approval = success (2026-09-25T22:22:39Z). PR state=open, headRefOid == review.manualApproval.sha 그대로.\n(2) 필수 체크: OK — commits/b7c7c26/status 의 combined state=success. check-runs 전건 success (required, ci / build, ci / e2e, docs / flow, docs / structure, data-format, render / render, image / publish (batch), image / publish (serving); image / pin deploy images 는 main-only skipped).\n(3) 머지 가능성: FAIL — PR #137 이 현재 main 과 충돌한다. gh pr view 137: mergeStateStatus=DIRTY, mergeable=CONFLICTING. GitHub 캐시 값을 믿지 않고 로컬 재실측: merge-base e92e3cc, main tip 2164bbc, head b7c7c26 로 git merge-tree --write-tree --name-only origin/main pr137 -> rc=1, 충돌 2파일 (docs/econ-opinion-monitor-doc-tracker/2026-09.md, python/packages/analysis/src/econ_analysis/llm.py).\n원인: 준비 시각(2026-09-25T15:59:09Z) 이후 자매 6건이 main 에 착지했다 — #143, #142, #140, #139, #141, #138. 그중 #139(comment-policy pass) 와 #141(시나리오 2 spec) 이 llm.py 를 건드려 이 PR 의 llm.py 편집과 텍스트 충돌하고, 원장 2026-09.md 는 판정 행에서 충돌한다.\n머지를 시도하지 않고 멈춘 이유: 충돌을 풀려면 리베이스·머지 커밋이 필요하고, 그러면 head 가 b7c7c26 에서 움직여 SHA 에 묶인 review/manual-approval 승인이 버려진다. 지침이 '승인을 받은 뒤 브랜치에 리베이스·커밋을 얹으면 승인이 버려진다 / 확인 -> 머지 사이에 다른 일을 하지 않는다' 로 금지한 행위이고, 승인 없는 코드를 착지시키게 되므로 실행하지 않았다. 되돌릴 수 없는 지점(머지)에는 들어가지 않았으므로 대상 레포에 변경이 전혀 없다. 이 건은 계획 결함이 아니라 재준비(리베이스 + 사람 승인 재취득) 사안이다."
             }
           ]
+        },
+        "verification": {
+          "status": "failed",
+          "asIsVersionAfter": "contracts:230b780b1c861f241c59f0b0d7ee962c49a9b9bc python:013e8a3acc273723e7b2994c6eea685d3d2abec0 go:e9e010de1b02f10d5e63a2d309a1d71465755fb0 web:a68b6dda64284538dac73897fd7a6b387d189e18 deploy:4d7fd767b4ad107f1bf45c6e1b484a21cba9fd4d",
+          "checks": [
+            {
+              "name": "머지 착지 — PR #137 이 main 에 반영됐는가",
+              "status": "failed",
+              "detail": "미착지. PR #137 은 여전히 state=open, merged=false 이고 main tip 은 2164bbc 로 이 PR 의 커밋을 담지 않는다. 머지 불가 사유는 충돌: 로컬 git merge-tree(origin/main x pr137) rc=1, 충돌 2파일 (docs/econ-opinion-monitor-doc-tracker/2026-09.md, python/packages/analysis/src/econ_analysis/llm.py). 충돌 해소는 새 커밋을 요구해 SHA 에 묶인 review/manual-approval 승인을 무효화하므로 지침상 실행자 범위 밖이다."
+            },
+            {
+              "name": "검증 ⑴ 정방향 — analysis.avsc 12필드 [run_id, call_id, no_call_reason]",
+              "status": "failed",
+              "detail": "main(2164bbc) 의 contracts/silver/analysis.avsc 는 9필드 [record_id, source_url, target_countries, narrative_subjects, sentiment, analysis_status, confidence, analyzed_at, analyzer_version] — 기대 12필드 미달. 참고로 PR head b7c7c26 의 같은 파일은 12필드이고 마지막 3개가 [run_id, call_id, no_call_reason] 로 정확히 계획대로다 ⇒ 변경 내용 자체의 결함이 아니라 착지가 안 된 것이다."
+            },
+            {
+              "name": "검증 ⑵⑶ 배타 불변식 + 역방향 조회 (레이크 실행)",
+              "status": "failed",
+              "detail": "실행하지 않았다(측정 불가). 착지 트리가 없어 main 에는 run_id/call_id/no_call_reason 필드도 records_of_run·calls_of_run·read_call 함수도 존재하지 않으므로 이 단정은 성립할 수 없다. 지침이 요구한 대상은 '머지된 origin/main 트리' 이고 그 트리가 만들어지지 않았다."
+            },
+            {
+              "name": "검증 ⑷ 회귀 게이트 (gen-check / test / lint)",
+              "status": "failed",
+              "detail": "main 트리에서는 판정 대상인 test_record_run_call_link.py 6 test 가 애초에 존재하지 않아 계획 범위의 직접 증거를 낼 수 없다. 다만 PR head b7c7c26 에서는 이 게이트들이 CI 로 전건 통과했다 — check-runs 의 ci / build, ci / e2e 모두 conclusion=success. 즉 실패는 변경의 품질이 아니라 미착지에서 온다."
+            },
+            {
+              "name": "검증 ⑸ 문서 판정 SSOT — check_scenario_mapping.py rc=0",
+              "status": "failed",
+              "detail": "착지 트리가 없어 재판정 대상이 없다. 지침이 절대 수치가 아니라 rc=0 을 기준으로 삼으라고 했으나, main 에는 이 재판정(AC4.3 착지 절·잔여 0건·매핑표 행)이 반영되지 않았으므로 계획한 문서 수렴 자체가 일어나지 않았다."
+            },
+            {
+              "name": "사람 승인 유효성 (참고 — 실패 원인 아님)",
+              "status": "passed",
+              "detail": "head b7c7c26 에 review/manual-approval = success (2026-09-25T22:22:39Z) 가 붙어 있고 PR head 가 review.manualApproval.sha 와 동일해 승인은 유효했다. 승인·CI 는 모두 통과했고 막힌 것은 main 과의 충돌 하나뿐이다."
+            },
+            {
+              "name": "대상 레포 무변경 (되돌릴 수 없는 지점 미진입)",
+              "status": "passed",
+              "detail": "머지를 시도하지 않았고 브랜치에 커밋을 얹지 않았다. PR #137 head 는 b7c7c26 그대로, main 은 2164bbc 그대로다. 롤백할 것이 없다."
+            }
+          ],
+          "verifiedAt": "2026-09-25T22:49:00Z"
         }
       }
     ]
