@@ -11814,7 +11814,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-redundancy",
     "status": "planning",
     "createdAt": "2026-09-25T20:45:29Z",
-    "updatedAt": "2026-09-25T20:50:06Z",
+    "updatedAt": "2026-09-25T21:18:11Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T20:45:29Z",
@@ -11836,6 +11836,42 @@
     "assessment": {
       "assessedAt": "2026-09-25T20:49:58Z",
       "reason": "**조치 필요.** 세 갈래 근거가 같은 곳을 가리킨다.\n\n**⑴ 실재하는 위반이 트리에 살아 있다(축자 1자리).** `tests/integration/session_read_ac1.py` 모듈 docstring 6–13행이 `docs/prd-session-read.md` AC1 검증 방법을 절 단위로 되풀이한다 = 복원 경로 ②. #216 은 주석 제거 0줄이므로 그대로 남아 있다. 정의의 정합 조건은 「판정했는가」가 아니라 「복원 가능한 것이 남아 있지 않은가」다.\n\n**⑵ 게이트 초록이 그 잔여를 부정하지 않는다 — 오히려 세어 박아 둔다.** tip `01ba408` 에서 `check_comment_policy.py` rc=0 이면서 `복원경로 ①② 판정 0/67행(잔량 67)`(줄 주석) · `1/32행(잔량 31)`(docstring) = **98행 미판정**. 내가 tip 에서 직접 돌린 양방향 프로브 3종이 이 수가 장식이 아님을 닫는다 — ⒜ 잔량 67→66(산술) rc=1 ⒝ 행 `#6` 의 `복원경로 ②:` 토큰만 제거(자격·토큰) rc=1 ⒞ **산술을 맞춘 채 틀린 앵커 `000000000000` 로 자격을 위조**(자격·앵커) rc=1. ⒞ 가 결정적이다: 게이트는 행을 세기만 하는 것이 아니라 각 행의 **등재 자격**을 본다.\n\n**⑶ 재감지 경로가 이 fire 말고는 없다(consumed trigger).** `rct_20260925-0007` 은 이 fire 도중 `verifying`→`succeeded` 로 완주했고, 그 계획은 잔여를 **명시적으로 범위 밖**에 두었다(「범위 밖(후속, 재감지가 잇는다): docstring 31행·줄 주석 67행의 ①② 판정 **자체**」). 검증 기록도 같은 말을 한다 — 「모델의 lastObservedVersion 은 건드리지 않았다 — **이 변화는 다음 감지 주기의 트리거다**」. 즉 슬라이스 33 의 산출은 *계기*이고 판정은 아직 0행이다. 여기서 `no_action_needed` 로 닫으면 baseline 만 전진하고 **슬라이스 34 를 여는 것이 아무것도 남지 않는다**.\n\n---\n\n## planner 에게 넘기는 것\n\n**범위**: ①② 축 재판정 슬라이스 34. 잔량 98행(줄 주석 67 · docstring 31) 전부가 아니라 **한 슬라이스 분량**을 집는다.\n\n**1순위 — docstring 원장 행 `#5`**(session 도구 9파일 · 198줄 · 지문 `a27ad2027fee`). 감지가 히트를 실측으로 특정해 둔 유일한 행이고 원장이 `session_read_ac4.py` 34–35 · `session_write_ac5.py` 41–42 · 45–46 을 열린 후보로 이미 등재해 두었다. ⚠️ **그 셋만 처리하지 말고 행 전수(198줄)를 물 것** — 슬라이스 32 의 근거 그대로이고, R12 앵커가 부분 판정을 `stale` 로 잡는다.\n\n**주의할 함정 넷**\n1. **게이트 자기참조**: 게이트 파일 자신이 줄 주석 행 `#12`·docstring 행 `#1` 에 등재돼 있다. `check_comment_policy.py` 를 한 줄이라도 고치면 그 행 지문이 움직여 R9·R10 이 `stale` 로 rc=1 을 낸다(잔량 상향으로 구제되지 않는다 — 기존 ③④ 산문이 있는 행이다). 고칠 거면 그 행의 ③④ 재앵커를 같은 PR 에 넣을 것.\n2. **완료 기준은 절대 줄 수가 아니라 행 수 등식으로.** 열린 자매 PR **#208**(`ci/gate-poll-and-overlap-gatekeeper-variant`, mergeStateStatus=UNKNOWN) · **#210**(`ci/dedicated-deployments`, CLEAN) 이 둘 다 `ledger.md` 의 **합계 마커**(`판정-합계`·`docstring-합계`)를 건드린다 ⇒ 합계 1975·3337 은 착지 순서에 낡을 수 있지만 행 수(67/32)는 불변이다.\n3. **pass 문서 1개 = `check_doc_inventory.py` D4 위반.** 새 pass 파일을 넣으면 `docs/doc-tracker/2026-09.md` 의 허브 도달 집계를 **총계·정책 종류 두 갈래**로 함께 올려야 한다(슬라이스 33 이 90·50 으로 올려 두었으므로 다음은 91·51). 슬라이스 25~32 가 매번 이 자리에서 재발견했다.\n4. **판정을 되돌리는 방향도 정합이다.** 이 축의 옛 판정 둘이 실측으로 거짓이었다(행 `#5` 여섯 자리 중 넷 · 행 `#6` 다섯 자리 전부). `복원 경로 넷 어디에도 없다` 류 단정을 만나면 **재측정 전에는 믿지 말 것**이고, 어긋난 옛 문면은 **지우지 말고 실측을 덧붙이는 것**이 이 원장의 관례다(다음 판정자가 같은 자리를 헛짚지 않게).\n\n**재감지 캐리어 — 이제 있다.** 잔량 마커가 `ledger.md` 에 살고 `ledger.md` 는 모델 to-be 지문(`docs/comment-policy/` tree)에 들어가므로 **잔량이 한 행이라도 움직이면 다음 감지가 열린다**. 이것이 슬라이스 33 의 산출이며, 이 판정은 그 캐리어를 쓰는 첫 fire 다. 단 **as-is 지문은 여전히 docstring 본문을 못 본다**(`^[[:space:]]*(//|#)`) — docstring 표면 슬라이스는 to-be 쪽으로만 재감지된다. 그것으로 충분하지만, **모델 as-is 지문을 docstring 까지 넓히는 일은 `reconciler-tobe-modeler` 의 몫**이고 이 task 범위 밖이다(슬라이스 31·32·33 이 연속으로 지적한 근본 원인).\n\n**다음 fire 가 판정할 예측**: 슬라이스 34 가 착지하면 잔량이 31→30(또는 줄 주석 67→66) 으로 움직이고 to-be 가 재감지를 연다. **움직이지 않은 채 to-be 만 바뀌면**(pass 문서만 들어온 경우) 그것은 「판정했다고 적었는데 세지 않았다」이므로 그 자체가 새 drift 다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "원장 docstring 행 `#5`(session 도구 e2e 9파일 · 198줄 · 지문 a27ad2027fee)의 **복원 경로 ①② 축**을 행 전수로 재판정해 복원 가능한 주석을 제거한다. 이 접근을 고른 이유: 슬라이스 33(#216)이 R11·R12 로 이 축의 잔량을 처음 세기 시작했으나 판정은 0행이고, 잔량 마커가 to-be(`docs/comment-policy/` tree)에 살아 재감지 캐리어가 이제서야 존재한다 — 즉 지금이 이 축의 첫 소비 시점이다. 행 `#5` 를 고른 것은 R12 를 세운 근거 둘 중 하나가 이 행의 옛 ①② 판정이기 때문이고, 감지가 이월한 세 자리가 아니라 **행 전수 198줄**을 게이트 파서로 다시 세어 물었다(R12 앵커가 행 지문에 묶여 부분 판정은 stale 이 된다). **완료 기준(범위)**: ⑴ 행 `#5` 가 부모 대비 **순 제거 75줄**(198 -> 123 · 지문 0b0500327ed8) ⑵ `docstring-합계` −75 · `docstring-복원경로①②-잔량` 31 -> 30(완료 2/32행) ⑶ 게이트 네 종 rc=0 + 음성 프로브 4종 rc=1 ⑷ **코드 diff 0줄**(ast 로 docstring 만 걷어낸 트리가 base 와 9/9 바이트 일치) ⑸ PR #217 머지. **범위 밖**: 줄 주석 표면의 ①② 축 67행 전부 · docstring 표면의 남은 30행 · 모델 as-is 지문을 docstring 까지 넓히는 일(reconciler-tobe-modeler 몫). 절대 합계값(3337/1975)은 완료 기준에 쓰지 않는다 — 자매 #208·#210 이 그 마커를 움직인다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #217(head befd336)의 필수 status `ci passed` 가 초록인지, mergeStateStatus 가 CLEAN 인지 확인한다. DIRTY 면 step 2 로, CLEAN 이면 step 3 으로 간다.",
+              "expectedOutcome": "`gh pr view 217 --json mergeStateStatus,statusCheckRollup` 가 CLEAN + ci passed SUCCESS. ruleset 의 필수 status 는 `ci passed` 하나이고 사람 승인 status 요구가 없어 무인 착지다."
+            },
+            {
+              "seq": 2,
+              "action": "자매 #208·#210 이 먼저 착지해 DIRTY 가 된 경우에만: origin/main 을 머지하고 **`ledger.md` 의 `docstring-합계` 한 줄만** 게이트 출력값으로 재계산한다(손으로 합치지 말 것). 그 외 충돌은 실측상 없다.",
+              "expectedOutcome": "충돌 파일은 `docs/comment-policy/ledger.md` 하나이고 충돌 줄은 `docstring-합계` 마커 한 줄(merge-tree 실측). 재계산 뒤 게이트 네 종 rc=0."
+            },
+            {
+              "seq": 3,
+              "action": "머지 직전 게이트 네 종을 다시 굴려 rc=0 을 확인한다: `python3 scripts/check_comment_policy.py`, `check_mock_policy.py`, `check_doc_inventory.py`, `python3 tests/integration/check_ac_mapping.py`.",
+              "expectedOutcome": "네 종 rc=0. comment-policy 출력의 docstring 줄이 `등재 범위 32 · 복원경로 ③④ 32/32(잔량 0) · 복원경로 ①② 2/32(잔량 30)`."
+            },
+            {
+              "seq": 4,
+              "action": "PR #217 을 squash 머지한다(`gh pr merge 217 --squash`). 이 레포는 squash 착지라 PR 제목이 곧 main 커밋 제목이다.",
+              "expectedOutcome": "main tip 이 이 PR 의 squash 커밋. 브랜치 `reconcile/rct_20260925-0008-opus5` 삭제."
+            },
+            {
+              "seq": 5,
+              "action": "착지한 main 을 새로 받아 완료 기준을 재측정한다 — 행 `#5` 가 123줄 / 지문 `0b0500327ed8`, `docstring-복원경로①②-잔량` 이 30, 게이트 네 종 rc=0, 그리고 `git diff <부모> HEAD -- tests/integration/session_*.py` 의 순 델타가 docstring 전용(코드 0줄)인 것.",
+              "expectedOutcome": "네 항목 전부 성립. 잔량 마커가 31 -> 30 으로 움직였으므로 to-be 가 다음 감지를 연다(남은 30행 · 줄 주석 67행이 후속 슬라이스)."
+            }
+          ],
+          "plannedAt": "2026-09-25T21:18:11Z"
+        }
+      }
+    ]
   }
 ]
