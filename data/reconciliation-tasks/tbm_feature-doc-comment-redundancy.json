@@ -8623,7 +8623,7 @@
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
     "status": "planning",
     "createdAt": "2026-09-25T20:05:02Z",
-    "updatedAt": "2026-09-25T20:19:45Z",
+    "updatedAt": "2026-09-25T21:17:07Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T20:05:02Z",
@@ -8645,7 +8645,96 @@
     "assessment": {
       "reason": "**조치 필요 — 판정을 받지 않은 주석 43행이 main 에 있고, 축자 대조로 그중 최소 5자리가 복원 가능(정의상 drift)으로 확인됐다. 어느 열린 task 도 이 범위를 닫지 않는다.**\n\n**근거 ①(실측).** 트리거 창 두 커밋 중 자매 모델의 #155(슬라이스 7b)가 주석 +43행·files +1 을 들여왔다. 줄 단위 차분으로 `backend/tests/worker.rs` 6→28(+22) · `e2e/tests/sc04-10-cross-user-data-isolation.spec.ts` 0→21 을 확정했고, 원장이 적은 등식 `행 열의 합 2,708 + ⑴ 21 + ⑵ 22 = 전역 live 2,751` 이 전역 지문과 전건 일치한다.\n\n**근거 ②(카운트가 아니라 원문).** 「미판정」이 곧 drift 는 아니므로 한 자리씩 읽었다. `worker.rs` 의 `/// AC4.7 (04#시나리오 10 의 두 번째 기대 결과): 한 워커 인스턴스가 두 사용자의 job 을 연달아 집어도 작업 컨텍스트가 섞이지 않는다.` 는 `docs/test/04-platform.md` 시나리오 10 기대 결과 두 번째 문장의 재진술이고 **주석이 스스로 출처를 적어** 복원 경로 ②로 전건 복원된다(같은 `(AC4.7)` 꼬리표를 `passes/2026-09-19-dependencies-axis.md` 가 이미 「전부 docs/prd 에서 그대로 확인된다」로 제거 판정한 선례). 여기에 시나리오 실행 단계 인용 1(유형 ②) · 구분선 주석 2(유형 ④) · 선언 재진술 2(유형 ①)가 더 있다. 반면 404/403 설계 근거 · stub 설치 토큰의 관측성 · 「워커는 영속을 하나도 소유하지 않는다」 격리 계약은 「애매하면 남긴다」의 유지 후보다 ⇒ **전건 제거가 아니라 행 단위 판정**이 필요하다.\n\n**근거 ③(인계의 수신자가 이 task 다).** #154(30차 패스)의 원장 기재가 「이 43행은 이 패스의 판정 범위 밖이며 **다음 감지 주기가 후속 task 로 연다**」로 명시 인계했고, 열린 `rct_20260925-0008`(`reviewing`, PR #157)의 계획은 **범위 밖(후속)** 에 「#155가 다시 연 ⑴ 축 21행·⑵ 축 22행 … 이들은 이 task로 닫지 않는다」를 적었다(실제 편집 범위도 `backend/src/llm.rs` 3행 + 원장·패스 문서로 교집합 0). #154 의 완주 선언(⑴ 105→0 · ⑵ 7→0)은 **그 패스 축에 한정된 진술**이라 이 43행을 부정하지 않는다.\n\n**근거 ④(초록이 부정하지 않는다).** 레포 게이트는 4종(`data-format-review`·`docs-scenario-e2e`·`docs-journey-mockup`·`docs-mockup-render`)이고 `tools/` 6종·`.github/workflows/` 7종 전수에 **주석 비중복성 게이트는 없다** — 이 43행은 CI 전건 초록으로 착지했다. 재감지 경로는 이 모델의 지문 축 하나뿐이며, 그것이 지금 발화해 이 task 를 열었다.\n\n---\n\n## planner 에게 (인계 · 권고를 포함한다)\n\n**범위는 미판정 43행뿐이다.** 행 열의 합 2,708 **안**의 **미집행** 잔량(D6 `tools/check-data-format-change.py` 12~15행 = `SELF_PATHS` 자기 참조로 무인 머지 경로 없음 · D1 `backend/migrations/*.sql` 15~19행 = 운영 DB repair 창 + 사람 승인)은 판정이 이미 끝난 몫이므로 **이 task 로 끌어오지 말 것**.\n\n**분기 ⒜ 슬라이스 쪼개기 — 권고: 한 슬라이스로 묶는다.** ⑴ 21행(`e2e/tests/`)과 ⑵ 22행(`backend/tests/`)은 **게이트 종류가 같다**(둘 다 `SELF_PATHS` 밖 · `backend/migrations/` 밖 ⇒ `review/manual-approval` 자동 success, 무인 착지). 게이트가 서로 다를 때만 쪼개는 것이 이 원장의 규약이므로(28차 패스가 D1·D6 를 가른 근거), 여기서는 쪼갤 이유가 없고 한 패스로 **미판정을 0 으로** 되돌리는 쪽이 정합적이다.\n\n**분기 ⒝ 원장 기재 형태 — 규약이 이미 정한다.** ⑵ 22행은 **행 14 「테스트 하네스 축 5파일」 안**이므로 새 행을 만들지 말고 행 14 의 결과 칸을 갱신 + 원래 패스 파일(`passes/2026-09-20-test-harness-axis.md`)에 「증분 재판정」 절 추가. ⑴ 21행은 **어느 행에도 없는 신설 파일**이므로 **새 행**이 필요하다. `docs/**.md` 파일 개수를 늘리지 않으면 허브 `docs/index.html` 무수정으로 `check-journey-mockup.py` R8·R9 가 무접촉 통과한다.\n\n**⚠️ 착지 순서 의존 1건(문서만).** `ledger.md` 말미 요약 블록의 합계 3줄(#154 착지본 기준 줄 67·72·77)은 레포에 한 벌뿐이고, **열린 PR #157 이 그 세 줄을 `2,592 / 2,705 / 2,705 + ⑴ 21 + ⑵ 22 = 2,748` 로 고쳐 둔 상태**다. #157 이 먼저 착지하면 이 task 의 base 가 그 값이 된다 — 원장 자신의 규약대로 **절대값을 베끼지 말고 뒤에 서는 쪽이 live 에서 재측정해 다시 적을 것**. 코드 범위는 교집합 0 이라 충돌하지 않는다.\n\n**분기 ⒞ 구멍 자체 — 권고: 이번 계획서에 예측으로 실어 둘 것.** 이 축은 **자매 모델 `tbm_feature-doc-docs-impl` 의 슬라이스가 착지할 때마다 AC 꼬리표·시나리오 인용 형태로 구조적으로 재충전된다**(이번이 #126 → #152 → #155 로 이어지는 반복). 행 단위로 닫는 것만으로는 다음 슬라이스가 같은 유형을 다시 들여온다. 근본 대응은 **AC 꼬리표·시나리오 문장 인용을 잡는 레포 게이트 신설**(현재 이 축의 게이트 하중은 0)이지만 그것은 이 모델의 판정 표면 밖이므로, 이 task 에서는 **⒜⒝ 로 43행을 닫고 계획서에 「다음 docs-impl 슬라이스가 같은 유형을 다시 들여오면 게이트 신설을 별도 task 로 연다」를 예측으로 적어 두는 쪽**을 권한다 — 그러면 다음 fire 가 그 발화를 판정할 수 있다.\n\n---\n\n## ⚠️ 덧붙임 — push 후 재스윕에서 base 가 또 움직였다(2026-09-25T20:2xZ 실측). 이 task 의 범위는 그대로다.\n\n이 판정을 밀어 넣은 직후 재스윕에서 **#156**(`84d312a`, 20:06:19Z, 목업↔구현 수렴 — 접힘 affordance 폭 + 게이트 M8)이 착지한 것을 확인했다. 내 baseline 은 `lines=2751` 에 고정돼 있으므로 **다음 감지 주기가 이 11행으로 다시 발화한다** — 이 task 는 #155 의 43행만 닫는다(범위를 넓히지 말 것).\n\n**다만 자매 리뷰(`rct_20260925-0008` 거부 코멘트)가 #156 을 두 군데 틀리게 적었다 — 그대로 따르면 이 모델이 지키는 원장에 틀린 산술·틀린 행 배치를 심는다.** 독립 실측(동일 추출기·줄 단위 차분, `a473767` → `84d312a`):\n\n- 실제 증감은 **추가 12 · 제거 1 = 순 +11**, 전역 `lines=2762`. 파일별로는 **`frontend/src/index.css` +1**, **`tools/check-mockup-render.py` +11/−1**. 리뷰 코멘트의 「`index.css` +10 삽입, `check-mockup-render.py` 나머지」는 **두 파일이 뒤바뀐 것**이다.\n- 그 11행은 **행 열 밖이 아니다.** 두 파일 모두 이미 원장 행에 있다 — `index.css` 는 **행 10**(「프런트 데이터·셸 축」), `check-mockup-render.py` 는 **`tools/` 축 행**(`check-journey-mockup.py`·`check-scenario-e2e.py` 와 같은 행). 또 `check-mockup-render.py` 는 D6 `SELF_PATHS`(= `tools/check-data-format-change.py` · `.github/workflows/data-format-review.yml` 두 항목뿐, 실측)에 **없으므로 사람 게이트도 아니다**.\n- 따라서 화해식의 올바른 정정은 **⑴ 21 → 32 가 아니라 ⑵ 22 → 33** 이다: `행 열의 합 2,708 + ⑴ 21 + ⑵ 33 = 전역 live 2,762`. 총합은 어느 쪽이든 2,762 로 맞아떨어지지만 **축이 곧 기재 형태를 결정한다** — ⑴ 로 적으면 이미 행이 있는 두 파일에 **새 행을 만들게 되고**, 그것은 #157 이 거부당한 사유(「원장에 틀린 산술을 심는다」)와 같은 종류의 오염이다.\n- 이 11행은 **⒞ 분기의 예측이 같은 fire 안에서 발화한 증거**다: 43행을 닫기로 판정한 지 몇 분 만에 자매 슬라이스가 같은 축을 11행 더 채웠다(#126 → #152 → #155 → #156). 계획서에 게이트 신설 예측을 적어 두라는 권고의 근거가 한 건 더 늘었다.",
       "assessedAt": "2026-09-25T20:12:58Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#155(슬라이스 7b, AC4.7 분석 작업의 격리)가 들여온 미판정 주석 43행을 **한 슬라이스로** 판정한다 — 게이트 종류가 같아서다(두 파일 모두 check-data-format-change.py 의 D1·D6 밖이라 review/manual-approval 이 자동 success, 무인 착지). 기재 형태는 원장 규약이 정한다: backend/tests/worker.rs +22 는 **행 14 안**이라 새 행 없이 증분 재판정 ②, 어느 행에도 없는 신설 e2e/tests/sc04-10-…spec.ts 21행은 **새 행 31** + 새 패스 파일. 판정은 「③ 가 두꺼운 창에서는 서사를 닫고 편집 지점 가드를 남긴다」 규칙을 먼저 세우고 적용했다 — 제거 33행 중 가드 0 · 유지 10행 중 가드 6. ■ **완료 기준(이 범위가 성공인 조건)**: ⑴ 부모 대비 주석 지문 **순 제거 33행**(worker.rs −21 · sc04-10 −12) · files 불변 ⑵ 원장 행 14 = 21/`d4414d5f…` · 새 행 31 = 9/`ff166536…`(행 규약 = 개행 포함) ⑶ 원장 잔여 계수기 rc=0 — `행 열의 합 + ⑴ + ⑵ == 전역 live` **그리고 원장 산술 블록 문면과 일치**(등식만으로는 새 행 삭제가 ⑴ 마커에 흡수돼 조용히 초록이다) 로 **⑴ = 0** ⑷ 주석 걷어낸 코드 md5 부모와 동일 2/2 · 비주석 diff 0줄 ⑸ 게이트 4종 rc=0 + 판정기 `✅ 해당 없음`. 절대값은 형제 착지에 낡으니 **부모 대비 델타**로 판정한다. ■ **범위 밖**: #156 이 원장 행 10·11 에 연 11행(= rct_20260925-0010 / PR #159 의 몫) · 열린 #158 이 backend/tests/worker.rs 에 얹을 주석 약 12행 · 주석 비중복성 게이트 신설(예고만 원장에 적었다).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "모델 versionScript 를 4개 커밋(#155 부모·#155·#154·#156)에서 재현해 감지의 43행 배분을 독립 실측한다(Counter 차집합으로 gross/net 을 갈라 센다).",
+              "expectedOutcome": "지문 4개 전건 바이트 일치 · added 43 = worker.rs 22 + sc04-10 21 · removed 0(gross==net) · 43행 전부 HEAD 에 생존."
+            },
+            {
+              "seq": 2,
+              "action": "원장을 `|` split 으로 파싱해 행 열의 합·행 목록 파일 수·행별 live 값을 독립 재계수하고, 감지 addendum 의 「⑵ 22 → 33」 정정을 검산한다.",
+              "expectedOutcome": "행 열의 합 2,708 · 149(지문 144) · 어긋난 행 셋(10·11·14) 합 33 · 2,708+21+33=2,762 성립 ⇒ 자매 리뷰의 ⑴32/⑵22 배분은 거짓, ⑴ 은 sc04-10 하나뿐."
+            },
+            {
+              "seq": 3,
+              "action": "복원 경로 원본을 소스에서 직접 읽는다 — docs/test/04-platform.md#시나리오 10 · docs/prd/04-platform.md AC4.7 · docs/doc-tracker/2026-09.md 매핑 행·변경 이력 · PR #155 본문·코멘트·리뷰 전부 · worker_api.rs 모듈 //! · analysis.rs owned_analysis doc · analysis.rs 언어 복사 지점 · github_app.rs stub_installation_id doc · e2e-mocking-policy.md.",
+              "expectedOutcome": "정본 네 자리 확인(worker_api //! 「owns *no* persistence」 · owned_analysis 「404 (not 403)」 · analysis.rs 「Copied, not referenced」 · stub_installation_id 「derived from the user」) · doc-tracker 89행이 ?as= 일반 규약의 자리임을 선례로 확인."
+            },
+            {
+              "seq": 4,
+              "action": "판정 규칙을 먼저 세운다(서사 닫고 편집 지점 가드 남긴다 · 정본 지정 · 비공개 fn 은 pub 요약 유지 조항 밖) 뒤 43행을 명제 단위로 판정해 표를 만든다.",
+              "expectedOutcome": "제거 33 · 유지 10 · 유지분 중 가드 6 / 제거분 중 가드 0 으로 값이 갈린다."
+            },
+            {
+              "seq": 5,
+              "action": "$CLAUDE_JOB_DIR/tmp 의 재생 가능 스크립트(rep() + assert count==1)로 두 소스 파일의 주석만 편집한다.",
+              "expectedOutcome": "2 files changed · 지문 2762→2729(순 제거 33) · worker.rs 28→7 · sc04-10 21→9."
+            },
+            {
+              "seq": 6,
+              "action": "블록 주석 인식 stripper 로 코드 바이트 동일을 증명하고 비주석 diff·assert 수·세미콜론 수로 보강한다.",
+              "expectedOutcome": "md5 동일 2/2 · 비주석 diff 0줄 · 62==62 · 12==12 · 168==168 · 40==40."
+            },
+            {
+              "seq": 7,
+              "action": "원장 행 14 의 줄 수·지문 재고정 + 증분 재판정 ② 를 결과 칸에 잇고, 표 끝에 새 행 31 을 붙인다.",
+              "expectedOutcome": "행 14 = 21/`d4414d5f…` · 행 31 = 9/`ff166536…` (행 규약 재현)."
+            },
+            {
+              "seq": 8,
+              "action": "합계 문단·산술 블록을 live 에서 재측정해 다시 적고, 30차 패스의 인계 문장에 「— 해소됨」을 덧붙인다(지우지 않는다). 낡은 등재의 복제본을 명제 grep 으로 전수 확인한다.",
+              "expectedOutcome": "복제본 0건(ledger.md 한 곳뿐) · 순 제거 누적·행 열의 합·산술 블록이 계수기와 일치."
+            },
+            {
+              "seq": 9,
+              "action": "passes/2026-09-20-test-harness-axis.md 에 「증분 재판정 ②」 절을 더하고, 새 행 31 용 passes/2026-09-25-ac47-isolation-spec.md 를 만든다.",
+              "expectedOutcome": "판정 표 · 규칙 · 검증 절이 담긴 두 문서. docs/ 의 md 53→54."
+            },
+            {
+              "seq": 10,
+              "action": "새 md 로 깨지는 허브 R9 를 고친다 — docs/index.html 에 doc-row 1건 + Documents 53→54.",
+              "expectedOutcome": "check-journey-mockup.py rc=0."
+            },
+            {
+              "seq": 11,
+              "action": "게이트 4종 + 판정기를 굴리고 cargo 를 cboot C 툴체인으로 실제 실행한다.",
+              "expectedOutcome": "문서 게이트 3종·prototype rc=0 · 판정기 ✅ 해당 없음 · cargo 25 타깃 246 passed/0 failed(worker 14/14)."
+            },
+            {
+              "seq": 12,
+              "action": "음성 프로브를 단정 단위로 7종 굴린다(행 14 줄 수·지문 · 새 행 삭제 · 산술 블록 옛 값 · 검토자 제안 배분 · 허브 카운트 · 허브 doc-row).",
+              "expectedOutcome": "전부 rc=1. 그리고 「새 행 삭제」는 등식만으로는 초록이라는 사각을 실측해 계수기에 문면 일치 단정을 추가."
+            },
+            {
+              "seq": 13,
+              "action": "PR 을 열기 직전에 gh pr list + merge-tree 로 열린 PR 과 자물쇠를 재측정하고, 움직인 base(84d312a→b09f505)로 리베이스해 합계 문단 충돌을 planner 가 직접 해소한다.",
+              "expectedOutcome": "#157 착지 확인 · #159·#158 신규 발견 · 소스 교집합 0 · 행 14·31 핀이 두 base 에서 바이트 동일 · 합계는 #157 판 위에 이어 적는다."
+            },
+            {
+              "seq": 14,
+              "action": "브랜치를 push 하고 PR 을 연다(본문에 판정 규칙·산술 재측정·음성 프로브·착지 순서·flake 고지 포함).",
+              "expectedOutcome": "dlddu/feature-doc#160 · ci-gate 대기 · review/manual-approval 자동 success."
+            }
+          ],
+          "plannedAt": "2026-09-25T21:17:07Z",
+          "executionGuide": "# 실행 지침 — `rct_20260925-0009` (32차 패스 · PR #160)\n\n## 0. 착수 조건 (순서대로, 하나라도 어긋나면 멈춘다)\n\n1. `gh pr view 160 --repo dlddu/feature-doc --json mergeStateStatus,mergeable,statusCheckRollup`\n   - `ci-gate` **SUCCESS** · `review/manual-approval` **success**(판정기 `✅ 해당 없음` → 자동)\n   - `mergeStateStatus` 가 `CLEAN` 이 아니면 **머지하지 말고** 아래 3절(리베이스)로.\n2. **확인 → 머지 사이에 다른 일을 하지 않는다.** 이 레포에는 형제 주석 패스 PR(#159)과 docs-impl PR(#158)이\n   동시에 열려 있고 `ledger.md` 합계 문단은 레포에 한 벌뿐이라, 확인 뒤 한 박자만 늦어도 `DIRTY` 로 바뀐다.\n\n## 1. 머지\n\n```\ngh pr merge 160 --repo dlddu/feature-doc --squash --delete-branch\n```\n\n**squash 만** 쓴다(레포 규약). 머지 커밋·리베이스 머지를 쓰지 않는다.\n\n## 2. 검증 — 완료 기준은 **절대값이 아니라 부모 대비 델타**다\n\n착지 커밋을 `M`, 그 부모를 `P` 라 하자. 형제 PR 이 먼저 착지하면 절대값은 전부 움직이지만 아래 다섯은\n모두 **불변**이다. `main` 을 체크아웃하고 아래를 순서대로 잰다.\n\n### ⑴ 주석 지문 — 부모 대비 **순 제거 33행** · `files` 불변\n\n모델 `tbm_feature-doc-comment-redundancy` 의 `asIs.versionScript` 를 `P` 와 `M` 두 트리에서 그대로 돌린다\n(`git worktree add --detach`). 기대: `lines` 가 **정확히 33 줄어들고** `files` 는 같다.\n\n- 파일별로는 `backend/tests/worker.rs` **−21** · `e2e/tests/sc04-10-cross-user-data-isolation.spec.ts` **−12**.\n- 계획 시점 실측(부모 `b09f505`): `2,759 → 2,726`.\n\n### ⑵ 행 지문 핀 — 행 14 = `21 / d4414d5f…` · 새 행 31 = `9 / ff166536…`\n\n행 규약은 **개행 포함** 해시(`printf '%s\\n' \"$HITS\" | sha256sum`)다. 전역 규약(`printf '%s'`)으로는\n`5318cb91…` · `aedd932f…`. 이 6파일은 #156·#157 이 건드리지 않아 계획 시점 두 base(`84d312a`·`b09f505`)에서\n**바이트 동일**로 재고정됐다.\n\n⚠️ **열린 #158 이 먼저 착지하면 행 14 의 절대값이 움직인다**(`backend/tests/worker.rs` +117/−0, 주석 약 12행).\n그때는 핀 대조 대신 **부모 대비 −21행**으로 판정하고, 원장 행 14 의 줄 수·지문 칸을 `M` 에서 재측정해\n`ledger.md` 를 고치는 후속은 **다음 감지 주기의 몫**으로 둔다(이 task 의 범위를 넓히지 않는다).\n\n### ⑶ 원장 산술 — 계수기 rc=0\n\n아래를 `$TMP/count.py` 로 저장해 레포 루트에서 돌린다(정규식으로 표를 읽지 않는다 — `|` split).\n\n```python\nimport re, sys\nfrom collections import Counter\nrows=[]; start=False\nfor l in open('docs/comment-policy/ledger.md').read().split('\\n'):\n    if l.startswith('| 판정 범위'): start=True; continue\n    if start and l.startswith('|---'): continue\n    if start and l.startswith('|'): rows.append(l.strip().strip('|').split('|'))\ndef files_of(cell):\n    head = cell[:cell.find('(')] if '(' in cell else cell\n    return [('backend/migrations/'+p) if p.endswith('.sql') and '/' not in p else p\n            for p in re.findall(r'`([^`]+)`', head)]\nhits=[l.rstrip('\\n') for l in open(sys.argv[1]) if l.strip()]   # versionScript 의 HITS\nbyf=Counter(h.split(':',1)[0] for h in hits)\ntot=sum(int(c[1].strip()) for c in rows)\nallf=[p for c in rows for p in files_of(c[0])]\nout=sum(byf[p] for p in set(byf)-set(allf))\ninc=sum(sum(byf.get(p,0) for p in files_of(c[0]))-int(c[1].strip()) for c in rows)\neq=f\"행 열의 합 {tot:,}  +  ⑴ 행 열 밖 잔여 {out}  +  ⑵ 행 열 안 미판정 증분 {inc}  =  전역 live {len(hits):,}\"\nled=open('docs/comment-policy/ledger.md').read()\nprint(eq); print('등식', tot+out+inc==len(hits), '· 원장 문면 일치', eq in led)\nsys.exit(0 if (tot+out+inc==len(hits) and eq in led) else 1)\n```\n\n기대(형제 미착지 시): `행 열의 합 2,715 + ⑴ 0 + ⑵ 11 = 전역 live 2,726`, rc=0.\n**⑴ 이 0 인 것이 이 패스의 핵심 산출**이다. ⑵ 11 은 #156 의 몫(원장 행 10·11)이고 **PR #159** 가 닫는다 —\n#159 가 먼저 착지했다면 ⑵ 는 0 이 되고 합계 문단도 그쪽이 다시 적었을 것이므로, 그때는 **등식이 성립하고\n원장 문면과 일치하는가**만 본다(숫자 절대값을 기대값으로 쓰지 않는다).\n\n🔴 **등식만으로는 새 행 삭제를 못 잡는다**(⑴ 마커가 흡수해 조용히 초록 — 계획 단계에서 실측했다).\n그래서 계수기는 **원장 산술 블록 문면과의 일치**를 함께 단정한다. 그 줄을 빼고 쓰지 말 것.\n\n### ⑷ 코드 무변경 — md5 동일 2/2 · 비주석 diff 0줄\n\n`/* … */` 스팬을 지우고 **주석만이던 줄까지 지우는** 블록 주석 인식 stripper 로 재야 한다.\n줄머리 필터만 쓰면 `/** … */` 가 남긴 빈 줄 때문에 **거짓 DIFFER** 가 난다.\n\n```\ngit diff -U0 P M -- backend/tests/worker.rs e2e/tests/sc04-10-cross-user-data-isolation.spec.ts \\\n | grep -E '^[+-]' | grep -vE '^(\\+\\+\\+|---)' | sed -E 's/^[+-][[:space:]]*//' \\\n | grep -vE '^(//|/\\*\\*|\\*/|\\*([[:space:]]|$))' | grep -c .\n```\n→ **0**. 보강: `assert`/`expect(` 62==62 · 12==12, `;` 168==168 · 40==40.\n\n### ⑸ 게이트 4종 + 판정기\n\n```\npython3 tools/check-journey-mockup.py      # R9: 허브 Documents 54 · doc-row 링크 집합\npython3 tools/check-mockup-render.py\npython3 tools/check-scenario-e2e.py        # 매핑 36 · 선언 36 불변\nnpm i --no-save jsdom@29 && node tools/check-journey-prototype.js   # jsdom 선행 필요\npython3 tools/check-data-format-change.py --base <P> --head <M>     # ✅ 해당 없음\n```\n\n`cargo test --offline --release` 를 다시 돌릴 필요는 없다(CI `cargo` 잡이 본다). 돌린다면\n`. /home/ubuntu/toolchains/cboot/env.sh && export CARGO_HOME=/home/ubuntu/toolchains/cargo-home\nCARGO_TARGET_DIR=/home/ubuntu/toolchains/fd-target` 뒤 `backend/` 에서 실행한다(계획 시점 **25 타깃 /\n246 passed / 0 failed**). ⚠️ **1차 실행에서 `migrations_create_expected_tables` 1건이 실패했다가 단독·전체\n재실행에서 재현되지 않았다** — 이 PR 은 `.sql`·`backend/src` 무접촉이라 그 경로에 닿을 수 없다. CI 에서 같은\n이름이 빨갛게 뜨면 **재실행(re-run failed jobs)** 으로 확인하고, 두 번 연속 실패하면 이 PR 과 무관한 flake 로\n별도 보고할 것 — 이 task 의 실패로 적지 말 것.\n\n## 3. `DIRTY`/`BEHIND` 일 때 — 리베이스는 **실행자가 하지 않는다**\n\n`ledger.md` 합계 문단 충돌은 **재준비(planner)의 몫**이다. 실행자는 머지를 시도하지 말고\ntask 를 `failed`(verification 에 「머지 자체를 시작하지 못했다」를 명시)로 닫는다 — planner 가 범위·완료\n기준·PR 을 그대로 두고 리베이스 + 합계 재측정만 집행한다. 계획 단계에서 이미 한 번 했다\n(`84d312a → b09f505`, 충돌 2곳 모두 합계 문단이었고 **#157 판을 취하고 32차 몫을 이어 적는** 방식으로 해소).\n\n## 4. 주의사항\n\n- **불가역 지점**: squash 머지. 되돌리려면 `git revert` 로 새 PR 을 열어야 한다(직접 push 금지).\n- **트래픽·데이터 영향 0**: 주석과 문서만 바뀌고 `backend/migrations/**` 무접촉이라 sqlx 체크섬 repair 창이\n  없다. 운영 파드·DB 에 영향이 없다.\n- **`// 검증 시나리오:` 1행을 건드리지 말 것** — `check-scenario-e2e.py` 가 파싱하는 매핑 선언이고\n  지문·판정 양쪽에서 제외된다.\n- **허브 3종**: `docs/index.html` 의 `Documents` **54** 와 `doc-row` 는 **함께** 움직여야 한다(둘 중 하나만\n  되돌리면 R9 가 서로 다른 문면으로 운다 — 양방향 프로브로 실측했다).\n\n## 범위 밖 (후속 — 재감지가 잇는다)\n\n- **#156 의 11행** — 원장 행 10(`frontend/src/index.css` +1) · 행 11(`tools/check-mockup-render.py` +10).\n  `rct_20260925-0010` / **PR #159** 가 이미 열려 있다.\n- **#158 이 `backend/tests/worker.rs` 에 얹는 주석 약 12행** — 착지하면 행 14 가 다시 열린다.\n- **주석 비중복성 게이트 신설** — 이 축은 자매 슬라이스마다 AC 꼬리표·시나리오 인용으로 구조적으로\n  재충전되고 현재 게이트 하중은 0 이다. 이 모델의 판정 표면 밖이라 **예고로만** 원장에 적었다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/feature-doc",
+          "branch": "reconcile/rct_20260925-0009-feature-doc-comment-redundancy",
+          "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/160",
+          "preparedAt": "2026-09-25T21:17:07Z",
+          "notes": "head c5e3289 · 부모 b09f505(#157 착지 직후 — 계획 시점 84d312a 에서 리베이스, 행 14·31 핀은 두 base 에서 바이트 동일). 6 files changed. 게이트 전수 로컬 rc=0(journey-mockup·mockup-render·scenario-e2e·journey-prototype) · check-data-format-change.py `✅ 해당 없음`(D1·D6 무접촉 ⇒ review/manual-approval 자동 success, 무인 착지) · cargo test --offline --release 25 타깃 246 passed/0 failed. 음성 프로브 7종 전부 rc=1. 충돌면은 ledger.md 합계 문단 하나뿐이고 #159(rct_20260925-0010)와 소스 교집합 0 · #158 은 worker.rs 에 순수 추가라 헝크 무겹침 — 착지 순서 자유."
+        }
+      }
+    ]
   },
   {
     "id": "rct_20260925-0010",
