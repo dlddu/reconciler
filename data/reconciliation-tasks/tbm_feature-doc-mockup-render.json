@@ -4647,7 +4647,7 @@
       }
     },
     "createdAt": "2026-09-24T05:45:03Z",
-    "updatedAt": "2026-09-25T13:20:39Z",
+    "updatedAt": "2026-09-25T13:25:10Z",
     "stateSummary": {
       "asIs": "## as-is — 구현 화면 (`frontend/src` @ `cac12df5`, HEAD `fd6cdad`, 2026-09-24T05:38Z 관측)\n\n39h 무음 구간(09-22T13:59Z ~ 09-24T05:38Z, 7커밋 / PR #131 #133 #132 #134 #135 #136 #137) 중\n**렌더링 소스를 건드린 것은 PR #132 하나**다(`fix(frontend): 횡단 관심사 근거 줄 레이아웃 붕괴 수정`).\n나머지는 backend 파이프라인(#134 #137)·목업/허브(#131 #133 #135 #136)라 as-is 판정 표면 밖이다.\n\n- `CrossCuttingConcerns.tsx` +24/−8 — 근거 목록의 마크업을 범용 클래스에서 **목업의 클래스 이름으로 이관**:\n  `div.stack-10` → `div`(marginTop 12) · `div.row.between` → `div.ev` · `span.label` → `span.ename` ·\n  `span.meta` → `span.esrc`. 근거 경로는 `join(' · ')` 한 줄에서 **경로당 `<span>` 한 줄**로 바뀌었고,\n  `근거 없음` 범례는 실제로 그 태그가 있는 축에서만 그리도록 조건부가 됐다(목업과 같은 규칙).\n- `index.css` +33 — ⑴ `body` 에 `-webkit-text-size-adjust:100%` / `text-size-adjust:100%` 4줄,\n  ⑵ 새 `.ev` 규칙 블록 29줄(`.ev` · `.ev + .ev` · `.ev .ename` · `.ev .esrc` · `.ev .esrc > span` · `.ev .tag`).\n- 화면 컴포넌트 15개 전부 상단 주석 매핑 보유. `.screen`·토큰 정의는 이 구간에 손대지 않았다.\n- 15개 화면의 `:root` 토큰 21개는 이름·값 모두 목업 정의와 1:1(게이트 M2).\n",
       "toBe": "## to-be — 목업 (`docs/mockups` @ `42b1f8ea`, `design-system.md` @ `95b8c254`, 같은 HEAD)\n\n- 목업 5개 JRN 파일 **−716/+398** 로 대변동. 내용은 전부 **표현 층**이다:\n  ⑴ #131/#133 — 기기 프레임 제거(`div.statusbar` · `div.home-indicator` 전건 삭제, `.screen` 이\n  `top:54px` → `top:0` + `padding` 상단 14px 로 보정). ⑵ #136 — `.doc-layer`(규칙 5b 문서 메타)에\n  여정 경계 안내 `handoff-note` 와 이를 채우는 스크립트 추가. ⑶ #135 — 허브의 iframe 미리보기 제거\n  (`docs/mockups/README.md` 1줄).\n- `design-system.md` **+2줄** — `body` 에 `-webkit-text-size-adjust:100%` / `text-size-adjust:100%`.\n  이것은 위 `index.css` 의 4줄과 **같은 PR(#132)에서 함께 들어간 한 변경**이다(SSOT 와 구현이 동반 이동).\n- **앱 화면 자체는 한 바이트도 안 움직였다** — `.doc-layer` 이후를 자르고 `statusbar`/`home-indicator`\n  를 제거한 앱 화면 마크업 md5 가 양 지점에서 **5/5 SAME**\n  (`6ffccc87924ae83f` · `602c79908194b6a1` · `2c7b79a74743100c` · `32b8b5928296852b` · `35f46ddaae83daa9`).\n  화면 관련 CSS 변화도 파일당 2건뿐이고 둘 다 프레임 제거의 직접 산물(`.screen` 의 `top`/`padding`)이다.\n- 판정 기준이 되는 목업 `.ev` 규칙은 **양 지점 바이트 동일**:\n  `gap: 8px` · `.ev + .ev { margin-top: 9px }` · `.ename { font-size: 12.5px; color: var(--text-primary) }` ·\n  `.esrc { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary) }`.\n",
@@ -4714,6 +4714,62 @@
           "status": "approved",
           "reviewedAt": "2026-09-24T08:00:00Z",
           "reason": "목업이 SSOT 인 수치 3건을 구현으로 수렴시키고, 반대 방향(구현이 상위 문서를 따르는) 편차 1건을 원장에 등재해 gap 을 정확히 닫는다. 변경은 3파일 11+/9− 로 계획 2~5단계와 일치하고 무관한 변경이 없다. PR #140 은 지금도 OPEN·MERGEABLE·CLEAN 이고 head 667827ba 가 preparation 기록 그대로이며, required status 두 개(ci-gate · review/manual-approval)를 포함해 체크 전건이 success 다 — 사람 승인 context 도 자동 판정으로 이미 붙어 있어 별도 대기가 필요 없다. 위험은 low: CSS 수치 3 · 주석 3줄 · 원장 1행뿐이라 데이터·마이그레이션·외부 부작용 등 불가역 지점이 없고, 롤백은 squash sha 단일 revert 로 완전하다. executionGuide 가 완료 기준을 게이트 3종의 기대 수치(M4 29건·M5 29/29·M3A/M3B 348/315·M7 불일치0)와 grep 단정으로 못 박고, 래칫 공전을 배제하는 음성 프로브까지 지정해 검증이 통과-만-보고 끝나지 않는다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-25T13:20:45Z",
+          "finishedAt": "2026-09-25T13:25:10Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-25T13:20:45Z",
+              "finishedAt": "2026-09-25T13:22:10Z",
+              "log": "선결 확인만 수행(지침 0절). 자매 PR #139 는 6e6478a 로 이미 착지해 있었다. origin/main 은 그 뒤 #142(82be2f4, CI 설정)까지 전진해 PR base(6e6478a)에서 이동한 상태 — 그래서 GitHub 의 test-merge 판정에 의존하지 않고 로컬에서 재검증했다: merge-tree --write-tree --merge-base=6e6478a origin/main pr140 rc=0, 충돌 0건, 병합 트리 8e20143. PR diff 는 3파일 11+/9- 로 preparation 기록과 불변. DIRTY 아니므로 0절의 리베이스 규칙은 발동하지 않았다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-25T13:22:10Z",
+              "finishedAt": "2026-09-25T13:22:40Z",
+              "log": "내용 자체는 preparation 이 PR #140(head 667827ba)에 이미 작성해 둔 것이고, 실행자는 그것을 머지해 착지시켰다. 병합 트리에서 실측: index.css 726행 '.ev { display: flex; gap: 8px; align-items: baseline; }' 1줄 · 727행 '.ev + .ev { margin-top: 9px; }' 1줄. 줄바꿈 수용 규칙 4종은 PR diff 에 없어 무접촉이 확인됐다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-25T13:22:10Z",
+              "finishedAt": "2026-09-25T13:22:40Z",
+              "log": "병합 트리 실측: CrossCuttingConcerns.tsx 122행 'style={{ marginTop: 14, gap: 8 }}' 1건, data-testid=\"reproducibility\" 동일 줄에 그대로 유지."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-25T13:22:10Z",
+              "finishedAt": "2026-09-25T13:22:40Z",
+              "log": "PR diff 의 CrossCuttingConcerns.tsx 는 6행 중 5행이 삭제(순 -3행 주석)로, 거짓이 된 3줄 + 빈 주석 줄 제거가 포함돼 있다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-25T13:22:10Z",
+              "finishedAt": "2026-09-25T13:22:40Z",
+              "log": "docs/doc-tracker/2026-09.md 10+/2- 로 원장 1행 + 캡션·상한 28->29 + 경위 절이 들어가 있고, 486행이 '알려진 편차: **29건** · 미해소 편차 상한: **29**'. 지침 3절대로 docs/comment-policy/ledger.md 는 무접촉(PR diff 에 없음)."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-25T13:22:40Z",
+              "finishedAt": "2026-09-25T13:23:05Z",
+              "log": "게이트 3종을 병합 트리(8e20143)에서 선실행: check-mockup-render.py --verbose rc=0 · check-journey-mockup.py rc=0 · check-scenario-e2e.py rc=0. M5 음성 프로브도 함께 측정 — 상한만 29->28 로 되돌리니 rc=1 과 'M5: 미해소 편차 29건 > 상한 28 — 늘릴 수 없다', 확인 후 되돌려 워킹트리 clean. 머지 전에 굴린 이유는 main 이 PR base 에서 이동해 PR 런의 test-merge 가 낡았기 때문이다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-25T13:23:05Z",
+              "finishedAt": "2026-09-25T13:25:10Z",
+              "log": "PR 은 preparation 이 열어 둔 #140 이고, 실행자는 그것을 squash 머지해 착지시켰다. 머지 직전 재실측: state OPEN · mergeable MERGEABLE · mergeStateStatus CLEAN · head 667827ba(승인 기록과 동일) · combined status success, gh pr checks 전건 pass(ci-gate · test (cargo) 5m24s · test (kind e2e) 5m48s · docs 3종 · review/manual-approval 자동 판정 'DB 스키마·데이터 저장 형식 변경 없음'). PUT .../pulls/140/merge merge_method=squash sha=667827ba (commit_title 미지정 — 지정하면 (#N) 접미사가 사라진다) -> merged true, squash sha 9b8effbd0610db65f144c4755de7ccdd64371522, 13:23:15Z. main tip 이 '목업↔구현 수렴 — 근거 줄 간격 3값 + 경로 전량 편차 등재 (rct_20260924-0001) (#140)' 로 갱신됐다."
+            }
+          ]
         }
       }
     ]
