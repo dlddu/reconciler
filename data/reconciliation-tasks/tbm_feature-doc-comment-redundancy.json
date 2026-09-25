@@ -7952,9 +7952,9 @@
   {
     "id": "rct_20260925-0006",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "reviewing",
+    "status": "review_rejected",
     "createdAt": "2026-09-25T17:53:18Z",
-    "updatedAt": "2026-09-25T18:31:03Z",
+    "updatedAt": "2026-09-25T18:38:14Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T17:53:18Z",
@@ -8023,6 +8023,12 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/153",
           "preparedAt": "2026-09-25T18:25:56Z",
           "notes": "head `f8889bb` · 부모 `f4b7db3`. 변경 3파일 전부 `docs/`(+137/−6): `docs/comment-policy/ledger.md`(행 27·28 신설 + 행 26 의 두 유예 문장에 「해소됨」 덧붙임 + 합계 갱신) · `docs/comment-policy/passes/2026-09-25-gated-residual-pool.md`(신설 122줄) · `docs/index.html`(허브 `Documents` 52→53 + `doc-row` 1건 — R9).\n\n**무인 경로가 실물로 확인됐다.** 판정기를 **커밋된 범위**(`--base origin/main --head HEAD`)로 굴려 `✅ 해당 없음 (review/manual-approval = success)` 을 받았고, PR 생성 뒤 head `f8889bb` 의 combined status 에 `review/manual-approval=success` 가 **자동 부착**됐다(2026-09-25 실측). 남은 필수 체크는 `ci-gate` 하나다.\n\n**신설 2행의 줄 수·지문**(행 규약 `printf '%s\\n'` — 전역 규약과 다르다): 행 27 `backend/migrations/0014_feature_doc_restores.sql` 33 / `9ebe4ef258cf1d20be70401346d566575a0ddeafb176eb1332ef4f7d368e0ddf` · 행 28 `tools/check-data-format-change.py` 36 / `9b5b5b79d16129ff3bce26d5b823034e6c39e9e21a3a9d5405e530b788d19656`. 규약은 기존 행 25(123 / `3568954f74e1293bfd823b6c23095e331f868fbc0b5f697d10da7db3aab6ff04`)를 그대로 재현해 검증했다.\n\n**호스트에서 굴린 게이트**: `check-scenario-e2e.py` · `check-mockup-render.py` · `check-journey-mockup.py` · `node check-journey-prototype.js`(선행 `npm i --no-save jsdom@26.1.0`) 전부 rc=0. **R9 음성 프로브**: 허브 `Documents` 만 53→52 로 되돌리면 `✗ R9: 허브 요약 Documents 선언 52 이 실측 53 과 다르다` rc=1 → 되돌리면 rc=0(양방향 실측).\n\n**자매 경합**: `merge-tree --merge-base` 로 `origin/main` 과 clean. 열린 PR #152·#148 과 파일 교집합 0(PR 생성 직전 재실측). 단 원장 합계 줄과 허브 `Documents` 수치는 **충돌 없이 낡을 수 있는** 자리이므로 머지 직전 재확인이 실행 지침 1·2 단계에 들어 있다."
+        },
+        "review": {
+          "status": "rejected",
+          "reviewedAt": "2026-09-25T18:38:14Z",
+          "reason": "위험·불가역성 자체는 문제가 없다 — 변경 3파일이 전부 `docs/`(코드·매니페스트·마이그레이션 0)이고 롤백은 revert 한 번, 트래픽·데이터 영향이 없다. 준비물 신선도도 절반은 성립한다: PR은 열려 있고 `mergeable=MERGEABLE`/`CLEAN`, head `f8889bb` 에 필수 status 두 개(`ci-gate`, `review/manual-approval`)가 모두 success 다(사람 승인 context 가 판정기 자동 부착으로 이미 붙어 있어 4-2 는 해당 없음).\n\n거부 사유는 **계획 뒤 베이스가 실질적으로 이동했다는 것**이다. 계획 18:25 → 자매 PR #152 착지 18:30 (main tip `ea04fe05`)으로 범위 내 소스에 주석이 유입돼 전역 지문이 `lines=2683 files=141` → `lines=2726 files=143` 으로 움직였고, 그중 **원장이 덮지 않는 신규 파일 2건**이 생겼다 — `e2e/tests/sc04-06-mobile-first-session.spec.ts` 29행 · `frontend/src/viewport.ts` 7행(PR head 원장 전문에 언급 0건, 독립 재계수로 확정). 즉 이 PR 이 착지하는 순간 완료 기준 4·6 의 「행 열 밖 잔여(⑴ 축) = 0 · 행 열의 합 2,683 = 전역 live」가 성립하지 않는다(잔여 **36**, 산술은 2,683+43=2,726 으로만 화해한다). 동시에 원장 「합계」 문단이 「행 열 밖 잔여가 0 이 됐다」는 **거짓 단언을 정본으로 실어 착지**하는데, 그 문단이 이 모델의 to-be 산출물 자체라 단순 부기 오차가 아니라 기록 오염이다. 그대로 승인하면 실행자는 정상 머지를 하고도 검증 6 에서 `failed` 를 받는다. 정보가 부족해서가 아니라 전제가 무너져서 거부한다.",
+          "comment": "**현재 main tip `ea04fe05` 위에서 다시 재고, 착지 시점에 참이 되는 수치·문장으로 고칠 것.** 자매 #152 가 범위 내 소스에 주석 +43행/신규 2파일을 들여왔다(측정: versionScript 를 `f4b7db3` 와 `ea04fe05` 양쪽에서 전건 재실행).\n\n1. **원장 「합계」 문단 + 완료 기준 4·6** — 아래 두 갈래 중 하나를 골라 둘을 함께 고친다. 지금처럼 「잔여 0 · 합 2,683」을 절대값으로 두면 어느 쪽도 성립하지 않는다.\n   - (a) **신규 유입분까지 담아 실제로 0 으로 닫는다**: `e2e/tests/sc04-06-mobile-first-session.spec.ts` 29행 · `frontend/src/viewport.ts` 7행(= 36행)을 행 29·30 으로 신설 → 합계 파일 137→**139**, 행 열의 합 2,683→**2,719**, 잔여 0. 두 파일은 D1·D6 경로가 아니므로 `review/manual-approval` 자동 부착 전제는 그대로 유지된다(판정기 재실행으로 확인할 것).\n   - (b) **범위를 기존 69행으로 유지한다**: 그러면 완료 기준 4·6 을 절대값이 아니라 **부모 대비 델타**(「잔여 −69, 창 밖 신규 유입분 제외」)로 다시 쓰고, 원장 문장도 「잔여 0」이 아니라 신규 식별자 2건을 명시한 **잔여 36** 으로 적는다. 이미 기준 2 를 델타로 쓴 것과 같은 처방이다 — ⑴ 축에도 그 처방을 적용하면 된다.\n\n2. **행 열 *안* 증분(⑵ 축) 처리를 명시할 것** — 덮인 3파일의 줄 수 칸이 낡았다: `e2e/playwright.config.ts` 5→8 · `e2e/tests/sc03-01-llm-assisted-edit.spec.ts` 9→12 · `frontend/src/index.css` 5→6 (합 +7). ⑵ 를 완료 판정에서 빼는 결정은 유지해도 되지만, 그렇게 두면 기준 6 의 산술 화해식 `행 열의 합 + 잔여 = 전역 live` 가 ⑴·⑵ 를 한 덩어리로 섞어 버려 검증이 잔여 43 을 요구하게 된다. 식을 두 축으로 분리해 쓸 것(`합 + ⑴ + ⑵ = 전역 live`).\n\n3. **손대지 않아도 되는 자리**: 허브 `Documents` 53 은 여전히 유효하다 — #152 는 `docs/doc-tracker/2026-09.md` 수정만 했고 새 `doc-row` 를 넣지 않았다. R9 는 현재도 초록이다.\n\n4. 재계획 PR 은 `ea04fe05` 를 부모로 만들고, 실행 지침 2 단계의 교집합 검사에 **머지된 직전 커밋까지** 포함할 것 — 이번 누락은 「열린 PR 과의 교집합 0」은 통과하는데 **방금 착지한 PR** 이 같은 집계 축을 낡게 만든 경로였다(#148 은 아직 열려 있고 `e2e` 12파일을 건드리므로 같은 축에서 또 반복될 수 있다)."
         }
       }
     ]
