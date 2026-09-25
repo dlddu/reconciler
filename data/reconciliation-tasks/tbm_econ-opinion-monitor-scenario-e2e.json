@@ -2914,6 +2914,67 @@
       "reason": "**조치 필요.** 실측 불변식 `(24 − 1 − 1) = 22 ≠ 20`(매칭 spec 파일)이고, 이번 창이 새로 연 몫은 1:1 대상 시나리오 **`econ-opinion-monitor-test-pipeline-ops.md#시나리오 2`(기사별 LLM 호출 기록 — 정상·파싱 실패·호출 실패·재사용)** 를 주검증하는 spec 파일이 **0개**라는 것이다 — 모델 정의 규칙 1의 「누락」 drift.\n\n**지금 작업이 필요한 이유(자동 해소 불가)**: 공백으로 내려온 경위 자체가 자동 해소의 반대다. 선행 조건이던 미구현(AC4.2 기사별 LLM 호출 기록)이 형제 모델 task `tbm_econ-opinion-monitor-docs-impl/rct_20260925-0001` 로 **착지**(커밋 `58e82a2`, PR #134)해 「관측할 대상이 없다」는 구현 대기 사유가 소멸했고, 모델 정의 규칙 6이 예고한 대로 이 시나리오가 1:1 판정 대상으로 **복귀**했다. 착지는 등재문 주장이 아니라 실측으로 확인했다 — `contracts/silver/llm_call.avsc`·`econ_core.calllog.record_call`·`econ_analysis.llm._call_record` 실재, 네 갈래 enum 전건 실재, 그리고 구현 대기 표가 걸어 둔 **해제 신호 2건이 실제로 0건으로 사라졌다**. 등재 SSOT 도 「남은 것은 **전용 spec 저작**」이라고 담당 이관을 명시한다. 전용 spec 을 새로 저작해야만 닫힌다.\n\n**중복 아님 — 열린 task 가 이 공백을 덮지 않는다.** 이 모델의 유일한 비종료 task 는 `rct_20260925-0001`(`planning`, updatedAt 2026-09-25T13:52:36Z)인데, 그 계획서가 **범위 밖 ⑴** 로 「구현 대기 2건(`pipeline-ops#시나리오 2·3`) — 미구현이라 관측 대상이 없고 해소는 `tbm_econ-opinion-monitor-docs-impl` 의 몫(규칙 6)」이라고 시나리오 2 를 **명시적으로 배제**한다. 그 배제의 전제(「시나리오 2 는 미구현/구현 대기」)가 바로 내 창에서 **거짓이 됐다** — 그 계획이 쓰인 13:52:36Z 로부터 66분 뒤인 14:58:29Z 에 #134 가 착지해 시나리오 2 는 구현 대기에서 내려왔다. planner 가 알 수 있었던 사실이 아니다. 또한 그 task 는 아직 `preparation`(staged PR)이 없어 **파일 목록으로도 이 공백을 덮지 못한다**(attempt 키가 `plan` 하나뿐). 따라서 이 공백은 지금 아무 열린 task 의 소관도 아니며, 여기서 닫으면 재감지 경로가 0 이다(baseline 은 이미 `reg:773d987a…` 로 전진했으므로 다음 스윕이 같은 변화를 다시 집지 않는다).\n\n**planner 에게 — `rct_20260925-0001` 의 완료 기준이 내 창에 의해 산술적으로 도달 불가가 됐다(인계 사항, 별도 task 로 열지 않음).** 그 계획의 범위(완료 기준)는 「`check_scenario_mapping.py` 가 `시나리오 매칭 spec 파일 21` · `공백 0` · 공백 목록 없음으로 rc=0, 즉 `(24 − 1 − 2) = 21 = 매칭 21`」인데, 구현 대기가 2→1 로 내려가 **1:1 대상이 21→22** 가 됐다. 그 PR 이 계획대로 완벽히 착지해도 실제 상태는 `매칭 21 · 공백 1`(시나리오 2 잔존) 이라 **자신의 완료 기준 「공백 0」을 스스로 만족시키지 못한다** — 게이트는 여전히 rc=0(문서가 사실대로 적혀 있으면 초록이므로)이지만, 계획이 적은 검증 문구를 그대로 실행하면 실패로 읽힌다. 그 task 는 아직 `planning` 이라 planner 가 손에 쥐고 있으니, ⑴ 완료 기준을 `매칭 21 · 공백 1 · 1:1 대상 22` 로 재서술하거나 ⑵ 이 task 와 합쳐 공백 2건을 한 슬라이스로 닫는 쪽 중 하나를 택하면 된다. **두 공백은 같은 하네스(배치 3단 e2e 루트)를 딛고 서므로** 순서 조율에 값이 있다 — 시나리오 2 는 분석 단계의 모델 더블 응답 갈래(정상·형식 깨짐·호출 오류·이전 응답 재사용)와 로직 버전 상향 재처리를 요구하는데, `rct_20260925-0001` 이 이미 전용 루트 `/data/pipeline-ops` 와 모델 더블 재배선을 세우고 있다.\n\n**작업 범위 주의(planner 에게)**: 이 모델의 산출물 경계는 **E2E spec 과 등재 문서뿐**이다. 시나리오 2 가 요구하는 세 관측 중 앞 둘(네 갈래 호출 기록 · 전송 프롬프트 바이트 동일)은 등재문이 「단위 테스트가 이미 관측 중」이라 적으므로 e2e 는 레이크에 적재된 `silver/llm_call` 반출로 재고, 셋째(로직 버전 상향 재처리 뒤 이전 버전 기록 잔존)는 배치 3단 루트 위에 재처리 1회를 얹는 몫이다. 화면·엔드포인트·비즈니스 로직 신설로 번지면 경계 이탈 신호다(2026-08 AC3.7 전례). 착지 시 spec 헤더의 `검증 시나리오:` 선언과 `2026-09.md` 의 `## e2e 매핑` 집계표·공백 목록(`<!-- gap-list -->` 마커 사이)을 함께 갱신해야 게이트가 초록으로 남는다.\n\n**as-is 는 이번 트리거와 무관**하다(`tests/e2e` 트리 해시 `efaa8ce8…` 불변). 규칙 2·3·5 위반은 실측 0건이므로 이번 작업 범위는 **공백 1건(시나리오 2) 해소**로 한정된다.",
       "assessedAt": "2026-09-25T15:05:30Z"
     },
-    "updatedAt": "2026-09-25T15:09:33Z"
+    "updatedAt": "2026-09-26T00:30:52+09:00",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`pipeline-ops#시나리오 2`(기사별 LLM 호출 기록 — 정상·파싱 실패·호출 실패·재사용) 전용 e2e spec 을 신설해 공백 1건을 닫는다. 접근: **제품 코드를 한 줄도 고치지 않고, 기존 LLM 더블의 응답 픽스처와 「두 수집 주기」만으로 네 갈래를 한 실행 안에 세운다.** 전용 데이터 루트 `/data/llm-calls` 에 ㈀ 주기1 수집(기사 3건) → 분석(`llm-v1`) 으로 정상 1·파싱 실패 1·호출 실패 1 을 만들고, ㈁ 주기2 수집(같은 3건 재관측 + 신규 1건) → 분석(`llm-v1`, **같은 버전**) 으로 **한 실행 안에 네 갈래 전건**(재사용·파싱 실패·호출 실패·정상)을 세운 뒤, ㈂ `--analyzer-version llm-v2` 로 같은 Bronze 를 재처리한다. 적재된 `silver/llm_call` 을 반출해 spec 이 읽는다.\n\n**왜 이 방법인가 — 네 갈래가 전부 픽스처만으로 나온다는 것을 로컬에서 제품 CLI 로 실측했다.** 더블은 이미 ⑴ 모르는 제목에 404 를 내고(→ `call_failed`), ⑵ 응답 값을 그대로 JSON 문자열로 감싸므로 **객체 아닌 문자열 응답 하나만 픽스처에 넣으면** `parse_response` 가 「no JSON object」로 끊어 `parse_failed` 가 되고, ⑶ 응답 캐시가 레이크(`silver/analysis_cache`)에 남아 다음 주기의 **새 record_id + 바이트 동일 프롬프트**가 `reused` + `reused_from_call_id` 로 원 호출을 가리킨다. `record_id` 가 `(source_id, url, cycle)` 이고 수집 dedup 은 **URL 기준**이므로 같은 피드를 주기만 달리해 재수집하면 프롬프트가 동일한 새 레코드가 생긴다 — 더블 응답 모드 신설도, 두 번째 소스도 필요 없다. 실측(로컬 제품 CLI + 실 더블): 주기2 분석이 `attempted=5 failed=4 reused=1`, 세 실행 뒤 호출 레코드 16건 = `{parsed 4, parse_failed 5, call_failed 5, reused 2}`, 두 `analyzer_version` 공존.\n\n**프롬프트 바이트 동일**은 재구성 대조(공전 위험)로 때우지 않는다. 더블에 **받은 요청의 프롬프트 sha256 을 stderr 로 한 줄 남기는 6줄**을 더해(새 모킹 지점 아님 — 기존 더블의 관측일 뿐, 쓰기 가능 볼륨도 불필요) `kubectl logs` 로 반출하고, spec 이 **호출 레코드의 `prompt_sha256` ↔ 더블이 실제로 받은 digest 집합**을 대조한다. 여기서 실측으로 잡은 함정: 재사용 레코드의 digest 는 **그 원본이 이미 보냈으므로 로그에 있다** — 「재사용은 전송하지 않았다」는 digest 유무가 아니라 **수신 건수 == 재사용 아닌 호출 레코드 수**로만 falsifiable 하다. 더블은 모든 체인을 동시에 섬기므로 대조 집합은 **`model=e2e-llm-calls` 로 걸러** 잡는다.\n\n**범위(완료 기준) — 절대값이 아니라 부모 대비 델타로 적는다**(자매 착지 순서와 무관하게 성립해야 하므로): `python3 tests/e2e/check_scenario_mapping.py` 가 rc=0 이면서 부모 트리 대비 **`시나리오 매칭 spec 파일` +1 · `공백` −1** 이고, `gap-list` 마커 사이에서 **`…#시나리오 2` 줄 정확히 1줄이 사라지고 `#시나리오 1` 줄은 그대로 남는다**. 그리고 필수 status 2종(`required`, `review/manual-approval`)이 초록. 즉 이 슬라이스는 불변식을 **닫지 않는다** — 공백은 2→1 이 되고 남는 1건은 자매 task 몫이다.\n\n**범위 밖**: ⑴ `pipeline-ops#시나리오 1` — 자매 task `rct_20260925-0001`(`planning`, 이 모델) 소관이며 내가 점유하지 않는다. ⑵ `pipeline-ops#시나리오 3`(구현 대기 1건, 규칙 6 — `tbm_econ-opinion-monitor-docs-impl` 몫). ⑶ 예외 1건(`ingestion#시나리오 1`). ⑷ `docs/econ-opinion-monitor-e2e-mocking-policy.md` 허용목록 등재 — 새 모킹 지점 5건(FEED 2 · LLM 3)은 자매 모델 `tbm_econ-opinion-monitor-e2e-mock-policy` 의 SSOT 이고 그 모델 as-is 가 `tests/**` 토큰 스캔이라 이 착지로 자동 재감지된다(선례: `rct_20260919-0001` 이 지점을 들이고 등재는 `rct_20260919-0004` 가 했다). ⑸ 제품 코드·화면·엔드포인트·계약(`contracts/**`) — 한 줄도 건드리지 않는다(2026-08 AC3.7 전례의 고정부).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "전용 corpus 픽스처를 만든다. `tests/e2e/fixtures/feeds/llm_calls_cycle1.rss.xml`(기사 3건: 정상 응답용·문자열 응답용·응답 없음용)과 `llm_calls_cycle2.rss.xml`(같은 3건을 **같은 URL 로** 그대로 + 신규 1건)을 두고, 피드 구성 `e2e-feeds-calls1.json`·`e2e-feeds-calls2.json` 을 기존 `e2e-feeds-analysis.json` 모양(`source_id`·`axis`·`feed_url`·`limit`)으로 각각 추가한다. 두 파일의 `source_id` 는 **같아야** 한다 — 주기만 다른 재관측이어야 `record_id` 가 새로 생기면서 프롬프트가 바이트 동일해진다.",
+              "expectedOutcome": "`fixtures/feeds/` 에 xml 2개 + json 2개가 늘고 기존 픽스처는 불변. 두 xml 의 겹치는 3건은 `<link>` 가 동일하고 `<title>`·본문도 동일하다(`diff` 로 확인: 차이는 신규 1건 블록뿐)."
+            },
+            {
+              "seq": 2,
+              "action": "`tests/e2e/fixtures/llm/responses.json` 에 묶음 `e2e-llm-calls` 를 추가한다. 응답 표에는 **정상 기사 2건(객체)** 과 **파싱 실패용 1건(값이 객체가 아니라 문자열)** 만 넣고, **호출 실패용 기사 제목은 넣지 않는다**(더블이 404 → `CompletionError` → `call_failed`). `extends` 는 쓰지 않는다. 기존 세 묶음(`e2e-llm-v1`·`e2e-llm-v2`·`e2e-llm-agg`)의 응답은 한 글자도 건드리지 않는다.",
+              "expectedOutcome": "`python3 -c 'import json;json.load(open(...))'` 통과하고 더블의 `/healthz` 가 `models` 에 `e2e-llm-calls` 를 포함해 4개를 보고한다. 기존 묶음 3개의 JSON 부분트리가 부모와 바이트 동일(`git diff` 가 새 묶음 블록만 보여준다)."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/e2e/fixtures/llm/server.py` 에 **수신 프롬프트 digest 로그 한 줄**을 더한다: 요청 본문의 system·마지막 user content 로 `sha256(system + b'\\0' + user)` 를 계산해 `sys.stderr.write(f\"[llm-double] received model={model} prompt_sha256={d}\\n\")`. 위치는 제목 추출 성공 직후(= 404 로 끊기는 호출도 로그가 남아야 한다 — `call_failed` 도 「보낸 요청」이다). 계산식은 제품의 `calllog.prompt_digest` 와 **같은 정의**(NUL 구분)여야 한다. 쓰기 가능 볼륨·ConfigMap 변경·`readOnlyRootFilesystem` 완화는 필요 없다(stderr).",
+              "expectedOutcome": "더블을 손으로 띄워 한 건 호출하면 stderr 에 `received model=… prompt_sha256=…` 이 나오고, 그 값이 제품이 적은 `prompt_sha256` 과 일치한다(로컬 실측으로 5/5 일치 확인된 관계). 기존 응답 본문·상태 코드·`/healthz` 모양은 불변."
+            },
+            {
+              "seq": 4,
+              "action": "Job 매니페스트 5개를 `tests/e2e/k8s/batch/` 에 추가한다. 전부 기존 같은 역할 매니페스트의 복제이고 바뀌는 것은 데이터 루트(`/data/llm-calls`)·피드 설정·`ECON_RUN_ID`·`ECON_LLM_MODEL`·(마지막만) `--analyzer-version` 뿐이다: `ingest-job-calls1.yaml`·`ingest-job-calls2.yaml`, `analyze-job-calls1.yaml`·`analyze-job-calls2.yaml`(둘 다 `ECON_LLM_MODEL=e2e-llm-calls`, `ECON_RUN_ID` 는 `e2e-calls-run-1`/`-2`), `analyze-job-calls-v2.yaml`(같은 묶음 + `args: [--analyzer-version, llm-v2]`, `ECON_RUN_ID=e2e-calls-run-3`). 상류 재배선 지점마다 기존 형식 그대로 `# mock-exception: <CODE> — <사유> — docs/econ-opinion-monitor-e2e-mocking-policy.md` 주석을 단다. 코드는 실측된 현재 최대값 다음 번호: **FEED-21·FEED-22 · LLM-09·LLM-10·LLM-11**.",
+              "expectedOutcome": "`kubectl apply --dry-run=client -f` 가 5개를 파싱한다. `grep -c 'mock-exception:' tests/e2e/k8s/batch/*calls*.yaml` 합이 5이고, 레포 전체의 `mock-exception:` 코드 집합에 중복이 없다(`grep -rho 'mock-exception: [A-Z]*-[0-9]*' tests/ | sort | uniq -d` 가 빈 출력)."
+            },
+            {
+              "seq": 5,
+              "action": "`tests/e2e/run.sh` 에 이 루트 구간을 **추가만** 한다: ⑴ 헬퍼 한 줄 `export_llm_call() { export_parts \"$1\" silver \"$2\" llm_call '*=*/*.json'; }`(객체 데이터셋 레이아웃 `call_id_prefix=<c>/<call_id>.json` 실측), ⑵ `chain_llm_calls()` 를 기존 `chain_analysis` 모양으로 쓴다 — ingest1 → analyze1 → ingest2 → analyze2 → analyze-v2 를 체인 **안에서 순차**로 돌리고(캐시·주기 순서가 본체다), 각 분석 단계 뒤 CLI 요약 줄을 가드로 잡는다(주기1 은 `failed=2`, 주기2 는 `reused=1` 이 **있어야** 한다 — `failed=0` 가드를 쓰면 이 묶음은 성립하지 않는다), ⑶ 마지막에 `export_llm_call /data/llm-calls \"$LLM_CALL_DIR\"` 와 `kubectl logs deploy/econ-llm-double --tail=-1 > \"$LLM_DOUBLE_LOG\"` 로 반출, ⑷ `CHAINS=(...)` 에 `llm_calls` 를 더하고, ⑸ spec 실행 env 블록에 `E2E_LLM_CALL_DIR`·`E2E_LLM_DOUBLE_LOG` 를 더하고 끝의 `[e2e] OK:` 요약 줄 하나를 더한다.",
+              "expectedOutcome": "`bash -n tests/e2e/run.sh` rc=0. 기존 체인 함수·가드·env 줄은 한 줄도 수정되지 않는다(`git diff tests/e2e/run.sh` 가 순수 추가 + `CHAINS=` 한 줄 + env 블록 두 줄만 보여준다)."
+            },
+            {
+              "seq": 6,
+              "action": "`tests/e2e/lib/calllog.ts` 를 기존 `lib/silver.ts`·`lib/ingestlog.ts` 모양으로 추가한다: 반출 JSONL 을 `LlmCall` 타입으로 읽고 `callsOf(records, recordId)`·`byOutcome(records)`·`receivedDigests(logPath, model)`(더블 로그에서 `model=<이름>` 줄의 digest 집합) 정도의 최소 도우미만 둔다. 환경변수가 비면 조용히 0을 주지 않고 예외로 끊는 기존 규약을 따른다. `lib/llmdouble.ts` 에는 **기존 `CannedReply`·`cannedReply` 시그니처를 바꾸지 않고** 문자열 응답을 읽는 접근자(예: `rawReplyValue(model, title): unknown`)만 **덧붙인다** — 기존 5개 spec 의 호출부가 그대로 컴파일돼야 한다.",
+              "expectedOutcome": "`npx playwright test --list` 가 타입 오류 없이 전 spec 을 나열한다(파일 수 = 기존 21 + 1). `git diff tests/e2e/lib/llmdouble.ts` 가 순수 추가다."
+            },
+            {
+              "seq": 7,
+              "action": "`tests/e2e/specs/pipeline-ops-2-llm-call-records.spec.ts` 를 신설한다. 헤더 주석 첫 줄에 `// 검증 시나리오: econ-opinion-monitor-test-pipeline-ops.md#시나리오 2` 를 **정확히 한 줄** 둔다(게이트 규칙 2). 단정은 시나리오의 기대 결과 문면을 따라 네 묶음으로 둔다 — ⑴ **네 갈래 전건 존재**: 주기2 실행(`run_id=e2e-calls-run-2`)의 호출 레코드에 `parsed`·`parse_failed`·`call_failed`·`reused` 가 **모두** 있고, 각각 응답 원문(`response_raw`; `call_failed` 는 null + `call_failure_reason` 에 사유)·파싱 실패 사유·`call_attempt_count`·`call_model`/`call_temperature`·`run_id` 를 갖는다. ⑵ **프롬프트 바이트 동일**: 재사용 아닌 모든 레코드의 `prompt_sha256` 이 더블이 받은 digest 집합(`model=e2e-llm-calls` 필터)에 있고, **수신 건수 == 재사용 아닌 호출 레코드 수**(이 등식이 「재사용은 아무것도 보내지 않았다」를 지탱한다 — digest 유무로는 판별되지 않는다). 아울러 `prompt_sha256` 이 `sha256(prompt_system + NUL + prompt_user)` 로 재계산된다. ⑶ **재사용**: `reused` 레코드는 `call_attempt_count == 0` · `duration_ms == 0` 이고 `reused_from_call_id` 가 **주기1 실행의 실재하는 `call_id`** 를 가리킨다(원본 레코드의 `record_id` 는 다른 주기의 것이다). ⑷ **재처리 후 이력 잔존**: `analyzer_version` 이 `llm-v1`·`llm-v2` 두 값으로 존재하고, `llm-v2` 실행이 더한 레코드가 있으면서 **`llm-v1` 레코드 집합(`call_id` 기준)이 하나도 사라지지 않았다**. 수치는 corpus 크기에 딸린 절대값 대신 위 관계식으로 적는다.",
+              "expectedOutcome": "`check_scenario_mapping.py` 가 이 파일을 `pipeline-ops#시나리오 2` 의 매칭으로 읽어 매칭 +1 · 공백 −1. CI `required` 안의 e2e 잡에서 spec 이 통과한다."
+            },
+            {
+              "seq": 8,
+              "action": "등재 SSOT `docs/econ-opinion-monitor-doc-tracker/2026-09.md` 의 `## e2e 매핑` 절을 실측에 맞춘다: ⑴ 「집계 (실측)」 표의 `시나리오 매칭 spec 파일` **+1** · `공백 (1:1 대상 중 파일 없음)` **−1**, ⑵ 「시나리오 ↔ spec 파일 (실측)」 표에 행 1개 추가, ⑶ `gap-list` 마커 **사이에서 `#시나리오 2` 줄만 지운다**(마커는 지우지 않는다 — 규칙 5 가 마커 부재를 위반으로 잡는다; `#시나리오 1` 줄은 남는다), ⑷ 「공백 해소 경로」 표에 이 하네스 행 추가 + 그 앞 문단의 「**공백이 한 건 있다**(`pipeline-ops#시나리오 1`) — 아래 표는 아직 그 한 건의 행을 갖지 않는다」 문장을 실측(공백 1건 = 시나리오 1, 표는 이제 시나리오 2 행을 갖는다)에 맞게 정정, ⑸ 「불변식 현황」 문단의 회계식 갱신, ⑹ 「이번 달 변경 이력」 에 행 추가. **절대값을 쓰는 칸은 착수 시점의 `check_scenario_mapping.py` 출력에서 다시 읽어 적는다**(자매가 먼저 착지하면 20→21 이 아니라 21→22 다).",
+              "expectedOutcome": "`python3 tests/e2e/check_scenario_mapping.py` rc=0 이고 출력 7개 수치가 전부 문서와 일치. 회계식 `전집 = 매칭 + 예외 + 구현 대기 + 공백` 이 닫힌다."
+            },
+            {
+              "seq": 9,
+              "action": "게이트를 직접 굴려 **단정 단위 양방향**으로 확인한다: `python3 tests/e2e/check_scenario_mapping.py`(rc=0) · `python3 scripts/check-journey-mockup.py`(rc=0) · `python3 scripts/check-mockup-render.py`(rc=0) · `make lint-py lint-go`(rc=0) · `python3 scripts/check-data-format-change.py <base> <head>` 로 `format_changed=false`(= 필수 status `review/manual-approval` 이 자동으로 붙어 무인 슬라이스가 성립). 음성 프로브 3건: ㈀ spec 헤더 선언 줄만 지우면 rc=1, ㈁ 집계 표의 매칭 수만 되돌리면 rc=1, ㈂ `gap-list` 에서 `#시나리오 1` 줄까지 지우면 rc=1(= 내 편집이 옆 줄을 먹지 않았음을 반대쪽에서 고정).",
+              "expectedOutcome": "게이트 5종 rc=0, 음성 프로브 3건 전부 rc=1, `format_changed=false`."
+            },
+            {
+              "seq": 10,
+              "action": "브랜치 `reconcile/rct_20260925-0003-econ-scenario-e2e` 를 `origin/main` 에서 따 커밋·푸시하고 PR 을 연다. PR 본문에 task id · 공백 1건의 경위(#134 AC4.2 착지로 구현 대기에서 내려옴) · 실측 수치(주기2 `attempted/failed/reused`, 반출 호출 레코드의 갈래별 건수, 더블 수신 건수) · 게이트 출력과 음성 프로브 결과 · 범위 밖 5항 · **자매 task `rct_20260925-0001`(시나리오 1)과의 관계**(집계 칸이 같은 자리라 착지 순서에 따라 수치를 재계산해야 함)를 적는다. 열기 직전 `gh pr list` 와 `git merge-tree --merge-base` 로 겹치는 헝크를 재실측해 본문에 수치로 남긴다.",
+              "expectedOutcome": "PR 이 열리고 `required`·`review/manual-approval` 두 필수 status 가 초록. `merge-tree` 가 `origin/main` 기준 clean."
+            }
+          ],
+          "plannedAt": "2026-09-26T00:30:52+09:00"
+        }
+      }
+    ]
   }
 ]
