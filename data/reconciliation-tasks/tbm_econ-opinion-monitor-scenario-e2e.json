@@ -2781,7 +2781,7 @@
     "toBeModelId": "tbm_econ-opinion-monitor-scenario-e2e",
     "status": "planning",
     "createdAt": "2026-09-25T13:22:06Z",
-    "updatedAt": "2026-09-25T13:31:06Z",
+    "updatedAt": "2026-09-25T13:52:36Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T13:22:06Z",
@@ -2800,7 +2800,63 @@
     "assessment": {
       "reason": "**조치 필요.** 실측 불변식 `(24 − 1 − 2) = 21 ≠ 20`(매칭 spec 파일)로, 1:1 대상 시나리오 `econ-opinion-monitor-test-pipeline-ops.md#시나리오 1`(실행·단계 기록과 건수 정합) 을 주검증하는 spec 파일이 **0개**다 — 모델 정의 규칙 1의 「누락」 drift.\n\n**지금 작업이 필요한 이유(자동 해소 불가)**: 이 공백은 일시 상태나 진행 중 롤아웃이 아니라 **전용 spec 을 새로 저작해야만** 닫힌다. 공백으로 내려온 경위 자체가 자동 해소의 반대다 — 선행 조건이던 미구현(AC4.1 실행·단계 기록)이 형제 모델 task `tbm_econ-opinion-monitor-docs-impl/rct_20260924-0001` 로 **착지**(커밋 `9ebc095`)해 「관측할 대상이 없다」는 구현 대기 사유가 소멸했고, 모델 정의 규칙 6이 예고한 대로 이 시나리오가 1:1 판정 대상으로 **복귀**한 것이다. 등재 SSOT 도 「남은 것은 전용 spec 저작 = 이 모델의 하네스 몫」이라고 담당 이관을 명시한다.\n\n**중복 아님**: 이 모델의 기존 task 25건은 전부 종료 상태로, 이 공백을 덮는 열린 task 가 없다. 실행 중인 `docs-impl/rct_20260924-0001` 은 **다른 모델**(문서↔구현 정합)이고 그쪽의 산출물(AC4.1 구현)은 이미 착지했으므로 이 spec 공백을 처리하지 않는다.\n\n**작업 범위 주의(planner 에게)**: 이 모델의 산출물 경계는 **E2E spec 과 등재 문서뿐**이다. 시나리오가 요구하는 세 관측 중 앞 둘(정상 실행의 건수 맞물림 · 분석 중단 실행의 실패 단계와 사유)은 기존 배치 3단 e2e 루트 위에 얹을 수 있고, 셋째(스케줄러 이력 정리 뒤에도 조회됨)는 기록이 레이크(`silver/pipeline_run`)에 있다는 사실 자체라 별도 하네스가 불필요하다고 등재 문서가 적고 있다. 화면·엔드포인트·비즈니스 로직 신설로 번지면 경계 이탈 신호다(2026-08 AC3.7 전례). 작업 시 spec 헤더의 `검증 시나리오:` 선언과 `2026-09.md` 의 `## e2e 매핑` 집계표·공백 목록(`<!-- gap-list -->` 마커 사이)을 함께 갱신해야 게이트 `check_scenario_mapping.py` 가 계속 초록으로 남는다.\n\n**as-is 는 이번 트리거와 무관**하다(`tests/e2e` 트리 해시 `87b9bca1…` 불변). 규칙 2·3 위반(선언 중복·고아·미등재 파일)은 실측 0건이므로 이번 작업 범위는 공백 1건 해소로 한정된다.",
       "assessedAt": "2026-09-25T13:24:24Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`pipeline-ops#시나리오 1`(실행·단계 기록과 건수 정합) 전용 e2e spec 을 신설해 공백 1건을 닫고 모델 불변식을 `21 = 21` 로 복원한다. 접근: **새 하네스를 짓지 않고 기존 배치 3단 루트의 복제로 「관측 가능한 두 실행」을 만든다** — 전용 데이터 루트 `/data/pipeline-ops` 에 ㈀ 정상 실행(수집→분석→집계, 수집 구성에 항상 실패하는 소스 1개 포함)과 ㈁ 중단 실행(새 기사를 수집한 뒤 분석 상류를 죽은 주소로 돌려 모델 호출 전건 실패)을 각각 하나의 `ECON_RUN_ID` 로 묶어 돌리고, 배치가 레이크에 쓴 `silver/pipeline_run` 레코드 두 건을 반출해 spec 이 읽는다. 세 번째 관측(「스케줄러 이력 정리 뒤에도 조회된다」)은 등재 문서가 적어 둔 「기록이 레이크에 있다는 사실」로 넘기지 않고, **그 루트의 Job 5개를 실제로 삭제한 뒤 반출**해 관측한다 — e2e 에 Argo 컨트롤러가 없으므로 Job(+Pod 로그)이 이 하네스의 스케줄러 이력이고, AC4.1 구현이 스스로 적은 설계 근거(「스케줄러는 최근 몇 건만 남기고 Pod 로그는 노드와 함께 사라지므로 레이크에 쓴다」)를 그대로 재는 자리다.\n\n**왜 이 방법인가**: 기존 집계 루트(`/data/aggregation`)에 `ECON_RUN_ID` 만 얹으면 파일 추가 0 · 모킹 지점 0 으로 정상 실행을 얻을 수 있지만, 그 루트의 피드 구성에 실패 소스를 넣는 순간 `run.sh` 의 `failed_sources=[]` 가드(이미 착지한 집계 spec 들을 지키는 장치)를 약화시켜야 한다. 전용 루트는 기존 단정을 한 줄도 건드리지 않으며(루트를 주기·용도별로 가르는 이 하네스의 기존 관례 그대로), 되돌리기도 파일 삭제 한 번이다.\n\n**범위(완료 기준)**: `python3 tests/e2e/check_scenario_mapping.py` 가 `시나리오 매칭 spec 파일 21` · `공백 (1:1 대상 중 파일 없음) 0` · 공백 목록 없음으로 rc=0 이고, CI 의 `required`(그 안의 `ci / e2e` 포함)가 초록. 즉 이 모델의 불변식 `(24 − 1 − 2) = 21 = 매칭 21` 이 성립한다.\n\n**범위 밖**: ⑴ 구현 대기 2건(`pipeline-ops#시나리오 2·3`) — 미구현이라 관측 대상이 없고 해소는 `tbm_econ-opinion-monitor-docs-impl` 의 몫(규칙 6). ⑵ 예외 1건(`ingestion#시나리오 1`). ⑶ `docs/econ-opinion-monitor-e2e-mocking-policy.md` 의 허용목록 등재 — 새 모킹 지점 6개는 자매 모델 `tbm_econ-opinion-monitor-e2e-mock-policy` 의 SSOT 이고, 그 모델 as-is 가 `tests/**` 의 토큰 스캔 지문(`sites=31 files=18`)이라 이 착지로 자동 재감지된다(선례: 집계 하네스 `rct_20260919-0001` 이 6지점을 들이고 등재는 `rct_20260919-0004` 가 했다). ⑷ 열린 자매 PR #131 의 `run.sh` 재구조화(배치 Job 병렬 체인화) — 내 루트를 7번째 체인으로 옮기는 것은 그 PR 이 착지한 뒤의 별도 정리다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "전용 데이터 루트 `/data/pipeline-ops` 의 피드 구성 2개를 픽스처로 추가한다: `tests/e2e/fixtures/feeds/e2e-feeds-ops.json`(기존 집계 corpus 3소스 + 더블의 `/__fail__/` 를 가리키는 4번째 소스 `e2e-ops-down`)과 `e2e-feeds-ops-2.json`(둘째 실행이 수집할 새 기사 — 기존 `faults_ok.rss.xml` 4건). **새 RSS/Atom 픽스처는 만들지 않는다** — 기존 xml 을 가리키는 설정만 더한다.",
+              "expectedOutcome": "`tests/e2e/fixtures/feeds/` 에 json 2개가 늘고 xml 은 불변. 실측 기준: 이 구성으로 수집하면 Bronze 10건 · `failed_sources=['e2e-ops-down']`(로컬 제품 CLI 실측)."
+            },
+            {
+              "seq": 2,
+              "action": "Job 매니페스트 5개를 `tests/e2e/k8s/batch/` 에 추가한다. 전부 기존 같은 역할 매니페스트의 복제이고 바뀌는 것은 데이터 루트·피드 설정·`ECON_RUN_ID`·(중단 실행만) `ECON_LLM_BASE_URL` 뿐이다: `ingest-job-ops.yaml`·`analyze-job-ops.yaml`(응답 묶음 `e2e-llm-agg`)·`aggregate-job-ops.yaml` 은 `ECON_RUN_ID=e2e-ops-run-ok`, `ingest-job-ops-2.yaml`·`analyze-job-ops-stopped.yaml` 은 `ECON_RUN_ID=e2e-ops-run-stopped`. 중단 실행의 분석 Job 만 `ECON_LLM_BASE_URL` 을 클러스터에 없는 주소로 두고 `backoffLimit: 0` 으로 둔다. 상류 재배선 지점마다 기존 형식 그대로 `# mock-exception: <CODE> — <사유>` 주석을 단다(FEED 4 · LLM 2, 코드는 기존 최대값 다음 번호).",
+              "expectedOutcome": "`kubectl kustomize`/`kubectl apply --dry-run=client` 가 5개 매니페스트를 파싱한다. `grep -c 'mock-exception:' tests/e2e/k8s/batch/*ops*.yaml` 합이 6."
+            },
+            {
+              "seq": 3,
+              "action": "`tests/e2e/run.sh` 에 이 루트 구간을 더한다: ㈀ `econ-e2e-ingest-ops` → `econ-e2e-analyze-ops` → `econ-e2e-aggregate-ops` 를 기존 `run_batch_job` 으로 순차 실행하고 각 단계에 기존과 같은 가드(`failed_sources` 에 `e2e-ops-down` 이 **있어야** 한다 / `failed=0` / Gold 비어 있지 않음)를 둔다. ㈁ `econ-e2e-ingest-ops-2` 를 돌린 뒤 `econ-e2e-analyze-ops-stopped` 는 **실패를 기대값으로** 기다린다(`kubectl wait --for=condition=failed`) — 성공하면 「모델 호출이 모두 실패한다」가 성립하지 않은 것이라 그 자리에서 끊는다.",
+              "expectedOutcome": "`bash -n tests/e2e/run.sh` rc=0. run.sh 의 새 구간이 기존 구간·함수를 한 줄도 수정하지 않는다(추가만)."
+            },
+            {
+              "seq": 4,
+              "action": "같은 구간 끝에서 **스케줄러 이력 정리**를 수행한다: 위 5개 Job 을 `kubectl delete job` 으로 지우고, 지워졌음을 `kubectl get job` 으로 확인한 뒤(0건이 아니면 끊는다) `export_parts` 로 `silver/pipeline_run` 을 `$E2E_RUNLOG_OPS_DIR` 에 반출한다. 반출은 `bronze-shell` Pod 가 PVC 를 읽는 경로라 Job 삭제와 독립이다. Job 로그는 삭제 **전에** 이미 `$LOG_DIR` 에 잡혀 있다.",
+              "expectedOutcome": "반출된 `pipeline_run.jsonl` 이 비어 있지 않고 run 레코드 2건을 담는다. 삭제 확인 명령이 Job 0건을 본다."
+            },
+            {
+              "seq": 5,
+              "action": "`tests/e2e/lib/runlog.ts` 를 추가한다(기존 `lib/silver.ts`·`lib/ingestlog.ts` 와 같은 모양): 반출된 JSONL 을 `PipelineRun`·`RunStage` 타입으로 읽고, `stageOf(run, name)`·`outcomeSum(stage)`·`stageNames(run)` 같은 최소 도우미만 둔다. 환경변수가 비면 조용히 0을 주지 않고 예외로 끊는 기존 규약을 따른다.",
+              "expectedOutcome": "`npx tsc --noEmit` 상당(`npx playwright test --list`)이 통과한다."
+            },
+            {
+              "seq": 6,
+              "action": "`tests/e2e/specs/pipeline-ops-1-run-stage-records.spec.ts` 를 신설한다. 헤더 주석 첫 줄에 `// 검증 시나리오: econ-opinion-monitor-test-pipeline-ops.md#시나리오 1` 을 **정확히 한 줄** 둔다(게이트 규칙 2). 단정은 시나리오의 기대 결과 문면을 따라 세 묶음으로 둔다 — ⑴ 두 실행 모두 `run_id`·`run_trigger`·`run_started_at`/`run_ended_at`·`run_status` 를 갖는다(각각 `succeeded`/`failed`), ⑵ 정상 실행: 세 단계 각각 `sum(outcomes) == input_count`, 앞 단계 `output_count == `다음 단계 `input_count`(수집 10 → 분석 10 → 집계 10), 수집 단계의 `source_failures` 가 `e2e-ops-down` 과 사유를 담는다, ⑶ 중단 실행: `analysis` 단계가 `failed` + `failure_reason` 에 호출 실패 사유, `sum(outcomes) == input_count`(= `skipped_settled` + `call_failed`), `stages` 에 `aggregation` 이 **없다**. 그리고 이 단정 전체가 Job 삭제 뒤 반출본 위에서 돈다는 사실을 헤더에 적어 세 번째 관측을 명시한다.",
+              "expectedOutcome": "`check_scenario_mapping.py` 가 이 파일을 `pipeline-ops#시나리오 1` 의 매칭으로 읽어 매칭 21 · 공백 0."
+            },
+            {
+              "seq": 7,
+              "action": "등재 SSOT `docs/econ-opinion-monitor-doc-tracker/2026-09.md` 의 `## e2e 매핑` 절을 실측에 맞춘다: ⑴ 「집계 (실측)」 표의 `시나리오 매칭 spec 파일` 20→21 · `공백 (1:1 대상 중 파일 없음)` 1→0, ⑵ 「시나리오 ↔ spec 파일 (실측)」 표에 행 1개 추가, ⑶ 「공백 (1:1 대상 중 파일 없음)」 의 `gap-list` 마커 **사이를 비운다**(마커는 지우지 않는다 — 규칙 5 가 마커 부재를 위반으로 잡는다), ⑷ 「공백 해소 경로」 표에 이 하네스 행 추가 + 그 앞 문단의 「아직 그 한 건의 행을 갖지 않는다」 문장 정정, ⑸ 「불변식 현황」 문단을 `21 = 21` 성립으로 갱신, ⑹ 「이번 달 변경 이력」 에 행 추가.",
+              "expectedOutcome": "`python3 tests/e2e/check_scenario_mapping.py` rc=0 이고 출력의 7개 수치가 전부 문서와 일치."
+            },
+            {
+              "seq": 8,
+              "action": "게이트를 전부 직접 굴려 양방향으로 확인한다: `python3 tests/e2e/check_scenario_mapping.py`(rc=0) · `python3 scripts/check-journey-mockup.py`(rc=0) · `python3 scripts/check-mockup-render.py`(rc=0) · `python3 scripts/check-data-format-change.py <base> <head>` 로 `format_changed=false`(= 필수 status `review/manual-approval` 이 자동으로 붙어 무인 슬라이스가 성립) · 음성 프로브로 「등재만 되돌리면 rc=1」·「spec 선언만 지우면 rc=1」 두 건.",
+              "expectedOutcome": "네 게이트 rc=0, 음성 프로브 2건 rc=1. 데이터 형식 판정이 `false`."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치 `reconcile/rct_20260925-0001-scenario-e2e` 를 `origin/main` 에서 따 커밋·푸시하고 PR 을 연다. PR 본문에 task id · 공백 1건의 경위 · 실측 수치(반출 레코드 2건의 단계별 건수) · 게이트 출력 · 범위 밖 4항(위 summary 와 같은 목록) · 자매 PR #131 과의 착지 순서를 적는다. 열기 직전 `gh pr list` 와 `git merge-tree` 로 겹치는 헝크를 재실측해 본문에 수치로 남긴다.",
+              "expectedOutcome": "PR 이 열리고 `required` 가 초록, `review/manual-approval` status 가 붙는다."
+            }
+          ],
+          "plannedAt": "2026-09-25T13:52:36Z"
+        }
+      }
+    ]
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-scenario-e2e",
