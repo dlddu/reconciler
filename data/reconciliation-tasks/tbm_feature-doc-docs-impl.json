@@ -7143,7 +7143,7 @@
     "toBeModelId": "tbm_feature-doc-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-25T16:48:43Z",
-    "updatedAt": "2026-09-25T18:06:52Z",
+    "updatedAt": "2026-09-25T18:12:27Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T16:48:43Z",
@@ -7228,6 +7228,51 @@
           "reviewedAt": "2026-09-25T18:05:00Z",
           "reason": "준비물 무효 — PR #152(head `844f27c5`)는 OPEN·MERGEABLE·충돌 없음이나, 필수 status 중 `ci-gate`가 FAILURE라 머지 게이트를 통과하지 못한다(2026-09-25T18:0xZ 재확인, run 36169066503). `test (kind e2e)`에서 2건 실패다: ⑴ 이 PR이 새로 넣은 `sc04-06-mobile-first-session.spec.ts`가 600s 타임아웃으로 미통과 — AC4.4 수렴을 증명할 유일한 실측(계획 step 5·8이 CI를 유일 측정 지점으로 지목)이 비어 있다. ⑵ 기존 `sc03-01-llm-assisted-edit.spec.ts:66`이 회귀 — 390px(PHONE) 뷰포트에서 `scenario-list`가 resolved-but-hidden으로 10s 타임아웃, step 4의 접힘 기본값이 원인으로 보인다. 사람 승인 context `review/manual-approval`은 이미 success로 붙어 있어 머지를 막는 것은 사람이 아니라 계획 자체의 결함이므로, 4-2가 아니라 거부로 판정한다.",
           "comment": "⑴ **접힘 기본값이 기존 e2e를 깬다.** step 4의 `<details className=\"disclosure\" open={wide}>`는 390px에서 `wide=false`라 닫힌 채 서고, `FeatureAcceptance`의 「인수 시나리오」 절 안에 있는 `data-testid=\"scenario-list\"`가 hidden이 된다. `sc03-01-llm-assisted-edit.spec.ts`는 `PHONE={390,844}`로 뷰포트를 좁히고 L66에서 `expect(getByTestId('scenario-list')).toBeVisible()`을 단정하므로 그대로 실패한다(로그: locator는 23회 resolved, 값은 hidden). 재계획에는 **접힘 대상 요소를 좁은 뷰포트에서 단정하는 기존 spec을 먼저 전수 열거하는 단계**와, 그 spec들이 summary를 눌러 펼친 뒤 단정하도록 고치는 단계(또는 `scenario-list`를 접힘 대상에서 빼는 설계 변경)를 넣을 것. `check-scenario-e2e.py`는 시나리오↔spec 1:1 매핑만 보므로 이 회귀를 구조적으로 못 잡는다 — 정적 게이트 rc=0을 근거로 삼지 말 것.\n\n⑵ **새 spec `sc04-06`이 600s 타임아웃으로 미통과.** 「5분 예산」을 재기 전에 어느 단계에서 멈추는지(로그인 / 분석 완료 대기 / 요약 렌더 / summary 클릭 후 상세 노출)부터 특정해 대기 지점을 고치고, 10분 타임아웃 안에 끝나는 구조로 다시 쓸 것. 이 spec이 통과하지 못하면 AC4.4가 실제로 수렴했다는 근거가 없다.\n\n⑶ **검증 단계에 CI 실측을 명시할 것.** 이번 준비는 로컬 정적 게이트(문서 3종 + `npm run build`) rc=0만으로 초록을 선언하고 e2e는 실행하지 못한 채 PR을 열었다. 재계획의 완료 기준에 「PR head에서 `test (kind e2e)` 전건 통과 및 `ci-gate` success 확인」을 넣을 것."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**재계획 — 범위·PR 은 그대로 두고, 거부 사유 두 건의 *원인*을 실측해 고친다.** 슬라이스 7a(AC4.4 「긴 분석 결과는 단계적으로 노출(요약 → 상세)」 한 절)의 범위·완료 기준·PR #152 는 직전 시도 그대로다. 거부는 계획의 **범위**가 아니라 **구현의 두 결함**을 가리켰고, 둘 다 이번 fire 에서 원인까지 특정했다(PR head `844f27c5`, CI run 36169066503 잡 로그 실측 — 34 passed / 2 failed).\n\n**원인 ⑴ — 기존 e2e 회귀는 「좁은 뷰포트 × 접힘 대상」 교집합 하나뿐이고, 그것을 전수로 증명했다.** 검토자는 `sc03-01:66` 을 지목했는데, 지목된 자리가 곧 고칠 단위인지부터 되물었다. 접힘 4곳의 `<summary>` 안쪽(항상 보임)과 body(접히면 숨음)를 갈라 세어 **숨는 testid 17개**를 확정하고(`axis`·`pipeline-count`·`scenario-count`·`archive-count` 는 `<details>`/`<summary>` 자신이라 제외), 35개 spec 전수에서 그 17개를 쓰는 곳을 뽑으니 **12개 spec 이 걸렸다**. 그러나 `playwright.config.ts` 의 project 가 `Desktop Chrome`(1280×720 ≥ 600px)이라 기본은 전부 펼쳐진 채 서고, **뷰포트를 600px 아래로 좁히는 spec 은 `sc03-01` 과 신설 `sc04-06` 둘뿐**이다(`setViewportSize` 전수 grep). 즉 실제 회귀 표면 = 12 ∩ 2 = **`sc03-01:66` 하나**. 이 계수는 CI 가 독립적으로 검산해 준다 — 34 passed / 2 failed 로, 나머지 11개 spec 이 전부 초록이었다. 그래서 **지목된 한 자리가 실제로 전부**이며, 근거 없이 11개를 더 건드리지 않는다.\n\n**원인 ⑵ — `sc04-06` 의 600s 는 「느린 것」이 아니라 *존재하지 않는 요소를 누른 것*이다.** 실패 문면이 `Test timeout of 600000ms exceeded` 이고 **`expect` 실패 메시지가 하나도 없다**는 점이 판별식이다: `expect` 는 `expect.timeout = 10_000` 이 걸려 있어 10초에 locator 오류와 함께 죽지만, **action(`click`/`fill`)은 기본 타임아웃이 없어** 테스트 상한까지 그대로 매달린다. 그래서 멈춘 지점은 단정이 아니라 action 이다. 소스에서 짚으면 **L82 `getByTestId('request-edit').click()`** 이다 — `request-edit` 는 `frontend/src/FeatureDependencies.tsx:176`, 즉 `/features/<key>/dependencies` 라우트의 요소인데 spec 은 L69 에서 `/acceptance` 로 간 채 그대로 누른다(`sc03-01` 은 L33 에서 그 라우트로 이동한 뒤 누른다). 영영 나타나지 않는 요소를 기다린 것이라 **「5분 예산」 단정은 아예 도달하지도 못했다**. 검토자가 요구한 「어느 단계에서 멈추는지 먼저 특정」의 답이 이것이다.\n\n**그래서 프런트 코드는 건드리지 않는다.** 같은 로그가 접힘 기구 자체는 무죄임을 증명한다 — 600s 를 썼다는 것은 (a)·(b) 블록의 `toHaveAttribute('open','')`·`toBeVisible()` 이 **통과**했다는 뜻이고(실패했다면 10초에 죽었다), 그 사이 `AnalysisProgress` 는 폴 틱마다 재렌더된다. 즉 `open={wide}` 가 사용자의 펼침을 되돌리지 않는다는 것이 실측으로 이미 확인됐다. 수정은 **e2e 축 3파일**로 닫힌다.\n\n**완료 기준(이 범위 기준으로 판정)** — 절대 지문이 아니라 **부모(=squash 머지 시점 main tip) 대비 델타**로 적는다:\n1. PR #152 가 main 에 squash 머지돼 tip 이다.\n2. **PR head 에서 `test (kind e2e)` 가 전건 통과(36/36)하고 `ci-gate` 가 success** — 직전 시도가 빠뜨린 유일한 실측 지점이며, 이것 없이는 AC4.4 수렴 근거가 없다.\n3. 순 변화 **9파일**, `backend/` **0파일**(마이그레이션 0014 불변). 직전 7파일 + `e2e/tests/sc03-01-...spec.ts` + `e2e/playwright.config.ts`.\n4. 카운터 델타(직전 시도와 동일, 재확인): 구현 대기 4→**3** · 매핑 = spec 수 34→**35** · 편차 30→**33**(상한 30→33) · 활성 대조 **15 불변**. 항등식 `38 = 35 + 0 + 3 + 0`.\n5. 게이트 4종 + `npm run build` rc=0, 그리고 `check-mockup-render.py` 의 **M3A 346 · M3B 314 가 부모와 동일**(카피 0줄의 검산).\n\n**범위 밖(후속 재감지가 잇는다)**: AC4.6(마이그레이션 0015 · 사람 승인 벽) · AC4.7 · AC4.1 「해제」 조항 · 목업의 접힘 변이 제작 · **「좁은 뷰포트에서 접힘 body 를 단정하면 막는다」는 정적 게이트 신설**(이번 전수 열거는 PR 본문에 남겨 근거로 보존하되, 새 판정기는 `docs/` 새 파일·R9 표면을 건드리므로 별 슬라이스다).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "거부 사유 ⑴ 의 표면을 **전수로 다시 세고 그 계수법을 PR 본문에 남긴다**. 접힘 4곳(`AnalysisProgress:153` · `CrossCuttingConcerns:133` · `FeatureAcceptance:160` · `FeatureAcceptance:305`)에서 `<summary>` 안쪽과 body 를 갈라 **숨는 testid 17개**를 뽑고, `e2e/tests/*.spec.ts` 35개 + `e2e/support/*.ts` 전수에서 그 17개의 사용처를 뽑고, 다시 `setViewportSize` 로 600px 미만을 만드는 spec 으로 교차한다.",
+              "expectedOutcome": "숨는 testid 17 · 그것을 쓰는 spec 12 · 좁히는 spec 2(`sc03-01`·`sc04-06`) ⇒ 교집합 **`sc03-01:66` 한 자리**. CI 의 34 passed 가 나머지 11개의 무사함을 독립 검산한다. 이 표가 「지목된 자리가 전부였다」의 근거다."
+            },
+            {
+              "seq": 2,
+              "action": "`e2e/tests/sc03-01-llm-assisted-edit.spec.ts` 를 고친다 — L66 의 `scenario-list` 단정 **앞에** 해당 `scenarios-disclosure` 의 `summary` 를 눌러 펼치는 줄을 넣는다. ⚠️ **「탭 3」 주석 표식 뒤에 넣어** 3탭 계수를 건드리지 않는다: 세는 탭은 `request-edit`·`send-request`·`approve-diff` 세 번이고 L65 에서 끝나며, L66 이후는 결과 확인 구간이다. 주석으로 그 이유를 한 줄 남긴다(AC4.4 가 AC3.1 보다 위가 아니라 **서로 다른 구간**을 본다는 것).",
+              "expectedOutcome": "`sc03-01` 이 390px 에서 통과한다. 주석 표식 `── 탭 1/2/3` 은 그대로 3개이고, 펼침 클릭은 탭 3 **뒤**에 있어 「3탭 이내」 단정의 의미가 보존된다."
+            },
+            {
+              "seq": 3,
+              "action": "`e2e/tests/sc04-06-mobile-first-session.spec.ts` 의 (c) 블록을 고친다 — `request-edit` 를 누르기 **전에** `sc03-01:33` 과 같이 `/#/analyses/<run.id>/features/<key>/dependencies` 로 이동한다. 그리고 승인 뒤 L87 의 `scenario-list` 단정은 **새로 마운트된 화면**이라 390px 에서 다시 접혀 있으므로, 그 앞에도 `scenarios-disclosure` 펼침을 넣는다.",
+              "expectedOutcome": "600s 매달림이 사라진다. (c) 가 `sc03-01` 과 같은 라우트에서 돌아 `request-edit`·`send-request`·`approve-diff` 가 전부 실재하는 요소를 누른다."
+            },
+            {
+              "seq": 4,
+              "action": "`e2e/playwright.config.ts` 에 **`use.actionTimeout: 30_000`** 을 더한다. 지금은 action 에 상한이 없어 잘못 겨눈 클릭 하나가 테스트 상한(600s)까지 매달리고 **`expect` 오류도 남기지 않아 진단이 불가능**했다(이번 거부의 실제 비용). 30초는 관측된 가장 느린 테스트 전체(21.2s)보다 크고 600s 보다 20배 작다.",
+              "expectedOutcome": "앞으로 같은 종류의 오조준은 30초 안에 locator 문면과 함께 죽는다. 전건 36 passed 로 이 값이 기존 spec 을 하나도 깎지 않음을 확인한다(깎이면 값을 올리되 600s 로 되돌리지는 않는다)."
+            },
+            {
+              "seq": 5,
+              "action": "로컬에서 정적 게이트 4종 + 빌드를 재확인한다(`check-scenario-e2e.py`·`check-mockup-render.py`·`check-journey-mockup.py`·`check-journey-prototype.js` · `frontend` 빌드). **단 이 rc=0 을 초록의 근거로 삼지 않는다** — 검토자가 못박은 대로 `check-scenario-e2e.py` 는 시나리오↔spec 1:1 매핑만 봐서 이번 회귀를 구조적으로 못 잡는다.",
+              "expectedOutcome": "전건 rc=0, M3A 346 · M3B 314 불변(카피 0줄). 문서 축이 이번 수정으로 흔들리지 않았음만 확인한다."
+            },
+            {
+              "seq": 6,
+              "action": "수정 3파일을 PR #152 브랜치에 얹어 push 하고, **CI 가 실제로 돌아 `test (kind e2e)` 가 전건 통과하는지 확인한다**. 실패하면 잡 로그를 받아(`actions:read` + `curl -L`) 멈춘 지점을 다시 특정한 뒤 고친다 — 로그가 `expect` 오류를 주면 단정, 주지 않으면 action 오조준이다(이번에 쓴 판별식).",
+              "expectedOutcome": "`test (kind e2e)` 36 passed / 0 failed, `ci-gate` success. `review/manual-approval` 은 `backend/migrations/**` 무접촉이라 새 head 에 자동으로 다시 붙는다."
+            },
+            {
+              "seq": 7,
+              "action": "PR 본문을 갱신한다 — ⑴ step 1 의 전수 표(17 testid · 12 spec · 좁히는 spec 2 ⇒ 교집합 1), ⑵ 600s 의 원인이 `request-edit` 라우트 오조준이었다는 것과 `expect` 오류 유무 판별식, ⑶ `actionTimeout` 을 넣은 이유, ⑷ CI e2e 전건 통과 수치.",
+              "expectedOutcome": "검토자가 세 지적(⑴ 전수 열거 · ⑵ 멈춘 지점 특정 · ⑶ CI 실측)의 답을 PR 본문에서 바로 읽을 수 있다."
+            }
+          ],
+          "plannedAt": "2026-09-25T18:12:27Z"
         }
       }
     ]
