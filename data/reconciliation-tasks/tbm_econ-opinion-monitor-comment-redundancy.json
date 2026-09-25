@@ -6168,7 +6168,7 @@
   {
     "id": "rct_20260924-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-24T05:52:49Z",
@@ -6178,7 +6178,7 @@
       }
     },
     "createdAt": "2026-09-24T05:52:49Z",
-    "updatedAt": "2026-09-25T13:25:28Z",
+    "updatedAt": "2026-09-25T13:29:40Z",
     "assessment": {
       "reason": "**status → `action_required`.** 판정 3단을 순서대로 물었고 세 항이 전부 성립한다. 더해 **직전 판정의 유일한 기각 사유가 게이트 개정으로 소멸**했다(이번 fire 의 핵심 발견).\n\n⑴ **이 트리거는 내 직전 산출이 아니다.** 창 `5e57792..9a37d04` 12커밋 중 주석 정책 패스는 **0건**이고 전부 자매 모델 산출(#117·#118·#119·#121·#122·#123·#124·#125·#126·#127·#128·#129)이다. 직전 산출인 #116(phone-media-pass)은 창의 **부모**이고, 그 지점에서 versionScript 를 재실행해 baseline `d888d2b2…`(2431/134)을 **바이트 재현**했으므로 놓친 이벤트가 없다. to-be(`docs/comment-policy/` tree)는 #116 이후 무이동 — 소진된-트리거 형태가 아니다.\n\n⑵ **잔여가 실재한다 — 197줄, 독립 재계수 잔차 0.** 원장 138행 파서 ↔ tip 실측(140파일 2601줄) 대조로 ⑴ 행 없는 파일 7개 **109줄** + ⑵ 행이 있으나 자란 파일 17개 **88줄**. 원장 기재 10 대비 **+187**이고, 이 187 은 주석 지문의 **추가분 +187 과 정확히 일치**한다(삭제 −17 은 「남음」 감소라 잔여 계수 밖 — 원장 「읽는 법」 규약 그대로). 파일별 델타 합 == 전역 델타(+170)도 동시 성립 ⇒ 자유 풀·이중 계상 0.\n\n⑶ **소유자가 없다.** 이 모델의 열린 task 0(직전 `rct_20260922-0002` 는 `no_action_needed` 종결). 대상 레포 열린 PR 은 **#130·#131 둘뿐이고 어느 쪽도 `docs/comment-policy/` 를 건드리지 않는다** — #130 은 자매 `docs-impl` 의 reconcile(runlog 신설), #131 은 CI 단축. 즉 이 197줄을 판정할 주체가 어디에도 없다. executor 는 `lastObservedVersion` 을 건드리지 않고 후속 task 도 만들지 않으므로, 지금 닫으면 다음 자매 착지까지 방치된다.\n\n**⑷ 결정적 변화 — 직전 판정의 기각 사유가 #127 로 소멸했다.** `rct_20260922-0002` 가 `no_action_needed` 를 낸 유일한 근거는 「잔여 10+7 전부가 `check-data-format-change.py` `SENSITIVE_PATHS` 에 걸려 `review/manual-approval` 이 자동으로 붙지 않는 **사람 몫**이라 무인 패스의 선이 0」이었다. #127(`6b3a264`, 「수동 승인 판정을 데이터 계약·게이트 자신으로 축소」)이 `SENSITIVE_PATHS` 를 **10항 → 5항**으로 줄이며 `deploy/**/*pvc*.yaml` · `storage.py` · `domain.py` · `go/internal/store/*.go` · `data/**` 를 **뺐다**(게이트 소스 직접 판독 + 경로별 매칭 실측). 결과:\n- 원장이 「사람 몫」으로 파킹해 둔 **`batch-pvc.yaml` 7줄이 이제 무인으로 닫을 수 있다**.\n- 새 잔여 197 중 **사람 몫은 `scripts/check-data-format-change.py` 11줄 하나뿐**, 나머지 **186줄이 무인 사정권**이다.\n- 게이트 동작을 양성으로 검증: `check-data-format-change.py 187f55e^ 187f55e`(web·go PR) → **`format_changed=false` rc=0**. 워크플로가 붙이는 `CONTEXT=review/manual-approval`(`:45`) == main ruleset 필수 status(`gh api …/rules/branches/main` 실측: `required`, `review/manual-approval`) — **이름이 일치**하고, #127 이후 #129 가 실제로 머지돼 경로가 살아 있음이 실증된다.\n\n**⑸ 자동 해소 가능성 없음 → 유예 아님.** 주석은 스스로 사라지지 않고, to-be 는 이 모델 자신의 편집으로만 움직인다. 열린 PR 둘 다 잔여를 닫지 않는다(#130 은 오히려 주석을 더 들일 것이다 — 정상적인 자매 착지 주기).\n\n**planner 인계 — 슬라이스 권고**\n원장은 「자매 착지 증가분을 표적 패스로 닫는」 형태를 20회 넘게 반복해 왔고(`*-pass` 명명 + 원장 행 갱신 + `passes/<날짜>-<slug>.md`), 이번 197 은 한 패스로 닫기엔 크다. **최우선 슬라이스 후보 = `go/internal/handlers/dashboard.go` 37 + `dashboard_test.go` 15 (#117 한 묶음, 신규 행 신설, 52줄)** — 단일 PR 유래라 복원 경로 ③④ 가 깨끗하고, 표본 판독에서 목업·PRD 재진술형이 이미 확인됐으며, **아래 in-flight 충돌 집합 밖**이다.\n- **in-flight 주의**: 열린 PR **#130 이 잔여 24파일 중 5개를 동시에 건드린다** — `debug.go` · `debug_test.go` · `storage.py` · `domain.py` · `test_storage.py`. 이 다섯은 이번 패스에서 빼거나 #130 착지 후로 미루는 편이 리베이스 비용이 낮다(나머지 **19파일은 충돌 없음**).\n- **사람 몫으로 남길 것**: `scripts/check-data-format-change.py` 11줄(게이트 자신 — 여전히 `SENSITIVE_PATHS`).\n- **이번에 새로 열린 자리**: `deploy/overlays/prod/batch-pvc.yaml` 7줄(원장 `:529`·`:655` 가 「사람 몫」으로 적어 둔 것 — #127 로 무인 가능해졌으므로 원장의 그 문구도 함께 갱신 대상).\n- 원장 말미 요약(`:655`)의 「미판정 잔여 10 / ⑵ 0 / 무인 패스의 다음 선은 없다」 세 문장은 전부 낡았다 — 패스가 이 숫자를 재산정해 갱신해야 한다.",
       "assessedAt": "2026-09-24T07:54:00Z"
@@ -6295,6 +6295,43 @@
               "log": "executionGuide 순서 4 (착지 후 검증). main tip 92e408f 에서 완료 기준 셋을 재실측했다 — 상세 수치와 판정은 verification.checks 에 남긴다. 부수 확인: main push 로 도는 Image 워크플로와 pages-build-deployment 둘 다 92e408f 에서 success (이 레포의 Checks 는 PR 전용이라 main push 에는 돌지 않는다)."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "lines=2603 files=145\ne39db35c68f74992a49747dd20200fc4c786366600f05e7fa7d09ce3c6268127",
+          "checks": [
+            {
+              "name": "지문 — 이 PR 의 순 제거 41줄 / 파일 +-0 (모델 asIs.versionScript 재실행)",
+              "status": "passed",
+              "detail": "착지 tip 92e408f: lines=2603 files=145 / e39db35c68f74992a49747dd20200fc4c786366600f05e7fa7d09ce3c6268127. 부모 9ebc095: lines=2644 files=145. 델타 = -41 줄 / 파일 +-0 으로 지침의 불변 기준과 정확히 일치. 지침이 적은 절대값 lines=2560 files=140 / 94d42f5f... 은 자매 PR #130(runlog) 이 계획 수립 뒤 먼저 착지해 기준선이 9a37d04 -> 9ebc095 로 움직였기 때문에 성립하지 않으며, 지침 자신이 그 경우 '부모 대비 순 제거 41줄' 로 읽으라고 명시한 대로 판정했다."
+            },
+            {
+              "name": "원장 재계수 — 판정 85줄이 미판정 잔여에서 빠졌는가",
+              "status": "passed",
+              "detail": "원장 파서로 (1) 행 없는 파일 전량 + (2) 행이 있으나 실측 > 남음 인 파일의 증가분을 재계수했다. 머지 직전 9ebc095(구 원장 138행): 238 = (1) 11파일 128 + (2) 21파일 110. 착지 tip 92e408f(신 원장 141행): 153 = (1) 8파일 72 + (2) 17파일 81. 델타 = 정확히 -85 로, 이 시도가 판정 대상으로 삼은 #117 유래 85줄 전량이 잔여에서 빠졌다. 교차 검산: 같은 파서를 계획의 판정 트리 9a37d04 에 돌리면 197 = (1) 7파일 109 + (2) 17파일 88 이 재현되는데, 이는 plan.steps[2] 의 기대값과 바이트 동일하다. 197 - 85 = 112 가 지침이 적은 절대 기대값이고, 관측된 153 = 112 + 41 에서 41 은 #130 이 새로 들인 미판정 증가분이다(이 시도의 범위 밖)."
+            },
+            {
+              "name": "원장 「파일별 원장」 141행 + 일곱 파일 남음 실측 일치",
+              "status": "passed",
+              "detail": "docs/comment-policy/ledger.md 의 파일별 원장 표가 파일 행 141개(파이프 행 142개에서 말미 '레포 전체' 총계 행 1개 제외). 일곱 파일 남음 전부 지침과 일치: go/internal/handlers/dashboard.go 16 · go/internal/handlers/dashboard_test.go 15 · web/src/screens/Dashboard.tsx 12 · web/src/api/types.ts 21 · tests/e2e/specs/ac3-6-sentiment-ratio-viz.spec.ts 27 · web/src/shell/topbarSlot.ts 2 · web/src/shell/Topbar.tsx 1."
+            },
+            {
+              "name": "게이트 전량 rc=0 (착지 tip 기준)",
+              "status": "passed",
+              "detail": "squash 착지 트리가 머지 전 merge-tree 예측 트리 33653f0d 와 바이트 동일해, 예측 트리에서 돌린 실측이 main tip 에 그대로 적용된다. scripts/check-journey-mockup.py rc=0 (R8 상대 링크 195건 전부 해석 · PASS 여정 7 · 미이관 0). scripts/check-mockup-render.py rc=0 (지침이 최대 회귀 지점으로 지목한 게이트 — R3 'in-scope 27종 — 이름 대조 성립 26 · 등재 예외 1 · 구현 전용 1' 불변, 즉 CMP-metric·CMP-spark·CMP-topbar 마커가 살아남았다). go: gofmt -l 출력 0줄 · go vet rc=0 · go test ./... rc=0. web: npx tsc -b rc=0 · npx eslint . rc=0 · npx vitest run rc=0 (9파일 73건, 지침의 73건과 일치)."
+            },
+            {
+              "name": "PR #132 착지",
+              "status": "passed",
+              "detail": "squash 머지 완료 — 착지 커밋 92e408f9a930c64e6640b5cf0002f5d25fb19c62, 제목에 (#132) 접미사 보존, 브랜치 삭제됨. 머지 직전 head b708b149 는 preparation 기록과 동일했고 필수 status 11건 전부 SUCCESS 였다. 착지 후 main push 워크플로 Image · pages-build-deployment 둘 다 92e408f 에서 success."
+            },
+            {
+              "name": "잔여 gap (정보성 — 이 시도의 판정 대상 아님)",
+              "status": "passed",
+              "detail": "착지 tip 기준 미판정 잔여 153줄이 남아 있다. 내역: 계획이 범위 밖으로 적어 둔 112(사람 몫 11 = scripts/check-data-format-change.py · 무인 패스의 다음 선 75 · 기타) 에 더해, 자매 #130 이 새로 들인 41(go/internal/handlers/debug.go 10 · debug_test.go 5 · python/packages/core/src/econ_core/storage.py 12 · runlog.py 5 · test_runlog.py 4 · 그 밖). #130 분은 착지 전에는 '열린 PR 과 겹치는 26' 으로 유보돼 있던 것이 착지로 무인 사정권에 들어온 것이다. 모델 lastObservedVersion 은 건드리지 않았으므로 다음 감지 주기가 이 버전 변화를 보고 후속 task 를 연다."
+            }
+          ],
+          "verifiedAt": "2026-09-25T13:29:40Z"
         }
       }
     ]
