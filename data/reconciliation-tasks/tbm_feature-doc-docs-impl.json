@@ -7631,7 +7631,7 @@
     "toBeModelId": "tbm_feature-doc-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-25T20:08:41Z",
-    "updatedAt": "2026-09-25T21:07:53Z",
+    "updatedAt": "2026-09-25T21:27:26Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T20:08:41Z",
@@ -7726,6 +7726,61 @@
           "reviewedAt": "2026-09-25T21:05:00Z",
           "reason": "**거부 — 준비물이 유효하지 않다. PR #158 의 `ci-gate` 가 FAILURE 이고, 그 실패는 이 PR 이 신설한 것이다.**\n\n판정 직전 재조회: state=OPEN · mergeable=MERGEABLE · mergeStateStatus=BLOCKED · head=`47bc453` (준비 시점과 동일) · `review/manual-approval` SUCCESS(= `backend/migrations/**` 무접촉이라 자동 붙었고, 계획이 노린 무인 칸은 실제로 열려 있다) · `ci-gate` **FAILURE**. 실패 job 은 `test (kind e2e)` 하나이고 **12 failed / 26 passed** 인데, 그 12건이 신설 `sc04-02` **그리고 그 뒤에 도는 sc04-03~sc04-14 자매 11건 전부**다. 모두 같은 증상 — `ECONNREFUSED ::1:8080` / `net::ERR_CONNECTION_REFUSED at http://localhost:8080` — 이고, `sc04-02` 앞에서 돈 26건은 전건 통과했다. 즉 `sc04-02` 가 도는 순간 하니스의 API 진입점이 죽고 그 뒤 전부가 연쇄로 쓰러진다.\n\n원인은 계획 6단계가 신설한 `e2e/support/cluster.ts::setApiEnv` 의 설계 결함이다. `scripts/e2e.sh:63-65` 가 Playwright 시작 전에 `kubectl port-forward svc/featuredoc 8080:8080` 을 **한 번만** 띄우고 그 pid 를 끝까지 들고 간다. `port-forward` 는 Service 뒤의 **특정 pod 하나에 고정**되므로, `setApiEnv` 가 `kubectl set env deployment/featuredoc` 으로 API 롤아웃을 일으켜 그 pod 를 교체하면 포워드가 끊기고 스스로 재연결하지 않는다. `setApiEnv` 가 덧붙인 `rollout status` 는 새 pod 를 기다릴 뿐 죽은 포워드와는 무관하다. `setWorkerEnv` 가 무사했던 것은 워커가 포워드 대상이 아니기 때문이고, 그래서 계획이 「같은 형(같은 `kubectl` 경유)」으로 유추한 전제가 여기서 깨졌다.\n\n이것은 플레이크가 아니라 재현되는 결함이고, 계획이 스스로 세운 완료 기준 ⒠(`kind e2e 전건 그린`)과 위험 평가(「자매 spec 전건 그린」)를 정면으로 위반한다. 머지는 이 레포의 유일한 불가역 지점이므로 `ci-gate` 빨강 상태로 실행 허가를 낼 수 없다. 반면 아직 머지 전이라 지금 거부는 전부 가역이고(레포에 남는 흔적 없음), 코드·문서 게이트 4종과 cargo 는 모두 초록이라 **고쳐야 할 자리는 e2e 하니스 한 곳으로 좁혀져 있다.**",
           "comment": "**고칠 것은 `setApiEnv` 의 API 재시작 방식 하나다. 나머지(백엔드 3파일 · 프론트 2파일 · doc-tracker · sc04-02 의 시나리오 흐름)는 손댈 필요가 없다 — cargo 248 그린 · docs 게이트 3종 그린 · `review/manual-approval` 자동 success 가 그대로 유지된다.**\n\n실측된 파괴 경로: `scripts/e2e.sh:63-65` 의 `kubectl port-forward svc/featuredoc 8080:8080` 은 **런 전체에 하나뿐이고 특정 pod 에 고정**된다. `setApiEnv` → `kubectl set env deployment/featuredoc` → 롤아웃 → 그 pod 소멸 → 포워드 영구 사망 → `sc04-02` 자신부터 그 뒤 sc04-03~14 까지 `ECONNREFUSED :8080`. 따라서 **「API Deployment 를 롤아웃시키는 방식으로 해제를 흉내내지 않는」 방향으로 다시 설계할 것.** 아래 중 하나를 고르고 그 근거를 계획에 적으면 된다.\n\n⑴ **(권장) API 재시작이 필요 없는 해제 핸들로 바꾼다.** stub 의 허용 저장소 목록을 프로세스 env 가 아니라 **런타임에 바꿀 수 있는 자리**(예: stub 전용 테스트 엔드포인트 한 개, 또는 stub 이 읽는 DB/파일 상태)에서 읽게 해, spec 이 HTTP 한 번으로 범위를 좁히고 `finally` 에서 되돌린다. 포워드도 pod 도 건드리지 않으므로 자매 spec 과의 간섭이 구조적으로 0 이 된다. `FEATUREDOC_STUB_REPO_ACCESS` 를 「미설정 = 현행 3개」 기본값으로 유지하는 성질은 그대로 살릴 수 있다.\n⑵ **포워드를 롤아웃에 견디게 만든다.** `scripts/e2e.sh` 의 포워드를 죽으면 다시 붙는 감시 루프로 바꾸고(또는 `setApiEnv` 가 롤아웃 완료 뒤 포워드를 재수립하고 `/api` 가 실제로 200 을 줄 때까지 폴링), `setApiEnv` 의 계약에 「반환 시점엔 `localhost:8080` 이 새 pod 로 살아 있다」를 명시한다. 이 길을 고르면 `scripts/e2e.sh` 가 diff 에 들어오므로 **하니스 변경이 자매 spec 전건에 영향**을 준다 — 계획의 위험 평가를 그에 맞게 다시 쓸 것.\n\n어느 쪽이든 **계획에 다음 두 검증을 완료 기준으로 추가할 것.** ⒜ `sc04-02` 단독 그린만으로 끝내지 말고 **`sc04-*` 전건(특히 `sc04-02` 뒤에 도는 sc04-03~sc04-14)이 같은 런에서 그린**임을 확인한다 — 이번 실패는 정확히 이 자리에서 났고, 계획의 음성 프로브 4종은 `sc04-01` 만 봐서 이것을 놓쳤다. ⒝ kind e2e 는 CI 가 유일한 집행자라 로컬 실측으로는 이 결함을 잡을 수 없다 — 그러므로 **PR 을 올린 뒤 `ci-gate` 가 실제로 success 인 것을 준비 완료의 일부로 확인**하고 그 결과를 `preparation.notes` 에 적을 것(이번 준비는 로컬 게이트만 보고 `planned` 로 넘겼다).\n\n참고: 재계획은 기존 브랜치 `feat/ac41-revocation-policy`/PR #158 을 고쳐 쓰면 된다(닫지 않아도 된다). `backend/migrations/**` 무접촉 · 새 리터럴 카피 0줄 · `편차 33/33 · M3A 346 · M3B 314` 불변이라는 제약은 그대로 유지할 것 — 무인 착지와 자매 래칫이 거기에 걸려 있다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**재계획 — 범위·정책·PR 은 그대로 두고, 거부 사유가 지목한 e2e 하니스 한 곳만 고친다.** 슬라이스 7c(AC4.1 「해제」 조항 → `docs/test/04-platform.md#시나리오 2` 를 「구현 대기」 표에서 꺼낸다)의 설계·구현·문서는 직전 시도에서 이미 전부 초록이었고(cargo 248 · 문서 게이트 3종 · `review/manual-approval` **자동 success**), 빨간 것은 `ci-gate` 의 `test (kind e2e)` 하나였다. PR #158·브랜치 `feat/ac41-revocation-policy` 를 닫지 않고 고쳐 쓴다.\n\n**거부 사유를 직접 재실측했고 전부 맞았다 — 게다가 실측이 원인을 한 단계 더 좁혔다.**\n⑴ `scripts/e2e.sh:63-65` 는 `kubectl port-forward svc/featuredoc 8080:8080` 을 **런 전체에 한 번만** 띄우고 pid 를 끝까지 들고 간다(실측: 그 파일에 `port-forward` 는 1회 등장).\n⑵ 결정적인 것은 거부 사유가 적지 않은 사실이다 — **API Deployment 는 `strategy: Recreate`** 이다(`deploy/k8s/deployment.yaml:9-11`, 「SQLite on a ReadWriteOnce volume: never let two pods mount it at once」). 즉 롤아웃은 **새 pod 를 띄우기 전에 옛 pod 를 먼저 없앤다** ⇒ 서비스 중인 pod 가 **0 인 창**이 반드시 생긴다. 그래서 이 파손은 플레이크가 아니라 **결정적**이고, 「옛 pod 가 아직 서빙 중이라 통과할 수도 있다」는 여지도 없다.\n⑶ CI 로그 실측 2건이 「포워드 프로세스가 죽었다」를 독립적으로 증명한다 — ⓐ 실패 문면이 `ECONNREFUSED ::1:8080`(= **아무도 그 포트를 듣지 않는다**. 살아 있는데 끊긴 포워드면 reset/500 이 난다) ⓑ 종료 트랩이 `[cleanup] kind delete cluster` 는 찍었는데 **`[cleanup] stop port-forward (pid …)` 는 찍지 않았다** — 그 줄은 `kill -0 \"$PF_PID\"` 가 성공할 때만 나오므로, 트랩이 돌 시점에 그 프로세스는 이미 없었다.\n⑷ 계획이 유추의 근거로 삼은 「`setWorkerEnv` 와 같은 형」이 왜 깨졌는지도 실측으로 닫힌다 — 기존 env 리스 spec **전건(sc01-06 · sc02-08 · sc03-07 · sc03-08)이 `setWorkerEnv` 만 쓴다.** API Deployment 에 env 를 건 spec 은 이 레포 역사상 `sc04-02` 가 처음이다. 즉 「같은 형」의 선례가 애초에 없었다.\n\n**고친 방향 — 검토자 선택지 ⑵(포워드를 롤아웃에 견디게)를 고르고, 검토자가 요구한 대로 위험 평가를 다시 썼다.** 선택지 ⑴(재시작이 필요 없는 해제 핸들)을 버린 이유는 비용 비대칭이다: ⑴ 은 stub 의 허용 목록을 런타임에 바꿀 자리(테스트 전용 엔드포인트 또는 DB/파일 상태)를 **백엔드에 신설**해야 하고, 그러면 이미 초록인 표면 전부(cargo 248 · `backend/migrations/**` 무접촉 ⇒ `review/manual-approval` 자동 success · 편차 33/33 · M3A 346 · M3B 314)가 다시 위험에 열리며, 새 제품·더블 제어면은 `docs/e2e-mocking-policy.md` 등재 대상까지 늘린다. 반면 ⑵ 는 **백엔드·프론트를 한 바이트도 건드리지 않는다**(실측: `git diff 47bc453 HEAD -- backend/ frontend/` 의 유일한 차이는 자매 #159 가 main 에 올린 `frontend/src/index.css` 주석 삭제뿐이다). 그리고 ⑵ 가 손대는 두 파일은 **어느 게이트의 모집단도 아니다** — `tools/check-scenario-e2e.py:27` 이 `e2e/support/` 를 매핑 모집단에서 명시적으로 제외하고, `docs/e2e-mocking-policy.md:28` 은 `e2e/support/cluster.ts` 의 클러스터 리스를 「실제 구현이 도는 것이라 모킹이 아니다」로 이미 판정해 두었다.\n\n**하니스 변경이 자매 spec 전건에 미치는 영향(검토자가 요구한 재평가)**: 롤아웃이 없는 동안 감시 루프는 **한 번도 재기동하지 않으므로** 나머지 36개 spec 이 보는 동작은 이전과 같다(`kubectl port-forward` 가 살아 있으면 `wait` 에서 블록한다). 바뀌는 것은 「포워드가 죽었을 때」 하나뿐이고, 그 상황은 지금까지 **무조건 런 전체의 죽음**이었다 — 즉 이 변경으로 나빠질 수 있는 경로가 구조적으로 없다. 감시 루프·트랩·로그 덤프는 `kubectl` 을 스텁으로 갈아 **로컬에서 직접 굴려 실측**했다(2초마다 죽는 포워드를 7초간: 재기동 3회 · 트랩이 감시자와 자식을 함께 정리 · 고아 프로세스 0 · 로그 덤프 정상).\n\n**완료 기준(이 범위로 판정한다 — 직전 시도의 ⒜~⒡ 를 그대로 잇고 거부 사유를 기준으로 승격한다)**: ⒜ `check-scenario-e2e.py` rc=0 · **부모 대비** 매핑 `+1`(36→37) · 구현 대기 `−1`(2→1) · spec 파일 `+1` · 미매핑 0/0. ⒝ `check-mockup-render.py` rc=0 · 편차·M3A·M3B **델타 0**(33/33 · 346 · 314). ⒞ `check-journey-mockup.py` rc=0. ⒟ `check-data-format-change.py` 가 `✅ 해당 없음`(`backend/migrations/**` 접촉 0 ⇒ `review/manual-approval` 자동 success = 무인 착지 유지). ⒠ `cargo test --profile ci` **248 passed / 0 failed**. ⒡ 음성 프로브 4종 불변(직전 시도 실측 승계 — 백엔드·프론트 무접촉이므로 감도가 움직일 수 없다). **⒢(거부 사유 ⒜ 승격) `sc04-02` 단독이 아니라 `sc04-*` 전건이 같은 런에서 그린** — 특히 `sc04-02` **뒤에** 도는 sc04-03~sc04-14. **⒣(거부 사유 ⒝ 승격) kind e2e 는 CI 가 유일한 집행자이므로, PR head 에서 `ci-gate` 가 실제로 success 인 것을 확인한 뒤에만 준비 완료로 넘긴다** — 그 결과를 `preparation.notes` 에 적는다.\n\n**범위 밖(후속)**: AC4.6 관측 가능성·비용 가시성(→ 슬라이스 7d, 적재처 신설 ⇒ 마이그레이션 ⇒ D1 발화 ⇒ 사람 승인 경유) · `STP-notice-change` 알림 화면 · 화면 밖 통지 경로(푸시·메일) · GitHub 웹훅 수신면(이 축은 pull 로 닫으므로 짓지 않는다) · `JRN-restore-history` 목업 제작(자매 소관) · **포워드를 아예 쓰지 않는 하니스 재설계**(지금 필요 없다 — 감시로 충분하다).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "거부 사유를 소스에서 재실측해 원인을 확정한다 — ⑴ `scripts/e2e.sh` 의 `port-forward` 등장 횟수, ⑵ `deploy/k8s/deployment.yaml` 의 `strategy`, ⑶ CI 로그의 실패 문면과 종료 트랩 출력, ⑷ 기존 env 리스 spec 이 worker/API 중 어디에 env 를 거는지 전수.",
+              "expectedOutcome": "⑴ 1회(런 전체에 하나) · ⑵ `Recreate`(= 서빙 pod 0 인 창이 필연) · ⑶ `ECONNREFUSED ::1:8080` + `stop port-forward` 줄 **부재**(= 프로세스 이미 사망) · ⑷ 기존 4 spec 전건 `setWorkerEnv`, API 는 `sc04-02` 가 최초. 네 실측이 모두 거부 사유와 일치한다."
+            },
+            {
+              "seq": 2,
+              "action": "`scripts/e2e.sh` 의 포워드를 **감시 루프**로 바꾼다 — `kubectl port-forward` 가 종료하면 현재 ready pod 로 다시 붙는다(자식 pid 를 들고 `wait` → 종료 시 로그에 한 줄 남기고 1초 뒤 재시도). 종료 트랩은 감시자를 죽이고 그 트랩이 자식까지 정리하게 하며, **포워드 로그를 덤프**한다(kind e2e 는 CI 가 유일한 집행자라 pod 교체의 유일한 기록이다).",
+              "expectedOutcome": "`bash -n scripts/e2e.sh` 통과. 롤아웃이 없으면 재기동 0회로 기존 동작과 동일."
+            },
+            {
+              "seq": 3,
+              "action": "`e2e/support/cluster.ts::setApiEnv` 에 계약을 세운다 — 「반환 시점엔 `BASE_URL` 이 **새 값을 실은 pod** 로 살아 있다」. Deployment 의 `metadata.generation` 이 바뀐 경우에만 롤아웃을 기다리고(no-op 편집은 롤아웃이 없어 기다리면 spec 타임아웃만 태운다), 그다음 **pod 교체**(옛 pod 이름이 전부 사라짐)와 **`/hello` 200** 을 차례로 기다린다. `scaleWorkers` 가 이미 쓰는 「pod 목록이 실제로 정착할 때까지」 규약과 같은 형이다. 비동기가 되므로 `sc04-02` 의 호출부 3곳에 `await` 를 붙인다(시나리오 흐름은 한 줄도 바뀌지 않는다).",
+              "expectedOutcome": "`npx playwright test --list` = `Total: 38 tests in 37 files`(`sc04-02` 포함) · `tsc --strict --noEmit` rc=0."
+            },
+            {
+              "seq": 4,
+              "action": "감시 루프·트랩·로그 덤프를 **클러스터 없이 실측**한다 — `kubectl` 을 「2초 살고 죽는 port-forward」 스텁으로 갈아 7초간 굴린다.",
+              "expectedOutcome": "재기동 3회 관측 · 종료 트랩이 감시자와 자식을 함께 정리 · `pgrep kubectl` 0건(고아 없음) · 로그 덤프에 재기동 줄이 보인다."
+            },
+            {
+              "seq": 5,
+              "action": "이 슬라이스가 들인 더블 스위치 `FEATUREDOC_STUB_REPO_ACCESS` 를 `docs/e2e-mocking-policy.md` 의 **EXT-02** 사유 칸에 등재하고 근거 시나리오에 `sc04-02` 를 더한 뒤, 변동 이력에 한 행을 남긴다. 형태는 EXT-03 의 `FEATUREDOC_STUB_REPO_REVISION` 등재와 **같은 유형**(새 `Mode::Stub` 분기가 아니라 기존 Stub arm 이 읽는 값)이라 허용목록 쌍 수·지점 수는 건드리지 않는다.",
+              "expectedOutcome": "`grep -c 'Mode::Stub' backend/src/github_app.rs` 가 부모와 같은 **6**(4행 `(6곳)` 칸 불변) · 허용목록 **18쌍 불변** · 문서 게이트 4종 rc=0."
+            },
+            {
+              "seq": 6,
+              "action": "게이트를 **커밋한 뒤** 병합 트리(`origin/main` 머지 완료)에서 전수로 굴리고, 수치를 **절대값이 아니라 부모 대비 델타**로 확인한다. `origin/main` 자체에서도 같은 게이트를 굴려 부모값을 직접 잰다.",
+              "expectedOutcome": "부모(`origin/main`): 매핑 36 · 구현 대기 2 · 편차 33 · M3A 346 · M3B 314. 내 트리: 매핑 37 · 구현 대기 1 · 편차 33 · M3A 346 · M3B 314 ⇒ 델타 `+1 / −1 / 0 / 0 / 0`. `check-data-format-change.py` = `✅ 해당 없음`. `cargo test --profile ci` 248/0."
+            },
+            {
+              "seq": 7,
+              "action": "PR 을 열기 직전에 열린 자매 PR 과의 겹침을 다시 잰다(claim 때의 실측은 낡는다). 겹치는 파일이 있으면 헝크 단위로, 그리고 두 패치를 실제로 적용해 판정한다.",
+              "expectedOutcome": "열린 PR 재실측: #148 · **#160(신규)**. #160 과 `backend/tests/worker.rs` 를 공유하지만 헝크가 떨어져 있어(160: 14·44·480+ / 내 것: 300 한 블록) **두 패치가 순서 무관하게 clean 적용**. #160 이 물고 있는 `docs/comment-policy/ledger.md` 충돌은 **#160 ↔ main(#159) 사이의 것**이고 내 PR 은 그 파일을 건드리지 않는다 ⇒ 착지 순서 자유."
+            },
+            {
+              "seq": 8,
+              "action": "브랜치를 push 하고 **`ci-gate` 가 실제로 success 인 것**을 확인한다(완료 기준 ⒣). `test (kind e2e)` 의 `sc04-*` 전건이 같은 런에서 그린인지 job 로그로 직접 센다(완료 기준 ⒢).",
+              "expectedOutcome": "`ci-gate` success · `review/manual-approval` success · `test (kind e2e)` 에서 38/38 통과이고 `sc04-02`~`sc04-14` 전건 그린."
+            },
+            {
+              "seq": 9,
+              "action": "PR 본문에 재작업 절을 덧붙인다 — 원인(Recreate + 단일 pod 고정 포워드), 두 실측 증거, 선택지 ⑵ 를 고른 근거와 자매 spec 영향 재평가, 그리고 CI 실측 결과. 직전 본문은 지우지 않는다.",
+              "expectedOutcome": "PR 본문에 원인·근거·CI 수치가 남아 검토자가 같은 판정을 재현할 수 있다."
+            }
+          ],
+          "plannedAt": "2026-09-25T21:27:26Z"
         }
       }
     ]
