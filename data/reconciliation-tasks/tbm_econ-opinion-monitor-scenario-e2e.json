@@ -2804,9 +2804,9 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-scenario-e2e",
-    "status": "assessing",
+    "status": "no_action_needed",
     "createdAt": "2026-09-25T13:34:52Z",
-    "updatedAt": "2026-09-25T13:36:52Z",
+    "updatedAt": "2026-09-25T13:37:18Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T13:34:52Z",
@@ -2821,6 +2821,10 @@
       "toBe": "**to-be (시나리오 SSOT + 등재) — `sc:62c30293… reg:f88bfaa6…`, 이번 창에서 무이동**\n\n- 이 트리거는 as-is 단독이다. toBe 버전(`docs/econ-opinion-monitor-test-*.md` 목록 지문 + doc-tracker 「## e2e 매핑」 섹션 sha256)은 직전 감지(`rct_20260925-0001`, 13:22Z)가 전진시킨 값 그대로이고 #132 는 `docs/comment-policy/` 만 건드려 어느 쪽도 움직이지 않았다.\n- **독립 재계수(트리거 지점)**: `### 시나리오 ` 헤딩 = aggregation-viz 8 · analysis 6 · ingestion 7 · pipeline-ops 3 = **전집 24**.\n- 등재 SSOT(`docs/econ-opinion-monitor-doc-tracker/2026-09.md` 「## e2e 매핑」) 집계표: 전집 24 · 예외 1 · 구현 대기 2 · 1:1 대상 21 · 매칭 spec 20 · 공백 1 · 비-시나리오 1. 회계 항등식 `24 = 20 + 1 + 2 + 1` 성립, 내 재계수와 전건 일치.\n- 공백 1건 = `econ-opinion-monitor-test-pipeline-ops.md#시나리오 1`(실행·단계 기록과 건수 정합). PR #130(AC4.1 착지, 13:17:18Z)이 구현 대기 사유를 소멸시켜 **공백으로 내려온** 건으로, 등재 절이 담당이 이 모델로 넘어왔음을 스스로 적고 있다.\n",
       "gap": "**유의미한 차이 없음 — 이 트리거가 판정 표면을 하나도 움직이지 않았다.**\n\n모델 불변식 `(시나리오 − 예외 − 구현 대기) = 매칭 파일` 은 트리거 지점에서 `(24 − 1 − 2) = 21 ≠ 20` 으로 여전히 깨져 있지만, **그 위반은 이 창이 만든 것이 아니다**: 부모 `9ebc095` 에서 게이트 출력이 바이트 단위로 동일하고(같은 공백 1건, 같은 집계 7행), 직전 task `rct_20260925-0001`(13:22Z 생성, 13:24Z 판정)이 **같은 값을 같은 사유로 이미 측정해 `action_required` 로 인계**했다.\n\n이 창(#132)이 기여한 델타는 `ac3-6-sentiment-ratio-viz.spec.ts` 헤더 주석 3줄→1줄뿐이며, 판정 축 세 가지 — ⑴ 매칭 단위 파일 집합(21==21) ⑵ `검증 시나리오:` 선언 집합(21행 바이트 동일) ⑶ 등재 집계·불변식(게이트 출력 md5 동일) — 어디에도 닿지 않는다. 주석 패스가 이 모델의 매핑 SSOT(헤더 주석 한 줄)를 밀 수 있다는 구조적 위험은 실재하지만, 이번엔 실측으로 무죄다. 규칙 2(파일당 선언 1개)도 양 지점 유지.",
       "summarizedAt": "2026-09-25T13:36:52Z"
+    },
+    "assessment": {
+      "reason": "**조치 불필요.** 판정 3단 전부 음성이다.\n\n**⑴ 창 확정** — `git diff --name-only 9ebc095 92e408f -- tests/e2e` 가 파일 1개(`specs/ac3-6-sentiment-ratio-viz.spec.ts`)만 내놓고, 그 델타는 헤더 주석 산문 3줄→1줄이다. 주석·빈 줄 제거 후 코드 md5 `2fb4886a50a587f35874550b4f52ec46` 가 양 지점 동일하므로 단정은 무이동. 이 커밋은 자매 모델(`tbm_econ-opinion-monitor-comment-redundancy`)의 주석 판정 슬라이스이지 내 직전 산출이 아니다.\n\n**⑵ 잔여 실측** — 불변식 `(24 − 1 − 2) = 21 ≠ 20`(공백 1: `econ-opinion-monitor-test-pipeline-ops.md#시나리오 1`)은 살아 있으나 **이 창의 산물이 아니다**. 부모 `9ebc095` 에서 레포 게이트 `check_scenario_mapping.py` 출력이 트리거 지점과 **바이트 동일**(rc=0/rc=0, 집계 7행·공백 목록 전부 일치)이고, 매칭 단위 파일 집합 21==21, `// 검증 시나리오:` 선언 21행도 바이트 동일이다. 즉 내 판정 축 셋 중 어느 것도 이 트리거가 건드리지 않았다.\n\n**⑶ 열린 task 가 이미 덮는가** — 덮는다. 같은 모델 `rct_20260925-0001`(13:22:06Z 생성 → 13:24:24Z `action_required` → 13:31:06Z planner 점유, 현재 `planning`)이 **바로 그 공백 1건을 이름으로 지목**해 「전용 spec 저작」을 완료 기준으로 들고 갔다. 그 task 는 아직 staged PR 이 없어(`attempts: none`) 이 트리거와 충돌할 헝크도 없고, 앞으로 서는 PR 은 #132 를 포함한 main tip 위에서 태어난다. 여기서 둘째 task 를 열면 같은 공백을 두 번 계상하고 `…scenario-e2e.json` 헝크 경합만 만든다.\n\n**구조적 위험은 실재하나 이번엔 무죄** — 이 모델의 매핑 SSOT 는 spec 파일 *헤더 주석 한 줄*이라, 주석을 걷는 자매 패스가 선언을 지우면 규칙 1·2 가 조용히 깨진다. 그래서 선언 21행을 양 지점 전수 대조했고(바이트 동일), 삭제된 3줄은 화면 귀속 산문(`sentiment`/`JRN-daily-scan` 대시보드 경위)이라 매핑과 무관함을 확인했다. 재감지 경로도 열려 있다 — 선언이 실제로 밀리면 `tests/e2e` 트리 해시가 다시 움직이고 게이트가 규칙 1·2 로 떨어진다.\n\n**부수 보고(이 task 의 gap 아님)** — `claim.sh detect-version` 이 스키마에서 폐기된 `trigger.changedSides` 를 실어 보내 **rc=1 로 거부**된다(`Additional properties are not allowed ('changedSides' was unexpected)`). 이번 점유는 `reconciler_tool.py upsert --create` 로 손수 했다. 헬퍼가 고쳐지기 전까지 detector 의 버전 점유는 전부 이 경로로 실패하므로 별도 수리가 필요하다.",
+      "assessedAt": "2026-09-25T13:37:18Z"
     }
   }
 ]
