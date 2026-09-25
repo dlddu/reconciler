@@ -7194,7 +7194,7 @@
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-25T15:32:40Z",
-    "updatedAt": "2026-09-25T22:47:25Z",
+    "updatedAt": "2026-09-25T22:55:56Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T15:32:40Z",
@@ -7399,6 +7399,67 @@
             }
           ],
           "verifiedAt": "2026-09-25T22:49:00Z"
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "**재준비(re-preparation)다 — 재계획이 아니다.** 직전 시도는 계획·준비·검토·승인·CI 를 전부 통과하고도 **머지 자체를 시작하지 못했다**: 준비 시각(15:59Z) 이후 자매 7건(#138·#139·#140·#141·#142·#143·#144)이 main 에 착지해 PR #137 이 `CONFLICTING` 이 됐고, 충돌 해소는 새 커밋을 요구하는데 그러면 SHA 에 묶인 `review/manual-approval` 승인이 버려진다. 실행자는 지침이 금지한 행위(승인 취득 후 브랜치에 커밋 얹기)를 피해 되돌릴 수 없는 지점에 들어가지 않고 멈췄다 — 옳은 정지였다. 그러므로 **범위·완료 기준·PR 번호(#137)를 그대로 두고**, 리베이스와 충돌 해소를 실행자가 아니라 **준비 단계에서** 집행한 뒤 승인을 새 head 에 다시 받는다.\n\n**왜 준비 단계인가**: 충돌 해소를 실행자에게 남기면 (a) 그가 승인을 무효화하거나 (b) 또 멈추거나 둘 중 하나이고, 게다가 해소에 필요한 **자리 목록이 자매 착지마다 낡는다**. 준비 단계에서 풀면 해소값을 게이트 실측으로 확정하고 그 트리 위에서 전 게이트를 다시 굴려 둘 수 있다.\n\n**충돌 2파일의 해소 방침(축이 다르다)**. ⑴ `llm.py` 는 **주석 축**이다 — #139(`calllog-e2e-window-pass`)가 판정해 제거한 주석 2블록을 내 커밋이 그 자리에서 고치고 있었다. 자매의 삭제를 **되살리지 않고 유지**했다(되살리면 착지한 판정을 되돌리고 주석 원장의 잔여 산술이 낡는다). ⑵ 원장 `2026-09.md` 는 **집계 축**이다 — #141 이 `시나리오 2` spec 을 착지시켜 매칭 21→22 · 공백 2→0 으로 축이 움직였다. 옛 판 수치를 골라 해소하지 않고 **게이트가 머지 트리에서 부른 실측값으로 네 블록을 다시 썼다**.\n\n**범위(완료 기준) — 직전 시도와 동일한 AC4.3 한 건.** ⑴ 임의 Silver 행에서 실행으로 도달한다(`run_id`). ⑵ 모델을 호출한 행은 호출 기록에, 호출하지 않은 행은 미호출 사유에 도달하며 둘 중 정확히 하나가 항상 채워진다. ⑶ 실행 기록에서 그 실행의 레코드 목록·호출 기록 목록으로 역방향 도달한다. ⑷ 병존하는 두 로직 버전의 행이 서로 다른 실행·호출을 가리키고 AC2.6 Bronze 키를 유지한다. 덧붙여 doc-tracker 판정 SSOT 세 자리가 재판정돼 있고 CI 필수 체크가 초록이어야 한다.\n\n🔴 **완료 기준은 절대 수치가 아니라 부모 대비 델타로 적는다** — 직전 시도가 적어 둔 「pytest 169」·「매칭 21 · 공백 2」가 자매 착지로 전부 낡았기 때문이다. 이번 판의 기준은 **pytest = `origin/main` baseline + 6** 과 **`check_scenario_mapping.py` rc=0** 이다.\n\n**범위 밖(후속, 직전과 동일)**: `/debug` 화면과 그 조회 API(PRD-4 범위 밖) · `pipeline-ops#시나리오 3` 전용 e2e spec(자매 `tbm_econ-opinion-monitor-scenario-e2e` 몫으로 공백에 등재) · `tests/e2e/lib/silver.ts` 의 `Analysis` TS 타입 반영(같은 자매 소관).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "재준비 첫 동작 — `git rev-parse origin/main` 으로 현재 tip 을 잡고, 준비 시각 이후 착지한 자매 커밋이 건드린 파일과 내 14파일의 **교집합**을 낸다. 열린 자매 PR 도 `gh pr list` 로 다시 센다.",
+              "expectedOutcome": "main tip `00473f9`(실행자가 잰 `2164bbc` 보다 1커밋 앞). 교집합 정확히 2파일 = `docs/econ-opinion-monitor-doc-tracker/2026-09.md` · `python/packages/analysis/src/econ_analysis/llm.py`. 열린 PR 은 #137 자신 하나뿐이라 기다려 흡수할 자매 착지가 없다."
+            },
+            {
+              "seq": 2,
+              "action": "리베이스 전 **불변식 지문**을 뜬다 — 옛 base(`e92e3cc`) 대비 ± 줄 집합 md5 를 파일별로 기록한다. 이것이 「해소가 변경을 바꾸지 않았다」의 판정 기준이 된다(절대 SHA 가 아니라 base 이동에 견딘다).",
+              "expectedOutcome": "14파일 각각의 ± 줄 집합 md5 가 기록되고 전체 `--shortstat` 이 14 files / +495 / −78."
+            },
+            {
+              "seq": 3,
+              "action": "`git rebase origin/main`. 충돌 `llm.py` 2헝크를 **주석 축**으로 해소한다 — 양쪽 모두 merge-base 에 존재했고 #139 가 제거한 주석이므로, 자매의 삭제를 유지하고 내 코드 변경(`run_id` 인자)만 싣는다. `checkout --theirs` 를 쓰지 않고 헝크별로 문자열 치환하며 `assert count==1` 로 고정한다.",
+              "expectedOutcome": "`llm.py` 에 충돌 마커 0개. 주석 2블록은 main 과 같이 부재하고 `analyze_llm(..., run_id)` · `_unanalyzed(item, analyzer_version, run_id)` 는 그대로."
+            },
+            {
+              "seq": 4,
+              "action": "원장 `2026-09.md` 충돌 4블록을 **집계 축**으로 해소한다. 한쪽을 고르지 않고 자매 착지를 반영한 값으로 다시 쓴다 — 집계 표·불변식 현황 산문·`gap-list`+그 아래 산문·변경 이력 행(add/add 라 두 행을 나란히 두되 내 행의 전/후 칸을 자매가 남긴 트리 기준으로 재진술).",
+              "expectedOutcome": "충돌 마커 0개. 집계 표가 구현 대기 0 · 1:1 대상 23 · 매칭 22 · 공백 1 · 회계 `24 = 22 + 1 + 0 + 1`. `gap-list` 안에 `시나리오 3` 한 줄."
+            },
+            {
+              "seq": 5,
+              "action": "🔴 **충돌 없이 낡은 집계 문장**을 훑는다 — 내 커밋이 새로 더한 문단은 깨끗이 머지되지만 그 안의 수치는 자매 착지로 낡는다. 「공백 N→M」 꼴을 전수 grep 해 대조한다.",
+              "expectedOutcome": "AC4.3 착지 문단의 `공백 1→2` 가 `공백 0→1` 로, 「남은 셋은 전부 … 공백이다」가 「앞 둘은 이미 매칭이며 남은 한 건이 공백」으로 정정된다(자매 판정 문장은 건드리지 않는다)."
+            },
+            {
+              "seq": 6,
+              "action": "**불변식 검산** — 새 base(`00473f9`) 대비 파일별 ± 줄 집합 md5 를 다시 떠 step 2 와 대조하고, 움직인 파일은 delta-of-deltas 로 무엇이 달라졌는지 줄 단위로 특정한다.",
+              "expectedOutcome": "14파일 중 **12파일이 바이트 동일**. 움직인 둘은 원장(의도적 재작성)과 `llm.py` 이고, 후자의 delta-of-deltas 는 **주석 6줄뿐**(내가 재작성하려던 블록의 ± 쌍이 사라진 것) — 코드 줄 불변."
+            },
+            {
+              "seq": 7,
+              "action": "리베이스된 트리에서 **게이트 전건 로컬 재현** — pytest(+ `origin/main` baseline 별도 측정) · `go build`/`go test`/`gofmt -l`/`go vet` · ruff 0.15.18(`uv.lock` 핀) check·format · `make gen-check` 대역 · `tests/smoke.sh` · `check_scenario_mapping.py` · `check-journey-mockup.py` · `check-mockup-render.py` · 실 레이크 양방향 스크립트.",
+              "expectedOutcome": "전건 rc=0. pytest 167 = baseline 161 + 6(신규 파일 6건 단독 실행으로 확인). 레이크 14행이 배타 불변식·`run_id` 해소·`records_of_run` 일치를 만족."
+            },
+            {
+              "seq": 8,
+              "action": "게이트가 **내 값을 실제로 읽는지** 음성 프로브로 잰다 — ⑴ 집계 표 세 칸만 옛 값으로 되돌림 ⑵ `gap-list` 에서 시나리오 3 행만 제거. 각각 뒤 원상복구하고 대조군도 굴린다.",
+              "expectedOutcome": "프로브 둘 다 rc=1, 대조군 rc=0. 재작성한 수치가 공전하지 않는다."
+            },
+            {
+              "seq": 9,
+              "action": "`--force-with-lease=<브랜치>:b7c7c26…` 로 force-push 해 옛 head 를 덮는 경주를 막는다. 푸시 직전 `git fetch` 로 main 이 또 움직이지 않았는지 확인한다. PR 본문에 「재준비」 절(충돌 2축·무영향 검산·재측정 집계·게이트·음성 프로브)을 덧붙이고 낡은 `공백 1→2` 를 정정한다.",
+              "expectedOutcome": "PR #137 head 가 `0c98e50` 이 되고 `mergeable=MERGEABLE`(직전 `CONFLICTING` 에서 해소). `mergeStateStatus=BLOCKED` 는 `review/manual-approval` 하나 때문이며 이는 설계된 사람 승인 경로다."
+            },
+            {
+              "seq": 10,
+              "action": "`scripts/check-data-format-change.py origin/main HEAD` 로 사람 승인 필요 여부를 재실측하고, 승인이 **새 head SHA 에 다시 필요**함을 지침과 리뷰 인계에 못박는다.",
+              "expectedOutcome": "`format_changed=true` (contracts/ · go/gen/ · econ_core/models/ · 생산자 2파일). 직전 승인 sha `b7c7c26` 은 무효이고 `0c98e50` 에 새로 받아야 한다."
+            }
+          ],
+          "plannedAt": "2026-09-25T22:55:56Z",
+          "executionGuide": "# 실행 지침 — AC4.3 재준비판 (rct_20260925-0003, 시도 #2)\n\n준비는 끝났다. **PR [#137](https://github.com/dlddu/economic-opinion-trend-monitor/pull/137)**\n(`reconcile/rct_20260925-0003-econ-docs-impl`, head **`0c98e50`**)가 계획 전체를 담고 있고,\n실행자가 할 일은 **머지 하나**다. **새 커밋을 얹지 않는다.**\n\n> **직전 시도와 무엇이 다른가.** 직전 실행은 승인·CI 를 다 통과하고도 PR 이 `CONFLICTING` 이라\n> 멈췄다(옳은 정지였다). 그 충돌은 **이번 준비 단계에서 이미 해소됐다** — 브랜치는 현재\n> `origin/main`(`00473f9`) 위로 리베이스돼 `MERGEABLE` 이다. 실행자가 풀 충돌은 없다.\n> **head 가 `b7c7c26` → `0c98e50` 으로 움직였으므로 직전 승인은 무효다**(아래 1번).\n\n## 착수 조건 (머지 전에 반드시 확인)\n\n1. 🔴 **필수 status `review/manual-approval` 이 head `0c98e50` 에 붙어 있는가.**\n   이 PR 은 `contracts/` 를 건드리므로 `review-gate.yml` 이 `format_changed=true` 를 내고\n   **그 status 를 자동으로 붙이지 않는다**(이번 트리에서 재실측했다). 설계된 사람 승인 경로다.\n   **승인은 SHA 에 묶이므로 `b7c7c26` 에 붙어 있던 직전 승인(2026-09-25T22:22:39Z)은 리베이스와\n   함께 버려졌다** — 리뷰 단계가 새 sha 로 `review.manualApproval` 을 남기고, 사람이 **`0c98e50`\n   에** status 를 붙인 뒤에만 실행에 들어간다.\n2. 🔴 **확인 → 머지 사이에 다른 일을 하지 않는다.** 승인을 받은 뒤 브랜치에 리베이스·커밋을\n   얹으면 승인이 다시 버려진다. 이것이 직전 시도를 세운 바로 그 함정이다.\n3. **필수 체크가 success 인가.** `ci` 잡의 `build`(gen-check · lint · test)와 `e2e`(kind) 둘 다 본다.\n4. **`mergeable` 이 여전히 `MERGEABLE` 인가.** 준비 이후 자매가 또 착지하면 다시 `DIRTY` 가 될 수\n   있다 — 그때는 **머지를 시도하지 말고** 재준비 사안으로 돌려보낸다(아래 「막혔을 때」).\n\n```bash\ngh pr view 137 --repo dlddu/economic-opinion-trend-monitor \\\n  --json state,headRefOid,mergeable,mergeStateStatus,statusCheckRollup\n# combined status 는 사용자 gh 로 본다(App 토큰은 403 이 난다)\ngh api repos/dlddu/economic-opinion-trend-monitor/commits/0c98e50/status \\\n  --jq '.state, (.statuses[]|.context+\" \"+.state)'\n```\n\n## 순서\n\n| # | 하는 일 | 순서가 중요한 이유 |\n|---|---------|--------------------|\n| 1 | 위 착수 조건 4건 확인 | status 없이 머지를 시도하면 BLOCKED 로 튕긴다 |\n| 2 | **squash 머지** | 이 레포의 reconcile 착지 형태 |\n| 3 | 머지 후 검증(아래) | 착지 후 main 에서 재는 것이 완료 기준이다 |\n\n병렬 가능한 단계는 없다. 1 → 2 → 3 순서다.\n\n## 검증 방법 (완료 기준 = 계획의 범위)\n\n머지된 `origin/main` 을 체크아웃해 **그 트리 위에서** 잰다.\n🔴 **기준은 절대 수치가 아니라 「부모 대비 델타」와 「게이트 rc」다** — 직전 시도가 적어 둔 절대값\n(pytest 169 · 매칭 21 · 공백 2)이 자매 착지로 전부 낡아 실패 오독을 부를 뻔했다.\n\n### ⑴ 정방향 — 행에서 실행·호출·사유로\n\n```bash\npython3 -c \"import json;d=json.load(open('contracts/silver/analysis.avsc'));\\\nprint(len(d['fields']), [f['name'] for f in d['fields'][-3:]])\"\n# 기대: 12 ['run_id', 'call_id', 'no_call_reason']\n```\n\n### ⑵ 배타 불변식 + ⑶ 역방향 — 실제 레이크에서\n\n`uv` 가 없으면 `PYTHONPATH=$(ls -d python/packages/*/src | tr '\\n' ':')` 로 그대로 돈다\n(네 패키지 모두 외부 의존 0). ⚠️ `python3 -m <pkg>.cli` 는 `__main__` 가드가 없어 **조용히\n아무것도 안 한다** — `importlib` 3줄 러너로 `<pkg>.cli:main` 을 부를 것.\n\n```bash\npython3 - <<'PY'\nfrom econ_core import open_store, runlog, silver, calllog\ns = open_store(\"/tmp/ac43\")\nrows = silver.read_analyses(s)\nassert rows, \"no silver rows\"\nassert all((r[\"call_id\"] is None) != (r[\"no_call_reason\"] is None) for r in rows), \"배타 위반\"\nassert all(runlog.read_run(s, r[\"run_id\"]) for r in rows), \"run_id 가 실행에 닿지 않는다\"\nfor run in runlog.read_runs(s):\n    recs = silver.records_of_run(s, run[\"run_id\"])\n    assert {r[\"record_id\"] for r in recs} == {\n        r[\"record_id\"] for r in rows if r[\"run_id\"] == run[\"run_id\"]\n    }, \"역방향 목록이 정방향과 다르다\"\n    calllog.calls_of_run(s, run[\"run_id\"])\nprint(f\"OK rows={len(rows)}\")\nPY\n```\n\n기대: `OK rows=<N>`(N>0). 이 스크립트가 ⑴⑵⑶ 을 한 번에 단정한다.\n**준비 단계 실측**: 수집+분석(fake) 뒤 `rows=14 runs=2`, 14행 전건 배타 불변식 성립.\n\n### ⑷ 병존 버전 + 전체 회귀\n\n```bash\nmake gen-check   # 생성 코드가 stale 이 아니다\nmake test        # python + go + web + cross-smoke\nmake lint        # ruff / gofmt / vet / eslint / scenario-mapping\n```\n\n기대: 전건 rc=0. 🔴 **pytest 의 완료 기준은 절대값이 아니라 「머지 직전 `origin/main` baseline\n+ 6」**이다. 신규 `python/packages/analysis/tests/test_record_run_call_link.py` 가 정확히 **6 test**\n이고 그것이 계획 범위 ⑴~⑷ 의 직접 증거다(`test_coexisting_versions_name_different_runs_and_calls`\n가 ⑷). 준비 단계 실측: baseline **161** → 브랜치 **167**. 자매가 테스트를 더하면 두 값이 같이\n올라가므로 **+6 만 확인**하면 된다.\n\n```bash\npython3 packages/analysis/../../../tests/e2e/check_scenario_mapping.py  # 또는 make lint-scenario-mapping\n```\n\n### ⑸ 문서 판정 SSOT\n\n```bash\npython3 tests/e2e/check_scenario_mapping.py\n```\n\n🔴 **판정 기준은 rc=0 이다.** 준비 시점 실측은 전집 **24** · 예외 **1** · 구현 대기 **0** ·\n1:1 대상 **23** · 매칭 **22** · 공백 **1**(`pipeline-ops#시나리오 3`) · 비-시나리오 **1** 이고\n회계는 `24 = 22 + 1 + 0 + 1` 로 닫힌다. **자매가 시나리오 3 의 spec 을 먼저 착지시키면 매칭 22→23 ·\n공백 1→0 이 되고 그때도 rc=0 이다** — 게이트는 문서와 실측의 일치만 보므로 수치가 움직였다고\n「실패」로 적지 말 것.\n\n```bash\npython3 scripts/check-journey-mockup.py && python3 scripts/check-mockup-render.py\n```\n기대: 둘 다 rc=0(축이 달라 무접촉이다).\n\n## 주의사항\n\n- 🔴 **되돌릴 수 없는 지점은 머지 하나뿐**이고, 롤백은 revert PR 을 여는 것이다. 변경이 전부\n  **옵셔널 필드 추가 + 함수 추가**라 revert 가 기존 데이터를 깨지 않는다.\n- 🔴 **데이터 영향**: 이미 레이크에 있는 옛 Silver 행에는 새 필드가 없다. 읽는 쪽은 둘 다\n  안전하다 — Go 는 JSON 언마샬이라 누락 필드가 제로값이고, Python 소비자(`aggregation`·서빙)는\n  이 필드를 참조하지 않으며 `Analysis.from_dict` 는 레포에 **호출부가 없다**. 다음 전체 레이크\n  실행이 지나가면 옛 행은 그 실행의 행으로 갱신된다. 별도 마이그레이션은 필요 없다.\n- 🔴 **트래픽 영향 없음**: 서빙 경로(`/api/dashboard`·`/api/trend`·`/api/compare`)는 새 필드를\n  읽지 않는다. `/api/debug` 는 스텁 그대로이고 `Missing` 문자열만 바뀐다.\n- ⚠️ **`review/manual-approval` 이 붙기 전에는 실행에 들어가지 않는다.** 붙지 않았다고 PR 을\n  고쳐 통과시키려 하지 말 것 — `pull_request_target` 이라 PR 이 바꾼 게이트는 그 PR 에 적용되지\n  않으며, 그것이 이 status 의 설계 목적이다.\n- ⚠️ **이 브랜치의 주석 2블록은 일부러 없다.** `llm.py` 의 「Never reached the model…」·「A reply\n  that came back…」은 자매 #139 가 판정해 제거한 것이고 이번 리베이스에서 **그 삭제를 유지**했다.\n  「원래 PR 에 있던 주석이 사라졌다」를 결함으로 읽지 말 것 — 되살리면 착지한 판정을 되돌리고\n  주석 원장의 잔여 산술이 낡는다.\n\n## 막혔을 때 — 재계획이 아니라 재준비\n\n`mergeStateStatus=BLOCKED` 는 대개 `review/manual-approval` 하나가 없는 것이다.\n`mergeable=CONFLICTING`(=`DIRTY`)이면 준비 이후 또 자매가 착지한 것이다. **둘 다 계획 결함이\n아니다** — 머지를 시도하거나 브랜치에 커밋을 얹지 말고, 되돌릴 수 없는 지점에 들어가지 않은 채\n`failed` 로 닫아 **재준비**(리베이스 + 승인 재취득)로 돌려보낸다. 직전 시도가 그렇게 했고 그것이\n옳았다.\n\n## 범위 밖 (후속 — 재감지가 잇는다)\n\n- 이 연결을 보여 주는 화면 `/debug` 와 그 조회 API. `/api/debug` 가\n  `Missing:[\"debug_read_path\"]` 로 부재를 계속 밝힌다. PRD-4 범위 밖(문서 명시).\n- `pipeline-ops#시나리오 3` 전용 e2e spec — 자매 `tbm_econ-opinion-monitor-scenario-e2e` 몫으로\n  공백에 등재돼 있다(현재 이 모델의 유일한 공백).\n- `tests/e2e/lib/silver.ts` 의 `Analysis` TS 타입에 새 3필드 반영 — 같은 자매 소관.\n"
         }
       }
     ]
