@@ -7028,5 +7028,24 @@
       "reason": "작업 불필요 → **`no_action_needed`**. 근거는 전부 이번 fire 의 독립 실측이다(14:39~14:5xZ, 클론 `c377c30`).\n\n**근거 1 — 창이 한 커밋이고, 그 커밋은 자매 모델의 주석 패스다.** `9acbd49 → c377c30`(PR #130, `tbm_feature-doc-comment-redundancy` 22차 패스) 단 하나. 코드 변경은 `backend/src/db.rs`·`backend/tests/migrations.rs` 주석 삭제뿐이며 **비주석 델타 0행**(`git diff -U0` 에서 `//`·`///`·`//!` 아닌 `+`/`-` 줄 0건) · **주석 스트립 후 md5 양 끝 동일**(문자열 리터럴 보존 파서) · `frontend/` 트리 해시 불변 · `e2e/`·`tools/`·`scripts/`·`.github/` 변경 0파일.\n\n**근거 2 — to-be 판정 표면이 트리 해시로 전부 불변.** `docs/prd`·`docs/test`·`docs/values.md`·`docs/design-system.md`·`docs/user-journey`·`docs/mockups`·`docs/doc-tracker` 7개 경로가 부모와 **바이트 동일**. to-be 해시를 움직인 것은 자매 소관 3파일(`comment-policy/ledger.md` · 신규 패스 상세 · 공용 허브 `index.html`)뿐이다. 허브 변화는 **신규 문서 1건에 바이트 귀속**된다 — `doc-row` 48→49 · `Documents` 타일 48→49 · **새 행 제외 href 집합 md5 양 끝 동일**(`d5a2bfe4f2b3`) · `Mockup pages` 05 불변 · 게이트의 상대 링크 416→418 이 추가 링크 정확히 2건(`ledger.md` 1 + 허브 1)·삭제 0건으로 닫힌다.\n\n**근거 3 — 게이트 실측이 창 양 끝에서 같다.** `check-scenario-e2e.py` rc=0 출력 md5 동일 · `check-mockup-render.py` rc=0 출력 md5 동일 · `check-journey-mockup.py` rc=0 이고 출력 델타는 위의 문서·링크 2줄뿐(여정 6 · 예외 1 · 이관 완료 5 · **이관 대기 0** · 목업 5 전부 불변).\n\n**근거 4 — 판정 3기준 전부 불발화.** ⑴ 미구현 AC: 요구 집합(문서)도 구현도 이 창에서 안 움직였다. ⑵ 구현↔문서 불일치: 지워진 출처 주석 7행은 `backend/migrations/README.md` 의 **축자 사본**임을 독립 확인(7·20·26-27·34·40행) — 문서가 여전히 그 말을 한다. `APPLIED`/`PRE_CLEANUP` **값은 불변**이라 체크섬 계약 무접촉. ⑶ 문서 없는 구현: 새 사용자 대면 동작 0건.\n\n**근거 5 — 사라진 `(AC4.5)` 꼬리표는 매핑 SSOT 가 아니다**(반사적 노이즈 판정이 아니라 측정으로 확정). 인라인 AC 꼬리표 94→93 중 하나가 사라졌으나, ① 이 레포의 AC↔스펙 매핑 SSOT 는 `docs/doc-tracker/` 이고 자매 패스 문서들이 그 사유를 명문으로 반복하며(「AC↔spec 매핑은 `doc-tracker.md` 의 자리다」), ② 규칙을 강제하는 게이트 둘 다 코드 주석의 AC 꼬리표를 읽지 않는다(`check-scenario-e2e.py` 는 e2e spec 의 `// 검증 시나리오:` 선언만, `check-mockup-render.py` 는 `frontend/src/*.tsx` 상단 목업 매핑만), ③ AC4.5 는 이미 **구현 완료**(2026-08-07 슬라이스 3a)이고 매핑이 `doc-tracker/2026-09.md:123-124` → `sc04-07`·`sc04-08` spec 으로 살아 있으며 `worker_api.rs` 에도 꼬리표 2건이 남아 있다.\n\n**근거 6 — 잔여 gap 은 실재하나 이 창이 만든 것이 아니고, 열린 task 가 정확히 덮는다.** 미구현 AC 4건/5항목(AC3.4·AC4.4·AC4.6·AC4.7·AC4.1「해제」) + 원장 1행(`STP-notice-change`)은 여전히 정의상 drift 지만, **`rct_20260922-0005`(status `approved`)** 가 AC3.4 슬라이스 6e 로 이를 집고 있고 staged PR **#126**(head `ebce1463`)이 사람 승인 status `review/manual-approval` 을 기다린다(재준비 2026-09-25T13:52:40Z). 새로 열 task 가 없다.\n\n**근거 7 — 이 창이 PR #126 을 dirty 로 만든 것은 귀속까지 측정했고, execution-internal 이다.** `merge-tree --write-tree` 양 끝 시험 머지: 부모 × `pr126` **rc=0(깨끗)** / 트리거 × `pr126` **rc=1, 충돌 `backend/tests/migrations.rs` 1파일**(`gh api …/pulls/126` 도 `dirty`). 원인은 이 트리거가 맞고 헝크는 라인 의존적이다(지워진 주석 4행이 PR 이 고치는 `const APPLIED […;13]→14` 바로 위라 한 블록). **그래도 새 task 가 아니다**: ⑴ 비주석 델타 0행이라 계획이 딛고 선 것(마이그레이션 0014·`FeatureHistory.tsx`·CTA·M1 규칙)이 하나도 사라지지 않았다 — 순수 리베이스 사유다. ⑵ **그 task 의 실행 지침이 이 충돌을 이름까지 지목해 이미 예고**했다 — 「열린 자매 PR #143 · **#130** 둘 다 … (**#130 은 `backend/tests/migrations.rs` 에서도**)」. ⑶ 지침 2절-B 가 처리 경로를 규정한다(실행자는 리베이스 금지 · `DIRTY` 면 중단 후 계획 단계로 반환) — 집어갈 워커와 절차가 존재하므로 **재감지 경로 0 이 아니다**.\n\n**조용한 되돌림 위험도 닫혀 있다.** 「이 PR 쪽 취하기」로 풀면 주석 4행이 되살아나 자매의 22차 패스를 조용히 뒤집지만 **이 지침엔 그런 규칙이 없다**(실행자의 충돌 해소를 아예 금지하고 최신 main 위 재스테이징으로 보낸다 — 지워진 상태를 승계). 반대 방향은 배열 길이 13 vs 14항목이라 **Rust 컴파일 에러로 시끄럽게 실패**한다. 양쪽 다 조용히 틀리지 않는다.\n\n**인계**: 이 모델의 다음 실질 전진은 PR #126 의 사람 승인(`review/manual-approval`)이다. 이 창 때문에 그 head 는 다시 죽었으므로 planner 의 **네 번째 재준비**가 필요하며, 이번 충돌 파일은 앞선 세 번의 `docs/doc-tracker/2026-09.md` 가 아니라 `backend/tests/migrations.rs` 다(해소는 주석 4행을 **되살리지 않고** `13→14` 만 취하는 것).",
       "assessedAt": "2026-09-25T14:48:43Z"
     }
+  },
+  {
+    "id": "rct_20260925-0003",
+    "toBeModelId": "tbm_feature-doc-docs-impl",
+    "status": "assessing",
+    "createdAt": "2026-09-25T15:48:58Z",
+    "updatedAt": "2026-09-25T15:48:58Z",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-25T15:48:58Z",
+      "asIs": {
+        "previousVersion": "backend:103ebbfc26f3ea4c8f7992b433c20cd8a8ace4a3 frontend:9c0d345f5e143f7467a3592ab68a667dfe6284c4",
+        "currentVersion": "backend:1201546cc4f3db40d7bba6d545637213ec447243 frontend:93997eaa35219462fe8396db6eacfb80656ed370"
+      },
+      "toBe": {
+        "previousVersion": "8f6d1623dbc49d6992e96b66b556aea0ca1af977",
+        "currentVersion": "d2f847a5b7b7052d5eff2f31f30dc64b171f1963"
+      }
+    }
   }
 ]
