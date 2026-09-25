@@ -4884,7 +4884,7 @@
   {
     "id": "rct_20260925-0001",
     "toBeModelId": "tbm_feature-doc-mockup-render",
-    "status": "reviewing",
+    "status": "review_rejected",
     "createdAt": "2026-09-25T14:02:29Z",
     "trigger": {
       "source": "version_change",
@@ -4975,6 +4975,12 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/146",
           "preparedAt": "2026-09-25T14:23:45Z",
           "notes": "base `c377c30`(#130 착지 후 main) · head `79cf235` · `frontend/src/CrossCuttingConcerns.tsx` 1파일 9 insertions / 9 deletions. 준비 중 자매 #130 이 착지해 base 가 `9acbd49a → c377c30` 으로 움직였고, 리베이스 뒤 **전 수치를 새 base 에서 재측정**했다(겹치는 파일 0이라 충돌 없음). 새 base 실측: 검사기 부모 `FAIL (6)` → head `PASS (11/11 수렴)`, `check-mockup-render`·`check-journey-mockup`·`check-scenario-e2e` 전부 rc=0 이고 mockup-render 카운터가 부모와 `diff` 상 완전히 동일(M0 편차 29 · M3A 346 · M3B 313 · M4 29 · M5 29/29 · M6 128/11 · M7 13쌍), `cd frontend && npm ci && npm run build`(`tsc -b && vite build`) rc=0. PR 에서 필수 status `review/manual-approval` 이 예상대로 자동 `SUCCESS` 로 붙었다 — 판정기가 보는 `backend/migrations/**`·판정기 자신에 닿지 않으므로 **사람 승인 대기가 아니다**. `docs-journey-mockup`·`docs-mockup-render`·`docs-scenario-e2e` 도 원격에서 SUCCESS. `ci-gate`(cargo test · kind e2e)는 기록 시점에 진행 중이었다 — 실행자는 머지 전 두 필수 status (`ci-gate`·`review/manual-approval`)가 초록인지 확인할 것. 열린 자매 PR #126 과는 파일 교집합이 0이라 착지 순서가 자유롭다."
+        },
+        "review": {
+          "status": "rejected",
+          "reviewedAt": "2026-09-25T14:38:10Z",
+          "reason": "거부. 거부 사유는 계획의 내용이 아니라 준비물의 신선도 하나다 — 대상 레포 main의 required status check 2종 중 `ci-gate`가 head 79cf235에서 FAILURE로 종료했다(2026-09-25T14:29:01Z). 계획 기록 시점엔 진행 중이었고 executionGuide가 실행자에게 「머지 전 ci-gate·review/manual-approval 둘 다 초록인지 확인」을 걸어 뒀는데, 그 확인이 지금 실패로 결정됐다. 따라서 approved로 넘기면 실행자는 머지할 수 없는 PR을 받는다. 나머지 승인 조건은 모두 충족한다: 정합성 — 변경이 `frontend/src/CrossCuttingConcerns.tsx` 1파일 9+/9-로 plan.steps 2~4의 3지점과 정확히 일치하고 원장·목업·e2e·백엔드 무접촉이라 범위 이탈이 없다. 위험 통제 — riskLevel=low에 완료 기준이 `verify-slice.py`의 FAIL(6)→PASS(11/11) 전이로 기계 판정 가능하고 게이트 4종 카운터 불변(M0 29·M3A 346·M3B 313·M4 29·M5 29/29·M6 128/11·M7 13쌍)이 부수 효과 없음의 증거로 명시돼 있다. 불가역성 — 인라인 스타일 치환뿐이라 `git revert` 한 커밋으로 끝나고 데이터 영향 0. PR 자체는 OPEN·MERGEABLE·base c377c30 그대로이고 `review/manual-approval`은 예상대로 SUCCESS로 자동 부착됐다 — 사람 승인 대기가 아니다. 막는 것은 오직 실패한 ci-gate다.",
+          "comment": "고칠 것은 diff가 아니라 CI 한 건이다. 계획·PR 내용은 손대지 말고 아래 순서로 재개하라.\n\n1. 실패 지점: `ci-gate`가 의존하는 `test (kind e2e)` 잡에서 Playwright 1건 실패 — `e2e/tests/sc01-01-full-pipeline-run.spec.ts:158`의 `expect(getByTestId('strategy-open-candidates')).toBeDisabled()`가 10초 타임아웃으로 `enabled`를 받았다(33 passed / 1 failed, 4.1m). `test (cargo)`·`docs-journey-mockup`·`docs-mockup-render`·`docs-scenario-e2e`·`데이터 저장 형식 변경 판정`은 전부 SUCCESS다.\n\n2. 이 실패는 이 슬라이스의 diff와 접점이 없을 가능성이 높다 — 실패한 단정은 `DiscoveryStrategy` 화면의 승인 버튼 비활성화 상태이고, 이 PR이 건드린 파일은 `CrossCuttingConcerns.tsx` 하나뿐이다(두 화면은 컴포넌트·testid가 겹치지 않는다). 오늘 같은 레포의 다른 브랜치 CI 8건은 전부 success라 main이 상시 빨간 상태도 아니다. 승인 후 재큐잉 타이밍에 걸린 경합성 flake로 읽힌다.\n\n3. 그러므로 먼저 **같은 head 79cf235에서 실패 잡만 재실행**하고 결과로 갈라라 (`gh run rerun <run-id> --failed`, run 36147088095).\n   - 초록이 되면 → 재계획 없이 그대로 다시 planned로 올려라. diff·executionGuide 수정 불필요.\n   - **재현되면** → 이 슬라이스의 문제가 아니라 sc01-01의 실재하는 결함/불안정이므로 여기서 고치려 하지 말고 별도 슬라이스로 분리하고, 이 PR은 그 선행이 착지한 뒤 다시 올려라. 이 슬라이스 안에서 e2e spec을 손대면 계획이 스스로 선언한 「원장·목업·e2e 무접촉」 범위를 깨뜨린다.\n\n4. 재개 시 executionGuide에 한 줄 보강할 것: 지금 지침은 ci-gate를 「초록인지 확인」까지만 적어 빨간 경우의 분기가 없다. 위 3번의 갈래(재실행 후 초록 → 진행 / 재현 → 별도 슬라이스로 분리)를 지침에 명시해 다음 실행자가 같은 자리에서 멈추지 않게 하라."
         }
       }
     ]
