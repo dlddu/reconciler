@@ -6703,9 +6703,9 @@
   {
     "id": "rct_20260925-0003",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "createdAt": "2026-09-25T15:09:00Z",
-    "updatedAt": "2026-09-25T16:56:39Z",
+    "updatedAt": "2026-09-25T16:58:04Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T15:09:00Z",
@@ -6874,6 +6874,43 @@
               "log": "실행 단계 — 실행 지침의 「순서」를 그대로 수행했고, 자매 착지로 DIRTY 가 된 케이스라 지침의 「자매 PR 이 먼저 착지했을 때(DIRTY) — 리베이스 레시피」를 함께 밟았다. 계획 밖으로 범위를 넓히지 않았다(레시피가 지침 본문에 명문으로 있다).\n\n**① 착수 조건 — mergeStateStatus 실측.** 첫 조회에서 `UNKNOWN`(GitHub 재계산 중)이었고, 재폴링에서 `DIRTY`/`CONFLICTING`. check-run 은 11건 전원 초록이었다(`ci / build` · `ci / e2e` · `data-format` · `docs / structure` · `docs / flow` · `render / render` · `image / publish (serving)` · `image / publish (batch)` · `required` · `review/manual-approval`, `image / pin deploy images (main only)` 만 SKIPPED). 즉 막은 것은 게이트가 아니라 자매 착지다.\n\n**② 자매 재확인(플래그를 믿지 않고 로컬 실측).** 준비 시점 base `e92e3cc` 이후 자매 #138(`22464d6`, pipeline-ops-harness-pass, 같은 모델 `rct_20260925-0004`)이 착지해 있었다. `merge-tree --write-tree --merge-base=e92e3cc origin/main 3b71f60` 이 rc=1 이고 **충돌 파일은 `docs/comment-policy/ledger.md` 하나뿐**임을 확인했다(#138 이 건드린 9파일 중 코드 8파일은 내 5파일과 교집합 0). 지침이 예고한 ⑴ 계열 그대로다.\n\n**③ 리베이스 레시피 수행.** `reset --hard origin/main` 후 코드 4파일 + 패스 문서를 PR head `3b71f60` 에서 그대로 복원했고, `ledger.md` 는 **origin/main 판 위에** 다시 얹었다(내 옛 판으로 덮지 않았다): 패스 이력 행 1개 추가(새 base `22464d6`) · 파일 행 3개 갱신 + 2개 신설(`playwright-setup.sh` 는 `playwright.config.ts` 앞, `test_llm_call_record.py` 는 `test_llm.py` 뒤) · 말미 요약 행 1개를 내 것으로 교체(요약 행은 레포에 하나뿐이며 교체 후에도 1개임을 기계로 확인). ledger 델타는 7/4 로 원래 PR 과 같은 모양이다.\n\n**④ 잔여는 손으로 세지 않았다.** 지침의 `residual.py`(원장 전 행 파싱 + tip 실측 대조)로 냈다 — **잔여 43 = ⑴ 행 없는 파일 1개 11줄(`scripts/check-data-format-change.py`) + ⑵ 자란 파일 1개 32줄(`tests/e2e/run.sh` +32)**. 지침의 검산식이 정확히 닫힌다: 자매 #138 요약의 잔여 121 − 78 = **43**. 교차검증으로 main tip 에서 같은 스크립트를 돌려 #138 이 선언한 121 을 바이트 재현했다(⑴ 3파일 28 + ⑵ 3파일 93). 리베이스 전 선언값 178 이 43 으로 내려간 것은 #136 이 들인 167 중 135(신규 7파일)를 #138 이 판정해 그 몫이 잔여에서 사라졌기 때문이다.\n\n**⑤ 게이트 전수 재실행(리베이스했으므로 필수).** `ruff 0.15.18 check` rc=0(All checks passed) · `ruff format --check` rc=0(41 files already formatted) · `pytest` rc=0 **점 161개**(지침 기대값과 동일) · `check_scenario_mapping.py` rc=0 · `bash -n run.sh` rc=0 · `bash -n playwright-setup.sh` rc=0 · `check-mockup-render.py` rc=0 · `check-journey-mockup.py` rc=0 · `check-data-format-change.py origin/main HEAD` → **`format_changed=false`**(무인 사정권 유지 조건).\n\n**⑥ 델타 불변 재확인.** 리베이스 직후 as-is versionScript 를 두 지점에서 직접 돌렸다 — main `22464d6` 에서 `lines=2714 files=152`, 내 트리에서 `lines=2654 files=152` ⇒ **−60 / 파일 ±0**. 주석 외 불변도 다시 쟀다: 편집 4파일의 주석 제거 후 md5 가 부모와 전부 동일(`same` 4건), diff 의 +/- 72줄 중 **비주석·비공백 0줄**, 제거 66 / 추가 6(`run.sh` −46/+5 · `llm.py` −7 · `test_llm_call_record.py` −7 · `cli.py` −6/+1).\n\n**⑦ push.** SHA 를 손으로 적지 않고 `git ls-remote` 로 원격 tip 을 재서 기대값(`3b71f60`)과 일치함을 확인한 뒤 `--force-with-lease=refs/heads/<br>:<측정값>` 명시형으로 push(맨 `--force` 미사용). `3b71f60 → efdafe8`.\n\n**⑧ 새 head CI 대기 후 머지.** 폴링 1회차 `BLOCKED`(집계 체크 `required` 만 QUEUED) → 2회차 **`CLEAN`, 11건 전원 초록**(`review/manual-approval` 포함 — 무인 부여가 새 sha 에도 붙었다). 지침의 「CLEAN 이면 즉시 squash 머지」대로 확인과 머지 사이를 벌리지 않았고, 머지 직전 head(`efdafe8`)·state(`OPEN`)·mss(`CLEAN`) 를 한 번 더 가드로 재확인했다. `gh pr merge 139 --squash --delete-branch` rc=0 — **commit_title 을 지정하지 않아 squash 제목의 `(#139)` 접미사가 보존**됐다. merge commit **`e3cbba1a`**(main `bd1ca1c` → `e3cbba1a`), 파일 6개 +243/−70 로 준비 시점과 동일. 브랜치 삭제 완료.\n\n**머지 직전 main 이 한 번 더 움직였다**(자매 #141 `bd1ca1c`, pipeline-ops 시나리오 2 — 다른 모델의 task). 코드 교집합이 없어 `CLEAN` 이 유지됐고 머지는 그대로 성공했다. 절대 지문은 그만큼 올라갔지만 완료 기준은 델타이므로 검증에서 `bd1ca1c → e3cbba1a` 로 다시 쟀다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "lines=2783 files=159\na0e23bfe0a1b5f7cf01f61a38f4953f26ae9497b679775cb5de2442e2c968cfc",
+          "checks": [
+            {
+              "name": "as-is 지문 델타 −60 / 파일 ±0 (이 패스의 완료 기준)",
+              "status": "passed",
+              "detail": "모델 asIs.versionScript 를 직접 두 번 돌려 **머지 전후로** 쟀다 — 머지 직전 main `bd1ca1c` `lines=2843 files=159` / `839b1305b1f2…`, 머지 tip `e3cbba1a` `lines=2783 files=159` / `a0e23bfe0a1b…` ⇒ **lines −60 정확, files ±0**. 리베이스 직후 base `22464d6` 기준으로도 `2714 → 2654`(−60 / ±0)로 같았다. **절대값은 지침이 예고한 대로 움직였다** — 머지 직전 자매 #141(`bd1ca1c`, 다른 모델 pipeline-ops 시나리오 2)이 착지해 주석 129줄·7파일을 들였고, 그래서 원장에 적힌 절대값(2714 → 2654)은 착지 시점 main(2843)과 다르다. 지침이 「완료 기준은 절대 지문이 아니라 델타」로 못박고 요약 행 자체가 그 읽는 법을 담고 있으므로 이는 미달성이 아니다. 세 base(`78e32da` · `e92e3cc` · `22464d6`)와 실제 착지(`bd1ca1c`)에서 델타가 모두 −60 으로 불변이다."
+            },
+            {
+              "name": "주석 외 불변 — 편집 4파일 주석 제거 후 md5 가 부모와 동일",
+              "status": "passed",
+              "detail": "`bd1ca1c`(머지 전) 대 `e3cbba1a`(머지 후)로 `tests/e2e/run.sh` · `econ_analysis/llm.py` · `econ_analysis/cli.py` · `tests/test_llm_call_record.py` 네 파일 모두 `same`. 리베이스 직후 origin/main 대비로도 4건 `same` 이었다. 추가로 코드 diff 의 +/- 72줄 중 **비주석·비공백 0줄**을 기계로 확인했다. 지침대로 이 두 증명이 닫히면 `make e2e` 와 Python 런타임 동작은 바뀔 수 없다 — 클러스터를 띄우지 않고 닫았고, PR 의 실제 `ci / e2e` 잡도 새 head `efdafe8` 에서 SUCCESS 였다."
+            },
+            {
+              "name": "제거/추가 분해 66/6",
+              "status": "passed",
+              "detail": "`git diff --numstat` 실측: `run.sh` −46/+5 · `llm.py` −7/+0 · `test_llm_call_record.py` −7/+0 · `cli.py` −6/+1 ⇒ 제거 66 / 추가 6, 순 −60. 지침 표의 기대값과 일치."
+            },
+            {
+              "name": "머지 착지 — PR #139 squash 머지",
+              "status": "passed",
+              "detail": "merge commit **`e3cbba1a`**(main `bd1ca1c` → `e3cbba1a`), 파일 6개 **+243/−70** 으로 준비 시점 실측과 동일. squash 제목에 `(#139)` 접미사가 보존됐다(`commit_title` 미지정). 머지 직전 가드로 head `efdafe8` · state `OPEN` · mergeStateStatus `CLEAN` 을 재확인했고, check-run 11건이 전원 초록이었다(`review/manual-approval` 포함 — 무인 부여가 새 sha 에도 붙었다). 브랜치 `reconcile/rct_20260925-0003-econ-comment-redundancy` 삭제 완료. 이 레포는 squash 만 허용한다."
+            },
+            {
+              "name": "게이트 전수 재실행(리베이스했으므로 필수)",
+              "status": "passed",
+              "detail": "로컬: `ruff 0.15.18 check` rc=0 · `ruff format --check` rc=0(41 files already formatted) · `pytest` rc=0 **점 161개**(지침 기대값과 동일) · `check_scenario_mapping.py` rc=0 · `bash -n run.sh`/`playwright-setup.sh` rc=0 · `check-mockup-render.py` rc=0 · `check-journey-mockup.py` rc=0 · `check-data-format-change.py origin/main HEAD` → **`format_changed=false`**(무인 사정권 유지 조건). CI: 새 head `efdafe8` 에서 11건 전원 초록 (`ci / build` · `ci / e2e` · `data-format` · `docs / structure` · `docs / flow` · `render / render` · `image / publish` 2건 · `required` · `review/manual-approval`; `image / pin deploy images` 만 SKIPPED)."
+            },
+            {
+              "name": "원장 정합 — 요약 행 1개 · 잔여 43 검산",
+              "status": "passed",
+              "detail": "리베이스 후 요약 행이 레포에 **정확히 1개**(내 것으로 교체, 자매 것을 남겨 둘이 되게 하지 않았다), 파일 행 157개, ledger 델타 7/4(원래 PR 과 같은 모양). 잔여는 손으로 세지 않고 지침의 `residual.py`(원장 전 행 파싱 + tip 실측 대조)로 냈다 — **43 = ⑴ 행 없는 파일 1개 11줄(`scripts/check-data-format-change.py`, 사람 몫) + ⑵ 자란 파일 1개 32줄(`tests/e2e/run.sh` +32)**. 지침의 검산식이 정확히 닫힌다: 자매 #138 요약의 잔여 121 − 78 = 43(78 = 제거 60 + 행에 편입된 유지 18). 교차검증으로 main tip 에서 같은 스크립트를 돌려 #138 이 선언한 121 을 바이트 재현했다. 행/지문 집합 차이도 기계로 확인(행만 6 · 지문만 1)해 요약 행 서술과 일치."
+            }
+          ],
+          "verifiedAt": "2026-09-25T17:02:00Z"
         }
       }
     ]
