@@ -6912,9 +6912,9 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "createdAt": "2026-09-25T13:57:10Z",
-    "updatedAt": "2026-09-25T14:58:29Z",
+    "updatedAt": "2026-09-25T15:00:40Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-25T13:57:10Z",
@@ -7114,6 +7114,48 @@
               "log": "PR 준비물 소진 — 준비 단계가 연 PR #134 가 state=MERGED(mergedAt 2026-09-25T14:58:29Z), squash 커밋 58e82a2 이 main tip 이 됐고 브랜치 reconcile/rct_20260925-0001-econ-opinion-monitor-docs-impl 은 삭제됐다(ref 조회 404). squash 제목에 (#134) 접미사가 보존됐다. | PR #134 squash 머지(main 58e82a2)로 main 착지. 머지 커밋 tree 30e3c3ee == PR head a38b942 tree 30e3c3ee (바이트 동일) — PR head 에서 초록이던 체크 12종이 지금 main 트리에 그대로 적용된다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "contracts:230b780b1c861f241c59f0b0d7ee962c49a9b9bc python:c3ff06f4ba9d4a644fbf2452f50a415cb5b762d6 go:43664545e10eb722ad1c29a0c95f0c9f217f3ca4 web:66828e63f5b0ecc671182f592097c0ff436b614f deploy:4d7fd767b4ad107f1bf45c6e1b484a21cba9fd4d",
+          "checks": [
+            {
+              "name": "(1) 계약과 생성물 착지",
+              "status": "passed",
+              "detail": "contracts/silver/llm_call.avsc 존재(test -f rc=0). python3 contracts/codegen.py -> 'codegen: 11 records, 8 enums' (착지 전 10/7 대비 기대치 그대로). make gen 절차 전체를 uv.lock 핀과 동일한 ruff 0.15.18 로 재실행(codegen -> gofmt -w go/gen -> ruff check --fix -> ruff format) 한 뒤 git diff --exit-code -- go/gen python/packages/core/src/econ_core/models 가 rc=0. 생성물이 계약과 맞물려 있고 손질 흔적 0."
+            },
+            {
+              "name": "(2) 네 갈래가 모두 기록되나 (AC4.2 핵심)",
+              "status": "passed",
+              "detail": "pytest packages/analysis/tests/test_llm_call_record.py -> 11 passed, rc=0 (지침 기대치 11건과 일치). 지침이 AC4.2 검증 방법과 1:1 로 지목한 네 건을 개별 실행으로도 확인: test_every_outcome_leaves_a_call_record_with_its_verdict(정상·파싱 실패·호출 실패), test_the_recorded_prompt_is_byte_identical_to_what_was_sent(전송본 동일성 + prompt_sha256), test_a_reused_reply_is_recorded_and_names_the_call_it_replays(reused + reused_from_call_id), test_reprocessing_appends_and_never_overwrites_an_earlier_call(append-only) — 넷 다 rc=0."
+            },
+            {
+              "name": "(3) 전체 게이트 초록 · pytest 161 하한",
+              "status": "passed",
+              "detail": "pytest 전건 161 passed rc=0 — 지침의 하한(착지 전 150 + 신규 11 = 161)과 정확히 일치하므로 사라진 기존 테스트가 없다. gen-check rc=0. lint-py rc=0 (ruff 0.15.18: check 'All checks passed', format --check '41 files already formatted'). lint-go rc=0 (gofmt -l 공집합, go vet rc=0). lint-scenario-mapping rc=0. go test ./... rc=0 (handlers·store ok). 로컬에 uv·npm 이 없어 lint-web/test-web/test-cross 는 대역 실행하지 않았으나, 머지 커밋 tree(30e3c3ee)가 PR head a38b942 tree 와 바이트 동일이고 그 트리에서 ci/build·ci/e2e·docs/structure·docs/flow·render·image publish 2종·data-format·required 가 전부 SUCCESS 였으므로 그 대역이 덮인다(econ-monitor 의 Checks 는 PR 전용이라 main push 로는 재발화하지 않는다)."
+            },
+            {
+              "name": "(4) 문서 회계가 닫혔나",
+              "status": "passed",
+              "detail": "python3 tests/e2e/check_scenario_mapping.py rc=0. 집계가 지침 기대치와 정확히 일치: 구현 대기 1 · 1:1 대상 22 · 공백 2. 전집 24 = 매칭 20 + 예외 1 + 구현 대기 1 + 공백 2 로 겹침 없이 덮인다. 공백 목록 두 줄 = 시나리오 1 · 시나리오 2. 출력 문면: '규칙 1·2·3·4·5·6 위반 없음'."
+            },
+            {
+              "name": "(5) 스텁이 정직한가",
+              "status": "passed",
+              "detail": "debug.go:19 Missing 이 [\"record_run_call_link\"] — llm_call_record 주장이 사라졌고 비어 있지도 않다(AC4.3 이 남았으므로 비면 안 된다는 지침 조건 충족). go/ 전수 grep 의 llm_call_record 히트 2건은 debug_test.go 의 '더는 주장하지 말라'는 역방향 단정뿐이다. debug_test.go:45 의 len(got.Missing) == 0 단정도 살아 있다. go test ./internal/handlers/ rc=0, TestDebugIsAnHonestStubUntilRunAndCallRecordsExist 포함 전건 PASS. 서버를 띄우는 curl /api/debug 는 하지 않았고 핸들러 테스트로 갈음했다."
+            },
+            {
+              "name": "(6) SSOT 무변경",
+              "status": "passed",
+              "detail": "git diff 0e38ab1(머지 전 main)..58e82a2(머지 후 main) -- docs/econ-opinion-monitor-prd-pipeline-ops.md docs/econ-opinion-monitor-test-pipeline-ops.md contracts/silver/analysis.avsc 가 0 바이트. to-be 를 고쳐 gap 을 없앤 것이 아니라 as-is 를 to-be 로 수렴시켰음이 실측으로 확인된다."
+            },
+            {
+              "name": "(참고·정보성) 계획 범위 밖 잔여 gap",
+              "status": "passed",
+              "detail": "판정에 넣지 않는 정보성 관측이다. 이 task 의 범위는 AC4.2 한 건이고 그것은 달성됐다. 모델 전체 to-be 기준 잔여: AC4.3(레코드-실행-호출 연결, 선결 2건이 이제 다 갖춰짐 — debug 스텁의 Missing 이 record_run_call_link 로 이 사실을 스스로 남기고 있다), AC4.2 e2e spec 미저작(집계상 공백 2 중 시나리오 2), /debug 화면 실구현, 이월 관측 2건(#118 한국어 표기 규칙 · #121 Hive 파티션 레이아웃). 이 실행이 as-is 버전을 움직였으므로 후속은 다음 감지 주기가 연다. 모델의 lastObservedVersion 은 건드리지 않았다."
+            }
+          ],
+          "verifiedAt": "2026-09-25T15:00:40Z"
         }
       }
     ]
