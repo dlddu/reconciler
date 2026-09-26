@@ -11877,7 +11877,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
     "status": "planning",
     "createdAt": "2026-09-26T08:31:16Z",
-    "updatedAt": "2026-09-26T09:07:12Z",
+    "updatedAt": "2026-09-26T09:40:00Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-26T08:31:16Z",
@@ -11899,6 +11899,62 @@
     "assessment": {
       "reason": "**조치 필요 — `prd-approval-gate` AC1 의 두 겹 중 *뒤 겹*(호출 시 선언 밖 행사 차단)이 여전히 미구현이다. 판정 기준 1(미구현 AC)·2(구현↔문서 불일치) 발화, 기준 3·4 음성.** (판정 2026-09-26T08:51:11Z)\n\n창은 **정확히 2커밋** `65e0123..5ca1a98` 이고 내 as-is 를 움직인 것은 **`5ca1a98`(PR #236) 하나** — **내 모델 자신의 직전 task `rct_20260926-0012` 의 산출물**이다.\n\n**⑴ 소유 — 창의 소유가 내 모델이고, 그 계획이 잔여의 수신자를 *재감지=나*로 지목해 두었다.**\n`rct_20260926-0012` 의 `executionGuide` 「## 4. 범위 밖 (후속 — **재감지가 새 task 로 이어야 한다**)」 1항이 축자로 적는다 — 「🔴 **AC1 의 뒤 겹 — 호출 시 선언 밖 행사 차단.** … `k8s.Service` **14 메서드**를 감싸는 범위 제한 데코레이터 + 호출 경로 배선 + 도구별 「선언 = 실제 행사」 확인이 필요하다. **이 PR 이 그 선행**이다」. 같은 계획은 완료 기준을 **넷으로 못박고 뒤 겹을 명시적으로 배제**했다(「⚠️ 완료 기준을 「AC1 충족」으로 적지 않는 이유: 이 슬라이스로 AC1 이 닫히지 않는다」). tracker 대기 행도 같은 말을 한다 — 「**⑷ 는 아직 닫히지 않았다** … 남은 것은 ⑷ 의 뒤 겹 하나」. ⇒ **여기서 넘기지 않으면 예고된 인계가 그 자리에서 끊긴다.**\n\n**⑵ 창이 내 집계 칸을 움직였다 — 그러나 *절반만* 변제했다(이것이 110차와 부호가 갈리는 지점).**\n헤더 셀 리스트 완전 일치(`PRD (도구)|달성 가치|AC 수|테스트 문서|상태`)로 앵커해 매트릭스 본문 **17행**을 전수 열거하면 비-`✅` 는 세 rev 전부 **정확히 1행**이고, 그 칸의 내용이 창에서 좁혀졌다: `AC1 선언 강제(기동 검사·호출 제한) 미구현` → `AC1 **호출 제한** 미구현 (기동 검사는 착지)`. **즉 같은 커밋이 앞 겹은 변제했고 뒤 겹은 변제하지 않았다** — 계획이 그것을 범위 밖으로 선언했기 때문이다. 110차는 「움직인 만큼 같은 커밋이 닫았다」로 `no_action_needed` 였고, 이번은 **부분 변제**라 잔여가 남는다. 비-✅ 계수는 **1 → 1**(닫히지 않았다).\n\n**미달은 문서 주장 인용이 아니라 「타입이 있나」가 아닌 「*소비자*가 있나」로 직접 셌다.**\n- **표식 종류(`touchesNothing`·`discoveryOnly`)를 읽는 지점은 전 레포에서 `internal/mcp/declaration.go:65`(기동 검사 switch) 한 곳뿐**이고, 나머지 히트는 전부 **선언 지점**(`gate.go` 레지스트리 리터럴 12곳)과 **테스트**다 ⇒ **호출 시 소비자 0**. 「선언만 있고 집행되지 않는 함수/필드」의 110차 처방(렌더·호출자 계수) 그대로다.\n- **디스패치가 공용 클라이언트를 그대로 넘긴다**: `result, rerr = entry.handle(h, ctx, rawArgs)`(`internal/mcp/mcp.go:409`, 그 밖 `create_gate.go:63`·`delete_collection.go:147`). 핸들러는 `Handler.k8s k8s.Service` 를 받고 **호출별로 좁힌 클라이언트를 만드는 지점이 없다**(`*h`·`h2 :=`·`scopedHandler`·`withK8s` 전수 **0히트**).\n- **범위 제한 토큰 전수**(`scoped|restrictTo|allowedPairs|scopeClient|declaredOnly|confine|ScopedService|withinDeclaration`) 유효 히트 **0** — 히트 전부가 `cluster-scoped`(k8s 종류)·「token scoped to」(GitHub/Grafana 토큰)라는 **다른 뜻**이다(낱말 일치로 「구현 있음」으로 읽으면 부호가 뒤집힌다).\n- **코드가 스스로 자인한다**: `declaration.go:12` 주석 *\"the call-time half of AC1 confines them differently\"* ⇒ 뒤 겹을 **아직 오지 않은 별개의 것**으로 적어 둔 자기선언(113차 「코드 자기선언이 AC 착지 오라클」의 반대 부호 판).\n- **실질 귀결**: `api_resources` 는 `discoveryOnly` 로 **선언**돼 있으나 런타임에는 다른 25종과 똑같은 전권 `k8s.Service` 를 받는다. AC1 이 「⑵ 표식 도구의 클라이언트는 표식이 허락한 것 외에는 아무것도 할 수 없다」고 요구한 바로 그 지점이다.\n- **AC1 자신이 앞 겹만으로는 부족하다고 적었다** — 「기동 검사만으로는 「선언은 있으나 틀린」 도구를 잡지 못하고, 호출 제한만으로는 한 번도 호출되지 않은 도구의 빠뜨림을 드러내지 못한다. 그래서 둘 다 둔다.」 ⇒ 앞 겹 착지를 AC 충족으로 셀 수 없다.\n\n**⑶ 캐리어가 죽었다 — 다중 소스 재판독이 값을 했다(계보 5번째).**\n`rct_20260926-0012` 는 claim 직후 첫 판독 **`executing`**(08:31Z, `execution.status=running`) → 요약 전 재판독 **`succeeded`**(`execution.status=succeeded finishedAt=08:27:10Z` + `verification` 존재) → 판정 직전 3번째 판독도 **`succeeded`/last attempt key=`verification`** ⇒ **소비된 트리거**. 한 번만 읽었으면 「살아 있는 점유」로 오판해 닫았을 자리다.\n**다른 소관도 없다.** homelab-k3s-mcp 4모델의 비종료 task 전수(내 것 포함 4건)에서 `호출 제한`·`범위 제한`·`선언 밖`·`scopedClient`·`declaration.go` **전건 0히트**. 유일하게 `AC1` 을 3회 언급하는 자매 `tbm_homelab-k3s-mcp-scenario-e2e` `rct_20260926-0006`(`assessing`, 같은 회차 라이브)은 **오히려 내 판정을 교차검증한다** — 그 레코드가 축자로 「판정 중 2파도 `5ca1a98`(#236)이 **앞 겹만** 착지시켰고 원장 행이 스스로 「⑷ 는 아직 닫히지 않았다」로 적는다 ⇒ **자격 유지**」라 적고, 자기 축은 AC↔e2e 매핑임을 분명히 한다. tracker 가 **⑸ 는 ⑷ 착지 전에는 판정 대상이 없다**고 순서를 못박았으므로 구조적으로 그 렌즈가 가져갈 수 없다. ⇒ **지금 이 잔여를 받을 수 있는 소관은 내 모델의 planner 하나다.**\n**열린 PR 전건을 head 에서 내 versionScript 로 재서 비-캐리어임을 증명했다**(114차 최강형): 판정 중 3회 조회 — #238(claim 직후 열림 → 08:38Z 착지) · **#239**(판정 직전 신규, head `4d02eb8`) 모두 `internal:dae59673 main.go:75bce72e` 로 **내 asIs 가 main tip 과 바이트 동일** ⇒ 잔여 **0줄 판정**. #239 head 에서 approval-gate 매트릭스 행 sha `a61dbfaa52d0ec33` 도 바이트 동일이고 `prd-approval-gate.md`·`test-approval-gate.md` 는 SAME.\n**재감지 경로는 살아 있다** — 뒤 겹 구현은 `internal/k8s`·`internal/mcp` 를 반드시 움직이고 그것이 곧 내 as-is 지문(`internal/` 트리 해시)이다.\n\n**2파도 처리(판정 중 착지) — 「움직였나」가 아니라 「내 판정면을 움직였나」로 환원했다.**\n08:38Z PR #238(자매 `comment-redundancy` `rct_20260926-0010`) 착지로 tip `5ca1a98`→`8d1a97f`: **내 asIs 바이트 동일**, toBe 만 이동. 이동분은 `comment-policy` 2파일 + **`doc-tracker/2026-09.md` 한 줄**(허브 집계 `101/101`→`102/102`)뿐이고 **approval-gate 매트릭스 행·시나리오 1 대기 행은 2파도 양 끝 바이트 동일**(행 sha `a61dbfaa52d0ec33`·`723924bd1ac5d18c`) · **`prd-`/`test-`/`values` 35 엔트리 이동 0** ⇒ 판정면 무접촉이라 부호 유지. ⚠️ `gh pr list --state open` 이 두 번째 조회에서 `[]` 였는데 그것은 「2파도 없음」이 아니라 **#238 이 머지돼 목록에서 사라진 것**이었다 — tip 재조회가 잡았다. 그 toBe 이동분(`70fca590`→`3dc886d3`)은 내 claim 이 `70fca590` 을 baseline 으로 전진시켰으므로 **다음 fire 가 toBe 단측 트리거로 이어받는다**(정상 인계, 내 기준과는 무관 축).\n\n**「초록은 근거가 아니다」 — 변이로 계측기 소재를 특정했고, 이번엔 「정적 게이트 사각」과 「무측정」이 실제로 갈렸다.**\n하네스 생존 assert 선행(`git init && git add -A -f` 후 `ls-files` **329 == 미러 329**, BASE tree `0c09e624`, 프로브 사이 `reset --hard`+`clean -fd` 로 매번 BASE 복원 확인 — 112차 위양성 트랩·113차 인덱스 오염 트랩 둘 다 예방):\n- ⒜ **기준 4 위조**(매트릭스 행을 이제 거짓인 `✅ 완전` 으로 되돌림) ⇒ 게이트 4종(`check_ac_mapping`·`check_mock_policy`·`check_comment_policy`·`check_doc_inventory`) **전부 rc=0** ⇒ 정적 게이트 사각.\n- ⒝ **앞 겹 회귀**(출하 도구 `grafana_token` 의 표식만 제거) ⇒ 같은 4종 **전부 rc=0** 이지만 **`go test ./internal/mcp/ -run TestProductionRegistryDeclaresEveryTool` 이 rc=0 → rc=1** ⇒ **앞 겹에는 살아 있는 집행자가 생겼다**(창의 실질적 이득이고, 이후 회귀는 기계가 잡는다). 「게이트 4종 초록」만 보고 「무측정」으로 적었으면 거짓이었다.\n- ⒞ **음성 대조**: `docs/prd-metrics.md` 1개 삭제 ⇒ `check_doc_inventory` **rc=1**, 복원 시 rc=0 ⇒ 계측기 생존.\n- ⇒ **뒤 겹에는 집행자가 0**(제한할 코드가 없으니 단정할 테스트도 없다). 기준 4 의 진위도 기계 사각이지만 **내 to-be 지문이 `docs/` 전체 트리라 tracker 의 *수정*은 반드시 재감지에 실린다** ⇒ 사각지대이되 부채는 아니다.\n\n**재확인 유예(`recheckAfter`)를 두지 않는 이유**: 자동 해소를 기다릴 진행 중 변화가 없다. 양 side 는 정적 해시(트리·blob)라 스스로 움직이지 않고, 잔여는 **코드를 써야만** 닫힌다. 열린 PR #239 는 head 실측으로 내 asIs 무이동 ⇒ 굶길 이유도 없다.\n\n**무인 사정권(파일집합을 벽 정의에 직접 대 봤다)**: 이 레포에는 `SENSITIVE_PATHS` 류 경로 기반 승인 벽이 **없다**(전역 0히트 — econ·feature-doc 레포의 기제를 상속하지 말 것). `main` ruleset 의 required status 는 **`ci passed` 하나**이고 `pull_request`(사람 리뷰) 규칙 **없음** ⇒ 후속 슬라이스도 무인 착지 가능.\n\n**계획 단계로 넘기는 이유와 범위 경계(범위 판단은 planner 몫)**: 정의의 「충돌 시 기본 방향」(문서가 SSOT, 코드를 문서에 맞춘다)이 그대로 적용된다 — 제품 결정(약속을 낮추지 않고 구현을 올린다)이 2026-09-26 tracker 변경 이력에 이미 못박혀 있고 이번 창이 그 앞 겹을 실제로 이행했다. 남은 것은 뒤 겹 하나다. planner 가 유의할 경계:\n- **내 잔여는 AC1 뒤 겹 단독**이다. 앞 겹(`declaration.go`·`validateDeclarations`)은 **이미 착지했고 기계 집행자까지 붙었으니 다시 짜지 말 것**.\n- `k8s.Service`(`internal/k8s/service.go:6`)는 `APIResources`·`ListResources`·`WatchResources`·`GetResource`·`CreateResource`·`UpdateResource`·`PatchResource`·`DeleteResource`·`DeleteCollection`·`ExecInPod`·`ExecResource`·`AttachResource`·`PortForwardResource` 등을 가진 넓은 인터페이스라 **데코레이터 + 배선 + 도구 13종의 「선언 = 실제 행사」 확인**이 필요하다(직전 계획이 「크기가 다르다」고 갈라 둔 그 이유).\n- **표식의 *종류*를 읽어야 한다** — `discoveryOnly` 는 discovery 만 허락하고 `touchesNothing` 은 아무것도 허락하지 않는다(AC1 문면).\n- **AC11 의 게이트 자체 사전 읽기는 이 제한과 별개**다(AC1 이 명시: 「게이트 자신의 사전 읽기(AC11)는 도구 선언이 아니라 AC11 의 표로 범위가 정해지므로 이 제한과 별개다」) — `gateReader`·`gateCollectionReader` 를 도구 선언으로 좁히면 AC11 을 깬다.\n- **⑸(관측 수단 결정)은 `tbm_homelab-k3s-mcp-scenario-e2e` 소관**이고 ⑷ 착지 뒤에 생긴다 — 이 계획에 넣지 말 것. `docs/comment-policy/` 원장 행 `#25`·신설 `declaration.go` 주석 27줄의 복원 경로 판정도 **자매 `comment-redundancy` 소관**이다(직전 계획 §4 의 3·4항).",
       "assessedAt": "2026-09-26T08:51:11Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**AC1 의 뒤 겹(호출 시 선언 밖 행사 차단)을 구현해 AC1 을 닫는다.** 접근: `k8s.Service` 14 메서드를 감싸는 `confinedService`(신설 `internal/mcp/confine.go`)를 세우고, **디스패처**가 핸들러에 건네는 클라이언트를 그 호출의 선언 쌍으로 좁힌다(`h.invoke` — `entry.handle(h, …)` 세 지점 전부). 핸들러가 스스로 좁히게 두지 않은 이유는 게이트 호출을 디스패처에 둔 이유와 같다(잊을 수 있는 자리를 만들지 않는다). 대안으로 ⑴ 도구별로 좁은 인터페이스를 주입하는 방식은 14 메서드 × 15 도구의 배선을 건드려 되돌리기가 어렵고, ⑵ 핸들러 안에서 사전 검사만 하는 방식은 「클라이언트가 할 수 없다」가 아니라 「핸들러가 하지 않는다」라서 AC1 문면(「핸들러가 받는 클라이언트는 … 범위가 제한된다」)을 만족하지 못한다. 데코레이터는 `git revert` 한 번으로 완전히 되돌아간다. 지문 도출은 `resourceName()` 하나로 모아 선언 측과 제한 측이 같은 정규화를 쓰게 했다(둘이면 갈리고, 갈리면 정상 호출이 거부된다).\n\n**완료 기준(이 범위로 판정한다)**: ⑴ 게이트 4종(`check_ac_mapping`·`check_mock_policy`·`check_comment_policy`·`check_doc_inventory`) + Go 4종(`gofmt -l`·`vet`·`build`·`test ./...`) 전부 rc=0, ⑵ `confine_test.go` 의 네 단정이 살아 있다 — 선언 A/행사 B 거부(승인이 있어도 · k8s 호출 0 · 도구 호출 실패) · 표식 종류별 제한(discovery 표식은 discovery 만) · **출하 도구 14종 전건의 정상 호출이 제한에 걸리지 않는다(표 누락 자체가 실패)** · AC11 사전 읽기 무제한, ⑶ `entry.handle(h,` 비테스트 히트 0(세 경로가 모두 `h.invoke` 를 지난다), ⑷ tracker 매트릭스 approval-gate = `✅ 완전` + 대기 행의 남은 해제 조건이 ⑸ 하나, ⑸ 주석 원장 R4 등식 성립 + `rct_20260926-0013` 잔량 선언 문단 존재.\n\n**범위 밖**: ⑸ (c) 미선언 도구 기동 변형의 관측 수단과 전용 `approval_gate_ac1.py` 저작(`tbm_homelab-k3s-mcp-scenario-e2e` 소관 — 이 슬라이스가 그 선행), 신설 두 파일의 주석 비중복성 판정(`tbm_homelab-k3s-mcp-comment-redundancy` 소관 — 잔량 50→143 으로 선언만 했다), `resource_patch` 의 `subresource` 인자 조기 거부(광고 스키마 밖이라 정상 경로 도달 불가).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "감지 인계를 한 단계 아래에서 재실측한다 — 선언 타입·레지스트리 25종·디스패치 3경로·`k8s.Service` 14 메서드·핸들러별 k8s 사용 지점을 소스에서 직접 센다.",
+              "expectedOutcome": "핸들러 14곳이 **각각 정확히 한 메서드**만 부르고, 그 메서드의 쌍이 선언과 1:1 대응함을 확인(= 데코레이터가 출하 도구를 깨지 않는다는 선결 조건)."
+            },
+            {
+              "seq": 2,
+              "action": "주석 원장·게이트 제약을 먼저 잰다: 접촉 예정 파일이 판정된 행에 속하는지, 지문이 줄 번호를 포함하는지(`comment_lines` = `path:주석` 정렬·해시).",
+              "expectedOutcome": "판정 파일은 **코드만** 고치면 R2 가 불변임을 확인 ⇒ 설명 주석은 신설 파일에만 두고 잔량으로 선언하는 설계 확정."
+            },
+            {
+              "seq": 3,
+              "action": "`internal/mcp/confine.go` 신설 — `resourceName()`·`h.invoke()`·`confine()`·`confinedService`(14 메서드).",
+              "expectedOutcome": "`go build ./...` rc=0 · `gofmt -l` 출력 없음."
+            },
+            {
+              "seq": 4,
+              "action": "배선 — `entry.handle(h, …)` 3지점(`mcp.go`·`create_gate.go`·`delete_collection.go`)을 `h.invoke(...)` 로 치환하고, `genericPairs`·`proxyPairs` 의 지문 도출을 `resourceName()` 으로 모은다(주석 무변경).",
+              "expectedOutcome": "`go vet ./...` rc=0 · 판정 파일들의 주석 줄 델타 0(게이트 추출기로 실측)."
+            },
+            {
+              "seq": 5,
+              "action": "`internal/mcp/confine_test.go` 신설 — 선언 A/행사 B 거부 · 표식 종류별 제한 · 출하 도구 전건 표(+커버리지 래칫) · AC11 분리.",
+              "expectedOutcome": "`go test ./...` 전 패키지 ok."
+            },
+            {
+              "seq": 6,
+              "action": "기존 픽스처 정합 — `gate_test.go` 의 합성 도구가 **자기 선언을 실제로 행사**하게 고친다(`exercisesPair`), 선언 없던 `\"platform\"` 에 discovery 표식.",
+              "expectedOutcome": "기대값(`fake.count()` 3·1) 무변경으로 전부 통과 · 이 파일 주석 줄 증감 0."
+            },
+            {
+              "seq": 7,
+              "action": "음성 프로브 4건(배선 제거 · exec 서브리소스 누락 · 게이트 사전 읽기를 좁힌 클라이언트로 · 표에서 도구 1건 제거)을 커밋 위에 주입하고 되돌린다.",
+              "expectedOutcome": "네 건 모두 해당 테스트가 FAIL ⇒ 계측기 생존 증명(초록을 근거로 쓰지 않는다)."
+            },
+            {
+              "seq": 8,
+              "action": "문서 등재 — 원장 잔량(실측에서 파생) + 선언 문단, tracker 매트릭스 `✅ 완전`, 대기 행 해제 조건 ⑸ 로 좁힘, 변경 이력 1행.",
+              "expectedOutcome": "게이트 4종 rc=0 · R4 등식 3482 = 3339 + 143."
+            },
+            {
+              "seq": 9,
+              "action": "최신 `main`(자매 #239 착지분) 위로 리베이스하고 게이트 8종 재실행 후 PR 생성.",
+              "expectedOutcome": "`merge-tree` clean · 전 게이트 rc=0 · PR OPEN·MERGEABLE."
+            }
+          ],
+          "plannedAt": "2026-09-26T09:40:00Z"
+        }
+      }
+    ]
   }
 ]
