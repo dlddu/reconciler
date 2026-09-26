@@ -10245,9 +10245,9 @@
   {
     "id": "rct_20260926-0004",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "executing",
+    "status": "succeeded",
     "createdAt": "2026-09-26T08:50:43Z",
-    "updatedAt": "2026-09-26T10:22:40Z",
+    "updatedAt": "2026-09-26T10:24:30Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-26T08:50:43Z",
@@ -10376,6 +10376,48 @@
               "startedAt": "2026-09-26T10:21:10Z",
               "finishedAt": "2026-09-26T10:22:40Z",
               "log": "Post-merge verification on main (guide B). main HEAD = 297611d. check-comment-ledger.py rc=0 with the same first line lines=3161 files=162 unclassified=0; the other three gates rc=0. The merge commit tree e4d8b270 is byte-identical to the PR head tree e4d8b270, so every pre-merge measurement transfers to main exactly. asIs.versionScript on main reproduces lines=3161 files=162 unclassified=0 / 228d00f6. CI job reality checked from the job log, not the needs list: job comment-ledger (id 108382157735, run 36233930359) conclusion success with step 'check comment ledger invariants' success - not skipped - and the log at lines 127-133 prints the same measurement plus 'passed - ledger invariants I1-I5 clean'. Per repo history CI here is PR-only (main push runs only Image), so the judgement is the PR-run job plus the tree identity above."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "lines=3161 files=162 unclassified=0\n228d00f6c68640cbf44ecac55a4451411b175995b69df5a243a564f03b016580",
+          "verifiedAt": "2026-09-26T10:24:30Z",
+          "checks": [
+            {
+              "name": "1. gate rc=0 and its measurement byte-matches asIs.versionScript",
+              "status": "passed",
+              "detail": "On main 297611d: python3 scripts/check-comment-ledger.py rc=0 (run without a pipe, so the rc is the gate's own). Its first line reads lines=3161 files=162 unclassified=0. The model asIs.versionScript run on the same tree prints lines=3161 files=162 unclassified=0 - byte-identical. The equation, not the absolute, is the criterion: the guide recorded 3161/162 at judgement time and base never moved, so the absolute happens to agree too. Digest 228d00f6c68640cbf44ecac55a4451411b175995b69df5a243a564f03b016580."
+            },
+            {
+              "name": "2. exhaustive-and-unique row equation",
+              "status": "passed",
+              "detail": "Gate line 2 on main: 39 rows, 166 registered files, unregistered 0, and 4 registered files now at 0 comment lines (backend/tests/analyses.rs, backend/tests/crypto.rs, backend/tests/settings.rs, deploy/k8s/kustomization.yaml). Unregistered 0 gives exhaustiveness; rc=0 means invariants I1-I5 held, which is what forbids a file belonging to two rows and what enforces per-row line-count and digest agreement with the live measurement. Informational: the gate reports 2093 lines / 18 rows judged complete (66% of lines) and unjudged rows per axis as 7/8/10/19 - those are the deliberate '-' marks, in scope of later slices, not failures."
+            },
+            {
+              "name": "3. zero comment lines removed, diff confined, .sql untouched",
+              "status": "passed",
+              "detail": "Direction was measured by set-diffing normalized hit lists rather than trusting the net count: comment lines present at base 4e8b66b but absent at head = 0; added = exactly 5, being 4 lines in .github/workflows/ci.yml and 1 in the new scripts/check-comment-ledger.py. That is the +5 the guide predicted (3156 -> 3161). git diff --name-only 4e8b66b..HEAD = 25 files; filtering out docs/, scripts/check-comment-ledger.py and .github/workflows/ci.yml returned 0 lines, and the .sql filter returned 0 lines, so backend/migrations was untouched."
+            },
+            {
+              "name": "4. the four pre-existing gates stay rc=0",
+              "status": "passed",
+              "detail": "Run without pipes at PR head and again on main 297611d: scripts/check-comment-ledger.py rc=0, tools/check-journey-mockup.py rc=0 (hub R9 included), tools/check-mockup-render.py rc=0, tools/check-scenario-e2e.py rc=0 - all four at both trees. tools/check-journey-prototype.js was not measured locally (no node on this host); that is recorded as unmeasured, not as a pass. CI covered it: the PR run's ci-gate was success."
+            },
+            {
+              "name": "5. prose migration is lossless",
+              "status": "passed",
+              "detail": "Verified independently of the PR body. Paragraph level: 62 of 63 base ledger paragraphs left the ledger and 57 are verbatim under docs/comment-policy/passes/; of the 5 apparent misses, 2 are old 4-column table rows (superseded by the new 6-column table) and 2 are verbatim in passes/2026-09-26-ledger-history.md lines 170 and 606. Line level: of 736 removed non-table prose lines, 728 are verbatim; re-testing the remaining 8 whitespace-insensitively showed 3 are re-wrap artifacts of paragraphs that did migrate. The 5 genuinely absent lines are all base lines 14-18, strictly inside the old reading-guide section (base 6-23, table starts at 24): old-format parsing and arithmetic rules superseded by the rewritten reading guide, two of them describing the hand-written aggregate this PR deliberately deletes and which invariant I5 now forbids returning. Plan step 3 scopes migration to the prose after the table plus the result-cell sections and says the reading guide stays - so this is rewrite, not loss."
+            },
+            {
+              "name": "merge landed exactly the reviewed tree",
+              "status": "passed",
+              "detail": "Merge commit 297611d tree = e4d8b2709da383e77a2e88dbd72958edaf4b0e77, byte-identical to PR head b4acb8e tree e4d8b2709da383e77a2e88dbd72958edaf4b0e77. Every pre-merge measurement therefore transfers to main exactly, with no re-measurement gap. main tip was re-read immediately before merging and was still 4e8b66b (== PR base), so no sister PR landed inside the CI window and no rebase was needed. Merge used merge_method=squash with the sha guard read programmatically from the API and no commit_title, preserving the (#178) suffix."
+            },
+            {
+              "name": "the new comment-ledger job really ran in CI",
+              "status": "passed",
+              "detail": "Judged from the job log rather than the needs list, as the guide requires. Job comment-ledger id 108382157735 in run 36233930359 on head b4acb8e: conclusion success, step 'check comment ledger invariants' success - not skipped. Log lines 127-133 print the same measurement (lines=3161 files=162 unclassified=0; 39 rows / 166 registered / 0 unregistered) and the pass line for invariants I1-I5. Fetched with gh api --allow-escape-sequences; the flag belongs to gh api, not gh run view, which returns 0 bytes. CI in this repo is PR-only (a main push runs only Image), so the verdict rests on that PR-run job plus the tree identity above. Informational guide errata: the guide expected the image job to run-and-succeed, but both image jobs reported skipped while ci-gate, the actual required status, was success - not treated as a failure since image is not among the five completion criteria."
             }
           ]
         }
