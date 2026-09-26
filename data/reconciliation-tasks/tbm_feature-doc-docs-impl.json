@@ -8545,9 +8545,9 @@
   {
     "id": "rct_20260926-0004",
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "createdAt": "2026-09-26T09:21:08Z",
-    "updatedAt": "2026-09-26T10:36:00Z",
+    "updatedAt": "2026-09-26T10:38:00Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-26T09:21:08Z",
@@ -8706,6 +8706,58 @@
               "log": "게이트 전수 재실행은 Step 3 검증에서 착지한 main 을 새로 clone 해 수행했다(전건 rc=0). 착지 변경 파일은 정확히 9개이고 벤더 트리(`frontend/node_modules` 등)는 실리지 않았다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "backend:d55ae72ef40226204fd3fc4cb3f68d625bf5b5c3 frontend:6d56a472ca684d95891edca6df3a34ead8127dd0",
+          "checks": [
+            {
+              "name": "머지·착지 동일성 — 초록 CI 가 잰 내용이 곧 착지한 내용인가",
+              "status": "passed",
+              "detail": "PR #179 squash 머지 → main tip 9a32b76ba1ecf47cfb34b67f836acf7c15d453f5. 머지 커밋 tree = PR head(1a681cde) tree = ad9fa4c2a311fdd0e18615d2d69cd19ace4e21eb (두 커밋의 .commit.tree.sha 를 API 로 각각 읽어 대조). base 가 머지 순간까지 297611d3 에서 움직이지 않아 squash 가 재작성한 트리가 없다 ⇒ head 에 붙은 ci-gate/kind e2e 2샤드의 초록이 착지 내용에 그대로 적용된다. 착지 변경 파일 정확히 9개(backend/src/analysis.rs · backend/src/usage.rs · backend/tests/usage.rs · docs/comment-policy/ledger.md · docs/doc-tracker/2026-09.md · docs/mockups/JRN-discover-features.html · e2e/tests/sc04-09-per-user-cost-visibility.spec.ts · frontend/src/AnalysisProgress.tsx · frontend/src/api.ts) — 벤더 트리 0."
+            },
+            {
+              "name": "(1) 단계별 도달 — by_stage · StageView.spend",
+              "status": "passed",
+              "detail": "착지한 main 을 새로 clone 한 트리에서 실측. backend/src/usage.rs L97 `pub async fn by_stage(` 1건. backend/src/analysis.rs: `spend: crate::usage::Spend` 2건(StageView L143 · 응답 구조체 L165), `load_detail` 이 L621 `stage.spend = *charged` 로 단계별을 채우고 L625 `of_analysis` 로 총합을 따로 유지한다 ⇒ 단계별과 총합이 서로 다른 출처."
+            },
+            {
+              "name": "(2) 화면 표시 — stage-spend 한 자리",
+              "status": "passed",
+              "detail": "grep -c 'data-testid=\"stage-spend\"' frontend/src/AnalysisProgress.tsx = 1 (기대값 1 — 단계마다 렌더되는 한 자리). 기존 stage-sub 안에 넣지 않아 sc01-05 등의 toHaveText 단정이 오염되지 않았다."
+            },
+            {
+              "name": "(3) 백엔드 단정 — cargo test",
+              "status": "passed",
+              "detail": "aarch64 로컬 툴체인(cboot cc + rust, CARGO_TARGET_DIR=fd-target)에서 `cargo test --offline` 전건 실행 rc=0. tests/usage.rs = **7 passed**(기대값 7)이고 그중 `per_stage_spend_is_attributed_to_the_stage_that_spent_it` 이 실제로 돌았다. 단위 118 passed 포함 전 스위트 0 failed."
+            },
+            {
+              "name": "(4) e2e 단정 — 단계별 귀속을 총합 복사와 가르는 단정",
+              "status": "passed",
+              "detail": "**성질로 판정했다 — 지침의 리터럴 기대값은 오기다.** 지침 표는 `grep -c \"stage-spend|stagesOf\" ... >= 4` 를 적었으나 실측은 **3**이다. grep -c 는 히트 **줄 수**이고, 착지 코드가 로케이터를 `stageSpend(key)` 헬퍼 한 줄로 묶어 리터럴 `stage-spend` 가 1줄(L170)에만, `stagesOf` 가 2줄(정의 L66 · 호출 L148)에만 나오기 때문이다(occurrence 단위로 세도 3). 그 검사가 재려던 성질 — 지침 3-A 가 열거한 단정 넷 — 은 착지 파일에 전부 있다: ① `stage('fetch').spend.costCents).toBe(0)` 과 `llmCalls).toBe(0)`(LLM 없이 도는 유일한 단계가 succeeded 인데도 0 — 총합을 행마다 복사한 회귀의 음성 대조) ② `expect(stageCalls).toBeLessThanOrEqual(firstSpend.llmCalls)`(호출 축 부등식) ③ 화면 `[data-stage=\"cross_cutting\"] [data-testid=\"stage-spend\"]` 가 `money(stage('cross_cutting').spend.costCents)` 와 같음 ④ `[data-stage=\"fetch\"]` 가 `$0.00`. 지침이 경고한 「단계 합 == 총비용」 등식은 없다(센트 올림 때문에 참인 구현에서도 깨진다). 머리말의 「단계별은 후속」 2줄도 실측에 맞게 고쳐졌다. 실행 증거: head 1a681cde 의 check-run `test (kind e2e 1/2)`·`test (kind e2e 2/2)` 가 둘 다 completed/success 이고 그 tree 가 착지 tree 와 동일하다."
+            },
+            {
+              "name": "(5) 게이트 5종 — rc=0 과 불변 수치",
+              "status": "passed",
+              "detail": "착지 main 사본에서 `npm ci --prefix tools` 후 전수 실행(파이프 없이 rc 를 따로 읽음): check-scenario-e2e.py rc=0 · check-mockup-render.py rc=0 · check-journey-mockup.py rc=0 · check-journey-prototype.js rc=0 · check-comment-ledger.py rc=0. 게이트가 스스로 인쇄한 수치: **M3A 352** · **M3B 319** · M5 래칫 미해소 **편차 31/31** · 등재 대조 **매핑 38 · 선언(spec) 38** · 불변식 (시나리오 38 − 예외 0 − **구현 대기 0**) = 38 · 실제 매칭 파일 38 · 래칫 미매핑 0/0 — 전부 기대값 그대로. `data-sample` 은 계획대로 **133건**(준비 시점 128 → +5, 오용 0건). 원장 게이트: 실측 lines=3213 files=162 unclassified=0 · 행 39 · 미등재 0 · I1~I5 이상 없음."
+            },
+            {
+              "name": "(6) 마이그레이션 무접촉 — 무인 착지의 조건",
+              "status": "passed",
+              "detail": "`git diff --name-only 297611d3..9a32b76b -- backend/migrations/` 가 **빈 출력**. D1(사람 승인 벽)이 서지 않은 이유이자 `review/manual-approval` 이 워크플로의 「해당 없음」 판정으로 붙은 근거와 일치한다."
+            },
+            {
+              "name": "(7) 예고 보존 — 7e 의 예고를 지우지 않고 해소를 덧붙였는가",
+              "status": "passed",
+              "detail": "`grep -c '후속 슬라이스가 닫는다. — \\*\\*해소됨\\*\\*' docs/doc-tracker/2026-09.md` = **1**. 이전 슬라이스가 적은 예고 문면을 삭제하지 않고 해소를 덧붙인 형태 그대로다."
+            },
+            {
+              "name": "[정보] 이 슬라이스가 범위 밖으로 남긴 것",
+              "status": "passed",
+              "detail": "판정에 넣지 않는다(계획이 명시적으로 범위 밖으로 둔 항목이며, 모델 전체 to-be 와의 잔여 gap 은 다음 감지 주기의 입력이다). 남은 것: 단계별 **호출 수·토큰**의 화면 표시 · 파이프라인 밖 지출의 별도 버킷 화면 · `/metrics` · 운영자 전용 화면 · 모델별 단가표. 또한 by_stage 는 `analysis_documents` 만 단계 축으로 집계하므로 버킷 합 != 총합이다(버킷마다 센트 올림) — 계획이 의도한 성질이다. 실행으로 as-is 가 움직였다(backend/frontend 트리 해시 변경) ⇒ detector 가 이 변화를 보고 후속 task 를 연다. `lastObservedVersion` 은 건드리지 않았다."
+            }
+          ],
+          "verifiedAt": "2026-09-26T10:38:00Z"
         }
       }
     ]
