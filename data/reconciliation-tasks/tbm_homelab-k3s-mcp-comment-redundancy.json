@@ -14562,7 +14562,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-redundancy",
     "status": "planning",
     "createdAt": "2026-09-26T08:33:52Z",
-    "updatedAt": "2026-09-26T10:08:11Z",
+    "updatedAt": "2026-09-26T10:31:00Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-26T08:33:52Z",
@@ -14632,6 +14632,46 @@
           "reviewedAt": "2026-09-26T09:59:00Z",
           "reason": "거부 — 계획이 세운 완료 기준 ⑴ 이 현재 base 에서 닫히지 않는다. 신선도 확인 중 main 이 `7200590e` → `19e55a91` 로 움직였다(PR #241 / rct_20260926-0013, 09:54:43Z 착지). PR #242 자체는 여전히 열려 있고 head `05188aa6` 의 필수 check-run `ci passed` 는 success(09:40:18Z)이며, 내가 새 base 에서 지침 §4 의 재생 스크립트 넷을 직접 밟아 여덟 행의 기재(`#70` 5/ef5ba22c5ba6 · `#71` 20/105b890b250e · `#60` 18/bda322ad0dc6 · `#63` 26/c5587ccee5c4 · `#56` 18/81db4dff9cd6 · `#58` 35/180ffbe8c029 · `D#24` 29/1990e776c49e · `D#26` 50/4f409ab2bcfa)가 바이트 동일임을 확인했다(⑵ 성립, 앵커도 멀쩡 — #241 은 declaration.go 를 건드리지 않았다). 내용 자체도 무해하다: 6개 코드·픽스처 파일이 Go 주석 걷은 동등 · Python docstring 걷은 AST 동등 · YAML 객체 동등으로 의미 불변이고 불가역 작업이 없다. 문제는 ⑴ `판정-잔량 == 0` 이다 — #241 이 신규 `internal/mcp/confine.go`·`confine_test.go` 로 미등재 주석 93줄을 더해 잔량이 50 → 143 이 되었고, 이 슬라이스를 재생해도 잔량은 **93** 으로 남는다. 그래서 planner 의 `edit_ledger.py` 가 `assert vals['판정-잔량'] == 0` 에서 rc=1 로 정지해 지침이 정한 재고정 절차 자체가 완주하지 못하고, 지침이 명시한 「자매 머지로 전역 합계가 움직여도 세 등식은 불변」이 실측으로 반증된다. PR 은 ledger.md 한 파일에서 실제로 CONFLICTING(merge-tree 실측)이라 재생 없이는 머지도 불가하다. 이 상태로 승인하면 executor 는 Step 5 의 ⑴ 을 인용해 `failed` 로 떨어질 수밖에 없다.",
           "comment": "고칠 것 넷. ⑴ **완료 기준 ⑴ 을 자매 착지에 실제로 불변인 형태로 다시 쓸 것.** 전역 `판정-잔량 == 0` 은 미등재 주석을 더하는 자매가 착지하면 깨진다(#239 는 문서만 고쳐 안 깨졌고 #241 은 신규 Go 파일 둘로 93줄을 더해 깼다). 이 task 의 gap 은 감지가 지목한 50줄이므로 기준도 그 50줄로 한정할 것 — 예: 「`internal/mcp/declaration.go` 27줄 · `tests/k8s/kind/dear-baby.yaml` 23줄이 등재 범위에 들어가 `등재 범위` 가 69 → 71 이 된다」 또는 「잔량 == (착지 시점 base 의 잔량 − 50)」. ⑵ **`edit_ledger.py` 의 `assert vals['판정-잔량'] == 0` 을 그 새 기준으로 바꿀 것. 그리고 assert 를 마커 write 앞으로 옮기거나 실패 시 원복할 것** — 지금은 마커를 먼저 써 놓고 죽어서, 중단된 트리에 `판정-잔량 = 93` 이 박힌 채 게이트 4종이 전부 rc=0 으로 초록이 된다(실측). rc 를 안 보는 executor 가 그대로 머지하면 원장은 93, Step 5 는 0 을 요구하는 모순된 기록이 남는다. ⑶ **`edit_ledger.py` 의 하드코딩 경로 `/home/ubuntu/.claude/jobs/3f6a36bd/tmp/derived.txt` 를 제거할 것** — planner 자기 job 스크래치 디렉터리이고 지금 존재하지 않는다. ⑴⑵ 를 고쳐도 executor 세션에서 FileNotFoundError 로 죽고, §4 의 「self-contained」 표기와도 어긋난다. ⑷ **base `19e55a91` 로 재고정해 force-push 할 것**(ledger.md 한 파일 충돌). ⑵ 는 손볼 것이 없다 — 여덟 행 기재가 새 base 에서 바이트 동일이고 앵커 다섯 개 전부 count==1 로 맞았다. 대안으로 #241 이 남긴 93줄까지 이 슬라이스에 흡수하면 ⑴ 을 문자 그대로 0 으로 닫을 수 있고 예산도 남지만(400줄 중 284줄 사용), 다음 자매가 또 착지하면 같은 곳에서 다시 깨지므로 ⑴ 의 재정의가 근본 해법이다. 덧붙여 `preparation.preparedAt` 이 `2026-09-26T10:03:00Z` 로 기록 시각보다 미래다(CI 초록은 09:40Z, claim 은 09:51Z) — 다음 준비에서 실제 시각으로 적을 것."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**재계획(2차) — 범위·판정 내용·PR 은 1차 그대로 승계하고, 거부가 지목한 넷만 고친다.** 1차 계획은 완료 기준을 전역 `판정-잔량 == 0` 으로 적었는데, 그 뒤 자매 PR #241(`rct_20260926-0013`)이 신규 `internal/mcp/confine.go`·`confine_test.go` 로 **미등재 주석 93줄**을 들여 잔량이 50 → 143 이 되면서 이 슬라이스를 재생해도 0 에 도달할 수 **없게** 됐다(재생 뒤 93 으로 남는다). 검토는 그 기준으로는 executor 가 `failed` 로 떨어질 수밖에 없다며 거부했고, 실측으로도 그 기준이 요구하던 `잔량 0` 은 이제 게이트 `[R4]` 를 **rc=1 로 깨는 값**이다(음성 프로브 1). 고친 것 넷: ⑴ **완료 기준을 자매 착지에 불변인 형태로 다시 적었다** — 전역 절대값이 아니라 「두 파일이 각각 정확히 한 원장 행에 속한다 + `등재 범위` == base+2 + `판정-잔량` == base−50(그 두 파일이 base 에서 들고 있던 줄 수)」. ⑵ `edit_ledger.py` 의 `assert 판정-잔량 == 0` 을 그 델타·행 존재 단정으로 바꾸고 **모든 단정을 마커 쓰기 앞으로 옮겼다** — 1차는 마커를 먼저 쓰고 죽어서 중단된 트리에 틀린 잔량이 박힌 채 게이트 4종이 **거짓 초록**이 됐다(`[R4]` 항등식이 자기 치유적이라 그렇다). ⑶ 저술 세션에 묶인 하드코딩 경로 `/home/ubuntu/.claude/jobs/<id>/tmp/derived.txt` 를 없애고 파생값을 stdout 으로만 낸다. ⑷ base `19e55a91` → **`4f18415c`**(현 main)로 재고정해 force-push 했다. **범위(완료 기준)**: 감지가 지목한 미등재 50줄(`internal/mcp/declaration.go` 27 · `tests/k8s/kind/dear-baby.yaml` 23)을 복원 경로 ①②③④ 전 축에 대고 판정해 원장에 두 행으로 등재하고, 같은 패스에서 복원 경로 ①② 를 줄 주석 행 `#56`·`#58`·`#60`·`#63` 과 docstring 행 `D#24`·`D#26` 에 대해 판정한다 — 파일 공유 union-find 로 닫힌 덩어리 단위다(`#56`↔`D#24`, `#58`↔`D#26` 은 같은 파일이라 한 덩어리). 성공은 §0 의 세 등식이고, **범위 밖**: 남는 잔량 93줄(#241 의 두 신규 파일)은 이 task 의 gap 이 아니다 — 0 으로 만들려고 범위를 넓히지 않는다. 행 `#5`(97줄)와 ①② 잔량 48행/docstring 26행도 다음 패스의 몫이다. **이 접근을 고른 이유**: 잔량은 조용히 지울 수 없고(위조하면 `[R4]` rc=1 — 실측) **등재(=판정)만이** 그것을 줄인다. 되돌리기는 PR 미머지 또는 revert 한 번이고 비주석 바이트가 0이라 런타임 영향이 없다. 🔴 **열린 자매 #243(`rct_20260926-0012`, 원장 형식 이전)과는 순서 의존이 있다** — 그 PR 은 마커 여덟 개와 `<!-- 판정-원장 -->` 구분자를 전부 지우고 행을 6열로 옮기며 게이트 자체를 새로 써서, 줄 충돌이 아니라 **형식 비호환**이다. 다만 #243 은 이 두 파일을 판정 축 `—`(미판정) 행으로 **등재만** 하고 결과 칸에 「판정은 `rct_20260926-0011` 의 몫이다」라고 적어 **판정을 이 task 에 이름으로 넘긴다** — 두 PR 은 서로를 대체하지 않는다. #243 이 먼저 착지하면 재생으로 풀리지 않으므로 지침이 **즉시 정지 + `failed`** 를 못박았고(스크립트가 그 자리에서 죽도록 만들어 실측했다), 그때 남는 몫은 등재가 아니라 판정뿐이라 새 게이트의 `미판정(—) N행` 이 그 자리를 계속 지목한다(사각지대 아님).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "🔴 **원장 형식부터 확인한다** — `grep -c '<!-- 판정-원장 -->' docs/comment-policy/ledger.md`. 자매 PR #243(`rct_20260926-0012`, 원장 형식 이전)이 먼저 착지했는지를 가르는 판별식이다.",
+              "expectedOutcome": "1 이면 그대로 진행. **0 이면 즉시 정지**하고 `failed` — 재생으로는 풀리지 않는 형식 비호환이다(지침 §3 의 문면을 사유로 인용할 것). 사각지대가 아니다: #243 이 두 파일을 판정 축 `—` 행으로 등재해 두므로 남은 몫은 판정뿐이고, 새 게이트의 `미판정(—) N행` 이 그것을 계속 지목한다."
+            },
+            {
+              "seq": 2,
+              "action": "PR #242 의 필수 status 를 확인한다 — `gh pr view 242 --repo dlddu/homelab-k3s-mcp --json mergeStateStatus,statusCheckRollup`. ⚠️ 필수 `ci passed` 는 commit status 가 아니라 **check run** 이라 `commits/<sha>/status` 는 `state=pending`·`total_count=0` 을 돌려준다.",
+              "expectedOutcome": "`ci passed` 가 SUCCESS 이고 `mergeStateStatus` 가 CLEAN 또는 BEHIND. 빨강이면 머지하지 말고 사유를 읽는다. 🔴 초록인 head 에 커밋을 얹으면 그 초록이 날아간다(필수 status 는 sha 에 묶인다)."
+            },
+            {
+              "seq": 3,
+              "action": "`mergeStateStatus` 가 DIRTY 면(그러나 1 에서 마커가 살아 있었으면) 머지하지 말고 재생 규약을 따른다. `git fetch && git reset --hard origin/main` → 패스 상세 파일을 `e472cbd1` 에서 복원 → 지침 §4 의 스크립트 넷을 순서대로 재생(앵커가 `count != 1` 이면 즉시 정지) → 게이트 4종 rc=0 재확인 → **force-push 로 한 커밋 유지**. 충돌은 `docs/comment-policy/ledger.md` 한 파일에서만 난다.",
+              "expectedOutcome": "재생 뒤 게이트 4종 rc=0 이고 §0 의 세 등식이 새 base 에서 성립한다. 파생 수치(`docstring-합계` 등)는 스크립트가 스스로 갱신한다. 🔴 원장 수치를 손으로 맞추지 말 것 — `[R4]`/`[R8]` 항등식이 자기 치유적이라 다른 행의 오차를 흡수해 거짓 초록이 된다."
+            },
+            {
+              "seq": 4,
+              "action": "머지 **직전** base 에서 `python3 scripts/check_comment_policy.py` 첫 줄의 `등재 범위 B` 와 `미판정 잔량 R` 을 적어 둔 뒤, PR #242 를 **squash** 로 머지한다 (`gh pr merge 242 --repo dlddu/homelab-k3s-mcp --squash`).",
+              "expectedOutcome": "PR 이 MERGED 이고 main tip 이 이 슬라이스를 담는다. B·R 을 적어 두는 것이 5·6 의 판정 기준이다. squash 는 관례가 아니라 **판정 근거**다 — 원장의 ④ 판정 여럿이 「커밋 본문이 비공백 1줄」에 기댄다."
+            },
+            {
+              "seq": 5,
+              "action": "머지된 main 에서 게이트 4종을 다시 돌린다 — `scripts/check_comment_policy.py` · `scripts/check_mock_policy.py` · `scripts/check_doc_inventory.py` · `tests/integration/check_ac_mapping.py`. 🔴 `python3 <gate> | head; echo $?` 는 `head` 의 rc 다 — 파이프 없이 읽을 것.",
+              "expectedOutcome": "전건 rc=0."
+            },
+            {
+              "seq": 6,
+              "action": "§0 의 세 등식을 명시적으로 재판정한다 — ⑴ `internal/mcp/declaration.go` 와 `tests/k8s/kind/dear-baby.yaml` 이 각각 정확히 한 원장 행에 속하고 `등재 범위 == B + 2` · `판정-잔량 == R - 50` ⑵ 여덟 행(`#70`·`#71`·`#60`·`#63`·`#56`·`#58`·`D#24`·`D#26`)의 줄 수·지문·축 앵커가 실측과 같다(`[R2]`·`[R6]`·`[R9]`~`[R12]` 무위반이 그 증거) ⑶ 게이트 4종 rc=0.",
+              "expectedOutcome": "셋 다 성립하면 이 task 의 범위가 수렴했다 — `succeeded`. 하나라도 어긋나면 그 등식을 인용해 `failed`. 🔴 **잔량이 0 인지는 묻지 않는다** — 남는 93줄은 #241 이 들인 두 신규 파일이고 범위 밖이다. 전역 수치가 자매 착지로 움직인 것은 실패가 아니다."
+            }
+          ],
+          "plannedAt": "2026-09-26T10:31:00Z"
         }
       }
     ]
