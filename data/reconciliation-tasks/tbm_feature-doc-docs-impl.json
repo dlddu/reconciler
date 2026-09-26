@@ -8123,5 +8123,24 @@
       "assessedAt": "2026-09-25T23:46:00Z",
       "reason": "**조치 불필요 → `no_action_needed`(lock 해제).** 이번 창은 내 축에 **하중을 전혀 걸지 않았고**(신규 drift 0), 남은 잔여 1건(AC4.6)은 **덮개 task 가 PR 까지 세워 리뷰 중**이다. 근거는 전부 이번 fire 의 독립 실측이다(feature-doc 전용 신규 클론 + 창 양 끝 탐침 + 게이트 직접 실행 + PR API).\n\n**⑴ 창 확정부터 측정이다.** 최근 14커밋에 3지문(`HEAD:backend`·`HEAD:frontend`·`HEAD:docs`)을 전수로 찍어 **지문을 움직인 커밋이 정확히 2개**임을 확정했다 — `2973641`(#162 자매 주석 패스) · `bf6bd74`(#164 빌드 프로파일). **main tip `51803a27`(#167)은 세 지문이 #164 와 전건 동일**해 창에서 떨어진다(`.github/`+`README.md`). tip 을 반사적으로 창에 넣었으면 없는 drift 를 지을 자리였다.\n\n**⑵ #162 = 주석뿐(기준 2·3 무발화).** 내 as-is 표면 5파일을 양 끝에서 꺼내 주석·공백 줄을 걷고 md5 를 비교하니 **5/5 바이트 동일**(`9b1ca427ef`·`aa08bac8c2`·`b59220cc6c`·`7ffc6981c3`·`dae44f22d2`). ⇒ 사용자 대면 동작 변화 0 ⇒ **새로 문서화할 동작도, 문서와 어긋날 구현도 생기지 않았다**. 같은 커밋의 `scripts/e2e.sh`·`e2e/tests/` 는 정의가 as-is 에서 명시 제외한 표면이다.\n\n**⑶ #164 = 빌드 프로파일뿐.** `[profile.release]` 의 `lto = \"thin\"` → `false` 와 `codegen-units = 1` 제거가 전부이고 의존성·feature·`strip` 무변경, 소스 0줄. 크레이트 빌드 54s → 24s 를 바이너리 ~20% 증가로 사는 **빌드 시간 거래**로, 직전 fire 가 #148(워커 유휴 폴링 env)을 판정한 자리와 같다 — 운영 튜닝이지 사용자 대면 동작이 아니다.\n\n**⑷ to-be 는 아예 움직이지 않았다 — 경로별 트리 해시 전수 대조.** `docs/` 최상위 12엔트리 중 판정 기준이 되는 표면(`prd`·`test`·`values.md`·`mockups`·`design-system.md`·`doc-tracker`·`e2e-mocking-policy.md`·`user-journey`·`reader.html`)이 **전건 SAME** 이고, 움직인 것은 `comment-policy/`(자매 주석 모델 자신의 원장 + 신규 패스 문서)와 `docs/index.html`(허브) **2엔트리뿐**이다. 목표선이 그대로이므로 **이번 트리거는 내 축에서 노이즈**다. AC 전집 25개도 독립 재계수로 불변이다.\n\n**⑸ 잔여 AC4.6 은 코드 부재로 재측정했다(승계 아님).** SQL `SUM(` **0히트** · 라우트 40개 중 `metrics|usage|cost|billing` **0건** · prometheus 0 · 마이그레이션 **0014 불변** · 화면 `AnalysisProgress.tsx:269` 는 「실측 누적은 아직 계측 전」을 그대로 렌더. ⚠️ **재계수 불일치를 미분류 1건부터 확인했다** — 대소문자 무시 grep 이 `SUM(` 3히트를 냈으나 전부 Rust 이터레이터 `.sum()`(`cross_cutting.rs:400`·`acceptance.rs:479`·`analysis.rs:1832`)이고 **baseline 커밋에도 동일하게 존재**한다(`git grep` 양 끝 대조). 라우트도 `.route(` **53줄 = 중복 제거 40경로**로 직전 fire 의 40 과 같은 집합이다. 둘 다 내 grep 아티팩트이지 drift 가 아니다.\n\n**⑹ 판정을 가른 것은 덮개이고, 덮개는 살아 있는 정도가 아니라 *PR 까지 세웠다*.** `rct_20260925-0011` 은 직전 fire 의 `planning` 에서 **`reviewing`(23:35:33Z)** 으로 전진했고(assess 직전 origin 재판독), 그 산출물이 대상 레포에 **열린 PR #166 — 슬라이스 7d, AC4.6** 으로 실재한다(17파일 +812/−82). 범위가 내 잔여와 **정확히 일치**함을 파일로 확인했다: 내가 「없다」고 잰 적재·집계가 `migrations/0015_llm_call_usage.sql` + **신설 `backend/src/usage.rs` 224줄**(`GET /api/usage`)로 서고 — PR head 재측정에서 **SQL `SUM(` 0 → 5히트** — 화면의 「아직 계측 전」이 `AnalysisProgress.tsx`(+17/−53)에서 걷히며, 검증은 `backend/tests/usage.rs` 265줄 + e2e `sc04-09` 신설, 등재는 tracker 가 **「구현 대기 1건 → 0건」**(집계 매핑 37→38)으로 간다. **부분 슬라이스가 아니라 잔여 전체를 덮는다.** 여기서 `action_required` 를 열면 이미 리뷰에 올라간 PR 을 두고 같은 슬라이스 7d 를 두 번 계획하게 되고, single in-flight 규약이 막으려는 바로 그 중복이다.\n\n**⑺ 내 창이 그 덮개를 훼손하지 않았음이 원리적으로 성립한다.** PR #166 의 **`base.sha` = `bf6bd74c` = 내 창의 마지막 지문 이동 커밋(#164)** 이다 ⇒ planner 는 내 창 **전체가 이미 들어간 트리 위에서** 준비했고 `mergeable=true` 다. 훼손 무죄·비피복이 API 한 번에 닫힌다.\n\n**⑻ 재감지 경로 0 아님.** PR #166 head 에서 내 versionScript 를 직접 돌리니 `backend:e20e109c85 frontend:ef09ddca9a docs:b225b2b024` 로 **세 지문 전부** tip 과 다르다 ⇒ 착지하면 이 모델이 반드시 재발사되어 AC4.6 의 실제 수렴을 재판정한다. 즉 이 판정은 잔여를 묻는 것이 아니라 **소유자에게 맡기고 재감지로 되돌아오는** 정상 경로다.\n\n**⑼ 게이트 2종 tip rc=0** — `check-scenario-e2e.py` 불변식 `(38 − 0 − 1) = 37` vs 실제 매칭 파일 37 성립 · 래칫 0/0, `check-mockup-render.py` 전 규칙 통과(M7 13쌍 불일치 0 · M8 잔존 0). **초록이 AC4.6 잔여와 공존한다** — 기준 1 에 기계적 방벽이 없다는 성질(`check-scenario-e2e.py` 래칫은 「미매핑」만 본다)은 그대로이고, 그래서 이 잔여를 세우는 것은 이 감지 루프와 그 위의 task 뿐이다.\n\n**보고만(판정 무영향, 후속 인계).** ⓐ tracker `## 현재 상태 요약` 13행이 여전히 「e2e spec 36개 · 매핑 36건 · 구현 대기 2건」으로 권위 집계(37·1)와 어긋난다 — **`docs/doc-tracker` 트리가 창 양 끝 바이트 동일**이라 내 창이 만든 것도 아니고 상태 변화도 없으며, 직전 fire 가 변이 탐침으로 「기계 독자 0」을 이미 닫았으므로 **바이트 동일성으로 승계**한다(재도출 불요). PR #166 이 이 13행을 **고친다**(`e2e spec 38개 · 매핑 38건 · 구현 대기 0건`) ⇒ 직전 fire 가 「7d 에 동승시키라」고 남긴 권고가 **실제로 반영됐다** — 7d 가 착지하면 ⓐ 는 자동 해소된다.\n\n**baseline 은 이 창 전체를 판독·판정했으므로 tip 까지 전진한 상태 그대로 둔다**(claim 커밋이 이미 `backend:747f530e frontend:bc42c6b9` · docs `1434adf0` 로 전진시켰다)."
     }
+  },
+  {
+    "id": "rct_20260926-0001",
+    "toBeModelId": "tbm_feature-doc-docs-impl",
+    "status": "assessing",
+    "createdAt": "2026-09-26T00:14:36Z",
+    "updatedAt": "2026-09-26T00:14:36Z",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-26T00:14:36Z",
+      "asIs": {
+        "previousVersion": "backend:747f530eb1e5f59f1637b0a72ce4c8642c60f9a8 frontend:bc42c6b95619c148252d3143f5e40edd83048121",
+        "currentVersion": "backend:9c042064b7e7d21f2751441c675bff9058fb151d frontend:bc42c6b95619c148252d3143f5e40edd83048121"
+      },
+      "toBe": {
+        "previousVersion": "1434adf0c6407fd9fa208f7bcf7f9aa22b0da14d",
+        "currentVersion": "c0f050d873d2938689f75ababe385b81006bf968"
+      }
+    }
   }
 ]
