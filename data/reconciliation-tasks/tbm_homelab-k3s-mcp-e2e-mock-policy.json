@@ -1849,7 +1849,7 @@
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-09-26T01:53:50Z",
-    "updatedAt": "2026-09-26T02:06:54Z",
+    "updatedAt": "2026-09-26T02:20:00Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-26T01:53:50Z",
@@ -1871,6 +1871,47 @@
     "assessment": {
       "reason": "**작업 필요 — 불변식 1(지점 1:1)이 깨졌다. PR #226 이 `MCP_AUTH_DISABLED` 를 넣는 배포 변형을 새로 들이면서 정책 SSOT 의 지점 열을 갱신하지 않아, 정책이 자기 문면(`:187`)으로 요구하는 등재 의무가 미이행으로 남았다.**\n\n정의는 「정합 상태 = 불변식 1 ∧ 불변식 2. 어느 하나만 참인 것은 정합이 아니다」이고 「**미등재 모킹**도 … 모두 drift」라고 못박는다. 불변식 2 는 이번에 전건 성립하지만 불변식 1 이 한 지점만큼 거짓이므로 `action_required` 다.\n\n**⑴ 위반의 실체 — 선언 6 vs 실재 7, 차집합 정확히 1건.**\n독립 계측기(허용목록 지점 셀 파싱 ↔ 스캔 범위 `mock-exception:` 주석의 다음 줄 ID 해석)를 양 방향으로 돌려 `UNREGISTERED = ('MCP_AUTH_DISABLED', 'tests/k8s/kind/gate-broken-variant.yaml')` 단 하나, `ORPHAN = 0` 을 얻었다. 그 파일은 `:113/:204/:289` 에서 `MCP_AUTH_DISABLED=1` 을 **실제로 세 번 주입**하고, 창의 `ci.yml +21` 이 세 배포의 rollout 을 대기하므로 **CI 에서 도는 살아 있는 게이트 완화**다. 정책 `:187` 은 축자로 *\"역으로 게이트 완화를 **새로** 넣는 배포는 이 행의 지점 열에 자기를 추가해야 하고, 그 배포의 검증 대상이 인증이 아님을 위 표에 적어야 한다\"* 다. 그 파일 자신의 주석 `:111/:202/:286` 이 「**등재**: docs/e2e-mocking-policy.md」라고 적은 것은 **허위 자기신고**다.\n\n**⑵ 왜 이 회차가 전환점인가 — 5회 연속 고정 사유의 전건이 처음 참이 됐다.**\n`rct_20260921-0002`·`-0003`·`-0004`·`rct_20260925-0001` 은 매번 이 **같은 조항**을 검사하고 「새 변형이 `MCP_API_KEYS` 를 켜고 `MCP_AUTH_DISABLED` 를 두지 않았으므로 **의무 미발생**, 행 불변이 정합」으로 닫아 왔다. 이번 창은 그 전건(`MCP_AUTH_DISABLED` 를 새로 넣는 배포)을 **처음으로 충족**시켰다. 사유-문자열 diff 가 「의무 미발생」에서 「의무 발생·미이행」으로 뒤집히는 1줄이 곧 이 판정이다.\n\n**⑶ 초록이 공백을 서명한다 — 게이트 맹점을 양성으로 실측했다.**\n`scripts/check_mock_policy.py` 는 창 양 끝 **rc=0**(blob 동일)이고 `모킹 지점 6 · 미등재 0 · 고아 0` 이 불변, 움직인 것은 `표기 주석 6→9` 한 칸뿐이다. 이 초록은 게이트가 죽어서가 아니라 **R2 가 토큰 단위(파일×토큰 쌍이 아니다)**라서 이미 등재된 토큰을 쓰는 **새 파일이 원리적으로 안 보이기** 때문이다. 탐침으로 갈랐다 — ⒜ 신규 파일에 주석+등재 토큰 1지점을 심어도 **rc=0**(지점 6 불변) ⇒ 맹점 양성 확정 · ⒝ 선언된 지점의 주석 제거 rc=1 `[R4]` · ⒞ **지점 수는 6 그대로 두고 앵커만 실재하지 않는 파일로 위조** rc=1 `[R3]+[R4]` ⇒ 「세기만 하는 게이트」 가설 사망(실앵커를 해석한다) · ⒡ 창과 같은 종류의 무해한 산문 1줄 → rc=0 + **내 전 카운터 불변** ⇒ 창의 나머지 편집은 내 축에 하중 0. 탐침마다 `git archive | tar -x` 재추출, 끝에 BASE↔RESTORE 전 카운터 바이트 대조 ok.\n\n**⑷ 불변식 2 는 전건 거짓이므로 이 판정의 근거가 아니다(항별 실측).**\n**B1 위반 0** — baseline 이후 이 모델을 지목한 자매 task 3건은 전부 이력·귀속 서술이고, `소관` 셀은 #223 이 자매로 이전한 뒤 #226 이 행째 철거했다(새 인계 0). **B2 미비 0 · 착수 가능 행 0 · 재검토 도과 0** — 원장 0행이므로 공허하게 참(게이트 「차단 원장 0행 완비」). **B3 감소(1→0)는 위반이 아니다** — 정의가 요구하는 「해소 방향이 실제로 반영됐는지」를 문서 주장을 인용하지 않고 전건 독립 재현했다: `approval_gate_ac5.py` 가 여덟 경로 (1)`REJECTED` (2)`EXPIRED` (3)판정 없음 (4)409 (5)5xx (6)연결 실패 (7)`GATEKEEPER_BASE_URL` 미설정 (8)`GATEKEEPER_API_KEY` 미설정 + 읽기 대조군을 실제로 갖고, 주입기·불통 배포 두 매니페스트가 실재하고, C3 「제품 무변경」은 창의 `internal/`·`cmd/`·`main.go`·`k8s/`·`gatekeeper-fixture.yaml` 접촉 **0파일**로 성립한다 ⇒ 「예고만 하고 행이 사라진 조용한 영구 면제」가 **아니다**.\n\n**⑸ 중복 계상이 아니다 — 캐리어가 내 claim 50초 전에 닫혔다.**\n창을 만든 자매 `tbm_homelab-k3s-mcp-scenario-e2e/rct_20260926-0001` 은 claim 스냅샷(01:49:28Z)에 `executing` 이었으나 **assess 직전 재판독에서 `succeeded`(01:55:00Z)**, `attempts[0].execution.finishedAt=01:53:00Z` = 내 claim(01:53:50Z)보다 앞이고 `preparation.pullRequestUrl` = PR #226 = 내 창, `merged=true`. **덮개 PR == 내 창은 「창 무죄」만 증명하고 gap 닫힘을 증명하지 않는다** — 가르는 것은 잔여 N 이고 여기서는 **N=1**(미등재 지점 1건)이므로 캐리어가 필수인데 그 캐리어가 없다. 함대 열린 task 4건 중 이 지점을 덮는 것 0건, 대상 레포 열린 PR 은 #225 하나이며 파일 5개가 내 스캔 범위·SSOT 와 **교집합 0** ⇒ 덮을 PR·굶길 PR 동시 부재. 여기서 `no_action_needed` 로 닫으면 **이 미등재는 영구 미탐지**가 된다(게이트가 초록이고 지문은 이미 소비됐다).\n\n**유예(`recheckAfter`)를 택하지 않는 이유**: 유예는 「시간이 지나면 저절로 닫히는 차이」용이다. 이 차이는 롤아웃도 일시적 alert 도 아니고 **정책 문서에 두 줄을 적어야 닫히는 저작**이며 선행이 없다(캐리어 부재). 파킹하면 그 시각까지 이 모델이 후보에서 제외되는데, 탐침 ⒜ 가 「같은 종류의 다음 미등재도 게이트가 못 본다」를 실측했으므로 그동안 불변식 1 이 눈을 감는다 — 파킹 비용이 이득보다 크다.\n\n**planner 에게 넘기는 완료 기준(⒟ 슬라이스 형태 검증으로 실측했다 — 추측이 아니다).** 제안 수정을 실제로 적용해 게이트와 불변식이 닫히는지 쟀다: `docs/e2e-mocking-policy.md` **`:84`** 허용목록 `MCP_AUTH_DISABLED` 행의 **모킹 지점 셀에 `tests/k8s/kind/gate-broken-variant.yaml` 추가** ⇒ 게이트 **rc=0 · `모킹 지점 6→7` · 등재 5(상한 5) 불변**, 내 계측기 **미등재 0 · 고아 0 = 불변식 1 닫힘**. **등재 행을 늘리지 않으므로 R6 상한 래칫은 발화하지 않는다**(문서 `:170` 이 스스로 *\"배포가 늘었다고 예외가 는 것이 아니다 — 등재 행 수와 상한은 그대로 5다\"* 라고 적는다). 새 `대체 검증`도 불필요하다 — `:183` 이 *\"이 대체 검증은 두 지점 모두에 유효하다 … 게이트를 켠 배포가 하나라도 실재하면\"* 으로 같은 `:ci` 이미지 전 변형에 유효함을 이미 선언했고, 세 배포 모두 그 이미지를 쓴다.\n**게이트가 집행하지 않는 나머지 표면 4곳**(⒟ 이후 FAIL 0이므로 손으로 열거한다 — 같은 절이 「두 지점」을 전제하는 자리): `:163` 「등재가 선언한 **두 지점**」 · `:165` 하위 표 「지점 | 무엇을 태우는가」 **2행 → 3행**(이것이 `:187` 의 *\"위 표에 적어야 한다\"* 가 가리키는 표다) · `:170` 「**두 지점**은 같은 완화」 · `:183` 「이 대체 검증은 **두 지점 모두**에 유효하다」. 실측은 **세 파일 7지점**이다.\n**범위 밖(이 task 가 아니다)**: ⑴ as-is 지문의 `e2e-mock` 오탐 4건(정책 문서 **경로 문자열**이 패턴에 걸리는 것 — 정의가 「지문의 사각지대」로 예고했고 게이트의 `ID_TOKEN_RE` 는 `(?![A-Za-z0-9_])` 로 이미 제외한다. 지문 패턴 개정은 **tobe-modeler 소관**, 입력으로만 남긴다) ⑵ **게이트 R2 를 파일×토큰 쌍으로 승격하는 개정** — 탐침 ⒜ 가 맹점을 양성으로 찍었으니 이 슬라이스에 넣을 만하나, `scripts/check_mock_policy.py` 는 자매 모델 `tbm_homelab-k3s-mcp-comment-redundancy` 원장 2행(`:36`·`:430`)의 등재 대상이라 건드리면 그쪽 지문이 함께 움직인다 ⇒ **planner 가 사정할 사항으로 명시 이관**한다.\n\n**gap 은 0이 아니다(정의 요구)**: 차단 원장 **잔여 0행**이므로 재검토 시점 기준선은 없고, 다음 감지의 관측 기준선은 **미등재 지점 1건**(`gate-broken-variant.yaml`)의 해소 여부다. 재감지 경로는 확인했다 — 이 task 의 산출이 착지하면 `docs/e2e-mocking-policy.md` blob 이 움직여 **to-be 가 반드시 깨어난다**.\n",
       "assessedAt": "2026-09-26T02:04:16Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "정책 SSOT `docs/e2e-mocking-policy.md` 한 파일만 고쳐 불변식 1(지점 1:1)을 닫는다. PR #226 이 들인 `tests/k8s/kind/gate-broken-variant.yaml` 이 세 Deployment 에서 `MCP_AUTH_DISABLED=1` 을 실제로 주입하면서 허용목록 `:84` 의 지점 열에는 등재되지 않아 (선언 6쌍 vs 실재 7쌍, 차집합 정확히 1건) 그 파일 자신의 `# 등재:` 주석이 허위 자기신고로 남아 있다. 정책이 `:187` 에서 축자로 요구하는 두 가지 — ⑴ 이 행의 지점 열에 자기를 추가 ⑵ 그 배포의 검증 대상이 인증이 아님을 `:165` 표에 적기 — 를 그대로 이행하고, 그 결과 낡는 「두 지점」 산문 3곳(`:163`·`:170`·`:183`)을 「세 지점」으로 맞춘다. 대안으로 ⒜ 완화 자체를 제거(= gate-broken 변형에서 인증을 켠다)와 ⒝ 새 등재 행 신설을 저울질했으나, ⒜ 는 AC5 여덟 경로의 관측을 인증 설정에 종속시켜 정책의 「실환경 불가 사유」를 그대로 재생산하고, ⒝ 는 `:170` 이 스스로 적은 「배포가 늘었다고 예외가 는 것이 아니다 — 등재 행 수와 상한은 그대로 5다」와 R6 상한 래칫에 정면으로 어긋난다. 지점 열 확장이 정책 문면이 지정한 유일한 경로다. 가역성: 문서 1파일 5줄 편집이라 revert 로 완전 복원되고 제품 코드·매니페스트·CI 접촉 0바이트다.\n\n**완료 기준(이 범위 기준으로 4-4 가 판정한다)**: ⑴ `docs/e2e-mocking-policy.md` 만 변경된 PR 이 main 에 머지된다 ⑵ 머지 후 main 에서 `python3 scripts/check_mock_policy.py` rc=0 이고 출력이 `등재 5(상한 5) · 모킹 지점 7 · 실재 토큰 5 · 표기 주석 9 · 미등재 0 · 고아 0` ⑶ 독립 계측기(지침 §검증의 `inv1.py`)가 `declared=7 actual=7 · UNREGISTERED=[] · ORPHAN=[]` = **불변식 1 CLOSED** ⑷ 나머지 세 lint 게이트(`check_ac_mapping`·`check_comment_policy`·`check_doc_inventory`)와 `test_check_mock_policy.py` 13건이 전부 rc=0 ⑸ 필수 status `ci passed` success.\n\n**범위 밖(후속)**: ⒜ **게이트 R2 를 토큰 단위 → (파일×토큰) 쌍으로 승격** — 이번 미등재가 CI 에서 초록이었던 원인이고 탐침으로 맹점을 양성 확인했으나(신규 파일에 등재된 토큰을 심어도 rc=0), `scripts/check_mock_policy.py` 는 자매 모델 `tbm_homelab-k3s-mcp-comment-redundancy` 원장의 `ledger.md:36`(줄 주석 35줄, 지문 `501fc6ff7545`)·`:430`(docstring 123줄, 지문 `2b48777c236f`) 두 행의 등재 범위이고 `:36` 행이 축자로 「앵커를 더하면 … 이 행을 함께 재판정할 것(게이트가 R2 로 막는다)」 이라 적는다. 게다가 그 원장은 지금 형제가 점유 중이다(`rct_20260926-0002` executing/PR #225 · `rct_20260926-0003` assessing). 묶으면 이 슬라이스가 주석 축 재판정까지 떠안는다 — 별 task 로 분리한다. **차단 요인 원장 행으로는 등재하지 않는다**: 차단 요인의 정의는 「e2e 가 그 경로를 아예 밟지 못하는 원인」이고 게이트 감도는 e2e 경로를 막지 않는다. ⒝ as-is 지문의 `e2e-mock` 오탐 4건(정책 문서 **경로 문자열**이 패턴에 걸린다 — 게이트의 `ID_TOKEN_RE` 는 `(?![A-Za-z0-9_])` 로 이미 제외한다): 지문 패턴 개정은 **tobe-modeler 소관**이라 이 task 가 손대지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR 브랜치 `reconcile/rct_20260926-0002-mock-policy` 를 최신 main 에 리베이스하고 `gh pr view 225 --json mergeable` 로 자매 PR 과의 파일 교집합이 여전히 0 인지 재확인한다.",
+              "expectedOutcome": "리베이스 충돌 0 · #225 파일 5개(ledger.md · passes/2026-09-26-paths-1-2-slice-38.md · doc-tracker/2026-09.md · internal/github/github.go · internal/grafana/grafana.go)와 내 1파일의 교집합 0."
+            },
+            {
+              "seq": 2,
+              "action": "네 lint 게이트와 체커 자기 테스트를 로컬에서 전수 실행한다(python3 표준 라이브러리만 필요, 클러스터 불필요).",
+              "expectedOutcome": "`check_ac_mapping` rc=0 · `check_mock_policy` rc=0 + 첫 줄이 `등재 5(상한 5) · 모킹 지점 7 · 실재 토큰 5 · 표기 주석 9 · 미등재 0 · 고아 0` · `check_comment_policy` rc=0 · `check_doc_inventory` rc=0 · `test_check_mock_policy.py` 13건 OK."
+            },
+            {
+              "seq": 3,
+              "action": "독립 계측기(지침 §검증)를 돌려 (ID, 파일) 쌍 수준에서 불변식 1 을 양방향으로 재고, 음성 프로브로 감도까지 확인한다(지점 열에서 `gate-broken-variant.yaml` 만 되돌린 트리에서 재실행).",
+              "expectedOutcome": "본 트리 `declared=7 actual=7 · UNREGISTERED=[] · ORPHAN=[] · CLOSED` rc=0. 음성 프로브는 `UNREGISTERED=[('MCP_AUTH_DISABLED','tests/k8s/kind/gate-broken-variant.yaml')]` rc=1 — 계측기가 공전하지 않음을 증명한다."
+            },
+            {
+              "seq": 4,
+              "action": "PR #227 의 필수 status `ci passed` 가 success 가 될 때까지 기다린다(`gh pr checks`). `changes` 필터상 `docs/**` 만 바뀌므로 Go·kind 레인은 skip 되고 `lint` 잡이 판정한다.",
+              "expectedOutcome": "`ci passed` = success. lint 잡의 네 스텝 전부 초록."
+            },
+            {
+              "seq": 5,
+              "action": "squash 머지한다(레포는 linear history 강제).",
+              "expectedOutcome": "main 에 1커밋 착지, PR merged=true, 브랜치 삭제."
+            },
+            {
+              "seq": 6,
+              "action": "머지된 main 을 새로 받아 게이트와 독립 계측기를 다시 돌려 완료 기준 ⑵⑶⑷ 를 main 에서 재확인한다.",
+              "expectedOutcome": "main 에서 `모킹 지점 7 · 미등재 0 · 고아 0` rc=0 이고 계측기 CLOSED rc=0. `docs/e2e-mocking-policy.md` blob 이 `1658da5e…` 에서 움직여 다음 to-be 감지가 반드시 깨어난다."
+            }
+          ],
+          "plannedAt": "2026-09-26T02:20:00Z"
+        }
+      }
+    ]
   }
 ]
