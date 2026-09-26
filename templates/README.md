@@ -75,7 +75,10 @@ CI 게이트로 집행한다. 여백과 색은 여전히 보지 않는다.
 자체의 품질도 보지 않는다 — 오직 중복만 본다. 그리고 다른 유형들이 예외를 줄이는
 방향으로 기우는 것과 달리, **판단이 갈리면 주석을 남기는 쪽으로 기운다**: 중복
 주석의 비용은 작지만 유일한 지식을 지우면 회복되지 않는다는 비대칭 때문이다.
-언어 중립이며, 언어마다 달라지는 것은 주석 줄을 뽑는 패턴 슬롯뿐이다. 정책은 파일 하나가 아니라
+언어 중립이며, 언어별 주석 패턴은 슬롯이 아니라 파일 이름으로 고르는 고정부 언어군 표다. 범위도
+포함 목록이 아니라 **레포 전체 − 제외 세 부류**(① 복원 원본 ② 편집 불가 ③ 주석 문법 없음)이고, 레포
+고유 제외는 모델이 아니라 대상 레포 정책 본문의 `comment-scope-exclude` 블록에 둔다 — 포함 목록은 새
+디렉터리를 조용히 흘리고, 제외가 대상 레포에 있어야 범위 수정이 data plane의 PR로 끝나기 때문이다. 정책은 파일 하나가 아니라
 `docs/comment-policy/` 디렉터리에 본문(`README.md`)·원장(`ledger.md`)·판정 상세(`passes/`)로
 나눠 두고 to-be는 그 디렉터리의 트리 해시로 본다 — 패스가 쌓이며 한 파일에서 본문이 판정 기록에
 묻히던 것을 구조로 막는 고정부다.
@@ -129,7 +132,7 @@ data plane이 스스로 수렴시킬 수 있다. 판정기 헤더가 정책을 �
 | id | `tbm_<slug>-docs-impl` / `tbm_<slug>-scenario-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` / `tbm_<slug>-journey-mockup` / `tbm_<slug>-comment-redundancy` / `tbm_<slug>-pr-manual-approval` (slug = 소문자 레포명) |
 | metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> 테스트 시나리오 ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` / `<slug> 사용자 여정 ↔ 목업 1:1 정합성` / `<slug> 주석 비중복성 (복원 가능한 주석 제거)` / `<slug> PR 수동 승인 정합성` |
 | metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, test-scenario, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` / `[<slug>, journey, mockup, ux, consistency]` / `[<slug>, comments, documentation, consistency]` / `[<slug>, pr, review, manual-approval, ci, consistency]` (+ 필요 시 도구·언어 태그: maestro, playwright, go, python 등) |
-| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·scenario-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(글롭이면 `ls-tree` 지문, 복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60`. comment-redundancy는 as-is에 e2e-mock-policy와 같은 grep 지문(sha256)을 쓰되 주석 줄만 추출하고 `timeoutSeconds: 120`, to-be는 `docs/comment-policy` 트리 해시(부재는 `absent`)에 `timeoutSeconds: 60`. pr-manual-approval은 to-be에 정책 문서 blob hash(부재는 `absent`, `timeoutSeconds: 60`), as-is에 `judges=…;ruleset=…;surface=…;anchors=…` 라벨 조합(판정기 blob hash · GitHub API로 읽은 기본 브랜치 required check 집합 — 읽기 실패 시 비0 종료, `env.GITHUB_TOKEN` 참조 · 정책이 선언한 표면의 토큰형 grep 지문 · 앵커 실재 여부)에 `timeoutSeconds: 120` |
+| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·scenario-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(글롭이면 `ls-tree` 지문, 복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60`. comment-redundancy는 as-is에 레포 전체 − 제외에서 언어군별로 뽑은 주석 줄과 미분류 파일 경로의 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`, to-be는 `docs/comment-policy` 트리 해시(부재는 `absent`)에 `timeoutSeconds: 60`. pr-manual-approval은 to-be에 정책 문서 blob hash(부재는 `absent`, `timeoutSeconds: 60`), as-is에 `judges=…;ruleset=…;surface=…;anchors=…` 라벨 조합(판정기 blob hash · GitHub API로 읽은 기본 브랜치 required check 집합 — 읽기 실패 시 비0 종료, `env.GITHUB_TOKEN` 참조 · 정책이 선언한 표면의 토큰형 grep 지문 · 앵커 실재 여부)에 `timeoutSeconds: 120` |
 | lastObservedVersion/At | 등록 시 생략(첫 감지 sweep이 채운다) |
 
 ## 인스턴스화 절차
@@ -174,6 +177,13 @@ definition을 크게 개정할 일이 생기면 템플릿 구조로 수렴시키
 슬라이스 예산)은 버전 스크립트를 바꾸지 않고 definition만 고쳤다. 그래서 개정 자체는 트리거가 되지 않는다 —
 열린 task가 있는 모델은 그 슬라이스의 착지로 생기는 다음 감지가, 열린 task가 없는 모델은 수동 트리거가 개정을
 읽는다. 각 모델의 「개정 메모」가 이전의 완료 기준이고, 개정 전에 열린 task는 이전을 떠맡지 않는다.
+
+2026-09-26 comment-redundancy **범위 개정**(포함 목록 → 레포 전체 − 제외)도 같은 규칙을 따른다. 기존 모델의
+`asIs`(subPath 제거·versionScript 교체)와 definition만 고치고 id와 `lastObservedVersion`은 그대로 둔다 —
+전환 뒤 첫 감지에서 as-is 지문이 바뀐 것이 트리거가 되고, 그 task가 새로 범위에 든 파일의 판정과
+(필요하면) 대상 레포의 `comment-scope-exclude` 블록 신설, 그리고 원장 게이트가 실측 파일 집합을 계산하는
+범위를 새 규칙으로 맞추는 일을 맡는다. 새 범위의 줄 수가 크게 느는 것은
+예상된 것이다. 이 모델의 task가 열려 있는 동안은 전환하지 않는다(위와 같은 이유).
 
 ## doc-tracker 경로 해석
 

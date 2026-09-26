@@ -10,7 +10,7 @@
 
 **언어 중립**이다. 판정 기준은 특정 언어의 주석 문법이나 문서화 관례가 아니라
 "이 문장이 다른 곳에서 복원되는가"이며, 언어별로 달라지는 것은 주석 줄을 뽑는
-패턴(슬롯)뿐이다.
+패턴뿐이다 — 그 패턴도 모델마다 고르지 않고, 고정부의 언어군 표가 파일 이름으로 고른다.
 
 ## 정책 디렉터리 (고정부)
 
@@ -29,7 +29,7 @@ docs/comment-policy/
 
 | 파일 | 담는 것 | 담지 않는 것 |
 |---|---|---|
-| `README.md` | 복원 경로 넷 · 유지 대상 · 운영 규칙 · 판정 절차 · 범위 밖 · 지문 사각지대, `ledger.md`·`passes/`로 가는 링크 | 판정 이력, 개별 주석의 판정 근거 |
+| `README.md` | 복원 경로 넷 · 유지 대상 · 운영 규칙 · 판정 절차 · 범위 밖(과 그 기계판 `comment-scope-exclude` 블록) · 지문 사각지대, `ledger.md`·`passes/`로 가는 링크 | 판정 이력, 개별 주석의 판정 근거 |
 | `ledger.md` | 판정한 범위(파일 단위) · 그 범위의 현재 주석 줄 수 · 지문 · 판정 축 · 결과 요약의 표, 원장 읽는 법 | 정책 규칙, 제거표·유지 목록 같은 상세, **손으로 적은 합계·잔량**, 경위·병합 재측정 노트 |
 | `passes/<판정일>-<slug>.md` | 한 패스의 제거 근거표 · 유지 목록 · 판단이 갈려 남긴 것 · 이후의 증분 재판정 | 정책 규칙, 다른 패스의 기록 |
 
@@ -68,47 +68,82 @@ PR끼리도 반드시 충돌하고, 그 충돌을 피하려고 판정 슬라이�
 - **게이트를 둔다**: `ledger.md`를 파싱해 위 불변식(파일 소속 유일·전수, 줄 수·지문 일치, 판정 축 표기
   유효, 표·「읽는 법」 밖 산문 없음)을 CI에서 강제하고, 집계를 출력한다. 게이트는 미판정(`—`)을 실패로
   보지 않는다 — 판정하지 않았다는 사실을 행에 남기는 것은 정상이고, 그 행은 다음 판정 슬라이스가 가져간다.
+- 게이트가 실측 파일 집합을 계산하는 **범위는 as-is 지문과 같은 규칙**(「범위 (고정부)」: 레포 전체 − 제외,
+  같은 언어군, 같은 `comment-scope-exclude` 블록)을 쓴다. 게이트가 경로 목록을 따로 들고 있으면 둘이 갈라져,
+  지문에는 있는데 원장 불변식은 모르는 파일이 생긴다.
+
+## 범위 (고정부) — 레포 전체 − 제외
+
+범위는 **포함 목록이 아니라 "레포 전체에서 제외를 뺀 것"**이다. 포함 목록은 레포가 자라며 생긴 새
+디렉터리를 조용히 흘린다 — 그 안의 주석은 지문에 잡히지 않고, drift가 있어도 신호가 없다. 그리고
+등록 시점의 판단이 경계로 굳어 모델마다 기준이 달라진다(같은 `scripts/`가 어느 모델에선 대상, 다른
+모델에선 범위 밖이었다). 그래서 **무엇을 넣을지는 정하지 않고, 무엇을 뺄지만 원칙으로 정한다.**
+
+제외는 다음 세 부류뿐이다. 이 밖의 이유(예: "CI 스크립트라서", "설정 파일이라서")로는 빼지 않는다.
+
+| 부류 | 왜 빼는가 | 고정부가 빼는 것 | 대상 레포가 더 빼는 것 (예) |
+|---|---|---|---|
+| ① 복원 원본 | 저장소 문서는 판정의 **기준**이다. 대상에 넣으면 기준이 자기 자신을 심사한다 | `docs/`, 모든 `*.md` | 문서 역할을 하는 다른 트리 |
+| ② 편집 불가 | 지워도 재생성·재설치되어 판정할 의미가 없다 | 벤더·의존성·빌드 산출물 디렉터리, 락 파일, 머리 5줄에 `DO NOT EDIT`·`@generated` 표식이 있는 파일 | 표식 없는 codegen 출력 경로 |
+| ③ 주석 문법 없음 | 주석이라는 개념이 없어 패턴이 무엇을 잡든 오탐이다 | 바이너리(`grep -I`), 아래 NONE 언어군(JSON·CSV·키 등 데이터) | 테스트 픽스처 데이터 |
+
+- **고정부 제외**는 스크립트에 박혀 있고 유형 전체에 같다.
+- **레포 고유 제외**는 모델이 아니라 **대상 레포의 `docs/comment-policy/README.md`**에 둔다. 본문의
+  「범위 밖」 절 아래에 정보 문자열이 `comment-scope-exclude`인 코드 블록을 두고 한 줄에 ERE 하나를
+  적는다. 줄마다 어느 부류(①②③)인지를 블록 바로 위 산문에 적는다 — 부류를 댈 수 없는 제외는 둘 수 없다.
+
+  ````markdown
+  ```comment-scope-exclude
+  ^tests/e2e/fixtures/feeds/
+  ```
+  ````
+
+  모델이 아니라 대상 레포에 두는 이유: 범위가 낡았을 때의 수정이 **대상 레포 PR로 끝나야** data plane이
+  스스로 수렴시킬 수 있다(모델은 control plane만 고친다). 블록은 정책 디렉터리 안에 있으므로 블록이
+  바뀌면 to-be 트리 해시도 바뀌어 재감지가 돈다.
+
+### 언어군 (고정부)
+
+파일은 **이름으로** 언어군 하나에 든다(위에서부터 처음 맞는 군). 견본 접미사(`.example`·`.sample`·
+`.template`·`.tmpl`·`.tpl`·`.dist`·`.in`·`.j2`)는 떼고 본 확장자로 가른다.
+
+| 언어군 | 대표 파일 | 주석 줄 ERE |
+|---|---|---|
+| C | Go·Rust·Java·Kotlin·Swift·C/C++·C#·JS/TS(JSX 포함)·CSS/SCSS·proto, `go.mod`, `tsconfig*.json`·`.jsonc` | `^[[:space:]]*(//\|/\*\|\*([[:space:]]\|$)\|\{/\*)` |
+| HASH | Python·Ruby·Shell·Perl·R·YAML·TOML·Terraform/HCL·ini/cfg, `Makefile`·`*.mk`, `Dockerfile*`, `.gitignore`류, `.env*`, `requirements*.txt` | `^[[:space:]]*#` |
+| DASH | SQL·Lua·Haskell·Elm·Ada | `^[[:space:]]*--` |
+| MIXED | HTML·Vue·Svelte·Astro (마크업 안에 스크립트) | `^[[:space:]]*(<!--\|//\|/\*\|\*([[:space:]]\|$)\|\{/\*)` |
+| MARKUP | XML·SVG·plist·XSD/XSL | `^[[:space:]]*<!--` |
+| NONE | JSON·JSONL·CSV/TSV·TXT·avsc·스냅샷·골든·PEM/키·patch, `LICENSE`·`.nvmrc`류 | (스캔 안 함 — 제외 ③) |
+
+- 확장자로 못 가른 텍스트 파일은 **첫 줄이 `#!`이면 HASH**로 본다(확장자 없는 스크립트).
+- 그래도 남는 텍스트 파일은 **미분류**다. 미분류 파일은 경로가 지문에 들어가므로 생기거나 사라지면
+  감지가 돈다 — 범위가 레포 성장을 따라가지 못할 때 조용히 새지 않게 하는 장치다. 해소는 두 갈래다:
+  데이터·자산이면 대상 레포의 `comment-scope-exclude` 블록에 더하고(data plane이 PR로 끝낸다), 표에
+  없는 **새 언어**면 이 표를 고치는 템플릿 커밋이 필요하다(control plane — task는 필요를 보고만 한다).
+- 블록 주석 연속 줄은 `\*([[:space:]]|$)`로 잡는다. `\*[^/]`를 쓰지 않는 것은 포인터 역참조
+  (`*p = x`)와 셸 `case`의 `*)`를 오탐하기 때문이다.
+- `--`를 C 언어군에 넣지 않는 것은 CSS 커스텀 프로퍼티(`--bg-base`)와 PEM 경계 줄을 오탐하기 때문이다.
+  언어군이 파일 이름으로 갈리므로 `--`는 DASH 파일에만 적용된다.
+- 문자열 리터럴 안의 `//` 같은 오탐은 남는다. 결정적이기만 하면 무해하다 — 실제 판정은 task가 파일을
+  읽어서 한다.
 
 ## 슬롯 표
 
-대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다.
+대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다. 범위와 언어별 패턴은
+슬롯이 아니다(위 고정부).
 
 | 슬롯 | 의미 | 예 (session-platform / Go·TS) | 예 (단일 언어 Python) |
 |---|---|---|---|
 | `{{REPO}}` | owner/repo | `dlddu/session-platform` | `dlddu/econ-opinion-monitor` |
 | `{{SLUG}}` | id·이름용 소문자 레포명 | `session-platform` | `econ-opinion-monitor` |
-| `{{SCAN_SCOPE}}` | 판정 대상 소스 경로 목록 | `control-plane data-plane web/src web/e2e` | `src tests` |
-| `{{SCOPE_EXCLUDE}}` | 스캔 제외 ERE (생성 코드·벤더·서드파티) | `(^|/)(vendor|node_modules|dist)/\|\.pb\.go$` | `(^\|/)(\.venv\|migrations)/` |
-| `{{COMMENT_PATTERN}}` | 주석 줄 탐지 ERE (아래 언어군 표 참고) | `^[[:space:]]*(//\|/\*\|\*[^/])` | `^[[:space:]]*#` |
-| `{{DIRECTIVE_EXCLUDE}}` | 기계가 읽는 주석 — 지문·판정 **모두** 제외 | `//go:\|nolint\|eslint-\|@ts-\|검증 AC:\|mock-exception:` | `#!\|# noqa\|# type:\|# pragma` |
+| `{{DIRECTIVE_EXTRA}}` | 이 레포 고유의 기계가 읽는 주석(CI 파서 마커 등) — 지문·판정 **모두** 제외. 도구 공통 지시자(빌드 태그·린터·shebang·타입 체커 등)는 고정부에 이미 있다 | `검증 AC:\|mock-exception:\|mockup:` | `검증 시나리오:` |
+| `{{REPO_EXCLUDE_SEED}}` | 등록 시 대상 레포 `comment-scope-exclude` 블록에 들어가야 할 줄과 부류 — 모델이 아니라 **첫 task의 범위**로 넘긴다 | (없음) | `^tests/fixtures/` (③ 픽스처 데이터) |
 | `{{DOC_COMMENT_POLICY}}` | public 식별자 doc 주석·모듈 주석의 처리 수준 | 1줄 doc + 패키지 주석 유지 | docstring 유지, 본문 재진술은 제거 |
 | `{{KEEP_KINDS}}` | 이 레포에서 "복원 불가"로 인정하는 주석 종류 | 커널·런타임 제약, 온클러스터 검증 결과, 동시성 계약, 함정 | 외부 API의 문서화되지 않은 동작, 수치 근거 |
-| `{{OUT_OF_SCOPE}}` | 대상이 아닌 것 | 라이선스 헤더, 생성 코드, `docs/`의 마크다운 본문 | 〃 (대상에 맞게) |
 | `{{SIBLING_MODEL}}` | 같은 트리를 보는 자매 모델 [선택] | `tbm_session-platform-docs-impl` | — |
-| `{{SLICE_BUDGET}}` | 판정 슬라이스 하나가 가져갈 주석 줄 수의 목표치 | `400` (기본값) | `400` |
 | `{{INITIAL_STATE}}` | 등록 시점 현황 (주석 줄 수, 눈에 띄는 중복 유형) | 주석 1,680줄 / 전체 18.7k LOC | — |
 | `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` | 〃 |
-
-### 언어군별 `{{COMMENT_PATTERN}}` 기본값
-
-지문의 목적은 **결정성과 변경 민감도**이지 완전한 파서가 아니다. 오탐은 트리거를
-조금 늘릴 뿐 판정을 왜곡하지 않는다 — 실제 판정은 task가 파일을 읽어서 한다.
-
-| 언어군 | 주석 시작 | ERE |
-|---|---|---|
-| C 계열 (Go·Rust·Java·C/C++·C#·JS/TS·Swift·Kotlin) | `//`, `/* */` | `^[[:space:]]*(//\|/\*\|\*[^/])` |
-| 스크립트·설정 (Python·Ruby·Shell·Perl·R·YAML·Terraform) | `#` | `^[[:space:]]*#` |
-| SQL·Haskell·Lua·Ada | `--` | `^[[:space:]]*--` |
-| Lisp 계열·ini·어셈블리 | `;` | `^[[:space:]]*;` |
-| 마크업 (HTML·XML·Vue·Svelte) | `<!-- -->` | `^[[:space:]]*<!--` |
-| 혼합 레포 | 위의 합집합 | `^[[:space:]]*(//\|#\|--\|/\*\|\*[^/]\|<!--)` |
-
-주의:
-- `#`는 C 전처리기·shebang과, `*`는 포인터 역참조·곱셈 줄바꿈과 겹친다.
-  겹치는 것들은 `{{DIRECTIVE_EXCLUDE}}`나 `{{SCOPE_EXCLUDE}}`로 걸러낸다.
-- 문자열 리터럴 안의 `//` 같은 오탐은 남는다. 결정적이기만 하면 무해하다.
-- 줄 끝 주석(`x := 1 // 이유`)은 줄 시작 패턴에 걸리지 않는다. 그 층위까지 보려면
-  패턴에 `[^[:space:]].*//`를 더하되, 오탐이 크게 늘어난다는 점을 감수한다.
 
 ## 모델 JSON 골격
 
@@ -127,14 +162,13 @@ PR끼리도 반드시 충돌하고, 그 충돌을 피하려고 판정 슬라이�
     "versionScript": { "runtime": "bash", "code": "<to-be 스크립트>", "timeoutSeconds": 60 }
   },
   "asIs": {
-    "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main", "subPath": "{{SCAN_SCOPE}}" },
+    "dataSource": { "type": "github", "repository": "{{REPO}}", "ref": "main" },
     "versionScript": { "runtime": "bash", "code": "<as-is 스크립트>", "timeoutSeconds": 120 }
   }
 }
 ```
 
-- `{{SCAN_SCOPE}}`가 단일 디렉터리가 아니면 `asIs.dataSource.subPath`는 생략하고
-  스크립트가 경로 목록을 직접 다룬다(스크립트가 진실).
+- `asIs.dataSource`에는 `subPath`를 두지 않는다. 범위는 레포 전체 − 제외이고, 스크립트가 진실이다.
 - 주 언어 태그(`go`, `python`, `typescript` 등)를 tags에 추가해도 된다.
 
 ## versionScript
@@ -160,39 +194,107 @@ git rev-parse --verify --quiet "HEAD:docs/comment-policy" || echo "absent"
 
 **as-is** — 코드에 실재하는 주석의 지문. **트리 해시를 쓰지 않는다**: 주석과
 무관한 코드 변경에 반응하면 자매 모델(`{{SIBLING_MODEL}}`)과 중복 트리거되고
-노이즈가 커진다. 주석 줄만 뽑아 정규화·정렬·해시한다.
+노이즈가 커진다. 「범위 (고정부)」대로 레포 전체에서 제외를 빼고, 언어군별로 주석 줄만
+뽑아 정규화·정렬·해시한다. 슬롯은 `{{REPO}}`·`{{DIRECTIVE_EXTRA}}` 둘뿐이고 나머지는 **그대로** 붙인다
+(런타임에 공유 라이브러리가 없으므로 인라인 복사가 원본이다).
 
 ```bash
 #!/usr/bin/env bash
-# as-is = 판정 대상 주석의 지문. 주석이 추가·수정·삭제될 때만 값이 변한다.
+# as-is = 판정 대상 주석의 지문. 주석이 추가·수정·삭제되거나, 어느 언어군에도 들지 않는 텍스트 파일이
+# 생기고 사라질 때만 값이 변한다. 트리 해시를 쓰지 않으므로 주석과 무관한 코드 변경에는 반응하지 않는다.
+# 범위는 포함 목록이 아니라 「레포 전체 − 제외」다 — 새 디렉터리는 등록 없이 자동으로 스캔된다.
 # 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
 set -euo pipefail
 export LC_ALL=C
-PATTERN='{{COMMENT_PATTERN}}'
-DIRECTIVE='{{DIRECTIVE_EXCLUDE}}'
-HITS=$({ git ls-files -- {{SCAN_SCOPE}} | grep -vE '{{SCOPE_EXCLUDE}}' | sort \
-        | xargs -r grep -EH "$PATTERN" || true; } \
-  | grep -vE "$DIRECTIVE" \
-  | sed 's/[[:space:]]\+/ /g' | sed 's/^ //; s/ $//' \
-  | sort)
-echo "lines=$(printf '%s' "$HITS" | grep -c . || true) files=$(printf '%s' "$HITS" | cut -d: -f1 | sort -u | grep -c . || true)"
-printf '%s' "$HITS" | sha256sum | cut -d' ' -f1
+
+# ── 제외 (템플릿 고정부) ── 세 부류만 제외한다.
+#  ① 복원 원본: 저장소 문서는 판정의 기준이지 대상이 아니다.
+#  ② 편집 불가: 벤더·의존성·빌드 산출물·락 파일, 그리고 생성 표식(DO NOT EDIT · @generated)이 머리에 있는 파일.
+#  ③ 주석 문법이 없는 데이터·자산: 아래 NONE 언어군과 바이너리(grep -I).
+FIXED_EXCLUDE='^docs/|\.md$|(^|/)(vendor|node_modules|dist|build|target|\.venv|venv|__pycache__|\.next|coverage)/|(^|/)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml|go\.sum|uv\.lock|poetry\.lock|Cargo\.lock|Pipfile\.lock)$'
+# ── 제외 (대상 레포 소유) ── docs/comment-policy/README.md 의 ```comment-scope-exclude 블록(한 줄에 ERE 하나).
+# 레포 고유의 ①②③(예: codegen 출력 경로, 테스트 픽스처 데이터)은 모델이 아니라 이 블록에 적는다 —
+# 정책 문서를 고치는 대상 레포 PR만으로 범위가 수렴하게 하기 위해서다. 블록이 없으면 고정부만 적용한다.
+REPO_EXCLUDE=$(git show HEAD:docs/comment-policy/README.md 2>/dev/null \
+  | awk '/^```comment-scope-exclude[[:space:]]*$/{f=1;next} f&&/^```/{f=0} f&&NF' | paste -sd'|' - || true)
+EXCLUDE="$FIXED_EXCLUDE${REPO_EXCLUDE:+|$REPO_EXCLUDE}"
+# 블록의 ERE가 깨졌으면 빈 범위로 조용히 뭉개지 않고 실패한다(감지 오류로 드러나게).
+rc=0; printf '' | grep -E -- "$EXCLUDE" >/dev/null 2>&1 || rc=$?
+[ "$rc" -ne 2 ] || { echo "invalid ERE in comment-scope-exclude block" >&2; exit 1; }
+
+# ── 기계가 읽는 주석 ── 지문·판정 모두에서 제외. 앞부분은 도구 공통(고정부), 뒤는 레포 고유(슬롯).
+DIRECTIVE=':#!|//go:|nolint|eslint-|@ts-|prettier-ignore|/// <reference|istanbul ignore|c8 ignore|# ?noqa|# ?type:|# ?pragma|# ?pylint:|# ?fmt:|shellcheck |# ?syntax=|yaml-language-server:|{{DIRECTIVE_EXTRA}}'
+
+# ── 언어군 (템플릿 고정부) ── 파일명 ERE → 주석 줄 ERE. 한 파일은 위에서부터 처음 맞는 군 하나에 든다.
+# 견본 접미사(.example 등)는 떼고 본 확장자로 가른다(secret.yaml.example → # 언어군).
+SUF='(\.(example|sample|template|tmpl|tpl|dist|in|j2))?$'
+C_FILES='\.(go|rs|java|kt|kts|scala|groovy|gradle|swift|c|h|cc|cpp|hpp|cs|m|js|jsx|mjs|cjs|ts|tsx|mts|cts|css|scss|less|proto|jsonc)'"$SUF"'|(^|/)(go\.mod|go\.work|tsconfig[^/]*\.json|jsconfig[^/]*\.json|\.devcontainer/[^/]*\.json)$'
+C_PATTERN='^[[:space:]]*(//|/\*|\*([[:space:]]|$)|\{/\*)'
+HASH_FILES='\.(py|pyi|rb|sh|bash|zsh|fish|pl|r|ya?ml|toml|tf|tfvars|hcl|cfg|conf|ini|mk|dockerfile|nix|awk|sed)'"$SUF"'|(^|/)(Makefile|GNUmakefile|Dockerfile[^/]*|Containerfile|Caddyfile|\.gitignore|\.dockerignore|\.gitattributes|\.helmignore|\.editorconfig|\.env[^/]*|CODEOWNERS|requirements[^/]*\.txt)$'
+HASH_PATTERN='^[[:space:]]*#'
+DASH_FILES='\.(sql|lua|hs|elm|ada|adb)'"$SUF"
+DASH_PATTERN='^[[:space:]]*--'
+MIXED_FILES='\.(html?|vue|svelte|astro)'"$SUF"
+MIXED_PATTERN='^[[:space:]]*(<!--|//|/\*|\*([[:space:]]|$)|\{/\*)'
+MARKUP_FILES='\.(xml|svg|xhtml|plist|xsd|xsl)'"$SUF"
+MARKUP_PATTERN='^[[:space:]]*<!--'
+NONE_FILES='\.(json|jsonl|ndjson|csv|tsv|txt|avsc|snap|golden|pem|crt|key|pub|patch|diff|log|lock|sum|mod|map|http)'"$SUF"'|(^|/)(LICENSE[^/]*|NOTICE|AUTHORS|\.nvmrc|\.node-version|\.python-version|\.tool-versions|\.gitkeep|py\.typed)$'
+
+LIST=$(git ls-files | grep -vE "$EXCLUDE" | sort | xargs -r -d '\n' grep -Il '' 2>/dev/null | sort || true)
+GENERATED=$(printf '%s\n' "$LIST" | sed '/^$/d' | while IFS= read -r f; do
+  head -n5 -- "$f" | grep -qE 'DO NOT EDIT|@generated' && printf '%s\n' "$f"; done || true)
+[ -n "$GENERATED" ] && LIST=$(comm -23 <(printf '%s\n' "$LIST") <(printf '%s\n' "$GENERATED"))
+
+REST="$LIST"; OUT=""
+scan() {  # $1 = 파일명 ERE, $2 = 주석 줄 ERE(비면 스캔 없이 소거만)
+  local take; take=$(printf '%s\n' "$REST" | grep -E "$1" || true)
+  REST=$(printf '%s\n' "$REST" | grep -vE "$1" || true)
+  [ -n "$2" ] && [ -n "$take" ] && OUT+=$(printf '%s\n' "$take" | xargs -r -d '\n' grep -EH -e "$2" || true)$'\n'
+  return 0
+}
+scan "$C_FILES" "$C_PATTERN"
+scan "$HASH_FILES" "$HASH_PATTERN"
+scan "$DASH_FILES" "$DASH_PATTERN"
+scan "$MIXED_FILES" "$MIXED_PATTERN"
+scan "$MARKUP_FILES" "$MARKUP_PATTERN"
+scan "$NONE_FILES" ""
+# 확장자로 못 가른 텍스트 파일: shebang이 있으면 # 언어군, 없으면 미분류.
+SHEBANG=$(printf '%s\n' "$REST" | sed '/^$/d' | while IFS= read -r f; do
+  head -c2 -- "$f" | grep -q '^#!' && printf '%s\n' "$f"; done || true)
+if [ -n "$SHEBANG" ]; then
+  OUT+=$(printf '%s\n' "$SHEBANG" | xargs -r -d '\n' grep -EH -e "$HASH_PATTERN" || true)$'\n'
+  REST=$(comm -23 <(printf '%s\n' "$REST" | sed '/^$/d') <(printf '%s\n' "$SHEBANG"))
+fi
+# 미분류는 지문에 경로로 넣는다 — 범위가 레포 성장을 따라가지 못하면 조용히 새지 않고 감지가 돈다.
+# 해소는 두 갈래: 데이터·자산이면 대상 레포의 comment-scope-exclude 블록에, 새 언어면 템플릿 언어군에.
+UNCLASSIFIED=$(printf '%s\n' "$REST" | sed '/^$/d')
+
+HITS=$({ printf '%s' "$OUT" | sed '/^$/d' | grep -vE "$DIRECTIVE" || true; } \
+  | sed 's/[[:space:]]\+/ /g' | sed 's/^ //; s/ $//' | sort)
+UNCL_LINES=$(printf '%s\n' "$UNCLASSIFIED" | sed '/^$/d; s/^/unclassified:/')
+echo "lines=$(printf '%s' "$HITS" | grep -c . || true) files=$(printf '%s' "$HITS" | cut -d: -f1 | sort -u | grep -c . || true) unclassified=$(printf '%s' "$UNCLASSIFIED" | grep -c . || true)"
+{ printf '%s\n' "$HITS"; printf '%s\n' "$UNCL_LINES"; } | sed '/^$/d' | sort | sha256sum | cut -d' ' -f1
 ```
 
 - `grep -EH`는 줄 번호를 붙이지 않으므로 **같은 파일 안에서 주석이 이동해도 값이
   변하지 않는다**. 파일이 바뀌면 변한다 — 그때는 문맥이 실제로 달라진 것이다.
 - `sort -u`가 아니라 `sort`다. 같은 문구가 여러 곳에 복사되는 것 자체가 이 유형이
   보려는 신호이므로 중복을 접지 않는다.
-- 주석이 **하나도 없는** 상태의 지문은 빈 입력 sha256
-  `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`로 고정된다.
-- 마지막 줄만 버전이므로 `lines=…` 진단 줄은 값에 영향을 주지 않는다.
-- `{{DIRECTIVE_EXCLUDE}}`는 지문에서도 빼야 한다. 기계가 읽는 주석은 정책 대상이
-  아닌데, 지문에 넣으면 빌드 태그 하나가 늘 때마다 재평가가 돈다.
+- 해시 입력은 주석 줄과 `unclassified:<경로>` 줄의 합이다. 둘 다 **하나도 없는** 상태의 지문은 빈 입력
+  sha256 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`다 — 정상 레포에서 이 값이
+  나오면 범위가 무너진 것이다.
+- 감지기는 **stdout 전체**를 저장·비교한다. 진단 줄(`lines=… files=… unclassified=…`)도 비교에 들어가지만
+  세 수는 해시 입력에서 파생되므로 해시와 따로 움직이지 않는다.
+- 레포 고유 제외 블록의 ERE가 깨졌으면 **비0으로 종료**한다. 빈 범위의 지문으로 조용히 떨어지면 모든
+  주석이 한꺼번에 사라진 것처럼 보이기 때문이다.
+- 기계가 읽는 주석은 지문에서도 뺀다. 정책 대상이 아닌데 지문에 넣으면 빌드 태그 하나가 늘 때마다
+  재평가가 돈다. 고정부 목록에 없는 도구 지시자가 대상 레포에 쓰이면 `{{DIRECTIVE_EXTRA}}`에 더한다.
 
-인스턴스화할 때 대상 레포에서 한 번 돌려 세 가지를 확인한다 — 같은 트리에서 **두 번
+인스턴스화할 때 대상 레포에서 한 번 돌려 네 가지를 확인한다 — 같은 트리에서 **두 번
 돌려 값이 같은가**(결정성), **코드만 바꿨을 때 값이 그대로인가**(무관한 변경에
-둔감), **주석만 바꿨을 때 값이 달라지는가**(민감). 세 번째가 깨지면 패턴이 그 언어의
-주석을 잡지 못하고 있다는 뜻이다.
+둔감), **주석만 바꿨을 때 값이 달라지는가**(민감), 그리고 **`unclassified=0`인가**. 세 번째가
+깨지면 언어군 표가 그 언어의 주석을 잡지 못하고 있다는 뜻이다. 네 번째가 0이 아니면 등록 전에 그
+파일들을 부류(①②③)로 가르거나 언어군을 더해 두고, 레포 고유 제외는 `{{REPO_EXCLUDE_SEED}}`로 적는다.
 
 ## definition 본문 템플릿
 
@@ -207,11 +309,11 @@ printf '%s' "$HITS" | sha256sum | cut -d' ' -f1
 ## 무엇이 "맞는 상태"인가 (SSOT)
 - **복원 경로는 넷**이다: ① 코드 자체 ② 저장소 문서 ③ PR 제목·본문·리뷰 코멘트 ④ 커밋 메시지. 이 중 어디서든 확인되는 내용은 주석의 자리가 아니다.
 - **정책의 SSOT**는 `docs/comment-policy/` 디렉터리다. 본문 `README.md`에 유지 대상({{KEEP_KINDS}})과 doc 주석 수준({{DOC_COMMENT_POLICY}}), 기계가 읽는 주석 목록을 두고, 판정 원장은 `ledger.md`, 판정 상세는 `passes/<판정일>-<slug>.md`에 둔다. 세 역할을 한 파일에 섞지 않는다.
-- **실제 상태의 SSOT**는 {{SCAN_SCOPE}} 범위의 주석이다.
+- **실제 상태의 SSOT**는 레포 전체에서 제외 세 부류(① 복원 원본 ② 편집 불가 ③ 주석 문법 없음)를 뺀 범위의 주석이다. 레포 고유 제외는 정책 본문의 `comment-scope-exclude` 블록에 부류와 함께 둔다(범위 규칙의 SSOT는 reconciler `templates/comment-redundancy.tbm.md`의 「범위 (고정부)」 절).
 - 정합 상태 = 그 주석들 중 **복원 가능한 내용을 담은 것이 없음**.
 
 ## 유지 대상 (이 밖은 제거 후보)
-- **기계가 읽는 주석** — 빌드 태그, 린터 지시자, CI 파서 마커. 정책 대상이 아니며 판정에서 제외한다: {{DIRECTIVE_EXCLUDE}}
+- **기계가 읽는 주석** — 빌드 태그, 린터 지시자, CI 파서 마커. 정책 대상이 아니며 지문·판정 모두에서 제외한다: 도구 공통 지시자(템플릿 고정부) + {{DIRECTIVE_EXTRA}}
 - **doc 주석** — {{DOC_COMMENT_POLICY}}
 - **복원 불가능한 지식** — {{KEEP_KINDS}}
 
@@ -230,15 +332,15 @@ printf '%s' "$HITS" | sha256sum | cut -d' ' -f1
 
 ## 추적 방식 (요약)
 - **to-be** = `docs/comment-policy/`의 tree hash. 없으면 `absent`. 정책 본문·원장·판정 상세가 바뀔 때만 변한다.
-- **as-is** = {{SCAN_SCOPE}}에서 주석 줄만 추출·정규화·정렬한 sha256 지문. 트리 해시를 쓰지 않으므로 주석과 무관한 코드 변경에는 반응하지 않고<!-- [선택] --> (자매 모델 `{{SIBLING_MODEL}}`과의 중복 트리거 회피)<!-- --> 주석이 추가·수정·삭제될 때만 변한다.
+- **as-is** = 레포 전체 − 제외에서 언어군별로 주석 줄만 추출·정규화·정렬하고 미분류 파일 경로를 더한 sha256 지문. 트리 해시를 쓰지 않으므로 주석과 무관한 코드 변경에는 반응하지 않고<!-- [선택] --> (자매 모델 `{{SIBLING_MODEL}}`과의 중복 트리거 회피)<!-- --> 주석이 추가·수정·삭제되거나 미분류 파일이 생기고 사라질 때만 변한다. 새 디렉터리는 등록 없이 자동으로 범위에 든다.
 
 ## 초기 상태 메모 (등록 시점 {{NOW_ISO}})
-{{INITIAL_STATE}} <!-- 지침: 주석 줄 수와 전체 LOC, 눈에 띄는 중복 유형(문서 재진술·선언 재진술·작업 흔적 등)을 남긴다. 격차가 크면 "첫 task는 (1) `docs/comment-policy/` 정비 (2) 기존 주석의 복원 가능성 판정을 다루게 된다 — 큰 초기 격차는 예상된 것"을 포함 -->
+{{INITIAL_STATE}} <!-- 지침: 주석 줄 수와 전체 LOC, 눈에 띄는 중복 유형(문서 재진술·선언 재진술·작업 흔적 등)을 남긴다. 격차가 크면 "첫 task는 (1) `docs/comment-policy/` 정비 (2) 기존 주석의 복원 가능성 판정을 다루게 된다 — 큰 초기 격차는 예상된 것"을 포함. {{REPO_EXCLUDE_SEED}}가 있으면 "첫 task가 README.md에 `comment-scope-exclude` 블록으로 옮긴다"와 그 줄·부류를 적는다 -->
 
 ## 범위 밖 / 비고
-- {{OUT_OF_SCOPE}}는 대상이 아니다.
+- 범위 밖은 「범위 (고정부)」의 제외 세 부류와 대상 레포 `comment-scope-exclude` 블록뿐이다. 그 밖의 경로(CI 워크플로·배포 매니페스트·검사 스크립트·설정 파일 포함)는 주석 문법이 있으면 대상이다.
 - **문서·커밋 메시지 자체의 품질**은 이 모델이 보지 않는다. 다만 "주석을 지우려면 원본을 고쳐야 한다"는 판정은 그 원본을 고치는 작업을 낳을 수 있고, 그건 정상이다.
 - **주석의 정확성**(코드와 맞는가)도 이 모델의 판정 표면이 아니다. 이쪽은 중복만 본다 — 다만 되풀이된 주석이 낡아 틀려 있으면 그것은 제거 근거를 강화한다.
 - 특정 주석이 "정말 복원 가능한지"의 최종 판단은 각 task(planner)의 몫이고, 이 모델은 복원 경로 넷과 유지 대상이라는 **판단 기준**만 고정한다.
-- 지문의 사각지대: `{{COMMENT_PATTERN}}`에 걸리지 않는 주석(줄 끝 주석, 언어 특유 문법)은 보이지 않는다. 그런 주석이 늘어나는 레포라면 패턴을 넓히는 것을 다음 task에서 다룬다.
+- 지문의 사각지대: 언어군 패턴에 걸리지 않는 주석 — 줄 끝 주석(`x := 1 // 이유`), Python docstring, 문자열 안의 주석 형태 — 은 지문에 보이지 않는다. 판정(task)은 파일을 읽으므로 볼 수 있지만, 그것만 바뀌면 감지가 돌지 않는다. 줄 끝 주석까지 보려면 언어군 표를 고치는 템플릿 커밋으로 다룬다(오탐이 크게 늘어난다는 점을 감수).
 ```
