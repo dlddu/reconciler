@@ -1640,7 +1640,7 @@
     "toBeModelId": "tbm_econ-opinion-monitor-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-09-26T07:05:40Z",
-    "updatedAt": "2026-09-26T08:20:03Z",
+    "updatedAt": "2026-09-26T09:00:00Z",
     "trigger": {
       "source": "manual",
       "detectedAt": "2026-09-26T07:05:40Z",
@@ -1698,6 +1698,41 @@
           "reviewedAt": "2026-09-26T08:06:32Z",
           "reason": "거부 — 준비물이 유효하지 않다. PR #151 은 열려 있고 base 최신(`compare main...4f7ec13` → behind_by 0 · ahead_by 2 · 충돌 없음 · mergeable MERGEABLE)이며 롤백도 squash 1커밋 revert 로 가역이지만, 대상 레포의 필수 status 두 개 중 **`required` 가 FAILURE** 다(ruleset `rules/branches/main`: `required` + `review/manual-approval`. 후자는 계획 예측대로 자동 success 라 사람 승인 게이트는 열려 있다). 머지를 막는 것은 사람 승인이 아니라 CI 다 — head `4f7ec13`, run 36228371033 attempt 1 의 `ci / e2e` 가 `ac3-6-sentiment-ratio-viz.spec.ts:80` 에서 `renderedAnalyzed + unanalyzedWidth` = **100.1** (기대 100, 허용 ±0.05) 로 실패했다(94 passed / 1 failed). 이 실패는 이 PR 이 **건드리지 않은** 스펙에서 나왔고, 갈아끼운 파이프라인 Gold 의 KR 분포가 7분모라 (미분석 2/7 → 28.6 · 분석 5/7 이 4분류로 2:1:1:1 → 28.6+14.3×3 = 71.5) 세그먼트 폭이 소수 첫째 자리로 각각 올림되며 합이 결정적으로 100.1 이 되는 **산술**이다. 픽스처 피드·페이크 LLM 응답이 커밋돼 있어 배치가 결정적이므로 매 실행 같은 값이 나온다 — executionGuide 가 적어 둔 flake 갈래(`rerun --failed`)로 초록이 되지 않는다. 계획의 완료 기준 ⑴(`ci / e2e` 초록)이 지금 상태로는 닫히지 않으므로 실행 허가를 낼 수 없다.",
           "comment": "재계획 시 고칠 것.\n\n1) **핵심 — 새 Gold 분포가 기존 렌더 단정을 깬다.** `ac3-6-sentiment-ratio-viz.spec.ts:80` 의 「바 전체가 100% 를 채운다」(`toBeCloseTo(100, 1)`, 허용 ±0.05)가 7분모 분포에서 100.1 로 결정적으로 깨진다. 둘 중 하나로 닫을 것: ⓐ **corpus 를 고쳐 분모를 맞춘다** — KR 축 레코드 수를 세그먼트 폭이 소수 첫째 자리에서 정확히 합쳐지는 값(예: 분모 10·20·25, 미분석 포함)으로 잡아 `28.6+14.3×3` 같은 올림 누적이 생기지 않게 한다. 계획이 이미 `agg_global_desk.rss.xml` 로 corpus 를 늘리고 있으므로 같은 자리에서 조정 가능하고, 3축 비교(AC3.7)의 축별 상위 비율 단정도 함께 재계산해 두면 된다. ⓑ corpus 를 그대로 두려면 `ac3-6` 의 (3) 단정이 왜 이 분포에서 참일 수 없는지를 근거로 스펙 수정까지 이 task 범위에 넣고, 그 수정이 **어서션 완화가 아니라** 렌더 계약의 재정의임을 계획에 적을 것 (모델 정의의 「어서션 단순화를 위한 치환」 불허와 부딪히지 않게). ⓐ 를 권한다.\n\n2) **검증 범위가 좁았다.** preparation 은 `/api/compare`·`/api/dashboard`·`/api/sentiment`·`/api/trend` 를 로컬 실측하고 브라우저 층은 `ci / e2e` 에 위임했는데, 바꾼 것이 **서빙 입력 분포 전체**라 영향면은 손댄 3개 스펙(ac3-7·ac3-8·aggregation-5)이 아니라 **Gold 를 읽는 모든 스펙**이다. 재준비 시 PR 전에 `make e2e` 전건을 한 번 돌리거나, 최소한 Gold 분포에 단정을 거는 스펙 목록을 열거해 각각 새 분포로 재계산한 기대값을 근거로 남길 것. (`/api/sentiment` 가 합 1.0 인 것과 **렌더된 폭의 반올림 합이 100** 인 것은 다른 명제다 — 이번 실패가 정확히 그 틈이다.)\n\n3) **보고 정합성(작은 것).** preparation.notes 는 「14파일」이라 적었으나 PR 실물은 **21파일**이다(`gh pr diff 151 --name-only`). 재계획 시 기록과 실물을 맞출 것.\n\n유효한 것은 그대로 재사용 가능: base 최신·충돌 0, `review/manual-approval` 자동 success(사람 승인 불필요), 롤백 경로(squash 1커밋 revert, `deploy/` 는 주석뿐이라 프로덕션 무영향), 그리고 `.github/workflows/ci.yml` 을 건드리므로 push 에 `workflows:write` 가 필요하다는 주의사항."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**재계획(2차) — 범위·산출물은 1차와 같고, 거부 사유 두 개를 완료 기준으로 승격해 닫았다.** R3 한 행을 문서로 닫지 않고 배선으로 닫는다: 서빙 오버레이의 Gold 입력을 커밋된 픽스처 ConfigMap(`gold-fixtures`)에서 **집계 배치가 같은 클러스터에서 쓴 Gold**로 갈아끼우고, 그에 딸린 GOLD-01~03 등재와 픽스처 2파일을 제거해 GOLD 카테고리를 폐기한다. 1차 거부는 계획의 방향이 아니라 **분모**를 지적했다 — 새 Gold의 KR 축 미분석 비율 2/7 = 0.2857…이 소수 첫째 자리에서 떨어지지 않아, 이 PR이 **건드리지 않은** `ac3-6-sentiment-ratio-viz.spec.ts:80`의 「바가 100%를 채운다」가 반올림 누적으로 100.1이 되어 결정적으로 빨갰다. 검토자가 권한 갈래 ⓐ(corpus 수정)를 택했다: **KR 축에 본문 없는 기사 한 건**을 더해 전체 8건 / 미분석 3건(0.375)으로 만든다. 분모를 8로 만드는 갈래는 다섯 있지만 미분석만 `subject_trend`를 전혀 건드리지 않아(미분석 레코드는 서술 대상을 남기지 않는다) 정규화 단정의 값이 불변으로 유지된다 — 실제로 `mixed` 분류를 더하는 안은 `aggregation-1:43`을 깨서 실측으로 폐기했다. **어서션은 약화시키지 않았다**(spec 무수정). 둘째 거부 사유(검증 범위가 좁았다)는 **클러스터 없이 spec을 직접 돌리는 하네스**로 닫았다 — Gold를 읽는 spec 11개 / 41 단정을 고치기 전(40 pass / 1 fail = CI와 같은 자리) · 고친 뒤(41 pass / 0 fail) 양쪽에서 돌렸다. 준비 중 자매 PR #153이 착지해 등재 기준선이 44→51로 움직였으므로 **그 위로 리베이스하고 완료 기준의 절대 수를 다시 쟀다**. **완료 기준(이 범위 기준으로 판정할 것)**: ⑴ PR #151이 main에 착지하고 `ci / e2e`가 초록이다 ⑵ 착지 후 정책 문서의 열린 원장 행이 0이고 소관 칸이 없다 ⑶ 등재 == 코드 1:1(등재 48지점 / 30파일 / 2종 · 코드 48 / 30 · 고아 0 · 미등재 0)이고, 절대 수가 자매 착지로 움직이면 **등식**(지점 −3 · 파일 −2 · GOLD 3→0 · 미등재 불변)으로 판정한다 ⑷ `tests/e2e/fixtures/gold`가 없다. **범위 밖**: #150이 들인 7지점의 등재는 자매 #153이 이미 끝냈으므로 1차 계획의 그 「범위 밖」 항목은 소멸했다. 다중 버킷 x축 렌더(두 번째 서빙 인스턴스 필요)는 여전히 범위 밖이다. 🔴 **현재 `required`가 빨간 이유는 이 PR이 아니다**: 2026-09-26 08:44 이후 계정 전역 GitHub Actions 과금 차단으로 잡이 스텝을 하나도 실행하지 못한 채 실패한다(자매 PR #155의 실패 run에 같은 annotation, 경계 08:44:19/08:44:21). 사람이 Billing을 풀어야 하는 외부 선결이므로, 그 상태에서는 `failed`로 닫지 말고 파킹한 뒤 **같은 sha를 `gh run rerun`**하라고 지침에 못박았다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #151의 필수 status가 빨갛다면, 그것이 **계정 과금 차단**인지 먼저 가린다. 실패 잡의 `steps`가 빈 배열이고 check-run annotation이 `The job was not started because recent account payments have failed…`이면 과금 차단이다(명령은 executionGuide의 「먼저 읽을 것」 절).",
+              "expectedOutcome": "과금 차단이면 계획 결함 0이므로 머지·재계획을 하지 않고 파킹한다(사람이 Billing을 푼 뒤 같은 sha를 `gh run rerun`). 차단이 아니면 step 2로 간다."
+            },
+            {
+              "seq": 2,
+              "action": "PR #151의 필수 status(`required`·`review/manual-approval`)가 초록인지 확인한다. 특히 `ci / e2e`(kind) — 이 변경의 본체 검증이다. `review/manual-approval`은 `check-data-format-change.py 5301dd6 HEAD` → `format_changed=false`라 자동 success여야 한다.",
+              "expectedOutcome": "`required`=SUCCESS, `mergeStateStatus`가 BLOCKED가 아니다. e2e 잡 로그에 `[e2e] OK: pipeline Gold (aggregation root) -> in-cluster serving -> API + browser`가 찍히고, `ac3-6`이 통과한다(렌더 합이 100.1이 아니라 100.0)."
+            },
+            {
+              "seq": 3,
+              "action": "PR #151을 squash 머지한다(브랜치 `reconcile/rct_20260926-0002-econ-mock-policy`, head `85d7650`). 머지 커밋에 커밋을 더 얹지 않는다.",
+              "expectedOutcome": "main tip이 이 PR의 squash 커밋이 되고 브랜치가 정리된다."
+            },
+            {
+              "seq": 4,
+              "action": "착지한 main에서 완료 기준 네 항을 직접 재계측한다(명령은 executionGuide의 「완료 기준 재계측」 절). ⑶은 절대 수와 **등식** 두 형태로 함께 잰다.",
+              "expectedOutcome": "열린 원장 행 0 · 소관 칸 없음 · 등재 48/30/2 == 코드 48/30(고아 0 · 미등재 0) · 코드 `GOLD-` 0건 · `tests/e2e/fixtures/gold` 없음. 절대 수가 어긋나면 등식(−3 지점 / −2 파일 / GOLD 3→0)으로 판정한다."
+            },
+            {
+              "seq": 5,
+              "action": "수렴 판정을 기록한다. 네 항이 모두 참이면 succeeded, 하나라도 아니면 무엇이 어긋났는지와 함께 failed로 닫는다. 단 step 1의 과금 차단은 failed가 아니다.",
+              "expectedOutcome": "task가 계획 범위 기준으로 닫힌다. 범위 밖 잔여(다중 버킷 x축 렌더)는 실패가 아니라 다음 감지의 입력으로 남는다."
+            }
+          ],
+          "plannedAt": "2026-09-26T08:55:00Z"
         }
       }
     ]
