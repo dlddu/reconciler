@@ -12751,7 +12751,7 @@
   {
     "id": "rct_20260926-0002",
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-redundancy",
-    "status": "reviewing",
+    "status": "review_rejected",
     "createdAt": "2026-09-26T00:49:05Z",
     "updatedAt": "2026-09-26T01:34:54Z",
     "trigger": {
@@ -12857,6 +12857,12 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/225",
           "preparedAt": "2026-09-26T01:31:15Z",
           "notes": "base `ed0ff06`(슬라이스 37/#224 착지 직후) · head `bc018e4` · 5파일 +206/−15. 제거 7줄 · 추가 0줄: grafana.go 112–116→1줄 · 166–167→1줄 · github.go 112–114→1줄. 원장 두 행 갱신(39→34 fp `118864349507`→`f75f45a0d1e6` · 43→41 fp `86180f41bf6a`→`ee6012b9b813`), 마커 `판정-합계` 3307→3300 · `복원경로①②-잔량` 63→61, 두 행 모두 ①②·③④ 두 앵커를 새 지문으로 재앵커. 새 패스 문서 `passes/2026-09-26-paths-1-2-slice-38.md` 와 그에 따른 `docs/doc-tracker/2026-09.md` 94/94→95/95(정책 54→55). 검증 전부 로컬 완료: 게이트 3종 rc=0(헤더 `판정 대상 주석 3300줄` · `복원경로 ①② 판정 6/67행(잔량 61)` · ③④ 67/67 유지) · `go build`/`vet` rc=0 · `go test ./...` 12패키지 ok FAIL 0 · **비주석 diff 0줄** · 음성 프로브 4종 전부 rc=1(잔량 61→62 ⇒ R11 · #8 ①② 앵커 옛 지문 ⇒ R11 · 합계 3300→3307 ⇒ R4 · #10 ③④ 앵커 옛 지문 ⇒ R9). 필수 status 는 ruleset 실측 `ci passed` 하나뿐이고 사람 승인 status 가 없어 **무인 착지**다. PR 직전 재실측: base 이후 착지한 자매 0건 · 열린 PR 0건(이 PR 뿐)."
+        },
+        "review": {
+          "status": "rejected",
+          "reviewedAt": "2026-09-26T01:37:30Z",
+          "reason": "거부 — 유일한 필수 status `ci passed` 가 PR head `bc018e4` 에서 **FAILURE** 다(2026-09-26T01:34:01Z, run 36208682725). 원인은 `integration tests` 잡의 `resource_generic_ac5.py` 한 건: `previous terminated container \"boom\" in pod \"crashloop-fixture-...\" not found` — crashloop 픽스처가 아직 한 번도 종료되지 않은 시점에 `previous=True` 로그를 물은 **픽스처 경합**이고, 이 PR 이 건드리지 않는 테스트다. 계획 자체의 결함은 찾지 못했다: PR 은 OPEN·MERGEABLE, behind_by 0, merge_base 가 main tip `ed0ff06` 그대로여서 베이스 이동·충돌 없음이고, `internal/` diff 를 직접 떠 보니 **주석 제거 7줄 · 추가 3줄 · 비주석 0줄**로 plan.steps 2~4 와 정확히 일치했다. executionGuide 도 완료 기준 C1~C5·음성 프로브·롤백(머지 전 브랜치 폐기 / 머지 후 revert 1커밋)을 명시하고 자매 착지 시 실측 재고정 절차까지 예고해 위험 통제와 불가역성은 문제가 없다(riskLevel low). 그러나 승인은 곧 머지 허가인데 필수 status 가 빨간 상태로는 executor 가 착지할 수 없어, 「CI 통과」 전제가 무너진 것으로 보고 거부한다.",
+          "comment": "계획 내용은 고칠 것이 없다 — 재계획이 아니라 **필수 status 를 초록으로 만든 뒤 재제출**이 필요하다.\n\n1. **`ci passed` 를 초록으로.** 실패는 `integration tests` 의 `resource_generic_ac5.py` 단건이고 `previous terminated container \"boom\" ... not found` — crashloop 픽스처가 첫 종료를 하기 전에 `previous` 로그를 물은 경합이다. 직전 15개 CI run 중 실패는 이 run 하나뿐이라 일시적 flake 로 보인다. 실패 잡(108310569447) 또는 run 36208682725 을 **재실행**하고, head `bc018e4` 에 붙은 `ci passed` 의 최신 결론이 `success` 인지 확인한 뒤 status 를 `planned` 로 돌려 검토를 다시 받으면 된다. 재실행해도 같은 자리에서 반복 실패하면 flake 가 아니라 픽스처 대기 조건 문제이므로, 그때는 이 슬라이스와 분리해 별도 task 로 다뤄야 한다(이 PR 의 비주석 diff 가 0줄이라 인과가 없다).\n\n2. **자매 PR #226 과의 겹침을 착지 직전에 재실측.** #226(`reconcile/rct_20260926-0001-opus5`, head `f0329dac`)이 열려 있고 `docs/comment-policy/ledger.md` 와 `docs/doc-tracker/2026-09.md` **두 파일을 이 PR 과 공유**한다. 지금은 behind_by 0 으로 무해하지만 #226 이 먼저 착지하면 원장 마커(`판정-합계` 3300 · `복원경로①②-잔량` 61)와 doc-tracker 총계(95/95)가 **충돌 없이 조용히 낡는다**. executionGuide 1~2·4번이 이 경우의 실측 재고정을 이미 명시하고 있으니 절차를 새로 쓸 필요는 없고, 재제출 시점에 `ed0ff06..origin/main` 을 다시 세어 재고정이 필요한지만 판정하면 된다.\n\n그 밖에 정합성·범위·롤백·불가역성에서 지적할 것은 없었다."
         }
       }
     ]
