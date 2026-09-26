@@ -9413,7 +9413,7 @@
   {
     "id": "rct_20260926-0011",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-26T13:16:51Z",
@@ -9427,7 +9427,7 @@
       }
     },
     "createdAt": "2026-09-26T13:16:51Z",
-    "updatedAt": "2026-09-26T14:06:57Z",
+    "updatedAt": "2026-09-26T14:15:23Z",
     "stateSummary": {
       "asIs": "모델 `asIs.versionScript` 를 창 **양 끝에서 직접 재실행**(runtime bash, rc=0 · 각 1회):\n- base `93fcc50`: `lines=2840 files=193 unclassified=0` / `docstring=867/43 eol=93/29 unparsed=0` / `86719bca…`\n- head `c8a1de2`: `lines=2840 files=193 unclassified=0` / `docstring=886/43 eol=93/29 unparsed=0` / `86043ff7…`\n\n두 값이 trigger 의 `previousVersion`/`currentVersion` 과 **바이트 동일** ⇒ 창은 **정확히 1커밋** `93fcc50..c8a1de2`(= PR **#163**, `%p` 단일 부모 확인)로 확정된다.\n\n**표면별 분해 — 이동은 D 단독이다.**\n- **L(줄머리) 2840줄 전량 바이트 동일**: 양 끝에서 `$HITS` 를 덤프해 `diff -q` 무차이(2840/2840). 레포 어디에서도 줄머리 주석이 한 줄도 움직이지 않았다.\n- **E(줄 끝·줄 중간) 부동**: `93/29` 양 끝 동일.\n- **D(docstring) 867 → 886 (+19)**: `$DE` 덤프 집합차가 **추가 20 · 삭제 1**이고 **21줄 전부 `scripts/check-comment-ledger.py` 한 파일** — 게이트가 자기 D·E 추출기를 설명하려 더한 docstring 이다. 다른 42개 D 파일 무변이.\n- 창 diff 는 3파일뿐: `docs/comment-policy/README.md`(+19/−2) · `docs/comment-policy/ledger.md`(+88) · `scripts/check-comment-ledger.py`(+411/−92). 앞 둘은 `^docs/` 제외라 as-is 밖이고, as-is 이동의 유일한 원천이 셋째다.\n\n**원장 게이트 실측**(`scripts/check-comment-ledger.py`, 파이프 없이 실행 · rc=0 · 「불변식 통과」):\n\n| 표면 | 행/파일 | 줄 | 네 축 완료 | 일부 축만 | 미판정 `—` |\n|---|---|---:|---|---|---|\n| L (base `93fcc50`) | 193/193 | 2840 | 58행 453줄 | 53행 1065줄 | 82행 1322줄 |\n| L (head `c8a1de2`) | 193/193 | 2840 | 58행 453줄 | 53행 1065줄 | 82행 1322줄 |\n| **D (head, 신설)** | 43/43 | **886** | **0행 0줄** | **0행 0줄** | **43행 886줄** |\n| **E (head, 신설)** | 29/29 | **93** | **0행 0줄** | **0행 0줄** | **29행 93줄** |\n\nbase 에는 표면 구분 자체가 없었다(게이트가 한 덩어리로 `행 193 · 2840줄` 만 인쇄). head 의 **L 세 칸이 base 와 숫자까지 전건 동일** ⇒ 이 창은 기존 L 판정을 한 칸도 건드리지 않았다.\n\n**게이트 수치가 기계 도출임을 양성 대조로 확인**(직전 task 의 프로브를 승계하지 않고 재실행): CTRL 무변이 rc=0 · D 43행 886줄 미판정 → D 표 한 행(`contracts/codegen.py` 16줄)의 판정 축을 `—` → `①②③④` 로 변이하면 **42행 870줄**로 정확히 16줄 감소(완료 1행 16줄) → 원본 복원 후 `git diff --stat` 공백 · rc=0 · 43행 886줄 회귀.",
       "toBe": "to-be = `docs/comment-policy/` tree hash. `188ecd30`(base) → `215ff64d`(head) — trigger 값과 일치.\n\n**#163 은 정의 「지문 표면 개정(L + D·E)」 메모가 지정한 3몫을 전건 착지시켰다**(축자 인용: 「그 task 의 몫: ⑴ … README.md 의 지문 사각지대 서술을 세 표면 기준으로 고친다 ⑵ `ledger.md` 에 D·E 표면의 표를 둔다 ⑶ **D·E 줄은 판정 축 `—` 로 등재하고 판정은 슬라이스 예산대로 이어 간다**」):\n- ⑴ `README.md` 139행의 사각지대 문장에서 「Python docstring 본문」·「줄 끝 주석」이 사라지고 「**지문은 표면 셋을 센다**(L·D·E)」 현재형 서술로 교체 — 27일 가까이 거짓이던 문장이 참이 됐다.\n- ⑵ `ledger.md` 에 `## 파일별 원장 — D (docstring 본문)`(231행) · `— E (줄 끝·줄 중간 주석)`(279행) 두 절 신설. `## ` 절 4개 체계.\n- ⑶ D 43행 · E 29행 **전량 판정 축 `—`**(게이트 히스토그램 실측, 다른 축 값 0건).\n\n**그 표의 자기 규정을 축자로 읽었다** — 「등재됐으니 면제」인지 「임시 등재·계속 gap」인지를 가르는 유일한 근거다. D·E 행의 결과 칸은 전 행이 **「미판정 — 2026-09-26 지문 표면 개정(L + D·E)이 들인 D 표면 첫 등재.」** 이고, 정의 메모는 같은 문장에서 「**판정은 슬라이스 예산대로 이어 간다 — 큰 격차는 예상된 것이다**」로 잇는다. ⇒ **면제가 아니라 gap 계수 통로**다. `README.md` 의 「게이트는 미판정(`—`)을 실패로 보지 않는다」는 *게이트*가 집행자가 아니라는 뜻일 뿐, 정의의 정합 조건(「그 주석들 중 복원 가능한 내용을 담은 것이 없음」)을 면제하지 않는다.\n\n정의 본문·개정 메모 4종은 이번 창에서 개정되지 않았다(control plane 소유 · `versionScript` md5 양 side 불변).\n\n**2파도 고지**: 내 claim(13:16:51Z) 43초 뒤 `1e0c2e6`(PR **#164** serving-core-axis-pass, 13:17:16Z)이 착지해 tip 이 창 밖으로 나갔다. 그 커밋 위에서 게이트를 다시 돌려 **내 판정면이 무사함을 확인**했다 — L 만 움직이고(2840→2829줄 · 완료 58→63행 · 미판정 82→80행) **D 43행 886줄 · E 29행 93줄은 tip 에서도 판정 0으로 바이트 동일**. 따라서 아래 gap 은 창 끝과 현재 tip 양쪽에서 동시에 참이다.",
@@ -9504,6 +9504,72 @@
           "status": "approved",
           "reviewedAt": "2026-09-26T14:01:13Z",
           "reason": "PR #166 실측 재확인(2026-09-26T13:59Z): OPEN · head `c9e61a0` (preparation.notes 와 동일) · base `8def8fe` = 현재 main tip · compare `main...head` behind_by=0/ahead_by=1 ⇒ 충돌 불가 구조로 확정(mergeable_state=clean). 필수 status 둘 다 head 에 success — check-run `required`(13:55:17Z) · commit status `review/manual-approval`(자동 부착, `format_changed=false` 판정 그대로) ⇒ 4-2 사람 승인 요구 해당 없음. 범위 정합: changed_files=15 (+214/−122) 로 준비 notes 와 숫자 일치하고, 파일 전량이 선언한 슬라이스 안이다 — 주석·docstring 13파일(analysis·ingestion) + `docs/comment-policy/{ledger.md, passes/2026-09-26-batch-de-axis-pass.md}`. 추가된 python 줄을 전수 확인한 결과 docstring 축약과 줄끝 AC 꼬리표를 걷은 assert 줄뿐으로 코드 토큰 변경 0건이고, ledger.md diff 는 D·E 표 행만 건드린다(L 표 행·집계 줄 무접촉 ⇒ 자매 패스와 행 충돌 없음). 완료 기준을 diff 로 역산해 대조: 판정 축 `①②③④` 로 바뀐 D 16행 합 289줄 · E 6행 합 18줄로 계획의 「D 완료 16행289줄 · E 완료 6행18줄」과 정확히 일치하고, 행 삭제 3건(analysis/__main__.py · ingestion/__main__.py · E 의 test_fake_llm.py)도 예고대로다. 줄 수·지문은 `ci / comment-ledger` 가 R7 로 강제하며 head 에서 success. 위험 통제: riskLevel=low 에 걸맞게 executionGuide 가 완료 기준을 절대 수치가 아닌 네 등식(D·E 표면 포함관계 · L 표면 sha256 바이트 동일 · 행 삭제 3건)으로 못박았고, 불가역 지점은 squash merge 하나뿐이며 롤백은 revert PR 로 닫힌다 — 런타임·데이터·트래픽에 닿는 변경이 없어 되돌림 비용이 실제로 낮다. 데이터 삭제·마이그레이션·외부 부작용 없음. 기록 흠(판정에 영향 없음): plannedAt 14:00Z · preparedAt 14:02Z 가 PR 생성 시각 13:53:01Z 보다 뒤로 적혀 있다 — 실물 PR 이 그 전에 이미 존재하므로 시각 표기 오차로 보고 넘긴다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-26T14:07:30Z",
+          "finishedAt": "2026-09-26T14:14:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "skipped",
+              "log": "준비 단계(planner, rct_20260926-0011 attempt 1)에서 이미 수행 — PR #166 로 스테이징됨(preparation.preparedAt 2026-09-26T14:02:00Z). executor 는 재실행하지 않는다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "log": "준비 단계(planner, rct_20260926-0011 attempt 1)에서 이미 수행 — PR #166 로 스테이징됨(preparation.preparedAt 2026-09-26T14:02:00Z). executor 는 재실행하지 않는다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "log": "준비 단계(planner, rct_20260926-0011 attempt 1)에서 이미 수행 — PR #166 로 스테이징됨(preparation.preparedAt 2026-09-26T14:02:00Z). executor 는 재실행하지 않는다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "log": "준비 단계(planner, rct_20260926-0011 attempt 1)에서 이미 수행 — PR #166 로 스테이징됨(preparation.preparedAt 2026-09-26T14:02:00Z). executor 는 재실행하지 않는다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "skipped",
+              "log": "준비 단계(planner, rct_20260926-0011 attempt 1)에서 이미 수행 — PR #166 로 스테이징됨(preparation.preparedAt 2026-09-26T14:02:00Z). executor 는 재실행하지 않는다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "skipped",
+              "log": "준비 단계(planner, rct_20260926-0011 attempt 1)에서 이미 수행 — PR #166 로 스테이징됨(preparation.preparedAt 2026-09-26T14:02:00Z). executor 는 재실행하지 않는다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "skipped",
+              "log": "준비 단계(planner, rct_20260926-0011 attempt 1)에서 이미 수행 — PR #166 로 스테이징됨(preparation.preparedAt 2026-09-26T14:02:00Z). executor 는 재실행하지 않는다."
+            },
+            {
+              "stepSeq": 8,
+              "status": "skipped",
+              "log": "준비 단계(planner, rct_20260926-0011 attempt 1)에서 이미 수행 — PR #166 로 스테이징됨(preparation.preparedAt 2026-09-26T14:02:00Z). executor 는 재실행하지 않는다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "skipped",
+              "log": "준비 단계(planner, rct_20260926-0011 attempt 1)에서 이미 수행 — PR #166 로 스테이징됨(preparation.preparedAt 2026-09-26T14:02:00Z). executor 는 재실행하지 않는다."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-26T14:08:00Z",
+              "finishedAt": "2026-09-26T14:12:52Z",
+              "log": "지침 「순서」 1~2 + 「주의사항」 — 필수 status 재실측 · 자매 착지 감지 · 머지 전 로컬 선검증.\n\n**1) PR·게이트 재실측(API 직접 조회, 머지 직전)** — PR #166 state=open · draft=false · head `c9e61a0011d6aa118a52e77c0a980552074baff3`(리뷰 기록값 그대로) · base.sha `8def8fe7d031a684ac5194c18e28b915bb260d9f` · mergeable=true · mergeable_state=clean. check-run 13건 전부 completed 이고 conclusion=success(단 `image / pin deploy images (main only)` 만 skipped — main 전용 잡). 지침이 완료 기준으로 꼽은 게이트 넷: `ci / comment-ledger` success · `ci / scenario-mapping` success · `ci / build` success · `ci / e2e` success. combined status = success 로 `review/manual-approval` success(2026-09-26T13:53:09Z, `data-format` success 에 따라 자동 부착) — 사람 대기 아님. 이 task 에는 review.manualApproval 이 없다.\n\n**2) 자매 착지 없음** — origin/main tip 이 `8def8fe`(#165) 로 PR base.sha 와 동일. 리베이스 불필요 → 지침의 「재생」 경로(apply.py 재실행)를 타지 않았다.\n\n**3) 머지 전 로컬 선검증(merge-tree 아님 — 실제 로컬 머지)** — `8def8fe` 위에 `refs/pull/166/head` 를 실제로 머지(rc=0, 충돌 0)해 tree `bb27d1b5bf0f6a31e08a4ae509e878fdd360d395` 를 얻고, 그 트리에서 되돌릴 수 없는 머지 앞에 완료 기준 네 등식을 전건 통과시켰다: 게이트 rc=0 「불변식 통과」 · D 판정 축 ①②③④ 16행 289줄 · E 6행 18줄 · L 표면 2788줄 sha256 앞 16 `fcd3c6702f4dbc15` 가 base 와 바이트 동일 · 행 삭제 3건. 보조로 ruff check(rc=0) · ruff format --check(rc=0, 42 files already formatted) · pytest(rc=0, 168 passed / 0 failed) 와 「주석·docstring 만 변경」의 기계적 증명(diff 13개 py 파일 전부 docstring 제거 후 AST 덤프 동일 → 코드 토큰 0 변경)까지 확인."
+            },
+            {
+              "stepSeq": 9,
+              "status": "succeeded",
+              "startedAt": "2026-09-26T14:12:52Z",
+              "finishedAt": "2026-09-26T14:14:00Z",
+              "log": "지침 「순서」 3 — squash merge. 불가역 지점 하나.\n\n`PUT /repos/dlddu/economic-opinion-trend-monitor/pulls/166/merge`, body `{\"merge_method\":\"squash\",\"sha\":\"c9e61a0011d6aa118a52e77c0a980552074baff3\"}`. sha 가드는 직전 API 응답의 head 값을 파일로 만들어 넘겼다(손으로 적지 않았다). `commit_title` 은 넘기지 않아 제목의 `(#166)` 접미사가 살아 있다.\n\n결과 http=200 · merged=true · 머지 커밋 `0229fe8e605bc8f0406257a3434d805e029f93e0`(2026-09-26T14:13Z경) 이 main tip. 착지 검증: 부모 == `8def8fe`(= 머지 직전 실제 main tip, 선검증 baseline 과 동일) · tree == `bb27d1b5bf0f6a31e08a4ae509e878fdd360d395`(선검증 트리와 바이트 동일) · 제목 `docs(comment-policy): batch-de-axis-pass — ... (#166)`. 계획 밖 변경 0 — 실행은 이 머지 하나뿐이고 클러스터·배포·데이터 조작은 없었다."
+            }
+          ]
         }
       }
     ]
