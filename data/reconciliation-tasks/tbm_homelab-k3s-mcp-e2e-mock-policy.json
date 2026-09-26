@@ -2271,7 +2271,7 @@
   {
     "id": "rct_20260926-0005",
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
-    "status": "reviewing",
+    "status": "approved",
     "createdAt": "2026-09-26T08:17:05Z",
     "updatedAt": "2026-09-26T08:58:46Z",
     "trigger": {
@@ -2367,6 +2367,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/239",
           "preparedAt": "2026-09-26T08:50:00Z",
           "notes": "base main `5ca1a98`(PR #236 착지 뒤 tip — 감지가 본 `96ab309` 에서 움직였으나 델타는 docs/comment-policy/ledger.md · docs/doc-tracker/2026-09.md · internal/mcp 셋뿐이고 내 판정면과 파일 교집합 0, to-be blob `fca61ec9` 불변). 커밋 1개 `4d02eb8`, 변경 파일 4개: docs/e2e-mocking-policy.md · scripts/check_mock_policy.py · scripts/test_check_mock_policy.py · docs/comment-policy/ledger.md. PR 생성 직전 `gh pr list --state open` = 0건이라 헝크 겹침 없음. 필수 status 는 ruleset 실측으로 `ci passed` 하나(integration_id 15368 = GitHub Actions)이고 사람이 붙이는 status 는 없다 — 무인 착지 사정권. docs/·scripts/ 전용이라 changes 잡이 go=false app=false image=false 로 분류해 unit-tests·integration-tests·image 는 skip 허용이고 lint(fmt + vet) 하나가 판정한다. `.go` 접촉 0이라 gofmt/vet/build 입력도 불변. 로컬 실측: 네 파이썬 게이트 rc=0 · 회귀 스위트 16 tests OK · as-is 지문 `sites=41 files=25`/`5719722c98e1…` 바이트 불변. 음성 프로브 3종(R7 양성 rc=1 · 소관 칸 부활 rc=1 · 규약대로 6열 rc=0) 확인."
+        },
+        "review": {
+          "status": "approved",
+          "reviewedAt": "2026-09-26T09:12:00Z",
+          "reason": "승인. **정합성·범위**: 변경은 `preparation.notes` 가 적은 넷과 정확히 같고(`docs/e2e-mocking-policy.md`·`scripts/check_mock_policy.py`·`scripts/test_check_mock_policy.py`·`docs/comment-policy/ledger.md`, +156/−37, 런타임 `.go` 0파일) 무관한 변경이 없다. gap 이 실재하고 이 PR 이 닫는다는 것을 **음성 프로브의 대조군으로 직접 측정**했다 — 감지가 쓴 변이(차단 원장에 `소관` 칸 부활 + 남의 모델 행)가 **오늘의 main(`8d1a97f`)에서는 rc=0 으로 새고**(`B2 차단 원장 1행 완비`) 이 PR 뒤에는 rc=1(`[B2] 차단 원장 행은 6개 열이어야 한다`)이다. P1 rc=1(`[R7] …:188 산문이 개수를 말한다: '상한은 그대로 4'`) · P3 rc=0(`probe-valid-row: 선행=없음 · 재검토=2026-10-15`)로 R7 이 물되 공전하지 않는 것도 확인했다.\n\n**신선도 — 충돌·CI 없음의 원인은 하나다.** 자매 PR #238 이 08:38Z 에 착지했고 이 PR 은 그 8분 뒤 08:46Z 에 열렸다 — planner 의 base `5ca1a98` 는 생성 시점에 이미 낡아 PR 이 **충돌 상태로 태어났다**(behind_by 1). 그래서 `refs/pull/239/merge` 가 존재하지 않고, `on: pull_request` 런 자체가 만들어지지 않아 head `4d02eb8` 의 워크플로 런이 **0건**이다(CI 실패가 아니다 — Actions enabled·`CI` workflow active 이고 같은 bot 의 #238 은 40분 전 `ci passed: success` 를 받았다). 재고정하면 merge ref 가 생기며 CI 가 돈다.\n\n**지침 §5 의 충돌 해소 절차를 리뷰가 직접 밟아 완료 기준이 닫히는지 실측했다.** 충돌은 지침이 예고한 그 한 곳뿐 — `ledger.md` 의 `docstring-합계` 마커. R4·R8 등식으로 **1961(main) + 22(내 몫) = 1983** 으로 풀었고 게이트가 역산을 확인한다(`판정 대상 docstring 1983줄 / 판정 완료 1983줄(100.0%) / 잔량 0`). 재고정이 건드리는 파일은 `ledger.md` 하나뿐이라 세 체커 파일의 docstring 지문 `de6557668bc3` 가 보존되고, 🔴「머지 전 커밋 금지」가 막으려던 R6·R10 파손은 일어나지 않는다(V2 rc=0 이 그 증거). 재고정 트리에서 **필수 `ci passed` 의 내용을 전수 재현**했다 — `lint` 잡이 돌리는 네 게이트가 곧 V4·V1·V2·V3 이고 전부 rc=0, V5 `Ran 16 tests OK`, V7 `.go` 0파일이라 gofmt/vet/build 입력은 초록인 main 과 불변이다.\n\n**위험·불가역성**: low. 문서와 게이트 스크립트뿐이라 트래픽·데이터 영향 0, 불가역 지점은 squash 머지 하나이고 롤백은 그 커밋 `git revert` 로 끝난다(롤아웃 대기 없음). 사람 승인용 required status context 는 ruleset 실측으로 없다(`ci passed` 하나, integration_id 15368 = GitHub Actions) — manualApproval 불필요.\n\n⚠️ **executor 가 쓸 낡은 리터럴 — 전부 자매 #238 의 몫이고 이 PR 의 델타는 0이다. 지침의 절대 수치 대신 아래 값으로 판정할 것.**\n- **V6**: 지침의 `sites=41 files=25`/`5719722c98e1…` 는 이미 거짓이다. #238 이 `tests/integration/github_app_installation_token_ac5.py`(as-is 스캔 범위 `tests` 안)를 고쳐 **main 이 `sites=40 files=24`/`f0db54d9c2d302c4be24be1e5d8b01c57dd7807d1d76a2304841987061d47f8d`** 로 움직였다. 재고정 head 의 실측이 **main 과 바이트 일치**하므로 V6 이 실제로 단언하는 것(이 PR 은 모킹 지점 무접촉)은 참이다. 지침 §5 대로 귀속은 자매이고, 이 값은 기준을 낮춘 것이 아니라 같은 등식의 현재 좌표다.\n- **V2**: 줄 주석 3393→**3389**, docstring 1989→**1983**(100.0%·잔량 0 불변), 복원경로 ①② 4/33 잔량 29→**5/33 잔량 28**.\n- **ledger `docstring-합계`**: 1989 → **1983**.\n\n재고정 결과는 내 재생(`4dce968`, `origin/main` 대비 위 4파일)과 대조 가능하다 — 해소가 `docstring-합계` 한 줄이면 `git diff` 가 그 줄 외에 pr239 원본과 갈리지 않아야 한다."
         }
       }
     ]
