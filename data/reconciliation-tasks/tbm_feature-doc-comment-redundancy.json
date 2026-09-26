@@ -10427,7 +10427,7 @@
   {
     "id": "rct_20260926-0005",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-26T09:54:40Z",
@@ -10441,7 +10441,7 @@
       }
     },
     "createdAt": "2026-09-26T09:54:40Z",
-    "updatedAt": "2026-09-26T12:00:03Z",
+    "updatedAt": "2026-09-26T12:06:45Z",
     "stateSummary": {
       "asIs": "**측정**: 2026-09-26 09:5xZ, `dlddu/feature-doc` main `4e8b66ba`(09:39:41Z), 모델 `asIs.versionScript`(09:00:38Z `867ffa32` 로 교체된 새 스크립트) 직접 실행.\n\n```\nlines=3156 files=161 unclassified=0\ncc659ace563941298687be14c71376c59b5dc02bc96dc0da4c8c8fa045dd4a28\n```\nprecheck 값과 **바이트 일치**. `unclassified=0`(범위 개정 메모의 선언과 일치).\n\n## 지문 이동의 내역 — 두 성분으로 갈라 실측했다\n\n**성분 ①(지배적) 범위 개정 그 자체 — 10파일 / 234줄이 새로 범위에 들었다.** 같은 트리(`4e8b66ba`)에서 개정 **전** 스크립트(`a65a5226` 판, 1455자)를 돌려 `lines=2921 files=151` / `c5f8eb1f…`(= 내 baseline 과 바이트 일치)를 얻고, 두 히트 줄 집합을 `comm` 으로 갈랐다: **only_in_new=234 · only_in_old=0**(빠진 것 없음).\n\n| 새로 든 파일 | 주석 줄 |\n|---|---|\n| `.github/workflows/ci.yml` | 89 |\n| `.github/workflows/image.yml` | 33 |\n| `.github/workflows/data-format-review.yml` | 26 |\n| `.github/workflows/docs-scenario-e2e.yml` | 17 |\n| `.github/workflows/docs-journey-mockup.yml` | 17 |\n| `.github/workflows/cache-warm.yml` | 15 |\n| `.github/workflows/docs-mockup-render.yml` | 14 |\n| `backend/Cargo.toml` | 12 |\n| `Dockerfile` | 10 |\n| `deploy/k8s/.gitignore` | 1 |\n| **합** | **234** |\n\n개정 메모가 선언한 내역(`.github/` 211 · TOML 12 · Dockerfile 10 · `.gitignore` 1 = 234)과 **파일·줄 수가 전건 일치**한다(메모의 `deploy/.gitignore` 는 실제 경로 `deploy/k8s/.gitignore`).\n\n**성분 ②(1줄) 옛 범위 안의 실제 주석 변경.** 옛 스크립트를 baseline 트리(`6a572e07`, 08:41:28Z)와 main 에서 각각 돌리니 `2921 → 2922`. 전량이 `tools/check-mockup-render.py` 한 파일이고 **+14 / −13**(자매 모델 `tbm_feature-doc-mockup-render` 의 기능 PR **#176**, 09:39:41Z). 들어온 14줄은 `# ── M10 짝의 동일성 · 클래스 축 ──` 절 머리 블록과 「2026-09-26 실측으로 … `no-access` · `request-error` 가 정확히 그 모양이었다」류 스냅샷 산문이고, 나간 13줄은 `rct_20260926-0003` 이 직전 창에서 **같은 유형(절 머리 · 스냅샷 수치)으로 제거 판정한** M9 판이다.\n\n## 새로 든 주석에 실재하는 복원 가능 사례 (표본 실측)\n\n「미판정」에 그치지 않고 **정의의 중복 유형이 실제로 들어 있다**:\n\n1. **유형 ④ 구분선 주석 — `Dockerfile` 3줄.** `# ---- stage 1: frontend ----` 바로 아래가 `FROM node:22-bookworm-slim AS frontend`, stage 2 ↔ `AS backend`, stage 3 ↔ `AS runtime`. 절 제목이 말하는 것(단계 순번·이름)이 **①코드 자체의 `AS <name>` 절로 전량 복원**된다.\n2. **유형 ②·③ — 같은 명제가 두 파일에 한 벌씩.** `Dockerfile:32-34`(「One image, two workloads (AC4.5) … worker Deployment overrides it」)와 `backend/Cargo.toml:6-7`(「Two binaries out of one crate … the worker Deployment only overrides the command」)이 **같은 명제**를 적고 둘 다 `(AC4.5)` 꼬리표를 단다. 그 명제는 ①로 복원된다 — `Cargo.toml:8-14` 의 `[[bin]] featuredoc` / `featuredoc-worker` 두 선언과 `deploy/k8s/worker-deployment.yaml:29` 의 `command: [\"/usr/local/bin/featuredoc-worker\"]`. `(AC4.5)` 꼬리표 자체는 정의가 **작업 흔적(③)** 으로 분류해 커밋 메시지·doc-tracker 의 자리로 돌린 것이다.\n\n**반대로 유지 후보도 섞여 있다**(전량 제거를 주장하지 않는 근거): `backend/Cargo.toml:43-48` 의 LTO·codegen-units 실측 경위(thin LTO + CGU=1 일 때 ~54초 → 둘 다 바꿔 ~24초, arm64 4코어)는 코드·문서·이력 어디로도 복원되지 않는 **성능 함정 지식**이고, `Dockerfile:15-16`(스텁 빌드가 두 `[[bin]]` 타깃을 요구) · `:21-22`(`sqlx::migrate!` 가 컴파일 시각에 마이그레이션을 임베드하므로 빌드 단계엔 있어야 하고 런타임 이미지엔 없어야 한다)는 **저장소 제약의 함정**이다.\n",
       "toBe": "**측정**: 같은 트리. `git rev-parse HEAD:docs/comment-policy` = **`0b24d0ce5f32aa132d42dd91cafcd6e1cccb1d97`**(baseline `767704a791…`).\n\n**toBe 이동은 평범한 패스 기록이다.** 창 diff는 `ledger.md` +19/−5 와 `passes/2026-09-20-tools-checker-axis.md` +161 두 파일뿐 — `rct_20260926-0003` 의 착지분(`51fbb9a`, 09:03:20Z)이다. 구조를 바꾼 바이트는 0.\n\n## 정책 SSOT 의 현재 상태 (main)\n\n| 항목 | main 실측 |\n|---|---|\n| `README.md` | 8236B / 105줄 · 절 8개 |\n| 「범위」 절 | **옛 포함 목록** — 대상 = `backend/src backend/tests frontend/src e2e scripts tools deploy` + `backend/migrations/*.sql`, **비대상 = 라이선스 헤더 · 생성물 · 마크다운 · `Dockerfile` · `.github/workflows`** |\n| `comment-scope-exclude` 블록 | **없음**(grep 0건) |\n| `ledger.md` | 883줄 / 235,000B · 표 **36행** · 열 **4개**(`판정 범위 \\| 현재 주석 줄 수 \\| 지문 \\| 결과 요약`) — `판정 축` 열 **없음** |\n| 원장 게이트 | **없음**(`scripts/check-comment-ledger.py` 부재) |\n| 새로 든 10파일의 원장 행 | **0행**(전수 부재 — `.github` 5히트는 전부 산문·`SELF_PATHS` 인용, 표 행 아님) |\n\n**⚠️ 「범위」 절은 단순 미비가 아니라 정의와 정면으로 어긋난다.** 정의 「범위 밖 / 비고」는 「CI 워크플로(`.github/`)·배포 매니페스트·Dockerfile·설정 파일도 주석 문법이 있으면 **대상**이다」라고 적는데, 정책 본문은 같은 두 항목을 **비대상**으로 선언한다. 정책 디렉터리가 이 모델의 to-be SSOT 이므로 이것은 SSOT 가 **거짓을 선언한 상태**다.\n\n## 열린 PR **#178** — 내 축의 구조 항목을 전건 담고 서 있다\n\n`reconcile/rct_20260926` · head **`b4acb8e9c8a810e145a341fc2dfd66c871cb859f`** · 생성 **09:49:22Z** · `MERGEABLE` · 25파일. 소유자는 같은 모델의 **살아 있는** `rct_20260926-0004`(현재 `reviewing`). head 를 클론해 `rev-parse HEAD == 요청 sha` 및 `head ≠ tip` 를 assert 한 뒤(둘 다 통과) 정의의 「전환 뒤 첫 task 완료 기준」 4항을 직접 재었다:\n\n| 완료 기준 | #178 head 실측 | 판정 |\n|---|---|---|\n| ⑴ 새로 든 파일을 판정 축 `—` 행으로 등재 | 행 35 = 워크플로 7파일 / 215줄 / 축 `—` / 「미판정 — 범위 개정으로 이 패스에서 처음 범위에 들었다」, 행 36 = `Dockerfile`·`backend/Cargo.toml`·`deploy/k8s/.gitignore` / 23줄 / 축 `—`. 표는 **6열**(`판정일 \\| 판정 범위 \\| 현재 주석 줄 수 \\| 지문 \\| 판정 축 \\| 결과 요약`) · 41행 | **충족** (10/10 파일) |\n| ⑵ README 「범위 밖」 절을 새 범위 규칙으로 | 절 제목이 「## 범위 — 레포 전체 − 제외」로 바뀌고 제외 **세 부류 ①②③ 표**가 들어왔다. 「`.github/workflows/*.yml`·`Dockerfile`·`backend/Cargo.toml`·`deploy/k8s/.gitignore`도 **대상이다**」를 축자로 선언하고, `comment-scope-exclude` 블록 규약(줄마다 부류 표기)을 설명한다. 옛 포함 목록·옛 비대상 열거는 **소거** | **충족** |\n| ⑶ 게이트를 처음부터 새 규칙으로 | `scripts/check-comment-ledger.py`(+253) 에 `FIXED_EXCLUDE` · 언어군 6종 · `comment-scope-exclude` 파싱 · `DO NOT EDIT`/`@generated` · shebang 폴백 · `unclassified` 전부 실재. **옛 두 패스 경로 목록(`backend/src`·`frontend/src`·`backend/migrations/*` 등) grep 0히트.** 실행 rc=0, 인쇄값 `lines=3161 files=162 unclassified=0` 이 같은 트리에서 돌린 모델 `asIs.versionScript` 출력과 **바이트 일치**, `미등재 0` | **충족** |\n| ⑷ 「적용된 마이그레이션의 주석」 절 불변 | README diff 에서 repair·sqlx·SHA-384·`VersionMismatch` 관련 변경 줄 **0** | **충족** |\n\n게이트가 같은 head 에서 인쇄한 판정 진척: **판정 완료 2,093줄 / 18행(전체 줄의 66%)**, 미판정 ≈**1,068줄**, 축별 미판정 행 **①7 · ②8 · ③10 · ④19**. 새로 든 10파일은 그 미판정 풀 안에 축 `—` 로 들어 있다.\n",
@@ -10507,6 +10507,55 @@
             "sha": "e849f48744616767649e59eec7f583a9ee4043aa",
             "context": "review/manual-approval"
           }
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-26T12:00:10Z",
+          "finishedAt": "2026-09-26T12:06:40Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-26T12:00:10Z",
+              "finishedAt": "2026-09-26T12:02:53Z",
+              "log": "필수 status 두 개를 `rules/branches/main` 실측으로 재확인: required = `ci-gate`(integration_id 15368) + `review/manual-approval`, strict=false. PR #182 head `e849f487` 의 check-run 축에서 `ci-gate` = completed/success(11:09:48Z). 머지 직전 12:02:53Z 재실측에서도 success 유지. head 에 커밋을 얹지 않았으므로 CI 런은 재발화하지 않았다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-26T12:00:10Z",
+              "finishedAt": "2026-09-26T12:02:53Z",
+              "log": "사람 승인 확인만 했고 **붙이지 않았다**(이 단계는 status 를 쓰지 않는다). `GET /commits/e849f487…/statuses` 결과는 원소 1개이고 그것이 context `review/manual-approval` = **success**(created_at 2026-09-26T11:52:36Z, 리뷰 판정 11:19:59Z 이후에 사람이 붙인 것). 리뷰가 남긴 `manualApproval.sha` = `e849f48744616767649e59eec7f583a9ee4043aa` 와 PR head 가 동일해 승인이 그 sha 에 그대로 묶여 있다. `mergeable_state` 도 `blocked` 가 아니라 `clean` 으로 바뀌어 있어 승인 부재가 해소된 것이 API 축에서도 일치한다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-26T12:01:00Z",
+              "finishedAt": "2026-09-26T12:02:10Z",
+              "log": "열린 자매 재실측: #183(`ledger.md` +4/−4 · backend 3 · e2e 1 · frontend 1 · 패스 3) · #184(`ledger.md` +1/−1 · `tools/check-mockup-render.py` +50 · doc-tracker). 준비 시점의 #180·#181 은 **이미 착지**해 main tip 이 `52d8748d` → `9d334287`(#181) 로 움직여 있었다 — PR base 는 `52d8748d` 라 내 PR 이 main 보다 뒤처진 상태였다. 겹치는 파일은 `docs/comment-policy/ledger.md` 하나이고 행이 서로소(내 3행 vs #183 의 4행 vs #184 의 1행)다. `merge-tree` 만 믿지 않고 **실제 로컬 merge** 로 선검증: `git merge pr/182` into `9d334287` rc=0, 충돌 파일 0, `Auto-merging docs/comment-policy/ledger.md` 자동 병합, 변경 15파일 +337/−217(PR 통계와 동일 ⇒ #181 의 원장 새 행 삽입이 내 세 행을 밀지 않았다). 그 병합 트리 `7cdc40ec…` 에서 게이트 5종을 미리 전건 통과시켜 두고 머지로 넘어갔다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-26T12:03:00Z",
+              "finishedAt": "2026-09-26T12:03:20Z",
+              "log": "squash 머지. `commit_title` 을 **넘기지 않아** 제목이 PR 제목 그대로 남았다 — 착지 커밋 `e222ee0fd05e8b829fd7bd48ecd74a7723078611` 제목: `주석 비중복성 39차 패스 — CI · 빌드 설정 축 (범위 개정 10파일 + 게이트 1파일) (rct_20260926-0005) (#182)` (`(rct_20260926-0005)` 와 `(#182)` 둘 다 보존). 낙관적 잠금으로 `sha` 가드를 넘겼고 그 값은 손으로 적지 않고 `gh api …/pulls/182 --jq .head.sha` 로 읽어 전달했다. 응답 `merged:true`. 착지 커밋의 트리가 **선검증한 트리와 동일**(`7cdc40ec…` == `7cdc40ec…`)이라 게이트를 통과시킨 그 트리가 그대로 main 이 됐다."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-26T12:04:00Z",
+              "finishedAt": "2026-09-26T12:04:40Z",
+              "log": "머지된 main `e222ee0f` 를 체크아웃해 `python3 scripts/check-comment-ledger.py` 실행 — 파이프 없이 받아 `rc=0`. 출력: `lines=3071 files=160 unclassified=0` · `행 40 · 등재 파일 167 · 미등재 0 · 주석 0행이 된 등재 파일 7` · `판정 완료(①②③④): 2169줄 / 21행 (70%)` · `축별 미판정 행: ① 5 · ② 6 · ③ 8 · ④ 17`. 세 행의 판정 축이 `①②③④` 이고 줄 수가 지침 표대로 60 · 9 · 0 이다(지문은 게이트 자신이 I3 로 대조하므로 rc=0 이 곧 정합)."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-26T12:04:40Z",
+              "finishedAt": "2026-09-26T12:06:40Z",
+              "log": "나머지 게이트 4종 전건 `rc=0`(각각 파일로 받아 rc 를 따로 읽었다): `tools/check-journey-mockup.py`(허브 R9 — `여정 6 · 목업 페이지 5 · 문서 59` · `docs/` 상대 링크 470건 · 허브 단계 링크 23건 ⇒ 새 패스 파일 1건과 `Documents` 58→59 가 함께 들어간 것이 확인됨) · `tools/check-mockup-render.py`(M8~M11 전 규칙 통과) · `tools/check-scenario-e2e.py` · `node tools/check-journey-prototype.js`(`npm ci --prefix tools` 로 jsdom 설치 — 루트 `npm install` 을 쓰지 않아 벤더 트리 유입 0, 워킹트리 clean 유지; `여정 프로토타입 5개 · 단언 417건`)."
+            }
+          ]
         }
       }
     ]
