@@ -12202,5 +12202,20 @@
       "reason": "**조치 불필요 — 창(정확히 1커밋 `89c8317`, PR #245)이 내 양 side 를 모두 움직였지만 판정 4기준 전건 음성이고, 이동 방향은 gap 축소다.** (판정 2026-09-26T12:41:25Z)\n\n이번 창은 **직전 task `rct_20260926-0017` 이 「범위 밖 · 자매 `tbm_homelab-k3s-mcp-scenario-e2e` 소관」으로 남긴 바로 그 열린 PR 의 착지**다. 그 전제가 소비됐으므로 「직전 판정이 음성이었다」를 인용하지 않고 네 기준을 tip 에서 각각 다시 쟀다. 캐리어 귀속: 커밋 제목의 `(rct_20260926-0008)` 은 자매 모델 것이고(⚠️id 는 (파일, id) 쌍), 커밋이 만진 SSOT 면이 그 자매의 소유면이라는 것으로 확정했다.\n\n**⑴ 경로 교집합이 먼저 비용을 확정했다 — 창 하중 8파일 1094줄 중 내 범위는 4파일.**\n`internal/` 2파일(+55/−1) + SSOT 2파일(`docs/test-approval-gate.md` +6/−2 · `docs/doc-tracker/2026-09.md` +8/−9). 나머지 `tests/` 972줄 · `ci.yml` 48줄 · `comment-policy/ledger.md` 6줄은 정의가 as-is 범위·SSOT 에서 **명시 제외**한다. 그래서 비싼 측정을 기준 2·3·4 에만 썼다.\n\n**⑵ 「as-is 에 새 파일이 생겼다」가 곧 drift 가 아니다 — 빌드 태그 뒤인지가 갈랐다.**\n신설 `internal/mcp/undeclared_tool_probe.go` 는 `//go:build e2e_undeclared_tool` 이고, **`internal/` 전체 Go 파일 중 빌드 태그를 가진 유일한 파일**이다. `extraAdvertisedTools` 에 append 하는 코드도 이 파일 한 곳뿐(`git grep` 전수 4자리: gate.go 선언·capacity·append + 이 파일). ⇒ 태그 없는 기본 빌드에서 그 슬라이스는 **항상 nil** 이고, 이는 tracker ¶978 의 축자 주장과 일치한다(내가 독립 실측으로 확인했다 — 남의 문장을 인용만 하지 않았다).\n\n**⑶ 기준 2·3 을 닫은 부호 = 기본 빌드 도구 표면의 4중 일치.**\n`gate.go::toolRegistry` **25** == `toolslist.go` 광고면 **25** == `tests/integration/_helpers.py::EXPECTED_TOOLS` **25** == `internal/server/mcp_test.go::want` **25**, 양방향 차집합 0, **창 양 끝 동일**. 태그 뒤 도구 `e2e_undeclared_probe` 는 **네 집합 어디에도 없다**. 발행 이미지가 태그 없는 빌드라는 것도 `ci.yml` 실측으로 확인했다(태그 빌드는 `homelab-k3s-mcp:ci-undeclared` 별도 이미지로만 kind 적재). ⇒ 사용자 대면 동작 추가 **0** ⇒ 기준 3 의 두 요건(사용자 대면 ∧ 문서 부재)이 둘 다 불성립이고, `docs/` 의 `tools/list` 계약 문면(도구별 `destructiveHint`·`readOnlyHint` AC)도 광고면 집합 불변이라 어긋날 자리가 없다(기준 2). 덧붙여 그 코드는 문서에 **있다** — tracker ¶978 이 파일 경로·태그·`gate.go` 2줄을, `test-approval-gate.md:54` 가 태그를 (c) 의 수단으로 적는다.\n\n**⑷ 기준 1 은 프리즈 + 재측정 양쪽으로 닫았다.**\nSSOT 35 blob 중 `values.md` 1 · `prd-*.md` 17 이 창 양 끝 sha 집합 동일 ⇒ AC 집합이 변할 자리 없음. 그래도 tip 재측정: `^### AC\\d+` 독립 재계수 **95** == tracker `AC 수` 칸 합 **95**, PRD 매트릭스 **17행 · 비-✅ 0행**, 등재 2절(「PRD 없는 가치」·「구현 없는 문서」)은 절 md5 양 끝 동일(`9429a6f1d7` · `9e349a60fe`)이면서 tip 재계수도 **열린 행 0/0**(문면 부동과 전제 재실측을 따로 했다).\n\n**⑸ 기준 4 는 유일하게 실제로 움직였고, 세 인쇄값이 전부 참이다.**\ntracker 이동 3곳은 모두 시나리오 레지스트리 축이다. 독립 재계수: 표 본문 **99행** = ✅ **93** + ⏳ **4** + 🚫 **2** + ⬜ **0**, 제목 줄·집계 블록·불변식 문장(`99 − 2 − 4 = 93 = 매칭 파일 93`) 셋 다 실측과 일치. **「매칭 파일 93」은 카운터로 믿지 않고 실물로 확인** — ✅ 행이 이름을 적은 전용 파일 **93개(중복 0)** 를 `tests/integration` 트리와 대조해 **부재 0**. **⏳→✅ 로 올라간 그 한 행의 ✅ 가 참인가**도 따로 물었다: `approval_gate_ac1.py` 실재(717줄) · docstring 이 `검증 시나리오: test-approval-gate.md#시나리오 1` 축자 · (c) 의 `UNDECLARED_TOOL = \"e2e_undeclared_probe\"` 핀 · `ci.yml` 이 `gate-refusal-variant.yaml` 두 배포를 실제 apply · 머지 커밋 check-runs **7/7 success**. 전집 축은 무접촉(`.md` 추가 0건 ⇒ 「허브 도달 가능 문서 106/106 · 정책 66」 줄 양 끝 바이트 동일) — 이번 창은 문서를 늘리지 않고 **상태 칸만** 바꿨다.\n\n**⑹ 안티-은폐 검사 통과 — 골대가 내려오지 않았다.**\n움직인 SSOT 1파일(`test-approval-gate.md`)은 **훅 1개**뿐이고 삭제분 2줄이 전부 「자동화」 불릿(`(미작성) — … 준비된 뒤 작성한다`)이다. 요구 문면 (a)(b)(c) 와 `검증 AC: AC1, AC5` 는 무접촉이고 파일 전체 `검증 AC` 줄 수도 **11 == 11**. tracker 이동도 ⏳ 5→4 · ✅ 92→93 으로 **올라간 방향**이다. ⇒ 요구를 깎아 구현에 맞춘 형태가 아니라 「(미작성)」이 실물 717줄 파일로 교체된 것, 즉 **gap 이 닫힌 방향**이다.\n\n**⑺ 남은 것은 내 범위 밖이다.** 레지스트리 ⏳ 4행은 정의가 「AC ↔ e2e 1:1 매칭은 별도 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 담당」으로 범위 밖에 둔 축이다. 열린 PR 은 **#246 한 건**(`docs(comment-policy)` · 자매 `rct_20260926-0015` · DIRTY)뿐이고 내 판정 좌표와 교집합 0. 판정 직전 `ls-remote main` = `89c83173…` 로 창 확정 시점과 동일 ⇒ **2파도 0**.",
       "assessedAt": "2026-09-26T12:41:25Z"
     }
+  },
+  {
+    "id": "rct_20260926-0019",
+    "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
+    "status": "assessing",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-26T13:12:05Z",
+      "toBe": {
+        "currentVersion": "a39b107000dd34094006adfd939ca16091814fec",
+        "previousVersion": "f44b97ecb331c219c5d6ab71b1fc7ecc0688bd7e"
+      }
+    },
+    "createdAt": "2026-09-26T13:12:05Z",
+    "updatedAt": "2026-09-26T13:12:05Z"
   }
 ]
