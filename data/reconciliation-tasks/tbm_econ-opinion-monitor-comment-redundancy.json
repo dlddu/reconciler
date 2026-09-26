@@ -7867,7 +7867,7 @@
   {
     "id": "rct_20260926-0003",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-redundancy",
-    "status": "reviewing",
+    "status": "review_rejected",
     "createdAt": "2026-09-26T07:58:26Z",
     "updatedAt": "2026-09-26T08:51:19Z",
     "trigger": {
@@ -7944,6 +7944,12 @@
           "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/155",
           "preparedAt": "2026-09-26T08:45:00Z",
           "notes": "PR #155 — 124줄 전건 판정(제거 58 · 유지 66), 지문 2792 -> 2734 · 파일 166 불변(자매 #152·#154 착지 뒤 리베이스, head b6bc38a). 코드 10파일(비주석 diff 0줄) + 원장 7행 신설·3행 전진·집계/이력 행 + 패스 문서 1개. 게이트 로컬 rc=0 전건: check_scenario_mapping.py(공백 0 · 23=23) · check-journey-mockup.py · check-mockup-render.py · check-journey-flow.js · bash -n run.sh · tsc --noEmit --strict. check-data-format-change.py fdfb1cb HEAD -> format_changed=false ⇒ review/manual-approval 자동 success (사람 승인 벽 없음). PR 직전 merge-tree 재실측: #151 는 run.sh 를 공유하나 clean · #152 는 ledger.md 말미에서 충돌 1(구조적, 말미 요약 행이 레포에 하나뿐) · #153 겹침 0. 충돌 해소는 합치지 말고 reset --hard 뒤 재생 스크립트 2개를 순서대로 돌릴 것 — $CLAUDE_JOB_DIR/tmp/apply.py(코드, 앵커 31개) · ledger.py(원장). ledger.py 는 #152 착지 전/후 말미 두 모양을 모두 인식한다. 두 스크립트 모두 치환마다 assert count==1. 🔴 리베이스 실측: 앵커 31개 전건 재매치 · 게이트 전건 rc=0 · merge-tree #151·#153 clean · PR mergeable=MERGEABLE. #154 가 `test_cli.py` 에 주석 2줄을 들여 **잔여 바닥이 0 -> 2** 로 움직였다 — 범위를 넓히지 않고 완료 기준을 낮춰 적었다. reset --hard 는 passes/ 문서를 지우므로 재생 시 pass-scripts 디렉터리의 사본을 되돌릴 것."
+        },
+        "review": {
+          "status": "rejected",
+          "reviewedAt": "2026-09-26T08:58:00Z",
+          "reason": "거부 — 계획·PR 내용에는 결함이 없으나 **필수 status `required` 가 PR head `b6bc38a` 에서 failure** 여서 지금 그대로 실행(머지)할 수 없다. 원인은 diff 도 게이트 로직도 아니라 **계정 수준 GitHub Actions 과금 정지**다 — `required` · `data-format` 의 실패 annotation 이 전건 \"The job was not started because recent account payments have failed or your spending limit needs to be increased\" 이고, `required` 는 08:46:58 · 08:48:23 · 08:53:55 **세 attempt 전건 같은 사유로 시작조차 못 했다**(flake 아님, rerun 으로 안 풀린다). 내용 자체는 이 sha 에서 초록이다: `ci / build` · `ci / e2e` · `ci / scenario-mapping` · `docs / structure` · `docs / flow` · `render / render` · `image / publish` 2종 · `data-format`(08:44:19, 과금 정지 직전) 전건 success 이고, `review/manual-approval` 도 combined status success 라 **사람 승인 벽은 없다**(4-2 비해당). 신선도 — PR 은 OPEN · head 는 준비 기록과 동일한 `b6bc38a` · `mergeable=MERGEABLE`(충돌 없음)이고, 리뷰 중 자매 #153(08:42:55) · #156(08:55:28)이 착지해 base 가 2커밋 뒤로 밀렸으나 완료 기준은 움직이지 않았다(#153 은 `.md` 만 접촉해 versionScript 제외 대상, #156 은 `web/src/**` 를 건드리지만 범위 내 주석 줄 증감이 0 — 두 파일 patch 를 모델 PATTERN·DIRECTIVE 로 직접 세어 확인). 그럼에도 `required` 가 main ruleset 필수 status 라 `mergeStateStatus=BLOCKED` 이고 실행 지침 3단계(squash 머지)가 불가능하므로, 되돌리기 어려운 지점을 열어 둔 채 승인하지 않는다.",
+          "comment": "**계획·PR 내용은 바꿀 것이 없다. 재작성하지 말 것.** 범위·완료 기준·롤백을 모두 재확인했다: 12파일 · +142/−86 이 전건 `tests/e2e/**` + `docs/comment-policy/**` 안이고(준비 notes 의 「코드 10파일 + 원장 + 패스 문서 1개」와 일치), 완료 기준 2줄(부모 대비 델타 −58 · RESIDUAL=2 전량 `python/packages/analysis/tests/test_cli.py`)은 자매 #153 · #156 착지 뒤에도 유효하고, 롤백도 `git revert <squash sha>` 로 구체적이며 비주석 diff 0줄이라 제품·데이터 영향이 없다.\n\n**막힌 것은 단 하나 — 대상 레포의 GitHub Actions 과금이다.** 08:44:21 이후 이 레포의 러너 워크플로가 전부 \"job was not started … recent account payments have failed or your spending limit needs to be increased\" 로 실패 중이다(우리 브랜치 08:44:21~08:53:55, 자매 `rct_20260926-0002-econ-mock-policy` 08:49:10~08:50:13, main `Image` 08:55:31). 러너를 안 쓰는 `pages build and deployment` 만 초록이다. 즉 이것은 이 task 의 결함이 아니라 **레포 전역 환경 정지**다.\n\n재계획이 해야 할 일은 순서대로 이 셋뿐이다.\n1. **사람이 GitHub Billing & plans 에서 Actions 지출 한도/결제를 복구**해야 한다 — 무인 루프로는 풀 수 없다. 복구 전에 재제출하면 `required` 가 같은 사유로 다시 빨개져 거부가 반복된다(연속 3회면 `cancelled`). 복구 확인은 아무 워크플로든 하나가 success 로 도는 것으로 한다.\n2. 복구 뒤 head `b6bc38a` 에서 `Checks` 와 `review gate — data format` 을 **re-run** 해 `required` 와 `review/manual-approval` 이 둘 다 success · `mergeStateStatus` 가 BLOCKED 가 아님을 확인한다. 커밋을 새로 얹거나 force-push 할 필요가 없다 — 내용 재생은 불필요하고, head 가 움직이면 오히려 초록인 게이트 결과를 버리게 된다.\n3. base 가 그동안 더 밀리면 `mergeable` 만 다시 보고(지금은 MERGEABLE), DIRTY 가 됐을 때만 준비 notes 의 재생 절차(`apply.py` → `ledger.py` → `residual.py`, 치환마다 assert count==1)를 밟는다. 손으로 봉합하지 말 것.\n\n위 2가 초록이면 계획을 그대로 `planned` 로 올려 다시 검토에 넣으면 된다."
         }
       }
     ]
