@@ -8545,7 +8545,7 @@
   {
     "id": "rct_20260926-0004",
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "reviewing",
+    "status": "approved",
     "createdAt": "2026-09-26T09:21:08Z",
     "updatedAt": "2026-09-26T10:26:43Z",
     "trigger": {
@@ -8631,6 +8631,11 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/179",
           "preparedAt": "2026-09-26T20:05:00+09:00",
           "notes": "head `1a681cde01ef9feb0f56582519dfebd16038e62f` · base `297611d3`(= 준비 완료 시점의 main tip) · 9파일 +205 −10. 머지는 하지 않았다.\n\n**세션 중 자매 한 건이 착지해 범위가 늘었다.** 계획 시점의 main 은 `4e8b66b`(#176)이었고 열린 PR 은 #178(주석 원장 형식 이전) 하나였다. #178 이 세우는 `scripts/check-comment-ledger.py` 는 `changes` 필터 없이 **모든 PR 에서** 돌면서 원장 행마다 「판정 대상 주석 줄 수 + 그 줄들의 sha256 지문」을 실측과 대조(I3)하므로, 주석을 더하는 내 슬라이스와 반드시 충돌한다. 그래서 push 전에 머지 프리이미지(`git worktree` + `merge <pr178-head>`)로 미리 재서 **5행이 어긋난다**는 것과 그 복구가 산술(줄 수·지문 두 칸 재기재)임을 확인했고, 예행 스크립트로 rc=0 까지 확인했다. 그 뒤 #178 이 실제로 착지(`297611d3`)해 같은 절차로 닫았다 — `origin/main` 리베이스 + 5행 재기재, 판정 축·비고 칸은 무접촉(셀 단위 대조로 확인: 바뀐 칸은 전부 `[2, 3]`).\n\n**무인 착지 조건 충족**: `tools/check-data-format-change.py --base origin/main --head HEAD` 가 「해당 없음」으로 판정(`backend/migrations/**` 무접촉 · 판정기 자신 무접촉) ⇒ 워크플로가 head 에 `review/manual-approval` = success 를 붙인다. 필수 status 는 ruleset 실측으로 `ci-gate` + `review/manual-approval` 둘이고 사람만 붙이는 context 는 없다.\n\n**로컬 전건 실측**(게이트 인용 0): `cargo test --offline` 전건 통과(118 unit + 통합 전 스위트) · 신설 테스트에 **양성 프로브**(총합을 행마다 복사하는 변이 주입 → 그 테스트만 FAILED, 되돌려 7 passed) · 게이트 5종 rc=0(M3A 352 · M3B 319 · 편차 31/31 · 매핑 38 · spec 38 · 구현 대기 0 전부 불변, `data-sample` 128→133) · `tsc -b` rc=0 · e2e spec `tsc --noEmit --strict` rc=0 · **jsdom + vite iife 번들**로 화면 렌더 실측(단계 5행 전부 `stage-spend` · `fetch $0.00` · `cross_cutting $0.19` · `stage-sub` 무오염).\n\n레포 안에 `node_modules` 를 만들지 않았다 — `frontend/node_modules` 는 무시 목록에 없어서 타입 검사·번들은 전부 레포 **밖** 사본에서 돌렸고, `gh api …/pulls/179` 의 `changed_files` 는 **9**다."
+        },
+        "review": {
+          "status": "approved",
+          "reviewedAt": "2026-09-26T10:32:00Z",
+          "reason": "승인. 슬라이스 7f 는 gap 으로 남은 축 C(AC4.6 검증 방법의 「단계별 비용」)만 닫고, 9파일 +205 −10 이 계획 step 1~8 과 1:1 로 대응한다 — `usage::by_stage`(analysis_documents 를 kind 로 GROUP BY) · `StageView.spend` · 백엔드 단정(음성 프로브 포함) · `api.ts` 타입 · `AnalysisProgress` 한 칸 · 목업 5칸(`data-sample`) · `sc04-09` 단정 · tracker. 범위 밖 변경 없음: `backend/migrations/**` 무접촉이고 벤더 트리(node_modules) 0파일이며, `docs/comment-policy/ledger.md` 는 자매 #178 착지에 따른 5행 재기재인데 셀 단위로 대조하니 바뀐 칸이 전부 [2,3](줄 수·지문)이라 판정 축·비고는 무접촉이다. 신선도 실측(2026-09-26T10:31Z): PR #179 open · head `1a681cde01ef9feb0f56582519dfebd16038e62f` = preparation 기록값 그대로 · base 297611d3 = 현재 main tip 이고 compare 가 behind_by 0 / merge_base = main tip 이라 충돌 불가 · mergeable_state clean. 필수 status 두 개 모두 head 에서 초록이다 — `ci-gate` 는 check-run 축에서 success(completed 10:23:20Z, e2e 2샤드·cargo 포함), `review/manual-approval` 은 commit status 축에서 success(10:18:54Z, 판정기가 「데이터 저장 형식 변경 없음」으로 붙인 것). ruleset 실측상 required context 는 이 둘뿐이고 사람만 붙이는 context 는 없으며 둘 다 이미 success 라 manualApproval 은 남기지 않는다. 위험: riskLevel low 에 부합한다 — 마이그레이션 0건이라 되돌릴 수 없는 데이터 변경이 없고, `stages[].spend` 는 와이어 '추가'라 구버전 프런트가 깨지지 않는다. 머지=배포(flux 가 main 을 따라감)라는 불가역 지점이 있으나 롤백이 revert PR 하나로 구체적이고 실제로 가능하며, 완료 기준 7항목이 각각 grep/테스트/게이트 명령과 기대 수치(M3A 352 · M3B 319 · 편차 31/31 · 매핑 38 · spec 38 · 구현 대기 0 불변, cargo test --test usage 7 passed)로 실행 지침에 명시돼 있다. 단, 계획 step 9 는 changed_files 를 「8개 이내」로 적었는데 실제는 9다 — #178 착지로 생긴 ledger.md 재기재분이며 preparation notes 와 executionGuide 는 9파일로 일치하므로 범위 일탈이 아니라 낡은 리터럴로 본다."
         }
       }
     ]
