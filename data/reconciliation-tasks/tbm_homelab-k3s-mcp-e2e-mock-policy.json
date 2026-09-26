@@ -2051,7 +2051,7 @@
   {
     "id": "rct_20260926-0004",
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
-    "status": "reviewing",
+    "status": "approved",
     "createdAt": "2026-09-26T07:09:26Z",
     "trigger": {
       "source": "manual",
@@ -2135,6 +2135,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/237",
           "preparedAt": "2026-09-26T08:05:00Z",
           "notes": "계획 1~8 단계를 브랜치에 그대로 반영했다(커밋 `a00bb38` 하나). 9파일 · +194/−85 — `tests/k8s/kind/dear-baby-fixture.yaml` → `tests/k8s/kind/dear-baby.yaml`(개명 + 실 backend·실 redis), spec 두 파일(POD_PREFIX · ac1 성공 stdout 한 줄), `ci.yml`(apply 경로 · redis 대기 신설 · backend 대기 `deploy/dear-baby --timeout=180s` · 진단 덤프), `docs/e2e-mocking-policy.md`(허용목록 5→4행 · 상한 5→4 · IMG 절 → 해소 기록), `docs/test-dear-baby-reset-user.md`(파드 글롭 · stdout 문면), `docs/comment-policy/{ledger.md,README.md}`(자매 원장 동기화). **로컬 게이트 전수 rc=0**: check_ac_mapping · check_mock_policy(「등재 4(상한 4) · 모킹 지점 6 · 실재 토큰 4 · 표기 주석 8 · 미등재 0 · 고아 0」) · check_comment_policy(3353줄 / 판정 3330 / 잔량 23 / ③④ 69/69 / ①② 16/69) · check_doc_inventory(허브 101/101 무변) · gofmt 0건 · go vet · go build. 스캔 범위의 `dear-baby-fixture` 토큰 0건. ⚠️ push 에 `workflows: write` 토큰이 필요했다(contents+PR 만으로는 ci.yml 변경이 거절된다) — 머지도 같은 권한으로 받을 것. e2e 자체는 kind 가 필요해 로컬 검증 불가이고 CI 가 유일한 판정면이다."
+        },
+        "review": {
+          "status": "approved",
+          "reviewedAt": "2026-09-26T08:01:00Z",
+          "reason": "승인 — 완료 기준 ⑴~⑷를 PR head `a00bb388`에서 직접 재실측해 전부 확인했다(재확인 08:00Z: PR OPEN · head 불변 · mergeable MERGEABLE · mergeStateStatus **CLEAN**).\n**필수 status 초록**: `main` ruleset의 필수는 `ci passed` **하나**이고(rules API 실측) 그 값이 **success**다. ⚠️ `commits/<sha>/status`는 `pending`·빈 배열로 보이므로 **check-run 축**에서 읽었다 — status 축으로 읽으면 멀쩡한 PR을 CI 실패로 오독한다. 하위 잡도 전건 성공(`changes`·`fmt + vet`·`unit tests`·`integration tests`·`image / build & push`, `pin`은 main 전용 skip).\n**⑷ 실환경 대체의 증거를 로그에서 직접 봤다** — 이 슬라이스의 핵심이라 잡 초록만으로 갈음하지 않았다. run 36228093042 `integration tests`: `deployment \"redis\" successfully rolled out` → `deployment \"dear-baby\" successfully rolled out` → dear-baby 레인에서 `reset ok against pod dear-baby-84444db744-jksq2` · `reset failure path ok`, AC1·AC2·AC3 전건 통과. 파드 접두사가 `dear-baby-`(구 `dear-baby-fixture-`)이므로 실 백엔드 이미지 + 실 redis 위에서 실 `/reset-user` 바이너리가 돌았다는 것이 확정된다.\n**⑴⑵⑶도 head에서 실측**: `ci.yml`·ac1·ac2의 `dear-baby-fixture` 토큰 각 0건이고 `tests/k8s/kind/dear-baby-fixture.yaml`은 404(삭제됨). `fmt + vet` 출력이 「등재 4(상한 4) · 모킹 지점 6 · 실재 토큰 4 · 표기 주석 8 · 미등재 0 · 고아 0」으로 계획 기대값과 일치하고, 네 게이트(mock policy R1~R6 · comment policy R1~R12 3353줄 · doc hub 101/101 · AC 매핑) 전건 위반 0.\n**정합성·범위**: 9파일 전부 gap 축에 붙어 있다 — 픽스처 개명·재작성, spec 둘의 `POD_PREFIX`·stdout 한 줄, `ci.yml` 세 자리(apply 경로 · redis 대기 선행 · 진단 덤프), 정책 문서의 허용목록 −1행·상한 5→4·해소 기록, 테스트 문서 파드 글롭, 자매 주석 원장 동기화(R1·R2·R9가 요구해 빠뜨리면 필수 status가 막힌다). 무관한 변경 0. `ci.yml` diff를 직접 읽어 계획이 적은 세 자리 외에 아무것도 없음을 확인했다.\n**위험 통제·불가역성**: riskLevel medium에 걸맞게 롤백이 단일 revert로 구체적이고 실제로 가능하다 — 변경면이 kind e2e 하네스와 문서뿐이라 되돌려도 데이터가 남지 않고, 지침이 「부분 revert 금지(스텁·등재·상한·원장이 함께 돌아와야 한다)」와 「스텁 복원으로 초록을 사지 말 것」까지 못박았다. 파드 미Ready의 세 실패 모양과 각 원인·귀속(계획 결함 ⇒ 재계획)도 미리 갈라 놨다. 파괴적 마이그레이션·데이터 삭제 없음.\n**사람 승인 불필요**: 필수 목록에 사람 승인용 context가 없다(`ci passed` 단독) — 그래서 `manualApproval`을 남기지 않는다.\n실행자 참고 두 가지: ⒜ 이 PR은 `.github/workflows/ci.yml`을 건드리므로 머지 토큰에 `workflows: write`가 있어야 한다(없으면 App이 거절된다 — 지침 0절). ⒝ main push는 `docker-build-push.yaml`이 단독으로 받아 빌드·pin을 하므로 머지 직후 그 워크플로가 돈다. Go 소스 무접촉이라 내용상 동일 이미지이고 이 레포의 상시 동작이다."
         }
       }
     ]
