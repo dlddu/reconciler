@@ -8278,7 +8278,7 @@
   {
     "id": "rct_20260926-0002",
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "reviewing",
+    "status": "review_rejected",
     "createdAt": "2026-09-26T06:53:46Z",
     "updatedAt": "2026-09-26T07:51:07Z",
     "trigger": {
@@ -8349,6 +8349,12 @@
           "pullRequestUrl": "https://github.com/dlddu/feature-doc/pull/174",
           "preparedAt": "2026-09-26T08:01:00Z",
           "notes": "7파일 +131 −8. 목업 2(`JRN-discover-features.html` 그리드 2→4칸 · `JRN-connect-repo.html` 홈에 `누적 사용량` 그리드 신설) · 구현 3(`AnalysisProgress.tsx` 두 칸 · `HomeRepositories.tsx` 의 `getUsage()` 배선과 전체별 세 칸 · `format.ts` 의 `formatCount`) · e2e 1(`sc04-09` 에 화면 단정 5건) · 등재 1(`doc-tracker/2026-09.md` 의 `sc04-09` 행 + 마지막 검증 시점).\n로컬 실측: 게이트 4종 전건 rc=0(M3A 348→352 · M3B 315→319 · 편차 31/31 불변 · M9 대조 19→22쌍), `frontend` `tsc -b --noEmit` rc=0, 수정한 e2e spec 의 `tsc --noEmit --strict` 오류 0건(남은 오류는 전부 `@types/node` 부재로 인한 playwright 타입 쪽 선재 오류).\n`check-data-format-change.py --base origin/main --head HEAD` = ✅ 해당 없음 ⇒ `review/manual-approval` 자동 success ⇒ 사람 승인 벽 없음(무인 착지).\n음성 프로브 3건을 PR 본문 표에 실측으로 남겼다. 🔴 그중 ①(구현에서만 `LLM Calls` 칸 제거)은 **rc=0 — 이 PR 이 만든 게이트 사각**이다: M3A 의 건초더미가 활성 화면 전체를 이어 붙인 부분 문자열 검색이라 같은 라벨이 두 화면에 서면 한쪽 삭제를 다른 쪽이 가린다. 그 자리를 지키는 것은 정적 게이트가 아니라 `sc04-09` 의 `getByTestId('llm-calls')` 단정이므로, 실행 단계에서 e2e 가 초록인지를 그 축의 증거로 볼 것.\n계획 시점 열린 자매 PR 은 #173 하나이고 파일 교집합 0(`docs/e2e-mocking-policy.md` 뿐)."
+        },
+        "review": {
+          "status": "rejected",
+          "reviewedAt": "2026-09-26T07:55:00Z",
+          "reason": "거부 — 준비물이 유효하지 않다. 필수 status check `ci-gate`가 PR head `36acaad2`에서 **failure**다(재확인 07:54Z: PR OPEN·head 불변·mergeable MERGEABLE·mergeStateStatus **BLOCKED**). 원인은 `e2e` job(`test (kind e2e 2/2)`)의 실패이고 이 job은 skip 허용이 아니다(`SKIP_OK.e2e=false`) — ci-gate 로그가 `failure e2e`를 그대로 찍는다.\n**깨진 것이 이 계획의 완료 기준 자신이다.** 실패한 단정 1건은 이 PR이 새로 넣은 `sc04-09-per-user-cost-visibility.spec.ts:143` 의 `getByTestId('usage-calls')` → `element(s) not found`(10s timeout, 기대 \"4\"). 그 자리가 곧 완료 기준 ⑴⑵의 전체별 축(`HomeRepositories.tsx`+`getUsage()` 배선)이고, executionGuide가 「이 축의 증거는 정적 게이트가 아니라 e2e job 이 success 인지」라고 못박은 바로 그 증거다. 계획의 음성 프로브 ①이 예고한 게이트 사각이 실제로 물렸다 — 정적 게이트 3종·데이터형식 판정·`tsc`는 전부 초록인데 런타임에서 그 칸이 서지 않는다.\n**flake가 아니다.** 같은 샤드·같은 port-forward에서 18/20 통과, 앞선 새 칸 단정 (`llm-calls`·`tokens-used`, 이 PR이 `AnalysisProgress.tsx`에 넣은 것)은 **통과** ⇒ 서빙된 번들에 이 PR의 변경이 들어 있고, 직전 `page.request.get('/api/usage')`도 ok(실측 total로 기대값 \"4\"를 계산) ⇒ API·세션도 정상. 브라우저에서만 `누적 사용량` 블록이 안 그려진 것이다. 같은 describe의 두 번째 테스트는 serial이라 `did not run`.\n베이스 이동(#173 착지로 behind_by 1)은 거부 사유가 아니다 — 파일 교집합 0(`docs/e2e-mocking-policy.md` 뿐)이고 계획이 예고한 자매이며 mergeable도 MERGEABLE이다. 사람 승인 벽도 없다(`review/manual-approval` = success). 위험도 low·롤백(단일 revert)은 타당했다 — 막은 것은 위험이 아니라 미구현이다.",
+          "comment": "재계획에서 고칠 것 — 딱 한 축이다: **홈의 `누적 사용량` 블록이 런타임에 렌더되지 않는다.**\n1) **실패 재현·원인 확정이 먼저다.** e2e 실패 아티팩트가 이미 있다: run 36227625563 / job 108364606424 의 `test-results/sc04-09-.../trace.zip` 과 `error-context.md`. 브라우저 콘솔·네트워크에서 `GET /api/usage`가 **브라우저 컨텍스트에서** 무엇을 돌려주는지 확인할 것 — 테스트의 `page.request` 경로로는 ok였으므로, `credentials: 'same-origin'` fetch와 `page.request`의 인증·오리진 차이가 1순위 용의자다.\n2) **실패를 삼키는 설계를 고칠 것.** `HomeRepositories.tsx` 의 `void getUsage().then(setUsage, () => setUsage(null))` + 블록 전체를 `usage !== null`로 감싼 조합 때문에, `/api/usage` 실패가 「사용량이 없음」과 구별되지 않고 칸이 조용히 사라진다 — 사용자에게도, 정적 게이트에도 보이지 않는다. 이번 실패가 런타임에서만 드러난 이유가 이것이다. 로딩·실패·정상 세 상태를 구분해 실패 시에도 자리는 서고(에러 표시) `usage-calls` 가 DOM에 남게 하거나, 최소한 실패를 화면에 드러낼 것. 「없어도 홈은 선다」는 취지는 유지해도 좋지만, 그 취지가 완료 기준의 칸을 지우는 형태여서는 안 된다.\n3) 고친 뒤 **PR head에서 `test (kind e2e 2/2)` 초록을 실제로 확인**하고 나서 planned로 올릴 것. 이 축은 정적 게이트로 대신할 수 없다(계획이 스스로 적어 둔 사각).\n4) 새 커밋을 올리면 `review/manual-approval` 은 sha에 묶여 있어 head에서 사라진다 — 재부착을 확인할 것. 그리고 #173이 착지해 main이 움직였으니, 완료 기준 ⑶의 절대값(편차 31/31·매핑 38·M3A 352·M3B 319)을 **새 main 기준으로 재실측**해 계획에 다시 박을 것.\n범위·정합성·롤백 자체는 문제없었다 — 계획을 새로 짤 필요는 없고, 위 렌더 결함만 닫으면 된다."
         }
       }
     ]
