@@ -556,8 +556,8 @@
         "code": "#!/usr/bin/env bash\n# to-be = 테스트 시나리오 집합(docs/test 트리) + 예외/매핑 등재(docs/doc-tracker.md).\n# docs/prd 변경은 무시된다 — AC 층은 이 모델의 판정 대상이 아니다.\n# 런타임이 dataSource.repository(dlddu/feature-doc)@ref(main)를 체크아웃한 상태를 가정한다.\n#\n# doc-tracker 월별 폴더 대응: 레거시 docs/doc-tracker.md 가 있으면 blob 해시(기존 값 그대로),\n# 없으면 docs/doc-tracker/ 최신 YYYY-MM.md 의 「## e2e 매핑」 섹션 sha256 (없으면 absent).\n# 전환 커밋에서 reg 값이 한 번 바뀌는 것은 정상이다(파일 전체 → 섹션 기준).\nset -euo pipefail\n# ── doc-tracker 해석 (templates/README.md 「doc-tracker 경로 해석」 공통 조각 — 수정 시 그쪽과 함께) ──\n# 레거시 단일 파일(<x>.md)이 HEAD에 있으면 그대로 쓴다(기존 버전 값과 바이트 동일 유지).\n# 없으면 월별 폴더 모드: <x>/ 아래 가장 최근 YYYY-MM.md 에서 등재 섹션만 잘라 해시한다.\n# 등재 섹션은 product-doc-engineer 규약상 롤오버 때 바이트 그대로 이월되므로, 달이 바뀌어도\n# 섹션 내용이 같으면 해시가 같다(월 파일 경로는 버전에 넣지 않는다).\ntracker_has_legacy() { git cat-file -e \"HEAD:$1\" 2>/dev/null; }\ntracker_month() {  # $1 = 레거시 경로 → 폴더 모드의 최신 월 파일 경로(없으면 빈 출력)\n  local dir=\"${1%.md}\" f\n  f=\"$(git ls-tree --name-only \"HEAD:$dir\" 2>/dev/null | grep -E '^[0-9]{4}-[0-9]{2}\\.md$' | LC_ALL=C sort | tail -n1 || true)\"\n  if [ -n \"$f\" ]; then printf '%s/%s\\n' \"$dir\" \"$f\"; fi\n}\ntracker_section() {  # $1 = 파일 경로, $2 = 제목 접두(예: '## e2e 매핑') → 섹션 본문\n  # 섹션 = 제목 줄부터 같은 레벨 이상(# 개수 ≤)의 다음 제목 직전까지. 코드 블록 안의 # 줄은 제목이 아니다.\n  git show \"HEAD:$1\" 2>/dev/null | awk -v t=\"$2\" '\n    /^(```|~~~)/ { fence = !fence }\n    function lvl(s) { match(s, /^#+/); return RLENGTH }\n    !f && !fence && index($0, t) == 1 { f = 1; L = lvl($0); print; next }\n    f && !fence && /^#+ / && lvl($0) <= L { exit }\n    f { print }' || true\n}\ntracker_registry_hash() {  # $1 = 레거시 경로, $2 = 폴더 모드 등재 섹션 제목 접두 → sha256 | absent\n  local m sec\n  m=\"$(tracker_month \"$1\")\"\n  if [ -z \"$m\" ]; then echo absent; return; fi\n  sec=\"$(tracker_section \"$m\" \"$2\")\"\n  if [ -z \"$sec\" ]; then echo absent; return; fi\n  printf '%s' \"$sec\" | sha256sum | cut -d' ' -f1\n}\n# ── /doc-tracker 해석 ──\ns=\"$(git rev-parse \"HEAD:docs/test\")\"\nTRACKER=docs/doc-tracker.md\nif tracker_has_legacy \"$TRACKER\"; then\n  t=\"$(git rev-parse \"HEAD:$TRACKER\")\"\nelse\n  t=\"$(tracker_registry_hash \"$TRACKER\" '## e2e 매핑')\"\nfi\nprintf 'sc:%s reg:%s\\n' \"$s\" \"$t\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "sc:09744489dbaf98b4c3136f4c05c200b907013a4d reg:064262978210bfde698f711cecd6e736c05b3f1af795b43e4b0a2cf8e28d9ddd",
-      "lastObservedAt": "2026-09-26T06:50:17Z"
+      "lastObservedVersion": "sc:09744489dbaf98b4c3136f4c05c200b907013a4d reg:01a5545506853d4df7859e3be422bfc96b26a46169e49d6f8dbd27c7588e3e31",
+      "lastObservedAt": "2026-09-26T08:55:10Z"
     },
     "asIs": {
       "dataSource": {
@@ -571,8 +571,8 @@
         "code": "#!/usr/bin/env bash\n# as-is = e2e 테스트 구현. e2e/ 하위 트리 해시만 사용 → 그 밖 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/feature-doc)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:e2e\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "a77062bd71b9f107972ddfdec3fc1036eb37a2df",
-      "lastObservedAt": "2026-09-26T06:50:17Z"
+      "lastObservedVersion": "52796ca77679c4ab806786ee25a2a907b5133db4",
+      "lastObservedAt": "2026-09-26T08:55:10Z"
     }
   },
   {
