@@ -128,6 +128,30 @@ PR끼리도 반드시 충돌하고, 그 충돌을 피하려고 판정 슬라이�
 - 문자열 리터럴 안의 `//` 같은 오탐은 남는다. 결정적이기만 하면 무해하다 — 실제 판정은 task가 파일을
   읽어서 한다.
 
+### 표면 (고정부) — L · D · E
+
+언어군 패턴은 **줄머리** 주석만 잡는다. 그래서 지문은 표면 셋의 합이다. 하나라도 빠지면 그 표면의 주석만
+바뀐 변경에 감지가 돌지 않고, task는 사각지대를 「범위 밖」으로 넘기는 것밖에 할 수 없다(2026-09-18~26
+econ-opinion-monitor에서 20여 개 task가 docstring·줄 끝 주석을 같은 문장으로 되풀이해 넘긴 끝에 이 절이 생겼다).
+
+| 표면 | 무엇 | 추출 | 해시 줄 |
+|---|---|---|---|
+| **L** 줄머리 주석 | 언어군 패턴에 걸리는 줄 | `grep` (위 표) | `경로:본문` |
+| **D** docstring 본문 | Python 모듈·클래스·함수(async 포함) docstring, `inspect.cleandoc` 정리 후 줄 단위 | `ast` | `D:경로:본문` |
+| **E** 줄 끝·줄 중간 주석 | 코드 **뒤에** 오는 주석 | Python `tokenize` · C 언어군(`//`·`/* */`, CSS는 `/* */`만)·HASH 일부(`#`)·DASH(`--`)는 문자열 상태를 따라가는 줄 스캐너 | `E:경로:본문` |
+
+- **L이 원장이 세는 표면이다.** 첫 진단 줄 `lines=… files=… unclassified=…`은 L만 센다. D·E는 둘째 진단 줄
+  `docstring=줄/파일 eol=줄/파일 unparsed=N`에 따로 나온다 — 원장은 표면마다 표를 둔다(「원장 형식」).
+- 세 표면 모두 줄 번호·식별자 이름을 담지 않는다. 주석이 파일 안에서 옮겨 가거나 함수 이름이 바뀌어도 값은 그대로다.
+- 기계가 읽는 주석은 E에서도 뺀다(같은 `DIRECTIVE`). 지시자 **뒤에 붙은 사유**(`# shellcheck disable=X # 이유`,
+  `// eslint-disable-line r -- 이유`)는 사람의 문장이므로 E로 남긴다. 고정부가 더 빼는 것: `go.mod`·`go.work`의
+  `// indirect`(go mod tidy가 쓰고 읽는다), Makefile 타깃 줄의 `## 설명`(`make help`가 읽는다).
+- E를 보지 않는 파일: MIXED·MARKUP 언어군, 그리고 줄 중간 `#`이 주석이 아닌 HASH 파일(`Dockerfile*`·
+  `Containerfile`·`.gitignore`류·`CODEOWNERS`·`.editorconfig`·`.env*`·ini/cfg/conf·`Caddyfile`·`*.sed`).
+- 파싱에 실패한 파일(`ast`·`tokenize` 오류, UTF-8 아님)은 `X:` 줄로 해시에 들고 `unparsed`로 세진다.
+  **`unparsed`가 0이 아니면 그 파일의 D·E가 빠진 것이므로 모델 건강 문제**다(control plane이 고친다).
+- D·E 추출은 `python3`에 기댄다. 없으면 스크립트가 비0으로 끝난다 — 두 표면이 빠진 지문으로 조용히 떨어지지 않게.
+
 ## 슬롯 표
 
 대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다. 범위와 언어별 패턴은
@@ -203,6 +227,9 @@ git rev-parse --verify --quiet "HEAD:docs/comment-policy" || echo "absent"
 # as-is = 판정 대상 주석의 지문. 주석이 추가·수정·삭제되거나, 어느 언어군에도 들지 않는 텍스트 파일이
 # 생기고 사라질 때만 값이 변한다. 트리 해시를 쓰지 않으므로 주석과 무관한 코드 변경에는 반응하지 않는다.
 # 범위는 포함 목록이 아니라 「레포 전체 − 제외」다 — 새 디렉터리는 등록 없이 자동으로 스캔된다.
+# 표면은 셋이다: L 줄머리 주석(언어군 패턴 — 원장이 세는 표면, 첫 진단 줄이 이것만 센다),
+# D Python docstring 본문(ast), E 코드 뒤에 오는 줄 끝·줄 중간 주석(Python은 tokenize, 나머지는 줄 스캐너).
+# 세 표면 모두 줄 번호·식별자 이름을 담지 않는다 — 주석이 파일 안에서 옮겨 가거나 함수 이름이 바뀌어도 값은 그대로다.
 # 런타임이 dataSource.repository({{REPO}})@ref(main)를 체크아웃한 상태를 가정한다.
 set -euo pipefail
 export LC_ALL=C
@@ -245,16 +272,17 @@ GENERATED=$(printf '%s\n' "$LIST" | sed '/^$/d' | while IFS= read -r f; do
   head -n5 -- "$f" | grep -qE 'DO NOT EDIT|@generated' && printf '%s\n' "$f"; done || true)
 [ -n "$GENERATED" ] && LIST=$(comm -23 <(printf '%s\n' "$LIST") <(printf '%s\n' "$GENERATED"))
 
-REST="$LIST"; OUT=""
-scan() {  # $1 = 파일명 ERE, $2 = 주석 줄 ERE(비면 스캔 없이 소거만)
+REST="$LIST"; OUT=""; TAGGED=""
+scan() {  # $1 = 파일명 ERE, $2 = 주석 줄 ERE(비면 스캔 없이 소거만), $3 = D·E 표면 스캐너 태그(비면 L만)
   local take; take=$(printf '%s\n' "$REST" | grep -E "$1" || true)
   REST=$(printf '%s\n' "$REST" | grep -vE "$1" || true)
   [ -n "$2" ] && [ -n "$take" ] && OUT+=$(printf '%s\n' "$take" | xargs -r -d '\n' grep -EH -e "$2" || true)$'\n'
+  [ -n "${3:-}" ] && [ -n "$take" ] && TAGGED+=$(printf '%s\n' "$take" | sed "s/^/$3\t/")$'\n'
   return 0
 }
-scan "$C_FILES" "$C_PATTERN"
-scan "$HASH_FILES" "$HASH_PATTERN"
-scan "$DASH_FILES" "$DASH_PATTERN"
+scan "$C_FILES" "$C_PATTERN" C
+scan "$HASH_FILES" "$HASH_PATTERN" HASH
+scan "$DASH_FILES" "$DASH_PATTERN" DASH
 scan "$MIXED_FILES" "$MIXED_PATTERN"
 scan "$MARKUP_FILES" "$MARKUP_PATTERN"
 scan "$NONE_FILES" ""
@@ -263,17 +291,162 @@ SHEBANG=$(printf '%s\n' "$REST" | sed '/^$/d' | while IFS= read -r f; do
   head -c2 -- "$f" | grep -q '^#!' && printf '%s\n' "$f"; done || true)
 if [ -n "$SHEBANG" ]; then
   OUT+=$(printf '%s\n' "$SHEBANG" | xargs -r -d '\n' grep -EH -e "$HASH_PATTERN" || true)$'\n'
+  TAGGED+=$(printf '%s\n' "$SHEBANG" | sed 's/^/SHEBANG\t/')$'\n'
   REST=$(comm -23 <(printf '%s\n' "$REST" | sed '/^$/d') <(printf '%s\n' "$SHEBANG"))
 fi
 # 미분류는 지문에 경로로 넣는다 — 범위가 레포 성장을 따라가지 못하면 조용히 새지 않고 감지가 돈다.
 # 해소는 두 갈래: 데이터·자산이면 대상 레포의 comment-scope-exclude 블록에, 새 언어면 템플릿 언어군에.
 UNCLASSIFIED=$(printf '%s\n' "$REST" | sed '/^$/d')
 
+# ── D·E 표면 (템플릿 고정부) ── L이 줄머리 패턴이라 못 보는 주석. MIXED·MARKUP 언어군과 줄 끝 `#`이 주석이
+# 아닌 HASH 파일(Dockerfile·.gitignore류·.env·ini/cfg)은 E를 보지 않는다. 기계가 읽는 주석은 여기서도 뺀다.
+# 파싱에 실패한 파일은 `X:` 줄로 남아 unparsed로 세진다 — 조용히 표면에서 빠지지 않게 하기 위해서다.
+DE_PY=$(cat <<'PY'
+import ast, io, os, re, sys, tokenize
+DIR = re.compile(os.environ["DIRECTIVE"].replace(":#!|", "", 1))
+SUF = re.compile(r"\.(example|sample|template|tmpl|tpl|dist|in|j2)$")
+HASH_E_EXT = {"sh", "bash", "zsh", "fish", "rb", "pl", "r", "yaml", "yml", "toml", "tf", "tfvars", "hcl", "mk", "nix", "awk"}
+MAKE = re.compile(r"^(Makefile|GNUmakefile)$|\.mk$")
+OPEN_OK = set(" \t=([{,:")
+out = []
+
+def emit(kind, path, text):
+    t = re.sub(r"\s+", " ", text).strip()
+    if t and not (kind == "E" and DIR.search(t)):
+        out.append(f"{kind}:{path}:{t}")
+
+def rescue(path, comment, tail):
+    # 지시자 줄 뒤에 붙은 사유(`# shellcheck disable=X # 이유`, `// eslint-disable-line r -- 이유`)는
+    # L이 지시자와 함께 버리므로 E로 남긴다 — 사유는 기계가 읽지 않는 사람의 문장이다.
+    if DIR.search(comment):
+        m = re.search(tail, comment[1:])
+        if m:
+            emit("E", path, comment[1 + m.start():])
+
+def py(path, src):
+    try:
+        tree = ast.parse(src)
+    except (SyntaxError, ValueError):
+        out.append(f"X:{path}:ast"); tree = None
+    if tree is not None:
+        for n in ast.walk(tree):
+            if isinstance(n, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+                for line in (ast.get_docstring(n, clean=True) or "").splitlines():
+                    emit("D", path, line)
+    lines = src.splitlines()
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(src).readline):
+            if tok.type == tokenize.COMMENT:
+                r, c = tok.start
+                if lines[r - 1][:c].strip():
+                    emit("E", path, tok.string)
+                else:
+                    rescue(path, tok.string, r"\s#\s")
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        out.append(f"X:{path}:tokenize")
+
+def marker_lang(path, src, marker, quotes, make=False):
+    # `#`·`--` 계열 줄 스캐너. 줄머리 주석은 L 몫이라 건너뛰고, 코드 뒤 주석만 E로 낸다.
+    for line in src.splitlines():
+        s = line.lstrip()
+        if s.startswith(marker):
+            rescue(path, s, r"\s" + re.escape(marker) + r"\s")
+            continue
+        q = None; i = 0
+        while i < len(line):
+            ch = line[i]
+            if q:
+                if ch == "\\" and q == '"':
+                    i += 2; continue
+                if ch == q:
+                    q = None
+            elif ch in quotes and (i == 0 or line[i - 1] in OPEN_OK):
+                q = ch
+            elif line.startswith(marker, i) and (marker != "#" or line[i - 1] in " \t"):
+                c = line[i:]
+                if not (make and re.match(r"^##( |$)", c)):
+                    emit("E", path, c)
+                break
+            i += 1
+
+def slash_lang(path, src, line_comments):
+    # C 언어군 줄 스캐너. 문자열(" ' `)과 블록 주석 상태를 줄을 넘어 따라간다. ' "는 줄 끝에서 닫는다.
+    q = None; block = False
+    for line in src.splitlines():
+        s = line.lstrip()
+        if q in ('"', "'"):
+            q = None
+        lead = not block and q is None and s.startswith(("//", "/*", "*", "{/*"))
+        if lead and s.startswith("//"):
+            rescue(path, s[1:], r"\s(--|//)\s")
+        i = 0; code = False
+        while i < len(line):
+            ch = line[i]; nx = line[i + 1] if i + 1 < len(line) else ""
+            if block:
+                if ch == "*" and nx == "/":
+                    block = False; i += 2; continue
+                i += 1; continue
+            if q:
+                if ch == "\\":
+                    i += 2; continue
+                if ch == q:
+                    q = None
+                i += 1; continue
+            if ch == "\\":
+                i += 2; code = True; continue
+            if line_comments and ch == "/" and nx == "/":
+                if code and not lead:
+                    emit("E", path, line[i:])
+                break
+            if ch == "/" and nx == "*":
+                end = line.find("*/", i + 2)
+                if code and not lead:
+                    emit("E", path, line[i:] if end < 0 else line[i:end + 2])
+                if end < 0:
+                    block = True; break
+                i = end + 2; continue
+            if ch in "\"'`":
+                q = ch
+            if not ch.isspace() and ch != "{":
+                code = True
+            i += 1
+
+for rec in sys.stdin.read().splitlines():
+    if "\t" not in rec:
+        continue
+    tag, path = rec.split("\t", 1)
+    try:
+        src = open(path, encoding="utf-8").read()
+    except (UnicodeDecodeError, OSError):
+        out.append(f"X:{path}:read"); continue
+    name = SUF.sub("", os.path.basename(path))
+    ext = name.rsplit(".", 1)[1].lower() if "." in name else ""
+    if tag == "C":
+        n = len(out)
+        slash_lang(path, src, ext != "css")
+        if name in ("go.mod", "go.work"):
+            # `// indirect`는 go mod tidy가 쓰고 읽는 표식이다(기계가 읽는 주석).
+            out[n:] = [o for o in out[n:] if not o.endswith(":// indirect")]
+    elif tag == "DASH":
+        marker_lang(path, src, "--", "'\"")
+    elif tag in ("HASH", "SHEBANG"):
+        if ext in ("py", "pyi") or (tag == "SHEBANG" and "python" in src.split("\n", 1)[0]):
+            py(path, src)
+        elif tag == "SHEBANG" or ext in HASH_E_EXT or MAKE.search(name) or name.startswith("requirements"):
+            marker_lang(path, src, "#", "'\"", make=bool(MAKE.search(name)))
+print("\n".join(out))
+PY
+)
+DE=$(printf '%s' "$TAGGED" | sed '/^$/d' | DIRECTIVE="$DIRECTIVE" python3 -c "$DE_PY" | sed '/^$/d' | sort)
+
 HITS=$({ printf '%s' "$OUT" | sed '/^$/d' | grep -vE "$DIRECTIVE" || true; } \
   | sed 's/[[:space:]]\+/ /g' | sed 's/^ //; s/ $//' | sort)
 UNCL_LINES=$(printf '%s\n' "$UNCLASSIFIED" | sed '/^$/d; s/^/unclassified:/')
 echo "lines=$(printf '%s' "$HITS" | grep -c . || true) files=$(printf '%s' "$HITS" | cut -d: -f1 | sort -u | grep -c . || true) unclassified=$(printf '%s' "$UNCLASSIFIED" | grep -c . || true)"
-{ printf '%s\n' "$HITS"; printf '%s\n' "$UNCL_LINES"; } | sed '/^$/d' | sort | sha256sum | cut -d' ' -f1
+surf() { local s; s=$(printf '%s\n' "$DE" | grep "^$1:" || true)
+  printf '%s/%s' "$(printf '%s' "$s" | grep -c . || true)" "$(printf '%s' "$s" | cut -d: -f2 | sort -u | grep -c . || true)"; }
+echo "docstring=$(surf D) eol=$(surf E) unparsed=$(printf '%s\n' "$DE" | grep -c '^X:' || true)"
+{ printf '%s\n' "$HITS"; printf '%s\n' "$UNCL_LINES"; printf '%s\n' "$DE"; } | sed '/^$/d' | sort | sha256sum | cut -d' ' -f1
 ```
 
 - `grep -EH`는 줄 번호를 붙이지 않으므로 **같은 파일 안에서 주석이 이동해도 값이
@@ -283,16 +456,18 @@ echo "lines=$(printf '%s' "$HITS" | grep -c . || true) files=$(printf '%s' "$HIT
 - 해시 입력은 주석 줄과 `unclassified:<경로>` 줄의 합이다. 둘 다 **하나도 없는** 상태의 지문은 빈 입력
   sha256 `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`다 — 정상 레포에서 이 값이
   나오면 범위가 무너진 것이다.
-- 감지기는 **stdout 전체**를 저장·비교한다. 진단 줄(`lines=… files=… unclassified=…`)도 비교에 들어가지만
-  세 수는 해시 입력에서 파생되므로 해시와 따로 움직이지 않는다.
+- 감지기는 **stdout 전체**를 저장·비교한다. 진단 두 줄(`lines=… files=… unclassified=…`,
+  `docstring=… eol=… unparsed=…`)도 비교에 들어가지만 모든 수는 해시 입력에서 파생되므로 해시와 따로 움직이지 않는다.
+- 해시 입력은 L 주석 줄 · `unclassified:<경로>` 줄 · `D:`·`E:`·`X:` 줄의 합이다(「표면 (고정부)」).
 - 레포 고유 제외 블록의 ERE가 깨졌으면 **비0으로 종료**한다. 빈 범위의 지문으로 조용히 떨어지면 모든
   주석이 한꺼번에 사라진 것처럼 보이기 때문이다.
 - 기계가 읽는 주석은 지문에서도 뺀다. 정책 대상이 아닌데 지문에 넣으면 빌드 태그 하나가 늘 때마다
   재평가가 돈다. 고정부 목록에 없는 도구 지시자가 대상 레포에 쓰이면 `{{DIRECTIVE_EXTRA}}`에 더한다.
 
-인스턴스화할 때 대상 레포에서 한 번 돌려 네 가지를 확인한다 — 같은 트리에서 **두 번
+인스턴스화할 때 대상 레포에서 한 번 돌려 다섯 가지를 확인한다 — 같은 트리에서 **두 번
 돌려 값이 같은가**(결정성), **코드만 바꿨을 때 값이 그대로인가**(무관한 변경에
-둔감), **주석만 바꿨을 때 값이 달라지는가**(민감), 그리고 **`unclassified=0`인가**. 세 번째가
+둔감 — 문자열 안의 `#`·`//`, docstring 가진 함수의 이름 변경 포함), **주석만 바꿨을 때 값이 달라지는가**(민감 —
+줄머리·docstring·줄 끝 주석 각각), **`unclassified=0`인가**, 그리고 **`unparsed=0`인가**. 세 번째가
 깨지면 언어군 표가 그 언어의 주석을 잡지 못하고 있다는 뜻이다. 네 번째가 0이 아니면 등록 전에 그
 파일들을 부류(①②③)로 가르거나 언어군을 더해 두고, 레포 고유 제외는 `{{REPO_EXCLUDE_SEED}}`로 적는다.
 
@@ -332,7 +507,7 @@ echo "lines=$(printf '%s' "$HITS" | grep -c . || true) files=$(printf '%s' "$HIT
 
 ## 추적 방식 (요약)
 - **to-be** = `docs/comment-policy/`의 tree hash. 없으면 `absent`. 정책 본문·원장·판정 상세가 바뀔 때만 변한다.
-- **as-is** = 레포 전체 − 제외에서 언어군별로 주석 줄만 추출·정규화·정렬하고 미분류 파일 경로를 더한 sha256 지문. 트리 해시를 쓰지 않으므로 주석과 무관한 코드 변경에는 반응하지 않고<!-- [선택] --> (자매 모델 `{{SIBLING_MODEL}}`과의 중복 트리거 회피)<!-- --> 주석이 추가·수정·삭제되거나 미분류 파일이 생기고 사라질 때만 변한다. 새 디렉터리는 등록 없이 자동으로 범위에 든다.
+- **as-is** = 레포 전체 − 제외에서 주석을 세 표면(L 줄머리 주석 · D Python docstring 본문 · E 줄 끝·줄 중간 주석)으로 추출·정규화·정렬하고 미분류 파일 경로를 더한 sha256 지문. 원장이 세는 것은 L이고, D·E는 표면별 표로 따로 센다. 트리 해시를 쓰지 않으므로 주석과 무관한 코드 변경에는 반응하지 않고<!-- [선택] --> (자매 모델 `{{SIBLING_MODEL}}`과의 중복 트리거 회피)<!-- --> 주석이 추가·수정·삭제되거나 미분류 파일이 생기고 사라질 때만 변한다. 새 디렉터리는 등록 없이 자동으로 범위에 든다.
 
 ## 초기 상태 메모 (등록 시점 {{NOW_ISO}})
 {{INITIAL_STATE}} <!-- 지침: 주석 줄 수와 전체 LOC, 눈에 띄는 중복 유형(문서 재진술·선언 재진술·작업 흔적 등)을 남긴다. 격차가 크면 "첫 task는 (1) `docs/comment-policy/` 정비 (2) 기존 주석의 복원 가능성 판정을 다루게 된다 — 큰 초기 격차는 예상된 것"을 포함. {{REPO_EXCLUDE_SEED}}가 있으면 "첫 task가 README.md에 `comment-scope-exclude` 블록으로 옮긴다"와 그 줄·부류를 적는다 -->
@@ -342,5 +517,6 @@ echo "lines=$(printf '%s' "$HITS" | grep -c . || true) files=$(printf '%s' "$HIT
 - **문서·커밋 메시지 자체의 품질**은 이 모델이 보지 않는다. 다만 "주석을 지우려면 원본을 고쳐야 한다"는 판정은 그 원본을 고치는 작업을 낳을 수 있고, 그건 정상이다.
 - **주석의 정확성**(코드와 맞는가)도 이 모델의 판정 표면이 아니다. 이쪽은 중복만 본다 — 다만 되풀이된 주석이 낡아 틀려 있으면 그것은 제거 근거를 강화한다.
 - 특정 주석이 "정말 복원 가능한지"의 최종 판단은 각 task(planner)의 몫이고, 이 모델은 복원 경로 넷과 유지 대상이라는 **판단 기준**만 고정한다.
-- 지문의 사각지대: 언어군 패턴에 걸리지 않는 주석 — 줄 끝 주석(`x := 1 // 이유`), Python docstring, 문자열 안의 주석 형태 — 은 지문에 보이지 않는다. 판정(task)은 파일을 읽으므로 볼 수 있지만, 그것만 바뀌면 감지가 돌지 않는다. 줄 끝 주석까지 보려면 언어군 표를 고치는 템플릿 커밋으로 다룬다(오탐이 크게 늘어난다는 점을 감수).
+- 지문의 사각지대(템플릿 「표면 (고정부)」 기준): MIXED·MARKUP 파일과 줄 중간 `#`이 주석이 아닌 HASH 파일의 줄 끝 주석, `*`로 시작하지 않는 블록 주석 연속 줄, Python 밖의 docstring 성격 문자열, 줄 스캐너의 문자열 추적 한계(JS 정규식 리터럴, JSX 텍스트의 따옴표·`//`, Rust 수명 표기). 오탐·누락 모두 결정적이다.
+- **표면 소유권.** 표면과 도구 공통 지시자는 템플릿 고정부(control plane)라 data plane task가 고칠 수 없다. task는 위 목록에 **없는** 사각지대가 실제로 발화했거나 등재된 사각지대가 판정을 틀리게 만든 실례가 있을 때만 그것을 기록하고, **이미 등재된 사각지대를 task마다 다시 인계하지 않는다.**
 ```
