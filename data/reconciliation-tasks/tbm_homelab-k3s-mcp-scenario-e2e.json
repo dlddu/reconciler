@@ -13544,7 +13544,7 @@
       "reason": "scenario-e2e 템플릿 개정(규칙 7: 테스트 인프라 선행을 이 모델 소관으로, 구현 대기 자격을 제품 기능 미구현으로 한정)을 definition에 반영했으나 버전 스크립트는 그대로라 트리거되지 않는다 — 하네스·픽스처 부재 사유의 구현 대기 행을 공백으로 옮기고 인프라 해소 계획을 세우도록 재감지를 요청한다."
     },
     "createdAt": "2026-09-27T15:16:22Z",
-    "updatedAt": "2026-09-27T16:07:00Z",
+    "updatedAt": "2026-09-27T16:10:00Z",
     "stateSummary": {
       "asIs": "**as-is = `dlddu/homelab-k3s-mcp` `tests/` 트리 (tip `70cf953`, 2026-09-27T14:40:09Z · `HEAD:tests` = `221a4d10…` — 관측 시점 `lastObservedVersion`과 동일, 버전 무이동)**\n\n- 매칭 단위 = `tests/integration/` 최상위 `*.py` **93개**(헬퍼 `_*.py` 7 · 하네스 `run_all.py`·`check_ac_mapping.py` 제외). 레포 게이트 `python3 tests/integration/check_ac_mapping.py` **rc=0**, 자기출력 = `시나리오 전집 99 · 예외 2 · 구현 대기 4 · 1:1 대상 93 · 매칭 파일 93 · 분할 대기 0 · 공백 0`.\n- 픽스처 실측(`tests/k8s/kind/` 21개):\n  - **CRIU 런타임 없음** — `session-platform.yaml:11-12`이 `CRIU_ENABLED`·`CLAUDE_CODE_ARCHIVE_ENABLED`를 **의도적으로 unset**(제어면 기본값 false)이라 못박는다. 제품 쪽 체크포인트 경로(`Service.Restore`→`checkpointerFor`)는 실재하고 픽스처가 `NewStubCheckpointer(false)`를 주입할 뿐이다.\n  - **gatekeeper 픽스처는 있다** — `gatekeeper-fixture.yaml`·`gatekeeper-injector.yaml`·`gatekeeper-variant.yaml` 3종(2026-09-15 착지).\n  - **apiserver 요청 감사 프록시 없음** — `git grep -ln audit -- tests` **0히트**.\n- 제품 등록·구현 실측: `resource_delete_collection`은 **등록**(`internal/mcp/toolslist.go:349`)·**구현**(`internal/mcp/delete_collection.go`·`internal/k8s/delete_collection.go`)·**기대 목록 등재**(`tests/integration/_helpers.py:51 EXPECTED_TOOLS`) 3자리 모두 실재. `GatePairs()`는 `{get,list}×gateTargetKind` 두 쌍을 실제로 돌려준다(`internal/mcp/gate.go:572`).\n- 게이트 소스 실측: `check_ac_mapping.py`(415줄)는 ⏳ 절에서 **굵은 시나리오 식별자만** 추출한다(`self.pending = set(BOLD_SCENARIO_RE.findall(_section(text, \"⏳ 구현 대기\")))`, 124행) — 각 행의 `근거`·`담당`·`해제 조건` 칸은 **읽지 않는다**.\n",
       "toBe": "**to-be = 모델 정의(2026-09-27 개정) + 등재 SSOT `docs/doc-tracker/2026-09.md` 「## 테스트 시나리오 ↔ e2e 1:1 정합성」 절 (365줄, `<!-- registry: tbm_homelab-k3s-mcp-scenario-e2e -->`; 레거시 `docs/doc-tracker.md` 없음 → 월별 폴더 모드, 최신 월 = 2026-09)**\n\n- **개정된 규칙 6**: 구현 대기 등재 자격은 **제품 기능의 미구현 하나뿐**이다. **개정된 규칙 7**: 기능은 있는데 하네스가 그 상태에 도달하지 못하는 것은 **이 모델 소관의 공백**이며, 선행이 레포 밖(러너 커널 기능·특권 런타임 등)이라도 «구현 대기로도 예외로도 옮기지 않고» 공백으로 남겨 선행 인프라·해소 방향·재검토 시점을 행에 적는다. 정의는 «그런 행이 구현 대기 표에 있으면 집계 불일치(규칙 5) drift»라고 명시한다. 정의의 「2026-09-27 개정」 절은 이 이전(移轉)과 집계 갱신을 **개정 후 첫 task의 몫**으로 지목한다.\n- **등재 SSOT의 현재 문면은 개정 이전 판이다**:\n  - 절의 「규칙 6」 = «시나리오가 기술하는 상태에 이 하네스가 **도달할 수 없어** … 등재한다» — 개정판이 규칙 7로 옮긴 사유를 그대로 등재 자격으로 유지한다.\n  - ⏳ 표 머리말의 ⚠️ 못박음(2026-09-19 `rct_20260919-0004`) = «규칙 6 의 등재 자격은 **하네스가 시나리오의 상태에 도달할 수 없다**는 것 하나뿐» — 개정판과 **정반대**.\n  - 절이 쓰는 「규칙 7」은 개정판의 인프라 선행이 아니라 **다른 규칙**(테스트 문서 `자동화` 필드 상태 일치)이며, 게이트 출력 문자열(`규칙 1·2·3·4·5·6·7`)도 그 번호 체계를 쓴다.\n- ⏳ 구현 대기 **4행**의 자기선언 근거·담당·해제 조건: ⑴`test-session-read.md#시나리오 2`(CRIU 런타임·특권 파드·체크포인트 저장소를 kind에 세워야 함 · 담당 «이 렌즈») ⑵`test-session-write.md#시나리오 2`(같은 벽 공유) ⑶`test-session-write.md#시나리오 4`(session-platform이 스크롤백 상한을 **env 설정 표면으로 노출** + claude-code 파드가 이 하네스에 서야 함 · 담당 «이 렌즈 + session-platform(상한 노출)») ⑷`test-approval-gate.md#시나리오 11`((a) 실물 gatekeeper + **apiserver 요청 감사 프록시** (b) `resource_delete_collection`과 list 경로 (c) 문면 판단 · 담당 «docs-impl(delete_collection) → 이 렌즈(e2e·감사 프록시)»).\n- 집계 블록(`<!-- scenario-e2e-집계 -->`)은 공백 0 · 구현 대기 4로 선언되어 있고 게이트가 그 숫자를 강제한다.\n",
@@ -13618,9 +13618,67 @@
           "reason": "위험 통제·불가역성: 변경은 문서 2 + CI 체커 1(총 3파일 +123 −38)이고 제품 코드·e2e 파일·ci.yml 무접촉이다. 실행은 PR squash 머지 하나뿐이며, main push 이미지 워크플로의 paths 가 docs/**·tests/**·**/*.md 를 제외하므로 이미지 발행·Flux 롤아웃·클러스터·데이터 부작용이 0이다(PR 체크에서도 image·unit tests 가 skipped). 되돌리기는 머지 커밋 git revert 한 번으로 닫힌다 — 불가역 지점 없음. riskLevel low 가 영향면에 맞다. 신선도 실측(2026-09-27T15:58Z): PR #264 OPEN · head 2c2ae1c(기록값과 동일, pull/264/head 실물 대조 diff 0) · mergeable MERGEABLE · mergeStateStatus CLEAN · behind_by 0 이고 merge_base 가 main tip 70cf953 이라 충돌 불가 · 필수 check 는 rules/branches/main 실측으로 'ci passed' 하나이고 head 에서 check-run success(15:46:09Z) · 열린 자매 PR 0건. 사람 승인용 required status context 는 없다(레포에 pr-manual-approval 정책 문서도 없음) ⇒ manualApproval 불필요. 정합성: 정의 2026-09-27 개정이 규칙 6 자격을 제품 기능 미구현으로 한정하고 규칙 7(테스트 인프라 선행)을 이 모델 소관으로 못박으면서 남은 몫을 '공백 목록의 행(선행 인프라·해소 방향·재검토 시점)'으로 적으라고 요구하므로, ⏳ 4행 → 🚧 4행 이관과 체커 확장은 정의가 개정 후 첫 task 에 부과한 바로 그 작업이다. 네 행의 재검토 시점(2026-11-15 · 2026-12-20 ×3)은 규칙 7 의 최장 90일 안이다. 완료 기준을 head·base 양 끝에서 직접 굴려 확인했다 — head 에서 check_ac_mapping.py 가 '99 / 예외 2 / 구현 대기 0 / 1:1 대상 97 / 매칭 파일 93 / 분할 0 / 공백 4' 와 'OK: … 규칙 …·7·8 …' 를 인쇄하고 게이트 4종 rc=0, 문서 등식 4건(⏳ 0행 · 🚧 4행 · 레지스트리 ⏳ 표기 0 · 상한 줄 1)도 성립. base 에서는 같은 체커가 '구현 대기 4 / 1:1 93 / 공백 0' 과 '·8' 없는 OK 를 인쇄하므로 판정 기준이 base 에서도 초록인 공전이 아니다. 게이트 약화 여부를 음성 프로브 8건으로 갈랐다(전건 rc=1, 의도한 문면): e2e 파일 삭제(rm ping_ac1.py)는 규칙 6 행 대조·규칙 8 자동화 필드·집계 '매칭 파일'·집계 '공백 시나리오'·불변식 다섯 자리에서 발화하고, 공백 행 삭제·빈 칸·재검토 시점 형식 위반·상한 3·상한 줄 삭제·스테일 등재도 각각 멈춘다. 'blank != 0' 에서 '미등재 공백 != 0' 으로 옮긴 것이 회귀 탐지를 약화시키지 않았고, 상한 래칫이 공백의 조용한 증가를 막는다. 체커의 주석 줄 수는 12 불변(규칙 7→8 재번호 2줄 치환)이고 주석 원장 L 행은 지문 17612fd210bc → 91727cbaf480 으로 재기재돼 check_comment_policy.py rc=0 이다. 승인한다. 기록의 사소한 낡음 2건(판정에 영향 없음): ⑴ 지침은 changes 가 app=true 로 잡혀 unit tests·image 까지 돈다고 적었으나 실제로는 둘 다 skipped 였다(필수 'ci passed' 는 success) ⑵ 확장된 체커의 불변식 실패 메시지는 여전히 공백 항 없는 옛 산술('(99 − 2 − 0) = 97 ≠ 매칭 파일 …')을 인쇄해 문서의 새 불변식 문면(− 공백 등재 수)과 표기가 어긋난다 — 실패 시 열거되는 집합은 미등재 공백이라 판정은 정확하다."
         },
         "execution": {
-          "status": "running",
+          "status": "succeeded",
           "startedAt": "2026-09-27T16:06:00Z",
-          "entries": []
+          "finishedAt": "2026-09-27T16:10:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:06:00Z",
+              "finishedAt": "2026-09-27T16:10:00Z",
+              "log": "PR 264 squash 머지(`86399f4`)로 착지. main 실측: 절 제목 `### 파일 식별 규약 (규칙 1·2·3·4·5·6·7·8)` · 규칙 6 자격이 「제품 기능의 미구현 하나뿐」으로 좁혀짐 · 규칙 7(테스트 인프라 선행 — 공백 등재) 불릿 신설 · 옛 규칙 7(테스트 문서 상태 일치)은 규칙 8 로 이동 · 불변식 문면에 공백 등재 수와 `공백 등재 상한` 래칫 포함."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:06:00Z",
+              "finishedAt": "2026-09-27T16:10:00Z",
+              "log": "main 실측 등식 4종 전건 일치: ⏳ 절 표 행 0 · 🚧 절 표 행 4 · 레지스트리 `⏳ 구현 대기 (규칙 6` 표기 0건 · `- 공백 등재 상한: 4` 1건. 절 헤딩은 `### ⏳ 구현 대기 (0)`(L976)·`### 🚧 공백 (4) — 규칙 7 등재`(L1169) 로 둘 다 실재하고, 레지스트리 제목줄은 `🚧 공백 등재 4 · ⏳ 구현 대기 0`."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:06:00Z",
+              "finishedAt": "2026-09-27T16:10:00Z",
+              "log": "집계 블록(L854~861) 실측 `99 / 2 / 0 / 97 / 93 / 0 / 4` + `공백 등재 상한: 4`. 체커 자기출력이 같은 일곱 줄을 인쇄해 집계 대조 위반 0."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:06:00Z",
+              "finishedAt": "2026-09-27T16:10:00Z",
+              "log": "체커 확장 착지. main 에서 `python3 tests/integration/check_ac_mapping.py` rc=0, 마지막 줄 `OK: 규칙 1(중복 전용)·2·3·4·5·6·7·8 위반 없음, 불변식 성립, 러너 배차 누락·케이스 미호출 없음` — `·8` 포함으로 번호 정렬이 반영됨을 확인."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:06:00Z",
+              "finishedAt": "2026-09-27T16:10:00Z",
+              "log": "주석 원장 재기재 착지. `scripts/check_comment_policy.py` rc=0 (R1~R15 위반 0). L 행 `2026-09-05(tests/integration/run_all.py) 13줄 91727cbaf480` — 계획한 지문 이동(`17612fd210bc` → `91727cbaf480`)·줄 수 13 불변. docstring 짝 `28줄 1e12fb094833` 무접촉 확인."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:06:00Z",
+              "finishedAt": "2026-09-27T16:10:00Z",
+              "log": "변경 이력 행 착지(월 파일 「이번 달 변경 이력」). 이 표는 등재 절 밖이라 to-be 지문에 들어가지 않는다."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:06:00Z",
+              "finishedAt": "2026-09-27T16:10:00Z",
+              "log": "main 새 checkout 에서 게이트 4종 전건 rc=0: check_ac_mapping · check_mock_policy(등재 4/상한 4 · 모킹 지점 6) · check_comment_policy(주석 3112줄/159파일 · docstring 1383줄/112파일 · 줄끝 4줄/4파일) · check_doc_inventory(허브 122/122 · 끊긴 링크 0). 음성 프로브 2건 재현: ⑴ `rm tests/integration/ping_ac1.py` ⇒ rc=1 이 여섯 자리(규칙 6 행 대조 · 규칙 8 자동화 필드 · 집계 `매칭 파일` 93≠92 · 집계 `공백 시나리오` 4≠5 · 불변식 · 규칙 7 상한 초과) — 지침이 예고한 네 자리를 모두 포함. ⑵ 🚧 표 한 행 삭제 ⇒ rc=1(`규칙 7 위반 — … 공백 표에 선행 인프라·해소 방향·재검토 시점이 없다` + 불변식). 복원 후 `git write-tree` = `896fe75a260f3d718d2a4a375f3523e6cb3c1be9` = `HEAD^{tree}` 로 오염 0, 대조 실행 rc=0."
+            },
+            {
+              "stepSeq": 8,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:06:00Z",
+              "finishedAt": "2026-09-27T16:10:00Z",
+              "log": "실행 = PR 머지. 머지 직전 재실측: `mergeable=MERGEABLE` · `mergeStateStatus=CLEAN` · `baseRefOid=70cf953…` = main tip(자매 착지 0) · 열린 PR 은 264 하나. head sha 를 API 로 읽어 `sha` 가드로 넘긴 squash 머지 성공 → `86399f4`, 제목에 `(#264)` 접미사 보존(commit_title 미지정). PR state=closed·merged=true·merged_at 2026-09-27T16:07:31Z. main 머지 커밋 tree == PR head tree(`896fe75a…`) 로 착지 내용 동일성 확인. 커밋 추가·리베이스·범위 확장 없음."
+            }
+          ]
         }
       }
     ]
