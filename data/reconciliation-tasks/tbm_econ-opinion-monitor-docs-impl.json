@@ -8825,7 +8825,7 @@
       }
     },
     "createdAt": "2026-09-27T03:24:29Z",
-    "updatedAt": "2026-09-27T14:55:34Z",
+    "updatedAt": "2026-09-27T15:05:00Z",
     "stateSummary": {
       "asIs": "## as-is — 구현 (contracts/ + python/ + go/ + web/ + deploy/), 2026-09-27T03:3x 관측\n\n**창 = 단일 커밋 `31d74a0`**(PR #174, `%cI` 2026-09-27T03:12:19Z, trailer `reconciler-bot`).\n25커밋 성분 전수표로 확정했다 — 기준선 `232fd66`(docs `dd2ea054` · go `c223814d` · web `0469e729`)에서\ntip 까지 사이 커밋이 없고, 양 끝 지문이 모델 레코드와 **바이트 동일**하다:\n\n```\n232fd66 asIs contracts:914b9741 python:e04c98a4 go:c223814d web:0469e729 deploy:c298428b  toBe dd2ea054\n31d74a0 asIs contracts:914b9741 python:e04c98a4 go:f81f11d7 web:c894846b deploy:c298428b  toBe ea6816af\n```\n\n움직인 것은 `go/`·`web/`(as-is 2성분) + `docs/`(to-be)이고 `contracts/`·`python/`·`deploy/` 는 부동.\n경로 접두사 집계: `docs` 4 · `go` 3 · `web` 5 (파싱 실패 줄 0).\n\n### 이 창은 **내 모델 자신의 직전 task 산출물**이다\n\n커밋 제목이 `슬라이스 11, reconcile rct_20260927-0001` 을 자기선언하고, 그 task\n(`tbm_econ-opinion-monitor-docs-impl/rct_20260927-0001`)는 03:17:41Z `succeeded` 로 닫혔다.\n즉 창은 남의 것이 아니라 **내 gap 을 좁히려고 내가 연 슬라이스의 착지**다.\n\n### 슬라이스 11(AC3.10 기여 기사 목록) 전건 착지 — 문서 주장 말고 코드로 독립 검증\n\n| 완료 기준 | 실측 (tip `31d74a0`) |\n|---|---|\n| ⑴ `GET /api/contributions` 라우트 | `handlers.go:43` 등재. 라우트 9→10(`health dashboard trend compare sentiment fairness **contributions** trace reprocess debug`) |\n| ⑵ 두 합 등식 단위 테스트 | `contributions_test.go` 6건 — `...MatchesTheGoldRawCount` · `...NarrowedBySourceSumsToTheWhole` · `...CountsAReanalyzedRecordOnce` · `...MarksSharedBodiesAsDuplicates` · `...HonoursTheRequestedUnitAndBucket` · `...AnswersAnUnknownSubjectWithAnEmptyList`. **`go test -run Contributions` rc=0** (go1.24.7, `ok ... 0.017s`) |\n| ⑶ 화면 목록 + 수집원 좁히기 | `Fairness.tsx` ∋ `art-row`, `tokens.css` 에 `.art-` 신규 선택자 11개 |\n| ⑷ 게이트 rc=0 | `check_scenario_mapping.py` **양 끝 rc=0** (아래) |\n| ⑸ 문서 동기화 | doc-tracker 2026-09.md +63/−18 로 착지 절 신설 · 집계 3칸 이동 |\n\nR3(마커 집계) 불변 확인: `Fairness.tsx` 의 `CMP-*` 마커는 기존 8종 그대로(신규 0), 신규 CSS 는\n`.art-` 접두뿐 — 계획이 약속한 「상한 0 유지」가 지켜졌다.\n\n### 잔여 = **AC3.9 소스별 기여 분해, 원장 밖 실물에서 전건 부재** (tip 실측)\n\n- `contracts/gold/` 는 `axis_sentiment.avsc`·`subject_trend.avsc` 2개뿐이고 `source` **0히트**.\n- `go/gen/gold.go` ∋ `SubjectTrend` 키는 `Subject·Axis·BucketUnit·TimeBucket` + 파생\n  `RawCount·NormalizedShare·Delta·Spark` — **수집원 차원 없음**.\n- 집계기는 수집원별로 **이미 센다** — `aggregate.py:52` `counts[axis][bucket][source][subject] -> n`,\n  `:63` 누산. 그런데 `:72~76` 에서 `n_sources = len(sources)` / `source_total` 로\n  `averaged[subject] += (n / source_total) / n_sources` — **소스축을 접어 산출에서 버린다**.\n  ⇒ 없는 것은 계산이 아니라 산출·계약·서빙·화면이다(창 전후 부동: `python/` 지문 `e04c98a4` 불변).\n- `Fairness.tsx:316` 이 부재를 스스로 적는다: `(대상 · 축 · 버킷)` 이라 **`수집원 차원이 없고`**.\n  슬라이스 11 은 AC3.10 쪽 부재 주장만 걷고 이 문장을 **계획대로 살려 뒀다**.\n\n### 게이트 자기출력 — `tests/e2e/check_scenario_mapping.py` 양 끝 실행\n\n| | 시나리오 전집 | 예외 | 구현 대기 | 1:1 대상 | 매칭 spec | 공백 | rc |\n|---|---|---|---|---|---|---|---|\n| `232fd66` | 26 | 1 | **2** | 23 | 23 | **0** | 0 |\n| `31d74a0` | 26 | 1 | **1** | 24 | 23 | **1** (시나리오 10) | 0 |\n\n구현 대기 2→1: AC3.10 의 시나리오 10 이 **구현 대기 → 공백**으로 내려갔고(그 spec 저작은 자매\n`tbm_econ-opinion-monitor-scenario-e2e` 몫), **AC3.9 의 시나리오 9 는 구현 대기에 그대로 남았다**.\n게이트 규칙6 이 그 행의 해제 신호(`web/src/screens/Fairness.tsx` ∋ `수집원 차원이 없고`)가\n**아직 살아 있음을 매 실행에서 기계로 확인**한다 ⇒ AC3.9 미구현은 문서 주장이 아니라 게이트 검증값이다.\n\n### ⚠️ 게이트 자기 한계 — 이 초록이 내 판정을 닫지 못한다\n\n게이트 모듈 docstring 이 스스로 적는다: 「판정 단위는 **시나리오**다. **AC 는 이 검사기의 축이 아니다**\n— 어떤 시나리오가 어떤 AC 를 검증하는지는 테스트 문서가 적지만 그 연결의 완전성은 **문서 체계\n(doc-tracker 앞부분)가 보고 이 게이트는 보지 않는다**」, 그리고 「강제하지 **않는** 것: 공백 0 …\n게이트는 '격차가 없다'가 아니라 '문서가 격차를 정직하게 말한다'를 지킨다」.\n내 모델의 축(기준1 미구현 AC = drift)은 정확히 그 사각지대 안이다 ⇒ 양 끝 rc=0 은 무발화 근거가 아니다.\n\n### 계측기 3발 (tip 에서, 복원 검증됨)\n\n- **CTRL**(창과 동형 = doc-tracker 산문 1줄 추가) → **rc=0 불변**.\n- **A**(해제 신호 직격: `수집원 차원이 없고` → `…생겼고`) → **rc=1 `규칙6: … 해제 신호가 사라졌다\n  (web/src/screens/Fairness.tsx 에 수집원 차원이 없고 없음) — 구현이 착지했을 수 있으니 재판정할 것`**.\n- **B**(집계 표 `구현 대기 등재` 1→2) → **rc=1 `규칙5: 집계 표의 구현 대기 등재 가 2 인데 실측은 1 다`**.\n- 복원: `git write-tree` == `HEAD^{tree}` == `2d5f6943f35a1ec083ed01d6621a304936710876`, 작업트리 청정.\n\n⇒ 게이트는 잔여 좌표에 **살아 있고**, 창과 동형 변이에는 둔감하다. 무발화가 아니라 **발화**가 정답이다.\n",
       "toBe": "## to-be — 제품 문서 `docs/` (SSOT), tip `ea6816af` 관측\n\n문서가 정의하는 골대는 **AC 26건**이다(`### AC` 헤딩 전수: AC1.1~1.7 · AC2.1~2.6 · AC3.1~3.10 ·\nAC4.1~4.3 — `sort -uV` 로 26). 2026-09-26 사용자 결정으로 「소스 차원」 잔여가 AC3.9·AC3.10 으로\n승격돼 24→26 이 된 상태이고, 이 창이 그 둘 중 하나(AC3.10)를 착지시켰다.\n\n### doc-tracker 가 적은 잔여 (최신 월 파일 `2026-09.md`, 정의의 경로 해석 규약대로)\n\n- **「잔여 (= 이 모델이 후속 슬라이스로 여는 대상. 페이크/스텁은 충족으로 세지 않는다)」 절:\n  「미구현 AC 1건 — AC3.9 소스별 기여 분해」**(신설 2건 중 AC3.10 은 2026-09-27 슬라이스 11 로 착지).\n  그 둘을 빼면 PRD-1~3 의 21건 + PRD-4 의 3건은 전건 착지.\n- **AC 별 표 `:956`**: `| AC3.9 | — 미구현 (구현 대기) | test-aggregation-viz 시나리오9 | 12 |`\n  (바로 아래 `:957` `| AC3.10 | — 구현 착지, spec 미저작 (공백) | … | 11 |` — 창이 옮긴 칸).\n- **구현 대기 등재 표 `:673`**: 시나리오 9 행의 **담당 칸 = `tbm_econ-opinion-monitor-docs-impl`\n  (로드맵 슬라이스 12)** — 즉 **이 모델 자신**을 지목한다.\n- **로드맵 `:924`**: 슬라이스 12 `fairness` 소스별 기여(`STP-inspect-sources`) / AC3.9 /\n  대상 `Gold(수집원 × 대상 기여)·contracts·python·go·web`.\n- **변경 이력 `:1036`**: 「슬라이스 11 착지 — AC3.10 기여 기사 목록. **미구현 AC 2→1**, 시나리오 10 이\n  구현 대기에서 공백으로.」\n\n### 등재의 성격 — 면제가 아니라 배정이다\n\n구현 대기 표의 머리말이 자기규정한다: 「공백은 **이 모델(=자매 scenario-e2e)이 하네스를 넓혀** 닫고,\n구현 대기는 **담당 모델이 구현을 착지시켜야 풀린다**. 둘을 한 통에 담으면 '누가 무엇을 해야 하는가'가\n사라진다.」 ⇒ 시나리오 9 의 구현 대기 등재는 **나(docs-impl)에게 배정된 것**이며, 그 표가 제공하는\n면제는 자매 축(시나리오↔spec 1:1)에 대한 것이지 내 축(AC 커버리지)에 대한 것이 아니다.\n\n### 정의가 요구하는 것\n\n정의 「정합성 판정 기준 1」: **미구현 AC = drift**, 「골격의 페이크/스텁은 AC 충족으로 보지 않는다\n(2026-07-12 사용자 결정: 미구현 AC를 백로그로 예외 처리하지 않는다)」.\n「충돌 시 기본 방향」: 문서가 SSOT이고 **미구현 AC는 원칙적으로 구현한다**.\n⇒ AC3.9 가 26건 중 1건 미구현으로 남아 있는 상태는 정의상 그 자체로 격차다.\n",
@@ -9088,6 +9088,106 @@
               "detail": "정보성 인계. 계획 결함 0 · PR 내용 무결 · 범위 그대로. 필요한 것은 head 재고정 하나다: 자매 #180(main d2bed93)이 착지해 docs/comment-policy/ledger.md 가 충돌한다. executor 가 해소하면 head 가 움직여 review.manualApproval 이 묶은 sha 40aced5 의 사람 승인 1회를 확정적으로 버리므로 planner 로 되돌린다 (attempt 2 의 reason 이 기록한 #176 때와 같은 구조, 같은 처분). 다음 planner 시도는 지침 §2-A-2 의 ledger.md 규칙을 그대로 재생하면 된다 — #180 은 L 잔여 축 판정 패스라 web/src 블록이 아니라 다른 블록을 움직였을 수 있으니 소관 행만 취하고 자매가 소멸시킨 행은 되살리지 않는다. 충돌은 주석 원장 1파일뿐이고 #180 이 건드린 나머지 16파일은 자동 병합됐다 — 코드 충돌 0. 대상 레포에 가한 변경은 0이며 PR #178 은 열린 채 head·승인 status 를 보존한다."
             }
           ]
+        }
+      },
+      {
+        "reason": "failed — 계획 결함 0 · 준비물(PR 내용) 무결 · 범위 그대로. 2차 시도는 승인까지 받았으나(사람 승인 success on `40aced5`) 자매 #180 이 05:31:59 에 착지해 PR #178 이 `mergeable=false`/`dirty` 가 됐고, executor 가 지침 §2-D 의 정지 조건대로 **해소하지 않고 멈췄다**(머지 미수행 · 대상 레포 변경 0 · head·승인 status 보존). 해소는 head 를 움직여 `manualApproval` 이 묶은 sha 의 사람 승인 1회를 버리므로 executor 몫이 아니다. 검증의 인계 문면대로 **범위·PR·계획 내용을 그대로 승계하고 해소만 planner 가 끝내는 재준비(3차)**로 진행한다.",
+        "plan": {
+          "summary": "**이 시도는 재계획이 아니라 재준비다(3차). 범위·접근·PR·계획 내용은 한 글자도 바꾸지 않는다.** 직전 시도(2차)는 계획 결함 0 · 준비물 무결로 **승인**까지 받았고(사람 `review/manual-approval` = success on `40aced5`, 14:36:26), executor 가 지침 §2-D 의 **정지 조건을 정확히 밟아** 멈춘 것이다: 자매 #180(`d2bed93`, 05:31:59 착지)로 PR #178 이 `mergeable=false`/`dirty` 가 됐고, 해소는 필연적으로 head 를 움직여 `manualApproval` 이 묶은 sha `40aced5` 의 사람 승인 1회를 확정적으로 버리므로 해소하지 않고 planner 로 되돌렸다. **대상 레포·프로덕션에 가한 변경은 0이고 머지는 일어나지 않았다.** 그래서 필요한 것은 재계획이 아니라 **head 재고정 하나**다 — 2차와 같은 구조·같은 처분(2차의 `reason` 이 기록한 #176 때와 동일).\n\n**해소는 planner 가 끝냈다(단계 17). 새 head `1826fa4` · base `c88294f` → `d2bed93`.** 충돌은 자매 셋이 얽혔던 2차와 달리 **`docs/comment-policy/ledger.md` 1파일뿐**이었고(`git merge-tree --write-tree --name-only d2bed93 40aced5` rc=1, 그 1파일), #180 이 건드린 나머지 16파일(go/python/tests/passes)은 자동 병합돼 **코드 충돌 0**이다. 해소는 행 소유자대로 했다 — #180 의 재판정 9행을 그대로 취하고, 이 슬라이스가 신설한 `python/packages/aggregation/src/econ_aggregation/contributions.py` 행 1개만 원래 정렬 위치(같은 패키지 `cli.py` 다음)에 남겼고, **#180 이 소멸시킨 3행(`test_fake_llm.py`·`test_llm_call_record.py`·`test_sources.py`)은 되살리지 않았다**. `checkout --theirs/--ours` 미사용, 편집은 내용 앵커 + `assert len(mine)==1` 스크립트(`resolve_ledger.py`)로 했다.\n\n**범위 불변을 리터럴 신뢰 없이 증명했다(이번 재준비의 핵심 근거).** 21개 파일 전건에 대해 「부모 대비 ± 줄 집합 md5」를 **옛 base↔옛 head(`c88294f`→`40aced5`)** 와 **새 base↔새 head(`d2bed93`→`1826fa4`)** 두 지점에서 각각 계산해 **21/21 동일(SAME)**을 실측했다. 즉 이 PR 이 main 에 넣는 내용은 바이트 단위로 2차와 같고, 움직인 것은 head sha 와 base 뿐이다. `changed_files` **21**(벤더 오염 0)도 API 로 재확인했다.\n\n**게이트 4종 로컬 rc=0, 인쇄값이 승인 시점과 같다** — `check-comment-ledger.py` 「불변식 통과」(표면 L 행 191 · D 행 42 · E 행 20), `check_scenario_mapping.py` **구현 대기 0 · 1:1 대상 25 · 매칭 24 · 공백 1(= 시나리오 9)**, `check-mockup-render.py` 규칙 3·4·5 통과, `check-journey-mockup.py` PASS. PR 은 `mergeable=true`(`mergeable_state=blocked` — 필수 context 2개 중 사람 승인 미부착) 로 3회 연속 실측했다.\n\n**완료 기준(범위)은 2차와 동일하다 — 아래 ㉮~㉴ 와 순서 불변 등식.** 재준비는 완료 기준을 건드리지 않는다. 다만 리뷰가 인계한 **낡은 리터럴 4건**을 지침에 판정 기준으로 승격해 적었다(㉯ 는 절대 md5 가 아니라 base↔head 동일로 · doc-tracker 이력 수치 · design-tracker 인용 3자리 · 머지가 롤아웃까지 간다는 사실).\n\n---\n\n로드맵 슬라이스 12 = AC3.9 「소스별 기여 분해」를 한 슬라이스로 착지시킨다. 집계기는 이미 `counts[axis][bucket][source][subject]` 로 수집원별로 세고도 `(n/source_total)/n_sources` 로 소스축을 접어 산출에서 버리므로, 없는 것은 **계산이 아니라 산출·계약·서빙·화면**이다(감지 실측). 그래서 새 계산법을 짜지 않고 **그 접기 직전의 중간값을 그대로 꺼내 쓰는** 길을 고른다: `build_subject_trends` 의 세기·접기를 `_count()`/`_fold()` 로 갈라 두 산출(`subject_trend` · 새 `subject_source_contribution`)이 **한 패스**를 공유하게 하면 AC3.9 가 요구하는 두 합 등식(수집원별 원시 건수 합 = `raw_count` · 수집원별 정규화 후 기여 합 = `normalized_share`)이 리터럴 대조가 아니라 **구성상** 성립한다. 두 번째 계산법을 쓰면 자기가 설명한다는 수와 조용히 어긋나는 분해가 되는데, 그것이 슬라이스 11 이 `/api/contributions` 에서 이미 피한 함정이다.\n\n차원을 더하면 같은 개체의 행이 여러 벌 생기므로 **기존 `subject_trend` 의 회계를 바꾸지 않는 것**이 등재가 적어 둔 조건이다. 그래서 별도 Gold 데이터셋으로 내고(기본안), 불변은 두 축으로 증명한다 — ⑴ `store.go` 가 `gold/<dataset>.jsonl` 을 **이름으로** 읽어 기존 소비자(`dashboard`·`compare`)가 새 파일을 볼 수 없다는 구조적 근거, ⑵ 리팩터 전후 같은 레이크에 집계를 돌려 `gold/subject_trend.jsonl` **바이트 동일**을 실측한 값.\n\n**범위(완료 기준)** — ㉮ `contracts/gold/subject_source_contribution.avsc` 신설 + `make gen` 레시피 전체(codegen → gofmt → 락 핀 ruff 0.15.18)로 `go/gen`·`econ_core/models` 재생성, ㉯ 집계기가 그 데이터셋을 쓰고 `subject_trend` 산출이 바이트 동일, ㉰ `GET /api/source-contributions` 가 그 Gold 를 읽어 (대상·축·버킷단위·버킷) 한 값의 수집원별 원시 건수·원시 기여 비중·정규화 후 기여를 내려 주고, ㉱ `fairness` 화면의 부재 사유 note(`수집원 차원이 없고`)가 실제 소스별 기여 카드로 대체되며, ㉲ AC3.9 「검증 방법」 세 절(두 합 등식 · 한 소스 수집량만 늘렸을 때의 거동 · 분해 도입 전후 대상 단위 집계 불변)이 python/go/web 단위 테스트로 1:1 단언되고, ㉳ doc-tracker·design-tracker 장부가 실측에 맞게 이동하고(구현 대기 1→0 · 공백 1→2 · 1:1 대상 24→25 · 미구현 AC 1→0), ㉴ 게이트 4종 (`check_scenario_mapping.py`·`check-mockup-render.py`·`check-journey-mockup.py`·`check-comment-ledger.py`) + `make lint`/`test` 대역이 로컬 rc=0.\n\n**범위 밖(후속)** — ⒜ 시나리오 9 전용 e2e spec 저작: 착지로 구현 대기가 풀리면 그 시나리오는 **공백**으로 내려가고 담당이 자매 `tbm_econ-opinion-monitor-scenario-e2e` 로 넘어간다(모델 정의: 공백은 그 모델이 하네스를 넓혀 닫고, 구현 대기는 담당 모델이 구현을 착지시켜 푼다 — 여기서 spec 을 저작하면 자매 몫을 삼킨다). ⒝ 이번 착지로 **새로 생기는** 목업↔구현 편차(집중도 지표 표기·`.src-` 표면 등)의 등재는 자매 `tbm_econ-opinion-monitor-mockup-render` 몫이다(`web/src/screens` 지문이 움직이므로 재감지가 연다) — 다만 내 착지가 **전제를 죽이는** design-tracker 두 행(`STP-inspect-sources` 「전면 부재」 · 「구현 전용 … 소스 분해 부재 note」)은 슬라이스 11 이 `STP-drilldown-articles` 행에 한 것과 같은 선례대로 이 슬라이스에서 재판정한다. ⒞ 목업 전용으로 남는 것(저신뢰·미분석 분리 표기 토글 = AC2.5 축 · 단계 이탈 CTA = 여정 전진 장치) 은 편차로 남긴다. ⒟ 번호 없는 잔여 「대상별 분위기」.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "슬라이스 전 base 실측 고정: `git rev-parse origin/main`, 게이트 4종 rc=0 기준선, `python3 tests/e2e/check_scenario_mapping.py` 의 집계 7값, `check-comment-ledger.py` 의 `measure()/by_file()/fingerprint()` 로 이번에 건드릴 파일들의 L·D·E 현재값, 그리고 `gold/subject_trend.jsonl` 회계 불변의 **기준 산출물**(페이크 레이크 1벌).",
+              "expectedOutcome": "게이트 4종 rc=0 · 기준 Gold 1벌 · 건드릴 파일의 표면별 (줄 수, 지문) 표가 손에 있다."
+            },
+            {
+              "seq": 2,
+              "action": "`contracts/gold/subject_source_contribution.avsc` 신설. 키는 `(subject, axis, bucket_unit, time_bucket, source_id)`, 값은 `raw_count`(그 수집원의 원시 건수) · `raw_share`(그 값의 원시 카운트 대비 비중) · `normalized_contribution`(정규화 후 기여). enum `Axis`·`BucketUnit` 은 기존과 **같은 symbols** 로 재선언한다(codegen `register_enum` 이 symbols 가 같으면 멱등, 다르면 SystemExit). 새 필드 이름은 한정형 둘뿐이고 `raw_count`·`subject`·`axis`·`bucket_unit`·`time_bucket`·`source_id` 는 기존 계약에 이미 있는 이름을 재사용해 `field_assignment_rule()` 의 영구 사정권을 넓히지 않는다.",
+              "expectedOutcome": "`.avsc` 1파일 추가. `avsc` 는 주석 언어군 NONE 이라 주석 원장 행이 필요 없다."
+            },
+            {
+              "seq": 3,
+              "action": "`make gen` 레시피 **전체**를 돌려 생성물을 재생성: `python3 contracts/codegen.py` → `gofmt -w go/gen` → 락 핀 `ruff 0.15.18` 의 `check --fix` + `format`(models 만). `go/gen/gold.go`·`python/.../models/gold.py`·`__init__.py` 에 `SubjectSourceContribution` 이 알파벳 순으로 들어간다. `enums.go`·`enums.py` 는 **무변경**이어야 한다(같은 enum 재선언).",
+              "expectedOutcome": "`git diff -- go/gen python/packages/core/src/econ_core/models` 가 새 레코드만 담고, 커밋 뒤 `make gen-check` 대역(같은 레시피 재실행 + `git diff --exit-code`)이 공집합."
+            },
+            {
+              "seq": 4,
+              "action": "집계기 리팩터: `aggregate.py` 의 `build_subject_trends` 를 `_count(bronze, silver, unit)` 와 `_fold(counts)` 로 가른다. `_fold` 는 기존 산술을 **글자 그대로** 옮기면서 접기 직전의 per-source 항 `(n/source_total)/n_sources` 를 버리지 않고 함께 돌려준다. `build_subject_trends` 는 그 중 subject 단위 값만 쓰고(출력 무변경), 새 `build_subject_source_contributions` / `build_subject_source_contributions_all_units` 가 per-source 항을 `denom` 으로 나눠 `normalized_contribution` 으로, `n/raw_total` 을 `raw_share` 로 낸다.",
+              "expectedOutcome": "`pytest` 기존 집계 테스트 전건 통과 + 1단계에서 뜬 기준 Gold 와 `gold/subject_trend.jsonl` **바이트 동일**(`md5sum` 대조)."
+            },
+            {
+              "seq": 5,
+              "action": "산출 배선: `econ_core/domain.py` 에 `DS_SUBJECT_SOURCE_CONTRIBUTION` 추가(줄 끝 주석 없이 — 그 파일 L·D·E 세 행을 건드리지 않는다), `econ_aggregation/cli.py` 가 그 데이터셋을 `store.write_records` 로 쓰고 요약 줄·경로 줄에 건수를 싣는다.",
+              "expectedOutcome": "`python3 -m econ_aggregation --data $D` 가 `gold/subject_source_contribution.jsonl` 을 쓰고 CLI 요약이 그 건수를 찍는다."
+            },
+            {
+              "seq": 6,
+              "action": "AC3.9 「검증 방법」을 집계 단위 테스트로 1:1 이식(`tests/test_aggregate.py` 에 추가): ⑴ 수집원별 원시 건수 합 = `raw_count` ⑵ 수집원별 `normalized_contribution` 합 = `normalized_share`(4자리 반올림 등식) ⑶ 한 소스의 수집량만 늘리면 그 소스의 `raw_share` 는 오르고 `normalized_contribution` 은 과도하게 흔들리지 않는다 ⑷ 분해를 낸 뒤에도 `subject_trend` 산출이 같다. 픽스처는 손으로 쓰지 않고 **집계기 자신의 입력**(한 축 2수집원 · 같은 대상이 두 소스에 걸침 · 재분석 2버전 · 다중 대상 · 이전 버킷)으로 만든다.",
+              "expectedOutcome": "`pytest` 신규 4건 + 기존 전건 통과."
+            },
+            {
+              "seq": 7,
+              "action": "서빙: `go/internal/store/store.go` 에 `SubjectSourceContributions()` 리더 추가(주석 0줄), `go/internal/handlers/source_contributions.go` 신설 — `GET /api/source-contributions` 가 `axis`·`subject`·`unit`·`time_bucket` 을 받아 그 값의 수집원 행을 원시 건수 내림차순으로 내고, `basis` 에 Gold `raw_count`·`normalized_share` 와 이 엔드포인트가 합한 `raw_total`·`normalized_total` 을 **함께** 실어 화면·테스트가 두 등식을 단언하게 한다. 집중도 지표(`최다 기여` 수집원 · 그 소스 비중 · 기여 소스 수)도 같은 응답에서 낸다. `handlers.go` 는 라우트 1줄만(주석 0줄).",
+              "expectedOutcome": "`go test ./...` rc=0 · 신규 테스트가 두 합 등식과 빈 Gold 생존을 단언한다."
+            },
+            {
+              "seq": 8,
+              "action": "화면: `web/src/api/types.ts`·`client.ts` 에 타입·메서드 추가(주석 0줄), `web/src/screens/Fairness.tsx` 의 부재 사유 note 블록(312~322행)을 **소스별 기여 카드**로 교체한다 — 목업 카피(`소스별 기여` · `이 대상의 언급이 어디서 왔는가` · 표 헤더 `수집원`·`원시 건수`·`기여 비중`·`정규화 후` · 집중도 `최다 기여`·`그 소스 비중`·`기여 소스 수`)를 그대로 쓰고, 새 CSS 선택자는 `.src-` 로 접두 격리한다(R5 상한 0 유지). JSX 주석은 **이미 in-scope 인 마커만** 재사용한다(새 `CMP-*`/`PAT-*` 토큰 금지 — R3 집계 불변). `tokens.css` 새 규칙은 주석 0줄.",
+              "expectedOutcome": "`npm run lint`·`npm test` rc=0 · `check-mockup-render.py` R3 「27종 — 26·1·1」·R5 상한 0 불변 · `수집원 차원이 없고` 가 `web/` 전건 grep 0히트."
+            },
+            {
+              "seq": 9,
+              "action": "`Fairness.test.tsx` 의 부재 note 단언을 새 카드 단언으로 교체하고, 화면이 두 등식을 한 자리에 적는지(`합 N건 · 원시 카운트 M건`, 갈리면 갈렸다고 적는다) 단언을 추가한다. slice 11 의 `art-` 카드 테스트와 같은 모양.",
+              "expectedOutcome": "`npm test` 신규/변경 단언 통과 · `Fairness.test.tsx` 에서 `수집원 차원이 없고` 0히트."
+            },
+            {
+              "seq": 10,
+              "action": "doc-tracker(`docs/econ-opinion-monitor-doc-tracker/2026-09.md`) 이동: ⑴ 「구현 대기」 표에서 시나리오 9 행 삭제(표 머리는 남긴다 — 규칙6 이 신호 없는 행을 거부하므로 다음 등재가 같은 규약으로 들어오게), ⑵ `gap-list` 마커 안에 `econ-opinion-monitor-test-aggregation-viz.md#시나리오 9` 추가, ⑶ 집계 표 3칸(구현 대기 등재 1→0 · 1:1 대상 24→25 · 공백 1→2)과 회계 문장(`전집 26 = 매칭 23 + 예외 1 + 구현 대기 0 + 공백 2`), ⑷ 「잔여」 절의 미구현 AC 1건 → **0건**, ⑸ AC별 표 `| AC3.9 | ... |` 행을 착지로, ⑹ 로드맵 슬라이스 12 착지 표기, ⑺ 변동 이력에 2026-09-27 슬라이스 12 행 추가(전/후 수치 포함). ⚠️ `AC 26/26`·`테스트 커버 26/26` 은 연결 수치라 **무변경**.",
+              "expectedOutcome": "`python3 tests/e2e/check_scenario_mapping.py` rc=0 이고 인쇄된 7값이 표와 일치 · `check-journey-mockup.py` R10(산문 재진술 숫자) rc=0."
+            },
+            {
+              "seq": 11,
+              "action": "design-tracker(`docs/econ-opinion-monitor-design-tracker.md`) 재판정 2행 — `STP-inspect-sources` 「전면 부재」 행은 슬라이스 11 이 `STP-drilldown-articles` 행에 쓴 형식(「2026-09-27 재판정 — 「전면 부재」가 아니다」 + 남은 편차 열거 + 사유 + 새 재검토 조건)으로 고치고, 「구현 전용 — … 소스 분해 부재 note」 행에서 note 절을 걷는다(짝 행이 해소됐으므로). 새로 생긴 편차의 **등재**는 하지 않는다(자매 mockup-render 몫).",
+              "expectedOutcome": "`check-mockup-render.py` rc=0(편차 표는 게이트가 읽지 않으므로 수치 불변) · 행 5칸 유지 · 셀에 `|` 없음."
+            },
+            {
+              "seq": 12,
+              "action": "주석 원장(`docs/comment-policy/ledger.md`) 정합: `git add -A` **뒤에** `check-comment-ledger.py` 를 import 해 `measure()`/`by_file()`/`fingerprint()` 로 실측값을 뽑아 ⑴ 표면이 움직인 기존 행(`aggregate.py` L·D · `Fairness.tsx` L · `Fairness.test.tsx` L · `cli.py` L·D · `test_aggregate.py` L 등 — 실측으로 확정)의 줄 수·지문을 갱신하고 결과 칸에는 **증분 절을 앞에 덧붙인다**(옛 문면 삭제 금지), ⑵ 신규 파일(`source_contributions.go` 등)은 판정 축 `—` 행으로 등재한다. 표 머리 6열·행 정렬 규약을 지키고 셀에 `|` 를 넣지 않는다.",
+              "expectedOutcome": "`python3 scripts/check-comment-ledger.py .` rc=0(R1~R9) · 행 수 = 지문 파일 수."
+            },
+            {
+              "seq": 13,
+              "action": "게이트·테스트 전수 로컬 재현 후 커밋·푸시·PR. 게이트 4종 + `ruff check`/`format --diff` + `pytest` + `go build`·`go vet`·`go test ./...` + `npm run lint`·`npm test` + `tests/smoke.sh` 대역(`sed 's#uv run --quiet python#python3#g'`). 마지막에 `python3 scripts/check-data-format-change.py <base> <head>`(**위치 인자**)를 **base 쪽 판정기 사본**으로 돌려 `format_changed` 를 실측하고 PR 본문·준비 노트에 적는다.",
+              "expectedOutcome": "전건 rc=0 · `format_changed=true`(계약 접촉) 확인 · PR 열림 · `changed_files` 실측이 의도한 파일 집합과 일치(루트 `node_modules` 등 오염 0)."
+            },
+            {
+              "seq": 14,
+              "action": "자매 착지로 생긴 충돌을 **준비 단계에서** 해소한다. 편집은 눈대중 줄 번호가 아니라 **내용 앵커 + `assert count==1`** 스크립트로 하고, 🔴 `checkout --theirs/--ours` 는 쓰지 않는다(파일째 고르면 한쪽 행이 사라진다). 실제로 이 시도 중에 자매가 **셋** 착지해 두 라운드가 필요했다.\n\n⑴ **#176**(`28d1ed6`) — `docs/econ-opinion-monitor-design-tracker.md` 1파일·2헝크. 헝크1 은 `검증 중 태그 부재`(#176) · `STP-inspect-sources` 재판정(내 쪽) · `STP-drilldown-articles`(#176) 세 행을 원래 순서로 보존하고, 헝크2 는 `세는 기준 카드` 는 내 판(note 절 걷은 것)을 남기고 #176 의 신설 5행을 뒤에 붙인다(#176 의 같은 행 옛 판은 버린다). 함께 #176 이 인용한 `Fairness.tsx` 줄 번호 3자리를 **병합 트리에서 다시 재서** 갱신한다.\n\n⑵ **#179**(`ae80c10`) — `docs/comment-policy/ledger.md` 의 `web/src` 블록 전체. #179 가 그 23행을 재판정했고 **내 소관은 `Fairness.tsx`·`Fairness.test.tsx` 두 행뿐**이므로 #179 의 21행 + 내 2행으로 합친다. 🔴 #179 가 주석을 전부 걷어 **소멸시킨 2행**(`App.tsx`·`Placeholder.tsx`)은 되살리지 않는다 — 복원하면 #179 의 착지를 조용히 되돌린다.\n\n⑶ **#177**(`c88294f`) — `docs/econ-opinion-monitor-doc-tracker/2026-09.md` 3헝크. **수치가 얽힌 유일한 충돌이다**: #177 이 매칭 23→24 · 공백 1→0 을, 내가 구현 대기 1→0 · 1:1 대상 24→25 · 공백을 쓴다. 합쳐진 회계 `전집 26 = 매칭 24 + 예외 1 + 구현 대기 0 + 공백 1`(공백 = 시나리오 9)로 집계 표 · gap-list · 불변식 문장 · 산문 재진술 숫자를 **게이트가 인쇄한 값 그대로** 맞춘다.",
+              "expectedOutcome": "충돌 마커 0 · 설계 트래커 `| ` 데이터 행 **177** · `Fairness.tsx` 인용 3자리가 실측값 `:76`/`:248`/`:255` (`types.ts:142-152` 는 실측 확인 후 무변경) · 원장 `web/src` 블록 **23행**(#179 21 + 슬라이스 12 의 2) · `check_scenario_mapping.py` 가 전집 26 · 예외 1 · 구현 대기 0 · 1:1 대상 25 · 매칭 24 · 공백 1 을 인쇄."
+            },
+            {
+              "seq": 15,
+              "action": "해소본을 `git add -A` 뒤 게이트 4종으로 재검증하고, 해소가 **코드 파일을 한 줄도 건드리지 않았음**을 `git diff <옛 head> <새 head>` 로 증명한 뒤 커밋·푸시한다. 푸시 전에 `git fetch origin main` 으로 main 이 그사이 또 움직이지 않았는지 재확인한다(무거운 단계 앞뒤로 자물쇠 재확인).",
+              "expectedOutcome": "게이트 4종 rc=0 · **이 슬라이스의 코드 기여가 base 이동에 불변**임을 `git diff` 의 ± 줄 집합 md5 가 옛/새 base 에서 동일함으로 증명(+1109/−44 · 18파일) · `git status --porcelain` 이 비어 있음(벤더 오염 0) · push 성공 · PR `mergeable=true` · `changed_files` 21 유지."
+            },
+            {
+              "seq": 16,
+              "action": "새 head 에서 CI 를 다시 받고 `preparation` 을 그 head 로 갱신한다. 지침에서는 충돌 해소를 executor 몫 (1차 §1~§2)에서 **준비 단계 기록**으로 옮겨 적고, 「head 에 커밋을 얹지 말 것」과 「자매가 또 착지해 `dirty` 가 되면 executor 가 해소하지 말고 멈춰 재준비로 되돌릴 것」을 정지 조건으로 못박는다. 장부 검증 ㉳ 는 절대 수치에서 순서 불변 등식으로 바꿔 적는다.",
+              "expectedOutcome": "새 head `40aced5` 의 필수 aggregate `required` = **success**(12잡 전건 success/skipped) · `review/manual-approval` 은 여전히 미부착(= `contracts/**` 접촉의 기대 상태, 우회 금지) · `preparation.pullRequestUrl` 은 그대로이고 notes 가 새 head 와 실측값을 담는다."
+            },
+            {
+              "seq": 17,
+              "action": "자매 #180 착지분 해소 — **준비 단계에서 planner 가** 끝낸다(executor 에게 남기지 않는다). ⑴ `git merge-base origin/main <head>` = `c88294f` 확인 후 `git merge --no-commit --no-ff origin/main`. ⑵ 충돌 1파일(`docs/comment-policy/ledger.md`)을 **행 소유자대로** 푼다 — 충돌 블록에서 내 몫이 `econ_aggregation/contributions.py` 행 **정확히 1개**임을 `assert len(mine)==1` 로 못박고, 나머지는 origin/main 쪽 9행을 그대로 취한다. #180 이 소멸시킨 3행은 **되살리지 않는다**(집합 차로 열거해 로그에 남긴다). `--theirs/--ours` 금지. ⑶ `git add -A` 뒤 게이트 4종 전수 실행. ⑷ 21파일 전건 「± 줄 집합 md5」를 옛 base↔옛 head 와 새 base↔새 head 두 지점에서 대조해 **전건 동일**을 증명. ⑸ 머지 커밋 1개로 커밋·푸시.",
+              "expectedOutcome": "충돌 마커 0 · 게이트 4종 rc=0(인쇄값 승인 시점과 동일) · 21/21 md5 SAME · `changed_files` 21 · 새 head `1826fa4a4da4363a623179c8e65ff9e6db9744fd` · PR #178 `mergeable=true`."
+            },
+            {
+              "seq": 18,
+              "action": "새 head 에서 CI 를 다시 받아 필수 aggregate `required` 가 success 인지 확인하고 `preparation` 을 그 head 로 갱신한다. 그다음 리뷰가 이 head 에 `manualApproval` 을 다시 묶고, 사람이 `review/manual-approval` 을 **이 sha 에** 붙인 뒤에만 executor 가 집는다. 지침의 정지 조건(§2-D)은 그대로 유지한다 — 또 자매가 착지해 `dirty` 가 되면 executor 는 해소하지 말고 멈춰 재준비로 되돌린다.",
+              "expectedOutcome": "`GET /commits/1826fa4.../check-runs` 에서 `required` = success(의존 잡 전건 success/skipped) · `review/manual-approval` 은 이 head 에 **부재**(그것이 기대 상태 — `contracts/**` 접촉으로 `check-data-format-change.py` 가 `format_changed=true`)."
+            }
+          ],
+          "plannedAt": "2026-09-27T15:05:00Z"
         }
       }
     ]
