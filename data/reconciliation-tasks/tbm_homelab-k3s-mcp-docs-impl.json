@@ -12497,5 +12497,20 @@
       "reason": "**판정: 작업 불필요(`no_action_needed`).** 양 지문이 함께 움직였으나(as-is `internal/` 트리 · to-be `docs/` 트리) 판정 기준 1~4 가 전건 무위반이고, 움직임의 실체는 **자매 주석 정리 슬라이스 56(PR #256 = `comment-redundancy/rct_20260926-0026` 집행 — 내가 직전 회차에 열어 넘긴 task)이 관측 가능성·러너 축 주석 260줄을 걷은 것**이다. 그중 내 as-is 표면에 닿은 것은 `internal/metrics` 가족 3파일 **−45줄**뿐이고, 나머지 215줄은 정의가 **명시 제외**한 `tests/` 다.\n\n**근거 요약**\n1. **코드 무변화 2중 계측**: `git diff -U0 -- internal/` 의 `+9 / −54` 줄이 **전부 `//` 주석**(비주석 `+0/−0`, **블록 주석 변경 0** ⇒ 다중행 본문 위양성 여지 원리적 부재) · Go 토크나이저 주석-스트립 md5 **3/3 SAME**. 계측기 자신을 **CTRL 4발**로 검증(코드 주입→DIFF · 주석 변이→SAME · 주석 *제거*→SAME · 리터럴 인식 5/5). `main.go` blob 부동. ⚠️이 호스트엔 `go` 가 없어 `gofmt`·`go/parser` 경로가 막혀 있다.\n2. **문서 무변화**: `docs/` 최상위 41엔트리 **39 SAME · DIFF 2**(`comment-policy/`·`doc-tracker/` — 둘 다 내 SSOT 밖, 엔트리 신설·소실 0), **SSOT 36파일 blob 전부 부동**. ⇒ 기준 1(AC 95 · 매트릭스 17행 전부 `✅ 완전` · 신규 AC 0)과 기준 2(계약 불일치 — 도구 표면 정본 `internal/mcp/toolslist.go` 는 창의 변경 목록에 없다)는 표면이 열리지 않았다. 모델 정의의 「session-* 3종 미구현 12건」은 정의 스스로 「판정 기준이 아닌 스냅샷」이라 못박은 등록 시점 숫자이며 그 셋은 이미 구현·문서화 완료다.\n3. **기준 3(문서 없는 구현)을 세 방향으로 떴고 전부 무위반**: ⒜내 SSOT → 걷힌 주석 축자 인용 **0히트**(제거 49문면 × `docs/` 117파일) ⒝걷힌 주석이 인용한 `prd-metrics AC1~AC5`·`prd-event-log AC2` 전부 tip 실재하고, **절 본문이 주석보다 길고 정확한 원본임을 다섯 자리에서 대조**(미호출 0 노출 · `unregistered` 폴드값이 **AC1·AC4 이중 기술** · 「여섯 판정」 · `sum(refusals_total)==calls_total{refused}` 불변식이 event-log AC2 검증 방법에 명시 · 인증 경계 문장은 **거의 축자 일치**) ⇒ **「가리키던 쪽이 지워진 형」 3회째** ⒞`ledger.md` **비고 칸**이 내 SSOT 를 「② 소유자」로 주장(`prd-metrics` 5 · `test-metrics` 6 · `test-event-log` 7 · `prd-event-log` 1 — **경로 칸 집계로는 안 잡히는 자리**), 그 주장을 원장 밖 AC 절 본문으로 독립 검증한 것이 ⒝다.\n4. **기준 4(tracker)**: 레포 자기 게이트 `scripts/check_doc_inventory.py` 를 **양 끝 실행** — base `ae93a6c` rc=0 **116/116 · 정책 76**, tip `35ee2f4` rc=0 **117/117 · 정책 77**, 둘 다 끊긴 링크 0 · D1~D4 위반 없음. **계측기 셋이 `+1`**(창의 `A` 파일 1 · 게이트 Δ · tracker 자기선언 Δ 1/1). 163차 앵커 `116/116 · 정책 76` == 내 base 실측(**연속성 검산 4회째**).\n5. ⭐**AC 매핑 게이트가 blob 이 움직였는데 출력은 바이트 동일**: 창이 `tests/integration/check_ac_mapping.py` 를 `+3/−63` 으로 건드렸다(blob `98895944`→`7596eac0`). 「blob 부동 ≠ 구성적 불변」의 *반대* 케이스라 양 끝 실행이 필수였고, **파이프 없는 rc** 로 떠서 둘 다 rc=0 · 출력 바이트 동일(`99 · 2 · 4 · 93 · 93 · 0 · 0`, 불변식 99−2−4=93). ⇒ 게이트가 읽는 `검증 AC:` 선언 전수가 주석 제거를 **생존**했다.\n6. ⭐**원장 계수와 내 계수가 처음으로 정확히 일치**: `ledger.md` 의 `internal/metrics/…` 행 **76→31 = −45** == 내 행별 재계수 `54−9 = −45`. 원장 10행 총합 **398→138 = −260** == 커밋 자기선언 「주석 260줄 제거」.\n\n**소관 검토**: 이번은 잔여가 「감소」가 아니라 **구조적 0**(기준 1~4 전건 무위반)이므로 139차의 「소관 전수 0 ⇒ 잔여 크기로 발화」 규칙은 **해당 없다** — 그 검토를 거쳤음을 여기 명시한다.\n\n**마감 검증**: 재스윕에서 내 모델이 `occupied by rct_20260927-0001` 로 떨어져 **baseline 전진 확인**(CHANGED 소멸). 2파도 **0** — `ls-remote refs/heads/main` == 창 tip `35ee2f4` 바이트 일치. `summarizedAt(00:44:30Z) <= assessedAt(00:45:40Z)`.\n\n**남긴 후보**: `tbm_homelab-k3s-mcp-comment-redundancy` 양측 CHANGED 1건은 single in-flight 규약대로 **점유하지 않고 그대로 뒀다**. `scenario-e2e`·`e2e-mock-policy` 는 그 사이 자매 워커가 각각 집어 갔다(정상 인계).",
       "assessedAt": "2026-09-27T00:45:40Z"
     }
+  },
+  {
+    "id": "rct_20260927-0002",
+    "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
+    "status": "assessing",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-27T01:40:01Z",
+      "toBe": {
+        "currentVersion": "4f1b128409f9f35cc6a536f73cff4117c4ba4746",
+        "previousVersion": "c1e514875c8fc38d990cb1754ff5871a92fd7c4c"
+      }
+    },
+    "createdAt": "2026-09-27T01:40:01Z",
+    "updatedAt": "2026-09-27T01:40:01Z"
   }
 ]
