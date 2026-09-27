@@ -12187,7 +12187,7 @@
   {
     "id": "rct_20260927-0002",
     "toBeModelId": "tbm_feature-doc-comment-redundancy",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-27T15:01:12Z",
@@ -12263,6 +12263,55 @@
           "status": "approved",
           "reviewedAt": "2026-09-27T15:58:00Z",
           "reason": "PR #194 신선도 실측: OPEN · head `1a0c4e4` 불변 · `compare main...head` behind_by 0 / merge_base = main tip `13ffb8a` (충돌 불가 확정) · `changed_files` 6 · `+185 −52` — 필수 status 두 건 모두 head 에 붙어 있다(`ci-gate` check-run success · `review/manual-approval` status success, 판정기 `✅ 해당 없음`). 4-2 해당 없음. 완료 기준을 내가 양 끝에서 직접 굴려 음성 대조했다 — base `13ffb8a` 는 `[L] 2971줄/40행 (97% of 3060) · 축별 미판정 2/2/2/2`, head 는 `3020줄/42행 (100% of 3020) · 0/0/0/0`. 양 끝 rc=0 이므로 rc 는 수렴의 증거가 아니지만, 지침이 기준으로 못박은 것은 집계 칸(`100% of` + 축별 전건 0)이라 base 에서 실제로 거짓·head 에서 참이다(등식 기준이라 자매 #193 착지 순서에도 무너지지 않는다). 범위: 6파일 전량이 계획면이고 `.sql`·벤더 트리 유입 0 — 코드 3파일의 **비주석 diff 0줄**을 문자열/템플릿 리터럴을 구분하는 주석 스캐너로 재확인했고, 같은 스캐너에 코드 1토큰을 주입하면 2줄이 뜨므로 감도도 실증됐다. 되돌릴 수 없는 지점은 머지 하나이고 revert 한 번이 실제로 원상복구다(코드 바이트 동일). riskLevel low 타당 — 승인. [지침 정정 2건 — 거부 사유가 아니라 executor 가 알고 있어야 하는 값] ⑴ 「배포 매니페스트 무접촉 · 트래픽 영향 0 · 문서·주석 전용」은 **PR 기준으로만 참이고 머지 기준으로는 거짓**이다: `backend/src/access_request.rs` 가 `image.yml` 의 main push `paths` 제외 목록(`docs/**`·`tools/**`·`e2e/**`·`scripts/**`·`backend/tests/**`)에 들지 않으므로 머지가 `build & push image` + `pin deployment image (main only)` 를 발화시켜 `deploy` 브랜치의 `deploy/k8s/*deployment.yaml` 이 새 sha 로 고정되고 Flux 롤아웃이 따라온다. PR 위의 `push image (no app change)` SKIPPED 는 PR 이벤트 몫이라 이걸 못 가른다. 동형 선례로 실측 확인: 같은 모양(backend/src 주석만)인 #189 `687282e` · #188 `3e0c8d9` · #175 `cacb429` 세 건 모두 두 job 이 main 에서 success, 현재 `deploy` tip 은 `Source-Commit: 13ffb8a`. 위험은 통제됨 — 비주석 diff 0 이라 재빌드 이미지는 동작 동일이고, pin job 은 조상 판정 + `--force-with-lease` 로 더 새 pin 을 덮지 않으며, revert 도 같은 경로로 pin 을 되돌린다. 다만 **Step 6 의 원장 게이트만으로는 롤아웃까지 검증되지 않으므로** executor 는 머지 후 `image.yml` 두 job 과 `deploy` tip 의 `Source-Commit` 이 머지 sha 로 옮겨졌는지도 함께 볼 것. ⑵ 「재생 스크립트 전문이 지침 §재생 절차에 있다」는 거짓 — §3 에는 `<tmp>/edit_comments.py`·`edit_ledger.py` 호출 스케치와 3규칙(내용 문자열 앵커 + `assert count==1` · 원장 수치는 게이트 import 실측 · 허브 라벨 현재 값 +1)만 있고 소스는 계획 잡과 함께 사라졌다. 지금 head 가 CLEAN 이고 자매 `rct_20260927-0001` 은 `planning`(PR #193 head 가 `6e932ee` 로 다시 이동, BLOCKED)이라 재생 경로는 열릴 가능성이 낮고, 열려도 `1a0c4e4` diff + 3규칙으로 재작성 가능하며 `count != 1` 정지 규칙이 강행을 막으므로 실패 모드는 닫혀 있다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-27T16:04:30Z",
+          "finishedAt": "2026-09-27T16:07:00Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:04:30Z",
+              "finishedAt": "2026-09-27T16:04:50Z",
+              "log": "PR #194 head 1a0c4e4 실측: 필수 status 두 개 전부 SUCCESS (check-run ci-gate=SUCCESS, StatusContext review/manual-approval=SUCCESS, created_at 2026-09-27T15:38:26Z, combined state=success), mergeStateStatus=CLEAN, mergeable=MERGEABLE, changedFiles=6. 나머지 check-run 도 전건 SUCCESS(changes, 데이터 저장 형식 변경 판정, docs-journey-mockup, docs-mockup-render, docs-scenario-e2e, comment-ledger, test (cargo), test (kind e2e 1/2·2/2)) + 이미지 잡 2건 SKIPPED. 지침이 경고한 「combined pending + statuses:[]」 모양은 아니었다 — statuses 에 review/manual-approval success 가 실제로 있다."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:04:50Z",
+              "finishedAt": "2026-09-27T16:05:05Z",
+              "log": "착지 순서 분기 = CLEAN 경로. main tip 이 PR base 와 같은 13ffb8a 로 실측돼 자매 #193 은 아직 미착지(state=OPEN, mergeStateStatus=BLOCKED, head 6e932ee). 따라서 Step 3 재생 불필요, Step 4 로 진행."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "startedAt": "2026-09-27T16:05:05Z",
+              "finishedAt": "2026-09-27T16:05:05Z",
+              "log": "충돌이 없어 재생 절차 미실행(Step 2 의 CLEAN 분기). edit_comments.py / edit_ledger.py 를 돌리지 않았고 head 에 커밋을 얹지 않았다 — 필수 status 가 묶인 sha 1a0c4e4 를 그대로 유지."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:05:05Z",
+              "finishedAt": "2026-09-27T16:05:55Z",
+              "log": "게이트 6종 전수 로컬 실행(대상 레포 얕은 클론 --depth 20 + refs/pull/194/head, HEAD=1a0c4e4 · HEAD^=13ffb8a 로 찍어 확인 → 머지 결과 트리 == PR head 트리). rc 전부 0: check-comment-ledger.py rc=0 / check-journey-mockup.py rc=0 (여정 6 · 목업 페이지 5 · 문서 62 · 상대 링크 509) / check-scenario-e2e.py rc=0 / check-mockup-render.py rc=0 (M12 27쌍·카피 38, M9 27쌍, M11 사각 9) / check-journey-prototype.js rc=0 (프로토타입 5 · 단언 417) / check-data-format-change.py --base 13ffb8a --head HEAD rc=0 → 「해당 없음 (review/manual-approval = success)」 변경 파일 6개. 완료 기준 줄 실측: 「[L] 판정 완료(①②③④) 3020줄 / 42행 (100% of 3020줄) · 축별 미판정 행 ① 0 · ② 0 · ③ 0 · ④ 0」. node 게이트는 첫 실행이 MODULE_NOT_FOUND(jsdom 미설치)로 rc=1 이었고 지침대로 npm ci --prefix tools 로 설치 후 rc=0 — 게이트 실패가 아니라 런타임 준비 문제였다(루트 npm install 은 하지 않았고 git status 는 깨끗해 벤더 트리가 실리지 않음). 변경 파일 6개에 backend/migrations/ 는 0건."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:05:55Z",
+              "finishedAt": "2026-09-27T16:06:20Z",
+              "log": "머지 직전 라이브 재실측(state=OPEN · mergeStateStatus=CLEAN · head 1a0c4e4 · base 13ffb8a · main tip 13ffb8a · combined status success) 뒤 squash 머지. PUT /repos/dlddu/feature-doc/pulls/194/merge merge_method=squash + sha 가드 1a0c4e4 (commit_title 은 넘기지 않음 — 넘기면 (#194) 접미사가 사라진다). 응답 merged=true · squash 커밋 5b753ffa3851fcde46b0b8684987c09e3bb05459. head 에 새 커밋을 얹지 않았다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T16:06:20Z",
+              "finishedAt": "2026-09-27T16:07:00Z",
+              "log": "착지 확인: PR state=MERGED · mergedAt 2026-09-27T16:06:19Z · mergeCommit 5b753ff. main tip 5b753ff 이고 그 tree 27915d87dae2891ccf7dcfccceca248ac86c1490 == PR head 1a0c4e4 의 tree 로 동일 — squash 가 판정 대상 트리를 그대로 옮겼다. 커밋 제목에 (#194) 접미사 보존. 수렴 재측정은 verification 에 기록."
+            }
+          ]
         }
       }
     ]
