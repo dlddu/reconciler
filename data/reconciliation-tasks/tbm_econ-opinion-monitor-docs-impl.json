@@ -8811,7 +8811,7 @@
   {
     "id": "rct_20260927-0003",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-27T03:24:29Z",
@@ -8825,7 +8825,7 @@
       }
     },
     "createdAt": "2026-09-27T03:24:29Z",
-    "updatedAt": "2026-09-27T15:51:10Z",
+    "updatedAt": "2026-09-27T15:55:00Z",
     "stateSummary": {
       "asIs": "## as-is — 구현 (contracts/ + python/ + go/ + web/ + deploy/), 2026-09-27T03:3x 관측\n\n**창 = 단일 커밋 `31d74a0`**(PR #174, `%cI` 2026-09-27T03:12:19Z, trailer `reconciler-bot`).\n25커밋 성분 전수표로 확정했다 — 기준선 `232fd66`(docs `dd2ea054` · go `c223814d` · web `0469e729`)에서\ntip 까지 사이 커밋이 없고, 양 끝 지문이 모델 레코드와 **바이트 동일**하다:\n\n```\n232fd66 asIs contracts:914b9741 python:e04c98a4 go:c223814d web:0469e729 deploy:c298428b  toBe dd2ea054\n31d74a0 asIs contracts:914b9741 python:e04c98a4 go:f81f11d7 web:c894846b deploy:c298428b  toBe ea6816af\n```\n\n움직인 것은 `go/`·`web/`(as-is 2성분) + `docs/`(to-be)이고 `contracts/`·`python/`·`deploy/` 는 부동.\n경로 접두사 집계: `docs` 4 · `go` 3 · `web` 5 (파싱 실패 줄 0).\n\n### 이 창은 **내 모델 자신의 직전 task 산출물**이다\n\n커밋 제목이 `슬라이스 11, reconcile rct_20260927-0001` 을 자기선언하고, 그 task\n(`tbm_econ-opinion-monitor-docs-impl/rct_20260927-0001`)는 03:17:41Z `succeeded` 로 닫혔다.\n즉 창은 남의 것이 아니라 **내 gap 을 좁히려고 내가 연 슬라이스의 착지**다.\n\n### 슬라이스 11(AC3.10 기여 기사 목록) 전건 착지 — 문서 주장 말고 코드로 독립 검증\n\n| 완료 기준 | 실측 (tip `31d74a0`) |\n|---|---|\n| ⑴ `GET /api/contributions` 라우트 | `handlers.go:43` 등재. 라우트 9→10(`health dashboard trend compare sentiment fairness **contributions** trace reprocess debug`) |\n| ⑵ 두 합 등식 단위 테스트 | `contributions_test.go` 6건 — `...MatchesTheGoldRawCount` · `...NarrowedBySourceSumsToTheWhole` · `...CountsAReanalyzedRecordOnce` · `...MarksSharedBodiesAsDuplicates` · `...HonoursTheRequestedUnitAndBucket` · `...AnswersAnUnknownSubjectWithAnEmptyList`. **`go test -run Contributions` rc=0** (go1.24.7, `ok ... 0.017s`) |\n| ⑶ 화면 목록 + 수집원 좁히기 | `Fairness.tsx` ∋ `art-row`, `tokens.css` 에 `.art-` 신규 선택자 11개 |\n| ⑷ 게이트 rc=0 | `check_scenario_mapping.py` **양 끝 rc=0** (아래) |\n| ⑸ 문서 동기화 | doc-tracker 2026-09.md +63/−18 로 착지 절 신설 · 집계 3칸 이동 |\n\nR3(마커 집계) 불변 확인: `Fairness.tsx` 의 `CMP-*` 마커는 기존 8종 그대로(신규 0), 신규 CSS 는\n`.art-` 접두뿐 — 계획이 약속한 「상한 0 유지」가 지켜졌다.\n\n### 잔여 = **AC3.9 소스별 기여 분해, 원장 밖 실물에서 전건 부재** (tip 실측)\n\n- `contracts/gold/` 는 `axis_sentiment.avsc`·`subject_trend.avsc` 2개뿐이고 `source` **0히트**.\n- `go/gen/gold.go` ∋ `SubjectTrend` 키는 `Subject·Axis·BucketUnit·TimeBucket` + 파생\n  `RawCount·NormalizedShare·Delta·Spark` — **수집원 차원 없음**.\n- 집계기는 수집원별로 **이미 센다** — `aggregate.py:52` `counts[axis][bucket][source][subject] -> n`,\n  `:63` 누산. 그런데 `:72~76` 에서 `n_sources = len(sources)` / `source_total` 로\n  `averaged[subject] += (n / source_total) / n_sources` — **소스축을 접어 산출에서 버린다**.\n  ⇒ 없는 것은 계산이 아니라 산출·계약·서빙·화면이다(창 전후 부동: `python/` 지문 `e04c98a4` 불변).\n- `Fairness.tsx:316` 이 부재를 스스로 적는다: `(대상 · 축 · 버킷)` 이라 **`수집원 차원이 없고`**.\n  슬라이스 11 은 AC3.10 쪽 부재 주장만 걷고 이 문장을 **계획대로 살려 뒀다**.\n\n### 게이트 자기출력 — `tests/e2e/check_scenario_mapping.py` 양 끝 실행\n\n| | 시나리오 전집 | 예외 | 구현 대기 | 1:1 대상 | 매칭 spec | 공백 | rc |\n|---|---|---|---|---|---|---|---|\n| `232fd66` | 26 | 1 | **2** | 23 | 23 | **0** | 0 |\n| `31d74a0` | 26 | 1 | **1** | 24 | 23 | **1** (시나리오 10) | 0 |\n\n구현 대기 2→1: AC3.10 의 시나리오 10 이 **구현 대기 → 공백**으로 내려갔고(그 spec 저작은 자매\n`tbm_econ-opinion-monitor-scenario-e2e` 몫), **AC3.9 의 시나리오 9 는 구현 대기에 그대로 남았다**.\n게이트 규칙6 이 그 행의 해제 신호(`web/src/screens/Fairness.tsx` ∋ `수집원 차원이 없고`)가\n**아직 살아 있음을 매 실행에서 기계로 확인**한다 ⇒ AC3.9 미구현은 문서 주장이 아니라 게이트 검증값이다.\n\n### ⚠️ 게이트 자기 한계 — 이 초록이 내 판정을 닫지 못한다\n\n게이트 모듈 docstring 이 스스로 적는다: 「판정 단위는 **시나리오**다. **AC 는 이 검사기의 축이 아니다**\n— 어떤 시나리오가 어떤 AC 를 검증하는지는 테스트 문서가 적지만 그 연결의 완전성은 **문서 체계\n(doc-tracker 앞부분)가 보고 이 게이트는 보지 않는다**」, 그리고 「강제하지 **않는** 것: 공백 0 …\n게이트는 '격차가 없다'가 아니라 '문서가 격차를 정직하게 말한다'를 지킨다」.\n내 모델의 축(기준1 미구현 AC = drift)은 정확히 그 사각지대 안이다 ⇒ 양 끝 rc=0 은 무발화 근거가 아니다.\n\n### 계측기 3발 (tip 에서, 복원 검증됨)\n\n- **CTRL**(창과 동형 = doc-tracker 산문 1줄 추가) → **rc=0 불변**.\n- **A**(해제 신호 직격: `수집원 차원이 없고` → `…생겼고`) → **rc=1 `규칙6: … 해제 신호가 사라졌다\n  (web/src/screens/Fairness.tsx 에 수집원 차원이 없고 없음) — 구현이 착지했을 수 있으니 재판정할 것`**.\n- **B**(집계 표 `구현 대기 등재` 1→2) → **rc=1 `규칙5: 집계 표의 구현 대기 등재 가 2 인데 실측은 1 다`**.\n- 복원: `git write-tree` == `HEAD^{tree}` == `2d5f6943f35a1ec083ed01d6621a304936710876`, 작업트리 청정.\n\n⇒ 게이트는 잔여 좌표에 **살아 있고**, 창과 동형 변이에는 둔감하다. 무발화가 아니라 **발화**가 정답이다.\n",
       "toBe": "## to-be — 제품 문서 `docs/` (SSOT), tip `ea6816af` 관측\n\n문서가 정의하는 골대는 **AC 26건**이다(`### AC` 헤딩 전수: AC1.1~1.7 · AC2.1~2.6 · AC3.1~3.10 ·\nAC4.1~4.3 — `sort -uV` 로 26). 2026-09-26 사용자 결정으로 「소스 차원」 잔여가 AC3.9·AC3.10 으로\n승격돼 24→26 이 된 상태이고, 이 창이 그 둘 중 하나(AC3.10)를 착지시켰다.\n\n### doc-tracker 가 적은 잔여 (최신 월 파일 `2026-09.md`, 정의의 경로 해석 규약대로)\n\n- **「잔여 (= 이 모델이 후속 슬라이스로 여는 대상. 페이크/스텁은 충족으로 세지 않는다)」 절:\n  「미구현 AC 1건 — AC3.9 소스별 기여 분해」**(신설 2건 중 AC3.10 은 2026-09-27 슬라이스 11 로 착지).\n  그 둘을 빼면 PRD-1~3 의 21건 + PRD-4 의 3건은 전건 착지.\n- **AC 별 표 `:956`**: `| AC3.9 | — 미구현 (구현 대기) | test-aggregation-viz 시나리오9 | 12 |`\n  (바로 아래 `:957` `| AC3.10 | — 구현 착지, spec 미저작 (공백) | … | 11 |` — 창이 옮긴 칸).\n- **구현 대기 등재 표 `:673`**: 시나리오 9 행의 **담당 칸 = `tbm_econ-opinion-monitor-docs-impl`\n  (로드맵 슬라이스 12)** — 즉 **이 모델 자신**을 지목한다.\n- **로드맵 `:924`**: 슬라이스 12 `fairness` 소스별 기여(`STP-inspect-sources`) / AC3.9 /\n  대상 `Gold(수집원 × 대상 기여)·contracts·python·go·web`.\n- **변경 이력 `:1036`**: 「슬라이스 11 착지 — AC3.10 기여 기사 목록. **미구현 AC 2→1**, 시나리오 10 이\n  구현 대기에서 공백으로.」\n\n### 등재의 성격 — 면제가 아니라 배정이다\n\n구현 대기 표의 머리말이 자기규정한다: 「공백은 **이 모델(=자매 scenario-e2e)이 하네스를 넓혀** 닫고,\n구현 대기는 **담당 모델이 구현을 착지시켜야 풀린다**. 둘을 한 통에 담으면 '누가 무엇을 해야 하는가'가\n사라진다.」 ⇒ 시나리오 9 의 구현 대기 등재는 **나(docs-impl)에게 배정된 것**이며, 그 표가 제공하는\n면제는 자매 축(시나리오↔spec 1:1)에 대한 것이지 내 축(AC 커버리지)에 대한 것이 아니다.\n\n### 정의가 요구하는 것\n\n정의 「정합성 판정 기준 1」: **미구현 AC = drift**, 「골격의 페이크/스텁은 AC 충족으로 보지 않는다\n(2026-07-12 사용자 결정: 미구현 AC를 백로그로 예외 처리하지 않는다)」.\n「충돌 시 기본 방향」: 문서가 SSOT이고 **미구현 AC는 원칙적으로 구현한다**.\n⇒ AC3.9 가 26건 중 1건 미구현으로 남아 있는 상태는 정의상 그 자체로 격차다.\n",
@@ -9231,6 +9231,63 @@
               "startedAt": "2026-09-27T15:50:40Z",
               "finishedAt": "2026-09-27T15:50:50Z",
               "log": "지침 §3 머지 — squash 로 착지. PUT /pulls/178/merge {merge_method: squash, sha: 1826fa4...} -> HTTP 200, merged=true, sha=e72cc9dc76b6485b69a6874c862ed42f820db1cb. 요청에 commit_title 을 넘기지 않아 GitHub 기본 제목이 유지됐다 — 착지 제목이 레포 관례대로 '(#178)' 로 끝난다: 'feat(contracts,python,go,web): fairness 소스별 기여 분해 — AC3.9 (슬라이스 12, reconcile rct_20260927-0003) (#178)'. sha 파라미터로 머지 대상 head 를 못박아 경쟁 push 가 있었으면 409 로 떨어지게 했다(떨어지지 않았다). 착지 검증: GET /commits/main = e72cc9dc..., parents=[d2bed93] (= 승인 시점 base 그대로, 중간 커밋 없음), 그리고 착지 커밋 tree = ebdb65c8c0a9943833fcb8e2fd5d350d95d16955 가 PR head 1826fa4 의 tree 와 **동일** — main 에 들어간 내용이 사람이 승인한 트리와 바이트 단위로 같다는 뜻이다. GET /pulls/178 = state closed · merged_at 2026-09-27T15:50:47Z · merge_commit_sha e72cc9dc.... head 에 커밋을 얹지 않았고(§0·§2-D) 리베이스·force-push·main 직접 push·다른 PR 머지 모두 하지 않았다."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "contracts:213e5a643be714a8fffcad1aa8f59fb0be9a6b89 python:8b65135a66f06b6052030f596653c1ac51016591 go:89530388b71b05452fe22e3f96e89c06767ff7b3 web:879e2ccc4d95e2cc605d2da64024f565512cf866 deploy:c298428b6b693299c36dbda08f9945ef1c8fca59",
+          "verifiedAt": "2026-09-27T15:55:00Z",
+          "checks": [
+            {
+              "name": "㉮ 계약·생성물이 착지한 main 에 서 있다",
+              "status": "passed",
+              "detail": "착지 main e72cc9dc76b6485b69a6874c862ed42f820db1cb 의 실체크아웃에서 실측. contracts/gold/subject_source_contribution.avsc 존재. grep -c SubjectSourceContribution -> go/gen/gold.go 2히트 · python/packages/core/src/econ_core/models/gold.py 2히트 (기대 각 1 이상). 라우트도 등재됐다: go/internal/handlers/handlers.go:44 에 mux.HandleFunc GET /api/source-contributions 1히트. 직전 시도에서 이 3항이 전부 0/부재였던 것과 대조된다 — 그때는 머지가 없었기 때문이고 이번엔 착지했다."
+            },
+            {
+              "name": "㉯ 집계기가 새 데이터셋을 쓰고 기존 산출이 불변(base↔head 동일 대조)",
+              "status": "passed",
+              "detail": "지침 지시대로 절대 md5 가 아니라 base↔head 동일로 판정했다(1차 지침의 39dcf10a… 리터럴은 낡았다고 명시돼 있다). 같은 페이크 레이크 레시피(ingestion fake --cycle 2026-06-23T14:00 -> analysis fake -> aggregation)를 base d2bed93 와 착지 head e72cc9d 두 체크아웃에서 각각 3단 실행해 대조: gold/subject_trend.jsonl md5 = cd07bb58091bf03772bf1239188d6cf9 로 양 끝 SAME(42행), gold/axis_sentiment.jsonl md5 = f137bc7056b77f7a2a9780477f5cf685 로 양 끝 SAME(9행). 신설 gold/subject_source_contribution.jsonl 은 base 부재 -> head 존재 42행 (md5 66eff03307a6f5ab924f840ff0b6fa2b). aggregation CLI 요약도 지침이 예고한 대로 42 subject_source_contribution 을 찍었다. 즉 데이터 영향은 가산뿐이고 기존 회계는 바이트 단위로 불변이다. 리뷰가 승인 시점에 낸 두 md5 와도 값이 그대로 일치한다."
+            },
+            {
+              "name": "㉰ 서빙이 분해를 내려주고 두 합 등식이 전수 성립",
+              "status": "passed",
+              "detail": "go build ./cmd/serving rc=0 후 ECON_DATA_ROOT=위 페이크 레이크로 127.0.0.1:18931 에 띄워 실측. 3축(KR·US·GLOBAL)의 /api/fairness 전 행에 대해 /api/source-contributions?axis=..&unit=..&time_bucket=..&subject=.. 를 조회해 basis.raw_total==basis.raw_count 와 basis.normalized_total==basis.normalized_share 를 전수 대조: KR 7행 · US 4행 · GLOBAL 3행 = checked 14 · mismatch 0. concentration 도 전 행에서 채워져 내려왔다(top_source_id: kr-wire·kr-biz·us-markets·global-desk). 지침 경고대로 페이크 corpus 는 대상마다 기사 1건이라 이 14개가 전부 단일 소스인데, 그것을 결함으로 읽지 않았다 — 다중 수집원·재분석 축은 ㉲ 의 python·go 합성 픽스처가 덮는다."
+            },
+            {
+              "name": "㉱ 부재 note 가 걷혔다",
+              "status": "passed",
+              "detail": "grep -rc 로 web/ 전 파일(37개) 실측 — 수집원 차원이 없고 가 전건 0히트. Fairness.tsx·Fairness.test.tsx 도 0. docs/econ-opinion-monitor-doc-tracker/2026-09.md 는 3히트가 남아 있는데 지침이 경위 기록이라 히트가 남는 것이 정상이라고 명시한 자리라 통과로 본다."
+            },
+            {
+              "name": "㉲ AC3.9 검증 방법이 단정으로 서 있다(3개 스위트)",
+              "status": "passed",
+              "detail": "착지 main 트리에서 전건 rc=0: python3 -m pytest python -q rc=0 · (cd go && go test ./...) rc=0 (handlers·store 양 패키지 ok) · (cd web && npm ci && npm test) rc=0 (테스트 파일 9개 전건 통과, Fairness.test.tsx 포함). 지침 지시대로 passed 개수는 판정 근거로 쓰지 않았다 — 자매 주석 패스와 e2e spec 이 모집단을 계속 움직이기 때문이다."
+            },
+            {
+              "name": "㉳ 장부가 실측대로 움직였다(절대 수치 아닌 등식)",
+              "status": "passed",
+              "detail": "python3 tests/e2e/check_scenario_mapping.py rc=0, 인쇄값: 시나리오 전집 26 · 예외 등재 1 · 구현 대기 등재 0 · 1:1 대상 25 · 매칭 spec 24 · 공백 1 · 비-시나리오 spec 1. 지침의 등식을 전항 만족한다 — 구현 대기 0 (이 슬라이스가 1 에서 닫은 핵심 지표) · 1:1 대상 25 (24 에서 증가) · 매칭 24 + 공백 1 = 25 · 공백 목록이 정확히 econ-opinion-monitor-test-aggregation-viz.md#시나리오 9 하나. 규칙 1~6 위반 0 이고 게이트가 실측과 문서 집계를 스스로 대조하므로 rc=0 은 둘의 일치를 뜻한다. 지침이 낡았다고 못박은 doc-tracker 이력 행의 매칭 23·공백 2 문면은 판정에 쓰지 않았다."
+            },
+            {
+              "name": "㉴ 게이트 4종 초록",
+              "status": "passed",
+              "detail": "git add -A 뒤 착지 트리에서 전건 rc=0. check_scenario_mapping.py rc=0 (위 ㉳). check-mockup-render.py rc=0 — R3 in-scope 27종 (이름 대조 26 · 등재 예외 1 · 구현 전용 1) 로 승인 시점과 동일, R4 불일치 3항 전부 0 = 상한 0, R5 값 충돌·목업 전용·구현 전용 선언 전부 0 = 상한 0. check-journey-mockup.py rc=0 — R8 docs 상대 링크 433건 전부 해석·깨진 링크 0, R10 재진술 숫자 전건 일치. check-comment-ledger.py rc=0 — 불변식 통과, 표면 L 행 191 · D 행 42 · E 행 20 으로 지침 §2-B 실측표와 값이 그대로 일치. 설계 트래커 데이터 행도 177 로 일치."
+            },
+            {
+              "name": "착지 무결성 — main 에 들어간 것이 사람이 승인한 트리와 같은가",
+              "status": "passed",
+              "detail": "판정 항목은 아니지만 되돌릴 수 없는 단계라 독립 확인했다. 착지 커밋 e72cc9dc76b6485b69a6874c862ed42f820db1cb 의 parents 가 [d2bed93] 단 하나 (= 승인 시점 base 그대로, 중간 커밋 없음)이고, 그 tree ebdb65c8c0a9943833fcb8e2fd5d350d95d16955 가 사람이 승인한 head 1826fa4 의 tree 와 동일하다. squash 제목도 레포 관례대로 (#178) 로 끝난다(merge 요청에 commit_title 을 넘기지 않았다). PR #178 state=closed · merged_at 2026-09-27T15:50:47Z."
+            },
+            {
+              "name": "[정보] 롤아웃 — 머지가 프로덕션까지 갔는가",
+              "status": "passed",
+              "detail": "지침 §7 이 머지는 롤아웃까지 간다 고 못박은 전제를 실측으로 확인했다(판정 항목은 아니다). 머지 약 90초 뒤 deploy 브랜치 tip 이 ca0d0bc1d52fc51295bb244ae8238b0216a5074b 로 움직였고 메시지가 deploy: econ-monitor 이미지를 e72cc9dc76b6485b69a6874c862ed42f820db1cb 로 고정 (2026-09-27T15:52:16Z) — 즉 image publish -> pin deploy images (main only) 가 돌아 새 이미지로 재고정됐다. 파드 재시작 자체는 승인 게이트 뒤라 여기서 프로브하지 않았다."
+            },
+            {
+              "name": "[정보] 범위 밖 잔여 gap — 판정에 넣지 않음",
+              "status": "passed",
+              "detail": "지침 §6 이 후속으로 넘긴 항목들은 이 task 의 완료 기준이 아니므로 판정에서 뺐고 사실만 남긴다. ⑴ 시나리오 9 전용 e2e spec 저작 — 이 착지로 그 시나리오가 구현 대기에서 공백으로 내려갔고 담당은 자매 모델 tbm_econ-opinion-monitor-scenario-e2e 다(위 ㉳ 의 공백 1 이 그것). ⑵ 새로 생긴 목업↔구현 편차 등재 — tbm_econ-opinion-monitor-mockup-render 몫. ⑶ design-tracker 의 Fairness.tsx 인용 3자리(문면 :70/:221/:228 ↔ 실측 :76/:248/:255) — 지침이 의도적으로 고치지 않았다고 적은 자리이고 고치면 21/21 불변 증명이 깨지므로 그대로 두었다. 게이트 4종은 이 문면을 보지 않는다(전건 rc=0 로 확인). ⑷ 목업 전용 편차 2종 · 번호 없는 잔여 대상별 분위기 · 신규 3파일의 주석 판정(축 —). 모델 전체 to-be 의 잔여는 다음 감지 주기가 후속 task 로 잇는다 — lastObservedVersion 은 건드리지 않았다."
             }
           ]
         }
