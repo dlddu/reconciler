@@ -3195,5 +3195,20 @@
       "reason": "**작업 불필요.** 창(`f606bfb` → `b26af50`, 1커밋 = PR #182)은 내 두 side 를 모두 밀었지만 **두 이동 모두 판정면 밖**이고,\n1:1 정합성은 창 양 끝에서 완전히 닫혀 있다.\n\n**근거 1 — 레포 자체 게이트를 양 끝에서 실행.** `scripts/check-journey-mockup.py`(모델 규칙 1~8 을 R1~R13 으로 기계화)를\n`f606bfb`·`b26af50` 각각에서 돌려 `rc=0` · **출력 전문 바이트 동일**:\n`PASS — 여정 7개 · 여정 페이지 7개 · 미이관 0(상한 0) · 규칙 5 미충족 페이지 0(상한 0) · 링크 433건`.\n래칫 두 칸(`미이관 상한 0` · `규칙 5 미충족 상한 0`)은 **감소분이 아니라 구조적 0** — 여정 7개가 모두 여정 페이지를\n가지므로 미이관도, 규칙 8 로 등재할 대상도 원리적으로 없다(등재 실측 0건, 양 끝 동일).\n\n**근거 2 — CTRL/양성 프로브 쌍으로 무발화를 재현.** as-is 이동은 인덱스 단계 귀속 표 `STP-inspect-sources` 행의\n**세 번째(서술) 칸 1줄 증설**이 전부다(첫·두 번째 칸과 mockup `.html` 7개는 바이트 부동, 신설 파일 0건).\n⒜ CTRL: *다른* 행(`STP-open-origin`)의 같은 서술 칸에 동형 문장을 주입 → `rc=0` 불변 = 창과 같은 모양이 무발화.\n⒝ 양성: 페이지의 `data-step` 1건 훼손 → `[R3]`+`[R5]` 2건 `rc=1`; 인덱스 래칫 `상한 0→1` → `[R1] 래칫 하강 미반영` `rc=1`.\n⒞ 규칙 8 등재부 생존: `JRN-sentiment-shift.html` 삭제 → `[R1] 여정 페이지도 예외 등재도 없는 여정 1건 > 상한 0`(총 16건),\n같은 삭제 + 그 여정 규칙 8 등재 → **정확히 그 한 줄만 소멸**(15건). 등재부는 살아 있고 지금 비어 있다.\n\n**근거 3 — to-be 이동의 소유자가 명시적으로 내 범위 밖.** design-tracker 를 `## ` 절 단위로 전수 대조(10절)한 결과\nDIFF 는 **`## 목업 ↔ 구현 편차 허용목록` 단 1절**이고 `## 규칙 8 예외 등재` 절은 `8aaf08` 로 **바이트 부동**이다.\n움직인 그 절은 슬라이스 12(`fairness` 소스별 기여, AC3.9) 의 목업↔구현 편차 등재이며, 내 정의가\n「목업이 구현 화면과 일치하는가는 **범위 밖**」으로 명시 배제하고 자매 `tbm_econ-opinion-monitor-mockup-render` 에\n귀속시킨 축이다(인덱스에 덧붙은 그 1줄도 같은 자매 모델을 소유자로 지목한다). 흐름의 SSOT `docs/user-journeys`\n트리는 `8db32e29` 로 **양 끝 완전 부동**이다.\n\n**근거 4 — 규칙 5(c)(d)(e)를 「존재」가 아니라 「통과」로 닫았다.** 이 세 항목은 정적 대조로 판정 불가이고 이 호스트에\nnode 가 없다. 대신 PR #182 head `f55aa417` 의 체크런에서 `docs / flow`(= `node scripts/check-journey-flow.js .`,\n규칙 5 a~h 실제 DOM 구동)와 `docs / structure` 가 **둘 다 success**, 그리고 그 head 의 `docs/mockups` ·\n`docs/user-journeys` · design-tracker · `docs/index.html` · **`scripts`** 서브트리 해시가 머지 커밋 `b26af50`(= 현재 tip)과\n**전부 동일**임을 확인했다 — 하네스는 tip 의 내용물을 tip 의 하네스 코드로 쳤고 초록이다.\n\n**함께 검토했고 격차가 아니라고 판단한 사항(다음 회차가 다시 열지 않도록 명시):**\n- **게이트 맹점 1건(잠재, 현재 격차 0).** 내 규칙 6 은 「예외 목록이 존재하지 않는 여정을 등재하고 있으면 drift」라고\n  하지만, 게이트는 `excepted` 집합을 *누락된 페이지를 면제하는 데만* 쓰고 그 식별자가 실재 여정인지 검사하지 않는다\n  (없는 여정 `JRN-does-not-exist` 를 등재한 양성 프로브가 `rc=0`). 다만 **등재 실측이 0건이라 지금 잘못 등재된 행은\n  없다** — 위반 사실이 아니라 집행 장치의 잠재 격차이며, 등재가 처음 생기는 시점에 게이트 보강이 필요해진다.\n- **정의 본문의 낡은 한 문장.** 「범위 밖」 절이 아직 \"이 레포에는 아직 mockup-render 모델이 없으며\"라고 적고 있으나\n  `tbm_econ-opinion-monitor-mockup-render` 는 실존한다(이번 창의 소유자). 배제 *효력*은 그대로이므로 판정에 영향이\n  없고, 레포 상태가 아니라 모델 기록 측 문면이라 detector 의 격차가 아니다(모델러 몫).\n- **2파도 없음.** assess 직전 재확인에서 `origin/main` 은 여전히 `b26af50` 이고 네 지문 성분\n  (`mockups:391072f8` · `hub:2467533e` · `journeys-tree:8db32e29` · `reg:1d38bd86`) 이 claim 시점 값과 전부 동일 —\n  `stateSummary` 정정 불필요.\n- **캐리어 census 생략 사유.** 좁힐 격차가 0건이므로 열린 PR·자매 task·남의 원장 행을 찾을 필요가 없다\n  (캐리어는 격차를 넘길 곳이지, 격차 없음의 근거가 아니다).",
       "assessedAt": "2026-09-27T16:55:00Z"
     }
+  },
+  {
+    "id": "rct_20260927-0005",
+    "toBeModelId": "tbm_econ-opinion-monitor-journey-mockup",
+    "status": "assessing",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-27T18:04:03Z",
+      "toBe": {
+        "currentVersion": "journeys-tree:8db32e29b7ca64f54ff513ada71e561d040f67c7 reg:f1d8f0b6d2e8f976ab5534b25dee712d2092f39b",
+        "previousVersion": "journeys-tree:8db32e29b7ca64f54ff513ada71e561d040f67c7 reg:1d38bd86102f73081155a099fbd4b613ccb7b6ac"
+      }
+    },
+    "createdAt": "2026-09-27T18:04:03Z",
+    "updatedAt": "2026-09-27T18:04:03Z"
   }
 ]
