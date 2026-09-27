@@ -21,7 +21,7 @@
       "gap": "유의미한 차이 — 최초 관측. **규칙 1 위반(4개 여정 전부)**: 여정당 mockup 진입점이 정확히 1개여야 하는데 J1 8개·J2 7개·J3 6개·J4 6개로 모두 \"2개 이상 = 중복\"에 해당한다. 목업이 화면 단위로 만들어져 있어 \"여정 하나를 한 페이지에서 걸어본다\"는 규칙 5의 흐름 체험 요건(단계 전환 수단·현재 위치 표시·`#<step-id>` 딥링크·분기 선택)도 구조적으로 성립하지 않는다. **규칙 3 판정 불가**: `data-step` 0건이라 문서 27단계와 목업 단계 집합의 양방향 대조가 기계적으로 불가능하다. 반면 **규칙 7의 인덱스 축은 이미 충족**에 가깝다 — 인덱스가 27/27을 매핑하고 있어 여정 단위로 재편할 때 참조 무결성을 유지할 기반이 있다. 구조적 취약성으로, 단계 식별자가 파일명에 순번으로 박혀 있어 단계 추가·재배치 시 파일명·인덱스가 동시에 어긋난다.",
       "summarizedAt": "2026-08-15T15:35:00Z"
     },
-    "updatedAt": "2026-09-27T16:56:34Z",
+    "updatedAt": "2026-09-27T17:55:00Z",
     "assessment": {
       "reason": "작업 필요. 화면 단위 27개 → 여정 단위 4개 페이지로의 마이그레이션은 파일 재구성이 필요한 작업이며 자동 해소될 성질이 아니다. 식별자 체계 이관(순번 `S1` → 슬러그 `STP-<슬러그>`)과 `data-journey`/`data-step` 규약 도입을 **같은 작업에서 함께 처리하면 파일명 변경이 한 번으로 끝난다** — 모델 정의도 이 점을 명시한다. 인덱스가 27/27 매핑을 이미 갖고 있어 재편의 기준표로 쓸 수 있으므로 지금이 작업하기 좋은 시점이다. 다만 27개 파일을 건드리는 큰 변경이므로 planner가 여정 단위(J1~J4)로 슬라이스를 나누는 것이 적절하다.",
       "assessedAt": "2026-08-15T15:35:00Z"
@@ -98,6 +98,76 @@
           "reviewedAt": "2026-09-20T22:38:45Z",
           "reason": "준비물이 유효하지 않다 — PR #44 는 지금도 **draft** 이고 `mergeable=false`/`mergeable_state=dirty` 다. base `a3d703bf` 는 준비 시점(2026-08-15) 그대로이고 main 은 `dcea8c2b` 까지 5주 이동했다. gap 자체는 살아 있다(main 의 `docs/mockups/` 에 화면 단위 27개가 그대로, 여정 단위 페이지 0개)지만 이 PR 을 지금 그대로 실행할 수는 없다.\n계획의 전제 둘이 무너졌다. ⑴ executionGuide 의 머지 순서·충돌 해소 절차가 상대로 지목한 **PR #43 은 머지되지 않고 closed** 됐고, 그 자리를 **#48**(`docs: 폴더 체계 정비 + 플랫폼 인프라 표면 등재`, 2026-09-20 착지)이 대신했다 — #48 은 `docs/{prd,tests,values,platform}/` 로 종류당 디렉터리를 세웠고 `docs/journeys/` 는 만들지 않았으며 여정 md 는 `docs/` 루트에 남겼다. 즉 「`docs/mockups/journeys/` 에 둔다」는 판단의 근거였던 「#43 이 `docs/journeys/` 를 선점한다」가 사실이 아니게 됐고, 디렉터리 규약은 #48 이 세운 새 기준선 위에서 다시 도출돼야 한다. ⑵ #48 이 `docs/mockups/tessera-mockup-index.md`·`docs/tessera-doc-tracker.md`·`docs/index.html` 을 고쳐 이 PR 의 14파일 중 둘과 정면으로 겹친 것이 dirty 의 정체다.\n검증 근거도 낡았다 — #44 의 유일한 CI 런 `31915414303`(`CI & Release`, 2026-08-15)은 **#48 이 신설한 `scripts/check-docs-links.mjs` 게이트가 존재하기 전**의 런이라 「docs/ 상대 링크 165 · 깨짐 0」 실측은 그 게이트를 한 번도 통과한 적이 없다. 직전(사람 검토 시절) 리뷰가 남긴 release 워크플로 위험 — 이 레포는 CI 와 서명·공증 릴리스가 한 워크플로에 묶여 있어 `release` job 이 돌면 머지 전에 auto-updater 로 나가고 revert 로 회수되지 않는다 — 도 5주 더 낡은 관측이라 그대로 남아 있다.\nmedium 위험에 되돌릴 수 없는 경로가 걸려 있는데 전제·검증·충돌 해소 절차가 모두 낡았으므로 승인하지 않는다.",
           "comment": "재계획 시 고칠 것(넷 다 필요):\n1. **PR #44 를 그대로 살리지 말 것.** draft 해제만으로는 안 되고 `dcea8c2b` 이후 main 으로 리베이스해야 하며, 겹치는 `docs/mockups/tessera-mockup-index.md`·`docs/tessera-doc-tracker.md` 는 #48 착지분을 지우지 않게 양쪽 증분을 합쳐 해소해야 한다. 브랜치를 버리고 새로 준비하는 쪽이 싸면 그렇게 하고 새 PR 번호를 preparation 에 적을 것.\n2. **디렉터리 규약을 #48 기준선 위에서 다시 정할 것.** 「#43 이 `docs/journeys/` 를 쓴다」는 근거는 소멸했다(#43 closed, 착지한 것은 #48). #48 이 세운 「종류당 디렉터리 1개」와 모델 definition 이 예시로 든 `docs/journeys/J<n>/index.html` 를 함께 놓고, 모델 `asIs.versionScript` 가 보는 경로 안에 들어가는지를 실측으로 확인한 뒤 고를 것. 경로를 바꾸면 갤러리·인덱스의 상대 링크 깊이도 함께 보정해야 한다.\n3. **검증을 새 게이트로 다시 잡을 것.** #48 이 들여온 `scripts/check-docs-links.mjs` 가 링크 검증의 정본이므로, 완료 기준의 「docs/ 상대 링크 N · 깨짐 0」 은 그 스크립트 출력으로 재정의하고 기준선(N)도 새 main 에서 재측정할 것 — 옛 수치 165/161 은 쓰지 말 것.\n4. **release 워크플로 차단을 실행 지침의 정지 조건으로 명시할 것.** `CI & Release` 의 `changes` job 이 `release=false` 를 내는지 **머지 직전 그 PR head 의 런에서** 확인하고, 아니면 중단·보고하도록 쓸 것(머지 전 서명·공증 릴리스는 revert 로 회수되지 않는다).\n참고: gap 은 아직 살아 있다 — main `dcea8c2b` 기준 `docs/mockups/` 에 `M-J*-S*.html` 27개가 그대로이고 여정 단위 페이지는 0개다. J1 한 여정만 먼저 미는 슬라이스 전략 자체는 유지해도 된다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "J1(통합 작업 표면 구성, 8단계) 한 여정만 슬라이스로 잡아 화면 단위 목업 8개(M-J1-S1~S8)를 여정 단위 페이지 1개(`docs/mockups/JRN-layout.html`)로 통합하고, 그 페이지에 `data-journey`/`data-step` 규약과 슬러그 식별자(`JRN-layout`·`STP-<슬러그>`)를 도입한 뒤 여정 문서·mockup 인덱스·갤러리·허브·여정 인덱스·트래커를 함께 갱신한다. **완료 기준(이 시도의 성공 조건, 전부 게이트·스크립트 출력으로 판정)**: ⑴ `node scripts/check-docs-links.mjs`가 `깨진 참조 0건`(rc=0) — 준비 시점 실측 212건, main 기준선 208건이고 증가분 +4는 전수 대조로 설명됨 ⑵ 여정 문서 「단계 ID」 열 집합 == 페이지 `data-step` 집합(순서 포함 8=8, 양방향 차집합 0) 및 `data-journey` 선언 1건 ⑶ J1 mockup 페이지 1개 · `docs/mockups/M-J1-S*.html` 0개 · legacy ID 8건 보존 · J2~J4 화면 19개 불변 ⑷ 규칙 5 배선(스텝바·`:target` 현재 위치·전진 핫스폿 8·단계별 이전/다음 8)과 자체 완결성(외부 참조 0·`<script>` 0) ⑸ 추출 화면 8개가 원본과 **바이트 동일**. **범위 밖**: J2·J3·J4 이관(화면 19개 그대로), `reader.html` 두 정규식 켜기, 허브 「화면 단위」 구획 제거, `WorkspaceRail.tsx`의 낡은 경로 인용(= `src/` 편집은 release 필터를 건드린다 — 트래커 「다음 액션」에 등재해 다음 코드 PR로 넘겼다), 목업↔구현 렌더링·시각 품질(모델 정의가 범위 밖으로 명시). **왜 한 여정만인가**: 27단계를 한 번에 옮기면 규칙 5의 흐름 체험 표현 방식이 반려될 때 전부 재작업이다(이 레포는 #43에서 실제로 반려를 겪었다). 한 여정으로 규약을 확정해 검토받고 나머지 셋은 복제로 간다. **왜 J1인가**: 8단계로 가장 크고 화면 형태가 가장 다양해(단일 pane→분할→2×2→드래그→저장→zoom→워크스페이스 전환) 규약을 가장 세게 검증한다. 네 여정 모두 다른 여정으로 가는 분기 행이 없어 규칙 4는 공허 충족이다. **왜 `docs/mockups/` 평면인가(이전 판의 결정을 #48 기준선에서 재실측해 바꿨다)**: `reader.html`의 `mockupBase`와 허브 주석·모델 정의 예시는 `docs/journeys/<id>/`를 예약해 두지만, 이 모델의 as-is 지문이 `docs/mockups` 트리 + `docs/index.html` blob이라 그 밖에 두면 **페이지 내용이 바뀌어도 지문이 안 움직인다**(추가·삭제만 허브로 보인다). #48이 여정 *문서*의 `journeys/` 이관을 미룬 사유와 같은 함정이고, 모델 스크립트 수정은 control plane 몫이라 data plane task가 할 수 없다. 평면 배치는 `docs/README.md` 구획 규칙 1(중첩 한 단계 — `mockups/journeys/`는 두 단계)에 맞고 공유 CSS 상대 경로가 기존 27개와 동일해 링크 깊이 보정이 0이며, 규칙 4대로 basename을 `JRN-<슬러그>.html`로 고정했으니 모델 지문이 경로 독립적으로 고쳐지면 이름 그대로 `journeys/`로 내려갈 수 있다. 예약 문면은 지우지 않고 실제 규약으로 정정했다(두 정규식은 `(?!)` 유지 ⇒ 동작 무변경). **왜 화면 마크업을 바이트 그대로 옮기는가**: 이관이 구조 변경임을 기계적으로 증명해야 「목업 재디자인」 심사를 부르지 않는다. 그래서 규칙 5(d)의 전진 핫스폿은 화면 안 요소를 고치는 대신 화면 전체를 `a.advance`로 감쌌다(원본 8개에 `<a>` 0건 ⇒ 중첩 앵커 없음). **왜 지금 이 task를 집었는가**: 모델이 `checkPolicy.enabled:false`(감지 비활성)라 22사이클 동안 「비활성 모델이라 미점유」로 반복 제외돼 6.8일 묵었다. 그 제외 사유를 실측으로 다시 쟀다 — `claim.py`의 비활성 모델 차단은 `load_model()`에 있고 그것은 **detect 경로에서만** 호출된다(plan·review·execute는 status만 본다). 실제로 `--dry-run` 게이트가 이 task에 대해 통과했고, 레포 README도 `review_rejected`를 「진행 중(재작업 진입점)」으로 정의한다. 즉 비활성은 **감지 중단**이지 작업 중단이 아니며, 이 task는 정당한 planner 대상이다. 다만 감지가 꺼져 있어 잔여 gap의 재감지가 자동으로 돌지 않는다는 사실은 지침에 적었다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "진입 게이트·정지 조건 실측: `gh api repos/dlddu/tessera/rules/branches/main`로 필수 status 유무, `.github/workflows/ci.yml`의 `changes` job 허용목록으로 release 트리거 축, `node scripts/check-docs-links.mjs`로 main 기준선, 열린 PR 전수(#44·#47)와 겹침.",
+              "expectedOutcome": "ruleset `[]`(필수 status 0건 ⇒ 무인 착지 가능) · release 허용목록에 `docs/`·`scripts/` 없음 · 기준선 `208건/깨짐 0` · #44(이 task의 이전 시도, draft·dirty)와 #47(tracker 월별 폴더, open)이 확인된다."
+            },
+            {
+              "seq": 2,
+              "action": "경로·식별자 규약을 #48 기준선에서 재결정: `docs/README.md` 구획 규칙, `reader.html` CONFIG `mockupBase`, 허브 주석, 모델 `asIs.versionScript`가 보는 경로를 나란히 놓고 고른다.",
+              "expectedOutcome": "`docs/mockups/JRN-<여정 슬러그>.html` 평면 배치 확정. 예약 문면 2곳(`reader.html`·허브 주석)은 삭제가 아니라 정정 대상으로 잡힌다. 단계 식별자는 `STP-<슬러그>`, 여정은 `JRN-layout`."
+            },
+            {
+              "seq": 3,
+              "action": "생성 스크립트로 `docs/mockups/JRN-layout.html`을 만든다. 8개 원본에서 `<div class=\"shell\">` 안쪽(`.caption`+`.win`)을 파싱해 **바이트 그대로** 추출하고 `<!-- extracted-from:<legacy>.html begin/end -->` 마커로 감싼 뒤 `<section class=\"step\" id=\"STP-*\" data-step=\"STP-*\" data-legacy-id=\"M-J1-S*\">`로 래핑한다. 루트에 `data-journey=\"JRN-layout\"` 1회.",
+              "expectedOutcome": "단일 HTML에 section 8개. 각 추출 블록이 원본과 문자열 단위로 동일(스크립트 자체가 assert). `data-journey` 1건 · `data-step` 8건."
+            },
+            {
+              "seq": 4,
+              "action": "규칙 5(a)~(g) 배선: 상단 sticky 스텝바 8칸, 단계별 이전/다음, `:target` 레일로 현재 위치, 화면 전체를 `a.advance`(라벨은 `data-action`)로 감싸 주요 행동을 눌러 전진, `#STP-*` 딥링크(브라우저 기본 동작), 페이지 로컬 `<style>`만 쓰고 JS 0.",
+              "expectedOutcome": "`file://`로 열려 스텝바·핫스폿 양쪽으로 8단계를 왕복할 수 있고 `#STP-*`가 해당 단계를 표시한다. `<script>` 0건 · 외부 요청 0건."
+            },
+            {
+              "seq": 5,
+              "action": "구 화면 단위 8개(`docs/mockups/M-J1-S1.html`~`S8.html`)를 `git rm`한다.",
+              "expectedOutcome": "`docs/mockups/M-J1-S*.html` 0건. J1 진입점 8 → 1(규칙 1 충족). J2~J4의 19개는 불변."
+            },
+            {
+              "seq": 6,
+              "action": "`docs/tessera-journey-layout.md`: `## 단계` 표에 「단계 ID」 열을 신설해 `STP-<슬러그>` 8개를 박고, 시각화 칸을 `./mockups/JRN-layout.html#STP-<슬러그>`로 교체, 머리말에 여정 슬러그·여정 mockup 링크 추가, 「시각화 상태」 절을 여정 단위 기준으로 다시 쓴다. 단계 본문·순서·근거 AC는 불변(흐름 SSOT 무수정).",
+              "expectedOutcome": "여정 문서 단계 8개 그대로이고 각 행이 단계 ID를 갖는다. 규칙 3의 문서 측 대조점이 기계 파싱 가능해진다."
+            },
+            {
+              "seq": 7,
+              "action": "`docs/mockups/tessera-mockup-index.md`: 「여정 단위 페이지 규약」 절 신설(자리·선언·단계·식별자 보존·화면 마크업 무수정·흐름 체험·허브/갤러리·반출 금지 — J2~J4가 그대로 따를 계약)과 J1 표 재작성(단계 ID·legacy ID·전진 핫스폿 열 신설), 머리말 집계 재계산, J2~J4 제목에 「화면 단위 (이관 대기)」 표시.",
+              "expectedOutcome": "인덱스가 혼재 상태(J1 여정 단위 · J2~J4 화면 단위)를 정확히 기술하고 후속 슬라이스가 참조할 계약이 문서화된다(규칙 7 인덱스 축 유지)."
+            },
+            {
+              "seq": 8,
+              "action": "갤러리(`docs/mockups/index.html`) J1 카드 8장을 `./JRN-layout.html#STP-*`로 재배선(cid를 단계 ID로)하고 제목·리드 수치를 실제와 맞춘다. 허브(`docs/index.html`)의 J1 행 `여정 mockup 준비 중` 자리를 실제 링크로 채우고, 예약 주석과 「화면 단위」 구획 문면을 정정한다. `reader.html` CONFIG의 `mockupBase`·조립 줄·주석을 실제 규약으로 고친다(두 정규식은 `(?!)` 유지). `docs/tessera-user-journeys.md`의 mockup 현황 5줄을 실제와 맞춘다.",
+              "expectedOutcome": "갤러리에서 J1 카드를 누르면 여정 페이지의 해당 단계가 열린다. 허브·인덱스·여정 인덱스의 수치가 실제 파일 구성과 일치(규칙 7). `reader.html` 동작은 무변경(`jid`가 항상 undefined)."
+            },
+            {
+              "seq": 9,
+              "action": "트래커 등재: 「시각화 누락 단계」 항목을 여정 단위 기준으로 고치고 이관 대기 3건을 🟡로 세우고, 「다음 액션」에 J2~J4 이관과 `WorkspaceRail.tsx` 낡은 경로 인용 2건을 등재하고, 변경 이력 1행을 더한다. 「최근 갱신」 머리 문단과 과거 이력 행은 건드리지 않는다(#47과의 충돌면 최소화).",
+              "expectedOutcome": "트래커가 실제 상태를 기술하고, 이 PR이 고치지 않는 잔여(`src/` 경로 인용)가 사유·해제 조건과 함께 레포 안에 남는다. 트래커 편집이 3개 국소 hunk를 넘지 않는다."
+            },
+            {
+              "seq": 10,
+              "action": "검증 4종을 돌리고 음성 프로브 4건으로 게이트 민감도를 실측한다: ⑴ 링크 게이트 ⑵ 1:1 규칙 11단정 ⑶ 자체 완결성 ⑷ 바이트 보존. 프로브 — 허브 링크를 없는 파일로 · `data-step` 하나 제거 · 추출 블록 1곳 변형 · 삭제한 화면 복원. 각 프로브는 `git reset --hard` + `clean -fd`로 격리한다. 끝으로 `origin/main`에서 스크립트 3개를 처음부터 재생해 트리 동일성을 확인한다.",
+              "expectedOutcome": "검증 전건 PASS · 프로브 4건 전부 발화(rc=1 또는 해당 단정 FAIL) · CTRL 전건 PASS · `git write-tree == HEAD^{tree}` · 재생 트리가 커밋 트리와 완전히 동일."
+            },
+            {
+              "seq": 11,
+              "action": "브랜치 `reconcile/rct_20260815-0001-v2`를 푸시하고 PR을 연다(draft 아님). 본문에 task id·gap·완료 기준·범위 밖·검증 실측·경로 결정 근거·릴리스 정지 조건·잔여 1건을 적는다. CI를 실측하고, 대체된 #44는 사유를 코멘트로 남기고 닫는다.",
+              "expectedOutcome": "PR #49 생성. `changes`=success·`gate`=skipped(= release=false의 증거)·`release` job 없음 · `ci`가 초록 · `mergeable=MERGEABLE`. #44 closed."
+            },
+            {
+              "seq": 12,
+              "action": "자매 #47과의 충돌면을 `merge-tree`로 실측하고(merge-base를 명시 계산), #47 head에서 앵커 재생 가능성을 확인해 해소 절차를 지침에 절 단위로 적는다.",
+              "expectedOutcome": "충돌은 트래커 파일 1곳뿐. 편집 스크립트가 트래커 경로를 자동 해석하고, #47 월 파일에서 다시 잡아야 하는 앵커 2개가 이름으로 특정된다 ⇒ 착지 순서 자유."
+            }
+          ],
+          "plannedAt": "2026-09-27T17:55:00Z"
         }
       }
     ]
