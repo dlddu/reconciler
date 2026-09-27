@@ -18482,7 +18482,7 @@
       }
     },
     "createdAt": "2026-09-27T06:24:13Z",
-    "updatedAt": "2026-09-27T07:10:03Z",
+    "updatedAt": "2026-09-27T07:14:10Z",
     "stateSummary": {
       "asIs": "## as-is — `dlddu/homelab-k3s-mcp` 주석 실측 (2026-09-27T06:2x, 창 `84271ce`→`efb9937`)\n\n**지문 양 끝 재현** (모델 `asIs.versionScript`를 창 양 끝에서 직접 실행 — precheck 값과 바이트 일치):\n\n| 표면 | `84271ce` (baseline) | `efb9937` (current) | 델타 |\n|---|---|---|---|\n| L 줄머리 주석 | `lines=3246 files=161 unclassified=0` | `lines=3114 files=159 unclassified=0` | **−132줄 / −2파일** |\n| D docstring | `docstring=1680/112` | `docstring=1654/112` | **−26줄 / 파일 부동** |\n| E 줄 끝 주석 | `eol=4/4 unparsed=0` | `eol=4/4 unparsed=0` | **부동** |\n| sha256 | `d4c82e28…a791106` | `3936b3f8…60fa8da4e` | — |\n\n**창은 단일 커밋 `efb9937` (PR #261)** 하나다. 커밋 trailer 에 `Co-authored-by: reconciler-bot` — **이 모델 자신의 직전 task `rct_20260927-0005`(06:17:34 `succeeded`)의 집행 결과**가 되먹임으로 들어온 회차다. 커밋 자기선언 「9행 394줄을 ①② 축에서 판정 — 주석 158줄 제거」와 실측이 정확히 맞는다: **L −132 + D −26 = 158** ✅.\n\n**창이 주석 전용임을 세 갈래로 확인**(17파일 / +131 −193):\n- `git diff -U0` 의 모든 `+`/`-` 줄을 주석 판정에 걸었다 — docs 밖 205줄 중 주석 접두사가 아닌 것 43줄, **전부 `.py` 3파일의 docstring 본문**(= D 표면이 세는 자리). `.go` 3파일·`.yaml` 8파일의 변경 줄은 **100% 주석 접두사**.\n- 변경된 `.py` 3파일 전부 **code-AST SAME**(docstring `Expr` 제거 후 `ast.dump` 대조) ⇒ 코드 무변화.\n- 게이트 R2·R6·R13(행별 재측정 줄 수·지문 vs 등재값)이 양 끝 `rc=0`.\n\n**게이트 `scripts/check_comment_policy.py` 양 끝 실행 (R1~R15, 둘 다 `rc=0`)** — 게이트 실측이 내 지문과 바이트 일치(3246/161 · 3114/159 · unclassified 0):\n\n| 표면 | baseline 판정완료 | current 판정완료 | 잔여(네 축 미완) |\n|---|---|---|---|\n| L | 76행 2901줄 (89.4%) · ③④ 8행 | **83행 3107줄 (99.8%)** · ③④ 1행 | 345줄 → **7줄** |\n| D | 31행 1338줄 (94.4%) · ③④ 3행 | **33행 1368줄 (98.3%)** · ③④ 1행 | 80줄 → **24줄** |\n| E | 9행 4줄 (100%) | 9행 4줄 (100%) | 0 → **0** |\n| 미판정(`—`) | 0행 | 0행 | — |\n\n**잔여 검산**: baseline 잔여 425줄(345+80) − 커밋 자기선언 슬라이스 **394줄** = **31줄** = current 잔여(7+24) ✅ 바이트 단위로 닫힌다.\n\n## to-be 이동\n`docs/comment-policy/` tree `90a6c6dc85…` → `cabe671968…`. 창이 만진 것은 `ledger.md`(18줄) + 신규 `passes/2026-09-27-paths-1-2-server-and-kind-fixtures-slice-61.md`(100줄) 둘뿐 — 정책 본문 `README.md` 무접촉. 원장 행 수는 양 끝 **L 84행 / D 34행 / E 9행 부동**이고 움직인 것은 9행의 `판정 축` 칸과 결과 칸이다(등재가 아니라 판정 전진).\n\n## 계측기 검증 (게이트가 실제로 재는지)\n- ⭐**CTRL** — 판정 완료 행의 파일(`tests/integration/_helpers.py`)에서 **양 끝 모두 생존한** L 주석 1줄 삭제: 모집단이 **3114→3113 으로 실제 이동**(오독 44 회피 — 모집단이 안 움직이면 아무것도 증명하지 못한다), 게이트 `rc=1` **[R2] 가 그 파일을 이름으로 지목**하며 등재 107≠실측 106 **그리고** 지문 `d3e4a850b228`≠`d1f97cd987f6` 둘 다 인쇄. ⇒ tip 의 `rc=0` 은 「원장 밖 실물 대조」다.\n- **양성 A** — 잔여 행의 축 칸 `③④`를 `①②③④`로 위조: `rc=1` **[R9]**(표기 위반) + **[R11]**(칸 vs 근거 어긋남, 세 표면 각각 행을 이름으로 열거).\n- **양성 B** — 축 칸을 `①②Z`로: `rc=1` [R9]+[R11] 이 그 한 행만 지목.\n- ⭐**R11 은 양방향이다** — 축 칸을 결과 칸의 「복원경로 <축> 판정 @지문 <그 행의 **현재** 지문>」 선언에서 독립적으로 재도출해 대조하고, *지문이 움직였으면 그 축은 낡은 것이므로 `—`로 되돌려 다시 물으라*고 문면으로 규정한다. 즉 잔여 행의 `③④`는 라벨이 아니라 **「①②는 현재 지문에서 묻지 않았다」의 게이트 보증**이다.",
       "toBe": "## to-be — 정의가 요구하는 정합 상태\n\n`tbm_homelab-k3s-mcp-comment-redundancy` 정의:\n- 정합 상태 = 범위(레포 전체 − 제외 세 부류) 안의 주석 중 **복원 가능한 내용을 담은 것이 없음**. 복원 경로는 넷 — ① 코드 자체 ② 저장소 문서 ③ PR 제목·본문·리뷰 코멘트 ④ 커밋 메시지.\n- **판정 슬라이스**: 한 슬라이스는 가져간 행을 ①②③④ **네 축 모두**에 대고 판정한다. 축별 소급 패스를 만들지 않는다. 일부 축만 끝난 기존 행은 남은 축만 채우면 된다.\n- 크기는 주석 **400줄**까지. 예산보다 작게 끝내려면 사유를 계획에 적는다 — 좁히는 **유일한 사유**는 「파일이 실제로 겹치는 열린 PR」이다. 애매한 주석은 「유지(애매)」로 적고 **판정 완료로 센다**(좁히는 사유가 아니다).\n- 정책 SSOT = `docs/comment-policy/`(본문 `README.md` · 원장 `ledger.md` · 상세 `passes/`), 원장 게이트 = `scripts/check_comment_policy.py` R1~R15.\n\n## 현재 to-be 대비 잔여\n\n게이트가 출력하는 「네 경로 판정 완료」 밖에 남은 것은 **단 하나의 파일, 두 표면 행**이다:\n\n| 표면 | 행 | 줄 | 등재 지문 | 축 칸 | 남은 축 |\n|---|---|---|---|---|---|\n| L 줄머리 | `2026-09-14(scripts/check_doc_inventory.py)` | **7줄** | `edd31d7005fc` | `③④` | **①②** |\n| D docstring | `2026-09-14(scripts/check_doc_inventory.py)` | **24줄** | `f8f8fc3a7427` | `③④` | **①②** |\n\n합 **1파일 · 2행 · 31줄**. 미판정(`—`) 행은 세 표면 모두 **0행**이고, 등재 범위는 실측 전량(L 3114줄/159파일 · D 1392줄/112파일 · E 4줄/4파일)을 덮는다 — 범위 누락도 미분류도 없다(`unclassified=0`).\n\n두 행 모두 결과 칸이 **`복원경로 ③④ 판정 @지문 <현재 지문>`** 까지만 못박고 있다. 원장 결과 칸의 이전 이력을 보면 ①②는 `rct_20260914-0015`·PR #95 시절에 한 번 물었으나 그 뒤 재판정으로 **지문이 움직였고**, R11 의 규정대로 낡은 축은 칸에서 되돌려졌다. 따라서 ①②는 **현재 지문에서 묻지 않은 상태**다.",
@@ -18539,6 +18539,48 @@
           "status": "approved",
           "reviewedAt": "2026-09-27T07:12:00Z",
           "reason": "주석·문서만 바뀌는 저위험 변경이고 완료 기준을 base·head 양 끝에서 실측해 수렴을 확인했다. PR #262 OPEN·head `3975b30`(준비 기록과 동일)·mergeStateStatus=CLEAN·mergeable=MERGEABLE, `compare main...head` 가 behind_by 0 · merge_base=main tip `efb9937` 라 베이스 이동·충돌 불가. 필수 status 는 `rules/branches/main` 실측으로 `ci passed` 하나(strict=false)이고 check-run 축에서 success(06:53:44Z) — 사람 승인용 context 는 없어 manualApproval 없이 승인한다. 정합성: 계획이 든 완료 기준을 직접 굴렸다 — base `efb9937` 에서 L 83행 3107줄(99.8%)+③④ 1행 · D 33행 1368줄(98.3%)+③④ 1행 이고 그 잔여 두 행이 정확히 `scripts/check_doc_inventory.py` (7줄 `edd31d7005fc` · 24줄 `f8f8fc3a7427`) 인데, head 에서 L 84행 3114줄(100.0%) · D 34행 1383줄(100.0%) · E 9행 4줄(100.0%) 로 **세 표면 모두 `③④` 만 붙은 행이 0** 이 된다. rc=0 은 base 에서도 나므로 판정은 출력 수치로 했고, D 행은 15줄 `729551491033` 로 재앵커돼 인쇄된다. 범위: 4파일 +131 −15 로 준비 기록과 바이트 일치(군더더기 0). `scripts/check_doc_inventory.py` 는 docstring 만 움직였다 — code-AST SAME 이고 모듈 docstring 이후 190줄이 base·head 바이트 동일(md5 `2bc1c807b9233ec4bc43cd34b6c0ba90`, 계획이 못박은 값과 일치) ⇒ 비주석 diff 0줄. 나머지 3파일은 원장 2행·패스 문서 1개·허브 집계이고, 허브 집계 121/121→122/122(정책 82)는 패스 문서가 1개 늘어 D4 가 요구하는 것이다(빼면 게이트가 깨진다). 네 게이트 head 전건 rc=0. 위험·불가역성: 머지가 유일한 쓰기이고 revert 한 번으로 끝난다. main push 트리거를 실측하니 `docker-build-push.yaml` 의 `paths` 가 `!docs/**`·`!scripts/**` 로 이 두 경로를 제외하므로 이미지 발행·deploy pin·Flux 롤아웃이 돌지 않고, main push 로 도는 것은 `warm-caches.yml` 뿐이다 ⇒ 런타임·트래픽·데이터 영향 0. 열린 PR 은 #262 단 1건이라 자매 착지로 베이스가 움직일 여지도 없다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-27T07:10:30Z",
+          "finishedAt": "2026-09-27T07:13:40Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T07:10:30Z",
+              "finishedAt": "2026-09-27T07:11:10Z",
+              "log": "PR #262 재확인 — state=open · merged=false · head 3975b30b7e965cfc9ad1686c541b08738c1755fe(준비 기록과 동일) · base efb9937193d2f9e34ee149ac83e2a34f328bad14 · mergeable=true · mergeable_state=clean · 4파일 +131 -15. head check-runs: 'ci passed' success(06:53:44Z) · 'changes' success · 'fmt + vet' success · 'unit tests'/'integration tests'/'image' skipped. rules/branches/main 필수 status 는 'ci passed' 하나(strict=false) — 사람 승인용 context 없음. 파일 목록도 기대대로 네 개: docs/comment-policy/ledger.md(+2 -2) · docs/comment-policy/passes/2026-09-27-paths-1-2-doc-inventory-slice-62.md(+126 신규) · docs/doc-tracker/2026-09.md(+1 -1) · scripts/check_doc_inventory.py(+2 -12)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T07:12:10Z",
+              "finishedAt": "2026-09-27T07:12:25Z",
+              "log": "squash 머지 완료 — PUT /pulls/262/merge {merge_method: squash, sha: 3975b30...} → 200, merged=true, 머지 커밋 f7fcd2e0aa65e8f756d03a8fcb2a6c8cff9eae58(mergedAt 07:12:19Z). commit_title 을 넘기지 않아 제목에 '(#262)' 접미사가 남았다. 커밋을 새로 얹지 않았다(head 그대로 머지). main tip = f7fcd2e · 부모 = efb9937(계획 base) · 머지 커밋 tree 04fcd8e35bf75b97593cddfe665228d1652de2c3 == PR head 3975b30 의 tree 로 바이트 동일 ⇒ 네 파일만 움직였다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T07:12:40Z",
+              "finishedAt": "2026-09-27T07:13:10Z",
+              "log": "머지된 main 을 --depth 2 로 클론(HEAD=f7fcd2e, 실제 checkout — 게이트가 git ls-files 로 범위를 잡으므로)해 레포 루트에서 네 게이트를 파이프 없이 bare rc 로 실행: check_comment_policy rc=0 · check_doc_inventory rc=0 · check_mock_policy rc=0 · tests/integration/check_ac_mapping rc=0. check_comment_policy 출력 — L '판정 대상 주석 3114줄 / 159파일 · 미분류 0 · 원장 84행 · 네 경로 판정 완료 84행 3114줄(100.0%) · 미판정(—) 0행 · 축별 ①②③④ 84행' · D '판정 대상 docstring 1383줄 / 112파일 · 원장 34행 · 34행 1383줄(100.0%) · 미판정(—) 0행 · 축별 ①②③④ 34행' · E '줄 끝 주석 4줄 / 4파일 · 9행 4줄(100.0%) · 축별 ①②③④ 9행'. 출력 133줄 전수에서 '③④' 만 붙은 행 0건(grep '③④' | grep -v '①②③④' 무히트)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T07:13:10Z",
+              "finishedAt": "2026-09-27T07:13:25Z",
+              "log": "코드 무변화 이중 검산 — ⑴ scripts/check_doc_inventory.py 의 모듈 docstring 이후 190줄 md5 = 2bc1c807b9233ec4bc43cd34b6c0ba90 (head f7fcd2e·base efb9937 양쪽 동일값, tail 바이트 동일 True) ⇒ 계획이 못박은 값과 일치 ⑵ 모든 docstring Expr 를 떼고 ast.dump 비교 → SAME. 두 축 모두 성립 ⇒ 비주석 diff 0줄. 덤으로 판정 대상 파일의 표면 지문을 check_comment_policy 모듈로 재계산: L 7줄 edd31d7005fc(불변) · D 15줄 729551491033(24→15 이동) — 원장 두 행(ledger.md L55·L103)에 인쇄된 값과 일치."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-09-27T07:13:25Z",
+              "finishedAt": "2026-09-27T07:13:40Z",
+              "log": "허브 집계 — check_doc_inventory 출력 'docs/ 마크다운 문서: 122 (가치 1 · PRD 17 · 테스트 17 · 상태 추적 5 · 정책 82) · 허브 도달 가능: 122 / 122 · 끊긴 링크 0' + 'OK: D1~D4 위반 없음 — 허브 집계가 실측과 같다'. 패스 문서 1개 증가가 doc-tracker 의 122/122 정책 82 와 맞는다."
+            }
+          ]
         }
       }
     ]
