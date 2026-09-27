@@ -9183,7 +9183,7 @@
   {
     "id": "rct_20260926-0009",
     "toBeModelId": "tbm_feature-doc-docs-impl",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-26T13:01:12Z",
@@ -9279,6 +9279,20 @@
             "sha": "fc1cf5b8e1e9ead6daec3001ea1bb705332195e8",
             "context": "review/manual-approval"
           }
+        },
+        "execution": {
+          "status": "aborted",
+          "startedAt": "2026-09-27T02:27:10Z",
+          "finishedAt": "2026-09-27T02:41:30Z",
+          "entries": [
+            {
+              "stepSeq": 10,
+              "status": "failed",
+              "startedAt": "2026-09-27T02:27:10Z",
+              "finishedAt": "2026-09-27T02:41:30Z",
+              "log": "게이트 확인에서 머지 불가가 확정돼 머지를 실행하지 않고 중단했다(지침 순서 1에서 정지, 3 미실행).\n\n관측:\n- PR #187 state=open · head=fc1cf5b8e1e9ead6daec3001ea1bb705332195e8(= review.manualApproval.sha 그대로)\n- review/manual-approval = success (2026-09-27T02:01:41Z, '수동 승인') — 사람 승인 게이트 자체는 통과\n- mergeable=false · mergeable_state=dirty (3회 연속 폴링 동일 — GitHub 계산 중 상태 unknown 아님)\n\n충돌 실측(로컬 실제 머지, origin/main eaad646 <- pr187 fc1cf5b, merge-base 220cc8d):\ngit merge --no-commit --no-ff -> rc=1, 충돌 2파일\n  1) frontend/src/NoAccess.tsx  (소스 충돌)\n  2) docs/comment-policy/ledger.md  (행 단위 판정 충돌 3곳)\n\n원인 — 준비 이후 자매 4건이 main 에 착지했다(220cc8d 이후 #188 3e0c8d9, #189 687282e, #190 71455fd, #191 eaad646).\n그중 #191(주석 비중복성 45차 패스, rct_20260926-0012)이 NoAccess.tsx 의 머리 주석을 전건 제거했다\n(파일 18줄 -> 7줄, 주석 11행 -> 0행). 이 task 의 PR 은 같은 머리 주석을 27행으로 고쳐 쓰고 그 아래\nrequestAccess 호출 상태를 얹어 파일을 93줄로 만든다. 한쪽이 지운 블록을 다른 쪽이 늘려 쓴 형태라\n텍스트 자동 병합이 불가능하다.\n\nledger.md 충돌 3곳도 같은 뿌리다 — 자매 패스가 0014/0015 행을 미판정에서 판정완료로 올리고\nNoAccess.tsx 행을 '전건 제거 11행 / 0줄 / 지문 01ba4719' 로 닫았는데, 이 PR 은 같은 행을\n'27줄 / 미판정 / 지문 f2527c94' 로 등재한다. 두 주장이 같은 행에서 상호 배타적이라 합계 한 줄만\n고쳐서 푸는 종류가 아니다(줄 수와 지문 자체가 판정 결과에 딸려 움직인다).\n\n중단 판단 — 충돌 해소는 새 커밋을 요구하는데, 이 건의 사람 승인은 sha fc1cf5b 에 묶여 있고\n실행 지침이 '커밋을 추가하지 말고 그 head 그대로 squash 머지할 것'을 명시한다. 리베이스하거나\n해소 커밋을 얹는 순간 승인이 날아가 승인받지 않은 코드를 머지하게 된다. 또한 NoAccess.tsx 의\n어느 주석 줄이 살아남는지는 주석 비중복성 정책의 판정이라 계획 범위 밖의 새 판단이다.\n계획 밖으로 범위를 넓히지 않고 여기서 멈춘다 — 재리베이스와 원장 행 재기재는 재계획(planner) 몫이다.\n\n부작용 없음: 대상 레포에 쓰기를 하지 않았다(머지·푸시·status 생성 모두 미실행). 로컬 머지는\njob tmp 의 스크래치 클론에서만 했고 즉시 abort 했다."
+            }
+          ]
         }
       }
     ]
