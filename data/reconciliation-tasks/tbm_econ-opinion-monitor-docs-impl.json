@@ -10302,7 +10302,7 @@
   {
     "id": "rct_20260928-0005",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-28T05:19:47Z",
@@ -10466,6 +10466,58 @@
               "log": "착지(squash 머지). 지침 0 사전조건 3항 전건 확인 후 실행 — ⑴ 필수 status 둘이 head `126be68a` 에서 초록(`required` = check-run `success`; `review/manual-approval` = commit status `success`, 「데이터 저장 형식 변경 없음 — 사람 리뷰 불필요」 자동 부착) ⑵ `mergeable=true` · `mergeable_state=clean` · `changed_files=8` ⑶ base `0c1daf87` == 머지 직전 main tip 이고 대상 레포 열린 PR 은 #196 하나뿐(자매 착지 여지 0). `gh pr merge 196 --squash --delete-branch` rc=0 — commit_title 미지정이라 `(#196)` 접미사 유지. 결과: `merged=true` · `merged_at=2026-09-28T06:26:08Z` · main tip `a95c393c31bc49314caa346e8600608e9ac5a370` 이고 그 부모가 `0c1daf87`(base 무이동). 별도 배포 액션 없음 — `image` 워크플로가 main 에서 태그를 갱신한다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "contracts:213e5a643be714a8fffcad1aa8f59fb0be9a6b89 python:83ecdba578da5de737d8f5ec6a3f27b0ef1161ba go:130c9827b75ac3c909e2149e9c50d1b5face3a28 web:b1c52401c373af3907efba94f19bf14c9755aeeb deploy:c298428b6b693299c36dbda08f9945ef1c8fca59",
+          "checks": [
+            {
+              "name": "⒜ 자기선언 스텁이 0자리",
+              "status": "passed",
+              "detail": "착지 트리(main `a95c393c`) 체크아웃에서 `grep -rn 'stub:' go/ --include='*.go' | grep -v _test` = **0줄**(직전 1 — debug.go), `grep -rn 'debug_read_path' go/` rc=1(출력 없음). 리뷰가 base `0c1daf8` 에서 1줄로 음성 대조해 둔 축이 그대로 뒤집혔다."
+            },
+            {
+              "name": "⒝ 조회 경로가 실제로 조인한다 — 단위 테스트",
+              "status": "passed",
+              "detail": "`gofmt -l .` 0줄 · `go vet ./...` rc=0 · `go test ./...` rc=0(handlers·store 전건 ok). 개수 전건 일치 — `go test ./... -v | grep -c '^=== RUN'` = **63**(기대 63 · 직전 54) · `-run Debug -v` = **8**(기대 8) · `./internal/store/ -run 'PipelineRun|ObjectDatasets' -v | grep -c '^--- PASS'` = **2**(기대 2; `TestPipelineRunAndLlmCallReadTheObjectDatasetsByKey`·`TestObjectDatasetsReadEmptyWhenAbsentAndOrderByKeyFileName`)."
+            },
+            {
+              "name": "⒞ 교차 언어 오라클 — 파이썬이 쓴 것을 Go 가 같은 수로 읽는다",
+              "status": "passed",
+              "detail": "클러스터·더블 없이 3단 페이크 레이크(`--source fake` → `--analyzer fake`, silver 14행)를 만들고 `go/bin/serving -addr :8099 -data <lake>` 로 `/api/debug` 를 실제 조회. 기대값 전건 일치 — `found=True` · `selection=auto` · `versions=1` · `exchange = no-call / keyword_analyzer` · **`records 14 == input_count 14`** · 행 상태 `analyzed 10 / low_confidence 2 / unanalyzed 2` 가 파이썬이 쓴 stage outcomes(`analyzed 10 / low_confidence 2 / unanalyzed 2 / skipped_settled 0`)와 맞물린다. 지침대로 `__main__` 가드 부재를 피해 래퍼 호출로 돌렸다. 이 corpus 가 행사하지 않는 `call_failed`·`reused` 갈래는 ⒝ 의 Go 픽스처가 덮는다."
+            },
+            {
+              "name": "⒟ 게이트 5종 — 4종 base 와 바이트 동일",
+              "status": "passed",
+              "detail": "squash 부모가 base `0c1daf87` 그대로라(무이동) 기대 md5 를 직접 대조했고 rc·md5 전건 일치 — `check-journey-mockup.py` rc=0 `cebe38983862` · `check-journey-flow.js`(jsdom) rc=0 `6b4ce7b6a71e`(여정 7페이지 · 710 passed, 0 failed) · `check-mockup-render.py` rc=0 `cf02b4c645e8` · `check_scenario_mapping.py` rc=0 `ce4fe660b1d4` · `check-comment-ledger.py` rc=0 `df4cfbfa2be8`. 지침대로 rc 만 보지 않고 출력까지 확인 — **표면 L 행 189 · 판정 대상 주석 2584줄**, 세 표면 전부 `미판정(—): 행 0 · 0줄` · 「불변식 통과」."
+            },
+            {
+              "name": "⒠ 낡은 문면 정정 착지 · 라이브 현재형 거짓 0건",
+              "status": "passed",
+              "detail": "`grep -rn 'debug_read_path' docs/ | grep -v 'comment-policy/passes'` 의 파일별 벡터가 **ledger.md 1 · design-tracker.md 1 · doc-tracker/2026-09.md 4 · mockup-index.md 2(합 8)** 로 계획 단계 실측과 동일 — 남은 히트는 전부 보존된 인용·과거 이력 행·원장 산문이라 라이브 현재형 거짓 0건이다(지침대로 raw 히트 0 을 기준으로 쓰지 않았다). 정정 문면 실측: `2026-09-28 재판정(rct_20260928-0005)` **2**(기대 2) · `아직 없는 것은 그 기록을 그리는` **1** · `남은 선행 조건은 **화면 하나**` **1**."
+            },
+            {
+              "name": "착지 무결성 — 승인받은 코드 그대로 main 에",
+              "status": "passed",
+              "detail": "squash 커밋 `a95c393c31bc49314caa346e8600608e9ac5a370` 의 tree 가 승인 head `126be68a` 의 tree 와 **동일**(`908b5f78963caf03818303cff4790b849082d520`)이고 부모는 base `0c1daf87`(무이동) — 머지 전 커밋을 얹지 않았고 리베이스도 없었다는 뜻이다. `(#196)` 접미사 유지 · PR `state=closed, merged=true` · 브랜치 삭제."
+            },
+            {
+              "name": "as-is 버전 변화면 — 의도 외 하위 트리 무접촉",
+              "status": "passed",
+              "detail": "착지 후 asIs 지문에서 `go` 하위 트리만 `4bb88b5cc1bbda3383af9026849eac207850121c` → `130c9827b75ac3c909e2149e9c50d1b5face3a28` 로 움직였고 `contracts`·`python`·`web`·`deploy` 는 바이트 불변 — 지침의 「`contracts/`·`go/gen/`·`deploy/` 무접촉」이 사후에도 성립한다. toBe(docs) 지문은 `e35003a6…` → `ad45b0fb630d0520eac2eb750257af6829d68e1d`."
+            },
+            {
+              "name": "롤아웃(정보성) — 계획 범위 밖의 부수 효과 확인",
+              "status": "passed",
+              "detail": "지침이 §1 에 명시한 경로가 그대로 돌았다 — main `a95c393c` 의 `Image` 런(36386450876) 3잡 전건 success(`publish (batch)`·`publish (serving)`·`pin deploy images (main only)`)이고 `refs/heads/deploy` tip 이 `58fdad33`(「econ-monitor 이미지를 a95c393c… 로 고정」, 06:27:23Z)로 갱신됐다. 완료 기준 ⒜~⒠ 에는 들어가지 않는 관측이다."
+            },
+            {
+              "name": "잔여 gap(정보성) — 이 task 범위 밖",
+              "status": "passed",
+              "detail": "지침 §4 가 후속으로 파킹한 것들은 이번 판정에 넣지 않았다 — `web/src/screens/Debug.tsx` 화면과 `BUILT` 편입·목업↔구현 대조(자매 `tbm_econ-opinion-monitor-mockup-render` 소관, mockup-index :441 이 축자로 귀속) · `STP-pin-record` 선택 UI·딥링크 · `STP-check-input` Bronze 본문 버전 대조 · `STP-route-cause` 판정 영속화(여정 문서가 스스로 백로그로 파킹) · `PAT-integrity-panel`/`STP-spot-anomaly` 의 구간별 수집 현황 집계(다른 여정 `JRN-ingestion-recovery`) · 전용 e2e spec(자매 `tbm_econ-opinion-monitor-scenario-e2e`). 화면 부재와 `Placeholder` 렌더는 지침이 못박은 기대 상태이므로 미달로 읽지 않았다. 이 착지가 만든 as-is/to-be 버전 변화는 다음 감지 주기가 후속 task 로 잇는다."
+            }
+          ],
+          "verifiedAt": "2026-09-28T06:32:00Z"
         }
       }
     ]
