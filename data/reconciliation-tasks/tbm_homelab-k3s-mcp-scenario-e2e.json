@@ -14415,7 +14415,7 @@
       }
     },
     "createdAt": "2026-09-28T06:20:07Z",
-    "updatedAt": "2026-09-28T06:33:25Z",
+    "updatedAt": "2026-09-28T06:45:00Z",
     "stateSummary": {
       "asIs": "## as-is — `dlddu/homelab-k3s-mcp` 의 e2e (읽은 시각 2026-09-28T06:2xZ)\n\n- **`tests/` 트리 = `9864b7faa3d05314ec4f56a647f3982e09d352db`** — 창 `edc9dc5`→`597e0bf` **양 끝 바이트 동일**이고 모델 `asIs.lastObservedVersion` 과도 일치. 이번 창은 as-is 를 한 바이트도 움직이지 않았다.\n- **게이트 `tests/integration/check_ac_mapping.py`** blob md5 `99538fa73ac4` 양 끝 동일. 원래 경로 깊이의 worktree 두 벌에서 각각 실행 → **rc 0 / 0**, 출력 **바이트 동일**:\n  `시나리오 전집 100 · 예외 등재 2 · 구현 대기 등재 1 · 1:1 대상 97 · 매칭 파일(전용) 94 · 분할 대기 0 · 공백 시나리오 3` / `OK: 규칙 1~8 위반 없음, 불변식 성립, 러너 배차 누락·케이스 미호출 없음`.\n- **`#시나리오 6` 을 주검증으로 선언한 파일은 0개다.** `tests/integration/*.py` 의 모듈 docstring `검증 시나리오:` 전수에서 `test-github-app-installation-token.md#시나리오` 선언은 **1·2·3·4·5 다섯 개뿐**(`github_app_installation_token_ac1..ac5.py`). 문서 쪽 헤딩은 `### 시나리오 6: checks 쓰기는 발급되지 않고 읽기는 발급된다`(`docs/test-github-app-installation-token.md:82`)로 실재한다.\n- **제품 구현은 이 창에서 착지했다**(원장 산문이 아니라 코드 직독): `internal/github/github.go` 가 단일 상수 `statusesPermission` 을 **배제 대상 집합 `excludedWritePermissions`**(`statuses`·`checks`, 권한별 거부 문면 동반, `:32`)로 바꾸고 **세 지점 전부**가 그 집합을 순회한다 — 명시 거부 `effectivePermissions:252` · 생략 시 강등 `effectivePermissions:269` · 반환 토큰 폐기 `CreateInstallationToken:368`. `internal/github` 의 `checks` 히트는 **0 → 19**(`github.go` 3 · `github_test.go` 16). 즉 「시나리오 6 이 관측할 대상이 없다」는 더 이상 참이 아니다.\n- **하네스 선행도 없다**: `tests/k8s/kind/github-mock.yaml` 의 노브 `installation_permissions`(:92)·`mint_extra_permissions`(:207)는 `permissions.update(config()[...] or {})` 로 **임의 권한 이름을 받는 일반형 dict** 이고, 시나리오 5 의 전용 e2e `github_app_installation_token_ac5.py:100,136` 이 이미 `statuses` 로 그 노브를 쓴다. `checks` 로 같은 형태를 쓰는 데 새 픽스처·인프라가 필요하지 않다 ⇒ **규칙 7(인프라 선행) 사안이 아니라 순수 저작**이다.",
       "toBe": "## to-be — 등재 SSOT 의 시나리오 ↔ e2e 1:1 정합성 절 (읽은 시각 2026-09-28T06:2xZ)\n\n- **판정면 귀속 완결**: 모델 정의의 「doc-tracker 경로 해석」대로 최신 월 파일 `docs/doc-tracker/2026-09.md` 의 **`## 테스트 시나리오 ↔ e2e 1:1 정합성` 절만** sha256 한 값이 claim 의 두 값과 **바이트 일치** — `1eb924b1…`(edc9dc5) → `273da5bf…`(597e0bf). `sc:` 축(`docs/test-*.md` 목록 지문 `dcd2421b…`)은 **부동** ⇒ 시나리오 집합 자체는 안 움직였고 움직인 것은 **등재**뿐이다.\n- **창 = 단일 커밋** `edc9dc5`→`597e0bf`(PR **#270**, 2026-09-28T06:11:29Z, `feat(token): AC5 의 배제 대상을 집합으로 넓혀 checks 쓰기도 막는다`) 4파일. 그중 **내 절 내부의 diff 는 정확히 1줄** — ⏳ 구현 대기 표의 **유일한 행**. 나머지 변경(건강 상태 ⑷ · 도구 매트릭스 · 「구현 없는 문서」 · 「수용된 위험」 `checks` 행 · 변경 이력 · `index.md` · `internal/github/*.go`)은 전부 **내 판정면 밖**이다(절 단위 sha256 + 절 내부 diff — 같은 파일 안의 남의 대목을 가르는 도구).\n- **그 한 줄이 무엇이 됐나** (`### ⏳ 구현 대기 (1) — 규칙 6 등재` 표, `test-github-app-installation-token.md#시나리오 6`):\n  - 근거: 「⟨2026-09-28 갱신 · `rct_20260928-0001`⟩ 제품 쪽 차단은 **해소됐다** … 시나리오 ①~⑤ 가 기대하는 거동이 전부 제품에 있다 … **남은 차단은 전용 e2e 저작이다**」\n  - 담당: 「**이 렌즈**(전용 e2e · 필요하면 github-mock 노브 — `installation_permissions`·`mint_extra_permissions` 는 이미 일반형 dict 다). docs-impl 몫은 2026-09-28 에 착지했다」\n  - 해제 조건: 「`internal/github` 가 `checks` 에 대해 세 조항을 행사한다 — **충족(2026-09-28)**. 그 뒤 남는 것이 저작뿐이면 이 행은 자격을 잃으므로(위 ⚠️) **행을 빼고 전용 e2e 로 닫는다**」\n- **같은 절의 ⚠️ 못박음**(2026-09-19 · `rct_20260919-0004`, 이번 창에서 무변경): 「규칙 6 의 등재 자격은 **제품 기능의 미구현 하나뿐**이고 … 행의 해제 조건이 **저작 하나로 줄어드는 순간 그 행은 이 표의 자격을 잃고**, 남은 저작은 등재가 아니라 `tbm_homelab-k3s-mcp-scenario-e2e` 의 **공백으로 계수돼야 한다**. … 집계·집합 대조·`check_ac_mapping.py` 는 **행을 세고 대조할 뿐 각 행의 등재 자격을 검사하지 않아** 셋 다 초록을 통과했다」 — 같은 형태가 세 사이클 연속 재발해서 붙인 못박음이다.\n- **같은 절의 도입 산문**(무변경, `edc9dc5`/#269 유래)은 이제 **현재형이 거짓**이다: 「2026-09-28 에 **제품 기능 미구현 행** 하나가 새로 들어왔다 — AC5 확장(소유자 결정)이 낳은 시나리오라 **자격은 규칙 6 그대로다**」.\n- **집계·재진술 3면**(창 양 끝 동일): 집계 블록 `전집 100 · 예외 2 · 구현 대기 1 · 1:1 대상 97 · 매칭 94 · 분할 대기 0 · 공백 3 · 공백 등재 상한 3` / 레지스트리 표제 `(100) — ✅ 94 · ⬜ 0 · 🚧 3 · ⏳ 1 · 🚫 2` / 불변식 산문 `100 − 2 − 1 − 3 = 94 = 매칭 파일 94`. 레지스트리 행 `…#시나리오 6 | checks 쓰기는 발급되지 않고 읽기는 발급된다 | ⏳ 구현 대기`.\n- **🚧 공백 3행**(session-read#2 · session-write#2 · session-write#4)은 전부 `재검토 시점` **2026-12-20** 으로 **만기 미도래** — 이번 후보가 아니다.",
@@ -14425,6 +14425,67 @@
     "assessment": {
       "reason": "**판정: 작업 필요(`action_required`).**\n\n**① 발화의 실체 — 유예 표의 등재 자격이 창에서 거짓이 됐다.** 이번 창(단일 커밋 `edc9dc5`→`597e0bf` · PR #270)이 내 판정면(`docs/doc-tracker/2026-09.md` 의 `## 테스트 시나리오 ↔ e2e 1:1 정합성` 절, sha256 `1eb924b1…`→`273da5bf…` = claim 의 두 값과 바이트 일치)에서 바꾼 것은 **정확히 1줄**, ⏳ 구현 대기 표의 유일한 행(`test-github-app-installation-token.md#시나리오 6`)이다. 같은 커밋이 그 시나리오의 **제품 구현을 착지**시켰고(코드 직독: `internal/github/github.go` 가 단일 상수 `statusesPermission` → 배제 대상 집합 `excludedWritePermissions` 로 바뀌고 명시 거부 `:252`·생략 시 강등 `:269`·반환 토큰 폐기 `:368` 세 지점이 모두 집합을 순회, `internal/github` 의 `checks` 히트 0→19), 행 자신이 해제 조건을 「**충족(2026-09-28)**」으로 적으며 남은 차단을 「**전용 e2e 저작**」 하나로 줄였다. 규칙 6 의 등재 자격은 **제품 기능의 미구현 하나뿐**이고, 같은 절의 ⚠️ 못박음(`rct_20260919-0004`)이 「해제 조건이 저작 하나로 줄어드는 순간 그 행은 이 표의 자격을 잃고, 남은 저작은 `tbm_homelab-k3s-mcp-scenario-e2e` 의 **공백으로 계수돼야 한다**」로 못박아 두었다. ⇒ **⏳ 에 남아 있는 것 자체가 오분류 = 규칙 5 집계 불일치 drift**이고, `#시나리오 6` 은 전용 파일 0개인 **규칙 1 공백**이다.\n\n**② 규칙 7 이 아니라 순수 저작이다.** `tests/k8s/kind/github-mock.yaml` 의 `installation_permissions`(:92)·`mint_extra_permissions`(:207)가 `permissions.update(config()[…] or {})` 로 **임의 권한 이름을 받는 일반형 dict** 이고 시나리오 5 의 전용 e2e 가 이미 `statuses` 로 그 노브를 쓴다(`github_app_installation_token_ac5.py:100,136`). 새 픽스처·하네스 선행이 없으므로 🚧 공백 등재(부채 파킹)로 옮길 사안이 아니라 **전용 e2e 를 저작해 닫는 정규 경로**다.\n\n**③ 게이트 초록은 근거가 아니다 — 프로브 2발로 맹점을 측정했다**(정본 323 재실증, 주입마다 `git diff --numstat` 로 착지 확인 후 rc 판독). `check_ac_mapping.py` blob 은 창 양 끝 동일하고 rc 0/0·출력 바이트 동일(CTRL = 창 자신). ⒜ **행만 제거**하면 **rc=1** 로 6건 FAIL — `불변식 (100−2−0)=98 ≠ 매칭 94` · `전용 파일도 등재도 없는 시나리오: ['…#시나리오 6']` · 표제/불변식 재진술 3건 · `공백 4 이 등재 상한 3 초과` ⇒ **행 제거만으로는 닫히지 않고 같은 슬라이스에 전용 e2e 파일이 있어야 한다**. ⒝ 행을 **유지한 채 근거를 전면 거짓으로** 바꾸면(「자격은 이미 없다 / 담당 아무나 / 이미 충족됨」) **rc=0 · 출력 바이트 동일** ⇒ 게이트는 행의 등재 자격을 **원리적으로 보지 못한다**. 지금 초록인 것은 정당해서가 아니라 안 보기 때문이다. 프로브 복원 후 `git status --porcelain` 0행.\n\n**④ 소관은 이 모델이다.** ⏳ 행의 담당 칸이 「**이 렌즈**(전용 e2e · 필요하면 github-mock 노브)」이고, 창의 변경 이력 ⑹ 이 「전용 e2e `#시나리오 6`(자매 렌즈 **`tbm_homelab-k3s-mcp-scenario-e2e`** 소관 — 행은 그대로 둔다. 그 행을 빼려면 e2e 파일이 같은 PR 에 있어야 불변식이 선다)」라고 적는다 — 창이 **의도적으로 내 몫을 남겨 두고 갔다**.\n\n**⑤ 소관 캐리어 전수 0(assess 직전 재측정)** ⒜ 열린 PR 1건(#271)은 head `76a75557` 에서 내 절 sha256 을 재계산하니 `1eb924b1…`(창 이전 값) = **내 절 무접촉** ⒝ 같은 모델 열린 task 0(내 것뿐) ⒞ 자매 `tbm_homelab-k3s-mcp-docs-impl` `rct_20260928-0002` 는 **`no_action_needed` 로 종결**(06:16:35Z), 같은 레포 비종결 0. ⇒ 139 역규칙의 앞 조건(잔여 gap 실재)과 캐리어 셋 모두 충족 — 지금 열지 않으면 이 부채를 이을 것이 없다.\n\n**⑥ 남기는 작업 범위(planner 몫)**: `#시나리오 6` 전용 e2e 1개 저작(시나리오 ①~⑤ = `checks: write` 명시 거부 · `checks: read` 발급 · 생략 시 강등 · 반환 토큰 폐기) + ⏳ 행 제거 + 레지스트리 행 `⏳ 구현 대기`→`✅ 전용 파일` + 집계 4면(집계 블록 `구현 대기 1→0`·`매칭 94→95` · 레지스트리 표제 · 불변식 산문 `100−2−0−3=95`) + 절 도입 산문의 **거짓 현재형** 정정(「제품 기능 미구현 행 하나가 새로 들어왔다 … 자격은 규칙 6 그대로다」) + CI 러너 배차. **한 PR 에 함께 올려야 불변식이 선다**(프로브 ⒜ 가 그것을 실측했다). 제품 코드는 건드리지 않는다.\n\n**⑦ 한계 명기**: 이 호스트에 Go 툴체인·kind 클러스터가 없어 새 e2e 의 실제 통과는 CI `integration-tests` 잡의 몫이다. 이번에 닫은 것은 **관측 대상의 실재**(구현 착지를 코드 좌표로 직독)와 **하네스 선행의 부재**(노브가 일반형 dict)까지다.",
       "assessedAt": "2026-09-28T06:33:30Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "규칙 6 자격을 잃은 ⏳ 행 하나를 「전용 e2e 저작 + 등재 이관」 한 PR 로 닫는다. `test-github-app-installation-token.md#시나리오 6`(checks 쓰기 미발급·읽기 발급)은 제품 구현이 PR #270 으로 착지해(`excludedWritePermissions` 를 거부·강등·폐기 세 지점이 순회) 규칙 6 의 유일한 등재 자격(제품 기능 미구현)을 잃었고, 남은 차단은 저작 하나뿐이다. github-mock 의 노브 (`installation_permissions`·`mint_extra_permissions`)가 이미 임의 권한 이름을 받는 일반형 dict 라 하네스 선행이 없으므로(규칙 7 사안 아님) 시나리오 5 의 전용 e2e 를 형태로 삼아 `checks` 축 전용 파일 `tests/integration/github_app_installation_token_ac5_checks.py` 를 저작한다. 행 제거와 파일 저작을 **같은 PR** 에 두는 것이 필수다 — `check_ac_mapping.py` 의 불변식 (전집 − 예외 − 구현 대기 − 공백 = 매칭 파일)이 한쪽만으로는 서지 않는다(감지의 프로브 ⒜ 가 행만 빼면 rc=1·FAIL 6건임을 실측했다). 접근 대안으로 ⑴ 행을 🚧 공백으로 이관(= 부채 파킹)은 하네스 선행이 없어 규칙 7 의 등재 자격이 없고 ⑵ 행 근거만 갱신(직전 자매가 한 것)은 자격 상실을 두 번째 사이클로 미루는 것이라 둘 다 버렸다. 제품 코드는 한 줄도 건드리지 않는다. 이 시도의 범위(완료 기준): ① 새 전용 e2e 파일 1개가 `검증 시나리오: …#시나리오 6` 을 선언하고 run() 이 케이스 전건을 호출한다 ② `docs/doc-tracker/2026-09.md` 의 `## 테스트 시나리오 ↔ e2e 1:1 정합성` 절에서 ⏳ 행이 빠지고 레지스트리 행이 `✅ 전용 파일` 로 바뀌고 집계·표제·불변식·⏳ 절 표제 네 면이 새 실측값(구현 대기 0 · 1:1 대상 98 · 매칭 파일 95)으로 갱신되고 도입 산문의 거짓 현재형이 정정된다 ③ `docs/test-github-app-installation-token.md` 시나리오 6 의 `자동화` 필드에서 `(미작성)` 이 사라지고 새 파일을 참조한다(규칙 8) ④ 주석 비중복성 원장에 신설 파일의 docstring 행이 판정 축 `—` 로 등재된다 ⑤ 로컬 게이트 4종 + `compileall` 전건 rc=0, CI `ci passed` success. 범위 밖: 🚧 공백 3행(재검토 시점 2026-12-20 미도래) · `resource_generic_ac2.py` 의 레인 간 경쟁 flake (규칙 7 부채이나 전용 파일이 이미 있어 등재 자격 없음 — 다음 감지 몫) · 제품 코드·github-mock 수정 0.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "베이스라인 고정 — `dlddu/homelab-k3s-mcp` 를 `597e0bf` 에서 클론하고 게이트 4종(`tests/integration/check_ac_mapping.py` · `scripts/check_mock_policy.py` · `scripts/check_comment_policy.py` · `scripts/check_doc_inventory.py`) + `compileall` 을 굴려 rc·출력을 파일로 떠 둔다.",
+              "expectedOutcome": "4종 전건 rc=0. `check_ac_mapping` 이 `구현 대기 등재: 1 · 1:1 대상: 97 · 매칭 파일(전용): 94 · 공백 시나리오: 3` 을 찍고, `check_comment_policy` 가 `원장 86행 / 등재 범위 3163줄 · 미판정(—) 0행` 을 찍는다."
+            },
+            {
+              "seq": 2,
+              "action": "전용 e2e 저작 — `tests/integration/github_app_installation_token_ac5_checks.py` 를 만든다. 모듈 docstring 에 `검증 시나리오: test-github-app-installation-token.md#시나리오 6` · `실행 대상: primary` · `병렬 레인: github-app` 을 선언하고(같은 mock 노브를 쓰는 `github_app_installation_token_ac5.py` 와 같은 레인이어야 직렬화된다), 시나리오 6 의 다섯 단계를 케이스 다섯으로 그대로 단언한다 — ① `{checks: write}` 와 `{contents: read, checks: write}` 둘 다 도구 에러 + mint 요청 0 ② `{checks: read}` 는 발급되고 `# Permissions: checks=read` ③ 인자 없이 호출 시 mint **요청 본문**의 `permissions.checks == read` ④ `mint_extra_permissions={checks: write}` 에서 `DELETE /installation/token` 1회 + 도구 에러 + 직렬화 결과에 토큰 문자열 부재 ⑤ `installation_permissions={statuses: write, checks: write}` 에서 mint 본문의 둘 다 `read`. 🔴 `#` 줄 주석·줄 끝 주석은 **0줄**로 쓴다(주석 원장의 줄 주석·줄 끝 주석 표면을 건드리지 않기 위해 — 설명은 전부 docstring 에 둔다).",
+              "expectedOutcome": "`python3 -c 'import ast; ast.parse(...)'` 통과. 파일의 `#` 히트 0줄, docstring 만 존재. `run()` 이 다섯 케이스를 전부 호출한다."
+            },
+            {
+              "seq": 3,
+              "action": "등재 이관 — `docs/doc-tracker/2026-09.md` 의 `## 테스트 시나리오 ↔ e2e 1:1 정합성` 절만 고친다: ⑴ ⏳ 표에서 `#시나리오 6` 행 제거 ⑵ 레지스트리 행을 `✅ 전용 파일 \\`github_app_installation_token_ac5_checks.py\\`` 로 ⑶ 집계 블록 `구현 대기 등재 1→0` · `1:1 대상 97→98` · `매칭 파일(전용) 94→95` ⑷ 레지스트리 표제 `✅ 전용 파일 94→95 · ⏳ 구현 대기 1→0` ⑸ 불변식 산문 `100 − 2 − 0 − 3 = 95 = 매칭 파일 95` ⑹ `### ⏳ 구현 대기 (1)` → `(0)` ⑺ 도입 산문의 거짓 현재형(「2026-09-28 에 제품 기능 미구현 행 하나가 새로 들어왔다 … 자격은 규칙 6 그대로다」)을 이관 사실로 정정 ⑻ 변경 이력에 한 행 추가. 절 밖(자매 렌즈 소관 행 212·284·321·581·684·687 등)은 건드리지 않는다.",
+              "expectedOutcome": "`check_ac_mapping.py` rc=0 이고 `구현 대기 등재: 0 · 1:1 대상: 98 · 매칭 파일(전용): 95 · 공백 시나리오: 3` 을 찍는다."
+            },
+            {
+              "seq": 4,
+              "action": "규칙 8 — `docs/test-github-app-installation-token.md` 시나리오 6 의 `자동화` 필드에서 `(미작성)` 을 걷고 새 전용 파일을 참조하도록 다시 쓴다(시나리오 5 필드의 형태를 따른다).",
+              "expectedOutcome": "`check_ac_mapping.py` 의 규칙 8 검사 통과(전용 파일 실재 + `(미작성)` 부재)."
+            },
+            {
+              "seq": 5,
+              "action": "주석 원장 — `git add -A` 로 신설 파일을 추적시킨 뒤 `scripts/check_comment_policy.py` 를 굴려 R8 FAIL 이 뱉는 실측 줄 수와 R6 FAIL 이 뱉는 지문을 그대로 받아, `docs/comment-policy/ledger.md` 의 `## docstring 판정 이력` 표에 신설 파일 행 1개를 **판정 축 `—`** 로 더한다(결과 칸은 「미판정」 선언 — R11 의 축 근거 토큰 `복원경로 ①:`/`③:` 과 `복원경로 … 판정 @지문` 앵커를 쓰지 않는다). 줄 주석·줄 끝 주석 표면은 신설 파일의 히트가 0 이라 행을 더하지 않는다.",
+              "expectedOutcome": "`check_comment_policy.py` rc=0, `원장 87행` · `미판정(—) 1행` · docstring 표면 `축별 ①②③④ N행 · — 1행`."
+            },
+            {
+              "seq": 6,
+              "action": "게이트 전수 재실행 — 4종 + `compileall` 을 다시 굴리고, `check_mock_policy.py` · `check_doc_inventory.py` 두 종은 **출력이 base 와 바이트 동일**한지 diff 로 확인한다 (새 `.md` 문서를 만들지 않으므로 허브 집계 123/123 은 불변이어야 한다).",
+              "expectedOutcome": "4종 rc=0 · `check_mock_policy`·`check_doc_inventory` 출력 md5 가 base (`0676583d78f4`·`427c4abf4675`)와 동일."
+            },
+            {
+              "seq": 7,
+              "action": "음성 프로브 — ⑴ 새 파일의 `checks` 단언 하나를 `statuses` 로 바꿔도 게이트가 못 잡는 것(게이트는 런타임을 안 본다)을 확인하는 대신, 게이트가 실제로 무는 축을 각각 깬다: ⒜ ⏳ 행만 되살리면 `check_ac_mapping` rc=1 ⒝ 새 파일의 모듈 docstring 에서 `검증 시나리오:` 선언을 지우면 rc=1 ⒞ 새 파일에 `#` 주석 한 줄을 넣으면 `check_comment_policy` rc=1 ⒟ 원장 새 행의 지문을 한 글자 바꾸면 rc=1. 프로브마다 `git diff --numstat` 로 착지를 확인하고 **미리 `cp` 로 뜬 사본**으로 복원한다.",
+              "expectedOutcome": "프로브 4발 전건 rc=1, 복원 후 `git status --porcelain` 이 의도한 파일 집합과 정확히 일치."
+            },
+            {
+              "seq": 8,
+              "action": "PR 직전 재실측 — `git fetch origin` 으로 base 가 움직였는지, `gh pr list` 로 열린 자매 PR 이 내 파일(`doc-tracker/2026-09.md` 의 내 절 · `ledger.md` · `docs/test-github-app-installation-token.md`)을 건드리는지 다시 재고, 움직였으면 `reset --hard origin/main` 후 편집 스크립트를 재생해 모든 수치를 새 base 에서 다시 읽는다.",
+              "expectedOutcome": "base 부동이거나, 재생 후 게이트 4종 rc=0 이 새 base 에서 재현된다."
+            },
+            {
+              "seq": 9,
+              "action": "브랜치 `reconcile/rct_20260928-0002-scenario-e2e` 로 커밋·푸시하고 PR 을 연다. PR 본문에 task id · gap 요약 · 자격 상실의 근거 · 불변식이 왜 한 PR 을 요구하는지 · 게이트 실측값 · 음성 프로브 결과 · 범위 밖 목록을 적는다.",
+              "expectedOutcome": "PR 이 열리고 `changes` 가 `app=true` 로 `integration tests`(kind)를 배차한다."
+            },
+            {
+              "seq": 10,
+              "action": "CI 관측 — `ci passed` 와 그 needs 잡들의 결론을 확인한다. `integration tests` 가 빨개지면 실행 지침의 판별식 셋(비주석 diff · 실패 spec 이 접촉 파일인가 · 동시각 대조군)으로 flake 여부를 가른다.",
+              "expectedOutcome": "`ci passed` success · `mergeable_state=clean`."
+            }
+          ],
+          "plannedAt": "2026-09-28T06:45:00Z"
+        }
+      }
+    ]
   }
 ]
