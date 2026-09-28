@@ -2820,5 +2820,20 @@
       "reason": "**조치 불필요** — 불변식 1·2 가 모두 성립하고, 창의 as-is 이동은 모킹 지점의 변화가 아니라\n직전 창이 판정한 위양성 쌍의 **되돌림**이다.\n\n⑴ **창은 실질 1커밋**: 지문을 움직인 커밋은 `28c263f`(#267) 하나다. base `ab3a213` = `8d7f508b`\n= 원장 `previousVersion` **바이트 일치**, 중간 `b197938`(#266) 도 `8d7f508b` 부동, tip = `e7dd420e`\n= `currentVersion` 바이트 일치(모델 versionScript 를 worktree 세 벌에서 그대로 실행).\n\n⑵ **직전 판정의 되돌림**: 현재 값 `e7dd420e`/`sites=28 files=18` 은 직전 task `rct_20260927-0005` 의\n`previousVersion` 과 **바이트 동일**하다. 0005 가 「모킹 지점이 아닌 SSOT 파일명 산문 인용 위양성」으로\n판정해 `no_action_needed` 로 닫은 그 한 쌍(`tests/k8s/kind/apiserver-audit-variant.yaml:e2e-mock`)이\n이번에 걷힌 것이다 — 양방향 차집합에서 **새 쌍 0 · 사라진 쌍 정확히 1**, RAW 다중도도 count 1 → 0,\n나머지 27쌍 전건 동일. 정책 SSOT 자신이 L67~68 에서 이 `e2e-mock` 위양성 계열을 명문화하고 있고,\n같은 계열 잔여 쌍 8건이 그대로 살아 있다.\n\n⑶ **규범면이 그 줄을 요구하지 않는다**: 정책 L49~57 의 사유 주석 의무는 **허용된 모킹 지점**에만\n걸리고(`# mock-exception: <CODE>` 형), L71 은 「지점이 아니라 참조이면 주석을 달지 않는다」고 적으며,\n정책 전문 516줄에 `인용`·`링크` 의무 조항이 **0히트**다. 걷힌 줄은 `# mock-exception:` 형이 아니고,\n`# mock-exception:` 표기 주석 **8개 지점은 창 양 끝 전건 부동**이다(파일별 `uniq -c` 동일) ⇒ 등재\n표기가 걷힌 자리는 없다.\n\n⑷ **그 파일의 「모킹 아님」 판정 근거가 흔들리지 않았다**: 창에서 그 yaml 의 변경 20줄은 **전건 `#`\n주석 · 비주석 0줄**이고, 주석을 뺀 본문 md5 가 양 끝 **SAME**(`398e5036…`, 506줄 동일)이다. 개작 3줄\n(신규 문면 유입이라 따로 판정)의 주장도 코드로 직접 재현해 전부 참임을 확인했다 —\n끄는 계층 정규식 **0히트** · 상류 CA = `create_default_context(cafile=SA ca.crt)` ·\n상류 = `HTTPSConnection` + `response_body` 그대로 되쓰기. 걷힌 인용의 원본 절은 정책 blob 부동으로 생존한다.\n\n⑸ **게이트 양 끝 동일 + 프로브 4발**: `scripts/check_mock_policy.py` blob `fb6672fb` 창 양 끝 동일,\n양 끝 `rc=0` · 출력 **바이트 동일**(`등재 4 · 모킹 지점 6 · 실재 토큰 4 · 표기 주석 8 · 미등재 0 · 고아 0` +\n`B2 차단 원장 0행 완비`), `origin/main` 마감 재측정도 같은 값. 무발화가 둔감이 아님은\n**P0**(감사기 CTRL — 비주석 1줄 치환 시 `비주석=2` 로 잡힌다) · **P1**(창과 동형: 다른 파일의 순수 인용\n주석 1줄 제거 → 지문은 `sites=27 files=17` 로 이동하나 게이트 첫 줄까지 불변) ·\n**P2**(직격: `name: cluster-admin` → `cluster-admin-mock` → 게이트 **rc=1**, `[R2] 미등재 모킹 토큰`)로 닫았다.\n**P3 은 게이트의 한계를 실측했다**: 새 이름의 충실도 저하 env(`E2E_TLS_TRUST_ALL`)를 주입하면 게이트\nrc=0 이고 **지문도 바이트 부동**이다. 그래서 초록에 기대지 않고 창의 `tests`·`.github/workflows`\n**추가줄 86줄 전수**를 모킹 지표 정규식으로 긁어 **0히트**를 별도로 세웠고, 범위 안 `tests/` 3파일\n(`apiserver-audit-variant.yaml`·`approval_gate_ac11.py`·`check_ac_mapping.py`)의 변경이 전부 주석·\ndocstring 산문·문서 검증 코드임을 줄 단위로 확인했다.\n\n⑹ **불변식 2 여섯 조건 전부 거짓**: B1 인계 **0**(reconciler 비종결 task 전수 — claim 시점 5건과\n**마감 재스캔 5건**(econ mockup-render `0007` 종결, homelab docs-impl `0012` 신규 claim) 두 번 모두\n내 모델 id·`e2e-mocking-policy`·`차단 요인`·`mock-blocker`·`모킹` **0히트**) · B2 미비 **0**(게이트\n「0행 완비」) · B4 이전 시도 **0**(원장 표 머리 `ID | 출처 | 등록일 | 해소 방향 | 선행 | 재검토` — **소관 칸\n자체가 없다**) · 착수 가능 행 **0** · 재검토 시점 도과 **0** · B3 **불변**(0행 → 0행, 정책 blob `3c1392b9`\n창 3지점 전부 동일).\n\n⑺ **잔여 gap 은 「감소」가 아니라 구조적 0**: 차단 원장 잔여 행 0건이라 행별 재검토 시점도 「가장 이른\n재검토 시점」도 존재하지 않는다 — 다음 감지의 관측 기준선에 적을 날짜가 없고 기준선은 as-is 지문\n`e7dd420e…c93f15dd` / to-be blob `3c1392b9…0be61c` 뿐이다. 이 검토 사실 자체를 여기 남긴다.\n\n⑻ **소관/캐리어**: drift 가 없으므로 인계할 것이 없다. 창의 유일 커밋은 자매\n`tbm_homelab-k3s-mcp-comment-redundancy/rct_20260927-0010`(PR #267, 내 claim 1분 전 `verify` 착지)의\n산물이고, 내 판정면(등재목록·차단 원장·모킹 지점 집합)을 건드리지 않았다.\n\n⑼ **2파도 면제**: summarize 직전 `pull --rebase` 가 들인 커밋은 econ mockup-render `0007` 의\n`run`/`verify` 와 homelab docs-impl `0012` 의 `claim` 뿐으로 내 표면(내 모델 레코드·내 task 파일)\n무접촉이고, 대상 레포 `origin/main` 도 마감 재측정에서 `28c263f` 부동이다 — 그래서 `stateSummary`\n전체를 이 패치에 다시 싣지 않는다.",
       "assessedAt": "2026-09-27T19:31:00Z"
     }
+  },
+  {
+    "id": "rct_20260928-0001",
+    "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
+    "status": "assessing",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-09-28T07:40:12Z",
+      "asIs": {
+        "currentVersion": "sites=29 files=19\na600c9fead5ac5b7bbfbcec33b0686ef4f0ffce6492ca1578044ec399c7321f8",
+        "previousVersion": "sites=28 files=18\ne7dd420efa0da75dceb74f2c9e961c1a352898d80894b32d8b706770aed4acd5"
+      }
+    },
+    "createdAt": "2026-09-28T07:40:12Z",
+    "updatedAt": "2026-09-28T07:40:12Z"
   }
 ]
