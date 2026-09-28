@@ -12821,7 +12821,7 @@
   {
     "id": "rct_20260928-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "reviewing",
+    "status": "approved",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-28T05:28:13Z",
@@ -12898,6 +12898,11 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/270",
           "preparedAt": "2026-09-28T06:00:00Z",
           "notes": "PR #270, head 4d97489816403d372c726d268be1f32ad1ddace4, base edc9dc548a8dcb9791d7218bcc430cb2633ff15d (= 감지가 관측한 tip, 3지문 일치: docs 2acf514b · internal 5a1db204 · main.go 75bce72e). 4파일 +194 −18 — internal/github/github.go +28−6 · internal/github/github_test.go +149−0 · docs/doc-tracker/2026-09.md +16−11 · docs/doc-tracker/index.md +1−1. API 로 changed_files=4 재확인. PR 생성 직전 gh 열린 PR 조회 0건(자매 PR 없음). 필수 status 는 ruleset 실측으로 'ci passed' 하나뿐이고 pull_request(사람 리뷰) 규칙이 없다 ⇒ 사람 승인 없이 무인 머지 가능. 로컬 전수 실행: 게이트 4종 rc=0 이고 출력 전건이 origin/main worktree 와 바이트 동일 · gofmt -l 빈 출력 · go vet 무출력 · go build ./... · go test ./... -count=1 전건 ok. PR 제출 40초 뒤 체크런: changes success · 'fmt + vet' success(게이트 4종이 여기서 돈다) · unit tests / integration tests / image 는 in_progress. mergeable=true, state=blocked(= 'ci passed' 미보고)."
+        },
+        "review": {
+          "status": "approved",
+          "reviewedAt": "2026-09-28T06:02:52Z",
+          "reason": "PR #270 실측(06:03Z): open · head 4d97489(기록값과 동일) · base edc9dc5 = 현재 main tip · mergeable_state clean · 필수 status 'ci passed' success(unit/integration/fmt+vet/changes 전건 success). main 룰셋의 필수 검사는 'ci passed' 하나이고 GitHub Actions 앱(integration_id 15368)에 고정돼 있으며 pull_request(사람 리뷰) 규칙이 없다 — 대상 레포에 사람 승인 context 자체가 없어 4-2 비해당. 정합성: diff 4파일(+194/−18)이 전부 gap 대상이다 — internal/github/github.go 가 statusesPermission 단일 상수를 excludedWritePermissions 집합으로 바꿔 명시 거부·생략 시 강등·반환 토큰 폐기 세 지점이 모두 순회하고(AC5 세 조항을 checks 에도 행사), statuses 거부·폐기 문면은 바이트 그대로다(fmt.Sprintf 가 statuses 일 때 종전 문자열을 재현). 새 단위 테스트 5건을 head 에서 직접 읽어 단언이 실질적임을 확인했다(거부 3서브케이스 · 상류 요청 0 · 문면이 check run 을 말하고 github_commit_status_create 를 가리키지 않음 · 두 권한 동시 강등의 요청 본문·발급본 양쪽 대조 · 폐기 1회·토큰 비노출). tracker 2파일은 판정 기준 4 몫이고 ⏳ 시나리오 6 행은 제거하지 않아 불변식이 선다. 위험 통제: 나는 게이트 4종을 base/head 양 끝에서 직접 굴려 rc=0 + 출력 바이트 동일을 확인했고(주석 지문 517a3eca…b37e2b 불변 = 주석 0줄 추가, ac_mapping 매칭 94 · 공백 3 · 불변식 OK) rc=0 만으로 닫지 않았다. 롤백은 main 에 revert 한 번이고 외부 상태 의존이 없다. [지침 정정 1 — 배포는 범위 밖이 아니다] 지침 3절의 「이 PR 은 배포 어느 것도 건드리지 않는다」는 거짓이다: .github/workflows/docker-build-push.yaml 의 main push paths 는 docs/**·tests/**·**/*.md·**/*_test.go 만 제외하므로 internal/github/github.go 를 바꾼 이 머지는 image 빌드 후 pin 잡이 deploy 브랜치로 force-push 하고 Flux 가 그것을 추적한다(실측: deploy tip f32e206 의 Source-Commit 70cf953 = internal/** 를 만진 직전 main 커밋). 즉 머지 = 운영 파드 롤아웃이다. 그래도 승인하는 근거는 셋이다 — ⑴ 오늘의 거동 델타가 0이다(설치에 checks: read 만, checks: write 요청은 GitHub 422; 강등 루프가 낮출 write 항목이 없다) ⑵ 방향이 조이는 쪽뿐이고 statuses 경로는 바이트 불변 ⑶ AC5 호환성 절과 「수용된 위험」이 못박은 순서(이 구현을 운영에 배포한 뒤에만 App 에 checks: write 부여)를 롤아웃이 위반이 아니라 선행 충족한다 — 권한 부여는 사람 몫으로 여전히 범위 밖이다. 롤백도 그 경로를 덮는다(revert 머지가 새 SHA 로 pin 잡을 다시 타 deploy 를 되돌린다 — 워크플로 주석이 그 절차를 명시). 다만 tracker 건강 상태 ⑷ 의 「아직 운영에 배포되지 않았다」는 머지 직후 낡는다 — 문서 서술이라 어느 게이트도 물지 않으므로(위 4종 실측) 완료 기준을 막지 않고, 실제 배포 상태는 다음 감지 창이 갱신한다. [지침 정정 2 — 사전 조건 4 는 이미 어긋나 있다] 계획 뒤(05:56:38Z) 자매 PR #271(docs/close-statuses-deploy-order-risk, 같은 base, docs 전용 2파일)이 열려 겹치는 파일이 0 이 아니다 — 둘 다 docs/doc-tracker/2026-09.md 를 만진다. 지침이 executor 에게 맡긴 merge-tree 판별식을 내가 직접 밟았다: git merge-tree pr270 pr271 은 CONFLICT 다(「수용된 위험」의 인접 두 행 — #271 은 배포 순서 역전 행, #270 은 checks 행 — 과 변경 이력의 같은 삽입 지점). 해소는 기계적이다(합집합: #271 의 배포순서 행 + #270 의 checks 행, 09-28 변경 이력 2행 병존). 그 트리에서 게이트 4종을 굴려 rc=0 이고 출력이 새 base(#271) 와 바이트 동일, 주석 지문·매칭 94·공백 3 모두 불변임을 확인했다 — 즉 착지 순서가 어느 쪽이어도 완료 기준이 닫힌다. #270 이 먼저 착지하면 재고정이 아예 필요 없고(지금 clean), #271 이 먼저면 executor 가 위 합집합으로 재고정한 뒤 게이트·go test 를 새 base 로 다시 닫으면 된다 — #271 은 docs 전용이라 Go 단언에 닿지 않는다. #271 은 아직 reconciler 원장에 기록이 없어(origin/main 에 pull/271 참조 0건) 무인 착지 예고는 없다. 불가역: 데이터 삭제·파괴적 마이그레이션 없음. App 권한 부여 금지(지침 3절 🔴)와 주석 0줄 규칙(comment-policy ledger 41줄 행)은 그대로 유효하다."
         }
       }
     ]
