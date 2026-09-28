@@ -19007,6 +19007,34 @@
           "status": "approved",
           "reviewedAt": "2026-09-28T08:52:00Z",
           "reason": "PR #274 은 열려 있고 head `44b57c8d`(기록값 그대로) · base `abd6e1a` = 현재 main tip · mergeable CLEAN · `changed_files 4`(`+86 −24`)로 준비 기록과 일치한다. main 룰셋의 필수 status 는 `ci passed` 하나이고 그 check-run 이 이 head 에서 `success`(08:33:24Z, GitHub Actions app 15368) — `integration tests` 포함 5잡 전건 초록이다. ⚠️ 지침 2번의 「`commits/<sha>/status` 의 `state` 가 success 인지」는 문면 흠이다: 이 레포의 `ci passed` 는 commit status 가 아니라 check-run 이라 그 엔드포인트는 `state:pending · statuses:[]` 를 돌려준다. 판정은 `commits/<sha>/check-runs` 의 `ci passed` 로 읽을 것. 사람 승인용 required context 는 룰셋에 없어 `manualApproval` 은 남기지 않는다.\n\n정합성·완료 기준을 리뷰가 직접 실측했다(PR 본문 인용이 아니라 양 끝 트리 재실행). base `abd6e1a`: D 표면 `1451줄/114파일 · 원장 36행 · 97.4% · 미판정(—) 1행`. head: `1435줄/114파일 · 원장 36행 · 판정 완료 36행 1435줄(100.0%) · 미판정(—) 0행 · 축별 ①②③④ 36행` — 완료 기준 ⑴ 성립. L(`3163줄/161파일 · 원장 86행 · 100.0%`)·E(`4줄/4파일 · 원장 9행`) 두 표면은 전체 지문까지 양 끝 동일(`bac44c1d…` · `517a3eca…`)이고, `check_ac_mapping.py`·`check_mock_policy.py` 출력은 **바이트 동일**, `check_doc_inventory.py` 는 rc=0 · `허브 도달 가능 124 / 124` 로 세 줄(123→124 · 정책 83→84)만 차이 — 기준 ⑵⑶ 성립. 기준 ⑷ 비주석 diff 0줄도 재현했다: docstring 노드를 벗긴 AST 를 `ast.unparse` 로 다시 적은 md5 가 base·head 모두 `aa385a0d84ecc78f8a7fce01486febea` 로 계획이 못박은 리터럴과 일치(파일 192→173줄). 게이트 rc=0 은 base 에서도 나므로 근거로 쓰지 않았고, 대신 음성 프로브 3발을 직접 주입해 게이트가 실제로 무는 것을 확인했다 — 행의 줄 수·지문을 `38`/`226abe55d3b1` 로 되돌리면 `[R6]`×2 + `[R11]`, 판정 축만 `—` 로 바꾸면 `[R11] 칸 「—」 != 근거 「①②③④」`, 걷은 자리에 docstring 한 줄을 되살리면 `[R6] 등재 22 != 실측 23 · 지문 f6f05a5b0038 != cf569cb9bd54` (전건 rc=1, 복원 뒤 트리 청정). 즉 원장 행의 `22`·`f6f05a5b0038`·`①②③④` 는 산문 주장이 아니라 기계가 파일 내용에 묶어 검증하는 값이다.\n\n범위: 4파일 모두 이 gap 에 묶여 있다 — 판정 대상 코드 파일(docstring 줄만) · 그 판정을 적는 원장 행 1행 교체 · 원장이 링크하는 패스 문서(D2 가 요구) · 그 신설 `.md` 가 움직인 허브 집계와 변경 이력(D4 가 요구). 무관한 변경 0. 예산 좁힘 사유(「예산을 채울 대상이 없음」)는 definition 의 허용 사유와 같고 base 실측으로 확인했다 — L·E 는 미판정 0행, D 의 미판정은 이 한 행뿐이다.\n\n자매 간섭: 열린 자매 PR #273(rct_20260928-0003)이 같은 `docs/doc-tracker/2026-09.md` 를 만진다. 다만 헝크가 서로 떨어져 있어(#273 은 「구현 없는 문서」·「수용된 위험」 절, #274 는 허브 집계 줄과 변경 이력 첫 행) worktree 에서 실제로 병합해 보니 `ort` 자동 병합 rc=0 이고, 병합 트리에서 게이트 4종이 전건 rc=0 · `미판정 0행 · 100.0%` · `허브 124 / 124` 를 그대로 낸다. 착지 순서와 무관하게 완료 기준이 닫히므로 지침 3-a 의 재고정 절차는 발동하지 않는다.\n\n위험·불가역성: riskLevel low 가 타당하다. 이 4파일은 image 워크플로 main push `paths` 의 제외 목록(`!docs/**` · `!tests/**` · `!**/*.md`)에 전건 걸려 이미지 빌드가 돌지 않는다 — 직전 동형 머지 #272(`abd6e1a`, docs+tests)도 main 에서 Warm CI caches 와 GitHub Pages 만 돌았고 Image 런이 없다(코드를 만진 `597e0bf` 에는 있다). 즉 Flux 롤아웃·런타임 영향 0이고, 배포는 Pages 뿐이다. 불가역 작업 없음. 롤백은 이 PR 한 건의 revert 이고, 레포가 squash-only(`allow_squash_merge` 만 true · linear history 강제)라 `-m` 없는 단순 revert 가 맞다. 검증 방법은 지침 4번에 게이트 출력 수치로 명시돼 있고 리뷰가 그 값을 head 에서 전건 재현했다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-09-28T08:53:43Z",
+          "finishedAt": "2026-09-28T08:55:10Z",
+          "entries": [
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-28T08:53:50Z",
+              "finishedAt": "2026-09-28T08:54:10Z",
+              "log": "지침 1 — 머지 전 재실측. gh api pulls/274: state=open · merged=false · mergeable=true · mergeable_state=clean · changed_files=4 · +86 -24 · base.sha=abd6e1a53eef278f72c73a155c9c547f9c1f0875 · head.sha=44b57c8da05c69c5aff874c0b1577dc4b4d870f7. base.sha 가 지침이 적은 abd6e1a 그대로이고 repos/.../commits/main 도 같은 sha 라 그 사이 main 이 움직이지 않았다 — 3-a(리베이스) 조건에 해당하지 않아 그대로 진행. 변경 4파일 실측: ledger.md(+1-1) · passes/2026-09-28-paths-1-2-3-4-github-app-checks-e2e-slice-64.md(+80 신규) · doc-tracker/2026-09.md(+2-1) · tests/integration/github_app_installation_token_ac5_checks.py(+3-22) — 계획이 의도한 4파일과 일치."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-28T08:54:10Z",
+              "finishedAt": "2026-09-28T08:54:40Z",
+              "log": "지침 2 — 필수 status 확인. commits/44b57c8d/status 의 combined state 는 pending 이지만 statuses 배열이 0건이다 — 이 레포의 `ci passed` 는 commit status 가 아니라 check-run 이라 combined status 에 영원히 집계되지 않는다(기록된 레포 성질). 판정은 check-runs 로 했다: `ci passed` completed/success · `integration tests` completed/success · `changes` completed/success · `fmt + vet` completed/success · `image`·`unit tests` skipped. mergeable_state=clean 이 룰셋의 필수 status 충족을 독립적으로 확인해 준다. 지침대로 이 sha 에 커밋을 얹지 않았다."
+            },
+            {
+              "stepSeq": 10,
+              "status": "succeeded",
+              "startedAt": "2026-09-28T08:54:40Z",
+              "finishedAt": "2026-09-28T08:55:10Z",
+              "log": "지침 3 — squash 머지. PUT pulls/274/merge (merge_method=squash, sha 가드=44b57c8da05c69c5aff874c0b1577dc4b4d870f7, commit_title 미지정 — 지정하면 (#274) 접미사가 사라진다). 응답 merged=true · sha=f473f29fc8133e2e3cbbb5773ef48e45dddacddd. 머지 뒤 main tip = f473f29 「docs(comment-policy): 시나리오 6 전용 e2e 의 docstring 38줄을 네 복원 경로로 판정한다 (#274)」. PR state=closed · merged_at=2026-09-28T08:54:59Z. 착지 무결성: squash 커밋 tree 270fad3ebd0e3723a5b2145fda91fcafd233772a == PR head tree 270fad3e… (바이트 동일). main 직접 push 없음, 지침 밖 변경 없음."
+            }
+          ]
         }
       }
     ]
