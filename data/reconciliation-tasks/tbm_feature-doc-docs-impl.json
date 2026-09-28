@@ -9949,7 +9949,7 @@
       }
     },
     "createdAt": "2026-09-28T03:08:18Z",
-    "updatedAt": "2026-09-28T03:15:10Z",
+    "updatedAt": "2026-09-28T03:50:00Z",
     "stateSummary": {
       "asIs": "### as-is — `backend/` + `frontend/` @ `3d18abb` (2026-09-28T02:55:34Z)\n- 지문: `backend:a344e1dd… frontend:9006e788…` (claim 시 관측값과 tip 실측 **바이트 일치**)\n- **창 = 단일 커밋** `16fce29`→`3d18abb` (PR #197, 「홈에 미결정 후보 남은 개수를 노출한다 — 여정 전용 의무 1/7」). trailer `rct_20260928-0002` = **내 모델 자신의 직전 task**(02:58:30Z `succeeded`) ⇒ 창은 내 축 집행 산출물의 착지다.\n- 변경 5파일: `backend/src/analysis.rs`(+8/−2) · `frontend/src/HomeRepositories.tsx`(+7) · `frontend/src/api.ts`(+1) · `docs/mockups/JRN-connect-repo.html`(+1) · `docs/doc-tracker/2026-09.md`(+26/−1).\n- **착지 독립 검증(코드 실측)**:\n  - `AnalysisView.undecided_candidates: i64`(`analysis.rs:119`), `analysis_columns()` 의 상관 서브쿼리(`:184~187`)가 `stages_done` 과 **같은 모양**으로 실린다 — 두 번째 요청 없이 홈 카드가 그린다.\n  - **술어 동일성 실측**: 새 SQL `decision = '{undecided}' AND c.merged_into IS NULL` 의 상수는 `DECISION_UNDECIDED`(`:1057`)를 포맷 인자로 넘겨 문자열 사본 0. 후보 화면 집계(`:1237` `.filter(|c| c.decision == DECISION_UNDECIDED && c.merged_into.is_none())`)와 **같은 정의** ⇒ 두 화면이 다른 수를 말하지 않는다.\n  - 직렬화 경로 생존: `#[derive(Serialize, sqlx::FromRow)] #[serde(rename_all = \"camelCase\")]`(`:107~108`) ⇒ JSON `undecidedCandidates`, 프런트 타입 `api.ts:145`, 렌더 `HomeRepositories.tsx:317~321`(`data-testid=\"undecided-remaining\"`, `> 0` 가드). **백엔드→API→UI 3단 전건 연결**.\n  - **마이그레이션 0건 실측**: `backend/migrations/` 엔트리 수 창 양 끝 **17 == 17**, 최신 `0016_access_requests.sql` 부동. `tools/check-data-format-change.py --base 16fce29 --head 3d18abb` **rc=0**(D1 미발화) ⇒ 사람 승인 경유 불필요.\n- **미구현 AC 0 · 구현 대기 0** 불변(doc-tracker 13행·7행 자기선언, 이번 창이 건드리지 않음).\n\n### 게이트 5종 실측\n| 게이트 | base `16fce29` | tip `3d18abb` |\n|---|---|---|\n| `check-journey-mockup.py` | rc=0 | rc=0 — 출력 **바이트 동일** |\n| `check-mockup-render.py` | rc=0 | rc=0 — 델타 3줄만 |\n| `check-scenario-e2e.py` | rc=0 | rc=0 — 출력 **바이트 동일** |\n| `check-comment-ledger.py` | — | rc=0 (I1~I5, 판정 완료 8줄/7행) |\n| `check-data-format-change.py` | 창 인자형 | rc=0 (D1 미발화) |\n\n`check-mockup-render` 양 끝 출력 `diff` = **정확히 3줄**: M3A 352→**354** · M3B 319→**321** · M6 `data-sample` 133→**134**. 앞 둘은 doc-tracker 슬라이스 8a 행의 **자기선언과 바이트 일치**, M6 +1 은 목업에 새로 선 `data-sample` 1개. **편차 원장 35행·상한 35 불변**(원장 수를 인쇄하는 줄이 양 끝 동일), M12 27쌍/38건 불변 ⇒ **새 편차 0**(목업과 구현을 같은 커밋에 움직인 결과).\n\n### 잔여 — 사용자 여정 전용 의무 (AC 미귀속) **6건**\n정의 판정 기준 4(2026-09-28 신설)가 만든 축. doc-tracker 신설 절(`:772~797`)이 7건 중 1건(G6=홈의 미결정 후보 수) 착지를 적고 **6건을 표로 남겼다**. 각 행의 「구현 0」 주장을 코드로 **독립 재검증**:\n\n| # | 의무 | 벽 | 내 실측 |\n|---|---|---|---|\n| G1 | 단계 완료·재분석 **알림 발송** | 알림 인프라(새 테이블 ⇒ D1) + AC3.5 | `notification\\|notify` 가 `backend/src`+`frontend/src` **0히트** ✓ |\n| G2 | 소유자가 **타 사용자에게 열람 허용** | 제품 결정 선결(AC4.7 격리 ↔ AC4.10 접수까지, 사이 한 칸 공백) + 새 테이블 | `owned_analysis` **31곳** — 사용자 대면 읽기 전량이 `id = ? AND user_id = ?` 를 지난다 ✓ |\n| G3 | 의존성 카테고리의 **자연어 설명 라벨** | G2(P2 화면이 서기 전엔 놓을 자리가 없다) | `밖에서 부르는 곳 …` 이 `docs/mockups/JRN-understand-feature.html:1134` 에만, `frontend/src` **0히트** ✓ |\n| G4 | P2 제안이 **P1 검토를 거친다는 표시** | G2 의 귀결(제안자≠승인자 세계) | `doc_edit.rs:59` 의 `edit-proposals/{proposal}/decision` 이 **소유자 1인 세계**를 가정 ✓ |\n| G5 | 비용 초과 시 **중단 경로** | 분석 취소 API 부재 + 큐·리스·단계 행 처리 **선결 결정** | `backend/src` 에 취소 라우트/핸들러 **0히트** ✓ (자매 편차 원장에 「데이터 부재」 행으로 기등재) |\n| G7 | **미검수 feature 개수**를 목록에 표시 | 슬라이스 5b 의 근거 뷰어 자체가 미착지 | `STP-verify-evidence` 가 목업 4곳에만, `frontend/src` **0히트** · `unreviewed` **0히트** ✓ (자매 편차 원장 기등재) |\n\n여정 코퍼스 재계수: `docs/user-journey/` **7파일**(JRN 6 + README) · 실재 단계 **26개** — 원장 자기선언과 일치(정규식 27 중 1은 README `STP-<슬러그>` **형식 예시**라 제외; 정본 「서술 대상으로 갈라라」).\n\n### ⚠️ 이 축에는 기계 가드가 0개다 (양성 프로브 실측)\n`JRN-connect-repo.md` 페인포인트 절에 **구현에 존재하지 않는 의무 1줄**(`favoriteRepos` 즐겨찾기 고정)을 주입 → `check-journey-mockup` · `check-mockup-render` · `check-scenario-e2e` · `check-comment-ledger` **4종 전부 rc=0**. 복원 후 `git status --porcelain` **0행**. 기존 게이트는 여정↔목업 · 목업↔구현 · 시나리오↔e2e 만 본다 ⇒ **이 잔여를 붙드는 것은 doc-tracker 표 하나뿐**이고, 표가 낡으면 축 전체가 조용히 사라진다.",
       "toBe": "### to-be — `docs/` @ `3d18abb`, 트리 `61152f1ac88aab0ee8eafc24c498a12b7c8c427d`\n- 지문이 claim 시 관측한 `currentVersion` 과 **바이트 일치**(`git rev-parse HEAD:docs`).\n- 정의(2026-09-27T14:26:49Z 갱신)의 목표: `docs/` 가 SSOT이고 ⑴ 모든 AC 구현+검증 ⑵ UI ↔ 여정·목업·디자인 시스템 일치 ⑶ 문서 없는 구현 0. **판정 기준 4(미구현 여정 동작)** 가 2026-09-28 사용자 결정으로 명문화돼, 대응 AC 가 없는 여정 단계라도 기술된 시스템 동작이 구현에 없으면 drift다.\n- 현재 문서 규모(doc-tracker 자기선언, 이번 창 불변): 가치 **8**(V1~V8) · PRD **4** · **AC 26**(가치 연결 26 / 미연결 0) · 테스트 시나리오 39 · 매핑 39 · 구현 대기 **0** · 미구현 AC **0**.\n- **이번 창의 to-be 이동은 문서 2파일뿐**: `docs/mockups/JRN-connect-repo.html` +1줄(홈 카드에 미결정 후보 문면 — 구현과 **같은 커밋**) · `docs/doc-tracker/2026-09.md` +26/−1(「마지막 검증 시점」 갱신 + 슬라이스 8a 변동 이력 1행 + **「사용자 여정 전용 의무 (AC 미귀속) — 2026-09-28 실측」 절 신설**).\n- 신설 절이 to-be 를 **넓힌 것이 아니라 드러냈다** — 판정 기준 4 가 이미 만든 의무 7건을 처음으로 좌표·벽과 함께 원장화한 것이고, 그중 1건(G6)이 같은 커밋에 착지했다.\n- 문서 권위 순서(가치 > PRD > 테스트 > 여정 > 목업 > 구현)는 불변 — 남은 6건은 **여정이 단독으로 만든 의무**(AC 침묵 영역)라 정의가 명문으로 「AC 로 승격할지는 문서 쪽 결정」이라 적어 둔 층이다.",
@@ -9959,6 +9959,87 @@
     "assessment": {
       "reason": "**작업 필요 — 정의 판정 기준 4(미구현 여정 동작)의 잔여 6건. `action_required` 로 planner 에 인계한다.**\n\n⑴ **창은 gap 을 줄였고, 그 착지는 참이다.** `16fce29`→`3d18abb`(PR #197)은 내 모델 자신의 직전 task `rct_20260928-0002` 가 여정 전용 의무 7건 중 1건(홈의 미결정 후보 남은 개수)을 착지시킨 커밋이다. 산문을 믿지 않고 코드로 재검증했다 — `analysis_columns()` 상관 서브쿼리 → `#[serde(rename_all=\"camelCase\")]` → `api.ts:145` → `HomeRepositories.tsx:317~321` **3단 전건 연결**, 술어가 후보 화면 집계(`analysis.rs:1237`)와 **같은 정의**(`DECISION_UNDECIDED && merged_into IS NULL`)라 두 화면이 어긋나지 않는다. 마이그레이션 **17==17**(0건)이라 `check-data-format-change.py --base 16fce29 --head 3d18abb` **rc=0**(D1 미발화, 사람 승인 불필요).\n\n⑵ **새 어긋남·문서 없는 구현은 0이다.** 게이트 5종 창 양 끝 전건 `rc=0`. `check-journey-mockup` · `check-scenario-e2e` 출력은 **바이트 동일**, `check-mockup-render` 양 끝 `diff` 는 **정확히 3줄**(M3A 352→354 · M3B 319→321 · M6 `data-sample` 133→134)이고 앞 둘은 슬라이스 8a 행의 **자기선언과 바이트 일치**, M6 +1 은 새로 선 목업 `data-sample` 1개다. 목업과 구현을 같은 커밋에 움직여 **편차 원장 35행·상한 35 불변**(새 편차 0). 미구현 AC **0** · 구현 대기 **0** 불변.\n\n⑶ **그럼에도 to-be 미달이 남는다 — 6건, 전부 실재하는 공백.** 같은 커밋이 신설한 원장 절이 스스로 6건을 미구현으로 적었고, 나는 각 행의 「구현 0」 주장을 좌표별로 독립 재검증했다: G1 `notification|notify` 가 `backend/src`+`frontend/src` **0히트** · G2 `owned_analysis` **31곳**(사용자 대면 읽기 전량이 `id = ? AND user_id = ?`) · G3 P2 라벨이 목업 `JRN-understand-feature.html:1134` 에만·frontend **0히트** · G4 `doc_edit.rs:59` 의 `edit-proposals/{proposal}/decision` 이 **소유자 1인 세계** 가정 · G5 취소 라우트 **0히트** · G7 `STP-verify-evidence`·`unreviewed` 가 frontend **0히트**. 여정 코퍼스 재계수도 원장 자기선언과 일치(7파일 · 실재 단계 **26**; 정규식 27 중 1은 README `STP-<슬러그>` 형식 예시라 제외). 정의가 「백로그로 치부해 이 루프 밖으로 빼지 않는다」고 못박은 층이다.\n\n⑷ **이 잔여는 「구조적 0」이 아니다.** 158·159·160차 형(등호·차집합 ∅ 로 닫혀 집어 갈 대상 자체가 없는 경우)과 다르다 — 6개의 실재하는 미구현 동작이고, 각 행이 벽(선결 조건)까지 명시돼 있어 계획 단계가 바로 읽을 수 있다. 우선순위·착수 순서 판단은 정의가 명문으로 **계획 단계의 몫**으로 돌렸다.\n\n⑸ **소관 캐리어 전수 0 — 139차 역규칙 전건 성립.** ⒜ 대상 레포 열린 PR **1건**(#195 `주석 비중복성 49차 패스`)은 자매 `tbm_feature-doc-comment-redundancy` `rct_20260927-0003` 의 캐리어로 **내 축이 아니다**(주석 제거 창, 머지 전 수동 repair 대기). ⒝ **같은 모델 열린 task 0** — 캐리어 `rct_20260928-0002` 가 **02:58:30Z `succeeded`** 로 종결(claim 시점·summarize 직전·assess 직전 **3회 재측정**, 전건 동일). ⒞ **남의 원장 새 지목 0** — G5·G7 이 자매 `mockup-render` 편차 원장에 행을 갖지만 그 원장은 정의 경계 규정(「미구현 화면의 구현 의무는 `tbm_feature-doc-docs-impl`」)대로 구현 소관을 나에게 돌려놓은 상태이고, `e2e-mocking-policy` 원장의 「구현 대기」는 **0건**이다. ⇒ 잔여 > 0 인데 셋 다 0 ⇒ `action_required`.\n\n⑹ **자동 해소 가능성 없음 ⇒ 유예(`recheckAfter`) 부적절.** 6건 전부가 롤아웃·일시 상태가 아니라 **코드·제품 결정을 요구하는 구조적 공백**이고, 벽(G2 제품 결정 · G1/G2 새 테이블 D1 · G5 취소 시맨틱 결정 · G7 근거 뷰어 선착지 · G3/G4 는 G2 의존)은 시간이 지난다고 풀리지 않는다.\n\n⑺ **⚠️ 이 축에는 기계 가드가 0개다(양성 프로브 실측).** `JRN-connect-repo.md` 페인포인트 절에 **구현에 존재하지 않는 의무 1줄**(`favoriteRepos`)을 주입하니 `check-journey-mockup`·`check-mockup-render`·`check-scenario-e2e`·`check-comment-ledger` **4종 전부 rc=0**(복원 후 `git status --porcelain` 0행). 기존 게이트는 여정↔목업 · 목업↔구현 · 시나리오↔e2e 만 본다 ⇒ **이 잔여를 붙드는 것은 doc-tracker 표 하나뿐**이다. 표가 낡으면 축 전체가 조용히 사라지므로, planner 는 후보를 고를 때 그 표를 1차 입력으로 쓰되 **표를 신뢰하지 말고 좌표별 0히트를 다시 떠라**(이번 회차가 6건 전부 그렇게 확인했다).\n\n⑻ **2파도 0 ⇒ `stateSummary` 재탑재 면제.** 마감 재스윕에서 대상 레포 `origin/main` 이 claim 시점 `3d18abb` 그대로이고 `docs`(`61152f1a…`)·`backend`(`a344e1dd…`)·`frontend`(`9006e788…`) **세 트리 전부 바이트 부동**, 열린 PR 목록도 #195 1건으로 불변. 내 표면에 접촉한 새 커밋이 없어 요약을 다시 실을 사유가 없다.\n\n⑼ **남은 후보는 점유하지 않았다**(single in-flight): 마감 재스윕의 `4 changed` 는 전부 **다른 레포**(`tbm_econ-opinion-monitor-docs-impl` 양 side · `…-journey-mockup/toBe` · `…-mockup-render/asIs`)다. 🟢 전 원장 비종결 **3건**, `review.manualApproval` **0건**(전수 재스캔).",
       "assessedAt": "2026-09-28T03:16:30Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**슬라이스 8b — 여정 전용 의무 G5(분석 중단 경로)를 착지시킨다.** 범위(완료 기준): `JRN-discover-features` §4 마지막 행 「누적 비용이 사용자 예상을 크게 초과 → 비용을 계속 노출하고 **중단 경로 제공** → 여정 중단」의 두 절 중 이미 충족된 앞 절(7e·7f 가 착지시킨 누적/단계별 비용 노출)은 범위에서 빼고, 비어 있는 뒤 절만 구현한다. 착지 판정: ⑴ 여정 전용 의무 표(`docs/doc-tracker/2026-09.md` 「사용자 여정 전용 의무 (AC 미귀속)」) 6건 → **5건**(G5 행 제거), ⑵ 편차 원장의 `FeatureCandidates.tsx` `비용이 예상보다 커요 — 중단하기` 행 해소 ⇒ **알려진 편차 35 → 34 · 미해소 편차 상한 35 → 34**(M5 래칫이라 동반 하향 필수), ⑶ 게이트 5종 로컬 전수 rc=0, ⑷ **마이그레이션 0건**(D1 미발화 ⇒ `review/manual-approval` 자동 success ⇒ 무인 착지). **왜 G5 인가 — 남은 6건 중 유일하게 벽이 우리 구현 선택이었다.** 원장이 적은 G5 의 벽은 「분석을 취소하는 API 자체가 없고, 큐·리스·단계 행을 어떤 상태로 남길지가 **선결 결정**」이었는데 두 축 모두 재실측에서 무너졌다: ⒜ 사용자에게 보이는 시맨틱은 **목업이 이미 확정해 둔다** — `END-cost-abandoned` 가 「더 이상 비용이 발생하지 않습니다. 지금까지의 결정은 저장돼 있어서, 원할 때 이어서 진행할 수 있어요」 + `중단 · 누적 <금액>` + 「결정 화면으로 돌아가기」로 네 가지(비용 정지 · 결정 보존 · 재개 가능 · 비용 계속 노출)를 문면으로 정한다. 제품 결정이 비어 있던 것이 아니라 권위 순서상 여정(4) > 목업(5) 이 이미 답을 적어 두었다. ⒝ 서버 쪽 상태 처리에는 **바이트 단위 선례가 이미 있다** — `worker_api::stop_for_revoked_access` 가 실행 중 분석을 「status 전환 + finished_at + lease/claimed_by 해제 + RUNNING 단계 정리」로 멈추는 모양을 세워 두었고, `analysis::retry_stage` 가 같은 트랜잭션 모양으로 단계를 PENDING 으로 되돌린다. 새 결정이 아니라 **기존 규약의 n 번째 적용**이다. **비용 정지는 이미 구조적으로 보장돼 있다(핵심 실측)**: 워커는 각 단계의 유일한 유료 호출 **앞에서** `heartbeat` 를 부르고(`bin/worker.rs` 6자리), heartbeat·report_stage·submit_document·finish 전부 `require_lease`(= `claimed_by 일치 AND status='running' AND 살아 있는 lease`)를 지난다. 따라서 status 가 `cancelled` 가 되는 순간 다음 유료 호출 직전에 409 가 돌아오고, 워커는 그 뒤 어떤 쓰기도 되돌릴 수 없다 — 취소를 FAILED 로 덮어쓰는 경로가 없다. claim 선택자도 `status='queued' OR (status='running' AND lease 만료)` 라 `cancelled` 를 다시 집지 않는다. **마이그레이션이 0건인 이유**: `analyses.status` 는 `TEXT NOT NULL DEFAULT 'queued'` 이고 **CHECK 제약이 없다**(`0003_analyses.sql` 실측 — `feature_candidates.decision` 과 달리 열거를 DB 에 박지 않았다). 새 값 하나를 더하는 데 스키마 변경이 필요 없으므로 `check-data-format-change.py` D1 이 발화하지 않는다. **주석·docstring 0줄로 고친다** — 접촉 5파일(`analysis.rs`·`pipeline.rs`·`api.ts`·`FeatureCandidates.tsx`·`HomeRepositories.tsx`) 전부 주석 원장의 판정 완료 행이고 양성 프로브로 실측했다(주석 1줄 → `check-comment-ledger.py` rc=1 · 비주석 1줄 → rc=0). 신설 파일도 같다(새 파일 + 주석 1줄 → I2[L] 미등재로 rc=1 · 주석 0줄 → rc=0). 설계 근거는 코드가 아니라 PR 본문과 원장 행이 진다. **종료 화면은 매핑 주석 없는 새 파일에 세운다** — 7i 가 `END-no-access` 를 `NoAccess.tsx`(매핑 주석 없음 ⇒ M1 이 화면으로 발견하지 않음)에 세운 선례를 그대로 따른다. `END-` 섹션은 `STP-` 단계가 아니라 대조 단계가 될 수 없고, 매핑된 `FeatureCandidates.tsx` 안에 종료 카피를 넣으면 구현 전용 카피가 짝 안에 생겨 닫으려던 편차 자리에 새 편차를 연다. 반대로 **중단 버튼 카피는 반드시 `FeatureCandidates.tsx` 에** 들어간다 — 목업 `STP-sift-candidates` 가 그리는 문면이라 M3A(카피 ⊆ 구현)의 분모이고, 지금은 편차 행이 면제해 주고 있을 뿐이다. **AC·테스트 문서·e2e spec 은 신설하지 않는다** — 정의가 「AC 에 귀속되지 않은 여정 전용 의무는 테스트 문서·E2E 가 보호하지 않는다」고 적었고 8a 가 그 방침으로 착지했다. 지어낸 시나리오는 `docs/test` ↔ e2e 1:1 원장에 AC 없는 행을 만든다. 검증은 `backend/tests/` 단위 테스트 + 게이트 출력 + 음성 프로브가 진다. **가역성**: 서버 상태 변경은 `analyses.status` 한 칸이고 사용자 자신의 분석에만 닿는다. PR 은 머지 전 언제든 닫을 수 있고, 머지 뒤 되돌리기는 revert 한 번이다(스키마·데이터 이전이 없다).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 `dlddu/feature-doc` 를 clone 하고 `origin/main`(`3d18abb`)에서 브랜치 `reconcile/rct_20260928-0004` 를 딴다. 게이트 4종(`tools/check-journey-mockup.py`·`tools/check-mockup-render.py`·`tools/check-scenario-e2e.py`·`scripts/check-comment-ledger.py`)을 **편집 전에** 돌려 기준선 출력을 파일로 남긴다.",
+              "expectedOutcome": "4종 전건 rc=0. 기준선 카운터: M3A 354 · M3B 321 · 알려진 편차 35(상한 35) · M11 사각 9/원장 9 · M12 27쌍/38건 · 주석 원장 판정 8줄/7행 · e2e spec 39."
+            },
+            {
+              "seq": 2,
+              "action": "백엔드 상태값: `backend/src/pipeline.rs` 의 `pub mod status` 에 `pub const CANCELLED: &str = \"cancelled\";` 를 더한다. **주석 0줄**(기존 상수들엔 doc 주석이 있지만 이 파일은 판정 완료 행이라 한 줄도 더하지 않는다).",
+              "expectedOutcome": "`grep -c '^\\s*//' backend/src/pipeline.rs` 가 편집 전과 같다. `check-comment-ledger.py` rc=0."
+            },
+            {
+              "seq": 3,
+              "action": "백엔드 핸들러: `backend/src/analysis.rs` 에 `POST /api/analyses/{id}/cancel` 라우트와 `cancel` 핸들러를 `retry_stage` 바로 뒤에 더한다. 소유권은 기존 규약대로 `WHERE id = ? AND user_id = ?` 로 확인하고(없으면 `AppError::NotFound` — 남의 id 와 없는 id 를 구분하지 않는 AC4.7 속성 유지), 한 트랜잭션에서 ⑴ `UPDATE analyses SET status = CANCELLED, finished_at = ?, lease_expires_at = NULL, claimed_by = NULL WHERE id = ? AND status IN (QUEUED, RUNNING)`, ⑵ `UPDATE analysis_stages SET status = PENDING, detail = NULL, error = NULL, started_at = NULL, finished_at = NULL WHERE analysis_id = ? AND status = RUNNING` 을 실행한다. ⑴ 의 `rows_affected() == 0` 이면 `AppError::Conflict(\"진행 중이거나 대기 중인 분석만 중단할 수 있습니다.\")`. 끝으로 `crate::audit::record(.., \"analysis.cancel\", None)` 과 `Ok(Json(load_detail(..)))`.",
+              "expectedOutcome": "`cargo` 없이도 라우트 문자열·상수 참조가 기존 핸들러와 같은 모양임을 `git diff` 로 읽어 확인. 새 열·새 테이블 0 ⇒ `backend/migrations/` 무접촉."
+            },
+            {
+              "seq": 4,
+              "action": "프런트 API: `frontend/src/api.ts` 에 `cancelAnalysis(id)` 를 `retryStage`(또는 같은 모양의 기존 POST 래퍼) 바로 옆에 같은 형태로 더한다. `status` 는 이미 `Analysis`·`AnalysisDetail` 에 `string` 으로 실려 있으므로 타입 변경은 없다. **주석 0줄**.",
+              "expectedOutcome": "`AnalysisDetail` 반환 타입이 기존 래퍼와 동일. `api.ts` 주석 줄 수 불변."
+            },
+            {
+              "seq": 5,
+              "action": "종료 화면: **새 파일** `frontend/src/AnalysisStopped.tsx` 를 만들고 `NoAccess.tsx` 의 `AccessRequested` 를 구조적 템플릿으로 목업 `END-cost-abandoned` 를 바이트 그대로 옮긴다 — `card end-card`(marginTop 170) / `.em` `◼` / `h1.h-display`(marginTop 14) `여기서 멈췄어요` / `p.h-display-sub`(marginTop 8) `더 이상 비용이 발생하지 않습니다. 지금까지의 결정은 저장돼 있어서, 원할 때 이어서 진행할 수 있어요.` / `span.badge.warn`(marginTop 16) 안에 `span.dot` + 잎 `중단 · 누적 ` + **금액은 자기 `<span>` 으로 분리**(`{formatCost(spentCents)}`) / `div.stack`(marginTop 26) 의 `btn btn-secondary block` `결정 화면으로 돌아가기`. **파일 머리에 목업 경로 매핑 주석을 쓰지 않는다**(쓰면 M1 이 화면으로 발견한다). 파일 전체 **주석 0줄**.",
+              "expectedOutcome": "`head -3 frontend/src/AnalysisStopped.tsx` 에 `docs/mockups/` 문자열이 없다. M3A 354 · M3B 321 가 이 파일 때문에 움직이지 않는다."
+            },
+            {
+              "seq": 6,
+              "action": "중단 버튼: `frontend/src/FeatureCandidates.tsx` 의 `div.stack`(현 `finish-sift`·`leave-partial`) 에 **세 번째** 버튼으로 `btn btn-ghost block` / `data-testid=\"stop-cost\"` / 카피 `비용이 예상보다 커요 — 중단하기` 를 더하고, 누르면 `cancelAnalysis(id)` 뒤 `AnalysisStopped` 를 그린다(`stopped` 상태 한 칸). 카피는 목업 `btn-stop-cost` 의 바이트와 일치해야 한다(em dash `—`, 양옆 공백 1칸).",
+              "expectedOutcome": "`python3 -c` 로 목업 문면과 `.tsx` 문면의 **md5 일치** 확인. 기존 e2e 두 spec(`sc03-03`·`sc04-09`)은 `getByTestId` 로만 잡으므로 버튼 추가에 영향 없음."
+            },
+            {
+              "seq": 7,
+              "action": "홈 배지: `frontend/src/HomeRepositories.tsx` 의 `STATUS_BADGE` 에 `cancelled: { tone: 'warn', label: 'Stopped' }` 한 줄을 더한다. 근거 — `badgeFor` 의 폴백이 `label: status` 라, 더하지 않으면 홈 카드가 날 `cancelled` 를 그려 **영어 토큰이 사용자 화면에 샌다**. 기존 5개 라벨이 모두 영어(`Queued`·`Analyzing`·`Fetched`·`Synced`·`Failed`)이므로 같은 표의 n 번째 적용이고, `.badge.warn` 은 `index.css:263` 에 이미 있다. **주석 0줄**.",
+              "expectedOutcome": "`check-mockup-render.py` rc=0 이고 M3A·M3B·M11·M12 가 편차 행 −1 을 뺀 나머지에서 불변. (변동이 있으면 값을 PR 본문 표에 적고 근거를 남긴다.)"
+            },
+            {
+              "seq": 8,
+              "action": "백엔드 테스트: `backend/tests/analysis_cancel.rs` 를 `backend/tests/access_request.rs`·`usage.rs` 와 같은 하네스로 만든다 — ⑴ 대기 중 분석 취소 → `status == \"cancelled\"` · `finishedAt` 있음, ⑵ 실행 중(lease 보유) 분석 취소 → 같은 워커의 `heartbeat`·`report_stage`·`finish` 가 전부 409, ⑶ 취소된 분석의 재취소는 409, ⑷ 남의 분석 취소는 404(없는 id 와 **(status, body) 쌍 동일**), ⑸ 미인증 401. **주석 0줄**(새 파일이라 주석 1줄이면 원장 등재가 필요해진다).",
+              "expectedOutcome": "툴체인이 있으면 `cargo test --test analysis_cancel` 통과. 없으면 테스트 코드가 기존 하네스 호출 형태와 1:1인지 diff 로 대조하고 CI 의 `ci-gate` 결과로 확정한다."
+            },
+            {
+              "seq": 9,
+              "action": "음성 프로브(감도 실측): ⒜ 취소 핸들러의 `lease_expires_at = NULL, claimed_by = NULL` 을 지우면 ⑵ 의 409 단정이 깨지는지, ⒝ `status IN (QUEUED, RUNNING)` 가드를 지우면 ⑶ 의 409 단정이 깨지는지, ⒞ 중단 버튼 카피의 em dash 를 하이픈으로 바꾸면 `check-mockup-render.py` M3A 가 붉어지는지. 각 프로브는 **사본으로 복원**한다(`git checkout -- <f>` 는 내 편집까지 지운다).",
+              "expectedOutcome": "세 프로브 전부 발화(단정이 실제로 그 코드에 걸려 있음이 증명된다). 복원 뒤 `git status --porcelain` 이 프로브 이전과 동일."
+            },
+            {
+              "seq": 10,
+              "action": "원장 편집 1 — 편차 해소: `docs/doc-tracker/2026-09.md` 486행(`FeatureCandidates.tsx` / `비용이 예상보다 커요 — 중단하기`) 행을 **삭제**하고, 511행 캡션을 `알려진 편차: **34건** · 미해소 편차 상한: **34**.` 로 동반 하향한다(M5 는 `actual == cap` 양방향 래칫이라 둘을 함께 움직여야 한다).",
+              "expectedOutcome": "`check-mockup-render.py` rc=0 이고 M5 가 「상한을 낮추라」로 실패하지 않는다. 표 행 수가 34."
+            },
+            {
+              "seq": 11,
+              "action": "원장 편집 2 — 여정 전용 의무 표: 같은 파일 「사용자 여정 전용 의무 (AC 미귀속) — 2026-09-28 실측」 절에서 **G5 행을 제거**하고, 절 도입부의 「남은 6건」을 「남은 5건」으로, `> G6 은 이 표에 없다` 주석 아래에 `> **G5 도 이 표에 없다** — 슬라이스 8b 가 닫았다(분석 중단 경로).` 를 같은 모양으로 더한다. 원장이 「이 축의 유일한 원장」이라 적은 문장은 그대로 둔다(가드 신설은 범위 밖).",
+              "expectedOutcome": "절의 표 행이 5행(G1·G2·G3·G4·G7). `grep -c '^| G' ` 가 5."
+            },
+            {
+              "seq": 12,
+              "action": "원장 편집 3 — 패스 기록·머리 갱신: 「마지막 검증 시점」(7행)을 슬라이스 8b 로 갱신하고(직전 8a 서술은 `직전:` 으로 이어 붙이는 기존 규약 유지), 패스 이력 표에 8b 행 한 줄(배경·근거·전/후 값)을 더한다. 전/후 값 칸에 **여정 전용 의무 6 → 5 · 편차 35 → 34(상한 동반) · 마이그레이션 16 불변 · 미구현 AC 0 불변 · 구현 대기 0 불변 · e2e spec 39 불변**을 적는다.",
+              "expectedOutcome": "`check-journey-mockup.py`·`check-scenario-e2e.py` 출력이 기준선과 **바이트 동일**(이 편집은 여정·목업·시나리오 축을 건드리지 않는다)."
+            },
+            {
+              "seq": 13,
+              "action": "커밋 뒤 게이트 전수 재실행 + `python3 tools/check-data-format-change.py --base origin/main --head HEAD`(둘 다 필수 인자, **커밋 뒤에** 돌려야 diff 가 빈 거짓 초록이 나지 않는다). 그리고 `gh api repos/dlddu/feature-doc/pulls/<N>` 의 `changed_files` 로 실제 변경 파일 수를 실측해 의도한 집합(9±1 파일)과 대조한다(루트 `npm install` 등으로 벤더 트리가 실리지 않았는지).",
+              "expectedOutcome": "게이트 5종 rc=0 · `check-data-format-change.py` rc=0(D1·D6 미발화) · `changed_files` 가 의도한 파일만. ⇒ `review/manual-approval` 이 자동 success 로 붙어 무인 착지."
+            },
+            {
+              "seq": 14,
+              "action": "PR 을 열고(머지는 실행 단계의 몫) 필수 status 두 개(`ci-gate` · `review/manual-approval`)가 초록이 되는지 확인한다. `ci-gate` 가 빨간색이면 실패 잡의 `steps` 배열이 비어 있는지 먼저 보고(빈 배열 = Actions 과금 차단이라 내 변경이 아니다) 같은 sha 로 `rerun --failed` 한다.",
+              "expectedOutcome": "필수 status 2종 success. PR head 에 커밋을 더 얹지 않는다(사람이 붙인 status 는 sha 에 묶인다)."
+            }
+          ],
+          "plannedAt": "2026-09-28T03:50:00Z"
+        }
+      }
+    ]
   }
 ]
