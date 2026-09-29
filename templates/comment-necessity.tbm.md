@@ -131,10 +131,10 @@ PR끼리도 반드시 충돌하고, 그 충돌을 피하려고 판정 슬라이�
 | 언어군 | 대표 파일 | 주석 줄 ERE |
 |---|---|---|
 | C | Go·Rust·Java·Kotlin·Swift·C/C++·C#·JS/TS(JSX 포함)·CSS/SCSS·proto, `go.mod`, `tsconfig*.json`·`.jsonc` | `^[[:space:]]*(//\|/\*\|\*([[:space:]]\|$)\|\{/\*)` |
-| HASH | Python·Ruby·Shell·Perl·R·YAML·TOML·Terraform/HCL·ini/cfg, `Makefile`·`*.mk`, `Dockerfile*`, `.gitignore`류, `.env*`, `requirements*.txt` | `^[[:space:]]*#` |
+| HASH | Python·Ruby·Shell·Perl·R·YAML·TOML·Terraform/HCL·ini/cfg, `Makefile`·`*.mk`, `Dockerfile*`, `.gitignore`류, `.env*`, `requirements*.txt`, 확장자 없는 Ruby DSL(`Gemfile`·`Podfile`·`Rakefile`·`Brewfile`·fastlane `Fastfile`·`Appfile`·`Matchfile`·`Pluginfile`) | `^[[:space:]]*#` |
 | DASH | SQL·Lua·Haskell·Elm·Ada | `^[[:space:]]*--` |
 | MIXED | HTML·Vue·Svelte·Astro (마크업 안에 스크립트) | `^[[:space:]]*(<!--\|//\|/\*\|\*([[:space:]]\|$)\|\{/\*)` |
-| MARKUP | XML·SVG·plist·XSD/XSL | `^[[:space:]]*<!--` |
+| MARKUP | XML·SVG·plist(Apple `*.entitlements` 포함)·XSD/XSL | `^[[:space:]]*<!--` |
 | NONE | JSON·JSONL·CSV/TSV·TXT·avsc·스냅샷·골든·PEM/키·patch, `LICENSE`·`.nvmrc`류 | (스캔 안 함 — 제외 ③) |
 
 - 확장자로 못 가른 텍스트 파일은 **첫 줄이 `#!`이면 HASH**로 본다(확장자 없는 스크립트).
@@ -279,13 +279,13 @@ DIRECTIVE=':#!|//go:|nolint|eslint-|@ts-|prettier-ignore|/// <reference|istanbul
 SUF='(\.(example|sample|template|tmpl|tpl|dist|in|j2))?$'
 C_FILES='\.(go|rs|java|kt|kts|scala|groovy|gradle|swift|c|h|cc|cpp|hpp|cs|m|js|jsx|mjs|cjs|ts|tsx|mts|cts|css|scss|less|proto|jsonc)'"$SUF"'|(^|/)(go\.mod|go\.work|tsconfig[^/]*\.json|jsconfig[^/]*\.json|\.devcontainer/[^/]*\.json)$'
 C_PATTERN='^[[:space:]]*(//|/\*|\*([[:space:]]|$)|\{/\*)'
-HASH_FILES='\.(py|pyi|rb|sh|bash|zsh|fish|pl|r|ya?ml|toml|tf|tfvars|hcl|cfg|conf|ini|mk|dockerfile|nix|awk|sed)'"$SUF"'|(^|/)(Makefile|GNUmakefile|Dockerfile[^/]*|Containerfile|Caddyfile|\.gitignore|\.dockerignore|\.gitattributes|\.helmignore|\.editorconfig|\.env[^/]*|CODEOWNERS|requirements[^/]*\.txt)$'
+HASH_FILES='\.(py|pyi|rb|sh|bash|zsh|fish|pl|r|ya?ml|toml|tf|tfvars|hcl|cfg|conf|ini|mk|dockerfile|nix|awk|sed)'"$SUF"'|(^|/)(Makefile|GNUmakefile|Dockerfile[^/]*|Containerfile|Caddyfile|\.gitignore|\.dockerignore|\.gitattributes|\.helmignore|\.editorconfig|\.env[^/]*|CODEOWNERS|requirements[^/]*\.txt|Gemfile|Podfile|Rakefile|Brewfile|Fastfile|Appfile|Matchfile|Pluginfile)$'
 HASH_PATTERN='^[[:space:]]*#'
 DASH_FILES='\.(sql|lua|hs|elm|ada|adb)'"$SUF"
 DASH_PATTERN='^[[:space:]]*--'
 MIXED_FILES='\.(html?|vue|svelte|astro)'"$SUF"
 MIXED_PATTERN='^[[:space:]]*(<!--|//|/\*|\*([[:space:]]|$)|\{/\*)'
-MARKUP_FILES='\.(xml|svg|xhtml|plist|xsd|xsl)'"$SUF"
+MARKUP_FILES='\.(xml|svg|xhtml|plist|entitlements|xsd|xsl)'"$SUF"
 MARKUP_PATTERN='^[[:space:]]*<!--'
 NONE_FILES='\.(json|jsonl|ndjson|csv|tsv|txt|avsc|snap|golden|pem|crt|key|pub|patch|diff|log|lock|sum|mod|map|http)'"$SUF"'|(^|/)(LICENSE[^/]*|NOTICE|AUTHORS|\.nvmrc|\.node-version|\.python-version|\.tool-versions|\.gitkeep|py\.typed)$'
 
@@ -329,6 +329,7 @@ DIR = re.compile(os.environ["DIRECTIVE"].replace(":#!|", "", 1))
 SUF = re.compile(r"\.(example|sample|template|tmpl|tpl|dist|in|j2)$")
 HASH_E_EXT = {"sh", "bash", "zsh", "fish", "rb", "pl", "r", "yaml", "yml", "toml", "tf", "tfvars", "hcl", "mk", "nix", "awk"}
 MAKE = re.compile(r"^(Makefile|GNUmakefile)$|\.mk$")
+RUBY_DSL = re.compile(r"^(Gemfile|Podfile|Rakefile|Brewfile|Fastfile|Appfile|Matchfile|Pluginfile)$")
 OPEN_OK = set(" \t=([{,:")
 out = []
 
@@ -454,7 +455,7 @@ for rec in sys.stdin.read().splitlines():
     elif tag in ("HASH", "SHEBANG"):
         if ext in ("py", "pyi") or (tag == "SHEBANG" and "python" in src.split("\n", 1)[0]):
             py(path, src)
-        elif tag == "SHEBANG" or ext in HASH_E_EXT or MAKE.search(name) or name.startswith("requirements"):
+        elif tag == "SHEBANG" or ext in HASH_E_EXT or MAKE.search(name) or RUBY_DSL.search(name) or name.startswith("requirements"):
             marker_lang(path, src, "#", "'\"", make=bool(MAKE.search(name)))
 print("\n".join(out))
 PY
