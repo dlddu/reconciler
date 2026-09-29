@@ -100,7 +100,7 @@ SSOT다 — 헤더에만 있으면 판정기를 고치는 사람만 보고, 무�
 | `{{JUDGE}}` | 판정기 · 워크플로 · 등록 시점 케이스 ID | `tools/check-data-format-change.py` · `.github/workflows/data-format-review.yml` · D1~D6 |
 | `{{RULESET}}` | 게이트 ruleset | `default` (id 23666120, 기본 브랜치, required: `ci-gate`(integration 15368)·`review/data-format`(integration 없음) — **첫 task에서 `{{STATUS_CONTEXT}}`로 개명**) |
 | `{{TOKEN_REF}}` | ruleset 조회용 토큰 참조 (사실상 필수) | `secretRef:<이름>` — 공개 레포는 무토큰으로도 읽히지만 무인증 한도(60/h)를 egress 전체가 공유해 등록 전 실측에서 소진됐다. metadata:read 권한이면 충분하다 |
-| `{{SIBLING_MODEL}}` | 판정기 헤더를 함께 보는 자매 모델 [선택] | `tbm_feature-doc-comment-redundancy` |
+| `{{SIBLING_MODEL}}` | 판정기 헤더를 함께 보는 자매 모델 [선택] | `tbm_feature-doc-comment-necessity` |
 | `{{INITIAL_STATE}}` | 등록 시점 현황 | 정책 문서 없음 · 케이스는 판정기 헤더 주석에만 · status가 `review/data-format`(개명 필요) · ruleset은 이미 required(integration 미고정) · 수동 status 절차 미기재 |
 | `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
 
@@ -322,5 +322,5 @@ R1~R6 · O1~O5 중 **하나라도** 위반이면 `action_required`. 전부 충�
 - 개별 PR이 수동 status로 승인됐는지(승인자·시점)의 감사는 대상이 아니다. status 이력은 GitHub에 남으므로 필요할 때 조회한다.
 - 판정기가 `.github/workflows/`에 있으므로, 워크플로 수정이 필요한 task는 GitHub App의 workflows 권한 유무에 따라 사람 손이 필요할 수 있다.
 - 지문의 사각지대: surface ERE가 모르는 형태로 나타나는 위험(새 저장 기술, 새 디렉터리)과 ruleset bypass 목록은 보이지 않는다. O4 재검토 기한이 그 안전망이다.
-- <!-- [선택] --> 판정기 헤더 주석이 정책 문서의 케이스를 되풀이하면 자매 모델 `{{SIBLING_MODEL}}`(주석 비중복성)의 대상이 된다. 케이스 본문의 SSOT는 정책 문서이고, 판정기에는 케이스 ID와 정책 링크만 남기는 것이 두 모델이 수렴하는 모양이다.<!-- -->
+- <!-- [선택] --> 판정기 헤더 주석이 정책 문서의 케이스를 되풀이하면 자매 모델 `{{SIBLING_MODEL}}`(주석 필요성)의 대상이 된다. 케이스 본문의 SSOT는 정책 문서이고, 판정기에는 케이스 ID와 정책 링크만 남기는 것이 두 모델이 수렴하는 모양이다.<!-- -->
 ```

@@ -14,7 +14,7 @@
 | `e2e-mock-policy.tbm.md` | E2E 모킹 최소화 | 모킹 정책·허용목록과 코드에 실재하는 모킹 지점의 양방향 1:1(불변식 1), 그리고 차단 요인이 해소 계획을 갖는가(불변식 2) |
 | `mockup-render.tbm.md` | 목업 ↔ 구현 렌더링 정합성 | 목업이 정의한 화면과 이미 구현된 화면의 시각적 일치(코드 정적 대조) |
 | `journey-mockup.tbm.md` | 사용자 여정 ↔ 목업 1:1 정합성 | 여정 문서와 여정 mockup 페이지의 여정·단계 두 층위 완전 1:1(전단사) |
-| `comment-redundancy.tbm.md` | 주석 비중복성 (복원 가능한 주석 제거) | 코드·문서·PR·커밋 이력으로 복원되는 내용이 주석에 남아 있지 않음 |
+| `comment-necessity.tbm.md` | 주석 필요성 (필요 사유 없는 주석 제거) | 판정 범위의 모든 주석이 한 문장 필요 사유를 댈 수 있음 |
 | `pr-manual-approval.tbm.md` | PR 수동 승인 정합성 | 판정기 하나·status 하나·ruleset required check로 이뤄진 단일 수동 승인 프로세스에서 정책 케이스 ↔ 판정기 ↔ 게이트의 정합(불변식 1), 그리고 케이스가 코드베이스를 따라가는가 — 앵커 실재·표면 포괄·제외 트립와이어·재검토 기한(불변식 2) |
 
 한 레포에 docs-impl·scenario-e2e 두 유형을 등록하는 것이 기본이며, 이때 역할
@@ -77,17 +77,18 @@ mockup-render가 뒤 칸(그 mockup대로 구현됐는가 = **시각 대조**)�
 규칙 5가 실제 입력 요소·화면 내 전진 배선·정상 경로 밖 상태를 요구하고 DOM 하네스
 CI 게이트로 집행한다. 여백과 색은 여전히 보지 않는다.
 
-**comment-redundancy**는 어느 레포에나 얹을 수 있는 여섯 번째 유형으로, 앞의
+**comment-necessity**는 어느 레포에나 얹을 수 있는 여섯 번째 유형으로, 앞의
 다섯과 **화살표 방향이 반대**다. docs-impl이 "문서가 기술한 것이 코드에
-있는가"(문서 → 코드의 누락)를 본다면, 이쪽은 "코드·문서·이력이 이미 말한 것이
-주석에 또 있는가"(코드 → 주석의 중복)를 본다. 같은 소스 트리를 보므로 두 모델이
+있는가"(문서 → 코드의 누락)를 본다면, 이쪽은 "코드에 붙은 주석 하나하나가 존재
+이유를 대는가"를 본다. 같은 소스 트리를 보므로 두 모델이
 함께 트리거되는 구간이 있지만, as-is 지문이 **주석 줄에만 한정**되어 있어
-판정 대상이 겹치지 않는다. 이 유형은 주석의 **정확성**도, 문서·커밋 메시지
-자체의 품질도 보지 않는다 — 오직 중복만 본다. 그리고 다른 유형들이 예외를 줄이는
-방향으로 기우는 것과 달리, **판단이 갈리면 주석을 남기는 쪽으로 기운다**: 중복
-주석의 비용은 작지만 유일한 지식을 지우면 회복되지 않는다는 비대칭 때문이다.
+판정 대상이 겹치지 않는다. 이 유형은 주석의 정확성을 따로 검사하지 않고, 문서·커밋
+메시지 자체의 품질도 보지 않는다. 그리고 **입증 책임이 주석에 있다**: "이 주석을 지우면
+고치러 온 사람이 틀린 판단을 하거나 확인에 상당한 비용을 치르는가"에 한 문장 사유를
+댈 수 없으면 지운다 — 사유 없는 주석은 검증되지 않은 채 낡고, 지운 주석은 git 이력에
+남기 때문이다(2026-09-29 전에는 "복원 가능한 주석 제거"였고 판단이 갈리면 남겼다).
 언어 중립이며, 언어별 주석 패턴은 슬롯이 아니라 파일 이름으로 고르는 고정부 언어군 표다. 범위도
-포함 목록이 아니라 **레포 전체 − 제외 세 부류**(① 복원 원본 ② 편집 불가 ③ 주석 문법 없음)이고, 레포
+포함 목록이 아니라 **레포 전체 − 제외 세 부류**(① 문서 ② 편집 불가 ③ 주석 문법 없음)이고, 레포
 고유 제외는 모델이 아니라 대상 레포 정책 본문의 `comment-scope-exclude` 블록에 둔다 — 포함 목록은 새
 디렉터리를 조용히 흘리고, 제외가 대상 레포에 있어야 범위 수정이 data plane의 PR로 끝나기 때문이다. 정책은 파일 하나가 아니라
 `docs/comment-policy/` 디렉터리에 본문(`README.md`)·원장(`ledger.md`)·판정 상세(`passes/`)로
@@ -112,7 +113,7 @@ CI 게이트로 집행한다. 여백과 색은 여전히 보지 않는다.
 (최장 90일, `recheckAfter`)으로 덮는다. ruleset은 레포 밖 설정이라 as-is가 GitHub API로 required
 check 집합을 읽는다(이 유형만 API를 호출한다 — 토큰 참조 필요). 표면·앵커 블록을 모델이 아니라
 **대상 레포의 정책 문서**에 두는 것도 고정부다 — 표면이 낡았을 때의 수정이 대상 레포 PR로 끝나야
-data plane이 스스로 수렴시킬 수 있다. 판정기 헤더가 정책을 되풀이하면 comment-redundancy와 겹치므로,
+data plane이 스스로 수렴시킬 수 있다. 판정기 헤더가 정책을 되풀이하면 comment-necessity의 제거 대상이 되므로,
 케이스 본문은 정책 문서에 두고 판정기에는 케이스 ID와 링크만 남기는 쪽으로 두 모델이 수렴한다.
 
 ## 고정부와 가변부
@@ -140,10 +141,10 @@ data plane이 스스로 수렴시킬 수 있다. 판정기 헤더가 정책을 �
 
 | 항목 | 규약 |
 |---|---|
-| id | `tbm_<slug>-docs-impl` / `tbm_<slug>-scenario-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` / `tbm_<slug>-journey-mockup` / `tbm_<slug>-comment-redundancy` / `tbm_<slug>-pr-manual-approval` (slug = 소문자 레포명) |
-| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> 테스트 시나리오 ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` / `<slug> 사용자 여정 ↔ 목업 1:1 정합성` / `<slug> 주석 비중복성 (복원 가능한 주석 제거)` / `<slug> PR 수동 승인 정합성` |
+| id | `tbm_<slug>-docs-impl` / `tbm_<slug>-scenario-e2e` / `tbm_<slug>-e2e-mock-policy` / `tbm_<slug>-mockup-render` / `tbm_<slug>-journey-mockup` / `tbm_<slug>-comment-necessity` / `tbm_<slug>-pr-manual-approval` (slug = 소문자 레포명) |
+| metadata.name | `<slug> 제품 문서 ↔ 구현 정합성` / `<slug> 테스트 시나리오 ↔ E2E 1:1 정합성` / `<slug> E2E 모킹 최소화 (정책 ↔ 실제 모킹 지점)` / `<slug> 목업 ↔ 구현 렌더링 정합성` / `<slug> 사용자 여정 ↔ 목업 1:1 정합성` / `<slug> 주석 필요성 (필요 사유 없는 주석 제거)` / `<slug> PR 수동 승인 정합성` |
 | metadata.tags | `[<slug>, docs, implementation, consistency]` / `[<slug>, test-scenario, e2e, consistency]` / `[<slug>, e2e, mocking, test-policy, consistency]` / `[<slug>, mockup, ui, design-system, consistency]` / `[<slug>, journey, mockup, ux, consistency]` / `[<slug>, comments, documentation, consistency]` / `[<slug>, pr, review, manual-approval, ci, consistency]` (+ 필요 시 도구·언어 태그: maestro, playwright, go, python 등) |
-| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·scenario-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(글롭이면 `ls-tree` 지문, 복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60`. comment-redundancy는 as-is에 레포 전체 − 제외에서 언어군별로 뽑은 주석 줄과 미분류 파일 경로의 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`, to-be는 `docs/comment-policy` 트리 해시(부재는 `absent`)에 `timeoutSeconds: 60`. pr-manual-approval은 to-be에 정책 문서 blob hash(부재는 `absent`, `timeoutSeconds: 60`), as-is에 `judges=…;ruleset=…;surface=…;anchors=…` 라벨 조합(판정기 blob hash · GitHub API로 읽은 기본 브랜치 required check 집합 — 읽기 실패 시 비0 종료, `env.GITHUB_TOKEN` 참조 · 정책이 선언한 표면의 토큰형 grep 지문 · 앵커 실재 여부)에 `timeoutSeconds: 120` |
+| versionScript | bash, `set -euo pipefail`, 결정적(타임스탬프·랜덤 금지). docs-impl·scenario-e2e는 `git rev-parse "HEAD:<path>"` 트리 해시(글롭이면 `ls-tree` 지문, 복수면 라벨 조합), `timeoutSeconds: 60`. e2e-mock-policy는 트리 해시 대신 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`. mockup-render는 트리 해시에 빌드 산출물 blob 해시를 더해 조합하고 `timeoutSeconds: 60`. journey-mockup은 트리 해시에 인덱스·허브 blob 해시를 더해 조합하되 부재는 `absent`로 표기하고 `timeoutSeconds: 60`. comment-necessity는 as-is에 레포 전체 − 제외에서 언어군별로 뽑은 주석 줄과 미분류 파일 경로의 grep 지문(sha256)을 쓰고 `timeoutSeconds: 120`, to-be는 `docs/comment-policy` 트리 해시(부재는 `absent`)에 `timeoutSeconds: 60`. pr-manual-approval은 to-be에 정책 문서 blob hash(부재는 `absent`, `timeoutSeconds: 60`), as-is에 `judges=…;ruleset=…;surface=…;anchors=…` 라벨 조합(판정기 blob hash · GitHub API로 읽은 기본 브랜치 required check 집합 — 읽기 실패 시 비0 종료, `env.GITHUB_TOKEN` 참조 · 정책이 선언한 표면의 토큰형 grep 지문 · 앵커 실재 여부)에 `timeoutSeconds: 120` |
 | lastObservedVersion/At | 등록 시 생략(첫 감지 sweep이 채운다) |
 
 ## 인스턴스화 절차
@@ -201,6 +202,18 @@ definition을 크게 개정할 일이 생기면 템플릿 구조로 수렴시키
 `lines=` 값·델타로 적힌 완료 기준은 전환 전후 같다 — 어긋나는 것은 해시 절대값뿐이다. 그래서 이 개정은 사용자
 지시로 **열린 task가 있는 채** 네 모델을 함께 전환했다(범위 개정과 같은 의도적 예외). 전환 뒤 첫 감지 task가
 대상 레포 정책 본문의 사각지대 서술과 원장의 D·E 표면 표를 들인다.
+
+2026-09-29 **필요성 개정**은 유형 자체를 바꿨다 — 판정 기준을 "복원 가능한가"에서 "한 문장 필요 사유를 댈 수
+있는가"로, 애매하면 남기던 기본값을 사유를 못 대면 지우는 쪽으로, 원장의 판정 축 `①②③④`를 판정 칸 `완료`/`—`로.
+그래서 `ac-e2e` → `scenario-e2e`와 같이 **id를 옮겼다**: 템플릿 `comment-redundancy.tbm.md` → `comment-necessity.tbm.md`,
+네 모델 `tbm_<slug>-comment-redundancy` → `tbm_<slug>-comment-necessity`, task 파일명과 각 task의 `toBeModelId`를
+한 커밋에서 옮기고, 자매 모델 definition의 교차 참조도 같은 커밋에서 고쳤다. 위 문단들의 `comment-redundancy`는 당시
+이름이다. task 본문 안의 옛 id 언급은 이력이라 고치지 않는다. `lastObservedVersion`은 그대로 옮기고, versionScript
+출력도 그대로라(제외 ① 설명 주석만 고침) 개정 자체는 트리거가 되지 않는다 — 모델마다 수동 트리거로 첫 감지를 연다.
+그 task가 대상 레포 정책 본문(필요성 시험·유지 대상)과 원장 게이트의 판정 표기를 새 형식으로 바꾸고, 기존 행을 모두
+`—`로 되돌리고, 대상 레포 안의 옛 모델 id 참조를 고친다(각 모델의 「개정 메모 (2026-09-29)」가 완료 기준). 옛 기준의
+`①②③④`는 새 기준의 판정 완료가 아니다 — 복원 불가로 남긴 주석도 필요 사유를 다시 대야 한다. 전환 시점에 네 모델
+모두 열린 task가 없었다.
 
 ## doc-tracker 경로 해석
 
