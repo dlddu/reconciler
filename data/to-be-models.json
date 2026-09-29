@@ -2003,8 +2003,8 @@
         "code": "#!/usr/bin/env bash\n# to-be = 수동 승인 정책 문서의 blob hash. 아직 없으면 'absent'.\n# 런타임이 dataSource.repository(dlddu/feature-doc)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse --verify --quiet \"HEAD:docs/review-policy.md\" || echo \"absent\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "absent",
-      "lastObservedAt": "2026-09-29T09:48:38Z"
+      "lastObservedVersion": "fb49bcb8bb00088472c0403f3477ef55251cb64f",
+      "lastObservedAt": "2026-09-29T10:48:04Z"
     },
     "asIs": {
       "dataSource": {
@@ -2017,8 +2017,8 @@
         "code": "#!/usr/bin/env bash\n# as-is = 수동 승인 프로세스의 실재 상태 지문. judges · surface · anchors 세 성분의 라벨 조합.\n# ruleset(required check)은 일부러 지문에 넣지 않는다 — 템플릿의 「ruleset을 지문에 넣지 않는 이유」 참고.\n# 런타임이 dataSource.repository(dlddu/feature-doc)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nexport LC_ALL=C\nPOLICY='docs/review-policy.md'\nCONTEXT_ERE='context[^a-z/]{1,4}review/[a-z0-9-]+'\nJUDGE_REF_ERE='tools/[A-Za-z0-9_./-]+\\.(py|js|mjs|sh)'\nh() { sha256sum | cut -c1-16; }\n\n# ① judges — 승인 신호 status 를 붙이는 워크플로와, 그 워크플로가 부르는 판정기의 blob 해시.\n#    신호 형태(CONTEXT_ERE)에 걸리는 워크플로를 모두 찾으므로, 두 번째 판정기·두 번째 context 가 생기면 값이 바뀐다.\nWFS=$(git ls-files -- '.github/workflows/*.yml' '.github/workflows/*.yaml' | sort \\\n  | xargs -r grep -lE \"$CONTEXT_ERE\" || true)\nREFS=$(printf '%s\\n' \"$WFS\" | grep . | xargs -r grep -EHo \"$JUDGE_REF_ERE\" | cut -d: -f2- | sort -u || true)\nJUDGES=$(for f in $WFS $REFS; do\n  printf '%s %s\\n' \"$f\" \"$(git rev-parse --verify --quiet \"HEAD:$f\" || echo absent)\"; done | sort -u)\nCTX=$(printf '%s\\n' \"$WFS\" | grep . | xargs -r grep -Eho \"$CONTEXT_ERE\" | sort -u || true)\n\n# 정책 문서에서 ```<kind> 펜스 블록의 본문 줄을 뽑는다(같은 kind 블록이 여럿이면 이어 붙인다).\nblock() {\n  git show \"HEAD:$POLICY\" 2>/dev/null | awk -v k=\"$1\" '\n    !f && ($0 == \"```\" k || index($0, \"```\" k \" \") == 1) { f = 1; next }\n    f && /^```/ { f = 0; next }\n    f && NF { print }' || true\n}\n\n# ③ surface — 정책이 선언한 위험 표면(scope · exclude · ere)에 걸리는 (파일, 토큰) 집합.\n#    scope·ere 줄은 여러 개 둘 수 있다(scope 는 합집합, ere 는 | 로 합친다).\nS=$(block surface)\nscope=$(printf '%s\\n' \"$S\" | sed -n 's/^scope:[[:space:]]*//p' | tr '\\n' ' ')\nere=$(printf '%s\\n' \"$S\" | sed -n 's/^ere:[[:space:]]*//p' | paste -sd'|' -)\nexcl=$(printf '%s\\n' \"$S\" | sed -n 's/^exclude:[[:space:]]*//p' | paste -sd'|' -); excl=${excl:-'^$'}\nif [ -z \"${scope// /}\" ] || [ -z \"$ere\" ]; then SURFACE=malformed\nelse\n  # shellcheck disable=SC2086\n  SURFACE=$({ git ls-files -- $scope | grep -vE \"$excl\" | sort \\\n      | xargs -r grep -IEHo \"$ere\" || true; } | sort -u)\nfi\n\n# ④ anchors — 케이스 규칙이 이름으로 지목하는 경로(글롭 허용)의 실재 여부. 내용 변경에는 반응하지 않는다.\nANCHORS=$(block anchors | while IFS= read -r p; do\n  if [ -n \"$(git ls-files -- \":(glob)$p\" | head -n1)\" ]; then s=present; else s=absent; fi\n  printf '%s %s\\n' \"$p\" \"$s\"; done | sort -u)\n\n[ -n \"$(git rev-parse --verify --quiet \"HEAD:$POLICY\" || true)\" ] || { SURFACE=absent; ANCHORS=absent; }\necho \"contexts=$(printf '%s' \"$CTX\" | grep -c . || true) judges=$(printf '%s' \"$JUDGES\" | grep -c . || true) surface_hits=$(printf '%s' \"$SURFACE\" | grep -c . || true) anchors_absent=$(printf '%s' \"$ANCHORS\" | grep -c ' absent$' || true)\"\nprintf 'judges=%s;surface=%s;anchors=%s\\n' \\\n  \"$(printf '%s' \"$JUDGES\" | h)\" \"$(printf '%s' \"$SURFACE\" | h)\" \"$(printf '%s' \"$ANCHORS\" | h)\"\n",
         "timeoutSeconds": 120
       },
-      "lastObservedVersion": "contexts=1 judges=2 surface_hits=1 anchors_absent=0\njudges=8592d7944af5d4f8;surface=5ad38304b535c298;anchors=5ad38304b535c298",
-      "lastObservedAt": "2026-09-29T09:48:38Z"
+      "lastObservedVersion": "contexts=1 judges=2 surface_hits=44 anchors_absent=0\njudges=fe3c6ab70293c342;surface=637ba45862d91723;anchors=618acd6f47328b77",
+      "lastObservedAt": "2026-09-29T10:48:04Z"
     }
   },
   {
