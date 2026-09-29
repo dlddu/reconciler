@@ -1777,5 +1777,48 @@
         "timeoutSeconds": 120
       }
     }
+  },
+  {
+    "id": "tbm_pocket-aide-mockup-render",
+    "metadata": {
+      "name": "pocket-aide 목업 ↔ 구현 렌더링 정합성",
+      "description": "dlddu/pocket-aide에서 이미 구현된 SwiftUI 화면(앱·위젯·키보드 확장·DesignSystem 컴포넌트)이 대응 목업(docs/mockups, 정적 HTML·화면 ID screen-<슬러그>)과 시각적으로 일치하는지를 화면 코드 정적 대조로 추적한다. 매핑·디자인 토큰·카피·구조 수치·상태 스타일의 불일치와 미문서화 이탈을 drift로 본다. 미구현 화면과 실행 스크린샷 픽셀 비교는 범위 밖이다.",
+      "tags": [
+        "pocket-aide",
+        "mockup",
+        "ui",
+        "design-system",
+        "consistency",
+        "swiftui"
+      ],
+      "createdAt": "2026-09-29T08:37:44Z"
+    },
+    "definition": "# pocket-aide 목업 ↔ 구현 렌더링 정합성\n\n## 목표\n`dlddu/pocket-aide`(SwiftUI 개인 비서 앱·홈 화면 위젯·키보드 확장)에서 **이미 구현된 화면**(SwiftUI 화면 — `ios/PocketAide/`(탭 셸·화면·시트), `ios/PocketAideWidget/`(위젯), `ios/PocketAideKeyboard/`(키보드 확장), 공용 컴포넌트 `ios/Shared/Sources/DesignSystem/`)의 렌더링 결과가 대응 **목업**(`docs/mockups`, 정적 HTML(Tailwind CDN + 인라인 `<style>`의 `:root` 토큰 변수, 393×852 iPhone 프레임), 화면 ID 체계 `screen-<슬러그>`(파일명))의 화면과 일치하도록 수렴시킨다. 판정은 **화면 코드 정적 대조**로 한다(실행 스크린샷 픽셀 비교가 아님).\n\n## 무엇이 \"맞는 상태\"인가 (to-be)\n- **시각의 단일 소스(SSOT)는 목업**이다: `docs/mockups`(소스 — 빌드 산출물 없이 HTML 자체가 렌더 결과), `docs/design-system`(토큰 정의).\n- **to-be(목표 상태)** 는 다음이 모두 성립하는 상태다:\n  1. **매핑 완비** — 구현된 모든 화면이 대응 목업 ID와 기계적으로 확인 가능한 형태로 매핑되어 있다(구현 화면 파일 ↔ `screen-<슬러그>`의 기계 판독 가능한 매핑(등록 시점 없음 — 형식은 첫 task가 정한다)).\n  2. **토큰 일치** — `docs/design-system/tokens.md`(목업 `:root` 변수의 원천) ↔ `ios/Shared/Sources/DesignSystem/Tokens.swift` + `Resources/Colors.xcassets`의 영역별 팔레트(surface·ink·accent·rule·soft·card — §1.1~1.8), 다크 변형(§1.9), 파괴적 액션(§1.10), PR 모니터 영역·상태색(§1.11), 중립 토큰(§2), 폰트 패밀리·사이즈·가중치(§3), 패딩·라운드·간격(§4)가 1:1 대응한다.\n  3. **카피 일치** — 목업 화면의 텍스트 리터럴과 대응 구현 화면의 텍스트가 양방향으로 일치한다.\n  4. **구조·수치 일치** — 목업 CSS px(Tailwind 클래스는 기본 스케일로 px 환원, 예 `p-5`=20px) = SwiftUI pt(393pt 폭 프레임 기준 1px=1pt), 색은 hex 일치, 폰트는 tokens.md §3 매핑 환산이 성립하고, 요소 순서·계층, 상태별 스타일, CTA 구성이 목업과 같다.\n  5. **이탈의 문서화** — 플랫폼상 불가피한 차이는 사유가 명시된 허용목록으로만 존재한다.\n- **범위**: 구현된 화면에 대응하는 목업만. 아직 구현되지 않은 화면의 부재는 이 모델의 drift가 **아니다**.\n- **등록 시점 현황**: 구현 화면 ↔ 목업 매핑 0건 — SwiftUI 코드에 목업 참조가 없고 `_index.md`도 구현 파일을 가리키지 않는다. 판정 대상 후보: 다짐 탭(`Affirmations/AffirmationsView.swift`↔`screen-affirmations`), 우선순위 시트(`PriorityEditSheet.swift`↔`screen-affirmations-priority-edit`), PR 모니터(`PRMonitor/*`↔`screen-pr-monitor-history`), 위젯 다짐 섹션(`PocketAideWidget/Sections/AffirmationSection.swift`↔`screen-widget`의 다짐 부분), 탭 바(`RootView.swift`↔각 목업의 TabBar). 로그인·`HelloWorldView`·`PlaceholderTab`은 대응 목업이 없고, 키보드 확장은 골격뿐이다. 화면 목업은 13개(`screen-*.html`)이고, 다크 갤러리 `mockups-dark.html`에는 PR 모니터 2화면이 아직 없다.\n  이 문단의 숫자는 **스냅샷일 뿐 판정 기준이 아니다** — 목업이 추가·삭제되면 to-be 버전이 바뀌어 재평가가 트리거되고, 새 목업도 대응 화면이 구현되는 순간 자동으로 판정 대상이 된다. 현황 숫자 갱신은 각 task의 몫이다. **기계적 대조의 전제가 되는 매핑 파일 신설은 첫 감지 task의 계획 단계에서 다룬다.** 현재 커버리지를 to-be로 낮춰 잡지 않는다.\n\n## drift 판정 기준\nas-is(구현 화면)가 to-be(목업)와 어긋나면 drift다:\n1. **매핑 공백·오매핑** — 구현 화면에 대응 목업 매핑이 없거나 매핑이 실제와 다름.\n2. **토큰 불일치** — 대조 대상 토큰 중 어느 하나라도 어긋남.\n3. **카피 불일치** — 어느 방향이든 텍스트 차집합이 존재함.\n4. **구조·수치 불일치** — 요소 순서·계층, 간격·라운드·굵기, 상태별 스타일, CTA 유무의 차이.\n5. **미문서화 이탈** — 허용목록에 사유 없이 존재하는 차이.\n\n각 task는 직전 관측 대비 \"일치가 늘었는가 / 새 불일치가 생겼는가 / 목업 변경으로 to-be가 달라졌는가\"를 평가하되, 남은 불일치 전체를 상태 요약에 유지한다.\n\n## 충돌 시 기본 방향\n**목업이 스펙(SSOT)이므로 원칙적으로 구현을 목업에 맞춘다.** 단 그 차이가 의도된 디자인 변경이거나 플랫폼상 불가피하면, 목업 소스(`docs/mockups`·`docs/design-system`)를 고치거나 허용목록에 사유를 남겨 구현에 맞춘다. 어느 쪽인지는 각 task의 계획 단계에서 판단한다.\n\n## 추적 방식 (요약)\n- **to-be** = github `dlddu/pocket-aide`의 `docs/mockups` + `docs/design-system` 트리 해시 조합. 목업은 빌드 없는 정적 HTML이라 번들 성분은 없다.\n- **as-is** = 같은 레포의 `ios/PocketAide`, `ios/PocketAideWidget`, `ios/PocketAideKeyboard`, `ios/Shared/Sources/DesignSystem` 트리 해시 조합. 렌더링과 무관한 변경은 무시된다.\n- 매핑 파일이 정착하면 as-is를 **매핑·토큰·카피 지문(sha256)** 으로 좁힐 수 있다(모델 개정 사항).\n\n## 범위 밖 / 비고\n- **실행 스크린샷 픽셀 비교는 범위 밖**이다. 이 모델은 정적 대조로 판정한다. 캡처 인프라를 도입하면 판정 방식을 개정한다. 등록 시점 레포에는 시뮬레이터 스크린샷 캡처 인프라가 없다.\n- **미구현 화면의 구현 의무는 `tbm_pocket-aide-docs-impl`이 담당**한다. 그 모델의 to-be 중 \"UI가 목업·디자인 시스템과 일치\" 항목과 겹치므로, **화면 단위 시각 대조는 이 모델이 담당**하는 것으로 경계를 둔다.\n- 동작·상태 전이의 검증 커버리지는 `tbm_pocket-aide-scenario-e2e`가 담당한다.\n- **여정 mockup(`docs/journeys/`)은 이 모델의 시각 SSOT가 아니다.** `_index.md` 규약상 화면 목업(`screen-*.html`)이 여정 mockup의 원본 화면이며, 여정 ↔ 여정 mockup의 커버리지는 `tbm_pocket-aide-journey-mockup`이 본다. 다크 갤러리 `mockups-dark.html`은 목업 트리 안에 있어 to-be를 움직이지만, 구현이 다크 모드를 지원하는 화면만 대조 대상이다.\n- `ios/Shared/Sources/PocketAideAPI`·`PocketAideAuth`·`PocketAideStorage`(비렌더링 모듈), `ios/PocketAideTests`·`PocketAideUnitTests`(테스트), `ios/project.yml`·`fastlane/`(빌드 설정), `backend/`는 렌더링 소스가 아니므로 as-is 버전 범위에서 제외한다.\n",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/pocket-aide",
+        "ref": "main",
+        "subPath": "docs/mockups"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = 목업(시각 SSOT). docs/mockups(정적 HTML — 빌드 산출물 없음) + docs/design-system(토큰) 트리 해시 조합.\n# 런타임이 dataSource.repository(dlddu/pocket-aide)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nm=\"$(git rev-parse \"HEAD:docs/mockups\")\"\nd=\"$(git rev-parse \"HEAD:docs/design-system\")\"\nprintf 'mockups:%s design-system:%s\\n' \"$m\" \"$d\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/pocket-aide",
+        "ref": "main",
+        "subPath": "ios"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = 실제 구현의 렌더링 소스. ios/PocketAide · ios/PocketAideWidget · ios/PocketAideKeyboard · ios/Shared/Sources/DesignSystem 트리 해시 조합.\n# → 렌더링과 무관한 변경(ios/Shared/Sources의 API·Auth·Storage, 테스트 타깃, project.yml·fastlane, backend 등)은 무시된다.\n# 런타임이 dataSource.repository(dlddu/pocket-aide)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\na=\"$(git rev-parse \"HEAD:ios/PocketAide\")\"\nw=\"$(git rev-parse \"HEAD:ios/PocketAideWidget\")\"\nk=\"$(git rev-parse \"HEAD:ios/PocketAideKeyboard\")\"\nt=\"$(git rev-parse \"HEAD:ios/Shared/Sources/DesignSystem\")\"\nprintf 'app:%s widget:%s keyboard:%s design-system:%s\\n' \"$a\" \"$w\" \"$k\" \"$t\"\n",
+        "timeoutSeconds": 60
+      }
+    }
   }
 ]
