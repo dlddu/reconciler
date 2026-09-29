@@ -1652,5 +1652,47 @@
       "lastObservedAt": "2026-09-28T16:11:44Z"
     },
     "checkPolicy": {}
+  },
+  {
+    "id": "tbm_pocket-aide-docs-impl",
+    "metadata": {
+      "name": "pocket-aide 제품 문서 ↔ 구현 정합성",
+      "description": "dlddu/pocket-aide에서 docs/(제품 문서)와 ios·backend(구현) 사이의 정합성을 추적한다. to-be는 `docs/product/prd-*.md`의 모든 PRD의 AC와 사용자 여정이 기술한 시스템 동작이 모두 구현·검증되고 UI·계약이 문서와 일치하며 문서 없는 구현이 없는 상태. 부분 구현인 현 상태는 as-is일 뿐 목표가 아니다.",
+      "tags": [
+        "pocket-aide",
+        "docs",
+        "implementation",
+        "consistency",
+        "swift",
+        "go"
+      ],
+      "createdAt": "2026-09-29T08:37:44Z"
+    },
+    "definition": "# pocket-aide 제품 문서 ↔ 구현 정합성\n\n## 목표\n`dlddu/pocket-aide` 레포(iOS(SwiftUI) 앱·홈 화면 위젯·키보드 확장 + Go 백엔드의 한·영 혼용 개인 비서 서비스)에서 **실제 구현(`ios/` — SwiftUI 앱 `PocketAide`·위젯 `PocketAideWidget`·키보드 확장 `PocketAideKeyboard`·공유 패키지 `Shared`(DesignSystem·API·Auth·Storage) · `backend/` — Go API 서버(`cmd/server`, SQLite 마이그레이션, GitHub 웹훅 소비·APNs 푸시·OpenRouter LLM 클라이언트))** 이 **제품 문서(`docs/`)** 가 기술하는 의도된 동작을 **전부 실현·검증하고 서로 어긋나지 않는** 상태로 수렴시킨다.\n\n## 무엇이 \"맞는 상태\"인가 (to-be)\n- **의도된 동작의 단일 소스(SSOT)** 는 `docs/` 다: 가치 `V<N>`(`product/values.md`) → PRD `PRD-<N>`(`product/prd-*.md`, 번호는 doc-tracker 인벤토리 표) → AC `PRD-<N>.AC<n>`(각 PRD의 `### AC<n>:` 헤딩) → 테스트 문서(product-doc-engineer 규약상 `product/` 아래 `test-*.md`, 등록 시점 미작성). 부속: 사용자 여정 `user-journeys/`(`JRN-<슬러그>`/`STP-<슬러그>`) · 여정 mockup `journeys/` · 화면 mockup `mockups/`(`_index.md`가 SSOT) · 디자인 시스템 `design-system/`(tokens·components·patterns) · 운영 런북 `runbook-pr-monitor-setup.md` · 문서 체계 상태 `product/doc-tracker/`·`doc-structure-state.md`.\n- **to-be(목표 상태)** 는 다음이 모두 성립하는 상태다:\n  1. `docs/product/prd-*.md`의 모든 PRD의 **모든 AC가 구현**되어 있고, 각 AC가 대응 테스트 문서가 기술하는 대로 검증 가능하다. **사용자 여정이 기술한 시스템 동작도 모두 구현되어 있다**(AC가 침묵하는 영역 포함 — 아래 「사용자 여정의 판정 무게」).\n  2. UI가 대응 목업·사용자 여정·디자인 시스템 문서와 일치한다. 단 이미 구현된 화면의 화면 단위 시각 대조는 `tbm_pocket-aide-mockup-render`가 담당한다.\n  3. 구현이 운영 런북(`docs/runbook-pr-monitor-setup.md`)이 기술하는 계약·설정(웹훅·SQS·APNs 연동)과 일치한다.\n  4. 코드에 존재하는 모든 사용자 대면 동작이 문서에 표현되어 있다(문서 없는 구현 없음).\n  5. `docs/product/doc-tracker` 최신 월 파일의 상태 집계가 1~4의 실제 상태와 일치한다.\n- **PRD 안의 단계 표기의 취급**: 등록 시점 draft 표기 PRD는 없다. PRD가 스스로 적은 \"1차 범위 밖\"·\"후속\" 같은 단계 표기(예: PRD-10의 후속 AC)는 **우선순위 정보**로 읽고 to-be에서 빼지 않는다 — 무엇을 먼저 구현할지는 판정 기준 1대로 각 task 계획 단계의 몫이다. PRD에 draft 표기가 생기거나 AC를 폐기하는 것은 docs 변경이므로 to-be 버전을 바꿔 재평가를 트리거한다.\n- **부분 구현은 as-is다, to-be가 아니다.** 등록 시점 스냅샷: PRD 11개·AC 81개(`docs/product/doc-tracker/2026-09.md` 집계), 테스트 문서 0개, 사용자 여정 1개(`JRN-affirmation-daily-exposure`, 초안). 구현은 OIDC 로그인·7탭 셸, PRD-5 다짐 탭(추가·우선순위 시트·회전 노출)과 위젯 다짐 섹션, PRD-10 PR 모니터(CI 완료 푸시·알림 이력·제외 레포) 일부가 있고, 채팅·임시공간·개인·회사·루틴 탭은 `PlaceholderTab`, 키보드 확장은 \"Hello\" 삽입 골격뿐이다 — 최초 gap 산정은 첫 task 몫이다. to-be를 현 구현 수준으로 낮춰 잡지 않는다.\n  이 문장의 숫자는 **스냅샷일 뿐 판정 기준이 아니다** — AC·PRD가 추가·삭제되면 to-be 버전이 바뀌어 재평가가 트리거되고, 새 AC도 확정 PRD에 속하는 순간 자동으로 판정 대상이 된다. 현황 숫자 갱신은 각 task의 몫이다.\n\n## drift 판정 기준\nas-is(구현)가 to-be(문서 전체)에 미달하거나 어긋나면 drift다:\n1. **미구현 AC**: 문서에 있으나 구현되지 않은 AC는 to-be 미달 gap이며 **drift다**. 백로그로 치부해 이 루프 밖으로 빼지 않는다. (무엇을 먼저 구현할지의 우선순위 판단은 각 task의 계획 단계 몫이다.)\n2. **미구현 여정 동작**: 사용자 여정이 기술한 시스템 동작이 구현에 없으면, 대응 AC가 없더라도 drift다(범위는 아래 「사용자 여정의 판정 무게」).\n3. **구현 ↔ 문서 불일치**: 구현된 동작이 대응 AC·테스트 문서·목업·여정·디자인 시스템·엔지니어링 노트와 어긋나면 drift.\n4. **문서 없는 구현**: 코드에 존재하는 사용자 대면 동작이 문서에 없으면 drift(명시된 예외 제외).\n5. **tracker 불일치**: `docs/product/doc-tracker` 최신 월 파일의 집계·상태가 실제와 어긋나면 drift.\n\n각 task는 직전 관측 대비 \"gap이 줄었는가 / 새 어긋남·문서 없는 구현이 생겼는가 / 문서 변경으로 to-be가 달라졌는가\"를 평가하되, 남은 gap 전체(미구현 AC 목록 포함)를 상태 요약에 유지한다.\n\n## 사용자 여정의 판정 무게\n\n사용자 여정(`docs/user-journeys/`)은 AC와 마찬가지로 **구현 의무를 만든다**. 대응 AC가 없는 여정 단계라도, 여정이 기술한 시스템 동작이 구현에 없으면 drift다.\n- **의무를 만드는 서술**: 각 단계(`STP-<슬러그>` 헤딩 절)에 적힌 「사용자 행동」·「터치포인트」가 전제하는 시스템 동작과 화면 요소, 페인포인트의 대응(→) 가운데 제품이 하겠다고 기술한 것, 분기·예외 흐름이 기술한 시스템 대응.\n- **의무를 만들지 않는 서술**: 생각·감정, 측정 지표(지표 정의·사용 이벤트 로깅은 별도 결정 전까지 판정 밖), 여정 스스로 「범위 밖」·「백로그 후보」·「제품 외부」로 표시한 것, 「(가정)」으로 표시된 전제.\n- **우선순위**: 같은 항목을 PRD·AC·테스트 문서가 기술하면 그쪽이 이긴다. 여정이 단독으로 의무를 만드는 것은 AC가 침묵하는 영역뿐이다.\n- **검증 근거**: AC에 귀속되지 않은 여정 전용 의무는 테스트 문서·E2E가 보호하지 않는다. task는 그 의무를 구현·판정할 때 여정 단계 서술을 단계 ID로 인용해 근거로 삼고, 상태 요약에 「AC 미귀속 여정 의무」로 따로 목록화해 유지한다(AC로 승격할지는 문서 쪽 결정).\n\n## 충돌 시 기본 방향\n문서가 스펙(SSOT)이다. 구현이 어떤 AC와 어긋나거나 미달이면 **원칙적으로 코드를 문서에 맞춘다**(미구현 AC → 구현을 추가한다). 단, 그 어긋남이 **의도된 동작 변경**이면 문서(PRD/AC/테스트/여정/목업 등 + tracker)를 갱신해 코드에 맞춘다. 어느 쪽인지는 각 task에서 판단(planner)한다.\n\n## 추적 방식 (요약)\n- **to-be** = github `dlddu/pocket-aide` `docs/` 하위 트리 해시(문서만 바뀌면 이 값만 변함).\n- **as-is** = github `dlddu/pocket-aide` `ios`, `backend` 하위 트리 해시 조합(구현 코드만 바뀌면 이 값만 변함).\n- 어느 한쪽 버전이 바뀌면 task가 생성되어 to-be 대비 as-is의 gap 전체(미구현 AC 포함)를 재검증한다.\n\n## 범위 밖 / 비고\n- `k8s/`(배포 매니페스트)·`.github/`(CI 워크플로·액션)·루트 `Dockerfile`·루트 `README.md`는 \"구현 동작\"이 아니라 운영/검증/빌드 인프라이므로 as-is 버전 범위에서 제외한다.\n- **테스트 시나리오 ↔ E2E 1:1 매칭은 별도 모델 `tbm_pocket-aide-scenario-e2e`가 담당**한다. 이 모델은 테스트 커버리지가 아니라 문서 ↔ 구현의 일치를 본다. 다만 **scenario-e2e가 \"구현 대기\"로 등재해 넘긴 시나리오의 기능 구현은 이 모델의 몫**이다 — 그 기능은 여기서 판정 기준 1(미구현 AC) 또는 2(미구현 여정 동작)로 다룬다. scenario-e2e 루프는 E2E를 쓰려고 제품 코드를 만들지 않으므로, 미구현 해소를 두 루프가 중복 수행하지 않는다. 반대로 E2E용 테스트 인프라(하네스·시드·testID 같은 테스트 진입점)는 그쪽 몫이다.\n- **이미 구현된 화면의 목업 대비 시각 대조는 별도 모델 `tbm_pocket-aide-mockup-render`가 담당**한다. 이 모델은 미구현 화면(구현 의무)과 동작·계약의 일치를 보고, 구현된 화면이 목업대로 보이는지는 그쪽에서 판정한다.\n- **여정 문서 ↔ 여정 목업의 1:1 커버리지는 별도 모델 `tbm_pocket-aide-journey-mockup`이 담당**한다. 이 모델은 여정 ↔ 구현을 본다.\n- docs 내부 계층 정합성(가치 정렬, AC↔테스트 커버리지, tracker 집계 산출)은 문서 체계 자체의 관심사로, 이 모델의 주 판정 대상이 아니다(task 수행 중 발견되면 함께 보고할 수 있다).\n- 노이즈: to-be가 `docs/` 전체 트리 해시라 doc-tracker·`doc-structure-state.md`·화면/여정 mockup·허브(`index.html`·`reader.html`) 갱신도 재검증을 트리거한다(무해 — task가 변화 없음으로 닫는다). 노이즈가 크면 to-be를 `docs/product`·`docs/user-journeys`·`docs/design-system` 조합으로 좁힐 수 있다(모델 개정).\n- `ios/`의 테스트 타깃(`PocketAideTests`·`PocketAideUnitTests`)과 빌드 설정(`project.yml`·`fastlane/`)은 as-is 트리에 함께 들어가 그 변경도 재검증을 트리거한다(무해).\n",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/pocket-aide",
+        "ref": "main",
+        "subPath": "docs"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = 제품 문서. docs/ 하위 트리 해시만 사용 → docs 밖(코드 등) 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/pocket-aide)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:docs\"\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/pocket-aide",
+        "ref": "main"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = 실제 구현. ios·backend 하위 트리 해시 조합.\n# → 이 디렉터리들 밖 변경(k8s/·.github/·Dockerfile 등)은 무시된다.\n# 런타임이 dataSource.repository(dlddu/pocket-aide)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\na=\"$(git rev-parse \"HEAD:ios\")\"\nb=\"$(git rev-parse \"HEAD:backend\")\"\nprintf 'ios:%s backend:%s\\n' \"$a\" \"$b\"\n",
+        "timeoutSeconds": 60
+      }
+    }
   }
 ]
