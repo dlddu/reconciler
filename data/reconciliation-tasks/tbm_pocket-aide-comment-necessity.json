@@ -326,7 +326,7 @@
       }
     },
     "createdAt": "2026-09-29T10:55:49Z",
-    "updatedAt": "2026-10-01T06:39:32Z",
+    "updatedAt": "2026-10-01T06:43:27Z",
     "stateSummary": {
       "asIs": "관측: dlddu/pocket-aide@main `2bb24bf`(2026-09-29T10:52Z, PR #56 = 같은 모델 `rct_20260929-0001` 착지). 모델 as-is versionScript 를 창 커밋마다 실행:\n```\n0f623b6 (직전 관측)  lines=860 files=71 eol=19/5  96a2262c…\ndd06989 (#53 투두)   lines=913 files=78 eol=20/6  8413b6b3…\n7c6cfce·85441ab·46fd19c (#49·#57·#59 docs 전용)  불변 8413b6b3…\n2bb24bf (#56)        lines=773 files=75 eol=5/4   f2c55d2d…  ← claim 기록과 바이트 일치\n```\n- #53(PRD-3 투두 구현)이 L +53줄/+7파일·E +1줄을 들였고, #56(첫 판정 패스)이 backend/ 에서 L 140줄·E 15줄을 걷어 773/75 가 됐다. #49·#57·#59 는 주석 지문 무영향.\n- tip 에서 레포 자체 게이트 `python3 scripts/comment-policy/check_ledger.py` **rc=0**: `L: 행 35 · 파일 75 · 주석 773줄 · 완료 205 · 미판정 568` / `D: 0` / `E: 행 4 · 주석 5줄 · 완료 3 · 미판정 2` / `지문: f2c55d2d…` = 모델 as-is 셋째 줄과 바이트 일치.",
       "toBe": "관측: main `2bb24bf` 에 `docs/comment-policy/` 신설(tree `2095c725…`, 직전 `absent`) — `README.md`(정책 본문) · `ledger.md`(원장) · `passes/2026-09-29-backend.md`(첫 판정 상세) + 게이트 `scripts/comment-policy/{check_ledger.py,scan.sh}`. 정의가 요구한 세 역할 분리가 실물로 섰다.\n- 원장 `—`(미판정) 행 중 정의 슬라이스 단위 덩어리: `.github/workflows/`(49) · `backend/cmd/server/main.go`(27) · `ios/Shared/Sources/PocketAideAPI/`(49) · `ios/fastlane/`(6) · `k8s/{configmap,kustomization,secret}.yaml`(31) · `tools/journey-mockup-harness/check.mjs`(29) 외 iOS·backend 잔여.\n- 같은 모델 `rct_20260929-0002`(planned, PR #65)의 plan 범위 = L 377줄 + E 2줄(`.gitignore`·backend 잔여·`ios/PocketAide/**`·테스트·위젯·`ios/Shared` 일부). plan 「범위 밖(후속)」이 위 6덩어리 **191줄 + E 1줄**을 이름으로 재감지에 이월.\n- 열린 PR 파일 대조(10:57Z): #58·#62·#64 → `backend/cmd/server/main.go`, #58·#63 → `.github/workflows/*`, #63 → `ios/fastlane/Fastfile`·`k8s/deployment.yaml`(원장 k8s 행 3파일과 불겹침), #64 → `PocketAideAPI/Scratchpad.swift`(신설, 원장 PocketAideAPI 행 기존 파일과 불겹침). `tools/journey-mockup-harness/` 를 만지는 열린 PR 0.",
@@ -384,6 +384,41 @@
           "reviewedAt": "2026-09-30T02:59:25Z",
           "reason": "PR #66(head b1bd333, base 2bb24bf)은 열려 있으나 mergeable_state=dirty — main 이 5ba51ba 로 전진(#63·#60·#68·#69·#65)했고 #65 착지로 docs/comment-policy/ledger.md 가 merge-tree CONFLICT 다. 계획은 이 경우 실행 단계에서 build.sh 재생을 예정했지만, 그 재생의 전제가 무너졌다: #63 이 k8s/deployment.yaml 에 주석 6줄(21~26행, pin·preview 태그 설명)을 들여 main 원장의 k8s 행이 `configmap·deployment·kustomization·secret` 37줄로 묶였다. 재생 키트는 행을 디렉터리 단위로 키잉하고 범위 변경 감지는 9개 대상 파일만 보므로, 재생하면 판정하지 않은 deployment.yaml 6줄을 포함한 k8s 행이 `완료` 로 찍히거나 완료 기준 ⑶(k8s 10줄)이 어긋난다. 게다가 검토하지 않은 새 head 가 실행 중에 만들어진다. 준비물이 무효라 승인하지 않는다(사람 승인 context 는 없음 — 필수 status 는 ruleset 의 ci-success 하나).",
           "comment": "planner가 고칠 것: ① 현재 main(5ba51ba 이후) 위에서 PR #66 을 재생해 새 head 로 올리고 CI(ci-success · comment-policy ledger) 초록과 mergeable_state=clean 을 확인한 뒤 preparation.notes 에 새 head sha 로 기록할 것 — 재생을 실행 단계로 미루지 말 것(리뷰가 본 head 가 곧 실행될 head 여야 한다). ② k8s 범위 재판정: #63 이 k8s/deployment.yaml 에 주석 6줄을 들여 원장 k8s 행이 4파일 37줄이 됐다. deployment.yaml 6줄도 이 패스에서 필요성 판정해 k8s 행 전체를 `완료` 로 하든지, 아니면 k8s 행을 `—` 로 남기고 범위에서 빼든지 정하고, 완료 기준 ⑶의 행별 줄 수(현재 'k8s 10줄')를 그에 맞춰 고칠 것. build.sh 의 범위 변경 감지가 대상 9파일만 보고 같은 원장 행에 새로 묶인 파일은 못 잡는다는 점도 보완(행 구성 파일 집합이 2bb24bf 과 같은지 단정)할 것. ③ #65 착지로 기존 `완료` 행이 첫 패스 13 + 둘째 패스 17 이 됐으니 완료 기준 ⑷를 조건부 문구 없이 그 30행 보존으로 확정. ④ executionGuide 의 'classic branch protection' 표기를 ruleset 24173503(ci-success · required_linear_history)으로, main 의 journey-mockup 빨강 전제(#67 로 해소되고 #63 이 ci-success needs 에 편입)를 현재 상태로 갱신. 판정 내용(PocketAideAPI 27 · check.mjs 3 유지 등)과 가역성·리스크 평가는 유효하다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재준비(attempt 2, 직전 review_rejected) — 셋째 판정 슬라이스를 현재 main `86108bb` 위에서 재생해 PR #66 head 를 `4e52b9f` 로 교체하고 리뷰 지적 넷을 반영한다. 범위 = 원장 `—` 행 중 파일이 겹치는 열린 PR 이 없는 덩어리 **넷, L 12파일 122줄**: `ios/Shared/Sources/PocketAideAPI/`(49) · `ios/fastlane/`(7) · `k8s/`(37, #63 이 들인 `deployment.yaml` 21–26 6줄 포함 — 리뷰 ② 의 「k8s 행 전체 판정」 쪽을 택했다) · `tools/journey-mockup-harness/check.mjs`(29). attempt 1 이 뺀 `ios/fastlane/` 는 그 사유(#63 과 파일 겹침)가 #63 착지로 만료돼 정의의 슬라이스 규칙(겹침 없으면 가져간다)대로 편입했다. 앞 9파일은 2bb24bf 이후 main 에서 무변경이고 판정·결과 blob 이 attempt 1 과 동일하다(리뷰가 판정 내용을 유효로 봤다). **예산(400) 미달 사유**: `.github/workflows/`(143, 열린 #58 이 `ci.yml`·`ios-test.yml` 을 고친다) · `backend/cmd/server/`(27, #58·#64) — 남은 무캐리어 잔여가 없다. 결과 L 미판정 292→170, 비주석 변경 0. 재생은 실행 단계로 미루지 않았다(리뷰 ①): 리뷰가 보는 head 가 곧 머지될 head 다. 대안(행 k8s 를 `—` 로 두고 빼기)은 6줄 때문에 31줄 판정을 다시 미루는 것이라 기각. 가역성: 주석·원장·패스 파일만 — revert 한 번. **완료 기준**(PR #66 squash 머지 커밋 M 에서): ⑴ `python3 scripts/comment-policy/check_ledger.py` rc=0 ⑵ 그 `지문:` = 모델 as-is versionScript 셋째 줄 ⑶ 원장에서 `passes/2026-09-29-api-k8s-harness.md` 를 가리키는 `완료` 행이 정확히 4개 — PocketAideAPI 27줄 · fastlane(`Fastfile`) 1줄 · k8s(4파일) 13줄 · check.mjs 3줄 ⑷ 첫 패스(`passes/2026-09-29-backend.md`) 13행 + 둘째 패스(`passes/2026-09-29-ci-backend-ios.md`) 17행 = 30행 문면 보존 ⑸ `git diff M^ M` 의 비주석 변경 0. **범위 밖(후속)**: `.github/workflows/`(143) · `backend/cmd/server/`(27, 첫 패스가 미룬 `HTMLURL→RunURL` 개명 포함) — #58·#64 착지 뒤 재감지가 연다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "선결 재확인: `gh pr view 66 -R dlddu/pocket-aide --json headRefOid,mergeable,mergeStateStatus` 로 head = `4e52b9fb772a` 인지, `gh pr checks 66` 로 `ci-success` · `Comment ledger` 가 그 sha 에서 success 인지 본다. main 이 `d816938` 뒤로 움직였으면 `git merge-tree --write-tree origin/main <head>` 로 clean 인지, 새 main 이 주석 지문을 움직였는지(`check_ledger.py` 를 merge-tree 결과 트리에서 rc=0) 본다.",
+              "expectedOutcome": "head 4e52b9f · ci-success success · mergeable CLEAN(또는 behind 이지만 merge-tree clean 이고 게이트 rc=0). 아니면 커밋을 얹지 말고 멈춰 failed(사유: 재준비 필요) — 리뷰가 본 head 만 머지한다."
+            },
+            {
+              "seq": 2,
+              "action": "squash 머지: `gh pr merge 66 -R dlddu/pocket-aide --squash --match-head-commit 4e52b9fb772a7514370bad46dc272aa25d2ae109`(k3s MCP App 토큰, contents/pull_requests write).",
+              "expectedOutcome": "머지 커밋 M 이 main 에 착지."
+            },
+            {
+              "seq": 3,
+              "action": "M 체크아웃 후 완료 기준 ⑴⑵: `python3 scripts/comment-policy/check_ledger.py` 와 모델 as-is versionScript 를 같은 트리에서 실행해 지문 대조.",
+              "expectedOutcome": "rc=0 · 두 지문 일치(M 이 `d816938`+이 PR 뿐이면 `240ded7c8ee8…e1cc`)."
+            },
+            {
+              "seq": 4,
+              "action": "완료 기준 ⑶⑷: `grep -c 'passes/2026-09-29-api-k8s-harness.md' docs/comment-policy/ledger.md` · `grep -c 'passes/2026-09-29-backend.md'` · `grep -c 'passes/2026-09-29-ci-backend-ios.md'`, 그리고 앞 두 패스 행을 `git show M^:docs/comment-policy/ledger.md` 의 같은 행과 diff.",
+              "expectedOutcome": "4 · 13 · 17, 30행 문면 diff 0."
+            },
+            {
+              "seq": 5,
+              "action": "완료 기준 ⑸: `git diff M^ M -U0 -- . ':!docs/comment-policy' | grep '^[-+]' | grep -v '^[-+][-+]' | grep -vE '^[-+]\\s*(//|#|--|$)'`.",
+              "expectedOutcome": "빈 출력 → 다섯 항목 모두 참이면 succeeded."
+            }
+          ],
+          "plannedAt": "2026-10-01T06:43:27Z"
         }
       }
     ]
