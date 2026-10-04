@@ -31,37 +31,35 @@ E2E가 관측할 대상 자체가 없는 시나리오는 이 모델의 drift가 
 섞으면 인프라 부채가 구현 대기 표에 숨어 해소 압력이 사라진다.
 
 **개수·범위 숫자는 판정 기준에 넣지 않는다.** 시나리오와 E2E 파일은 계속 추가·삭제되므로,
-"시나리오 54개" 같은 숫자를 목표나 판정 기준에 박으면 하나가 늘어난 순간 definition이
-사실과 어긋난다. 숫자는 definition의 "등록 시점 현황"에만 **스냅샷으로 라벨링해** 두고,
-판정은 개수 독립적 서술로 쓴다. 대상이 늘면 to-be 버전이 바뀌어 재평가가 트리거되고,
+숫자를 목표나 판정 기준에 박으면 하나가 늘어난 순간 definition이
+사실과 어긋난다. 대상이 늘면 to-be 버전이 바뀌어 재평가가 트리거되고,
 새 항목도 자동으로 판정 대상에 들어온다.
 
 ## 슬롯 표
 
 대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다.
 
-| 슬롯 | 의미 | 예 (kubernetes-dashboard) |
-|---|---|---|
-| `{{REPO}}` | owner/repo | `dlddu/kubernetes-dashboard` |
-| `{{SLUG}}` | id·이름용 소문자 레포명 | `kubernetes-dashboard` |
-| `{{TEST_DOCS_PATH}}` | 테스트 문서 경로·패턴(to-be 버전 범위, 표시용) | `docs/product/test-*.md` |
-| `{{TEST_DOCS_DIR}}` | 조합형 스크립트가 ls-tree로 훑을 디렉터리 [선택] | `docs` |
-| `{{TEST_DOCS_RE}}` | 그 안에서 테스트 문서만 고르는 정규식 [선택] | `docs/product/test-[a-z-]+\.md$` |
-| `{{SCENARIO_UNIT}}` | 시나리오 단위(헤딩 형태) | 테스트 문서의 `### 시나리오 N: …` 헤딩 |
-| `{{SCENARIO_ID}}` | 시나리오 **식별 체계**(개수 아님) | `<문서 파일명>#시나리오 <N>` |
-| `{{E2E_PATH}}` | E2E 루트(as-is 버전 범위) | `e2e` |
-| `{{E2E_UNIT}}` | 매칭 단위(파일 유형·위치) | `e2e/` 최상위 `*.spec.ts` (Playwright) |
-| `{{NON_UNIT}}` | E2E 루트 안이지만 매칭 단위가 아닌 것 | `e2e/helpers/`·`e2e/k8s/`(공유 헬퍼·픽스처) |
-| `{{MAPPING_SSOT}}` | 시나리오↔파일 매핑을 기계적으로 확인하는 곳 | 각 시나리오의 `자동화:` 필드 (또는 파일 헤더의 `검증 시나리오:` 선언) |
-| `{{EXCEPTION_SSOT}}` | 예외·구현 대기·비-시나리오 파일 등재 위치 | `docs/product/doc-tracker/` 최신 월 파일의 "e2e 매핑" 섹션 |
-| `{{SIBLING_DOCS_IMPL}}` | 미구현 기능의 구현을 담당하는 자매 docs-impl 모델 id | `tbm_kubernetes-dashboard-docs-impl` (없으면 "담당 모델 미등록") |
-| `{{SIBLING_MOCK_POLICY}}` | 모킹 정책을 담당하는 자매 e2e-mock-policy 모델 id [선택] | `tbm_kubernetes-dashboard-e2e-mock-policy` (없으면 규칙 7의 해당 문장 삭제) |
-| `{{NON_SCENARIO_TYPES}}` | 허용하는 비-시나리오 파일 유형 [선택] | 스모크/인프라(health, 부팅 배선) |
-| `{{EXCEPTION_HINTS}}` | 예외 목록 후보(자동화 곤란 시나리오 유형) | 푸시 실수신, 실물 배송, AI 산출물 품질, 외부 OAuth |
-| `{{TRACKER_DIR}}` | 등재 SSOT가 있는 doc-tracker 폴더 — to-be에 등재 섹션 해시를 묶는다 [선택] | `docs/product/doc-tracker` |
-| `{{REG_TITLE}}` | 해시할 등재 섹션 제목 접두 [선택] | `## e2e 매핑` |
-| `{{INITIAL_STATE}}` | 등록 시점 **스냅샷**: 다대다 정도, 공백·묶음·중복 예시 | 시나리오 54 vs spec 12, 묶음·중복 존재 |
-| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
+| 슬롯 | 의미 |
+|---|---|
+| `{{REPO}}` | owner/repo |
+| `{{SLUG}}` | id·이름용 소문자 레포명 |
+| `{{TEST_DOCS_PATH}}` | 테스트 문서 경로·패턴(to-be 버전 범위, 표시용) |
+| `{{TEST_DOCS_DIR}}` | 조합형 스크립트가 ls-tree로 훑을 디렉터리 [선택] |
+| `{{TEST_DOCS_RE}}` | 그 안에서 테스트 문서만 고르는 정규식 [선택] |
+| `{{SCENARIO_UNIT}}` | 시나리오 단위(헤딩 형태) |
+| `{{SCENARIO_ID}}` | 시나리오 식별 체계 |
+| `{{E2E_PATH}}` | E2E 루트(as-is 버전 범위) |
+| `{{E2E_UNIT}}` | 매칭 단위(파일 유형·위치) |
+| `{{NON_UNIT}}` | E2E 루트 안이지만 매칭 단위가 아닌 것 |
+| `{{MAPPING_SSOT}}` | 시나리오↔파일 매핑을 기계적으로 확인하는 곳 |
+| `{{EXCEPTION_SSOT}}` | 예외·구현 대기·비-시나리오 파일 등재 위치 |
+| `{{SIBLING_DOCS_IMPL}}` | 미구현 기능의 구현을 담당하는 자매 docs-impl 모델 id |
+| `{{SIBLING_MOCK_POLICY}}` | 모킹 정책을 담당하는 자매 e2e-mock-policy 모델 id [선택] |
+| `{{NON_SCENARIO_TYPES}}` | 허용하는 비-시나리오 파일 유형 [선택] |
+| `{{EXCEPTION_HINTS}}` | 예외 목록 후보(자동화 곤란 시나리오 유형) |
+| `{{TRACKER_DIR}}` | 등재 SSOT가 있는 doc-tracker 폴더 — to-be에 등재 섹션 해시를 묶는다 [선택] |
+| `{{REG_TITLE}}` | 해시할 등재 섹션 제목 접두 [선택] |
+| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) |
 
 ## 시나리오 식별자의 안정성 (슬롯 채울 때 주의)
 
@@ -183,9 +181,6 @@ git rev-parse "HEAD:{{E2E_PATH}}"
 - **to-be** = github `{{REPO}}` `{{TEST_DOCS_PATH}}` 트리·blob 해시<!-- [선택] TRACKER_DIR 쓰면 --> + `{{TRACKER_DIR}}` 최신 월 파일의 「{{REG_TITLE}}」 섹션 해시 조합(시나리오 집합 또는 예외/매핑 등재가 바뀌면 변함). **PRD·가치 문서 변경은 이 모델을 트리거하지 않는다.**
 - **as-is** = github `{{REPO}}` `{{E2E_PATH}}` 하위 트리 해시(파일 추가·수정·삭제 시 변함).
 - 어느 한쪽 버전이 바뀌면 task가 생성되어 1:1 매칭을 재검증한다.
-
-## 초기 상태 메모 (등록 시점 {{NOW_ISO}})
-{{INITIAL_STATE}} 이 문단의 숫자는 **스냅샷일 뿐 판정 기준이 아니다** — 시나리오나 파일이 추가·삭제되면 어느 한쪽 버전이 바뀌어 재평가가 트리거되고, 새 시나리오도 자동으로 1:1 판정 대상이 된다. 판정은 항상 개수 독립적 불변식 "(시나리오 수 − 예외 수 − 구현 대기 수) = (매칭 파일 수)"로 한다. 현황 숫자 갱신은 각 task의 몫이다. <!-- 지침: 현재 시나리오 수 vs 파일 수, 묶음/중복/공백의 구체 예를 남긴다. 다대다면 "첫 task는 (1) 매핑 표·예외 목록 확정 (2) 묶음 분리·중복 정리 (3) 누락 시나리오의 파일 신설 또는 예외 등재를 다루게 된다 — 큰 초기 격차는 예상된 것"을 포함 -->
 
 ## 범위 밖 / 비고
 - **AC ↔ 시나리오 층은 이 모델의 판정 대상이 아니다.** 모든 AC가 시나리오로 커버되는지(커버리지)도, 시나리오가 참조하는 AC가 실재하는지(참조 무결성)도 보지 않는다. 그 층은 제품 문서 체계({{EXCEPTION_SSOT}}를 포함한 doc-tracker와 `product-doc-engineer`)의 몫이며, 그래서 PRD만 바뀌었을 때 이 모델은 트리거되지 않는다.
