@@ -195,7 +195,7 @@
       }
     },
     "createdAt": "2026-10-04T05:15:53Z",
-    "updatedAt": "2026-10-04T05:18:35Z",
+    "updatedAt": "2026-10-04T05:21:14Z",
     "stateSummary": {
       "asIs": "관측 2026-10-04T05:16:33Z · `dlddu/pocket-aide` main `df38b01`(슬라이스 (1) 착지 #104 `34cda49` 이후 + #106 위젯·#107 godoc 주석 판정).\n- as-is 지문: `migrations=21 site_lines=46 query_lines=117 checker=present` / `schema=345cb458…;queries=c706daeb59cb1419;checker=dc74f22d…` — 직전 `scope=absent` 에서 `data-model-scope` 블록(정의 초안과 동일)·체커 `backend/cmd/datamodelcheck` 착지.\n- 체커 실행(이 호스트, `cd backend && go run ./cmd/datamodelcheck --json`): 엔진 **SQLite 3.46.0 (modernc.org/sqlite v1.34.1)** — 운영과 같은 엔진, **종료 코드 1**, `undecidable` 0.\n- 스키마 스냅샷: 테이블 12 · 인덱스(PK 제외) 14 · FK 11. 지점(`sites`) 46 = 지문 `site_lines=46`(C4 계수 일치).",
       "toBe": "관측 2026-10-04T05:16:33Z · main `df38b01`: `docs/data-model` 트리 `770c321` = `README.md`(판정 규칙·`data-model-scope` 블록·체커 절) + `erd.md`. 쿼리 패턴 카탈로그 `query-patterns.md`·수동 형태 표·지원 칸·미사용 인덱스 표 **부재**.",
@@ -205,6 +205,47 @@
     "assessment": {
       "reason": "판정 절차 1~2: main `df38b01` 에서 레포 체커를 운영 엔진(modernc SQLite 3.46.0)으로 직접 실행 → rc=1, 불변식 1 ok · 2 violated(지점 46 전부 미등재, 카탈로그 부재) · 3 violated(인덱스 14 미판정). 판정 규칙(하나라도 위반 ⇒ action_required)에 따라 조치 필요. 절차 4 확인: 체커가 읽은 범위 = README 블록 그대로(리포트 `block` 필드), 지점 46 = 지문 `site_lines=46` ⇒ C2/C4 이상 신호 없음. 소관 census: pocket-aide 열린 PR 4건(#108 e2e 매핑·#85 XCUITest·#58 BF-1 E2E·#50 PRD-12)의 변경 경로 중 `docs/data-model`·`migrations`·`datamodelcheck` 0, 이 모델의 다른 열린 task 0(`rct_20261004-0001` succeeded = 슬라이스 (1) #104) ⇒ 캐리어 없음. planner 는 정의의 판정 슬라이스 (2) 카탈로그 `query-patterns.md` + 수동 형태(todos `+tbl+` 5곳·scratchpad 변수 SQL·notificationhistory prepare·routines querier)부터 가져가고, (3) 지원 칸·미사용 인덱스는 (2) 머지 후 재감지가 잇는다(순서 고정).",
       "assessedAt": "2026-10-04T05:16:47Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "판정 슬라이스 (2) — 불변식 2(카탈로그 ↔ 코드 쿼리 지점)를 PR 하나로 닫는다: ⑴ 체커 `backend/cmd/datamodelcheck` 에 C4 형태 추출을 더한다 — 각 site 줄의 호출을 Go AST 로 찾아 SQL 인자를 정적으로 해석(백틱 리터럴 · 패키지 const 연결(`columns`) · `PrepareContext` 로 만든 `stmt` 의 ExecContext 는 prepare 쪽 SQL)하고, SQL 을 템플릿 「형태」 규칙(별칭 복원·조인 등치 `a.x=b.y`·`OR` 묶음/`NOT IN`/`!=` 제외·`IN`=eq·`BETWEEN`/`<`=range·`ORDER BY` 원순서·서브쿼리 합집합·`ON CONFLICT(x)`=upsert eq)으로 형태화하며, 해석 불가(런타임 변수 `tbl`·`insert`)는 사유와 함께 추출 불가로 낸다 — 조용히 건너뛰는 후보 0. ⑵ `docs/data-model/query-patterns.md` 를 체커의 기대 행으로 생성(패턴 표 + 수동 형태 표: todos `+tbl+` 5지점 × 두 테이블 = 10행, scratchpad `Store::Move` 의 `insert` 변수 SQL × 4 대상 테이블 = 4행), 체커는 카탈로그를 읽어 불변식 2 를 양방향 판정(미등재·죽은 지점·죽은 패턴·귀속 모호·수동 형태 집합 불일치). ⑶ 불변식 3(C5 플랜)은 이 슬라이스 밖이므로, 카탈로그가 있으면 체커는 판정 불가(exit 2 — CI 실패)가 아니라 `plan-unimplemented` 위반 1건(exit 1, report 모드 통과)을 정직하게 낸다; 지원 칸은 접근 조건 없는 쓰기만 `—`, 나머지는 `미판정` 으로 둔다. 왜 이 경로: 지금 체커는 카탈로그가 생기는 순간 exit 2 를 내므로 카탈로그와 체커 확장은 한 PR 이어야 하고(README 「체커」 절이 이미 그렇게 예고), 카탈로그를 손으로 쓰지 않고 체커 출력으로 만들어 두 벌 해석을 없앤다(슬라이스 (1) ERD 와 같은 방식). 수동 형태를 체커 결함 하치장으로 쓰지 않도록 서브쿼리·조인·const 연결은 체커가 직접 형태화한다. **완료 기준(이 시도의 범위)**: PR 이 main 에 squash 착지하고 착지 커밋 main 체크아웃에서 `cd backend && go run ./cmd/datamodelcheck --json` 의 ⑴ `invariants.1.status == ok` ⑵ `invariants.2.status == ok`(위반 0) ⑶ `invariants.3` 위반 kind 집합 == {`plan-unimplemented`} ⑷ `exit_code == 1` · `undecidable == []` ⑸ 모든 site 가 shape 또는 unextractable 사유를 가진다(빈 항목 0), 그리고 `python3 scripts/comment-policy/check_ledger.py` rc=0. **범위 밖**: 불변식 3 전부(C5 `EXPLAIN QUERY PLAN`·지원 칸 실값·미사용 인덱스 표·필요한 인덱스 마이그레이션·CI gate 전환) — 착지로 체커/to-be 버전이 바뀌면 재감지가 슬라이스 (3)으로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "pocket-aide main 최신 체크아웃에서 기준선 실측: 체커 rc=1 · sites 46 · inv1 ok · 열린 PR 의 `docs/data-model`/`backend/cmd/datamodelcheck`/`backend/internal/*/store.go` 접촉 여부",
+              "expectedOutcome": "기준선 = 감지 리포트와 일치, 같은 경로를 고치는 열린 PR 0"
+            },
+            {
+              "seq": 2,
+              "action": "체커 확장: shape.go(SQL 토크나이저 + 형태 추출) · extract.go(site 줄 호출의 SQL 인자 정적 해석: 리터럴/const 연결/stmt→prepare, 불가 시 사유) · catalog.go(query-patterns.md 패턴·수동 형태 표 파싱, 불변식 2 양방향 판정, 기대 행 출력) · main.go(카탈로그 있으면 판정, 불변식 3 은 plan-unimplemented 1건) · main_test.go(형태 추출 표 테스트 + 불변식 2 drift 종류별 양방향). 주석 0줄",
+              "expectedOutcome": "go vet·go test -race ./cmd/datamodelcheck/ 통과, gofmt 0"
+            },
+            {
+              "seq": 3,
+              "action": "카탈로그 생성: 빈 query-patterns.md 로 체커를 돌려 기대 행(패턴·수동 형태)을 스크립트로 옮겨 query-patterns.md 작성, README 의 「아직 없다」 문장과 체커 절·형태 정의(INSERT OR IGNORE=insert, stmt→prepare SQL)를 갱신",
+              "expectedOutcome": "체커 inv2 ok · inv3 {plan-unimplemented} · exit 1 · undecidable []"
+            },
+            {
+              "seq": 4,
+              "action": "레포 게이트 전수: go vet ./... · go test ./... · golangci-lint · check_ledger.py · as-is versionScript 진단 줄",
+              "expectedOutcome": "전부 통과, ledger rc=0, as-is 진단 줄 site_lines=46 유지(store.go 무변경)"
+            },
+            {
+              "seq": 5,
+              "action": "브랜치 push · PR 생성(머지 안 함), PR 본문에 task id·gap·완료 기준·검증 명령",
+              "expectedOutcome": "PR OPEN, 필수 ci-success 진행"
+            },
+            {
+              "seq": 6,
+              "action": "(실행 단계) CI 확인 후 squash merge, 착지 커밋에서 완료 기준 재실측",
+              "expectedOutcome": "완료 기준 ⑴~⑸ + ledger rc=0"
+            }
+          ],
+          "plannedAt": "2026-10-04T05:21:14Z"
+        }
+      }
+    ]
   }
 ]
