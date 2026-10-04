@@ -2002,7 +2002,7 @@
       }
     },
     "createdAt": "2026-10-04T06:31:47Z",
-    "updatedAt": "2026-10-04T06:36:59Z",
+    "updatedAt": "2026-10-04T06:39:19Z",
     "stateSummary": {
       "asIs": "관측 2026-10-04T06:33:12Z · dlddu/pocket-aide main tip `11e7887`(as-is `app:64929a8 widget:f5ddbba keyboard:9acc7aa design-system:f9d448a`, 직전 `app:614cbc1 widget:64b2801`).\n- 창 as-is 커밋: #111 `14b30e5`(위젯 날씨 영역 PRD-8 AC4 — `Sections/WeatherSection.swift` 신설 · `ios/PocketAide/WeatherLocationAccess.swift` 신설 · `PocketAideWidget.swift` 에서 `PlaceholderSection(area: .personal, label: \"날씨\")` → `WeatherSection(state: entry.weather)` · WidgetEntry/AffirmationProvider/AppAuthCoordinator/PocketAideApp/Info plist), #85 `11e7887`(TodoListView `accessibilityIdentifier` 위치 이동만 — 렌더 텍스트·구조 무변).\n- `WeatherSection.swift` 리터럴: `날씨`(영역 라벨), `앱에서 위치 접근을 허용해 주세요.`, `잠시 후 다시 시도할게요.` 등 — 현재 `_copy-map` 에 없음.",
       "toBe": "관측 2026-10-04T06:33:12Z · `docs/mockups` `6439228`→`c076162`, `docs/design-system` `84ee405` 불변.\n- 창 to-be 커밋: #110 `f1d728e` = 이 모델 직전 task `rct_20261004-0005` 착지(위젯 알림 슬라이스 매핑·카피 대응 + 상태 목업; `_impl-map`/`_copy-map`/`_index`/README/screen-widget/mockups-dark).\n- 내장 검산 3종(각 map 의 `## 검산` bash 블록을 리비전별 실행): `e5f7eb3`(baseline) impl 누락 1·copy A잉여 1 / **`f1d728e` 3종 ok**(0005 완료 기준 착지) / `14b30e5`·tip `11e7887` **`_impl-map` 누락 2**(`ios/PocketAide/WeatherLocationAccess.swift`, `ios/PocketAideWidget/Sections/WeatherSection.swift`) · **`_copy-map` `A 잉여 ('PocketAideWidget.swift','날씨')`** · `_token-map` ok.\n- `_impl-map` `PlaceholderSection.swift` 행은 여전히 「날씨·메일 슬라이스 자리표시자(미구현)」, `_copy-map` `screen-widget` 날씨 4행(`서울`·`18°`·`한때 비`·`최고 22 · 최저 14`)은 `미구현 영역` — 실물은 구현됨.",
@@ -2040,7 +2040,15 @@
               "expectedOutcome": "main 에서 세 검산 ok"
             }
           ],
-          "plannedAt": "2026-10-04T06:36:59Z"
+          "plannedAt": "2026-10-04T06:36:59Z",
+          "executionGuide": "## 순서 (직렬)\n1. **사전 확인** — PR #115 의 CI(`ci-success` 필수)가 초록인지 본다. docs 전용이라 paths-filter 상 무거운 잡은 skip 이어야 한다. `mergeStateStatus` 가 `BEHIND` 여도 `clean` 이면 리베이스하지 말 것(strict=false).\n2. **자매 착지 재확인** — 머지 직전 `git merge-tree --write-tree origin/main <head>` 로 충돌 없음 확인. 그새 main 에 `docs/mockups/_impl-map.md`·`_copy-map.md`·`screen-widget.html` 또는 `ios/PocketAideWidget/**`·`ios/PocketAide/*.swift` 를 건드린 커밋이 들어왔으면 아래 3의 검산을 **결합 트리**에서 다시 돌린다. 실패하면 브랜치를 새 main 에서 `apply.py` 로 재생(`/home/ubuntu/planner/.reconciler-work/artifacts/pa-mr-rct_20261004-0006/apply.py`; assert 가 깨지면 그 앵커만 손으로 맞추고 `checkout --theirs` 금지) 후 재검증.\n3. **머지** — squash 머지(PR head `1ad6062…` 그대로, 커밋을 얹지 말 것).\n4. **main 검증** — main 체크아웃 루트에서:\n   ```bash\n   for f in _impl-map _copy-map _token-map; do echo \"== $f\"; awk '/^## 검산/{p=1} p' docs/mockups/$f.md | sed -n '/^```bash/,/^```$/p' | sed '1d;$d' | bash; done\n   grep -nE '^\\| (A|B) \\| (구현 대기|목업 대기)' docs/mockups/_copy-map.md\n   python3 -c \"import re,json;s=open('docs/mockups/mockups-dark.html').read();json.loads(re.search(r'id=\\\"mockupData\\\">(.*?)</script>',s,re.S).group(1));print('json ok')\"\n   ```\n\n## 검증 기준 (완료 기준 — 이 범위로 판정할 것)\n- 세 검산 모두 출력 `ok` 한 줄.\n- 카피 drift 행: A 구현 대기 **13** · A 목업 대기 **22** · B 구현 대기 **55**(늘지 않음).\n- mockupData `json ok`.\n- 머지 커밋의 변경 파일이 `docs/mockups/` 6개뿐.\n\n## 주의사항\n- 가역: docs 전용 squash 커밋 하나 — 문제 시 `git revert <squash>` PR 로 되돌린다. 프로덕션·데이터 영향 없음.\n- 자매 docs-impl 이 그새 메일 슬라이스 등 위젯 영역을 더 착지시키면 검산이 다시 깨질 수 있다 — 그건 이 task 의 실패가 아니라 새 감지의 몫이다. 단, **머지 시점 결합 트리에서 이 PR 이 다룬 날씨 행이 ok** 인지는 확인할 것.\n- 검산이 git 이 아니라 working tree 를 읽으므로 반드시 main 을 체크아웃한 상태에서 돌릴 것.\n\n## 범위 밖(후속 — 재감지의 입력)\n- 날씨 상태 어휘 차이(목업 「한때 비」 ↔ 구현 WMO 고정 어휘) — 예시 데이터로 분류.\n- 「 · 강수 N%」 꼬리·라벨 색 등 구조·토큰(기준 4).\n- 기존 잔여: A 구현 대기 13 · A 목업 대기 22 · B 구현 대기 55 · 토큰 구현 대기 5 · 이탈 등재 0.\n- 메일 슬라이스(docs-impl 몫), `_copy-map` 머리말 「파일 12개」 낡음.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261004-0006-widget-weather-map",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/115",
+          "preparedAt": "2026-10-04T06:39:19Z",
+          "notes": "PR명의: app/dlddu-k3s-homelab-k3s-mcp(App 토큰 발급 성공). base main `11e7887`, head `1ad606278c771c32e2a7bcb96df3081bcb3a7fe6`, docs/mockups 6파일(+60/−23) — ios/·backend/·.github 무접촉이라 iOS 빌드·TestFlight·이미지 push 발사 없음(필수 status 는 `ci-success` 하나, ruleset 실측). 재생 스크립트 `/home/ubuntu/planner/.reconciler-work/artifacts/pa-mr-rct_20261004-0006/apply.py`(main 11e7887 에서 실행 → 같은 diff, assert count==1·표 행 수 A 146/B 395 단정). head 에서 세 검산 ok(main 에서는 `_impl-map` 누락 2 · `_copy-map` A 잉여 1), mockupData json.loads ok, comment-policy check_ledger rc=0, 카피 drift 행 A 구현 대기 13 · A 목업 대기 22 · B 구현 대기 55 불변. 음성 프로브(목업 `앱에서 위치 접근을 허용해 주세요.` 삭제 → `_copy-map` 2줄 실패) 확인. 열린 자매 PR #114·#113·#112·#58·#50 은 docs/mockups·ios/PocketAideWidget 무접촉. `_copy-map` 머리말 「파일 12개」(실제 14→15)는 기존 낡음 — 범위 밖으로 PR 본문에 기록."
         }
       }
     ]
