@@ -183,8 +183,11 @@ docs/data-model/
   표와 두 벌이 된다). FK 하나 = 관계 하나, 라벨은 FK 컬럼. 카디널리티는 FK에서 기계적으로 정한다: 부모 쪽은
   FK가 NOT NULL이면 `||`, NULL 허용이면 `|o`, 자식 쪽은 FK 컬럼이 UNIQUE면 `o|` 아니면 `o{`.
 - **엔티티** — 테이블마다 `### \`<테이블>\`` 제목과:
-  - `의미:` 한 줄 — 대응 도메인 타입의 **코드 문서 주석으로 가는 링크**. 의미 문장은 ERD에 쓰지 않는다.
-  - 컬럼 표 `컬럼 | 타입 | NULL | 키`. NULL은 `YES`/`NO`, 키는 `PK` · `FK → <테이블>.<컬럼>` · 빈칸.
+  - `의미:` 한 줄 — 그 테이블의 의미를 말하는 **코드 문서 주석으로 가는 링크**(가리키는 자리와 형식은 `{{DOC_LINK}}`,
+    레포마다 하나). 의미 문장은 ERD에 쓰지 않는다. 의미는 코드 옆에 있어야 코드와 함께 바뀌고, ERD에 따로 쓴
+    의미는 검증되지 않은 채 낡는다.
+  - 컬럼 표 `컬럼 | 타입 | NULL | 키`. NULL은 `YES`/`NO`, 키는 `PK` · `FK → <테이블>.<컬럼>` · 빈칸. 컬럼 단위
+    의미가 필요하면 마지막에 `의미` 열을 더하되 코드 문서 주석 링크만 넣는다.
   - 인덱스 표 `인덱스 | 컬럼 | UNIQUE | 조건`. 라벨은 「인덱스 라벨」, 컬럼은 순서대로, 조건은 부분 인덱스
     `WHERE` 식 또는 `-`. PK는 컬럼 표의 `키`로 표현하고 인덱스 표에 다시 적지 않는다.
 
@@ -231,6 +234,7 @@ definition의 초기 상태 메모에 **첫 task가 만들 블록의 초안**으
 | `{{SCOPE_DRAFT}}` | README 블록 초안(`migrations`·`checker`·`scope`·`exclude`·`site`·`sql`·`schema-exclude`) | 위 「`README.md`」 절의 예시 블록 |
 | `{{CHECKER_RUN}}` | 체커 실행 명령(초안) | `python3 tools/data-model-check/check.py --json` |
 | `{{CI_MODE}}` | 체커 CI의 머지 차단 여부: `gate` 또는 `report` | 첫 수렴 전 `report`, 세 불변식이 처음 참이 된 뒤 `gate` 권장 |
+| `{{DOC_LINK}}` | ERD `의미` 링크가 가리키는 자리(도메인 타입, 또는 그 테이블을 소유한 모듈)와 형식 | 도메인 타입 정의 파일 상대 링크와 항목명, 예: [`Message`](../../crates/store/src/model.rs) |
 | `{{SIBLING_MODELS}}` | 경계를 맞출 자매 모델 [선택] | `tbm_example-docs-impl` · `tbm_example-comment-necessity` · `tbm_example-pr-manual-approval` |
 | `{{INITIAL_STATE}}` | 등록 시점 현황(스냅샷) | `docs/data-model/` 없음 · 마이그레이션 14개 · 테이블 9개 · `query!` 지점 약 40곳 · 체커 없음 |
 | `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
@@ -375,7 +379,7 @@ printf 'schema=%s;queries=%s;checker=%s\n' "$SCHEMA" "$QUERIES" "$CHECKER"
 - 정합 상태 = **불변식 1 ∧ 불변식 2 ∧ 불변식 3**.
 
 ## 불변식 1 — ERD ↔ 실제 스키마 전단사
-`erd.md`의 테이블·컬럼(타입·NULL)·PK·FK·인덱스 집합 == 마이그레이션을 전부 적용한 결과의 집합(동일성 키는 템플릿 「불변식 1」 표). mermaid 다이어그램의 엔티티 집합·관계 집합도 구조 표의 테이블·FK와 같다. 엔티티의 의미는 코드 문서 주석 링크로만 둔다.
+`erd.md`의 테이블·컬럼(타입·NULL)·PK·FK·인덱스 집합 == 마이그레이션을 전부 적용한 결과의 집합(동일성 키는 템플릿 「불변식 1」 표). mermaid 다이어그램의 엔티티 집합·관계 집합도 구조 표의 테이블·FK와 같다. 엔티티의 의미는 코드 문서 주석 링크({{DOC_LINK}})로만 둔다.
 - 충돌하면 **스키마가 이긴다**: ERD를 고친다. ERD에 맞추려고 마이그레이션을 쓰거나 기존 마이그레이션을 고치지 않는다.
 
 ## 불변식 2 — 쿼리 패턴 카탈로그 ↔ 코드 쿼리 지점 전단사
