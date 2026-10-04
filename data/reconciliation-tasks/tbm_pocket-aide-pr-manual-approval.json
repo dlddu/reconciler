@@ -2,7 +2,7 @@
   {
     "id": "rct_20260929-0001",
     "toBeModelId": "tbm_pocket-aide-pr-manual-approval",
-    "status": "executing",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-29T09:44:05Z",
@@ -16,7 +16,7 @@
       }
     },
     "createdAt": "2026-09-29T09:44:05Z",
-    "updatedAt": "2026-10-04T06:49:01Z",
+    "updatedAt": "2026-10-04T06:50:58Z",
     "stateSummary": {
       "asIs": "관측 2026-09-29T09:46Z · `dlddu/pocket-aide@main` = `82b4a16`(#48, 2026-09-29T03:20:29Z).\n- **as-is 지문**(versionScript 실행값 = claim 기록 값): `contexts=0 judges=0 surface_hits=1 anchors_absent=0` / `judges=e3b0c44298fc1c14;surface=5ad38304b535c298;anchors=5ad38304b535c298` — judges 는 빈 입력의 해시, surface·anchors 는 정책 부재로 `absent` 상수의 해시.\n- **판정기·워크플로**: `.github/workflows/` 6개(backend-docker-push·backend-integration-test·backend-unit-test·ci·ios-test·testflight-upload) 중 `review/` context 를 붙이는 것 0개, `pull_request_target` 트리거 0개. `.github/` 전체 `review/` grep 0 히트.\n- **게이트(R5, `gh api` 조회)**: `rules/branches/main` = `[]`, `rulesets` = `[]`. 단 **classic branch protection 은 존재**한다 — `required_status_checks.contexts=[\"ci-success\"]`(`checks[0].app_id=15368` 로 **앱 고정**), `strict=false`, `enforce_admins=false`, `required_linear_history=true`. `review/manual-approval` 는 required 에 **없다**.\n- **사람 승인 절차(R6)**: 정책 문서가 없어 프로세스 표·수동 status 절차·승인 도구 범위 기재 0.\n- **후보 위험 표면 실재**(모델 초기 메모의 후보, 케이스 아님): `backend/migrations/**` 13파일 · `backend/internal/auth` 2 · `ios/Shared/Sources/PocketAideAuth` 1 · `k8s/` 6. 열린 PR #53(`backend/migrations/0007_todos.{up,down}.sql` 추가)은 마이그레이션 후보 표면을 건드리지만 현재 어떤 수동 승인 게이트도 요구하지 않는다.\n- **열린 PR 캐리어 census**: #49·#51·#52·#53 무접촉, #50(`docs/product/prd-approval-gate.md` — 앱 내부 gatekeeper 기능 PRD)은 diff 에 `review/`·`manual-approval`·`review-policy`·ruleset/required 히트 0 → 이 모델의 캐리어 아님.",
       "toBe": "`docs/review-policy.md` @ `82b4a16`: **부재**(`git rev-parse HEAD:docs/review-policy.md` 실패 → versionScript 값 `absent`). 프로세스 표·수동 승인 케이스 표·```surface```/```anchors``` 블록·의도적 제외·미탐 원장 모두 없음. 모델 정의(`templates/pr-manual-approval.tbm.md` 원칙 P1~P8)가 요구하는 목표는: 정책 문서 + 단일 판정기(`pull_request_target`, base 실행) + `review/manual-approval` 를 앱 비고정 required check 로 요구하는 게이트 + 수동 status 절차.",
@@ -133,6 +133,78 @@
               "log": "워크플로 첫 실행 관측 생략(지침 §1-4: 일부러 PR·빈 커밋 만들지 말 것). 06:50:14Z 기준 workflow review-policy(id 374421380) active, pull_request_target run 0건 — 열린 PR #115·#114·#58·#50 의 마지막 갱신이 전부 머지(06:49:38Z) 이전이라 synchronize 이벤트가 없었다. R5(ruleset default id 24173503 required 에 review/manual-approval 추가)는 레포 밖 설정 — 사람 몫으로 남김, 실행자 미접촉."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "contexts=1 judges=2 surface_hits=54 anchors_absent=0\njudges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3",
+          "checks": [
+            {
+              "name": "to-be 지문(main 2b0368a)",
+              "status": "passed",
+              "detail": "to-be versionScript = d6544dfa72dfac7cadb45f952f44bd8ad36b0484 (absent → 정책 blob, 리뷰 기대값과 동일)."
+            },
+            {
+              "name": "R1 케이스 1:1",
+              "status": "passed",
+              "detail": "docs/review-policy.md 케이스 표 ID {MA1,MA2,MA3,MA4} == judge.py CASES ID {MA1,MA2,MA3,MA4}; 정책 사본에서 MA4→MA5 로 바꾸면 judge rc=2(자기 대조 fail-closed)."
+            },
+            {
+              "name": "R2 신호 단일",
+              "status": "passed",
+              "detail": "as-is 진단 contexts=1 judges=2."
+            },
+            {
+              "name": "R3 원칙(워크플로)",
+              "status": "passed",
+              "detail": "review-policy.yml: on pull_request_target(opened/synchronize/reopened/ready_for_review); actions/checkout@v4 에 ref: 없음(base), persist-credentials false; PR 코드 비실행(경로는 pulls/{n}/files API 데이터만); status 는 judge rc 0 일 때만, rc 1 notice, 그 외 exit 1; changed_files>=3000 fail-closed; permissions contents read·pull-requests read·statuses write. MA4 가 docs/review-policy.md·scripts/review-policy/·.github/workflows/review-policy.yml 세 경로 포함. 픽스처 rc: migrations 1·k8s 1·PocketAideAuth 1·judge 자기경로 1·docs/foo.md 0·빈 입력 2."
+            },
+            {
+              "name": "R4 문서",
+              "status": "passed",
+              "detail": "프로세스 표 7행(context·판정기·워크플로·게이트·사람 승인·마지막·다음 재검토), 케이스 표 MA1~MA4, surface 블록(scope 4·exclude·ere 5줄)·anchors 블록 7줄 존재; surface ≠ malformed."
+            },
+            {
+              "name": "R6 사람 승인 칸",
+              "status": "passed",
+              "detail": "승인자 dlddu, gh api -X POST statuses 수동 명령, 승인 도구 github_commit_status_create 범위 GITHUB_COMMIT_STATUS_CONTEXT_PREFIXES=review/ 기재."
+            },
+            {
+              "name": "O1 앵커",
+              "status": "passed",
+              "detail": "anchors_absent=0."
+            },
+            {
+              "name": "O2 표면 누수",
+              "status": "passed",
+              "detail": "versionScript 사본으로 SURFACE 전수 덤프: 54 (파일,토큰) · 30 파일, 전부 케이스 경로(backend/migrations/·backend/internal/auth/·ios/Shared/Sources/PocketAideAuth/·k8s/) 또는 제외 3대상(backend/internal/db/db.go·ios/Shared/Sources/PocketAideStorage/·backend/internal/oidcmock/) 안 — 누수 0."
+            },
+            {
+              "name": "O3 제외 재개 조건",
+              "status": "passed",
+              "detail": "전부 거짓: iofs.New(migrations.FS 1 · 운영 sql.Open(\"sqlite\" 1파일 · ThisDeviceOnly 합계 2 == kSecAttrAccessible as String 합계 2 · kSecClassGenericPassword 2파일(<3) · 운영 경로 internal/oidcmock import 0."
+            },
+            {
+              "name": "O4 재검토 주기",
+              "status": "passed",
+              "detail": "마지막 2026-10-04 · 다음 2027-01-02 (90일)."
+            },
+            {
+              "name": "O5 미탐 원장",
+              "status": "passed",
+              "detail": "빈 표(헤더만)."
+            },
+            {
+              "name": "자매 원장 무접촉",
+              "status": "passed",
+              "detail": "scripts/comment-policy/check_ledger.py rc=0 (E 행 3 · 미판정 0); judge.py 주석·docstring 0줄."
+            },
+            {
+              "name": "범위 밖 잔여(정보성)",
+              "status": "passed",
+              "detail": "R5 미충족 — ruleset default(id 24173503) required 에 review/manual-approval 미등재, 레포 밖 설정이라 사람 몫(지침 §3). 워크플로 첫 실행은 머지 뒤 PR synchronize 0건이라 미관측(run 0건, 06:50:14Z). 다음 감지 주기가 as-is/to-be 버전 변화를 보고 R5 후속을 판정한다."
+            }
+          ],
+          "verifiedAt": "2026-10-04T06:50:58Z"
         }
       }
     ]
