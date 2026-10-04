@@ -58,7 +58,7 @@ DB를 가진 레포에서 **데이터 모델 문서(`docs/data-model/`)** 가 �
   - 같은 형태를 두 행이 가지면 **귀속 모호**. 형태가 키이므로 행은 형태마다 하나다.
 - **존재 여부에서는 코드가 이긴다.** 미등재 쿼리는 카탈로그에 더하고(같은 형태의 행이 있으면 그 행에 지점을
   더한다), 죽은 지점·죽은 패턴은 카탈로그에서 지운다. 카탈로그에 맞추려고 쿼리를 만들거나 지우지 않는다.
-- **정적으로 형태를 뽑을 수 없는 지점**(동적 `format!` 조립, 런타임에 고르는 테이블·정렬 등)은 「수동 형태」
+- **정적으로 형태를 뽑을 수 없는 지점**(동적 문자열 조립(Rust `format!`, Go 문자열 연결·`fmt.Sprintf`), 런타임에 고르는 테이블·정렬 등)은 「수동 형태」
   표에 지점별로 등재한다. 체커가 추출 불가로 보고한 지점 집합 == 수동 형태 표의 지점 집합(양방향). 수동
   형태도 패턴에 귀속되므로 그 지점은 패턴 행의 호출 지점에도 적힌다. 동적 조립이 형태를 여럿 만들면 형태마다
   한 행을 둔다.
@@ -135,7 +135,7 @@ insert messages | - | - | -
 ```
 docs/data-model/
   README.md          # 형태 정의 · 풀스캔 허용 기준 · 추출 제외 범위 · 체커
-  erd.md             # mermaid erDiagram + 엔티티별 구조 표 (의미는 rustdoc 링크)
+  erd.md             # mermaid erDiagram + 엔티티별 구조 표 (의미는 코드 문서 주석 링크 — Rust면 rustdoc)
   query-patterns.md  # ID | 형태 | 지원 인덱스 또는 허용 사유 | 호출 지점(파일::함수)
 ```
 
@@ -157,8 +157,8 @@ docs/data-model/
    checker: tools/data-model-check
    scope: crates/*/src
    exclude: (^|/)tests?/|/fixtures/
-   site: sqlx::query(_as|_scalar)?(_unchecked)?!?\(
-   sql: \b(SELECT|INSERT|UPDATE|DELETE|WITH|FROM|WHERE|JOIN|ORDER BY|ON CONFLICT|VALUES|SET)\b
+   site: sqlx::query(_as|_scalar)?(::<[^>]*>)?!?\(
+   sql: \b(FROM|JOIN|INTO|DELETE FROM) [a-z_]+\b|\bUPDATE [a-z_]+( +SET\b| *\\?$)|\bWHERE\b|\b(AND|OR) \(?[a-z_.()]+ *(=|<|>|!=|IN |IS |LIKE|BETWEEN)|\bORDER BY\b|\bON CONFLICT\b
    schema-exclude: ^(_sqlx_migrations|sqlite_sequence)$
    ```
    ````
@@ -170,7 +170,7 @@ docs/data-model/
    | `scope` | 쿼리를 찾는 `git ls-files` 경로 목록, 공백 구분 | 합집합 |
    | `exclude` | scope에서 빼는 경로 ERE | `\|`로 합침 |
    | `site` | 쿼리 지점 토큰 ERE. **이 ERE에 걸리는 줄은 체커가 반드시 지점 후보로 본다** | `\|`로 합침 |
-   | `sql` | 쿼리 텍스트 줄 ERE(지문 전용 — SQL 문자열이 바뀌면 버전이 바뀌게) | `\|`로 합침 |
+   | `sql` | 쿼리 텍스트 줄 ERE(지문 전용 — 형태가 바뀌면 버전이 바뀌게). **형태를 싣는 줄만** 잡는다: 테이블(`FROM`·`JOIN`·`INTO`·`UPDATE`·`DELETE FROM` 뒤 식별자), 조건(`WHERE`, `AND`/`OR` 뒤 비교), `ORDER BY`, `ON CONFLICT`. 선택 컬럼·`VALUES`·`SET` 줄은 형태가 아니라 넣지 않는다 — 넣으면 주석의 SQL 단어나 `DELETE /api/…` 같은 HTTP 문구까지 걸려 무관한 트리거가 생긴다 | `\|`로 합침 |
    | `schema-exclude` | 불변식 1에서 빼는 테이블 이름 ERE(체커 전용) | `\|`로 합침 |
 
    제외는 **쿼리가 아닌 것**(테스트·픽스처·생성물·마이그레이션 자체)만 뺀다. 제품 경로의 쿼리를 체커가
@@ -183,10 +183,10 @@ docs/data-model/
   표와 두 벌이 된다). FK 하나 = 관계 하나, 라벨은 FK 컬럼. 카디널리티는 FK에서 기계적으로 정한다: 부모 쪽은
   FK가 NOT NULL이면 `||`, NULL 허용이면 `|o`, 자식 쪽은 FK 컬럼이 UNIQUE면 `o|` 아니면 `o{`.
 - **엔티티** — 테이블마다 `### \`<테이블>\`` 제목과:
-  - `의미:` 한 줄 — 대응 도메인 타입의 **rustdoc으로 가는 링크**. 의미 문장은 ERD에 쓰지 않는다. 의미는 코드
+  - `의미:` 한 줄 — 대응 도메인 타입의 **코드 문서 주석으로 가는 링크**(Rust rustdoc, Go godoc 등 — 언어의 doc 주석 관례). 의미 문장은 ERD에 쓰지 않는다. 의미는 코드
     옆에 있어야 코드와 함께 바뀌고, ERD에 따로 쓴 의미는 검증되지 않은 채 낡는다.
   - 컬럼 표 `컬럼 | 타입 | NULL | 키`. NULL은 `YES`/`NO`, 키는 `PK` · `FK → <테이블>.<컬럼>` · 빈칸. 컬럼 단위
-    의미가 필요하면 마지막에 `의미` 열을 더하되 rustdoc 링크만 넣는다.
+    의미가 필요하면 마지막에 `의미` 열을 더하되 doc 주석 링크만 넣는다.
   - 인덱스 표 `인덱스 | 컬럼 | UNIQUE | 조건`. 라벨은 「인덱스 라벨」, 컬럼은 순서대로, 조건은 부분 인덱스
     `WHERE` 식 또는 `-`. PK는 컬럼 표의 `키`로 표현하고 인덱스 표에 다시 적지 않는다.
 
@@ -210,7 +210,7 @@ docs/data-model/
 |---|---|
 | C1 위치 | 대상 레포 안, README 블록 `checker:` 경로. 실행 명령은 README 「체커」 절. 그 레포의 PR로 고친다. |
 | C2 입력 | README 블록, `docs/data-model/` 세 파일, 마이그레이션, scope − exclude 소스. 범위 선언은 **블록 한 곳**에서만 읽는다(체커 코드에 범위를 따로 하드코딩하지 않는다 — versionScript와 두 벌이 된다). |
-| C3 스키마 관측 | 빈 DB에 마이그레이션을 순서대로 **전부** 적용하고 엔진 카탈로그로 실제 스키마를 읽는다. 마이그레이션 적용이 실패하면 판정 불가. |
+| C3 스키마 관측 | 빈 DB에 마이그레이션을 순서대로 **전부** 적용하고(up/down 쌍이면 up만, 레포의 마이그레이션 도구와 같은 순서로) 엔진 카탈로그로 실제 스키마를 읽는다. 마이그레이션 적용이 실패하면 판정 불가. |
 | C4 지점 추출 | `site` ERE에 걸리는 줄을 모두 지점 후보로 보고 각각을 (지점, 형태, SQL)로 산출하거나 (지점, 추출 불가 사유)로 산출한다. **조용히 건너뛰는 후보는 없다.** 지문(`site`)이 보는 줄과 체커가 보는 줄이 어긋나지 않게 하는 계약이다. |
 | C5 플랜 | 지점 SQL·대표 SQL을 C3의 빈 DB에서 플랜한다. SQLite는 `ANALYZE` 없이 `EXPLAIN QUERY PLAN`. PostgreSQL은 `enable_seqscan = off`로 빈 테이블의 순차 스캔 편향을 없애고, 자리표시자는 일반 플랜으로(16 이상 `EXPLAIN (GENERIC_PLAN)`, 그 아래는 `plan_cache_mode = force_generic_plan` + `PREPARE`/`EXPLAIN EXECUTE`에 NULL). 엔진 버전은 운영 엔진에 맞추고 리포트에 적는다. |
 | C6 출력 | 위반을 불변식·항목별로 사람이 읽는 형태로, `--json`이면 기계 판독형으로 낸다. 종료 코드 **0 정합 · 1 위반 · 2 판정 불가**(엔진 없음, 마이그레이션 실패, 문서·블록 파싱 실패). 판정 불가를 0으로 뭉개지 않는다. |
@@ -233,7 +233,7 @@ definition의 초기 상태 메모에 **첫 task가 만들 블록의 초안**으
 | `{{SCOPE_DRAFT}}` | README 블록 초안(`migrations`·`checker`·`scope`·`exclude`·`site`·`sql`·`schema-exclude`) | 위 「`README.md`」 절의 예시 블록 |
 | `{{CHECKER_RUN}}` | 체커 실행 명령(초안) | `python3 tools/data-model-check/check.py --json` |
 | `{{CI_MODE}}` | 체커 CI의 머지 차단 여부: `gate` 또는 `report` | 첫 수렴 전 `report`, 세 불변식이 처음 참이 된 뒤 `gate` 권장 |
-| `{{DOC_LINK}}` | ERD `의미` 링크 형식(rustdoc) | `[`Message`](../../crates/store/src/model.rs)` — 도메인 타입 정의 파일과 항목명 |
+| `{{DOC_LINK}}` | ERD `의미` 링크 형식(언어의 doc 주석 — Rust rustdoc, Go godoc) | `[`Message`](../../crates/store/src/model.rs)` — 도메인 타입 정의 파일과 항목명 |
 | `{{SIBLING_MODELS}}` | 경계를 맞출 자매 모델 [선택] | `tbm_example-docs-impl` · `tbm_example-comment-necessity` · `tbm_example-pr-manual-approval` |
 | `{{INITIAL_STATE}}` | 등록 시점 현황(스냅샷) | `docs/data-model/` 없음 · 마이그레이션 14개 · 테이블 9개 · `query!` 지점 약 40곳 · 체커 없음 |
 | `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
@@ -355,8 +355,8 @@ printf 'schema=%s;queries=%s;checker=%s\n' "$SCHEMA" "$QUERIES" "$CHECKER"
 - `queries`는 쿼리 **줄**의 지문이라 다음은 보지 못한다: 함수 이름 변경(호출 지점 칸이 낡는다), 다른 파일의
   상수로 조립되는 테이블·컬럼 이름, `site`·`sql` ERE에 걸리지 않는 쿼리 빌더 DSL. 앞의 둘은 체커가 판정할
   때와 CI(C9)에서 잡히고, 마지막은 `site` ERE를 넓히는 대상 레포 PR로 고친다(C4가 그 ERE를 체커와 공유한다).
-- 같은 파일의 무관한 줄이 `sql` ERE에 걸려(예: `SET`이 든 Rust 식별자) 노이즈 트리거가 생길 수 있다. 무해하지만
-  잦으면 블록의 `sql` ERE를 좁힌다 — 이것도 대상 레포 PR로 끝난다.
+- 같은 파일의 무관한 줄이 `sql` ERE에 걸리면 노이즈 트리거가 생긴다. 예시 ERE는 2026-10-04 feature-doc(Rust)·pocket-aide(Go)
+  실측에서 주석 줄 히트 0이었다(SQL 단어를 모두 잡는 ERE는 주석 4~6줄이 걸렸다). 잦으면 블록의 `sql` ERE를 좁힌다 — 대상 레포 PR로 끝난다.
 - 등록 전에 대상 레포에서 두 스크립트를 실제로 돌려 값이 나오는지, 들여쓰기·줄 이동에 흔들리지 않는지,
   SQL 한 글자 변경에 흔들리는지 확인한다(블록이 아직 없으면 `absent` 출력만 확인).
 
@@ -378,7 +378,7 @@ printf 'schema=%s;queries=%s;checker=%s\n' "$SCHEMA" "$QUERIES" "$CHECKER"
 - 정합 상태 = **불변식 1 ∧ 불변식 2 ∧ 불변식 3**.
 
 ## 불변식 1 — ERD ↔ 실제 스키마 전단사
-`erd.md`의 테이블·컬럼(타입·NULL)·PK·FK·인덱스 집합 == 마이그레이션을 전부 적용한 결과의 집합(동일성 키는 템플릿 「불변식 1」 표). mermaid 다이어그램의 엔티티 집합·관계 집합도 구조 표의 테이블·FK와 같다. 엔티티의 의미는 rustdoc 링크({{DOC_LINK}})로만 둔다.
+`erd.md`의 테이블·컬럼(타입·NULL)·PK·FK·인덱스 집합 == 마이그레이션을 전부 적용한 결과의 집합(동일성 키는 템플릿 「불변식 1」 표). mermaid 다이어그램의 엔티티 집합·관계 집합도 구조 표의 테이블·FK와 같다. 엔티티의 의미는 코드 doc 주석 링크({{DOC_LINK}})로만 둔다.
 - 충돌하면 **스키마가 이긴다**: ERD를 고친다. ERD에 맞추려고 마이그레이션을 쓰거나 기존 마이그레이션을 고치지 않는다.
 
 ## 불변식 2 — 쿼리 패턴 카탈로그 ↔ 코드 쿼리 지점 전단사
@@ -431,7 +431,7 @@ printf 'schema=%s;queries=%s;checker=%s\n' "$SCHEMA" "$QUERIES" "$CHECKER"
 - 스키마 설계의 좋고 나쁨(정규화, 네이밍)은 보지 않는다. 이 모델은 지도가 땅과 같은지만 본다.
 - 인덱스 추가 마이그레이션의 **운영 적용 방식**(대용량 테이블의 잠금, PostgreSQL `CREATE INDEX CONCURRENTLY`와 트랜잭션 밖 실행)은 판정 대상이 아니라 그 PR의 계획에서 다룬다.
 - <!-- [선택] --> 제품 문서 ↔ 구현 정합(`tbm_{{SLUG}}-docs-impl`)의 to-be는 `docs/` 트리라 `docs/data-model/` 변경에도 트리거되지만, 데이터 모델 문서의 판정은 이 모델이 전담한다. <!-- -->
-- <!-- [선택] --> ERD가 의미를 위임한 rustdoc(도메인 타입 doc 주석)은 주석 필요성 모델(`tbm_{{SLUG}}-comment-necessity`)에서 필요 사유를 갖는다 — 지우면 ERD의 의미 링크가 빈 곳을 가리킨다. <!-- -->
+- <!-- [선택] --> ERD가 의미를 위임한 도메인 타입 doc 주석은 주석 필요성 모델(`tbm_{{SLUG}}-comment-necessity`)에서 필요 사유를 갖는다 — 지우면 ERD의 의미 링크가 빈 곳을 가리킨다. <!-- -->
 - <!-- [선택] --> 이 모델이 내는 인덱스 추가 마이그레이션 PR은 PR 수동 승인 모델(`tbm_{{SLUG}}-pr-manual-approval`)의 마이그레이션 케이스에 걸릴 수 있다. 그 경우 리뷰가 `review.manualApproval`을 남기고 사람 승인 뒤에 실행된다 — 정상 경로다. <!-- -->
 - <!-- 지침: 노이즈 비고 — queries 지문에 걸리는 무관한 줄, README 서술 수정이 to-be를 바꾸는 것 등 — 을 대상에 맞게 1~2줄 작성 -->
 ```

@@ -130,7 +130,7 @@ data plane이 스스로 수렴시킬 수 있다. 판정기 헤더가 정책을 �
 (README의 `data-model-scope`)을 읽는 것이 고정부다 — 추출 규칙이 낡았을 때 data plane이 대상 레포 PR 하나로
 수렴시킬 수 있어야 하고, 범위 선언이 두 벌이면 지문과 판정이 서로 다른 코드를 본다. 그래서 이 유형의 versionScript에는
 슬롯이 없다. 경계: `docs/data-model/`은 docs-impl의 to-be(`docs/` 트리)에도 들지만 판정은 이 유형이 전담하고, ERD가
-의미를 위임한 rustdoc은 comment-necessity에서 필요 사유를 가지며, 이 유형이 내는 인덱스 마이그레이션 PR은
+의미를 위임한 doc 주석(rustdoc·godoc)은 comment-necessity에서 필요 사유를 가지며, 이 유형이 내는 인덱스 마이그레이션 PR은
 pr-manual-approval의 마이그레이션 케이스에 걸려 사람 승인을 거칠 수 있다(정상 경로). 운영 성능·정렬 지원·ERD 밖
 스키마 속성(기본값·CHECK·FK 동작·트리거·뷰)은 범위 밖이며 넣으려면 템플릿 개정이다.
 
