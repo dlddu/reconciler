@@ -2099,8 +2099,8 @@
         "code": "#!/usr/bin/env bash\n# to-be = 데이터 모델 문서(docs/data-model) 트리 해시. 디렉터리가 없으면 'absent'.\n# 런타임이 dataSource.repository@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse --verify --quiet \"HEAD:docs/data-model\" || echo \"absent\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "absent",
-      "lastObservedAt": "2026-10-04T04:12:08Z"
+      "lastObservedVersion": "d9aed43fb6cce3629aea158f958068183fba23ce",
+      "lastObservedAt": "2026-10-04T05:11:50Z"
     },
     "asIs": {
       "dataSource": {
@@ -2113,8 +2113,8 @@
         "code": "#!/usr/bin/env bash\n# as-is = 데이터 모델의 실재 지문. schema · queries · checker 세 성분의 라벨 조합.\n# 경로·범위는 docs/data-model/README.md 의 ```data-model-scope 블록에서 읽는다(체커와 같은 선언).\n# git 체크아웃만 쓴다 — 네트워크·빌드·체커 실행 없음. 블록의 ERE 는 grep 에만 쓰이고 셸로 평가되지 않는다.\n# 런타임이 dataSource.repository@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nexport LC_ALL=C\nREADME='docs/data-model/README.md'\nh() { sha256sum | cut -c1-16; }\n\nB=$(git show \"HEAD:$README\" 2>/dev/null | awk '\n  !f && ($0 == \"```data-model-scope\" || index($0, \"```data-model-scope \") == 1) { f = 1; next }\n  f && /^```/ { f = 0; next }\n  f && NF { print }' || true)\nif [ -z \"$B\" ]; then\n  echo \"scope=absent\"\n  echo \"schema=absent;queries=absent;checker=absent\"\n  exit 0\nfi\n\nval() { printf '%s\\n' \"$B\" | sed -n \"s/^$1:[[:space:]]*//p\"; }\nere_ok() {  # 비어 있지 않고 grep -E 가 받아들이는 ERE 인가(rc 2 = 문법 오류)\n  local rc=0\n  [ -n \"$1\" ] || return 1\n  printf 'x\\n' | grep -Eq -- \"$1\" 2>/dev/null || rc=$?\n  [ \"$rc\" -le 1 ]\n}\nrev() { if [ -n \"$1\" ]; then git rev-parse --verify --quiet \"HEAD:$1\" || echo absent; else echo malformed; fi; }\n\nMIG=$(val migrations | head -n1)\nCHK=$(val checker | head -n1)\nSCOPE=$(val scope | tr '\\n' ' ')\nEXCL=$(val exclude | paste -sd'|' -); EXCL=${EXCL:-'^$'}\nSITE=$(val site | paste -sd'|' -)\nSQL=$(val sql | paste -sd'|' -)\n\nSCHEMA=$(rev \"$MIG\")\nCHECKER=$(rev \"$CHK\")\n\nif [ -z \"${SCOPE// /}\" ] || ! ere_ok \"$SITE\" || ! ere_ok \"$SQL\" || ! ere_ok \"$EXCL\"; then\n  QUERIES=malformed; Q=''\nelse\n  # (파일, 줄) — 줄 번호를 빼고 공백을 1칸으로 접는다. 같은 줄이 여러 번 나오면 그 수만큼 남긴다(sort, -u 아님).\n  # shellcheck disable=SC2086\n  Q=$({ git ls-files -- $SCOPE | grep -vE -- \"$EXCL\" | sort \\\n        | xargs -r grep -IEH -- \"$SITE|$SQL\" || true; } \\\n      | sed -E 's/[[:space:]]+/ /g; s/^([^:]*): /\\1:/; s/ $//' | sort)\n  QUERIES=$(printf '%s' \"$Q\" | h)\nfi\n\ncase \"$SCHEMA\" in absent|malformed) NMIG=0 ;; *) NMIG=$(git ls-tree -r --name-only \"HEAD:$MIG\" | grep -c . || true) ;; esac\ncase \"$QUERIES\" in malformed) NSITE=0 ;; *) NSITE=$(printf '%s\\n' \"$Q\" | grep -cE -- \"$SITE\" || true) ;; esac\ncase \"$CHECKER\" in absent|malformed) CS=$CHECKER ;; *) CS=present ;; esac\necho \"migrations=$NMIG site_lines=$NSITE query_lines=$(printf '%s' \"$Q\" | grep -c . || true) checker=$CS\"\nprintf 'schema=%s;queries=%s;checker=%s\\n' \"$SCHEMA\" \"$QUERIES\" \"$CHECKER\"\n",
         "timeoutSeconds": 120
       },
-      "lastObservedVersion": "scope=absent\nschema=absent;queries=absent;checker=absent",
-      "lastObservedAt": "2026-10-04T04:12:08Z"
+      "lastObservedVersion": "migrations=19 site_lines=139 query_lines=383 checker=present\nschema=3764df890a176c8f187abb558a7a4f65cdb1aa2e;queries=d44e2edc317cb868;checker=928f270ed2b4b2e46023c018834857f3c119b630",
+      "lastObservedAt": "2026-10-04T05:11:50Z"
     }
   },
   {
