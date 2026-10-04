@@ -1725,8 +1725,8 @@
         "code": "#!/usr/bin/env bash\n# to-be = 시나리오 집합(docs/product/test-*.md) + 예외/매핑 등재(docs/product/doc-tracker 최신 월 파일의 「## e2e 매핑」 섹션).\n# 이 둘 밖의 문서(PRD·가치·목업)·코드 변경은 무시된다.\n# 파일이 새로 추가돼도 정규식이 자동 포함한다. ls-tree 출력은 경로 정렬이라 결정적이다.\n# 런타임이 dataSource.repository(dlddu/pocket-aide)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\n# ── doc-tracker 등재 섹션 해석 (templates/README.md 「doc-tracker 경로 해석」 공통 조각) ──\n# tracker = 폴더 아래 월별 파일. 가장 최근 YYYY-MM.md 에서 등재 섹션만 잘라 해시한다.\n# 등재 섹션은 product-doc-engineer 규약상 롤오버 때 바이트 그대로 이월되므로, 달이 바뀌어도\n# 섹션 내용이 같으면 해시가 같다(월 파일 경로는 버전에 넣지 않는다).\ntracker_month() {  # $1 = tracker 폴더 → 최신 월 파일 경로(없으면 빈 출력)\n  local f\n  f=\"$(git ls-tree --name-only \"HEAD:$1\" 2>/dev/null | grep -E '^[0-9]{4}-[0-9]{2}\\.md$' | LC_ALL=C sort | tail -n1 || true)\"\n  if [ -n \"$f\" ]; then printf '%s/%s\\n' \"$1\" \"$f\"; fi\n}\ntracker_section() {  # $1 = 파일 경로, $2 = 제목 접두(예: '## e2e 매핑') → 섹션 본문\n  # 섹션 = 제목 줄부터 같은 레벨 이상(# 개수 ≤)의 다음 제목 직전까지. 코드 블록 안의 # 줄은 제목이 아니다.\n  git show \"HEAD:$1\" 2>/dev/null | awk -v t=\"$2\" '\n    /^(```|~~~)/ { fence = !fence }\n    function lvl(s) { match(s, /^#+/); return RLENGTH }\n    !f && !fence && index($0, t) == 1 { f = 1; L = lvl($0); print; next }\n    f && !fence && /^#+ / && lvl($0) <= L { exit }\n    f { print }' || true\n}\ntracker_registry_hash() {  # $1 = tracker 폴더, $2 = 등재 섹션 제목 접두 → sha256 | absent\n  local m sec\n  m=\"$(tracker_month \"$1\")\"\n  if [ -z \"$m\" ]; then echo absent; return; fi\n  sec=\"$(tracker_section \"$m\" \"$2\")\"\n  if [ -z \"$sec\" ]; then echo absent; return; fi\n  printf '%s' \"$sec\" | sha256sum | cut -d' ' -f1\n}\n# ── /doc-tracker 등재 섹션 해석 ──\n# 등록 시점 테스트 문서는 0개다. 선택이 비는 것이 유효한 현재 상태이므로 grep 실패로 스크립트를 죽이지 않고\n# 'absent'로 관측한다(빈 입력 sha256 상수로 뭉개지 않는다). 첫 문서가 생기면 absent → 해시로 바뀌어 감지된다.\n# 정규식은 경로 필드 앞 탭에 앵커해 docs/product/ 최상위만 고른다. pathspec 글롭은 쓰지 않는다(ls-tree는 글롭을 하지 않는다).\nsel=\"$(git ls-tree -r HEAD -- docs/product | { grep -E '[[:blank:]]docs/product/([a-z0-9-]+-)?test-[a-z0-9-]+\\.md$' || true; })\"\nif [ -z \"$sel\" ]; then s=absent; else s=\"$(printf '%s\\n' \"$sel\" | sha256sum | cut -d' ' -f1)\"; fi\nt=\"$(tracker_registry_hash 'docs/product/doc-tracker' '## e2e 매핑')\"\nprintf 'sc:%s reg:%s\\n' \"$s\" \"$t\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "sc:a84a509613f5a6b4f263caaa71c1ee29b168049a1944ebe01ea9a7282897a17a reg:47729423a31e3ec643cd67280e06750623ab12960ead8f6ce5de08d83afa7de6",
-      "lastObservedAt": "2026-10-04T21:23:44Z"
+      "lastObservedVersion": "sc:a84a509613f5a6b4f263caaa71c1ee29b168049a1944ebe01ea9a7282897a17a reg:39933b2bbc5f9ec282366f299a58e4e7d65736a9cbba7968338dad4b7aa6dd47",
+      "lastObservedAt": "2026-10-04T23:13:36Z"
     },
     "asIs": {
       "dataSource": {
@@ -1740,8 +1740,8 @@
         "code": "#!/usr/bin/env bash\n# as-is = E2E 테스트 구현. ios/PocketAideTests/ 하위 트리 해시만 사용 → 그 밖 변경은 무시된다.\n# 런타임이 dataSource.repository(dlddu/pocket-aide)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\ngit rev-parse \"HEAD:ios/PocketAideTests\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "fa57937a5f511087e65aa1e24632fc744d568bdc",
-      "lastObservedAt": "2026-10-04T21:23:44Z"
+      "lastObservedVersion": "adfc04fb899c53f3a73f7c1d711c37a51d44c3cc",
+      "lastObservedAt": "2026-10-04T23:13:36Z"
     }
   },
   {
