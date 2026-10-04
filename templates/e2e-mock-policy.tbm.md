@@ -15,25 +15,24 @@
 
 대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다.
 
-| 슬롯 | 의미 | 예 (kubernetes-dashboard) | 예 (dear-baby) |
-|---|---|---|---|
-| `{{REPO}}` | owner/repo | `dlddu/kubernetes-dashboard` | `dlddu/dear-baby` |
-| `{{SLUG}}` | id·이름용 소문자 레포명 | `kubernetes-dashboard` | `dear-baby` |
-| `{{REAL_BASELINE}}` | "실제로 구동한다"의 기준선(실환경 하네스) | kind 실클러스터 + 실 fixture | 실 백엔드·Postgres·Redis·MinIO + `reset-user`/`seed-diary` 시드 |
-| `{{MOCK_KINDS}}` | 이 레포에서 "모킹"으로 세는 것 | Playwright 네트워크 인터셉트(`page.route` 계열) | 빌드타임 E2E 플래그, fixture 구현체, 외부 서비스 mock 서버 |
-| `{{POLICY_SSOT}}` | 정책·허용목록의 위치 (파일 또는 파일 내 섹션) | `docs/e2e-mocking-policy.md` | `docs/doc-tracker/` 최신 월 파일의 "외부 호출 모킹 경계 레지스트리" 섹션 |
-| `{{CATEGORIES}}` | 허용 예외 카테고리 체계 | `ERR`·`LAT`·`ABS`·`DES` 코드 | 외부 호출 경계 ID `MB-N` |
-| `{{FORBIDDEN}}` | 명시적 불허 | 데이터 모킹, 플레이키 회피, 백엔드 미구현 우회 | 〃 (대상에 맞게) |
-| `{{ANNOTATION}}` | 코드 쪽 표기 규약 | `// mock-exception: <CODE> — <사유>` | `// mock-exception: MB-N — <사유>` |
-| `{{MOCK_SCOPE}}` | as-is 스캔 범위(경로 목록) | `e2e` | `app backend worker e2e scripts .github` |
-| `{{MOCK_PATTERN}}` | 모킹 지점 탐지 ERE | `\.route\(`·`route\.fulfill\(` 등 | `EXPO_PUBLIC_E2E_[A-Z0-9_]+` 등 |
-| `{{SCOPE_EXCLUDE}}` | 스캔 제외(단위 테스트 등) | — | `__tests__/`, `*.test.ts`, `*_test.go` |
-| `{{ALTERNATIVES}}` | 모킹 대신 권장하는 실환경 수단 | fixture·전용 namespace | seed CLI·전용 테스트 계정·docker-compose 의존성 |
-| `{{OUT_OF_SCOPE}}` | 이 모델의 대상이 아닌 모킹 | 프론트/Go 단위 테스트 | 앱·백엔드 단위 테스트 |
-| `{{SIBLING_MODEL}}` | 중복 트리거를 피할 자매 모델 [선택] | `tbm_kubernetes-dashboard-ac-e2e` | `tbm_dear-baby-ac-e2e-1to1` |
-| `{{BLOCKER_LEDGER}}` | 차단 요인 원장의 위치(정책 문서 내 표·마커). **없으면 「아직 없음 — 첫 원인이 생기는 시점에 만든다」** | 아직 없음 | 아직 없음 |
-| `{{INITIAL_STATE}}` | 등록 시점 현황(등재 수 vs 실측 지점 수, 미등재·고아 예시) | 정책 문서 부재, 인터셉트 83줄 | 경계 6건 등재, seam 32건 실측 |
-| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` | 〃 |
+| 슬롯 | 의미 |
+|---|---|
+| `{{REPO}}` | owner/repo |
+| `{{SLUG}}` | id·이름용 소문자 레포명 |
+| `{{REAL_BASELINE}}` | "실제로 구동한다"의 기준선(실환경 하네스) |
+| `{{MOCK_KINDS}}` | 이 레포에서 "모킹"으로 세는 것 |
+| `{{POLICY_SSOT}}` | 정책·허용목록의 위치 (파일 또는 파일 내 섹션) |
+| `{{CATEGORIES}}` | 허용 예외 카테고리 체계 |
+| `{{FORBIDDEN}}` | 명시적 불허 |
+| `{{ANNOTATION}}` | 코드 쪽 표기 규약 |
+| `{{MOCK_SCOPE}}` | as-is 스캔 범위(경로 목록) |
+| `{{MOCK_PATTERN}}` | 모킹 지점 탐지 ERE |
+| `{{SCOPE_EXCLUDE}}` | 스캔 제외(단위 테스트 등) |
+| `{{ALTERNATIVES}}` | 모킹 대신 권장하는 실환경 수단 |
+| `{{OUT_OF_SCOPE}}` | 이 모델의 대상이 아닌 모킹 |
+| `{{SIBLING_MODEL}}` | 중복 트리거를 피할 자매 모델 [선택] |
+| `{{BLOCKER_LEDGER}}` | 차단 요인 원장의 위치(정책 문서 내 표·마커). **없으면 「아직 없음 — 첫 원인이 생기는 시점에 만든다」** |
+| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) |
 
 ## 모델 JSON 골격
 
@@ -225,9 +224,6 @@ HITS=$({ git ls-files -- {{MOCK_SCOPE}} | grep -vE '{{SCOPE_EXCLUDE}}' | sort \
 - **to-be** = {{POLICY_SSOT}}의 지문. 없으면 `absent`. 정책·허용목록이 바뀔 때만 변한다.
 - **차단 요인**은 별도 소스가 없다 — 원장({{BLOCKER_LEDGER}})이 to-be 슬라이스 **안**에 있으므로 행 변화가 to-be 버전으로 잡힌다. 불변식 2는 추적이 아니라 판정만 요구한다.
 - **as-is** = {{MOCK_SCOPE}}에서 모킹 지점만 추출·정규화·정렬한 sha256 지문. 트리 해시를 쓰지 않으므로 무관한 변경에는 반응하지 않고<!-- [선택] --> (자매 모델 `{{SIBLING_MODEL}}`과의 중복 트리거 회피)<!-- --> 모킹이 추가·삭제되거나 대상 패턴이 바뀔 때만 변한다.
-
-## 초기 상태 메모 (등록 시점 {{NOW_ISO}})
-{{INITIAL_STATE}} <!-- 지침: 등재 수 vs 실측 지점 수, 미등재·고아의 구체 예를 남긴다. 차단 요인은 원장 유무와 행 수, 그리고 B1(다른 모델이 넘긴 인계) 실측 결과를 반드시 포함한다 — 원장이 없으면 "차단 요인 원장 없음 · B1 위반 N건"으로 적는다. 격차가 크면 "첫 task는 (1) 정책 문서 정비 (2) 기존 지점의 카테고리 판정 → 등재 또는 제거를 다루게 된다 — 큰 초기 격차는 예상된 것"을 포함 -->
 
 ## 범위 밖 / 비고
 - {{OUT_OF_SCOPE}}의 모킹은 대상이 아니다. 그 층위에서는 모킹이 정상이다.

@@ -153,13 +153,13 @@ docs/data-model/
 
    ````text
    ```data-model-scope
-   migrations: migrations
-   checker: tools/data-model-check
-   scope: crates/*/src
-   exclude: (^|/)tests?/|/fixtures/
-   site: sqlx::query(_as|_scalar)?(::<[^>]*>)?!?\(
-   sql: \b(FROM|JOIN|INTO|DELETE FROM) [a-z_]+\b|\bUPDATE [a-z_]+( +SET\b| *\\?$)|\bWHERE\b|\b(AND|OR) \(?[a-z_.()]+ *(=|<|>|!=|IN |IS |LIKE|BETWEEN)|\bORDER BY\b|\bON CONFLICT\b
-   schema-exclude: ^(_sqlx_migrations|sqlite_sequence)$
+   migrations: <마이그레이션 디렉터리>
+   checker: <체커 경로>
+   scope: <경로> <경로> …
+   exclude: <ERE>
+   site: <ERE>
+   sql: <ERE>
+   schema-exclude: <ERE>
    ```
    ````
 
@@ -222,22 +222,19 @@ docs/data-model/
 ## 슬롯 표
 
 대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다. versionScript에는 슬롯이
-**없다** — 두 스크립트는 고정 경로 `docs/data-model`과 README 블록만 읽는다. 아래 슬롯 중 블록에 들어갈 값은
-definition의 초기 상태 메모에 **첫 task가 만들 블록의 초안**으로 남긴다.
+**없다** — 두 스크립트는 고정 경로 `docs/data-model`과 README 블록만 읽는다.
 
-| 슬롯 | 의미 | 예 (가상의 Rust · sqlx · SQLite 레포) |
-|---|---|---|
-| `{{REPO}}` | owner/repo | `dlddu/example` |
-| `{{SLUG}}` | id·이름용 소문자 레포명 | `example` |
-| `{{DB_ENGINE}}` | 운영 DB 엔진과 버전 | SQLite 3.45 (`libsqlite3-sys` bundled) |
-| `{{QUERY_LAYER}}` | 쿼리를 내는 코드 레이어와 정적 추출의 단서·장애물 | `sqlx::query!`·`query_as!` 매크로(SQL 리터럴), 목록 필터를 `format!`으로 조립하는 지점 있음 |
-| `{{SCOPE_DRAFT}}` | README 블록 초안(`migrations`·`checker`·`scope`·`exclude`·`site`·`sql`·`schema-exclude`) | 위 「`README.md`」 절의 예시 블록 |
-| `{{CHECKER_RUN}}` | 체커 실행 명령(초안) | `python3 tools/data-model-check/check.py --json` |
-| `{{CI_MODE}}` | 체커 CI의 머지 차단 여부: `gate` 또는 `report` | 첫 수렴 전 `report`, 세 불변식이 처음 참이 된 뒤 `gate` 권장 |
-| `{{DOC_LINK}}` | ERD `의미` 링크가 가리키는 자리(도메인 타입, 또는 그 테이블을 소유한 모듈)와 형식 | `` [`<항목>`](<erd.md 기준 상대 경로>) `` — 항목은 도메인 타입 또는 모듈, 경로는 그 문서 주석이 있는 소스 파일 |
-| `{{SIBLING_MODELS}}` | 경계를 맞출 자매 모델 [선택] | `tbm_example-docs-impl` · `tbm_example-comment-necessity` · `tbm_example-pr-manual-approval` |
-| `{{INITIAL_STATE}}` | 등록 시점 현황(스냅샷) | `docs/data-model/` 없음 · 마이그레이션 14개 · 테이블 9개 · `query!` 지점 약 40곳 · 체커 없음 |
-| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
+| 슬롯 | 의미 |
+|---|---|
+| `{{REPO}}` | owner/repo |
+| `{{SLUG}}` | id·이름용 소문자 레포명 |
+| `{{DB_ENGINE}}` | 운영 DB 엔진과 버전 |
+| `{{QUERY_LAYER}}` | 쿼리를 내는 코드 레이어와 정적 추출의 단서·장애물 |
+| `{{CHECKER_RUN}}` | 체커 실행 명령(초안) |
+| `{{CI_MODE}}` | 체커 CI의 머지 차단 여부: `gate` 또는 `report` |
+| `{{DOC_LINK}}` | ERD `의미` 링크가 가리키는 자리(도메인 타입, 또는 그 테이블을 소유한 모듈)와 형식 |
+| `{{SIBLING_MODELS}}` | 경계를 맞출 자매 모델 [선택] |
+| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) |
 
 ## 모델 JSON 골격
 
@@ -356,8 +353,7 @@ printf 'schema=%s;queries=%s;checker=%s\n' "$SCHEMA" "$QUERIES" "$CHECKER"
 - `queries`는 쿼리 **줄**의 지문이라 다음은 보지 못한다: 함수 이름 변경(호출 지점 칸이 낡는다), 다른 파일의
   상수로 조립되는 테이블·컬럼 이름, `site`·`sql` ERE에 걸리지 않는 쿼리 빌더 DSL. 앞의 둘은 체커가 판정할
   때와 CI(C9)에서 잡히고, 마지막은 `site` ERE를 넓히는 대상 레포 PR로 고친다(C4가 그 ERE를 체커와 공유한다).
-- 같은 파일의 무관한 줄이 `sql` ERE에 걸리면 노이즈 트리거가 생긴다. 예시 ERE는 2026-10-04 feature-doc(Rust)·pocket-aide(Go)
-  실측에서 주석 줄 히트 0이었다(SQL 단어를 모두 잡는 ERE는 주석 4~6줄이 걸렸다). 잦으면 블록의 `sql` ERE를 좁힌다 — 대상 레포 PR로 끝난다.
+- 같은 파일의 무관한 줄이 `sql` ERE에 걸리면 노이즈 트리거가 생긴다. 잦으면 블록의 `sql` ERE를 좁힌다 — 대상 레포 PR로 끝난다.
 - 등록 전에 대상 레포에서 두 스크립트를 실제로 돌려 값이 나오는지, 들여쓰기·줄 이동에 흔들리지 않는지,
   SQL 한 글자 변경에 흔들리는지 확인한다(블록이 아직 없으면 `absent` 출력만 확인).
 
@@ -418,12 +414,6 @@ printf 'schema=%s;queries=%s;checker=%s\n' "$SCHEMA" "$QUERIES" "$CHECKER"
 - **to-be** = `docs/data-model` 트리 해시. 디렉터리가 없으면 `absent`.
 - **as-is** = `schema=…;queries=…;checker=…`. schema는 마이그레이션 디렉터리 트리 해시, queries는 scope − exclude에서 `site`·`sql` ERE에 걸리는 줄의 (파일, 정규화한 줄) sha256, checker는 체커 경로의 해시. 경로·범위는 README `data-model-scope` 블록에서 읽고, 블록이 없으면 세 성분 모두 `absent`, 깨지면 그 성분이 `malformed`.
 - 두 스크립트 모두 git 체크아웃만 쓴다. 판정(체커 실행·쿼리 플랜)은 감지 단계에서 한다.
-
-## 초기 상태 메모 (등록 시점 {{NOW_ISO}})
-{{INITIAL_STATE}} 이 문단의 숫자는 **스냅샷일 뿐 판정 기준이 아니다**.
-첫 task가 만들 `data-model-scope` 블록 초안:
-{{SCOPE_DRAFT}}
-<!-- 지침: docs/data-model/ 유무, 마이그레이션 디렉터리와 개수, 테이블 수, 쿼리 레이어와 동적 조립 지점의 예, 체커·CI 유무, 등록 전 as-is 진단 줄을 남긴다. 문서가 없으면 "첫 task는 판정 슬라이스 (1)부터 시작한다 — 큰 초기 격차는 예상된 것"을 포함 -->
 
 ## 범위 밖 / 비고
 - **운영 성능**은 보지 않는다. 빈 DB 플랜은 인덱스가 그 형태를 **지원할 수 있는가**를 묻는다. 운영 통계에서 플래너가 실제로 고르는 플랜, 쿼리 지연, 인덱스 크기·쓰기 비용은 범위 밖이다.
