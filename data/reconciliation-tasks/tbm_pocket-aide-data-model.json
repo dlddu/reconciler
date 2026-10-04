@@ -16,7 +16,7 @@
       }
     },
     "createdAt": "2026-10-04T04:16:01Z",
-    "updatedAt": "2026-10-04T04:19:01Z",
+    "updatedAt": "2026-10-04T04:31:13Z",
     "stateSummary": {
       "asIs": "관측 2026-10-04T04:16Z · `dlddu/pocket-aide` main `3d0b0d5`.\n- as-is 지문: `scope=absent` / `schema=absent;queries=absent;checker=absent` — `docs/data-model/README.md` 와 `data-model-scope` 블록이 없어 세 성분 모두 absent.\n- 체커 `backend/cmd/datamodelcheck` 없음(`backend/cmd` = `oidcmock`·`server` 뿐). 레포 전체에서 `datamodelcheck`·`data-model` 참조 0.\n- 마이그레이션 up 10개(`backend/migrations`). 빈 SQLite(python sqlite3 3.45.1 — 운영 엔진 modernc 아님, 스냅샷 계수용)에 전부 적용: 테이블 12 · 인덱스 15(autoindex 4) · FK 11 — 등록 시점 메모와 일치.\n- 초안 블록의 scope−exclude 에서 `site` ERE 히트 46줄 — 메모와 일치.",
       "toBe": "관측 2026-10-04T04:16Z · main `3d0b0d5`: `docs/data-model` 디렉터리 없음 → to-be 지문 `absent`. ERD(`erd.md`)·쿼리 패턴 카탈로그·수동 형태 표·미사용 인덱스 표·README 판정 규칙 모두 부재.\n목표(정의): ERD ↔ 마이그레이션 적용 스키마 전단사(불변식 1) ∧ 카탈로그 ↔ 코드 쿼리 지점 형태 전단사(불변식 2) ∧ 지원 칸 ↔ 빈 DB 쿼리 플랜(불변식 3), 판정은 레포 체커 `cd backend && go run ./cmd/datamodelcheck --json`.",
@@ -26,6 +26,47 @@
     "assessment": {
       "reason": "신규 등록 모델(2026-10-04T04:09Z)의 첫 감지 — baseline null. 체커·`docs/data-model/` 부재 = 정의 판정 절차 3의 gap 자체이며 불변식 1~3 전부 위반(테이블 12·인덱스 15·FK 11·site 46줄 미문서화, 등록 메모 재현). 소관 census: pocket-aide 열린 PR 3건(#85 scenario-e2e, #58 e2e-mock-policy, #50 PRD-12 docs) 모두 데이터 모델 무관, 레포 내 `data-model`/`datamodelcheck` 참조 0, 이 모델의 다른 열린 task 0 ⇒ 캐리어 없음. 정의의 「판정 슬라이스」대로 planner 는 (1) README·`data-model-scope` 블록(정의 초안)·체커 골격(`backend/cmd/datamodelcheck`, modernc 엔진, CI 모드 report)과 ERD(불변식 1, store.go godoc 링크 포함)부터 가져간다. (2) 카탈로그·수동 형태(todos `+tbl+` 5곳·scratchpad 변수 SQL·notificationhistory prepare·routines querier)와 (3) 지원 칸·미사용 인덱스는 후속 감지가 잇는다.",
       "assessedAt": "2026-10-04T04:16:38Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "판정 슬라이스 (1) — `docs/data-model/README.md`(형태 정의·풀스캔 허용 기준 빈 표·`data-model-scope` 블록(정의 초안 그대로)·체커 절) + 체커 골격 `backend/cmd/datamodelcheck`(블록만 읽고 빈 임시 DB 에 golang-migrate·modernc 로 up 전부 적용 → PRAGMA 카탈로그로 불변식 1 판정, `--json`·종료 코드 0/1/2·기대 행 출력·정렬) + 체커 기대 행으로 생성한 `erd.md`(관계 11·테이블 12, 의미=godoc 링크) + 링크가 가리킬 godoc 첫 문장 4줄 + CI `data-model` report 모드를 PR #104 하나로 착지시킨다. 왜 이 경로: 정의의 판정 슬라이스가 순서를 고정했고(불변식 3은 2의 카탈로그 전제), 체커가 대상 레포에 있어야 이후 슬라이스가 PR 하나로 수렴한다. ERD 를 손으로 쓰지 않고 체커 출력으로 만들어 「ERD↔체커」 두 벌 해석을 없앴다. 불변식 2·3 은 카탈로그가 없는 동안 「카탈로그 없음」 위반 + site 후보 46 을 정직하게 보고(exit 1)하고, 카탈로그가 생겼는데 형태 추출이 없으면 exit 2 — 판정 불가를 0 으로 뭉개지 않는다. **완료 기준(이 시도의 범위)**: PR #104 가 main 에 squash 착지하고, 착지 커밋의 main 체크아웃에서 ⑴ `cd backend && go run ./cmd/datamodelcheck --json` 의 `invariants.1.status == \"ok\"` · `exit_code == 1` · `undecidable == []` · `sites` 46 · `schema` = 테이블 12/인덱스(PK 제외) 14/FK 11, ⑵ as-is 지문 진단 줄 `migrations=21 site_lines=46 query_lines=117 checker=present`, ⑶ to-be ≠ `absent`, ⑷ `python3 scripts/comment-policy/check_ledger.py` rc=0. **범위 밖**: 불변식 2(카탈로그·수동 형태·C4 형태 추출) · 불변식 3(지원 칸·미사용 인덱스·C5 플랜·인덱스 마이그레이션·CI gate 전환) — 착지로 버전이 바뀌면 재감지가 슬라이스 (2)로 잇는다. 새 godoc 4줄의 필요성 판정은 comment-necessity 소관(원장 `—` 행).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "사전 조건 재실측: PR #104 head 가 `807738d`(또는 이 계획 이후 리베이스 head)인지, `mergeStateStatus`, 열린 자매 PR(#58·#85·#50 등)과 `merge-tree` 충돌 0, main 에 그 사이 `backend/migrations/` 추가나 `docs/data-model/` 생성이 없는지 확인",
+              "expectedOutcome": "충돌 0 · main 의 마이그레이션 파일 목록이 0001~0010 그대로(아니면 지침의 정지 규칙)"
+            },
+            {
+              "seq": 2,
+              "action": "PR #104 의 필수 status `ci-success` 와 비필수 `data-model check (report)` · `comment-policy ledger` 결과 확인(초록이 아니면 지침의 판별 순서대로 원인 판정)",
+              "expectedOutcome": "ci-success success · data-model check success(경고 1건: 위반 있음 — report 모드) · comment-policy ledger success"
+            },
+            {
+              "seq": 3,
+              "action": "PR #104 를 squash merge(브랜치 삭제)",
+              "expectedOutcome": "main 에 착지 커밋 1개, 변경 파일 12개"
+            },
+            {
+              "seq": 4,
+              "action": "착지 커밋 main 체크아웃에서 `cd backend && go run ./cmd/datamodelcheck --json` 실행",
+              "expectedOutcome": "exit 1 · invariants.1.status=ok · invariants.2/3.status=violated(catalog-missing) · undecidable=[] · sites 46 · schema 12/14/11"
+            },
+            {
+              "seq": 5,
+              "action": "모델 to-be/as-is versionScript 를 착지 커밋에서 실행하고 `check_ledger.py` 실행",
+              "expectedOutcome": "to-be = docs/data-model 트리 해시(absent 아님) · as-is 진단 줄 migrations=21 site_lines=46 query_lines=117 checker=present · ledger rc=0"
+            },
+            {
+              "seq": 6,
+              "action": "main push 의 CI(`CI` 의 ci-success·pin, `data-model`) 결과 확인",
+              "expectedOutcome": "ci-success success · data-model check success · 운영 롤아웃(pin)이 기존 서버 바이너리 동작 무변경으로 완료"
+            }
+          ],
+          "plannedAt": "2026-10-04T04:31:13Z"
+        }
+      }
+    ]
   }
 ]
