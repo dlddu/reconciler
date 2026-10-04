@@ -234,7 +234,7 @@ definition의 초기 상태 메모에 **첫 task가 만들 블록의 초안**으
 | `{{SCOPE_DRAFT}}` | README 블록 초안(`migrations`·`checker`·`scope`·`exclude`·`site`·`sql`·`schema-exclude`) | 위 「`README.md`」 절의 예시 블록 |
 | `{{CHECKER_RUN}}` | 체커 실행 명령(초안) | `python3 tools/data-model-check/check.py --json` |
 | `{{CI_MODE}}` | 체커 CI의 머지 차단 여부: `gate` 또는 `report` | 첫 수렴 전 `report`, 세 불변식이 처음 참이 된 뒤 `gate` 권장 |
-| `{{DOC_LINK}}` | ERD `의미` 링크가 가리키는 자리(도메인 타입, 또는 그 테이블을 소유한 모듈)와 형식 | 도메인 타입 정의 파일 상대 링크와 항목명, 예: [`Message`](../../crates/store/src/model.rs) |
+| `{{DOC_LINK}}` | ERD `의미` 링크가 가리키는 자리(도메인 타입, 또는 그 테이블을 소유한 모듈)와 형식 | `` [`<항목>`](<erd.md 기준 상대 경로>) `` — 항목은 도메인 타입 또는 모듈, 경로는 그 문서 주석이 있는 소스 파일 |
 | `{{SIBLING_MODELS}}` | 경계를 맞출 자매 모델 [선택] | `tbm_example-docs-impl` · `tbm_example-comment-necessity` · `tbm_example-pr-manual-approval` |
 | `{{INITIAL_STATE}}` | 등록 시점 현황(스냅샷) | `docs/data-model/` 없음 · 마이그레이션 14개 · 테이블 9개 · `query!` 지점 약 40곳 · 체커 없음 |
 | `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
