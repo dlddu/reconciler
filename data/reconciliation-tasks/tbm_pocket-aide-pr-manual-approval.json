@@ -16,7 +16,7 @@
       }
     },
     "createdAt": "2026-09-29T09:44:05Z",
-    "updatedAt": "2026-10-04T06:18:50Z",
+    "updatedAt": "2026-10-04T06:22:12Z",
     "stateSummary": {
       "asIs": "관측 2026-09-29T09:46Z · `dlddu/pocket-aide@main` = `82b4a16`(#48, 2026-09-29T03:20:29Z).\n- **as-is 지문**(versionScript 실행값 = claim 기록 값): `contexts=0 judges=0 surface_hits=1 anchors_absent=0` / `judges=e3b0c44298fc1c14;surface=5ad38304b535c298;anchors=5ad38304b535c298` — judges 는 빈 입력의 해시, surface·anchors 는 정책 부재로 `absent` 상수의 해시.\n- **판정기·워크플로**: `.github/workflows/` 6개(backend-docker-push·backend-integration-test·backend-unit-test·ci·ios-test·testflight-upload) 중 `review/` context 를 붙이는 것 0개, `pull_request_target` 트리거 0개. `.github/` 전체 `review/` grep 0 히트.\n- **게이트(R5, `gh api` 조회)**: `rules/branches/main` = `[]`, `rulesets` = `[]`. 단 **classic branch protection 은 존재**한다 — `required_status_checks.contexts=[\"ci-success\"]`(`checks[0].app_id=15368` 로 **앱 고정**), `strict=false`, `enforce_admins=false`, `required_linear_history=true`. `review/manual-approval` 는 required 에 **없다**.\n- **사람 승인 절차(R6)**: 정책 문서가 없어 프로세스 표·수동 status 절차·승인 도구 범위 기재 0.\n- **후보 위험 표면 실재**(모델 초기 메모의 후보, 케이스 아님): `backend/migrations/**` 13파일 · `backend/internal/auth` 2 · `ios/Shared/Sources/PocketAideAuth` 1 · `k8s/` 6. 열린 PR #53(`backend/migrations/0007_todos.{up,down}.sql` 추가)은 마이그레이션 후보 표면을 건드리지만 현재 어떤 수동 승인 게이트도 요구하지 않는다.\n- **열린 PR 캐리어 census**: #49·#51·#52·#53 무접촉, #50(`docs/product/prd-approval-gate.md` — 앱 내부 gatekeeper 기능 PRD)은 diff 에 `review/`·`manual-approval`·`review-policy`·ruleset/required 히트 0 → 이 모델의 캐리어 아님.",
       "toBe": "`docs/review-policy.md` @ `82b4a16`: **부재**(`git rev-parse HEAD:docs/review-policy.md` 실패 → versionScript 값 `absent`). 프로세스 표·수동 승인 케이스 표·```surface```/```anchors``` 블록·의도적 제외·미탐 원장 모두 없음. 모델 정의(`templates/pr-manual-approval.tbm.md` 원칙 P1~P8)가 요구하는 목표는: 정책 문서 + 단일 판정기(`pull_request_target`, base 실행) + `review/manual-approval` 를 앱 비고정 required check 로 요구하는 게이트 + 수동 status 절차.",
@@ -26,6 +26,52 @@
     "assessment": {
       "reason": "판정 규칙 「R1~R6·O1~O5 중 하나라도 위반이면 action_required」에 따라 **action_required**. R1~R6 전건 위반(정책 문서·판정기·워크플로·`review/manual-approval` required check·수동 status 절차 모두 부재), O1~O5 는 정책 부재로 충족 불가. 격차는 「감소 중」이 아니라 **구조적 전량 부재**(첫 관측)이며 자동 해소 경로 없음 → 유예 사유 없음. 소관 census 3칸 0: ⒜열린 PR 0(#49~#53 중 정책·판정기·ruleset 접촉 0, #50 은 앱 기능 PRD) ⒝같은 모델 열린 task 0(이 task 가 첫 task) ⒞남의 원장 행 0. **planner 인계**: 이 모델은 케이스를 발명하지 않는다 — 첫 작업은 **어떤 PR 을 사람 승인 대상으로 둘지 사람에게 묻는 결정 대기**(후보: `backend/migrations/**` 13파일 · `backend/internal/auth` · `ios/Shared/Sources/PocketAideAuth` · `k8s/` · 자기참조 P5). 케이스 확정 뒤 정책 문서·판정기(`pull_request_target`+base 실행)·워크플로를 PR 로 만들고, `review/manual-approval` required check 추가는 **레포 밖 설정이라 사람 몫**. 주의: main 게이트는 ruleset 이 아니라 **classic branch protection**(`ci-success` required, app_id 15368 고정)이므로 required check 추가 경로와 앱 비고정(P8) 요구를 계획에서 명시할 것; 워크플로 추가는 GitHub App workflows 권한 유무에 따라 사람 손이 필요할 수 있다.",
       "assessedAt": "2026-09-29T09:45:07Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "pocket-aide 에 수동 승인 프로세스의 레포 안 3요소(정책 문서 `docs/review-policy.md` · 단일 판정기 `scripts/review-policy/judge.py` · `pull_request_target` 워크플로 `.github/workflows/review-policy.yml`)를 **한 PR** 로 세운다 — 정책만 내면 R1·R3(판정기 부재)이, 판정기만 내면 R4(정책 부재)가 남고 둘은 P5 자기참조로 서로를 케이스로 묶어야 하므로 쪼갤 수 없다(feature-doc #218·econ #217 선례). 케이스는 루프가 발명하지 않는다는 정의에 따라 **모델 정의가 열거한 후보 4종(마이그레이션·인증·k8s 매니페스트·P5 자기참조)을 그대로 MA1~MA4 로 제안**하고(P6: 갈리면 넓게), **케이스 확정은 사람이 이 PR 의 head 에 `review/manual-approval` 수동 status 를 붙이는 행위로 한다**(9/29 시도는 AskUserQuestion 으로 묻고 답이 오지 않아 5일 정지 → 이번엔 결정을 기존 사람 승인 채널로 옮겨 루프를 세우지 않는다; 거부 시 사유가 review_rejected 로 돌아와 재계획 입력이 된다). **완료 기준(이 시도의 범위)**: PR 머지 뒤 main 에서 R1(정책 ID 집합 == 판정기 ID 집합)·R2(`contexts=1 judges=2`)·R3(P2~P6, 파일 판독)·R4(프로세스 표 7칸·케이스 표·surface·anchors 기계 판독, surface≠malformed)·R6(사람 승인 칸에 승인자·명령·도구 범위 `review/`)·O1(anchors_absent=0)·O2(표면 히트 전부 케이스/제외로 덮임)·O3(제외 재개 조건이 리터럴이고 현재 거짓)·O4(마지막 2026-10-04·다음 2027-01-02)·O5(원장 빈 표) 충족. **범위 밖**: R5 — ruleset `default`(id 24173503) required check 에 `review/manual-approval`(integration 미고정) 추가는 레포 밖 설정이라 **사람 몫**이며 워크플로가 main 에 착지한 **뒤에** 해야 한다(먼저 하면 모든 열린 PR 이 막힌다); 재감지가 R5 단독 잔여로 새 task 를 연다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "pocket-aide main 최신에서 브랜치 `reconcile/rct_20260929-0001-pocket-aide-pr-manual-approval` 생성, 후보 표면 실측: `backend/migrations/**`(20 sql + migrations.go) · `backend/internal/auth/**` · `ios/Shared/Sources/PocketAideAuth/**` · `k8s/**` 및 그 위험 토큰이 케이스 밖 파일에 나타나는지 전수 grep",
+              "expectedOutcome": "케이스 대상 경로 실재 확인, 케이스 밖 토큰 히트 목록 확보(제외 표 입력)"
+            },
+            {
+              "seq": 2,
+              "action": "`docs/review-policy.md` 작성 — 프로세스 표 7칸(context `review/manual-approval` · 판정기 · 워크플로 · 게이트 ruleset `default` + `gh api` 확인 명령 · 사람 승인 `dlddu` + `gh api` 수동 status 명령 + 승인 전용 도구 `github_commit_status_create` 범위 `review/` · 마지막 재검토 2026-10-04 · 다음 2027-01-02), 케이스 표 MA1~MA4, ```surface```/```anchors``` 블록, 의도적 제외(재개 조건 리터럴), 빈 미탐 원장",
+              "expectedOutcome": "모델 as-is versionScript 를 이 브랜치 커밋에서 돌리면 surface≠malformed, anchors_absent=0"
+            },
+            {
+              "seq": 3,
+              "action": "판정기 `scripts/review-policy/judge.py` 작성 — 변경 경로 목록(stdin, 개명은 옛·새 경로 둘 다)을 케이스 ID 튜플(MA1~MA4)과 대조, 시작 시 base 의 정책 표 ID 집합 == 자기 ID 집합인지 확인(불일치·파싱 실패·빈 입력은 exit 2 = fail-closed), 미접촉이면 exit 0, 접촉이면 닿은 ID 출력 후 exit 1. 주석·docstring 0줄(주석 원장 무접촉)",
+              "expectedOutcome": "로컬 픽스처: 케이스 경로 각 1개 → exit 1 + 해당 ID, `docs/foo.md` → exit 0, 빈 입력·정책 ID 불일치 → exit 2"
+            },
+            {
+              "seq": 4,
+              "action": "워크플로 `.github/workflows/review-policy.yml` 작성 — `pull_request_target`(opened/synchronize/reopened/ready_for_review), base 체크아웃(PR ref 체크아웃 없음), `gh api --paginate pulls/{n}/files` 로 경로 수집(3000 파일 상한 도달 시 fail-closed), judge exit 0 일 때만 `statuses/{head_sha}` 에 `context=review/manual-approval` success. permissions: contents read · pull-requests read · statuses write",
+              "expectedOutcome": "actionlint/yaml 파싱 통과; as-is 지문 `contexts=1 judges=2`"
+            },
+            {
+              "seq": 5,
+              "action": "게이트 전수 로컬 실행: 모델 as-is·to-be versionScript, surface 전수 덤프 대조(O2), `scripts/comment-policy/check_ledger.py` rc=0, PR 을 열고 `ci-success` 초록 확인(docs/scripts/워크플로 신설만이라 backend·ios·TestFlight 잡 skip)",
+              "expectedOutcome": "모든 로컬 게이트 rc=0, ci-success success"
+            },
+            {
+              "seq": 6,
+              "action": "(실행 단계) 사람이 PR head 에 `review/manual-approval` = success(`수동 승인 — <승인자>`)를 붙인 것을 확인한 뒤에만 squash 머지 — 케이스 확정은 사람의 결정",
+              "expectedOutcome": "head sha 에 수동 승인 status 존재 → 머지; main 에서 versionScript 재실행 시 to-be=blob hash, as-is `contexts=1 judges=2 … anchors_absent=0`"
+            },
+            {
+              "seq": 7,
+              "action": "(실행 단계, 머지 직후) 머지 뒤 열린 첫 PR(또는 `gh api` 로 기존 열린 PR 재동기화 이벤트)에서 워크플로가 실제로 status 를 붙이는지/안 붙이는지 관측하고, R5(ruleset required 추가)는 사람에게 요청으로 남긴다",
+              "expectedOutcome": "케이스 미접촉 PR 에 `review/manual-approval` success 가 `github-actions` 로 붙음; 케이스 접촉 PR 에는 없음"
+            }
+          ],
+          "plannedAt": "2026-10-04T06:22:12Z"
+        }
+      }
+    ]
   }
 ]
