@@ -16,7 +16,7 @@
       }
     },
     "createdAt": "2026-10-04T04:12:08Z",
-    "updatedAt": "2026-10-04T04:14:40Z",
+    "updatedAt": "2026-10-04T04:22:24Z",
     "stateSummary": {
       "asIs": "관측 2026-10-04T04:13Z · `dlddu/feature-doc` main `e8a8e69` (2026-10-04T03:57:12Z).\n- versionScript: `scope=absent` / `schema=absent;queries=absent;checker=absent` — README `data-model-scope` 블록 없음.\n- `backend/migrations/` 19개 파일(마이그레이션 18 + README). Python `sqlite3` 3.45.1 빈 DB에 전부 적용하니 테이블 20(`sqlite_sequence` 제외) · 인덱스 53(그중 autoindex 30) · FK 23. 모델 초기 상태 메모와 같다.\n- 쿼리 지점(`site` ERE `sqlx::query(_as|_scalar)?(::<[^>]*>)?!?\\(`): `backend/src` 19개 파일에 139줄. 메모와 같다.\n- 체커 `tools/check-data-model.py` 없음(`tools/` 에는 check-data-format-change·journey-mockup·journey-prototype·mockup-render·scenario-e2e 만 있음).",
       "toBe": "관측 2026-10-04T04:13Z · 같은 커밋 `e8a8e69`.\n- versionScript: `absent` — `docs/data-model/` 디렉터리 없음. 그래서 ERD(`erd.md`), 쿼리 패턴 카탈로그, 수동 형태 표, 미사용 인덱스 표, README(형태 정의 · 풀스캔 허용 기준 · `data-model-scope` 블록 · 체커 절)가 모두 없다.\n- 이 모델은 2026-10-04T04:09:53Z 에 등록됐다(`07cf42d`). 이번이 첫 관측이다(`previousVersion` null).",
@@ -26,6 +26,37 @@
     "assessment": {
       "reason": "action_required. 판정 규칙상 불변식 1~3 또는 체커 계약 C1~C9 중 하나만 어겨도 조치 대상인데, 지금은 전부 어긋난다: `docs/data-model/`이 없고 `tools/check-data-model.py`도 없다. 그래서 엔진 판정을 돌릴 수 없고(절차 3), 엔진 판정 없이 불변식 3을 정합으로 닫을 수도 없다. 저절로 해소될 여지는 없다(문서와 체커를 누군가 써야 한다). 맡은 쪽이 있는지도 확인했다: ⒜ feature-doc 열린 PR은 #223 하나뿐이고, 마이그레이션 주석만 다루는 comment-necessity `rct_20261001-0004`라 이 산출물과 무관하다. ⒝ 이 모델에 다른 열린 task 0건. ⒞ 다른 원장에 data-model 행 0건. 다른 docs-impl 모델은 `a0905f7`에서 docs/data-model을 이 모델에 넘겼다. planner는 정의의 판정 슬라이스 (1)부터 맡는다: README·`data-model-scope` 블록(정의 메모의 초안)·체커 골격(Python 표준 `sqlite3`, 운영 bundled SQLite와의 버전 차이를 리포트에 적기 — C5)·불변식 1 ERD, 그리고 ERD `의미` 링크가 가리킬 rustdoc 주석(`FromRow` 구조체 20개 중 doc 주석은 2개). CI 모드는 `report`. 슬라이스 (2) 카탈로그·수동 형태와 (3) 지원 칸·미사용 인덱스는 머지 뒤 재감지가 이어받는다.",
       "assessedAt": "2026-10-04T04:15:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "판정 슬라이스 (1)만 가져간다 — docs/data-model/README.md(형태 정의·사람 소유 풀스캔 기준 빈 표·data-model-scope 블록·의미 링크 규약·체커 절) + erd.md(엔진 카탈로그에서 생성: 테이블 20·컬럼 185·FK 23·인덱스(PK 제외) 33) + tools/check-data-model.py(빈 DB에 마이그레이션 전부 적용 → PRAGMA로 ERD 대조, 불변식 2·3은 판정 불가 exit 2)를 PR #225 한 건으로 착지시킨다. ERD 의미 링크는 행 구조체가 아니라 테이블을 소유한 모듈의 //! 머리로 둔다 — FromRow 구조체 20개가 조회별 투영이라 테이블과 1:1이 아니고(definition 초기 메모), 모듈 머리는 주석 정책상 사유 없이 유지되는 doc 수준이라 새 private /// 를 들여 주석 원장 행을 여럿 되돌리는 비용을 피한다(대안: 구조체마다 /// 신설 — 기각). 소유 모듈 중 머리 주석이 없던 push.rs 에만 //! 1줄을 더하고 원장 L 행을 판정 — 으로 신설한다. 완료 기준: main 머지 후 `python3 tools/check-data-model.py --json` 의 invariants.1.status == ok(위반 0) · invariants.2/3 == undecidable · exit 2, 그리고 ci-gate success. 범위 밖: 슬라이스 (2) query-patterns.md·수동 형태·지점 추출(C4)·#[cfg(test)] 제외, 슬라이스 (3) 지원 칸·미사용 인덱스·쿼리 플랜(C5)·인덱스 마이그레이션, 체커 CI(C9 — 종료 코드 0/1 이 의미를 갖는 슬라이스에서 report 모드로).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #225 head cbb6b29 의 필수 status 확인: `gh pr checks 225 --repo dlddu/feature-doc` 및 combined status(`review/manual-approval`). backend/src/push.rs 접촉으로 backend=true·app=true 라 cargo·e2e 2샤드가 돌고 image 는 skip 이 정상.",
+              "expectedOutcome": "ci-gate SUCCESS, review/manual-approval success(D1/D6 미발화 — check-data-format-change 로컬 실측 '해당 없음'), mergeable_state clean"
+            },
+            {
+              "seq": 2,
+              "action": "머지 직전 로컬 재현: PR head 를 체크아웃해 `python3 tools/check-data-model.py --json` 실행",
+              "expectedOutcome": "invariants.1.status == \"ok\"(violations []), invariants.2·3.status == \"undecidable\", exit 2; counts.tables 20 · fks 23 · indexes 33"
+            },
+            {
+              "seq": 3,
+              "action": "main 이 PR base 이후 움직였으면 `git merge-tree --write-tree origin/main <head>` 로 충돌 0 확인 후 squash 머지(`gh pr merge 225 --squash`). 충돌·behind 만이면 리베이스하지 말고 그대로 머지(ci-gate 는 merge ref 로 돈다).",
+              "expectedOutcome": "PR merged, main 에 docs/data-model/{README.md,erd.md} · tools/check-data-model.py 존재"
+            },
+            {
+              "seq": 4,
+              "action": "머지된 main 에서 수렴 검증: `python3 tools/check-data-model.py --json` · `python3 scripts/check-comment-ledger.py` · `python3 tools/check-journey-mockup.py` 실행, reconciler 모델의 to-be/as-is versionScript 실행",
+              "expectedOutcome": "체커 invariants.1 ok · exit 2(2·3 undecidable) · 원장 rc=0 · journey-mockup rc=0(문서 72) · to-be ≠ absent(트리 해시) · as-is 첫 줄 migrations=19 site_lines=139 query_lines=383 checker=present"
+            }
+          ],
+          "plannedAt": "2026-10-04T04:22:24Z"
+        }
+      }
+    ]
   }
 ]
