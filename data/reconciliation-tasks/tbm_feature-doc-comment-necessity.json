@@ -14403,6 +14403,41 @@
           },
           "comment": "사람 승인 거부 — 리베이스 필요: #210(10/04 03:35Z)·#226·#228 착지로 PR #223 이 DIRTY (merge-tree 충돌: backend/tests/migrations.rs · docs/comment-policy/ledger.md · docs/index.html). head dc094cb 에 승인을 붙여도 실행자가 머지할 수 없고, 그 전제인 운영 DB repair 를 먼저 하면 머지 지연 동안 구 이미지 파드가 VersionMismatch 로 재기동 실패할 위험이 있어 승인하지 않았다. planner가 고칠 것: ⑴ 새 main 위에서 재생 스크립트(edit_sql.py·pin_applied.py·ledger.py·hub.py)로 재준비 — main 의 0003~0016 .sql 바이트는 불변이라 repair 표는 그대로여야 하며, 재준비 후 12파일 SHA-384 를 표와 다시 대조. ⑵ migrations.rs APPLIED 에 #210 의 0017 엔트리를 보존한 채 12개 해시만 갱신. ⑶ ledger.md 충돌 시 #226·#228 이 판정한 행과 겹치는지 재확인하고 이 PR 범위(마이그레이션 5행)만 반영, 완료 기준의 미판정 행 수를 새 main 기준으로 다시 잰다. ⑷ 새 head sha 로 review.manualApproval 을 다시 받는다 — 운영 DB repair 는 새 head 승인 직전에 사람이 한다. PR #223 은 닫지 않았다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재준비(시도 2): 시도 1 의 판정·범위·PR(#223)은 그대로 둔다. 사람 승인이 거부된 이유는 계획 결함이 아니라 #210·#226·#228 착지로 PR 이 DIRTY 가 된 것이었다. 그래서 새 main `f96d4b6` 위에서 브랜치를 다시 만들어 force-push 했다(새 head `500111e`). 리베이스를 실행자에게 남기지 않으려는 것이다. `.sql` 12파일은 `dc094cb` 와 바이트 동일하고(main 의 `0003`~`0016` 불변, 델타는 `0017` 추가뿐) repair 표도 그대로다. 바뀌는 것은 승인받을 head sha 하나다. 완료 기준: #223 착지 · main 에서 원장 게이트 통과 · [L] 미판정 행 7→2 · 마이그레이션 5행 `완료` · `.sql` L 합 234→180 · 12파일 SHA-384 가 repair 표 「새」 열과 일치 · `APPLIED` 18/18 · 롤아웃 뒤 `VersionMismatch` 없음. 범위 밖: `analysis.rs` 묶음 L 1행 + E 1행(열린 rct_20261004-0003 의 몫) · `db.rs`·`migrations.rs` 묶음 L 1행. 예산 400줄 미달 사유는 정책 2항(전용 PR, 다른 주석 정리 혼합 금지)이다.",
+          "riskLevel": "high",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "사람이 PR #223 head `500111e` 의 repair 표대로 운영 DB 를 repair 한다: Flux suspend → API scale 0 → 정비 파드 `.bak` → 현재 값이 「이전」 열과 같은지 확인 → 12버전 UPDATE → Flux resume. 마친 뒤 head `500111e` 에 `review/manual-approval`=success 를 붙인다. 실행자는 이 단계를 하지 않는다.",
+              "expectedOutcome": "`review.manualApproval.sha`(=`500111e…`) 에 `review/manual-approval` success 가 있고, 승인 사유에 repair 완료가 적혀 있다."
+            },
+            {
+              "seq": 2,
+              "action": "실행자: PR head 가 승인 sha 와 같은지, PR 이 main 과 충돌 없는지(`mergeable_state` ≠ dirty) 확인한다. head 의 12개 `.sql` SHA-384 를 다시 계산해 repair 표 「새」 열과 대조한다.",
+              "expectedOutcome": "head == 승인 sha · 충돌 없음 · 12/12 바이트 일치. 하나라도 어긋나면 머지하지 않고 `failed` 로 둔다."
+            },
+            {
+              "seq": 3,
+              "action": "곧바로 PR #223 을 squash 머지한다.",
+              "expectedOutcome": "main 에 착지한다. 필수 status `ci-gate`·`review/manual-approval` 이 success 다."
+            },
+            {
+              "seq": 4,
+              "action": "main CI(test→push→pin)와 Flux 롤아웃을 관측한다: `rollout status` · 부팅 로그 · `/hello`.",
+              "expectedOutcome": "롤아웃 완료, `VersionMismatch` 없음, `/hello` 200."
+            },
+            {
+              "seq": 5,
+              "action": "main 에서 `python3 scripts/check-comment-ledger.py` 를 실행하고 `.sql` L 합, 마이그레이션 5행 판정 칸, `APPLIED` 오라클을 실측한다.",
+              "expectedOutcome": "통과 · [L] 미판정 행이 머지 직전 base 의 값보다 5 적다(f96d4b6 기준 7→2) · 마이그레이션 L 합 180 · 5행 `완료` · APPLIED N/N."
+            }
+          ],
+          "plannedAt": "2026-10-04T06:55:00Z"
+        }
       }
     ]
   },
