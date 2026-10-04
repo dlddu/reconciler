@@ -159,7 +159,7 @@
       }
     },
     "createdAt": "2026-10-04T05:11:50Z",
-    "updatedAt": "2026-10-04T05:14:33Z",
+    "updatedAt": "2026-10-04T05:24:39Z",
     "stateSummary": {
       "asIs": "feature-doc main `1489738`(2026-10-04 04:53Z) 기준. 슬라이스 (1)이 #225 `f7f7802`로 착지했다: `docs/data-model/README.md`(`data-model-scope` 블록)·`erd.md`(371줄)·`tools/check-data-model.py` 생성. 지문 `migrations=19 site_lines=139 query_lines=383 checker=present`, schema 트리 `3764df89…`, checker blob `928f270e…`. `python3 tools/check-data-model.py --json` 실행(엔진 sqlite 3.45.1, python sqlite3): **종료 코드 2**. counts: 마이그레이션 18 · 테이블 20 · 컬럼 185 · 인덱스 33 · FK 23 · site 후보 139. 불변식 1 `ok`(위반 0), 불변식 2 `undecidable`(「쿼리 패턴 카탈로그(query-patterns.md)와 지점 추출(C4)은 판정 슬라이스 (2)에서 들어온다」), 불변식 3 `undecidable`(「지원 인덱스 판정(C5 쿼리 플랜)은 판정 슬라이스 (3)에서 들어온다」).",
       "toBe": "`docs/data-model` 트리 `d9aed43f…`(absent → 생성). 파일은 README.md·erd.md 두 개뿐이고 `query-patterns.md`(카탈로그·수동 형태 표·지원 칸·미사용 인덱스 표)는 없다. 정의의 정합 상태는 불변식 1 ∧ 2 ∧ 3, 체커 종료 코드 0.",
@@ -170,6 +170,37 @@
       "reason": "action_required. 판정 규칙상 불변식 1~3이나 체커 계약 C1~C9 중 하나만 어겨도 조치 대상이다. main `1489738`에서 체커가 종료 코드 2(판정 불가)를 냈다. 불변식 2(카탈로그·C4 지점 추출)와 불변식 3(C5 쿼리 플랜)이 「슬라이스 (2)/(3)에서 들어온다」로 비어 있다. 슬라이스 (1)은 #225로 착지했고 불변식 1은 ok, 위반 0이다. 남은 일은 사람이 써야 하는 문서·체커라 저절로 해소될 여지가 없다. 맡은 쪽도 확인했다: ⒜ feature-doc 열린 PR은 #223 하나다. comment-necessity `rct_20261001-0004`로 마이그레이션 주석만 다뤄 카탈로그·체커와 무관하다. ⒝ 이 모델의 열린 task는 이 건뿐이다(`0001`은 succeeded). ⒞ 다른 원장에 data-model 카탈로그 행은 없다. planner는 정의의 판정 슬라이스 (2)를 맡는다: `docs/data-model/query-patterns.md` 카탈로그(형태 = 연산·테이블·등치·범위·정렬)와 수동 형태 표, 그리고 체커 C4(site 139줄 추출 — `const` SQL·`usage.rs`의 `{CALL_ROWS}` 보간·`#[cfg(test)]` 제외 포함)다. 불변식 3은 카탈로그를 전제로 하므로 머지 뒤 재감지에서 슬라이스 (3)으로 이어받는다.",
       "assessedAt": "2026-10-04T05:12:39Z",
       "recheckAfter": null
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "판정 슬라이스 (2)만 가져간다. 체커 tools/check-data-model.py 에 C4 지점 추출을 넣는다: Rust 렉서로 둘러싼 fn·impl 을 찾고, 첫 인자를 리터럴·같은 파일 const·format!(const 펼침 / 인자 없는 format! 함수 재귀 / '…' 안 값 무시)으로 풀고, 미니 SQL 파서로 형태를 계산한다. 불변식 2 판정(미등재·죽은 지점·죽은 패턴·귀속 모호·수동 형태 양방향·대표 SQL EXPLAIN)도 넣는다. 체커가 낸 기대 행을 옮겨 docs/data-model/query-patterns.md(패턴 102 · 수동 형태 2 — usage.rs 파생 테이블 두 지점)를 만들고, README 의 레포 고유 추출 규칙을 구현에 맞춰 고치고, 허브에 doc-row 를 등재한다. 이 넷을 PR #227 한 건으로 착지시킨다. 대안 둘을 기각했다. ① analysis_columns() 보간 두 지점을 수동 형태로 보내는 안 — 정적으로 풀리는 관용구를 수동 표에 쌓는 것은 템플릿이 금한 「체커 결함의 하치장」이다. ② 형태를 사람이 손으로 적는 안 — 형태가 체커 계산과 어긋날 수 있다. 완료 기준: main 머지 후 `python3 tools/check-data-model.py --json` 이 invariants.\"1\".status==ok · invariants.\"2\".status==ok(violations []) · invariants.\"3\".status==undecidable · exit 2 · counts.site_candidates==139(==as-is site_lines) · sites_extracted 137 · sites_unextractable 2 · patterns 102 · manual_shapes 2 를 내고, ci-gate 가 success 일 것. 범위 밖: 슬라이스 (3)(지원 칸 · 미사용 인덱스 · C5 쿼리 플랜 · 인덱스 마이그레이션), 체커 CI(C9), docs/reader.html 의 `\\|` 렌더링.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #227(head 88c71ea) 필수 status 확인: `gh pr checks 227 --repo dlddu/feature-doc` 와 commit status `review/manual-approval`. docs/·tools/ 전용이라 changes 판정은 app=false·backend=false 다.",
+              "expectedOutcome": "ci-gate SUCCESS — test (cargo)·kind e2e 는 SKIPPED 가 정상이고 push image 는 실제로 돌아 SUCCESS. review/manual-approval success(「해당 없음」 자동 판정). changed_files 4."
+            },
+            {
+              "seq": 2,
+              "action": "머지 직전 로컬 재현: PR head 에서 `python3 tools/check-data-model.py --json` 을 실행한다.",
+              "expectedOutcome": "invariants 1 ok · 2 ok(violations []) · 3 undecidable · exit 2. counts: site_candidates 139 · sites_extracted 137 · sites_unextractable 2 · sites_excluded 0 · patterns 102 · manual_shapes 2."
+            },
+            {
+              "seq": 3,
+              "action": "main 이 base 1489738 이후 움직였으면 `git merge-tree --write-tree $(git merge-base origin/main <head>) origin/main <head>` 로 충돌 0 을 확인하고 체커를 merge 결과 트리에서 다시 돌린다(backend/src 쿼리 변경이 들어왔으면 불변식 2 위반이 날 수 있다 — 지침 「주의」). 그다음 `gh pr merge 227 --squash --match-head-commit <head>` 로 머지한다.",
+              "expectedOutcome": "PR merged. main 에 docs/data-model/query-patterns.md 가 있다."
+            },
+            {
+              "seq": 4,
+              "action": "머지된 main 에서 수렴을 검증한다: 체커 --json, check-comment-ledger.py, check-journey-mockup.py, 그리고 모델의 to-be/as-is versionScript 를 실행한다.",
+              "expectedOutcome": "완료 기준의 체커 값 그대로. ledger rc=0. journey-mockup rc=0(문서 74). as-is 첫 줄은 site_lines=139 · checker=present 이고, checker 성분은 f02fa404…(head blob)로 바뀐다. to-be 는 트리 해시가 바뀐다."
+            }
+          ],
+          "plannedAt": "2026-10-04T05:24:39Z"
+        }
+      }
+    ]
   }
 ]
