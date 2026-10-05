@@ -744,6 +744,41 @@
           ],
           "verifiedAt": "2026-10-04T07:41:47Z"
         }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "재계획이 아니라 **재준비**다(범위·PR #232 승계, 새 커밋 0). 직전 시도는 계획 결함 없이 「사람 결정 대기」로 닫혔는데, 그 벽이 그 뒤 움직였다: #233(`8f99a48`)이 README 「풀스캔 허용 기준」 표 행 변경을 수동 승인 케이스 D7 로 판정기에 넣었고, #232 는 그 위로 리베이스돼(head `201fbba`) 판정기가 자동 success 를 붙이지 않으며, 그 head 에 사람 승인 status `review/manual-approval` success(설명 「수동 승인 — dlddu」, 2026-10-05T00:15:31Z)가 붙었다 — 직전 시도가 요구한 사람 결정이 대상 레포의 정식 게이트로 내려진 것이다. 그래서 그 head 를 그대로 squash 한다(승인은 sha 에 묶이므로 리베이스·커밋 추가 금지; main 은 #223 한 커밋 앞서지만 `docs/data-model/` 무접촉이고 ruleset strict=false · clean). 대안인 「main 위로 리베이스 후 재승인 요청」은 사람 승인을 버리고 같은 내용을 다시 묻는 것이라 택하지 않는다 — 머지 트리(`133e059`)에서 체커 rc 0 을 이미 실측했다. 완료 기준(직전과 동일): PR #232 가 head `201fbba` 로 main 에 착지하고 main 에서 `python3 tools/check-data-model.py --json` 종료 코드 0(불변식 1·2·3 ok, fullscan_allowed 1, unused_indexes 8). 범위 밖: CI `gate` 승격(다음 슬라이스), 쿼리 변경, F1 외 기준.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "사람 결정 증거 재실측: `gh api repos/dlddu/feature-doc/pulls/232` 의 state·head.sha, `gh api repos/dlddu/feature-doc/commits/201fbba581dae8efcc1e5a746ca2381fb152d349/statuses` 의 `review/manual-approval` 항목.",
+              "expectedOutcome": "PR open · head.sha == 201fbba581dae8efcc1e5a746ca2381fb152d349 · 그 context 의 최신 status 가 success 이고 설명이 자동 판정 문면(「수동 승인 케이스 해당 없음 (자동 판정)」)이 **아니다**(실측: 「수동 승인 — dlddu」 1건뿐). head 가 다르거나 최신이 자동 판정 문면/부재면 머지하지 않고 중단."
+            },
+            {
+              "seq": 2,
+              "action": "PR 상태 재실측: mergeable_state, changed_files, 필수 status(`ci-gate` check · `review/manual-approval`), 그리고 `git diff --name-only 3869cab origin/main -- docs/data-model tools/check-data-model.py backend/migrations backend/src` 로 준비 이후 main 변동이 체커 입력에 닿았는지.",
+              "expectedOutcome": "clean · changed_files == 2 · 두 필수 success. main 이 `3869cab` 그대로면 바로 3. 움직였고 체커 입력에 닿았으면 임시 worktree 에서 `main ⊕ 201fbba` 머지 트리의 체커 rc 0 을 먼저 확인(rc≠0 이면 머지하지 않고 failed)."
+            },
+            {
+              "seq": 3,
+              "action": "squash 머지: `gh pr merge 232 --squash --match-head-commit 201fbba581dae8efcc1e5a746ca2381fb152d349`(대상 레포 토큰). 커밋을 얹거나 리베이스하지 않는다.",
+              "expectedOutcome": "PR merged, main 에 커밋 1개(문서 2파일 +6 −6) 착지."
+            },
+            {
+              "seq": 4,
+              "action": "main 머지 커밋 체크아웃에서 `python3 tools/check-data-model.py --json; echo rc=$?` 와 `grep -c '^| F1 |' docs/data-model/README.md`.",
+              "expectedOutcome": "rc=0 · invariants 1·2·3 ok · counts.fullscan_allowed == 1 · unused_indexes == 8 · F1 행 1개 · Q-31 지원 칸이 `풀스캔 허용(F1): ` 로 시작."
+            },
+            {
+              "seq": 5,
+              "action": "main push 의 `docs-data-model.yml`(report) run 결론 확인.",
+              "expectedOutcome": "conclusion success, rc 1 경고 주석 없음."
+            }
+          ],
+          "plannedAt": "2026-10-05T09:36:00Z"
+        }
       }
     ]
   }
