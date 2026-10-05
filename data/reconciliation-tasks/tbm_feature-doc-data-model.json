@@ -896,7 +896,7 @@
   },
   {
     "toBeModelId": "tbm_feature-doc-data-model",
-    "status": "assessing",
+    "status": "action_required",
     "createdAt": "2026-10-05T09:49:24Z",
     "trigger": {
       "source": "version_change",
@@ -912,6 +912,10 @@
       "toBe": "`docs/data-model` 트리 `743c536` → `e8e3df8`(#232 「풀스캔 허용 기준 F1 등재」, `rct_20261004-0005`의 실행 결과). 바뀐 내용 전부:\n\n- `README.md` 「풀스캔 허용 기준」 표에 **F1** 한 행 추가(사람이 직접 여는 조회에서 `UNION ALL` 파생 테이블 구체화 때문에 스캔하는 경우 / 근거: 플랜의 `MATERIALIZE` 아래 `SCAN`, 호출 지점이 사용자 요청 핸들러 하나)와 그 아래 서술 정리. 기준 추가는 사람 소유 결정이며, `0005` 기록상 PR head `201fbba`에 `review/manual-approval` success 「수동 승인 — dlddu」가 붙은 뒤 그 sha로 머지됐다.\n- `query-patterns.md` `Q-31` 지원 칸 `지원 없음` → `풀스캔 허용(F1): …`.\n- `erd.md`, `data-model-scope` 블록, 형태 정의, 「추출 제외 범위」, 「체커」 절은 무변경.\n\n정의상 맞는 상태는 불변식 1 ∧ 2 ∧ 3 그리고 체커 계약 C1~C9다. C9의 머지 차단 여부는 이 모델에서 「첫 수렴 전 `report`, 세 불변식이 처음 참이 된 뒤 `gate`」이고, README 「체커」 절 CI 항목도 같은 조건을 적고 있다: main에서 종료 코드 0이 나오면 `workflow_call`로 바꿔 `ci.yml`이 부르고 `ci-gate` needs에 넣으며 종료 코드 1도 실패로 친다.",
       "gap": "이번 to-be 변화(#232)는 남아 있던 유일한 불변식 위반 Q-31을 사람이 승인한 기준 F1로 닫았고, main eb40651에서 체커가 처음으로 종료 코드 0(불변식 1·2·3 ok)을 냈다 — 문서↔스키마↔코드↔엔진 사이의 차이는 없다. 그러나 바로 그 첫 수렴이 C9의 gate 승격 조건을 발동시켰는데 체커 CI는 아직 report 모드(ci-gate needs 밖, 종료 코드 1 통과)이고 README 「체커」 CI 항목도 'report 모드로 돈다'로 남아 있다. 모델 정의와 README가 함께 못박은 CI 모드(수렴 후 gate)에 미달하는 유의미한 차이다.",
       "summarizedAt": "2026-10-05T09:50:19Z"
+    },
+    "assessment": {
+      "reason": "action_required. 판정 규칙상 불변식 1~3이나 체커 계약 C1~C9 중 하나만 어겨도 조치 대상이다. 불변식 쪽은 닫혔다: main `eb40651`에서 체커를 직접 돌려(sqlite 3.45.1) 종료 코드 0, 불변식 1·2·3 ok, 풀스캔 허용 1(F1 — 사람 승인 status를 거쳐 #232로 등재, Q-31의 엔진 플랜·단일 지점이 F1 근거와 맞음), 미사용 인덱스 8을 확인했다. as-is 지문(schema·queries·checker)과 `data-model-scope` 블록이 불변이라 C2/C4는 직전 판정에서 달라질 것이 없다. 남은 것은 C9다: 이 모델의 CI 모드는 「세 불변식이 처음 참이 된 뒤 `gate`」이고 README 「체커」 절도 main 종료 코드 0을 승격 조건으로 적는데, 그 조건이 이번에 처음 충족됐는데도 `docs-data-model.yml`은 report 모드(종료 코드 1 통과, `ci-gate` needs 밖)다. 저절로 해소되지 않는다 — 워크플로를 고치는 PR이 있어야 하고, feature-doc 열린 PR은 0건, 이 모델의 다른 열린 task도 0건이라 맡은 곳이 없다(`rct_20261004-0005`의 검증 기록이 gate 승격을 '다음 감지 주기가 잇는다'고 넘겼다). 방치하면 방금 맞춘 세 불변식을 깨는 PR이 차단 없이 머지된다. planner 범위: README가 적은 대로 `docs-data-model.yml`을 다른 `docs-*.yml`처럼 `workflow_call`로 바꿔 `ci.yml`이 부르고 `ci-gate` needs에 넣으며 종료 코드 1을 실패로 치고(2는 계속 실패), 같은 PR에서 README 「체커」 CI 항목을 gate 서술로 고친다(README 변경은 to-be 해시를 움직여 재감지를 부른다 — 정상). 불변식·기준 표·카탈로그는 건드릴 것이 없다. 워크플로 변경이므로 `tbm_feature-doc-pr-manual-approval`의 수동 승인 케이스 해당 여부는 계획·리뷰 단계에서 확인한다.",
+      "assessedAt": "2026-10-05T09:50:38Z"
     }
   }
 ]
