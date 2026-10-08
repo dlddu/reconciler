@@ -607,7 +607,7 @@
   {
     "id": "rct_20261008-0001",
     "toBeModelId": "tbm_pocket-aide-data-model",
-    "status": "assessing",
+    "status": "action_required",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-08T12:20:51Z",
@@ -617,12 +617,16 @@
       }
     },
     "createdAt": "2026-10-08T12:20:51Z",
-    "updatedAt": "2026-10-08T12:22:46Z",
+    "updatedAt": "2026-10-08T12:23:06Z",
     "stateSummary": {
       "asIs": "관측 2026-10-08T12:22:46Z · dlddu/pocket-aide main `01bc08f` (2026-10-08T12:13:12Z). 직전 관측(`3c8dc05`, rct_20261004-0004) 이후 data-model scope 를 건드린 커밋은 #120 `01bc08f`(docs-impl `rct_20261004-0009`, 세션 플랫폼 프록시) 단 하나.\n- 지문: migrations 21→23 · site_lines 46→50 · query_lines 117→121 · schema `345cb458…`→`65961c8f…` · queries `c706daeb…`→`48ffd5a9…` · checker `963b26dc…` **불변**.\n- #120 의 data-model 관련 변경: `backend/migrations/0011_agent_sessions.{up,down}.sql`(테이블 `agent_sessions`(session_id TEXT PK · user_id INTEGER NOT NULL FK→users.id ON DELETE CASCADE · created_at) + `idx_agent_sessions_user_id(user_id)`), `backend/internal/sessions/store.go` 쿼리 지점 4(`Add` insert · `Owns` select eq(session_id,user_id) · `Owned` select eq(user_id) · `Remove` delete eq(session_id,user_id)). `docs/data-model/` 은 건드리지 않았다.\n- 레포 체커 `cd backend && go run ./cmd/datamodelcheck --json` 을 tip 에서 운영 엔진 **SQLite 3.46.0 (modernc.org/sqlite v1.34.1)** 으로 직접 실행(go1.24.7) → **rc=1**, `undecidable` [].\n  - 스키마: 테이블 13 · 인덱스(PK 제외) 15 · FK 12. 지점 50(= 지문 site_lines 50 → C4 이상 없음) · plans 54.\n  - 불변식 1 **violated** 3: `table-missing` agent_sessions · `diagram-entity-missing` agent_sessions · `diagram-relation-missing` `users ||--o{ agent_sessions : user_id`.\n  - 불변식 2 **violated** 4: `query-unregistered` × sessions/store.go::Store::{Add, Owns, Owned, Remove}.\n  - 불변식 3 **violated** 3: `no-support` Q-09 · Q-15(이전과 동일 잔여) + `unused-unregistered` `idx_agent_sessions_user_id`(Owned 가 카탈로그에 없어 플랜 대상이 아니라서 생긴 것).\n- 보조 프로브(python sqlite3 3.45.1, 엔진 판정 아님): Owns·Remove → `sqlite_autoindex_agent_sessions_1 (session_id=?)`, Owned → `idx_agent_sessions_user_id (user_id=?)` — 4행 등재 시 새 no-support 는 없고 unused 위반도 사라질 형태.\n- 절차 4: 체커 해시 불변 ⇒ C2(블록 밖 하드코딩) 이전 판정 유지, 리포트 `block` = README 블록 그대로.\n- CI(main `01bc08f`): `data-model check (report)` success(report 모드 — rc=1 은 경고), Backend unit+lint·integration success, iOS 진행 중.\n- 열린 PR(#176·#173) 중 `docs/data-model`·`datamodelcheck`·`sessions/` 접촉 0.",
       "toBe": "`docs/data-model` 트리 `ab3ba43` **불변**(마지막 변경 #114 `3c8dc05`). 파일: `README.md` · `erd.md` · `query-patterns.md` — `agent_sessions` 언급 0. README §2 가 풀스캔 허용 기준 표(0행)를 직접 품고 있고 `fullscan-criteria.md` 는 **없다**. 반면 모델 정의·템플릿 고정부(2026-10-05 개정, reconciler `1918b5fb0`)는 기준 표를 `docs/data-model/fullscan-criteria.md` 한 파일에 두고 README §2 는 링크만 하도록 요구한다.",
       "gap": "#120 착지로 불변식 1·2 가 다시 벌어졌다 — `agent_sessions` 테이블·관계가 ERD 에 없고(3건), sessions/store.go 쿼리 지점 4개가 카탈로그에 없으며(4건), 그 결과 `idx_agent_sessions_user_id` 가 미사용 미등재(1건)로 잡힌다; 체커 rc=1 이고 판정 규칙상 「하나라도 위반」이므로 유의미하다. 그 밖의 잔여 — 불변식 3 `no-support` Q-09·Q-15 와 `fullscan-criteria.md` 분리(템플릿 레이아웃) — 는 이전과 같고 열린 `rct_20261004-0004`(action_required) 가 소관한다.",
       "summarizedAt": "2026-10-08T12:22:46Z"
+    },
+    "assessment": {
+      "reason": "판정 절차 1~2: main `01bc08f` 에서 레포 체커를 운영 엔진(modernc SQLite 3.46.0)으로 직접 실행 → rc=1, undecidable []. 불변식 1 violated 3(agent_sessions 표·다이어그램 엔티티·관계 누락) · 2 violated 4(sessions/store.go Add·Owns·Owned·Remove 미등재) · 3 violated 3(no-support Q-09·Q-15 + unused-unregistered idx_agent_sessions_user_id). 판정 규칙(하나라도 위반 ⇒ action_required)에 따라 조치 필요. 절차 4: 체커 해시 불변 · 리포트 block = README 블록 · 지점 50 = 지문 site 줄 ⇒ C2/C4 이상 없음.\n자동 해소 경로 없음(유예 불가): 원인 #120 은 이미 머지됐고, 그 task(docs-impl `rct_20261004-0009`)는 「docs/data-model 의 agent_sessions ERD·쿼리 4행은 tbm_pocket-aide-data-model 소관」으로 범위 밖을 명시했다. 열린 PR(#176·#173)의 docs/data-model·sessions 접촉 0. 같은 모델의 열린 `rct_20261004-0004`(action_required, 미점유)는 Q-09·Q-15 기준 결정과 fullscan-criteria.md 분리만 다루며 agent_sessions 는 「#120 착지 시 재감지가 이 모델로 온다」고 예고만 했다 ⇒ 이번 신규 gap 의 캐리어 없음.\nplanner 인계: (1) 이 task 의 범위는 #120 이 연 8건 — erd.md 에 `agent_sessions` 엔티티(표·인덱스 표·mermaid 엔티티/관계 `users ||--o{ agent_sessions : user_id`, `의미:` 는 sessions 패키지/도메인 타입 doc 주석 링크 — 없으면 comment-necessity 와 맞물린다) + query-patterns.md 4행(체커 `expected` 제시 형태: insert agent_sessions `—` · select eq(user_id) `idx_agent_sessions_user_id` · select/delete eq(session_id,user_id) 는 PK autoindex). 보조 프로브상 새 no-support 는 없고 Owned 등재로 unused 위반도 닫힐 것 — 엔진(체커)으로 재확인할 것. ERD 의 session_id NULL 칸은 체커 expected 가 `YES`(SQLite 비-rowid TEXT PK 의 NULL 허용)이니 체커 출력을 따를 것(스키마가 이긴다). 이 변경은 문서만이라 마이그레이션·코드 변경 없음, 위험 낮음. (2) Q-09·Q-15 와 fullscan-criteria.md 분리는 `rct_20261004-0004` 의 몫 — 이 task 에서 기준을 착지시키거나 범위를 섞지 말 것. 두 task 가 같은 docs/data-model 파일(README·query-patterns.md)을 건드릴 수 있으니 PR 충돌·순서를 계획에서 다룰 것. (3) 이 슬라이스로 rc=1 은 남는다(Q-09·Q-15) — CI 는 report 모드 유지, gate 전환은 세 불변식이 처음 참이 된 뒤.",
+      "assessedAt": "2026-10-08T12:23:06Z"
     }
   }
 ]
