@@ -868,7 +868,7 @@
     "toBeModelId": "tbm_pocket-aide-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-10-08T15:33:02Z",
-    "updatedAt": "2026-10-08T15:34:46Z",
+    "updatedAt": "2026-10-08T15:36:16Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-08T15:33:02Z",
@@ -890,6 +890,37 @@
     "assessment": {
       "assessedAt": "2026-10-08T15:34:39Z",
       "reason": "조치 필요. #180(자매 `tbm_pocket-aide-scenario-e2e/rct_20261008-0003` 착지)이 러너 쪽 시드 헬퍼 `BackendAPIUITestSupport.swift` 를 허용목록 행 + `mock-exception: EXT` 주석과 함께 정합하게 들였지만, 같은 PR 의 `ScratchpadCaptureMetaUITests.swift` 가 실패 메시지(27행)에 `oidcmock` 토큰을 담아 지문 패턴에 걸린다 — 그 파일은 허용목록 행도 주석도 없어 불변식 1(등재 지점 집합 == 코드 지점 집합)이 깨졌다(지문 12파일 vs 허용목록 11파일). 자매 task 의 준비 단계 검증 ⑶은 헬퍼 행·주석만 확인해 이 파일을 놓쳤다. 실질 위험은 낮다(새 치환 수단 없음 — 등재된 헬퍼와 `UITestAuth` 를 부를 뿐, 새 두 파일에 env seam·launchArguments·URLProtocol 0건) — 그러나 방치하면 1:1 대조가 영구히 어긋나고, 이 차이를 닫을 다른 주체가 없어 자동 해소되지 않는다(유예 부적합). 해소는 작은 대상 레포 변경 하나: 정의의 「판정이 애매하면 제거 쪽」에 따라 메시지에서 `oidcmock` 단어를 빼는 것(예: 「…backend token from the test IdP」)이 1순위이고, 등재로 간다면 `LoginUITests.swift` 선례처럼 허용목록 행 + 파일 머리 `mock-exception: EXT` 주석을 함께 단다 — 선택은 planner 몫. 불변식 2 판정 6조건은 전부 거짓(원장 데이터 행 0·B3 0→0·B1 인계 0)이므로 이번 조치 사유는 불변식 1 단독이다. main `a8b2028` 의 `iOS build + test` 는 관측 시 진행 중이었다(판정에 영향 없음)."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "불변식 1 위반 1건(지문 12파일 vs 허용목록 11파일)을 정의의 「카테고리 판정이 애매하면 제거 쪽」에 따라 등재가 아닌 **토큰 제거**로 닫는다: `ios/PocketAideTests/ScratchpadCaptureMetaUITests.swift` 27행 XCTUnwrap 실패 메시지의 단어 `oidcmock` 을 `the test IdP` 로 바꾼다(문자열 1줄, 동작 무변경 — 그 파일은 등재된 `BackendAPI.signIn`·`UITestAuth` 를 부를 뿐 자체 치환이 없으므로 등재할 지점 자체가 아니다; 등재+주석은 예외를 늘리는 방향이라 기각). 완료 기준: main 착지 후 versionScript 지문 = `sites=21 files=11` · `580e25db…` 이고 지문 파일 집합 == 허용목록 파일 집합(11=11, 양방향 차집합 0), `docs/e2e-mocking-policy.md` 무접촉(to-be `602abd0` 불변), 차단 요인 원장 데이터 행 0 불변. 범위 밖: 지문 사각지대 패턴 개정(control plane), 다른 축.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 브랜치 `reconcile/pa-mock-policy-rct_20261008-0001` 에서 `ScratchpadCaptureMetaUITests.swift` 27행 메시지 `…backend token from oidcmock` → `…backend token from the test IdP` (1줄 치환, 비문자열 diff 0)",
+              "expectedOutcome": "git diff 1 file +1/−1, 그 파일의 `oidcmock` grep 0건"
+            },
+            {
+              "seq": 2,
+              "action": "로컬 게이트: versionScript 지문 재계산 · 허용목록 파일 집합 대조 · `scripts/comment-policy/check_ledger.py` · `scripts/review-policy/judge.py`",
+              "expectedOutcome": "`sites=21 files=11` / `580e25dbc38f…` · 차집합 양방향 0 · check_ledger rc=0 · judge 「수동 승인 케이스 미접촉」"
+            },
+            {
+              "seq": 3,
+              "action": "PR 생성(머지 안 함) 후 PR CI 확인 — paths-filter 상 `ios_tests` 만 참(ios/backend 필터 거짓 ⇒ 이미지·TestFlight 미발화)",
+              "expectedOutcome": "필수 `ci-success` + `review/manual-approval` success"
+            },
+            {
+              "seq": 4,
+              "action": "executor: squash 머지 후 main 에서 versionScript 재측정",
+              "expectedOutcome": "main 지문 `sites=21 files=11` · `580e25dbc38f4056fabc061879331b0eeeed0a366367207de25649dbf886d4c9`, 정책 문서 blob `602abd0d` 불변"
+            }
+          ],
+          "plannedAt": "2026-10-08T15:36:16Z"
+        }
+      }
+    ]
   }
 ]
