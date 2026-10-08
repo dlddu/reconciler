@@ -12143,7 +12143,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "assessing",
+    "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-08T13:37:16Z",
@@ -12157,13 +12157,17 @@
       }
     },
     "createdAt": "2026-10-08T13:37:16Z",
-    "updatedAt": "2026-10-08T13:38:40Z",
+    "updatedAt": "2026-10-08T13:38:56Z",
     "id": "rct_20261008-0001",
     "stateSummary": {
       "asIs": "관측 시각 2026-10-08T13:40Z · `dlddu/economic-opinion-trend-monitor` main `cef78d3` (#237 머지, PR head `1314cd2`).\n\n직전 관측(`rct_20261005-0004`, main `d572997`) 이후 커밋은 **#237 하나**이고 as-is 다섯 디렉터리 중 **`python/`만** 바뀌었다(contracts·go·web·deploy 트리 해시 불변).\n\n#237 「fix(batch): analysis·aggregation 을 주기 단위로 읽어 OOM 해소」 — analyze Pod 512Mi OOMKilled(2026-09-30~) 대응의 **메모리 리팩터링**:\n- `econ_analysis/cli.py`: 레이크 전체를 한 번에 읽던 `_analyze`를 Bronze 주기 파티션 단위 순회(`_Analysis.visit`/`flush`)로 바꿨다. 배치는 여전히 `--batch-size`까지 주기 경계를 넘어 채운다(경계에서 재시도만 남은 배치가 all-calls-failed 가드를 오발하지 않게). `--sample`은 `_sample_ids`가 전체 선택 위에서 예전과 같은 순서·시드로 뽑는다.\n- 전체 레이크 실행은 실패 없이 끝난 주기를 `silver/analysis_settled`(신설, `domain.py`에 `# not a contract` 표기 — `analysis_cache`·`analysis_retry`와 같은 운영 데이터셋)에 버전별로 표시하고, 다음 실행에서 재시도 대기가 없고 Bronze·Silver 파티션 서명(`partition_signature` = inode:size:mtime)이 그대로인 주기는 읽지 않고 건너뛴다. 건너뛴 주기의 `bronze_count`는 `input_count`·`skipped_settled`에 그대로 합산된다(pipeline_run 계수 의미 불변). 범위 실행(`--since`/`--axis`/`--source`/`--sample`)은 표시를 읽지도 쓰지도 않아 `coexisting` 의미 그대로다.\n- `econ_aggregation/aggregate.py`·`cli.py`·`contributions.py`: 주기 단위 조인 + Gold 스트리밍 쓰기. 커밋 메시지 기준 합성 레이크 최대 RSS analysis 803→31MB, aggregation 850→117MB, **출력 바이트 동일**.\n- `econ_core/storage.py`: `iter_records` 제너레이터·`partition_signature` 추가(`read_records`는 그 위의 list). `silver.py`: settled 표시 읽기/쓰기·`still_settled`·`pending_retry_cycles`. 테스트 추가(analysis `test_cli.py` +152, aggregation run record +35, storage +18).\n\n검증 근거: PR head `1314cd2`의 체크 전부 success — `ci / build`(파이썬 테스트), `ci / e2e`(pipeline-ops 시나리오의 `입력 = skipped_settled + call_failed` 계수 단정 포함), `ci / scenario-mapping`, `ci / comment-ledger`, `data-format`(포맷 변경 없음 → `review/manual-approval` 자동 success), `docs / structure`·`docs / flow`, `render`. main `cef78d3`의 build·publish·deploy도 success.",
       "toBe": "관측 시각 2026-10-08T13:40Z · `docs/` 트리 `31a7731` → `c680b71`.\n\n같은 #237에서 `docs/`는 **`docs/comment-policy/ledger.md` 한 파일**만 바뀌었다 — #237이 주석을 늘린 7개 파이썬 파일(analysis `cli.py` 26→44 · `test_cli.py` 5→9 · aggregation `aggregate.py` 16→20 · core `domain.py`·`silver.py`·`storage.py` 2행)의 원장 행을 새 줄 수·지문으로 갱신하고 판정 칸을 `—`(「증분 미판정」)로 되돌렸다. 주석 정책 원장으로, 이 모델이 SSOT로 보는 가치·PRD·AC·테스트 문서·여정·목업·디자인 시스템·doc/design tracker는 **무접촉**이다. 문서 쪽에 운영 데이터셋 목록(`analysis_cache`·`analysis_retry` 등)을 열거한 곳은 없다(그 설명은 `docs/` 밖 README 소관).",
       "gap": "유의미한 차이 없음 — #237은 분석·집계 배치의 메모리 사용만 바꾼 리팩터링으로, 문서가 기술하는 동작(분석 결과·재시도·범위 재처리의 coexisting/in place·pipeline_run 계수·Gold 출력)은 그대로이고(출력 바이트 동일·e2e 계수 단정 통과) 계약·서빙·웹·배포는 무접촉이라 기준 1·2·3·6에 새 격차가 없다. 신설 `analysis_settled`는 계약이 아닌 내부 운영 표시라 사용자 대면 미문서 구현(기준 4)이 아니며, to-be 변화는 주석 정책 원장뿐이라 구현과 모순되는 문서 서술(기준 5)도 생기지 않았다. 원장의 「증분 미판정」 7행은 자매 `tbm_econ-opinion-monitor-comment-necessity` 소관이고, 직전 task들이 기록한 `구조` 등재 잔여는 이번 창과 무관하게 같은 처분으로 남는다.",
       "summarizedAt": "2026-10-08T13:38:40Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창(#237)은 analyze 512Mi OOMKilled 대응의 배치 메모리 리팩터링으로, 문서가 기술하는 관측 가능한 동작을 바꾸지 않았다: 집계 출력 바이트 동일, pipeline_run 계수(`input_count`·`skipped_settled`·`skipped_not_sampled`)는 건너뛴 주기의 건수를 그대로 합산해 의미 불변, 범위 재처리의 coexisting/in place 구분·재시도·AC4.3 이전 행 재연결도 그대로다 — PR head `1314cd2`의 `ci / build`·`ci / e2e`(계수 단정 포함)·`data-format`·`docs / *` 전부 success가 이를 뒷받침한다. 계약·서빙·웹·배포 무접촉이라 미구현 AC·여정 의무가 새로 생기거나 닫히지 않았고, 신설 `analysis_settled`는 기존 `analysis_cache`·`analysis_retry`와 같은 계약 아닌 운영 데이터셋이라 사용자 대면 미문서 구현이 아니다. to-be 변화는 `docs/comment-policy/ledger.md`뿐이고 그 「증분 미판정」 행은 자매 `tbm_econ-opinion-monitor-comment-necessity`가 다룬다. 직전 판정(`rct_20261005-0004`)의 잔여(`구조` 등재)는 이번 창과 무관하게 그대로다.",
+      "assessedAt": "2026-10-08T13:38:56Z"
     }
   }
 ]
