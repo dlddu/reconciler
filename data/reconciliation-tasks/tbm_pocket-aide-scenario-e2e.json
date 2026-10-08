@@ -4711,6 +4711,42 @@
       "reason": "작업 필요. 공백 12건(42 ≠ 30)은 정의 규칙 1 위반이 지속되는 drift이고, 규칙 7상 인프라 선행까지 이 모델 소관이다(「소관은 항상 이 모델」 — 재검토 시점 기재는 부채 기록일 뿐 공백을 닫지 않는다). 자동 해소 경로가 없다.\n\n직전 판정(rct_20261008-0002)은 같은 공백을 `rct_20261008-0001`(PR #173)이 캐리어로 들고 있어 no_action_needed 였으나, 그 슬라이스는 이번 창에서 main 에 착지했고(#173 `b93ac2b`, 0001 은 실행 검증만 남은 `executing`) 계획이 나머지 12행을 「범위 밖 — 후속 재감지 몫」으로 명시했다. main 독립 재측정 결과 착지에 결함은 없다(파일 33 = 시나리오 30 + 비-시나리오 3, 매핑 표 == 선언 집합, 네 통 합 74, 집계 == 실측). 따라서 남은 12행을 들고 갈 열린 캐리어가 없으므로 이 task 가 후속 캐리어가 된다 — 슬라이스 → 재감지 → 후속 task 의 정상 루프.\n\nplanner 참고: 남은 12행은 모두 행에 인프라 선행이 적혀 있어 「선행 없음」으로 바로 착수 가능한 행은 없다. 선행 묶음별 후보 — ⑴ widget #10: 날씨 화면 도달 하네스 셋(관측점은 #162 로 실재) ⑵ routines #4·6·7: 「오늘」 주입 테스트 진입점(제품 코드 접촉 → 사용자 동작 무변경 근거·모킹 정책 `DET` 허용목록 동시 등재 필요) ⑶ github-monitor #3(GitHub API 스텁 경로 — #130 착지로 일부 실재)·#8·9·12·14(envelope 주입 위 행별 선행) ⑷ scratchpad #4(과거 시각 메모 시드 경로) ⑸ scratchpad #7(탭 바 배지 접근성 노출 — 제품 쪽 접근성, 규칙 7 테스트 진입점 범위인지 판단 필요) ⑹ affirmations #5(회전 시드 재도입, 재검토 2026-12-15). 한 슬라이스에 한 묶음을 권한다. 착수 전 0001 이 `succeeded` 로 닫혔는지 확인하고, 「## e2e 매핑」 절을 동시에 고치는 다른 열린 PR 이 없는지 볼 것.",
       "assessedAt": "2026-10-08T13:46:05Z"
     },
-    "updatedAt": "2026-10-08T13:46:49Z"
+    "updatedAt": "2026-10-08T13:51:54Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "공백 12행 가운데 제품 코드·워크플로를 건드리지 않고 무인 1슬라이스로 닫히는 묶음 ⑷ **`test-scratchpad.md#시나리오 4`** 하나를 닫는다. 그 행의 선행 「과거 캡처 시각·입력 방식 메모 시드 경로」를 같은 슬라이스에서 세운다: 공유 헬퍼 `BackendAPIUITestSupport.swift` 가 테스트 러너에서 oidcmock 과 PKCE 왕복(authorize 302 의 code → token)으로 앱과 같은 subject 의 액세스 토큰을 받아 실 백엔드 `/api/scratchpad` 를 부른다(시드 = 실 API 경로 — 모킹이 아니라 정책의 권장 대안. 단 파일이 `oidcmock` 을 쓰므로 모킹 정책 허용목록에 행을 더하고 머리에 `mock-exception: EXT` 를 단다). 전용 파일 `ScratchpadCaptureMetaUITests.swift` 는 목록을 API 로 먼저 비우고(회전 다짐 #6 선례) 앱 UI 로 오늘 텍스트 메모 1개 + API 로 어제 음성·어제 숏컷·사흘 전 텍스트 메모를 시드한 뒤 메타 줄 네 개(「탭 내 입력 · HH:mm」「음성 · 21:40」「숏컷 · 음성 · 08:05」「탭 내 입력 · 10:30」)·섹션 머리 「오늘」「어제」「M월 D일」과 「N ITEMS」·섹션 순서·섹션 안 최신 순을 단정한다. 단정하지 않는 것: 숏컷 표시 점(접근성 밖 도형) · 「음성 본문 = 인식 원문」(시나리오 1·3 구현 대기 — 음성 캡처 경로가 없다). 버린 대안: ⑴ routines #4·6·7 — 「오늘」 주입 진입점이 `ios/PocketAide/**` 제품 코드 접촉이라 main 머지가 TestFlight 를 발화한다 ⑵ widget #10 — 위치 고정·권한을 `ios-test.yml` 에 넣어야 하고 5단계 실패 도달 수단이 없다 ⑶ github-monitor #3 — 혼합 규칙은 GitHub 이 계산해 앱이 읽기만 하므로 관측 방법 판정부터 ⑷ #8·9·12·14 — 행별 선행이 넷으로 갈린다(#14 2·3단계는 이번 헬퍼 위에 둘째 사용자가 더 필요). 되돌리기는 PR revert 한 번이다.\n\n**완료 기준(이 task 의 성공 판정)**: main 에서 ⑴ `ios/PocketAideTests/ScratchpadCaptureMetaUITests.swift` 가 있고 첫 줄이 `// 검증 시나리오: test-scratchpad.md#시나리오 4` 이다. ⑵ 「## e2e 매핑」 집계가 착지 직전 main 값 대비 매칭 +1 · 공백 −1 · 매칭 단위 파일 +1 · scratchpad 공백 −1 이고 전집·예외·구현 대기는 불변이다(재생 키트 `verify.py` rc=0 + 출력 벡터 대조). ⑶ `docs/e2e-mocking-policy.md` 허용목록에 (`ios/PocketAideTests/BackendAPIUITestSupport.swift`, `oidcmock`, `EXT`) 행이 있고 그 파일 머리에 `mock-exception: EXT` 가 있다. ⑷ 머지되는 PR head 의 `iOS build + test` 에서 `ScratchpadCaptureMetaUITests` 가 실제로 실행돼 통과했다. **범위 밖(후속 재감지 몫)**: 남는 공백 11행 — affirmations #5 · github-monitor #3·8·9·12·14 · routines #4·6·7 · scratchpad #7 · widget #10.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR head 의 `iOS build + test` 결과를 확인한다(잡 로그에서 `Test Suite 'ScratchpadCaptureMetaUITests' passed` 를 센다). 준비 단계의 CI 결과는 preparation.notes 에 있다.",
+              "expectedOutcome": "`ScratchpadCaptureMetaUITests` passed 1회 이상 · `ci-success` success · `review/manual-approval` success."
+            },
+            {
+              "seq": 2,
+              "action": "PR 의 mergeStateStatus 를 본다. DIRTY 이면(자매가 「## e2e 매핑」 절이나 모킹 정책 허용목록을 먼저 바꿈) main 위에서 키트 `apply.py` 로 문서 두 개를 다시 쌓고 Swift 두 파일은 PR head 에서 그대로 가져와 force-with-lease push 한 뒤 1단계를 새 head 로 반복한다.",
+              "expectedOutcome": "PR 이 mergeable 이고 head 의 필수 체크가 초록이며, verify 벡터가 착지 직전 main 대비 매칭 +1 · 공백 −1 · 단위 +1 이다."
+            },
+            {
+              "seq": 3,
+              "action": "PR 을 squash 머지한다(제목 그대로).",
+              "expectedOutcome": "main 에 커밋 1개가 착지하고 PR 이 MERGED 다."
+            },
+            {
+              "seq": 4,
+              "action": "main checkout 에서 완료 기준 ⑴⑵⑶ 을 재측정한다(`head -1` 선언 줄 · 키트 `verify.py <main>` · 허용목록 행 grep + 파일 머리 `mock-exception: EXT`).",
+              "expectedOutcome": "선언·집계 벡터·허용목록 행이 모두 기대값이다."
+            },
+            {
+              "seq": 5,
+              "action": "main push 런에서 TestFlight·이미지 잡이 발화하지 않았는지 확인한다(`ios/PocketAideTests/**`·`docs/**` 만 접촉).",
+              "expectedOutcome": "`TestFlight upload`·`Backend Docker build + push` 가 skipped 다."
+            }
+          ],
+          "plannedAt": "2026-10-08T13:51:54Z"
+        }
+      }
+    ]
   }
 ]
