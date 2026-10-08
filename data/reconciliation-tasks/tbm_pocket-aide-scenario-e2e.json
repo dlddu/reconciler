@@ -4864,10 +4864,46 @@
       "gap": "불변식 `(74 − 예외 11 − 구현 대기 21) = 42 ≠ 매칭 31` — 공백 11건은 규칙 1(시나리오→파일 유일) 위반이고 규칙 7상 인프라 선행까지 이 모델 소관이라 **정의상 유의미한 drift가 남아 있다**. 이번 창이 만든 새 어긋남은 0이다: #180 착지로 공백 12→11(축소), 선언·등재·집계(규칙 2·3·5)는 실측과 전부 일치한다.",
       "summarizedAt": "2026-10-08T15:38:07Z"
     },
-    "updatedAt": "2026-10-08T15:38:39Z",
+    "updatedAt": "2026-10-08T15:52:00Z",
     "assessment": {
       "reason": "작업 필요. 공백 11건(42 ≠ 31)은 정의 규칙 1 위반이 지속되는 drift이고, 규칙 7상 인프라 선행까지 이 모델 소관이다(「소관은 항상 이 모델」 — 행의 재검토 시점은 부채 기록일 뿐 공백을 닫지 않는다). 자동 해소 경로가 없다(롤아웃·재동기화로 사라지는 차이가 아니다).\n\n직전 캐리어 `rct_20261008-0003`(PR #180)은 공백 1행(scratchpad #4)만 닫는 슬라이스로 `succeeded` 종료됐고, 나머지 11행은 그 계획에서 범위 밖이었다. main `a8b2028` 독립 재측정 결과 착지에 결함은 없다(파일 34 = 시나리오 31 + 비-시나리오 3, 매핑 표 == 선언 집합, 네 통 합 74, 집계 == 실측). 남은 11행을 들고 있는 열린 캐리어가 없다 — 열린 pocket-aide task(comment-necessity·data-model·docs-impl·e2e-mock-policy·mockup-render)와 열린 PR(#178·#179·#183·#184·#185) 중 공백 행을 닫는 것은 없다. 따라서 이 task 가 후속 캐리어가 된다 — 슬라이스 → 재감지 → 후속 task 의 정상 루프.\n\nplanner 참고: 남은 선행 묶음 — ⑴ widget #10: 날씨 화면 도달 하네스 셋(관측점은 #162 로 실재) ⑵ routines #4·6·7: 「오늘」 주입 테스트 진입점(제품 코드 접촉 → 사용자 동작 무변경 근거·모킹 정책 `DET` 허용목록 동시 등재 필요, `ios/PocketAide/**` 접촉은 main 머지 시 TestFlight 발화) ⑶ github-monitor #3(GitHub API 스텁 경로)·#8·9·12·14(envelope 주입 위 행별 선행) ⑷ scratchpad #7(탭 바 배지 접근성 노출 — `.badge` 값이 XCUITest 트리에 없음, 규칙 7 테스트 진입점 범위인지 판단 필요) ⑸ affirmations #5(회전 시드 재도입, 재검토 2026-12-15). 신규 자산: #180 의 `BackendAPIUITestSupport.swift`(러너 PKCE 토큰 + 실 API 시드 경로)가 이제 실재하므로, 백엔드가 받는 값으로 과거 상태를 만들 수 있는 행(예: 서버가 날짜 문자열을 그대로 받는 routines 체크 이력 등)은 이 경로로 선행 일부를 대체할 수 있는지 먼저 볼 것. 한 슬라이스에 한 묶음을 권한다. 착수 전 PR #185(e2e-mock-policy, 같은 `ScratchpadCaptureMetaUITests.swift` 접촉)와 「## e2e 매핑」 절·`docs/e2e-mocking-policy.md` 허용목록을 동시에 고치는 다른 열린 PR 이 없는지 확인할 것.",
       "assessedAt": "2026-10-08T15:38:25Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "공백 11행 가운데 제품 코드·워크플로를 건드리지 않고 무인 1슬라이스로 닫히는 묶음 **routines #6·#7** 두 행을 닫는다. 두 행이 공유하던 선행 「『오늘』 주입 테스트 진입점(`DET`)」을 제품 코드 seam 대신 #180 이 세운 러너 → 실 백엔드 API 시드 경로(`BackendAPIUITestSupport.swift`)로 대체한다: 백엔드 `POST /api/routines` 는 `start_day` 를, `PATCH /api/routines/{id}/days/{day}/steps/{stepID}` 는 과거 `day` 를 클라이언트 값 그대로 받으므로(서버가 그 문자열로 활성일을 판정 — 비활성일은 409), 러너가 시뮬레이터 달력(`Calendar.current`, 앱의 `RoutineDayFormat` 과 같은 기기 달력)으로 계산한 과거 날짜로 「며칠 전에 만든 루틴」과 과거 활성일의 체크를 실 API 로 시드할 수 있다. 앱의 「오늘」은 실제 기기 날짜 그대로다 — 시계 주입·제품 seam·모킹 정책 `DET` 행이 필요 없다. #6 은 1·2단계(단계 없는 루틴 「0 / 0 완료」·「대기」, 쉬는 루틴 행 → 이력 시트)를 앱 UI 로, 3단계(「어제 완료였던 루틴이 다음 날 『0 / 2 완료』·『대기』로 다시 시작」)를 어제 시작·어제 두 단계 체크를 API 로 시드한 루틴의 오늘 카드 + 그 루틴 이력 시트의 어제 행 「완료」로 단정한다. #7 은 「특정 요일」 루틴(단계 2개)을 열흘 전 시작으로 API 시드하고, 그 사이 활성일 셋에 모두 체크 · 하나만 체크 · 미체크를 만든 뒤 이력 시트의 머리 「<이름> · 30일」·요약 「<주기> · 예정 N일 중 M일 완료」·일자별 행(최근 날짜가 위 · 「완료」·「미완료 1/2」·「미완료 0/2」·「쉬는 날」(비활성일·시작 전 날짜))·「닫기」를 단정한다(격자 칸 색은 접근성 밖이라 단정하지 않는다). 버린 대안: ⑴ routines #4 — 1·3단계는 실제 오늘로도 닿지만 「주기가 *돌아온* 날 올라온다」(날짜 경계 넘김)와 2단계 짧은 달 말일 규칙은 앱의 「오늘」이 바뀌어야 관측되어 API 시드로 대체되지 않는다(제품 진입점 → TestFlight) ⑵ widget #10 — 위치 고정·권한을 `ios-test.yml` 에 넣어야 하고 5단계 실패 도달 수단이 없다 ⑶ github-monitor #3·8·9·12·14 — 행별 선행이 갈리고 #12·#14 는 둘째 사용자(oidcmock subject 하나)가 남는다 ⑷ scratchpad #7 — 탭 바 배지 접근성 노출(제품 코드) ⑸ affirmations #5 — `DET` 회전 시드 재도입(제품 코드). 되돌리기는 PR revert 한 번이다.\n\n**완료 기준(이 task 의 성공 판정)**: main 에서 ⑴ `ios/PocketAideTests/` 에 #6·#7 전용 파일 두 개가 있고 첫 줄이 각각 `// 검증 시나리오: test-routines.md#시나리오 6` · `// 검증 시나리오: test-routines.md#시나리오 7` 이다. ⑵ 「## e2e 매핑」 집계가 착지 직전 main 값 대비 매칭 +2 · 공백 −2 · 매칭 단위 파일 +2 · routines 공백 −2 이고 전집·예외·구현 대기·비-시나리오는 불변이다(재생 키트 `verify.py` rc=0 + 출력 벡터 대조). ⑶ 새 두 파일에 모킹 지문 토큰(`oidcmock`·`launchEnvironment` 등)이 없고 `docs/e2e-mocking-policy.md` 는 무변경이다(시드는 기존 허용 헬퍼를 부를 뿐이다). ⑷ PR head 의 ios-test 에서 두 클래스가 passed 다. 범위 밖: 나머지 공백 9행(affirmations #5 · github-monitor #3·8·9·12·14 · routines #4 · scratchpad #7 · widget #10) — routines #4 행의 선행 문면은 이번에 고치지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR head 의 `iOS build + test` 결과를 확인한다(잡 로그에서 두 신설 클래스의 `Test Suite '<클래스>' passed` 를 센다). 준비 단계의 CI 결과는 preparation.notes 에 있다.",
+              "expectedOutcome": "두 클래스 passed, 필수 status `ci-success`·`review/manual-approval` success"
+            },
+            {
+              "seq": 2,
+              "action": "PR 의 mergeStateStatus 를 본다. DIRTY 이면 main 위에서 키트 `apply.py` 로 doc-tracker 를 다시 쌓고 Swift 두 파일은 PR head 에서 그대로 가져와 force-with-lease push 한 뒤 1단계를 새 head 로 반복한다.",
+              "expectedOutcome": "CLEAN 이거나 behind+`merge-tree` clean"
+            },
+            {
+              "seq": 3,
+              "action": "PR 을 squash 머지한다(제목 그대로).",
+              "expectedOutcome": "PR merged, main 에 squash 커밋 1개"
+            },
+            {
+              "seq": 4,
+              "action": "main checkout 에서 완료 기준 ⑴⑵⑶ 을 재측정한다(`head -1` 선언 줄 두 개 · 키트 `verify.py <main>` · 새 파일 모킹 토큰 grep 0 + `docs/e2e-mocking-policy.md` 무변경).",
+              "expectedOutcome": "⑴⑵⑶ 모두 참, verify 벡터가 머지 직전 main 대비 매칭 +2 · 공백 −2 · 단위 +2"
+            },
+            {
+              "seq": 5,
+              "action": "main push 런에서 TestFlight·이미지 잡이 발화하지 않았는지 확인한다(`ios/PocketAideTests/**`·`docs/**` 만 접촉).",
+              "expectedOutcome": "`TestFlight upload`·`Backend Docker build + push` skipped"
+            }
+          ],
+          "plannedAt": "2026-10-08T15:52:00Z"
+        }
+      }
+    ]
   }
 ]
