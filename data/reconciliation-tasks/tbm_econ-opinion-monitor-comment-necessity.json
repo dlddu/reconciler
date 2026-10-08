@@ -14457,6 +14457,37 @@
       "reason": "**작업 필요 → action_required.** 근거 1 — 게이트 자기출력: `scripts/check-comment-ledger.py` 를 창 양 끝 `a320223`/`cef78d3` 에서 실행, 둘 다 rc=0 이나 tip 은 미판정 L 2행·18줄 · D 5행·132줄 · E 1행·4줄(이전 끝 0/0/0). 원장 합계가 지문(L 1664 · D 491/42 · E 27/17)과 일치한다.\n근거 2 — 원인은 기능 PR #237(배치 OOM 해소)이 Python 7파일에 들인 주석이며, 그 PR 은 정책 본문 운영 규칙대로 자기 행을 `—` 로 되돌렸을 뿐 판정·유지 사유 기록을 하지 않았다. 이 모델의 정합 상태(필요 사유 없는 주석 0 + 유지 사유 `passes/` 기록)는 판정 패스 없이는 회복되지 않는다 — 자동 해소 경로가 없어 유예는 맞지 않는다.\n근거 3 — 규모는 154줄/8행(파일 7: `analysis/tests/test_cli.py`·`analysis/src/econ_analysis/cli.py`·`aggregation/src/econ_aggregation/aggregate.py`·`core/src/econ_core/{domain,silver,storage}.py`)로 슬라이스 예산 400줄 안이라 한 task 로 전량 가져갈 수 있다. 증분 판정은 결과 칸의 기존 유지 근거를 바탕으로 늘어난 줄의 사유를 대면 된다(행 전체가 `—` 이므로 행 단위 재판정).\n근거 4 — 골대 불변: `README.md`·`passes/` 양 끝 동일, to-be 이동은 #237 의 원장 8행뿐.\n계획 참고: 열린 PR #238(Go `go/internal/handlers`·`store` + `ledger.md` 10줄)은 위 Python 파일과 겹치지 않으므로 덩어리를 뺄 사유가 아니다 — 다만 같은 `ledger.md` 를 고치므로 병합 순서·rebase 를 지침에 적을 것. #238 이 Go 주석을 들이면 머지 뒤 별도 감지 task 의 몫이다. 같은 모델의 다른 비종결 task 0.",
       "assessedAt": "2026-10-08T13:34:20Z"
     },
-    "updatedAt": "2026-10-08T13:36:15Z"
+    "updatedAt": "2026-10-08T13:36:15Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#237 이 원장 8행(L 2·D 5·E 1, 154줄)을 `—` 로 되돌린 gap 을, 그 PR 이 들인 **추가 계수 50줄**(L 6·D 43·E 1)만 필요성 시험으로 판정해 닫는다(원장 운영 규칙 「증분만 판정했으면 그 결과를 적는다」 — 옛 판정 줄은 근거가 움직이지 않아 재판정하지 않음, service-dedup·prune-fresh 증분 패스 선례). 대안(8행 154줄 전량 재판정)은 같은 결론을 되풀이할 뿐이라 기각. 예산 400 대비 50 인 사유: 미판정 행이 이 8행뿐(남은 대상 없음). **완료 기준**: PR #239 머지 후 main 에서 `scripts/check-comment-ledger.py` 가 불변식 통과 + L·D·E 미판정 모두 `행 0 · 0줄`, 원장 8행 판정 `완료`, 패스 파일 `passes/2026-10-08-batch-cycle-streaming-increment-pass.md` 존재. **범위 밖**: 열린 #238(Go 서빙)이 들일 Go 행 증분 — 그 착지 뒤 재감지 몫.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "게이트 measure→by_file 로 cef78d3^ vs cef78d3 의 추가 계수 50줄을 뽑아 파일·표면별 판정",
+              "expectedOutcome": "제거 16(test_cli L 4 · cli.py D 12) · 유지 34(개작 1)"
+            },
+            {
+              "seq": 2,
+              "action": "소스 편집(cli.py·test_cli.py 주석/docstring 만) + 코드 무변경 증명(docstring 뗀 ast.dump SAME, 음성 프로브 DIFF) · ruff · pytest",
+              "expectedOutcome": "2파일 SAME · ruff/pytest rc=0 · check-data-format-change format_changed=false"
+            },
+            {
+              "seq": 3,
+              "action": "원장 8행 줄 수·지문 실측 갱신 + 판정 `완료` + 패스 파일 작성",
+              "expectedOutcome": "check-comment-ledger 미판정 L·D·E 0행 0줄, 불변식 통과"
+            },
+            {
+              "seq": 4,
+              "action": "PR #239 머지(squash) — 실행 단계",
+              "expectedOutcome": "main 에서 게이트 미판정 0 · 지문 L 1660 · D 479/42 · E 27/17"
+            }
+          ],
+          "plannedAt": "2026-10-08T13:44:20Z"
+        }
+      }
+    ]
   }
 ]
