@@ -6820,7 +6820,7 @@
     "toBeModelId": "tbm_pocket-aide-mockup-render",
     "status": "planning",
     "createdAt": "2026-10-08T16:52:48Z",
-    "updatedAt": "2026-10-08T17:08:00Z",
+    "updatedAt": "2026-10-08T17:20:00Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-08T16:52:48Z",
@@ -6868,7 +6868,7 @@
             {
               "seq": 4,
               "action": "브랜치 push · PR 생성(머지 안 함), 음성 프로브(ScreenHeader 한 줄 되돌림 → 검산 발화) 기록",
-              "expectedOutcome": "PR open, changed_files 9, ci-success · review/manual-approval 대기"
+              "expectedOutcome": "PR open, changed_files 8(ios 1 · docs/mockups 7), ci-success · review/manual-approval 대기"
             },
             {
               "seq": 5,
@@ -6876,7 +6876,15 @@
               "expectedOutcome": "main 에서 완료 기준 충족"
             }
           ],
-          "plannedAt": "2026-10-08T17:08:00Z"
+          "plannedAt": "2026-10-08T17:08:00Z",
+          "executionGuide": "# 실행 지침 — rct_20261008-0007 (PR dlddu/pocket-aide#187)\n\n## 범위(완료 기준) — 이 기준으로만 판정할 것\n- PR #187 이 main 에 **squash 머지**되고(`--match-head-commit` 로 승인 head 고정, 준비 시 `4d6e9b4`),\n- main 머지 커밋에서 네 대응표 검산(`docs/mockups/_structure-map.md` · `_impl-map.md` · `_copy-map.md` · `_token-map.md` 의 `## 검산` bash 블록, 레포 루트)이 **`ok`×4**(검산은 실패해도 rc=0 — **출력 문자열**로 판정),\n- `_structure-map.md` 「집계」 `screen-affirmations`: **표 M 일치 122 · 기본값 일치 1 · 불일치 22 · 허용 8 · 목업 대기 0 / 표 S 일치 14 · 불일치 3 · 목업 대기 0**, 표 머리 `· 153행`·`· 17행` 불변, 우선순위 시트·루틴 불일치 0 유지,\n- 머지 전 PR head 의 필수 둘(`ci-success` · `review/manual-approval`) success.\n\n남은 표 M 불일치 22 · 표 S 3 은 **범위 밖**이다 — 실패로 세지 말 것.\n\n## 순서 (직렬 — 병렬 불가)\n1. **필수 status 확인** — `gh api repos/dlddu/pocket-aide/pulls/187 --jq .head.sha`.\n   - `ci-success` 는 CI run 의 잡이다: `gh api \"repos/dlddu/pocket-aide/actions/runs?head_sha=<full sha>\" --jq '.workflow_runs[]|\"\\(.name) \\(.status) \\(.conclusion)\"'` 로 `CI` run conclusion 확인(`commits/<sha>/statuses` 폴링은 영영 none). iOS 빌드 + XCUITest 45~65분 — App 토큰(1h) 재발급 대비.\n   - `review/manual-approval` 은 judge 자동 success(「수동 승인 케이스 미접촉 (8 경로)」, 사람 게이트 없음). 빨강·부재면 `git diff --name-only origin/main...<head> | python3 scripts/review-policy/judge.py --policy docs/review-policy.md` 로 재라.\n   - **빨강일 때**: 실패 스텝을 본다. 컴파일 오류(ScreenHeader 2줄은 리터럴만 바꿨다)·XCUITest 실패는 계획 결함이므로 머지하지 말고 `failed`(실패 스텝·로그 줄 인용). runner 과금 정지(`steps: []`, 1~3초)·flake 는 같은 sha `rerun --failed` 1회까지 — 커밋을 얹지 말 것(결론이 sha 에 묶인다).\n2. **결합 트리 재검산(main 이 `e7d7d60` 에서 움직였을 때만)** — 임시 worktree 에서 `git -c user.name=x -c user.email=x@x merge --no-commit origin/main` 후 네 검산 `ok`×4 · `git grep -c \"tracking(-0.025 \\* 24)\" ios/Shared/Sources/DesignSystem/Components/ScreenHeader.swift` = 1 · `grep -c 'font-semibold\">다짐<' docs/mockups/screen-affirmations.html` = 0. 충돌·검산 실패면 머지하지 말고 `failed`(재준비: 리베이스 — 재생 스크립트 아래).\n3. **squash 머지** — `gh pr merge 187 -R dlddu/pocket-aide --squash --match-head-commit <sha>`.\n4. **main 검산** — 머지 커밋에서 네 검산 `ok`×4 · 집계 행(위 수치) · `git show --stat HEAD` = 8파일(ios 는 `ScreenHeader.swift` 1파일).\n5. **main push CI 관찰(기록만)** — `ios/**` 접촉이라 iOS 빌드 + **프로덕션 TestFlight 업로드**가 발화한다. 「Run fastlane beta」 실패는 2026-10-04 부터의 기존 상태라 판정 무관.\n\n## 검증 방법 요약\n| 항목 | 명령/관측 | 기대값 |\n|---|---|---|\n| 대응표 검산 | `python3 -c 'import re;md=open(\"docs/mockups/<f>.md\").read();exec(re.search(r\"python3 - <<.EOF.\\n(.*?)\\nEOF\", md, re.S).group(1))'` | 4개 모두 `ok` |\n| 집계 | `grep -n '^| \\`screen-affirmations\\` | [MS] |' docs/mockups/_structure-map.md` | M 122/1/22/8/0 · S 14/3/0 |\n| 라벨 굵기 잔여 | `grep -c 'font-semibold\\\\\\?\">\\(다짐\\|루틴\\|임시 공간\\)<' docs/mockups/*.html` | 전부 0 |\n| 필수 status | 1단계 | 둘 다 success |\n\n## 주의사항\n- **되돌릴 수 없는 지점**: main 머지 = 프로덕션 TestFlight 업로드. 코드 롤백은 `git revert <merge>` 1커밋이지만 업로드된 빌드는 남는다. CI 가 초록이 아니면 머지하지 말 것.\n- **시각 변화(의도)**: `ScreenHeader` 를 쓰는 5화면(다짐·루틴·임시 공간·PR 모니터·투두) 제목 자간이 조금 좁아지고(−0.24 → −0.6pt) 라벨↔제목 간격이 4 → 2pt. 목업 헤더 라벨이 600 → 700(구현은 원래 700, 무변화). 데이터·API·백엔드 무접촉.\n- 표 행은 검산이 계산·대조한다 — 손으로 고치지 말 것. 재생이 필요하면 준비 노트의 `apply.py`(rep()+count 단정)를 깨끗한 main 위에서 한 번.\n\n## 범위 밖(후속 — 재감지가 새 task 로 잇는다)\n- stone↔ink 색 3행(히어로 메타 글자 · 범례 · 빈 상태 안내) — 검산 stone 에셋 미지원 + 허용 `S1` 범위 결정\n- 정렬 칩 12행 + 표 S #11 · 이동 출처 줄 7행 + 표 S #13 — 기능 선결(`tbm_pocket-aide-docs-impl` 경계)\n- 표 S #6 회전 점 `animate-pulse` — 무한 애니메이션 ↔ XCUITest idle\n- 카피 표 A 구현 대기 9 · 표 B 50 · 나머지 구현 화면 대응표 신설(PR 모니터·임시공간·투두·위젯·루틴 목록/이력·탭 바 — 이 PR 로 그 화면 헤더 3값이 미리 수렴하지만 판정은 표가 생길 때)\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261008-0007-screen-header",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/187",
+          "preparedAt": "2026-10-08T17:20:00Z",
+          "notes": "PR명의: dlddu-k3s-homelab-k3s-mcp[bot](App 토큰). head `4d6e9b4`, base main `e7d7d60`, changed_files 8(+26/−26): `ScreenHeader.swift` 2줄 · 목업 html 5(헤더 라벨 semibold→bold 14+다크 14) · `_structure-map.md` · `_token-map.md`. 로컬 실측: 검산 ok×4 · 음성 프로브 3/3 발화(자간·간격·목업 라벨 되돌림) · swiftlint-static --strict(ios/) 위반 0 · judge.py 「수동 승인 케이스 미접촉 (8 경로)」 · check_ledger.py rc=0 · journey-mockup-harness 출력 base 동일(위반 0). 열린 PR #186·#185·#179·#178 은 docs/mockups·DesignSystem 무접촉. 준비 중 실수 1건 정정: 첫 적용이 `| 제목 | tracking-tight |` 정규식으로 우선순위 표 131행을 잘못 집어 검산이 깨졌다 → 행 정규식에 구현 파일·인용까지 넣고 count==1 단정, 깨끗한 트리에서 재적용(커밋에는 정상본만). 재생 스크립트: 잡 tmp `kit/apply.py`."
         }
       }
     ]
