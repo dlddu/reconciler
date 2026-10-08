@@ -868,7 +868,7 @@
     "toBeModelId": "tbm_pocket-aide-e2e-mock-policy",
     "status": "planning",
     "createdAt": "2026-10-08T15:33:02Z",
-    "updatedAt": "2026-10-08T15:36:52Z",
+    "updatedAt": "2026-10-08T15:37:13Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-08T15:33:02Z",
@@ -918,7 +918,8 @@
               "expectedOutcome": "main 지문 `sites=21 files=11` · `580e25dbc38f4056fabc061879331b0eeeed0a366367207de25649dbf886d4c9`, 정책 문서 blob `602abd0d` 불변"
             }
           ],
-          "plannedAt": "2026-10-08T15:36:16Z"
+          "plannedAt": "2026-10-08T15:36:16Z",
+          "executionGuide": "## 범위(완료 기준)\n불변식 1 위반 1건 해소만: main 착지 후 모델 versionScript 지문 = `sites=21 files=11` / `580e25dbc38f4056fabc061879331b0eeeed0a366367207de25649dbf886d4c9`, 지문 파일 집합 == `docs/e2e-mocking-policy.md` 「## 허용목록」 파일 집합(11=11, 양방향 차집합 0). 정책 문서 blob `602abd0d…` 불변.\n\n## 순서 (직렬)\n1. **PR #185 상태 확인** — head `df937809c97a41b1d494bac4e3fef38107c93cd3`, 변경 1파일(`ios/PocketAideTests/ScratchpadCaptureMetaUITests.swift` +1/−1). `gh api repos/dlddu/pocket-aide/pulls/185 --jq '.changed_files,.head.sha,.mergeable_state'` ⇒ `1` · 위 sha · `clean`(behind 여도 필수 status 초록이면 clean — 리베이스 불필요).\n2. **필수 status 대기** — `ci-success`(ios-test ~50분) + `review/manual-approval`(judge 「케이스 미접촉」 ⇒ 자동 success). 둘 다 head sha 에 success 일 때만 다음 단계.\n   - ios-test 가 이 변경과 무관한 이유(타 XCUITest flake 등)로 실패하면 `gh run rerun --failed` 로 **같은 sha** 재실행 — 커밋을 얹지 말 것. 이 PR 은 실패 메시지 문자열만 바꿨으므로 단정 결과에 영향이 없다.\n3. **squash 머지** (`gh pr merge 185 --squash`, 같은 App 토큰).\n4. **main 검증** — main 을 checkout 해 모델 `asIs.versionScript` 그대로 실행 ⇒ 위 지문. 그리고 허용목록 대조:\n   ```\n   git ls-files -- ios backend .github | grep -vE '_test\\.go$|^ios/PocketAideUnitTests/|^\\.github/workflows/backend-(unit|integration)-test\\.yml$|^\\.github/actions/wait-for-localstack/|\\.md$' | xargs grep -El \"$PATTERN\" | sort\n   ```\n   를 허용목록 1열 경로 집합과 비교 ⇒ 차집합 0. `git rev-parse HEAD:docs/e2e-mocking-policy.md` = `602abd0d4dbd8a8135c36da58ed48cfba5d6a552`(자매가 그 사이 정책 문서를 바꿨으면 허용목록 파일 집합 대조만으로 판정).\n\n## 주의\n- main 머지 push 의 paths-filter: `ios_tests` 만 참, `ios`·`backend` 거짓 ⇒ 이미지 빌드/pin·TestFlight **미발화**. 운영 영향 없음.\n- 롤백: 머지 커밋 revert(문자열 1줄) — 불가역 지점 없음.\n- 준비 이후 main 이 움직여 다른 PR 이 새 `oidcmock` 등 지문 토큰을 들이면 지문 수치는 달라질 수 있다 — 그때는 「이 파일의 `oidcmock` 0건 + 이 파일이 지문 집합에 없음」으로 이 범위를 판정하고, 새 차이는 재감지 몫.\n\n## 범위 밖(후속)\n- 지문 사각지대(`launchArguments`·`URLProtocol` 등) 패턴 개정 — control plane.\n- 차단 요인 원장: 데이터 행 0, 이번 슬라이스 무관.\n"
         },
         "preparation": {
           "repository": "dlddu/pocket-aide",
