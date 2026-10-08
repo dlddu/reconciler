@@ -617,7 +617,7 @@
       }
     },
     "createdAt": "2026-10-08T12:20:51Z",
-    "updatedAt": "2026-10-08T14:24:46Z",
+    "updatedAt": "2026-10-08T14:36:49Z",
     "stateSummary": {
       "asIs": "관측 2026-10-08T12:22:46Z · dlddu/pocket-aide main `01bc08f` (2026-10-08T12:13:12Z). 직전 관측(`3c8dc05`, rct_20261004-0004) 이후 data-model scope 를 건드린 커밋은 #120 `01bc08f`(docs-impl `rct_20261004-0009`, 세션 플랫폼 프록시) 단 하나.\n- 지문: migrations 21→23 · site_lines 46→50 · query_lines 117→121 · schema `345cb458…`→`65961c8f…` · queries `c706daeb…`→`48ffd5a9…` · checker `963b26dc…` **불변**.\n- #120 의 data-model 관련 변경: `backend/migrations/0011_agent_sessions.{up,down}.sql`(테이블 `agent_sessions`(session_id TEXT PK · user_id INTEGER NOT NULL FK→users.id ON DELETE CASCADE · created_at) + `idx_agent_sessions_user_id(user_id)`), `backend/internal/sessions/store.go` 쿼리 지점 4(`Add` insert · `Owns` select eq(session_id,user_id) · `Owned` select eq(user_id) · `Remove` delete eq(session_id,user_id)). `docs/data-model/` 은 건드리지 않았다.\n- 레포 체커 `cd backend && go run ./cmd/datamodelcheck --json` 을 tip 에서 운영 엔진 **SQLite 3.46.0 (modernc.org/sqlite v1.34.1)** 으로 직접 실행(go1.24.7) → **rc=1**, `undecidable` [].\n  - 스키마: 테이블 13 · 인덱스(PK 제외) 15 · FK 12. 지점 50(= 지문 site_lines 50 → C4 이상 없음) · plans 54.\n  - 불변식 1 **violated** 3: `table-missing` agent_sessions · `diagram-entity-missing` agent_sessions · `diagram-relation-missing` `users ||--o{ agent_sessions : user_id`.\n  - 불변식 2 **violated** 4: `query-unregistered` × sessions/store.go::Store::{Add, Owns, Owned, Remove}.\n  - 불변식 3 **violated** 3: `no-support` Q-09 · Q-15(이전과 동일 잔여) + `unused-unregistered` `idx_agent_sessions_user_id`(Owned 가 카탈로그에 없어 플랜 대상이 아니라서 생긴 것).\n- 보조 프로브(python sqlite3 3.45.1, 엔진 판정 아님): Owns·Remove → `sqlite_autoindex_agent_sessions_1 (session_id=?)`, Owned → `idx_agent_sessions_user_id (user_id=?)` — 4행 등재 시 새 no-support 는 없고 unused 위반도 사라질 형태.\n- 절차 4: 체커 해시 불변 ⇒ C2(블록 밖 하드코딩) 이전 판정 유지, 리포트 `block` = README 블록 그대로.\n- CI(main `01bc08f`): `data-model check (report)` success(report 모드 — rc=1 은 경고), Backend unit+lint·integration success, iOS 진행 중.\n- 열린 PR(#176·#173) 중 `docs/data-model`·`datamodelcheck`·`sessions/` 접촉 0.",
       "toBe": "`docs/data-model` 트리 `ab3ba43` **불변**(마지막 변경 #114 `3c8dc05`). 파일: `README.md` · `erd.md` · `query-patterns.md` — `agent_sessions` 언급 0. README §2 가 풀스캔 허용 기준 표(0행)를 직접 품고 있고 `fullscan-criteria.md` 는 **없다**. 반면 모델 정의·템플릿 고정부(2026-10-05 개정, reconciler `1918b5fb0`)는 기준 표를 `docs/data-model/fullscan-criteria.md` 한 파일에 두고 README §2 는 링크만 하도록 요구한다.",
@@ -674,6 +674,48 @@
           "status": "approved",
           "reviewedAt": "2026-10-08T14:22:44Z",
           "reason": "문서 3파일(erd.md +15 · query-patterns.md +4 · ledger.md +1 미판정 행) + sessions.Store doc 주석 1줄. 마이그레이션·쿼리·동작 변경 없음, 되돌릴 수 없는 지점 없음. PR #177 열림 · head `546b616b` 불변 · 필수 check `ci-success`(iOS 포함, 14:21Z)·`review/manual-approval`(판정기 「수동 승인 케이스 미접촉」) 모두 success · mergeable clean. 완료 기준을 head 에서 실측: CI data-model 잡 로그상 체커(SQLite 3.46.0/modernc) 불변식 1·2 정합 · 3 = no-support Q-09·Q-15 두 건뿐(undecidable 없음, rc=1 정상); check_ledger.py rc=0. 리뷰 중 main 이 `01bc08f`→`e3ecb20`(#176·#173·#181, iOS·mockups·doc-tracker 만)으로 움직였으나 PR 4파일과 겹침 0이고 behind 3 이어도 strict=false 라 clean; 로컬 merge 트리에서 충돌 0·diff 4파일 +21 · ledger rc=0 재확인, data-model scope(migrations·sessions·docs/data-model) 무접촉이라 체커 결과도 불변. backend/** 접촉이라 main 머지 시 이미지 빌드→Pin 운영 롤아웃이 돌지만(지침 5단계 명시, 동작 동일 이미지) 롤백은 revert PR 로 가능해 medium 위험이 통제됨 — 승인. 사람 승인 context 는 이미 success 라 manualApproval 없음. 지침 1단계의 「base 01bc08f」는 낡았으니 executor 는 merge-tree 로 재확인하면 된다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-10-08T14:24:59Z",
+          "finishedAt": "2026-10-08T14:36:49Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-10-08T14:24:59Z",
+              "finishedAt": "2026-10-08T14:26:05Z",
+              "log": "PR #177 head 546b616b · mergeable_state clean · changed_files 4 · +21/-0. head 체크: ci-success·data-model check (report)·comment-policy ledger·judge success, review/manual-approval success(판정기: 수동 승인 케이스 미접촉). main 이 01bc08f→e3ecb20 로 이동(#173·#176·#181 — iOS·mockups·doc-tracker 만, PR 4파일과 경로 겹침 0). git merge-tree --write-tree origin/main 546b616b → 충돌 0, tree 3b1c5377. 실제 로컬 merge 트리(같은 3b1c5377)에서 사전 실행: datamodelcheck rc=1 inv1 ok·inv2 ok·inv3 {no-support Q-09, Q-15}·undecidable [] / check_ledger rc=0."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-10-08T14:26:09Z",
+              "finishedAt": "2026-10-08T14:26:13Z",
+              "log": "PUT pulls/177/merge squash (sha 가드 546b616b, 제목 미지정=PR 제목+(#177)) → merged, main 26efc924b680b14d6bbc8ee490df01ce431ff66e (부모 e3ecb20, tree 3b1c5377 == 사전 merge 트리)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-10-08T14:26:20Z",
+              "finishedAt": "2026-10-08T14:27:30Z",
+              "log": "main 26efc92 detached checkout, go1.24.7(GOTOOLCHAIN=local, -mod=mod 미사용): cd backend && go run ./cmd/datamodelcheck --json → exit 1, invariants 1 ok · 2 ok · 3 violated, violations = (no-support,Q-09),(no-support,Q-15) 정확히 2건(unused-unregistered idx_agent_sessions_user_id 소멸), undecidable []."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-10-08T14:27:30Z",
+              "finishedAt": "2026-10-08T14:27:40Z",
+              "log": "main 26efc92: python3 scripts/comment-policy/check_ledger.py rc=0 (L: 행 41 · 파일 76 · 주석 604줄 · 완료 573 · 미판정 31). ledger.md L 표 37행: backend/internal/sessions/store.go · 1줄 · 54a62f1c49b2 · 판정 — · 미판정."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-10-08T14:27:45Z",
+              "finishedAt": "2026-10-08T14:36:49Z",
+              "log": "main push runs(head_sha 26efc92): data-model 37792446106 success · comment-policy 37792446182 success. CI 37792446817 은 기록 시점 in_progress — Detect changes·Journey mockup·Backend unit + lint success, LocalStack skipped, iOS build + test 진행 중(pocket-aide main CI ~1h). Build & push image → Pin deployment image 는 iOS 잡 뒤라 아직 미발화; 지침대로 판정(3·4)과 분리 — 결과는 이 기록 밖, 실패해도 운영은 직전 이미지 유지이며 롤백은 git revert 26efc92 PR."
+            }
+          ]
         }
       }
     ]
