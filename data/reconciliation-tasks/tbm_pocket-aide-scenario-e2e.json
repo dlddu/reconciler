@@ -5712,6 +5712,47 @@
     "assessment": {
       "reason": "작업 필요. 공백 6건(42 ≠ 36)은 정의 규칙 1 위반이 이어지는 drift다. 규칙 7에 따라 인프라 선행까지 이 모델 소관이고, 롤아웃·재동기화로 저절로 사라지는 차이가 아니라 자동 해소 경로가 없다.\n\n이번 창은 직전 캐리어 rct_20261009-0001(PR #200, affirmations #5 한 행만 닫는 슬라이스)의 착지다. 이 task는 머지 후 main `2b3e698`의 `iOS build + test`(관측 시점 in_progress)를 기다리며 `verifying` 상태다. 그 계획은 나머지 6행을 「범위 밖 — 후속」으로 명시했다. 남은 6행을 들고 있는 열린 캐리어는 없다. 열린 PR 중 #210(mockup-render)·#207(approval-gate 백엔드, docs-impl)·#208·#201(문서)은 공백 행의 E2E 파일·등재를 만들지 않는다. 슬라이스 → 재감지 → 후속 task 규약(선례 rct_20261009-0001 ← rct_20261008-0007)에 따라 이 task를 후속 캐리어로 planner에 넘긴다.\n\nplanner 참고:\n- 0001 executor의 main `2b3e698` `iOS build + test` 판정(`RotationWeightedAffirmationUITests` 통과)을 확인한 뒤 계획할 것. 0001이 실패로 롤백되면 affirmations #5가 공백으로 돌아오므로 그 행도 다시 포함한다.\n- 각 행의 선행 인프라(제품 접근성 노출·백엔드 APNs 호스트 재지정·푸시 시점 주입·앱 둘째 사용자 로그인·날씨 하네스 등)는 「## e2e 매핑」 공백 표 해당 행에 있다.\n- 열린 PR #209(ci/ios-test-shards: iOS UI 테스트 3샤드 분산)가 E2E 러너·워크플로를 바꾸므로, 워크플로를 건드리는 슬라이스라면 충돌·순서를 함께 볼 것.",
       "assessedAt": "2026-10-09T06:09:43Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "공백 6행 중 제품·백엔드·워크플로 벽이 없는 유일한 행 github-monitor #3 을 매칭으로 닫는다: 행의 선행 「혼합 규칙 관측 방법 판정」을 '혼합 규칙은 GitHub 이 계산하는 statusCheckRollup.state 의 의미론이고 앱은 그 값을 표시만 한다 → 스텁이 체크 목록에서 GitHub 롤업 규칙으로 state 를 짓는 PR 여섯을 서빙하면 앱 쪽 관측점 전부가 선다'로 판정해, 기존 GitHub API 스텁에 PAT ghp_e2e_rollup(기존 픽스처 무변경)과 전용 파일 PullRequestsCIStatusUITests.swift 를 더하고 doc-tracker 「## e2e 매핑」·모킹 정책 두 행을 같은 PR(#211)에서 갱신한다. 대안(실 GitHub 테스트 계정 PAT)은 BF-3 에서 실측 기각, 기존 ghp_e2e_valid 확장은 시나리오 1·4·10 의 행 집합 단정을 깨므로 새 토큰을 택했다. **범위(완료 기준)**: PR #211 이 main 에 squash 착지하고, main 의 `iOS build + test` 에서 PullRequestsCIStatusUITests 가 통과하며, main 위 「## e2e 매핑」 집계가 매칭 37 · 공백 5 · 매칭 단위 40 이고 공백 표에 github-monitor #3 행이 없을 것. **범위 밖(후속)**: 남은 공백 5행 github-monitor #8(테스트가 고른 시점의 푸시 주입)·#9(백엔드 APNs 호스트 재지정 — backend 접촉 = 운영 배포)·#12(앱 둘째 사용자 로그인)·scratchpad #7(탭 배지 접근성 노출 — 제품 코드)·widget #10(날씨 하네스 셋).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "선행 확인: 직전 캐리어 rct_20261009-0001(PR #200)의 main 2b3e698 `iOS build + test` 결론을 본다(affirmations #5 매칭 유지 여부). 실패로 롤백되면 이 PR 의 집계는 그 롤백 PR 과 함께 재생 스크립트로 다시 얹는다.",
+              "expectedOutcome": "2b3e698 iOS build + test success(또는 rct_20261009-0001 이 succeeded) — #200 의 매칭 36 이 유지된다"
+            },
+            {
+              "seq": 2,
+              "action": "PR #211 head 70f8107 의 필수 status(`ci-success`·`review/manual-approval`) 와 `iOS build + test` 결과를 확인한다. 실패 시 실패 테스트가 PullRequestsCIStatusUITests 인지, 기존 단골 flake(PRMonitorUITests testPushTap… · AffirmationDeleteUITests 스와이프)인지 귀속을 가른다.",
+              "expectedOutcome": "iOS build + test success, PullRequestsCIStatusUITests.testEachPullRequestShowsTheRollupOfItsHeadCommitChecks passed; ci-success·review/manual-approval success"
+            },
+            {
+              "seq": 3,
+              "action": "PR #211 이 DIRTY 면(자매가 「## e2e 매핑」 집계 줄을 먼저 고친 경우) main 을 병합하고 doc-tracker·모킹 정책은 main 판 위에 artifacts/pa-sc-rct_20261009-0005/apply.py 를 재생해 얹는다(코드 3파일은 이 브랜치 판 그대로).",
+              "expectedOutcome": "mergeable CLEAN, 재생 후 독립 재계수 rc=0"
+            },
+            {
+              "seq": 4,
+              "action": "PR #211 을 squash 머지한다.",
+              "expectedOutcome": "main 에 1커밋 착지, 5파일 변경"
+            },
+            {
+              "seq": 5,
+              "action": "main 머지 커밋의 check-runs 확인: `iOS build + test` 통과, image·TestFlight 미발화(Plan image / TestFlight 로그 image=false testflight=false).",
+              "expectedOutcome": "main iOS build + test success · Pin/TestFlight skipped"
+            },
+            {
+              "seq": 6,
+              "action": "main 위 독립 재계수: ios/PocketAideTests 최상위 *UITests.swift 수, 시나리오 선언 수, 「## e2e 매핑」 집계·매핑 표·공백 표.",
+              "expectedOutcome": "파일 40 · 시나리오 선언 37(중복 0) · 매핑 표 ID 집합 == 선언 집합 · 집계 매칭 37 · 공백 5 · 공백 표 5행(#3 없음)"
+            }
+          ],
+          "plannedAt": "2026-10-09T06:40:00Z"
+        }
+      }
+    ]
   }
 ]
