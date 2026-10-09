@@ -277,7 +277,7 @@
       }
     },
     "createdAt": "2026-10-09T00:56:29Z",
-    "updatedAt": "2026-10-09T00:59:05Z",
+    "updatedAt": "2026-10-09T01:08:00Z",
     "stateSummary": {
       "asIs": "**관측 시각** 2026-10-09T00:58Z · `dlddu/feature-doc@main` tip `ec93125` (#236, 2026-10-09T00:48:16Z 머지). 창 `c8c5dde..ec93125` = 커밋 1건(#236 「풀스캔 허용 기준을 fullscan-criteria.md 로 분리」).\n\n- **지문**: `contexts=1 judges=2 surface_hits=46 anchors_absent=0` — judges 해시만 `63ab9d98…`→`f3baab21…`, surface·anchors 해시 불변.\n- **판정기** `tools/check-data-format-change.py`: D7 구현이 「`docs/data-model/README.md` 「풀스캔 허용 기준」 절의 `|` 행 집합 merge-base↔head 비교」에서 **`CRITERIA_DOC = docs/data-model/fullscan-criteria.md` 파일 단위 매치**로 바뀜(`criteria_rows` 삭제, `classify(files)`). 라벨 {D1, D6, D7}, SELF_PATHS 3개(판정기·워크플로·정책) 유지, git 오류 → exit 2(status 없음) 유지.\n- **워크플로** `.github/workflows/data-format-review.yml`: 불변 — `pull_request_target`, `ref: base.sha` 체크아웃, `review/…` context 는 `review/manual-approval` 하나.\n- **데이터 모델 체커** `tools/check-data-model.py`도 `CRITERIA = …/fullscan-criteria.md` 로 이동(기준 표의 유일한 독자). README 「풀스캔 허용 기준」 절은 이제 표 없이 `fullscan-criteria.md` 링크 산문만 남음. `fullscan-criteria.md` 는 F1 1행 표.\n- **게이트(R5)** 이번 조회 성공: `GET repos/dlddu/feature-doc/rules/branches/main` required = `ci-gate integration=15368` · `review/manual-approval integration=any`. 다른 `review/` context 없음.\n- **#236 승인 경로**: head `56e8e40` 에 `review/manual-approval` success, description 「수동 승인 — dlddu (세션에서 머지 지시, D6·D7)」, creator `dlddu-k3s-homelab-k3s-mcp[bot]`(정책 `사람 승인` 칸이 적은 승인 전용 도구) — P7 경로.\n- **제외 재개 조건 6행**(tip 실측): crypto 버전필드 0 · `pub struct Envelope` 1 · `STAGES: [Stage; 5]` 1 · `json_(extract|each|tree)` 0 · sqlx 0.8 1 / rusqlite·libsqlite3-sys 0 · `replicas: 1`·`type: Recreate` 존재, PVC 파일 1(`deploy/k8s/pvc.yaml`) · `sqlx::migrate!(\"./migrations\")` 1 → 전부 거짓.\n- 열린 PR 0건.",
       "toBe": "**정책** `docs/review-policy.md` blob `95da34b`→`a8d2a52`(#236). 변경은 케이스 표 **D7 행 1줄**뿐: 대상이 「README 「풀스캔 허용 기준」 절의 표 행 변경」→ **「`docs/data-model/fullscan-criteria.md` 의 모든 변경(`--no-renames`)」**.\n\n- 케이스 3: D1(`backend/migrations/**`) · D6(판정기·워크플로·정책 자신) · D7(`fullscan-criteria.md`).\n- 프로세스 표: 게이트 칸(ruleset 23666120, `ci-gate`(15368)·`review/manual-approval`(미고정) + `gh api` 확인 명령) · 사람 승인 칸(수동 status, 승인 도구와 `review/` prefix 범위) 채워짐. 마지막 재검토 2026-09-29 · **다음 재검토 2026-12-28**.\n- surface 블록 불변(scope 4 · ere 7줄).\n- **anchors 블록 불변**: `backend/migrations/*.sql` · **`docs/data-model/README.md`** · `tools/check-data-format-change.py` · `.github/workflows/data-format-review.yml` · `docs/review-policy.md`. → D7 이 이제 지목하는 `docs/data-model/fullscan-criteria.md` 는 앵커에 **없다**.\n- 의도적 제외 6행(재개 조건 리터럴 有) · 미탐 원장 0행.",
@@ -287,6 +287,42 @@
     "assessment": {
       "reason": "판정 규칙 「R1~R6·O1~O5 중 하나라도 위반이면 action_required」에 따라 **action_required**.\n\n**위반 — O1(앵커 실재)의 추적 대상이 케이스와 어긋남(R4 앵커 블록 정합 포함)**: 정의상 앵커는 「케이스가 이름으로 지목하는 경로」다. #236 이후 D7 이 지목하는 경로는 `docs/data-model/fullscan-criteria.md` 인데 anchors 블록에는 없고, 대신 어떤 케이스도 더는 지목하지 않는 `docs/data-model/README.md` 가 남아 있다(#233 이 D7 앵커로 넣은 줄). README 가 계속 존재하므로 지문의 `anchors_absent=0` 은 D7 에 대해 아무것도 보장하지 않는다 — 기준 표 파일이 다시 옮겨지면 판정기의 `CRITERIA_DOC` 는 없는 경로를 보며 계속 success 를 붙이고, 지문은 움직이지 않는다. 그 PR 자체는 D7(`--no-renames` 삭제 감지)에 걸려 사람에게 가지만, 사람이 판정기를 같이 옮기지 않으면 이후 조용히 죽는다 — 앵커가 잡아야 할 바로 그 경우다. 자동 해소 경로 없음(정책 파일 수정이 필요) → 유예 사유 없음.\n\n**충족**: R1 정책 {D1,D6,D7} == 판정기 라벨, D7 본문(파일 단위 · `--no-renames`) 코드 일치 · R2 contexts=1, 판정기 1 · R3 `pull_request_target`+`base.sha` 체크아웃, success 만, git 오류 exit 2, SELF_PATHS 에 정책 포함(P5) · R5 2026-10-09 조회 성공 — required `ci-gate integration=15368`·`review/manual-approval integration=any`, 다른 `review/` 없음 · R6 사람 승인 칸 완비, #236 은 수동 status(「수동 승인 — dlddu (세션에서 머지 지시, D6·D7)」, 승인 도구 bot) · O2 surface 해시 불변(46히트, 전부 D1/제외 대상 — 직전 task 측정 유지) · O3 제외 6행 재개 조건 tip 실측 전부 거짓 · O4 다음 재검토 2026-12-28(오늘 이후, 마지막 재검토+90일) · O5 미탐 원장 0행.\n\n**planner 인계(제안)**: `docs/review-policy.md` anchors 블록에서 `docs/data-model/README.md` → `docs/data-model/fullscan-criteria.md` 로 교체(README 를 함께 남길지는 계획 판단 — 남기면 어떤 케이스의 앵커인지 근거 필요). 이 PR 은 D6(정책 자신) 대상이라 수동 승인이 필요하다. 지문의 anchors 해시가 바뀌는 것이 정상이며, 머지 후 재감지에서 `anchors_absent=0` 이 새 경로 기준으로 성립해야 한다. 부수(비차단): D7 본문의 「2026-10-08 전에는」 은 실제 머지일(2026-10-09)과 하루 어긋난다 — 같은 PR 에서 고쳐도 무방. 소관 census: 열린 PR 0 · 같은 모델 열린 task 는 이 task 하나.",
       "assessedAt": "2026-10-09T01:02:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "`docs/review-policy.md` 의 `anchors` 블록에서 어떤 케이스도 더는 지목하지 않는 `docs/data-model/README.md` 를 D7 이 지금 지목하는 `docs/data-model/fullscan-criteria.md` 로 같은 자리(51행)에서 교체하고, 같은 PR 에서 D7 본문의 「2026-10-08 전에는」을 실제 분리 시점 「#236(2026-10-09) 전에는」으로 고친다 — 정책 문서 한 파일 · 2줄 교체. README 를 함께 남기는 대안은 기각: 정의상 앵커는 「케이스가 이름으로 지목하는 경로」인데 README 를 지목하는 케이스가 없고(D7 본문의 README 언급은 과거 서술, D1 의 `backend/migrations/README.md` 는 이유 칸의 근거 인용), 남기면 O1 이 D7 과 무관한 파일의 실재로 계속 초록이 되는 지금의 거짓 초록을 일부 유지한다. 판정기·워크플로·체커는 이미 새 경로를 보므로 무접촉. **완료 기준(이 시도의 범위)**: ⑴ main 의 anchors 블록 = `backend/migrations/*.sql` · `docs/data-model/fullscan-criteria.md` · `tools/check-data-format-change.py` · `.github/workflows/data-format-review.yml` · `docs/review-policy.md` 5행, `docs/data-model/README.md` 0행 ⑵ main 에서 모델 as-is versionScript 출력 = `contexts=1 judges=2 surface_hits=46 anchors_absent=0` 이고 judges·surface 해시 불변(`f3baab210de93544`·`d3b6f527d6f2e31d`), anchors 해시만 `86d94988c7649d24` 에서 바뀜 ⑶ 음성 프로브: `fullscan-criteria.md` 를 지운 임시 커밋에서 `anchors_absent=1`(머지 전 브랜치에서 실측 — 옛 앵커에선 0 이었다) ⑷ D7 행에 `2026-10-08` 0건. 범위 밖: 케이스 신설·확대, 판정기·워크플로 수정, 다음 재검토(O4, 2026-12-28) 갱신, ruleset.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR 브랜치에서 `docs/review-policy.md` 51행 `docs/data-model/README.md` → `docs/data-model/fullscan-criteria.md` 교체, 28행 D7 본문 「2026-10-08 전에는」→「#236(2026-10-09) 전에는」(문자열 일치 assert count==1).",
+              "expectedOutcome": "`git diff --numstat main` = `2 2 docs/review-policy.md` 한 줄; 다른 파일 0."
+            },
+            {
+              "seq": 2,
+              "action": "PR head 에서 모델 as-is versionScript 를 그대로 실행하고, 임시 커밋(fullscan-criteria.md 삭제)에서 다시 실행해 음성 프로브.",
+              "expectedOutcome": "head: `contexts=1 judges=2 surface_hits=46 anchors_absent=0`, judges=f3baab210de93544 · surface=d3b6f527d6f2e31d 불변, anchors 해시 변경. 프로브: `anchors_absent=1`. (main 에서 같은 프로브는 0 — 거짓 초록 실증.)"
+            },
+            {
+              "seq": 3,
+              "action": "로컬 게이트: `python3 tools/check-data-format-change.py --base origin/main --head HEAD`(D6 발화 예고) · `scripts/check-comment-ledger.py` · docs 게이트(`tools/check-docs*.py` 류) 실행.",
+              "expectedOutcome": "판정기 = needs_review(D6: docs/review-policy.md) — `review/manual-approval` 은 자동으로 붙지 않음(정상, P5). 나머지 게이트 rc=0."
+            },
+            {
+              "seq": 4,
+              "action": "PR 의 필수 status 확인: `ci-gate` success(docs 전용 → image 가 돌아 success 해야 함) + `review/manual-approval` 은 사람(dlddu)이 수동 status 로 head sha 에 붙인다(review.manualApproval). 붙은 뒤 그 head 로 squash 머지(커밋 추가 금지 — status 는 sha 에 묶인다).",
+              "expectedOutcome": "PR merged, main 에 squash 커밋 1건."
+            },
+            {
+              "seq": 5,
+              "action": "머지 후 main 에서 versionScript 재실행 + anchors 블록 grep.",
+              "expectedOutcome": "완료 기준 ⑴⑵⑷ 성립(⑶ 은 2단계에서 실측)."
+            }
+          ],
+          "plannedAt": "2026-10-09T01:08:00Z"
+        }
+      }
+    ]
   }
 ]
