@@ -9246,6 +9246,46 @@
           "reason": "PR #220 은 열려 있고(head e9523fd, base 3ed91c9 = 현재 main, behind_by 0, MERGEABLE) 범위는 notes 그대로 3파일이다. `review/manual-approval` 은 SUCCESS, `ci-success` 는 iOS 잡 queued 로 아직 미판정이다. 그러나 head 에서 `docs/mockups/_copy-map.md` 「## 검산」이 `A 누락 ('ios/PocketAide/Todos/TodoListView.swift', '\\\\(idPrefix).summary')` 를 출력한다. 같은 블록이 base main 에서는 `ok` 다. 원인은 이 PR 이 요약 줄 식별자 리터럴 `\"\\(idPrefix).summary\"` 를 `.accessibilityIdentifier(` 인자에서 `subtitleIdentifier:` 인자로 옮긴 것이다. 검산의 EXCL 정규식은 `accessibilityIdentifier(` 뒤 리터럴만 제외하므로, 이 리터럴이 카피 표 A 의 미등재 리터럴로 잡힌다. CI 에는 mockups 검산이 없고 완료 기준 ⑴은 `_structure-map.md` 만 본다. 그래서 그대로 머지하면 기준 3(카피) 측정기가 main 에서 깨진 채 succeeded 로 닫힌다 — 결정적 회귀라 거부. 그 밖의 실측: `_structure-map` 검산 head `ok`, 음성 프로브(버튼 40→36 되돌림)는 오류를 낸다, 집계 산술 98−15=83 · 43+13=56 · 2+1=3 · 146−1=145 성립, 기존 4화면 표 무접촉, `_impl-map`·`_token-map` 검산 head `ok`, 배포 타깃 iOS 26 이라 `.monospaced(Bool)` 가용. 지침의 TestFlight·롤백 서술은 적정하다.",
           "comment": "코드 방향·structure-map 갱신은 그대로 두고, 카피 표 회귀만 고친 뒤 재준비하면 된다.\n(1) `_copy-map.md` 검산을 `ok` 로 되돌릴 것. 두 방법 중 하나를 고른다.\n  - 권장: 표 A 의 TodoListView 블록에 `| \\`ios/PocketAide/Todos/TodoListView.swift\\` | \\`\\(idPrefix).summary\\` | 비표시 | 요약 줄 접근성 식별자(ScreenHeader \\`subtitleIdentifier\\` 인자) |` 행을 추가한다. 표에 비표시 집계가 있으면 그것도 맞춘다.\n  - 대안: 검산 EXCL 에 `subtitleIdentifier:\\s*` 를 추가한다(리뷰 실측: 이것만으로 head 에서 `ok`).\n(2) 완료 기준과 로컬 게이트에 `_copy-map.md`·`_impl-map.md`·`_token-map.md` 검산 `ok`(stdout 한 줄, rc 아님)를 넣는다. structure-map 만 보면 이 회귀가 실행 단계에서도 안 잡힌다.\n(3) 재생 키트 `artifacts/pa-mr-rct_20261009-0011/kit/` 의 apply_doc.py 에도 (1)을 반영하고, preparation.notes 의 head sha 를 갱신한다.\n그 밖의 계획·지침(범위, 집계 수치, TestFlight 주의, revert 롤백)은 리뷰에서 문제를 찾지 못했다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "**재계획(attempt #1, review_rejected 반영)** — 범위·코드·structure-map 갱신은 attempt #0 그대로이고, 리뷰가 잡은 카피 표 회귀(`_copy-map.md` 검산 `A 누락 \\(idPrefix).summary`)를 표 A `비표시` 행 등재로 고친 뒤 완료 기준 ⑴을 mockups 검산 4종으로 넓힌다(EXCL 정규식 수정 대안은 버렸다 — 측정기 규칙을 바꾸면 다른 화면의 판정까지 움직일 수 있고, 표 행 등재는 이 PR 이 만든 리터럴 하나만 닫는다). `screen-todo-personal` 표의 불일치 98행 중 **헤더 덩어리**(제목 28 · 요약 줄을 제목 아래 부제 자리로 · 추가 버튼 40 clay 채움 흰 글리프 18 외곽선 없음 · 헤더↔검색 12 · 검색 위아래 8 · 검색 글자 13 · 검색 아래 12)를 iOS 구현을 목업에 맞춰 닫고, 같은 PR 에서 `_structure-map.md` 표 M·S·집계를 실측값으로 갱신한다. 왜 이 묶음인가: #212(scratchpad 헤더 덩어리)가 공용 `ScreenHeader` 에 넣어 둔 기본값 인자(`titleSize`·`bottomPadding`)를 그대로 쓰므로 공용 컴포넌트 변경이 `subtitleIdentifier`·`subtitleMonospaced` 두 기본값 인자(기존 호출부·기존 4화면 표 인용 무수정)로 끝나고, 회사 탭 목업(`screen-todo-work`)도 같은 헤더 치수(28 · 40 · mt-3 · py-2 · 13 · pb-3)라 같은 뷰가 두 탭을 함께 수렴시킨다. 필터 칩 18행(제품 기능 부재)·섹션 구조·행 카드·영역 점(공용 `AreaLabel` 점 크기·모양이 탭마다 다름)·stone 색·S4 계열 시스템 스와이프·목업 대기 3+2 는 범위 밖(후속). 완료 기준: ⑴ main 에서 `docs/mockups/` 검산 4종(`_structure-map.md`·`_copy-map.md`·`_impl-map.md`·`_token-map.md` 「## 검산」)이 각각 stdout `ok` ⑵ `screen-todo-personal` 집계가 이 PR 의 실측값(M 불일치 98→83 · 일치 43→56 · 기본값 일치 2→3 · 표 M 146→145행, S 불일치 7→6 · 일치 12→13) ⑶ 기존 4화면(priority-edit·routines·affirmations·scratchpad) 표 E·M·S 본문과 집계 행 바이트 불변 ⑷ 회사 탭 요약 줄 고정폭 유지(test-todo 시나리오 7) · XCUITest 식별자 `todos.<area>.summary`·`todos.<area>.add.button` 유지. 카피 집계: A 비표시 14→15 · 표 A 164→165행, 그 밖의 카피 집계 불변.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`ScreenHeader.swift` 주 init 에 기본값 인자 `subtitleIdentifier: String = \"screen.header.subtitle\"` · `subtitleMonospaced: Bool = false` 추가, 부제 `Text` 에 `.monospaced(subtitleMonospaced)` 와 `.accessibilityIdentifier(subtitleIdentifier)`",
+              "expectedOutcome": "기존 호출부(다짐·임시공간·루틴·PR 모니터 등) 무수정 컴파일, 기존 4화면 표의 `ScreenHeader.swift` 인용이 그대로 존재(검산이 인용 부재로 실패하지 않음)"
+            },
+            {
+              "seq": 2,
+              "action": "`TodoListView.swift` 헤더를 주 init 으로: `titleSize: 28` · `subtitle: area.summary(...)` · `subtitleIdentifier: \"\\(idPrefix).summary\"` · `subtitleMonospaced: area == .work` · `bottomPadding: Spacing.md`, trailing 은 추가 버튼만(40 × 40 · accent 채움 · `.white` · `plus` 18 · 외곽선 제거). `summaryFont` 삭제. 검색 필드 `.padding(.vertical, Spacing.sm)` · 글자 `bodySm` 13 · 아래 여백 `Spacing.md`",
+              "expectedOutcome": "요약 줄이 제목 아래 부제 자리, 식별자 `todos.personal.summary`/`todos.work.summary` 유지, 회사 요약 고정폭"
+            },
+            {
+              "seq": 3,
+              "action": "`docs/mockups/_structure-map.md` 의 `screen-todo-personal` 표 M 헤더·요약·추가 버튼·검색 행의 구현 파일·인용·값·판정·근거 갱신, M 「추가 버튼 외곽선」 행 삭제, 표 S 4 `일치`, 정방향 규약 문면 「부제 분기 제외」→「포함」, 집계 문장·표 갱신",
+              "expectedOutcome": "검산 `ok`, 집계 M 일치 56 · 기본값 3 · 불일치 83 · 목업 대기 3, S 일치 13 · 불일치 6 · 목업 대기 2"
+            },
+            {
+              "seq": 4,
+              "action": "`docs/mockups/_copy-map.md` 표 A 의 TodoListView 블록(`todos.\\(area.rawValue)` 행 바로 아래)에 `\\(idPrefix).summary` | 비표시 행 추가, 집계 `| A | 비표시 | 14 |`→15, 표 A 제목 164행→165행 (키트 `apply_copy.py`)",
+              "expectedOutcome": "`_copy-map.md` 검산 stdout `ok`(base 3ed91c9 에서도 ok · attempt #0 head 에서는 `A 누락`)"
+            },
+            {
+              "seq": 5,
+              "action": "로컬 게이트: mockups 검산 4종(`_structure-map`·`_copy-map`·`_impl-map`·`_token-map`, stdout 한 줄로 판정) + 음성 프로브(새 카피 행 삭제 → `A 누락` · 집계 변조 → 오류, 사본 복원) · 키트 재생 write-tree == head 트리 · `judge.py`(수동 승인 케이스 미접촉) · comment-policy `check_ledger` · 기존 4화면 표 본문 바이트 대조",
+              "expectedOutcome": "검산 4종 모두 `ok`, 프로브 모두 오류, 재생 트리 일치, judge 미접촉, ledger 지문 불변"
+            },
+            {
+              "seq": 6,
+              "action": "기존 PR #220 브랜치 `reconcile/mockup-render-rct_20261009-0011-todo-header` 에 수정 커밋을 fast-forward 로 얹고(force push 없음) PR 본문에 재준비 절 추가 — 머지는 실행 단계",
+              "expectedOutcome": "PR open, head 갱신, `ci-success`·`review/manual-approval` 무인 SUCCESS(ios 잡 포함)"
+            }
+          ],
+          "plannedAt": "2026-10-09T12:40:00Z"
+        }
       }
     ]
   }
