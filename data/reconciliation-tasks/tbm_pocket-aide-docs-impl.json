@@ -5193,7 +5193,7 @@
       }
     },
     "createdAt": "2026-10-09T12:48:29Z",
-    "updatedAt": "2026-10-09T12:50:38Z",
+    "updatedAt": "2026-10-09T13:08:00Z",
     "stateSummary": {
       "asIs": "**관측 시각 2026-10-09T12:50Z** · `dlddu/pocket-aide` main `2f458ed`(2026-10-09T12:36:02Z) · `ios` 트리 `307958f0…`(직전 `74cede38…`) · `backend` 트리 `307ccaf8…`(불변).\n\n- 직전 관측 커밋 `3ed91c9` 이후 main에 들어온 커밋은 #214 `2f458ed` 하나다(rct_20261009-0012 실행 슬라이스).\n- 코드 변경(3파일):\n  - `Shared/Sources/PocketAideAPI/PRMonitor.swift`: `PRMonitorPushPayload.deepLinkURL`이 `event_id`가 없거나 숫자로 읽을 수 없으면 `nil` 대신 `pocketaide://pr-monitor`를 돌려준다.\n  - `PocketAide/AppDelegate.swift`: 「no event_id … skipping deep link」 else 분기를 지웠다. 콜드 스타트(`launchOptions[.remoteNotification]`)와 포그라운드·백그라운드 탭(`didReceive`)이 모두 같은 함수를 거쳐 `DeepLinkRouter`로 간다.\n  - `PocketAideUnitTests/PRMonitorPushPayloadTests.swift`: `testDeepLinkURLNilWhenNoEventID` → `testDeepLinkURLFallsBackToTabWhenNoEventID`(빈 페이로드·`\"not-a-number\"` 둘 다 탭 URL).\n- 소비 측 `PocketAideApp.handleDeepLink`의 `pr-monitor` 분기는 원래부터 쿼리가 없으면 `highlightedEventID = nil` + `selectedTab = .prMonitor`였다. 그래서 이제 「탭 진입·강조 없음」이 성립한다.\n- 부수 영향 점검: 앱에 로컬 알림(`UNNotificationRequest` 등)이 0건이다. 백엔드가 보내는 유일한 APNs 페이로드(`cmd/server/main.go` `{\"event_id\": …}`)는 PR 모니터용이다. 그래서 모든 알림 탭이 PR 모니터로 가는 폴백이 다른 알림을 잘못 보내는 경우는 지금 없다.\n- 로그아웃 경로: `AppAuthCoordinator.signOut()`을 부르는 `SignOutButton`은 여전히 어느 화면도 띄우지 않는 `HelloWorldView`에만 있다. 탭 셸에서 도달할 수 있는 로그아웃(계정 전환) 경로는 0이다.\n- main CI(`2f458ed`): deploy·build·journey-mockup·data-model·comment-policy가 success다. backend 잡은 변경이 없어 skipped. iOS build+test는 관측 시점에 queued였다(PR 단계 CI 초록은 0012 완료 기준 ⑥).\n- 열린 task: rct_20261009-0007(PRD-12 백엔드 1차, `approved`), rct_20261009-0014(PRD-8 AC10 날씨 새로고침, `planning`). rct_20261009-0012는 `succeeded`로 닫혔다.",
       "toBe": "**관측 시각 2026-10-09T12:50Z** · `docs` 트리 `8bfff167…`(직전 `5ca270a7…`) — 같은 #214 커밋이 바꿨다.\n\n- `docs/product/test-github-monitor.md` 시나리오 8: 「구현 상태」 문면을 「이벤트 ID가 없거나 읽을 수 없으면 `pocketaide://pr-monitor` — 탭 진입만, 강조 없음」으로 늘렸다. 「관련 코드 테스트」를 새 테스트 이름으로 바꿨다. 기대 결과(「이벤트 ID가 없으면 PR 모니터 탭으로만 진입하고 강조는 없다」)는 그대로다.\n- `docs/product/doc-tracker/2026-10.md`: PRD-10.AC7 불일치 해소 bullet(취소선)과 이력 행(「불일치 1 → 0」)을 더했다. 이력 행은 「시나리오 12의 로그아웃 경로 부재는 별도」라고 명시한다. e2e 매핑 절의 github-monitor #8·#12 구현 대기 행은 scenario-e2e 소관이라 바꾸지 않았다.\n- PRD·AC 본문·여정·목업·디자인 시스템은 바뀌지 않았다. AC 수도 그대로다.\n- 시나리오 12(검증 AC: PRD-10 AC11)의 3단계는 「다른 사용자 계정으로 로그인해 PR 모니터 탭에 진입한다」로, 앱 안 계정 전환을 전제한다. 「구현 상태」 줄은 여전히 「구현됨」이다.",
@@ -5203,6 +5203,42 @@
     "assessment": {
       "reason": "작업 필요(action_required). 이번 창(#214 `2f458ed`)은 rct_20261009-0012의 부분 슬라이스다. 그 계획이 정한 시나리오 8(PRD-10 AC7)을 닫았다. 코드에서 다시 확인했다: `deepLinkURL` 폴백 → `handleDeepLink`가 탭 진입·강조 없음으로 처리하고, 다른 알림 종류가 없어 부작용도 없다.\n\n- 같은 0012가 「범위 밖 — 다음 슬라이스」로 미룬 **시나리오 12 3단계 / PRD-10 AC11 로그아웃(계정 전환) 경로 부재**는 그대로다. 0012가 `succeeded`로 닫혀 이 gap을 맡은 열린 task가 없다(0007·0014 범위 밖). 슬라이스 → 재감지 → 후속 task 규약에 따라 여기서 넘긴다.\n- 사용자에게 보이는 확정 AC 전제가 코드에 없다. 코드가 바뀌지 않는 한 자동으로 해소되지 않는다. scenario-e2e의 github-monitor #12 1:1 매칭도 이 경로에 막혀 있다(tracker e2e 매핑 「코드 실측」 행).\n- 계획 단계 메모:\n  1. 0012가 미룬 사유는 「진입점 위치의 목업·디자인 근거 부재」였다. 탭 셸 어디(설정·프로필 등)에 로그아웃을 둘지 문서 근거를 먼저 찾고, 없으면 문서 쪽 결정(목업·여정 보강)이 함께 필요한지 판단한다.\n  2. 로그아웃 시 기존 동작(위젯 타임라인 재요청 `WidgetRefresher.reloadAll`, 키체인 비움)을 지킨다.\n  3. 착지하면 test-github-monitor 시나리오 12 「구현 상태」와 tracker를 정정한다. e2e 매핑 행은 scenario-e2e 소관이다.",
       "assessedAt": "2026-10-09T12:56:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "PRD-10 AC11 / test-github-monitor 시나리오 12 3단계(다른 계정으로 로그인)의 앱 경로를 만든다: 앱의 유일한 설정 화면인 PR 모니터 「알림 설정」 시트(_impl-map 「목업 없음」 행 — 목업 편차를 만들지 않는 자리) 하단에 확인 대화상자를 거치는 「로그아웃」을 두고 기존 `AppAuthCoordinator.signOut()`(키체인 OIDC·GitHub 토큰 비움 + `WidgetRefresher.reloadAll`)을 그대로 부른다. 진입점 위치는 문서가 정하지 않았으므로(목업·디자인 시스템·PRD 0건) prd-github-monitor 「결정 사항」에 기록하고, 시나리오 12 비고·tracker 불일치 bullet(해소)·이력 1행을 같은 PR 에 싣는다. 대안(첫 탭 머리 계정 버튼·8번째 「설정」 탭)은 목업·tokens.md §7 탭 구성을 바꿔 mockup 축 편차를 새로 만들므로 기각. **완료 기준**: ① PR 이 main 에 squash 머지 ② `PRMonitorNotificationSettingsSheet` 에 `prmonitor.settings.signOut` 버튼 → `confirmationDialog` → `signOut()` 경로가 있고 PR CI `ci-success` 초록(ios-test 의 SwiftLint strict + 빌드 + 기존 테스트) ③ prd-github-monitor 결정 사항 1행·test-github-monitor 시나리오 12 비고·tracker 불일치 bullet(취소선 해소)·이력 1행이 main 에 있다 ④ 새 `.swift` 0 · 새 주석 0줄(comment-policy 원장 무접촉) · `judge.py` 수동 승인 케이스 미접촉. **범위 밖**: tracker 「e2e 매핑」 github-monitor #12 행 해제(scenario-e2e 소관) · `HelloWorldView` 잔존(별도) · `_impl-map` 알림 설정 시트 행 설명 갱신(mockup-render 소관) · 로그아웃 시 서버 디바이스 토큰 해제(다음 로그인 계정이 `ON CONFLICT(token)` 으로 가져가므로 계정 전환은 성립, 로그아웃~재로그인 사이 앞 계정 푸시 도달은 후속).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "사전 확인: PR head 가 main 위에 clean 한지(`gh pr view <N> --json mergeStateStatus,mergeable`), 열린 PR(#207·#216·#220·#221 등)과 `PRMonitorNotificationSettingsSheet.swift`·`PRMonitorView.swift`·`prd-github-monitor.md`·`test-github-monitor.md`·`doc-tracker/2026-10.md` 헝크 겹침을 `git merge-tree` 로 확인",
+              "expectedOutcome": "clean; 겹치는 자매가 먼저 착지했으면 지침의 리베이스 규칙대로 tracker 이력 행만 재배치"
+            },
+            {
+              "seq": 2,
+              "action": "PR CI 확인: `ci-success` 와 ios-test(SwiftLint --strict · 빌드 · 단위/UI 테스트), comment-policy, review-policy(judge) 결과",
+              "expectedOutcome": "필수 status `ci-success` success; `review/manual-approval` 자동 success(MA1~4 미접촉)"
+            },
+            {
+              "seq": 3,
+              "action": "PR squash 머지",
+              "expectedOutcome": "main 에 커밋 1개 착지, 변경 파일 5개(swift 2 + docs 3)"
+            },
+            {
+              "seq": 4,
+              "action": "main 착지 검증: `grep -n 'prmonitor.settings.signOut' ios/PocketAide/PRMonitor/PRMonitorNotificationSettingsSheet.swift` · `grep -n 'auth.signOut' ios/PocketAide/PRMonitor/PRMonitorView.swift` · `grep -n '앱 로그아웃 진입점' docs/product/prd-github-monitor.md docs/product/doc-tracker/2026-10.md docs/product/test-github-monitor.md`",
+              "expectedOutcome": "각 1건 이상 히트"
+            },
+            {
+              "seq": 5,
+              "action": "main push CI 관측(배포·이미지 pin·TestFlight 는 ios/** 접촉으로 발화) — 실패 시 스텝이 기존 실패(TestFlight fastlane)인지 가른다",
+              "expectedOutcome": "ci-success 또는 기존 TestFlight 실패만"
+            }
+          ],
+          "plannedAt": "2026-10-09T13:08:00Z"
+        }
+      }
+    ]
   }
 ]
