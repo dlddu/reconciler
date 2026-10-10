@@ -6882,7 +6882,7 @@
       }
     },
     "createdAt": "2026-10-10T05:04:59Z",
-    "updatedAt": "2026-10-10T11:10:45Z",
+    "updatedAt": "2026-10-10T12:22:01Z",
     "assessment": {
       "reason": "조치 필요. 이 판정은 stale lock 해제로 생긴 recheck를 재진입해 내렸고, 판정 대상은 main `03e607a` 실측이다(task가 열린 뒤 as-is·reg가 더 이동했다).\n(1) 「## e2e 매핑」 구현 대기 표의 github-monitor #12 행이 해제 조건을 충족했다(#222 로그아웃 경로 착지). 등재를 공백 행으로 옮기고 집계를 41/39/공백 2로 고쳐야 한다. 행에 적어 둔 「복귀 뒤 하네스 선행」(앱 로그인을 둘째 subject로 끝내는 경로와 기본 사용자 복귀 정리)을 공백 행의 선행 인프라로 되돌리고, 가능하면 같은 슬라이스에서 그 인프라와 전용 파일까지 세운다. 이것은 자동 해소되지 않는 등재 불일치이고 이 모델 소관이다.\n(2) github-monitor #9 공백(가짜 APNs 수신부·호스트 재지정 선행, 재검토 2026-10-31)도 이 모델 소관의 열린 부채다. 이번 슬라이스 범위에 넣을지는 planner가 정한다.\n참고: 이 판정은 recheck 재진입이라 모델의 lastObservedVersion을 갱신하지 않았다(as-is 9ed62e6…, to-be reg 684aab73…). 다음 스윕이 같은 변화로 새 task를 열 수 있다.",
       "assessedAt": "2026-10-10T09:09:24Z"
@@ -6940,6 +6940,36 @@
           "reviewedAt": "2026-10-10T11:07:34Z",
           "reason": "PR #233 은 열림·main 5325e3e6(#232 착지) 위에 로컬 merge clean(strict=false 라 behind_by 1 은 무해), diff 6파일이 plan.steps 1~5 와 정확히 일치하고 #232 의 ios-test.yml 변경(Open-Meteo 차단 단계)·push-e2e 릴레이는 새 테스트(`dlddu/e2e-userscope-` 레포)와 교차하지 않는다. review/manual-approval 은 head f06f1c17 에 success. 그러나 필수 check `ci-success` 가 failure(run 38040935533, iOS shard 0): 새 클래스 `WebhookUserScopedHistoryUITests.testCompletedEventsListUnacknowledgedFirstAndStayWithTheirUser` 가 `Failed to tap \"prmonitor.settings.signOut.confirm\" Button: Multiple matching elements found` 로 본문·teardown(restoreDefaultUser) 두 번 실패했다. 로케이터 모호성이라 결정적이고 rerun 으로 풀리지 않으며, 지침 3 의 「하네스 귀속」 분기에 해당한다(제품 귀속 아님 — 로그아웃 시트·확인 버튼까지는 도달). 빨간 필수 check head 는 실행 허가를 낼 수 없어 거부한다.",
           "comment": "계획·범위·지침은 그대로 두고 하네스 수정 한 가지만 하면 된다: `ios/PocketAideTests/WebhookUserScopedHistoryUITests.swift` 의 `signOut(in:)` 에서 확인 버튼 쿼리 `app.buttons[\"prmonitor.settings.signOut.confirm\"]` 가 confirmationDialog 가 렌더하는 중복 요소 때문에 다중 매칭된다 — `.firstMatch` 로 단일화(대체 predicate 경로도 이미 `.firstMatch`)하고, 같은 함수를 쓰는 teardown `restoreDefaultUser` 도 함께 풀리는지 확인할 것. 이 커밋을 PR #233 브랜치에 얹고 CI(ios-test 3샤드) 초록을 확인한 뒤 새 head sha 로 preparation 을 갱신해 planned 로 올리면 된다(새 커밋이라 review/manual-approval 판정기도 재부착 확인 필요). 같은 시트 경로를 쓰는 다른 단계(로그아웃 행·알림 설정 버튼)는 이번 런에서 통과했다. 제품 귀속 축소안(3-b)으로 갈 근거는 없다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재준비(review_rejected — 하네스 귀속 로케이터 1건): 직전 시도의 접근·범위·PR #233 을 그대로 승계하고, 거부 사유인 `WebhookUserScopedHistoryUITests.signOut(in:)` 의 확인 버튼 다중 매칭(`Failed to tap \"prmonitor.settings.signOut.confirm\" Button: Multiple matching elements found` — 본문·teardown 두 번, run 38040935533 shard 0)만 같은 파일 안에서 고친 커밋을 브랜치에 얹는다(일치 요소 중 히트 가능한 것을 골라 탭, 없으면 firstMatch). 접근을 바꾸지 않는 이유: 실패 지점까지(이벤트 주입·목록 단정·알림 설정 시트·로그아웃 행) 전부 통과했고 확인 대화상자도 떴다 — 제품 귀속(3-b) 근거 없음. 범위(완료 기준, 직전 시도와 동일): ① `docs/product/doc-tracker/2026-10.md` 「## e2e 매핑」에서 github-monitor #12 가 구현 대기 표에서 빠지고 매핑 표에 `WebhookUserScopedHistoryUITests.swift` 와 함께 들어가 집계가 머지 직전 main 대비 구현 대기 −1 · 1:1 대상 +1 · 매칭 +1 · 매칭 단위 파일 +1 · 공백 불변 ② 전용 파일이 `// 검증 시나리오: test-github-monitor.md#시나리오 12` 선언 ③ PR 필수 status `ci-success`(ios-test 3샤드 포함) 초록 후 squash 머지. 범위 밖: github-monitor #9 공백(재검토 2026-10-31), 그 밖의 모든 행. 새 head 에서 로그아웃 이후 구간(둘째 subject 재로그인·이력 부재 단정)이 CI 첫 실측이므로, 거기서 제품 귀속 실패가 나면 직전 지침 3-b 축소안(구현 대기 −1 · 1:1 +1 · 공백 +1)으로 닫는다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #233 브랜치 `reconcile/rct_20261010-0002-gm12` 에 `ios/PocketAideTests/WebhookUserScopedHistoryUITests.swift` `signOut(in:)` 확인 버튼 탭 수정 커밋 `1a1c19d75747df63300e57885e235d08afb98721` 을 얹는다(준비 단계에서 완료 — 6+/5−, 같은 파일 한 헝크). 다른 5파일은 직전 승인 검토 대상과 바이트 동일.",
+              "expectedOutcome": "PR head = 1a1c19d, changed_files 6 불변, swiftlint-static --strict 0 violations, check_ledger.py rc=0 · 지문 d897e731… 불변, judge.py rc=0(수동 승인 케이스 미접촉 → review/manual-approval 자동 재부착)."
+            },
+            {
+              "seq": 2,
+              "action": "새 head 1a1c19d 의 CI(`ci-success` — backend-unit-test · ios-test 3샤드)를 기다린다. 커밋을 더 얹지 말 것(재실행 결론·사람/판정기 status 는 sha 에 묶인다). 실패 시 직전 지침 3 의 분기(flake → 같은 sha rerun --failed / 하네스 귀속 → 테스트 파일 수정 커밋 / 제품 귀속 → 3-b 축소안)를 따른다.",
+              "expectedOutcome": "`ci-success` success, iOS shard 0 에서 `WebhookUserScopedHistoryUITests` 통과, 기존 클래스 회귀 0, `review/manual-approval` success on 1a1c19d."
+            },
+            {
+              "seq": 3,
+              "action": "머지 직전 `mergeStateStatus` 재확인(DIRTY 면 merge origin/main + apply.py 재적층, `checkout --theirs` 금지) 후 `gh pr merge 233 --squash --match-head-commit <head>`.",
+              "expectedOutcome": "PR merged(squash). main push 에서 `backend/**` 접촉으로 이미지 빌드+deploy pin(코드 동일), TestFlight 미발화."
+            },
+            {
+              "seq": 4,
+              "action": "main 에서 완료 기준 ①②와 검산(네 표 합 74 · 교집합 0 · 선언 수 = 매핑 표 행 수)을 확인한다.",
+              "expectedOutcome": "구현 대기 21 · 1:1 대상 41 · 매칭 40 · 공백 1(자매가 다른 행을 옮겼으면 델타로 판정) · 선언 파일 40 + 비-시나리오 3."
+            }
+          ],
+          "plannedAt": "2026-10-10T12:22:01Z"
         }
       }
     ]
