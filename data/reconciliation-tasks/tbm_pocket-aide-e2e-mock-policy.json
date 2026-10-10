@@ -1115,7 +1115,7 @@
   {
     "id": "rct_20261010-0001",
     "toBeModelId": "tbm_pocket-aide-e2e-mock-policy",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-10T07:52:34Z",
@@ -1125,7 +1125,7 @@
       }
     },
     "createdAt": "2026-10-10T07:52:34Z",
-    "updatedAt": "2026-10-10T09:46:25Z",
+    "updatedAt": "2026-10-10T09:46:45Z",
     "stateSummary": {
       "asIs": "**as-is** — `dlddu/pocket-aide@main` `18ef069`(#223, 2026-10-10T07:49:28Z), 관측 2026-10-10T07:54:11Z.\n- versionScript 지문: `sites=25 files=13` / `4ccaff7f…` — 기준선(`rct_20261009-0001` 이후)과 **동일**. 직전 관측 창(`c1b6460`..`18ef069`, 39파일)이 모킹 지문 토큰을 하나도 더하거나 빼지 않았다.\n- 모킹 관련 실변경은 `.github/workflows/ios-test.yml` 한 곳이다(#223 · rct_20261009-0011 실행 슬라이스, github-monitor 시나리오 8). 새 스텝 「Deliver pushes for test-sent push-e2e events」가 직전 줄에 `# mock-exception: EXT — APNs 전달(Apple 서버 → 기기)…` 주석을 달고 추가됐다. 이 스텝은 백그라운드에서 1초마다 `$DATABASE_PATH`(실 SQLite)의 `notification_history`를 읽는다. 대상은 `mock-user-123` 사용자이면서 `repo_full_name LIKE 'dlddu/push-e2e-%'`인 새 행이다. 행마다 `formatPushText` 모양의 페이로드(제목 `CI 통과 — <repo> #<n>`, 본문 `<workflow> on <branch>`, `event_id`)를 만들어 `xcrun simctl push`로 한 번 넣는다. `dlddu/push-e2e-noid-` 레포는 `event_id` 없이 넣는다.\n- 이력 행은 테스트(`WebhookPushTapUITests.swift`)가 러너에서 로컬 SQS로 보낸 실 `workflow_run` envelope을 컨슈머가 저장해 생긴다. 즉 시드이고, 치환되는 구간은 APNs 전달뿐이다. 수신·배너 탭·딥링크·강조·미확인 유지는 실경로로 돈다.\n- 대조: 백엔드 `backend/cmd/server/main.go` `formatPushText`(완료 결론 → `CI 통과`/`CI 실패`, PR 번호가 있으면 `<verdict> — <repo> #<n>`)와 같은 모양이다. 테스트 이벤트는 PR 제목이 없고 `success`라, 중계가 `pr_title`·진행 중 결론 매핑을 생략해도 실경로보다 관대한 분기가 되지 않는다.\n- 같은 창의 나머지 테스트 변경(`ScratchpadUnclassifiedBadgeUITests.swift` 스크린샷+Vision 판독, `PRMonitorUITests.swift`)과 #225(PR 모니터 푸시를 준비 신호 뒤에만 보냄), #209(3샤드)에는 새 치환 수단이 없다.",
       "toBe": "**to-be** — `docs/e2e-mocking-policy.md` blob `b05dfc89` → `4eb24147`(#223, `18ef069`), 관측 2026-10-10T07:54:11Z.\n- 허용목록 `ios-test.yml` / `simctl push` / `EXT` 행의 **사유 문구만** 확장됐다. 둘째 스텝 「Deliver pushes for test-sent push-e2e events」의 동작(`dlddu/push-e2e-` 이력 행마다 한 번, `-noid-`는 `event_id` 없이, 레포 이름은 테스트가 고르는 시드)을 적었다.\n- 지문 사각지대 절에서 `simctl push`의 코드 지점을 「두 스텝과 각 직전 `mock-exception: EXT` 주석」으로 정정했다.\n- 행 수·위치·대상·카테고리는 불변이다. 허용목록 파일은 13개다.\n- 차단 요인 원장: 열린 데이터 행 **0**(표 머리만 있음). 해소된 행 BF-1·2·3은 불변이다. 정책 문서 어디에도 「장애 주입」·widget #10·날씨 조회 실패 언급이 없다.\n- B1 인계 스캔(직전 판정 2026-10-09T08:09:35Z 이후 다른 모델 task): `tbm_pocket-aide-scenario-e2e` 레코드 둘이 widget #10의 「5단계(조회 실패 → 다시 시도)」 경로를 이 모델에 넘겼다.\n  - rct_20261009-0006 계획 지침(커밋 `647c6436b`, 2026-10-09T08:24:59Z): 「5단계의 장애 주입은 모킹 정책의 허용 카테고리 EXT·LLM·DET 어디에도 들지 않는다 — 그래서 카테고리 판정이 선행이다(`tbm_pocket-aide-e2e-mock-policy`)」.\n  - rct_20261009-0007 계획(2026-10-09T08:36Z~): 5단계를 매핑 행에 「관측 밖」으로 적고, 범위 밖(후속)을 「widget #10 5단계의 실패 상태 도달 수단(정책이 장애 주입 카테고리를 들이면 그때)」으로 남겼다.\n  - 같은 레코드의 github-monitor #9(가짜 APNs 수신·호스트 재지정)는 scenario-e2e 자신의 슬라이스에서 「허용목록 등재를 같은 슬라이스에서 함께 처리」하라는 지침이다. 이 모델로 해소를 넘긴 문장이 아니므로 세지 않는다.",
@@ -1236,6 +1236,43 @@
               "log": "App 토큰(contents·pull_requests·workflows write)으로 PUT pulls/232/merge 를 호출했다(merge_method=squash, sha=96eadbc 가드, commit_title 미지정). merged=true, squash 커밋 5325e3e6f6737d4b8ecb1a50ef8e0ff4900cad56. 접촉 파일은 3개(+96 −0). 머지 직전 base 에 #231(03e607a)이 먼저 착지해 있었다. 그래서 머지 트리(cd22827)는 PR head 트리(a8270ea)와 다르지만, 이 커밋의 diff 는 지침이 말한 세 파일뿐이다. main 확인은 verification 에 남긴다."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "sites=25 files=13\n4ccaff7fada2b4cafef1e5d2b09a54d2ea4fa61eb4f38a7a0d62e610d8844399",
+          "checks": [
+            {
+              "name": "완료 기준 1 — PR #232 squash 머지",
+              "status": "passed",
+              "detail": "PUT merge 응답 merged=true, 커밋 5325e3e(제목 끝 (#232), 단일 부모 03e607a). gh pr view 232 state=MERGED."
+            },
+            {
+              "name": "완료 기준 2 — BF-4 행·열린 표 0행",
+              "status": "passed",
+              "detail": "main@5325e3e: awk '/^## 차단 요인 원장/,/^### 해소된/' | grep -c '^| BF-' 의 결과는 0이다. grep -c '^| BF-4 .*(#232)' 의 결과는 1이다. 「해소된 차단 요인」 표의 행 순서는 103:BF-4, 104:BF-3, 105:BF-2, 106:BF-1 이므로 BF-4 가 맨 위다."
+            },
+            {
+              "name": "완료 기준 3 — PRMonitorUITests 샤드 success·새 메서드 통과",
+              "status": "passed",
+              "detail": "머지한 head 96eadbc 의 CI run 38037054114 를 봤다. PRMonitorUITests 가 든 샤드는 「Pick this shard's test classes」의 「<- this job」 목록으로 shard 2(job 114169622926)로 식별했다. 그 잡의 conclusion 은 success 다. 로그 1338행에 「✔ testWeatherFetchFailsWhileOpenMeteoIsCutAndRetryRestoresTheForecast (43.209 seconds)」, 1372행에 「Executed 18 tests, with 0 failures (0 unexpected)」가 있다."
+            },
+            {
+              "name": "완료 기준 4 — as-is 지문 불변",
+              "status": "passed",
+              "detail": "모델 asIs.versionScript.code 를 main@5325e3e checkout 에서 실행했다(rc=0). 결과는 sites=25 files=13 / 4ccaff7fada2b4cafef1e5d2b09a54d2ea4fa61eb4f38a7a0d62e610d8844399 로 기대와 일치한다. 머지 직전 부모 03e607a 에서도 같은 값이다."
+            },
+            {
+              "name": "머지 push 워크플로(정보)",
+              "status": "passed",
+              "detail": "main push CI run 38042514458 의 Detect changes 출력은 「image=false testflight=false preview_pr=none source=main」이다. Backend Docker build + push 와 TestFlight upload 는 skipped 이므로 운영 배포와 TestFlight 는 발화하지 않았다. 지침은 main push 에서 ios-test 가 돈다고 예상했지만 「iOS build + test」도 skipped 였다. 이 검증은 기준 3 의 PR head run 으로 대신했고 판정에는 넣지 않는다. comment-policy·data-model push run 은 success, journey-mockup 은 기록 시점에 진행 중이었다."
+            },
+            {
+              "name": "범위 밖 잔여(정보)",
+              "status": "passed",
+              "detail": "tbm_pocket-aide-scenario-e2e 쪽 widget #10 매핑 행 갱신·WeatherScreenUITests 복원·5단계 「관측 밖」 재판정은 지침상 범위 밖이다. 다음 감지 주기가 이어받는다."
+            }
+          ],
+          "verifiedAt": "2026-10-10T09:46:45Z"
         }
       }
     ]
