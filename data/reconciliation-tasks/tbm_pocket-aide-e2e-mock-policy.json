@@ -1115,7 +1115,7 @@
   {
     "id": "rct_20261010-0001",
     "toBeModelId": "tbm_pocket-aide-e2e-mock-policy",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-10T07:52:34Z",
@@ -1125,7 +1125,7 @@
       }
     },
     "createdAt": "2026-10-10T07:52:34Z",
-    "updatedAt": "2026-10-10T09:44:48Z",
+    "updatedAt": "2026-10-10T09:46:25Z",
     "stateSummary": {
       "asIs": "**as-is** — `dlddu/pocket-aide@main` `18ef069`(#223, 2026-10-10T07:49:28Z), 관측 2026-10-10T07:54:11Z.\n- versionScript 지문: `sites=25 files=13` / `4ccaff7f…` — 기준선(`rct_20261009-0001` 이후)과 **동일**. 직전 관측 창(`c1b6460`..`18ef069`, 39파일)이 모킹 지문 토큰을 하나도 더하거나 빼지 않았다.\n- 모킹 관련 실변경은 `.github/workflows/ios-test.yml` 한 곳이다(#223 · rct_20261009-0011 실행 슬라이스, github-monitor 시나리오 8). 새 스텝 「Deliver pushes for test-sent push-e2e events」가 직전 줄에 `# mock-exception: EXT — APNs 전달(Apple 서버 → 기기)…` 주석을 달고 추가됐다. 이 스텝은 백그라운드에서 1초마다 `$DATABASE_PATH`(실 SQLite)의 `notification_history`를 읽는다. 대상은 `mock-user-123` 사용자이면서 `repo_full_name LIKE 'dlddu/push-e2e-%'`인 새 행이다. 행마다 `formatPushText` 모양의 페이로드(제목 `CI 통과 — <repo> #<n>`, 본문 `<workflow> on <branch>`, `event_id`)를 만들어 `xcrun simctl push`로 한 번 넣는다. `dlddu/push-e2e-noid-` 레포는 `event_id` 없이 넣는다.\n- 이력 행은 테스트(`WebhookPushTapUITests.swift`)가 러너에서 로컬 SQS로 보낸 실 `workflow_run` envelope을 컨슈머가 저장해 생긴다. 즉 시드이고, 치환되는 구간은 APNs 전달뿐이다. 수신·배너 탭·딥링크·강조·미확인 유지는 실경로로 돈다.\n- 대조: 백엔드 `backend/cmd/server/main.go` `formatPushText`(완료 결론 → `CI 통과`/`CI 실패`, PR 번호가 있으면 `<verdict> — <repo> #<n>`)와 같은 모양이다. 테스트 이벤트는 PR 제목이 없고 `success`라, 중계가 `pr_title`·진행 중 결론 매핑을 생략해도 실경로보다 관대한 분기가 되지 않는다.\n- 같은 창의 나머지 테스트 변경(`ScratchpadUnclassifiedBadgeUITests.swift` 스크린샷+Vision 판독, `PRMonitorUITests.swift`)과 #225(PR 모니터 푸시를 준비 신호 뒤에만 보냄), #209(3샤드)에는 새 치환 수단이 없다.",
       "toBe": "**to-be** — `docs/e2e-mocking-policy.md` blob `b05dfc89` → `4eb24147`(#223, `18ef069`), 관측 2026-10-10T07:54:11Z.\n- 허용목록 `ios-test.yml` / `simctl push` / `EXT` 행의 **사유 문구만** 확장됐다. 둘째 스텝 「Deliver pushes for test-sent push-e2e events」의 동작(`dlddu/push-e2e-` 이력 행마다 한 번, `-noid-`는 `event_id` 없이, 레포 이름은 테스트가 고르는 시드)을 적었다.\n- 지문 사각지대 절에서 `simctl push`의 코드 지점을 「두 스텝과 각 직전 `mock-exception: EXT` 주석」으로 정정했다.\n- 행 수·위치·대상·카테고리는 불변이다. 허용목록 파일은 13개다.\n- 차단 요인 원장: 열린 데이터 행 **0**(표 머리만 있음). 해소된 행 BF-1·2·3은 불변이다. 정책 문서 어디에도 「장애 주입」·widget #10·날씨 조회 실패 언급이 없다.\n- B1 인계 스캔(직전 판정 2026-10-09T08:09:35Z 이후 다른 모델 task): `tbm_pocket-aide-scenario-e2e` 레코드 둘이 widget #10의 「5단계(조회 실패 → 다시 시도)」 경로를 이 모델에 넘겼다.\n  - rct_20261009-0006 계획 지침(커밋 `647c6436b`, 2026-10-09T08:24:59Z): 「5단계의 장애 주입은 모킹 정책의 허용 카테고리 EXT·LLM·DET 어디에도 들지 않는다 — 그래서 카테고리 판정이 선행이다(`tbm_pocket-aide-e2e-mock-policy`)」.\n  - rct_20261009-0007 계획(2026-10-09T08:36Z~): 5단계를 매핑 행에 「관측 밖」으로 적고, 범위 밖(후속)을 「widget #10 5단계의 실패 상태 도달 수단(정책이 장애 주입 카테고리를 들이면 그때)」으로 남겼다.\n  - 같은 레코드의 github-monitor #9(가짜 APNs 수신·호스트 재지정)는 scenario-e2e 자신의 슬라이스에서 「허용목록 등재를 같은 슬라이스에서 함께 처리」하라는 지침이다. 이 모델로 해소를 넘긴 문장이 아니므로 세지 않는다.",
@@ -1187,6 +1187,55 @@
           "status": "approved",
           "reviewedAt": "2026-10-10T09:40:21Z",
           "reason": "테스트·워크플로·문서 3파일(+96, 추가만)로 범위가 preparation.notes·plan.steps와 일치하고, 앱 코드·URL·응답 무수정이라 허용목록·지문 무변동 — 정책의 「명시적 불허」(구성요소 치환·관대한 분기) 어디에도 들지 않는 실환경 대체다. PR #232 열림, head 96eadbc 그대로, 필수 ci-success·review/manual-approval(판정기 자동 success) 모두 success — 새 메서드 testWeatherFetchFailsWhileOpenMeteoIsCutAndRetryRestoresTheForecast 는 shard 2 잡 로그에서 ✔(43.2s) 통과 확인(차단 로그는 실패 덤프에만 찍혀 성공 런엔 없음 — retry 버튼 단정 통과가 차단이 걸렸다는 근거). main 은 base 18ef069 뒤 #230·#231 로 2커밋 이동(docs/mockups/_structure-map.md·TodoListView.swift, 파일 겹침 0)했으나 strict=false 라 mergeStateStatus CLEAN. 위험은 일회용 macOS 러너의 pf·/etc/hosts 한정(180초 자동 원복·정리 단계 원복)이고 paths-filter 상 배포·TestFlight 미발화, 롤백은 squash revert 한 번이라 승인."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-10-10T09:44:59Z",
+          "finishedAt": "2026-10-10T09:46:25Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-10-10T09:44:59Z",
+              "finishedAt": "2026-10-10T09:44:59Z",
+              "log": "판정은 planner·review 가 PR #232 준비 시 수행했다. 실행 시점에 재확인했다: PR OPEN, head 96eadbcdaf6fad017d0a3c01ace00836505cfb21(bf72621·96eadbc 2커밋, 지침 기대와 일치), mergeStateStatus CLEAN."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-10-10T09:44:59Z",
+              "finishedAt": "2026-10-10T09:44:59Z",
+              "log": "PR #232 head 에 포함됐다(PRMonitorUITests.swift +44). 같은 head 의 CI run 38037054114 에서 SwiftLint·빌드가 통과했고 comment-policy ledger 도 success 다."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-10-10T09:44:59Z",
+              "finishedAt": "2026-10-10T09:44:59Z",
+              "log": "PR #232 head 에 포함됐다(ios-test.yml +51). shard 2 job 114169622926 로그에 「Cut the Open-Meteo route」 단계가 실행된 흔적(restore_route 정의 등)이 있다."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-10-10T09:44:59Z",
+              "finishedAt": "2026-10-10T09:44:59Z",
+              "log": "PR #232 head 에 포함됐다(e2e-mocking-policy.md +1, BF-4 행)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-10-10T09:44:59Z",
+              "finishedAt": "2026-10-10T09:45:10Z",
+              "log": "head 96eadbc 의 run: CI 38037054114 · comment-policy 38037053930 · data-model 38037053937 · review-policy 38037052974 모두 success. ci-success SUCCESS, review/manual-approval SUCCESS. iOS 3샤드 success. PRMonitorUITests 는 shard 2(job 114169622926, 「<- this job」 목록)에 있다. 그 로그에 「✔ testWeatherFetchFailsWhileOpenMeteoIsCutAndRetryRestoresTheForecast (43.209 seconds)」, 「Executed 18 tests, with 0 failures」가 찍혔다. rerun 은 하지 않았다."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-10-10T09:45:20Z",
+              "finishedAt": "2026-10-10T09:45:28Z",
+              "log": "App 토큰(contents·pull_requests·workflows write)으로 PUT pulls/232/merge 를 호출했다(merge_method=squash, sha=96eadbc 가드, commit_title 미지정). merged=true, squash 커밋 5325e3e6f6737d4b8ecb1a50ef8e0ff4900cad56. 접촉 파일은 3개(+96 −0). 머지 직전 base 에 #231(03e607a)이 먼저 착지해 있었다. 그래서 머지 트리(cd22827)는 PR head 트리(a8270ea)와 다르지만, 이 커밋의 diff 는 지침이 말한 세 파일뿐이다. main 확인은 verification 에 남긴다."
+            }
+          ]
         }
       }
     ]
