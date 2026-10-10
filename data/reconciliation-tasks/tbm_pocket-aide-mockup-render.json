@@ -10356,6 +10356,37 @@
       "reason": "작업이 필요하다(action_required). 근거는 네 가지다.\n\n(1) 출처\n- as-is 변화(app `10ea574→648b77b`)와 to-be 변화(mockups `1291594→b678fd4`)는 모두 PR #231 `03e607a` 한 건에서 나왔다. 이 모델의 `rct_20261010-0007` 슬라이스이고, 그 task는 succeeded다.\n- 슬라이스 → 재감지 → 후속 task로 이어지는 정상 루프다.\n- main에서 검산 4종 `ok`, todo M 불일치 65/65→62/61, 다른 화면 불변, main `ci-success` success를 직접 확인했다.\n\n(2) 잔여 drift는 정의상 유의미하다(기준 1·3·4).\n- 구조·수치 불일치 M 143 · S 16.\n- 카피 구현 대기 A 9 · B 43.\n- widget·pr-monitor-history 구조표 부재.\n\n(3) 자동 해소 가능성은 없다. 열린 PR #232·#207·#201 중 이 축(docs/mockups·렌더링 View)을 건드리는 것이 없다. 그래서 유예하지 않는다.\n\n(4) planner 참고\n- 후속 후보는 직전 task(0007)의 목록과 같다.\n  - 남은 todo 62+61행(체크 모양·크기, 섹션 머리, 필터 칩·태그 줄 등)\n  - widget·pr-monitor-history 구조표 신설\n  - 카피 구현 대기\n  - 사람 결정이 선결인 항목(scratchpad stone 토큰 등)\n- `_impl-map.md`의 `PRMonitorNotificationSettingsSheet` 근거 열에 #222 로그아웃 서술이 빠진 저위험 문서 정리는 아직 남아 있다.",
       "assessedAt": "2026-10-10T09:17:58Z"
     },
-    "updatedAt": "2026-10-10T09:18:56Z"
+    "updatedAt": "2026-10-10T09:18:56Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "공유 TodoListView 의 체크(토글) 크기를 영역 분기 `checkSize`(개인 24 · 회사 20)로 바꾸고 체크에 위 여백 `.padding(.top, 2)` 를 더해, _structure-map 표 M 12행(개인 체크·체크(완료) 의 w·h·mt-0.5 6행 + 회사 같은 6행)을 불일치→일치로 옮긴다 — todo-personal·todo-work 표 M 불일치 62→56 / 61→55. 두 목업이 각자 확정된 값(개인 `w-6 h-6`, 회사 `w-5 h-5`, 둘 다 `mt-0.5`)을 그리고, 영역 분기는 같은 파일의 `rowRadius` 가 이미 쓰는 방식이라 디자인 판단이 섞이지 않는다(ios +8 −1줄, 롤백 = PR revert). 대안 저울질: 체크 모양(개인 원) 2행은 SF Symbol 을 `circle` 로 바꿔도 검산이 `구현 값 full` 을 인용에 `Capsule|Circle` 이 있어야만 인정해(_structure-map 검산 1509행) 원 심볼이 `불일치` 로 남고, 도형으로 직접 그리면 1.6 외곽선·12 글리프가 정방향 누락으로 번져 범위가 커진다 — 뺐다. 섹션 머리(시스템 Section)·필터 칩·태그 줄·영역 점(공용 ScreenHeader/AreaLabel 접촉 = 다른 화면·위젯 영향)은 구조 신설이라 뺐다. 완료 기준: ⑴ 검산 4종(_structure-map·_impl-map·_copy-map·_token-map) 출력 문면 ok ⑵ 집계 todo-personal M 일치 74·기본값 일치 3·불일치 56·허용 12·목업 대기 0, S 15/6/0; todo-work M 82·3·55·11·0, S 16/6/0, 문장 줄 56행·55행 ⑶ 다른 4화면 집계 불변 ⑷ 착지 커밋 변경 파일 정확히 2개(TodoListView.swift · _structure-map.md) ⑸ 착지 커밋 main ci-success success. 범위 밖: 체크 모양(개인 원)·체크 글리프 12, 섹션 머리·섹션 제목 크기·색·자간, 필터 칩 줄, 태그 줄, 영역 점·라벨 줄 간격, 행 제목 굵기, 목록 위·아래 여백, 메타 줄 간격·달력 글리프·회사 메타 대문자·구분점, 검색 자리표시 색, 회사 급한 행 띠·N.B. 상자·헤더 바탕 95%·추가 버튼 모양·회사 카드 라운드, 카피 구현 대기 A9·B43, widget·pr-monitor-history·routines 목록 구조표, _impl-map PRMonitorNotificationSettingsSheet 근거 열 로그아웃 서술.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "ios/PocketAide/Todos/TodoListView.swift: `extension TodoArea` 의 `rowRadius` 바로 뒤에 `var checkSize: CGFloat { switch self { case .personal: return 24 case .work: return 20 } }` 추가, TodoRow 체크 `Image` 의 `.font(.system(size: 18))` → `.font(.system(size: area.checkSize))`, 토글 `Button` 의 `.buttonStyle(.plain)` 뒤에 `.padding(.top, 2)` 추가 (키트 apply_ios.py)",
+              "expectedOutcome": "diff +8 −1, 식별자·카피·심볼 이름 무변경"
+            },
+            {
+              "seq": 2,
+              "action": "docs/mockups/_structure-map.md: 개인 표 M 체크·체크(완료) 의 `w-6`·`h-6`·`mt-0.5` 6행, 회사 표 M 체크·체크(완료) 의 `w-5`·`h-5`·`mt-0.5` 6행에 새 인용·값을 넣어 `일치` 로, 집계 문장 2줄과 집계 표 4칸 갱신 (키트 apply_doc.py)",
+              "expectedOutcome": "검산 4종 출력 ok, 집계 개인 74/3/56/12/0 · 회사 82/3/55/11/0"
+            },
+            {
+              "seq": 3,
+              "action": "PR 의 필수 status(ci-success · review/manual-approval) 확인 후 head 그대로 squash 머지",
+              "expectedOutcome": "main 에 2파일 squash 커밋 착지"
+            },
+            {
+              "seq": 4,
+              "action": "main 착지 커밋에서 완료 기준 ⑴~⑸ 재실측",
+              "expectedOutcome": "⑴~⑸ 모두 충족"
+            }
+          ],
+          "plannedAt": "2026-10-10T09:40:00Z"
+        }
+      }
+    ]
   }
 ]
