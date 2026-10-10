@@ -1135,6 +1135,47 @@
     "assessment": {
       "reason": "작업 필요. 판정 규칙의 「B1 위반 ≥ 1」이 참이다. `tbm_pocket-aide-scenario-e2e` rct_20261009-0006(2026-10-09T08:24:59Z 계획 지침)과 rct_20261009-0007(범위 밖 후속 「정책이 장애 주입 카테고리를 들이면 그때」)이 widget #10 5단계(날씨 조회 실패 → 「다시 시도」 복구)의 도달 수단을 이 모델의 카테고리 판정에 넘겼다. 그런데 `docs/e2e-mocking-policy.md` 차단 요인 원장에는 그 행이 없다. 정의상 받는 쪽이 세지 않아 인계가 유실되는 바로 그 자리다. 두 레코드가 직전 판정(08:09:35Z) 뒤에 쓰여 이번이 첫 관측이다. 문서 갱신으로 저절로 닫히는 흐름도 없다. 자매 모델은 이미 succeeded로 닫혀 이 건을 들고 있지 않다. 그래서 유예 대신 지금 넘긴다. planner 참고: (1) 원장에 행을 신설한다. 해소 방향은 `실환경 대체`(예: 실 Open-Meteo 상류를 쓰되 실패를 실환경으로 만들 수단 — 네트워크 차단 등)와 `등재(<CODE>)` 중 하나로 시작한다. 장애 주입은 현재 EXT·LLM·DET 어디에도 들지 않는다. 정의는 새 카테고리를 허용하지 않고 「애매하면 제거 쪽」이므로, 등재가 불가하면 실환경 대체 계획이나 근거 있는 재검토 시점을 행 안에 기계 판독 가능하게 적는다. 선행·재검토 시점(ISO 날짜면 등재일 +90일 이내)도 같다. (2) 선행이 「없음」이면 착수 가능 행이 되어 이 task가 착수해야 한다. (3) widget #10은 현재 scenario-e2e 장부상 구현 대기(4단계 당겨서 새로고침 동작 실측) 상태다. 하지만 5단계 차단은 그와 독립인 하네스·정책 문제다. #223의 둘째 `simctl push` 스텝은 정책 적합으로 판정했으며 조치 대상이 아니다.",
       "assessedAt": "2026-10-10T07:54:11Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "B1 인계(scenario-e2e rct_20261009-0006·0007 → widget #10 5단계 「조회 실패 → 다시 시도」)를 차단 요인 원장 행 BF-4 로 받고, 정의의 「착수 가능하면 이 task 가 착수한다」에 따라 같은 PR 에서 실환경 대체로 해소한다: 장애 주입 치환(스텁·URL 재지정·env seam — EXT·LLM·DET 밖)이 아니라 러너에서 api.open-meteo.com 경로를 pf(block return)+/etc/hosts 로 실제로 끊고 되살리는 잡 단계 + 그 신호를 로그로 내는 XCUITest 메서드(기존 비-시나리오 인프라 파일 PRMonitorUITests.swift — BF-2·3 선례, e2e 매핑 집계 무변동). 앱 코드·URL·응답 무수정이라 as-is 지문 불변(sites=25 files=13 / 4ccaff7f…), 허용목록 무변동. 대안 기각: (a) 행만 열린 표에 등재 — 선행 칸은 「없음|행 ID」뿐이라 「없음」이 되고 판정 규칙 「착수 가능 행 ≥1」로 즉시 action_required 재발; (b) 스텁/env 로 실패 주입 — 허용 카테고리 밖, 「애매하면 제거」; (c) WeatherScreenUITests.swift 복원에 5단계를 넣기 — 그 파일과 매핑 행 전이는 scenario-e2e 레지스트리 소관. 롤백은 PR revert 한 번(테스트·워크플로·문서만). **완료 기준(이 시도의 범위)**: PR #232 가 main 에 squash 머지되고, ① main 의 docs/e2e-mocking-policy.md 「해소된 차단 요인」에 BF-4 행이 (#232) 와 함께 있고 열린 원장 데이터 행 0, ② 머지 직전 PR head 의 ios-test 에서 PRMonitorUITests 가 든 샤드가 success(새 메서드 testWeatherFetchFailsWhileOpenMeteoIsCutAndRetryRestoresTheForecast 통과) 이고 그 잡 로그 또는 테스트 통과가 차단이 실제로 걸렸음을 보인다, ③ main 에서 as-is 지문이 sites=25 files=13 / 4ccaff7f… 그대로. **범위 밖**: scenario-e2e 의 widget #10 매핑 행 전이(구현 대기 → 공백/매칭)·WeatherScreenUITests 복원·PRMonitorUITests 비-시나리오 행 설명 갱신(그 모델 레지스트리), 지문 패턴 개정(control plane).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "차단 요인 원장 판정: 정책 문서 열린 표 0행 · 해소 표 BF-1~3 확인, 인계 문장 2건(rct_20261009-0006 지침 · rct_20261009-0007 범위 밖 후속) 실측, 실패 상태 도달 수단 판정(앱이 api.open-meteo.com 직접 호출 · URLSession.shared · WeatherViewModel.load 오류 → .error)",
+              "expectedOutcome": "BF-4 를 실환경 대체(실 경로 차단)로 해소 가능 — 선행 없음"
+            },
+            {
+              "seq": 2,
+              "action": "ios/PocketAideTests/PRMonitorUITests.swift 에 testWeatherFetchFailsWhileOpenMeteoIsCutAndRetryRestoresTheForecast 추가(위치 허용 → pocketaide://weather → 실 예보 → NSLog network-cut → 당겨서 새로고침 반복 → weather.retry·weather.notice 단정 → NSLog network-restore → 다시 시도 반복 → 예보 복귀 단정, teardown restore). 비지시 주석 0줄",
+              "expectedOutcome": "SwiftLint 0 위반 · check_ledger.py rc=0 · as-is 지문 불변"
+            },
+            {
+              "seq": 3,
+              "action": ".github/workflows/ios-test.yml 에 pr_monitor 샤드 한정 단계 「Cut the Open-Meteo route while a test asks for it」 추가(simctl log stream 으로 network-cut/restore 줄 감시 → pf block return + /etc/hosts + DNS flush, 180초 자동 원복) · 실패 덤프 · 정리 단계 원복",
+              "expectedOutcome": "YAML 파싱 · bash -n · 대역 모의에서 cut→restore→중복 무시→재 cut"
+            },
+            {
+              "seq": 4,
+              "action": "docs/e2e-mocking-policy.md 「해소된 차단 요인」 맨 위에 BF-4 행(차단 요인·해소·(#232)·2026-10-10)",
+              "expectedOutcome": "B1 인계 1건이 원장 행으로 실재 · 열린 행 0 → B2·B4·착수 가능·재검토 도과 0"
+            },
+            {
+              "seq": 5,
+              "action": "PR #232 의 CI(ci-success · review/manual-approval 자동 success · comment-policy ledger) 확인 — 특히 ios-test 의 PRMonitorUITests 샤드",
+              "expectedOutcome": "필수 status 전부 success, 새 메서드 통과"
+            },
+            {
+              "seq": 6,
+              "action": "squash 머지 후 main 에서 BF-4 행 · as-is 지문 · 머지 push 의 워크플로(이미지 pin·TestFlight 미발화) 확인",
+              "expectedOutcome": "완료 기준 ①②③ 충족"
+            }
+          ],
+          "plannedAt": "2026-10-10T08:22:00Z"
+        }
+      }
+    ]
   }
 ]
