@@ -10651,6 +10651,42 @@
       "reason": "작업이 필요하다(action_required). 근거는 네 가지다.\n\n(1) 출처\n- as-is 변화(app `0586289→579818e`)와 to-be 변화(mockups `9239d07→7789c2d`)는 모두 PR #235 `7da5dec` 한 건에서 나왔다. 이 모델의 `rct_20261010-0009` 슬라이스다.\n- main에서 직접 확인했다: 검산 4종 `ok`, 집계 todo-personal M 80/3/50/12/0 · S 15/6/0, todo-work M 83/3/54/11/0 · S 16/6/0, 다른 4화면 불변, 2파일. `7da5dec`의 build·deploy·report-build-status는 success다.\n- 0009 task 자체는 이 감지 시점에 아직 `executing`이다. 그 마감은 executor의 몫이고, 이 판정은 main에 착지한 결과를 기준으로 했다.\n- 슬라이스 → 재감지 → 후속 task로 이어지는 정상 루프다.\n\n(2) 잔여 drift는 정의상 유의미하다.\n- 기준 4: M 불일치 124행 · S 16행(todo-personal 50/6 · todo-work 54/6 · scratchpad 13/3 · affirmations 7/1).\n- 기준 3: 카피 구현 대기 A 9 · B 43.\n- 기준 1·4: `screen-widget`·`screen-pr-monitor-history`에 구조표가 없다.\n- 이 잔여분은 0009가 닫혀도 해소되지 않는다.\n\n(3) 자동 해소 가능성은 없다. 열린 PR #207(backend·docs/product)·#201(docs/user-journeys) 중 렌더링 트리나 docs/mockups·docs/design-system을 건드리는 것이 없다. 그래서 유예하지 않는다.\n\n(4) planner 참고\n- `rct_20261010-0009`가 succeeded로 닫혔는지 먼저 확인할 것. 같은 `TodoListView.swift`·`_structure-map.md`를 건드린다.\n- 후속 후보:\n  - 남은 todo 50+54행(체크 모양·글리프, 목록 프레임 `pt-1`(시스템 `Section` 머리), 필터 칩·태그 줄, 영역 점, 메타 줄 등. 공용 ScreenHeader/AreaLabel 접촉이 필요한 항목이 섞여 있다).\n  - widget·pr-monitor-history 구조표 신설.\n  - 카피 구현 대기.\n  - 사람 결정이 선결인 항목(scratchpad stone 토큰 등).\n- `_impl-map.md`의 `PRMonitorNotificationSettingsSheet` 근거 열에 #222 로그아웃 서술이 빠진 저위험 문서 정리는 아직 남아 있다.",
       "assessedAt": "2026-10-10T14:02:30Z"
     },
-    "updatedAt": "2026-10-10T14:07:20Z"
+    "updatedAt": "2026-10-10T14:11:46Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "공유 TodoListView 섹션 머리에 영역 분기 두 개를 넣는다. `sectionTitleTracking`(개인 0 · 회사 0.3)과 `sectionTitleCase`(개인 nil · 회사 .uppercase)다. 이것으로 _structure-map 표 M 6행을 불일치→일치로 옮긴다. 대상은 회사 섹션 제목 · 섹션 제목(백로그) · 완료 섹션 제목 각각의 tracking-wide · uppercase이고, todo-work M 불일치가 54→48로 줄며 todo-personal은 50 그대로다. 목업이 확정한 순수 타이포 값만 따르고, 영역 분기는 같은 파일 `checkSize`·`sectionTitleSize` 방식이라 디자인 판단이 섞이지 않는다(ios +16 −1, 롤백 = PR revert). 「OPEN」·「DONE」은 이미 대문자라 보이는 글자와 UI 테스트 `sectionHeader`(label BEGINSWITH \"OPEN · \")는 바뀌지 않는다. 대안 저울질: ⑴ 섹션 제목 색(stone-400/500)은 DesignTokens에 stone 토큰이 없어 토큰 신설이 필요하다(사람 결정 선결 — scratchpad stone 과 같은 축)라 뺐다. ⑵ 회사 메타 줄 uppercase는 사용자 메모까지 대문자로 바꿔 TodoAdd/Edit/Complete UITests의 메타 라벨 정확 일치를 깰 위험이 있어 뺐다. ⑶ 행 제목 굵기는 긴급 분기 판단이 섞여, 카드 라운드·추가 버튼 모양은 회사 Radius 결정이 필요해 뺐다. 완료 기준: ⑴ 검산 4종(_structure-map·_impl-map·_copy-map·_token-map) 출력 문면 ok ⑵ 집계 todo-personal M 일치 80·기본값 일치 3·불일치 50·허용 12·목업 대기 0, S 15/6/0; todo-work M 89·3·48·11·0, S 16/6/0, 남은 drift 문장 50행·48행 ⑶ 다른 4화면 집계 불변 ⑷ 착지 커밋 변경 파일 정확히 2개(TodoListView.swift · _structure-map.md) ⑸ 착지 커밋 main ci-success success. 범위 밖: 섹션 제목 색(개인·회사 ink/stone), 섹션 막대·구분선·머리 여백(시스템 Section), 목록 위 여백, 체크 모양·글리프, 필터 칩, 태그 줄, 영역 점·라벨 줄 간격, 행 제목 굵기, 메타 줄 간격·대문자·구분점 색·달력 글리프, 회사 급한 행 띠·N.B. 상자·헤더 바탕·추가 버튼·카드 라운드, 검색 자리표시 색, 카피 구현 대기 A9·B43, widget·pr-monitor-history 구조표, _impl-map PRMonitorNotificationSettingsSheet 근거 열.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #236 head 를 origin/main 위에서 재확인: `git merge-tree --write-tree origin/main <head>` 충돌 0, 변경 파일 2개(TodoListView.swift · docs/mockups/_structure-map.md)",
+              "expectedOutcome": "충돌 없음, PR changed_files == 2"
+            },
+            {
+              "seq": 2,
+              "action": "PR #236 CI(ci-success · ios-test · review-policy · comment-policy · journey-mockup) 전부 success 확인 — 실패 시 커밋을 얹지 말고 원인 판별(flake 면 같은 sha rerun)",
+              "expectedOutcome": "필수 status 전부 success"
+            },
+            {
+              "seq": 3,
+              "action": "PR #236 squash 머지",
+              "expectedOutcome": "main 에 커밋 1개 착지, 변경 파일 2개"
+            },
+            {
+              "seq": 4,
+              "action": "착지 main 에서 검산 4종 실행(artifacts/pa-mr-rct_20261010-0010/check.py <repo>)",
+              "expectedOutcome": "네 줄 모두 `ok`"
+            },
+            {
+              "seq": 5,
+              "action": "착지 main 집계 표 대조: todo-work M 89/3/48/11/0 · S 16/6/0, todo-personal M 80/3/50/12/0 · S 15/6/0, 다른 4화면 불변; 착지 커밋의 main ci-success 결론",
+              "expectedOutcome": "수치 일치, ci-success success"
+            }
+          ],
+          "plannedAt": "2026-10-10T14:25:00Z"
+        }
+      }
+    ]
   }
 ]
