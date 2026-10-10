@@ -10651,7 +10651,7 @@
       "reason": "작업이 필요하다(action_required). 근거는 네 가지다.\n\n(1) 출처\n- as-is 변화(app `0586289→579818e`)와 to-be 변화(mockups `9239d07→7789c2d`)는 모두 PR #235 `7da5dec` 한 건에서 나왔다. 이 모델의 `rct_20261010-0009` 슬라이스다.\n- main에서 직접 확인했다: 검산 4종 `ok`, 집계 todo-personal M 80/3/50/12/0 · S 15/6/0, todo-work M 83/3/54/11/0 · S 16/6/0, 다른 4화면 불변, 2파일. `7da5dec`의 build·deploy·report-build-status는 success다.\n- 0009 task 자체는 이 감지 시점에 아직 `executing`이다. 그 마감은 executor의 몫이고, 이 판정은 main에 착지한 결과를 기준으로 했다.\n- 슬라이스 → 재감지 → 후속 task로 이어지는 정상 루프다.\n\n(2) 잔여 drift는 정의상 유의미하다.\n- 기준 4: M 불일치 124행 · S 16행(todo-personal 50/6 · todo-work 54/6 · scratchpad 13/3 · affirmations 7/1).\n- 기준 3: 카피 구현 대기 A 9 · B 43.\n- 기준 1·4: `screen-widget`·`screen-pr-monitor-history`에 구조표가 없다.\n- 이 잔여분은 0009가 닫혀도 해소되지 않는다.\n\n(3) 자동 해소 가능성은 없다. 열린 PR #207(backend·docs/product)·#201(docs/user-journeys) 중 렌더링 트리나 docs/mockups·docs/design-system을 건드리는 것이 없다. 그래서 유예하지 않는다.\n\n(4) planner 참고\n- `rct_20261010-0009`가 succeeded로 닫혔는지 먼저 확인할 것. 같은 `TodoListView.swift`·`_structure-map.md`를 건드린다.\n- 후속 후보:\n  - 남은 todo 50+54행(체크 모양·글리프, 목록 프레임 `pt-1`(시스템 `Section` 머리), 필터 칩·태그 줄, 영역 점, 메타 줄 등. 공용 ScreenHeader/AreaLabel 접촉이 필요한 항목이 섞여 있다).\n  - widget·pr-monitor-history 구조표 신설.\n  - 카피 구현 대기.\n  - 사람 결정이 선결인 항목(scratchpad stone 토큰 등).\n- `_impl-map.md`의 `PRMonitorNotificationSettingsSheet` 근거 열에 #222 로그아웃 서술이 빠진 저위험 문서 정리는 아직 남아 있다.",
       "assessedAt": "2026-10-10T14:02:30Z"
     },
-    "updatedAt": "2026-10-10T15:51:01Z",
+    "updatedAt": "2026-10-10T15:52:32Z",
     "attempts": [
       {
         "plan": {
@@ -10699,6 +10699,42 @@
           "reviewedAt": "2026-10-10T15:45:58Z",
           "reason": "필수 check `ci-success`가 PR #236 head `2922647`에서 failure다(15:43:57Z). 원인은 iOS build + test shard 0의 `Build & test (simulator)` 스텝이 14:14:29Z에 시작해 끝나지 않은 채 \"The hosted runner lost communication with the server\" annotation으로 끝난 것이다(로그 blob BlobNotFound, 실패 단정 0건). shard 1·2는 success라 Swift 변경은 컴파일된다. 계획 자체는 승인 수준이다: base `63fdbfc` = main tip, MERGEABLE, 2파일(TodoListView.swift +16 −1 · _structure-map.md +14 −14)로 범위 일치, 회사 섹션 제목은 리터럴 「OPEN」·「DONE」뿐이라 `.uppercase`의 가시 변화 없음, 목업 screen-todo-work.html 섹션 제목 4곳 모두 `tracking-wide … uppercase`, 검산 4종 base·head 모두 `ok`, 음성 프로브 3종(집계 48→54 · 0.3→0.4 · .uppercase→.lowercase) 모두 검출, 집계 diff는 todo-work M 83→89 · 54→48 두 행뿐, 열린 #201·#207과 파일 겹침 0, review/manual-approval 자동 success. 그러나 빨간 필수 check가 붙은 head는 실행 허가를 낼 수 없어 거부한다.",
           "comment": "계획·diff·지침은 고칠 것이 없다 — 재계획이 아니라 「같은 sha 재실행」만 필요하다. ① PR #236 run 38058595123의 실패 잡(iOS build + test shard 0, job 114232069098 — runner lost communication 인프라 단절)만 `gh run rerun 38058595123 --failed -R dlddu/pocket-aide`로 head `2922647` 그대로 재실행한다. 커밋을 얹거나 브랜치를 재생하지 말 것(shard 1·2 초록과 이 리뷰의 실측이 그 sha에 묶여 있다). ② 재실행된 shard 0의 check-run `completed_at`이 15:43:50Z 이후이고 `ci-success`가 success인 것을 확인한 뒤 plan·preparation은 그대로 두고 새 attempt로 planned에 올린다. ③ 재실행에서 shard 0이 XCUITest 실패 단정으로 빨개지면 그때는 해당 테스트명·단정을 보고 diff 영향(섹션 머리 `.tracking`/`.textCase`)인지 base main에서도 나는 flake인지 갈라 계획에 반영한다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재준비(review_rejected, 계획 결함 0): 직전 시도의 범위·PR #236·head 2922647 을 그대로 승계하고, 거부 사유였던 필수 check `ci-success` 빨강(iOS shard 0 「hosted runner lost communication」 인프라 단절)만 같은 sha 재실행으로 푼다 — 커밋을 얹지 않는 이유는 재실행 결론과 리뷰 실측이 그 sha 에 묶여 있기 때문이다. 공유 TodoListView 섹션 머리에 영역 분기 두 개를 넣는다. `sectionTitleTracking`(개인 0 · 회사 0.3)과 `sectionTitleCase`(개인 nil · 회사 .uppercase)다. 이것으로 _structure-map 표 M 6행을 불일치→일치로 옮긴다. 대상은 회사 섹션 제목 · 섹션 제목(백로그) · 완료 섹션 제목 각각의 tracking-wide · uppercase이고, todo-work M 불일치가 54→48로 줄며 todo-personal은 50 그대로다. 목업이 확정한 순수 타이포 값만 따르고, 영역 분기는 같은 파일 `checkSize`·`sectionTitleSize` 방식이라 디자인 판단이 섞이지 않는다(ios +16 −1, 롤백 = PR revert). 「OPEN」·「DONE」은 이미 대문자라 보이는 글자와 UI 테스트 `sectionHeader`(label BEGINSWITH \"OPEN · \")는 바뀌지 않는다. 대안 저울질: ⑴ 섹션 제목 색(stone-400/500)은 DesignTokens에 stone 토큰이 없어 토큰 신설이 필요하다(사람 결정 선결 — scratchpad stone 과 같은 축)라 뺐다. ⑵ 회사 메타 줄 uppercase는 사용자 메모까지 대문자로 바꿔 TodoAdd/Edit/Complete UITests의 메타 라벨 정확 일치를 깰 위험이 있어 뺐다. ⑶ 행 제목 굵기는 긴급 분기 판단이 섞여, 카드 라운드·추가 버튼 모양은 회사 Radius 결정이 필요해 뺐다. 완료 기준: ⑴ 검산 4종(_structure-map·_impl-map·_copy-map·_token-map) 출력 문면 ok ⑵ 집계 todo-personal M 일치 80·기본값 일치 3·불일치 50·허용 12·목업 대기 0, S 15/6/0; todo-work M 89·3·48·11·0, S 16/6/0, 남은 drift 문장 50행·48행 ⑶ 다른 4화면 집계 불변 ⑷ 착지 커밋 변경 파일 정확히 2개(TodoListView.swift · _structure-map.md) ⑸ 착지 커밋 main ci-success success. 범위 밖: 섹션 제목 색(개인·회사 ink/stone), 섹션 막대·구분선·머리 여백(시스템 Section), 목록 위 여백, 체크 모양·글리프, 필터 칩, 태그 줄, 영역 점·라벨 줄 간격, 행 제목 굵기, 메타 줄 간격·대문자·구분점 색·달력 글리프, 회사 급한 행 띠·N.B. 상자·헤더 바탕·추가 버튼·카드 라운드, 검색 자리표시 색, 카피 구현 대기 A9·B43, widget·pr-monitor-history 구조표, _impl-map PRMonitorNotificationSettingsSheet 근거 열.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #236 head 를 origin/main 위에서 재확인: `git merge-tree --write-tree origin/main <head>` 충돌 0, 변경 파일 2개(TodoListView.swift · docs/mockups/_structure-map.md)",
+              "expectedOutcome": "충돌 없음, PR changed_files == 2"
+            },
+            {
+              "seq": 2,
+              "action": "PR #236 CI(ci-success · ios-test · review-policy · comment-policy · journey-mockup) 전부 success 확인 — 실패 시 커밋을 얹지 말고 원인 판별(flake 면 같은 sha rerun)",
+              "expectedOutcome": "필수 status 전부 success"
+            },
+            {
+              "seq": 3,
+              "action": "PR #236 squash 머지",
+              "expectedOutcome": "main 에 커밋 1개 착지, 변경 파일 2개"
+            },
+            {
+              "seq": 4,
+              "action": "착지 main 에서 검산 4종 실행(artifacts/pa-mr-rct_20261010-0010/check.py <repo>)",
+              "expectedOutcome": "네 줄 모두 `ok`"
+            },
+            {
+              "seq": 5,
+              "action": "착지 main 집계 표 대조: todo-work M 89/3/48/11/0 · S 16/6/0, todo-personal M 80/3/50/12/0 · S 15/6/0, 다른 4화면 불변; 착지 커밋의 main ci-success 결론",
+              "expectedOutcome": "수치 일치, ci-success success"
+            }
+          ],
+          "plannedAt": "2026-10-10T15:52:32Z",
+          "executionGuide": "## 0. 재준비 사유와 실측 (이번 시도에서 바뀐 것은 이 절뿐)\n직전 시도는 계획·diff·지침에 결함 없이 **필수 `ci-success` 빨강** 하나로 거부됐다. 범위·PR #236·브랜치·**head `2922647` 그대로** 승계한다.\n\n| 축 | 실측 (2026-10-10 15:5xZ) |\n|---|---|\n| 원인 | run 38058595123 attempt 1, `iOS build + test (shard 0)` job 114232069098: 14:11:15→15:43:50(92분, 형제 shard 1·2 는 38·54분에 success). annotation = `The hosted runner lost communication with the server` — 테스트 실패 단정 0건 |\n| 접촉 | 변경 2파일(TodoListView.swift · _structure-map.md). UI 테스트 파일 무접촉. shard 1·2 success ⇒ Swift 변경 컴파일됨 |\n| 기저 실패율 | ci.yml 최근 30 run 중 완료 28: failure 2 — 이 run 과 38040935533(gm12, shard 0 XCUITest 단정 `prmonitor.settings.signOut.confirm` 다중 매치 = 그 PR 고유 결함 · 런너 단절 아님). 런너 단절 기저 = 0/27 |\n| 대조군 | 동시각 자매 run 38063341129(#237, 15:23Z 시작) shard 3개 정상 진행 중 — 러너 풀 자체 정지 아님 |\n| 조치 | `gh run rerun 38058595123 --failed -R dlddu/pocket-aide` (15:51:34Z, attempt 2, shard 0 15:51:42Z 시작) — 커밋 0 |\n| 재실행 결과 | (아래 preparation.notes 에 기록) |\n\n### 실행자 머지 직전 재확인 두 항목\n1. 그 시점 PR head 가 **여전히 `2922647`** 이고 `ci-success`(최신 check-run, completed_at > 15:51Z)가 success 인가. head 가 바뀌었으면 멈추고 failed.\n2. 자매 착지 여부: #237(ios-test.yml·백엔드·WebhookPushSettingsUITests) · #207 · #201 은 두 파일과 겹침 0. 자매 착지로 `BEHIND`/`DIRTY` 가 되면 아래 1단계 재생 규칙을 따른다(재생 시 CI 는 새 sha 에서 다시 돈다 — 정상).\n\n🔴 **재실행에서도 shard 0 이 같은 자리에서 깨지면(런너 단절이든 XCUITest 단정이든) flake 가 아니다** — 범위를 넓혀 테스트를 고치지 말고 failed 로 두어 별도 판정을 받게 할 것. XCUITest 단정 실패면 테스트명·단정을 기록하고, 섹션 머리 `.tracking`/`.textCase` 영향인지 base main 에서도 나는지 가른다.\n\n## 순서 (직렬 — 각 단계가 앞 단계 결과에 의존)\n1. **재확인**: `gh pr view 236 -R dlddu/pocket-aide --json mergeable,mergeStateStatus,changedFiles,headRefOid`. mergeable 이 CLEAN/clean 이고 changedFiles 가 2 여야 한다. DIRTY면(자매 PR이 같은 두 파일에 착지한 경우) 새 main 위에서 키트를 재생한다: `git checkout -B reconcile/mockup-render-rct_20261010-0010 origin/main && python3 apply_ios.py . && python3 apply_doc.py .`. 키트 위치는 `/workspaces/planner/.reconciler-work/artifacts/pa-mr-rct_20261010-0010/`이고, rep 단언은 count==1이다. 재생한 뒤에는 check.py 를 돌린다. 재생이 단언으로 실패하면 범위가 무너진 것이니 실행을 멈추고 failed 로 둔다.\n2. **CI 대기**: ios-test는 30~100분 걸린다. 필수는 `ci-success`. review-policy는 judge 결과 「수동 승인 케이스 미접촉」이라 manual-approval 이 자동 success여야 한다.\n   - 실패한 잡의 `steps` 가 `[]` 이고 1~3초 만에 끝났다면 Actions 과금 정지다. 계획 결함이 아니다.\n   - XCUITest 한 건이 retry 로 통과하는 flake면 같은 sha 를 rerun 한다.\n   - 커밋을 얹으면 초록이 날아가니 얹지 말 것.\n3. **머지**: squash. 머지 메시지는 PR 제목을 그대로 쓴다.\n4. **검증**(완료 기준 = 이 범위):\n   - ⑴ `python3 check.py <main checkout>` 네 줄 `rc=0 ok`.\n   - ⑵ `_structure-map.md` 집계 표가 아래와 같아야 한다:\n     - `screen-todo-work` M 일치 89 · 기본값 일치 3 · 불일치 48 · 허용 11 · 목업 대기 0, S 16/6/0\n     - `screen-todo-personal` M 80/3/50/12/0, S 15/6/0\n     - 59행 문장 「표 M `불일치` 48행」\n   - ⑶ 다른 4화면(affirmations·scratchpad·routines 등) 집계 행이 머지 전 main 과 바이트 동일해야 한다(`git diff <base> <merge> -- docs/mockups/_structure-map.md` 의 ± 줄이 todo-work 표·집계·색 행 인용·59행에만 있을 것).\n   - ⑷ `git show --stat <merge>` 2파일.\n   - ⑸ 착지 커밋 sha 의 main `ci-success` success.\n\n## 검증 근거 (planned 시점 로컬 실측, head 2922647, base 63fdbfc)\n- 검산 4종: 출력 `ok`.\n- 음성 프로브 3종 모두 검출:\n  - 0.3→0.4: 구현 인용 오류\n  - `.uppercase`→`.lowercase`: 구현 인용 오류\n  - 집계 48→54: `집계 screen-todo-work M 불일치`\n- `judge.py --policy docs/review-policy.md`: 「수동 승인 케이스 미접촉 (2 경로)」.\n- `check_ledger.py` rc=0. 추가한 주석은 0줄이다.\n- 열린 PR #201 · #207은 두 파일과 겹치지 않는다.\n\n## 주의사항\n- 렌더 변화는 회사 탭 섹션 머리 자간 +0.3pt뿐이다.\n  - `.textCase(.uppercase)` 는 리터럴 「OPEN」·「DONE」이 이미 대문자라 보이는 글자를 바꾸지 않는다. 숫자 「· N」도 그대로다.\n  - 개인 탭은 tracking 0 · textCase nil 이라 이전과 같다.\n- 컴파일은 로컬 Xcode 없이 CI에 맡겼다.\n  - `Text.tracking(_:)` → Text, `View.textCase(_: Text.Case?)` 는 SwiftUI 표준 API다.\n  - CI 컴파일이 실패하면 계획 결함으로 보고 failed 로 둔다. 실행 단계에서 코드를 고치지 말 것.\n- 불가역 지점은 없다. 롤백은 PR revert 다.\n- TestFlight 발화: ios 접촉 PR의 main 머지는 기존 슬라이스(#230·#231·#234·#235)와 같은 경로를 탄다. 별도 조치는 없다.\n\n## 범위 밖 (후속 — 재감지가 새 task 로)\n- todo-work M 48행:\n  - 섹션 제목 색(stone 토큰 부재 — 사람 결정)\n  - 섹션 막대·구분선·머리 여백(시스템 Section)\n  - 메타 줄 대문자(UITests 메타 라벨 정확 일치 위험)·구분점 색\n  - 급한 행 띠, N.B. 상자, 헤더 바탕, 카드 라운드, 추가 버튼 모양, 체크 글리프, 목록 위 여백, 행 제목 굵기, 영역 점·라벨 줄\n- todo-personal M 50행: 필터 칩, 태그 줄, 영역 점, 섹션 머리 여백, 체크 모양, 섹션 제목 색, 메타 글리프 등\n- 기타:\n  - 카피 구현 대기 A9 · B43\n  - widget · pr-monitor-history 구조표\n  - _impl-map PRMonitorNotificationSettingsSheet 근거 열\n"
         }
       }
     ]
