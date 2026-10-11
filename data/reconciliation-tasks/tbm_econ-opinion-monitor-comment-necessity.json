@@ -15132,7 +15132,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-comment-necessity",
-    "status": "assessing",
+    "status": "action_required",
     "createdAt": "2026-10-11T03:11:48Z",
     "trigger": {
       "source": "version_change",
@@ -15154,8 +15154,8 @@
       "summarizedAt": "2026-10-11T09:20:00Z"
     },
     "assessment": {
-      "reason": "**재확인 유예 — 차이 존재하나 자동 해소 가능성 있어 2026-10-11T09:13:30Z에 재확인.** status는 `assessing`으로 둔다.\n\n**근거 1 — 차이는 실재하고 유의미하다.** tip `2497886`에서 게이트 `scripts/check-comment-ledger.py`는 rc=0(불변식 통과)이지만 미판정이 L `행 5 · 150줄`, E `행 1 · 2줄` 남아 있다(직전 `69c49f6`은 모두 0). 원인은 자매 기능 PR #247(serving OOM 해소)이다. 정의의 정합 상태(원장 미판정 0)에 어긋난다.\n\n**근거 2 — 미판정 6행이 모두 진행 중인 변경과 겹친다.** 원격 브랜치 `serving-sqlite-index`(`5b6c3f2`)가 2026-10-11T02:54Z, 이 감지 약 30분 전에 main tip 위로 push됐다. 이 브랜치는 미판정 행의 파일을 전부 건드린다.\n- 삭제: `store/calltally.go`(L 29) · `handlers/startup_memprobe_test.go`(L 4)\n- 재작성: `handlers/debug_records.go`(L 8) · `handlers.go`(L 101 중 ±20줄)\n- 수정: `debug_records_test.go`(E 2) · `cmd/serving/main.go`(L 8)\n\n정의의 판정 슬라이스 규칙은 「파일이 실제로 겹치는 열린 PR이 있을 때만 그 덩어리를 뺀다」이다. 이 규칙대로면 지금 계획해도 가져갈 덩어리가 남지 않는다. 억지로 판정하면 결과의 대부분(삭제될 33줄, 재작성될 행)이 그 머지로 무효가 된다.\n\n**근거 3 — 그 머지가 이 gap을 다시 움직인다.** 브랜치는 아직 `docs/comment-policy/`를 고치지 않았다. 머지 전에 README 운영 규칙대로 자기 파일 행을 갱신해야 게이트를 통과한다. 그래서 머지되면 삭제 파일의 행이 사라지고, 재작성 파일은 새 줄 수로 `—` 행이 된다. 판정 대상이 그 시점에 확정된다.\n\n**재확인 시 할 일**\n- 브랜치가 머지돼 있으면 새 tip에서 게이트를 다시 실행한다. 미판정이 남아 있으면 `action_required`로 넘긴다(예산 400줄 안에서 한 슬라이스).\n- 브랜치가 머지되지 않고 남아 있거나 PR이 닫혔으면, 겹침이 계속되는 것과 무관하게 `action_required`로 넘긴다. 이 경우 planner가 슬라이스에서 겹치는 덩어리를 빼는 판단을 계획에 적는다. 무기한 유예하지 않는다.\n\n**한계** — PR 번호와 열림 여부는 확인하지 못했다. GitHub REST가 401이었고 토큰 발급 MCP(k3s)가 연결에 실패했다. 겹침은 원격 브랜치 diff(`git diff 2497886 5b6c3f2`)로 확인했다.",
-      "assessedAt": "2026-10-11T03:13:30Z"
+      "reason": "**작업 필요 — `action_required`.** 재확인(유예 만료 09:13:30Z, 09:17Z 재진입)에서도 차이가 지속돼 계획 단계로 넘긴다.\n\n**근거 1 — 유예 사유가 해소됐고 gap은 남았다.** 유예의 근거였던 `serving-sqlite-index` 브랜치는 #248(`13e496e`)로 머지됐다. 그 머지 뒤 tip에서 게이트를 다시 돌리면 불변식은 통과(rc=0)하지만 미판정이 L 23행·348줄, E 3행·5줄이다(트리거 시점 L 5행·150줄, E 1행·2줄보다 늘었다). 정의의 정합 상태(미판정 0)에 어긋난다. 유예 때 적은 지침(「머지돼 있으면 새 tip에서 게이트를 다시 돌려, 미판정이 남아 있으면 `action_required`」)대로 넘긴다.\n\n**근거 2 — 겹침을 빼도 한 슬라이스가 남는다.** 열린 PR #249(ingestion)와 #220(docs)은 미판정 행의 파일을 건드리지 않는다. PR 없는 원격 브랜치 `serving-index-screens`(`883f78f`, 09:10Z push)가 `handlers/debug.go`·`debug_records.go`·`handlers.go`·`servingindex/build.go`·`web/src/screens/Debug.tsx`(L 152줄)를 수정한다. 정의의 슬라이스 규칙상 이 덩어리는 planner가 계획에서 빼는 판단을 적을 몫이다. 빼더라도 `deploy/batch/workflow-template.yaml` 34, `store/store.go` 37, `tests/e2e/run.sh` 33, `servingindex/{reader,publish,schema.sql,derive.sql,build_test}` 등 약 200줄이 예산 400줄 안에서 겹침 없이 남는다. 그래서 다시 유예할 이유가 없다.\n\n**planner 참고**\n- #249가 `ledger.md`와 `passes/`를 수정하므로, 먼저 머지되는 쪽에 맞춰 원장을 rebase해야 할 수 있다.\n- `serving-index-screens`가 PR로 열리거나 머지되면, 겹치는 5개 파일의 행 줄 수가 다시 바뀐다.\n\n**lastObservedVersion** — 재확인 경로라 모델의 `lastObservedVersion`은 갱신하지 않았다(as-is 여전히 `c0a4eb2b…`, to-be `0bfe9f33…`). 그래서 다음 스윕이 #248 변화(`5d7a5024…` / `9df411bd`)로 후속 task를 열 수 있다. 그 gap은 이 task가 가져간 것과 같으므로, 이 task가 열려 있는 동안에는 중복으로 판정하면 된다.",
+      "assessedAt": "2026-10-11T09:20:00Z"
     }
   }
 ]
