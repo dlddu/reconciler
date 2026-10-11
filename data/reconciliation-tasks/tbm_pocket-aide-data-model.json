@@ -824,7 +824,7 @@
       "reason": "조치 필요. 판정 절차 1~3: main `ef16dbb`의 CI 체커(C9, 엔진 SQLite 3.46.0/modernc v1.34.1, rc=1)에서 불변식 1·2는 정합이고 불변식 3은 `no-support` {Q-09, Q-15} 2건 위반이다. 절차 4의 C2·C4는 이상 없다. 판정 규칙(하나라도 위반 ⇒ action_required)상 조치가 필요하다.\n이번 to-be 변화(#239, README CI 서술 1줄)는 새 위반을 만들지 않았다. 그런데도 `no_action_needed`로 닫지 않는 이유는 소관이 바뀌었기 때문이다. 직전 감지 `rct_20261008-0002`·`rct_20261009-0001`은 이 잔여를 열린 `rct_20261004-0004`의 소관으로 보고 닫았다. 그 task는 2026-10-09T13:53Z 사람 세션 요청으로 `cancelled`됐고(사유 기록 없음, PR #159·#160 미머지 종료), 지금은 이 잔여를 맡은 비종결 task가 없다. 여기서 또 닫으면 판정 규칙상 남은 위반이 추적되지 않는 채로 묻힌다. 롤아웃·재동기화 같은 자동 해소 경로도 없어 재확인 유예는 맞지 않는다.\nplanner 인계: (1) 0004 취소는 사람의 결정이다. 같은 F1 기준 제안 PR 스택(#159/#160 경로)을 그대로 다시 쌓기 전에 취소 의도를 존중할 것. 풀스캔 허용 기준은 사람 소유이므로 기준을 발명해 착지시키지 말고, 기준 제안 경로라면 사람 승인(`review.manualApproval`)을 거칠 것. (2) 기준 없이 닫히는 길은 쿼리 변경뿐이다. Q-09 `devicetokens.Store::ListAll`은 비테스트 호출자가 없어(테스트 `handlers/device_tokens_test.go:85` 하나) 메서드와 테스트를 정리하면 지점·패턴이 사라진다. Q-15 `ListUserIDsExcluding`은 운영 호출자(`cmd/server/main.go:149`)가 있어 인덱스로는 닫히지 않고(형태에 접근 조건 없음 — 0004 실측), 기준 결정이나 쿼리 형태 변경이 필요하다. Q-15만 사람 결정으로 남기는 부분 슬라이스도 정상 경로다. (3) 열린 #207(docs-impl `0007`, 마이그레이션 0012)이 착지하면 불변식 1·2가 다시 벌어진다. 그 등재는 그 재감지가 이을 몫이고, CI report→gate 전환은 이 순서와 함께 다룰 것. (4) 미사용 인덱스는 등재를 유지한다(삭제는 사람의 결정).",
       "assessedAt": "2026-10-11T03:12:46Z"
     },
-    "updatedAt": "2026-10-11T04:48:45Z",
+    "updatedAt": "2026-10-11T04:49:58Z",
     "attempts": [
       {
         "plan": {
@@ -871,6 +871,34 @@
           "status": "approved",
           "reviewedAt": "2026-10-11T04:35:00Z",
           "reason": "승인. PR #241 열림·head `e78bfa9` 불변·base `b267cbc`=main tip(behind_by 0)·CLEAN, 필수 `ci-success` success(iOS 3샤드 포함, 04:3xZ)·`review/manual-approval` success(judge 「수동 승인 케이스 미접촉」)라 manualApproval 불요. diff 6파일 +14/−37 이 plan.steps 와 일치하고, 리뷰 로컬 실측(go1.24.7)에서 datamodelcheck 위반이 base 대비 정확히 −{(3,no-support,Q-09)}·추가 0, check_ledger rc=0, `grep ListAll backend` 0건이다(리뷰 집계는 24→23 으로 지침의 25→24 와 절대값이 1 다르나 차집합은 같다 — executor 는 차집합으로 판정할 것). 자매 PR #242(rct_20261011-0002, docs/data-model·ledger 접촉)와 merge-tree 충돌 0, 병합 트리에서도 #242 대비 −Q-09 만·check_ledger rc=0 이라 착지 순서와 무관하다. 위험은 운영 롤아웃(Pin deployment image)이지만 제거 함수는 비테스트 호출자 0 이라 동작 무변경이고, 롤백은 squash 커밋 revert 한 번·데이터/스키마 변경 없음."
+        },
+        "execution": {
+          "status": "running",
+          "startedAt": "2026-10-11T04:48:54Z",
+          "finishedAt": null,
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-10-11T04:48:54Z",
+              "finishedAt": "2026-10-11T04:49:10Z",
+              "log": "PR #241 head e78bfa9: ci-success pass(run 38107967548, iOS 3샤드 포함), review/manual-approval pass(수동 승인 케이스 미접촉). data-model check (report) job 114377426343 로그: no-support 는 Q-15 한 줄뿐, Q-09 없음(exit status 1 = report 경고)."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-10-11T04:49:00Z",
+              "finishedAt": "2026-10-11T04:49:15Z",
+              "log": "main 이 b267cbc 에서 1커밋 이동(39808dd #240 — docs/mockups 2파일·ios 3파일, data-model/comment-policy 무접촉) → 체커·원장 재실행 불요. git merge-tree --write-tree origin/main(39808dd) e78bfa9 rc=0 충돌 0, tree 2d07799. 리베이스 안 함(head 불변)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-10-11T04:49:21Z",
+              "finishedAt": "2026-10-11T04:49:26Z",
+              "log": "머지 직전 head e78bfa9·mergeStateStatus CLEAN 재확인 → gh pr merge 241 --squash --match-head-commit e78bfa9 (App 봇 토큰) rc=0. mergedAt 2026-10-11T04:49:25Z, squash d1b9b16(부모 39808dd), 머지 tree == 선검증 merge-tree 2d07799."
+            }
+          ]
         }
       }
     ]
