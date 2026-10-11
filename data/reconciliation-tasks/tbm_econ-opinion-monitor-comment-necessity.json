@@ -15157,7 +15157,53 @@
       "reason": "**작업 필요 — `action_required`.** 재확인(유예 만료 09:13:30Z, 09:17Z 재진입)에서도 차이가 지속돼 계획 단계로 넘긴다.\n\n**근거 1 — 유예 사유가 해소됐고 gap은 남았다.** 유예의 근거였던 `serving-sqlite-index` 브랜치는 #248(`13e496e`)로 머지됐다. 그 머지 뒤 tip에서 게이트를 다시 돌리면 불변식은 통과(rc=0)하지만 미판정이 L 23행·348줄, E 3행·5줄이다(트리거 시점 L 5행·150줄, E 1행·2줄보다 늘었다). 정의의 정합 상태(미판정 0)에 어긋난다. 유예 때 적은 지침(「머지돼 있으면 새 tip에서 게이트를 다시 돌려, 미판정이 남아 있으면 `action_required`」)대로 넘긴다.\n\n**근거 2 — 겹침을 빼도 한 슬라이스가 남는다.** 열린 PR #249(ingestion)와 #220(docs)은 미판정 행의 파일을 건드리지 않는다. PR 없는 원격 브랜치 `serving-index-screens`(`883f78f`, 09:10Z push)가 `handlers/debug.go`·`debug_records.go`·`handlers.go`·`servingindex/build.go`·`web/src/screens/Debug.tsx`(L 152줄)를 수정한다. 정의의 슬라이스 규칙상 이 덩어리는 planner가 계획에서 빼는 판단을 적을 몫이다. 빼더라도 `deploy/batch/workflow-template.yaml` 34, `store/store.go` 37, `tests/e2e/run.sh` 33, `servingindex/{reader,publish,schema.sql,derive.sql,build_test}` 등 약 200줄이 예산 400줄 안에서 겹침 없이 남는다. 그래서 다시 유예할 이유가 없다.\n\n**planner 참고**\n- #249가 `ledger.md`와 `passes/`를 수정하므로, 먼저 머지되는 쪽에 맞춰 원장을 rebase해야 할 수 있다.\n- `serving-index-screens`가 PR로 열리거나 머지되면, 겹치는 5개 파일의 행 줄 수가 다시 바뀐다.\n\n**lastObservedVersion** — 재확인 경로라 모델의 `lastObservedVersion`은 갱신하지 않았다(as-is 여전히 `c0a4eb2b…`, to-be `0bfe9f33…`). 그래서 다음 스윕이 #248 변화(`5d7a5024…` / `9df411bd`)로 후속 task를 열 수 있다. 그 gap은 이 task가 가져간 것과 같으므로, 이 task가 열려 있는 동안에는 중복으로 판정하면 된다.",
       "assessedAt": "2026-10-11T09:20:00Z"
     },
-    "updatedAt": "2026-10-11T09:18:42Z"
+    "updatedAt": "2026-10-11T09:36:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#247·#248 이 원장 26행(L 23·E 3)을 `—` 로 내리며 들인 **증분 129줄(L 124·E 5)** 만 필요성 시험으로 판정한다(증분 패스 선례 #240·#243·#246 레시피 — 행 합계 353줄 중 224줄은 옛 판정이 이미 유지했다). 결과는 제거 42 · 유지 87(개작 6)이고, 26행을 `완료` 로 올려(0줄이 된 L 4행·E 1행은 삭제) **세 표면 미판정 0** 에 닿는다. 예산 400줄에 못 미치는 사유는 「남은 대상 없음」— 미판정 행이 이 26행뿐이다. PR 없는 원격 브랜치 `serving-index-screens`(`883f78f`)가 겹치는 6파일은 정의상 제외 사유(열린 PR)가 아니라 범위에 넣었고, 준비 단계에서 `merge-tree` 로 충돌을 실측했다. **완료 기준**: (1) 머지 뒤 main 에서 `python3 scripts/check-comment-ledger.py` rc=0 이고 이 26개 `(표면, 경로)` 중 남은 21행이 전부 판정 칸 `완료` · 지문/줄 수가 PR 값과 같고 삭제된 5행이 없다 (2) 그 밖의 원장 행은 PR base `13e496e` 대비 불변 (3) 비주석 코드 토큰 불변(Go scanner·TS 프린터·YAML 로드 동일). 범위 밖: 머지 시점에 자매(#249 등)가 새로 들인 `—` 행 — 재감지가 다음 task 로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "모집단 실측 — 게이트 `measure` 를 창 양 끝(`69c49f6`·`13e496e`) worktree 에서 떠 `—` 26행의 파일별 주석 멀티셋 차를 구한다($CLAUDE_JOB_DIR/tmp/meas.py).",
+              "expectedOutcome": "추가 계수 L 124 · E 5 = 129줄, D 0. 행 합계 353 중 224 는 옛 판정 유지분."
+            },
+            {
+              "seq": 2,
+              "action": "129줄을 필요성 시험으로 판정하고 재생 가능한 편집 스크립트(edit.py — `rep()` + `assert count==1`)로 18개 소스 파일에서 제거 42 · 개작 6. `handlers.go` 는 `gofmt` 정렬 공백 1줄을 함께 바꾼다.",
+              "expectedOutcome": "`gofmt -l` 공백 · `go vet`·`go test ./...` ok · web `vitest` 136 passed · `tsc -b`·`eslint .` 무오류."
+            },
+            {
+              "seq": 3,
+              "action": "유지·제거 논거를 음성 프로브로 실측(P1~P8: publish mtime·sweep `ours`·`filepath.Abs`·`TryLock`·Debug 안내 조건·빈 catch·테스트 `Chtimes`).",
+              "expectedOutcome": "「테스트가 붉게 지킨다」로 걷은 자리는 FAIL, 「조용히 깨진다」로 남긴 자리는 초록 — 어긋난 두 판정(sweep 가드 → 유지, 상대 경로 → 제거)을 정정."
+            },
+            {
+              "seq": 4,
+              "action": "ledger.py 로 L·E 절 안의 26행을 `| — |` 앵커로 대치(날짜 2026-10-11 · 게이트 `fingerprint` 로 줄 수·지문 · 축 `완료` · 결과 칸), 0줄 행 삭제. 패스 문서 `passes/2026-10-11-serving-index-increment-pass.md` 신설.",
+              "expectedOutcome": "게이트 rc=0 · L 181행 1768줄 · D 42행 479줄 · E 19행 30줄 · 미판정 0/0/0."
+            },
+            {
+              "seq": 5,
+              "action": "main `13e496e` worktree 에서 edit.py → ledger.py → 패스 문서 복사를 재생해 브랜치와 `write-tree` 를 대조하고 PR 을 연다.",
+              "expectedOutcome": "트리 해시 동일(재생 정확) · PR 1건(docs+주석 전용, `format_changed=false`)."
+            },
+            {
+              "seq": 6,
+              "action": "실행: PR 의 필수 체크가 초록이고 `mergeStateStatus=CLEAN` 이면 squash 머지. BEHIND/DIRTY 면 지침의 재생 절차로 해소.",
+              "expectedOutcome": "main 에 squash 1커밋 착지."
+            },
+            {
+              "seq": 7,
+              "action": "검증: 머지 커밋에서 게이트 + 행별 오라클(oracle.py)을 돌린다.",
+              "expectedOutcome": "오라클 PASS — 21행 `완료`·값 일치, 5행 부재, 다른 행 불변."
+            }
+          ],
+          "plannedAt": "2026-10-11T09:36:00Z"
+        }
+      }
+    ]
   },
   {
     "id": "rct_20261011-0002",
