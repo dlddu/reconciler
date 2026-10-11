@@ -12076,6 +12076,47 @@
     "assessment": {
       "reason": "작업이 필요하다(action_required). 근거는 네 가지다.\n\n(1) 출처\n- as-is(`app 03d1b81→1e7374d`)와 to-be(`mockups 916c288→a78e219`)의 변화는 둘 다 PR #250 `84fcbba` 한 건에서 나왔다. 이 모델의 `rct_20261011-0005` 슬라이스다(succeeded).\n- 슬라이스 → 재감지로 이어지는 정상 루프다.\n- main tip에서 검산 4종을 실행했고 모두 `ok`다. `_structure-map` 집계는 0005 완료 기준과 같다(회사 M 26 · S 3, 개인 M 36 · S 5 · 기본값 일치 7). 새 불일치는 없다.\n\n(2) 잔여 drift는 정의상 유의미하고(기준 3·4), 주인이 없는 몫이 있다.\n- 구조 잔여: todo-work M26/S3, todo-personal 36/5, scratchpad 13/3, affirmations 7/1.\n- 구조표 부재: `screen-approval`, widget, pr-monitor-history.\n- 카피 구현 대기: A 9 · B 80.\n- 이 모델에서 열린 task는 0007(reviewing, PR #253) 하나다. 그 범위는 승인 탭 배지 색(`RootView.swift`·tokens.md·`_impl-map.md`)뿐이다.\n\n(3) 자동 해소 가능성은 없다.\n- 열린 PR(#253·#251·#248·#201)과 `reconcile/*` 브랜치의 main 대비 파일 목록을 확인했다.\n- Todo·Scratchpad·Affirmations·Widget 렌더링 파일이나 `_structure-map`·`_copy-map`을 건드리는 것은 없다. 그래서 유예하지 않는다.\n\n(4) planner 참고\n- `TodoListView.swift`는 #250 착지로 비었다. 그래서 todo-personal(36/5)이나 todo-work 잔여 26/3 슬라이스에 바로 착수할 수 있다.\n  - 0005가 범위 밖으로 둔 것: 기한별 섹션 부재로 인한 막대 색, 급한 행 띠, 메타 줄, 필터 칩 등.\n- scratchpad 13/3 · affirmations 7/1도 열린 브랜치와 겹치지 않는다.\n- `screen-approval` 구조·토큰 표는 #251 착지 뒤에 작성할 것.\n- 배지 색은 0007 몫이니 중복하지 말 것.\n- `docs-impl`의 미반영 버전 변화는 이번 실행에서 점유하지 않았다.",
       "assessedAt": "2026-10-11T10:42:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "투두 두 탭의 완료 체크를 목업 `.check`/`.check.done` 모양으로 맞춘다. SF Symbol `square`·`checkmark.square.fill` 대신 새 `TodoCheckBox`(ios/PocketAide/Todos/TodoCheckBox.swift)가 영역 `accent` 1.6 `strokeBorder` 외곽선(개인 `Circle()` · 회사 `Rectangle()`, 분기는 `TodoArea.checkIsRound`) + 완료 시 accent 채움 + 흰 `checkmark` 글리프 12 를 그린다. 대안 중 TodoListView.swift 안에 직접 넣는 길은 swiftlint `file_length`(400, strict) 를 412 로 넘겨서 버렸고, 별 파일로 빼 TodoListView 는 397줄 그대로다. 버튼·접근성 식별자(`todos.<area>.row.<id>.toggle`)는 그대로라 XCUITest 무수정. 남은 잔여 중 이 클러스터를 고른 이유: 두 화면에 걸친 순수 시각 차이(데이터·카피·구성 변경 없음)이고, 다른 후보(이동 칩 바탕 white/60 은 다크 목업이 #272219/60 이라 라이트·다크 한 토큰으로 못 맞춤 · 이동 출처 줄·인식 메모 줄은 데이터 필드 선결 · 필터 칩·기한별 섹션은 구성 변경)는 결정·선결이 따른다. **완료 기준**: PR 트리(및 main 결합 트리)에서 검산 4종(`_structure-map`·`_impl-map`·`_copy-map`·`_token-map`) 모두 `ok`. `screen-todo-personal` 표 M 불일치 36→32(체크 rounded-full ×2 · 체크 글리프 12 ×2, 일치 91→95), `screen-todo-work` 표 M 불일치 26→24(체크 글리프 12 ×2, 일치 109→111), 표 S 불일치는 두 화면 그대로(5 · 3). `_impl-map` 에 `TodoCheckBox.swift` 부분 행 1개, `_copy-map` 표 A 비표시 16→14(사라진 SF Symbol 리터럴 2행). PR CI `ci-success` 와 `review/manual-approval`(judge: 수동 승인 케이스 미접촉) success. **범위 밖**: 이동 칩 바탕·외곽선(라이트/다크 토큰 결정), 다짐 이동 출처 줄 · 임시공간 인식 메모 줄 · 분류 버튼(데이터·구성), 필터 칩 · 섹션 보조 · 태그 줄 · 달력 글리프 · 기한별 섹션 막대 색 · 급한 행 띠 · 메타 구분점 · N.B. 상자 · 회사 행 라운드/추가 버튼 모양, 구조표 부재(screen-approval · widget · pr-monitor-history), 카피 A9·B80, 배지 색(0007 몫).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "main tip(`84fcbba`)에서 검산 4종을 돌려 기준 출력을 저장한다(`_structure-map`·`_impl-map`·`_copy-map`·`_token-map` 의 `## 검산` bash 블록, 레포 루트).",
+              "expectedOutcome": "4종 모두 `ok`."
+            },
+            {
+              "seq": 2,
+              "action": "`ios/PocketAide/Todos/TodoCheckBox.swift` 를 새로 만든다(`TodoCheckBox(area:isDone:)` — `box<S: InsettableShape>` 가 `checkmark` 글리프 12 bold 흰색 · `.opacity(isDone ? 1 : 0)` · `.frame(width: area.checkSize, height: area.checkSize)` · accent 채움(완료) · accent 1.6 `strokeBorder` · `contentShape(Rectangle())`). `TodoListView.swift` 에 `var checkIsRound: Bool { self == .personal }` 를 더하고 `TodoRow` 의 버튼 라벨을 `TodoCheckBox(area: area, isDone: item.isDone)` 로 바꾼다.",
+              "expectedOutcome": "`swiftlint-static lint --strict` 위반 0(TodoListView.swift 397줄 — file_length 400 안). 버튼 `accessibilityIdentifier` · `.padding(.top, 2)` 불변이라 XCUITest `toggle(_:)` 무수정."
+            },
+            {
+              "seq": 3,
+              "action": "대조 맵 갱신(재생 스크립트 `apply_doc.py`): `_structure-map` 개인 M 체크 rounded-full ×2 · 체크 글리프 ×2 를 일치로, 회사 M 체크 글리프 ×2 를 일치로, 체크 w/h 행 인용을 새 `.frame(width: area.checkSize, …)` 로, S 개인 #10 · 회사 #12 인용을 `TodoCheckBox(area: area, isDone: item.isDone)` 로, 집계·서두 문장, 검산 `SCREENS` 의 두 투두 화면 `fwd` 에 `TodoCheckBox.swift` 추가, 범위 표·정방향 규약 문장. `_impl-map` 에 `TodoCheckBox.swift` 부분 행. `_copy-map` 표 A 에서 `checkmark.square.fill`·`square` 2행 제거 + 집계·행 수.",
+              "expectedOutcome": "`git add -A` 뒤 검산 4종 `ok`(impl-map 은 `git ls-files` 를 읽으니 스테이징 뒤에 잴 것). 개인 M 불일치 32 · 회사 24."
+            },
+            {
+              "seq": 4,
+              "action": "음성 프로브(변조 → 검산 → 복원): ① lineWidth 1.6→2 ② 글리프 size 12→13 ③ `box(Circle())`→`box(Capsule())` ④ `.opacity(isDone ? 1 : 0)`→`0.1` ⑤ 개인 집계 32→33 ⑥ `systemName: isDone ? \"checkmark\" : \"circle\"`(새 리터럴 → copy-map) ⑦ TodoCheckBox 에 `.padding(1)`(정방향 범위가 새 파일을 보는가).",
+              "expectedOutcome": "7개 모두 검산이 오류를 낸다. 복원 뒤 `ok`."
+            },
+            {
+              "seq": 5,
+              "action": "브랜치 `reconcile/mockup-render-rct_20261011-0008` 에 커밋·push, 봇 명의 PR 을 연다. `check_ledger.py` rc=0(주석 0줄 — 지문 main 과 동일) · `judge.py` 「수동 승인 케이스 미접촉」 확인. 열린 자매 PR(#253·#251·#248·#201)과 `merge-tree` clean 확인.",
+              "expectedOutcome": "PR OPEN, `review/manual-approval` 자동 success, iOS CI(`ci-success`) 진행 또는 success."
+            },
+            {
+              "seq": 6,
+              "action": "(실행 단계) CI 초록 확인 후 squash 머지 → main 에서 검산 4종 재실행.",
+              "expectedOutcome": "main 에서 4종 `ok`, 개인 M 불일치 32 · 회사 24."
+            }
+          ],
+          "plannedAt": "2026-10-11T10:45:47Z"
+        }
+      }
+    ]
   }
 ]
