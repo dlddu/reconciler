@@ -13827,6 +13827,50 @@
     "assessment": {
       "reason": "조치 필요(action_required). 이번 to-be 변화는 0017 자신의 슬라이스(#267) 착지로 깨끗하다(검산 4종 ok·집계 M 불일치 34→25·허용 5→14·타 화면 불변·ci-success). 하지만 0017이 succeeded로 닫혀 screen-approval 설정·키 발급 잔여(M 25 · 목업 대기 2 · S 2)와 같은 화면 나머지 프레임 구조표 부재(기준 4·5)를 맡은 열린 task가 없다 — no_action_needed로 닫으면 아무것도 이 gap을 운반하지 않는다. 선례 「carrier가 닫히고 잔여에 주인이 없으면 action_required」(0013·0015·0016·0017·0018)를 따른다. 문서/구현 변경 없이는 줄지 않으므로 자동 해소 가능성이 없어 유예하지 않는다.\n\nplanner 인계:\n⑴ 후보: 시스템 시트 6행 — 0017 계획이 「목업 주석이 편집 시트 패턴(patterns §9)이고 공용 `Sheet` 컴포넌트가 있어 플랫폼 불가피 사유가 서지 않는다 → 구현 수렴 대상(iOS 접촉 → TestFlight)」으로 판정해 두었다. 자동 응답 모드 13행은 미구현(AC9, 백엔드 선결)이라 docs-impl 소관인지 먼저 확인. 기타 6·목업 대기 2·S 2는 행 단위 재측정.\n⑵ 주의: #267 착지로 **#268(0018, planned)이 새 main `24c86f4`와 `_deviations.md`(S7 뒤 S8 추가 자리)·`_structure-map.md`(집계 줄)에서 CONFLICT** — 0018 검토/실행 단계가 재생해야 한다. 새 계획이 `_deviations.md` 끝·`_structure-map` 집계 줄을 건드리면 #268·#261과 순서를 조율할 것(허용 번호 S8은 #268이 선점).\n⑶ #264(docs-impl 0018, `ApprovalsView.swift`·승인 이력 화면)는 clean이다. screen-approval 나머지 일곱 프레임 구조표는 #264 착지 뒤가 적기.",
       "assessedAt": "2026-10-11T20:09:52Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "screen-approval 설정·키 발급 표 M 불일치 25행 중 「기타」의 구현 수식 한 줄로 닫히는 4행(섹션 머리 mt-1 · 섹션 제목 tracking-wide · uppercase · 경고 문구 leading-relaxed)을 ApprovalKeysView.swift 구현 수렴으로 닫고 _structure-map 4행을 일치로, 집계를 재계산한다(같은 레포 선례: .tracking 0.1pt 반올림 · .textCase(.uppercase) · .lineHeight(.multiple)). 등재가 아니라 수렴인 이유: 플랫폼 불가피 사유가 없고 같은 수식의 일치 선례가 있다. 완료 기준: 착지 후 검산 4종 출력 ok + screen-approval M 불일치 −4 · 일치 +4(착지 직전 25→21 · 105→109) + check-runs 실패 0. 범위 밖: 시스템 시트 8행(.sheet↔공용 Sheet 결정 선결, PR 모니터 시트 3개가 반대 선례) · AC9 자동 응답 모드 13행+S 2행(미구현, docs-impl) · 목업 대기 2 · 나머지 일곱 프레임 구조표.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #270 상태 재실측(state·mergeable_state·head.sha)과 #261·#268 착지 여부 확인",
+              "expectedOutcome": "open · head 0364f2ec(또는 재생 뒤 새 head) · DIRTY 아님. 자매 착지로 DIRTY 면 2단계"
+            },
+            {
+              "seq": 2,
+              "action": "DIRTY 이면 origin/main 위에서 apply.py(멱등, 행 키 앵커 + 집계 재계산) 재생 → 검산 4종 ok 확인 → PR 브랜치에 main merge + 재생 결과 커밋 push",
+              "expectedOutcome": "PR diff 2파일(ApprovalKeysView.swift +4, _structure-map.md 7줄 치환) · mergeable"
+            },
+            {
+              "seq": 3,
+              "action": "필수 status ci-success + review/manual-approval 확인(iOS 빌드·XCUITest 샤드 대기, 무관 flake 는 같은 sha rerun --failed)",
+              "expectedOutcome": "두 status success (judge 는 MA 경로 미접촉으로 자동 success)"
+            },
+            {
+              "seq": 4,
+              "action": "PR #270 squash 머지 (TestFlight 업로드 발사)",
+              "expectedOutcome": "merged, main 에 착지 커밋 생성"
+            },
+            {
+              "seq": 5,
+              "action": "착지 커밋에서 검산 4종 실행(chk.sh) + screen-approval 집계·4행 판정·Swift 수식 4종 존재 확인 + check-runs",
+              "expectedOutcome": "네 출력 모두 ok · M 불일치 −4 · 일치 +4 · 4행 일치 · check-runs 실패 0"
+            }
+          ],
+          "plannedAt": "2026-10-11T20:15:02Z",
+          "executionGuide": "## 순서 (직렬 — 병렬 불가)\n\n1. **PR #270 재실측** — `gh api repos/dlddu/pocket-aide/pulls/270 --jq '.state,.mergeable_state,.head.sha'`. 기대: open · head `0364f2ec`(또는 재생 뒤 새 head) · clean/unstable/blocked(체크 진행 중).\n2. **DIRTY 이면 재생** — #261·#268 이 먼저 착지하면 `docs/mockups/_structure-map.md` 집계 줄 인접으로 충돌한다. 손으로 풀지 말 것(`checkout --theirs` 금지): 새 브랜치를 `origin/main` 에서 따고 `python3 apply.py`(PR 본문 `<details>` 또는 `/workspaces/planner/.reconciler-work/artifacts/pa-mr-rct_20261011-0019/apply.py`, 멱등·행 키 앵커 + 집계 재계산)를 레포 루트에서 실행 → 검산 4종 `ok` → 같은 PR 브랜치에 force-push 대신 **main 을 merge 한 커밋 위에 재생 결과를 커밋**해 올린다. 재생 뒤 diff 는 2파일(`ApprovalKeysView.swift` +4 · `_structure-map.md` 7줄 치환)이어야 한다.\n3. **필수 status 확인** — `ci-success` + `review/manual-approval`. 이 PR 은 `scripts/review-policy/judge.py` 의 MA1~MA4 경로를 건드리지 않아 judge 가 자동 success 를 붙인다. `ios/**` 접촉이라 iOS 빌드·XCUITest 샤드(큐 포함 45~90분)가 돈다. shard 실패가 이 PR 과 무관한 테스트면(접촉 파일은 `ApprovalKeysView.swift` 뿐 — 승인 키 UI 테스트 밖이면 flake) 같은 sha `gh run rerun --failed`; 커밋을 얹으면 초록이 날아간다.\n4. **squash 머지** — 초록 · mergeable 이면 squash. 머지가 TestFlight 업로드를 발사한다(되돌릴 수 없는 지점 — 아래 주의).\n5. **착지 검증** — main 착지 커밋에서 아래 「검증」 전부.\n\n## 검증 (완료 기준 = 이 범위)\n\n- main 의 `docs/mockups/` 네 문서(`_impl-map`·`_copy-map`·`_structure-map`·`_token-map`) 검산 블록을 각각 실행해 출력이 정확히 `ok` (rc 아님 — 출력으로 판정). 실행: `/workspaces/planner/.reconciler-work/artifacts/pa-mr-rct_20261011-0019/chk.sh` 를 레포 루트에서 `bash`.\n- `_structure-map.md` 의 screen-approval 표 M 에서 4행(`섹션 머리`/`mt-1`, `섹션 제목`/`tracking-wide`, `섹션 제목`/`uppercase`, `경고 문구`/`leading-relaxed`) 판정이 `일치`.\n- **완료 기준은 델타**: screen-approval M `불일치` 가 착지 직전 값보다 **정확히 4 줄고** `일치` 가 4 늘었다(착지 직전 main 기준 25→21 · 105→109; 자매가 screen-approval 행을 바꿨다면 그 값에서 −4/+4). 다른 화면 집계 줄은 이 PR 로 변하지 않는다.\n- `ApprovalKeysView.swift` 에 `.padding(.top, DesignTokens.Spacing.xs)`·`.tracking(0.3)`·`.textCase(.uppercase)`·`.lineHeight(.multiple(factor: 1.625))` 가 각각 1회.\n- 착지 커밋 check-runs 실패 0 (`ci-success` success).\n\n## 범위 밖 (후속 — 재감지가 새 task 로)\n\n- 시스템 시트 6행(`rounded-t-[22px]`·손잡이 `bg-stone-300`/`h-1`/`mb-4`/`rounded-full`/`w-9`) + 같은 시트 `pt-3`·`pb-10` 2행: 시스템 `.sheet`(presentationDetents) ↔ 공용 `Sheet` 결정 선결. 0017 은 「구현 수렴 대상」으로 적었으나 같은 레포 PR 모니터 시트 3개도 시스템 `.sheet` 라 반대 선례가 있다 — 수렴/등재 판단을 따로 할 것.\n- 「자동 응답 모드」(AC9) M 13행 + 표 S 2행: 미구현 기능, docs-impl 소관.\n- 목업 대기 2행(빈 목록·불러오는 중·오류 배너 상태 여백·굵기): 목업에 상태 프레임 추가 슬라이스.\n- screen-approval 나머지 일곱 프레임 구조표(#264 착지 뒤가 적기), widget·pr-monitor-history 구조표.\n\n## 주의\n\n- **불가역 지점은 4단계 머지**: `ios/**` 접촉이라 main 머지가 iOS 빌드 + TestFlight 업로드를 발사한다. 렌더 영향은 섹션 머리 4pt 하강·자간 0.3pt·경고 문구 줄 간격뿐(기능·데이터 무영향). 롤백은 revert PR(역시 TestFlight 발사).\n- `.lineHeight(.multiple(factor:))` 는 iOS 26 API — 배포 타깃 26.0 이고 같은 앱(`AffirmationsView`·`PriorityEditSheet`)이 이미 쓴다.\n- 검산 프로브는 **레포 경로의 표를 읽는다** — 사본 위 프로브는 무조건 ok. 프로브를 했으면 사본 `cp` 로 복원(`git checkout --` 는 커밋 전 편집을 날린다).\n- #264(ApprovalsView 등 17파일)는 이 PR 과 파일이 겹치지 않는다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261011-0019-approval-keys-misc",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/270",
+          "preparedAt": "2026-10-11T20:15:02Z",
+          "notes": "PR명의: app/dlddu-k3s-homelab-k3s-mcp(App 토큰 bot). head 0364f2ec, base 24c86f4, 2 files(ApprovalKeysView.swift +4 · _structure-map.md 7줄 치환). 계획 단계 검산 4종 ok, 음성 프로브 2종(.tracking 제거 · factor 1.5)이 _structure-map 검산에서 해당 행을 잡았다. swiftlint --strict 위반 0(325→329줄). judge.py MA1~4 경로 미접촉. merge-tree: #268·#261 과 집계 인접 줄 CONFLICT(두 PR 은 현 main 과도 이미 DIRTY) — apply.py 를 #268 head·#261 head 위에서 실행해 검산 4종 ok 확인. #264·#260·#269 파일 겹침 없음. 재생 키트 /workspaces/planner/.reconciler-work/artifacts/pa-mr-rct_20261011-0019/(apply.py 멱등 · chk.sh), PR 본문 <details> 에도 전문."
+        }
+      }
+    ]
   }
 ]
