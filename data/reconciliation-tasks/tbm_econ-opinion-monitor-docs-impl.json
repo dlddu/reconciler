@@ -12519,7 +12519,7 @@
   {
     "id": "rct_20261011-0006",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "assessing",
+    "status": "action_required",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-11T13:48:11Z",
@@ -12539,6 +12539,10 @@
       "toBe": "**to-be** — 같은 레포 `docs/` 트리 `ca38639…` → `821d7b2…`. 이번 창의 docs 변경은 `docs/comment-policy/ledger.md`(#255가 들인 주석 3행 `미판정` 등재)뿐이다.\n- `article_pick`·`ArticlePick`은 `docs/`(comment-policy 제외)에서 **0히트**다. PRD·AC·테스트·여정·목업 인덱스·doc-tracker·design-tracker 어디에도 이 Gold 데이터셋이 없다. 반면 같은 계층의 형제 `subject_source_contribution`은 doc-tracker(슬라이스 12)와 목업 인덱스 `:147`에 「구현 실체」로 등재돼 있다.\n- **최신 tracker `docs/econ-opinion-monitor-doc-tracker/2026-09.md` 「현재 상태 요약」의 슬라이스 11 항목(`:302-320`)** 이 기여 기사 목록의 동작을 현재형으로 기술한다: 「Gold 계약은 건드리지 않았다 — 대상↔기사 대응은 Silver `analysis.narrative_subjects`에, 수집원·수집 시각은 Bronze `news_item`에 … 조인은 집계기의 계산을 **그대로 옮긴 것이다**(`select_serving` → `collected_at` 버킷 절단 → `narrative_subjects` 멤버십)」. 로드맵 표 슬라이스 11 행(`:1025`)도 「Go 서빙(Silver × Bronze) · Gold 계약 무접촉」이다.\n- AC3.9·AC3.10은 2026-09-28 사용자 결정으로 승격이 번복돼 PRD-3에 없다(`### AC3.9` 0히트). 기여 목록은 AC를 소유하지 않는 슬라이스 11이다.\n- 관련 의무: 여정 `JRN-spike-verification` `STP-drilldown-articles`(기여 뉴스 목록으로 내려가기), PRD-3 AC3.2 본문 「집계에서 내려가는 조회(기여 기사 목록·소스별 기여)도 같은 키로 묶는다」.",
       "gap": "**유의미한 차이 있음(문서 쪽, 기준 4·5).** #255가 기여 기사 목록의 출처를 Go 재계산에서 **새 Gold 계약 `article_pick`**(집계가 쓰고 서빙은 읽기만 함)으로 옮겼다. 그런데 docs에는 이 계약이 0히트이고(기준 4: 문서화되지 않은 계약), 최신 doc-tracker 「현재 상태 요약」 슬라이스 11은 여전히 「Gold 무접촉, Silver×Bronze 조인을 서빙이 계산」이라고 현재형으로 기술한다(기준 5: 구현된 영역을 코드와 모순되게 기술). 사용자 대면 동작(목록 내용·합 등식·준비 중 문면)과 AC·여정 의무는 그대로라서 기준 1·2·6의 새 격차는 없다.",
       "summarizedAt": "2026-10-11T13:50:18Z"
+    },
+    "assessment": {
+      "reason": "작업 필요(action_required). 이번 창은 #255 한 커밋이다(사람 세션: 「집계가 기여 기사 목록을 Gold article_pick으로 쓰고 서빙은 읽기만 한다」).\n\n**A. 지금 작업이 필요한 격차: 문서 쪽 두 건.**\n1. **기준 4, 문서화되지 않은 계약.** 새 Gold 계약 `contracts/gold/article_pick.avsc`(필드 7개)가 docs(comment-policy 제외)에 0히트다. 형제 Gold 계약 `subject_source_contribution`은 doc-tracker 슬라이스 12와 목업 인덱스 `:147`에 구현 실체로 등재돼 있다. 같은 계층의 새 데이터셋만 빠진 셈이다.\n2. **기준 5, 현재형 서술과 구현의 모순.** 최신 tracker `doc-tracker/2026-09.md` 「현재 상태 요약」 슬라이스 11(`:302-320`)은 「Gold 계약은 건드리지 않았다」와 「조인은 집계기의 계산을 그대로 옮긴 것이다(`select_serving` → 버킷 절단 → 멤버십)」를 현재형으로 기술한다. 지금 구현은 집계가 `article_pick`을 쓰고 서빙은 읽기만 하며, Go 쪽 그 계산은 삭제됐다. 로드맵 표 슬라이스 11 행(`:1025` 「Go 서빙(Silver × Bronze) · Gold 계약 무접촉」)도 같은 축이다. 선례는 2026-09-28 목업 인덱스의 `STP-inspect-sources` 현재형 거짓 주장 정정(기준 5)이다.\n진행 중인 수정은 없다. 열린 PR 4건(#220·#249·#251·#254)과 원격 브랜치 6개 모두 docs에서 `article_pick` 0히트다. 이 모델의 이전 task도 전부 종료 상태다. 문서는 스스로 고쳐지지 않으므로 재확인 유예 대상이 아니다.\n\n**B. 새 격차 없음: 기준 1·2·3(필드 의미)·6.** 사용자 대면 동작은 그대로다. 목록은 여전히 Gold `raw_count`가 센 기사 그대로이고, 이제는 구성상 `total == raw_count`이다(python·cross·e2e 3축 검증, `a569932` check-run 6종 success). `web/` 무변경이다. 과도기 「인덱스 준비 중」 문면은 design-tracker `:1067`에 이미 등재돼 있다. `article_pick`의 필드 의미(최신 관측 선택·버킷·대상 키)는 AC1.5·AC3.2·AC3.3·AC2.6 기술과 모순되지 않는다. AC·여정(`STP-drilldown-articles`) 의무는 생기지도 닫히지도 않았다.\n\n**C. planner 참고.**\n- 충돌 시 기본 방향에 따르면 이번 건은 「의도된 구현 변경」이다. 고칠 쪽은 **문서**(doc-tracker 현재 상태 요약 슬라이스 11 문단, 필요하면 로드맵 표 슬라이스 11 행 주석 또는 목업 인덱스 `fairness` 귀속 문단에 `article_pick` 구현 실체 등재)이고 코드가 아니다. 월별 tracker 규약상 2026-10 파일이 아직 없으니, 이월 여부는 planner가 판단한다.\n- 덤으로 확인한 것: `article_pick.avsc` 레코드 doc은 번복된 `AC3.9`를 인용한다(기여 목록은 옛 AC3.10 쪽이었다). 이는 2026-09-28 source-dimension-unpromote-pass가 「틀린 주석, 별도 변경」으로 남겨 둔 계약 doc 인용 축의 새 인스턴스다. `contracts/` 수정은 사람 승인(MA1)을 부르므로 이번 범위에 넣을지는 planner가 정한다.\n- 배포 직후 `article_pick`이 없는 레이크에서는 기여 목록이 다음 aggregate 전까지 「인덱스 준비 중」이다. 이는 PR이 명시한 운영 과도기이고 docs-impl 격차가 아니다.\n- 새 Go·Python 주석 판정은 `tbm_econ-opinion-monitor-comment-necessity` 몫이다(같은 #255로 그 모델도 버전이 바뀌어 별도 감지 대상이다). MA1·MA2·MA3·MA6 지문 변화는 `tbm_econ-opinion-monitor-pr-manual-approval` 몫이다.",
+      "assessedAt": "2026-10-11T13:50:47Z"
     }
   }
 ]
