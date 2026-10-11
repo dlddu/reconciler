@@ -957,7 +957,7 @@
   {
     "id": "rct_20261011-0002",
     "toBeModelId": "tbm_pocket-aide-data-model",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-11T03:20:14Z",
@@ -967,7 +967,7 @@
       }
     },
     "createdAt": "2026-10-11T03:20:14Z",
-    "updatedAt": "2026-10-11T06:02:56Z",
+    "updatedAt": "2026-10-11T06:03:01Z",
     "stateSummary": {
       "asIs": "관측 2026-10-11T03:2xZ · dlddu/pocket-aide main `b267cbc`(#207 승인 게이트 백엔드 1차 머지, docs-impl `rct_20261009-0007`)\n- as-is 지문: `migrations=23 site_lines=50 query_lines=121` → `migrations=25 site_lines=61 query_lines=143`, schema 해시 `65961c8…`→`ef12e4a…`, queries `48ffd5a9…`→`82483b70…`, checker 해시 `6e74adb…` 불변.\n- 원인 변경(`e01a18d..b267cbc`, 데이터 모델 경로): 새 마이그레이션 `0012_approval_gate.up/down.sql` — 테이블 `approval_caller_keys`(FK users, `key_hash` UNIQUE, 인덱스 `idx_approval_caller_keys_active_name`(부분 UNIQUE, `revoked_at IS NULL`)·`idx_approval_caller_keys_user_created`)와 `approval_requests`(FK users·approval_caller_keys, UNIQUE(caller_key_id, external_id), 인덱스 `idx_approval_requests_user_status_created`). 새 쿼리 지점 `backend/internal/approvals/store.go` 11곳(site 50→61).\n- 판정(절차 3, C9 — 판정 환경에 Go 없음): main `b267cbc` 의 CI `data-model check (report)` job 114376680290 로그, 엔진 SQLite 3.46.0 (modernc.org/sqlite v1.34.1), **종료 코드 1**.\n  - 불변식 1 위반 7: `table-missing` approval_caller_keys · approval_requests, `diagram-entity-missing` 2, `diagram-relation-missing` 3(users→approval_caller_keys, users→approval_requests, approval_caller_keys→approval_requests).\n  - 불변식 2 위반 11: approvals/store.go `Authenticate`(select·update) · `Create` · `Decide` · `Get` · `GetForCaller` · `IssueKey` · `ListKeys` · `ListPending` · `RevokeKey` · `getKey` 전부 `query-unregistered`.\n  - 불변식 3 위반 7: `no-support` Q-09 · Q-15(이전부터의 잔여) + `unused-unregistered` 5(UNIQUE key_hash, UNIQUE(caller_key_id,external_id), idx_approval_caller_keys_active_name, idx_approval_caller_keys_user_created, idx_approval_requests_user_status_created — 해당 패턴이 카탈로그에 없어 아직 어떤 플랜도 이들을 쓰지 않는 결과).\n- 절차 4: 체커 해시 불변 · 리포트 지점 후보 61 = 지문 site_lines 61 ⇒ C2/C4 이상 없음.",
       "toBe": "관측 2026-10-11T03:2xZ · dlddu/pocket-aide main `docs/data-model` 트리 `b9033a06…`(이번에 바뀌지 않음 — 직전 감지 `rct_20261011-0001` 때와 같음).\n- ERD(`erd.md`)·쿼리 카탈로그(`query-patterns.md`)에 `approval_` 문자열 0건 — #207 의 두 테이블·인덱스·11개 쿼리 지점이 등재돼 있지 않다.\n- 정의(불변식 1: 스키마가 이긴다 → ERD 를 고친다, 불변식 2: 코드가 이긴다 → 카탈로그에 더한다, 불변식 3: 미사용 인덱스는 등재만)상 목표는 위 테이블 2·관계 3·패턴 11(수동 형태 0)·지원 칸·미사용 인덱스 표가 반영된 상태.\n- 열린 관련 작업: PR #241(`reconcile/rct_20261011-0001`, planned)은 `docs/data-model/README.md`·`query-patterns.md` 만 건드리며 범위는 불변식 3 `no-support` Q-09 해소(devicetokens.ListAll 제거)다 — approvals 등재는 포함하지 않는다. 다른 열린 PR(#240·#237·#201)은 데이터 모델 경로 0.",
