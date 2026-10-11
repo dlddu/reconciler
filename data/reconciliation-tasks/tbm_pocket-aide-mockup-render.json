@@ -13978,10 +13978,41 @@
       "gap": "#268은 0018 완료 기준을 그대로 충족했다: squash 착지, 검산 4종 `ok`, todo-work M −11/허용 +11, S −1/허용 +1, check-runs 실패 0. 새 정의 위반은 없다.\n\n그래도 정의상 drift(기준 3·4·5)는 남는다.\n- **열린 task의 몫**:\n  - 0012(#260 More 카피 B 9행): main과 merge-tree clean이다.\n  - 0013(#261 투두 검색 자리표시 색): 기존부터 `_structure-map` CONFLICT이고, #268 이전 base에서도 같다.\n  - 0019(#270 screen-approval 4행): #268 착지로 새로 `_structure-map.md` CONFLICT가 됐다. `24c86f4` 기준으로는 clean이었다.\n- **주인 없는 잔여**(0018이 닫혀 맡은 task가 더 줄었다):\n  - todo-work M11/S2 중 0013 몫을 뺀 나머지: 오늘 마감 강조, 헤더 95% 바탕, 메타 uppercase·구분점, 섹션 stone\n  - todo-personal M32/S5\n  - scratchpad M11/S3\n  - affirmations M7/S1(데이터 선결)\n  - screen-approval 중 0019 4행 밖의 나머지\n  - 카피 A 구현 대기 9·목업 대기 11, B 구현 대기 중 #260 밖의 몫\n  - 구조표 부재 화면들",
       "summarizedAt": "2026-10-11T20:30:54Z"
     },
-    "updatedAt": "2026-10-11T20:31:17Z",
+    "updatedAt": "2026-10-11T20:33:39Z",
     "assessment": {
       "reason": "조치 필요(action_required).\n\n이번 to-be 변화는 0018 자신의 슬라이스(#268) 착지이고, 깨끗하다:\n- 검산 4종 `ok`\n- todo-work 집계가 완료 기준대로 움직였다: M −11, S −1, 허용 +12\n- 다른 화면 집계는 그대로다\n- check-runs 실패 0\n\n자동 해소될 성격의 차이는 아니다. 하지만 0018이 succeeded로 닫혀, 정의상 잔여 drift(기준 3·4·5) 상당 부분을 맡은 열린 task가 없다:\n- todo-personal M32/S5\n- todo-work 잔여 중 0013 몫 밖\n- scratchpad M11/S3\n- affirmations M7/S1\n- screen-approval 중 0019 4행 밖\n- 카피 A 9/11 · B 잔여\n- 구조표 부재 화면들\n\n슬라이스 → 재감지 → 후속 task 규약에 따라 planner로 넘긴다.\n\n참고: #268 착지로 0019의 PR #270이 `_structure-map.md`에서 새로 CONFLICT가 됐다. 0019 리뷰·재준비 단계가 이를 고려해야 한다. #261(0013)은 기존부터 CONFLICT이고, #260·#264는 clean이다.",
       "assessedAt": "2026-10-11T20:31:07Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "투두 행 메타 줄을 한 Text 의 「 · 」 이어 붙이기에서 항목별 HStack(spacing 12)으로 바꿔 두 투두 화면(개인·회사)의 메타 구조 drift 를 닫는다 — 개인: 항목 간격 gap-3 · 기한 앞 달력 글리프(11pt, 글리프↔기한 4) · 구분점 없음, 회사: 항목 간격 gap-3 · 대문자 변환 · 구분점 「·」 을 별도 글자로. TodoListView.swift 는 swiftlint file_length 400 에 붙어 있어(399) 메타 렌더를 새 파일 TodoRowMeta.swift 로 옮기고 접근성 요소(식별자 ·meta, 라벨 「a · b · c」)는 ScratchpadView 메타 줄 선례(children .ignore + label + isStaticText)로 보존한다. 완료 기준: 검산 4종 출력 ok, 개인 표 M 불일치 32→28 · 표 S 불일치 5→4, 회사 표 M 불일치 11→9, 그 밖 화면 집계 불변, 기존 UI 테스트 무수정 통과(ci-success). 범위 밖: 우선 태그(개인 우선 태그 5행 + 태그 줄 2 + S11 — 우선순위 표기 방식 변경은 행 의미 결정), 회사 구분점 stone-300 색(다크도 stone ⇒ S5 불성립, 색 행은 불일치 유지), 필터 칩·섹션 보조·기한별 섹션·급한 행 강조·헤더 95% 바탕.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR head 의 ios 변경 확인: ios/PocketAide/Todos/TodoRowMeta.swift 신설(메타 항목 HStack · 개인 달력 글리프 · 회사 구분점·대문자), TodoListView.swift 의 TodoRow 메타 블록을 TodoRowMeta(area:item:) 호출로 교체(meta/workRank/metaFont 이관)",
+              "expectedOutcome": "TodoListView.swift 줄 수 < 400, swiftlint --strict 위반 0, 접근성 식별자 todos.<area>.row.<id>.meta 와 라벨 「기한 · 우선순위 · 메모: …」 보존"
+            },
+            {
+              "seq": 2,
+              "action": "문서 대응표 갱신 확인: _impl-map 에 TodoRowMeta.swift 부분 행, _structure-map SCREENS 두 투두 fwd 에 새 파일, 메타 관련 M/S 행 구현 파일·인용 재지정 및 판정 전환, 집계 재계산, _copy-map 메타 리터럴 행 파일 재지정",
+              "expectedOutcome": "검산 4종(_impl-map·_token-map·_copy-map·_structure-map) 출력 ok"
+            },
+            {
+              "seq": 3,
+              "action": "집계 단정: 개인 M 불일치 32→28 · S 불일치 5→4, 회사 M 불일치 11→9, 다른 화면 집계 줄 불변",
+              "expectedOutcome": "집계 표·문장 줄 수치가 기대값과 일치"
+            },
+            {
+              "seq": 4,
+              "action": "CI 확인 후 squash 머지",
+              "expectedOutcome": "ci-success 초록(iOS build + test 포함), main 착지"
+            }
+          ],
+          "plannedAt": "2026-10-11T20:33:39Z"
+        }
+      }
+    ]
   }
 ]
