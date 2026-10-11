@@ -11007,6 +11007,47 @@
     "assessment": {
       "reason": "작업이 필요하다(action_required). 근거는 네 가지다.\n\n(1) 출처\n- as-is 변화(app `d71f4a1→af411a7`, design-system `9680714→e5c0114`)와 to-be 변화(mockups `fb3242f→6192a87`)는 모두 PR #240 `39808dd` 한 건에서 나왔다. 이 모델의 `rct_20261010-0011` 슬라이스다.\n- main에서 직접 확인했다. 검산 4종이 `ok`이고, 집계는 todo-personal M 86/3/44/12/0 · S 16/5/0, todo-work M 94/3/43/11/0 · S 17/5/0, 다짐 탭 기본값 일치 2→3, 그 밖의 3화면은 그대로다. 변경 파일은 5개다. 0011 계획의 완료 기준과 같다. `39808dd`의 build·deploy·report-build-status는 success다.\n- 0011 task는 이 감지 시점에 아직 `executing`이다. 그 마감은 executor의 몫이다. 이 판정은 main에 착지한 결과를 기준으로 했다.\n- 슬라이스 → 재감지 → 후속 task로 이어지는 정상 루프다.\n\n(2) 잔여 drift는 정의상 유의미하다.\n- 기준 4: M 불일치 107행 · S 14행(todo-personal 44/5 · todo-work 43/5 · scratchpad 13/3 · affirmations 7/1).\n- 기준 3: 카피 구현 대기 A 9 · B 43.\n- 기준 1·4: `screen-widget`·`screen-pr-monitor-history`에 구조표가 없다.\n- 이 잔여분은 0011이 닫혀도 해소되지 않는다.\n\n(3) 자동 해소 가능성은 없다. 열린 PR #242·#241·#237·#201의 파일 목록에 렌더링 트리나 docs/mockups·docs/design-system 경로가 하나도 없다. 그래서 유예하지 않는다.\n\n(4) planner 참고\n- `rct_20261010-0011`이 succeeded로 닫혔는지 먼저 확인할 것. 같은 `TodoListView.swift`·`ScreenHeader.swift`·`AreaLabel.swift`·`_structure-map.md`를 건드린다.\n- `rct_20261010-0010`이 `planning` 상태로 열려 있다(2026-10-11T00:07Z 점유, 이후 갱신 없음). 그 task의 슬라이스 PR #236은 이미 `b14f475`로 main에 착지했다(실행 기록 step 3·4). 다만 executor 실행이 stale lock 해제로 `failed` 처리됐다가 재계획에 들어간 것이다. 같은 잔여 행을 두 계획이 동시에 잡지 않도록, 이 task를 계획하기 전에 0010의 진행 상태를 확인할 것.\n- 후속 후보는 0011 계획의 「범위 밖」 목록과 같다.\n  - 섹션 제목 색(개인·회사 ink/stone — stone 토큰 부재, 사람 결정).\n  - 시스템 Section 머리 여백·섹션 막대·구분선, 목록 위 여백.\n  - 체크 모양·글리프, 필터 칩, 태그 줄, 행 제목 굵기, 메타 줄 간격·대문자·구분점 색·달력 글리프.\n  - 회사 급한 행 띠·N.B. 상자·헤더 바탕·추가 버튼·카드 라운드.\n  - scratchpad 13/3, affirmations 7/1.\n  - widget·pr-monitor-history 구조표 신설.\n  - 카피 구현 대기 A 9 · B 43.",
       "assessedAt": "2026-10-11T04:50:46Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "두 투두 탭의 행 제목 굵기와 섹션 머리 색을 목업에 맞춘다. `TodoListView` 에 영역 분기 `rowTitleWeight`(개인 .regular · 회사 .medium)를 더하고, 섹션 머리 색을 `titleOpacity` 인자로 가른다(열린 섹션 1 = ink 그대로 · 완료 섹션 0.45). 그 결과 _structure-map 정방향 3행(개인 행 제목 굵기 · 개인/회사 열린 섹션 제목 색)이 불일치→기본값 일치가 되고, 완료 섹션 제목 stone-400 2행은 _deviations `S5` 대상에 넣어 허용 S5 가 된다. S5 를 집은 근거: S5 는 투두 섹션 제목을 「구현이 모든 섹션 머리를 한 투명도로 그려 목업의 백로그·완료 구분과 다르다」는 이유로만 뺐는데, 이 변경으로 그 사유가 만료된다. 다크 목업은 완료 섹션 제목을 돋보기 글리프와 같은 영역 다크 톤(개인 #9C7A6A · 회사 #7A8AA0)으로 그린다. S5 는 그 돋보기 stone-400 을 ink 45% 로 이미 대응시켰으니, 같은 대응이다. 앞 슬라이스들이 「stone 토큰 부재 → 사람 결정」으로 미룬 축이지만, 실제로는 S5 의 기존 규약(tokens.md §2 「영역 토큰 우선」 · §1.9)으로 닫힌다. 회사 백로그 섹션 제목 stone-500 은 구현에 백로그 섹션이 없는 구성 차이라 불일치로 남긴다(근거 열만 갱신). 개인 행 제목은 목업 모든 프레임이 굵기 클래스 없음(400)이다. 회사는 오늘 마감 제목만 font-medium 인데 구현에 마감 구분이 없어 medium 을 유지한다. 판독 규약 `기본값 일치` 정의에 「글자 색은 `.frame{color:var(--ink)}` 이 물려주는 영역 ink」를 덧붙인다. 정방향 행은 목업 인용 없이 `일치` 를 쓸 수 없어서(검산 규칙) 상속 색 일치도 이 판정으로 적는다. 대안 저울질: ⑴ 완료 섹션을 stone 고정 회색으로 칠하기 — 다크 변형이 없어 S5 가 거절한 길이다. ⑵ 완료 섹션도 ink 그대로 두기 — 목업의 완료 흐림을 잃고 불일치가 늘어 거부했다. ⑶ 이동 칩 바탕(white/60)·헤더 바탕 95% 를 함께 싣기 — 다른 화면 파일이 끼거나 목록이 헤더와 겹치지 않아 시각 변화가 없는 행이라 다음으로 미룬다. 변경 규모: ios +12 −5(TodoListView.swift 한 파일), 롤백 = PR revert. 완료 기준: ⑴ 검산 4종(_structure-map·_impl-map·_copy-map·_token-map) 출력 문면이 `ok` ⑵ 집계 todo-personal M 일치 86 · 기본값 일치 5 · 불일치 41 · 허용 13 · 목업 대기 0, S 16/5/0; todo-work M 94 · 4 · 41 · 12 · 0, S 17/5/0; 집계 위 문장 줄 「불일치` 41행」 두 화면 ⑶ 그 밖의 4화면(priority-edit·routines·affirmations·scratchpad) 집계 불변 ⑷ 착지 커밋 변경 파일이 정확히 3개(TodoListView.swift·_structure-map.md·_deviations.md) ⑸ 착지 커밋 main 의 ci-success success. 범위 밖: 회사 백로그 섹션 제목 색(구성 차이), 시스템 Section 머리 여백·섹션 막대·구분선, 목록 위 여백, 체크 모양·글리프, 필터 칩, 태그 줄·우선 태그, 메타 줄 간격·대문자·구분점 색·달력 글리프, 회사 오늘 마감 아닌 행 제목 굵기(마감 구분 부재), 회사 급한 행 띠·N.B. 상자·헤더 바탕·추가 버튼·카드 라운드, 검색 자리표시 색, 섹션 보조 글자, scratchpad 13/3(이동 칩 바탕·외곽선 등), affirmations 7/1(이동 출처 줄), 카피 구현 대기 A9·B43, widget·pr-monitor-history 구조표.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #245 상태 확인: `gh pr view 245 -R dlddu/pocket-aide --json state,mergeable,mergeStateStatus,headRefOid,baseRefOid,files` — head 가 리뷰가 본 sha 와 같은지, 변경 파일이 정확히 3개인지 본다. main 이 base 보다 앞서 있으면 `git merge-tree --write-tree --merge-base=$(git merge-base origin/main <head>) origin/main <head>` 가 clean 인지 확인한다.",
+              "expectedOutcome": "OPEN · MERGEABLE · 3파일(ios/PocketAide/Todos/TodoListView.swift · docs/mockups/_structure-map.md · docs/mockups/_deviations.md), merge-tree clean"
+            },
+            {
+              "seq": 2,
+              "action": "PR head 의 필수 check 확인: `ci-success`(ios-test 3샤드·journey-mockup·comment-policy ledger 포함)와 status `review/manual-approval` 이 success 인지 본다(`gh api repos/dlddu/pocket-aide/commits/<head>/check-runs` · `/status`).",
+              "expectedOutcome": "ci-success success · review/manual-approval success(judge 「수동 승인 케이스 미접촉 (3 경로)」)"
+            },
+            {
+              "seq": 3,
+              "action": "PR head worktree 에서 검산 4종 재실측: `docs/mockups/{_structure-map,_impl-map,_copy-map,_token-map}.md` 의 `## 검산` 아래 bash/python 블록을 레포 루트에서 실행하고 출력 문면을 본다(재생 키트의 `check.py <root>` 가 같은 일을 한다).",
+              "expectedOutcome": "네 블록 모두 출력이 정확히 `ok` 한 줄"
+            },
+            {
+              "seq": 4,
+              "action": "PR #245 squash 머지(`PUT pulls/245/merge` merge_method=squash, sha 가드 = 1단계 head). 머지 전에 커밋을 얹지 않는다.",
+              "expectedOutcome": "merged=true, 착지 커밋 제목에 (#245)"
+            },
+            {
+              "seq": 5,
+              "action": "착지 커밋에서 완료 기준 ⑴~⑷ 재실측: 검산 4종 `ok`, 집계 표 칸(todo-personal M 86/5/41/13/0 · S 16/5/0, todo-work M 94/4/41/12/0 · S 17/5/0, 나머지 4화면 불변), 문장 줄 `grep -c`, `git show --stat` 3파일.",
+              "expectedOutcome": "모든 수치 일치 · 변경 파일 3개"
+            },
+            {
+              "seq": 6,
+              "action": "착지 커밋 main push 의 CI 확인: `gh api 'repos/dlddu/pocket-aide/actions/runs?head_sha=<착지 sha>&event=push'` → CI run 의 ci-success 를 본다. `ios/**` 접촉이라 TestFlight 업로드가 발화한다.",
+              "expectedOutcome": "ci-success success(TestFlight 「Run fastlane beta」 스텝 단독 실패는 기존 상태라 이 PR 실패로 세지 않고 근거를 기록)"
+            }
+          ],
+          "plannedAt": "2026-10-11T05:04:14Z"
+        }
+      }
+    ]
   }
 ]
