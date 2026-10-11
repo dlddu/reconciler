@@ -12172,6 +12172,46 @@
           "reason": "계획 실질(TodoCheckBox 신설·체크 6행 일치화, ios/·docs/mockups/ 한정, squash revert로 롤백 가능, 위험 low)은 타당하나 준비물이 무효다. PR #254(head a96c01e, base 84fcbba)는 mergeable_state=dirty: main이 d281d5e(#251)·3adae04(#256)로 2커밋 이동해 docs/mockups/_copy-map.md 집계 두 줄(`| A | 비표시 |`, `## 표 A … N행`)에서 충돌한다(_impl-map.md는 자동 병합, _structure-map.md는 main 미접촉). 또 필수 check `ci-success`가 failure — 원인은 shard 2의 WebhookPushSettingsUITests(testPushArrivalFollowsNotificationSettings·testDeniedSystemPermissionShowsNotice) 실패로 diff 무관 설정 앱 flake이고, 투두 XCUITest가 든 shard 0·1은 success. 리뷰가 main 3adae04 위에 PR을 병합해 충돌을 `A 비표시 21`(main 23 −2)·`표 A 196행`(198 −2)로 풀자 검산 4종 모두 `ok`, 개인 M 불일치 32·회사 24·S 5/3 그대로, _impl-map TodoCheckBox 부분 행 1개 확인(copy-map 집계를 22로 변조하면 검산이 `집계 A 비표시: 표기 22`로 검출 — 검산은 rc=0이므로 stdout `ok`로 판정). 충돌·빨간 필수 check가 있는 head는 executor가 지침상 리베이스 없이 실패로 닫으므로 지금은 승인할 수 없다.",
           "comment": "재고정만 하면 된다(계획 범위·코드는 그대로 둘 것).\n1) PR #254를 현재 main(3adae04 이후)에 rebase/merge하고 docs/mockups/_copy-map.md 충돌을 `| A | 비표시 | 21 |`, `## 표 A — 정방향 (구현 리터럴 → 목업) · 196행`으로 해소(main 23/198에서 SF Symbol 리터럴 2행 제거분 −2). _impl-map.md는 자동 병합된 쪽에 TodoCheckBox 행 1개만 있는지 확인. 새 head에서 검산 4종 stdout `ok` 재확인.\n2) 새 head push로 CI가 다시 돌면 `ci-success`·`review/manual-approval` success를 확인. shard 2 WebhookPushSettingsUITests는 diff 무관 flake라 다시 빨갛면 같은 sha `gh run rerun --failed` 1회.\n3) executionGuide 갱신: head sha 리터럴(a96c01e) 교체, 완료 기준의 `_copy-map.md 집계 | A | 비표시 | 14 |` → 21(자매 착지 시 델타 −2로 판정), preparation.notes의 base·자매 목록(#251·#256 착지 반영)."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재준비(review_rejected → 범위·코드·PR 그대로). 거부 사유는 계획 결함이 아니라 준비물 무효다. PR #254 가 main 이동(#251 `d281d5e`·#256 `3adae04`)으로 `_copy-map.md` 집계 두 줄에서 DIRTY 였고, 필수 `ci-success` 가 diff 와 무관한 shard 2 `WebhookPushSettingsUITests` flake 로 빨강이었다. 그래서 `origin/main` 을 PR 브랜치에 머지(force-push 0)하고 충돌을 리뷰가 지정한 값 `| A | 비표시 | 21 |`·`표 A … 196행`(main 23/198 에서 이 PR 의 SF Symbol 리터럴 2행 −2)으로 풀어 새 head `b346a18` 을 push 했다. 이 push 로 CI 가 새 sha 에서 다시 돈다. 리베이스 대신 머지를 고른 이유: 리뷰된 커밋 `a96c01e` 를 보존하고, iOS diff 가 바이트 단위로 같다는 것을 한 줄 diff 로 증명할 수 있다. 열린 자매 #258(0010, reviewing)이 `_structure-map.md` 서두 요약에서 인접 줄 충돌을 내므로, #258 선착지 경우를 위해 해소 스크립트 `resolve_post258.py` 와 대조용 브랜치 `…-post258`(트리 `d1c7af91`)을 미리 만들었다. **완료 기준(첫 판과 같고 집계만 새 base 기준)**: PR #254 가 squash 머지되고 머지 head 에서 `ci-success`·`review/manual-approval` 이 success. main 머지 트리에서 검산 4종 stdout 이 모두 `ok`. `screen-todo-personal` M 불일치 32(일치 95)·S 5, `screen-todo-work` M 불일치 24(일치 111)·S 3. `_impl-map` 의 `TodoCheckBox.swift` 부분 행 1개. `_copy-map` `| A | 비표시 | 21 |`·`표 A · 196행`. 자매가 먼저 착지하면 숫자 대신 이 PR 의 델타(개인 −4·회사 −2·A 비표시 −2·표 A −2)로 판정한다. **범위 밖**: 첫 판과 같다(이동 칩 = 0010/#258 몫, 배지 색 = 0007/#253 몫, 데이터 선결 줄, 나머지 투두 시각 잔여, 구조표 부재 화면, 카피 구현 대기).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "(준비 완료) PR 브랜치 `reconcile/mockup-render-rct_20261011-0008` 에 `origin/main`(`3adae04`)을 머지한다. `_copy-map.md` 충돌을 `| A | 비표시 | 21 |`·`## 표 A — 정방향 (구현 리터럴 → 목업) · 196행` 으로 푼다. 새 head `b346a18` 을 push 한다.",
+              "expectedOutcome": "PR #254 head `b346a18`, base `3adae04`, `mergeable_state` blocked(필수 status 대기). 충돌 마커 0."
+            },
+            {
+              "seq": 2,
+              "action": "(준비 완료) 새 head 에서 검산 4종(`check.py <repo>`), 음성 프로브(copy-map 집계 21→22), `check_ledger.py`, iOS diff 동일성(`git diff 84fcbba a96c01e -- ios` vs `git diff origin/main b346a18 -- ios`)을 확인한다.",
+              "expectedOutcome": "4종 `ok`. 프로브는 `집계 A 비표시: 표기 22` 를 낸다. ledger rc=0. iOS diff 동일."
+            },
+            {
+              "seq": 3,
+              "action": "(준비 완료) 열린 자매 PR 과 `merge-tree` 로 겹침을 잰다. #253·#257·#248·#201 은 clean 이다. #258 은 `_structure-map.md` 서두 요약에서 인접 줄 충돌이 난다. 그래서 `resolve_post258.py` 와 `reconcile/mockup-render-rct_20261011-0008-post258`(`8efdba7`, 트리 `d1c7af91`)을 만들었다. #258 squash 선착지를 시뮬레이션해 「PR 브랜치 + origin/main 머지 + 스크립트」 결과 트리가 `d1c7af91` 과 같은지 확인했다.",
+              "expectedOutcome": "시뮬레이션 트리 == `d1c7af91`, 검산 4종 `ok`."
+            },
+            {
+              "seq": 4,
+              "action": "(실행) 새 head 의 `CI` run 이 끝나기를 기다린다. shard 가 diff 와 무관하게 실패하면(설정 앱 `WebhookPushSettingsUITests`, `Unable to find a device` 등) 같은 sha 로 `gh run rerun <id> --failed` 를 1회 실행한다. 투두 XCUITest(`TodoComplete*`) 실패는 회귀로 보고 실패로 닫는다.",
+              "expectedOutcome": "`ci-success` success, `review/manual-approval` success(이미 success)."
+            },
+            {
+              "seq": 5,
+              "action": "(실행) 착지 직전에 main 을 재실측한다. #258 이 먼저 착지했으면 지침의 분기 B 를 따른다(머지 + 스크립트 + 트리 대조 + push + CI 재대기). 아니면 head 에 커밋을 얹지 않고 squash 머지한다.",
+              "expectedOutcome": "PR #254 merged."
+            },
+            {
+              "seq": 6,
+              "action": "(실행) main 머지 커밋에서 검산 4종과 집계를 재실측한다.",
+              "expectedOutcome": "4종 `ok`. 개인 M 불일치 32·회사 24(또는 자매 착지 시 델타 −4/−2). A 비표시 21(또는 델타 −2)."
+            }
+          ],
+          "plannedAt": "2026-10-11T15:45:00Z"
+        }
       }
     ]
   },
