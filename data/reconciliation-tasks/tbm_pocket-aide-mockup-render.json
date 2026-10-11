@@ -11372,6 +11372,42 @@
     "assessment": {
       "reason": "작업이 필요하다(action_required). 근거는 네 가지다.\n\n(1) 출처\n- as-is 변화(app `0d94864→2dba4f2`)와 to-be 변화(design-system `b6806ff→b30f753`)는 모두 PR #244 `070aa88` 한 건에서 나왔다. `tbm_pocket-aide-docs-impl` `rct_20261011-0001`의 승인 탭 1차 슬라이스다.\n- ci-success는 success다.\n- 목업 HTML은 바뀌지 않았다. to-be 변화는 tokens.md 산문 한 줄(구현 현황 서술)뿐이다.\n\n(2) 새 drift는 정의상 유의미하다. main tip에서 검산을 직접 실행해 확인했다.\n- 기준 1: `_impl-map` 검산이 `누락 ApprovalsView.swift / ApprovalsViewModel.swift`로 깨졌다. `RootView.swift` 행의 탭 바 서술이 실제와 다르다(오매핑). `screen-approval`이 어느 맵에도 없다.\n- 기준 3: `_copy-map` 검산이 `A 누락 (RootView.swift, '승인')`으로 깨졌다. 승인 화면 텍스트(헤더·빈/오류 상태 등)도 미대조다.\n- 기준 2·5: 승인 탭 배지가 시스템 빨강이다. §1.11 강조색 규칙에 어긋나고, `_deviations.md` 허용목록에도 없다.\n- 기존 잔여 drift(M 102 · S 14, 카피 A 9 · B 43, 구조표 없는 2화면)도 그대로 남아 있다.\n\n(3) 자동 해소 가능성은 없다.\n- 열린 PR #247(`rct_20261011-0003`, reviewing)은 base가 #244 이전(`d302575`)이다. `TodoListView.swift`·`_structure-map.md`만 건드리고 Approvals 매핑·카피를 다루지 않는다(브랜치에서 `git grep Approvals` 0건).\n- #201은 렌더링 무관이다.\n- 그래서 유예하지 않는다.\n\n(4) planner 참고\n- 깨진 검산 2종(`_impl-map`·`_copy-map`)을 먼저 복구하는 것이 최소 슬라이스다. Approvals 2파일 행 + RootView 행 갱신 + RootView `승인` 카피 행이다.\n- 이어서 `screen-approval` ↔ `ApprovalsView` 구조·카피·토큰 표를 신설하고, 배지 색은 구현 수정(§1.11 강조색) 또는 `_deviations` 등재 중 하나로 정한다.\n- #247(`rct_20261011-0003`)이 같은 `_structure-map.md`를 건드린다. 먼저 머지되면 rebase가 필요하다. 승인 탭 구현 자체(미구현 AC)는 docs-impl 모델 몫이다. 화면 단위 시각 대조만 이 모델 몫이다.",
       "assessedAt": "2026-10-11T09:09:26Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#244(승인 탭 1차)가 연 매핑·카피 공백을 문서 전용 PR 하나로 닫는다 — `_impl-map` 에 `ApprovalsView.swift`(부분 `screen-approval`)·`ApprovalsViewModel.swift`(비렌더링)를 등재하고 `RootView.swift` 행을 #244 탭 구성으로 고치며, `_copy-map` 에 승인 화면 카피를 양방향 전수(표 A +10 · 표 B `screen-approval` +101)로 판정하고 #244 로 사실이 바뀐 기존 행(다른 목업 7장의 탭 바 `승인` 구현 대기 → 일치, `임시공간` 기준 4 → 일치 A/B 각 1)을 재판정한다. 대안 저울질: ⑴ `ApprovalsView` 를 `화면` 으로 — 상세·결정·이력·설정·키 발급이 미구현이라 캡션이 거짓이 된다(부분이 사실) ⑵ 배지 색을 `_deviations.md` 허용으로 등재 — tokens.md §7·목업이 「§1.11 강조색」으로 방향을 정해 두어 허용 근거가 없다(ios 구현 대기) ⑶ 배지 색까지 같은 PR 에서 ios 로 고치기 — ios 접촉은 iOS CI ~60분 + main 머지 시 TestFlight 를 발사하고 tokens.md 문장까지 움직여 범위가 커진다. 그래서 문서 2파일·앱 무접촉 경로를 골랐다(롤백 = PR revert). 완료 기준(착지 커밋 기준): ⑴ 검산 4종(_impl-map·_copy-map·_token-map·_structure-map) 출력이 각각 `ok` 한 줄 ⑵ `_copy-map` 집계 A 일치 135 · 데이터 6 · 비표시 16 · 시스템 UI 2 · 미구현 영역 1 · 기준 4 5 · 구현 대기 9 · 목업 대기 2, B 일치 180 · 외부 40 · 예시 데이터 135 · 목업 전용 125 · 미구현 영역 10 · 기준 4 3 · 구현 대기 80, 표 머리 A 176행 · B 573행 ⑶ `grep -c '^| \\`screen-approval\\`'` = 101 · `_impl-map` 에 `Approvals/` 2행 · 문구 「승인 탭이 없」 0건(_impl-map·_copy-map) ⑷ 착지 커밋 변경 파일 정확히 2개(docs/mockups/_impl-map.md · docs/mockups/_copy-map.md) ⑸ 착지 커밋 main 의 CI `ci-success` success. 범위 밖(후속): 승인 탭 배지 색(시스템 빨강 ↔ §1.11 강조색, ios 구현 대기 — 같은 `.badge` 인 임시공간 배지 포함), `screen-approval` 의 `_structure-map`·`_token-map` 대조, 오류 상태 목업 프레임(A 목업 대기 2), 이 PR 이 연 B 구현 대기 44(상세·결정·이력·자동 응답·호출자 키 — PRD-12 docs-impl 소관 구현이 따라오면 재판정), 기존 잔여 M/S·카피 A9·B43·widget/pr-monitor-history 구조표.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #249 상태 확인: `gh pr view 249 -R dlddu/pocket-aide --json state,mergeable,mergeStateStatus,headRefOid,files` 와 head 의 CI run(`actions/runs?head_sha=<head>`) conclusion, `review/manual-approval` check",
+              "expectedOutcome": "OPEN · MERGEABLE, head 152b7c4(또는 리베이스본), 변경 파일 2개, CI success(docs 전용이라 Detect changes + ci-success 만), review/manual-approval success(judge 자동)"
+            },
+            {
+              "seq": 2,
+              "action": "main 이 PR base(070aa88) 이후 움직였으면 결합 트리에서 검산 4종 재실행: 임시 worktree 에 `git -c user.name=x -c user.email=x@x merge --no-commit origin/main` 후 네 블록 실행. 특히 #247(_structure-map·TodoListView)·docs-impl 후속(ios/PocketAide/Approvals 접촉 가능)이 먼저 착지했는지 본다",
+              "expectedOutcome": "네 출력 모두 `ok`. Approvals 리터럴·RootView 리터럴이 바뀌어 `_copy-map` 이 누락/잉여를 내면 4단계 지침(재생 스크립트 재적용) 대상"
+            },
+            {
+              "seq": 3,
+              "action": "PR #249 squash 머지(`gh api -X PUT repos/dlddu/pocket-aide/pulls/249/merge -f merge_method=squash`)",
+              "expectedOutcome": "merged=true, main 에 착지 커밋 1개"
+            },
+            {
+              "seq": 4,
+              "action": "착지 커밋에서 검산 4종 + 완료 기준 ⑵⑶⑷ 실측(`git show --stat <sha>`, 집계 표 grep, `grep -c '^| \\`screen-approval\\`'`)",
+              "expectedOutcome": "`ok`×4, 집계 수치가 summary 의 완료 기준과 일치, 변경 파일 2개, screen-approval 행 101"
+            },
+            {
+              "seq": 5,
+              "action": "착지 커밋의 main CI(`actions/runs?head_sha=<sha>&branch=main`) conclusion 확인",
+              "expectedOutcome": "CI success(ios/backend skipped — TestFlight 미발사)"
+            }
+          ],
+          "plannedAt": "2026-10-11T09:40:00Z"
+        }
+      }
+    ]
   }
 ]
