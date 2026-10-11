@@ -12764,7 +12764,7 @@
       }
     },
     "createdAt": "2026-10-11T17:40:30Z",
-    "updatedAt": "2026-10-11T17:42:47Z",
+    "updatedAt": "2026-10-11T17:48:07Z",
     "stateSummary": {
       "asIs": "관측 2026-10-11 17:4xZ · `dlddu/pocket-aide` main `67f2fc1`(#253). 창(window)은 커밋 1개다: `b13f5bb`(#254) → `67f2fc1`(#253, rct_20261011-0007 슬라이스). app 트리 `3736c40`→`7755638`. widget·keyboard·DesignSystem 트리는 그대로다.\n\n- `ios/PocketAide/RootView.swift` +15: 정적 `approvalBadgeAppearance`가 `UITabBarAppearance`(stacked·inline·compactInline × normal·selected)의 `badgeBackgroundColor`를 `DesignTokens.Color.accent(.prMonitor)`(라이트·다크를 trait로 해석)로 지정한다. `UITabBar.appearance().standardAppearance`에 넣고 `init`에서 1회 평가한다. 승인 탭 `.badge(approvals.pendingCount)`와 「더 보기」 안 임시공간 `.badge(scratchpad.unclassifiedCount)`는 그대로다. 앱의 다른 곳에는 `UITabBar`·`toolbarBackground` 지정이 없다(git grep). 그래서 standardAppearance 교체로 덮어쓰이는 기존 탭 바 외형은 없다.\n- 테스트 2파일(as-is 범위 밖 `ios/PocketAideTests`): `TabBadgeReader`가 `BadgeTint`(.systemRed 기본·.accent)를 받는다. 승인 탭 판독은 「다짐」 탭으로 옮긴 뒤 accent로 읽는다.\n- 검사: #253 머지 커밋 check-runs는 build·deploy·comment-policy ledger·journey-mockup success, iOS 잡 skipped(경로 필터), TestFlight queued다. PR head `ff48dad`는 `ci-success` success · `review/manual-approval` success다.",
       "toBe": "관측 동시점 · 같은 커밋. mockups 트리 `bc63774`→`89bab71`, design-system 트리 `b30f753`→`676e913`. 두 파일, 각 1줄이다.\n- `docs/design-system/tokens.md` §7 「하단 노출」: 「다만 승인 탭 배지는 아직 iOS 시스템 빨강이다」를 「승인 탭 배지도 2026-10-11부터 §1.11 강조색이다(… `UITabBarAppearance` 배지 배경을 `accent(.prMonitor)`로 — 「더 보기」 목록 안 배지는 탭 바 밖이라 이 외형을 받지 않는다)」로 바꿨다. 스펙 문장(「승인 탭 배지는 iOS 시스템 빨강 대신 §1.11 강조색」)은 그대로다.\n- `docs/mockups/_impl-map.md` `RootView.swift` 행: 같은 취지로 구현 서술만 갱신했다.\n- 목업 HTML(`screen-*.html`·`mockups-dark.html`)은 무변경이다. `screen-approval` 탭 바 주석은 「배지 = 대기 요청 수(§1.11 강조색)」이다. 목업은 「더 보기」 목록을 그리지 않는다.\n- 검산 4종(`_copy-map`·`_impl-map`·`_structure-map`·`_token-map`)은 base `b13f5bb`와 tip `67f2fc1` 모두 `ok`다.",
@@ -12774,6 +12774,37 @@
     "assessment": {
       "reason": "조치 필요. #253 슬라이스 자체는 깨끗하게 수렴했다. 검산 4종 `ok`, 필수 CI·수동 승인 success이고 새 불일치는 0이다. 하지만 정의상 잔여 drift(기준 3·4·5)가 남는다. 열린 0010·0011이 맡지 않은 몫(todo-personal 32/5 · todo-work 22/3 · scratchpad 11/3 · 카피 A 9/목업 대기 5 · B 71 · 구조표 부재 3화면)에는 주인 task가 없다. 0007이 succeeded로 닫혀 이 잔여를 실어 갈 task도 없다. 그래서 0008→0011 선례대로 action_required로 넘긴다.\n\nplanner 참고:\n- (a) #258(0010)은 main과 `_structure-map.md` 충돌 중이다(#254 유래, #253 무관). #259(0011)는 새 main과 clean이다. 새 슬라이스는 이 두 PR과 `_structure-map` 집계 줄 충돌을 피해 고를 것.\n- (b) affirmations 7/1은 backend·data-model 선결이라 렌더링 슬라이스로 닫을 수 없다(0010 계획 실측).\n- (c) 열린 PR #257(docs-impl, 승인 게이트 설정 화면)이 착지하면 새 화면이 `_impl-map` 누락을 낼 수 있다. 0009 선례를 볼 것.",
       "assessedAt": "2026-10-11T17:42:03Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "시스템 More 탭 한국어화로 `_copy-map` 표 B 의 카피 drift 9행을 닫는다. 대상은 목업 9장 「더 보기」 8행과 scratchpad 「편집」 1행이다. 원인은 하나다: `ios/project.yml` `developmentLanguage: en` 때문에 UIKit 이 시스템 `TabView` 오버플로 탭·목록을 「More」·「Edit」으로 그린다. 그래서 `ko` 로 바꾸고, 오버플로 탭을 찾는 UI 테스트 5곳의 라벨도 `buttons[\"더 보기\"]` 로 바꾼다. 이 문구에는 앱 리터럴이 없어 표 B `일치`(Swift 리터럴 대조)로는 닫히지 않는다. 그래서 `시스템 UI` 판정을 역방향에도 정의하고, 검산이 낱말 ∈ {더 보기, 편집} 과 `developmentLanguage: ko` 를 함께 확인하게 한다. 공전을 막으려고 음성 프로브 2종을 실측했다. 대안도 따져 봤다. 허용목록 등재는 목업이 SSOT 이고 플랫폼상 불가피하지도 않아(설정 한 줄로 닫힌다) 버렸다. 오버플로 탭을 커스텀 탭 바로 바꾸는 것은 재설계라 버렸다. 슬라이스 선택 근거: 열린 #258(`_structure-map`·ScratchpadView)·#259(`_structure-map`·TodoListView)·#257(Approvals*) 과 파일이 하나도 겹치지 않는다. 감지가 경고한 `_structure-map` 집계 충돌도 피한다. 표 A 구현 대기 9행은 데이터 선결(회전 위치·노출 수)이거나 열린 PR 파일(TodoListView)과 겹친다. **완료 기준**: PR #260 이 squash 머지된 main 에서 다음이 모두 성립하면 성공이다. (1) `_copy-map` 검산 출력 `ok`, 집계가 `| B | 구현 대기 | 62 |` · `| B | 시스템 UI | 9 |` 이고 「더 보기」·「편집」 9행 판정이 `시스템 UI`. (2) `_impl-map`·`_structure-map`·`_token-map` 검산 `ok`. (3) `ios/project.yml` `developmentLanguage: ko`. (4) PR head 의 필수 `ci-success` SUCCESS. iOS UI 테스트가 「더 보기」 라벨로 오버플로 탭을 찾는 것이 런타임 증명이다. (5) comment-policy `check_ledger.py` 지문이 머지 직전 main 과 같다(주석 0줄). **범위 밖**: 표 A 구현 대기 9 · 목업 대기 5, 표 B 나머지 구현 대기 62, 「더 보기」 목록 안내 문구, `_structure-map` 잔여(todo 32/5·22/3, scratchpad 11/3, affirmations 7/1), 구조표 부재 3화면.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #260 head 의 필수 status 를 확인한다. `ci-success`(iOS UI 테스트 포함)·`review/manual-approval` 이 있으면 그것까지 본다. 빨강이면 실패 잡 로그로 원인을 가른다. 「더 보기」 라벨 불일치인지(AffirmationsUITests 의 `tabBar.debugDescription` 첨부), flake 인지 본다.",
+              "expectedOutcome": "필수 status 전부 success"
+            },
+            {
+              "seq": 2,
+              "action": "머지 직전에 `git merge-tree` 로 main 과의 충돌을 확인한다. 자매 #258·#259·#257 착지 뒤라도 파일이 겹치지 않으니 clean 이어야 한다. 머지 트리에서 검산 4종과 `check_ledger.py` 를 실행한다.",
+              "expectedOutcome": "merge-tree clean, 검산 ok×4, 지문 불변"
+            },
+            {
+              "seq": 3,
+              "action": "PR #260 을 squash 머지한다(head sha 고정, 커밋을 얹지 않는다).",
+              "expectedOutcome": "main 에 착지, PR merged"
+            },
+            {
+              "seq": 4,
+              "action": "main 에서 완료 기준 (1)~(3)·(5) 를 재실측한다. 검산 4종 출력, `_copy-map` 집계 줄 grep, `project.yml` grep, `check_ledger.py` 를 본다.",
+              "expectedOutcome": "ok×4 · `| B | 구현 대기 | 62 |` · `| B | 시스템 UI | 9 |` · `developmentLanguage: ko`"
+            }
+          ],
+          "plannedAt": "2026-10-11T17:48:07Z"
+        }
+      }
+    ]
   }
 ]
