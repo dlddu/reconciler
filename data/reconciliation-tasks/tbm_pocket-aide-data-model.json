@@ -883,7 +883,7 @@
       }
     },
     "createdAt": "2026-10-11T03:20:14Z",
-    "updatedAt": "2026-10-11T03:23:06Z",
+    "updatedAt": "2026-10-11T03:25:45Z",
     "stateSummary": {
       "asIs": "관측 2026-10-11T03:2xZ · dlddu/pocket-aide main `b267cbc`(#207 승인 게이트 백엔드 1차 머지, docs-impl `rct_20261009-0007`)\n- as-is 지문: `migrations=23 site_lines=50 query_lines=121` → `migrations=25 site_lines=61 query_lines=143`, schema 해시 `65961c8…`→`ef12e4a…`, queries `48ffd5a9…`→`82483b70…`, checker 해시 `6e74adb…` 불변.\n- 원인 변경(`e01a18d..b267cbc`, 데이터 모델 경로): 새 마이그레이션 `0012_approval_gate.up/down.sql` — 테이블 `approval_caller_keys`(FK users, `key_hash` UNIQUE, 인덱스 `idx_approval_caller_keys_active_name`(부분 UNIQUE, `revoked_at IS NULL`)·`idx_approval_caller_keys_user_created`)와 `approval_requests`(FK users·approval_caller_keys, UNIQUE(caller_key_id, external_id), 인덱스 `idx_approval_requests_user_status_created`). 새 쿼리 지점 `backend/internal/approvals/store.go` 11곳(site 50→61).\n- 판정(절차 3, C9 — 판정 환경에 Go 없음): main `b267cbc` 의 CI `data-model check (report)` job 114376680290 로그, 엔진 SQLite 3.46.0 (modernc.org/sqlite v1.34.1), **종료 코드 1**.\n  - 불변식 1 위반 7: `table-missing` approval_caller_keys · approval_requests, `diagram-entity-missing` 2, `diagram-relation-missing` 3(users→approval_caller_keys, users→approval_requests, approval_caller_keys→approval_requests).\n  - 불변식 2 위반 11: approvals/store.go `Authenticate`(select·update) · `Create` · `Decide` · `Get` · `GetForCaller` · `IssueKey` · `ListKeys` · `ListPending` · `RevokeKey` · `getKey` 전부 `query-unregistered`.\n  - 불변식 3 위반 7: `no-support` Q-09 · Q-15(이전부터의 잔여) + `unused-unregistered` 5(UNIQUE key_hash, UNIQUE(caller_key_id,external_id), idx_approval_caller_keys_active_name, idx_approval_caller_keys_user_created, idx_approval_requests_user_status_created — 해당 패턴이 카탈로그에 없어 아직 어떤 플랜도 이들을 쓰지 않는 결과).\n- 절차 4: 체커 해시 불변 · 리포트 지점 후보 61 = 지문 site_lines 61 ⇒ C2/C4 이상 없음.",
       "toBe": "관측 2026-10-11T03:2xZ · dlddu/pocket-aide main `docs/data-model` 트리 `b9033a06…`(이번에 바뀌지 않음 — 직전 감지 `rct_20261011-0001` 때와 같음).\n- ERD(`erd.md`)·쿼리 카탈로그(`query-patterns.md`)에 `approval_` 문자열 0건 — #207 의 두 테이블·인덱스·11개 쿼리 지점이 등재돼 있지 않다.\n- 정의(불변식 1: 스키마가 이긴다 → ERD 를 고친다, 불변식 2: 코드가 이긴다 → 카탈로그에 더한다, 불변식 3: 미사용 인덱스는 등재만)상 목표는 위 테이블 2·관계 3·패턴 11(수동 형태 0)·지원 칸·미사용 인덱스 표가 반영된 상태.\n- 열린 관련 작업: PR #241(`reconcile/rct_20261011-0001`, planned)은 `docs/data-model/README.md`·`query-patterns.md` 만 건드리며 범위는 불변식 3 `no-support` Q-09 해소(devicetokens.ListAll 제거)다 — approvals 등재는 포함하지 않는다. 다른 열린 PR(#240·#237·#201)은 데이터 모델 경로 0.",
@@ -893,6 +893,37 @@
     "assessment": {
       "reason": "조치 필요. 판정 절차 1~3: main `b267cbc`의 CI 체커(C9, SQLite 3.46.0/modernc v1.34.1, job 114376680290) 종료 코드 1 — 불변식 1 위반 7(approval 테이블 2·다이어그램 엔티티 2·관계 3) · 불변식 2 위반 11(approvals/store.go 미등재) · 불변식 3 위반 7(no-support Q-09·Q-15 + unused-unregistered 5). 절차 4: 체커 해시 불변, 지점 61 = 지문 site 줄 ⇒ C2/C4 이상 없음. 판정 규칙(하나라도 위반 ⇒ action_required)에 따라 조치 필요.\n신규 위반의 원인 #207 은 이미 머지·배포됐고(docs-impl `rct_20261009-0007` succeeded), 그 task 계획은 「`docs/data-model` ERD·쿼리 카탈로그 등재는 데이터 모델 루프 소관」으로 범위 밖을 명시했다(#120→#177 선례와 같은 구조). 열린 `rct_20261011-0001`(PR #241)은 Q-09만 다루고 approvals 등재를 포함하지 않으므로 이 gap 의 캐리어가 없다. 롤아웃·재동기화 같은 자동 해소 경로도 없어 재확인 유예는 맞지 않는다.\nplanner 인계: 범위는 approvals 신규분 — ERD 에 두 테이블(컬럼·NULL·PK·FK·인덱스, 부분 UNIQUE `revoked_at IS NULL` 조건 포함)·mermaid 엔티티/관계 3개·의미 링크(`approvals` 도메인 타입), 카탈로그에 11 형태(체커 리포트의 「기대」 행이 형태·지원 칸 초안을 준다), 그리고 그 등재 뒤 체커가 다시 계산하는 미사용 인덱스 표. Q-09·Q-15 는 `rct_20261011-0001`/#241 과 겹치지 않게 범위 밖으로 둘 것 — 같은 파일(`query-patterns.md`·README)을 건드리므로 #241 과의 머지 순서·충돌에 유의. datamodelcheck 는 아직 report 모드.",
       "assessedAt": "2026-10-11T03:21:27Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#207(승인 게이트)이 연 데이터 모델 위반을 문서 등재로 닫는다 — erd.md 에 approval_caller_keys·approval_requests 엔티티 2(컬럼·인덱스, 부분 UNIQUE 조건 포함)와 mermaid 관계 3, query-patterns.md 에 approvals/store.go 지점 11을 체커 기대 행 그대로 Q-52~Q-62 로, 그 등재 뒤 체커가 다시 계산한 미사용 인덱스 2(UNIQUE(caller_key_id,external_id)·idx_approval_caller_keys_active_name)를 미사용 표에, ERD 의미 링크가 가리킬 Go doc 주석 2줄(approvals.CallerKey·approvals.Request)과 그 주석 원장 L 미판정 행 1을 한 PR(#177 선례와 같은 구조)로 낸다. 정의상 불변식 1은 스키마가, 2는 코드가 이기므로 문서만 고치는 것이 유일한 방향이고 마이그레이션·쿼리는 건드리지 않는다. 완료 기준: main 머지 뒤 CI `data-model check (report)` 리포트에서 불변식 1 위반 0 · 불변식 2 위반 0 · 불변식 3 위반 중 approval_* 관련 0(남는 것은 `no-support` Q-09·Q-15 뿐, #241 이 먼저 착지했으면 Q-15 하나) 그리고 주석 원장 게이트 rc=0. 범위 밖: `no-support` Q-09(열린 rct_20261011-0001/#241 소관)·Q-15(사람의 풀스캔 기준 결정 대기), 새 doc 주석 2줄의 필요성 판정(주석 필요성 모델 몫 — 원장 행은 `—` 미판정), datamodelcheck 의 report→gate 전환.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR 의 CI 확인 — `data-model check (report)` 잡 로그가 불변식 1·2 정합, 불변식 3 위반이 no-support Q-09·Q-15 두 건뿐(종료 코드 1, report 모드라 통과)이고, 주석 원장 게이트·Go 빌드/테스트 등 PR 필수 체크(`ci-success`)가 초록인지 본다.",
+              "expectedOutcome": "ci-success success; data-model 리포트 `불변식 1: 정합` · `불변식 2: 정합` · 불변식 3 은 [no-support] Q-09·Q-15 만"
+            },
+            {
+              "seq": 2,
+              "action": "머지 직전 base 재실측 — `gh pr view <N> --json mergeStateStatus,mergeable` 와 열린 자매 #241 의 상태를 확인한다. #241 이 먼저 착지했으면 merge-tree 로 충돌 0을 확인한다(계획 단계 실측: main b267cbc 기준 양쪽 결합 트리 clean, 결합 트리 체커는 Q-15 하나만 남김).",
+              "expectedOutcome": "mergeable=MERGEABLE, 충돌 0"
+            },
+            {
+              "seq": 3,
+              "action": "PR 을 squash 머지한다.",
+              "expectedOutcome": "PR merged, main 에 squash 커밋 1개"
+            },
+            {
+              "seq": 4,
+              "action": "main push CI 의 `data-model check (report)` 잡 리포트를 읽어 완료 기준을 판정하고, 같은 run 의 이미지 빌드·Pin(운영 롤아웃, 코드 동작 무변경)·TestFlight 결과를 기록한다.",
+              "expectedOutcome": "불변식 1·2 위반 0, 불변식 3 위반은 no-support Q-09·Q-15(또는 Q-15) 뿐; approval_* 관련 위반 0"
+            }
+          ],
+          "plannedAt": "2026-10-11T03:25:45Z"
+        }
+      }
+    ]
   }
 ]
