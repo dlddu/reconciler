@@ -14108,6 +14108,36 @@
           "reason": "PR #271 열림(head 405b139e). 판정 시점 main 은 f45ff87 로 이동(#260 착지 — _copy-map·_impl-map 접촉)했지만, worktree 에서 main+head 를 병합하면 텍스트 충돌이 없고 계획 검산 4종(chk.sh)이 전부 `ok`, 집계는 todo-personal M 28 · S 4, todo-work M 9 · S 2 로 완료 기준과 맞는다. TodoListView.swift 는 371줄. 계획 자체의 정합성·범위(5파일)·롤백(revert PR, TestFlight 는 다음 빌드로 덮임)에는 문제가 없다. 그러나 head 의 CI 잡 `comment-policy ledger` 가 결정적으로 실패한다(`L 표: ios/PocketAide/Todos/TodoRowMeta.swift (3줄) 가 어느 행에도 없다`, exit 1). 병합 트리에서 로컬로 재실행해도 같은 결과이고, main(f45ff87·0473a80)에서는 success 다. 이 잡은 ci-success 의 needs 에 없어 머지를 막지는 않는다. 하지만 docs/comment-policy/ledger.md 5·11행이 「주석을 들이는 PR 은 자기 파일의 행을 더한다」고 강제하므로, 그대로 머지하면 main 이 빨개지는 정책 위반이다. 또 iOS build + test 3샤드가 아직 queued 라 ci-success 도 미확정이다.",
           "comment": "고칠 것은 하나다. 새 파일 ios/PocketAide/Todos/TodoRowMeta.swift 의 `///` 줄머리 주석 3줄(3·4·59행)이 docs/comment-policy/ledger.md 의 L 표 어느 행에도 없어서 `comment-policy ledger` 가 빨갛다. 고치는 방법은 둘 중 하나다. (a) ledger.md L 표의 범위 첫 파일 경로 사전순 위치에 이 파일의 행을 더하고, 판정 칸은 `—` 로 둔다. 주석 줄 수·지문은 `python3 scripts/comment-policy/check_ledger.py --rows` 출력에서 옮긴다. (b) 그 주석 3줄을 지운다. 어느 쪽이든 `python3 scripts/comment-policy/check_ledger.py` 가 rc 0 이어야 하고, 이 단정을 executionGuide 완료 기준과 재생 키트(chk.sh 또는 apply_*.py)에 넣는다. ledger.md 를 고치면 PR 파일 수는 6이 된다. 그 밖의 diff·검산·집계(28/4, 9/2)는 현재 main f45ff87 위에서도 성립함을 실측했으니 바꾸지 말 것. 재제출 시 iOS build + test 가 끝나 ci-success 가 초록인 head 여야 한다(현재 queued)."
         }
+      },
+      {
+        "reason": "review_rejected — #0 리뷰: TodoRowMeta.swift 새 `///` 3줄이 comment-policy 원장 L 표 미등재 → `comment-policy ledger` 잡 실패. 재준비로 주석 3줄 제거(리뷰 제시 (b)), 범위·PR 승계.",
+        "plan": {
+          "summary": "재준비(review_rejected): 직전 시도의 범위·PR #271 을 그대로 잇고, 거부 사유 하나 — 새 파일 TodoRowMeta.swift 의 `///` 줄머리 주석 3줄이 comment-policy 원장 L 표에 없어 `comment-policy ledger` 잡이 빨갛다 — 를 리뷰가 준 두 길 중 (b) 주석 3줄 제거로 닫는다. (a) 원장 행 신설보다 (b) 를 고른 이유: 옮겨 온 코드(TodoListView 의 meta·workRank·metaFont)는 원래 주석 0줄이라 이 주석은 이번 PR 이 새로 지은 서술이고, 지우면 PR 파일 수 5 그대로·원장 무접촉·판정 대기 행(`—`)을 새로 만들지 않는다. 구조표 범위 앵커(`struct TodoRowMeta`→`private struct TodoDueItem`)와 인용은 내용 기반이라 주석 줄 삭제에 무영향(검산 실측 ok). 완료 기준(직전 시도와 동일 + 1): 검산 4종 출력 ok, `python3 scripts/comment-policy/check_ledger.py` rc 0, 개인 표 M 불일치 32→28 · 표 S 5→4, 회사 표 M 11→9 · S 2 불변, 그 밖 화면 집계 불변, ci-success 초록 + `comment-policy ledger` 잡 success. 범위 밖: 직전 시도 지침의 「범위 밖」 목록 그대로(우선 태그 · 회사 구분점 색 · 필터 칩 등).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #271 head 확인: 405b139(직전 시도 diff) 위에 f04d028(TodoRowMeta.swift 의 `///` 3줄 삭제만, 비주석 diff 0줄)이 얹혀 있고 PR 파일 수 5",
+              "expectedOutcome": "`git diff 405b139 f04d028` 이 `-///` 3줄뿐 · `grep -c '//' ios/PocketAide/Todos/TodoRowMeta.swift` = 0 · changed_files 5"
+            },
+            {
+              "seq": 2,
+              "action": "main 과의 병합 트리에서 검산 4종 + 주석 원장 게이트 실행(재생 키트 chk.sh)",
+              "expectedOutcome": "_impl-map·_copy-map·_structure-map·_token-map·comment-ledger 다섯 줄 모두 ok"
+            },
+            {
+              "seq": 3,
+              "action": "집계 단정: 개인 M 불일치 28 · S 4, 회사 M 9 · S 2, 다른 화면 집계 줄 불변",
+              "expectedOutcome": "`_structure-map.md` 59·60행 문면이 기대값"
+            },
+            {
+              "seq": 4,
+              "action": "head 의 CI(ci-success 필수 + comment-policy ledger 잡) 초록 확인 후 squash 머지",
+              "expectedOutcome": "ci-success success · comment-policy ledger success · main 착지"
+            }
+          ],
+          "plannedAt": "2026-10-11T20:52:00Z"
+        }
       }
     ]
   },
