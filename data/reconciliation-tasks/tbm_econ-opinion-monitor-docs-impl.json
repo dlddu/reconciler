@@ -12403,7 +12403,7 @@
   {
     "id": "rct_20261011-0002",
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "assessing",
+    "status": "no_action_needed",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-11T08:20:09Z",
@@ -12423,6 +12423,10 @@
       "toBe": "**관측 시각** 2026-10-11T08:20Z · `docs/` 트리 `448fe06` → `c9d1ef4` (같은 #248).\n\n- `docs/econ-opinion-monitor-design-tracker.md:1129` 「구현 전용 — 상태 문구 여섯 종」 행: 「호출 집계 중」 문면 셋을 빼고 **인덱스 준비 중 문면**을 넣어 갱신. 처분 근거에 「배치가 첫 인덱스를 발행하기 전에는 API 가 `503 index_not_ready` 로 답하므로 실패로 그리지 않고 기다리면 열리는 상태라고 밝힌다 · 목업은 이 상태도 그리지 않으므로 처분은 같다(구현 유지)」를 추가. 리터럴이 `Debug.tsx` 와 일치하고, 삭제된 「집계 중」 문면은 docs·web 양쪽에서 0히트(목업 인덱스의 `재집계 중` 은 다른 화면의 로딩 상태).\n- `docs/econ-opinion-monitor-review-policy.md`: 새 수동 승인 케이스 **MA6**(Go 가 레이크 볼륨에 쓰는 코드 — `go/internal/servingindex/**`·`go/cmd/econ-index/**`), 앵커 2줄, 위험 표면 ERE 에 `Remove|RemoveAll|Rename` 추가, 「Go 쪽이 레이크에 쓰기 시작한다」 제외 행의 재개 조건을 빌더 밖으로 좁혀 연장. 리뷰 정책 메타 문서다(AC·여정 아님).\n- `docs/comment-policy/ledger.md` 행 갱신 + `passes/2026-10-11-serving-index-removed-rows.md`(사라진 파일 4개의 원장 행 이관). 주석 정책 메타 문서다.\n- AC(PRD 4종의 AC1.x~AC4.x)·테스트 문서·사용자 여정(`JRN-judgment-debug` 포함)·목업·디자인 시스템은 바이트 불변.",
       "gap": "**유의미한 차이 없음.** #248은 디버그 화면 API 의 원천을 「요청마다 레이크 스캔」에서 「배치가 레이크에서 다시 만드는 SQLite 인덱스」로 옮긴 서빙 성능 변경이다. 응답 필드·값·순서가 옛 구현과 같고(독립 대조 1,028건 차이 0, CI·deploy success), 유일한 사용자 대면 변화(「인덱스 준비 중」 문면 추가·「집계 중」 문면 셋 삭제)는 같은 PR 이 design-tracker `:1129` 에 이미 반영해 기준 4를 스스로 충족했다. AC4.1~4.3(실행·호출 기록은 레이크에 남고 양방향 도달) 은 원천이 여전히 레이크이고 인덱스가 실패한 실행 뒤에도(`onExit`) 다시 발행되므로 그대로 충족된다. 기준 1~6 어디에도 새 격차가 없다.",
       "summarizedAt": "2026-10-11T08:21:31Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창은 #248 한 커밋이다(사람 세션, 디버그 화면 serving RSS 182→19MiB).\n\n**A. 기준 1·3·5·6 — 새 격차 없음.** `contracts`·`python` 무접촉. docs 변화는 design-tracker 1행(구현을 문서에 맞춰 적음)과 리뷰 정책(MA6)·주석 원장뿐이라 새 AC·여정 의무가 생기거나 닫히지 않았고, 구현과 모순되는 서술도 없다.\n**B. 기준 2 — 구현 동작↔문서 일치 유지.** 디버그 두 라우트의 응답은 옛 구현과 같다(코드상 같은 Go 리더로 순서 결정, PR 독립 리뷰 1,028건 대조 차이 0, `13e496e` build·publish·deploy 전부 success). 「빈 문자열 `no_call_reason`/`call_id`」 처리 통일은 목록을 상세에 맞춘 것이고 Python 쓰기 쪽은 빈 문자열을 만들지 않아 실데이터 영향이 없다. AC4.1(실행·단계 기록을 레이크에 남기고 실패한 실행도 조회)·AC4.2(호출 기록 append-only)·AC4.3(레코드↔실행↔호출 양방향 도달)은 레이크가 여전히 원천이고 인덱스는 그 파생물이며, `onExit` 로 성패와 무관하게 매 워크플로 끝에 다시 발행되므로 그대로 충족된다(인덱스 빌더가 지우는 것은 `serving/` 안 자기 인덱스 파일뿐 — 레이크 기록은 건드리지 않음). 진행 중인 실행이 끝나기 전까지 화면에 반영되지 않는 지연은 AC·`JRN-judgment-debug`가 규정하지 않는 운영 특성이다(여정은 남은 기록을 사후에 읽는 흐름, `:91` 「외부 지연: 해당 없음」). `deploy/` 의 `index` 단계는 이 서빙 경로의 배선이며 새 사용자 대면 동작이 아니다.\n**C. 기준 4 — 미문서화 구현 없음.** 신규 문면 「인덱스 준비 중: …」은 같은 커밋에서 design-tracker `:1129` 에 리터럴 일치로 등재됐고, 삭제된 「집계 중」 문면 셋은 같은 행에서 빠졌다(docs·web 0히트). `calls_tallied` 는 `contracts/` 밖 go↔web 내부 응답 필드였고(`rct_20261010-0001` 처분) 이제 없다.\n**D. 비고.** 머지 직후 배치가 첫 인덱스를 발행하기 전까지 디버그 화면은 「인덱스 준비 중」이다 — PR 이 명시한 배포 과도기이며 문서화된 상태다. 새 Go 주석의 필요성 판정(원장 `—` 행)은 자매 `tbm_econ-opinion-monitor-comment-necessity` 의 몫이고, 리뷰 정책 MA6 지문 변화는 `tbm_econ-opinion-monitor-pr-manual-approval` 의 몫이다.",
+      "assessedAt": "2026-10-11T08:21:31Z"
     }
   }
 ]
