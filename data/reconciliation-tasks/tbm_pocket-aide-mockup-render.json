@@ -13664,6 +13664,47 @@
     "assessment": {
       "reason": "조치 필요. 이 변화 자체는 0010 슬라이스가 계획대로 착지한 것이라 새 위반은 없다. 그러나 0010이 `succeeded`로 닫혀 scratchpad 잔여 M11/S3를 맡은 열린 task가 없다. 열린 task 0012·0013·0017과 docs-impl 0018의 범위는 각각 시스템 More 탭 카피, 투두 검색, screen-approval 내비게이션 바, 승인 이력 화면이다.\n\n같은 선례를 따른다: 「carrier가 닫히고 잔여에 주인이 없으면 action_required」(0013·0016·0017).\n\nplanner 핸드오프:\n- 다음 슬라이스 후보는 scratchpad 잔여(M11/S3) 또는 주인 없는 다른 화면 잔여다.\n- 착지 기준점은 main `490fcd6`이고, 검산 4종은 이 커밋에서 `ok`다.\n- 열린 #261은 main과 `_structure-map.md`에서 충돌한다(기존 충돌). 같은 집계 줄을 건드리는 새 PR은 #261·#267과의 merge-tree를 확인해야 한다.",
       "assessedAt": "2026-10-11T20:02:22Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "screen-todo-work 「N.B.」 분리 안내 점선 상자(표 M 11행 + 표 S 19행)를 문서 전용 허용 S8 로 등재해 구조표를 `_copy-map.md` 표 B 의 기존 판정(같은 상자 문구 = `목업 전용` 설계 주석, #76)과 맞춘다 — 상자 문구는 prd-todo AC1 의 재진술이고 AC 검증 방법과 무관하므로 구현(iOS 접촉 → TestFlight, TodoListView 399/400줄)이 아니라 등재가 맞는 닫힘이다. 범위(완료 기준): (1) PR #268 이 main 에 squash 착지 (2) main 에서 `_structure-map.md` 검산 출력 `ok`(그리고 `_impl-map`·`_token-map`·`_copy-map` 검산 `ok`) (3) screen-todo-work 집계가 착지 순서와 무관하게 「#268 이전 값 대비 표 M 불일치 −11 · 허용 +11, 표 S 불일치 −1 · 허용 +1」(main 단독이면 M 불일치 11 · 허용 23 · S 불일치 2 · S 허용 1) (4) `_deviations.md` 에 `### S8 ` 헤딩 1개 · 대상 12행이 전부 `허용 S8`. 범위 밖: screen-todo-work 의 나머지 불일치(기한별 섹션·급한 행 강조·메타 줄·섹션 막대/제목 색·헤더 바탕·행 제목 굵기 · 검색 안내 색은 #261/0013 몫), todo-personal M32/S5, scratchpad M11/S3, affirmations M7/S1, 승인 화면 잔여(#267/0017 몫), 카피 표 A 대기, 구조표 부재 화면(widget·pr-monitor-history 등).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #268 재실측: `gh api repos/dlddu/pocket-aide/pulls/268` 의 state·mergeable_state·head.sha 와 #261(0013)·#267(0017) 착지 여부.",
+              "expectedOutcome": "open · head `a590e5a`(또는 재생 뒤 새 head) · clean/unstable. #267 또는 #261 이 먼저 착지했으면 DIRTY 일 수 있다 → 2단계."
+            },
+            {
+              "seq": 2,
+              "action": "DIRTY 면 재생: 브랜치를 origin/main 으로 `reset --hard` 하고 `python3 /workspaces/planner/.reconciler-work/artifacts/pa-mr-rct_20261011-0018/apply.py .` 실행 → 커밋 → `--force-with-lease` push. 충돌을 손으로 해소하지 않는다.",
+              "expectedOutcome": "diff 2 files(`docs/mockups/_deviations.md`·`_structure-map.md`) · `_deviations.md` +13 줄 · 구조표 12행 판정 변경 + 집계 4~5줄. 두 파일 밖 변경 0. 스크립트는 멱등(두 번 돌려도 diff 불변)."
+            },
+            {
+              "seq": 3,
+              "action": "로컬 검산: 레포 루트에서 `_structure-map.md`·`_impl-map.md`·`_token-map.md`·`_copy-map.md` 의 `## 검산` 블록 python 을 실행.",
+              "expectedOutcome": "네 개 모두 출력 `ok` 한 줄(rc 가 아니라 출력으로 판정)."
+            },
+            {
+              "seq": 4,
+              "action": "PR head 의 필수 CI 확인: `gh api 'repos/dlddu/pocket-aide/actions/runs?head_sha=<head>'` 로 `CI`·`review-policy` 결론.",
+              "expectedOutcome": "둘 다 success(문서 전용이라 iOS/backend 잡은 skip). judge.py 「수동 승인 케이스 미접촉 (2 경로)」 → 사람 status 불필요."
+            },
+            {
+              "seq": 5,
+              "action": "PR #268 squash 머지.",
+              "expectedOutcome": "merged=true, main 새 커밋에 2 files."
+            },
+            {
+              "seq": 6,
+              "action": "main 에서 3단계 검산을 다시 돌리고 screen-todo-work 집계 4값과 `grep -c '^### S8 ' docs/mockups/_deviations.md`·`grep -c '허용 S8' docs/mockups/_structure-map.md` 를 잰다.",
+              "expectedOutcome": "검산 4종 ok · S8 헤딩 1 · `허용 S8` 12(표 M 11 + 표 S 1) · 집계는 완료 기준 (3)의 델타 등식을 만족."
+            }
+          ],
+          "plannedAt": "2026-10-11T20:07:19Z"
+        }
+      }
+    ]
   }
 ]
