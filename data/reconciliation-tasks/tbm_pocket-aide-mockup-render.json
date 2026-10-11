@@ -12897,6 +12897,36 @@
           "reason": "PR #260 head `4bda454` 은 지금 머지할 수 없다. (1) 필수 `ci-success` FAILURE(19:10Z, run 38161091542): iOS shard 1 의 `ApprovalFirstDecisionWinsUITests.testLateDecisionIsRefusedAndExplained` 가 두 반복 모두 실패했다. 1회차는 「The confirmation should close」(「거절」 탭 뒤 alert 잔류), 2회차는 `BackendAPIUITestSupport.swift:161` 「/api/approval-keys should answer」(20s 무응답)다. 실패 줄이 서로 달라 백엔드 무응답 계열로 보이며 locale 변경과 직접 연결되는 단정은 아니다. main `67f2fc1`·`ca96eb9`·`fbbfe02`·`bb54493`·`058a385` 의 `ci-success` 는 모두 success 다. (2) 그 사이 자매 #263(rct_20261011-0014, `058a385`)이 `_copy-map.md` 집계를 움직여 PR 이 CONFLICTING/DIRTY 이고 behind_by 4 다. 지침의 「파일 집합상 DIRTY 없음」은 계획 뒤 생긴 #263 때문에 깨졌다.\n계획 자체는 건전하다. 범위는 7파일 +26/−20(설정 1줄·UI 테스트 5곳·대응표 2개)이다. base `67f2fc1`·head 양 끝에서 검산 4종 `ok`, check_ledger 지문 `1d8b8b01…` 이 불변이다. 음성 프로브(`developmentLanguage: en` 복원 → `B 시스템 UI 거짓`)는 재현됐다. 열린 PR 과 파일 겹침은 0 이다(#257·#259 는 착지, #258 은 `_structure-map`·ScratchpadView). `review/manual-approval` 은 판정기 자동 success(「수동 승인 케이스 미접촉」)라 4-2 대상이 아니다. 롤백은 revert 1회로 구체적이다. 그래서 거부 사유는 재고정과 CI 재판정 두 가지로 좁힌다.\n리뷰가 worktree 에서 origin/main `058a385` 에 pr260 을 머지해 충돌을 직접 풀어 봤다: `_copy-map.md` 두 hunk 만 충돌하고 `_impl-map.md` 는 자동 병합된다. 해소값은 집계 `| B | 시스템 UI | 9 |`·`| B | 구현 대기 | 47 |`(main 56 − 9)이고, 「남은 카피 drift」 문장은 main 판(표 A 목업 대기 11행)에 B 47행이다. 이 트리에서 검산 4종 `ok`, 9행 grep 9, 지문 불변을 확인했다. 완료 기준 (1)의 리터럴 62 는 47 로 바뀐다(지침의 델타 규칙 −9/+9 와 같다).",
           "comment": "계획·범위는 그대로 두고 PR #260 재고정만 하면 된다. 재계획 불필요.\n① 브랜치 `reconcile/mockup-render-rct_20261011-0012` 에 origin/main 을 머지 커밋으로 넣는다(rebase·force-push 금지). `_copy-map.md` 충돌 해소값: 집계 줄은 `| B | 시스템 UI | 9 |` + `| B | 구현 대기 | 47 |`, 「남은 카피 drift」 문장은 main 쪽(표 A `구현 대기` 9행 · `목업 대기` 11행)을 따르되 표 B `구현 대기` 47행. 해소 트리에서 검산 4종 stdout `ok`·9행 grep 9·check_ledger 지문 불변을 확인한다(리뷰가 같은 해소로 실측함).\n② 새 head 에서 필수 `ci-success` 를 기다린다. `ApprovalFirstDecisionWinsUITests` 가 또 빨강이면 같은 sha 로 `gh run rerun --failed`. 같은 줄로 반복 실패하면 main 에서도 재현되는지(최근 main 은 success) 대조해 locale(ko) 영향인지 가르고, 영향이면 그 테스트 수정도 범위에 넣는다.\n③ preparation.notes 의 head sha·base·검산 수치와 executionGuide·완료 기준 (1)의 `| B | 구현 대기 | 62 |` 를 47 로 고친다. 「자매와 파일 겹침 0 → DIRTY 없음」 문장은 #263 선례로 정정한다.\n참고: 같은 모델에 rct_20261011-0015 가 열려 계획 중이다 — `_copy-map` 집계를 또 건드리면 착지 순서에 맞춰 해소값을 다시 셈할 것."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재준비(review_rejected — 계획 결함 0): 범위·PR #260 은 그대로 두고 두 거부 사유만 해소한다. ⑴ #263(`058a385`)이 `_copy-map` 집계를 움직여 DIRTY 였던 브랜치에 origin/main 을 머지 커밋으로 넣었다(rebase·force-push 없음, 새 head `d654764`). 충돌은 `_copy-map.md` 두 hunk 뿐이었고 해소값은 리뷰가 실측한 것과 같다: `| B | 시스템 UI | 9 |` · `| B | 구현 대기 | 47 |`(main 56 − 9), 「남은 카피 drift」 문장은 main 판(표 A 구현 대기 9 · 목업 대기 11) + B 47. ⑵ 필수 `ci-success` 빨강(`ApprovalFirstDecisionWinsUITests`)은 새 head 에서 다시 판정받는다. 그 테스트는 앱이 정의한 라벨(「거절」·`Button(\"취소\")`)만 쓰고 두 반복의 실패 줄이 달랐다(alert 잔류 / `/api/approval-keys` 20s 무응답) — locale 과 무관한 백엔드 무응답 계열로 판정하되, 같은 sha 재실행 뒤에도 같은 줄로 반복되면 실행자가 멈추고 failed 로 넘긴다. 내용은 이전 시도와 같다: `ios/project.yml` `developmentLanguage: ko` + 오버플로 탭 UI 테스트 5곳 「더 보기」 + `_copy-map`/`_impl-map` 표 B `시스템 UI` 9행. 대안(허용목록 등재·커스텀 탭 바)은 이전 시도에서 기각한 그대로다. **완료 기준**: PR #260 이 squash 머지된 main 에서 (1) `_copy-map` 검산 `ok`, 「더 보기」·「편집」 9행 판정 `시스템 UI`, 집계는 머지 직전 main 대비 **델타** B `구현 대기` −9 · `시스템 UI` +9(현재 main 기준 리터럴은 `| B | 구현 대기 | 47 |` · `| B | 시스템 UI | 9 |`); (2) `_impl-map`·`_structure-map`·`_token-map` 검산 `ok`; (3) `developmentLanguage: ko`; (4) 머지한 head 의 필수 `ci-success` SUCCESS; (5) `check_ledger.py` 지문이 머지 직전 main 과 같다(주석 0줄). **범위 밖**: 표 A 구현 대기 9 · 목업 대기 11, 표 B 나머지 구현 대기 47, 「더 보기」 목록 안내 문구, `_structure-map` 잔여(열린 #258·#261·0015 몫), 구조표 부재 3화면.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #260 head `d654764` 의 필수 `ci-success` 가 끝나기를 기다린다(iOS 3 shard, 약 80분). 빨강이면 실패 잡과 테스트 이름을 읽어 가른다: ⓐ 오버플로 탭 「더 보기」 미발견(계획 결함) → failed; ⓑ 그 외 → 같은 sha 로 `gh run rerun <run> --failed` 1회.",
+              "expectedOutcome": "head `d654764`(또는 그 뒤 사람 외 커밋 없음)에서 `ci-success` SUCCESS"
+            },
+            {
+              "seq": 2,
+              "action": "머지 직전 재실측: `git merge-tree --write-tree --merge-base=$(git merge-base origin/main <head>) origin/main <head>` clean, 그 트리에서 검산 4종 + `python3 scripts/comment-policy/check_ledger.py`.",
+              "expectedOutcome": "clean · ok×4 · 지문 = origin/main 지문"
+            },
+            {
+              "seq": 3,
+              "action": "PR #260 을 head sha 고정으로 squash 머지(커밋을 얹지 않는다).",
+              "expectedOutcome": "PR merged, main 에 착지"
+            },
+            {
+              "seq": 4,
+              "action": "main 에서 완료 기준 (1)~(3)·(5) 재실측: 검산 4종 출력, 시스템 UI 9행 grep, 집계 델타, `project.yml` grep, `check_ledger.py`.",
+              "expectedOutcome": "ok×4 · 9 · B 구현 대기 −9 / 시스템 UI +9 · `developmentLanguage: ko` · 지문 불변"
+            }
+          ],
+          "plannedAt": "2026-10-11T19:17:30Z"
+        }
       }
     ]
   },
