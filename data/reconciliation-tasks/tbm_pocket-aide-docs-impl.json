@@ -6599,7 +6599,7 @@
   {
     "id": "rct_20261011-0012",
     "toBeModelId": "tbm_pocket-aide-docs-impl",
-    "status": "reviewing",
+    "status": "review_rejected",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-11T11:08:15Z",
@@ -6670,6 +6670,12 @@
           "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/257",
           "preparedAt": "2026-10-11T11:52:00Z",
           "notes": "PR #257 head `e8b23948` (base main `d281d5e`), 11파일 +933/−9, 작성자 App 봇(dlddu-k3s-homelab-k3s-mcp). 신규 8(ApprovalKeys.swift · ApprovalKeysView/ViewModel · UITest 3 + 지원 1 · 단위 ApprovalKeysTests) + 수정 3(ApprovalsView 설정 버튼·navigationDestination, test-approval-gate.md, tracker). 로컬 게이트(PR head): SwiftLint strict rc=0(1차 3건 — multiple_closures_with_trailing_closure·function_body_length·empty_count — 두 번째 커밋에서 수정) · check_ledger.py rc=0, 지문 `1d8b8b01…` = main(원장 무접촉) · judge.py 「수동 승인 케이스 미접촉」 · 구현 상태 재계수 57/8/9→59/6/9. journey-mockup은 docs/journeys·user-journeys 무접촉이라 영향 없음. Swift 빌드·테스트는 로컬 불가(Xcode 없음) — PR CI ios-test가 유일한 컴파일·실행 검증. 열린 자매 PR #248·#255(scenario-e2e — `AppAccountUITestSupport.swift`의 `enum AppAccount` 신설, tracker e2e 매핑), #253·#254(mockup-render), #201: 전부 `merge-tree` clean, 타입 이름 충돌 없음(내 쪽은 `ApprovalUserSwitch`). 캐리어 rct_20261011-0007은 #251 머지(10:58Z)로 범위 완료, 레코드는 executing 상태(executor 종료 대기) — 이 PR은 #251 착지 위에 쌓였다."
+        },
+        "review": {
+          "status": "rejected",
+          "reviewedAt": "2026-10-11T15:20:15Z",
+          "reason": "PR #257 열림·head `e8b23948`·MERGEABLE(base main `d281d5e`→`3adae04` 이동, behind_by 1이나 strict=false). `review/manual-approval`은 success(판정기 「수동 승인 케이스 미접촉」)지만 필수 `ci-success` check-run이 failure다(run 38135145901). shard 1에서 이 PR이 새로 넣은 `ApprovalKeyRevokeUITests.testRevokingOneKeyBlocksOnlyThatKeyAndKeepsItsPendingRequest`가 `ApprovalKeyRevokeUITests.swift:60`에서 첫 시도·재시도 두 번 모두 같은 단정으로 실패했다 — 폐기 후 목록으로 돌아왔을 때 대기 요청 행 label에 「폐기된 키로 생성됨」이 없다(관측 label `infra-ci-…, 29:3x 남음, 요청 pending-…, Deploy Bot · 12:18`). PR 신규 파일·같은 줄·같은 원인 2회라 flake가 아닌 결정적 결함이고, executionGuide 스스로 「새 ApprovalKey* 테스트 실패 → 머지 금지」로 정해 두었다. shard 0은 테스트 전 `xcodebuild: error: Unable to find a device matching the provided destination specifier`(exit 70)로 죽은 별개의 인프라 실패라 rerun만으로는 ci-success가 초록이 될 수 없다. 롤백(revert PR 1개)·불가역 지점(main 머지 시 TestFlight)은 명시돼 있으나 필수 check가 빨강인 상태로는 실행할 수 없어 거부한다.",
+          "comment": "1) `ApprovalKeyRevokeUITests.swift:60`(시나리오 16) 실패를 고칠 것. 유력한 원인은 `screen.goBack()` 뒤 승인 목록을 다시 불러오지 않아 대기 행이 폐기 전에 받은 `keyRevoked=false`를 그대로 쓰는 것이다. 행이 이미 있으니 테스트의 `pullToRefresh()` 분기도 타지 않는다. 설정 화면에서 돌아올 때 목록을 다시 불러오거나(step 2가 「돌아오면 목록 재로드 유지」라 했으니 실제로 구현됐는지 확인), 테스트에서 경고를 확인하기 전에 명시적으로 새로고침할 것. label은 맞는데 노출이 안 되는 경우라면 `ApprovalsView.swift:265` 행의 accessibility label 구성을 확인할 것. 2) 같은 브랜치에 수정을 push하고, 새 head에서 `ci-success`가 초록(3샤드 전부)이고 `ApprovalKeyRevokeUITests`·`ApprovalKeyIssueUITests`·`ApprovalKeyLastUsedUITests`·`ApprovalKeysTests`가 통과하는 것을 확인할 것. shard 0의 `Unable to find a device` 실패는 인프라 문제이니 같은 sha에 `gh run rerun --failed`로 그 샤드만 다시 돌릴 것. 3) 계획과 PR을 맞출 것. plan.steps step 3과 완료 기준 ②는 「새 XCUITest 2파일(시나리오 1·2)」이라 적었지만 PR에는 시나리오 16용 `ApprovalKeyRevokeUITests`를 포함해 3클래스가 있다. 시나리오 16 테스트와 그것이 `ApprovalsView`를 건드린다는 점을 steps·완료 기준에 적을 것. 4) base가 `3adae04`로 이동했다(#253/#254 mockup-render 착지). 새 base에서도 재계수(59/6/9)와 tracker 마지막 이력 행 등식이 성립하는지 다시 확인할 것."
         }
       }
     ]
