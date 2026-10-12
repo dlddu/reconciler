@@ -7805,7 +7805,7 @@
       }
     },
     "createdAt": "2026-10-12T00:52:54Z",
-    "updatedAt": "2026-10-12T15:31:19Z",
+    "updatedAt": "2026-10-12T15:32:31Z",
     "stateSummary": {
       "asIs": "관측 2026-10-12T00:54:13Z, dlddu/pocket-aide main `7c00f0d`(이전 관측 `d132600`).\n- as-is 버전: `ios:b4b52a06… backend:11870e8e…` → `ios:18d04997… backend:dc886d02…`. 양쪽이 모두 바뀌었다.\n- 창 `d132600`→`7c00f0d`는 #274 한 커밋이다. rct_20261011-0027(executing)의 계획 범위인 PRD-12 AC10 슬라이스다. 22파일, +849/−35.\n- backend 변경:\n  - `apns` 거절 오류를 타입(`RejectedError`)으로 바꿨다. `FitAlertBody`가 페이로드를 4096바이트에 맞춘다.\n  - 새 패키지 `approvalpush`가 비동기 발송(고루틴, 30초)과 무효 토큰 삭제를 맡는다.\n  - `devicetokens.Delete`를 추가했다.\n  - `CreateExternalApproval`은 생성 뒤 푸셔를 호출한다.\n  - `main.go`는 APNs 클라이언트를 PR 모니터와 공유한다.\n  - 테스트: `payload_test`·`notifier_test`·`approval_push_test`.\n- ios 변경:\n  - `ApprovalDeepLinkOpener.swift`를 새로 만들었다. `approval_id` 알림을 `pocketaide://approvals?id=<id>`로 판별해 승인 탭과 상세를 연다.\n  - `AppDelegate`·`PocketAideApp`·`RootView`·`ApprovalsView`·`Shared/PocketAideAPI/Approvals.swift`도 바뀌었다.\n  - 테스트: `ApprovalPushUITests`·`ApprovalLongPushUITests`·`ApprovalPushUITestSupport`·`ApprovalPushPayloadTests`.\n- 머지 커밋 `7c00f0d`의 check-run은 Backend unit+lint, Backend integration, data-model check, Journey mockup, comment-policy ledger, Docker build/Pin deployment, deploy가 success다. TestFlight는 queued다. iOS 잡은 main에서 skipped다.\n- PR head `3e995ee`: ci-success와 review/manual-approval이 success다. iOS 3 shard도 success다(shard 1의 설정 앱 flake는 같은 sha rerun으로 통과, 0027 preparation 기록).\n- 열린 docs-impl task는 rct_20261011-0027(executing, 검증 전) 하나뿐이다.",
       "toBe": "관측 2026-10-12T00:54:13Z, dlddu/pocket-aide main `7c00f0d` `docs/`.\n- to-be 버전: `05d365cb…`→`b341353b…`.\n- 창의 docs 변경은 #274가 함께 담은 세 파일이다.\n  - `docs/product/test-approval-gate.md`: 시나리오 6·7을 「미구현」→「구현됨」으로 바꾸고 관련 코드 테스트를 등재했다. 서두는 「자동 응답과 잠금화면 알림 액션은 아직 없다」로 갱신했다.\n  - `docs/product/doc-tracker/2026-10.md`: T-12 행을 구현됨 9→11, 미구현 4→2로 바꿨다. 관측 절과 이력 1행이 늘었다(구현 상태 60/6/8 → 62/6/6).\n  - `docs/data-model/query-patterns.md`: Q-64(`delete device_tokens`)를 등재했다. data-model 소관이다.\n- PRD·AC 본문, `docs/user-journeys`, `docs/design-system`, `docs/journeys`, `docs/mockups`의 diff는 0이다. AC·시나리오 수도 그대로다.\n- 재계수: `7c00f0d`에서 test-*.md의 「구현 상태」를 grep하면 62/6/6이다. tracker 마지막 이력 행과 같다.",
@@ -7878,6 +7878,61 @@
           "reviewedAt": "2026-10-12T15:26:59Z",
           "reason": "PR #278 열림, head b6c43af 는 preparation 기록과 동일, main 5ad2977 무이동(compare behind_by 0·merge_base=main tip), MERGEABLE. 범위 20파일 +669/−27 은 계획 steps 와 일치하고, MA1 마이그레이션의 롤백(0013 파일 보존 revert)도 실측돼 있어 계획 실질은 승인 가능 수준이다. 그러나 필수 check `ci-success` 가 head b6c43af 에서 failure 다(run 38208248846 attempt 1, shard 2). 재시도 2회 모두 실패한 것은 무접촉 WebhookPushSettingsUITests.testDeniedSystemPermissionShowsNotice(설정 앱 「알림」 미발견)과 WebhookPushTapUITests.testPushTapHighlightsItemWithoutAcknowledging(push 미표시) 둘뿐이다. ApprovalKeyIssueUITests·WebhookUserScopedHistoryUITests 는 재시도에서 통과했고 shard 0·1 은 success 다. 알려진 환경 flake 이고 직전 head 9404180 에서는 같은 테스트가 통과했다. 그래도 head 의 필수 check 가 빨강이면 BLOCKED 라 승인(=실행 허가)이 성립하지 않는다. 9시간째 re-run 이 없어 「re-run 만」으로 좁혀 거부한다.",
           "comment": "코드·계획 수정 불필요. 커밋을 얹지 말고(review/manual-approval 이 sha 에 묶이므로 head 를 b6c43af 그대로 유지) `gh run rerun 38208248846 -R dlddu/pocket-aide --failed` 로 shard 2 만 같은 sha 에서 재실행하라. 그런 다음 check-run 축(`commits/b6c43af…/check-runs` 의 ci-success)이 success 인지 확인하고, preparation.notes 의 「b6c43af 의 CI 는 기록 시점 진행 중」을 그 결과(run id·attempt·ci-success success)로 갱신해 planned 로 되돌려라. re-run 에서도 WebhookPush* 만 실패하면 같은 시각 자매/main run 의 동일 실패를 대조군으로 notes 에 박을 것. 새 테스트(ApprovalAutoResponseUITests·ApprovalsTests)나 기존 Approval* UITest 가 재시도 2회 모두 실패하면 그때는 결함으로 보고 고칠 것. main 이 움직여 tracker 이력 표 끝에서 충돌하면 재고정이 필요하다(head 이동 → 사람 승인 전이어야 함)."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재준비(attempt #1, review_rejected — 필수 `ci-success` 가 head b6c43af 의 iOS shard 2 무접촉 flake 로 failure, 계획 결함 0): 범위·PR #278·브랜치·head `b6c43af` 를 한 바이트도 바꾸지 않고 승계하고, 같은 sha 에서 `gh run rerun 38208248846 --failed` 로 shard 2 만 재실행해 `ci-success` 를 초록으로 만든 뒤 planned 로 재제출한다(커밋을 얹으면 sha 에 묶인 초록과 사람의 `review/manual-approval` 이 날아간다). 이 시도의 완료 기준은 attempt #0 과 같다 — 아래 원문.\n\nPRD-12 AC9 자동 응답 모드(+ AC12 빈 상태의 현재 모드 표시)를 서버·앱 양쪽에 세운다. 대안 저울질: 잔여 미구현 AC 중 무인 조각은 남아 있지 않다 — AC11 잠금화면 액션은 Face ID/잠금 상태 관찰이 실기기 몫이고, PRD-11 AC4~12·PRD-8 메일·PRD-1·6·7·9·PRD-4 음성은 설계·키 주입 같은 사람 결정이 먼저다. AC9 는 사용자 단위 모드 저장에 새 테이블(마이그레이션 0013)이 필요해 `docs/review-policy.md` MA1(사람 승인)에 걸린다는 이유로 0018·0027 두 시도가 미뤄 왔는데, 그 사유는 「무인 몫과 묶지 않는다」였지 착수 금지가 아니다 — 무인 몫이 바닥난 지금 단독 슬라이스로 집는다(머지는 `review/manual-approval` 사람 서명 뒤, 선례 #207 의 0012 마이그레이션). 서버: `user_approval_settings(user_id PK, auto_response NONE|AUTO_APPROVE|AUTO_REJECT)` 테이블 + `GET/PATCH /api/approval-settings`; 호출자 키로 요청이 생성될 때 소유자의 모드가 자동이면 같은 INSERT 에서 `APPROVED`/`REJECTED` · `decision_mode='auto'` · `processed_at=created_at` 으로 기록하고(201 응답의 status 가 곧 결과 — AC3 즉시 결과), 푸시를 보내지 않는다. 이미 `PENDING` 인 요청은 건드리지 않는다(소급 없음). 앱: 승인 탭 헤더 「자동 응답 <모드>」 줄, 자동 모드일 때 대기 목록 상단 배너(「자동 승인/거절 모드가 켜져 있습니다.」 + 「새 요청은 알림 없이 바로 승인/거절됩니다.」 + 「끄기」), 빈 상태의 「자동 응답 모드 <모드> — …」 줄, 승인 게이트 설정의 「자동 응답 모드」 섹션(「없음 — 알림으로 받기」/「자동 승인」/「자동 거절」). 이력의 「자동 승인」「자동 거절」 라벨은 #264 가 이미 `decision_mode` 로 그린다. **완료 기준**: ① 단일 PR 이 main 에 squash 머지되고 필수 status(`ci-success` + `review/manual-approval` — MA1 이라 사람이 붙인다)가 초록 ② Go 테스트(설정 기본값 NONE·변경·잘못된 값 400·사용자 격리, 자동 승인/거절 생성 → 201 응답 status·호출자 조회·이력 `decision_mode=auto`, 자동 모드 푸시 미호출·NONE 모드 푸시 호출, 모드 변경이 기존 PENDING 에 소급하지 않음)가 통과 ③ `go run ./cmd/datamodelcheck` 위반이 main 기준선과 같다(새 쿼리·테이블 등재) ④ 앱: 단위 테스트(모드 문구)와 XCUITest(시나리오 13: 설정에서 자동 승인 → 배너·P 유지 → 새 요청 즉시 APPROVED·가짜 APNs 미수신 → 이력 「자동 승인」 → 「끄기」/없음으로 배너 사라짐, 자동 거절 동형; 빈 상태 모드 줄)가 PR CI 에서 통과 ⑤ `test-approval-gate.md` 시나리오 13 「구현됨」, 12·15·16 의 AC9 미구현 단서 해소, tracker T-12 행·관측·이력 1행이 grep 재계수와 일치(기대 67/3/5 — #280 착지 뒤 기준 63/6/6). 범위 밖: AC11 잠금화면 액션(시나리오 14), `_copy-map`/`_impl-map`/`_structure-map`(mockup-render 소관), 「e2e 매핑」 절(scenario-e2e 소관), PRD-11·8·1·6·7·9·PRD-4 음성.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "backend/migrations/0013_approval_settings.{up,down}.sql 추가 — user_approval_settings 테이블(user_id PK FK users ON DELETE CASCADE, auto_response CHECK NONE|AUTO_APPROVE|AUTO_REJECT DEFAULT NONE, updated_at)",
+              "expectedOutcome": "go test ./internal/db/... 와 전 스위트가 새 마이그레이션 적용 후 통과; down 은 DROP TABLE 하나"
+            },
+            {
+              "seq": 2,
+              "action": "backend/internal/approvals/store.go 에 AutoResponse 타입·AutoResponse(get)·SetAutoResponse(upsert) 추가, Create 가 소유자 모드를 읽어 자동이면 status·decision_mode='auto'·processed_at 을 INSERT 에 싣는다",
+              "expectedOutcome": "자동 모드 생성 요청이 APPROVED/REJECTED + decision_mode auto 로 저장, NONE 은 기존과 바이트 동일한 PENDING 경로"
+            },
+            {
+              "seq": 3,
+              "action": "handlers: GET/PATCH /api/approval-settings 핸들러 + main.go 라우트 등록; CreateExternalApproval 은 created.Status 가 PENDING 일 때만 push.Notify",
+              "expectedOutcome": "설정 API 200/400, 자동 모드 생성 시 푸셔 미호출(테스트 단정)"
+            },
+            {
+              "seq": 4,
+              "action": "Go 테스트 추가(handlers/approval_auto_response_test.go) + docs/data-model 등재(query-patterns 새 Q 행, 테이블 문서) 후 go vet·go test ./...·go run ./cmd/datamodelcheck 로컬 실측",
+              "expectedOutcome": "전부 통과, datamodelcheck 위반이 main 기준선과 동일"
+            },
+            {
+              "seq": 5,
+              "action": "iOS: PocketAideAPI/Approvals.swift 에 ApprovalAutoResponse·설정 API·문구 함수, ApprovalsViewModel 이 모드도 읽음, ApprovalsView 헤더 모드 줄·배너(끄기)·빈 상태 모드 줄, ApprovalKeysView 「자동 응답 모드」 섹션 — 주석 0줄",
+              "expectedOutcome": "SwiftLint strict 0, 빌드 성공(CI ios-test)"
+            },
+            {
+              "seq": 6,
+              "action": "iOS 테스트: 단위(ApprovalsTests 에 모드 문구) + XCUITest ApprovalAutoResponseUITests(시나리오 13 자동 승인·자동 거절) — 푸시 미발송은 가짜 APNs 수신부 :5558/e2e/received 로 단정",
+              "expectedOutcome": "PR CI ios-test 3 shard 에서 새 테스트 통과"
+            },
+            {
+              "seq": 7,
+              "action": "docs/product/test-approval-gate.md 시나리오 13 구현됨·관련 코드 테스트 등재, 12·15·16 구현 상태 갱신, docs/product/doc-tracker/2026-10.md T-12 행·관측·이력 1행(grep 재계수)",
+              "expectedOutcome": "grep 재계수 = tracker 마지막 이력 행 오른쪽 값(기대 66/3/5)"
+            },
+            {
+              "seq": 8,
+              "action": "로컬 게이트(check_ledger.py · review-policy judge.py · journey-mockup check.mjs) 실행 후 브랜치 reconcile/docs-impl-rct_20261012-0002 push · PR 생성(봇 명의) · CI 확인",
+              "expectedOutcome": "ci-success 초록, review/manual-approval 은 MA1 로 사람 대기(judge 가 MA1 접촉 판정)"
+            },
+            {
+              "seq": 9,
+              "action": "(재준비) head b6c43af 불변 확인 후 같은 sha 에서 `gh run rerun 38208248846 -R dlddu/pocket-aide --failed` — shard 2 만 재실행, 결과를 check-runs 축으로 확인",
+              "expectedOutcome": "run 38208248846 의 새 attempt 에서 iOS shard 2 success → `ci-success` success, PR mergeable_state 가 blocked 인 이유가 `review/manual-approval`(MA1 사람) 하나뿐"
+            }
+          ],
+          "plannedAt": "2026-10-12T15:32:31Z"
         }
       }
     ]
