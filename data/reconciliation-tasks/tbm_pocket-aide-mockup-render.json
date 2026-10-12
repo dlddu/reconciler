@@ -15844,6 +15844,42 @@
           "reason": "PR #288(head cc211a5, base main 6fb75db = 현재 main, MERGEABLE, 자매 겹침 0)은 범위·diff가 plan.steps와 일치하고 표시 전용·revert 1회 롤백이라 위험은 낮다. 그러나 필수 ci-success 의 입력인 `iOS build + test (shard 0)` 가 18:33:47Z 에 failure — swiftlint `PRMonitorGroupCard.swift:5 type_body_length: Struct body should span 250 lines or less ... currently spans 251 lines`. 이 PR 의 +6줄이 struct 본문 안에 들어가 한도를 1줄 넘긴 결정적 결함이라 re-run 으로 풀리지 않는다(계획은 file_length 400 여유만 보고 type_body_length 250 을 놓쳤다). review/manual-approval 은 판정기 success(수동 승인 케이스 미접촉)라 사람 승인 요구는 없다. 필수 check 빨강이 확정이므로 거부.",
           "comment": "PRMonitorGroupCard 의 struct 본문이 swiftlint type_body_length 한도(250, 주석·공백 제외)를 251 로 1줄 넘겨 shard 0 lint 가 결정적으로 실패한다(job 114952079959). 고칠 것: (1) 새 라벨을 struct 본문 밖으로 옮긴다 — 예: `extension PRMonitorGroupCard { @ViewBuilder var noPRLabel: some View {…} }` 또는 파일 안 private 하위 View 로 빼고 body 에서는 한 줄 호출만 남긴다(extension 은 type_body_length 에 합산되지 않음). swiftlint:disable 주석은 쓰지 말 것(새 주석은 comment-ledger 대상). (2) 로컬에서 `swiftlint lint ios/PocketAide/PRMonitor/PRMonitorGroupCard.swift` 로 type_body_length·file_length 를 실측해 notes 에 숫자로 남긴다 — 「swiftlint 로컬 미실행(CI 몫)」 으로 두지 말 것. (3) 커밋을 얹으면 head 가 바뀌므로 새 head 의 iOS 3샤드·ci-success 결과를 기다려 preparation.notes 의 head sha 와 executionGuide 의 sha 가드(cc211a5)를 갱신한다. 라벨 문면·조건·UITest 단정·_copy-map 집계(A 일치 171·B 일치 207·B 구현 대기 31·표 A 231행)는 그대로 유효하다 — 재검토 시 diff 범위만 위 리팩터 하나로 늘어나는지 본다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재계획(review_rejected — 직전 head cc211a5 의 struct 본문이 swiftlint type_body_length 251>250 으로 shard 0 lint 결정적 실패): 범위·PR·라벨 문면·완료 기준은 그대로 두고 라벨만 struct 본문 밖 extension 으로 옮긴다. PR 모니터 이력의 PR 없는 커밋 그룹 헤더에 목업 상태 라벨 「PR 없음 · <브랜치> 직접 푸시」 를 그린다 — 카피 표 B screen-pr-monitor-history 「PR 없음 · main 직접 푸시」 구현 대기 1행을 일치로 닫는 단일 행 표시 슬라이스(0008 「D-4」·0009 「오늘 · n%」 와 같은 꼴). 이 후보를 고른 이유: group.prNumber·headBranch 가 이미 HistoryGroup 에 있어 backend·API 선결 0이고, 목업이 브랜치 빈 커밋 그룹(「—」)에는 라벨을 그리지 않아 조건(PR 없음 ∧ 브랜치 비어 있지 않음)이 목업 두 프레임으로 확정된다. 다른 B 후보는 선결이 있다: 「run <wf> #n」(API 에 run 번호 없음)·「확인 완료 · 어제」(여러 날 그룹 섹션 정의)·헤더 부제 @dlddu/웹훅 연결(계정·연결 상태 API)·「22:00 시작 알림」(알림 기능)·「전체 이력」(history strip 구조)·affirmations 「1/14」·「13회 노출」(backend)·todo 날짜/마감 섹션(구조)·approval(#278). PRMonitorGroupCard.swift 한 파일 +11(304→315줄, file_length 400 여유 · 라벨은 extension 의 `noPRLabel` 로 빼 struct 본문 type_body_length 245→246, 한도 250) · 기존 WebhookHistoryGroupingUITests 단정 1개(새 UITest 클래스 0 → 샤드 불변) · _copy-map 2행·집계. 열린 자매 #278·#201 과 파일 겹침 0, git revert 한 번으로 되돌린다. 완료 기준: PR #288(head 8f24263) squash 착지 후 main 에서 검산 4종 + comment-ledger 출력 ok, _copy-map 집계 A 일치 171·구현 대기 9·목업 대기 12, B 일치 207·구현 대기 31(32→31), 표 A 231행 · 표 B 577행, 요약 줄 「표 B `구현 대기` 31행」, _structure-map 불변, WebhookHistoryGroupingUITests 포함 필수 CI 초록. 범위 밖: 개인 M1/S1 · 회사 M7/S2 · scratchpad M11/S3 · affirmations M7/S1 · approval M21·목업 대기 2/S2 · 카피 A 구현 대기 9·목업 대기 12 · B 나머지 구현 대기 31.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #288 head 8f24263 의 필수 CI(iOS build+test 3샤드 — shard 0 swiftlint 포함 · ci-success · comment-policy ledger · review/manual-approval) 결과와 mergeable 확인",
+              "expectedOutcome": "필수 status 전부 success(특히 shard 0 swiftlint 에 type_body_length 경고 0), mergeable clean, head 8f24263 그대로"
+            },
+            {
+              "seq": 2,
+              "action": "PR #288 을 main 에 squash merge(sha 가드 = 계획 head 8f2426305e0e65a5eb4fb7d4d198e04841b58827)",
+              "expectedOutcome": "main 에 커밋 1개 착지(3파일: PRMonitorGroupCard.swift · WebhookHistoryGroupingUITests.swift · _copy-map.md)"
+            },
+            {
+              "seq": 3,
+              "action": "main 에서 검산 4종 + comment-ledger 실행(chk.sh)",
+              "expectedOutcome": "다섯 줄 모두 출력 ok"
+            },
+            {
+              "seq": 4,
+              "action": "_copy-map 집계·요약 줄·표 머리 행 수 단정",
+              "expectedOutcome": "A 일치 171 · 구현 대기 9 · 목업 대기 12, B 일치 207 · 구현 대기 31, 표 A 231행 · 표 B 577행"
+            },
+            {
+              "seq": 5,
+              "action": "머지 커밋 check-runs 확인",
+              "expectedOutcome": "실패 0(TestFlight 진행은 판정 무관)"
+            }
+          ],
+          "plannedAt": "2026-10-12T18:50:00Z",
+          "executionGuide": "## 순서 (직렬 — 병렬 불가)\n1. **CI 확인** → 2. **squash merge** → 3. **검산** → 4. **집계 단정** → 5. **머지 커밋 check-runs**. 3·4 는 main 착지 뒤에만 의미가 있다.\n\n## 사전 조건\n- PR #288 head `8f2426305e0e65a5eb4fb7d4d198e04841b58827`(`8f24263`) 가 그대로일 것(커밋을 얹지 말 것 — 필수 status 는 sha 에 묶인다).\n- merge 직전 `git merge-tree --write-tree $(git merge-base origin/main 8f24263) origin/main 8f24263` 로 무충돌 확인. 열린 자매 PR(#278 approval · #201 journeys)은 이 PR 의 세 파일 중 어느 것도 건드리지 않는다(파일 목록 실측). main 이 움직여 `_copy-map` 집계가 충돌하면 재생 키트로 재적용: 새 main 에서 브랜치를 다시 만들고 `python3 …/pa-mr-rct_20261012-0010/apply.py <repo>` 다음 `python3 …/pa-mr-rct_20261012-0010/apply2.py <repo>`(apply2 = 라벨을 extension 으로 옮기는 리팩터 — 순서 고정; apply.py 는 멱등 — 단, 집계 값은 이 계획의 main `6fb75db` 기준 리터럴 치환이라 다른 자매가 같은 집계를 움직였으면 그 값에서 A 일치 +1 · B 일치 +1 · B 구현 대기 −1 · 표 A 머리 +1 로 다시 셀 것).\n\n## 검증 방법 (완료 기준 = 이 범위)\n- 검산: 레포 루트에서 `bash /workspaces/planner/.reconciler-work/artifacts/pa-mr-rct_20261012-0010/chk.sh` → `_impl-map: ok` `_copy-map: ok` `_structure-map: ok` `_token-map: ok` `comment-ledger: ok`. ⚠️ 검산은 rc 가 아니라 **출력 `ok`** 로 판정(`누락` 을 내도 rc=0).\n- 집계: `sed -n 37,60p docs/mockups/_copy-map.md` 에서 A 일치 171 · 구현 대기 9 · 목업 대기 12, B 일치 207 · 구현 대기 31(32→31), 요약 줄 「표 A `구현 대기` 9행 · `목업 대기` 12행, 표 B `구현 대기` 31행」, 표 A 머리 231행 · 표 B 577행. `_structure-map` 은 diff 0(screen-pr-monitor-history 는 structure-map 대상이 아니다).\n- 표 B 행: `grep -n 'PR 없음 · main 직접 푸시' docs/mockups/_copy-map.md` → 판정 `일치` 1행. 표 A 에 `PRMonitorGroupCard.swift` `PR 없음 · \\(group.headBranch) 직접 푸시` 일치 1행.\n- UI 테스트: CI 의 `WebhookHistoryGroupingUITests` 통과 — PR 없는 그룹(branch `main`)만 「PR 없음 · main 직접 푸시」 를 읽고 PR 그룹 둘은 읽지 않는다.\n- 음성 프로브(계획 단계에서 실측): 리터럴을 `… 직접 push` 로 바꾸면 `_copy-map: A 누락 … / A 잉여 …` — 원복하면 ok. 되돌릴 땐 `cp` 사본으로 복원.\n- 실기(선택): PR 모니터 이력에서 PR 없는 커밋 그룹 카드 헤더 맨 위에 회색 이탤릭 「PR 없음 · main 직접 푸시」, 그 아래 「repo · main @sha」. 브랜치가 빈 커밋 그룹(「—」)과 PR 그룹에는 라벨 없음.\n\n## 주의사항\n- **type_body_length**: `PRMonitorGroupCard` struct 본문은 245→246(한도 250, 주석·빈 줄 제외). 커밋을 얹을 때 struct 본문에 줄을 더하지 말 것 — 여유 4줄. 재는 법: `python3 /workspaces/planner/.reconciler-work/artifacts/pa-mr-rct_20261012-0010/tbl.py < ios/PocketAide/PRMonitor/PRMonitorGroupCard.swift`(cc211a5 에서 251 = CI 실측 값과 일치하도록 보정됨). `swiftlint:disable` 주석 금지(comment-ledger).\n- **ios/ 접촉** — main 머지가 TestFlight 빌드를 발화한다(앞 슬라이스 #286·#287 과 같은 경로). backend·워크플로·마이그레이션 무접촉, `judge.py` 수동 승인 케이스 미접촉. 되돌리기는 `git revert <squash sha>` 한 번(데이터 영향 0 — 표시 전용).\n- 새 주석 0줄 — comment-ledger 영향 없음. 이 PR 에 커밋을 얹을 땐 `///` 를 넣지 말 것.\n- 라벨에 accessibilityIdentifier 를 달지 않았다: 카드 전체에 `PRMonitorView` 의 `prmonitor.group.<id>` 가 덮이고 `WebhookHistoryUI.groups(of:)` 는 그 identifier 집합을 `[groupKey]` 와 등식 비교한다 — 자식 identifier 를 새로 달아도 덮이지만, 덮이지 않는 변경이 생기면 그 등식이 깨진다. 커밋을 얹을 때 identifier 를 추가하지 말 것.\n- `WebhookHistoryGroupingUITests.composition` 은 두 도착 순서의 정규화 라벨을 등식 비교한다 — 새 라벨은 두 회차 모두에 같은 꼴로 나와 등식이 유지된다(`main` 브랜치는 repo/token 치환 대상이 아니다).\n\n## 범위 밖(후속 — 재감지의 입력)\n- 개인 M1/S1: 비선택 칩 stone-600(다크 stone-400 ⇒ S5 불성립) · 표 S #8 기한별 섹션 · 「펼치기」 목업 보강(목업 대기 1)\n- 회사 M7/S2: 기한별 섹션 · 오늘 마감 강조(`#C2554F` 토큰 결정 선결) · 메타 구분점 stone-300 · 요약 「DEADLINE n」(정의 선결)\n- scratchpad M11/S3 · affirmations M7/S1(backend 선결) · approval M21·목업 대기 2/S2(#278 착지 대기)\n- 카피 B 구현 대기 31: routines 「22:00 시작 알림」(알림 기능 선결)·「전체 이력」(history strip 인라인 구조 선결), PR 모니터 「run <wf> #n」(API 에 run 번호 없음 — backend 선결)·「확인 완료 · 어제」(여러 날 확인 그룹의 섹션 정의 선결)·헤더 부제 「@dlddu」·「웹훅 연결」(계정·연결 상태 API 선결), affirmations 「1/14」·「13회 노출」(backend), todo 날짜·마감 섹션(구조), scratchpad STT 메타·「분류 →」·더 보기 안내 등\n"
+        }
       }
     ]
   }
