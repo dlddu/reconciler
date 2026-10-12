@@ -7918,7 +7918,7 @@
       }
     },
     "createdAt": "2026-10-12T02:24:47Z",
-    "updatedAt": "2026-10-12T02:27:05Z",
+    "updatedAt": "2026-10-12T02:29:53Z",
     "stateSummary": {
       "asIs": "관측 2026-10-12T02:26:32Z — `dlddu/pocket-aide` main tip `5a675f6`(#275, mockup-render rct_20261012-0001 슬라이스).\n- as-is `ios:18d04997…` → `ios:8223d5c4…`(backend `dc886d02…` 그대로). 창 `cfc4e03` → `5a675f6`의 코드 변경은 #275 하나다.\n  - 새 `ios/PocketAide/Todos/TodoDueFilterChips.swift`: 개인 투두 검색 필드 아래 단일 선택 칩 줄 「전체 · N」·「오늘」·「이번 주」·「날짜 없음」(가로 스크롤). `TodoListView.swift`가 `area == .personal`이고 항목이 있을 때만 그린다. 회사 탭에는 없다.\n  - `TodoListViewModel.visibleItems` = 검색 결과 ∩ `dueFilter.includes`.\n  - 거르는 규칙은 `ios/Shared/Sources/PocketAideAPI/Todos.swift`의 `TodoDueFilter`에 있다.\n    - `today`: `dueDate <= 오늘` → **마감이 지난 항목도 포함**한다.\n    - `thisWeek`: `dueDate <= 이번 주 마지막 날`. 주 경계는 `Calendar.current`의 `.weekOfYear`라 **기기 로캘에 따라 일/월요일 시작**이 갈린다. 지난 항목도 포함한다.\n    - `noDate`: `dueDate == nil`.\n  - `ios/PocketAideUnitTests/TodoDueFilterTests.swift` 4건이 위 규칙을 고정한다(today `[1,2,6]`, thisWeek `[1,2,3,6]`, noDate `[5]`).\n- merge commit `5a675f6` check-run: `ci-success`·`build`·`deploy`·`TestFlight upload`·`Journey mockup`·`comment-policy ledger` success. iOS·backend job은 경로 필터로 skipped다.\n- 열린 PR은 #278(docs-impl 0002, PRD-12 AC9)·#270(mockup-render 0019)·#201(여정 초안)이다. 어느 것도 투두 문서·코드를 건드리지 않는다.",
       "toBe": "docs 트리 `ab582023…` → `f5a4c284…`. 같은 #275가 형제(mockup-render) 소관 대조 맵 3개만 고쳤다.\n- `docs/mockups/_impl-map.md`: `TodoDueFilterChips.swift` 행(부분, `screen-todo-personal`)을 추가했다. 그 행은 「거르는 규칙은 `PocketAideAPI` 의 `TodoDueFilter`」라고 코드를 가리킨다.\n- `_copy-map.md`(표 A 일치 163→167, 표 B 199→203)와 `_structure-map.md`(표 M 불일치 27→11 · S 4→3)는 집계만 갱신했다.\n- PRD·AC·테스트 문서·여정·디자인 시스템·런북은 이 창에서 바뀌지 않았다.\n\n칩의 문서 근거는 다음과 같다.\n- `docs/mockups/screen-todo-personal.html` `<!-- filter pills -->`에 네 칩 라벨이 그려져 있다. 그래서 칩의 존재와 라벨은 목업(SSOT의 일부)에 근거가 있다.\n- `prd-todo.md` 개요는 「데이터 저장소·뷰·필터·검색이 모두 분리」라고만 적는다.\n- 반면 `prd-todo.md`의 AC1~5와 「결정 사항」, `test-todo.md` 시나리오 1~9 어디에도 **기한 필터의 거르는 규칙**이 없다. 「오늘」·「이번 주」가 무엇을 포함하는지, 지난 항목을 어떻게 다루는지, 주 시작 요일, 「전체 · N」의 N이 무엇인지, 회사 탭에 칩이 없다는 점 모두 마찬가지다.\n- `docs/` 전역에서 「지난 항목/overdue/마감 지난」 서술도 0건이다.\n\n잔여 gap(미구현 AC·여정 의무 전체)은 직전 관측(rct_20261012-0003)과 같다. 그중 PRD-12 AC9는 열린 rct_20261012-0002(planning, PR #278)가 들고 있다.",
@@ -7928,6 +7928,42 @@
     "assessment": {
       "reason": "작업 필요(action_required). #275가 착지시킨 개인 투두 기한 필터의 거르는 규칙이 문서에 없다. 「오늘」·「이번 주」의 지난 항목 포함, `Calendar.current` 기반 주 경계, 개인 탭 전용, 「전체 · N」이 그것이다. 이는 판정 기준 4(문서 없는 구현)에 해당하고 지금 열려 있는 어떤 task도 이를 다루지 않는다.\n- docs-impl 0002(#278)는 PRD-12 AC9 범위이고, mockup-render 0001은 #275로 시각 대조를 끝냈다. 동작 규칙의 문서화는 시각 대조가 아니라 문서 ↔ 동작 계약이라 이 모델의 몫이다.\n- 자동 해소될 변화(롤아웃 대기 등)가 아니라 문서 공백이므로 유예하지 않는다.\n- planner에게 넘길 방향: 문서가 SSOT이므로 기본은 의도된 동작을 확정해 `prd-todo.md` 「결정 사항」(또는 새 AC)과 `test-todo.md` 시나리오에 기술하는 것이다. 필요하면 tracker 집계도 함께 갱신한다. 규칙을 문서와 다르게 정하면 코드·`TodoDueFilterTests`를 맞춘다. 특히 주 시작 요일을 로캘에 맡길지 고정할지는 문서 결정이 필요하다.\n- 잔여 미구현 AC gap은 열린 0002가 계속 맡으므로 이 task에 합치지 않는다.",
       "assessedAt": "2026-10-12T02:26:32Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "문서가 SSOT 이므로 #275 가 착지시킨 개인 투두 기한 필터의 거르는 규칙을 구현 그대로 문서에 확정한다 — `prd-todo.md` 「결정 사항」에 2026-10-12 결정 블록(칩 넷·단일 선택·기본 「전체」, 「전체 · N」=개인 영역 전 항목 수, 「오늘」=마감 ≤ 오늘(지난 마감 포함), 「이번 주」=마감 ≤ 기기 달력 기준 이번 주 마지막 날(지난 마감 포함, 주 시작 요일은 기기 지역 설정), 「날짜 없음」=마감 없음, 완료 섹션에도 같은 규칙, 검색과 교집합, 머리 개수 요약은 필터 무관, 개인 탭 전용·항목 0개면 칩 줄 없음)을 덧붙이고, `test-todo.md` 끝에 시나리오 10(검증 AC1 — 시나리오 2 의 「검색 동작 = AC1」 선례, 구현됨, 관련 코드 테스트 `TodoDueFilterTests` 4건)을 덧붙이고, `doc-tracker/2026-10.md` 집계(T-3 9→10·합계 74→75·현재 상태 요약·고아 테스트 문면)와 PRD 공백 해소 bullet·변경 이력 1행을 갱신한다. 구현 변경(코드·`TodoDueFilterTests`)은 0 — 대안 「주 시작 요일 월요일 고정」은 코드 변경과 iOS 관례 이탈을 부르고 문서 근거가 없어 기각(가역: 결정 블록 한 줄 + 코드로 뒤집을 수 있다). 완료 기준: PR 이 docs 3파일만 바꾸고(코드 0) 위 규칙 문면이 `TodoDueFilter`·`TodoListView` 동작과 1:1이며 필수 `ci-success` 초록으로 squash 머지된다. 범위 밖: 「e2e 매핑」 절의 시나리오 10 등재(scenario-e2e 소관), `_impl-map` 행 문면(mockup-render 소관), 잔여 미구현 AC(열린 0002/#278).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`docs/product/prd-todo.md` 「결정 사항」 끝에 「개인 투두 기한 필터(#275) 착지로 확정된 사항. (2026-10-12 결정)」 단락과 bullet 을 덧붙인다(기존 AC5 bullet 2개 바이트 불변).",
+              "expectedOutcome": "결정 사항에 기한 필터 bullet 이 있고 각 문면이 `Todos.swift` `TodoDueFilter.includes`·`TodoListView.swift:156-157`·`TodoListViewModel.swift:24-28` 동작과 일치"
+            },
+            {
+              "seq": 2,
+              "action": "`docs/product/test-todo.md` 끝에 「시나리오 10: 개인 탭의 기한 필터 칩으로 마감일 기준 목록을 좁힌다」(검증 AC1 · 구현됨 · 관련 코드 테스트 `TodoDueFilterTests`)를 덧붙이고, 작성 기준에 시나리오 10 의 판정 기준 커밋(`5a675f6`, #275)을 한 문장 추가한다.",
+              "expectedOutcome": "시나리오 1~9 바이트 불변, 시나리오 수 10, `구현 상태: 구현됨` 10"
+            },
+            {
+              "seq": 3,
+              "action": "`docs/product/doc-tracker/2026-10.md` 갱신 — 현재 상태 요약 「시나리오 74개」→75, T-3 행 9→10·비고, 합계 **74**→**75**, 고아 테스트 「74개 시나리오」→75, PRD 공백에 해소 bullet, 변경 이력 1행. 「e2e 매핑」 절은 바이트 불변.",
+              "expectedOutcome": "원문 재집계(`grep -c '^### 시나리오'` × test-*.md = 75)와 tracker 수치 일치; e2e 매핑 절 sha256 불변"
+            },
+            {
+              "seq": 4,
+              "action": "로컬 게이트 — `python3 scripts/comment-policy/check_ledger.py` rc=0, `git diff --name-only origin/main | python3 scripts/review-policy/judge.py --policy docs/review-policy.md` 미접촉, `node tools/journey-mockup-harness/check.mjs` rc=0.",
+              "expectedOutcome": "세 게이트 통과(docs 전용이라 iOS·backend 잡 skip)"
+            },
+            {
+              "seq": 5,
+              "action": "PR 생성(브랜치 `reconcile/docs-impl-rct_20261012-0004`) 후 PR CI(Detect·comment-policy ledger·Journey mockup·ci-success) 초록 확인 → squash 머지(실행 단계).",
+              "expectedOutcome": "`ci-success` success, main 에 docs 3파일 변경만 착지; main push 에서 이미지·TestFlight 미발화(docs 경로)"
+            }
+          ],
+          "plannedAt": "2026-10-12T02:29:47Z"
+        }
+      }
+    ]
   }
 ]
