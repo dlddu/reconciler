@@ -16045,7 +16045,7 @@
       }
     },
     "createdAt": "2026-10-12T20:56:59Z",
-    "updatedAt": "2026-10-12T21:07:10Z",
+    "updatedAt": "2026-10-12T21:07:17Z",
     "stateSummary": {
       "asIs": "관측 2026-10-12T21:0xZ · dlddu/pocket-aide main `c19295c`(#288) · as-is `app:5ef9cbe…`(직전 `app:6491078…`, widget·keyboard·design-system 불변).\n\n- 창(window)은 커밋 1개다: `6fb75db` → `c19295c`(#288, rct_20261012-0010의 자기 슬라이스, squash 20:50:24Z).\n- 렌더링 변경은 `ios/PocketAide/PRMonitor/PRMonitorGroupCard.swift` +11뿐이다. 그룹 헤더에 `noPRLabel`(extension)이 추가돼, PR 번호가 없고 `headBranch`가 비어 있지 않은 그룹에 「PR 없음 · \\(group.headBranch) 직접 푸시」를 그린다.\n- 테스트 `WebhookHistoryGroupingUITests.swift` +4(단정 1개)는 as-is 범위 밖이다.\n- 머지 커밋 check-runs: success 6 · skipped 6 · 실패 0. TestFlight 업로드는 진행 중이며 판정과 무관하다. comment-ledger(`check_ledger.py`)의 미판정은 0이다.",
       "toBe": "관측 동일 시각 · to-be `mockups:b751c81…`(직전 `mockups:223fa0c…`, design-system 불변).\n\n- 목업 트리에서 바뀐 파일은 `docs/mockups/_copy-map.md` 하나다(+7/−6). `screen-*.html`, `_impl-map`, `_structure-map`, `_token-map`, `docs/design-system`은 그대로다.\n- 집계: A 일치 170→171, B 일치 206→207, B 구현 대기 32→31. 요약 줄은 「표 B `구현 대기` 31행」이고 표 A는 230→231행, 표 B는 577행이다.\n- 표 B `screen-pr-monitor-history` 「PR 없음 · main 직접 푸시」는 구현 대기에서 일치로 바뀌었다. 표 A에는 대응 행 1개가 추가됐다.\n- 검산 4종(`_copy/_impl/_structure/_token-map`)은 base `6fb75db`와 tip `c19295c`에서 모두 출력 `ok`이다.",
@@ -16088,7 +16088,8 @@
               "expectedOutcome": "실패 0(TestFlight 업로드는 판정과 무관)"
             }
           ],
-          "plannedAt": "2026-10-12T21:07:02Z"
+          "plannedAt": "2026-10-12T21:07:02Z",
+          "executionGuide": "## 순서 (직렬)\n1. **CI 확인** — PR #289 head `2b9afcb` 의 필수 status. 이 PR 은 `ios/**` 를 만지므로 iOS 3샤드(40분대)가 돈다. 🔴 빨강이면 커밋을 얹지 말 것 — 재실행 결론은 sha 에 묶인다. `WebhookPushSettingsUITests` 등 설정 앱 계열 flake 는 `gh run rerun <id> --failed`.\n2. **squash 머지** — 머지 전에 열린 #278(docs-impl 0002, 같은 `ApprovalsView.swift`·`Approvals.swift`)이 먼저 착지했으면 `git merge-tree --write-tree origin/main <289 head>` 가 clean 인지 확인(준비 시점 실측: 헝크 비겹침 clean). 충돌이면 리베이스는 「#278 헝크 + 내 헝크 둘 다 살리기」, 그 뒤 검산 재실행.\n3. **검증** — 아래.\n\n## 검증 (완료 기준 — 이 기준으로 판정할 것)\nmain 최신 checkout 에서:\n```\nfor f in _impl-map _copy-map _structure-map _token-map; do printf \"%s: \" $f; python3 - docs/mockups/$f.md <<'PY' 2>&1 | tail -40\nimport re,sys\nmd=open(sys.argv[1]).read()\ncode=re.search(r\"python3 - <<'EOF'\\n(.*?)\\nEOF\", md, re.S).group(1)\nexec(compile(code,'chk','exec'),{'__name__':'__main__'})\nPY\ndone\npython3 scripts/comment-policy/check_ledger.py\n```\n- 다섯 개 모두 출력 `ok`(🔴 `_impl-map` 은 누락을 출력해도 rc=0 — 출력으로 판정).\n- `_copy-map` 집계: B 구현 대기 **30** · B 예시 데이터 **138** · B 일치 207 · B 외부 54 · A 일치 171 · A 구현 대기 9 · A 목업 대기 12. 요약 줄 「표 B `구현 대기` 30행」.\n- 표 B `screen-approval` 「session-platform agent · 어제 18:02」 행 판정 `예시 데이터`.\n- `_structure-map`·`_impl-map`·`_token-map` 파일 diff 0.\n- 단위 테스트 `ApprovalHistoryTests.testRequestTimeIsTodayYesterdayOrDate`·`testHistoryTimeIsTodayYesterdayOrDate` 통과(iOS CI 로그).\n- 준비 시점 음성 프로브: 집계 30→31 로 되돌리면 `_copy-map: 집계 B 구현 대기: 표기 31` — 검산이 이 집계를 실제로 문다.\n\n## 주의사항\n- main 머지 = TestFlight 업로드 발화(`ios/**` 접촉). 앱 동작 변화는 목록 행 시각 문자열뿐(어제·그 전 요청에 접두/날짜). 오늘 요청은 기존과 같은 `HH:mm` — 기존 UITest 의 행 라벨 단정은 오늘 데이터라 불변.\n- 롤백: `git revert <squash>` 한 번(마이그레이션·backend 무접촉).\n- 재생 키트: `/workspaces/planner/.reconciler-work/artifacts/pa-mr-rct_20261012-0011/`(`apply_swift.py <root>`·`apply_doc.py <root>` — 멱등, 집계는 표에서 재계산).\n\n## 범위 밖(후속)\n개인 M1/S1 · 회사 M7/S2 · scratchpad M11/S3 · affirmations M7/S1 · approval M21·목업 대기 2/S2 · 카피 A 구현 대기 9·목업 대기 12 · B 구현 대기 나머지 30(선결: run 번호 API · 여러 날 그룹 정의 · 계정/웹훅 API · 알림 · history strip · affirmations backend · todo 날짜 섹션 · approval 자동 응답 모드는 #278).\n"
         },
         "preparation": {
           "repository": "dlddu/pocket-aide",
