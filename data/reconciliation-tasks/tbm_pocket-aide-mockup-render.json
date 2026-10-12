@@ -14934,6 +14934,41 @@
           "reason": "계획·diff는 승인 수준이다. PR #279(head f006a3e)는 열려 있고 범위는 준비 notes와 같은 5파일(+58/−23)이다. 검산 4종과 check_ledger가 base 5a675f6·head 양 끝에서 출력 `ok`이고, 개인 집계는 M 일치 122·불일치 4, S 일치 19·불일치 2로 완료 기준과 맞는다. 현재 main b2428b5(#280, docs/product 3파일만)에 병합해도 clean·검산 ok다. 자매 #270과도 clean·ok다. #278과 병합하면 screen-approval 검산 7줄이 깨지지만, #279 없이 main+#278만으로도 같은 7줄이라 #278 몫이다. review/manual-approval은 판정기 자동 success(「수동 승인 케이스 미접촉」)라 manualApproval은 해당 없다. 롤백은 squash 1커밋 revert이고 마이그레이션이 없어 low 위험에 걸맞다. 그러나 필수 `ci-success`가 head f006a3e에서 failure(03:16:04Z)라 지금 머지할 수 없다. 원인은 iOS shard 1의 `WebhookPushSettingsUITests.testDeniedSystemPermissionShowsNotice`(설정 앱 알림 목록 단정, :221·:250)다. 이 테스트는 diff(Todos 3파일·대조 맵 2개)와 무관하게 알려진 flake이고 shard 0·2는 success였다. 사소한 흠: `_structure-map` 검산 SCREENS의 screen-todo-personal `fwd`에 `TodoPriorityTag.swift` 튜플이 두 번 들어갔다. 같은 파일을 두 번 검사할 뿐이라 결과에는 영향이 없다.",
           "comment": "재계획 범위는 「CI re-run만」이다. 계획·diff·executionGuide는 그대로 둔다. 같은 head f006a3e에서 실패 잡만 `gh run rerun <run-id> --failed`로 다시 돌린다(iOS build + test shard 1 — WebhookPushSettingsUITests 설정 앱 flake). 그 뒤 `ci-success` check-run이 success인 것을 확인하고 planned로 되돌린다. iOS 큐는 ~1시간 이상 걸리니 bg 폴링한다. 재실행도 같은 테스트·같은 줄(:221/:250)에서 실패하면 결정적이라 rerun으로는 안 풀린다. 그때는 main 같은 테스트의 최근 결론을 대조해 판단하고 notes에 남긴다. head를 바꾸지 말 것: main이 b2428b5(#280, docs/product만)로 움직였지만 strict=false라 재고정은 필요 없다. 선택 사항: `_structure-map.md` 검산 SCREENS의 중복 `(\"ios/PocketAide/Todos/TodoPriorityTag.swift\", None, None)` 한 줄은 head를 바꾸게 되니 이번엔 건드리지 말고 후속 슬라이스에서 정리한다."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재준비(CI flake 거부): 직전 시도의 계획·범위·PR #279·head `f006a3e` 를 그대로 승계하고, 필수 `ci-success` 를 빨갛게 만든 iOS shard 1 의 설정 앱 flake(`WebhookPushSettingsUITests.testDeniedSystemPermissionShowsNotice` :221/:250)를 같은 sha 의 `gh run rerun --failed` 로 다시 굴려 초록을 붙인다 — head 에 커밋을 얹으면 sha 에 묶인 재실행 결론이 날아가므로 diff 무변경. 슬라이스 내용(원 계획): 개인 투두(`screen-todo-personal`) 행의 「우선」 태그 줄을 목업대로 구현해 기준 4 잔여 중 태그 줄·우선 태그 묶음(표 M 7행 + 표 S #11)을 닫는다. 목업은 우선순위 high 행 제목 위에 clay 대문자 태그를 그리고 구현은 메타 줄 문구로만 그렸다. 목업이 상태·치수를 전부 그려 해석 여지가 가장 작은 묶음이고, 개인 전용 새 파일(`TodoPriorityTag.swift`)로 갈라 회사 표를 건드리지 않는다. 다른 후보인 기한별 섹션(S #8/work S #7·M 6)은 그룹핑 재설계라 연쇄가 크고, 필터 칩 stone-600·`-mx-5` 는 S5 불성립·구조 차이라 등재 판단이 따로 필요해 뒤로 미뤘다. **완료 기준(이 범위)**: PR #279 squash 머지 후 main 에서 ⑴ `_structure-map` 개인 집계가 표 M `불일치` 4 · 표 S `불일치` 2, M `일치` 122 · S `일치` 19, ⑵ 검산 4종(`_impl-map`·`_copy-map`·`_structure-map`·`_token-map`)과 `check_ledger.py` 가 모두 출력 `ok`, ⑶ 다른 화면(회사 투두 포함) 집계 행 무변화, ⑷ main CI 필수 체크 실패 0. **범위 밖**: 개인 M 잔여 4(필터 칩 `-mx-5`·비선택 stone-600·섹션 보조 2)·S #8 기한별 섹션·#17 접기, 회사 투두 M8/S2, scratchpad·affirmations·approval 잔여, 카피 A/B 구현 대기.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #279 head 가 여전히 `f006a3e9` 인지, CI run 38195845359 의 최신 attempt(재준비에서 `rerun --failed` 한 attempt 2 이상)가 `success` 이고 `ci-success` check-run 이 success 인지, `mergeable_state` 가 `clean`(또는 strict=false 하의 `behind`)인지, `git merge-tree` 로 최신 main 과 clean 인지 확인",
+              "expectedOutcome": "head f006a3e9 · ci-success success · merge-tree rc=0"
+            },
+            {
+              "seq": 2,
+              "action": "PR #279 squash 머지(제목 그대로)",
+              "expectedOutcome": "main 에 1커밋 착지, 5파일(`_impl-map`·`_structure-map`·TodoListView·TodoPriorityTag(신규)·TodoRowMeta)"
+            },
+            {
+              "seq": 3,
+              "action": "main 체크아웃에서 검산 4종 + check_ledger 실행(키트 `.reconciler-work/artifacts/pa-mr-rct_20261012-0004/chk.sh`)",
+              "expectedOutcome": "다섯 줄 모두 `ok`"
+            },
+            {
+              "seq": 4,
+              "action": "`_structure-map` 집계 표에서 `screen-todo-personal` M 일치 122·불일치 4, S 일치 19·불일치 2 와 59행 문장 확인, 다른 화면 집계 행이 머지 전과 동일한지 diff",
+              "expectedOutcome": "개인 행만 바뀌고 나머지 집계 바이트 동일"
+            },
+            {
+              "seq": 5,
+              "action": "main 머지 커밋의 check-runs/Actions 결론 확인(TestFlight 업로드 포함)",
+              "expectedOutcome": "실패 0"
+            }
+          ],
+          "plannedAt": "2026-10-12T03:25:00Z"
+        }
       }
     ]
   }
