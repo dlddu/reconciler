@@ -8652,6 +8652,42 @@
       "reason": "작업 필요(action_required). 슬라이스는 작고 위험이 낮다.\n(1) 시나리오 3 은 「구현됨」(#279)이고 태그는 앱 UI로 관측할 수 있다. 그래서 규칙 4 예외나 규칙 6 구현 대기로 돌릴 수 없다. 이 시나리오를 주검증하는 파일은 `TodoAddUITests.swift` 하나이고, 고쳐진 기대 결과(개인 「우선」 태그 / 회사 보조 줄 P1)를 단언하도록 맞추는 일은 이 모델 소관이다. 구조 불변식은 깨지지 않았지만, 지금 E2E는 시나리오 3 의 핵심 변경점을 검증하지 않는다. 이 태그가 회귀해도 테스트는 통과한다.\n(2) 이 차이는 저절로 사라지지 않는다. #283 은 문서만 바꿨다. 열린 PR #281(rct_20261012-0003, todo 10)·#278·#201 과 이 모델의 다른 열린 task 어디에도 시나리오 3 단언 갱신이 없다.\n(3) planner 참고: 제품 진입점은 이미 있다. 태그 식별자는 `todos.personal.row.<id>.priority` 이고, 보조 줄 라벨은 결정 사항대로 유지된다. 따라서 테스트 코드만 바꾸면 된다. 할 일은 다음과 같다. (a) 개인 탭의 full 항목에 태그가 있음을 단언한다. (b) 회사 탭에는 태그가 없음을 단언한다. (c) 기존 접근성 라벨 단언은 유지한다. 보이는 보조 줄에서 「우선」이 빠졌는지는 children:.ignore 라서 XCUITest로 직접 볼 수 없으니, 그렇다는 사실을 계획에 적는다. 파일 수, 매핑, 「## e2e 매핑」 집계는 바뀌지 않는다. #281 과 파일이 겹치지 않으므로 독립 PR로 진행할 수 있다. 다만 `TodoUITestSupport.swift` 에 헬퍼를 더하면 #281 과 충돌하는지 확인한다.\ndocs-impl 슬라이스(#279 → #283) 다음에 오는 재감지 → 후속 task 흐름이다.",
       "assessedAt": "2026-10-12T05:30:57Z"
     },
-    "updatedAt": "2026-10-12T05:31:16Z"
+    "updatedAt": "2026-10-12T05:40:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "test-todo.md#시나리오 3 의 고쳐진 3단계 기대 결과(#283: 개인 탭은 제목 위 「우선」 태그 · 회사 탭은 태그 없이 보조 줄 P1)를 전용 파일 TodoAddUITests.swift 가 직접 단언하게 한다. 제품 진입점(#279 의 `todos.<area>.row.<id>.priority`)이 이미 있으므로 테스트 코드만 바꾼다. 헬퍼는 공유 파일 TodoUITestSupport.swift 가 아니라 TodoAddUITests.swift 안의 private 함수로 둔다(열린 #281 과 파일·헝크가 겹치지 않게). 대안 — 공유 TodoScreen 에 priorityTag() 를 더하는 것 — 은 재사용성이 낫지만 #281 착지 전 공유 파일 접촉이 늘어 기각했다. 완료 기준(범위): ① PR 이 main 에 squash 머지되고 ② 그 PR head 의 iOS 테스트 잡에서 TodoAddUITests 가 통과하며 ③ 머지 뒤 TodoAddUITests.swift 가 개인 full 항목 태그 존재·라벨 「우선」·제목보다 위, 회사 full 항목 태그 부재, 제목만 항목 태그 부재를 단언하고 기존 접근성 라벨 단언(개인 「우선」/회사 「P1」)을 그대로 유지하며 ④ doc-tracker e2e 매핑 시나리오 3 행 설명이 그 단언을 적는다. 범위 밖: todo 시나리오 10(rct_20261012-0003 / #281 소관), 보이는 보조 줄에서 「우선」이 빠졌는지의 직접 관측(TodoRowMeta 가 children: .ignore + 라벨에 우선순위를 유지하므로 XCUITest 로 볼 수 없다 — 단언하지 않음), 파일 수·매핑 수·집계 변화(없음).",
+          "riskLevel": "low",
+          "plannedAt": "2026-10-12T05:40:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "pocket-aide main 5ad2977 에서 브랜치 reconcile/rct_20261012-0004-scenario-e2e 를 만들고 ios/PocketAideTests/TodoAddUITests.swift 의 assertStored 에 태그 단언 3종(개인 full: 존재·label==「우선」·frame.minY < 제목 minY / 회사 full: 부재 / 제목만: 부재)과 private priorityTag(on:title:) 헬퍼(screen.rowID → app.staticTexts[\"todos.<area>.row.<id>.priority\"])를 추가한다. 기존 meta 라벨 단언은 바꾸지 않는다. 주석 0줄.",
+              "expectedOutcome": "diff 가 TodoAddUITests.swift +19/-0, 추가 줄에 `//` 0개, check_ledger.py rc=0(미판정 0)."
+            },
+            {
+              "seq": 2,
+              "action": "docs/product/doc-tracker/2026-10.md 「## e2e 매핑」 표의 `test-todo.md#시나리오 3` 행 설명 칸에 접근성 라벨·개인 태그(`todos.personal.row.<id>.priority`)·회사/제목만 태그 없음을 반영한다(행 수 불변).",
+              "expectedOutcome": "doc-tracker diff 1줄 교체, 매핑 행 수·집계 불변."
+            },
+            {
+              "seq": 3,
+              "action": "PR 을 열고 #281 head 와 git merge-tree 로 충돌 없음을 확인, review-policy judge.py 로 수동 승인 케이스 미접촉을 확인한다.",
+              "expectedOutcome": "merge-tree 충돌 0 · judge 「수동 승인 케이스 미접촉」."
+            },
+            {
+              "seq": 4,
+              "action": "PR CI 에서 ios-test(UITest) 결론을 확인한다 — TodoAddUITests 통과, ci-success success.",
+              "expectedOutcome": "PR head 의 ci-success success, ios-test 잡 success(TodoAddUITests 포함)."
+            },
+            {
+              "seq": 5,
+              "action": "승인 뒤 squash 머지하고 main push CI 를 확인한다(테스트·문서 전용이라 이미지 pin·TestFlight 미발화).",
+              "expectedOutcome": "main 머지 커밋의 CI success, testflight-upload·backend-docker-push skipped."
+            }
+          ]
+        }
+      }
+    ]
   }
 ]
