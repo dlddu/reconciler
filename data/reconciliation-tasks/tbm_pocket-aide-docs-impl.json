@@ -7568,7 +7568,7 @@
   {
     "id": "rct_20261011-0027",
     "toBeModelId": "tbm_pocket-aide-docs-impl",
-    "status": "verifying",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-11T22:05:32Z",
@@ -7685,6 +7685,48 @@
               "log": "PUT pulls/274/merge squash(sha 가드 3e995ee) → merged:true, 머지 커밋 7c00f0d0da7d(parent d132600, 00:37:43Z). commit_title 미지정이라 제목 (#274) 접미사 유지. main CI run 38188735422(push @7c00f0d): Detect changes·comment-policy ledger·data-model check(report)·Journey mockup·Backend unit + lint·Backend integration(LocalStack)·Build & push image(00:40:09Z)·Pin deployment image (main only)(00:40:18Z, 운영 롤아웃) 전부 success; iOS build + test·iOS test backend binaries 는 main push 에서 skipped(정상 — iOS 검증은 PR CI shard 0/1/2 success). TestFlight upload 잡은 01:09Z 현재 GitHub-hosted macos-26 러너 대기로 queued(00:40:19Z 생성, 실패 아님) — 직전 iOS 변경 main run d132600 의 TestFlight 는 success(00:27:46Z). 계획 완료 기준 ①~⑥ 밖의 배포 단계라 기다리지 않고 진행 중으로 기록."
             }
           ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "ios:18d0499708a2047d1972aab021716e2fc0ef7563 backend:dc886d02e588737e3fb6226f333ddace75ad176f",
+          "checks": [
+            {
+              "name": "① PR #274 squash 머지 + 머지 직전 필수 status",
+              "status": "passed",
+              "detail": "PR #274 MERGED(00:37:43Z) → main 7c00f0d(parent d132600). 머지 직전 head 3e995ee(지침·리뷰 기록과 동일): ci-success success, review/manual-approval success(22:29:55Z), mergeStateStatus CLEAN."
+            },
+            {
+              "name": "② 서버 테스트 + 라우트 배선",
+              "status": "passed",
+              "detail": "로컬 @7c00f0d go test ./internal/apns/ ./internal/approvalpush/ ./internal/handlers/ -run 'Fit|Rejection|Send|LongContext|Invalid|Notify|ApprovalCreate' -v rc=0: 새 8건(TestFitAlertBodyKeepsBodiesThatFit·TestFitAlertBodyCutsToThePayloadLimit·TestSendGoesToEveryDeviceOfTheOwner·TestLongContextIsCutToFitThePayload·TestInvalidTokensAreDroppedOthersKept·TestNotifyReturnsBeforeTheSendFinishes·TestApprovalCreatePushesKeyNameAndContext·TestApprovalCreateDoesNotWaitForPush) PASS, 거절 문면 단정 TestSendWithDataReportsRejections PASS. main CI Backend unit + lint·integration success. grep -cF 'CreateExternalApproval(approvalStore, approvalPusher)' backend/cmd/server/main.go = 1."
+            },
+            {
+              "name": "③ 데이터 모델 위반 = main 기준선",
+              "status": "passed",
+              "detail": "go run ./cmd/datamodelcheck @7c00f0d: 불변식 1·2 정합, 불변식 3 위반 1건 [no-support] Q-15 (rc=1). 기준선 @d132600 동일하게 Q-15 1건 — 새 위반 0. grep -c 'Q-64' query-patterns.md = 1(패턴 표 L76, 지점 devicetokens/store.go::Store::Delete), 「미사용 인덱스」 절(L99~)의 UNIQUE(device_tokens.token) 0건(파일 전체 1건은 Q-64 행의 지원 인덱스 칸). main CI data-model check(report) success."
+            },
+            {
+              "name": "④ 앱 테스트(PR CI)",
+              "status": "passed",
+              "detail": "PR CI run 38180641201 @3e995ee: ios-test shard 0(ApprovalPushUITests·ApprovalPushPayloadTests)·shard 1(ApprovalLongPushUITests)·shard 2 success; shard 1 의 무접촉 WebhookPushSettingsUITests 설정 앱 flake 는 같은 sha rerun 으로 success(준비 기록). main push 는 iOS 잡 skip(정상)."
+            },
+            {
+              "name": "⑤ 문서 재계수 = tracker 마지막 행",
+              "status": "passed",
+              "detail": "@7c00f0d grep 「구현 상태**: 구현됨/부분 구현/미구현」 = 62/6/6, docs/product/doc-tracker/2026-10.md 마지막 이력 행(L350, PRD-12.AC10) 오른쪽 값 「구현 상태 62/6/6」과 일치. test-approval-gate.md 시나리오 6(L149)·7(L164) 구현 상태 「구현됨」."
+            },
+            {
+              "name": "⑥ 로컬 게이트",
+              "status": "passed",
+              "detail": "@7c00f0d check_ledger.py rc=0 지문 1d8b8b0126394a2a…(준비 기록과 불변); git diff --name-only d132600 7c00f0d(22 경로) | judge.py → 「수동 승인 케이스 미접촉 (22 경로)」 rc=0; journey-mockup 은 로컬 jsdom 미설치로 실행 불가 → 지침대로 CI 로 갈음: main CI Journey mockup success·comment-policy ledger success; SwiftLint 는 PR CI ios-test success 로 갈음."
+            },
+            {
+              "name": "운영 롤아웃(정보)",
+              "status": "passed",
+              "detail": "Build & push image success(00:40:09Z) → Pin deployment image (main only) success(00:40:18Z). TestFlight upload 는 01:09Z 현재 macos-26 러너 대기 queued — 완료 기준 밖, 실패 아님. 잔여(범위 밖, 재감지 몫): PRD-12 AC9 자동 응답(마이그레이션=사람 게이트)·AC11 잠금화면·simctl push e2e·approval-gate #6·#7 「e2e 매핑」(scenario-e2e)·_impl-map 의 ApprovalDeepLinkOpener.swift 누락(mockup-render). main 은 이후 e5ed35a·cfc4e03 으로 이동."
+            }
+          ],
+          "verifiedAt": "2026-10-12T01:10:15Z"
         }
       }
     ]
