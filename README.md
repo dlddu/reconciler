@@ -62,6 +62,33 @@ tests/                              # index.html 동작 테스트 (node --test)
 `manualApproval`이 남은 채 `rejected`인 기록이 곧 사람의 거부다. 이 전이는 그 context가 아직 success가 아닐
 때만 쓰므로 executor의 점유(`approved → executing`)와 겹치지 않는다.
 
+## 사람 소유 결정 (decision)
+
+gap을 닫는 길이 사람이 소유한 결정(허용 기준·예외·승인 케이스 등)을 거쳐야 하면, planner는 결정안을 담은
+`제안:` PR을 열고 마지막 attempts 항목에 `decision`을 남긴다. 제안은 data plane이 하고 결정은 사람이 한다 —
+대상 레포의 승인 게이트가 그 경로를 덮는지와 무관하게, 사람의 결정 없이는 실행되지 않는다.
+
+```json
+"decision": { "sha": "<결정 대상 PR head>", "verdict": "approved | rejected", "comment": "<사유>" }
+```
+
+| 필드 | 쓰는 쪽 | 의미 |
+| --- | --- | --- |
+| `sha` | planner(준비 때) · 리뷰(현재 head로 확인·갱신) | 결정 대상 PR head. 사람의 결정은 이 커밋에 묶인다 |
+| `verdict` | 사람 세션만 | 없으면 결정 대기 |
+| `comment` | 사람 세션 | 결정 사유. `rejected`면 필수 — planner 재계획의 입력 |
+
+결정안·대안·근거는 PR 본문과 diff에 있으므로 task에 다시 적지 않는다.
+
+`decision`이 있는 `approved` task는 다음이 모두 참일 때만 실행 대상이다.
+
+- `verdict`가 `approved`다.
+- `preparation.pullRequestUrl`의 PR이 열려 있고 head가 `sha` 그대로다 — 결정 뒤 새 커밋이 올라오면 그 결정은 무효다.
+
+`review.manualApproval`과는 독립이다 — 둘 다 있으면 둘 다 충족해야 한다. 사람의 결정은 사람 세션에서
+`reconciler-manual-approval`로 처리한다. 승인이면 `verdict: approved`를 기록하고, 거부면 `verdict: rejected`와
+`comment`를 기록하며 `approved → review_rejected`로 전이해 planner 재계획으로 넘긴다.
+
 ## 모델 템플릿
 
 레포마다 반복 등록되는 정합성 유형 — **제품 문서 ↔ 구현**(docs-impl),
@@ -105,7 +132,7 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
   | 모드 | 목록에 나오는 모델 |
   | --- | --- |
   | **진행 중** (기본값) | 감지 활성 모델 중 완료되지 않은 작업이 있는 모델 — 완료 = `succeeded`·`cancelled`·`no_action_needed` |
-  | **리뷰 대기 중** | 감지 활성 모델 중 대상 레포의 사람 승인을 기다리는 작업(`approved` + `review.manualApproval`)이 있는 모델 |
+  | **리뷰 대기 중** | 감지 활성 모델 중 사람을 기다리는 작업이 있는 모델 — 수동 승인 대기(`approved` + `review.manualApproval`) 또는 결정 대기(`approved` + `verdict` 없는 `decision`) |
   | **활성 전체** | 감지가 활성인 모델 전체 |
   | **숨김** | `checkPolicy.enabled`가 `false`인 모델만 |
 
@@ -119,12 +146,13 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
   진행 중이다.
 
   **리뷰 대기 중**은 진행 중의 부분집합이다 — 승인을 기다리는 작업은 끝나지 않은 작업이기도
-  하므로 두 모드에 함께 나온다. 사람 승인은 수동 승인 대기 하나뿐이다: status는 `approved`(실행
-  대기)지만 마지막 시도의 `review.manualApproval`이 있으면 대상 레포의 사람 승인 status가 붙기
-  전까지 실행되지 않는다. `planned`(리뷰 스킬의 **검토 판단 대기**)는 사람의 리뷰가 아니므로
-  들어가지 않는다.
+  하므로 두 모드에 함께 나온다. 사람을 기다리는 것은 둘이고, 둘 다 status는 `approved`(실행
+  대기)다: 마지막 시도의 `review.manualApproval`이 있으면 대상 레포의 사람 승인 status가 붙기
+  전까지(수동 승인 대기), `decision`이 있고 `verdict`가 없으면 사람의 결정이 기록되기 전까지(결정
+  대기) 실행되지 않는다. 둘 다인 작업은 한 번만 센다. `planned`(리뷰 스킬의 **검토 판단 대기**)는
+  사람의 리뷰가 아니므로 들어가지 않는다.
 
-  사이드바 항목에는 **진행 중 N**·**수동 승인 대기 N** 배지가 함께 표시된다.
+  사이드바 항목에는 **진행 중 N**·**수동 승인 대기 N**·**결정 대기 N** 배지가 함께 표시된다.
 
 - **조치 pill (종료 상태에선 숨김)**: task 헤더의 **조치 필요** pill은 **status만으로** 정한다.
   감지 판정은 status 전이(`assessing` → `no_action_needed` | `action_required`)로 남고, 계획·실행

@@ -163,12 +163,15 @@
   .taskcount { font-size: 11px; color: var(--muted); }
   .progpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #e0e7ff; color: #4338ca; }
   .manualpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #cffafe; color: #0e7490; }
+  .decisionpill { font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #fef3c7; color: #b45309; }
   .hidepill { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: var(--code-bg); color: var(--muted); }
   :root[data-theme="dark"] .progpill { background: #221f4d; color: #a5b4fc; }
   :root[data-theme="dark"] .manualpill { background: #083344; color: #67e8f9; }
+  :root[data-theme="dark"] .decisionpill { background: #422006; color: #fcd34d; }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .progpill { background: #221f4d; color: #a5b4fc; }
     :root:not([data-theme="light"]) .manualpill { background: #083344; color: #67e8f9; }
+    :root:not([data-theme="light"]) .decisionpill { background: #422006; color: #fcd34d; }
   }
 
   .legend { margin-top: auto; border-top: 1px solid var(--border); padding: 10px 14px; font-size: 12px; color: var(--muted); }
@@ -409,16 +412,19 @@
   // 완료 = 워크플로가 더 이상 집어가지 않는 종료 상태. failed·review_rejected는 planner가
   // 다시 집는 재작업 진입점이므로 완료가 아니라 진행 중이다.
   //
-  // 리뷰 대기 중 = 사람의 승인을 기다리는 작업이 있는 모델. 진행 중의 부분집합이다.
-  // 사람 승인은 수동 승인 대기 하나뿐이다 — status는 approved(실행 대기)지만 마지막 시도의
-  // review.manualApproval이 있으면, 대상 레포의 사람 승인 status가 붙기 전까지 실행되지 않는다.
-  // 승인 status가 붙었는지는 GitHub에서만 알 수 있으므로 페이지는 확인하지 않는다 — 실행되어
-  // approved를 벗어나면 탭에서 빠진다. 상태만으로는 가려지지 않아 task 단위로 판정한다.
+  // 리뷰 대기 중 = 사람을 기다리는 작업이 있는 모델. 진행 중의 부분집합이다.
+  // 사람을 기다리는 것은 둘이고, 둘 다 status는 approved(실행 대기)다 — 상태만으로는 가려지지 않아
+  // 마지막 시도를 보고 task 단위로 판정한다.
+  // - 수동 승인 대기: review.manualApproval이 있으면 대상 레포의 사람 승인 status가 붙기 전까지
+  //   실행되지 않는다. 그 status가 붙었는지는 GitHub에서만 알 수 있으므로 페이지는 확인하지 않는다 —
+  //   실행되어 approved를 벗어나면 탭에서 빠진다.
+  // - 결정 대기: decision이 있고 verdict가 아직 없으면 사람 소유 결정(제안 PR)을 기다린다.
+  //   verdict는 task에 기록되므로 페이지가 직접 판정한다.
   var DONE_STATUSES = ["succeeded", "cancelled", "no_action_needed"];
   var MODES = [
     { id: "progress", label: "진행 중",      head: "진행 중 모델",      hint: "완료(" + DONE_STATUSES.join("/") + ")되지 않은 작업이 있는 모델만",
       empty: "진행 중인 작업이 없습니다." },
-    { id: "review",   label: "리뷰 대기 중", head: "리뷰 대기 중 모델", hint: "대상 레포의 사람 승인을 기다리는(수동 승인 대기 approved) 작업이 있는 모델만",
+    { id: "review",   label: "리뷰 대기 중", head: "리뷰 대기 중 모델", hint: "사람을 기다리는(수동 승인 대기·결정 대기 approved) 작업이 있는 모델만",
       empty: "리뷰를 기다리는 작업이 없습니다." },
     { id: "active",   label: "활성 전체",    head: "ToBeModels",        hint: "감지가 활성인 모델 전체",
       empty: "감지 활성 모델이 없습니다." },
@@ -832,6 +838,16 @@
           (pp.pullRequestUrl ? "PR " + prShortLabel(pp.pullRequestUrl) : "PR 없음"), ppbody);
       }
 
+      if (at.decision) {
+        var dc = at.decision;
+        var verdictLabel = dc.verdict === "approved" ? "승인" : dc.verdict === "rejected" ? "거부" : "결정 대기";
+        var dbody =
+          '<div class="kv"><span>결정</span><span>' + escapeHtml(verdictLabel) + "</span></div>" +
+          '<div class="kv"><span>대상 head</span><span><code>' + escapeHtml(String(dc.sha || "").slice(0, 7)) + "</code></span></div>" +
+          (dc.comment ? '<div class="prose" style="margin-top:6px">' + md(dc.comment) + "</div>" : "");
+        sections += sec("사람 결정" + atag, "decision · " + verdictLabel, dbody);
+      }
+
       if (at.review) {
         var r = at.review;
         var rbody =
@@ -922,9 +938,23 @@
     return (state.tasksByModel[modelId] || []).filter(awaitsManualApproval).length;
   }
 
-  // 리뷰 대기 중 탭 = 수동 승인 대기 작업 수.
+  // 결정 대기 = approved이면서 마지막 시도의 decision에 verdict가 아직 없는 작업.
+  function awaitsDecision(t) {
+    if (!t || t.status !== "approved") return false;
+    var attempts = Array.isArray(t.attempts) ? t.attempts : [];
+    var last = attempts.length ? attempts[attempts.length - 1] : null;
+    return !!(last && last.decision && !last.decision.verdict);
+  }
+
+  function decisionTaskCount(modelId) {
+    return (state.tasksByModel[modelId] || []).filter(awaitsDecision).length;
+  }
+
+  // 리뷰 대기 중 탭 = 수동 승인 대기 또는 결정 대기인 작업 수(둘 다인 작업은 한 번만 센다).
   function reviewTaskCount(modelId) {
-    return manualApprovalTaskCount(modelId);
+    return (state.tasksByModel[modelId] || []).filter(function (t) {
+      return awaitsManualApproval(t) || awaitsDecision(t);
+    }).length;
   }
 
   // ---------- 대상 레포 필터 ----------
@@ -1225,6 +1255,8 @@
       var progpill = progress ? '<span class="progpill" title="완료(' + DONE_STATUSES.join("/") + ')되지 않은 작업">진행 중 ' + progress + "</span>" : "";
       var manual = manualApprovalTaskCount(m.id);
       var manualpill = manual ? '<span class="manualpill" title="실행 대기(approved)지만 대상 레포의 사람 승인 status를 기다리는 작업(review.manualApproval)">수동 승인 대기 ' + manual + "</span>" : "";
+      var decided = decisionTaskCount(m.id);
+      var decisionpill = decided ? '<span class="decisionpill" title="실행 대기(approved)지만 사람 소유 결정을 담은 제안 PR에 사람의 결정(decision.verdict)이 아직 없는 작업">결정 대기 ' + decided + "</span>" : "";
       var hide = isModelEnabled(m) ? "" : '<span class="hidepill" title="감지 비활성">숨김</span>';
       var tags = ((m.metadata && m.metadata.tags) || []).slice(0, 3).map(function (t) { return '<span class="tag">' + escapeHtml(t) + "</span>"; }).join(" ");
       var la = lastAction(m.id);
@@ -1236,7 +1268,7 @@
       return '<button class="model-item' + (m.id === state.selected ? " active" : "") + '" data-id="' + escapeHtml(m.id) + '">' +
         '<div class="mi-name">' + dot + "<span>" + escapeHtml((m.metadata && m.metadata.name) || m.id) + "</span></div>" +
         '<div class="mi-id">' + escapeHtml(m.id) + "</div>" +
-        '<div class="mi-meta">' + progpill + manualpill + hide + '<span class="taskcount">작업 ' + count + "</span> " + tags + "</div>" +
+        '<div class="mi-meta">' + progpill + manualpill + decisionpill + hide + '<span class="taskcount">작업 ' + count + "</span> " + tags + "</div>" +
         acted +
         "</button>";
     }).join("");

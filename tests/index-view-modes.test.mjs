@@ -109,22 +109,23 @@ test("the toolbar offers exactly the four requested modes, in order", () => {
   ]);
 });
 
-test("done is the terminal statuses only; review is manual approval only", () => {
+test("done is the terminal statuses only; no status means waiting for a human", () => {
   assert.deepEqual(Array.from(run("DONE_STATUSES")), ["succeeded", "cancelled", "no_action_needed"]);
-  // No status means "waiting for a human" any more: the only human approval is review.manualApproval
-  // on an approved task, so the page keeps no review status set.
+  // No status means "waiting for a human" any more: humans are waited on through review.manualApproval
+  // and decision on an approved task, so the page keeps no review status set.
   assert.doesNotMatch(html, /REVIEW_STATUSES|awaiting_review|approving/);
 });
 
-test("the review tab counts exactly the tasks waiting for manual approval", () => {
-  const withGated = { tasksByModel: { ...TASKS, ...MANUAL_TASKS } };
-  for (const id of ["asking", "queued", "working", "idle", "nope", "gated", "ready", "moved"]) {
-    assert.equal(
-      run(`manualApprovalTaskCount("${id}")`, withGated),
-      run(`reviewTaskCount("${id}")`, withGated),
-      `${id}: the review tab must count manual approvals only`
-    );
+test("the review tab counts the tasks waiting for manual approval or a decision, once each", () => {
+  const withGated = { tasksByModel: { ...TASKS, ...MANUAL_TASKS, ...DECISION_TASKS } };
+  for (const id of ["asking", "queued", "working", "idle", "nope", "gated", "ready", "moved", "deciding", "both", "decided", "rejected", "redo"]) {
+    const tasks = withGated.tasksByModel[id] || [];
+    const expected = tasks.filter((t) =>
+      run(`awaitsManualApproval(${JSON.stringify(t)}) || awaitsDecision(${JSON.stringify(t)})`, withGated)
+    ).length;
+    assert.equal(run(`reviewTaskCount("${id}")`, withGated), expected, `${id}: review tab = manual approval ∪ decision`);
   }
+  assert.equal(run('reviewTaskCount("both")', withGated), 1, "a task waiting for both counts once");
 });
 
 // approved + review.manualApproval on the latest attempt = waiting for the target repo's human approval status.
@@ -156,6 +157,43 @@ test("an approved task waiting for manual approval shows in the review tab", () 
   }
   const progress = ids(run('modelsInMode("progress")', o));
   assert.ok(progress.includes("gated"), "manual approval is still in progress");
+});
+
+// approved + decision without verdict on the latest attempt = waiting for a human-owned decision.
+const SHA = "b".repeat(40);
+const DECISION_TASKS = {
+  deciding: [{ id: "d1", status: "approved", attempts: [{ review: { status: "approved" }, decision: { sha: SHA } }] }],
+  // waiting for both the target repo's approval and the decision: one task
+  both: [{ id: "d2", status: "approved", attempts: [{ review: { status: "approved", manualApproval: MANUAL }, decision: { sha: SHA } }] }],
+  decided: [{ id: "d3", status: "approved", attempts: [{ review: { status: "approved" }, decision: { sha: SHA, verdict: "approved" } }] }],
+  rejected: [{ id: "d4", status: "review_rejected", attempts: [{ review: { status: "approved" }, decision: { sha: SHA, verdict: "rejected", comment: "no" } }] }],
+  // only the latest attempt counts
+  redo: [{ id: "d5", status: "approved", attempts: [
+    { decision: { sha: SHA } },
+    { review: { status: "approved" } }
+  ] }]
+};
+const DECISION_MODELS = Object.keys(DECISION_TASKS).map((id) => ({ id, metadata: { name: id, tags: [] } }));
+
+test("an approved task waiting for a human decision shows in the review tab", () => {
+  const o = { models: DECISION_MODELS, tasksByModel: DECISION_TASKS };
+  assert.deepEqual(ids(run('modelsInMode("review")', o)), ["deciding", "both"]);
+  assert.equal(run('decisionTaskCount("deciding")', o), 1);
+  for (const id of ["decided", "rejected", "redo"]) {
+    assert.equal(run(`decisionTaskCount("${id}")`, o), 0, `${id} is not waiting for a decision`);
+  }
+});
+
+test("decision tolerates tasks without attempts or decision", () => {
+  const o = { tasksByModel: { x: [{ id: "1", status: "approved" }, { id: "2", status: "approved", attempts: [] }, { id: "3", status: "approved", attempts: [{}] }] } };
+  assert.equal(run('decisionTaskCount("x")', o), 0);
+});
+
+test("the decision shape the page reads matches the schema", () => {
+  const d = schema.$defs.decision;
+  assert.deepEqual(Object.keys(d.properties).sort(), ["comment", "sha", "verdict"]);
+  assert.deepEqual(d.required, ["sha"]);
+  assert.deepEqual(d.properties.verdict.enum, ["approved", "rejected"]);
 });
 
 test("manual approval tolerates tasks without attempts or review", () => {
@@ -194,7 +232,7 @@ test("progress mode keeps active models with any unfinished task", () => {
   assert.deepEqual(ids(run('modelsInMode("progress")')), ["working", "asking", "queued", "retry"]);
 });
 
-test("review mode keeps only active models with a task awaiting manual approval", () => {
+test("review mode keeps only active models with a task awaiting a human", () => {
   assert.deepEqual(ids(run('modelsInMode("review")')), ["asking"]);
 });
 
