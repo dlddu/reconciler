@@ -1142,7 +1142,7 @@
   {
     "id": "rct_20261011-0003",
     "toBeModelId": "tbm_pocket-aide-data-model",
-    "status": "executing",
+    "status": "verifying",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-11T04:52:12Z",
@@ -1156,7 +1156,7 @@
       }
     },
     "createdAt": "2026-10-11T04:52:12Z",
-    "updatedAt": "2026-10-13T12:20:44Z",
+    "updatedAt": "2026-10-13T12:22:22Z",
     "stateSummary": {
       "asIs": "관측 2026-10-11T04:5xZ · dlddu/pocket-aide main `d1b9b16`(#241 머지, data-model `rct_20261011-0001`의 Q-09 슬라이스).\n\n- as-is 지문: `site_lines 61→60` · `query_lines 143→142` · queries `82483b70…`→`b3510162…`. schema `ef12e4a4…`·checker `6e74adb4…`는 바뀌지 않았다. 마이그레이션 변경이 없다.\n- 원인 변경(`b267cbc..d1b9b16`, 데이터 모델 경로): `backend/internal/devicetokens/store.go`에서 테스트 전용 `Store::ListAll`(Q-09 지점)을 지웠고, `handlers/device_tokens_test.go`가 그 호출을 대체했다. 같은 구간의 #240은 ios·mockups만 건드렸다.\n- 판정(절차 3, C9 — 판정 환경에 Go가 없음): main `d1b9b16`의 CI `data-model check (report)` job 114391696324 로그. 엔진 SQLite 3.46.0 (modernc.org/sqlite v1.34.1). 테이블 15 · 인덱스(PK 제외) 20 · FK 15 · 지점 후보 60. **종료 코드 1**.\n  - 불변식 1 위반 7: approval_caller_keys·approval_requests의 `table-missing` 2 · `diagram-entity-missing` 2 · `diagram-relation-missing` 3.\n  - 불변식 2 위반 11: `approvals/store.go`의 11개 지점이 모두 `query-unregistered`다.\n  - 불변식 3 위반 6: `no-support` **Q-15** 1건과 approval_* `unused-unregistered` 5건.\n  - 직전 관측(`b267cbc`, rct_20261011-0002)의 위반 집합에서 정확히 `(3, no-support, Q-09)` 하나가 빠졌고, 새로 생긴 위반은 0이다.\n- 절차 4: 체커 해시가 그대로이고, 리포트의 지점 후보 60 = 지문 site_lines 60이다 ⇒ C2/C4 이상 없음.\n- 소관 census: approval_* 23건은 `rct_20261011-0002`(reviewing)가 맡고 PR #242(열림)가 다룬다. **Q-15**는 `rct_20261011-0001`(executing, #241 머지됨)과 `0002` 모두 범위 밖으로 명시했고(「사람 기준 결정 또는 쿼리 형태 변경 — 재감지가 잇는다」), 이를 맡은 비종결 task는 없다. Q-15 `excludedrepos.Store::ListUserIDsExcluding`에는 운영 호출자가 있다(`users`를 `NOT IN`으로 고르는 형태라 바깥 `users` SCAN이고, 인덱스로는 닫히지 않는다). 기준을 제안한 F1 경로 `rct_20261004-0004`는 사람 요청으로 cancelled됐다.",
       "toBe": "관측 2026-10-11T04:5xZ · `docs/data-model` 트리 `b9033a06…` → `e1d8e7f7…`(#241 `d1b9b16`).\n\n- `query-patterns.md`: Q-09 행을 지웠다. 「미사용 인덱스」 표에 `UNIQUE(device_tokens.token)` 행을 더했다(Q-08 `ON CONFLICT(token)` 충돌 대상이라 쓰기 패턴이고 플랜 판정 밖). 체커가 이 행을 위반으로 보지 않으므로 등재가 엔진과 맞다.\n- `README.md`: §2의 지원 없는 패턴 서술을 「둘(Q-09·Q-15)」에서 「하나(Q-15)」로 바꿨다. 「체커」 절 CI 문구도 「`no-support` 한 건」으로 바꿨다. 모드는 그대로 report다.\n- `erd.md`는 바뀌지 않았고 `fullscan-criteria.md`는 여전히 기준 0행이다. ERD와 카탈로그의 `approval_` 문자열은 0건이다(#242 미머지).",
@@ -1227,6 +1227,60 @@
           "status": "approved",
           "reviewedAt": "2026-10-13T03:22:53Z",
           "reason": "문서 3파일(+5/−4, docs/data-model 만) — fullscan-criteria.md 에 F1 행 제안 + Q-15 지원 칸 `풀스캔 허용(F1)` + README §2·§4 정합. diff 가 plan.steps·notes 와 정확히 일치하고 backend/** 무접촉이라 이미지·pin·TestFlight 발화 없음. 신선도(2026-10-13T03:2xZ): PR #293 open·draft·head f96673e == decision.sha, compare behind_by 0·merge_base == main tip 6a5e983(충돌 불가), mergeStateStatus CLEAN, 필수 ci-success·review/manual-approval 둘 다 success; head 의 `data-model check (report)` 잡 로그 「불변식 1·2·3 정합 / 종료 코드 0」으로 완료 기준을 PR merge ref 에서 실측 확인. F1 의 관측 근거(풀스캔 테이블 users 에 eq/range 없음)가 Q-15 형태와 맞는다. 불가역 지점 없고 롤백은 squash 커밋 revert 한 번. review/manual-approval 은 판정기 자동 success(대상 레포 사람 승인 게이트 없음)라 review.manualApproval 은 남기지 않는다 — 사람 소유 기준의 채택은 attempts[].decision.verdict 가 게이트이고 executor 는 verdict=approved·head==decision.sha 일 때만 실행한다(sha 는 현재 head 로 확인, 변경 없음)."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-10-13T12:20:59Z",
+          "finishedAt": "2026-10-13T12:21:57Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-10-13T12:20:59Z",
+              "finishedAt": "2026-10-13T12:21:05Z",
+              "log": "decision.verdict=approved, decision.sha=f96673e43a6323d9aeb52870679fd3f521c22d49. gh pr view 293: state OPEN, headRefOid f96673e43a6323d9aeb52870679fd3f521c22d49 (== decision.sha), isDraft true, mergeStateStatus CLEAN."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-10-13T12:21:05Z",
+              "finishedAt": "2026-10-13T12:21:20Z",
+              "log": "main 6a5e983 -> 40c8c6d (#294 mockups, #278 approvals). merge-base 6a5e983; git merge-tree --write-tree rc=0 tree 1a50a4ef (충돌 0). 6a5e983..main 의 docs/data-model 접촉은 #278 하나: erd.md user_approval_settings 절 + query-patterns.md Q-65/Q-66 행 추가 — Q-15 행·README §2/§4·fullscan-criteria.md 와 헝크 겹침 없음. 로컬 merge 트리(=1a50a4ef)에서 go run ./cmd/datamodelcheck --json: exit 0, 불변식 1/2/3 ok 위반 0, undecidable [] (Go 1.24.7, SQLite 3.46.0/modernc v1.34.1)."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-10-13T12:21:20Z",
+              "finishedAt": "2026-10-13T12:21:35Z",
+              "log": "head f96673e: status review/manual-approval success (2026-10-13T03:18:36Z, 판정기 자동 — 사람 채택 신호로 쓰지 않음; 채택은 decision.verdict). check-run ci-success success, data-model check (report) success, 나머지 backend/iOS/Docker/TestFlight 잡 skipped(문서만 변경)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-10-13T12:21:40Z",
+              "finishedAt": "2026-10-13T12:21:48Z",
+              "log": "직전 재확인 OPEN head f96673e. gh pr ready 293 (draft 해제) -> PUT pulls/293/merge merge_method=squash sha=f96673e43a6323d9aeb52870679fd3f521c22d49 (commit_title 미지정): merged=true, squash 커밋 2667d58fd8379d7a657b3e76f115238c716502b5 '... (rct_20261011-0003) (#293)'. 부모 40c8c6d, tree 1a50a4ef == 사전 검증한 로컬 merge 트리. diff: README.md 6(+3/-3) · fullscan-criteria.md +1 · query-patterns.md 2(+1/-1)."
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-10-13T12:21:50Z",
+              "finishedAt": "2026-10-13T12:21:57Z",
+              "log": "main 2667d58 detached checkout 에서 cd backend && go run ./cmd/datamodelcheck --json: rc=0, exit_code 0, invariants 1/2/3 status ok 위반 0, undecidable []."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-10-13T12:21:50Z",
+              "finishedAt": "2026-10-13T12:21:57Z",
+              "log": "git show origin/main(2667d58):docs/data-model/fullscan-criteria.md | grep -cE '^\\| F[0-9]' -> 1 (F1)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "skipped",
+              "log": "rejected 분기 전용 — verdict=approved 이므로 해당 없음."
+            }
+          ]
         }
       }
     ]
