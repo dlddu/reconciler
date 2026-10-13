@@ -1891,7 +1891,8 @@
               "expectedOutcome": "to-be tree hash 가 3523a3e8… 에서 바뀌고 `docs/` 밖 변경 0"
             }
           ],
-          "plannedAt": "2026-10-13T12:13:23Z"
+          "plannedAt": "2026-10-13T12:13:23Z",
+          "executionGuide": "## 순서 (직렬)\n1. **사전 확인** — `gh pr view 297 -R dlddu/pocket-aide --json mergeable,mergeStateStatus,headRefOid` : head `72b2d9afb96513837b7ba1fe32f47d18f25a4427`, `MERGEABLE`. 필수 status 는 `gh api repos/dlddu/pocket-aide/commits/<head>/status` + Actions runs(`?head_sha=<head>`)로 본다(App 토큰엔 `checks` 권한이 없다).\n   - `BEHIND` 면 리베이스하지 말고 `git merge-tree --write-tree --merge-base=$(git merge-base origin/main <head>) origin/main <head>` 가 clean 인지만 볼 것. 충돌이면 원장 행 인접일 가능성이 높다 — 양쪽 행을 살려 해소(내 행은 `approvals/store.go` 한 줄).\n   - 자매 #296(위젯)이 먼저 착지해도 겹치는 줄은 없다(계획 시점 merge-tree clean).\n2. **squash 머지** — 제목은 PR 제목 그대로.\n3. **착지 검증** — main 착지 커밋을 받아 `python3 scripts/comment-policy/check_ledger.py`.\n\n## 검증 (완료 기준)\n- `check_ledger.py` rc=0 이고 출력 `L: … 주석 612줄 · 완료 612 · 미판정 0`, `E: … 완료 4 · 미판정 0`, 지문 `f6ec97d645c6937fc973a38fb0d4ec7dbcb6c6b9a81062f9ddd2a0054c5ec943`.\n  - 머지 전 다른 PR 이 주석을 더해 줄 수가 612 와 달라졌다면, **이 행(`approvals/store.go`)의 판정 칸이 `완료` 이고 이 PR 이 미판정을 3 줄였는가**로 판정하라(다른 행의 새 미판정은 범위 밖 — 재감지 몫).\n- `grep -c '증분 판정 — 2026-10-13' docs/comment-policy/passes/2026-10-04-data-model-godoc.md` = 1.\n- 착지 diff 가 `docs/comment-policy/` 두 파일뿐(비주석·코드 변경 0).\n\n## 주의사항\n- docs 전용이라 main push 에서 이미지 pin·TestFlight 는 발화하지 않는다(`backend/**`·워크플로 미접촉). 혹시 발화했다면 범위를 벗어난 것이니 diff 를 재확인.\n- `judge.py` 판정: 「수동 승인 케이스 미접촉 (2 경로)」 — 사람 status 불필요.\n- `comment-policy ledger` 잡은 `ci-success` needs 밖이지만 **초록이어야** 한다(빨강이면 머지하지 말 것).\n- 롤백: 문서 2파일뿐이라 `git revert <착지 커밋>` 한 번이면 원 상태(행 `—`)로 돌아간다. 운영 영향 없음.\n\n## 범위 밖(후속)\n- 없음. 머지 뒤 to-be tree hash 변화를 detector 가 재감지해 미판정 0 을 확인한다.\n"
         },
         "preparation": {
           "repository": "dlddu/pocket-aide",
