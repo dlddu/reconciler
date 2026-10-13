@@ -16568,7 +16568,7 @@
     "toBeModelId": "tbm_pocket-aide-mockup-render",
     "status": "planning",
     "createdAt": "2026-10-13T02:49:01Z",
-    "updatedAt": "2026-10-13T03:30:28Z",
+    "updatedAt": "2026-10-13T03:30:30Z",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-13T02:49:01Z",
@@ -16619,7 +16619,8 @@
               "expectedOutcome": "ios/·backend/ 무접촉, check-runs 실패 0."
             }
           ],
-          "plannedAt": "2026-10-13T03:50:00Z"
+          "plannedAt": "2026-10-13T03:50:00Z",
+          "executionGuide": "## 순서 (직렬 — 병렬 불가)\n1. **CI 확인** — `GH_TOKEN=<pocket-aide 토큰> gh pr checks 294 -R dlddu/pocket-aide`. 필수는 `ci-success` 하나. docs/mockups 전용이라 iOS·backend 잡은 skipped 가 정상이다. 빨강이면 실패 잡의 `steps` 가 빈 배열인지(Actions 과금 차단) 먼저 보고, 그렇다면 같은 sha 로 `rerun` — 커밋을 얹지 말 것.\n2. **base 재확인** — main 이 `6a5e983` 에서 움직였으면 `git merge-tree --write-tree origin/main origin/reconcile/rct_20261013-0002-mockup-render`. clean 이면 리베이스하지 말고 그대로 머지. 충돌이면 새 main 에서 브랜치를 다시 만들고 `python3 .reconciler-work/artifacts/pa-mr-rct_20261013-0002/apply.py <repo>` 를 재생(멱등 — 집계는 표에서 재계산)한 뒤 검산 5종 ok 를 보고 force-with-lease 로 갱신. 🔴 `_copy-map` 집계·요약 줄은 자매 PR 과 인접 줄이라 손으로 충돌을 풀지 말 것(`checkout --theirs` 금지).\n3. **squash 머지** — PR #294.\n4. **검증(완료 기준)** — 새 main 레포 루트에서 `bash /workspaces/planner/.reconciler-work/artifacts/pa-mr-rct_20261013-0002/chk.sh` → 다섯 줄 `_impl-map: ok` `_copy-map: ok` `_structure-map: ok` `_token-map: ok` `comment-ledger: ok`. 🔴 `_impl-map` 검산은 누락을 출력해도 rc=0 — rc 가 아니라 **출력 `ok`** 로 판정.\n   - `grep -n \"^남은 카피 drift\" docs/mockups/_copy-map.md` → 「표 A `구현 대기` 8행 · `목업 대기` 6행, 표 B `구현 대기` 29행」.\n   - `grep -n \"^| A | 일치 \\|^| A | 목업 대기 \" docs/mockups/_copy-map.md` → 179 · 6.\n   - `grep -n \"screen-todo-personal\\`) · \\|^| \\`screen-todo-personal\\` | S \" docs/mockups/_structure-map.md` → 표 S 22행 · 일치 21 · 불일치 1 · 목업 대기 0.\n   - `grep -c \"목록 — 완료 접힘\" docs/mockups/screen-todo-personal.html docs/mockups/mockups-dark.html` → 각 1 이상.\n5. **영향 확인** — `git show --stat <squash>` 가 docs/mockups 6파일뿐(ios/ 무접촉 ⇒ TestFlight·이미지 핀 미발화), 머지 커밋 check-runs 실패 0.\n\n이 범위 기준으로 수렴을 판정할 것 — 아래 범위 밖 잔여는 이 task 의 실패 사유가 아니다.\n\n## 범위 밖(후속 — 재감지 입력)\n- 카피: A 구현 대기 8 · A 목업 대기 6(전부 ApprovalKeysView — 열린 #278 착지 뒤 몫; 그때 `_impl-map` 누락 `ApprovalAutoResponseViews.swift`·`_copy-map` A 누락 「자동 응답 모드」도 함께) · B 구현 대기 29(run 번호 API · 여러 날 그룹 · 계정·연결 API · 알림 · history strip · backend · todo 섹션 구조 · #278 선결).\n- 구조표: 개인 M1/S1 · 회사 M7/S2 · scratchpad M11/S3 · affirmations M7/S1 · approval M21·목업 대기 2/S2.\n\n## 주의사항\n- 되돌릴 수 없는 지점 없음 — 문서 전용, 롤백은 squash 커밋 `git revert` 하나(검산은 revert 뒤에도 main 6a5e983 상태로 ok).\n- 트래픽·데이터 영향 0: `ios/`·`backend/`·`.github/` 무접촉이라 머지가 이미지 핀·TestFlight 를 발화하지 않는다.\n- 새 프레임은 **파일 끝**에 있어 기존 프레임 순서(다른 맵의 프레임 인덱스)는 불변이다 — 재생 시에도 끝에 붙일 것.\n- 다크 JSON 은 `json.dumps(ensure_ascii=False).replace(\"</\",\"<\\\\/\")` 직렬화가 원본을 바이트 재현함을 키트가 assert 한다; 손으로 고치지 말 것.\n"
         },
         "preparation": {
           "repository": "dlddu/pocket-aide",
