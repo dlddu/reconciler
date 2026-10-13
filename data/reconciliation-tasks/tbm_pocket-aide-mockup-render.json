@@ -16734,7 +16734,7 @@
       }
     },
     "createdAt": "2026-10-13T03:40:04Z",
-    "updatedAt": "2026-10-13T03:50:02Z",
+    "updatedAt": "2026-10-13T03:51:13Z",
     "stateSummary": {
       "asIs": "관측: dlddu/pocket-aide main `e584ef4` (2026-10-13T03:4xZ).\n\n- as-is 렌더링 소스(`ios/PocketAide`·`PocketAideWidget`·`PocketAideKeyboard`·`Shared/Sources/DesignSystem`) 버전은 불변이다: `app:dc2059a… widget:789d34b… keyboard:9acc7aa… design-system:e5c0114…`. lastObservedVersion과 같다.\n- 머지 커밋 #294는 `ios/`·`backend/`를 건드리지 않는다. 그래서 구현 화면은 직전 관측 그대로다.",
       "toBe": "관측: dlddu/pocket-aide main `e584ef4` (2026-10-13T03:37:14Z 커밋).\n\n- to-be 버전: `mockups:7521331…` → `mockups:9a3582d…`. `design-system:676e913…`은 불변이다.\n- 원인은 단일 커밋 `e584ef4` = PR #294(rct_20261013-0002 슬라이스 「개인 투두 「목록 — 완료 접힘」 프레임」)의 squash다. 직전 관측 `6a5e983`(#292) 바로 다음 커밋이다.\n- 변경 파일은 `docs/mockups` 6개(README·_copy-map·_index·_structure-map·mockups-dark.html·screen-todo-personal.html, +179/−17)뿐이다. `_token-map`과 design-system은 diff가 0이다.\n- e584ef4에서 검산 5종을 돌린 결과 `_impl-map`·`_copy-map`·`_structure-map`·`_token-map`·`comment-ledger`가 모두 `ok`다.\n- `_copy-map` 요약 줄: 「표 A `구현 대기` 8행 · `목업 대기` 6행, 표 B `구현 대기` 29행」.\n  - A: 일치 179 · 구현 대기 8 · 목업 대기 6.\n  - B: 일치 214 · 예시 데이터 141 · 구현 대기 29.\n- `_structure-map`: 개인 표 S는 22행이고 일치 21 · 불일치 1 · 목업 대기 0이다.\n- 새 프레임 「목록 — 완료 접힘」은 screen-todo-personal.html과 mockups-dark.html에 각 1회 들어 있다.\n- 머지 커밋 check-runs는 14개(success 7 · skipped 7 · 실패 0)이고 `ci-success`는 success다.\n- 열린 PR #278(docs-impl rct_20261012-0002, head `b6c43af3`), #293(data-model), #201(journeys)은 새 main 기준 merge-tree가 모두 clean이다.",
@@ -16772,7 +16772,18 @@
               "expectedOutcome": "main 의 prd-todo.md 에 블록 존재, 목업 검산 5종 출력 main 과 동일"
             }
           ],
-          "plannedAt": "2026-10-13T03:50:02Z"
+          "plannedAt": "2026-10-13T03:50:02Z",
+          "executionGuide": "## 0. 실행 전제 — 사람 결정 (가장 먼저)\n- 이 시도는 **사람 소유 결정**을 담은 제안이다. `attempts[-1].decision.verdict == \"approved\"` 이고 PR #295 head 가 `decision.sha`(`5cfbef9…`)와 같을 때만 실행한다.\n  - verdict 가 없으면 집지 않는다. failed 로 닫지도 않는다.\n  - head 가 다르면 실행하지 않는다. 재준비 몫이다.\n- 사람이 거부하면 reconciler-manual-approval 이 `review_rejected` 로 돌린다. `decision.comment` 가 다음 계획의 입력이다.\n\n## 1. 순서 (직렬)\n1. **재확인**: 다음 셋을 확인한다. 하나라도 어긋나면 멈춘다.\n   - `gh pr view 295 -R dlddu/pocket-aide --json state,headRefOid,mergeable,mergeStateStatus` 결과가 state OPEN, headRefOid = decision.sha 다.\n   - `files` 가 `docs/product/prd-todo.md` 하나뿐이다.\n   - main 이 움직였으면 `git merge-tree --write-tree origin/main <head>` 가 clean 이다.\n2. **ready 전환**: `gh pr ready 295`. draft 는 안전장치였을 뿐 head 는 바꾸지 않는다.\n3. **squash 머지**: `gh pr merge 295 --squash --match-head-commit <decision.sha>`. 커밋을 얹지 않는다 — head 가 바뀌면 사람 결정이 무효다.\n   - 필수 status 는 `ci-success`·`review/manual-approval`(판정기 자동 success)이다.\n   - status 가 빨갛게 떠도 내용 문제가 아닐 수 있다. 같은 sha 로 `gh run rerun --failed` 를 쓴다(docs 전용 CI 는 1~3분).\n\n## 2. 검증 (완료 기준)\n- main 의 `docs/product/prd-todo.md` 에서 다음 둘이 각 1회 있다.\n  - `grep -c '투두 미완료 「기한별 섹션」' docs/product/prd-todo.md` → 1\n  - `grep -c '「오늘」 · 「이번 주」 · 「나중」 · 「날짜 없음」 순서다' docs/product/prd-todo.md` → 1\n- 머지 커밋의 변경 파일이 `docs/product/prd-todo.md` 1개이고 삭제 줄이 0이다.\n- `docs/mockups`·`ios/`·`docs/design-system` diff 가 0이다. 따라서 목업 검산 5종의 출력은 머지 전 main 과 같다(재실행은 선택).\n- 머지 커밋 check-runs 실패가 0이다.\n\n## 3. 주의\n- 되돌릴 수 없는 지점은 없다. 문서 1파일이라 `git revert` 로 롤백한다. ios·backend 를 건드리지 않으므로 TestFlight·이미지 발화가 없다.\n- 결정 문면을 실행 단계에서 고치지 않는다. 날짜 「(2026-10-13 결정)」도 사람이 고친 head 일 때만 바뀐다.\n\n## 4. 범위 밖 (후속 — 재감지 입력)\n- 섹션의 iOS 구현: `TodoListView` 에서 개인 S #8 · 회사 S #7 · 카피 A 「할 일」/「OPEN」 · B 「5월 6일 수」「2개」「DUE TODAY」「THIS WEEK」「BACKLOG · 5」를 닫는다. 결정이 착지한 뒤 다음 슬라이스다.\n  - 새 문구 「나중」·「이번 주」 섹션은 목업에 없다. 그래서 구현 뒤 목업 보강이 필요하다.\n- 회사 오늘 마감 붉은 강조 `#C2554F`: 토큰 결정이 선결이다.\n- A 목업 대기 6(ApprovalKeysView): #278 착지 뒤다.\n- B 구현 대기의 나머지(run 번호 · 계정 API · 알림 · history strip · backend), 「오늘 회전 · 1/14」(n/전체 정의 없음), stone 자리(S5 불성립), scratchpad·affirmations 구조 잔여.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/pa-mr-rct_20261013-0003",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/295",
+          "preparedAt": "2026-10-13T03:51:13Z",
+          "notes": "draft 제안 PR. base main e584ef4, head 5cfbef9. docs/product/prd-todo.md 1파일만 바꾼다(+9/−0, 기존 줄 바이트 불변). 봇 명의다. judge.py 「수동 승인 케이스 미접촉」(rc=0)이라 review/manual-approval 이 자동 success 로 붙는다. 대상 레포 게이트가 없으므로 사람 결정 게이트는 decision 하나뿐이다. check_ledger.py rc=0."
+        },
+        "decision": {
+          "sha": "5cfbef93b45bf2b44b3df9d101e124ec263f01b7"
         }
       }
     ]
