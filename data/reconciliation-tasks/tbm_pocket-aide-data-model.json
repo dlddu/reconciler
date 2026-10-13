@@ -1156,7 +1156,7 @@
       }
     },
     "createdAt": "2026-10-11T04:52:12Z",
-    "updatedAt": "2026-10-13T03:15:33Z",
+    "updatedAt": "2026-10-13T03:19:31Z",
     "stateSummary": {
       "asIs": "관측 2026-10-11T04:5xZ · dlddu/pocket-aide main `d1b9b16`(#241 머지, data-model `rct_20261011-0001`의 Q-09 슬라이스).\n\n- as-is 지문: `site_lines 61→60` · `query_lines 143→142` · queries `82483b70…`→`b3510162…`. schema `ef12e4a4…`·checker `6e74adb4…`는 바뀌지 않았다. 마이그레이션 변경이 없다.\n- 원인 변경(`b267cbc..d1b9b16`, 데이터 모델 경로): `backend/internal/devicetokens/store.go`에서 테스트 전용 `Store::ListAll`(Q-09 지점)을 지웠고, `handlers/device_tokens_test.go`가 그 호출을 대체했다. 같은 구간의 #240은 ios·mockups만 건드렸다.\n- 판정(절차 3, C9 — 판정 환경에 Go가 없음): main `d1b9b16`의 CI `data-model check (report)` job 114391696324 로그. 엔진 SQLite 3.46.0 (modernc.org/sqlite v1.34.1). 테이블 15 · 인덱스(PK 제외) 20 · FK 15 · 지점 후보 60. **종료 코드 1**.\n  - 불변식 1 위반 7: approval_caller_keys·approval_requests의 `table-missing` 2 · `diagram-entity-missing` 2 · `diagram-relation-missing` 3.\n  - 불변식 2 위반 11: `approvals/store.go`의 11개 지점이 모두 `query-unregistered`다.\n  - 불변식 3 위반 6: `no-support` **Q-15** 1건과 approval_* `unused-unregistered` 5건.\n  - 직전 관측(`b267cbc`, rct_20261011-0002)의 위반 집합에서 정확히 `(3, no-support, Q-09)` 하나가 빠졌고, 새로 생긴 위반은 0이다.\n- 절차 4: 체커 해시가 그대로이고, 리포트의 지점 후보 60 = 지문 site_lines 60이다 ⇒ C2/C4 이상 없음.\n- 소관 census: approval_* 23건은 `rct_20261011-0002`(reviewing)가 맡고 PR #242(열림)가 다룬다. **Q-15**는 `rct_20261011-0001`(executing, #241 머지됨)과 `0002` 모두 범위 밖으로 명시했고(「사람 기준 결정 또는 쿼리 형태 변경 — 재감지가 잇는다」), 이를 맡은 비종결 task는 없다. Q-15 `excludedrepos.Store::ListUserIDsExcluding`에는 운영 호출자가 있다(`users`를 `NOT IN`으로 고르는 형태라 바깥 `users` SCAN이고, 인덱스로는 닫히지 않는다). 기준을 제안한 F1 경로 `rct_20261004-0004`는 사람 요청으로 cancelled됐다.",
       "toBe": "관측 2026-10-11T04:5xZ · `docs/data-model` 트리 `b9033a06…` → `e1d8e7f7…`(#241 `d1b9b16`).\n\n- `query-patterns.md`: Q-09 행을 지웠다. 「미사용 인덱스」 표에 `UNIQUE(device_tokens.token)` 행을 더했다(Q-08 `ON CONFLICT(token)` 충돌 대상이라 쓰기 패턴이고 플랜 판정 밖). 체커가 이 행을 위반으로 보지 않으므로 등재가 엔진과 맞다.\n- `README.md`: §2의 지원 없는 패턴 서술을 「둘(Q-09·Q-15)」에서 「하나(Q-15)」로 바꿨다. 「체커」 절 CI 문구도 「`no-support` 한 건」으로 바꿨다. 모드는 그대로 report다.\n- `erd.md`는 바뀌지 않았고 `fullscan-criteria.md`는 여전히 기준 0행이다. ERD와 카탈로그의 `approval_` 문자열은 0건이다(#242 미머지).",
@@ -1166,7 +1166,53 @@
     "assessment": {
       "reason": "조치 필요. 판정 절차 1~3: main `d1b9b16`의 CI 체커(C9, SQLite 3.46.0/modernc v1.34.1, job 114391696324)가 종료 코드 1을 냈다. 불변식 1 위반 7 · 불변식 2 위반 11 · 불변식 3 위반 6(no-support Q-15 + unused-unregistered 5). 절차 4: 체커 해시는 그대로이고 지점 60 = 지문 site 줄이다 ⇒ C2/C4 이상 없음. 판정 규칙(하나라도 위반 ⇒ action_required)에 따라 조치가 필요하다.\n이번 변화(#241)는 Q-09를 정확히 닫았고(위반 집합 −Q-09, 새 위반 0) 회귀가 없다. 남은 위반의 소관:\n- approval_* 23건(I1 7·I2 11·I3 unused 5) → 열린 `rct_20261011-0002`(reviewing, PR #242)가 맡는다. **이 task 범위 밖.** 중복 계획 금지.\n- **Q-15** `excludedrepos.Store::ListUserIDsExcluding`(no-support) → 비종결 소관 task가 없다. 0001이 부분 슬라이스로 「재감지가 잇는다」고 남긴 잔여이고, 0002도 범위 밖으로 명시했다. 여기서 닫으면 판정 규칙상 남은 위반이 추적되지 않은 채 묻힌다. 롤아웃·재동기화 같은 자동 해소 경로도 없어 재확인 유예는 맞지 않는다.\nplanner 인계(범위 = Q-15만):\n(1) 인덱스로는 닫히지 않는다(바깥 `users` SCAN — 형태에 users 접근 조건이 없다). 운영 호출자가 있으므로 지점 삭제도 답이 아니다.\n(2) 닫는 길은 둘이다. (a) 풀스캔 허용 기준 제안(사람 소유) — 기준을 발명해 착지시키지 말고, 제안 PR이라면 사람 승인(`review.manualApproval`)을 거친다. F1 경로의 `rct_20261004-0004`가 사람 요청으로 취소된 사실을 존중하고, 같은 제안을 그대로 다시 쌓기 전에 사람 의사를 먼저 확인할 것. (b) 쿼리 형태 변경(코드 변경, 이 지도의 범위 밖이라 별도 판단 필요).\n(3) 사람 결정이 선행 조건이면 계획이 「사람 결정 요청」 형태가 될 수 있다.\n(4) #242와 같은 파일(`query-patterns.md`·README §2·CI 문구)을 건드리므로 머지 순서·충돌에 유의한다. CI report→gate 전환은 Q-15와 approvals가 모두 닫힌 뒤의 일이다.",
       "assessedAt": "2026-10-11T04:53:30Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "불변식 3 `no-support` Q-15(단독 잔여)를 사람 소유 결정 제안으로 닫는다 — `fullscan-criteria.md` 에 F1 한 행을 제안하고 Q-15 지원 칸을 `풀스캔 허용(F1)` 으로, README §2·§4 를 채택 기준으로 고친 draft PR #293 을 준비하고 `attempts[].decision.sha` 에 그 head 를 묶는다. 왜 이 경로인가: Q-15(`ListUserIDsExcluding`, `cmd/server/main.go:176` 푸시 팬아웃 운영 쿼리)는 형태에 `users` 접근 조건이 없어 인덱스 마이그레이션으로 닫히지 않고(모델 정의 「인덱스로 닫히지 않으면 기준 제안 PR」), 쿼리 재설계는 제품 의미 변경이라 data plane 몫이 아니다. 지금까지는 기준을 착지시킬 사람 승인 경로가 없어 claim→release 만 반복됐다(#160 은 MA5 경로 철회로 닫힘) — reconciler `2e0e8af` 가 그 경로로 `decision` 을 들였다. **완료 기준(이 시도의 범위)**: `decision.verdict == approved` 이고 PR #293 head 가 `decision.sha` 그대로일 때 squash 머지되어 main 의 `go run ./cmd/datamodelcheck --json` 이 exit 0(불변식 1·2·3 위반 0 · undecidable 0). `rejected` 면 머지 없이 PR 을 닫고 `decision.comment` 를 다음 재계획 입력으로 넘긴다. **범위 밖**: data-model CI report→gate 전환(별도 PR) · 미사용 인덱스 처분 · 쿼리 재설계.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "결정 게이트 확인: 이 시도의 `decision.verdict` 를 읽는다. 없으면(결정 대기) 실행하지 않는다. `approved` 면 PR #293 이 open 이고 head == `decision.sha`(`f96673e`)인지 `gh api repos/dlddu/pocket-aide/pulls/293 -q .head.sha` 로 확인. `rejected` 면 7단계로.",
+              "expectedOutcome": "verdict=approved · PR open · head == f96673e43a6323d9aeb52870679fd3f521c22d49"
+            },
+            {
+              "seq": 2,
+              "action": "main 대비 재확인: `git merge-tree --write-tree $(git merge-base origin/main <head>) origin/main <head>` 가 clean 이고, main 이 움직였으면 그 사이 `docs/data-model/` 접촉 커밋이 Q-15 행·README §2·§4·fullscan-criteria 와 겹치지 않는지 본다(겹치면 head 를 바꾸지 말고 멈춤 — 결정이 sha 에 묶여 있다).",
+              "expectedOutcome": "merge-tree clean, 충돌 0"
+            },
+            {
+              "seq": 3,
+              "action": "PR 의 필수 status 확인: `ci-success` · `review/manual-approval`(판정기 자동 success — 사람 채택 신호 아님) 둘 다 head 에 success.",
+              "expectedOutcome": "두 required context 모두 success"
+            },
+            {
+              "seq": 4,
+              "action": "draft 해제(`gh pr ready 293` 또는 GraphQL markPullRequestReadyForReview) 뒤 head sha 고정 squash 머지(`gh api -X PUT repos/dlddu/pocket-aide/pulls/293/merge -f merge_method=squash -f sha=f96673e43a6323d9aeb52870679fd3f521c22d49`).",
+              "expectedOutcome": "merged=true, main 에 squash 커밋 1개"
+            },
+            {
+              "seq": 5,
+              "action": "main 머지 커밋에서 `cd backend && go run ./cmd/datamodelcheck --json` 실행(또는 main push 의 CI `data-model check (report)` 잡 로그).",
+              "expectedOutcome": "exit 0 · invariants 1/2/3 status ok · 위반 0 · undecidable 0"
+            },
+            {
+              "seq": 6,
+              "action": "`docs/data-model/fullscan-criteria.md` 의 F 데이터 행 수 확인: `git show origin/main:docs/data-model/fullscan-criteria.md | grep -cE '^\\| F[0-9]'`.",
+              "expectedOutcome": "1 (F1)"
+            },
+            {
+              "seq": 7,
+              "action": "(rejected 분기) 머지하지 않고 PR #293 을 코멘트(`decision.comment` 인용)와 함께 닫는다. 대상 레포 변경 0.",
+              "expectedOutcome": "PR closed, merged=false, main 무변경"
+            }
+          ],
+          "plannedAt": "2026-10-13T03:19:21Z"
+        }
+      }
+    ]
   },
   {
     "id": "rct_20261011-0004",
