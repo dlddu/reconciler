@@ -8938,6 +8938,57 @@
       "reason": "**조치 필요(action_required).**\n- 이번 버전 변화는 rct_20261012-0002의 PRD-12 AC9 슬라이스(#278)와 형제 소관 docs 두 건(#293 data-model, #297 comment-policy)이 착지한 것이다. #278은 AC9·AC12 문서와 일치하고, tracker 재계수 67/3/5도 맞는다. 그래서 새 어긋남은 없다.\n- 그러나 0002가 부분 슬라이스로 succeeded가 되면서, 잔여 미구현 AC를 맡는 열린 docs-impl task가 없어졌다. 잔여 항목은 PRD-12 AC11, PRD-11 AC4~12·SSE, PRD-8 AC3·AC11(+AC1·AC8 부분), PRD-1·6·7·9, PRD-4 AC1·AC2 음성이다.\n- 모델 정의의 판정 기준 1은 미구현 AC를 백로그로 빼지 않고 drift로 본다. 스킬 규약도 「슬라이스 → 재감지 → 후속 task」를 정상 루프로 둔다.\n- 자동 해소될 성질이 아니다. 이 task를 새 carrier로 planner에 넘긴다. 다음 슬라이스 선택(예: 같은 PRD-12를 마무리하는 AC11)은 planner 몫이다.",
       "assessedAt": "2026-10-13T12:33:31Z"
     },
-    "updatedAt": "2026-10-13T12:34:36Z"
+    "updatedAt": "2026-10-13T12:40:55Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "PRD-12 AC11 잠금화면 알림 액션(test-approval-gate 시나리오 14 — T-12 의 마지막 미구현)을 서버·앱 양쪽에 세운다. 대안 저울질: 직전 계획(0002)은 AC11 을 「실기기 관찰」이라 미뤘지만, 테스트 문서 서두가 이미 「시뮬레이터 검증은 액션 처리 경로 호출까지, 잠금 해제 요구 자체는 실기기」로 관찰 지점을 갈라 두었다 — 구현은 무인으로 가능하고 실기기는 검증 축의 일부일 뿐이다. 나머지 잔여(PRD-11 앱·SSE, PRD-8 메일, PRD-1·6·7·9, PRD-4 음성)는 설계·키 주입 같은 사람 결정이 먼저라 이번 슬라이스로 부적합하다. AC11 은 마이그레이션·인증 경로를 건드리지 않아 review-policy MA1~4 미접촉(judge 실측) — 사람 서명 없이 `ci-success` 만으로 머지된다. 서버: `apns.Client.SendWithCategory`(aps.category) 추가, `SendWithData` 는 빈 카테고리 호출로 PR 모니터 무변경, `PayloadSize`/`FitAlertBody` 가 카테고리까지 재서 4096바이트 보장 유지, approvalpush 가 `APPROVAL_REQUEST` 로 보낸다. 앱: AppDelegate 가 실행 시 `APPROVAL_REQUEST` 카테고리에 「승인」(authenticationRequired)·「거절」(destructive, 잠금 상태 실행) 액션 등록; 액션 수신 시 화면 없이 결정 API 호출 후 같은 알림 식별자로 결과 교체(성공 「승인됨/거절됨 — <첫 줄>」, 409 기존 conflictNotice, 실패 기존 failedDecisionNotice — 재시도 없음). 문구 매핑은 PocketAideAPI 의 순수 함수 `ApprovalNotificationAction`(단위 테스트). **완료 기준**: ① PR #300 이 main 에 squash 머지되고 필수 status(`ci-success` + 판정기 자동 `review/manual-approval`)가 초록 ② Go: `TestSendWithDataReportsRejections`(일반 푸시 category 없음 · SendWithCategory 는 aps.category=APPROVAL_REQUEST)·`TestSendGoesToEveryDeviceOfTheOwner`(승인 푸시 category)·자르기 테스트 통과 ③ iOS: `ApprovalPushPayloadTests.testLockScreenActionsMapToDecisionsAndReportTheResult` 통과 + 기존 승인·푸시 UI 테스트 회귀 없음(ci-success) ④ 문서: `test-approval-gate.md` 시나리오 14 「구현됨」, tracker T-12 「16개 모두 구현됨」, 재계수 grep = tracker 마지막 이력 행 오른쪽 값(기대 68/3/4) ⑤ main 머지 커밋에서 check_ledger rc=0 · datamodelcheck exit 0. 범위 밖: 시나리오 14 e2e 매핑(scenario-e2e — SpringBoard 경로라 예외 후보), 알림 문구 `_copy-map`(mockup-render), 실기기 잠금 해제 관찰, PRD-11·8·1·6·7·9·PRD-4 음성.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "backend/internal/apns/client.go: SendWithCategory 추가(aps.category), SendWithData 는 빈 카테고리 위임, alertPayload/PayloadSize/FitAlertBody 에 category 인자",
+              "expectedOutcome": "go build ./... 성공, PR 모니터 경로(main.go SendWithData) 무변경"
+            },
+            {
+              "seq": 2,
+              "action": "backend/internal/approvalpush/notifier.go: Sender 인터페이스를 SendWithCategory 로, const Category=\"APPROVAL_REQUEST\", FitAlertBody 에 Category 포함. 테스트 가짜 3곳(notifier_test fakeSender·gate, handlers blockingSender) 갱신 + category 단언",
+              "expectedOutcome": "go test ./internal/apns/ ./internal/approvalpush/ ./internal/handlers/ PASS"
+            },
+            {
+              "seq": 3,
+              "action": "ios Shared Approvals.swift 에 ApprovalNotificationAction(카테고리·액션 식별자·제목·decision 매핑·resultNotice) 추가, 단위 테스트 ApprovalPushPayloadTests 에 1메서드",
+              "expectedOutcome": "swiftlint --strict 0 위반, CI 단위 테스트 PASS"
+            },
+            {
+              "seq": 4,
+              "action": "ios AppDelegate: 실행 시 setNotificationCategories([APPROVAL_REQUEST: 승인 authenticationRequired · 거절 destructive]), didReceive 에서 액션이면 결정 API 호출 → 같은 식별자 로컬 알림으로 결과 교체 → completionHandler",
+              "expectedOutcome": "CI iOS 빌드·테스트 3 shard 초록(새 UITest 클래스 없음 → 샤드 재배치 없음)"
+            },
+            {
+              "seq": 5,
+              "action": "docs: test-approval-gate.md 서두·시나리오 14 구현 상태/관련 코드 테스트, doc-tracker/2026-10.md T-12 행·관측 문단·이력 1행(67/3/5→68/3/4)",
+              "expectedOutcome": "재계수 grep 68/3/4 = tracker 마지막 이력 행 오른쪽 값"
+            },
+            {
+              "seq": 6,
+              "action": "로컬 게이트: check_ledger.py · judge.py(변경 경로) · datamodelcheck · go vet/test ./...",
+              "expectedOutcome": "ledger rc=0, judge 「수동 승인 케이스 미접촉」, datamodelcheck exit 0"
+            },
+            {
+              "seq": 7,
+              "action": "PR #300 CI 초록 확인 후 squash 머지(실행 단계)",
+              "expectedOutcome": "ci-success·review/manual-approval success, main 머지"
+            },
+            {
+              "seq": 8,
+              "action": "main 사후 확인: push CI backend/ios·image pin 성공, 재계수 재확인",
+              "expectedOutcome": "운영 파드 새 이미지 Ready, grep = tracker"
+            }
+          ],
+          "plannedAt": "2026-10-13T12:58:00Z"
+        }
+      }
+    ]
   }
 ]
