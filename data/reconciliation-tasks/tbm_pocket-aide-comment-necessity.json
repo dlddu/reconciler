@@ -1863,6 +1863,37 @@
       "reason": "작업 필요(action_required). ⑴ 직전 관측 이후 두 side를 바꾼 것은 #278(`40c8c6d`) 한 커밋이다. 이 커밋이 `backend/internal/approvals/store.go` 50행에 exported 타입 `AutoResponse` doc 주석 1줄을 더했고, 원장에는 그 행을 `—`(미판정)로만 되돌렸다. `e66b47e`↔`40c8c6d` 정규화 주석 diff는 +1/−0이고, 두 지문 모두 재현했다. ⑵ `check_ledger.py` @ `40c8c6d`는 rc=0이지만 L 612줄 중 완료 609 · 미판정 3이다. 게이트는 행·지문 정합만 강제해 미판정이 남아도 CI는 초록이므로 이 차이는 저절로 닫히지 않는다. 판정과 `passes/` 기록을 남기는 PR이 필요하다. 같은 형태였던 rct_20261011-0003(#242가 CallerKey·Request doc 2줄을 미판정으로 등재)도 action_required로 판정했다. ⑶ 새 줄은 exported 식별자 doc 주석이다. README 기준으로 첫 문장 요약 부분만 사유 면제다. 「a user without a row gets AutoResponseNone」처럼 동작 규칙을 말하는 부분은 시험 대상이고, 같은 사실이 ERD(`의미:`)에 정본으로 있으면 「같은 사실은 한 자리에」 규칙도 따져야 한다. 어느 쪽이든 유지·개작·제거 결정과 사유 기록은 planner 몫이다. ⑷ 슬라이스: 판정 칸이 `완료`가 아닌 행은 이 하나(3줄)뿐이라 400줄 예산 안이다. 열린 PR 중 store.go와 겹치는 것은 없다. #296은 ledger.md의 다른 행(위젯)만 고치고, 원장 형식상 공유 줄이 없어 좁히는 사유가 아니다. 이 모델에 다른 열린 task도 없다. 자동 해소를 기다릴 근거도 없다(#278은 머지 완료, 후속 판정 PR 없음).",
       "assessedAt": "2026-10-13T12:09:54Z"
     },
-    "updatedAt": "2026-10-13T12:10:45Z"
+    "updatedAt": "2026-10-13T12:13:23Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#278 이 `미판정` 으로 되돌린 원장 L 행 `backend/internal/approvals/store.go`(3줄 중 새 1줄 `AutoResponse` doc)를 판정해 유지하고, 사유를 `passes/2026-10-04-data-model-godoc.md` 의 증분 절(2026-10-13)에 적어 그 행을 `완료` 로 닫는 문서 전용 PR #297 을 squash 머지한다. 이유: 그 줄은 exported 타입의 한 줄 doc 주석이자 ERD `user_approval_settings` 의 `의미:` 링크 대상이라 제거는 `datamodelcheck` 불변식 1(`meaning-undocumented`)을 깨고, 첫 문장 뒤 문면(생성 시점에만 적용 · 행 부재 = `AutoResponseNone`)은 타입 선언에서 안 보이는 계약이며 코드(`Create` 307행 · `Store.AutoResponse` 의 `ErrNoRows` 분기)와 대조해 참이다. 기존 2줄(`CallerKey`·`Request`)은 rct_20261011-0003/#246 판정 그대로이고 문면 불변. 대안 ⑴ 개작·제거 — `backend/**` 접촉으로 main 머지 시 이미지 pin(운영 롤아웃)·TestFlight 를 발화시키고 제거는 게이트를 깬다 ⑵ 새 패스 파일 — 같은 주제의 기존 파일에 증분 절을 더하는 #246 선례가 있어 불필요. 완료 기준(범위): PR #297 이 main 에 착지하고, 착지 커밋에서 `check_ledger.py` rc=0 · L `완료 612 · 미판정 0` · 지문 `f6ec97d6…` 불변 · 원장 `approvals/store.go` 행 판정 칸 `완료`. 슬라이스 크기: 판정 칸이 `완료` 가 아닌 행이 이 하나(3줄)뿐이라 예산 400줄 미달은 「남은 대상 없음」 사유. 범위 밖: 없음(이 머지 뒤 to-be tree hash 변화의 재감지가 0 미판정을 확인한다).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #297 head `72b2d9a` 가 main 위에서 충돌 없음(`mergeable`)이고 필수 status(`ci-success` 등) 가 초록인지 확인. docs 전용이라 backend·ios 잡은 skip 이 정상",
+              "expectedOutcome": "mergeable=MERGEABLE, 필수 체크 success"
+            },
+            {
+              "seq": 2,
+              "action": "PR #297 squash 머지",
+              "expectedOutcome": "main 에 착지 커밋 1개, 변경 파일 2개(ledger.md · passes/2026-10-04-data-model-godoc.md)"
+            },
+            {
+              "seq": 3,
+              "action": "착지 커밋에서 `python3 scripts/comment-policy/check_ledger.py` 실행",
+              "expectedOutcome": "rc=0, `L: 행 44 · 파일 79 · 주석 612줄 · 완료 612 · 미판정 0`, 지문 f6ec97d645c6937fc973a38fb0d4ec7dbcb6c6b9a81062f9ddd2a0054c5ec943"
+            },
+            {
+              "seq": 4,
+              "action": "`git rev-parse HEAD:docs/comment-policy` 와 `git diff --stat <머지 부모> HEAD` 로 docs 전용 착지 확인",
+              "expectedOutcome": "to-be tree hash 가 3523a3e8… 에서 바뀌고 `docs/` 밖 변경 0"
+            }
+          ],
+          "plannedAt": "2026-10-13T12:13:23Z"
+        }
+      }
+    ]
   }
 ]
