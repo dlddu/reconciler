@@ -19,8 +19,8 @@
 
 **개수·범위 숫자는 판정 기준에 넣지 않는다.** 여정과 단계는 계속 추가·삭제되므로
 "여정 7개"·"단계 5개" 같은 숫자를 목표나 판정 기준에 박으면 하나가 늘어난 순간
-definition이 사실과 어긋난다. 숫자는 definition의 "등록 시점 현황"에만 **스냅샷으로
-라벨링해** 두고, 판정은 개수 독립적 불변식으로 쓴다. 여정·단계가 늘면 to-be 버전이
+definition이 사실과 어긋난다. 현황 숫자는 definition에 두지 않고(기록·갱신은
+각 task의 `stateSummary` 몫), 판정은 개수 독립적 불변식으로 쓴다. 여정·단계가 늘면 to-be 버전이
 바뀌어 재평가가 트리거되고, 새 항목도 자동으로 판정 대상이 된다.
 
 **단계 식별자는 순번이 아니라 슬러그다.** 순번을 식별자로 쓰면 단계가 중간에
@@ -32,29 +32,28 @@ definition이 사실과 어긋난다. 숫자는 definition의 "등록 시점 현
 
 대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다.
 
-| 슬롯 | 의미 | 예 (dear-baby) |
-|---|---|---|
-| `{{REPO}}` | owner/repo | `dlddu/dear-baby` |
-| `{{SLUG}}` | id·이름용 소문자 레포명 | `dear-baby` |
-| `{{JOURNEY_PATH}}` | 여정 문서 루트(to-be 버전 범위) | `docs/user-journeys` |
-| `{{JOURNEY_UNIT}}` | 여정 매칭 단위(파일 유형·위치) | `docs/user-journeys/JRN-*.md` 파일 1개 = 여정 1개 |
-| `{{ID_SCHEME}}` | 여정·단계 ID **체계**(개수 아님) | 여정 `JRN-<슬러그>`, 단계 `STP-<슬러그>` |
-| `{{STEP_SSOT}}` | 여정 문서에서 단계 목록을 읽는 위치 | "3. 단계별 상세"의 `### \`STP-…\`` 헤딩 |
-| `{{BRANCH_SSOT}}` | 여정 문서에서 분기를 읽는 위치 [선택] | "4. 분기·예외 흐름" 표의 "이어지는 단계" 열 |
-| `{{MOCKUP_ROOT}}` | 여정 mockup 루트(as-is 버전 범위) | `docs/journeys` |
-| `{{MOCKUP_UNIT}}` | mockup 매칭 단위 | `docs/journeys/<journey-id>/index.html` |
-| `{{NON_UNIT}}` | mockup 루트 안이지만 매칭 단위가 아닌 것 [선택] | `docs/journeys/_shared/`(공용 스타일·스크립트) |
-| `{{STEP_MARKUP}}` | mockup의 식별자 노출 규약 | `<main data-journey="…">` / `<section data-step="…">` |
-| `{{MAPPING_SSOT}}` | 여정↔mockup 매핑을 기계적으로 확인하는 곳(인덱스) | `docs/mockup-index.md` |
-| `{{HARNESS}}` | 규칙 5를 집행하는 DOM 하네스와 그 CI 게이트 | `tools/journey-prototype.test.mjs` + `.github/workflows/docs-journey-mockup.yml` |
-| `{{HUB}}` | Pages 진입 허브(인덱스의 반영물) | `docs/index.html` |
-| `{{EXCEPTION_SSOT}}` | 여정 예외·비-여정 페이지 등재 위치. doc-tracker 안이면 to-be에는 `{{TOBE_EXTRA}}` blob 대신 README 「doc-tracker 경로 해석」 조각으로 그 등재 섹션 해시를 묶는다 | `docs/doc-structure-state.md`의 "여정 mockup 예외" 섹션 |
-| `{{EXCLUDED_STATES}}` | 판정 대상에서 빼는 여정 상태 | `폐기`(무조건), `초안`(예외 등재 시) |
-| `{{TOBE_EXTRA}}` | to-be 버전에 함께 묶을 파일 [선택] | `docs/doc-structure-state.md` blob(예외 등재 변경도 감지) |
-| `{{ASIS_COMMON}}` | as-is 경로들의 공통 상위(dataSource.subPath) | `docs` |
-| `{{SIBLING_MOCKUP_RENDER}}` | 자매 mockup-render 모델 id [선택] | `tbm_dear-baby-mockup-render` |
-| `{{INITIAL_STATE}}` | 등록 시점 **스냅샷**: 여정 수 vs 페이지 수, 공백·중복·미규약 예시 | 여정 7 vs 페이지 3, `data-step` 규약 미도입, 2개 여정이 한 페이지 |
-| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
+| 슬롯 | 의미 |
+|---|---|
+| `{{REPO}}` | owner/repo |
+| `{{SLUG}}` | id·이름용 소문자 레포명 |
+| `{{JOURNEY_PATH}}` | 여정 문서 루트(to-be 버전 범위) |
+| `{{JOURNEY_UNIT}}` | 여정 매칭 단위(파일 유형·위치) |
+| `{{ID_SCHEME}}` | 여정·단계 ID **체계**(개수 아님) |
+| `{{STEP_SSOT}}` | 여정 문서에서 단계 목록을 읽는 위치 |
+| `{{BRANCH_SSOT}}` | 여정 문서에서 분기를 읽는 위치 [선택] |
+| `{{MOCKUP_ROOT}}` | 여정 mockup 루트(as-is 버전 범위) |
+| `{{MOCKUP_UNIT}}` | mockup 매칭 단위 |
+| `{{NON_UNIT}}` | mockup 루트 안이지만 매칭 단위가 아닌 것 [선택] |
+| `{{STEP_MARKUP}}` | mockup의 식별자 노출 규약 |
+| `{{MAPPING_SSOT}}` | 여정↔mockup 매핑을 기계적으로 확인하는 곳(인덱스) |
+| `{{HARNESS}}` | 규칙 5를 집행하는 DOM 하네스와 그 CI 게이트 |
+| `{{HUB}}` | Pages 진입 허브(인덱스의 반영물) |
+| `{{EXCEPTION_SSOT}}` | 여정 예외·비-여정 페이지 등재 위치. doc-tracker 안이면 to-be에는 `{{TOBE_EXTRA}}` blob 대신 README 「doc-tracker 경로 해석」 조각으로 그 등재 섹션 해시를 묶는다 |
+| `{{EXCLUDED_STATES}}` | 판정 대상에서 빼는 여정 상태 |
+| `{{TOBE_EXTRA}}` | to-be 버전에 함께 묶을 파일 [선택] |
+| `{{ASIS_COMMON}}` | as-is 경로들의 공통 상위(dataSource.subPath) |
+| `{{SIBLING_MOCKUP_RENDER}}` | 자매 mockup-render 모델 id [선택] |
+| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) |
 
 ## 모델 JSON 골격
 
@@ -223,9 +222,6 @@ printf '%s\n%s\n%s' "$HITS" \
 - 어느 한쪽 버전이 바뀌면 task가 생성되어 1:1 매칭을 재검증한다.
 - 규칙 5(c)(d)(e)는 버전 감지로는 잡히지 않는다. {{HARNESS}}가 커밋 시점에 CI 게이트로 집행하고, 이 모델은 그 하네스의 존재와 통과를 판정 대상에 포함한다.
 - {{STEP_MARKUP}} 규약이 정착하면 as-is를 **식별자 지문(sha256)** 으로 좁힐 수 있다(모델 개정 사항). 단 {{HARNESS}}가 CI에 걸린 뒤에만 — 지문은 배선·입력·상태 회귀를 보지 못한다.
-
-## 초기 상태 메모 (등록 시점 {{NOW_ISO}})
-{{INITIAL_STATE}} 이 문단의 숫자는 **스냅샷일 뿐 판정 기준이 아니다** — 여정이나 페이지가 추가·삭제되면 어느 한쪽 버전이 바뀌어 재평가가 트리거되고, 새 여정도 자동으로 1:1 판정 대상이 된다. 판정은 항상 개수 독립적 불변식으로 한다. 현황 숫자 갱신은 각 task의 몫이다. <!-- 지침: 현재 여정 수 vs 페이지 수, 단계 커버리지 공백/중복/미규약의 구체 예를 남긴다. 격차가 크면 "첫 task는 (1) 매핑 인덱스·예외 목록 신설 (2) {{STEP_MARKUP}} 규약 도입 (3) 묶음 페이지 분리·누락 여정의 페이지 신설을 다루게 된다 — 큰 초기 격차는 예상된 것"을 포함 -->
 
 <!-- [선택] 단계 식별자가 순번(STP-1, STP-2 …)이면 아래 문단을 남기고, 슬러그 체계면 삭제 -->
 **식별자 체계 이관이 선행 과제다.** 현재 단계 식별자가 순번 기반이라 단계가 추가·재배치되면 mockup과의 대조가 통째로 어긋난다. 첫 task는 슬러그 체계({{ID_SCHEME}})로의 일괄 이관을 계획 대상에 포함한다.

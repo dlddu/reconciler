@@ -28,6 +28,7 @@ templates/                          # 반복 등록되는 모델 유형의 표�
   journey-mockup.tbm.md             # 사용자 여정 ↔ 목업 1:1 정합성
   comment-necessity.tbm.md          # 주석 필요성 (필요 사유 없는 주석 제거)
   pr-manual-approval.tbm.md         # PR 수동 승인 (정책 ↔ 판정기 ↔ ruleset · 케이스 신선도)
+  data-model.tbm.md                 # 데이터 모델 (ERD ↔ 스키마 · 쿼리 패턴 ↔ 코드 · 패턴 ↔ 인덱스)
 data/                               # 운영 데이터 (스킬이 런타임에 생성·기록, 초기엔 비어 있음)
   to-be-models.json                 # ToBeModel (배열)
   reconciliation-tasks/             # task: to-be 모델(toBeModelId)별로 파일 분리
@@ -66,7 +67,8 @@ tests/                              # index.html 동작 테스트 (node --test)
 레포마다 반복 등록되는 정합성 유형 — **제품 문서 ↔ 구현**(docs-impl),
 **테스트 시나리오 ↔ E2E 1:1**(scenario-e2e), **E2E 모킹 최소화**(e2e-mock-policy),
 **목업 ↔ 구현 렌더링**(mockup-render), **사용자 여정 ↔ 목업 1:1**(journey-mockup),
-**주석 필요성**(comment-necessity), **PR 수동 승인**(pr-manual-approval) — 은 `templates/`의
+**주석 필요성**(comment-necessity), **PR 수동 승인**(pr-manual-approval),
+**데이터 모델**(data-model) — 은 `templates/`의
 템플릿으로 등록한다. 판정 기준·충돌 방향·추적 방식 같은 고정부는 템플릿이 유형의
 SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 채운다. 자세한 절차는
 `templates/README.md`.
@@ -185,6 +187,10 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
 - **딥링크**: `#<toBeModelId>`로 들어오면 그 모델이 보이는 모드로 자동 전환되므로,
   숨김 모델 링크도 그대로 열린다. `#tpl:<파일명>`(예: `#tpl:scenario-e2e.tbm.md`)은
   템플릿 보기로 열린다.
+
+  모델 선택은 주소에 남기지 않는다 — 목록에서 모델을 골라도 URL이 바뀌지 않으므로,
+  새로고침하면 보던 모델이 아니라 기본 선택(목록의 첫 모델)으로 연다. 딥링크로 들어온 뒤
+  다른 모델을 고르면 주소의 딥링크도 지워진다.
 
 - **GitHub Pages 활성화**: 저장소 Settings → Pages → *Deploy from a branch* →
   브랜치의 `/(root)` 선택. 페이지는 `data/`를 상대경로로 읽으므로 반드시

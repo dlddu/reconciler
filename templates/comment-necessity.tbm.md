@@ -178,18 +178,16 @@ econ-opinion-monitor에서 20여 개 task가 docstring·줄 끝 주석을 같은
 대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다. 범위와 언어별 패턴은
 슬롯이 아니다(위 고정부).
 
-| 슬롯 | 의미 | 예 (session-platform / Go·TS) | 예 (단일 언어 Python) |
-|---|---|---|---|
-| `{{REPO}}` | owner/repo | `dlddu/session-platform` | `dlddu/econ-opinion-monitor` |
-| `{{SLUG}}` | id·이름용 소문자 레포명 | `session-platform` | `econ-opinion-monitor` |
-| `{{DIRECTIVE_EXTRA}}` | 이 레포 고유의 기계가 읽는 주석(CI 파서 마커 등) — 지문·판정 **모두** 제외. 도구 공통 지시자(빌드 태그·린터·shebang·타입 체커 등)는 고정부에 이미 있다 | `검증 AC:\|mock-exception:\|mockup:` | `검증 시나리오:` |
-| `{{REPO_EXCLUDE_SEED}}` | 등록 시 대상 레포 `comment-scope-exclude` 블록에 들어가야 할 줄과 부류 — 모델이 아니라 **첫 task의 범위**로 넘긴다 | (없음) | `^tests/fixtures/` (③ 픽스처 데이터) |
-| `{{DOC_COMMENT_POLICY}}` | public 식별자 doc 주석·모듈 주석의 처리 수준 | 1줄 doc + 패키지 주석 유지 | docstring 유지, 본문 재진술은 제거 |
-| `{{KEEP_KINDS}}` | 이 레포에서 흔한 필요 사유 — 사유를 대는 예시이지 시험 면제 목록이 아니다 | 커널·런타임 제약, 온클러스터 검증 결과, 동시성 계약, 함정 | 외부 API의 문서화되지 않은 동작, 수치 근거 |
-| `{{SIBLING_MODEL}}` | 같은 트리를 보는 자매 모델 [선택] | `tbm_session-platform-docs-impl` | — |
-| `{{SLICE_BUDGET}}` | task 하나가 가져가는 주석 줄 수 예산(definition 「판정 슬라이스」) | `400` | `400` |
-| `{{INITIAL_STATE}}` | 등록 시점 현황 (주석 줄 수, 눈에 띄는 불필요 유형) | 주석 1,680줄 / 전체 18.7k LOC | — |
-| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` | 〃 |
+| 슬롯 | 의미 |
+|---|---|
+| `{{REPO}}` | owner/repo |
+| `{{SLUG}}` | id·이름용 소문자 레포명 |
+| `{{DIRECTIVE_EXTRA}}` | 이 레포 고유의 기계가 읽는 주석(CI 파서 마커 등) — 지문·판정 **모두** 제외. 도구 공통 지시자(빌드 태그·린터·shebang·타입 체커 등)는 고정부에 이미 있다 |
+| `{{DOC_COMMENT_POLICY}}` | public 식별자 doc 주석·모듈 주석의 처리 수준 |
+| `{{KEEP_KINDS}}` | 이 레포에서 흔한 필요 사유 — 사유를 대는 예시이지 시험 면제 목록이 아니다 |
+| `{{SIBLING_MODEL}}` | 같은 트리를 보는 자매 모델 [선택] |
+| `{{SLICE_BUDGET}}` | task 하나가 가져가는 주석 줄 수 예산(definition 「판정 슬라이스」) |
+| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) |
 
 ## 모델 JSON 골격
 
@@ -492,7 +490,7 @@ echo "docstring=$(surf D) eol=$(surf E) unparsed=$(printf '%s\n' "$DE" | grep -c
 둔감 — 문자열 안의 `#`·`//`, docstring 가진 함수의 이름 변경 포함), **주석만 바꿨을 때 값이 달라지는가**(민감 —
 줄머리·docstring·줄 끝 주석 각각), **`unclassified=0`인가**, 그리고 **`unparsed=0`인가**. 세 번째가
 깨지면 언어군 표가 그 언어의 주석을 잡지 못하고 있다는 뜻이다. 네 번째가 0이 아니면 등록 전에 그
-파일들을 부류(①②③)로 가르거나 언어군을 더해 두고, 레포 고유 제외는 `{{REPO_EXCLUDE_SEED}}`로 적는다.
+파일들을 부류(①②③)로 가르거나 언어군을 더해 두고, 레포 고유 제외는 대상 레포 정책 본문의 `comment-scope-exclude` 블록에 둔다(블록이 없으면 첫 task가 만든다).
 
 ## definition 본문 템플릿
 
@@ -531,9 +529,6 @@ echo "docstring=$(surf D) eol=$(surf E) unparsed=$(printf '%s\n' "$DE" | grep -c
 ## 추적 방식 (요약)
 - **to-be** = `docs/comment-policy/`의 tree hash. 없으면 `absent`. 정책 본문·원장·판정 상세가 바뀔 때만 변한다.
 - **as-is** = 레포 전체 − 제외에서 주석을 세 표면(L 줄머리 주석 · D Python docstring 본문 · E 줄 끝·줄 중간 주석)으로 추출·정규화·정렬하고 미분류 파일 경로를 더한 sha256 지문. 원장이 세는 것은 L이고, D·E는 표면별 표로 따로 센다. 트리 해시를 쓰지 않으므로 주석과 무관한 코드 변경에는 반응하지 않고<!-- [선택] --> (자매 모델 `{{SIBLING_MODEL}}`과의 중복 트리거 회피)<!-- --> 주석이 추가·수정·삭제되거나 미분류 파일이 생기고 사라질 때만 변한다. 새 디렉터리는 등록 없이 자동으로 범위에 든다.
-
-## 초기 상태 메모 (등록 시점 {{NOW_ISO}})
-{{INITIAL_STATE}} <!-- 지침: 주석 줄 수와 전체 LOC, 눈에 띄는 불필요 유형(재진술·작업 흔적·장식 등)을 남긴다. 격차가 크면 "첫 task는 (1) `docs/comment-policy/` 정비 (2) 기존 주석의 필요성 판정을 다루게 된다 — 큰 초기 격차는 예상된 것"을 포함. {{REPO_EXCLUDE_SEED}}가 있으면 "첫 task가 README.md에 `comment-scope-exclude` 블록으로 옮긴다"와 그 줄·부류를 적는다 -->
 
 ## 범위 밖 / 비고
 - 범위 밖은 「범위 (고정부)」의 제외 세 부류와 대상 레포 `comment-scope-exclude` 블록뿐이다. 그 밖의 경로(CI 워크플로·배포 매니페스트·검사 스크립트·설정 파일 포함)는 주석 문법이 있으면 대상이다.

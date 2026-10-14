@@ -1431,13 +1431,21 @@
   }
 
   function writeHash(id) {
-    if (history.replaceState) history.replaceState(null, "", id ? "#" + encodeURIComponent(id) : "#");
-    else location.hash = id ? encodeURIComponent(id) : "";
+    if (history.replaceState) {
+      history.replaceState(null, "", id ? "#" + encodeURIComponent(id) : location.pathname + location.search);
+    } else location.hash = id ? encodeURIComponent(id) : "";
+  }
+
+  // 모델 선택은 주소에 남기지 않는다 — 새로고침하면 보던 모델이 아니라 기본 선택(목록의 첫 모델,
+  // 즉 가장 최근에 움직인 모델)으로 연다. 딥링크(#<toBeModelId>)로 들어온 뒤 다른 모델을 고르면
+  // 그 딥링크도 지워, 새로고침이 예전 딥링크 모델로 되돌아가지 않게 한다.
+  function clearModelHash() {
+    if (state.view !== "templates") writeHash(null);
   }
 
   function select(id) {
     state.selected = id;
-    writeHash(id);
+    clearModelHash();
     renderSidebar();
     renderDetail();
   }
@@ -1462,7 +1470,7 @@
       if (!state.selectedTemplate) state.selectedTemplate = TEMPLATE_OVERVIEW.file;
       writeHash(templateHash(state.selectedTemplate));
     } else {
-      writeHash(state.selected);
+      clearModelHash();
     }
     renderAll();
   }
@@ -1473,7 +1481,7 @@
     var models = visibleModels();
     if (models.some(function (m) { return m.id === state.selected; })) return;
     state.selected = models.length ? models[0].id : null;
-    writeHash(state.selected);
+    clearModelHash();
   }
 
   function setMode(mode) {

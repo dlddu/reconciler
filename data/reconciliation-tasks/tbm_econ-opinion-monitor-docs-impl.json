@@ -11579,5 +11579,1268 @@
       "reason": "**조치 불필요(`no_action_needed`).** 창 `464dd1c..d5953a8` 은 단일 커밋 #217(자매 `pr-manual-approval` `rct_20260929-0001` 착지)이다.\n① **구현 불변**: as-is 5칸 부동(contracts·python·go·web·deploy numstat 0). 코드측 변경은 `scripts/`·`.github/`·`README.md` 로 이 모델의 as-is 범위 밖이다.\n② **새 의무 없음**: `docs/` DIFF 는 `econ-opinion-monitor-review-policy.md` 신설 1파일뿐. 내용은 PR 수동 승인 게이트의 프로세스 SSOT(케이스 MA1~MA5·위험 표면·앵커·의도적 제외·미탐 원장)로, AC/PRD/여정 참조 0건 — 기준 1·6 의 의무면(AC·여정 단계)을 늘리지 않는다. 그 문서가 만드는 의무(판정기·워크플로)는 as-is 밖이고 자매 `pr-manual-approval` 모델 소관이다.\n③ **문서↔코드 모순 없음(기준 5)**: 문서가 코드에 대해 적은 사실을 tip 에서 실측 — `PARTITION_FILE = \"data.jsonl\"` 1 · 직렬화 라이브러리 import 0 · `domain.py` 레이어 상수 3 · Go `os.Create/WriteFile/OpenFile` 0 · `git ls-files data` 3 · PVC 파일 1(`deploy/overlays/prod/batch-pvc.yaml`) · `claimName: econ-batch-data` 2 · 앵커 10경로 전부 1개 이상 실재. 재개 조건 전부 거짓(=문서 서술대로), 죽은 앵커 0.\n④ **소관 전수**: ⒜ 대상 레포 열린 PR 0 ⒝ 이 모델 열린 task 는 이 task 외 0(직전 `rct_20260928-0017` no_action_needed) ⒞ 이 창에 이 모델 소관 원장 행 없음. 잔여는 「감소」가 아니라 이 창에서 **구조적 0**(새 의무·새 미구현 없음)이라 캐리어 부재가 발화 사유가 아니다.",
       "assessedAt": "2026-09-29T10:41:07Z"
     }
+  },
+  {
+    "id": "rct_20261001-0001",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "succeeded",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-01T06:19:50Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:5cde21ab61c54d7232932f88a93ad8b5ec6e0442 go:efd3d3c3a6a30683430fdaaf2319807a0c467fa9 web:beab1c82812ad715b9d8d68608c6601e53a640a8 deploy:d3498b45ee81ed20886f3135b9b55e998106789a",
+        "previousVersion": "contracts:213e5a643be714a8fffcad1aa8f59fb0be9a6b89 python:bf4c3001f637496bf47bb35454ee77d3da0a497d go:ab914cba93337892a7e5d58048b40df3fdf0a546 web:beab1c82812ad715b9d8d68608c6601e53a640a8 deploy:d3498b45ee81ed20886f3135b9b55e998106789a"
+      },
+      "toBe": {
+        "currentVersion": "c8f5bf50a3bd615476261963779672804f2190bf",
+        "previousVersion": "00dc7445c627c734fde3e5e022bd3b890cf4410a"
+      }
+    },
+    "createdAt": "2026-10-01T06:19:50Z",
+    "updatedAt": "2026-10-01T06:51:12Z",
+    "stateSummary": {
+      "asIs": "관측 2026-10-01T06:2xZ, `dlddu/economic-opinion-trend-monitor` main `042a699`. 창 `d5953a8..042a699` 은 단일 커밋 **#218**(「서술 대상을 고정 카테고리로 분류해 Gold 점유율을 카테고리 기준으로 집계」)이다. as-is 5칸 중 contracts(`213e5a6`→`291e4c6`)·python(`bf4c300`→`5cde21a`)·go(`ab914cb`→`efd3d3c`) 3칸이 이동했고, web·deploy 는 부동이다.\n- **계약**: `contracts/silver/analysis.avsc` 에 nullable `subject_categories`(string 배열, default null)가 신설됐다. `narrative_subjects` doc 은 「집계는 `subject_categories` 가 null 인 행에서만 이것으로 묶는다」로 바뀌었다. Go `gen.Analysis.SubjectCategories *[]string` 이 대응한다.\n- **분석**: `econ_core.domain.SUBJECT_CATEGORIES` 는 고정 25개(`통화정책·금리`…`지정학·국제정세`, 마지막 `기타`)다. `llm.py` 시스템 프롬프트가 기사당 1~2개 카테고리를 요구한다. `canonical_categories` 는 목록 밖 값을 버리고 최대 2개만 남기며, 남는 것이 없으면 `기타`, 필드 자체가 없으면 null 을 쓴다.\n- **집계·서빙**: `econ_core.silver.grouping_keys`(카테고리 우선, null 이면 서술 대상)를 Gold `count_by_source` 가 쓴다. Go `groupingKeys` 는 같은 규칙으로 기여 목록(`contributions.go`)과 재처리 버전 비교(`reprocess.go mentionShares`)를 묶는다.\n- `ANALYZER_VERSION = \"llm-v1\"` 은 그대로다(프롬프트가 바뀌었는데 버전은 올라가지 않았다). 새 버전을 올리던 #219(`llm-v3`)는 머지되지 않고 CLOSED 됐다.\n- 실측: tip 에서 `test_llm.py`+`test_aggregate.py` 전부 통과, `go test ./internal/handlers/` ok. web 에 `subject_categories` 참조는 0건이다(서빙이 Gold 키를 그대로 내리므로 대시보드의 「서술 대상」 축이 카테고리명이 된다).",
+      "toBe": "관측 2026-10-01T06:2xZ, `docs/` 트리 `00dc744`→`c8f5bf5`. DIFF 는 `docs/comment-policy/ledger.md` 1파일뿐이다(#218 의 주석 원장 행, 판정면 밖). PRD·AC·테스트·여정·목업·디자인 시스템·doc/design-tracker 는 양 끝이 같다.\n- `docs/`(comment-policy 제외)에 `subject_categor`·`SUBJECT_CATEGORIES`·`category`·「고정 목록」·「분류 체계」는 0건이다. `카테고리` 히트 2파일은 e2e 모킹 정책의 GOLD 픽스처 카테고리와 그것을 인용한 doc-tracker 1줄로, 이 기능과 무관하다.\n- **AC2.2**: 「핵심 대상(인물·기업·기관·정책·상품·이슈 등)을 추출한다. 추세·비율 집계의 기준 키가 되므로 정규화된 명칭/식별자로 산출한다.」\n- **AC3.2**: 「Silver의 핵심 서술 대상(AC2.2)을 키로 빈도·점유율을 집계한다. 표기 변형이 통합된 동일 키로 묶인다.」 AC3.5·AC3.6·V1·V3 도 「서술 대상 기준」 추세·비율을 기술한다.\n- 열린 PR **#220**(docs, AC2.7 「분석 로직 버전은 프롬프트에서 파생된다」)이 #218 프롬프트 변경을 버전 미증가 사례로 인용한다. 하지만 카테고리 분류·집계 키 자체는 문서화하지 않는다(diff 의 `카테고리` 히트는 그 인용 1곳뿐).",
+      "gap": "**유의미한 차이 있음.** #218 이 Gold 집계 키를 「핵심 서술 대상(AC2.2)」에서 「고정 25개 카테고리(없으면 서술 대상)」로 바꿨다. 그런데 문서는 이를 한 줄도 기술하지 않는다. ⑴ 기준 4: 새 계약 필드 `subject_categories`, 고정 카테고리 목록, 사용자 대면 점유율·추세의 집계 키가 문서에 없다. ⑵ 기준 2·5: AC3.2(「서술 대상(AC2.2)을 키로 집계」)·AC3.5·V1·V3 문면이 구현과 어긋난다. ⑶ 부수적으로, 프롬프트가 바뀌었지만 `analyzer_version` 이 `llm-v1` 그대로라 AC2.6 재처리 판정면이 세 세대를 한 로직으로 본다. 이 축은 열린 docs PR #220(AC2.7)이 문서 쪽만 다룬다.",
+      "summarizedAt": "2026-10-01T06:22:06Z"
+    },
+    "assessment": {
+      "reason": "**조치 필요(`action_required`).** 창 `d5953a8..042a699` 은 단일 커밋 #218 이고, 문서화되지 않은 사용자 대면 동작 변경을 들였다.\n① **유의미하다.** Gold 점유율·추세·기여 목록·재처리 비교의 집계 키가 자유형 서술 대상에서 고정 25개 카테고리로 바뀌었다. 계약에는 `subject_categories` 필드가 새로 생겼다. `docs/` 는 이 창에서 판정면이 부동이고(`comment-policy/ledger.md` 만 이동), 카테고리·새 필드를 기술하는 문면이 0건이다. AC3.2 는 여전히 「서술 대상(AC2.2)을 키로 집계」라고 적는다. 정의 기준 4(문서 없는 구현)와 기준 2·5(AC 문면 ↔ 구현 불일치)에 걸린다.\n② **방향은 planner 몫이다.** 커밋 제목·계약 doc(「무한 집합 대신 유계 집합 위에서 점유율」)을 보면 의도된 동작 변경으로 보인다. 그렇다면 정의의 「충돌 시 기본 방향」 단서에 따라 문서(PRD-2 AC2.2/PRD-3 AC3.2·3.5·3.6 + 테스트 문서 + 필요시 values·여정·목업 + doc-tracker)를 갱신하는 쪽이다. 되돌리는 쪽이면 코드를 AC 에 맞춘다.\n③ **부수 축**: 프롬프트 변경에도 `ANALYZER_VERSION = \"llm-v1\"` 이 불변이다. 버전을 올리던 #219 는 CLOSED 됐다. 열린 docs PR #220(AC2.7)이 문서 쪽만 다루고 있으니, planner 는 #220 머지 여부와 이 task 의 문서 개정이 충돌하지 않게 순서를 잡아야 한다.\n④ **소관 전수**: ⒜ 대상 레포 열린 PR 은 #220 하나다. AC2.7(버전 파생)만 신설하고 카테고리 집계 키는 문서화하지 않으므로 이 gap 의 캐리어가 아니다. ⒝ 이 모델의 열린 task 는 이 task 외 0이다(직전 `rct_20260929-0001` no_action_needed). ⒞ 자매 `tbm_econ-opinion-monitor-comment-necessity` `rct_20260930-0001`(planning)이 #218 을 다루지만 **주석 필요성 축**(원장 L/D 미판정 행)뿐이고 문서↔구현 정합성은 소관 밖이다. 캐리어가 없고 잔여는 구조적 0 이 아닌 실재 격차이므로 `action_required` 다.\n실측 근거: tip 에서 `test_llm.py`·`test_aggregate.py` 통과, `go test ./internal/handlers` ok. 구현은 동작하며, 격차는 문서 쪽 부재/모순이다.",
+      "assessedAt": "2026-10-01T06:22:06Z"
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#218 의 고정 카테고리 집계를 **의도된 동작 변경**으로 판정하고(사용자 dlddu 명의 커밋 · 계약 doc 의 「무한 집합 대신 유계 집합」 근거 · README 동반 기술 · 테스트 동반) 정의의 「충돌 시 기본 방향」 단서대로 **문서를 구현에 맞춘다** — 코드를 되돌리는 대안은 사용자 결정을 뒤집으므로 기각. docs/ 단독 PR 1건(무인 사정권: contracts/** 무접촉 ⇒ format_changed=false). **완료 기준(이 시도의 범위)**: ⑴ PRD-2 AC2.2 가 고정 카테고리 분류(25개 목록 전문 · `기타` 는 마지막 포괄 범주 · 기사당 1~2개 중심도 순 · 목록 밖 값 버림 · 남는 것 없으면 `기타` · 판단 부재 시 null)와 「집계 키는 카테고리, 판단 없는 행은 서술 대상」을 기술하고, 목록이 `econ_core.domain.SUBJECT_CATEGORIES` 와 **순서까지 동일**하다 ⑵ AC2.4 가 카테고리를 저장 대상으로 열거한다(계약 `subject_categories` nullable 표현) ⑶ PRD-3 AC3.2 의 집계 키가 「카테고리(AC2.2), 판단 없는 행은 서술 대상」으로 바뀌고 AC3.3~AC3.10 의 「서술 대상」이 그 집계 키를 가리킴을 한 문장으로 묶는다 ⑷ 테스트-2 시나리오 2 · 테스트-3 시나리오 2 의 기대 결과가 카테고리 분류·폴백을 검증한다(시나리오 신설 0 — 시나리오 전집 불변) ⑸ doc-tracker 2026-09.md `## 이번 달 변경 이력` 에 앵커 실측 행 1건 ⑹ 게이트 5종(check_scenario_mapping · check-comment-ledger · check-journey-mockup · check-mockup-render · check-journey-flow) rc=0 이고 출력이 base 와 바이트 동일, check-data-format-change format_changed=false ⑺ 열린 자매 PR #220 과 `git merge-tree` 무충돌. **범위 밖(후속)**: analyzer_version 파생(AC2.7 — #220 문서 + 로드맵 슬라이스 13 구현) · 과거 주기 재처리(운영) · 목업·여정·디자인 시스템의 표시 카피(카테고리명이 대시보드 축이 된 것 — 자매 mockup-render/journey-mockup 축 · 이번 판정에서 거짓 주장 0) · e2e spec 강화(자매 scenario-e2e — 시나리오 문면 변경이 그 모델의 to-be 를 움직여 재감지된다) · 가치 문서 V1/V3(가치 수준 서술은 카테고리화로 거짓이 되지 않음 — 무수정 판정) · doc-tracker 월 롤오버(2026-10.md 신설은 #220 이 2026-09.md 를 편집 중이라 그 PR 을 깨므로 이 슬라이스에서 하지 않는다).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 main(042a699) 에서 브랜치 reconcile/rct_20261001-0001-econ-docs-impl 생성, 재생 가능한 치환 스크립트(앵커 문자열 count==1 단정)로 PRD-2 AC2.2·AC2.4 를 개정",
+              "expectedOutcome": "AC2.2 에 25개 목록 전문 + 분류 규칙 + 집계 키 규칙, AC2.4 에 카테고리 저장(nullable) 이 기술되고 AC 제목·번호 불변"
+            },
+            {
+              "seq": 2,
+              "action": "PRD-3 AC3.2 설명·검증 방법 개정 + 「AC3.3 이후의 서술 대상 = 이 집계 키」 묶음 문장",
+              "expectedOutcome": "AC3.2 가 카테고리 우선·서술 대상 폴백을 기술; 다른 AC 본문 무접촉"
+            },
+            {
+              "seq": 3,
+              "action": "테스트-2 시나리오 2 · 테스트-3 시나리오 2 의 사전 조건/실행/기대 결과에 카테고리 분류·폴백 검증을 추가(제목·번호·검증 AC 불변)",
+              "expectedOutcome": "check_scenario_mapping 전집 24 · 벡터 불변"
+            },
+            {
+              "seq": 4,
+              "action": "doc-tracker 2026-09.md 변경 이력에 행 1건(이전/이후 상태는 두 커밋에서 make lint-scenario-mapping 실측)",
+              "expectedOutcome": "상태 칸 규약 준수, #220 의 헝크와 비겹침"
+            },
+            {
+              "seq": 5,
+              "action": "게이트 5종 + check-data-format-change 를 base/head 양쪽에서 실행해 출력 md5 대조, 목록 동일성 스크립트로 docs ↔ domain.py 25개 대조, #220 head 와 merge-tree",
+              "expectedOutcome": "전부 rc=0 · 출력 바이트 동일 · 목록 25/25 순서 일치 · 충돌 0"
+            },
+            {
+              "seq": 6,
+              "action": "push 후 PR 생성(App 명의), CI required + review/manual-approval 확인",
+              "expectedOutcome": "mergeStateStatus CLEAN"
+            },
+            {
+              "seq": 7,
+              "action": "(실행 단계) squash 머지 후 main 에서 완료 기준 ⑴~⑹ 재판정",
+              "expectedOutcome": "범위 기준 수렴 → succeeded"
+            }
+          ],
+          "plannedAt": "2026-10-01T06:40:00Z",
+          "executionGuide": "# 실행 지침 — rct_20261001-0001 (PR #222, docs/ 단독)\n\n## 범위(완료 기준) — 이 기준으로만 판정할 것\nsummary 의 ⑴~⑹ 이다. 검증은 아래 스크립트 하나로 기계 판정한다. 범위 밖(후속)으로 넘긴 항목은 검증 실패 사유가 아니다: AC2.7 버전 파생(#220·슬라이스 13), 과거 주기 재처리, 목업·여정 카피, e2e spec 보강, V1/V3, 월 롤오버.\n\n## 순서 (직렬 — 병렬 불가)\n1. **사전 확인**: `gh pr view 222 --json mergeStateStatus,headRefOid,files`\n   - head 가 `d7413e4` 인지, `changedFiles` 가 5(전부 `docs/`)인지 본다.\n   - `required` 와 `review/manual-approval` 이 SUCCESS 인지 본다. 준비 시점 실측: `review/manual-approval` 자동 SUCCESS, `required` 는 QUEUED. docs 단독이라 `ci / build`·`ci / e2e` 는 SKIPPED 가 정상이다.\n2. **#220 착지 여부로 분기**:\n   - **(a) #220 이 아직 열려 있음** → `mergeStateStatus=CLEAN` 이면 그대로 squash 머지한다. 머지 뒤 #220 이 doc-tracker 끝 행에서 충돌하게 되지만, 그건 그 PR 쪽 몫이다.\n   - **(b) #220 이 먼저 착지해 #222 가 DIRTY** → 리베이스·`checkout --theirs` 를 쓰지 말고 **재생**한다. 순서:\n     1. `git fetch && git checkout -B reconcile/rct_20261001-0001-econ-docs-impl origin/main`\n     2. `python3 /home/ubuntu/planner/.reconciler-work/artifacts/rct_20261001-0001-econ-docs-impl-edit.py .` 를 실행한다. 앵커는 `count==1` 로 단정되고, 시나리오 벡터는 그 트리에서 실측해 채운다. 예상 벡터: 전집 25 · 예외 1 · 구현 대기 1 · 1:1 대상 23 · 매칭 23 · 공백 0.\n     3. 커밋하고 `--force-with-lease=refs/heads/<br>:d7413e4` 로 push 한다.\n     4. 게이트 5종 rc=0 을 확인하고 새 head 에 status 가 다시 붙기를 기다린 뒤 squash 머지한다.\n     - 스크립트 파일이 청소돼 없으면 수동으로 한다. `git merge origin/main` 으로 doc-tracker 끝 충돌에서 **양쪽 행을 다 살리고**, 내 행(2026-10-01)의 두 상태 칸 벡터를 새 base 의 `python3 tests/e2e/check_scenario_mapping.py` 출력으로 고친다.\n   - **(c) 그 밖의 자매 착지로 DIRTY** → (b) 와 같은 재생 절차를 쓴다. 앵커 단정이 깨지면 자매가 같은 AC 문면을 고친 것이다. 그때는 멈추고 `failed` 로 사유를 남긴다(재계획 대상).\n3. **머지**: squash. 제목은 PR 제목을 그대로 쓴다.\n4. **수렴 검증**: 머지 커밋에서 `git checkout origin/main` 한 뒤 아래를 실행한다.\n   - `python3 /home/ubuntu/planner/.reconciler-work/artifacts/rct_20261001-0001-econ-docs-impl-verify.py .` → `ALL PASS`, rc=0 이어야 한다. 8개 판정이다.\n     - 준비 단계 dry-run: 이 브랜치에서 8/8 PASS, base `042a699` 에서 8/8 FAIL. 양방향 실측이다.\n     - 스크립트가 없으면 다음 다섯을 손으로 확인한다:\n       1. AC2.2 의 `고정 목록(` 뒤 백틱 25개가 `python/packages/core/src/econ_core/domain.py` 의 `SUBJECT_CATEGORIES` 와 순서까지 같다.\n       2. AC2.4 에 `서술 대상 카테고리(AC2.2)` 가 있다.\n       3. AC3.2 에 `서술 대상 카테고리(AC2.2)를 키로` 가 있다.\n       4. 테스트 두 문서의 시나리오 2 에 `기타`/폴백 문면이 있다.\n       5. 최신 doc-tracker 에 `| 2026-10-01 |` + `rct_20261001-0001` 행이 정확히 1건이다.\n   - 게이트 5종: `python3 tests/e2e/check_scenario_mapping.py` · `python3 scripts/check-comment-ledger.py` · `python3 scripts/check-journey-mockup.py` · `python3 scripts/check-mockup-render.py` · `NODE_PATH=<jsdom 설치 dir>/node_modules node scripts/check-journey-flow.js`. 모두 rc=0 이어야 한다.\n     - jsdom 은 레포 밖에 `npm install --no-save jsdom@29` 로 설치한다. 레포 안에 설치하면 `node_modules/` 가 PR 에 실린다.\n   - `python3 scripts/check-data-format-change.py <머지 부모> <머지 커밋>` → `format_changed=false`.\n5. 전부 통과하면 `succeeded` 로 닫는다.\n\n## 주의사항\n- **불가역 지점은 squash 머지뿐이다**. 문서만 바뀌므로 런타임·데이터 영향은 0 이다(코드·계약·배포 무접촉, `format_changed=false`). 롤백은 `git revert <squash sha>` 1커밋이면 된다.\n- **head 에 커밋을 얹지 말 것**(경로 (b) 제외). status 가 sha 에 묶여 있어서, 커밋을 얹으면 다시 기다려야 한다.\n- 실패가 `required` 하나뿐이고 실패 잡의 `steps: []`(1~3초)이면 Actions 과금 차단이다. 같은 sha 를 `rerun` 한다. 계획 결함이 아니다.\n- **doc-tracker 월 롤오버(`2026-10.md`)를 이 실행에서 하지 말 것**. 범위 밖이고, #220 을 깬다.\n- PR 본문의 「범위 밖」 다섯 항목은 재감지가 새 task 로 잇는다. 이 task 의 실패 사유로 쓰지 말 것.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261001-0001-econ-docs-impl",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/222",
+          "preparedAt": "2026-10-01T06:33:00Z",
+          "notes": "PR명의: app/dlddu-k3s-homelab-k3s-mcp(MCP 발급 토큰). head d7413e4 on base 042a699, docs/ 단독 5파일 +31/−9(changed_files 5 실측). 게이트 5종 rc=0·출력 md5 base 와 바이트 동일(scen 3c592314d207 · ledger 39bae6bba934 · jm e7e11dc28ccb · mr d2fcb4f7488f · jf 4c2502a895e3), check-data-format-change format_changed=false ⇒ review/manual-approval 자동 부착 예상(무인). 목록 25개는 domain.py 에서 기계 추출해 옮김. 열린 #220(AC2.7 docs)과는 doc-tracker 변경 이력 표 끝 행 덧붙이기 1자리만 충돌(merge-tree 실측, 나머지 4파일 clean). 재생 스크립트: /home/ubuntu/planner/.reconciler-work/artifacts/rct_20261001-0001-econ-docs-impl-edit.py (python3 <script> <worktree>; 앵커 count==1 단정 · 벡터는 그 트리에서 check_scenario_mapping 실측) — #220 head 위 재생 실측: 4파일 blob 이 merge-tree 결과와 동일 · 게이트 5종 rc=0 · 벡터 25/1/1/23/23/0."
+        },
+        "review": {
+          "status": "approved",
+          "reviewedAt": "2026-10-01T06:46:52Z",
+          "reason": "docs/ 단독 5파일 +31/−9(PR #222 head d7413e4, 준비 notes 와 파일·증감 일치)로 #218 의 고정 카테고리 집계를 AC2.2·AC2.4·AC3.2·테스트 시나리오 2 두 건·doc-tracker 행 1건에 기술해 gap ⑴⑵ 를 좁히고, 범위 밖 항목은 계획에 명시돼 있다. 신선도: OPEN · CLEAN/MERGEABLE · `required` check-run success · `review/manual-approval` success(head 에 부착 — 사람 승인 대기 아님). main 이 #221(b364622, comment-policy 개정 + domain.py 주석 삭제만)로 1커밋 이동했으나 strict=false 라 재고정 불요; worktree 에서 b364622+#222 를 직접 병합해 verify 스크립트 8/8 PASS(SUBJECT_CATEGORIES 25개 순서 일치 유지), 게이트 4종 rc=0·출력 md5 가 새 base 와 바이트 동일(scen 3c592314d207 · ledger 6ffec0f3450a · jm fcdae3c0390a · mr d2fcb4f7488f — notes 의 ledger/jm 리터럴은 #221 이 체커를 바꿔 낡은 값이며 판정 기준은 새 base 대조), check-data-format-change format_changed=false. check-journey-flow 는 이 호스트에 node 부재로 로컬 미실행이나 head 의 `docs / flow` CI success 이고 diff 가 여정·목업 무접촉. #220 과는 지침이 예고한 doc-tracker 끝 행 1자리만 충돌(merge-tree 실측) — 경로 (a)/(b) 로 처리된다. 불가역 지점은 문서 squash 머지뿐이고 롤백은 revert 1커밋, 런타임·데이터 영향 0 이라 승인."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-10-01T06:48:55Z",
+          "finishedAt": "2026-10-01T06:49:19Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "skipped",
+              "log": "준비 단계(planner, 2026-10-01T06:33Z)에서 완료 — PR #222 head d7413e4 로 실렸다. 실행 단계에서 재수행하지 않음."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "log": "준비 단계(planner, 2026-10-01T06:33Z)에서 완료 — PR #222 head d7413e4 로 실렸다. 실행 단계에서 재수행하지 않음."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "log": "준비 단계(planner, 2026-10-01T06:33Z)에서 완료 — PR #222 head d7413e4 로 실렸다. 실행 단계에서 재수행하지 않음."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "log": "준비 단계(planner, 2026-10-01T06:33Z)에서 완료 — PR #222 head d7413e4 로 실렸다. 실행 단계에서 재수행하지 않음."
+            },
+            {
+              "stepSeq": 5,
+              "status": "skipped",
+              "log": "준비 단계(planner, 2026-10-01T06:33Z)에서 완료 — PR #222 head d7413e4 로 실렸다. 실행 단계에서 재수행하지 않음."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-10-01T06:48:55Z",
+              "finishedAt": "2026-10-01T06:49:10Z",
+              "log": "사전 확인(지침 1): #222 OPEN·CLEAN·MERGEABLE, head d7413e4829c0 그대로, changedFiles 5(전부 docs/). commit status review/manual-approval=success, check-run required=success(ci/build·ci/e2e skipped — docs 단독 정상, 그 밖 scenario-mapping·comment-ledger·data-format·docs/flow·render·docs/structure success). 분기(지침 2): #220 OPEN(head 6eda0f0, CLEAN) → 경로 (a). main=b364622(#221) — 리뷰 시점과 동일, 리뷰가 b364622+#222 병합 트리에서 verify 8/8 실측해 둠."
+            },
+            {
+              "stepSeq": 7,
+              "status": "succeeded",
+              "startedAt": "2026-10-01T06:49:15Z",
+              "finishedAt": "2026-10-01T06:49:19Z",
+              "log": "PUT /pulls/222/merge merge_method=squash sha=d7413e4 → merged:true, squash e15539f9f223 (parent b364622, 제목 PR 제목 + (#222)). 5파일 +31/−9 로 PR 과 동일. #220 은 doc-tracker 끝 행에서 충돌하게 됐다(지침 2(a) 예고대로 그 PR 쪽 몫)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:cf0b760b9254f6c0ad30893ba4800696d71cf334 go:070dfe119787946fc1a927ca4ed67da794ae4fbb web:beab1c82812ad715b9d8d68608c6601e53a640a8 deploy:d3498b45ee81ed20886f3135b9b55e998106789a",
+          "verifiedAt": "2026-10-01T06:50:58Z",
+          "checks": [
+            {
+              "name": "⑴~⑸ verify 스크립트(8판정) @ e15539f",
+              "status": "passed",
+              "detail": "planner artifacts rct_20261001-0001-econ-docs-impl-verify.py 를 main e15539f 체크아웃에서 실행 → rc=0, ALL PASS 8/8: AC2.2 목록 == domain.SUBJECT_CATEGORIES(순서 포함 25) · AC2.2 규칙(기타·최대 2·null·집계 키) · AC2.4 카테고리 저장(nullable) · AC3.2 카테고리 우선·폴백·묶음 문장 · AC3.2 옛 집계 키 문면 소거 · 테스트-2 시나리오 2 · 테스트-3 시나리오 2 · doc-tracker 변경 이력 행 정확히 1건. (준비 dry-run: base 042a699 에서 8/8 FAIL — 양방향 실측됨)"
+            },
+            {
+              "name": "⑹ 게이트 5종 rc=0 · 출력 부모와 바이트 동일",
+              "status": "passed",
+              "detail": "e15539f vs 부모 b364622 출력 md5(앞 12자, 뒤 개행 포함 파일 캡처): check_scenario_mapping 3c592314d207=3c592314d207 · check-comment-ledger 6ffec0f3450a=6ffec0f3450a · check-journey-mockup fcdae3c0390a=fcdae3c0390a · check-mockup-render d2fcb4f7488f=d2fcb4f7488f · check-journey-flow(node toolchain + 레포 밖 jsdom NODE_PATH) 4c2502a895e3=4c2502a895e3. 전부 rc=0. 리뷰가 적은 새 base 값(scen·ledger·jm·mr)과 일치."
+            },
+            {
+              "name": "⑹ check-data-format-change",
+              "status": "passed",
+              "detail": "python3 scripts/check-data-format-change.py b364622 e15539f → rc=0, format_changed=false"
+            },
+            {
+              "name": "머지 대상 동일성",
+              "status": "passed",
+              "detail": "squash e15539f 의 parent=b364622(머지 직전 main), 변경 5파일 +31/−9 로 PR #222(head d7413e4) 의 파일 목록·증감과 일치. contracts/·python/·go/·web/·deploy/ 무접촉."
+            },
+            {
+              "name": "⑺ 자매 #220 충돌(정보성)",
+              "status": "passed",
+              "detail": "머지 전 #220 OPEN 확인 → 지침 2(a) 경로. 준비·리뷰가 merge-tree 로 실측한 doc-tracker 끝 행 1자리 충돌이 이제 #220 쪽에 남는다 — 지침상 그 PR 몫이며 이 task 판정 밖."
+            },
+            {
+              "name": "asIsVersionAfter(기록용)",
+              "status": "passed",
+              "detail": "모델 asIs.versionScript(.code, bash) 를 e15539f 에서 재실행 — 부모 b364622 와 동일 값(docs 단독 머지라 as-is 불변, 예상대로). 잔여 gap(범위 밖: AC2.7 버전 파생 #220·슬라이스 13, 과거 주기 재처리, 목업·여정 카피, e2e spec 보강, doc-tracker 월 롤오버)은 to-be 버전 변화(docs/ 트리 이동)로 다음 감지 주기가 잇는다. lastObservedVersion 무접촉."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "rct_20261001-0002",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-01T07:07:45Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:cf0b760b9254f6c0ad30893ba4800696d71cf334 go:070dfe119787946fc1a927ca4ed67da794ae4fbb web:beab1c82812ad715b9d8d68608c6601e53a640a8 deploy:d3498b45ee81ed20886f3135b9b55e998106789a",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:5cde21ab61c54d7232932f88a93ad8b5ec6e0442 go:efd3d3c3a6a30683430fdaaf2319807a0c467fa9 web:beab1c82812ad715b9d8d68608c6601e53a640a8 deploy:d3498b45ee81ed20886f3135b9b55e998106789a"
+      },
+      "toBe": {
+        "currentVersion": "7261a657a2434631be712bf033333cbdb11e7cd2",
+        "previousVersion": "c8f5bf50a3bd615476261963779672804f2190bf"
+      }
+    },
+    "createdAt": "2026-10-01T07:07:45Z",
+    "updatedAt": "2026-10-01T07:09:34Z",
+    "stateSummary": {
+      "asIs": "관측 2026-10-01T07:09:34Z, `dlddu/economic-opinion-trend-monitor` main `e15539f`. 창 `042a699..e15539f` = #221 `b364622`(자매 comment-necessity `rct_20260930-0001` 착지) + #222 `e15539f`(이 모델 직전 `rct_20261001-0001` 착지). as-is 이동 칸은 python(`5cde21a`→`cf0b760`)·go(`efd3d3c`→`070dfe1`) 2칸이고 둘 다 #221 에서만 움직였다(contracts·web·deploy 부동, #222 는 docs/ 단독).\n- **#221 코드 12파일 +10/−103 은 주석·docstring 전용이다.** py 5파일(`llm.py`·`domain.py`·`test_llm.py`·`test_aggregate.py`·`test_storage.py`)은 docstring 제거 후 AST md5 가 양 끝 1변종(SAME). go 7파일(`handlers/` contributions·dashboard·reprocess·reprocess_trigger + 테스트)은 `git diff -U0` 의 모든 ± 줄이 `//` 주석 또는 공백(비주석 0줄). `__doc__` 독자 0건.\n- tip 구현 실측: `econ_core.domain.SUBJECT_CATEGORIES` 25개, `llm.canonical_categories` = 필드 없음→None, 목록 밖 버림·중복 제거·최대 2개, 남는 것 없으면 `기타`. Silver 모델 기본값 `subject_categories=None`(미분석 행 null). 계약 `silver/analysis.avsc` nullable 배열·default null. `ANALYZER_VERSION = \"llm-v1\"` 불변.",
+      "toBe": "관측 2026-10-01T07:09:34Z, `docs/` 트리 `c8f5bf5`→`7261a65`. #221 은 `comment-policy/` 만(판정면 밖), #222 가 PRD-2·PRD-3·테스트 문서 2개·doc-tracker `2026-09.md` 5파일 +31/−9.\n- **AC2.2**: 고정 목록 25개(순서 포함)에서 기사당 1~2개, 목록 밖 값만 → `기타`, 판단 없음(도입 전·미분석·필드 누락) → null·서술 대상 폴백. **AC2.4**: Silver 스키마에 카테고리(nullable, 판단 있으면 1~2개). **AC3.2**: 집계 키 = 카테고리, null 행만 서술 대상; AC3.3~ 의 「서술 대상」·기여 목록·재처리 버전 비교도 같은 키. 테스트 문서 시나리오 2 두 건에 카테고리 분류·폴백 검증 추가.\n- **AC2.6**(main 문면): 「분석 로직 변경 시 동일 Bronze 원문을 재분석해 Silver 를 갱신할 수 있어야 한다」 — 버전 증가 의무는 없다. 버전 파생 의무(AC2.7)는 열린 PR #220 에만 있고 main 에 미착지.",
+      "gap": "**유의미한 차이 없음.** ⑴ #221 의 as-is 이동은 주석·docstring 전용(py AST SAME · go 비주석 ± 0줄)이라 기준 1·2·4·6 의 구현면이 불변이다. ⑵ #222 가 직전 task gap(⑴ 기준 4 미문서화 ⑵ 기준 2·5 AC3.2 문면 모순)을 닫았다: docs 의 25개 목록이 `domain.SUBJECT_CATEGORIES` 와 순서까지 25/25 일치하고, null·`기타`·최대 2개·폴백 규칙이 `canonical_categories`·계약 doc·Go `groupingKeys` 와 일치한다(새 문면이 만든 의무 중 미구현 0). ⑶ `analyzer_version` 축은 main 의 AC2.6 이 버전 증가를 요구하지 않아 현 SSOT 기준 drift 가 아니다(AC2.7 은 #220 에만 있음).",
+      "summarizedAt": "2026-10-01T07:09:34Z"
+    },
+    "assessment": {
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `042a699..e15539f` = #221(주석 전용) + #222(이 모델 직전 `rct_20261001-0001` 착지).\n① **구현 불변**: as-is python·go 이동은 #221 의 주석·docstring 제거뿐(py 5파일 docstring-strip AST 양 끝 SAME, go 7파일 비주석 ± 0줄). 동작·계약 변화 0.\n② **직전 gap 닫힘 독립 확인**: docs 25개 목록 == `econ_core.domain.SUBJECT_CATEGORIES`(순서 포함 25/25), 문면의 null/`기타`/최대 2개/서술 대상 폴백 == `llm.canonical_categories`·`silver.py` 기본 None·`analysis.avsc` doc. AC3.2 가 기여 목록·재처리 비교까지 같은 키로 규정 == Go `groupingKeys`. 새 문면이 만든 의무 중 미구현 0(기준 1·6), 문서↔코드 모순 0(기준 2·5), 미문서 구현 0(기준 4).\n③ **직전 task 의 「범위 밖(후속)」 재판정**: ⒜ AC2.7 버전 파생 — main AC2.6 은 재분석 *가능성*만 요구하므로 `llm-v1` 불변은 현 SSOT 에서 drift 아님; 의무는 열린 PR #220 에만 있고 착지 시 to-be 이동으로 재감지된다(캐리어 = 열린 PR, ⚠️ #222 머지로 doc-tracker 끝 행 충돌해 현재 `DIRTY` — 예고된 그 PR 몫). ⒝ e2e spec 보강 — 자매 scenario-e2e 의 열린 PR #223(tests/, 이 모델 as-is 밖). ⒞ 목업·여정 카피 — 자매 mockup-render/journey-mockup 축. ⒟ 과거 주기 재처리 — 운영, 판정면 밖. ⒠ V1/V3 — 가치 수준 서술로 카테고리화와 모순 없음(직전 판정 유지). ⒡ doc-tracker 월 롤오버 — 정의는 「가장 최근 `YYYY-MM.md`」만 읽으므로 `2026-09.md` 가 최신인 현재 등재 소실 아님.\n④ **소관 전수**: 이 모델 열린 task 는 이 task 외 0(직전 `0001` succeeded). 잔여는 「감소」가 아니라 이 모델 판정면에서 **구조적 0** 이라 캐리어 부재가 발화 사유가 되지 않는다.",
+      "assessedAt": "2026-10-01T07:09:34Z"
+    }
+  },
+  {
+    "id": "rct_20261001-0003",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-01T07:59:58Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:cf0b760b9254f6c0ad30893ba4800696d71cf334 go:7bfebaa4ad548616a37d8f4be4bbc152766141dd web:beab1c82812ad715b9d8d68608c6601e53a640a8 deploy:d3498b45ee81ed20886f3135b9b55e998106789a",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:cf0b760b9254f6c0ad30893ba4800696d71cf334 go:070dfe119787946fc1a927ca4ed67da794ae4fbb web:beab1c82812ad715b9d8d68608c6601e53a640a8 deploy:d3498b45ee81ed20886f3135b9b55e998106789a"
+      },
+      "toBe": {
+        "currentVersion": "4cb519c35b490088d3d75dd17a31b4087d41e591",
+        "previousVersion": "7261a657a2434631be712bf033333cbdb11e7cd2"
+      }
+    },
+    "createdAt": "2026-10-01T07:59:58Z",
+    "updatedAt": "2026-10-01T08:01:11Z",
+    "stateSummary": {
+      "asIs": "관측 2026-10-01T08:01 (main `a196484`). as-is 5칸 중 `go` 만 이동(`070dfe1`→`7bfebaa`); contracts·python·web·deploy 부동.\n- 창 `e15539f..a196484` 에서 `go/` 를 만진 커밋은 #224(자매 `tbm_econ-opinion-monitor-comment-necessity` `rct_20261001-0001` 착지) 하나: `argo.go`·`handlers.go`·`handlers_test.go`·`store.go` 4파일, −216/+8.\n- `git diff -U0 -- go` 의 ± 226줄 중 비주석 6줄은 gofmt 열 정렬(구조체 필드 3쌍)이며, 공백을 접으면 +/− 다중집합이 동일(True). 즉 동작 변화 0.\n- `go test ./...` (tip) 통과: handlers ok · store ok.\n- #223 은 `tests/e2e/` 만 변경(as-is 범위 밖).",
+      "toBe": "관측 2026-10-01T08:01 (main `a196484`). `docs/` 트리 `7261a65`→`4cb519c`.\n- 변경 파일 2개 전부 `docs/comment-policy/`(주석 정책 메타): `ledger.md` ±4, `passes/2026-10-01-go-serving-necessity-pass.md` 신설 92줄.\n- AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc-tracker·design-tracker 는 바이트 불변 → 새 의무 0.\n- 열린 PR: #220(docs AC2.7, 직전 task 들이 이미 인지한 축)뿐.",
+      "gap": "**유의미한 차이 없음.** 이 창은 자매 comment-necessity 의 착지(#224)로 Go 4파일 주석 제거(비주석 줄은 gofmt 정렬뿐, 공백 접은 다중집합 동일·`go test` 통과)와 주석 정책 메타 문서 갱신뿐이며, #223 은 as-is 밖 `tests/e2e/` 다. 의무면(AC·여정)도 구현 동작도 양 끝에서 같아 기준 1~6 어디에도 새 격차가 없다.",
+      "summarizedAt": "2026-10-01T08:01:11Z"
+    },
+    "assessment": {
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `e15539f..a196484` = #223(tests/e2e 전용, as-is 범위 밖) + #224(자매 `tbm_econ-opinion-monitor-comment-necessity` `rct_20261001-0001` 착지).\n① **구현 불변**: as-is 이동은 `go` 1칸, #224 의 4파일 주석 제거뿐. `-U0` 비주석 6줄은 gofmt 열 정렬이고 공백을 접으면 +/− 다중집합이 동일하다. tip 에서 `go test ./...` 통과. 기준 1·2·3·4·6 의 구현면 불변.\n② **새 의무 없음**: `docs/` DIFF 는 `comment-policy/`(메타 원장·판정 기록) 2파일뿐 — AC·PRD·테스트·여정·목업·tracker 불변. 기준 1·6 의무면 불변.\n③ **문서↔코드 모순 없음(기준 5)**: docs 가 Go 파일을 문면으로 인용하는 토큰(`func finestUnit`·`share-normalized`)은 tip 에 생존. design-tracker 의 줄 좌표 `handlers.go:34`·`:30-37` 은 창 이전부터 근사 좌표였고(라우트 등록 블록을 가리킴) 주석 제거로 오히려 1~2줄 당겨졌을 뿐 지목 대상(라우트 등록 전수)은 그대로다 — 이 창이 만든 모순 아님.\n④ **잔여 소관**: 직전 `rct_20261001-0002` 가 gap 0 으로 닫았고, 남은 AC2.7 축은 열린 PR #220 이 운반 중(main SSOT 기준 drift 아님). 같은 모델 열린 task 0, 이 창이 새로 만든 잔여 0 — 「구조적 0」이므로 action_required 해당 없음.",
+      "assessedAt": "2026-10-01T08:01:11Z"
+    }
+  },
+  {
+    "id": "rct_20261001-0004",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-01T08:43:44Z",
+      "toBe": {
+        "currentVersion": "f32b429cd925258410e90538f1c7b041c314ad76",
+        "previousVersion": "4cb519c35b490088d3d75dd17a31b4087d41e591"
+      }
+    },
+    "createdAt": "2026-10-01T08:43:44Z",
+    "updatedAt": "2026-10-01T08:43:44Z",
+    "stateSummary": {
+      "asIs": "관측 2026-10-01T08:45Z, `dlddu/economic-opinion-trend-monitor` main. 창 `a196484..182de91`(단일 커밋 #225 — 자매 `tbm_econ-opinion-monitor-comment-necessity` `rct_20261001-0002` 착지). as-is 5 트리 양 끝 SAME: `contracts` 291e4c6 · `python` cf0b760 · `go` 7bfebaa · `web` beab1c8 · `deploy` d3498b4. #225 의 코드 측 변경은 `tests/e2e/` 14파일 주석 제거뿐(정의상 as-is 범위 밖).",
+      "toBe": "`docs/` 트리 `4cb519c` → `f32b429`. `docs/` 최상위 엔트리 20개 중 DIFF 는 `docs/comment-policy` 1개(SAME 19 — PRD·AC·테스트 문서·values·user-journeys·mockups·design-system·doc-tracker·design-tracker·review-policy 전부 불변). DIFF 내용 = `comment-policy/ledger.md`(±40, 판정 원장 행 갱신) + `passes/2026-10-01-e2e-harness-necessity-pass.md`(+113, 판정 근거 기록) — 주석 정책의 메타 원장으로 제품 동작을 기술하지 않는다.",
+      "gap": "유의미한 차이 없음. 이 창의 to-be 이동은 주석 정책 메타 문서(`docs/comment-policy/`) 2파일뿐이고 AC·PRD·테스트·여정·목업·tracker 는 바이트 불변이며, as-is 5 트리도 양 끝 SAME 이라 기준 1~6 어디에도 새 의무·새 모순·미문서 구현이 생기지 않았다.",
+      "summarizedAt": "2026-10-01T08:44:32Z"
+    },
+    "assessment": {
+      "assessedAt": "2026-10-01T08:44:35Z",
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `a196484..182de91` = #225(자매 comment-necessity `rct_20261001-0002` 착지) 단일 커밋.\n① **의무면 불변**: `docs/` 최상위 20엔트리 중 DIFF 는 `comment-policy` 하나(ledger.md 행 갱신 + passes/ 판정 기록 신설). AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc/design-tracker 트리 SAME ⇒ 기준 1·6 새 의무 0, 기준 5 새 모순 0.\n② **구현 불변**: as-is `contracts`·`python`·`go`·`web`·`deploy` 트리 해시 양 끝 동일. #225 코드 변경은 `tests/e2e/` 주석 제거뿐(as-is 범위 밖) ⇒ 기준 2·3·4 불변.\n③ **잔여 소관**: 직전 `rct_20261001-0002`·`0003` 이 gap 0 으로 닫았고, AC2.7 축은 열린 PR #220 이 운반 중(main SSOT 기준 drift 아님). 같은 모델 열린 task 는 이 task 뿐 — 이 창이 만든 잔여는 「감소」가 아니라 구조적 0 이므로 action_required 해당 없음."
+    }
+  },
+  {
+    "id": "rct_20261001-0005",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-01T09:11:48Z",
+      "toBe": {
+        "currentVersion": "4b9de400200a0e53fff81d1d2ad02346f1617190",
+        "previousVersion": "f32b429cd925258410e90538f1c7b041c314ad76"
+      }
+    },
+    "createdAt": "2026-10-01T09:11:48Z",
+    "updatedAt": "2026-10-01T09:12:38Z",
+    "stateSummary": {
+      "asIs": "관측 2026-10-01T09:12:27Z, `dlddu/economic-opinion-trend-monitor` main. 창 `182de91..e635864`(단일 커밋 #226 — 자매 `tbm_econ-opinion-monitor-comment-necessity` `rct_20261001-0003` 착지). as-is 5 트리 양 끝 SAME: `contracts` 291e4c6 · `python` cf0b760 · `go` 7bfebaa · `web` beab1c8 · `deploy` d3498b4. #226 의 코드 측 변경은 `tests/` 18파일(e2e spec·러너·하네스 설정 주석 제거)뿐 — 정의상 as-is 범위 밖.",
+      "toBe": "`docs/` 트리 `f32b429` → `4b9de40`. `docs/` 최상위 엔트리 20개 중 DIFF 는 `docs/comment-policy` 1개(SAME 19 — PRD·AC·테스트 문서·values·user-journeys·mockups·design-system·doc-tracker·design-tracker·review-policy 전부 불변). DIFF 내용 = `comment-policy/ledger.md`(±, 판정 원장 행 갱신) + `passes/2026-10-01-e2e-spec-runner-necessity-pass.md`(+134, 판정 근거 기록) — 주석 정책의 메타 원장으로 제품 동작을 기술하지 않는다.",
+      "gap": "유의미한 차이 없음. 이 창의 to-be 이동은 주석 정책 메타 문서(`docs/comment-policy/`) 2파일뿐이고 AC·PRD·테스트·여정·목업·tracker 는 트리 불변이며, as-is 5 트리도 양 끝 SAME 이라 기준 1~6 어디에도 새 의무·새 모순·미문서 구현이 생기지 않았다(직전 `rct_20261001-0004` 와 동형 창).",
+      "summarizedAt": "2026-10-01T09:12:27Z"
+    },
+    "assessment": {
+      "assessedAt": "2026-10-01T09:12:38Z",
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `182de91..e635864` = #226(자매 comment-necessity `rct_20261001-0003` 착지) 단일 커밋.\n① **의무면 불변**: `docs/` 최상위 20엔트리 중 DIFF 는 `comment-policy` 하나(ledger.md 행 갱신 + passes/ 판정 기록 신설). AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc/design-tracker 트리 SAME ⇒ 기준 1·6 새 의무 0, 기준 5 새 모순 0.\n② **구현 불변**: as-is `contracts`·`python`·`go`·`web`·`deploy` 트리 해시 양 끝 동일. #226 코드 변경은 `tests/` 18파일 주석 제거뿐(as-is 범위 밖) ⇒ 기준 2·3·4 불변.\n③ **잔여 소관**: 직전 `rct_20261001-0002`~`0004` 가 gap 0 으로 닫았고, AC2.7 축은 열린 PR #220 이 운반 중(main SSOT 기준 drift 아님). 같은 모델 열린 task 는 이 task 뿐 — 이 창이 만든 잔여는 구조적 0 이므로 action_required 해당 없음."
+    }
+  },
+  {
+    "id": "rct_20261001-0006",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-01T09:51:49Z",
+      "toBe": {
+        "currentVersion": "1f432a2af754b4a109ba65fc97781586246caa4e",
+        "previousVersion": "4b9de400200a0e53fff81d1d2ad02346f1617190"
+      }
+    },
+    "createdAt": "2026-10-01T09:51:49Z",
+    "updatedAt": "2026-10-01T09:52:30Z",
+    "stateSummary": {
+      "asIs": "**구현(as-is)** — `dlddu/economic-opinion-trend-monitor` main 창 `e635864..2625e47`(#227) 양 끝에서 `contracts:291e4c6 python:cf0b760 go:7bfebaa web:beab1c8 deploy:d3498b4` 5 트리 해시 전부 SAME(관측 2026-10-01 09:5xZ). #227 의 코드 변경 58파일은 전부 `tests/e2e/`(픽스처·배치 매니페스트 주석 제거) — as-is 범위 밖.",
+      "toBe": "**문서(to-be)** — `docs` 트리 `4b9de40 → 1f432a2`. `docs/` 최상위 20엔트리 중 DIFF 는 `comment-policy` 하나(`0767f6b → 66903b8`): `ledger.md` 행 갱신(+40/−61) + `passes/2026-10-01-e2e-fixture-batch-necessity-pass.md` 신설(+115). 자매 `tbm_econ-opinion-monitor-comment-necessity` `rct_20261001-0004` 착지. AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc/design-tracker 트리 SAME.",
+      "gap": "유의미한 차이 없음. 이 창의 to-be 이동은 주석 정책 메타 문서(`docs/comment-policy/`) 2파일뿐이고 의무면(AC·PRD·테스트·여정·목업·tracker)은 트리 불변이며, as-is 5 트리도 양 끝 SAME 이라 기준 1~6 어디에도 새 의무·새 모순·미문서 구현이 생기지 않았다(직전 `rct_20261001-0004`·`0005` 와 동형 창).",
+      "summarizedAt": "2026-10-01T09:52:30Z"
+    },
+    "assessment": {
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `e635864..2625e47` = #227(자매 comment-necessity `rct_20261001-0004` 착지) 단일 커밋.\n① **의무면 불변**: `docs/` 최상위 20엔트리 중 DIFF 는 `comment-policy` 하나(ledger.md 행 갱신 + passes/ 판정 기록 신설). AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc/design-tracker 트리 SAME ⇒ 기준 1·6 새 의무 0, 기준 5 새 모순 0.\n② **구현 불변**: as-is `contracts`·`python`·`go`·`web`·`deploy` 트리 해시 양 끝 동일. #227 코드 변경은 `tests/e2e/` 58파일 주석 제거뿐(as-is 범위 밖) ⇒ 기준 2·3·4 불변.\n③ **잔여 소관**: 직전 `rct_20261001-0002`~`0005` 가 gap 0 으로 닫았고, AC2.7 축은 열린 PR #220 이 운반 중(main SSOT 기준 drift 아님). 같은 모델 열린 task 는 이 task 뿐 — 이 창이 만든 잔여는 구조적 0 이므로 action_required 해당 없음.",
+      "assessedAt": "2026-10-01T09:52:30Z"
+    }
+  },
+  {
+    "id": "rct_20261004-0001",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-04T03:07:48Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:3087456f449099b7ba85629ee50c06a2e98392d0 go:00b3fde7868d7a87b104788883e11af89426b89e web:beab1c82812ad715b9d8d68608c6601e53a640a8 deploy:d3498b45ee81ed20886f3135b9b55e998106789a",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:cf0b760b9254f6c0ad30893ba4800696d71cf334 go:7bfebaa4ad548616a37d8f4be4bbc152766141dd web:beab1c82812ad715b9d8d68608c6601e53a640a8 deploy:d3498b45ee81ed20886f3135b9b55e998106789a"
+      },
+      "toBe": {
+        "currentVersion": "707055d7015452c16222666974a11a45d18a0066",
+        "previousVersion": "1f432a2af754b4a109ba65fc97781586246caa4e"
+      }
+    },
+    "createdAt": "2026-10-04T03:07:48Z",
+    "updatedAt": "2026-10-04T03:09:23Z",
+    "stateSummary": {
+      "asIs": "관측 시각 2026-10-04 03:08Z · `dlddu/economic-opinion-trend-monitor@a047363`(main tip).\n- as-is 5 트리: `contracts` 291e4c6 · `web` beab1c8 · `deploy` d3498b4 **불변**; `python` cf0b760→**3087456**, `go` 7bfebaa→**00b3fde**.\n- 창 `2625e47..a047363` = 단일 커밋 #228(자매 `tbm_econ-opinion-monitor-comment-necessity/rct_20261004-0001` 착지, Python 패키지 전체·Go 잔여 주석 필요성 판정 364→230줄).\n- 코드 변경 15파일: `python/packages/**` 14파일(+32/−185), `go/internal/static/static.go` 1파일(−4).\n- **행위 불변 실측**: Python 14파일 전부 docstring 제거 AST 대조 SAME(그중 3파일은 원시 AST 까지 SAME = `#` 주석만 변경), Go 1파일은 `git diff -U0` 의 ± 줄 전부가 `//` 주석·빈 줄. `__doc__`/`inspect.getdoc` 독자 0히트 ⇒ docstring 이 런타임 출력에 실리지 않는다.",
+      "toBe": "관측 시각 2026-10-04 03:08Z · `docs/` 트리 1f432a2→**707055d**.\n- `docs/` 최상위 엔트리 중 DIFF 는 `comment-policy` 하나(66903b8→71a4441: `ledger.md` 행 갱신 + `passes/2026-10-04-python-packages-go-necessity-pass.md` 판정 기록 신설, +171/−47).\n- AC·PRD·테스트 문서·사용자 여정·목업·디자인 시스템·doc/design-tracker 트리 **SAME** ⇒ 의무면(기준 1·6 의 AC/여정 의무 집합) 불변.",
+      "gap": "유의미한 차이 없음. 이 창은 자매 comment-necessity 의 주석 정리 착지(#228)로, to-be 는 주석 정책 메타 문서만 움직였고 as-is 의 python/go 변경은 docstring·주석 전용(AST 대조 SAME)이라 기준 1~6 어디에도 새 의무·새 모순·미문서 구현이 생기지 않았다; 제거된 테스트 docstring 4문장은 docs 가 원천인 문장의 중복 사본이었고 docs 쪽 원문은 그대로 남아 있다.",
+      "summarizedAt": "2026-10-04T03:08:59Z"
+    },
+    "assessment": {
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `2625e47..a047363` = #228(자매 comment-necessity `rct_20261004-0001` 착지) 단일 커밋.\n① **의무면 불변**: `docs/` 최상위 엔트리 중 DIFF 는 `comment-policy` 하나. AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc/design-tracker 트리 SAME ⇒ 기준 1·6 새 의무 0, 기준 5 새 모순 0.\n② **구현 행위 불변**: as-is 중 `python`·`go` 트리만 이동했다. Python 14파일은 docstring 을 걷어 낸 AST 가 양 끝 전부 SAME이고, Go `static.go` 는 ± 줄 전부가 `//` 주석이다. `__doc__` 독자는 0이고 `contracts`·`web`·`deploy` 는 SAME ⇒ 기준 2·3·4 불변(새 사용자 대면 동작·계약 필드 0).\n③ **역방향 점검**: 제거된 주석·docstring 156줄(20자 이상)의 문면을 docs(comment-policy 제외)에 grep 하면 4히트이고, 전부 `test_llm_call_record.py` 테스트 docstring 이 test-pipeline-ops 시나리오·doc-tracker 문장을 옮겨 적은 사본이다. docs 원문은 그대로 남았고, docs 가 코드 주석을 근거로 인용하는 자리는 0이다(tracker 2026-09.md:106 의 `aggregate.py` docstring 인용은 이미 rct_20260926-0016 이 ledger 로 옮겼다).\n④ **잔여 소관**: 직전 `rct_20261001-0002`~`0006` 이 gap 0 으로 닫았다. AC2.7 축은 열린 PR #220(유일한 열린 PR)이 운반 중이며 main SSOT 기준으로 drift 가 아니다. 같은 모델의 열린 task 는 이 task 뿐이다 — 이 창이 만든 잔여는 「감소」가 아니라 구조적 0 이므로 action_required 해당 없음.",
+      "assessedAt": "2026-10-04T03:09:23Z"
+    }
+  },
+  {
+    "id": "rct_20261004-0002",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-04T04:19:45Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:3087456f449099b7ba85629ee50c06a2e98392d0 go:00b3fde7868d7a87b104788883e11af89426b89e web:25443ee271f8d4ca7a317094a4c2067fdeb286f4 deploy:d3498b45ee81ed20886f3135b9b55e998106789a",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:3087456f449099b7ba85629ee50c06a2e98392d0 go:00b3fde7868d7a87b104788883e11af89426b89e web:beab1c82812ad715b9d8d68608c6601e53a640a8 deploy:d3498b45ee81ed20886f3135b9b55e998106789a"
+      },
+      "toBe": {
+        "currentVersion": "6268150e6f07d27af6f8bc3f92a55efcb50f3953",
+        "previousVersion": "707055d7015452c16222666974a11a45d18a0066"
+      }
+    },
+    "createdAt": "2026-10-04T04:19:45Z",
+    "updatedAt": "2026-10-04T04:28:00Z",
+    "stateSummary": {
+      "asIs": "관측 2026-10-04T04:20Z, `dlddu/economic-opinion-trend-monitor@main` = `5b639e3`(#229). 창 `a047363..5b639e3` = **단일 커밋 #229**(자매 `tbm_econ-opinion-monitor-comment-necessity` `rct_20261004-0002` 착지 — web/src 화면·API·셸 주석 필요성 판정).\n- as-is 5칸 중 이동은 `web` 1칸(`beab1c8`→`25443ee`). `contracts`·`python`·`go`·`deploy` 트리 SAME(커밋 제목의 「배포·이미지」 6파일은 판정만 하고 제거 0 — diff 없음).\n- web 변경 15파일 −126/+(재작성 주석 몇 줄): `git diff -U0 -- web` 의 모든 `+`/`-` 줄을 주석 판정에 건 감사에서 **비주석 줄 0**(`//`·`/*`·`*`·`{/*` 로 시작하거나 공백). 커밋 자기선언도 「코드 변경 0 — TS 프린터 `removeComments` 출력이 base 와 같다」.\n- 제거 주석 문면(20자 이상 92줄)을 docs(comment-policy 제외)에 대조: 1히트(`Fairness.tsx:35` 「수를 맞추려고 부분을 깎는…」)는 doc-tracker `2026-09.md:1154` 슬라이스 12 기록의 사본이고, 같은 동작은 UI 문면(`Fairness.tsx:416`)·테스트(`Fairness.test.tsx:260`)에 그대로 남는다.",
+      "toBe": "관측 2026-10-04T04:20Z, `docs/` 트리 `707055d`→`6268150`. 최상위 엔트리 중 DIFF 는 **`comment-policy` 하나**(`ledger.md` 30행 갱신 + `passes/2026-10-04-web-src-deploy-necessity-pass.md` 신설). AC·PRD 4종·테스트 문서 4종·values·여정·목업·디자인 시스템·doc-tracker·design-tracker·review/e2e 정책 트리 **SAME**.\n- design-tracker 는 화면 소스를 줄 번호로 인용한다(`Fairness.tsx:13`·`types.ts:142-152`·`Compare.tsx:105-107` 등 24좌표). 양 끝 대조: 주석 자체를 근거로 인용하는 자리(`Fairness.tsx:13`·`Trace.tsx:7` 「급등 검증」, `Trend.tsx:8-21`, `Sentiment.tsx:24-33`, `Fairness.tsx:70`) SAME. 나머지 좌표는 이동했으나 상당수는 base 에서도 이미 다른 줄을 가리켰고(예 `types.ts:39-43`·`Sentiment.tsx:263`), 패스 문서 :78-82 가 「등재 시점 스냅숏, 어느 게이트도 읽지 않는다」로 명시적으로 다뤘다. 인용된 명제(예: `FairnessResponse` 에 선택 대상 필드 없음, `PREV_LABEL`/`NEW_LABEL` 3단위)는 코드 불변이라 그대로 참.",
+      "gap": "유의미한 차이 없음. 이 창은 자매 comment-necessity 의 web 주석 정리 착지(#229)로, to-be 는 주석 정책 메타 문서만 움직였고 as-is 의 web 변경은 주석 전용(비주석 ± 줄 0)이라 기준 1~6 어디에도 새 의무·새 모순·미문서 구현이 생기지 않았다; design-tracker 의 줄 번호 좌표 일부가 밀렸지만 인용된 명제는 코드 불변으로 참이고 주석 자체를 근거로 인용한 자리는 전부 생존했다(위생 관찰, drift 아님).",
+      "summarizedAt": "2026-10-04T04:27:00Z"
+    },
+    "assessment": {
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `a047363..5b639e3` = #229(자매 comment-necessity `rct_20261004-0002` 착지) 단일 커밋.\n① **의무면 불변**: `docs/` 최상위 엔트리 중 DIFF 는 `comment-policy` 하나. AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc/design-tracker 트리 SAME ⇒ 기준 1·6 새 의무 0, 기준 5 새 모순 0.\n② **구현 행위 불변**: as-is 중 `web` 트리만 이동했고 `-U0` ± 줄 전수 감사에서 비주석 줄 0(커밋 자기선언 「TS `removeComments` 출력 동일」과 일치). `contracts`·`python`·`go`·`deploy` SAME ⇒ 기준 2·3·4 불변.\n③ **역방향 점검**: 제거 주석 문면 92줄을 docs(comment-policy 제외)에 대조하면 1히트이고 doc-tracker 원문의 사본이라 원문은 남는다. design-tracker 의 web 줄 번호 인용 24좌표 중 주석 자체를 근거로 삼는 자리는 전부 SAME, 이동한 좌표는 등재 시점 스냅숏(상당수 base 에서 이미 어긋남, 패스 문서 :78-82 가 명시)이고 인용 명제는 코드 불변으로 참 — 위생 관찰이지 기준 5 모순 아님.\n④ **잔여 소관**: 직전 `rct_20261001-0002`~`rct_20261004-0001` 이 gap 0 으로 닫았고 이 창이 만든 잔여는 「감소」가 아니라 구조적 0 이므로 action_required 해당 없음. 같은 모델 열린 task 는 이 task 뿐.",
+      "assessedAt": "2026-10-04T04:28:00Z"
+    }
+  },
+  {
+    "id": "rct_20261004-0003",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-04T05:19:46Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:3087456f449099b7ba85629ee50c06a2e98392d0 go:00b3fde7868d7a87b104788883e11af89426b89e web:25443ee271f8d4ca7a317094a4c2067fdeb286f4 deploy:79449e36af7a33882a931839c7d87a904df9ee6c",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:3087456f449099b7ba85629ee50c06a2e98392d0 go:00b3fde7868d7a87b104788883e11af89426b89e web:25443ee271f8d4ca7a317094a4c2067fdeb286f4 deploy:d3498b45ee81ed20886f3135b9b55e998106789a"
+      },
+      "toBe": {
+        "currentVersion": "7dcb3f2d8ad08f8c491b44b0775b9652a634b0f7",
+        "previousVersion": "6268150e6f07d27af6f8bc3f92a55efcb50f3953"
+      }
+    },
+    "createdAt": "2026-10-04T05:19:46Z",
+    "updatedAt": "2026-10-04T05:20:58Z",
+    "stateSummary": {
+      "asIs": "관측 2026-10-04 05:2xZ, `dlddu/economic-opinion-trend-monitor` main `014b279`(#230). 창 `5b639e3..014b279` 단일 커밋(자매 comment-necessity `rct_20261004-0003` 착지).\n- as-is 5 트리: `contracts` 291e4c6·`python` 3087456·`go` 00b3fde·`web` 25443ee 양 끝 SAME, `deploy` d3498b4→79449e3 만 이동.\n- `deploy/` 변경 3파일(`base/deployment.yaml`·`overlays/prod/batch-pvc.yaml`·`overlays/prod/kustomization.yaml`): `-U0` ± 줄 전수 감사에서 비주석 줄 0, 3파일 모두 YAML 파싱 후 정규화 md5 양 끝 SAME(5dc0ff77bb·f73ece4a34·985b99f650).\n- 나머지 코드 변경은 `scripts/`(여정 하네스·시나리오·검사기 주석) — as-is 범위 밖.",
+      "toBe": "관측 2026-10-04 05:2xZ, `docs` 트리 6268150→7dcb3f2. `docs/` 최상위 엔트리 중 DIFF 는 `comment-policy` 하나(ledger.md 행 갱신 + passes/ 판정 기록 1파일 신설). AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc/design-tracker·review-policy 트리 SAME.",
+      "gap": "유의미한 차이 없음. to-be 는 주석 정책 메타 문서만 움직였고, as-is 의 deploy 변경은 주석 전용(비주석 ± 줄 0, YAML 파싱 md5 SAME)이라 기준 1~6 어디에도 새 의무·새 모순·미문서 구현이 생기지 않았다; doc-tracker 가 deploy 파일 문면을 `∋` 로 인용하는 관측 좌표 10개는 창 양 끝에서 생존 여부가 전부 동일하다(이 창이 깬 좌표 0).",
+      "summarizedAt": "2026-10-04T05:20:44Z"
+    },
+    "assessment": {
+      "assessedAt": "2026-10-04T05:20:58Z",
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `5b639e3..014b279` = #230(자매 comment-necessity `rct_20261004-0003` 착지) 단일 커밋.\n① **의무면 불변**: `docs/` 최상위 엔트리 중 DIFF 는 `comment-policy` 하나. AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc/design-tracker 트리 SAME ⇒ 기준 1·6 새 의무 0, 기준 5 새 모순 0.\n② **구현 행위 불변**: as-is 중 `deploy` 트리만 이동했다. 3파일의 `-U0` ± 줄은 전부 `#` 주석(비주석 0)이고, YAML 파싱 후 정규화 md5 가 3파일 모두 양 끝 SAME 이다(블록 스칼라 내부 변경 없음도 함께 증명). `contracts`·`python`·`go`·`web` SAME ⇒ 기준 2·3·4 불변.\n③ **역방향 점검**: 제거된 주석 문면 200줄(20자 이상, deploy+scripts)을 docs(comment-policy 제외)에 대조하면 0히트. doc-tracker `2026-09.md` 가 deploy 파일 문면을 `∋` 로 인용하는 관측 좌표 10개는 창 양 끝에서 참/거짓이 전부 동일하다(`kustomization.yaml` ∋ `Swap the data emptyDir…` 생존; `batch-pvc.yaml` 인용 등 거짓 2개는 base 에서 이미 거짓 — 이 창이 깬 좌표 0). 제거된 `deployment.yaml` 의 README 「운영 고정」 포인터는 README(as-is·to-be 밖)를 가리킬 뿐 docs 의무가 아니다.\n④ **잔여 소관**: 직전 `rct_20261001-0002`~`rct_20261004-0002` 가 gap 0 으로 닫았다. AC2.7 축은 열린 PR #220(유일한 열린 PR)이 운반 중이며 main SSOT 기준 drift 아님. 같은 모델의 열린 task 는 이 task 뿐 — 이 창이 만든 잔여는 「감소」가 아니라 구조적 0 이므로 action_required 해당 없음."
+    }
+  },
+  {
+    "id": "rct_20261004-0004",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-04T06:23:47Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:3087456f449099b7ba85629ee50c06a2e98392d0 go:00b3fde7868d7a87b104788883e11af89426b89e web:23c619ea95958af175d13a50a096875cd5dc2e33 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:3087456f449099b7ba85629ee50c06a2e98392d0 go:00b3fde7868d7a87b104788883e11af89426b89e web:25443ee271f8d4ca7a317094a4c2067fdeb286f4 deploy:79449e36af7a33882a931839c7d87a904df9ee6c"
+      },
+      "toBe": {
+        "currentVersion": "8b8406e0e46230cc7e1cd02444dbad7008430987",
+        "previousVersion": "7dcb3f2d8ad08f8c491b44b0775b9652a634b0f7"
+      }
+    },
+    "createdAt": "2026-10-04T06:23:47Z",
+    "updatedAt": "2026-10-04T06:34:00Z",
+    "stateSummary": {
+      "asIs": "관측 2026-10-04T06:30Z, 대상 `dlddu/economic-opinion-trend-monitor` main `17d7ba9`(창 `014b279..17d7ba9` = #231 단일 커밋, 자매 comment-necessity `rct_20261004-0004` 착지).\n- as-is 5 트리: `contracts` `291e4c67`·`python` `3087456f`·`go` `00b3fde7` 양 끝 SAME. `web` `25443ee2→23c619ea`(`web/src/tokens/tokens.css` −30/+1), `deploy` `79449e36→41f3b62c`(`deploy/batch/cronworkflow-pipeline.yaml` −16/+2 · `workflow-template.yaml` −10/+5).\n- `-U0` ± 줄 전수 감사: 비주석 줄 0(CSS 는 전부 `/* … */`, YAML 은 전부 `#`).\n- 정규화 대조: tokens.css 주석 제거+공백 정규화 md5 `450777dd449a` 양 끝 SAME(CTRL: 선언 1개 주입 → `4af200fd8fa1` DIFF). YAML 2파일 `safe_load_all` md5 양 끝 SAME(`8042e67e8171`·`c2a430a9258c`) — 블록 스칼라 내부 변경 없음도 함께 증명.\n- 창 밖 경로: `.github/workflows/` 3파일(as-is 범위 밖).",
+      "toBe": "관측 2026-10-04T06:30Z, `docs/` `7dcb3f2d→8b8406e0`.\n- `docs/` 최상위 엔트리 중 DIFF 는 `comment-policy` 하나(ledger.md ±12 + passes/2026-10-04-workflows-batch-tokens-necessity-pass.md 신설 96줄).\n- AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc-tracker(`2026-09.md` 최신 월)·design-tracker 트리 SAME.",
+      "gap": "유의미한 차이 없음. to-be 는 주석 정책 메타 문서만 움직였고 as-is 의 web/deploy 변경은 주석 전용(비주석 ± 줄 0, CSS 정규화·YAML 파싱 md5 SAME)이라 기준 1~6 어디에도 새 의무·새 모순·미문서 구현이 생기지 않았다; doc-tracker `2026-09.md:155` 가 근거로 가리키던 `cronworkflow-pipeline.yaml` 「머리 주석」 절차가 이 창에서 걷혀 포인터가 허공을 가리키게 됐으나, 서술 대상은 2026-09-20 의 과거 운영 행위이고 그 문장의 현재 사실 주장(`suspend: false`/`true`)은 참으로 남아 위생 관찰이지 drift 가 아니다.",
+      "summarizedAt": "2026-10-04T06:31:00Z"
+    },
+    "assessment": {
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `014b279..17d7ba9` = #231(자매 comment-necessity `rct_20261004-0004` 착지) 단일 커밋.\n① **의무면 불변**: `docs/` 최상위 엔트리 중 DIFF 는 `comment-policy` 하나. AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc/design-tracker 트리 SAME ⇒ 기준 1·6 새 의무 0, 기준 5 새 모순 0.\n② **구현 행위 불변**: as-is 중 `web`(tokens.css)·`deploy`(batch 2파일) 트리만 이동했다. `-U0` ± 줄 전수 감사에서 비주석 줄 0이고, CSS 주석 제거 정규화 md5 와 YAML 파싱 md5 가 양 끝 SAME 이다(CSS CTRL 선언 주입 → DIFF 로 계측기 작동 확인). `contracts`·`python`·`go` SAME ⇒ 기준 2·3·4 불변.\n③ **역방향 점검**: doc-tracker `2026-09.md`·design-tracker 가 창 3파일 문면을 `∋` 로 인용하는 좌표 13개는 창 양 끝에서 참/거짓이 전부 같다(이 창이 깬 좌표 0; 거짓 1개 `name:\\n reprocess` 는 줄바꿈 인용 아티팩트로 base 부터 거짓). design-tracker 의 `tokens.css:992-993` 줄 인용 3곳은 base 에서도 이미 다른 줄을 가리키는 스냅숏 좌표이고, 인용된 「규칙 5 대조 규약」 자기선언 주석(`.cmp-exits` 머리)은 tip 993~995 에 생존한다.\n④ **위생 관찰(drift 아님)**: `2026-09.md:155` 는 2026-09-20(#72) 상시 스케줄 전환 착지를 적으며 「`cronworkflow-pipeline.yaml` 머리 주석의 4단계」를 그때 따른 절차의 출처로 가리키는데, 이 창이 그 절차 주석을 「틀린 주석」으로 걷었다(패스 문서 :36 — 이미 `suspend: false` 라 「켜기 전」 절차가 무의미). 서술 대상이 과거 운영 행위이고, 같은 문장의 현재 사실 주장(`∋ suspend: false`/`suspend: true`)은 참이며, 절차의 요지(Secret 확인 + 수동 1회 실증 후 전환)는 README:271 에 남아 있다. 「4단계」는 base 에서도 번호 3단계의 의역이었다. 따라서 기준 5 모순이 아니라 출처 포인터 위생 문제이며, 다음 doc-tracker 편집 때 출처를 README 로 바꾸면 된다.\n⑤ **잔여 소관**: 직전 `rct_20261001-0002`~`rct_20261004-0003` 이 gap 0 으로 닫았고 AC2.7 축은 열린 PR #220 이 운반 중(main SSOT 기준 drift 아님). 같은 모델의 열린 task 는 이 task 뿐 — 이 창이 만든 잔여는 「감소」가 아니라 구조적 0 이므로 action_required 해당 없음.",
+      "assessedAt": "2026-10-04T06:34:00Z"
+    }
+  },
+  {
+    "id": "rct_20261004-0005",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-04T15:55:50Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:218d729f3d322b92a576d1f09a140e0ed5135d8f go:00b3fde7868d7a87b104788883e11af89426b89e web:23c619ea95958af175d13a50a096875cd5dc2e33 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:3087456f449099b7ba85629ee50c06a2e98392d0 go:00b3fde7868d7a87b104788883e11af89426b89e web:23c619ea95958af175d13a50a096875cd5dc2e33 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "currentVersion": "243e6fb3ebd54f50ac7ce7824e84e1bb92dc57b1",
+        "previousVersion": "8b8406e0e46230cc7e1cd02444dbad7008430987"
+      }
+    },
+    "createdAt": "2026-10-04T15:55:50Z",
+    "updatedAt": "2026-10-04T15:57:14Z",
+    "stateSummary": {
+      "asIs": "관측 2026-10-04T15:56:55Z, 대상 `dlddu/economic-opinion-trend-monitor` main `a320223`(창 `17d7ba9..a320223` = #232 단일 커밋, 자매 comment-necessity `rct_20261004-0005` 착지).\n- as-is 5 트리: `contracts` `291e4c67`·`go` `00b3fde7`·`web` `23c619ea`·`deploy` `41f3b62c` 양 끝 SAME. `python` `3087456f→218d729f` — 변경 파일은 `python/packages/analysis/src/econ_analysis/fake_llm.py` 하나(−8/+1).\n- 변경 내용: 모듈 docstring 7줄 본문을 첫 줄 요약 1줄로 접음(비-docstring ± 줄 0).\n- `ast.dump` 대조: 전체 AST md5 `f58a28ae8508→518661fb5dc3`(DIFF = docstring 노드), docstring 노드 제거 후 md5 `06d03ee93a8f` 양 끝 SAME. CTRL(문장 1개 주입) → `1522bda5b05e` DIFF 로 계측기 작동 확인. `__doc__` 독자는 `python/` 전체에 0.\n- 걷힌 문장이 서술하던 동작은 tip 에 생존: `fake_llm.py:13` `NO_CALL_KEYWORD_ANALYZER = \"keyword_analyzer\"`, `contracts/silver/analysis.avsc:78` 필드 doc, `web/src/screens/Debug.tsx:28` 라벨.\n- 창 밖 경로: `.github/workflows/review-gate.yml`(as-is 범위 밖).",
+      "toBe": "관측 2026-10-04T15:56:55Z, `docs/` `8b8406e0→243e6fb3`.\n- `docs/` 최상위 엔트리 중 DIFF 는 `comment-policy` 하나(`ledger.md` ±12 + `passes/2026-10-04-manual-approval-lane-necessity-pass.md` 신설 61줄).\n- AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc-tracker(`2026-09.md` 최신 월)·design-tracker 트리 SAME.",
+      "gap": "유의미한 차이 없음. to-be 는 주석 정책 메타 문서만 움직였고 as-is 의 유일한 변경은 `fake_llm.py` 모듈 docstring 축약(docstring 제거 AST md5 양 끝 SAME)이라 기준 1~6 어디에도 새 의무·새 모순·미문서 구현이 생기지 않았다; 걷힌 문장이 가리키던 AC4.3 「호출하지 않은 사유」 동작은 상수·계약 doc·화면 라벨에 그대로 남아 있고, 판정 문서 가운데 그 docstring 문면을 인용하는 곳은 없다.",
+      "summarizedAt": "2026-10-04T15:56:55Z"
+    },
+    "assessment": {
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `17d7ba9..a320223` = #232(자매 comment-necessity `rct_20261004-0005` 착지) 단일 커밋.\n① **의무면 불변**: `docs/` 최상위 엔트리 중 DIFF 는 `comment-policy` 하나(원장 ±12 + 패스 문서 신설). AC·PRD·테스트 문서·여정·목업·디자인 시스템·doc/design-tracker 트리 SAME ⇒ 기준 1·6 새 의무 0, 기준 5 새 모순 0.\n② **구현 행위 불변**: as-is 중 `python` 트리만 이동했고 변경 파일은 `python/packages/analysis/src/econ_analysis/fake_llm.py` 하나다. 모듈 docstring 본문 7줄이 요약 1줄로 접혔을 뿐이며, docstring 노드를 뗀 `ast.dump` md5 가 양 끝 SAME(`06d03ee93a8f`)이고 문장 주입 CTRL 은 DIFF 로 계측기 작동을 확인했다. `python/` 에 `__doc__` 독자는 없다. `contracts`·`go`·`web`·`deploy` SAME ⇒ 기준 2·3·4 불변.\n③ **역방향 점검**: 걷힌 docstring 은 AC4.3 「호출하지 않은 사유」(`no_call_reason=\"keyword_analyzer\"`)와 단발 CLI 실행의 run 이름을 설명했다. 그 동작 자체는 tip 에 남아 있다 — `fake_llm.py:13` 상수, `contracts/silver/analysis.avsc:78` 필드 doc, `web/src/screens/Debug.tsx:28` 라벨. `comment-policy` 밖 문서에서 `fake_llm` 을 가리키는 곳은 `e2e-mocking-policy.md:19` 의 모듈 이름 언급 하나이고 docstring 문면 인용은 0, doc-tracker `2026-09.md:286`·`:1150` 은 계약·동작을 서술할 뿐 이 docstring 을 출처로 삼지 않는다 ⇒ 이 창이 깬 좌표 0.\n④ **잔여 소관**: 직전 `rct_20261004-0001`~`0004` 가 gap 0 으로 닫았고 AC2.7 축은 열린 PR #220 이 운반 중(2026-09-29 이후 무변동, main SSOT 기준 drift 아님). eom 계열 모델의 비종결 task 는 이 task 뿐이다. 이 창이 만든 잔여는 「감소」가 아니라 구조적 0 이므로 action_required 해당 없음.",
+      "assessedAt": "2026-10-04T15:57:14Z"
+    }
+  },
+  {
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-05T10:01:44Z",
+      "toBe": {
+        "previousVersion": "243e6fb3ebd54f50ac7ce7824e84e1bb92dc57b1",
+        "currentVersion": "07ca754a4f78ea276a58ce10ef74e5b51b4734d3"
+      }
+    },
+    "createdAt": "2026-10-05T10:01:44Z",
+    "id": "rct_20261005-0001",
+    "stateSummary": {
+      "asIs": "관측 2026-10-05T10:03:57Z, 대상 `dlddu/economic-opinion-trend-monitor` main `b3252a6`(창 `a320223..b3252a6` = #233 단일 커밋).\n- as-is 5 트리 양 끝 SAME: `contracts` `291e4c67` · `python` `218d729f` · `go` `00b3fde7` · `web` `23c619ea` · `deploy` `41f3b62c`. 창의 변경 파일은 `docs/` 2개뿐이다.\n- `dash`(`web/src/screens/Dashboard.tsx`) 실측:\n  - 직전 구간 대비 증감은 순위 행에 기본 노출된다(`dtext`, `has_baseline=false` 면 `—`; 신규 진입은 `NEW_LABEL`).\n  - 기간·단위를 **고르는 컨트롤은 없다** — `web/src/screens` 에서 `setRange` 는 `Reprocess.tsx` 뿐이고 `Dashboard.tsx` 에 select·radio 0. 값 자체는 저장소 `econ-monitor:dash:brief` 에서 복원해 조회에 싣는다.\n  - 순위 행을 누르면 고르지 않고 곧장 `/trend?axis=…&subject=…` 로 내려간다(`:240-241`) — 「고른 대상」 상태 없음.\n  - 화면 2·3 표면 리터럴 9종(`증감 임계`·`새로 올라온 대상만`·`단위별 순위`·`비교 기준 구간`·`3축을 나란히 비교`·`기간 적용`·`집계 단위`·`급등의 진위부터 확인`·`고른 대상`) `Dashboard.tsx` 0히트.\n- 서빙 `go/internal/handlers/dashboard.go`: `delta`·`is_new`·`previous_bucket`·`has_baseline` 을 내려주고 조회 파라미터 `range`(`:69`)·`unit`(`:286`)을 읽는다. `contracts/gold/subject_trend.avsc:41` `delta` doc = 「Change vs the previous bucket … (AC3.5)」. `contracts/gold`·`dashboard.go` 에 `sample` 0히트. `Compare.tsx` `useSearchParams` 0히트.\n- 라우트 `/compare`·`/fairness`·`/trend` 는 모두 실재(`App.tsx:22-25`).",
+      "toBe": "관측 2026-10-05T10:03:57Z, `docs/` `243e6fb3→07ca754a`.\n- `docs/` 최상위 엔트리 DIFF 는 둘: `econ-opinion-monitor-design-tracker.md`(blob `4af36ef0→13750f8c`, +64/−1)와 `mockups` 트리(`1774d4dd→4bce27ea`, `econ-opinion-monitor-mockup-index.md` ±2). PRD 4종·테스트 문서 4종·values·`user-journeys`·`design-system`·doc-tracker·`comment-policy` 는 SAME ⇒ AC·여정 의무면 불변.\n- design-tracker 「목업 ↔ 구현 편차 허용목록」: `dash` 행 8개 신설(`STP-scan-delta` 4 · `STP-adjust-window` 4) + 기존 「기간·단위 컨트롤 … 부재」 행의 종류를 `구조`→`구현 수렴 대기` 로 정정. 신설 8행 중 `구현 수렴 대기` 5(증감 카드 · 「고른 대상」 카드 · `기간 · 단위` 카드 머리·문면 · `단위별 순위` 카드 · `3축을 나란히 비교 →` 이탈 배너), `구조` 3(비교 기준 select · 표본 경고 · `급등의 진위부터 확인 →` 이탈 배너).\n- mockup 인덱스: `STP-scan-delta`·`STP-adjust-window` 두 행 비고에 「구현 편차는 설계 트래커 허용목록 행이 대조한다」는 소관 선언 추가(매핑 값 불변).\n- 불변인 여정 의무(`JRN-daily-scan.md`): `STP-scan-delta` → 직전 동일 구간 대비 증감을 순위 목록에 기본 노출 / `STP-adjust-window` → 시간·일·주 단위 변경(AC3.3 인용), 터치포인트 「기간 `<select>` · 단위 라디오」, 단위 변경 시 직전 선택 대상 하이라이트 유지 / 분기 → `JRN-spike-verification`·`JRN-axis-contrast` 로 이탈.",
+      "gap": "이 창이 새로 만든 차이는 없다 — as-is 5 트리가 SAME 이고 to-be 는 AC·PRD·테스트·여정이 아니라 design-tracker 허용목록 등재와 mockup 인덱스 비고만 움직였으며, 신설 행이 구현에 대해 적은 사실 주장(서빙의 `delta`·`is_new`·`range`·`unit`, 계약 `delta` doc, `sample` 0히트, `Compare.tsx` 조회 조건 미독, 순위 행의 `/trend` 직행)은 tip 코드와 전부 일치한다(기준 5 새 모순 0). 다만 등재가 드러낸 기존 잔여는 실재한다: `JRN-daily-scan` `STP-adjust-window` 가 전제하는 기간·단위 컨트롤, 단위 변경 시 선택 대상 하이라이트 유지, `JRN-axis-contrast` 이탈 표면이 `dash` 구현에 없다(기준 6) — 이 셋은 트래커 `구현 수렴 대기` 6행과 같은 표면이고, 자매 `tbm_econ-opinion-monitor-mockup-render` `rct_20261005-0002` 가 지금 `planning` 으로 운반 중이다. `STP-scan-delta` 의 여정 의무(증감 기본 노출)는 충족 상태 그대로다.",
+      "summarizedAt": "2026-10-05T10:03:57Z"
+    },
+    "updatedAt": "2026-10-05T10:04:24Z",
+    "assessment": {
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `a320223..b3252a6` = #233(자매 mockup-render `rct_20261005-0001` 착지) 단일 커밋, to-be 만 이동.\n① **의무면 불변**: `docs/` DIFF 는 design-tracker 허용목록 절(+64/−1)과 mockup 인덱스 비고 2행뿐. PRD·AC·테스트 문서·`user-journeys`·`design-system`·doc-tracker SAME ⇒ 기준 1·6 에 새 의무 0.\n② **구현 불변**: `contracts`·`python`·`go`·`web`·`deploy` 5 트리 양 끝 SAME ⇒ 기준 2·3·4 불변.\n③ **기준 5(문서가 구현을 거짓으로 적는가) 직접 대조**: 신설 8행이 구현에 대해 적은 주장을 tip 코드에서 확인했다 — `dashboard.go` 의 `delta`·`is_new`·`previous_bucket`·`has_baseline` 과 `range`·`unit` 파라미터 실재, `subject_trend.avsc:41` `delta` doc 축자 일치, `contracts/gold`·`dashboard.go` `sample` 0히트, `Compare.tsx` `useSearchParams` 0히트, `Dashboard.tsx:240-241` 순위 행의 `/trend` 직행, 화면 2·3 리터럴 9종 `Dashboard.tsx` 0히트. 어긋난 주장 0.\n④ **기존 잔여는 실재하나 운반체가 있다**: 여정 `STP-adjust-window` 의 기간·단위 컨트롤 · 선택 대상 하이라이트 유지 · `JRN-axis-contrast` 이탈 표면은 `dash` 구현에 없다(기준 6). 이는 이 창이 만든 것이 아니라 #233 이 등재로 드러낸 기존 차이이고, 트래커 `구현 수렴 대기` 6행과 같은 표면(`Dashboard.tsx`)이다. 그 6행의 집행은 `tbm_econ-opinion-monitor-mockup-render` `rct_20261005-0002` 가 받아 2026-10-05T10:02:30Z 부터 `planning` 이다. 여기서 `action_required` 를 또 열면 같은 파일에 계획·PR 이 이중으로 선다 — 이 모델의 선례(`rct_20260928-0003` 「등재된 편차 ⇒ 소관 축 있음, 내 잔여에서 뺀다」)와 같은 처분이다.\n⑤ **재감지 경로**: 그 집행은 `web/` 을 움직이므로 착지하면 이 모델의 as-is 지문이 바뀌어 재감지가 자동으로 열리고, 남은 여정 의무는 그때 다시 잰다. 그래서 재확인 유예(`recheckAfter`)는 택하지 않았다 — 여러 슬라이스에 걸칠 작업 동안 이 모델의 감지 lock 을 붙잡을 이유가 없다.\n⑥ **운반체 밖 항목**: `구조` 3행(비교 기준 select · 표본 경고 · `급등의 진위부터 확인 →` 배너)은 Gold·서빙에 값이 없어 세우면 허위가 되는 사유 있는 등재다. 여정 분기 「`JRN-spike-verification` 로 이탈」은 `/fairness` 라우트가 실재해 경로 자체는 열려 있고, 없는 것은 목업의 배너 표면이다. 「평소」 baseline 부재는 `rct_20260926-0001` 등재 이래 무변동.\n⑦ **census**(10:03Z): 대상 레포 열린 PR 은 #220(AC2.7 문서, 2026-09-29 이후 무변동) 1건으로 `Dashboard.tsx` 무관. eom 계열 비종결 task 는 이 task 와 위 mockup-render `0002` 둘뿐.\n**주의(사람이 볼 것)**: mockup-render `0002` 가 `web/` 을 건드리지 않고 종결(취소·거부 후 방치)되면 ④의 잔여는 이 모델 지문으로는 다시 깨어나지 않는다 — 그 경우 이 모델에 수동 트리거가 필요하다.",
+      "assessedAt": "2026-10-05T10:04:24Z"
+    }
+  },
+  {
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "createdAt": "2026-10-05T10:29:07Z",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-05T10:29:07Z",
+      "asIs": {
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:218d729f3d322b92a576d1f09a140e0ed5135d8f go:00b3fde7868d7a87b104788883e11af89426b89e web:23c619ea95958af175d13a50a096875cd5dc2e33 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:218d729f3d322b92a576d1f09a140e0ed5135d8f go:00b3fde7868d7a87b104788883e11af89426b89e web:2eb41403556467fe5ddd6cafadb4ce13f129a94a deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "previousVersion": "07ca754a4f78ea276a58ce10ef74e5b51b4734d3",
+        "currentVersion": "358d89ede43246193283379b89fcfe7cf644170f"
+      }
+    },
+    "id": "rct_20261005-0002",
+    "stateSummary": {
+      "asIs": "관측 2026-10-05T10:30:15Z, 대상 `dlddu/economic-opinion-trend-monitor` main `798eefa`(창 `b3252a6..798eefa` = #234 단일 커밋, 자매 mockup-render `rct_20261005-0002` 착지).\n- as-is 5 트리: `web` 만 DIFF(`23c619ea→2eb41403`), `contracts` `291e4c67` · `python` `218d729f` · `go` `00b3fde7` · `deploy` `41f3b62c` 는 양 끝 SAME. `web` 변경 파일은 `src/screens/Dashboard.tsx`(+131) · `Dashboard.test.tsx`(+128) · `src/tokens/tokens.css`(+55) 셋이고 `web/src/api` 는 무접촉이다.\n- `dash`(`Dashboard.tsx`) 실측 — 새로 선 것(`STP-scan-delta` 화면 2):\n  - 「고른 대상」 상태 `target`(`:132`), 필터 상태 `thresh`·`onlyNew`(`:130-131`).\n  - `밤사이 변화` 카드: `증감 임계`·`새로 올라온 대상만` 으로 순위 행의 `delta`·`is_new` 를 화면에서 거른다(`:169-170`, 기준 버킷이 없으면 임계로 거르지 않음). 행은 누르면 내려가지 않고 고른다(`:327` `setTarget`, `aria-pressed`). 조회는 늘지 않는다.\n  - `고른 대상` 카드: 빈 상태 + kv 넷. kv `진입` 은 `!hasBaseline ? \"—\" : is_new ? ENTRY_LABEL[unit] : \"이전 구간에도 있었음\"`(`:383`), `ENTRY_LABEL` 은 시간·일·주 세 문면(`:50-54`).\n  - 순위 행은 그대로 `/trend?axis=…&subject=…` 로 내려간다(`:256-257`). `sentbar` 0히트.\n  - 화면 2 리터럴 7종(`밤사이 변화`·`증감 임계`·`새로 올라온 대상만`·`고른 대상`·`오늘 더 볼 후보`·`이 조건에 걸리는 변화가 없습니다`·`이전 구간에도 있었음`) 각 1히트 이상. `Dashboard.test.tsx` 에 「밤사이 변화 · 고른 대상」 describe 5건 신설.\n- `dash` 실측 — 여전히 없는 것(`STP-adjust-window` 화면 3):\n  - 기간·단위를 **고르는 컨트롤이 없다** — `range`·`unit` 은 `entry` 에서 읽는 상수(`:133-134`)이고 `<select>` 는 축 하나뿐(`:198`), radio 0.\n  - 리터럴 `단위별 순위`·`기간 적용`·`집계 단위`·`기간 · 단위`·`3축을 나란히 비교` 0히트. 구조 등재 쪽 `비교 기준 구간`·`급등의 진위부터 확인` 도 0히트.\n- 서빙·계약은 직전 관측(`rct_20261005-0001`)과 바이트 동일: `dashboard.go` 의 `delta`·`is_new`·`previous_bucket`·`has_baseline` 과 조회 파라미터 `range`·`unit`, `subject_trend.avsc` `delta` doc.",
+      "toBe": "관측 2026-10-05T10:30:15Z, `docs/` `07ca754a→358d89ed`.\n- `docs/` DIFF 는 `econ-opinion-monitor-design-tracker.md` 한 파일뿐(blob `13750f8c→8ac6b3b1`, +43/−4). PRD·AC·테스트 문서·values·`user-journeys`·`mockups`·`design-system`·doc-tracker·`comment-policy` 는 SAME ⇒ AC·여정 의무면 불변.\n- design-tracker 「목업 ↔ 구현 편차 허용목록」 변경:\n  - `dash` `구현 수렴 대기` 2행(`밤사이 변화` 증감 카드 부재 · `고른 대상` 사이드 카드 부재)을 「해소된 등재」로 이동(소멸 커밋 #234).\n  - `구조` 1행 신설: `고른 대상` 카드의 감성 분포 막대(`sentbar`) 부재 — 사유는 `/api/dashboard` 순위 행이 감성 분포를 싣지 않음.\n  - 「구현 전용 — 단위 변형 라벨」 행 4종→6종(`이번 시간 새로 올라옴`·`이번 주 새로 올라옴` 추가).\n  - `기간 · 단위` 카드 머리 행의 문면 조정, 집행 경위 블록 추가(「범위 밖(후속)」: 화면 3 `구현 수렴 대기` 4행 — 기간·단위 컨트롤 · 카드 머리·문면 · `단위별 순위` 카드 · `3축을 나란히 비교 →` 이탈 배너 / `구조` 4행의 Gold·서빙 벽).\n- 불변인 여정 의무(`JRN-daily-scan.md:47-59`): `STP-scan-delta` → 직전 동일 구간 대비 증감을 순위 목록에 기본 노출 / `STP-adjust-window` → 시간·일·주 단위 변경(AC3.3 인용), 터치포인트 「기간 `<select>` · 단위 라디오」, 단위 변경 시 직전 선택 대상 하이라이트 유지 / 분기 → `JRN-spike-verification`·`JRN-axis-contrast` 로 이탈.",
+      "gap": "이 창은 차이를 좁혔고 새 차이를 만들지 않았다 — #234 가 `STP-scan-delta` 화면 2 의 두 카드와 「고른 대상」 상태를 `web/` 에 세웠고(문서화된 목업 `JRN-daily-scan.html` 에 대응 표면 실재 ⇒ 기준 4 미문서 구현 0), to-be 는 design-tracker 한 파일만 움직였으며 그 신설·정정 문면이 구현에 대해 적은 주장(`target` 상태, 임계·신규 화면 필터, 순위 행 `/trend` 직행 유지, `ENTRY_LABEL` 세 단위와 기준 결측 시 `—`, `sentbar` 부재, 서빙·계약·`web/src/api` 무접촉)은 tip 코드와 전부 일치한다(기준 5 새 모순 0). 남은 잔여는 직전 관측과 같은 종류로 실재한다: `JRN-daily-scan` `STP-adjust-window` 가 전제하는 기간·단위 컨트롤, 단위 변경 시 선택 대상 하이라이트 유지, `JRN-axis-contrast` 이탈 표면이 `dash` 구현에 없다(기준 6, `range`·`unit` 이 상수) — 트래커 `구현 수렴 대기` 4행과 같은 표면이고 자매 `tbm_econ-opinion-monitor-mockup-render` `rct_20261005-0003` 이 `planning` 으로 운반 중이다. 선택 대상 하이라이트 유지의 선행이던 「고른 대상」 상태는 이 창에서 섰다.",
+      "summarizedAt": "2026-10-05T10:30:15Z"
+    },
+    "updatedAt": "2026-10-05T10:30:39Z",
+    "assessment": {
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `b3252a6..798eefa` = #234(자매 mockup-render `rct_20261005-0002` 착지) 단일 커밋, as-is(`web`)와 to-be(`docs`)가 함께 이동.\n① **의무면 불변**: `docs/` DIFF 는 design-tracker 한 파일(+43/−4). PRD·AC·테스트 문서·`user-journeys`·`mockups`·`design-system`·doc-tracker SAME ⇒ 기준 1·6 에 새 의무 0.\n② **구현은 문서 쪽으로 움직였다**: `web` 만 DIFF(`Dashboard.tsx`·`Dashboard.test.tsx`·`tokens.css`), `contracts`·`python`·`go`·`deploy` SAME, `web/src/api` 무접촉. 새로 선 사용자 대면 표면(`밤사이 변화` 카드 · 임계/신규 필터 · `고른 대상` 카드와 고르는 상태)은 목업 `JRN-daily-scan.html` 에 대응 표면이 있고 트래커가 「해소된 등재」로 받았다 ⇒ 기준 4(문서 없는 구현) 0. 계약·서빙 불변 ⇒ 기준 3 불변.\n③ **기준 5(문서가 구현을 거짓으로 적는가) 직접 대조**: 트래커 신설·정정 문면의 구현 주장을 tip 코드에서 확인했다 — `target` 상태(`Dashboard.tsx:132`), 임계·신규를 화면에서 거르고 기준 버킷이 없으면 거르지 않음(`:169-170`), 증감 목록 행은 고름(`:327`)·순위 행은 `/trend` 직행 유지(`:256-257`), kv `진입` 의 기준 결측 `—` 와 `ENTRY_LABEL` 세 단위(`:50-54`·`:383`), `sentbar` 0히트, 화면 3 리터럴 5종 0히트. 어긋난 주장 0. (트래커의 커버리지 계수 `POP/ROW/…` 는 자매 mockup-render 모델의 관측기라 여기서 재측정하지 않았다 — 그쪽 `rct_20261005-0003` 이 독립 재측정해 일치를 기록했다.)\n④ **잔여는 실재하나 운반체가 있다**: 여정 `STP-adjust-window` 의 기간·단위 컨트롤(`range`·`unit` 이 `:133-134` 상수, select 는 축 하나) · 단위 변경 시 선택 대상 하이라이트 유지 · `JRN-axis-contrast` 이탈 표면은 `dash` 구현에 없다(기준 6). 직전 `rct_20261005-0001` 이 적은 잔여에서 이 창이 선행 하나(「고른 대상」 상태)를 세웠을 뿐 나머지는 그대로다. 이는 트래커 `구현 수렴 대기` 4행과 같은 표면(`Dashboard.tsx`)이고, 그 집행은 `tbm_econ-opinion-monitor-mockup-render` `rct_20261005-0003` 이 `action_required` 판정 뒤 2026-10-05T10:27:13Z 부터 `planning` 으로 잡고 있다. 여기서 `action_required` 를 또 열면 같은 파일에 계획·PR 이 이중으로 선다 — 직전 task 와 선례 `rct_20260928-0003`(「등재된 편차 ⇒ 소관 축 있음, 내 잔여에서 뺀다」)와 같은 처분이다.\n⑤ **재감지 경로**: 그 집행은 `web/` 을 움직이므로 착지하면 이 모델의 as-is 지문이 바뀌어 재감지가 자동으로 열린다(이번 task 가 바로 그 경로로 열렸다). 그래서 재확인 유예(`recheckAfter`)는 택하지 않았다.\n⑥ **운반체 밖 항목**: `구조` 4행(비교 기준 select · 표본 경고 · `급등의 진위부터 확인 →` 배너 · 감성 분포 막대)은 Gold·서빙에 값이 없어 세우면 허위가 되는 사유 있는 등재다. 여정 분기 「`JRN-spike-verification` 로 이탈」은 `/fairness` 라우트가 실재해 경로는 열려 있다. `STP-scan-delta` 의 여정 의무(증감 기본 노출)는 충족 상태 그대로다.\n⑦ **census**: `tbm_econ-opinion-monitor-*` 비종결 task 는 이 task 와 위 mockup-render `0003` 둘뿐(reconciler main 실측). 대상 레포의 열린 PR 목록은 이번에 재조회하지 않았다.\n**주의(사람이 볼 것)**: mockup-render `0003` 이 `web/` 을 건드리지 않고 종결(취소·거부 후 방치)되면 ④의 잔여는 이 모델 지문으로는 다시 깨어나지 않는다 — 그 경우 이 모델에 수동 트리거가 필요하다.",
+      "assessedAt": "2026-10-05T10:30:39Z"
+    }
+  },
+  {
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "createdAt": "2026-10-05T11:33:45Z",
+    "updatedAt": "2026-10-05T11:36:02Z",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-05T11:33:45Z",
+      "asIs": {
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:218d729f3d322b92a576d1f09a140e0ed5135d8f go:00b3fde7868d7a87b104788883e11af89426b89e web:2eb41403556467fe5ddd6cafadb4ce13f129a94a deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:218d729f3d322b92a576d1f09a140e0ed5135d8f go:00b3fde7868d7a87b104788883e11af89426b89e web:227c0f6a86d6d5e5ac585daebf1df8f227b66448 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "previousVersion": "358d89ede43246193283379b89fcfe7cf644170f",
+        "currentVersion": "e608ca9362182d88253b4e17af14929104a827c6"
+      }
+    },
+    "id": "rct_20261005-0003",
+    "stateSummary": {
+      "asIs": "관측 2026-10-05T11:45Z, 대상 `dlddu/economic-opinion-trend-monitor` main `6c80565`(창 `798eefa..6c80565` = #235 단일 커밋, 자매 mockup-render `rct_20261005-0003` 착지). main CI(build·deploy·publish serving/batch·report-build-status) 전부 success.\n- as-is 5 트리: `web` 만 DIFF(`2eb41403→227c0f6a`). `contracts` `291e4c67` · `python` `218d729f` · `go` `00b3fde7` · `deploy` `41f3b62c` 양 끝 SAME. 변경 파일은 `web/src/screens/Dashboard.tsx`(+193/−7) · `Dashboard.test.tsx`(+192) · `web/src/tokens/tokens.css`(+34) 셋이고 `web/src/api`·`Compare.tsx` 무접촉.\n- `dash`(`Dashboard.tsx`) 실측 — 새로 선 것(`STP-adjust-window` 화면 3):\n  - `range`·`unit` 이 진입 상수에서 state 로 올라감(`:139-140`) + 초안 state `draftRange`·`draftUnit`(`:141-142`). 제출(`applyWindow`, `:171-177`)에서만 적용되고 창이 같으면 재조회하지 않는다. 조회는 `api.dashboard(axis, range, unit)`(`:162`), 브리프 저장에 range·unit 포함(`:154`).\n  - `기간 · 단위` 카드: `기간` select(`최근 24시간`/`최근 7일`/`최근 30일`, `:27-29`·`:418`) · `집계 단위` radio(`:436`) · `기간 적용`(`:448`) · 힌트 `고른 대상은 그대로 유지됩니다.`(`:450`) · note `단위를 바꾸면 순위가 뒤집힐 수 있습니다.`(`:457`).\n  - `단위별 순위` 카드(`:475-`): sub `{기간} · {단위}`, 태그 `{range} · {unit}`, 재적용 중 `고른 단위로 다시 집계하는 중…`/첫 진입 `불러오는 중…`(`:488`), 헤더 `{단위} 점유율`(`:503`), 순번은 서빙 `rank`, 고른 대상 행은 `var(--primary-soft)` 배경 + 태그 `고른 대상`(`:509-518`).\n  - 이탈 배너 `축마다 온도가 다른지 궁금하다면` … `3축을 나란히 비교 →` → `/compare`(`:543-544`).\n  - `target` 은 행 클릭(`:345`)에서만 바뀌고 재조회 effect(`:156-169`)가 지우지 않는다 ⇒ 단위 변경 후에도 선택 유지. 테스트 `keeps the picked subject across a re-aggregation…`(`Dashboard.test.tsx:665`)가 주 단위 재적용 뒤 표 강조·태그·note `‘삼성전자’ 으로 강조`·`고른 대상` 카드 유지를 단정. 화면 3 테스트 7건 신설(`:587-737`).\n- `dash` 실측 — 여전히 없는 것(트래커 `구조` 등재): `시간 단위에서는 구간당 표본이 적습니다` · `비교 기준 구간` · `급등의 진위부터 확인` · `sentbar` · `튀는 값` 각 0히트. `고른 대상` 카드 빈 상태의 `어제 대비` 1히트(트래커가 미뤄 둔 판정 ⑷로 유지).\n- 서빙·계약은 직전 관측과 바이트 동일(`dashboard.go` 는 `range`·`unit` 을 이미 받음).",
+      "toBe": "관측 2026-10-05T11:45Z, `docs/` `358d89ed→e608ca93`.\n- `docs/` DIFF 는 `econ-opinion-monitor-design-tracker.md` 한 파일(+46/−7, blob `8ac6b3b→303a214`). PRD·AC·테스트 문서·values·`user-journeys`·`mockups`·`design-system`·doc-tracker·`comment-policy` SAME ⇒ AC·여정 의무면 불변.\n- design-tracker 변경:\n  - `dash` `구현 수렴 대기` 4행(기간·단위 컨트롤 · `기간 · 단위` 카드 머리·문면 · `단위별 순위` 카드 · `3축을 나란히 비교 →` 이탈 배너) + `카피` 행 「재적용 로딩 문구」를 「해소된 등재」로 이동(소멸 커밋 #235). `dash` 의 `구현 수렴 대기` 행 0.\n  - 「순번」 `구조` 행에 `단위별 순위` 표 추가, 「구현 전용 — 상태·결측 문구」 행 2종→3종(`불러오는 중…`).\n  - 집행 경위 블록: 미뤄 둔 판정 넷(별도 표 · 초안/제출 · 배너 「같은 기준으로」의 참 · 빈 상태 `어제 대비` 유지), 「범위 밖(후속)」 = `구조` 네 행의 Gold·서빙 벽 + `STP-notice-spike` 세 행.\n  - 구현 주장: 서빙·계약·`web/src/api`·`Compare.tsx` 무접촉, `low-sample` 배너 미구축, 재적용 왕복에만 재집계 문면, 태그 서빙 어휘(`24h`).\n- 불변인 여정 의무(`JRN-daily-scan.md:54-59`·`:75-82`): `STP-adjust-window` → 시간/일/주 단위 변경(AC3.3), 터치포인트 「기간 `<select>` · 단위 라디오」, 단위 변경 시 직전 선택 대상 하이라이트 유지 / 분기 「축 간 차이가 궁금해짐 → `JRN-axis-contrast` `STP-open-compare`」.\n- 대상 레포 열린 PR: #220(docs: AC2.7 신설) 하나 — main 미반영이라 이번 to-be 에 들어 있지 않다.",
+      "gap": "이 창은 직전 task 들이 기록한 잔여를 닫았고 새 차이를 만들지 않았다 — #235 가 `JRN-daily-scan` `STP-adjust-window` 의 기간 select·단위 radio·`기간 적용`, 단위 재적용 뒤 직전 선택 대상 하이라이트 유지(테스트로 단정), `JRN-axis-contrast` 이탈 배너를 `web/` 에 세워 기준 6 잔여가 해소됐고, 새 표면은 목업에 대응이 있어 기준 4 미문서 구현 0, to-be 는 design-tracker 한 파일만 움직였으며 그 문면이 구현에 대해 적은 주장은 tip 코드와 전부 일치한다(기준 5 새 모순 0). 남은 것은 Gold·서빙에 값이 없어 트래커가 `구조` 로 받은 사유 있는 등재(비교 기준 select · 표본 경고 · 급등 이탈 배너 · 감성 분포 막대 · `STP-notice-spike` 세 행)뿐으로 직전 판정과 같은 처분이다.",
+      "summarizedAt": "2026-10-05T11:35:22Z"
+    },
+    "assessment": {
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `798eefa..6c80565` = #235(자매 mockup-render `rct_20261005-0003` 착지, 그 task 는 `succeeded`) 단일 커밋, as-is(`web`)와 to-be(`docs`)가 함께 이동. main CI 전부 success.\n① **의무면 불변**: `docs/` DIFF 는 design-tracker 한 파일(+46/−7). PRD·AC·테스트 문서·`user-journeys`·`mockups`·`design-system`·doc-tracker SAME ⇒ 기준 1·6 에 새 의무 0.\n② **직전 잔여가 닫혔다(기준 6)**: 직전 `rct_20261005-0001`·`0002` 가 「운반체 있음」으로 넘긴 `STP-adjust-window` 잔여 셋이 tip 에 섰다 — 기간 select·단위 radio·`기간 적용`(`Dashboard.tsx:139-177`·`:418-448`, AC3.3 를 서빙 `range`·`unit` 으로 실제 재조회), 단위 재적용 뒤 직전 선택 대상 하이라이트 유지(`target` 은 클릭에서만 바뀌고 재조회가 지우지 않음, 표 강조 `:509-518`, 테스트 `Dashboard.test.tsx:665` 가 단정), 분기 「축 간 차이 → `JRN-axis-contrast`」 이탈 배너 `3축을 나란히 비교 →` → `/compare`(`:543-544`).\n③ **문서 없는 구현 0(기준 4)·계약 불변(기준 3)**: 새 표면(두 카드·폼·표·배너·재적용 문면)은 목업 `JRN-daily-scan.html` 화면 3 에 대응이 있고 트래커가 「해소된 등재」로 받았다. `contracts`·`python`·`go`·`deploy`·`web/src/api` 무접촉.\n④ **기준 5 직접 대조**: 트래커 신설·정정 문면의 구현 주장(range·unit state 승격, 초안/제출, 서빙 `rank` 순번, `low-sample` 배너·`thin` 미구축, 재적용 왕복에만 `고른 단위로 다시 집계하는 중…`, 태그 서빙 어휘 `24h`, 빈 상태 `어제 대비` 유지, 서빙·계약·`Compare.tsx` 무접촉)을 tip 코드에서 확인 — 어긋난 주장 0. **위생 관찰 1건**: `trend` 「승계 표면」 행(`design-tracker.md:1013`)의 사유 일부가 「`dash` 에 기간·단위 컨트롤이 없다」를 전제하는데 #235 로 그 전제가 낡았다. 다만 처분(문면 이식 불가)은 `/api/trend` 가 `range`·`unit` 을 받지 않아 여전히 참이고, 이 행은 목업↔구현 허용목록이라 자매 `tbm_econ-opinion-monitor-mockup-render` `rct_20261005-0004`(현재 `planning`, 같은 트래커·`Dashboard.tsx` 재적용 로딩 그릇 이탈을 운반)가 정보성으로 이미 지목했다 — 여기서 별도 task 를 열지 않는다.\n⑤ **남은 것은 사유 있는 등재뿐**: `구조` 행(비교 기준 select · `low-sample` 표본 경고 · `급등의 진위부터 확인 →` 배너 · 감성 분포 막대 · `STP-notice-spike` 세 행)은 Gold·서빙에 값이 없어 세우면 허위가 되는 벽이 있는 등재로, 직전 판정들과 같은 처분이다(tip 0히트 재확인). 재적용 로딩 그릇(막대·글자 크기) 편차는 목업↔구현 렌더 영역이며 자매 `rct_20261005-0004` 가 운반 중이다.\n⑥ **재확인 유예를 택하지 않은 이유**: 자매 집행이 `web/`·`docs/` 를 움직이면 이 모델 지문이 바뀌어 재감지가 자동으로 열린다. 대상 레포 열린 PR #220(AC2.7 문서)은 머지되면 to-be 가 바뀌어 역시 재감지된다.",
+      "assessedAt": "2026-10-05T11:36:02Z"
+    }
+  },
+  {
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "createdAt": "2026-10-05T11:58:14Z",
+    "updatedAt": "2026-10-05T11:59:57Z",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-05T11:58:14Z",
+      "asIs": {
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:218d729f3d322b92a576d1f09a140e0ed5135d8f go:00b3fde7868d7a87b104788883e11af89426b89e web:227c0f6a86d6d5e5ac585daebf1df8f227b66448 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:218d729f3d322b92a576d1f09a140e0ed5135d8f go:00b3fde7868d7a87b104788883e11af89426b89e web:4f512c072fdcb4883063ef05f611eb5cd6c873cd deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "previousVersion": "e608ca9362182d88253b4e17af14929104a827c6",
+        "currentVersion": "31a7731081c44647987e114f1ad25d3cb997bb2c"
+      }
+    },
+    "id": "rct_20261005-0004",
+    "stateSummary": {
+      "asIs": "관측 시각 2026-10-05T12:00Z · `dlddu/economic-opinion-trend-monitor@main` tip `d572997`(#236, mockup-render `rct_20261005-0004` 착지) · 창 `6c80565..d572997` 단일 커밋.\n- 지문: `web` `227c0f6a`→`4f512c07`, `contracts`·`python`·`go`·`deploy` 불변.\n- `web/src/screens/Dashboard.tsx:486-498`: `단위별 순위` 카드의 로딩 분기를 둘로 나눔 — 재적용(`reapplying`) 중이면 `.dash-loadbox`(문면 `고른 단위로 다시 집계하는 중…` + `.dash-bar > i` 진행 막대), 첫 진입·축 전환은 기존 `.dash-brief-empty` `불러오는 중…`. 재조회 시 `setData(null)`(`:159`)로 응답을 비우는 동작은 불변.\n- `web/src/tokens/tokens.css`: `.dash-loadbox`·`.dash-loadbox .dash-bar`·`.dash-loadbox .dash-bar i` 3블록 신설(목업 `.loadbox`/`.bar` 값 그대로, 접두만 붙임).\n- `Dashboard.test.tsx`: 재적용 그릇·막대 1개·첫 로드 빈 상태 그릇을 단정하는 테스트 1건 추가.\n- 서빙 사실 재확인: `range`/`unit` 쿼리를 읽는 곳은 `dashboard.go:69`·`:286`(그 밖에 `reprocess.go:90` 이 재처리 요청의 `range` 를 읽음 — trend 와 무관). `/api/trend` 는 `range`·`unit` 을 받지 않는다(`Trend.tsx:9-13` 자기선언과 일치).\n- main CI(`d572997`) 6 check 전부 success. 열린 PR #220(AC2.7 문서, 미머지).",
+      "toBe": "관측 시각 2026-10-05T12:00Z · `docs/` 트리 `e608ca93`→`31a77310`. DIFF 는 `docs/econ-opinion-monitor-design-tracker.md` 한 파일(+5/−2)뿐 — PRD·AC·테스트 문서·`user-journeys`·`mockups`·`design-system`·doc-tracker 불변.\n- 변경 이력 줄 1행 추가(rct_20261005-0004).\n- `구조` 행 신설: 「재적용 동안 `단위별 순위` 표를 비운다」 — 목업(`JRN-daily-scan.html` `win-form` submit → `#s-loading` 을 `#winlist` 위에 띄우고 300ms 뒤 `renderWindow()`)은 직전 표를 남기나, 구현은 카드 머리·pill 을 적용 기간으로 즉시 그리고 세 카드가 같은 응답을 공유해 재조회 중 응답을 비운다. 해소 조건: 머리·pill 을 응답 `basis` 로 그리게 될 때.\n- 「재적용 로딩 문구」 행 해소 이력 정정(「소멸」은 문면에 한함, 그릇 편차는 #236 이 닫음) + 해소 행 「재적용 로딩 그릇」 신설(#236).\n- `trend` 승계 표면 행 벽 재기술: 「`dash` 에 컨트롤이 없다」 → 「`GET /api/trend` 가 `range`·`unit` 을 받지 않는다」(직전 `rct_20261005-0003` 이 지목한 낡은 전제를 갱신).\n- 여정 `JRN-daily-scan.md` `STP-adjust-window` 는 재적용 중 직전 표 유지를 요구하지 않는다(페인포인트 대응은 「직전 선택 대상 하이라이트 유지」뿐, 이미 구현·테스트됨).",
+      "gap": "새 유의미 차이 0 — #236 은 자매 mockup-render 가 지목한 재적용 로딩 그릇 이탈을 목업 값 그대로 닫았고(`rct_20261005-0005` 가 `no_action_needed` 로 확인), to-be 는 design-tracker 한 파일만 움직였으며 그 문면의 구현 주장(로딩 분기·`setData(null)`·`/api/trend` 의 `range`·`unit` 미수용)은 tip 코드와 일치한다(기준 5 새 모순 0; 「`range`/`unit` 을 읽는 곳은 `dashboard.go` 뿐」은 `reprocess.go` 의 재처리용 `range` 를 빼고 말한 표현이지만 `/api/trend` 에 대한 결론은 참). 신설 `구조` 행(재적용 중 직전 표 비움)은 여정·AC 의무가 아닌 목업↔구현 렌더 차이로 사유·해소 조건이 있는 등재이며, 직전 판정의 `구조` 등재들과 같은 처분이다.",
+      "summarizedAt": "2026-10-05T11:59:29Z"
+    },
+    "assessment": {
+      "reason": "**조치 불필요(`no_action_needed`).** 창 `6c80565..d572997` = #236(자매 mockup-render `rct_20261005-0004` 착지, 그 task `succeeded` · 재감지 `rct_20261005-0005` `no_action_needed`) 단일 커밋. as-is(`web`)·to-be(`docs`) 동반 이동, main CI 6 check 전부 success.\n① **의무면 불변(기준 1·6)**: `docs/` DIFF 는 design-tracker 한 파일. PRD·AC·테스트 문서·`user-journeys`·`mockups`·`design-system`·doc-tracker SAME ⇒ 새 AC·여정 의무 0. `JRN-daily-scan` `STP-adjust-window` 는 재적용 중 직전 표 유지를 요구하지 않는다.\n② **구현 변경은 목업 수렴(기준 2)**: `단위별 순위` 재적용 로딩을 목업 `.loadbox` + `.bar > i` 값 그대로(`.dash-loadbox` 3블록)로 세움, 테스트 1건 추가. 첫 로드 `불러오는 중…` 은 기존 그릇 유지. `contracts`·`python`·`go`·`deploy`·`web/src/api` 무접촉(기준 3 불변), 새 사용자 대면 동작 없음(기준 4 미문서 구현 0).\n③ **기준 5 직접 대조**: 트래커 신설·정정 문면의 구현 주장 — 재적용/첫 로드 분기(`Dashboard.tsx:486-498`), 재조회 시 응답 비움(`:159` `setData(null)`), 머리·pill 을 적용 기간으로 즉시 그림, `/api/trend` 가 `range`·`unit` 을 받지 않음(`Trend.tsx:9-13`·`go/internal/handlers` grep) — tip 에서 전부 확인, 어긋남 0. **위생 관찰**: 트래커의 「`range`/`unit` 쿼리를 읽는 곳은 `dashboard.go` 뿐」은 `reprocess.go:90`(재처리 요청의 `range`)을 빠뜨린 표현이나, 결론(trend 가 기간을 받지 않음)은 참이고 판정에 영향이 없어 task 를 열지 않는다.\n④ **남은 것은 사유 있는 등재뿐**: 신설 `구조` 행 「재적용 동안 표를 비운다」는 머리·pill 을 응답 `basis` 로 그리는 3카드+토프바 변경이 선행돼야 하는 목업↔구현 렌더 차이로, 해소 조건이 명시된 등재다. 기존 `구조` 행(비교 기준 select · 표본 경고 · 급등 이탈 배너 · 감성 분포 막대 · `STP-notice-spike`)도 직전 판정과 같은 처분.\n⑤ **유예를 택하지 않은 이유**: 남은 차이는 시간이 지나 저절로 바뀌는 것이 아니며, 후속 변경(구조 행 해소·PR #220 머지)은 지문을 바꿔 재감지를 자동으로 연다.",
+      "assessedAt": "2026-10-05T11:59:57Z"
+    }
+  },
+  {
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-08T13:37:16Z",
+      "asIs": {
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:218d729f3d322b92a576d1f09a140e0ed5135d8f go:00b3fde7868d7a87b104788883e11af89426b89e web:4f512c072fdcb4883063ef05f611eb5cd6c873cd deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:d05ebffc7712f0aa1db5eba8b84c7c2217f7d4d8 go:00b3fde7868d7a87b104788883e11af89426b89e web:4f512c072fdcb4883063ef05f611eb5cd6c873cd deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "previousVersion": "31a7731081c44647987e114f1ad25d3cb997bb2c",
+        "currentVersion": "c680b71ffa906f783fed607f573946954b36a866"
+      }
+    },
+    "createdAt": "2026-10-08T13:37:16Z",
+    "updatedAt": "2026-10-08T13:38:56Z",
+    "id": "rct_20261008-0001",
+    "stateSummary": {
+      "asIs": "관측 시각 2026-10-08T13:40Z · `dlddu/economic-opinion-trend-monitor` main `cef78d3` (#237 머지, PR head `1314cd2`).\n\n직전 관측(`rct_20261005-0004`, main `d572997`) 이후 커밋은 **#237 하나**이고 as-is 다섯 디렉터리 중 **`python/`만** 바뀌었다(contracts·go·web·deploy 트리 해시 불변).\n\n#237 「fix(batch): analysis·aggregation 을 주기 단위로 읽어 OOM 해소」 — analyze Pod 512Mi OOMKilled(2026-09-30~) 대응의 **메모리 리팩터링**:\n- `econ_analysis/cli.py`: 레이크 전체를 한 번에 읽던 `_analyze`를 Bronze 주기 파티션 단위 순회(`_Analysis.visit`/`flush`)로 바꿨다. 배치는 여전히 `--batch-size`까지 주기 경계를 넘어 채운다(경계에서 재시도만 남은 배치가 all-calls-failed 가드를 오발하지 않게). `--sample`은 `_sample_ids`가 전체 선택 위에서 예전과 같은 순서·시드로 뽑는다.\n- 전체 레이크 실행은 실패 없이 끝난 주기를 `silver/analysis_settled`(신설, `domain.py`에 `# not a contract` 표기 — `analysis_cache`·`analysis_retry`와 같은 운영 데이터셋)에 버전별로 표시하고, 다음 실행에서 재시도 대기가 없고 Bronze·Silver 파티션 서명(`partition_signature` = inode:size:mtime)이 그대로인 주기는 읽지 않고 건너뛴다. 건너뛴 주기의 `bronze_count`는 `input_count`·`skipped_settled`에 그대로 합산된다(pipeline_run 계수 의미 불변). 범위 실행(`--since`/`--axis`/`--source`/`--sample`)은 표시를 읽지도 쓰지도 않아 `coexisting` 의미 그대로다.\n- `econ_aggregation/aggregate.py`·`cli.py`·`contributions.py`: 주기 단위 조인 + Gold 스트리밍 쓰기. 커밋 메시지 기준 합성 레이크 최대 RSS analysis 803→31MB, aggregation 850→117MB, **출력 바이트 동일**.\n- `econ_core/storage.py`: `iter_records` 제너레이터·`partition_signature` 추가(`read_records`는 그 위의 list). `silver.py`: settled 표시 읽기/쓰기·`still_settled`·`pending_retry_cycles`. 테스트 추가(analysis `test_cli.py` +152, aggregation run record +35, storage +18).\n\n검증 근거: PR head `1314cd2`의 체크 전부 success — `ci / build`(파이썬 테스트), `ci / e2e`(pipeline-ops 시나리오의 `입력 = skipped_settled + call_failed` 계수 단정 포함), `ci / scenario-mapping`, `ci / comment-ledger`, `data-format`(포맷 변경 없음 → `review/manual-approval` 자동 success), `docs / structure`·`docs / flow`, `render`. main `cef78d3`의 build·publish·deploy도 success.",
+      "toBe": "관측 시각 2026-10-08T13:40Z · `docs/` 트리 `31a7731` → `c680b71`.\n\n같은 #237에서 `docs/`는 **`docs/comment-policy/ledger.md` 한 파일**만 바뀌었다 — #237이 주석을 늘린 7개 파이썬 파일(analysis `cli.py` 26→44 · `test_cli.py` 5→9 · aggregation `aggregate.py` 16→20 · core `domain.py`·`silver.py`·`storage.py` 2행)의 원장 행을 새 줄 수·지문으로 갱신하고 판정 칸을 `—`(「증분 미판정」)로 되돌렸다. 주석 정책 원장으로, 이 모델이 SSOT로 보는 가치·PRD·AC·테스트 문서·여정·목업·디자인 시스템·doc/design tracker는 **무접촉**이다. 문서 쪽에 운영 데이터셋 목록(`analysis_cache`·`analysis_retry` 등)을 열거한 곳은 없다(그 설명은 `docs/` 밖 README 소관).",
+      "gap": "유의미한 차이 없음 — #237은 분석·집계 배치의 메모리 사용만 바꾼 리팩터링으로, 문서가 기술하는 동작(분석 결과·재시도·범위 재처리의 coexisting/in place·pipeline_run 계수·Gold 출력)은 그대로이고(출력 바이트 동일·e2e 계수 단정 통과) 계약·서빙·웹·배포는 무접촉이라 기준 1·2·3·6에 새 격차가 없다. 신설 `analysis_settled`는 계약이 아닌 내부 운영 표시라 사용자 대면 미문서 구현(기준 4)이 아니며, to-be 변화는 주석 정책 원장뿐이라 구현과 모순되는 문서 서술(기준 5)도 생기지 않았다. 원장의 「증분 미판정」 7행은 자매 `tbm_econ-opinion-monitor-comment-necessity` 소관이고, 직전 task들이 기록한 `구조` 등재 잔여는 이번 창과 무관하게 같은 처분으로 남는다.",
+      "summarizedAt": "2026-10-08T13:38:40Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창(#237)은 analyze 512Mi OOMKilled 대응의 배치 메모리 리팩터링으로, 문서가 기술하는 관측 가능한 동작을 바꾸지 않았다: 집계 출력 바이트 동일, pipeline_run 계수(`input_count`·`skipped_settled`·`skipped_not_sampled`)는 건너뛴 주기의 건수를 그대로 합산해 의미 불변, 범위 재처리의 coexisting/in place 구분·재시도·AC4.3 이전 행 재연결도 그대로다 — PR head `1314cd2`의 `ci / build`·`ci / e2e`(계수 단정 포함)·`data-format`·`docs / *` 전부 success가 이를 뒷받침한다. 계약·서빙·웹·배포 무접촉이라 미구현 AC·여정 의무가 새로 생기거나 닫히지 않았고, 신설 `analysis_settled`는 기존 `analysis_cache`·`analysis_retry`와 같은 계약 아닌 운영 데이터셋이라 사용자 대면 미문서 구현이 아니다. to-be 변화는 `docs/comment-policy/ledger.md`뿐이고 그 「증분 미판정」 행은 자매 `tbm_econ-opinion-monitor-comment-necessity`가 다룬다. 직전 판정(`rct_20261005-0004`)의 잔여(`구조` 등재)는 이번 창과 무관하게 그대로다.",
+      "assessedAt": "2026-10-08T13:38:56Z"
+    }
+  },
+  {
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-08T14:03:17Z",
+      "asIs": {
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:d05ebffc7712f0aa1db5eba8b84c7c2217f7d4d8 go:00b3fde7868d7a87b104788883e11af89426b89e web:4f512c072fdcb4883063ef05f611eb5cd6c873cd deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:00b3fde7868d7a87b104788883e11af89426b89e web:4f512c072fdcb4883063ef05f611eb5cd6c873cd deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "previousVersion": "c680b71ffa906f783fed607f573946954b36a866",
+        "currentVersion": "9552b760cc449f337d03d577f9903069ff4d824b"
+      }
+    },
+    "createdAt": "2026-10-08T14:03:17Z",
+    "id": "rct_20261008-0002",
+    "stateSummary": {
+      "asIs": "관측 시각 2026-10-08T14:04:14Z · `dlddu/economic-opinion-trend-monitor` main `68b0874` (#239 머지, PR head `be7f280`).\n\n직전 관측(`rct_20261008-0001`, main `cef78d3`) 이후 커밋은 **#239 하나**이고, as-is 다섯 디렉터리 중 **`python/`만** 바뀌었다(contracts·go·web·deploy 트리 해시 불변). python 트리 `d05ebff` → `ff6e6ca`.\n\n#239 「docs(comment-policy): #237 증분 주석 필요성 판정 50→34줄 (rct_20261008-0001)」은 자매 `tbm_econ-opinion-monitor-comment-necessity` task가 연 주석 정리 PR이다. 코드 쪽 변경은 2파일:\n- `python/packages/analysis/src/econ_analysis/cli.py` (+3/−22): `_Analysis`·`_analyze`·`_sample_ids` 등의 docstring 일부를 제거·축약.\n- `python/packages/analysis/tests/test_cli.py` (−4): 주석 4줄 제거.\n\n검증: 두 파일 모두 #239 전후를 `ast.parse`로 파싱해 docstring을 걷어낸 AST 덤프가 **완전히 동일**함을 확인했다(주석은 AST에 없으므로 실행 코드 변경 0). PR head `be7f280`의 체크 전부 success — `ci / build`·`ci / e2e`·`ci / scenario-mapping`·`ci / comment-ledger`·`data-format`·`docs / structure`·`docs / flow`·`render`·`Required`. main `68b0874`의 build·publish(batch/serving)·deploy·pin deploy images도 success.",
+      "toBe": "관측 시각 2026-10-08T14:04:14Z · `docs/` 트리 `c680b71` → `9552b76`.\n\n같은 #239에서 `docs/`는 주석 정책 영역 2파일만 바뀌었다: `docs/comment-policy/ledger.md`(#237 증분 미판정 8행을 판정 `완료`로 갱신 — analysis `cli.py` 44→32·`test_cli.py` 9→5줄, 나머지는 유지) 와 신설 판정 기록 `docs/comment-policy/passes/2026-10-08-batch-cycle-streaming-increment-pass.md`(+80). 이 모델이 SSOT로 보는 가치·PRD·AC·테스트 문서·사용자 여정·목업·디자인 시스템·doc/design tracker는 **무접촉**이다.",
+      "gap": "유의미한 차이 없음 — #239는 #237이 늘린 주석을 판정·정리한 PR로, python 변경은 docstring·주석 제거뿐(AST 동일, CI 전부 success)이라 구현 동작이 바뀌지 않았고 to-be 변화도 주석 정책 원장·판정 기록뿐이라 AC·여정 의무가 새로 생기거나 닫히지 않았다(기준 1~4 모두 새 격차 없음). 직전 판정(`rct_20261008-0001`)·그 이전 task가 기록한 잔여(`구조` 등재 처분)는 이번 창과 무관하게 같은 처분으로 남는다.",
+      "summarizedAt": "2026-10-08T14:04:14Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창(#239)은 자매 comment-necessity 루프의 주석 정리 PR로, `python/` 변경은 analysis `cli.py`·`test_cli.py`의 docstring·주석 제거뿐이며 전후 AST(docstring 제외)가 동일해 실행 코드 변경이 없다. PR head `be7f280`의 `ci / build`·`ci / e2e`·`data-format`·`docs / *`·`render` 전부 success, main 배포도 success. to-be 변화는 `docs/comment-policy/` 원장·판정 기록뿐이라 이 모델의 SSOT(가치·PRD·AC·테스트·여정·목업·디자인 시스템·tracker)는 무접촉이다. 따라서 미구현 AC·구현↔문서 불일치·문서 없는 구현·미구현 여정 동작 어느 기준에서도 새 격차가 생기거나 닫히지 않았다. 이전 task들의 잔여 처분은 그대로다.",
+      "assessedAt": "2026-10-08T14:04:14Z"
+    }
+  },
+  {
+    "id": "rct_20261009-0001",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-09T00:28:39Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:515bd2398fa5823e98a2585b1e769733c3df843d web:4f512c072fdcb4883063ef05f611eb5cd6c873cd deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:00b3fde7868d7a87b104788883e11af89426b89e web:4f512c072fdcb4883063ef05f611eb5cd6c873cd deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "currentVersion": "8856fd9c62cabe8e67ca078aedc4b8f2890896f3",
+        "previousVersion": "9552b760cc449f337d03d577f9903069ff4d824b"
+      }
+    },
+    "createdAt": "2026-10-09T00:28:39Z",
+    "updatedAt": "2026-10-09T00:28:39Z",
+    "stateSummary": {
+      "asIs": "관측 시각 2026-10-09T00:29:38Z · `dlddu/economic-opinion-trend-monitor` main `0050c4f` (#238 머지 2026-10-09T00:16:14Z, PR head `34f2404`).\n\n직전 관측(`rct_20261008-0002`, main `68b0874`) 이후 커밋은 **#238 하나**이고 as-is 다섯 디렉터리 중 **`go/`만** 바뀌었다(go 트리 `00b3fde` → `515bd23`; contracts·python·web·deploy 해시 불변).\n\n#238 「fix(serving): 레이크 전량 로드 제거」 — 2026-10-05 econ-serving 파드가 working set ≈1GiB에서 liveness 타임아웃으로 재시작된 사고(디버그 화면의 `/api/debug`+`/api/debug/records` 재요청이 겹치며 Silver·llm_call 전량을 올림) 대응의 **서빙 메모리 리팩터링**:\n- `store`: context를 받는 스트리밍 리더 `EachAnalysis`·`EachNewsItem`·`EachLlmCallHead`, 읽으며 거르는 `SubjectTrendsWhere`·`SubjectSourceContributionsWhere`, 조기 종료 `ErrStop`, 본문 없이 `call_id`·`run_id`·`call_outcome`만 디코드하는 `LlmCallHead`. `LlmCalls()` 전량 리더 제거.\n- `/api/debug`: Silver 1패스로 대상 레코드 행과 run별 집계를 함께 수집, 호출 기록은 `call_id`로 필요한 것만 조회. `/api/debug/records`: 보이는 50행만 호출 기록 조회(`call_outcome:` 증상 필터일 때만 후보 전체를 헤드로 조회), `total`/`matched`/`truncated` 의미 유지.\n- `trace`는 첫 일치에서 멈춤(기존 `silverSection`도 첫 일치 행을 썼으므로 동등). `reprocess`·`contributions`는 스트리밍 필터, dashboard·fairness·source-contributions의 Gold 읽기도 읽으며 거름.\n- 전량 스캔 라우트(debug, debug/records, trace, reprocess, contributions)는 `oneScanAtATime`으로 한 번에 하나만 실행. 대기 중 떠난(취소된) 요청은 실행·응답하지 않음.\n- 테스트 추가: `lake_scan_test.go`(대기열·취소), `store_test.go`(조기 종료·헤드만 읽기).\n\n검증 근거: PR 본문 — 운영 모양 합성 레이크(6만 레코드)에서 27개 GET 요청 응답 md5가 기존/변경 바이너리 간 **전부 동일**, `/api/debug` 피크 RSS 703→35MiB 등. PR head `34f2404` 체크 `ci / build`·`ci / e2e`·`ci / scenario-mapping`·`ci / comment-ledger`·`data-format`(format_changed=false)·`docs / structure`·`docs / flow`·`render`·`required` 전부 success, main `0050c4f`의 build·publish(batch/serving)·deploy·pin deploy images success. 직접 diff 확인으로도 라우트·응답 타입·선택 규칙(`requested`/`auto`/`requested-missing`/`empty`) 불변.",
+      "toBe": "관측 시각 2026-10-09T00:29:38Z · `docs/` 트리 `9552b76` → `8856fd9`.\n\n같은 #238에서 `docs/`는 `docs/comment-policy/ledger.md` 한 파일만 바뀌었다(+6/−4): go 서빙 6파일(`contributions.go`·`dashboard.go`·`debug.go`·`debug_records.go`·`handlers.go`·`store.go`)의 주석 줄 수 증가를 판정 `—`(미판정) 행으로 갱신·신설. 이 모델이 SSOT로 보는 가치·PRD·AC·테스트 문서·사용자 여정·목업·디자인 시스템·doc/design tracker는 **무접촉**이다. docs 전반에 디버그/trace/reprocess/contributions 라우트의 동시성·취소·응답 시간을 규정하는 서술은 없다(검색 확인).",
+      "gap": "유의미한 차이 없음 — #238은 응답 형식·의미를 바꾸지 않는 서빙 메모리 리팩터링(스트리밍 읽기·지연 조회·전량 스캔 직렬화·취소 요청 무응답)이며 응답 동등성(27요청 md5 동일)과 CI·배포 success로 뒷받침된다. 새로 생긴 관측 가능한 차이(전량 스캔 라우트의 1건씩 대기, 떠난 요청 무응답)는 문서가 규정하지 않는 운영 특성이라 미구현 AC·구현↔문서 불일치·문서 없는 사용자 대면 구현 어느 기준에도 해당하지 않고, to-be 변화는 주석 원장뿐이다(그 미판정 행은 자매 `tbm_econ-opinion-monitor-comment-necessity` 몫).",
+      "summarizedAt": "2026-10-09T00:29:38Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창(#238)은 2026-10-05 serving 재시작 사고 대응의 Go 서빙 메모리 리팩터링으로, 문서가 기술하는 관측 가능한 동작을 바꾸지 않았다: 라우트·응답 타입·레코드 선택 규칙 불변, 운영 모양 합성 레이크에서 27개 GET 요청 응답 md5가 기존/변경 바이너리 간 동일, PR head `34f2404`의 `ci / build`·`ci / e2e`·`ci / scenario-mapping`·`data-format`(format_changed=false)·`docs / *`·`render` 전부 success, main `0050c4f` 배포 success. 새 운영 특성(전량 스캔 라우트 1건씩 대기, 취소된 요청 무응답)은 문서가 규정하지 않는 영역이라 미구현 AC·구현↔문서 불일치·문서 없는 사용자 대면 구현·미구현 여정 동작 어느 기준에서도 새 격차가 생기거나 닫히지 않았다. contracts·python·web·deploy 무접촉. to-be 변화는 `docs/comment-policy/ledger.md`의 주석 미판정 행뿐이고 그 판정은 자매 `tbm_econ-opinion-monitor-comment-necessity`가 다룬다. 이전 task들의 잔여 처분은 그대로다.",
+      "assessedAt": "2026-10-09T00:29:52Z"
+    }
+  },
+  {
+    "id": "rct_20261009-0002",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-09T00:44:39Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:04fb31437b0b5191203af6fd543f261687885fdd web:4f512c072fdcb4883063ef05f611eb5cd6c873cd deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:515bd2398fa5823e98a2585b1e769733c3df843d web:4f512c072fdcb4883063ef05f611eb5cd6c873cd deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "currentVersion": "60943351c734711b0263093aa21ebb0fe8a4fe2c",
+        "previousVersion": "8856fd9c62cabe8e67ca078aedc4b8f2890896f3"
+      }
+    },
+    "createdAt": "2026-10-09T00:44:39Z",
+    "updatedAt": "2026-10-09T00:44:39Z",
+    "stateSummary": {
+      "asIs": "관측: 2026-10-09 00:45Z, `dlddu/economic-opinion-trend-monitor@main` = `496c05a` (PR #240). 창 = `0050c4f`(#238, 직전 판정 `rct_20261009-0001`의 기준) → `496c05a`.\n\n- as-is 버전: `go` 트리만 `515bd23` → `04fb314`. `contracts`·`python`·`web`·`deploy` 트리 해시 불변.\n- `go/` 변경은 #240 한 커밋, 주석 3줄 삭제·1줄 개작뿐(비주석 줄 변경 0):\n  - `go/internal/handlers/contributions.go` `byID` 문단: 「…kept or not, as the unfiltered map did.」 → 「…kept or not.」 (옛 코드를 가리킨 경위 문구 제거)\n  - `go/internal/handlers/debug_records.go`: `byCall` 분기 위 코드 재진술 주석 2줄 삭제\n- `496c05a` check-runs: build·publish(batch/serving)·deploy·pin deploy images·report-build-status 모두 success.\n- 따라서 서빙 동작·API 응답·계약·배치·웹·배포 매니페스트는 `0050c4f`과 동일하다.",
+      "toBe": "관측: 2026-10-09 00:45Z, `docs/` 트리 `8856fd9` → `6094335` (PR #240 한 커밋).\n\n- `docs/comment-policy/ledger.md`: #238이 남긴 `—`(미판정) L 표면 6행(`contributions.go`·`dashboard.go`·`debug.go`·`debug_records.go`·`handlers.go`·`store.go`)을 `완료`로 갱신, 줄 수·지문 실측 반영.\n- 신설 `docs/comment-policy/passes/2026-10-09-serving-oom-increment-pass.md`: #238 증분 26줄 판정 기록(제거 3 · 유지 23), `gofmt`·`go vet`·`go test` 통과 기재.\n- 가치·PRD·AC·테스트 문서·사용자 여정·목업·디자인 시스템·doc-tracker/design-tracker 변경 없음 → 새 AC·여정 의무 0, 폐기 0.",
+      "gap": "유의미한 차이 없음 — #240은 #238이 들인 주석의 필요성 판정 PR로, go 변경은 주석 3줄 삭제·1줄 개작뿐(비주석 변경 0, CI·deploy success)이라 구현 동작이 바뀌지 않았고, to-be 변화도 주석 정책 원장·판정 기록뿐이라 AC·여정 의무가 생기거나 닫히지 않았다(기준 1~6 새 격차 없음). 직전 `rct_20261009-0001`이 기록한 잔여 처분은 이번 창과 무관하게 그대로다.",
+      "summarizedAt": "2026-10-09T00:45:16Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요 — 이번 버전 변화(#240)는 주석 정리(go 주석 3줄 삭제·1줄 개작, 비주석 변경 0)와 주석 정책 원장·판정 기록 갱신뿐이다. 구현 동작·계약·UI·배포가 `0050c4f`과 동일하고(CI·deploy success), 문서 쪽에 새 AC·여정 의무나 구현과 모순되는 서술이 생기지 않아 정의의 drift 기준 1~6 어디에도 새 격차가 없다. 정의 비고의 「주석/메타 파일 변경 노이즈 — 빠르게 no-op 처리」에 해당한다.",
+      "assessedAt": "2026-10-09T00:45:26Z"
+    }
+  },
+  {
+    "id": "rct_20261009-0003",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-09T09:56:39Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:de742e0dbae72a9a7416367235ff93640742cb8a web:963ff3482568dd486c5f9401ca7dfa49af099c26 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:04fb31437b0b5191203af6fd543f261687885fdd web:4f512c072fdcb4883063ef05f611eb5cd6c873cd deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "currentVersion": "7db82f1a4df967d275be11a4d9fe4f8ca6c95cf5",
+        "previousVersion": "60943351c734711b0263093aa21ebb0fe8a4fe2c"
+      }
+    },
+    "createdAt": "2026-10-09T09:56:39Z",
+    "updatedAt": "2026-10-09T09:59:45Z",
+    "stateSummary": {
+      "asIs": "**구현 — `dlddu/economic-opinion-trend-monitor@main` `d0e1243`(#241 squash, 2026-10-09T09:41:03Z 머지), 관측 2026-10-09T09:58:57Z**\n\n창 = `496c05a`(#240) → `d0e1243`(#241) **한 커밋**. as-is 지문 중 `go`(`04fb3143`→`de742e0d`)·`web`(`4f512c07`→`963ff348`)만 움직였고 `contracts`·`python`·`deploy` 불변.\n\n#241 「fix(debug): 판단 디버깅 화면 지연과 레코드 선택 무반응 해소」 — 사람 세션의 버그 수정 PR(reconcile task 아님).\n- **go (서빙 내부)**: `store.LlmCallTally` 신설(`calltally.go` +152). llm_call 파일을 한 번만 읽는 증분 집계로, 파일 이름 해시만 보관한다. 센 파일이 사라지면 그 파티션을 다시 세고, 취소된 갱신은 이어서 센다. `debugRunOf`의 실행 패널 호출 수·결과별 건수가 전량 `EachLlmCallHead` 스캔 대신 이 집계에서 나온다(같은 값). `debugInputOf`는 Silver 행의 `source_url`을 힌트로 Bronze를 한 번만 훑고, 힌트가 어긋날 때만 두 번째로 훑는다(결과 동일, `debug_input_test.go` 폴백 테스트). 라우트·응답 타입·필드 불변.\n- **web**: `getJSON`/`api.debug`/`api.debugRecords`에 `AbortSignal`(이전 요청 취소). `Debug.tsx`: 라디오가 고르는 즉시 체크(`query || data?.record_id`). 같은 조건으로 「찾기」를 눌러도 목록을 다시 불러옴(`listReload`). 「찾기」에 `.btn` 클래스. 로딩 문면 `불러오는 중…` → `레코드 {query}의 판단 기록을 불러오는 중…`/`판단 기록을 불러오는 중…`(상세), `목록을 불러오는 중…`(목록). `tokens.css`에 `.dbg-formrow .btn{justify-content:center;padding:9px 18px}`.\n- **docs 동반 변경**: `docs/comment-policy/ledger.md`만 바뀜(새·바뀐 주석 행을 판정 칸 `—`로 실측 갱신).\n- **검증**: PR head `46e47a1`에서 `ci / build`·`ci / e2e`·`ci / scenario-mapping`·`ci / comment-ledger`·`data-format`·`docs / structure`·`docs / flow`·`render / render`·`Required` 전부 success. main `d0e1243`의 `build`·`publish (serving|batch)`·`deploy`·`pin deploy images` 전부 success.",
+      "toBe": "**문서 — `docs/` 트리 `60943351` → `7db82f1a`, 관측 2026-10-09T09:58:57Z**\n\n이 창의 docs 변화는 `docs/comment-policy/ledger.md` 한 파일 +7/−3뿐이다. #241이 들이거나 바꾼 주석 행(`debug_input.go` 등)을 미판정(`—`)으로 실측 갱신했다. 이 모델의 SSOT인 가치·PRD 4종·테스트 문서·AC·사용자 여정(`JRN-judgment-debug` 포함)·목업(`JRN-judgment-debug.html`)·디자인 시스템·doc-tracker·design-tracker는 **바이트 불변**이다.\n\n관련 기존 서술(불변):\n- design-tracker `:1108` — `debug` 구현 전용 상태 문구 네 종 중 `불러오는 중…`을 사유와 함께 등재(목업은 로딩을 그리지 않음 → 구현 유지).\n- design-tracker `:1109` — 구현 전용 제출 `찾기`(서빙 질의 + 주소 되쓰기)를 등재.\n- design-tracker `:255` — 「새 `.dbg-*` 선언은 행을 만들지 않는다」.\n- 목업 `STP-pin-record`: 목록에서 레코드를 고르면 그 레코드가 「고른 결과」로 선택된다. 로딩 상태는 그리지 않는다.",
+      "gap": "**새 유의미한 차이 없음 — 이 모델의 몫으로는.** #241은 문서가 규정하지 않는 서빙 성능(증분 집계·Bronze 1회 스캔)과 요청 취소를 바꿨고(응답 형식·값 불변, CI·배포 success), 사용자 대면 변화(라디오 즉시 체크·같은 조건 재조회)는 목업 `STP-pin-record`와 등재 행 `:1109` 방향으로 수렴한다. 유일한 문서 불일치는 로딩 문면 세 종이 design-tracker `:1108`(등재 리터럴 `불러오는 중…`, `Debug.tsx` 0히트로 낡음)에 없다는 것이다. 이는 목업↔구현 허용목록의 소유자인 자매 `tbm_econ-opinion-monitor-mockup-render`가 `rct_20261009-0001`로 같은 #241을 이미 감지해 `approved`(실행 대기)로 들고 있다. 그래서 여기서 중복 task를 열지 않는다.",
+      "summarizedAt": "2026-10-09T09:58:57Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창은 #241 한 커밋이다. 사람 세션이 `debug` 화면의 지연과 라디오 무반응을 고친 버그 수정이다.\n\n**A. 기준 1·3·5·6 — 새 격차 없음.** `contracts`·`python`·`deploy` 무접촉. docs 변화는 주석 정책 원장(`ledger.md`)뿐이라 새 AC·여정 의무가 생기지 않았다. 닫힌 AC도 없고, 구현과 모순되는 새 서술도 없다.\n**B. 기준 2 — 구현 동작↔문서 일치 유지.** go 변경은 서빙 내부 최적화다(`LlmCallTally` 증분 집계·`debugInputOf` Bronze 1회 스캔+폴백). 라우트·응답 타입·값이 같고, 단위 테스트와 PR head `46e47a1`의 `ci / e2e`·`ci / build` 등 전 체크, main 배포가 success다. web의 라디오 즉시 체크·같은 조건 재조회는 목업 `STP-pin-record`(고르면 곧 선택됨)와 등재 행 `:1109`(「찾기」 = 서빙 질의) 쪽으로의 수렴이다. 요청 취소(`AbortSignal`)는 문서가 규정하지 않는 운영 특성이다(`rct_20261009-0001`의 「떠난 요청 무응답」과 같은 처분).\n**C. 기준 4 — 미문서화 사용자 대면 구현 1건, 단 소유 task가 이미 실행 대기.** 로딩 문면 세 종(`레코드 {query}의 판단 기록을 불러오는 중…`·`판단 기록을 불러오는 중…`·`목록을 불러오는 중…`)이 docs 0히트다. design-tracker `:1108`의 등재 리터럴 `불러오는 중…`도 `Debug.tsx`에서 0히트로 낡았다. 이 목업↔구현 카피 허용목록의 소유자는 자매 `tbm_econ-opinion-monitor-mockup-render`다(정의 기준 6). 그 모델이 같은 #241로 `rct_20261009-0001`을 열어 이 정확한 차이(+ `찾기` `.btn` 정보성 구조)를 `action_required`로 판정했다. 이 판정 중(09:56:48Z) 그 task가 `succeeded`로 닫혔고, 대상 레포 main에 #242(`688c874`, `docs/econ-opinion-monitor-design-tracker.md` +23/−1)로 착지했다. 이제 새 세 문면이 트래커에 등재돼 있다(`목록을 불러오는 중…` docs 2히트). 같은 gap으로 이 모델에 두 번째 task를 열면 같은 트래커 행을 두 PR이 고치게 된다. 그래서 이 모델은 열지 않고 그 task에 위임한다. #242가 `docs/`를 바꿨으므로 다음 스윕이 이 모델을 재감지해 수렴을 확인한다.\n**D. 잔여.** 직전 task들(`rct_20261009-0001`/`-0002` 등)이 기록한 잔여 처분은 이번 창과 무관하게 그대로다. #241이 들인 주석 미판정 행은 자매 `tbm_econ-opinion-monitor-comment-necessity`의 몫이다.",
+      "assessedAt": "2026-10-09T09:59:45Z"
+    }
+  },
+  {
+    "id": "rct_20261009-0004",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-09T10:20:42Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:97eab21e929c9c1887ac7ecdf0fe5058bc80edf2 web:b3e17e82c180b1798a586df1c59f7653d677962d deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:de742e0dbae72a9a7416367235ff93640742cb8a web:963ff3482568dd486c5f9401ca7dfa49af099c26 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "currentVersion": "0d7b4dc809a6d4f52f3e4baeebef9b59c412e7ac",
+        "previousVersion": "7db82f1a4df967d275be11a4d9fe4f8ca6c95cf5"
+      }
+    },
+    "createdAt": "2026-10-09T10:20:42Z",
+    "updatedAt": "2026-10-09T10:20:42Z",
+    "stateSummary": {
+      "asIs": "**구현 — `dlddu/economic-opinion-trend-monitor@main` `696d381`(#243 squash, 2026-10-09T10:05:22Z 머지), 관측 2026-10-09T10:21:47Z**\n\n창 = `d0e1243`(#241) → `688c874`(#242) → `696d381`(#243). as-is 지문 중 `go`(`de742e0d`→`97eab21e`)·`web`(`963ff348`→`b3e17e82`)만 움직였고 `contracts`·`python`·`deploy` 불변(`git diff --stat` 0).\n\n- **#242**는 docs 전용이다(go/web 무접촉).\n- **#243** 「docs(comment-policy): #241 증분 주석 필요성 판정 20→16줄」(자매 `tbm_econ-opinion-monitor-comment-necessity` `rct_20261009-0003` 실행 결과). go/web 변경은 **주석 줄 삭제·재접기뿐**이다. 창의 go/web diff에서 `//` 주석이 아닌 +/− 줄은 0이다.\n  - `go/internal/handlers/debug_input.go` `debugInputOf` doc: 4→3줄. 함수 재진술 첫 문장을 제거하고 `urlHint` 사유를 유지했다.\n  - `go/internal/store/calltally.go` `Refresh` doc: 3→1줄. 재계수·이어 세기 서술은 같은 이름의 테스트 두 개가 말한다.\n  - `web/src/api/client.ts` `getJSON` 위 `signal` 주석 1줄 제거.\n- **동작 불변**: 라우트·응답 타입·화면 문면·CSS 모두 #241 상태 그대로다. `Debug.tsx:239`(`레코드 ${query}의 판단 기록을 불러오는 중…`/`판단 기록을 불러오는 중…`)와 `:327`(`목록을 불러오는 중…`)이 그대로이고, `tokens.css`의 `.dbg-formrow .btn`도 그대로다.\n- **검증**: main `696d381`의 `build`·`publish (batch|serving)`·`deploy`·`pin deploy images`·`report-build-status` 전부 success. `688c874`의 `build`·`deploy` success.",
+      "toBe": "**문서 — `docs/` 트리 `7db82f1a` → `3c5f23f7`(#242) → `0d7b4dc8`(#243), 관측 2026-10-09T10:21:47Z**\n\n- **#242** `docs/econ-opinion-monitor-design-tracker.md` +23/−1. 자매 `tbm_econ-opinion-monitor-mockup-render` `rct_20261009-0001`(succeeded)의 실행 결과다.\n  - 변경 이력 한 줄을 추가했다.\n  - 실측 근거 블록 「`debug` `#241` 귀속 갱신」을 신설했다.\n  - `debug` 「구현 전용 — 상태 문구」 행을 네 종에서 다섯 종으로 제자리 갱신했다. 옛 로딩 리터럴 `불러오는 중…`을 상세 로딩 둘과 목록 로딩 하나로 바꿨다.\n  - `구조` 행 「구현 전용 `찾기` 제출 버튼의 모양(`.dbg-formrow .btn{justify-content:center; padding:9px 18px}`)」을 신설했다. 둘 다 처분은 **구현을 유지**다.\n- **#243** `docs/comment-policy/ledger.md` 일곱 행의 판정 칸을 `—`에서 `완료`로 바꾸고 줄 수·지문을 실측했다. 패스 문서 `docs/comment-policy/passes/2026-10-09-debug-latency-increment-pass.md`(+67)를 신설했다. 주석 정책 메타 문서다.\n- 이 모델의 SSOT인 가치·PRD·AC·테스트 문서·사용자 여정·목업·디자인 시스템·doc-tracker는 **바이트 불변**이다. 새 AC나 여정 의무가 생기지 않았다.",
+      "gap": "**유의미한 차이 없음.** 이번 창은 자매 모델 두 task의 실행 결과다. #242는 #241이 들인 로딩 문면 세 종과 `찾기` 버튼 모양을 design-tracker에 등재했다. 그 결과 직전 `rct_20261009-0003`이 위임했던 기준 4 격차(미문서화 사용자 대면 문면)가 닫혔다. 세 문면과 `.dbg-formrow .btn` 모두 `Debug.tsx`/`tokens.css`와 트래커에 함께 서 있다. #243은 go/web의 주석만 바꿨고(비주석 diff 0), 문서는 주석 정책 원장뿐이다. 그래서 기준 1~6 어디에도 새 격차가 없다.",
+      "summarizedAt": "2026-10-09T10:21:47Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창은 `d0e1243`→`696d381`의 두 커밋이고, 둘 다 자매 reconcile task의 산출물이다.\n\n**A. 기준 4 — 직전 위임분 수렴 확인.** `rct_20261009-0003`이 `tbm_econ-opinion-monitor-mockup-render` `rct_20261009-0001`에 위임한 미문서화 로딩 문면 세 종(`레코드 {query}의 판단 기록을 불러오는 중…`·`판단 기록을 불러오는 중…`·`목록을 불러오는 중…`)이 #242로 design-tracker `debug` 상태 문구 행에 등재됐다. 근거는 docs 히트 각 1, `Debug.tsx:239`·`:327`과 리터럴 일치다. `찾기` 버튼의 `.btn` 모양도 `구조` 행으로 등재됐다(`tokens.css`와 리터럴 일치). 둘 다 「구현 유지」 처분이라 새 구현 의무를 만들지 않는다.\n**B. 기준 1·2·3·5·6 — 새 격차 없음.** `contracts`·`python`·`deploy`는 무접촉이다. #243의 go/web 변경은 주석 4곳의 삭제·재접기뿐이다(비주석 +/− 0줄). 그래서 라우트·응답·화면 동작·문면이 #241과 같다. docs 변화는 design-tracker(구현을 문서에 맞춰 적음)와 주석 정책 원장·패스 문서뿐이다. AC·PRD·테스트·여정·목업은 바이트 불변이라 새 의무도, 구현과 모순되는 서술도 없다.\n**C. 검증.** main `696d381`의 build·publish·deploy 체크가 전부 success다.\n**D. 잔여.** 직전 task들이 기록한 잔여 처분은 이번 창과 무관하게 그대로다. 주석 판정은 자매 `tbm_econ-opinion-monitor-comment-necessity`가 #243으로 마쳤다(`rct_20261009-0003` succeeded, 재감지 `rct_20261009-0004` no_action_needed).",
+      "assessedAt": "2026-10-09T10:21:51Z"
+    }
+  },
+  {
+    "id": "rct_20261010-0001",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-10T04:56:42Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:b08fc2f1c59ad48a18f091623f2218497b7d494e web:8883c506844aa6d269a2b0357fb59863920dbba1 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:97eab21e929c9c1887ac7ecdf0fe5058bc80edf2 web:b3e17e82c180b1798a586df1c59f7653d677962d deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "currentVersion": "f4f3cd17d35bca1c07bac2ca406dd2c2f5fc5809",
+        "previousVersion": "0d7b4dc809a6d4f52f3e4baeebef9b59c412e7ac"
+      }
+    },
+    "createdAt": "2026-10-10T04:56:42Z",
+    "updatedAt": "2026-10-10T04:56:42Z",
+    "stateSummary": {
+      "asIs": "**구현 — `dlddu/economic-opinion-trend-monitor@main` `0e7c89c`(#245 squash, 2026-10-10T04:44:42Z 머지), 관측 2026-10-10T04:57:39Z**\n\n창 = `696d381`(#243) → `5d00dac`(#244) → `0e7c89c`(#245) **두 커밋**. as-is 지문 중 `go`(`97eab21e`→`b08fc2f1`)·`web`(`b3e17e82`→`8883c506`)만 움직였고 `contracts`·`python`·`deploy` 불변. 둘 다 사람 세션의 서빙 성능 PR(reconcile task 아님).\n\n- **#244 「feat(serving): /api/debug 단계별 시간 계측」** — go만. `handlers/stages.go`(+124) 신설: 전량 스캔 게이트(`oneScanAtATime`)를 지나는 요청마다 단계(`gate`·`handler`·`silver`·`calls`·`run`·`bronze`·`bronze_again`·`bodies`) 시간을 `Server-Timing` 응답 헤더와 `stages` 로그로 남기고, 끊긴 요청은 `outcome=aborted at=<stage>`로 적는다. 라우트·응답 본문 불변.\n- **#245 「fix(serving): llm_call 집계를 요청 밖 백그라운드로」** — go: `serving/main.go`가 `KeepCallTally(ctx, 2m)`를 띄워 llm_call 집계를 백그라운드로 갱신하고, `debugRunOf`는 집계를 읽기만 한다(`store/calltally.go` 16개 병렬 읽기·디코딩 실패 건 skip 카운트). 응답 `run.symptoms`에 **`calls_tallied` bool 추가** — 첫 집계 전엔 `false`이고 `calls`=0·`call_outcome`=[]. web: `types.ts`에 `calls_tallied?`, `Debug.tsx`가 `calls_tallied===false`일 때 `모델 호출 집계 중` / 호출 결과 자리에 `호출 기록을 세는 중입니다 — 잠시 뒤 다시 열면 보입니다` / kv `실행` 줄에 `호출 집계 중`을 그린다(집계 완료 후 표시는 이전과 동일). PR 본문 실측: 첫 집계 전 /api/debug 4.2–9.8s, 이후 3.8–6.9s(이전 951s/11.8s).\n- **검증**: PR head `bb7da3d`(#244)·`0aa16b6`(#245) 모두 `ci / build`·`ci / e2e`·`ci / scenario-mapping`·`ci / comment-ledger`·`docs / structure`·`docs / flow`·`render / render`·`data-format`·`required` success. main `5d00dac`·`0e7c89c`의 `build`·`publish (serving|batch)`·`deploy`·`pin deploy images` 전부 success.",
+      "toBe": "**문서 — `docs/` 트리 `0d7b4dc8` → `296de30`(#244) → `f4f3cd17`(#245), 관측 2026-10-10T04:57:39Z**\n\n이 창의 docs 변화는 두 파일:\n- `docs/comment-policy/ledger.md` +9/−5 — 두 PR이 들인 주석 행(`debug.go`·`handlers.go`·`stages.go`·`calltally.go`·`Debug.tsx`·테스트들)을 미판정(`—`)으로 실측 갱신.\n- `docs/econ-opinion-monitor-design-tracker.md` 1행(`:1129`) — `debug` 「구현 전용 상태 문구」 행을 **다섯 종 → 여섯 종**으로 넓혀 호출 집계 중 문면 셋(`모델 호출 집계 중`/`호출 기록을 세는 중입니다 — 잠시 뒤 다시 열면 보입니다`/`호출 집계 중`)을 사유(「0건으로 그려 호출 없음으로 읽히게 하지 않는다」)와 함께 등재, 처분 「구현 유지」·재검토 조건 「목업이 실패·로딩·미발견 상태를 그릴 때」 동일.\n\n가치·PRD·AC·테스트 문서·사용자 여정(`JRN-judgment-debug` 포함)·목업·디자인 시스템·doc-tracker는 **바이트 불변**. docs는 `/api/debug` 응답 필드를 계약으로 열거하지 않는다(design-tracker `:305`가 `run.symptoms`를 「한 실행의 세 축 tally」로만 서술). `Server-Timing`·`stages` 로그·`calls_tallied`는 docs 0히트.",
+      "gap": "**새 유의미한 차이 없음.** #244·#245는 문서가 규정하지 않는 서빙 성능·관측성(단계 계측 헤더/로그, llm_call 집계 백그라운드화)만 바꿨고 CI·배포 success다. 유일한 사용자 대면 변화(첫 집계 전 「호출 집계 중」 문면 셋)는 같은 PR #245가 design-tracker `:1129`에 구현 전용 상태 문구로 이미 등재해 기준 4를 스스로 충족했다. 새 응답 필드 `calls_tallied`는 `contracts/` 밖의 go↔web 내부 응답 필드로, docs가 `/api/debug` 필드를 계약으로 열거하지 않으므로 문서 대응 의무가 없다.",
+      "summarizedAt": "2026-10-10T04:57:39Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창은 #244(단계 계측)·#245(llm_call 집계 백그라운드화) 두 커밋이다. 둘 다 사람 세션이 `debug` 화면의 `/api/debug` 지연을 계측·해소한 서빙 성능 PR이다.\n\n**A. 기준 1·3·5·6 — 새 격차 없음.** `contracts`·`python`·`deploy`는 건드리지 않았다. docs 변화는 주석 원장(`ledger.md`)과 design-tracker 1행뿐이라 새 AC·여정 의무가 생기지 않았다. 닫힌 AC도 없고, 구현과 모순되는 새 서술도 없다.\n**B. 기준 2 — 구현 동작↔문서 일치 유지.** `Server-Timing` 헤더·`stages` 로그·백그라운드 집계(2분 주기)는 문서가 규정하지 않는 운영 특성이다(`rct_20261009-0003`의 증분 집계·요청 취소와 같은 처분). 집계가 끝나면 `debug` 실행 패널의 호출 수·결과별 건수는 이전과 같은 값이라 `JRN-judgment-debug`/`STP-scan-run`의 서술과 그대로 맞는다. 두 PR head와 main 배포의 전 체크(`ci / e2e`·`ci / build`·`docs / *`·`render`·`deploy`)가 success다.\n**C. 기준 4 — 미문서화 구현 없음.** 사용자 대면 신규 문면 셋(`모델 호출 집계 중`·`호출 기록을 세는 중입니다 — 잠시 뒤 다시 열면 보입니다`·`호출 집계 중`)은 #245가 같은 커밋에서 design-tracker `:1129` 「구현 전용 상태 문구」 행(다섯→여섯 종)에 사유와 함께 등재했다. 처분은 compare·trend 등 동일 유형 행과 같은 「구현 유지」다. 그래서 자매 `tbm_econ-opinion-monitor-mockup-render`가 맡는 카피 허용목록에도 남은 공백이 없다. 응답 필드 `calls_tallied`는 `contracts/` 밖의 go↔web 내부 필드다. docs는 `/api/debug` 응답 필드를 계약으로 열거하지 않으므로(design-tracker `:305`는 `run.symptoms`를 tally로만 서술) 문서화 의무가 없다.\n**D. 잔여.** 두 PR이 들인 주석 미판정 행(`ledger.md` `—` 8행)은 자매 `tbm_econ-opinion-monitor-comment-necessity`의 몫이다. 직전 task들이 기록한 잔여 처분은 이번 창과 무관하게 그대로다.",
+      "assessedAt": "2026-10-10T04:57:59Z"
+    }
+  },
+  {
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "createdAt": "2026-10-10T06:53:11Z",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-10T06:53:11Z",
+      "asIs": {
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:b08fc2f1c59ad48a18f091623f2218497b7d494e web:8883c506844aa6d269a2b0357fb59863920dbba1 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:fcabe1a60fb7a4606cb001f2f564f369aec6749e web:2302b6442f6b40add708a01454b725c622423140 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "previousVersion": "f4f3cd17d35bca1c07bac2ca406dd2c2f5fc5809",
+        "currentVersion": "eb6731acd508f532a675c45c3e238106bf22420a"
+      }
+    },
+    "id": "rct_20261010-0002",
+    "stateSummary": {
+      "asIs": "**as-is** (`dlddu/economic-opinion-trend-monitor@main` `69c49f6`, 2026-10-10T06:54:10Z 관측)\n- 버전 `contracts:291e4c6 python:ff6e6ca go:fcabe1a web:2302b64 deploy:41f3b62`. 직전 관측(`0e7c89c`, #245) 대비 `go`(`b08fc2f→fcabe1a`)·`web`(`8883c50→2302b64`)만 변했다.\n- 창 `0e7c89c..69c49f6` = 1커밋 #246 `docs(comment-policy): #244·#245 증분 주석 필요성 판정 44→30줄 (rct_20261010-0001)`.\n- go/web diff(go 5파일·web 1파일)는 주석 삭제·개작뿐이다: `stages.go` -5, `calltally.go` -1·개작 1, `debug_probe_test.go` 3줄→1줄 접기, `stages_test.go`·`calltally_test.go` 줄끝 주석 각 1개 제거, `Debug.tsx` 주석 -2줄. 주석 줄을 빼면 코드 diff는 0이다(비주석으로 잡힌 2줄 `cancel()`·`tally.refresh.Lock()`은 줄끝 `//`만 떨어진 것).\n- `contracts`·`python`·`deploy` 무접촉.\n- `69c49f6` check-runs: build·publish(batch/serving)·deploy·pin deploy images·report-build-status 모두 success.",
+      "toBe": "**to-be** (`docs/` 트리 `f4f3cd1→eb6731a`, 같은 #246)\n- `docs/comment-policy/ledger.md` 16줄: #244·#245가 「미판정」으로 남긴 행(`debug.go`·`debug_probe_test.go`·`handlers.go`·`stages.go`·`calltally.go`·`Debug.tsx` 등)에 필요성 판정을 기록해 `완료`로 전환.\n- 판정 기록 `docs/comment-policy/passes/2026-10-10-debug-stages-increment-pass.md` 신설(+95).\n- PRD·AC·테스트 문서·사용자 여정·목업·디자인 시스템·doc-tracker·design-tracker 무변경.",
+      "gap": "**유의미한 차이 없음.** #246은 #244·#245가 들인 주석의 필요성 판정 PR이다. go/web 변경은 주석 삭제·개작뿐(비주석 변경 0, CI·deploy success)이라 구현 동작·계약·UI·배포가 `0e7c89c`와 같다. to-be 변화도 주석 정책 원장·판정 기록뿐이라 AC·여정 의무가 생기거나 닫히지 않았고, 구현과 모순되는 서술도 없다(기준 1~6 새 격차 없음). 직전 `rct_20261010-0001`(#244·#245)의 no-op 판정은 그대로 유효하다.",
+      "summarizedAt": "2026-10-10T06:53:48Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창은 #246 한 커밋이다. 직전 task `rct_20261010-0001`이 다룬 #244·#245 주석의 필요성 판정을 반영한 comment-policy PR이다.\n**A. 기준 1·3·5·6 — 새 격차 없음.** `contracts`·`python`·`deploy` 무접촉. docs 변화는 `comment-policy/ledger.md`·판정 기록 1건뿐이라 새 AC·여정 의무가 생기지 않았다. 닫힌 AC도 없고, 구현과 모순되는 새 서술도 없다.\n**B. 기준 2·4 — 구현 동작 불변.** go 5파일·web 1파일 diff가 주석 삭제·개작뿐이고 비주석 코드 변경은 0이다. 그래서 동작·응답·UI 문면이 그대로이고, 미문서화 사용자 대면 동작도 새로 생기지 않았다. `69c49f6`의 build·publish·deploy check-run도 모두 success다.\n정의 비고의 「주석/메타 파일 변경 노이즈 — 빠르게 no-op 처리」에 해당한다.",
+      "assessedAt": "2026-10-10T06:54:10Z"
+    }
+  },
+  {
+    "id": "rct_20261011-0001",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-11T03:12:39Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:0a409e097faff65ee30132b195a71eec2195fc96 web:2302b6442f6b40add708a01454b725c622423140 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:fcabe1a60fb7a4606cb001f2f564f369aec6749e web:2302b6442f6b40add708a01454b725c622423140 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "currentVersion": "448fe06d6e1b9179fcc55be0502ec09838907159",
+        "previousVersion": "eb6731acd508f532a675c45c3e238106bf22420a"
+      }
+    },
+    "createdAt": "2026-10-11T03:12:39Z",
+    "updatedAt": "2026-10-11T03:12:39Z",
+    "stateSummary": {
+      "asIs": "**as-is** (`dlddu/economic-opinion-trend-monitor@main` `2497886`, 2026-10-11T03:13Z 관측)\n- 버전 `contracts:291e4c6 python:ff6e6ca go:0a409e0 web:2302b64 deploy:41f3b62`. 직전 관측(`69c49f6`, #246) 대비 `go`(`fcabe1a→0a409e0`)만 변했다.\n- 창 `69c49f6..2497886` = 1커밋 #247 `fix(serving): 목록 API 가 레코드 전부를 쥐지 않게 · 집계는 스캔에 양보 — serving OOM 해소`.\n- go diff 7파일(+412/-109):\n  - `handlers/debug_records.go`: 디버그 레코드 목록이 레코드마다 최신 분석 행의 목록 필드만 압축 보관(`listedRecord`)하고, 필터·정렬 뒤 노출할 50행에 대해서만 Bronze 제목·출처·수집 시각을 읽는다. 동치성 확인: 최신 행 선택(같은 시각이면 먼저 본 행 유지)·정렬(analyzedAt 내림차순, recordID 오름차순)·`q` 검색 대상(최신 수집 제목, 같은 시각이면 첫 행)·응답 필드(`Total`·`Matched`·`Limit`·`Truncated`·`Rows`)가 옛 구현과 같다. `fillExchange`가 쓰는 `exchangeOf`는 `CallID`·`NoCallReason`만 읽어 축약 analysis로도 결과가 같다. 커밋 메시지: 응답 10,080개 바이트 동일.\n  - `handlers/handlers.go`: `scanning sync.RWMutex` 추가 — 허용된 전량 스캔 동안 LLM 호출 집계 refresh가 멈춘다(`calls.YieldTo`).\n  - `store/calltally.go`: `YieldTo`·`paused`·`eachListed` — 디렉터리를 나눠 읽고 스캔 중 양보. 집계 값 의미 불변.\n  - `cmd/serving/main.go`: `applyMemoryLimit` — cgroup `memory.max`의 80%를 Go 소프트 메모리 한도로 설정(`GOMEMLIMIT` 지정 시 무시).\n  - 테스트 3건 추가(`main_test.go`·`debug_records_test.go` 최신 제목 표시·검색·`startup_memprobe_test.go`).\n- 커밋 메시지 실측: 콜드 시작 최대 RSS 367MiB→182MiB, 목록 처리 14.6s→6.3s.\n- `contracts`·`python`·`web`·`deploy` 무접촉.\n- `2497886` check-runs: build·publish(batch/serving)·deploy·pin deploy images·report-build-status 모두 success.",
+      "toBe": "**to-be** (`docs/` 트리 `eb6731a→448fe06`, 같은 #247)\n- `docs/comment-policy/ledger.md` 10줄만 변경: #247이 들인 주석이 있는 `main.go`·`debug_records.go`·`handlers.go`·`calltally.go` 행을 「미판정(—)」으로 되돌리고 `startup_memprobe_test.go`·`debug_records_test.go` 행을 신설.\n- PRD·AC·테스트 문서·사용자 여정·목업·디자인 시스템·doc-tracker·design-tracker 무변경.",
+      "gap": "**유의미한 차이 없음.** #247은 serving OOM을 고친 메모리·성능 수정이다. 디버그 레코드 목록 응답(필드·정렬·검색·50행 제한)과 호출 집계 의미가 옛 구현과 같고(코드 대조 + 추가 테스트 + 커밋의 바이트 동일 확인, CI·deploy success), 계약·UI·배포 매니페스트는 그대로다. to-be 변화는 주석 원장 행 갱신뿐이라 AC·여정 의무가 새로 생기거나 닫히지 않았다(기준 1~6 새 격차 없음). 원장의 「미판정」 행은 자매 모델 `tbm_econ-opinion-monitor-comment-necessity`가 다룬다.",
+      "summarizedAt": "2026-10-11T03:13:26Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창은 #247 한 커밋이다. serving OOM을 고친 메모리·성능 수정이다.\n**A. 기준 1·3·5·6 — 새 격차 없음.** `contracts`·`python`·`web`·`deploy` 무접촉. docs 변화는 `comment-policy/ledger.md` 행 갱신뿐이라 새 AC·여정 의무가 생기지 않았다. 닫힌 AC도 없고, 구현과 모순되는 새 서술도 없다.\n**B. 기준 2·4 — 사용자 대면 동작 불변.** 디버그 레코드 목록은 내부 보관 형태와 Bronze 읽는 범위만 바뀌었다. 최신 행 선택·정렬·검색 대상·응답 필드는 옛 구현과 같다(코드 대조, 새 테스트, 커밋의 응답 바이트 동일 실측). 호출 집계의 스캔 중 양보와 Go 소프트 메모리 한도는 내부 자원 관리다. 문서화해야 할 새 사용자 대면 동작이 아니다. `2497886` build·publish·deploy check-run 모두 success.\n원장의 「미판정」 행(#247 주석)은 이 모델이 아니라 `tbm_econ-opinion-monitor-comment-necessity`의 몫이다.",
+      "assessedAt": "2026-10-11T03:13:38Z"
+    }
+  },
+  {
+    "id": "rct_20261011-0002",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-11T08:20:09Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:5f881228dcb0c6654b265a16f131bdb38b992ee7 web:c9bd80dfa73c818f930748b43324b75211ce1b2e deploy:2c012e1a0aa22c09415974c30472d5c337f2785f",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:0a409e097faff65ee30132b195a71eec2195fc96 web:2302b6442f6b40add708a01454b725c622423140 deploy:41f3b62cc47e92aab88bb8436409b058e8d4f9f7"
+      },
+      "toBe": {
+        "currentVersion": "c9d1ef4e072610f6aa03e3be09c714b03bb34ebb",
+        "previousVersion": "448fe06d6e1b9179fcc55be0502ec09838907159"
+      }
+    },
+    "createdAt": "2026-10-11T08:20:09Z",
+    "updatedAt": "2026-10-11T08:21:31Z",
+    "stateSummary": {
+      "asIs": "**관측 시각** 2026-10-11T08:20Z · `dlddu/economic-opinion-trend-monitor` main `13e496e` (이전 관측 `2497886`). 창은 **#248** 한 커밋(머지 08:00Z, 사람 세션)이다: 「디버그 화면을 배치가 만드는 SQLite 서빙 인덱스로」.\n\n- **contracts · python**: 트리 해시 불변(무접촉).\n- **go**: 신설 `go/internal/servingindex/`(build·derive.sql·schema.sql·publish·reader) + `go/cmd/econ-index`(인덱스 빌더 바이너리, 서빙 이미지에 동봉). serving 의 `/api/debug`·`/api/debug/records` 는 요청마다 레이크(Silver analysis·Bronze news_item·llm_call)를 훑던 방식에서 **배치가 레이크에서 만든 SQLite 인덱스를 읽기 전용(`mode=ro&immutable=1`)으로 읽는 방식**으로 바뀌었다. 백그라운드 호출 집계(`store/calltally.go`)와 응답 필드 `calls_tallied` 를 걷어냈다. 인덱스가 없으면 `503 {\"error\":\"index_not_ready\"}`. 라우트·응답 필드(`calls_tallied` 제외)·행 순서는 같다 — 빌더가 serving 과 같은 Go 리더(`store.EachAnalysis`·`EachNewsItem`)로 순서를 만든다. PR 독립 리뷰가 옛/새 serving 응답 1,028건을 대조해 차이 0건. 의도한 차이 하나: 빈 문자열 `no_call_reason`·`call_id` 를 옛 목록만 「없음」으로 보던 것을 상세와 일치시킴(Python 쓰기 쪽은 빈 문자열을 만들지 않음).\n- **web**: `Debug.tsx` — `index_not_ready` 를 `API 오류` 대신 note 「인덱스 준비 중: 판단 기록 인덱스가 아직 만들어지지 않았습니다 — 배치 파이프라인이 다음 실행을 마치면 열립니다.」로 표시. 「집계 중」 문면 셋(`모델 호출 집계 중`·`호출 기록을 세는 중입니다 — 잠시 뒤 다시 열면 보입니다`·`호출 집계 중`) 삭제 → 항상 `모델 호출 {N}건`. `client.ts` 가 실패 응답 `{error}` 를 `ApiError` 로 전달, `types.ts` 에서 `calls_tallied` 삭제.\n- **deploy**: `deploy/batch/workflow-template.yaml` 에 `onExit: index` + `index` 템플릿(서빙 이미지로 `econ-index` 실행, mutex `econ-serving-index`, retry 3, 512Mi). 진입점(ingest·pipeline·reprocess·publish)과 성패에 관계없이 워크플로 끝에 인덱스를 다시 발행한다. 발행은 `serving/index-<시각>-<난수>.sqlite` + 포인터 `serving/index.current` 교체, 옛 인덱스는 교체 시점부터 1시간 뒤 삭제(자기 이름 파일만).\n- **검증**: `13e496e` check-run `build`·`publish (batch)`·`publish (serving)`·`deploy`·`pin deploy images`·`report-build-status` 전부 success.",
+      "toBe": "**관측 시각** 2026-10-11T08:20Z · `docs/` 트리 `448fe06` → `c9d1ef4` (같은 #248).\n\n- `docs/econ-opinion-monitor-design-tracker.md:1129` 「구현 전용 — 상태 문구 여섯 종」 행: 「호출 집계 중」 문면 셋을 빼고 **인덱스 준비 중 문면**을 넣어 갱신. 처분 근거에 「배치가 첫 인덱스를 발행하기 전에는 API 가 `503 index_not_ready` 로 답하므로 실패로 그리지 않고 기다리면 열리는 상태라고 밝힌다 · 목업은 이 상태도 그리지 않으므로 처분은 같다(구현 유지)」를 추가. 리터럴이 `Debug.tsx` 와 일치하고, 삭제된 「집계 중」 문면은 docs·web 양쪽에서 0히트(목업 인덱스의 `재집계 중` 은 다른 화면의 로딩 상태).\n- `docs/econ-opinion-monitor-review-policy.md`: 새 수동 승인 케이스 **MA6**(Go 가 레이크 볼륨에 쓰는 코드 — `go/internal/servingindex/**`·`go/cmd/econ-index/**`), 앵커 2줄, 위험 표면 ERE 에 `Remove|RemoveAll|Rename` 추가, 「Go 쪽이 레이크에 쓰기 시작한다」 제외 행의 재개 조건을 빌더 밖으로 좁혀 연장. 리뷰 정책 메타 문서다(AC·여정 아님).\n- `docs/comment-policy/ledger.md` 행 갱신 + `passes/2026-10-11-serving-index-removed-rows.md`(사라진 파일 4개의 원장 행 이관). 주석 정책 메타 문서다.\n- AC(PRD 4종의 AC1.x~AC4.x)·테스트 문서·사용자 여정(`JRN-judgment-debug` 포함)·목업·디자인 시스템은 바이트 불변.",
+      "gap": "**유의미한 차이 없음.** #248은 디버그 화면 API 의 원천을 「요청마다 레이크 스캔」에서 「배치가 레이크에서 다시 만드는 SQLite 인덱스」로 옮긴 서빙 성능 변경이다. 응답 필드·값·순서가 옛 구현과 같고(독립 대조 1,028건 차이 0, CI·deploy success), 유일한 사용자 대면 변화(「인덱스 준비 중」 문면 추가·「집계 중」 문면 셋 삭제)는 같은 PR 이 design-tracker `:1129` 에 이미 반영해 기준 4를 스스로 충족했다. AC4.1~4.3(실행·호출 기록은 레이크에 남고 양방향 도달) 은 원천이 여전히 레이크이고 인덱스가 실패한 실행 뒤에도(`onExit`) 다시 발행되므로 그대로 충족된다. 기준 1~6 어디에도 새 격차가 없다.",
+      "summarizedAt": "2026-10-11T08:21:31Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창은 #248 한 커밋이다(사람 세션, 디버그 화면 serving RSS 182→19MiB).\n\n**A. 기준 1·3·5·6 — 새 격차 없음.** `contracts`·`python` 무접촉. docs 변화는 design-tracker 1행(구현을 문서에 맞춰 적음)과 리뷰 정책(MA6)·주석 원장뿐이라 새 AC·여정 의무가 생기거나 닫히지 않았고, 구현과 모순되는 서술도 없다.\n**B. 기준 2 — 구현 동작↔문서 일치 유지.** 디버그 두 라우트의 응답은 옛 구현과 같다(코드상 같은 Go 리더로 순서 결정, PR 독립 리뷰 1,028건 대조 차이 0, `13e496e` build·publish·deploy 전부 success). 「빈 문자열 `no_call_reason`/`call_id`」 처리 통일은 목록을 상세에 맞춘 것이고 Python 쓰기 쪽은 빈 문자열을 만들지 않아 실데이터 영향이 없다. AC4.1(실행·단계 기록을 레이크에 남기고 실패한 실행도 조회)·AC4.2(호출 기록 append-only)·AC4.3(레코드↔실행↔호출 양방향 도달)은 레이크가 여전히 원천이고 인덱스는 그 파생물이며, `onExit` 로 성패와 무관하게 매 워크플로 끝에 다시 발행되므로 그대로 충족된다(인덱스 빌더가 지우는 것은 `serving/` 안 자기 인덱스 파일뿐 — 레이크 기록은 건드리지 않음). 진행 중인 실행이 끝나기 전까지 화면에 반영되지 않는 지연은 AC·`JRN-judgment-debug`가 규정하지 않는 운영 특성이다(여정은 남은 기록을 사후에 읽는 흐름, `:91` 「외부 지연: 해당 없음」). `deploy/` 의 `index` 단계는 이 서빙 경로의 배선이며 새 사용자 대면 동작이 아니다.\n**C. 기준 4 — 미문서화 구현 없음.** 신규 문면 「인덱스 준비 중: …」은 같은 커밋에서 design-tracker `:1129` 에 리터럴 일치로 등재됐고, 삭제된 「집계 중」 문면 셋은 같은 행에서 빠졌다(docs·web 0히트). `calls_tallied` 는 `contracts/` 밖 go↔web 내부 응답 필드였고(`rct_20261010-0001` 처분) 이제 없다.\n**D. 비고.** 머지 직후 배치가 첫 인덱스를 발행하기 전까지 디버그 화면은 「인덱스 준비 중」이다 — PR 이 명시한 배포 과도기이며 문서화된 상태다. 새 Go 주석의 필요성 판정(원장 `—` 행)은 자매 `tbm_econ-opinion-monitor-comment-necessity` 의 몫이고, 리뷰 정책 MA6 지문 변화는 `tbm_econ-opinion-monitor-pr-manual-approval` 의 몫이다.",
+      "assessedAt": "2026-10-11T08:21:31Z"
+    }
+  },
+  {
+    "id": "rct_20261011-0003",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-11T09:52:11Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:be301b902c84e803e3e409802a2c0f6fc0aba6f9 web:2307e4665d6eea2cb501599f11153facbe82e197 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:5f881228dcb0c6654b265a16f131bdb38b992ee7 web:c9bd80dfa73c818f930748b43324b75211ce1b2e deploy:2c012e1a0aa22c09415974c30472d5c337f2785f"
+      },
+      "toBe": {
+        "currentVersion": "ad0630d03a644a823beb5c415908120584bafb64",
+        "previousVersion": "c9d1ef4e072610f6aa03e3be09c714b03bb34ebb"
+      }
+    },
+    "createdAt": "2026-10-11T09:52:11Z",
+    "updatedAt": "2026-10-11T09:52:11Z",
+    "stateSummary": {
+      "asIs": "**관측 시각** 2026-10-11T09:53Z · `dlddu/economic-opinion-trend-monitor` main `bd3bc99` (이전 관측 `13e496e`). 창은 **#250** 한 커밋(머지 09:41Z, reconciler-planner 봇 — 자매 `tbm_econ-opinion-monitor-comment-necessity` rct_20261011-0001 의 주석 필요성 판정 적용)이다.\n\n- **contracts · python**: 트리 해시 불변(무접촉).\n- **go** (`5f88122`→`be301b9`): `cmd/serving/main.go`·`handlers/{debug,debug_records,debug_test,handlers,index}.go` 에서 주석 행만 삭제·축약. 비주석 변경은 `handlers.go` 의 `index *servingindex.Reader` 필드 정렬(gofmt 공백) 1줄뿐 — 동작 무변.\n- **web** (`c9bd80d`→`2307e46`): `screens/Debug.tsx` 주석 1줄(`// The debug API reads an index …`) 삭제. 코드·문면 무변.\n- **deploy** (`2c012e1`→`b072897`): `batch/workflow-template.yaml` `index` 템플릿 위 YAML 주석 6줄→4줄 축약. 스펙 필드 무변.\n- 범위 밖: `Dockerfile` 주석 2줄, `tests/` 주석 삭제.\n- **검증**: `bd3bc99` check-run `build`·`publish (batch)`·`publish (serving)`·`deploy`·`pin deploy images`·`report-build-status` 전부 success.",
+      "toBe": "**관측 시각** 2026-10-11T09:53Z · `docs/` 트리 `c9d1ef4` → `ad0630d` (같은 #250).\n\n- 변경은 `docs/comment-policy/` 뿐: `ledger.md` 48행 갱신 + 신규 `passes/2026-10-11-serving-index-increment-pass.md`(#247·#248 증분 129줄 판정 — 무인 48줄 적용, MA6 72줄 이월). 주석 정책 메타 문서다.\n- AC(PRD AC1.x~AC4.x)·테스트 문서·사용자 여정·목업·디자인 시스템·design-tracker·doc-tracker 바이트 불변.",
+      "gap": "**유의미한 차이 없음.** #250은 주석 필요성 판정 적용(주석 삭제·축약 + 주석 원장 갱신)뿐이다. as-is 쪽 비주석 변경은 gofmt 정렬 1줄이고 동작·계약·UI 문면·배포 스펙이 그대로이며(CI·deploy success), to-be 쪽은 AC·여정·목업과 무관한 주석 정책 메타 문서만 바뀌었다. 기준 1~6 어디에도 새 격차가 생기거나 닫히지 않았다.",
+      "summarizedAt": "2026-10-11T09:52:56Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창은 #250 한 커밋(자매 comment-necessity task rct_20261011-0001 의 적용 PR)이다.\n\n**A. 기준 1·3·5·6** — `contracts`·`python` 무접촉, docs 변화는 `docs/comment-policy/` 메타 문서뿐이라 새 AC·여정 의무가 생기거나 닫히지 않았고 구현과 모순되는 서술도 없다.\n**B. 기준 2** — go/web/deploy 변경은 주석 삭제·축약과 gofmt 필드 정렬 1줄뿐(diff 에서 비주석 `+/-` 행이 그 1줄). 동작·응답·문면(`Debug.tsx` 의 `INDEX_NOT_READY` 처리 그대로)·워크플로 `index` 템플릿 스펙 불변. `bd3bc99` build·publish·deploy check-run 전부 success.\n**C. 기준 4** — 새 사용자 대면 구현·계약 필드 없음.\n**D. 비고** — 직전 판정 rct_20261011-0002(#248, no_action_needed)의 결론이 그대로 유지된다. MA6 이월분 72줄 주석 판정은 `tbm_econ-opinion-monitor-comment-necessity`/`-pr-manual-approval` 의 몫이다.",
+      "assessedAt": "2026-10-11T09:52:56Z"
+    }
+  },
+  {
+    "id": "rct_20261011-0004",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-11T12:40:39Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:684b840b08b3e6f99b9a87112f893060940c5d7b web:b4864ad6ddad85df951a198ed2a4d71b048c9817 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:be301b902c84e803e3e409802a2c0f6fc0aba6f9 web:2307e4665d6eea2cb501599f11153facbe82e197 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2"
+      },
+      "toBe": {
+        "currentVersion": "9e49c1608a31e82fd0981f2c8082078d4e6a46aa",
+        "previousVersion": "ad0630d03a644a823beb5c415908120584bafb64"
+      }
+    },
+    "createdAt": "2026-10-11T12:40:39Z",
+    "updatedAt": "2026-10-11T12:40:39Z",
+    "stateSummary": {
+      "asIs": "**as-is (구현, main `e28d896` = #252, 관측 2026-10-11T12:41:54Z)** — 이전 관측 `bd3bc99`(#250) 이후 1커밋.\n- `contracts`·`python`·`deploy` 트리 해시 불변. `go`(`be301b9`→`684b840`)·`web`(`2307e46`→`b4864ad`)만 변경.\n- go: `/api/trace`·`/api/contributions`·`/api/reprocess` 가 요청마다 레이크(Silver analysis·Bronze news_item)를 훑던 것을 #248 의 SQLite 서빙 인덱스 조회로 바꿨다(`handlers/index_rows.go` 신설, `reprocess.go` SQL 집계화, `contributions.go` 마지막 관측 규칙의 SQL 이식, `servingindex` `SchemaVersion` 1→2: `body_share` 테이블·`news_item(axis, collected_at)` 인덱스·`records` 메타). 스캔 게이트 `oneScanAtATime`/`lakeScan` 제거. 응답 스키마(`web/src/api/types.ts`) 무변경.\n- web: `api/indexState.ts`·`screens/IndexNotReady.tsx` 신설(Debug.tsx 에 있던 것을 공통화). 추적·재처리·공정성(기여 기사) 화면도 `503 index_not_ready` 를 「인덱스 준비 중: 원문·분석 기록 인덱스가 아직 만들어지지 않았습니다 — 배치 파이프라인이 다음 실행을 마치면 열립니다.」로 보인다. 디버그 화면의 옛 문구 「판단 기록 인덱스가…」는 이 공통 문구로 바뀜(web·docs 0히트).\n- 검증 근거: PR 본문 — prod 레이크에서 옛/새 핸들러 13요청 바이트 비교 12/12 동일(13번째는 스키마 v2 로 인한 예상 차이), 합성 레이크 약 10만 쌍 차등 대조 후 결함 수정·재비교. `e28d896` check-run build·publish(serving/batch)·deploy·pin·report 전부 success.",
+      "toBe": "**to-be (docs/, `ad0630d`→`9e49c16`, 관측 2026-10-11T12:41:54Z)** — 같은 #252 커밋.\n- `docs/econ-opinion-monitor-design-tracker.md` 4행 갱신: `:1067`(fairness 상태·결측 문구 8→9종), `:1090`(trace 상태 문구 2→3종), `:1117`(reprocess 상태 문구 2→3종), `:1129`(debug 인덱스 준비 중 문구 교체). 네 행 모두 web 의 새 문구와 리터럴 일치.\n- `docs/comment-policy/ledger.md` 11+/7- (주석 원장 메타 — 자매 comment-necessity 몫).\n- PRD·AC·테스트 문서·여정·목업·values 무변경.",
+      "gap": "**유의미한 차이 없음.** #252 는 #248 과 같은 서빙 성능 변경을 추적·기여·재처리 API 로 넓힌 것이다. 응답이 옛 구현과 바이트 단위로 같고(prod 12/12, CI·deploy success), 유일한 사용자 대면 변화인 「인덱스 준비 중」 문면 3화면 추가·디버그 문구 교체는 같은 PR 이 design-tracker 4행에 리터럴 일치로 등재해 기준 4를 스스로 충족했다. 기준 1~6 어디에도 새 격차가 생기거나 닫히지 않았다.",
+      "summarizedAt": "2026-10-11T12:41:54Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창은 #252 한 커밋이다(사람 세션, 「추적·기여·재처리 화면도 서빙 인덱스로」).\n\n**A. 기준 1·3·5·6 — 새 격차 없음.** `contracts`·`python`·`deploy` 무접촉. docs 변화는 design-tracker 4행(구현 문면을 문서에 맞춰 적음)과 주석 원장뿐이라 새 AC·여정 의무가 생기거나 닫히지 않았고, 구현과 모순되는 서술도 없다.\n**B. 기준 2 — 구현 동작↔문서 일치 유지.** 세 라우트의 응답이 옛 구현과 같다(PR: prod 레이크 같은 시각 고정 바이트 비교 12/12 동일, 합성 레이크 약 10만 쌍 차등 대조 결함 수정 후 재비교, 기존 trace·contributions·reprocess Go 테스트를 진짜 빌더 인덱스로 그대로 통과; `e28d896` build·publish·deploy check-run success). 응답 타입 `web/src/api/types.ts` 무변경. 마지막 관측 규칙·버킷 판정(`bucketLabel` 을 SQL 함수로 등록)·서빙 버전 선택(`selectServing`)은 같은 로직이다. 레이크가 여전히 원천이고 인덱스는 매 워크플로 끝에 다시 발행되는 파생물이라, rct_20261011-0002(#248) 의 AC4.x 판단이 그대로 유지된다.\n**C. 기준 4 — 미문서화 구현 없음.** 새 문면 「인덱스 준비 중: 원문·분석 기록 인덱스가 아직 만들어지지 않았습니다 — …」은 design-tracker `:1067`(fairness)·`:1090`(trace)·`:1117`(reprocess)·`:1129`(debug) 에 리터럴 일치로 등재됐다(`git grep` 4히트). 디버그 옛 문구 「판단 기록 인덱스」는 docs·web 0히트.\n**D. 비고.** 스키마 v1→v2 배포 직후 다음 `index` 단계까지 다섯 화면(재처리의 실행·반영·되돌리기 패널 포함)이 「준비 중」인 것은 PR·README 가 명시한 배포 과도기이고 문서화된 상태다. 망가진 JSONL 한 줄이 빌드를 실패시키는 것(화면은 마지막 성공 인덱스 유지)·`confidence: -0`→`0` 표기는 AC·여정이 규정하지 않는 운영 특성이다. 새 Go 주석 판정은 `tbm_econ-opinion-monitor-comment-necessity`, MA6(`go/internal/servingindex/**`) 지문 변화는 `tbm_econ-opinion-monitor-pr-manual-approval` 의 몫이다.",
+      "assessedAt": "2026-10-11T12:41:54Z"
+    }
+  },
+  {
+    "id": "rct_20261011-0005",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-11T13:04:06Z",
+      "asIs": {
+        "currentVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:a8c6b6984da59f5f1c606425073ad9b56a55220a web:9af5facfa3386e8eadfa4e3115367be51ce4ef32 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:684b840b08b3e6f99b9a87112f893060940c5d7b web:b4864ad6ddad85df951a198ed2a4d71b048c9817 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2"
+      },
+      "toBe": {
+        "currentVersion": "ca38639a6a312996106454bacd7d2547d0d72837",
+        "previousVersion": "9e49c1608a31e82fd0981f2c8082078d4e6a46aa"
+      }
+    },
+    "createdAt": "2026-10-11T13:04:06Z",
+    "updatedAt": "2026-10-11T13:04:06Z",
+    "stateSummary": {
+      "asIs": "**as-is (구현, main `2928f5c` = #253, 관측 2026-10-11T13:04:30Z)**: 이전 관측 `e28d896`(#252) 이후 1커밋이다.\n- `contracts`·`python`·`deploy` 트리 해시는 그대로다. `go`(`684b840`→`a8c6b69`)와 `web`(`b4864ad`→`9af5fac`)만 바뀌었다.\n- 변경은 전부 **주석 삭제·개작**이다. go `handlers/{contributions,handlers,index,index_rows,reprocess}.go`와 web `api/indexState.ts`에서 주석 줄만 지웠거나 다시 썼다(`git diff e28d896 2928f5c -- go web`에서 `//`·빈 줄이 아닌 +/- 줄은 0이다). 코드·응답 스키마·UI 문면은 무변경이다.\n- 근거: rct_20261011-0004(comment-necessity)의 #252 증분 판정을 무인으로 적용한 52줄 슬라이스다. `2928f5c`의 check-run build·publish(serving/batch)·deploy·pin·report-build-status 6건이 모두 success다.",
+      "toBe": "**to-be (docs/, `9e49c16`→`ca38639`, 관측 2026-10-11T13:04:30Z)**: #253과 같은 커밋이다.\n- `docs/comment-policy/ledger.md`(14줄)에서 #252 행들을 「미판정」에서 「완료」로 올렸다.\n- `docs/comment-policy/passes/2026-10-11-serving-index-screens-increment-pass.md`를 신설했다(99줄, 주석 판정 기록).\n- PRD·AC·테스트 문서·여정·목업·values·design-tracker·doc-tracker는 무변경이다.",
+      "gap": "**유의미한 차이 없음.** #253은 주석 필요성 판정을 적용한 커밋이다. 구현 쪽은 주석만 지웠거나 다시 썼고(비주석 변경 0줄, CI·deploy success), 문서 쪽은 주석 원장과 판정 기록만 바뀌었다. 기준 1~6 어디에서도 동작·계약·UI·AC·여정 의무가 생기거나 닫히지 않았다. 직전 판정(rct_20261011-0004, no_action_needed)이 그대로 유지된다.",
+      "summarizedAt": "2026-10-11T13:04:30Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창은 #253 한 커밋이고, comment-necessity rct_20261011-0004가 실행한 주석 판정 슬라이스다.\n\n**A. 기준 1·2·3·6: 동작 무변경.** go·web diff는 주석 줄의 삭제·개작뿐이다(비주석 +/- 0줄). `contracts`·`python`·`deploy`는 손대지 않았다. `2928f5c` build·publish·deploy check-run이 success라 빌드와 배포도 그대로다. 새로 생기거나 닫힌 AC·여정 의무가 없다.\n**B. 기준 4·5: 미문서화 구현·문서 모순 없음.** 사용자 대면 문면이 바뀌지 않았다. `indexState.ts`에서는 개발자 주석 2줄만 지웠고 `errorText`·`INDEX_NOT_READY` 문면은 그대로다. docs 변경은 주석 원장과 판정 기록(`comment-policy/`)뿐이라 PRD·AC·여정·목업과 충돌할 서술이 없다.\n**C. 비고.** 주석 판정의 정합성은 `tbm_econ-opinion-monitor-comment-necessity`가 맡는다(같은 #253으로 그 모델도 버전이 바뀌어 별도 감지 대상이다). rct_20261011-0004(#252, no_action_needed)의 판단이 그대로 유지된다.",
+      "assessedAt": "2026-10-11T13:04:30Z"
+    }
+  },
+  {
+    "id": "rct_20261011-0006",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "succeeded",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-11T13:48:11Z",
+      "asIs": {
+        "currentVersion": "contracts:c53840a1176d6acfa7bd964ef9d90eb77d1cbe86 python:5c05441fcf0a243b5aa6aed9605e0269bd390840 go:edf34bfb19ad341873bbbe0503613c38af38d60b web:9af5facfa3386e8eadfa4e3115367be51ce4ef32 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2",
+        "previousVersion": "contracts:291e4c67246c70094a346d5d9062293a88e45c1e python:ff6e6ca73c6d72bafa5dce9d90b7383ae01bc1b9 go:a8c6b6984da59f5f1c606425073ad9b56a55220a web:9af5facfa3386e8eadfa4e3115367be51ce4ef32 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2"
+      },
+      "toBe": {
+        "currentVersion": "821d7b2cf436878683363e1a7c464de8b7d98a8d",
+        "previousVersion": "ca38639a6a312996106454bacd7d2547d0d72837"
+      }
+    },
+    "createdAt": "2026-10-11T13:48:11Z",
+    "updatedAt": "2026-10-11T14:07:32Z",
+    "stateSummary": {
+      "asIs": "**as-is** — `dlddu/economic-opinion-trend-monitor@main` `a569932` (#255, 2026-10-11 13:35Z 머지). 관측 13:5xZ.\n- 버전: `contracts:c53840a… python:5c05441… go:edf34bf… web:9af5fac…(불변) deploy:b072897…(불변)`. 기준 커밋 `2928f5c`(#253) 이후 #255 한 커밋.\n- **새 Gold 계약 `contracts/gold/article_pick.avsc`** (`ArticlePick`, 필드 `axis`·`bucket_unit`·`time_bucket`·`record_id`·`source_id`·`collected_at`·`counted_subjects`): (축·단위·버킷)마다 기사별 최신 관측 하나와 그 기사가 세어진 대상 키. 생성물 `go/gen/gold.go`·`econ_core/models/gold.py`가 함께 생겼다. 레코드 doc은 `(AC3.9)`를 인용한다.\n- `econ_aggregation`: `subject_trend`를 만든 picks를 그대로 `article_pick`으로 기록한다. 어떤 대상에도 세어지지 않은 기사는 기록하지 않는다.\n- 서빙 인덱스 스키마 v3에 `article_pick` 테이블이 생겼다. `/api/contributions`는 이제 `article_pick ⨝ news_item ⨝ body_share`를 **읽기만** 한다. Go 쪽 버킷 절단·관측 선택·`bucket_label` SQL 함수는 제거됐다. `article_pick`이 없는 레이크의 인덱스에서는 기여 목록만 `503 index_not_ready`(「인덱스 준비 중」)를 낸다.\n- `web/` 무변경. 화면 문면 「인덱스 준비 중: …」은 design-tracker `:1067`(fairness)에 이미 등재돼 있다.\n- 검증: `a569932` check-run 6종(build·publish batch/serving·deploy·pin·report) success. PR 테스트는 `raw_count == picks × counted_subjects`(python), cross·e2e `total == raw_count` 3축.\n- README에는 article_pick 서술이 추가됐다(README는 docs/ 밖이다).",
+      "toBe": "**to-be** — 같은 레포 `docs/` 트리 `ca38639…` → `821d7b2…`. 이번 창의 docs 변경은 `docs/comment-policy/ledger.md`(#255가 들인 주석 3행 `미판정` 등재)뿐이다.\n- `article_pick`·`ArticlePick`은 `docs/`(comment-policy 제외)에서 **0히트**다. PRD·AC·테스트·여정·목업 인덱스·doc-tracker·design-tracker 어디에도 이 Gold 데이터셋이 없다. 반면 같은 계층의 형제 `subject_source_contribution`은 doc-tracker(슬라이스 12)와 목업 인덱스 `:147`에 「구현 실체」로 등재돼 있다.\n- **최신 tracker `docs/econ-opinion-monitor-doc-tracker/2026-09.md` 「현재 상태 요약」의 슬라이스 11 항목(`:302-320`)** 이 기여 기사 목록의 동작을 현재형으로 기술한다: 「Gold 계약은 건드리지 않았다 — 대상↔기사 대응은 Silver `analysis.narrative_subjects`에, 수집원·수집 시각은 Bronze `news_item`에 … 조인은 집계기의 계산을 **그대로 옮긴 것이다**(`select_serving` → `collected_at` 버킷 절단 → `narrative_subjects` 멤버십)」. 로드맵 표 슬라이스 11 행(`:1025`)도 「Go 서빙(Silver × Bronze) · Gold 계약 무접촉」이다.\n- AC3.9·AC3.10은 2026-09-28 사용자 결정으로 승격이 번복돼 PRD-3에 없다(`### AC3.9` 0히트). 기여 목록은 AC를 소유하지 않는 슬라이스 11이다.\n- 관련 의무: 여정 `JRN-spike-verification` `STP-drilldown-articles`(기여 뉴스 목록으로 내려가기), PRD-3 AC3.2 본문 「집계에서 내려가는 조회(기여 기사 목록·소스별 기여)도 같은 키로 묶는다」.",
+      "gap": "**유의미한 차이 있음(문서 쪽, 기준 4·5).** #255가 기여 기사 목록의 출처를 Go 재계산에서 **새 Gold 계약 `article_pick`**(집계가 쓰고 서빙은 읽기만 함)으로 옮겼다. 그런데 docs에는 이 계약이 0히트이고(기준 4: 문서화되지 않은 계약), 최신 doc-tracker 「현재 상태 요약」 슬라이스 11은 여전히 「Gold 무접촉, Silver×Bronze 조인을 서빙이 계산」이라고 현재형으로 기술한다(기준 5: 구현된 영역을 코드와 모순되게 기술). 사용자 대면 동작(목록 내용·합 등식·준비 중 문면)과 AC·여정 의무는 그대로라서 기준 1·2·6의 새 격차는 없다.",
+      "summarizedAt": "2026-10-11T13:50:18Z"
+    },
+    "assessment": {
+      "reason": "작업 필요(action_required). 이번 창은 #255 한 커밋이다(사람 세션: 「집계가 기여 기사 목록을 Gold article_pick으로 쓰고 서빙은 읽기만 한다」).\n\n**A. 지금 작업이 필요한 격차: 문서 쪽 두 건.**\n1. **기준 4, 문서화되지 않은 계약.** 새 Gold 계약 `contracts/gold/article_pick.avsc`(필드 7개)가 docs(comment-policy 제외)에 0히트다. 형제 Gold 계약 `subject_source_contribution`은 doc-tracker 슬라이스 12와 목업 인덱스 `:147`에 구현 실체로 등재돼 있다. 같은 계층의 새 데이터셋만 빠진 셈이다.\n2. **기준 5, 현재형 서술과 구현의 모순.** 최신 tracker `doc-tracker/2026-09.md` 「현재 상태 요약」 슬라이스 11(`:302-320`)은 「Gold 계약은 건드리지 않았다」와 「조인은 집계기의 계산을 그대로 옮긴 것이다(`select_serving` → 버킷 절단 → 멤버십)」를 현재형으로 기술한다. 지금 구현은 집계가 `article_pick`을 쓰고 서빙은 읽기만 하며, Go 쪽 그 계산은 삭제됐다. 로드맵 표 슬라이스 11 행(`:1025` 「Go 서빙(Silver × Bronze) · Gold 계약 무접촉」)도 같은 축이다. 선례는 2026-09-28 목업 인덱스의 `STP-inspect-sources` 현재형 거짓 주장 정정(기준 5)이다.\n진행 중인 수정은 없다. 열린 PR 4건(#220·#249·#251·#254)과 원격 브랜치 6개 모두 docs에서 `article_pick` 0히트다. 이 모델의 이전 task도 전부 종료 상태다. 문서는 스스로 고쳐지지 않으므로 재확인 유예 대상이 아니다.\n\n**B. 새 격차 없음: 기준 1·2·3(필드 의미)·6.** 사용자 대면 동작은 그대로다. 목록은 여전히 Gold `raw_count`가 센 기사 그대로이고, 이제는 구성상 `total == raw_count`이다(python·cross·e2e 3축 검증, `a569932` check-run 6종 success). `web/` 무변경이다. 과도기 「인덱스 준비 중」 문면은 design-tracker `:1067`에 이미 등재돼 있다. `article_pick`의 필드 의미(최신 관측 선택·버킷·대상 키)는 AC1.5·AC3.2·AC3.3·AC2.6 기술과 모순되지 않는다. AC·여정(`STP-drilldown-articles`) 의무는 생기지도 닫히지도 않았다.\n\n**C. planner 참고.**\n- 충돌 시 기본 방향에 따르면 이번 건은 「의도된 구현 변경」이다. 고칠 쪽은 **문서**(doc-tracker 현재 상태 요약 슬라이스 11 문단, 필요하면 로드맵 표 슬라이스 11 행 주석 또는 목업 인덱스 `fairness` 귀속 문단에 `article_pick` 구현 실체 등재)이고 코드가 아니다. 월별 tracker 규약상 2026-10 파일이 아직 없으니, 이월 여부는 planner가 판단한다.\n- 덤으로 확인한 것: `article_pick.avsc` 레코드 doc은 번복된 `AC3.9`를 인용한다(기여 목록은 옛 AC3.10 쪽이었다). 이는 2026-09-28 source-dimension-unpromote-pass가 「틀린 주석, 별도 변경」으로 남겨 둔 계약 doc 인용 축의 새 인스턴스다. `contracts/` 수정은 사람 승인(MA1)을 부르므로 이번 범위에 넣을지는 planner가 정한다.\n- 배포 직후 `article_pick`이 없는 레이크에서는 기여 목록이 다음 aggregate 전까지 「인덱스 준비 중」이다. 이는 PR이 명시한 운영 과도기이고 docs-impl 격차가 아니다.\n- 새 Go·Python 주석 판정은 `tbm_econ-opinion-monitor-comment-necessity` 몫이다(같은 #255로 그 모델도 버전이 바뀌어 별도 감지 대상이다). MA1·MA2·MA3·MA6 지문 변화는 `tbm_econ-opinion-monitor-pr-manual-approval` 몫이다.",
+      "assessedAt": "2026-10-11T13:50:47Z"
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#255 가 기여 기사 목록(슬라이스 11)의 출처를 Go 재계산에서 새 Gold 계약 `article_pick` 으로 옮겼는데 docs 는 그 계약을 0회 적고(기준 4) doc-tracker 두 자리가 「Gold 계약 무접촉 · 서빙이 조인을 계산」을 현재형으로 말한다(기준 5) — 의도된 구현 변경이므로 문서를 구현에 맞춘다. 접근: `docs/econ-opinion-monitor-doc-tracker/2026-09.md` 한 파일만 편집(현재 상태 요약 슬라이스 11 항목 · 로드맵 표 슬라이스 11 행에 현재 사실 + 옛 문면 「」 보존 + task id, 변경 이력 행 1건 추가 — 2026-10-01 행 선례대로 2026-10 월 파일은 만들지 않는다: `check_scenario_mapping.py` 가 월 폴더의 마지막 파일을 TRACKER 로 고르므로 새 파일은 그 게이트를 깬다). docs 단독이라 `format_changed=false` ⇒ 무인 착지, `git revert` 로 되돌린다. **완료 기준**: oracle.py(지침 전재) — 변경 이력 절 밖 앵커 3종(`Gold 계약은 건드리지 않았다`·`그대로 옮긴 것`·`Gold 계약 무접촉`)의 「」 span 밖 건수 3→0 · 안 1→4 · 이력 절 밖 `article_pick` 0→6, 게이트 5종 출력 md5 base 와 동일, 변경 파일 1개. **범위 밖**: `contracts/gold/article_pick.avsc` doc 의 번복된 AC 코드 인용(contracts 접촉 = 사람 승인 MA1, 2026-09-28 번복 행이 명시 제외) · 목업 인덱스 `fairness` 귀속 문단 구현 실체 등재(`docs/mockups` = 자매 모델 지문) · #255 코드 주석 판정(comment-necessity) · 이력 표 과거 행.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #N(브랜치 reconcile/rct_20261011-0006-article-pick-docs) 의 변경 파일이 `docs/econ-opinion-monitor-doc-tracker/2026-09.md` 1개뿐이고 base 가 main 과 충돌 없는지 확인(`gh pr view --json files,mergeable,mergeStateStatus`)",
+              "expectedOutcome": "files=1, mergeable=MERGEABLE"
+            },
+            {
+              "seq": 2,
+              "action": "PR head 를 로컬로 받아 kit 의 oracle.py 를 base(PR 의 merge-base)와 head 에서 각각 실행",
+              "expectedOutcome": "base rc=1(outside=3 inside=1 article_pick=0) · head rc=0(outside=0 inside=4 article_pick=6)"
+            },
+            {
+              "seq": 3,
+              "action": "`python3 scripts/check-data-format-change.py <base> <head>` 로 사람 게이트 여부 확인",
+              "expectedOutcome": "format_changed=false"
+            },
+            {
+              "seq": 4,
+              "action": "필수 status(`required`·`review/manual-approval`)가 head 에 success 인지 확인 후 squash merge",
+              "expectedOutcome": "PR MERGED, main 에 커밋 1개 착지"
+            },
+            {
+              "seq": 5,
+              "action": "main 착지 커밋에서 oracle.py 재실행 + 게이트 5종 rc 확인",
+              "expectedOutcome": "oracle PASS · 게이트 5종 rc=0"
+            }
+          ],
+          "plannedAt": "2026-10-11T13:57:50Z",
+          "executionGuide": "# 실행 지침 — rct_20261011-0006 (econ docs-impl · #255 Gold `article_pick` 문서 따라잡기)\n\n**PR**: dlddu/economic-opinion-trend-monitor#256 · head `a90e3e76` · base main `a569932` · 1파일(`docs/econ-opinion-monitor-doc-tracker/2026-09.md`, +18 −10) · 위험도 low(문서 단독, `git revert` 로 원복).\n\n## 순서 (직렬 — 앞 단계가 실패하면 멈출 것)\n1. **PR 상태 확인**: `gh pr view 256 --json state,files,mergeable,mergeStateStatus,headRefOid`\n   - 기대값: OPEN · files 정확히 1개(위 경로) · mergeable=MERGEABLE · head=`a90e3e76…`.\n   - main 이 움직여서 `BEHIND` 이면 **리베이스하지 말 것**. `git merge-tree --write-tree --merge-base=$(git merge-base origin/main <head>) origin/main <head>` 결과가 clean 이면 그대로 진행한다. 커밋을 얹으면 head sha 에 묶인 status 가 사라진다.\n   - 충돌(CONFLICT)이면 대부분 자매가 같은 파일 끝(변경 이력 표의 마지막 행 뒤)에 행을 먼저 착지시킨 경우다. 실행 중에 직접 풀지 말고 `failed`(재준비)로 닫을 것. 재준비하는 쪽은 앵커 스크립트를 새 main 위에서 다시 실행하고, 내 행을 **자매 행 뒤에** 넣는다.\n2. **오라클 실측**: PR head 와 base 양쪽에서 아래 스크립트를 실행한다. 결과가 rc 하나만으로 판정되지 않도록, 출력의 세 수를 함께 기록할 것.\n   - base(`a569932` 또는 merge-base): rc=1, `outside=3 inside=1 article_pick(이력 밖)=0`\n   - head: rc=0, `outside=0 inside=4 article_pick(이력 밖)=6`\n   - 실행법: `python3 oracle.py <repo> <rev>` (rev 를 주면 `git show` 로 읽는다. working tree 를 대상으로 한 프로브는 rev 경로에 닿지 않는다.)\n3. **사람 게이트 여부**: `python3 scripts/check-data-format-change.py <base-sha> <head-sha>` (**위치 인자**) → `format_changed=false`. 따라서 `review/manual-approval` 은 자동으로 success 가 붙는다.\n4. **필수 status**: head 에 `required` 와 `review/manual-approval` 이 모두 success 인지 확인한다(`gh pr checks 256`). `ci / build` 와 `e2e` 는 docs 단독 PR 이라 SKIPPED 가 정상이다. `image / publish` 는 실행돼서 success 여야 한다.\n   - `required` 가 빨강이고 실패 잡의 `steps` 가 `[]`(1~3초 만에 끝남)이면 Actions 과금 차단이다. 계획 결함이 아니므로 PR 에 코멘트만 남기고 `failed` 로 처리할 것.\n5. **squash merge**: `gh pr merge 256 --squash` (App 토큰). 머지 직후 main 에서 오라클 rc=0 을 확인하고, 게이트 5종 rc=0 을 재확인한다.\n\n## 완료 기준 (이 범위로만 판정)\n- main 착지 커밋에서 오라클 **PASS**(outside=0 · inside=4 · article_pick(이력 밖)≥2. 실측값은 6).\n- 게이트 5종 전건 rc=0. 출력 md5 는 base 와 동일해야 한다: `check-mockup-render` `9fdfb8655f20` · `check-journey-mockup` `52cba1ac0696` · `check-comment-ledger` `f708b116b4df` · `check_scenario_mapping` `ce4fe660b1d4` · `check-journey-flow.js` `6b4ce7b6a71e`. 출력 md5 는 `printf '%s' \"$out\" | md5sum | cut -c1-12` 로 잰다. 자매 PR 이 먼저 착지해 md5 가 달라졌다면 rc=0 과 시나리오 벡터 불변으로 판정한다.\n- `check-journey-flow.js` 는 jsdom 이 필요하다. 레포 **밖** 디렉터리에 `npm install --no-save jsdom@29` 로 설치하고 `NODE_PATH` 로 넘길 것. 루트에 `npm install` 하면 `node_modules` 가 커밋에 실린다.\n- 시나리오 벡터 불변: 전집 24 · 예외 1 · 구현 대기 0 · 1:1 대상 23 · 매칭 23 · 공백 0.\n- ⚠️ **CI 초록은 수렴 근거가 아니다.** 현재형 거짓 주장 축을 강제하는 게이트는 없다(2026-09-28 양성 프로브 선례). 수렴 근거는 오라클 등식이다.\n\n## 주의사항\n- **`docs/econ-opinion-monitor-doc-tracker/2026-10.md` 를 만들지 말 것.** `check_scenario_mapping.py` 는 `sorted(...)[-1]` 로 TRACKER 를 고른다. 새 파일을 만들면 「집계 (실측)」 절이 없는 파일을 읽게 되어 필수 게이트가 깨진다. 10월 행은 2026-10-01 선례대로 2026-09.md 에 쓴다.\n- `AC3.9`·`AC3.10` 토큰을 새 문면에 넣지 말 것. 2026-09-28 번복 행이 그 인용을 범위 밖으로 보냈다.\n- 롤백: 머지 뒤 문제가 생기면 `git revert <squash-sha>` 로 되돌린다. 문서 단독이라 배포·데이터에는 영향이 없다. `image / publish` 는 돌지만, 코드 무변경이라 이미지 내용은 같다.\n\n## 범위 밖 (후속 — 재감지가 잇는다)\n- `contracts/gold/article_pick.avsc` 레코드 doc 이 번복된 AC 코드를 인용하는 축. `contracts/**` 를 건드리면 사람 승인(MA1)이 필요하다. 이 계약 doc 인용 축은 2026-09-28 source-dimension-unpromote-pass 가 「틀린 주석, 별도 변경」으로 남긴 것의 새 인스턴스다.\n- 목업 인덱스(`docs/mockups/econ-opinion-monitor-mockup-index.md`) `fairness` 귀속 문단에 `STP-drilldown-articles` 구현 실체(`article_pick`)를 등재하는 일. `docs/mockups` 는 자매 `mockup-render`·`journey-mockup` 의 지문이라 그쪽이 맡는다.\n- #255 가 들인 Go·Python 주석의 판정은 `tbm_econ-opinion-monitor-comment-necessity` 몫이다. MA 지문 변화는 `pr-manual-approval` 몫이다.\n- 변경 이력 표의 과거 행(2026-09-27 슬라이스 11 착지 행 등)은 그 날짜에 참이었던 기록이므로 손대지 않는다.\n\n## 오라클 전문 (`oracle.py`)\n```python\n#!/usr/bin/env python3\n\"\"\"rct_20261011-0006 완료 기준 오라클. 사용: oracle.py <repo root> [git-rev]  (rev 주면 git show 로 읽는다)\n판정: ⑴ 변경 이력 절 밖에서 「Gold 무접촉」 현재형 앵커가 「」 인용 span 밖에 0건 ⑵ 변경 이력 절 밖 `article_pick` ≥ 2.\"\"\"\nimport re, sys, subprocess, pathlib\nroot = sys.argv[1]; rev = sys.argv[2] if len(sys.argv) > 2 else None\nP = \"docs/econ-opinion-monitor-doc-tracker/2026-09.md\"\ns = subprocess.run([\"git\", \"-C\", root, \"show\", f\"{rev}:{P}\"], capture_output=True, text=True, check=True).stdout if rev \\\n    else pathlib.Path(root, P).read_text()\nbody = s.split(\"\\n## 이번 달 변경 이력\")[0]\ndef spans(t):  # 중첩 「」 를 깊이로 추적\n    out, d, st = [], 0, 0\n    for i, c in enumerate(t):\n        if c == \"「\":\n            if d == 0: st = i\n            d += 1\n        elif c == \"」\" and d:\n            d -= 1\n            if d == 0: out.append((st, i))\n    return out\nsp = spans(body)\nANCH = [\"Gold 계약은 건드리지 않았다\", \"그대로 옮긴 것\", \"Gold 계약 무접촉\"]\noutside = inside = 0\nfor a in ANCH:\n    for m in re.finditer(re.escape(a), body):\n        if any(x < m.start() < y for x, y in sp): inside += 1\n        else: outside += 1; print(f\"  현재형 {a!r} @ line {body[:m.start()].count(chr(10))+1}\")\nap = body.count(\"article_pick\")\n# docs 전체(주석 원장·이 파일 제외)의 article_pick — 정보용\nprint(f\"outside={outside} inside={inside} article_pick(이력 밖)={ap}\")\nok = outside == 0 and ap >= 2\nprint(\"PASS\" if ok else \"FAIL\"); sys.exit(0 if ok else 1)\n```\n"
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261011-0006-article-pick-docs",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/256",
+          "preparedAt": "2026-10-11T13:57:05Z",
+          "notes": "PR명의: app/dlddu-k3s-homelab-k3s-mcp (App 토큰). head a90e3e76 · base main a569932 · 변경 1파일 +18 −10 (docs/econ-opinion-monitor-doc-tracker/2026-09.md). format_changed=false ⇒ 무인. 로컬 게이트 5종 rc=0, 출력 md5 base 동일. 오라클 base rc=1(3/1/0) → head rc=0(0/4/6). 열린 PR: #220(사람, 09-29 DIRTY)은 이미 main 과 같은 파일 끝에서 충돌 — 귀속은 #220 의 뒤처짐; #251·#254 충돌은 ledger.md 로 무관; #249 clean. 재생 키트: 편집은 앵커 count==1 스크립트로 만들었다(지침의 oracle 전재)."
+        },
+        "review": {
+          "status": "approved",
+          "reviewedAt": "2026-10-11T14:03:54Z",
+          "reason": "문서 단독(doc-tracker 2026-09.md 1파일 +18 −10) 저위험 변경. PR #256 OPEN · head a90e3e76 · base=현재 main tip a569932 · mergeStateStatus CLEAN · 필수 `required`·`review/manual-approval` 둘 다 success(판정기: 수동 승인 케이스 미해당) · format_changed=false라 manualApproval 불필요. 정합성: 지침의 oracle을 직접 돌려 base rc=1(outside=3 inside=1 article_pick=0) → head rc=0(0/4/6)으로 기준 4·5가 닫히는 것을 실측했고, 새 문면이 인용한 구현 실체(`build_article_picks_all_units`·`pickedArticles`·schema.sql `article_pick` 테이블·`index_not_ready` 503·avsc 필드 7개·README 서빙 인덱스 절)가 a569932에 전부 실재한다. 열린 자매 #257(comment-necessity)은 파일 교집합이 0이고 인용 심볼을 개명하지 않는다(주석만 바꿈). 같은 파일을 건드리는 #220은 09-29부터 DIRTY인 사람 PR이라 이번 착지를 막지 않는다. 롤백은 squash 커밋 `git revert`로 가능하며 데이터·배포 영향이 없다."
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-10-11T14:05:16Z",
+          "finishedAt": "2026-10-11T14:06:55Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-10-11T14:05:16Z",
+              "finishedAt": "2026-10-11T14:05:20Z",
+              "log": "gh pr view 256: OPEN · files=1 (docs/econ-opinion-monitor-doc-tracker/2026-09.md) · mergeable=MERGEABLE · mergeStateStatus=CLEAN · head=a90e3e7623858dccbaf5555c252553cb7660e934 · base=a569932afc60 == origin/main tip (merge-base 동일, BEHIND 아님)"
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-10-11T14:05:25Z",
+              "finishedAt": "2026-10-11T14:05:35Z",
+              "log": "oracle.py(지침 펜스 블록 추출) base a569932: rc=1 outside=3 inside=1 article_pick(이력 밖)=0 FAIL (현재형 앵커 line 306·309·1025) · head a90e3e76: rc=0 outside=0 inside=4 article_pick(이력 밖)=6 PASS — 지침 기대값과 정확히 일치"
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-10-11T14:05:35Z",
+              "finishedAt": "2026-10-11T14:05:36Z",
+              "log": "python3 scripts/check-data-format-change.py a569932 a90e3e76 → format_changed=false rc=0"
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-10-11T14:05:49Z",
+              "finishedAt": "2026-10-11T14:05:53Z",
+              "log": "head a90e3e76 combined status=success: review/manual-approval success(사람 리뷰 불필요), required pass, image/publish(batch·serving) pass, ci/build·ci/e2e skipping(docs 단독 정상). 머지 직전 head·CLEAN 재확인 후 PUT pulls/256/merge squash sha=a90e3e76(App 토큰, commit_title 미지정) → merged=true, squash a006f0899336d20fcbb3a1b161873fdc31ffca5a (부모 a569932, main 커밋 1개 착지)"
+            },
+            {
+              "stepSeq": 5,
+              "status": "succeeded",
+              "startedAt": "2026-10-11T14:06:00Z",
+              "finishedAt": "2026-10-11T14:06:55Z",
+              "log": "main a006f08: oracle rc=0 outside=0 inside=4 article_pick(이력 밖)=6 PASS · 게이트 5종 rc=0, 출력 md5(printf '%s' | md5sum | cut -c1-12) base a569932 와 main a006f08 양쪽 동일: check-mockup-render 9fdfb8655f20 · check-journey-mockup 52cba1ac0696 · check-comment-ledger f708b116b4df · check_scenario_mapping ce4fe660b1d4 · check-journey-flow.js 6b4ce7b6a71e (jsdom@29 는 레포 밖 job tmp 에 설치, NODE_PATH)"
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "contracts:c53840a1176d6acfa7bd964ef9d90eb77d1cbe86 python:5c05441fcf0a243b5aa6aed9605e0269bd390840 go:edf34bfb19ad341873bbbe0503613c38af38d60b web:9af5facfa3386e8eadfa4e3115367be51ce4ef32 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2",
+          "verifiedAt": "2026-10-11T14:07:32Z",
+          "checks": [
+            {
+              "name": "oracle (완료 기준 등식) @ main a006f08",
+              "status": "passed",
+              "detail": "rc=0 outside=0 inside=4 article_pick(이력 밖)=6 PASS. base a569932 는 rc=1 outside=3 inside=1 article_pick=0 — 양방향 프로브로 계측기 생존 확인"
+            },
+            {
+              "name": "게이트 5종 rc=0 · 출력 md5 base 동일",
+              "status": "passed",
+              "detail": "base a569932 / main a006f08 모두 rc=0, md5 지침 값과 전건 일치: 9fdfb8655f20 · 52cba1ac0696 · f708b116b4df · ce4fe660b1d4 · 6b4ce7b6a71e"
+            },
+            {
+              "name": "시나리오 벡터 불변",
+              "status": "passed",
+              "detail": "check_scenario_mapping @ a006f08: 전집 24 · 예외 1 · 구현 대기 0 · 1:1 대상 23 · 매칭 23 · 공백 0"
+            },
+            {
+              "name": "변경 파일 1개 · 2026-10.md 미생성",
+              "status": "passed",
+              "detail": "git diff --name-only a569932 a006f08 = docs/econ-opinion-monitor-doc-tracker/2026-09.md 1개; doc-tracker 폴더 최신 월 파일은 2026-09.md 그대로"
+            },
+            {
+              "name": "format_changed=false (무인 착지 조건)",
+              "status": "passed",
+              "detail": "check-data-format-change.py a569932 a90e3e76 → format_changed=false; review/manual-approval 자동 success"
+            },
+            {
+              "name": "as-is 재계산 (기록용)",
+              "status": "passed",
+              "detail": "as-is 5개 트리 해시 불변(docs 단독 변경, lastObservedVersion 과 동일). to-be docs 트리 821d7b2c → 6fb849bb 로 이동 — 다음 감지 주기 트리거. 잔여(범위 밖, 정보성): contracts/gold/article_pick.avsc doc 의 번복 AC 인용(MA1), 목업 인덱스 fairness 문단 article_pick 등재(mockup 자매 몫), #255 주석 판정(comment-necessity 몫)"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "rct_20261011-0007",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-11T14:08:57Z",
+      "toBe": {
+        "currentVersion": "6fb849bb86ba49a8b2ba6fdbe608749458765fce",
+        "previousVersion": "821d7b2cf436878683363e1a7c464de8b7d98a8d"
+      }
+    },
+    "createdAt": "2026-10-11T14:08:57Z",
+    "updatedAt": "2026-10-11T14:08:57Z",
+    "stateSummary": {
+      "asIs": "**as-is** — `dlddu/economic-opinion-trend-monitor@main` `a006f08`(2026-10-11 14:05Z), 관측 14:10Z. 버전 `contracts:c53840a… python:5c05441… go:edf34bf… web:9af5fac… deploy:b072897…` — **이전 관측(rct_20261011-0006 currentVersion)과 동일, 불변**. 이번 창의 유일한 커밋 #256 은 docs 단독이다.\n- 구현 실체(재확인): `contracts/gold/article_pick.avsc`(`ArticlePick`) · `python/packages/aggregation/src/econ_aggregation/aggregate.py:271` `def build_article_picks_all_units` · `go/internal/servingindex/schema.sql`(article_pick 2히트) · `go/internal/handlers/contributions.go:126` `func pickedArticles` — 모두 tip 에 존재.",
+      "toBe": "**to-be** — `docs/` 트리 `821d7b2…` → `6fb849b…`. 창 안 커밋은 `a006f08`(#256, rct_20261011-0006 의 실행 슬라이스) 하나, 변경 파일 `docs/econ-opinion-monitor-doc-tracker/2026-09.md` 1개(+18 −10). 월 폴더 최신 파일은 여전히 `2026-09.md`(2026-10.md 미생성 — 계획대로).\n- 「현재 상태 요약」 슬라이스 11 항목(`:303-322`): 목록 출처를 「2026-10-11 #255 부터 Gold `article_pick`」으로 현재형 기술(계약 필드 7개 · 집계 함수 · 인덱스 테이블 · 읽기 전용 핸들러 · 과도기 503 `index_not_ready`). 옛 문면은 `「」` 인용 + 낡은 경위 + task id 로 보존.\n- 로드맵 표 슬라이스 11 행(`:1032`): 「Gold `article_pick`(집계가 쓰고 서빙은 읽기만 한다)」으로 정정, 옛 「Gold 계약 무접촉」은 인용 보존.\n- 변경 이력 2026-10-11 행(`:1170`) 1건 추가.\n- docs(comment-policy 제외) `article_pick` 히트 0 → 6. `Gold 계약은 건드리지 않았다`·`그대로 옮긴 것`·`Gold 계약 무접촉` 이 「」 밖 현재형으로 남은 곳 0(`:1082` 「Gold 계약 무접촉 예고는 실측으로 지켜졌고」는 「2026-09-27:」 날짜가 붙은 과거 시점 서술로, 당시 사실).",
+      "gap": "**유의미한 차이 없음.** 이번 to-be 변화는 rct_20261011-0006 이 계획한 문서 따라잡기(#256) 그 자체이며, 0006 이 지목한 두 격차(기준 4: `article_pick` 계약 문서 0히트 / 기준 5: 슬라이스 11 「Gold 무접촉 · 서빙이 조인 계산」 현재형 서술)가 모두 닫혔다. 새 문면이 인용한 코드 심볼은 tip 에 전부 실재해 새 모순이 없고, as-is 는 불변이며 AC·여정 의무의 추가·삭제도 없다.",
+      "summarizedAt": "2026-10-11T14:09:43Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 근거:\n1. **트리거 = 직전 task 의 슬라이스 착지.** to-be `821d7b2→6fb849b` 는 `a006f08`(#256, rct_20261011-0006 실행 PR) 한 커밋이고 docs 1파일(doc-tracker 2026-09.md)만 바꿨다. as-is 버전은 0006 관측과 동일(불변).\n2. **0006 gap 수렴 확인.** 기준 4: docs(comment-policy 제외) `article_pick` 0→6히트(현재 상태 요약 슬라이스 11 · 로드맵 행 · 이력 행). 기준 5: 앵커 3종(「Gold 계약은 건드리지 않았다」·「그대로 옮긴 것」·「Gold 계약 무접촉」)의 「」 밖 현재형 잔존 0. `:1082` 는 「2026-09-27:」 날짜가 붙은 과거 시점 서술이라 모순 아님.\n3. **새 문면이 새 격차를 만들지 않았다.** 인용한 구현 심볼 `contracts/gold/article_pick.avsc`(ArticlePick) · `aggregate.py:271 build_article_picks_all_units` · `servingindex/schema.sql` article_pick · `contributions.go:126 pickedArticles` 가 tip 에 전부 존재. 새 AC·여정 단계·시나리오 신설 없음(기준 1·2·6 불변). `a006f08` check-run build·deploy·report-build-status success.\n4. **잔여(이 모델 범위 밖, 0006 계획이 명시 제외)**: `article_pick.avsc` doc 의 번복된 AC 코드 인용(contracts 접촉 = 사람 승인) · 목업 인덱스 `fairness` 귀속 문단(자매 모델 지문) · #255 주석 판정은 자매 comment-necessity 가 열린 PR #257(`reconcile/rct_20261011-0006-article-pick-increment`)로 진행 중.",
+      "assessedAt": "2026-10-11T14:09:43Z"
+    }
+  },
+  {
+    "id": "rct_20261011-0008",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-11T14:12:57Z",
+      "asIs": {
+        "currentVersion": "contracts:c53840a1176d6acfa7bd964ef9d90eb77d1cbe86 python:659cb117d9d379511fe99f10b315c7e1b3676bc6 go:a0994c9843f8331e1b8aed522abac2b238bb1b57 web:9af5facfa3386e8eadfa4e3115367be51ce4ef32 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2",
+        "previousVersion": "contracts:c53840a1176d6acfa7bd964ef9d90eb77d1cbe86 python:5c05441fcf0a243b5aa6aed9605e0269bd390840 go:edf34bfb19ad341873bbbe0503613c38af38d60b web:9af5facfa3386e8eadfa4e3115367be51ce4ef32 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2"
+      },
+      "toBe": {
+        "currentVersion": "c31279a528bdf9935df37cb85aded6a94ebef08a",
+        "previousVersion": "6fb849bb86ba49a8b2ba6fdbe608749458765fce"
+      }
+    },
+    "createdAt": "2026-10-11T14:12:57Z",
+    "updatedAt": "2026-10-11T14:12:57Z",
+    "stateSummary": {
+      "asIs": "**구현 (as-is) @ `2a5975a` (main tip, 관측 2026-10-11T14:13:54Z)**\n- 버전: `python 5c05441→659cb11`, `go edf34bf→a0994c9`. contracts·web·deploy 는 그대로다.\n- 창 `a006f08..2a5975a` 는 커밋 1개다: #257 `docs(comment-policy): #255 증분 주석 필요성 판정 31줄`. 자매 모델 `tbm_econ-opinion-monitor-comment-necessity` 의 rct_20261011-0006 실행 PR 이다.\n- 코드 변경 3파일은 모두 주석만 바꿨다.\n  - `go/internal/handlers/contributions.go`: `//` 주석 5줄을 지우고 1줄을 고쳐 썼다(-7/+1). 코드 줄 변화는 0이다.\n  - `python/packages/aggregation/src/econ_aggregation/aggregate.py`: `ArticlePicks`·`article_picks` docstring 3줄을 지웠다.\n  - `python/packages/aggregation/tests/test_article_picks.py`: 모듈 docstring 첫 줄 「AC3.9 — …」을 지웠다.\n- 검증: python 두 파일은 docstring 을 뺀 AST 가 baseline 과 같다. Go diff 는 `//` 줄뿐이다. 그래서 동작·계약·UI 는 바뀌지 않았다.\n- `2a5975a` check-run 6종(build·deploy·publish batch/serving·pin deploy images·report-build-status)이 모두 success 다.",
+      "toBe": "**문서 (to-be) @ `2a5975a`**\n- `docs` 트리: `6fb849b→c31279a`.\n- 바뀐 파일은 `docs/comment-policy/ledger.md`(원장 행 갱신)와 신설 `docs/comment-policy/passes/2026-10-11-article-pick-increment-pass.md` 두 개뿐이다. 둘 다 주석 정책 메타 문서다.\n- 제품 문서는 그대로다: 가치·PRD·AC·테스트·여정·목업·디자인 시스템·doc-tracker·design-tracker.\n- 직전 task rct_20261011-0007 이 확인한 doc-tracker 슬라이스 11 서술은 지금도 tip 의 코드와 맞는다. 인용 심볼 `func pickedArticles`(`contributions.go:121`)도 그대로 있다.",
+      "gap": "유의미한 차이는 없다. #257 은 자매 comment-necessity 의 주석 판정 슬라이스다. 코드는 주석·docstring 만 바뀌었고(AST 동치), docs 는 `comment-policy/` 메타 문서만 바뀌었다. 기준 1~6 어느 쪽에도 새 격차가 없다. 오히려 지운 줄 가운데 번복된 AC 번호 「AC3.9」를 인용하던 테스트 docstring 1줄이 있어서, 잔여 참조가 하나 줄었다.",
+      "summarizedAt": "2026-10-11T14:13:54Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 근거는 다음과 같다.\n1. **트리거는 자매 모델 슬라이스의 착지다.** as-is(python·go)와 to-be(docs)가 함께 바뀐 창은 `a006f08..2a5975a` 의 커밋 하나(#257)다. 이 커밋은 `tbm_econ-opinion-monitor-comment-necessity` rct_20261011-0006(succeeded)의 주석 판정 슬라이스로, #255 증분 31줄을 판정하고 그중 무인 28줄을 적용했다.\n2. **구현 동작은 그대로다.** python 2파일은 docstring 을 뺀 AST 가 baseline 과 같고, Go `contributions.go` 는 `//` 주석 줄만 바뀌었다. contracts·web·deploy 는 무변경이다. `2a5975a` check-run 6종도 모두 success 다. 그래서 기준 1·2·3·6(AC·여정 의무 충족, 동작·계약 ↔ 문서 일치)에 새 격차가 없다.\n3. **제품 문서도 그대로다.** docs 변경은 `comment-policy/ledger.md` 와 새 pass 문서뿐이다. 둘 다 주석 정책 메타 문서라 이 모델의 SSOT(가치·PRD·AC·테스트·여정·목업·디자인 시스템)가 아니다. 기준 4·5 에도 새 격차가 없다. doc-tracker 슬라이스 11 이 인용하는 `func pickedArticles` 는 tip 에 그대로 있다.\n4. **잔여 사항(이번 변경과 무관하고 이전 task 에서 이미 범위 밖으로 기록됨).** contracts·go/gen·python 의 번복된 AC 코드 「AC3.9」 인용 잔존은 rct_20261011-0007 이 잔여로 적은 그대로다. contracts 를 건드리려면 사람 승인이 필요하다. #257 은 테스트 docstring 의 AC3.9 인용 1줄을 지워 이 잔여를 오히려 줄였다.\n자매 모델 comment-necessity 도 같은 커밋으로 버전이 바뀌어 있다. 이번 fire 에서는 그 모델을 점유하지 않았다(single in-flight).",
+      "assessedAt": "2026-10-11T14:14:10Z"
+    }
+  },
+  {
+    "id": "rct_20261012-0001",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-12T03:04:51Z",
+      "asIs": {
+        "currentVersion": "contracts:c53840a1176d6acfa7bd964ef9d90eb77d1cbe86 python:659cb117d9d379511fe99f10b315c7e1b3676bc6 go:7f19da3a4e2bc9b7691a9faa4ec4aea3e8456259 web:9af5facfa3386e8eadfa4e3115367be51ce4ef32 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2",
+        "previousVersion": "contracts:c53840a1176d6acfa7bd964ef9d90eb77d1cbe86 python:659cb117d9d379511fe99f10b315c7e1b3676bc6 go:a0994c9843f8331e1b8aed522abac2b238bb1b57 web:9af5facfa3386e8eadfa4e3115367be51ce4ef32 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2"
+      },
+      "toBe": {
+        "currentVersion": "ddae0741e611a6df0d97255923ed8454b4e9f4d1",
+        "previousVersion": "c31279a528bdf9935df37cb85aded6a94ebef08a"
+      }
+    },
+    "createdAt": "2026-10-12T03:04:51Z",
+    "updatedAt": "2026-10-12T03:04:51Z",
+    "stateSummary": {
+      "asIs": "**as-is (관측 2026-10-12T03:0xZ, `dlddu/economic-opinion-trend-monitor@main` = `2125723`)**\n- 버전: `go` 트리 `a0994c9 → 7f19da3`. contracts·python·web·deploy 트리 불변.\n- 창 `2a5975a..2125723` = 커밋 1개 **#258** 「chore(comment-policy): #250·#253·#257 이 이월한 MA6 경로 주석 판정 적용 — 제거 19 · 개작 2, MA6 행 전부 완료 (rct_20261011-0007)」. 자매 모델 `tbm_econ-opinion-monitor-comment-necessity` 의 rct_20261011-0007 이 실행한 슬라이스다.\n- 바뀐 구현 파일 7개는 모두 `go/`: `cmd/econ-index/main.go`, `internal/servingindex/{build.go, build_test.go, derive.sql, functions.go, publish.go, reader.go}`.\n- diff에서 주석이 아닌 `+/-` 행은 `build_test.go` 의 두 줄뿐이다. 둘 다 같은 코드 줄에서 끝의 `// ...` 주석만 떼어 냈다(`second := build(...)`, `third := build(...)`). `derive.sql` 은 `--` 주석 줄과 빈 줄만 지웠다. 그 밖의 파일도 `//` 주석의 삭제·개작뿐이다.\n- `2125723` 의 check-run 6종(build · publish batch · publish serving · deploy · pin deploy images · report-build-status)이 모두 success 다.",
+      "toBe": "**to-be (관측 2026-10-12T03:0xZ, `docs/` 트리 `c31279a → ddae074`)**\n- 같은 커밋 #258이 바꾼 docs 파일은 둘뿐이다. `docs/comment-policy/ledger.md` 에서는 servingindex 등 8행을 「적용 이월(MA6 사람 게이트)」에서 「완료」로 고치고 지문을 갱신했다. 판정 기록 `docs/comment-policy/passes/2026-10-11-serving-index-ma6-apply.md` 는 새로 생겼다.\n- PRD·AC·테스트 문서·사용자 여정·목업·디자인 시스템·doc-tracker·design-tracker 는 손대지 않았다.",
+      "gap": "**유의미한 차이 없음.** #258은 자매 comment-necessity 슬라이스로, MA6 경로 주석 판정을 적용한 커밋이다. 구현 쪽 변화는 Go `//`·SQL `--` 주석의 삭제·개작뿐이다(비주석 동작 변경 0, check-run 6종 success). 문서 쪽은 `comment-policy/` 메타 문서만 바뀌었다. 그래서 기준 1~6 어디에도 새 격차가 생기거나 닫히지 않았고, 직전 판정 rct_20261011-0008(no_action_needed)이 그대로 유지된다.",
+      "summarizedAt": "2026-10-12T03:05:42Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 근거는 다음과 같다.\n1. **트리거는 자매 모델 슬라이스의 착지다.** as-is(go)와 to-be(docs)가 함께 바뀐 창은 `2a5975a..2125723` 의 커밋 하나(#258)다. 이 커밋은 comment-necessity rct_20261011-0007 이 #250·#253·#257 에서 이월한 MA6 주석 판정을 적용한 것이다(제거 19 · 개작 2).\n2. **기준 1·2·3·6: 동작이 그대로다.** go diff 의 비주석 `+/-` 행은 `build_test.go` 두 줄뿐인데, 둘 다 같은 문장에서 끝 주석만 뗐다. `derive.sql` 은 `--` 주석 줄과 빈 줄만 지웠으므로 SQL 문은 같다. contracts·python·web·deploy 는 무변경이다. `2125723` 의 build·publish·deploy check-run 은 모두 success 다. 새로 생기거나 닫힌 AC·여정 의무가 없다.\n3. **기준 4·5: 미문서화 구현이나 문서 모순이 없다.** 사용자 대면 문면·API·계약 필드가 바뀌지 않았다. docs 변경은 주석 원장(8행 「완료」 전환)과 새 판정 기록뿐이라 PRD·AC·여정·목업과 충돌할 서술이 없다.\n4. **다른 열린 작업이 없다.** 이 모델에 열린 task 는 이 건 하나다. 잔여 격차를 들고 있는 작업이 따로 없으므로 이번 창으로 새로 열 계획도 없다.",
+      "assessedAt": "2026-10-12T03:05:42Z"
+    }
+  },
+  {
+    "id": "rct_20261012-0002",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-12T16:12:36Z",
+      "asIs": {
+        "currentVersion": "contracts:c53840a1176d6acfa7bd964ef9d90eb77d1cbe86 python:b1611eb607c3791e842ac7bcc87c451728fc365f go:7f19da3a4e2bc9b7691a9faa4ec4aea3e8456259 web:9af5facfa3386e8eadfa4e3115367be51ce4ef32 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2",
+        "previousVersion": "contracts:c53840a1176d6acfa7bd964ef9d90eb77d1cbe86 python:659cb117d9d379511fe99f10b315c7e1b3676bc6 go:7f19da3a4e2bc9b7691a9faa4ec4aea3e8456259 web:9af5facfa3386e8eadfa4e3115367be51ce4ef32 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2"
+      },
+      "toBe": {
+        "currentVersion": "ec02229810295c170a1233881249ca7b249e12ad",
+        "previousVersion": "ddae0741e611a6df0d97255923ed8454b4e9f4d1"
+      }
+    },
+    "createdAt": "2026-10-12T16:12:36Z",
+    "updatedAt": "2026-10-12T16:15:01Z",
+    "stateSummary": {
+      "asIs": "**관측 2026-10-12 16:1xZ, 대상 main `1782672`(#249).** as-is 창은 `2125723..1782672`의 커밋 하나다. 다섯 트리 중 `python`만 `659cb11→b1611eb`로 바뀌었고 contracts·go·web·deploy는 그대로다.\n\n- **#249 「소스별 body_extraction 으로 기사 페이지 본문 추출」**: 새 모듈 `econ_ingestion/article.py`가 HTML에서 링크가 아닌 텍스트가 가장 많은 블록을 고른다(`MIN_ARTICLE_CHARS = 200`, `_MAX_JOINED_LINK_SHARE = 0.3`). `feeds.py`에는 `BODY_EXTRACTION_MODES = (\"feed\",\"article\",\"article_always\")`, `ARTICLE_MIN_FEED_CHARS = 300`, `FeedConfig.body_extraction`(기본 `feed`)을 더했다. `_with_article_body`는 재시도 없이 한 번만 연다. 페이지를 열다 예외가 나거나, 추출 결과가 200자 미만이거나 피드 본문보다 길지 않으면 피드 본문을 그대로 둔다(소스를 실패로 만들지 않음). 채택한 경우에는 `body_available=True`로 바꾼다.\n- `default_feeds.json`: 11개 소스가 18개로 바뀌었다. nyt-business·wsj-markets·marketwatch-top·ft-global-economy를 빼고 mk·donga·khan·hani·cnbc·npr·abc·fox-business·dw·cna·euronews를 더했다. 모든 항목에 `body_extraction`을 명시한다.\n- `IngestStats`에 `article_fetches/extracted/kept_feed_body` 카운터를 더했다. `cli.py`는 운영 로그에 `article_pages:` 한 줄을 찍는다.\n- 단위 테스트 `tests/test_article.py`(+241)와 HTML/RSS 픽스처 4개가 새로 생겼다.\n- `1782672` check-run: build·publish(batch/serving)·deploy·pin deploy images·report-build-status 6종이 모두 success다(운영 반영 완료).\n- go·web·contracts·deploy에 소스 id를 하드코딩한 곳은 0히트다.",
+      "toBe": "**관측 2026-10-12 16:1xZ.** to-be `docs` 트리 `ddae074→ec02229`, 같은 커밋 #249.\n\n- `docs/econ-opinion-monitor-prd-ingestion.md`(+63)에 세 절이 새로 생겼다.\n  1. 「본문 확보 경로: 소스별 `body_extraction`」: `feed`/`article`(<300자일 때만, 200자 이상이면서 피드보다 긴 것만 채택, 실패 시 피드 본문 유지)/`article_always`를 정의하고, 18개 소스별 값과 실측 근거 표를 둔다.\n  2. 「소스 편입 기준: 기사 전문을 받을 수 있는 소스만」과 「뺀 소스」 표(nyt·wsj·marketwatch·ft, 2026-10-12).\n  3. 「2026-10-12 레이크 정리 (일회성)」: 뺀 소스와 본문 없음·300자 미만 관측 156,764건을 Silver·LLM 로그·캐시와 함께 지운다. 시점은 「#249와 이 소스 목록이 운영에 반영된 뒤」다.\n- AC1.1~1.7 본문, 테스트 문서(test-ingestion AC1.4: 추출 가능/불가 기사 혼합), 가치·여정은 그대로다.\n- `docs/comment-policy/` 원장과 새 pass 문서는 자매 comment-necessity의 메타 문서다.\n- 최신 doc-tracker `2026-09.md` 「현재 상태 요약」의 수집 슬라이스 좌표(`cli.py ∋ real RSS/Atom 'feed' (default)`, packaged `default_feeds.json`)는 tip에서도 그대로 성립한다.\n- 그 밖에 docs에서 뺀 소스를 언급하는 곳은 `mockups/JRN-judgment-debug.html:970`의 예시 데이터(`src:'wsj-markets'`)뿐이다.",
+      "gap": "**유의미한 차이 없음.** #249는 같은 PR 안에서 구현(소스별 기사 페이지 본문 추출과 소스 목록 18개 교체)과 PRD 기술(`body_extraction` 3모드, 소스별 표, 편입 기준, 뺀 소스)을 함께 착지시켰다. 코드 상수와 분기(300/200자, 피드보다 길 때만 채택, 실패 시 피드 본문 유지, 소스 비실패)와 18개 소스의 모드 값이 PRD와 1:1로 일치한다(기준 2·4). AC1.4 의 「본문 미확보도 링크 저장」은 유지되고 개선됐다(기준 1). 계약·UI·여정 의무, 그리고 tracker의 현재형 좌표에는 새 모순이 없다(기준 3·5·6). PRD의 「레이크 정리(일회성)」는 운영 데이터 작업이라 as-is(contracts/python/go/web/deploy) 범위 밖이다.",
+      "summarizedAt": "2026-10-12T16:14:31Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창은 #249 한 커밋이다. 이 커밋은 사람 세션의 기능 PR로, 구현과 PRD를 함께 바꿨다. 근거는 다음과 같다.\n\n1. **기준 2·4: 구현과 문서가 같은 PR에서 1:1로 맞는다.** PRD 「본문 확보 경로」의 각 수치·분기가 코드와 일치한다.\n   - 300자 미만일 때만 연다 = `ARTICLE_MIN_FEED_CHARS = 300`.\n   - 200자 이상이면서 피드 본문보다 길 때만 채택한다 = `MIN_ARTICLE_CHARS = 200`, `len(text) <= len(article.body)`이면 유지.\n   - 실패해도 피드 본문을 유지하고 소스를 실패로 만들지 않는다 = `_with_article_body`의 `except` 분기.\n   - `article_always`는 길이 조건 없이 연다 = `always=True`.\n   - 소스 표 18행과 「뺀 소스」 4개가 `default_feeds.json`의 소스·축·모드와 전부 같다.\n   - 새 사용자 대면 동작·계약 필드는 없다. 운영 로그 한 줄(`article_pages:`)과 내부 카운터만 더해졌다.\n2. **기준 1·6: 미구현 AC나 여정 의무가 새로 생기거나 늘지 않았다.** AC1.1~1.7과 테스트 문서는 그대로다. AC1.4(본문 미확보도 링크 저장, `body_available`)는 이번 추출로 오히려 본문 확보율이 올라가는 쪽으로 충족된다. CI는 `1782672` check-run 6종(build·publish·deploy 포함)이 모두 success다.\n3. **기준 3·5: 계약·현재형 서술에 새 모순이 없다.** contracts는 무변경이다. 최신 tracker `2026-09.md` 수집 슬라이스의 좌표는 tip에서도 성립한다. docs에서 뺀 소스를 언급하는 곳은 PRD의 「뺀 소스」 표, 그리고 목업 `JRN-judgment-debug.html:970`의 예시 행(`wsj-markets`)뿐이다. 목업의 예시 데이터는 구현 의무를 만들지 않는다.\n   - PRD `:28` 「해시는 본문 원문 바이트 그대로」는 저장된 본문을 정규화 없이 해시한다는 뜻이다. `article` 모드에서는 새 절이 그 본문을 「추출한 텍스트」로 정의하므로 모순이 아니다.\n4. **범위 밖이라 판정하지 않은 것.**\n   - PRD 「2026-10-12 레이크 정리 (일회성)」는 운영 레이크 데이터를 한 번 지우는 결정이다. 시점은 #249가 운영에 반영된 뒤인데, deploy check-run이 success이므로 그 조건은 이제 충족됐다. 레이크(`data/`)는 이 모델의 as-is 범위 밖이고 AC·여정 의무도 아니어서 이 루프의 판정 대상이 아니다. 실행 여부는 사람 쪽 운영 몫이며, 이번 감지에서는 확인하지 않았다.\n   - 열린 PR #220(docs AC2.7)은 doc-tracker `2026-09.md`에서 main과 충돌한다. 이 충돌은 base(`2125723`)에서도 같았으므로 #249와 무관하다.\n   - `comment-policy/` 변경은 자매 `tbm_econ-opinion-monitor-comment-necessity`의 몫이다. 그 모델도 같은 #249로 버전이 바뀌어 별도 감지 대상으로 남아 있다.\n5. **잔여 격차의 소유.** 열린 econ docs-impl task는 없다. 이번 창은 새 잔여 격차를 만들지 않았고, 직전 판정들(0005·0007·0008·rct_20261012-0001, 모두 no_action_needed)의 결론을 바꾸지도 않는다.",
+      "assessedAt": "2026-10-12T16:15:01Z"
+    }
+  },
+  {
+    "id": "rct_20261013-0001",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-13T07:24:06Z",
+      "asIs": {
+        "currentVersion": "contracts:de475dfb394d8348e6e1967aae704c02f71840f7 python:4fb639578e6ba856cb435450d68e26f7b47e5eea go:59b2450f28b172b30f9f24699ce544eb677c07f7 web:5f606a4f5c38724f5f1f82745a487399764e3a58 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2",
+        "previousVersion": "contracts:c53840a1176d6acfa7bd964ef9d90eb77d1cbe86 python:b1611eb607c3791e842ac7bcc87c451728fc365f go:7f19da3a4e2bc9b7691a9faa4ec4aea3e8456259 web:9af5facfa3386e8eadfa4e3115367be51ce4ef32 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2"
+      },
+      "toBe": {
+        "currentVersion": "45c82710473b45bf1a9d3ca175c2e8e6552b37e9",
+        "previousVersion": "ec02229810295c170a1233881249ca7b249e12ad"
+      }
+    },
+    "createdAt": "2026-10-13T07:24:06Z",
+    "updatedAt": "2026-10-13T07:24:06Z",
+    "stateSummary": {
+      "asIs": "**관측 2026-10-13T07:2xZ, 대상 main `00b77b9`(#260).** as-is 창 `1782672..00b77b9` 는 커밋 1개(#260 「분위기 라벨마다 모델의 판단 근거를 남기고 추적 화면에 보인다 (AC2.3)」)다. contracts·python·go·web 트리가 바뀌었고 deploy 는 `b072897` 그대로다.\n\n- **contracts**: `silver/analysis.avsc` 에 `sentiment_rationale`(`[\"null\",\"string\"]`, default null)을 더했다. doc 에는 \"sentiment 가 null 이거나 keyword_analyzer 행이거나 응답이 빠뜨린 경우 null\" 이라고 적혀 있다.\n- **python**: `llm.py` 시스템 프롬프트가 `sentiment_rationale`(한국어 한 문장, mixed 는 양쪽, neutral 은 톤이 없는 이유)을 요구하고, 응답 형태 예시에도 그 키를 넣었다. 파싱은 `_clean_text`(문자열이 아니거나 비어 있으면 None)를 쓰고, 라벨 검증과 분기는 바뀌지 않았다. 그래서 근거가 빠져도 라벨은 기록된다. `_unanalyzed` 경로(본문 없음, `analyzable=false`)는 근거를 채우지 않는다. `econ_core.models.silver.Analysis` 에 nullable 필드와 `from_dict` 매핑을 더했다. 단위 테스트 `test_llm.py` 는 +44줄이다. 응답 캐시 키에 시스템 프롬프트가 들어가므로 옛 프롬프트로 받은 응답은 재사용되지 않는다.\n- **go**: `gen/silver.go` 에 `SentimentRationale *string` 을 더했다. 서빙 인덱스는 `schema.sql` 에 `sentiment_rationale TEXT` 열을 더하고 `SchemaVersion` 을 3→4 로 올렸으며, `build.go` INSERT 와 `index_rows.go` SELECT·Scan 에도 반영했다. `/api/trace` 의 `traceSilver.sentiment_rationale` 은 Silver 값을 그대로 넘긴다. `handlers_test.go` 는 +21줄이다.\n- **web**: `TraceSilver.sentiment_rationale: string | null` 을 더했다. `Trace.tsx` 분석 카드는 `silver.sentiment` 가 있을 때만 「판단 근거」 kv 를 그린다. 값이 null 이면 「기록 없음 — 근거를 남기기 전에 분석된 기사입니다」를 보인다. `Trace.test.tsx` 는 +29줄이다.\n- 범위 밖이지만 같은 PR 에 든 것: README Silver 필드 설명, `tests/e2e`(fixture·llmdouble·silver·`analysis-3-sentiment-classes.spec.ts` 단정 추가).\n- `00b77b9` check-run 6종(build · publish (batch) · publish (serving) · deploy · pin deploy images · report-build-status)은 모두 completed/success 다.",
+      "toBe": "**관측 2026-10-13T07:2xZ.** to-be `docs` 트리 `ec02229→45c8271`, 같은 커밋 #260.\n\n- `prd-analysis.md`: 머리 달성 가치에 V5 를 더했다(AC2.6·AC2.3 근거). AC2.3 설명에 「라벨마다 판단 근거(기사 속 표현·사실 한 문장, 혼합은 양쪽)를 받아 분석 결과에 남기고 원문 역추적 화면에서 라벨 옆에 보인다 · 근거 누락은 라벨을 막지 않는다 · 근거 기록 전 행과 미분석 행은 비어 있다」를 더했고, 달성 가치는 V3→V3·V5, 검증 방법에는 근거 무손실 전달과 근거 없는 응답의 처리를 더했다.\n- `test-analysis.md` 시나리오 3: 사전 조건(근거 있는 응답과 없는 응답의 혼합)과 기대 결과(근거는 그대로 실리고, 없으면 라벨만 남음)를 더했다. 시나리오 수와 1:1 spec 매핑은 그대로다.\n- `design-tracker.md`: `trace` 「구현 전용 — 분석 카드 kv」 등재 행을 10종에서 12종으로 늘렸다(`판단 근거` 라벨, 부재 표기 `기록 없음 — …`). 처분(구현 유지)과 사유는 그대로다.\n- doc-tracker `2026-09.md`: 가치 매트릭스 V5 행에 AC2.3 을 더하고 변경 이력에 2026-10-13 행을 더했다(시나리오 전집 24 · 예외 1 · 구현 대기 0 · 1:1 23/23 · AC 24 불변).\n- AC 수(24)와 여정 문서는 그대로다. PRD-3(서빙)은 `/api/trace` 필드 목록을 열거하지 않으므로 갱신할 자리가 없다.",
+      "gap": "**유의미한 차이 없음.** #260 은 같은 PR 에서 AC2.3 개정(판단 근거 기록과 표시)과 그 구현(계약 필드 · 프롬프트·파싱 · Silver 모델 · 서빙 인덱스 · `/api/trace` · Trace 화면)을 함께 착지시켰고, 두 쪽이 1:1 로 맞는다. 근거를 빠뜨려도 라벨을 유지하는 것은 `_clean_text`→None 이 라벨 분기와 독립이라서 성립하고, 미분석 행에 근거가 없는 것은 `_unanalyzed` 경로가 보장한다. 화면에서 라벨 옆에 보이는 것과 근거 부재 표기는 `Trace.tsx` 가, 계약 doc 의 null 규칙은 PRD 서술과 각각 일치한다(기준 1·2·3). 새 사용자 대면 문면은 설계 트래커에 등재됐고, 계약 필드는 AC2.3 이 문서화한다(기준 4). 문서 내부 모순과 새 여정 의무는 없다(기준 5·6). CI 6종은 모두 success 다.",
+      "summarizedAt": "2026-10-13T07:30:00Z"
+    },
+    "assessment": {
+      "reason": "작업 불필요(no_action_needed). 이번 창은 #260 한 커밋이다. 이 커밋은 사람 세션의 기능 PR 로, 문서(AC2.3 개정)와 구현을 함께 바꿨다. 근거는 다음과 같다.\n\n1. **기준 1·2: 개정된 AC2.3 이 구현으로 충족된다.** 네 가지를 확인했다. 첫째, 판단 근거를 모델에게 받는다(`_SYSTEM_PROMPT` 의 `sentiment_rationale` 요구와 응답 형태 예시). 둘째, 그 근거를 Silver 에 남긴다(`Analysis.sentiment_rationale`, `_clean_text` 는 공백만 정규화하고 내용은 보존한다). 셋째, 원문 역추적 화면에서 라벨 옆에 보인다(`Trace.tsx` 「판단 근거」 kv). 넷째, 근거가 빠져도 라벨은 기록된다(근거 파싱이 라벨 검증·분기와 독립). 미분석 행에 근거가 없다는 것은 `_unanalyzed` 경로가 보장한다. 테스트 문서 시나리오 3 의 혼합 사전 조건은 `test_llm.py`(+44) 와 e2e spec 단정이 다룬다.\n2. **기준 3: 계약과 문서가 일치한다.** `analysis.avsc` `sentiment_rationale` 은 nullable 이고, doc 의 null 규칙(sentiment null · keyword_analyzer · 응답 누락 · 필드 도입 전 행)이 PRD AC2.3 서술과 같다. Go 생성 타입, 서빙 인덱스 열, `/api/trace` 필드, TS 타입까지 같은 이름과 같은 null 의미로 이어진다. 인덱스 형태가 바뀌어 `SchemaVersion` 을 3→4 로 올렸다.\n3. **기준 4·5·6: 미문서화 구현, 문서 모순, 새 여정 의무가 없다.** 화면의 새 문면 2종(`판단 근거`, `기록 없음 — …`)은 같은 PR 이 설계 트래커 `trace` 등재 행에 올렸다(10→12종). doc-tracker 매트릭스와 이력도 갱신됐다. PRD-3 은 `/api/trace` 필드를 열거하지 않으므로 낡은 서술이 생기지 않는다. 여정 문서는 바뀌지 않았다.\n4. **운영 반영도 확인했다.** `00b77b9` 의 check-run 6종(build · publish batch/serving · deploy · pin deploy images · report-build-status)이 모두 success 다.\n5. **범위 밖이라 판정하지 않은 것.** `tests/e2e`·README 변경은 as-is 범위 밖이다. 이 PR 이 들인 코드 주석의 판정은 자매 `tbm_econ-opinion-monitor-comment-necessity` 몫이고, 목업↔구현 카피 대조는 자매 `mockup-render` 몫이다. 과거 주기 행은 근거가 비어 있다. 이는 AC2.3 이 명시적으로 허용한 상태(「근거 기록 전에 분석된 행도 비어 있다」)라 격차가 아니다.\n6. **열린 task 없음.** 이 모델에 열린 다른 task 는 없다. 이번 창은 새 잔여 격차를 만들지 않았고, 직전 판정들(rct_20261012-0001·0002, 모두 no_action_needed)의 결론도 바꾸지 않는다.",
+      "assessedAt": "2026-10-13T07:31:00Z"
+    }
+  },
+  {
+    "id": "rct_20261013-0002",
+    "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-13T12:36:25Z",
+      "asIs": {
+        "currentVersion": "contracts:de475dfb394d8348e6e1967aae704c02f71840f7 python:4fb639578e6ba856cb435450d68e26f7b47e5eea go:e29a8c19cb38712ad928abb34f71a22fcffd1a54 web:5f606a4f5c38724f5f1f82745a487399764e3a58 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2",
+        "previousVersion": "contracts:de475dfb394d8348e6e1967aae704c02f71840f7 python:4fb639578e6ba856cb435450d68e26f7b47e5eea go:59b2450f28b172b30f9f24699ce544eb677c07f7 web:5f606a4f5c38724f5f1f82745a487399764e3a58 deploy:b072897f81a8d36deb4f8ef504ec276e826071e2"
+      },
+      "toBe": {
+        "currentVersion": "55da4e972b4ba5a55836e189df48467335b218e7",
+        "previousVersion": "45c82710473b45bf1a9d3ca175c2e8e6552b37e9"
+      }
+    },
+    "createdAt": "2026-10-13T12:36:25Z",
+    "updatedAt": "2026-10-13T12:37:58Z",
+    "stateSummary": {
+      "asIs": "**관측 시각** 2026-10-13T12:4xZ · `dlddu/economic-opinion-trend-monitor` main `8a483a3` (창 `00b77b9`→`8a483a3`, 커밋 2개: #261 `283225f`, #262 `8a483a3`).\n\n- 바뀐 트리는 `go/` 하나다(`59b2450`→`e29a8c1`). contracts·python·web·deploy 트리 해시는 그대로다.\n- **#261 「Gold 화면이 인덱스의 Gold 사본에서 보이는 버킷·대상만 읽는다」**(go 13파일, +692/−189):\n  - 서빙 인덱스(SQLite) 스키마에 Gold 사본 테이블 3개(`subject_trend`·`subject_source_contribution`·`axis_sentiment`)와 조회 인덱스를 추가했다(`servingindex/schema.sql`·`derive.sql`). `econ-index` 빌드가 레이크 Gold를 스트리밍해 싣는다(`store.go` `EachSubjectTrend` 등, `build.go`).\n  - Gold 라우트 6개(`/api/dashboard`·`trend`·`compare`·`sentiment`·`fairness`·`source-contributions`)를 `h.fromGold(...)`로 감쌌다(`gold.go` 신설). 인덱스가 있고 버전이 맞으면 인덱스 사본을 읽는다(`X-Gold-Source: index`, `X-Index-Built-At`). 없으면 레이크 Gold 파일을 예전처럼 읽는다(`X-Gold-Source: lake`). 인덱스를 기다리는 503은 없다.\n  - 라우트 경로, 쿼리 파라미터, 응답 JSON 모양은 바뀌지 않았다. 차등 테스트 `TestGoldScreensAnswerTheSameFromTheIndexAsFromTheFiles`(`gold_test.go`)가 Gold 픽스처 9종 × 쿼리 34개에서 index 응답 본문이 lake 응답과 **바이트 동일**함을 단정한다.\n  - 루트 `README.md`의 서빙 인덱스 절도 같은 PR에서 갱신됐다. Gold 화면도 인덱스 사본을 읽고, 반영 시점은 인덱스 발행 때(수 분)이며, 인덱스 경로에는 truncate 창이 없다는 내용이다.\n- **#262**: 자매 comment-necessity 패스다. go 3파일에서 주석 6줄을 제거했고, 비주석 변경은 없다.\n- `web/`은 그대로다(새 헤더 `X-Gold-Source`를 읽는 코드가 없다). 두 커밋 모두 check-run 6종(build·publish serving/batch·deploy·pin·report)이 success다.",
+      "toBe": "**관측 시각** 2026-10-13T12:4xZ · `docs/` 트리 `45c8271`→`55da4e9`.\n\n- 바뀐 파일은 `docs/comment-policy/` 메타 문서뿐이다. `ledger.md`는 #261이 행을 갱신하고 #262가 판정을 기록했고, `passes/2026-10-13-gold-index-increment-pass.md`가 신설됐다. PRD·AC·테스트 문서·여정·목업·디자인 시스템·doc-tracker·design-tracker는 바뀌지 않았다.\n- 관련 기존 기술:\n  - PRD·테스트 문서·여정에는 서빙 인덱스, Gold 읽기 경로, 화면 반영 지연에 관한 요구가 없다(`docs/*prd*`·`*test*`·`user-journeys/`를 「인덱스」·「반영」으로 grep한 결과 0건. 유일한 언급은 PRD-ingestion :88 「Gold 와 서빙 인덱스는 다음 집계·색인이 … 다시 만든다」로, 여전히 참이다).\n  - doc-tracker 최신 월 파일 `2026-09.md` 「현재 상태 요약」의 착지 항목 「운영 — 서빙 Gold 연결 (2026-09-21, #92)」(:167–180)은 #92 공유 볼륨 선택의 근거로 「Go 스토어(`store.go` ∋ `os.Open(path)`)가 요청마다 파일을 여니 … 재시작 없이 매시간 집계가 응답에 실린다」와 「좁혔지만 닫지 않은 창(truncate+write)」을 적고 있다.",
+      "gap": "**유의미한 차이 없음.** #261은 Gold 화면 6라우트의 읽기 경로를 서빙 인덱스의 Gold 사본으로 옮긴 성능 리팩터다(레이크 폴백 유지). 라우트·파라미터·응답 JSON이 그대로라는 것은 차등 테스트가 바이트 동일로 잠그고 있다. 그래서 AC·여정 의무, 계약, 사용자 대면 동작에 새 격차가 없다(기준 1·2·3·6). 새 응답 헤더 `X-Gold-Source`는 기존 `X-Index-Built-At`과 같은 운영 진단 헤더이고 web이 읽지 않아서, 문서화가 필요한 사용자 대면 동작이 아니다(기준 4). 서빙 인덱스는 지금까지도 README가 문서화해 왔고, 이번 PR이 README를 함께 갱신했다. doc-tracker의 #92 착지 항목은 날짜가 붙은 착지 근거이고, 그 결론(같은 볼륨의 Gold를 재시작 없이 매시간 반영)은 여전히 참이다. 인용 좌표 `store.go ∋ os.Open(path)`도 실재한다(폴백 경로). 「창이 남아 있다」는 폴백 경로에서 여전히 참이고 인덱스 경로에서는 좁아졌을 뿐이라서, 0006 선례(현재형 서술이 거짓이 됨)와 달리 모순이 아니다(기준 5). docs 쪽 변화는 comment-policy 메타뿐이다.",
+      "summarizedAt": "2026-10-13T12:37:58Z"
+    },
+    "assessment": {
+      "reason": "차이가 판정 기준 1~6 어디에도 걸리지 않는다. 구현 변화(#261)는 응답이 바이트 동일한 읽기 경로 최적화이고, 그 운영 서술은 같은 PR에서 README에 반영됐다. #262와 docs 변화는 자매 comment-necessity 모델의 주석·원장 갱신이다. 미구현 AC·여정 의무 목록과 직전 판정 rct_20261013-0001(no_action_needed) 이후의 잔여는 그대로이며, 이번 창이 새로 연 작업은 없다. 따라서 no_action_needed로 종료한다.",
+      "assessedAt": "2026-10-13T12:37:58Z"
+    }
   }
 ]

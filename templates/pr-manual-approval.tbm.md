@@ -89,19 +89,16 @@ SSOT다 — 헤더에만 있으면 판정기를 고치는 사람만 보고, 무�
 
 대상 레포를 탐색해 확정한다. 확정 안 되는 값은 추측하지 말고 사용자에게 묻는다.
 
-| 슬롯 | 의미 | 예 (feature-doc) |
-|---|---|---|
-| `{{REPO}}` | owner/repo | `dlddu/feature-doc` |
-| `{{STATUS_CONTEXT}}` | 수동 승인 판정 status context (하나). **케이스를 가리키는 이름은 피한다** — 케이스가 넓어질 때마다 개명해야 하고, 개명은 워크플로·ruleset·정책을 동시에 건드린다 | `review/manual-approval` (레포 현행은 `review/data-format`이라 첫 task에서 개명) |
-| `{{CONTEXT_ERE}}` | 워크플로에서 승인 계열 context 선언을 찾는 ERE. 이름 하나가 아니라 `{{STATUS_CONTEXT}}`가 속한 **계열**을 잡는다 — 그래야 두 번째 신호가 생길 때(P1 위반) 지문이 움직인다. **작은따옴표를 쓰지 않는다** | `context[^a-z/]{1,4}review/[a-z0-9-]+` (`context=review/x`·`context: review/x`·`"context": "review/x"`를 모두 잡는다) |
-| `{{SLUG}}` | id·이름용 소문자 레포명 | `feature-doc` |
-| `{{POLICY_SSOT}}` | 정책 문서 경로 | `docs/review-policy.md` |
-| `{{JUDGE_REF_ERE}}` | 워크플로가 부르는 판정기 경로를 뽑는 ERE | `tools/[A-Za-z0-9_./-]+\.(py\|js\|mjs\|sh)` |
-| `{{JUDGE}}` | 판정기 · 워크플로 · 등록 시점 케이스 ID | `tools/check-data-format-change.py` · `.github/workflows/data-format-review.yml` · D1~D6 |
-| `{{RULESET}}` | 게이트 ruleset (등록 시점 실측 스냅샷 — 지문 아님) | `default` (id 23666120, 기본 브랜치, required: `ci-gate`(integration 15368)·`review/data-format`(integration 없음) — **첫 task에서 `{{STATUS_CONTEXT}}`로 개명**) |
-| `{{SIBLING_MODEL}}` | 판정기 헤더를 함께 보는 자매 모델 [선택] | `tbm_feature-doc-comment-necessity` |
-| `{{INITIAL_STATE}}` | 등록 시점 현황 | 정책 문서 없음 · 케이스는 판정기 헤더 주석에만 · status가 `review/data-format`(개명 필요) · ruleset은 이미 required(integration 미고정) · 수동 status 절차 미기재 |
-| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) | `date -u +%Y-%m-%dT%H:%M:%SZ` |
+| 슬롯 | 의미 |
+|---|---|
+| `{{REPO}}` | owner/repo |
+| `{{STATUS_CONTEXT}}` | 수동 승인 판정 status context (하나). **케이스를 가리키는 이름은 피한다** — 케이스가 넓어질 때마다 개명해야 하고, 개명은 워크플로·ruleset·정책을 동시에 건드린다 |
+| `{{CONTEXT_ERE}}` | 워크플로에서 승인 계열 context 선언을 찾는 ERE. 이름 하나가 아니라 `{{STATUS_CONTEXT}}`가 속한 **계열**을 잡는다 — 그래야 두 번째 신호가 생길 때(P1 위반) 지문이 움직인다. **작은따옴표를 쓰지 않는다** |
+| `{{SLUG}}` | id·이름용 소문자 레포명 |
+| `{{POLICY_SSOT}}` | 정책 문서 경로 |
+| `{{JUDGE_REF_ERE}}` | 워크플로가 부르는 판정기 경로를 뽑는 ERE |
+| `{{SIBLING_MODEL}}` | 판정기 헤더를 함께 보는 자매 모델 [선택] |
+| `{{NOW_ISO}}` | 등록 시각 (UTC ISO 8601) |
 
 ### 개명 순서
 
@@ -283,12 +280,6 @@ ruleset을 지문에 되살리려면 먼저 호스트 게이트와 drift-detecto
 ## 프로세스 원칙
 P1 단일 프로세스(판정기 하나 · status 하나) · P2 긍정 확인(success만, 부재 = 사람) · P3 fail-closed · P4 base 실행(`pull_request_target`, PR 코드 비실행) · P5 판정기·워크플로·정책 변경은 수동 승인 케이스 · P6 판단이 갈리면 사람 쪽 · P7 사람 승인은 항상 수동 status(같은 context, description `수동 승인`, bypass는 경로가 아님 — 사람이 직접 붙이든 그 지시로 도는 승인 전용 도구로 붙이든 같다) · P8 승인의 주체는 사람이고, 사람 없이 도는 것은 붙이지 않으며, 승인에 쓰는 도구는 승인 네임스페이스로 제한되고, required check는 특정 앱에 고정하지 않는다. (정의: reconciler `templates/pr-manual-approval.tbm.md`)
 
-## 등록 시점 프로세스 (스냅샷)
-- 판정기: {{JUDGE}}
-- 게이트: {{RULESET}}
-- 사람 승인: 수동 status (P7)
-<!-- 지침: 판정 기준이 아니라 스냅샷이다. 케이스 수·ID 범위는 여기에만 적고 판정 기준에 넣지 않는다 -->
-
 ## 불변식 1 — 케이스 · 신호 · 게이트 정합 ("사람 승인이 필요한 케이스"의 추적·관리)
 
 - **R1 케이스 1:1** — 정책 케이스 표의 ID 집합 == 판정기가 판정 근거로 쓰는 ID 집합. 판정기의 케이스 본문(대상 경로·패턴)이 정책과 다르면 drift이며 **정책이 SSOT**다. 판정기에만 있는 케이스는 정책 밖의 판정, 정책에만 있는 케이스는 **판정기가 보지 않는 수동 승인 케이스**(= 새는 케이스)다 — 후자가 더 위험하다.
@@ -326,9 +317,6 @@ R1~R6 · O1~O5 중 **하나라도** 위반이면 `action_required`. 전부 충�
 - **as-is** = `judges=…;surface=…;anchors=…`. judges는 `{{CONTEXT_ERE}}` 계열 context를 붙이는 워크플로와 그 판정기의 blob hash, surface는 정책 surface 블록에 걸리는 (파일, 토큰) 집합, anchors는 정책 anchors 블록 경로의 실재 여부. 정책 문서가 없으면 surface·anchors는 `absent`.
 - **R5 게이트**(required check·앱 고정)와 **R6의 bypass 목록**은 지문에 없다 — R5는 판정할 때마다 API로 조회하고, bypass는 admin 권한이 필요해 O4 재검토 때 사람이 본다. **O4 재검토 기한**은 `recheckAfter`로 추적한다.
 - ruleset을 지문에서 뺀 것은 의도된 설계다: 게이트가 `versionScript.env`를 읽지 않아 무인증 호출이 되고, versionScript가 비0으로 끝나면 fail-closed 래퍼가 **모든 모델의 감지**를 건너뛰기 때문이다.
-
-## 초기 상태 메모 (등록 시점 {{NOW_ISO}})
-{{INITIAL_STATE}} <!-- 지침: 정책 문서 유무, 케이스가 지금 어디에 적혀 있는지(헤더 주석 등), 등록 시점에 조회한 required check 목록과 integration 고정 여부, 수동 status 절차 기재 여부, 등록 전 as-is 진단 줄을 남긴다. 정책 문서가 없으면 "첫 task는 판정기 헤더의 케이스를 {{POLICY_SSOT}}로 옮겨 프로세스 표·케이스 표·표면/앵커 블록을 만들고, 판정기 헤더는 정책 참조로 줄인다 — 큰 초기 격차는 예상된 것"을 포함 -->
 
 ## 범위 밖 / 비고
 - 케이스의 **의미적 정확성**(이 SQL이 정말 스키마를 바꾸는가)은 보지 않는다. 그것은 사람 승인의 몫이고, 이 모델은 "무엇이 사람에게 가는가"의 경계만 본다.

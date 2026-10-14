@@ -2,7 +2,7 @@
   {
     "id": "rct_20260929-0001",
     "toBeModelId": "tbm_pocket-aide-pr-manual-approval",
-    "status": "planning",
+    "status": "succeeded",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-09-29T09:44:05Z",
@@ -16,7 +16,7 @@
       }
     },
     "createdAt": "2026-09-29T09:44:05Z",
-    "updatedAt": "2026-09-29T09:54:53Z",
+    "updatedAt": "2026-10-04T06:50:58Z",
     "stateSummary": {
       "asIs": "관측 2026-09-29T09:46Z · `dlddu/pocket-aide@main` = `82b4a16`(#48, 2026-09-29T03:20:29Z).\n- **as-is 지문**(versionScript 실행값 = claim 기록 값): `contexts=0 judges=0 surface_hits=1 anchors_absent=0` / `judges=e3b0c44298fc1c14;surface=5ad38304b535c298;anchors=5ad38304b535c298` — judges 는 빈 입력의 해시, surface·anchors 는 정책 부재로 `absent` 상수의 해시.\n- **판정기·워크플로**: `.github/workflows/` 6개(backend-docker-push·backend-integration-test·backend-unit-test·ci·ios-test·testflight-upload) 중 `review/` context 를 붙이는 것 0개, `pull_request_target` 트리거 0개. `.github/` 전체 `review/` grep 0 히트.\n- **게이트(R5, `gh api` 조회)**: `rules/branches/main` = `[]`, `rulesets` = `[]`. 단 **classic branch protection 은 존재**한다 — `required_status_checks.contexts=[\"ci-success\"]`(`checks[0].app_id=15368` 로 **앱 고정**), `strict=false`, `enforce_admins=false`, `required_linear_history=true`. `review/manual-approval` 는 required 에 **없다**.\n- **사람 승인 절차(R6)**: 정책 문서가 없어 프로세스 표·수동 status 절차·승인 도구 범위 기재 0.\n- **후보 위험 표면 실재**(모델 초기 메모의 후보, 케이스 아님): `backend/migrations/**` 13파일 · `backend/internal/auth` 2 · `ios/Shared/Sources/PocketAideAuth` 1 · `k8s/` 6. 열린 PR #53(`backend/migrations/0007_todos.{up,down}.sql` 추가)은 마이그레이션 후보 표면을 건드리지만 현재 어떤 수동 승인 게이트도 요구하지 않는다.\n- **열린 PR 캐리어 census**: #49·#51·#52·#53 무접촉, #50(`docs/product/prd-approval-gate.md` — 앱 내부 gatekeeper 기능 PRD)은 diff 에 `review/`·`manual-approval`·`review-policy`·ruleset/required 히트 0 → 이 모델의 캐리어 아님.",
       "toBe": "`docs/review-policy.md` @ `82b4a16`: **부재**(`git rev-parse HEAD:docs/review-policy.md` 실패 → versionScript 값 `absent`). 프로세스 표·수동 승인 케이스 표·```surface```/```anchors``` 블록·의도적 제외·미탐 원장 모두 없음. 모델 정의(`templates/pr-manual-approval.tbm.md` 원칙 P1~P8)가 요구하는 목표는: 정책 문서 + 단일 판정기(`pull_request_target`, base 실행) + `review/manual-approval` 를 앱 비고정 required check 로 요구하는 게이트 + 수동 status 절차.",
@@ -26,6 +26,445 @@
     "assessment": {
       "reason": "판정 규칙 「R1~R6·O1~O5 중 하나라도 위반이면 action_required」에 따라 **action_required**. R1~R6 전건 위반(정책 문서·판정기·워크플로·`review/manual-approval` required check·수동 status 절차 모두 부재), O1~O5 는 정책 부재로 충족 불가. 격차는 「감소 중」이 아니라 **구조적 전량 부재**(첫 관측)이며 자동 해소 경로 없음 → 유예 사유 없음. 소관 census 3칸 0: ⒜열린 PR 0(#49~#53 중 정책·판정기·ruleset 접촉 0, #50 은 앱 기능 PRD) ⒝같은 모델 열린 task 0(이 task 가 첫 task) ⒞남의 원장 행 0. **planner 인계**: 이 모델은 케이스를 발명하지 않는다 — 첫 작업은 **어떤 PR 을 사람 승인 대상으로 둘지 사람에게 묻는 결정 대기**(후보: `backend/migrations/**` 13파일 · `backend/internal/auth` · `ios/Shared/Sources/PocketAideAuth` · `k8s/` · 자기참조 P5). 케이스 확정 뒤 정책 문서·판정기(`pull_request_target`+base 실행)·워크플로를 PR 로 만들고, `review/manual-approval` required check 추가는 **레포 밖 설정이라 사람 몫**. 주의: main 게이트는 ruleset 이 아니라 **classic branch protection**(`ci-success` required, app_id 15368 고정)이므로 required check 추가 경로와 앱 비고정(P8) 요구를 계획에서 명시할 것; 워크플로 추가는 GitHub App workflows 권한 유무에 따라 사람 손이 필요할 수 있다.",
       "assessedAt": "2026-09-29T09:45:07Z"
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "pocket-aide 에 수동 승인 프로세스의 레포 안 3요소(정책 문서 `docs/review-policy.md` · 단일 판정기 `scripts/review-policy/judge.py` · `pull_request_target` 워크플로 `.github/workflows/review-policy.yml`)를 **한 PR** 로 세운다 — 정책만 내면 R1·R3(판정기 부재)이, 판정기만 내면 R4(정책 부재)가 남고 둘은 P5 자기참조로 서로를 케이스로 묶어야 하므로 쪼갤 수 없다(feature-doc #218·econ #217 선례). 케이스는 루프가 발명하지 않는다는 정의에 따라 **모델 정의가 열거한 후보 4종(마이그레이션·인증·k8s 매니페스트·P5 자기참조)을 그대로 MA1~MA4 로 제안**하고(P6: 갈리면 넓게), **케이스 확정은 사람이 이 PR 의 head 에 `review/manual-approval` 수동 status 를 붙이는 행위로 한다**(9/29 시도는 AskUserQuestion 으로 묻고 답이 오지 않아 5일 정지 → 이번엔 결정을 기존 사람 승인 채널로 옮겨 루프를 세우지 않는다; 거부 시 사유가 review_rejected 로 돌아와 재계획 입력이 된다). **완료 기준(이 시도의 범위)**: PR 머지 뒤 main 에서 R1(정책 ID 집합 == 판정기 ID 집합)·R2(`contexts=1 judges=2`)·R3(P2~P6, 파일 판독)·R4(프로세스 표 7칸·케이스 표·surface·anchors 기계 판독, surface≠malformed)·R6(사람 승인 칸에 승인자·명령·도구 범위 `review/`)·O1(anchors_absent=0)·O2(표면 히트 전부 케이스/제외로 덮임)·O3(제외 재개 조건이 리터럴이고 현재 거짓)·O4(마지막 2026-10-04·다음 2027-01-02)·O5(원장 빈 표) 충족. **범위 밖**: R5 — ruleset `default`(id 24173503) required check 에 `review/manual-approval`(integration 미고정) 추가는 레포 밖 설정이라 **사람 몫**이며 워크플로가 main 에 착지한 **뒤에** 해야 한다(먼저 하면 모든 열린 PR 이 막힌다); 재감지가 R5 단독 잔여로 새 task 를 연다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "pocket-aide main 최신에서 브랜치 `reconcile/rct_20260929-0001-pocket-aide-pr-manual-approval` 생성, 후보 표면 실측: `backend/migrations/**`(20 sql + migrations.go) · `backend/internal/auth/**` · `ios/Shared/Sources/PocketAideAuth/**` · `k8s/**` 및 그 위험 토큰이 케이스 밖 파일에 나타나는지 전수 grep",
+              "expectedOutcome": "케이스 대상 경로 실재 확인, 케이스 밖 토큰 히트 목록 확보(제외 표 입력)"
+            },
+            {
+              "seq": 2,
+              "action": "`docs/review-policy.md` 작성 — 프로세스 표 7칸(context `review/manual-approval` · 판정기 · 워크플로 · 게이트 ruleset `default` + `gh api` 확인 명령 · 사람 승인 `dlddu` + `gh api` 수동 status 명령 + 승인 전용 도구 `github_commit_status_create` 범위 `review/` · 마지막 재검토 2026-10-04 · 다음 2027-01-02), 케이스 표 MA1~MA4, ```surface```/```anchors``` 블록, 의도적 제외(재개 조건 리터럴), 빈 미탐 원장",
+              "expectedOutcome": "모델 as-is versionScript 를 이 브랜치 커밋에서 돌리면 surface≠malformed, anchors_absent=0"
+            },
+            {
+              "seq": 3,
+              "action": "판정기 `scripts/review-policy/judge.py` 작성 — 변경 경로 목록(stdin, 개명은 옛·새 경로 둘 다)을 케이스 ID 튜플(MA1~MA4)과 대조, 시작 시 base 의 정책 표 ID 집합 == 자기 ID 집합인지 확인(불일치·파싱 실패·빈 입력은 exit 2 = fail-closed), 미접촉이면 exit 0, 접촉이면 닿은 ID 출력 후 exit 1. 주석·docstring 0줄(주석 원장 무접촉)",
+              "expectedOutcome": "로컬 픽스처: 케이스 경로 각 1개 → exit 1 + 해당 ID, `docs/foo.md` → exit 0, 빈 입력·정책 ID 불일치 → exit 2"
+            },
+            {
+              "seq": 4,
+              "action": "워크플로 `.github/workflows/review-policy.yml` 작성 — `pull_request_target`(opened/synchronize/reopened/ready_for_review), base 체크아웃(PR ref 체크아웃 없음), `gh api --paginate pulls/{n}/files` 로 경로 수집(3000 파일 상한 도달 시 fail-closed), judge exit 0 일 때만 `statuses/{head_sha}` 에 `context=review/manual-approval` success. permissions: contents read · pull-requests read · statuses write",
+              "expectedOutcome": "actionlint/yaml 파싱 통과; as-is 지문 `contexts=1 judges=2`"
+            },
+            {
+              "seq": 5,
+              "action": "게이트 전수 로컬 실행: 모델 as-is·to-be versionScript, surface 전수 덤프 대조(O2), `scripts/comment-policy/check_ledger.py` rc=0, PR 을 열고 `ci-success` 초록 확인(docs/scripts/워크플로 신설만이라 backend·ios·TestFlight 잡 skip)",
+              "expectedOutcome": "모든 로컬 게이트 rc=0, ci-success success"
+            },
+            {
+              "seq": 6,
+              "action": "(실행 단계) 사람이 PR head 에 `review/manual-approval` = success(`수동 승인 — <승인자>`)를 붙인 것을 확인한 뒤에만 squash 머지 — 케이스 확정은 사람의 결정",
+              "expectedOutcome": "head sha 에 수동 승인 status 존재 → 머지; main 에서 versionScript 재실행 시 to-be=blob hash, as-is `contexts=1 judges=2 … anchors_absent=0`"
+            },
+            {
+              "seq": 7,
+              "action": "(실행 단계, 머지 직후) 머지 뒤 열린 첫 PR(또는 `gh api` 로 기존 열린 PR 재동기화 이벤트)에서 워크플로가 실제로 status 를 붙이는지/안 붙이는지 관측하고, R5(ruleset required 추가)는 사람에게 요청으로 남긴다",
+              "expectedOutcome": "케이스 미접촉 PR 에 `review/manual-approval` success 가 `github-actions` 로 붙음; 케이스 접촉 PR 에는 없음"
+            }
+          ],
+          "plannedAt": "2026-10-04T06:22:12Z",
+          "executionGuide": "# 실행 지침 — tbm_pocket-aide-pr-manual-approval / rct_20260929-0001\n\nPR: https://github.com/dlddu/pocket-aide/pull/112 · branch `reconcile/rct_20260929-0001-pocket-aide-pr-manual-approval` · head `737d0c46e94e6da2d0f7804e1aa6caeb44c40bf7` · 새 파일 3개뿐(+186/−0).\n\n## 0. 사전 조건 — 🔴 사람의 케이스 확정 없이는 머지하지 않는다\n\n- 모델 정의: 「이 모델은 케이스를 발명하지 않는다 — 첫 task 는 어떤 PR 을 사람 승인 대상으로 둘지 사람에게 묻는 결정」. 이 PR 의 MA1~MA3 은 정의가 열거한 후보를 옮긴 **제안**이다.\n- 결정의 채널 = **PR head 의 `review/manual-approval` 수동 status**(description `수동 승인 — <승인자>`). 리뷰는 `review.manualApproval = {sha: 737d0c4…, context: \"review/manual-approval\"}` 를 남기고, executor 는 그 status 가 **그 sha 에** success 로 붙은 것을 확인한 뒤에만 집는다.\n  - 확인: `gh api repos/dlddu/pocket-aide/commits/<head sha>/statuses --jq '.[] | select(.context==\"review/manual-approval\") | \"\\(.state) \\(.description) \\(.creator.login)\"' | head -1` → `success 수동 승인 — …`.\n  - 이 PR 에서 그 status 를 붙일 수 있는 것은 사람뿐이다(`pull_request_target` 은 base 쪽 워크플로로 도는데 base 에는 아직 워크플로가 없다). `github-actions` 가 붙인 것이면 이상 신호 — 멈추고 보고.\n- head 가 `737d0c4` 에서 바뀌었으면(리베이스·추가 커밋) 수동 승인은 무효다. 머지하지 말고 실패로 기록해 재승인을 받게 할 것.\n- 사람이 승인 대신 케이스 변경을 요구했으면(`approved → review_rejected`) 이 지침은 무효 — 재계획 몫.\n\n## 1. 순서 (직렬, 병렬 불가)\n\n1. **head·status 재확인** — `gh pr view 112 -R dlddu/pocket-aide --json headRefOid,mergeStateStatus,state` 에서 `headRefOid == 737d0c46e94e6da2d0f7804e1aa6caeb44c40bf7`, `state=OPEN`. `ci-success` = success(필수 status 는 ruleset `default` 의 `ci-success` 하나). `mergeStateStatus` 가 `BEHIND` 여도 `strict=false` 라 머지 가능 — **리베이스 금지**(head 가 바뀌면 수동 승인이 날아간다). `DIRTY` 면 멈추고 실패 기록(새 파일 3개뿐이라 충돌은 같은 경로를 누가 먼저 만든 경우뿐).\n2. **squash 머지** — `gh pr merge 112 -R dlddu/pocket-aide --squash`. 커밋 제목은 PR 제목 그대로.\n3. **main 에서 지문 재실측** — main 을 체크아웃하고 모델의 versionScript 를 그대로 실행:\n   - to-be: `d6544dfa72dfac7cadb45f952f44bd8ad36b0484` (squash 는 트리를 보존하므로 blob hash 동일)\n   - as-is 첫 줄: `contexts=1 judges=2 surface_hits=54 anchors_absent=0` — `surface_hits` 는 머지 사이 main 에 새 마이그레이션·매니페스트가 착지했으면 늘 수 있다. 그때는 아래 O2 판정으로 갈음한다.\n4. **워크플로 첫 실행 관측(선택이지만 권장)** — 머지 뒤 열린 PR 하나에 synchronize 가 오면 `review-policy / judge` 가 돈다. 케이스 미접촉 PR 은 `review/manual-approval` success(creator `github-actions[bot]`, description `판정기: 수동 승인 케이스 미접촉`), 접촉 PR 은 status 없음 + notice. 일부러 PR 을 만들거나 빈 커밋을 밀지 말 것 — 관측할 PR 이 없으면 생략하고 그 사실만 기록.\n\n## 2. 검증 — 이 범위(완료 기준) 기준으로 판정\n\n| 항목 | 방법 | 기대값 |\n|---|---|---|\n| R1 케이스 1:1 | `grep -oE '^\\| MA[0-9]+ \\|' docs/review-policy.md` vs `judge.py` 의 `CASES` ID | 둘 다 `{MA1,MA2,MA3,MA4}` (판정기가 스스로도 대조해 불일치면 exit 2) |\n| R2 신호 단일 | as-is 진단 줄 | `contexts=1 judges=2` |\n| R3 원칙 | `review-policy.yml` 판독 | `pull_request_target`; checkout 에 `ref:` 없음(= base); PR 코드 실행 없음; status 는 exit 0 일 때만; MA4 가 세 경로 포함 |\n| R4 문서 | 프로세스 표 7행 · 케이스 표 · `surface` · `anchors` 블록 | surface ≠ `malformed` |\n| R6 사람 승인 칸 | 프로세스 표 `사람 승인` | 승인자 `dlddu`, `gh api` 명령, 도구 범위 `review/` |\n| O1 | as-is 진단 | `anchors_absent=0` |\n| O2 | versionScript 사본으로 SURFACE 전수 덤프 → 각 파일이 케이스 경로(`backend/migrations/` · `backend/internal/auth/` · `ios/Shared/Sources/PocketAideAuth/` · `k8s/`)나 제외 3대상(`backend/internal/db/db.go` · `ios/Shared/Sources/PocketAideStorage/` · `backend/internal/oidcmock/`)에 속함 | 새는 표면 0 |\n| O3 | 제외 표 재개 조건 명령 4종 | 전부 거짓(`iofs.New(migrations.FS` 1 · 운영 `sql.Open(\"sqlite\"` 1파일 · `ThisDeviceOnly` 합계 == `kSecAttrAccessible as String` 합계 · `kSecClassGenericPassword` <3파일 · 운영 경로 `internal/oidcmock` import 0) |\n| O4 | 프로세스 표 | 마지막 2026-10-04 · 다음 2027-01-02(≤90일) |\n| O5 | 미탐 원장 | 빈 표 |\n\n전부 맞으면 `succeeded`. 하나라도 어긋나면 `failed`(사유에 항목 ID).\n\n## 3. 범위 밖(후속) — 재감지가 새 task 로 잇는다\n\n- **R5 게이트**: ruleset `default`(id 24173503) required 에 `review/manual-approval`(integration 미고정) 추가 — **레포 밖 설정, 사람 몫.** 머지 **뒤에만**. 실행자가 하지 않는다(App 에 administration 권한을 요구하지 말 것). 재감지는 R5 단독 위반으로 `action_required` 를 낼 것이고, 그 task 는 사람 요청으로 막아 두는 것이 정의의 방향이다.\n- 키체인 저장(`PocketAideStorage`)·배포 워크플로(`.github/workflows/**`)를 케이스로 올릴지는 사람이 이 PR 승인 때 정한다 — 이번엔 제외/후보 밖.\n- 판정기 헤더 주석 0줄이므로 자매 `tbm_pocket-aide-comment-necessity` 와의 접점 없음(원장 rc=0 실측).\n\n## 4. 주의 · 롤백\n\n- 불가역 지점 없음. 머지는 운영 배포를 일으키지 않는다(paths-filter: backend·k8s·ios 무접촉 → image/pin/TestFlight 없음).\n- 머지 직후부터 **모든 새 PR 에 판정기가 돈다**. 판정기 실패(exit 2)는 job 빨강이지만 required 가 아니라 머지를 막지 않는다(R5 전까지). 빨강이 반복되면 정책 표 파싱 문제 — 보고.\n- 롤백: `git revert <squash sha>` 한 번. R5 가 이미 추가됐다면 **ruleset 에서 먼저 빼고** revert(순서가 바뀌면 모든 PR 이 막힌다).\n- 토큰: 대상 레포 머지는 `dlddu/pocket-aide` 용 App 토큰(`contents:write`·`pull_requests:write`; 워크플로 파일이 들어 있으므로 `workflows:write` 포함)으로.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20260929-0001-pocket-aide-pr-manual-approval",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/112",
+          "preparedAt": "2026-10-04T06:25:43Z",
+          "notes": "head `737d0c46e94e6da2d0f7804e1aa6caeb44c40bf7`, base main `14b30e5`. 새 파일 3개(+186): `docs/review-policy.md`(케이스 MA1~MA4 · surface 5 ere · anchors 7 · 제외 3행 · 빈 원장) · `scripts/review-policy/judge.py`(주석·docstring 0) · `.github/workflows/review-policy.yml`(pull_request_target, base 체크아웃, statuses:write). 로컬 실측(head 커밋 위): to-be `absent`→`d6544dfa72dfac7cadb45f952f44bd8ad36b0484`; as-is `contexts=1 judges=2 surface_hits=54 anchors_absent=0` / `judges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3`; surface 54쌍 = 케이스 48 + 제외 6, 새는 표면 0; 제외 재개 조건 전부 거짓; judge 픽스처 exit 0/1/2 의도대로; `check_ledger.py` rc=0. 🔴 **케이스 선택은 사람 결정**(모델 정의 「케이스를 발명하지 않는다」) — 9/29 시도는 AskUserQuestion 으로 물었으나 무응답으로 5일 정지 후 stale-lock reaper 가 풀었다. 이번엔 결정을 **이 PR head 의 `review/manual-approval` 수동 status** 로 옮겼다: 리뷰는 `review.manualApproval={sha: 737d0c46e94e6da2d0f7804e1aa6caeb44c40bf7, context: review/manual-approval}` 를 남겨야 한다 — 레포 ruleset 이 그 status 를 아직 required 로 요구하지 않더라도(현재 required 는 `ci-success` 하나), 이 task 의 성공 조건 자체가 사람의 케이스 확정이기 때문. 이 PR 에선 `pull_request_target` 이 base(워크플로 없음)로 돌아 판정기가 status 를 붙이지 않으므로 status 의 출처는 사람뿐이다. 거부 사유(케이스 증감)는 review_rejected 로 돌아와 재계획 입력이 된다. 토큰: App 설치 토큰(`workflows:write` 포함)으로 push·PR — PR 작성자 봇. CI: docs/scripts/새 워크플로만 → paths-filter 상 backend·ios·TestFlight skip."
+        },
+        "review": {
+          "status": "approved",
+          "reviewedAt": "2026-10-04T06:31:20Z",
+          "reason": "PR #112 재실측(06:3xZ): OPEN · head 737d0c4(준비 기록 그대로) · 새 파일 3개(+186/−0)로 plan 과 범위 일치, gap 밖 변경 0. 준비 뒤 #85(iOS 투두 UITest·doc-tracker, 교집합 0) 착지로 behind_by 1 이지만 ruleset `default` strict=false 라 MERGEABLE/CLEAN, `ci-success`(15368) success. 현재 main 11e7887 에 #112 를 병합한 트리에서 versionScript 실측: to-be absent→d6544dfa…, as-is `contexts=1 judges=2 surface_hits=54 anchors_absent=0`(지문 judges=7301e747…;surface=f496fd3d…;anchors=d95fd0f3… — head 단독과 바이트 동일, 자매 착지 무영향); 판정기 픽스처 rc 1/1/0/1/2(마이그레이션·k8s·docs·자기경로·빈입력) 의도대로, check_ledger rc=0. 워크플로는 pull_request_target·ref 없는 base 체크아웃·PR 코드 비실행·exit 0 일 때만 status(P2~P5 충족). 불가역 지점 없음(docs/scripts/workflow 신설만, 배포 paths 무접촉), 롤백은 squash revert 1회(R5 추가 뒤라면 ruleset 에서 먼저 제거)로 지침에 명시. 사람 승인 요구: 대상 레포 required 에는 아직 `review/manual-approval` 이 없지만(현재 `ci-success` 하나 — R5 는 머지 뒤 사람 몫), 모델 정의가 「케이스를 발명하지 않는다 — 케이스 선택은 사람의 결정」이라 MA1~MA4 는 제안일 뿐이므로, 4-2 문자 조건 밖이지만 실행을 사람의 수동 status 뒤로 묶는 쪽(P6, 더 조이는 방향)으로 manualApproval 을 남긴다 — head 737d0c4 에 `review/manual-approval` status 0건, base 에 워크플로가 없어 그 status 의 출처는 사람뿐. 선례: econ #217·feature-doc #218 첫 task 도 같은 형태로 승인.",
+          "manualApproval": {
+            "sha": "737d0c46e94e6da2d0f7804e1aa6caeb44c40bf7",
+            "context": "review/manual-approval"
+          }
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-10-04T06:49:27Z",
+          "finishedAt": "2026-10-04T06:50:14Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "skipped",
+              "log": "준비 단계(planner, preparedAt 2026-10-04T06:25:43Z)에서 PR #112 head 737d0c4 로 완료 — 실행 단계 몫 아님, 리뷰가 main 11e7887 병합 트리에서 재실측함."
+            },
+            {
+              "stepSeq": 2,
+              "status": "skipped",
+              "log": "준비 단계(planner, preparedAt 2026-10-04T06:25:43Z)에서 PR #112 head 737d0c4 로 완료 — 실행 단계 몫 아님, 리뷰가 main 11e7887 병합 트리에서 재실측함."
+            },
+            {
+              "stepSeq": 3,
+              "status": "skipped",
+              "log": "준비 단계(planner, preparedAt 2026-10-04T06:25:43Z)에서 PR #112 head 737d0c4 로 완료 — 실행 단계 몫 아님, 리뷰가 main 11e7887 병합 트리에서 재실측함."
+            },
+            {
+              "stepSeq": 4,
+              "status": "skipped",
+              "log": "준비 단계(planner, preparedAt 2026-10-04T06:25:43Z)에서 PR #112 head 737d0c4 로 완료 — 실행 단계 몫 아님, 리뷰가 main 11e7887 병합 트리에서 재실측함."
+            },
+            {
+              "stepSeq": 5,
+              "status": "skipped",
+              "log": "준비 단계(planner, preparedAt 2026-10-04T06:25:43Z)에서 PR #112 head 737d0c4 로 완료 — 실행 단계 몫 아님, 리뷰가 main 11e7887 병합 트리에서 재실측함."
+            },
+            {
+              "stepSeq": 6,
+              "status": "succeeded",
+              "startedAt": "2026-10-04T06:49:27Z",
+              "finishedAt": "2026-10-04T06:49:38Z",
+              "log": "머지 직전 재확인(06:49:27Z): PR #112 OPEN · headRefOid 737d0c46e94e6da2d0f7804e1aa6caeb44c40bf7 == manualApproval.sha · mergeStateStatus CLEAN · ci-success(app 15368) success · review/manual-approval 최신 status = success 「수동 승인」 2026-10-04T06:45:49Z, creator dlddu-k3s-homelab-k3s-mcp[bot](사람 세션 승인 도구 github_commit_status_create — github-actions 아님). gh pr merge 112 --squash --match-head-commit 737d0c4… rc=0 → MERGED 2026-10-04T06:49:38Z, squash 2b0368a91d0e5e096d9786fe82b64cd8ca36c6c7 (부모 9d79d08 #113). 리베이스 없음. 커밋 제목은 PR 제목 + (#112)."
+            },
+            {
+              "stepSeq": 7,
+              "status": "skipped",
+              "startedAt": "2026-10-04T06:49:38Z",
+              "finishedAt": "2026-10-04T06:50:14Z",
+              "log": "워크플로 첫 실행 관측 생략(지침 §1-4: 일부러 PR·빈 커밋 만들지 말 것). 06:50:14Z 기준 workflow review-policy(id 374421380) active, pull_request_target run 0건 — 열린 PR #115·#114·#58·#50 의 마지막 갱신이 전부 머지(06:49:38Z) 이전이라 synchronize 이벤트가 없었다. R5(ruleset default id 24173503 required 에 review/manual-approval 추가)는 레포 밖 설정 — 사람 몫으로 남김, 실행자 미접촉."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "contexts=1 judges=2 surface_hits=54 anchors_absent=0\njudges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3",
+          "checks": [
+            {
+              "name": "to-be 지문(main 2b0368a)",
+              "status": "passed",
+              "detail": "to-be versionScript = d6544dfa72dfac7cadb45f952f44bd8ad36b0484 (absent → 정책 blob, 리뷰 기대값과 동일)."
+            },
+            {
+              "name": "R1 케이스 1:1",
+              "status": "passed",
+              "detail": "docs/review-policy.md 케이스 표 ID {MA1,MA2,MA3,MA4} == judge.py CASES ID {MA1,MA2,MA3,MA4}; 정책 사본에서 MA4→MA5 로 바꾸면 judge rc=2(자기 대조 fail-closed)."
+            },
+            {
+              "name": "R2 신호 단일",
+              "status": "passed",
+              "detail": "as-is 진단 contexts=1 judges=2."
+            },
+            {
+              "name": "R3 원칙(워크플로)",
+              "status": "passed",
+              "detail": "review-policy.yml: on pull_request_target(opened/synchronize/reopened/ready_for_review); actions/checkout@v4 에 ref: 없음(base), persist-credentials false; PR 코드 비실행(경로는 pulls/{n}/files API 데이터만); status 는 judge rc 0 일 때만, rc 1 notice, 그 외 exit 1; changed_files>=3000 fail-closed; permissions contents read·pull-requests read·statuses write. MA4 가 docs/review-policy.md·scripts/review-policy/·.github/workflows/review-policy.yml 세 경로 포함. 픽스처 rc: migrations 1·k8s 1·PocketAideAuth 1·judge 자기경로 1·docs/foo.md 0·빈 입력 2."
+            },
+            {
+              "name": "R4 문서",
+              "status": "passed",
+              "detail": "프로세스 표 7행(context·판정기·워크플로·게이트·사람 승인·마지막·다음 재검토), 케이스 표 MA1~MA4, surface 블록(scope 4·exclude·ere 5줄)·anchors 블록 7줄 존재; surface ≠ malformed."
+            },
+            {
+              "name": "R6 사람 승인 칸",
+              "status": "passed",
+              "detail": "승인자 dlddu, gh api -X POST statuses 수동 명령, 승인 도구 github_commit_status_create 범위 GITHUB_COMMIT_STATUS_CONTEXT_PREFIXES=review/ 기재."
+            },
+            {
+              "name": "O1 앵커",
+              "status": "passed",
+              "detail": "anchors_absent=0."
+            },
+            {
+              "name": "O2 표면 누수",
+              "status": "passed",
+              "detail": "versionScript 사본으로 SURFACE 전수 덤프: 54 (파일,토큰) · 30 파일, 전부 케이스 경로(backend/migrations/·backend/internal/auth/·ios/Shared/Sources/PocketAideAuth/·k8s/) 또는 제외 3대상(backend/internal/db/db.go·ios/Shared/Sources/PocketAideStorage/·backend/internal/oidcmock/) 안 — 누수 0."
+            },
+            {
+              "name": "O3 제외 재개 조건",
+              "status": "passed",
+              "detail": "전부 거짓: iofs.New(migrations.FS 1 · 운영 sql.Open(\"sqlite\" 1파일 · ThisDeviceOnly 합계 2 == kSecAttrAccessible as String 합계 2 · kSecClassGenericPassword 2파일(<3) · 운영 경로 internal/oidcmock import 0."
+            },
+            {
+              "name": "O4 재검토 주기",
+              "status": "passed",
+              "detail": "마지막 2026-10-04 · 다음 2027-01-02 (90일)."
+            },
+            {
+              "name": "O5 미탐 원장",
+              "status": "passed",
+              "detail": "빈 표(헤더만)."
+            },
+            {
+              "name": "자매 원장 무접촉",
+              "status": "passed",
+              "detail": "scripts/comment-policy/check_ledger.py rc=0 (E 행 3 · 미판정 0); judge.py 주석·docstring 0줄."
+            },
+            {
+              "name": "범위 밖 잔여(정보성)",
+              "status": "passed",
+              "detail": "R5 미충족 — ruleset default(id 24173503) required 에 review/manual-approval 미등재, 레포 밖 설정이라 사람 몫(지침 §3). 워크플로 첫 실행은 머지 뒤 PR synchronize 0건이라 미관측(run 0건, 06:50:14Z). 다음 감지 주기가 as-is/to-be 버전 변화를 보고 R5 후속을 판정한다."
+            }
+          ],
+          "verifiedAt": "2026-10-04T06:50:58Z"
+        }
+      }
+    ]
+  },
+  {
+    "id": "rct_20261004-0001",
+    "toBeModelId": "tbm_pocket-aide-pr-manual-approval",
+    "status": "succeeded",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-04T06:51:52Z",
+      "asIs": {
+        "currentVersion": "contexts=1 judges=2 surface_hits=54 anchors_absent=0\njudges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3",
+        "previousVersion": "contexts=0 judges=0 surface_hits=1 anchors_absent=0\njudges=e3b0c44298fc1c14;surface=5ad38304b535c298;anchors=5ad38304b535c298"
+      },
+      "toBe": {
+        "currentVersion": "d6544dfa72dfac7cadb45f952f44bd8ad36b0484",
+        "previousVersion": "absent"
+      }
+    },
+    "createdAt": "2026-10-04T06:51:52Z",
+    "updatedAt": "2026-10-04T16:14:49Z",
+    "stateSummary": {
+      "asIs": "관측 2026-10-04T06:53:00Z · `dlddu/pocket-aide@main` = `2b0368a`(#112 squash, 06:49:38Z — 직전 task `rct_20260929-0001` 착지).\n- **as-is 지문**(모델 versionScript 를 main 클론에서 직접 실행): `contexts=1 judges=2 surface_hits=54 anchors_absent=0` / `judges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3` — claim 값·직전 task verification `asIsVersionAfter` 와 바이트 동일. 창(`absent`→정책 blob, judges 0→2) 전량이 #112 의 새 파일 3개(`docs/review-policy.md`·`scripts/review-policy/judge.py`·`.github/workflows/review-policy.yml`) 귀속.\n- **R1~R4·R6·O1~O5**: 직전 task verification(06:50:58Z, main `2b0368a`)이 전 항목 passed — 케이스 {MA1..MA4} 1:1, P2~P5 워크플로 판독, 프로세스 표 7칸, surface 54쌍(케이스 48·제외 6, 누수 0), 제외 재개 조건 전부 거짓, 재검토 2026-10-04→2027-01-02, 원장 빈 표. 그 뒤 main 무변동(지문 동일)이라 재사용.\n- **R5 게이트(`gh api` 조회, 2026-10-04T06:53:00Z)**: `rules/branches/main` required_status_checks = `[ci-success (integration 15368), review/manual-approval (integration 없음)]`, strict=false. ruleset `default`(id 24173503) `updated_at=2026-10-04T06:46:23Z`(사람이 머지 직전 추가), enforcement active, `bypass_actors=[]`. `review/` 계열 context 는 `review/manual-approval` 하나 → **게이트 자체는 충족**(존재 · 앱 비고정 · 다른 review/ 없음).\n- **워크플로 실행**: `pull_request_target` run 0건 — 머지 이후 열린 PR(#115·#114·#58·#50) synchronize 없음. 이 4개 PR head 엔 `review/manual-approval` 이 없어 다음 푸시(판정기 자동 부착) 또는 수동 status 전까지 머지 불가(정의상 개별 PR 상태는 범위 밖, 정보성).\n- **캐리어 census**: 열린 PR 4건 중 `review-policy`·`review/` 경로 접촉 0; 같은 모델 열린 task 0(직전 `0001` succeeded).",
+      "toBe": "`docs/review-policy.md` @ `2b0368a` = blob `d6544dfa72dfac7cadb45f952f44bd8ad36b0484`(absent → 실재). 프로세스 표 7칸 · 케이스 MA1~MA4 · surface 5 ere · anchors 7 · 의도적 제외 3 · 빈 미탐 원장. **프로세스 표 `게이트` 칸 문면**: 「2026-10-04 현재 required 는 `ci-success`(integration 15368) 하나이고 **`review/manual-approval` 은 아직 없다** — 이 문서와 워크플로가 main 에 착지한 뒤에 저장소 소유자가 … 추가한다」 + 확인용 `gh api` 명령(기대 `review/manual-approval integration=any`).",
+      "gap": "유의미(작음): R5 의 게이트 실물은 이제 정합(`review/manual-approval` required · 앱 비고정 · 다른 review/ 없음)인데, 정의 R5 의 마지막 조건 「정책의 프로세스 표 `게이트` 칸이 실제 ruleset 과 맞아야 한다」가 깨졌다 — 칸은 여전히 「required 는 `ci-success` 하나, `review/manual-approval` 은 아직 없다 · 착지 뒤 추가한다」는 **현재 사실 주장**을 담고 있어 06:46:23Z ruleset 갱신으로 거짓이 됐다. 나머지 R1~R4·R6·O1~O5 는 충족.",
+      "summarizedAt": "2026-10-04T06:53:00Z"
+    },
+    "assessment": {
+      "reason": "판정 규칙 「R1~R6·O1~O5 중 하나라도 위반이면 action_required」 → **action_required**. 위반 1건: R5 마지막 조건(정책 프로세스 표 `게이트` 칸 == 실제 ruleset) — 칸이 「`review/manual-approval` 은 아직 없다」고 주장하나 ruleset `default`(24173503)는 06:46:23Z 부터 그것을 integration 미고정으로 required 로 요구한다(gh api 실측). 게이트 실물·R1~R4·R6·O1~O5 는 충족(직전 task 0001 verification + main 지문 바이트 동일). 자동 해소 경로 없음(문서 문면은 스스로 안 바뀐다) → 유예 아님. 소관 census 3칸 0: ⒜열린 PR 4건 review-policy 경로 접촉 0 ⒝같은 모델 열린 task 0 ⒞남의 원장 행 0. **planner 인계**: `docs/review-policy.md` 프로세스 표 `게이트` 칸을 현재형으로 고치는 docs-only PR 하나(「required = `ci-success`(15368) + `review/manual-approval`(integration 없음, 2026-10-04 추가)」, 확인 `gh api` 명령은 유지; bypass_actors `[]` 를 이번 조회로 봤다면 재검토 줄에 기록 가능). 이 경로는 **MA4(정책 자기참조)** 라 판정기가 status 를 안 붙인다 → 머지에 사람 수동 status 필요(P5) — 리뷰는 manualApproval 을 남길 것. 정보성: 머지 뒤 PR synchronize 0건이라 판정기 첫 실행 미관측, 열린 PR #115·#114·#58·#50 은 다음 푸시 전까지 `review/manual-approval` 부재로 머지 대기. 모든 항목 충족 시 recheckAfter = 다음 재검토 2027-01-02.",
+      "assessedAt": "2026-10-04T06:53:17Z"
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "docs-only PR 하나로 `docs/review-policy.md` 프로세스 표 `게이트` 칸(15행)을 현재 ruleset(required = `ci-success`(15368) + `review/manual-approval`(integration 고정 없음, 2026-10-04 추가))에 맞춰 현재형으로 고친다 — 확인용 gh api 명령은 유지하고 그 밖은 0줄. 대안(칸에서 사실 주장을 빼고 명령만 남기기)은 R5 가 칸이 ruleset 과 '맞을' 것을 요구하므로 현재 값을 적는 쪽이 정의에 직접 부합해 택했다. 완료 기준: PR #117 이 main 에 squash 착지 ∧ main 의 `게이트` 칸이 「`review/manual-approval` 은 아직 없다」 문면 0건 · 「required 는 `ci-success`(integration 15368)와 `review/manual-approval`(integration 고정 없음) 둘이다」 1건 ∧ `gh api …/rules/branches/main` 출력이 그 칸과 일치(`ci-success integration=15368`, `review/manual-approval integration=any`, 다른 review/ 0) ∧ as-is 지문 불변. 범위 밖: 열린 PR #115·#114·#58·#50 의 status 부재(정의상 개별 PR 상태), 판정기 첫 실행 관측, O4 bypass 목록 재검토(사람 몫, 다음 재검토 2027-01-02).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #117(head 9392efc) 에 사람의 수동 `review/manual-approval` success status 가 붙었는지 확인(MA4 자기참조라 판정기는 붙이지 않는다 — review.manualApproval 경유) 및 `ci-success` success 확인",
+              "expectedOutcome": "head 9392efc 에 `ci-success`=success · `review/manual-approval`=success(description `수동 승인 …`), mergeable"
+            },
+            {
+              "seq": 2,
+              "action": "PR #117 을 squash 머지(head sha 고정: `gh pr merge 117 --squash --match-head-commit 9392efc357edd75e5a71b64e8d0a442c521b8340`)",
+              "expectedOutcome": "PR merged, main 에 squash 커밋 1개, 변경 파일 docs/review-policy.md 1개(+1/−1)"
+            },
+            {
+              "seq": 3,
+              "action": "main 에서 `게이트` 칸 문면과 ruleset 조회 대조: `grep -c '아직 없다' docs/review-policy.md` 및 새 문면 grep, `gh api repos/dlddu/pocket-aide/rules/branches/main --jq …`",
+              "expectedOutcome": "옛 문면 0건 · 새 문면 1건 · gh api = `ci-success integration=15368` + `review/manual-approval integration=any`, 다른 review/ 0"
+            },
+            {
+              "seq": 4,
+              "action": "모델 asIs versionScript 를 main 클론에서 실행해 지문 대조, to-be blob 확인",
+              "expectedOutcome": "as-is `contexts=1 judges=2 surface_hits=54 anchors_absent=0` / `judges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3` 불변; to-be blob = 7028fd455ce51afa882a349d95f1e2a64788ac15"
+            }
+          ],
+          "plannedAt": "2026-10-04T07:00:00Z",
+          "executionGuide": "## 순서 (직렬 — 병렬 불가)\n1. **사람 status 확인 먼저.** 이 PR 은 `docs/review-policy.md` 만 건드려 판정기 케이스 **MA4(정책 자기참조)** 에 닿는다(로컬 `judge.py` 실측 rc=1 `MA4 docs/review-policy.md`). 판정기는 status 를 붙이지 않으며 ruleset `default`(24173503)가 `review/manual-approval` 을 required 로 요구하므로 **사람의 수동 status 없이는 머지 불가**. review 는 `review.manualApproval`(sha `9392efc357edd75e5a71b64e8d0a442c521b8340`, context `review/manual-approval`)을 남길 것.\n   - 확인: `gh api repos/dlddu/pocket-aide/commits/9392efc357edd75e5a71b64e8d0a442c521b8340/status --jq '.statuses[]|\"\\(.context) \\(.state)\"'` → `review/manual-approval success`, 그리고 check-run `ci-success` success(`gh api repos/dlddu/pocket-aide/commits/<sha>/check-runs --jq '.check_runs[]|select(.name==\"ci-success\")|.conclusion'`).\n2. **head 를 바꾸지 말 것.** 수동 status 는 sha 에 묶인다 — 리베이스·커밋 추가 금지. main 이 앞서가도 `strict_required_status_checks_policy=false` 라 behind 여도 머지 가능. 충돌(DIRTY)일 때만 멈추고 failed 로 보고(재준비 몫).\n3. 머지: `gh pr merge 117 -R dlddu/pocket-aide --squash --match-head-commit 9392efc357edd75e5a71b64e8d0a442c521b8340`.\n4. 검증(아래).\n\n## 검증 방법 (완료 기준 = 이 범위)\n- main 최신 클론에서:\n  - `grep -c 'review/manual-approval\\` 은 아직 없다' docs/review-policy.md` → **0**\n  - `grep -c 'required 는 \\`ci-success\\`(integration 15368)와 \\`review/manual-approval\\`(integration 고정 없음) 둘이다' docs/review-policy.md` → **1**\n  - 확인 명령 문장(`→ \\`review/manual-approval integration=any\\` 가 있어야 하고`) 1건 유지.\n- `gh api \"repos/dlddu/pocket-aide/rules/branches/main\" --jq '.[] | select(.type==\"required_status_checks\") | .parameters.required_status_checks[] | \"\\(.context) integration=\\(.integration_id // \"any\")\"'` → 정확히 `ci-success integration=15368` · `review/manual-approval integration=any` (칸 문면과 일치). 이 출력이 달라졌다면(사람이 ruleset 을 다시 바꿈) 칸과의 불일치를 failed 사유로 적을 것.\n- 모델 asIs versionScript 실행 → `contexts=1 judges=2 surface_hits=54 anchors_absent=0` / `judges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3` (게이트 칸은 surface/anchors 블록 밖이라 불변이어야 한다). to-be `git rev-parse HEAD:docs/review-policy.md` = `7028fd455ce51afa882a349d95f1e2a64788ac15`(main 이 그 사이 이 파일을 다시 바꾸지 않았다면).\n- 준비 단계 로컬 실측(참고): `scripts/comment-policy/check_ledger.py` rc=0, `tools/journey-mockup-harness/check.mjs` 위반 0, 위 지문 불변.\n\n## 범위 밖 (후속 — 재감지 입력)\n- 열린 PR #115·#114·#58·#50 의 `review/manual-approval` 부재(다음 푸시에 판정기 자동 부착 또는 수동 status) — 정의상 개별 PR 상태.\n- 판정기 워크플로(`pull_request_target`) 첫 실행 관측.\n- O4 재검토의 bypass 목록 확인은 사람 몫(이번 준비에서 사용자 `gh` 로 `bypass_actors=[]` 를 봤으나 문서에는 적지 않았다 — 재검토 기록은 사람이 남긴다). 다음 재검토 2027-01-02.\n\n## 주의사항\n- 불가역 지점 없음(docs 한 줄). 롤백 = revert PR(이것도 MA4 라 수동 status 필요).\n- 피크 영향·데이터 영향 없음. ci.yml 의 `changes` 상 docs-only 라 backend/ios 잡은 skip, `journey-mockup` 은 항상 돈다(로컬 위반 0).\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261004-0001-pocket-aide-pr-manual-approval",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/117",
+          "preparedAt": "2026-10-04T07:01:00Z",
+          "notes": "head 9392efc357edd75e5a71b64e8d0a442c521b8340 · base main 2b0368a · 변경 docs/review-policy.md 1파일 +1/−1(게이트 칸만). PR명의: dlddu-k3s-homelab-k3s-mcp[bot](App 토큰 발급 성공). 판정기 로컬: MA4 접촉 rc=1 ⇒ 판정기 status 없음 — 리뷰는 review.manualApproval(sha=head, context=review/manual-approval)을 세울 것. ruleset 실측 06:5xZ: ci-success integration=15368 · review/manual-approval integration=any, bypass_actors=[]. 로컬 게이트: comment-policy ledger rc=0 · journey-mockup harness 위반 0 · as-is 지문 불변. 열린 PR 4건(#115·#114·#58·#50) review-policy 경로 접촉 0."
+        },
+        "review": {
+          "status": "approved",
+          "reviewedAt": "2026-10-04T07:12:00Z",
+          "reason": "docs-only 1파일 +1/−1(게이트 칸)로 gap(R5 마지막 조건: 칸 문면 ≠ 실제 ruleset)을 직접 닫는다 — merged 트리에서 옛 문면 0건·새 문면 1건·확인 명령 1건이고, live `rules/branches/main` = `ci-success integration=15368` + `review/manual-approval integration=any`(strict=false)라 칸과 일치. 신선도: PR #117 OPEN·head 9392efc 불변·MERGEABLE, 필수 check-run `ci-success` success(judge·journey-mockup·comment-policy 포함 초록); main 은 #115(90d1414, docs/mockups 6파일)만큼 앞서 behind_by 1 이나 strict=false·경로 교집합 0이고, as-is versionScript 를 base 2b0368a·main 90d1414·PR head·main+PR 병합 4곳에서 돌려 `contexts=1 judges=2 surface_hits=54 anchors_absent=0`/`judges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3` 바이트 동일, 병합 to-be blob = 7028fd45…(계획 기대값). 열린 자매 PR #116·#114·#58·#50 의 review-policy·review/ 경로 접촉 0. 불가역 지점 없음, 롤백 = revert PR(squash-only 레포 실측, 이것도 MA4라 수동 status 필요)이 지침에 명시돼 승인. 사람 승인 필요: ruleset 이 required 로 요구하는 `review/manual-approval`(정책 프로세스 표상 사람 승인용 수동 status)이 head 9392efc 에 없다 — 판정기 로컬 실측 `MA4 docs/review-policy.md` rc=1 이라 판정기는 붙이지 않는다.",
+          "manualApproval": {
+            "sha": "9392efc357edd75e5a71b64e8d0a442c521b8340",
+            "context": "review/manual-approval"
+          }
+        },
+        "execution": {
+          "status": "succeeded",
+          "startedAt": "2026-10-04T16:13:11Z",
+          "finishedAt": "2026-10-04T16:14:05Z",
+          "entries": [
+            {
+              "stepSeq": 1,
+              "status": "succeeded",
+              "startedAt": "2026-10-04T16:13:11Z",
+              "finishedAt": "2026-10-04T16:13:50Z",
+              "log": "PR #117 OPEN · head 9392efc357edd75e5a71b64e8d0a442c521b8340(= review.manualApproval.sha) · CLEAN/MERGEABLE · 변경 docs/review-policy.md +1/-1. head 의 최신 `review/manual-approval` = success(2026-10-04T16:10:49Z, description `수동 승인`), check-run `ci-success` = success(judge·journey-mockup·comment-policy ledger·Detect changes success, backend/ios 잡 skipped). main 은 2b0368a→3c8dc05 로 앞서 있었으나 그 창에서 docs/review-policy.md 접촉 0. 머지 전 로컬 실제 merge(3c8dc05 + 9392efc, 충돌 0)에서 옛 문면 0·새 문면 1·확인 명령 1, to-be blob 7028fd45…, as-is 지문은 base 2b0368a·머지 직전 tip 3c8dc05·merge 트리 3곳 바이트 동일."
+            },
+            {
+              "stepSeq": 2,
+              "status": "succeeded",
+              "startedAt": "2026-10-04T16:13:50Z",
+              "finishedAt": "2026-10-04T16:13:57Z",
+              "log": "머지 직전 재확인: head 9392efc 불변 · approval success · main 3c8dc05. `gh pr merge 117 -R dlddu/pocket-aide --squash --match-head-commit <manualApproval.sha>` rc=0 → MERGED 2026-10-04T16:13:56Z, squash 커밋 50c5d86d2c98e39ff87b8e52bb871ad4ac00d68d(부모 3c8dc05), numstat `1 1 docs/review-policy.md`. squash tree 89f64d1c… == 로컬 merge tree."
+            },
+            {
+              "stepSeq": 3,
+              "status": "succeeded",
+              "startedAt": "2026-10-04T16:13:57Z",
+              "finishedAt": "2026-10-04T16:14:05Z",
+              "log": "main 50c5d86 에서 grep -cF: 옛 문면(`review/manual-approval` 은 아직 없다) 0 · 새 문면(required 는 `ci-success`(integration 15368)와 `review/manual-approval`(integration 고정 없음) 둘이다) 1 · 확인 명령 문장 1. `gh api repos/dlddu/pocket-aide/rules/branches/main` → `ci-success integration=15368` + `review/manual-approval integration=any` 두 줄뿐(다른 review/ 0)."
+            },
+            {
+              "stepSeq": 4,
+              "status": "succeeded",
+              "startedAt": "2026-10-04T16:13:57Z",
+              "finishedAt": "2026-10-04T16:14:05Z",
+              "log": "모델 asIs.versionScript(.code) 를 main 50c5d86 체크아웃에서 실행 rc=0 → `contexts=1 judges=2 surface_hits=54 anchors_absent=0` / `judges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3`(기대값과 동일). toBe.versionScript → 7028fd455ce51afa882a349d95f1e2a64788ac15(기대값과 동일)."
+            }
+          ]
+        },
+        "verification": {
+          "status": "passed",
+          "asIsVersionAfter": "contexts=1 judges=2 surface_hits=54 anchors_absent=0\njudges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3",
+          "verifiedAt": "2026-10-04T16:14:49Z",
+          "checks": [
+            {
+              "name": "PR #117 이 main 에 squash 착지",
+              "status": "passed",
+              "detail": "MERGED 2026-10-04T16:13:56Z · main = 50c5d86d2c98e39ff87b8e52bb871ad4ac00d68d(부모 3c8dc05) · 변경 docs/review-policy.md 1파일 +1/-1 · 승인받은 head 9392efc 그대로(--match-head-commit) · squash tree == 머지 전 로컬 merge tree(89f64d1c…)."
+            },
+            {
+              "name": "게이트 칸 옛 문면 0건",
+              "status": "passed",
+              "detail": "main 50c5d86 `grep -cF 'review/manual-approval` 은 아직 없다' docs/review-policy.md` = 0."
+            },
+            {
+              "name": "게이트 칸 새 문면 1건 · 확인 명령 유지",
+              "status": "passed",
+              "detail": "새 문면(required 는 `ci-success`(integration 15368)와 `review/manual-approval`(integration 고정 없음) 둘이다) = 1 · 확인 명령 문장(→ `review/manual-approval integration=any` 가 있어야 하고) = 1."
+            },
+            {
+              "name": "live ruleset 이 칸과 일치",
+              "status": "passed",
+              "detail": "2026-10-04T16:14:05Z `gh api repos/dlddu/pocket-aide/rules/branches/main` required_status_checks = `ci-success integration=15368` · `review/manual-approval integration=any` 정확히 두 줄, 다른 review/ context 0."
+            },
+            {
+              "name": "as-is 지문 불변",
+              "status": "passed",
+              "detail": "모델 asIs.versionScript 를 base 2b0368a · 머지 직전 tip 3c8dc05 · 머지 후 main 50c5d86 에서 실행해 세 곳 바이트 동일: contexts=1 judges=2 surface_hits=54 anchors_absent=0 / judges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3."
+            },
+            {
+              "name": "to-be blob = 계획 기대값",
+              "status": "passed",
+              "detail": "main 50c5d86 `git rev-parse HEAD:docs/review-policy.md` = 7028fd455ce51afa882a349d95f1e2a64788ac15(머지 전 d6544dfa…). 이 to-be 버전 변화는 모델 lastObservedVersion 에 반영하지 않았다 — 다음 감지 주기의 입력."
+            },
+            {
+              "name": "잔여·인계(정보성)",
+              "status": "passed",
+              "detail": "계획 범위 밖으로 남는 것: 열린 다른 PR 들의 `review/manual-approval` status 는 개별 PR 상태, 판정기 워크플로 첫 실행 관측, O4 bypass 목록 재검토(사람 몫, 다음 2027-01-02). 후속이 필요하면 재감지가 task 를 연다."
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "rct_20261004-0002",
+    "toBeModelId": "tbm_pocket-aide-pr-manual-approval",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-04T16:15:45Z",
+      "toBe": {
+        "currentVersion": "7028fd455ce51afa882a349d95f1e2a64788ac15",
+        "previousVersion": "d6544dfa72dfac7cadb45f952f44bd8ad36b0484"
+      }
+    },
+    "createdAt": "2026-10-04T16:15:45Z",
+    "updatedAt": "2026-10-04T16:15:45Z",
+    "stateSummary": {
+      "asIs": "관측 2026-10-04T16:16:58Z · `dlddu/pocket-aide@main` = `50c5d86`(#117 squash, 16:13:55Z — 같은 모델 직전 task `rct_20261004-0001` 착지).\n- **as-is 지문**(모델 versionScript 를 main 클론에서 직접 실행, rc=0): `contexts=1 judges=2 surface_hits=54 anchors_absent=0` / `judges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3` — 기준선과 바이트 동일(as-is 쪽은 이 창에서 무변동). 판정기·워크플로는 #112 이후 diff 0줄.\n- **R1**: 정책 케이스 표 {MA1,MA2,MA3,MA4} == `judge.py` 케이스 {MA1..MA4}, 대상 경로 접두사도 일치. 판정기 직접 실행: `docs/review-policy.md` → `MA4` rc=1, `README.md` → rc=0, 빈 입력 → rc=2(fail-closed).\n- **R2**: `review/…` context 를 붙이는 워크플로 1개(`review-policy.yml:44`), context 1개.\n- **R3**: `pull_request_target` · 체크아웃 1회(base) · 판정기 rc=0 일 때만 status POST · MA4 가 판정기·워크플로·정책 자기 경로 포함.\n- **R4**: 프로세스 표 7행 빈 칸 0 · surface 블록(scope 1·exclude 1·ere 5) · anchors 7줄, 지문 surface `malformed` 아님.\n- **R5(`gh api` 조회 2026-10-04T16:16:58Z)**: `rules/branches/main` required = `ci-success integration=15368` · `review/manual-approval integration=any` 두 줄뿐, strict=false. ruleset `default`(24173503) `updated_at=2026-10-04T06:46:23Z`(직전 판정 때와 동일) · enforcement active · `bypass_actors=[]`.\n- **R6**: `사람 승인` 칸에 승인자(`dlddu`)·명령·승인 전용 도구와 context 범위(`review/` 접두사) 기재. 레포 안에서 `review/manual-approval` 을 언급하는 파일은 워크플로와 정책 둘뿐.\n- **O1** 앵커 7/7 present. **O2** surface 54쌍 = MA1 37 · MA3 6 · MA2 5 · 제외 6, 누수 0. **O3** 제외 3행 재개 조건 전부 거짓(`iofs.New(migrations.FS` 1 · `sql.Open(\"sqlite\"` 1파일 · oidcmock 운영 import 0 · ThisDeviceOnly 2 == Accessible 2 · 키체인 2파일). **O4** 마지막 2026-10-04 · 다음 2027-01-02(90일 이내·미래). **O5** 미탐 원장 0행.\n- 정보성: 판정기 워크플로 `pull_request_target` 실행이 관측됨(최근 5건 전부 success, 최신 16:15:01Z). 열린 PR 4건(#141·#140·#120·#50) 중 review-policy 경로 접촉 0; #120 은 `backend/migrations/0011_*` 로 MA1 접촉(사람 승인 대상 — 개별 PR 상태는 범위 밖).",
+      "toBe": "`docs/review-policy.md` @ `50c5d86` = blob `7028fd455ce51afa882a349d95f1e2a64788ac15`(이전 `d6544df…`). 창의 diff 는 프로세스 표 `게이트` 칸 1줄(+1/−1)뿐: 「required 는 `ci-success` 하나이고 `review/manual-approval` 은 아직 없다」 → 「required 는 `ci-success`(integration 15368)와 `review/manual-approval`(integration 고정 없음) 둘이다 — 2026-10-04 에 저장소 소유자가 추가했다」. 확인용 `gh api` 명령 문장은 유지. 케이스 MA1~MA4 · surface 5 ere · anchors 7 · 의도적 제외 3 · 빈 미탐 원장은 무변경(지문 surface/anchors 해시 불변).",
+      "gap": "차이 없음. 이 창은 직전 task `0001` 이 지목한 유일한 위반(R5 마지막 조건 — `게이트` 칸 문면 ≠ 실제 ruleset)을 닫는 한 줄 정정이고, 새 칸 문면이 지금 조회한 ruleset(`ci-success` 15368 + `review/manual-approval` 앱 비고정)과 일치한다. R1~R6 · O1~O5 전 항목을 tip 에서 재측정해 충족.",
+      "summarizedAt": "2026-10-04T16:16:58Z"
+    },
+    "assessment": {
+      "reason": "판정 규칙 「R1~R6·O1~O5 전부 충족이면 no_action_needed」 → **no_action_needed**. 창 = #117 `50c5d86` 단일(같은 모델 `rct_20261004-0001` 착지, 사람 수동 status 뒤 머지) — `docs/review-policy.md` `게이트` 칸 +1/−1 로 직전 유일 위반(R5 칸 문면 ≠ ruleset)이 닫혔다. tip 재측정: 케이스 4(MA1~MA4, 정책 == 판정기) · 표면 히트 54(케이스 48 · 제외 6 · 누수 0) · 의도적 제외 3(재개 조건 전부 거짓) · 미탐 원장 0행 · 앵커 7/7 present · required check 조회 = `ci-success integration=15368` + `review/manual-approval integration=any`(strict=false, 다른 `review/` 0, bypass_actors `[]`) — 칸 문면과 일치. as-is 지문 기준선과 바이트 동일, 판정기·워크플로 #112 이후 무변경. 열린 PR 4건 중 review-policy 경로 접촉 0(예정된 정책 변경 없음). O4 는 시간이 만드는 drift 라 정의대로 `recheckAfter` = 다음 재검토 2027-01-02 를 남긴다(그날 surface ERE 포괄성과 bypass 목록을 사람이 재검토).",
+      "assessedAt": "2026-10-04T16:17:11Z",
+      "recheckAfter": "2027-01-02T00:00:00Z"
+    }
+  },
+  {
+    "toBeModelId": "tbm_pocket-aide-pr-manual-approval",
+    "status": "no_action_needed",
+    "createdAt": "2026-10-08T12:17:00Z",
+    "updatedAt": "2026-10-08T12:21:30Z",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-08T12:17:00Z",
+      "asIs": {
+        "previousVersion": "contexts=1 judges=2 surface_hits=54 anchors_absent=0\njudges=7301e74722023f82;surface=f496fd3dd8216092;anchors=d95fd0f318435fa3",
+        "currentVersion": "contexts=1 judges=2 surface_hits=58 anchors_absent=0\njudges=7301e74722023f82;surface=3e90cef974c2d3ac;anchors=d95fd0f318435fa3"
+      }
+    },
+    "id": "rct_20261008-0001",
+    "stateSummary": {
+      "asIs": "관측 2026-10-08T12:20Z · `dlddu/pocket-aide@main` = `01bc08f`(#120 squash, 12:13:13Z — `tbm_pocket-aide-docs-impl` `rct_20261004-0009` 실행 착지). 직전 관측 `50c5d86` 이후 35커밋.\n- **as-is 지문**(모델 versionScript 를 main 클론에서 직접 실행, rc=0): `contexts=1 judges=2 surface_hits=58 anchors_absent=0` / `judges=7301e74722023f82;surface=3e90cef974c2d3ac;anchors=d95fd0f318435fa3`. 이전 대비 **surface 만** 변함(54→58), judges·anchors 해시 동일.\n- **surface 증분**(정책 surface 블록을 `50c5d86` 과 HEAD 에 각각 적용해 diff): 신규 4쌍 전부 `backend/migrations/0011_agent_sessions.{up,down}.sql` 의 `CREATE TABLE`·`CREATE INDEX`·`DROP TABLE`·`DROP INDEX`. 사라진 쌍 0.\n- **R1**: 정책 케이스 표 {MA1..MA4} == `judge.py` 케이스 {MA1..MA4}, 경로 접두사 일치. 판정기·워크플로·정책 diff `50c5d86..HEAD` 0줄. 직접 실행: 0011 up/down → `MA1` rc=1, `README.md` → rc=0, 빈 입력 → rc=2(fail-closed).\n- **R2**: `review/…` context 를 붙이는 워크플로 1개(`review-policy.yml`), `review/manual-approval` 언급 파일은 워크플로·정책 둘뿐.\n- **R3**: 판정기·워크플로 무변경(직전 판정 `pull_request_target`·base 체크아웃·rc=0 일 때만 POST·MA4 자기 경로 포함 그대로).\n- **R4**: 정책 blob `7028fd4…` 무변경(프로세스 표 7행·surface/anchors 블록 기계 판독, 지문 surface `malformed` 아님).\n- **R5(API 조회 2026-10-08T12:20Z)**: `rules/branches/main` required = `ci-success integration=15368` · `review/manual-approval integration=any`, strict=false, 다른 `review/` 0. ruleset 24173503 `updated_at=2026-10-04T06:46:23Z`(직전과 동일) · enforcement active. bypass_actors 는 읽기 토큰으로 보이지 않음(null) — O4 사람 재검토 몫.\n- **R6**: `사람 승인` 칸 무변경(승인자 `dlddu`·명령·승인 전용 도구 homelab-k3s-mcp `github_commit_status_create`, context 범위 `review/`).\n- **O1** 앵커 7/7 present(`backend/migrations/*.up.sql` 11파일). **O2** surface 58쌍 = MA1 41 · MA2 5 · MA3 6 · 제외 6, 누수 0. **O3** 제외 3행 재개 조건 전부 거짓(`iofs.New(migrations.FS` 1 · `sql.Open(\"sqlite\"` 1파일 · oidcmock 운영 import 0 · ThisDeviceOnly 2 == Accessible 2 · 키체인 2파일). **O4** 마지막 2026-10-04 · 다음 2027-01-02(미래·90일 이내). **O5** 미탐 원장 0행.\n- **#120 승인 경로(bypass 흔적 확인)**: MA1 접촉으로 판정기가 status 미부착 → reconciler 리뷰가 `review.manualApproval`(sha `51f4142`, context `review/manual-approval`) 기록 → 12:09:41Z 해당 sha 에 `review/manual-approval` success, description `수동 승인`, creator `dlddu-k3s-homelab-k3s-mcp[bot]`(정책이 선언한 승인 전용 도구) → 12:13:13Z 머지. 수동 status 경로이며 bypass 흔적 없음.\n- 정보성: 열린 PR 2건(#176·#173) 모두 케이스 경로 접촉 0, 판정기 실행 최근 5건 success.",
+      "toBe": "`docs/review-policy.md` @ `01bc08f` = blob `7028fd455ce51afa882a349d95f1e2a64788ac15` — 직전 관측과 동일(to-be 무변경). 케이스 MA1~MA4 · surface 5 ere · anchors 7 · 의도적 제외 3 · 빈 미탐 원장 · 게이트 칸(`ci-success` 15368 + `review/manual-approval` 앱 비고정) · 다음 재검토 2027-01-02.",
+      "gap": "유의미한 차이 없음. as-is 변동은 #120 이 추가한 마이그레이션 `0011_agent_sessions` 의 DDL 토큰 4쌍이 surface 에 새로 걸린 것뿐이고, 전부 MA1(`backend/migrations/`)에 덮이며 판정기도 MA1 로 잡는다(누수 0). 그 PR 은 판정기 미부착 → 수동 status 로 승인·머지되어 프로세스가 의도대로 동작했다. R1~R6·O1~O5 전 항목 충족.",
+      "summarizedAt": "2026-10-08T12:21:00Z"
+    },
+    "assessment": {
+      "reason": "판정 규칙 「R1~R6·O1~O5 전부 충족이면 no_action_needed」 → **no_action_needed**. 트리거 = as-is surface 해시 변동(54→58)뿐이고 원인은 #120(`01bc08f`)이 더한 `backend/migrations/0011_agent_sessions.{up,down}.sql` 의 DDL 4쌍 — 전부 MA1 에 덮이고 판정기도 MA1 rc=1 로 잡는다(누수 0). 정책·판정기·워크플로·앵커는 직전 판정 이후 무변경. tip 재측정: 케이스 4(정책 == 판정기) · 표면 히트 58(케이스 52 · 제외 6) · 의도적 제외 3(재개 조건 전부 거짓) · 미탐 원장 0행 · 앵커 7/7 · required check 조회 = `ci-success integration=15368` + `review/manual-approval integration=any`(strict=false, 다른 `review/` 0) — 게이트 칸 문면과 일치. #120 은 판정기 미부착 → 승인 전용 도구로 수동 status(`수동 승인`, head `51f4142`) → 머지 순으로 선언된 경로를 탔다(bypass 흔적 없음). O4 는 정의대로 `recheckAfter` = 다음 재검토 2027-01-02(그날 surface ERE 포괄성과 bypass 목록을 사람이 재검토).",
+      "assessedAt": "2026-10-08T12:21:30Z",
+      "recheckAfter": "2027-01-02T00:00:00Z"
+    }
+  },
+  {
+    "id": "rct_20261011-0001",
+    "toBeModelId": "tbm_pocket-aide-pr-manual-approval",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-11T03:16:18Z",
+      "asIs": {
+        "currentVersion": "contexts=1 judges=2 surface_hits=63 anchors_absent=0\njudges=7301e74722023f82;surface=98815e79565a6548;anchors=d95fd0f318435fa3",
+        "previousVersion": "contexts=1 judges=2 surface_hits=58 anchors_absent=0\njudges=7301e74722023f82;surface=3e90cef974c2d3ac;anchors=d95fd0f318435fa3"
+      }
+    },
+    "createdAt": "2026-10-11T03:16:18Z",
+    "updatedAt": "2026-10-11T03:18:55Z",
+    "stateSummary": {
+      "asIs": "**관측 시각** 2026-10-11T03:16~03:25Z · `dlddu/pocket-aide` main tip `b267cbc`(#207, 03:13:59Z 머지).\n\n- as-is 지문(versionScript를 fresh clone에서 재실행): `contexts=1 judges=2 surface_hits=63 anchors_absent=0` / `judges=7301e74722023f82;surface=98815e79565a6548;anchors=d95fd0f318435fa3` — 직전 기준선 대비 **surface 해시·히트 수(58→63)만** 변동, judges·anchors 바이트 동일.\n- 변동 창: 기준선 관측(2026-10-08T12:17Z, `01bc08f`) 이후 main 커밋을 하나씩 재측정 → surface 해시가 바뀐 커밋은 **#207 `b267cbc` 하나**(`ef16dbb`까지는 `3e90cef974c2d3ac` 유지). #207은 rct_20261009-0007(승인 게이트 백엔드 1차) 착지.\n- surface 집합 diff(`ef16dbb`→`b267cbc`): +5행, 전부 새 마이그레이션 `backend/migrations/0012_approval_gate.{up,down}.sql` — `CREATE TABLE` · `CREATE INDEX` · `CREATE UNIQUE INDEX`(up), `DROP TABLE` · `DROP INDEX`(down). 제거 0행.\n- judges: `.github/workflows/review-policy.yml` `b867f1c` · `scripts/review-policy/judge.py` `cddbbe6` — 무변경. `review/…` context는 `review/manual-approval` 하나.\n- anchors 7/7 present(무변경).\n- 판정기 실행(tip 정책·판정기): #207 변경 경로 입력 → rc=1, `MA1 backend/migrations/0012_approval_gate.{down,up}.sql`. surface 히트 파일 전체 입력 → 케이스 덮임 57행(MA1 마이그레이션 25파일 · MA2 2 · MA3 3 등), 미덮임 6행은 전부 의도적 제외 3행의 대상(`backend/internal/db/db.go` 2 · `backend/internal/oidcmock/oidcmock.go` 2 · `PocketAideStorage/{TokenStore,GitHubCredentialStore}.swift` 각 1). 누수 0.\n- 제외 트립와이어 실측: `iofs.New(migrations.FS` = 1(≠0) · `sql.Open(\"sqlite\"` 운영 파일 = 1(<2) · oidcmock 운영 import = 0 · `ThisDeviceOnly` 합계 2 = `kSecAttrAccessible as String` 합계 2 · `kSecClassGenericPassword` 파일 2(<3) → 재개 조건 전부 거짓.\n- R5 게이트(`gh api rules/branches/main` 상당 REST 조회): ruleset 24173503 required = `ci-success integration=15368` + `review/manual-approval integration=any`, strict=false, 다른 `review/` 0. `rulesets/24173503` 응답의 `bypass_actors`는 이 토큰 권한으로 보이지 않음(None — admin 필요, O4 몫).\n- #207 승인 경로: head `031d184` — review-policy 워크플로(`pull_request_target`) 실행 success지만 판정기 rc=1이라 status 미부착 → `review/manual-approval` success, description `수동 승인`, 2026-10-11T01:21:14Z, 승인 전용 도구(homelab-k3s-mcp bot) → 03:13:59Z 머지. bypass 흔적 없음.\n- 열린 PR #237·#201: 정책·판정기·워크플로 경로 접촉 0.\n",
+      "toBe": "**관측 시각** 2026-10-11T03:16Z · `docs/review-policy.md` blob `7028fd455ce51afa882a349d95f1e2a64788ac15`(기준선과 동일, 2026-10-04 이후 무변경).\n\n- 케이스 4: MA1 `backend/migrations/` 전부 · MA2 인증(`backend/internal/auth/`·`PocketAideAuth/`) · MA3 `k8s/` · MA4 판정기·워크플로·정책 자신.\n- surface 블록(scope `backend ios/Shared ios/PocketAide k8s`, ERE 5줄) · anchors 7경로 · 의도적 제외 3행(재개 조건 리터럴 명시) · 미탐 원장 0행.\n- 프로세스 표: 게이트 칸 = ruleset `default`(24173503) required `ci-success`(15368) + `review/manual-approval`(고정 없음) · 사람 승인 칸 = 수동 status 절차 + 승인 전용 도구(`review/` prefix 제한) · 마지막 재검토 2026-10-04 · 다음 재검토 2027-01-02(90일 이내, 오늘 이후).\n",
+      "gap": "유의미한 차이 없음. as-is 변동은 #207이 추가한 마이그레이션 `0012_approval_gate`의 DDL 토큰 5개가 surface에 새로 걸린 것뿐이고, 전부 MA1에 덮이며 판정기도 MA1(rc=1)로 잡는다(누수 0) — #207은 판정기 미부착 → 수동 status → 머지로 선언된 경로를 탔다. 정책·판정기·워크플로·앵커·게이트는 직전 판정 이후 무변경이고 R1~R6·O1~O5 전부 충족.",
+      "summarizedAt": "2026-10-11T03:18:37Z"
+    },
+    "assessment": {
+      "reason": "판정 규칙 「R1~R6·O1~O5 전부 충족이면 no_action_needed」 → **no_action_needed**. 트리거 = as-is surface 해시 변동(58→63)뿐이고, 커밋별 재측정으로 원인을 #207(`b267cbc`, rct_20261009-0007 착지) 하나로 특정했다 — 새 마이그레이션 `backend/migrations/0012_approval_gate.{up,down}.sql`의 DDL 5토큰이 전부 MA1에 덮이고 판정기도 MA1 rc=1로 잡는다(누수 0). 정책 blob·판정기·워크플로·앵커는 직전 판정(rct_20261008-0001) 이후 바이트 동일. tip 재측정: 케이스 4(정책 == 판정기, 판정기 rc=2 아님) · 표면 히트 63(케이스 57 · 제외 6) · 의도적 제외 3(재개 조건 전부 거짓) · 미탐 원장 0행 · 앵커 7/7 · required check 조회 = `ci-success integration=15368` + `review/manual-approval integration=any`(strict=false, 다른 `review/` 0) — 게이트 칸 문면과 일치. #207은 판정기 미부착 → 승인 전용 도구로 수동 status(`수동 승인`, head `031d184`) → 머지 순으로 선언된 경로를 탔다(bypass 흔적 없음). 열린 PR 2건(#237·#201) 정책 경로 접촉 0. O4는 정의대로 `recheckAfter` = 다음 재검토 2027-01-02(그날 surface ERE 포괄성과 bypass 목록을 사람이 재검토). lastObservedVersion은 claim 커밋에서 이미 tip 값으로 갱신됨.",
+      "assessedAt": "2026-10-11T03:18:55Z",
+      "recheckAfter": "2027-01-02T00:00:00Z"
+    }
+  },
+  {
+    "id": "rct_20261013-0001",
+    "toBeModelId": "tbm_pocket-aide-pr-manual-approval",
+    "status": "no_action_needed",
+    "trigger": {
+      "source": "version_change",
+      "detectedAt": "2026-10-13T12:04:13Z",
+      "asIs": {
+        "currentVersion": "contexts=1 judges=2 surface_hits=65 anchors_absent=0\njudges=7301e74722023f82;surface=1d749993f4b55b34;anchors=d95fd0f318435fa3",
+        "previousVersion": "contexts=1 judges=2 surface_hits=63 anchors_absent=0\njudges=7301e74722023f82;surface=98815e79565a6548;anchors=d95fd0f318435fa3"
+      }
+    },
+    "createdAt": "2026-10-13T12:04:13Z",
+    "updatedAt": "2026-10-13T12:06:15Z",
+    "stateSummary": {
+      "asIs": "**관측 시각** 2026-10-13T12:06:04Z · `dlddu/pocket-aide` main tip `40c8c6d`(#278, 2026-10-13T11:59:23Z 머지).\n\n- as-is 지문(fresh clone에서 versionScript 재실행): `contexts=1 judges=2 surface_hits=65 anchors_absent=0` / `judges=7301e74722023f82;surface=1d749993f4b55b34;anchors=d95fd0f318435fa3`. 직전 기준선과 비교하면 **surface 해시와 히트 수(63→65)만** 바뀌었고 judges·anchors는 바이트 단위로 같다.\n- 변동 창: 기준선(`b267cbc`, #207) 이후 main 커밋을 하나씩 다시 쟀다. surface 해시가 바뀐 커밋은 **#278 `40c8c6d` 하나**다(`e584ef4`까지는 `98815e79565a6548` 유지). #278은 rct_20261012-0002(승인 자동 응답 모드, PRD-12 AC9)의 착지다.\n- surface 집합 diff(`e584ef4`→`40c8c6d`): +2행, 제거 0행. 둘 다 새 마이그레이션의 DDL이다: `backend/migrations/0013_approval_settings.up.sql:CREATE TABLE`, `…0013_approval_settings.down.sql:DROP TABLE`(`user_approval_settings` 테이블).\n- judges: `.github/workflows/review-policy.yml`·`scripts/review-policy/judge.py` 무변경(마지막 변경은 #112 이전). `review/…` context는 `review/manual-approval` 하나.\n- anchors 7/7 present(무변경).\n- 판정기 실행(tip 정책·판정기, #278 변경 경로 20개 입력): rc=1, `MA1 backend/migrations/0013_approval_settings.{down,up}.sql`.\n- surface 65행 분류: 케이스가 덮는 행 59(MA1~MA3 경로), 의도적 제외 대상 행 6(`db.go`·`oidcmock`·`PocketAideStorage`). 어느 쪽에도 속하지 않는 누수는 0행이다.\n- #278 처리 경로: head `b6c43af`에 붙은 status는 `review/manual-approval` = success 하나다(description `수동 승인`, 11:57:18Z, 승인 전용 도구 `dlddu-k3s-homelab-k3s-mcp[bot]`). 판정기는 붙이지 않았다(MA1 접촉). 머지는 11:59:23Z였고 bypass 흔적은 없다.\n- 제외 트립와이어(tip): `iofs.New(migrations.FS` 1회 · `sql.Open(\"sqlite\")` 사용 1파일 · 운영 경로에서 `internal/oidcmock` import 0파일 · `ThisDeviceOnly` 2 = `kSecAttrAccessible as String` 2 · `kSecClassGenericPassword` 사용 2파일. 재개 조건은 전부 거짓이다.\n- required check 조회(`rules/branches/main`): `ci-success integration=15368`, `review/manual-approval integration=any`. ruleset 24173503, strict=false이고 다른 `review/` context는 0개다. 그 밖의 규칙은 deletion · non_fast_forward · required_linear_history다.\n- 열린 PR 4건(#296·#295·#293·#201) 중 MA1~MA4 경로를 건드리는 PR은 0건이다.",
+      "toBe": "**관측 시각** 2026-10-13T12:06:04Z · `docs/review-policy.md` blob `7028fd455ce51afa882a349d95f1e2a64788ac15`. lastObservedVersion과 같아 직전 판정 이후 무변경이다.\n\n- 케이스 4개(MA1 마이그레이션 · MA2 인증 · MA3 `k8s/` · MA4 판정기·워크플로·정책 자신). 판정기의 케이스 집합과 일치한다.\n- 의도적 제외 3행. 재개 조건은 모두 관측 가능한 리터럴로 적혀 있다.\n- 미탐 원장 0행.\n- 프로세스 표: `게이트` 칸은 ruleset 24173503의 `ci-success`(15368)와 `review/manual-approval`(고정 없음)이다. `사람 승인` 칸은 수동 status 명령 + 승인 전용 도구 범위 `review/`를 적고 있다. 마지막 재검토 2026-10-04, 다음 재검토 2027-01-02.",
+      "gap": "유의미한 차이 없음. as-is 변동은 #278이 추가한 마이그레이션 `0013_approval_settings`의 DDL 토큰 2개(`CREATE TABLE`·`DROP TABLE`)가 surface에 새로 걸린 것뿐이다. 둘 다 MA1에 덮이고 판정기도 MA1(rc=1)로 잡는다(누수 0). #278은 판정기 미부착 → 수동 status → 머지라는 선언된 경로를 탔다. 정책·판정기·워크플로·앵커·게이트는 직전 판정 이후 무변경이며 R1~R6·O1~O5 전부 충족한다.",
+      "summarizedAt": "2026-10-13T12:06:04Z"
+    },
+    "assessment": {
+      "reason": "판정 규칙 「R1~R6·O1~O5 전부 충족이면 no_action_needed」 → **no_action_needed**. 트리거는 as-is surface 해시 변동(63→65) 하나뿐이다. 커밋별 재측정으로 원인을 #278(`40c8c6d`, rct_20261012-0002 착지) 하나로 특정했다. 새 마이그레이션 `backend/migrations/0013_approval_settings.{up,down}.sql`의 DDL 2토큰이 전부 MA1에 덮이고, 판정기도 MA1 rc=1로 잡는다(누수 0). 정책 blob·판정기·워크플로·앵커는 직전 판정(rct_20261011-0001) 이후 바이트 단위로 같다. tip 재측정 결과: 케이스 4(정책 == 판정기) · 표면 히트 65(케이스 59 · 제외 6) · 의도적 제외 3(재개 조건 전부 거짓) · 미탐 원장 0행 · 앵커 7/7. required check 조회 결과는 `ci-success integration=15368` + `review/manual-approval integration=any`이고(strict=false, 다른 `review/` 0) 게이트 칸 문면과 일치한다. #278은 판정기 미부착 → 승인 전용 도구로 수동 status(`수동 승인`, head `b6c43af`) → 머지 순으로 선언된 경로를 탔다(bypass 흔적 없음). 열린 PR 4건(#296·#295·#293·#201)은 정책 경로를 건드리지 않는다. O4는 정의대로 `recheckAfter` = 다음 재검토 2027-01-02로 남긴다(그날 사람이 surface ERE 포괄성과 bypass 목록을 재검토한다). lastObservedVersion은 claim 커밋에서 이미 tip 값으로 갱신됐다.",
+      "assessedAt": "2026-10-13T12:06:15Z",
+      "recheckAfter": "2027-01-02T00:00:00Z"
     }
   }
 ]
