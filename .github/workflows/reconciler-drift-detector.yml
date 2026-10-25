@@ -10,11 +10,6 @@ on:
         description: "감지할 대상 지목(tbm_... 모델 또는 rct_... assessing task). 비우면 자동 선정"
         required: false
         default: ""
-      full_sweep:
-        description: "첫 버전 변화에서 멈추지 않고 모든 활성 모델의 버전을 계산(남은 변화 건수 보고용)"
-        type: boolean
-        required: false
-        default: false
 
 # 같은 스킬이 동시에 두 번 돌며 같은 task를 점유하거나 push가 충돌하지 않도록 직렬화한다.
 concurrency:
@@ -64,12 +59,10 @@ jobs:
         id: select
         env:
           INPUT_TARGET_ID: ${{ inputs.target_id }}
-          INPUT_FULL_SWEEP: ${{ inputs.full_sweep }}
         run: |
           args=(--repo "$GITHUB_WORKSPACE" --target "$INPUT_TARGET_ID"
                 --work-dir "$RUNNER_TEMP/select-target"
                 --summary-file "$RUNNER_TEMP/select-target.md")
-          [ "$INPUT_FULL_SWEEP" = "true" ] && args+=(--full-sweep)
           python3 .github/scripts/select_drift_target.py "${args[@]}"
 
       # TODO: 고른 대상에 대해 스킬 실행.

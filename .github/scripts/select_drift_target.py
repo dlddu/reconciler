@@ -405,7 +405,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--work-dir", help="대상 레포 클론 위치. 기본은 임시 디렉터리")
     parser.add_argument("--repo-url-template", default="https://github.com/{repository}.git")
     parser.add_argument("--full-sweep", action="store_true",
-                        help="첫 변화에서 멈추지 않고 모든 활성 모델의 버전을 계산")
+                        help="로컬 점검용: 첫 변화에서 멈추지 않고 모든 활성 모델의 버전을 계산"
+                             "(선정 결과는 같다 — 밀린 건수·스크립트 오류 확인용, 워크플로에선 쓰지 않음)")
     parser.add_argument("--github-output", default=os.environ.get("GITHUB_OUTPUT"))
     parser.add_argument("--summary-file", default=os.environ.get("GITHUB_STEP_SUMMARY"))
     args = parser.parse_args(argv)
