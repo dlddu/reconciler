@@ -79,7 +79,9 @@ class FakeWorld:
                 elif method == "tools/list":
                     result = {"tools": [{"name": "ping"}, {"name": "github_app_installation_token"}]}
                 elif msg["params"]["name"] == "github_app_installation_token":
-                    result = {"content": [{"type": "text", "text": "# expires soon\nGITHUB_TOKEN=ghs_fake123\n"}]}
+                    result = {"content": [{"type": "resource", "resource": {  # 실제 서버와 같은 embedded resource 모양
+                        "uri": "file:///github-token.env", "mimeType": "text/plain",
+                        "text": "# expires soon\nGITHUB_TOKEN=ghs_fake123\n"}}]}
                 else:
                     result = {"content": [{"type": "text", "text": "pong"}]}
                 body = json.dumps({"jsonrpc": "2.0", "id": msg["id"], "result": result}).encode()

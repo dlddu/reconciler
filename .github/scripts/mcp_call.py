@@ -85,10 +85,22 @@ class McpClient:
 
     def call_tool(self, name: str, arguments: dict) -> str:
         result = self.request("tools/call", {"name": name, "arguments": arguments})
-        text = "\n".join(c.get("text", "") for c in result.get("content") or [] if c.get("type") == "text")
+        text = "\n".join(content_text(c) for c in result.get("content") or [])
         if result.get("isError"):
             raise McpError(f"{name}: {text.strip()[:500]}")
         return text
+
+
+def content_text(content: dict) -> str:
+    """text content와 embedded resource(text)를 같은 방식으로 읽는다.
+
+    github_app_installation_token은 토큰을 `{"type":"resource","resource":{"text":...}}`로 돌려준다.
+    """
+    if content.get("type") == "text":
+        return content.get("text", "")
+    if content.get("type") == "resource":
+        return (content.get("resource") or {}).get("text", "")
+    return ""
 
 
 def parse_sse(body: str, want_id) -> dict:

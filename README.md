@@ -59,7 +59,7 @@ tests/                              # index.html 동작 테스트 (node --test),
 - **homelab-k3s-mcp 연결**: GitHub Actions OIDC. OIDC 토큰이 약 5분짜리라 `.mcp.json`에 박지 않고, 로컬 프록시
   (`mcp_oidc_proxy.py`, 127.0.0.1)가 요청마다 토큰을 붙이고 만료 전에 갱신한다. mcode 환경에서는 OIDC 요청
   변수와 대상 레포 토큰을 뺀다. 서버 `MCP_GITHUB_OIDC_RULES`에 이 워크플로 파일 규칙이 있어야 하고
-  (`github_app_installation_token` 필수, `resource_list`·`resource_get`·`ping` 권장), audience는
+  (`github_app_installation_token` 필수, `resource_list`·`resource_get`·`api_resources` 권장), audience는
   `vars.HOMELAB_K3S_MCP_AUDIENCE`(기본 `homelab-k3s-mcp`), URL은 `vars.HOMELAB_K3S_MCP_URL`로 바꿀 수 있다.
 - **테스트**: `python3 -m unittest discover -s tests`가 프록시·점검기·검증기를 네트워크 없이 검사한다.
 

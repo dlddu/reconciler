@@ -14,7 +14,7 @@
 #   vars.HOMELAB_K3S_MCP_AUDIENCE      (선택) 서버 MCP_GITHUB_OIDC_AUDIENCE, 기본 homelab-k3s-mcp
 #   vars.MINIMAX_REGION                (선택) en(기본, api.minimax.io) | cn
 #   서버 MCP_GITHUB_OIDC_RULES에 이 파일(.github/workflows/reconciler-drift-detector.yml) 규칙:
-#     github_app_installation_token(필수), resource_list, resource_get, ping(권장)
+#     github_app_installation_token(필수), resource_list, resource_get, api_resources(권장)
 name: "Reconciler · Drift Detector"
 
 on:
@@ -231,7 +231,9 @@ jobs:
           python3 - "$OUT/logs/mcp-tools.json" <<'PY' >> "$GITHUB_OUTPUT"
           import json, sys
           tools = set(json.load(open(sys.argv[1])))
-          print("has_ping=" + ("true" if "ping" in tools else "false"))
+          # mcode 배선 확인용: 인자 없이 부를 수 있는 읽기 도구(ping이 규칙에 없으면 api_resources)
+          smoke = next((t for t in ("ping", "api_resources") if t in tools), "")
+          print("smoke_tool=" + smoke)
           if "github_app_installation_token" not in tools:
               print("::error::이 워크플로의 OIDC 규칙에 github_app_installation_token이 없음 — MCP_GITHUB_OIDC_RULES에 추가 필요", file=sys.stderr)
               sys.exit(1)
@@ -268,20 +270,21 @@ jobs:
 
       # mcode → MCP 배선 확인: 실제 도구 호출이 대화 기록에 남는지 본다(문장 응답만으로는 증거가 아님).
       - name: MCP smoke test via mcode
-        if: steps.mcp.outputs.has_ping == 'true'
+        if: steps.mcp.outputs.smoke_tool != ''
         env:
           MODEL: ${{ inputs.minimax_model }}
+          SMOKE_TOOL: ${{ steps.mcp.outputs.smoke_tool }}
         run: |
           args=(exec --cwd "$GITHUB_WORKSPACE/ws" --permission full --output-format stream-json --timeout 5m)
           [ -n "$MODEL" ] && args+=(--model "$MODEL")
           before=$(grep -c "POST 200" "$OUT/logs/mcp-proxy.log" || true)
           env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL -u SOURCE_GITHUB_TOKEN \
-            mcode "${args[@]}" "MCP 서버 k3s의 ping 도구를 한 번 호출하고 결과만 그대로 답하라." \
+            mcode "${args[@]}" "MCP 서버 k3s의 $SMOKE_TOOL 도구를 인자 없이 한 번 호출하고, 결과 첫 몇 줄만 그대로 답하라." \
             > "$OUT/logs/mcp-smoke.jsonl" 2> "$OUT/logs/mcp-smoke.stderr.log" || true
           after=$(grep -c "POST 200" "$OUT/logs/mcp-proxy.log" || true)
           python3 harness/.github/scripts/mcode_transcript.py summary "$OUT/logs/mcp-smoke.jsonl" || true
-          if [ "$after" -gt "$before" ] && python3 harness/.github/scripts/mcode_transcript.py require-tool "$OUT/logs/mcp-smoke.jsonl" ping; then
-            echo "mcode → k3s MCP 확인: 프록시 경유 요청 $((after - before))건, 대화 기록에 ping tool_call"
+          if [ "$after" -gt "$before" ] && python3 harness/.github/scripts/mcode_transcript.py require-tool "$OUT/logs/mcp-smoke.jsonl" "$SMOKE_TOOL"; then
+            echo "mcode → k3s MCP 확인: 프록시 경유 요청 $((after - before))건, 대화 기록에 $SMOKE_TOOL tool_call"
           else
             tail -n 20 "$OUT/logs/mcp-smoke.stderr.log" || true
             echo "::error::mcode가 k3s MCP 도구를 호출하지 못함 — logs/mcp-smoke.jsonl 참고"; exit 1
