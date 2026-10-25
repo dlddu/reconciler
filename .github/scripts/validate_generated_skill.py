@@ -3,7 +3,7 @@
 
 생성 결과를 사람이 읽기 전에 기계적으로 걸러낼 수 있는 것만 본다:
   - 형식: SKILL.md 존재, frontmatter(name/description), 본문 길이
-  - 계약 커버리지: 감지 단계 계약의 핵심 요소가 본문에 등장하는지(키워드 기반 — 의미 검증은 test job 몫)
+  - 계약 커버리지: 감지 단계 계약의 핵심 요소가 본문·번들 스크립트에 등장하는지(키워드 기반 — 의미 검증은 test job 몫)
   - 안전: 비밀값 리터럴, 강제 push, 스키마 파일 쓰기 같은 금지 패턴
   - 보조 스크립트: .py는 컴파일, .sh는 `bash -n`
 
@@ -36,7 +36,7 @@ REQUIRED = [
     ("수동 트리거 사유 manualTriggerReason", [r"\bmanualTriggerReason\b"]),
     ("기록 필드 stateSummary", [r"\bstateSummary\b"]),
     ("기록 필드 assessment", [r"\bassessment\b"]),
-    ("task 스키마 참조", [r"schemas/reconciliation-task\.schema\.json"]),
+    ("task 스키마 참조", [r"reconciliation-task\.schema\.json"]),
     ("task 저장 위치", [r"data/reconciliation-tasks"]),
     ("커밋 메시지 규약 detect(...)", [r"detect\("]),
     ("드라이런 RECONCILER_DRY_RUN", [r"\bRECONCILER_DRY_RUN\b"]),
@@ -115,6 +115,14 @@ def parse_simple_yaml(raw: str) -> dict:
     return data
 
 
+def bundled_text(skill_dir: Path) -> str:
+    parts = []
+    for path in sorted(skill_dir.rglob("*")):
+        if path.is_file() and path.name != "SKILL.md" and path.stat().st_size < 2_000_000:
+            parts.append(path.read_text(encoding="utf-8", errors="replace"))
+    return "\n".join(parts)
+
+
 def check_scripts(skill_dir: Path, report: Report) -> None:
     for path in sorted(skill_dir.rglob("*")):
         if not path.is_file() or path.name == "SKILL.md":
@@ -165,13 +173,15 @@ def validate(skill_dir: Path) -> Report:
     elif body_len > MAX_BODY_CHARS:
         report.errors.append(f"본문이 너무 김({body_len}자 > {MAX_BODY_CHARS})")
 
+    # 계약 커버리지는 SKILL.md와 번들 스크립트를 합쳐 본다 — 스키마 경로처럼 절차를 스크립트에 위임한 경우가 있다.
+    covered = text + "\n" + bundled_text(skill_dir)
     for label, patterns in REQUIRED:
-        if any(re.search(p, text) for p in patterns):
+        if any(re.search(p, covered) for p in patterns):
             report.passed.append(label)
         else:
             report.errors.append(f"계약 누락: {label}")
     for label, patterns in RECOMMENDED:
-        if any(re.search(p, text, re.I) for p in patterns):
+        if any(re.search(p, covered, re.I) for p in patterns):
             report.passed.append(label)
         else:
             report.warnings.append(f"권장 항목 누락: {label}")

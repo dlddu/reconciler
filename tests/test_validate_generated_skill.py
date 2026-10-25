@@ -76,6 +76,13 @@ class ValidateGeneratedSkillTest(unittest.TestCase):
         self.assertEqual(rep.errors, [])
         self.assertTrue(any("점유가 수집보다 먼저" in w for w in rep.warnings))
 
+    def test_contract_covered_by_bundled_script(self):
+        body = BODY.replace("`schemas/reconciliation-task.schema.json`으로 ", "")
+        rep = self.write(skill_text(body=body))
+        self.assertTrue(any("task 스키마 참조" in e for e in rep.errors))
+        rep = self.write(skill_text(body=body), {"scripts/rec.py": 'SCHEMA = "reconciliation-task.schema.json"\n'})
+        self.assertEqual(rep.errors, [])
+
     def test_short_body_is_error(self):
         self.assertTrue(any("짧음" in e for e in self.write(skill_text(pad=0)).errors))
 
