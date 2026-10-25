@@ -5,6 +5,11 @@ name: "Reconciler · Work Executor"
 
 on:
   workflow_dispatch:
+    inputs:
+      target_id:
+        description: "실행할 대상 지목(<tbm_id>/<rct_id>, 모호하지 않은 rct_..., 또는 tbm_... 모델). 비우면 자동 선정"
+        required: false
+        default: ""
 
 # 같은 스킬이 동시에 두 번 돌며 같은 task를 점유하거나 push가 충돌하지 않도록 직렬화한다.
 concurrency:
@@ -45,23 +50,38 @@ jobs:
         run: |
           echo "TODO: set up runtime for $SKILL_NAME"
 
-      # TODO: 이번 실행이 다룰 대상(ToBeModel/ReconciliationTask) 한 건을 고른다.
-      # 고른 id를 target_id로 내보내고, 대상이 없으면 found=false로 두어 이후 스텝을 건너뛴다.
+      # 스킬 Step 0(대상 선정 · 진입 게이트, 4-0)을 그대로 옮긴 읽기 전용 선정.
+      # 판정 규칙은 reconciler-local work-executor 게이트(precheck-execute.py)와 같다:
+      # approved만 입구 · plan.steps/executionGuide/preparation.preparedAt 필수 ·
+      # review.manualApproval이 있으면 PR open + head == sha + context 최신 status success일 때만 ·
+      # attempt.decision이 있으면 verdict approved + PR head == sha일 때만. 확인 못 하면 승인 안 됨(fail-closed).
+      # 지목이 없으면 review.reviewedAt이 오래된 approved부터 판정해 첫 executable 한 건에서 멈춘다.
+      # task id는 모델 안에서만 유일하므로 target_id는 <tbm_id>/<rct_id>로 내보낸다.
+      # 레포에 쓰지 않는다 — approved → executing 점유 커밋은 스킬 Step 1 몫.
+      # PR·status 조회는 앞 스텝이 $GITHUB_ENV로 내보낼 SOURCE_GITHUB_TOKEN(대상 레포 read)을 우선 쓰고,
+      # 없으면 워크플로 토큰으로 공개 레포 조회 한도만 올린다.
+      # 대상이 없는데 승인 확인에 실패한 건이 있으면 "실행할 것 없음"으로 단정할 수 없어 실패로 끝낸다.
       - name: Select target
         id: select
+        env:
+          INPUT_TARGET_ID: ${{ inputs.target_id }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          echo "TODO: select target for $SKILL_NAME"
-          echo "target_id=" >> "$GITHUB_OUTPUT"
-          echo "found=false" >> "$GITHUB_OUTPUT"
+          args=(--repo "$GITHUB_WORKSPACE" --target "$INPUT_TARGET_ID"
+                --summary-file "$RUNNER_TEMP/select-target.md")
+          python3 .github/scripts/select_execute_target.py "${args[@]}"
 
       # TODO: 고른 대상에 대해 스킬 실행.
       - name: Run skill
         if: steps.select.outputs.found == 'true'
         env:
           TARGET_ID: ${{ steps.select.outputs.target_id }}
+          SELECT_REASON: ${{ steps.select.outputs.reason }}
+          PULL_REQUEST_URL: ${{ steps.select.outputs.pull_request_url }}
         run: |
           echo "skill:     $SKILL_NAME"
-          echo "target_id: $TARGET_ID"
+          echo "target_id: $TARGET_ID ($SELECT_REASON)"
+          echo "pr:        ${PULL_REQUEST_URL:-<none>}"
           echo "TODO: implement $SKILL_NAME execution"
 
       - name: Summary
@@ -69,10 +89,13 @@ jobs:
         env:
           TARGET_ID: ${{ steps.select.outputs.target_id }}
           FOUND: ${{ steps.select.outputs.found }}
+          REASON: ${{ steps.select.outputs.reason }}
         run: |
           {
             echo "### $SKILL_NAME"
             echo "- target found: ${FOUND:-false}"
-            echo "- target_id: ${TARGET_ID:-<none>}"
+            echo "- target_id: ${TARGET_ID:-<none>}${REASON:+ ($REASON)}"
             echo "- result: TODO"
+            echo
+            cat "$RUNNER_TEMP/select-target.md" 2>/dev/null || true
           } >> "$GITHUB_STEP_SUMMARY"
