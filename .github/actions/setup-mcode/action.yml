@@ -1,0 +1,88 @@
+name: Set up MiniMax Code
+description: >-
+  MiniMax Code(mcode) CLI를 설치하고 Token Plan subscription key로 공식 MiniMax API(BYOK minimax_api)
+  경로를 선택한다. 키는 이 job 전용 데이터 디렉터리의 config.yaml(0600)에만 남고 로그·인자에 나오지 않는다.
+
+inputs:
+  subscription-key:
+    description: MiniMax Token Plan subscription key (sk-cp-...). secrets.MINIMAX_SUBSCRIPTION_KEY를 넘긴다.
+    required: true
+  version:
+    description: "@minimax-ai/code 버전 (재현성을 위해 고정)"
+    required: false
+    default: "0.6.13"
+  region:
+    description: "en(global, api.minimax.io) 또는 cn(api.minimaxi.com)"
+    required: false
+    default: "en"
+
+outputs:
+  data-dir:
+    description: mcode 데이터 디렉터리(MINIMAX_DATA_DIR)
+    value: ${{ steps.configure.outputs.data-dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "24"
+
+    - name: Install mcode
+      shell: bash
+      env:
+        MCODE_VERSION: ${{ inputs.version }}
+      run: |
+        npm install -g "@minimax-ai/code@${MCODE_VERSION}" \
+          --registry=https://registry.npmjs.org/ --ignore-scripts=false --include=optional \
+          --allow-scripts=@minimax-ai/code,better-sqlite3 --no-fund --no-audit
+        mcode --version
+
+    # 키는 env로만 건넨다(set-minimax-key가 환경 변수에서 읽어 config.yaml에 저장 — 명령 인자에 싣지 않는다).
+    - name: Configure subscription key
+      id: configure
+      shell: bash
+      env:
+        MCODE_PROVIDER_API_KEY: ${{ inputs.subscription-key }}
+        REGION: ${{ inputs.region }}
+      run: |
+        if [ -z "$MCODE_PROVIDER_API_KEY" ]; then
+          echo "::error::MiniMax subscription key가 비어 있습니다 — 레포 secret MINIMAX_SUBSCRIPTION_KEY를 등록하세요"
+          exit 1
+        fi
+        data_dir="$RUNNER_TEMP/mcode-data"
+        mkdir -p "$data_dir"
+        {
+          echo "MINIMAX_DATA_DIR=$data_dir"
+          echo "MCODE_DISABLE_TELEMETRY=1"
+          echo "MAVIS_REGION=$REGION"
+        } >> "$GITHUB_ENV"
+        export MINIMAX_DATA_DIR="$data_dir" MCODE_DISABLE_TELEMETRY=1 MAVIS_REGION="$REGION"
+        mcode provider set-minimax-key
+        # 기본값 dataContribution.enabled: true — CI 대화가 제공자 쪽 데이터 기여로 넘어가지 않게 끈다.
+        python3 - "$data_dir/config.yaml" <<'PY'
+        import re, sys
+        path = sys.argv[1]
+        text = open(path, encoding="utf-8").read()
+        if re.search(r"(?m)^dataContribution:\s*\n\s+enabled:", text):
+            text = re.sub(r"(?m)^(dataContribution:\s*\n\s+enabled:)\s*\S+", r"\1 false", text)
+        else:
+            text = text.rstrip("\n") + "\ndataContribution:\n  enabled: false\n"
+        open(path, "w", encoding="utf-8").write(text)
+        PY
+        echo "data-dir=$data_dir" >> "$GITHUB_OUTPUT"
+
+    - name: Check provider
+      shell: bash
+      run: |
+        mcode provider list --json | python3 -c '
+        import json, sys
+        data = json.load(sys.stdin)
+        active = [p for p in data["providers"] if p.get("active")]
+        print("model source:", data.get("minimaxModelSource"))
+        print("active provider:", ", ".join(p["providerId"] for p in active) or "<none>")
+        ok = data.get("minimaxModelSource") == "minimax_api_key" and any(
+            p["providerId"] == "minimax_api" and p.get("hasApiKey") for p in active)
+        sys.exit(0 if ok else "minimax_api provider가 활성화되지 않았습니다")
+        '

@@ -36,9 +36,32 @@ data/                               # 운영 데이터 (스킬이 런타임에 �
 index.html                          # data/·templates/ 브라우징용 정적 웹페이지 (GitHub Pages)
 tests/                              # index.html 동작 테스트 (node --test), 워크플로 선정 스크립트 테스트 (python3 -m unittest)
 .github/workflows/                  # 단계 스킬별 workflow_dispatch 워크플로
-.github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py: 감지 대상 선정 = 스킬 Step 0)
+.github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py: 감지 대상 선정 = 스킬 Step 0,
+                                    #   mcp_oidc_proxy.py·mcp_call.py: homelab-k3s-mcp OIDC 연결,
+                                    #   validate_generated_skill.py·check_detector_result.py: 생성 스킬 검증·테스트 점검)
+.github/actions/setup-mcode/        # MiniMax Code(mcode) 설치 + subscription key 설정 composite action
+.github/minimax/                    # mcode에 주는 간결한 생성 지침(brief)과 테스트 프롬프트
 .nojekyll                           # Pages가 data/*.json을 그대로 서빙하도록 Jekyll 우회
 ```
+
+## 감지 스킬 MiniMax 파이프라인 (`reconciler-drift-detector.yml`)
+
+감지 워크플로는 MiniMax Code(`mcode exec`)로 감지 스킬을 **생성 → 검증 → 테스트**한다.
+
+| job | 하는 일 | 아티팩트 |
+| --- | --- | --- |
+| generate | `.github/minimax/drift-detector-brief.md`(간결한 지침)만 주고, mcode가 레포(README·스키마·선정 스크립트·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `drift-detector-skill` (skill/, 대화 기록) |
+| validate | 형식·계약 커버리지·금지 패턴·보조 스크립트 문법을 정적 검증한다. | `drift-detector-validation` |
+| test | 러너가 Step 0(대상 선정)을 하고, 생성된 스킬로 그 대상을 감지한다. 기본 브랜치를 체크아웃해 **커밋까지만 하고 push하지 않는다**(드라이런, 이 job의 `GITHUB_TOKEN`도 읽기 전용). 결과 diff를 계약 점검기로 확인한다. | `drift-detector-test-result` (result.patch, commits.patch, 점검 보고, 대화 기록) |
+
+- **MiniMax 인증**: 레포 secret `MINIMAX_SUBSCRIPTION_KEY`(Token Plan subscription key)를 `mcode provider set-minimax-key`로
+  job 전용 데이터 디렉터리에 넣는다. 텔레메트리와 데이터 기여는 끈다.
+- **homelab-k3s-mcp 연결**: GitHub Actions OIDC. OIDC 토큰이 약 5분짜리라 `.mcp.json`에 박지 않고, 로컬 프록시
+  (`mcp_oidc_proxy.py`, 127.0.0.1)가 요청마다 토큰을 붙이고 만료 전에 갱신한다. mcode 환경에서는 OIDC 요청
+  변수와 대상 레포 토큰을 뺀다. 서버 `MCP_GITHUB_OIDC_RULES`에 이 워크플로 파일 규칙이 있어야 하고
+  (`github_app_installation_token` 필수, `resource_list`·`resource_get`·`ping` 권장), audience는
+  `vars.HOMELAB_K3S_MCP_AUDIENCE`(기본 `homelab-k3s-mcp`), URL은 `vars.HOMELAB_K3S_MCP_URL`로 바꿀 수 있다.
+- **테스트**: `python3 -m unittest discover -s tests`가 프록시·점검기·검증기를 네트워크 없이 검사한다.
 
 ## 실행 전 사람 승인 (review.manualApproval)
 
