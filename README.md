@@ -34,7 +34,9 @@ data/                               # 운영 데이터 (스킬이 런타임에 �
   reconciliation-tasks/             # task: to-be 모델(toBeModelId)별로 파일 분리
     <toBeModelId>.json
 index.html                          # data/·templates/ 브라우징용 정적 웹페이지 (GitHub Pages)
-tests/                              # index.html 동작 테스트 (node --test)
+tests/                              # index.html 동작 테스트 (node --test), 워크플로 선정 스크립트 테스트 (python3 -m unittest)
+.github/workflows/                  # 단계 스킬별 workflow_dispatch 워크플로
+.github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py: 감지 대상 선정 = 스킬 Step 0)
 .nojekyll                           # Pages가 data/*.json을 그대로 서빙하도록 Jekyll 우회
 ```
 
