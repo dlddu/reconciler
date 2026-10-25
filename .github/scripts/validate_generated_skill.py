@@ -49,6 +49,8 @@ RECOMMENDED = [
     ("compare-and-set / 재확인", [r"compare[\s-]*and[\s-]*set", r"재확인"]),
     ("스키마 수정 금지 명시", [r"스키마[^\n]{0,40}(수정|변경)[^\n]{0,20}(않|금지|말)"]),
     ("k3s MCP 도구", [r"github_app_installation_token"]),
+    ("점유가 수집보다 먼저", [r"점유[^\n]{0,60}(push|푸시|커밋)[^\n]{0,60}(뒤|후|다음|성공한\s*뒤)",
+                          r"버전\s*계산\s*→\s*점유\s*→\s*수집"]),
 ]
 
 FORBIDDEN = [

@@ -14,6 +14,7 @@ BODY = """
 # reconciler-drift-detector
 
 한 건만 점유한다(single in-flight). 점유는 compare-and-set이며 `git pull --rebase` 후 재확인한다.
+순서는 버전 계산 → 점유 → 수집 → 판정이다. 점유 push가 성공한 뒤에만 대상 레포를 읽는다.
 
 1. 대상의 `lastObservedVersion`, `checkPolicy.manualTriggerRequestedAt`/`manualTriggerReason`을 재확인한다.
 2. `data/reconciliation-tasks/<model>.json`에 `assessing` task를 만들고 커밋 `detect(<tbm>/<rct>): claim`.
@@ -68,6 +69,12 @@ class ValidateGeneratedSkillTest(unittest.TestCase):
         joined = "\n".join(rep.errors)
         self.assertIn("recheckAfter", joined)
         self.assertIn("RECONCILER_DRY_RUN", joined)
+
+    def test_missing_claim_order_is_warning(self):
+        body = BODY.replace("순서는 버전 계산 → 점유 → 수집 → 판정이다. 점유 push가 성공한 뒤에만 대상 레포를 읽는다.", "")
+        rep = self.write(skill_text(body=body))
+        self.assertEqual(rep.errors, [])
+        self.assertTrue(any("점유가 수집보다 먼저" in w for w in rep.warnings))
 
     def test_short_body_is_error(self):
         self.assertTrue(any("짧음" in e for e in self.write(skill_text(pad=0)).errors))

@@ -13,6 +13,7 @@
   - 계기별 정합: 버전 변화면 trigger 버전과 모델 lastObservedVersion이 맞물리나, 수동 트리거면
                사유를 그대로 옮기고 요청 필드를 지웠나, 재확인 만료면 기존 task를 이어받았나
   - 커밋: 커밋 메시지가 `detect(<model>/<task>): ...` 규약을 따르나
+  - 점유 순서(--transcript): 첫 커밋(점유) 전에 대상 레포 diff 읽기·하네스 실행 같은 수집을 했나
 
 결과 diff를 패치 파일로 남긴다(아티팩트용). 오류가 있으면 종료 코드 1.
 """
@@ -213,6 +214,63 @@ def check(repo: Path, base: str, model_id: str, target_id: str, target_kind: str
     return res
 
 
+# 점유 전에 하면 안 되는 일(수집·판정). 버전 계산용 토큰 발급·클론·versionScript 실행은 허용된다.
+PRE_CLAIM_FORBIDDEN = [
+    ("대상 레포 diff/내용 읽기", re.compile(r"\bgit\b[^\n|;&]*\s(diff|show)\b|\bgit\b[^\n|;&]*\slog\b[^\n|;&]*\s(-p|--patch|--stat|--name-status)\b")),
+    ("하네스·의존성 실행", re.compile(r"\b(npm|pnpm|yarn)\s+(install|ci|test|run)\b|\bpytest\b|\bgo\s+test\b")),
+]
+PRE_CLAIM_WARN_TOOLS = ("resource_get", "resource_list")
+
+
+def tool_calls_with_time(transcript: Path) -> list[tuple[int, str, str]]:
+    """(완료 timestampMs, 도구 이름, 입력 값들을 이은 원문) — item id 기준 첫 완료 시각."""
+    seen: dict[str, tuple[int, str, str]] = {}
+    with open(transcript, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if not line.startswith("{"):
+                continue
+            try:
+                ev = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            item = ev.get("item") or {}
+            call = item.get("toolCall")
+            if item.get("type") != "tool_call" or not isinstance(call, dict) or ev.get("type") != "item.completed":
+                continue
+            key = item.get("id") or str(len(seen))
+            if key not in seen:
+                inp = call.get("input") or {}
+                text = "\n".join(str(v) for v in inp.values()) if isinstance(inp, dict) else str(inp)
+                seen[key] = (int(ev.get("timestampMs") or 0), str(call.get("name") or ""), text)
+    return sorted(seen.values())
+
+
+def check_claim_order(repo: Path, base: str, transcript: Path, res: Result) -> None:
+    """점유 커밋이 수집·판정보다 먼저인지 대화 기록의 시간순으로 본다."""
+    first = git(repo, "log", "--reverse", "--format=%ct%x09%s", f"{base}..HEAD").strip().splitlines()
+    if not first:
+        return
+    claim_ms = int(first[0].split("\t", 1)[0]) * 1000
+    calls = tool_calls_with_time(transcript)
+    before = [c for c in calls if c[0] and c[0] < claim_ms]
+    res.facts["pre_claim_tool_calls"] = len(before)
+    res.facts["total_tool_calls"] = len(calls)
+    violations = []
+    own = str(repo.resolve())  # reconciler 체크아웃 자체를 보는 git diff(작업 트리 점검)는 수집이 아니다
+    for _, name, args in before:
+        for label, pattern in PRE_CLAIM_FORBIDDEN:
+            if name == "bash" and pattern.search(args) and own not in args:
+                violations.append(label)
+        if name.endswith(PRE_CLAIM_WARN_TOOLS):
+            res.warnings.append(f"점유 전에 쿠버네티스 관측({name}) — 버전 계산 목적이 아니면 순서 위반")
+    if violations:
+        counts = {v: violations.count(v) for v in dict.fromkeys(violations)}
+        res.errors.append("점유 커밋 전에 수집을 함(점유가 먼저여야 함): "
+                          + ", ".join(f"{k} {n}회" for k, n in counts.items()))
+    else:
+        res.passed.append(f"점유 순서: 점유 전 도구 호출 {len(before)}회 중 수집·판정 없음")
+
+
 def render(res: Result) -> str:
     f = res.facts
     out = ["### 스킬 테스트 결과 점검", f"- 결과: {'✅ 통과' if res.ok else '❌ 실패'}"]
@@ -243,6 +301,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--report", type=Path)
     p.add_argument("--json", type=Path)
     p.add_argument("--patch", type=Path, help="base 대비 전체 diff(커밋+미커밋)를 쓸 경로")
+    p.add_argument("--transcript", type=Path, help="mcode stream-json 대화 기록 — 주면 점유 순서를 점검한다")
     args = p.parse_args(argv)
 
     if args.patch:
@@ -251,6 +310,8 @@ def main(argv: list[str] | None = None) -> int:
         git(args.repo, "reset", "-q", check=False)
     try:
         res = check(args.repo, args.base, args.model_id, args.target_id, args.target_kind, args.reason)
+        if args.transcript and args.transcript.is_file():
+            check_claim_order(args.repo, args.base, args.transcript, res)
     except (RuntimeError, json.JSONDecodeError, OSError) as exc:
         res = Result(errors=[f"점검 자체가 실패: {exc}"])
     text = render(res)

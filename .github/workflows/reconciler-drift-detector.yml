@@ -116,6 +116,11 @@ jobs:
             python3 harness/.github/scripts/mcode_transcript.py summary "$out/logs/transcript.jsonl" 2>/dev/null || true
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # 대화 기록에는 도구 결과로 받은 토큰이 남을 수 있다 — 올리기 전에 가린다.
+      - name: Redact secrets
+        if: always()
+        run: python3 harness/.github/scripts/redact_secrets.py "$RUNNER_TEMP/out"
+
       - name: Upload skill artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -331,7 +336,8 @@ jobs:
           set +e
           python3 harness/.github/scripts/check_detector_result.py --repo ws/reconciler --base "$BASE" \
             --model-id "$MODEL_ID" --target-id "$TARGET_ID" --target-kind "$TARGET_KIND" --reason "$SELECT_REASON" \
-            --report "$OUT/check-report.md" --json "$OUT/check-report.json" --patch "$OUT/result.patch"
+            --report "$OUT/check-report.md" --json "$OUT/check-report.json" --patch "$OUT/result.patch" \
+            --transcript "$OUT/logs/test-transcript.jsonl"
           code=$?
           set -e
           git -C ws/reconciler format-patch --stdout "$BASE..HEAD" > "$OUT/commits.patch" || true
@@ -365,6 +371,11 @@ jobs:
               head -c 6000 "$OUT/logs/test-final-message.md"; echo; echo "</details>"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # mcode가 MCP로 받은 대상 레포 토큰을 셸 명령에 옮겨 적으므로 대화 기록에 토큰이 남는다 — 올리기 전에 가린다.
+      - name: Redact secrets
+        if: always()
+        run: python3 harness/.github/scripts/redact_secrets.py "$RUNNER_TEMP/out" --extra-env SOURCE_GITHUB_TOKEN
 
       - name: Upload test artifact
         if: always()

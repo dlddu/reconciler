@@ -175,6 +175,48 @@ class CheckDetectorResultTest(unittest.TestCase):
         repo = Repo(self.tmp, [model()])
         self.assertTrue(any("새 커밋이 없음" in e for e in repo.check().errors))
 
+    def _transcript(self, calls):
+        path = self.tmp / "t.jsonl"
+        lines = [json.dumps({"type": "item.completed", "timestampMs": ts,
+                             "item": {"id": f"c{i}", "type": "tool_call",
+                                      "toolCall": {"name": name, "input": {"command": cmd}}}})
+                 for i, (ts, name, cmd) in enumerate(calls)]
+        path.write_text("\n".join(lines) + "\n")
+        return path
+
+    def _claimed_repo(self):
+        repo = Repo(self.tmp, [model()])
+        repo.commit([model(as_is="v2")], {MID: [finished_task()]}, f"detect({MID}/rct_20261025-0001): claim")
+        claim_ms = int(git(repo.path, "log", "-1", "--format=%ct")) * 1000
+        return repo, claim_ms
+
+    def test_collection_before_claim_is_error(self):
+        repo, claim = self._claimed_repo()
+        tr = self._transcript([(claim - 60000, "mcp__k3s__github_app_installation_token", ""),
+                               (claim - 50000, "bash", "git clone --depth 1 https://x /tmp/w/demo"),
+                               (claim - 40000, "bash", "C=/tmp/w/demo\ngit -C $C diff -U0 a b"),
+                               (claim - 30000, "bash", "cd /tmp/w/demo && npm install jsdom"),
+                               (claim + 5000, "bash", "git -C /tmp/w/demo show HEAD:docs/a.md")])
+        res = repo.check()
+        cdr.check_claim_order(repo.path, repo.base, tr, res)
+        joined = "\n".join(res.errors)
+        self.assertIn("점유 커밋 전에 수집", joined)
+        self.assertIn("diff/내용 읽기 1회", joined)
+        self.assertIn("하네스·의존성 실행 1회", joined)
+        self.assertEqual(res.facts["pre_claim_tool_calls"], 4)
+
+    def test_version_only_before_claim_passes(self):
+        repo, claim = self._claimed_repo()
+        own = str(repo.path.resolve())
+        tr = self._transcript([(claim - 50000, "bash", "git clone --depth 1 https://x /tmp/w/demo"),
+                               (claim - 40000, "bash", "cd /tmp/w/demo && bash /tmp/version.sh"),
+                               (claim - 30000, "bash", f"git -C {own} diff --name-only"),
+                               (claim + 5000, "bash", "git -C /tmp/w/demo diff a b")])
+        res = repo.check()
+        cdr.check_claim_order(repo.path, repo.base, tr, res)
+        self.assertFalse([e for e in res.errors if "점유" in e], res.errors)
+        self.assertTrue(any("점유 순서" in p for p in res.passed))
+
     def test_patch_includes_uncommitted(self):
         repo = Repo(self.tmp, [model()])
         repo.write([model(as_is="v2")], {MID: [finished_task()]})

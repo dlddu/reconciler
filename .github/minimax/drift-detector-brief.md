@@ -19,6 +19,7 @@
 지켜야 할 계약:
 1. 한 번에 한 건만 점유한다. 다른 모델은 건드리지 않는다.
 2. 점유는 compare-and-set: 최신화 → 전제(관측 버전/수동 요청/재확인 시각)가 그대로인지 재확인 → task 생성(또는 재진입 표시)과 모델 갱신을 **한 커밋**으로 → 즉시 push. 전제가 바뀌었으면 물러난다.
+   **점유가 먼저다.** 점유 커밋 전에 하는 일은 레코드 읽기와 `versionScript` 버전 계산(점유 커밋에 적을 값)뿐이다. 대상 레포의 diff·파일 내용 읽기, 하네스·테스트 실행, 쿠버네티스 관측, 판정은 전부 점유 push가 성공한 **뒤에** 한다(드라이런이면 점유 커밋 뒤). 다른 워커가 같은 대상을 중복으로 판정하지 않게 하기 위해서다. 절차 순서를 이대로 적어라: 버전 계산 → 점유 → 수집 → 판정.
 3. 상태 흐름: `assessing` → `no_action_needed` | `action_required`, 또는 `assessing` + `assessment.recheckAfter`(자동 해소 가능성 있을 때, 시각 필수).
 4. `stateSummary`(asIs/toBe/gap)는 버전 문자열이 아니라 실제 관측 사실로. `assessment.reason`에 판정 근거.
 5. 수동 트리거면 모델의 요청 사유를 task로 그대로 옮기고 요청 필드를 짝으로 지운다.
@@ -26,6 +27,6 @@
 7. 커밋 메시지는 `detect(<toBeModelId>/<taskId>): <요약>`, 단계마다 개별 커밋.
 8. 드라이런(`RECONCILER_DRY_RUN=1`)이면 커밋은 하되 push는 건너뛰고 성공으로 간주한다.
 
-도구: MCP 서버 `k3s`의 `github_app_installation_token`(대상 레포 읽기용, 권한은 contents:read로 좁힐 것), `resource_list`/`resource_get`(쿠버네티스 관측). 토큰 값은 절대 출력·커밋하지 않는다.
+도구: MCP 서버 `k3s`의 `github_app_installation_token`(대상 레포 읽기용, 권한은 contents:read로 좁힐 것), `resource_list`/`resource_get`(쿠버네티스 관측). 토큰 값은 echo·로그·커밋·task 기록에 절대 남기지 않는다.
 
 다 쓰면 SKILL.md가 위 계약을 빠짐없이 다루는지 스스로 점검하고 끝내라.

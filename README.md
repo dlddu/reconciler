@@ -52,7 +52,7 @@ tests/                              # index.html 동작 테스트 (node --test),
 | --- | --- | --- |
 | generate | `.github/minimax/drift-detector-brief.md`(간결한 지침)만 주고, mcode가 레포(README·스키마·선정 스크립트·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `drift-detector-skill` (skill/, 대화 기록) |
 | validate | 형식·계약 커버리지·금지 패턴·보조 스크립트 문법을 정적 검증한다. | `drift-detector-validation` |
-| test | 러너가 Step 0(대상 선정)을 하고, 생성된 스킬로 그 대상을 감지한다. 기본 브랜치를 체크아웃해 **커밋까지만 하고 push하지 않는다**(드라이런, 이 job의 `GITHUB_TOKEN`도 읽기 전용). 결과 diff를 계약 점검기로 확인한다. | `drift-detector-test-result` (result.patch, commits.patch, 점검 보고, 대화 기록) |
+| test | 러너가 Step 0(대상 선정)을 하고, 생성된 스킬로 그 대상을 감지한다. 기본 브랜치를 체크아웃해 **커밋까지만 하고 push하지 않는다**(드라이런, 이 job의 `GITHUB_TOKEN`도 읽기 전용). 결과 diff와 대화 기록 시간순(점유 커밋 전에 diff 읽기·하네스 실행이 없었는지)을 계약 점검기로 확인한다. 업로드 전 대화 기록의 토큰은 가린다. | `drift-detector-test-result` (result.patch, commits.patch, 점검 보고, 대화 기록) |
 
 - **MiniMax 인증**: 레포 secret `MINIMAX_SUBSCRIPTION_KEY`(Token Plan subscription key)를 `mcode provider set-minimax-key`로
   job 전용 데이터 디렉터리에 넣는다. 텔레메트리와 데이터 기여는 끈다.
