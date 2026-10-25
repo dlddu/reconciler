@@ -5,6 +5,11 @@ name: "Reconciler · Work Planner"
 
 on:
   workflow_dispatch:
+    inputs:
+      target_id:
+        description: "계획할 대상 지목(rct_... task · tbm_... 모델 · tbm_.../rct_... — rct id가 여러 모델에 겹치면 마지막 형식). 비우면 자동 선정"
+        required: false
+        default: ""
 
 # 같은 스킬이 동시에 두 번 돌며 같은 task를 점유하거나 push가 충돌하지 않도록 직렬화한다.
 concurrency:
@@ -45,23 +50,33 @@ jobs:
         run: |
           echo "TODO: set up runtime for $SKILL_NAME"
 
-      # TODO: 이번 실행이 다룰 대상(ToBeModel/ReconciliationTask) 한 건을 고른다.
-      # 고른 id를 target_id로 내보내고, 대상이 없으면 found=false로 두어 이후 스텝을 건너뛴다.
+      # 스킬 Step 0(대상 선정 · 진입 게이트)을 그대로 옮긴 읽기 전용 선정 — 기준은 reconciler-local
+      # 타이머 게이트(planner/precheck-plan.py)와 같다. 계획 대상 = 미점유 인수인계 지점
+      # (action_required · review_rejected · failed)에 있고 모델이 꺼져 있지 않은(enabled:false 아님) task.
+      # planning은 집지 않는다(새 러너는 resume할 lock이 없고, 버려진 lock을 구별할 수 없다).
+      # single in-flight: 지목이 없으면 인수인계 지점에 가장 오래 머문 한 건만 고른다.
+      # 레포에 쓰지 않는다 — action_required → planning 점유 커밋은 스킬 Step 1 몫.
+      # task 파일이 깨져 판단할 수 없으면 "계획할 것 없음"으로 단정하지 않고 실패로 끝낸다.
       - name: Select target
         id: select
+        env:
+          INPUT_TARGET_ID: ${{ inputs.target_id }}
         run: |
-          echo "TODO: select target for $SKILL_NAME"
-          echo "target_id=" >> "$GITHUB_OUTPUT"
-          echo "found=false" >> "$GITHUB_OUTPUT"
+          python3 .github/scripts/select_plan_target.py \
+            --repo "$GITHUB_WORKSPACE" --target "$INPUT_TARGET_ID" \
+            --summary-file "$RUNNER_TEMP/select-target.md"
 
       # TODO: 고른 대상에 대해 스킬 실행.
       - name: Run skill
         if: steps.select.outputs.found == 'true'
         env:
           TARGET_ID: ${{ steps.select.outputs.target_id }}
+          MODEL_ID: ${{ steps.select.outputs.model_id }}
+          FROM_STATUS: ${{ steps.select.outputs.from_status }}
+          SELECT_REASON: ${{ steps.select.outputs.reason }}
         run: |
           echo "skill:     $SKILL_NAME"
-          echo "target_id: $TARGET_ID"
+          echo "target_id: $MODEL_ID/$TARGET_ID ($FROM_STATUS, $SELECT_REASON)"
           echo "TODO: implement $SKILL_NAME execution"
 
       - name: Summary
@@ -69,10 +84,13 @@ jobs:
         env:
           TARGET_ID: ${{ steps.select.outputs.target_id }}
           FOUND: ${{ steps.select.outputs.found }}
+          FROM_STATUS: ${{ steps.select.outputs.from_status }}
         run: |
           {
             echo "### $SKILL_NAME"
             echo "- target found: ${FOUND:-false}"
-            echo "- target_id: ${TARGET_ID:-<none>}"
+            echo "- target_id: ${TARGET_ID:-<none>}${FROM_STATUS:+ ($FROM_STATUS)}"
             echo "- result: TODO"
+            echo
+            cat "$RUNNER_TEMP/select-target.md" 2>/dev/null || true
           } >> "$GITHUB_STEP_SUMMARY"
