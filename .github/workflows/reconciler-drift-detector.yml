@@ -5,6 +5,16 @@ name: "Reconciler · Drift Detector"
 
 on:
   workflow_dispatch:
+    inputs:
+      target_id:
+        description: "감지할 대상 지목(tbm_... 모델 또는 rct_... assessing task). 비우면 자동 선정"
+        required: false
+        default: ""
+      full_sweep:
+        description: "첫 버전 변화에서 멈추지 않고 모든 활성 모델의 버전을 계산(남은 변화 건수 보고용)"
+        type: boolean
+        required: false
+        default: false
 
 # 같은 스킬이 동시에 두 번 돌며 같은 task를 점유하거나 push가 충돌하지 않도록 직렬화한다.
 concurrency:
@@ -45,23 +55,33 @@ jobs:
         run: |
           echo "TODO: set up runtime for $SKILL_NAME"
 
-      # TODO: 이번 실행이 다룰 대상(ToBeModel/ReconciliationTask) 한 건을 고른다.
-      # 고른 id를 target_id로 내보내고, 대상이 없으면 found=false로 두어 이후 스텝을 건너뛴다.
+      # 스킬 Step 0(대상 선정 · 진입 게이트)을 그대로 옮긴 읽기 전용 선정. 우선순위:
+      # 지목 → 재확인 만료(assessing + recheckAfter 경과) → 수동 트리거 → 버전 변화(오래 관측 안 된 모델부터).
+      # 비활성 모델과 열린 assessing이 있는 모델은 제외한다. 레포에 쓰지 않는다 — 점유 커밋은 스킬 Step 1 몫.
+      # 대상 레포(private) 클론에는 앞 스텝이 $GITHUB_ENV로 내보낸 SOURCE_GITHUB_TOKEN을 쓴다(없으면 익명 클론).
+      # 대상이 없는데 일부 모델의 버전 계산이 실패하면 "감지할 것 없음"으로 단정할 수 없어 실패로 끝낸다.
       - name: Select target
         id: select
+        env:
+          INPUT_TARGET_ID: ${{ inputs.target_id }}
+          INPUT_FULL_SWEEP: ${{ inputs.full_sweep }}
         run: |
-          echo "TODO: select target for $SKILL_NAME"
-          echo "target_id=" >> "$GITHUB_OUTPUT"
-          echo "found=false" >> "$GITHUB_OUTPUT"
+          args=(--repo "$GITHUB_WORKSPACE" --target "$INPUT_TARGET_ID"
+                --work-dir "$RUNNER_TEMP/select-target"
+                --summary-file "$RUNNER_TEMP/select-target.md")
+          [ "$INPUT_FULL_SWEEP" = "true" ] && args+=(--full-sweep)
+          python3 .github/scripts/select_drift_target.py "${args[@]}"
 
       # TODO: 고른 대상에 대해 스킬 실행.
       - name: Run skill
         if: steps.select.outputs.found == 'true'
         env:
           TARGET_ID: ${{ steps.select.outputs.target_id }}
+          TARGET_KIND: ${{ steps.select.outputs.target_kind }}
+          SELECT_REASON: ${{ steps.select.outputs.reason }}
         run: |
           echo "skill:     $SKILL_NAME"
-          echo "target_id: $TARGET_ID"
+          echo "target_id: $TARGET_ID ($TARGET_KIND, $SELECT_REASON)"
           echo "TODO: implement $SKILL_NAME execution"
 
       - name: Summary
@@ -69,10 +89,13 @@ jobs:
         env:
           TARGET_ID: ${{ steps.select.outputs.target_id }}
           FOUND: ${{ steps.select.outputs.found }}
+          REASON: ${{ steps.select.outputs.reason }}
         run: |
           {
             echo "### $SKILL_NAME"
             echo "- target found: ${FOUND:-false}"
-            echo "- target_id: ${TARGET_ID:-<none>}"
+            echo "- target_id: ${TARGET_ID:-<none>}${REASON:+ ($REASON)}"
             echo "- result: TODO"
+            echo
+            cat "$RUNNER_TEMP/select-target.md" 2>/dev/null || true
           } >> "$GITHUB_STEP_SUMMARY"
