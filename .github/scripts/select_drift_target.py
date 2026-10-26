@@ -36,10 +36,23 @@ from pathlib import Path
 
 SIDES = ("asIs", "toBe")
 RUNTIMES = {"bash": ["bash"], "python": ["python3"], "node": ["node"]}
-# 버전 스크립트에 넘기지 않는 환경 변수(스크립트는 체크아웃된 레포만 읽는다).
+# 버전 스크립트는 체크아웃된 레포만 읽는다 — 러너 환경을 물려주지 않고 아래 허용목록만 넘긴다.
+# 워크플로가 GITHUB_ENV로 내보낸 변수(OUT·SKILL_DIR 등)를 스크립트가 같은 이름의 셸 변수로 쓰면, bash는 그
+# 변수를 export된 채로 이어 써서 지문이 달라지거나(값 앞에 러너 경로가 붙음) 128KB를 넘어 이후 모든
+# 외부 명령이 `Argument list too long`으로 실패한다(run 40391516597, tbm_feature-doc-comment-necessity).
+# 사람 세션과 러너가 같은 버전을 계산하려면 스크립트 환경이 러너에 의존하면 안 된다.
+SCRIPT_ENV_KEYS = ("PATH", "HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "TZ", "LANG", "LANGUAGE")
+SCRIPT_ENV_PREFIXES = ("LC_",)
+# 허용목록 밖이라 이미 빠지지만, 토큰은 허용목록이 넓어져도 절대 넘기지 않는다.
 SCRUBBED_ENV = ("SOURCE_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN",
                 "ACTIONS_ID_TOKEN_REQUEST_TOKEN", "ACTIONS_RUNTIME_TOKEN")
 EPOCH = dt.datetime(1970, 1, 1, tzinfo=dt.timezone.utc)
+
+
+def script_env(environ) -> dict:
+    """versionScript에 넘길 환경: 허용목록 키만, 토큰은 항상 제외."""
+    return {k: v for k, v in environ.items()
+            if (k in SCRIPT_ENV_KEYS or k.startswith(SCRIPT_ENV_PREFIXES)) and k not in SCRUBBED_ENV}
 
 
 class SelectionError(Exception):
@@ -140,7 +153,7 @@ class VersionComputer:
         runtime = script.get("runtime")
         if runtime not in RUNTIMES:
             raise VersionError(f"versionScript.runtime={runtime!r} 미지원")
-        env = {k: v for k, v in os.environ.items() if k not in SCRUBBED_ENV}
+        env = script_env(os.environ)
         for key, value in (script.get("env") or {}).items():
             if value.startswith("secretRef:"):
                 raise VersionError(f"versionScript.env.{key}의 secretRef는 아직 해석하지 않음")

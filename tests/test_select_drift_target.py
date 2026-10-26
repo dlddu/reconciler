@@ -301,6 +301,24 @@ class SelectDriftTargetTest(unittest.TestCase):
         self.assertEqual((code, out["found"]), (0, "false"))
         self.assertNotIn("secret-value", stdout)
 
+    def test_scripts_do_not_inherit_runner_env(self):
+        # 러너가 GITHUB_ENV로 내보낸 OUT을 스크립트가 같은 이름의 셸 변수로 이어 써도 지문이 오염되지 않는다.
+        script = {"runtime": "bash", "code": 'OUT+="hit"; printf "%s|%s\\n" "$OUT" "${SKILL_DIR:-none}"\n'}
+        _, to_be = self.fx.current(self.repo_a)
+        self.fx.model("tbm_a", self.repo_a, as_is="hit|none", to_be=to_be, as_is_script=script)
+        import os
+        os.environ.update(OUT="/home/runner/work/_temp/out", SKILL_DIR="/runner/skill")
+        try:
+            code, out, stdout = self.fx.run()
+        finally:
+            del os.environ["OUT"], os.environ["SKILL_DIR"]
+        self.assertEqual((code, out["found"]), (0, "false"), stdout)
+
+    def test_script_env_allowlist(self):
+        env = sdt.script_env({"PATH": "/bin", "HOME": "/h", "LC_ALL": "C", "OUT": "/o", "GITHUB_TOKEN": "t",
+                              "MCP_LOCAL_URL": "http://x", "TZ": "UTC"})
+        self.assertEqual(env, {"PATH": "/bin", "HOME": "/h", "LC_ALL": "C", "TZ": "UTC"})
+
     # ── 지목 ──
 
     def test_explicit_model_skips_sweep(self):
