@@ -232,7 +232,15 @@ jobs:
       - name: MCP preflight (tools/list)
         id: mcp
         run: |
-          if ! python3 harness/.github/scripts/mcp_call.py --url "$MCP_LOCAL_URL" tools --json > "$OUT/logs/mcp-tools.json"; then
+          # 서버가 재시작·기동 중이면 첫 요청이 502로 떨어질 수 있다 — 짧게 몇 번 다시 본다.
+          ok=""
+          for i in 1 2 3 4; do
+            if python3 harness/.github/scripts/mcp_call.py --url "$MCP_LOCAL_URL" tools --json > "$OUT/logs/mcp-tools.json"; then
+              ok=1; break
+            fi
+            [ "$i" -lt 4 ] && { echo "MCP 응답 없음 — $((i * 20))초 뒤 재시도($i/3)"; sleep $((i * 20)); }
+          done
+          if [ -z "$ok" ]; then
             cat "$OUT/logs/mcp-proxy.log"
             echo "::error::homelab-k3s-mcp 호출 실패 — 401이면 audience(vars.HOMELAB_K3S_MCP_AUDIENCE)나 서버 MCP_GITHUB_OIDC_RULES에 이 워크플로 규칙이 있는지 확인"
             exit 1
