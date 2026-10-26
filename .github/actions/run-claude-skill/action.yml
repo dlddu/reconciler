@@ -8,7 +8,8 @@
 #      주소는 homelab-mcp 액션이 띄운 로컬 OIDC 프록시라 설정 파일에 토큰이 없다.
 #   4. `claude -p "/reconciler-data-plane:<skill> <checkout-dir>"` — reconciler-local의
 #      `claude --bg ... "/reconciler-data-plane:<skill> $DIR"`와 같은 호출. checkout은 이 실행 전용이다.
-#   5. 대화 기록 요약 → step summary, 비밀값 가림 → 아티팩트 업로드, 마지막에 성패 판정.
+#   5. 사용 한도 초과로 중단됐으면 PocketAide 푸시(homelab-k3s-mcp pocket_aide_notification_send).
+#   6. 대화 기록 요약 → step summary, 비밀값 가림 → 아티팩트 업로드, 마지막에 성패 판정.
 #
 # GitHub 토큰 경계(README 「모델 키 격리」와 같은 원칙):
 #   - reconciler 쓰기: 호출 job이 checkout-dir에 미리 체크아웃해 둔 워크플로 GITHUB_TOKEN(contents: write)
@@ -73,11 +74,26 @@ inputs:
   artifact-name:
     description: 업로드할 아티팩트 이름
     required: true
+  target-label:
+    description: 알림·요약에 적을 대상(선정 결과). 비우면 생략
+    required: false
+    default: ""
+  notify-on-limit:
+    description: 사용 한도 초과로 중단되면 PocketAide 푸시를 보낼지(true|false)
+    required: false
+    default: "true"
+  notify-tz:
+    description: 알림의 재설정 시각 표기 시간대
+    required: false
+    default: Asia/Seoul
 
 outputs:
   exit-code:
     description: claude 종료 코드(124면 시간 초과)
     value: ${{ steps.run.outputs.exit_code }}
+  usage-limited:
+    description: 사용 한도 초과로 중단됐는지(true|false)
+    value: ${{ steps.limit.outputs.limited }}
 
 runs:
   using: composite
@@ -203,6 +219,44 @@ runs:
         [ "$code" -eq 124 ] && echo "::error::claude 실행이 $TIMEOUT 안에 끝나지 않음 — 점유가 남았을 수 있다(다음 실행의 resume/재확인 규칙이 이어받는다)"
         exit 0
 
+    # claude -p는 한도에 걸려도 exit 0 · subtype success로 끝난다 — 대화 기록(rate_limit_event · result 본문)으로 판정한다.
+    - name: Detect usage limit
+      id: limit
+      if: always() && steps.run.outcome == 'success'
+      shell: bash
+      env:
+        HARNESS: ${{ inputs.harness-dir }}
+        OUT: ${{ inputs.out-dir }}
+        TZ_NAME: ${{ inputs.notify-tz }}
+      run: python3 "$HARNESS/.github/scripts/claude_transcript.py" limit "$OUT/logs/transcript.jsonl" --tz "$TZ_NAME"
+
+    # 알림이 실패해도 실행 판정은 바꾸지 않는다(경고만). devices=0이면 등록된 기기가 없다는 뜻이다.
+    - name: Notify PocketAide (usage limit)
+      if: always() && steps.limit.outputs.limited == 'true' && inputs.notify-on-limit == 'true'
+      shell: bash
+      env:
+        HARNESS: ${{ inputs.harness-dir }}
+        MCP_URL: ${{ inputs.mcp-local-url }}
+        OUT: ${{ inputs.out-dir }}
+        SKILL: ${{ inputs.skill }}
+        TARGET: ${{ inputs.target-label }}
+        TZ_NAME: ${{ inputs.notify-tz }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        t="$HARNESS/.github/scripts/claude_transcript.py"
+        args="$(python3 "$t" notify-args "$OUT/logs/transcript.jsonl" --skill "$SKILL" --target "$TARGET" \
+                  --run-url "$RUN_URL" --tz "$TZ_NAME")"
+        printf '%s\n' "$args" > "$OUT/logs/notify-args.json"
+        if python3 "$HARNESS/.github/scripts/mcp_call.py" --url "$MCP_URL" \
+             call pocket_aide_notification_send --args "$args" > "$OUT/logs/notify-result.txt" 2>&1; then
+          echo "PocketAide 알림 보냄: $(tr '\n' ' ' < "$OUT/logs/notify-result.txt")"
+          echo "- 📣 PocketAide 알림 보냄: $(tr '\n' ' ' < "$OUT/logs/notify-result.txt" | cut -c1-200)" >> "$GITHUB_STEP_SUMMARY"
+        else
+          cat "$OUT/logs/notify-result.txt"
+          echo "::warning::PocketAide 알림 실패 — 이 워크플로 OIDC 규칙에 pocket_aide_notification_send가 있는지 확인"
+          echo "- ⚠️ PocketAide 알림 실패" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
     - name: Summarize
       if: always()
       shell: bash
@@ -212,6 +266,7 @@ runs:
         OUT: ${{ inputs.out-dir }}
         CHECKOUT_DIR: ${{ inputs.checkout-dir }}
         DEFAULT_BRANCH: ${{ inputs.default-branch }}
+        TARGET: ${{ inputs.target-label }}
         EXIT_CODE: ${{ steps.run.outputs.exit_code }}
       run: |
         t="$HARNESS/.github/scripts/claude_transcript.py"
@@ -227,6 +282,7 @@ runs:
         fi
         {
           echo "### $SKILL (Claude Code)"
+          [ -n "$TARGET" ] && echo "- 대상: $TARGET"
           echo "- claude exit: ${EXIT_CODE:-n/a}"
           python3 "$t" summary "$OUT/logs/transcript.jsonl" || true
           if [ -s "$OUT/logs/commits.txt" ]; then
@@ -270,8 +326,15 @@ runs:
         HARNESS: ${{ inputs.harness-dir }}
         OUT: ${{ inputs.out-dir }}
         EXIT_CODE: ${{ steps.run.outputs.exit_code }}
+        LIMITED: ${{ steps.limit.outputs.limited }}
+        LIMIT_LABEL: ${{ steps.limit.outputs.limit_label }}
+        RESETS: ${{ steps.limit.outputs.resets_local }}
       run: |
         fail=0
+        # 한도 초과는 실패로 남기되 원인을 따로 적는다(점유가 남았을 수 있다 — 재설정 뒤 다음 실행이 이어받는다).
+        if [ "$LIMITED" = "true" ]; then
+          echo "::error title=Claude 사용 한도 초과::${LIMIT_LABEL:-사용 한도}로 중단${RESETS:+ — 재설정 $RESETS}"
+        fi
         python3 "$HARNESS/.github/scripts/claude_transcript.py" check "$OUT/logs/transcript.jsonl" --mcp k3s || fail=1
         if [ "${EXIT_CODE:-1}" != "0" ]; then echo "::error::claude exit ${EXIT_CODE:-n/a} — logs/stderr.log 참고"; fail=1; fi
         if [ -s "$OUT/logs/unpushed.txt" ]; then echo "::error::스킬 checkout에 push되지 않은 커밋이 남음"; fail=1; fi

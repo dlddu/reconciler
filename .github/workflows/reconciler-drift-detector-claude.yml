@@ -16,7 +16,8 @@
 #   vars.CLAUDE_MODEL                 (선택) 기본 모델. 워크플로 입력 model이 우선
 #   서버 MCP_GITHUB_OIDC_RULES에 이 워크플로 파일(reconciler-drift-detector-claude.yml) 규칙:
 #     github_app_installation_token(필수 — 대상 레포·plugin-marketplace 토큰. githubToken 상한에 reconciler는 넣지 않는다),
-#     resource_list, resource_get, api_resources(권장 — kubernetes 데이터 소스 관측)
+#     resource_list, resource_get, api_resources(권장 — kubernetes 데이터 소스 관측),
+#     pocket_aide_notification_send(권장 — Claude 사용 한도 초과로 중단되면 푸시)
 #   GitHub App 설치 범위에 dlddu/plugin-marketplace(read)가 있어야 플러그인을 설치할 수 있다.
 name: "Reconciler · Drift Detector (Claude Code)"
 
@@ -86,6 +87,7 @@ jobs:
           url: ${{ env.MCP_URL }}
           audience: ${{ env.MCP_AUDIENCE }}
           log-dir: ${{ runner.temp }}/out/logs
+          recommended-tools: resource_list resource_get api_resources pocket_aide_notification_send
 
       # 스킬 Step 0(대상 선정 · 진입 게이트)을 그대로 옮긴 읽기 전용 선정. 우선순위:
       # 지목 → 재확인 만료(assessing + recheckAfter 경과) → 수동 트리거 → 버전 변화(오래 관측 안 된 모델부터).
@@ -117,6 +119,7 @@ jobs:
           model: ${{ inputs.model || vars.CLAUDE_MODEL }}
           claude-version: ${{ vars.CLAUDE_CODE_VERSION || 'stable' }}
           timeout: 50m
+          target-label: ${{ steps.select.outputs.target_id }}${{ steps.select.outputs.model_id && format(' ({0})', steps.select.outputs.model_id) || '' }}
           artifact-name: drift-detector-claude-run
 
       - name: Summary
