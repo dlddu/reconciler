@@ -5,13 +5,18 @@
 그 뒤에 스킬이 남긴 변경을 기계적으로 확인한다.
 
   - 커밋: 새 커밋이 있고 모두 `detect(<model>/<task>): ...` 규약, 대상이 점유한 task인가
-  - 범위: 바뀐 파일이 data/reconciliation-tasks/<model>.json 하나뿐인가
+  - 범위: 스킬 커밋이 바꾼 파일이 data/reconciliation-tasks/<model>.json 하나뿐인가
           (to-be-models.json·스키마·다른 파일은 점유 이후 건드리면 안 된다)
   - 단일 대상: 손댄 task가 점유한 그 한 건뿐인가(새 task·다른 task 없음)
   - 점유 기록 보존: 그 task의 trigger·createdAt·id·toBeModelId가 점유 때 그대로인가
   - 스키마: task가 schemas/의 현재 스키마를 통과하는가
   - 종료 상태: no_action_needed | action_required | assessing+recheckAfter 중 하나인가,
                stateSummary(asIs/toBe/gap)·assessment.reason이 채워졌나
+
+실제 모드에서는 스킬이 push 전에 `pull --rebase`하므로, 실행 중 다른 작업자가 기본 브랜치에 올린 커밋이
+`base..HEAD`에 섞인다. 그 커밋은 스킬의 결과가 아니므로 HEAD reflog로 가려 점검에서 뺀다 — 이 체크아웃에서
+만들어진 커밋(`commit:`, rebase·cherry-pick의 `(pick):` 등, 로컬 병합 커밋)만 스킬 커밋으로 보고, 나머지는
+원격에서 들어온 커밋으로 경고에만 남긴다. reflog를 읽을 수 없으면 전부 스킬 커밋으로 본다(보수적).
 
 결과 diff를 패치 파일로 남긴다(아티팩트용). 오류가 있으면 종료 코드 1.
 """
@@ -30,6 +35,10 @@ TASKS_DIR = "data/reconciliation-tasks"
 COMMIT_RE = re.compile(r"^detect\((tbm_[^/\s)]+)/(rct_[0-9]{8}-[0-9]{4})\): \S")
 FINAL_STATUSES = {"no_action_needed", "action_required", "assessing"}
 CLAIM_FIELDS = ("id", "toBeModelId", "trigger", "createdAt")
+# HEAD reflog에서 이 체크아웃이 커밋을 '만든' 항목. reflog 동작 이름에는 플래그가 붙는다
+# (예: `pull -q --rebase (pick): ...`). `(start): checkout <upstream>`·`pull: Fast-forward`·`reset:`은 만든 게 아니다.
+LOCAL_REFLOG_RE = re.compile(r"^(commit\b[^:]*:|cherry-pick\b|revert\b|.*\((pick|reword|edit|squash|fixup|continue)\):)"
+                             r"|Merge made by")
 
 
 @dataclass
@@ -61,10 +70,59 @@ def load_worktree(repo: Path, path: str):
     return json.loads(file.read_text(encoding="utf-8")) if file.exists() else None
 
 
-def changed_files(repo: Path, base: str) -> list[str]:
-    tracked = git(repo, "diff", "--name-only", base).split()
+def local_commits(repo: Path) -> set[str] | None:
+    """이 체크아웃에서 만들어진 커밋(HEAD reflog 기준). reflog가 없으면 None — 출처를 가릴 수 없다."""
+    proc = subprocess.run(["git", "-C", str(repo), "reflog", "--format=%H%x09%gs", "HEAD"],
+                          capture_output=True, text=True)
+    if proc.returncode or not proc.stdout.strip():
+        return None
+    return {sha for sha, _, action in (line.partition("\t") for line in proc.stdout.splitlines())
+            if LOCAL_REFLOG_RE.search(action)}
+
+
+def split_commits(repo: Path, base: str, res: Result) -> tuple[list, list]:
+    """base..HEAD를 (스킬 커밋, 원격에서 rebase로 들어온 커밋)으로 나눈다. 각 항목은 (sha, 제목), 오래된 순."""
+    rows = [line.partition("\t") for line in git(repo, "log", "--reverse", "--format=%H%x09%s", f"{base}..HEAD").splitlines()]
+    commits = [(sha, subject) for sha, _, subject in rows]
+    local = local_commits(repo)
+    if local is None:
+        if commits:
+            res.warnings.append("HEAD reflog를 읽지 못해 커밋 출처를 가릴 수 없음 — 점유 이후 커밋 전부를 스킬 커밋으로 점검")
+        return commits, []
+    return [c for c in commits if c[0] in local], [c for c in commits if c[0] not in local]
+
+
+def commit_files(repo: Path, sha: str) -> set[str]:
+    # --cc: 병합 커밋은 모든 부모와 다른 파일(충돌 해소분)만 — 병합으로 끌려온 원격 변경은 빼고 본다.
+    return set(git(repo, "diff-tree", "-r", "--root", "--no-commit-id", "--name-only", "--cc", sha).split())
+
+
+def uncommitted_files(repo: Path) -> set[str]:
+    tracked = git(repo, "diff", "--name-only", "HEAD").split()
     untracked = git(repo, "ls-files", "--others", "--exclude-standard").split()
-    return sorted(set(tracked) | set(untracked))
+    return set(tracked) | set(untracked)
+
+
+def changed_files(repo: Path, own: list) -> list[str]:
+    files = uncommitted_files(repo)
+    for sha, _ in own:
+        files |= commit_files(repo, sha)
+    return sorted(files)
+
+
+def touched_task_ids(repo: Path, own: list, task_file: str) -> set[str]:
+    """스킬 커밋(과 미커밋 변경)이 실제로 바꾼 task id. 원격 커밋이 같은 파일의 다른 task를 바꾼 것은 세지 않는다."""
+    def diff(a, b) -> set[str]:
+        return {k for k in set(a) | set(b) if a.get(k) != b.get(k)}
+
+    touched: set[str] = set()
+    for sha, _ in own:
+        after = by_id(load_at(repo, sha, task_file))
+        parents = git(repo, "rev-list", "--parents", "-n", "1", sha).split()[1:]
+        per_parent = [diff(by_id(load_at(repo, p, task_file)), after) for p in parents] or [diff({}, after)]
+        touched |= set.intersection(*per_parent)
+    touched |= diff(by_id(load_at(repo, "HEAD", task_file)), by_id(load_worktree(repo, task_file)))
+    return touched
 
 
 def make_validator(schema: dict):
@@ -97,8 +155,13 @@ def check(repo: Path, base: str, model_id: str, task_id: str, claim_subject: str
     base = resolve_base(repo, base, claim_subject, res)
 
     # ── 커밋 ──
-    log = git(repo, "log", "--format=%s", f"{base}..HEAD").strip().splitlines()
-    res.facts["commits"] = list(reversed(log))
+    own, foreign = split_commits(repo, base, res)
+    log = [subject for _, subject in own]
+    res.facts["commits"] = log
+    if foreign:
+        res.facts["foreign_commits"] = [subject for _, subject in foreign]
+        res.warnings.append(f"실행 중 원격에서 rebase로 들어온 다른 작업자의 커밋 {len(foreign)}개는 점검에서 제외: "
+                            + ", ".join(f"`{sha[:7]} {subject}`" for sha, subject in foreign[:5]))
     if not log:
         res.errors.append("점유 이후 새 커밋이 없음 — 스킬이 판정을 기록하지 않았다")
     bad = [s for s in log if not (m := COMMIT_RE.match(s)) or (m.group(1), m.group(2)) != (model_id, task_id)]
@@ -111,7 +174,7 @@ def check(repo: Path, base: str, model_id: str, task_id: str, claim_subject: str
         res.warnings.append("커밋되지 않은 변경이 남아 있음: " + ", ".join(line[3:] for line in dirty[:10]))
 
     # ── 범위 ──
-    files = changed_files(repo, base)
+    files = changed_files(repo, own)
     res.facts["changed_files"] = files
     outside = [f for f in files if f != task_file]
     if outside:
@@ -121,7 +184,7 @@ def check(repo: Path, base: str, model_id: str, task_id: str, claim_subject: str
 
     # ── 대상 task ──
     base_tasks, cur_tasks = by_id(load_at(repo, base, task_file)), by_id(load_worktree(repo, task_file))
-    touched = sorted(k for k in set(base_tasks) | set(cur_tasks) if base_tasks.get(k) != cur_tasks.get(k))
+    touched = sorted(touched_task_ids(repo, own, task_file))
     res.facts["touched_tasks"] = touched
     if touched != [task_id]:
         res.errors.append(f"점유한 {task_id} 한 건만 바뀌어야 하는데 바뀐 task: {touched or '없음'}")

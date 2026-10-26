@@ -175,6 +175,69 @@ class CheckDetectorResultTest(unittest.TestCase):
         self.assertEqual(res.errors, [])
         self.assertTrue(any("rebase" in w for w in res.warnings))
 
+    # ── 실제 모드: 점유가 push된 뒤 다른 작업자가 기본 브랜치에 커밋하고, 스킬이 pull --rebase로 그 위에 쌓는다 ──
+
+    def upstream(self, repo, files, msg="docs(drift-detector): 다른 세션의 수정"):
+        """repo의 점유 커밋을 bare 원격에 push하고, 다른 클론에서 files를 바꾼 커밋을 원격에 올린다."""
+        remote = self.tmp / "remote.git"
+        git(self.tmp, "init", "-q", "--bare", "-b", "main", str(remote))
+        git(repo.path, "remote", "add", "origin", str(remote))
+        git(repo.path, "push", "-q", "origin", "main")
+        other = self.tmp / "other"
+        git(self.tmp, "clone", "-q", str(remote), str(other))
+        for rel, text in files.items():
+            (other / rel).parent.mkdir(parents=True, exist_ok=True)
+            (other / rel).write_text(text)
+        git(other, "add", "-A")
+        git(other, "-c", "user.name=o", "-c", "user.email=o@example.com", "commit", "-q", "-m", msg)
+        git(other, "push", "-q", "origin", "main")
+
+    def test_upstream_commit_pulled_in_by_rebase_is_excluded(self):
+        repo = Repo(self.tmp)
+        self.upstream(repo, {".github/workflows/x.yml": "on: push\n"})
+        repo.commit({MID: [judged()]}, f"detect({MID}/{TID}): assess")
+        git(repo.path, "pull", "-q", "--rebase", "origin", "main")
+        res = repo.check(subject=f"detect({MID}/{TID}): claim")
+        self.assertEqual(res.errors, [])
+        self.assertEqual(res.facts["commits"], [f"detect({MID}/{TID}): assess"])
+        self.assertEqual(res.facts["foreign_commits"], ["docs(drift-detector): 다른 세션의 수정"])
+        self.assertTrue(any("다른 작업자의 커밋 1개" in w for w in res.warnings))
+        self.assertEqual(res.facts["changed_files"], [f"data/reconciliation-tasks/{MID}.json"])
+
+    def test_upstream_change_to_other_task_in_same_file_is_not_counted(self):
+        repo = Repo(self.tmp, tasks={MID: [claimed_task(), judged(id="rct_20261020-0001")]})
+        other_task = judged(id="rct_20261020-0001", status="planning")
+        self.upstream(repo, {f"data/reconciliation-tasks/{MID}.json":
+                             json.dumps([claimed_task(), other_task], ensure_ascii=False, indent=2)},
+                      msg=f"plan({MID}/rct_20261020-0001): claim")
+        repo.commit({MID: [judged(), judged(id="rct_20261020-0001")]}, f"detect({MID}/{TID}): assess")
+        git(repo.path, "pull", "-q", "--rebase", "origin", "main")
+        res = repo.check(subject=f"detect({MID}/{TID}): claim")
+        self.assertEqual(res.errors, [])
+        self.assertEqual(res.facts["touched_tasks"], [TID])
+
+    def test_own_bad_commit_still_caught_when_upstream_commit_present(self):
+        repo = Repo(self.tmp)
+        self.upstream(repo, {"README.md": "x\n"})
+        models = copy.deepcopy(repo.models)
+        models[0]["asIs"]["lastObservedVersion"] = "v3"
+        repo.commit({MID: [judged()]}, "update data", models=models)
+        git(repo.path, "pull", "-q", "--rebase", "origin", "main")
+        joined = "\n".join(repo.check(subject=f"detect({MID}/{TID}): claim").errors)
+        self.assertIn("커밋 규약 위반", joined)
+        self.assertIn("data/to-be-models.json", joined)
+        self.assertNotIn("README.md", joined)
+
+    def test_without_reflog_all_commits_count_as_skill_commits(self):
+        repo = Repo(self.tmp)
+        self.upstream(repo, {"README.md": "x\n"})
+        repo.commit({MID: [judged()]}, f"detect({MID}/{TID}): assess")
+        git(repo.path, "pull", "-q", "--rebase", "origin", "main")
+        git(repo.path, "reflog", "expire", "--expire=all", "--all")
+        res = repo.check(subject=f"detect({MID}/{TID}): claim")
+        self.assertTrue(any("reflog" in w for w in res.warnings))
+        self.assertTrue(any("README.md" in e for e in res.errors))
+
     def test_patch_includes_uncommitted(self):
         repo = Repo(self.tmp)
         repo.write({MID: [judged()]})
