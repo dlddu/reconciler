@@ -1,0 +1,39 @@
+# 워크플로 정적 검사 — 모델 키가 제공자별 environment 밖으로 새지 않는지 본다(README 「모델 키 격리」).
+#
+# GLM·Claude Code 등 새 제공자를 붙이는 PR이 규칙을 어기면(environment 없이 키 참조, 한 job에 두 제공자 키,
+# secrets: inherit 등) 여기서 막힌다. 새 제공자는 .github/scripts/check_llm_key_scope.py의 PROVIDERS에 먼저 등록한다.
+# secret을 쓰지 않으며 읽기 권한만 갖는다.
+name: "Workflow Lint"
+
+on:
+  pull_request:
+    paths:
+      - ".github/**"
+  push:
+    branches: [main]
+    paths:
+      - ".github/**"
+
+permissions:
+  contents: read
+
+jobs:
+  llm-key-scope:
+    name: Model key scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github
+            tests
+
+      - name: Check model key scope
+        run: |
+          python3 -c "import yaml" 2>/dev/null || pip install --quiet --disable-pip-version-check pyyaml
+          python3 .github/scripts/check_llm_key_scope.py
+
+      - name: Test checker
+        run: python3 -m unittest tests.test_check_llm_key_scope tests.test_redact_secrets

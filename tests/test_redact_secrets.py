@@ -49,6 +49,18 @@ class RedactTest(unittest.TestCase):
         self.assertNotIn("plain-literal-123", text)
         self.assertIn("https://x-access-token:<redacted:url-credential>@github.com", text)
 
+    def test_other_provider_keys(self):
+        anthropic = "sk-ant-api03-" + "Q1w2E3r4" * 4
+        glm = "0123456789abcdef" * 2 + ".AbCdEfGhIjKlMnOp"
+        sha = "0123456789abcdef0123456789abcdef01234567"  # 커밋 SHA는 가리지 않는다
+        f = self.root / "k.log"
+        f.write_text(f"ANTHROPIC_API_KEY={anthropic}\nGLM_API_KEY={glm}\ncommit {sha}\n")
+        self.assertEqual(rs.redact_dir(self.root, []), {"k.log": 2})
+        text = f.read_text()
+        self.assertIn("<redacted:anthropic-key>", text)
+        self.assertIn("<redacted:glm-key>", text)
+        self.assertIn(sha, text)
+
     def test_binary_and_clean_files_untouched(self):
         (self.root / "b.bin").write_bytes(b"\0\1" + GH.encode())
         (self.root / "c.txt").write_text("nothing here")

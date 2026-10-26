@@ -23,6 +23,8 @@ PATTERNS = [
     ("github-token", re.compile(r"\bgh[spuor]_[A-Za-z0-9_]{20,}")),
     ("github-pat", re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}")),
     ("minimax-key", re.compile(r"\bsk-(?:cp|api)-[A-Za-z0-9_\-]{16,}")),
+    ("anthropic-key", re.compile(r"\bsk-ant-[A-Za-z0-9_\-]{20,}")),
+    ("glm-key", re.compile(r"\b[0-9a-f]{32}\.[A-Za-z0-9]{16}\b")),
     ("jwt", re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}")),
     ("basic-auth", re.compile(r"(?i)(authorization:\s*basic\s+)[A-Za-z0-9+/=]{16,}")),
     ("url-credential", re.compile(r"(https?://[^/\s:@]+:)[^@\s/]{8,}(@)")),

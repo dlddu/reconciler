@@ -63,8 +63,9 @@ tests/                              # index.html 동작 테스트 (node --test),
 | validate | 형식·계약 커버리지·금지 패턴·보조 스크립트 문법을 정적 검증한다. | `drift-detector-validation` |
 | test | 운영 감지와 같은 흐름(러너 점유 → 스킬 판정)을 생성본으로 드라이런한다. 점유 커밋 이후의 변경을 계약 점검기로 확인한다(그 task 파일만 바뀌었나, 점유 기록 보존, 종료 상태). 업로드 전 대화 기록의 토큰은 가린다. | `drift-detector-test-result` (claim.patch, result.patch, commits.patch, 점검 보고, 대화 기록) |
 
-- **MiniMax 인증**: 레포 secret `MINIMAX_SUBSCRIPTION_KEY`(Token Plan subscription key)를 `mcode provider set-minimax-key`로
-  job 전용 데이터 디렉터리에 넣는다. 텔레메트리와 데이터 기여는 끈다.
+- **MiniMax 인증**: environment `llm-minimax`의 secret `MINIMAX_SUBSCRIPTION_KEY`(Token Plan subscription key)를
+  `mcode provider set-minimax-key`로 job 전용 데이터 디렉터리에 넣는다. 텔레메트리와 데이터 기여는 끈다.
+  레포 secret에는 두지 않는다(아래 「모델 키 격리」).
 - **homelab-k3s-mcp 연결**: GitHub Actions OIDC. OIDC 토큰이 약 5분짜리라 `.mcp.json`에 박지 않고, 로컬 프록시
   (`mcp_oidc_proxy.py`, 127.0.0.1)가 요청마다 토큰을 붙이고 만료 전에 갱신한다. mcode 환경에서는 OIDC 요청
   변수와 대상 레포 토큰을 뺀다. 서버 `MCP_GITHUB_OIDC_RULES`에 두 워크플로 파일 각각의 규칙이 있어야 하고
@@ -113,6 +114,45 @@ MiniMax Code로 돌리는 감지는 이 둘을 **러너의 결정적 스크립�
 **범위**: 이 분리는 MiniMax 감지 경로에만 해당한다. Claude Code 플러그인(`reconciler-data-plane`)의 감지 스킬은
 사람 세션에서 직접 불릴 수 있으므로 지금처럼 선정·점유를 스스로 한다. 두 경로가 같은 레포에 쓰므로 점유 기록의
 형태(커밋 제목, `trigger`, 기준선 갱신, 수동 요청 필드를 짝으로 `null`)는 같게 유지한다.
+
+## 모델 키 격리
+
+워크플로마다 쓰는 모델(MiniMax, 추후 GLM·Claude Code)이 다를 수 있다. 각 job의 에이전트는 **자기 모델 키만** 볼 수
+있어야 하고, 다른 제공자의 키에는 닿지 않아야 한다. 같은 job 안에서 에이전트가 자기 키를 읽는 것은 막지 않는다
+(`--permission full`이면 설정 파일을 읽을 수 있다).
+
+- **제공자별 environment**: 모델 키는 레포 secret이 아니라 environment secret으로만 둔다 — `llm-minimax`
+  (`MINIMAX_SUBSCRIPTION_KEY`), `llm-glm`(`GLM_API_KEY`), `llm-claude`(`ANTHROPIC_API_KEY` 또는
+  `CLAUDE_CODE_OAUTH_TOKEN`). 키가 필요한 job만 `environment:`로 그 environment를 선언한다. 레포 secret은 environment가
+  없는 job에도 넘어가니, 같은 이름의 레포 secret은 지운다.
+- **한 job엔 한 제공자**: 두 모델을 쓰는 워크플로는 job을 나눈다. job마다 별도 VM이라 파일·프로세스로도 키가 섞이지 않는다.
+- **배포 브랜치 제한**: 각 `llm-*` environment의 Deployment branches를 기본 브랜치(`main`)로만 둔다. 누가 다른 브랜치에
+  워크플로를 올려도 그 실행은 키를 받지 못한다. 대신 스킬 빌드 같은 수동 워크플로도 `main`에서만 돌릴 수 있다.
+- **정적 검사**: `workflow-lint.yml`이 `.github/` 변경마다 `check_llm_key_scope.py`를 돌려, environment 밖의 키 참조,
+  한 job의 두 제공자 키, 최상위 `env:`의 키, `secrets: inherit`·`toJSON(secrets)`·`secrets[...]`를 막는다.
+  새 제공자는 스크립트의 `PROVIDERS`에 먼저 등록한다. 대화 기록 가림(`redact_secrets.py`)은 MiniMax·Anthropic·GLM 키
+  모양을 안다.
+
+에이전트가 키를 꺼내는 실제 경로는 YAML이 아니라 **워크플로를 새로 쓰는 것**이다. `GITHUB_TOKEN`은 `contents: write`여도
+`.github/workflows`를 바꿀 수 없다. 하지만 에이전트가 MCP `github_app_installation_token`으로 받는 App 토큰은, App 설치에
+이 레포와 Workflows 권한이 들어 있으면 워크플로를 push할 수 있다. 그래서 homelab-k3s-mcp OIDC 규칙의 `githubToken`
+상한으로 토큰 범위를 고정한다(서버의 규칙별 상한 기능이 필요). 상한이 걸린 호출은 인자를 생략하면 상한을 받고, 상한 밖
+레포·권한을 요청하면 거부된다. 상한에는 이 레포를 넣지 않는다. 대상 레포의 워크플로를 고쳐야 하는 단계는 `workflows: write`를
+받아도 된다. 다만 서버가 **호출한 워크플로 자신의 레포(reconciler)가 포함되는 토큰에는 workflows 권한을 주지 않는다**.
+`permissions`를 생략하면 App의 모든 권한(workflows 포함)이 되므로, 그때는 `repositories`를 명시하고 이 레포를 빼야 발급된다.
+
+```json
+{"repository": "dlddu/reconciler", "workflow": ".github/workflows/reconciler-drift-detector.yml",
+ "tools": ["github_app_installation_token", "resource_list", "resource_get", "api_resources", "ping"],
+ "githubToken": {"repositories": ["plugin-marketplace", "claude-transcript-viewer-v2", "dear-baby",
+                                  "economic-opinion-trend-monitor", "feature-doc", "homelab-k3s-mcp",
+                                  "kubernetes-dashboard", "pocket-aide", "pr-review", "session-platform", "tessera"],
+                 "permissions": {"contents": "read", "metadata": "read"}}}
+```
+
+스킬 빌드 규칙도 `plugin-marketplace`를 뺀 같은 상한을 둔다. 대상 레포 목록은 `data/to-be-models.json`의 대상
+레포(꺼진 모델 포함)다. 새 대상 레포를 등록하면 상한에도 추가한다. 계획·실행 단계가 대상 레포에 PR을 만들고 머지하게 되면
+그 워크플로 규칙에 `contents`·`pull_requests`의 `write`를 주고, 대상 레포 워크플로를 고친다면 `workflows: write`도 준다.
 
 ## 실행 전 사람 승인 (review.manualApproval)
 
