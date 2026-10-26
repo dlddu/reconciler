@@ -93,6 +93,13 @@ class ValidateGeneratedSkillTest(unittest.TestCase):
         self.assertIn("토큰 출력", joined)
         self.assertIn("스키마 파일 쓰기", joined)
 
+    def test_prohibition_lines_are_not_usage(self):
+        ok = BODY + "\n- **강제 push 금지**(`git push --force`, `--force-with-lease` 사용 금지).\n" \
+                    "- `echo $GITHUB_TOKEN` 같은 출력은 절대 하지 않는다.\n"
+        self.assertEqual(self.write(skill_text(body=ok)).errors, [])
+        bad = BODY + "\n```\ngit push --force origin main\n```\n"
+        self.assertTrue(any("강제 push" in e for e in self.write(skill_text(body=bad)).errors))
+
     def test_scripts_are_checked(self):
         rep = self.write(skill_text(), {"scripts/ok.py": "print(1)\n", "scripts/bad.py": "def (:\n",
                                          "scripts/bad.sh": "if then\n"})

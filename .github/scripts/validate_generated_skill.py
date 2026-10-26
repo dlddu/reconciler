@@ -46,9 +46,13 @@ RECOMMENDED = [
     ("점유는 러너 몫 — 스킬은 점유·대상 선정을 하지 않음", [r"(점유|선정)[^\n]{0,80}러너", r"러너[^\n]{0,80}(점유|선정)"]),
     ("점유 기록(trigger·to-be-models) 보존", [r"\btrigger\b[^\n]{0,80}(건드리지|수정하지|바꾸지|고치지|손대지|그대로|불변)",
                                          r"to-be-models\.json[^\n]{0,80}(건드리지|수정하지|바꾸지|고치지|손대지|그대로|불변)"]),
-    ("스키마 수정 금지 명시", [r"스키마[^\n]{0,40}(수정|변경)[^\n]{0,20}(않|금지|말)"]),
+    ("스키마 수정 금지 명시", [r"스키마[^\n]{0,40}(수정|변경)[^\n]{0,20}(않|금지|말)",
+                         r"스키마[^\n]{0,40}(건드리지|고치지|손대지)\s*않"]),
     ("k3s MCP 도구", [r"github_app_installation_token"]),
 ]
+
+# 금지 패턴을 "하지 말라"고 적은 줄(예: 「강제 push 금지(`git push --force`)」)은 사용이 아니라 금지 서술이다.
+PROHIBITION = re.compile(r"금지|하지\s*않|하지\s*말|않는다|절대|쓰지\s*않|never|do\s+not|don't|must\s+not", re.I)
 
 FORBIDDEN = [
     ("GitHub 토큰 리터럴", r"\bgh[spuor]_[A-Za-z0-9]{20,}"),
@@ -183,8 +187,9 @@ def validate(skill_dir: Path) -> Report:
         else:
             report.warnings.append(f"권장 항목 누락: {label}")
     for label, pattern in FORBIDDEN:
-        if re.search(pattern, text):
-            report.errors.append(f"금지 패턴({label}) — SKILL.md")
+        hits = [line for line in text.splitlines() if re.search(pattern, line) and not PROHIBITION.search(line)]
+        if hits:
+            report.errors.append(f"금지 패턴({label}) — SKILL.md: {hits[0].strip()[:120]}")
     check_scripts(skill_dir, report)
     return report
 
