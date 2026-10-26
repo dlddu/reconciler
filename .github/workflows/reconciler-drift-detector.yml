@@ -3,10 +3,11 @@
 #   generate  간결한 지침(.github/minimax/drift-detector-brief.md)만 주고 mcode가 레포를 직접 읽어
 #             SKILL.md를 작성한다. 기존 스킬 본문은 모델에 노출하지 않는다.
 #   validate  생성물 정적 검증(형식 · 계약 커버리지 · 금지 패턴 · 보조 스크립트 문법).
-#   test      Step 0(대상 선정)을 러너가 하고, 생성된 스킬로 그 대상을 실제로 감지한다.
-#             mcode는 homelab-k3s-mcp에 GitHub OIDC로 붙는다(로컬 프록시가 토큰을 갱신).
-#             드라이런: 기본 브랜치를 체크아웃해 커밋까지만 하고 push하지 않는다 — GITHUB_TOKEN도
-#             이 job에선 읽기 전용이다. 결과(diff · 판정 · 대화 기록)는 아티팩트로 반환한다.
+#   test      대상 선정과 점유는 러너(claim_drift_target.py)가 하고, 생성된 스킬은 점유된 task 한 건을
+#             판정만 한다(README 「점유는 러너가 한다」). mcode는 homelab-k3s-mcp에 GitHub OIDC로
+#             붙는다(로컬 프록시가 토큰을 갱신). 드라이런: 기본 브랜치를 체크아웃해 점유·판정 모두 커밋까지만
+#             하고 push하지 않는다 — GITHUB_TOKEN도 이 job에선 읽기 전용이다. 결과(diff · 판정 ·
+#             대화 기록)는 아티팩트로 반환한다.
 #
 # 필요한 설정
 #   secrets.MINIMAX_SUBSCRIPTION_KEY   MiniMax Token Plan subscription key (sk-cp-...)
@@ -22,6 +23,10 @@ on:
     inputs:
       target_id:
         description: "감지할 대상 지목(tbm_... 모델 또는 rct_... assessing task). 비우면 자동 선정"
+        required: false
+        default: ""
+      reason:
+        description: "지목한 모델의 버전이 그대로일 때 manual task에 남길 사유(비우면 '워크플로 지목 감지 요청')"
         required: false
         default: ""
       minimax_model:
@@ -247,18 +252,21 @@ jobs:
                   print(f"::warning::OIDC 규칙에 {name}이 없음 — kubernetes 데이터 소스 관측 불가", file=sys.stderr)
           PY
 
-      # 대상 레포(private) 클론용 읽기 토큰. 선정 스크립트만 쓰고 mcode 환경에서는 뺀다.
+      # 대상 레포(private) 클론용 읽기 토큰. 선정·점유 스크립트만 쓰고 mcode 환경에서는 뺀다.
       - name: Mint source read token
         run: python3 harness/.github/scripts/mcp_call.py --url "$MCP_LOCAL_URL" github-token --env-name SOURCE_GITHUB_TOKEN
 
-      # 스킬 Step 0(대상 선정 · 진입 게이트) — 읽기 전용.
-      - name: Select target
+      # 대상 선정 + 점유(compare-and-set 커밋). 경쟁에서 지면 다음 후보로, 무관한 커밋에 밀린 push는
+      # 새 상태에서 재확인 후 재시도한다. 이 job은 드라이런이라 점유 커밋도 push하지 않는다.
+      - name: Claim target
         id: select
         env:
           INPUT_TARGET_ID: ${{ inputs.target_id }}
+          INPUT_REASON: ${{ inputs.reason }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          python3 harness/.github/scripts/select_drift_target.py --repo ws/reconciler \
-            --target "$INPUT_TARGET_ID" --work-dir "$RUNNER_TEMP/select-target" \
+          python3 harness/.github/scripts/claim_drift_target.py --repo ws/reconciler --dry-run --branch "$DEFAULT_BRANCH" \
+            --target "$INPUT_TARGET_ID" --reason "$INPUT_REASON" --work-dir "$RUNNER_TEMP/select-target" \
             --summary-file "$OUT/logs/select-target.md"
 
       - name: Set up MiniMax Code
@@ -297,18 +305,19 @@ jobs:
 
       - name: Run generated skill
         id: run
-        if: steps.select.outputs.found == 'true'
+        if: steps.select.outputs.claimed == 'true'
         env:
           MODEL: ${{ inputs.minimax_model }}
-          TARGET_ID: ${{ steps.select.outputs.target_id }}
-          TARGET_KIND: ${{ steps.select.outputs.target_kind }}
+          TASK_ID: ${{ steps.select.outputs.task_id }}
           MODEL_ID: ${{ steps.select.outputs.model_id }}
-          SELECT_REASON: ${{ steps.select.outputs.reason }}
+          CLAIM_REASON: ${{ steps.select.outputs.claim_reason }}
+          CLAIM_COMMIT: ${{ steps.select.outputs.claim_commit }}
         run: |
-          echo "base=$(git -C ws/reconciler rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          test "$(git -C ws/reconciler rev-parse HEAD)" = "$CLAIM_COMMIT"
+          echo "base=$CLAIM_COMMIT" >> "$GITHUB_OUTPUT"
           sed -e "s#{{SKILL_DIR}}#$SKILL_REL#g" -e "s#{{REPO_DIR}}#./reconciler#g" \
-              -e "s#{{TARGET_ID}}#$TARGET_ID#g" -e "s#{{TARGET_KIND}}#$TARGET_KIND#g" \
-              -e "s#{{MODEL_ID}}#$MODEL_ID#g" -e "s#{{REASON}}#$SELECT_REASON#g" \
+              -e "s#{{TASK_ID}}#$TASK_ID#g" -e "s#{{MODEL_ID}}#$MODEL_ID#g" \
+              -e "s#{{CLAIM_REASON}}#$CLAIM_REASON#g" -e "s#{{CLAIM_COMMIT}}#$CLAIM_COMMIT#g" \
               harness/.github/minimax/drift-detector-test-prompt.md > "$OUT/logs/test-prompt.md"
           args=(exec --input - --cwd "$GITHUB_WORKSPACE/ws" --permission full
                 --output-format stream-json --timeout 40m
@@ -327,34 +336,36 @@ jobs:
       - name: Check result
         if: steps.run.outcome != 'skipped' && steps.run.outputs.base != ''
         env:
-          TARGET_ID: ${{ steps.select.outputs.target_id }}
-          TARGET_KIND: ${{ steps.select.outputs.target_kind }}
+          TASK_ID: ${{ steps.select.outputs.task_id }}
           MODEL_ID: ${{ steps.select.outputs.model_id }}
-          SELECT_REASON: ${{ steps.select.outputs.reason }}
+          CLAIM_MESSAGE: ${{ steps.select.outputs.claim_message }}
           BASE: ${{ steps.run.outputs.base }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set +e
+          git -C ws/reconciler format-patch --stdout "$BASE~1..$BASE" > "$OUT/claim.patch" || true
           python3 harness/.github/scripts/check_detector_result.py --repo ws/reconciler --base "$BASE" \
-            --model-id "$MODEL_ID" --target-id "$TARGET_ID" --target-kind "$TARGET_KIND" --reason "$SELECT_REASON" \
-            --report "$OUT/check-report.md" --json "$OUT/check-report.json" --patch "$OUT/result.patch" \
-            --transcript "$OUT/logs/test-transcript.jsonl"
+            --model-id "$MODEL_ID" --task-id "$TASK_ID" --claim-subject "$CLAIM_MESSAGE" \
+            --report "$OUT/check-report.md" --json "$OUT/check-report.json" --patch "$OUT/result.patch"
           code=$?
           set -e
-          git -C ws/reconciler format-patch --stdout "$BASE..HEAD" > "$OUT/commits.patch" || true
+          # 점유 커밋 + 스킬 커밋 전부(드라이런이라 원격에는 없다)
+          git -C ws/reconciler format-patch --stdout "origin/$DEFAULT_BRANCH..HEAD" > "$OUT/commits.patch" || true
           exit $code
 
       - name: Summary
         if: always()
         env:
-          FOUND: ${{ steps.select.outputs.found }}
-          TARGET_ID: ${{ steps.select.outputs.target_id }}
-          REASON: ${{ steps.select.outputs.reason }}
+          FOUND: ${{ steps.select.outputs.claimed }}
+          TARGET_ID: ${{ steps.select.outputs.task_id }}
+          REASON: ${{ steps.select.outputs.claim_reason }}
+          LOST: ${{ steps.select.outputs.lost_count }}
           RUN_EXIT: ${{ steps.run.outputs.exit_code }}
         run: |
           {
             echo "### 3. Test (dry run — push 없음)"
             echo "- MCP: $MCP_URL (audience \`$MCP_AUDIENCE\`) · 노출 도구 $(cat "$OUT/logs/mcp-tools.json" 2>/dev/null || echo '<preflight 실패>')"
-            echo "- target found: ${FOUND:-false} · target_id: ${TARGET_ID:-<none>}${REASON:+ ($REASON)}"
+            echo "- 점유: ${FOUND:-false} · task: ${TARGET_ID:-<none>}${REASON:+ ($REASON)} · 경쟁 패배 ${LOST:-0}건"
             echo "- mcode exit: ${RUN_EXIT:-n/a}"
             if [ -s "$OUT/logs/mcp-smoke.jsonl" ]; then
               echo "- MCP smoke:"; python3 harness/.github/scripts/mcode_transcript.py summary "$OUT/logs/mcp-smoke.jsonl" | sed 's/^/  /'

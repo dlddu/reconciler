@@ -31,26 +31,23 @@ REQUIRED = [
     ("상태 no_action_needed", [r"\bno_action_needed\b"]),
     ("상태 action_required", [r"\baction_required\b"]),
     ("재확인 유예 recheckAfter", [r"\brecheckAfter\b"]),
-    ("관측 버전 lastObservedVersion", [r"\blastObservedVersion\b"]),
-    ("수동 트리거 요청 manualTriggerRequestedAt", [r"\bmanualTriggerRequestedAt\b"]),
-    ("수동 트리거 사유 manualTriggerReason", [r"\bmanualTriggerReason\b"]),
     ("기록 필드 stateSummary", [r"\bstateSummary\b"]),
     ("기록 필드 assessment", [r"\bassessment\b"]),
     ("task 스키마 참조", [r"reconciliation-task\.schema\.json"]),
     ("task 저장 위치", [r"data/reconciliation-tasks"]),
     ("커밋 메시지 규약 detect(...)", [r"detect\("]),
     ("드라이런 RECONCILER_DRY_RUN", [r"\bRECONCILER_DRY_RUN\b"]),
-    ("점유 전 최신화", [r"pull\s+--rebase", r"git\s+fetch"]),
+    ("push 전 최신화(pull --rebase)", [r"pull\s+--rebase"]),
     ("스키마 검증", [r"jsonschema", r"\bvalidat"]),
+    ("점유된 task 입력(task_id)", [r"\btask_id\b"]),
 ]
 
 RECOMMENDED = [
-    ("한 건만 점유(single in-flight)", [r"한\s*건", r"single[\s-]*in[\s-]*flight", r"하나만"]),
-    ("compare-and-set / 재확인", [r"compare[\s-]*and[\s-]*set", r"재확인"]),
+    ("점유는 러너 몫 — 스킬은 점유·대상 선정을 하지 않음", [r"(점유|선정)[^\n]{0,80}러너", r"러너[^\n]{0,80}(점유|선정)"]),
+    ("점유 기록(trigger·to-be-models) 보존", [r"\btrigger\b[^\n]{0,80}(건드리지|수정하지|바꾸지|그대로)",
+                                         r"to-be-models\.json[^\n]{0,80}(건드리지|수정하지|바꾸지|그대로)"]),
     ("스키마 수정 금지 명시", [r"스키마[^\n]{0,40}(수정|변경)[^\n]{0,20}(않|금지|말)"]),
     ("k3s MCP 도구", [r"github_app_installation_token"]),
-    ("점유가 수집보다 먼저", [r"점유[^\n]{0,60}(push|푸시|커밋)[^\n]{0,60}(뒤|후|다음|성공한\s*뒤)",
-                          r"버전\s*계산\s*→\s*점유\s*→\s*수집"]),
 ]
 
 FORBIDDEN = [

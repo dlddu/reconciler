@@ -36,7 +36,8 @@ data/                               # 운영 데이터 (스킬이 런타임에 �
 index.html                          # data/·templates/ 브라우징용 정적 웹페이지 (GitHub Pages)
 tests/                              # index.html 동작 테스트 (node --test), 워크플로 선정 스크립트 테스트 (python3 -m unittest)
 .github/workflows/                  # 단계 스킬별 workflow_dispatch 워크플로
-.github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py: 감지 대상 선정 = 스킬 Step 0,
+.github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py: 감지 대상 선정,
+                                    #   claim_drift_target.py: 선정 + 점유(compare-and-set 커밋) — MiniMax 감지의 Step 0·1,
                                     #   mcp_oidc_proxy.py·mcp_call.py: homelab-k3s-mcp OIDC 연결,
                                     #   validate_generated_skill.py·check_detector_result.py: 생성 스킬 검증·테스트 점검)
 .github/actions/setup-mcode/        # MiniMax Code(mcode) 설치 + subscription key 설정 composite action
@@ -50,9 +51,9 @@ tests/                              # index.html 동작 테스트 (node --test),
 
 | job | 하는 일 | 아티팩트 |
 | --- | --- | --- |
-| generate | `.github/minimax/drift-detector-brief.md`(간결한 지침)만 주고, mcode가 레포(README·스키마·선정 스크립트·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `drift-detector-skill` (skill/, 대화 기록) |
+| generate | `.github/minimax/drift-detector-brief.md`(간결한 지침)만 주고, mcode가 레포(README·스키마·점유 스크립트·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `drift-detector-skill` (skill/, 대화 기록) |
 | validate | 형식·계약 커버리지·금지 패턴·보조 스크립트 문법을 정적 검증한다. | `drift-detector-validation` |
-| test | 러너가 Step 0(대상 선정)을 하고, 생성된 스킬로 그 대상을 감지한다. 기본 브랜치를 체크아웃해 **커밋까지만 하고 push하지 않는다**(드라이런, 이 job의 `GITHUB_TOKEN`도 읽기 전용). 결과 diff와 대화 기록 시간순(점유 커밋 전에 diff 읽기·하네스 실행이 없었는지)을 계약 점검기로 확인한다. 업로드 전 대화 기록의 토큰은 가린다. | `drift-detector-test-result` (result.patch, commits.patch, 점검 보고, 대화 기록) |
+| test | 러너(`claim_drift_target.py`)가 대상을 고르고 **점유**한 뒤, 생성된 스킬은 점유된 task 한 건을 판정만 한다. 기본 브랜치를 체크아웃해 점유·판정 모두 **커밋까지만 하고 push하지 않는다**(드라이런, 이 job의 `GITHUB_TOKEN`도 읽기 전용). 점유 커밋 이후의 변경을 계약 점검기로 확인한다(그 task 파일만 바뀌었나, 점유 기록 보존, 종료 상태). 업로드 전 대화 기록의 토큰은 가린다. | `drift-detector-test-result` (claim.patch, result.patch, commits.patch, 점검 보고, 대화 기록) |
 
 - **MiniMax 인증**: 레포 secret `MINIMAX_SUBSCRIPTION_KEY`(Token Plan subscription key)를 `mcode provider set-minimax-key`로
   job 전용 데이터 디렉터리에 넣는다. 텔레메트리와 데이터 기여는 끈다.
@@ -61,7 +62,44 @@ tests/                              # index.html 동작 테스트 (node --test),
   변수와 대상 레포 토큰을 뺀다. 서버 `MCP_GITHUB_OIDC_RULES`에 이 워크플로 파일 규칙이 있어야 하고
   (`github_app_installation_token` 필수, `resource_list`·`resource_get`·`api_resources` 권장), audience는
   `vars.HOMELAB_K3S_MCP_AUDIENCE`(기본 `homelab-k3s-mcp`), URL은 `vars.HOMELAB_K3S_MCP_URL`로 바꿀 수 있다.
-- **테스트**: `python3 -m unittest discover -s tests`가 프록시·점검기·검증기를 네트워크 없이 검사한다.
+- **테스트**: `python3 -m unittest discover -s tests`가 선정·점유(경쟁 재현 포함)·프록시·점검기·검증기를
+  네트워크 없이 검사한다.
+
+### 점유는 러너가 한다 (MiniMax 감지)
+
+Claude Code용 `reconciler-drift-detector` 스킬은 대상 선정(Step 0)과 점유(Step 1)를 스킬 안에서 한다.
+MiniMax Code로 돌리는 감지는 이 둘을 **러너의 결정적 스크립트**(`claim_drift_target.py`)로 옮기고, 스킬은
+점유가 끝난 task 한 건을 받아 수집·판정만 한다.
+
+**근거 — 점유를 스킬 밖으로 뺄 수 있는 이유**
+
+1. MiniMax Code는 앱(사람이 대화하는 세션)에서 실행하지 않는다. 항상 `mcode exec`를 부르는 러너
+   (지금은 이 GitHub Actions 워크플로)가 있다.
+2. 따라서 **target id를 정하는 컴포넌트가 항상 존재한다**고 가정할 수 있다. 사람이 스킬을 직접 불러
+   "이 모델 봐줘"라고 하는 경로 — Claude Code 스킬이 선정·점유를 스스로 해야 했던 이유 — 가 MiniMax 쪽에는 없다.
+   사람이 대상을 지목하고 싶으면 워크플로 입력(`target_id`, `reason`)으로 러너에 지목한다.
+3. 대상을 정하는 컴포넌트가 늘 있으므로, 그 컴포넌트가 **점유까지 맡을 수 있다.** 점유는 판단이 필요 없는
+   기계적 compare-and-set(전제 재확인 → task 생성/재진입 표시 + 모델 기준선 갱신을 한 커밋 → 즉시 push)이라
+   모델보다 스크립트가 정확하다.
+
+**얻는 것**
+
+- **점유 순서가 구조적으로 보장된다.** 모델이 실행되기 전에 점유가 끝나 있으므로 "점유 전에 수집하지 말 것"을
+  지침과 사후 점검으로 강제할 필요가 없다.
+- **경쟁 처리가 한곳에 있다.** 다른 워커가 같은 변화를 먼저 집었으면(전제 불일치) 그 모델을 빼고 다음 후보를
+  점유한다(지목 실행이면 종료). 무관한 커밋 때문에 push가 거절되면 새 상태에서 전제를 다시 확인해 재시도한다 —
+  경쟁 패배와 단순 push 거절을 구분한다. 단위 테스트가 두 경우를 bare origin으로 재현한다.
+- **결과가 출력으로 남는다.** `claimed`·`task_id`·`claim_reason`·`claim_commit`·`lost_count`를 GITHUB_OUTPUT으로 내보내,
+  "점유할 대상 없음 / 경쟁에서 짐 / 점유 후 판정"이 워크플로에서 구분된다.
+
+**스킬에 남는 계약**: 넘겨받은 task가 `assessing`인지 확인 → 수집·판정 → `stateSummary`·`assessment`·`status` 기록
+(`detect(<tbm>/<rct>): …` 커밋) → `pull --rebase` 후 push. 점유 기록(그 task의 `trigger`·`createdAt`,
+`data/to-be-models.json`)과 다른 task·모델은 건드리지 않는다. 테스트의 점검기는 점유 커밋 이후 변경이 그 task 파일
+하나뿐인지로 이를 확인한다.
+
+**범위**: 이 분리는 MiniMax 감지 경로에만 해당한다. Claude Code 플러그인(`reconciler-data-plane`)의 감지 스킬은
+사람 세션에서 직접 불릴 수 있으므로 지금처럼 선정·점유를 스스로 한다. 두 경로가 같은 레포에 쓰므로 점유 기록의
+형태(커밋 제목, `trigger`, 기준선 갱신, 수동 요청 필드를 짝으로 `null`)는 같게 유지한다.
 
 ## 실행 전 사람 승인 (review.manualApproval)
 

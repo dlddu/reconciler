@@ -13,14 +13,13 @@ import validate_generated_skill as vgs  # noqa: E402
 BODY = """
 # reconciler-drift-detector
 
-한 건만 점유한다(single in-flight). 점유는 compare-and-set이며 `git pull --rebase` 후 재확인한다.
-순서는 버전 계산 → 점유 → 수집 → 판정이다. 점유 push가 성공한 뒤에만 대상 레포를 읽는다.
+대상 선정과 점유는 러너가 끝냈다. 넘겨받은 `task_id` 한 건만 판정한다.
 
-1. 대상의 `lastObservedVersion`, `checkPolicy.manualTriggerRequestedAt`/`manualTriggerReason`을 재확인한다.
-2. `data/reconciliation-tasks/<model>.json`에 `assessing` task를 만들고 커밋 `detect(<tbm>/<rct>): claim`.
-3. `stateSummary`와 `assessment`를 채우고 `schemas/reconciliation-task.schema.json`으로 jsonschema 검증.
+1. task가 `assessing`인지 확인한다. 그 task의 `trigger`·`createdAt`과 `to-be-models.json`은 그대로 둔다.
+2. `stateSummary`와 `assessment`를 채우고 `schemas/reconciliation-task.schema.json`으로 jsonschema 검증.
+3. `data/reconciliation-tasks/<model>.json`에 기록하고 커밋 `detect(<tbm>/<rct>): assess`.
 4. `no_action_needed` 또는 `action_required`, 유예면 `assessment.recheckAfter`.
-5. `RECONCILER_DRY_RUN=1`이면 push를 건너뛴다. 스키마는 절대 수정하지 않는다.
+5. `git pull --rebase` 후 push. `RECONCILER_DRY_RUN=1`이면 push를 건너뛴다. 스키마는 절대 수정하지 않는다.
 6. 대상 레포는 `github_app_installation_token`(contents:read)으로 읽는다.
 """
 
@@ -70,11 +69,11 @@ class ValidateGeneratedSkillTest(unittest.TestCase):
         self.assertIn("recheckAfter", joined)
         self.assertIn("RECONCILER_DRY_RUN", joined)
 
-    def test_missing_claim_order_is_warning(self):
-        body = BODY.replace("순서는 버전 계산 → 점유 → 수집 → 판정이다. 점유 push가 성공한 뒤에만 대상 레포를 읽는다.", "")
+    def test_missing_runner_claim_note_is_warning(self):
+        body = BODY.replace("대상 선정과 점유는 러너가 끝냈다. ", "")
         rep = self.write(skill_text(body=body))
         self.assertEqual(rep.errors, [])
-        self.assertTrue(any("점유가 수집보다 먼저" in w for w in rep.warnings))
+        self.assertTrue(any("점유는 러너 몫" in w for w in rep.warnings))
 
     def test_contract_covered_by_bundled_script(self):
         body = BODY.replace("`schemas/reconciliation-task.schema.json`으로 ", "")
