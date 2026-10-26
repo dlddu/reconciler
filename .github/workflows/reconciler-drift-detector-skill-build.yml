@@ -1,11 +1,12 @@
 # 감지 스킬 빌드 — MiniMax Code(mcode)로 reconciler-drift-detector 스킬을 생성 → 검증 → 테스트한다.
 #
-# 스킬 생성은 자동화 대상이 아니다: 지침(.github/minimax/drift-detector-brief.md)이나 계약을 바꿀 때 사람이
+# 스킬 생성은 자동화 대상이 아니다: 지침(.github/minimax/drift-detector-brief*.md)이나 계약을 바꿀 때 사람이
 # 수동으로 돌리고, 통과한 생성본(drift-detector-skill 아티팩트)을 plugin-marketplace의
 # plugins/reconciler-data-plane 에 PR로 올린다. 스케줄 감지는 reconciler-drift-detector.yml 이 그 고정 패키지로 돈다.
 #
-#   generate  간결한 지침(.github/minimax/drift-detector-brief.md)만 주고 mcode가 레포를 직접 읽어
-#             SKILL.md를 작성한다. 기존 스킬 본문은 모델에 노출하지 않는다.
+#   generate  지침만 주고 mcode가 레포를 직접 읽어 SKILL.md를 작성한다. 기존 스킬 본문은 모델에 노출하지 않는다.
+#             지침 = 메인(drift-detector-brief.md, 핵심 규칙 — 무엇을 해야 하나) + 서브(drift-detector-brief-sub.md,
+#             품질 보조 규칙 — 어떻게, 무엇을 하지 말 것). 둘을 이 순서로 이어 한 프롬프트로 준다.
 #   validate  생성물 정적 검증(형식 · 계약 커버리지 · 금지 패턴 · 보조 스크립트 문법).
 #   test      대상 선정과 점유는 러너(claim_drift_target.py)가 하고, 생성된 스킬은 점유된 task 한 건을
 #             판정만 한다(README 「점유는 러너가 한다」). mcode는 homelab-k3s-mcp에 GitHub OIDC로
@@ -90,8 +91,14 @@ jobs:
           MODEL: ${{ inputs.minimax_model }}
         run: |
           out="$RUNNER_TEMP/out"; mkdir -p "$out/logs" "$GITHUB_WORKSPACE/ws/$SKILL_REL"
-          sed -e "s#{{SKILL_DIR}}#$SKILL_REL#g" -e "s#{{REPO_DIR}}#./reconciler#g" \
-            harness/.github/minimax/drift-detector-brief.md > "$out/logs/prompt.md"
+          for f in drift-detector-brief.md drift-detector-brief-sub.md; do
+            test -f "harness/.github/minimax/$f" || { echo "::error::지침 파일 없음: $f"; exit 1; }
+          done
+          {
+            cat harness/.github/minimax/drift-detector-brief.md
+            printf '\n\n---\n\n'
+            cat harness/.github/minimax/drift-detector-brief-sub.md
+          } | sed -e "s#{{SKILL_DIR}}#$SKILL_REL#g" -e "s#{{REPO_DIR}}#./reconciler#g" > "$out/logs/prompt.md"
           echo "brief: $(wc -c < "$out/logs/prompt.md") bytes"
           args=(exec --input - --cwd "$GITHUB_WORKSPACE/ws" --permission full
                 --output-format stream-json --timeout 25m

@@ -59,7 +59,7 @@ tests/                              # index.html 동작 테스트 (node --test),
 
 | job | 하는 일 | 아티팩트 |
 | --- | --- | --- |
-| generate | `.github/minimax/drift-detector-brief.md`(간결한 지침)만 주고, mcode가 레포(README·스키마·점유 스크립트·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `drift-detector-skill` (skill/, 대화 기록) |
+| generate | 지침만 주고 — 메인 `.github/minimax/drift-detector-brief.md`(핵심 규칙: 무엇을 해야 하나) + 서브 `drift-detector-brief-sub.md`(품질 보조 규칙: 어떻게, 무엇을 하지 말 것)를 이어 한 프롬프트로 — mcode가 레포(README·스키마·점유 스크립트·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `drift-detector-skill` (skill/, 대화 기록) |
 | validate | 형식·계약 커버리지·금지 패턴·보조 스크립트 문법을 정적 검증한다. | `drift-detector-validation` |
 | test | 운영 감지와 같은 흐름(러너 점유 → 스킬 판정)을 생성본으로 드라이런한다. 점유 커밋 이후의 변경을 계약 점검기로 확인한다(그 task 파일만 바뀌었나, 점유 기록 보존, 종료 상태). 업로드 전 대화 기록의 토큰은 가린다. | `drift-detector-test-result` (claim.patch, result.patch, commits.patch, 점검 보고, 대화 기록) |
 
