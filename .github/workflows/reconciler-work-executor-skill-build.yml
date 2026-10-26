@@ -1,0 +1,244 @@
+# 실행 스킬 빌드 — MiniMax Code(mcode)로 reconciler-work-executor 스킬을 생성 → 검증 → 테스트한다.
+# 뼈대만 있음: job·스텝 순서와 경계만 잡고, 스킬별 로직은 TODO로 남긴다. 완성 형태는
+# reconciler-drift-detector-skill-build.yml을 따른다(README 「감지 스킬 MiniMax 파이프라인」).
+#
+# 스킬 생성은 자동화 대상이 아니다: 지침이나 계약을 바꿀 때 사람이 수동으로 돌리고, 통과한 생성본
+# (work-executor-skill 아티팩트)을 plugin-marketplace의 plugins/reconciler-data-plane 에 PR로 올린다.
+#
+#   generate  간결한 지침(.github/minimax/work-executor-brief.md — TODO: 작성)만 주고 mcode가 레포를 직접 읽어
+#             SKILL.md를 작성한다. 기존 스킬 본문은 모델에 노출하지 않는다.
+#   validate  생성물 정적 검증(형식 · 실행 단계 계약 커버리지 · 금지 패턴 · 보조 스크립트 문법).
+#   test      대상 선정(select_execute_target.py)과 점유(approved → executing)는 러너가 하고, 생성된 스킬은 점유된
+#             task 한 건을 실행(4-3)·검증(4-4)한다. 실행 단계는 실제 PR 머지·클러스터 반영을 하므로 드라이런의 범위가
+#             다른 단계보다 좁다: reconciler에 push하지 않는 것은 물론, **대상 레포·클러스터에 어떤 변경도 가하지
+#             않는다.** 드라이런에서 실행·검증을 무엇으로 대신할지(실행 직전에서 멈추고 실행 계획만 기록 vs 샌드박스
+#             대상)는 TODO — 정하기 전까지 Run generated skill은 켜지 않는다. 결과는 아티팩트로 반환한다.
+#
+# 필요한 설정(구현 시)
+#   environment llm-minimax의 secret MINIMAX_SUBSCRIPTION_KEY   레포 secret에는 두지 않는다 — README 「모델 키 격리」
+#   vars.HOMELAB_K3S_MCP_URL / vars.HOMELAB_K3S_MCP_AUDIENCE / vars.MINIMAX_REGION   (선택) 감지 스킬 빌드와 같다
+#   서버 MCP_GITHUB_OIDC_RULES에 이 파일(.github/workflows/reconciler-work-executor-skill-build.yml) 규칙:
+#     github_app_installation_token(필수, 대상 레포 읽기 권한 상한), resource_list·resource_get(검증용 읽기),
+#     ping(권장). resource_create·resource_patch·resource_delete 등 쓰기 도구는 이 규칙에 넣지 않는다.
+name: "Reconciler · Work Executor Skill Build"
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_id:
+        description: "테스트에서 실행할 대상 지목(<tbm_id>/<rct_id>, 모호하지 않은 rct_..., 또는 tbm_... 모델). 비우면 자동 선정"
+        required: false
+        default: ""
+      minimax_model:
+        description: "mcode 모델 override(<provider>/<model>, 예: minimax/MiniMax-M3). 비우면 CLI 기본값"
+        required: false
+        default: ""
+
+# 빌드끼리 직렬화한다. test job은 드라이런이라 운영 실행 워크플로와 겹쳐도 데이터를 바꾸지 않는다.
+concurrency:
+  group: reconciler-work-executor-skill-build
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  SKILL_NAME: reconciler-work-executor
+  SKILL_REL: .agents/skills/reconciler-work-executor # mcode 워크스페이스(ws/) 기준 스킬 위치
+  MCODE_VERSION: latest
+  MCP_URL: ${{ vars.HOMELAB_K3S_MCP_URL || 'https://homelab-k3s-mcp.llkm.nl/mcp' }}
+  MCP_AUDIENCE: ${{ vars.HOMELAB_K3S_MCP_AUDIENCE || 'homelab-k3s-mcp' }}
+  MCP_PROXY_PORT: "8765"
+
+jobs:
+  generate:
+    name: Generate skill (MiniMax Code)
+    runs-on: ubuntu-latest
+    environment: llm-minimax # 모델 키는 이 environment에만 있다(README 「모델 키 격리」)
+    timeout-minutes: 30
+    steps:
+      - name: Checkout harness
+        uses: actions/checkout@v4
+        with:
+          path: harness
+          persist-credentials: false
+
+      # 스킬을 레포 밖(ws/.agents)에 쓰게 해 reconciler 체크아웃을 오염시키지 않는다.
+      - name: Checkout reconciler (reference)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: ws/reconciler
+          persist-credentials: false
+
+      # TODO: ./harness/.github/actions/setup-mcode (subscription-key: secrets.MINIMAX_SUBSCRIPTION_KEY)
+      - name: Set up MiniMax Code
+        run: |
+          echo "TODO: set up mcode for $SKILL_NAME"
+
+      # TODO: .github/minimax/work-executor-brief.md 작성 후 감지 스킬 빌드의 Generate SKILL.md와 같은 방식으로 실행.
+      #   brief에 담을 계약: approved → executing 점유는 러너 몫(입구는 approved 하나, manualApproval은 러너가 확인),
+      #   계획·executionGuide대로 실행(4-3) → verifying → 완료 기준 수렴 검증(4-4) → succeeded | failed,
+      #   커밋 execute(<tbm>/<rct>): run / verify, 스키마 수정 금지,
+      #   RECONCILER_DRY_RUN이면 reconciler push는 물론 대상 레포 머지·클러스터 변경도 하지 않는다.
+      - name: Generate SKILL.md
+        id: gen
+        env:
+          MODEL: ${{ inputs.minimax_model }}
+        run: |
+          echo "TODO: generate $SKILL_NAME SKILL.md into ws/$SKILL_REL"
+
+      # TODO: ws/reconciler가 깨끗한지, ws/$SKILL_REL/SKILL.md가 생겼는지 확인.
+      - name: Check reference checkout untouched
+        run: |
+          echo "TODO: check ws/reconciler untouched and SKILL.md exists"
+
+      # TODO: 생성본·대화 기록을 $RUNNER_TEMP/out으로 모으고 redact_secrets.py로 가린 뒤
+      #   work-executor-skill 아티팩트로 올린다.
+      - name: Collect, redact and upload skill
+        if: always()
+        run: |
+          echo "TODO: collect → redact → upload work-executor-skill"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### 1. Generate — $SKILL_NAME"
+            echo "- result: TODO"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  validate:
+    name: Validate skill
+    needs: generate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout harness
+        uses: actions/checkout@v4
+        with:
+          path: harness
+          persist-credentials: false
+          sparse-checkout: .github
+
+      # TODO: work-executor-skill 아티팩트 다운로드.
+      - name: Download skill
+        run: |
+          echo "TODO: download work-executor-skill"
+
+      # TODO: validate_generated_skill.py는 지금 감지 스킬 전용(EXPECTED_NAME·REQUIRED가 하드코딩)이다.
+      #   스킬별 계약 표(executing/verifying/succeeded/failed, approved 외 진입 금지, execute(…) 커밋,
+      #   드라이런 시 머지·클러스터 변경 금지)를 받도록 일반화한 뒤 여기서 돌리고,
+      #   보고서를 work-executor-validation 아티팩트로 올린다.
+      - name: Static validation
+        run: |
+          echo "TODO: validate $SKILL_NAME"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### 2. Validate — $SKILL_NAME"
+            echo "- result: TODO"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  test:
+    name: Test skill (dry run)
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: llm-minimax # 모델 키는 이 environment에만 있다(README 「모델 키 격리」)
+    timeout-minutes: 60
+    permissions:
+      contents: read # push 불가 — 드라이런의 안전망
+      id-token: write # homelab-k3s-mcp OIDC
+    steps:
+      - name: Checkout harness
+        uses: actions/checkout@v4
+        with:
+          path: harness
+          persist-credentials: false
+
+      # 운영 데이터는 기본 브랜치가 진실이다. 읽기 전용 토큰이 남아 스킬의 pull --rebase는 되고 push는 안 된다.
+      - name: Checkout reconciler (default branch)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: ws/reconciler
+          fetch-depth: 50
+
+      # TODO: git 작성자(reconciler-bot), jsonschema 설치, 생성본 다운로드 → ws/$SKILL_REL 설치.
+      - name: Prepare workspace and install generated skill
+        run: |
+          echo "TODO: prepare ws/ and install generated $SKILL_NAME"
+
+      # TODO: mcp_oidc_proxy.py 기동 → mcp_call.py tools 프리플라이트 → 대상 레포 읽기 토큰(SOURCE_GITHUB_TOKEN).
+      #   대상 레포 토큰은 읽기 권한으로만 받는다 — 스킬이 드라이런을 어겨도 머지할 수 없게 하는 안전망.
+      #   프리플라이트에서 OIDC 규칙에 쓰기 도구(resource_create·resource_patch 등)가 보이면 실패로 끝낸다.
+      - name: Connect homelab-k3s-mcp
+        run: |
+          echo "TODO: start OIDC proxy, preflight (no write tools), mint source read token"
+
+      # 스킬 Step 0(대상 선정)을 옮긴 읽기 전용 선정 — 운영 실행 워크플로와 같은 스크립트.
+      # PR·status 조회는 SOURCE_GITHUB_TOKEN을 우선 쓰고, 없으면 워크플로 토큰으로 공개 레포만 본다.
+      - name: Select target
+        id: select
+        env:
+          INPUT_TARGET_ID: ${{ inputs.target_id }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 harness/.github/scripts/select_execute_target.py \
+            --repo ws/reconciler --target "$INPUT_TARGET_ID" \
+            --summary-file "$RUNNER_TEMP/select-target.md"
+
+      # TODO: 러너 점유 스크립트(claim_drift_target.py에 대응하는 실행용)를 만들어 --dry-run으로
+      #   approved → executing compare-and-set 커밋을 남긴다(push 없음). claimed·claim_commit을 출력한다.
+      - name: Claim target (dry run)
+        id: claim
+        if: steps.select.outputs.found == 'true'
+        run: |
+          echo "TODO: claim $SKILL_NAME target without push"
+
+      # TODO: 드라이런 범위를 정한 뒤 setup-mcode → ws/.mcp.json 연결 → MCP smoke →
+      #   .github/minimax/work-executor-test-prompt.md로 RECONCILER_DRY_RUN=1 실행
+      #   (mcode 환경에서 OIDC 요청 변수·SOURCE_GITHUB_TOKEN 제외). 정하기 전까지는 대상만 출력한다.
+      - name: Run generated skill
+        id: run
+        if: steps.select.outputs.found == 'true'
+        env:
+          MODEL: ${{ inputs.minimax_model }}
+          TARGET_ID: ${{ steps.select.outputs.target_id }}
+          SELECT_REASON: ${{ steps.select.outputs.reason }}
+          PULL_REQUEST_URL: ${{ steps.select.outputs.pull_request_url }}
+        run: |
+          echo "target_id: $TARGET_ID ($SELECT_REASON)"
+          echo "pr:        ${PULL_REQUEST_URL:-<none>}"
+          echo "TODO: run generated $SKILL_NAME (dry run — no merge, no cluster change)"
+
+      # TODO: 점유 커밋 이후 변경 점검기(check_detector_result.py에 대응하는 실행용) — 그 task 파일만 바뀌었나,
+      #   드라이런 종료 상태가 계약대로인가, 대상 PR이 여전히 open이고 head가 그대로인가(머지되지 않았나).
+      - name: Check result
+        if: steps.run.outcome == 'success'
+        run: |
+          echo "TODO: check $SKILL_NAME result"
+
+      - name: Summary
+        if: always()
+        env:
+          FOUND: ${{ steps.select.outputs.found }}
+          TARGET_ID: ${{ steps.select.outputs.target_id }}
+          REASON: ${{ steps.select.outputs.reason }}
+        run: |
+          {
+            echo "### 3. Test (dry run — push·머지·클러스터 변경 없음) — $SKILL_NAME"
+            echo "- target found: ${FOUND:-false}"
+            echo "- target_id: ${TARGET_ID:-<none>}${REASON:+ ($REASON)}"
+            echo "- result: TODO"
+            echo
+            cat "$RUNNER_TEMP/select-target.md" 2>/dev/null || true
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # TODO: redact_secrets.py --extra-env SOURCE_GITHUB_TOKEN → work-executor-test-result 아티팩트 업로드.
+      - name: Redact and upload test result
+        if: always()
+        run: |
+          echo "TODO: redact and upload work-executor-test-result"
