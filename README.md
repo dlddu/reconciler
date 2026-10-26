@@ -65,6 +65,10 @@ tests/                              # index.html 동작 테스트 (node --test),
 - **테스트**: `python3 -m unittest discover -s tests`가 선정·점유(경쟁 재현 포함)·프록시·점검기·검증기를
   네트워크 없이 검사한다.
 
+- **스케줄 (아직 끔)**: 워크플로 파일에 `schedule` 트리거와 `circuit-breaker` job이 주석으로 들어 있다. 켤 때 함께
+  주석을 푼다 — circuit-breaker는 스케줄 실행이 `FAILURE_THRESHOLD`(3)번 연속 실패하면 `gh workflow disable`로 이
+  워크플로를 끄고 PocketAide로 알린다(GitHub는 실패 횟수로 워크플로를 끄지 않는다). 켜기 전 체크리스트도 같은 주석에 있다.
+
 ### 점유는 러너가 한다 (MiniMax 감지)
 
 Claude Code용 `reconciler-drift-detector` 스킬은 대상 선정(Step 0)과 점유(Step 1)를 스킬 안에서 한다.
