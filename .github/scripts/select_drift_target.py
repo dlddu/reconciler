@@ -167,6 +167,11 @@ class VersionComputer:
         return version
 
 
+def last_line(output: str) -> str:
+    """README 계약: versionScript stdout의 마지막 줄이 버전 문자열이다."""
+    return output.strip().splitlines()[-1].strip()
+
+
 def version_matches(stored: str | None, current: str) -> bool:
     """저장값과 같은지. README 계약은 stdout 마지막 줄이지만, 기존 레코드는 여러 줄 stdout을
     통째로 저장한 경우가 있어 둘 중 하나와 같으면 같은 버전으로 본다."""
@@ -192,11 +197,17 @@ class Selection:
     errors: list = field(default_factory=list)    # (id, 메시지)
     scanned: int = 0
     remaining_unknown: bool = False
+    # 점유(claim_drift_target.py)가 compare-and-set으로 재확인할 "선정 시점의 값".
+    #   version_changed: {"changed": [side], "previous": {side: 저장값}, "current": {side: 계산값}}
+    #   manual_trigger:  {"requestedAt": 요청 시각 원문, "reason": 사유}
+    #   recheck_expired / 지목 task: {"recheckAfter": 원문 또는 None}
+    premise: dict = field(default_factory=dict)
 
-    def pick(self, *, target_id, target_kind, model_id, reason, detail):
+    def pick(self, *, target_id, target_kind, model_id, reason, detail, premise=None):
         self.found = True
         self.target_id, self.target_kind = target_id, target_kind
         self.model_id, self.reason, self.detail = model_id, reason, detail
+        self.premise = premise or {}
         return self
 
 
@@ -248,7 +259,8 @@ def select_explicit(target: str, models: list, tasks_by_model: dict, now: dt.dat
                     sel.skipped.append((target, describe_open(task, kind)))
                     return sel
                 return sel.pick(target_id=target, target_kind="task", model_id=model_id,
-                                reason="explicit", detail=f"지목된 assessing task ({kind})")
+                                reason="explicit", detail=f"지목된 assessing task ({kind})",
+                                premise={"recheckAfter": (task.get("assessment") or {}).get("recheckAfter")})
         raise SelectionError(f"task {target}를 찾을 수 없음")
 
     model = by_id.get(target)
@@ -263,7 +275,8 @@ def select_explicit(target: str, models: list, tasks_by_model: dict, now: dt.dat
         task = expired[0]
         return sel.pick(target_id=task["id"], target_kind="task", model_id=target,
                         reason="recheck_expired",
-                        detail=f"지목된 모델에 재확인 만료 task가 있어 그것을 이어받음(recheckAfter {task['assessment']['recheckAfter']})")
+                        detail=f"지목된 모델에 재확인 만료 task가 있어 그것을 이어받음(recheckAfter {task['assessment']['recheckAfter']})",
+                        premise={"recheckAfter": task["assessment"]["recheckAfter"]})
     if opened:
         task, kind = opened[0]
         sel.skipped.append((target, describe_open(task, kind)))
@@ -273,14 +286,18 @@ def select_explicit(target: str, models: list, tasks_by_model: dict, now: dt.dat
 
 
 def select_target(repo: Path, now: dt.datetime, computer: VersionComputer | None,
-                  explicit: str | None = None, full_sweep: bool = False) -> Selection:
+                  explicit: str | None = None, full_sweep: bool = False,
+                  exclude: frozenset = frozenset()) -> Selection:
+    """exclude: 이번 실행에서 점유 경쟁에 진 모델 id — 후보에서 뺀다(지목 실행에는 쓰지 않는다)."""
     models, tasks_by_model = load_state(repo)
 
     if explicit:
         return select_explicit(explicit, models, tasks_by_model, now)
 
     sel = Selection()
-    enabled = [m for m in models if is_enabled(m)]
+    if exclude:
+        sel.skipped.append((f"{len(exclude)}개 모델", "이번 실행에서 점유 경쟁에 짐 — 다른 워커 몫: " + ", ".join(sorted(exclude))))
+    enabled = [m for m in models if is_enabled(m) and m["id"] not in exclude]
     disabled = [m for m in models if not is_enabled(m)]
     if disabled:
         sel.skipped.append((f"{len(disabled)}개 모델", "감지 비활성(enabled:false) — 버전 스크립트 생략"))
@@ -306,7 +323,8 @@ def select_target(repo: Path, now: dt.datetime, computer: VersionComputer | None
         if len(expired) > 1:
             sel.skipped.append((f"재확인 만료 {len(expired) - 1}건", "이번엔 점유하지 않고 다음 실행에 넘김"))
         return sel.pick(target_id=task["id"], target_kind="task", model_id=model_id,
-                        reason="recheck_expired", detail=f"recheckAfter {fmt_time(when)} 경과")
+                        reason="recheck_expired", detail=f"recheckAfter {fmt_time(when)} 경과",
+                        premise={"recheckAfter": task["assessment"]["recheckAfter"]})
 
     # 2) 수동 트리거 — 가장 오래 기다린 요청부터.
     manual = []
@@ -326,7 +344,9 @@ def select_target(repo: Path, now: dt.datetime, computer: VersionComputer | None
             sel.skipped.append((f"수동 트리거 {len(manual) - 1}건", "이번엔 점유하지 않고 다음 실행에 넘김"))
         return sel.pick(target_id=model["id"], target_kind="model", model_id=model["id"],
                         reason="manual_trigger",
-                        detail=f"{fmt_time(requested)} 요청 — {model['checkPolicy']['manualTriggerReason']}")
+                        detail=f"{fmt_time(requested)} 요청 — {model['checkPolicy']['manualTriggerReason']}",
+                        premise={"requestedAt": model["checkPolicy"]["manualTriggerRequestedAt"],
+                                 "reason": model["checkPolicy"]["manualTriggerReason"]})
 
     # 3) 새 변화 — 오래 관측되지 않은 모델부터 버전을 계산하고, 처음 바뀐 한 건에서 멈춘다.
     if computer is None:
@@ -334,28 +354,32 @@ def select_target(repo: Path, now: dt.datetime, computer: VersionComputer | None
     changed = []
     for model in sorted(available, key=lambda m: (oldest_observed(m), m["id"])):
         sel.scanned += 1
-        diffs = []
+        diffs, currents = [], {}
         try:
             for side in SIDES:
                 current = computer.compute(model[side])
+                currents[side] = last_line(current)
                 if not version_matches(model[side].get("lastObservedVersion"), current):
                     diffs.append(side)
         except VersionError as exc:
             sel.errors.append((model["id"], str(exc)))
             continue
         if diffs:
-            changed.append((model, diffs))
+            changed.append((model, diffs, currents))
             if not full_sweep:
                 break
     if changed:
-        model, diffs = changed[0]
+        model, diffs, currents = changed[0]
         if full_sweep and len(changed) > 1:
             sel.skipped.append((f"버전 변화 {len(changed) - 1}건",
                                 "이번엔 점유하지 않고 lastObservedVersion을 그대로 둠: "
-                                + ", ".join(m["id"] for m, _ in changed[1:])))
+                                + ", ".join(m["id"] for m, _, _ in changed[1:])))
         sel.remaining_unknown = not full_sweep and sel.scanned < len(available)
         return sel.pick(target_id=model["id"], target_kind="model", model_id=model["id"],
-                        reason="version_changed", detail=f"바뀐 side: {', '.join(diffs)}")
+                        reason="version_changed", detail=f"바뀐 side: {', '.join(diffs)}",
+                        premise={"changed": diffs,
+                                 "previous": {side: model[side].get("lastObservedVersion") for side in diffs},
+                                 "current": {side: currents[side] for side in diffs}})
 
     clean = sel.scanned - len(sel.errors)
     sel.skipped.append((f"활성 {len(available)}개", f"{clean}개 버전 변화 없음"))
