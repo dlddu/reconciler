@@ -345,11 +345,12 @@ claude를 띄울지 정하는 읽기 전용 게이트일 뿐 점유 커밋을 �
   프록시 주소만 있다. `-claude.yml` 규칙 4개는 기존 규칙 파라미터가 4KB 한도에 차서 별도 SSM 파라미터
   `/flux-cd/homelab-k3s-mcp/github-oidc-claude`(키 `MCP_GITHUB_OIDC_RULES_CLAUDE`, homelab-k3s-mcp#289 · flux-cd-apps#89)에 둔다.
   도구는 4개 모두 `github_app_installation_token`·`api_resources`·`resource_list`·`resource_get`·`ping`·`pocket_aide_notification_send`
-  (클러스터 쓰기 도구는 기존 task 실행 기록상 쓴 적이 없어 넣지 않았다). githubToken 상한(reconciler는 어디에도 넣지 않는다):
-  - 감지·리뷰: `plugin-marketplace` + 대상 레포 10개, `contents`·`metadata`·`pull_requests`·`statuses`·`actions` read
-  - 계획·실행: 상한 두 개 — 대상 레포 10개에 `contents`·`pull_requests`·`workflows`·`actions` write + `metadata`·`statuses` read,
-    `plugin-marketplace`에 `contents`·`metadata` read. 요청은 둘 중 하나에 통째로 들어맞아야 해서 marketplace에는 write가 없다.
-    (기록 근거: PR 생성·머지 거의 전건, 워크플로 파일이 든 PR 머지 14건, 실패 잡 재실행 24건)
+  (클러스터 쓰기 도구는 기존 task 실행 기록상 쓴 적이 없어 넣지 않았다). githubToken 상한은 레포를 나열하지 않고 **제외할 레포**로
+  정한다(homelab-k3s-mcp#289 `excludeRepositories` — 나중에 생긴 레포도 자동 포함):
+  - 감지·리뷰: reconciler를 뺀 모든 레포(plugin-marketplace·인프라 레포 포함)에 `contents`·`metadata`·`pull_requests`·`statuses`·`actions` read
+  - 계획·실행: reconciler·plugin-marketplace·infrastructure·flux-cd·flux-cd-apps를 뺀 모든 레포에 권한 제한 없음(workflows 포함),
+    그리고 `plugin-marketplace`에 `contents`·`metadata` read. 요청은 상한 하나에 통째로 들어맞아야 해서 marketplace에는 write가 없고,
+    제외 상한은 레포를 명시한 요청에만 들어맞는다.
 - **플러그인**: 마켓플레이스가 private라 클론용 읽기 토큰을 MCP로 받아 설치 명령의 git 환경 변수(`http.extraheader`)로만 준다.
   GitHub App 설치 범위에 `plugin-marketplace`가 있어야 한다. 버전은 `vars.CLAUDE_CODE_VERSION`(기본 `stable`), 모델은 입력 `model`
   또는 `vars.CLAUDE_MODEL`.
