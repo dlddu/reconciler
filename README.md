@@ -41,31 +41,39 @@ tests/                              # index.html 동작 테스트 (node --test),
                                     #   mcp_oidc_proxy.py·mcp_call.py: homelab-k3s-mcp OIDC 연결,
                                     #   validate_generated_skill.py·check_detector_result.py: 생성 스킬 검증·테스트 점검)
 .github/actions/setup-mcode/        # MiniMax Code(mcode) 설치 + subscription key 설정 composite action
-.github/minimax/                    # mcode에 주는 간결한 생성 지침(brief)과 테스트 프롬프트
+.github/minimax/                    # mcode에 주는 간결한 생성 지침(brief), 테스트·운영 실행 프롬프트
 .nojekyll                           # Pages가 data/*.json을 그대로 서빙하도록 Jekyll 우회
 ```
 
-## 감지 스킬 MiniMax 파이프라인 (`reconciler-drift-detector.yml`)
+## 감지 스킬 MiniMax 파이프라인
 
-감지 워크플로는 MiniMax Code(`mcode exec`)로 감지 스킬을 **생성 → 검증 → 테스트**한다.
+감지는 MiniMax Code(`mcode exec`)로 돈다. 워크플로는 둘로 나뉜다 — **스킬 생성은 자동화 대상이 아니다.**
+
+| 워크플로 | 트리거 | 하는 일 |
+| --- | --- | --- |
+| `reconciler-drift-detector.yml` (운영 감지) | 수동, 스케줄(주석 — 아직 끔) | 러너가 대상을 고르고 **점유**한 뒤, plugin-marketplace의 고정 스킬(`plugins/reconciler-data-plane`, MiniMax 플러그인 형식)을 mcode 로컬 플러그인으로 설치해 그 task 한 건을 판정한다. 결과 점검기로 계약을 확인하고 `drift-detector-result` 아티팩트를 남긴다. 지금은 드라이런(`env.DRY_RUN: "1"`, push 없음). |
+| `reconciler-drift-detector-skill-build.yml` (스킬 빌드) | 수동만 | 지침이나 계약을 바꿀 때 사람이 돌린다. 아래 generate → validate → test를 통과한 생성본을 plugin-marketplace에 PR로 올리면, 운영 감지는 그 다음 실행부터 새 스킬을 쓴다(`plugin_ref` 입력으로 브랜치·SHA를 지정해 미리 돌려볼 수도 있다). |
+
+스킬 빌드의 job:
 
 | job | 하는 일 | 아티팩트 |
 | --- | --- | --- |
 | generate | `.github/minimax/drift-detector-brief.md`(간결한 지침)만 주고, mcode가 레포(README·스키마·점유 스크립트·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `drift-detector-skill` (skill/, 대화 기록) |
 | validate | 형식·계약 커버리지·금지 패턴·보조 스크립트 문법을 정적 검증한다. | `drift-detector-validation` |
-| test | 러너(`claim_drift_target.py`)가 대상을 고르고 **점유**한 뒤, 생성된 스킬은 점유된 task 한 건을 판정만 한다. 기본 브랜치를 체크아웃해 점유·판정 모두 **커밋까지만 하고 push하지 않는다**(드라이런, 이 job의 `GITHUB_TOKEN`도 읽기 전용). 점유 커밋 이후의 변경을 계약 점검기로 확인한다(그 task 파일만 바뀌었나, 점유 기록 보존, 종료 상태). 업로드 전 대화 기록의 토큰은 가린다. | `drift-detector-test-result` (claim.patch, result.patch, commits.patch, 점검 보고, 대화 기록) |
+| test | 운영 감지와 같은 흐름(러너 점유 → 스킬 판정)을 생성본으로 드라이런한다. 점유 커밋 이후의 변경을 계약 점검기로 확인한다(그 task 파일만 바뀌었나, 점유 기록 보존, 종료 상태). 업로드 전 대화 기록의 토큰은 가린다. | `drift-detector-test-result` (claim.patch, result.patch, commits.patch, 점검 보고, 대화 기록) |
 
 - **MiniMax 인증**: 레포 secret `MINIMAX_SUBSCRIPTION_KEY`(Token Plan subscription key)를 `mcode provider set-minimax-key`로
   job 전용 데이터 디렉터리에 넣는다. 텔레메트리와 데이터 기여는 끈다.
 - **homelab-k3s-mcp 연결**: GitHub Actions OIDC. OIDC 토큰이 약 5분짜리라 `.mcp.json`에 박지 않고, 로컬 프록시
   (`mcp_oidc_proxy.py`, 127.0.0.1)가 요청마다 토큰을 붙이고 만료 전에 갱신한다. mcode 환경에서는 OIDC 요청
-  변수와 대상 레포 토큰을 뺀다. 서버 `MCP_GITHUB_OIDC_RULES`에 이 워크플로 파일 규칙이 있어야 하고
-  (`github_app_installation_token` 필수, `resource_list`·`resource_get`·`api_resources` 권장), audience는
+  변수와 대상 레포 토큰을 뺀다. 서버 `MCP_GITHUB_OIDC_RULES`에 두 워크플로 파일 각각의 규칙이 있어야 하고
+  (`github_app_installation_token` 필수 — 운영 감지는 이것으로 private plugin-marketplace도 읽는다,
+  `resource_list`·`resource_get`·`api_resources`·`ping` 권장), audience는
   `vars.HOMELAB_K3S_MCP_AUDIENCE`(기본 `homelab-k3s-mcp`), URL은 `vars.HOMELAB_K3S_MCP_URL`로 바꿀 수 있다.
 - **테스트**: `python3 -m unittest discover -s tests`가 선정·점유(경쟁 재현 포함)·프록시·점검기·검증기를
   네트워크 없이 검사한다.
 
-- **스케줄 (아직 끔)**: 워크플로 파일에 `schedule` 트리거와 `circuit-breaker` job이 주석으로 들어 있다. 켤 때 함께
+- **스케줄 (아직 끔)**: 운영 감지 워크플로에 `schedule` 트리거와 `circuit-breaker` job이 주석으로 들어 있다. 켤 때 함께
   주석을 푼다 — circuit-breaker는 스케줄 실행이 `FAILURE_THRESHOLD`(3)번 연속 실패하면 `gh workflow disable`로 이
   워크플로를 끄고 PocketAide로 알린다(GitHub는 실패 횟수로 워크플로를 끄지 않는다). 켜기 전 체크리스트도 같은 주석에 있다.
 
