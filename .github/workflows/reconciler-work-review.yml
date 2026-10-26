@@ -5,6 +5,11 @@ name: "Reconciler · Work Review"
 
 on:
   workflow_dispatch:
+    inputs:
+      target_id:
+        description: "판정할 대상 지목(tbm_.../rct_... 또는 rct_... planned task, tbm_... 모델). 비우면 자동 선정"
+        required: false
+        default: ""
 
 # 같은 스킬이 동시에 두 번 돌며 같은 task를 점유하거나 push가 충돌하지 않도록 직렬화한다.
 concurrency:
@@ -45,34 +50,48 @@ jobs:
         run: |
           echo "TODO: set up runtime for $SKILL_NAME"
 
-      # TODO: 이번 실행이 다룰 대상(ToBeModel/ReconciliationTask) 한 건을 고른다.
-      # 고른 id를 target_id로 내보내고, 대상이 없으면 found=false로 두어 이후 스텝을 건너뛴다.
+      # 스킬 Step 0(대상 선정 · 진입 게이트, 4-0)을 옮긴 읽기 전용 선정. reconciler-local의 리뷰어
+      # 게이트(precheck-review.py: status planned)에 claim.py의 review 전제(마지막 attempt의
+      # plan.steps·executionGuide·preparation)를 더해, 점유가 튕기지 않을 task만 고른다.
+      # 우선순위: 지목 → 오래 기다린 planned(updatedAt). reviewing(남의 lock)·approved 등은 고르지 않는다.
+      # 레포에 쓰지 않고 대상 레포에도 접근하지 않는다 — 점유는 스킬 Step 1, PR 신선도는 Step 2 몫.
+      # 대상이 없는데 전제가 깨진 planned가 있으면 막힌 task를 드러내려고 실패로 끝낸다.
       - name: Select target
         id: select
+        env:
+          INPUT_TARGET_ID: ${{ inputs.target_id }}
         run: |
-          echo "TODO: select target for $SKILL_NAME"
-          echo "target_id=" >> "$GITHUB_OUTPUT"
-          echo "found=false" >> "$GITHUB_OUTPUT"
+          python3 .github/scripts/select_review_target.py \
+            --repo "$GITHUB_WORKSPACE" --target "$INPUT_TARGET_ID" \
+            --summary-file "$RUNNER_TEMP/select-target.md"
 
       # TODO: 고른 대상에 대해 스킬 실행.
       - name: Run skill
         if: steps.select.outputs.found == 'true'
         env:
           TARGET_ID: ${{ steps.select.outputs.target_id }}
+          MODEL_ID: ${{ steps.select.outputs.model_id }}
+          SELECT_REASON: ${{ steps.select.outputs.reason }}
+          PULL_REQUEST_URL: ${{ steps.select.outputs.pull_request_url }}
         run: |
           echo "skill:     $SKILL_NAME"
-          echo "target_id: $TARGET_ID"
+          echo "target_id: $MODEL_ID/$TARGET_ID ($SELECT_REASON)"
+          echo "pr:        ${PULL_REQUEST_URL:-<direct action>}"
           echo "TODO: implement $SKILL_NAME execution"
 
       - name: Summary
         if: always()
         env:
           TARGET_ID: ${{ steps.select.outputs.target_id }}
+          MODEL_ID: ${{ steps.select.outputs.model_id }}
           FOUND: ${{ steps.select.outputs.found }}
+          REASON: ${{ steps.select.outputs.reason }}
         run: |
           {
             echo "### $SKILL_NAME"
             echo "- target found: ${FOUND:-false}"
-            echo "- target_id: ${TARGET_ID:-<none>}"
+            echo "- target_id: ${TARGET_ID:-<none>}${MODEL_ID:+ (model $MODEL_ID)}${REASON:+, $REASON}"
             echo "- result: TODO"
+            echo
+            cat "$RUNNER_TEMP/select-target.md" 2>/dev/null || true
           } >> "$GITHUB_STEP_SUMMARY"

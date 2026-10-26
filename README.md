@@ -36,8 +36,8 @@ data/                               # 운영 데이터 (스킬이 런타임에 �
 index.html                          # data/·templates/ 브라우징용 정적 웹페이지 (GitHub Pages)
 tests/                              # index.html 동작 테스트 (node --test), 워크플로 선정 스크립트 테스트 (python3 -m unittest)
 .github/workflows/                  # 단계 스킬별 workflow_dispatch 워크플로
-.github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py / select_plan_target.py / select_execute_target.py:
-                                    #   감지·계획·실행 대상 선정,
+.github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py / select_plan_target.py / select_review_target.py /
+                                    #   select_execute_target.py: 감지·계획·리뷰·실행 대상 선정,
                                     #   claim_drift_target.py: 선정 + 점유(compare-and-set 커밋) — MiniMax 감지의 Step 0·1,
                                     #   mcp_oidc_proxy.py·mcp_call.py: homelab-k3s-mcp OIDC 연결,
                                     #   validate_generated_skill.py·check_detector_result.py: 생성 스킬 검증·테스트 점검)
