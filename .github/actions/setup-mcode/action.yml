@@ -8,9 +8,9 @@ inputs:
     description: MiniMax Token Plan subscription key (sk-cp-...). secrets.MINIMAX_SUBSCRIPTION_KEY를 넘긴다.
     required: true
   version:
-    description: "@minimax-ai/code 버전 (재현성을 위해 고정)"
+    description: "@minimax-ai/code 버전 또는 dist-tag(기본 latest — 고정하려면 0.7.0처럼 버전을 넘긴다)"
     required: false
-    default: "0.6.13"
+    default: "latest"
   region:
     description: "en(global, api.minimax.io) 또는 cn(api.minimaxi.com)"
     required: false
@@ -20,6 +20,9 @@ outputs:
   data-dir:
     description: mcode 데이터 디렉터리(MINIMAX_DATA_DIR)
     value: ${{ steps.configure.outputs.data-dir }}
+  version:
+    description: 실제 설치된 mcode 버전
+    value: ${{ steps.install.outputs.version }}
 
 runs:
   using: composite
@@ -30,6 +33,7 @@ runs:
         node-version: "24"
 
     - name: Install mcode
+      id: install
       shell: bash
       env:
         MCODE_VERSION: ${{ inputs.version }}
@@ -37,7 +41,10 @@ runs:
         npm install -g "@minimax-ai/code@${MCODE_VERSION}" \
           --registry=https://registry.npmjs.org/ --ignore-scripts=false --include=optional \
           --allow-scripts=@minimax-ai/code,better-sqlite3 --no-fund --no-audit
-        mcode --version
+        installed=$(mcode --version)
+        echo "mcode $installed (요청: $MCODE_VERSION)"
+        echo "version=$installed" >> "$GITHUB_OUTPUT"
+        echo "MCODE_INSTALLED_VERSION=$installed" >> "$GITHUB_ENV"
 
     # 키는 env로만 건넨다(set-minimax-key가 환경 변수에서 읽어 config.yaml에 저장 — 명령 인자에 싣지 않는다).
     - name: Configure subscription key

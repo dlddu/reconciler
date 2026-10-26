@@ -49,7 +49,7 @@ permissions:
 env:
   SKILL_NAME: reconciler-drift-detector
   SKILL_REL: .agents/skills/reconciler-drift-detector # mcode 워크스페이스(ws/) 기준 스킬 위치
-  MCODE_VERSION: "0.6.13"
+  MCODE_VERSION: latest # npm dist-tag — 실제 설치된 버전은 Set up MiniMax Code 출력·요약에 남는다
   MCP_URL: ${{ vars.HOMELAB_K3S_MCP_URL || 'https://homelab-k3s-mcp.llkm.nl/mcp' }}
   MCP_AUDIENCE: ${{ vars.HOMELAB_K3S_MCP_AUDIENCE || 'homelab-k3s-mcp' }}
   MCP_PROXY_PORT: "8765"
@@ -120,7 +120,7 @@ jobs:
           cp -R "ws/$SKILL_REL/." "$out/skill/" 2>/dev/null || true
           {
             echo "### 1. Generate"
-            echo "- mcode exit: ${{ steps.gen.outputs.exit_code || 'n/a' }}"
+            echo "- mcode ${MCODE_INSTALLED_VERSION:-<미설치>} · exit: ${{ steps.gen.outputs.exit_code || 'n/a' }}"
             echo "- 생성 파일: $(cd "$out/skill" && find . -type f | sed 's#^\./##' | paste -sd ', ' -)"
             python3 harness/.github/scripts/mcode_transcript.py summary "$out/logs/transcript.jsonl" 2>/dev/null || true
           } >> "$GITHUB_STEP_SUMMARY"
@@ -378,7 +378,7 @@ jobs:
             echo "### 3. Test (dry run — push 없음)"
             echo "- MCP: $MCP_URL (audience \`$MCP_AUDIENCE\`) · 노출 도구 $(cat "$OUT/logs/mcp-tools.json" 2>/dev/null || echo '<preflight 실패>')"
             echo "- 점유: ${FOUND:-false} · task: ${TARGET_ID:-<none>}${REASON:+ ($REASON)} · 경쟁 패배 ${LOST:-0}건"
-            echo "- mcode exit: ${RUN_EXIT:-n/a}"
+            echo "- mcode ${MCODE_INSTALLED_VERSION:-<미설치>} · exit: ${RUN_EXIT:-n/a}"
             if [ -s "$OUT/logs/mcp-smoke.jsonl" ]; then
               echo "- MCP smoke:"; python3 harness/.github/scripts/mcode_transcript.py summary "$OUT/logs/mcp-smoke.jsonl" | sed 's/^/  /'
             fi
