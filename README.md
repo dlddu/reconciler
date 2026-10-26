@@ -141,18 +141,20 @@ MiniMax Code로 돌리는 감지는 이 둘을 **러너의 결정적 스크립�
 받아도 된다. 다만 서버가 **호출한 워크플로 자신의 레포(reconciler)가 포함되는 토큰에는 workflows 권한을 주지 않는다**.
 `permissions`를 생략하면 App의 모든 권한(workflows 포함)이 되므로, 그때는 `repositories`를 명시하고 이 레포를 빼야 발급된다.
 
+규칙의 형태를 보여 주는 **예시**다. 레포 이름과 권한은 자리표시이고, 실제 운영 값은 이 README가 아니라 SSM
+`/flux-cd/homelab-k3s-mcp/github-oidc`의 `MCP_GITHUB_OIDC_RULES`가 기준이다.
+
 ```json
-{"repository": "dlddu/reconciler", "workflow": ".github/workflows/reconciler-drift-detector.yml",
- "tools": ["github_app_installation_token", "resource_list", "resource_get", "api_resources", "ping"],
- "githubToken": {"repositories": ["plugin-marketplace", "claude-transcript-viewer-v2", "dear-baby",
-                                  "economic-opinion-trend-monitor", "feature-doc", "homelab-k3s-mcp",
-                                  "kubernetes-dashboard", "pocket-aide", "pr-review", "session-platform", "tessera"],
+{"repository": "dlddu/reconciler", "workflow": ".github/workflows/<워크플로>.yml",
+ "tools": ["github_app_installation_token", "ping"],
+ "githubToken": {"repositories": ["<대상 레포 A>", "<대상 레포 B>"],
                  "permissions": {"contents": "read", "metadata": "read"}}}
 ```
 
-스킬 빌드 규칙도 `plugin-marketplace`를 뺀 같은 상한을 둔다. 대상 레포 목록은 `data/to-be-models.json`의 대상
-레포(꺼진 모델 포함)다. 새 대상 레포를 등록하면 상한에도 추가한다. 계획·실행 단계가 대상 레포에 PR을 만들고 머지하게 되면
-그 워크플로 규칙에 `contents`·`pull_requests`의 `write`를 주고, 대상 레포 워크플로를 고친다면 `workflows: write`도 준다.
+상한을 정할 때의 원칙: 레포는 그 단계가 실제로 다루는 대상 레포(`data/to-be-models.json`, 꺼진 모델 포함)와 필요한
+보조 레포만 넣고, 새 대상 레포를 등록하면 상한에도 추가한다. 권한은 감지처럼 관측만 하는 단계엔 읽기만 준다. 계획·실행
+단계가 대상 레포에 PR을 만들고 머지하게 되면 `contents`·`pull_requests`의 `write`를, 대상 레포 워크플로를 고친다면
+`workflows: write`도 준다. 상한의 권한은 GitHub App이 가진 권한 안이어야 발급된다.
 
 ## 실행 전 사람 승인 (review.manualApproval)
 
