@@ -21,6 +21,8 @@ BODY = """
 4. `no_action_needed` 또는 `action_required`, 유예면 `assessment.recheckAfter`.
 5. `git pull --rebase` 후 push. `RECONCILER_DRY_RUN=1`이면 push를 건너뛴다. 스키마는 절대 수정하지 않는다.
 6. 대상 레포는 `github_app_installation_token`(contents:read)으로 읽는다.
+7. 판정은 현재 상태에 대해 내린다 — 잔여 gap이 남으면 `action_required`.
+8. `gap`은 세 문장 이내로 쓴다.
 """
 
 
@@ -74,6 +76,15 @@ class ValidateGeneratedSkillTest(unittest.TestCase):
         rep = self.write(skill_text(body=body))
         self.assertEqual(rep.errors, [])
         self.assertTrue(any("점유는 러너 몫" in w for w in rep.warnings))
+
+    def test_missing_residual_gap_and_length_rules_are_warnings(self):
+        body = BODY.replace("7. 판정은 현재 상태에 대해 내린다 — 잔여 gap이 남으면 `action_required`.\n", "")
+        body = body.replace("8. `gap`은 세 문장 이내로 쓴다.\n", "")
+        rep = self.write(skill_text(body=body))
+        self.assertEqual(rep.errors, [])
+        joined = "\n".join(rep.warnings)
+        self.assertIn("잔여 gap 규칙", joined)
+        self.assertIn("기록 분량 기준", joined)
 
     def test_contract_covered_by_bundled_script(self):
         body = BODY.replace("`schemas/reconciliation-task.schema.json`으로 ", "")

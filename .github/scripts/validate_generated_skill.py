@@ -50,6 +50,8 @@ RECOMMENDED = [
                          r"스키마[^\n]{0,40}(건드리지|고치지|손대지)\s*않",
                          r"스키마[^\n]{0,20}(고쳐|수정해|바꿔)[^\n]{0,30}않"]),
     ("k3s MCP 도구", [r"github_app_installation_token"]),
+    ("잔여 gap 규칙 — 부분 해소를 no_action_needed로 닫지 않음", [r"잔여\s*gap", r"남은\s*(gap|차이)", r"현재\s*상태[^\n]{0,40}판정"]),
+    ("기록 분량 기준(gap·reason)", [r"\bgap\b[^\n]{0,40}(문장|자\s*(이내|안팎|이하))", r"\breason\b[^\n]{0,40}\d+\s*자"]),
 ]
 
 # 금지 패턴을 "하지 말라"고 적은 줄(예: 「강제 push 금지(`git push --force`)」)은 사용이 아니라 금지 서술이다.
