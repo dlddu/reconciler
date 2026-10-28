@@ -16257,7 +16257,7 @@
   {
     "id": "rct_20261028-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T16:12:36Z",
     "trigger": {
       "source": "version_change",
@@ -16280,6 +16280,45 @@
     "assessment": {
       "reason": "**작업 필요: `action_required`.**\n\n- **근거 1 — 미판정 주석 잔존.** 정책 기준·범위는 불변인데 #263~#267로 주석이 늘어(L +112 · D +18 · E +8줄) 원장 기준 30행·637줄이 필요성 판정을 받지 못했다(L 23행/549줄 · D 5행/75줄 · E 2행/13줄). 이는 정의상 '필요 사유를 댈 수 없는 주석'이 있을 수 있는 상태로, 판정 없이는 정합을 확인할 수 없다.\n- **근거 2 — 자동 해소 불가.** 판정은 사람이 아니라 정책 판정 패스(대상 레포 PR)로만 닫히며, 시간이 지나도 저절로 줄지 않는다(마지막 판정 패스 이후 신규 주석을 들인 PR이 계속 쌓이는 중). 유예할 이유가 없다.\n- **근거 3 — 이전 정상 착지와의 차이.** rct_20261013-0002는 미판정 0·불변식 통과여서 no_action_needed였다. 이번엔 같은 게이트가 rc=0이지만 미판정이 0이 아니다. 계획 시 PR 단위(기간 누적 집계 · 조회 조건 카드 정리 · 요건 9 mockup 재작업)로 슬라이스해 한 번에 한 묶음씩 판정하는 것이 이전 슬라이스 관행과 맞다.",
       "assessedAt": "2026-10-28T16:13:09Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#263~#267 이 들인 주석 중 Go 서빙·Python 집계·e2e gold.ts 덩어리(L 11행·D 4행, 행 기준 약 380줄)를 **증분 판정**한다 — 창 `8a483a3`→`24b477b` 의 추가 주석(L 약 58·D 12)만 필요성 시험하고 기존 행의 옛 판정은 유지하며, 재진술 12줄(buildDashboard doc 2 · 픽스처 값 표 7 · Stats 필드 열거 2 · 테스트 `_axes` docstring 1)을 제거하고 나머지는 사유와 함께 유지한다(대안: 전 행 재판정 — 옛 판정이 이미 완료라 낭비; 지침 준수). 완료 기준: PR #270 착지 후 위 14행이 `완료`·D test_aggregate 행 삭제·게이트 rc=0. 범위 밖: scripts/** · types.ts · Dashboard.tsx · tokens.css(열린 PR #269 와 파일 겹침) · E 2행 · D scripts 1행 — 예산 400줄 안에서 한 덩어리 묶음만 가져가며, 나머지는 재감지가 새 task 로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "사전 확인: PR #270 OPEN · head a92a36d839e87c2143c627a87767ac66dd74faa1 · mergeable · required success · review/manual-approval 이 head sha 에 success",
+              "expectedOutcome": "사람 승인 status 가 붙은 head 로 머지 가능"
+            },
+            {
+              "seq": 2,
+              "action": "gh pr merge 270 --squash --match-head-commit a92a36d839e87c2143c627a87767ac66dd74faa1 (커밋 얹기·리베이스 금지)",
+              "expectedOutcome": "main 에 squash 커밋 M 착지"
+            },
+            {
+              "seq": 3,
+              "action": "M 에서 check-comment-ledger.py + 14행 grep(`완료`·수·지문) + D test_aggregate 행 부재 + 패스 문서 존재; 대조군 M^1",
+              "expectedOutcome": "rc=0 · 완료 11 L + 3 D 행 · 삭제 행 부재 / M^1 에서 `—`"
+            },
+            {
+              "seq": 4,
+              "action": "(선택) go vet ./internal/handlers/ ./internal/servingindex/ 또는 M 의 CI 확인",
+              "expectedOutcome": "ok"
+            }
+          ],
+          "plannedAt": "2026-10-28T17:20:00Z",
+          "executionGuide": "# 실행 지침 — rct_20261028-0001 (PR #270 · 증분 판정 적용)\n\n## 순서 (직렬)\n1. **사전 확인**: `gh pr view 270 -R dlddu/economic-opinion-trend-monitor --json state,headRefOid,mergeable,mergeStateStatus` — `OPEN` · `headRefOid=a92a36d839e87c2143c627a87767ac66dd74faa1` · `mergeable≠CONFLICTING`. 필수 `required` check-run success, 그리고 `review/manual-approval` 이 **그 sha 에** success(`servingindex/build.go` 가 MA6 라 사람이 붙인다). 없으면 집지 말 것.\n2. **squash 머지**: `gh pr merge 270 --squash --match-head-commit a92a36d839e87c2143c627a87767ac66dd74faa1`. 커밋을 얹거나 리베이스하지 말 것(승인 status 는 sha 에 묶여 있다).\n3. **검증**(머지 커밋 M, 대조군 M^1):\n   - `python3 scripts/check-comment-ledger.py` rc=0.\n   - 원장 L 표: `dashboard.go`(18 · `5cccd2c16d4b`) · `dashboard_test.go`(19 · `310988784613`) · `gold.go` · `handlers.go` · `spikes_test.go` · `build.go`(23 · `82bd46fef00e`) · `schema.sql` · `store.go` · `aggregate.py` · `test_aggregate.py` · `tests/e2e/lib/gold.ts` 11행이 `완료`. D 표: `aggregate.py` · `test_article_picks.py` · `test_source_contributions.py` 3행 `완료`, `tests/test_aggregate.py` D 행 부재. `grep -F` 로 행마다 확인(M^1 에서는 전부 `—`/부재).\n   - 패스 문서 `docs/comment-policy/passes/2026-10-28-window-ranking-increment-pass.md` 존재.\n   - 판정 완료 기준은 위 행들이다 — 「미판정 0」 절대값은 기준이 아니다(머지 시점 자매가 들인 새 `—` 행 · 범위 밖 잔여 12 L 행 · E 2행 · D 1행).\n4. (선택) `cd go && go vet ./internal/handlers/ ./internal/servingindex/` 또는 M 의 CI 결과.\n\n## 주의\n- 사람 게이트: `check-data-format-change.py origin/main HEAD` → `format_changed=true`(build.go). 리뷰는 `manualApproval{sha:a92a36d839e87c2143c627a87767ac66dd74faa1, context:review/manual-approval}` 를 남긴다.\n- 열린 PR #269 가 `tokens.css` · `Sentiment.tsx` · `Trend.tsx` 를 고친다 — 이 PR 과 파일이 겹치지 않는다. 충돌(DIRTY)이면 해소하지 말고 정지·재준비.\n- 동작 변경 없음(주석·빈 줄만). 불가역 지점 없음. 롤백은 `git revert M` 1회(MA6 라 사람 승인 필요).\n\n## 범위 밖(후속 — 재감지가 새 task 로 잇는다)\n`scripts/check-journey-flow.js` · `check-journey-mockup.py` · `journey-scenarios/JRN-*.js` 7종 · `web/src/api/types.ts` · `web/src/screens/Dashboard.tsx` · `web/src/tokens/tokens.css`(#269 와 파일 겹침, 머지 뒤) · E 표 2행(`check-journey-*`) · D 표 `scripts/check-journey-mockup.py`.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261028-0001-econ-comment-necessity",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/270",
+          "preparedAt": "2026-10-28T17:20:00Z",
+          "notes": "PR #270 · head a92a36d839e87c2143c627a87767ac66dd74faa1 · base main `24b477b` · 6파일(소스 4: dashboard.go · dashboard_test.go · build.go · tests/test_aggregate.py, 문서 2: ledger.md · 새 패스 문서). 실측: check-comment-ledger.py 불변식 통과 · gofmt 빈 출력(build.go Stats 는 빈 줄로 정렬 블록을 나눔) · py_compile ok. 🔒 check-data-format-change.py origin/main HEAD → format_changed=true(servingindex/build.go MA6) ⇒ 리뷰는 manualApproval{sha:a92a36d839e87c2143c627a87767ac66dd74faa1, context:review/manual-approval} 필요. 열린 PR #269(tokens.css·Sentiment.tsx·Trend.tsx)·#220(문서)와 파일 겹침 없음."
+        }
+      }
+    ]
   }
 ]
