@@ -2160,7 +2160,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T17:22:50Z",
     "trigger": {
       "source": "version_change",
@@ -2273,6 +2273,39 @@
               "detail": "PR 이 머지되지 않아 main 에서 미달성. 재계획 시 347행 주석 1줄도 같은 범위로 판정(필요성 시험·passes 기록)하거나 원장 행 갱신이 필요."
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "직전 시도가 중단된 원인(#333 이 check.mjs 에 5(i)-4 주석 1줄을 더해 3줄 복원이 불가)을 반영해, 기존 PR #335 를 최신 main 위로 rebase 하고 349행 주석까지 포함한 check.mjs 증분 3줄(138·334·349)을 모두 제거(README 5(i) 행·인접 코드 재진술)하며 notifier.go 5줄은 전부 유지로 판정하는 주석·원장·passes 전용 PR 한 건으로 닫는다(가역; 대안인 원장 행만 6줄로 갱신하고 유지하는 안은 재진술을 남겨 정책에 어긋나 기각). 범위(완료 기준): check.mjs 행 게이트 오류 해소(3줄·지문 1b2b6f9a788a 복귀) + notifier.go 행 완료, 즉 PR 브랜치에서 check_ledger rc=0 · 미판정 0. 범위 밖: 계획 이후 새로 들어오는 주석(재감지 몫).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #335 브랜치를 main@2ab283c 위로 rebase(ledger.md 충돌 해소), check.mjs 의 5(i) 주석 3줄(138·334·349행) 제거, passes 증분 절·원장 행 갱신",
+              "expectedOutcome": "비주석 코드 변경 0, node --check 통과, check_ledger rc=0(완료 651·미판정 0)"
+            },
+            {
+              "seq": 2,
+              "action": "CI(comment-policy ledger 포함) 초록 확인 후 PR #335 머지(머지 직전 최신 main 대비 게이트 재확인)",
+              "expectedOutcome": "main 에서 check.mjs·notifier.go 두 행 완료"
+            },
+            {
+              "seq": 3,
+              "action": "머지 후 as-is versionScript·check_ledger 재실행",
+              "expectedOutcome": "게이트 rc=0, 미판정 0, check.mjs 지문 1b2b6f9a788a"
+            }
+          ],
+          "plannedAt": "2026-10-28T20:00:00Z",
+          "executionGuide": "## 순서\n1. PR https://github.com/dlddu/pocket-aide/pull/335 는 이미 최신 main(2ab283c, #331·#333 머지 포함) 위로 rebase돼 있다(head 715bad1). 실행 시점에 main 이 더 앞서 있으면 `git rebase origin/main` 후 ledger.md 인접 행 충돌은 줄 단위로 해소(notifier.go=이 PR 의 `완료` 행, 그 외 행=main 쪽)하고 force-with-lease push.\n2. rebase 후 `python3 scripts/comment-policy/check_ledger.py` rc=0 확인. 새로 들어온 주석 때문에 check.mjs 행 줄 수가 3≠N 이면 임의로 넓히지 말고 중단(failed)해 재감지에 맡긴다.\n3. CI(`comment-policy ledger` 잡 포함) 초록 확인 후 머지. 병렬 단계 없음, 배포 영향 없음.\n4. 머지 후 main 에서 as-is versionScript 와 check_ledger 를 재실행한다.\n\n## 검증\n- PR 브랜치 기준: check_ledger rc=0 · L 행 49 · 파일 84 · 주석 651줄 · 완료 651 · 미판정 0.\n- `git diff origin/main -- tools/journey-mockup-harness/check.mjs` 가 주석 3줄 삭제(138·334·349행)뿐인지, `node --check` 통과 확인.\n- 머지 후 main: check.mjs 행 `완료` · 3줄 · 지문 `1b2b6f9a788a`, notifier.go 행 `완료`, 미판정 0. 수렴은 이 두 행의 완료 여부로 판정(그 사이 다른 PR 이 들인 주석은 범위 밖).\n\n## 주의\n- 롤백: PR revert(주석·문서만 변경, 불가역 지점 없음).\n- 직전 시도는 #333 이 check.mjs 에 주석 1줄을 더해 계획 시점 이후 줄 수가 어긋나 중단됐다. 같은 파일에 다른 PR 이 주석을 더하면 다시 어긋날 수 있으니 머지 직전에 게이트를 재실행한다.\n\n## 범위 밖(후속)\n- 없음. 머지 전후로 새 주석이 들어오면 재감지가 새 task 로 잇는다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/comment-necessity-rct_20261028-0002",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/335",
+          "preparedAt": "2026-10-28T20:00:00Z",
+          "notes": "기존 PR #335 재사용: main@2ab283c 위로 rebase 후 349행 주석 제거를 더해 force-with-lease push(head 715bad1), 제목·본문 갱신. 로컬 check_ledger rc=0 · node --check 통과. 대상 레포 수동 승인 정책 해당 여부는 리뷰 단계가 판정한다."
         }
       }
     ]
