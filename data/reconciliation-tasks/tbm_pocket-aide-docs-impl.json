@@ -8914,7 +8914,7 @@
   {
     "id": "rct_20261013-0005",
     "toBeModelId": "tbm_pocket-aide-docs-impl",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-13T12:32:23Z",
     "trigger": {
       "source": "version_change",
@@ -8938,7 +8938,7 @@
       "reason": "**조치 필요(action_required).**\n- 이번 버전 변화는 rct_20261012-0002의 PRD-12 AC9 슬라이스(#278)와 형제 소관 docs 두 건(#293 data-model, #297 comment-policy)이 착지한 것이다. #278은 AC9·AC12 문서와 일치하고, tracker 재계수 67/3/5도 맞는다. 그래서 새 어긋남은 없다.\n- 그러나 0002가 부분 슬라이스로 succeeded가 되면서, 잔여 미구현 AC를 맡는 열린 docs-impl task가 없어졌다. 잔여 항목은 PRD-12 AC11, PRD-11 AC4~12·SSE, PRD-8 AC3·AC11(+AC1·AC8 부분), PRD-1·6·7·9, PRD-4 AC1·AC2 음성이다.\n- 모델 정의의 판정 기준 1은 미구현 AC를 백로그로 빼지 않고 drift로 본다. 스킬 규약도 「슬라이스 → 재감지 → 후속 task」를 정상 루프로 둔다.\n- 자동 해소될 성질이 아니다. 이 task를 새 carrier로 planner에 넘긴다. 다음 슬라이스 선택(예: 같은 PRD-12를 마무리하는 AC11)은 planner 몫이다.",
       "assessedAt": "2026-10-13T12:33:31Z"
     },
-    "updatedAt": "2026-10-28T15:56:10Z",
+    "updatedAt": "2026-10-28T15:58:45Z",
     "attempts": [
       {
         "plan": {
@@ -9095,6 +9095,69 @@
               "detail": "머지되지 않음(OPEN). ci-success 미충족: iOS shard 0 SwiftLint file_length(Approvals.swift 427>400) 실패. shard 1·2 는 확인 시점 진행 중, 나머지 backend·ledger·data-model·judge·review/manual-approval 은 success."
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "[재계획 — 직전 시도 failed] 범위·접근은 직전 계획과 같다(PRD-12 AC11 잠금화면 알림 액션 슬라이스 · PR #300 squash 머지, 완료 기준 ①~⑤ 불변). 직전 실패 원인은 iOS shard 0 의 SwiftLint file_length(Approvals.swift 427>400줄)였다. 대안: (a) .swiftlint.yml 한도 상향·disable 주석 — 린트 정책 약화+ledger 주석 부담이라 기각, (b) ApprovalNotificationAction 을 같은 모듈의 별도 파일로 분리 — 동작 불변·가역이라 채택. 새 head d671033 에서 Approvals.swift 398줄, 신규 ApprovalNotificationAction.swift 30줄. PRD-12 AC11 잠금화면 알림 액션(test-approval-gate 시나리오 14 — T-12 의 마지막 미구현)을 서버·앱 양쪽에 세운다. 재계획 사유: 직전 시도의 PR #300 이 main 22커밋 뒤처져 충돌(dirty)이 났고, 그 사이 PRD-12 AC15~17·시나리오 19~21 착지로 기대 재계수(68/3/4)·「PRD-12 AC 전부 구현」 전제가 무효였다. 접근은 그대로(카테고리 푸시 + 앱 알림 액션 등록·결정 API 호출·결과 알림 교체; 대안이던 「실기기 관찰이라 미룸」은 테스트 문서가 시뮬레이터 관찰 지점을 이미 갈라 두어 기각) 두고, 브랜치에 현행 main 을 merge commit 으로 들여(force-push 없음, 직전 head 이력 보존 — 가역) 충돌을 해소했다: 문서(tracker T-12 행 → 21개 모두 구현됨, 이력 행 추가, 시나리오 14 구현됨), Approvals.swift(ApprovalNotificationAction 과 ExternalNotificationPushPayload 병존), 그리고 의미 충돌 하나 — main 의 externalnotify 가 쓰는 apns.FitAlertBody/PayloadSize 에 category 인자가 늘어 빈 카테고리를 넘기게 고쳤다(동작 불변). AppDelegate 는 자동 병합됐고 액션 분기가 PushDeepLink(#324 알림 상세 라우팅)보다 앞서 승인 카테고리 액션만 가로채므로 단순 알림 푸시(카테고리 없음)와 겹치지 않는다. 마이그레이션·인증·k8s·정책 경로 미접촉(judge: 수동 승인 케이스 미접촉, 12 경로) — 사람 서명 없이 ci-success 만으로 머지된다. 완료 기준: ① PR #300 이 main 에 squash 머지되고 머지 직전 head 의 ci-success(Xcode 27 러너)·review/manual-approval 이 success ② Go: apns·approvalpush·handlers·externalnotify 테스트 통과(category 단언 포함) ③ iOS: ApprovalPushPayloadTests.testLockScreenActionsMapToDecisionsAndReportTheResult 통과 + 기존 승인·푸시·알림 기록 UI 테스트 회귀 없음 ④ 문서: test-approval-gate.md 시나리오 14 「구현됨」, tracker T-12 「21개 모두 구현됨」, 재계수 grep = 87/3/4 = tracker 이력 행 오른쪽 값 ⑤ 머지 커밋에서 check_ledger rc=0·datamodelcheck exit 0. 범위 밖: 시나리오 14 e2e 매핑(scenario-e2e — SpringBoard 경로라 예외 후보), 알림 문구 _copy-map(mockup-render), 실기기 잠금 해제 관찰, PRD-11 앱 잔여·PRD-8 메일·PRD-1·6·7·9·PRD-4 음성.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "backend/internal/apns/client.go: SendWithCategory 추가(aps.category), SendWithData 는 빈 카테고리 위임, alertPayload/PayloadSize/FitAlertBody 에 category 인자",
+              "expectedOutcome": "go build ./... 성공, PR 모니터 경로(main.go SendWithData) 무변경"
+            },
+            {
+              "seq": 2,
+              "action": "backend/internal/approvalpush: Sender 를 SendWithCategory 로, const Category=\"APPROVAL_REQUEST\", FitAlertBody 에 Category 포함. 테스트 가짜 갱신 + category 단언. externalnotify 는 빈 카테고리로 시그니처 맞춤(main 병합 시 충돌 해소)",
+              "expectedOutcome": "go test ./internal/apns/ ./internal/approvalpush/ ./internal/handlers/ ./internal/externalnotify/ PASS"
+            },
+            {
+              "seq": 3,
+              "action": "ios Shared Approvals.swift 에 ApprovalNotificationAction(카테고리·액션 식별자·제목·decision 매핑·resultNotice) 추가(ExternalNotificationPushPayload 와 병존), 단위 테스트 1메서드",
+              "expectedOutcome": "swiftlint --strict 0 위반, CI 단위 테스트 PASS"
+            },
+            {
+              "seq": 4,
+              "action": "(재계획 추가) ApprovalNotificationAction 을 ios/Shared/Sources/PocketAideAPI/ApprovalNotificationAction.swift 로 분리해 Approvals.swift 를 400줄 이하로(398)",
+              "expectedOutcome": "swiftlint --strict file_length 위반 0, 심볼 이동뿐이라 동작 불변"
+            },
+            {
+              "seq": 5,
+              "action": "ios AppDelegate: 실행 시 setNotificationCategories([APPROVAL_REQUEST: 승인 authenticationRequired · 거절 destructive]), didReceive 에서 승인 카테고리 액션이면 결정 API 호출 → 같은 식별자 알림으로 결과 교체 → completionHandler(그 밖은 PushDeepLink 기존 경로)",
+              "expectedOutcome": "CI iOS 빌드·테스트 3 shard 초록(Xcode 27)"
+            },
+            {
+              "seq": 6,
+              "action": "docs: test-approval-gate.md 서두·시나리오 14 구현 상태/관련 코드 테스트, doc-tracker/2026-10.md T-12 행(21개 모두 구현됨)·미검증 AC 문단·이력 1행(86/3/5→87/3/4)",
+              "expectedOutcome": "재계수 grep 87/3/4 = tracker 마지막 구현 상태 이력 행 오른쪽 값"
+            },
+            {
+              "seq": 7,
+              "action": "로컬 게이트: check_ledger.py · judge.py(변경 경로) · datamodelcheck · go vet/test ./...",
+              "expectedOutcome": "ledger rc=0, judge 「수동 승인 케이스 미접촉」, datamodelcheck exit 0, go test 전체 PASS"
+            },
+            {
+              "seq": 8,
+              "action": "PR #300 새 head CI 초록 확인 후 squash 머지(실행 단계)",
+              "expectedOutcome": "ci-success·review/manual-approval success, main 머지"
+            },
+            {
+              "seq": 9,
+              "action": "main 사후 확인: push CI backend/ios·image pin 성공, 재계수 재확인",
+              "expectedOutcome": "운영 파드 새 이미지 Ready, grep = tracker"
+            }
+          ],
+          "plannedAt": "2026-10-28T16:15:00Z",
+          "executionGuide": "# 실행 지침 — rct_20261013-0005 재실행 (PRD-12 AC11 잠금화면 알림 액션)\n\nPR: https://github.com/dlddu/pocket-aide/pull/300 (branch `reconcile/docs-impl-rct_20261013-0005`). **새 head `d671033d5586`**(직전 6b2b86e 에 린트 수정 커밋 1개). 실행은 이 PR 을 squash 머지하는 것이다.\n\n## 직전 실패와 이번 보정\n- 직전 시도: iOS shard 0 SwiftLint `file_length`(Approvals.swift 427>400)로 머지하지 않고 failed.\n- 보정: `ApprovalNotificationAction` enum 을 `ApprovalNotificationAction.swift`(같은 SwiftPM 모듈, 자동 포함)로 옮겼다. Approvals.swift 398줄. 심볼·가시성 불변, AppDelegate·테스트 수정 없음. 문서에 이 enum 의 파일 경로를 적은 곳은 없음(grep 0).\n- main 은 4345f92 로 그대로이고 PR 은 behind 0·MERGEABLE. 새 head 에서 judge success, `review/manual-approval` success(실측).\n\n## 순서 (직렬)\n1. **사전 확인**: PR OPEN, head `d671033`, MERGEABLE. 충돌·head 불일치면 머지하지 말고 failed(사유: 재준비). 실행 단계에서 충돌을 해소하거나 코드를 고치지 말 것.\n2. **CI 확인**: head 의 `ci-success` success(iOS 3 shard 전부 포함, Xcode 27). SwiftLint 단계 통과가 이번 핵심이다. shard 실패가 이 PR 이 건드리지 않은 테스트의 flake(자매·main 에서도 동일)면 같은 sha 로 `gh run rerun <id> --failed`. 린트·빌드·새/승인·푸시 관련 테스트 실패는 머지 금지, failed.\n3. **머지**: `gh pr merge 300 --squash`(대상 레포 contents·pull_requests write 토큰).\n4. **main 사후 확인**: 머지 커밋 push CI 의 backend-unit-test·ios-test, `Build & push image` → `Pin deployment image` success, 운영 파드 새 이미지 Ready. TestFlight 실패는 직전 main run 과 대조 후 판단.\n\n## 검증 (완료 기준 = 이 시도의 범위, 직전과 동일)\n- ① PR #300 squash 머지, 머지 직전 head 의 `ci-success`·`review/manual-approval` success.\n- ② 서버: `grep -c 'SendWithCategory' backend/internal/apns/client.go` ≥ 2; `grep -c 'Category = \"APPROVAL_REQUEST\"' backend/internal/approvalpush/notifier.go` = 1; `grep -c 'SendWithData(ctx, t, title, body, data)' backend/cmd/server/main.go` = 1; `grep -c 'FitAlertBody(\"\", title, body, data)' backend/internal/externalnotify/notifier.go` = 1.\n- ③ 앱: `grep -c 'setNotificationCategories' ios/PocketAide/AppDelegate.swift` = 1; `grep -c '.authenticationRequired' ios/PocketAide/AppDelegate.swift` = 1; `grep -rc 'enum ApprovalNotificationAction' ios/Shared/Sources/PocketAideAPI/` 합 = 1(파일은 ApprovalNotificationAction.swift). 테스트는 CI ios-test.\n- ④ 문서 재계수(기대 **87 / 3 / 4**; 자매가 먼저 착지하면 「grep 값 = tracker 이력 마지막 행 오른쪽 값」로 판정):\n  ```sh\n  for k in 구현됨 \"부분 구현\" 미구현; do grep -h \"구현 상태\\*\\*: $k\" docs/product/test-*.md | wc -l; done\n  ```\n  시나리오 14 「구현 상태」가 「구현됨」으로 시작, T-12 행 「21개 모두 구현됨」.\n- ⑤ 머지 커밋: `python3 scripts/comment-policy/check_ledger.py` rc=0, `cd backend && go run ./cmd/datamodelcheck` exit 0.\n\n## 주의사항\n- **운영 영향**: backend/** 변경이라 머지 push 가 이미지 빌드 → Pin deployment image(운영 롤아웃)·TestFlight 발화. 서버 동작 변화는 승인 요청 푸시 `aps.category` 필드 하나. 카테고리 미등록 옛 앱은 무시. 마이그레이션 없음.\n- **롤백**: `git revert <머지 커밋>` 1회(부팅 위험 없음, 같은 pin 이 돈다).\n- **앱 측 위험**: 재부팅 후 한 번도 잠금 해제하지 않은 기기는 키체인을 못 읽어 「결정되지 않았습니다」로 끝난다(안전한 방향).\n- 「e2e 매핑」·`ios-test-durations.json` 은 scenario-e2e, `_copy-map`·`_impl-map` 은 mockup-render 소관 — 건드리지 말 것.\n\n## 범위 밖 (후속 — 재감지 입력)\n- scenario-e2e: 시나리오 14 「e2e 매핑」 재판정(SpringBoard·실기기 — 예외 후보). mockup-render: 알림 액션 제목·결과 문구(시스템 UI 후보). 실기기 관찰(Face ID·해제 없이 거절·비행기 모드).\n- PRD-11 앱 잔여, PRD-8 메일, PRD-1·6·7·9, PRD-4 음성.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/docs-impl-rct_20261013-0005",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/300",
+          "preparedAt": "2026-10-28T16:15:00Z",
+          "notes": "재준비 2026-10-28T16:15Z: 직전 failed(SwiftLint file_length)를 고치려 ApprovalNotificationAction 을 별도 파일로 분리하는 커밋 d671033 을 PR 브랜치에 추가(force-push 없음, head 6b2b86e→d671033). main 4345f92 불변·behind 0·MERGEABLE. Approvals.swift 398줄. 새 head: review/manual-approval success, judge success; backend·iOS shard CI 는 진행 중(iOS 는 로컬 빌드 불가 — 실행자가 ci-success 로 확인)."
         }
       }
     ]
