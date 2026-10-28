@@ -9254,7 +9254,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T17:02:33Z",
     "trigger": {
       "source": "version_change",
@@ -9274,6 +9274,40 @@
     "assessment": {
       "assessedAt": "2026-10-28T17:03:09Z",
       "reason": "approval-gate #14 가 「구현됨」으로 바뀌어 구현 대기 등재가 stale 이고 전용 E2E 파일/예외 등재가 없다. 일시적·자동 해소 요소 없음(등재 섹션은 사람/작업이 갱신해야 함). 열린 approved task 들의 범위 밖인 새 gap 이므로 planner 가 선행 task(#298·#329) 착지 순서를 고려해 #14 를 매칭·예외·공백 중 하나로 재등재하는 계획을 세워야 한다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "approval-gate #14 는 #300 으로 「구현됨」이 됐으나 e2e 매핑 구현 대기 표에 stale 로 남았다. 시나리오 전제가 실기기·기기 잠금·SpringBoard 잠금화면 알림 액션·생체 잠금 해제라 시뮬레이터 XCUITest 로 결정적 단정이 불가하므로(정의 규칙 4 의 APNs 푸시 실수신 유형) 전용 파일을 신설하지 않고 구현 대기 → 예외 목록으로 재등재한다(구현 대기 행 자체가 해제 시 예외 후보로 적어 둔 경로). 대안(전용 XCUITest 신설)은 잠금 상태·Face ID·비행기 모드를 재현할 수 없어 기각, 공백 등재는 인프라 부재가 아니라 시나리오 자체가 실기기 전제라 기각. 범위(완료 기준): doc-tracker 「## e2e 매핑」에서 #14 가 예외 표에만 있고 구현 대기 표에는 없으며 집계 예외 13·구현 대기 5·1:1 76·매칭 59·공백 17 이 실측과 일치, PR #332 squash 착지. 범위 밖: #298·#329 슬라이스(선행 머지), 공백 17행의 전용 파일·인프라, 구현 대기 나머지 5행(docs-impl 몫). 사람 소유 결정 없음, 수동 승인 케이스(MA1~5) 비해당(doc-tracker 문서만).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "선행 확인: PR #298 → #329 가 main 에 머지됐는지 확인한다. 미머지면 실행을 보류(executor 가 순서대로 머지).",
+              "expectedOutcome": "#298·#329 merged, main 에 e2e 매핑 집계 예외 12·구현 대기 6·공백 17 이 반영됨"
+            },
+            {
+              "seq": 2,
+              "action": "PR #332(reconcile/rct_20261028-0002-approval-lockscreen)의 base 재실측 후 충돌이 없으면 squash 머지한다. 충돌이면 main 을 브랜치에 머지해 doc-tracker 집계 칸만 해소(force 없음).",
+              "expectedOutcome": "main 의 2026-10.md 예외 표에 test-approval-gate.md#시나리오 14 행, 구현 대기 표에는 없음"
+            },
+            {
+              "seq": 3,
+              "action": "집계·불변식 문단 확인: 예외 13 · 구현 대기 5 · 1:1 대상 76 · 매칭 59 · 공백 17, (94−13−5)=59+17, 문서별 예외 approval-gate 1·구현 대기 approval-gate 0.",
+              "expectedOutcome": "불변식 성립, 파일 쪽 회계 62=59+3+0 불변"
+            }
+          ],
+          "plannedAt": "2026-10-28T17:30:00Z",
+          "executionGuide": "## 순서\n1. #298 → #329 → #332 순서로만 머지(모두 같은 절의 집계·표를 건드려 순서 뒤집으면 충돌). 병렬 불가.\n2. #332 는 #329 head 에 최신 main 을 머지한 위에 1커밋(7e98ab7)만 더한다. 선행 squash 머지 후 base 재실측: main 대비 diff 가 doc-tracker/2026-10.md 만이고 #14 관련 변경만 남는지 본다.\n\n## 검증\n- `git show main:docs/product/doc-tracker/2026-10.md` 에서 `### 예외 목록` 아래에 `test-approval-gate.md#시나리오 14` 행이 있고 `### 구현 대기` 아래에는 없음.\n- 집계 표 예외 13 · 구현 대기 5 · 1:1 76 · 매칭 59 · 공백 17.\n- 재감지: to-be 의 reg 해시가 바뀌므로 다음 detector 가 새 task 를 열 수 있다 — #14 가 예외로 판정돼 drift 없음이어야 한다. 남는 gap 은 공백 17행(범위 밖).\n- `python3 scripts/review-policy/judge.py` 상 수동 승인 케이스 비해당(doc-tracker 만).\n\n## 주의\n- 선행 #298·#329 가 머지 전이거나 main 이 또 움직였으면 집계 숫자가 달라질 수 있다: 숫자는 항상 머지 직전 base 실측으로 다시 맞춘다(예외 +1 · 구현 대기 −1 만이 이 PR 의 델타).\n- 롤백: revert 1커밋(문서만, 불가역 없음).\n- 범위 밖(후속): 공백 17행의 전용 XCUITest·인프라, 구현 대기 5행."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261028-0002-approval-lockscreen",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/332",
+          "preparedAt": "2026-10-28T17:30:00Z",
+          "notes": "#329 head(fb38dc3) 위에 최신 main(48da4d7)을 머지하고 1커밋(7e98ab7, doc-tracker/2026-10.md 만 +6/−6) 적층. 머지 전 로컬 judge.py 기준 doc-tracker 만이라 수동 승인 케이스 비해당. 선행 #298→#329 머지 필요를 PR 본문에 적었다."
+        }
+      }
+    ]
   }
 ]
