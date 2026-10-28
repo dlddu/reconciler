@@ -232,7 +232,7 @@ def plan_claim(models: list, tasks: list, sel: sdt.Selection, now: dt.datetime,
 
 
 def claim(repo: Path, sel: sdt.Selection, now: dt.datetime, *, remote: str, branch: str,
-          dry_run: bool, versions: dict | None = None, explicit_reason: str = "",
+          versions: dict | None = None, explicit_reason: str = "",
           max_push_attempts: int = 5, before_push=None) -> ClaimResult:
     """선정된 한 건을 compare-and-set으로 점유한다. 경쟁에서 지면 status=lost."""
     model_validator, task_validator = validators(repo)
@@ -256,9 +256,6 @@ def claim(repo: Path, sel: sdt.Selection, now: dt.datetime, *, remote: str, bran
             raise ClaimError("점유 커밋에 변경이 없음")
         git(repo, "commit", "--quiet", "-m", plan.message)
         commit = git(repo, "rev-parse", "HEAD").stdout.strip()
-        if dry_run:
-            return ClaimResult(status="claimed", task_id=plan.task_id, commit=commit,
-                               detail=plan.detail + " — 드라이런: push 생략", message=plan.message)
         if before_push:
             before_push(attempt)
         if push(repo, remote, branch) == "ok":
@@ -279,7 +276,7 @@ def compute_versions(computer: sdt.VersionComputer, repo: Path, model_id: str) -
 
 
 def run(repo: Path, now: dt.datetime, computer: sdt.VersionComputer, *, explicit: str | None,
-        remote: str, branch: str, dry_run: bool, explicit_reason: str,
+        remote: str, branch: str, explicit_reason: str,
         before_push=None) -> Outcome:
     out = Outcome()
     excluded: set[str] = set()
@@ -292,7 +289,7 @@ def run(repo: Path, now: dt.datetime, computer: sdt.VersionComputer, *, explicit
         versions = None
         if sel.target_kind == "model" and sel.reason in ("manual_trigger", "explicit"):
             versions = compute_versions(computer, repo, sel.model_id)
-        result = claim(repo, sel, now, remote=remote, branch=branch, dry_run=dry_run,
+        result = claim(repo, sel, now, remote=remote, branch=branch,
                        versions=versions, explicit_reason=explicit_reason, before_push=before_push)
         if result.status == "claimed":
             out.claim = result
@@ -351,7 +348,6 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--reason", default="", help="지목 실행에서 버전 변화가 없을 때 manual task의 사유")
     p.add_argument("--remote", default="origin")
     p.add_argument("--branch", default="main")
-    p.add_argument("--dry-run", action="store_true", help="점유 커밋까지만 하고 push하지 않는다")
     p.add_argument("--now", help="기준 시각(ISO 8601, 테스트용)")
     p.add_argument("--work-dir", help="대상 레포 클론 위치")
     p.add_argument("--repo-url-template", default="https://github.com/{repository}.git")
@@ -375,7 +371,7 @@ def main(argv: list[str] | None = None) -> int:
                                    token=os.environ.get("SOURCE_GITHUB_TOKEN") or None)
     try:
         out = run(args.repo, now, computer, explicit=target, remote=args.remote, branch=args.branch,
-                  dry_run=args.dry_run, explicit_reason=explicit_reason)
+                  explicit_reason=explicit_reason)
     except (ClaimError, sdt.SelectionError) as exc:
         print(f"::error::{exc}")
         return 2 if isinstance(exc, sdt.SelectionError) else 1

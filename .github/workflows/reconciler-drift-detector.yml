@@ -5,7 +5,7 @@
 # 통과한 생성본이 plugin-marketplace에 올라간 것만 쓴다(README 「감지 스킬 MiniMax 파이프라인」).
 # 대상 선정·점유는 claim_drift_target.py(README 「점유는 러너가 한다」), 스킬은 판정만.
 #
-# 실제 모드: 점유·판정 커밋을 기본 브랜치에 push한다(contents: write). 드라이런으로 돌리려면 env.DRY_RUN을 "1"로.
+# 점유·판정 커밋을 기본 브랜치에 push한다(contents: write).
 #
 # 필요한 설정
 #   environment llm-minimax의 secret MINIMAX_SUBSCRIPTION_KEY   MiniMax Token Plan subscription key (sk-cp-...)
@@ -19,9 +19,8 @@ name: "Reconciler · Drift Detector"
 
 on:
   # ── 스케줄 트리거 (아직 끔) ──────────────────────────────────────────────────────────
-  # 스케줄은 감지만 돈다(이 파일에 스킬 생성은 없다). 켜기 전에 할 일:
-  #   1. 실제 모드로 — permissions.contents: write, 아래 env.DRY_RUN을 "0"으로(점유·판정 커밋이 push된다).
-  #   2. 아래 circuit-breaker job 주석 해제(스케줄 실행이 연속 실패하면 이 워크플로를 스스로 끈다).
+  # 스케줄은 감지만 돈다(이 파일에 스킬 생성은 없다). 켤 때 아래 circuit-breaker job 주석도 함께 푼다
+  # (스케줄 실행이 연속 실패하면 이 워크플로를 스스로 끈다).
   # 주기는 실행 시간(판정 6~8분)과 concurrency 직렬화를 보고 정한다. :00 정각은 GitHub 스케줄이 몰려 지연되기
   # 쉬우니 피한다.
   # schedule:
@@ -54,7 +53,6 @@ permissions:
   contents: write
 
 env:
-  DRY_RUN: "0" # 드라이런은 "1"(점유·판정을 커밋까지만 하고 push하지 않음)
   PLUGIN_NAME: reconciler-data-plane
   SKILL_NAME: reconciler-drift-detector
   MCODE_VERSION: latest # npm dist-tag — 실제 설치된 버전은 Set up MiniMax Code 출력·요약에 남는다
@@ -130,7 +128,6 @@ jobs:
         run: |
           args=(--repo ws/reconciler --branch "$DEFAULT_BRANCH" --target "$INPUT_TARGET_ID" --reason "$INPUT_REASON"
                 --work-dir "$RUNNER_TEMP/select-target" --summary-file "$OUT/logs/claim.md")
-          [ "$DRY_RUN" = "1" ] && args+=(--dry-run)
           python3 harness/.github/scripts/claim_drift_target.py "${args[@]}"
 
       # 고정 스킬: plugin-marketplace(private)의 plugins/<PLUGIN_NAME>을 mcode 로컬 플러그인으로 설치한다.
@@ -200,7 +197,6 @@ jobs:
           sed -e "s#{{SKILL_DIR}}#$SKILL_DIR#g" -e "s#{{REPO_DIR}}#./reconciler#g" \
               -e "s#{{TASK_ID}}#$TASK_ID#g" -e "s#{{MODEL_ID}}#$MODEL_ID#g" \
               -e "s#{{CLAIM_REASON}}#$CLAIM_REASON#g" -e "s#{{CLAIM_COMMIT}}#$CLAIM_COMMIT#g" \
-              -e "s#{{DRY_RUN}}#$DRY_RUN#g" \
               harness/.github/minimax/drift-detector-run-prompt.md > "$OUT/logs/prompt.md"
           args=(exec --input - --cwd "$GITHUB_WORKSPACE/ws" --permission full
                 --output-format stream-json --timeout 40m
@@ -208,7 +204,7 @@ jobs:
                 --diagnostics-dir "$OUT/logs/diagnostics")
           [ -n "$MODEL" ] && args+=(--model "$MODEL")
           set +e
-          RECONCILER_DRY_RUN="$DRY_RUN" env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL \
+          env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL \
             -u SOURCE_GITHUB_TOKEN -u MARKETPLACE_TOKEN \
             mcode "${args[@]}" < "$OUT/logs/prompt.md" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"
           code=$?
@@ -248,7 +244,7 @@ jobs:
           RUN_EXIT: ${{ steps.run.outputs.exit_code }}
         run: |
           {
-            echo "### reconciler-drift-detector${DRY_RUN:+ (DRY_RUN=$DRY_RUN)}"
+            echo "### reconciler-drift-detector"
             echo "- 점유: ${CLAIMED:-false} · task: ${TASK_ID:-<none>}${REASON:+ ($REASON)} · 경쟁 패배 ${LOST:-0}건"
             [ -n "$PLUGIN_VERSION" ] && echo "- 스킬: $PLUGIN_NAME $PLUGIN_VERSION (plugin-marketplace \`${PLUGIN_COMMIT:0:7}\`)"
             echo "- mcode ${MCODE_INSTALLED_VERSION:-<미설치>} · exit: ${RUN_EXIT:-n/a}"

@@ -69,9 +69,9 @@ class ClaimFixture(Fixture):
     def computer(self):
         return sdt.VersionComputer(work_dir=self.tmp / "work", url_template=f"file://{self.sources}/{{repository}}")
 
-    def run_claim(self, explicit=None, dry_run=False, before_push=None, reason="지목 사유"):
+    def run_claim(self, explicit=None, before_push=None, reason="지목 사유"):
         return cdt.run(self.repo, NOW_DT, self.computer(), explicit=explicit, remote="origin", branch="main",
-                       dry_run=dry_run, explicit_reason=reason, before_push=before_push)
+                       explicit_reason=reason, before_push=before_push)
 
     def origin_json(self, rel):
         return json.loads(git(self.repo, "show", f"origin/main:{rel}"))
@@ -166,16 +166,6 @@ class ClaimDriftTargetTest(unittest.TestCase):
         self.fx.run_claim(explicit="tbm_a", reason="사용자 지목")
         t = self.fx.origin_json("data/reconciliation-tasks/tbm_a.json")[0]
         self.assertEqual(t["trigger"], {"detectedAt": NOW, "source": "manual", "reason": "사용자 지목"})
-
-    def test_dry_run_commits_without_push(self):
-        self.changed("tbm_a", self.repo_a)
-        self.fx.publish()
-        before = git(self.fx.repo, "rev-parse", "origin/main")
-        out = self.fx.run_claim(dry_run=True)
-        self.assertEqual(out.claim.status, "claimed")
-        git(self.fx.repo, "fetch", "-q", "origin")
-        self.assertEqual(git(self.fx.repo, "rev-parse", "origin/main"), before)
-        self.assertEqual(git(self.fx.repo, "rev-parse", "HEAD"), out.claim.commit)
 
     def test_nothing_to_claim(self):
         self.unchanged("tbm_a", self.repo_a)
