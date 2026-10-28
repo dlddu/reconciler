@@ -8998,7 +8998,7 @@
   {
     "id": "rct_20261013-0002",
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-13T12:24:14Z",
@@ -9122,6 +9122,49 @@
               "detail": "충돌로 머지하지 않음. main 에는 변경이 반영되지 않았다(계획 범위 미달성). 재준비(main 머지 후 같은 절 충돌 해소 및 검산기 재실행) 필요."
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "2차 시도가 머지 직전 base 재실측에서 main 이동(c7bac8f→4345f92)에 따른 doc-tracker 충돌로 failed 였다. 같은 슬라이스(approval-gate #12·#13·#15·#16 을 「## e2e 매핑」과 두 전용 파일에 반영, #15 는 공백 행으로 등재)를 유지하고, PR #298 에 main 을 머지해 충돌 4곳(집계·불변식 문단·구현 대기 표·공백 표)을 해소한다 — 새 PR 없음, force 없음, 가역. 완료 기준은 2차의 \"검산기 벡터 정확 일치\"를 \"이 슬라이스 관련 FAIL 0 + 매칭 56·구현 대기 7·공백 2·예외 12·비-시나리오 3 + check_ledger rc=0 + #298 squash 착지\"로 바꾼다: main 이 이미 범위 밖에서 어긋나(approval-gate #19~21·session-platform 1~14·전용 파일 3개 미등재) 정확 일치가 불가능하기 때문이다. 범위 밖 drift 는 이 PR 이 건드리지 않고 재감지가 새 task 로 잇는다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #298 head f1b212a 의 CI(iOS 3샤드·SwiftLint·ledger·ci-success)와 review/manual-approval status 확인",
+              "expectedOutcome": "필수 status 초록, mergeable_state clean"
+            },
+            {
+              "seq": 2,
+              "action": "머지 직전 base 재실측: main 이동 시 git merge-tree 로 충돌 확인, 머지 트리에서 검산기 실행",
+              "expectedOutcome": "충돌 0 · 검산기 FAIL 에 슬라이스 관련 항목 없음 · matched 56 · pending 7 · gap 2 · exception 12 · non-scenario 3"
+            },
+            {
+              "seq": 3,
+              "action": "PR #298 squash 머지(sha 고정)",
+              "expectedOutcome": "main 에 1커밋 착지, 변경 3파일"
+            },
+            {
+              "seq": 4,
+              "action": "착지 트리에서 검산기·check_ledger.py 확인",
+              "expectedOutcome": "슬라이스 관련 FAIL 0, check_ledger rc=0"
+            },
+            {
+              "seq": 5,
+              "action": "main push CI(ios-test·ci-success) 확인",
+              "expectedOutcome": "ios-test 초록"
+            }
+          ],
+          "plannedAt": "2026-10-28T16:10:00Z",
+          "executionGuide": "## 실행 지침 — rct_20261013-0002 (PR #298, 3차 준비 head `f1b212a455d6d16b25b256958dc24a276ecdbac9`)\n\n**3차 준비 배경**: 직전 시도(2차)는 머지 직전 base 재실측에서 main(`c7bac8f`→`4345f92`)과 `docs/product/doc-tracker/2026-10.md` 충돌이 나 `failed` 였다. 이번에 PR 브랜치에 main 을 머지해(충돌 4곳 해소, force 없음) head 를 `f1b212a455d6d16b25b256958dc24a276ecdbac9` 로 올렸다. main 대비 변경은 여전히 3파일(`2026-10.md` · `ApprovalHistoryUITests.swift` · `ApprovalKeyRevokeUITests.swift`)이다.\n\n**완료 기준 (이 기준으로 판정할 것)**: 이 시도의 범위는 approval-gate #12·#13·#15·#16 반영이다(2차와 같다). main 은 그 사이 이 범위 밖에서 이미 어긋나 있다(아래 범위 밖). 그래서 2차의 \"검산기 벡터 정확 일치\"는 폐기하고 다음으로 바꾼다.\n- PR #298 이 head `f1b212a455d6d16b25b256958dc24a276ecdbac9` 로 squash 머지된다(필수 status `ci-success`·`review/manual-approval` success).\n- 착지 트리에서 2차 지침의 내장 검산기(`verify_e2e_map.py`, 2차 attempts 의 executionGuide 에 전문이 있다)를 돌려 **FAIL 라인에 다음이 하나도 없다**: `시나리오 12|13|15|16` · `ApprovalHistoryUITests` · `ApprovalKeyRevokeUITests` · `ApprovalAutoResponseUITests` · `test-widget.md#시나리오 3`. 벡터는 `matched 56 · pending 7 · gap 2 · exception 12 · non-scenario 3` 이어야 한다(scenarios/files 수는 범위 밖 drift 라 94/62 로 나올 수 있고 무시).\n- 착지 트리 `python3 scripts/comment-policy/check_ledger.py` rc=0.\n- 머지 커밋의 main 대비 변경 파일이 위 3개뿐.\n\n사전 실측(머지 트리): 검산기 FAIL 은 main 대비 #12·#13·#15·#16·위젯 #3 관련 전부 사라지고, 남는 FAIL 은 main 에도 있는 범위 밖 drift 뿐이다(approval-gate #19·#20·#21, session-platform #1~14, 파일 `ApprovalServiceAccountRegisterUITests`·`SessionsPlatformUnreachableUITests`·`SessionsTabUITests` 등재 없음, 그에 따른 집계 3항). `check_ledger.py` rc=0.\n\n### 순서 (직렬)\n1. **CI 확인**: head `f1b212a455d6d16b25b256958dc24a276ecdbac9` 의 필수 `ci-success`·`review/manual-approval` 와 iOS 3샤드(수정 두 클래스 + `ApprovalAutoResponseUITests`), SwiftLint, comment-policy ledger. 이 head 는 main 머지로 새 sha 라 CI 가 다시 돈다. 두 수정 클래스 밖의 알려진 flake(`WebhookPushSettingsUITests` 등)만 빨강이면 같은 sha 로 실패 잡 1회 재실행, 커밋 금지. 수정 클래스의 이 PR 단정 문구 실패는 계획 결함 → `failed`. 머지 정책의 `review/manual-approval` 이 새 head 에 없으면(판정기가 다시 붙이는지 확인) 사람 승인 경로이므로 임의로 붙이지 말 것.\n2. **머지 직전 base 재실측**: main 이 `4345f92` 에서 움직였으면 `git merge-tree --write-tree origin/main f1b212a455d6d16b25b256958dc24a276ecdbac9` 로 충돌 확인. main 이 같은 절을 또 고쳤다면(자매 PR 이 \"## e2e 매핑\" 을 갱신 — 위 범위 밖 drift 를 닫는 PR 이 이를 건드릴 수 있다) 실행에서 풀지 말고 `failed`(재준비) 로 두되, 사유에 충돌 파일과 main sha 를 남길 것.\n3. **squash 머지**: `PUT /repos/dlddu/pocket-aide/pulls/298/merge` `{\"merge_method\":\"squash\",\"sha\":\"f1b212a455d6d16b25b256958dc24a276ecdbac9\"}` (sha 고정).\n4. **착지 검증**: 위 완료 기준 셋을 main 착지 트리에서 확인.\n5. **main push CI**: ios-test 초록 확인. TestFlight 업로드 실패는 별개.\n\n### 주의사항\n테스트 전용 변경 + 등재 문서. 제품 코드·워크플로·매니페스트 미접촉. `ApprovalKeyRevokeUITests` 가 기본 사용자의 자동 응답 모드를 `AUTO_APPROVE` 로 켜고 teardown 이 `NONE` 으로 복원한다(뒤 테스트가 즉시 APPROVED 로 깨지면 복원 경로 의심). 롤백: squash 커밋 `git revert`(가역).\n\n### 범위 밖(후속) — 재감지가 새 task 로 잇는다\n- approval-gate #15 공백(백엔드 중단·복구 하네스 + 전용 파일), #14 미구현 유지, widget #11 문서 문구.\n- main 에 이미 있는 등재 drift: approval-gate #19·#20·#21 미등재, session-platform 시나리오 1~14·전용 파일 3개 미등재, approval-gate #17(문서 구현됨으로 바뀜 — 등재는 아직 구현 대기), 집계 표 전집 77 ≠ 실측. 이 PR 이 건드리지 않는다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261013-0002-approval-auto-response",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/298",
+          "preparedAt": "2026-10-28T16:10:00Z",
+          "notes": "**3차 준비 — 기존 PR #298 을 이어 썼다(새 PR·force 없음).** main(4345f92)을 브랜치에 머지해 head 를 59972a6 → f1b212a 로 올렸다. 충돌은 docs/product/doc-tracker/2026-10.md 4곳: 집계 표(구현 대기 9→7: #13·#15 해제, 1:1 대상 58, 매칭 56, 공백 2), 불변식 문단(main 문면 기준 숫자 갱신: 77−12−7=56+공백 2, 파일 59=56+3+0, 구현 대기 approval-gate 2·공백 approval-gate 2), 구현 대기 표(#14·#17 유지, #15 제거), 공백 표(#15 와 main 의 #18 둘 다 유지). 머지 트리 main 대비 변경은 3파일 +72/−16. 실측: 검산기 FAIL 은 main 대비 #12·#13·#15·#16·widget #3·세 전용 파일 관련이 전부 사라졌고 남는 FAIL 은 main 에도 있던 범위 밖 drift(approval-gate #19~21, session-platform 1~14, 전용 파일 3개, 집계 3항) 뿐이다. check_ledger.py rc=0. push 는 App 토큰, 커밋 작성자 reconciler-bot. 푸시 직후 API 의 mergeable_state/head 가 아직 이전 값(dirty/59972a6)으로 보였다 — GitHub 갱신 지연으로 보이며 executor 가 재확인한다. 범위 밖 drift 는 이 PR 이 닫지 않고 재감지에 맡긴다."
         }
       }
     ]
