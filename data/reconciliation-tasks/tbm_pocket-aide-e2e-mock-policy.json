@@ -1387,7 +1387,7 @@
   {
     "id": "rct_20261026-0001",
     "toBeModelId": "tbm_pocket-aide-e2e-mock-policy",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-10-26T19:59:01Z",
       "source": "version_change",
@@ -1527,6 +1527,39 @@
               "detail": "main 미변경(PR 미머지)이라 BF-5 범위 미달성."
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "재계획(직전 시도 failed: PR #327 iOS 테스트 단정 실패로 머지 불가). 접근·범위·위험도는 동일 — BF-5(등재 EXT, 선행 없음)를 session-platform 앱 경로 스텁 + SESSION_PLATFORM_URL 우회로 착수하고, 범위는 시나리오 1 의 2·4·11·12단계가 CI 에서 관찰되고 허용목록 3행이 코드와 1:1 인 것, 범위 밖은 BF-6(시나리오 7~10·13·14) 등재. 달라진 점: 실패 원인을 로그로 규명했다 — 스텁 state 값(running/snapshotted)이 앱·실 플랫폼 값(active/snapshot)과 달라 세션 응답 디코딩이 실패. PR 브랜치에서 정정(9207b9c). 사람 소유 결정 없음(MA1~MA5 미접촉).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #327 새 head(9207b9c)의 CI 를 확인한다: iOS shard 0~2·ci-success 가 success 이고 review/manual-approval 이 head 에 success 인지. 러너 크래시성 실패면 job 재실행, 테스트 단정 실패면 머지하지 않는다.",
+              "expectedOutcome": "ci-success success; Sessions 4개 클래스 pass."
+            },
+            {
+              "seq": 2,
+              "action": "ci-success 가 success 임을 확인한 뒤 PR #327 을 머지한다 (스텁·액션·Sessions* XCUITest·정책 문서 BF-5 해소·BF-6 등재).",
+              "expectedOutcome": "main 에 머지 커밋 생성."
+            },
+            {
+              "seq": 3,
+              "action": "main HEAD 에서 as-is 지문 versionScript 를 실행하고 정책 문서 허용목록과 양방향 대조한다; BF-5 해소·BF-6 열린 행을 확인한다.",
+              "expectedOutcome": "허용목록 == 코드 실측(스텁 관련 3행 포함); BF-5 닫힘, BF-6(재검토 2027-01-20) 열림."
+            }
+          ],
+          "plannedAt": "2026-10-28T19:25:00Z",
+          "executionGuide": "## 직전 실패 반영\n- 직전 시도(실행 abort): PR #327 head ed28980 의 iOS shard 0·1 이 Sessions 테스트 단정 실패(SessionsCreateUITests 「생성 후 상세 미도달」, SessionsDeleteUITests 「목록에 플랫폼 세션이 보여야 함」), shard 2 는 러너 부트스트랩 크래시(XCTWaiter stalled, 인프라).\n- **원인 규명(코드 결함, 러너 탓 아님)**: 스텁 `session_platform_stub.py` 가 세션 `state` 를 `running`/`snapshotted` 로 내보냈으나 앱 `AgentSessionState`(ios/Shared/Sources/PocketAideAPI/Sessions.swift)와 실 플랫폼 와이어 값은 `active`/`idle`/`snapshot`(SessionsTests 픽스처 동일). 세션이 1건이라도 있으면 목록·생성 응답 디코딩이 실패한다. 빈 목록 테스트만 통과한 것과 일치.\n- **수정 완료**: PR #327 브랜치에 커밋 9207b9c — 스텁 state 를 `active`/`snapshot` 으로 정정(생성=active, switch=active, snapshot 액션=snapshot, snapshot 상태 read 시 active 복귀·write 422). py_compile·check_ledger.py(rc=0, 주석 줄 불변)·judge.py(수동 승인 케이스 미접촉, 10경로) 통과.\n\n## 순서\n1. (직렬) 새 head(9207b9c, 커밋 후 push 됨)의 PR #327 CI 확인 — `gh pr checks 327`. `review/manual-approval` 이 새 head SHA 에 success 인지 재확인(판정기: 미접촉이라 자동 부여, 안 붙었으면 executor 는 사람 승인 케이스가 아니므로 재실행/대기).\n2. (직렬) ci-success success 확인 후에만 PR #327 머지.\n3. (직렬) 머지 후 main CI 확인, 지문 대조.\n\n## 검증 방법\n- PR CI: shard 0~2·ci-success 전부 success. Sessions 4개 클래스(Tab·Create·Delete·PlatformUnreachable) pass — 특히 Create(상세 「실행 중」 = active 라벨)·Delete(목록 행 표시·삭제 후 스텁에서 제거).\n- shard 가 러너 부트스트랩 크래시(`PocketAideTests-Runner ... XCTWaiter stalled`, 코드 무관)로만 실패하면 job 재실행한다. 테스트 **단정** 실패면 머지하지 말고 실패 사유를 기록해 종료(Swift 임의 수정 금지 — 재계획 입력).\n- 지문: 정책 문서 허용목록 (파일,대상) == 코드 실측(양방향). BF-5 가 해소 표로, BF-6 이 열린 행(선행 없음·재검토 2027-01-20·등재 2026-10-28)으로 있는지 확인.\n\n## 주의사항\n- ios-test.yml 은 workflows 권한 없어 미변경(스텁 PID/로그 정리 미포함, 기능상 영향 없음).\n- 롤백: 머지 커밋 revert. BF-5 가 다시 열린다.\n- 새 커밋이 더 올라오면 review/manual-approval 은 head 기준이므로 재확인.\n\n## 범위 밖(후속)\n- BF-6: 시나리오 7·8·9(가)·10·13 단정 테스트, 스텁의 turn 마커(시나리오 14)·아카이브 게이트 오프(시나리오 9 (나)) 흉내.\n- 실 플랫폼 대체(전용 테스트 플랫폼)가 마련되면 스텁 세 행을 지우고 시나리오 12 를 플랫폼 중지로 다시 쓴다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261026-0001",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/327",
+          "preparedAt": "2026-10-28T19:25:00Z",
+          "notes": "기존 PR #327 을 이어 쓴다(새 PR 없음). 실패 원인(스텁 state 값 불일치)을 커밋 9207b9c 로 고쳤다. py_compile·check_ledger.py rc=0·judge.py 수동 승인 케이스 미접촉 확인. Swift 테스트 실행 결과는 새 head CI 로 확인해야 한다 — shard 2 의 러너 부트스트랩 크래시는 인프라성이라 재실행 대상."
         }
       }
     ]
