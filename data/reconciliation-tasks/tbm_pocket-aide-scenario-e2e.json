@@ -9323,7 +9323,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T17:02:33Z",
     "trigger": {
       "source": "version_change",
@@ -9425,6 +9425,39 @@
           "reviewedAt": "2026-10-28T18:35:00Z",
           "reason": "PR #332 는 열려 있고 충돌 없음이나 mergeable_state 가 여전히 blocked 이고 head 가 직전 거부 때와 같은 7e98ab7 이라 거부 사유(CI 미통과)가 해소되지 않았다(리뷰 토큰으로 check-run 은 읽지 못했으나 head 불변·blocked 로 미해소 판단; review/manual-approval 은 success). 선행 #298·#329 가 아직 open 이라 #332 diff 에 #329 의 Swift 2개(ApprovalHistoryUITests·ApprovalKeyRevokeUITests)가 섞여 있어 계획 steps 의 '#332 diff = doc-tracker 만' 전제가 현재 성립하지 않고, 계획 자체도 main ledger 복구 등 외부 선행 조건에 의존해 지금 실행하면 executor 가 보류만 하게 된다. 변경 내용은 문서 한정·low 위험·revert 1커밋 롤백으로 타당.",
           "comment": "실행 가능한 상태로 만든 뒤 재계획할 것: 1) #298→#329 가 main 에 머지된 뒤(또는 #332 를 main 기준으로 재작성해 doc-tracker/2026-10.md 만 남기고) 재계획. 2) main 의 comment-policy ledger(ledger.md:66, check.mjs) 복구가 확인된 뒤 #332 에 main 을 머지해 새 head 에서 comment-policy ledger·iOS shard·ci-success 가 success 임을 확인하고 그 결과를 preparation.notes 에 적을 것. 3) 집계 숫자를 새 base 로 재실측. 선행 조건이 아직 안 풀렸으면 새 PR 변경 없이 재계획하지 말고 선행 머지가 일어날 때까지 기다릴 것."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "approval-gate #14 는 #300 으로 「구현됨」이 됐으나 doc-tracker 「## e2e 매핑」 구현 대기 표에 stale 로 남았다. 시나리오 전제가 실기기·기기 잠금·SpringBoard 잠금화면 알림 액션·생체 잠금 해제라 시뮬레이터 XCUITest 로 결정적 단정이 불가하므로(정의 규칙 4, APNs 푸시 실수신 유형) 전용 파일 없이 구현 대기 → 예외로 재등재한다(접근은 직전 두 시도와 동일; 거부는 접근이 아니라 PR 준비 상태 때문이었다). 재계획에서 달라진 점: 선행 의존을 끊었다 — #298 은 머지됐고(2026-10-28T17:36Z) #329 는 충돌 상태라 기다리지 않고, #329 위에 적층돼 충돌하던 #332 를 닫고 main(4b7d061) 기준 새 브랜치에서 #14 델타만 담은 PR #334 로 대체했다(diff = doc-tracker/2026-10.md 만, 예외 12→13·구현 대기 7→6, 1:1 58·매칭 56·공백 2 불변). main 의 comment-policy ledger 실패(48da4d7 #328, check.mjs 주석)는 main 자체 실패이고 main 의 ci-success 는 success 라 이 PR 의 차단 요인이 아니며, 고치는 것은 comment-policy 몫이라 범위 밖이다. 범위(완료 기준): doc-tracker 예외 표에 #14, 구현 대기 표엔 없음, 집계가 머지 직전 base 실측과 일치, PR #334 squash 착지. 범위 밖: #329 슬라이스, main ledger 복구, 공백 2행·구현 대기 6행. 사람 소유 결정 없음, 수동 승인 케이스 비해당(doc-tracker 문서만).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #334 의 base 를 재실측한다: main 이 움직였거나 #329 가 먼저 머지됐으면 main 을 브랜치에 머지(force 없음)하고 집계 칸만 (예외 +1 · 구현 대기 −1) 델타로 맞춘다.",
+              "expectedOutcome": "#334 diff = doc-tracker/2026-10.md 만, 충돌 없음"
+            },
+            {
+              "seq": 2,
+              "action": "#334 head 의 CI 를 확인한다. 이 PR 에 귀속되는 실패가 없고(main 에서도 실패하는 comment-policy ledger 제외) 필수 check(ci-success)가 success 일 때 squash 머지한다.",
+              "expectedOutcome": "ci-success success, #334 merged"
+            },
+            {
+              "seq": 3,
+              "action": "집계·불변식 확인: (시나리오 − 예외 − 구현 대기) = 매칭 + 공백, approval-gate 예외 1·구현 대기 3.",
+              "expectedOutcome": "main 의 예외 표에 test-approval-gate.md#시나리오 14 행, 구현 대기 표에는 없음, 불변식 성립"
+            }
+          ],
+          "plannedAt": "2026-10-28T18:55:00Z",
+          "executionGuide": "## 순서\n1. #334 만 머지 대상이다(#332 는 닫힘, #329 는 독립). 먼저 `gh pr view 334 --json mergeable,mergeStateStatus` 와 `gh pr diff 334 --name-only`(doc-tracker/2026-10.md 하나여야 함)로 확인.\n2. main 이 움직였거나 #329 가 먼저 머지됐다면 main 을 #334 에 머지하고 집계 숫자만 새 base 실측 + 델타(예외 +1, 구현 대기 −1, approval-gate 예외 +1·구현 대기 −1)로 맞춘다.\n3. check 확인: ci-success success 필수. 'comment-policy ledger' 가 실패해도 main 4b7d061 에서 같은 check 가 이미 실패(원인 #328 check.mjs 주석)면 이 PR 귀속이 아니므로 ledger.md 를 이 PR 에서 고치지 말 것. 단 이 check 가 필수라 머지가 차단되면 보류하고 사유만 기록. iOS 등 나머지 check 는 완료까지 대기.\n\n## 검증\n- `git show main:docs/product/doc-tracker/2026-10.md`: `### 예외 목록` 아래 `test-approval-gate.md#시나리오 14` 행 존재, `### 구현 대기` 아래 없음.\n- 집계: 시나리오 77 · 예외 13 · 구현 대기 6 · 1:1 58 · 매칭 56 · 공백 2 (base 가 바뀌면 실측으로 재계산).\n- 재감지: reg 해시가 바뀌므로 다음 detector 가 새 task 를 열 수 있다 — #14 는 예외로 판정돼 drift 없음이어야 한다.\n\n## 주의\n- 롤백: revert 1커밋(문서만, 불가역 없음).\n- 범위 밖(후속): #329(공백 확대분), main ledger 복구(comment-policy), 구현 대기 6행(docs-impl), 공백 2행."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261028-0002-v3",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/334",
+          "preparedAt": "2026-10-28T18:55:00Z",
+          "notes": "main 4b7d061 기준 새 브랜치 1커밋(3ae8341, doc-tracker/2026-10.md +5/−5, #332 의 7e98ab7 델타를 충돌 해소해 이식). 이전 PR #332 는 닫고 #334 로 대체 관계 명시. 생성 직후라 CI 는 미완료 — 실행 단계가 확인. main 의 comment-policy ledger 실패는 main 자체 실패(범위 밖)."
         }
       }
     ]
