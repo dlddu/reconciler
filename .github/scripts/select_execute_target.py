@@ -18,6 +18,10 @@ reconciler-work-executor 스킬의 Step 0(대상 선정 · 진입 게이트, 4-0
      `decision.sha` 그대로. (3과 독립 — 둘 다 있으면 둘 다 통과해야 한다.)
   승인 확인은 fail-closed: 확인하지 못하면(API 오류·URL 파싱 실패) 승인 안 됨(error)으로 본다.
 
+모델이 꺼져 있으면(`checkPolicy.enabled: false`) 그 task는 approved여도 고르지 않는다 — 주차된 것으로
+보고 승인 확인(API 호출)도 하지 않는다(select_plan_target.py와 같은 술어). reconciler-local의
+precheck-execute.py는 이것을 보지 않지만, 꺼진 모델의 task가 실수로 승인까지 간 일이 있어(2026-10-28) 막는다.
+
 선정: 지목(워크플로 입력)이 있으면 그 대상만, 없으면 `review.reviewedAt`이 오래된 approved부터
 판정해 처음 executable인 한 건에서 멈춘다(승인이 오래 묵을수록 전제가 흔들리므로). 나머지는
 `approved` 그대로 다음 실행 몫이다. 타임스탬프 없는 건은 오래됐다고 할 수 없어 맨 뒤로 간다.
@@ -43,6 +47,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 TASKS_DIR = Path("data") / "reconciliation-tasks"
+MODELS_FILE = Path("data") / "to-be-models.json"
 READY_STATUSES = {"approved"}
 DEFAULT_API = "https://api.github.com"
 API_TIMEOUT = 30
@@ -51,7 +56,9 @@ PR_URL_RE = re.compile(r"^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+
 NO_TIMESTAMP = "￿"
 
 EXECUTABLE, WAITING, STALE, ERROR, NOT_READY = "executable", "waiting", "stale", "error", "not_ready"
+PARKED = "parked"
 VERDICT_LABEL = {
+    PARKED: "주차됨",
     WAITING: "승인 대기",
     STALE: "승인 무효",
     ERROR: "확인 불가",
@@ -80,6 +87,26 @@ class ApprovalCheckError(Exception):
 
 
 # ── 데이터 ────────────────────────────────────────────────────────────────────
+
+
+def is_enabled(model: dict | None) -> bool:
+    """`checkPolicy.enabled`가 JSON false일 때만 꺼진 것으로 본다(select_plan_target.py와 같은 술어)."""
+    if not isinstance(model, dict):
+        return True
+    return (model.get("checkPolicy") or {}).get("enabled") is not False
+
+
+def load_models(repo: Path) -> dict:
+    path = repo / MODELS_FILE
+    if not path.exists():
+        return {}
+    try:
+        models = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise SelectionError(f"{MODELS_FILE}: {exc}") from exc
+    if not isinstance(models, list):
+        raise SelectionError(f"{MODELS_FILE}는 배열이어야 함")
+    return {m.get("id"): m for m in models if isinstance(m, dict)}
 
 
 def load_tasks(repo: Path) -> list[tuple[str, dict]]:
@@ -330,6 +357,7 @@ def resolve_explicit(target: str, tasks: list[tuple[str, dict]]) -> list[tuple[s
 
 def select_target(repo: Path, gh: GitHub, explicit: str | None = None) -> Selection:
     tasks = load_tasks(repo)
+    models = load_models(repo)
     sel = Selection()
     approved = sorted(((m, t) for m, t in tasks if t.get("status") in READY_STATUSES), key=approval_order)
     sel.approved_count = len(approved)
@@ -348,8 +376,11 @@ def select_target(repo: Path, gh: GitHub, explicit: str | None = None) -> Select
                 sel.other_stages[st] = sel.other_stages.get(st, 0) + 1
 
     for i, (model_id, task) in enumerate(candidates):
-        verdict, why, info = judge(task, gh)
         ref = f"{model_id}/{task.get('id')}"
+        if not is_enabled(models.get(model_id)):
+            sel.judged.append((ref, PARKED, "모델 감지 비활성(enabled:false) — checkPolicy.enabled를 켜면 다시 실행 대상", {}))
+            continue
+        verdict, why, info = judge(task, gh)
         if verdict == EXECUTABLE:
             sel.deferred = [f"{m}/{t.get('id')}" for m, t in candidates[i + 1:]]
             detail = why if reason == "explicit" else f"승인 {reviewed_at(task) or '시각 미기록'} — {why}"

@@ -163,12 +163,29 @@ class SelectReviewTargetTest(unittest.TestCase):
         _, out, _, _ = self.f.run()
         self.assertEqual(out["found"], "false")
 
-    def test_disabled_model_still_reviewed(self):
-        # checkPolicy.enabled는 감지 정책 — 이미 계획된 task의 리뷰는 막지 않는다(claim.py와 같음).
+    def test_disabled_model_is_parked(self):
+        # 꺼진 모델의 planned task는 주차된 것 — 오래 기다렸어도 고르지 않고 켜진 모델의 것을 고른다.
+        self.f.model("tbm_off", enabled=False)
+        self.f.task("tbm_off", "rct_1", "planned", updated="2026-09-01T00:00:00Z")
+        self.f.task("tbm_a", "rct_2", "planned")
+        rc, out, summary, _ = self.f.run()
+        self.assertEqual((rc, out["model_id"], out["target_id"]), (0, "tbm_a", "rct_2"))
+        self.assertIn("주차됨", summary)
+
+    def test_disabled_model_alone_finds_nothing(self):
         self.f.model("tbm_off", enabled=False)
         self.f.task("tbm_off", "rct_1", "planned")
-        _, out, _, _ = self.f.run()
-        self.assertEqual(out["target_id"], "rct_1")
+        rc, out, summary, _ = self.f.run()
+        self.assertEqual((rc, out["found"]), (0, "false"))
+        self.assertIn("tbm_off/rct_1", summary)
+
+    def test_disabled_model_explicit_is_parked(self):
+        self.f.model("tbm_off", enabled=False)
+        self.f.task("tbm_off", "rct_1", "planned")
+        for target in ("tbm_off/rct_1", "rct_1", "tbm_off"):
+            rc, out, summary, _ = self.f.run(target)
+            self.assertEqual((rc, out["found"]), (0, "false"), target)
+            self.assertIn("주차됨", summary, target)
 
     def test_direct_action_with_notes_is_ready(self):
         self.f.task("tbm_a", "rct_1", "planned", attempts=[prepared_attempt(pr=None, notes="직접 실행")])

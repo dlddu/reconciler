@@ -101,6 +101,12 @@ class Fixture:
         self.tasks.setdefault(mid, []).append(t)
         return t
 
+    def model(self, mid, enabled=True):
+        models_file = self.repo / "data" / "to-be-models.json"
+        models = json.loads(models_file.read_text()) if models_file.exists() else []
+        models.append({"id": mid, "checkPolicy": {"enabled": enabled}})
+        models_file.write_text(json.dumps(models))
+
     def write(self):
         for mid, tasks in self.tasks.items():
             (self.repo / "data" / "reconciliation-tasks" / f"{mid}.json").write_text(json.dumps(tasks))
@@ -156,6 +162,23 @@ class SelectExecuteTargetTest(unittest.TestCase):
             self.fx.task("tbm_a", f"rct_{i}", st)
         code, out, _ = self.run_main()
         self.assertEqual((code, out["found"]), (0, "false"))
+
+    def test_disabled_model_is_parked_without_api(self):
+        self.fx.model("tbm_off", enabled=False)
+        self.fx.model("tbm_a")
+        self.fx.task("tbm_off", "rct_1", reviewed_at="2026-09-01T00:00:00Z", pr="dlddu/off/pull/1")
+        self.fx.task("tbm_a", "rct_2", reviewed_at="2026-10-20T00:00:00Z")
+        code, out, stdout = self.run_main()
+        self.assertEqual((code, out["target_id"]), (0, "tbm_a/rct_2"))
+        self.assertIn("주차됨 · `tbm_off/rct_1`", stdout)
+        self.assertEqual(self.gh.requests, [])
+
+    def test_disabled_model_explicit_finds_nothing(self):
+        self.fx.model("tbm_off", enabled=False)
+        self.fx.task("tbm_off", "rct_1")
+        code, out, stdout = self.run_main("--target", "tbm_off/rct_1")
+        self.assertEqual((code, out["found"]), (0, "false"))
+        self.assertIn("주차됨", stdout)
 
     def test_empty_tasks_dir(self):
         code, out, _ = self.run_main()
