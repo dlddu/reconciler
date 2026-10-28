@@ -16469,7 +16469,7 @@
   {
     "id": "rct_20261028-0003",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T23:03:47Z",
     "trigger": {
       "source": "version_change",
@@ -16492,6 +16492,45 @@
     "assessment": {
       "reason": "**작업 필요: `action_required`.**\n\n- **근거 1 — 미판정 주석 잔존.** 기준·범위 불변인데 원장 기준 미판정 L 11행·328줄 · D 4행·49줄이 남아 있다. 판정 없이는 정합을 확인할 수 없다.\n- **근거 2 — 자동 해소 불가.** 판정은 대상 레포의 정책 판정 패스 PR로만 닫히며 시간이 지나도 줄지 않는다. 유예할 이유가 없다.\n- **근거 3 — 선행 task와의 관계.** rct_20261028-0001(approved, PR #270 OPEN)이 `dashboard.go`·`dashboard_test.go`·`build.go`·`test_aggregate.py`를 가져간다. planner는 겹침을 확인하고 나머지(`gold.go`·`handlers.go`·`spikes_test.go`·`schema.sql`·`store.go`·`aggregate.py`·`test_article_picks.py`·`test_source_contributions.py`·`tests/e2e/lib/gold.ts`)만 예산(400줄) 안에서 계획하라.",
       "assessedAt": "2026-10-28T23:04:29Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#265·#266 이 들인 주석 중 열린 PR #270(rct_20261028-0001) 몫(dashboard.go·dashboard_test.go·build.go·test_aggregate.py)을 뺀 나머지 10개 행(L 7·D 3, gold.go·handlers.go·spikes_test.go·schema.sql·store.go·aggregate.py·gold.ts·test_article_picks.py·test_source_contributions.py)을 증분 판정한다 — 옛 판정이 닫은 시점 8a483a3 이후 들어온 L 26줄·D 12줄만 필요성 시험해 재진술 9줄(spikes_test.go 기대 배수 표 6 · window_articles 직전 창 문장 1 · 두 테스트 _axes docstring 2)을 제거하고 29줄은 사유와 함께 유지한다(대안: 전 행 현재 지문 재판정 — 옛 판정이 이미 완료라 낭비, 증분 판정 선례를 따름; 예산 400줄 안). 완료 기준: PR #277 착지 후 위 10행이 `완료`·게이트 rc=0. 범위 밖: #270 몫 5행 — #270 이 닫고, 이후 새 주석은 재감지가 새 task 로 잇는다. 위험은 low: 주석·docstring 삭제뿐이라 동작 변경이 없고 수동 승인 경로를 건드리지 않는다(format_changed=false).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "사전 확인: PR #277 OPEN · head ef2234da3f3845fcb3415ba9aab67549eef69073 · mergeable · required success (format_changed=false 라 수동 승인 불필요)",
+              "expectedOutcome": "승인 status 없이 머지 가능한 head"
+            },
+            {
+              "seq": 2,
+              "action": "gh pr merge 277 --squash --match-head-commit ef2234da3f3845fcb3415ba9aab67549eef69073 (커밋 얹기·리베이스 금지)",
+              "expectedOutcome": "main 에 squash 커밋 M 착지"
+            },
+            {
+              "seq": 3,
+              "action": "M 에서 check-comment-ledger.py + 10행 grep(`완료`·줄 수·지문) + 패스 문서 존재; 대조군 M^1",
+              "expectedOutcome": "rc=0 · L 7행 + D 3행 `완료` / M^1 에서 `—`"
+            },
+            {
+              "seq": 4,
+              "action": "(선택) gofmt -l / py_compile 또는 M 의 CI 결과 확인",
+              "expectedOutcome": "빈 출력 · ok · success"
+            }
+          ],
+          "plannedAt": "2026-10-29T00:20:00Z",
+          "executionGuide": "# 실행 지침 — rct_20261028-0003 (PR #277 · #265·#266 나머지 증분 판정)\n\n## 순서 (직렬)\n1. **사전 확인**: `gh pr view 277 -R dlddu/economic-opinion-trend-monitor --json state,headRefOid,mergeable,mergeStateStatus` — `OPEN` · `headRefOid=ef2234da3f3845fcb3415ba9aab67549eef69073` · `mergeable≠CONFLICTING`. `required` 체크가 그 sha 에서 success. 이 PR 은 수동 승인 경로를 건드리지 않아(`python3 scripts/check-data-format-change.py origin/main HEAD` → `format_changed=false`, `servingindex/**` 소스 무접촉) `review/manual-approval` 없이 머지된다.\n2. **squash 머지**: `gh pr merge 277 --squash --match-head-commit ef2234da3f3845fcb3415ba9aab67549eef69073`. 커밋을 얹거나 리베이스하지 말 것. #270(rct_20261028-0001)이 먼저 머지돼 `ledger.md` 충돌이 나면(서로 다른 행이라 드묾) 해소하지 말고 정지·재준비.\n3. **검증**(머지 커밋 M, 대조군 M^1):\n   - `python3 scripts/check-comment-ledger.py` rc=0.\n   - 원장 L 표 `go/internal/handlers/gold.go`(19) · `handlers.go`(93) · `spikes_test.go`(2 · `d50951d66f15`) · `go/internal/servingindex/schema.sql`(15) · `go/internal/store/store.go`(47) · `python/packages/aggregation/src/econ_aggregation/aggregate.py`(12) · `tests/e2e/lib/gold.ts`(57) 7행 `완료`; D 표 `aggregate.py`(31) · `tests/test_article_picks.py`(2) · `tests/test_source_contributions.py`(12) 3행 `완료`. `grep -F` 로 행마다 확인(M^1 에서는 전부 `—`).\n   - 패스 문서 `docs/comment-policy/passes/2026-10-28-spikes-all-axis-increment-pass.md` 존재.\n   - `cd go && gofmt -l internal/handlers` 빈 출력 / `python3 -m py_compile` ok (선택: M 의 CI 결과).\n   - 완료 기준은 위 10행이다 — 「미판정 0」 절대값이 아니다(#270 몫 L 4행·77줄 · D 1행·1줄과, 머지 시점 자매가 들인 새 `—` 행이 남을 수 있다).\n\n## 주의\n- 동작 변경 없음(주석·docstring·빈 줄 삭제와 원장·문서 갱신뿐). 불가역 지점 없음. 롤백은 `git revert M` 1회.\n- #270 과 파일 집합이 서로소다(원장은 서로 다른 행). 순서는 무관.\n- 지문은 L/D 표면 기준이다. 머지 시점에 자매 PR 이 같은 행을 건드렸으면 게이트가 줄 수·지문 불일치로 실패한다 — 그때는 실행하지 말고 정지.\n\n## 범위 밖(후속 — 재감지가 새 task 로 잇는다)\n#270 이 가져간 `dashboard.go` · `dashboard_test.go` · `build.go` · `tests/test_aggregate.py`(L·D) — #270 착지 후 `완료`. 그 밖의 잔여는 이 PR 이후 새로 들어온 주석뿐이다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261028-0003-econ-comment-necessity",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/277",
+          "preparedAt": "2026-10-29T00:20:00Z",
+          "notes": "PR #277 · head ef2234da3f3845fcb3415ba9aab67549eef69073 · base main 9a534f3 · 6파일(소스 4: spikes_test.go · aggregate.py · test_article_picks.py · test_source_contributions.py / 문서 2: ledger.md · 새 패스 문서 2026-10-28-spikes-all-axis-increment-pass.md). 실측: check-comment-ledger.py 불변식 통과(미판정 잔여 L 4행·77줄 · D 1행·1줄 = #270 몫) · gofmt 빈 출력 · py_compile ok · check-data-format-change.py origin/main HEAD → format_changed=false ⇒ 수동 승인 불필요 · mergeable=MERGEABLE. 열린 PR #270(원장 다른 행)·#276(web)·#220(docs)와 파일 겹침 없음. 이 러너에서 go vet 은 모듈 다운로드가 필요해 실행하지 못했고 pytest 도 미설치라 돌리지 않았다(주석·docstring 삭제뿐)."
+        }
+      }
+    ]
   }
 ]
