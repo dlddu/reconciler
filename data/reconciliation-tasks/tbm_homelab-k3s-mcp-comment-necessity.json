@@ -19534,6 +19534,40 @@
     "assessment": {
       "assessedAt": "2026-10-28T20:04:10Z",
       "reason": "차이 존재·자동 해소 불가: 필요성 판정은 사람이 아닌 슬라이스 작업으로만 진행되며 지금 대기 중인 작업이 없다. 원장 약 128행이 미판정이라 정의의 정합 상태(사유 없는 주석 0)에 도달하지 못했고, 직전 슬라이스(rct_20261028-0003)가 만든 변화로 후속 슬라이스가 필요하다(롤아웃·일시적 alert 성격 아님). planner가 다음 판정 슬라이스 범위를 정한다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "필요성 판정 두 번째 슬라이스(모델 정의의 판정 슬라이스 400줄 예산 안): 상류 API 클라이언트·진입점 계열 7행(main.go·awsconfig·github·grafana·opensearch·server·sessionplatform, 줄 주석 383줄)을 필요성 시험으로 판정해 사유 없는 주석을 제거한다. 가역성이 높은(비주석 diff 0, PR revert) 문서성 변경이고 서로 파일을 공유하지 않는 행 단위라 한 PR 로 묶었다. 열린 PR 과 겹치는 파일 없음. 완료 기준(범위): 이 7행이 판정 축 `완료`(결과 칸 「필요성 판정 @지문」)이고 제거·유지 사유가 passes/ 에 기록되며 게이트 R1~R15·doc inventory 가 통과하면 성공(383→261줄). 범위 밖(후속): 나머지 줄 주석 75행·docstring 37행·줄 끝 9행 — 재감지가 새 task 로 잇는다. 사람 소유 결정은 없다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 신규 브랜치에서 7개 행 범위의 주석을 필요성 시험(README 판정 절차)으로 판정해 사유 없는 주석을 제거한다(기계가 읽는 주석·Go 최소 doc 은 유지, 상류 사실·구조 보장은 유지).",
+              "expectedOutcome": "줄 주석 383→261, 비주석 diff 0줄, gofmt/go build/test 통과"
+            },
+            {
+              "seq": 2,
+              "action": "ledger.md 7행의 줄 수·지문을 게이트 실측으로 갱신하고 판정 축을 `완료` 로, 결과 칸에 「필요성 판정 @지문」을 적는다. passes/ 파일에 제거 목록·유지 사유를 기록하고 doc-tracker 허브 집계를 맞춘다.",
+              "expectedOutcome": "check_comment_policy.py R1~R15 OK(완료 16행 579줄), check_doc_inventory.py OK"
+            },
+            {
+              "seq": 3,
+              "action": "PR 을 연다(머지는 executor 몫).",
+              "expectedOutcome": "PR 열림, CI 초록"
+            }
+          ],
+          "plannedAt": "2026-10-28T21:05:00Z",
+          "executionGuide": "## 순서\n1. PR(dlddu/homelab-k3s-mcp#295) head 와 `ci passed` 확인(fmt+vet 잡의 check_comment_policy.py·check_doc_inventory.py, go test, mock/ac 게이트). image 잡이 `error writing layer blob: not_found` 류 레지스트리 오류로 일시 실패하면 실패 잡만 재실행한다(직전 task 에서 같은 증상이 주석 변경과 무관했다). 머지 전 main 이 움직여 원장·같은 파일을 건드린 PR 이 들어왔으면 rebase 후 `python3 scripts/check_comment_policy.py` 재실행 — 지문 불일치(R2/R6)가 나면 그 행의 줄 수·지문만 실측으로 갱신하고 새로 들어온 주석은 판정 축 `—` 로 둔다(판정하지 않은 주석을 `완료` 로 세지 않는다).\n2. squash 머지.\n3. 머지 후 main 에서 검증.\n\n## 검증\n- `python3 scripts/check_comment_policy.py` → `R1~R15 위반 없음`, 줄 주석 `필요성 판정 완료 16행 579줄`(기존 9행 318줄 + 7행 261줄), 전체 판정 대상 3101줄.\n- `python3 scripts/check_doc_inventory.py` → D1~D4 OK(허브 133/133).\n- PR diff 에 비주석 변경 없음(gofmt 이 sessionplatform_test.go 빈 줄 셋을 접은 것뿐). `go build ./... && go test ./internal/...` 통과.\n- 수렴 판정은 이 범위 기준: 위 7행이 `완료` 이고 passes/2026-10-28-necessity-slice-rct-20261028-0004.md 가 제거·유지 사유를 담으면 성공. 전체 to-be(미판정 0)는 아직 아니며 지문 해시는 머지로 이동하는 것이 정상.\n\n## 범위 밖(후속)\n줄 주석 미판정 75행(예: internal/mcp/gate.go 375줄 행, tests/integration 큰 행들, .github 워크플로), docstring 37행, 줄 끝 9행. 머지 후 재감지가 새 task 를 연다.\n\n## 주의\n- 되돌릴 수 없는 지점 없음(주석·문서만). 롤백 = PR revert. 행 단위로 독립이라 이의가 있는 행만 되돌려도 된다.\n- doc-tracker/2026-09.md 허브 집계(132→133)를 고쳤다 — 같은 시점에 문서를 추가한 다른 PR 과 충돌하면 집계를 실측으로 다시 맞춘다.\n- 제거 판단의 최종 책임은 이 계획에 있다."
+        },
+        "preparation": {
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20261028-0004",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/295",
+          "preparedAt": "2026-10-28T21:05:00Z",
+          "notes": "주석 제거와 원장·passes·doc-tracker 갱신이 PR 에 포함됨. 로컬에서 check_comment_policy.py·check_doc_inventory.py·check_mock_policy.py·check_ac_mapping.py·gofmt·go build/vet·go test ./internal/... 통과 확인. 머지는 하지 않음."
+        }
+      }
+    ]
   }
 ]
