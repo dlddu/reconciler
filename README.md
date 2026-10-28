@@ -363,7 +363,9 @@ claude를 띄울지 정하는 읽기 전용 게이트일 뿐 점유 커밋을 �
   "Rate limit reached" 등). 걸리면 실행을 「Claude 사용 한도 초과」로 실패 처리하고 PocketAide 푸시를 보낸다
   (`pocket_aide_notification_send` — 한도 종류 · 재설정 시각(KST) · 대상 · 실행 링크). 각 `-claude.yml` OIDC 규칙에 이 도구를
   넣어야 한다(없으면 경고만 남고 실행 판정은 그대로). 중간에 끊겨 점유가 남아도 재설정 뒤 다음 실행의 재개 규칙이 이어받는다.
-- **지목 실행**: 입력 `target_id`는 시스템 프롬프트로 덧붙인다(슬래시 명령 뒤 문자열은 통째로 checkout 경로 `$ARGUMENTS`이므로).
+- **대상 전달**: Select target이 고른 대상(입력 `target_id`가 있으면 그 지목을 반영한 결과)을 `<tbm>/<rct>`로 시스템 프롬프트에
+  넘기고 스킬은 그 대상만 본다(슬래시 명령 뒤 문자열은 통째로 checkout 경로 `$ARGUMENTS`). 넘기지 않으면 스킬이 Step 0을 다시 돌려
+  러너와 다른 후보를 고를 수 있다 — 테스트에서 계획 스킬이 러너가 뺀 감지 비활성 모델의 task를 고른 적이 있다.
 - 스케줄은 없다(`workflow_dispatch`만). 로컬 타이머·MiniMax 감지와 동시에 돌아도 점유 compare-and-set이 경쟁을 막는다.
 - 공용 스크립트(`mcp_oidc_proxy.py`·`mcp_call.py`·`redact_secrets.py`)는 MiniMax 워크플로와 함께 쓴다 — 고치면 양쪽 동작을 함께 확인할 것.
   Claude 전용은 `claude_transcript.py`(stream-json 기록 요약·검사)와 `.github/actions/{homelab-mcp,run-claude-skill}`.

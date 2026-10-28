@@ -44,7 +44,7 @@ inputs:
     description: 로그·대화 기록을 둘 디렉터리(아티팩트로 올라간다)
     required: true
   target-id:
-    description: 지목 대상(사용자가 워크플로 입력으로 지목한 경우만). 비우면 스킬이 Step 0으로 고른다
+    description: 이번 실행의 대상(러너의 Select target이 고른 것, <tbm>/<rct> 또는 tbm_). 스킬은 이 대상만 본다. 비우면 스킬이 Step 0으로 고른다
     required: false
     default: ""
   model:
@@ -197,10 +197,11 @@ runs:
               --mcp-config "$MCP_CONFIG" --strict-mcp-config
               --output-format stream-json --verbose)
         [ -n "$MODEL" ] && args+=(--model "$MODEL")
-        # 실행 환경 규칙과 지목은 시스템 프롬프트로 덧붙인다(슬래시 명령 뒤 문자열은 통째로 $ARGUMENTS=checkout 경로).
+        # 실행 환경 규칙과 대상은 시스템 프롬프트로 덧붙인다(슬래시 명령 뒤 문자열은 통째로 $ARGUMENTS=checkout 경로).
+        # 대상을 넘기지 않으면 스킬이 Step 0을 다시 돌려 러너와 다른 후보(예: 감지 비활성 모델의 task)를 고를 수 있다.
         sys="이 실행은 GitHub Actions 러너다. reconciler 레포는 러너가 $CHECKOUT_DIR 에 기본 브랜치로 미리 체크아웃해 두었고, push 자격 증명이 그 checkout의 git 설정에 들어 있다. reconciler-repo-access를 따르되 reconciler 레포에 대해서는 k3s:github_app_installation_token 발급과 ~/.git-credentials 설정(Step 1 읽기 토큰 · Step 3 쓰기 토큰)을 건너뛰고, 그 checkout에서 git pull --rebase · commit · push만 한다 — 서버가 reconciler 토큰 발급을 거부하도록 설정돼 있다. 그 checkout의 git 원격·자격 증명 설정을 바꾸지 말고 .github/ 아래 파일은 수정하지 않는다. 대상 레포·plugin-marketplace 토큰은 스킬 지침대로 MCP로 받는다."
         if [ -n "$TARGET_ID" ]; then
-          sys="$sys"$'\n'"이번 실행은 사용자가 대상을 지목했다: $TARGET_ID. 스킬 Step 0의 '사용자가 특정 모델/task를 지목했으면 그 대상으로 한정한다'를 따라 이 대상만 본다. 그 대상이 진입 게이트를 통과하지 못하면 다른 대상을 고르지 말고 이유를 보고하고 종료한다."
+          sys="$sys"$'\n'"이번 실행의 대상은 정해져 있다: $TARGET_ID (러너가 스킬 Step 0과 같은 규칙으로 고른 대상 — 워크플로 입력으로 지목된 경우 그 지목을 반영했다). 스킬 Step 0의 '사용자가 특정 모델/task를 지목했으면 그 대상으로 한정한다'를 따라 이 대상만 본다. 다른 후보를 스스로 다시 고르지 않는다. 이 대상이 진입 게이트(점유 전제)를 통과하지 못하면 다른 대상으로 넘어가지 말고 이유를 보고하고 종료한다."
         fi
         args+=(--append-system-prompt "$sys")
         echo "prompt: $prompt${TARGET_ID:+ (지목 $TARGET_ID)}"
