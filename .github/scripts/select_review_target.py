@@ -17,7 +17,9 @@ reconciler-work-review 스킬의 Step 0(대상 선정 · 진입 게이트, 4-0)�
 
 `reviewing`은 고르지 않는다 — 다른 워커가 잡은 lock이고, 오래됐다는 이유로 회수하지 않는다.
 `approved`(executor 몫), `review_rejected`(planner 재계획 몫) 등 나머지 status도 대상이 아니다.
-모델의 checkPolicy.enabled는 감지 단계 정책이라 여기서는 보지 않는다(claim.py review도 보지 않음).
+모델이 꺼져 있으면(`checkPolicy.enabled: false`) 그 task는 planned여도 고르지 않는다 — 주차된 것으로 본다
+(select_plan_target.py와 같은 술어). reconciler-local의 claim.py review는 이것을 보지 않지만, 꺼진 모델의
+오래된 planned task가 「가장 오래 기다린 것」으로 먼저 집혀 승인까지 간 일이 있어(2026-10-28) 막는다.
 
 우선순위: 지목 → 오래 기다린 순(updatedAt = planned가 된 시각, 없으면 createdAt) → id.
 여러 건이어도 한 건만 고르고 나머지는 `planned`로 남긴다.
@@ -91,6 +93,23 @@ def load_json(path: Path):
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise SelectionError(f"{path}: {exc}") from exc
+
+
+def is_enabled(model: dict | None) -> bool:
+    """`checkPolicy.enabled`가 JSON false일 때만 꺼진 것으로 본다(select_plan_target.py와 같은 술어)."""
+    if not isinstance(model, dict):
+        return True
+    return (model.get("checkPolicy") or {}).get("enabled") is not False
+
+
+def load_models(repo: Path) -> dict:
+    models = load_json(repo / MODELS_FILE)
+    if not isinstance(models, list):
+        raise SelectionError(f"{MODELS_FILE}는 배열이어야 함")
+    return {m.get("id"): m for m in models if isinstance(m, dict)}
+
+
+PARKED = "planned지만 모델 감지 비활성(enabled:false) — 주차됨 (checkPolicy.enabled를 켜면 다시 리뷰 대상)"
 
 
 def last_attempt(task: dict) -> dict:
@@ -172,8 +191,9 @@ def model_ids(repo: Path) -> set[str]:
     return {m.get("id") for m in models if isinstance(m, dict)}
 
 
-def scan(sel: Selection, tasks: list[tuple[str, dict]]) -> list[tuple[str, dict]]:
+def scan(sel: Selection, tasks: list[tuple[str, dict]], models: dict | None = None) -> list[tuple[str, dict]]:
     """ready 목록을 돌려주고, 나머지는 sel에 사유별로 적는다."""
+    models = models or {}
     ready = []
     for model_id, task in tasks:
         status = task.get("status")
@@ -181,6 +201,9 @@ def scan(sel: Selection, tasks: list[tuple[str, dict]]) -> list[tuple[str, dict]
             sel.others[status] += 1
             if status in LIST_IDS:
                 sel.other_ids.setdefault(status, []).append(f"{model_id}/{task['id']}")
+            continue
+        if not is_enabled(models.get(model_id)):
+            sel.skipped.append((f"{model_id}/{task['id']}", PARKED))
             continue
         why = unready_reason(task)
         if why:
@@ -192,7 +215,8 @@ def scan(sel: Selection, tasks: list[tuple[str, dict]]) -> list[tuple[str, dict]
     return ready
 
 
-def select_explicit_task(target: str, tasks: list[tuple[str, dict]], model: str | None = None) -> Selection:
+def select_explicit_task(target: str, tasks: list[tuple[str, dict]], model: str | None = None,
+                         models: dict | None = None) -> Selection:
     """task id는 모델 안에서만 유일하다(같은 rct_ id가 여러 모델 파일에 있다). 그래서
     `tbm_.../rct_...`로 모델까지 지목할 수 있고, rct_만 주면 그중 planned인 한 건으로 좁힌다."""
     sel = Selection()
@@ -210,6 +234,9 @@ def select_explicit_task(target: str, tasks: list[tuple[str, dict]], model: str 
             sel.skipped.append((f"{model_id}/{target}", f"status={status} — {OWNER.get(status, '리뷰 대상 아님')}"))
         return sel
     model_id, task = planned[0]
+    if not is_enabled((models or {}).get(model_id)):
+        sel.skipped.append((f"{model_id}/{target}", PARKED))
+        return sel
     why = unready_reason(task)
     if why:
         sel.errors.append((f"{model_id}/{target}", f"planned인데 리뷰 전제 미충족 — {why}"))
@@ -221,20 +248,21 @@ def select_explicit_task(target: str, tasks: list[tuple[str, dict]], model: str 
 
 
 def select_target(repo: Path, explicit: str | None = None) -> Selection:
+    models = load_models(repo)
     if explicit and "/" in explicit:
         model, _, task_id = explicit.partition("/")
-        return select_explicit_task(task_id, load_tasks(repo, model), model=model)
+        return select_explicit_task(task_id, load_tasks(repo, model), model=model, models=models)
     if explicit and explicit.startswith("rct_"):
-        return select_explicit_task(explicit, load_tasks(repo))
+        return select_explicit_task(explicit, load_tasks(repo), models=models)
 
     only_model = None
     if explicit:  # tbm_
-        if explicit not in model_ids(repo) and not (repo / TASKS_DIR / f"{explicit}.json").exists():
+        if explicit not in models and not (repo / TASKS_DIR / f"{explicit}.json").exists():
             raise SelectionError(f"모델 {explicit}를 찾을 수 없음")
         only_model = explicit
 
     sel = Selection()
-    ready = scan(sel, load_tasks(repo, only_model))
+    ready = scan(sel, load_tasks(repo, only_model), models)
     if not ready:
         return sel
     model_id, task = ready[0]

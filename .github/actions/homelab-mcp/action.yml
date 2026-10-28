@@ -1,0 +1,139 @@
+# homelab-k3s-mcp를 GitHub Actions OIDC로 쓰기 위한 준비.
+#
+#   1. 로컬 OIDC 프록시 기동(127.0.0.1) — 약 5분짜리 OIDC 토큰을 요청마다 붙이고 만료 전에 갱신한다.
+#      에이전트 설정(.mcp.json)에는 토큰 없이 프록시 주소만 들어간다.
+#   2. 사전 점검(tools/list) — 서버 기동 중 502를 감안해 몇 번 다시 본다. 필수 도구가 없으면 실패.
+#   3. 읽기 토큰 발급(선택) — github_app_installation_token으로 받아 마스킹 후 $GITHUB_ENV에 내보낸다.
+#      레포는 read-token-repositories로 명시한다(제외 목록 상한은 레포를 생략한 요청을 거부한다).
+#      선정 스크립트(대상 레포 클론·PR 조회)용이며 에이전트 실행 환경에서는 뺀다.
+#
+# job에 `permissions: id-token: write`가 있어야 한다. 서버 MCP_GITHUB_OIDC_RULES에 호출 워크플로
+# 파일별 규칙이 있어야 도구가 노출된다(401이면 audience, 도구가 빠졌으면 규칙을 본다).
+# 기동 후 $GITHUB_ENV에 MCP_LOCAL_URL, MCP_PROXY_LOG를 내보낸다.
+name: homelab-k3s-mcp (OIDC)
+description: OIDC 프록시 기동 + MCP 사전 점검 + 읽기 토큰 발급
+
+inputs:
+  harness-dir:
+    description: 이 레포 체크아웃 경로(스크립트 위치)
+    required: true
+  url:
+    description: homelab-k3s-mcp 엔드포인트
+    required: true
+  audience:
+    description: OIDC audience(서버 MCP_GITHUB_OIDC_AUDIENCE)
+    required: true
+  port:
+    description: 로컬 프록시 포트
+    required: false
+    default: "8765"
+  log-dir:
+    description: 프록시 로그·도구 목록을 둘 디렉터리
+    required: true
+  required-tools:
+    description: 없으면 실패할 도구(공백 구분)
+    required: false
+    default: github_app_installation_token
+  recommended-tools:
+    description: 없으면 경고만 남길 도구(공백 구분)
+    required: false
+    default: resource_list resource_get api_resources
+  read-token-env:
+    description: 읽기 토큰을 내보낼 환경 변수 이름. 비우면 발급하지 않는다
+    required: false
+    default: SOURCE_GITHUB_TOKEN
+  read-token-repositories:
+    description: 읽기 토큰의 레포(쉼표 구분, owner 없이). 제외 목록 상한은 레포를 명시한 요청만 받으므로 비우지 않는다
+    required: false
+    default: ""
+  read-token-permissions:
+    description: 읽기 토큰 권한(JSON)
+    required: false
+    default: '{"contents":"read","metadata":"read","pull_requests":"read","statuses":"read","actions":"read"}'
+
+outputs:
+  local-url:
+    description: 에이전트가 붙을 로컬 MCP 주소
+    value: ${{ steps.proxy.outputs.local-url }}
+  tools:
+    description: 노출된 도구 이름(JSON 배열)
+    value: ${{ steps.preflight.outputs.tools }}
+
+runs:
+  using: composite
+  steps:
+    - name: Start OIDC proxy
+      id: proxy
+      shell: bash
+      env:
+        HARNESS: ${{ inputs.harness-dir }}
+        UPSTREAM: ${{ inputs.url }}
+        AUDIENCE: ${{ inputs.audience }}
+        PORT: ${{ inputs.port }}
+        LOG_DIR: ${{ inputs.log-dir }}
+      run: |
+        mkdir -p "$LOG_DIR"
+        log="$LOG_DIR/mcp-proxy.log"
+        nohup python3 "$HARNESS/.github/scripts/mcp_oidc_proxy.py" --upstream "$UPSTREAM" \
+          --audience "$AUDIENCE" --port "$PORT" > "$log" 2>&1 &
+        pid=$!
+        for _ in $(seq 1 30); do
+          grep -q listening "$log" && break
+          if ! kill -0 "$pid" 2>/dev/null; then cat "$log"; echo "::error::MCP OIDC 프록시 기동 실패"; exit 1; fi
+          sleep 1
+        done
+        grep -q listening "$log" || { cat "$log"; echo "::error::MCP OIDC 프록시가 30초 안에 뜨지 않음"; exit 1; }
+        cat "$log"
+        url="http://127.0.0.1:$PORT/mcp"
+        echo "local-url=$url" >> "$GITHUB_OUTPUT"
+        { echo "MCP_LOCAL_URL=$url"; echo "MCP_PROXY_LOG=$log"; } >> "$GITHUB_ENV"
+
+    - name: MCP preflight (tools/list)
+      id: preflight
+      shell: bash
+      env:
+        HARNESS: ${{ inputs.harness-dir }}
+        URL: ${{ steps.proxy.outputs.local-url }}
+        LOG_DIR: ${{ inputs.log-dir }}
+        REQUIRED: ${{ inputs.required-tools }}
+        RECOMMENDED: ${{ inputs.recommended-tools }}
+      run: |
+        # 서버가 재시작·기동 중이면 첫 요청이 502로 떨어질 수 있다 — 짧게 몇 번 다시 본다.
+        ok=""
+        for i in 1 2 3 4; do
+          if python3 "$HARNESS/.github/scripts/mcp_call.py" --url "$URL" tools --json > "$LOG_DIR/mcp-tools.json"; then
+            ok=1; break
+          fi
+          [ "$i" -lt 4 ] && { echo "MCP 응답 없음 — $((i * 20))초 뒤 재시도($i/3)"; sleep $((i * 20)); }
+        done
+        if [ -z "$ok" ]; then
+          cat "$LOG_DIR/mcp-proxy.log"
+          echo "::error::homelab-k3s-mcp 호출 실패 — 401이면 audience나 서버 MCP_GITHUB_OIDC_RULES에 이 워크플로($GITHUB_WORKFLOW_REF) 규칙이 있는지 확인"
+          exit 1
+        fi
+        echo "tools: $(cat "$LOG_DIR/mcp-tools.json")"
+        echo "tools=$(cat "$LOG_DIR/mcp-tools.json")" >> "$GITHUB_OUTPUT"
+        python3 - "$LOG_DIR/mcp-tools.json" <<'PY'
+        import json, os, sys
+        tools = set(json.load(open(sys.argv[1])))
+        missing = [t for t in os.environ["REQUIRED"].split() if t not in tools]
+        for name in os.environ["RECOMMENDED"].split():
+            if name not in tools:
+                print(f"::warning::OIDC 규칙에 {name}이 없음 — 이 단계에서 해당 도구를 쓰는 관측·작업은 실패한다")
+        if missing:
+            print(f"::error::이 워크플로의 OIDC 규칙에 필수 도구가 없음: {', '.join(missing)} — MCP_GITHUB_OIDC_RULES에 추가 필요")
+            sys.exit(1)
+        PY
+
+    - name: Mint read token
+      if: inputs.read-token-env != ''
+      shell: bash
+      env:
+        HARNESS: ${{ inputs.harness-dir }}
+        URL: ${{ steps.proxy.outputs.local-url }}
+        ENV_NAME: ${{ inputs.read-token-env }}
+        REPOS: ${{ inputs.read-token-repositories }}
+        PERMS: ${{ inputs.read-token-permissions }}
+      run: |
+        python3 "$HARNESS/.github/scripts/mcp_call.py" --url "$URL" github-token --env-name "$ENV_NAME" \
+          --repositories "$REPOS" --permissions "$PERMS"

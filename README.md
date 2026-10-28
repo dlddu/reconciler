@@ -317,3 +317,55 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
   `file://`로 직접 열면 브라우저 보안정책상 `data/`를 못 읽으니 서버로 열 것.
 - **테스트**: `node --test "tests/*.test.mjs"` — 각 테스트는 `index.html`에서 해당
   함수 블록을 정규식으로 뽑아 `vm`으로 실행한다(빌드·의존성 없음).
+
+## 단계 워크플로 — Claude Code (`.github/workflows/reconciler-*-claude.yml`)
+
+reconciler-local의 systemd 러너(`run-<stage>.sh`: 게이트 → `claude --bg "/reconciler-data-plane:<skill> $DIR"`)를
+GitHub Actions로 옮긴 것이다. 기존 단계 워크플로(`reconciler-<stage>.yml`)와 MiniMax 감지 파이프라인
+(`reconciler-drift-detector.yml`·`reconciler-drift-detector-skill-build.yml`)과는 **별개 파일**이고 그 파일들을 건드리지 않는다.
+concurrency 그룹도 `<skill>-claude`로 따로 둔다(같은 그룹이면 대기 중인 실행끼리 서로 취소된다). 네 단계가 같은 모양이다.
+
+MiniMax 감지와 달리 **선정·점유를 스킬이 한다**(위 「점유는 러너가 한다」의 범위 참고) — 러너의 Select target은
+claude를 띄울지 정하는 읽기 전용 게이트일 뿐 점유 커밋을 만들지 않는다. 점유 기록의 형태는 두 경로가 같다.
+
+| 스텝 | 하는 일 |
+| --- | --- |
+| Checkout | 하네스(`harness/`, 자격 증명 없음)와 reconciler 기본 브랜치(`ws/reconciler`, 워크플로 토큰 유지 — 스킬의 push용). |
+| Connect homelab-k3s-mcp | `homelab-mcp` 액션. GitHub OIDC 로컬 프록시(`mcp_oidc_proxy.py`, 127.0.0.1)를 띄우고 `tools/list`로 사전 점검, `SOURCE_GITHUB_TOKEN`(대상 레포 read)을 발급한다. |
+| Select target | 단계별 `select_*_target.py` — 스킬 Step 0을 옮긴 읽기 전용 게이트. 대상이 없으면 claude를 띄우지 않고 성공, 판단할 수 없으면 실패(fail-closed). |
+| Run skill (Claude Code) | `run-claude-skill` 액션. CLI 설치 → 마켓플레이스 `dlddu/plugin-marketplace` 등록 + `reconciler-data-plane` 설치 → `claude -p "/reconciler-data-plane:<skill> <ws/reconciler>"`. 점유·기록·커밋·push는 스킬이 한다. |
+
+- **Claude 인증**: environment `llm-claude`의 secret `CLAUDE_CODE_OAUTH_TOKEN`(`claude setup-token`으로 발급한 OAuth 토큰).
+  job이 `environment: llm-claude`를 선언한다(「모델 키 격리」). Deployment branches가 `main`뿐이면 이 워크플로들도 `main`에서만 돈다.
+- **GitHub 토큰 경계**: reconciler push는 job의 워크플로 토큰(`contents: write`)으로 한다 — `.github/workflows`는 못 바꾼다.
+  스킬(reconciler-repo-access)은 원래 reconciler용 App 토큰을 MCP로 받지만, githubToken 상한에서 reconciler를 빼므로
+  러너가 시스템 프롬프트로 그 단계를 건너뛰고 체크아웃의 자격 증명으로 pull·push하게 한다. 대상 레포·plugin-marketplace
+  토큰은 MCP(상한 안)로 받는다. claude 환경에서는 OIDC 요청 변수·`SOURCE_GITHUB_TOKEN`·`GITHUB_TOKEN` 환경 변수를 뺀다.
+- **homelab-k3s-mcp**: 스킬이 부르는 서버 이름 `k3s`로 등록한다(`--mcp-config` + `--strict-mcp-config`). 설정 파일에는 로컬
+  프록시 주소만 있다. `-claude.yml` 규칙 4개는 기존 규칙 파라미터가 4KB 한도에 차서 별도 SSM 파라미터
+  `/flux-cd/homelab-k3s-mcp/github-oidc-claude`(키 `MCP_GITHUB_OIDC_RULES_CLAUDE`, homelab-k3s-mcp#289 · flux-cd-apps#89)에 둔다.
+  도구는 4개 모두 `github_app_installation_token`·`api_resources`·`resource_list`·`resource_get`·`ping`·`pocket_aide_notification_send`
+  (클러스터 쓰기 도구는 기존 task 실행 기록상 쓴 적이 없어 넣지 않았다). githubToken 상한은 레포를 나열하지 않고 **제외할 레포**로
+  정한다(homelab-k3s-mcp#289 `excludeRepositories` — 나중에 생긴 레포도 자동 포함):
+  - 감지·리뷰: reconciler를 뺀 모든 레포(plugin-marketplace·인프라 레포 포함)에 `contents`·`metadata`·`pull_requests`·`statuses`·`actions` read
+  - 계획·실행: reconciler·plugin-marketplace·infrastructure·flux-cd·flux-cd-apps를 뺀 모든 레포에 권한 제한 없음(workflows 포함),
+    그리고 `plugin-marketplace`·`infrastructure`·`flux-cd`·`flux-cd-apps`에 `contents`·`metadata` read. 요청은 상한 하나에 통째로
+    들어맞아야 해서 이 넷에는 write가 없고,
+    제외 상한은 레포를 명시한 요청에만 들어맞는다.
+- **플러그인**: 마켓플레이스가 private라 클론용 읽기 토큰을 MCP로 받아 설치 명령의 git 환경 변수(`http.extraheader`)로만 준다.
+  GitHub App 설치 범위에 `plugin-marketplace`가 있어야 한다. 버전은 `vars.CLAUDE_CODE_VERSION`(기본 `stable`), 모델은 입력 `model`
+  또는 `vars.CLAUDE_MODEL`.
+- **식별**: 커밋 작성자는 로컬과 같은 `reconciler-bot`이고 committer만 `reconciler-bot-actions`라 Actions 실행분을 구분할 수 있다.
+- **결과**: step summary(선정 결과 · 도구 호출 · 이번 실행 커밋 · 최종 보고)와 아티팩트 `<stage>-claude-run`(대화 기록,
+  업로드 전 토큰 가림). result 이벤트 없음 · 오류 종료 · `k3s` 미연결 · push 안 된 커밋이 있으면 실패.
+- **사용 한도 초과 알림**: `claude -p`는 구독 한도에 걸려도 exit 0으로 끝나므로 대화 기록으로 판정한다 —
+  `rate_limit_event`의 `status: rejected`(줄이 깨져도 찾는다) 또는 오류 result의 한도 문구("You've hit your … limit",
+  "Rate limit reached" 등). 걸리면 실행을 「Claude 사용 한도 초과」로 실패 처리하고 PocketAide 푸시를 보낸다
+  (`pocket_aide_notification_send` — 한도 종류 · 재설정 시각(KST) · 대상 · 실행 링크). 각 `-claude.yml` OIDC 규칙에 이 도구를
+  넣어야 한다(없으면 경고만 남고 실행 판정은 그대로). 중간에 끊겨 점유가 남아도 재설정 뒤 다음 실행의 재개 규칙이 이어받는다.
+- **대상 전달**: Select target이 고른 대상(입력 `target_id`가 있으면 그 지목을 반영한 결과)을 `<tbm>/<rct>`로 시스템 프롬프트에
+  넘기고 스킬은 그 대상만 본다(슬래시 명령 뒤 문자열은 통째로 checkout 경로 `$ARGUMENTS`). 넘기지 않으면 스킬이 Step 0을 다시 돌려
+  러너와 다른 후보를 고를 수 있다 — 테스트에서 계획 스킬이 러너가 뺀 감지 비활성 모델의 task를 고른 적이 있다.
+- 스케줄은 없다(`workflow_dispatch`만). 로컬 타이머·MiniMax 감지와 동시에 돌아도 점유 compare-and-set이 경쟁을 막는다.
+- 공용 스크립트(`mcp_oidc_proxy.py`·`mcp_call.py`·`redact_secrets.py`)는 MiniMax 워크플로와 함께 쓴다 — 고치면 양쪽 동작을 함께 확인할 것.
+  Claude 전용은 `claude_transcript.py`(stream-json 기록 요약·검사)와 `.github/actions/{homelab-mcp,run-claude-skill}`.

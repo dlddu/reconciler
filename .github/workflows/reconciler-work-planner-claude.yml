@@ -1,0 +1,141 @@
+# 계획 단계 — Claude Code로 reconciler-work-planner 스킬 실행
+# (기존 reconciler-work-planner.yml과 별개 파일. 그 파일은 건드리지 않는다.)
+# 작업이 필요하다고 판정된(action_required · review_rejected · failed) task 한 건을 점유해 계획·PR 준비·실행 지침을 남긴다.
+#
+# 흐름(reconciler-local의 planner/run-planner.sh와 같다): 싼 게이트(Select target)가 대상을 확인했을 때만
+# 비싼 claude 실행을 띄운다. 점유·기록·커밋·push는 스킬이 한다(reconciler-repo-access 규약). reconciler push는
+# 러너가 체크아웃해 둔 워크플로 토큰(contents: write)으로, 대상 레포는 MCP App 토큰으로.
+# 게이트가 판단하지 못하면 claude를 띄우지 않고 실패로 끝낸다(fail-closed).
+#
+# 필요한 설정은 reconciler-drift-detector-claude.yml 머리말과 같다(environment llm-claude의 CLAUDE_CODE_OAUTH_TOKEN ·
+# homelab-k3s-mcp OIDC 규칙 · plugin-marketplace 읽기). 이 단계 추가 사항:
+#   계획 단계는 대상 레포에 브랜치·PR을 만든다 — 스킬이 MCP로 받는 App 토큰에 대상 레포 contents/pull_requests 쓰기가 필요하다.
+#   서버 MCP_GITHUB_OIDC_RULES에 이 워크플로 파일(reconciler-work-planner-claude.yml) 규칙(github_app_installation_token 필수).
+name: "Reconciler · Work Planner (Claude Code)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_id:
+        description: "계획할 대상 지목(rct_... task · tbm_... 모델 · tbm_.../rct_... — rct id가 여러 모델에 겹치면 마지막 형식). 비우면 자동 선정"
+        required: false
+        default: ""
+      model:
+        description: "Claude 모델 override(예: claude-opus-5-5, opus). 비우면 vars.CLAUDE_MODEL 또는 계정 기본값"
+        required: false
+        default: ""
+
+# 같은 스킬이 동시에 두 번 돌며 같은 task를 점유하거나 push가 충돌하지 않도록 직렬화한다.
+# 그룹은 기존(MiniMax) 워크플로와 따로 둔다 — 같은 그룹이면 대기 중인 실행이 서로를 취소한다.
+# (로컬 러너·MiniMax 워크플로와의 경쟁은 스킬의 status compare-and-set 점유 커밋이 막는다.)
+concurrency:
+  group: reconciler-work-planner-claude
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  SKILL_NAME: reconciler-work-planner
+  MCP_URL: ${{ vars.HOMELAB_K3S_MCP_URL || 'https://homelab-k3s-mcp.llkm.nl/mcp' }}
+  MCP_AUDIENCE: ${{ vars.HOMELAB_K3S_MCP_AUDIENCE || 'homelab-k3s-mcp' }}
+
+jobs:
+  run:
+    name: Run reconciler-work-planner
+    runs-on: ubuntu-latest
+    environment: llm-claude # 모델 키는 이 environment에만 있다(README 「모델 키 격리」)
+    timeout-minutes: 90
+    permissions:
+      contents: write # 스킬의 점유·기록 커밋 push(워크플로 토큰은 .github/workflows를 못 바꾼다)
+      id-token: write # homelab-k3s-mcp OIDC
+    steps:
+      - name: Checkout harness
+        uses: actions/checkout@v4
+        with:
+          path: harness
+          persist-credentials: false
+
+      # 스킬이 점유·기록할 reconciler(운영 데이터는 기본 브랜치가 진실이다). 워크플로 토큰을 남겨 스킬이 push에 쓴다.
+      # 스킬(reconciler-repo-access Step 1)은 checkout이 있으면 클론하지 않고 pull --rebase만 한다.
+      - name: Checkout reconciler (default branch)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: ws/reconciler
+          fetch-depth: 50
+
+      - name: Prepare output
+        run: |
+          echo "OUT=$RUNNER_TEMP/out" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/out/logs"
+
+      # 읽기 토큰을 요청할 대상 레포 — ToBeModel 데이터 소스에서(reconciler 제외).
+      - name: Target repositories
+        id: targets
+        run: echo "names=$(python3 harness/.github/scripts/target_repositories.py ws/reconciler)" >> "$GITHUB_OUTPUT"
+
+      # OIDC 프록시 + 사전 점검 + SOURCE_GITHUB_TOKEN(대상 레포 read) 발급.
+      - name: Connect homelab-k3s-mcp
+        id: mcp
+        uses: ./harness/.github/actions/homelab-mcp
+        with:
+          harness-dir: ${{ github.workspace }}/harness
+          url: ${{ env.MCP_URL }}
+          audience: ${{ env.MCP_AUDIENCE }}
+          log-dir: ${{ runner.temp }}/out/logs
+          read-token-repositories: ${{ steps.targets.outputs.names }}
+          recommended-tools: resource_list resource_get api_resources pocket_aide_notification_send
+
+      # 스킬 Step 0(대상 선정 · 진입 게이트)을 그대로 옮긴 읽기 전용 선정 — 기준은 reconciler-local
+      # 타이머 게이트(planner/precheck-plan.py)와 같다. 계획 대상 = 미점유 인수인계 지점
+      # (action_required · review_rejected · failed)에 있고 모델이 꺼져 있지 않은(enabled:false 아님) task.
+      # planning은 집지 않는다(새 러너는 resume할 lock이 없고, 버려진 lock을 구별할 수 없다).
+      # single in-flight: 지목이 없으면 인수인계 지점에 가장 오래 머문 한 건만 고른다.
+      # 레포에 쓰지 않는다 — action_required → planning 점유 커밋은 스킬 Step 1 몫.
+      # task 파일이 깨져 판단할 수 없으면 "계획할 것 없음"으로 단정하지 않고 실패로 끝낸다.
+      - name: Select target
+        id: select
+        env:
+          INPUT_TARGET_ID: ${{ inputs.target_id }}
+        run: |
+          python3 harness/.github/scripts/select_plan_target.py \
+            --repo ws/reconciler --target "$INPUT_TARGET_ID" \
+            --summary-file "$OUT/logs/select-target.md"
+
+      - name: Run skill (Claude Code)
+        if: steps.select.outputs.found == 'true'
+        uses: ./harness/.github/actions/run-claude-skill
+        with:
+          skill: ${{ env.SKILL_NAME }}
+          harness-dir: ${{ github.workspace }}/harness
+          oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          checkout-dir: ${{ github.workspace }}/ws/reconciler
+          default-branch: ${{ github.event.repository.default_branch }}
+          mcp-local-url: ${{ steps.mcp.outputs.local-url }}
+          out-dir: ${{ runner.temp }}/out
+          # 러너가 고른 대상을 스킬에 지목한다 — 스킬이 Step 0을 다시 돌려 다른 대상을 고르지 않게.
+          target-id: ${{ format('{0}/{1}', steps.select.outputs.model_id, steps.select.outputs.target_id) }}
+          model: ${{ inputs.model || vars.CLAUDE_MODEL }}
+          claude-version: ${{ vars.CLAUDE_CODE_VERSION || 'stable' }}
+          timeout: 80m
+          target-label: ${{ steps.select.outputs.target_id }}${{ steps.select.outputs.model_id && format(' ({0})', steps.select.outputs.model_id) || '' }}
+          artifact-name: work-planner-claude-run
+
+      - name: Summary
+        if: always()
+        env:
+          TARGET_ID: ${{ steps.select.outputs.target_id }}
+          FOUND: ${{ steps.select.outputs.found }}
+          REASON: ${{ steps.select.outputs.reason }}
+          PULL_REQUEST_URL: ${{ steps.select.outputs.pull_request_url }}
+        run: |
+          {
+            echo "### 대상 선정"
+            echo "- target found: ${FOUND:-false}"
+            echo "- target_id: ${TARGET_ID:-<none>}${REASON:+ · $REASON}"
+            [ -n "$PULL_REQUEST_URL" ] && echo "- PR: $PULL_REQUEST_URL"
+            [ "$FOUND" = "true" ] || echo "- claude 실행 안 함(대상 없음 또는 게이트 실패)"
+            echo
+            cat "$OUT/logs/select-target.md" 2>/dev/null || true
+          } >> "$GITHUB_STEP_SUMMARY"
