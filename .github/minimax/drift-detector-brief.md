@@ -24,13 +24,14 @@
 2. **점유 기록 보존.** 그 task의 `trigger`·`createdAt`과 `data/to-be-models.json`(기준선·수동 요청 필드 포함)은 그대로 둔다. 다른 task·다른 모델 파일도 그대로 둔다. 새 task를 만들지 않는다.
 3. **관측.** 모델의 `definition`과 dataSource가 가리키는 실제 대상을 열어 as-is/to-be 상태를 확인한다. 수동 트리거 task면 `trigger.reason`이 가리키는 지점을 실제로 확인한다.
 4. **기록.** `stateSummary`(asIs/toBe/gap)에 관측 사실을, `assessment.reason`에 판정 근거를 적는다.
-5. **판정.** 현재 상태를 `definition` 기준에 비춰 셋 중 하나로 끝낸다.
+5. **판정.** 현재 상태를 `definition` 기준에 비춰 셋 중 하나로 끝낸다. 기준은 `definition` **전체**다 — 목표 문장, 허용·불허 조건, 예외의 자격 요건, 충돌 시 기본 방향까지. 형식 불변식이나 대상 레포 게이트가 통과해도 다른 규칙을 어기면 gap이다.
    - `action_required` — 기준에 해당하는 gap이 남아 있고, 그 gap을 맡은 열린 형제 task가 없다. 이번 변화가 일부를 해소했어도 gap이 남았으면 여기다(실행 단계의 부분 슬라이스 → 재감지 → 후속 판정이 정상 흐름이다).
    - `no_action_needed` — 남은 gap이 없거나, 남은 gap을 이미 열린 형제 task가 맡고 있다.
    - `assessing` 유지 + `assessment.recheckAfter` — 롤아웃·머지 대기처럼 자동 해소될 가능성이 있다. `recheckAfter`는 시간대 있는 **미래** 시각이다.
 6. **검증.** 쓰기 전에 레코드를 `schemas/reconciliation-task.schema.json`으로 검증한다(python `jsonschema`). 통과하지 않으면 쓰지 않는다.
-7. **커밋.** 메시지는 `detect(<toBeModelId>/<taskId>): <요약>`, 단계마다 개별 커밋(상태 요약 → 판정).
+7. **커밋.** 단계마다 개별 커밋: 상태 요약 `detect(<toBeModelId>/<taskId>): summarize state` → 판정 `detect(<toBeModelId>/<taskId>): assess action`. Claude Code 감지 스킬과 같은 제목이다(뒤에 ` — <한 줄 요약>`을 붙여도 된다).
 8. **push.** `git pull --rebase` 후 push한다. 다른 모델의 커밋이 먼저 들어와 거절되면 `pull --rebase` 후 다시 push한다.
+9. **멈출 때도 lock을 남기지 않는다.** 넘겨받은 task를 판정하다가 이 실행 안의 사유(관측 실패, 검증 실패 등)로 끝내지 못하면, `assessing`을 유지한 채 가까운 미래의 `assessment.recheckAfter`와 멈춘 사유(`assessment.reason`)를 기록해 push하고 끝낸다. `recheckAfter` 없는 `assessing`으로 두지 않는다 — 러너는 그런 task를 「점유 중」으로 보고 그 모델을 다시 집지 않는다. 시작할 때 task가 없거나 `assessing`이 아니면 남의 기록이므로 아무것도 쓰지 않는다.
 
 ## 도구
 MCP 서버 `k3s`의 `github_app_installation_token`(대상 레포 읽기, contents:read로 좁힌다), `resource_list`/`resource_get`(쿠버네티스 관측).
