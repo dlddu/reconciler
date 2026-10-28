@@ -9327,6 +9327,42 @@
     "assessment": {
       "reason": "직전 슬라이스(#300, PRD-12 AC11)로 gap은 줄었으나 PRD-1·6·7·9 전체, PRD-4 음성 경로, PRD-8 위젯 AC1·3·8·11 등 미구현 AC가 남아 정의 판정 기준 1·2의 유의미한 drift가 지속된다. 롤아웃 진행 같은 자동 해소 경로가 없고 열린 task도 없으므로 재확인 유예 없이 즉시 계획 단계로 넘긴다(슬라이스 → 재감지 → 후속 task 흐름). 우선순위 판단은 planner 몫.",
       "assessedAt": "2026-10-28T17:07:52Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "PRD-8 메일 연동(AC3·AC11)의 백엔드 반쪽을 한 PR로 세운다: 계정별 IMAP 앱 비밀번호 보관(AES-256-GCM, 키 없으면 메일 기능만 꺼짐)·계정 연결/해제/재연결 API·읽기 전용(EXAMINE, BODY.PEEK) 미확인 메일 합산 조회(최신순 50통, 계정 라벨·미리보기). 선택 근거: 남은 gap 중 PRD-1·6·7·9는 LLM·STT 설계 결정이 앞서고 PRD-4 음성(AC1·AC2)은 PRD-6·7에 종속이라 지금 닫을 수 없는 반면, PRD-8 메일은 결정 사항(IMAP·앱 비밀번호·암호화·삭제 시점·읽기 전용)이 모두 확정돼 있고 iOS·위젯이 의존하는 서버 계약을 먼저 고정하는 것이 가장 작은 완결 단위다(환경에 iOS 빌드가 없어 앱·위젯 반쪽은 후속으로 분리). 완료 기준: PR 이 main 에 squash 착지하고 착지 커밋 ci-success 성공, main 에서 ① backend/migrations 에 메일 계정 테이블 마이그레이션(번호 중복 0) ② /api/mail/accounts(POST·GET·DELETE·재연결)와 /api/mail/unseen 라우트 존재 ③ go test ./... 통과(가짜 IMAP 서버 기반 연결 시험·인증 실패→재연결 필요·읽기 전용 확인·50통 상한·계정 합산 정렬·암호화 왕복·키 없음 시 비활성·해제 시 비밀번호 즉시 삭제) ④ data-model 문서(erd·query-patterns)·datamodelcheck 통과. 범위 밖(후속 재감지 몫): 앱 메일 화면(AC11)·위젯 메일 영역(AC3)·AC8 메일 탭 진입 링크, k8s Secret/ExternalSecret 키 주입(dlddu/flux-cd-apps), PRD-1·6·7·9 전부, PRD-4 음성 경로, PRD-8 AC1·AC8 부분 구현 잔여, E2E 시나리오(scenario-e2e 소관). 이 PR 은 마이그레이션을 담아 MA1 수동 승인 케이스에 닿는다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "main 최신에서 브랜치를 따고 마이그레이션 0018(mail_accounts: user_id·label·email·imap_host/port·암호문 비밀번호(키 버전 접두)·status(active/reauth_required)·created_at) 과 data-model 문서(erd·query-patterns, 풀스캔 기준표는 건드리지 않음)를 더한다",
+              "expectedOutcome": "마이그레이션 번호 중복 0, datamodelcheck 통과"
+            },
+            {
+              "seq": 2,
+              "action": "internal/mail 패키지: AES-256-GCM 암호화(키 버전 접두, 키 미설정이면 기능 비활성), 읽기 전용 IMAP 클라이언트(EXAMINE·BODY.PEEK 으로 미확인 목록·발신자·제목·시각·미리보기 조회, 접속 시험), 계정 저장소",
+              "expectedOutcome": "가짜 IMAP 서버 단위 테스트 통과, 읽음 플래그를 바꾸는 명령 0"
+            },
+            {
+              "seq": 3,
+              "action": "handlers 에 /api/mail/accounts(연결: 접속 시험 후 저장, 목록, 해제: 즉시 행 삭제, 재연결: 새 앱 비밀번호) 와 /api/mail/unseen(계정 필터·50통 상한·최신순·계정 라벨) 를 사용자 경계 아래 추가하고 main.go 에 배선",
+              "expectedOutcome": "핸들러 테스트 통과(타 사용자 계정 접근 404, 인증 실패 계정은 재연결 필요 표시, 키 없음이면 503)"
+            },
+            {
+              "seq": 4,
+              "action": "문서 동기화: test-widget.md 시나리오 3·11 구현 상태에 「백엔드 착지·앱/위젯 미구현」 반영, doc-tracker 2026-10 T-8 칸, comment-policy ledger 신규 행",
+              "expectedOutcome": "문서 CI 체크 초록"
+            },
+            {
+              "seq": 5,
+              "action": "PR 을 열고(머지하지 않음) CI 전체와 review/manual-approval(MA1 접촉 → 사람 승인) 상태를 확인한다",
+              "expectedOutcome": "ci-success 초록, 수동 승인 대기가 PR 본문에 명시"
+            }
+          ],
+          "plannedAt": "2026-10-28T17:20:00Z"
+        }
+      }
+    ]
   }
 ]
