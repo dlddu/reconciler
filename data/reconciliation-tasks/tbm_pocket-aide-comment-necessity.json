@@ -2365,6 +2365,39 @@
     "assessment": {
       "assessedAt": "2026-10-28T20:19:51Z",
       "reason": "작업 필요(action_required). #336이 들인 check.mjs 주석 1줄(5(i)-4)이 원장 행 줄 수·지문 불일치(3줄→실측 6줄)와 미판정을 만든다. rct_20261028-0002(PR #335)는 직전 증분 2줄만 다루고 이 1줄은 범위에 없어, 0002가 머지돼도 check.mjs 행은 실측 4줄 대 원장 3줄로 계속 어긋난다 — 그래서 새 task로 잇는다(0002의 gap 종결을 기다린 뒤 잔여를 판정하는 편이 맞으므로, planner는 0002 머지 순서·ledger.md check.mjs·notifier.go 행 충돌과 PR #335의 열린 상태를 확인하고 슬라이스를 겹치지 않게 잡을 것). 정적 기록 gap이라 자동 해소 요인이 없어 재확인 유예 없이 넘긴다. 슬라이스 예산(400줄) 내."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "새 1줄로 지목된 check.mjs 5(i)-4 주석(349행)은 이미 승인된 rct_20261028-0002의 PR #335(제거 3줄: 138·334·349)가 최신 main(526e843) 위로 rebase하면 그대로 닫는다는 것을 실측으로 확인했다 — 그래서 겹치는 두 번째 PR을 만들지 않고, 코드 변경 없는 직접 액션(#335 머지 후 재측정·검증)으로 이 task를 닫는다(대안인 별도 PR은 같은 3행·ledger.md 65행을 건드려 충돌하고 같은 주석을 두 번 판정하게 되어 기각). 범위(완료 기준): 머지된 main에서 check_ledger rc=0 · check.mjs 행 `완료`(3줄, 지문 1b2b6f9a788a) · notifier.go 행 완료 · 미판정 0. 범위 밖: 계획 이후 새로 들어오는 주석(재감지 몫).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR https://github.com/dlddu/pocket-aide/pull/335 가 main에 머지됐는지 확인(머지는 rct_20261028-0002 executor의 몫, 이 task는 머지하지 않는다)",
+              "expectedOutcome": "state=MERGED"
+            },
+            {
+              "seq": 2,
+              "action": "머지된 main에서 `python3 scripts/comment-policy/check_ledger.py` 와 as-is versionScript 재실행",
+              "expectedOutcome": "rc=0, L 완료·미판정 0, check.mjs 행 3줄·지문 1b2b6f9a788a"
+            },
+            {
+              "seq": 3,
+              "action": "범위 행 확인 후 검증 단계에서 succeeded 판정(새 게이트 오류가 있으면 그 원인 주석을 범위 밖 후속으로 기록)",
+              "expectedOutcome": "task 종료"
+            }
+          ],
+          "plannedAt": "2026-10-28T20:50:00Z",
+          "executionGuide": "## 사전 조건\n이 task는 코드를 바꾸지 않는다. 실측 근거: 이 계획 시점 pocket-aide main@526e843 에서 check_ledger 는 `ledger.md:65 주석 줄 3 ≠ 실측 6`(미판정 5, notifier.go)이고, PR #335 head(715bad1)를 origin/main 위로 rebase 한 결과는 check_ledger rc=0 · 주석 651줄 · 완료 651 · 미판정 0, check.mjs 변경은 주석 3줄(138·334·349행) 삭제뿐이다. 즉 #335 가 머지되면 gap 전체가 닫힌다. (#336 은 check.mjs 를 건드리지 않았다 — 지문 +1줄의 정체는 #333 의 349행 5(i)-4 주석이다.)\n\n## 순서\n1. `gh pr view 335` 로 머지 여부 확인. **머지 전이면 아무것도 하지 않고 점유를 approved 로 되돌려 중단**한다(순서가 의존적: #335 는 rct_20261028-0002 executor 가 머지). 이 task 가 #335 를 대신 머지하거나 같은 파일을 다른 PR 로 고치지 않는다.\n2. 머지됐으면 main 체크아웃에서 check_ledger.py 와 as-is versionScript 를 재실행한다.\n\n## 검증\n- check_ledger rc=0, 미판정 0, check.mjs 행 `완료`·3줄·`1b2b6f9a788a`, notifier.go 행 `완료`.\n- 그 사이 다른 PR 이 들인 주석으로 새 오류가 나면 그 파일/행은 범위 밖(재감지가 새 task 로 잇는다)이며, 위 두 행이 완료인지로만 수렴을 판정한다.\n\n## 주의\n- 롤백 대상 없음(변경 없음). 불가역 지점 없음.\n- 열린 PR #337(승인 여정 mockup)은 check.mjs·ledger.md 를 건드리지 않아 겹치지 않는다.\n\n## 범위 밖(후속)\n- 없음."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "pullRequestUrl": null,
+          "preparedAt": "2026-10-28T20:50:00Z",
+          "notes": "코드 변경 없음, 직접 액션으로 실행(검증 전용). 이 gap 은 기존 PR #335(rct_20261028-0002, approved)가 닫으며, 중복 PR 을 만들지 않았다."
+        }
+      }
+    ]
   }
 ]
