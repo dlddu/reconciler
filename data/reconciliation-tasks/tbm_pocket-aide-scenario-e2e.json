@@ -9245,7 +9245,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T15:52:26Z",
     "trigger": {
       "source": "version_change",
@@ -9491,6 +9491,44 @@
               "detail": "#329 미착지 — main(#334 squash) 위로 재베이스 재준비 필요"
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "직전 시도(#329 가 #334 squash 후 dirty, main ledger 실패로 미착지)를 이어 같은 슬라이스(「## e2e 매핑」을 실측 시나리오 94 에 맞추는 등재: 미등재 17 시나리오 등재 · approval-gate #17 stale 구현 대기→매칭)를 재준비한다. 적층이 충돌 원인이었으므로 선행 PR(#298·#334·#335 모두 머지됨)이 사라진 지금 main 위 단일 커밋으로 리베이스해 의존을 제거했다(가역 문서 1파일). **완료 기준(범위)**: 검산기 벡터 `files 62 · scenarios 94 · matched 59 · non-scenario 3 · exception 13 · pending 5 · gap 17` + ledger rc=0 + #329 squash 착지. **범위 밖**: 공백 17행의 XCUITest·인프라 신설, 구현 대기 5행.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "#329 head 740d889·mergeable·필수 status(ci-success, review/manual-approval) 확인, 진행 중 check 완료 대기",
+              "expectedOutcome": "필수 status 초록, mergeable clean"
+            },
+            {
+              "seq": 2,
+              "action": "머지 직전 base 재실측: merge-tree 충돌 0 + 결과 트리에서 검산기·ledger 실행",
+              "expectedOutcome": "충돌 0, 검산기 rc=0 (exception 13 · pending 5 · gap 17), ledger rc=0"
+            },
+            {
+              "seq": 3,
+              "action": "#329 squash 머지(sha 고정)",
+              "expectedOutcome": "main 에 doc-tracker 1파일 변경 착지"
+            },
+            {
+              "seq": 4,
+              "action": "착지 트리에서 검산기 --expect 와 check_ledger.py 재실행",
+              "expectedOutcome": "둘 다 rc=0, 벡터 일치"
+            }
+          ],
+          "plannedAt": "2026-10-28T23:00:00Z",
+          "executionGuide": "## 실행 지침 — rct_20261028-0001 3차 시도 (PR dlddu/pocket-aide#329, head `740d889`)\n\n**완료 기준**: #329 가 main 에 squash 착지하고 착지 트리에서 ① 검산기 rc=0, 마지막 줄 정확히 `ok — files 62 · scenarios 94 · matched 59 · non-scenario 3 · exception 13 · pending 5 · gap 17` ② `python3 scripts/comment-policy/check_ledger.py` rc=0 ③ PR 필수 status 초록(`ci-success`·`review/manual-approval`).\n\n### 직전 실패 원인과 이번 변경\n직전: #334 squash 머지 뒤 #329 가 dirty(적층 구조), main ledger 실패(#335 미머지). 이번: #334·#335 모두 머지됐고, #329 를 main(dbf9b4e) 위 **단일 커밋(doc-tracker 1파일)** 으로 리베이스했다. 선행 PR 의존이 없다. 계획 시점 mergeable=MERGEABLE, review/manual-approval·comment-policy ledger success, 나머지 샤드는 문서 변경이라 skipped.\n\n### 순서 (직렬)\n1. #329 의 head 가 `740d889` 인지, mergeable 인지, 필수 status(`ci-success`·`review/manual-approval`)가 초록인지 확인. 진행 중인 check(journey-mockup)가 있으면 완료까지 기다린다. head 가 바뀌어 있으면 sha 를 새로 고정하고 manual-approval 재판정을 확인한다.\n2. 머지 직전 base 재실측: `git merge-tree --write-tree origin/main <head>` 충돌 0, 그 트리에서 검산기·ledger 실행. main 이 tracker 를 다시 건드려 충돌/불일치면 실행에서 해소하지 말고 재준비로 넘긴다.\n3. squash 머지(`sha=740d889…` 고정).\n4. 착지 트리에서 검산기 `--expect` 와 check_ledger.py 재실행.\n\n### 검증\n검산기 전문은 레코드 rct_20261013-0002 첫 시도 `attempts[0].plan.executionGuide` 의 파이썬 블록. checkout 밖에 저장해 `python3 -I verify_e2e_map.py <checkout> --expect \"files 62 · scenarios 94 · matched 59 · non-scenario 3 · exception 13 · pending 5 · gap 17\"`. 불변식 94−13−5=76=59+17. 계획 시점 리베이스 트리에서 rc=0 확인.\n\n### 주의\n문서 1파일 변경, 롤백은 squash revert, 불가역 지점 없음.\n\n### 범위 밖(후속 — 재감지가 새 task 를 연다)\n공백 17행의 전용 XCUITest 신설: approval-gate #15·#18~21, session-platform #2~11·#13·#14(BF-5 스텁 PR #327 착지 후). 구현 대기 5행(docs-impl 몫).\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261028-0001-e2e-ledger",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/329",
+          "preparedAt": "2026-10-28T23:00:00Z",
+          "notes": "기존 PR #329 재사용(force-with-lease 로 head c257338→740d889). main(dbf9b4e) 위 cherry-pick 1커밋, doc-tracker 만 변경, 충돌 없음. 검산기 ok(files 62 · scenarios 94 · matched 59 · non-scenario 3 · exception 13 · pending 5 · gap 17), check_ledger.py rc=0. 푸시 후 mergeable=MERGEABLE, review/manual-approval·comment-policy ledger success."
         }
       }
     ]
