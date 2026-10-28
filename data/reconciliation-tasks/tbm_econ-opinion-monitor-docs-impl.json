@@ -13692,7 +13692,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T23:18:24Z",
     "trigger": {
       "detectedAt": "2026-10-28T23:18:24Z",
@@ -13715,6 +13715,50 @@
     "assessment": {
       "reason": "문서 SSOT(design-tracker 수렴 대기 행·AC·여정)가 요구하나 구현에 없는 표면이 남아 있다. 정적 코드·문서 격차라 자동 해소 가능성이 없고(web 슬라이스는 수렴 루프가 한 건씩 착지시킨다), 문서→구현 완전 수렴이 목표이므로 지금 작업이 필요하다. 계약 변경 없이 착지 가능한 `compare` 4개 표면(Compare.tsx 부재 확인)이 다음 슬라이스 후보이고, 소스별 저신뢰 건수·`integrity` 라우트·구간 파라미터·일 단위 시계열이 필요한 표면(fairness 저신뢰 note, gap-go, sentiment 기여 뉴스 링크, reprocess 전후 추이)은 서빙/라우트 선행이라 planner가 범위에서 제외하거나 별도 판단해야 한다. 이번 변화 자체는 정합하여 회귀·모순은 없다.",
       "assessedAt": "2026-10-28T23:19:07Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "compare 수렴 슬라이스를 서빙·계약 무변경으로 닫히는 두 표면(축 컬럼 `공통 n축`/`KR만` 배지, `축 간 격차` 카드의 격차 후보 행)으로 한정한다. 대상 국가 select(Gold에 차원 없음 → 계약 변경 MA1 선행)와 표기 통합 안내(통합 전 표기가 서빙에 없음)는 범위 밖이다. 성공 기준: 두 표면이 응답 데이터만으로 목업 문면대로 그려지고 테스트·목업 정합 게이트가 통과하며 design-tracker가 갱신되는 것. 대안으로 계약·집계까지 넓히는 안은 수동 승인·다언어 변경이라 한 슬라이스로 크고 불가역성이 커 택하지 않았다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "Compare.tsx에 축별 상위 대상 대조(presence)를 계산하고 컬럼 행에 PresenceBadge(`공통 n축`/`{축}만`)를 붙인다",
+              "expectedOutcome": "둘 이상 축에 있는 대상은 `공통 n축`, 한 축뿐이면 `KR만` 등으로 표기된다"
+            },
+            {
+              "seq": 2,
+              "action": "`축 간 격차` 카드 추가: 격차 순 후보 행, 상위 밖 축은 `상위 밖`, 행 클릭 시 /trend로 이동, 모두 겹치면 `한 축에만 있는 대상이 없습니다.` note",
+              "expectedOutcome": "/compare 하단에 카드가 서고 행 클릭이 최대 점유율 축·대상을 /trend 쿼리로 넘긴다"
+            },
+            {
+              "seq": 3,
+              "action": "tokens.css에 cmp-common/cmp-only/cmp-gap* 선언 추가, Compare.test.tsx에 5건 추가",
+              "expectedOutcome": "vitest 168 통과, tsc·eslint·check-mockup-render·check-comment-ledger 통과"
+            },
+            {
+              "seq": 4,
+              "action": "design-tracker 갱신: 배지 행을 해소 이력으로 이동, 격차 패널·수렴 대기 행 범위 축소",
+              "expectedOutcome": "남은 compare 편차는 대상 국가 select·표기 통합 안내 두 개뿐"
+            },
+            {
+              "seq": 5,
+              "action": "[실행 단계] PR #278 머지",
+              "expectedOutcome": "main에 반영, web 트리 해시 변화로 재감지"
+            }
+          ],
+          "plannedAt": "2026-10-28T23:40:00Z",
+          "executionGuide": "## 실행 순서\n1. PR #278(`reconcile/rct_20261028-0007`, head `cd46000`)의 CI(`required`, 문서 게이트)가 success인지 확인한다. 변경은 `web/` + design-tracker 문서뿐이라 `review/manual-approval`은 판정기가 `format_changed=false`로 붙인다(MA1~MA6 비해당).\n2. 머지(squash). 단계는 이것 하나다 — 병렬 요소 없음.\n3. 머지 후 as-is `web` 트리 해시가 바뀌는지 확인한다(재감지 입력).\n\n## 검증 방법\n- 로컬 사전 결과: `npm test` 168 통과, `tsc -b`·`eslint` 클린, `check-mockup-render.py`·`check-comment-ledger.py` 통과.\n- 머지 커밋에서 `web/src/screens/Compare.tsx`에 `PresenceBadge`·`cmp-gap-row`가 있고 `Compare.test.tsx` 신규 5건이 통과하는지 본다.\n- design-tracker에서 `공통`/`축 고유` 배지 행이 사라지고 해소 이력에 rct_20261028-0007 행이 있는지 본다.\n- 수렴 판정은 **이 시도의 범위(배지 + 축 간 격차 카드)** 기준이다.\n\n## 범위 밖(후속)\n- 「대상 국가」 select: Gold(`subject_trend`·`axis_sentiment`)에 대상 국가 차원이 없다. `contracts/`(MA1 수동 승인)·집계 변경이 선행한다.\n- 표기 통합 안내(통합 전·후 표): 통합 전 표기가 서빙에 없다.\n- fairness 저신뢰 note·`integrity` 라우트, sentiment 기여 뉴스 링크(구간 파라미터), reprocess 전후 추이(일 단위 시계열)도 서빙 선행이라 이번 범위 밖이다.\n\n## 주의사항\n- 불가역 지점 없음. 롤백은 머지 커밋 revert(web 화면 단독, 서빙·계약·데이터 무영향).\n- 머지 전 head SHA가 `cd46000`인지 확인한다(이후 푸시가 있으면 CI 재확인).\n- 배지는 응답의 키 문자열 일치로 계산한다. 집계 키가 카테고리(AC2.2)라 정확하지만, 카테고리 판단이 없는 구 분석 행은 서술 대상 문자열이 키라 표기 변형이 갈릴 수 있다 — 후속 표기 통합 안내 몫이다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261028-0007",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/278",
+          "preparedAt": "2026-10-28T23:40:00Z",
+          "notes": "head cd46000. web/ + docs 변경만이라 check-data-format-change.py format_changed=false(수동 승인 케이스 비해당) 로컬 확인. 머지는 하지 않음."
+        }
+      }
+    ]
   }
 ]
