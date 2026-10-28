@@ -9877,7 +9877,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T22:28:09Z",
     "trigger": {
       "detectedAt": "2026-10-28T22:28:09Z",
@@ -9944,6 +9944,49 @@
           "reviewedAt": "2026-10-28T22:58:00Z",
           "reason": "PR #338(head 5d2adb0)은 열려 있고 충돌 없음, diff는 계획대로 2파일(테스트 +82, doc-tracker 6/6)이며 위험도 low·롤백(squash revert)도 명확하다. 그러나 head 의 필수 CI 중 `comment-policy ledger` 가 failure(main bf8c634 에서는 success)이고 iOS 3샤드는 아직 진행/대기 중이라 CI 통과를 확인할 수 없다. planner 는 check_ledger.py rc=0 이라 기록했으나 CI 결과와 불일치해 준비물이 유효하지 않다.",
           "comment": "PR #338 에서 `comment-policy ledger` check 실패 원인(CI 로그)을 확인해 고칠 것 — 예: 새 ApprovalDecisionModeUITests.swift 의 주석이 comment-policy ledger(scripts/comment-policy/check_ledger.py) 규칙에 맞지 않거나 ledger 항목 갱신이 필요한 경우 반영하고, 로컬 rc=0 이 CI 와 다른 이유(실행 인자/기준 브랜치)도 점검. 수정 후 ledger·iOS 3샤드·ci-success 가 초록인 head 를 만들어 재계획/재준비하면 승인 가능. (참고: review/manual-approval 은 이미 success 였으나 새 커밋이 오르면 무효.)"
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "직전 시도와 같은 슬라이스(approval-gate #18 전용 XCUITest ApprovalDecisionModeUITests 신설 + 「## e2e 매핑」 갱신, PR #338)를 유지하되, 리뷰 거부 사유인 comment-policy ledger 실패를 PR 에 고쳐 재준비한다. 원인은 새 파일의 줄머리 주석 3줄이 원장에 없던 것이라 원장 행을 더하는 대신 불필요한 단계 주석 3줄을 제거했다(가역·테스트 전용). 범위·완료 기준·범위 밖(#19, #15·#21, #20, session-platform 12건)은 직전과 같고, 완료 기준은 #18 이 파일 1개로 매칭(매칭 +1·공백 −1·파일 +1)되고 PR #338 이 squash 착지하는 것. 사람 소유 결정 없음, 수동 승인 케이스 비해당.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #338 의 head(현재 35ba443)·mergeable·diff(2파일)를 재조회하고 main 이동/doc-tracker 충돌 여부를 확인한다. 충돌이면 main 을 브랜치에 머지(force 없음)하고 집계 칸만 델타로 맞춘다.",
+              "expectedOutcome": "충돌 0, diff = ApprovalDecisionModeUITests.swift + doc-tracker/2026-10.md"
+            },
+            {
+              "seq": 2,
+              "action": "comment-policy ledger·iOS 3샤드·SwiftLint·ci-success 가 새 head 에서 초록인지 확인한다.",
+              "expectedOutcome": "ledger 포함 필수 check 초록(ApprovalDecisionModeUITests 통과)"
+            },
+            {
+              "seq": 3,
+              "action": "PR #338 을 head sha 고정으로 squash 머지한다.",
+              "expectedOutcome": "main 에 1커밋 착지, 변경 2파일"
+            },
+            {
+              "seq": 4,
+              "action": "착지 트리에서 선언 grep·매핑 표/공백 표·집계 불변식·check_ledger.py 를 확인한다.",
+              "expectedOutcome": "#18 선언 1줄, 공백 표에서 제거, 불변식 성립, ledger rc=0"
+            },
+            {
+              "seq": 5,
+              "action": "main push CI(ios-test) 확인.",
+              "expectedOutcome": "ios-test 초록"
+            }
+          ],
+          "plannedAt": "2026-10-28T23:10:00Z",
+          "executionGuide": "## 실행 지침 — rct_20261028-0006 (PR #338, head = 브랜치 `reconcile/rct_20261028-0006-decision-mode` 2커밋, 현재 head `35ba443`(직전 `5d2adb0` 에 ledger 수정 커밋 추가))\n\n**완료 기준**: approval-gate #18 이 전용 파일 `ApprovalDecisionModeUITests.swift` 로 매칭되고 PR #338 이 squash 로 main 에 착지한다. 집계는 머지 직전 base 실측 기준 매칭 +1 · 공백 −1 · 파일 +1 (작성 시점 base bf8c634 기준 매칭 60 · 공백 16 · 파일 63 · 불변식 94−13−5=60+16 성립).\n\n### 순서 (직렬)\n1. **base 재실측**: `gh pr view 338 --json mergeable,mergeStateStatus,headRefOid`, `gh pr diff 338 --name-only` = `docs/product/doc-tracker/2026-10.md` · `ios/PocketAideTests/ApprovalDecisionModeUITests.swift` 둘뿐. main 이 움직여 doc-tracker 충돌이면 main 을 브랜치에 머지(force 없음)하고 집계 칸만 새 base 실측 + 델타(매칭 +1 · 공백 −1 · 파일 +1 · approval-gate 공백 −1)로 맞춘다. 같은 절을 자매 PR(#327 등)이 바꿨다면 그 결과 위에서 델타만 적용.\n2. **CI 확인**: 먼저 `comment-policy ledger` 가 초록인지 본다(직전 시도 실패 원인은 아래 주의사항).  iOS 3샤드(새 클래스는 `scripts/ci/ios_test_shards.py` 가 중앙값 가중으로 자동 편입 — 경고 `missing from ios-test-durations.json` 은 무해), SwiftLint, ci-success. `ApprovalDecisionModeUITests` 의 단정 실패는 계획 결함이므로 `failed` 로 두고 사유(어느 단계의 어떤 필드)를 남긴다. 알려진 flake(`WebhookPushSettingsUITests` 등 다른 클래스)만 빨강이면 같은 sha 로 실패 잡 1회 재실행, 커밋 금지. main 에서도 실패 중인 check 는 이 PR 귀속이 아니다.\n3. **squash 머지**: `PUT /repos/dlddu/pocket-aide/pulls/338/merge` `{\"merge_method\":\"squash\",\"sha\":\"<head sha 고정>\"}`. 대상 레포 수동 승인 정책의 케이스에 닿지 않는 테스트·문서 변경이다(`review/manual-approval` 이 붙으면 사람 승인 경로이므로 임의로 붙이지 말 것).\n4. **착지 검증**: main 에서 `grep -H '^// 검증 시나리오:' ios/PocketAideTests/*UITests.swift | grep '시나리오 18'` 가 정확히 1줄, 「## e2e 매핑」 공백 표에 #18 없음·매핑 표에 있음, 집계 불변식 성립, `python3 scripts/comment-policy/check_ledger.py` rc=0.\n5. **main push CI**: ios-test 초록(TestFlight 업로드 실패는 별개).\n\n### 검증 방법 (파일 내용)\n- 1단계 R1: 조회 `PENDING`, `decisionMode` null → 사용자 `POST /api/approvals/{id}/approve` 200 → 조회 `APPROVED` + `manual`.\n- 2단계 R2: `PATCH /api/approval-settings {\"auto_response\":\"AUTO_APPROVE\"}` 200 뒤 생성 응답이 이미 `APPROVED` + `auto`.\n- 3단계 R3: 모드 `NONE` 복원, `timeoutSeconds`=5, 6초 뒤 `EXPIRED` + `expired`. 모든 응답에 `sub`·`email`·`userId` 없음.\n\n### 주의사항\n- 테스트 전용 + 문서. 제품 코드·워크플로·매니페스트 미접촉 — 사용자에게 보이는 동작 변경 없음.\n- 모드 설정은 사용자별(실행 고유 `login_hint` subject)이라 다른 클래스와 간섭하지 않고, teardown 이 `NONE` 복원·키 폐기를 한다. 3단계의 6초 sleep 은 만료 대기이므로 실패 시 타이밍(백엔드 만료 처리 지연)을 의심하되 sleep 을 줄이지 말 것.\n- 롤백: squash 커밋 `git revert`(문서·테스트만, 불가역 없음).\n\n### 범위 밖(후속) — 재감지가 새 task 로 잇는다\n- #19(`ExternalNotificationDeliveryUITests` 신설 — 푸시 수신부·알림 탭이 걸려 별도 슬라이스, 재검토 2026-12-15), #15·#21(network-cut 릴레이 선행), #20 및 session-platform #2~11·#13·#14(BF-5 세션 플랫폼 스텁 PR #327 선행).\n\n### 재계획 메모 (직전 시도 review_rejected 반영)\n- 직전 거부 사유: head `5d2adb0` 에서 `comment-policy ledger` 실패. 원인은 CI 로그 `L 표: ApprovalDecisionModeUITests.swift (3줄) 가 어느 행에도 없다` — 새 파일의 `// Step N:` 줄머리 주석 3줄이 원장(docs/comment-policy/ledger.md)에 행이 없었다. 계획 시점 「check_ledger.py rc=0」 기록은 오류였고 실제로는 rc=1 이었다(재현 확인).\n- 조치: 해당 3줄 주석을 제거(원장 행 추가 대신 — 판정 안 한 주석을 들이지 않는다). 새 head `35ba443` 에서 로컬 `check_ledger.py` rc=0(L 파일 84·미판정 0) 실측. `// 검증 시나리오:` 선언은 스캔 대상이 아니라 영향 없음.\n- 새 커밋이 올라 `review/manual-approval`·CI 가 재평가된다. 1단계에서 head sha 를 재조회해 그 sha 로 머지한다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261028-0006-decision-mode",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/338",
+          "preparedAt": "2026-10-28T23:10:00Z",
+          "notes": "기존 PR #338 에 수정 커밋 35ba443 추가(ApprovalDecisionModeUITests.swift 의 // Step N: 주석 3줄 제거, -3줄). 로컬 check_ledger.py rc=0 실측(수정 전은 rc=1 재현). 새 head 의 CI 는 큐 진행 중이라 이 시점 미확인 — 실행 단계가 확인한다. XCUITest 는 macOS 러너가 없어 로컬 실행 불가."
         }
       }
     ]
