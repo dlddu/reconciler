@@ -29,7 +29,7 @@
    - `no_action_needed` — 남은 gap이 없거나, 남은 gap을 이미 열린 형제 task가 맡고 있다.
    - `assessing` 유지 + `assessment.recheckAfter` — 롤아웃·머지 대기처럼 자동 해소될 가능성이 있다. `recheckAfter`는 시간대 있는 **미래** 시각이다.
 6. **검증.** 쓰기 전에 레코드를 `schemas/reconciliation-task.schema.json`으로 검증한다(python `jsonschema`). 통과하지 않으면 쓰지 않는다.
-7. **커밋.** 단계마다 개별 커밋: 상태 요약 `detect(<toBeModelId>/<taskId>): summarize state` → 판정 `detect(<toBeModelId>/<taskId>): assess action`. Claude Code 감지 스킬과 같은 제목이다(뒤에 ` — <한 줄 요약>`을 붙여도 된다).
+7. **커밋.** 메시지는 `detect(<toBeModelId>/<taskId>): <요약>`, 단계마다 개별 커밋(상태 요약 → 판정).
 8. **push.** `git pull --rebase` 후 push한다. 다른 모델의 커밋이 먼저 들어와 거절되면 `pull --rebase` 후 다시 push한다.
 
 ## 도구
