@@ -1387,7 +1387,7 @@
   {
     "id": "rct_20261026-0001",
     "toBeModelId": "tbm_pocket-aide-e2e-mock-policy",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-10-26T19:59:01Z",
       "source": "version_change",
@@ -1678,6 +1678,44 @@
               "detail": "미머지. 허용목록 대조 불가. 범위(시나리오 1 의 2·4·11·12단계 CI 관찰) 미달성."
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "재계획(직전 시도 failed: PR #327 iOS shard 1 의 SessionsCreateUITests 단정 실패로 머지 불가). 접근·범위·위험도는 동일 — BF-5(등재 EXT, 선행 없음)를 session-platform 앱 경로 스텁 + SESSION_PLATFORM_URL 우회로 착수하고, 범위(완료 기준)는 시나리오 1 의 2·4·11·12단계가 CI 에서 관찰되고 허용목록 3행이 코드와 1:1 인 것, 범위 밖은 BF-6(시나리오 7~10·13·14) 등재. 달라진 점: 실패 원인을 앱 코드·CI 로그로 규명했다 — 테스트가 상세 화면을 otherElements 로 찾고(컨테이너 식별자는 노출되지 않음) 상태 텍스트에 없는 '실행 중'을 기대한 테스트 결함이며, PR 브랜치 커밋 32a5641 로 고쳤다. shard 0 의 권한 테스트 실패는 PR 무관(main green)이라 재실행 대상. 사람 소유 결정 없음(MA1~MA5 미접촉).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #327 head 가 32a5641 이상이고 review/manual-approval 이 그 head 에서 success 인지 확인한다.",
+              "expectedOutcome": "head 32a5641+, manual-approval success."
+            },
+            {
+              "seq": 2,
+              "action": "새 head CI 완료를 기다려 comment-policy ledger·iOS shard 0~2·ci-success 가 success 인지 확인한다. 러너 크래시·PR 무관 권한 테스트 실패는 해당 job 만 재실행(최대 2회), Sessions* 단정 실패면 머지하지 않는다.",
+              "expectedOutcome": "ci-success success; Sessions 4개 클래스 pass."
+            },
+            {
+              "seq": 3,
+              "action": "ci-success success 를 확인한 뒤 PR #327 을 머지한다(스텁·액션·Sessions* XCUITest·정책 문서 BF-5 해소·BF-6 등재).",
+              "expectedOutcome": "main 에 머지 커밋 생성."
+            },
+            {
+              "seq": 4,
+              "action": "main HEAD 에서 as-is 지문 versionScript 를 실행하고 정책 문서 허용목록과 양방향 대조한다; BF-5 해소·BF-6 열린 행을 확인한다.",
+              "expectedOutcome": "허용목록 == 코드 실측(스텁 관련 3행 포함); BF-5 닫힘, BF-6(재검토 2027-01-20) 열림."
+            }
+          ],
+          "plannedAt": "2026-10-29T00:10:00Z",
+          "executionGuide": "## 실행 지침 — PR #327 (head 32a5641) 머지 후 BF-5 해소 확인\n\n### 이번 재계획에서 달라진 점 (직전 failed 원인)\n직전 시도는 iOS shard 1 의 `SessionsCreateUITests.testCreateSessionFromPlatformCatalog` 단정 실패(`Creating should land on the new session's detail`)로 머지하지 못했다. 앱·스텁 코드(SessionCreateSheet→create→path.append→SessionDetailView)를 읽어 **테스트 자체의 결함 두 곳**으로 규명했고 PR 브랜치에 커밋 `32a5641` 로 고쳤다.\n1. 상세 화면을 `app.otherElements[\"sessions.detail.screen\"]` 로 찾았다. 식별자는 SessionDetailView 최상위 컨테이너(VStack)에 붙어 있어 otherElements 로 노출되지 않는다. 같은 PR 의 다른 테스트(SessionsDeleteUITests)는 `descendants(matching: .any)` 로 찾고 통과한다 → 같은 locator 로 교체.\n2. `sessions.detail.state` 텍스트는 `AgentSessionFormatting.stateDetail`(active → \"환경이 떠 있어요 · 마지막 사용 …\")이며 \"실행 중\"은 배지 라벨(`SessionStateBadge`)이다 → 기대 문구를 \"환경이 떠 있어요\"로 교체.\nshard 0 의 `WebhookPushSettingsUITests.testDeniedSystemPermissionShowsNotice` 실패는 이 PR 이 건드리지 않은 시스템 알림 권한 테스트이고 main(bf8c634f)은 green 이다 → 인프라/플레이키로 보고 **해당 job 만 재실행**한다. 단 재실행에서도 같은 테스트가 반복 실패하면 PR 과의 연관을 다시 조사한다.\n\n### 순서 (직렬 — 앞 단계 결과가 뒤 단계의 게이트)\n1. PR #327 새 head 가 `32a5641` 이상인지, `review/manual-approval` 이 그 head 에서 success 인지 확인한다(새 커밋이 올라오면 재확인). 사람 승인 요구 없음(MA1~MA5 미접촉).\n2. 새 head CI 완료를 기다린다(`gh pr checks 327`). 검증: comment-policy ledger · judge · iOS shard 0~2 · ci-success 모두 success.\n   - 러너 부트스트랩 크래시(`Early unexpected exit`/XCTWaiter stalled)나 PR 과 무관한 권한 테스트 실패 → 해당 job 재실행(`gh run rerun <id> --failed`), 최대 2회.\n   - Sessions* 4개 클래스(SessionsTabUITests·SessionsCreateUITests·SessionsDeleteUITests·SessionsPlatformUnreachableUITests) 중 하나라도 단정 실패면 **머지하지 말고** 로그에서 원인을 적고 종료(failed).\n3. ci-success 가 success 일 때만 PR #327 을 머지한다.\n4. main HEAD 에서 as-is 지문 versionScript 를 실행해 허용목록과 양방향 대조한다.\n\n### 검증 방법\n- `gh pr checks 327 -R dlddu/pocket-aide` 전부 pass.\n- main 머지 후 ios-test 에서 Sessions 4개 클래스 pass.\n- 지문: sites/files 가 기준선 32/17 에서 늘되 고아·미등재 0; `docs/e2e-mocking-policy.md` 에서 BF-5 가 닫힌 표로 이동, BF-6 열림(재검토 2027-01-20).\n\n### 주의사항\n- 되돌릴 수 없는 지점 없음. 롤백 = 머지 커밋 revert 한 번(테스트용 스텁·테스트·문서만).\n- 프로덕션/데이터 영향 없음. 앱·백엔드 제품 코드 변경 없음.\n- 임의 Swift 수정 금지 — 새 실패가 나면 원인을 기록하고 재계획 입력으로 남긴다. Swift 는 로컬 컴파일하지 못했고(CI 가 1차 검증) 이번 수정은 두 줄 locator/문구 교체뿐이다.\n\n### 범위 밖(후속)\n시나리오 7~10·13·14(프롬프트·출력·아카이브·복원 단정)는 원장 BF-6 로 이 PR 이 등재했고 이 모델이 후속 해소한다."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261026-0001",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/327",
+          "preparedAt": "2026-10-29T00:10:00Z",
+          "notes": "기존 PR #327 을 이어 쓴다(새 PR 없음). SessionsCreateUITests.swift 두 줄 수정 커밋 32a5641 푸시(locator→descendants(.any), 상태 문구→'환경이 떠 있어요'). Swift 는 로컬 컴파일하지 못했고 새 head CI 로 확인해야 한다. review/manual-approval 은 새 head 에 success."
         }
       }
     ]
