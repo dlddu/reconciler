@@ -13562,7 +13562,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T22:58:20Z",
     "trigger": {
       "detectedAt": "2026-10-28T22:58:20Z",
@@ -13585,6 +13585,45 @@
     "assessment": {
       "assessedAt": "2026-10-28T22:58:56Z",
       "reason": "문서 SSOT(목업·AC)가 요구하나 구현에 없는 표면이 남아 있다. 자동 해소될 성격이 아니며 compare(대상 국가 select·공통/고유 표시·격차 후보 행·표기 통합 안내)와 fairness/trace(AC2.5 저신뢰 분리 표기·§4 컨트롤)는 계약 변경 없이 착지 가능해 지금 한 슬라이스로 수렴시킬 수 있다. sentiment 기여 뉴스 링크·reprocess 전후 추이 카드/ua-trend-go/gap-go는 서빙 계약 변경이 선행이라 planner가 범위에서 제외하거나 별도 판단해야 한다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "detector가 계약 변경 없이 착지 가능하다고 본 compare·fairness/trace 중, 실제로 서빙 계약·제품 결정 없이 닫히는 `fairness` 기여 뉴스 카드 아래 두 갈래 컨트롤만 슬라이스로 계획한다: `「원문 열기」가 열리지 않으면` → `보존 원문으로 이어서 보기 →`(/trace), `기사가 이 대상이 아니라면` → `재처리 범위 정하기 →`(/reprocess). 완료 기준은 이 두 표면의 착지와 design-tracker 해소 행·수렴 대기 행 축소다. 범위 밖: compare(대상 국가 차원이 Gold·서빙에 없고 공통/고유 표시·표기 통합은 대상 동일성 판정이라는 제품 결정이 선행, 격차 후보 행은 CompareResponse 격차 필드 선행 — 트래커가 이미 그렇게 막았다) · fairness `수집 이상 점검하기`(도착지 integrity 라우트 없음) · 소스 카드 저신뢰 note(소스별 저신뢰 건수가 서빙에 없음) · 소멸 배너 「판정으로 →」 · sentiment 기여 뉴스 링크 · reprocess 전후 추이 카드·ua-trend-go·gap-go. 대안(compare 전체)은 계약 변경·사람 결정이 선행해 기각; 정적 링크 변경이라 PR revert로 롤백된다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "Fairness.tsx 기여 뉴스 카드 아래에 `.art-hints` 블록 추가: `보존 원문으로 이어서 보기 →`(Link /trace), `재처리 범위 정하기 →`(Link /reprocess)",
+              "expectedOutcome": "기사 목록 아래에서 두 갈래 문면과 링크가 보인다"
+            },
+            {
+              "seq": 2,
+              "action": "tokens.css 에 `.art-hints` 스타일 추가(주석 없이, comment ledger 불변), Fairness.test.tsx 에 두 링크·이동 테스트 1건 추가",
+              "expectedOutcome": "vitest 163 passed"
+            },
+            {
+              "seq": 3,
+              "action": "design-tracker 해소 행(#276) 추가, fairness·trace 수렴 대기 행을 남은 몫(수집 이상 점검·저신뢰 note·소멸 배너)으로 축소",
+              "expectedOutcome": "해소된 등재에 #276 행, 수렴 대기 행은 남은 몫만 가리킨다"
+            },
+            {
+              "seq": 4,
+              "action": "tsc·eslint·vitest·comment-ledger·mockup-render 확인 후 PR #276 머지(executor)",
+              "expectedOutcome": "전부 통과, 머지로 as-is·to-be 버전이 이동하고 재감지가 잔여 gap만 센다"
+            }
+          ],
+          "plannedAt": "2026-10-28T23:08:00Z",
+          "executionGuide": "## 실행 순서\n1. PR https://github.com/dlddu/economic-opinion-trend-monitor/pull/276 head(`6fc1743`)에서 CI(`required`·ci/build·e2e·comment-ledger·render·docs/*)와 `review/manual-approval` 상태를 확인한다. 변경 경로(`web/`, design-tracker)는 직전 슬라이스(#272~#274)와 같은 부류로 자동 success 가 붙을 것이다. 안 붙으면 `review.manualApproval` 을 따른다.\n2. squash 머지(`--match-head-commit`). 단일 PR 이라 순서 의존·병렬 없음. main 이 그 사이 움직였으면(#275 처럼 docs 만 바뀐 경우) 충돌 여부만 확인한다.\n3. 머지 후 design-tracker 「해소된 등재」의 `#276 (squash)` 가 실제 PR 번호와 맞는지 확인한다.\n\n## 검증 방법 (완료 기준 = 슬라이스 범위)\n- `web/src/screens/Fairness.tsx` 에 `.art-hints` 안 `Link to=\"/trace\"`(`보존 원문으로 이어서 보기 →`)·`Link to=\"/reprocess\"`(`재처리 범위 정하기 →`)가 있다.\n- `cd web && npx tsc -b && npx eslint . && npx vitest run` 통과(163 passed), `python3 scripts/check-comment-ledger.py .`·`python3 scripts/check-mockup-render.py .` 통과.\n- design-tracker 「해소된 등재」에 `#276 (squash)` fairness 행이 있고, `fairness`·`trace` 수렴 대기 행은 수집 이상 점검·저신뢰 note·소멸 배너만 가리킨다.\n- 재감지: web·docs 가 함께 움직인다. 재감지 task 가 이 두 표면을 새 gap 으로 세지 않아야 한다.\n\n## 범위 밖(후속)\n- compare 전부: 대상 국가 select(대상 축 분류가 Gold·서빙에 없음) · 공통/고유 표시·표기 통합(대상 동일성 판정이라는 제품 결정 선행) · 격차 후보 행(CompareResponse 격차 필드 선행). 계약/결정이 먼저라 다음 계획은 서빙·계약 슬라이스 또는 사람 결정 제안 PR 이어야 한다.\n- fairness `수집 이상 점검하기`(integrity 라우트), 저신뢰 note(서빙 필드), trace/fairness 소멸 배너 「판정으로 →」, sentiment 기여 뉴스 링크, reprocess 전후 추이 카드·ua-trend-go·gap-go.\n\n## 주의사항\n- 불가역 지점 없음. 롤백은 PR revert.\n- 새 주석을 넣지 않아 comment ledger 는 그대로다(CSS 주석을 한 번 넣었다가 ledger 불변식에 걸려 제거했다).\n- 변경은 정적 링크뿐이며 contracts/·go/·python/ 무접촉이라 수동 승인 케이스(MA1~MA6)에 닿지 않는다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261028-0006",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/276",
+          "preparedAt": "2026-10-28T23:08:00Z",
+          "notes": "web 변경(Fairness.tsx·tokens.css·Fairness.test.tsx) + design-tracker 한 PR. 로컬 tsc/eslint/vitest(163)·ledger·mockup-render 통과. head 6fc1743. 머지는 하지 않았다."
+        }
+      }
+    ]
   }
 ]
