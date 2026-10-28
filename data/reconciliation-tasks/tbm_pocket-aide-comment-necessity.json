@@ -2109,7 +2109,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T17:22:50Z",
     "trigger": {
       "source": "version_change",
@@ -2129,6 +2129,45 @@
     "assessment": {
       "assessedAt": "2026-10-28T17:23:24Z",
       "reason": "작업 필요(action_required). #328이 check.mjs 주석을 3→5줄로 늘려 원장 행(줄 수·지문)이 낡아 check_ledger 게이트가 불일치 오류를 내고, 증분 2줄은 필요성 판정·passes 사유 기록이 없다. 정적 기록 gap이라 자동 해소 요인 없음 — 재확인 유예 불필요. 열린 task rct_20261028-0001(PR #331)은 swift·go 6행 35줄만 다루고 ledger.md를 함께 수정하므로 planner가 머지 순서·원장 충돌을 확인할 것. notifier.go 5줄은 #300 머지로 제외 사유가 사라졌으니 이 슬라이스에 포함 검토. 슬라이스 예산(400줄) 내."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#328이 check.mjs 에 들인 주석 2줄(5(i), README 표 재진술)을 제거해 원장 행(3줄·지문 1b2b6f9a788a)을 복원하고, #300 머지로 제외 사유가 사라진 notifier.go 5줄을 판정(전부 유지)해 완료 처리하는 pocket-aide 주석·원장·passes 전용 PR 한 건으로 닫는다(주석만 바꾸므로 가역, 대안으로 원장 행만 5줄로 갱신하고 증분을 유지 판정하는 안은 README 재진술을 남겨 정책에 어긋나 기각). 범위(완료 기준): check.mjs 행 게이트 오류 해소 + notifier.go 행 완료, 즉 이 PR 브랜치에서 check_ledger rc=0 · 지문이 직전 관측 9426d81c… 로 복귀. 범위 밖: rct_20261028-0001 의 PR #331 이 다루는 7행 35줄(미판정 35줄) — 파일이 겹치지 않고 #331 이 먼저 머지된다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "pocket-aide main@48da4d7 기준 check.mjs 증분 2줄(138·334행, 5(i) 주석)과 notifier.go 5줄에 필요성 시험 적용 — check.mjs 2줄 제거, notifier.go 전부 유지",
+              "expectedOutcome": "비주석 코드 변경 0, node --check 통과, 지문 9426d81c… 복귀"
+            },
+            {
+              "seq": 2,
+              "action": "passes/2026-09-29-api-k8s-harness.md 에 증분 절 추가, passes/2026-10-28-externalnotify-notifier.md 신규 작성, ledger.md 의 check.mjs·notifier.go 행 갱신",
+              "expectedOutcome": "check_ledger.py rc=0"
+            },
+            {
+              "seq": 3,
+              "action": "#331 머지 후 이 PR 을 main 에 rebase(ledger.md 인접 행 충돌은 줄 단위 해소), CI 통과 확인 후 머지",
+              "expectedOutcome": "main 에서 두 행 완료"
+            },
+            {
+              "seq": 4,
+              "action": "머지 후 as-is versionScript·check_ledger 재실행",
+              "expectedOutcome": "게이트 rc=0, 미판정 0, 지문 = 머지 시점 as-is"
+            }
+          ],
+          "plannedAt": "2026-10-28T17:45:00Z",
+          "executionGuide": "## 순서\n1. PR #331(rct_20261028-0001)이 먼저 머지됐는지 확인한다. 아직이면 그 머지를 기다린다(둘 다 ledger.md 의 인접 행을 고친다).\n2. PR https://github.com/dlddu/pocket-aide/pull/335 브랜치를 main 에 rebase 한다. ledger.md 충돌은 줄 단위로 해소: notifier.go 행은 이 PR 의 `완료` 행, #331 이 고친 externalnotify/store.go·handlers 행은 #331 쪽을 취한다. 해소 후 `python3 scripts/comment-policy/check_ledger.py` 로 재검증하고 force-with-lease push.\n3. CI(`comment-policy ledger` 잡 포함) 초록 확인 후 머지(병렬 단계 없음, 배포 영향 없음).\n4. 머지 후 main 에서 as-is versionScript 와 check_ledger 를 재실행한다.\n\n## 검증\n- PR 브랜치(현 base 48da4d7) 기준: check_ledger rc=0 · L 행 50 · 파일 85 · 주석 653줄 · 완료 618 · 미판정 35(전부 #331 범위), 지문 `9426d81c486f…`(직전 관측과 동일).\n- #331 과 함께 머지된 main: 미판정 0, check.mjs 행 `완료` · 3줄 · 지문 `1b2b6f9a788a`, notifier.go 행 `완료`.\n- `git diff` 가 check.mjs 의 주석 2줄 삭제뿐인지, `node --check tools/journey-mockup-harness/check.mjs` 통과 확인. 수렴은 두 범위 행의 완료 여부로 판정(그 사이 다른 PR 이 들인 주석은 범위 밖).\n\n## 주의\n- 롤백: PR revert(주석·문서만 변경, 불가역 지점 없음).\n- 머지 순서를 어기면 ledger.md 충돌 — 위 2단계로 해소.\n- 슬라이스 예산 400줄 중 7줄만 가져갔다: 남은 미판정 35줄은 열린 PR #331 이 이미 판정 중이라 파일이 아니라 ledger.md 행이 겹친다.\n\n## 범위 밖(후속)\n- 없음(#331 머지 후 원장 미판정 0 기대). 그 사이 새 주석이 들어오면 재감지가 새 task 로 잇는다."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/comment-necessity-rct_20261028-0002",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/335",
+          "preparedAt": "2026-10-28T17:45:00Z",
+          "notes": "주석 2줄 삭제 + 원장·passes 만 변경. check_ledger rc=0 · node --check 통과 로컬 확인. #331 과 ledger.md 인접 행이 겹쳐 머지 순서(#331 선행 후 rebase)가 필요. 대상 레포 수동 승인 정책 해당 여부는 리뷰 단계(4-2)가 판정한다."
+        }
+      }
+    ]
   }
 ]
