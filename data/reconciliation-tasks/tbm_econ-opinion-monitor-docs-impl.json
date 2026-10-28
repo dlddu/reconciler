@@ -13173,6 +13173,50 @@
     "assessment": {
       "assessedAt": "2026-10-28T20:16:04Z",
       "reason": "버전 변화는 직전 슬라이스(#271, rct_20261028-0002)의 정상 후속 반영이라 신규 회귀는 없다. 그러나 정의 기준 2·6의 잔여 gap(design-tracker 구현 수렴 대기 4행: sentiment·compare·fairness/trace·reprocess, integrity 화면 미구현, 재판정 필요 행)이 정적으로 남아 있고 자동 해소될 성격이 아니다. 문서→구현 완전 수렴이 목표이므로 후속 슬라이스 계획이 필요하다. 제품 결정이 선행되는 항목과 바로 구현 가능한 항목을 planner가 가려 분할할 것."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "제품 결정·계약 변경이 필요 없는 슬라이스만 닫는다: design-tracker 「구현 수렴 대기」 `sentiment` 행 중 분류 기준 줄(AC2.3)·원문 확인/재처리 링크(§4 3·4행)·축 전환 라디오 세 항목을 구현이 목업(JRN-sentiment-shift)에 맞춘다. 완료 기준은 이 세 항목의 해소이며, 원인 줄(사유별 건수가 Gold 계약에 없어 계약 변경 선행)·구간별 건수 막대·구간 선택, compare·fairness/trace·reprocess 수렴 대기 행, integrity 화면은 범위 밖. 대안(sentiment 전체·4행 일괄)은 계약 변경이 필요한 항목이 섞이고 PR 이 비대해져 기각; 정적 문면·라우트 링크라 PR revert 로 롤백된다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "Sentiment.tsx 도넛 카드에 `분류 기준` 줄(.sent-def) 추가",
+              "expectedOutcome": "혼합·중립·긍정/부정·미분석 정의가 목업 문면대로 렌더된다"
+            },
+            {
+              "seq": 2,
+              "action": "`판별이 어렵다면` 카드에 /trace·/reprocess 링크 추가",
+              "expectedOutcome": "링크 3개(/fairness?axis=KR·/trace·/reprocess)가 렌더된다"
+            },
+            {
+              "seq": 3,
+              "action": "축 전환 컨트롤을 .seg 버튼에서 라디오(.dash-radios)로 교체",
+              "expectedOutcome": "라디오 선택이 API 재조회(axis=US)를 일으킨다"
+            },
+            {
+              "seq": 4,
+              "action": "design-tracker 해소 행 추가·sentiment 수렴 대기 행 축소",
+              "expectedOutcome": "해소된 등재에 #272 행, 남은 행은 원인 줄·막대·구간 선택만"
+            },
+            {
+              "seq": 5,
+              "action": "tsc·eslint·vitest·comment-ledger·mockup-render 실행 후 PR 머지(executor)",
+              "expectedOutcome": "전부 통과, 머지로 as-is·to-be 버전 이동, 재감지가 잔여 gap 만 센다"
+            }
+          ],
+          "plannedAt": "2026-10-28T20:30:00Z",
+          "executionGuide": "## 실행 순서\n1. PR https://github.com/dlddu/economic-opinion-trend-monitor/pull/272 의 CI(`required`)와 `review/manual-approval` 상태를 확인한다. 변경 경로(`web/`, `docs/econ-opinion-monitor-design-tracker.md`)는 직전 슬라이스(#269·#271)와 같아 수동 승인 케이스에 닿지 않을 것으로 보지만, 자동 success 가 안 붙으면 `review.manualApproval` 이 있는지 보고 따른다.\n2. squash 머지. 단일 PR 이라 순서 의존·병렬 없음.\n3. 머지 후 design-tracker 해소 행의 `#272 (squash)` 가 실제 PR 번호와 맞는지 확인한다.\n\n## 검증 방법 (완료 기준 = 슬라이스 범위)\n- `web/src/screens/Sentiment.tsx` 에 `.sent-def` 분류 기준 줄, `/trace`·`/reprocess` 링크, `name=\"sent-axis\"` 라디오가 있고 `.seg` 가 없다.\n- `cd web && npx tsc -b && npx eslint . && npx vitest run` 통과(156 passed), `scripts/check-comment-ledger.py`·`check-mockup-render.py .` 통과.\n- design-tracker 「해소된 등재」에 `sentiment` 3항목 행(`#272 (squash)`)이 있고, 「등재된 편차」의 `sentiment` 수렴 대기 행은 원인 줄·구간별 건수 막대·구간 선택/기여 뉴스 링크만 남는다.\n- 재감지: 머지로 web·docs 가 함께 움직인다. 재감지 task 가 이 3항목을 새 gap 으로 세지 않아야 한다.\n\n## 범위 밖(후속)\n- `sentiment` 남은 항목: 미분석 원인 줄(사유별 건수가 Gold 계약에 없음 — 계약 변경 필요), 구간별 건수 막대·구간 선택·기여 뉴스 링크.\n- `compare`(대상 국가 select·공통/고유 표시·표기 통합 안내 — 대상 동일성 결정 선행), `fairness`·`trace`(AC2.5 저신뢰 표기·§4 컨트롤), `reprocess`(AC3.3 전후 추이·§4 컨트롤), `integrity` 화면, 「재판정 필요」 행.\n\n## 주의사항\n- 불가역 지점 없음. 롤백은 PR revert.\n- 로컬에서 prettier 를 쓰지 않았다(프로젝트 도구 아님) — 재포맷 diff 없음.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261028-0003",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/272",
+          "preparedAt": "2026-10-28T20:30:00Z",
+          "notes": "web 변경(Sentiment.tsx·tokens.css·테스트) + design-tracker 갱신 한 PR. 로컬 tsc/eslint/vitest(156)·ledger·mockup-render 통과. head ecf3d34. 수동 승인 판정기는 로컬에서 돌리지 않았다 — executor 가 review/manual-approval status 로 확인."
+        }
+      }
+    ]
   }
 ]
