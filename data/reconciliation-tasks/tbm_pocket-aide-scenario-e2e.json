@@ -9877,7 +9877,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T22:28:09Z",
     "trigger": {
       "detectedAt": "2026-10-28T22:28:09Z",
@@ -9896,6 +9896,50 @@
     "assessment": {
       "reason": "공백 17건이 남은 실제 drift이고, 그중 approval-gate #18·#19는 선행 인프라 없이(기존 ApprovalCallerRejectionUITests 패턴) 지금 전용 XCUITest 신설로 해소 가능해 작업이 필요하다. 나머지 15건은 BF-5 스텁(PR #327)·network-cut 릴레이 선행 대기라 planner가 착수 가능 범위로 슬라이스할 것. 등재 변경 자체는 직전 task 결과이며 자동 해소될 차이가 아니라 유예하지 않는다.",
       "assessedAt": "2026-10-28T22:28:47Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "공백 17건 중 선행 인프라 없이 닫히는 approval-gate #18 하나만 슬라이스한다 — 러너가 실 API 로 키 발급·요청 생성·승인·모드 변경을 하는 기존 패턴(ApprovalCallerRejectionUITests)으로 전용 XCUITest ApprovalDecisionModeUITests.swift 를 신설하고 「## e2e 매핑」을 함께 갱신한다. #19 는 푸시 수신부·알림 탭·기기 격리가 얽혀 한 PR 에 같이 넣으면 검증 부담이 커지므로 다음 task 로 잇고, #15·#21·#20·session-platform 12건은 레포 안 선행(릴레이·BF-5 스텁 #327)이 있어 범위 밖이다. 완료 기준: #18 이 파일 1개로 매칭되고(매칭 +1 · 공백 −1 · 파일 +1, 집계 불변식 성립) PR #338 이 squash 착지. 제품 코드·워크플로 미접촉(테스트 전용 + 문서)이라 가역. 사람 소유 결정 없음, 수동 승인 케이스 비해당.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #338 의 base 를 재실측한다(diff 가 파일 2개뿐인지, main 이동·doc-tracker 충돌 여부). 충돌이면 main 을 브랜치에 머지(force 없음)하고 집계 칸만 델타로 맞춘다.",
+              "expectedOutcome": "충돌 0, diff = ApprovalDecisionModeUITests.swift + doc-tracker/2026-10.md"
+            },
+            {
+              "seq": 2,
+              "action": "iOS 3샤드·SwiftLint·ci-success 확인; ApprovalDecisionModeUITests 가 초록인지 확인한다.",
+              "expectedOutcome": "새 클래스 포함 필수 check 초록"
+            },
+            {
+              "seq": 3,
+              "action": "PR #338 을 head sha 고정으로 squash 머지한다.",
+              "expectedOutcome": "main 에 1커밋 착지, 변경 2파일"
+            },
+            {
+              "seq": 4,
+              "action": "착지 트리에서 선언 grep·매핑 표/공백 표·집계 불변식·check_ledger.py 를 확인한다.",
+              "expectedOutcome": "#18 선언 1줄, 공백 표에서 제거, 불변식 성립, ledger rc=0"
+            },
+            {
+              "seq": 5,
+              "action": "main push CI(ios-test) 확인.",
+              "expectedOutcome": "ios-test 초록"
+            }
+          ],
+          "plannedAt": "2026-10-28T22:50:00Z",
+          "executionGuide": "## 실행 지침 — rct_20261028-0006 (PR #338, head = 브랜치 `reconcile/rct_20261028-0006-decision-mode` 1커밋 `5d2adb0`)\n\n**완료 기준**: approval-gate #18 이 전용 파일 `ApprovalDecisionModeUITests.swift` 로 매칭되고 PR #338 이 squash 로 main 에 착지한다. 집계는 머지 직전 base 실측 기준 매칭 +1 · 공백 −1 · 파일 +1 (작성 시점 base bf8c634 기준 매칭 60 · 공백 16 · 파일 63 · 불변식 94−13−5=60+16 성립).\n\n### 순서 (직렬)\n1. **base 재실측**: `gh pr view 338 --json mergeable,mergeStateStatus,headRefOid`, `gh pr diff 338 --name-only` = `docs/product/doc-tracker/2026-10.md` · `ios/PocketAideTests/ApprovalDecisionModeUITests.swift` 둘뿐. main 이 움직여 doc-tracker 충돌이면 main 을 브랜치에 머지(force 없음)하고 집계 칸만 새 base 실측 + 델타(매칭 +1 · 공백 −1 · 파일 +1 · approval-gate 공백 −1)로 맞춘다. 같은 절을 자매 PR(#327 등)이 바꿨다면 그 결과 위에서 델타만 적용.\n2. **CI 확인**: iOS 3샤드(새 클래스는 `scripts/ci/ios_test_shards.py` 가 중앙값 가중으로 자동 편입 — 경고 `missing from ios-test-durations.json` 은 무해), SwiftLint, ci-success. `ApprovalDecisionModeUITests` 의 단정 실패는 계획 결함이므로 `failed` 로 두고 사유(어느 단계의 어떤 필드)를 남긴다. 알려진 flake(`WebhookPushSettingsUITests` 등 다른 클래스)만 빨강이면 같은 sha 로 실패 잡 1회 재실행, 커밋 금지. main 에서도 실패 중인 check 는 이 PR 귀속이 아니다.\n3. **squash 머지**: `PUT /repos/dlddu/pocket-aide/pulls/338/merge` `{\"merge_method\":\"squash\",\"sha\":\"<head sha 고정>\"}`. 대상 레포 수동 승인 정책의 케이스에 닿지 않는 테스트·문서 변경이다(`review/manual-approval` 이 붙으면 사람 승인 경로이므로 임의로 붙이지 말 것).\n4. **착지 검증**: main 에서 `grep -H '^// 검증 시나리오:' ios/PocketAideTests/*UITests.swift | grep '시나리오 18'` 가 정확히 1줄, 「## e2e 매핑」 공백 표에 #18 없음·매핑 표에 있음, 집계 불변식 성립, `python3 scripts/comment-policy/check_ledger.py` rc=0.\n5. **main push CI**: ios-test 초록(TestFlight 업로드 실패는 별개).\n\n### 검증 방법 (파일 내용)\n- 1단계 R1: 조회 `PENDING`, `decisionMode` null → 사용자 `POST /api/approvals/{id}/approve` 200 → 조회 `APPROVED` + `manual`.\n- 2단계 R2: `PATCH /api/approval-settings {\"auto_response\":\"AUTO_APPROVE\"}` 200 뒤 생성 응답이 이미 `APPROVED` + `auto`.\n- 3단계 R3: 모드 `NONE` 복원, `timeoutSeconds`=5, 6초 뒤 `EXPIRED` + `expired`. 모든 응답에 `sub`·`email`·`userId` 없음.\n\n### 주의사항\n- 테스트 전용 + 문서. 제품 코드·워크플로·매니페스트 미접촉 — 사용자에게 보이는 동작 변경 없음.\n- 모드 설정은 사용자별(실행 고유 `login_hint` subject)이라 다른 클래스와 간섭하지 않고, teardown 이 `NONE` 복원·키 폐기를 한다. 3단계의 6초 sleep 은 만료 대기이므로 실패 시 타이밍(백엔드 만료 처리 지연)을 의심하되 sleep 을 줄이지 말 것.\n- 롤백: squash 커밋 `git revert`(문서·테스트만, 불가역 없음).\n\n### 범위 밖(후속) — 재감지가 새 task 로 잇는다\n- #19(`ExternalNotificationDeliveryUITests` 신설 — 푸시 수신부·알림 탭이 걸려 별도 슬라이스, 재검토 2026-12-15), #15·#21(network-cut 릴레이 선행), #20 및 session-platform #2~11·#13·#14(BF-5 세션 플랫폼 스텁 PR #327 선행)."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261028-0006-decision-mode",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/338",
+          "preparedAt": "2026-10-28T22:50:00Z",
+          "notes": "main bf8c634 기준 새 브랜치 1커밋(5d2adb0): ApprovalDecisionModeUITests.swift 신설(+) · doc-tracker/2026-10.md(#18 공백 행 제거, 매핑 행 추가, 집계 매칭 60·공백 16·파일 63). check_ledger.py rc=0. XCUITest 는 러너에 macOS 가 없어 로컬 실행 못 함 — CI 가 첫 실행이므로 실행 단계가 확인한다. 열린 PR 중 같은 결정/시나리오를 다루는 것 없음(#327 은 session-platform)."
+        }
+      }
+    ]
   }
 ]
