@@ -984,7 +984,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-journey-mockup",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T15:33:21Z",
     "trigger": {
       "source": "version_change",
@@ -1008,6 +1008,45 @@
     "assessment": {
       "assessedAt": "2026-10-28T15:34:11Z",
       "reason": "작업 필요. 버전 변화 자체(신규 초안 여정의 예외 등재, 승인 페이지 임베드 화면 갱신)는 규칙 1~4·6~8을 깨지 않지만, 2026-10-15 화면 완전성 개정 이후 첫 감지 task라 정의가 명시한 완료 기준 3가지가 미충족이다: (1) 3개 페이지 모두 .screen[data-screen]/data-state/data-offpath 화면 식별자 없음(레포 규약 부재 → 첫 task가 _index.md에 규약 기술), (2) _index.md 「여정 mockup」 절에 단계별 화면·상태 목록과 근거(시스템 응답·AC·구현) 대비 「의도적 제외」 등재 없음, (3) 하네스(check.mjs)에 화면 식별자 누락·목록↔인덱스 불일치 검사 없음. 자동 해소될 성격이 아니라 재확인 유예 없이 planner로 넘긴다. 한계: pocket-aide check-run 결론은 토큰 권한 부족으로 보지 못했고 하네스를 로컬 실행하지 않았다(정적 대조·grep 근거)."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "2026-10-15 화면 완전성 개정 후 첫 task로 완료 기준 1~3을 한 슬라이스로 닫는다: 3개 여정 페이지의 모든 화면에 .screen[data-screen]을 부여하고, _index.md 「여정 mockup」 절에 규약과 단계·상태별 화면 목록을 두고, 하네스 check.mjs에 규칙 5(i)(식별자 누락·형식·중복, 목록↔페이지 불일치)를 추가한다. 근거 변경이 데이터 의미 없는 속성·문서·검사 추가라 가역적이고 위험이 낮다. 범위 밖(후속): 근거(시스템 응답·AC·구현) 대비 누락 화면·상태 대조, 단면 화면 보강, 「의도적 제외」 등재(규칙 5(i)-3·4) — 재감지가 새 task로 잇는다. 사람 소유 결정은 없다(수동 승인 케이스 MA1~MA5 경로 변경 없음).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "pocket-aide 3개 여정 페이지의 .frame과 오버레이(시트·다이얼로그·잠금 해제 패널)에 class=screen + data-screen 부여(동일 화면은 동일 식별자)",
+              "expectedOutcome": "모든 (단계,상태)에서 보이는 프레임·오버레이가 .screen[data-screen]"
+            },
+            {
+              "seq": 2,
+              "action": "docs/mockups/_index.md 「여정 mockup」 절에 「화면 식별자 규약」과 여정별 「단계별 화면」 목록 추가",
+              "expectedOutcome": "목록이 페이지가 실제로 보이는 화면 집합과 일치"
+            },
+            {
+              "seq": 3,
+              "action": "tools/journey-mockup-harness/check.mjs에 규칙 5(i) 추가, README 표·한계 갱신",
+              "expectedOutcome": "하네스 위반 0, 식별자 누락·목록 불일치를 부정 시험에서 실패로 잡음"
+            },
+            {
+              "seq": 4,
+              "action": "PR(dlddu/pocket-aide#328)을 CI(journey-mockup → ci-success) 통과 후 머지",
+              "expectedOutcome": "main에 반영, as-is 지문(mockups·index) 변경"
+            }
+          ],
+          "plannedAt": "2026-10-28T16:20:00Z",
+          "executionGuide": "## 순서\n1. PR #328의 CI(ci-success, 특히 journey-mockup 잡)가 통과했는지 확인한다. 수동 승인 케이스(MA1~MA5) 경로를 건드리지 않으므로 review/manual-approval은 판정기가 자동 부여한다.\n2. 머지(순서 의존 없음, 한 PR).\n\n## 검증\n- 머지 후 main에서 `npm ci --prefix tools/journey-mockup-harness && node tools/journey-mockup-harness/check.mjs` → 위반 0.\n- `grep -c 'data-screen=' docs/journeys/*/index.html`가 각 페이지 0이 아님. `_index.md`에 「화면 식별자 규약」과 여정 3개 각각의 「단계별 화면」 존재.\n- 범위 기준 수렴: 완료 기준 1(식별자 노출) · 2의 목록 부분 · 3(하네스 집행)이 충족되면 succeeded.\n\n## 주의/롤백\n- 속성·문서·검사만 추가, 런타임 동작 변화 없음. 문제 시 PR revert.\n- 머지 후 새 하네스가 CI에서 실패하면 ci-success가 막히니 머지 전 PR의 CI 결과를 반드시 확인.\n\n## 범위 밖(후속)\n- 근거 대비 누락 화면·상태 대조와 「의도적 제외」 등재(5(i)-3·4), 단면 화면 보강. 재감지 후 다음 task의 입력."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261028-0001",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/328",
+          "preparedAt": "2026-10-28T16:20:00Z",
+          "notes": "하네스 로컬 실행 위반 0, 식별자 누락/목록 불일치 부정 시험 확인."
+        }
+      }
+    ]
   }
 ]
