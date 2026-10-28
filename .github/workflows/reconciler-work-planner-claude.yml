@@ -25,12 +25,9 @@ on:
         required: false
         default: ""
 
-# 같은 스킬이 동시에 두 번 돌며 같은 task를 점유하거나 push가 충돌하지 않도록 직렬화한다.
-# 그룹은 기존(MiniMax) 워크플로와 따로 둔다 — 같은 그룹이면 대기 중인 실행이 서로를 취소한다.
-# (로컬 러너·MiniMax 워크플로와의 경쟁은 스킬의 status compare-and-set 점유 커밋이 막는다.)
-concurrency:
-  group: reconciler-work-planner-claude
-  cancel-in-progress: false
+# concurrency 그룹을 두지 않는다 — 같은 워크플로를 여러 번 띄우면 병렬로 돈다.
+# 같은 task 중복 점유·push 충돌은 스킬의 status compare-and-set 점유 커밋(pull --rebase → 상태 재확인 →
+# 점유 push, 지면 물러남)이 막는다. 로컬 러너·다른 제공자 워크플로와의 경쟁도 같은 규약으로 막는다.
 
 permissions:
   contents: read

@@ -326,7 +326,8 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
 reconciler-local의 systemd 러너(`run-<stage>.sh`: 게이트 → `claude --bg "/reconciler-data-plane:<skill> $DIR"`)를
 GitHub Actions로 옮긴 것이다. 기존 단계 워크플로(`reconciler-<stage>.yml`)와 MiniMax 감지 파이프라인
 (`reconciler-drift-detector.yml`·`reconciler-drift-detector-skill-build.yml`)과는 **별개 파일**이고 그 파일들을 건드리지 않는다.
-concurrency 그룹도 `<skill>-claude`로 따로 둔다(같은 그룹이면 대기 중인 실행끼리 서로 취소된다). 네 단계가 같은 모양이다.
+concurrency 그룹은 두지 않는다 — 같은 워크플로를 여러 번 띄우면 병렬로 돌고, 같은 task 중복 점유·push 충돌은
+스킬의 compare-and-set 점유 커밋이 막는다(MiniMax 워크플로·로컬 러너와의 경쟁도 같은 규약). 네 단계가 같은 모양이다.
 
 MiniMax 감지와 달리 **선정·점유를 스킬이 한다**(위 「점유는 러너가 한다」의 범위 참고) — 러너의 Select target은
 claude를 띄울지 정하는 읽기 전용 게이트일 뿐 점유 커밋을 만들지 않는다. 점유 기록의 형태는 두 경로가 같다.
