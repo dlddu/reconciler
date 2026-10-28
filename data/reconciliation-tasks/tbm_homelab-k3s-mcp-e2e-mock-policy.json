@@ -2901,7 +2901,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-e2e-mock-policy",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T05:54:15Z",
     "trigger": {
       "source": "version_change",
@@ -2925,6 +2925,45 @@
     "assessment": {
       "assessedAt": "2026-10-28T05:55:33Z",
       "reason": "작업 필요. 대상 레포 PR #280~#290 창에서 신규 상류 스텁 oidc-mock(PocketAide 앞 IdP)이 UPS로 등재되고 등재 상한이 4→5로 올랐다. 레포 게이트(check_mock_policy.py)는 등재 5·지점 7·미등재 0·고아 0으로 통과하지만 이는 등재↔코드 일치만 보는 것이다. 정의는 실환경 대체가 가능하면 어떤 카테고리도 쓸 수 없고(대체 수단 부재는 불가능의 근거가 아님), 애매하면 제거 쪽으로 기울며, 대체 수단을 만드는 것까지 이 모델 task의 범위라고 규정한다. 그런데 등재 문서(docs/e2e-mocking-policy.md「oidc-mock」절)가 스스로 실 OIDC 구현 dex(tests/k8s/kind/oidc-fixture.yaml, 이미 구동 중)로 대체하는 길이 원리적으로 막혀 있지 않고 미채택 사유 3개(dex idTokens 20초 전역값, dex 롤아웃 순서, 토큰 모양 일치)가 불가능이 아닌 비용이라고 인정한다. 따라서 UPS 요건 미달 = 실환경 대체 가능한 모킹이며 자동 해소되지 않는다(코드·문서에 사람이 의도적으로 반영한 상태). 불변식 2는 원장 0행·B1 0건·B3 불변으로 모든 판정 규칙이 거짓이라 작업 사유가 아니다. 나머지 변화(gatekeeper-variant→approval-variant 이름 이전, 주입기 PocketAide 이전)는 판정에 영향 없음. 계획 단계에서 다룰 사항: dex로 PocketAide 발급자를 옮기는 실환경 대체의 구체 방안(만료 값 분리 또는 롤아웃 순서)과 슬라이스 분할, 불가 시 등재 유지 근거 보강."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "실환경 우선 원칙에 따라 `oidc-mock`(UPS) 등재를 제거한다 — PocketAide 의 IdP 를 하네스의 실 OIDC 구현 dex 의 전용 인스턴스로 교체한다(기존 dex 의 20초 만료·롤아웃 순서 문제는 인스턴스 분리로 해소, aud 는 정적 클라이언트 id 로 맞춤). 범위(완료 기준): 허용목록에서 `oidc-mock` 삭제·상한 5→4·코드에 oidc-mock 토큰 0·게이트 통과·approval_gate e2e 가 CI 에서 통과. 범위 밖: 나머지 4개 등재의 재판정. 대안(등재 유지+근거 보강)은 정의의 「애매하면 제거」에 반하고, 정책 문서 스스로 대체가 가능하다고 인정해 기각. 가역(PR revert).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PocketAide 전용 dex 매니페스트(pocket-aide-dex.yaml) 추가, PocketAide 픽스처의 OIDC_ISSUER/클라이언트 id 를 그쪽으로 변경",
+              "expectedOutcome": "dex Ready 후 PocketAide 가 discovery 를 받아 기동"
+            },
+            {
+              "seq": 2,
+              "action": "_approval_gate.py 를 password grant 로 전환, ci.yml 에서 oidcmock 빌드·로드·배포 제거하고 dex 배포 단계로 교체",
+              "expectedOutcome": "호출자 등록 스텝과 approval_gate_* 시나리오가 통과"
+            },
+            {
+              "seq": 3,
+              "action": "oidc-mock.yaml 삭제, 정책 문서 허용목록 행 삭제·상한 5→4·해소 절 추가, 주석 정책 원장 갱신",
+              "expectedOutcome": "check_mock_policy/check_comment_policy/check_doc_inventory 통과"
+            },
+            {
+              "seq": 4,
+              "action": "PR #291 CI green 확인 후 머지, main 재검증",
+              "expectedOutcome": "등재 4·미등재 0·oidc-mock 토큰 0"
+            }
+          ],
+          "plannedAt": "2026-10-28T06:20:00Z",
+          "executionGuide": "## 순서\n1. PR #291(dlddu/homelab-k3s-mcp)의 CI 가 전부 green 인지 확인한다 — 특히 `integration-tests` 잡의 「Deploy PocketAide dex fixture」→「Deploy PocketAide fixture」→「Register the SUT service accounts」 단계와 approval_gate_* 시나리오. 순차 의존(dex Ready → PocketAide 기동 → 호출자 등록)이라 병렬 불가.\n2. 머지 전 사전 조건: 레포의 수동 승인 정책(review-policy)에 PR 이 걸리는지는 대상 레포 status 로 확인한다(걸리면 리뷰가 manualApproval 로 처리).\n3. 머지(executor). 머지 후 main 의 CI 가 green 인지 재확인.\n\n## 검증 (계획 범위 기준)\n- `python3 scripts/check_mock_policy.py` → `등재 4(상한 4) · 미등재 0 · 고아 0`, rc=0 (main 에서).\n- `grep -rn \"oidc-mock\\|oidcmock\" tests .github` → 0 hit. 허용목록에 `oidc-mock` 행 없음.\n- 모델 as-is 지문(파일×토큰 쌍)에서 `oidc-mock` 쌍이 사라졌는지 재감지로 확인.\n- approval_gate 시나리오가 CI 에서 통과(토큰 만료·aud 문제 없음).\n\n## 주의 / 롤백\n- 로컬에서 kind 실행은 못 했다. 불확실성 3가지: ① PocketAide 의 go-oidc 검증이 dex 액세스 토큰(JWT, aud=클라이언트 id)을 받는가 ② password grant 사용자 sub 로 호출자 등록이 되는가 ③ dex `staticClients.redirectURIs` 설정이 PocketAide 의 OIDC_REDIRECT_URI 요구와 충돌하지 않는가.\n- CI 가 실패하면 PR 브랜치에서 원인(dex/PocketAide 로그는 ci.yml 의 실패 덤프 단계가 `dex-pocket-aide` 네임스페이스를 출력)을 고쳐 재시도하고, 실행 시도 자체가 `failed` 로 끝나면 재계획에서 PocketAide 쪽 요구(aud/azp, public client 등)를 반영한다. 머지 후 문제가 나면 PR revert 로 등재를 복구한다(가역).\n- 불가역 지점 없음. 프로덕션 영향 없음(테스트 하네스만).\n\n## 범위 밖 (후속)\n- 등재 `github-mock`·`grafana-mock`(UPS), `MCP_AUTH_DISABLED`·`DISABLE_SECURITY_PLUGIN`(GATE)의 카테고리 재판정은 이번 슬라이스 밖이다. 이번 변경이 새 gap 을 만들지는 않는다.\n- 이번 슬라이스가 수렴하면 등재 4·지점 6 으로 줄고, 재감지가 열 task 가 있으면 그것이 입력이다."
+        },
+        "preparation": {
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20261028-0001",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/291",
+          "preparedAt": "2026-10-28T06:25:00Z",
+          "notes": "로컬에서 세 체커(mock/comment/doc-inventory) 통과. kind 위 실행은 미관측 — PR CI 가 판정한다. ci.yml 수정이라 push 에 workflows 권한 토큰을 썼다."
+        }
+      }
+    ]
   }
 ]
