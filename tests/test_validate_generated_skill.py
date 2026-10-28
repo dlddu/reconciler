@@ -19,7 +19,7 @@ BODY = """
 2. `stateSummary`와 `assessment`를 채우고 `schemas/reconciliation-task.schema.json`으로 jsonschema 검증.
 3. `data/reconciliation-tasks/<model>.json`에 기록하고 커밋 `detect(<tbm>/<rct>): assess`.
 4. `no_action_needed` 또는 `action_required`, 유예면 `assessment.recheckAfter`.
-5. `git pull --rebase` 후 push. `RECONCILER_DRY_RUN=1`이면 push를 건너뛴다. 스키마는 절대 수정하지 않는다.
+5. `git pull --rebase` 후 push. 스키마는 절대 수정하지 않는다.
 6. 대상 레포는 `github_app_installation_token`(contents:read)으로 읽는다.
 7. 판정은 현재 상태에 대해 내린다 — 잔여 gap이 남으면 `action_required`.
 8. `gap`은 세 문장 이내로 쓴다.
@@ -66,10 +66,10 @@ class ValidateGeneratedSkillTest(unittest.TestCase):
         self.assertGreater(rep.meta["description_chars"], 0)
 
     def test_missing_contract_items_are_errors(self):
-        rep = self.write(skill_text(body=BODY.replace("recheckAfter", "재확인시각").replace("RECONCILER_DRY_RUN", "DRY")))
+        rep = self.write(skill_text(body=BODY.replace("recheckAfter", "재확인시각").replace("pull --rebase", "pull")))
         joined = "\n".join(rep.errors)
         self.assertIn("recheckAfter", joined)
-        self.assertIn("RECONCILER_DRY_RUN", joined)
+        self.assertIn("pull --rebase", joined)
 
     def test_missing_runner_claim_note_is_warning(self):
         body = BODY.replace("대상 선정과 점유는 러너가 끝냈다. ", "")
@@ -103,6 +103,10 @@ class ValidateGeneratedSkillTest(unittest.TestCase):
         self.assertIn("강제 push", joined)
         self.assertIn("토큰 출력", joined)
         self.assertIn("스키마 파일 쓰기", joined)
+
+    def test_dry_run_branch_is_forbidden(self):
+        bad = BODY + "\n`RECONCILER_DRY_RUN=1`이면 push를 건너뛴다.\n"
+        self.assertTrue(any("드라이런 분기" in e for e in self.write(skill_text(body=bad)).errors))
 
     def test_prohibition_lines_are_not_usage(self):
         ok = BODY + "\n- **강제 push 금지**(`git push --force`, `--force-with-lease` 사용 금지).\n" \

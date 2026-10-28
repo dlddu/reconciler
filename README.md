@@ -52,8 +52,8 @@ tests/                              # index.html 동작 테스트 (node --test),
 
 | 워크플로 | 트리거 | 하는 일 |
 | --- | --- | --- |
-| `reconciler-drift-detector.yml` (운영 감지) | 수동, 스케줄(주석 — 아직 끔) | 러너가 대상을 고르고 **점유**한 뒤, plugin-marketplace의 고정 스킬(`plugins/reconciler-data-plane`, MiniMax 플러그인 형식)을 mcode 로컬 플러그인으로 설치해 그 task 한 건을 판정한다. 결과 점검기로 계약을 확인하고 `drift-detector-result` 아티팩트를 남긴다. 실제 모드(`env.DRY_RUN: "0"`) — 점유·판정 커밋이 기본 브랜치에 push된다. |
-| `reconciler-drift-detector-skill-build.yml` (스킬 빌드) | 수동만 | 지침이나 계약을 바꿀 때 사람이 돌린다. 아래 generate → validate → test를 통과한 생성본을 plugin-marketplace에 PR로 올리면, 운영 감지는 그 다음 실행부터 새 스킬을 쓴다(`plugin_ref` 입력으로 브랜치·SHA를 지정해 미리 돌려볼 수도 있다). |
+| `reconciler-drift-detector.yml` (운영 감지) | 수동, 스케줄(주석 — 아직 끔) | 러너가 대상을 고르고 **점유**한 뒤, plugin-marketplace의 고정 스킬(`plugins/reconciler-data-plane`, MiniMax 플러그인 형식)을 mcode 로컬 플러그인으로 설치해 그 task 한 건을 판정한다. 결과 점검기로 계약을 확인하고 `drift-detector-result` 아티팩트를 남긴다. 점유·판정 커밋은 기본 브랜치에 push된다. |
+| `reconciler-drift-detector-skill-build.yml` (스킬 빌드) | 수동만 | 지침이나 계약을 바꿀 때 사람이 돌린다. 아래 generate → validate를 통과한 생성본을 plugin-marketplace에 PR로 올리면, 운영 감지는 그 다음 실행부터 새 스킬을 쓴다(`plugin_ref` 입력으로 브랜치·SHA를 지정할 수 있다 — 그 실행도 실제 기록을 남긴다). |
 
 스킬 빌드의 job:
 
@@ -61,14 +61,17 @@ tests/                              # index.html 동작 테스트 (node --test),
 | --- | --- | --- |
 | generate | 지침만 주고 — 메인 `.github/minimax/drift-detector-brief.md`(핵심 규칙: 무엇을 해야 하나) + 서브 `drift-detector-brief-sub.md`(품질 보조 규칙: 어떻게, 무엇을 하지 말 것)를 이어 한 프롬프트로 — mcode가 레포(README·스키마·점유 스크립트·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `drift-detector-skill` (skill/, 대화 기록) |
 | validate | 형식·계약 커버리지·금지 패턴·보조 스크립트 문법을 정적 검증한다. | `drift-detector-validation` |
-| test | 운영 감지와 같은 흐름(러너 점유 → 스킬 판정)을 생성본으로 드라이런한다. 점유 커밋 이후의 변경을 계약 점검기로 확인한다(그 task 파일만 바뀌었나, 점유 기록 보존, 종료 상태). 업로드 전 대화 기록의 토큰은 가린다. | `drift-detector-test-result` (claim.patch, result.patch, commits.patch, 점검 보고, 대화 기록) |
+
+**드라이런은 없다.** 계획·실행 단계는 대상 레포 PR·머지·클러스터를 실제로 건드려 구조적으로 드라이런을 할 수 없으므로,
+감지에만 드라이런을 두어 단계마다 다르게 만들지 않는다. 스킬 빌드는 생성 → 정적 검증까지이고, 생성본의 첫 실행은 운영
+감지(실제 기록)다 — 계약 위반은 운영 감지의 결과 점검기가 잡는다. 검증기는 생성본에 드라이런 분기가 있으면 실패시킨다.
 
 - **MiniMax 인증**: environment `llm-minimax`의 secret `MINIMAX_SUBSCRIPTION_KEY`(Token Plan subscription key)를
   `mcode provider set-minimax-key`로 job 전용 데이터 디렉터리에 넣는다. 텔레메트리와 데이터 기여는 끈다.
   레포 secret에는 두지 않는다(아래 「모델 키 격리」).
 - **homelab-k3s-mcp 연결**: GitHub Actions OIDC. OIDC 토큰이 약 5분짜리라 `.mcp.json`에 박지 않고, 로컬 프록시
   (`mcp_oidc_proxy.py`, 127.0.0.1)가 요청마다 토큰을 붙이고 만료 전에 갱신한다. mcode 환경에서는 OIDC 요청
-  변수와 대상 레포 토큰을 뺀다. 서버 `MCP_GITHUB_OIDC_RULES`에 두 워크플로 파일 각각의 규칙이 있어야 하고
+  변수와 대상 레포 토큰을 뺀다. 서버 `MCP_GITHUB_OIDC_RULES`에 운영 감지 워크플로 파일의 규칙이 있어야 하고
   (`github_app_installation_token` 필수 — 운영 감지는 이것으로 private plugin-marketplace도 읽는다,
   `resource_list`·`resource_get`·`api_resources`·`ping` 권장), audience는
   `vars.HOMELAB_K3S_MCP_AUDIENCE`(기본 `homelab-k3s-mcp`), URL은 `vars.HOMELAB_K3S_MCP_URL`로 바꿀 수 있다.
@@ -108,7 +111,7 @@ MiniMax Code로 돌리는 감지는 이 둘을 **러너의 결정적 스크립�
 
 **스킬에 남는 계약**: 넘겨받은 task가 `assessing`인지 확인 → 수집·판정 → `stateSummary`·`assessment`·`status` 기록
 (`detect(<tbm>/<rct>): …` 커밋) → `pull --rebase` 후 push. 점유 기록(그 task의 `trigger`·`createdAt`,
-`data/to-be-models.json`)과 다른 task·모델은 건드리지 않는다. 테스트의 점검기는 점유 커밋 이후 변경이 그 task 파일
+`data/to-be-models.json`)과 다른 task·모델은 건드리지 않는다. 운영 감지의 결과 점검기는 점유 커밋 이후 변경이 그 task 파일
 하나뿐인지로 이를 확인한다.
 
 **범위**: 이 분리는 MiniMax 감지 경로에만 해당한다. Claude Code 플러그인(`reconciler-data-plane`)의 감지 스킬은

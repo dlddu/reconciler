@@ -1,4 +1,4 @@
-# 리뷰 스킬 빌드 — MiniMax Code(mcode)로 reconciler-work-review 스킬을 생성 → 검증 → 테스트한다.
+# 리뷰 스킬 빌드 — MiniMax Code(mcode)로 reconciler-work-review 스킬을 생성 → 검증한다.
 # 뼈대만 있음: job·스텝 순서와 경계만 잡고, 스킬별 로직은 TODO로 남긴다. 완성 형태는
 # reconciler-drift-detector-skill-build.yml을 따른다(README 「감지 스킬 MiniMax 파이프라인」).
 #
@@ -8,30 +8,21 @@
 #   generate  간결한 지침(.github/minimax/work-review-brief.md — TODO: 작성)만 주고 mcode가 레포를 직접 읽어
 #             SKILL.md를 작성한다. 기존 스킬 본문은 모델에 노출하지 않는다.
 #   validate  생성물 정적 검증(형식 · 리뷰 단계 계약 커버리지 · 금지 패턴 · 보조 스크립트 문법).
-#   test      대상 선정(select_review_target.py)과 점유(planned → reviewing)는 러너가 하고, 생성된 스킬은 점유된
-#             task 한 건의 승인/거부만 판정한다(4-1 · 4-2). 드라이런: reconciler에는 커밋까지만 하고 push하지 않는다.
-#             리뷰는 대상 레포에 쓰지 않는다 — PR·ruleset은 읽기만. 결과는 아티팩트로 반환한다.
 #
 # 필요한 설정(구현 시)
 #   environment llm-minimax의 secret MINIMAX_SUBSCRIPTION_KEY   레포 secret에는 두지 않는다 — README 「모델 키 격리」
-#   vars.HOMELAB_K3S_MCP_URL / vars.HOMELAB_K3S_MCP_AUDIENCE / vars.MINIMAX_REGION   (선택) 감지 스킬 빌드와 같다
-#   서버 MCP_GITHUB_OIDC_RULES에 이 파일(.github/workflows/reconciler-work-review-skill-build.yml) 규칙:
-#     github_app_installation_token(필수, 대상 레포 contents·pull_requests·statuses read 상한), ping(권장)
+#   vars.MINIMAX_REGION   (선택) 감지 스킬 빌드와 같다
 name: "Reconciler · Work Review Skill Build"
 
 on:
   workflow_dispatch:
     inputs:
-      target_id:
-        description: "테스트에서 판정할 대상 지목(tbm_.../rct_... · rct_... planned task · tbm_... 모델). 비우면 자동 선정"
-        required: false
-        default: ""
       minimax_model:
         description: "mcode 모델 override(<provider>/<model>, 예: minimax/MiniMax-M3). 비우면 CLI 기본값"
         required: false
         default: ""
 
-# 빌드끼리 직렬화한다. test job은 드라이런이라 운영 리뷰 워크플로와 겹쳐도 데이터를 바꾸지 않는다.
+# 빌드끼리 직렬화한다.
 concurrency:
   group: reconciler-work-review-skill-build
   cancel-in-progress: false
@@ -43,9 +34,6 @@ env:
   SKILL_NAME: reconciler-work-review
   SKILL_REL: .agents/skills/reconciler-work-review # mcode 워크스페이스(ws/) 기준 스킬 위치
   MCODE_VERSION: latest
-  MCP_URL: ${{ vars.HOMELAB_K3S_MCP_URL || 'https://homelab-k3s-mcp.llkm.nl/mcp' }}
-  MCP_AUDIENCE: ${{ vars.HOMELAB_K3S_MCP_AUDIENCE || 'homelab-k3s-mcp' }}
-  MCP_PROXY_PORT: "8765"
 
 jobs:
   generate:
@@ -76,7 +64,7 @@ jobs:
       # TODO: .github/minimax/work-review-brief.md 작성 후 감지 스킬 빌드의 Generate SKILL.md와 같은 방식으로 실행.
       #   brief에 담을 계약: planned → reviewing 점유는 러너 몫, 계획이 gap을 좁히는지 · PR 유효성 · 위험 통제 근거로
       #   reviewing → approved | review_rejected, 사람 승인 status가 필요하면 approved + review.manualApproval(sha·context)
-      #   (사람 승인 대기 상태로 보내지 않음), 실행하지 않음, 스키마 수정 금지, RECONCILER_DRY_RUN이면 push 생략.
+      #   (사람 승인 대기 상태로 보내지 않음), 실행하지 않음, 스키마 수정 금지.
       - name: Generate SKILL.md
         id: gen
         env:
@@ -136,101 +124,3 @@ jobs:
             echo "### 2. Validate — $SKILL_NAME"
             echo "- result: TODO"
           } >> "$GITHUB_STEP_SUMMARY"
-
-  test:
-    name: Test skill (dry run)
-    needs: validate
-    runs-on: ubuntu-latest
-    environment: llm-minimax # 모델 키는 이 environment에만 있다(README 「모델 키 격리」)
-    timeout-minutes: 60
-    permissions:
-      contents: read # push 불가 — 드라이런의 안전망
-      id-token: write # homelab-k3s-mcp OIDC
-    steps:
-      - name: Checkout harness
-        uses: actions/checkout@v4
-        with:
-          path: harness
-          persist-credentials: false
-
-      # 운영 데이터는 기본 브랜치가 진실이다. 읽기 전용 토큰이 남아 스킬의 pull --rebase는 되고 push는 안 된다.
-      - name: Checkout reconciler (default branch)
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-          path: ws/reconciler
-          fetch-depth: 50
-
-      # TODO: git 작성자(reconciler-bot), jsonschema 설치, 생성본 다운로드 → ws/$SKILL_REL 설치.
-      - name: Prepare workspace and install generated skill
-        run: |
-          echo "TODO: prepare ws/ and install generated $SKILL_NAME"
-
-      # TODO: mcp_oidc_proxy.py 기동 → mcp_call.py tools 프리플라이트 → 대상 레포 읽기 토큰(SOURCE_GITHUB_TOKEN).
-      #   대상 레포 토큰은 읽기 권한으로만 받는다 — 리뷰는 대상 레포에 status·코멘트를 쓰지 않는다.
-      - name: Connect homelab-k3s-mcp
-        run: |
-          echo "TODO: start OIDC proxy, preflight, mint source read token"
-
-      # 스킬 Step 0(대상 선정)을 옮긴 읽기 전용 선정 — 운영 리뷰 워크플로와 같은 스크립트.
-      - name: Select target
-        id: select
-        env:
-          INPUT_TARGET_ID: ${{ inputs.target_id }}
-        run: |
-          python3 harness/.github/scripts/select_review_target.py \
-            --repo ws/reconciler --target "$INPUT_TARGET_ID" \
-            --summary-file "$RUNNER_TEMP/select-target.md"
-
-      # TODO: 러너 점유 스크립트(claim_drift_target.py에 대응하는 리뷰용)를 만들어 --dry-run으로
-      #   planned → reviewing compare-and-set 커밋을 남긴다(push 없음). claimed·claim_commit을 출력한다.
-      - name: Claim target (dry run)
-        id: claim
-        if: steps.select.outputs.found == 'true'
-        run: |
-          echo "TODO: claim $SKILL_NAME target without push"
-
-      # TODO: setup-mcode → ws/.mcp.json 연결 → MCP smoke → .github/minimax/work-review-test-prompt.md로
-      #   RECONCILER_DRY_RUN=1 실행(mcode 환경에서 OIDC 요청 변수·SOURCE_GITHUB_TOKEN 제외).
-      - name: Run generated skill
-        id: run
-        if: steps.select.outputs.found == 'true'
-        env:
-          MODEL: ${{ inputs.minimax_model }}
-          TARGET_ID: ${{ steps.select.outputs.target_id }}
-          MODEL_ID: ${{ steps.select.outputs.model_id }}
-          PULL_REQUEST_URL: ${{ steps.select.outputs.pull_request_url }}
-        run: |
-          echo "target_id: $MODEL_ID/$TARGET_ID"
-          echo "pr:        ${PULL_REQUEST_URL:-<direct action>}"
-          echo "TODO: run generated $SKILL_NAME (dry run)"
-
-      # TODO: 점유 커밋 이후 변경 점검기(check_detector_result.py에 대응하는 리뷰용) — 그 task 파일만 바뀌었나,
-      #   approved | review_rejected로 끝났나, review 근거가 채워졌나, manualApproval이면 sha가 PR head와 같은가.
-      - name: Check result
-        if: steps.run.outcome == 'success'
-        run: |
-          echo "TODO: check $SKILL_NAME result"
-
-      - name: Summary
-        if: always()
-        env:
-          FOUND: ${{ steps.select.outputs.found }}
-          TARGET_ID: ${{ steps.select.outputs.target_id }}
-          MODEL_ID: ${{ steps.select.outputs.model_id }}
-          REASON: ${{ steps.select.outputs.reason }}
-        run: |
-          {
-            echo "### 3. Test (dry run — push 없음) — $SKILL_NAME"
-            echo "- target found: ${FOUND:-false}"
-            echo "- target_id: ${TARGET_ID:-<none>}${MODEL_ID:+ (model $MODEL_ID)}${REASON:+, $REASON}"
-            echo "- result: TODO"
-            echo
-            cat "$RUNNER_TEMP/select-target.md" 2>/dev/null || true
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      # TODO: redact_secrets.py --extra-env SOURCE_GITHUB_TOKEN → work-review-test-result 아티팩트 업로드.
-      - name: Redact and upload test result
-        if: always()
-        run: |
-          echo "TODO: redact and upload work-review-test-result"

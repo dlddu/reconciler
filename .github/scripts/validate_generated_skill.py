@@ -3,8 +3,8 @@
 
 생성 결과를 사람이 읽기 전에 기계적으로 걸러낼 수 있는 것만 본다:
   - 형식: SKILL.md 존재, frontmatter(name/description), 본문 길이
-  - 계약 커버리지: 감지 단계 계약의 핵심 요소가 본문·번들 스크립트에 등장하는지(키워드 기반 — 의미 검증은 test job 몫)
-  - 안전: 비밀값 리터럴, 강제 push, 스키마 파일 쓰기 같은 금지 패턴
+  - 계약 커버리지: 감지 단계 계약의 핵심 요소가 본문·번들 스크립트에 등장하는지(키워드 기반 — 실제 동작은 운영 감지의 결과 점검기가 본다)
+  - 안전: 비밀값 리터럴, 강제 push, 스키마 파일 쓰기, 드라이런 분기 같은 금지 패턴
   - 보조 스크립트: .py는 컴파일, .sh는 `bash -n`
 
 오류가 하나라도 있으면 종료 코드 1. 경고는 보고만 한다.
@@ -36,7 +36,6 @@ REQUIRED = [
     ("task 스키마 참조", [r"reconciliation-task\.schema\.json"]),
     ("task 저장 위치", [r"data/reconciliation-tasks"]),
     ("커밋 메시지 규약 detect(...)", [r"detect\("]),
-    ("드라이런 RECONCILER_DRY_RUN", [r"\bRECONCILER_DRY_RUN\b"]),
     ("push 전 최신화(pull --rebase)", [r"pull\s+--rebase"]),
     ("스키마 검증", [r"jsonschema", r"\bvalidat"]),
     ("점유된 task 입력(task_id)", [r"\btask_id\b"]),
@@ -61,6 +60,8 @@ FORBIDDEN = [
     ("GitHub 토큰 리터럴", r"\bgh[spuor]_[A-Za-z0-9]{20,}"),
     ("MiniMax 키 리터럴", r"\bsk-(cp|api)-[A-Za-z0-9_-]{16,}"),
     ("강제 push", r"git\s+push\b[^\n]*(\s--force\b|\s-f\b|\s\+\S)"),
+    # 정합성 루프에는 드라이런 모드가 없다(계획·실행은 구조적으로 드라이런이 불가능해 단계마다 다르면 헷갈린다).
+    ("드라이런 분기", r"\bRECONCILER_DRY_RUN\b"),
     ("스키마 파일 쓰기", r"(>|\btee\b|sed\s+-i[^\n]*)\s*\S*schemas/[\w.-]+\.schema\.json"),
     ("토큰 출력", r"echo\s+[\"']?\$\{?(GITHUB_TOKEN|GH_TOKEN|SOURCE_GITHUB_TOKEN)\b"),
 ]

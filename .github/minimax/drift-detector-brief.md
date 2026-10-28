@@ -17,7 +17,7 @@
 ## 스킬이 할 일
 감지 단계의 **판정**: 러너가 점유해 둔 task 한 건에 대해 as-is/to-be의 실제 상태를 관측하고, "차이가 유의미한가, 지금 작업이 필요한가"를 근거와 함께 판정해 그 task에 기록한다. 고치거나 계획하지 않는다.
 
-입력: 러너가 프롬프트로 체크아웃 경로, 점유된 `task_id`·`model_id`, 점유 사유(`claim_reason`), 점유 커밋, 드라이런 여부를 넘긴다. 대상 선정과 점유(task 생성 또는 재진입 표시 + 모델 기준선 갱신, 커밋·push)는 **러너가 이미 끝냈다.**
+입력: 러너가 프롬프트로 체크아웃 경로, 점유된 `task_id`·`model_id`, 점유 사유(`claim_reason`), 점유 커밋을 넘긴다. 대상 선정과 점유(task 생성 또는 재진입 표시 + 모델 기준선 갱신, 커밋·push)는 **러너가 이미 끝냈다.**
 
 ## 핵심 규칙
 1. **한 건만.** 넘겨받은 task 한 건만 다룬다. 시작할 때 그 task가 `assessing`인지 확인하고, 아니면 아무것도 쓰지 않고 멈춘다.
@@ -31,7 +31,6 @@
 6. **검증.** 쓰기 전에 레코드를 `schemas/reconciliation-task.schema.json`으로 검증한다(python `jsonschema`). 통과하지 않으면 쓰지 않는다.
 7. **커밋.** 메시지는 `detect(<toBeModelId>/<taskId>): <요약>`, 단계마다 개별 커밋(상태 요약 → 판정).
 8. **push.** `git pull --rebase` 후 push한다. 다른 모델의 커밋이 먼저 들어와 거절되면 `pull --rebase` 후 다시 push한다.
-9. **드라이런.** `RECONCILER_DRY_RUN=1`이면 커밋까지만 하고 push는 건너뛰고 성공으로 간주한다.
 
 ## 도구
 MCP 서버 `k3s`의 `github_app_installation_token`(대상 레포 읽기, contents:read로 좁힌다), `resource_list`/`resource_get`(쿠버네티스 관측).
