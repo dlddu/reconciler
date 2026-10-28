@@ -19762,7 +19762,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T22:33:39Z",
     "trigger": {
       "source": "version_change",
@@ -19786,6 +19786,40 @@
     "assessment": {
       "reason": "직전 슬라이스(rct_20261028-0005, PR #296)가 병합돼 버전이 바뀌었으나 필요성 판정은 줄 주석 29.6%(895/3022줄), docstring 5/1467줄, 줄 끝 주석 0/4줄만 끝났다. 미판정 주석이 대량으로 남아 정의상 drift이며, 자동 해소되는 성격이 아니라 슬라이스 단위 판정 작업이 계속 필요하다(롤아웃·일시적 alert 아님). 지문 재현: 두 versionScript를 대상 레포 신규 클론(3bd7a16)에서 실행해 to-be a40c9d9d…, as-is 6c49d8ed…를 얻어 claim 값과 일치(env -i 필요). planner 참고: 슬라이스 예산(≈400줄)을 지키고 남은 줄 주석 70행부터 한 슬라이스 단위로 자를 것.",
       "assessedAt": "2026-10-28T22:34:05Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "필요성 판정 네 번째 슬라이스(모델 정의의 판정 슬라이스 400줄 예산 안): 서로 파일을 공유하지 않는 미판정 줄 주석 7행 400줄(approvalgate 114·eventlog 계열 127·commitstatus 15·mcp/confine 44·confine_test 20·mcp/resource 34·resource_test 46)을 필요성 시험으로 판정해 한 PR 로 묶는다. 비주석 diff 0(주석 제거에 따른 gofmt 정렬 공백 1줄 제외)이고 PR revert 로 되돌릴 수 있어 한 PR 이 가장 싸다. 열린 PR 과 겹치는 파일 없음(대상 레포 열린 PR 0건 확인). 완료 기준(범위): 이 7행이 판정 축 `완료`(결과 칸 「필요성 판정 @지문」)이고 제거·유지 사유가 passes/ 에 기록되며 게이트 R1~R15·doc inventory 가 통과하면 성공(400→329줄). 범위 밖(후속): 나머지 줄 주석 63행·docstring 37행·줄 끝 9행 — 재감지가 새 task 로 잇는다. 사람 소유 결정은 없다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 신규 브랜치(reconcile/rct_20261028-0006)에서 7개 행 범위의 주석을 필요성 시험(README 판정 절차)으로 판정해 사유 없는 주석을 제거한다(이름·AC 번호·테스트 이름 재진술, 주석끼리 중복, 작업 흔적은 제거; 상류 사실·순서 불변식·계약 문장은 유지).",
+              "expectedOutcome": "줄 주석 400→329, 비주석 diff 는 gofmt 정렬 공백 1줄, gofmt/go vet/go test 통과"
+            },
+            {
+              "seq": 2,
+              "action": "ledger.md 7행의 줄 수·지문을 게이트 실측으로 갱신하고 판정 축을 `완료` 로, 결과 칸에 「필요성 판정 @지문」을 적는다. passes/2026-10-28-necessity-slice-rct-20261028-0006.md 에 제거 목록·유지 사유를 기록하고 doc-tracker 허브 집계를 맞춘다.",
+              "expectedOutcome": "check_comment_policy.py R1~R15 OK(완료 28행 1224줄), check_doc_inventory.py D1~D4 OK(135/135)"
+            },
+            {
+              "seq": 3,
+              "action": "PR 을 연다(머지는 executor 몫).",
+              "expectedOutcome": "PR #297 열림, CI 초록"
+            }
+          ],
+          "plannedAt": "2026-10-28T23:05:00Z",
+          "executionGuide": "## 순서\n1. PR(dlddu/homelab-k3s-mcp#297) head 와 `ci passed` 확인(fmt+vet 잡의 check_comment_policy.py·check_doc_inventory.py, go test, mock/ac 게이트). image 잡이 레지스트리 일시 오류로 실패하면 실패 잡만 재실행한다(주석 변경과 무관). 머지 전 main 이 움직여 원장·같은 파일을 건드린 PR 이 들어왔으면 rebase 후 `python3 scripts/check_comment_policy.py` 재실행 — 지문 불일치(R2/R6)가 나면 그 행의 줄 수·지문만 실측으로 갱신하고 새로 들어온 주석은 판정 축 `—` 로 둔다(판정하지 않은 주석을 `완료` 로 세지 않는다). doc-tracker 허브 집계(135/135)가 다른 PR 과 충돌하면 실측으로 다시 맞춘다.\n2. squash 머지(`--match-head-commit` 으로 검증한 head 고정).\n3. 머지 후 main 에서 검증.\n\n## 검증\n- `env -i python3 scripts/check_comment_policy.py` → `R1~R15 위반 없음`, 줄 주석 `필요성 판정 완료 28행 1224줄`(기존 21행 895줄 + 7행 329줄), 전체 판정 대상 2951줄, 미판정 63행.\n- `python3 scripts/check_doc_inventory.py` → D1~D4 OK(허브 135/135).\n- PR diff 에 비주석 변경은 `approvalgate.go` 의 `DefaultTokenFile` 정렬 공백 1줄뿐. `gofmt -l .` 빈 출력, `go vet ./... && go test ./internal/...` 통과.\n- 수렴 판정은 이 범위 기준: 위 7행이 `완료` 이고 passes/2026-10-28-necessity-slice-rct-20261028-0006.md 가 제거·유지 사유를 담으면 성공. 전체 to-be(미판정 0)는 아직 아니며 지문 해시는 머지로 이동하는 것이 정상.\n\n## 범위 밖(후속)\n줄 주석 미판정 63행(예: internal/k8s/* 큰 행들·tests/integration·tests/k8s/kind/*·.github/workflows/ci.yml), docstring 37행, 줄 끝 9행. 머지 후 재감지가 새 task 를 연다.\n\n## 주의\n- 되돌릴 수 없는 지점 없음(주석·문서만). 롤백 = PR revert. 행 단위로 독립이라 이의가 있는 행만 되돌려도 된다.\n- 제거 판단의 최종 책임은 이 계획에 있다."
+        },
+        "preparation": {
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20261028-0006",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/297",
+          "preparedAt": "2026-10-28T23:05:00Z",
+          "notes": "주석 제거와 원장·passes·doc-tracker 갱신이 PR 에 포함됨. 로컬에서 check_comment_policy.py·check_doc_inventory.py·check_mock_policy.py·check_ac_mapping.py·gofmt·go vet·go test ./internal/... 통과 확인. 머지는 하지 않음."
+        }
+      }
+    ]
   }
 ]
