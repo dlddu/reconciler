@@ -9245,7 +9245,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T15:52:26Z",
     "trigger": {
       "source": "version_change",
@@ -9380,6 +9380,49 @@
               "detail": "#329 미착지 — 범위 미달성. #298 squash 머지 위로 #329 재베이스(재준비) 후 CI 재실행 필요"
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "직전 시도(#329 가 #298 squash 후 dirty·shard0 실패로 미착지)를 이어, 같은 슬라이스(「## e2e 매핑」을 실측 시나리오 94 에 맞추는 등재: 미등재 17 시나리오 등재 · approval-gate #17 stale 구현 대기→매칭)를 재준비한다. #298 은 머지됐으므로 스택 없이 doc-tracker 1파일 변경으로 줄였고, 같은 절을 고치는 sibling #334(#14 구현 대기→예외)와 집계 충돌이 나지 않게 #334 head 위에 적층했다(둘 다 가역 문서 변경, 어느 쪽이 먼저든 집계는 94 기준). **완료 기준(범위)**: 검산기 벡터 `files 62 · scenarios 94 · matched 59 · non-scenario 3 · exception 13 · pending 5 · gap 17` + #329 squash 착지. **범위 밖**: 공백 17행의 XCUITest·인프라 신설, 구현 대기 5행.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "선행 확인: #334 가 main 에 머지됐는지(안 됐으면 #329 머지 금지)",
+              "expectedOutcome": "#334 MERGED"
+            },
+            {
+              "seq": 2,
+              "action": "main 의 comment-policy ledger 실패(무관, #335 가 수정) 해소 확인 후 #329 의 CI(ci-success, ledger)·review/manual-approval 확인",
+              "expectedOutcome": "필수 status 초록, mergeable clean"
+            },
+            {
+              "seq": 3,
+              "action": "머지 직전 base 재실측: merge-tree 충돌 0 + 결과 트리에서 검산기 실행",
+              "expectedOutcome": "충돌 0, 검산기 rc=0 files 62 · scenarios 94 · matched 59 · non-scenario 3 · exception 13 · pending 5 · gap 17"
+            },
+            {
+              "seq": 4,
+              "action": "#329 squash 머지(sha 고정)",
+              "expectedOutcome": "main 에 doc-tracker 변경 착지"
+            },
+            {
+              "seq": 5,
+              "action": "착지 트리에서 검산기 --expect 재실행",
+              "expectedOutcome": "rc=0, 벡터 일치"
+            }
+          ],
+          "plannedAt": "2026-10-28T20:10:00Z",
+          "executionGuide": "## 실행 지침 — rct_20261028-0001 재시도 (PR dlddu/pocket-aide#329, head `c257338`)\n\n**완료 기준**: #329 가 main 에 squash 착지하고 착지 트리에서 ① 검산기 rc=0, 마지막 줄 정확히 `ok — files 62 · scenarios 94 · matched 59 · non-scenario 3 · exception 13 · pending 5 · gap 17` ② PR 필수 status 초록(`ci-success`·`review/manual-approval`).\n\n### 직전 시도 실패 원인과 이번 변경\n직전: #298 squash 머지로 #329 가 dirty, iOS shard0 실패(#298 스택분). 이번: #298 은 이미 머지됐고 #329 는 이제 **doc-tracker 1파일만** 바꾼다(iOS 샤드 SKIPPED 확인). 또한 같은 절의 sibling PR **#334**(rct_20261028-0002, approval-gate #14 구현 대기→예외)와 집계 칸이 겹쳐 #329 를 #334 head(`3ae8341`) 위에 1커밋(`c257338`) 적층했다. 따라서 #329 의 집계는 #334 의 #14 이동을 이미 포함한다(예외 13·구현 대기 5).\n\n### 순서 (직렬)\n1. **선행: #334 가 main 에 머지돼 있어야 한다.** 아니면 #329 를 머지하지 말고 대기(사유 기록). #334 가 squash 머지되면 #329 의 #334 분 변경이 main 과 동일해 충돌 없이 tracker 차이만 남는다. #334 가 닫히거나 main 이 tracker 를 다시 건드려 `mergeable=dirty` 가 되면 실행에서 해소하지 말고 재준비로 넘긴다.\n2. **ledger 게이트 확인**: 현재 main 의 `comment-policy ledger` 가 이미 failure(ledger.md:65 `check.mjs` 줄 수/지문 불일치, #333 유입)이고 이 PR 과 무관하다. 수정 PR #335(rct_20261028-0002 comment-necessity)가 머지돼야 #329 의 ledger·`ci-success` 가 초록이 된다. 따라서 #335 머지 후 #329 의 CI 를 다시 돌려(리베이스 없이 re-run 또는 main 병합 필요 시 재준비) ledger 초록을 확인한다. 이 실패를 우회하려고 필수 status 를 건너뛰지 않는다.\n3. 머지 직전 base 재실측: `git merge-tree --write-tree origin/main <head>` 충돌 0, 그 트리에서 검산기 실행.\n4. squash 머지(`sha=c257338…` 고정). 5. 착지 트리에서 검산기 재실행.\n\n### 검증\n검산기 전문은 레코드 rct_20261013-0002 첫 시도 `attempts[0].plan.executionGuide` 의 파이썬 블록. checkout 밖에 저장해 `python3 -I verify_e2e_map.py <checkout> --expect \"files 62 · scenarios 94 · matched 59 · non-scenario 3 · exception 13 · pending 5 · gap 17\"`. 불변식 94−13−5=76=59+17. 계획 시점 c257338 트리에서 rc=0 확인.\n\n### 주의\n문서 1파일 변경, 롤백은 squash revert. 불가역 지점 없음. head 가 바뀌면 `review/manual-approval` 이 sha 에 묶여 재판정된다.\n\n### 범위 밖(후속 — 재감지가 새 task 를 연다)\n공백 17행의 전용 XCUITest 신설: approval-gate #15·#18~21, session-platform #2~11·#13·#14(BF-5 스텁 PR #327 착지 후). 구현 대기 5행(docs-impl 몫).\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261028-0001-e2e-ledger",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/329",
+          "preparedAt": "2026-10-28T20:10:00Z",
+          "notes": "기존 PR #329 재사용(force-with-lease 로 head fb38dc3→c257338). #334 head(3ae8341, base 4b7d061) 위 1커밋, doc-tracker 만 변경. 검산기 ok(files 62 · scenarios 94 · matched 59 · non-scenario 3 · exception 13 · pending 5 · gap 17). 같은 gap(approval-gate #14)을 #334 가 다루므로 그 위에 적층; 순서 의존: #334 → (#335 로 main ledger 복구) → #329. 코멘트 정책 ledger 실패는 main 자체 문제."
         }
       }
     ]
