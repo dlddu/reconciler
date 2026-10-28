@@ -17095,7 +17095,7 @@
   {
     "id": "rct_20261013-0006",
     "toBeModelId": "tbm_pocket-aide-mockup-render",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "source": "version_change",
       "detectedAt": "2026-10-13T13:00:11Z",
@@ -17115,6 +17115,45 @@
     "assessment": {
       "reason": "조치 필요(action_required).\n\n이번 변화는 PR #296(`9b6ec73`, 사람 작성)이 위젯 지원 크기를 iOS 27에서 4×6(`.systemExtraLargePortrait`) 하나로 바꾼 것이다. 목업(SSOT)은 「큰 위젯 (4×4)」만 그린다. 이 이탈은 허용목록에도 없고, 맵 서술(`_impl-map` 「(Large)」, `_copy-map` 미구현 영역 사유 「supportedFamilies 는 .systemLarge 뿐」)도 어긋나게 됐다(기준 1·4·5). PR 본문도 「mockups 맵의 「Large 하나뿐」 서술은 아직 갱신하지 않음」, 「실기기에서 여백 분배 확인 필요」라고 적었다.\n\n자동 해소 가능성은 없다.\n- 검산 4종과 ledger는 `ok`이고, CI도 이 차이를 막지 않는다. 기계적 실패로 누군가 끌려올 경로가 없다.\n- 열린 mockup-render task는 0005(planned, PR #301 ApprovalKeysView 세 상태 프레임)뿐이고 위젯을 다루지 않는다.\n- 열린 pocket-aide PR(#301·#300·#298·#201) 중 위젯 크기나 screen-widget을 다루는 것은 없다.\n- 지금 배포 산출물이 Xcode 26 빌드라 Large로 동작하는 것은 일시적인 사정일 뿐이다. 소스는 이미 4×6을 선언했고, 이 모델의 as-is는 소스 기준이다.\n\nplanner 참고:\n- 방향은 정의의 「충돌 시 기본 방향」에 따라 계획 단계에서 정한다. 4×6은 의도된 디자인 변경으로 보인다. 그렇다면 후보는 다음과 같다:\n  - (a) `screen-widget.html`에 「초대형 위젯 (4×6)」 프레임을 추가(또는 4×4 프레임 교체)하고, `_impl-map:90`·`_copy-map:652-657` 사유를 현행화한다(iOS 26은 Large 유지).\n  - (b) 목업 보강 전까지 `_deviations.md`에 사유와 함께 등재한다.\n  - 크기 정책 자체가 사람 소유 결정이면 decision PR로 올린다.\n- 4×6 세로 여백 분배(위·아래 행 구분선이 늘어나는 형태)는 실기기 확인 전이라 목업 수치를 정하는 근거가 아직 없다. 계획에 반영할 것.\n- 경계: PRD-8 AC1·test-widget·JRN-morning-widget-glance의 「Large」 서술은 docs-impl/scenario-e2e/journey 모델의 몫이다. 이 모델은 `docs/mockups` 쪽만 맡는다.",
       "assessedAt": "2026-10-13T13:02:19Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "PR #296 이 iOS 27 에서 위젯을 4×6(.systemExtraLargePortrait) 하나로 지원하도록 바꿨고(그 밖은 .systemLarge), 정의의 충돌 규칙상 이는 의도된 디자인 변경이라 구현을 되돌리지 않고 목업을 구현에 맞춘다(가역: PR revert). 범위: screen-widget 에 4×6 프레임을 더하고 _copy-map 의 4×2 미구현 사유를 현행화한다(_impl-map 은 이미 현행, 사람 소유 결정 없음, 이탈 허용목록 불필요). 범위 밖: 4×6 실측 높이·여백 분배의 실기기 확인, 다른 모델 몫인 PRD/테스트/여정 문서의 Large 서술.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "pocket-aide 브랜치 reconcile/rct_20261013-0006 에서 docs/mockups/screen-widget.html 에 「홈 스크린 · 초대형 위젯 (4×6 · iOS 27)」 프레임 추가(내용은 4×4 와 동일, 위젯 높이만 길게, 남는 높이는 아래 빈 여백).",
+              "expectedOutcome": "4×4 프레임 유지, 4×6 프레임 추가"
+            },
+            {
+              "seq": 2,
+              "action": "_copy-map.md 에 새 변형 제목 행 추가, 4×2 미구현 영역 사유 6행을 supportedFamilies 현행(iOS 27 .systemExtraLargePortrait / 그 밖 .systemLarge, .systemMedium 없음)으로 수정. _index.md·README.md 변형 목록 갱신.",
+              "expectedOutcome": "맵 서술이 구현과 일치"
+            },
+            {
+              "seq": 3,
+              "action": "검산 4종(_impl/_copy/_structure/_token) 실행 후 PR 생성.",
+              "expectedOutcome": "widget 관련 신규 불일치 0, PR 열림"
+            },
+            {
+              "seq": 4,
+              "action": "(executor) PR 머지 후 main 에서 검산 재실행.",
+              "expectedOutcome": "기준 1·4·5 의 위젯 크기 gap 해소"
+            }
+          ],
+          "plannedAt": "2026-10-28T07:30:00Z",
+          "executionGuide": "## 순서\n1. (직렬) PR #326 의 변경 파일이 `docs/mockups/` 아래뿐인지, `review/manual-approval` 이 자동 판정(MA1~MA5 비해당)인지 확인한다.\n2. (직렬) `ci-success` 와 `review/manual-approval` 이 PR head 에 success 인지 확인한 뒤 머지한다.\n3. (직렬) 머지 후 main 에서 검산을 돌린다.\n\n## 검증 방법 (완료 기준 = 이 시도의 범위)\n- `screen-widget.html` 에 「홈 스크린 · 초대형 위젯 (4×6 · iOS 27)」 프레임이 있고 4×4 프레임은 그대로다.\n- `_copy-map.md` 의 4×2 미구현 영역 사유 6행에 「`.systemLarge` 뿐」이 더 이상 없고 새 제목 행이 있다.\n- `_impl-map`·`_structure-map`·`_token-map` 검산 출력 `ok`. `_copy-map` 검산에서 `screen-widget` 불일치 0 (`screen-sessions` 기존 불일치는 무관).\n- 재감지 시 위젯 크기·family 관련 gap(기준 1·5)이 사라지면 수렴.\n\n## 주의\n- 높이 `h-[490px]` 는 근사값(4×4 ≈345 의 6/4). 실기기 확인 전이라 후속에서 고친다. 되돌리기는 PR revert 한 번.\n- 코드 변경 없음(문서·목업만), 위험 낮음.\n\n## 범위 밖(후속)\n- 4×6 실측 높이 반영과 세로 여백 분배의 실기기 확인.\n- PRD-8 AC1·test-widget·JRN-morning-widget-glance 의 「Large」 서술 — docs-impl/scenario-e2e/journey 모델 몫.\n- `_copy-map` 의 `screen-sessions` 기존 검산 불일치 — 별도 gap.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261013-0006",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/326",
+          "preparedAt": "2026-10-28T07:30:00Z",
+          "notes": "docs/mockups 만 변경(수동 승인 케이스 비해당 예상). 높이 490 은 근사값. 검산 3종 ok, _copy-map 은 screen-sessions 기존 불일치 외 widget 신규 0."
+        }
+      }
+    ]
   }
 ]
