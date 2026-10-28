@@ -13458,6 +13458,55 @@
     "assessment": {
       "assessedAt": "2026-10-28T22:33:26Z",
       "reason": "버전 변화는 #273(rct_20261028-0004)의 정상 후속 반영이라 신규 회귀는 없다. 그러나 기준 2·6의 잔여 gap(design-tracker 구현 수렴 대기: sentiment 잔여 표면·compare·fairness/trace·reprocess, integrity 화면 미구현, 재판정 필요 행)이 정적으로 남아 있고 자동 해소될 성격이 아니라 재확인 유예는 불필요하다. 문서→구현 완전 수렴이 목표이므로 후속 슬라이스 계획이 필요하다. 계약 변경 선행 항목(sentiment 원인 줄, 구간 파라미터를 받는 공정성 링크)과 바로 구현 가능한 항목(compare·fairness/trace·reprocess)을 planner가 가려 한 슬라이스씩 분할할 것."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "계약 변경 없이 닫을 수 있는 `reprocess` 화면 표면만 슬라이스로 닫는다: 범위 표 scrolly · 임계 초과 note 의 `/trace` 이탈(over-go) · 표본 요약의 `로직을 고치고 표본부터 다시`(redo-go) · 끊김 note 의 `체크포인트부터 이어서 재개`(resume-go). 완료 기준은 이 네 표면의 해소이며, 범위 밖: AC3.3 전후 추이 카드·`ua-trend-go`(버전별 일 단위 시계열이 서빙에 없어 계약 변경 선행) · `gap-go`(`integrity` 라우트 없음) · sentiment 원인 줄·기여 뉴스 링크 · compare(대상 동일성 판정이 선행) · fairness/trace(저신뢰 서빙 필드 없음) · integrity 화면 · 「재판정 필요」 행. 대안(전후 추이 카드 포함 reprocess 전체)은 Gold/Go 계약 변경이 선행이라 기각; 정적 렌더 변경이라 PR revert 로 롤백된다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "Reprocess.tsx 범위 표를 `.rp-scrolly`(최대 높이 320px) 래퍼로 감싸고 tokens.css 에 `.rp-scrolly`·`.rp-actions` 추가",
+              "expectedOutcome": "범위 표가 카드 안에서 스크롤된다"
+            },
+            {
+              "seq": 2,
+              "action": "임계 초과 note 에 `반영을 보류하고 원인 대상을 원문까지 확인 →` Link(`/trace`) 추가",
+              "expectedOutcome": "임계 초과 시 note 안에서 원문 추적 화면으로 이어진다"
+            },
+            {
+              "seq": 3,
+              "action": "ReprocessTrigger.tsx 표본 요약 카드에 표본 완료 후에만 `로직을 고치고 표본부터 다시` 추가(목표 로직 버전 입력에 포커스)",
+              "expectedOutcome": "표본이 끝난 뒤에만 보이고 누르면 버전 입력이 포커스된다"
+            },
+            {
+              "seq": 4,
+              "action": "끊김 note 안에 `체크포인트부터 이어서 재개 →` 추가(실행 버튼과 같은 잠금·같은 전량 요청)",
+              "expectedOutcome": "끊긴 전량 실행을 note 에서 바로 재개한다"
+            },
+            {
+              "seq": 5,
+              "action": "design-tracker 해소 행 추가·reprocess 수렴 대기 행 축소, 테스트 3건 추가",
+              "expectedOutcome": "해소된 등재에 #274 행, 남은 reprocess 행은 전후 추이 카드·ua-trend-go·gap-go 만 남는다"
+            },
+            {
+              "seq": 6,
+              "action": "tsc·eslint·vitest·comment-ledger·mockup-render 확인 후 PR #274 머지(executor)",
+              "expectedOutcome": "전부 통과, 머지로 as-is·to-be 버전 이동, 재감지가 잔여 gap 만 센다"
+            }
+          ],
+          "plannedAt": "2026-10-28T22:41:58Z",
+          "executionGuide": "## 실행 순서\n1. PR https://github.com/dlddu/economic-opinion-trend-monitor/pull/274 의 head(`7154243`) 에서 CI(`required`·ci/build·e2e·comment-ledger·render)와 `review/manual-approval` 상태를 확인한다. 변경 경로(`web/`, design-tracker)는 직전 슬라이스(#272·#273)와 같은 부류다. 자동 success 가 안 붙으면 `review.manualApproval` 이 있는지 보고 따른다.\n2. squash 머지. 단일 PR 이라 순서 의존·병렬 없음.\n3. 머지 후 design-tracker 「해소된 등재」의 `#274 (squash)` 가 실제 PR 번호와 맞는지 확인한다.\n\n## 검증 방법 (완료 기준 = 슬라이스 범위)\n- `web/src/screens/Reprocess.tsx` 에 `.rp-scrolly > table.rp-scope` 와 임계 초과 note 안 `Link to=\"/trace\"`(`반영을 보류하고 원인 대상을 원문까지 확인 →`), `ReprocessTrigger.tsx` 에 `로직을 고치고 표본부터 다시`(표본 완료 후만)·`체크포인트부터 이어서 재개 →`(끊김 note 안) 가 있다.\n- `cd web && npx tsc -b && npx eslint . && npx vitest run` 통과(162 passed), `python3 scripts/check-comment-ledger.py .`·`python3 scripts/check-mockup-render.py .` 통과.\n- design-tracker 「해소된 등재」에 `#274 (squash)` reprocess 행이 있고, 「등재된 편차」의 reprocess 수렴 대기 행은 전후 추이 카드·`ua-trend-go`·`gap-go` 만 남는다.\n- 재감지: 머지로 web·docs 가 함께 움직인다. 재감지 task 가 이 네 표면을 새 gap 으로 세지 않아야 한다.\n\n## 범위 밖(후속)\n- reprocess: AC3.3 전후 추이 카드와 `ua-trend-go`(두 버전의 같은 기간 일 단위 시계열이 `/api/reprocess` 에 없음 — 서빙 계약 변경 선행), `gap-go`(도착지 `integrity` 라우트 없음).\n- sentiment 원인 줄·기여 뉴스 링크, compare, fairness/trace(AC2.5 저신뢰 분리·§4 컨트롤), integrity 화면, 「재판정 필요」 행.\n\n## 주의사항\n- 불가역 지점 없음. 롤백은 PR revert.\n- 새 주석은 넣지 않아 comment ledger 행은 그대로다(게이트 불변식 통과 확인).\n- `Reprocess` 가 `<Link>` 를 쓰므로 테스트는 `MemoryRouter` 로 감쌌다(앱은 이미 Router 안).\n"
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261028-0005",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/274",
+          "preparedAt": "2026-10-28T22:41:58Z",
+          "notes": "web 변경(Reprocess.tsx·ReprocessTrigger.tsx·tokens.css·Reprocess.test.tsx) + design-tracker 한 PR. 로컬 tsc/eslint/vitest(162)·ledger·mockup-render 통과. head 7154243. 머지는 하지 않았다."
+        }
+      }
+    ]
   }
 ]
