@@ -19175,7 +19175,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T15:27:18Z",
     "trigger": {
       "detectedAt": "2026-10-28T15:27:18Z",
@@ -19198,6 +19198,50 @@
     "assessment": {
       "assessedAt": "2026-10-28T15:28:04Z",
       "reason": "**작업 필요.** 자동 해소 가능성이 없다 — 미판정 주석은 사람이 판정 슬라이스(필요성 시험 → 제거/유지 사유 기록)를 PR로 올려야만 줄어든다. 근거: ⑴ 지문 재현 — 두 versionScript를 대상 레포 신규 클론(616228d)에서 실행해 as-is dead770f…, to-be 0d0b4fd8…가 trigger와 일치. ⑵ 게이트 실측 — L 65.4%(미판정 23행)·D 67.2%(미판정 11행)·E 100%; 직전 관측은 전부 100%·0이었으므로 순수 후퇴다. ⑶ 열린 task 0건(succeeded 89·no_action_needed 56·cancelled 4)이라 이 gap의 소유자가 없다. ⑷ 정책 본문(README)은 변하지 않아 정책 개정 task가 아니라 신규 주석 판정 슬라이스 task다. planner 참고: 미판정 행 목록은 게이트 출력의 판정 축 '—' 행, 범위는 #279~#290 창이 들인 파일(session_create/delete, OIDC 인증, pocket-aide, 승인 게이트 관련 Go·테스트·Python 시나리오·k8s 픽스처)이다. docstring 수치는 게이트(1470줄)와 as-is 스크립트(1764줄)가 다른 표기이므로 게이트 기준으로 완료 기준을 세울 것."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "모델 개정(비중복성→필요성)의 이전 4항목이 대상 레포에 한 번도 착지하지 않아, 옛 기준 판정이 새 기준의 「완료」로 계수되고 있다(65.4%/67.2%는 옛 기준 수치). 판정 슬라이스에 앞서 이전을 한다: README 판정 기준 교체 · 원장 전행 `—` 로 되돌림 · 게이트 R9/R11 개정 · 옛 id 참조 갱신. 범위=이전 4항목만(주석 삭제 없음, 판정 슬라이스는 범위 밖 — 대량 리셋 diff와 섞지 않기 위함, 모델 정의가 이전을 슬라이스 예산 밖으로 규정). 범위 밖 잔여(미판정 91행+D/E 전 표면)는 머지 후 재감지가 여는 새 task의 몫. 대안: 이전+슬라이스 동시(검토 불가한 PR 크기라 기각), 슬라이스만(옛 기준 위에서 판정하게 되어 기각). 가역: PR revert.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 README 판정 기준을 복원 경로 넷에서 필요성 시험·유지 대상으로 교체하고 제외 ① 이름을 「문서」로, 모델 id를 necessity로 갱신",
+              "expectedOutcome": "README가 필요성 정책 본문이고 comment-redundancy 참조 0건"
+            },
+            {
+              "seq": 2,
+              "action": "ledger.md 판정 축 값을 `완료`/`—` 로 바꾸고 기존 104행을 전부 `—` 로 되돌린다(결과 칸 서술은 보존)",
+              "expectedOutcome": "게이트 출력 필요성 판정 완료 0행, 세 표면 모두 — 만 존재"
+            },
+            {
+              "seq": 3,
+              "action": "check_comment_policy.py R9를 `완료`·`—`만 허용, R11 앵커를 「필요성 판정 @지문 <hash>」 로 교체; 자기 행(줄 수·지문) 갱신",
+              "expectedOutcome": "R1~R15 위반 없음"
+            },
+            {
+              "seq": 4,
+              "action": "docs/index.html·doc-tracker 현재형 라벨 갱신 후 PR 생성",
+              "expectedOutcome": "check_doc_inventory.py D1~D4 위반 없음"
+            },
+            {
+              "seq": 5,
+              "action": "(실행) CI 초록 확인 후 머지하고 main에서 게이트 재검증",
+              "expectedOutcome": "머지 후 main 게이트 OK, 완료 0행"
+            }
+          ],
+          "plannedAt": "2026-10-28T16:30:00Z",
+          "executionGuide": "## 범위 (완료 기준)\n**이 시도 = 모델 개정(2026-09-29)의 이전 4항목만.** 주석 판정 슬라이스(400줄)는 하지 않는다 — 사유: 이전은 원장 104행의 판정 값을 일괄 `—` 로 되돌리는 대량 diff이고, 판정 제거와 섞으면 검토가 불가능하다(2026-09-26 형식 이전 선례도 「주석을 한 줄도 지우지 않는다」). 모델 정의가 이전을 슬라이스 예산 밖으로 명시한다.\n범위 안: README 판정 기준 교체 · 원장 판정 축 `완료`/`—` + 전행 `—` · 게이트 R9/R11 수정 · 옛 id 참조 갱신.\n범위 밖(후속): 미판정 91행(L)·D·E 표면 전체의 필요성 판정 — PR 머지 후 to-be(`docs/comment-policy` tree hash) 이동으로 재감지가 새 task를 연다. 특히 #279~#290 창이 들인 신규 행(provenance, workload_types, pocket-aide-dex, pocketaide.go, mcp.go/toolslist.go, notification_send_sc2/sc4)을 첫 슬라이스 후보로 넘긴다.\n\n## 순서\n1. PR(`dlddu/homelab-k3s-mcp#293`)의 CI(fmt+vet 잡의 `check_comment_policy.py`, `check_doc_inventory.py`) 초록 확인. 머지 전 main이 움직였으면(원장·게이트를 건드린 PR) rebase 후 `python3 scripts/check_comment_policy.py` 재실행 — 지문 불일치(R2/R6)가 나면 해당 행의 줄 수·지문만 갱신(판정 축은 `—` 유지).\n2. 머지(squash).\n3. 머지 후 main에서 검증.\n\n## 검증\n- `python3 scripts/check_comment_policy.py` → `R1~R15 위반 없음`, `필요성 판정 완료 0행`, 세 표면 모두 `축별 — N행`만 존재, 판정 대상 줄 수는 머지 직전 main과 동일(PR 시점 L 3282줄 — 게이트 자기 주석 +1 포함).\n- `grep -rn 'comment-redundancy' docs/comment-policy/README.md scripts/` → 0건. `grep -c '①②③④' docs/comment-policy/ledger.md`의 판정 축 칸(표 5번째 열) 값 0건.\n- 주석 diff: PR diff에 Go/Python/YAML 소스 변경 없음(게이트 스크립트 docstring 제외).\n- 수렴 판정은 이 범위 기준: 정책 README가 필요성 기준이고 원장에 옛 기준 `완료`가 없으면 성공. 지문 as-is/to-be 해시는 머지로 to-be가 이동하는 것이 정상이다.\n\n## 주의\n- 되돌릴 수 없는 지점 없음(문서·게이트 변경, revert 가능). 롤백 = PR revert.\n- 옛 판정 서술(결과 칸·`passes/`)은 당시 기록이라 고치지 않았다.\n- 이 PR은 `scripts/check_comment_policy.py`를 바꾸므로 CI가 새 게이트로 도는 첫 PR이다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20261028-0001",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/293",
+          "preparedAt": "2026-10-28T16:30:00Z",
+          "notes": "README·원장·게이트·라벨 변경, 주석 삭제 없음. 로컬에서 check_comment_policy.py·check_doc_inventory.py 통과 확인. 감지 단계 assessment는 옛 기준 수치(100%→65.4%)를 근거로 삼았으나 실제 gap은 이전 미착지이므로 계획 범위를 이전으로 재설정했다."
+        }
+      }
+    ]
   }
 ]
