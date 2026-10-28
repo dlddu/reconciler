@@ -1567,6 +1567,49 @@
           "reason": "PR #327(head 9207b9c)은 열려 있고 충돌 없음(mergeable), 범위(10파일 +337/-11)·롤백(revert)·위험도(low)는 타당하다. 그러나 신선도 확인(18:44Z)에서 CI가 통과하지 않았다: 'comment-policy ledger' 체크가 새 head에서 failure(18:36:33Z 완료)이고 iOS shard 0~2는 queued라 스텁 state 정정의 효과가 미검증이며 필수 ci-success도 미완이다. 계획은 check_ledger.py 로컬 rc=0을 근거로 들지만 CI 결과와 모순된다. review/manual-approval은 head에 success라 사람 승인 요구 사유는 아니다.",
           "comment": "1) 'comment-policy ledger' 체크 실패 원인을 CI 로그로 규명해 고칠 것 — 로컬 check_ledger.py rc=0과 CI 결과가 다른 이유(CI가 보는 ledger.md/주석 규약, session_platform_stub.py·action.yml·Sessions* 테스트의 mock-exception 주석 ↔ docs/e2e-mocking-policy.md 허용목록 3행 불일치 여부)를 확인하고 executionGuide에 반영. 2) iOS shard 0~2와 ci-success가 새 head에서 success임을 확인한 뒤 재계획·재검토 요청(러너 대기 중이면 완료까지 기다림; 부트스트랩 크래시는 job 재실행). 3) 새 커밋이 올라오면 review/manual-approval 재확인."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재계획(직전 시도 review_rejected: PR #327 `comment-policy ledger` 실패·CI 미완). 접근·범위·위험도는 동일 — BF-5(등재 EXT, 선행 없음)를 session-platform 앱 경로 스텁 + SESSION_PLATFORM_URL 우회로 착수하고, 범위는 시나리오 1 의 2·4·11·12단계가 CI 에서 관찰되고 허용목록 3행이 코드와 1:1 인 것, 범위 밖은 BF-6(시나리오 7~10·13·14) 등재. 달라진 점: ledger 실패 원인을 CI 로그와 재현으로 규명했다 — 이 PR 이 아니라 main 이 이미 깨져 있다(#328 이 check.mjs 주석을 바꾸고 ledger 행 미갱신; 순수 main 에서도 rc=1). 고치는 PR #335 가 green·mergeable 이고 #335+#327 병합 시 ledger 통과를 로컬로 확인했다. 그래서 PR #327 에는 변경을 더하지 않고, #335 머지 → #327 을 main 으로 갱신 → 전 CI(shard 포함) success 확인 → 머지 순으로 실행한다. 사람 소유 결정 없음(MA1~MA5 미접촉).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #335(check.mjs ledger 행 수정, rct_20261028-0002)가 main 에 머지됐는지 확인한다. 미머지면 머지하지 않고 대기·종료(재시도 대상).",
+              "expectedOutcome": "#335 state=MERGED; origin/main 에서 check_ledger.py rc=0."
+            },
+            {
+              "seq": 2,
+              "action": "PR #327 을 최신 main 으로 갱신(update-branch)하고 새 head 의 review/manual-approval 이 success 인지 확인한다.",
+              "expectedOutcome": "새 head SHA; review/manual-approval success."
+            },
+            {
+              "seq": 3,
+              "action": "새 head 의 CI 완료를 기다려 comment-policy ledger·iOS shard 0~2·ci-success 가 success 인지 확인한다. 러너 크래시성 실패는 재실행, 테스트 단정 실패면 머지하지 않는다.",
+              "expectedOutcome": "ledger success; ci-success success; Sessions 4개 클래스 pass."
+            },
+            {
+              "seq": 4,
+              "action": "ci-success success 를 확인한 뒤 PR #327 을 머지한다 (스텁·액션·Sessions* XCUITest·정책 문서 BF-5 해소·BF-6 등재).",
+              "expectedOutcome": "main 에 머지 커밋 생성."
+            },
+            {
+              "seq": 5,
+              "action": "main HEAD 에서 as-is 지문 versionScript 를 실행하고 정책 문서 허용목록과 양방향 대조한다; BF-5 해소·BF-6 열린 행을 확인한다.",
+              "expectedOutcome": "허용목록 == 코드 실측(스텁 관련 3행 포함); BF-5 닫힘, BF-6(재검토 2027-01-20) 열림."
+            }
+          ],
+          "plannedAt": "2026-10-28T18:58:00Z",
+          "executionGuide": "## 직전 거부 반영\n- 직전 검토(reviewedAt 18:46Z)는 PR #327 head 9207b9c 에서 `comment-policy ledger` 체크 failure, iOS shard 0~2 미완, ci-success 미완을 이유로 거부했다. 계획은 로컬 check_ledger.py rc=0 을 근거로 들었으나 CI 결과와 모순이었다.\n- **원인 규명 (이 PR 의 결함이 아님 — main 에서 이미 깨져 있음)**: CI 로그는 `ledger.md:67: 주석 줄 3 ≠ 실측 5` · `지문 1b2b6f9a788a ≠ 실측 a122dd649331` 이다. 그 행은 `tools/journey-mockup-harness/check.mjs`(L 표)이며 이 PR 이 건드린 파일이 아니다. main 에 들어간 #328(rct_20261028-0001, 17:06Z)이 check.mjs 에 주석 2줄을 더하고 ledger 행을 갱신하지 않았다. **순수 origin/main(3c34039) 에서 check_ledger.py 를 돌려도 같은 두 줄로 실패(rc=1)한다**(재현함). CI 는 PR 을 main 에 병합한 ref 에서 도는 반면 직전 로컬 검사는 PR 브랜치 단독이라 결과가 달랐다. 이 PR 의 Sessions 행(ed28980)은 정확하다 — 병합 ref 에서 불일치로 보고된 행은 check.mjs 한 행뿐이다.\n- **수정 경로**: 같은 결함을 고치는 열린 PR **#335**(`docs(comment-policy): check.mjs 증분 2줄 제거 · notifier.go 5줄 필요성 판정`, rct_20261028-0002)가 있다. #335 head 52a3478 은 CI 전부 green(ci-success·ledger·judge success)·MERGEABLE 이다. origin/main + #335 + #327 을 로컬 병합(ledger.md 자동 병합, 충돌 없음)해 check_ledger.py 를 돌리면 불일치 0 으로 통과함을 확인했다. 따라서 이 PR 에는 코드·문서 변경을 더하지 않는다(check.mjs 행을 이 PR 에서 고치면 #335 와 ledger.md 같은 행에서 충돌하고 남의 판정을 덮는다). 선행 조건 = #335 머지.\n- state 정정(9207b9c)의 효과는 shard 결과로만 확인된다. 직전 확인 시점(18:50Z)에 shard 0·1 queued, shard 2 in_progress 였다.\n\n## 순서\n1. (직렬) **#335 가 main 에 머지됐는지 확인**: `gh pr view 335 --json state,mergedAt`. 미머지면 머지하지 말고 대기한다 — #335 는 다른 task(rct_20261028-0002)의 PR 이라 이 task 가 머지하지 않는다. 대기만 하고 종료(실행 abort 아님; 재시도 대상).\n2. (직렬) #335 머지 후 PR #327 을 최신 main 으로 갱신한다: `gh pr update-branch 327` (또는 base 병합). 새 head SHA 가 생기므로 `review/manual-approval` 이 새 head 에 success 인지 재확인(judge: MA1~MA5 미접촉이면 자동 부여; 안 붙으면 사람 승인 케이스가 아니므로 judge 재실행/대기).\n3. (직렬) 새 head 의 CI 완료까지 기다린다: `comment-policy ledger` success, iOS shard 0~2 success, ci-success success. queued/in_progress 면 완료까지 기다린다(미완 상태에서 머지 금지).\n4. (직렬) ci-success success 확인 후에만 PR #327 머지.\n5. (직렬) 머지 후 main CI 확인, as-is 지문 versionScript 실행·정책 문서 허용목록 양방향 대조, BF-5 해소·BF-6 열림 확인.\n\n## 검증 방법\n- ledger: `gh pr checks 327` 에서 `comment-policy ledger` success. 의심되면 `git merge origin/main` 한 상태에서 `python3 scripts/comment-policy/check_ledger.py` rc=0 (**PR 브랜치 단독이 아니라 main 병합 상태에서** 돌릴 것).\n- iOS: shard 0~2·ci-success 전부 success. Sessions 4개 클래스(Tab·Create·Delete·PlatformUnreachable) pass — Create(상세 「실행 중」=active 라벨)·Delete(목록 행 표시·삭제 후 스텁에서 제거).\n- shard 실패 사유 구분: 러너 부트스트랩 크래시(`PocketAideTests-Runner ... XCTWaiter stalled`, 코드 무관)면 job 재실행. 테스트 **단정** 실패면 머지하지 말고 실패 테스트·로그를 기록해 종료(Swift 임의 수정 금지 — 재계획 입력).\n- 지문: 정책 문서 허용목록 (파일,대상) == 코드 실측(양방향, 스텁 관련 3행 포함). BF-5 가 해소 표로, BF-6 이 열린 행(선행 없음·재검토 2027-01-20·등재 2026-10-28)으로 있는지 확인.\n\n## 주의사항\n- #335 미머지 상태에서 ledger 실패를 이 PR 의 문제로 오인해 check.mjs 행을 고치지 말 것(#335 와 충돌).\n- 새 커밋/갱신이 올라올 때마다 review/manual-approval 은 head 기준이므로 재확인.\n- ios-test.yml 은 workflows 권한 없어 미변경(스텁 PID/로그 정리 미포함, 기능상 영향 없음).\n- 롤백: 머지 커밋 revert. BF-5 가 다시 열린다.\n\n## 범위 밖(후속)\n- BF-6: 시나리오 7·8·9(가)·10·13 단정 테스트, 스텁의 turn 마커(시나리오 14)·아카이브 게이트 오프(시나리오 9 (나)) 흉내.\n- 실 플랫폼 대체(전용 테스트 플랫폼)가 마련되면 스텁 세 행을 지우고 시나리오 12 를 플랫폼 중지로 다시 쓴다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261026-0001",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/327",
+          "preparedAt": "2026-10-28T18:58:00Z",
+          "notes": "기존 PR #327 을 이어 쓴다(새 PR·새 커밋 없음, head 9207b9c 유지). ledger 실패는 main 선재 결함(#328 의 check.mjs 행 미갱신)이며 PR #335 가 고친다 — origin/main+#335+#327 로컬 병합에서 check_ledger.py 불일치 0 확인. 따라서 #335 머지 후 #327 을 main 으로 갱신(update-branch)하고 CI 를 새로 돌려야 한다. judge 수동 승인 케이스 미접촉, review/manual-approval 은 현 head 에 success."
+        }
       }
     ]
   }
