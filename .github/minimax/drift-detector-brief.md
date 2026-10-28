@@ -31,7 +31,7 @@
 6. **검증.** 쓰기 전에 레코드를 `schemas/reconciliation-task.schema.json`으로 검증한다(python `jsonschema`). 통과하지 않으면 쓰지 않는다.
 7. **커밋.** 단계마다 개별 커밋: 상태 요약 `detect(<toBeModelId>/<taskId>): summarize state` → 판정 `detect(<toBeModelId>/<taskId>): assess action`. Claude Code 감지 스킬과 같은 제목이다(뒤에 ` — <한 줄 요약>`을 붙여도 된다).
 8. **push.** `git pull --rebase` 후 push한다. 다른 모델의 커밋이 먼저 들어와 거절되면 `pull --rebase` 후 다시 push한다.
-9. **멈출 때도 lock을 남기지 않는다.** 넘겨받은 task를 판정하다가 이 실행 안의 사유(관측 실패, 검증 실패 등)로 끝내지 못하면, `assessing`을 유지한 채 가까운 미래의 `assessment.recheckAfter`와 멈춘 사유(`assessment.reason`)를 기록해 push하고 끝낸다. `recheckAfter` 없는 `assessing`으로 두지 않는다 — 러너는 그런 task를 「점유 중」으로 보고 그 모델을 다시 집지 않는다. 시작할 때 task가 없거나 `assessing`이 아니면 남의 기록이므로 아무것도 쓰지 않는다.
+9. **판정을 끝내지 못하면 실패로 끝낸다.** 관측·검증이 확정적으로 실패하면(레포 접근 거부, 스크립트 오류, 스키마 위반 등) 유예로 꾸미지 않는다 — `recheckAfter`를 쓰지 않고 실패를 보고하며 비제로로 끝낸다. 점유한 task는 `assessing`으로 남고, 이어받기는 러너·사람 몫이다(워크플로 `target_id`로 그 task를 지목). 유예(`recheckAfter`)는 자동 해소를 기다릴 때만 쓴다 — 네트워크·MCP 일시 오류처럼 곧 풀릴 실패는 여기에 들어간다.
 
 ## 도구
 MCP 서버 `k3s`의 `github_app_installation_token`(대상 레포 읽기, contents:read로 좁힌다), `resource_list`/`resource_get`(쿠버네티스 관측).
