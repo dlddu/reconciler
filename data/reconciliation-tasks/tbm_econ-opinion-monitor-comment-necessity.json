@@ -16332,7 +16332,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T22:33:28Z",
     "trigger": {
       "source": "version_change",
@@ -16356,6 +16356,45 @@
     "assessment": {
       "reason": "**작업 필요: `action_required`.**\n\n- **근거 1 — 미판정 주석 잔존.** 기준·범위 불변인데 원장 기준 미판정 31행·692줄(L 604 · D 75 · E 13)이 남아 있다. 필요 사유를 댈 수 없는 주석이 있을 수 있는 상태라 판정 없이는 정합을 확인할 수 없다.\n- **근거 2 — 자동 해소 불가.** 판정은 대상 레포의 정책 판정 패스 PR로만 닫히며 시간이 지나도 줄지 않는다. 유예할 이유가 없다.\n- **근거 3 — 선행 task와의 관계.** rct_20261028-0001(approved, 실행 대기)이 먼저 실행되면 미판정이 줄 수 있다. planner는 그 계획의 범위와 겹치는지 확인하고, 겹치면 잔여 증분(web fix #269·#271~#273)만 계획하라.",
       "assessedAt": "2026-10-28T22:33:49Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "원장에서 미판정인 행 가운데 열린 PR #270(rct_20261028-0001)이 가져간 파일을 뺀 나머지 전부 — web 4파일(types.ts · Dashboard.tsx · Sentiment.tsx · tokens.css)과 여정 하네스 9파일(check-journey-flow.js · check-journey-mockup.py · JRN-*.js 7), L 315줄 + D 26 + E 13 — 를 한 덩어리로 증분이 아니라 현재 지문 기준으로 필요성 판정한다(정의의 슬라이스 예산 400줄 안; 두 덩어리를 합쳐도 예산을 넘지 않아 남은 대상을 다 가져간다. 대안: 한 덩어리만 — 남은 예산을 낭비하고 task 를 늘리므로 기각). 사유를 못 대는 주석 L 77줄을 제거하고 나머지는 passes 에 사유와 함께 유지로 기록한다. 완료 기준: PR #275 착지 후 위 16행(L 13 · D 1 · E 2)이 `완료` · 게이트 rc=0. 범위 밖: #270 몫 go/·python/·gold.ts 14행 — #270 이 닫고, 이후 새 주석은 재감지가 새 task 로 잇는다. 위험은 low: 주석·빈 줄 삭제뿐이라 동작 변경이 없고 수동 승인 경로를 건드리지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "사전 확인: PR #275 OPEN · head 380bd8fcdffc0dce58b35aac9f87045b6f89fe6b · mergeable · required success (수동 승인 경로 무접촉, format_changed=false)",
+              "expectedOutcome": "승인 status 없이 머지 가능한 head"
+            },
+            {
+              "seq": 2,
+              "action": "gh pr merge 275 --squash --match-head-commit 380bd8fcdffc0dce58b35aac9f87045b6f89fe6b (커밋 얹기·리베이스 금지)",
+              "expectedOutcome": "main 에 squash 커밋 M 착지"
+            },
+            {
+              "seq": 3,
+              "action": "M 에서 check-comment-ledger.py + 16행 grep(`완료`·줄 수·지문) + 패스 문서 존재 + check-journey-mockup.py PASS; 대조군 M^1",
+              "expectedOutcome": "rc=0 · L 13 + D 1 + E 2 행 `완료` / M^1 에서 `—`"
+            },
+            {
+              "seq": 4,
+              "action": "(선택) M 의 CI 결과 확인",
+              "expectedOutcome": "success"
+            }
+          ],
+          "plannedAt": "2026-10-28T23:25:00Z",
+          "executionGuide": "# 실행 지침 — rct_20261028-0002 (PR #275 · web·여정 하네스 판정)\n\n## 순서 (직렬)\n1. **사전 확인**: `gh pr view 275 -R dlddu/economic-opinion-trend-monitor --json state,headRefOid,mergeable,mergeStateStatus` — `OPEN` · `headRefOid=380bd8fcdffc0dce58b35aac9f87045b6f89fe6b` · `mergeable≠CONFLICTING`. `required` 체크가 그 sha 에서 success. 이 PR 은 수동 승인 경로(MA1~MA6)를 건드리지 않아(`check-data-format-change.py origin/main HEAD` → `format_changed=false`) `review/manual-approval` 없이 머지된다.\n2. **squash 머지**: `gh pr merge 275 --squash --match-head-commit 380bd8fcdffc0dce58b35aac9f87045b6f89fe6b`. 커밋을 얹거나 리베이스하지 말 것. 먼저 #270 이 머지돼 `ledger.md` 충돌이 나면(서로 다른 행이라 드묾) 해소하지 말고 정지·재준비.\n3. **검증**(머지 커밋 M, 대조군 M^1):\n   - `python3 scripts/check-comment-ledger.py` rc=0.\n   - 원장 L 표에서 `web/src/api/types.ts` · `web/src/screens/Dashboard.tsx` · `web/src/screens/Sentiment.tsx` · `web/src/tokens/tokens.css` · `scripts/check-journey-flow.js` · `scripts/check-journey-mockup.py` · `scripts/journey-scenarios/JRN-*.js` 7 = 13행이 `완료`; D 표 `scripts/check-journey-mockup.py` 1행 `완료`; E 표 `scripts/check-journey-flow.js` · `scripts/check-journey-mockup.py` 2행 `완료`. `grep -F` 로 행마다 확인(M^1 에서는 전부 `—`).\n   - 주석 줄 수: Sentiment 43 · Dashboard 10 · check-journey-flow.js 24 · check-journey-mockup.py 26 · 시나리오 7파일 합 38.\n   - 패스 문서 `docs/comment-policy/passes/2026-10-28-web-scripts-necessity-pass.md` 존재.\n   - `python3 scripts/check-journey-mockup.py .` PASS.\n   - 완료 기준은 위 행들이다 — 「미판정 0」 절대값이 아니다(#270 몫 L 11행·328줄 · D 4행·49줄과 머지 시점 자매가 들인 새 `—` 행이 남을 수 있다).\n4. (선택) M 의 CI 결과 확인.\n\n## 주의\n- 동작 변경 없음(주석·빈 줄 삭제와 원장·문서 갱신뿐). 불가역 지점 없음. 롤백은 `git revert M` 1회.\n- #270(`rct_20261028-0001`)과 파일 집합이 서로소다(원장은 서로 다른 행). 순서는 무관.\n- 지문은 L 표면 기준이다. 머지 시점에 자매 PR 이 같은 행을 건드렸으면 게이트가 줄 수·지문 불일치로 실패한다 — 그때는 실행하지 말고 정지.\n\n## 범위 밖(후속 — 재감지가 새 task 로 잇는다)\n#270 이 가져간 `go/**` · `python/**` · `tests/e2e/lib/gold.ts` 14행(#270 착지 후 `완료`). 그 밖의 잔여는 이 PR 이후 새로 들어온 주석뿐이다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261028-0002-econ-comment-necessity",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/275",
+          "preparedAt": "2026-10-28T23:25:00Z",
+          "notes": "PR #275 · head 380bd8fcdffc0dce58b35aac9f87045b6f89fe6b · base main f4068c3 · 13파일(소스 10: Dashboard.tsx · Sentiment.tsx · check-journey-flow.js · check-journey-mockup.py · JRN-*.js 7 / 문서 2: ledger.md · 새 패스 문서; types.ts · tokens.css 는 유지만이라 소스 무변경). 실측: check-comment-ledger.py 불변식 통과(L 미판정 11행·328줄 = #270 몫) · check-journey-mockup.py PASS · node --check/py_compile ok. check-data-format-change.py origin/main HEAD → format_changed=false ⇒ 수동 승인 불필요. 열린 PR #270(go/·python/·gold.ts)·#220(docs)와 파일 겹침 없음(원장은 서로 다른 행). mergeStateStatus=BLOCKED 는 CI 진행 중 때문으로 보이며 head 에 manual-approval 요구는 없다."
+        }
+      }
+    ]
   }
 ]
