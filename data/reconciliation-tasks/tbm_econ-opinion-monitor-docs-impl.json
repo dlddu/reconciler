@@ -12868,6 +12868,50 @@
     "assessment": {
       "assessedAt": "2026-10-28T16:03:50Z",
       "reason": "작업 필요(action_required). 이번 창은 구현 PR #263~#266(문서와 1:1로 일치, 새 격차 없음)과 문서 PR #267(여정 mockup 전면 재작업)·#268(트래커)로 이루어진다. 앞의 것은 정합하지만 #267이 새로 구현 의무를 연다: (a) design-tracker 「구현 수렴 대기」 5행 신설과 「재판정 필요」 유지 19행, (b) 라우트 없는 `integrity` 화면(JRN-ingestion-recovery 다섯 단계)이 web에 없다는 점이 정의 기준 2·6(미구현 여정 동작 = drift)에 해당한다. 자동 해소될 변화가 아니고 진행 중인 롤아웃도 없다. 확인 근거: git diff 8a483a3..24b477b (docs/web), web/src/screens 목록, design-tracker `요건 9` 항목. 한계: 22행·5행 개별 항목은 tracker 서술에 의존했고 목업 HTML 4천 줄은 줄 단위로 대조하지 않았다 — planner가 단계별로 확정한다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "gap 중 제품 결정이 필요 없는 슬라이스만 닫는다: 요건 9 이후 목업이 SSOT 로 판정된 「구현 수렴 대기」 3항목(trend·sentiment 의 `AC3.3` 꼬리 태그 제거, debug `찾기` 버튼 여백 덮어쓰기 제거)을 구현이 목업에 맞춘다. 완료 기준은 이 3행의 소멸이며, compare·fairness/trace·reprocess·debug 신규 표면·sentiment 신규 표면·integrity 화면 등 나머지는 범위 밖(별도 슬라이스, 일부는 제품 결정 선행). 대안(전체 일괄 구현)은 PR 이 비대해지고 제품 결정이 막혀 기각; 작은 코드 변경이라 revert 로 롤백 가능하다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "Trend.tsx·Sentiment.tsx 버킷 단위 note 에서 `AC3.3` 꼬리 태그 span 제거",
+              "expectedOutcome": "note 문장은 목업과 같고 태그가 렌더되지 않는다"
+            },
+            {
+              "seq": 2,
+              "action": "tokens.css 의 `.dbg-formrow .btn` 덮어쓰기(여백·justify-content) 제거",
+              "expectedOutcome": "debug `찾기` 버튼이 CMP-btn 값(7px 13px)으로 렌더된다"
+            },
+            {
+              "seq": 3,
+              "action": "design-tracker 의 해당 3행을 「등재된 편차」에서 「해소된 등재」로 이동",
+              "expectedOutcome": "살아 있는 편차 표에 이 3행이 없다"
+            },
+            {
+              "seq": 4,
+              "action": "web 타입체크·린트·테스트와 코멘트 원장·목업 렌더 스크립트 실행",
+              "expectedOutcome": "전부 통과 (vitest 152 passed)"
+            },
+            {
+              "seq": 5,
+              "action": "PR 머지(executor), 재감지로 잔여 gap 확인",
+              "expectedOutcome": "슬라이스 범위 3행 소멸, 잔여는 새 task 로"
+            }
+          ],
+          "plannedAt": "2026-10-28T16:40:00Z",
+          "executionGuide": "## 실행 순서\n1. PR https://github.com/dlddu/economic-opinion-trend-monitor/pull/269 의 CI(`required`)와 `review/manual-approval` 상태를 확인한다. 변경 경로(`web/`, `docs/`)는 MA1~MA6 에 닿지 않아 판정기가 자동 success 를 붙여야 한다. 안 붙으면 사람 승인 대기이므로 `review.manualApproval` 이 있는지 보고 따른다.\n2. 머지는 squash. 단계는 하나뿐이라 병렬/순서 의존은 없다.\n3. 머지 후 `design-tracker` 해소 행의 `#269 (squash)` 가 실제 PR 번호와 맞는지 확인한다.\n\n## 검증 방법 (완료 기준 = 슬라이스 범위)\n- `grep -rn \"AC3.3\" web/src/screens/Trend.tsx web/src/screens/Sentiment.tsx` 가 렌더되는 JSX 에서 0건(주석의 언급은 남을 수 있음). `Sentiment.tsx` 의 `AC2.5` 태그는 이 슬라이스 밖이므로 그대로 둔다.\n- `grep -n \"dbg-formrow .btn\" web/src/tokens/tokens.css` 0건.\n- `design-tracker` 「등재된 편차」에 해당 3행이 없고 「해소된 등재」에 2행(`AC3.3` 꼬리 태그는 trend·sentiment 를 한 행으로)이 있다.\n- `cd web && npx tsc -b && npx eslint . && npx vitest run` 통과, `scripts/check-comment-ledger.py`·`check-mockup-render.py` 통과.\n- 재감지: 머지로 as-is(web)와 to-be(docs)가 함께 움직인다. 재감지 task 가 이 3행을 새 gap 으로 세지 않아야 한다.\n\n## 범위 밖(후속) — 재감지가 다음 계획의 입력으로 삼는다\n`compare`(축 간 격차 패널·공통/축 고유 배지·대상 국가 select·표기 통합 안내), `fairness`·`trace`(AC2.5 저신뢰 표기·§4 다섯 갈래 컨트롤), `reprocess`(AC3.3 전후 추이·§4 컨트롤·scrolly), `debug`(parse-failed 배너 AC4.2·버전별 표 AC4.3·`btn pri`), `sentiment`(분류 기준 줄·구간별 막대 등), `integrity` 화면(JRN-ingestion-recovery 다섯 단계, 파이프라인 산출물/제품 결정 선행 가능성), 「재판정 필요」 유지 19행. AC 미귀속 여정 의무는 STP 단위로 후속 계획에서 목록화한다.\n\n## 주의사항\n- 불가역 지점 없음. 롤백은 PR revert(코드·문서 모두 한 PR).\n- `.trend-ac` CSS 는 `Sentiment.tsx` 의 `AC2.5` 에서 아직 쓰므로 지우지 않는다.\n- 머지 직후 트래커 해소 행이 소멸 커밋을 `#269 (squash)` 로 가리킨다. 번호가 어긋나면 후속 정정.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261028-0001",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/269",
+          "preparedAt": "2026-10-28T16:40:00Z",
+          "notes": "web 변경 + design-tracker 갱신 한 PR. 로컬 tsc/eslint/vitest 통과. 수동 승인 케이스 경로 미접촉."
+        }
+      }
+    ]
   }
 ]
