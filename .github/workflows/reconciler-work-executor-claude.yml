@@ -71,6 +71,11 @@ jobs:
           echo "OUT=$RUNNER_TEMP/out" >> "$GITHUB_ENV"
           mkdir -p "$RUNNER_TEMP/out/logs"
 
+      # 읽기 토큰을 요청할 대상 레포 — ToBeModel 데이터 소스에서(reconciler 제외).
+      - name: Target repositories
+        id: targets
+        run: echo "names=$(python3 harness/.github/scripts/target_repositories.py ws/reconciler)" >> "$GITHUB_OUTPUT"
+
       # OIDC 프록시 + 사전 점검 + SOURCE_GITHUB_TOKEN(대상 레포 read) 발급.
       - name: Connect homelab-k3s-mcp
         id: mcp
@@ -80,6 +85,7 @@ jobs:
           url: ${{ env.MCP_URL }}
           audience: ${{ env.MCP_AUDIENCE }}
           log-dir: ${{ runner.temp }}/out/logs
+          read-token-repositories: ${{ steps.targets.outputs.names }}
           recommended-tools: resource_list resource_get api_resources pocket_aide_notification_send
 
       # 스킬 Step 0(대상 선정 · 진입 게이트, 4-0)을 그대로 옮긴 읽기 전용 선정.
