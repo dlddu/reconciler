@@ -5,7 +5,9 @@
 # 통과한 생성본이 plugin-marketplace에 올라간 것만 쓴다(README 「감지 스킬 MiniMax 파이프라인」).
 # 대상 선정·점유는 claim_drift_target.py(README 「점유는 러너가 한다」), 스킬은 판정만.
 #
-# 실제 모드: 점유·판정 커밋을 기본 브랜치에 push한다(contents: write). 드라이런으로 돌리려면 env.DRY_RUN을 "1"로.
+# 실제 모드: 점유·판정 커밋을 기본 브랜치에 push한다(contents: write).
+# 드라이런: 수동 실행 입력 dry_run=true — 점유·판정을 커밋까지만 하고 push하지 않는다. 이때 reconciler 체크아웃에
+# push 자격 증명을 남기지 않아(persist-credentials: false) 스킬이 지시를 어겨도 push할 수 없다. 스케줄 실행은 항상 실제 모드.
 #
 # 필요한 설정
 #   environment llm-minimax의 secret MINIMAX_SUBSCRIPTION_KEY   MiniMax Token Plan subscription key (sk-cp-...)
@@ -20,7 +22,7 @@ name: "Reconciler · Drift Detector"
 on:
   # ── 스케줄 트리거 (아직 끔) ──────────────────────────────────────────────────────────
   # 스케줄은 감지만 돈다(이 파일에 스킬 생성은 없다). 켜기 전에 할 일:
-  #   1. 실제 모드로 — permissions.contents: write, 아래 env.DRY_RUN을 "0"으로(점유·판정 커밋이 push된다).
+  #   1. 실제 모드 확인 — permissions.contents: write(스케줄 실행은 dry_run 입력이 없어 항상 실제 모드다).
   #   2. 아래 circuit-breaker job 주석 해제(스케줄 실행이 연속 실패하면 이 워크플로를 스스로 끈다).
   # 주기는 실행 시간(판정 6~8분)과 concurrency 직렬화를 보고 정한다. :00 정각은 GitHub 스케줄이 몰려 지연되기
   # 쉬우니 피한다.
@@ -44,6 +46,11 @@ on:
         description: "mcode 모델 override(<provider>/<model>). 비우면 CLI 기본값"
         required: false
         default: ""
+      dry_run:
+        description: "드라이런 — 점유·판정을 커밋까지만 하고 push하지 않음(결과는 아티팩트로만 남는다)"
+        type: boolean
+        required: false
+        default: false
 
 # 같은 대상을 두 실행이 동시에 점유하지 않도록 직렬화한다.
 concurrency:
@@ -54,7 +61,7 @@ permissions:
   contents: write
 
 env:
-  DRY_RUN: "0" # 드라이런은 "1"(점유·판정을 커밋까지만 하고 push하지 않음)
+  DRY_RUN: ${{ inputs.dry_run && '1' || '0' }} # 수동 실행 입력 dry_run=true면 "1"(커밋까지만, push 없음). 스케줄은 항상 "0"
   PLUGIN_NAME: reconciler-data-plane
   SKILL_NAME: reconciler-drift-detector
   MCODE_VERSION: latest # npm dist-tag — 실제 설치된 버전은 Set up MiniMax Code 출력·요약에 남는다
@@ -84,6 +91,8 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           path: ws/reconciler
           fetch-depth: 50
+          # 드라이런이면 push 자격 증명을 남기지 않는다 — 점유 스크립트와 스킬 모두 push할 수 없다.
+          persist-credentials: ${{ !inputs.dry_run }}
 
       - name: Prepare workspace
         run: |

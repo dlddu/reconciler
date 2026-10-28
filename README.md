@@ -52,7 +52,7 @@ tests/                              # index.html 동작 테스트 (node --test),
 
 | 워크플로 | 트리거 | 하는 일 |
 | --- | --- | --- |
-| `reconciler-drift-detector.yml` (운영 감지) | 수동, 스케줄(주석 — 아직 끔) | 러너가 대상을 고르고 **점유**한 뒤, plugin-marketplace의 고정 스킬(`plugins/reconciler-data-plane`, MiniMax 플러그인 형식)을 mcode 로컬 플러그인으로 설치해 그 task 한 건을 판정한다. 결과 점검기로 계약을 확인하고 `drift-detector-result` 아티팩트를 남긴다. 실제 모드(`env.DRY_RUN: "0"`) — 점유·판정 커밋이 기본 브랜치에 push된다. |
+| `reconciler-drift-detector.yml` (운영 감지) | 수동, 스케줄(주석 — 아직 끔) | 러너가 대상을 고르고 **점유**한 뒤, plugin-marketplace의 고정 스킬(`plugins/reconciler-data-plane`, MiniMax 플러그인 형식)을 mcode 로컬 플러그인으로 설치해 그 task 한 건을 판정한다. 결과 점검기로 계약을 확인하고 `drift-detector-result` 아티팩트를 남긴다. 실제 모드 — 점유·판정 커밋이 기본 브랜치에 push된다. 수동 실행 입력 `dry_run=true`면 커밋까지만 하고 push하지 않으며, 체크아웃에 push 자격 증명도 남기지 않는다. |
 | `reconciler-drift-detector-skill-build.yml` (스킬 빌드) | 수동만 | 지침이나 계약을 바꿀 때 사람이 돌린다. 아래 generate → validate → test를 통과한 생성본을 plugin-marketplace에 PR로 올리면, 운영 감지는 그 다음 실행부터 새 스킬을 쓴다(`plugin_ref` 입력으로 브랜치·SHA를 지정해 미리 돌려볼 수도 있다). |
 
 스킬 빌드의 job:
