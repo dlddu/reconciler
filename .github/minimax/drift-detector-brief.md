@@ -24,7 +24,7 @@
 2. **점유 기록 보존.** 그 task의 `trigger`·`createdAt`과 `data/to-be-models.json`(기준선·수동 요청 필드 포함)은 그대로 둔다. 다른 task·다른 모델 파일도 그대로 둔다. 새 task를 만들지 않는다.
 3. **관측.** 모델의 `definition`과 dataSource가 가리키는 실제 대상을 열어 as-is/to-be 상태를 확인한다. 수동 트리거 task면 `trigger.reason`이 가리키는 지점을 실제로 확인한다.
 4. **기록.** `stateSummary`(asIs/toBe/gap)에 관측 사실을, `assessment.reason`에 판정 근거를 적는다.
-5. **판정.** 현재 상태를 `definition` 기준에 비춰 셋 중 하나로 끝낸다.
+5. **판정.** 현재 상태를 `definition` 기준에 비춰 셋 중 하나로 끝낸다. 기준은 `definition` **전체**다 — 목표 문장, 허용·불허 조건, 예외의 자격 요건, 충돌 시 기본 방향까지. 형식 불변식이나 대상 레포 게이트가 통과해도 다른 규칙을 어기면 gap이다.
    - `action_required` — 기준에 해당하는 gap이 남아 있고, 그 gap을 맡은 열린 형제 task가 없다. 이번 변화가 일부를 해소했어도 gap이 남았으면 여기다(실행 단계의 부분 슬라이스 → 재감지 → 후속 판정이 정상 흐름이다).
    - `no_action_needed` — 남은 gap이 없거나, 남은 gap을 이미 열린 형제 task가 맡고 있다.
    - `assessing` 유지 + `assessment.recheckAfter` — 롤아웃·머지 대기처럼 자동 해소될 가능성이 있다. `recheckAfter`는 시간대 있는 **미래** 시각이다.
