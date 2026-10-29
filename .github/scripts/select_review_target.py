@@ -191,11 +191,15 @@ def model_ids(repo: Path) -> set[str]:
     return {m.get("id") for m in models if isinstance(m, dict)}
 
 
-def scan(sel: Selection, tasks: list[tuple[str, dict]], models: dict | None = None) -> list[tuple[str, dict]]:
-    """ready 목록을 돌려주고, 나머지는 sel에 사유별로 적는다."""
+def scan(sel: Selection, tasks: list[tuple[str, dict]], models: dict | None = None,
+         exclude: frozenset = frozenset()) -> list[tuple[str, dict]]:
+    """ready 목록을 돌려주고, 나머지는 sel에 사유별로 적는다. exclude(`model/task`)는 점유 경쟁에서 진 것이라 건너뛴다."""
     models = models or {}
     ready = []
     for model_id, task in tasks:
+        if f"{model_id}/{task['id']}" in exclude:
+            sel.skipped.append((f"{model_id}/{task['id']}", "점유 경쟁에서 짐 — 이번 실행에서는 다시 고르지 않음"))
+            continue
         status = task.get("status")
         if status != READY_STATUS:
             sel.others[status] += 1
@@ -247,7 +251,7 @@ def select_explicit_task(target: str, tasks: list[tuple[str, dict]], model: str 
     return sel.pick(task, model_id, "explicit", f"워크플로 입력으로 지목된 planned task{note}")
 
 
-def select_target(repo: Path, explicit: str | None = None) -> Selection:
+def select_target(repo: Path, explicit: str | None = None, exclude: frozenset = frozenset()) -> Selection:
     models = load_models(repo)
     if explicit and "/" in explicit:
         model, _, task_id = explicit.partition("/")
@@ -262,7 +266,7 @@ def select_target(repo: Path, explicit: str | None = None) -> Selection:
         only_model = explicit
 
     sel = Selection()
-    ready = scan(sel, load_tasks(repo, only_model), models)
+    ready = scan(sel, load_tasks(repo, only_model), models, exclude)
     if not ready:
         return sel
     model_id, task = ready[0]

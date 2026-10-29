@@ -124,5 +124,71 @@ class ValidateGeneratedSkillTest(unittest.TestCase):
         self.assertNotIn("ok.py", joined)
 
 
+REVIEW_BODY = """
+# reconciler-work-review
+
+대상 선정과 점유는 러너가 끝냈다. 넘겨받은 `task_id` 한 건(`reviewing`)만 판정한다.
+
+1. `preparation.pullRequestUrl`의 PR을 `github_app_installation_token`(읽기)으로 확인한다.
+2. 대상 레포 `rules/branches`의 required status를 본다. 사람 승인 status를 붙이지 않는다.
+3. `attempts` 마지막 항목에 `review`(`reviewedAt`·`reason`)를 쓰고 `schemas/reconciliation-task.schema.json`으로 jsonschema 검증.
+4. 승인이면 `approved`(필요하면 `manualApproval`), 거부면 `review_rejected`, 연속 3회 거부면 `cancelled`.
+5. `data/reconciliation-tasks/<model>.json` 커밋 `review(<tbm>/<rct>): approved` → `git pull --rebase` 후 push.
+6. 판정 후 lock을 놓는다 — reviewing으로 남기지 않는다. PR을 머지하지 않는다. 스키마는 수정하지 않는다.
+7. `reason`은 2~4문장으로 쓴다.
+"""
+
+
+class ValidateWorkReviewProfileTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self._tmp.name) / "reconciler-work-review"
+        self.dir.mkdir()
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def write(self, body=REVIEW_BODY, name="reconciler-work-review", extra=None):
+        (self.dir / "SKILL.md").write_text(skill_text(name=name, desc="리뷰 단계 스킬", body=body), encoding="utf-8")
+        for rel, content in (extra or {}).items():
+            p = self.dir / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(content, encoding="utf-8")
+        return vgs.validate(self.dir, "work-review")
+
+    def test_complete_review_skill_passes_without_warnings(self):
+        rep = self.write()
+        self.assertEqual(rep.errors, [])
+        self.assertEqual(rep.warnings, [])
+        self.assertEqual(rep.meta["profile"], "work-review")
+
+    def test_drift_profile_rejects_review_skill(self):
+        self.write()
+        self.assertTrue(vgs.validate(self.dir).errors)
+
+    def test_name_and_missing_contract(self):
+        self.assertTrue(any("name" in e for e in self.write(name="reconciler-drift-detector").errors))
+        rep = self.write(body=REVIEW_BODY.replace("(필요하면 `manualApproval`)", "").replace("review_rejected", "거부"))
+        joined = "\n".join(rep.errors)
+        self.assertIn("manualApproval", joined)
+        self.assertIn("review_rejected", joined)
+
+    def test_recommended_items_are_warnings(self):
+        body = REVIEW_BODY.replace("사람 승인 status를 붙이지 않는다.", "").replace(" PR을 머지하지 않는다.", "")
+        rep = self.write(body=body)
+        self.assertEqual(rep.errors, [])
+        joined = "\n".join(rep.warnings)
+        self.assertIn("스스로 붙이지 않음", joined)
+        self.assertIn("실행하지 않음", joined)
+
+    def test_target_repo_writes_are_forbidden(self):
+        bad = REVIEW_BODY + "\n```\ngh pr merge 7 --squash\n```\n"
+        self.assertTrue(any("PR 머지" in e for e in self.write(body=bad).errors))
+        ok = REVIEW_BODY + "\n- `gh pr merge`와 `github_commit_status_create`는 쓰지 않는다(금지).\n"
+        self.assertEqual(self.write(body=ok).errors, [])
+        rep = self.write(extra={"scripts/x.py": "TOOL = 'github_commit_status_create'\n"})
+        self.assertTrue(any("commit status 쓰기" in e for e in rep.errors))
+
+
 if __name__ == "__main__":
     unittest.main()
