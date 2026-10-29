@@ -7,9 +7,12 @@
   <work>/target.git            대상 레포 역할의 로컬 bare 저장소(main + 준비 브랜치)
   <work>/reconciler-origin.git reconciler 원격 역할의 로컬 bare 저장소
   <work>/ws/reconciler         그 clone — 스킬이 기록·커밋·push하는 체크아웃(mcode cwd는 <work>/ws)
-  <work>/expect.json           점검기(check_executor_result.py --expect)가 볼 시나리오 기대값
+  --expect-file                점검기(check_executor_result.py --expect)가 볼 시나리오 기대값 — <work> 밖에 둔다
 
-reconciler 픽스처에는 실제 레포의 README.md·schemas/·.github/scripts/를 복사하고, data/에는 픽스처 모델 두 개와
+시험 대상이 정답지를 보지 않게 한다: 기대값은 작업 디렉터리 밖에 쓰고, 테스트 하네스 스크립트(점검기·이 픽스처·
+생성 스킬 검증기)는 픽스처 reconciler에 복사하지 않는다.
+
+reconciler 픽스처에는 실제 레포의 README.md·schemas/·.github/scripts/(하네스 제외)를 복사하고, data/에는 픽스처 모델 두 개와
 task 세 건(같은 모델의 지난 succeeded, 점유된 executing 한 건, 다른 모델의 approved 한 건)만 둔다.
 점유는 러너 몫이므로 `approved → executing` 전이를 `execute(<tbm>/<rct>): claim` 커밋으로 미리 push해 둔다.
 
@@ -36,6 +39,9 @@ OTHER_MODEL_ID = "tbm_fixture-other-app-docs"
 TASK_ID = "rct_20261029-0001"
 PAST_TASK_ID = "rct_20261020-0001"
 SCENARIOS = ("merge", "broken-premise")
+# 시험 대상에게 보이면 안 되는 테스트 하네스(점검기·픽스처·생성 스킬 검증기).
+HARNESS_SCRIPTS = ("executor_fixture.py", "check_executor_result.py", "check_detector_result.py",
+                   "validate_generated_skill.py")
 GIT_ENV = {
     "GIT_AUTHOR_NAME": "fixture", "GIT_AUTHOR_EMAIL": "fixture@example.invalid",
     "GIT_COMMITTER_NAME": "fixture", "GIT_COMMITTER_EMAIL": "fixture@example.invalid",
@@ -226,11 +232,13 @@ def validate_records(repo: Path) -> None:
                 raise RuntimeError(f"픽스처 레코드 {record.get('id')}가 {schema_file}를 통과하지 못함: {errors[0].message}")
 
 
-def build(source: Path, work: Path, scenario: str, now: dt.datetime | None = None) -> dict:
+def build(source: Path, work: Path, scenario: str, expect_file: Path, now: dt.datetime | None = None) -> dict:
     if scenario not in SCENARIOS:
         raise ValueError(f"알 수 없는 시나리오: {scenario}")
     now = now or dt.datetime.now(dt.timezone.utc)
-    work = work.resolve()
+    work, expect_file = work.resolve(), expect_file.resolve()
+    if expect_file.is_relative_to(work):
+        raise ValueError(f"기대값 파일은 작업 디렉터리 밖에 둔다: {expect_file}")
     if work.exists() and any(work.iterdir()):
         raise RuntimeError(f"작업 디렉터리가 비어 있지 않음: {work}")
     work.mkdir(parents=True, exist_ok=True)
@@ -243,7 +251,7 @@ def build(source: Path, work: Path, scenario: str, now: dt.datetime | None = Non
     shutil.copy2(source / "README.md", repo / "README.md")
     shutil.copytree(source / "schemas", repo / "schemas")
     shutil.copytree(source / ".github" / "scripts", repo / ".github" / "scripts",
-                    ignore=shutil.ignore_patterns("__pycache__"))
+                    ignore=shutil.ignore_patterns("__pycache__", *HARNESS_SCRIPTS))
     dump(repo / "data/to-be-models.json", models(bare, now))
     task = claimed_task(bare, branch, info, now)
     tasks_file = repo / f"data/reconciliation-tasks/{MODEL_ID}.json"
@@ -275,10 +283,10 @@ def build(source: Path, work: Path, scenario: str, now: dt.datetime | None = Non
                    "main_file": {"path": "config/app.yaml", "contains": "replicas: 3"} if scenario == "merge" else None,
                    "as_is_tree": "config"},
     }
-    dump(work / "expect.json", expect)
+    dump(expect_file, expect)
     return {"repo_dir": str(repo), "ws_dir": str(repo.parent), "task_id": TASK_ID, "model_id": MODEL_ID,
             "claim_commit": git(repo, "rev-parse", "HEAD"), "claim_message": claim_message,
-            "expect_file": str(work / "expect.json"), "target_git_dir": str(bare)}
+            "expect_file": str(expect_file), "target_git_dir": str(bare)}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -286,10 +294,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--source", type=Path, required=True, help="실제 reconciler 체크아웃(README·schemas·scripts 원본)")
     p.add_argument("--work-dir", type=Path, required=True)
     p.add_argument("--scenario", choices=SCENARIOS, required=True)
+    p.add_argument("--expect-file", type=Path, required=True, help="시나리오 기대값 경로(--work-dir 밖)")
     p.add_argument("--github-output", type=Path, help="GITHUB_OUTPUT 경로(생략하면 stdout에만)")
     args = p.parse_args(argv)
     try:
-        out = build(args.source, args.work_dir, args.scenario)
+        out = build(args.source, args.work_dir, args.scenario, args.expect_file)
     except (RuntimeError, OSError, ValueError) as exc:
         print(f"::error::픽스처 생성 실패: {exc}")
         return 1

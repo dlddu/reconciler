@@ -37,7 +37,7 @@ class ExecutorFixtureCheckTest(unittest.TestCase):
         self._tmp.cleanup()
 
     def build(self, scenario):
-        out = fx.build(ROOT, self.tmp / scenario, scenario)
+        out = fx.build(ROOT, self.tmp / scenario, scenario, self.tmp / f"{scenario}-expect.json")
         self.repo = Path(out["repo_dir"])
         self.out = out
         self.expect = json.loads(Path(out["expect_file"]).read_text(encoding="utf-8"))
@@ -118,7 +118,18 @@ class ExecutorFixtureCheckTest(unittest.TestCase):
         (self.tmp / "busy").mkdir()
         (self.tmp / "busy" / "x").write_text("x")
         with self.assertRaises(RuntimeError):
-            fx.build(ROOT, self.tmp / "busy", "merge")
+            fx.build(ROOT, self.tmp / "busy", "merge", self.tmp / "busy-expect.json")
+
+    def test_expect_file_inside_work_dir_is_rejected(self):
+        with self.assertRaises(ValueError):
+            fx.build(ROOT, self.tmp / "w", "merge", self.tmp / "w" / "expect.json")
+
+    def test_harness_scripts_are_not_copied(self):
+        self.build("merge")
+        scripts = {p.name for p in (self.repo / ".github/scripts").iterdir()}
+        self.assertIn("select_execute_target.py", scripts)
+        self.assertFalse(scripts & set(fx.HARNESS_SCRIPTS))
+        self.assertFalse(any(p.name == "expect.json" for p in (self.tmp / "merge").rglob("*")))
 
     # ── 계약대로 ──
     def test_contract_following_merge_passes(self):

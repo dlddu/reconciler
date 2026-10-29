@@ -198,22 +198,30 @@ jobs:
           path: ${{ runner.temp }}/gen
 
       # 격리 무대: GitHub·MCP·클러스터 없이 로컬 bare 저장소만으로 점유된 task 한 건을 실행하게 한다.
+      # 정답지 봉인: 기대값(expect.json)과 테스트 하네스(점검기·픽스처·검증기)는 root 소유 700 디렉터리로 옮겨
+      # 실행 중인 mcode(러너 사용자)가 읽지 못하게 하고, 실행 뒤에 푼다. 그래도 들여다봤는지는 Check isolation이 본다.
       - name: Build fixture
         id: fx
         run: |
-          OUT="$RUNNER_TEMP/out"; echo "OUT=$OUT" >> "$GITHUB_ENV"
-          mkdir -p "$OUT/logs"
+          OUT="$RUNNER_TEMP/out"; SEALED="$RUNNER_TEMP/sealed"
+          { echo "OUT=$OUT"; echo "SEALED=$SEALED"; } >> "$GITHUB_ENV"
+          mkdir -p "$OUT/logs" "$SEALED"
           pip install --quiet --disable-pip-version-check jsonschema
           # 로컬 대상 저장소 병합 커밋용 작성자(운영에서는 GitHub가 머지 커밋을 만든다).
           git config --global user.name "reconciler-bot"
           git config --global user.email "reconciler@dlddu.dev"
           python3 harness/.github/scripts/executor_fixture.py --source harness --work-dir "$RUNNER_TEMP/fx" \
-            --scenario "${{ matrix.scenario }}" --github-output "$GITHUB_OUTPUT"
+            --scenario "${{ matrix.scenario }}" --expect-file "$SEALED/expect.json" --github-output "$GITHUB_OUTPUT"
           ws="$RUNNER_TEMP/fx/ws"
           mkdir -p "$ws/$SKILL_REL"
           cp -R "$RUNNER_TEMP/gen/skill/." "$ws/$SKILL_REL/"
           test -f "$ws/$SKILL_REL/SKILL.md" || { echo "::error::내려받은 생성본에 SKILL.md가 없음"; exit 1; }
-          cp "$RUNNER_TEMP/fx/expect.json" "$OUT/expect.json"
+          for f in check_executor_result.py check_detector_result.py executor_fixture.py validate_generated_skill.py; do
+            mv "harness/.github/scripts/$f" "$SEALED/$f"
+          done
+          sudo chown -R root:root "$SEALED"
+          sudo chmod -R go-rwx "$SEALED"
+          if cat "$SEALED/expect.json" >/dev/null 2>&1; then echo "::error::봉인 실패 — 러너 사용자가 기대값을 읽을 수 있음"; exit 1; fi
 
       - name: Set up MiniMax Code
         uses: ./harness/.github/actions/setup-mcode
@@ -223,11 +231,15 @@ jobs:
           region: ${{ vars.MINIMAX_REGION || 'en' }}
 
       # 운영 실행과 같은 프롬프트(work-executor-run-prompt.md). 이 무대에만 해당하는 사실은 ENV_NOTE 한 줄뿐이다.
+      # mcode 런타임이 재시도 가능한 오류(예: EMPTY_RESPONSE)로 끝났고 아직 아무것도 바뀌지 않았으면
+      # (reconciler HEAD = 점유 커밋·작업 트리 깨끗·대상 refs 그대로) 한 번만 처음부터 다시 돌린다.
       - name: Run skill
         id: run
         env:
           MODEL: ${{ inputs.minimax_model }}
           WS: ${{ steps.fx.outputs.ws_dir }}
+          REPO: ${{ steps.fx.outputs.repo_dir }}
+          TARGET: ${{ steps.fx.outputs.target_git_dir }}
           TASK_ID: ${{ steps.fx.outputs.task_id }}
           MODEL_ID: ${{ steps.fx.outputs.model_id }}
           CLAIM_COMMIT: ${{ steps.fx.outputs.claim_commit }}
@@ -242,17 +254,55 @@ jobs:
                 --output-last-message "$OUT/logs/final-message.md"
                 --diagnostics-dir "$OUT/logs/diagnostics")
           [ -n "$MODEL" ] && args+=(--model "$MODEL")
-          set +e
-          env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL -u ACTIONS_RUNTIME_TOKEN \
-              -u GITHUB_TOKEN -u GH_TOKEN \
-            mcode "${args[@]}" < "$OUT/logs/prompt.md" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"
-          code=$?
-          set -e
-          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          tail -n 5 "$OUT/logs/stderr.log" || true
+          refs() { git --git-dir "$TARGET" for-each-ref --format='%(refname) %(objectname)'; }
+          pre_refs=$(refs)
+          for attempt in 1 2; do
+            set +e
+            env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL -u ACTIONS_RUNTIME_TOKEN \
+                -u GITHUB_TOKEN -u GH_TOKEN \
+              mcode "${args[@]}" < "$OUT/logs/prompt.md" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"
+            code=$?
+            set -e
+            tail -n 5 "$OUT/logs/stderr.log" || true
+            [ "$code" -eq 0 ] && break
+            retryable=$(python3 -c 'import json,sys
+          r=[json.loads(l) for l in open(sys.argv[1]) if l.startswith("{")]
+          e=[x.get("result",{}).get("error") or {} for x in r if x.get("type")=="exec.completed"]
+          print("yes" if e and e[-1].get("retryable") else "no")' "$OUT/logs/transcript.jsonl" 2>/dev/null || echo no)
+            untouched=no
+            if [ "$(git -C "$REPO" rev-parse HEAD)" = "$CLAIM_COMMIT" ] && [ -z "$(git -C "$REPO" status --porcelain)" ] \
+               && [ "$(refs)" = "$pre_refs" ]; then untouched=yes; fi
+            if [ "$attempt" -eq 1 ] && [ "$retryable" = yes ] && [ "$untouched" = yes ]; then
+              echo "::warning::mcode가 재시도 가능한 오류로 끝났고 바뀐 것이 없음 — 한 번 다시 돌린다"
+              mv "$OUT/logs/transcript.jsonl" "$OUT/logs/transcript-attempt1.jsonl"
+              mv "$OUT/logs/stderr.log" "$OUT/logs/stderr-attempt1.log"
+              continue
+            fi
+            break
+          done
+          { echo "exit_code=$code"; echo "attempts=$attempt"; } >> "$GITHUB_OUTPUT"
           [ "$code" -eq 0 ] || echo "::warning::mcode가 exit $code로 끝남 — 결과 점검은 계속한다"
 
+      - name: Unseal answer key
+        if: always() && steps.fx.outcome == 'success'
+        run: sudo chown -R "$(id -u):$(id -g)" "$SEALED"
+
+      # 시험 대상이 정답지(기대값·점검기·픽스처)를 건드렸으면 결과와 무관하게 이 테스트는 무효다.
+      - name: Check isolation
+        id: isolation
+        if: steps.run.outcome == 'success'
+        run: |
+          code=0
+          for t in "$OUT"/logs/transcript*.jsonl; do
+            python3 harness/.github/scripts/mcode_transcript.py forbid "$t" "$SEALED" sealed/ expect.json \
+              check_executor_result check_detector_result executor_fixture validate_generated_skill \
+              | tee -a "$OUT/isolation.txt" || code=1
+          done
+          [ "$code" -eq 0 ] || echo "::error::시험 대상이 정답지를 들여다봄 — 이 테스트 결과는 무효"
+          exit $code
+
       - name: Check result
+        if: always() && steps.run.outcome == 'success'
         env:
           REPO: ${{ steps.fx.outputs.repo_dir }}
           TASK_ID: ${{ steps.fx.outputs.task_id }}
@@ -263,7 +313,8 @@ jobs:
           TARGET: ${{ steps.fx.outputs.target_git_dir }}
         run: |
           set +e
-          python3 harness/.github/scripts/check_executor_result.py --repo "$REPO" --base "$CLAIM_COMMIT" \
+          cp "$EXPECT" "$OUT/expect.json"
+          python3 "$SEALED/check_executor_result.py" --repo "$REPO" --base "$CLAIM_COMMIT" \
             --model-id "$MODEL_ID" --task-id "$TASK_ID" --claim-subject "$CLAIM_MESSAGE" \
             --expect "$EXPECT" --require-pushed \
             --report "$OUT/check-report.md" --json "$OUT/check-report.json" --patch "$OUT/result.patch"
@@ -279,10 +330,14 @@ jobs:
         if: always()
         env:
           RUN_EXIT: ${{ steps.run.outputs.exit_code }}
+          ATTEMPTS: ${{ steps.run.outputs.attempts }}
         run: |
           {
             echo "### 3. Test — ${{ matrix.scenario }}"
-            echo "- mcode ${MCODE_INSTALLED_VERSION:-<미설치>} · exit: ${RUN_EXIT:-n/a}"
+            echo "- mcode ${MCODE_INSTALLED_VERSION:-<미설치>} · exit: ${RUN_EXIT:-n/a} · 시도 ${ATTEMPTS:-n/a}회"
+            if grep -q "forbidden references: [1-9]" "$OUT/isolation.txt" 2>/dev/null; then
+              echo "- ❌ 격리 위반 — 시험 대상이 정답지를 들여다봄(결과 무효)"
+            fi
             if [ -s "$OUT/logs/transcript.jsonl" ]; then
               python3 harness/.github/scripts/mcode_transcript.py summary "$OUT/logs/transcript.jsonl"
             fi
