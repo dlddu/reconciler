@@ -1,17 +1,17 @@
 # 계획 스킬 빌드 — MiniMax Code(mcode)로 reconciler-work-planner 스킬을 생성 → 검증한다.
-# 뼈대만 있음: job·스텝 순서와 경계만 잡고, 스킬별 로직은 TODO로 남긴다. 완성 형태는
-# reconciler-drift-detector-skill-build.yml을 따른다(README 「감지 스킬 MiniMax 파이프라인」).
+# 감지 스킬 빌드(reconciler-drift-detector-skill-build.yml)와 같은 구조다(README 「계획 스킬 MiniMax 파이프라인」).
 #
 # 스킬 생성은 자동화 대상이 아니다: 지침이나 계약을 바꿀 때 사람이 수동으로 돌리고, 통과한 생성본
 # (work-planner-skill 아티팩트)을 plugin-marketplace의 plugins/reconciler-data-plane 에 PR로 올린다.
 #
-#   generate  간결한 지침(.github/minimax/work-planner-brief.md — TODO: 작성)만 주고 mcode가 레포를 직접 읽어
-#             SKILL.md를 작성한다. 기존 스킬 본문은 모델에 노출하지 않는다.
-#   validate  생성물 정적 검증(형식 · 계획 단계 계약 커버리지 · 금지 패턴 · 보조 스크립트 문법).
+#   generate  간결한 지침(.github/minimax/work-planner-brief.md)만 주고 mcode가 레포를 직접 읽어 SKILL.md를 작성한다.
+#             기존 스킬 본문은 모델에 노출하지 않는다(plugin-marketplace를 체크아웃하지 않고 MCP도 붙이지 않는다).
+#   validate  생성물 정적 검증(--profile work-planner: 형식 · 계획 단계 계약 커버리지 · 금지 패턴 · 보조 스크립트 문법).
+#             실제 동작은 운영 계획 워크플로(reconciler-work-planner.yml)의 결과 점검기가 본다.
 #
-# 필요한 설정(구현 시)
+# 필요한 설정
 #   environment llm-minimax의 secret MINIMAX_SUBSCRIPTION_KEY   레포 secret에는 두지 않는다 — README 「모델 키 격리」
-#   vars.MINIMAX_REGION   (선택) 감지 스킬 빌드와 같다
+#   vars.MINIMAX_REGION                (선택) en(기본, api.minimax.io) | cn
 name: "Reconciler · Work Planner Skill Build"
 
 on:
@@ -46,49 +46,78 @@ jobs:
           path: harness
           persist-credentials: false
 
-      # 스킬을 레포 밖(ws/.agents)에 쓰게 해 reconciler 체크아웃을 오염시키지 않는다.
+      # 참고용 reconciler는 이 워크플로를 돌린 커밋 그대로다 — 지침이 읽으라는 러너 스크립트(claim_plan_target.py)가
+      # 지침과 같은 버전이어야 한다(머지 전 브랜치에서 돌려도 맞도록). 스킬은 레포 밖(ws/.agents)에 쓴다.
       - name: Checkout reconciler (reference)
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.repository.default_branch }}
           path: ws/reconciler
           persist-credentials: false
 
-      # TODO: ./harness/.github/actions/setup-mcode (subscription-key: secrets.MINIMAX_SUBSCRIPTION_KEY)
       - name: Set up MiniMax Code
-        run: |
-          echo "TODO: set up mcode for $SKILL_NAME"
+        uses: ./harness/.github/actions/setup-mcode
+        with:
+          subscription-key: ${{ secrets.MINIMAX_SUBSCRIPTION_KEY }}
+          version: ${{ env.MCODE_VERSION }}
+          region: ${{ vars.MINIMAX_REGION || 'en' }}
 
-      # TODO: .github/minimax/work-planner-brief.md 작성 후 감지 스킬 빌드의 Generate SKILL.md와 같은 방식으로 실행.
-      #   brief에 담을 계약: action_required|review_rejected|failed → planning 점유는 러너 몫,
-      #   plan(3-1) · preparation(3-2, 대상 레포 PR) · executionGuide(3-3), planning → planned,
-      #   커밋 plan(<tbm>/<rct>): …, 스키마 수정 금지.
       - name: Generate SKILL.md
         id: gen
         env:
           MODEL: ${{ inputs.minimax_model }}
         run: |
-          echo "TODO: generate $SKILL_NAME SKILL.md into ws/$SKILL_REL"
+          out="$RUNNER_TEMP/out"; mkdir -p "$out/logs" "$GITHUB_WORKSPACE/ws/$SKILL_REL"
+          test -f harness/.github/minimax/work-planner-brief.md || { echo "::error::지침 파일 없음: work-planner-brief.md"; exit 1; }
+          sed -e "s#{{SKILL_DIR}}#$SKILL_REL#g" -e "s#{{REPO_DIR}}#./reconciler#g" \
+            harness/.github/minimax/work-planner-brief.md > "$out/logs/prompt.md"
+          echo "brief: $(wc -c < "$out/logs/prompt.md") bytes"
+          args=(exec --input - --cwd "$GITHUB_WORKSPACE/ws" --permission full
+                --output-format stream-json --timeout 25m
+                --output-last-message "$out/logs/final-message.md"
+                --diagnostics-dir "$out/logs/diagnostics")
+          [ -n "$MODEL" ] && args+=(--model "$MODEL")
+          set +e
+          env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL \
+            mcode "${args[@]}" < "$out/logs/prompt.md" > "$out/logs/transcript.jsonl" 2> "$out/logs/stderr.log"
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          tail -n 5 "$out/logs/stderr.log" || true
+          [ "$code" -eq 0 ] || { echo "::error::mcode 생성 실행 실패(exit $code) — logs/stderr.log 참고"; exit "$code"; }
 
-      # TODO: ws/reconciler가 깨끗한지, ws/$SKILL_REL/SKILL.md가 생겼는지 확인.
       - name: Check reference checkout untouched
         run: |
-          echo "TODO: check ws/reconciler untouched and SKILL.md exists"
+          changes=$(git -C ws/reconciler status --porcelain)
+          if [ -n "$changes" ]; then
+            echo "::error::생성 단계가 reconciler 체크아웃을 수정함"; echo "$changes"; exit 1
+          fi
+          test -f "ws/$SKILL_REL/SKILL.md" || { echo "::error::SKILL.md가 생성되지 않음"; exit 1; }
 
-      # TODO: 생성본·대화 기록을 $RUNNER_TEMP/out으로 모으고 redact_secrets.py로 가린 뒤
-      #   work-planner-skill 아티팩트로 올린다.
-      - name: Collect, redact and upload skill
+      - name: Collect skill
         if: always()
         run: |
-          echo "TODO: collect → redact → upload work-planner-skill"
-
-      - name: Summary
-        if: always()
-        run: |
+          out="$RUNNER_TEMP/out"; mkdir -p "$out/skill"
+          cp -R "ws/$SKILL_REL/." "$out/skill/" 2>/dev/null || true
           {
             echo "### 1. Generate — $SKILL_NAME"
-            echo "- result: TODO"
+            echo "- mcode ${MCODE_INSTALLED_VERSION:-<미설치>} · exit: ${{ steps.gen.outputs.exit_code || 'n/a' }}"
+            echo "- 생성 파일: $(cd "$out/skill" && find . -type f | sed 's#^\./##' | paste -sd ', ' -)"
+            python3 harness/.github/scripts/mcode_transcript.py summary "$out/logs/transcript.jsonl" 2>/dev/null || true
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # 대화 기록에는 도구 결과로 받은 토큰이 남을 수 있다 — 올리기 전에 가린다.
+      - name: Redact secrets
+        if: always()
+        run: python3 harness/.github/scripts/redact_secrets.py "$RUNNER_TEMP/out"
+
+      - name: Upload skill artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-planner-skill
+          path: ${{ runner.temp }}/out
+          if-no-files-found: warn
+          retention-days: 14
 
   validate:
     name: Validate skill
@@ -103,22 +132,28 @@ jobs:
           persist-credentials: false
           sparse-checkout: .github
 
-      # TODO: work-planner-skill 아티팩트 다운로드.
       - name: Download skill
-        run: |
-          echo "TODO: download work-planner-skill"
+        uses: actions/download-artifact@v4
+        with:
+          name: work-planner-skill
+          path: ${{ runner.temp }}/gen
 
-      # TODO: validate_generated_skill.py는 지금 감지 스킬 전용(EXPECTED_NAME·REQUIRED가 하드코딩)이다.
-      #   스킬별 계약 표(planning/planned, plan·preparation·executionGuide, plan(…) 커밋)를
-      #   받도록 일반화한 뒤 여기서 돌리고, 보고서를 work-planner-validation 아티팩트로 올린다.
       - name: Static validation
         run: |
-          echo "TODO: validate $SKILL_NAME"
+          mkdir -p "$RUNNER_TEMP/validation"
+          set +e
+          python3 harness/.github/scripts/validate_generated_skill.py "$RUNNER_TEMP/gen/skill" --profile work-planner \
+            --report "$RUNNER_TEMP/validation/report.md" --json "$RUNNER_TEMP/validation/report.json"
+          code=$?
+          set -e
+          cat "$RUNNER_TEMP/validation/report.md" >> "$GITHUB_STEP_SUMMARY"
+          exit $code
 
-      - name: Summary
+      - name: Upload validation artifact
         if: always()
-        run: |
-          {
-            echo "### 2. Validate — $SKILL_NAME"
-            echo "- result: TODO"
-          } >> "$GITHUB_STEP_SUMMARY"
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-planner-validation
+          path: ${{ runner.temp }}/validation
+          if-no-files-found: warn
+          retention-days: 14

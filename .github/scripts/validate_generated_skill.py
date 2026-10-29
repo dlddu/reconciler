@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""MiniMax Code가 생성한 reconciler-drift-detector 스킬의 정적 검증.
+"""MiniMax Code가 생성한 reconciler 단계 스킬(감지·계획)의 정적 검증.
 
 생성 결과를 사람이 읽기 전에 기계적으로 걸러낼 수 있는 것만 본다:
   - 형식: SKILL.md 존재, frontmatter(name/description), 본문 길이
-  - 계약 커버리지: 감지 단계 계약의 핵심 요소가 본문·번들 스크립트에 등장하는지(키워드 기반 — 실제 동작은 운영 감지의 결과 점검기가 본다)
+  - 계약 커버리지: 단계(--profile) 계약의 핵심 요소가 본문·번들 스크립트에 등장하는지(키워드 기반 — 실제 동작은 운영 감지의 결과 점검기가 본다)
   - 안전: 비밀값 리터럴, 강제 push, 스키마 파일 쓰기, 드라이런 분기 같은 금지 패턴
   - 보조 스크립트: .py는 컴파일, .sh는 `bash -n`
 
@@ -53,6 +53,33 @@ RECOMMENDED = [
     ("기록 분량 기준(gap·reason)", [r"\bgap\b[^\n]{0,40}(문장|자\s*(이내|안팎|이하))", r"\breason\b[^\n]{0,40}\d+\s*자"]),
 ]
 
+# 계획 단계(reconciler-work-planner) — 러너가 planning으로 점유한 task 한 건을 planned로 끌고 간다.
+PLANNER_REQUIRED = [
+    ("상태 planning", [r"\bplanning\b"]),
+    ("상태 planned", [r"\bplanned\b"]),
+    ("재작업 진입점 review_rejected/failed", [r"\breview_rejected\b"]),
+    ("시도 기록 attempts", [r"\battempts\b"]),
+    ("계획 단계 steps", [r"\bsteps\b"]),
+    ("실행 지침 executionGuide", [r"\bexecutionGuide\b"]),
+    ("준비 preparation", [r"\bpreparation\b"]),
+    ("PR 기록 pullRequestUrl", [r"\bpullRequestUrl\b"]),
+    ("task 스키마 참조", [r"reconciliation-task\.schema\.json"]),
+    ("task 저장 위치", [r"data/reconciliation-tasks"]),
+    ("커밋 메시지 규약 plan(...)", [r"\bplan\(\S"]),
+    ("push 전 최신화(pull --rebase)", [r"pull\s+--rebase"]),
+    ("스키마 검증", [r"jsonschema", r"\bvalidat"]),
+    ("점유된 task 입력(task_id)", [r"\btask_id\b"]),
+]
+
+PLANNER_RECOMMENDED = [
+    RECOMMENDED[0],  # 점유는 러너 몫
+    ("이전 attempts 항목 보존(append-only)", [r"append-only", r"이전[^\n]{0,40}(수정하지|건드리지|고치지|그대로|불변)"]),
+    RECOMMENDED[2],  # 스키마 수정 금지 명시
+    RECOMMENDED[3],  # k3s MCP 도구
+    ("롤백 절차", [r"롤백|rollback|되돌"]),
+    ("머지 금지(실행은 executor 몫)", [r"머지[^\n]{0,40}(않|금지|말)", r"merge[^\n]{0,40}(not|never)"]),
+]
+
 # 금지 패턴을 "하지 말라"고 적은 줄(예: 「강제 push 금지(`git push --force`)」)은 사용이 아니라 금지 서술이다.
 PROHIBITION = re.compile(r"금지|하지\s*않|하지\s*말|않는다|절대|쓰지\s*않|never|do\s+not|don't|must\s+not", re.I)
 
@@ -66,6 +93,12 @@ FORBIDDEN = [
     ("토큰 출력", r"echo\s+[\"']?\$\{?(GITHUB_TOKEN|GH_TOKEN|SOURCE_GITHUB_TOKEN)\b"),
 ]
 
+
+PROFILES = {
+    "drift-detector": ("reconciler-drift-detector", REQUIRED, RECOMMENDED, []),
+    "work-planner": ("reconciler-work-planner", PLANNER_REQUIRED, PLANNER_RECOMMENDED,
+                     [("PR 머지(계획 단계 금지)", r"gh\s+pr\s+merge|/pulls/[^\s/]+/merge\b")]),
+}
 
 @dataclass
 class Report:
@@ -128,7 +161,7 @@ def bundled_text(skill_dir: Path) -> str:
     return "\n".join(parts)
 
 
-def check_scripts(skill_dir: Path, report: Report) -> None:
+def check_scripts(skill_dir: Path, report: Report, forbidden=FORBIDDEN) -> None:
     for path in sorted(skill_dir.rglob("*")):
         if not path.is_file() or path.name == "SKILL.md":
             continue
@@ -146,12 +179,14 @@ def check_scripts(skill_dir: Path, report: Report) -> None:
             else:
                 report.passed.append(f"셸 문법: {rel}")
         text = path.read_text(encoding="utf-8", errors="replace") if path.stat().st_size < 2_000_000 else ""
-        for label, pattern in FORBIDDEN:
+        for label, pattern in forbidden:
             if re.search(pattern, text):
                 report.errors.append(f"금지 패턴({label}) — {rel}")
 
 
-def validate(skill_dir: Path) -> Report:
+def validate(skill_dir: Path, profile: str = "drift-detector") -> Report:
+    expected_name, required, recommended, extra_forbidden = PROFILES[profile]
+    forbidden = FORBIDDEN + extra_forbidden
     report = Report()
     skill_md = skill_dir / "SKILL.md"
     if not skill_md.is_file() or skill_md.is_symlink():
@@ -164,10 +199,10 @@ def validate(skill_dir: Path) -> Report:
     front = front or {}
     name = str(front.get("name") or "").strip()
     desc = str(front.get("description") or "").strip()
-    report.meta.update(name=name, description_chars=len(desc), body_chars=len(body.strip()),
+    report.meta.update(profile=profile, name=name, description_chars=len(desc), body_chars=len(body.strip()),
                        files=sorted(str(p.relative_to(skill_dir)) for p in skill_dir.rglob("*") if p.is_file()))
-    if name != EXPECTED_NAME:
-        report.errors.append(f"frontmatter name이 {EXPECTED_NAME!r}가 아님: {name!r}")
+    if name != expected_name:
+        report.errors.append(f"frontmatter name이 {expected_name!r}가 아님: {name!r}")
     if not desc:
         report.errors.append("frontmatter description이 비어 있음")
     elif len(desc) > MAX_DESCRIPTION_CHARS:
@@ -180,21 +215,21 @@ def validate(skill_dir: Path) -> Report:
 
     # 계약 커버리지는 SKILL.md와 번들 스크립트를 합쳐 본다 — 스키마 경로처럼 절차를 스크립트에 위임한 경우가 있다.
     covered = text + "\n" + bundled_text(skill_dir)
-    for label, patterns in REQUIRED:
+    for label, patterns in required:
         if any(re.search(p, covered) for p in patterns):
             report.passed.append(label)
         else:
             report.errors.append(f"계약 누락: {label}")
-    for label, patterns in RECOMMENDED:
+    for label, patterns in recommended:
         if any(re.search(p, covered, re.I) for p in patterns):
             report.passed.append(label)
         else:
             report.warnings.append(f"권장 항목 누락: {label}")
-    for label, pattern in FORBIDDEN:
+    for label, pattern in forbidden:
         hits = [line for line in text.splitlines() if re.search(pattern, line) and not PROHIBITION.search(line)]
         if hits:
             report.errors.append(f"금지 패턴({label}) — SKILL.md: {hits[0].strip()[:120]}")
-    check_scripts(skill_dir, report)
+    check_scripts(skill_dir, report, forbidden)
     return report
 
 
@@ -215,11 +250,13 @@ def render(report: Report) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("skill_dir", type=Path)
+    parser.add_argument("--profile", choices=sorted(PROFILES), default="drift-detector",
+                        help="검증할 단계 스킬(기본 drift-detector)")
     parser.add_argument("--report", type=Path, help="마크다운 보고서 경로")
     parser.add_argument("--json", type=Path, help="JSON 보고서 경로")
     args = parser.parse_args(argv)
 
-    report = validate(args.skill_dir)
+    report = validate(args.skill_dir, args.profile)
     text = render(report)
     print(text, end="")
     if args.report:

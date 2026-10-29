@@ -124,5 +124,65 @@ class ValidateGeneratedSkillTest(unittest.TestCase):
         self.assertNotIn("ok.py", joined)
 
 
+
+PLANNER_BODY = """
+# reconciler-work-planner
+
+대상 선정과 점유는 러너가 끝냈다. 넘겨받은 `task_id` 한 건이 `planning`인지 확인한다.
+
+1. `attempts` 끝에 새 항목을 덧붙인다(append-only, 이전 항목은 수정하지 않는다). 재작업이면 reason에 `review_rejected`/`failed`.
+2. plan의 `steps`·`executionGuide`(롤백 포함)를 쓰고 `preparation`(PR, 없으면 `pullRequestUrl: null`)을 기록한다. PR은 머지하지 않는다.
+3. `schemas/reconciliation-task.schema.json`으로 jsonschema 검증 후 `data/reconciliation-tasks/<model>.json`에 기록.
+4. 커밋 `plan(<tbm>/<rct>): draft plan` … `planned`로 전이. 스키마는 절대 수정하지 않는다.
+5. `git pull --rebase` 후 push. 대상 레포 PR은 머지하지 않는다.
+6. 대상 레포는 `github_app_installation_token`으로 접근한다.
+"""
+
+
+class PlannerProfileTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self._tmp.name) / "reconciler-work-planner"
+        self.dir.mkdir()
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def check(self, body=PLANNER_BODY, name="reconciler-work-planner", extra=None):
+        (self.dir / "SKILL.md").write_text(skill_text(name=name, desc="계획 단계 스킬", body=body), encoding="utf-8")
+        for rel, content in (extra or {}).items():
+            p = self.dir / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(content, encoding="utf-8")
+        return vgs.validate(self.dir, "work-planner")
+
+    def test_complete_planner_skill_passes(self):
+        rep = self.check()
+        self.assertEqual(rep.errors, [])
+        self.assertEqual(rep.warnings, [])
+
+    def test_name_is_per_profile(self):
+        self.assertTrue(any("name" in e for e in self.check(name="reconciler-drift-detector").errors))
+        self.assertTrue(vgs.validate(self.dir, "drift-detector").errors)  # 감지 계약으로는 통과하지 않는다
+
+    def test_missing_planner_contract(self):
+        rep = self.check(PLANNER_BODY.replace("executionGuide", "지침").replace("plan(<tbm>", "commit(<tbm>"))
+        joined = "\n".join(rep.errors)
+        self.assertIn("executionGuide", joined)
+        self.assertIn("plan(...)", joined)
+
+    def test_merge_is_forbidden_in_planner(self):
+        rep = self.check(PLANNER_BODY + "\n```\ngh pr merge 12 --squash\n```\n")
+        self.assertTrue(any("PR 머지" in e for e in rep.errors))
+        rep = self.check(extra={"scripts/x.sh": "gh pr merge 1\n"})
+        self.assertTrue(any("PR 머지" in e for e in rep.errors))
+
+
+
+    def test_dry_run_branch_is_forbidden_in_planner_too(self):
+        rep = self.check(PLANNER_BODY + "\n```\n[ \"$RECONCILER_DRY_RUN\" = 1 ] && exit 0\n```\n")
+        self.assertTrue(any("드라이런 분기" in e for e in rep.errors))
+
+
 if __name__ == "__main__":
     unittest.main()

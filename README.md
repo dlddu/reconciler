@@ -38,9 +38,10 @@ tests/                              # index.html 동작 테스트 (node --test),
 .github/workflows/                  # 단계 스킬별 workflow_dispatch 워크플로
 .github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py / select_plan_target.py / select_review_target.py /
                                     #   select_execute_target.py: 감지·계획·리뷰·실행 대상 선정,
-                                    #   claim_drift_target.py: 선정 + 점유(compare-and-set 커밋) — MiniMax 감지의 Step 0·1,
+                                    #   claim_drift_target.py / claim_plan_target.py: 선정 + 점유(compare-and-set 커밋) — MiniMax 감지·계획,
                                     #   mcp_oidc_proxy.py·mcp_call.py: homelab-k3s-mcp OIDC 연결,
-                                    #   validate_generated_skill.py·check_detector_result.py: 생성 스킬 검증·테스트 점검)
+                                    #   validate_generated_skill.py(--profile drift-detector|work-planner): 생성 스킬 정적 검증,
+                                    #   check_detector_result.py / check_planner_result.py: 운영 실행 결과 점검)
 .github/actions/setup-mcode/        # MiniMax Code(mcode) 설치 + subscription key 설정 composite action
 .github/minimax/                    # mcode에 주는 간결한 생성 지침(brief), 테스트·운영 실행 프롬프트
 .nojekyll                           # Pages가 data/*.json을 그대로 서빙하도록 Jekyll 우회
@@ -118,6 +119,29 @@ MiniMax Code로 돌리는 감지는 이 둘을 **러너의 결정적 스크립�
 사람 세션에서 직접 불릴 수 있으므로 지금처럼 선정·점유를 스스로 한다. 두 경로가 같은 레포에 쓰므로 점유 기록의
 형태(커밋 제목, `trigger`, 기준선 갱신, 수동 요청 필드를 짝으로 `null`)는 같게 유지한다.
 
+## 계획 스킬 MiniMax 파이프라인
+
+계획도 감지와 같은 구조로 MiniMax Code에서 돈다. 점유를 러너가 하는 근거도 위 「점유는 러너가 한다」와 같다.
+
+| 워크플로 | 트리거 | 하는 일 |
+| --- | --- | --- |
+| `reconciler-work-planner.yml` (운영 계획) | 수동 | 러너가 계획 대상 한 건을 **점유**(`claim_plan_target.py`)한 뒤 plugin-marketplace의 고정 스킬(`plugins/reconciler-data-plane`의 `reconciler-work-planner`)로 계획·준비(대상 레포 PR)·실행 지침을 쓴다. 결과 점검기(`check_planner_result.py`)로 계약을 확인하고 `work-planner-result` 아티팩트를 남긴다. 대상이 없으면 MCP·mcode를 띄우지 않는다. |
+| `reconciler-work-planner-skill-build.yml` (스킬 빌드) | 수동만 | generate(`.github/minimax/work-planner-brief.md`만 주고 mcode가 레포를 읽어 `SKILL.md`를 쓴다 — 기존 스킬 본문은 주지 않는다) → validate(`validate_generated_skill.py --profile work-planner`). 아티팩트 `work-planner-skill` · `work-planner-validation`. 통과한 생성본을 plugin-marketplace에 PR로 올리면 운영 계획이 그 스킬을 쓴다. |
+
+- **러너 점유**: 계획 대상(`action_required`·`review_rejected`·`failed`, 모델 켜짐) 한 건을 골라 status가 그대로인지
+  재확인 → `planning` + `updatedAt` → `plan(<tbm>/<rct>): claim` 커밋 → 즉시 push. 경쟁에서 지면 다음 후보, 무관한
+  커밋에 밀린 push는 재확인 후 재시도. `attempts`는 건드리지 않는다. 출력의 `from_status`(점유 전 status)로 스킬이
+  재작업 여부를 안다. 선정만 하는 `select_plan_target.py`는 스킬이 직접 점유하는 Claude Code 경로가 쓴다.
+- **스킬에 남는 계약**: 넘겨받은 task가 `planning`인지 확인 → `attempts` 끝에 새 항목(재작업이면 `reason`=`from_status`)을
+  덧붙여 `plan`·`preparation`·`plan.executionGuide`를 채움 → `planned`. 완주하지 못하면 이번 시도를 남기지 않고
+  `from_status`로 되돌린다. 이전 attempts 항목, `trigger`·`createdAt`·`stateSummary`·`assessment`, 다른 task·모델은
+  건드리지 않는다. 대상 레포 PR은 머지하지 않는다(실행 단계 몫).
+- **결과 점검**: 점유 커밋 이후 그 task 파일만 바뀌었는지, 보존 필드·이전 attempts, 스키마, 종료 상태를 본다.
+  `planning`으로 끝나면(풀 수 없는 lock) 오류로 실패한다. 시도 없이 `from_status`로 lock을 푼 것은 계약상 허용이라 경고다.
+  대상 레포 PR의 내용(계획과 diff가 맞는지, 관련 없는 변경이 섞였는지)은 리뷰 단계가 본다.
+- **서버 OIDC 규칙**: `reconciler-work-planner.yml` 규칙에 `github_app_installation_token`(대상 레포 contents·pull_requests
+  쓰기, plugin-marketplace 읽기)이 있어야 하고 `resource_list`·`resource_get`·`api_resources`·`ping`을 권장한다.
+
 ## 모델 키 격리
 
 워크플로마다 쓰는 모델(MiniMax, 추후 GLM·Claude Code)이 다를 수 있다. 각 job의 에이전트는 **자기 모델 키만** 볼 수
@@ -129,8 +153,10 @@ MiniMax Code로 돌리는 감지는 이 둘을 **러너의 결정적 스크립�
   `CLAUDE_CODE_OAUTH_TOKEN`). 키가 필요한 job만 `environment:`로 그 environment를 선언한다. 레포 secret은 environment가
   없는 job에도 넘어가니, 같은 이름의 레포 secret은 지운다.
 - **한 job엔 한 제공자**: 두 모델을 쓰는 워크플로는 job을 나눈다. job마다 별도 VM이라 파일·프로세스로도 키가 섞이지 않는다.
-- **배포 브랜치 제한**: 각 `llm-*` environment의 Deployment branches를 기본 브랜치(`main`)로만 둔다. 누가 다른 브랜치에
-  워크플로를 올려도 그 실행은 키를 받지 못한다. 대신 스킬 빌드 같은 수동 워크플로도 `main`에서만 돌릴 수 있다.
+- **배포 브랜치**: `llm-minimax`는 Deployment branches를 `main`으로 묶지 않는다 — 스킬 빌드 같은 수동 워크플로를 머지 전
+  브랜치에서 `workflow_dispatch --ref <브랜치>`로 돌려 보기 위해서다(dispatch하려면 같은 경로의 워크플로 파일이 기본
+  브랜치에 있어야 한다). 그래서 그 environment를 선언한 job이면 어느 브랜치에서든 키를 받는다. 키를 꺼내는 경로는 결국
+  워크플로를 새로 쓰는 것이므로, 막는 선은 아래 App 토큰 상한(에이전트가 이 레포의 워크플로를 push하지 못하게)이다.
 - **정적 검사**: `workflow-lint.yml`이 `.github/` 변경마다 `check_llm_key_scope.py`를 돌려, environment 밖의 키 참조,
   한 job의 두 제공자 키, 최상위 `env:`의 키, `secrets: inherit`·`toJSON(secrets)`·`secrets[...]`를 막는다.
   새 제공자는 스크립트의 `PROVIDERS`에 먼저 등록한다. 대화 기록 가림(`redact_secrets.py`)은 MiniMax·Anthropic·GLM 키
