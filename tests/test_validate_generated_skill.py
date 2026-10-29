@@ -124,5 +124,91 @@ class ValidateGeneratedSkillTest(unittest.TestCase):
         self.assertNotIn("ok.py", joined)
 
 
+EXECUTOR_BODY = """
+# reconciler-work-executor
+
+대상 선정과 점유는 러너가 끝냈다. 넘겨받은 `task_id` 한 건만 다룬다.
+
+1. task가 `executing`인지 확인하고, 아니면 아무것도 쓰지 않고 멈춘다.
+2. `attempts` 마지막 항목의 `plan.steps`를 `executionGuide` 순서대로 실행해 `execution.entries`(`stepSeq`)에 남긴다.
+3. 계획 밖 변경이 필요하면 멈추고 `failed`. 전제가 해소됐으면 `cancelled`.
+4. `review.manualApproval`이 있으면 머지 직전 PR head가 그 sha인지 확인한다. 사람 승인 status는 만들지 않는다.
+5. `verifying`으로 전이하고 `asIsVersionAfter`와 `verification.checks`를 남긴다. 통과면 `succeeded`, 미달이면 `failed`.
+6. `schemas/reconciliation-task.schema.json`으로 jsonschema 검증 후 `data/reconciliation-tasks/<model>.json`에 쓴다.
+7. 커밋 `execute(<tbm>/<rct>): run` → `execute(<tbm>/<rct>): verify`, `git pull --rebase` 후 push.
+8. 끝날 때 `executing`·`verifying`으로 남기지 않는다.
+9. `to-be-models.json`의 `lastObservedVersion`은 건드리지 않는다. 스키마는 절대 수정하지 않는다.
+10. 대상 레포 토큰은 `github_app_installation_token`으로 받는다.
+"""
+
+
+class ValidateExecutorProfileTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self._tmp.name) / "reconciler-work-executor"
+        self.dir.mkdir()
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def write(self, body, name="reconciler-work-executor", extra=None):
+        (self.dir / "SKILL.md").write_text(skill_text(name=name, desc="실행 단계 스킬", body=body), encoding="utf-8")
+        for rel, content in (extra or {}).items():
+            p = self.dir / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(content, encoding="utf-8")
+        return vgs.validate(self.dir, "reconciler-work-executor")
+
+    def test_complete_executor_skill_passes_without_warnings(self):
+        rep = self.write(EXECUTOR_BODY)
+        self.assertEqual(rep.errors, [])
+        self.assertEqual(rep.warnings, [])
+        self.assertEqual(rep.meta["profile"], "reconciler-work-executor")
+
+    def test_detector_skill_fails_executor_profile(self):
+        rep = self.write(BODY, name="reconciler-drift-detector")
+        joined = "\n".join(rep.errors)
+        self.assertIn("frontmatter name", joined)
+        self.assertIn("execute(...)", joined)
+        self.assertIn("asIsVersionAfter", joined)
+
+    def test_missing_executor_contract_items_are_errors(self):
+        rep = self.write(EXECUTOR_BODY.replace("asIsVersionAfter", "실행후버전").replace("verifying", "검증중"))
+        joined = "\n".join(rep.errors)
+        self.assertIn("asIsVersionAfter", joined)
+        self.assertIn("상태 verifying", joined)
+
+    def test_missing_scope_and_approval_rules_are_warnings(self):
+        body = EXECUTOR_BODY.replace("3. 계획 밖 변경이 필요하면 멈추고 `failed`. 전제가 해소됐으면 `cancelled`.\n", "")
+        body = body.replace("4. `review.manualApproval`이 있으면 머지 직전 PR head가 그 sha인지 확인한다. "
+                            "사람 승인 status는 만들지 않는다.\n", "")
+        rep = self.write(body)
+        self.assertEqual(rep.errors, [])
+        joined = "\n".join(rep.warnings)
+        self.assertIn("계획 범위 밖", joined)
+        self.assertIn("manualApproval", joined)
+        self.assertIn("cancelled", joined)
+
+    def test_approval_status_creation_is_forbidden(self):
+        bad = EXECUTOR_BODY + "\n```\nmcp call github_commit_status_create --state success\n```\n"
+        self.assertTrue(any("사람 승인 status 생성" in e for e in self.write(bad).errors))
+        bad = EXECUTOR_BODY + "\n```\ngh pr merge 12 --squash --admin\n```\n"
+        self.assertTrue(any("강제 머지" in e for e in self.write(bad).errors))
+        rep = self.write(EXECUTOR_BODY, extra={"scripts/x.sh": "gh api -X POST repos/o/r/statuses/abc\n"})
+        self.assertTrue(any("사람 승인 status 생성" in e for e in rep.errors))
+
+    def test_prohibition_line_mentioning_status_tool_is_allowed(self):
+        ok = EXECUTOR_BODY + "\n- `github_commit_status_create`는 절대 호출하지 않는다.\n"
+        self.assertEqual(self.write(ok).errors, [])
+
+    def test_cli_profile_flag(self):
+        (self.dir / "SKILL.md").write_text(skill_text(name="reconciler-work-executor", body=EXECUTOR_BODY),
+                                           encoding="utf-8")
+        import contextlib, io
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(vgs.main([str(self.dir), "--profile", "reconciler-work-executor"]), 0)
+            self.assertEqual(vgs.main([str(self.dir)]), 1)  # 기본 프로필(감지)로는 이름부터 다르다
+
+
 if __name__ == "__main__":
     unittest.main()

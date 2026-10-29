@@ -40,7 +40,8 @@ tests/                              # index.html 동작 테스트 (node --test),
                                     #   select_execute_target.py: 감지·계획·리뷰·실행 대상 선정,
                                     #   claim_drift_target.py: 선정 + 점유(compare-and-set 커밋) — MiniMax 감지의 Step 0·1,
                                     #   mcp_oidc_proxy.py·mcp_call.py: homelab-k3s-mcp OIDC 연결,
-                                    #   validate_generated_skill.py·check_detector_result.py: 생성 스킬 검증·테스트 점검)
+                                    #   validate_generated_skill.py·check_detector_result.py: 생성 스킬 검증·테스트 점검,
+                                    #   executor_fixture.py·check_executor_result.py: 실행 스킬 빌드 테스트의 격리 무대·결과 점검)
 .github/actions/setup-mcode/        # MiniMax Code(mcode) 설치 + subscription key 설정 composite action
 .github/minimax/                    # mcode에 주는 간결한 생성 지침(brief), 테스트·운영 실행 프롬프트
 .nojekyll                           # Pages가 data/*.json을 그대로 서빙하도록 Jekyll 우회
@@ -117,6 +118,36 @@ MiniMax Code로 돌리는 감지는 이 둘을 **러너의 결정적 스크립�
 **범위**: 이 분리는 MiniMax 감지 경로에만 해당한다. Claude Code 플러그인(`reconciler-data-plane`)의 감지 스킬은
 사람 세션에서 직접 불릴 수 있으므로 지금처럼 선정·점유를 스스로 한다. 두 경로가 같은 레포에 쓰므로 점유 기록의
 형태(커밋 제목, `trigger`, 기준선 갱신, 수동 요청 필드를 짝으로 `null`)는 같게 유지한다.
+
+## 실행 스킬 MiniMax 파이프라인
+
+`reconciler-work-executor-skill-build.yml`(수동만)이 실행 단계 스킬을 MiniMax Code로 **생성 → 검증 → 테스트**한다.
+통과한 생성본(`work-executor-skill` 아티팩트의 `skill/`)을 plugin-marketplace의 `plugins/reconciler-data-plane`에 PR로 올리는
+흐름은 감지 스킬과 같다.
+
+| job | 하는 일 | 아티팩트 |
+| --- | --- | --- |
+| generate | 메인 `.github/minimax/work-executor-brief.md`(핵심 규칙) + 서브 `work-executor-brief-sub.md`(품질 보조 규칙)만 주고, mcode가 레포(README·스키마·진입 게이트 스크립트·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `work-executor-skill` (skill/, 대화 기록) |
+| validate | `validate_generated_skill.py --profile reconciler-work-executor` — 형식·실행 단계 계약 커버리지(`executing`/`verifying`/종료 상태, `execution`·`verification`, `execute(…)` 커밋)·금지 패턴(사람 승인 status 생성, `--admin` 머지, 강제 push 등)·보조 스크립트 문법. | `work-executor-validation` |
+| test | 시나리오별로 격리 무대를 만들어(`executor_fixture.py`) 생성본을 운영과 같은 실행 프롬프트(`work-executor-run-prompt.md`)로 돌리고, `check_executor_result.py`가 계약과 시나리오 기대값을 점검한다. | `work-executor-test-<시나리오>` (대화 기록, 점검 보고서, 결과 task·패치) |
+| report | 세 단계 결과를 한 보고서로 묶는다. | `work-executor-build-report` (report.md, skill/) |
+
+**테스트는 운영 데이터로 하지 않는다.** 감지와 달리 실행은 PR 머지·클러스터 변경처럼 되돌리기 어려운 일을 하므로, 생성본의
+첫 실행을 운영에 맡기지 않고 러너 안의 격리 무대에서 먼저 돌린다. 무대에는 GitHub·MCP·클러스터 자격 증명이 없다.
+
+- 대상 레포 = 로컬 bare 저장소(`target.git`, main + 준비 브랜치). reconciler = 로컬 bare 원격 + clone(실제 README·schemas·scripts 복사,
+  data/에는 픽스처 모델 2개와 task 3건 — 같은 모델의 지난 `succeeded`, **점유된 `executing`** 한 건, 다른 모델의 `approved` 미끼).
+- 점유는 러너 몫이라 `approved → executing`을 `execute(<tbm>/<rct>): claim` 커밋으로 미리 push해 둔다. 이 커밋이 점검 기준이다.
+- 시나리오: `merge`(준비 브랜치 병합 → 검증 통과 → `succeeded`), `broken-premise`(리뷰 뒤 준비 브랜치가 사라짐 → 대상은 그대로, `failed`).
+- 점검: 커밋 규약(run → verify), 변경이 그 task 파일 하나뿐인지, 판정·계획·리뷰 기록과 이전 attempts 보존, 스키마, lock 해제
+  (`succeeded`|`failed`|`cancelled`), execution·verification 일관성(passed ⇔ succeeded, plan에 없는 stepSeq 없음), push 여부, 그리고
+  시나리오 기대값(대상 main 내용·refs 불변·이력 재작성 없음·`asIsVersionAfter`).
+
+**스킬에 남는 계약**(브리프의 핵심 규칙): 넘겨받은 task가 `executing`인지 확인 → 마지막 attempt의 `plan.steps`를 `executionGuide`대로
+실행해 `execution` 기록(`execute(<tbm>/<rct>): run`) → `verifying` → `asIsVersionAfter`·`checks` 기록 후 `succeeded`|`failed`
+(`… : verify`), 전제 붕괴면 `cancelled`|`failed` → 커밋마다 `pull --rebase` 후 push. 대상 선정·진입 게이트(사람 승인 확인 포함)·점유는
+러너가 한다 — 운영 실행 워크플로(`reconciler-work-executor.yml`)에 감지의 `claim_drift_target.py`에 해당하는 점유 스크립트를 붙이는
+것은 다음 단계다.
 
 ## 모델 키 격리
 
