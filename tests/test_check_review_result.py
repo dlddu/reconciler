@@ -118,6 +118,13 @@ class CheckReviewResultTest(unittest.TestCase):
                                                                 "arguments": {"state": "success"}}}}
         path.write_text(json.dumps(call) + "\n")
         self.assertTrue(any("대상 레포 쓰기" in e for e in self.check(transcript=path).errors))
+        call["item"]["toolCall"] = {"name": "read", "input": {"path": "SKILL.md"},
+                                    "output": {"content": [{"text": "github_commit_status_create는 쓰지 않는다"}]}}
+        path.write_text(json.dumps(call) + "\n")
+        self.assertEqual(self.check(transcript=path).errors, [])  # 읽은 내용(출력)은 호출이 아니다
+        call["item"]["toolCall"] = {"name": "Bash", "input": {"command": "gh pr merge 3 --squash"}}
+        path.write_text(json.dumps(call) + "\n")
+        self.assertTrue(any("PR 머지" in e for e in self.check(transcript=path).errors))
         call["item"]["toolCall"] = {"name": "Bash", "arguments": {"command": "gh api repos/o/r/pulls/3"}}
         path.write_text(json.dumps(call) + "\n")
         self.assertEqual(self.check(transcript=path).errors, [])

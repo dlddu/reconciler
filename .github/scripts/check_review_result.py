@@ -47,6 +47,15 @@ TARGET_WRITES = [
 ]
 
 
+# 도구 결과(output 등)는 보지 않는다 — 스킬이 금지 서술이 든 자기 SKILL.md를 읽기만 해도 걸리기 때문이다.
+OUTPUT_KEYS = {"output", "result", "results", "content", "error", "status"}
+
+
+def call_text(call: dict) -> str:
+    """도구 호출에서 이름과 입력만 텍스트로."""
+    return json.dumps({k: v for k, v in call.items() if k not in OUTPUT_KEYS}, ensure_ascii=False)
+
+
 def check(repo: Path, base: str, model_id: str, task_id: str, claim_subject: str | None = None,
           expect: list[str] | None = None, transcript: Path | None = None) -> cdr.Result:
     res = cdr.Result()
@@ -176,7 +185,7 @@ def check(repo: Path, base: str, model_id: str, task_id: str, claim_subject: str
 
             hits = []
             for call in mt.tool_calls(str(transcript)).values():
-                text = json.dumps(call, ensure_ascii=False)
+                text = call_text(call)
                 hits += [label for label, pat in TARGET_WRITES if re.search(pat, text)]
             if hits:
                 res.errors.append("대상 레포 쓰기 시도: " + ", ".join(sorted(set(hits))))
