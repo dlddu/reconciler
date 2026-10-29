@@ -38,9 +38,10 @@ tests/                              # index.html 동작 테스트 (node --test),
 .github/workflows/                  # 단계 스킬별 workflow_dispatch 워크플로
 .github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py / select_plan_target.py / select_review_target.py /
                                     #   select_execute_target.py: 감지·계획·리뷰·실행 대상 선정,
-                                    #   claim_drift_target.py: 선정 + 점유(compare-and-set 커밋) — MiniMax 감지의 Step 0·1,
+                                    #   claim_drift_target.py·claim_review_target.py: 선정 + 점유(compare-and-set 커밋) — MiniMax 감지·리뷰의 Step 0·1,
                                     #   mcp_oidc_proxy.py·mcp_call.py: homelab-k3s-mcp OIDC 연결,
-                                    #   validate_generated_skill.py·check_detector_result.py: 생성 스킬 검증·테스트 점검)
+                                    #   validate_generated_skill.py(--profile)·check_detector_result.py·check_review_result.py: 생성 스킬 검증·결과 점검,
+                                    #   replay_review_task.py: 리뷰 스킬 빌드 test의 샌드박스 replay 픽스처)
 .github/actions/setup-mcode/        # MiniMax Code(mcode) 설치 + subscription key 설정 composite action
 .github/minimax/                    # mcode에 주는 간결한 생성 지침(brief), 테스트·운영 실행 프롬프트
 .nojekyll                           # Pages가 data/*.json을 그대로 서빙하도록 Jekyll 우회
@@ -117,6 +118,37 @@ MiniMax Code로 돌리는 감지는 이 둘을 **러너의 결정적 스크립�
 **범위**: 이 분리는 MiniMax 감지 경로에만 해당한다. Claude Code 플러그인(`reconciler-data-plane`)의 감지 스킬은
 사람 세션에서 직접 불릴 수 있으므로 지금처럼 선정·점유를 스스로 한다. 두 경로가 같은 레포에 쓰므로 점유 기록의
 형태(커밋 제목, `trigger`, 기준선 갱신, 수동 요청 필드를 짝으로 `null`)는 같게 유지한다.
+
+## 리뷰 스킬 MiniMax 파이프라인
+
+`reconciler-work-review-skill-build.yml`(수동만)이 리뷰 스킬을 MiniMax Code로 **생성 → 검증 → 테스트**한다. 감지 스킬 빌드와
+같은 구조이고, 리뷰는 대상 레포를 읽기만 하는 단계라 샌드박스 test를 더했다. 통과한 생성본(`work-review-result`의 `skill/`)을
+plugin-marketplace의 `plugins/reconciler-data-plane`에 PR로 올린다.
+
+| job | 하는 일 | 아티팩트 |
+| --- | --- | --- |
+| generate | 메인 `.github/minimax/work-review-brief.md`(핵심 규칙) + 서브 `work-review-brief-sub.md`(품질 보조 규칙)만 주고, mcode가 레포(README·스키마·`claim_review_target.py`·템플릿·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `work-review-skill` |
+| validate | `validate_generated_skill.py --profile work-review` — 형식·계약 커버리지(`reviewing`·`approved`·`review_rejected`·`cancelled`·`manualApproval`·`attempts`·`review(...)` 커밋 등)·금지 패턴(commit status 쓰기·PR 머지 포함)·보조 스크립트 문법. | `work-review-validation` |
+| test | 시나리오 matrix — `live`(운영 `planned` 그대로), `replay`(최근 리뷰된 task를 점유 직전 `planned`로 되돌림). 러너 점유(`claim_review_target.py`, `planned → reviewing`) → 생성 스킬 판정(`work-review-run-prompt.md`) → 결과 점검(`check_review_result.py`). | `work-review-test-<시나리오>` |
+| report | 위 결과를 하나로 모은다 — `skill/`, `validation/`, `test/<시나리오>/reviewed-task.json`·점검 보고·결과 diff·mcode 최종 보고, `README.md` 요약. | `work-review-result` |
+
+**샌드박스 원격 — 드라이런이 아니다.** test job은 reconciler 체크아웃의 `origin`(fetch·push)을 러너 로컬 bare 레포로 바꾼다.
+러너 점유와 스킬의 `pull --rebase`·push는 운영과 똑같이 돌고, 닿는 곳만 그 bare 레포다. 스킬에는 드라이런 분기가 없고(검증기가
+금지) 자기가 test 중인지 모른다. job 토큰은 `contents: read`라 GitHub에는 어차피 쓸 수 없다. 이 방식이 리뷰에 가능한 것은 리뷰가
+대상 레포에 쓰지 않기 때문이다(PR·ruleset·check 조회뿐) — 대상 레포에 PR을 만들고 머지하는 계획·실행 단계에는 그대로 옮길 수 없다.
+
+**replay 시나리오**: 운영 데이터에 `planned`가 늘 있지는 않아서, git 이력의 최근 `review(<tbm>/<rct>): claim` 커밋을 찾아 그 부모의
+task 레코드(점유 직전)를 샌드박스에만 되돌려 놓는다(`replay_review_task.py` — 원격이 로컬 경로가 아니면 쓰지 않고 실패). 그 PR이 지금
+머지·종료됐으면 계획은 더 이상 실행할 수 없으므로 점검기가 `review_rejected | cancelled`를 기대한다 — 신선도 확인을 건너뛰고 기록만
+믿는 스킬은 여기서 걸린다. 원래 판정(운영 기록)은 요약에 함께 남는다.
+
+**점검기가 보는 계약**: 점유 이후 그 task 파일 하나·그 task 한 건만 바뀜, `review(<tbm>/<rct>): …` 커밋, `trigger`·`stateSummary`·
+`assessment`와 이전 attempts 항목·마지막 항목의 `plan`·`preparation` 보존, 종료 상태 `approved | review_rejected | cancelled`
+(`reviewing`이면 풀리지 않은 lock, `planned`면 판정 없는 해제), `review.status`와 status 일치, `reviewedAt`·`reason`(거부면 `comment`),
+`manualApproval`은 승인에만, 대화 기록에 대상 레포 쓰기(commit status·머지·코멘트·리뷰) 없음.
+
+**MCP 규칙**: 서버 `MCP_GITHUB_OIDC_RULES`에 이 워크플로 파일의 규칙이 있어야 한다 — `github_app_installation_token`(대상 레포
+읽기 상한, reconciler 제외), `ping`. 리뷰는 대상 레포에 쓰지 않으므로 write 권한이나 `github_commit_status_create`를 주지 않는다.
 
 ## 모델 키 격리
 

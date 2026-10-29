@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""MiniMax Code가 생성한 reconciler-drift-detector 스킬의 정적 검증.
+"""MiniMax Code가 생성한 reconciler 단계 스킬의 정적 검증(--profile drift-detector | work-review).
 
 생성 결과를 사람이 읽기 전에 기계적으로 걸러낼 수 있는 것만 본다:
   - 형식: SKILL.md 존재, frontmatter(name/description), 본문 길이
-  - 계약 커버리지: 감지 단계 계약의 핵심 요소가 본문·번들 스크립트에 등장하는지(키워드 기반 — 실제 동작은 운영 감지의 결과 점검기가 본다)
+  - 계약 커버리지: 그 단계 계약의 핵심 요소가 본문·번들 스크립트에 등장하는지(키워드 기반 — 실제 동작은
+    결과 점검기가 본다: 감지는 운영 감지의 check_detector_result.py, 리뷰는 스킬 빌드 test의 check_review_result.py)
   - 안전: 비밀값 리터럴, 강제 push, 스키마 파일 쓰기, 드라이런 분기 같은 금지 패턴
   - 보조 스크립트: .py는 컴파일, .sh는 `bash -n`
 
@@ -20,13 +21,12 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-EXPECTED_NAME = "reconciler-drift-detector"
 MIN_BODY_CHARS = 1500
 MAX_BODY_CHARS = 60000
 MAX_DESCRIPTION_CHARS = 1024
 
 # (라벨, 하나라도 맞으면 통과하는 정규식들)
-REQUIRED = [
+DRIFT_REQUIRED = [
     ("상태 assessing", [r"\bassessing\b"]),
     ("상태 no_action_needed", [r"\bno_action_needed\b"]),
     ("상태 action_required", [r"\baction_required\b"]),
@@ -41,7 +41,7 @@ REQUIRED = [
     ("점유된 task 입력(task_id)", [r"\btask_id\b"]),
 ]
 
-RECOMMENDED = [
+DRIFT_RECOMMENDED = [
     ("점유는 러너 몫 — 스킬은 점유·대상 선정을 하지 않음", [r"(점유|선정)[^\n]{0,80}러너", r"러너[^\n]{0,80}(점유|선정)"]),
     ("점유 기록(trigger·to-be-models) 보존", [r"\btrigger\b[^\n]{0,80}(건드리지|수정하지|바꾸지|고치지|손대지|그대로|불변)",
                                          r"to-be-models\.json[^\n]{0,80}(건드리지|수정하지|바꾸지|고치지|손대지|그대로|불변)"]),
@@ -51,6 +51,37 @@ RECOMMENDED = [
     ("k3s MCP 도구", [r"github_app_installation_token"]),
     ("잔여 gap 규칙 — 부분 해소를 no_action_needed로 닫지 않음", [r"잔여\s*gap", r"남은\s*(gap|차이)", r"현재\s*상태[^\n]{0,40}판정"]),
     ("기록 분량 기준(gap·reason)", [r"\bgap\b[^\n]{0,40}(문장|자\s*(이내|안팎|이하))", r"\breason\b[^\n]{0,40}\d+\s*자"]),
+]
+
+REVIEW_REQUIRED = [
+    ("상태 reviewing(점유된 입력)", [r"\breviewing\b"]),
+    ("상태 approved", [r"\bapproved\b"]),
+    ("상태 review_rejected", [r"\breview_rejected\b"]),
+    ("반복 거부 cancelled", [r"\bcancelled\b"]),
+    ("사람 승인 요구 manualApproval", [r"\bmanualApproval\b"]),
+    ("시도 기록 attempts", [r"\battempts\b"]),
+    ("판정 시각 reviewedAt", [r"\breviewedAt\b"]),
+    ("준비물(PR) 확인 pullRequestUrl", [r"\bpullRequestUrl\b"]),
+    ("task 스키마 참조", [r"reconciliation-task\.schema\.json"]),
+    ("task 저장 위치", [r"data/reconciliation-tasks"]),
+    ("커밋 메시지 규약 review(...)", [r"review\((<|tbm_|\$|\{)"]),
+    ("push 전 최신화(pull --rebase)", [r"pull\s+--rebase"]),
+    ("스키마 검증", [r"jsonschema", r"\bvalidat"]),
+    ("점유된 task 입력(task_id)", [r"\btask_id\b"]),
+]
+
+REVIEW_RECOMMENDED = [
+    ("점유는 러너 몫 — 스킬은 점유·대상 선정을 하지 않음", [r"(점유|선정)[^\n]{0,80}러너", r"러너[^\n]{0,80}(점유|선정)"]),
+    ("실행하지 않음(머지·배포 금지)", [r"(머지|merge)[^\n]{0,60}(않|금지|말)", r"실행[^\n]{0,40}(하지\s*않|금지)"]),
+    ("사람 승인 status를 스스로 붙이지 않음", [r"status[^\n]{0,80}(붙이지|쓰지|만들지|남기지)\s*않",
+                                       r"(붙이지|쓰지)\s*않[^\n]{0,60}status", r"github_commit_status_create[^\n]{0,80}(않|금지)"]),
+    ("required status check 확인", [r"required_status_checks", r"rules/branches", r"required\s+status"]),
+    ("스키마 수정 금지 명시", [r"스키마[^\n]{0,40}(수정|변경)[^\n]{0,20}(않|금지|말)",
+                         r"스키마[^\n]{0,40}(건드리지|고치지|손대지)\s*않",
+                         r"스키마[^\n]{0,20}(고쳐|수정해|바꿔)[^\n]{0,30}않"]),
+    ("k3s MCP 도구", [r"github_app_installation_token"]),
+    ("lock 해제 — reviewing으로 남기지 않음", [r"reviewing[^\n]{0,60}(남기지|남겨\s*두지|두지)\s*않", r"lock[^\n]{0,40}(놓|해제|풀)"]),
+    ("기록 분량 기준(reason)", [r"\breason\b[^\n]{0,60}\d\s*[~\-–]\s*\d\s*문장", r"\breason\b[^\n]{0,40}\d+\s*자"]),
 ]
 
 # 금지 패턴을 "하지 말라"고 적은 줄(예: 「강제 push 금지(`git push --force`)」)은 사용이 아니라 금지 서술이다.
@@ -65,6 +96,26 @@ FORBIDDEN = [
     ("스키마 파일 쓰기", r"(>|\btee\b|sed\s+-i[^\n]*)\s*\S*schemas/[\w.-]+\.schema\.json"),
     ("토큰 출력", r"echo\s+[\"']?\$\{?(GITHUB_TOKEN|GH_TOKEN|SOURCE_GITHUB_TOKEN)\b"),
 ]
+
+# 리뷰는 대상 레포에 쓰지 않는다 — 사람 승인 status를 무인 단계가 붙이면 사람 승인이 형식이 되고, 머지는 executor 몫이다.
+REVIEW_FORBIDDEN = [
+    ("commit status 쓰기", r"github_commit_status_create"),
+    ("PR 머지", r"gh\s+pr\s+merge\b|/pulls/[^\s/]+/merge\b"),
+]
+
+
+@dataclass(frozen=True)
+class Profile:
+    name: str
+    required: list
+    recommended: list
+    forbidden: list
+
+
+PROFILES = {
+    "drift-detector": Profile("reconciler-drift-detector", DRIFT_REQUIRED, DRIFT_RECOMMENDED, FORBIDDEN),
+    "work-review": Profile("reconciler-work-review", REVIEW_REQUIRED, REVIEW_RECOMMENDED, FORBIDDEN + REVIEW_FORBIDDEN),
+}
 
 
 @dataclass
@@ -128,7 +179,7 @@ def bundled_text(skill_dir: Path) -> str:
     return "\n".join(parts)
 
 
-def check_scripts(skill_dir: Path, report: Report) -> None:
+def check_scripts(skill_dir: Path, report: Report, forbidden: list = FORBIDDEN) -> None:
     for path in sorted(skill_dir.rglob("*")):
         if not path.is_file() or path.name == "SKILL.md":
             continue
@@ -146,13 +197,14 @@ def check_scripts(skill_dir: Path, report: Report) -> None:
             else:
                 report.passed.append(f"셸 문법: {rel}")
         text = path.read_text(encoding="utf-8", errors="replace") if path.stat().st_size < 2_000_000 else ""
-        for label, pattern in FORBIDDEN:
+        for label, pattern in forbidden:
             if re.search(pattern, text):
                 report.errors.append(f"금지 패턴({label}) — {rel}")
 
 
-def validate(skill_dir: Path) -> Report:
-    report = Report()
+def validate(skill_dir: Path, profile: str = "drift-detector") -> Report:
+    prof = PROFILES[profile]
+    report = Report(meta={"profile": profile})
     skill_md = skill_dir / "SKILL.md"
     if not skill_md.is_file() or skill_md.is_symlink():
         report.errors.append(f"{skill_md}가 없음(일반 파일이어야 함)")
@@ -166,8 +218,8 @@ def validate(skill_dir: Path) -> Report:
     desc = str(front.get("description") or "").strip()
     report.meta.update(name=name, description_chars=len(desc), body_chars=len(body.strip()),
                        files=sorted(str(p.relative_to(skill_dir)) for p in skill_dir.rglob("*") if p.is_file()))
-    if name != EXPECTED_NAME:
-        report.errors.append(f"frontmatter name이 {EXPECTED_NAME!r}가 아님: {name!r}")
+    if name != prof.name:
+        report.errors.append(f"frontmatter name이 {prof.name!r}가 아님: {name!r}")
     if not desc:
         report.errors.append("frontmatter description이 비어 있음")
     elif len(desc) > MAX_DESCRIPTION_CHARS:
@@ -180,29 +232,29 @@ def validate(skill_dir: Path) -> Report:
 
     # 계약 커버리지는 SKILL.md와 번들 스크립트를 합쳐 본다 — 스키마 경로처럼 절차를 스크립트에 위임한 경우가 있다.
     covered = text + "\n" + bundled_text(skill_dir)
-    for label, patterns in REQUIRED:
+    for label, patterns in prof.required:
         if any(re.search(p, covered) for p in patterns):
             report.passed.append(label)
         else:
             report.errors.append(f"계약 누락: {label}")
-    for label, patterns in RECOMMENDED:
+    for label, patterns in prof.recommended:
         if any(re.search(p, covered, re.I) for p in patterns):
             report.passed.append(label)
         else:
             report.warnings.append(f"권장 항목 누락: {label}")
-    for label, pattern in FORBIDDEN:
+    for label, pattern in prof.forbidden:
         hits = [line for line in text.splitlines() if re.search(pattern, line) and not PROHIBITION.search(line)]
         if hits:
             report.errors.append(f"금지 패턴({label}) — SKILL.md: {hits[0].strip()[:120]}")
-    check_scripts(skill_dir, report)
+    check_scripts(skill_dir, report, prof.forbidden)
     return report
 
 
 def render(report: Report) -> str:
     out = ["### 생성 스킬 검증", f"- 결과: {'✅ 통과' if report.ok else '❌ 실패'}"]
     meta = report.meta
-    if meta:
-        out.append(f"- name: `{meta.get('name')}` · description {meta.get('description_chars')}자 · "
+    if "files" in meta:
+        out.append(f"- profile `{meta.get('profile')}` · name: `{meta.get('name')}` · description {meta.get('description_chars')}자 · "
                    f"본문 {meta.get('body_chars')}자 · 파일 {len(meta.get('files', []))}개")
     for title, items, mark in (("오류", report.errors, "❌"), ("경고", report.warnings, "⚠️"),
                                ("통과", report.passed, "✅")):
@@ -215,11 +267,13 @@ def render(report: Report) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("skill_dir", type=Path)
+    parser.add_argument("--profile", choices=sorted(PROFILES), default="drift-detector",
+                        help="어느 단계 스킬의 계약으로 볼지(기본 drift-detector)")
     parser.add_argument("--report", type=Path, help="마크다운 보고서 경로")
     parser.add_argument("--json", type=Path, help="JSON 보고서 경로")
     args = parser.parse_args(argv)
 
-    report = validate(args.skill_dir)
+    report = validate(args.skill_dir, args.profile)
     text = render(report)
     print(text, end="")
     if args.report:
