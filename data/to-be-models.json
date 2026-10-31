@@ -1435,8 +1435,8 @@
         "code": "#!/usr/bin/env python3\n# as-is = 실제 도구 표면. data-plane/cmd/agent 의 toolDefinitions() 본문이 내는 도구 이름만 뽑는다\n# → 같은 패키지의 다른 변경(게이트 내부·파일 스풀·notice 등)은 움직이지 않는다.\n# 런타임이 dataSource.repository(dlddu/session-platform)@ref(main)를 체크아웃한 상태를 가정한다.\nimport pathlib, re, sys\n\npkg = pathlib.Path(\"data-plane/cmd/agent\")\nsrc_path = pkg / \"session_mcp_tools.go\"\nif not src_path.is_file():\n    sys.exit(\"missing %s — 도구 표면의 정본이 옮겨졌다. 모델 개정 필요.\" % src_path)\nsrc = src_path.read_text(encoding=\"utf-8\")\n\nm = re.search(r\"func \\([^)]*\\) toolDefinitions\\(\\)[^{]*\\{\", src)\nif not m:\n    sys.exit(\"toolDefinitions() not found — 표면 추출이 구조를 잃었다. 모델 개정 필요.\")\nstart = m.end() - 1\ndepth = 0\nend = None\nfor i in range(start, len(src)):\n    if src[i] == \"{\":\n        depth += 1\n    elif src[i] == \"}\":\n        depth -= 1\n        if depth == 0:\n            end = i\n            break\nif end is None:\n    sys.exit(\"toolDefinitions() body not balanced — 모델 개정 필요.\")\nbody = src[start : end + 1]\n\nraw = re.findall(r'\"name\"\\s*:\\s*(\"[^\"]*\"|[A-Za-z_][A-Za-z0-9_]*)', body)\n\nconsts = {}\nfor f in sorted(pkg.glob(\"*.go\")):\n    for k, v in re.findall(\n        r'^\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*\"([^\"]*)\"\\s*$',\n        f.read_text(encoding=\"utf-8\"),\n        re.M,\n    ):\n        consts.setdefault(k, v)\n\nnames = []\nfor n in raw:\n    if n.startswith('\"'):\n        names.append(n[1:-1])\n    elif n in consts:\n        names.append(consts[n])\n    else:\n        sys.exit(\"unresolved tool name identifier %r — 이름이 상수 리터럴이 아니다. 모델 개정 필요.\" % n)\n\nnames = sorted(set(names))\nprint(\"tools:%d%s\" % (len(names), (\" \" + \",\".join(names)) if names else \"\"))\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "tools:3 git_clone,ping,web_fetch_get",
-      "lastObservedAt": "2026-09-14T13:38:54Z"
+      "lastObservedVersion": "tools:5 git_clone,git_push,ping,request_repo_access,web_fetch_get",
+      "lastObservedAt": "2026-10-31T14:46:21Z"
     },
     "checkPolicy": {}
   },
