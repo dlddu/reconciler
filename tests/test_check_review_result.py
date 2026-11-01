@@ -125,6 +125,12 @@ class CheckReviewResultTest(unittest.TestCase):
         call["item"]["toolCall"] = {"name": "Bash", "input": {"command": "gh pr merge 3 --squash"}}
         path.write_text(json.dumps(call) + "\n")
         self.assertTrue(any("PR 머지" in e for e in self.check(transcript=path).errors))
+        call["item"]["toolCall"] = {"name": "bash", "input": {"command": 'curl -sS "https://api.github.com/repos/o/r/pulls/3/merge"'}}
+        path.write_text(json.dumps(call) + "\n")
+        self.assertEqual(self.check(transcript=path).errors, [])  # GET = 머지 여부 조회
+        call["item"]["toolCall"] = {"name": "bash", "input": {"command": 'curl -X PUT "https://api.github.com/repos/o/r/pulls/3/merge"'}}
+        path.write_text(json.dumps(call) + "\n")
+        self.assertTrue(any("PR 머지" in e for e in self.check(transcript=path).errors))
         call["item"]["toolCall"] = {"name": "Bash", "arguments": {"command": "gh api repos/o/r/pulls/3"}}
         path.write_text(json.dumps(call) + "\n")
         self.assertEqual(self.check(transcript=path).errors, [])

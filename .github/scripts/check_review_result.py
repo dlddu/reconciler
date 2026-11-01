@@ -42,7 +42,9 @@ REASON_SOFT_LIMIT = 1500
 TARGET_WRITES = [
     ("commit status 쓰기(MCP)", r"github_commit_status_create"),
     ("commit status 쓰기(API)", r"(-X\s*POST|--method\s+POST|method=.?POST)[^\n]{0,200}/statuses/|/statuses/[0-9a-f]{7,40}[^\n]{0,80}(-X\s*POST|-f\s+state=)"),
-    ("PR 머지", r"gh\s+pr\s+merge|/pulls/\d+/merge"),
+    # GET /pulls/{n}/merge는 「머지됐나」 조회(읽기)다 — PUT일 때만 머지다.
+    ("PR 머지", r"gh\s+pr\s+merge|(-X\s*PUT|--method\s+PUT|--request\s+PUT)[^\n]{0,200}/pulls/\d+/merge"
+                r"|/pulls/\d+/merge[^\n]{0,200}(-X\s*PUT|--method\s+PUT|--request\s+PUT)"),
     ("PR 코멘트·리뷰", r"gh\s+pr\s+(comment|review)\b|/issues/\d+/comments[^\n]{0,80}(POST|-f\s+body)|/pulls/\d+/reviews[^\n]{0,80}(POST|-f\s+event)"),
 ]
 
