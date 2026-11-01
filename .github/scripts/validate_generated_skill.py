@@ -111,6 +111,45 @@ REVIEW_RECOMMENDED = [
     ("기록 분량 기준(reason)", [r"\breason\b[^\n]{0,60}\d\s*[~\-–]\s*\d\s*문장", r"\breason\b[^\n]{0,40}\d+\s*자"]),
 ]
 
+_NO = r"(건드리지|수정하지|바꾸지|고치지|손대지|그대로|불변|갱신하지|쓰지)"
+
+EXECUTOR_REQUIRED = [
+    ("상태 executing", [r"\bexecuting\b"]),
+    ("상태 verifying", [r"\bverifying\b"]),
+    ("상태 succeeded", [r"\bsucceeded\b"]),
+    ("상태 failed", [r"\bfailed\b"]),
+    ("기록 필드 execution·entries", [r"\bentries\b"]),
+    ("기록 필드 stepSeq", [r"\bstepSeq\b"]),
+    ("기록 필드 verification·checks", [r"\bchecks\b"]),
+    ("실행 후 버전 asIsVersionAfter", [r"\basIsVersionAfter\b"]),
+    ("시도 기록 attempts(마지막 항목)", [r"\battempts\b"]),
+    ("계획 입력 plan.steps·executionGuide", [r"\bexecutionGuide\b"]),
+    ("task 스키마 참조", [r"reconciliation-task\.schema\.json"]),
+    ("task 저장 위치", [r"data/reconciliation-tasks"]),
+    ("커밋 메시지 규약 execute(...)", [r"execute\("]),
+    ("push 전 최신화(pull --rebase)", [r"pull\s+--rebase"]),
+    ("스키마 검증", [r"jsonschema", r"\bvalidat"]),
+    ("점유된 task 입력(task_id)", [r"\btask_id\b"]),
+]
+
+EXECUTOR_RECOMMENDED = [
+    ("점유는 러너 몫 — 스킬은 점유·대상 선정을 하지 않음", [r"(점유|선정)[^\n]{0,80}러너", r"러너[^\n]{0,80}(점유|선정)"]),
+    ("시작 시 executing 확인 — 아니면 멈춤", [r"executing[^\n]{0,80}(아니|확인|멈|중단|종료)"]),
+    ("사람 승인 manualApproval — 머지 직전 head 재확인", [r"manualApproval[^\n]{0,200}(sha|head)", r"(sha|head)[^\n]{0,120}manualApproval"]),
+    ("사람 승인 status를 만들지 않음", [r"(승인|approval)[^\n]{0,40}status[^\n]{0,60}(않|금지|말)",
+                                 r"github_commit_status_create[^\n]{0,60}(않|금지|말)",
+                                 r"(않|금지|말)[^\n]{0,40}github_commit_status_create"]),
+    ("계획 범위 밖 변경 금지", [r"(계획|plan)[^\n]{0,30}(범위\s*)?밖", r"범위를?\s*(넓히|늘리)"]),
+    ("lock 해제 — executing·verifying로 남기지 않음", [r"(executing|verifying)[^\n]{0,60}(남기지|두지|머물)",
+                                                   r"\block\b[^\n]{0,40}(해제|풀|놓)"]),
+    ("lastObservedVersion 보존", [r"lastObservedVersion[^\n]{0,80}" + _NO, r"to-be-models\.json[^\n]{0,80}" + _NO]),
+    ("전제 붕괴 시 cancelled", [r"\bcancelled\b"]),
+    ("스키마 수정 금지 명시", [r"스키마[^\n]{0,40}(수정|변경)[^\n]{0,20}(않|금지|말)",
+                         r"스키마[^\n]{0,40}(건드리지|고치지|손대지)\s*않",
+                         r"스키마[^\n]{0,20}(고쳐|수정해|바꿔)[^\n]{0,30}않"]),
+    ("k3s MCP 도구", [r"github_app_installation_token"]),
+]
+
 # 금지 패턴을 "하지 말라"고 적은 줄(예: 「강제 push 금지(`git push --force`)」)은 사용이 아니라 금지 서술이다.
 PROHIBITION = re.compile(r"금지|하지\s*않|하지\s*말|않는다|절대|쓰지\s*않|never|do\s+not|don't|must\s+not", re.I)
 
@@ -133,11 +172,19 @@ REVIEW_FORBIDDEN = [
     ("빌드 위치 경로 하드코딩", r"\.agents/skills/"),
 ]
 
+# 실행 단계도 무인 단계라 사람 승인 status를 만들지 않는다(README 「실행 전 사람 승인」). 머지는 하지만 관리자 우회는 금지.
+EXECUTOR_FORBIDDEN = [
+    ("사람 승인 status 생성", r"github_commit_status_create|/statuses/[^\n]*-X\s*POST|-X\s*POST[^\n]*/statuses/"),
+    ("강제 머지(관리자 우회)", r"gh\s+pr\s+merge\b[^\n]*--admin"),
+    ("빌드 위치 경로 하드코딩", r"\.agents/skills/"),
+]
+
 PROFILES = {
     "drift-detector": ("reconciler-drift-detector", REQUIRED, RECOMMENDED, []),
     "work-planner": ("reconciler-work-planner", PLANNER_REQUIRED, PLANNER_RECOMMENDED,
                      [("PR 머지(계획 단계 금지)", r"gh\s+pr\s+merge|/pulls/[^\s/]+/merge\b")]),
     "work-review": ("reconciler-work-review", REVIEW_REQUIRED, REVIEW_RECOMMENDED, REVIEW_FORBIDDEN),
+    "work-executor": ("reconciler-work-executor", EXECUTOR_REQUIRED, EXECUTOR_RECOMMENDED, EXECUTOR_FORBIDDEN),
 }
 
 @dataclass

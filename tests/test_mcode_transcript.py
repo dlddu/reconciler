@@ -37,6 +37,16 @@ class TranscriptTest(unittest.TestCase):
             rc = mt.main(list(args))
         return rc, buf.getvalue()
 
+    def test_forbid_flags_tool_calls_touching_answer_key(self):
+        events = EVENTS + [{"type": "item.completed", "item": {"id": "t3", "type": "tool_call", "toolCall": {
+            "name": "bash", "input": {"command": "cat /tmp/fx/expect.json"}}}}]
+        self.file.write_text("\n".join(json.dumps(e) for e in events) + "\n")
+        rc, out = self.run_main("forbid", str(self.file), "expect.json", "check_executor_result")
+        self.assertEqual(rc, 1)
+        self.assertIn("expect.json", out)
+        rc, _ = self.run_main("forbid", str(self.file), "check_executor_result")
+        self.assertEqual(rc, 0)
+
     def test_require_tool_uses_tool_call_items_not_prose(self):
         self.assertEqual(self.run_main("require-tool", str(self.file), "ping")[0], 0)
         self.assertEqual(self.run_main("require-tool", str(self.file), "agent_message")[0], 1)
