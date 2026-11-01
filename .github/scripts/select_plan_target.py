@@ -5,7 +5,7 @@ reconciler-work-planner 스킬의 Step 0(대상 선정 · 진입 게이트)을 �
 판단 기준은 reconciler-local의 타이머 게이트(`planner/precheck-plan.py`)와 같다 — 두 경로가
 "계획할 것이 있다"를 같은 뜻으로 쓰도록. 이번 실행이 계획할 ReconciliationTask **한 건**을 골라
 GitHub Actions output으로 내보낸다. 레포에는 아무것도 쓰지 않는다(읽기 전용) — `planning`으로의
-점유 커밋은 스킬 Step 1의 몫이다.
+점유 커밋은 Claude Code 경로에선 스킬 Step 1, MiniMax 경로에선 claim_plan_target.py의 몫이다.
 
 계획 대상(ready) = 미점유 인수인계 지점에 있는 task:
   - action_required   detector가 조치 필요로 판정해 planner에 넘긴 것
@@ -243,7 +243,9 @@ def select_explicit(target: str, state: State, sel: Selection) -> Selection:
                     detail=f"지목된 모델에서 가장 오래 기다린 task — {describe_wait(ref)}")
 
 
-def select_target(repo: Path, explicit: str | None = None) -> Selection:
+def select_target(repo: Path, explicit: str | None = None,
+                  exclude: frozenset = frozenset()) -> Selection:
+    """exclude: 이번 실행에서 빼둘 `tbm_…/rct_…` 키(점유 경쟁에서 진 task) — 자동 선정에만 적용."""
     state = load_state(repo)
     sel = Selection()
     for model_id in state.orphans:
@@ -254,6 +256,8 @@ def select_target(repo: Path, explicit: str | None = None) -> Selection:
 
     ready, parked = [], []
     for ref in state.tasks:
+        if f"{ref.model_id}/{ref.id}" in exclude:
+            continue
         if ref.status not in READY_STATUSES:
             sel.others[ref.status] = sel.others.get(ref.status, 0) + 1
         elif is_enabled(state.models.get(ref.model_id)):

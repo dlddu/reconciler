@@ -1,4 +1,4 @@
-# 감지 스킬 빌드 — MiniMax Code(mcode)로 reconciler-drift-detector 스킬을 생성 → 검증한다.
+# 감지 스킬 빌드 — MiniMax Code(mcode)로 reconciler-drift-detector 스킬을 생성 → 검증 → 테스트한다.
 #
 # 스킬 생성은 자동화 대상이 아니다: 지침(.github/minimax/drift-detector-brief*.md)이나 계약을 바꿀 때 사람이
 # 수동으로 돌리고, 통과한 생성본(drift-detector-skill 아티팩트)을 plugin-marketplace의
@@ -8,23 +8,37 @@
 #             지침 = 메인(drift-detector-brief.md, 핵심 규칙 — 무엇을 해야 하나) + 서브(drift-detector-brief-sub.md,
 #             품질 보조 규칙 — 어떻게, 무엇을 하지 말 것). 둘을 이 순서로 이어 한 프롬프트로 준다.
 #   validate  생성물 정적 검증(형식 · 계약 커버리지 · 금지 패턴 · 보조 스크립트 문법).
+#   test      생성본을 운영 감지와 같은 흐름(러너 점유 → 스킬 판정 → 결과 점검)으로 **실제 실행**한다(드라이런 없음).
+#             운영과 다른 점은 스킬 출처뿐 — plugin-marketplace 대신 이 빌드의 생성본을 쓴다. 점유·판정 커밋이
+#             기본 브랜치에 push된다. 대상은 target_id로 지목하거나 비우면 운영과 같은 규칙으로 자동 선정.
 #
 # 필요한 설정
 #   environment llm-minimax의 secret MINIMAX_SUBSCRIPTION_KEY   MiniMax Token Plan subscription key (sk-cp-...)
 #                                      레포 secret에는 두지 않는다 — README 「모델 키 격리」
 #   vars.MINIMAX_REGION                (선택) en(기본, api.minimax.io) | cn
+#   vars.HOMELAB_K3S_MCP_URL / vars.HOMELAB_K3S_MCP_AUDIENCE   (선택) test job — 운영 감지와 같다
+#   서버 MCP_GITHUB_OIDC_RULES에 이 파일(.github/workflows/reconciler-drift-detector-skill-build.yml) 규칙(test job):
+#     github_app_installation_token(필수 — 대상 레포 읽기), resource_list, resource_get, api_resources, ping(권장)
 name: "Reconciler · Drift Detector Skill Build"
 
 on:
   workflow_dispatch:
     inputs:
+      target_id:
+        description: "test에서 감지할 대상 지목(tbm_... 모델 또는 rct_... assessing task). 비우면 자동 선정"
+        required: false
+        default: ""
+      reason:
+        description: "지목한 모델의 버전이 그대로일 때 manual task에 남길 사유(비우면 '워크플로 지목 감지 요청')"
+        required: false
+        default: ""
       minimax_model:
         description: "mcode 모델 override(<provider>/<model>, 예: minimax/MiniMax-M3). 비우면 CLI 기본값"
         required: false
         default: ""
 
-# concurrency 그룹을 두지 않는다 — 빌드는 레포에 쓰지 않고(contents: read) 결과는 실행별 아티팩트라
-# 병렬로 돌아도 서로 겹치지 않는다.
+# concurrency 그룹을 두지 않는다 — generate·validate는 레포에 쓰지 않고 결과는 실행별 아티팩트다. test는 운영 감지처럼
+# 기본 브랜치에 쓰지만, 같은 대상 중복 점유·push 충돌은 러너의 compare-and-set 점유 커밋이 막는다.
 
 permissions:
   contents: read
@@ -33,6 +47,9 @@ env:
   SKILL_NAME: reconciler-drift-detector
   SKILL_REL: .agents/skills/reconciler-drift-detector # mcode 워크스페이스(ws/) 기준 스킬 위치
   MCODE_VERSION: latest # npm dist-tag — 실제 설치된 버전은 Set up MiniMax Code 출력·요약에 남는다
+  MCP_URL: ${{ vars.HOMELAB_K3S_MCP_URL || 'https://homelab-k3s-mcp.llkm.nl/mcp' }}
+  MCP_AUDIENCE: ${{ vars.HOMELAB_K3S_MCP_AUDIENCE || 'homelab-k3s-mcp' }}
+  MCP_PROXY_PORT: "8765"
 
 jobs:
   generate:
@@ -162,5 +179,196 @@ jobs:
         with:
           name: drift-detector-validation
           path: ${{ runner.temp }}/validation
+          if-no-files-found: warn
+          retention-days: 14
+
+  # 생성본을 운영 워크플로와 같은 흐름으로 실제 실행한다(드라이런 없음): 러너 점유 → 생성 스킬 실행 → 결과 점검.
+  # 운영 워크플로와 다른 점은 스킬 출처뿐이다 — plugin-marketplace 대신 이 빌드의 생성본(아티팩트)을 쓴다.
+  # 점유·판정 커밋은 기본 브랜치에 push되고, 실패하면 실제 task가 그 상태로 남는다.
+  test:
+    name: Test skill (real run)
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: llm-minimax # 모델 키는 이 environment에만 있다(README 「모델 키 격리」)
+    timeout-minutes: 60
+    permissions:
+      contents: write # 점유·판정 커밋 push
+      id-token: write # homelab-k3s-mcp OIDC
+    steps:
+      - name: Checkout harness
+        uses: actions/checkout@v4
+        with:
+          path: harness
+          persist-credentials: false
+
+      # 운영 데이터는 기본 브랜치가 진실이다. 워크플로 토큰을 남겨 점유 스크립트와 스킬이 push에 쓴다.
+      - name: Checkout reconciler (default branch)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: ws/reconciler
+          fetch-depth: 50
+
+      - name: Prepare workspace
+        run: |
+          OUT="$RUNNER_TEMP/out"; echo "OUT=$OUT" >> "$GITHUB_ENV"
+          mkdir -p "$OUT/logs" ws/targets
+          git -C ws/reconciler config user.name "reconciler-bot"
+          git -C ws/reconciler config user.email "reconciler@dlddu.dev"
+          git config --global user.name "reconciler-bot"
+          git config --global user.email "reconciler@dlddu.dev"
+          pip install --quiet --disable-pip-version-check jsonschema
+
+      - name: Download skill
+        uses: actions/download-artifact@v4
+        with:
+          name: drift-detector-skill
+          path: ${{ runner.temp }}/gen
+
+      # 생성본을 reconciler 체크아웃 밖(ws/.agents)에 둔다 — 운영의 플러그인 설치 위치 대신.
+      - name: Install generated skill
+        run: |
+          mkdir -p "ws/$SKILL_REL"
+          cp -R "$RUNNER_TEMP/gen/skill/." "ws/$SKILL_REL/"
+          test -f "ws/$SKILL_REL/SKILL.md"
+          echo "SKILL_DIR=$GITHUB_WORKSPACE/ws/$SKILL_REL" >> "$GITHUB_ENV"
+          ls -la "ws/$SKILL_REL"
+
+      - name: Start homelab-k3s-mcp OIDC proxy
+        run: |
+          nohup python3 harness/.github/scripts/mcp_oidc_proxy.py --upstream "$MCP_URL" \
+            --audience "$MCP_AUDIENCE" --port "$MCP_PROXY_PORT" > "$OUT/logs/mcp-proxy.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            grep -q listening "$OUT/logs/mcp-proxy.log" && break
+            if ! kill -0 $! 2>/dev/null; then cat "$OUT/logs/mcp-proxy.log"; echo "::error::프록시 기동 실패"; exit 1; fi
+            sleep 1
+          done
+          echo "MCP_LOCAL_URL=http://127.0.0.1:$MCP_PROXY_PORT/mcp" >> "$GITHUB_ENV"
+
+      - name: MCP preflight (tools/list)
+        run: |
+          # 서버가 재시작·기동 중(sablier cold start)이면 첫 요청이 실패할 수 있다 — 짧게 몇 번 다시 본다.
+          for i in 1 2 3 4; do
+            if python3 harness/.github/scripts/mcp_call.py --url "$MCP_LOCAL_URL" tools --json > "$OUT/logs/mcp-tools.json"; then
+              echo "tools: $(cat "$OUT/logs/mcp-tools.json")"; exit 0
+            fi
+            [ "$i" -lt 4 ] && { echo "MCP 응답 없음 — $((i * 20))초 뒤 재시도($i/3)"; sleep $((i * 20)); }
+          done
+          cat "$OUT/logs/mcp-proxy.log"
+          echo "::error::homelab-k3s-mcp 호출 실패 — audience나 서버 MCP_GITHUB_OIDC_RULES의 이 워크플로 규칙을 확인"
+          exit 1
+
+      # 대상 레포 클론용 읽기 토큰(선정·점유 스크립트 전용, mcode 환경에서는 뺀다).
+      - name: Mint source read token
+        run: python3 harness/.github/scripts/mcp_call.py --url "$MCP_LOCAL_URL" github-token --env-name SOURCE_GITHUB_TOKEN
+
+      - name: Claim target
+        id: claim
+        env:
+          INPUT_TARGET_ID: ${{ inputs.target_id }}
+          INPUT_REASON: ${{ inputs.reason }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          args=(--repo ws/reconciler --branch "$DEFAULT_BRANCH" --target "$INPUT_TARGET_ID" --reason "$INPUT_REASON"
+                --work-dir "$RUNNER_TEMP/select-target" --summary-file "$OUT/logs/claim.md")
+          python3 harness/.github/scripts/claim_drift_target.py "${args[@]}"
+
+      - name: Set up MiniMax Code
+        if: steps.claim.outputs.claimed == 'true'
+        uses: ./harness/.github/actions/setup-mcode
+        with:
+          subscription-key: ${{ secrets.MINIMAX_SUBSCRIPTION_KEY }}
+          version: ${{ env.MCODE_VERSION }}
+          region: ${{ vars.MINIMAX_REGION || 'en' }}
+
+      - name: Connect MCP to mcode
+        if: steps.claim.outputs.claimed == 'true'
+        run: printf '{"mcpServers":{"k3s":{"type":"http","url":"%s"}}}\n' "$MCP_LOCAL_URL" > ws/.mcp.json
+
+      - name: Run generated skill
+        id: run
+        if: steps.claim.outputs.claimed == 'true'
+        env:
+          MODEL: ${{ inputs.minimax_model }}
+          TASK_ID: ${{ steps.claim.outputs.task_id }}
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+          CLAIM_REASON: ${{ steps.claim.outputs.claim_reason }}
+          CLAIM_COMMIT: ${{ steps.claim.outputs.claim_commit }}
+        run: |
+          test "$(git -C ws/reconciler rev-parse HEAD)" = "$CLAIM_COMMIT"
+          echo "base=$CLAIM_COMMIT" >> "$GITHUB_OUTPUT"
+          sed -e "s#{{SKILL_DIR}}#$SKILL_DIR#g" -e "s#{{REPO_DIR}}#./reconciler#g" \
+              -e "s#{{TASK_ID}}#$TASK_ID#g" -e "s#{{MODEL_ID}}#$MODEL_ID#g" \
+              -e "s#{{CLAIM_REASON}}#$CLAIM_REASON#g" -e "s#{{CLAIM_COMMIT}}#$CLAIM_COMMIT#g" \
+              harness/.github/minimax/drift-detector-run-prompt.md > "$OUT/logs/prompt.md"
+          args=(exec --input - --cwd "$GITHUB_WORKSPACE/ws" --permission full
+                --output-format stream-json --timeout 40m
+                --output-last-message "$OUT/logs/final-message.md"
+                --diagnostics-dir "$OUT/logs/diagnostics")
+          [ -n "$MODEL" ] && args+=(--model "$MODEL")
+          set +e
+          env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL -u SOURCE_GITHUB_TOKEN \
+            mcode "${args[@]}" < "$OUT/logs/prompt.md" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          tail -n 5 "$OUT/logs/stderr.log" || true
+          [ "$code" -eq 0 ] || echo "::warning::mcode가 exit $code로 끝남 — 결과 점검은 계속한다"
+
+      - name: Check result
+        if: steps.run.outcome != 'skipped' && steps.run.outputs.base != ''
+        env:
+          TASK_ID: ${{ steps.claim.outputs.task_id }}
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+          CLAIM_MESSAGE: ${{ steps.claim.outputs.claim_message }}
+          BASE: ${{ steps.run.outputs.base }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set +e
+          python3 harness/.github/scripts/check_detector_result.py --repo ws/reconciler --base "$BASE" \
+            --model-id "$MODEL_ID" --task-id "$TASK_ID" --claim-subject "$CLAIM_MESSAGE" \
+            --report "$OUT/check-report.md" --json "$OUT/check-report.json" --patch "$OUT/result.patch"
+          code=$?
+          set -e
+          git -C ws/reconciler format-patch --stdout "origin/$DEFAULT_BRANCH..HEAD" > "$OUT/commits.patch" || true
+          exit $code
+
+      - name: Summary
+        if: always()
+        env:
+          CLAIMED: ${{ steps.claim.outputs.claimed }}
+          TASK_ID: ${{ steps.claim.outputs.task_id }}
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+          LOST: ${{ steps.claim.outputs.lost_count }}
+          RUN_EXIT: ${{ steps.run.outputs.exit_code }}
+        run: |
+          {
+            echo "### 3. Test — 생성본 실제 실행"
+            echo "- 점유: ${CLAIMED:-false} · task: ${MODEL_ID:+$MODEL_ID/}${TASK_ID:-<none>} · 경쟁 패배 ${LOST:-0}건"
+            echo "- mcode ${MCODE_INSTALLED_VERSION:-<미설치>} · exit: ${RUN_EXIT:-n/a}"
+            if [ -s "$OUT/logs/transcript.jsonl" ]; then
+              python3 harness/.github/scripts/mcode_transcript.py summary "$OUT/logs/transcript.jsonl"
+            fi
+            echo
+            cat "$OUT/logs/claim.md" 2>/dev/null || true
+            echo
+            cat "$OUT/check-report.md" 2>/dev/null || true
+            if [ -s "$OUT/logs/final-message.md" ]; then
+              echo; echo "<details><summary>mcode 최종 보고</summary>"; echo
+              head -c 6000 "$OUT/logs/final-message.md"; echo; echo "</details>"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # mcode가 MCP로 받은 토큰을 셸 명령에 옮겨 적으므로 대화 기록에 토큰이 남는다 — 올리기 전에 가린다.
+      - name: Redact secrets
+        if: always()
+        run: python3 harness/.github/scripts/redact_secrets.py "$RUNNER_TEMP/out" --extra-env SOURCE_GITHUB_TOKEN
+
+      - name: Upload test artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-detector-test-result
+          path: ${{ runner.temp }}/out
           if-no-files-found: warn
           retention-days: 14
