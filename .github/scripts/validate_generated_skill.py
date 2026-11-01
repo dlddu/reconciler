@@ -80,6 +80,37 @@ PLANNER_RECOMMENDED = [
     ("머지 금지(실행은 executor 몫)", [r"머지[^\n]{0,40}(않|금지|말)", r"merge[^\n]{0,40}(not|never)"]),
 ]
 
+REVIEW_REQUIRED = [
+    ("상태 reviewing(점유된 입력)", [r"\breviewing\b"]),
+    ("상태 approved", [r"\bapproved\b"]),
+    ("상태 review_rejected", [r"\breview_rejected\b"]),
+    ("반복 거부 cancelled", [r"\bcancelled\b"]),
+    ("사람 승인 요구 manualApproval", [r"\bmanualApproval\b"]),
+    ("시도 기록 attempts", [r"\battempts\b"]),
+    ("판정 시각 reviewedAt", [r"\breviewedAt\b"]),
+    ("준비물(PR) 확인 pullRequestUrl", [r"\bpullRequestUrl\b"]),
+    ("task 스키마 참조", [r"reconciliation-task\.schema\.json"]),
+    ("task 저장 위치", [r"data/reconciliation-tasks"]),
+    ("커밋 메시지 규약 review(...)", [r"review\((<|tbm_|\$|\{)"]),
+    ("push 전 최신화(pull --rebase)", [r"pull\s+--rebase"]),
+    ("스키마 검증", [r"jsonschema", r"\bvalidat"]),
+    ("점유된 task 입력(task_id)", [r"\btask_id\b"]),
+]
+
+REVIEW_RECOMMENDED = [
+    ("점유는 러너 몫 — 스킬은 점유·대상 선정을 하지 않음", [r"(점유|선정)[^\n]{0,80}러너", r"러너[^\n]{0,80}(점유|선정)"]),
+    ("실행하지 않음(머지·배포 금지)", [r"(머지|merge)[^\n]{0,60}(않|금지|말)", r"실행[^\n]{0,40}(하지\s*않|금지)"]),
+    ("사람 승인 status를 스스로 붙이지 않음", [r"status[^\n]{0,80}(붙이지|쓰지|만들지|남기지)\s*않",
+                                       r"(붙이지|쓰지)\s*않[^\n]{0,60}status", r"github_commit_status_create[^\n]{0,80}(않|금지)"]),
+    ("required status check 확인", [r"required_status_checks", r"rules/branches", r"required\s+status"]),
+    ("스키마 수정 금지 명시", [r"스키마[^\n]{0,40}(수정|변경)[^\n]{0,20}(않|금지|말)",
+                         r"스키마[^\n]{0,40}(건드리지|고치지|손대지)\s*않",
+                         r"스키마[^\n]{0,20}(고쳐|수정해|바꿔)[^\n]{0,30}않"]),
+    ("k3s MCP 도구", [r"github_app_installation_token"]),
+    ("lock 해제 — reviewing으로 남기지 않음", [r"reviewing[^\n]{0,60}(남기지|남겨\s*두지|두지)\s*않", r"lock[^\n]{0,40}(놓|해제|풀)"]),
+    ("기록 분량 기준(reason)", [r"\breason\b[^\n]{0,60}\d\s*[~\-–]\s*\d\s*문장", r"\breason\b[^\n]{0,40}\d+\s*자"]),
+]
+
 # 금지 패턴을 "하지 말라"고 적은 줄(예: 「강제 push 금지(`git push --force`)」)은 사용이 아니라 금지 서술이다.
 PROHIBITION = re.compile(r"금지|하지\s*않|하지\s*말|않는다|절대|쓰지\s*않|never|do\s+not|don't|must\s+not", re.I)
 
@@ -94,10 +125,19 @@ FORBIDDEN = [
 ]
 
 
+# 리뷰는 대상 레포에 쓰지 않는다 — 사람 승인 status를 무인 단계가 붙이면 사람 승인이 형식이 되고, 머지는 executor 몫이다.
+# 생성 위치(mcode 워크스페이스의 .agents/skills/...)는 운영 설치 위치와 다르다 — 보조 스크립트는 $SKILL_DIR 기준으로 부른다.
+REVIEW_FORBIDDEN = [
+    ("commit status 쓰기", r"github_commit_status_create"),
+    ("PR 머지", r"gh\s+pr\s+merge\b|/pulls/[^\s/]+/merge\b"),
+    ("빌드 위치 경로 하드코딩", r"\.agents/skills/"),
+]
+
 PROFILES = {
     "drift-detector": ("reconciler-drift-detector", REQUIRED, RECOMMENDED, []),
     "work-planner": ("reconciler-work-planner", PLANNER_REQUIRED, PLANNER_RECOMMENDED,
                      [("PR 머지(계획 단계 금지)", r"gh\s+pr\s+merge|/pulls/[^\s/]+/merge\b")]),
+    "work-review": ("reconciler-work-review", REVIEW_REQUIRED, REVIEW_RECOMMENDED, REVIEW_FORBIDDEN),
 }
 
 @dataclass
