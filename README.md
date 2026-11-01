@@ -39,12 +39,14 @@ tests/                              # index.html 동작 테스트 (node --test),
 .github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py / select_plan_target.py / select_review_target.py /
                                     #   select_execute_target.py: 감지·계획·리뷰·실행 대상 선정,
                                     #   claim_drift_target.py / claim_plan_target.py / claim_review_target.py: 선정 + 점유(compare-and-set 커밋) — MiniMax 감지·계획·리뷰,
-                                    #   mcp_oidc_proxy.py·mcp_call.py: homelab-k3s-mcp OIDC 연결,
+                                    #   mcp_oidc_proxy.py·mcp_call.py: homelab-k3s-mcp OIDC 연결(샌드박스 모드: GitHub 도구를 대역으로),
+                                    #   github_stub.py·github_sandbox.py·github_log.py: 스킬 빌드 test의 GitHub 샌드박스(대역·준비·기록 판정),
                                     #   validate_generated_skill.py(--profile drift-detector|work-planner|work-review|work-executor): 생성 스킬 정적 검증,
                                     #   check_detector_result.py / check_planner_result.py / check_review_result.py / check_executor_result.py: 실행 결과 점검,
                                     #   replay_review_task.py: 리뷰 스킬 빌드 test의 샌드박스 replay 픽스처,
                                     #   executor_fixture.py: 실행 스킬 빌드 test의 격리 무대)
 .github/actions/setup-mcode/        # MiniMax Code(mcode) 설치 + subscription key 설정 composite action
+.github/actions/github-sandbox/     # 스킬 빌드 test용 GitHub 샌드박스 올리기(up)·내리기(down) composite action
 .github/minimax/                    # mcode에 주는 간결한 생성 지침(brief), 테스트·운영 실행 프롬프트
 .nojekyll                           # Pages가 data/*.json을 그대로 서빙하도록 Jekyll 우회
 ```
@@ -64,12 +66,13 @@ tests/                              # index.html 동작 테스트 (node --test),
 | --- | --- | --- |
 | generate | 지침만 주고 — 메인 `.github/minimax/drift-detector-brief.md`(핵심 규칙: 무엇을 해야 하나) + 서브 `drift-detector-brief-sub.md`(품질 보조 규칙: 어떻게, 무엇을 하지 말 것)를 이어 한 프롬프트로 — mcode가 레포(README·스키마·점유 스크립트·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `drift-detector-skill` (skill/, 대화 기록) |
 | validate | 형식·계약 커버리지·금지 패턴·보조 스크립트 문법을 정적 검증한다. | `drift-detector-validation` |
-| test | 생성본을 운영 감지와 같은 흐름(러너 점유 → 스킬 판정 → 결과 점검기)으로 **실제 실행**한다. 운영과 다른 점은 스킬 출처뿐(plugin-marketplace 대신 이 빌드의 생성본). 점유·판정 커밋이 기본 브랜치에 push된다. 대상은 입력 `target_id`·`reason`으로 지목하거나 자동 선정. | `drift-detector-test-result` (claim·결과 패치, 점검 보고, 대화 기록) |
+| test | 생성본을 운영 감지와 같은 흐름(러너 점유 → 스킬 판정 → 결과 점검기)으로 **샌드박스** 위에서 돌린다 — reconciler는 샌드박스 원격, 대상 레포는 GitHub 샌드박스(아래 「GitHub 샌드박스」). 운영과 다른 점은 스킬 출처(이 빌드의 생성본)와 쓰기가 닿는 곳뿐이고, 점검기는 대역 기록으로 "대상 레포 쓰기 0건"도 본다. 대상은 입력 `target_id`·`reason`으로 지목하거나 자동 선정. | `drift-detector-test-result` (claim·결과 패치, 점검 보고, 대화 기록, `github-sandbox/`) |
 
-**드라이런은 없다.** 계획·실행 단계는 대상 레포 PR·머지·클러스터를 실제로 건드려 구조적으로 드라이런을 할 수 없으므로,
-감지에만 드라이런을 두어 단계마다 다르게 만들지 않는다. 그래서 스킬 빌드의 test는 생성본을 **실제로** 한 번 돌리고(실제 기록),
-계약 위반은 운영과 같은 결과 점검기가 잡는다 — 운영 스킬과 테스트한 스킬이 같은 코드 경로를 탄다. 검증기는 생성본에
-드라이런 분기가 있으면 실패시킨다. 서버 `MCP_GITHUB_OIDC_RULES`에 스킬 빌드 워크플로 파일의 규칙도 있어야 test가 돈다.
+**드라이런은 없다 — 대신 닿는 곳을 바꾼다.** 스킬 안에 드라이런 분기를 두지 않는다(검증기가 생성본의 드라이런 분기를 실패시킨다).
+스킬 빌드의 test는 생성본을 운영과 같은 코드 경로로 **실제로** 돌리고, 계약 위반은 운영과 같은 결과 점검기가 잡는다. 다만 그
+쓰기가 닿는 곳이 운영이 아니다: reconciler는 러너 로컬 bare 레포(샌드박스 원격), 대상 레포·GitHub API는 러너 안의 GitHub 대역
+(아래 「GitHub 샌드박스」)이다. 스킬은 자기가 test 중인지 모른다. 서버 `MCP_GITHUB_OIDC_RULES`에 스킬 빌드 워크플로 파일의 규칙도
+있어야 test가 돈다(러너가 미러링·읽기 중계에 쓰는 **읽기** 토큰만 — 스킬의 토큰 요청은 샌드박스 프록시가 대역에서 처리한다).
 
 - **MiniMax 인증**: environment `llm-minimax`의 secret `MINIMAX_SUBSCRIPTION_KEY`(Token Plan subscription key)를
   `mcode provider set-minimax-key`로 job 전용 데이터 디렉터리에 넣는다. 텔레메트리와 데이터 기여는 끈다.
@@ -130,7 +133,7 @@ MiniMax Code로 돌리는 감지는 이 둘을 **러너의 결정적 스크립�
 | 워크플로 | 트리거 | 하는 일 |
 | --- | --- | --- |
 | `reconciler-work-planner.yml` (운영 계획) | 수동 | 러너가 계획 대상 한 건을 **점유**(`claim_plan_target.py`)한 뒤 plugin-marketplace의 고정 스킬(`plugins/reconciler-data-plane`의 `reconciler-work-planner`)로 계획·준비(대상 레포 PR)·실행 지침을 쓴다. 결과 점검기(`check_planner_result.py`)로 계약을 확인하고 `work-planner-result` 아티팩트를 남긴다. 대상이 없으면 MCP·mcode를 띄우지 않는다. |
-| `reconciler-work-planner-skill-build.yml` (스킬 빌드) | 수동만 | generate(`.github/minimax/work-planner-brief.md`만 주고 mcode가 레포를 읽어 `SKILL.md`를 쓴다 — 기존 스킬 본문은 주지 않는다) → validate(`validate_generated_skill.py --profile work-planner`) → test(생성본을 운영 계획과 같은 흐름으로 **실제 실행** — 점유·계획 커밋 push, 대상 레포 PR 생성, 입력 `target_id`로 지목). 아티팩트 `work-planner-skill` · `work-planner-validation` · `work-planner-test-result`. 통과한 생성본을 plugin-marketplace에 PR로 올리면 운영 계획이 그 스킬을 쓴다. |
+| `reconciler-work-planner-skill-build.yml` (스킬 빌드) | 수동만 | generate(`.github/minimax/work-planner-brief.md`만 주고 mcode가 레포를 읽어 `SKILL.md`를 쓴다 — 기존 스킬 본문은 주지 않는다) → validate(`validate_generated_skill.py --profile work-planner`) → test(생성본을 운영 계획과 같은 흐름으로 **샌드박스** 위에서 실행 — 점유·계획 커밋은 샌드박스 원격, 대상 레포 브랜치·PR은 GitHub 대역에만 생긴다. 점검기는 대역 기록으로 머지 시도 0건·PR 1개·preparation과 일치·기본 브랜치 직접 push 0건을 본다. 입력 `target_id`로 지목). 아티팩트 `work-planner-skill` · `work-planner-validation` · `work-planner-test-result`. 통과한 생성본을 plugin-marketplace에 PR로 올리면 운영 계획이 그 스킬을 쓴다. |
 
 - **러너 점유**: 계획 대상(`action_required`·`review_rejected`·`failed`, 모델 켜짐) 한 건을 골라 status가 그대로인지
   재확인 → `planning` + `updatedAt` → `plan(<tbm>/<rct>): claim` 커밋 → 즉시 push. 경쟁에서 지면 다음 후보, 무관한
@@ -167,8 +170,9 @@ plugin-marketplace의 `plugins/reconciler-data-plane`에 PR로 올린다(0.5.0~)
 
 **샌드박스 원격 — 드라이런이 아니다.** test job은 reconciler 체크아웃의 `origin`(fetch·push)을 러너 로컬 bare 레포로 바꾼다.
 러너 점유와 스킬의 `pull --rebase`·push는 운영과 똑같이 돌고, 닿는 곳만 그 bare 레포다. 스킬에는 드라이런 분기가 없고(검증기가
-금지) 자기가 test 중인지 모른다. job 토큰은 `contents: read`라 GitHub에는 어차피 쓸 수 없다. 이 방식이 리뷰에 가능한 것은 리뷰가
-대상 레포에 쓰지 않기 때문이다(PR·ruleset·check 조회뿐) — 대상 레포에 PR을 만들고 머지하는 계획·실행 단계에는 그대로 옮길 수 없다.
+금지) 자기가 test 중인지 모른다. job 토큰은 `contents: read`라 GitHub에는 어차피 쓸 수 없다. 대상 레포 쪽은 GitHub 샌드박스가 맡는다 —
+실제 PR·status·ruleset은 러너의 읽기 토큰으로 중계해 보여 주고, 스킬이 status·머지·코멘트를 시도하면 대역에만 남아 점검기(`--github-log`)가
+잡는다. 같은 두 겹(샌드박스 원격 + GitHub 샌드박스)이 대상 레포에 쓰는 계획 단계 test에도 쓰인다.
 
 **replay 시나리오**: 운영 데이터에 `planned`가 늘 있지는 않아서, git 이력의 최근 `review(<tbm>/<rct>): claim` 커밋을 찾아 그 부모의
 task 레코드(점유 직전)를 샌드박스에만 되돌려 놓는다(`replay_review_task.py` — 원격이 로컬 경로가 아니면 쓰지 않고 실패). 그 PR이 지금
@@ -178,7 +182,7 @@ task 레코드(점유 직전)를 샌드박스에만 되돌려 놓는다(`replay_
 **점검기가 보는 계약**: 점유 이후 그 task 파일 하나·그 task 한 건만 바뀜, `review(<tbm>/<rct>): …` 커밋, `trigger`·`stateSummary`·
 `assessment`와 이전 attempts 항목·마지막 항목의 `plan`·`preparation` 보존, 종료 상태 `approved | review_rejected | cancelled`
 (`reviewing`이면 풀리지 않은 lock, `planned`면 판정 없는 해제), `review.status`와 status 일치, `reviewedAt`·`reason`(거부면 `comment`),
-`manualApproval`은 승인에만, 대화 기록에 대상 레포 쓰기(commit status·머지·코멘트·리뷰) 없음.
+`manualApproval`은 승인에만, 대화 기록에 대상 레포 쓰기(commit status·머지·코멘트·리뷰) 없음, GitHub 대역 기록에 쓰기 0건.
 
 **MCP 규칙**: 서버 `MCP_GITHUB_OIDC_RULES`에 두 워크플로 파일(운영 리뷰는 plugin-marketplace 읽기도) 각각의 규칙이 있어야 한다 — `github_app_installation_token`(대상 레포
 읽기 상한, reconciler 제외), `ping`. 리뷰는 대상 레포에 쓰지 않으므로 write 권한이나 `github_commit_status_create`를 주지 않는다.
@@ -197,7 +201,9 @@ task 레코드(점유 직전)를 샌드박스에만 되돌려 놓는다(`replay_
 | report | 세 단계 결과를 한 보고서로 묶는다. | `work-executor-build-report` (report.md, skill/) |
 
 **테스트는 운영 데이터로 하지 않는다.** 감지와 달리 실행은 PR 머지·클러스터 변경처럼 되돌리기 어려운 일을 하므로, 생성본의
-첫 실행을 운영에 맡기지 않고 러너 안의 격리 무대에서 먼저 돌린다. 무대에는 GitHub·MCP·클러스터 자격 증명이 없다.
+첫 실행을 운영에 맡기지 않고 러너 안의 격리 무대에서 먼저 돌린다. 무대에는 GitHub·MCP·클러스터 자격 증명이 없다. 안전망으로
+GitHub 샌드박스(미러 없음)를 올려 두어, 스킬이 GitHub로 무엇을 보내든 러너 안의 대역이 받고 거절하며 기록한다 — 무대의 task에는
+승인 PR이 없으므로 GitHub 머지·push·status는 `github_log.py --stage execute`가 오류로 잡는다.
 
 - 대상 레포 = 로컬 bare 저장소(`target.git`, main + 준비 브랜치). reconciler = 로컬 bare 원격 + clone(실제 README·schemas·scripts 복사,
   data/에는 픽스처 모델 2개와 task 3건 — 같은 모델의 지난 `succeeded`, **점유된 `executing`** 한 건, 다른 모델의 `approved` 미끼).
@@ -212,6 +218,39 @@ task 레코드(점유 직전)를 샌드박스에만 되돌려 놓는다(`replay_
 (`… : verify`), 전제 붕괴면 `cancelled`|`failed` → 커밋마다 `pull --rebase` 후 push. 대상 선정·진입 게이트(사람 승인 확인 포함)·점유는
 러너가 한다 — 운영 실행 워크플로(`reconciler-work-executor.yml`)에 감지의 `claim_drift_target.py`에 해당하는 점유 스크립트를 붙이는
 것은 다음 단계다.
+
+## GitHub 샌드박스 (스킬 빌드 test)
+
+스킬 빌드의 test가 대상 레포와 GitHub API에 닿는 곳을 러너 안의 **대역**(test double)으로 바꾼다. 스킬은 평소처럼 MCP로 토큰을 받고,
+`git clone`·`push`, REST·GraphQL(`curl`, `gh`, 파이썬 무엇이든)로 PR을 만들고 머지하고 status를 읽는다. 그 요청이 전부 대역에서 끝난다.
+`.github/actions/github-sandbox`(composite)가 올리고(`up`) 내린다(`down`).
+
+| 층 | 바꾸는 방법 |
+| --- | --- |
+| 토큰 (MCP `github_app_installation_token`) | `mcp_oidc_proxy.py` 샌드박스 모드가 이 호출을 실제 MCP로 보내지 않고 대역이 발급한 가짜 토큰을 같은 `.env` 모양으로 돌려준다. `github_commit_status_create`도 대역에 기록만 한다. 그 밖의 도구는 `--sandbox-allow-tools`에 적은 것(관측용 읽기)만 실제 MCP로 보내고 나머지는 막는다(fail-closed). |
+| git (`github.com`) | `/etc/hosts`로 `github.com`·`api.github.com`·`raw.githubusercontent.com`을 127.0.0.1로 돌리고 자체 CA를 시스템 신뢰 목록에 넣는다. 대역은 러너가 미리 받아 둔 bare 미러(원격 제거)를 `git http-backend`로 서비스한다 — push는 미러에만 쌓인다. 실제 ruleset(기본 브랜치)은 pre-receive 훅으로 옮겨 직접 push를 실제처럼 거절한다. `github.com/<owner>/reconciler`는 샌드박스 원격으로 이어진다. |
+| API (`api.github.com`) | PR 생성·수정·닫기·머지, 코멘트, status, ref를 대역 안에서 처리한다(머지는 미러에서 실제 git 병합, 필수 status가 없으면 실제처럼 405). `gh`가 쓰는 GraphQL은 질의의 선택 집합대로 응답을 깎아 돌려준다. 대역이 모델링하지 않는 **읽기(GET·GraphQL 질의)**만 러너의 읽기 전용 토큰으로 실제 GitHub에 중계한다(read passthrough). **쓰기는 어떤 경우에도 실제 GitHub로 나가지 않는다.** |
+
+- **진짜 토큰은 에이전트에 닿지 않는다.** 러너만 실제 읽기 토큰을 받고(미러·ruleset·읽기 중계), mcode 환경에서는 뺀다. 대역은 그 토큰을
+  0600 파일로 받아 읽은 뒤 지운다. 그래서 무엇이 대역을 빠져나가도 실제 GitHub 쓰기는 401로 끝난다.
+- **대역은 자기가 발급한 토큰만 인정**하고 실제 서버처럼 레포 범위(밖이면 404)와 권한(부족하면 403)을 지킨다.
+- **모든 요청은 `requests.jsonl`로 기록**된다(아티팩트 `github-sandbox/`: 기록·최종 상태·요약). 결과 점검기는 대화 기록의 명령 문자열이 아니라
+  대역에 도착한 요청 그 자체로 판정한다(`github_log.py`, 점검기의 `--github-log`):
+
+| 단계 | 대역 기록 규칙 |
+| --- | --- |
+| 감지·리뷰 | 쓰기 0건(거절된 시도 포함). 쓰기 권한 토큰 요청은 경고. |
+| 계획 | 머지 시도 0건, commit status 쓰기 0건, 기본 브랜치 직접·강제 push 0건, 연 PR은 최대 1개이고 `preparation.pullRequestUrl`과 일치(열고 기록하지 않았거나 기록한 PR을 열지 않았으면 오류·경고). |
+| 실행 | 머지는 승인된 task의 그 PR 하나만, commit status 쓰기 0건, 강제 push 0건. 거절된 시도는 경고. |
+
+  대역이 모르는 요청은 501 + `op: unsupported`로 남고 점검기 경고로 보인다 — 대역을 넓혀야 한다는 단서다.
+- **github.com 공개 자료**: git 밖 GET(릴리스 내려받기·아카이브 — 예: `npm install`의 prebuilt 바이너리)은 자격 증명 없이 실제 github.com에
+  물어 그대로 돌려준다(쓰기는 중계하지 않는다).
+- **한계**: 대역은 GitHub의 일부만 흉내 낸다(비동기 mergeable 계산, ruleset의 bypass·리뷰 요구는 없다). **대역 PR에는 CI가 돌지 않는다**
+  (웹훅·Actions 트리거 없음) — 스킬이 CI 결과를 기다리거나 "CI 미트리거"를 관측할 수 있다. 그 관측은 샌드박스의 산물이고 기록은 샌드박스에만
+  남는다. PR 번호는 실제와 겹치지 않게 90001부터다. 클러스터 쓰기는 MCP 허용 목록으로 막을 뿐 흉내 내지 않는다.
+- **로컬로 돌려 보기**: `python3 -m unittest tests.test_github_stub tests.test_github_log` — 대역을 평문 HTTP로 띄워 실제 `git`으로
+  clone·push하고 REST·GraphQL로 PR을 만들고 머지한다(네트워크 없이).
 
 ## 모델 키 격리
 

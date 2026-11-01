@@ -11,7 +11,10 @@
 #   test      실행 단계는 PR 머지·클러스터 변경처럼 되돌리기 어려운 일을 하므로 운영 데이터로 시험하지 않는다.
 #             executor_fixture.py가 러너 안에 격리 무대(로컬 bare 대상 저장소 + 로컬 reconciler 원격 + 점유된 task)를
 #             만들고, 생성본을 운영과 같은 실행 프롬프트로 mcode에 돌린 뒤 check_executor_result.py가 계약과
-#             시나리오 기대값을 점검한다. GitHub·MCP·클러스터 자격 증명은 주지 않는다.
+#             시나리오 기대값을 점검한다. GitHub·MCP·클러스터 자격 증명은 주지 않는다. 안전망으로 GitHub 샌드박스
+#             (.github/actions/github-sandbox, 미러 없음)를 올려 두어 스킬이 GitHub로 무엇을 보내든 러너 안의 대역에서
+#             끝나게 하고, 그 기록을 github_log.py `execute` 규칙으로 본다(무대에는 승인 PR이 없으니 GitHub 머지·push·
+#             status는 모두 오류).
 #               merge           준비 브랜치 병합 → 검증 통과 → succeeded
 #               broken-premise  리뷰 뒤 준비 브랜치가 사라짐 → 아무것도 바꾸지 않고 failed
 #   report    세 단계 결과를 한 보고서(work-executor-build-report 아티팩트)로 묶는다.
@@ -69,6 +72,14 @@ jobs:
           subscription-key: ${{ secrets.MINIMAX_SUBSCRIPTION_KEY }}
           version: ${{ env.MCODE_VERSION }}
           region: ${{ vars.MINIMAX_REGION || 'en' }}
+
+      # 안전망: 무대는 GitHub를 쓰지 않지만, 스킬이 GitHub로 무엇을 보내든 실제 GitHub 대신 러너 안의 대역이 받게 한다.
+      # 미러·토큰·MCP 없음 — 대역은 인증 없는 요청을 거절하고 전부 기록한다.
+      - name: GitHub sandbox up
+        id: sandbox
+        uses: ./harness/.github/actions/github-sandbox
+        with:
+          mode: up
 
       - name: Generate SKILL.md
         id: gen
@@ -230,6 +241,14 @@ jobs:
           version: ${{ env.MCODE_VERSION }}
           region: ${{ vars.MINIMAX_REGION || 'en' }}
 
+      # 안전망: 무대는 GitHub를 쓰지 않지만, 스킬이 GitHub로 무엇을 보내든 실제 GitHub 대신 러너 안의 대역이 받게 한다.
+      # 미러·토큰·MCP 없음 — 대역은 인증 없는 요청을 거절하고 전부 기록한다.
+      - name: GitHub sandbox up
+        id: sandbox
+        uses: ./harness/.github/actions/github-sandbox
+        with:
+          mode: up
+
       # 운영 실행과 같은 프롬프트(work-executor-run-prompt.md). 이 무대에만 해당하는 사실은 ENV_NOTE 한 줄뿐이다.
       # mcode 런타임이 재시도 가능한 오류(예: EMPTY_RESPONSE)로 끝났고 아직 아무것도 바뀌지 않았으면
       # (reconciler HEAD = 점유 커밋·작업 트리 깨끗·대상 refs 그대로) 한 번만 처음부터 다시 돌린다.
@@ -283,6 +302,13 @@ jobs:
           { echo "exit_code=$code"; echo "attempts=$attempt"; } >> "$GITHUB_OUTPUT"
           [ "$code" -eq 0 ] || echo "::warning::mcode가 exit $code로 끝남 — 결과 점검은 계속한다"
 
+      - name: GitHub sandbox down
+        if: always() && steps.sandbox.outcome != 'skipped'
+        uses: ./harness/.github/actions/github-sandbox
+        with:
+          mode: down
+          out-dir: ${{ runner.temp }}/out/github-sandbox
+
       - name: Unseal answer key
         if: always() && steps.fx.outcome == 'success'
         run: sudo chown -R "$(id -u):$(id -g)" "$SEALED"
@@ -326,6 +352,13 @@ jobs:
           cp "$REPO/data/reconciliation-tasks/$MODEL_ID.json" "$OUT/task-after.json" || true
           exit $code
 
+      # 무대의 task에는 승인 PR이 없다 — GitHub로 간 머지·push·status는 모두 계약 위반이다.
+      - name: Check GitHub sandbox
+        if: always() && steps.run.outcome == 'success'
+        run: |
+          python3 harness/.github/scripts/github_log.py "$OUT/github-sandbox/requests.jsonl" --stage execute \
+            --report "$OUT/github-sandbox/check.md"
+
       - name: Summary
         if: always()
         env:
@@ -343,6 +376,8 @@ jobs:
             fi
             echo
             cat "$OUT/check-report.md" 2>/dev/null || echo "_결과 점검 보고서 없음_"
+            echo
+            cat "$OUT/github-sandbox/check.md" 2>/dev/null || true
             if [ -s "$OUT/logs/final-message.md" ]; then
               echo; echo "<details><summary>mcode 최종 보고</summary>"; echo
               head -c 6000 "$OUT/logs/final-message.md"; echo; echo "</details>"

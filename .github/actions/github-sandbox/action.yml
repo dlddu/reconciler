@@ -1,0 +1,131 @@
+# GitHub 샌드박스 — 스킬 빌드 test에서 스킬이 닿는 GitHub를 러너 안의 대역으로 바꾼다(README 「GitHub 샌드박스」).
+#
+#   mode: up    대상 레포 미러(+ ruleset) → 인증서 → 대역(github_stub.py) 기동 → MCP 프록시를 샌드박스 모드로 재기동
+#               → hosts·CA 전환. 이후 스킬의 clone·push·PR·머지·status는 전부 대역에서 끝난다.
+#   mode: down  hosts·CA를 되돌리고 대역 기록·최종 상태·요약을 out-dir에 남긴다.
+#
+# 스킬에는 드라이런 분기가 없다. 스킬은 평소처럼 MCP로 토큰을 받고(대역의 가짜 토큰) GitHub에 쓴다.
+# 진짜 토큰은 에이전트에 닿지 않으므로 무엇이 대역을 빠져나가도 실제 GitHub 쓰기는 401로 끝난다.
+#
+# 순서 제약: up은 MCP 프록시(평문 모드)로 러너가 읽기 토큰을 받은 **뒤**, 에이전트 실행 **전**에 부른다.
+# 미러링과 대역의 실제 주소 풀이는 hosts를 바꾸기 전에 끝나야 한다 — up이 그 순서를 지킨다.
+name: GitHub sandbox
+description: 스킬 빌드 test용 GitHub 대역 올리기·내리기
+
+inputs:
+  mode:
+    description: up | down
+    required: true
+  harness:
+    description: 하네스 체크아웃 경로
+    default: harness
+  root:
+    description: 샌드박스 루트(미러·인증서·기록)
+    default: ${{ runner.temp }}/github-sandbox
+  repos:
+    description: (up) 미러링할 대상 레포 owner/name, 쉼표 구분. 비우면 미러 없음
+    default: ""
+  token-env:
+    description: (up) 실제 GitHub 읽기 토큰이 든 환경 변수 이름(미러·ruleset·read passthrough). 에이전트 환경에서는 빼야 한다
+    default: SOURCE_GITHUB_TOKEN
+  reconciler-bare:
+    description: (up) reconciler 샌드박스 원격(bare) 경로 — github.com/<owner>/reconciler 요청도 이리로 간다
+    default: ""
+  reconciler-repo:
+    description: (up) reconciler 레포 owner/name
+    default: dlddu/reconciler
+  mcp-upstream:
+    description: (up) 실제 MCP URL — 샌드박스 모드 프록시가 허용 도구만 중계한다
+    default: ""
+  mcp-audience:
+    description: (up) OIDC audience
+    default: ""
+  mcp-port:
+    description: (up) 로컬 MCP 프록시 포트(평문 모드 프록시가 이미 이 포트에 있으면 내리고 다시 띄운다)
+    default: "8765"
+  allow-tools:
+    description: (up) 샌드박스에서도 실제 MCP로 보낼 도구(쉼표 구분, 관측용 읽기 도구만). 나머지는 막는다
+    default: ping
+  admin-port:
+    description: 대역 관리 API 포트
+    default: "8766"
+  out-dir:
+    description: (down) 기록·상태·요약을 남길 디렉터리
+    default: ${{ runner.temp }}/out/github-sandbox
+
+runs:
+  using: composite
+  steps:
+    - name: Sandbox up
+      if: inputs.mode == 'up'
+      shell: bash
+      env:
+        H: ${{ inputs.harness }}
+        ROOT: ${{ inputs.root }}
+        REPOS: ${{ inputs.repos }}
+        TOKEN_ENV: ${{ inputs.token-env }}
+        RECONCILER_BARE: ${{ inputs.reconciler-bare }}
+        RECONCILER_REPO: ${{ inputs.reconciler-repo }}
+        UPSTREAM: ${{ inputs.mcp-upstream }}
+        AUDIENCE: ${{ inputs.mcp-audience }}
+        PORT: ${{ inputs.mcp-port }}
+        ALLOW: ${{ inputs.allow-tools }}
+        ADMIN_PORT: ${{ inputs.admin-port }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$ROOT"
+        echo "SANDBOX_ROOT=$ROOT" >> "$GITHUB_ENV"
+        echo "SANDBOX_LOG=$ROOT/requests.jsonl" >> "$GITHUB_ENV"
+        echo "SANDBOX_ADMIN_URL=http://127.0.0.1:$ADMIN_PORT" >> "$GITHUB_ENV"
+        bare_args=()
+        [ -n "$RECONCILER_BARE" ] && bare_args=(--reconciler-bare "$RECONCILER_BARE" --reconciler-repo "$RECONCILER_REPO")
+        # 1) 미러 + ruleset (실제 GitHub — hosts를 바꾸기 전)
+        python3 "$H/.github/scripts/github_sandbox.py" mirror --root "$ROOT" --repos "$REPOS" \
+          --token-env "$TOKEN_ENV" "${bare_args[@]}"
+        # 2) 인증서
+        python3 "$H/.github/scripts/github_sandbox.py" certs --root "$ROOT" > /dev/null
+        # 3) 대역 기동(읽기 토큰은 0600 파일로 넘기고 대역이 읽은 뒤 지운다; 실제 api.github.com 주소는 지금 푼다)
+        python3 "$H/.github/scripts/github_sandbox.py" start --root "$ROOT" --log "$ROOT/requests.jsonl" \
+          --token-env "$TOKEN_ENV" --admin-port "$ADMIN_PORT" --stub-log "$ROOT/stub.log"
+        # 4) MCP 프록시를 샌드박스 모드로 다시 띄운다(GitHub 도구는 대역으로, 허용 목록 밖 도구는 거절)
+        if [ -n "$UPSTREAM" ]; then
+          # [m] 패턴: 이 스텝 스크립트 자체(명령줄에 이 문자열이 들어갈 수 있다)를 맞히지 않는다
+          pkill -f "[m]cp_oidc_proxy.py.*--port $PORT" 2>/dev/null || true
+          for _ in $(seq 1 20); do (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null || break; sleep 0.5; done
+          nohup python3 "$H/.github/scripts/mcp_oidc_proxy.py" --upstream "$UPSTREAM" --audience "$AUDIENCE" \
+            --port "$PORT" --sandbox-admin "http://127.0.0.1:$ADMIN_PORT" --sandbox-allow-tools "$ALLOW" \
+            > "$ROOT/mcp-proxy.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            grep -q listening "$ROOT/mcp-proxy.log" && break
+            if ! kill -0 $! 2>/dev/null; then cat "$ROOT/mcp-proxy.log"; echo "::error::샌드박스 프록시 기동 실패"; exit 1; fi
+            sleep 1
+          done
+          grep listening "$ROOT/mcp-proxy.log"
+          echo "MCP_LOCAL_URL=http://127.0.0.1:$PORT/mcp" >> "$GITHUB_ENV"
+        fi
+        # 5) hosts·CA 전환 — 이 뒤로 github.com·api.github.com·raw.githubusercontent.com은 대역이다
+        python3 "$H/.github/scripts/github_sandbox.py" enable --root "$ROOT" --env-file "$GITHUB_ENV"
+        # 확인: 대역이 실제로 응답하는가(CA 신뢰 포함)
+        code=$(curl -s -o /dev/null -w '%{http_code}' https://api.github.com/rate_limit)
+        [ "$code" = "401" ] || { echo "::error::api.github.com이 대역으로 가지 않음(HTTP $code)"; exit 1; }
+        echo "GitHub sandbox ready — repos: ${REPOS:-<none>}"
+
+    - name: Sandbox down
+      if: inputs.mode == 'down'
+      shell: bash
+      env:
+        H: ${{ inputs.harness }}
+        ROOT: ${{ inputs.root }}
+        OUT_DIR: ${{ inputs.out-dir }}
+        ADMIN_PORT: ${{ inputs.admin-port }}
+      run: |
+        set -uo pipefail
+        python3 "$H/.github/scripts/github_sandbox.py" disable --root "$ROOT" || true
+        mkdir -p "$OUT_DIR"
+        curl -s "http://127.0.0.1:$ADMIN_PORT/_sandbox/state" > "$OUT_DIR/state.json" || true
+        [ -f "$ROOT/requests.jsonl" ] && cp "$ROOT/requests.jsonl" "$OUT_DIR/requests.jsonl"
+        for f in stub.log mcp-proxy.log rules.json; do [ -f "$ROOT/$f" ] && cp "$ROOT/$f" "$OUT_DIR/$f"; done
+        python3 "$H/.github/scripts/github_sandbox.py" summary --log "$ROOT/requests.jsonl" \
+          --markdown "$OUT_DIR/summary.md" > /dev/null || true
+        [ -f "$ROOT/stub.pid" ] && kill "$(cat "$ROOT/stub.pid")" 2>/dev/null || true
+        echo "GitHub sandbox down — 기록: $OUT_DIR"

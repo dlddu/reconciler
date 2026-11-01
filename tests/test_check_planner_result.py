@@ -115,6 +115,33 @@ class CheckPlannerResultTest(unittest.TestCase):
         for needle in ("커밋 규약", "허용 범위 밖", "한 건만", "stateSummary"):
             self.assertIn(needle, joined)
 
+    def test_github_log_matches_preparation(self):
+        pr = "https://github.com/dlddu/pocket-aide/pull/90001"
+        base = self.base(claimed())
+        t = claimed([attempt(pr=pr)])
+        t["status"] = "planned"
+        self.write([t]); self.commit(f"plan({MID}/{TID}): ready")  # noqa: E702
+        log = [{"op": "token.mint", "detail": {"repositories": ["pocket-aide"], "permissions": {"contents": "write"}}},
+               {"op": "git.push", "write": True, "repo": "dlddu/pocket-aide", "status": 200,
+                "detail": {"default_branch": "main", "updates": [
+                    {"ref": "refs/heads/reconcile/x", "old": "0" * 40, "new": "a" * 40, "forced": False}]}},
+               {"op": "pulls.create", "write": True, "repo": "dlddu/pocket-aide", "status": 201,
+                "detail": {"html_url": pr, "number": 90001, "head": "reconcile/x"}}]
+        res = self.run_check(base)
+        cpr.check_github(res, log)
+        self.assertEqual(res.errors, [])
+        self.assertIn("github", res.facts)
+
+        res = self.run_check(base)
+        cpr.check_github(res, log + [{"op": "pulls.merge", "write": True, "repo": "dlddu/pocket-aide",
+                                      "status": 200, "detail": {"number": 90001}}])
+        self.assertTrue(any("머지" in e for e in res.errors))
+
+        res = self.run_check(base)
+        cpr.check_github(res, log[:2])  # PR을 기록했는데 실제로 열지 않음 → 경고
+        self.assertEqual(res.errors, [])
+        self.assertTrue(any("재사용" in w for w in res.warnings))
+
     def test_left_planning_is_error(self):
         base = self.base(claimed())
         t = claimed([attempt()])

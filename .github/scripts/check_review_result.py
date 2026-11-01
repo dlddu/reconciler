@@ -16,6 +16,8 @@ check_detector_result.py와 같은 방식을 쓴다.
                manualApproval은 승인에만 있다
   - (선택) 기대 status: --expect-statuses 중 하나인가 — replay에서 머지·종료된 PR을 승인하면 실패
   - (선택) 대화 기록: 대상 레포에 쓰는 호출(commit status·머지·코멘트·리뷰)이 없는가
+  - (선택) GitHub 대역 기록(--github-log): 대상 레포에 실제로 도착한 쓰기가 0건인가(github_log `review`) —
+           대화 기록은 명령 문자열을 보지만, 이것은 대역에 도착한 요청 그 자체를 본다
 
 결과 diff·판정된 task를 파일로 남긴다(아티팩트용). 오류가 있으면 종료 코드 1.
 """
@@ -32,6 +34,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import check_detector_result as cdr  # noqa: E402
+import github_log  # noqa: E402
 
 TASKS_DIR = "data/reconciliation-tasks"
 COMMIT_RE = re.compile(r"^review\((tbm_[^/\s)]+)/(rct_[0-9]{8}-[0-9]{4})\): \S")
@@ -209,6 +212,7 @@ def render(res: cdr.Result) -> str:
         out.append(f"- planner에게: {str(f['comment']).strip()[:800]}")
     if f.get("commits"):
         out.append("- 커밋: " + " → ".join(f"`{c}`" for c in f["commits"]))
+    out.extend(github_log.render_facts(f.get("github")))
     for title, items, mark in (("오류", res.errors, "❌"), ("경고", res.warnings, "⚠️"), ("통과", res.passed, "✅")):
         if items:
             out.append(f"\n**{title}** ({len(items)})")
@@ -229,6 +233,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--json", type=Path)
     p.add_argument("--patch", type=Path, help="base 대비 전체 diff(커밋+미커밋)를 쓸 경로")
     p.add_argument("--task-out", type=Path, help="판정된 task 레코드(JSON)를 쓸 경로")
+    p.add_argument("--github-log", type=Path, help="GitHub 대역 기록(JSONL) — 있으면 대상 레포 쓰기 0건도 점검")
     args = p.parse_args(argv)
 
     expect = [s.strip() for s in args.expect_statuses.split(",") if s.strip()]
@@ -240,6 +245,8 @@ def main(argv: list[str] | None = None) -> int:
             cdr.git(args.repo, "reset", "-q", check=False)
         res = check(args.repo, args.base, args.model_id, args.task_id, args.claim_subject,
                     expect=expect, transcript=args.transcript)
+        if args.github_log:
+            github_log.merge_into(res, github_log.evaluate(github_log.load(args.github_log), "review"))
     except (RuntimeError, json.JSONDecodeError, OSError, subprocess.SubprocessError) as exc:
         res = cdr.Result(errors=[f"점검 자체가 실패: {exc}"])
     task = res.facts.pop("task", None)

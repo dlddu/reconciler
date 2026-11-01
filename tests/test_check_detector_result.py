@@ -238,6 +238,32 @@ class CheckDetectorResultTest(unittest.TestCase):
         self.assertTrue(any("reflog" in w for w in res.warnings))
         self.assertTrue(any("README.md" in e for e in res.errors))
 
+    def test_imports_without_github_log_when_sealed(self):
+        # 실행 빌드는 check_executor_result.py·check_detector_result.py만 봉인 디렉터리로 옮겨 쓴다 —
+        # github_log.py 없이도 import돼야 한다(--github-log를 쓸 때만 필요).
+        sealed = self.tmp / "sealed"
+        sealed.mkdir()
+        scripts = Path(__file__).resolve().parent.parent / ".github" / "scripts"
+        for name in ("check_executor_result.py", "check_detector_result.py"):
+            shutil.copy(scripts / name, sealed / name)
+        r = subprocess.run([sys.executable, "-I", "-c", f"import sys; sys.path.insert(0, {str(sealed)!r}); "
+                            "import check_executor_result"], capture_output=True, text=True, cwd=self.tmp)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_github_log_must_have_no_writes(self):
+        repo = Repo(self.tmp)
+        repo.commit({MID: [judged()]}, f"detect({MID}/{TID}): assess action")
+        log = self.tmp / "requests.jsonl"
+        read = {"op": "contents.get", "write": False, "repo": "dlddu/pocket-aide", "status": 200}
+        log.write_text(json.dumps(read) + "\n")
+        args = ["--repo", str(repo.path), "--base", repo.base, "--model-id", MID, "--task-id", TID,
+                "--github-log", str(log)]
+        self.assertEqual(cdr.main(args), 0)
+        push = {"op": "git.push", "write": True, "repo": "dlddu/pocket-aide", "status": 200,
+                "detail": {"updates": [{"ref": "refs/heads/x", "old": "0" * 40, "new": "a" * 40}]}}
+        log.write_text(json.dumps(read) + "\n" + json.dumps(push) + "\n")
+        self.assertEqual(cdr.main(args), 1)
+
     def test_patch_includes_uncommitted(self):
         repo = Repo(self.tmp)
         repo.write({MID: [judged()]})

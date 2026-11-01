@@ -13,6 +13,8 @@
 #             origin을 러너 로컬 bare 레포로 바꿔, 점유·판정 커밋의 pull --rebase/push가 그 bare 레포로만 간다.
 #             스킬에는 드라이런 분기가 없다(README 「드라이런은 없다」) — 스킬은 평소처럼 push하고, 그 push가 닿는 곳이
 #             샌드박스일 뿐이다. 리뷰는 대상 레포를 읽기만 하므로(PR·ruleset 조회) 운영 데이터 그대로 시험할 수 있다.
+#             대상 레포 접근은 GitHub 샌드박스(.github/actions/github-sandbox)를 거친다 — 실제 PR·status·ruleset은 러너의
+#             읽기 토큰으로 중계해 보여 주고, 스킬이 쓰려 하면(status·머지·코멘트) 대역에만 남아 점검기가 잡는다.
 #               live    운영 데이터의 planned task를 그대로 판정(없으면 대상 없음으로 끝남)
 #               replay  최근 리뷰된 task를 점유 직전(planned)으로 되돌려 다시 판정(replay_review_task.py). PR이 지금
 #                       머지·종료됐으면 승인하면 안 된다 — 점검기가 review_rejected|cancelled를 기대한다.
@@ -23,8 +25,9 @@
 #                                      레포 secret에는 두지 않는다 — README 「모델 키 격리」
 #   vars.HOMELAB_K3S_MCP_URL / vars.HOMELAB_K3S_MCP_AUDIENCE / vars.MINIMAX_REGION   (선택) 감지와 같다
 #   서버 MCP_GITHUB_OIDC_RULES에 이 파일(.github/workflows/reconciler-work-review-skill-build.yml) 규칙:
-#     github_app_installation_token(필수 — 대상 레포 contents·pull_requests·statuses·checks read 상한, reconciler 제외),
-#     ping(권장). 리뷰는 대상 레포에 쓰지 않으므로 write 권한이나 github_commit_status_create를 주지 않는다.
+#     github_app_installation_token(필수 — 대상 레포 contents·pull_requests·statuses·checks read 상한, reconciler 제외 —
+#     러너가 미러·읽기 중계에 쓴다), ping(권장). 리뷰는 대상 레포에 쓰지 않으므로 write 권한이나
+#     github_commit_status_create를 주지 않는다(스킬의 토큰 요청은 샌드박스 프록시가 대역에서 처리한다).
 name: "Reconciler · Work Review Skill Build"
 
 on:
@@ -348,6 +351,44 @@ jobs:
           python3 harness/.github/scripts/claim_review_target.py --repo ws/reconciler --branch "$DEFAULT_BRANCH" \
             --target "$INPUT_TARGET_ID" --summary-file "$OUT/logs/claim.md"
 
+      # GitHub 샌드박스용 실제 읽기 토큰(러너 전용 — 에이전트 환경에서는 뺀다). 레포를 명시해야 상한에 맞는다.
+      - name: Mint sandbox read token
+        id: source
+        if: steps.claim.outputs.claimed == 'true'
+        env:
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+        run: |
+          repos=$(python3 harness/.github/scripts/github_sandbox.py repos-for-model ws/reconciler "$MODEL_ID")
+          echo "repos=$repos" >> "$GITHUB_OUTPUT"
+          echo "대상 레포: ${repos:-<없음>}"
+          [ -n "$repos" ] || exit 0
+          names=$(echo "$repos" | tr ',' '\n' | sed 's#.*/##' | paste -sd, -)
+          # 서버 상한에 checks가 없을 수 있다 — 그러면 checks 없이 받는다(체크 런은 읽기 중계에서 빈 목록으로 보인다).
+          for perms in '{"contents":"read","pull_requests":"read","statuses":"read","checks":"read","metadata":"read"}' \
+                       '{"contents":"read","pull_requests":"read","statuses":"read","metadata":"read"}'; do
+            if python3 harness/.github/scripts/mcp_call.py --url "$MCP_LOCAL_URL" github-token \
+                 --env-name SANDBOX_SOURCE_TOKEN --repositories "$names" --permissions "$perms"; then
+              exit 0
+            fi
+            echo "::warning::읽기 토큰 권한 $perms 를 서버 상한이 거절 — 좁혀서 다시 요청"
+          done
+          exit 1
+
+      - name: GitHub sandbox up
+        id: sandbox
+        if: steps.claim.outputs.claimed == 'true'
+        uses: ./harness/.github/actions/github-sandbox
+        with:
+          mode: up
+          repos: ${{ steps.source.outputs.repos }}
+          token-env: SANDBOX_SOURCE_TOKEN
+          reconciler-bare: ${{ env.SANDBOX }}
+          reconciler-repo: ${{ github.repository }}
+          mcp-upstream: ${{ env.MCP_URL }}
+          mcp-audience: ${{ env.MCP_AUDIENCE }}
+          mcp-port: ${{ env.MCP_PROXY_PORT }}
+          allow-tools: ping
+
       - name: Set up MiniMax Code
         if: steps.claim.outputs.claimed == 'true'
         uses: ./harness/.github/actions/setup-mcode
@@ -383,12 +424,20 @@ jobs:
           [ -n "$MODEL" ] && args+=(--model "$MODEL")
           set +e
           env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL -u SOURCE_GITHUB_TOKEN \
+              -u SANDBOX_SOURCE_TOKEN \
             mcode "${args[@]}" < "$OUT/logs/prompt.md" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"
           code=$?
           set -e
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           tail -n 5 "$OUT/logs/stderr.log" || true
           [ "$code" -eq 0 ] || echo "::warning::mcode가 exit $code로 끝남 — 결과 점검은 계속한다"
+
+      - name: GitHub sandbox down
+        if: always() && steps.sandbox.outcome != 'skipped'
+        uses: ./harness/.github/actions/github-sandbox
+        with:
+          mode: down
+          out-dir: ${{ runner.temp }}/out/github-sandbox
 
       # 판정이 계약대로 기록됐는지 확인한다. 스킬이 push한 샌드박스 원격의 최신 상태도 함께 남긴다.
       - name: Check result
@@ -406,6 +455,7 @@ jobs:
           python3 harness/.github/scripts/check_review_result.py --repo ws/reconciler --base "$BASE" \
             --model-id "$MODEL_ID" --task-id "$TASK_ID" --claim-subject "$CLAIM_MESSAGE" \
             --expect-statuses "$EXPECT" --transcript "$OUT/logs/transcript.jsonl" \
+            --github-log "$OUT/github-sandbox/requests.jsonl" \
             --report "$OUT/check-report.md" --json "$OUT/check-report.json" --patch "$OUT/result.patch" \
             --task-out "$OUT/reviewed-task.json"
           code=$?
@@ -440,6 +490,8 @@ jobs:
             cat "$OUT/logs/claim.md" 2>/dev/null || true
             echo
             cat "$OUT/check-report.md" 2>/dev/null || true
+            echo
+            cat "$OUT/github-sandbox/summary.md" 2>/dev/null || true
             if [ -s "$OUT/logs/final-message.md" ]; then
               echo; echo "<details><summary>mcode 최종 보고</summary>"; echo
               head -c 6000 "$OUT/logs/final-message.md"; echo; echo "</details>"
@@ -448,7 +500,7 @@ jobs:
 
       - name: Redact secrets
         if: always()
-        run: python3 harness/.github/scripts/redact_secrets.py "$RUNNER_TEMP/out" --extra-env SOURCE_GITHUB_TOKEN
+        run: python3 harness/.github/scripts/redact_secrets.py "$RUNNER_TEMP/out" --extra-env SOURCE_GITHUB_TOKEN --extra-env SANDBOX_SOURCE_TOKEN
 
       - name: Upload test artifact
         if: always()
@@ -490,6 +542,8 @@ jobs:
                      sandbox-pushed.log logs/final-message.md logs/replay.md logs/claim.md; do
               [ -f "$d/$f" ] && cp "$d/$f" "$res/test/$name/"
             done
+            [ -f "$d/github-sandbox/summary.md" ] && cp "$d/github-sandbox/summary.md" "$res/test/$name/github-sandbox.md"
+            [ -f "$d/github-sandbox/requests.jsonl" ] && cp "$d/github-sandbox/requests.jsonl" "$res/test/$name/github-requests.jsonl"
           done
           {
             echo "# reconciler-work-review 스킬 빌드 결과"

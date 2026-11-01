@@ -15,6 +15,10 @@
                또는 완주하지 못해 시도를 남기지 않고 점유 전 status로 lock을 푼 것(계약상 허용 — 경고).
                planning으로 끝나면 아무도 풀 수 없는 lock이라 오류.
 
+`--github-log`(스킬 빌드 test의 GitHub 대역 기록)가 있으면 스킬이 대상 레포에 실제로 한 일도 본다
+(github_log.py `plan` 규칙): 머지 시도 0건, commit status 쓰기 0건, 기본 브랜치 직접·강제 push 0건,
+연 PR은 최대 1개이고 preparation.pullRequestUrl과 일치.
+
 결과 diff를 패치 파일로, 최종 task를 JSON으로 남긴다(아티팩트용). 오류가 있으면 종료 코드 1.
 """
 
@@ -28,6 +32,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import github_log  # noqa: E402
 from check_detector_result import (  # noqa: E402
     Result, by_id, changed_files, git, load_at, load_worktree, make_validator, resolve_base, split_commits,
     touched_task_ids)
@@ -161,6 +166,15 @@ def check(repo: Path, base: str, model_id: str, task_id: str, from_status: str, 
     return res
 
 
+def check_github(res: Result, entries: list[dict]) -> None:
+    """대역 기록으로 대상 레포에 실제로 한 일을 본다. 계획을 완주했으면(planned) 마지막 시도의 preparation과 대조한다."""
+    task = res.facts.get("task") or {}
+    prep = None
+    if task.get("status") == "planned" and task.get("attempts"):
+        prep = task["attempts"][-1].get("preparation") or {}
+    github_log.merge_into(res, github_log.evaluate(entries, "plan", preparation=prep))
+
+
 def render(res: Result) -> str:
     f = res.facts
     out = ["### 계획 결과 점검", f"- 결과: {'✅ 통과' if res.ok else '❌ 실패'}"]
@@ -177,6 +191,7 @@ def render(res: Result) -> str:
             out.append(f"  - {str(prep['notes']).strip()[:400]}")
     if f.get("commits"):
         out.append("- 커밋: " + " → ".join(f"`{c}`" for c in f["commits"]))
+    out.extend(github_log.render_facts(f.get("github")))
     for title, items, mark in (("오류", res.errors, "❌"), ("경고", res.warnings, "⚠️"), ("통과", res.passed, "✅")):
         if items:
             out.append(f"\n**{title}** ({len(items)})")
@@ -196,6 +211,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--json", type=Path)
     p.add_argument("--patch", type=Path, help="base 대비 전체 diff(커밋+미커밋)를 쓸 경로")
     p.add_argument("--task-out", type=Path, help="최종 task 레코드를 쓸 경로")
+    p.add_argument("--github-log", type=Path, help="GitHub 대역 기록(JSONL) — 있으면 대상 레포에 한 일도 점검")
     args = p.parse_args(argv)
 
     try:
@@ -206,6 +222,8 @@ def main(argv: list[str] | None = None) -> int:
             git(args.repo, "reset", "-q", check=False)
         res = check(args.repo, args.base, args.model_id, args.task_id, args.from_status,
                     claim_subject=args.claim_subject)
+        if args.github_log:
+            check_github(res, github_log.load(args.github_log))
     except (RuntimeError, json.JSONDecodeError, OSError) as exc:
         res = Result(errors=[f"점검 자체가 실패: {exc}"])
     task = res.facts.pop("task", None)

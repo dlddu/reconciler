@@ -11,6 +11,8 @@ import sys
 import tempfile
 import threading
 import unittest
+import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -147,6 +149,111 @@ class ProxyTest(unittest.TestCase):
         finally:
             os.environ.pop("GITHUB_ENV", None)
             env_file.unlink()
+
+
+class FakeSandboxAdmin:
+    """github_stub.py의 관리 API 흉내 — 받은 요청을 기록하고 정해진 답을 돌려준다."""
+
+    def __init__(self):
+        self.calls = []
+        admin = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_POST(self):
+                payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                admin.calls.append((self.path, payload))
+                if self.path == "/_sandbox/tokens":
+                    status, body = 200, {"token": "ghs_sandboxAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                                         "expires_at": "2026-11-01T13:00:00Z",
+                                         "repositories": payload.get("repositories"),
+                                         "permissions": payload.get("permissions")}
+                elif payload.get("context", "").startswith("bad/"):
+                    status, body = 422, {"message": "context not allowed"}
+                else:
+                    status, body = 201, dict(payload, id=1)
+                data = json.dumps(body).encode()
+                self.send_response(status)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+        self.server, self.url = serve(Handler)
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+
+class SandboxProxyTest(unittest.TestCase):
+    """샌드박스 모드: GitHub 도구는 대역이 받고, 허용 목록 밖 도구는 막고, 허용된 도구만 실제 MCP로 간다."""
+
+    def setUp(self):
+        self.clock = Clock()
+        self.world = FakeWorld(self.clock)
+        self.admin = FakeSandboxAdmin()
+        tokens = proxy.OidcTokenSource(f"{self.world.token_url}/token", "req-token", "aud", clock=self.clock)
+        policy = proxy.SandboxPolicy(self.admin.url, {"ping"})
+        handler = proxy.make_handler(f"{self.world.mcp_url}/mcp", tokens, 10, log=lambda *a, **k: None,
+                                     sandbox=policy)
+        self.proxy_server, base = serve(handler)
+        self.client = mcp_call.McpClient(f"{base}/mcp")
+        self.client.initialize()
+
+    def tearDown(self):
+        self.proxy_server.shutdown()
+        self.proxy_server.server_close()
+        self.admin.close()
+        self.world.close()
+
+    def upstream_calls(self):
+        return len(self.world.seen_auth)
+
+    def test_token_comes_from_sandbox_not_upstream(self):
+        before = self.upstream_calls()
+        text = self.client.call_tool("github_app_installation_token",
+                                     {"repositories": ["pocket-aide"], "permissions": {"contents": "write"}})
+        self.assertEqual(self.upstream_calls(), before)  # 실제 MCP에는 가지 않는다
+        self.assertEqual(mcp_call.extract_env_value(text, "GITHUB_TOKEN"), "ghs_sandboxAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        self.assertIn("# Permissions: contents=write", text)
+        self.assertEqual(self.admin.calls, [("/_sandbox/tokens", {"repositories": ["pocket-aide"],
+                                                                  "permissions": {"contents": "write"}})])
+
+    def test_commit_status_goes_to_sandbox(self):
+        sha = "a" * 40
+        text = self.client.call_tool("github_commit_status_create",
+                                     {"repository": "pocket-aide", "sha": sha, "state": "success",
+                                      "context": "review/manual-approval"})
+        self.assertIn("review/manual-approval=success", text)
+        self.assertEqual(self.admin.calls[0][0], "/_sandbox/statuses")
+        with self.assertRaises(mcp_call.McpError):  # 짧은 sha는 실제 도구처럼 거절
+            self.client.call_tool("github_commit_status_create",
+                                  {"repository": "x", "sha": "abc", "state": "success", "context": "c"})
+        with self.assertRaises(mcp_call.McpError):  # 대역의 거절은 isError로 전달
+            self.client.call_tool("github_commit_status_create",
+                                  {"repository": "x", "sha": sha, "state": "success", "context": "bad/x"})
+
+    def test_allowlist_is_fail_closed(self):
+        self.assertEqual(self.client.call_tool("ping", {}), "pong")  # 허용 → 실제 MCP
+        before = self.upstream_calls()
+        with self.assertRaises(mcp_call.McpError):
+            self.client.call_tool("resource_delete", {"kind": "Pod"})
+        self.assertEqual(self.upstream_calls(), before)
+
+    def test_non_tool_calls_pass_through(self):
+        names = sorted(t["name"] for t in self.client.list_tools())
+        self.assertEqual(names, ["github_app_installation_token", "ping"])
+
+    def test_batched_tool_call_rejected(self):
+        req = urllib.request.Request(self.client.url, method="POST", headers={"Content-Type": "application/json"},
+                                     data=json.dumps([{"jsonrpc": "2.0", "id": 9, "method": "tools/call",
+                                                       "params": {"name": "resource_delete"}}]).encode())
+        with self.assertRaises(urllib.error.HTTPError) as ctx:
+            urllib.request.urlopen(req, timeout=10)
+        self.assertEqual(ctx.exception.code, 400)
 
 
 class HelpersTest(unittest.TestCase):

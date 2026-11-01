@@ -8,17 +8,22 @@
 #             기존 스킬 본문은 모델에 노출하지 않는다(plugin-marketplace를 체크아웃하지 않고 MCP도 붙이지 않는다).
 #   validate  생성물 정적 검증(--profile work-planner: 형식 · 계획 단계 계약 커버리지 · 금지 패턴 · 보조 스크립트 문법).
 #   test      생성본을 운영 계획(reconciler-work-planner.yml)과 같은 흐름(러너 점유 → 스킬 계획 → 결과 점검)으로
-#             **실제 실행**한다(드라이런 없음). 운영과 다른 점은 스킬 출처뿐 — plugin-marketplace 대신 이 빌드의 생성본을
-#             쓴다. 점유·계획 커밋이 기본 브랜치에 push되고, 스킬은 대상 레포에 브랜치·PR을 만든다(머지하지 않는다).
-#             대상은 target_id로 지목하거나 비우면 운영과 같은 규칙으로 자동 선정.
+#             **샌드박스** 위에서 돌린다. 스킬에는 드라이런 분기가 없다 — 평소처럼 push하고 PR을 연다. 닿는 곳만 다르다:
+#               reconciler  체크아웃의 origin을 러너 로컬 bare 레포로 바꾼다(리뷰 빌드와 같은 샌드박스 원격).
+#               대상 레포   GitHub 샌드박스(.github/actions/github-sandbox) — github.com·api.github.com을 러너 안의
+#                           대역(github_stub.py)으로 돌리고, MCP 프록시가 토큰 도구를 대역의 가짜 토큰으로 바꾼다.
+#                           브랜치·PR·코멘트는 대역에만 생기고, 실제 GitHub에는 아무것도 쓰지 않는다.
+#             결과 점검기는 task 기록과 함께 대역 기록(--github-log)으로 "머지 시도 0건 · PR 1개 · preparation과 일치 ·
+#             기본 브랜치 직접 push 0건"을 본다. 대상은 target_id로 지목하거나 비우면 운영과 같은 규칙으로 자동 선정.
 #
 # 필요한 설정
 #   environment llm-minimax의 secret MINIMAX_SUBSCRIPTION_KEY   레포 secret에는 두지 않는다 — README 「모델 키 격리」
 #   vars.MINIMAX_REGION                (선택) en(기본, api.minimax.io) | cn
 #   vars.HOMELAB_K3S_MCP_URL / vars.HOMELAB_K3S_MCP_AUDIENCE   (선택) test job — 운영 계획과 같다
 #   서버 MCP_GITHUB_OIDC_RULES에 이 파일(.github/workflows/reconciler-work-planner-skill-build.yml) 규칙(test job):
-#     github_app_installation_token(필수 — 대상 레포 contents·pull_requests 쓰기), resource_list, resource_get,
-#     api_resources, ping(권장)
+#     github_app_installation_token(필수 — 러너가 대상 레포를 미러링·읽기 중계하는 **읽기** 토큰: contents·pull_requests·
+#     metadata read. 스킬의 쓰기 토큰 요청은 샌드박스 프록시가 대역에서 처리하므로 서버에는 쓰기 권한이 필요 없다),
+#     resource_list, resource_get, api_resources, ping(권장)
 name: "Reconciler · Work Planner Skill Build"
 
 on:
@@ -33,8 +38,7 @@ on:
         required: false
         default: ""
 
-# concurrency 그룹을 두지 않는다 — generate·validate는 레포에 쓰지 않고 결과는 실행별 아티팩트다. test는 운영 계획처럼
-# 기본 브랜치에 쓰지만, 같은 task 중복 점유·push 충돌은 러너의 compare-and-set 점유 커밋이 막는다.
+# concurrency 그룹을 두지 않는다 — 어느 job도 GitHub에 쓰지 않고(test는 샌드박스) 결과는 실행별 아티팩트다.
 
 permissions:
   contents: read
@@ -172,17 +176,16 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  # 생성본을 운영 워크플로와 같은 흐름으로 실제 실행한다(드라이런 없음): 러너 점유 → 생성 스킬 실행 → 결과 점검.
-  # 운영 워크플로와 다른 점은 스킬 출처뿐이다 — plugin-marketplace 대신 이 빌드의 생성본(아티팩트)을 쓴다.
-  # 점유·계획 커밋은 기본 브랜치에 push되고 스킬은 대상 레포에 브랜치·PR을 만든다(머지하지 않는다). 실패하면 실제 task가 그 상태로 남는다.
+  # 생성본을 운영 워크플로와 같은 흐름으로 샌드박스 위에서 돌린다: 러너 점유 → 생성 스킬 실행 → 결과 점검.
+  # 운영 워크플로와 다른 점은 스킬 출처(이 빌드의 생성본)와 쓰기가 닿는 곳(샌드박스)뿐이다. 실제 GitHub에는 쓰지 않는다.
   test:
-    name: Test skill (real run)
+    name: Test skill (sandbox)
     needs: validate
     runs-on: ubuntu-latest
     environment: llm-minimax # 모델 키는 이 environment에만 있다(README 「모델 키 격리」)
     timeout-minutes: 90
     permissions:
-      contents: write # 점유·계획 커밋 push
+      contents: read # GitHub에는 push할 수 없다 — 점유·계획 커밋은 샌드박스 원격으로만 간다
       id-token: write # homelab-k3s-mcp OIDC
     steps:
       - name: Checkout harness
@@ -191,13 +194,14 @@ jobs:
           path: harness
           persist-credentials: false
 
-      # 운영 데이터는 기본 브랜치가 진실이다. 워크플로 토큰을 남겨 점유 스크립트와 스킬이 push에 쓴다.
+      # 운영 데이터는 기본 브랜치가 진실이다.
       - name: Checkout reconciler (default branch)
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
           path: ws/reconciler
           fetch-depth: 50
+          persist-credentials: false
 
       - name: Prepare workspace
         run: |
@@ -208,6 +212,25 @@ jobs:
           git config --global user.name "reconciler-bot"
           git config --global user.email "reconciler@dlddu.dev"
           pip install --quiet --disable-pip-version-check jsonschema
+
+      # 샌드박스 원격: origin(fetch·push 모두)을 러너 로컬 bare 레포로 바꾼다. 이 job의 커밋은 GitHub에 닿지 않는다.
+      - name: Isolate reconciler into sandbox remote
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          sandbox="$RUNNER_TEMP/sandbox-origin.git"
+          git init -q --bare "$sandbox"
+          git -C "$sandbox" config receive.shallowUpdate true
+          git -C ws/reconciler push -q "$sandbox" "HEAD:refs/heads/$DEFAULT_BRANCH"
+          git -C ws/reconciler remote set-url origin "$sandbox"
+          git -C ws/reconciler remote set-url --push origin "$sandbox"
+          git -C ws/reconciler fetch -q origin "$DEFAULT_BRANCH"
+          git -C ws/reconciler branch -q --set-upstream-to="origin/$DEFAULT_BRANCH" "$DEFAULT_BRANCH"
+          if git -C ws/reconciler remote -v | grep -Eq '://|@'; then
+            echo "::error::샌드박스 격리 실패 — 원격 URL이 남아 있음"; exit 1
+          fi
+          echo "SANDBOX=$sandbox" >> "$GITHUB_ENV"
+          echo "SANDBOX_BASE=$(git -C ws/reconciler rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Download skill
         uses: actions/download-artifact@v4
@@ -224,6 +247,7 @@ jobs:
           echo "SKILL_DIR=$GITHUB_WORKSPACE/ws/$SKILL_REL" >> "$GITHUB_ENV"
           ls -la "ws/$SKILL_REL"
 
+      # 러너 전용 단계(점검·토큰 발급)용 평문 프록시. 에이전트 실행 전에 샌드박스 모드로 바꿔 띄운다(GitHub sandbox up).
       - name: Start homelab-k3s-mcp OIDC proxy
         run: |
           nohup python3 harness/.github/scripts/mcp_oidc_proxy.py --upstream "$MCP_URL" \
@@ -248,7 +272,7 @@ jobs:
           echo "::error::homelab-k3s-mcp 호출 실패 — audience나 서버 MCP_GITHUB_OIDC_RULES의 이 워크플로 규칙을 확인"
           exit 1
 
-      - name: Claim target
+      - name: Claim target (sandbox)
         id: claim
         env:
           INPUT_TARGET_ID: ${{ inputs.target_id }}
@@ -256,6 +280,35 @@ jobs:
         run: |
           python3 harness/.github/scripts/claim_plan_target.py --repo ws/reconciler --branch "$DEFAULT_BRANCH" \
             --target "$INPUT_TARGET_ID" --summary-file "$OUT/logs/claim.md"
+
+      # 대상 레포 미러링·ruleset·읽기 중계용 실제 읽기 토큰(러너 전용 — 에이전트 환경에서는 뺀다).
+      - name: Mint source read token
+        id: source
+        if: steps.claim.outputs.claimed == 'true'
+        env:
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+        run: |
+          repos=$(python3 harness/.github/scripts/github_sandbox.py repos-for-model ws/reconciler "$MODEL_ID")
+          echo "repos=$repos" >> "$GITHUB_OUTPUT"
+          echo "대상 레포: ${repos:-<없음>}"
+          [ -n "$repos" ] || exit 0
+          names=$(echo "$repos" | tr ',' '\n' | sed 's#.*/##' | paste -sd, -)
+          python3 harness/.github/scripts/mcp_call.py --url "$MCP_LOCAL_URL" github-token --env-name SOURCE_GITHUB_TOKEN \
+            --repositories "$names" --permissions '{"contents":"read","pull_requests":"read","metadata":"read"}'
+
+      - name: GitHub sandbox up
+        id: sandbox
+        if: steps.claim.outputs.claimed == 'true'
+        uses: ./harness/.github/actions/github-sandbox
+        with:
+          mode: up
+          repos: ${{ steps.source.outputs.repos }}
+          reconciler-bare: ${{ env.SANDBOX }}
+          reconciler-repo: ${{ github.repository }}
+          mcp-upstream: ${{ env.MCP_URL }}
+          mcp-audience: ${{ env.MCP_AUDIENCE }}
+          mcp-port: ${{ env.MCP_PROXY_PORT }}
+          allow-tools: resource_list,resource_get,api_resources,ping
 
       - name: Set up MiniMax Code
         if: steps.claim.outputs.claimed == 'true'
@@ -292,13 +345,20 @@ jobs:
                 --diagnostics-dir "$OUT/logs/diagnostics")
           [ -n "$MODEL" ] && args+=(--model "$MODEL")
           set +e
-          env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL \
+          env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL -u SOURCE_GITHUB_TOKEN \
             mcode "${args[@]}" < "$OUT/logs/prompt.md" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"
           code=$?
           set -e
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           tail -n 5 "$OUT/logs/stderr.log" || true
           [ "$code" -eq 0 ] || echo "::warning::mcode가 exit $code로 끝남 — 결과 점검은 계속한다"
+
+      - name: GitHub sandbox down
+        if: always() && steps.sandbox.outcome != 'skipped'
+        uses: ./harness/.github/actions/github-sandbox
+        with:
+          mode: down
+          out-dir: ${{ runner.temp }}/out/github-sandbox
 
       - name: Check result
         if: steps.run.outcome != 'skipped' && steps.run.outputs.base != ''
@@ -313,11 +373,14 @@ jobs:
           set +e
           python3 harness/.github/scripts/check_planner_result.py --repo ws/reconciler --base "$BASE" \
             --model-id "$MODEL_ID" --task-id "$TASK_ID" --from-status "$FROM_STATUS" --claim-subject "$CLAIM_MESSAGE" \
+            --github-log "$OUT/github-sandbox/requests.jsonl" \
             --report "$OUT/check-report.md" --json "$OUT/check-report.json" --patch "$OUT/result.patch" \
             --task-out "$OUT/planned-task.json"
           code=$?
           set -e
-          git -C ws/reconciler format-patch --stdout "origin/$DEFAULT_BRANCH..HEAD" > "$OUT/commits.patch" || true
+          git -C ws/reconciler format-patch --stdout "$SANDBOX_BASE..HEAD" > "$OUT/commits.patch" || true
+          git -C "$SANDBOX" log --format='%h %s' "$SANDBOX_BASE..$DEFAULT_BRANCH" > "$OUT/sandbox-pushed.log" || true
+          echo "샌드박스 원격에 push된 커밋:"; cat "$OUT/sandbox-pushed.log"
           exit $code
 
       - name: Summary
@@ -330,7 +393,7 @@ jobs:
           RUN_EXIT: ${{ steps.run.outputs.exit_code }}
         run: |
           {
-            echo "### 3. Test — 생성본 실제 실행"
+            echo "### 3. Test — 생성본 샌드박스 실행"
             echo "- 점유: ${CLAIMED:-false} · task: ${MODEL_ID:+$MODEL_ID/}${TASK_ID:-<none>} · 경쟁 패배 ${LOST:-0}건"
             echo "- mcode ${MCODE_INSTALLED_VERSION:-<미설치>} · exit: ${RUN_EXIT:-n/a}"
             if [ -s "$OUT/logs/transcript.jsonl" ]; then
@@ -340,6 +403,8 @@ jobs:
             cat "$OUT/logs/claim.md" 2>/dev/null || true
             echo
             cat "$OUT/check-report.md" 2>/dev/null || true
+            echo
+            cat "$OUT/github-sandbox/summary.md" 2>/dev/null || true
             if [ -s "$OUT/logs/final-message.md" ]; then
               echo; echo "<details><summary>mcode 최종 보고</summary>"; echo
               head -c 6000 "$OUT/logs/final-message.md"; echo; echo "</details>"
@@ -349,7 +414,7 @@ jobs:
       # mcode가 MCP로 받은 토큰을 셸 명령에 옮겨 적으므로 대화 기록에 토큰이 남는다 — 올리기 전에 가린다.
       - name: Redact secrets
         if: always()
-        run: python3 harness/.github/scripts/redact_secrets.py "$RUNNER_TEMP/out"
+        run: python3 harness/.github/scripts/redact_secrets.py "$RUNNER_TEMP/out" --extra-env SOURCE_GITHUB_TOKEN
 
       - name: Upload test artifact
         if: always()

@@ -18,6 +18,9 @@
 만들어진 커밋(`commit:`, rebase·cherry-pick의 `(pick):` 등, 로컬 병합 커밋)만 스킬 커밋으로 보고, 나머지는
 원격에서 들어온 커밋으로 경고에만 남긴다. reflog를 읽을 수 없으면 전부 스킬 커밋으로 본다(보수적).
 
+`--github-log`(스킬 빌드 test의 GitHub 대역 기록)가 있으면 대상 레포에 쓰기가 0건인지도 본다
+(github_log.py `detect` 규칙 — 감지는 관측만 한다).
+
 결과 diff를 패치 파일로 남긴다(아티팩트용). 오류가 있으면 종료 코드 1.
 """
 
@@ -243,11 +246,21 @@ def render(res: Result) -> str:
         out.append(f"- 근거: {str(f['reason']).strip()[:600]}")
     if f.get("commits"):
         out.append("- 커밋: " + " → ".join(f"`{c}`" for c in f["commits"]))
+    if f.get("github"):
+        out.extend(_github_log().render_facts(f["github"]))
     for title, items, mark in (("오류", res.errors, "❌"), ("경고", res.warnings, "⚠️"), ("통과", res.passed, "✅")):
         if items:
             out.append(f"\n**{title}** ({len(items)})")
             out.extend(f"- {mark} {i}" for i in items)
     return "\n".join(out) + "\n"
+
+
+def _github_log():
+    """github_log는 --github-log를 쓸 때만 불러온다 — 이 모듈은 다른 점검기(check_executor_result 등)가 import하고,
+    실행 빌드는 점검기를 봉인 디렉터리로 옮겨 쓰므로 모듈 수준 의존을 늘리면 그쪽이 깨진다."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import github_log
+    return github_log
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -260,6 +273,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--report", type=Path)
     p.add_argument("--json", type=Path)
     p.add_argument("--patch", type=Path, help="base 대비 전체 diff(커밋+미커밋)를 쓸 경로")
+    p.add_argument("--github-log", type=Path, help="GitHub 대역 기록(JSONL) — 있으면 대상 레포 쓰기 0건도 점검")
     args = p.parse_args(argv)
 
     try:
@@ -269,6 +283,9 @@ def main(argv: list[str] | None = None) -> int:
             args.patch.write_text(git(args.repo, "diff", base), encoding="utf-8")
             git(args.repo, "reset", "-q", check=False)
         res = check(args.repo, args.base, args.model_id, args.task_id, args.claim_subject)
+        if args.github_log:
+            gl = _github_log()
+            gl.merge_into(res, gl.evaluate(gl.load(args.github_log), "detect"))
     except (RuntimeError, json.JSONDecodeError, OSError) as exc:
         res = Result(errors=[f"점검 자체가 실패: {exc}"])
     text = render(res)
