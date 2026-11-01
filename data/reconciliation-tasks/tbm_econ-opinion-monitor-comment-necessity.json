@@ -16328,9 +16328,59 @@
           },
           "comment": "사람 승인 거부 — 승인 직전 재확인(2026-10-29 00:39Z)에서 PR #270(head a92a36d)이 main 200c8f3 과 docs/comment-policy/ledger.md content conflict. 리뷰(17:30Z) 이후 #275(rct_20261028-0002, web·여정 하네스 판정)·#277(rct_20261028-0003, #265·#266 나머지 증분 판정)이 원장을 고쳤고, 특히 #277 이 spikes_test.go · aggregate.py · test_article_picks.py · test_source_contributions.py 를 이미 판정·주석 제거해 이 PR 의 14행 범위와 겹친다. planner가 고칠 것: #275·#277 이후 main 원장을 기준으로 아직 미판정인 행만(build.go · dashboard.go · dashboard_test.go · test_aggregate.py 등) 다시 판정해 PR을 재준비할 것 — 기존 PR을 rebase하든 새로 만들든, 이미 완료된 행을 다시 판정하지 말 것. build.go(MA6)가 범위에 남으면 다시 사람 승인이 필요하다."
         }
+      },
+      {
+        "plan": {
+          "summary": "재작업(from_status=review_rejected) — 앞선 시도(#270)의 판정 내용은 유지하되 대상을 #275·#277 이후 main(200c8f3)에 남은 미판정 행으로 좁힌다. **접근**: 원장(docs/comment-policy/ledger.md)에 판정 칸이 `—` 로 남아 있는 행을 전부 가져간다. #275(web·여정 하네스)와 #277(spikes·aggregate 축)가 착지한 뒤 남은 `—` 는 다섯 행(L 4 · D 1 = 78줄)이고 전부 #266(조회 조건 카드 정리 · 「전체」 축 · 기간 누적 순위) 이 들인 주석이다 — 앞선 시도가 잡은 범위 중 #277/#275 가 이미 닫은 행( gold.go · handlers.go · spikes_test.go · schema.sql · store.go · aggregate.py · test_article_picks.py · test_source_contributions.py · gold.ts )은 다시 판정하지 않는다. 모델의 판정 슬라이스 예산(400줄) 안이고, 이번에 남은 미판정 전부를 담으므로 다음 슬라이스는 없다. **판정**: 제거 12줄은 전부 재진술이다 — dashboard.go `buildDashboard` doc 2줄(코드·시그니처의 재진술 · 「창 전체 기준」은 dashboard_test.go 단언 위 주석이 주인), dashboard_test.go `writeDailyGold` 값 표 6줄 + 구분선 1줄(바로 아래 픽스처 리터럴의 사본 · 한쪽만 고쳐지면 거짓이 된다), build.go `Stats` 「Gold 행 복사」 2줄(열거 재진술 · 아래 필드 이름이 같은 다섯 이름을 나열), test_aggregate.py `_axes` docstring 1줄(이름의 재진술). 나머지 66줄은 유지 사유를 패스 문서에 한 줄씩 적었다. **완료 기준**: PR #279(head 90e2a40)가 main 에 착지하면 `scripts/check-comment-ledger.py` 가 exit 0 · `불변식 통과` 를 내고 L·D·E 전 표면 `미판정(—): 행 0 · 0줄` 이 되며, 원장 다섯 행이 `완료` 로 갱신되어야 한다(L dashboard.go 18/`5cccd2c16d4b` · dashboard_test.go 19/`310988784613` · build.go 23/`82bd46fef00e` · test_aggregate.py 6/`d09d9163f399` · D 표면 test_aggregate.py 행 삭제). **범위 밖**: (1) 이미 `완료` 인 행과 옛 판정문 — 다시 판정하면 완료된 행이 중복 기록된다. (2) `docs/comment-policy/` 밖의 주석 — 모델 범위 밖(제외 세 부류·`comment-scope-exclude` 블록)이다. (3) 지문 표면과 도구 공통 지시자 — 템플릿 고정부(control plane)라 data plane task가 고칠 수 없다. (4) 원장 합계·잔량 행 — 원장 형식상 저장하지 않는다(게이트가 계산한다). **앞선 거절 사유 반영**: #270 의 원장 충돌(재준비한 base)·#275/#277 와의 행 겹침(남은 행만 판정)·사람 승인 미부여(MA6 게이트와 승인 경로를 plan·executionGuide 에 명시) 세 가지를 모두 반영했다.",
+          "riskLevel": "high",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "사전 확인: PR #279 를 `gh pr view 279 -R dlddu/economic-opinion-trend-monitor --json state,headRefOid,baseRefOid,mergeable,mergeStateStatus` 로 확인한다 — state=OPEN · headRefOid=90e2a4078bd0d4c9bcf742f2d7e4bbe711c849e8 · baseRefOid=200c8f35a26119086fc771acd07e46cf85fe02f9 · mergeable=MERGEABLE(CONFLICTING 이면 멈춘다)",
+              "expectedOutcome": "PR #279 가 OPEN · head 90e2a40 · base 200c8f3 · mergeable=MERGEABLE 로 확인되고 head sha 가 위 값과 일치한다"
+            },
+            {
+              "seq": 2,
+              "action": "사람 승인 확인: `gh api repos/dlddu/economic-opinion-trend-monitor/commits/90e2a4078bd0d4c9bcf742f2d7e4bbe711c849e8/status` 의 statuses 에서 context=`review/manual-approval` 이 state=success 인 것이 있는지 본다. `review/manual-approval` 이 없으면 머지하지 않고 멈춘다(MA6 — go/internal/servingindex/build.go 는 레이크 볼륨에 쓰는 Go 코드)",
+              "expectedOutcome": "head sha 90e2a40 에 context=`review/manual-approval` · state=success 가 붙어 있다 (없으면 멈춤)"
+            },
+            {
+              "seq": 3,
+              "action": "필수 체크 확인: `gh pr checks 279 -R dlddu/economic-opinion-trend-monitor` 로 `required` 포함 전 검사가 success/skipped 인지 확인한다. 실패한 검사가 있으면 머지하지 않고 멈춘다",
+              "expectedOutcome": "required 를 포함한 모든 check-run 이 success 또는 skipped 이다 (실패가 있으면 멈춤)"
+            },
+            {
+              "seq": 4,
+              "action": "squash 머지: `gh pr merge 279 -R dlddu/economic-opinion-trend-monitor --squash --match-head-commit 90e2a4078bd0d4c9bcf742f2d7e4bbe711c849e8` (커밋을 얹거나 리베이스하지 않는다 — 승인 status 는 head sha 에 묶여 있다)",
+              "expectedOutcome": "main 에 squash 커밋 M 이 착지하고 PR #279 의 state 가 MERGED 가 된다"
+            },
+            {
+              "seq": 5,
+              "action": "원장 게이트 검증(머지 커밋 M 에서): `python3 scripts/check-comment-ledger.py` 를 돌려 exit code 와 출력을 확인한다",
+              "expectedOutcome": "exit 0 · `불변식 통과` · L·D·E 전 표면 `미판정(—): 행 0 · 0줄` · L 판정 완료 행 189 / D 45 / E 22"
+            },
+            {
+              "seq": 6,
+              "action": "원장 행 값 대조: M 에서 `docs/comment-policy/ledger.md` 의 다섯 행이 L dashboard.go 18/`5cccd2c16d4b` · L dashboard_test.go 19/`310988784613` · L build.go 23/`82bd46fef00e` · L test_aggregate.py 6/`d09d9163f399` 로 `완료` 이고, D 표면에 `python/packages/aggregation/tests/test_aggregate.py` 행이 없는 것을 grep 으로 확인한다",
+              "expectedOutcome": "다섯 행 모두 판정 칸이 `완료` 이고 줄 수·지문이 위 값과 일치하며, D 표면의 test_aggregate.py 행은 존재하지 않는다"
+            },
+            {
+              "seq": 7,
+              "action": "소스 검증(머지 커밋 M 에서): `gofmt -l` (빈 출력 기대) · `cd go && go build ./... && go vet ./internal/handlers/ ./internal/servingindex/` (exit 0) · `cd go && go test ./internal/handlers/ ./internal/servingindex/` (ok 두 패키지) · `python3 -m py_compile python/packages/aggregation/tests/test_aggregate.py` (exit 0) 를 돌린다",
+              "expectedOutcome": "gofmt 출력 없음 · build·vet exit 0 · go test `ok` 두 줄 · py_compile exit 0"
+            },
+            {
+              "seq": 8,
+              "action": "(선택) 패스 문서 확인: `docs/comment-policy/passes/2026-11-01-window-ranking-increment-pass.md` 가 main 에 존재하고 유지 66줄의 사유가 줄마다 적혀 있는지 확인한다",
+              "expectedOutcome": "패스 문서가 main 에 존재하고 유지 사유와 제거 목록이 모두 들어 있다"
+            }
+          ],
+          "plannedAt": "2026-11-01T04:52:00Z"
+        },
+        "reason": "review_rejected"
       }
     ],
-    "updatedAt": "2026-11-01T04:36:49Z"
+    "updatedAt": "2026-11-01T04:47:30Z"
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-comment-necessity",
