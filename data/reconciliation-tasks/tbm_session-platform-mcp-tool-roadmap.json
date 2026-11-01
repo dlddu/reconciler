@@ -830,6 +830,13 @@
             }
           ],
           "plannedAt": "2026-11-01T12:08:03Z"
+        },
+        "preparation": {
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20261031-0001",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/186",
+          "preparedAt": "2026-11-01T12:21:23Z",
+          "notes": "**준비 성격** — 대상 레포 `dlddu/session-platform`의 `reconcile/rct_20261031-0001` 브랜치(HEAD `27d34a4`)에 **등재 2번 「K3s MCP 재노출」의 읽기 슬라이스**를 커밋하고 PR을 열었다. **병합하지 않았다.**\n\n**변경 요약(8파일 · +1037/-3)** — ① `data-plane/cmd/agent/session_mcp_k3s.go`(신규): K3s MCP 클라이언트(MCP Streamable HTTP · JSON/SSE 응답 처리) · 인자 검증 · 승인 게이트 경로 · 결과 스필. ② `session_mcp_tools.go`: `toolDefinitions()` 본문에 `k3s_resource_list`·`k3s_resource_get` 두 도구 정의 추가(모델의 as-is 추출이 잡을 수 있게 본문 안에 둠) · `callTool` 디스패치 · config에 클라이언트. ③ `control-plane/internal/adapter/k8s/k3s_mcp_proxy.go`(신규): `WithK3SMCPProxy` 옵션과 헬러 파드의 프록시 주소 배선. ④ `client_orchestrator.go`·`minimax_code.go`: `approval-gated` 헬퍼 파드가 전용 `k3s-mcp-proxy` 컨테이너를 띄우고(`SESSION_K3S_MCP_PROXY_ENABLED` opt-in) · ⑤ `control-plane/cmd/control-plane/main.go`: 설정 배선. ⑥ 테스트 2파일 신규(`session_mcp_k3s_test.go` · `k3s_mcp_proxy_orchestrator_test.go`).\n\n**인증 경계(AC-F6 C1~C4)** — `k3s-mcp-token`은 전용 `k3s-mcp-proxy` 컨테이너의 env에만 있고, 세션 MCP 컨테이너는 루프백 주소(`http://127.0.0.1:8093`)만 갖는다. 워크로드 파드는 토큰도 프록시 주소도 갖지 않으며, `helperPolicyPorts`는 **변경하지 않았다**(approval-gated의 헬퍼 ingress는 그대로 2포트 — 프록시 포트를 열지 않는다). 세션 MCP는 `Authorization` 헤더를 직접 붙이지 않는다(프록시가 bearer를 설치한다). 도구별 위임이지 패스스루가 아니다(C2).\n\n**검증 방법** — 준비 시점에 실행·확인한 것: `data-plane`: `gofmt -l cmd/agent` 무출력 · `go build ./...` 성공 · `go test ./cmd/agent/ -count=1` 전부 통과(신규 K3s 테스트 5건 포함). `control-plane`: `go build ./...` 성공 · `go test ./... -count=1` 전부 통과 · `go test -tags integration ./test/ -count=1` 통과(신규 배치 경계 테스트 2건 포함). **모델의 두 versionScript를 이 브랜치에서 재실행** — as-is = `tools:7 git_clone,git_push,k3s_resource_get,k3s_resource_list,ping,request_repo_access,web_fetch_get`(5→7), to-be = `roadmap:2 2. K3s MCP 재노출|3. gh CLI`(**무변화** — 등재를 건드리지 않았다). PR은 `state=OPEN` · `mergeable=MERGEABLE` · head `27d34a4`.\n\n**미완료(실행 단계 몫)** — PR 머지, 실행 클러스터에서의 배치 확인(헬퍼 파드의 프록시 컨테이너·토큰 부재·워크로드 파드의 포트 차단·승인/거절 실측), 그리고 등재 2번의 **쓰기 슬라이스**와 등재 3번(`gh` CLI)은 범위 밖이다."
         }
       }
     ]
