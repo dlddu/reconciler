@@ -791,6 +791,47 @@
       "reason": "**작업 필요(`action_required`) — 판정 기준 1(미착지 등재) 2건이 남아 있다.** 실측 as-is 는 `tools:5`, to-be 는 `roadmap:2 2. K3s MCP 재노출|3. gh CLI` (`dlddu/session-platform@616db3a`, 2026-10-31T14:50Z 관측). 등재 2번·3번에 대응하는 도구는 표면에 0개다 — 2번은 문서가 2026-10-24 갱신에서 헬퍼 파드의 K3s MCP 프록시 컨테이너가 이 항목의 재노출이 아니며 「도구 표면에 K3s 도구는 하나도 오르지 않았다」고 적고, 3번은 `git_push` 가 「브랜치 푸시 하나」만 덜어 내고 3번의 번호와 나머지(PR·이슈·리뷰)는 그대로임을 스스로 적는다.\n\n적용 기준: 정의의 to-be(「등재가 비어 있는 상태」)·기준 1(미착지 등재 — 「선행 조건이 걸려 있어도 drift 가 아닌 것이 아니다」)·「충돌 시 기본 방향」(「등재를 조용히 방치하는 것만이 drift 다」). 형제 task 확인 범위는 같은 모델 파일의 다른 4건(`rct_20260912-0001`·`rct_20260913-0001`·`rct_20260913-0002`·`rct_20260914-0001`)이며 전부 `succeeded` — 남은 gap 을 맡은 열린 형제 task 가 없다.\n\n반대 방향 근거: 이번 변화는 퇴행이 아니다 — 표면이 3→5 로 늘었고(`c9f0ade` #164 가 `request_repo_access`, `bb6df49` #171 이 `git_push` 를 세웠다), 등재 수는 2 로 유지되며, 사본 셋(머리 상태 줄 「도구 5개 … 다음 구현 대상 2개 등재」·「지금 있는 것 (5개)」 표·`docs/index.html:222` 「다음 구현 대상 2」)이 전부 실측과 일치한다. 등재 2번의 선행(R9)은 `d39fe00` #144(2026-09-21)로 이미 해소되어 그 항목은 지금 착수 가능하다. 이 두 가지도 등재 2·3 의 미착지를 없애지는 못한다 — 두 항목은 여전히 등재 절에 살아 있고 정의가 그 상태를 drift 로 본다.\n\n다음 슬라이스는 2번이다(선행이 풀려 지금 설 수 있고 번호가 우선순위 그대로).",
       "assessedAt": "2026-10-31T14:51:42Z"
     },
-    "updatedAt": "2026-11-01T12:01:22Z"
+    "updatedAt": "2026-11-01T12:01:22Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근과 그 이유.** 실측(2026-11-01, `dlddu/session-platform@86e680a`, 모델의 두 versionScript로 재측정) as-is=`tools:5 git_clone,git_push,ping,request_repo_access,web_fetch_get`, to-be=`roadmap:2 2. K3s MCP 재노출|3. gh CLI`. 판정 기준 1(미착지 등재) 2건 중 **2번만** 가져간다. 3번(`gh` CLI)은 2번이 열려야 자기 Secret 없이 설 수 있고(문서 「2 → 3 순서의 실질적 근거」), R4 승인 화면이 이 레포 밖이라 이번 슬라이스가 아니다. 2번 안에서도 **한꺼번에 다 내지 않는다** — 문서가 정한 대로 **읽기 슬라이스(로그·파드 조회·검색)만** 먼저 내고, 쓰기(재시작·스케일·문서 색인)는 승인 컨텍스트의 성격이 다르므로(쓰기는 「무엇을 어떻게 바꾸는가」가 사람에게 읽혀야 한다 · R4) 다음 슬라이스로 남긴다. 좁히는 방식은 **세션 MCP가 K3s MCP 서버의 읽기 도구를 자기 도구로 들고 하나씩 위임하는 것**이다 — 통로를 여는 것이 아니다(통로를 열면 에이전트가 게이트 없이 그 서버에 닿아 R1이 깨진다). 대안 두 개를 기각했다: ① K3s MCP 서버를 그대로 노출하는 패스스루/터널 — C2가 명시적으로 금지한다(도구별 위임이 아니라 패스스루는 게이트 없이 밖에 닿게 한다). ② 세션 MCP 컨테이너가 토큰을 직접 쥐고 K3s MCP를 호출 — C1의 문면과 어긋나고 C4(노출 금지)의 위험이 커진다. **채택한 형태는 2026-10-24 확정 항목이 이미 쓰인 모양**이다 — `k3s-mcp-token`은 같은 헬퍼 파드의 전용 `k3s-mcp-proxy` 컨테이너에만 두고, 세션 MCP 컨테이너는 **루프백 주소 하나만** 쥔다(`docs/prd/approval-gated-workload.md:181-194`의 「이 배치는 C1보다 좁다」 precedent). 그래서 C2는 **에이전트가 닿을 수 있는 경로가 승인 게이트를 지나는 도구뿐**으로 유지된다.\n\n**이 시도의 범위·완료 기준.** 범위: ① 세션 MCP에 `k3s_resource_list`·`k3s_resource_get` 두 읽기 도구를 **승인 게이트 뒤에** 추가하고 각 도구가 승인 1건당 K3s MCP 서버의 upstream `resource_list`/`resource_get` 한 건만 위임한다 · ② `k3s-mcp-token`을 `approval-gated` 헬퍼 파드의 전용 `k3s-mcp-proxy` 컨테이너에 배치하는 opt-in 배치를 추가하고(오늘의 배치는 **한 글자도 바뀌지 않는다**) · ③ 그 배치를 지키는 단언(워크로드 파드 토큰 부재 · 헬퍼 ingress 2포트 유지 · 세션 MCP가 Authorization 헤더를 직접 붙이지 않음)을 테스트로 남긴다. **완료 기준(머지·반영 뒤에 참이 되는 것)**: PR이 `main`에 머지되고 (a) 모델의 as-is versionScript이 `tools:7 git_clone,git_push,k3s_resource_get,k3s_resource_list,ping,request_repo_access,web_fetch_get`를 내며, (b) to-be versionScript이 `roadmap:2 2. K3s MCP 재노출|3. gh CLI`로 **그대로**다(읽기 슬라이스는 등재 2번을 닫지 않는다 — 등재 머리글 `### 2. K3s MCP 재노출`은 그대로 두고, 등재가 남는 근거는 task에 적는다), (c) 실행 클러스터의 `approval-gated` 헬퍼 파드에 `k3s-mcp-proxy` 컨테이너가 서서 토큰이 **그 컨테이너에만** 있고 워크로드 파드에는 `K3S_MCP_TOKEN`이 없으며, (d) 실제 `approval-gated` 세션에서 `k3s_resource_get` 한 건이 사람의 승인 뒤 K3s MCP 서버의 Pod 조회로 실측되고 **거절하면 isError 도구 결과가 되는 것**까지 실측되면 성공이다.\n\n**범위 밖.** ② 쓰기 슬라이스(재시작·스케일·문서 색인)와 ③ 등재 3번(`gh` CLI) — 둘 다 다음 task의 몫이다. `docs/session-mcp-tool-surface.md`(머리 상태 줄·「지금 있는 것」 표) 갱신은 **이 모델의 task가 하지 않는다** — 표면 사본과 R1~R12·AC 일치는 자매 모델 `tbm_session-platform-docs-impl`의 소관이고(모델 정의 「범위 밖 / 비고」), 등재 2번 자체가 「어느 도구를 냈는지의 목록은 코드가 갖는다 · 이 문서에 그 목록을 복사하지 않는다」를 스스로 규정한다. 또한 **모델의 두 versionScript는 고치지 않는다**(스키마·모델 파일은 이 스킬이 건드리지 않는다) — 참고로 as-is 추출 스크립트는 `dropToolDefinitions()`처럼 헬퍼 함수에서 붙는 도구를 세지 못하는 선행 사각이 있으나(오늘 `drop_upload`·`drop_download`가 그 상태다), **이번에 새로 나는 두 도구는 `toolDefinitions()` 본문 안에 정의해 추출에 잡히게 한다** — 새 사각을 늘리지 않는다. 전용 e2e 시나리오와 `docs/test/e2e.md` 등재는 `tbm_session-platform-scenario-e2e` 소관, 새 도구 코드의 주석은 `tbm_session-platform-comment-necessity` 소관이다.",
+          "riskLevel": "high",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "리뷰 관문 — 준비된 PR의 현재 상태를 확인한다. `gh pr view <num> --repo dlddu/session-platform`로 `state`·`mergeable`·`headRefOid`·`updatedAt`을 보고, `base`가 `main`이고 `headRefOid`이 준비 시점의 커밋과 같은지 확인한다. 동시에 `git log --oneline origin/main -20`을 읽어 분기점 이후 `main`이 `data-plane/cmd/agent/session_mcp_tools.go`·`data-plane/cmd/agent/main.go`·`control-plane/internal/adapter/k8s/*`를 건드렸는지 확인한다.",
+              "expectedOutcome": "PR이 열려 있고 `mergeable`이며, 분기점 이후 `main`이 건드린 파일에 겹치는 변경이 없다(겹치면 리베이스 후 다시 확인). 겹치는 변경이 있으면 이 단계에서 리베이스하고 그 fact를 task 기록에 남긴다."
+            },
+            {
+              "seq": 2,
+              "action": "머지 전 경계 확인 — 대상 레포에서 정적 검증을 돌린다: `cd data-plane && gofmt -l cmd/agent`가 무출력, `go build ./...` 성공, `go test ./cmd/agent/ -count=1` 전부 통과, `cd control-plane && go build ./... && go test ./... -count=1` 전부 통과. 게이트 경계가 살아 있는지도 코드에서 확인한다 — `control-plane/internal/adapter/k8s/minimax_code.go`의 `helperPolicyPorts`가 `approval-gated`에 대해 여전히 2포트(credentialProxyPort·SessionMCPPort)인지, `data-plane/cmd/agent`의 approval-gated 환경 검증이 `K3S_MCP_TOKEN`을 여전히 거부하는지, `k3sMCPDeniedTools` 목록이 줄지 않았는지.",
+              "expectedOutcome": "빌드·테스트 전부 green이고 `gofmt -l`이 무출력. `helperPolicyPorts`·워크로드 파드 토큰 거부 단언·deny 목록 셋이 **한 줄도 바뀌지 않았다**는 것이 코드에서 확인된다 — 즉 워크로드 파드에서 K3s MCP로 가는 길이 열리지 않았다."
+            },
+            {
+              "seq": 3,
+              "action": "PR을 `main`에 머지한다. 이 레포는 squash만 허용하므로 squash 머지를 쓴다(merge commit·rebase 머지는 시도하지 않는다). 머지 후 `git pull --ff-only`로 `main`을 받는다.",
+              "expectedOutcome": "`main`에 커밋 하나가 얹히고 PR이 `merged`로 닫힌다. 머지 커밋의 트레일러에 `reconciler: tbm_session-platform-mcp-tool-roadmap/rct_20261031-0001 소유`가 남아 자매 모델 `tbm_session-platform-docs-impl`의 감지가 귀속을 읽을 수 있다."
+            },
+            {
+              "seq": 4,
+              "action": "머지된 `main`을 체크아웃해 **모델의 두 versionScript를 재실행**한다 — to-be(`docs/session-mcp-tool-surface.md`의 「다음에 구현할 도구」 `### ` 헤딩 추출)와 as-is(`data-plane/cmd/agent/session_mcp_tools.go`의 `toolDefinitions()` 본문 도구 이름 추출). 두 스크립트 모두 `dlddu/session-platform@main`을 체크아웃한 상태를 전제로 한다.",
+              "expectedOutcome": "as-is = `tools:7 git_clone,git_push,k3s_resource_get,k3s_resource_list,ping,request_repo_access,web_fetch_get` (도구 2개가 표면에 섰고 숫자가 5→7로 움직임), to-be = `roadmap:2 2. K3s MCP 재노출|3. gh CLI` (**바이트 단위로 동일** — 등재는 건드리지 않는다). as-is가 tools:5에 머물면 새 도구 정의가 `toolDefinitions()` 본문 밖에 있는 것이므로 실패로 판정한다."
+            },
+            {
+              "seq": 5,
+              "action": "실행 클러스터에서 배치를 확인한다. `approval-gated` 세션의 헬퍼 파드에서 (a) `k3s-mcp-proxy` 컨테이너가 서고 `K3S_MCP_TOKEN`이 **그 컨테이너에만** 있으며, (b) MCP 컨테이너는 루프백 주소만 갖고 토큰이 없으며, (c) 워크로드 파드에는 `K3S_MCP_TOKEN`이 없고 8093 포트로 가는 길이 없다는 것을 확인한다. 그리고 실제 세션에서 `k3s_resource_get`을 **사람이 거절**한 호출이 `isError` 도구 결과로 돌아오는지 확인한다.",
+              "expectedOutcome": "(a)~(c)가 관측상 모두 참이고, 거절된 호출은 도구 결과(`isError`)로 돌아와 세션이 죽지 않는다. 하나라도 관측되지 않으면(특히 워크로드 파드에서 포트가 열린다) 실패로 판정하고 되돌린다."
+            },
+            {
+              "seq": 6,
+              "action": "착지 판정의 근거를 task 기록에 남긴다 — 등재 2번의 **읽기 범위가 착지**했고 **쓰기 범위가 남았음**을, 모델 정의의 판정 기준 3(매칭이 1:1이 아닌 항목)에 따라 「그 항목이 요구한 범위가 표면에 섰는가」로 판정해 적는다. 다음 슬라이스(2번의 쓰기 · 3번 `gh` CLI)의 선행 조건과 남은 근거를 함께 적는다.",
+              "expectedOutcome": "task 레코드에 등재 2번의 착지 범위(읽기)와 잔여 범위(쓰기·3번)가 근거와 함께 남고, `attempts`의 이번 항목이 이 근거를 보존한다."
+            }
+          ],
+          "plannedAt": "2026-11-01T12:08:03Z"
+        }
+      }
+    ]
   }
 ]
