@@ -1510,7 +1510,7 @@
   {
     "id": "rct_20261101-0001",
     "toBeModelId": "tbm_pocket-aide-data-model",
-    "status": "assessing",
+    "status": "no_action_needed",
     "trigger": {
       "detectedAt": "2026-11-01T08:33:15Z",
       "source": "version_change",
@@ -1525,6 +1525,11 @@
       "toBe": "관측 2026-11-01T08:37Z · main `efaafb5`의 `docs/data-model` 트리 해시 `2e12bb784ad5e5e765329896a5723ee98697c87a` — 2026-10-28T16:52:43Z 관측값과 동일(무변경).\n- `README.md`(형태 정의·`data-model-scope` 블록·체커 절) · `erd.md` · `query-patterns.md` · `fullscan-criteria.md` 4파일 존재.\n- 카탈로그 스냅샷: 패턴 70행 · 수동 형태 14행 · 풀스캔 허용 1(Q-15/F1) · 미사용 인덱스 4행.\n- `device_tokens` ERD 컬럼 6개(id·user_id·token·platform·created_at·updated_at) — `platform` 은 `backend/migrations/0003_device_tokens.up.sql`에 이미 있는 컬럼.",
       "gap": "이번 변화 창의 유일한 코드 영향은 `device_tokens` 의 선택·삽입 컬럼에 `platform` 가 추가된 것이며, 귀속 키인 형태(연산·대상 테이블·등치 조건 컬럼·범위 조건·정렬)는 바뀌지 않아 카탈로그 Q-08·Q-10 행이 그대로 성립한다. main 체커가 불변식 1·2·3 모두 위반 0 · 종료 코드 0을 냈고 to-be(`docs/data-model`)·schema 성분도 무변경이라 definition상 문제로 계상되는 차이는 없다. 이번 트리거는 queries 지문 해시 변경에서만 왔다.",
       "summarizedAt": "2026-11-01T08:37:23Z"
-    }
+    },
+    "assessment": {
+      "reason": "작업 불필요. 관측 2026-11-01T08:37Z dlddu/pocket-aide main `efaafb5` 에서 `cd backend && go run ./cmd/datamodelcheck --json` 이 종료 코드 0을 냈고 불변식 1·2·3 위반 0이다(엔진 SQLite 3.46.0 / modernc v1.34.1).\n\n근거: 변화 창 `4345f92..efaafb5`(12커밋)에서 to-be `docs/data-model` 트리 `2e12bb7`은 2026-10-28 관측값과 같고, as-is 지문은 queries 성분만 `3239fe4de16fb6fd` → `8c59eff1e9d195e7` 로 바뀌었다. 두 커밋의 정규화 줄 집합을 직접 뺀 차이는 `backend/internal/devicetokens/store.go` 2줄뿐(`INSERT INTO device_tokens (user_id, token)` → `(user_id, token, platform)`, `SELECT token FROM …` → `SELECT token, platform FROM …`)이고 지점 수 · 줄 수는 그대로다. 귀속 키는 형태(연산·대상 테이블·등치 컬럼·범위·정렬)라 이 두 줄은 Q-08 `upsert device_tokens | eq(token)` · Q-10 `select device_tokens | eq(user_id)` 형태를 바꾸지 않는다. `platform` 은 `backend/migrations/0003_device_tokens.up.sql`·`erd.md` 에 이미 있어 스키마·ERD 불일치도 없고, Q-10 플랜도 `idx_device_tokens_user_id` 로 카탈로그 지원 칸과 같다.\n\n적용 기준: 정의 「판정 규칙」(불변식 1~3 또는 체커 계약 C1~C9 중 하나라도 위반이면 action_required)·「판정 절차」1~4. 절차 1·2는 로컬 엔진 판정(Go 1.26.10 · modernc v1.34.1, 종료 코드 0)으로 충족. 절차 4의 C2 는 체커가 블록의 scope·exclude 를 읽어 하드코딩 경로가 없고, C4 는 지문 site_lines=70 이 체커 지점 70 과 같고 추출 불가 0으로 확인. C1(체커 경로)·C3(golang-migrate m.Up() 후 엔진 카탈로그)·C5(ANALYZE 없는 EXPLAIN QUERY PLAN)·C6(종료 코드 0/1/2)·C7(실행 후 git status 무변경)·C8(두 실행 출력 동일)·C9(ci.yml 의 `data-model check (gate)` 가 rc 1·2 를 실패 처리)도 확인했다.\n\n반대 방향 근거: 정의상 범위 밖(정렬 지원 · ERD 미기재 스키마 속성 · 운영 성능)은 판정 대상이 아니다. CI report→gate 전환·미사용 인덱스 삭제는 별도 건이라 이번 gap 이 아니다. 같은 모델 파일의 나머지 17건은 전부 종료 상태(succeeded·no_action_needed·cancelled)여서 이 gap 을 맡은 열린 형제 task 도 없다.",
+      "assessedAt": "2026-11-01T08:37:23Z"
+    },
+    "updatedAt": "2026-11-01T08:37:23Z"
   }
 ]
