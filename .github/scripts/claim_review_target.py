@@ -20,6 +20,10 @@
 스킬에 남는 계약: 넘겨받은 task가 `reviewing`인지 확인 → 신선도 확인 → 마지막 attempts 항목의 `review` 기록 →
 `approved | review_rejected | cancelled`로 전이(판정 없이 중단하면 `planned`로 되돌림) → `pull --rebase` 후 push.
 
+lock 해제(--release <tbm>/<rct>): 점유는 push됐는데 스킬을 돌리기 전에 러너가 실패했을 때(MCP·플러그인·mcode 설치) 워크플로가
+  부른다. 그 task가 여전히 `reviewing`이고 마지막 attempts 항목에 `review`가 없을 때만 `planned`로 되돌린다(같은 compare-and-set,
+  커밋 `review(<tbm>/<rct>): release`). 이미 판정이 기록됐거나 status가 바뀌었으면 아무것도 쓰지 않는다.
+
 출력(GITHUB_OUTPUT): found, claimed, task_id, model_id, claim_reason, claim_commit, claim_message,
                      pull_request_url, lost_count, error_count
 종료 코드: 0 = 점유했거나 대상 없음, 1 = 오류(대상 없음을 단정할 수 없음 포함), 2 = 사용법/데이터 오류
@@ -148,6 +152,36 @@ def claim(repo: Path, sel: srt.Selection, *, remote: str, branch: str,
     raise ClaimError(f"push가 {max_push_attempts}회 연속 거절됨 — 원격이 계속 움직이는 중")
 
 
+def release(repo: Path, key: str, *, remote: str, branch: str, max_push_attempts: int = 5,
+            before_push=None) -> str:
+    """점유한 task를 판정 없이 planned로 되돌린다. 돌려주는 값: released | skipped:<사유>."""
+    model_id, _, task_id = key.partition("/")
+    rel = f"{TASKS_DIR}/{model_id}.json"
+    validator = task_validator(repo)
+    for attempt in range(1, max_push_attempts + 1):
+        sync(repo, remote, branch)
+        path = repo / rel
+        tasks = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+        task = next((t for t in tasks if isinstance(t, dict) and t.get("id") == task_id), None)
+        if task is None:
+            return f"skipped:{key}가 없음"
+        if task.get("status") != CLAIM_STATUS:
+            return f"skipped:status가 {task.get('status')} — 이미 lock이 풀림"
+        last = (task.get("attempts") or [{}])[-1]
+        if isinstance(last, dict) and last.get("review"):
+            return "skipped:마지막 attempts 항목에 review가 있음 — 판정 기록을 되돌리지 않음"
+        task["status"] = FROM_STATUS
+        check_valid(validator, task, f"task {key}")
+        path.write_text(json.dumps(tasks, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        git(repo, "add", rel)
+        git(repo, "commit", "--quiet", "-m", f"review({model_id}/{task_id}): release")
+        if before_push:
+            before_push(attempt)
+        if push(repo, remote, branch) == "ok":
+            return "released"
+    raise ClaimError(f"release push가 {max_push_attempts}회 연속 거절됨")
+
+
 def run(repo: Path, *, explicit: str | None, remote: str, branch: str, no_sync: bool = False,
         before_push=None) -> Outcome:
     out = Outcome()
@@ -219,11 +253,31 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--target", default="", help="지목 대상(rct_..., tbm_..., tbm_.../rct_...), 비우면 자동 선정")
     p.add_argument("--remote", default="origin")
     p.add_argument("--branch", default="main")
+    p.add_argument("--release", default="", metavar="TBM/RCT",
+                   help="점유를 판정 없이 planned로 되돌린다(스킬 실행 전 러너 실패 시)")
     p.add_argument("--no-sync", action="store_true",
                    help="첫 선정 전에 원격으로 reset하지 않는다(체크아웃 직후라 이미 최신일 때)")
     p.add_argument("--github-output", default=os.environ.get("GITHUB_OUTPUT"))
     p.add_argument("--summary-file", default=os.environ.get("GITHUB_STEP_SUMMARY"))
     args = p.parse_args(argv)
+
+    if args.release:
+        if not re.fullmatch(r"tbm_[^/\s]+/rct_[^/\s]+", args.release.strip()):
+            print(f"::error::--release는 tbm_.../rct_... 형태여야 함: {args.release}")
+            return 2
+        try:
+            result = release(args.repo, args.release.strip(), remote=args.remote, branch=args.branch)
+        except ClaimError as exc:
+            print(f"::error::{exc}")
+            return 1
+        line = (f"- lock 해제: `{args.release}` reviewing → planned" if result == "released"
+                else f"- lock 해제 안 함 · `{args.release}`: {result.split(':', 1)[1]}")
+        text = "#### Release claim\n" + line + "\n"
+        print(text, end="")
+        if args.summary_file:
+            with open(args.summary_file, "a", encoding="utf-8") as fh:
+                fh.write(text)
+        return 0
 
     target = args.target.strip() or None
     if target and not re.fullmatch(r"(tbm_[^/\s]+/)?rct_[^/\s]+|tbm_[^/\s]+", target):

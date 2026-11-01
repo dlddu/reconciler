@@ -1,96 +1,296 @@
-# 리뷰 단계 — reconciler-work-review 스킬 실행
-# planned task 한 건을 reviewing으로 점유해 승인/거부를 판정한다.
-# 뼈대만 있음: 실제 스킬 실행 로직은 "Run skill" 스텝에 구현한다.
+# 리뷰 단계 — 러너가 대상을 고르고 점유한 뒤, plugin-marketplace의 고정 MiniMax 스킬
+# (plugins/reconciler-data-plane, reconciler-work-review)로 그 task 한 건의 승인/거부를 판정한다.
+#
+# 스킬은 여기서 만들지 않는다. 생성 → 검증 → 테스트는 reconciler-work-review-skill-build.yml(수동 실행)의 몫이고,
+# 통과한 생성본이 plugin-marketplace에 올라간 것만 쓴다(README 「리뷰 스킬 MiniMax 파이프라인」).
+# 대상 선정·점유(planned → reviewing)는 claim_review_target.py(감지와 같은 근거 — README 「점유는 러너가 한다」),
+# 스킬은 판정만. 실행 결과는 check_review_result.py가 계약대로인지 점검한다.
+#
+# 점유·판정 커밋을 기본 브랜치에 push한다(contents: write). 대상 레포는 읽기만 한다 — 승인된 task의 실행(머지)은
+# executor 단계의 몫이고, 사람 승인이 필요한 건은 review.manualApproval로 남아 사람이 status를 붙인 뒤에만 실행된다.
+#
+# 필요한 설정
+#   environment llm-minimax의 secret MINIMAX_SUBSCRIPTION_KEY   MiniMax Token Plan subscription key (sk-cp-...)
+#                                      레포 secret에는 두지 않는다 — README 「모델 키 격리」
+#   vars.HOMELAB_K3S_MCP_URL / vars.HOMELAB_K3S_MCP_AUDIENCE / vars.MINIMAX_REGION  (선택)
+#   서버 MCP_GITHUB_OIDC_RULES에 이 파일(.github/workflows/reconciler-work-review.yml) 규칙:
+#     github_app_installation_token(필수 — 대상 레포 contents·pull_requests·statuses·checks 읽기, plugin-marketplace 읽기,
+#     reconciler 제외), ping(권장). 리뷰는 대상 레포에 쓰지 않으므로 write 권한이나 github_commit_status_create를 주지 않는다.
+#   plugin-marketplace의 plugins/reconciler-data-plane에 MiniMax 리뷰 스킬(skills/reconciler-work-review)이 있어야 한다(0.5.0~).
 name: "Reconciler · Work Review"
 
 on:
   workflow_dispatch:
     inputs:
       target_id:
-        description: "판정할 대상 지목(tbm_.../rct_... 또는 rct_... planned task, tbm_... 모델). 비우면 자동 선정"
+        description: "판정할 대상 지목(rct_... planned task · tbm_... 모델 · tbm_.../rct_... — rct id가 여러 모델에 겹치면 마지막 형식). 비우면 자동 선정"
+        required: false
+        default: ""
+      plugin_ref:
+        description: "plugin-marketplace에서 가져올 ref(브랜치·태그·SHA). 비우면 main"
+        required: false
+        default: ""
+      minimax_model:
+        description: "mcode 모델 override(<provider>/<model>). 비우면 CLI 기본값"
         required: false
         default: ""
 
 # concurrency 그룹을 두지 않는다 — 같은 워크플로를 여러 번 띄우면 병렬로 돈다.
-# 같은 task 중복 점유·push 충돌은 스킬의 status compare-and-set 점유 커밋(pull --rebase → 상태 재확인 →
-# 점유 push, 지면 물러남)이 막는다. 로컬 러너·다른 제공자 워크플로와의 경쟁도 같은 규약으로 막는다.
+# 같은 task 중복 점유·push 충돌은 러너의 compare-and-set 점유 커밋(claim_review_target.py — status가 그대로 planned인지
+# 재확인 후 reviewing으로 push, 거절되면 새 상태에서 재확인해 재시도, 지면 다음 후보)이 막는다.
+# Claude Code 리뷰 워크플로(스킬이 직접 점유)와의 경쟁도 같은 status CAS로 막힌다.
 
 permissions:
   contents: write
-  id-token: write # OIDC 토큰 발급
+
+env:
+  PLUGIN_NAME: reconciler-data-plane
+  SKILL_NAME: reconciler-work-review
+  MCODE_VERSION: latest # npm dist-tag — 실제 설치된 버전은 Set up MiniMax Code 출력·요약에 남는다
+  MCP_URL: ${{ vars.HOMELAB_K3S_MCP_URL || 'https://homelab-k3s-mcp.llkm.nl/mcp' }}
+  MCP_AUDIENCE: ${{ vars.HOMELAB_K3S_MCP_AUDIENCE || 'homelab-k3s-mcp' }}
+  MCP_PROXY_PORT: "8765"
 
 jobs:
-  run:
-    name: Run reconciler-work-review
+  review:
+    name: Claim and judge
     runs-on: ubuntu-latest
+    environment: llm-minimax # 모델 키는 이 environment에만 있다(README 「모델 키 격리」)
     timeout-minutes: 60
-    env:
-      SKILL_NAME: reconciler-work-review
+    permissions:
+      contents: write # 점유·판정 커밋 push
+      id-token: write # homelab-k3s-mcp OIDC
     steps:
-      - name: Checkout reconciler
+      - name: Checkout harness
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          path: harness
+          persist-credentials: false
 
-      - name: Configure git author
+      # 운영 데이터는 기본 브랜치가 진실이다. 워크플로 토큰을 남겨 점유 스크립트와 스킬이 push에 쓴다.
+      - name: Checkout reconciler (default branch)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: ws/reconciler
+          fetch-depth: 50
+
+      - name: Prepare workspace
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          OUT="$RUNNER_TEMP/out"; echo "OUT=$OUT" >> "$GITHUB_ENV"
+          mkdir -p "$OUT/logs"
+          git -C ws/reconciler config user.name "reconciler-bot"
+          git -C ws/reconciler config user.email "reconciler@dlddu.dev"
+          pip install --quiet --disable-pip-version-check jsonschema
 
-      # TODO: OIDC 토큰 발급 (audience 지정 후 필요한 자격 증명으로 교환)
-      - name: Request OIDC token
-        run: |
-          test -n "$ACTIONS_ID_TOKEN_REQUEST_URL" && test -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            || { echo "OIDC 토큰 요청 환경이 없습니다 (id-token: write 권한 확인)"; exit 1; }
-          echo "TODO: request OIDC token for $SKILL_NAME"
-
-      # TODO: 스킬 실행에 필요한 런타임·CLI·자격 증명 준비 (예: Python, 대상 레포 토큰, 클러스터 접근)
-      - name: Set up runtime
-        run: |
-          echo "TODO: set up runtime for $SKILL_NAME"
-
-      # 스킬 Step 0(대상 선정 · 진입 게이트, 4-0)을 옮긴 읽기 전용 선정. reconciler-local의 리뷰어
-      # 게이트(precheck-review.py: status planned)에 claim.py의 review 전제(마지막 attempt의
-      # plan.steps·executionGuide·preparation)를 더해, 점유가 튕기지 않을 task만 고른다.
-      # 우선순위: 지목 → 오래 기다린 planned(updatedAt). reviewing(남의 lock)·approved 등은 고르지 않는다.
-      # 레포에 쓰지 않고 대상 레포에도 접근하지 않는다 — 점유는 스킬 Step 1, PR 신선도는 Step 2 몫.
-      # 대상이 없는데 전제가 깨진 planned가 있으면 막힌 task를 드러내려고 실패로 끝낸다.
-      - name: Select target
-        id: select
+      # 대상 선정 + 점유(planned → reviewing compare-and-set 커밋, 즉시 push).
+      # 선정은 레포 데이터만 읽으므로 MCP보다 먼저 한다 — 대상이 없으면 MCP·mcode를 띄우지 않는다.
+      # 리뷰 전제가 깨진 planned가 있어 대상 없음으로 단정할 수 없으면 실패로 끝낸다.
+      - name: Claim target
+        id: claim
         env:
           INPUT_TARGET_ID: ${{ inputs.target_id }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          python3 .github/scripts/select_review_target.py \
-            --repo "$GITHUB_WORKSPACE" --target "$INPUT_TARGET_ID" \
-            --summary-file "$RUNNER_TEMP/select-target.md"
+          python3 harness/.github/scripts/claim_review_target.py --repo ws/reconciler --branch "$DEFAULT_BRANCH" \
+            --target "$INPUT_TARGET_ID" --summary-file "$OUT/logs/claim.md"
 
-      # TODO: 고른 대상에 대해 스킬 실행.
-      - name: Run skill
-        if: steps.select.outputs.found == 'true'
-        env:
-          TARGET_ID: ${{ steps.select.outputs.target_id }}
-          MODEL_ID: ${{ steps.select.outputs.model_id }}
-          SELECT_REASON: ${{ steps.select.outputs.reason }}
-          PULL_REQUEST_URL: ${{ steps.select.outputs.pull_request_url }}
+      - name: Start homelab-k3s-mcp OIDC proxy
+        if: steps.claim.outputs.claimed == 'true'
         run: |
-          echo "skill:     $SKILL_NAME"
-          echo "target_id: $MODEL_ID/$TARGET_ID ($SELECT_REASON)"
-          echo "pr:        ${PULL_REQUEST_URL:-<direct action>}"
-          echo "TODO: implement $SKILL_NAME execution"
+          nohup python3 harness/.github/scripts/mcp_oidc_proxy.py --upstream "$MCP_URL" \
+            --audience "$MCP_AUDIENCE" --port "$MCP_PROXY_PORT" > "$OUT/logs/mcp-proxy.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            grep -q listening "$OUT/logs/mcp-proxy.log" && break
+            if ! kill -0 $! 2>/dev/null; then cat "$OUT/logs/mcp-proxy.log"; echo "::error::프록시 기동 실패"; exit 1; fi
+            sleep 1
+          done
+          echo "MCP_LOCAL_URL=http://127.0.0.1:$MCP_PROXY_PORT/mcp" >> "$GITHUB_ENV"
+
+      # 점유 뒤에 실패하면 task가 reviewing으로 남는다 — 아래 Release claim on failure가 planned로 되돌린다.
+      - name: MCP preflight (tools/list)
+        id: mcp
+        if: steps.claim.outputs.claimed == 'true'
+        run: |
+          # 서버가 재시작·기동 중(sablier cold start)이면 첫 요청이 실패할 수 있다 — 짧게 몇 번 다시 본다.
+          for i in 1 2 3 4; do
+            if python3 harness/.github/scripts/mcp_call.py --url "$MCP_LOCAL_URL" tools --json > "$OUT/logs/mcp-tools.json"; then
+              echo "tools: $(cat "$OUT/logs/mcp-tools.json")"
+              python3 - "$OUT/logs/mcp-tools.json" <<'PY'
+          import json, sys
+          tools = set(json.load(open(sys.argv[1])))
+          if "github_app_installation_token" not in tools:
+              sys.exit("::error::이 워크플로의 OIDC 규칙에 github_app_installation_token이 없음 — MCP_GITHUB_OIDC_RULES에 추가 필요")
+          if "github_commit_status_create" in tools:
+              print("::warning::이 워크플로 규칙이 github_commit_status_create를 노출함 — 리뷰는 대상 레포에 쓰지 않으므로 규칙에서 빼는 것을 권장")
+          PY
+              exit $?
+            fi
+            [ "$i" -lt 4 ] && { echo "MCP 응답 없음 — $((i * 20))초 뒤 재시도($i/3)"; sleep $((i * 20)); }
+          done
+          cat "$OUT/logs/mcp-proxy.log"
+          echo "::error::homelab-k3s-mcp 호출 실패 — audience나 서버 MCP_GITHUB_OIDC_RULES의 이 워크플로 규칙을 확인"
+          exit 1
+
+      # 고정 스킬: plugin-marketplace(private)의 plugins/<PLUGIN_NAME>을 mcode 로컬 플러그인으로 설치한다.
+      - name: Fetch plugin package
+        if: steps.claim.outputs.claimed == 'true'
+        id: plugin
+        env:
+          PLUGIN_REF: ${{ inputs.plugin_ref || 'main' }}
+        run: |
+          python3 harness/.github/scripts/mcp_call.py --url "$MCP_LOCAL_URL" github-token \
+            --env-name MARKETPLACE_TOKEN --repositories plugin-marketplace
+          echo "ref=$PLUGIN_REF" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout plugin-marketplace
+        if: steps.claim.outputs.claimed == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: dlddu/plugin-marketplace
+          ref: ${{ steps.plugin.outputs.ref }}
+          token: ${{ env.MARKETPLACE_TOKEN }}
+          path: marketplace
+          persist-credentials: false
+          sparse-checkout: |
+            plugins/${{ env.PLUGIN_NAME }}
+
+      - name: Set up MiniMax Code
+        if: steps.claim.outputs.claimed == 'true'
+        uses: ./harness/.github/actions/setup-mcode
+        with:
+          subscription-key: ${{ secrets.MINIMAX_SUBSCRIPTION_KEY }}
+          version: ${{ env.MCODE_VERSION }}
+          region: ${{ vars.MINIMAX_REGION || 'en' }}
+
+      - name: Install plugin into mcode
+        if: steps.claim.outputs.claimed == 'true'
+        id: install
+        run: |
+          src="marketplace/plugins/$PLUGIN_NAME"
+          test -f "$src/.minimax-plugin/plugin.json" || { echo "::error::$src 에 MiniMax 플러그인이 없음"; exit 1; }
+          test -f "$src/skills/$SKILL_NAME/SKILL.md" || {
+            echo "::error::$src 에 MiniMax $SKILL_NAME 스킬이 없음 — 스킬 빌드 생성본을 plugin-marketplace에 올린 뒤 실행"; exit 1; }
+          mkdir -p "$MINIMAX_DATA_DIR/plugins"
+          cp -R "$src" "$MINIMAX_DATA_DIR/plugins/$PLUGIN_NAME"
+          mcode plugin list --available --marketplace local --json > "$OUT/logs/plugins.json"
+          python3 - "$OUT/logs/plugins.json" <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, sys
+          name = os.environ["PLUGIN_NAME"]
+          found = [p for p in json.load(open(sys.argv[1]))["installed"] if p["name"] == name]
+          if not (found and found[0].get("enabled") and found[0]["capabilities"]["skillCount"] >= 1):
+              sys.exit(f"::error::mcode가 {name} 플러그인을 인식하지 못함")
+          print(f"version={found[0]['version']}")
+          PY
+          echo "commit=$(git -C marketplace rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "SKILL_DIR=$MINIMAX_DATA_DIR/plugins/$PLUGIN_NAME/skills/$SKILL_NAME" >> "$GITHUB_ENV"
+          printf '{"mcpServers":{"k3s":{"type":"http","url":"%s"}}}\n' "$MCP_LOCAL_URL" > ws/.mcp.json
+
+      - name: Run skill
+        id: run
+        if: steps.claim.outputs.claimed == 'true'
+        env:
+          MODEL: ${{ inputs.minimax_model }}
+          TASK_ID: ${{ steps.claim.outputs.task_id }}
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+          CLAIM_COMMIT: ${{ steps.claim.outputs.claim_commit }}
+          PULL_REQUEST_URL: ${{ steps.claim.outputs.pull_request_url }}
+        run: |
+          test "$(git -C ws/reconciler rev-parse HEAD)" = "$CLAIM_COMMIT"
+          echo "base=$CLAIM_COMMIT" >> "$GITHUB_OUTPUT"
+          sed -e "s#{{SKILL_DIR}}#$SKILL_DIR#g" -e "s#{{REPO_DIR}}#./reconciler#g" \
+              -e "s#{{TASK_ID}}#$TASK_ID#g" -e "s#{{MODEL_ID}}#$MODEL_ID#g" \
+              -e "s#{{CLAIM_COMMIT}}#$CLAIM_COMMIT#g" -e "s#{{PULL_REQUEST_URL}}#$PULL_REQUEST_URL#g" \
+              harness/.github/minimax/work-review-run-prompt.md > "$OUT/logs/prompt.md"
+          args=(exec --input - --cwd "$GITHUB_WORKSPACE/ws" --permission full
+                --output-format stream-json --timeout 40m
+                --output-last-message "$OUT/logs/final-message.md"
+                --diagnostics-dir "$OUT/logs/diagnostics")
+          [ -n "$MODEL" ] && args+=(--model "$MODEL")
+          set +e
+          env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL -u MARKETPLACE_TOKEN \
+            mcode "${args[@]}" < "$OUT/logs/prompt.md" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          tail -n 5 "$OUT/logs/stderr.log" || true
+          [ "$code" -eq 0 ] || echo "::warning::mcode가 exit $code로 끝남 — 결과 점검은 계속한다"
+
+      # 판정이 계약대로 기록됐는지 확인한다(점유 이후 그 task 파일만 바뀜, 기록 보존, 종료 상태, review 일관성,
+      # 대상 레포 쓰기 호출 없음). reviewing으로 끝났으면(풀 수 없는 lock) 여기서 실패로 드러난다.
+      - name: Check result
+        if: steps.run.outcome != 'skipped' && steps.run.outputs.base != ''
+        env:
+          TASK_ID: ${{ steps.claim.outputs.task_id }}
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+          CLAIM_MESSAGE: ${{ steps.claim.outputs.claim_message }}
+          BASE: ${{ steps.run.outputs.base }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set +e
+          python3 harness/.github/scripts/check_review_result.py --repo ws/reconciler --base "$BASE" \
+            --model-id "$MODEL_ID" --task-id "$TASK_ID" --claim-subject "$CLAIM_MESSAGE" \
+            --transcript "$OUT/logs/transcript.jsonl" \
+            --report "$OUT/check-report.md" --json "$OUT/check-report.json" --patch "$OUT/result.patch" \
+            --task-out "$OUT/reviewed-task.json"
+          code=$?
+          set -e
+          git -C ws/reconciler format-patch --stdout "origin/$DEFAULT_BRANCH..HEAD" > "$OUT/commits.patch" || true
+          exit $code
+
+      # 점유는 push됐는데 스킬을 돌리기 전에 실패했다면(MCP·플러그인·mcode 설치) task가 reviewing으로 남아 아무도 풀 수 없다.
+      # 그때만 러너가 planned로 되돌린다. 스킬이 돌았으면 되돌리지 않는다 — 그 뒤의 상태는 스킬 기록이고, 점검이 판정한다.
+      - name: Release claim on failure
+        if: failure() && steps.claim.outputs.claimed == 'true' && steps.run.outcome == 'skipped'
+        env:
+          TASK_ID: ${{ steps.claim.outputs.task_id }}
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          python3 harness/.github/scripts/claim_review_target.py --repo ws/reconciler --branch "$DEFAULT_BRANCH" \
+            --release "$MODEL_ID/$TASK_ID" --summary-file "$OUT/logs/release.md"
 
       - name: Summary
         if: always()
         env:
-          TARGET_ID: ${{ steps.select.outputs.target_id }}
-          MODEL_ID: ${{ steps.select.outputs.model_id }}
-          FOUND: ${{ steps.select.outputs.found }}
-          REASON: ${{ steps.select.outputs.reason }}
+          CLAIMED: ${{ steps.claim.outputs.claimed }}
+          TASK_ID: ${{ steps.claim.outputs.task_id }}
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+          PR_URL: ${{ steps.claim.outputs.pull_request_url }}
+          LOST: ${{ steps.claim.outputs.lost_count }}
+          PLUGIN_VERSION: ${{ steps.install.outputs.version }}
+          PLUGIN_COMMIT: ${{ steps.install.outputs.commit }}
+          RUN_EXIT: ${{ steps.run.outputs.exit_code }}
         run: |
           {
-            echo "### $SKILL_NAME"
-            echo "- target found: ${FOUND:-false}"
-            echo "- target_id: ${TARGET_ID:-<none>}${MODEL_ID:+ (model $MODEL_ID)}${REASON:+, $REASON}"
-            echo "- result: TODO"
+            echo "### reconciler-work-review"
+            echo "- 점유: ${CLAIMED:-false} · task: ${MODEL_ID:+$MODEL_ID/}${TASK_ID:-<none>}${PR_URL:+ · $PR_URL} · 경쟁 패배 ${LOST:-0}건"
+            [ -n "$PLUGIN_VERSION" ] && echo "- 스킬: $PLUGIN_NAME $PLUGIN_VERSION (plugin-marketplace \`${PLUGIN_COMMIT:0:7}\`)"
+            echo "- mcode ${MCODE_INSTALLED_VERSION:-<미설치>} · exit: ${RUN_EXIT:-n/a}"
+            if [ -s "$OUT/logs/transcript.jsonl" ]; then
+              python3 harness/.github/scripts/mcode_transcript.py summary "$OUT/logs/transcript.jsonl"
+            fi
             echo
-            cat "$RUNNER_TEMP/select-target.md" 2>/dev/null || true
+            cat "$OUT/logs/claim.md" 2>/dev/null || true
+            cat "$OUT/logs/release.md" 2>/dev/null || true
+            echo
+            cat "$OUT/check-report.md" 2>/dev/null || true
+            if [ -s "$OUT/logs/final-message.md" ]; then
+              echo; echo "<details><summary>mcode 최종 보고</summary>"; echo
+              head -c 6000 "$OUT/logs/final-message.md"; echo; echo "</details>"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # mcode가 MCP로 받은 대상 레포 토큰을 셸 명령에 옮겨 적으므로 대화 기록에 토큰이 남는다 — 올리기 전에 가린다.
+      - name: Redact secrets
+        if: always()
+        run: python3 harness/.github/scripts/redact_secrets.py "$RUNNER_TEMP/out" --extra-env MARKETPLACE_TOKEN
+
+      - name: Upload result artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-review-result
+          path: ${{ runner.temp }}/out
+          if-no-files-found: warn
+          retention-days: 14

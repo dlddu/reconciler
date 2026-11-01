@@ -148,15 +148,21 @@ MiniMax Code로 돌리는 감지는 이 둘을 **러너의 결정적 스크립�
 ## 리뷰 스킬 MiniMax 파이프라인
 
 `reconciler-work-review-skill-build.yml`(수동만)이 리뷰 스킬을 MiniMax Code로 **생성 → 검증 → 테스트**한다. 감지 스킬 빌드와
-같은 구조이고, 리뷰는 대상 레포를 읽기만 하는 단계라 샌드박스 test를 더했다. 통과한 생성본(`work-review-result`의 `skill/`)을
-plugin-marketplace의 `plugins/reconciler-data-plane`에 PR로 올린다.
+같은 구조이고, 리뷰는 대상 레포를 읽기만 하는 단계라 샌드박스 test를 더했다. 통과한 생성본(`work-review-build-result`의 `skill/`)을
+plugin-marketplace의 `plugins/reconciler-data-plane`에 PR로 올린다(0.5.0~).
+
+| 워크플로 | 트리거 | 하는 일 |
+| --- | --- | --- |
+| `reconciler-work-review.yml` (운영 리뷰) | 수동 | 러너가 `planned` 한 건을 **점유**(`claim_review_target.py`, `planned → reviewing`)한 뒤 plugin-marketplace의 고정 스킬(`plugins/reconciler-data-plane`의 `reconciler-work-review`)로 승인/거부를 판정한다. 결과 점검기(`check_review_result.py`)로 계약을 확인하고 `work-review-result` 아티팩트를 남긴다. 대상이 없으면 MCP·mcode를 띄우지 않는다. 점유 뒤 스킬을 돌리기 전에 러너가 실패하면(MCP·플러그인·mcode 설치) `--release`로 `planned`로 되돌린다. 점유·판정 커밋은 기본 브랜치에 push된다. |
+| `reconciler-work-review-skill-build.yml` (스킬 빌드) | 수동만 | 아래 generate → validate → test → report. |
+
 
 | job | 하는 일 | 아티팩트 |
 | --- | --- | --- |
 | generate | 메인 `.github/minimax/work-review-brief.md`(핵심 규칙) + 서브 `work-review-brief-sub.md`(품질 보조 규칙)만 주고, mcode가 레포(README·스키마·`claim_review_target.py`·템플릿·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `work-review-skill` |
 | validate | `validate_generated_skill.py --profile work-review` — 형식·계약 커버리지(`reviewing`·`approved`·`review_rejected`·`cancelled`·`manualApproval`·`attempts`·`review(...)` 커밋 등)·금지 패턴(commit status 쓰기·PR 머지 포함)·보조 스크립트 문법. | `work-review-validation` |
 | test | 시나리오 matrix — `live`(운영 `planned` 그대로), `replay`(최근 리뷰된 task를 점유 직전 `planned`로 되돌림). 러너 점유(`claim_review_target.py`, `planned → reviewing`) → 생성 스킬 판정(`work-review-run-prompt.md`) → 결과 점검(`check_review_result.py`). | `work-review-test-<시나리오>` |
-| report | 위 결과를 하나로 모은다 — `skill/`, `validation/`, `test/<시나리오>/reviewed-task.json`·점검 보고·결과 diff·mcode 최종 보고, `README.md` 요약. | `work-review-result` |
+| report | 위 결과를 하나로 모은다 — `skill/`, `validation/`, `test/<시나리오>/reviewed-task.json`·점검 보고·결과 diff·mcode 최종 보고, `README.md` 요약. | `work-review-build-result` |
 
 **샌드박스 원격 — 드라이런이 아니다.** test job은 reconciler 체크아웃의 `origin`(fetch·push)을 러너 로컬 bare 레포로 바꾼다.
 러너 점유와 스킬의 `pull --rebase`·push는 운영과 똑같이 돌고, 닿는 곳만 그 bare 레포다. 스킬에는 드라이런 분기가 없고(검증기가
@@ -173,7 +179,7 @@ task 레코드(점유 직전)를 샌드박스에만 되돌려 놓는다(`replay_
 (`reviewing`이면 풀리지 않은 lock, `planned`면 판정 없는 해제), `review.status`와 status 일치, `reviewedAt`·`reason`(거부면 `comment`),
 `manualApproval`은 승인에만, 대화 기록에 대상 레포 쓰기(commit status·머지·코멘트·리뷰) 없음.
 
-**MCP 규칙**: 서버 `MCP_GITHUB_OIDC_RULES`에 이 워크플로 파일의 규칙이 있어야 한다 — `github_app_installation_token`(대상 레포
+**MCP 규칙**: 서버 `MCP_GITHUB_OIDC_RULES`에 두 워크플로 파일(운영 리뷰는 plugin-marketplace 읽기도) 각각의 규칙이 있어야 한다 — `github_app_installation_token`(대상 레포
 읽기 상한, reconciler 제외), `ping`. 리뷰는 대상 레포에 쓰지 않으므로 write 권한이나 `github_commit_status_create`를 주지 않는다.
 
 ## 모델 키 격리

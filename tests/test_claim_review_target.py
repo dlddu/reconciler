@@ -117,6 +117,35 @@ class ClaimReviewTargetTest(unittest.TestCase):
         self.assertEqual(crt.main(["--repo", str(repo.path), "--target", "nope", "--github-output", "/dev/null",
                                    "--summary-file", "/dev/null"]), 2)
 
+    def test_release_reverts_unjudged_claim(self):
+        repo = ReviewRepo(self.tmp)
+        self.run_claim(repo)
+        self.assertEqual(crt.release(repo.path, f"{MID}/{TID}", remote="origin", branch="main"), "released")
+        self.assertEqual(repo.tasks(rev="origin/main")[0]["status"], "planned")
+        self.assertEqual(git(repo.path, "log", "-1", "--format=%s", "origin/main"), f"review({MID}/{TID}): release")
+
+    def test_release_keeps_judged_or_moved_task(self):
+        repo = ReviewRepo(self.tmp)
+        self.run_claim(repo)
+        worker = repo.other_worker()
+        path = worker / "data" / "reconciliation-tasks" / f"{MID}.json"
+        tasks = json.loads(path.read_text())
+        tasks[0]["attempts"][-1]["review"] = {"status": "approved", "reviewedAt": "2026-10-25T02:00:00Z", "reason": "r"}
+        path.write_text(json.dumps(tasks, ensure_ascii=False, indent=2) + "\n")
+        git(worker, "commit", "-qam", f"review({MID}/{TID}): note")
+        git(worker, "push", "-q")
+        self.assertTrue(crt.release(repo.path, f"{MID}/{TID}", remote="origin", branch="main").startswith("skipped"))
+        flip(worker, MID, TID, "approved", f"review({MID}/{TID}): approved")
+        self.assertTrue(crt.release(repo.path, f"{MID}/{TID}", remote="origin", branch="main").startswith("skipped"))
+        self.assertEqual(repo.tasks(rev="origin/main")[0]["status"], "approved")
+
+    def test_release_main(self):
+        repo = ReviewRepo(self.tmp)
+        self.run_claim(repo)
+        self.assertEqual(crt.main(["--repo", str(repo.path), "--release", f"{MID}/{TID}", "--summary-file", "/dev/null"]), 0)
+        self.assertEqual(repo.tasks(rev="origin/main")[0]["status"], "planned")
+        self.assertEqual(crt.main(["--repo", str(repo.path), "--release", "bad", "--summary-file", "/dev/null"]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
