@@ -13888,6 +13888,52 @@
       "assessedAt": "2026-10-28T23:58:03Z",
       "reason": "버전 변화(#278 compare 슬라이스)는 그 자체로 격차를 좁혔고 문서·구현이 일치하지만, 정의의 목표인 '문서→구현 완전 수렴'에 못 미치는 잔여 격차가 tracker의 '구현 수렴 대기' 행으로 남아 있다(sentiment·fairness·trace·reprocess·compare 잔여). 슬라이스→재감지→후속 task가 이 루프의 정상 진행이며, 서빙/계약 선행이 필요한 막힌 항목과 web만으로 닫을 수 있는 항목의 구분·우선순위화는 planner에 넘긴다. 자동 해소될 성격이 아니라 재확인 유예는 택하지 않는다."
     },
-    "updatedAt": "2026-11-01T05:05:53Z"
+    "updatedAt": "2026-11-01T05:11:56Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "접근과 그 이유 — 감지가 남긴 gap은 design-tracker 의 「구현 수렴 대기」 네 행(sentiment · compare · fairness·trace · reprocess)이다. gap 이 지목한 두 후보를 먼저 서빙·계약에 대조해(web 슬라이스로 좁힐 수 있는지) 가려봤고, **둘 다 web 슬라이스로 닫을 수 없다**는 결론에 도달했다. ① `sentiment` 미분석 경고 안 원인 줄(「원인 — 분석 실패 N건 · 저신뢰 M건」)은 Gold `axis_sentiment.distribution` 이 `unanalyzed` 비율 하나만 내고 사유 축이 없어(contracts/gold/axis_sentiment.avsc) 두 건수를 나눌 근거가 없다 — 계약·집계 변경 선행이 필요하다. ② `fairness` 저신뢰 분리 표기(AC2.5)는 소스별 저신뢰 건수를 내려주는 서빙 필드가 없어(contracts/gold/subject_source_contribution.avsc) 같은 이유로 막혀 있다. 그래서 같은 tracker 행에서 **서빙·계약 변경 없이 닫히는 유일한 표면**인 `fairness` 정규화 소멸 배너의 「판정으로 →」 갈래 컨트롤을 골랐다 — 목업(docs/mockups/JRN-spike-verification.html 의 `data-role=\"fa-away-go\"`)에 있고 구현(web/src/screens/Fairness.tsx 의 `spike-normalized-away`)에 없는 정적 링크 하나다. 목적지 단계 `STP-judge` 의 제품 안 몫은 `trace` 화면(「판정 기록은 아직 열 수 없습니다」 note)이라 `/trace` 로 보낸다. 같은 가려짐이 `compare` 잔여(대상 국가 차원이 Gold·서빙에 없음)·`reprocess` 전후 추이(버전별 시계열이 서빙에 없음)에도 적용되어 그것들은 이번 슬라이스 밖이다.\n\n이 시도의 범위와 완료 기준 — `web/src/screens/Fairness.tsx` 의 정규화 소멸 배너 안에 `href=\"/trace\"` 인 「판정으로 →」 링크 하나를 착지하고, `docs/econ-opinion-monitor-design-tracker.md` 의 「구현 수렴 대기 — fairness·trace」 행에서 그 표면을 빼 「해소된 등재 (이력)」 로 옮긴다(PR #280). 이 시도 끝에 참이 되어야 하는 것 — ⑴ 정규화 소멸 배너가 `data-testid=\"spike-normalized-away\"` 안에서 `/trace` 로 가는 「판정으로 →」 링크를 갖는다 ⑵ `cd web && npm test` 가 exit 0 으로 전 스위트(11 파일 169 테스트)가 통과하고 `Fairness.test.tsx` 가 21건이 된다(신규 「hands the normalized-away branch to the judgment screen」 1건) ⑶ tracker 의 「구현 수렴 대기 — fairness·trace」 행에 「소멸 배너 「판정으로 →」」 항목이 없고 「해소된 등재 (이력)」 에 그 행이 있다 ⑷ PR #280 이 열려 있고 머지되지 않았다.\n\n범위 밖 — ⑴ `sentiment` 미분석 경고 안 원인 줄 · 구간별 기여 뉴스 링크(사유 축·구간 파라미터가 계약·서빙에 없어 막힘) ⑵ `fairness`·`trace` 저신뢰 분리 표기(AC2.5) · 소스 카드 저신뢰 note(소스별 저신뢰 건수가 서빙에 없음) · 기여 뉴스 카드 「수집 이상 점검하기」(도착지 `integrity` 라우트가 없음) ⑶ `compare` 「대상 국가」 select · 표기 통합 안내(통합 전 표기가 서빙에 없음) ⑷ `reprocess` AC3.3 전후 추이 카드 · `ua-trend-go` · `gap-go`(버전별 시계열·`integrity` 라우트 선행 필요) ⑸ 목업 배너의 경고 아이콘 svg(지목된 표면이 「판정으로 →」 이므로) ⑹ 실행·머지·배포(executor 몫) — 위 ⑴~⑷는 서빙·계약 변경이 선행되어야 하므로 뒤 task로 넘긴다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #280 의 준비물을 확인한다 — `gh pr view 280 --json state,mergeable,headRefOid,statusCheckRollup` 그리고 `gh api repos/dlddu/economic-opinion-trend-monitor/commits/<headRefOid>/statuses` 를 실행해 head SHA 에 붙은 status 를 모두 확인한다.",
+              "expectedOutcome": "state=OPEN, mergeable=MERGEABLE, headRefOid=8762774... (main 파생 브랜치 head), head SHA 에 `review/manual-approval`=success, `required`=success, `data-format`=success 가 모두 붙어 있다. 하나라도 success 가 아니면(특히 `data-format` 이 MA 케이스를 찍은 경우) 이 단계에서 멈추고 되돌아간다."
+            },
+            {
+              "seq": 2,
+              "action": "PR #280 을 squash 머지한다 — `gh pr merge 280 --squash` (브랜치는 남겨 둔다).",
+              "expectedOutcome": "exit code 0, `git fetch origin main && git log -1 --format=%s origin/main` 의 제목이 `fix(web): fairness 구현 수렴 — 정규화 소멸 배너 「판정으로 →」 (rct_20261028-0009) (#280)` 로 끝나고, `gh pr view 280 --json state` 가 MERGED 다."
+            },
+            {
+              "seq": 3,
+              "action": "머지한 main 을 로컬에서 재검증한다 — `git checkout main && git pull --ff-only origin main && cd web && npm ci && npm test` 그리고 `npx tsc -b` 를 실행한다.",
+              "expectedOutcome": "`npm test` 가 exit 0 이고 `Test Files 11 passed (11)` · `Tests 169 passed (169)` 를 출력한다(Fairness.test.tsx 21건 포함). `npx tsc -b` 가 exit 0 이며 타입 오류 출력이 없다."
+            },
+            {
+              "seq": 4,
+              "action": "CI 이미지 발행과 deploy 브랜치 핀을 확인한다 — `git fetch origin deploy && git log -1 --format=%B origin/deploy` 와 `git show origin/deploy:deploy/base/deployment.yaml | grep -n 'image:'` 를 실행한다.",
+              "expectedOutcome": "deploy 브랜치 마지막 커밋 메시지에 `Source-Commit: <Step 2 의 main sha>` 트레일러가 있고, `deploy/base/deployment.yaml` 의 image 줄이 `ghcr.io/dlddu/economic-opinion-trend-monitor:<Step 2 의 main sha>` 다(머지 전 핀 `200c8f35a26119086fc771acd07e46cf85fe02f9` 와 달라야 한다). `deploy/batch/workflow-template.yaml` 의 배치 이미지 태그도 같은 SHA 다."
+            },
+            {
+              "seq": 5,
+              "action": "배포 반영을 관측한다 — MCP `k3s` 의 `resource_get`(apiVersion=apps/v1, kind=Deployment, namespace=econ-monitor, name=econ-serving) 으로 서빙 Deployment 의 컨테이너 이미지와 replicas 를 읽는다.",
+              "expectedOutcome": "컨테이너 `serving` 의 image 가 `ghcr.io/dlddu/economic-opinion-trend-monitor:<Step 2 의 main sha>` 로 바뀌어 있고(Step 4 의 핀과 일치), 이전 태그 `200c8f35...` 가 아니다. 이 환경은 서빙을 0/0 으로 유지하므로 `availableReplicas` 는 0 이어도 통과로 본다 — 신호는 이미지 태그다."
+            },
+            {
+              "seq": 6,
+              "action": "서빙 화면에서 표면을 확인한다 — 브라우저로 `fairness` 화면(`/fairness?axis=KR`)을 열고, 축을 「수집량 정규화」 로 둔 상태에서 정규화 소멸 배너를 찾는다(대상이 편중 spike 로 잡히는 데이터 기준). 배너 안의 「판정으로 →」 을 클릭한다.",
+              "expectedOutcome": "배너 안의 링크 텍스트가 「판정으로 →」 이고 href 가 `/trace` 다. 클릭하면 주소창 경로가 `/trace` 가 되고(쿼리는 없어도 된다), `/trace` 화면이 로드된다. 축을 「원시 건수」 로 바꾸면 배너와 링크가 함께 사라진다(기존 `spike-normalized-away` 동작이 그대로다)."
+            },
+            {
+              "seq": 7,
+              "action": "재감지 개시를 확인한다 — `git fetch origin main && git rev-parse origin/main:web` 와 `git rev-parse origin/main:docs` 를 실행해 머지 전 값(`web`=16a8363c87f74d15c0ede8ba62ac2da4eac216a4, `docs`=6150bdb14d40839458b380f69555762110ddb255)과 비교한다.",
+              "expectedOutcome": "`web` 해시가 16a8363c... 와 다르고 `docs` 해시도 6150bdb... 와 다르다(tracker 갱신이 to-be 를 움직였으므로 둘 다 움직인다). 두 값이 그대로면 변경이 반영되지 않은 것이므로 멈춘다."
+            }
+          ],
+          "plannedAt": "2026-11-01T05:10:55Z"
+        }
+      }
+    ]
   }
 ]
