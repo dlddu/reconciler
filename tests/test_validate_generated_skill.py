@@ -189,6 +189,12 @@ class ValidateWorkReviewProfileTest(unittest.TestCase):
         rep = self.write(extra={"scripts/x.py": "TOOL = 'github_commit_status_create'\n"})
         self.assertTrue(any("commit status 쓰기" in e for e in rep.errors))
 
+    def test_build_location_path_is_forbidden(self):
+        bad = REVIEW_BODY + "\n```\npython3 .agents/skills/reconciler-work-review/scripts/apply_review.py\n```\n"
+        self.assertTrue(any("빌드 위치" in e for e in self.write(body=bad).errors))
+        ok = REVIEW_BODY + "\n```\npython3 $SKILL_DIR/scripts/apply_review.py\n```\n"
+        self.assertEqual(self.write(body=ok).errors, [])
+
 
 if __name__ == "__main__":
     unittest.main()

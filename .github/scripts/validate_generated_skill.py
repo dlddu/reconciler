@@ -95,6 +95,8 @@ FORBIDDEN = [
     ("드라이런 분기", r"\bRECONCILER_DRY_RUN\b"),
     ("스키마 파일 쓰기", r"(>|\btee\b|sed\s+-i[^\n]*)\s*\S*schemas/[\w.-]+\.schema\.json"),
     ("토큰 출력", r"echo\s+[\"']?\$\{?(GITHUB_TOKEN|GH_TOKEN|SOURCE_GITHUB_TOKEN)\b"),
+    # 생성 위치(mcode 워크스페이스의 .agents/skills/...)는 운영 설치 위치와 다르다 — $SKILL_DIR 기준으로 불러야 한다.
+    ("빌드 위치 경로 하드코딩", r"\.agents/skills/"),
 ]
 
 # 리뷰는 대상 레포에 쓰지 않는다 — 사람 승인 status를 무인 단계가 붙이면 사람 승인이 형식이 되고, 머지는 executor 몫이다.

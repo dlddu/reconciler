@@ -243,7 +243,9 @@ jobs:
       - name: Prepare workspace
         run: |
           OUT="$RUNNER_TEMP/out"; echo "OUT=$OUT" >> "$GITHUB_ENV"
-          mkdir -p "$OUT/logs" "ws/$SKILL_REL"
+          mkdir -p "$OUT/logs"
+          # 운영처럼 생성 위치(ws/.agents/...)가 아닌 곳에 설치한다 — 생성 위치를 하드코딩한 스킬은 여기서 깨진다.
+          echo "SKILL_DIR=$RUNNER_TEMP/plugins/reconciler-data-plane/skills/$SKILL_NAME" >> "$GITHUB_ENV"
           git -C ws/reconciler config user.name "reconciler-bot"
           git -C ws/reconciler config user.email "reconciler@dlddu.dev"
           pip install --quiet --disable-pip-version-check jsonschema
@@ -276,8 +278,10 @@ jobs:
 
       - name: Install generated skill
         run: |
-          cp -R "$RUNNER_TEMP/gen/skill/." "ws/$SKILL_REL/"
-          ls -la "ws/$SKILL_REL"
+          mkdir -p "$SKILL_DIR"
+          cp -R "$RUNNER_TEMP/gen/skill/." "$SKILL_DIR/"
+          test ! -e "ws/.agents" || { echo "::error::워크스페이스에 생성 위치가 남아 있음"; exit 1; }
+          ls -la "$SKILL_DIR"
 
       - name: Start homelab-k3s-mcp OIDC proxy
         run: |
@@ -368,7 +372,7 @@ jobs:
         run: |
           test "$(git -C ws/reconciler rev-parse HEAD)" = "$CLAIM_COMMIT"
           echo "base=$CLAIM_COMMIT" >> "$GITHUB_OUTPUT"
-          sed -e "s#{{SKILL_DIR}}#$SKILL_REL#g" -e "s#{{REPO_DIR}}#./reconciler#g" \
+          sed -e "s#{{SKILL_DIR}}#$SKILL_DIR#g" -e "s#{{REPO_DIR}}#./reconciler#g" \
               -e "s#{{TASK_ID}}#$TASK_ID#g" -e "s#{{MODEL_ID}}#$MODEL_ID#g" \
               -e "s#{{CLAIM_COMMIT}}#$CLAIM_COMMIT#g" -e "s#{{PULL_REQUEST_URL}}#$PULL_REQUEST_URL#g" \
               harness/.github/minimax/work-review-run-prompt.md > "$OUT/logs/prompt.md"

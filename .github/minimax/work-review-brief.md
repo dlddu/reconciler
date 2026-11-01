@@ -7,6 +7,7 @@
 - `{{SKILL_DIR}}/SKILL.md` 하나(필요하면 같은 폴더 `scripts/`에 보조 스크립트). 다른 곳은 고치지 않는다.
 - YAML frontmatter: `name: reconciler-work-review`, `description`(언제 쓰는지, 1024자 이하).
 - 본문은 한국어, 다른 에이전트가 무인으로 따라 할 수 있는 단계별 절차.
+- `{{SKILL_DIR}}`는 지금 작성하는 위치일 뿐이다. 운영에서는 플러그인 디렉터리에 설치되므로, 보조 스크립트는 **SKILL.md가 있는 디렉터리(`$SKILL_DIR`) 기준**으로 부르고 작성 위치 경로를 본문·스크립트에 적지 않는다.
 
 ## 먼저 읽을 것 (`{{REPO_DIR}}`, reconciler 체크아웃)
 - `README.md` — 엔티티·상태 흐름, 「점유는 러너가 한다」, 「실행 전 사람 승인 (review.manualApproval)」
