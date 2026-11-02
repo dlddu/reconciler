@@ -71,28 +71,60 @@ class CheckPlannerResultTest(unittest.TestCase):
 
     def commit(self, msg):
         git(self.repo, "add", "-A")
-        git(self.repo, "commit", "-qm", msg)
+        git(self.repo, "commit", "-qm", msg, "--allow-empty")
+
+    def commit_stages(self, a, prev=(), others=()):
+        """계약대로 계획 → 준비 → 지침 → planned 전이를 각각 커밋한다. 마지막 task를 돌려준다."""
+        a = copy.deepcopy(a)
+        head = {k: v for k, v in a.items() if k != "preparation"}
+        head["plan"] = {k: v for k, v in a["plan"].items() if k != "executionGuide"}
+        steps = [head]
+        if "preparation" in a:
+            steps.append({**head, "preparation": a["preparation"]})
+        steps.append(a)
+        for i, att in enumerate(steps):
+            t = claimed(list(copy.deepcopy(prev)) + [att])
+            self.write([t, *others]); self.commit(f"plan({MID}/{TID}): stage {i + 1}")  # noqa: E702
+        t["status"] = "planned"
+        self.write([t, *others]); self.commit(f"plan({MID}/{TID}): planned")  # noqa: E702
+        return t
 
     def run_check(self, base, from_status="action_required", **kw):
         return cpr.check(self.repo, base, MID, TID, from_status, **kw)
 
     def test_complete_plan_passes(self):
         base = self.base(claimed())
-        t = claimed([attempt()])
-        self.write([t]); self.commit(f"plan({MID}/{TID}): draft plan")  # noqa: E702
-        t["status"] = "planned"
-        self.write([t]); self.commit(f"plan({MID}/{TID}): ready for execution")  # noqa: E702
+        self.commit_stages(attempt())
         res = self.run_check(base)
         self.assertEqual(res.errors, [])
         self.assertEqual(res.warnings, [])
+        self.assertIn("계획 → 준비 → 지침 → planned 전이를 각각 다른 커밋으로 남김", res.passed)
+
+    def test_stages_merged_into_one_commit_is_error(self):
+        base = self.base(claimed())
+        t = claimed([attempt()])
+        self.write([t]); self.commit(f"plan({MID}/{TID}): 계획·준비·지침")  # noqa: E702
+        t["status"] = "planned"
+        self.write([t]); self.commit(f"plan({MID}/{TID}): planned")  # noqa: E702
+        res = self.run_check(base)
+        self.assertTrue(any("단계별 커밋 위반" in e and "계획·준비·지침 단계를 한 커밋" in e for e in res.errors), res.errors)
+
+    def test_extra_fix_commit_between_stages_is_fine(self):
+        base = self.base(claimed())
+        a = attempt()
+        head = {"plan": {k: v for k, v in a["plan"].items() if k != "executionGuide"}}
+        self.write([claimed([head])]); self.commit(f"plan({MID}/{TID}): 계획")  # noqa: E702
+        head["plan"]["summary"] += " 정정"
+        self.write([claimed([head])]); self.commit(f"plan({MID}/{TID}): 계획 정정")  # noqa: E702
+        a["plan"]["summary"] = head["plan"]["summary"]
+        self.commit_stages(a)
+        self.assertEqual(self.run_check(base).errors, [])
 
     def test_rework_needs_reason_and_keeps_previous_attempts(self):
         prev = [{"plan": {"summary": "old", "steps": [{"seq": 1, "action": "x"}]},
                  "review": {"status": "rejected", "comment": "넓음"}}]
         base = self.base(claimed(copy.deepcopy(prev)))
-        t = claimed(prev + [attempt()])  # reason 누락
-        t["status"] = "planned"
-        self.write([t]); self.commit(f"plan({MID}/{TID}): replan")  # noqa: E702
+        t = self.commit_stages(attempt(), prev=prev)  # reason 누락
         res = self.run_check(base, from_status="review_rejected")
         self.assertEqual(res.errors, [])
         self.assertTrue(any("reason" in w for w in res.warnings))
@@ -118,9 +150,7 @@ class CheckPlannerResultTest(unittest.TestCase):
     def test_github_log_matches_preparation(self):
         pr = "https://github.com/dlddu/pocket-aide/pull/90001"
         base = self.base(claimed())
-        t = claimed([attempt(pr=pr)])
-        t["status"] = "planned"
-        self.write([t]); self.commit(f"plan({MID}/{TID}): ready")  # noqa: E702
+        self.commit_stages(attempt(pr=pr))
         log = [{"op": "token.mint", "detail": {"repositories": ["pocket-aide"], "permissions": {"contents": "write"}}},
                {"op": "git.push", "write": True, "repo": "dlddu/pocket-aide", "status": 200,
                 "detail": {"default_branch": "main", "updates": [
@@ -145,9 +175,7 @@ class CheckPlannerResultTest(unittest.TestCase):
     def test_rewrite_after_planned_is_error(self):
         pr = "https://github.com/dlddu/pocket-aide/pull/90001"
         base = self.base(claimed())
-        t = claimed([attempt(pr=pr)])
-        t["status"] = "planned"
-        self.write([t]); self.commit(f"plan({MID}/{TID}): planned 전이")  # noqa: E702
+        t = self.commit_stages(attempt(pr=pr))
         res = self.run_check(base)
         self.assertEqual(res.errors, [])
         self.assertIn("planned 전이가 이 task의 마지막 기록", res.passed)
@@ -193,9 +221,7 @@ class CheckPlannerResultTest(unittest.TestCase):
 
     def test_pr_url_recorded_is_fine(self):
         base = self.base(claimed())
-        t = claimed([attempt(pr="https://github.com/dlddu/pocket-aide/pull/1")])
-        t["status"] = "planned"
-        self.write([t]); self.commit(f"plan({MID}/{TID}): ready")  # noqa: E702
+        self.commit_stages(attempt(pr="https://github.com/dlddu/pocket-aide/pull/1"))
         res = self.run_check(base)
         self.assertEqual(res.errors, [])
         self.assertIn("preparation 기록", res.passed)

@@ -11,6 +11,8 @@
   - 보존: 그 task의 id·toBeModelId·trigger·createdAt·stateSummary·assessment, 이전 attempts 항목이 그대로인가
   - 스키마: task가 schemas/의 현재 스키마를 통과하는가
   - lock 해제 뒤 쓰기: planned로 넘긴 커밋 뒤에 스킬이 같은 task를 다시 고친 커밋이 있으면 오류
+  - 단계별 커밋: planned로 끝났다면 새 시도의 계획(plan) → 준비(preparation) → 지침(executionGuide) → planned 전이가
+                 각각 다른 커밋에 이 순서로 처음 나타나야 한다(두 단계를 한 커밋에 합치면 오류). 정정 커밋은 더해도 된다.
   - 종료 상태: planned + 새 attempts 항목 정확히 1개(plan.summary·steps·executionGuide, preparation),
                재작업이면 reason = 점유 전 status.
                또는 완주하지 못해 시도를 남기지 않고 점유 전 status로 lock을 푼 것(계약상 허용 — 경고).
@@ -18,8 +20,8 @@
 
 `--github-log`(스킬 빌드 test의 GitHub 대역 기록)가 있으면 스킬이 대상 레포에 실제로 한 일도 본다
 (github_log.py `plan` 규칙): 머지 시도 0건, commit status 쓰기 0건, 기본 브랜치 직접·강제 push 0건,
-연 PR은 최대 1개이고 preparation.pullRequestUrl과 일치. planned였다면 그 PR의 마지막 head CI가 성공이고(합성 CI),
-planned 커밋 시각 뒤의 대상 레포 쓰기가 없어야 한다.
+연 PR은 최대 1개이고 preparation.pullRequestUrl과 일치. planned였다면 planned 커밋 시각 뒤의 대상 레포 쓰기가
+없어야 한다(CI 결론은 판정하지 않고 사실로만 남긴다 — CI 실패 판정은 리뷰 몫).
 
 결과 diff를 패치 파일로, 최종 task를 JSON으로 남긴다(아티팩트용). 오류가 있으면 종료 코드 1.
 """
@@ -164,6 +166,7 @@ def check(repo: Path, base: str, model_id: str, task_id: str, from_status: str, 
             res.errors.append(f"새 attempts 항목이 정확히 1개여야 하는데 {added}개")
         else:
             check_attempt(new[-1], from_status, res)
+            check_stage_commits(repo, own, task_file, task_id, len(old), res)
     elif status == from_status:
         if added:
             res.errors.append(f"{from_status}로 lock을 풀었는데 attempts가 {added}개 늘어남 — 되돌릴 땐 시도를 남기지 않는다")
@@ -174,6 +177,39 @@ def check(repo: Path, base: str, model_id: str, task_id: str, from_status: str, 
     else:
         res.errors.append(f"계획 단계가 남기면 안 되는 status: {status}")
     return res
+
+
+STAGES = (("계획", lambda t, a: bool((a.get("plan") or {}).get("steps"))),
+          ("준비", lambda t, a: "preparation" in a),
+          ("지침", lambda t, a: bool((a.get("plan") or {}).get("executionGuide"))),
+          ("planned 전이", lambda t, a: t.get("status") == "planned"))
+
+
+def check_stage_commits(repo: Path, own: list, task_file: str, task_id: str, n_old: int, res: Result) -> None:
+    """새 시도의 네 단계가 각각 처음 나타난 스킬 커밋을 찾아, 서로 다른 커밋에 계약 순서로 나뉘었는지 본다."""
+    first: dict[str, tuple[int, str]] = {}
+    for i, (sha, subject) in enumerate(own):
+        cur = by_id(load_at(repo, sha, task_file)).get(task_id) or {}
+        attempts = cur.get("attempts") or []
+        if len(attempts) <= n_old:
+            continue
+        for name, done in STAGES:
+            if name not in first and done(cur, attempts[n_old]):
+                first[name] = (i, subject)
+    seq = [first.get(name) for name, _ in STAGES]
+    res.facts["stage_commits"] = {name: (hit[1] if hit else None) for (name, _), hit in zip(STAGES, seq)}
+    if None in seq:
+        return  # 빠진 단계는 check_attempt가 이미 오류로 낸다
+    idx = [hit[0] for hit in seq]
+    if idx == sorted(set(idx)):
+        res.passed.append("계획 → 준비 → 지침 → planned 전이를 각각 다른 커밋으로 남김")
+        return
+    groups: dict[int, list[str]] = {}
+    for (name, _), i in zip(STAGES, idx):
+        groups.setdefault(i, []).append(name)
+    merged = [f"{'·'.join(names)} 단계를 한 커밋 `{own[i][1]}`에 합침" for i, names in groups.items() if len(names) > 1]
+    detail = "; ".join(merged) if merged else "순서가 계약(계획 → 준비 → 지침 → planned 전이)과 다름"
+    res.errors.append("단계별 커밋 위반 — " + detail)
 
 
 def writes_after_planned(repo: Path, own: list, task_file: str, task_id: str) -> tuple[str | None, list[str]]:
