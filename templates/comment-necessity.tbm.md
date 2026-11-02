@@ -164,7 +164,9 @@ econ-opinion-monitor에서 20여 개 task가 docstring·줄 끝 주석을 같은
 - **L이 원장이 세는 표면이다.** 첫 진단 줄 `lines=… files=… unclassified=…`은 L만 센다. D·E는 둘째 진단 줄
   `docstring=줄/파일 eol=줄/파일 unparsed=N`에 따로 나온다 — 원장은 표면마다 표를 둔다(「원장 형식」).
 - 세 표면 모두 줄 번호·식별자 이름을 담지 않는다. 주석이 파일 안에서 옮겨 가거나 함수 이름이 바뀌어도 값은 그대로다.
-- 기계가 읽는 주석은 E에서도 뺀다(같은 `DIRECTIVE`). 지시자 **뒤에 붙은 사유**(`# shellcheck disable=X # 이유`,
+- 기계가 읽는 주석은 E·D에서도 뺀다(같은 `DIRECTIVE`). D는 지시자가 **줄머리**에 오는 docstring 줄만 뺀다 —
+  Python 테스트가 모듈 docstring에 `검증 시나리오:` 같은 선언을 두는 레포에서, 그 선언이 D 표면에 남아
+  지문이 게이트보다 커지던 틈을 막는다(homelab-k3s-mcp, 2026-11). 문장 중간의 지시자 낱말은 그대로 센다. 지시자 **뒤에 붙은 사유**(`# shellcheck disable=X # 이유`,
   `// eslint-disable-line r -- 이유`)는 사람의 문장이므로 E로 남긴다. 고정부가 더 빼는 것: `go.mod`·`go.work`의
   `// indirect`(go mod tidy가 쓰고 읽는다), Makefile 타깃 줄의 `## 설명`(`make help`가 읽는다).
 - E를 보지 않는 파일: MIXED·MARKUP 언어군, 그리고 줄 중간 `#`이 주석이 아닌 HASH 파일(`Dockerfile*`·
@@ -277,7 +279,7 @@ DIRECTIVE=':#!|//go:|nolint|eslint-|@ts-|prettier-ignore|/// <reference|istanbul
 SUF='(\.(example|sample|template|tmpl|tpl|dist|in|j2))?$'
 C_FILES='\.(go|rs|java|kt|kts|scala|groovy|gradle|swift|c|h|cc|cpp|hpp|cs|m|js|jsx|mjs|cjs|ts|tsx|mts|cts|css|scss|less|proto|jsonc)'"$SUF"'|(^|/)(go\.mod|go\.work|tsconfig[^/]*\.json|jsconfig[^/]*\.json|\.devcontainer/[^/]*\.json)$'
 C_PATTERN='^[[:space:]]*(//|/\*|\*([[:space:]]|$)|\{/\*)'
-HASH_FILES='\.(py|pyi|rb|sh|bash|zsh|fish|pl|r|ya?ml|toml|tf|tfvars|hcl|cfg|conf|ini|mk|dockerfile|nix|awk|sed)'"$SUF"'|(^|/)(Makefile|GNUmakefile|Dockerfile[^/]*|Containerfile|Caddyfile|\.gitignore|\.dockerignore|\.gitattributes|\.helmignore|\.editorconfig|\.env[^/]*|CODEOWNERS|requirements[^/]*\.txt|Gemfile|Podfile|Rakefile|Brewfile|Fastfile|Appfile|Matchfile|Pluginfile)$'
+HASH_FILES='\.(py|pyi|rb|sh|bash|zsh|fish|pl|r|ya?ml|toml|tf|tfvars|hcl|cfg|conf|ini|properties|pro|mk|dockerfile|nix|awk|sed)'"$SUF"'|(^|/)(Makefile|GNUmakefile|Dockerfile[^/]*|Containerfile|Caddyfile|\.gitignore|\.dockerignore|\.gitattributes|\.helmignore|\.editorconfig|\.env[^/]*|CODEOWNERS|requirements[^/]*\.txt|Gemfile|Podfile|Rakefile|Brewfile|Fastfile|Appfile|Matchfile|Pluginfile)$'
 HASH_PATTERN='^[[:space:]]*#'
 DASH_FILES='\.(sql|lua|hs|elm|ada|adb)'"$SUF"
 DASH_PATTERN='^[[:space:]]*--'
@@ -333,7 +335,9 @@ out = []
 
 def emit(kind, path, text):
     t = re.sub(r"\s+", " ", text).strip()
-    if t and not (kind == "E" and DIR.search(t)):
+    # D(docstring)는 지시자가 줄머리에 오는 줄만 뺀다 — `검증 시나리오:` 같은 docstring 선언은 기계가 읽고,
+    # 문장 중간에 지시자 낱말이 나오는 사람의 문장은 그대로 센다.
+    if t and not ((kind == "E" and DIR.search(t)) or (kind == "D" and DIR.match(t))):
         out.append(f"{kind}:{path}:{t}")
 
 def rescue(path, comment, tail):
