@@ -74,19 +74,13 @@ class PlanTest(unittest.TestCase):
         r = self.ev([create(head="other")], {"pullRequestUrl": PR, "branch": "reconcile/x"})
         self.assertTrue(any("head" in w for w in r["warnings"]))
 
-    def test_planned_with_failing_ci_is_error(self):
-        def ci(conclusion, sha):
-            return {"op": "ci.synthetic", "write": False, "repo": REPO, "status": 200,
-                    "detail": {"sha": sha, "number": 90001, "contexts": ["ci-success"], "conclusion": conclusion}}
-        prep = {"pullRequestUrl": PR, "branch": "reconcile/x"}
-        base = [push("refs/heads/reconcile/x"), create()]
-        r = self.ev(base + [ci("failure", "a" * 40)], prep)
-        self.assertTrue(any("CI가 실패한 PR로 planned" in e for e in r["errors"]))
-        r = self.ev(base + [ci("failure", "a" * 40), ci("success", "b" * 40)], prep)  # 고친 뒤 성공
+    def test_planned_with_failing_ci_is_not_judged(self):
+        # CI를 볼지·실패를 어떻게 다룰지는 계획 단계의 판단이고, CI 실패 판정은 리뷰 몫이다 — 점검기는 사실만 남긴다
+        ci = {"op": "ci.synthetic", "write": False, "repo": REPO, "status": 200,
+              "detail": {"sha": "a" * 40, "number": 90001, "contexts": ["ci"], "conclusion": "failure"}}
+        r = self.ev([push("refs/heads/reconcile/x"), create(), ci], {"pullRequestUrl": PR, "branch": "reconcile/x"})
         self.assertEqual(r["errors"], [])
-        self.assertTrue(any("마지막 head CI 성공" in p for p in r["passed"]))
-        r = self.ev(base + [ci("failure", "a" * 40)], None)  # lock을 풀었으면(preparation 없음) CI는 판정하지 않는다
-        self.assertFalse(any("CI가 실패한" in e for e in r["errors"]))
+        self.assertTrue(any("(failure)" in x for x in r["facts"]["synthetic_ci"]))
 
     def test_writes_after_planned_are_errors(self):
         prep = {"pullRequestUrl": PR, "branch": "reconcile/x"}

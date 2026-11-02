@@ -76,25 +76,6 @@ def created_prs(entries: list[dict]) -> list[dict]:
     return [e for e in entries if e.get("op") == "pulls.create" and ok(e)]
 
 
-def check_planned_ci(entries: list[dict], pr_url: str | None, errors: list, passed: list) -> None:
-    """planned로 넘긴 PR의 마지막 head에 붙은 합성 CI 결론. 대역 PR이 아니거나 합성 CI가 꺼져 있으면 판정하지 않는다."""
-    m = PR_URL.match(pr_url or "")
-    if not m:
-        return
-    repo, number = m.group(1).lower(), int(m.group(2))
-    runs = [e for e in entries if e.get("op") == "ci.synthetic" and (e.get("repo") or "").lower() == repo
-            and (e.get("detail") or {}).get("number") == number]
-    if not runs:
-        return
-    last = runs[-1].get("detail") or {}
-    if (last.get("conclusion") or "success") != "success":
-        errors.append(f"CI가 실패한 PR로 planned — {pr_url} head `{str(last.get('sha'))[:7]}` "
-                      f"{', '.join(last.get('contexts') or [])}={last.get('conclusion')} "
-                      "(실패면 범위 안에서 고치거나 lock을 풀어야 한다)")
-    else:
-        passed.append(f"planned PR의 마지막 head CI 성공(합성) — {pr_url}")
-
-
 def evaluate(entries: list[dict], stage: str, *, preparation: dict | None = None,
              approved_pr: str | None = None, merge: str = "allowed", planned_at: str | None = None,
              exclude_repos=("dlddu/reconciler",)) -> dict:
@@ -203,7 +184,6 @@ def evaluate(entries: list[dict], stage: str, *, preparation: dict | None = None
         if closed:
             facts["closed_prs"] = [describe(e) for e in closed]
         if preparation is not None:  # planned로 넘겼다
-            check_planned_ci(entries, recorded, errors, passed)
             if planned_at:
                 late = [e for e in writes if (e.get("ts") or "") > planned_at]
                 if late:
