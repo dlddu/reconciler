@@ -9,31 +9,41 @@ MiniMax 파이프라인」). 이 스크립트는 그 원격이 로컬 경로가 
 그 부모 커밋의 task 레코드(점유 직전 = planned)를 현재 파일에 되돌려 놓고 샌드박스 원격에 push한다. 그 위에서
 러너 점유(claim_review_target.py)와 생성 스킬의 판정이 운영과 똑같이 돈다 — 스킬은 이것이 replay인지 모른다.
 
-고르는 후보(최근 점유부터):
+후보(최근 점유부터) — 공통:
   - 점유 직전 레코드가 `planned`이고 리뷰 전제(select_review_target.unready_reason)를 갖췄다
   - 그 레코드가 **현재 스키마**를 통과한다(스키마가 바뀐 옛 레코드는 건너뜀)
   - 모델이 꺼져 있지 않다(`checkPolicy.enabled: false`가 아님)
   - 그 task가 지금 `planned`·`reviewing`이 아니다(살아 있는 작업은 live 시나리오 몫)
 
-기대 결과: PR이 지금 머지·종료됐으면 그 계획은 더 이상 실행할 수 없으므로 승인하면 안 된다 —
-`expect_statuses=review_rejected,cancelled`. PR이 열려 있거나 직접 액션이면 기대를 걸지 않는다(빈 값).
-PR 상태 조회에는 `--token-env`의 읽기 토큰을 쓴다(없으면 조회하지 않고 기대도 걸지 않는다).
+모드(--mode) — 무엇을 시험하나:
+  merged      (시나리오 replay) PR이 **지금 머지·종료된** 후보를 우선 고른다. 그 계획은 더 이상 실행할 수 없으므로
+              승인하면 안 된다 — expect_statuses=review_rejected,cancelled. 최근 --max-lookups건 안에 그런 후보가
+              없으면(또는 토큰이 없어 조회할 수 없으면) 가장 최근 후보를 기대 없이 쓰고 경고한다.
+  ci-failure  (시나리오 replay-ci-failure) PR이 **지금 열린** 후보를 고르고, 그 PR의 head 커밋 위에 GitHub 대역 PR을
+              시드로 세운다(--sandbox-root/seed.json: 브랜치 `<head>-2` + PR #90001, 제목·본문은 실제 PR 그대로).
+              되돌린 레코드의 preparation(pullRequestUrl·branch)과 마지막 시도 안의 옛 PR 링크·번호·브랜치를 대역 PR로
+              바꾼다. 워크플로가 대역을 합성 CI `failure`로 올리면 그 head의 CI는 실패로만 보인다(대역은 자기 PR head의
+              실제 체크 런을 섞지 않는다) — CI가 실패한 준비물은 승인하면 안 된다: expect_statuses=review_rejected,cancelled.
+              head 커밋·diff·base·실제 commit status(사람 승인 포함)는 실제 그대로라 CI만 다르다. 후보가 없으면 실패한다.
 
-출력(GITHUB_OUTPUT): target(tbm_.../rct_...), model_id, task_id, pull_request_url, pr_state, expect_statuses,
-                     original_claim, original_verdict, replay_commit
+PR 조회에는 `--token-env`의 읽기 토큰을 쓴다(러너 전용 — 에이전트 환경에서는 뺀다).
+
+출력(GITHUB_OUTPUT): target(tbm_.../rct_...), model_id, task_id, mode, pull_request_url(스킬이 볼 PR), original_pr,
+                     pr_state, expect_statuses, original_claim, original_verdict, replay_commit
 종료 코드: 0 = 되감아 push함, 1 = 후보 없음/오류, 2 = 사용법 오류
 """
 
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 import re
 import subprocess
 import sys
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -45,6 +55,9 @@ MODELS_FILE = "data/to-be-models.json"
 CLAIM_RE = re.compile(r"^review\((tbm_[^/\s)]+)/(rct_[0-9]{8}-[0-9]{4})\): claim$")
 LIVE = {"planned", "reviewing"}
 PR_RE = re.compile(r"^https://github\.com/([^/\s]+)/([^/\s]+)/pull/(\d+)")
+MODES = ("merged", "ci-failure")
+REJECT = "review_rejected,cancelled"
+SANDBOX_PR_NUMBER = 90001  # 대역 PR 번호는 레포마다 90001부터 — 시드가 처음 만든다
 
 
 class ReplayError(Exception):
@@ -59,9 +72,13 @@ class Replay:
     original_claim: str
     original_verdict: str
     pull_request_url: str = ""
+    original_pr: str = ""
     pr_state: str = ""
     expect_statuses: str = ""
+    mode: str = "merged"
+    seed: dict | None = None
     commit: str = ""
+    notes: list = field(default_factory=list)
 
 
 def git(repo: Path, *args: str, check: bool = True) -> str:
@@ -138,7 +155,8 @@ def candidates(repo: Path, target: str | None, scan: int):
         yield sha, m.group(1), m.group(2)
 
 
-def find(repo: Path, target: str | None, scan: int, skipped: list) -> Replay:
+def eligible(repo: Path, target: str | None, scan: int, skipped: list):
+    """공통 조건을 통과한 후보를 최근 점유부터: (claim sha, model_id, task_id, 점유 직전 레코드, 현재 레코드)."""
     validator = make_validator(repo)
     models = {m.get("id"): m for m in (json.loads((repo / MODELS_FILE).read_text(encoding="utf-8")) or [])}
     seen: set[str] = set()
@@ -164,37 +182,121 @@ def find(repo: Path, target: str | None, scan: int, skipped: list) -> Replay:
         if why:
             skipped.append((key, why))
             continue
-        last = len(before.get("attempts") or []) - 1
-        prep = (before["attempts"][-1].get("preparation") or {})
-        return Replay(model_id=model_id, task_id=task_id, record=before, original_claim=sha,
-                      original_verdict=verdict_of(current, last),
-                      pull_request_url=prep.get("pullRequestUrl") or "")
-    scope = f"지목 {target}" if target else f"최근 {scan}개 커밋"
-    raise ReplayError(f"replay 후보 없음({scope}의 review claim 커밋 중 조건을 만족하는 것이 없음)")
+        yield sha, model_id, task_id, before, current
 
 
-def pr_state(url: str, token: str | None) -> str:
-    """open | closed | merged — 조회할 수 없으면 빈 문자열."""
+def pr_url_of(record: dict) -> str:
+    return ((record.get("attempts") or [{}])[-1].get("preparation") or {}).get("pullRequestUrl") or ""
+
+
+def make_replay(sha, model_id, task_id, before, current, mode) -> Replay:
+    return Replay(model_id=model_id, task_id=task_id, record=copy.deepcopy(before), original_claim=sha,
+                  original_verdict=verdict_of(current, len(before.get("attempts") or []) - 1),
+                  pull_request_url=pr_url_of(before), original_pr=pr_url_of(before), mode=mode)
+
+
+def find(repo: Path, target: str | None, scan: int, skipped: list, *, mode: str = "merged",
+         lookup=None, token: str | None = None, max_lookups: int = 20) -> Replay:
+    """모드에 맞는 후보 하나. lookup(url, token) → PR 정보 dict(state·head_sha·head_ref·base_ref·title·body) 또는 None."""
+    first = None
+    looked = 0
+    for sha, model_id, task_id, before, current in eligible(repo, target, scan, skipped):
+        key = f"{model_id}/{task_id}"
+        first = first or (sha, model_id, task_id, before, current)
+        url = pr_url_of(before)
+        if not url:
+            skipped.append((key, "직접 액션(PR 없음) — 이 모드가 시험할 PR이 없음"))
+            continue
+        if not (lookup and token):
+            break  # 조회할 수 없다 — 아래에서 처리
+        if looked >= max_lookups:
+            skipped.append((key, f"PR 조회 {max_lookups}건 한도"))
+            break
+        looked += 1
+        info = lookup(url, token)
+        state = (info or {}).get("state", "")
+        if mode == "merged" and state in ("merged", "closed"):
+            rp = make_replay(sha, model_id, task_id, before, current, mode)
+            rp.pr_state, rp.expect_statuses = state, REJECT
+            return rp
+        if mode == "ci-failure" and state == "open" and info.get("head_sha") and info.get("head_ref"):
+            rp = make_replay(sha, model_id, task_id, before, current, mode)
+            rp.pr_state, rp.expect_statuses = state, REJECT
+            rehost(rp, info)
+            return rp
+        skipped.append((key, f"PR {state or '조회 실패'} — {mode} 모드 대상 아님"))
+
+    if mode == "ci-failure":
+        why = "읽기 토큰이 없어 PR을 조회할 수 없음" if not (lookup and token) else "지금 열린 PR을 가진 후보가 없음"
+        raise ReplayError(f"replay-ci-failure 후보 없음 — {why}")
+    if first is None:
+        scope = f"지목 {target}" if target else f"최근 {scan}개 커밋"
+        raise ReplayError(f"replay 후보 없음({scope}의 review claim 커밋 중 조건을 만족하는 것이 없음)")
+    rp = make_replay(*first, mode)
+    why = "읽기 토큰이 없어 PR 상태를 조회하지 못함" if not (lookup and token) else "머지·종료된 PR 건을 찾지 못함"
+    rp.notes.append(f"{why} — 가장 최근 후보를 기대 없이 판정시킨다(머지된 PR 거부 경로는 이번에 시험하지 않음)")
+    return rp
+
+
+def rehost(rp: Replay, info: dict) -> None:
+    """실제 PR의 head 커밋 위에 대역 PR을 세우고, 되돌린 레코드가 그 PR을 가리키게 한다(ci-failure)."""
+    m = PR_RE.match(rp.original_pr)
+    owner, name, number = m.group(1), m.group(2), m.group(3)
+    full = f"{owner}/{name}"
+    branch = f"{info['head_ref']}-2"  # 실제 PR과 같은 head 이름이면 실제 GitHub처럼 중복 PR로 거절된다
+    new_url = f"https://github.com/{full}/pull/{SANDBOX_PR_NUMBER}"
+    rp.seed = {"branches": [{"repository": full, "name": branch, "sha": info["head_sha"]}],
+               "pulls": [{"repository": full, "head": branch, "base": info.get("base_ref") or "main",
+                          "title": info.get("title") or f"PR #{number}", "body": info.get("body") or "",
+                          "number": SANDBOX_PR_NUMBER}]}
+    last = rp.record["attempts"][-1]
+    text = json.dumps(last, ensure_ascii=False)
+    text = text.replace(rp.original_pr, new_url)
+    text = re.sub(rf"(?<![\w/])#{number}\b", f"#{SANDBOX_PR_NUMBER}", text)
+    old_branch = (last.get("preparation") or {}).get("branch") or info["head_ref"]
+    text = re.sub(rf"(?<![\w/.-]){re.escape(old_branch)}(?![\w/.-])", lambda _m: branch, text)
+    last = json.loads(text)
+    last.setdefault("preparation", {})
+    last["preparation"]["pullRequestUrl"] = new_url
+    last["preparation"]["branch"] = branch
+    rp.record["attempts"][-1] = last
+    rp.pull_request_url = new_url
+
+
+def pr_info(url: str, token: str | None) -> dict | None:
+    """실제 PR 조회 → {state: open|closed|merged, head_sha, head_ref, base_ref, title, body}. 실패면 None."""
     m = PR_RE.match(url or "")
     if not (m and token):
-        return ""
+        return None
     req = urllib.request.Request(f"https://api.github.com/repos/{m.group(1)}/{m.group(2)}/pulls/{m.group(3)}",
                                  headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
                                           "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "reconciler-replay"})
     try:
         with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.load(resp)
-    except Exception as exc:  # noqa: BLE001 — 조회 실패는 기대를 걸지 않는 것으로 처리
-        print(f"::warning::PR 상태 조회 실패({url}): {type(exc).__name__}")
-        return ""
-    if data.get("merged") or data.get("merged_at"):
-        return "merged"
-    return str(data.get("state") or "")
+    except Exception as exc:  # noqa: BLE001 — 조회 실패는 그 후보를 건너뛰는 것으로 처리
+        print(f"::warning::PR 조회 실패({url}): {type(exc).__name__}")
+        return None
+    state = "merged" if (data.get("merged") or data.get("merged_at")) else str(data.get("state") or "")
+    return {"state": state, "head_sha": (data.get("head") or {}).get("sha"), "head_ref": (data.get("head") or {}).get("ref"),
+            "base_ref": (data.get("base") or {}).get("ref"), "title": data.get("title"), "body": data.get("body")}
 
 
-def apply(repo: Path, rp: Replay, *, remote: str, branch: str) -> None:
+def apply(repo: Path, rp: Replay, *, remote: str, branch: str, sandbox_root: Path | None = None) -> None:
     rel = f"{TASKS_DIR}/{rp.model_id}.json"
     path = repo / rel
+    errs = list(make_validator(repo).iter_errors(rp.record))
+    if errs:
+        raise ReplayError(f"되돌린 레코드가 스키마를 통과하지 않음 — {errs[0].message[:200]}")
+    if rp.seed is not None:
+        if sandbox_root is None:
+            raise ReplayError("ci-failure 모드는 --sandbox-root가 필요하다(대역 시드를 둘 곳)")
+        sandbox_root.mkdir(parents=True, exist_ok=True)
+        seed_path = sandbox_root / "seed.json"
+        seed = json.loads(seed_path.read_text(encoding="utf-8")) if seed_path.exists() else {}
+        for k, v in rp.seed.items():
+            seed.setdefault(k, []).extend(v)
+        seed_path.write_text(json.dumps(seed, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     tasks = json.loads(path.read_text(encoding="utf-8"))
     idx = next((i for i, t in enumerate(tasks) if isinstance(t, dict) and t.get("id") == rp.task_id), None)
     if idx is None:
@@ -214,7 +316,9 @@ def write_outputs(rp: Replay, path: str | None) -> None:
         "target": f"{rp.model_id}/{rp.task_id}",
         "model_id": rp.model_id,
         "task_id": rp.task_id,
+        "mode": rp.mode,
         "pull_request_url": rp.pull_request_url,
+        "original_pr": rp.original_pr,
         "pr_state": rp.pr_state,
         "expect_statuses": rp.expect_statuses,
         "original_claim": rp.original_claim,
@@ -229,14 +333,17 @@ def write_outputs(rp: Replay, path: str | None) -> None:
         sys.stdout.write(text)
 
 
-def render(rp: Replay | None, skipped: list) -> str:
-    out = ["#### Replay fixture (sandbox)"]
+def render(rp: Replay | None, skipped: list, mode: str) -> str:
+    out = [f"#### Replay fixture (sandbox · {mode})"]
     if rp:
-        pr = rp.pull_request_url or "직접 액션(PR 없음)"
+        pr = rp.original_pr or "직접 액션(PR 없음)"
         out.append(f"- 되감음: `{rp.model_id}/{rp.task_id}` ← `{rp.original_claim[:7]}^`의 planned 레코드 · {pr}"
                    + (f" (지금 {rp.pr_state})" if rp.pr_state else ""))
+        if rp.seed:
+            out.append(f"- 대역 PR: {rp.pull_request_url} — 같은 head 커밋, 합성 CI 실패(실제 CI는 숨김)")
         out.append(f"- 원래 판정: {rp.original_verdict}")
         out.append(f"- 기대: {rp.expect_statuses or '제한 없음(종료 상태 중 하나)'}")
+        out.extend(f"- ⚠️ {n}" for n in rp.notes)
     for key, why in skipped[:10]:
         out.append(f"- 건너뜀 · {key}: {why}")
     if len(skipped) > 10:
@@ -244,14 +351,17 @@ def render(rp: Replay | None, skipped: list) -> str:
     return "\n".join(out) + "\n"
 
 
-def main(argv: list[str] | None = None, lookup=pr_state) -> int:
+def main(argv: list[str] | None = None, lookup=pr_info) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--repo", type=Path, required=True)
     p.add_argument("--target", default="", help="tbm_.../rct_... — 비우면 최근 점유부터 자동 선택")
+    p.add_argument("--mode", choices=MODES, default="merged")
     p.add_argument("--remote", default="origin")
     p.add_argument("--branch", default="main")
     p.add_argument("--scan", type=int, default=400, help="review claim 커밋을 찾을 최근 커밋 수")
-    p.add_argument("--token-env", default="", help="PR 상태 조회용 읽기 토큰이 든 환경 변수 이름")
+    p.add_argument("--max-lookups", type=int, default=20, help="PR 상태를 조회할 후보 수 한도")
+    p.add_argument("--token-env", default="", help="PR 조회용 읽기 토큰이 든 환경 변수 이름")
+    p.add_argument("--sandbox-root", type=Path, help="GitHub 대역 루트(ci-failure 모드가 seed.json을 둔다)")
     p.add_argument("--github-output", default=os.environ.get("GITHUB_OUTPUT"))
     p.add_argument("--summary-file", default=os.environ.get("GITHUB_STEP_SUMMARY"))
     args = p.parse_args(argv)
@@ -260,21 +370,22 @@ def main(argv: list[str] | None = None, lookup=pr_state) -> int:
     if target and not re.fullmatch(r"tbm_[^/\s]+/rct_[0-9]{8}-[0-9]{4}", target):
         print(f"::error::replay 지목은 tbm_.../rct_... 형태여야 함: {target}")
         return 2
+    token = os.environ.get(args.token_env) if args.token_env else None
     skipped: list = []
     rp = None
     try:
         assert_sandbox(args.repo, args.remote)
-        rp = find(args.repo, target, args.scan, skipped)
-        rp.pr_state = lookup(rp.pull_request_url, os.environ.get(args.token_env) if args.token_env else None)
-        if rp.pr_state in ("merged", "closed"):
-            rp.expect_statuses = "review_rejected,cancelled"
-        apply(args.repo, rp, remote=args.remote, branch=args.branch)
+        rp = find(args.repo, target, args.scan, skipped, mode=args.mode, lookup=lookup, token=token,
+                  max_lookups=args.max_lookups)
+        apply(args.repo, rp, remote=args.remote, branch=args.branch, sandbox_root=args.sandbox_root)
     except ReplayError as exc:
-        print(render(None, skipped), end="")
+        print(render(None, skipped, args.mode), end="")
         print(f"::error::{exc}")
         return 1
-    summary = render(rp, skipped)
+    summary = render(rp, skipped, args.mode)
     print(summary, end="")
+    for n in rp.notes:
+        print(f"::warning::{n}")
     if args.summary_file:
         with open(args.summary_file, "a", encoding="utf-8") as fh:
             fh.write(summary)

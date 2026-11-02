@@ -174,7 +174,7 @@ plugin-marketplace의 `plugins/reconciler-data-plane`에 PR로 올린다(0.5.0~)
 | --- | --- | --- |
 | generate | 메인 `.github/minimax/work-review-brief.md`(핵심 규칙) + 서브 `work-review-brief-sub.md`(품질 보조 규칙)만 주고, mcode가 레포(README·스키마·`claim_review_target.py`·템플릿·데이터)를 직접 읽어 `SKILL.md`를 쓴다. 기존 스킬 본문은 모델에 주지 않는다. | `work-review-skill` |
 | validate | `validate_generated_skill.py --profile work-review` — 형식·계약 커버리지(`reviewing`·`approved`·`review_rejected`·`cancelled`·`manualApproval`·`attempts`·`review(...)` 커밋 등)·금지 패턴(commit status 쓰기·PR 머지 포함)·보조 스크립트 문법. | `work-review-validation` |
-| test | 시나리오 matrix — `live`(운영 `planned` 그대로), `replay`(최근 리뷰된 task를 점유 직전 `planned`로 되돌림). 러너 점유(`claim_review_target.py`, `planned → reviewing`) → 생성 스킬 판정(`work-review-run-prompt.md`) → 결과 점검(`check_review_result.py`). | `work-review-test-<시나리오>` |
+| test | 시나리오 matrix — `live`(운영 `planned` 그대로), `replay`(머지·종료된 PR 건을 점유 직전 `planned`로 되돌림), `replay-ci-failure`(열린 PR 건을 되돌려 대역 PR + CI 실패로). 러너 점유(`claim_review_target.py`, `planned → reviewing`) → 생성 스킬 판정(`work-review-run-prompt.md`) → 결과 점검(`check_review_result.py`). | `work-review-test-<시나리오>` |
 | report | 위 결과를 하나로 모은다 — `skill/`, `validation/`, `test/<시나리오>/reviewed-task.json`·점검 보고·결과 diff·mcode 최종 보고, `README.md` 요약. | `work-review-build-result` |
 
 **샌드박스 원격 — 드라이런이 아니다.** test job은 reconciler 체크아웃의 `origin`(fetch·push)을 러너 로컬 bare 레포로 바꾼다.
@@ -184,9 +184,17 @@ plugin-marketplace의 `plugins/reconciler-data-plane`에 PR로 올린다(0.5.0~)
 잡는다. 같은 두 겹(샌드박스 원격 + GitHub 샌드박스)이 대상 레포에 쓰는 계획 단계 test에도 쓰인다.
 
 **replay 시나리오**: 운영 데이터에 `planned`가 늘 있지는 않아서, git 이력의 최근 `review(<tbm>/<rct>): claim` 커밋을 찾아 그 부모의
-task 레코드(점유 직전)를 샌드박스에만 되돌려 놓는다(`replay_review_task.py` — 원격이 로컬 경로가 아니면 쓰지 않고 실패). 그 PR이 지금
-머지·종료됐으면 계획은 더 이상 실행할 수 없으므로 점검기가 `review_rejected | cancelled`를 기대한다 — 신선도 확인을 건너뛰고 기록만
-믿는 스킬은 여기서 걸린다. 원래 판정(운영 기록)은 요약에 함께 남는다.
+task 레코드(점유 직전)를 샌드박스에만 되돌려 놓는다(`replay_review_task.py` — 원격이 로컬 경로가 아니면 쓰지 않고 실패). 원래 판정(운영
+기록)은 요약에 함께 남는다. 모드마다 시험하는 거부 경로가 다르다.
+
+- `replay`(`--mode merged`): 최근 후보부터 PR을 조회해 **지금 머지·종료된** 건을 우선 고른다. 그 계획은 더 이상 실행할 수 없으므로
+  점검기가 `review_rejected | cancelled`를 기대한다 — 신선도 확인을 건너뛰고 기록만 믿는 스킬은 여기서 걸린다. 조회 한도(20건) 안에
+  그런 건이 없으면 가장 최근 건을 기대 없이 판정하고 경고한다.
+- `replay-ci-failure`(`--mode ci-failure`): **지금 열린** PR 건을 고르고, 그 PR의 head 커밋에 대역 브랜치(`<head>-2`)를 걸어 대역 PR
+  (#90001, 실제 PR의 제목·본문)을 시드로 세운다. 되돌린 레코드의 `preparation`과 마지막 시도 안의 옛 PR 링크·번호·브랜치는 대역 PR로
+  바꾼다. 대역은 `synthetic-ci: failure`로 올라와 그 head의 CI가 실패로만 보인다(대역 PR head에서는 같은 커밋의 실제 체크 런을 섞지 않는다).
+  diff·base·실제 commit status(사람 승인 포함)는 실제 그대로라 CI만 다르다 — CI가 실패한 준비물을 승인하면 점검기가 실패시킨다.
+  열린 PR 건이 없으면 fixture가 실패한다.
 
 **점검기가 보는 계약**: 점유 이후 그 task 파일 하나·그 task 한 건만 바뀜, `review(<tbm>/<rct>): …` 커밋, `trigger`·`stateSummary`·
 `assessment`와 이전 attempts 항목·마지막 항목의 `plan`·`preparation` 보존, 종료 상태 `approved | review_rejected | cancelled`
@@ -261,8 +269,9 @@ GitHub 샌드박스를 올려 두어, 스킬이 GitHub로 무엇을 보내든 �
 | 실행 | 머지는 승인된 task의 그 PR 하나만, commit status 쓰기 0건, 강제 push 0건. 거절된 시도는 경고. |
 
   대역이 모르는 요청은 501 + `op: unsupported`로 남고 점검기 경고로 보인다 — 대역을 넓혀야 한다는 단서다.
-- **시드·오프라인 MCP**(실행 빌드의 격리 무대): 대역은 시작 때 `seed.json`의 PR·commit status를 「스킬이 오기 전에 이미 있던」 것으로
-  심는다(기록 `seed.*`, 쓰기로 세지 않음). OIDC가 없는 job은 `mcp-offline: "true"`로 프록시가 MCP 서버 자체가 되어 GitHub 도구 두 개(대역)와
+- **시드·오프라인 MCP**(실행 빌드의 격리 무대, 리뷰 빌드 `replay-ci-failure`): 대역은 시작 때 `seed.json`의 브랜치(미러에 있는 커밋에 건다)·
+  PR·commit status를 「스킬이 오기 전에 이미 있던」 것으로 심는다(기록 `seed.*`, 쓰기로 세지 않음). 대역 PR head에서는 실제 체크 런을
+  중계하지 않으므로, 실제 커밋 위에 세운 대역 PR의 CI 결과는 합성 결과 하나다. OIDC가 없는 job은 `mcp-offline: "true"`로 프록시가 MCP 서버 자체가 되어 GitHub 도구 두 개(대역)와
   `ping`만 노출한다.
 - **github.com 공개 자료**: git 밖 GET(릴리스 내려받기·아카이브 — 예: `npm install`의 prebuilt 바이너리)은 자격 증명 없이 실제 github.com에
   물어 그대로 돌려준다(쓰기는 중계하지 않는다).

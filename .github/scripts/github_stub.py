@@ -33,10 +33,14 @@ head만 실패, 이후 push는 성공 — 고칠 수 있는 CI 실패) · off(�
 관리 API(평문 HTTP, 127.0.0.1 전용): POST /_sandbox/tokens · POST /_sandbox/statuses · GET /_sandbox/state ·
 GET /_sandbox/health
 
-시드(`--seed FILE`, JSON): 시험 무대가 "스킬이 오기 전에 이미 있던" PR·commit status를 심는다(실행 빌드 픽스처).
-`{"pulls": [{"repository": "o/r", "head": "br", "base": "main", "title": …, "body": …, "number": 90001}],
+시드(`--seed FILE`, JSON): 시험 무대가 "스킬이 오기 전에 이미 있던" 브랜치·PR·commit status를 심는다(실행 빌드 픽스처,
+리뷰 빌드 replay-ci-failure).
+`{"branches": [{"repository": "o/r", "name": "br", "sha": …}],
+  "pulls": [{"repository": "o/r", "head": "br", "base": "main", "title": …, "body": …, "number": 90001}],
   "statuses": [{"repository": "o/r", "sha": …, "state": "success", "context": "review/manual-approval"}]}`
-시드는 기록에 `seed.pull`·`seed.status`(write: false)로 남는다 — 스킬의 쓰기로 세지 않는다.
+시드는 기록에 `seed.branch`·`seed.pull`·`seed.status`(write: false)로 남는다 — 스킬의 쓰기로 세지 않는다.
+대역 PR의 head(합성 CI가 붙은 커밋)에서는 같은 커밋의 실제 체크 런을 중계하지 않는다 — 실제 커밋 위에 세운 대역 PR에서도
+CI 결과는 합성 결과 하나다(commit status는 그대로 중계 — 사람 승인 status는 실제 그대로 보인다).
 """
 
 from __future__ import annotations
@@ -677,6 +681,13 @@ class Api:
         data = json.loads(body)
         return (data.get(key) or []) if key else (data if isinstance(data, list) else [])
 
+    def real_ci(self, repo: str, sha: str, path: str, key: str) -> list:
+        """실제 GitHub의 체크 런·스위트 중계. 대역이 CI를 맡은 커밋(합성 런이 있는 head)이면 섞지 않는다 — 시드로 실제 커밋 위에
+        세운 대역 PR에서 그 커밋의 실제 CI 결과가 합성 결과(예: 실패)를 가리지 않게."""
+        if self.s.synthetic_runs(repo, sha):
+            return []
+        return self.real_list(path, key)
+
     def statuses_list(self, tok, kw, q, body):
         repo = self.repo(kw)
         self.s.authorize(tok, repo, "statuses", False)
@@ -702,7 +713,7 @@ class Api:
         self.s.authorize(tok, repo, "checks", False)
         sha = self.s.repos.rev(repo, urllib.parse.unquote(kw["ref"])) or kw["ref"]
         runs = self.s.synthetic_runs(repo, sha) + \
-            self.real_list(f"/repos/{repo}/commits/{sha}/check-runs?per_page=100", "check_runs")
+            self.real_ci(repo, sha, f"/repos/{repo}/commits/{sha}/check-runs?per_page=100", "check_runs")
         return 200, {"total_count": len(runs), "check_runs": runs}, "checks.list", repo, None
 
     def check_run_get(self, tok, kw, q, body):
@@ -722,7 +733,7 @@ class Api:
         sha = self.s.repos.rev(repo, urllib.parse.unquote(kw["ref"])) or kw["ref"]
         suites = [{"id": r["check_suite"]["id"], "head_sha": sha, "status": "completed", "conclusion": r["conclusion"],
                    "app": r["app"], "synthetic": True} for r in self.s.synthetic_runs(repo, sha)] + \
-            self.real_list(f"/repos/{repo}/commits/{sha}/check-suites?per_page=100", "check_suites")
+            self.real_ci(repo, sha, f"/repos/{repo}/commits/{sha}/check-suites?per_page=100", "check_suites")
         return 200, {"total_count": len(suites), "check_suites": suites}, "checks.suites", repo, None
 
     def add_status(self, repo: str, sha: str, body: dict, source: str) -> dict:
@@ -950,7 +961,8 @@ class Api:
                 self.real_list(f"/repos/{repo}/commits/{pr['head']['sha']}/statuses?per_page=100"):
             latest.setdefault(st["context"], st["state"])
         for run in self.s.synthetic_runs(repo, pr["head"]["sha"]) + \
-                self.real_list(f"/repos/{repo}/commits/{pr['head']['sha']}/check-runs?per_page=100", "check_runs"):
+                self.real_ci(repo, pr["head"]["sha"],
+                             f"/repos/{repo}/commits/{pr['head']['sha']}/check-runs?per_page=100", "check_runs"):
             latest.setdefault(run.get("name"), "success" if run.get("conclusion") in ("success", "neutral", "skipped")
                               else "failure" if run.get("conclusion") in ("failure", "timed_out", "cancelled",
                                                                           "action_required")
@@ -1718,7 +1730,20 @@ def make_server_handler(state: State, api: Api, gql: GraphQL, root: Path, web: P
 
 
 def apply_seed(state: State, api: Api, seed: dict) -> None:
-    """무대가 미리 갖춰 둔 PR·status. 스킬의 쓰기와 구분되게 seed.* (write false)로 기록한다."""
+    """무대가 미리 갖춰 둔 브랜치·PR·status. 스킬의 쓰기와 구분되게 seed.* (write false)로 기록한다.
+
+    branches: [{repository, name, sha}] — 미러에 이미 있는 커밋(refs/pull/* 포함)에 브랜치를 건다. 실제 PR의 head 커밋을
+    대역 PR로 다시 세울 때 쓴다(실제 PR과 같은 head 브랜치 이름이면 실제 GitHub처럼 중복 PR로 거절되므로 다른 이름)."""
+    for spec in seed.get("branches") or []:
+        repo = state.repos.canonical(spec["repository"])
+        if repo is None:
+            raise SystemExit(f"seed: 레포 없음 {spec['repository']}")
+        sha = state.repos.rev(repo, spec["sha"])
+        if not sha:
+            raise SystemExit(f"seed: {repo}에 커밋 {spec['sha']}이 없음")
+        state.repos.git(repo, "update-ref", f"refs/heads/{spec['name']}", sha)
+        state.record(source="seed", op="seed.branch", repo=repo, write=False,
+                     detail={"name": spec["name"], "sha": sha})
     for spec in seed.get("pulls") or []:
         repo = state.repos.canonical(spec["repository"])
         if repo is None:

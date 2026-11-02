@@ -40,6 +40,7 @@ class FakeUpstream:
 
     def __init__(self):
         self.seen = []
+        self.real_runs = []  # 실제 GitHub가 돌려줄 체크 런(기본 없음)
         up = self
 
         class H(BaseHTTPRequestHandler):
@@ -62,7 +63,7 @@ class FakeUpstream:
                                         "base": {"ref": "main", "sha": "e" * 40}})
                 if "/pulls?" in self.path or self.path.endswith("/statuses?per_page=100") \
                         or "/check-runs" in self.path or "/comments" in self.path:
-                    return self._reply([] if "/check-runs" not in self.path else {"check_runs": []})
+                    return self._reply([] if "/check-runs" not in self.path else {"check_runs": up.real_runs})
                 self._reply({"real": True, "path": self.path})
 
             def do_POST(self):
@@ -115,6 +116,7 @@ class StubFixture(unittest.TestCase):
         self.upstream = FakeUpstream() if self.passthrough else None
         pt = PlainPassthrough(self.upstream.port) if self.upstream else None
         api = stub.Api(self.state, pt)
+        self.api = api
         gql = stub.GraphQL(self.state, api, pt)
         web = PlainPassthrough(self.upstream.port, token="") if self.upstream else None
         self.server = ThreadingHTTPServer(("127.0.0.1", 0),
@@ -545,6 +547,45 @@ class SandboxHelpersTest(unittest.TestCase):
             {"seq": 3, "op": "unsupported", "method": "POST", "host": "api.github.com", "path": "/x", "status": 501}])
         self.assertIn("refs/heads/x 0000000→aaaaaaa", text)
         self.assertIn("POST api.github.com/x", text)
+
+
+class SeededRealCommitTest(StubFixture):
+    """replay-ci-failure: 실제 PR의 head 커밋 위에 시드로 대역 PR을 세우면, 그 커밋의 실제 CI(성공)는 숨고 합성 실패만 보인다."""
+    passthrough = True
+    required = ["ci-success", "review/manual-approval"]
+    synthetic_ci = "failure"
+
+    def test_seed_branch_and_pr_on_real_commit(self):
+        tok = self.mint(["demo"])
+        self.push_branch(tok, branch="feature/real")  # 실제 PR의 head 커밋 자리
+        sha = git("--git-dir", str(self.bare), "rev-parse", "refs/heads/feature/real").stdout.strip()
+        self.upstream.real_runs = [{"id": 1, "name": "ci-success", "head_sha": sha, "status": "completed",
+                                    "conclusion": "success", "app": {"slug": "github-actions"}}]
+        stub.apply_seed(self.state, self.api, {
+            "branches": [{"repository": "dlddu/demo", "name": "feature/real-2", "sha": sha}],
+            "pulls": [{"repository": "dlddu/demo", "head": "feature/real-2", "base": "main", "title": "real title",
+                       "body": "real body", "number": 90001}]})
+        pr = self.call("GET", "/repos/dlddu/demo/pulls/90001", tok)[1]
+        self.assertEqual((pr["head"]["sha"], pr["title"]), (sha, "real title"))
+        runs = self.call("GET", f"/repos/dlddu/demo/commits/{sha}/check-runs", tok)[1]["check_runs"]
+        self.assertEqual([(r["name"], r["conclusion"]) for r in runs], [("ci-success", "failure")])  # 실제 성공은 숨김
+        suites = self.call("GET", f"/repos/dlddu/demo/commits/{sha}/check-suites", tok)[1]["check_suites"]
+        self.assertEqual([s["conclusion"] for s in suites], ["failure"])
+        self.assertEqual(self.call("PUT", "/repos/dlddu/demo/pulls/90001/merge", tok, {})[0], 405)
+        ops = [e["op"] for e in self.entries()]
+        self.assertIn("seed.branch", ops)
+        self.assertFalse([e for e in self.entries() if e["op"].startswith("seed.") and e.get("write")])
+
+    def test_real_commit_without_sandbox_pr_still_shows_real_ci(self):
+        tok = self.mint(["demo"])
+        self.upstream.real_runs = [{"id": 1, "name": "ci-success", "conclusion": "success"}]
+        runs = self.call("GET", f"/repos/dlddu/demo/commits/{'f' * 40}/check-runs", tok)[1]["check_runs"]
+        self.assertEqual([r["conclusion"] for r in runs], ["success"])
+
+    def test_seed_branch_needs_existing_commit(self):
+        with self.assertRaises(SystemExit):
+            stub.apply_seed(self.state, self.api,
+                            {"branches": [{"repository": "dlddu/demo", "name": "x", "sha": "a" * 40}]})
 
 
 if __name__ == "__main__":
