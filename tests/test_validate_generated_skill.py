@@ -192,7 +192,8 @@ REVIEW_BODY = """
 1. `preparation.pullRequestUrl`의 PR을 `github_app_installation_token`(읽기)으로 확인한다.
 2. 대상 레포 `rules/branches`의 required status를 본다. 사람 승인 status를 붙이지 않는다.
 3. `attempts` 마지막 항목에 `review`(`reviewedAt`·`reason`)를 쓰고 `schemas/reconciliation-task.schema.json`으로 jsonschema 검증.
-4. 승인이면 `approved`(필요하면 `manualApproval`), 거부면 `review_rejected`, 연속 3회 거부면 `cancelled`.
+4. 승인이면 `approved`(필요하면 `manualApproval`), 거부면 `review_rejected`, 연속 3회 거부면 `cancelled`(커밋 `cancel after repeated rejection`).
+8. 계획이 적은 기대값을 실측과 대조하고, 하나라도 다르면 거부한다.
 5. `data/reconciliation-tasks/<model>.json` 커밋 `review(<tbm>/<rct>): approved` → `git pull --rebase` 후 push.
 6. 판정 후 lock을 놓는다 — reviewing으로 남기지 않는다. PR을 머지하지 않는다. 스키마는 수정하지 않는다.
 7. `reason`은 2~4문장으로 쓴다.

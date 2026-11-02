@@ -49,6 +49,10 @@ on:
         description: "replay·replay-ci-failure에서 되돌릴 task(tbm_.../rct_...). 비우면 최근 리뷰 점유부터 모드에 맞는 건 자동 선택"
         required: false
         default: ""
+      replay_expect:
+        description: "replay·replay-ci-failure의 기대 status 지정(쉼표 구분: approved · review_rejected · cancelled). 비우면 모드 기본(머지·종료 PR → 거부, ci-failure → 거부, 그 밖엔 기대 없음). replay_target과 함께 회귀 케이스를 고정할 때 쓴다"
+        required: false
+        default: ""
       minimax_model:
         description: "mcode 모델 override(<provider>/<model>, 예: minimax/MiniMax-M3). 비우면 CLI 기본값"
         required: false
@@ -344,10 +348,11 @@ jobs:
         env:
           REPLAY_TARGET: ${{ inputs.replay_target }}
           REPLAY_MODE: ${{ matrix.scenario == 'replay-ci-failure' && 'ci-failure' || 'merged' }}
+          REPLAY_EXPECT: ${{ inputs.replay_expect }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           python3 harness/.github/scripts/replay_review_task.py --repo ws/reconciler --branch "$DEFAULT_BRANCH" \
-            --mode "$REPLAY_MODE" --sandbox-root "$RUNNER_TEMP/github-sandbox" \
+            --mode "$REPLAY_MODE" --sandbox-root "$RUNNER_TEMP/github-sandbox" --expect "$REPLAY_EXPECT" \
             --target "$REPLAY_TARGET" --token-env SOURCE_GITHUB_TOKEN --summary-file "$OUT/logs/replay.md"
 
       - name: Claim target (sandbox)

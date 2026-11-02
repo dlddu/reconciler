@@ -195,6 +195,10 @@ task 레코드(점유 직전)를 샌드박스에만 되돌려 놓는다(`replay_
   바꾼다. 대역은 `synthetic-ci: failure`로 올라와 그 head의 CI가 실패로만 보인다(대역 PR head에서는 같은 커밋의 실제 체크 런을 섞지 않는다).
   diff·base·실제 commit status(사람 승인 포함)는 실제 그대로라 CI만 다르다 — CI가 실패한 준비물을 승인하면 점검기가 실패시킨다.
   열린 PR 건이 없으면 fixture가 실패한다.
+- **회귀 케이스 고정**(입력 `replay_target` + `replay_expect`): 모드가 기대를 걸지 않는 건(예: PR이 열려 있는데 잘못 승인된 건)은 기대 status를
+  직접 지정한다(`--expect`, 쉼표 구분). 예: `replay_target=tbm_pocket-aide-e2e-mock-policy/rct_20261026-0001`, `replay_expect=review_rejected`
+  — 계획의 diff 기대값(3파일)과 PR #327 실제 diff(11파일)가 다른데 운영 리뷰가 승인했던 건(run 41304877532, 사람이 3cd59ef에서 철회).
+  replay는 그 task의 가장 최근 `review(...): claim` 커밋의 부모 레코드를 되돌리므로, 그 뒤에 붙은 거부 기록과 무관하게 재현된다.
 
 **점검기가 보는 계약**: 점유 이후 그 task 파일 하나·그 task 한 건만 바뀜, `review(<tbm>/<rct>): …` 커밋, `trigger`·`stateSummary`·
 `assessment`와 이전 attempts 항목·마지막 항목의 `plan`·`preparation` 보존, 종료 상태 `approved | review_rejected | cancelled`

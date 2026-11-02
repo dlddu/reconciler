@@ -170,6 +170,9 @@ def check(repo: Path, base: str, model_id: str, task_id: str, claim_subject: str
             res.warnings.append(f"review.reason이 {len(reason)}자 — 2~4문장 기준보다 김")
         if want == "rejected" and not str(review.get("comment") or "").strip():
             res.errors.append("거부인데 review.comment가 없음 — planner가 고칠 것이 남지 않는다")
+        if status == "cancelled" and log and not any(x.endswith("): cancel after repeated rejection") for x in log):
+            res.errors.append("cancelled인데 커밋 제목이 `review(<tbm>/<rct>): cancel after repeated rejection`이 아님: "
+                              + ", ".join(f"`{x}`" for x in log))
         if review.get("manualApproval") and status != "approved":
             res.errors.append("manualApproval은 승인에만 남긴다")
         elif review.get("manualApproval"):

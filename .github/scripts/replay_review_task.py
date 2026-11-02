@@ -26,6 +26,10 @@ MiniMax 파이프라인」). 이 스크립트는 그 원격이 로컬 경로가 
               실제 체크 런을 섞지 않는다) — CI가 실패한 준비물은 승인하면 안 된다: expect_statuses=review_rejected,cancelled.
               head 커밋·diff·base·실제 commit status(사람 승인 포함)는 실제 그대로라 CI만 다르다. 후보가 없으면 실패한다.
 
+기대 지정(--expect): 모드가 정한 기대를 덮어쓴다(쉼표 구분, approved·review_rejected·cancelled 중). PR이 열려 있어 모드가 기대를
+걸지 않는 건을 회귀 케이스로 지목할 때 쓴다 — 예: 계획의 diff 기대값(3파일)과 실제 PR diff(11파일)가 다른데 승인된 건을
+`--target tbm_pocket-aide-e2e-mock-policy/rct_20261026-0001 --expect review_rejected`로 다시 판정시킨다.
+
 PR 조회에는 `--token-env`의 읽기 토큰을 쓴다(러너 전용 — 에이전트 환경에서는 뺀다).
 
 출력(GITHUB_OUTPUT): target(tbm_.../rct_...), model_id, task_id, mode, pull_request_url(스킬이 볼 PR), original_pr,
@@ -57,6 +61,7 @@ LIVE = {"planned", "reviewing"}
 PR_RE = re.compile(r"^https://github\.com/([^/\s]+)/([^/\s]+)/pull/(\d+)")
 MODES = ("merged", "ci-failure")
 REJECT = "review_rejected,cancelled"
+FINAL_STATUSES = ("approved", "review_rejected", "cancelled")
 SANDBOX_PR_NUMBER = 90001  # 대역 PR 번호는 레포마다 90001부터 — 시드가 처음 만든다
 
 
@@ -77,6 +82,7 @@ class Replay:
     expect_statuses: str = ""
     mode: str = "merged"
     seed: dict | None = None
+    expect_source: str = "모드"
     commit: str = ""
     notes: list = field(default_factory=list)
 
@@ -342,7 +348,8 @@ def render(rp: Replay | None, skipped: list, mode: str) -> str:
         if rp.seed:
             out.append(f"- 대역 PR: {rp.pull_request_url} — 같은 head 커밋, 합성 CI 실패(실제 CI는 숨김)")
         out.append(f"- 원래 판정: {rp.original_verdict}")
-        out.append(f"- 기대: {rp.expect_statuses or '제한 없음(종료 상태 중 하나)'}")
+        out.append(f"- 기대: {rp.expect_statuses or '제한 없음(종료 상태 중 하나)'}"
+                   + (" (워크플로 입력으로 지정)" if rp.expect_source == "지정" else ""))
         out.extend(f"- ⚠️ {n}" for n in rp.notes)
     for key, why in skipped[:10]:
         out.append(f"- 건너뜀 · {key}: {why}")
@@ -362,6 +369,7 @@ def main(argv: list[str] | None = None, lookup=pr_info) -> int:
     p.add_argument("--max-lookups", type=int, default=20, help="PR 상태를 조회할 후보 수 한도")
     p.add_argument("--token-env", default="", help="PR 조회용 읽기 토큰이 든 환경 변수 이름")
     p.add_argument("--sandbox-root", type=Path, help="GitHub 대역 루트(ci-failure 모드가 seed.json을 둔다)")
+    p.add_argument("--expect", default="", help="기대 status 지정(쉼표 구분: approved·review_rejected·cancelled) — 모드의 기대를 덮어쓴다")
     p.add_argument("--github-output", default=os.environ.get("GITHUB_OUTPUT"))
     p.add_argument("--summary-file", default=os.environ.get("GITHUB_STEP_SUMMARY"))
     args = p.parse_args(argv)
@@ -370,6 +378,10 @@ def main(argv: list[str] | None = None, lookup=pr_info) -> int:
     if target and not re.fullmatch(r"tbm_[^/\s]+/rct_[0-9]{8}-[0-9]{4}", target):
         print(f"::error::replay 지목은 tbm_.../rct_... 형태여야 함: {target}")
         return 2
+    expect = [x.strip() for x in args.expect.split(",") if x.strip()]
+    if bad := [x for x in expect if x not in FINAL_STATUSES]:
+        print(f"::error::--expect는 {', '.join(FINAL_STATUSES)} 중에서 고른다: {', '.join(bad)}")
+        return 2
     token = os.environ.get(args.token_env) if args.token_env else None
     skipped: list = []
     rp = None
@@ -377,6 +389,10 @@ def main(argv: list[str] | None = None, lookup=pr_info) -> int:
         assert_sandbox(args.repo, args.remote)
         rp = find(args.repo, target, args.scan, skipped, mode=args.mode, lookup=lookup, token=token,
                   max_lookups=args.max_lookups)
+        if expect:
+            rp.expect_statuses = ",".join(expect)
+            rp.expect_source = "지정"
+            rp.notes = [n for n in rp.notes if "기대 없이" not in n]
         apply(args.repo, rp, remote=args.remote, branch=args.branch, sandbox_root=args.sandbox_root)
     except ReplayError as exc:
         print(render(None, skipped, args.mode), end="")

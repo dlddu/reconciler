@@ -85,6 +85,7 @@ REVIEW_REQUIRED = [
     ("상태 approved", [r"\bapproved\b"]),
     ("상태 review_rejected", [r"\breview_rejected\b"]),
     ("반복 거부 cancelled", [r"\bcancelled\b"]),
+    ("반복 거부 커밋 제목 cancel after repeated rejection", [r"cancel after repeated rejection"]),
     ("사람 승인 요구 manualApproval", [r"\bmanualApproval\b"]),
     ("시도 기록 attempts", [r"\battempts\b"]),
     ("판정 시각 reviewedAt", [r"\breviewedAt\b"]),
@@ -109,6 +110,7 @@ REVIEW_RECOMMENDED = [
     ("k3s MCP 도구", [r"github_app_installation_token"]),
     ("lock 해제 — reviewing으로 남기지 않음", [r"reviewing[^\n]{0,60}(남기지|남겨\s*두지|두지)\s*않", r"lock[^\n]{0,40}(놓|해제|풀)"]),
     ("기록 분량 기준(reason)", [r"\breason\b[^\n]{0,60}\d\s*[~\-–]\s*\d\s*문장", r"\breason\b[^\n]{0,40}\d+\s*자"]),
+    ("기대값 ↔ 실측 대조(불일치면 거부)", [r"기대값[^\n]{0,80}실측", r"실측[^\n]{0,80}기대값"]),
 ]
 
 _NO = r"(건드리지|수정하지|바꾸지|고치지|손대지|그대로|불변|갱신하지|쓰지)"

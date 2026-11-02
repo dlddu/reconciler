@@ -67,6 +67,10 @@ class CheckReviewResultTest(unittest.TestCase):
         self.repo.commit({MID: [judged("cancelled", REJECT)]}, f"review({MID}/{TID}): cancel after repeated rejection")
         self.assertEqual(self.check().errors, [])
 
+    def test_cancelled_needs_repeated_rejection_subject(self):
+        self.repo.commit({MID: [judged("cancelled", REJECT)]}, f"review({MID}/{TID}): cancelled")
+        self.assertTrue(any("cancel after repeated rejection" in e for e in self.check().errors))
+
     def test_lock_left_or_released_without_verdict_is_error(self):
         self.repo.commit({MID: [judged("reviewing", APPROVE)]}, f"review({MID}/{TID}): note")
         self.assertTrue(any("lock" in e for e in self.check().errors))

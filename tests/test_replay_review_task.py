@@ -141,6 +141,19 @@ class ReplayReviewTaskTest(unittest.TestCase):
 
     # ── 공통 ──────────────────────────────────────────────────────────────────
 
+    def test_expect_overrides_mode(self):
+        repo, c1, _ = two_task_history(self.tmp)
+        # 열린 PR 건 지목 — merged 모드는 기대를 걸지 않지만, 지정하면 그 기대로 판정시킨다
+        self.assertEqual(self.main(repo, "--target", f"{MID}/{TID}", "--expect", "review_rejected",
+                                   states={PR: info("open")}), 0)
+        out = self.outputs()
+        self.assertEqual((out["target"], out["original_claim"], out["expect_statuses"]),
+                         (f"{MID}/{TID}", c1, "review_rejected"))
+        summary = (self.tmp / "s.md").read_text()
+        self.assertIn("워크플로 입력으로 지정", summary)
+        self.assertNotIn("기대 없이", summary)
+        self.assertEqual(self.main(repo, "--expect", "approve"), 2)
+
     def test_refuses_non_local_remote(self):
         repo, _ = reviewed_history(self.tmp)
         git(repo.path, "remote", "set-url", "--push", "origin", "https://github.com/dlddu/reconciler.git")
