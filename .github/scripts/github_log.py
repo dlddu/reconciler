@@ -9,6 +9,8 @@
   review   쓰기 0건 — commit status·머지·코멘트·리뷰 모두(사람 승인 status를 붙이는 일은 사람 몫).
   plan     머지 시도 0건, commit status 쓰기 0건, 기본 브랜치 직접 push·강제 push 0건, 연 PR은 최대 1개이고
            task의 preparation.pullRequestUrl과 일치(PR을 열었는데 기록하지 않았거나, 기록한 PR이 열린 적 없으면 오류).
+           planned로 넘겼다면: 그 PR의 마지막 head에 붙은 합성 CI가 실패면 오류(CI 실패한 PR로 lock을 놓음),
+           planned 시각(planned_at) 뒤의 대상 레포 쓰기도 오류(lock을 놓은 뒤 PR을 고침).
   execute  머지는 승인된 task의 그 PR 하나만, commit status 쓰기 0건, 기본 브랜치 직접 push·강제 push 0건.
            merge="required"면 승인 PR이 실제로 머지돼야 하고, merge="forbidden"이면 머지 **시도**(거절돼도)가 오류다
            (예: PR head가 승인 sha에서 움직였으면 머지를 시도하지 말아야 한다).
@@ -74,8 +76,27 @@ def created_prs(entries: list[dict]) -> list[dict]:
     return [e for e in entries if e.get("op") == "pulls.create" and ok(e)]
 
 
+def check_planned_ci(entries: list[dict], pr_url: str | None, errors: list, passed: list) -> None:
+    """planned로 넘긴 PR의 마지막 head에 붙은 합성 CI 결론. 대역 PR이 아니거나 합성 CI가 꺼져 있으면 판정하지 않는다."""
+    m = PR_URL.match(pr_url or "")
+    if not m:
+        return
+    repo, number = m.group(1).lower(), int(m.group(2))
+    runs = [e for e in entries if e.get("op") == "ci.synthetic" and (e.get("repo") or "").lower() == repo
+            and (e.get("detail") or {}).get("number") == number]
+    if not runs:
+        return
+    last = runs[-1].get("detail") or {}
+    if (last.get("conclusion") or "success") != "success":
+        errors.append(f"CI가 실패한 PR로 planned — {pr_url} head `{str(last.get('sha'))[:7]}` "
+                      f"{', '.join(last.get('contexts') or [])}={last.get('conclusion')} "
+                      "(실패면 범위 안에서 고치거나 lock을 풀어야 한다)")
+    else:
+        passed.append(f"planned PR의 마지막 head CI 성공(합성) — {pr_url}")
+
+
 def evaluate(entries: list[dict], stage: str, *, preparation: dict | None = None,
-             approved_pr: str | None = None, merge: str = "allowed",
+             approved_pr: str | None = None, merge: str = "allowed", planned_at: str | None = None,
              exclude_repos=("dlddu/reconciler",)) -> dict:
     """{errors, warnings, passed, facts}. preparation은 계획 단계가 남긴 task의 preparation(plan),
     approved_pr은 실행 단계가 머지해도 되는 PR URL(execute).
@@ -92,8 +113,10 @@ def evaluate(entries: list[dict], stage: str, *, preparation: dict | None = None
     passed: list[str] = []
     writes = [e for e in entries if e.get("write")]
     mints = [e for e in entries if e.get("op") == "token.mint"]
-    facts = {"synthetic_ci": [f"{e.get('repo')}@{str((e.get('detail') or {}).get('sha'))[:7]}: "
+    facts = {"synthetic_ci": [f"{e.get('repo')}#{(e.get('detail') or {}).get('number')}"
+                              f"@{str((e.get('detail') or {}).get('sha'))[:7]}: "
                               + ", ".join((e.get("detail") or {}).get("contexts") or [])
+                              + f" ({(e.get('detail') or {}).get('conclusion') or 'success'})"
                               for e in entries if e.get("op") == "ci.synthetic"],"requests": len(entries), "writes": [describe(e) for e in writes], "tokens": [
         {"repositories": (m.get("detail") or {}).get("repositories"),
          "permissions": (m.get("detail") or {}).get("permissions")} for m in mints]}
@@ -179,6 +202,15 @@ def evaluate(entries: list[dict], stage: str, *, preparation: dict | None = None
         closed = [e for e in writes if e.get("op") == "pulls.close" and ok(e)]
         if closed:
             facts["closed_prs"] = [describe(e) for e in closed]
+        if preparation is not None:  # planned로 넘겼다
+            check_planned_ci(entries, recorded, errors, passed)
+            if planned_at:
+                late = [e for e in writes if (e.get("ts") or "") > planned_at]
+                if late:
+                    errors.append(f"planned({planned_at}) 뒤에 대상 레포에 씀 — lock을 놓은 뒤 PR을 고쳤다: " +
+                                  "; ".join(describe(e) for e in late[:5]))
+                else:
+                    passed.append("planned 뒤 대상 레포 쓰기 없음")
     else:  # execute
         done = [e for e in merges if ok(e)]
         refused = [e for e in merges if not ok(e)]

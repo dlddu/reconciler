@@ -142,6 +142,23 @@ class CheckPlannerResultTest(unittest.TestCase):
         self.assertEqual(res.errors, [])
         self.assertTrue(any("재사용" in w for w in res.warnings))
 
+    def test_rewrite_after_planned_is_error(self):
+        pr = "https://github.com/dlddu/pocket-aide/pull/90001"
+        base = self.base(claimed())
+        t = claimed([attempt(pr=pr)])
+        t["status"] = "planned"
+        self.write([t]); self.commit(f"plan({MID}/{TID}): planned 전이")  # noqa: E702
+        res = self.run_check(base)
+        self.assertEqual(res.errors, [])
+        self.assertIn("planned 전이가 이 task의 마지막 기록", res.passed)
+        self.assertRegex(res.facts["planned_at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
+
+        t["attempts"][-1]["preparation"]["notes"] = "head 갱신 — CI 실패 수습"
+        self.write([t]); self.commit(f"plan({MID}/{TID}): 준비·지침 갱신")  # noqa: E702
+        res = self.run_check(base)
+        self.assertTrue(any("planned로 넘긴 뒤 같은 task를 다시 고침" in e and "준비·지침 갱신" in e
+                            for e in res.errors))
+
     def test_left_planning_is_error(self):
         base = self.base(claimed())
         t = claimed([attempt()])

@@ -359,6 +359,71 @@ class SyntheticCiTest(StubFixture):
         self.assertEqual([r["name"] for r in runs], ["ci"])
 
 
+class SyntheticCiFailureTest(StubFixture):
+    """failure 모드: 대역 PR의 모든 head에 합성 실패 — 고칠 수 없는 CI 실패 경로를 시험한다."""
+    required = ["ci-success", "review/manual-approval"]
+    synthetic_ci = "failure"
+
+    def push_more(self, tok, name):
+        cfg, url = self.git_remote(tok)
+        w = self.tmp / f"more-{name}"
+        git(*cfg, "clone", "-q", "-b", "reconcile/fix", url, str(w))
+        (w / f"more-{name}.txt").write_text(name + "\n")
+        git("add", ".", cwd=w)
+        git("commit", "-qm", name, cwd=w)
+        git(*cfg, "push", "-q", "origin", "reconcile/fix", cwd=w)
+        return self.call("GET", "/repos/dlddu/demo/pulls/90001", tok)[1]["head"]["sha"]
+
+    def conclusions(self, tok, sha):
+        runs = self.call("GET", f"/repos/dlddu/demo/commits/{sha}/check-runs", tok)[1]["check_runs"]
+        return [(r["name"], r["conclusion"]) for r in runs]
+
+    def open_pr(self, tok):
+        self.push_branch(tok)
+        status, pr = self.call("POST", "/repos/dlddu/demo/pulls", tok,
+                               {"title": "t", "head": "reconcile/fix", "base": "main"})
+        self.assertEqual(status, 201)
+        return pr
+
+    def test_every_head_fails_and_merge_is_refused_even_with_approval(self):
+        tok = self.mint(["demo"])
+        pr = self.open_pr(tok)
+        self.assertEqual(self.conclusions(tok, pr["head"]["sha"]), [("ci-success", "failure")])
+        runs = self.call("GET", f"/repos/dlddu/demo/commits/{pr['head']['sha']}/check-runs", tok)[1]["check_runs"]
+        self.assertIn("synthetic failure", runs[0]["output"]["title"])
+        suites = self.call("GET", f"/repos/dlddu/demo/commits/{pr['head']['sha']}/check-suites", tok)[1]
+        self.assertEqual([s["conclusion"] for s in suites["check_suites"]], ["failure"])
+        head2 = self.push_more(tok, "again")
+        self.assertEqual(self.conclusions(tok, head2), [("ci-success", "failure")])
+        # 사람 승인이 붙어도 CI 실패면 머지 거절
+        self.admin_call("POST", "/_sandbox/statuses", {"repository": "demo", "sha": head2, "state": "success",
+                                                       "context": "review/manual-approval"})
+        status, body = self.call("PUT", f"/repos/dlddu/demo/pulls/{pr['number']}/merge", tok, {})
+        self.assertEqual(status, 405)
+        self.assertIn('"ci-success"', body["message"])
+        node = self.gql(tok, 'query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name)'
+                             '{pullRequest(number:$number){statusCheckRollup:commits(last:1){nodes{commit{'
+                             'statusCheckRollup{state contexts(first:10){nodes{__typename ...on CheckRun{name '
+                             'conclusion}}}}}}}}}}',
+                        {"owner": "dlddu", "name": "demo", "number": pr["number"]})
+        rollup = node["data"]["repository"]["pullRequest"]["statusCheckRollup"]["nodes"][0]["commit"]["statusCheckRollup"]
+        self.assertEqual(rollup["state"], "FAILURE")
+        self.assertEqual([e["detail"]["conclusion"] for e in self.entries() if e["op"] == "ci.synthetic"],
+                         ["failure", "failure"])
+
+    def test_fail_first_then_success(self):
+        self.state.synthetic_ci = "fail-first"
+        tok = self.mint(["demo"])
+        pr = self.open_pr(tok)
+        self.assertEqual(self.conclusions(tok, pr["head"]["sha"]), [("ci-success", "failure")])
+        head2 = self.push_more(tok, "fix")
+        self.assertEqual(self.conclusions(tok, head2), [("ci-success", "success")])
+
+    def test_bad_mode_is_rejected(self):
+        with self.assertRaises(ValueError):
+            stub.State(stub.Repos(self.root), None, synthetic_ci="sometimes")
+
+
 class SyntheticCiOffTest(StubFixture):
     required = ["ci-success"]
     synthetic_ci = False

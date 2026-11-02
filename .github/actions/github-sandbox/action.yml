@@ -50,8 +50,11 @@ inputs:
     description: (up) 샌드박스에서도 실제 MCP로 보낼 도구(쉼표 구분, 관측용 읽기 도구만). 나머지는 막는다
     default: ping
   synthetic-ci:
-    description: (up) 대역 PR head 커밋마다 합성 CI(성공) 체크 런을 붙인다 — 사람 승인(review/) status는 붙이지 않는다
-    default: "true"
+    description: >-
+      (up) 대역 PR head 커밋마다 붙일 합성 CI 체크 런의 결론 — success(기본) · failure(매 head 실패) ·
+      fail-first(PR의 첫 head만 실패, 이후 push는 성공) · off(붙이지 않음). true/false는 success/off로 읽는다.
+      사람 승인(review/) status는 어느 모드에서도 붙이지 않는다
+    default: "success"
   admin-port:
     description: 대역 관리 API 포트
     default: "8766"
@@ -93,8 +96,13 @@ runs:
         # 2) 인증서
         python3 "$H/.github/scripts/github_sandbox.py" certs --root "$ROOT" > /dev/null
         # 3) 대역 기동(읽기 토큰은 0600 파일로 넘기고 대역이 읽은 뒤 지운다; 실제 api.github.com 주소는 지금 푼다)
-        ci_args=()
-        [ "$SYNTHETIC_CI" = "true" ] || ci_args=(--no-synthetic-ci)
+        case "$SYNTHETIC_CI" in
+          true|"") mode=success ;;
+          false) mode=off ;;
+          success|failure|fail-first|off) mode="$SYNTHETIC_CI" ;;
+          *) echo "::error::synthetic-ci는 success·failure·fail-first·off 중 하나: $SYNTHETIC_CI"; exit 1 ;;
+        esac
+        ci_args=(--synthetic-ci "$mode")
         python3 "$H/.github/scripts/github_sandbox.py" start --root "$ROOT" --log "$ROOT/requests.jsonl" \
           --token-env "$TOKEN_ENV" --admin-port "$ADMIN_PORT" --stub-log "$ROOT/stub.log" "${ci_args[@]}"
         # 4) MCP 프록시를 샌드박스 모드로 다시 띄운다(GitHub 도구는 대역으로, 허용 목록 밖 도구는 거절).

@@ -74,6 +74,31 @@ class PlanTest(unittest.TestCase):
         r = self.ev([create(head="other")], {"pullRequestUrl": PR, "branch": "reconcile/x"})
         self.assertTrue(any("head" in w for w in r["warnings"]))
 
+    def test_planned_with_failing_ci_is_error(self):
+        def ci(conclusion, sha):
+            return {"op": "ci.synthetic", "write": False, "repo": REPO, "status": 200,
+                    "detail": {"sha": sha, "number": 90001, "contexts": ["ci-success"], "conclusion": conclusion}}
+        prep = {"pullRequestUrl": PR, "branch": "reconcile/x"}
+        base = [push("refs/heads/reconcile/x"), create()]
+        r = self.ev(base + [ci("failure", "a" * 40)], prep)
+        self.assertTrue(any("CI가 실패한 PR로 planned" in e for e in r["errors"]))
+        r = self.ev(base + [ci("failure", "a" * 40), ci("success", "b" * 40)], prep)  # 고친 뒤 성공
+        self.assertEqual(r["errors"], [])
+        self.assertTrue(any("마지막 head CI 성공" in p for p in r["passed"]))
+        r = self.ev(base + [ci("failure", "a" * 40)], None)  # lock을 풀었으면(preparation 없음) CI는 판정하지 않는다
+        self.assertFalse(any("CI가 실패한" in e for e in r["errors"]))
+
+    def test_writes_after_planned_are_errors(self):
+        prep = {"pullRequestUrl": PR, "branch": "reconcile/x"}
+        early = {**push("refs/heads/reconcile/x"), "ts": "2026-11-01T12:20:00Z"}
+        opened = {**create(), "ts": "2026-11-01T12:20:30Z"}
+        late = {**push("refs/heads/reconcile/x", old="a" * 40, new="b" * 40), "ts": "2026-11-01T12:24:00Z"}
+        r = gl.evaluate([early, opened], "plan", preparation=prep, planned_at="2026-11-01T12:21:40Z")
+        self.assertEqual(r["errors"], [])
+        self.assertIn("planned 뒤 대상 레포 쓰기 없음", r["passed"])
+        r = gl.evaluate([early, opened, late], "plan", preparation=prep, planned_at="2026-11-01T12:21:40Z")
+        self.assertTrue(any("planned(2026-11-01T12:21:40Z) 뒤에 대상 레포에 씀" in e for e in r["errors"]))
+
     def test_reconciler_pushes_are_ignored(self):
         r = self.ev([push("refs/heads/main", old="b" * 40, repo="dlddu/reconciler")], {"pullRequestUrl": None})
         self.assertEqual(r["errors"], [])

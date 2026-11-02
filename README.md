@@ -248,7 +248,7 @@ GitHub 샌드박스를 올려 두어, 스킬이 GitHub로 무엇을 보내든 �
 | 단계 | 대역 기록 규칙 |
 | --- | --- |
 | 감지·리뷰 | 쓰기 0건(거절된 시도 포함). 쓰기 권한 토큰 요청은 경고. |
-| 계획 | 머지 시도 0건, commit status 쓰기 0건, 기본 브랜치 직접·강제 push 0건, 연 PR은 최대 1개이고 `preparation.pullRequestUrl`과 일치(열고 기록하지 않았거나 기록한 PR을 열지 않았으면 오류·경고). |
+| 계획 | 머지 시도 0건, commit status 쓰기 0건, 기본 브랜치 직접·강제 push 0건, 연 PR은 최대 1개이고 `preparation.pullRequestUrl`과 일치(열고 기록하지 않았거나 기록한 PR을 열지 않았으면 오류·경고). planned로 넘겼다면 그 PR의 마지막 head 합성 CI가 성공이고, planned 시각 뒤 대상 레포 쓰기 0건. |
 | 실행 | 머지는 승인된 task의 그 PR 하나만, commit status 쓰기 0건, 강제 push 0건. 거절된 시도는 경고. |
 
   대역이 모르는 요청은 501 + `op: unsupported`로 남고 점검기 경고로 보인다 — 대역을 넓혀야 한다는 단서다.
@@ -261,8 +261,10 @@ GitHub 샌드박스를 올려 두어, 스킬이 GitHub로 무엇을 보내든 �
   성공한 합성 체크 런을 붙인다 — 이름은 실제 ruleset의 필수 체크(예: `ci-success`), 필수 체크가 없으면 `ci`. 스킬이 보는 CI 결과(REST
   check-runs, `gh pr checks`·`statusCheckRollup`)와 대역의 머지 게이트가 이것으로 충족된다. **사람 승인 status(`review/` 접두어)는 절대
   합성하지 않는다** — 사람 승인 게이트는 샌드박스에서도 실제처럼 막힌다. 합성 런은 앱 `reconciler-sandbox`, 제목 "synthetic success — CI was
-  not run"으로 표시되고 기록(`op: ci.synthetic`)·요약에 남는다. 실제 PR(읽기 중계)에는 붙이지 않는다. CI **실패** 경로는 시험하지 못한다.
-  끄려면 액션 입력 `synthetic-ci: "false"`.
+  not run"으로 표시되고 기록(`op: ci.synthetic`)·요약에 남는다. 실제 PR(읽기 중계)에는 붙이지 않는다.
+  결론은 액션 입력 `synthetic-ci`로 고른다 — `success`(기본) · `failure`(매 head 실패: 고칠 수 없는 CI 실패 경로) ·
+  `fail-first`(PR의 첫 head만 실패, 이후 push는 성공: 고칠 수 있는 실패) · `off`. 계획 스킬 빌드는 입력 `synthetic_ci`로 넘긴다.
+  실패 런의 출력은 「synthetic failure」로 표시되고 고칠 실제 원인은 없다 — 스킬이 실패를 보고 lock을 푸는지·planned로 넘기지 않는지를 본다.
 - **한계**: 대역은 GitHub의 일부만 흉내 낸다(비동기 mergeable 계산, ruleset의 bypass·리뷰 요구는 없다). 웹훅·Actions 트리거는 없다(CI는 위
   합성 결과뿐). PR 번호는 실제와 겹치지 않게 90001부터다. 클러스터 쓰기는 MCP 허용 목록으로 막을 뿐 흉내 내지 않는다.
 - **로컬로 돌려 보기**: `python3 -m unittest tests.test_github_stub tests.test_github_log` — 대역을 평문 HTTP로 띄워 실제 `git`으로

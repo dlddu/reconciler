@@ -18,9 +18,11 @@
 레포 범위(`repositories`)와 권한(`permissions`)을 지킨다 — 범위 밖 레포는 404, 권한 부족은 403.
 
 가짜 CI: 대역 PR은 진짜 GitHub가 모르니 Actions CI가 돌지 않는다. 그래서 대역이 만든 PR의 head 커밋마다
-**합성 체크 런**(성공)을 붙인다 — 이름은 실제 ruleset의 필수 체크(예: `ci-success`), 없으면 `ci`. 사람 승인용 status
+**합성 체크 런**을 붙인다 — 이름은 실제 ruleset의 필수 체크(예: `ci-success`), 없으면 `ci`. 사람 승인용 status
 (`--human-status-prefixes`, 기본 `review/`)는 절대 합성하지 않는다(승인 게이트가 무력해진다). 출력·앱 이름에 합성임을
-밝히고 기록(`op: ci.synthetic`)에 남긴다. 실제 PR에는 붙이지 않는다(진짜 CI가 읽기 중계로 보인다). `--no-synthetic-ci`로 끈다.
+밝히고 기록(`op: ci.synthetic`, 결론 포함)에 남긴다. 실제 PR에는 붙이지 않는다(진짜 CI가 읽기 중계로 보인다).
+결론은 `--synthetic-ci`로 고른다: success(기본) · failure(매 head 실패 — 고칠 수 없는 CI 실패) · fail-first(PR의 첫
+head만 실패, 이후 push는 성공 — 고칠 수 있는 CI 실패) · off(붙이지 않음, `--no-synthetic-ci`와 같다).
 
 모든 요청은 JSONL 기록(`--log`)에 남는다. 결과 점검기는 이 기록으로 "PR을 몇 개 열었나 · 머지했나 · 기본 브랜치에
 직접 push했나 · status를 썼나"를 판정한다. 이 서버가 모르는 요청은 `op: unsupported`로 남기고 501을 돌려준다
@@ -66,6 +68,7 @@ READ_METHODS = ("GET", "HEAD")
 DEFAULT_PR_BASE = 90001
 NULL_SHA = "0" * 40
 SYNTHETIC_APP_SLUG = "reconciler-sandbox"
+SYNTHETIC_CI_MODES = ("success", "failure", "fail-first", "off")
 # 핸들러 → 기록의 op 이름(거절된 요청도 같은 이름으로 남긴다).
 HANDLER_OPS = {"pulls_create": "pulls.create", "pulls_update": "pulls.update", "pulls_merge": "pulls.merge",
                "comments_create": "issues.comments.create", "labels_add": "issues.labels.add",
@@ -177,10 +180,15 @@ class Repos:
 
 class State:
     def __init__(self, repos: Repos, log_path: Path | None, pr_base: int = DEFAULT_PR_BASE,
-                 rules: dict | None = None, synthetic_ci: bool = True,
+                 rules: dict | None = None, synthetic_ci: bool | str = True,
                  human_status_prefixes: tuple[str, ...] = ("review/",)):
         self.repos = repos
+        if synthetic_ci is True or synthetic_ci is False:
+            synthetic_ci = "success" if synthetic_ci else "off"
+        if synthetic_ci not in SYNTHETIC_CI_MODES:
+            raise ValueError(f"synthetic_ci는 {SYNTHETIC_CI_MODES} 중 하나: {synthetic_ci!r}")
         self.synthetic_ci = synthetic_ci
+        self.ci_heads: dict[tuple[str, int], int] = {}  # (repo, PR 번호) → 합성 CI를 붙인 head 수(fail-first용)
         self.human_status_prefixes = tuple(human_status_prefixes)
         self.ci_runs: dict[tuple[str, str], list[dict]] = {}  # (repo, sha) → 합성 체크 런
         self.lock = threading.RLock()
@@ -258,27 +266,33 @@ class State:
         return any(context.startswith(p) for p in self.human_status_prefixes)
 
     def ensure_synthetic_ci(self, repo: str, sha: str, base: str, pr_number: int) -> None:
-        """대역 PR의 head 커밋에 합성 CI(성공)를 한 번 붙인다. 사람 승인 context는 빼고, 필수 체크가 없으면 `ci`."""
-        if not self.synthetic_ci or not sha:
+        """대역 PR의 head 커밋에 합성 CI를 한 번 붙인다(결론은 synthetic_ci 모드). 사람 승인 context는 빼고,
+        필수 체크가 없으면 `ci`."""
+        if self.synthetic_ci == "off" or not sha:
             return
         with self.lock:
             if (repo, sha) in self.ci_runs:
                 return
+            nth = self.ci_heads.get((repo, pr_number), 0)
+            self.ci_heads[(repo, pr_number)] = nth + 1
+            failed = self.synthetic_ci == "failure" or (self.synthetic_ci == "fail-first" and nth == 0)
+            conclusion = "failure" if failed else "success"
             names = [c for c in self.required_contexts(repo, base) if not self.is_human_context(c)] or ["ci"]
             ts = now_iso()
+            title = f"sandbox: synthetic {conclusion} — CI was not run"
+            summary = ("이 PR은 GitHub 샌드박스(대역)에만 있어 실제 CI가 돌지 않는다. "
+                       + ("대역이 붙인 합성 실패 결과다 — 실패 경로 시험용으로, 고칠 실제 원인은 없다."
+                          if failed else "대역이 붙인 합성 성공 결과다."))
             runs = [{"id": next(self.ids), "name": name, "head_sha": sha, "status": "completed",
-                     "conclusion": "success", "started_at": ts, "completed_at": ts,
+                     "conclusion": conclusion, "started_at": ts, "completed_at": ts,
                      "html_url": f"https://github.com/{repo}/pull/{pr_number}/checks",
                      "details_url": None, "external_id": "reconciler-sandbox-synthetic",
                      "app": {"slug": SYNTHETIC_APP_SLUG, "name": "reconciler sandbox (synthetic CI)"},
-                     "output": {"title": "sandbox: synthetic success — CI was not run",
-                                "summary": "이 PR은 GitHub 샌드박스(대역)에만 있어 실제 CI가 돌지 않는다. "
-                                           "대역이 붙인 합성 성공 결과다.", "text": None,
-                                "annotations_count": 0},
+                     "output": {"title": title, "summary": summary, "text": None, "annotations_count": 0},
                      "check_suite": {"id": next(self.ids)}, "synthetic": True} for name in names]
             self.ci_runs[(repo, sha)] = runs
         self.record(source="stub", op="ci.synthetic", repo=repo, write=False,
-                    detail={"sha": sha, "number": pr_number, "contexts": names})
+                    detail={"sha": sha, "number": pr_number, "contexts": names, "conclusion": conclusion})
 
     def synthetic_runs(self, repo: str, sha: str) -> list[dict]:
         return list(self.ci_runs.get((repo, sha), []))
@@ -656,7 +670,7 @@ class Api:
         repo = self.repo(kw)
         self.s.authorize(tok, repo, "checks", False)
         sha = self.s.repos.rev(repo, urllib.parse.unquote(kw["ref"])) or kw["ref"]
-        suites = [{"id": r["check_suite"]["id"], "head_sha": sha, "status": "completed", "conclusion": "success",
+        suites = [{"id": r["check_suite"]["id"], "head_sha": sha, "status": "completed", "conclusion": r["conclusion"],
                    "app": r["app"], "synthetic": True} for r in self.s.synthetic_runs(repo, sha)] + \
             self.real_list(f"/repos/{repo}/commits/{sha}/check-suites?per_page=100", "check_suites")
         return 200, {"total_count": len(suites), "check_suites": suites}, "checks.suites", repo, None
@@ -888,6 +902,8 @@ class Api:
         for run in self.s.synthetic_runs(repo, pr["head"]["sha"]) + \
                 self.real_list(f"/repos/{repo}/commits/{pr['head']['sha']}/check-runs?per_page=100", "check_runs"):
             latest.setdefault(run.get("name"), "success" if run.get("conclusion") in ("success", "neutral", "skipped")
+                              else "failure" if run.get("conclusion") in ("failure", "timed_out", "cancelled",
+                                                                          "action_required")
                               else "pending")
         missing = [c for c in self.s.required_contexts(repo, pr["base"]["ref"]) if latest.get(c) != "success"]
         if missing:
@@ -1185,7 +1201,7 @@ def gql_rollup(state: State, repo: str, sha: str) -> dict:
               "isRequired": c in state.required_contexts(repo, state.repos.default_branch(repo))}
              for c, st in latest.items()]
     required = state.required_contexts(repo, state.repos.default_branch(repo))
-    nodes += [{"__typename": "CheckRun", "name": r["name"], "status": "COMPLETED", "conclusion": "SUCCESS",
+    nodes += [{"__typename": "CheckRun", "name": r["name"], "status": "COMPLETED", "conclusion": r["conclusion"].upper(),
                "detailsUrl": r["html_url"], "startedAt": r["started_at"], "completedAt": r["completed_at"],
                "isRequired": r["name"] in required, "checkSuite": {"workflowRun": None},
                "title": r["output"]["title"]} for r in state.synthetic_runs(repo, sha)]
@@ -1734,7 +1750,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--seed", type=Path, help="시작 때 심을 PR·status(JSON, 머리말 「시드」)")
     p.add_argument("--plain", action="store_true", help="TLS 없이(테스트용)")
     p.add_argument("--no-public-web", action="store_true", help="github.com의 git 밖 GET을 실제로 묻지 않는다")
-    p.add_argument("--no-synthetic-ci", action="store_true", help="대역 PR에 합성 CI(성공)를 붙이지 않는다")
+    p.add_argument("--synthetic-ci", choices=SYNTHETIC_CI_MODES, default="success",
+                   help="대역 PR 합성 CI 결론: success · failure(매 head) · fail-first(첫 head만) · off")
+    p.add_argument("--no-synthetic-ci", action="store_true", help="--synthetic-ci off와 같다")
     p.add_argument("--human-status-prefixes", default="review/",
                    help="합성하지 않을 사람 승인 status context 접두어(쉼표 구분)")
     args = p.parse_args(argv)
@@ -1743,7 +1761,8 @@ def main(argv: list[str] | None = None) -> int:
     rules_file = args.root / "rules.json"
     if rules_file.is_file():
         rules = {k.lower(): v for k, v in json.loads(rules_file.read_text(encoding="utf-8")).items()}
-    state = State(Repos(args.root), args.log, args.pr_number_base, rules, synthetic_ci=not args.no_synthetic_ci,
+    state = State(Repos(args.root), args.log, args.pr_number_base, rules,
+                  synthetic_ci="off" if args.no_synthetic_ci else args.synthetic_ci,
                   human_status_prefixes=tuple(x.strip() for x in args.human_status_prefixes.split(",") if x.strip()))
     passthrough = None
     if args.passthrough_token_file:
@@ -1772,7 +1791,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"github-stub: listening on {'http' if args.plain else 'https'}://127.0.0.1:{args.port} "
           f"(admin http://127.0.0.1:{args.admin_port}) repos={state.repos.all()} "
           f"passthrough={'on' if passthrough else 'off'} public_web={'on' if web else 'off'} "
-          f"synthetic_ci={'on' if state.synthetic_ci else 'off'} rules={sorted(rules)}",
+          f"synthetic_ci={state.synthetic_ci} rules={sorted(rules)}",
           flush=True)
     try:
         server.serve_forever()

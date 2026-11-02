@@ -21,10 +21,10 @@
 2. `attempts`는 append-only: 끝에 새 항목 하나를 덧붙이고 이전 항목은 고치지 않는다. 재작업(`from_status`가 `review_rejected`/`failed`)이면 새 항목 `reason`에 그 status를 적고, 직전 항목의 거부·실패 사유를 읽어 새 계획에 반영한다. 첫 시도면 `reason`을 생략한다.
 3. 그 밖은 건드리지 않는다: task의 `id`·`toBeModelId`·`trigger`·`createdAt`·`stateSummary`·`assessment`, `data/to-be-models.json`, 다른 task·모델 파일. 새 task를 만들지 않는다. 대상 레포는 reconciler 체크아웃 **밖**(작업 디렉터리)에 클론한다.
 4. `plan`: `summary`(접근과 그 이유, 이 시도의 범위·완료 기준, 범위 밖), `riskLevel`, `steps[]`(`seq` 1부터 · `action` · `expectedOutcome`, 검증 가능한 단위로), `plannedAt`. 완료 기준은 실행 단계가 실행·검증을 마친 뒤 이 task를 `succeeded`/`failed`로 닫는 기준이다 — 머지·반영 후에 참이 될 것을 쓰고, 계획 단계가 끝난 상태(PR 열림·미머지 등)는 쓰지 않는다.
-5. `preparation`: git 관리 대상을 바꾸는 작업이면 대상 레포에 브랜치 → 커밋 → PR(머지하지 않는다). PR 본문에 task id·gap·단계·검증 방법. 바꿀 코드가 없으면 PR 없이 `pullRequestUrl: null`과 `notes`로 준비 성격을 남긴다. 준비를 끝내지 못했으면 `preparation`을 남기지 않는다.
+5. `preparation`: git 관리 대상을 바꾸는 작업이면 대상 레포에 브랜치 → 커밋 → PR(머지하지 않는다). PR 본문에 task id·gap·단계·검증 방법. 바꿀 코드가 없으면 PR 없이 `pullRequestUrl: null`과 `notes`로 준비 성격을 남긴다. 준비를 끝내지 못했으면 `preparation`을 남기지 않는다. CI 게이트를 통과시키려고 다른 모델 소관의 판정·원장 기록을 실제 판정 없이 수치만 갱신하지 않는다 — 그런 게이트 실패는 범위 밖으로 적고 lock을 푼다.
 6. 사람이 소유한 결정(모델 정의나 대상 레포 문서가 사람 몫이라 한 것)을 거쳐야 gap이 닫히면, 결정을 스스로 내리지 말고 구체안을 `제안:` PR로 올린다. 그 경로가 대상 레포의 수동 승인 정책에 걸리는지 확인한다(README 「실행 전 사람 승인」).
 7. `plan.executionGuide`(마크다운): 실행 순서와 이유, 단계별·전체 검증 방법(기대값), 주의사항과 롤백 절차, 범위 밖 잔여.
-8. 4–7을 다 채우면 `planning → planned`. 끝까지 못 하면 이번 시도의 변경을 남기지 않고 status를 `from_status`로 되돌려 lock을 푼 뒤 사유를 보고한다. `planning`으로 끝내지 않는다.
+8. 4–7을 다 채우고, 준비한 PR이 있으면 그 PR의 CI가 끝나 통과한 것을 확인한 뒤 `planning → planned`. CI가 실패하면 범위 안에서 고치고, 못 고치면 lock을 푼다. `planned` 뒤에는 task도 PR도 다시 쓰지 않는다. 끝까지 못 하면 이번 시도의 변경을 남기지 않고 status를 `from_status`로 되돌려 lock을 푼 뒤 사유를 보고한다. `planning`으로 끝내지 않는다.
 9. 스키마 파일은 절대 수정하지 않는다. 쓰기 전 레코드를 스키마로 검증한다(python `jsonschema`).
 10. 커밋 메시지는 `plan(<toBeModelId>/<taskId>): <요약>`, 단계마다 개별 커밋(계획 → 준비 → 지침 → planned 전이).
 11. push는 `git pull --rebase` 후 한다. 거절되면 다시 `pull --rebase` 후 push. 강제 push 금지.

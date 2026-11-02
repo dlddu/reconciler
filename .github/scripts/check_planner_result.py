@@ -10,6 +10,7 @@
   - 단일 대상: 손댄 task가 점유한 그 한 건뿐인가
   - 보존: 그 task의 id·toBeModelId·trigger·createdAt·stateSummary·assessment, 이전 attempts 항목이 그대로인가
   - 스키마: task가 schemas/의 현재 스키마를 통과하는가
+  - lock 해제 뒤 쓰기: planned로 넘긴 커밋 뒤에 스킬이 같은 task를 다시 고친 커밋이 있으면 오류
   - 종료 상태: planned + 새 attempts 항목 정확히 1개(plan.summary·steps·executionGuide, preparation),
                재작업이면 reason = 점유 전 status.
                또는 완주하지 못해 시도를 남기지 않고 점유 전 status로 lock을 푼 것(계약상 허용 — 경고).
@@ -17,7 +18,8 @@
 
 `--github-log`(스킬 빌드 test의 GitHub 대역 기록)가 있으면 스킬이 대상 레포에 실제로 한 일도 본다
 (github_log.py `plan` 규칙): 머지 시도 0건, commit status 쓰기 0건, 기본 브랜치 직접·강제 push 0건,
-연 PR은 최대 1개이고 preparation.pullRequestUrl과 일치.
+연 PR은 최대 1개이고 preparation.pullRequestUrl과 일치. planned였다면 그 PR의 마지막 head CI가 성공이고(합성 CI),
+planned 커밋 시각 뒤의 대상 레포 쓰기가 없어야 한다.
 
 결과 diff를 패치 파일로, 최종 task를 JSON으로 남긴다(아티팩트용). 오류가 있으면 종료 코드 1.
 """
@@ -145,6 +147,14 @@ def check(repo: Path, base: str, model_id: str, task_id: str, from_status: str, 
     else:
         res.passed.append("task 스키마 통과")
 
+    planned_at, late = writes_after_planned(repo, own, task_file, task_id)
+    if planned_at:
+        res.facts["planned_at"] = planned_at
+    if late:
+        res.errors.append("planned로 넘긴 뒤 같은 task를 다시 고침(lock을 놓은 뒤 쓰기): " + ", ".join(f"`{s}`" for s in late))
+    elif planned_at:
+        res.passed.append("planned 전이가 이 task의 마지막 기록")
+
     status = task.get("status")
     res.facts.update(task_id=task_id, status=status, from_status=from_status)
     added = len(new) - len(old)
@@ -166,13 +176,33 @@ def check(repo: Path, base: str, model_id: str, task_id: str, from_status: str, 
     return res
 
 
+def writes_after_planned(repo: Path, own: list, task_file: str, task_id: str) -> tuple[str | None, list[str]]:
+    """(처음 planned가 된 스킬 커밋의 커밋 시각 UTC, 그 뒤 task를 바꾼 스킬 커밋 제목들)."""
+    planned_sha, snapshot, late = None, None, []
+    for sha, subject in own:
+        cur = by_id(load_at(repo, sha, task_file)).get(task_id)
+        if planned_sha is None:
+            if cur and cur.get("status") == "planned":
+                planned_sha, snapshot = sha, cur
+        elif cur != snapshot:
+            late.append(subject)
+            snapshot = cur
+    if planned_sha is None:
+        return None, []
+    when = git(repo, "show", "-s", "--format=%ct", planned_sha).strip()
+    import datetime as dt
+    stamp = dt.datetime.fromtimestamp(int(when), dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return stamp, late
+
+
 def check_github(res: Result, entries: list[dict]) -> None:
     """대역 기록으로 대상 레포에 실제로 한 일을 본다. 계획을 완주했으면(planned) 마지막 시도의 preparation과 대조한다."""
     task = res.facts.get("task") or {}
     prep = None
     if task.get("status") == "planned" and task.get("attempts"):
         prep = task["attempts"][-1].get("preparation") or {}
-    github_log.merge_into(res, github_log.evaluate(entries, "plan", preparation=prep))
+    github_log.merge_into(res, github_log.evaluate(entries, "plan", preparation=prep,
+                                                   planned_at=res.facts.get("planned_at")))
 
 
 def render(res: Result) -> str:

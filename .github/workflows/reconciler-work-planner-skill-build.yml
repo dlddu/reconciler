@@ -37,6 +37,12 @@ on:
         description: "mcode 모델 override(<provider>/<model>, 예: minimax/MiniMax-M3). 비우면 CLI 기본값"
         required: false
         default: ""
+      synthetic_ci:
+        description: "test 대역 PR의 합성 CI 결론 — success(기본) · failure(매 head 실패: 고칠 수 없는 CI 실패 경로) · fail-first(첫 head만 실패) · off"
+        required: false
+        default: "success"
+        type: choice
+        options: [success, failure, fail-first, "off"]
 
 # concurrency 그룹을 두지 않는다 — 어느 job도 GitHub에 쓰지 않고(test는 샌드박스) 결과는 실행별 아티팩트다.
 
@@ -309,6 +315,7 @@ jobs:
           mcp-audience: ${{ env.MCP_AUDIENCE }}
           mcp-port: ${{ env.MCP_PROXY_PORT }}
           allow-tools: resource_list,resource_get,api_resources,ping
+          synthetic-ci: ${{ inputs.synthetic_ci || 'success' }}
 
       - name: Set up MiniMax Code
         if: steps.claim.outputs.claimed == 'true'
