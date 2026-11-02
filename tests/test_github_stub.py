@@ -282,6 +282,20 @@ class PullRequestTest(StubFixture):
         self.assertIn("errors", unknown)
         self.assertTrue(any(e["op"] == "unsupported" and e.get("write") for e in self.entries()))
 
+    def test_commit_reads(self):
+        # 실행 스킬이 머지 결과를 확인할 때 쓰는 읽기(run 41401959961에서 대역이 몰랐던 요청)
+        tok = self.mint(["demo"])
+        self.push_branch(tok)
+        head = stub.Repos(self.root).branch_sha("dlddu/demo", "reconcile/fix")
+        status, commits = self.call("GET", "/repos/dlddu/demo/commits?sha=reconcile/fix&per_page=5", tok)
+        self.assertEqual(status, 200)
+        self.assertEqual(commits[0]["sha"], head)
+        self.assertEqual(len(commits), 2)
+        status, c = self.call("GET", f"/repos/dlddu/demo/git/commits/{head}", tok)
+        self.assertEqual((status, c["sha"], c["message"]), (200, head, "fix"))
+        self.assertEqual(len(c["parents"]), 1)
+        self.assertEqual(self.call("GET", f"/repos/dlddu/demo/git/commits/{'0' * 40}", tok)[0], 404)
+
     def test_unknown_write_is_not_implemented(self):
         tok = self.mint(["demo"])
         status, _ = self.call("POST", "/repos/dlddu/demo/releases", tok, {"tag_name": "v1"})

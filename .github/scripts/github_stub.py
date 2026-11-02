@@ -452,6 +452,8 @@ class Api:
             ("GET", rf"/repos/{R}/commits/(?P<ref>[^/]+)/check-runs", self.check_runs),
             ("GET", rf"/repos/{R}/commits/(?P<ref>[^/]+)/check-suites", self.check_suites),
             ("GET", rf"/repos/{R}/commits/(?P<ref>[^/]+)", self.commit_get),
+            ("GET", rf"/repos/{R}/commits", self.commits_list),
+            ("GET", rf"/repos/{R}/git/commits/(?P<sha>[0-9a-fA-F]{{40}})", self.git_commit_get),
             ("POST", rf"/repos/{R}/statuses/(?P<sha>[0-9a-fA-F]{{40}})", self.status_create),
             ("GET", rf"/repos/{R}/contents/?(?P<path>.*)", self.contents),
             ("GET", rf"/repos/{R}/compare/(?P<spec>.+)", self.compare),
@@ -622,6 +624,31 @@ class Api:
         out["files"] = [{"filename": line.split("\t")[-1], "status": {"A": "added", "M": "modified", "D": "removed"}
                          .get(line[:1], "modified")} for line in names.splitlines() if "\t" in line]
         return 200, out, "commits.get", repo, None
+
+    def commits_list(self, tok, kw, q, body):
+        repo = self.repo(kw)
+        self.s.authorize(tok, repo, "contents", False)
+        ref = (q.get("sha") or [self.s.repos.default_branch(repo)])[0]
+        tip = self.s.repos.rev(repo, ref) or self.s.repos.rev(repo, f"refs/heads/{ref}")
+        if not tip:
+            raise ApiError(404, f"No commit found for SHA: {ref}")
+        per_page = min(int((q.get("per_page") or ["30"])[0]), 100)
+        args = ["rev-list", f"--max-count={per_page}", tip]
+        if q.get("path"):
+            args += ["--", q["path"][0]]
+        shas = self.s.repos.git(repo, *args).split()
+        return 200, [self.commit_obj(repo, c) for c in shas], "commits.list", repo, None
+
+    def git_commit_get(self, tok, kw, q, body):
+        repo = self.repo(kw)
+        self.s.authorize(tok, repo, "contents", False)
+        if not self.s.repos.rev(repo, kw["sha"]):
+            raise ApiError(404, "Not Found")
+        c = self.commit_obj(repo, kw["sha"].lower())
+        out = dict(c["commit"], sha=c["sha"], node_id=c["node_id"], parents=c["parents"],
+                   url=f"https://api.github.com/repos/{repo}/git/commits/{c['sha']}",
+                   html_url=c["html_url"], verification={"verified": False, "reason": "unsigned"})
+        return 200, out, "git.commits.get", repo, None
 
     def local_statuses(self, repo: str, sha: str) -> list:
         return list(reversed(self.s.statuses.get((repo, sha), [])))
