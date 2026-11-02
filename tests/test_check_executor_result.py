@@ -141,6 +141,18 @@ class ExecutorFixtureCheckTest(unittest.TestCase):
             self.assertNotIn(scenario, readme)
         self.assertIn("## 실행 전 사람 승인", readme)  # 스킬이 읽어야 하는 절은 남긴다
 
+    def test_importing_copied_scripts_leaves_no_out_of_scope_change(self):
+        # 스킬이 복사된 스크립트를 import하면 __pycache__가 생긴다 — 실제 레포처럼 .gitignore로 무시돼야 한다
+        self.build("broken-premise")
+        r = subprocess.run([sys.executable, "-c", "import mcp_call"], cwd=self.repo / ".github/scripts",
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(any((self.repo / ".github/scripts/__pycache__").iterdir()))
+        self.run_ok(merged=False, final="failed")
+        res = self.check()
+        self.assertFalse([e for e in res.errors if "범위 밖" in e], res.errors)
+        self.assertFalse([w for w in res.warnings if "__pycache__" in w], res.warnings)
+
     def test_workspace_never_names_the_harness(self):
         # 격리 점검(Check isolation)이 금지하는 이름이 시험 대상의 작업 공간 어디에도 없다 — 문서·복사된 스크립트 모두
         # (run 41401959961 broken-premise: README 「구조」 파일 목록에서 점검기 이름을 보고 다시 검색해 무효)

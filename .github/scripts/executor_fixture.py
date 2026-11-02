@@ -393,6 +393,10 @@ def build(source: Path, work: Path, scenario: str, expect_file: Path, now: dt.da
     git(work, "init", "-q", "--bare", "-b", "main", str(origin))
     git(work, "init", "-q", "-b", "main", str(repo))
     write(repo / "README.md", harness_free_readme((source / "README.md").read_text(encoding="utf-8")))
+    # 실제 레포처럼 __pycache__ 등을 무시한다 — 없으면 스킬이 복사된 스크립트를 import만 해도 남는 .pyc가
+    # 범위 밖 변경으로 잡힌다(run 41405932332 pr-head-moved: mcp_call import → __pycache__/mcp_call.*.pyc).
+    if (source / ".gitignore").is_file():
+        shutil.copy2(source / ".gitignore", repo / ".gitignore")
     shutil.copytree(source / "schemas", repo / "schemas")
     shutil.copytree(source / ".github" / "scripts", repo / ".github" / "scripts",
                     ignore=shutil.ignore_patterns("__pycache__", *HARNESS_SCRIPTS))
