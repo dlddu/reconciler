@@ -47,6 +47,17 @@ class TranscriptTest(unittest.TestCase):
         rc, _ = self.run_main("forbid", str(self.file), "check_executor_result")
         self.assertEqual(rc, 0)
 
+    def test_forbid_ignores_tool_output(self):
+        # 자기 헬퍼·README를 읽었는데 그 **내용**에 점검기 이름이 나오는 것은 정답지 접근이 아니다(실행 빌드 run 41400321632)
+        events = EVENTS + [{"type": "item.completed", "item": {"id": "t4", "type": "tool_call", "toolCall": {
+            "name": "read", "input": {"path": "skills/reconciler-work-executor/scripts/apply.py"},
+            "output": {"content": [{"type": "text", "text": "# check_executor_result.py의 PRESERVED_FIELDS와 같다"}]}}}}]
+        self.file.write_text("\n".join(json.dumps(e) for e in events) + "\n")
+        rc, out = self.run_main("forbid", str(self.file), "check_executor_result")
+        self.assertEqual(rc, 0, out)
+        rc, _ = self.run_main("forbid", str(self.file), "apply.py")  # 입력(경로)은 본다
+        self.assertEqual(rc, 1)
+
     def test_require_tool_uses_tool_call_items_not_prose(self):
         self.assertEqual(self.run_main("require-tool", str(self.file), "ping")[0], 0)
         self.assertEqual(self.run_main("require-tool", str(self.file), "agent_message")[0], 1)

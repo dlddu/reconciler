@@ -329,9 +329,11 @@ jobs:
         run: |
           code=0
           for t in "$OUT"/logs/transcript*.jsonl; do
+            # 파이프의 종료 코드는 tee의 것이다 — 점검 자체의 결과는 PIPESTATUS[0]으로 본다.
             python3 harness/.github/scripts/mcode_transcript.py forbid "$t" "$SEALED" sealed/ expect.json \
               check_executor_result check_detector_result executor_fixture validate_generated_skill \
-              | tee -a "$OUT/isolation.txt" || code=1
+              | tee -a "$OUT/isolation.txt"
+            [ "${PIPESTATUS[0]}" -eq 0 ] || code=1
           done
           [ "$code" -eq 0 ] || echo "::error::시험 대상이 정답지를 들여다봄 — 이 테스트 결과는 무효"
           exit $code

@@ -131,6 +131,16 @@ class ExecutorFixtureCheckTest(unittest.TestCase):
         self.assertFalse(scripts & set(fx.HARNESS_SCRIPTS))
         self.assertFalse(any(p.name == "expect.json" for p in (self.tmp / "merge").rglob("*")))
 
+    def test_readme_has_no_harness_sections(self):
+        # 시나리오와 판정 기준을 설명하는 절은 산문으로 쓴 정답지다 — 픽스처 README에서 뺀다
+        self.build("merge")
+        readme = (self.repo / "README.md").read_text(encoding="utf-8")
+        for heading in fx.README_HARNESS_SECTIONS:
+            self.assertNotIn("\n" + heading, readme)
+        for scenario in ("broken-premise", "pr-head-moved"):
+            self.assertNotIn(scenario, readme)
+        self.assertIn("## 실행 전 사람 승인", readme)  # 스킬이 읽어야 하는 절은 남긴다
+
     # ── 계약대로 ──
     def test_contract_following_merge_passes(self):
         self.build("merge")

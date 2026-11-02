@@ -10,7 +10,8 @@
   --expect-file                점검기(check_executor_result.py --expect)가 볼 시나리오 기대값 — <work> 밖에 둔다
 
 시험 대상이 정답지를 보지 않게 한다: 기대값은 작업 디렉터리 밖에 쓰고, 테스트 하네스 스크립트(점검기·이 픽스처·
-생성 스킬 검증기)는 픽스처 reconciler에 복사하지 않는다.
+생성 스킬 검증기·GitHub 샌드박스)는 픽스처 reconciler에 복사하지 않는다. README도 시나리오와 판정 기준을 설명하는 절
+(README_HARNESS_SECTIONS — 사실상 산문으로 쓴 정답지)을 빼고 복사한다.
 
 reconciler 픽스처에는 실제 레포의 README.md·schemas/·.github/scripts/(하네스 제외)를 복사하고, data/에는 픽스처 모델 두 개와
 task 세 건(같은 모델의 지난 succeeded, 점유된 executing 한 건, 다른 모델의 approved 한 건)만 둔다.
@@ -57,6 +58,8 @@ REQUIRED_CHECKS = ["ci-success", APPROVAL_CONTEXT]
 # 시험 대상에게 보이면 안 되는 테스트 하네스(점검기·픽스처·생성 스킬 검증기).
 HARNESS_SCRIPTS = ("executor_fixture.py", "check_executor_result.py", "check_detector_result.py",
                    "validate_generated_skill.py", "github_stub.py", "github_sandbox.py", "github_log.py")
+# 픽스처 README에서 뺄 절(제목 접두어). 테스트 무대·시나리오·기대 결과를 설명한다 — 시험 대상이 읽으면 정답지다.
+README_HARNESS_SECTIONS = ("## 실행 스킬 MiniMax 파이프라인", "## GitHub 샌드박스")
 GIT_ENV = {
     "GIT_AUTHOR_NAME": "fixture", "GIT_AUTHOR_EMAIL": "fixture@example.invalid",
     "GIT_COMMITTER_NAME": "fixture", "GIT_COMMITTER_EMAIL": "fixture@example.invalid",
@@ -82,6 +85,17 @@ def write(path: Path, text: str) -> None:
 
 def dump(path: Path, data) -> None:
     write(path, json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+
+
+def harness_free_readme(text: str) -> str:
+    """README에서 테스트 하네스를 설명하는 `## ` 절을 통째로 뺀다(다음 `## ` 제목 전까지)."""
+    out, skipping = [], False
+    for line in text.splitlines(keepends=True):
+        if line.startswith("## "):
+            skipping = line.startswith(README_HARNESS_SECTIONS)
+        if not skipping:
+            out.append(line)
+    return "".join(out)
 
 
 def build_target(work: Path, branch: str, keep_branch: bool, bare: Path | None = None,
@@ -372,7 +386,7 @@ def build(source: Path, work: Path, scenario: str, expect_file: Path, now: dt.da
     origin, repo = work / "reconciler-origin.git", work / "ws" / "reconciler"
     git(work, "init", "-q", "--bare", "-b", "main", str(origin))
     git(work, "init", "-q", "-b", "main", str(repo))
-    shutil.copy2(source / "README.md", repo / "README.md")
+    write(repo / "README.md", harness_free_readme((source / "README.md").read_text(encoding="utf-8")))
     shutil.copytree(source / "schemas", repo / "schemas")
     shutil.copytree(source / ".github" / "scripts", repo / ".github" / "scripts",
                     ignore=shutil.ignore_patterns("__pycache__", *HARNESS_SCRIPTS))
