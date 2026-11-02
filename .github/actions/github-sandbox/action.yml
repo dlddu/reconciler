@@ -46,6 +46,9 @@ inputs:
   allow-tools:
     description: (up) 샌드박스에서도 실제 MCP로 보낼 도구(쉼표 구분, 관측용 읽기 도구만). 나머지는 막는다
     default: ping
+  synthetic-ci:
+    description: (up) 대역 PR head 커밋마다 합성 CI(성공) 체크 런을 붙인다 — 사람 승인(review/) status는 붙이지 않는다
+    default: "true"
   admin-port:
     description: 대역 관리 API 포트
     default: "8766"
@@ -71,6 +74,7 @@ runs:
         PORT: ${{ inputs.mcp-port }}
         ALLOW: ${{ inputs.allow-tools }}
         ADMIN_PORT: ${{ inputs.admin-port }}
+        SYNTHETIC_CI: ${{ inputs.synthetic-ci }}
       run: |
         set -euo pipefail
         mkdir -p "$ROOT"
@@ -85,8 +89,10 @@ runs:
         # 2) 인증서
         python3 "$H/.github/scripts/github_sandbox.py" certs --root "$ROOT" > /dev/null
         # 3) 대역 기동(읽기 토큰은 0600 파일로 넘기고 대역이 읽은 뒤 지운다; 실제 api.github.com 주소는 지금 푼다)
+        ci_args=()
+        [ "$SYNTHETIC_CI" = "true" ] || ci_args=(--no-synthetic-ci)
         python3 "$H/.github/scripts/github_sandbox.py" start --root "$ROOT" --log "$ROOT/requests.jsonl" \
-          --token-env "$TOKEN_ENV" --admin-port "$ADMIN_PORT" --stub-log "$ROOT/stub.log"
+          --token-env "$TOKEN_ENV" --admin-port "$ADMIN_PORT" --stub-log "$ROOT/stub.log" "${ci_args[@]}"
         # 4) MCP 프록시를 샌드박스 모드로 다시 띄운다(GitHub 도구는 대역으로, 허용 목록 밖 도구는 거절)
         if [ -n "$UPSTREAM" ]; then
           # [m] 패턴: 이 스텝 스크립트 자체(명령줄에 이 문자열이 들어갈 수 있다)를 맞히지 않는다

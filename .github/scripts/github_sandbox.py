@@ -10,8 +10,8 @@
         러너가 이미 만든 샌드박스 원격(bare)을 같은 자리에 링크한다 — 새로 clone해도 샌드박스로 간다.
   certs --root R
         자체 CA와 github.com · api.github.com · raw.githubusercontent.com 인증서를 만든다.
-  start --root R --log L [--token-env NAME] [--port 443] [--admin-port 8766]
-        대역을 띄우고 준비될 때까지 기다린다. 읽기 토큰은 환경 변수가 아니라 0600 파일로 넘기고 대역이 읽은 뒤 지운다.
+  start --root R --log L [--token-env NAME] [--port 443] [--admin-port 8766] [--no-synthetic-ci]
+        대역을 띄우고 준비될 때까지 기다린다. 기본으로 대역 PR에 합성 CI(성공)를 붙인다(github_stub.py 머리말). 읽기 토큰은 환경 변수가 아니라 0600 파일로 넘기고 대역이 읽은 뒤 지운다.
   enable --root R [--env-file $GITHUB_ENV]
         CA를 시스템 신뢰 목록에 넣고 /etc/hosts에서 세 호스트를 127.0.0.1로 돌린다(sudo). 에이전트용 CA 환경 변수
         (NODE_EXTRA_CA_CERTS · REQUESTS_CA_BUNDLE · SSL_CERT_FILE)를 env 파일에 쓴다.
@@ -271,12 +271,15 @@ def disable(root: Path, hosts_file: str = "/etc/hosts") -> None:
 
 # ── 대역 기동 ─────────────────────────────────────────────────────────────────────────────────
 
-def start(root: Path, log: Path, token: str | None, port: int, admin_port: int, stub_log: Path) -> int:
+def start(root: Path, log: Path, token: str | None, port: int, admin_port: int, stub_log: Path,
+          synthetic_ci: bool = True) -> int:
     if port < 1024 and os.geteuid() != 0:  # 대역은 러너 사용자로 돈다 — 443에 바인드하도록 낮은 포트를 연다
         subprocess.run([*sudo(), sbin("sysctl"), "-q", "-w", f"net.ipv4.ip_unprivileged_port_start={port}"], check=True)
     args = [sys.executable, str(Path(__file__).with_name("github_stub.py")), "--root", str(root),
             "--cert", str(root / "tls" / "server.crt"), "--key", str(root / "tls" / "server.key"),
             "--port", str(port), "--admin-port", str(admin_port), "--log", str(log)]
+    if not synthetic_ci:
+        args.append("--no-synthetic-ci")
     if token:
         fd, path = tempfile.mkstemp(prefix="pt-", dir=str(root))
         os.write(fd, token.encode())
@@ -316,12 +319,17 @@ def summarize(entries: list[dict]) -> str:
     passthrough = [e for e in reads if e.get("op") in ("passthrough", "graphql.passthrough")
                    or (e.get("detail") or {}).get("passthrough")]
     mints = [e for e in entries if e.get("op") == "token.mint"]
+    synthetic = [e for e in entries if e.get("op") == "ci.synthetic"]
     out = ["### GitHub 샌드박스 기록",
            f"- 요청 {len(entries)}건 · 쓰기 {len(writes)}건 · 읽기 {len(reads)}건(실제 GitHub 읽기 중계 {len(passthrough)}건) · "
            f"토큰 발급 {len(mints)}건 · 미지원 {len(unsupported)}건"]
     for m in mints:
         d = m.get("detail") or {}
         out.append(f"  - 토큰 `{m.get('token')}` repos={d.get('repositories') or '전체'} perms={d.get('permissions') or '전체'}")
+    for e in synthetic:
+        d = e.get("detail") or {}
+        out.append(f"  - 합성 CI(성공, 실제로 돌지 않음) {e.get('repo')} #{d.get('number')} @ `{str(d.get('sha'))[:7]}`: "
+                   + ", ".join(d.get("contexts") or []))
     if writes:
         out.append("\n| # | 작업 | 레포 | 결과 | 내용 |\n| --- | --- | --- | --- | --- |")
         for e in writes:
@@ -363,6 +371,7 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--port", type=int, default=443)
     s.add_argument("--admin-port", type=int, default=8766)
     s.add_argument("--stub-log", type=Path)
+    s.add_argument("--no-synthetic-ci", action="store_true")
     s = sub.add_parser("enable")
     s.add_argument("--root", type=Path, required=True)
     s.add_argument("--env-file", default=os.environ.get("GITHUB_ENV"))
@@ -386,7 +395,8 @@ def main(argv: list[str] | None = None) -> int:
         print(certs(args.root))
     elif args.cmd == "start":
         token = os.environ.get(args.token_env) if args.token_env else None
-        start(args.root, args.log, token, args.port, args.admin_port, args.stub_log or args.root / "stub.log")
+        start(args.root, args.log, token, args.port, args.admin_port, args.stub_log or args.root / "stub.log",
+              synthetic_ci=not args.no_synthetic_ci)
     elif args.cmd == "enable":
         enable(args.root, args.env_file)
     elif args.cmd == "disable":

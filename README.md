@@ -246,9 +246,14 @@ GitHub 샌드박스(미러 없음)를 올려 두어, 스킬이 GitHub로 무엇�
   대역이 모르는 요청은 501 + `op: unsupported`로 남고 점검기 경고로 보인다 — 대역을 넓혀야 한다는 단서다.
 - **github.com 공개 자료**: git 밖 GET(릴리스 내려받기·아카이브 — 예: `npm install`의 prebuilt 바이너리)은 자격 증명 없이 실제 github.com에
   물어 그대로 돌려준다(쓰기는 중계하지 않는다).
-- **한계**: 대역은 GitHub의 일부만 흉내 낸다(비동기 mergeable 계산, ruleset의 bypass·리뷰 요구는 없다). **대역 PR에는 CI가 돌지 않는다**
-  (웹훅·Actions 트리거 없음) — 스킬이 CI 결과를 기다리거나 "CI 미트리거"를 관측할 수 있다. 그 관측은 샌드박스의 산물이고 기록은 샌드박스에만
-  남는다. PR 번호는 실제와 겹치지 않게 90001부터다. 클러스터 쓰기는 MCP 허용 목록으로 막을 뿐 흉내 내지 않는다.
+- **합성 CI**: 대역 PR은 진짜 GitHub가 모르니 Actions CI가 돌지 않는다. 그래서 대역이 **자기가 만든 PR**의 head 커밋마다(새 push 포함)
+  성공한 합성 체크 런을 붙인다 — 이름은 실제 ruleset의 필수 체크(예: `ci-success`), 필수 체크가 없으면 `ci`. 스킬이 보는 CI 결과(REST
+  check-runs, `gh pr checks`·`statusCheckRollup`)와 대역의 머지 게이트가 이것으로 충족된다. **사람 승인 status(`review/` 접두어)는 절대
+  합성하지 않는다** — 사람 승인 게이트는 샌드박스에서도 실제처럼 막힌다. 합성 런은 앱 `reconciler-sandbox`, 제목 "synthetic success — CI was
+  not run"으로 표시되고 기록(`op: ci.synthetic`)·요약에 남는다. 실제 PR(읽기 중계)에는 붙이지 않는다. CI **실패** 경로는 시험하지 못한다.
+  끄려면 액션 입력 `synthetic-ci: "false"`.
+- **한계**: 대역은 GitHub의 일부만 흉내 낸다(비동기 mergeable 계산, ruleset의 bypass·리뷰 요구는 없다). 웹훅·Actions 트리거는 없다(CI는 위
+  합성 결과뿐). PR 번호는 실제와 겹치지 않게 90001부터다. 클러스터 쓰기는 MCP 허용 목록으로 막을 뿐 흉내 내지 않는다.
 - **로컬로 돌려 보기**: `python3 -m unittest tests.test_github_stub tests.test_github_log` — 대역을 평문 HTTP로 띄워 실제 `git`으로
   clone·push하고 REST·GraphQL로 PR을 만들고 머지한다(네트워크 없이).
 

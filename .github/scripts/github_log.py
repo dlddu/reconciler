@@ -87,7 +87,9 @@ def evaluate(entries: list[dict], stage: str, *, preparation: dict | None = None
     passed: list[str] = []
     writes = [e for e in entries if e.get("write")]
     mints = [e for e in entries if e.get("op") == "token.mint"]
-    facts = {"requests": len(entries), "writes": [describe(e) for e in writes], "tokens": [
+    facts = {"synthetic_ci": [f"{e.get('repo')}@{str((e.get('detail') or {}).get('sha'))[:7]}: "
+                              + ", ".join((e.get("detail") or {}).get("contexts") or [])
+                              for e in entries if e.get("op") == "ci.synthetic"],"requests": len(entries), "writes": [describe(e) for e in writes], "tokens": [
         {"repositories": (m.get("detail") or {}).get("repositories"),
          "permissions": (m.get("detail") or {}).get("permissions")} for m in mints]}
 
@@ -233,6 +235,8 @@ def render_facts(facts: dict | None) -> list[str]:
     if not facts:
         return []
     out = [f"- GitHub(대역): 요청 {facts.get('requests', 0)}건 · 쓰기 {len(facts.get('writes') or [])}건"]
+    if facts.get("synthetic_ci"):
+        out.append("  - 합성 CI(성공, 실제 CI는 돌지 않음): " + "; ".join(facts["synthetic_ci"][:5]))
     for w in (facts.get("writes") or [])[:10]:
         out.append(f"  - {w}")
     return out

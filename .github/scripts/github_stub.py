@@ -17,6 +17,11 @@
 (mcp_oidc_proxy.py 샌드박스 모드)가 스킬의 `github_app_installation_token` 호출을 이것으로 바꿔 준다. 실제 서버처럼
 레포 범위(`repositories`)와 권한(`permissions`)을 지킨다 — 범위 밖 레포는 404, 권한 부족은 403.
 
+가짜 CI: 대역 PR은 진짜 GitHub가 모르니 Actions CI가 돌지 않는다. 그래서 대역이 만든 PR의 head 커밋마다
+**합성 체크 런**(성공)을 붙인다 — 이름은 실제 ruleset의 필수 체크(예: `ci-success`), 없으면 `ci`. 사람 승인용 status
+(`--human-status-prefixes`, 기본 `review/`)는 절대 합성하지 않는다(승인 게이트가 무력해진다). 출력·앱 이름에 합성임을
+밝히고 기록(`op: ci.synthetic`)에 남긴다. 실제 PR에는 붙이지 않는다(진짜 CI가 읽기 중계로 보인다). `--no-synthetic-ci`로 끈다.
+
 모든 요청은 JSONL 기록(`--log`)에 남는다. 결과 점검기는 이 기록으로 "PR을 몇 개 열었나 · 머지했나 · 기본 브랜치에
 직접 push했나 · status를 썼나"를 판정한다. 이 서버가 모르는 요청은 `op: unsupported`로 남기고 501을 돌려준다
 (대역을 넓혀 가는 단서).
@@ -55,6 +60,7 @@ READ_METHODS = ("GET", "HEAD")
 # PR 번호는 실제 레포 번호와 겹치지 않게 큰 수에서 시작한다(실제 PR은 read passthrough로 보인다).
 DEFAULT_PR_BASE = 90001
 NULL_SHA = "0" * 40
+SYNTHETIC_APP_SLUG = "reconciler-sandbox"
 # 핸들러 → 기록의 op 이름(거절된 요청도 같은 이름으로 남긴다).
 HANDLER_OPS = {"pulls_create": "pulls.create", "pulls_update": "pulls.update", "pulls_merge": "pulls.merge",
                "comments_create": "issues.comments.create", "labels_add": "issues.labels.add",
@@ -166,8 +172,12 @@ class Repos:
 
 class State:
     def __init__(self, repos: Repos, log_path: Path | None, pr_base: int = DEFAULT_PR_BASE,
-                 rules: dict | None = None):
+                 rules: dict | None = None, synthetic_ci: bool = True,
+                 human_status_prefixes: tuple[str, ...] = ("review/",)):
         self.repos = repos
+        self.synthetic_ci = synthetic_ci
+        self.human_status_prefixes = tuple(human_status_prefixes)
+        self.ci_runs: dict[tuple[str, str], list[dict]] = {}  # (repo, sha) → 합성 체크 런
         self.lock = threading.RLock()
         self.tokens: dict[str, dict] = {}
         self.prs: dict[str, dict[int, dict]] = {}   # repo → number → PR(이 서버가 만든 것 + 손댄 실제 PR)
@@ -239,6 +249,35 @@ class State:
     def required_contexts(self, repo: str, branch: str) -> list[str]:
         return list((self.rules.get(repo.lower(), {}).get(branch) or {}).get("required_status_checks") or [])
 
+    def is_human_context(self, context: str) -> bool:
+        return any(context.startswith(p) for p in self.human_status_prefixes)
+
+    def ensure_synthetic_ci(self, repo: str, sha: str, base: str, pr_number: int) -> None:
+        """대역 PR의 head 커밋에 합성 CI(성공)를 한 번 붙인다. 사람 승인 context는 빼고, 필수 체크가 없으면 `ci`."""
+        if not self.synthetic_ci or not sha:
+            return
+        with self.lock:
+            if (repo, sha) in self.ci_runs:
+                return
+            names = [c for c in self.required_contexts(repo, base) if not self.is_human_context(c)] or ["ci"]
+            ts = now_iso()
+            runs = [{"id": next(self.ids), "name": name, "head_sha": sha, "status": "completed",
+                     "conclusion": "success", "started_at": ts, "completed_at": ts,
+                     "html_url": f"https://github.com/{repo}/pull/{pr_number}/checks",
+                     "details_url": None, "external_id": "reconciler-sandbox-synthetic",
+                     "app": {"slug": SYNTHETIC_APP_SLUG, "name": "reconciler sandbox (synthetic CI)"},
+                     "output": {"title": "sandbox: synthetic success — CI was not run",
+                                "summary": "이 PR은 GitHub 샌드박스(대역)에만 있어 실제 CI가 돌지 않는다. "
+                                           "대역이 붙인 합성 성공 결과다.", "text": None,
+                                "annotations_count": 0},
+                     "check_suite": {"id": next(self.ids)}, "synthetic": True} for name in names]
+            self.ci_runs[(repo, sha)] = runs
+        self.record(source="stub", op="ci.synthetic", repo=repo, write=False,
+                    detail={"sha": sha, "number": pr_number, "contexts": names})
+
+    def synthetic_runs(self, repo: str, sha: str) -> list[dict]:
+        return list(self.ci_runs.get((repo, sha), []))
+
     def snapshot(self) -> dict:
         with self.lock:
             return {
@@ -290,6 +329,8 @@ def refresh_pr(state: State, repo: str, pr: dict) -> None:
         tree = state.repos.merge_tree(repo, pr["base"]["sha"], pr["head"]["sha"])
         pr["mergeable"] = tree is not None
         pr["mergeable_state"] = "clean" if tree is not None else "dirty"
+        if pr.get("origin") == "sandbox":  # 실제 PR에는 진짜 CI가 있다 — 대역 PR에만
+            state.ensure_synthetic_ci(repo, pr["head"]["sha"], pr["base"]["ref"], pr["number"])
 
 
 def pr_public(state: State, repo: str, pr: dict) -> dict:
@@ -602,14 +643,17 @@ class Api:
         repo = self.repo(kw)
         self.s.authorize(tok, repo, "checks", False)
         sha = self.s.repos.rev(repo, urllib.parse.unquote(kw["ref"])) or kw["ref"]
-        runs = self.real_list(f"/repos/{repo}/commits/{sha}/check-runs?per_page=100", "check_runs")
+        runs = self.s.synthetic_runs(repo, sha) + \
+            self.real_list(f"/repos/{repo}/commits/{sha}/check-runs?per_page=100", "check_runs")
         return 200, {"total_count": len(runs), "check_runs": runs}, "checks.list", repo, None
 
     def check_suites(self, tok, kw, q, body):
         repo = self.repo(kw)
         self.s.authorize(tok, repo, "checks", False)
         sha = self.s.repos.rev(repo, urllib.parse.unquote(kw["ref"])) or kw["ref"]
-        suites = self.real_list(f"/repos/{repo}/commits/{sha}/check-suites?per_page=100", "check_suites")
+        suites = [{"id": r["check_suite"]["id"], "head_sha": sha, "status": "completed", "conclusion": "success",
+                   "app": r["app"], "synthetic": True} for r in self.s.synthetic_runs(repo, sha)] + \
+            self.real_list(f"/repos/{repo}/commits/{sha}/check-suites?per_page=100", "check_suites")
         return 200, {"total_count": len(suites), "check_suites": suites}, "checks.suites", repo, None
 
     def add_status(self, repo: str, sha: str, body: dict, source: str) -> dict:
@@ -836,7 +880,8 @@ class Api:
         for st in self.local_statuses(repo, pr["head"]["sha"]) + \
                 self.real_list(f"/repos/{repo}/commits/{pr['head']['sha']}/statuses?per_page=100"):
             latest.setdefault(st["context"], st["state"])
-        for run in self.real_list(f"/repos/{repo}/commits/{pr['head']['sha']}/check-runs?per_page=100", "check_runs"):
+        for run in self.s.synthetic_runs(repo, pr["head"]["sha"]) + \
+                self.real_list(f"/repos/{repo}/commits/{pr['head']['sha']}/check-runs?per_page=100", "check_runs"):
             latest.setdefault(run.get("name"), "success" if run.get("conclusion") in ("success", "neutral", "skipped")
                               else "pending")
         missing = [c for c in self.s.required_contexts(repo, pr["base"]["ref"]) if latest.get(c) != "success"]
@@ -1134,7 +1179,12 @@ def gql_rollup(state: State, repo: str, sha: str) -> dict:
               "targetUrl": st.get("target_url"), "description": st.get("description"), "createdAt": st["created_at"],
               "isRequired": c in state.required_contexts(repo, state.repos.default_branch(repo))}
              for c, st in latest.items()]
-    states = [n["state"] for n in nodes]
+    required = state.required_contexts(repo, state.repos.default_branch(repo))
+    nodes += [{"__typename": "CheckRun", "name": r["name"], "status": "COMPLETED", "conclusion": "SUCCESS",
+               "detailsUrl": r["html_url"], "startedAt": r["started_at"], "completedAt": r["completed_at"],
+               "isRequired": r["name"] in required, "checkSuite": {"workflowRun": None},
+               "title": r["output"]["title"]} for r in state.synthetic_runs(repo, sha)]
+    states = [n.get("state") or n.get("conclusion") for n in nodes]
     overall = ("FAILURE" if any(x in ("FAILURE", "ERROR") for x in states) else
                "PENDING" if not states or "PENDING" in states else "SUCCESS")
     return {"state": overall, "contexts": {"nodes": nodes, "totalCount": len(nodes),
@@ -1656,13 +1706,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--pr-number-base", type=int, default=DEFAULT_PR_BASE)
     p.add_argument("--plain", action="store_true", help="TLS 없이(테스트용)")
     p.add_argument("--no-public-web", action="store_true", help="github.com의 git 밖 GET을 실제로 묻지 않는다")
+    p.add_argument("--no-synthetic-ci", action="store_true", help="대역 PR에 합성 CI(성공)를 붙이지 않는다")
+    p.add_argument("--human-status-prefixes", default="review/",
+                   help="합성하지 않을 사람 승인 status context 접두어(쉼표 구분)")
     args = p.parse_args(argv)
 
     rules = {}
     rules_file = args.root / "rules.json"
     if rules_file.is_file():
         rules = {k.lower(): v for k, v in json.loads(rules_file.read_text(encoding="utf-8")).items()}
-    state = State(Repos(args.root), args.log, args.pr_number_base, rules)
+    state = State(Repos(args.root), args.log, args.pr_number_base, rules, synthetic_ci=not args.no_synthetic_ci,
+                  human_status_prefixes=tuple(x.strip() for x in args.human_status_prefixes.split(",") if x.strip()))
     passthrough = None
     if args.passthrough_token_file:
         token = args.passthrough_token_file.read_text(encoding="utf-8").strip()
@@ -1687,7 +1741,8 @@ def main(argv: list[str] | None = None) -> int:
     threading.Thread(target=admin.serve_forever, daemon=True).start()
     print(f"github-stub: listening on {'http' if args.plain else 'https'}://127.0.0.1:{args.port} "
           f"(admin http://127.0.0.1:{args.admin_port}) repos={state.repos.all()} "
-          f"passthrough={'on' if passthrough else 'off'} public_web={'on' if web else 'off'} rules={sorted(rules)}",
+          f"passthrough={'on' if passthrough else 'off'} public_web={'on' if web else 'off'} "
+          f"synthetic_ci={'on' if state.synthetic_ci else 'off'} rules={sorted(rules)}",
           flush=True)
     try:
         server.serve_forever()

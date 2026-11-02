@@ -90,6 +90,8 @@ class PlainPassthrough(stub.Passthrough):
 
 class StubFixture(unittest.TestCase):
     passthrough = False
+    required = ["review/manual-approval"]
+    synthetic_ci = True
 
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -104,11 +106,12 @@ class StubFixture(unittest.TestCase):
         bare = self.root / "git" / "dlddu" / "demo.git"
         bare.parent.mkdir(parents=True)
         git("clone", "-q", "--bare", str(src), str(bare))
-        rules = {"main": {"blocks_direct_push": True, "required_status_checks": ["review/manual-approval"]}}
+        rules = {"main": {"blocks_direct_push": True, "required_status_checks": list(self.required)}}
         sbx.install_hook(bare, rules)
         self.bare = bare
         self.log = tmp / "log.jsonl"
-        self.state = stub.State(stub.Repos(self.root), self.log, rules={"dlddu/demo": rules})
+        self.state = stub.State(stub.Repos(self.root), self.log, rules={"dlddu/demo": rules},
+                                synthetic_ci=self.synthetic_ci)
         self.upstream = FakeUpstream() if self.passthrough else None
         pt = PlainPassthrough(self.upstream.port) if self.upstream else None
         api = stub.Api(self.state, pt)
@@ -271,8 +274,10 @@ class PullRequestTest(StubFixture):
         self.assertIn("errors", merged)  # 필수 status 없음 → 거절
         rollup = self.gql(tok, "query S($id:ID!){node(id:$id){...on PullRequest{statusCheckRollup:commits(last:1)"
                                "{nodes{commit{statusCheckRollup{state}}}}}}}", {"id": pr["id"]})
+        # 필수 체크가 사람 승인뿐이라 합성 CI는 일반 `ci` 하나 — rollup은 실제 GitHub처럼 SUCCESS지만
+        # 사람 승인 status가 없어 머지는 위에서 거절됐다.
         self.assertEqual(rollup["data"]["node"]["statusCheckRollup"]["nodes"][0]["commit"]["statusCheckRollup"],
-                         {"state": "PENDING"})
+                         {"state": "SUCCESS"})
         unknown = self.gql(tok, "mutation{deleteRepository(input:{}){clientMutationId}}")
         self.assertIn("errors", unknown)
         self.assertTrue(any(e["op"] == "unsupported" and e.get("write") for e in self.entries()))
@@ -282,6 +287,90 @@ class PullRequestTest(StubFixture):
         status, _ = self.call("POST", "/repos/dlddu/demo/releases", tok, {"tag_name": "v1"})
         self.assertEqual(status, 501)
         self.assertEqual(self.entries()[-1]["op"], "unsupported")
+
+
+class SyntheticCiTest(StubFixture):
+    """대역 PR에는 CI가 돌지 않으니 합성 성공 체크 런을 붙인다 — 사람 승인 context는 절대 아니다."""
+    required = ["ci-success", "review/manual-approval"]
+
+    def open_pr(self, tok):
+        self.push_branch(tok)
+        status, pr = self.call("POST", "/repos/dlddu/demo/pulls", tok,
+                               {"title": "t", "head": "reconcile/fix", "base": "main"})
+        self.assertEqual(status, 201)
+        return pr
+
+    def test_ci_is_synthesized_but_human_approval_is_not(self):
+        tok = self.mint(["demo"])
+        pr = self.open_pr(tok)
+        sha, n = pr["head"]["sha"], pr["number"]
+        runs = self.call("GET", f"/repos/dlddu/demo/commits/{sha}/check-runs", tok)[1]["check_runs"]
+        self.assertEqual([(r["name"], r["conclusion"]) for r in runs], [("ci-success", "success")])
+        self.assertIn("synthetic", runs[0]["output"]["title"])
+        self.assertEqual(runs[0]["app"]["slug"], stub.SYNTHETIC_APP_SLUG)
+        # 커밋 status(사람 승인)는 합성하지 않는다 → combined status는 아직 pending
+        self.assertEqual(self.call("GET", f"/repos/dlddu/demo/commits/{sha}/status", tok)[1]["state"], "pending")
+        # 머지 게이트: CI는 합성으로 충족, 사람 승인만 남는다
+        status, body = self.call("PUT", f"/repos/dlddu/demo/pulls/{n}/merge", tok, {})
+        self.assertEqual(status, 405)
+        self.assertIn('"review/manual-approval"', body["message"])
+        self.assertNotIn('"ci-success"', body["message"])
+        self.admin_call("POST", "/_sandbox/statuses", {"repository": "demo", "sha": sha, "state": "success",
+                                                       "context": "review/manual-approval"})
+        self.assertEqual(self.call("PUT", f"/repos/dlddu/demo/pulls/{n}/merge", tok, {})[0], 200)
+        synth = [e for e in self.entries() if e["op"] == "ci.synthetic"]
+        self.assertEqual(len(synth), 1)
+        self.assertEqual(synth[0]["detail"]["contexts"], ["ci-success"])
+        self.assertFalse(synth[0]["write"])
+
+    def test_new_push_gets_its_own_ci_and_graphql_rollup_shows_it(self):
+        tok = self.mint(["demo"])
+        pr = self.open_pr(tok)
+        self.push_branch(tok, branch="other", content="other\n")  # 다른 브랜치·다른 커밋 — 대역 PR 아님
+        cfg2, url = self.git_remote(tok)
+        w2 = self.tmp / "w2"
+        git(*cfg2, "clone", "-q", "-b", "reconcile/fix", url, str(w2))
+        (w2 / "more.txt").write_text("more\n")
+        git("add", ".", cwd=w2)
+        git("commit", "-qm", "more", cwd=w2)
+        git(*cfg2, "push", "-q", "origin", "reconcile/fix", cwd=w2)
+        head = self.call("GET", f"/repos/dlddu/demo/pulls/{pr['number']}", tok)[1]["head"]["sha"]
+        self.assertNotEqual(head, pr["head"]["sha"])
+        runs = self.call("GET", f"/repos/dlddu/demo/commits/{head}/check-runs", tok)[1]["check_runs"]
+        self.assertEqual([r["name"] for r in runs], ["ci-success"])
+        other = stub.Repos(self.root).branch_sha("dlddu/demo", "other")  # PR이 아닌 커밋에는 없다
+        self.assertEqual(self.call("GET", f"/repos/dlddu/demo/commits/{other}/check-runs", tok)[1]["check_runs"], [])
+        # gh pr checks/view처럼 owner·name·number 변수로 묻는다
+        node = self.gql(tok, 'query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name)'
+                             '{pullRequest(number:$number){statusCheckRollup:commits(last:1){nodes{commit{'
+                             'statusCheckRollup{state contexts(first:10){nodes{__typename ...on CheckRun{name '
+                             'conclusion} ...on StatusContext{context state}}}}}}}}}}',
+                        {"owner": "dlddu", "name": "demo", "number": pr["number"]})
+        rollup = node["data"]["repository"]["pullRequest"]["statusCheckRollup"]["nodes"][0]["commit"]["statusCheckRollup"]
+        self.assertEqual(rollup["contexts"]["nodes"], [{"__typename": "CheckRun", "name": "ci-success",
+                                                         "conclusion": "SUCCESS"}])
+        self.assertEqual(rollup["state"], "SUCCESS")
+
+    def test_repo_without_required_checks_gets_generic_ci(self):
+        self.state.rules = {}
+        tok = self.mint(["demo"])
+        pr = self.open_pr(tok)
+        runs = self.call("GET", f"/repos/dlddu/demo/commits/{pr['head']['sha']}/check-runs", tok)[1]["check_runs"]
+        self.assertEqual([r["name"] for r in runs], ["ci"])
+
+
+class SyntheticCiOffTest(StubFixture):
+    required = ["ci-success"]
+    synthetic_ci = False
+
+    def test_disabled(self):
+        tok = self.mint(["demo"])
+        self.push_branch(tok)
+        pr = self.call("POST", "/repos/dlddu/demo/pulls", tok, {"title": "t", "head": "reconcile/fix",
+                                                                "base": "main"})[1]
+        self.assertEqual(self.call("GET", f"/repos/dlddu/demo/commits/{pr['head']['sha']}/check-runs",
+                                   tok)[1]["check_runs"], [])
+        self.assertEqual(self.call("PUT", f"/repos/dlddu/demo/pulls/{pr['number']}/merge", tok, {})[0], 405)
 
 
 class PassthroughTest(StubFixture):
@@ -298,6 +387,12 @@ class PassthroughTest(StubFixture):
         self.assertEqual(self.call("POST", "/repos/dlddu/demo/rulesets", tok, {})[0], 501)
         self.assertEqual(self.call("GET", "/repos/dlddu/other/rulesets", tok)[0], 404)  # 미러하지 않은 레포
         self.assertEqual(len(self.upstream.seen), before)  # 쓰기·범위 밖은 상류에 가지 않는다
+
+    def test_real_pr_gets_no_synthetic_ci(self):
+        tok = self.mint(["demo"])
+        self.call("PATCH", "/repos/dlddu/demo/pulls/7", tok, {"title": "touched"})  # 실제 PR을 손대 등록시킨다
+        self.assertEqual(self.call("GET", f"/repos/dlddu/demo/commits/{'f' * 40}/check-runs", tok)[1]["check_runs"], [])
+        self.assertFalse([e for e in self.entries() if e["op"] == "ci.synthetic"])
 
     def test_closing_a_real_pr_stays_local(self):
         tok = self.mint(["demo"])
