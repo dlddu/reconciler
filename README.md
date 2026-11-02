@@ -122,6 +122,13 @@ MiniMax Code로 돌리는 감지는 이 둘을 **러너의 결정적 스크립�
 `data/to-be-models.json`)과 다른 task·모델은 건드리지 않는다. 운영 감지의 결과 점검기는 점유 커밋 이후 변경이 그 task 파일
 하나뿐인지로 이를 확인한다.
 
+**판정 없이 끝난 점유**: 스킬이 판정을 기록하기 전에 끝나면(mcode 타임아웃·오류, 플러그인 준비 실패, 취소) task는
+`recheckAfter` 없는 `assessing` — 선정이 「다른 워커가 점유 중」으로 보고 아무도 이어받지 않는 lock — 으로 남는다.
+워크플로의 `Release unfinished claim` 스텝(`release_unfinished_claim.py`)이 점유한 실행마다 원격에서 그 task를 다시
+읽어, 여전히 그런 상태일 때만 재확인 유예(`assessment.recheckAfter` = 지금 + 30분, 커밋 `detect(<tbm>/<rct>): park
+unfinished`)로 돌린다. 시각이 지나면 다음 감지 실행이 「재확인 만료」로 이어받는다. 판정이 있거나 이미 유예 중이면 손대지
+않고, push가 거절되면 원격 상태에서 조건부터 다시 본다. 실행 자체는 결과 점검 실패로 그대로 실패한다.
+
 **범위**: 이 분리는 MiniMax 감지 경로에만 해당한다. Claude Code 플러그인(`reconciler-data-plane`)의 감지 스킬은
 사람 세션에서 직접 불릴 수 있으므로 지금처럼 선정·점유를 스스로 한다. 두 경로가 같은 레포에 쓰므로 점유 기록의
 형태(커밋 제목, `trigger`, 기준선 갱신, 수동 요청 필드를 짝으로 `null`)는 같게 유지한다.
