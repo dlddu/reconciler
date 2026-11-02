@@ -57,7 +57,12 @@ APPROVAL_CONTEXT = "review/manual-approval"
 REQUIRED_CHECKS = ["ci-success", APPROVAL_CONTEXT]
 # 시험 대상에게 보이면 안 되는 테스트 하네스(점검기·픽스처·생성 스킬 검증기).
 HARNESS_SCRIPTS = ("executor_fixture.py", "check_executor_result.py", "check_detector_result.py",
+                   "check_planner_result.py", "check_review_result.py", "replay_review_task.py",
                    "validate_generated_skill.py", "github_stub.py", "github_sandbox.py", "github_log.py")
+# 픽스처 README에서 이 이름이 나오는 줄은 뺀다(「구조」 파일 목록 등). 격리 점검은 도구 입력에 하네스 이름이 나오면
+# 무효로 치므로, 시험 대상이 읽는 문서에 그 이름을 두지 않는다(run 41401959961 broken-premise: README 파일 목록에서
+# 점검기 이름을 보고 그 이름으로 다시 검색해 격리 점검에 걸림).
+README_HARNESS_NAMES = tuple(n.removesuffix(".py") for n in HARNESS_SCRIPTS) + ("github-sandbox", "expect.json", "sealed/")
 # 픽스처 README에서 뺄 절(제목 접두어). 테스트 무대·시나리오·기대 결과를 설명한다 — 시험 대상이 읽으면 정답지다.
 README_HARNESS_SECTIONS = ("## 실행 스킬 MiniMax 파이프라인", "## GitHub 샌드박스")
 GIT_ENV = {
@@ -88,12 +93,13 @@ def dump(path: Path, data) -> None:
 
 
 def harness_free_readme(text: str) -> str:
-    """README에서 테스트 하네스를 설명하는 `## ` 절을 통째로 뺀다(다음 `## ` 제목 전까지)."""
+    """README에서 테스트 하네스를 설명하는 `## ` 절을 통째로 빼고(다음 `## ` 제목 전까지), 남은 부분에서도
+    하네스 이름(README_HARNESS_NAMES)이 나오는 줄을 뺀다."""
     out, skipping = [], False
     for line in text.splitlines(keepends=True):
         if line.startswith("## "):
             skipping = line.startswith(README_HARNESS_SECTIONS)
-        if not skipping:
+        if not skipping and not any(name in line for name in README_HARNESS_NAMES):
             out.append(line)
     return "".join(out)
 

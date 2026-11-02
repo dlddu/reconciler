@@ -141,6 +141,17 @@ class ExecutorFixtureCheckTest(unittest.TestCase):
             self.assertNotIn(scenario, readme)
         self.assertIn("## 실행 전 사람 승인", readme)  # 스킬이 읽어야 하는 절은 남긴다
 
+    def test_workspace_never_names_the_harness(self):
+        # 격리 점검(Check isolation)이 금지하는 이름이 시험 대상의 작업 공간 어디에도 없다 — 문서·복사된 스크립트 모두
+        # (run 41401959961 broken-premise: README 「구조」 파일 목록에서 점검기 이름을 보고 다시 검색해 무효)
+        self.build("merge")
+        needles = ("check_executor_result", "check_detector_result", "executor_fixture", "validate_generated_skill",
+                   "expect.json", "sealed/")
+        hits = [f"{p.relative_to(self.repo)}: {n}" for p in self.repo.rglob("*")
+                if p.is_file() and ".git" not in p.parts
+                for n in needles if n in p.read_text(encoding="utf-8", errors="ignore")]
+        self.assertEqual(hits, [])
+
     # ── 계약대로 ──
     def test_contract_following_merge_passes(self):
         self.build("merge")
