@@ -201,14 +201,22 @@ task 레코드(점유 직전)를 샌드박스에만 되돌려 놓는다(`replay_
 | report | 세 단계 결과를 한 보고서로 묶는다. | `work-executor-build-report` (report.md, skill/) |
 
 **테스트는 운영 데이터로 하지 않는다.** 감지와 달리 실행은 PR 머지·클러스터 변경처럼 되돌리기 어려운 일을 하므로, 생성본의
-첫 실행을 운영에 맡기지 않고 러너 안의 격리 무대에서 먼저 돌린다. 무대에는 GitHub·MCP·클러스터 자격 증명이 없다. 안전망으로
-GitHub 샌드박스(미러 없음)를 올려 두어, 스킬이 GitHub로 무엇을 보내든 러너 안의 대역이 받고 거절하며 기록한다 — 무대의 task에는
-승인 PR이 없으므로 GitHub 머지·push·status는 `github_log.py --stage execute`가 오류로 잡는다.
+첫 실행을 운영에 맡기지 않고 러너 안의 격리 무대에서 먼저 돌린다. 무대에는 실제 GitHub·MCP·클러스터 자격 증명이 없다. 모든 시나리오에서
+GitHub 샌드박스를 올려 두어, 스킬이 GitHub로 무엇을 보내든 러너 안의 대역이 받고 기록하며, `github_log.py --stage execute --expect`가
+시나리오의 머지 규칙(`github.merge`: 승인 PR 머지 필수 `required` / 머지 시도조차 금지 `forbidden`)으로 판정한다.
 
 - 대상 레포 = 로컬 bare 저장소(`target.git`, main + 준비 브랜치). reconciler = 로컬 bare 원격 + clone(실제 README·schemas·scripts 복사,
   data/에는 픽스처 모델 2개와 task 3건 — 같은 모델의 지난 `succeeded`, **점유된 `executing`** 한 건, 다른 모델의 `approved` 미끼).
 - 점유는 러너 몫이라 `approved → executing`을 `execute(<tbm>/<rct>): claim` 커밋으로 미리 push해 둔다. 이 커밋이 점검 기준이다.
-- 시나리오: `merge`(준비 브랜치 병합 → 검증 통과 → `succeeded`), `broken-premise`(리뷰 뒤 준비 브랜치가 사라짐 → 대상은 그대로, `failed`).
+- 시나리오(로컬 대상): `merge`(준비 브랜치 병합 → 검증 통과 → `succeeded`), `broken-premise`(리뷰 뒤 준비 브랜치가 사라짐 → 대상은 그대로, `failed`).
+- 시나리오(GitHub 대상 — 운영 실행의 실제 경로): 대상 레포 `fixture/target-app`이 GitHub 샌드박스에 있고 준비는 PR #90001, 리뷰가 사람 승인을
+  요구했다(`review.manualApproval`). 실제 ruleset처럼 필수 체크 `ci-success`·`review/manual-approval`과 main 직접 push 금지가 걸려 있고,
+  `ci-success`는 대역의 합성 CI, 사람 승인 status는 **리뷰 시점 head에만** 심어 둔다(`seed.json` — 스킬의 쓰기로 세지 않음).
+  스킬은 오프라인 샌드박스 MCP(`mcp_oidc_proxy.py --offline`)의 `github_app_installation_token`으로 대역 토큰을 받고, 대상은
+  `github.com/fixture/target-app`으로만 보인다(task·모델에 로컬 경로 없음, 버전 스크립트는 체크아웃 기준).
+  - `pr-merge`: PR head = `manualApproval.sha`, 필수 체크 모두 success → API로 PR 머지 → `succeeded`(대역 기록: 승인 PR 머지 필수).
+  - `pr-head-moved`: 리뷰(승인) 뒤 검토되지 않은 커밋이 PR에 올라와 head ≠ `manualApproval.sha` → 머지를 **시도하지 않고** `failed`,
+    대상 refs 불변(대역 기록: 거절된 머지 시도도 오류 — 새 head엔 승인 status가 없어 대역도 실제처럼 거절하지만, 시도 자체가 계약 위반).
 - 점검: 커밋 규약(run → verify), 변경이 그 task 파일 하나뿐인지, 판정·계획·리뷰 기록과 이전 attempts 보존, 스키마, lock 해제
   (`succeeded`|`failed`|`cancelled`), execution·verification 일관성(passed ⇔ succeeded, plan에 없는 stepSeq 없음), push 여부, 그리고
   시나리오 기대값(대상 main 내용·refs 불변·이력 재작성 없음·`asIsVersionAfter`).
@@ -244,6 +252,9 @@ GitHub 샌드박스(미러 없음)를 올려 두어, 스킬이 GitHub로 무엇�
 | 실행 | 머지는 승인된 task의 그 PR 하나만, commit status 쓰기 0건, 강제 push 0건. 거절된 시도는 경고. |
 
   대역이 모르는 요청은 501 + `op: unsupported`로 남고 점검기 경고로 보인다 — 대역을 넓혀야 한다는 단서다.
+- **시드·오프라인 MCP**(실행 빌드의 격리 무대): 대역은 시작 때 `seed.json`의 PR·commit status를 「스킬이 오기 전에 이미 있던」 것으로
+  심는다(기록 `seed.*`, 쓰기로 세지 않음). OIDC가 없는 job은 `mcp-offline: "true"`로 프록시가 MCP 서버 자체가 되어 GitHub 도구 두 개(대역)와
+  `ping`만 노출한다.
 - **github.com 공개 자료**: git 밖 GET(릴리스 내려받기·아카이브 — 예: `npm install`의 prebuilt 바이너리)은 자격 증명 없이 실제 github.com에
   물어 그대로 돌려준다(쓰기는 중계하지 않는다).
 - **합성 CI**: 대역 PR은 진짜 GitHub가 모르니 Actions CI가 돌지 않는다. 그래서 대역이 **자기가 만든 PR**의 head 커밋마다(새 push 포함)

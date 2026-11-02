@@ -17,6 +17,13 @@
 #             status는 모두 오류).
 #               merge           준비 브랜치 병합 → 검증 통과 → succeeded
 #               broken-premise  리뷰 뒤 준비 브랜치가 사라짐 → 아무것도 바꾸지 않고 failed
+#               pr-merge        대상이 GitHub 레포(샌드박스 대역)·준비가 PR·사람 승인 status가 head에 있음
+#                               → API로 PR 머지 → succeeded (대역 기록: 승인 PR 머지 필수)
+#               pr-head-moved   리뷰(승인) 뒤 PR head가 움직임(검토 안 된 커밋) → 머지 시도 없이 failed
+#                               (대역 기록: 머지 시도조차 금지)
+#             PR 시나리오는 GitHub 샌드박스에 대상 레포·ruleset(필수 체크 ci-success·review/manual-approval)·PR·사람 승인
+#             status를 미리 심고(seed.json), 오프라인 샌드박스 MCP로 github_app_installation_token만 준다(대역의 가짜 토큰).
+#             ci-success는 대역의 합성 CI, 사람 승인 status는 리뷰 시점 head에만 있다.
 #   report    세 단계 결과를 한 보고서(work-executor-build-report 아티팩트)로 묶는다.
 #
 # 필요한 설정
@@ -72,14 +79,6 @@ jobs:
           subscription-key: ${{ secrets.MINIMAX_SUBSCRIPTION_KEY }}
           version: ${{ env.MCODE_VERSION }}
           region: ${{ vars.MINIMAX_REGION || 'en' }}
-
-      # 안전망: 무대는 GitHub를 쓰지 않지만, 스킬이 GitHub로 무엇을 보내든 실제 GitHub 대신 러너 안의 대역이 받게 한다.
-      # 미러·토큰·MCP 없음 — 대역은 인증 없는 요청을 거절하고 전부 기록한다.
-      - name: GitHub sandbox up
-        id: sandbox
-        uses: ./harness/.github/actions/github-sandbox
-        with:
-          mode: up
 
       - name: Generate SKILL.md
         id: gen
@@ -193,7 +192,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scenario: [merge, broken-premise]
+        scenario: [merge, broken-premise, pr-merge, pr-head-moved]
     steps:
       # README·schemas·scripts 원본. 픽스처는 이것을 복사해 쓰고, 이 체크아웃 자체는 건드리지 않는다.
       - name: Checkout harness
@@ -221,8 +220,10 @@ jobs:
           # 로컬 대상 저장소 병합 커밋용 작성자(운영에서는 GitHub가 머지 커밋을 만든다).
           git config --global user.name "reconciler-bot"
           git config --global user.email "reconciler@dlddu.dev"
+          # PR 시나리오는 대상 레포·ruleset·PR·승인 status를 GitHub 샌드박스 루트(아래 sandbox up의 기본 root)에 심는다.
           python3 harness/.github/scripts/executor_fixture.py --source harness --work-dir "$RUNNER_TEMP/fx" \
-            --scenario "${{ matrix.scenario }}" --expect-file "$SEALED/expect.json" --github-output "$GITHUB_OUTPUT"
+            --scenario "${{ matrix.scenario }}" --expect-file "$SEALED/expect.json" --github-output "$GITHUB_OUTPUT" \
+            --sandbox-root "$RUNNER_TEMP/github-sandbox"
           ws="$RUNNER_TEMP/fx/ws"
           mkdir -p "$ws/$SKILL_REL"
           cp -R "$RUNNER_TEMP/gen/skill/." "$ws/$SKILL_REL/"
@@ -241,13 +242,21 @@ jobs:
           version: ${{ env.MCODE_VERSION }}
           region: ${{ vars.MINIMAX_REGION || 'en' }}
 
-      # 안전망: 무대는 GitHub를 쓰지 않지만, 스킬이 GitHub로 무엇을 보내든 실제 GitHub 대신 러너 안의 대역이 받게 한다.
-      # 미러·토큰·MCP 없음 — 대역은 인증 없는 요청을 거절하고 전부 기록한다.
+      # 로컬 시나리오: 안전망 — 스킬이 GitHub로 무엇을 보내든 실제 GitHub 대신 러너 안의 대역이 받는다(MCP 없음).
+      # PR 시나리오: 대상 레포가 이 대역에 있다. 오프라인 샌드박스 MCP가 github_app_installation_token(대역 토큰)을 준다.
+      # 실제 GitHub·실제 MCP 자격 증명은 어느 쪽에도 없다.
       - name: GitHub sandbox up
         id: sandbox
         uses: ./harness/.github/actions/github-sandbox
         with:
           mode: up
+          mcp-offline: ${{ steps.fx.outputs.github }}
+
+      - name: Connect MCP to mcode (PR scenarios)
+        if: steps.fx.outputs.github == 'true'
+        env:
+          WS: ${{ steps.fx.outputs.ws_dir }}
+        run: printf '{"mcpServers":{"k3s":{"type":"http","url":"%s"}}}\n' "$MCP_LOCAL_URL" > "$WS/.mcp.json"
 
       # 운영 실행과 같은 프롬프트(work-executor-run-prompt.md). 이 무대에만 해당하는 사실은 ENV_NOTE 한 줄뿐이다.
       # mcode 런타임이 재시도 가능한 오류(예: EMPTY_RESPONSE)로 끝났고 아직 아무것도 바뀌지 않았으면
@@ -262,7 +271,7 @@ jobs:
           TASK_ID: ${{ steps.fx.outputs.task_id }}
           MODEL_ID: ${{ steps.fx.outputs.model_id }}
           CLAIM_COMMIT: ${{ steps.fx.outputs.claim_commit }}
-          ENV_NOTE: "이번 실행 환경에는 MCP 서버가 연결돼 있지 않다. 대상 저장소는 task의 plan·preparation에 적힌 로컬 경로다."
+          ENV_NOTE: ${{ steps.fx.outputs.github == 'true' && 'MCP 서버 `k3s`가 연결돼 있다(대상 레포 토큰은 github_app_installation_token). 대상 레포는 task의 preparation에 적힌 GitHub 레포다.' || '이번 실행 환경에는 MCP 서버가 연결돼 있지 않다. 대상 저장소는 task의 plan·preparation에 적힌 로컬 경로다.' }}
         run: |
           sed -e "s#{{SKILL_DIR}}#$SKILL_REL#g" -e "s#{{REPO_DIR}}#./reconciler#g" \
               -e "s#{{TASK_ID}}#$TASK_ID#g" -e "s#{{MODEL_ID}}#$MODEL_ID#g" \
@@ -356,8 +365,9 @@ jobs:
       - name: Check GitHub sandbox
         if: always() && steps.run.outcome == 'success'
         run: |
+          # 시나리오 기대값(github.approved_pr·merge): pr-merge는 승인 PR 머지 필수, 나머지는 머지 시도조차 금지.
           python3 harness/.github/scripts/github_log.py "$OUT/github-sandbox/requests.jsonl" --stage execute \
-            --report "$OUT/github-sandbox/check.md"
+            --expect "$SEALED/expect.json" --report "$OUT/github-sandbox/check.md"
 
       - name: Summary
         if: always()

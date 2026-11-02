@@ -43,6 +43,9 @@ inputs:
   mcp-port:
     description: (up) 로컬 MCP 프록시 포트(평문 모드 프록시가 이미 이 포트에 있으면 내리고 다시 띄운다)
     default: "8765"
+  mcp-offline:
+    description: (up) 실제 MCP 없이 오프라인 샌드박스 MCP(GitHub 토큰·status 도구 + ping)를 mcp-port에 띄운다 — OIDC 없는 job용
+    default: "false"
   allow-tools:
     description: (up) 샌드박스에서도 실제 MCP로 보낼 도구(쉼표 구분, 관측용 읽기 도구만). 나머지는 막는다
     default: ping
@@ -75,6 +78,7 @@ runs:
         ALLOW: ${{ inputs.allow-tools }}
         ADMIN_PORT: ${{ inputs.admin-port }}
         SYNTHETIC_CI: ${{ inputs.synthetic-ci }}
+        MCP_OFFLINE: ${{ inputs.mcp-offline }}
       run: |
         set -euo pipefail
         mkdir -p "$ROOT"
@@ -93,8 +97,19 @@ runs:
         [ "$SYNTHETIC_CI" = "true" ] || ci_args=(--no-synthetic-ci)
         python3 "$H/.github/scripts/github_sandbox.py" start --root "$ROOT" --log "$ROOT/requests.jsonl" \
           --token-env "$TOKEN_ENV" --admin-port "$ADMIN_PORT" --stub-log "$ROOT/stub.log" "${ci_args[@]}"
-        # 4) MCP 프록시를 샌드박스 모드로 다시 띄운다(GitHub 도구는 대역으로, 허용 목록 밖 도구는 거절)
-        if [ -n "$UPSTREAM" ]; then
+        # 4) MCP 프록시를 샌드박스 모드로 다시 띄운다(GitHub 도구는 대역으로, 허용 목록 밖 도구는 거절).
+        #    오프라인이면 실제 MCP 없이 프록시가 MCP 서버 자체가 된다.
+        if [ "$MCP_OFFLINE" = "true" ]; then
+          nohup python3 "$H/.github/scripts/mcp_oidc_proxy.py" --offline --port "$PORT" \
+            --sandbox-admin "http://127.0.0.1:$ADMIN_PORT" > "$ROOT/mcp-proxy.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            grep -q listening "$ROOT/mcp-proxy.log" && break
+            if ! kill -0 $! 2>/dev/null; then cat "$ROOT/mcp-proxy.log"; echo "::error::오프라인 MCP 기동 실패"; exit 1; fi
+            sleep 1
+          done
+          grep listening "$ROOT/mcp-proxy.log"
+          echo "MCP_LOCAL_URL=http://127.0.0.1:$PORT/mcp" >> "$GITHUB_ENV"
+        elif [ -n "$UPSTREAM" ]; then
           # [m] 패턴: 이 스텝 스크립트 자체(명령줄에 이 문자열이 들어갈 수 있다)를 맞히지 않는다
           pkill -f "[m]cp_oidc_proxy.py.*--port $PORT" 2>/dev/null || true
           for _ in $(seq 1 20); do (exec 3<>"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null || break; sleep 0.5; done

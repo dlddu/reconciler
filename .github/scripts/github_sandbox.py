@@ -172,7 +172,8 @@ def mirror(root: Path, repos: list[str], token: str | None, reconciler_bare: Pat
            reconciler_repo: str | None) -> dict:
     gitroot = root / "git"
     gitroot.mkdir(parents=True, exist_ok=True)
-    all_rules: dict = {}
+    rules_file = root / "rules.json"  # 무대가 미리 둔 규칙(실행 빌드 픽스처)은 지우지 않고 합친다
+    all_rules: dict = json.loads(rules_file.read_text(encoding="utf-8")) if rules_file.is_file() else {}
     for full in repos:
         owner, name = full.split("/", 1)
         dest = gitroot / owner / f"{name}.git"
@@ -209,7 +210,7 @@ def mirror(root: Path, repos: list[str], token: str | None, reconciler_bare: Pat
             link.unlink() if link.is_symlink() else shutil.rmtree(link)
         link.symlink_to(reconciler_bare.resolve(), target_is_directory=True)
         print(f"linked {reconciler_repo} -> {reconciler_bare}")
-    (root / "rules.json").write_text(json.dumps(all_rules, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    rules_file.write_text(json.dumps(all_rules, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return all_rules
 
 
@@ -280,6 +281,8 @@ def start(root: Path, log: Path, token: str | None, port: int, admin_port: int, 
             "--port", str(port), "--admin-port", str(admin_port), "--log", str(log)]
     if not synthetic_ci:
         args.append("--no-synthetic-ci")
+    if (root / "seed.json").is_file():  # 무대가 심어 둔 PR·status(실행 빌드 픽스처)
+        args += ["--seed", str(root / "seed.json")]
     if token:
         fd, path = tempfile.mkstemp(prefix="pt-", dir=str(root))
         os.write(fd, token.encode())

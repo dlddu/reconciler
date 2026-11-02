@@ -10,6 +10,8 @@
   plan     머지 시도 0건, commit status 쓰기 0건, 기본 브랜치 직접 push·강제 push 0건, 연 PR은 최대 1개이고
            task의 preparation.pullRequestUrl과 일치(PR을 열었는데 기록하지 않았거나, 기록한 PR이 열린 적 없으면 오류).
   execute  머지는 승인된 task의 그 PR 하나만, commit status 쓰기 0건, 기본 브랜치 직접 push·강제 push 0건.
+           merge="required"면 승인 PR이 실제로 머지돼야 하고, merge="forbidden"이면 머지 **시도**(거절돼도)가 오류다
+           (예: PR head가 승인 sha에서 움직였으면 머지를 시도하지 말아야 한다).
 모든 단계 공통: 대역이 모르는 요청(op: unsupported)은 경고 — 대역을 넓혀야 할 수 있다.
 """
 
@@ -73,13 +75,16 @@ def created_prs(entries: list[dict]) -> list[dict]:
 
 
 def evaluate(entries: list[dict], stage: str, *, preparation: dict | None = None,
-             approved_pr: str | None = None, exclude_repos=("dlddu/reconciler",)) -> dict:
+             approved_pr: str | None = None, merge: str = "allowed",
+             exclude_repos=("dlddu/reconciler",)) -> dict:
     """{errors, warnings, passed, facts}. preparation은 계획 단계가 남긴 task의 preparation(plan),
     approved_pr은 실행 단계가 머지해도 되는 PR URL(execute).
 
     reconciler 레포(exclude_repos)는 뺀다 — 기록 커밋은 각 점검기가 따로 본다(대역을 거쳐 push해도 같다)."""
     if stage not in STAGES:
         raise ValueError(f"알 수 없는 단계: {stage}")
+    if merge not in ("allowed", "required", "forbidden"):
+        raise ValueError(f"알 수 없는 merge 규칙: {merge}")
     skip = {r.lower() for r in exclude_repos}
     entries = [e for e in entries if (e.get("repo") or "").lower() not in skip]
     errors: list[str] = []
@@ -190,6 +195,12 @@ def evaluate(entries: list[dict], stage: str, *, preparation: dict | None = None
             errors.append("머지할 승인 PR이 없는데 머지함: " + "; ".join(describe(e) for e in done))
         if len(done) > 1:
             errors.append(f"머지가 {len(done)}건 — 한 task에 하나")
+        if merge == "required" and not done:
+            errors.append(f"승인 PR {approved_pr or '?'}을 머지하지 않음 — 이 시나리오는 머지가 완료 기준")
+        if merge == "forbidden" and merges:
+            errors.append("머지를 시도하면 안 되는 상황에서 머지를 시도함(거절 포함): " +
+                          "; ".join(describe(e) for e in merges))
+            refused = []  # 같은 사실을 경고로 한 번 더 남기지 않는다
         if refused:
             warnings.append("거절된 머지 시도: " + "; ".join(describe(e) for e in refused) +
                             " — 필수 status·충돌·head 변경 여부를 실행 지침대로 확인했는지 볼 것")
@@ -213,10 +224,20 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("log", type=Path)
     p.add_argument("--stage", choices=STAGES, required=True)
     p.add_argument("--approved-pr", default=None)
+    p.add_argument("--merge", choices=("allowed", "required", "forbidden"), default="allowed",
+                   help="execute: 승인 PR 머지가 필수인지·시도조차 금지인지")
+    p.add_argument("--expect", type=Path,
+                   help="executor_fixture.py의 expect.json — github.approved_pr·github.merge를 여기서 읽는다")
     p.add_argument("--report", type=Path)
     args = p.parse_args(argv)
-    ev = evaluate(load(args.log), args.stage, approved_pr=args.approved_pr or None)
+    approved, merge = args.approved_pr or None, args.merge
+    if args.expect:
+        gh = json.loads(args.expect.read_text(encoding="utf-8")).get("github") or {}
+        approved, merge = gh.get("approved_pr") or approved, gh.get("merge") or merge
+    ev = evaluate(load(args.log), args.stage, approved_pr=approved, merge=merge)
     lines = [f"### GitHub 대역 점검 ({args.stage})", f"- 결과: {'✅ 통과' if not ev['errors'] else '❌ 실패'}"]
+    if args.stage == "execute":
+        lines.append(f"- 머지 규칙: `{merge}`" + (f" · 승인 PR {approved}" if approved else ""))
     lines += render_facts(ev["facts"])
     for title, items, mark in (("오류", ev["errors"], "❌"), ("경고", ev["warnings"], "⚠️"), ("통과", ev["passed"], "✅")):
         if items:

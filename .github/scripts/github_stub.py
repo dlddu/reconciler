@@ -28,6 +28,11 @@
 
 관리 API(평문 HTTP, 127.0.0.1 전용): POST /_sandbox/tokens · POST /_sandbox/statuses · GET /_sandbox/state ·
 GET /_sandbox/health
+
+시드(`--seed FILE`, JSON): 시험 무대가 "스킬이 오기 전에 이미 있던" PR·commit status를 심는다(실행 빌드 픽스처).
+`{"pulls": [{"repository": "o/r", "head": "br", "base": "main", "title": …, "body": …, "number": 90001}],
+  "statuses": [{"repository": "o/r", "sha": …, "state": "success", "context": "review/manual-approval"}]}`
+시드는 기록에 `seed.pull`·`seed.status`(write: false)로 남는다 — 스킬의 쓰기로 세지 않는다.
 """
 
 from __future__ import annotations
@@ -1646,6 +1651,28 @@ def make_server_handler(state: State, api: Api, gql: GraphQL, root: Path, web: P
     return Handler
 
 
+def apply_seed(state: State, api: Api, seed: dict) -> None:
+    """무대가 미리 갖춰 둔 PR·status. 스킬의 쓰기와 구분되게 seed.* (write false)로 기록한다."""
+    for spec in seed.get("pulls") or []:
+        repo = state.repos.canonical(spec["repository"])
+        if repo is None:
+            raise SystemExit(f"seed: 레포 없음 {spec['repository']}")
+        pr = api.create_pr(repo, spec["title"], spec["head"], spec.get("base") or "main", spec.get("body"),
+                           spec.get("draft", False))
+        if spec.get("number") and pr["number"] != spec["number"]:
+            raise SystemExit(f"seed: PR 번호 {pr['number']} ≠ 기대 {spec['number']}")
+        refresh_pr(state, repo, pr)
+        state.record(source="seed", op="seed.pull", repo=repo, write=False,
+                     detail={"number": pr["number"], "head": pr["head"]["ref"], "head_sha": pr["head"]["sha"]})
+    for spec in seed.get("statuses") or []:
+        repo = state.repos.canonical(spec["repository"])
+        if repo is None:
+            raise SystemExit(f"seed: 레포 없음 {spec['repository']}")
+        st = api.add_status(repo, spec["sha"].lower(), spec, "seed")
+        state.record(source="seed", op="seed.status", repo=repo, write=False,
+                     detail={"sha": spec["sha"], "context": st["context"], "state": st["state"]})
+
+
 def make_admin_handler(state: State, api: Api):
     class Admin(BaseHTTPRequestHandler):
         protocol_version = "HTTP/1.1"
@@ -1704,6 +1731,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--passthrough-token-file", type=Path,
                    help="read passthrough용 실제 읽기 토큰 파일(읽은 뒤 지운다). 없으면 모르는 읽기는 404")
     p.add_argument("--pr-number-base", type=int, default=DEFAULT_PR_BASE)
+    p.add_argument("--seed", type=Path, help="시작 때 심을 PR·status(JSON, 머리말 「시드」)")
     p.add_argument("--plain", action="store_true", help="TLS 없이(테스트용)")
     p.add_argument("--no-public-web", action="store_true", help="github.com의 git 밖 GET을 실제로 묻지 않는다")
     p.add_argument("--no-synthetic-ci", action="store_true", help="대역 PR에 합성 CI(성공)를 붙이지 않는다")
@@ -1725,6 +1753,8 @@ def main(argv: list[str] | None = None) -> int:
             passthrough = Passthrough(token)  # 실제 주소는 지금(hosts가 바뀌기 전) 푼다
     api = Api(state, passthrough)
     gql = GraphQL(state, api, passthrough)
+    if args.seed:
+        apply_seed(state, api, json.loads(args.seed.read_text(encoding="utf-8")))
     web = None
     if not args.no_public_web:
         try:

@@ -20,6 +20,10 @@ GitHub 대역(github_stub.py)이 받게 한다. 스킬은 평소처럼 도구를
 - `github_commit_status_create` → 대역의 commit status로 기록.
 - `--sandbox-allow-tools`에 적은 도구만 실제 MCP로 보낸다(관측용 읽기 도구). 나머지 도구 호출은 isError로 막는다 —
   허용 목록은 fail-closed다.
+
+오프라인 샌드박스 모드(`--sandbox-admin` + `--offline`, 실제 MCP·OIDC 없음 — 실행 빌드의 격리 무대): 프록시가 MCP 서버
+자체가 되어 initialize·tools/list에 직접 답하고, GitHub 도구 두 개(대역으로)와 `ping`만 노출한다. 실제 MCP로는 아무것도
+보내지 않는다.
 """
 
 from __future__ import annotations
@@ -169,6 +173,103 @@ class SandboxPolicy:
                           f"{created['repository']}@{created['sha']} (id {created['id']})")
 
 
+OFFLINE_TOOLS = [
+    {"name": "github_app_installation_token",
+     "description": "Mint a short-lived GitHub App installation access token (sandbox: issued by the GitHub test double).",
+     "inputSchema": {"type": "object", "additionalProperties": False, "properties": {
+         "repositories": {"type": "array", "items": {"type": "string"}},
+         "permissions": {"type": "object", "additionalProperties": {"type": "string"}}}}},
+    {"name": "github_commit_status_create",
+     "description": "Write one commit status on a commit (sandbox: recorded by the GitHub test double).",
+     "inputSchema": {"type": "object", "additionalProperties": False,
+                     "required": ["repository", "sha", "state", "context"], "properties": {
+                         "repository": {"type": "string"}, "sha": {"type": "string"},
+                         "state": {"type": "string", "enum": ["error", "failure", "pending", "success"]},
+                         "context": {"type": "string"}, "description": {"type": "string"},
+                         "target_url": {"type": "string"}}}},
+    {"name": "ping", "description": "Health check.", "inputSchema": {"type": "object", "properties": {}}},
+]
+OFFLINE_PROTOCOL = "2025-06-18"
+
+
+def offline_answer(msg: dict, sandbox: "SandboxPolicy", tools: list[dict]) -> dict | None:
+    """오프라인 모드의 JSON-RPC 응답 본문(result 또는 error). 알림(id 없음)은 None."""
+    if "id" not in msg:
+        return None
+    method = msg.get("method")
+    if method == "initialize":
+        version = (msg.get("params") or {}).get("protocolVersion") or OFFLINE_PROTOCOL
+        return {"result": {"protocolVersion": version, "capabilities": {"tools": {"listChanged": False}},
+                           "serverInfo": {"name": "homelab-k3s-mcp", "version": "sandbox-offline"}}}
+    if method == "ping":
+        return {"result": {}}
+    if method == "tools/list":
+        return {"result": {"tools": tools}}
+    if method == "tools/call":
+        name = (msg.get("params") or {}).get("name")
+        if name == "ping":
+            return {"result": {"content": [{"type": "text", "text": "pong"}]}}
+        if name not in {t["name"] for t in tools}:
+            return {"error": {"code": -32602, "message": f"unknown tool: {name}"}}
+        result = sandbox.intercept(msg)
+        if result is None:  # 허용 도구라도 오프라인에는 보낼 곳이 없다
+            result = sandbox._text(f"tool {name!r} is not available in this environment", is_error=True)
+        return {"result": result}
+    return {"error": {"code": -32601, "message": f"method not found: {method}"}}
+
+
+def make_offline_handler(sandbox: "SandboxPolicy", tools: list[dict] | None = None, log=print):
+    tools = tools or OFFLINE_TOOLS
+
+    class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.0"
+        server_version = "mcp-oidc-proxy"
+
+        def log_message(self, fmt, *args):
+            pass
+
+        def _send(self, status: int, payload: dict | list | None, headers: dict | None = None) -> None:
+            data = b"" if payload is None else json.dumps(payload).encode()
+            self.send_response(status)
+            for k, v in (headers or {}).items():
+                self.send_header(k, v)
+            if payload is not None:
+                self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def do_POST(self):
+            length = int(self.headers.get("Content-Length") or 0)
+            try:
+                msg = json.loads(self.rfile.read(length) or b"null")
+            except ValueError:
+                return self._send(400, {"jsonrpc": "2.0", "id": None,
+                                        "error": {"code": -32700, "message": "parse error"}})
+            batch = isinstance(msg, list)
+            out = []
+            for m in (msg if batch else [msg]):
+                if not isinstance(m, dict):
+                    continue
+                ans = offline_answer(m, sandbox, tools)
+                if ans is not None:
+                    out.append({"jsonrpc": "2.0", "id": m.get("id"), **ans})
+                    if m.get("method") == "tools/call":
+                        log(f"mcp-oidc-proxy: offline tools/call {(m.get('params') or {}).get('name')} -> "
+                            f"{'error' if 'error' in ans or ans['result'].get('isError') else 'ok'}", flush=True)
+            if not out:
+                return self._send(202, None)
+            self._send(200, out if batch else out[0], {"Mcp-Session-Id": "sandbox-offline"})
+
+        def do_GET(self):  # 서버 발신 SSE 스트림은 없다(스펙상 405 허용)
+            self._send(405, {"error": "no server-initiated stream"}, {"Allow": "POST, DELETE"})
+
+        def do_DELETE(self):
+            self._send(200, {})
+
+    return Handler
+
+
 def make_handler(upstream: str, tokens: OidcTokenSource, timeout: float, log=print,
                  sandbox: SandboxPolicy | None = None):
     target = urllib.parse.urlsplit(upstream)
@@ -265,8 +366,10 @@ def make_handler(upstream: str, tokens: OidcTokenSource, timeout: float, log=pri
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--upstream", required=True, help="실제 MCP 엔드포인트(예: https://.../mcp)")
-    parser.add_argument("--audience", required=True, help="OIDC 토큰 audience (서버의 MCP_GITHUB_OIDC_AUDIENCE)")
+    parser.add_argument("--upstream", default="", help="실제 MCP 엔드포인트(예: https://.../mcp) — --offline이 아니면 필수")
+    parser.add_argument("--audience", default="", help="OIDC 토큰 audience (서버의 MCP_GITHUB_OIDC_AUDIENCE)")
+    parser.add_argument("--offline", action="store_true",
+                        help="실제 MCP·OIDC 없이 샌드박스 GitHub 도구만 노출(--sandbox-admin 필요)")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--refresh-before", type=float, default=90.0, help="만료 몇 초 전에 갱신할지")
     parser.add_argument("--timeout", type=float, default=600.0, help="upstream 요청 타임아웃(초)")
@@ -279,6 +382,19 @@ def main(argv: list[str] | None = None) -> int:
     if args.sandbox_admin:
         allow = {t.strip() for t in args.sandbox_allow_tools.split(",") if t.strip()}
         sandbox = SandboxPolicy(args.sandbox_admin, allow - set(SandboxPolicy.FAKED))
+    if args.offline:
+        if sandbox is None:
+            parser.error("--offline에는 --sandbox-admin이 필요하다")
+        server = ThreadingHTTPServer(("127.0.0.1", args.port), make_offline_handler(sandbox))
+        print(f"mcp-oidc-proxy: listening on http://127.0.0.1:{args.port}/mcp (offline sandbox: github -> "
+              f"{args.sandbox_admin}, tools {[t['name'] for t in OFFLINE_TOOLS]})", flush=True)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            pass
+        return 0
+    if not args.upstream or not args.audience:
+        parser.error("--upstream·--audience가 필요하다(--offline이 아니면)")
 
     tokens = OidcTokenSource(os.environ.get("ACTIONS_ID_TOKEN_REQUEST_URL", ""),
                              os.environ.get("ACTIONS_ID_TOKEN_REQUEST_TOKEN", ""),
