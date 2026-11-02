@@ -404,7 +404,14 @@ class SyntheticCiFailureTest(StubFixture):
         pr = self.open_pr(tok)
         self.assertEqual(self.conclusions(tok, pr["head"]["sha"]), [("ci-success", "failure")])
         runs = self.call("GET", f"/repos/dlddu/demo/commits/{pr['head']['sha']}/check-runs", tok)[1]["check_runs"]
-        self.assertIn("synthetic failure", runs[0]["output"]["title"])
+        # 실패 런은 합성임을 드러내지 않는다(실제 Actions 실패처럼) — 합성 여부는 기록에만
+        self.assertEqual(runs[0]["output"]["title"], "ci-success failed")
+        self.assertEqual(runs[0]["app"]["slug"], "github-actions")
+        self.assertNotIn("synthetic", runs[0])
+        self.assertNotIn("sandbox", str(runs[0]))
+        one = self.call("GET", f"/repos/dlddu/demo/check-runs/{runs[0]['id']}", tok)
+        self.assertEqual((one[0], one[1]["conclusion"]), (200, "failure"))
+        self.assertEqual([e["detail"]["conclusion"] for e in self.entries() if e["op"] == "ci.synthetic"], ["failure"])
         suites = self.call("GET", f"/repos/dlddu/demo/commits/{pr['head']['sha']}/check-suites", tok)[1]
         self.assertEqual([s["conclusion"] for s in suites["check_suites"]], ["failure"])
         head2 = self.push_more(tok, "again")

@@ -289,7 +289,7 @@ def render_facts(facts: dict | None) -> list[str]:
         return []
     out = [f"- GitHub(대역): 요청 {facts.get('requests', 0)}건 · 쓰기 {len(facts.get('writes') or [])}건"]
     if facts.get("synthetic_ci"):
-        out.append("  - 합성 CI(성공, 실제 CI는 돌지 않음): " + "; ".join(facts["synthetic_ci"][:5]))
+        out.append("  - 합성 CI(실제 CI는 돌지 않음): " + "; ".join(facts["synthetic_ci"][:5]))
     for w in (facts.get("writes") or [])[:10]:
         out.append(f"  - {w}")
     return out

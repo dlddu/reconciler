@@ -23,6 +23,8 @@
 밝히고 기록(`op: ci.synthetic`, 결론 포함)에 남긴다. 실제 PR에는 붙이지 않는다(진짜 CI가 읽기 중계로 보인다).
 결론은 `--synthetic-ci`로 고른다: success(기본) · failure(매 head 실패 — 고칠 수 없는 CI 실패) · fail-first(PR의 첫
 head만 실패, 이후 push는 성공 — 고칠 수 있는 CI 실패) · off(붙이지 않음, `--no-synthetic-ci`와 같다).
+실패 런만은 합성임을 드러내지 않는다 — 출력·앱이 실제 Actions 실패처럼 보인다. "합성이라 무시해도 된다"는 판단을
+막아야 실패 경로(범위 안에서 고치거나 lock을 푼다)를 시험할 수 있다. 합성 여부는 기록(`ci.synthetic`)에만 남는다.
 
 모든 요청은 JSONL 기록(`--log`)에 남는다. 결과 점검기는 이 기록으로 "PR을 몇 개 열었나 · 머지했나 · 기본 브랜치에
 직접 push했나 · status를 썼나"를 판정한다. 이 서버가 모르는 요청은 `op: unsupported`로 남기고 501을 돌려준다
@@ -76,7 +78,7 @@ HANDLER_OPS = {"pulls_create": "pulls.create", "pulls_update": "pulls.update", "
                "ref_update": "refs.update", "ref_delete": "refs.delete", "pulls_sub_write": "pulls.reviews.create",
                "pulls_get": "pulls.get", "pulls_list": "pulls.list", "repo_get": "repos.get",
                "contents": "contents.get", "statuses_list": "statuses.list", "status_combined": "statuses.combined",
-               "check_runs": "checks.list"}
+               "check_runs": "checks.list", "check_run_get": "checks.get"}
 # 기록에서 "쓰기"로 세는 작업(거절된 시도 포함 — detail.refused). 점검기는 이것으로 판정한다.
 WRITE_OPS = {"pulls.create", "pulls.update", "pulls.close", "pulls.merge", "issues.update", "issues.comments.create",
              "issues.labels.add", "statuses.create", "refs.create", "refs.update", "refs.delete", "git.push",
@@ -279,17 +281,26 @@ class State:
             conclusion = "failure" if failed else "success"
             names = [c for c in self.required_contexts(repo, base) if not self.is_human_context(c)] or ["ci"]
             ts = now_iso()
-            title = f"sandbox: synthetic {conclusion} — CI was not run"
-            summary = ("이 PR은 GitHub 샌드박스(대역)에만 있어 실제 CI가 돌지 않는다. "
-                       + ("대역이 붙인 합성 실패 결과다 — 실패 경로 시험용으로, 고칠 실제 원인은 없다."
-                          if failed else "대역이 붙인 합성 성공 결과다."))
-            runs = [{"id": next(self.ids), "name": name, "head_sha": sha, "status": "completed",
-                     "conclusion": conclusion, "started_at": ts, "completed_at": ts,
-                     "html_url": f"https://github.com/{repo}/pull/{pr_number}/checks",
-                     "details_url": None, "external_id": "reconciler-sandbox-synthetic",
-                     "app": {"slug": SYNTHETIC_APP_SLUG, "name": "reconciler sandbox (synthetic CI)"},
-                     "output": {"title": title, "summary": summary, "text": None, "annotations_count": 0},
-                     "check_suite": {"id": next(self.ids)}, "synthetic": True} for name in names]
+            if failed:  # 실제 Actions 실패와 구별되지 않게 — 합성임은 기록에만 남긴다
+                app = {"slug": "github-actions", "name": "GitHub Actions"}
+                output = {"title": f"{{name}} failed", "summary": "Process completed with exit code 1.",
+                          "text": None, "annotations_count": 1}
+                marker = {}
+            else:
+                app = {"slug": SYNTHETIC_APP_SLUG, "name": "reconciler sandbox (synthetic CI)"}
+                output = {"title": "sandbox: synthetic success — CI was not run",
+                          "summary": "이 PR은 GitHub 샌드박스(대역)에만 있어 실제 CI가 돌지 않는다. 대역이 붙인 합성 성공 결과다.",
+                          "text": None, "annotations_count": 0}
+                marker = {"external_id": "reconciler-sandbox-synthetic", "synthetic": True}
+            runs = []
+            for name in names:
+                rid = next(self.ids)
+                out = {**output, "title": output["title"].format(name=name)}
+                runs.append({"id": rid, "name": name, "head_sha": sha, "status": "completed",
+                             "conclusion": conclusion, "started_at": ts, "completed_at": ts,
+                             "html_url": f"https://github.com/{repo}/runs/{rid}",
+                             "details_url": f"https://github.com/{repo}/pull/{pr_number}/checks",
+                             "app": app, "output": out, "check_suite": {"id": next(self.ids)}, **marker})
             self.ci_runs[(repo, sha)] = runs
         self.record(source="stub", op="ci.synthetic", repo=repo, write=False,
                     detail={"sha": sha, "number": pr_number, "contexts": names, "conclusion": conclusion})
@@ -451,6 +462,7 @@ class Api:
             ("GET", rf"/repos/{R}/commits/(?P<ref>[^/]+)/status", self.status_combined),
             ("GET", rf"/repos/{R}/commits/(?P<ref>[^/]+)/check-runs", self.check_runs),
             ("GET", rf"/repos/{R}/commits/(?P<ref>[^/]+)/check-suites", self.check_suites),
+            ("GET", rf"/repos/{R}/check-runs/(?P<run_id>\d+)", self.check_run_get),
             ("GET", rf"/repos/{R}/commits/(?P<ref>[^/]+)", self.commit_get),
             ("GET", rf"/repos/{R}/commits", self.commits_list),
             ("GET", rf"/repos/{R}/git/commits/(?P<sha>[0-9a-fA-F]{{40}})", self.git_commit_get),
@@ -692,6 +704,17 @@ class Api:
         runs = self.s.synthetic_runs(repo, sha) + \
             self.real_list(f"/repos/{repo}/commits/{sha}/check-runs?per_page=100", "check_runs")
         return 200, {"total_count": len(runs), "check_runs": runs}, "checks.list", repo, None
+
+    def check_run_get(self, tok, kw, q, body):
+        repo = self.repo(kw)
+        self.s.authorize(tok, repo, "checks", False)
+        rid = int(kw["run_id"])
+        for (r, _), runs in list(self.s.ci_runs.items()):
+            for run in runs:
+                if r == repo and run["id"] == rid:
+                    return 200, run, "checks.get", repo, None
+        status, data, _ = self.passthrough(f"/repos/{repo}/check-runs/{rid}", None, repo)  # 대역 런이 아니면 실제 읽기
+        return status, data, "checks.get", repo, {"passthrough": True}
 
     def check_suites(self, tok, kw, q, body):
         repo = self.repo(kw)

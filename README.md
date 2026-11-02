@@ -271,7 +271,9 @@ GitHub 샌드박스를 올려 두어, 스킬이 GitHub로 무엇을 보내든 �
   not run"으로 표시되고 기록(`op: ci.synthetic`)·요약에 남는다. 실제 PR(읽기 중계)에는 붙이지 않는다.
   결론은 액션 입력 `synthetic-ci`로 고른다 — `success`(기본) · `failure`(매 head 실패: 고칠 수 없는 CI 실패 경로) ·
   `fail-first`(PR의 첫 head만 실패, 이후 push는 성공: 고칠 수 있는 실패) · `off`. 계획 스킬 빌드는 입력 `synthetic_ci`로 넘긴다.
-  실패 런의 출력은 「synthetic failure」로 표시되고 고칠 실제 원인은 없다 — 스킬이 실패를 보고 lock을 푸는지·planned로 넘기지 않는지를 본다.
+  실패 런만은 합성임을 드러내지 않는다 — 앱 `github-actions`, 제목 「<체크> failed」, 요약 「Process completed with exit code 1.」로
+  실제 Actions 실패처럼 보이고, 합성 여부는 기록(`ci.synthetic`, 결론 포함)에만 남는다. 「합성이라 무시해도 된다」는 판단을 막아야
+  스킬이 실패를 범위 안에서 고치거나 lock을 푸는지(planned로 넘기지 않는지)를 시험할 수 있다.
 - **한계**: 대역은 GitHub의 일부만 흉내 낸다(비동기 mergeable 계산, ruleset의 bypass·리뷰 요구는 없다). 웹훅·Actions 트리거는 없다(CI는 위
   합성 결과뿐). PR 번호는 실제와 겹치지 않게 90001부터다. 클러스터 쓰기는 MCP 허용 목록으로 막을 뿐 흉내 내지 않는다.
 - **로컬로 돌려 보기**: `python3 -m unittest tests.test_github_stub tests.test_github_log` — 대역을 평문 HTTP로 띄워 실제 `git`으로
