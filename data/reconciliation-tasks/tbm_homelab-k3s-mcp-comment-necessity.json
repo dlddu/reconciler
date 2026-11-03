@@ -20141,7 +20141,7 @@
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-necessity",
-    "status": "planned",
+    "status": "planning",
     "createdAt": "2026-10-28T23:54:33Z",
     "trigger": {
       "detectedAt": "2026-10-28T23:54:33Z",
@@ -20287,6 +20287,39 @@
           "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/300",
           "preparedAt": "2026-11-03T11:15:00Z",
           "notes": "직전 거부(CI 미완료) 반영. 안정된 head 는 136dbca8(base = main aa8e01b, #308 위로 rebase, 9행). 이 head 에서 `ci passed`·integration tests·unit tests·fmt+vet 전부 success, mergeable, 충돌 없음(11:08 UTC 확인). 앞선 head a0c570c0 의 integration tests 실패는 resource_generic_sc2.py 의 픽스처 목록 시점 경합이고 재실행에서 통과했으며 주석 전용 diff 와 무관하다. 로컬에서 check_comment_policy.py R1~R15·check_doc_inventory.py D1~D4(141/141)·check_mock_policy.py 통과. 머지하지 않음."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "일곱 번째 필요성 판정 슬라이스를 현재 main(aa8e01b) 위의 9행으로 재제출한다. 직전 리뷰 거부 사유(CI 미완료)를 따라 PR #300 의 CI 를 끝까지 확인했다: 첫 run 의 integration tests 는 resource_generic_sc2 의 목록 비교가 다른 시나리오의 ag-ac1-workload 동시 생성과 경쟁해 실패한 flake(주석 전용 변경과 무관, main CI 는 success)였고 실패 잡 재실행으로 통과했다. 그 사이 main 이 rct_20261101-0001(#308)로 이동해 원장이 충돌(dirty)해 force-with-lease 로 재베이스했고(k8s kustomization·service 행은 #308 의 판정을 그대로 두어 이 PR 이 완료로 올리는 행은 11→9행, 허브 집계 141/141), 재베이스 head 136dbca8 의 CI 가 success 다. 계획의 접근·롤백은 그대로(주석·문서 전용, PR revert). 범위(완료 기준): 9행이 판정 축 `완료`이고 사유가 passes/2026-10-28-necessity-slice-rct-20261028-0009.md 에 기록되며 게이트 R1~R15·D1~D4 가 통과하면 성공. 범위 밖: #308 이 판정한 deployment·kustomization·service, 빠진 ci.yml·commit-status-variant·kind 묶음 행, 나머지 미판정 행·docstring·줄 끝 표면(재감지가 잇는다). 사람 소유 결정 없음.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #300 의 integration tests flake 를 확인(원인 로그 분석)하고 실패 잡을 재실행해 통과시킨다.",
+              "expectedOutcome": "resource_generic_sc2 실패가 flake 임이 확인되고 재실행 success"
+            },
+            {
+              "seq": 2,
+              "action": "main 이동(#308)으로 충돌한 PR 브랜치를 aa8e01b 위로 재베이스한다: ledger 는 main 이 먼저 판정한 행(telemetry·deployment·kustomization·rbac·service·drop)은 main 쪽을 두고 이 PR 의 행(apiserver-audit-variant·dear-baby)만 취한다. passes 파일과 doc-tracker 집계(141/141)를 실측에 맞춘다.",
+              "expectedOutcome": "check_comment_policy.py R1~R15 OK(완료 60행), check_doc_inventory.py D1~D4 OK, 비주석 diff 0"
+            },
+            {
+              "seq": 3,
+              "action": "force-with-lease 로 PR 브랜치를 갱신하고 본문을 새 범위로 고친 뒤 새 head 의 CI 를 확인한다(머지는 executor 몫).",
+              "expectedOutcome": "PR #300 mergeable_state clean, ci passed success"
+            }
+          ],
+          "plannedAt": "2026-11-03T11:05:00Z",
+          "executionGuide": "## 순서\n1. PR(dlddu/homelab-k3s-mcp#300) head `136dbca8` 의 `ci passed` success 와 mergeable_state clean 을 확인하고, main 이 aa8e01b 에서 더 움직였는지 본다(`gh api repos/.../compare`).\n2. main 이 움직였으면 rebase. 충돌이 ledger.md/doc-tracker 뿐이면: 같은 행을 main 이 먼저 판정했으면 main 쪽을 두고(재판정 금지), 이 PR 이 건드린 행(apiserver-audit-variant·undeclared_tool_probe·gate-refusal-variant·docker-build-push·게이트 스크립트·check_doc_inventory·auth-fixture+test-deployment·dear-baby·http-trace)만 취한다. main 이 이 행들의 소스 주석을 바꿨으면 그 행은 슬라이스에서 빼고 `—` 유지(범위 축소 허용, 확장 불허). 허브 집계는 실측(`check_doc_inventory.py` 출력)에 맞춘다. 이후 `env -i python3 scripts/check_comment_policy.py`·`check_doc_inventory.py` 를 통과시키고 새 CI 를 기다린다.\n3. CI 가 integration tests 의 `resource_generic_sc2`/`ag-ac1-workload` 경쟁으로 실패하면 flake 이므로 그 run 의 실패 잡만 재실행한다(`gh api -X POST repos/dlddu/homelab-k3s-mcp/actions/runs/<id>/rerun-failed-jobs`). 다른 실패는 flake 로 보지 않는다.\n4. squash 머지(`--match-head-commit` 로 검증한 head 고정). 머지 후 main 에서 게이트 재실행.\n\n## 검증\n- `env -i python3 scripts/check_comment_policy.py` → R1~R15 위반 없음, 이 PR 의 9행이 `완료`(판정 대상 2933줄 기준, main 대비 줄 주석 9줄 감소).\n- `python3 scripts/check_doc_inventory.py` → D1~D4 OK(허브 141/141; main 이동 시 실측값). `gofmt -l .` 빈 출력.\n- PR diff 에 비주석 변경 없음(7파일: ledger·passes·doc-tracker·undeclared_tool_probe.go·kind 픽스처 3). passes 파일이 제거·유지 사유를 담음.\n- 수렴 판정은 이 범위(9행 `완료` + 사유 기록) 기준. 전체 to-be 미달·지문 해시 이동은 정상.\n\n## 범위 밖(후속)\n`.github/workflows/ci.yml`(App workflows 권한 없음)·`tests/k8s/kind/commit-status-variant.yaml`·kind 묶음 행(minio·docstore·github-mock·grafana-mock·kustomization), 나머지 미판정 줄 주석 행, docstring·줄 끝 표면.\n\n## 주의\n- 되돌릴 수 없는 지점 없음(주석·문서만). 롤백 = PR revert.\n- 이 PR 은 `.github/` 를 건드리지 않는다.\n- 다른 판정 슬라이스(예: rct_20261101-0001)가 같은 ledger 를 건드려 main 이 계속 움직인다. 승인~머지 사이 간격이 길수록 재베이스가 필요해지니 승인 후 바로 실행한다."
+        },
+        "preparation": {
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20261028-0009",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/300",
+          "preparedAt": "2026-11-03T11:05:00Z",
+          "notes": "안정된 head 136dbca8f89ceee0631883ac89596e811b5cdceb(base aa8e01b7 = main HEAD, 1커밋 앞·뒤처짐 0, mergeable_state clean). 이 head 의 check-run 7개 전부 success/skipped, required `ci passed` success(2026-11-03T11:03Z). 직전 head a0c570c0 의 integration tests 실패는 resource_generic_sc2 flake(ag-ac1-workload 동시 생성 경쟁)로 재실행 통과 후 main 이동(#308)으로 재베이스해 head 가 바뀌었다. 로컬에서 check_comment_policy.py(완료 60행)·check_doc_inventory.py(141/141)·check_mock_policy.py·gofmt 통과. 머지하지 않음."
         }
       }
     ]
