@@ -17507,7 +17507,53 @@
     "assessment": {
       "reason": "조치 필요(action_required). 근거: 2026-11-02 iOS→Android 전환(#339~#349, iOS CI 비활성화 #345)으로 렌더링 소스가 `android/app/src/main/java/com/dlddu/pocketaide/` 로 바뀌었으나 `docs/mockups` 대응표 5종(_impl-map 78행·_copy-map 44파일·_structure-map 18파일·_token-map 1·_deviations 1 = Swift 참조 1,594회)이 `ios/**/*.swift` 만 가리키고 Kotlin 참조는 0건이며 `android/` 안에서 `screen-*` ID 를 언급한 파일도 없다. 적용 기준: drift 1(매핑 공백·오매핑)과 to-be 1(매핑 완비) — 정의가 「전환 뒤 첫 task 가 안드로이드 파일로 다시 잇는다 — 그 전까지는 매핑 공백(drift 1)이다」고 규정한 그대로이며, 매핑이 없으니 토큰·카피·구조 기계 대조의 전제 자체가 성립하지 않는다. 또한 `_deviations.md` T1 의 근거(「system」 영역 사용 파일은 목업 없는 `ios/PocketAide/HelloWorldView.swift` 뿐·렌더 영향 없음)는 현 구현이 `ui/RootScreen.kt`·`ui/RootTab.kt`·`designsystem/PocketAideTheme.kt`·`keyboard/KeyboardStyle.kt` 에서 `Area.System` 을 쓰는 사실과 어긋나 drift 5 로도 남는다. 반대 방향 근거: 토큰 값 자체는 §1.1~1.7·§1.9·§1.10·§1.11·위젯·키보드 보조 토큰과 §3.3 타이포 9사이즈가 `GeneratedPalettes.kt`·`DesignTokens.kt` 에 동일 hex/sp 로 옮겨져 drift 2 는 새로 생기지 않았고 허용목록 T1·T2 의 미정의 슬롯 값도 코드와 일치한다. to-be 는 2026-10-28 이후 불변이며 미구현 화면은 정의상 drift 가 아니다. 같은 모델 파일의 다른 125건 task 는 전부 종료 상태(succeeded·no_action_needed·cancelled)라 이 공백을 맡은 열린 형제 task 가 없다.",
       "assessedAt": "2026-11-02T04:43:20Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근과 그 이유** — 감지가 남긴 gap 은 drift 1(매핑 공백·오매핑)과 drift 5(허용목록 근거 낡음)이다. 2026-11-02 iOS→Android 전환으로 렌더링 소스가 `android/app/src/main/java/com/dlddu/pocketaide/` 로 옮겨갔으나 `docs/mockups` 대응표 5종은 `ios/**/*.swift` 1,594회만 가리키고 Kotlin 참조가 0건이다. 모델 정의가 「기계적 대조의 전제가 되는 매핑 파일 신설은 첫 감지 task 의 계획 단계에서 다룬다」고 규정한 그 공백 그 자체이며, 매핑이 없으니 토큰·카피·구조 기계 대조의 전제 자체가 성립하지 않는다. 목업이 시각의 SSOT 이므로 대응표는 구현이 아니라 **목업 쪽을 다시 읽어 같은 형식으로 안드로이드 기준으로 세우는** 수단이 맞다 — 형식·7분류·검산은 그대로 두고 대상 트리만 바꿔, 뒤따를 세 대응표의 재작성이 같은 판정 규약을 쓰게 한다. drift 5 의 근거 낡음(T1·T2 가 옛 iOS 파일을 가리킨다)은 같은 표를 손보는 김에 함께 갱신한다.\n\n**이번 시도의 범위** — `dlddu/pocket-aide` 의 `docs/mockups/_impl-map.md` 를 안드로이드 렌더링 소스 기준으로 전면 재작성한다. 대상 = `android/app/src/main/java/com/dlddu/pocketaide/` 하위 비렌더링 패키지(`api`·`auth`·`push`)를 뺀 `*.kt` 101개 + 색 리소스 2개(`android/app/src/main/res/values/colors.xml`·`android/app/src/main/res/values-night/colors.xml`) = 103행. 7분류 규약(`화면`·`부분`·`미구현`·`목업 없음`·`컴포넌트`·`토큰`·`비렌더링`)과 검산 스크립트를 Android 트리로 교체한다. 함께 `docs/mockups/_deviations.md` 의 T1·T2 근거와 `docs/mockups/README.md` 의 대상 트리 표기를 고치고, 세 대응표(`_copy-map.md`·`_structure-map.md`·`_token-map.md`)에는 「아직 iOS 기준」 안내문 한 줄씩만 넣고 본문은 건드리지 않는다. **Android 소스 코드·토큰 값·목업 HTML·설정 파일은 한 줄도 바꾸지 않는다.**\n\n**완료 기준** (실행·검증을 마친 뒤 `main` 반영까지 끝난 시점에 참이어야 한다) — ① `docs/mockups/_impl-map.md` 의 검산 블록을 레포 루트에서 실행하면 출력이 `ok` 한 줄이다(누락·잉여·중복 0 · 분류 7종 외 0 · 목업 ID 100% 실존). ② `main` 반영 뒤에도 `_impl-map.md` 의 데이터 행이 103행이고, `화면`·`부분` 행이 참조하는 화면 ID 가 11종(`screen-affirmations`·`screen-affirmations-priority-edit`·`screen-approval`·`screen-external-notifications`·`screen-pr-monitor-history`·`screen-routines`·`screen-scratchpad`·`screen-sessions`·`screen-todo-personal`·`screen-todo-work`·`screen-widget`)이다. ③ `git ls-files -- android/app/src/main/java/com/dlddu/pocketaide` 에서 `api/`·`auth`·`push` 를 뺀 `*.kt` 101개와 표의 경로 집합(103개)의 대칭 차이가 공집합이다. ④ `docs/mockups/_deviations.md` 에 옛 iOS 파일 경로(`HelloWorldView.swift`) 가 0건이고 T1·T2 가 안드로이드 구현 경로를 가리킨다. ⑤ as-is 버전이 `ui:3d8fa467cd6c23b67d7fb7fcd67b5a63b47e923f res:ee98cbb87ceed92fe790ced39479d4442c13a60f` 로 **불변**이다(Android 소스 무변경)·to-be 버전이 `mockups:449bee927725a711752edc11653da51b59ac9492 design-system:627683f26f996795fa7c58fd3d79793fdea8a202` 로 바뀐다(`docs/mockups` 트리 해시만 움직이고 `docs/design-system` 은 불변). ⑥ `main` 반영 후 `origin/main` 커밋의 `docs/mockups/` 6개 파일 내용이 PR head 와 바이트 동일하다.\n\n**범위 밖** — ① `_copy-map.md`·`_structure-map.md`·`_token-map.md` 의 Android 재작성(to-be 2·3·4 — 토큰·카피·구조 대조표 자체). 이번 PR 이 세운 `_impl-map.md` 행을 기준으로 다시 세우는 후속 task 의 몫이며, 그 전까지 세 표의 교차 참조는 옛 경로를 가리킨다. ② `screen-chat-voice`·`screen-shortcut-capture` 의 구현 — 목업만 있고 구현이 없으므로 이 모델의 drift 가 아니다. ③ `screen-pr-monitor-push` — 잠금 화면 알림은 안드로이드 시스템 UI 가 그리고 제목·본문은 `backend/` FCM 발송이 정해 Android 렌더링 소스가 없다. ④ 모델 정의의 「as-is 지문을 매핑·토큰·카피 지문으로 좁히기」 — 모델 개정 사항. ⑤ 머지 뒤 새로 열리는 to-be 버전 변경 감지 task — 후속 감지 몫.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #363 (`reconcile/rct_20261102-0001-android-impl-map` → `main`) 의 준비 상태를 확인한다 — head SHA 가 준비된 커밋과 같은지, base 가 `main` 인지, 머지 전 필수 status 가 붙었는지 본다.",
+              "expectedOutcome": "`gh pr view 363 --repo dlddu/pocket-aide --json headRefOid,baseRefName,state,statusCheckRollup` 의 `headRefOid` 가 `a69b1c9a13226f38f96f76441e1deb61cb9a71d8`, `baseRefName` 이 `main`, `state` 가 `OPEN`, `statusCheckRollup` 에 `ci-success` 와 `review/manual-approval` 두 항목이 모두 `SUCCESS` 로 들어 있다."
+            },
+            {
+              "seq": 2,
+              "action": "PR head 의 표가 현재 Android 트리와 맞는지 읽기 전용으로 확인한다 — `docs/mockups/_impl-map.md` 의 「검산」 절에 있는 `python3` 블록을 `dlddu/pocket-aide` 체크아웃 루트에서 그대로 실행한다.",
+              "expectedOutcome": "출력이 `ok` 한 줄이다(누락·잉여·중복·분류 위반·목업 ID 불실존 항목이 0 — 즉 `누락`·`잉여`·`중복`·`분류`·`목업 없음` 접두 줄이 하나도 없다)."
+            },
+            {
+              "seq": 3,
+              "action": "PR #363 을 `main` 에 merge 한다. 머지는 executor 몫이며 강제 push·브랜치 rebase 를 쓰지 않는다.",
+              "expectedOutcome": "`git fetch origin main` 후 `git rev-parse origin/main` 이 머지 커밋 SHA 로 바뀌고, `git diff a69b1c9a13226f38f96f76441e1deb61cb9a71d8 origin/main -- docs/mockups/` 의 출력이 빈 상태다(파일 내용이 PR head 와 바이트 동일)."
+            },
+            {
+              "seq": 4,
+              "action": "`main` 반영 상태에서 검산과 두 버전 지문을 다시 재측정한다 — to-be 는 `docs/mockups`·`docs/design-system` 트리 해시, as-is 는 ToBeModel 의 as-is versionScript 를 그대로 실행한다.",
+              "expectedOutcome": "to-be 가 `mockups:449bee927725a711752edc11653da51b59ac9492 design-system:627683f26f996795fa7c58fd3d79793fdea8a202` 이고 as-is 가 `ui:3d8fa467cd6c23b67d7fb7fcd67b5a63b47e923f res:ee98cbb87ceed92fe790ced39479d4442c13a60f` 다(as-is 는 Android 소스 무변경이라 이전 관측과 **같은 값**이다), 검산은 여전히 `ok` 한 줄이다."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/mockups/_deviations.md` 의 T1·T2 근거가 안드로이드 구현을 가리키는지 확인한다.",
+              "expectedOutcome": "`grep -c 'HelloWorldView.swift' docs/mockups/_deviations.md` 가 0 이고, T1 의 「렌더 영향」 줄에 `ui/RootScreen.kt`·`ui/RootTab.kt`·`designsystem/PocketAideTheme.kt`·`keyboard/KeyboardStyle.kt` 가 모두 들어 있다."
+            },
+            {
+              "seq": 6,
+              "action": "표의 경로 집합과 Android 트리의 파일 집합을 독립적으로 대조한다 — `git ls-files` 결과와 표의 경로를 집합으로 비교한다.",
+              "expectedOutcome": "대칭 차이가 공집합이다 — `*.kt` 101개 + `res/values/colors.xml` + `res/values-night/colors.xml` = 103개가 표의 103행과 1:1 로 대응하고 누락 0·잉여 0 이다."
+            },
+            {
+              "seq": 7,
+              "action": "실행·검증 결과를 reconciler task 레코드에 기록하고 status 를 닫는다 — `execution`(steps 1~3)·`verification`(steps 2·4·5·6)을 채운다.",
+              "expectedOutcome": "`verification.status` 가 `passed`, `asIsVersionAfter` 가 `ui:3d8fa467cd6c23b67d7fb7fcd67b5a63b47e923f res:ee98cbb87ceed92fe790ced39479d4442c13a60f`, `checks` 4건(검산 · 행 수·목업 ID 수 · 경로 집합 대조 · 버전 지문)이 모두 `passed` 이고 task `status` 가 `succeeded` 다."
+            }
+          ],
+          "plannedAt": "2026-11-03T16:24:40Z"
+        }
+      }
+    ]
   },
   {
     "id": "rct_20261102-0002",
