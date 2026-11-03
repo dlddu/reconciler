@@ -57,7 +57,7 @@ tests/                              # index.html 동작 테스트 (node --test),
 
 | 워크플로 | 트리거 | 하는 일 |
 | --- | --- | --- |
-| `reconciler-drift-detector.yml` (운영 감지) | 수동, 스케줄(매시 17분 UTC) | 러너가 대상을 고르고 **점유**한 뒤, plugin-marketplace의 고정 스킬(`plugins/reconciler-data-plane`, MiniMax 플러그인 형식)을 mcode 로컬 플러그인으로 설치해 그 task 한 건을 판정한다. 결과 점검기로 계약을 확인하고 `drift-detector-result` 아티팩트를 남긴다. 점유·판정 커밋은 기본 브랜치에 push된다. |
+| `reconciler-drift-detector.yml` (운영 감지) | 수동, 주기(k3s CronWorkflow가 매시 17분 UTC에 dispatch) | 러너가 대상을 고르고 **점유**한 뒤, plugin-marketplace의 고정 스킬(`plugins/reconciler-data-plane`, MiniMax 플러그인 형식)을 mcode 로컬 플러그인으로 설치해 그 task 한 건을 판정한다. 결과 점검기로 계약을 확인하고 `drift-detector-result` 아티팩트를 남긴다. 점유·판정 커밋은 기본 브랜치에 push된다. |
 | `reconciler-drift-detector-skill-build.yml` (스킬 빌드) | 수동만 | 지침이나 계약을 바꿀 때 사람이 돌린다. 아래 generate → validate → test를 통과한 생성본을 plugin-marketplace에 PR로 올리면, 운영 감지는 그 다음 실행부터 새 스킬을 쓴다(`plugin_ref` 입력으로 브랜치·SHA를 지정할 수 있다 — 그 실행도 실제 기록을 남긴다). |
 
 스킬 빌드의 job:
@@ -86,10 +86,14 @@ tests/                              # index.html 동작 테스트 (node --test),
 - **테스트**: `python3 -m unittest discover -s tests`가 선정·점유(경쟁 재현 포함)·프록시·점검기·검증기를
   네트워크 없이 검사한다.
 
-- **스케줄 (켬, 2026-11-02)**: 운영 감지 워크플로가 매시 17분(UTC)에 돈다. 실행이 겹칠 수 있고(직렬화 없음) 같은 대상은
-  점유 CAS가 막는다. `circuit-breaker` job이 함께 켜져 있어 스케줄 실행이 `FAILURE_THRESHOLD`(3)번 연속 실패하면
-  `gh workflow disable`로 이 워크플로를 끄고 PocketAide로 알린다(GitHub는 실패 횟수로 워크플로를 끄지 않는다). 끌 때는
-  두 블록을 함께 주석 처리한다. 켜기 전 시범 운영(수동 44회)에서 확인한 경로: 버전 변화 점유, 수동 트리거, 동시 실행의 점유
+- **주기 실행 (켬, 2026-11-02 · 2026-11-04 GitHub 스케줄 → k3s)**: 운영 감지 워크플로가 매시 17분(UTC)에 돈다. GitHub
+  스케줄(`on.schedule`)은 부하 때 실행을 버려(2026-11-02~03 매시 슬롯 30회 중 3회) 주기를 flux-cd-apps의 CronWorkflow
+  (`apps/reconciler-trigger`)로 옮겼다. 그 CronWorkflow가 GitHub App 설치 토큰(reconciler·`actions:write`)으로 이 워크플로를
+  `source=k3s-cron` 입력과 함께 dispatch 하고, 실행 제목이 「Reconciler · Drift Detector (k3s-cron)」이 된다. 주기를 멈추려면
+  그 CronWorkflow를 suspend 한다. 실행이 겹칠 수 있고(직렬화 없음) 같은 대상은
+  점유 CAS가 막는다. `circuit-breaker` job이 함께 켜져 있어 주기 실행(위 제목)이 `FAILURE_THRESHOLD`(3)번 연속 실패하면
+  `gh workflow disable`로 이 워크플로를 끄고 PocketAide로 알린다(GitHub는 실패 횟수로 워크플로를 끄지 않는다).
+  켜기 전 시범 운영(수동 44회)에서 확인한 경로: 버전 변화 점유, 수동 트리거, 동시 실행의 점유
   경쟁, 판정 없이 끝난 점유의 재확인 유예와 재확인 만료 이어받기, 대상 없음.
 
 ### 점유는 러너가 한다 (MiniMax 감지)
