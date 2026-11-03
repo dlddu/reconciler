@@ -9999,7 +9999,7 @@
   {
     "id": "rct_20261102-0001",
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-11-02T03:28:05Z",
       "source": "version_change",
@@ -10022,7 +10022,46 @@
     "assessment": {
       "reason": "action_required — 1:1 대상 76개 가운데 57개 시나리오에 전용 파일이 없어 규칙 1의 drift가 남아 있고, 이 gap을 맡은 열린 형제 task는 57행 가운데 1행뿐이다. 근거: stateSummary 관측값(시나리오 94 · 매칭 파일 19 · 공백 57 · 예외 13 · 구현 대기 5 · 비-시나리오 2 · 고아 0). 같은 모델 파일의 열린 형제 task는 rct_20261028-0006(executing) 하나뿐이고 그 plan.summary 범위는 'approval-gate #18 하나만 슬라이스'로 57행 중 1행이다 — 나머지 56행은 열린 task가 없다. 그 PR #338은 아직 open 이고 대상은 iOS ios/PocketAideTests/ApprovalDecisionModeUITests.swift 로, pocket-aide #350(2026-11-02T03:09:54Z 머지) 이후 매칭 단위가 아니다. 적용 기준: 규칙 1(예외·구현 대기에 없는 시나리오의 파일 0개는 누락=drift)·규칙 7(테스트 인프라 선행은 이 모델 소관이며 구현 대기로·예외로 옮겨 닫지 않는다)·규칙 5(집계는 실제 상태와 일치해야 한다). 반대 방향 근거: 공백 57행은 모두 선행 인프라·해소 방향·재검토 시점(2026-11-12·2026-12-15·2027-01-31, 90일 이내)을 적어 규칙 7 형식을 충족하고, 예외 13행은 '아직 구현되지 않았다'나 '테스트 인프라가 없다'를 사유로 쓰지 않았다(위젯 #1은 미구현이 예외 사유가 아님을 명시), 구현 대기 5행은 미구현 4건과 동작 결함 1건(담당 tbm_pocket-aide-docs-impl)이다 — 즉 등재 자체의 규정 위반이 아니라 파일 부재가 드리프트다. BF-5 스텁 PR #327이 아직 open 이라 13행은 대기지만 40행은 선행 인프라 없이 지금 이식 가능하므로 전체를 유예로 남길 수 없다.",
       "assessedAt": "2026-11-02T03:34:10Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "공백 57행 중 제품 기능과 로그인·API 시드·testTag 가 이미 안드로이드에 있어 추가 인프라 없이 닫히는 affirmations #3(문장 삭제) 하나만 슬라이스한다 — iOS AffirmationDeleteUITests 의 단언을 안드로이드 계측 테스트 AffirmationDeleteTest.kt 로 이식하고(시트 삭제·스와이프 삭제·생성 시트 삭제 버튼 부재·재진입/재실행 뒤 목록·히어로 회전 부재) 「## e2e 매핑」을 함께 갱신한다. 한 PR 에 여럿을 묶으면 첫 안드로이드 CI 왕복마다 미지수가 늘고 같은 절 집계 충돌이 나므로 직전 계열과 같이 한 시나리오씩 자른다. **완료 기준(범위)**: #3 이 파일 1개로 매칭(매칭 +1·공백 −1·파일 +1, 검산기 벡터 `files 22 · scenarios 94 · matched 20 · non-scenario 2 · exception 13 · pending 5 · gap 56`)되고 PR #362 가 squash 착지. **범위 밖**: 나머지 공백 56행(affirmations #4·5·6 포함), 구현 대기 5행. 제품 코드 미접촉(기존 testTag 만 사용)이라 가역. 사람 소유 결정 없음, 수동 승인 케이스 비해당.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "#362 head·mergeable·필수 status(ci-success, review/manual-approval, android-instrumented-test) 확인, 진행 중 check 완료 대기",
+              "expectedOutcome": "필수 status 초록, 새 계측 테스트 AffirmationDeleteTest 통과, mergeable clean"
+            },
+            {
+              "seq": 2,
+              "action": "머지 직전 base 재실측: merge-tree 충돌 0 + 결과 트리에서 검산기·ledger 실행",
+              "expectedOutcome": "충돌 0, 검산기 rc=0 (files 22 · scenarios 94 · matched 20 · non-scenario 2 · exception 13 · pending 5 · gap 56), ledger rc=0"
+            },
+            {
+              "seq": 3,
+              "action": "#362 squash 머지(sha 고정)",
+              "expectedOutcome": "main 에 테스트 파일 1개 + doc-tracker 1파일 착지"
+            },
+            {
+              "seq": 4,
+              "action": "착지 트리에서 검산기 --expect 와 check_ledger.py 재실행",
+              "expectedOutcome": "둘 다 rc=0, 벡터 일치"
+            }
+          ],
+          "plannedAt": "2026-11-03T03:30:00Z",
+          "executionGuide": "## 실행 지침 — rct_20261102-0001 (PR dlddu/pocket-aide#362, head `2f0018d`)\n\n**완료 기준(범위)**: `test-affirmations.md#시나리오 3` 이 `AffirmationDeleteTest.kt` 1개로 매칭되고 #362 가 main 에 squash 착지. 착지 트리에서 ① 검산기 rc=0, 마지막 줄 정확히 `ok — files 22 · scenarios 94 · matched 20 · non-scenario 2 · exception 13 · pending 5 · gap 56` ② `python3 scripts/comment-policy/check_ledger.py` rc=0 ③ PR 필수 status(`ci-success`·`review/manual-approval`) 초록 — 특히 `android-instrumented-test.yml` 이 새 테스트를 실제로 실행해 통과.\n\n### 순서 (직렬)\n1. #362 head 가 `2f0018d` 인지, mergeable 인지, 필수 status 초록인지 확인. `android-instrumented-test` 샤드가 진행 중이면 완료까지 기다린다. 새 테스트의 첫 CI 실행이라(로컬 에뮬레이터 없이 작성) 실패하면 머지하지 말고 실패 로그를 근거로 재준비로 넘긴다(`failed`).\n2. 머지 직전 base 재실측: `git merge-tree --write-tree origin/main <head>` 충돌 0. main 이 같은 tracker 절을 다시 건드려 집계가 어긋나면(다른 task 가 먼저 착지) 실행에서 풀지 말고 재준비로 넘긴다.\n3. squash 머지(`sha` 고정).\n4. 착지 트리에서 검산기 `--expect \"files 22 · scenarios 94 · matched 20 · non-scenario 2 · exception 13 · pending 5 · gap 56\"` 와 check_ledger.py 재실행.\n\n### 검증\n검산기는 checkout 밖에 저장해 `python3 -I verify_e2e_map.py <checkout> --expect \"files 22 · scenarios 94 · matched 20 · non-scenario 2 · exception 13 · pending 5 · gap 56\"` 로 실행(불변식 94−13−5=76=20+56). 전문:\n\n```python\n#!/usr/bin/env python3\n\"\"\"pocket-aide 「## e2e 매핑」 검산기 (rct_20261102-0001, 안드로이드 매칭 단위).\n\nusage: python3 -I verify_e2e_map.py <pocket-aide checkout> [--expect \"files 59 · ...\"]\n트리에서 시나리오·UITest 선언·등재 섹션을 직접 읽어 1:1 규칙과 집계를 대조한다.\nrc=0 이면 모든 검사 통과, 마지막 줄이 요약 벡터다.\n\"\"\"\nimport glob, os, re, sys\n\nroot = sys.argv[1]\nexpect = sys.argv[sys.argv.index(\"--expect\") + 1] if \"--expect\" in sys.argv else None\nfails = []\n\n\ndef fail(msg):\n    fails.append(msg)\n\n\n# ── 시나리오 전집과 구현 상태 ──\nscen, status = {}, {}\nfor path in sorted(glob.glob(os.path.join(root, \"docs/product/test-*.md\"))):\n    doc = os.path.basename(path)\n    cur = None\n    for line in open(path, encoding=\"utf-8\"):\n        m = re.match(r\"### 시나리오 (\\d+):\", line)\n        if m:\n            cur = f\"{doc}#시나리오 {m.group(1)}\"\n            scen[cur] = doc\n            continue\n        m = re.match(r\"- \\*\\*구현 상태\\*\\*: (.*)\", line)\n        if m and cur and cur not in status:\n            status[cur] = m.group(1).strip()\n\n# ── 매칭 단위 파일과 머리 선언 ──\nfiles = {}\nfor path in sorted(glob.glob(os.path.join(root, \"android/app/src/androidTest/java/com/dlddu/pocketaide/e2e/*Test.kt\"))):\n    decl = None\n    for line in open(path, encoding=\"utf-8\"):\n        m = re.match(r\"// 검증 시나리오: (.*)\", line)\n        if m:\n            decl = m.group(1).strip()\n            break\n    files[os.path.basename(path)] = decl\n\n# ── 최신 월 tracker 의 「## e2e 매핑」 섹션 ──\nmonths = sorted(f for f in os.listdir(os.path.join(root, \"docs/product/doc-tracker\")) if re.fullmatch(r\"\\d{4}-\\d{2}\\.md\", f))\nlines = open(os.path.join(root, \"docs/product/doc-tracker\", months[-1]), encoding=\"utf-8\").read().splitlines()\nstart = next(i for i, l in enumerate(lines) if l.startswith(\"## e2e 매핑\"))\nend = next((i for i in range(start + 1, len(lines)) if lines[i].startswith(\"## \")), len(lines))\nsub, tables = None, {}\nfor l in lines[start:end]:\n    if l.startswith(\"### \"):\n        sub = l[4:].strip()\n        continue\n    if sub and l.startswith(\"|\") and not re.match(r\"\\|\\s*-\", l):\n        cells = [c.strip() for c in l.strip().strip(\"|\").split(\"|\")]\n        tables.setdefault(sub, []).append(cells)\n\n\ndef rows(prefix):\n    key = next((k for k in tables if k.startswith(prefix)), None)\n    if key is None:\n        fail(f\"섹션 없음: ### {prefix}\")\n        return []\n    return [r for r in tables[key][1:]]\n\n\ntick = lambda s: s.strip(\"`\")\nmapping = {tick(r[0]): tick(r[1]) for r in rows(\"시나리오 ↔ 파일\")}\nexc = {tick(r[0]) for r in rows(\"예외 목록\")}\npend = {tick(r[0]): r[2] for r in rows(\"구현 대기\")}\nnonsc = {tick(r[0]) for r in rows(\"비-시나리오\")}\ngap = {tick(r[0]) for r in rows(\"공백\")}\nagg = {r[0]: r[1] for r in rows(\"집계\")}\n\n# 규칙 1·5·6·7 — 시나리오마다 정확히 한 곳\nfor s in scen:\n    homes = [n for n, g in ((\"매칭\", mapping), (\"예외\", exc), (\"구현대기\", pend), (\"공백\", gap)) if s in g]\n    if len(homes) != 1:\n        fail(f\"{s}: 등재 위치 {homes or '없음'}\")\nfor g in (mapping, exc, pend, gap):\n    for s in g:\n        if s not in scen:\n            fail(f\"사라진 시나리오 등재: {s}\")\n# 매칭 행 ↔ 파일 선언\nfor s, f in mapping.items():\n    if f not in files:\n        fail(f\"{s}: 매칭 파일 없음 {f}\")\n    elif files[f] != s:\n        fail(f\"{f}: 선언 {files[f]!r} ≠ 매핑 {s!r}\")\n# 규칙 2·3 — 파일마다 정확히 한 곳\nmapped_files = list(mapping.values())\nfor f, d in files.items():\n    if d is None:\n        fail(f\"{f}: 검증 시나리오 선언 없음\")\n    n = mapped_files.count(f) + (f in nonsc)\n    if n != 1:\n        fail(f\"{f}: 등재 {n}회\")\nfor s in gap:\n    if any(d == s for d in files.values()):\n        fail(f\"공백 {s} 인데 선언 파일이 있다\")\n# 구현 상태 정합 — 미구현은 구현 대기, 구현됨·부분 구현은 그 밖\nfor s in scen:\n    st = status.get(s, \"\")\n    if s in pend:\n        evidence = pend[s]\n        if not (st.startswith(\"미구현\") or re.match(r\"(코드|동작) 실측\", evidence)):\n            fail(f\"{s}: 구현 대기인데 구현 상태 {st[:30]!r}\")\n        if evidence.startswith(\"미구현 —\") and \"테스트 문서 「구현 상태」 원문\" not in evidence and not (evidence.rstrip(\" .\").startswith(st.rstrip(\" .\")) or st.startswith(evidence.rstrip(\" .\"))):\n            fail(f\"{s}: 미구현 근거가 테스트 문서 원문과 다르다\\n    등재 {evidence!r}\\n    원문 {st!r}\")\n    elif st.startswith(\"미구현\"):\n        fail(f\"{s}: 구현 상태 미구현인데 구현 대기 밖\")\n\n# 규칙 5 — 집계 표\nn_target = len(scen) - len(exc) - len(pend)\nwant = {\n    \"시나리오 전집\": len(scen), \"예외 등재\": len(exc), \"구현 대기 등재\": len(pend),\n    \"1:1 대상 (시나리오 − 예외 − 구현 대기)\": n_target, \"시나리오 매칭 파일\": len(mapping),\n    \"공백 (1:1 대상 중 파일 없음)\": len(gap), \"비-시나리오(스모크·인프라) 파일\": len(nonsc),\n    \"고아 파일 (선언·등재 없음)\": len(files) - len(mapping) - len(nonsc),\n}\nfor k, v in want.items():\n    if agg.get(k) != str(v):\n        fail(f\"집계 {k}: 등재 {agg.get(k)} ≠ 실측 {v}\")\nif n_target - len(mapping) != len(gap):\n    fail(f\"1:1 대상 {n_target} − 매칭 {len(mapping)} ≠ 공백 {len(gap)}\")\n\nfor m in fails:\n    print(\"FAIL\", m)\nvec = (f\"files {len(files)} · scenarios {len(scen)} · matched {len(mapping)} · non-scenario {len(nonsc)}\"\n       f\" · exception {len(exc)} · pending {len(pend)} · gap {len(gap)}\")\nif expect and vec != expect:\n    print(f\"FAIL 벡터 {vec!r} ≠ 기대 {expect!r}\")\n    fails.append(\"vector\")\nprint(f\"{'ok' if not fails else f'FAIL {len(fails)}'} — {vec}\")\nsys.exit(1 if fails else 0)\n```\n\n### 주의\n- 변경은 테스트 파일 1개 + doc-tracker 1파일. 제품 코드·워크플로 미접촉, 롤백은 squash revert, 불가역 지점 없음.\n- 테스트는 공유 백엔드에 문장 3개를 시드하고 끝에 남긴 1개를 API 로 정리한다. 실패로 남은 잔여 문장은 토큰이 붙어 다른 테스트와 충돌하지 않는다.\n- 같은 절을 고치는 다른 슬라이스 PR 과는 집계 칸이 충돌할 수 있다 — 먼저 착지한 쪽 기준으로 나중 것을 재계획한다.\n\n### 범위 밖(후속 — 재감지가 새 task 를 연다)\n나머지 공백 56행(affirmations #4·5·6, approval-gate 12, github-monitor 7, routines 7, scratchpad 4, session-platform 14, todo 8 등)의 안드로이드 전용 파일 이식. 구현 대기 5행은 docs-impl 몫. 열린 PR #338(iOS ApprovalDecisionMode, 매칭 단위 전환 뒤 무효)은 별도 task rct_20261028-0006 의 몫이다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261102-0001-affirmation-delete",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/362",
+          "preparedAt": "2026-11-03T03:30:00Z",
+          "notes": "main 04ac770 기준 1커밋(2f0018d): AffirmationDeleteTest.kt 신설 + doc-tracker/2026-11.md(#3 공백 행 제거·매칭 행 추가·집계 매칭 20·공백 56·파일 22). 검산기 rc=0 (files 22 · scenarios 94 · matched 20 · non-scenario 2 · exception 13 · pending 5 · gap 56), check_ledger.py rc=0 로컬 확인. 안드로이드 SDK/에뮬레이터가 없어 테스트는 컴파일·실행하지 못했다 — CI android-instrumented-test 가 첫 실행이므로 실행 단계가 확인한다. 같은 시나리오를 다루는 열린 PR 없음(#338 은 iOS approval-gate, #327 은 session-platform)."
+        }
+      }
+    ]
   },
   {
     "id": "rct_20261102-0002",
