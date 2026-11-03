@@ -982,7 +982,53 @@
       "reason": "**작업 필요(`action_required`).** 이번 트리거가 추가한 `JRN-repo-access` 자체는 이 모델의 1:1 불변식을 깨지 않았지만, 2026-10-15 개정의 화면 완전성 축이 아직 착수되지 않았다.\n\n**근거(실측).** 판정면은 `dlddu/session-platform`@main HEAD `616db3a`. 러너 계약으로 재계산한 버전은 as-is `mockups:fad18495 index:1fc53d6b hub:474caa77` · to-be `journeys:d54e4cea reg:5e3883e7` 로 트리거 `currentVersion`과 일치한다. 여정 문서 10개·단계 37개(전부 `초안`, `폐기` 0) · 여정 mockup 페이지 9개인데 `data-screen`은 9/9 페이지 **0건**, `data-offpath`도 0건이다. 페이지 규약 `docs/journeys/README.md`와 매핑 인덱스 `docs/mockups/README.md` 모두 `data-screen` 언급 0건이며, 매핑 인덱스에는 단계별 화면·상태 목록도 「의도적 제외」 등재도 없다. 하네스 `tools/journey-prototype.test.mjs`(573줄)에 `data-screen`·`data-offpath` 단언이 없다. 같은 모델 파일의 다른 17개 task는 모두 `succeeded`/`no_action_needed`로 닫혀 있어 이 gap을 맡은 열린 형제 task가 없다.\n\n**적용 기준.** 정의 규칙 5(i).2(화면 식별자 노출·규약 도입·매핑 인덱스 기재), 5(i).4(근거 대비 그리지 않은 화면·상태는 「의도적 제외」로 사유와 함께 등재), 개정 메모(2026-10-15)의 완료 기준 1·2·3. 개정 메모는 \"개정 뒤 첫 감지 task\"를 이 기준의 마감으로 지정하고 \"개정 전에 닫힌 task의 판정은 이 기준을 충족한 것으로 보지 않는다\"고 명시하는데, 이 모델 파일의 이전 17건은 모두 개정 전에 닫혔다.\n\n**반대 방향 근거.** 구조 불변식은 전건 성립한다 — (10 − 예외 1) = 페이지 9, 9/9 페이지 `data-journey` 1개·고아 0, 페이지 34단계 ↔ 문서 34단계 양방향 차집합 공집합, 매핑 10행 ↔ 허브 실링크 9건 일치, `JRN-concurrent-access` 예외는 사유·재검토 시점(2027-06-27) 완비. 하네스도 CI에 걸려 있어 커밋 `00d0694`의 `ci` run 40091844479에서 잡 `여정 ↔ 여정 mockup 1:1`이 success로 통과했다(`00d0694..616db3a` 판정면 diff 0). 이 축들은 definition 규칙과 충돌하지 않으므로 gap에서 빼지 않는다.",
       "assessedAt": "2026-10-31T18:21:00Z"
     },
-    "updatedAt": "2026-11-03T01:36:45Z"
+    "updatedAt": "2026-11-03T01:36:45Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근과 이유.** 정의 규칙 5(i).2와 2026-10-15 개정 메모의 완료 기준 1·2·3이 요구하는 「화면 식별자 축」이 전무하다 — 9개 여정 mockup 페이지의 화면 표면 35개 전부 `data-screen` 0건이고, 페이지 규약 `docs/journeys/README.md`와 매핑 인덱스 `docs/mockups/README.md` 어디에도 화면 식별자 규약·단계별 화면·상태 목록·「의도적 제외」 등재가 없으며, 하네스 `tools/journey-prototype.test.mjs`에 화면 식별자 단언도 없다. 개정 메모는 \"개정 뒤 첫 감지 task\"를 이 기준의 마감으로 지정하고 \"개정 전에 닫힌 task의 판정은 이 기준을 충족한 것으로 보지 않는다\"고 명시하는데, 이 모델 파일의 이전 18건은 모두 개정 전에 닫혔다. 그러므로 이번 task가 그 첫 task다. 수단은 journey-mockup-builder 규약 `.screen[data-screen]`(상태는 `data-state`, 여정 밖 행동은 `data-offpath`)을 대상 레포에 도입하는 것이다 — 정의 5(i).2가 \"레포 규약에 화면 식별자가 아직 없으면 … 도입하고 첫 task가 매핑 인덱스에 규약을 적는다\"고 경로를 지정하고 있고, (i).1·(i).2는 하네스가 집행하고 (i).3·(i).4는 감지·계획이 판정하는 축이라 규약+집행 쌍으로 닫아야 한다.\n\n**이번 시도의 범위.** 화면 식별자 축만 닫는다. (1) `docs/journeys/<JRN>/index.html` 9개 페이지의 화면 표면 35개에 `.screen` + `data-screen`을 붙인다. 화면 식별자는 구현 화면 이름의 kebab-case로 정한다 — 구현 화면 ↔ `new-session`·`sessions`·`workspace`·`restore`·`repo-access`·`delete-session-dialog`, 목업 자산 ↔ `agent-workspace`·`gated-workspace`, 외부 인증 화면 ↔ `authelia-login`. 같은 화면은 단계·여정이 달라도 같은 식별자다(9개 식별자, 34단계, 35표면). 그 안의 상태 변형 요소에는 `data-state`(7종: `error`·`info`·`success`·`warning`·`pending`·`empty`·`result`), 여정 경로 밖 행동에는 `data-offpath`를 붙인다. (2) 이름 충돌을 없애기 위해 세션 생명주기 배지(`active`/`snapshot`)의 기존 `data-state` 6건을 `data-session-state`로 바꾼다 — 구현 `web/src/app/SessionCard.tsx`가 쓰는 속성과 이름이 겹치면 화면 상태 축의 뜻이 둘로 갈라진다. (3) `docs/journeys/README.md`에 「화면 식별자」 규약 절을, `docs/mockups/README.md`에 「화면 식별자 규약」·「단계별 화면·상태 목록」(35행)·「의도적 제외」 등재 절을 신설한다. (4) 하네스에 4개 단언군(식별자 누락 / 상태·여정 밖 행동의 화면 소속 / 인덱스 등재 ↔ DOM 일치 / 의도적 제외의 형식과 대상)을 넣어 CI 게이트(`ci` 워크플로의 `journey-prototype` 잡)에서 집행되게 한다. 여정 문서 `docs/user-journeys/`와 예외 등재 `docs/doc-structure-state.md`는 건드리지 않는다 — 화면 식별자 축의 SSOT 변경이 아니라 판정 대상 밖이다.\n\n**완료 기준.** `main`에 반영된 뒤에도 다음이 참이어야 한다. (a) `docs/journeys/` 9개 페이지에 `data-screen`이 붙은 화면 표면이 35개이고, `data-screen`이 비어 있거나 `.screen`이 아닌 요소에 붙은 `data-screen`이 0건이다. (b) `docs/mockups/README.md`의 「단계별 화면·상태 목록」 35행이 DOM에서 뽑은 (여정, 단계, 화면, 상태) 집합과 정확히 일치하고, 페이지가 있는 34개 단계가 빠짐없이 등장한다. (c) `tools/journey-prototype.test.mjs`가 `node --test`로 돌았을 때 기존 183건과 새 단언이 전부 통과(fail 0)하고, `ci` 워크플로의 `journey-prototype` 잡이 success로 끝난다. (d) 「의도적 제외」 등재 2건이 근거·사유를 함께 갖고, 등재된 화면 식별자 `approval-gateway`가 DOM의 `data-screen`에 나타나지 않으며, 등재된 여정 `JRN-concurrent-access`에 페이지가 없다. (e) 세션 생명주기 배지 6건이 `data-session-state`로 남아 있고 `data-state=\"active\"`·`data-state=\"snapshot\"`은 0건이다.\n\n**범위 밖.** (1) 정의 규칙 5(i).3의 「단면이 아닌 화면」 — 앱 크롬·다른 탭·보조 버튼을 실제로 그려야 하는 축. 이번에 도입한 `data-offpath`는 규약만 세우고 실제 시공은 1건(`cancel-create`)뿐이다. (2) 정의 5(i).4의 「근거 대비 누락」 전수 판정 — 「의도적 제외」에는 이번에 확인한 2건(외부 승인 게이트웨이 화면·`JRN-concurrent-access`)만 담고, 10개 여정 문서의 시스템 응답·AC를 읽어 빠진 화면·상태를 전수 대조하는 일은 다음 감지·계획 task 몫이다. (3) 「단면 여부」 판정 자체(정의가 감지·계획 몫이라 함). (4) `docs/mockups/*.html` 화면 단위 mockup과 `web/` 구현 — 자매 모델 `tbm_session-platform-mockup-render` 소관. (5) `docs/user-journeys/` 여정 문서와 `docs/doc-structure-state.md` 예외 등재. (6) 규칙 1·2·3·7·8의 1:1·예외 등재 축은 이미 성립하므로 건드리지 않는다.\n\n**위험도(`medium`의 근거).** 되돌리기는 단일 커밋 revert로 쉽고 사용자 노출이 없어 low보다 높다. (a) 하네스 단언 신설로 이후 PR의 CI 게이트 판정 범위가 넓어져 새로 실패할 수 있다. (b) `data-state` → `data-session-state` 이름 변경이 `docs/journeys/` 밖의 참조와 어긋나면 mockup 게이트가 깨진다. (c) 화면 식별자 9개를 구현 화면 이름에 묶는 판단이 틀리면 mockup ↔ 구현 매핑 키가 어긋난다. 되돌릴 수 없는 지점(마이그레이션·데이터 손실)과 사람 판단이 반드시 필요한 지점은 없다 — 문서·마크업·하네스 변경이라 되돌리기가 가능하다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "`docs/journeys/<JRN>/index.html` 9개 파일에서 각 `<section class=\"step\" data-step=\"…\">` 안의 `.card` 표면 35개를 `<div class=\"card screen\" data-screen=\"<screen-id>\">` 로 바꾸고, 표면 안의 상태 실현 요소(`banner err|info|ok|warn|wait`·`empty`·`state-note`)에 `data-state=\"error|info|success|warning|pending|empty|result\"` 를 붙인다. 화면 식별자는 구현 화면의 kebab-case(`new-session`·`sessions`·`workspace`·`restore`·`repo-access`·`delete-session-dialog`·`agent-workspace`·`gated-workspace`·`authelia-login`)를 쓰고, `JRN-repo-access`의 `STP-access-review`만 `authelia-login`과 `repo-access` 두 표면을 갖는다.",
+              "expectedOutcome": "`grep -rho 'class=\"card screen\"' docs/journeys/ | wc -l` = 35, `grep -rho 'data-screen=\"' docs/journeys/ | wc -l` = 35, `grep -rn 'data-state=\"' docs/journeys/ | grep -v 'data-state-note' | grep -vE 'data-state=\"(error|info|success|warning|pending|empty|result)\"' | wc -l` = 0, `grep -rho 'data-screen=\"[a-z-]*\"' docs/journeys/ | sort -u | wc -l` = 9."
+            },
+            {
+              "seq": 2,
+              "action": "세션 생명주기 배지(`active`/`snapshot`)의 기존 `data-state` 6건을 `data-session-state`로 바꾼다 — `docs/journeys/JRN-session-deletion/index.html`의 `<li>` 3건과 `docs/journeys/JRN-multi-session-switch/index.html`의 `<li>` 3건. 구현 `web/src/app/SessionCard.tsx`의 `data-state` 와 이름이 겹치면 화면 상태 축의 의미가 둘로 갈라진다.",
+              "expectedOutcome": "`grep -rn 'data-session-state=' docs/journeys/ | wc -l` = 6, `grep -rn 'data-state=\"active\"\\|data-state=\"snapshot\"' docs/journeys/ | wc -l` = 0, `grep -rn 'data-session-state=' docs/journeys/ | grep -c '<li'` = 6."
+            },
+            {
+              "seq": 3,
+              "action": "여정 경로 밖 행동에 `data-offpath`를 붙인다 — `docs/journeys/JRN-session-creation/index.html`의 `btn-cancel`(세션 생성 자체를 포기하고 여정 밖으로 나가는 행동) 1건에 `data-offpath=\"cancel-create\"`. 화면 안의 실제 행동 중 여정 경로에 속하는 것(전진·분기·상태 트리거)은 `data-offpath`를 달지 않는다.",
+              "expectedOutcome": "`grep -rn 'data-offpath=' docs/journeys/ | wc -l` = 1, 그 1건이 `docs/journeys/JRN-session-creation/index.html`의 `btn-cancel`이고 같은 줄에 `data-advance-to`와 `data-branch-row`가 함께 있지 않다."
+            },
+            {
+              "seq": 4,
+              "action": "`docs/journeys/README.md`에 「화면 식별자」 절을 신설한다 — 화면 표면 마크업(`<div class=\"card screen\" data-screen=\"…\">`), 화면 식별자 규칙(구현 화면 이름의 kebab-case, 같은 화면은 단계·여정 달라도 같은 식별자), 상태(`data-state`)·여정 밖 행동(`data-offpath`) 규칙, 세션 생명주기 배지는 `data-session-state`라는 구분, `data-state`·`data-offpath`는 `.screen` 안에만, 규약과 하네스는 같은 커밋에서 함께 고친다는 단면을 단다.",
+              "expectedOutcome": "`grep -c '^## 10\\. 화면 식별자' docs/journeys/README.md` = 1, 같은 파일에서 `grep -c 'data-screen'` ≥ 3, `grep -c 'data-session-state'` ≥ 1, `grep -c 'data-offpath'` ≥ 1."
+            },
+            {
+              "seq": 5,
+              "action": "`docs/mockups/README.md`의 「여정 → 여정 mockup 페이지 매핑」 절 바로 뒤에 세 절을 신설한다 — 「화면 식별자 규약」(규약 전문 + 9개 화면 식별자와 대응 구현/목업의 표), 「단계별 화면·상태 목록」(DOM에서 뽑은 35행 표), 「의도적 제외」(근거·사유를 갖춘 2건: 화면 `approval-gateway`, 여정 `JRN-concurrent-access`).",
+              "expectedOutcome": "`grep -c '^## 화면 식별자 규약' docs/mockups/README.md` = 1, `grep -c '^## 단계별 화면·상태 목록' docs/mockups/README.md` = 1, `grep -c '^## 의도적 제외' docs/mockups/README.md` = 1, 「단계별 화면·상태 목록」 절 안의 표 데이터 행 수 = 35, `grep -c '근거:' docs/mockups/README.md` ≥ 2, `grep -c '사유:' docs/mockups/README.md` ≥ 2."
+            },
+            {
+              "seq": 6,
+              "action": "`tools/journey-prototype.test.mjs`에 화면 식별자 축 단언 4종을 추가한다 — (1) 모든 `.screen`이 비어 있지 않은 `data-screen`을 갖고 `.screen`이 아닌 요소에는 `data-screen`이 없다, (2) `[data-state]`·`[data-offpath]` 요소는 모두 `.screen` 안에 있고 `data-offpath` 요소는 `data-advance-to`·`data-branch-row`를 함께 갖지 않는다, (3) 인덱스 「단계별 화면·상태 목록」 표가 DOM의 (여정, 단계, 화면, 상태) 집합과 정확히 일치하고 페이지가 있는 34개 단계가 빠짐없이 등장한다, (4) 「의도적 제외」 항목마다 근거·사유가 있고 화면 항목의 식별자가 DOM에 나타나지 않으며 여정 항목은 페이지가 없고 `docs/doc-structure-state.md`에 등재돼 있다.",
+              "expectedOutcome": "`cd tools && npm run test:journey-mockup` 이 fail 0으로 끝나고, 총 테스트 수가 기존의 183보다 크며, 새 단언 4종이 ✔ 로 표시된다."
+            },
+            {
+              "seq": 7,
+              "action": "PR을 `main`에 merge하고 반영 결과를 확인한다. 브랜치를 rebase하지 말고 merge로 반영한다. 반영 후 `ci` 워크플로의 `journey-prototype` 잡이 success인지 본다.",
+              "expectedOutcome": "`gh run list --workflow ci --branch main --limit 1` 의 최신 run conclusion이 success이고 그 run 안에 잡 「여정 ↔ 여정 mockup 1:1 (프로토타입 충실도 포함)」이 completed/success다. merge 후 `git -C <repo> rev-parse HEAD:docs/journeys` 트리 해시와 `HEAD:docs/mockups/README.md` blob 해시가 PR head의 값과 같다."
+            }
+          ],
+          "plannedAt": "2026-11-03T01:47:31Z"
+        }
+      }
+    ]
   },
   {
     "id": "rct_20261101-0001",
