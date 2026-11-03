@@ -193,60 +193,67 @@ jobs:
               -e "s#{{FROM_STATUS}}#$FROM_STATUS#g" -e "s#{{CLAIM_COMMIT}}#$CLAIM_COMMIT#g" \
               -e "s#{{WORK_DIR}}#./targets#g" \
               harness/.github/minimax/work-planner-run-prompt.md > "$OUT/logs/prompt.md"
-          args=(exec --input - --cwd "$GITHUB_WORKSPACE/ws" --permission full
-                --output-format stream-json --timeout 70m
+          sed -e "s#{{TASK_ID}}#$TASK_ID#g" -e "s#{{MODEL_ID}}#$MODEL_ID#g" -e "s#{{CLAIM_COMMIT}}#$CLAIM_COMMIT#g" \
+              harness/.github/minimax/work-planner-resume-prompt.md > "$OUT/logs/resume-prompt.md"
+          base_args=(exec --input - --cwd "$GITHUB_WORKSPACE/ws" --permission full
+                --output-format stream-json
                 --output-last-message "$OUT/logs/final-message.md"
                 --diagnostics-dir "$OUT/logs/diagnostics")
-          [ -n "$MODEL" ] && args+=(--model "$MODEL")
-          # 재시도는 한 번, 다음을 모두 만족할 때만 한다(그 밖의 실패는 그대로 결과 점검으로 넘긴다):
-          #   - mcode가 재시도 가능한 오류로 끝남(마지막 exec.completed의 error.retryable — 예: 제공자 upstream 오류)
-          #   - 바뀐 것이 없음: reconciler HEAD가 점유 커밋 그대로·작업 트리 깨끗, 그리고 대화 기록에
-          #     대상 레포 쓰기(git push · gh pr · /pulls · /git/refs) 호출이 없음 — 반쯤 쓴 계획 위에 처음부터 다시 돌지 않게
-          #   - 1차 시도가 RETRY_WITHIN_SECONDS 안에 끝남 — 늦게 끝난 시도를 다시 돌리면 job timeout(90분)에 잘려 lock이 남는다
-          RETRY_WITHIN_SECONDS=900
+          [ -n "$MODEL" ] && base_args+=(--model "$MODEL")
+          # 재시도는 한 번, mcode가 재시도 가능한 오류(마지막 exec.completed의 error.retryable — 예: 제공자 upstream
+          # 오류)로 끝났을 때만 한다. 그 밖의 실패는 그대로 결과 점검으로 넘긴다.
+          # 재시도는 새로 시작하지 않고 1차 세션을 이어간다(--session) — 1차가 해 둔 조사·커밋·PR은 맥락에 남고,
+          # 재시도 프롬프트가 현재 상태부터 다시 확인시켜 끝난 단계를 반복하지 않게 한다.
+          # 시간: 1·2차를 합친 mcode 시간이 MCODE_BUDGET_SECONDS(기존 --timeout 70m)를 넘지 않게 2차의 --timeout을
+          # 남은 예산으로 준다 — job timeout(90분)에 잘리면 결과 점검·아티팩트가 남지 않는다. 남은 예산이
+          # MIN_RESUME_SECONDS보다 적으면 재시도하지 않는다.
+          MCODE_BUDGET_SECONDS=4200
+          MIN_RESUME_SECONDS=300
+          remain=$MCODE_BUDGET_SECONDS
+          prompt="$OUT/logs/prompt.md"
+          session_args=()
           for attempt in 1 2; do
             started=$(date +%s)
             set +e
             env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL -u MARKETPLACE_TOKEN \
-              mcode "${args[@]}" < "$OUT/logs/prompt.md" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"
+              mcode "${base_args[@]}" --timeout "${remain}s" "${session_args[@]}" \
+              < "$prompt" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"
             code=$?
             set -e
-            elapsed=$(( $(date +%s) - started ))
+            remain=$(( remain - ($(date +%s) - started) ))
             tail -n 5 "$OUT/logs/stderr.log" || true
             [ "$code" -eq 0 ] && break
             [ "$attempt" -eq 1 ] || break
-            verdict=$(python3 - "$OUT/logs/transcript.jsonl" <<'PY' 2>/dev/null || echo "unknown"
-          import json, re, sys
+            read -r verdict session_id < <(python3 - "$OUT/logs/transcript.jsonl" <<'PY' 2>/dev/null || echo "unknown -"
+          import json, sys
           rows = []
           for line in open(sys.argv[1], encoding="utf-8"):
               try:
                   rows.append(json.loads(line))
               except ValueError:
                   pass
-          errs = [(r.get("result") or {}).get("error") or {} for r in rows if r.get("type") == "exec.completed"]
-          if not (errs and errs[-1].get("retryable")):
-              print("not-retryable"); sys.exit()
-          write = re.compile(r"git\s+push|gh\s+pr\b|/pulls\b|/git/refs\b")
-          for r in rows:
-              tc = (r.get("item") or {}).get("toolCall") or {}
-              if r.get("type") == "item.completed" and tc and write.search(json.dumps(tc.get("input"), ensure_ascii=False)):
-                  print("target-write"); sys.exit()
-          print("retryable")
+          done = [r.get("result") or {} for r in rows if r.get("type") == "exec.completed"]
+          sid = (done[-1].get("sessionId") if done else None) or next((r["sessionId"] for r in reversed(rows) if r.get("sessionId")), None)
+          if not (done and (done[-1].get("error") or {}).get("retryable")):
+              print("not-retryable", sid or "-")
+          elif not sid:
+              print("no-session -")
+          else:
+              print("retryable", sid)
           PY
             )
             if [ "$verdict" != retryable ]; then
               echo "재시도 안 함 — 판정: $verdict"; break
             fi
-            if [ "$(git -C ws/reconciler rev-parse HEAD)" != "$CLAIM_COMMIT" ] || [ -n "$(git -C ws/reconciler status --porcelain)" ]; then
-              echo "재시도 안 함 — reconciler checkout이 점유 커밋에서 바뀜"; break
+            if [ "$remain" -lt "$MIN_RESUME_SECONDS" ]; then
+              echo "재시도 안 함 — 남은 mcode 예산 ${remain}s(< ${MIN_RESUME_SECONDS}s)"; break
             fi
-            if [ "$elapsed" -gt "$RETRY_WITHIN_SECONDS" ]; then
-              echo "재시도 안 함 — 1차 시도가 ${elapsed}s 걸림(> ${RETRY_WITHIN_SECONDS}s)"; break
-            fi
-            echo "::warning::mcode가 재시도 가능한 오류로 ${elapsed}s 만에 끝났고 바뀐 것이 없음 — 한 번 다시 돌린다"
+            echo "::warning::mcode가 재시도 가능한 오류로 끝남 — 세션 $session_id 를 이어서 한 번 다시 돌린다(남은 예산 ${remain}s)"
             mv "$OUT/logs/transcript.jsonl" "$OUT/logs/transcript-attempt1.jsonl"
             mv "$OUT/logs/stderr.log" "$OUT/logs/stderr-attempt1.log"
             [ -d "$OUT/logs/diagnostics" ] && mv "$OUT/logs/diagnostics" "$OUT/logs/diagnostics-attempt1"
+            prompt="$OUT/logs/resume-prompt.md"
+            session_args=(--session "$session_id")
           done
           { echo "exit_code=$code"; echo "attempts=$attempt"; } >> "$GITHUB_OUTPUT"
           [ "$code" -eq 0 ] || echo "::warning::mcode가 exit $code로 끝남 — 결과 점검은 계속한다"
