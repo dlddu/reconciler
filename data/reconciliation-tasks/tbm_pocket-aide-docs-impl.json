@@ -9656,34 +9656,39 @@
     "attempts": [
       {
         "plan": {
-          "summary": "런북(`docs/runbook-pr-monitor-setup.md`) 한 파일만 갱신하는 슬라이스: #340 backend OTel 트레이싱 계약(환경변수 4종·POD_NAMESPACE·opt-in 동작·Alloy 배선·트러블슈팅)을 코드에 맞춰 문서에 반영한다(의도된 동작 변경이므로 문서를 코드에 맞춤). 선택 근거: 남은 gap 중 android 제품 문서화는 제품 결정이 앞서고 위치 건은 rct_20261102-0002 소관이며 미구현 AC 는 설계 결정이 선행인 반면, 런북 불일치는 결정 사항 없이 코드 대조만으로 닫히고 가역적이며 정책의 MA 케이스에 닿지 않아 자동 경로로 착지한다. 완료 기준: main 런북이 OTEL_* 변수·opt-in·운영 배선을 기술하고 구현과 일치, 머지 커밋 ci-success 성공. 범위 밖: android 사용자 대면 표면의 PRD/AC/여정/목업/tracker 반영, 위치 수집 불일치(rct_20261102-0002), 미구현 AC 전부.",
+          "summary": "런북(`docs/runbook-pr-monitor-setup.md`) 한 파일에 backend OpenTelemetry 계약(OTEL_* 환경변수·POD_NAMESPACE·opt-in 동작·Alloy OTLP/HTTP 경로·실패 시 동작·트러블슈팅)을 코드에 맞춰 반영한다. 선택 근거: 의도된 동작 변경(#340)이고 코드가 SSOT 사실이라 문서를 코드에 맞추면 되며, 제품 결정이 필요 없고 사람 소유 결정도 아니어서 자동 경로(MA1~MA5 비접촉)로 닫힌다. 같은 gap의 FCM 런북은 #357로 이미 착지했다. 완료 기준: PR 이 main 에 착지하고 main 의 런북 §4 표에 OTEL_EXPORTER_OTLP_ENDPOINT·OTEL_EXPORTER_OTLP_TRACES_ENDPOINT·OTEL_SERVICE_NAME·OTEL_RESOURCE_ATTRIBUTES·POD_NAMESPACE 가 있고 「Tracing (OpenTelemetry)」 절이 코드(telemetry.go·main.go·deployment.yaml)와 일치. 범위 밖(재감지·형제 task 몫): android 사용자 대면 동작(탭 6종·위젯·키보드)의 PRD/AC/테스트/여정/목업/tracker 반영(제품 결정 필요), PRD-8 AC4 위치 결정 충돌(rct_20261102-0002), 미구현 AC 30개(PRD-1·6·7·9)·PRD-4 음성 경로.",
           "riskLevel": "low",
           "steps": [
             {
               "seq": 1,
-              "action": "PR #359 의 ci-success 와 review/manual-approval status 확인",
-              "expectedOutcome": "ci-success 통과, MA1–MA5 미접촉으로 자동 success"
+              "action": "PR #360(reconcile/rct_20261102-0001)의 diff 가 docs/runbook-pr-monitor-setup.md 한 파일·문서 변경뿐인지 확인하고 ci-success 통과를 확인한다.",
+              "expectedOutcome": "변경 파일 1개, review/manual-approval 자동 success, ci-success success."
             },
             {
               "seq": 2,
-              "action": "PR #359 squash 머지",
-              "expectedOutcome": "main 런북에 OTel 환경변수 표·Tracing 절·트러블슈팅 행이 반영됨"
+              "action": "런북의 OTEL_* 변수명·기본값·로그 문구(`tracing enabled`, `tracing setup failed; continuing without traces`)를 backend/internal/telemetry/telemetry.go·cmd/server/main.go·k8s/deployment.yaml 과 대조한다.",
+              "expectedOutcome": "문서 기술이 코드와 모두 일치."
             },
             {
               "seq": 3,
-              "action": "main 런북을 grep 하고 telemetry.go·main.go·k8s/deployment.yaml 과 대조",
-              "expectedOutcome": "문서의 변수 이름·opt-in 동작·운영 배선이 구현과 일치"
+              "action": "PR 을 squash 머지한다.",
+              "expectedOutcome": "main 에 착지 커밋 생성."
+            },
+            {
+              "seq": 4,
+              "action": "main 에서 런북 §4 표 행 5개·Tracing 절·§6 트러블슈팅 2행 존재를 grep 으로 확인하고 착지 커밋 ci-success 성공을 확인한다.",
+              "expectedOutcome": "grep 매치 확인, ci-success success."
             }
           ],
-          "plannedAt": "2026-11-03T11:10:00Z",
-          "executionGuide": "## 실행 순서\n1. PR https://github.com/dlddu/pocket-aide/pull/359 의 CI(`ci-success`)와 `review/manual-approval` status 를 확인한다. 변경은 `docs/runbook-pr-monitor-setup.md` 한 파일이고 `docs/review-policy.md` 의 MA1–MA5 경로에 닿지 않아 판정기가 자동 success 를 붙인다(안 붙으면 사람 승인 경로 — 그때는 review.manualApproval 규약을 따른다).\n2. PR 을 squash 머지한다. 단일 단계라 병렬 여부는 해당 없음.\n\n## 검증 방법\n- 머지 후 main 의 런북에서 `grep -n 'OTEL_' docs/runbook-pr-monitor-setup.md` 가 환경변수 4종(`OTEL_EXPORTER_OTLP_ENDPOINT`·`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`·`OTEL_RESOURCE_ATTRIBUTES`·`OTEL_SERVICE_NAME`)을 포함하고, 「Tracing (OpenTelemetry)」 절과 §6 트레이스 행이 있는지 확인한다.\n- 문서 값이 `backend/internal/telemetry/telemetry.go`(변수 이름·opt-in 조건)·`backend/cmd/server/main.go`(`tracing enabled`/`tracing setup failed` 로그)·`k8s/deployment.yaml`(Alloy 엔드포인트·`POD_NAMESPACE`)와 일치하는지 대조한다.\n- 머지 커밋의 `ci-success` 성공 확인.\n\n## 주의사항\n- 문서만 바꾸는 가역 변경이다. 롤백은 revert PR 한 건.\n- 머지 시 docs 트리 해시가 바뀌어 to-be 버전이 변하므로 다음 감지가 새 task 를 연다(노이즈, 무해).\n- 이 시도는 OTel 런북 gap 만 닫는다.\n\n## 범위 밖(후속, 재감지 몫)\n- android 사용자 대면 표면(탭 6종·위젯·키보드)의 PRD/AC/테스트/여정/목업/tracker 반영 — 제품 결정이 필요하다.\n- 위치 수집 불일치는 `rct_20261102-0002` 가 맡는다.\n- 미구현 AC(PRD-1·6·7·9 30개, PRD-4 AC1·AC2, PRD-8 AC3·AC11, 부분 구현 3개).\n- FCM 런북 반영은 #357 로 이미 착지."
+          "executionGuide": "## 순서\n1→2→3→4 순차(병렬 불가: 대조 결과가 머지 전제).\n\n## 검증\n- `gh pr view 360 --json files` 가 `docs/runbook-pr-monitor-setup.md` 1개.\n- `gh api repos/dlddu/pocket-aide/commits/<head>/status` 의 review/manual-approval 이 success(없으면 사람 승인 대기 — 판정기가 케이스에 닿았다고 본 것이므로 review 가 review.manualApproval 처리).\n- 머지 후 `git grep -n 'OTEL_EXPORTER_OTLP_ENDPOINT' docs/runbook-pr-monitor-setup.md`, `git grep -n 'Tracing (OpenTelemetry)' docs/runbook-pr-monitor-setup.md` 매치, 착지 커밋 ci-success 성공.\n- 범위 기준 수렴: 런북에 OTel 계약이 기술되고 구현과 일치하면 성공.\n\n## 주의\n- 문서만 변경이라 운영 영향·불가역성 없음. 롤백은 PR revert.\n- 머지 전 main 이 앞서 나가 런북이 충돌하면 리베이스 후 §4 표 행 위치만 맞춘다.\n\n## 범위 밖(후속)\nandroid 사용자 대면 동작의 제품 문서화, PRD-8 AC4 위치 결정 충돌(rct_20261102-0002), 미구현 AC 30개, PRD-4 음성 경로.",
+          "plannedAt": "2026-11-03T11:15:00Z"
         },
         "preparation": {
           "repository": "dlddu/pocket-aide",
-          "branch": "reconcile/rct_20261102-0001-otel-runbook",
-          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/359",
-          "preparedAt": "2026-11-03T11:10:00Z",
-          "notes": "런북 단일 파일 +30줄. 값은 telemetry.go·main.go·k8s/deployment.yaml 과 대조. review-policy MA1–MA5 미접촉이라 자동 success 예상. 머지는 하지 않음."
+          "branch": "reconcile/rct_20261102-0001",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/360",
+          "preparedAt": "2026-11-03T11:14:00Z",
+          "notes": "런북 한 파일 문서 변경 PR. 머지는 executor 몫. docs/ 변경이라 수동 승인 케이스(MA1~MA5) 비접촉."
         }
       }
     ]
