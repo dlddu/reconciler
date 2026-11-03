@@ -198,13 +198,57 @@ jobs:
                 --output-last-message "$OUT/logs/final-message.md"
                 --diagnostics-dir "$OUT/logs/diagnostics")
           [ -n "$MODEL" ] && args+=(--model "$MODEL")
-          set +e
-          env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL -u MARKETPLACE_TOKEN \
-            mcode "${args[@]}" < "$OUT/logs/prompt.md" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"
-          code=$?
-          set -e
-          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          tail -n 5 "$OUT/logs/stderr.log" || true
+          # 재시도는 한 번, 다음을 모두 만족할 때만 한다(그 밖의 실패는 그대로 결과 점검으로 넘긴다):
+          #   - mcode가 재시도 가능한 오류로 끝남(마지막 exec.completed의 error.retryable — 예: 제공자 upstream 오류)
+          #   - 바뀐 것이 없음: reconciler HEAD가 점유 커밋 그대로·작업 트리 깨끗, 그리고 대화 기록에
+          #     대상 레포 쓰기(git push · gh pr · /pulls · /git/refs) 호출이 없음 — 반쯤 쓴 계획 위에 처음부터 다시 돌지 않게
+          #   - 1차 시도가 RETRY_WITHIN_SECONDS 안에 끝남 — 늦게 끝난 시도를 다시 돌리면 job timeout(90분)에 잘려 lock이 남는다
+          RETRY_WITHIN_SECONDS=900
+          for attempt in 1 2; do
+            started=$(date +%s)
+            set +e
+            env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL -u MARKETPLACE_TOKEN \
+              mcode "${args[@]}" < "$OUT/logs/prompt.md" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"
+            code=$?
+            set -e
+            elapsed=$(( $(date +%s) - started ))
+            tail -n 5 "$OUT/logs/stderr.log" || true
+            [ "$code" -eq 0 ] && break
+            [ "$attempt" -eq 1 ] || break
+            verdict=$(python3 - "$OUT/logs/transcript.jsonl" <<'PY' 2>/dev/null || echo "unknown"
+          import json, re, sys
+          rows = []
+          for line in open(sys.argv[1], encoding="utf-8"):
+              try:
+                  rows.append(json.loads(line))
+              except ValueError:
+                  pass
+          errs = [(r.get("result") or {}).get("error") or {} for r in rows if r.get("type") == "exec.completed"]
+          if not (errs and errs[-1].get("retryable")):
+              print("not-retryable"); sys.exit()
+          write = re.compile(r"git\s+push|gh\s+pr\b|/pulls\b|/git/refs\b")
+          for r in rows:
+              tc = (r.get("item") or {}).get("toolCall") or {}
+              if r.get("type") == "item.completed" and tc and write.search(json.dumps(tc.get("input"), ensure_ascii=False)):
+                  print("target-write"); sys.exit()
+          print("retryable")
+          PY
+            )
+            if [ "$verdict" != retryable ]; then
+              echo "재시도 안 함 — 판정: $verdict"; break
+            fi
+            if [ "$(git -C ws/reconciler rev-parse HEAD)" != "$CLAIM_COMMIT" ] || [ -n "$(git -C ws/reconciler status --porcelain)" ]; then
+              echo "재시도 안 함 — reconciler checkout이 점유 커밋에서 바뀜"; break
+            fi
+            if [ "$elapsed" -gt "$RETRY_WITHIN_SECONDS" ]; then
+              echo "재시도 안 함 — 1차 시도가 ${elapsed}s 걸림(> ${RETRY_WITHIN_SECONDS}s)"; break
+            fi
+            echo "::warning::mcode가 재시도 가능한 오류로 ${elapsed}s 만에 끝났고 바뀐 것이 없음 — 한 번 다시 돌린다"
+            mv "$OUT/logs/transcript.jsonl" "$OUT/logs/transcript-attempt1.jsonl"
+            mv "$OUT/logs/stderr.log" "$OUT/logs/stderr-attempt1.log"
+            [ -d "$OUT/logs/diagnostics" ] && mv "$OUT/logs/diagnostics" "$OUT/logs/diagnostics-attempt1"
+          done
+          { echo "exit_code=$code"; echo "attempts=$attempt"; } >> "$GITHUB_OUTPUT"
           [ "$code" -eq 0 ] || echo "::warning::mcode가 exit $code로 끝남 — 결과 점검은 계속한다"
 
       # 계획이 계약대로 기록됐는지 확인한다(점유 이후 그 task 파일만 바뀜, 보존 필드·이전 attempts, 종료 상태).
@@ -240,12 +284,13 @@ jobs:
           PLUGIN_VERSION: ${{ steps.install.outputs.version }}
           PLUGIN_COMMIT: ${{ steps.install.outputs.commit }}
           RUN_EXIT: ${{ steps.run.outputs.exit_code }}
+          RUN_ATTEMPTS: ${{ steps.run.outputs.attempts }}
         run: |
           {
             echo "### reconciler-work-planner"
             echo "- 점유: ${CLAIMED:-false} · task: ${MODEL_ID:+$MODEL_ID/}${TASK_ID:-<none>}${FROM_STATUS:+ ($FROM_STATUS → planning)} · 경쟁 패배 ${LOST:-0}건"
             [ -n "$PLUGIN_VERSION" ] && echo "- 스킬: $PLUGIN_NAME $PLUGIN_VERSION (plugin-marketplace \`${PLUGIN_COMMIT:0:7}\`)"
-            echo "- mcode ${MCODE_INSTALLED_VERSION:-<미설치>} · exit: ${RUN_EXIT:-n/a}"
+            echo "- mcode ${MCODE_INSTALLED_VERSION:-<미설치>} · exit: ${RUN_EXIT:-n/a} · 시도 ${RUN_ATTEMPTS:-n/a}회"
             if [ -s "$OUT/logs/transcript.jsonl" ]; then
               python3 harness/.github/scripts/mcode_transcript.py summary "$OUT/logs/transcript.jsonl"
             fi
