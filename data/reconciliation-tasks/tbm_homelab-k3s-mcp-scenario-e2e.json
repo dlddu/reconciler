@@ -14821,7 +14821,51 @@
     "assessment": {
       "reason": "조치 필요(`action_required`) — 이번 창이 만든 drift는 없으나 **현재 상태**에 정의 규칙 5·6·7 기준 gap이 남고 이를 맡은 열린 형제 task가 없다.\n\n근거 ①(규칙 6 등재 자격 소실 → 규칙 5 집계 불일치): `test-pocket-aide-notification-send.md#시나리오 3` 의 ⏳ 근거는 「kind 의 PocketAide 에 이 엔드포인트가 없다 — 지금 부르면 404」다. HEAD `ci.yml` 핀 `POCKET_AIDE_SHA=ea32e4182f8b`(pocket-aide#319 main 머지 2026-10-25T10:20:47Z, #317 은 06:00:55Z 머지) 빌드에는 `POST /api/external/notifications` 가 **등록돼 있다**(pocket-aide `backend/cmd/server/main.go:165`) → 404 장애물이 사라졌다. 잔여는 `pocket_aide_notification_send_sc3.py` 저작뿐이라 규칙 6의 등재 자격(제품 기능 미구현 하나)을 잃고 규칙 7 공백으로 이관해야 한다 → 기록된 집계(구현 대기 2·공백 7·상한 7)가 규칙 5와 어긋난다.\n\n근거 ②(규칙 7 성숙 공백): `test-approval-gate.md#시나리오 12` 행의 재검토 사건「dlddu/pocket-aide#319 main 머지」가 2026-10-25에 이미 발생했고 행 스스로「핀이 main 머지 커밋으로 고정돼 이제 쓸 수 있다」고 적었다. 전용 파일 0개(규칙 1 누락)이고 인프라 저작은 이 모델 소관(규칙 7).\n\n근거 ③(중복 없음): 이 모델 파일 159건 중 미종결은 이 task 하나뿐 — 두 gap을 맡은 열린 형제 task 0건.\n\n반대 방향 근거(규칙과 충돌하지 않는 것): ① 창 자체는 무해하다 — 시나리오 식별자 117·선언 파일 105·선언 줄·등재 3표가 그대로이고 제목 변경 3줄은 레지스트리와 lockstep이다. ② 대상 레포 게이트 `check_ac_mapping.py` rc=0(규칙 1~9 무위반·불변식 성립·미등재 공백 0). ③ `test-pocket-aide-notification-send.md#시나리오 5` 의 ⏳ 등재는 정당 — 그 빌드 페이로드에 `requester` 가 없고 `decodeApprovalBody` 가 `DisallowUnknownFields` 로 400을 낸다(오분류는 #3 한 건뿐). ④ 나머지 공백 6행(platform-auth-safety#9~#11·session-read#2·session-write#2·#4)은 재검토 시점 2026-12-20 이 미래라 이번 판정의 근거가 아니며 부채로 남는다.",
       "assessedAt": "2026-11-01T04:00:43Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "gap ① 만 슬라이스로 닫는다: 시나리오 3 의 ⏳ 근거(엔드포인트 없음)는 stale 이고 실제 벽은 핀의 requester 거부였으므로, 핀을 pocket-aide#321 로 옮겨 sc3 를 저작·✅ 로 옮기고 sc5 는 상대 기능 착지로 ⏳ 자격을 잃어 🚧 공백으로 이관한다(결정 없이 가능한 가장 가역적 경로: PR 하나, 제품 코드 무변경). 완료 기준: 구현 대기 0 · 공백 9(상한 9) · 전용 파일 110, sc3 CI 통과. 범위 밖: gap ②(approval_gate_sc12 저작)와 sc5 e2e — 재감지가 새 task 로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "POCKET_AIDE_SHA 를 requester 를 받는 pocket-aide#321 머지 커밋(0a547a6)으로 옮긴다",
+              "expectedOutcome": "kind PocketAide 가 알림 엔드포인트에서 requester 를 수용한다"
+            },
+            {
+              "seq": 2,
+              "action": "호출자 미등록 변형 배포 notify-unregistered-variant.yaml 을 추가하고 ci.yml 에 적용·롤아웃 대기·실패 로그 스텝을 더한다",
+              "expectedOutcome": "정상 URL·토큰이지만 PocketAide 에 등록되지 않은 SUT 가 Ready 가 된다"
+            },
+            {
+              "seq": 3,
+              "action": "pocket_aide_notification_send_sc3.py 를 저작한다(등록 primary → 503, 미등록 변형 → 401)",
+              "expectedOutcome": "두 거부가 서로·미설정 거부와 다른 문면으로 관측된다"
+            },
+            {
+              "seq": 4,
+              "action": "test 문서 시나리오 3 자동화 필드와 doc-tracker 등재(시나리오 3 ✅, 시나리오 5 ⏳→🚧, 집계·상한·변경 이력)를 갱신한다",
+              "expectedOutcome": "check_ac_mapping.py 외 게이트 3종이 rc=0"
+            },
+            {
+              "seq": 5,
+              "action": "PR CI 확인 후 머지한다",
+              "expectedOutcome": "main 에서 sc3 통과, 구현 대기 0 · 공백 9 · 전용 파일 110"
+            }
+          ],
+          "plannedAt": "2026-11-03T11:00:00Z",
+          "executionGuide": "## 실행 순서\n1. PR https://github.com/dlddu/homelab-k3s-mcp/pull/306 의 CI 전체(특히 `integration-tests`, `fmt + vet` 게이트 4종)가 green 인지 확인한다. 순서 의존: 핀 갱신 → 변형 배포 롤아웃 → sc3 실행이 한 잡 안에서 이어지므로 CI 한 번이 곧 전체 검증이다. 병렬 불가(단일 PR).\n2. green 이면 머지한다(squash). 수동 승인 케이스에 닿으면 리뷰가 `review.manualApproval` 로 처리한 대로 따른다.\n\n## 검증 방법 (계획 범위 기준)\n- 머지 후 `python3 tests/integration/check_ac_mapping.py` → rc=0, 집계: 시나리오 122 · 예외 3 · 구현 대기 0 · 1:1 대상 119 · 매칭 파일 110 · 공백 9(상한 9).\n- main CI 의 `pocket_aide_notification_send_sc3.py` 통과: 등록된 primary 는 도구 에러에 `(503)`·`APNs`, 미등록 변형은 `(401)`·`registered`, 두 문면이 서로·미설정 거부와 다르다.\n- 재감지 시 to-be 지문(registry 섹션)·as-is(tests/ 트리)가 바뀌고, 시나리오 3 이 ✅ 로 판정돼 gap ① 이 사라진다.\n\n## 주의사항\n- 되돌릴 수 없는 지점 없음(핀·테스트·문서 추가뿐, 제품 코드 무변경). 실패 시 PR revert.\n- 핀을 `0a547a6`(#321 머지 커밋)로만 옮겼다. 그 사이 다른 pocket-aide 변경은 섞지 않았다 — CI 에서 기존 approval-gate e2e 가 깨지면 핀 변경 영향이다.\n- 503 문면은 pocket-aide 픽스처에 APNs 가 없다는 가정 위에 있다. CI 에서 다른 상태 코드가 나오면 단언을 실측에 맞추거나 시나리오 문서를 검토한다.\n- 403 이 아닌 401 은 호출자 미등록에서만 나온다 — `_approval_gate.CALLERS` 에 새 네임스페이스를 올리지 말 것.\n\n## 범위 밖(후속)\n- gap ②: `test-approval-gate.md#시나리오 12` 전용 `approval_gate_sc12.py` (세션 헤더·`reason` 누락 거부·민감 종류 분기·상한 초과 헤더, 공백 행 재검토 사건 이미 발생). 재감지 후 새 task 의 입력이다.\n- 시나리오 5 전용 e2e(알림 본문 관측 수단 선행, 공백 등재 · 재검토 2026-12-20)."
+        },
+        "preparation": {
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20261101-0001",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/306",
+          "preparedAt": "2026-11-03T11:00:00Z",
+          "notes": "로컬에서 check_ac_mapping/mock_policy/comment_policy/doc_inventory 모두 rc=0. kind e2e 는 PR CI 에서 확인."
+        }
+      }
+    ]
   },
   {
     "id": "rct_20261101-0002",
