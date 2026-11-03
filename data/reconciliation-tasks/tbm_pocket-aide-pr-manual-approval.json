@@ -563,14 +563,14 @@
     },
     "id": "rct_20261103-0001",
     "stateSummary": {
-      "summarizedAt": "2026-11-03T10:43:34Z",
-      "asIs": "관측 2026-11-03T10:43:34Z · dlddu/pocket-aide@main=548c233. 지문 judges=37090cd14cf5bb7d(불변);surface=35385cf437d5b824(변경);anchors=19758f6994c57098(불변). contexts=1 judges=2 surface_hits=80 anchors_absent=0. 표면 히트: migrations 35 · auth 1 · PocketAideAuth 1 · k8s 3 · db.go · telemetry.go · oidcmock.go · PocketAideStorage 2. 판정기 judge.py가 MA1~MA5 전부 판정(샘플 경로로 확인), 워크플로의 review/ context는 review/manual-approval 하나. 게이트(R5, rules/branches/main 조회): ci-success integration=15368, review/manual-approval integration=any — 앱 비고정, 다른 review/ context 없음.",
-      "toBe": "docs/review-policy.md blob 0c9e8c1(이전 161999a), review:ok. 변경은 #356(7cb6512): surface ERE에 telemetry.OpenDB(|otelsql.Open( 추가, 의도적 제외 1행에 backend/internal/telemetry OpenDB 래퍼와 재개 조건 추가. 다음 재검토 2027-01-02(마지막 2026-10-04) — 기한 내. 케이스 5(MA1~MA5)·제외 3·미탐 원장 0행.",
-      "gap": "유의미한 차이 없음. 지문 surface 변화는 정책이 새로 선언한 ERE(telemetry.OpenDB(·otelsql.Open()가 db.go·telemetry.go를 표면으로 잡은 것이고, 두 파일 모두 의도적 제외 행에 덮인다(O2). 제외 재개 조건 실측: iofs.New(migrations.FS) db.go 1 · sql.Open(\"sqlite\")|telemetry.OpenDB( 파일 db.go 1 · otelsql.Open( 파일 telemetry.go 1 · oidcmock import 0 · 키체인 ThisDeviceOnly 2/2, kSecClassGenericPassword 파일 2 — 전부 미발동(O3). 앵커 8개 모두 present(O1)."
+      "summarizedAt": "2026-11-03T10:45:01Z",
+      "asIs": "pocket-aide@main 관측(2026-11-03). 지문 judges=37090cd14cf5bb7d(불변) · anchors=19758f6994c57098(불변) · surface 해시 ba384ea8→35385cf4(변화). 판정기·워크플로 2건·context review/manual-approval 1개 그대로. surface 변화의 원인은 #340(telemetry.go에 otelsql.Open 추가)·#356(정책 ere에 telemetry.OpenDB\\(|otelsql.Open\\( 추가)·db.go의 sql.Open→telemetry.OpenDB 전환으로, 걸리는 (파일,토큰)이 db.go(telemetry.OpenDB)·telemetry.go(otelsql.Open)로 바뀜. 같은 기간 #355가 k8s/deployment·kustomization·secret을 바꿈(MA3 대상, 표면 해시 변화와는 무관하게 이미 덮임).",
+      "toBe": "docs/review-policy.md blob 161999a9→0c9e8c16(#356, 2026-11-02), 꼬리표 review:ok(다음 재검토 미도래). 변경: surface ere에 telemetry\\.OpenDB\\(|otelsql\\.Open\\( 추가, 의도적 제외 1행에 backend/internal/telemetry/ OpenDB(otelsql.Open 래퍼) 포함·사유·재개 조건 갱신.",
+      "gap": "신규 표면 hit 두 파일(db.go, telemetry.go)은 모두 의도적 제외 행이 덮고 케이스·앵커·게이트는 정합 — 정책이 코드 변화를 따라간 것은 문제 없음. 다만 새 재개 조건(트립와이어) 하나가 죽어 있다: 'git grep -lE '\"'\"'sql\\.Open\\(\"sqlite\"\\|telemetry\\.OpenDB\\('\"'\"' ... 가 2파일 이상(현재 db.go 1)'은 -E에서 \\|가 리터럴 '|'라 어떤 코드에도 매치되지 않아 항상 0을 반환한다(재현: 현재 0 반환, 올바른 '|'로는 db.go·telemetry.go 아닌 db.go 1). 즉 telemetry.OpenDB를 쓰는 두 번째 연결이 생겨도 이 트립와이어는 울리지 않는다(불변식 2 — 제외 트립와이어 신선도 위반)."
     },
     "assessment": {
-      "assessedAt": "2026-11-03T10:43:48Z",
-      "reason": "R1~R6·O1~O5 전부 충족. R1 판정기 MA1~MA5가 정책 케이스 5개와 1:1(샘플 경로로 확인), R2 review/ context 하나, R3~R4 정책 문서 완비·surface 정상 파싱, R5 required check에 review/manual-approval(integration=any)과 ci-success만 존재, R6 사람 승인 칸 기재(bypass 목록은 O4 재검토 몫), O4 다음 재검토 2027-01-02(review:ok), O5 미탐 원장 0행. 변경 내용(#356)은 정책이 스스로 표면·제외를 갱신한 정상 흐름. 케이스 5 · 표면 히트 80 · 제외 3 · 미탐 0행."
+      "assessedAt": "2026-11-03T10:45:01Z",
+      "reason": "surface 변화 자체는 정책이 제외·트립와이어로 정합하게 흡수했으나, 신설 트립와이어 1개(두 번째 DB 연결 감시)가 grep -E에서 \\|를 써 구조적으로 발화하지 않는다. 문서의 한 줄 수정(\\| → |)이면 닫히지만 docs/review-policy.md는 MA4 대상이라 사람 승인 PR이 필요하다 — 지금 대응할 가치가 있다고 판정."
     }
   }
 ]
