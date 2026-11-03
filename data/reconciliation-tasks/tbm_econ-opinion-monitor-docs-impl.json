@@ -13888,7 +13888,51 @@
       "assessedAt": "2026-10-28T23:58:03Z",
       "reason": "버전 변화(#278 compare 슬라이스)는 그 자체로 격차를 좁혔고 문서·구현이 일치하지만, 정의의 목표인 '문서→구현 완전 수렴'에 못 미치는 잔여 격차가 tracker의 '구현 수렴 대기' 행으로 남아 있다(sentiment·fairness·trace·reprocess·compare 잔여). 슬라이스→재감지→후속 task가 이 루프의 정상 진행이며, 서빙/계약 선행이 필요한 막힌 항목과 web만으로 닫을 수 있는 항목의 구분·우선순위화는 planner에 넘긴다. 자동 해소될 성격이 아니라 재확인 유예는 택하지 않는다."
     },
-    "updatedAt": "2026-11-01T11:22:40Z"
+    "updatedAt": "2026-11-01T11:22:40Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "web만으로 닫히는 유일한 표면인 fairness 정규화 소멸 배너 「판정으로 →」(/trace) 갈래 컨트롤 하나를 슬라이스로 삼는다 — tracker 「구현 수렴 대기」 행들 중 sentiment 원인 줄·fairness 저신뢰 표기·compare 잔여·reprocess 전후 추이는 Gold 계약/서빙에 필요한 차원(사유 축·소스별 저신뢰 건수·대상 국가·일 단위 시계열)이나 `integrity` 라우트가 없어 계약·서빙 선행이 필요하므로 제외했다. 이전 시도(해당 시도는 완료 기준이 계획과 모순돼 되돌려짐)의 PR #280을 재사용한다: 현재 main과 충돌 없이 병합, 병합본 npm test 169·tsc 통과, CI·review/manual-approval 모두 success. 범위/완료 기준(머지 후 판정): ⑴ main 의 Fairness.tsx 소멸 배너에 /trace 「판정으로 →」 링크 ⑵ npm test 169 통과·tsc 클린 ⑶ tracker 에서 해당 항목이 수렴 대기→해소 이력(#280)으로 이동 ⑷ PR #280 MERGED. 범위 밖: 계약·서빙 선행 항목 전부와 docs #281이 연 AC3.1/3.4/3.11/3.12 구현 격차(rct_20261103-0001 몫). 대안(계약 포함 광폭 슬라이스)은 MA1 수동 승인·불가역성이 커 택하지 않았다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #280 head/status 확인(OPEN·CLEAN·head bcac85a, review/manual-approval·required·data-format·ci success); main이 움직였으면 PR 브랜치를 main과 맞추고 CI 재확인",
+              "expectedOutcome": "머지 가능 상태이며 diff 가 web/ 3파일+design-tracker 뿐이다"
+            },
+            {
+              "seq": 2,
+              "action": "gh pr merge 280 --squash",
+              "expectedOutcome": "PR state=MERGED, main 최신 커밋 제목이 #280 squash"
+            },
+            {
+              "seq": 3,
+              "action": "main pull 후 cd web && npm ci && npm test && npx tsc -b",
+              "expectedOutcome": "11 파일 169 테스트 통과(Fairness.test.tsx 21건), tsc 오류 없음"
+            },
+            {
+              "seq": 4,
+              "action": "deploy 브랜치 Source-Commit·image 핀이 머지 SHA 로 오르는지 관측(관측만, 수렴 판정과 무관)",
+              "expectedOutcome": "핀 태그가 머지 SHA; 지연되면 notes 에 기록"
+            },
+            {
+              "seq": 5,
+              "action": "origin/main:web 및 origin/main:docs 트리 해시가 머지 전 값과 달라졌는지 확인",
+              "expectedOutcome": "web≠16a8363c…, docs≠6150bdb…(재감지 입력)"
+            }
+          ],
+          "plannedAt": "2026-11-03T11:00:00Z",
+          "executionGuide": "# 실행 지침 — rct_20261028-0009 · fairness 정규화 소멸 배너 「판정으로 →」\n\n대상: `dlddu/economic-opinion-trend-monitor` · PR #280 (`reconcile/rct_20261028-0009-fairness-normalized-away-judge-link`, head `bcac85a33e35f9fe0279ab290a9ad66962c223d3`, base main). 이전 시도의 준비물을 재사용한다(재계획 시점에 현재 main `e04fe78`과 충돌 없이 병합됨, 병합본 `npm test` 169 통과·`tsc -b` 클린을 로컬 확인).\n\n## 순서\n1. **머지 전 확인** — `gh pr view 280 --json state,mergeStateStatus,headRefOid` 와 head SHA의 status/check-runs. 기대: OPEN · CLEAN · head `bcac85a`(다르면 새 커밋이 있으니 diff가 `web/`+design-tracker 4파일뿐인지 재확인), `review/manual-approval`·`required`·`data-format` success, ci/* success. main이 움직여 CLEAN이 아니면 머지하지 말고 PR 브랜치를 main에 rebase/merge한 뒤 CI를 다시 본다(충돌이 tracker 한 행이면 이 PR의 한 줄 이동만 반영).\n2. **squash 머지** — `gh pr merge 280 --squash`. 의존: 1의 게이트 통과. 병렬 요소 없음.\n3. **머지본 재검증** — main pull 후 `cd web && npm ci && npm test && npx tsc -b`. 기대: 11 파일 169 테스트 통과(Fairness.test.tsx 21건), tsc 오류 없음.\n4. **배포 핀 확인(관측만)** — `git fetch origin deploy; git log -1 --format=%B origin/deploy` 의 `Source-Commit` 이 머지 SHA, `deploy/base/deployment.yaml` image 태그가 머지 SHA. 시간이 걸리면(CI pin job) 대기 후 재확인; 핀이 끝내 오르지 않아도 이 task의 수렴 판정에는 영향 없고 notes에 남긴다.\n5. **재감지 입력 확인** — `git rev-parse origin/main:web` 가 `16a8363c87f74d15c0ede8ba62ac2da4eac216a4` 와 다르고 `origin/main:docs` 도 새 값(이 PR의 tracker 변경 포함)이다.\n\n## 검증 방법 (완료 기준 판정 시점: 머지 후)\n완료 기준은 **머지가 끝난 뒤의 상태**로 판정한다. PR이 열려 있을 것을 요구하지 않는다.\n- ⑴ main의 `web/src/screens/Fairness.tsx` 정규화 소멸 배너(`data-testid=\"spike-normalized-away\"`) 안에 `/trace` 로 가는 「판정으로 →」 링크가 있다.\n- ⑵ `cd web && npm test` exit 0, 169 통과(Fairness.test.tsx 21건), `npx tsc -b` exit 0.\n- ⑶ main의 design-tracker 「구현 수렴 대기 — fairness·trace」 행에 「소멸 배너 「판정으로 →」」 가 없고 「해소된 등재 (이력)」 에 `#280` 행이 있다.\n- ⑷ PR #280 state = MERGED.\n이 네 가지가 참이면 이 시도(범위) 기준 성공이다.\n\n## 범위 밖(후속)\n- sentiment 미분석 경고 원인 줄·구간별 기여 뉴스 링크 — Gold `axis_sentiment` 에 사유 축이 없고 fairness 가 구간 파라미터를 받지 않음(계약·집계·서빙 선행, `contracts/` 는 MA1 수동 승인).\n- fairness·trace 저신뢰 분리 표기(AC2.5)·소스 카드 저신뢰 note — 소스별 저신뢰 건수가 서빙에 없음. 「수집 이상 점검하기」 — `integrity` 라우트 없음.\n- compare 「대상 국가」 select·표기 통합 안내, reprocess AC3.3 전후 추이 카드·`ua-trend-go`·`gap-go` — 서빙/계약 선행.\n- docs #281(AC3.1 제곱근 가중 정규화·AC3.4·AC3.11·AC3.12 등)이 연 구현 격차 — 별도 task rct_20261103-0001 의 몫.\n\n## 주의사항\n- 불가역 지점 없음. 변경은 정적 링크 1개(+CSS 6줄·테스트 1건·tracker 한 행)이고 서빙·계약·데이터 무접촉이다. 수동 승인 케이스(MA1~MA6) 비해당 — `review/manual-approval` 은 게이트가 자동으로 붙인다(대신 붙이지 않는다).\n- 롤백: main에 `git revert <머지 SHA>` PR을 내어 같은 게이트로 머지한다(force push 금지). 되돌린 뒤 npm test 는 168 통과가 정상.\n- 토큰 값을 기록·커밋 메시지에 남기지 않는다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261028-0009-fairness-normalized-away-judge-link",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/280",
+          "preparedAt": "2026-11-03T11:00:00Z",
+          "notes": "이전 시도(계획 단계에서 되돌려짐)의 PR #280을 재사용. head bcac85a, base 200c8f3 이나 현재 main e04fe78 과 충돌 없이 병합됨(로컬 병합본 npm test 169 통과·tsc -b exit 0). CI 전부 success, review/manual-approval=success, data-format=success, mergeStateStatus=CLEAN. 변경은 web/ 3파일+design-tracker 한 행(22+/1-)로 MA1~MA6 비해당. 머지하지 않음."
+        }
+      }
+    ]
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
