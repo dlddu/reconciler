@@ -17674,6 +17674,55 @@
     "assessment": {
       "reason": "조치 필요(action_required). 근거: #363으로 _impl-map(Android 103행)·_deviations는 맞춰졌으나 정의 to-be 2·3·4의 대조 기준인 _copy-map·_structure-map·_token-map이 여전히 ios/**/*.swift만 가리켜 Android 구현에 대한 토큰·카피·구조 대조가 불가능하다. 직전 task가 후속으로 남긴 명시 범위이며 자동 해소되지 않고 사람/후속 작업 없이는 닫히지 않는다. 구현 소스는 불변이므로 이번 변화로 새 불일치가 생긴 것은 아니다.",
       "assessedAt": "2026-11-04T13:41:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근과 이유** — gap 은 정의 to-be 2(토큰 일치)·3(카피)·4(구조)의 대조표 3종이 아직 iOS 기준이라 Android 구현을 판정할 수 없다는 것이다(#363 이 후속으로 남긴 분량). 세 표를 한 PR 로 다 세우면 `_copy-map`(1,286행)·`_structure-map`(1,817행)이 커 검토·롤백이 어려우므로, 값이 소수의 파일(`GeneratedPalettes.kt`·`DesignTokens.kt`·`colors.xml`)에 모여 있고 검산이 기계적으로 닫히는 **토큰 표(to-be 2)를 첫 슬라이스**로 고른다. 목업/`tokens.md` 가 SSOT 이므로 표는 구현 값을 `tokens.md` 의 절 본문과 대조해 판정을 다시 세우는 수단이며, 구현·목업 값은 바꾸지 않는다.\n\n**이번 시도의 범위(완료 기준)** — `dlddu/pocket-aide` `docs/mockups/_token-map.md` 를 안드로이드 기준으로 재작성한다(표 A 138행 · 표 B · 표 C · 검산 스크립트 Kotlin/XML 파싱 교체). 함께 `_deviations.md` T3(폰트 패밀리 근거)와 `README.md` 설명을 갱신한다. 완료 = ① 머지된 `main` 에서 `_token-map.md` 검산 블록 출력이 `ok` 한 줄, ② `_token-map.md` 에 `ios/`·`Swift`·`xcassets` 참조 0건, ③ `_deviations.md` T3 가 안드로이드 시스템 서체를 가리킴, ④ `android/` 소스·`res`·`tokens.md`·`screen-*.html` 무변경(as-is 버전 불변, to-be 의 `docs/design-system` 불변·`docs/mockups` 트리 해시만 변경). 이 범위의 값 대조에서 `구현 대기` 판정이 새로 드러나면 그것은 실패가 아니라 남은 토큰 drift 로 기록한다.\n\n**범위 밖(후속)** — `_copy-map.md`(to-be 3)·`_structure-map.md`(to-be 4)의 안드로이드 재작성(머지 뒤 재감지가 여는 새 task 의 몫, 각각 별도 슬라이스), 토큰 값 불일치가 발견될 경우의 구현 수정, 모델 정의의 as-is 지문 좁히기.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #374 준비 상태 확인 — head SHA·base·상태·필수 status.",
+              "expectedOutcome": "`gh pr view 374 --repo dlddu/pocket-aide --json headRefOid,baseRefName,state,statusCheckRollup` 의 `headRefOid`=15cc6e63f36768f9fa9122bde362bedd61ba66c8, `baseRefName`=main, `state`=OPEN, `ci-success`·`review/manual-approval` 가 SUCCESS(또는 정책상 사람 승인 대기면 review.manualApproval 규약을 따름)."
+            },
+            {
+              "seq": 2,
+              "action": "머지 전 검산 — PR head 체크아웃 루트에서 `_token-map.md` 「검산」 `python3` 블록을 실행한다.",
+              "expectedOutcome": "출력이 `ok` 한 줄(`누락`·`잉여`·`값`·`근거 없음`·`허용목록 항목 없음`·`역방향 누락` 접두 줄 0)."
+            },
+            {
+              "seq": 3,
+              "action": "PR #374 를 `main` 에 merge 한다(강제 push·rebase 금지).",
+              "expectedOutcome": "`git diff 15cc6e63f36768f9fa9122bde362bedd61ba66c8 origin/main -- docs/mockups/` 가 빈 출력(내용이 PR head 와 바이트 동일)."
+            },
+            {
+              "seq": 4,
+              "action": "머지 후 `main` 에서 검산과 두 버전 지문을 재측정한다.",
+              "expectedOutcome": "검산 `ok`; to-be 는 `design-system:627683f26f996795fa7c58fd3d79793fdea8a202` 불변·`mockups:` 해시만 변경; as-is 는 `ui:3d8fa467cd6c23b67d7fb7fcd67b5a63b47e923f res:ee98cbb87ceed92fe790ced39479d4442c13a60f` 불변(Android 소스 무변경)."
+            },
+            {
+              "seq": 5,
+              "action": "독립 점검 — `grep -nE 'ios/|Swift|swift|xcassets' docs/mockups/_token-map.md` 및 `_deviations.md` T3 확인, 구현 파일 diff 가 없는지 확인.",
+              "expectedOutcome": "grep 0건; T3 제목이 「안드로이드 시스템 서체」; `git diff --stat <머지 전 main>..origin/main -- android docs/design-system` 빈 출력."
+            },
+            {
+              "seq": 6,
+              "action": "결과를 task 레코드에 기록하고 닫는다 — `execution`·`verification`. 범위 내 `구현 대기` 행이 있으면 목록으로 남기고 범위 밖 후속(copy-map·structure-map)을 verification 노트에 명시.",
+              "expectedOutcome": "`verification.status`=passed, `asIsVersionAfter` 불변, checks(검산·잔재 grep·버전 지문) passed, status=succeeded."
+            }
+          ],
+          "plannedAt": "2026-11-04T16:20:00Z",
+          "executionGuide": "# 실행 지침 — rct_20261104-0001 · tbm_pocket-aide-mockup-render\n\n## 1. 순서와 이유\n1. **PR #374 준비 상태 확인**(head `15cc6e63f36768f9fa9122bde362bedd61ba66c8`) — 준비된 커밋과 다르면 머지하지 말고 계획으로 되돌린다.\n2. **머지 전 검산(읽기 전용)** — `docs/mockups/_token-map.md` 「검산」 블록을 PR head 루트에서 실행. `ok` 아니면 머지 금지.\n3. **머지**(squash 가능) — `docs/mockups/` 3파일 변경뿐이라 되돌림은 revert 한 커밋으로 충분하다.\n4. **머지 후 재측정** — 검산·to-be·as-is 지문. PR head 에서 통과한 검사가 `main` 에서도 통과해야 완료 기준이 참이다.\n5. **독립 점검** — 검산 스크립트에 의존하지 않고 grep·diff 로 잔재와 무변경 보증을 확인.\n6. **기록** — `execution`·`verification` 기록 후 종료.\n1→2 는 되돌리기 쉬운 시점, 3→4 는 반영 후 확인 구간. 병렬 실행 불가(순차).\n\n## 2. 검증 방법\n| 단계 | 방법 | 기대값 |\n|---|---|---|\n| 1 | `gh pr view 374 --repo dlddu/pocket-aide --json headRefOid,baseRefName,state,statusCheckRollup` | head `15cc6e63f36768f9fa9122bde362bedd61ba66c8` · base main · OPEN · 필수 status 충족 |\n| 2 | 검산 블록 실행 | `ok` 한 줄 |\n| 3 | merge 후 `git diff 15cc6e63f36768f9fa9122bde362bedd61ba66c8 origin/main -- docs/mockups/` | 빈 출력 |\n| 4 | to-be: `git rev-parse origin/main:docs/mockups origin/main:docs/design-system`; as-is: ToBeModel as-is versionScript | design-system 해시 불변, mockups 해시 변경, as-is `ui:3d8fa467… res:ee98cbb8…` 불변, 검산 `ok` |\n| 5 | `grep -nE 'ios/|Swift|swift|xcassets' docs/mockups/_token-map.md` | 0건 |\n\nPR 전체(base `039c42d6a92c8795add9e3f4c46539d9cdc1f60c`..head): 3파일 +180/-168 (`_token-map.md` +143… 통계는 `git diff --shortstat` 기준), 이전 시도 head 없음(최초 push).\n\n## 3. 주의사항\n- 되돌릴 수 없는 지점 없음(문서만 변경). 롤백: 머지 커밋 revert.\n- 이 PR 은 `docs/mockups/` 만 바꾸고 `docs/review-policy.md` 의 수동 승인 케이스(MA1~MA6)에 닿지 않으므로 `review/manual-approval` 자동 success 가 기대된다. 그래도 붙지 않았다면 사람 승인 대기이므로 임의로 status 를 붙이지 않는다.\n- 머지 뒤 to-be 버전이 바뀌므로 재감지가 새 task 를 열 수 있다 — 정상(후속 슬라이스).\n- 표의 판정이 `구현 대기` 로 드러나는 값이 있으면 구현을 이번에 고치지 않고 verification 에 목록으로 남긴다.\n\n## 4. 범위 밖(후속) 목록\n- `_copy-map.md` 안드로이드 재작성(to-be 3)\n- `_structure-map.md` 안드로이드 재작성(to-be 4)\n- 모델의 as-is 지문 좁히기(모델 개정)\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0001-android-token-map",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/374",
+          "preparedAt": "2026-11-04T16:20:00Z",
+          "notes": "docs/mockups 3파일(_token-map 재작성·_deviations T3·README) 변경 PR. 로컬에서 검산 ok 확인. 머지는 executor 몫."
+        }
+      }
+    ]
   }
 ]
