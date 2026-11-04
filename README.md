@@ -33,7 +33,7 @@ data/                               # 운영 데이터 (스킬이 런타임에 �
   to-be-models.json                 # ToBeModel (배열)
   reconciliation-tasks/             # task: to-be 모델(toBeModelId)별로 파일 분리
     <toBeModelId>.json
-index.html                          # data/·templates/ 브라우징용 정적 웹페이지 (GitHub Pages)
+index.html                          # data/·templates/ 브라우징용 정적 웹페이지 (GitHub Pages — 이 파일만 배포, 데이터는 raw에서 읽음)
 tests/                              # index.html 동작 테스트 (node --test), 워크플로 선정 스크립트 테스트 (python3 -m unittest)
 .github/workflows/                  # 단계 스킬별 workflow_dispatch 워크플로
 .github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py / select_plan_target.py / select_review_target.py /
@@ -48,7 +48,7 @@ tests/                              # index.html 동작 테스트 (node --test),
 .github/actions/setup-mcode/        # MiniMax Code(mcode) 설치 + subscription key 설정 composite action
 .github/actions/github-sandbox/     # 스킬 빌드 test용 GitHub 샌드박스 올리기(up)·내리기(down) composite action
 .github/minimax/                    # mcode에 주는 간결한 생성 지침(brief), 테스트·운영 실행 프롬프트
-.nojekyll                           # Pages가 data/*.json을 그대로 서빙하도록 Jekyll 우회
+.nojekyll                           # 예전 브랜치 배포용 Jekyll 우회(Actions 배포에서는 쓰지 않음 — Pages Source 전환 뒤 지워도 됨)
 ```
 
 ## 감지 스킬 MiniMax 파이프라인
@@ -381,8 +381,11 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
 `index.html`은 의존성 없는 단일 파일 정적 페이지로, `data/`의 ToBeModel과
 모델별 ReconciliationTask, 그리고 `templates/`의 모델 템플릿을 읽어 목록·상세로
 보여준다. `to-be-models.json`을 불러온 뒤 각 모델 id로
-`reconciliation-tasks/<id>.json`을 상대경로로 fetch하므로 외부 API·CDN이 필요
-없다. 마크다운 정의 렌더링(표 포함), 상태 배지, 마지막 조치 시각, 검색,
+`reconciliation-tasks/<id>.json`을 fetch한다. GitHub Pages(`<owner>.github.io/<repo>/`)에서는
+이 파일들을 `https://raw.githubusercontent.com/<owner>/<repo>/main/`에서 읽고(공개 레포라 인증 불필요),
+그 밖(로컬 서버 등)에서는 페이지와 같은 경로에서 읽는다(`dataBase()`). Pages에는 `index.html`만 올라가므로
+봇의 데이터 커밋마다 Pages를 다시 배포하지 않는다 — 예전처럼 브랜치 전체를 배포하면 커밋마다 빌드가 돌아
+하루 100회를 넘겼다. 대신 raw CDN 캐시 때문에 데이터가 최대 5분 늦게 보일 수 있다. 마크다운 정의 렌더링(표 포함), 상태 배지, 마지막 조치 시각, 검색,
 라이트/다크 테마, 원본 JSON 보기를 지원한다.
 
 - **보기 대상 2종 (모델 / 템플릿)**: 상단 툴바 맨 왼쪽 전환 버튼으로 사이드바가
@@ -495,9 +498,9 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
   새로고침하면 보던 모델이 아니라 기본 선택(목록의 첫 모델)으로 연다. 딥링크로 들어온 뒤
   다른 모델을 고르면 주소의 딥링크도 지워진다.
 
-- **GitHub Pages 활성화**: 저장소 Settings → Pages → *Deploy from a branch* →
-  브랜치의 `/(root)` 선택. 페이지는 `data/`를 상대경로로 읽으므로 반드시
-  루트에서 서빙해야 한다(`/docs` 아님). 배포 후 `https://<owner>.github.io/<repo>/`.
+- **GitHub Pages 활성화**: 저장소 Settings → Pages → Build and deployment → Source를
+  *GitHub Actions*로 둔다. `.github/workflows/pages.yml`이 `index.html`(또는 그 워크플로)이 main에서
+  바뀔 때만 `index.html` 하나를 배포한다(수동 실행도 가능). 배포 후 `https://<owner>.github.io/<repo>/`.
 - **로컬 확인**: `python3 -m http.server` 실행 후 `http://localhost:8000/` 접속.
   `file://`로 직접 열면 브라우저 보안정책상 `data/`를 못 읽으니 서버로 열 것.
 - **테스트**: `node --test "tests/*.test.mjs"` — 각 테스트는 `index.html`에서 해당

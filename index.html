@@ -1554,15 +1554,28 @@
     bar.innerHTML = msg;
   }
 
+  // ---------- data source ----------
+  // GitHub Pages(<owner>.github.io/<repo>/)에서는 data/·templates/를 Pages가 아니라 raw.githubusercontent.com의
+  // main에서 읽는다. Pages에는 이 페이지만 올라가므로 봇의 데이터 커밋마다 Pages를 다시 배포하지 않는다
+  // (README 「데이터 브라우저」). raw는 CDN 캐시 때문에 최대 5분 늦을 수 있다. 그 밖(로컬 서버 등)에서는
+  // 페이지와 같은 경로에서 읽는다.
+  function dataBase(loc) {
+    var m = /^([^.]+)\.github\.io$/.exec(loc.hostname || "");
+    var seg = String(loc.pathname || "").split("/").filter(Boolean);
+    if (!m || !seg[0]) return "";
+    return "https://raw.githubusercontent.com/" + m[1] + "/" + seg[0] + "/main/";
+  }
+  var DATA_BASE = dataBase(location);
+
   function fetchJSON(url) {
-    return fetch(url, { cache: "no-cache" }).then(function (r) {
+    return fetch(DATA_BASE + url, { cache: "no-cache" }).then(function (r) {
       if (!r.ok) { var e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
       return r.json();
     });
   }
 
   function fetchText(url) {
-    return fetch(url, { cache: "no-cache" }).then(function (r) {
+    return fetch(DATA_BASE + url, { cache: "no-cache" }).then(function (r) {
       if (!r.ok) { var e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
       return r.text();
     });
@@ -1649,7 +1662,8 @@
     }).catch(function (err) {
       var hint = (location.protocol === "file:")
         ? "이 페이지는 <b>file://</b>로는 데이터를 불러올 수 없습니다. GitHub Pages 또는 로컬 서버(<code>python3 -m http.server</code>)로 열어주세요."
-        : "<code>data/to-be-models.json</code>을 불러오지 못했습니다 (" + escapeHtml(err.message) + "). 이 파일이 페이지와 같은 경로에 서빙되는지 확인하세요.";
+        : "<code>" + escapeHtml(DATA_BASE + "data/to-be-models.json") + "</code>을 불러오지 못했습니다 (" + escapeHtml(err.message) + "). " +
+          (DATA_BASE ? "레포가 공개 상태이고 main에 이 파일이 있는지 확인하세요." : "이 파일이 페이지와 같은 경로에 서빙되는지 확인하세요.");
       setStatus(hint, true);
       $("#detail").innerHTML = '<div class="empty">데이터를 불러올 수 없습니다.<br><br>' + hint + "</div>";
     });
