@@ -7795,6 +7795,40 @@
     "assessment": {
       "reason": "action_required — #290이 새로 그린 `trend` 화면 목업 표면이 구현 `Trend.tsx`에 없고 허용목록에도 등재가 없다.\n\n근거: to-be가 `mockups:a6f4c1c2 → ed01e55b`로 바뀐 것은 PR #290(`JRN-subject-trend.html` 신설) 1건이고, as-is(`screens:728cd4a6 shell:9d97d48d tokens:43e30cb2`)는 직전 관측과 동일하다. 새 페이지와 R14 때문에 `JRN-daily-scan.html`·`JRN-axis-contrast.html`에 들어간 `tr-unit`(시간/일/주)·`tr-norm`(정규화 비율/원시 비율) 라디오, `tr-bars`(기사 건수 막대), `tr-cell-box`(「고른 칸」 카드)·`tr-cell-entries`(「이 칸의 기사 보기 →」·「같은 기간 분위기 →」)는 `Trend.tsx`에 대응 요소가 없다 — `type=\"radio\"` 0개, 해당 role·카피 0건. 인덱스 119~122행이 이 4단계를 화면 `trend`로 귀속시키고 두 단계는 「아직 구현에 없다」로 적는다. `docs/econ-opinion-monitor-design-tracker.md`의 「등재된 편차」 표에는 이 단계 id와 `trend` 단위·정규화 라디오에 해당하는 행이 0건이다(단계 id 4개 grep 0히트).\n\n적용 기준: 판정 기준 3·4·5(컴포넌트·패턴·카피·구조)·6(미문서화 이탈). 목업이 SSOT이므로 기본 방향은 구현을 목업에 맞추되, `trend`의 집계 단위 표면은 서빙 API가 `?unit=`를 받지 않아 목업 소스를 고치거나 사유를 허용목록에 등재하는 선택이 계획 단계 몫이다.\n\n반대 방향 근거: 규칙 1(매핑)은 성립한다 — 인덱스 「화면 id ↔ 파일」 8개 id가 `nav.ts` SCREENS 8개와 일치하고 추가·삭제가 없으며 `BUILT` 8개 화면 모두 목업 파일이 있다. 규칙 2(토큰)도 성립한다 — 목업 9페이지 `:root` 43프로퍼티 정규화 서명 `cac63de0`이 9/9 동일하고 design-system 트리도 불변이다. 여정↔목업 1:1은 앞 칸(`tbm_econ-opinion-monitor-journey-mockup`) 소관이며 #290으로 해소됐고, `trend`는 `BUILT` 안이라 이 모델의 판정 대상이다. 다만 열린 형제 task rct_20261104-0002(같은 모델 파일, status=planned)는 `dash` 화면 `Dashboard.tsx`의 `STP-toggle-raw`·`pick-entries`·`source-go`만 다루므로 `trend` 화면의 신규 표면은 그 task가 맡지 않는다.",
       "assessedAt": "2026-11-04T18:20:33Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "목업=SSOT 원칙대로 구현을 목업에 맞추되 gap 전체가 아닌 슬라이스 1로 한정한다: 서빙 응답의 raw_count 로 그릴 수 있는 기사 건수 막대(tr-bars)와 빈 칸 ○·언급 없음·안내(tr-gap-note)를 Trend.tsx 에 구현하고, API 가 받치지 못하거나 도착 화면이 없어 허위 컨트롤이 되는 나머지 세 덩어리(집계 단위 라디오 · 정규화 전/후 라디오·tr-flag·tr-diff-note · 고른 칸 카드·기사/분위기 진입)는 트래커 「등재된 편차」에 구현 수렴 대기 3행으로 등재한다(전부 등재만 하는 안은 구현 가능한 막대까지 미루게 되어 기각, 전부 구현하는 안은 ?unit=·칸 전체 건수 계약 변경이 필요해 기각). 완료 기준=막대·빈 칸 표시 착지 + 잔여 3행 등재; 범위 밖=잔여 3덩어리 구현. 코드 revert 로 가역.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #291 의 head·CI(checks·docs-mockup-render·docs-journey-mockup)와 review/manual-approval status 를 확인하고 머지한다. 같은 표를 건드리는 열린 PR #289 가 먼저 머지됐다면 충돌 여부를 확인한다.",
+              "expectedOutcome": "main 에 Trend.tsx 막대·빈 칸 표시, tokens.css 3 규칙, 테스트 2건, 트래커 3행이 반영된다."
+            },
+            {
+              "seq": 2,
+              "action": "머지 후 main 에서 web vitest·tsc 와 check-mockup-render.py, check-journey-mockup.py, check-comment-ledger.py 를 실행한다.",
+              "expectedOutcome": "전건 통과(rc=0), 주석 줄 수 변화 없음."
+            },
+            {
+              "seq": 3,
+              "action": "Trend.tsx 와 트래커에서 완료 기준(data-role tr-bars·tr-gap-note·tr-gap 존재, 트래커 trend 구현 수렴 대기 3행)을 확인한다.",
+              "expectedOutcome": "막대·빈 칸 표시 구현 확인, 잔여 3행이 구현 수렴 대기로 존재."
+            }
+          ],
+          "plannedAt": "2026-11-04T18:40:00Z",
+          "executionGuide": "## 순서\n1. PR #291(dlddu/economic-opinion-trend-monitor) head 가 계획 시점(72a2ffb3)에서 바뀌지 않았는지, CI 와 `review/manual-approval` status 를 확인한다.\n2. 머지한다. 단일 단계, 병렬 불가. #289 가 먼저 머지되면 트래커 「구현 수렴 대기」 구간 인접 줄 충돌 가능 — 행 순서만 맞춰 재배치.\n3. 머지 후 main 에서 검증한다.\n\n## 검증\n- `cd web && npx tsc --noEmit && npx vitest run` 통과(계획 시점 171).\n- `python3 scripts/check-mockup-render.py`, `python3 scripts/check-journey-mockup.py`, `python3 scripts/check-comment-ledger.py .` rc=0.\n- 완료 기준: `Trend.tsx` 에 `data-role=\"tr-bars\"` 막대(선택 대상 칸별 raw_count)·`tr-gap-note`·기준선 ○(`tr-gap`) 이 있고, 트래커에 `trend` 구현 수렴 대기 3행(집계 단위 / 정규화 전후·원시 비율 / 고른 칸 카드)이 있다.\n- 범위 밖(후속): tr-unit 라디오(?unit= 계약), tr-norm·tr-flag 전환·tr-diff-note(칸 전체 건수 계약), tr-cell-box·진입 링크(도착 화면). 재감지가 후속 task 로 잇는다.\n\n## 주의\n- 코드·문서 전용, 계약·저장 형식 변경 없음. 주석 줄 수 변화 0 이라 주석 원장 불변. 수동 승인 케이스 비해당 예상 — status 가 붙지 않으면 리뷰가 manualApproval 로 처리.\n- 롤백: PR 머지 커밋 revert 한 번. 불가역 지점 없음."
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261104-0003",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/291",
+          "preparedAt": "2026-11-04T18:40:00Z",
+          "notes": "코드(Trend.tsx·tokens.css)+테스트 2건+트래커 3행 PR. 로컬 vitest 171 통과, tsc·규칙 3·4·5·journey-mockup·comment-ledger 게이트 통과. head 72a2ffb3."
+        }
+      }
+    ]
   }
 ]
