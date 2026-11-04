@@ -17806,7 +17806,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-mockup-render",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T16:02:00Z",
     "trigger": {
       "source": "version_change",
@@ -17826,6 +17826,55 @@
     "assessment": {
       "assessedAt": "2026-11-04T16:08:00Z",
       "reason": "자동 해소되지 않는 잔여 gap: _copy-map.md·_structure-map.md 가 iOS 기준이라 카피·구조 대조가 Android 구현에 대해 불가능(토큰 표 _token-map.md 는 #374 로 안드로이드 기준 완료, 구현 대기 0건). 사람이 아닌 계획 단계에서 _impl-map.md 행을 기준으로 두 표를 다시 세우는 작업이 필요하다 — 변화(#374)가 일으킨 새 불일치는 없고, 직전 task 의 후속분 이어가기. 두 표는 규모가 크므로(558·1065행) 슬라이스 분할 권장."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근과 이유** — gap 은 정의 to-be 3(카피 일치)·4(구조)의 대조 결과표 `_copy-map.md`·`_structure-map.md` 가 아직 iOS 기준이라 안드로이드 구현을 판정할 수 없다는 것이다(직전 rct_20261104-0001 이 토큰 표만 닫고 남긴 후속). 구조 표(1,817행)는 간격·라운드·상태 스타일을 파일별로 읽어야 해 검토가 크므로, 문자열 리터럴 추출과 목업 텍스트 노드 대조로 **기계적으로 검산이 닫히는 카피 표(to-be 3)를 이번 슬라이스**로 고른다. 표는 구현 문자열을 목업(SSOT)과 대조해 판정을 다시 세우는 수단이며 구현·목업·tokens.md 는 바꾸지 않는다. 목업이 안 바뀐 부분은 기존 표의 판정(예시 데이터·목업 전용 등)을 이어받고, 안드로이드 쪽 일치·외부·비표시는 새 검산 스크립트로 기계 판정했다.\n\n**이번 시도의 범위(완료 기준)** — `dlddu/pocket-aide` `docs/mockups/_copy-map.md` 를 `_impl-map.md` 의 `화면`·`부분` 33개 Kotlin 파일 ↔ 목업 11장 기준으로 재작성한다(표 A 281행 · 표 B 766행 · 검산 스크립트를 Kotlin 리터럴 파싱으로 교체)하고 `_impl-map.md` 의 「아직 iOS 기준인 표」 안내문에서 `_copy-map`·`_token-map` 을 뺀다. 완료 = ① 머지된 `main` 에서 `_copy-map.md` 「검산」 블록 출력이 `ok` 한 줄, ② `_copy-map.md` 에 `.swift`·`SwiftUI`·`xcassets` 참조 0건(옛 판 설명 한 줄의 `ios/**/*.swift` 와 예시 데이터 `ios-tests` 는 제외), ③ `android/` 소스·`res`·`tokens.md`·`screen-*.html` 무변경(as-is 버전 불변, to-be 는 `docs/mockups` 트리 해시만 변경). 이 범위의 대조에서 `구현 대기`·`목업 대기` 판정이 드러나는 것은 실패가 아니라 남은 카피 drift 로 기록한다(현재 표 A 구현 대기 5·목업 대기 15, 표 B 구현 대기 21).\n\n**범위 밖(후속)** — `_structure-map.md`(to-be 4) 안드로이드 재작성(별도 슬라이스, 머지 뒤 재감지가 여는 새 task 의 몫), `_deviations.md` S2~S9 의 iOS 근거 갱신, 드러난 카피 drift 의 구현·목업 수정, 모델 as-is 지문 좁히기.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #377 준비 상태 확인 — head SHA·base·상태·필수 status.",
+              "expectedOutcome": "`gh pr view 377 --repo dlddu/pocket-aide --json headRefOid,baseRefName,state,statusCheckRollup` 의 `headRefOid`=775d2dd6bbbca2aac46b28f5a2a615959231ef1b, `baseRefName`=main, `state`=OPEN, `ci-success` 등 필수 check 가 SUCCESS, `review/manual-approval` 는 판정기가 미접촉으로 판정해 자동 success(붙지 않았으면 사람 승인 대기이므로 review.manualApproval 규약을 따른다)."
+            },
+            {
+              "seq": 2,
+              "action": "머지 전 검산 — PR head 체크아웃 루트에서 `_copy-map.md` 「검산」 `python3` 블록을 실행한다.",
+              "expectedOutcome": "출력이 `ok` 한 줄(`누락`·`잉여`·`중복`·`일치 거짓`·`외부 거짓`·`집계` 접두 줄 0)."
+            },
+            {
+              "seq": 3,
+              "action": "PR #377 을 `main` 에 merge 한다(강제 push·rebase 금지).",
+              "expectedOutcome": "`git diff 775d2dd6bbbca2aac46b28f5a2a615959231ef1b origin/main -- docs/mockups/_copy-map.md docs/mockups/_impl-map.md` 가 빈 출력(내용이 PR head 와 바이트 동일; 그 사이 다른 PR 이 같은 파일을 안 건드렸다는 전제)."
+            },
+            {
+              "seq": 4,
+              "action": "머지 후 `main` 에서 검산과 두 버전 지문을 재측정한다.",
+              "expectedOutcome": "검산 `ok`; to-be 는 `design-system:627683f26f996795fa7c58fd3d79793fdea8a202` 불변·`mockups:` 해시만 변경; as-is 는 `ui:3d8fa467cd6c23b67d7fb7fcd67b5a63b47e923f res:ee98cbb87ceed92fe790ced39479d4442c13a60f` 불변(안드로이드 소스·res 무변경)."
+            },
+            {
+              "seq": 5,
+              "action": "독립 점검 — `grep -nE 'Swift|swift|xcassets|SwiftUI' docs/mockups/_copy-map.md` 와 `git diff --stat <머지 전 main>..origin/main -- android docs/design-system` 로 잔재와 무변경 보증을 확인.",
+              "expectedOutcome": "grep 은 옛 판 설명 한 줄(`ios/**/*.swift`) 외 0건; diff 는 빈 출력. 집계 표의 행 수 합이 표 A 281·표 B 766 과 같다."
+            },
+            {
+              "seq": 6,
+              "action": "결과를 task 레코드에 기록하고 닫는다 — `execution`·`verification`. 범위 내 `구현 대기`·`목업 대기` 행은 목록으로 남기고 범위 밖 후속(structure-map 등)을 verification 노트에 명시.",
+              "expectedOutcome": "`verification.status`=passed, `asIsVersionAfter` 불변, checks(검산·잔재 grep·버전 지문) passed, status=succeeded."
+            }
+          ],
+          "plannedAt": "2026-11-04T16:50:00Z",
+          "executionGuide": "# 실행 지침 — rct_20261104-0002 · tbm_pocket-aide-mockup-render\n\n## 1. 순서와 이유\n1. **PR #377 준비 상태 확인**(head `775d2dd6bbbca2aac46b28f5a2a615959231ef1b`) — 준비된 커밋과 다르면 머지하지 말고 계획으로 되돌린다.\n2. **머지 전 검산(읽기 전용)** — `docs/mockups/_copy-map.md` 「검산」 블록을 PR head 루트에서 실행. `ok` 아니면 머지 금지.\n3. **머지**(squash 가능) — `docs/mockups/` 2파일 변경뿐이라 되돌림은 revert 한 커밋으로 충분하다.\n4. **머지 후 재측정** — 검산·to-be·as-is 지문. PR head 에서 통과한 검사가 `main` 에서도 통과해야 완료 기준이 참이다.\n5. **독립 점검** — 검산 스크립트에 의존하지 않고 grep·diff 로 잔재와 무변경 보증을 확인.\n6. **기록** — `execution`·`verification` 기록 후 종료.\n1→2 는 되돌리기 쉬운 시점, 3→4 는 반영 후 확인 구간. 병렬 실행 불가(순차).\n\n## 2. 검증 방법\n| 단계 | 방법 | 기대값 |\n|---|---|---|\n| 1 | `gh pr view 377 --repo dlddu/pocket-aide --json headRefOid,baseRefName,state,statusCheckRollup` | head `775d2dd6bbbca2aac46b28f5a2a615959231ef1b` · base main · OPEN · 필수 status 충족 |\n| 2 | 검산 블록 실행 (`python3 - <<'EOF' … EOF`, 레포 루트) | `ok` 한 줄 |\n| 3 | merge 후 `git diff 775d2dd6bbbca2aac46b28f5a2a615959231ef1b origin/main -- docs/mockups/_copy-map.md docs/mockups/_impl-map.md` | 빈 출력 |\n| 4 | to-be: `git rev-parse origin/main:docs/mockups origin/main:docs/design-system`; as-is: ToBeModel as-is versionScript | design-system 해시 불변, mockups 해시 변경, as-is `ui:3d8fa467… res:ee98cbb8…` 불변, 검산 `ok` |\n| 5 | `grep -nE 'Swift|swift|xcassets|SwiftUI' docs/mockups/_copy-map.md` | 옛 판 설명 1줄만 |\n\nPR 전체(base `a0381a8ab476ec393e1e77f979371e537f387856`..head): 2파일 +848/-893 (`_copy-map.md` 재생성, `_impl-map.md` 안내문 6줄 — `git diff --shortstat` 기준), 이전 시도 head 없음(최초 push).\n\n## 3. 주의사항\n- 되돌릴 수 없는 지점 없음(문서만 변경). 롤백: 머지 커밋 revert.\n- 이 PR 은 `docs/mockups/` 만 바꾸고 `docs/review-policy.md` 의 수동 승인 케이스에 닿지 않는다(`scripts/review-policy/judge.py` 에 변경 경로를 넣어 「수동 승인 케이스 미접촉」 확인) → `review/manual-approval` 자동 success 가 기대된다. 붙지 않았다면 사람 승인 대기이므로 임의로 status 를 붙이지 않는다.\n- 머지 전에 `main` 이 앞서 갔으면(다른 PR 이 `android/` 의 문자열이나 목업을 바꿨을 수 있다) PR head 에 `main` 을 반영한 뒤 검산을 다시 돌린다 — 검산이 `누락`·`잉여` 를 내면 표가 낡은 것이므로 머지하지 말고 계획으로 되돌린다.\n- 머지 뒤 to-be 버전이 바뀌므로 재감지가 새 task 를 열 수 있다 — 정상(후속 슬라이스).\n- 표에서 `구현 대기`·`목업 대기` 로 드러난 카피 차이는 이번에 고치지 않고 verification 에 목록으로 남긴다.\n\n## 4. 범위 밖(후속) 목록\n- `_structure-map.md` 안드로이드 재작성(to-be 4)\n- `_deviations.md` S2~S9 의 iOS 근거 갱신\n- 카피 drift 구현·목업 수정(표 A 구현 대기 5·목업 대기 15 / 표 B 구현 대기 21)\n- 모델의 as-is 지문 좁히기(모델 개정)\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0002",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/377",
+          "preparedAt": "2026-11-04T16:49:00Z",
+          "notes": "docs/mockups 2파일(_copy-map 재작성·_impl-map 안내문) 변경 PR. 로컬에서 검산 ok 확인, 리뷰 정책 판정기 미접촉 확인. 머지는 executor 몫."
+        }
+      }
+    ]
   }
 ]
