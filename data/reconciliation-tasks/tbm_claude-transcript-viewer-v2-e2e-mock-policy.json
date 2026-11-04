@@ -1,7 +1,7 @@
 [
   {
     "toBeModelId": "tbm_claude-transcript-viewer-v2-e2e-mock-policy",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T14:51:01Z",
     "trigger": {
       "source": "version_change",
@@ -22,6 +22,50 @@
     "assessment": {
       "reason": "정책 문서가 없어 현존 모킹 지점 전부가 미등재 drift이고(불변식 1), 차단 요인 원장도 없다(불변식 2 B1). 자동 해소 요소 없음(문서/테스트 변경이 있어야만 해소). 따라서 즉시 작업 필요: (1) 정책 문서 신설 (2) 3개 인터셉트의 실환경 대체 가능 여부 판정 후 제거 또는 등재+mock-exception 주석 (3) 원장 신설 및 LC-AC5 차단 요인 행 등재.",
       "assessedAt": "2026-11-04T14:51:18Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "정책 문서 신설 + 미등재 모킹 3종 정리 + 원장 신설을 한 슬라이스로 닫는다. 빈 상태(빈 배열 fulfill)는 명시적 불허 데이터 모킹이라 빈 DB 실 백엔드 인스턴스로 대체해 인터셉트를 제거하고, 로딩은 본문 fulfill을 없애고 지연만 주입(route.continue)하는 LAT로 좁혀 등재하며, 실패(500)는 목록이 SQLite만 읽어 요청 시점 실패를 실환경에서 낼 수 없어 ERR로 등재한다. 원장에는 BL1(LC-AC5 DeleteObject 실패 주입 부재)을 행으로 세운다. 범위: 불변식 1(코드 지점 ↔ 등재 1:1)과 불변식 2의 B1·B2·B4(원장 신설·행 완비) 충족. 범위 밖: BL1 자체의 해소(착수 가능 행으로 남아 재감지가 새 task로 잇는다). 롤백은 PR revert로 가능.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "dlddu/claude-transcript-viewer-v2에 docs/e2e-mocking-policy.md 신설: 카테고리 ERR/LAT, 표기 규약, 허용목록 3행(LAT 로딩·ERR 실패·LIST_ROUTE), 차단 요인 원장 BL1(해소 방향·선행 없음·재검토 2027-01-15)",
+              "expectedOutcome": "정책 문서가 main에 존재, to-be 버전이 absent에서 blob hash로 변함"
+            },
+            {
+              "seq": 2,
+              "action": "e2e/tests/support/empty-backend.ts 추가(빈 DB_PATH로 실 server 바이너리를 임의 포트에 기동·종료)하고 SL-AC6 빈 상태 테스트를 이를 쓰도록 바꿔 빈 배열 fulfill 제거",
+              "expectedOutcome": "빈 상태가 실 백엔드의 []로 통과, 해당 page.route 소멸"
+            },
+            {
+              "seq": 3,
+              "action": "로딩 테스트의 route.fulfill 본문을 제거하고 보류 후 route.continue()로 변경, 로딩·실패·LIST_ROUTE 직전 줄에 mock-exception 주석 추가",
+              "expectedOutcome": "코드의 모킹 지점이 허용목록과 1:1, 모든 지점에 주석"
+            },
+            {
+              "seq": 4,
+              "action": ".github/workflows/test.yml의 e2e-tests·kind-e2e-tests에 SERVER_BIN·STATIC_DIR 전달, kind 잡에 setup-go와 프론트/백엔드 빌드 추가",
+              "expectedOutcome": "두 CI 잡에서 빈 백엔드 인스턴스가 기동"
+            },
+            {
+              "seq": 5,
+              "action": "PR 머지 후 재감지로 as-is/to-be 수렴 확인",
+              "expectedOutcome": "불변식 1 gap 0, 원장 B1·B2·B4 충족(BL1 착수 가능 행만 잔존)"
+            }
+          ],
+          "plannedAt": "2026-11-04T16:25:00Z",
+          "executionGuide": "## 순서\n1. PR(dlddu/claude-transcript-viewer-v2#102)의 CI(e2e-tests, kind-e2e-tests, lint 등)가 모두 green인지 확인 후 머지. 단계 1~4는 한 PR에 묶여 있어 분리 불가(문서·주석·코드가 1:1이어야 함).\n2. 머지 후 main에서 재감지.\n\n## 검증\n- `gh pr checks 102` 전부 success. 특히 session-list-states.spec.ts 3건이 두 E2E 잡에서 통과.\n- main에서 `grep -rnE 'page\\.route|route\\.fulfill|LIST_ROUTE =' e2e` 지점 각각의 직전 줄이 `mock-exception:` 주석이고 허용목록 3행과 일치(빈 배열 fulfill 없음).\n- docs/e2e-mocking-policy.md 존재, 원장 BL1 행이 해소 방향·선행·재검토 시점을 모두 가짐, 소관 칸 없음.\n- 범위 밖(후속): BL1(LC-AC5 DeleteObject 실패 주입 E2E) — 선행 없음이라 재감지 후 새 task로 착수.\n\n## 주의\n- 이 PR은 docs/review-policy.md의 MA1~3(제품 문서·판정기/정책·store/s3/seed)에 닿지 않아 수동 승인 대상이 아님(판정기가 자동 success). test.yml은 케이스 밖.\n- 빈 백엔드는 repo root 기준 backend/server·frontend/dist를 기본 경로로 쓰므로 CI에서 빌드 단계가 선행돼야 한다. 로컬 실행 시 SERVER_BIN/STATIC_DIR 지정.\n- 롤백: PR revert 한 번으로 원복(데이터·운영 영향 없음)."
+        },
+        "preparation": {
+          "repository": "dlddu/claude-transcript-viewer-v2",
+          "branch": "reconcile/rct_20261104-0001",
+          "pullRequestUrl": "https://github.com/dlddu/claude-transcript-viewer-v2/pull/102",
+          "preparedAt": "2026-11-04T16:25:00Z",
+          "notes": "로컬에서는 backend 빌드와 빈 DB 인스턴스의 GET /api/transcripts=[] 만 확인했다. Playwright 전체 실행은 CI에서 검증. workflows 권한 토큰으로 푸시."
+        }
+      }
+    ]
   }
 ]
