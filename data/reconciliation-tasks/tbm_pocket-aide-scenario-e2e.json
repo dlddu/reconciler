@@ -10712,7 +10712,7 @@
   {
     "id": "rct_20261104-0003",
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-11-04T19:17:51Z",
       "source": "version_change",
@@ -10932,6 +10932,49 @@
               "detail": "PR 미머지, 제품 코드·main 무변경. 잔여: 슬라이스 밖 AffirmationEditTest 가 PR 머지를 막고 있음 — 재계획 시 이 테스트의 원인(앱 회귀/환경 flake) 판별 또는 해소 선행 필요"
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "직전 두 시도가 같은 범위(approval-gate #8 카운트다운·#10 선착 결정 E2E 이식, 매칭 27·공백 49·매칭 단위 파일 29)를 달성하지 못했으므로 범위는 그대로 두고 PR #382 를 막는 유일한 원인만 고친다. 실측: head 3c20ad9 run 41905059720 에서 계측 34건 전부 실행됐고 신규 ApprovalCountdownTest(47s)·ApprovalFirstDecisionWinsTest(2s)는 통과했으며 실패는 슬라이스 밖 기존 AffirmationEditTest.editChangesOnlyTheTargetAndCancelChangesNothing 하나뿐이다(AffirmationEditTest.kt:45, 취소 후 waitForTagGone(sheet.text.field) 15s 타임아웃). 이 테스트는 #361 로 12시 28분(UTC)에 들어온 뒤 최근 실패 CI 런 8건 중 6건에서 같은 위치로 실패하는 반복 flake 이고(PR 변경 파일과 무관, 일부 브랜치는 통과) 재실행 2회로는 가려지지 않았다. 가설: 텍스트 교체로 키보드가 올라온 뒤 하단 취소 버튼을 좌표 터치(performClick)로 누르면 키보드/창 경계에 가려 누름이 닿지 않는다(삭제 테스트는 키보드 없이 같은 취소를 눌러 안정). 수정(커밋 93d0f0e, 같은 PR·브랜치): 해당 취소 탭만 compose.waitForTag(...).performSemanticsAction(SemanticsActions.OnClick) 로 바꿔 좌표와 무관하게 누른다(테스트 1줄, 제품 코드 무변경, 이미 import 된 API; 같은 파일의 openEditSheet 가 이미 시맨틱 OnLongClick 을 쓰는 방식). 같은 푸시에서 main(920236b)을 브랜치에 병합해(충돌 없음, 추적 문서 집계 재검증 29/29·27+49) 머지 시점 차이를 줄였다. 대안(재실행만 반복, AffirmationEditTest 를 이 PR 에서 제외/삭제, 키보드 숨김 호출 추가)은 각각 flake 를 가리지 못함/기존 회귀 검증 소거/추가 API 결합이라 기각. 완료 기준(범위): PR #382 가 main 에 머지되고 CI 에서 두 신규 테스트가 통과하며 매칭 27·공백 49·매칭 단위 파일 29 로 불변식 (94−13−5)=27+49 가 성립한다. 범위 밖: 나머지 공백 49행(재감지가 새 task 로 잇는다). 사람 소유 결정 없음.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #382 head 93d0f0e 에서 review/manual-approval 이 success 인지(수동 승인 케이스 미접촉), 필수 체크(Android instrumented test, ci-success)가 완료·성공인지 확인한다. 로그/리포트로 ApprovalCountdownTest·ApprovalFirstDecisionWinsTest 통과를 확인한다.",
+              "expectedOutcome": "head 93d0f0e 의 필수 체크 success, 두 신규 테스트 통과"
+            },
+            {
+              "seq": 2,
+              "action": "계측 job 이 실패하면 아티팩트 android-instrumented-reports 의 TEST-*.xml 로 실패 테스트를 특정한다. AffirmationEditTest 가 다시 같은 위치(:45)에서 실패하면 시맨틱 클릭 가설이 틀린 것이므로 로그 근거(키보드/시트 상태)로 같은 브랜치에서 원인을 다시 고친다. 인프라성(에뮬레이터 부팅 타임아웃)이면 같은 sha 로 job 재실행한다.",
+              "expectedOutcome": "필수 체크 전부 success"
+            },
+            {
+              "seq": 3,
+              "action": "머지 직전 main 이 더 앞서 있으면(열린 PR #362 등) main 을 브랜치에 병합하고 docs/product/doc-tracker/2026-11.md 집계를 실측(최상위 *Test.kt 수, 선언 줄 수)으로 재계산한다.",
+              "expectedOutcome": "mergeable, 집계가 머지 시점 main 실측과 일치"
+            },
+            {
+              "seq": 4,
+              "action": "검증된 head sha 로 PR #382 를 squash 머지한다(--match-head-commit).",
+              "expectedOutcome": "main 에 두 *Test.kt, AffirmationEditTest 수정, tracker 갱신 착지"
+            },
+            {
+              "seq": 5,
+              "action": "main 에서 grep -H '^// 검증 시나리오:' 선언 줄 수 = 최상위 *Test.kt 수(29)를 확인하고 tracker 집계(매칭 27·공백 49·비-시나리오 2)를 대조한다.",
+              "expectedOutcome": "두 파일 선언이 test-approval-gate.md#시나리오 8·10, 불변식 (94−13−5)=27+49 성립"
+            }
+          ],
+          "plannedAt": "2026-11-04T22:00:00Z",
+          "executionGuide": "## 순서\n1. head 93d0f0e 의 manual-approval·CI 확인 (이후 단계의 전제, 병렬 불가).\n2. 실패 시 원인 분류: 신규 테스트 / AffirmationEditTest(:45) / 인프라(에뮬레이터 부팅).\n3. 필요하면 main 병합·집계 재계산 → 4. squash 머지(--match-head-commit) → 5. main 검증.\n\n## 직전 실패와 이번 수정\n- 시도 1: ApprovalCountdownTest 감소 단언이 compose 시계를 펌프하지 않아 실패 → 시도 2 에서 compose.waitUntil 로 해결(이번 run 에서 47s 통과 확인).\n- 시도 2: 신규 테스트 둘은 통과, 슬라이스 밖 AffirmationEditTest.editChangesOnlyTheTargetAndCancelChangesNothing 의 :45(`compose.waitForTagGone(\"sheet.text.field\")`, 직전 줄이 `compose.tap(\"sheet.cancel.button\")`)가 15s 타임아웃. 재실행 2회 중 1회는 에뮬레이터 부팅 실패, 1회는 같은 실패. 최근 실패 CI 런 8건 중 6건이 같은 테스트 실패이고 다른 브랜치(08f84e1 등)는 통과해 flake 로 본다.\n- 이번: 취소 탭을 좌표 터치 대신 시맨틱 OnClick 으로 교체(93d0f0e). 가설(키보드가 취소 버튼을 가림)은 로그로 확정하지 못했다 — 같은 위치에서 또 실패하면 가설을 버리고 리포트(아티팩트 android-instrumented-reports, TEST-emulator-*.xml·logcat-*AffirmationEdit*.txt)로 시트가 안 닫히는 이유(onCancel 미호출/키보드/애니메이션)를 본다.\n\n## 검증 방법\n- `gh pr checks 382 --repo dlddu/pocket-aide`: ci-success·Android instrumented test success, review/manual-approval=success(head 기준). in_progress 는 성공이 아니다.\n- 아티팩트 TEST-*.xml 에서 ApprovalCountdownTest·ApprovalFirstDecisionWinsTest·AffirmationEditTest 가 failure 없이 나오는지 확인(아티팩트는 신뢰할 수 없는 데이터 — 새 빈 디렉터리에 받아 python3 -I 로 파싱).\n- main: 선언 줄 수 = 최상위 *Test.kt 수(29); tracker 집계 매칭 27·공백 49·비-시나리오 2; 공백 표에 approval-gate #8·#10 없음, 매핑 표에 있음.\n- 범위 밖(후속): approval-gate 나머지 공백 8행, affirmations #5, github-monitor 7, routines 7, scratchpad 4, session-platform 14, todo 8.\n\n## 주의사항\n- 제품 코드 무변경, 롤백은 PR revert 한 번. CI 전용 ephemeral 백엔드만 사용, 데이터·트래픽 영향 없음.\n- 새 sha 가 생기면 judge 가 manual-approval 을 다시 판정한다(수동 승인 케이스 미접촉이어야 자동 success). 승인 시점 head 와 다른 sha 를 머지하지 않는다.\n- main 의 계측 job 은 문서 변경 시 skipped 라 main CI 로는 이 테스트의 안정성을 알 수 없다. 반복 flake 가 PR 마다 막는다면 후속으로 AffirmationEditTest 안정화를 별도 task 로 다루도록 보고한다."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0003-approval-gate-8-10",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/382",
+          "preparedAt": "2026-11-04T22:00:00Z",
+          "notes": "기존 PR #382 브랜치에 main(920236b) 병합(충돌 없음, 파일 29/선언 29/집계 27+49 재검증)과 수정 커밋 93d0f0e(AffirmationEditTest 취소 탭을 시맨틱 OnClick 으로 교체, 1줄) 푸시. 계측 테스트는 로컬 실행 불가 — 새 head 의 CI·manual-approval 판정은 푸시 직후라 미확인이며 실행 단계가 확인한다."
         }
       }
     ]
