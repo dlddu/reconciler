@@ -2295,7 +2295,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-e2e-mock-policy",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T18:28:04Z",
     "trigger": {
       "source": "version_change",
@@ -2316,6 +2316,45 @@
       "assessedAt": "2026-11-04T18:28:40Z",
       "reason": "판정: 조치 필요(action_required). 이 창의 변화(#375, BF-6 1차)는 정합하게 처리됐다 — 원장 BF-6 행이 실제 추가된 UITests에 맞춰 범위를 좁혔고 불변식 1(24==24)·B1·B2·B4·재검토 도과·B3 위반은 모두 0이다. 그러나 BF-6이 선행 「없음」(착수 가능)으로 열려 있고 정의의 판정 규칙은 착수 가능 행 ≥ 1이면 action_required로 규정한다. 남은 작업: 스텁에 지연 출력·turn 마커·게이트 오프 모드(/e2e/* 제어, 새 모킹 지점 없이 같은 EXT 갈래)를 더하고 시나리오 7(응답 진행 단계)·8(출력 이음)·9(나)·14를 단정하는 UITests 추가, 그리고 작성된 Sessions*UITests의 실행 검증(ios_tests CI 비활성). 열린 형제 task 없음(rct_20261104-0001 succeeded), 소관은 이 모델. 재검토 시점 2027-01-20(가장 이른 기준선), 잔여 열린 행 1건."
     },
-    "updatedAt": "2026-11-04T18:40:15Z"
+    "updatedAt": "2026-11-04T18:50:00Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "BF-6(착수 가능 행)의 2차 슬라이스: 세션 플랫폼 스텁에 응답 지연·turn 마커·아카이브 게이트 오프 모드를 더하고(새 모킹 지점 없이 기존 EXT 스텁 행 안), 시나리오 7(2·3단계)·8(1·2)·9(나)·14 를 단정하는 UITests 3개를 추가해 원장 BF-6 행을 남은 범위로 좁힌다. 이 시도의 완료 기준 = 위 스텁 모드와 UITests 가 main 에 있고 BF-6 행이 갱신됨. 범위 밖 = 1 MiB 초과 붙여넣기, Sessions*UITests 의 실행 검증(ios_tests 비활성). 대안으로 실행 검증용 ios_tests 재활성도 검토했으나 CI 비용에 대한 소유자 결정(ci.yml 주석)을 이 task 가 뒤집을 일이 아니라 제외했고, 한 PR 로 가역(revert 1회)이라 이 경로를 택했다.",
+          "riskLevel": "low",
+          "plannedAt": "2026-11-04T18:50:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "session_platform_stub.py 에 /e2e/reply(지연·조각·마커)와 /e2e/archive-disabled(snapshot 503) 모드 추가, reset 이 초기화",
+              "expectedOutcome": "로컬 스텁 기동 시 write→read 가 input/output/end 마커 순으로 자라고 snapshot 이 503"
+            },
+            {
+              "seq": 2,
+              "action": "SessionsUITestSupport 헬퍼와 SessionsResponsePhaseUITests·SessionsArchiveDisabledUITests·SessionsTurnMarkersUITests 추가",
+              "expectedOutcome": "시나리오 7(2·3)·8(1·2)·9(나)·14 단정 코드가 레포에 존재"
+            },
+            {
+              "seq": 3,
+              "action": "docs/e2e-mocking-policy.md BF-6 행을 남은 범위(1 MiB 붙여넣기·실행 검증)로 갱신, 세 칸 유지",
+              "expectedOutcome": "행이 B2 기계 판독 가능하고 소관 칸 없음"
+            },
+            {
+              "seq": 4,
+              "action": "PR 머지 후 versionScript 재계산",
+              "expectedOutcome": "as-is 지문 불변, to-be blob 변경, 허용목록↔코드 24==24"
+            }
+          ],
+          "executionGuide": "## 순서\n1. (사전) PR https://github.com/dlddu/pocket-aide/pull/380 의 CI 중 실행되는 잡(backend/android/문서 게이트)이 green 인지 확인한다. `ios_tests` 는 `false &&` 로 비활성이라 이 PR 에서 돌지 않는다.\n2. 머지(squash). 순서 의존 없음 — 단일 PR.\n3. 머지 후 pocket-aide@main 에서 versionScript 두 개(to-be blob, as-is 지문)를 다시 계산한다.\n\n## 검증 방법\n- 스텁 모드: `python3 .github/actions/start-test-backend/session_platform_stub.py <port>` 후 `/e2e/reply`(chunks·delay·interval·markers)·`/e2e/archive-disabled` 호출 → write 후 read 의 payload 가 `\\x1esession-platform input|output|end seq=N` 마커 순서이고, snapshot 이 503 인지 (계획 시 로컬 확인 완료).\n- 불변식 1: as-is 지문(`sites=41 files=24`, `b9a883fc…05d8`)이 머지 전후 동일해야 한다 — 새 모킹 토큰·파일이 없다. 허용목록 파일 집합 24 == 코드 24 유지.\n- 불변식 2: 원장 BF-6 행이 세 칸(해소 방향·선행·재검토)을 유지하고 범위가 「1 MiB 초과 붙여넣기 + 실행 검증」으로 좁아졌는지, 소관 칸이 없는지 확인한다. 행이 사라지지 않았다(B3).\n- 이 시도의 완료 기준(범위): 스텁 모드 2종 + 시나리오 7(2·3단계)·8(1·2)·9(나)·14 를 단정하는 UITests 3개가 main 에 있고 정책 문서 BF-6 행이 그에 맞게 갱신됨. \n\n## 주의사항\n- Swift 테스트는 macOS 가 없어 컴파일하지 못했다. 식별자는 SessionDetailView/SessionTranscriptView 기준이며 `ios_tests` 가 꺼져 있어 CI 가 오타를 잡지 못한다 — 실행 검증은 범위 밖.\n- `.github/actions/**` 변경이라 리뷰 정책 MA1~MA6(마이그레이션·auth·RBAC·정책자신·fullscan 기준표·제품 문서)에 해당하지 않음을 확인했다(수동 승인 불필요 예상). \n- 롤백: PR revert 한 번으로 복구(스텁 기본 모양은 모드를 켜지 않으면 변하지 않는다).\n\n## 범위 밖(후속)\n- 1 MiB 초과 붙여넣기 단정(시나리오 7 의 4단계) — BF-6 에 남음, 선행 없음.\n- `Sessions*UITests` 전체 실행 검증(로컬 시뮬레이터 또는 `ios_tests` 재활성) — BF-6 에 남음.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0002-bf6-stub-modes",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/380",
+          "preparedAt": "2026-11-04T18:50:00Z",
+          "notes": "스텁은 로컬 기동으로 검증. Swift 테스트는 macOS 부재로 컴파일 미검증."
+        }
+      }
+    ]
   }
 ]
