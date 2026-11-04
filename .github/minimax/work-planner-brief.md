@@ -27,7 +27,7 @@
 8. 4–7을 다 채우면 `planning → planned`. `planned`로 넘기기 직전에 PR 본문이 최종 head·계획과 맞는지 확인한다. `planned` 뒤에는 task도 PR도 다시 쓰지 않는다 — 어긋남을 찾으면 고치지 말고 보고한다. 끝까지 못 하면 이번 시도의 변경을 남기지 않고 status를 `from_status`로 되돌려 lock을 푼 뒤 사유를 보고한다. `planning`으로 끝내지 않는다.
 9. 스키마 파일은 절대 수정하지 않는다. 쓰기 전 레코드를 스키마로 검증한다(python `jsonschema`).
 10. 커밋 메시지는 `plan(<toBeModelId>/<taskId>): <요약>`. 단계마다 개별 커밋을 이 순서로 남긴다: 계획(`plan`) → 준비(`preparation`) → 지침(`executionGuide`) → planned 전이. 두 단계를 한 커밋에 합치지 않는다(러너 점검이 오류로 본다).
-11. reconciler push는 `git pull --rebase` 후 한다. 거절되면 다시 `pull --rebase` 후 push. 대상 레포 PR 브랜치는 rebase하지 않는다 — main 반영은 merge로 한다. 강제 push 금지.
+11. reconciler push는 `git pull --rebase` 후 한다. 거절되면 다시 `pull --rebase` 후 push. 대상 레포 PR 브랜치는 rebase하지 않는다. 강제 push 금지.
 
 도구: MCP 서버 `k3s`의 `github_app_installation_token`(대상 레포 접근, `repositories`를 그 레포 하나로 좁히고 권한은 필요한 만큼만), `resource_list`/`resource_get`(쿠버네티스 관측). reconciler push는 체크아웃에 설정된 자격 증명을 쓴다. 토큰 값은 echo·로그·커밋·task 기록·PR 본문에 절대 남기지 않는다.
 
