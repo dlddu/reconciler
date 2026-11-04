@@ -2581,6 +2581,39 @@
           "reason": "준비물 유효성 실패. PR #385(open, head 7307076)의 'comment-policy ledger' 체크가 failure(exit code 1, 21:25Z)이고, executionGuide가 이 체크 실패 시 머지 금지(우회 금지)로 못박고 있어 이대로는 실행이 불가능하다. 또 base가 main(baa8030)보다 1커밋 뒤처져 있다(merge base 920236b, mergeable 미확정). 변경 범위(UITest 1개+BF-6 행 갱신)와 롤백(PR revert)·위험도 low 자체는 타당하다.",
           "comment": "1) PR #385에서 'comment-policy ledger' 실패 원인(job 126875582294 로그)을 확인해 고칠 것 — BF-6 행 서술/세 칸 형식 또는 SessionsOversizePromptUITests.swift의 주석 정책(mock-exception 등) 위반이 의심되며, 로컬 check_ledger.py 통과와 CI 결과가 어긋난 이유도 확인. 2) 최신 main(baa8030)으로 rebase 후 ledger·ci-success가 모두 green인지 새 head sha에서 확인하고 preparation.notes에 기록. 3) 계획 자체(범위·롤백)는 유지해도 승인 가능."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "직전 거부(PR #385의 comment-policy ledger 실패·base 뒤처짐) 사유를 반영한 재계획. 접근·범위는 유지: BF-6 3차 슬라이스로 SessionsOversizePromptUITests 1개 추가(시나리오 7의 4단계)와 BF-6 행 갱신. 실패 원인은 새 Swift 파일의 비면제 주석 1줄이 docs/comment-policy/ledger.md L 표에 없어서였고(ios_tests가 아니라 주석 원장 체크), 판정 패스를 새로 여는 대신 코드가 이미 말하는 그 주석을 제거해 비면제 주석 0줄로 만든다(필요 사유를 한 문장으로 댈 수 없음). 완료 기준 = 이 UITest가 main에 있고 BF-6 행이 갱신됨; 범위 밖 = Sessions*UITests 실행 검증(ios_tests 재활성은 CI 비용 소유자 결정). PR 1개라 revert 1회로 가역.",
+          "riskLevel": "low",
+          "plannedAt": "2026-11-04T22:10:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "ios/PocketAideTests/SessionsOversizePromptUITests.swift 추가: 1 MiB+1 바이트를 클립보드로 붙여 넣고 toolarge 안내 표시·전송 버튼 비활성·출력 없음 단정 (주석은 `검증 시나리오:` 지시자 외에 두지 않는다 — comment-policy ledger 통과)",
+              "expectedOutcome": "시나리오 7의 4단계 단정 코드가 레포에 존재"
+            },
+            {
+              "seq": 2,
+              "action": "docs/e2e-mocking-policy.md BF-6 행에서 1 MiB 항목을 완료로 옮기고 남은 것을 실행 검증으로 좁힘(세 칸 유지)",
+              "expectedOutcome": "행이 B2 기계 판독 가능, 소관 칸 없음, check_ledger.py 통과"
+            },
+            {
+              "seq": 3,
+              "action": "PR 머지 후 versionScript 재계산",
+              "expectedOutcome": "as-is 지문 불변, to-be blob 변경, 24==24"
+            }
+          ],
+          "executionGuide": "## 순서\n1. (사전) PR https://github.com/dlddu/pocket-aide/pull/385 (head 58ae1d7, main baa8030 위로 rebase됨)에서 `ci-success`·`comment-policy ledger`가 success인지 확인한다. 실패하면 머지하지 않는다(우회 금지). `ios_tests`는 `false &&`라 돌지 않는다. 변경 경로가 review-policy MA1~MA6에 닿지 않아 `review/manual-approval` 불필요 예상 — status가 필요하면 그 상태를 확인한다.\n2. 모든 필수 체크가 green일 때만 squash 머지. 단일 PR이라 순서 의존 없음.\n3. 머지 후 pocket-aide@main에서 versionScript 두 개(to-be blob, as-is 지문)를 재계산한다.\n\n## 검증 방법\n- 불변식 1: as-is 지문이 `sites=41 files=24` / `b9a883fc…05d8`로 머지 전후 동일(새 모킹 토큰·주석 없음). 허용목록 24 == 코드 24.\n- 불변식 2: 원장 BF-6 행이 세 칸(해소 방향 등재(EXT)·선행 없음·재검토 2027-01-20)을 유지하고 남은 범위가 「Sessions*UITests 실행 검증」뿐이며 소관 칸이 없다. 행이 사라지지 않았다(B3).\n- 완료 기준(범위): `SessionsOversizePromptUITests`가 main에 있고 정책 문서 BF-6 행이 그에 맞게 갱신됨.\n\n## 주의사항\n- Swift는 macOS 부재로 컴파일하지 못했고 CI도 ios_tests 비활성이라 오타·붙여넣기 메뉴 동작(로케일·iOS 붙여넣기 허용 알림)을 잡지 못한다. 실행 검증은 범위 밖이며 BF-6에 남는다.\n- 롤백: PR revert 1회.\n\n## 재계획 메모\n- 직전 실패 원인: 새 Swift 파일 주석 1줄이 ledger L 표에 없음. 이번 head에서 주석을 제거했고 로컬 check_ledger.py와 CI의 comment-policy ledger·ci-success·review/manual-approval이 모두 success임을 확인했다.\n\n## 범위 밖(후속)\n- Sessions*UITests 전체 실행 검증(로컬 시뮬레이터 또는 ios_tests 재활성 — CI 비용 소유자 결정이라 이 시도는 건드리지 않음). BF-6에 남음, 선행 없음.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0003-bf6-oversize-paste",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/385",
+          "preparedAt": "2026-11-04T22:10:00Z",
+          "notes": "기존 PR #385 이어 사용. 주석 1줄 제거 커밋 추가 후 최신 main으로 rebase, 새 head 58ae1d7. 로컬 check_ledger.py 통과; CI comment-policy ledger·ci-success·review/manual-approval success, mergeable. Swift는 macOS 부재로 컴파일 미검증(ios_tests 비활성)."
+        }
       }
     ]
   }
