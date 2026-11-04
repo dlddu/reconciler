@@ -186,6 +186,12 @@ runs:
         DISABLE_UPDATES: "1"
         DISABLE_AUTOUPDATER: "1"
         CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+        # 서브에이전트(Agent, fork 포함)를 백그라운드로 띄우지 않는다 — 메인 세션이 결과를 받을 때까지 턴을 끝내지 않게.
+        # 백그라운드로 띄우면 메인이 "기다린다"며 턴을 끝내고, -p의 백그라운드 대기(기본 10분 무진행 상한)에 걸려
+        # 서브에이전트가 버려진다 → 점유(claim)만 남고 lock이 풀리지 않는다(2026-11-05 planner run 41905605507, 41910064424).
+        CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: "1"
+        # 그래도 백그라운드 작업이 생기면 -p가 끝까지 기다리게 한다(상한은 이 스텝의 timeout).
+        CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS: "0"
       run: |
         test -n "$CLAUDE_CODE_OAUTH_TOKEN" || { echo "::error::secrets.CLAUDE_CODE_OAUTH_TOKEN이 비어 있음"; echo "exit_code=2" >> "$GITHUB_OUTPUT"; exit 0; }
         prompt="/reconciler-data-plane:$SKILL $CHECKOUT_DIR"
