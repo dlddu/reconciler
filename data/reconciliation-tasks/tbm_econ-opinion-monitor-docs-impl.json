@@ -14365,6 +14365,37 @@
     "assessment": {
       "assessedAt": "2026-11-04T16:28:33Z",
       "reason": "슬라이스 1(#284)이 AC3.1을 축 단위로 닫았지만 ALL 축이 AC3.4의 '축별 산출 후 1/3 균등 평균'과 달리 소스 풀링 방식으로 남아 있고(계약 axis doc도 모순), AC3.11·AC3.12 및 기존 미구현 AC 격차가 지속된다. 정의 기준 ①②에 따라 지금 대응할 작업이 있으며 열린 action_required/진행 task가 없어 중복도 아니다. 롤아웃·alert류가 아니라 코드 격차라 자동 해소 가능성이 없어 유예하지 않는다. planner가 ALL 축 수정(AC3.4)을 다음 슬라이스 후보로 우선 검토하길 권한다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "AC3.4 「전체」(ALL) 축만 슬라이스로 닫는다: 지금은 세 축의 소스를 한 버킷에 합쳐 접어(pool) 기사가 많은 축이 지배하므로, 축마다 fold_bucket한 값을 먼저 내고 ALL은 데이터가 있는 축들의 균등 평균(데이터 없는 축 제외)으로 바꾼다(SubjectTrend 버킷·SubjectWindow 기간 모두). 달성 기준: 축 단위 값은 불변, ALL 점유율=축 점유율의 균등 평균(예: KR A2/3·B1/3, US C1 → A.3333·B.1667·C.5), 구간에 없는 축은 평균에서 빠짐, raw_count는 축 합, 기존 pytest·ruff·원장 불변식 통과. 계약은 axis doc 문구만 교정(구조 불변). 범위 밖(후속): 빠진 축 화면 표기(gold 스키마·go·web), ALL 분위기 분포 및 분위기 제곱근 정규화·정규화 전 병기·서술 대상×분위기(AC3.4 나머지, AC3.8), AC3.6·3.7, AC3.11, AC3.12. 대안으로 AC3.11/3.12를 먼저 하는 안은 gold 스키마·go·web 신설로 커서 후순위로 두고, 코드 한 곳(with_all_axis) 수정으로 닫히는 ALL을 먼저 닫는다. 코드·문서 한 PR이라 revert 한 번으로 가역.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "aggregate.py with_all_axis: 접힌 값(folded[axis][bucket])을 받아 ALL = 데이터 있는 축들의 균등 평균, raw_count 합으로 계산",
+              "expectedOutcome": "ALL이 소스 풀링이 아니라 축 평균이 된다"
+            },
+            {
+              "seq": 2,
+              "action": "subject_trends·subject_windows가 축별로 fold_bucket한 뒤 with_all_axis를 거치도록 변경",
+              "expectedOutcome": "버킷·기간 모두 같은 규칙, delta/spark도 새 ALL 값에서 계산"
+            },
+            {
+              "seq": 3,
+              "action": "test_aggregate/test_windows 기대값 교체 + 데이터 없는 축 제외 케이스 추가, contracts subject_trend/subject_window axis doc 교정, 주석 원장 2행 실측 갱신",
+              "expectedOutcome": "pytest packages·ruff·check-comment-ledger 통과(로컬 확인됨)"
+            },
+            {
+              "seq": 4,
+              "action": "PR #287 생성, CI와 사람 수동 승인(MA1) 후 머지",
+              "expectedOutcome": "as-is 버전 변화로 후속 슬라이스 재감지"
+            }
+          ],
+          "plannedAt": "2026-11-04T17:20:00Z"
+        }
+      }
+    ]
   }
 ]
