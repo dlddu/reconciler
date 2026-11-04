@@ -936,7 +936,7 @@
   },
   {
     "toBeModelId": "tbm_session-platform-mockup-render",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T17:34:32Z",
     "trigger": {
       "detectedAt": "2026-11-04T17:34:32Z",
@@ -956,6 +956,40 @@
     "assessment": {
       "reason": "**작업 필요.** 남은 카피·구조 격차 2건이 있고 열린 형제 task가 0건이다. (1) claude-code placeholder 문구 불일치 — 목업이 SSOT이므로 구현을 맞추거나, 플랫폼상 사실이 구현 쪽이면 목업/허용목록에 사유를 남겨 닫는다(어느 쪽인지는 planner가 판단). (2) NewSession의 `.guarantee` 문단 부재·\"and model\" 표현 차이. 두 건 모두 definition 3·4(카피·구조 일치)를 어기며, 자동 해소될 성질이 아니다(소스 변경 필요). 이번 as-is 변화(#197)는 격차를 좁힌 변화라 새 drift는 아님. 토큰(2)·매핑(1)·원장(5)은 게이트 R1-R10 rc=0으로 위반 없음.",
       "assessedAt": "2026-11-04T17:35:25Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "구현을 목업(카피·구조 SSOT)에 맞춰 ①claude-code 입력 placeholder를 'streams one claude -p response'로 ②NewSession에 목업의 .guarantee 문단을 추가해 닫는다(PR 1건, 가역). 목업 쪽을 구현에 맞추지 않는 이유: 목업이 SSOT이고 control-plane 스트림 e2e가 스트리밍 응답을 전제한다. 범위 밖: NewSession 고정 안내문의 'and model' 변형(워크로드별 플랫폼 사실, e2e 단언 존재) — 후속.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "Workspace.tsx claude-code placeholder를 'send a prompt — streams one claude -p response'로 교체",
+              "expectedOutcome": "agent-workspace.html:417과 문장 일치"
+            },
+            {
+              "seq": 2,
+              "action": "NewSession.tsx에 .guarantee 문단 추가, shell.css에 .guarantee 규칙(토큰 변수만) 추가",
+              "expectedOutcome": "new-session.html:513 문단과 카피·구조 일치"
+            },
+            {
+              "seq": 3,
+              "action": "check-render-fidelity.py·tsc·CI 검증 후 PR #198 머지",
+              "expectedOutcome": "rc=0, CI 통과, main 반영"
+            }
+          ],
+          "plannedAt": "2026-11-04T18:20:00Z",
+          "executionGuide": "## 순서\n1. PR #198(dlddu/session-platform) 확인 — 변경: `web/src/screens/Workspace.tsx`(claude-code placeholder 1줄), `web/src/screens/NewSession.tsx`(`.guarantee` 문단), `web/src/app/shell.css`(`.guarantee` 규칙), `docs/mockups/agent-workspace.html`(낡은 주석). 단일 PR, 순서 의존 없음.\n2. CI·리뷰 정책 판정 통과 확인(경로가 `docs/review-policy.md` MA1~MA5에 해당하지 않으므로 수동 승인 불필요) 후 머지.\n3. 머지 후 main에서 검증.\n\n## 검증 (이 시도 범위 기준)\n- `python3 scripts/check-render-fidelity.py` rc=0 (R1-R10 OK, 미해소 27/27 유지).\n- grep: `Workspace.tsx`에 `streams one claude -p response`, `NewSession.tsx`에 `Same guarantees whichever you pick`, `shell.css`에 `.guarantee`. minimax-code placeholder(`runs mcode exec once in the session pod`)는 그대로.\n- CI(typecheck·lint·e2e) 통과. e2e에 `runs claude -p once` 단언은 없음(사전 grep 확인).\n\n## 범위\n완료 기준: (1) claude-code placeholder, (2) NewSession `.guarantee` 문단이 목업과 일치. 범위 밖(후속, 재감지가 잇는다): NewSession 고정 안내문의 \"Workload type **and model**\" 표현 차이 — 구현은 워크로드별(gated/minimax/agent) 문장이고 `web/e2e/journeys/j6-model-selection.spec.ts:103`이 agent 문장을 단언한다. 플랫폼 사실이 담긴 차이라 목업 갱신 또는 허용목록 쪽 결정이 필요하다. repo-access 카피는 대조 결과 일치.\n\n## 주의 / 롤백\n문자열·CSS만 변경, 데이터·불가역 영향 없음. 롤백은 PR revert. 머지로 to-be(docs/mockups 트리)도 주석 한 줄이 바뀌므로 재감지 때 to-be 버전 변화는 정상이다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20261104-0002-mockup-copy-guarantee",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/198",
+          "preparedAt": "2026-11-04T18:20:00Z",
+          "notes": "4파일 소규모 변경. check-render-fidelity rc=0, tsc 통과 확인. 열린 형제 PR 중 같은 gap 없음."
+        }
+      }
+    ]
   }
 ]
