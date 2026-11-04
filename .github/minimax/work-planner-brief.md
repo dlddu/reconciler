@@ -28,6 +28,7 @@
 9. 스키마 파일은 절대 수정하지 않는다. 쓰기 전 레코드를 스키마로 검증한다(python `jsonschema`).
 10. 커밋 메시지는 `plan(<toBeModelId>/<taskId>): <요약>`. 단계마다 개별 커밋을 이 순서로 남긴다: 계획(`plan`) → 준비(`preparation`) → 지침(`executionGuide`) → planned 전이. 두 단계를 한 커밋에 합치지 않는다(러너 점검이 오류로 본다).
 11. reconciler push는 `git pull --rebase` 후 한다. 거절되면 다시 `pull --rebase` 후 push. 대상 레포 PR 브랜치는 rebase하지 않는다 — main 반영은 merge로 한다. 강제 push 금지.
+12. reconciler에는 점유한 task 파일(`data/reconciliation-tasks/<model_id>.json`)만 커밋한다. `git add -A`/`git add .`를 쓰지 않고 그 경로만 스테이징한다. 재생 스크립트·대응표 데이터·PR 본문 초안 같은 작업 파일은 reconciler 체크아웃 밖(대상 레포 작업 디렉터리나 임시 디렉터리)에 두고, task 기록에는 그 경로가 아니라 내용(명령·출력)을 남긴다.
 
 도구: MCP 서버 `k3s`의 `github_app_installation_token`(대상 레포 접근, `repositories`를 그 레포 하나로 좁히고 권한은 필요한 만큼만), `resource_list`/`resource_get`(쿠버네티스 관측). reconciler push는 체크아웃에 설정된 자격 증명을 쓴다. 토큰 값은 echo·로그·커밋·task 기록·PR 본문에 절대 남기지 않는다.
 
