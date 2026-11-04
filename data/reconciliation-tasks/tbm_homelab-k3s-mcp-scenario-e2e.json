@@ -15115,7 +15115,7 @@
   {
     "id": "rct_20261103-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-11-03T18:30:03Z",
       "source": "version_change",
@@ -15194,6 +15194,39 @@
               "log": "머지 직전 확인: PR #312 open, head 4b15040 == manualApproval.sha, review/manual-approval success(2026-11-04T14:01:38Z), CI 전부 success. 그러나 자매 PR #306이 main에 머지돼 main HEAD가 fa75359로 이동했고 PR #312는 mergeable=false(mergeable_state=dirty, 충돌). executionGuide 2번은 main을 rebase해 집계를 다시 맞춘 뒤 푸시를 요구하지만, 푸시하면 head가 승인받은 sha에서 바뀌어 사람 승인이 무효가 되고 승인받지 않은 코드를 머지하게 된다. 계획 밖 변경으로 넓히지 않고 머지하지 않은 채 중단한다."
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "직전 시도(PR #312 승인 4b15040)는 자매 PR #306 머지로 main 이 이동해 충돌(dirty)해 머지하지 못하고 failed 였다. 계획 범위는 그대로 gap ② 하나(test-approval-gate.md#시나리오 12 를 🚧 공백에서 전용 approval_gate_sc12.py ✅ 로 닫는다)이고, 같은 PR 을 main(fa75359) 위로 rebase 해 doc-tracker 집계를 현재 기준(구현 대기 0 · 공백 9→8 · 전용 110→111)으로 재조정하는 것이 이번 재계획의 전부다 — 새 PR 을 만들기보다 기존 PR/브랜치를 이어 쓰는 것이 가장 가역적이다. 완료 기준: sc12 CI 통과 · 공백 8(상한 8) · 매칭 파일 111. 범위 밖: 나머지 공백 7행. 사람 소유 결정은 없으나 head 가 바뀌어 MA1 수동 승인을 새 head 에 다시 받아야 한다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR 브랜치를 origin/main(fa75359) 위로 rebase, doc-tracker 충돌을 현재 main 집계(구현 대기 0·공백 9) 위에서 sc12 효과(공백 8·상한 8·전용 111)로 해소하고 force-with-lease 푸시",
+              "expectedOutcome": "PR #312 mergeable, check_ac_mapping.py·check_comment_policy.py·check_doc_inventory.py rc=0"
+            },
+            {
+              "seq": 2,
+              "action": "새 head 에서 CI(fmt+vet·judge·integration tests sc12) 확인",
+              "expectedOutcome": "전부 success"
+            },
+            {
+              "seq": 3,
+              "action": "MA1 사람 승인(review/manual-approval)을 새 head 에 받은 뒤 squash 머지",
+              "expectedOutcome": "main 에서 sc12 통과, 공백 -1 · 매칭 파일 +1"
+            }
+          ],
+          "plannedAt": "2026-11-04T16:10:00Z",
+          "executionGuide": "## 실행 순서\n1. PR https://github.com/dlddu/homelab-k3s-mcp/pull/312 의 현재 head(`49b756d9e63f4a048cc48ea317f05718a6bb98c1`, main `fa75359` 위로 rebase 완료)에서 CI(`fmt + vet`·`judge`·`integration tests` — approval-variant 그룹 `approval_gate_sc12.py`)가 전부 green 인지 확인한다. 계획 시점에 changes·judge·fmt+vet success, integration tests 진행 중이었다. 단일 PR이라 병렬 없음.\n2. `docs/test-*.md` 변경이라 MA1 에 닿는다. 판정기가 `review/manual-approval` 을 붙이지 않으므로, 리뷰가 `review.manualApproval`(sha=위 head)로 남긴 대로 사람이 **그 head 커밋**에 status 를 붙인 뒤에만 머지한다. 이전 시도의 승인(4b15040)은 head 변경으로 무효다.\n3. **head 를 바꾸는 푸시 금지**: 머지 직전 main 이 다시 이동해 충돌하면 실행자가 rebase 하지 말고(승인 sha 무효화) `failed` 로 두어 재계획으로 넘긴다.\n4. squash 머지.\n\n## 검증 방법 (계획 범위 기준)\n- 머지 후 main 에서 `python3 tests/integration/check_ac_mapping.py` rc=0, `test-approval-gate.md#시나리오 12` 가 ✅ 전용 `approval_gate_sc12.py` 이고 🚧 공백 표에서 빠져 있다.\n- 집계(머지 시점 main 이 fa75359 일 때): 시나리오 122 · 예외 3 · 구현 대기 0 · 1:1 대상 119 · 공백 8(상한 8) · 매칭 파일 111, 불변식 122−3−0−8=111.\n- main CI `approval_gate_sc12.py` 통과('ok: test-approval-gate.md#시나리오 12').\n- 재감지 시 시나리오 12 gap 이 사라진다.\n\n## 주의사항\n- 되돌릴 수 없는 지점 없음: 테스트·문서만 추가, 제품 코드·픽스처·ci.yml 무변경. 실패 시 PR revert.\n- 집계 숫자는 main 대비 기준이다. 머지 직전 main 이 이동했으면 위 3번에 따른다.\n- 판정기·정책(review-policy)은 이 PR 이 건드리지 않는다.\n\n## 범위 밖(후속)\n- 시나리오 5(알림 본문 관측 수단) 등 나머지 🚧 공백 7행(재검토 2026-12-20 · drop-token-issue#4 2027-01-30)."
+        },
+        "preparation": {
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20261103-0001",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/312",
+          "preparedAt": "2026-11-04T16:10:00Z",
+          "notes": "main fa75359 위로 rebase 후 force-with-lease 푸시, head 49b756d. 로컬 check_ac_mapping·check_comment_policy·check_doc_inventory rc=0. PR 본문 갱신. 푸시 직후 changes·judge·fmt+vet success, integration tests 진행 중(리뷰가 최종 확인할 것). 이전 승인 sha 4b15040 은 무효 — MA1 승인을 새 head 에 다시 받아야 한다."
         }
       }
     ]
