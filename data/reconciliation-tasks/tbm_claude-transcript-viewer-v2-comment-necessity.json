@@ -563,7 +563,7 @@
   },
   {
     "toBeModelId": "tbm_claude-transcript-viewer-v2-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T23:47:25Z",
     "trigger": {
       "detectedAt": "2026-11-04T23:47:25Z",
@@ -586,6 +586,40 @@
     "assessment": {
       "reason": "버전 변화는 직전 슬라이스 PR #107 반영에 따른 정상 진행이다. 다만 원장상 L 1046줄·E 5줄이 아직 미판정이라 정의의 정합 상태(필요 사유 없는 주석 없음)에 도달하지 못했다. 자동 해소될 성격이 아니므로 다음 슬라이스(원장 판정 칸이 '—'인 행을 파일 공유 덩어리로 400줄 이내, 예: backend/s3.go·store.go·seed.go 등) 판정 PR 계획이 필요하다.",
       "assessedAt": "2026-11-04T23:47:43Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "원장 `—` 행 중 e2e spec 16개(docker-build·lookup-*·message-uuid·session-id·session-list-{delete,open,order,search,states}·static-cache-headers·timeline-*·transcript-{not-found,session-prefix})의 줄머리 주석 397줄(+줄 끝 2건)을 필요성 시험으로 판정해 373줄·2건을 제거하고 24줄을 사유와 함께 유지한다. 완료 기준: 해당 행 판정 `완료`(주석 0이 된 행은 삭제), 원장 게이트 통과, CI e2e 통과. 범위 밖(후속): MA2·MA3 경로, .github/workflows/*, 열린 PR #104·#109·#98과 겹치는 파일, 나머지 e2e/tests·frontend — 재감지가 새 task로 잇는다. 슬라이스 선정 이유: 400줄 예산(397줄) 안이며 열린 PR과 파일이 겹치지 않고 MA 경로를 피해 자동 흐름으로 간다. 정책 디렉터리 내 판정은 모델 definition이 지시한 작업이라 제안 PR 절차 대상이 아니다. 주석 삭제뿐이라 revert로 완전 가역.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #111 head(ea309e6)의 변경 파일 목록(산출물 없음)과 전체 required check success를 확인한다.",
+              "expectedOutcome": "모든 check success, review/manual-approval 자동 success."
+            },
+            {
+              "seq": 2,
+              "action": "main 충돌이 있으면 병합 후 ledger_gate.py로 원장을 재정렬하고 PR #111을 머지한다.",
+              "expectedOutcome": "PR merged, main에 passes/2026-11-04-e2e-specs.md 존재."
+            },
+            {
+              "seq": 3,
+              "action": "머지된 main에서 ledger_gate.py를 돌려 범위 16개 파일 행이 `완료`(또는 삭제)이고 FAIL이 없는지 확인한다.",
+              "expectedOutcome": "FAIL 0, 범위 행 판정 완료, 미판정은 후속 범위만 남음."
+            }
+          ],
+          "executionGuide": "## 실행 순서\n1. PR #111(`reconcile/rct_20261104-0005`, head ea309e6)의 required check(`Comment ledger`, Lint, Unit, Integration, E2E, Docker Build E2E, Kind E2E, judge)가 모두 success인지 확인한다. 변경은 `e2e/tests/*.spec.ts`(MA 경로 밖)와 `docs/comment-policy/`뿐이라 `review/manual-approval`은 자동으로 붙는다. 순차, 병렬 불가.\n2. 머지 전 main이 앞서가 `docs/comment-policy/ledger.md`가 충돌하면(#104·#109도 원장을 건드린다) main을 병합하고 `python3 scripts/comment-policy/ledger_gate.py`로 줄 수·지문을 재정렬한 뒤 check 재확인. 그다음 squash 머지.\n3. 머지 후 main에서 재검증.\n\n## 검증 방법\n- `python3 scripts/comment-policy/ledger_gate.py` FAIL 없음, 집계 L 행 71(판정 완료 51)·줄 881(판정 완료 232/미판정 649), E 행 5(완료 3)·줄 6, D 1행. (#104/#109가 먼저 머지됐다면 그 변경분만큼 달라질 수 있다 — 범위 16개 파일 행이 `완료`이고 FAIL이 없는지가 기준.)\n- 범위 16개 파일 중 주석 0이 된 6개 행(session-list-open/search/states, timeline-distinction; E 2건 포함)은 원장에서 삭제, 나머지는 `완료`이며 유지 주석마다 `passes/2026-11-04-e2e-specs.md`에 사유가 있다.\n- 주석 삭제만이므로 CI e2e 통과를 확인한다. 이 범위 기준으로 succeeded/failed를 판정한다.\n\n## 주의사항\n- 주석 삭제 위주라 revert 한 번으로 완전 가역, 데이터·트래픽 영향 없음. `session-list-states.spec.ts`의 `mock-exception:` 지시자는 유지됨(e2e-mock-policy 모델이 읽는다).\n- `__pycache__` 등 산출물이 PR에 섞이지 않았는지 변경 파일 목록을 확인한다(직전 거부 사유).\n- 열린 PR #104(test.yml·support/*·transcript-delete-api.spec.ts)·#109(backend, 원장)와 파일은 겹치지 않으나 원장 표가 충돌할 수 있다 — 2단계로 해결.\n\n## 범위 밖(후속)\n원장 잔여 `—`: `backend/{store,s3,seed}.go`(MA3 사람 승인), `.github/workflows/*`(워크플로 권한), `scripts/review-policy/judge.py`(MA2), `e2e/tests/{tool-call-display,truncation-and-timestamps,transcript-direct-download,transcript-upload-api}.spec.ts`·`e2e/tests/support/*`·`transcript-delete-api.spec.ts`(#104), frontend `SessionList.tsx`·`TranscriptViewer*.tsx/.css`·`tsconfig.json`·`vite-env.d.ts` 등과 줄 끝 3건. 재감지가 새 task로 잇는다.\n",
+          "plannedAt": "2026-11-05T00:20:00Z"
+        },
+        "preparation": {
+          "repository": "dlddu/claude-transcript-viewer-v2",
+          "branch": "reconcile/rct_20261104-0005",
+          "pullRequestUrl": "https://github.com/dlddu/claude-transcript-viewer-v2/pull/111",
+          "preparedAt": "2026-11-05T00:20:00Z",
+          "notes": "PR #111: e2e spec 16개 주석 판정 + passes/2026-11-04-e2e-specs.md + 원장 갱신. 로컬 ledger_gate.py FAIL 없음. 머지는 하지 않음."
+        }
+      }
+    ]
   }
 ]
