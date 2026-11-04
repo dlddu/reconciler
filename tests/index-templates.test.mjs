@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
-const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const html = readFileSync(new URL("../docs/index.html", import.meta.url), "utf8");
 
 const parseMatch = html.match(/  function parseTemplateIndex\(src\) \{[\s\S]*?\n  \}\n/);
 assert.ok(parseMatch, "parseTemplateIndex must exist in index.html");

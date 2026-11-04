@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
-const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const html = readFileSync(new URL("../docs/index.html", import.meta.url), "utf8");
 const schema = JSON.parse(
   readFileSync(new URL("../schemas/reconciliation-task.schema.json", import.meta.url), "utf8")
 );

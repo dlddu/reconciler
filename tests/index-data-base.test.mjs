@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
-const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const html = readFileSync(new URL("../docs/index.html", import.meta.url), "utf8");
 
 const baseMatch = html.match(/  function dataBase\(loc\) \{[\s\S]*?\n  \}\n/);
 assert.ok(baseMatch, "dataBase must exist in index.html");
@@ -25,7 +25,12 @@ test("GitHub Pages reads data from raw main of the same repo", () => {
   );
 });
 
-test("local server and other hosts read from the page's own path", () => {
+test("a local server at the repo root reads data/ one level above docs/", () => {
+  assert.equal(dataBase({ hostname: "localhost", pathname: "/docs/" }), "../");
+  assert.equal(dataBase({ hostname: "127.0.0.1", pathname: "/docs/index.html" }), "../");
+});
+
+test("other hosts and paths read from the page's own path", () => {
   assert.equal(dataBase({ hostname: "localhost", pathname: "/" }), "");
   assert.equal(dataBase({ hostname: "127.0.0.1", pathname: "/index.html" }), "");
   assert.equal(dataBase({ hostname: "", pathname: "/tmp/index.html" }), "");
