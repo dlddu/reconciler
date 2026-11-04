@@ -10327,6 +10327,44 @@
           "reason": "PR #373(열림·mergeable, 3파일 +174/-7, 범위는 gap에 부합)의 head 3886cdf 에서 'Android instrumented test (emulator)' 가 failure 이고 필수 체크 ci-success 도 failure 다. 계획의 승인 전제(CI 통과)와 완료 기준(두 테스트 CI 통과)이 충족되지 않았고, 신규 Kotlin 계측 테스트가 로컬 미실행이라 실패 원인(테스트 결함 vs flake)이 불명이다. review/manual-approval 은 해당 sha 에 success 라 사람 승인 요구는 해당 없음.",
           "comment": "PR #373 브랜치에서 'Android instrumented test (emulator)' 실패 로그를 읽어 RotatingAffirmationTest·ScratchpadToAffirmationTest 중 무엇이 왜 실패했는지 확인하고(입력 불안정이면 시맨틱 액션, 타임아웃이면 대기/시드 수정) 고쳐 ci-success 가 success 가 된 head 로 재준비할 것. 수정 push 후 manual-approval 은 새 sha 에 다시 필요할 수 있다. preparation.notes 에 CI 결과와 수정 내용을 갱신하고, executionGuide 의 step 1(CI 확인)을 실패 수정 완료 상태로 반영할 것."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재계획(review_rejected): 직전 시도와 동일 범위(affirmations #4·#6 이식, PR #373)를 유지하고 CI 실패 원인만 고친다. 실패 로그(run 41852147477) 분석 결과 RotatingAffirmationTest 는 빈 상태에서 reenter() 가 list.header 를 기다렸으나 AffirmationsScreen 은 items 가 비면 list.header 를 그리지 않아(items.isNotEmpty() 분기) 15초 타임아웃 났다 — 테스트 결함이며 제품 코드는 무변경. reenter(settledTag) 로 빈 상태는 empty.state, 시드 후는 list.header 를 기다리게 수정해 PR 브랜치에 push(78d62ab). ScratchpadToAffirmationTest 는 통과했다. 같은 run 에서 기존 AffirmationEditTest(#361 산출, 이번 diff 밖)도 sheet 닫힘 대기(AffirmationEditTest.kt:45)에서 1회 실패했고 main CI 는 연속 success 라 flake 로 의심 — 새 CI 에서 재발하면 별도 수정 대상이다. 완료 기준(범위)은 직전과 같다: PR #373 머지, CI 에서 두 테스트 통과, 매칭 23·공백 53·매칭 단위 파일 25. 범위 밖: affirmations #5 및 나머지 공백 52행. 사람 소유 결정 없음, 수동 승인 케이스 비해당(단 새 head sha 에 review/manual-approval 이 다시 붙었는지 확인).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #373 의 새 head(78d62ab)에서 CI(android-instrumented-test, ci-success)가 완료·성공인지 확인한다. RotatingAffirmationTest·ScratchpadToAffirmationTest 통과를 로그로 확인하고, 기존 AffirmationEditTest 가 다시 실패하면 같은 sha 재실행으로 flake 를 가른 뒤 반복되면 그 테스트의 sheet 닫힘 대기를 고친다.",
+              "expectedOutcome": "head sha 의 필수 체크가 모두 success, ScratchpadToAffirmationTest·RotatingAffirmationTest 통과"
+            },
+            {
+              "seq": 2,
+              "action": "main 과 충돌(특히 doc-tracker/2026-11.md 집계 숫자)이 있으면 rebase/merge 로 풀고 집계를 실측 기준으로 재계산한다.",
+              "expectedOutcome": "PR 이 mergeable, 집계가 머지 시점 main 의 실측과 일치"
+            },
+            {
+              "seq": 3,
+              "action": "PR #373 을 squash 머지한다.",
+              "expectedOutcome": "main 에 두 *Test.kt 와 tracker 갱신이 착지"
+            },
+            {
+              "seq": 4,
+              "action": "main 에서 grep -H '^// 검증 시나리오:' 로 선언 줄 수 = 최상위 *Test.kt 수를 확인하고 tracker 집계(매칭·공백·파일)가 실측과 맞는지 대조한다.",
+              "expectedOutcome": "두 파일 선언이 test-affirmations.md#시나리오 4·6 이고 불변식 성립"
+            }
+          ],
+          "plannedAt": "2026-11-04T16:05:00Z",
+          "executionGuide": "## 순서\n1. PR #373 CI 확인 (병렬 불가 — 이후 단계의 전제).\n2. 충돌 해소(필요 시) → 3. squash 머지 → 4. main 검증.\nrct_20261028-0006 의 PR #338 도 tracker 를 고치므로 어느 쪽이 먼저든 뒤에 머지하는 쪽이 집계(매칭·공백·파일 수)를 재계산한다.\n\n## 검증 방법\n- CI: `gh pr checks 373 --repo dlddu/pocket-aide` 필수 체크 success, android-instrumented-test 로그에서 `RotatingAffirmationTest`·`ScratchpadToAffirmationTest` 통과.\n- main: `grep -H '^// 검증 시나리오:' android/app/src/androidTest/java/com/dlddu/pocketaide/e2e/*Test.kt` 줄 수 = 최상위 *Test.kt 수, 두 파일 선언이 `test-affirmations.md#시나리오 4`·`#시나리오 6`.\n- tracker 「집계 (실측)」 매칭 23·공백 53·비-시나리오 2, 공백 표에 affirmations #4·#6 행이 없고 매핑 표에 있음. 모델 to-be versionScript 의 reg 해시가 바뀌어 있음.\n- 범위 밖(후속): affirmations #5, approval-gate 12(또는 #338 착지 후 11), github-monitor 7, routines 7, scratchpad 4, session-platform 14, todo 8.\n\n## 주의사항\n- 제품 코드 무변경이라 롤백은 PR revert 한 번. 데이터·트래픽 영향 없음(CI 백엔드 전용).\n- RotatingAffirmationTest 는 시작 때 사용자의 다짐을 모두 지운다(iOS 와 동일) — CI 전용 ephemeral 백엔드에서만 돈다.\n- 계측 테스트가 흔들리면(15초 waitUntil 타임아웃) 같은 sha 재실행과 실패 테스트 변화를 보고 flake 인지 입력 불안정인지 가른 뒤 고친다. comment-policy ledger 가 새 주석에 실패하면 주석을 제거한다.\n- CI 미완료(in_progress)는 성공이 아니다 — 완료 후에만 머지.\n\n## 재계획 보강\n- 직전 실패 원인: RotatingAffirmationTest.reenter 가 빈 목록에서 `affirmations.list.header` 를 대기(헤더는 items 가 있을 때만 그려짐). 수정 완료·push 됨(78d62ab) — 실행자는 CI 결과만 확인하면 된다.\n- 새 sha 에는 review/manual-approval status 가 자동 판정으로 다시 붙는지 `gh pr view 373` 로 확인한다.\n- AffirmationEditTest 단독 실패는 이번 PR 과 무관한 flake 후보다: 재실행(`gh run rerun --failed`)으로 통과하면 머지 가능, 반복되면 범위 밖 수정으로 별도 처리한다."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0001-affirmations-4-6",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/373",
+          "preparedAt": "2026-11-04T16:05:00Z",
+          "notes": "직전 CI 실패(head 3886cdf, run 41852147477): RotatingAffirmationTest 가 빈 상태 reenter 에서 list.header(items 비면 미렌더) 대기로 15s 타임아웃; ScratchpadToAffirmationTest 통과; 기존 AffirmationEditTest 1건은 flake 의심. RotatingAffirmationTest.reenter 를 settledTag 인자로 고쳐 78d62ab 로 push(테스트 파일 1개 5줄, 제품 코드 무변경). 새 head 의 CI 는 아직 미확인 — 실행 단계가 확인한다."
+        }
       }
     ]
   }
