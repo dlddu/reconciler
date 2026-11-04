@@ -16780,7 +16780,7 @@
   {
     "id": "rct_20261104-0001",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-11-04T12:17:51Z",
       "source": "version_change",
@@ -16803,6 +16803,40 @@
     "assessment": {
       "reason": "action_required — definition 기준 미판정 주석이 남아 있고 이 모델의 열린 형제 task가 없다.\n\n근거: 대상 dlddu/economic-opinion-trend-monitor@main HEAD 7de88f3(#282 머지, 2026-11-04T10:27:18Z). 원장 게이트 `python3 scripts/check-comment-ledger.py`(exit 0) 실측 — 표면 L 189행/1843줄 중 판정 완료 188행/1812줄, 미판정(—) 1행/31줄. 그 1행이 web/src/screens/Fairness.tsx(30→31줄, 지문 029cb622d866→b6a1232aa371)이고 ledger.md 결과 칸이 「이후 증분 1 미판정: #282 `unit`/`time_bucket` 쿼리를 읽는 이유 1줄」로 적혀 있다. 해당 주석은 web/src/screens/Fairness.tsx:73 「// 다른 화면(sentiment)이 고른 구간을 달고 올 수 있다 — 없으면 서빙이 최신 구간을 고른다.」이며 as-is 지문도 lines=1842→1843, sha256 649650d1…→29563237…로 1줄 늘었다. 이 모델 파일의 다른 126개 task는 succeeded 85 · no_action_needed 39 · cancelled 2로 열린 형제 task가 없다. #282를 만든 rct_20261028-0009는 다른 모델(tbm_econ-opinion-monitor-docs-impl, succeeded) 소속이라 이 모델의 형제 task가 아니다. 대상 레포 열린 PR은 #284·#280·#220 셋인데 이 원장 행을 판정하는 PR은 없어 자동 해소 대기로 남길 근거가 없다.\n\n적용 기준: definition 「정합 상태 = 그 주석들 중 필요 사유를 댈 수 없는 것이 없음」 · 「유지는 기록으로 끝난다 — 사유를 적지 않은 유지는 판정 완료가 아니다」 · 「판정 슬라이스: 판정 칸이 `완료`가 아닌 행을 파일 공유로 묶은 덩어리 단위로 주석 400줄까지 가져간다」. 1행/31줄은 슬라이스 예산 안이고 정책 본문 「`—`는 결함이 아니라 다음 슬라이스의 몫」에 따라 지금 처리할 대상이다.\n\n반대 방향 근거: 게이트는 미판정을 실패로 보지 않으므로 CI는 초록이고 불변식 통과(exit 0)로 원장 행의 줄 수·지문이 실측과 일치한다. 나머지 255행은 모두 `완료`이고 D·E 표면도 전량 판정 완료여서 남은 미판정은 이 1행뿐이다. Fairness.tsx의 기존 30줄은 2026-10-04 web-src-deploy-necessity-pass에 유지 사유가 적혀 있어 판정 대상은 증분 1줄이다.",
       "assessedAt": "2026-11-04T12:23:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "#282 가 들인 Fairness.tsx 주석 1줄을 필요성 시험으로 판정해 유지(사유: 구간 파라미터를 Sentiment 링크가 실어 보내며 빈 값=서빙이 최신 구간 선택) 처리하고 원장 행을 완료로 닫는다. 범위: 원장 미판정 1행(31줄, 증분 1줄) — 이것만 달성하면 성공, 그 외 범위 밖. 문서만 변경하는 가역적 PR.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "Fairness.tsx:73 주석 필요성 판정(코드·서빙 latestValues 대조) → 유지",
+              "expectedOutcome": "사유 한 문장 확정"
+            },
+            {
+              "seq": 2,
+              "action": "passes/2026-11-04-fairness-query-increment-pass.md 작성, ledger.md 행 판정 칸 —→완료",
+              "expectedOutcome": "check-comment-ledger.py exit 0, 미판정 0행"
+            },
+            {
+              "seq": 3,
+              "action": "PR #285 머지",
+              "expectedOutcome": "main 의 원장 미판정 0행"
+            }
+          ],
+          "plannedAt": "2026-11-04T12:40:00Z",
+          "executionGuide": "## 순서\n1. PR #285 의 변경이 문서 2개(`docs/comment-policy/ledger.md`, `passes/2026-11-04-fairness-query-increment-pass.md`)뿐인지 확인 (코드 변경 없음).\n2. CI/게이트 통과 확인 후 머지. 단계 간 의존 없음.\n\n## 검증\n- 머지 후 main 에서 `python3 scripts/check-comment-ledger.py` → exit 0, 표면 L/D/E 미판정(—) 0행.\n- as-is 지문(Fairness.tsx 31줄, `b6a1232aa371`)은 변하지 않아야 한다 — 주석 코드 변경이 없으므로.\n- to-be(docs/comment-policy tree hash)는 머지로 바뀐다(판정 기록 추가) — 재감지 시 새 미판정이 없어야 정합.\n\n## 주의\n- 판정 결과는 「유지 1줄」이다: 제거가 아니므로 코드 롤백 부담 없음. 롤백은 PR revert.\n- MA 케이스(review-policy)에 걸리는 경로 없음(docs/comment-policy 는 MA5/MA7 대상 아님) — 자동 판정기 status 확인.\n\n## 범위 밖(후속)\n없음. 원장 미판정 행은 이 PR 로 0행."
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261104-0001",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/285",
+          "preparedAt": "2026-11-04T12:40:00Z",
+          "notes": "문서 2개만 변경, 게이트 로컬 통과"
+        }
+      }
+    ]
   }
 ]
