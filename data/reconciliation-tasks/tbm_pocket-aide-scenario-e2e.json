@@ -10259,7 +10259,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T12:40:21Z",
     "trigger": {
       "detectedAt": "2026-11-04T12:40:21Z",
@@ -10282,6 +10282,45 @@
     "assessment": {
       "assessedAt": "2026-11-04T12:40:55Z",
       "reason": "1:1 대상 중 55개 시나리오가 전용 E2E 파일 없이 남아 있다(정의상 drift). 자동 해소 요인이 없고(롤아웃·일시 alert 아님) 이식은 사람이 코드를 써야 해서 기다린다고 줄지 않는다. 슬라이스(#361)가 2건 닫았으므로 후속 슬라이스를 계획 단계로 넘긴다. 참고: 선행 인프라가 필요한 항목(session-platform 등 BF-5 스텁 의존)은 planner가 착수 가능한 것만 골라야 하고, 같은 모델의 rct_20261028-0006이 executing으로 열려 있어 범위 중복 여부를 planner가 확인해야 한다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "gap(1:1 대상 76 중 55개 공백) 가운데 선행 인프라가 「없음」인 affirmations #4(임시 공간 → 다짐 이동)·#6(탭 재진입·회전 버튼으로 히어로 문장 교체) 두 행만 이번 슬라이스로 닫는다: iOS ScratchpadToAffirmationUITests·RotatingAffirmationUITests 의 단언을 ScratchpadToAffirmationTest.kt·RotatingAffirmationTest.kt 로 이식하고(제품 코드 무변경 — scratchpad.row.<id>.move.affirmation·sheet.title·affirmations.hero.text/rotate/empty.state 등 testTag 가 이미 있다) 「## e2e 매핑」을 같은 PR(pocket-aide #373)에서 갱신한다. 같은 화면군·같은 시드 방식이라 한 슬라이스로 묶었고, #5 는 시스템 난수 표본 300회라 확률적 flake 위험이 커 별도 슬라이스로 미루며, 55행 일괄 이식은 CI 로 검증되지 않은 대량 Kotlin 을 한 PR 에 싣게 돼 기각했다. rct_20261028-0006(approval-gate #18, PR #338)과는 대상 시나리오가 달라 범위가 겹치지 않지만 둘 다 doc-tracker/2026-11.md 집계·공백 표를 고치므로 먼저 머지된 쪽 뒤에 나머지가 rebase 충돌을 풀어야 한다. 완료 기준(범위): PR #373 이 main 에 머지되고 CI android-instrumented-test 에서 두 테스트가 통과하며 매칭 23·공백 53·매칭 단위 파일 25 로 불변식 (94−13−5)=23+53 이 성립한다. 범위 밖: affirmations #5 및 나머지 공백 52행(재감지가 새 task 로 잇는다). 사람 소유 결정 없음, 수동 승인 케이스 비해당.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #373 의 CI(android-instrumented-test 등)가 완료·성공인지 확인한다. 실패하면 실패 테스트 로그를 읽어 같은 브랜치에서 고친다(롱프레스처럼 입력 불안정이면 시맨틱 액션 사용).",
+              "expectedOutcome": "head sha 의 필수 체크가 모두 success, ScratchpadToAffirmationTest·RotatingAffirmationTest 통과"
+            },
+            {
+              "seq": 2,
+              "action": "main 과 충돌(특히 doc-tracker/2026-11.md 집계 숫자)이 있으면 rebase/merge 로 풀고 집계를 실측 기준으로 재계산한다.",
+              "expectedOutcome": "PR 이 mergeable, 집계가 머지 시점 main 의 실측과 일치"
+            },
+            {
+              "seq": 3,
+              "action": "PR #373 을 squash 머지한다.",
+              "expectedOutcome": "main 에 두 *Test.kt 와 tracker 갱신이 착지"
+            },
+            {
+              "seq": 4,
+              "action": "main 에서 grep -H '^// 검증 시나리오:' 로 선언 줄 수 = 최상위 *Test.kt 수를 확인하고 tracker 집계(매칭·공백·파일)가 실측과 맞는지 대조한다.",
+              "expectedOutcome": "두 파일 선언이 test-affirmations.md#시나리오 4·6 이고 불변식 성립"
+            }
+          ],
+          "plannedAt": "2026-11-04T15:05:00Z",
+          "executionGuide": "## 순서\n1. PR #373 CI 확인 (병렬 불가 — 이후 단계의 전제).\n2. 충돌 해소(필요 시) → 3. squash 머지 → 4. main 검증.\nrct_20261028-0006 의 PR #338 도 tracker 를 고치므로 어느 쪽이 먼저든 뒤에 머지하는 쪽이 집계(매칭·공백·파일 수)를 재계산한다.\n\n## 검증 방법\n- CI: `gh pr checks 373 --repo dlddu/pocket-aide` 필수 체크 success, android-instrumented-test 로그에서 `RotatingAffirmationTest`·`ScratchpadToAffirmationTest` 통과.\n- main: `grep -H '^// 검증 시나리오:' android/app/src/androidTest/java/com/dlddu/pocketaide/e2e/*Test.kt` 줄 수 = 최상위 *Test.kt 수, 두 파일 선언이 `test-affirmations.md#시나리오 4`·`#시나리오 6`.\n- tracker 「집계 (실측)」 매칭 23·공백 53·비-시나리오 2, 공백 표에 affirmations #4·#6 행이 없고 매핑 표에 있음. 모델 to-be versionScript 의 reg 해시가 바뀌어 있음.\n- 범위 밖(후속): affirmations #5, approval-gate 12(또는 #338 착지 후 11), github-monitor 7, routines 7, scratchpad 4, session-platform 14, todo 8.\n\n## 주의사항\n- 제품 코드 무변경이라 롤백은 PR revert 한 번. 데이터·트래픽 영향 없음(CI 백엔드 전용).\n- RotatingAffirmationTest 는 시작 때 사용자의 다짐을 모두 지운다(iOS 와 동일) — CI 전용 ephemeral 백엔드에서만 돈다.\n- 계측 테스트가 흔들리면(15초 waitUntil 타임아웃) 같은 sha 재실행과 실패 테스트 변화를 보고 flake 인지 입력 불안정인지 가른 뒤 고친다. comment-policy ledger 가 새 주석에 실패하면 주석을 제거한다.\n- CI 미완료(in_progress)는 성공이 아니다 — 완료 후에만 머지."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0001-affirmations-4-6",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/373",
+          "preparedAt": "2026-11-04T15:05:00Z",
+          "notes": "테스트 2개 신설(RotatingAffirmationTest.kt·ScratchpadToAffirmationTest.kt)+tracker 갱신, 제품 코드 무변경. 로컬 check_ledger.py rc=0. 안드로이드 계측 테스트는 로컬 실행 불가 — PR 생성 직후라 CI 결과는 미확인이며 실행 단계가 확인한다."
+        }
+      }
+    ]
   }
 ]
