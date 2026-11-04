@@ -2905,7 +2905,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T23:34:20Z",
     "trigger": {
       "detectedAt": "2026-11-04T23:34:20Z",
@@ -2929,6 +2929,40 @@
     "assessment": {
       "reason": "작업 필요(action_required) — 원장 미판정 L 35줄(chat store.go 18·handlers/chat.go 15·chat_test.go 2)이 판정 pass를 받지 않았다. 같은 모델에 열린 형제 task가 없고(직전 task 전부 종료) 시간이 지나도 자동 해소되지 않는다: 원장 갱신과 passes/ 상세를 쓰는 판정 pass PR이 필요하다. 범위 이탈(미분류·unparsed)은 0이라 그 밖의 격차는 없다.",
       "assessedAt": "2026-11-04T23:34:40Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "원장 미판정 L 3행 35줄(chat store.go 18·handlers/chat.go 15·chat_test.go 2, 전부 #370 신규)을 한 슬라이스로 판정한다 — 코드 재진술 5줄 제거, 유지 30줄은 passes/ 에 사유 기록, 원장 갱신. 완료 기준: 원장 L 미판정 0줄 + 게이트 rc=0. 범위 밖: 이후 기능 PR이 들이는 신규 주석(재감지가 새 task로 잇는다). 예산 400줄 미만인 것은 남은 미판정 대상이 이 35줄뿐이라서다. 주석만 바꾸므로 revert로 복구 가능.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR dlddu/pocket-aide#389 머지 전 확인: 열린 PR 중 chat 3파일·ledger 해당 행과 겹치는 것이 없는지, CI `comment-policy ledger` 잡과 게이트 `python3 scripts/comment-policy/check_ledger.py` 통과 확인",
+              "expectedOutcome": "충돌 없음, 게이트·CI 초록"
+            },
+            {
+              "seq": 2,
+              "action": "PR #389 머지(필요 시 main 위로 rebase 후 게이트 재실행)",
+              "expectedOutcome": "main 에 chat 주석 판정과 원장 `완료` 반영"
+            },
+            {
+              "seq": 3,
+              "action": "머지된 main 에서 게이트와 모델 as-is versionScript 재실행",
+              "expectedOutcome": "L 미판정 0줄, rc=0, unclassified=0"
+            }
+          ],
+          "plannedAt": "2026-11-04T23:50:00Z",
+          "executionGuide": "## 순서\n1. 머지 전 확인(순차): #389 변경 파일은 chat/store.go, handlers/chat.go, handlers/chat_test.go(주석 5줄 삭제), ledger.md, passes/2026-11-04-chat-api-sessions.md. 열린 PR이 같은 파일·ledger 행을 건드리면 rebase 후 `check_ledger.py --rows` 로 행을 재계산.\n2. 머지. 3은 머지 뒤에만 의미가 있어 순차.\n\n## 검증\n- main checkout 에서 `python3 scripts/comment-policy/check_ledger.py` → `L: ... 미판정 0`, rc=0 (기준 시점 L 행 68·주석 842줄).\n- 비주석 변경 없음: `git diff 8372914 -- backend | grep '^[+-]' | grep -vE '^(\\+\\+\\+|---)' | grep -vE '^[+-]\\s*//'` 가 비어야 한다.\n- 모델 versionScript 재실행 시 `unclassified=0`, lines 가 원장 L 합계와 일치.\n- 완료 기준은 위 미판정 0줄이다. 이후 새 주석 PR의 미판정은 범위 밖(재감지가 새 task).\n\n## 주의\n- 주석만 바뀌어 롤아웃·트래픽 영향 없음. 되돌릴 때는 PR revert.\n- 머지 후 main 이 전진해 행이 어긋나면 `--rows` 출력으로 줄 수·지문 갱신 후 푸시.\n- PR이 docs/comment-policy 와 Go 주석만 바꾸므로 수동 승인 필요 여부는 리뷰 단계가 판정한다."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0004-chat-comments",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/389",
+          "preparedAt": "2026-11-04T23:50:00Z",
+          "notes": "기준 main 8372914, PR head a706d52. 게이트 rc=0(미판정 0줄). 머지는 하지 않았다."
+        }
+      }
+    ]
   }
 ]
