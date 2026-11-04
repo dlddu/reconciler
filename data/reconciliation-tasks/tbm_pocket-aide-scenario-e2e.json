@@ -11050,7 +11050,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T21:31:12Z",
     "trigger": {
       "source": "version_change",
@@ -11074,6 +11074,45 @@
     "assessment": {
       "reason": "작업 필요. 이번 버전 변화는 rct_20261104-0003 슬라이스(approval-gate #8·#10 이식)의 반영이라 그 자체로 오류는 없으나(등재 집계·선언·파일 회계 모두 실측과 일치), 정의 규칙 1·7상 공백 49건이 남아 있다. 자동 해소·롤아웃 대기 성질이 아니고 구현 대기/예외 등재 대상도 아니므로(등재 표가 이미 분류를 마침) 다음 슬라이스를 planner가 잡아야 한다 — 슬라이스 → 재감지 → 후속 task 루프의 정상 진행.",
       "assessedAt": "2026-11-04T21:31:42Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "gap(1:1 대상 76 중 공백 49) 가운데 선행 인프라가 「없음」이고 기존 하네스(BackendApi·ApprovalCaller·ApprovalUi·approvals.history.row.* testTag)만으로 닫히는 approval-gate #11(만료 요청은 대기 목록에서 빠지고 처리 이력에 「만료 — 결정 없음」으로 남는다)만 이번 슬라이스로 닫는다: iOS ApprovalExpiryHistoryUITests 단언을 ApprovalExpiryHistoryTest.kt 로 이식하고 「## e2e 매핑」을 같은 PR 에서 갱신한다. 직전 슬라이스 #8 이 타이밍 단언으로 CI 에서 한 번 실패했으므로 이번엔 한 행만, 서버 EXPIRED 를 먼저 확인한 뒤 앱을 띄우는 결정적 순서로 계획했다(#5 는 탭 배지 판독, #12 는 사용자 전환+29건 스크롤이라 위험이 커 제외). 완료 기준(범위): PR #386 이 main 에 머지되고 CI 에서 ApprovalExpiryHistoryTest 가 통과하며 매칭 28·공백 48·매칭 단위 파일 30 으로 불변식 (94−13−5)=28+48 이 성립한다. 범위 밖: 나머지 공백 48행(재감지가 새 task 로 잇는다). 제품 코드 무변경(테스트 하네스만 사용), 사람 소유 결정 없음, 수동 승인 케이스 비해당(base judge.py 로 변경 경로 2개 확인, rc=0).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #386 의 CI(android-instrumented-test, ci-success)가 완료·성공인지 확인하고 ApprovalExpiryHistoryTest 통과를 로그로 확인한다. 실패하면 로그를 읽어 같은 브랜치에서 고친다(새 head sha 면 review/manual-approval 재확인).",
+              "expectedOutcome": "head sha 의 필수 체크가 모두 success, 신규 테스트 통과"
+            },
+            {
+              "seq": 2,
+              "action": "main 과 충돌(특히 doc-tracker/2026-11.md 집계 숫자)이 있으면 풀고 집계를 실측 기준으로 재계산한다.",
+              "expectedOutcome": "PR 이 mergeable, 집계가 머지 시점 main 의 실측과 일치"
+            },
+            {
+              "seq": 3,
+              "action": "PR #386 을 squash 머지한다(--match-head-commit).",
+              "expectedOutcome": "main 에 ApprovalExpiryHistoryTest.kt 와 tracker 갱신이 착지"
+            },
+            {
+              "seq": 4,
+              "action": "main 에서 grep -H '^// 검증 시나리오:' 로 선언 줄 수 = 최상위 *Test.kt 수를 확인하고 tracker 집계가 실측과 맞는지 대조한다.",
+              "expectedOutcome": "선언이 test-approval-gate.md#시나리오 11 이고 불변식 성립"
+            }
+          ],
+          "plannedAt": "2026-11-04T22:20:00Z",
+          "executionGuide": "## 순서\n1. PR #386 CI 확인 (병렬 불가 — 이후 단계의 전제).\n2. 충돌이 있으면 해결, 집계 재계산 → 3. squash 머지 → 4. main 검증.\n열린 PR 중 tracker 집계를 건드리는 것(#362 affirmations #3 등)이 먼저 머지되면 나중 머지하는 쪽이 매칭·공백·파일 수를 재계산한다.\n\n## 검증 방법\n- CI: `gh pr checks 386 --repo dlddu/pocket-aide` 필수 체크(ci-success, android instrumented test) success. 로그에서 `ApprovalExpiryHistoryTest` 통과 확인. in_progress 는 성공이 아니다.\n- main: `grep -H '^// 검증 시나리오:' android/app/src/androidTest/java/com/dlddu/pocketaide/e2e/*Test.kt` 줄 수 = 최상위 *Test.kt 수(30), 신규 파일 선언이 `test-approval-gate.md#시나리오 11`.\n- tracker 「집계 (실측)」 매칭 28·공백 48·비-시나리오 2, 공백 표에 approval-gate #11 행이 없고 매핑 표에 있음.\n- 범위 밖(후속): approval-gate #5·#12·#15·#18~21, affirmations #5, github-monitor 7, routines 7, scratchpad 4, session-platform 14, todo 8.\n\n## 주의사항\n- 제품 코드 무변경, 롤백은 PR revert 한 번. CI 전용 ephemeral 백엔드만 쓰며 데이터·트래픽 영향 없음.\n- 테스트는 5초 timeout 요청이 서버에서 EXPIRED 가 될 때까지(최대 20초) 기다린 뒤 앱을 띄운다. 실패 시 같은 sha 재실행으로 flake 여부를 가른 뒤 고친다. 이력 행 라벨 단언은 「만료 — 결정 없음」 문구(ApprovalFormatting)에 의존한다 — 문구 불일치면 앱 동작이 아니라 단언부터 확인한다.\n- 슬라이스 밖 기존 AffirmationEditTest 15s 타임아웃 flake 가 같은 실행에서 다시 나면 같은 sha 재실행으로 구분한다.\n- 새 PR head sha 에 review/manual-approval 이 필요한지(대상 레포 정책) 머지 전 확인한다. 현재 변경 경로는 판정기상 미접촉.\n- comment-policy ledger 로컬 check_ledger.py rc=0 (주석은 머리 선언 1줄뿐)."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0004-approval-gate-11",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/386",
+          "preparedAt": "2026-11-04T22:20:00Z",
+          "notes": "테스트 1개 신설(ApprovalExpiryHistoryTest.kt)+tracker 갱신, 제품 코드 무변경. 로컬 check_ledger.py rc=0, judge.py 미접촉, 선언 30줄=최상위 *Test.kt 30개. 안드로이드 계측 테스트는 로컬 실행 불가 — PR 생성 직후라 CI 결과는 미확인이며 실행 단계가 확인한다."
+        }
+      }
+    ]
   }
 ]
