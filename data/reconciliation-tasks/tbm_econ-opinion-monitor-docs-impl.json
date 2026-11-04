@@ -14151,6 +14151,54 @@
           "reason": "PR #284(head 4f0a3a8)는 열려 있고 충돌·베이스 이동은 없으나 CI가 실패했다: ci / e2e, ci / build, ci / comment-ledger 및 집계 check `required`가 failure. 계획 자체가 e2e 임계 조정을 가장 큰 불확실성으로 꼽았고 e2e는 로컬 미실행이어서, 준비물이 검증되지 않은 상태로 실행 허가를 낼 수 없다.",
           "comment": "PR #284 CI 실패를 고쳐야 승인된다: (1) ci / e2e — aggregation-1-volume-normalization 4번째 케이스 임계(naiveRatio×2)를 fixture 실측으로 조정하고 e2e 통과 확인. (2) ci / build 실패 원인 수정(python 3.14 로컬 외 CI 환경 차이 여부 확인). (3) ci / comment-ledger 실패 원인 수정. 이후 `required` check가 success인 head로 재준비하고 preparation에 갱신된 head를 기록. 범위·롤백·검증 기준은 적절하므로 유지. contracts/** 변경이 있어 review/manual-approval(MA1)이 필요한 상태이며, CI 통과 후 재검토 시 승인+manualApproval로 처리 가능."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "gap(AC3.1 제곱근 가중·AC3.4·AC3.6~3.8·신규 AC3.11/3.12)이 python·contracts·go·web에 걸쳐 크므로 AC 단위로 슬라이스한다. 이번 시도(슬라이스 1)의 범위=AC3.1만: python aggregation의 fold_bucket을 소스 균등에서 「소스 내 점유율을 그 구간 그 소스 기사 수의 제곱근 가중으로 평균」으로 바꾼다(버킷·윈도우·ALL·소스기여가 같은 fold_bucket을 공유해 한 곳 수정으로 일관). 달성 기준: AC3.1 예시(A30건·반도체15 / B2건·금리 → 약 40%·20%) 재현, 2건 소스 추가 시 비율 안 흔들림, 기존 합항등식(AC3.9)·pytest 전부 통과. 범위 밖(후속, 재감지가 새 task로 연다): AC3.4(대상×분위기·분위기 분포 제곱근 가중·정규화 전 값 병기·ALL 3축 균등), AC3.6, AC3.7, AC3.8 전환, AC3.11 소스×대상 표, AC3.12 기여 기사+소스 구성 요약, 이에 따른 gold 스키마·go API·web 화면 변경, 신규 6개 여정 목업. 대안으로 AC3.4부터 착수하는 안은 스키마(MA1 수동 승인)까지 번져 크고 AC3.1이 모든 집계의 토대라 후순위로 둔다. 코드만의 변경이라 revert 한 번으로 가역. [재계획: 직전 거부(PR #284 CI 실패)의 원인은 계획 결함이 아니라 준비물 결함이었다 — 주석 원장 행 미갱신(ci/build·comment-ledger)과 e2e 임계 naiveRatio×2가 실측 0.786 > 0.909 불가(ci/e2e). 범위·접근은 유지하고 PR 보강으로 해소.]",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "aggregate.py: SourceCounts(소스별 언급 수 + articles 기사 수) 도입, count_articles/with_all_axis/subject_windows가 기사 수를 함께 센다",
+              "expectedOutcome": "기사 수와 언급 수가 분리되어 집계된다"
+            },
+            {
+              "seq": 2,
+              "action": "fold_bucket: 가중치=sqrt(기사 수)/Σsqrt, 항=(n/소스 언급합)×가중치",
+              "expectedOutcome": "소스 균등 대신 제곱근 가중 비율이 나온다"
+            },
+            {
+              "seq": 3,
+              "action": "테스트 갱신·추가(AC3.1 예시 재현, 소규모 소스 안정성, 기존 균등 가정 값 교체), contracts gold subject_trend/subject_window 필드 doc 문구 교정 후 codegen(생성물 무변)",
+              "expectedOutcome": "pytest packages 전부 통과, gen 결과 무변"
+            },
+            {
+              "seq": 4,
+              "action": "e2e aggregation-1 4번째 케이스를 불변→「건수만큼 밀려나지 않음」으로 완화",
+              "expectedOutcome": "CI e2e에서 제곱근 가중에서도 통과"
+            },
+            {
+              "seq": 5,
+              "action": "CI 실패 수정: 주석 원장 5개 행(줄 수·지문 실측 갱신, 판정 —)과 e2e 4번째 케이스 임계를 shareRatio > naiveRatio 로 교정",
+              "expectedOutcome": "PR head에서 required를 포함한 모든 check success"
+            },
+            {
+              "seq": 6,
+              "action": "PR 머지 후 재감지로 후속 슬라이스(AC3.4 등) task가 열리는지 확인",
+              "expectedOutcome": "as-is 버전 변화로 남은 gap이 새 task로 이어진다"
+            }
+          ],
+          "plannedAt": "2026-11-04T12:50:00Z",
+          "executionGuide": "## 순서\n1. PR #284 head `840a502`의 CI가 전부 success(`required` 포함)인지 확인한다(이미 확인됨: build·e2e·comment-ledger·data-format·scenario-mapping 모두 success). 단일 PR, 순서 의존 없음.\n2. contracts/** 변경(avsc doc 문구 2줄)이 레포 정책 MA1에 닿아 `review/manual-approval` 사람 승인이 필요할 수 있다 — 리뷰가 판정하고 승인되면 `review.manualApproval`로 남긴다. 사람 승인 후 머지.\n3. 머지 후 as-is 버전(python/contracts 해시) 변화로 재감지가 후속 슬라이스 task를 연다.\n\n## 검증\n- 머지 전: PR head의 `required` check success 재확인(head sha가 바뀌었으면 재확인).\n- 코드: `fold_bucket`이 소스 기사 수 제곱근 가중, 분포 합 1. test_aggregate의 AC3.1 예시(A 30건·반도체 15 / B 2건·금리 → 반도체≈0.397, 금리≈0.205)와 합 항등식(AC3.9) 통과.\n- e2e aggregation-1 4번째 케이스: 임계 `shareRatio > naiveRatio`(CI 실측 0.786 > 0.455)로 통과 확인됨.\n- 수렴 판정은 이 슬라이스 범위(AC3.1) 기준.\n\n## 주의\n- 되돌림: 머지 커밋 revert 한 번(데이터 마이그레이션 없음; gold는 다음 배치에서 재계산).\n- 배포 후 첫 집계 배치에서 비율 분포가 달라지는 것이 정상.\n- 주석 원장(docs/comment-policy/ledger.md)의 5개 행은 줄 수·지문만 실측으로 갱신하고 판정 칸을 `—`로 둠 — 증분 주석 판정은 별도 슬라이스(이 task 범위 밖).\n- 사람 소유 결정 없음(AC3.1은 docs가 확정).\n\n## 범위 밖(후속)\nAC3.4(대상×분위기, 분위기 분포 제곱근 가중·정규화 전 값 병기·ALL 3축 균등 평균·빠진 축 표기), AC3.6, AC3.7, AC3.8, AC3.11, AC3.12, 해당 gold 스키마·go API·web, 신규 여정 6개 목업(docs 쪽), 변경된 주석의 증분 판정."
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261103-0001-sqrt-weighted-normalization",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/284",
+          "preparedAt": "2026-11-04T12:50:00Z",
+          "notes": "기존 PR #284 브랜치에 수정 커밋 840a502 추가(원장 행 갱신 + e2e 임계 교정). head 840a502 에서 required·build·e2e·comment-ledger 전부 success 확인. contracts/** 변경으로 MA1(사람 수동 승인) 대상일 수 있음 — 리뷰가 판정."
+        }
       }
     ]
   },
