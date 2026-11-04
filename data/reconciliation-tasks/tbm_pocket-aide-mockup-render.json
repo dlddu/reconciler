@@ -18377,7 +18377,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-mockup-render",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T20:30:24Z",
     "trigger": {
       "source": "version_change",
@@ -18397,6 +18397,45 @@
     "assessment": {
       "assessedAt": "2026-11-04T20:30:41Z",
       "reason": "구현·토큰은 불변이고 목업 변화도 직전 슬라이스의 대조 문서 확장뿐이지만, 정의 기준(구조·수치 대조 완비, 불일치 수렴)을 어기는 잔여 gap이 명확하다. 롤아웃·일시 alert처럼 자동 해소될 성격이 아니고 슬라이스→재감지→후속 task 루프의 정상 진행이므로 지금 작업 필요: planner가 다음 슬라이스(대조표 없는 화면의 구조·수치 표 신설, 또는 대조 완료 화면의 불일치 수렴)의 범위를 정할 것."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "gap (a) 중 구조·수치 표 `_structure-map.md` 의 네 번째 화면 슬라이스: 우선순위 시트·다짐 탭·임시공간은 앞선 task 가 세웠고 routines·todo-personal·todo-work·approval 은 판정 불능이다. 여러 화면을 한 PR 에 담으면 검토·롤백이 어려우므로 `screen-todo-work`(회사 투두) 한 화면만 같은 방식으로 세운다. 표는 구현을 목업(SSOT)과 대조해 판정을 세우는 수단이며 android/·screen-*.html·tokens.md 는 바꾸지 않는다(문서만 변경, 가역: 머지 커밋 revert). **완료 기준**: ① 머지된 main 에서 `_structure-map.md` 검산 블록 출력이 `ok` 한 줄, ② 표에 `screen-todo-work` 표 E 41행·표 M 165행·표 S 15행과 집계가 있고 기존 세 화면 표도 검산 통과, ③ android/·res·screen-*.html·tokens.md·docs/design-system 무변경(as-is 지문 불변, to-be 는 docs/mockups 해시만 변경). 이 화면에서 드러난 불일치(표 M 불일치 23, 표 S 불일치 2·목업 대기 1)는 실패가 아니라 남은 drift 기록이다. **범위 밖(후속)**: 나머지 세 화면(routines·todo-personal·approval) 표, 네 화면 불일치의 구현/목업 수렴, `_copy-map.md` 잔여 카피 행(drift 3), `_deviations.md` S2~S9 iOS 근거 문구 갱신(drift 5), 모델 as-is 지문 좁히기.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #384 가 열려 있고 head 가 cea8ff7 인지, 변경 파일이 docs/mockups/_structure-map.md·_impl-map.md 2개뿐인지, main 과 충돌이 없는지 확인한다.",
+              "expectedOutcome": "open·mergeable, android/·screen-*.html·tokens.md 변경 0건."
+            },
+            {
+              "seq": 2,
+              "action": "PR 의 required check(judge 등)가 모두 success 인지 확인한 뒤 PR #384 를 squash 머지한다(--match-head-commit).",
+              "expectedOutcome": "main 에 머지 커밋 생성."
+            },
+            {
+              "seq": 3,
+              "action": "머지된 main 에서 레포 루트 기준 `_structure-map.md` 검산 블록을 실행한다.",
+              "expectedOutcome": "출력이 `ok` 한 줄."
+            },
+            {
+              "seq": 4,
+              "action": "행 수·무변경 범위를 확인한다: 회사 투두 표 E 41·M 165·S 15행과 집계, android/docs-design-system/screen-*.html diff 빈 출력, as-is versionScript 값 불변.",
+              "expectedOutcome": "구현·토큰·목업 HTML 무변경, as-is 지문 ui:3d8fa467… res:ee98cbb… 불변."
+            }
+          ],
+          "executionGuide": "## 순서\n1→2→3→4 순차(머지 전 확인이 머지·검증의 전제). 병렬 불가.\n\n## 실행\n1. `gh pr view 384 -R dlddu/pocket-aide` — state OPEN, headRefOid `cea8ff733c1714dee4536f12654949a89662b3cb`, 변경 파일 `docs/mockups/_structure-map.md`·`docs/mockups/_impl-map.md` 2개뿐. head 가 다르면 의도치 않은 푸시이므로 머지하지 말고 중단·보고. (계획 시점 main 은 8372914 로 PR base 8f269a1 보다 앞서 있으나 merge-tree 상 충돌 없음 — 머지 직전 재확인.)\n2. head 의 status/check 확인: `judge`(review-policy)·`Detect changes`·`comment-policy ledger`·`Journey mockup` 등 required 가 success 이고 진행 중인 것이 없을 때만 머지. 사람 승인 status 가 필요한 상태면 머지하지 않는다. 직전 슬라이스에서 merge commit 이 거부됐으므로 squash(`--match-head-commit` 고정)를 쓴다.\n3. 머지 후 main 체크아웃에서 `_structure-map.md` 의 `## 검산` 코드 블록을 레포 루트에서 실행 → `ok`.\n4. 완료 기준 ③ 확인: `git diff <머지 전 main>..main -- android docs/design-system docs/mockups/screen-*.html` 빈 출력, as-is/to-be versionScript 재실행(as-is 지문 불변).\n\n## 검증(계획 범위 기준)\n완료 기준 ①~③ 이 모두 성립하면 succeeded. 회사 투두 불일치 행(표 M 23·표 S 2)과 목업 대기 1(표 S)이 남아 있는 것은 범위 밖 drift 이므로 실패 사유가 아니다. 검산이 `ok` 가 아니면 failed(머지 내용이 PR head 와 같은지 `git diff cea8ff7..main -- docs/mockups/_structure-map.md docs/mockups/_impl-map.md` 로 먼저 확인).\n\n## 범위 밖(후속, 재감지 입력)\n- `_structure-map.md` 나머지 세 화면(routines·todo-personal·approval) 표\n- 불일치 수렴: 회사 투두(기한별 섹션·급한 행 강조·`.stamp` 서체·자간·요약 줄 서체·행 제목 굵기·구분점/막대 색·행 사이 간격 합산 표기), 임시공간·우선순위 시트·다짐 탭 기존 불일치\n- `_copy-map.md` 잔여 카피 행(drift 3), `_deviations.md` S2~S9 iOS 근거 문구 갱신(drift 5), 모델 as-is 지문 좁히기\n\n## 주의\n- 문서만 바꾸므로 런타임·데이터 영향 없음, 불가역 지점 없음. 롤백은 머지 커밋 revert 한 건.\n- 검산은 필요조건(인용 존재·환산·산술 정합)이다.\n- 머지 직후 base 가 이동해 충돌하면 임의 해결하지 말고 보고(재계획).",
+          "plannedAt": "2026-11-04T22:20:00Z"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0006",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/384",
+          "preparedAt": "2026-11-04T21:00:30Z",
+          "notes": "head cea8ff733c1714dee4536f12654949a89662b3cb, docs/mockups 2파일. 이전 planner 세션이 PR 까지 만들고 task 기록 전에 중단돼, 재개 세션이 PR 을 검증 후 이어받음: head 에서 검산 블록 ok, main(8372914)과 merge-tree 충돌 없음, 변경 파일 2개뿐, CI judge 등 success. 판정기 MA1~MA6 미접촉이라 자동 success. 머지는 executor 몫."
+        }
+      }
+    ]
   }
 ]
