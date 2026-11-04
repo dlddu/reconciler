@@ -14102,7 +14102,43 @@
     "assessment": {
       "reason": "docs 7da6f4b(2026-11-02)가 AC3.1 제곱근 가중 정규화, AC3.4 대상×분위기·ALL 균등평균, AC3.8 다섯 화면 전환, 신규 AC3.11/AC3.12를 확정했으나 구현(python/go/web/contracts)에는 해당 코드가 없다(grep 0건). 자동 해소될 성격이 아니라 구현 작업이 필요하다. 규모가 크므로 planner가 AC 단위로 슬라이스 분할을 권장한다. 신규 여정 6개의 목업 페이지 부재는 docs 쪽 후속이라 이 task 범위 밖.",
       "assessedAt": "2026-11-03T10:46:27Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "gap(AC3.1 제곱근 가중·AC3.4·AC3.6~3.8·신규 AC3.11/3.12)이 python·contracts·go·web에 걸쳐 크므로 AC 단위로 슬라이스한다. 이번 시도(슬라이스 1)의 범위=AC3.1만: python aggregation의 fold_bucket을 소스 균등에서 「소스 내 점유율을 그 구간 그 소스 기사 수의 제곱근 가중으로 평균」으로 바꾼다(버킷·윈도우·ALL·소스기여가 같은 fold_bucket을 공유해 한 곳 수정으로 일관). 달성 기준: AC3.1 예시(A30건·반도체15 / B2건·금리 → 약 40%·20%) 재현, 2건 소스 추가 시 비율 안 흔들림, 기존 합항등식(AC3.9)·pytest 전부 통과. 범위 밖(후속, 재감지가 새 task로 연다): AC3.4(대상×분위기·분위기 분포 제곱근 가중·정규화 전 값 병기·ALL 3축 균등), AC3.6, AC3.7, AC3.8 전환, AC3.11 소스×대상 표, AC3.12 기여 기사+소스 구성 요약, 이에 따른 gold 스키마·go API·web 화면 변경, 신규 6개 여정 목업. 대안으로 AC3.4부터 착수하는 안은 스키마(MA1 수동 승인)까지 번져 크고 AC3.1이 모든 집계의 토대라 후순위로 둔다. 코드만의 변경이라 revert 한 번으로 가역.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "aggregate.py: SourceCounts(소스별 언급 수 + articles 기사 수) 도입, count_articles/with_all_axis/subject_windows가 기사 수를 함께 센다",
+              "expectedOutcome": "기사 수와 언급 수가 분리되어 집계된다"
+            },
+            {
+              "seq": 2,
+              "action": "fold_bucket: 가중치=sqrt(기사 수)/Σsqrt, 항=(n/소스 언급합)×가중치",
+              "expectedOutcome": "소스 균등 대신 제곱근 가중 비율이 나온다"
+            },
+            {
+              "seq": 3,
+              "action": "테스트 갱신·추가(AC3.1 예시 재현, 소규모 소스 안정성, 기존 균등 가정 값 교체), contracts gold subject_trend/subject_window 필드 doc 문구 교정 후 codegen(생성물 무변)",
+              "expectedOutcome": "pytest packages 전부 통과, gen 결과 무변"
+            },
+            {
+              "seq": 4,
+              "action": "e2e aggregation-1 4번째 케이스를 불변→「건수만큼 밀려나지 않음」으로 완화",
+              "expectedOutcome": "CI e2e에서 제곱근 가중에서도 통과"
+            },
+            {
+              "seq": 5,
+              "action": "PR 머지 후 재감지로 후속 슬라이스(AC3.4 등) task가 열리는지 확인",
+              "expectedOutcome": "as-is 버전 변화로 남은 gap이 새 task로 이어진다"
+            }
+          ],
+          "plannedAt": "2026-11-04T12:05:00Z"
+        }
+      }
+    ]
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
