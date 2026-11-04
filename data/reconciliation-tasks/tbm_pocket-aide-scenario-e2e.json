@@ -10712,7 +10712,7 @@
   {
     "id": "rct_20261104-0003",
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-11-04T19:17:51Z",
       "source": "version_change",
@@ -10735,6 +10735,45 @@
     "assessment": {
       "reason": "판정: action_required — 규칙 1 누락 51건이 남아 있고 이를 맡은 열린 형제 task가 없다.\n근거: stateSummary 관측값(시나리오 94·예외 13·구현 대기 5·1:1 대상 76·매칭 파일 25·공백 51·고아 0, 파일 27=25+2+0, 선언 중복 0, 네 통 파티션 94 완전·중복 0)을 확인했다. 변경 창(d528d43→3dc5b54, commit 212c854 #378)의 산출은 approval-gate #3·#4 전용 파일 2개와 등재 갱신(공백 53→51)뿐이며 그 밖 51행은 그대로다. 같은 모델 파일 96 task 가운데 열린 것은 이 task뿐이라 남은 공백을 맡은 형제 task가 없다(확인 범위: data/reconciliation-tasks/tbm_pocket-aide-scenario-e2e.json 전체). 구현 대기 widget #10(동작 실측) 행은 이번 reg 변경 대상이 아니고 직전 감지와 동일해 새 gap 으로 세지 않았으며, 그 행을 세어도 판정은 같다.\n적용 기준: 규칙 1(전용 파일 0개=누락 drift)·규칙 7(테스트 인프라 선행과 전용 파일 신설은 이 모델 소관이고 공백을 예외·구현 대기로 옮기지 않는다). 두 규칙 아래 51행이 이 모델의 drift로 남는다. 자동 해소 요인(롤아웃·머지 대기)이 없어 유예(recheckAfter)하지 않는다.\n반대 방향 근거: 등재 문서는 실측과 완전히 일치한다 — 집계 94/13/5/76/25/51/2/0, 매핑 표 25행과 디스크 선언 완전 일치, 중복·고아·문서 없는 선언 0, 예외 13행은 사유·대체 수단, 공백 51행은 선행·해소·재검토 시점 기재, 구현 대기 5행은 근거·담당·해제 조건 기재 → 규칙 2·3·4·5 위반은 없다. BF-5 스텁 선행도 이미 착지했다(PR #327=039c42d — 공유 start-test-backend 액션이 session_platform_stub.py 를 띄워 SESSION_PLATFORM_URL 을 export 하고 Android 계측 잡이 그 액션을 사용, 7fe074f BF-6 1차 추가분은 iOS 전용이라 매칭 단위가 아님). 그래서 session-platform 14행의 선행 표기는 뒤처졌지만 행은 여전히 공백이라 해소로 세지 않는다.",
       "assessedAt": "2026-11-04T19:22:30Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "gap(1:1 대상 76 중 공백 51) 가운데 선행 인프라가 「없음」이고 기존 하네스(BackendApi·ApprovalUi·approval.detail.* testTag)만으로 닫히는 approval-gate #8(카운트다운 0 → 결정 불가)·#10(선착 결정만 유효)만 이번 슬라이스로 닫는다: iOS ApprovalCountdownUITests·ApprovalFirstDecisionWinsUITests 단언을 ApprovalCountdownTest.kt·ApprovalFirstDecisionWinsTest.kt 로 이식하고 「## e2e 매핑」을 같은 PR 에서 갱신한다. 직전 슬라이스(#378)와 같은 크기·방식의 결정적 두 행을 골라 CI 실패 위험을 낮추고(난수 표본인 affirmations #5, 둘째 사용자 전환이 필요한 행은 제외), 대량 이식은 기각했다. 완료 기준(범위): PR #382 가 main 에 머지되고 CI 에서 두 테스트가 통과하며 매칭 27·공백 49·매칭 단위 파일 29 로 불변식 (94−13−5)=27+49 가 성립한다. 범위 밖: 나머지 공백 49행(재감지가 새 task 로 잇는다). 제품 코드 무변경(테스트 하네스만 사용), 사람 소유 결정 없음, 수동 승인 케이스 비해당 여부는 머지 전 head sha 의 review/manual-approval 로 확인.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #382 의 CI(android-instrumented-test, ci-success)가 완료·성공인지 확인하고 ApprovalCountdownTest·ApprovalFirstDecisionWinsTest 통과를 로그로 확인한다. 실패하면 로그를 읽어 같은 브랜치에서 고친다.",
+              "expectedOutcome": "head sha 의 필수 체크가 모두 success, 두 테스트 통과"
+            },
+            {
+              "seq": 2,
+              "action": "main 과 충돌(특히 열린 PR #362 도 건드리는 doc-tracker/2026-11.md 집계 숫자)이 있으면 풀고 집계를 실측 기준으로 재계산한다.",
+              "expectedOutcome": "PR 이 mergeable, 집계가 머지 시점 main 의 실측과 일치"
+            },
+            {
+              "seq": 3,
+              "action": "PR #382 를 squash 머지한다(--match-head-commit).",
+              "expectedOutcome": "main 에 두 *Test.kt 와 tracker 갱신이 착지"
+            },
+            {
+              "seq": 4,
+              "action": "main 에서 grep -H '^// 검증 시나리오:' 로 선언 줄 수 = 최상위 *Test.kt 수를 확인하고 tracker 집계가 실측과 맞는지 대조한다.",
+              "expectedOutcome": "두 파일 선언이 test-approval-gate.md#시나리오 8·10 이고 불변식 성립"
+            }
+          ],
+          "plannedAt": "2026-11-04T20:10:00Z",
+          "executionGuide": "## 순서\n1. PR #382 CI 확인 (병렬 불가 — 이후 단계의 전제).\n2. 충돌이 있으면 해결, 집계 재계산 → 3. squash 머지 → 4. main 검증.\n열린 PR 중 tracker 집계를 건드리는 것(#362 affirmations #3 삭제 이식 등)이 먼저 머지되면 나중 머지하는 쪽이 매칭·공백·파일 수를 재계산한다.\n\n## 검증 방법\n- CI: `gh pr checks 382 --repo dlddu/pocket-aide` 필수 체크(ci-success, android instrumented test) success. 로그에서 `ApprovalCountdownTest`·`ApprovalFirstDecisionWinsTest` 통과 확인. in_progress 는 성공이 아니다.\n- main: `grep -H '^// 검증 시나리오:' android/app/src/androidTest/java/com/dlddu/pocketaide/e2e/*Test.kt` 줄 수 = 최상위 *Test.kt 수(29), 두 파일 선언이 `test-approval-gate.md#시나리오 8`·`#시나리오 10`.\n- tracker 「집계 (실측)」 매칭 27·공백 49·비-시나리오 2, 공백 표에 approval-gate #8·#10 행이 없고 매핑 표에 있음.\n- 범위 밖(후속): approval-gate 나머지 공백 8행, affirmations #5, github-monitor 7, routines 7, scratchpad 4, session-platform 14, todo 8.\n\n## 주의사항\n- 제품 코드 무변경, 롤백은 PR revert 한 번. CI 전용 ephemeral 백엔드만 쓰며 데이터·트래픽 영향 없음.\n- #8 은 45초 만료를 실제로 기다린다(최대 60초 waitUntil). 타임아웃이면 같은 sha 재실행으로 flake 여부를 가른 뒤 고친다. 카운트다운 감소 단언은 'mm:ss' 문자열 사전순 비교(1시간 미만 구간)에 의존한다.\n- #10 은 앱 상세에서 거절 확정 시 notice 문구 「이미 처리된 요청입니다 — 승인됨」(ApprovalFormatting.conflictNotice)을 단언한다 — 문구 불일치로 실패하면 앱 동작이 아니라 단언 문구부터 확인한다.\n- 새 PR head sha 에 review/manual-approval 이 필요한지(대상 레포 정책) 머지 전 확인한다.\n- comment-policy ledger 로컬 check_ledger.py rc=0 (주석은 머리 선언 1줄뿐)."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0003-approval-gate-8-10",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/382",
+          "preparedAt": "2026-11-04T20:15:00Z",
+          "notes": "테스트 2개 신설(ApprovalCountdownTest.kt·ApprovalFirstDecisionWinsTest.kt)+tracker 갱신, 제품 코드 무변경. 로컬 check_ledger.py rc=0, 선언 29줄=최상위 *Test.kt 29개, 공백 표 49행. 안드로이드 계측 테스트는 로컬 실행 불가 — PR 생성 직후라 CI 결과는 미확인이며 실행 단계가 확인한다."
+        }
+      }
+    ]
   }
 ]
