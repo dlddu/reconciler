@@ -2409,6 +2409,49 @@
           "reason": "신선도 확인: PR #380(head 08f84e1)은 열려 있고 diff 6파일이 plan.steps와 일치하며 comment-policy ledger·review/manual-approval은 success다. 그러나 기본 브랜치의 필수 체크 ci-success가 여전히 failure(Android instrumented test (emulator) 실패)라 머지할 수 없다. 변경 자체는 저위험·가역적이나, 계획이 '원인 미규명 flake가 풀리기를 executor가 재시도하며 기다린다'는 불확실한 조건에 의존해 지금 실행 허가를 줄 수 없다.",
           "comment": "ci-success가 success인 head를 확보한 뒤 재준비 필요: (1) Android 계측 잡 실패(AffirmationEditTest ComposeTimeoutException)를 이 PR과 무관한 flake로 단정만 하지 말고, 최근 main/다른 PR run에서 같은 잡의 성공·실패 이력을 근거로 확인하고, 이 PR이 .github/actions/start-test-backend/** 변경으로 해당 잡을 트리거하므로 스텁 변경이 계측 테스트 백엔드에 영향을 주지 않는지 확인. (2) 재실행(빈 커밋/rerun)으로 ci-success가 green이 된 head sha를 preparation.notes에 기록하거나, main 쪽 불안정이 원인이면 그 해소(소관 모델)를 선행 조건으로 명시. (3) executionGuide의 '재시도 후 계속 막히면 failed' 분기는 실행 단계에 불확실성을 넘기므로, 승인 가능한 상태(ci-success green)로 만든 뒤 계획을 제출할 것. 범위·롤백·검증 방법은 적절하니 유지."
         }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "BF-6(착수 가능 행)의 2차 슬라이스: 세션 플랫폼 스텁에 응답 지연·turn 마커·아카이브 게이트 오프 모드를 더하고(새 모킹 지점 없이 기존 EXT 스텁 행 안), 시나리오 7(2·3단계)·8(1·2)·9(나)·14 를 단정하는 UITests 3개를 추가해 원장 BF-6 행을 남은 범위로 좁힌다. 이 시도의 완료 기준 = 위 스텁 모드와 UITests 가 main 에 있고 BF-6 행이 갱신됨. 범위 밖 = 1 MiB 초과 붙여넣기, Sessions*UITests 의 실행 검증(ios_tests 비활성). 대안으로 실행 검증용 ios_tests 재활성도 검토했으나 CI 비용에 대한 소유자 결정(ci.yml 주석)을 이 task 가 뒤집을 일이 아니라 제외했고, 한 PR 로 가역(revert 1회)이라 이 경로를 택했다. [재계획 2: 직전 거부(ci-success 미green 에 실행 불확실성 이전)를 반영 — 범위·접근은 동일. Android 계측 잡 실패는 PR 고유 원인이 아님을 이력으로 확인했고, 같은 head 08f84e1 에서 failed job 재실행으로 ci-success 를 success 로 만든 뒤 제출한다.]",
+          "riskLevel": "low",
+          "plannedAt": "2026-11-04T21:05:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "session_platform_stub.py 에 /e2e/reply(지연·조각·마커)와 /e2e/archive-disabled(snapshot 503) 모드 추가, reset 이 초기화",
+              "expectedOutcome": "로컬 스텁 기동 시 write→read 가 input/output/end 마커 순으로 자라고 snapshot 이 503"
+            },
+            {
+              "seq": 2,
+              "action": "SessionsUITestSupport 헬퍼와 SessionsResponsePhaseUITests·SessionsArchiveDisabledUITests·SessionsTurnMarkersUITests 추가",
+              "expectedOutcome": "시나리오 7(2·3)·8(1·2)·9(나)·14 단정 코드가 레포에 존재"
+            },
+            {
+              "seq": 3,
+              "action": "docs/e2e-mocking-policy.md BF-6 행을 남은 범위(1 MiB 붙여넣기·실행 검증)로 갱신, 세 칸 유지",
+              "expectedOutcome": "행이 B2 기계 판독 가능하고 소관 칸 없음"
+            },
+            {
+              "seq": 4,
+              "action": "PR 머지 후 versionScript 재계산",
+              "expectedOutcome": "as-is 지문 불변, to-be blob 변경, 허용목록↔코드 24==24"
+            },
+            {
+              "seq": 5,
+              "action": "PR #380 head 08f84e1 에서 ci-success success·review/manual-approval success 를 재확인 후 squash 머지",
+              "expectedOutcome": "머지 가능 상태(필수 체크 green)에서 머지 완료"
+            }
+          ],
+          "executionGuide": "## 순서\n1. (사전) PR https://github.com/dlddu/pocket-aide/pull/380 의 head 가 `08f84e1b7ac99654fb2333d3e61b9e640453109d` 인지 확인하고, 그 sha 에서 `ci-success`·`comment-policy ledger`·`review/manual-approval` 이 모두 success 인지 읽는다(2026-11-04T20:58Z 기준 모두 success, run 41902132387 attempt 2). head 가 달라졌으면(리베이스·추가 커밋) 새 head 에서 다시 읽는다.\n2. 모두 success 면 squash 머지. 필수 체크가 success 가 아니면 머지하지 않는다(우회 금지).\n3. 머지 후 pocket-aide@main 에서 versionScript 두 개(to-be blob, as-is 지문)를 다시 계산한다.\n\n## 검증 방법\n- 불변식 1: as-is 지문(`sites=41 files=24`, `b9a883fc…05d8`)이 머지 전후 동일 — 새 모킹 토큰·파일이 없다. 허용목록 파일 집합 24 == 코드 24.\n- 불변식 2: 원장 BF-6 행이 세 칸(해소 방향·선행·재검토)을 유지하고 범위가 「1 MiB 초과 붙여넣기 + 실행 검증」으로 좁아졌으며 소관 칸이 없다. 행이 사라지지 않았다(B3).\n- 스텁 모드: `python3 .github/actions/start-test-backend/session_platform_stub.py <port>` 후 `/e2e/reply`·`/e2e/archive-disabled` 호출 → write 후 read 가 `\\x1esession-platform input|output|end seq=N` 마커 순서, snapshot 503 (계획 시 로컬 확인).\n- 이 시도의 완료 기준(범위): 스텁 모드 2종 + 시나리오 7(2·3)·8(1·2)·9(나)·14 를 단정하는 UITests 3개가 main 에 있고 정책 문서 BF-6 행이 갱신됨.\n\n## 주의사항\n- **CI 상태(근거)**: head 08f84e1 의 `Android instrumented test (emulator)` 는 첫 시도에서 `AffirmationEditTest.editChangesOnlyTheTargetAndCancelChangesNothing` 의 ComposeTimeoutException(15s)으로 failure 였으나, 코드 변경 없이 failed job 만 재실행(run 41902132387, attempt 2)하자 success → ci-success success. 같은 head 의 실패/성공 공존 + 다른 PR(#382 등)·main 기반 브랜치 다수에서 같은 테스트 실패 + 이 PR 이 `android/**`·`backend/**` 를 건드리지 않음(스텁의 `.github/actions/start-test-backend/**` 가 필터에 걸려 잡만 돎)으로 flake 로 판단. 스텁 기본 응답은 모드를 켜지 않으면 변하지 않는다. 테스트 자체는 #373(2026-11-04T16:00Z) 에서 들어온 scenario-e2e 모델 소관이며 이 task 범위 밖이다.\n- 사전 조건을 만족하는 head 가 이미 확보돼 있으므로 executor 는 재시도를 기다릴 필요가 없다. 머지 직전 읽은 ci-success 가 failure 로 바뀌었으면(새 push 등) 머지하지 말고 사유를 남겨 failed 로 닫는다.\n- main 이 head 보다 1커밋(문서 PR #383) 앞서 있다(behind 1). 머지 불가 사유가 되면 리베이스 대신 사유를 남긴다.\n- Swift 테스트는 macOS 가 없어 컴파일하지 못했다. `ios_tests` 가 꺼져 있어 CI 가 오타를 잡지 못한다 — 실행 검증은 범위 밖.\n- 롤백: PR revert 한 번.\n- 주석 정책: 이 PR 에 주석을 다시 더하면 ledger 게이트가 실패한다 — 판정 원장 갱신 없이 주석을 들이지 않는다.\n\n## 범위 밖(후속)\n- 1 MiB 초과 붙여넣기 단정(시나리오 7 의 4단계) — BF-6 에 남음, 선행 없음.\n- `Sessions*UITests` 전체 실행 검증(로컬 시뮬레이터 또는 `ios_tests` 재활성) — BF-6 에 남음.\n- Android `AffirmationEditTest` 불안정 — 이 task 범위 밖(scenario-e2e 소관).\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0002-bf6-stub-modes",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/380",
+          "preparedAt": "2026-11-04T21:05:00Z",
+          "notes": "head 08f84e1b7ac99654fb2333d3e61b9e640453109d (코드 변경 없음). ci-success success(2026-11-04T20:58:40Z, run 41902132387 attempt 2 — 실패한 Android 계측 잡 재실행으로 green), comment-policy ledger·review/manual-approval success, mergeable. 계측 잡 실패는 AffirmationEditTest 1건 flake(같은 head 에서 실패→성공, 타 PR 에서도 재현). main 대비 behind 1(문서 PR). Swift 테스트는 컴파일 미검증."
+        }
       }
     ]
   }
