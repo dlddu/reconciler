@@ -14417,7 +14417,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T19:09:19Z",
     "trigger": {
       "detectedAt": "2026-11-04T19:09:19Z",
@@ -14430,6 +14430,40 @@
         "currentVersion": "contracts:8aefc1e63dd51506fbc4297429a3d5fe939694f4 python:598c206cd4f3103e79fccd567010a4ff10f56c58 go:aa146ef7f8d14a4efc464523974165b2364f01a2 web:0f2c50bdc941aad96e5048bc16e815390e924e1b deploy:b072897f81a8d36deb4f8ef504ec276e826071e2"
       }
     },
-    "id": "rct_20261104-0003"
+    "id": "rct_20261104-0003",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "JRN-subject-trend 의 집계 단위 라디오(tr-unit)+재집계 로딩(tr-reloading)만 슬라이스 2로 착지: /api/trend 가 ?unit= 를 받게 하고 Trend 화면에 라디오를 단다(Gold 에 세 단위가 이미 있어 계약 변경 없이 가능한 최소 슬라이스). 정규화 전/후·고른 칸 카드는 계약/도착 화면이 선행이라 범위 밖. 완료 기준: ?unit= 동작 + 라디오/로딩 구현 + 트래커 행 해소.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #292 CI 통과·diff 확인",
+              "expectedOutcome": "go test·vitest·tsc 통과"
+            },
+            {
+              "seq": 2,
+              "action": "PR #292 squash 머지",
+              "expectedOutcome": "main 에 슬라이스 2 착지"
+            },
+            {
+              "seq": 3,
+              "action": "/api/trend?unit= 응답과 Trend 화면 tr-unit/tr-reloading 확인",
+              "expectedOutcome": "unit 별 basis.bucket_unit 일치, 폴백 동작, 트래커 행 해소"
+            }
+          ],
+          "plannedAt": "2026-11-04T19:45:00Z",
+          "executionGuide": "## 실행 지침\n**순서**: (1) PR #292 CI·리뷰 확인 → (2) 머지(squash) → (3) 검증. 단계 간 의존이라 직렬.\n\n**검증**\n- 머지 후 `GET /api/trend?axis=KR&unit=day` 의 `basis.bucket_unit == \"day\"`, 잘못된 값/없는 단위는 가장 잘게 쪼갠 단위로 폴백.\n- `/trend` 화면에 `[data-role=tr-unit]` 라디오(시간·일·주)가 있고 선택 시 `?unit=` 로 재요청, 재요청 중 `tr-reloading` 이 `tr-plot` 을 대체.\n- 디자인 트래커에서 `tr-unit`/`tr-reloading` 행이 「해소된 등재」로 이동했는지.\n- 완료 기준은 이 슬라이스 범위(단위 전환)만이다.\n\n**범위 밖(후속)**: `tr-norm`·`tr-flag`·`tr-diff-note`(칸별 전체 건수 계약 선행), `tr-cell-box`·`tr-cell-entries`(원시 비율·도착 화면 선행), 목업 기본 단위 day 와 서빙 기본(가장 잘게) 차이.\n\n**주의**: 가역(PR 되돌리기). 기본 응답(unit 미지정)은 불변. 이 task는 detector가 stateSummary/assessment를 남기지 않고 넘어와 planner가 트리거 diff(#291)와 디자인 트래커 「구현 수렴 대기」 행에서 gap을 직접 도출했다."
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261104-0003-tbm-econ-docs-impl",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/292",
+          "preparedAt": "2026-11-04T19:45:00Z",
+          "notes": "go test/vitest/tsc 로컬 통과"
+        }
+      }
+    ]
   }
 ]
