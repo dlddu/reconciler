@@ -1387,7 +1387,7 @@
   {
     "id": "rct_20261026-0001",
     "toBeModelId": "tbm_pocket-aide-e2e-mock-policy",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-10-26T19:59:01Z",
       "source": "version_change",
@@ -1896,6 +1896,44 @@
           "reviewedAt": "2026-11-03T10:56:00Z",
           "reason": "PR #327(head 7f3a95197a85)은 열려 있고 mergeable이며 diff는 plan.steps가 적은 11파일(+343/-13, .github/workflows 없음)과 일치하고 review/manual-approval은 이 head에서 success다. 그러나 필수 체크 ci-success가 head에 아직 없고(mergeable_state blocked), Android instrumented test가 in_progress이며, 계획이 검증 대상으로 삼은 iOS build + test(Sessions* 4개 클래스)는 이 head에서 skipped라 실행된 증거가 없다. CI가 통과·검증되지 않은 상태에서는 실행을 허가할 수 없다.",
           "comment": "head 7f3a951 의 CI 를 끝까지 돌려 ci-success 가 success 가 된 것을 확인한 뒤 재계획·재검토를 요청한다. 특히 iOS build + test 가 skipped 인 이유(Detect changes 경로 필터·병합 커밋 처리 등)를 확인해 ios/ 변경이 있는 이 PR 에서 iOS shard 와 Sessions* 4개 클래스가 실제로 실행·통과하도록 만들어야 한다(필요하면 재실행·빈 커밋 없이 가능한 방법 우선, 새 커밋이 올라오면 review/manual-approval 이 무효가 되므로 head 재확인). executionGuide step 2 의 'iOS shard 0~2 pass' 기대가 skipped 로 충족되지 않는 점을 계획에 반영할 것."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재계획(직전 시도 review_rejected: head 7f3a951 에서 ci-success 부재·iOS build + test skipped). 접근·위험도(low)는 동일 — BF-5(등재 EXT, 선행 없음)를 session-platform 앱 경로 스텁 + SESSION_PLATFORM_URL 우회로 착수한다(PR #327 이어 씀). 달라진 점 3가지. (1) iOS 가 skipped 인 이유를 규명했다: main 의 ci.yml 이 #345(2026-11-01)로 `ios_tests: ${{ false && … }}` 로 iOS 테스트·TestFlight 를 명시적으로 껐다 — 이 PR 의 문제가 아니라 레포 정책이며, 워크플로 변경은 권한 밖이고 되돌릴 사안도 아니다. 따라서 iOS Sessions* UI 테스트는 CI 에서 실행되지 않으며 앞선 계획의 「iOS shard 의 Sessions* pass」 완료 기준은 달성 불가능해졌다. 완료 기준을 재설정한다. (2) 신선도: main 이 79a097a 로 3커밋 이동(runbook 2건 + #365 review-policy MA6 신설). #365 는 docs/product/test-*.md 를 수동 승인 케이스 MA6 로 만든다 — 이 PR 이 건드리는 docs/product/test-session-platform.md 가 MA6 에 닿는다. head 7f3a951 의 review/manual-approval success 는 MA6 이전 판정기가 붙인 낡은 자동 success 였으므로 PR 브랜치를 main 으로 갱신(update-branch, 병합 커밋 3d7164f, 강제 push 없음)해 판정기를 새로 돌렸고, 새 head 에는 review/manual-approval 이 붙지 않았다(= MA6 로 사람에게 간다). 기존 success 로 머지가 통과되는 우회를 막은 것이다. 이 PR 은 사람 소유 결정을 새로 만들지는 않으나(스텁은 이미 정책 BF-5 행이 정한 방향) 사람 승인 정책상 사람 확인을 거쳐야 한다. (3) 지문: main 이동분(docs·judge·runbook)은 ios·backend·.github 모킹 지점을 바꾸지 않아 기대 지문 sites=41 files=24 가 유지된다(실행 시점 재측정).\n\n[범위와 완료 기준 — 재설정] (a) 새 head 의 ci-success·comment-policy ledger·judge·Android instrumented 가 success 이고 사람이 MA6 승인을 붙인 상태로 PR 이 머지되며, (b) main 머지 후 지문이 허용목록과 양방향 1:1 이고 BF-5 가 해소 표로 이동·BF-6 이 열린 행으로 남는다. 시나리오 1 의 2·4·11·12단계가 iOS CI 에서 실제로 관찰되는 것은 iOS CI 가 꺼져 있는 한 이 시도의 범위 밖이다(스텁·테스트 코드는 병합되어 iOS CI 재활성화 시 즉시 검증됨; Swift 는 아직 CI 컴파일 이력이 최근 head 기준 없음 — 위험으로 명시). 이 완화가 BF-5 「해소」로 충분한지는 리뷰·사람 승인이 판단한다. 범위 밖: BF-6(시나리오 7~10·13·14), 실환경 대체 갈래, iOS Sessions* 실행 관측.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #327 이 OPEN·MERGEABLE 이고 head 가 3d7164f(이후 커밋이 올라왔다면 그 head)인지 확인한다. `gh pr diff 327 -R dlddu/pocket-aide --name-only` 가 PR 전체 diff 기준 아래 11파일과 정확히 일치하고 `.github/workflows/` 가 없는지 확인한다: .github/actions/start-test-backend/action.yml · .github/actions/start-test-backend/session_platform_stub.py · docs/comment-policy/ledger.md · docs/e2e-mocking-policy.md · docs/product/test-session-platform.md · ios/PocketAide/Sessions/SessionDetailView.swift · ios/PocketAideTests/SessionsCreateUITests.swift · ios/PocketAideTests/SessionsDeleteUITests.swift · ios/PocketAideTests/SessionsPlatformUnreachableUITests.swift · ios/PocketAideTests/SessionsTabUITests.swift · ios/PocketAideTests/SessionsUITestSupport.swift. main(79a097a) 병합분(docs/review-policy.md·scripts/review-policy/judge.py·docs/runbook-*)은 PR diff 에 나타나지 않아야 한다. review/manual-approval 은 MA6(docs/product/test-session-platform.md) 때문에 사람이 붙이기 전엔 head 에 없는 것이 정상이다.",
+              "expectedOutcome": "PR 전체 diff 11파일·워크플로 없음, head 일치, review/manual-approval 은 사람 승인 전까지 부재."
+            },
+            {
+              "seq": 2,
+              "action": "head 의 CI 완료를 기다려 ci-success·comment-policy ledger·judge·Android instrumented test·Detect changes·journey-mockup 이 success 인지 확인한다. iOS build + test·iOS test backend binaries 는 ci.yml 의 `ios_tests: false &&`(#345) 때문에 skipped 가 정상이며 실패 사유가 아니다(ci-success 게이트가 skipped 를 허용하는지는 head 의 ci-success 결과 자체로 판정). 실패 job 이 PR 과 무관한 인프라성이면 해당 job 만 재실행(최대 2회).",
+              "expectedOutcome": "ci-success success, 나머지 열거한 체크 success, iOS 계열은 skipped."
+            },
+            {
+              "seq": 3,
+              "action": "review/manual-approval 이 head 에 사람 손으로 success 가 붙은 것(리뷰가 review.manualApproval 로 남긴 sha·context)을 확인한 뒤에만 PR #327 을 머지한다. status 가 없거나 head sha 가 바뀌었으면 머지하지 않고 대기한다.",
+              "expectedOutcome": "사람 승인 status 확인 후 머지 → PR state MERGED."
+            },
+            {
+              "seq": 4,
+              "action": "main HEAD 를 체크아웃해 모델 asIs.versionScript 를 실행하고 허용목록(docs/e2e-mocking-policy.md)과 코드 실측을 양방향 대조(고아 0·미등재 0, mock-exception 카테고리 일치)한다. `python3 scripts/comment-policy/check_ledger.py` rc=0 을 확인하고, 원장에서 BF-5 가 해소 표로 이동했고 BF-6 이 열린 행(재검토 2027-01-20)으로 남았는지 읽는다.",
+              "expectedOutcome": "main 이 79a097a 이후 지문 표면에서 변하지 않았다면 sites=41 files=24 / b9a883fc3d6eee6fef67ec9b8b5aa7eda010613fb90706c952218af44ddd05d8; 움직였다면 그 시점 main 대비 정확히 +1 site/+1 file(session_platform_stub.py). 허용목록==코드 실측, BF-5 닫힘·BF-6 열림."
+            }
+          ],
+          "plannedAt": "2026-11-04T12:30:00Z",
+          "executionGuide": "## 실행 지침 — PR #327 (head 3d7164f) 사람 승인 후 머지, BF-5 해소 확인\n\n### 이번 재계획에서 달라진 점 (직전 review_rejected 사유 반영)\n- 직전 거부 사유: head 7f3a951 에 ci-success 가 없었고 iOS build + test 가 skipped 였다. 확인 결과 ci-success 는 이후 success 가 됐고, **iOS skipped 는 main ci.yml 의 `ios_tests: ${{ false && … }}`(#345, 2026-11-01 「iOS 테스트·TestFlight 업로드를 명시적으로 끔」) 때문**이다. 이 PR 의 경로 필터 문제가 아니고 빈 커밋·재실행으로 바뀌지 않는다. 워크플로 수정은 이 작업 범위 밖이므로, 완료 기준에서 「iOS shard 의 Sessions* pass」를 빼고 iOS 실행 관측은 범위 밖(후속)으로 옮겼다. 그 결과 스텁·Sessions* 테스트 Swift 는 병합돼도 CI 가 실행·컴파일하지 않는다는 점이 잔여 위험이다.\n- main 이 이동해(#365: 제품 문서 `docs/product/test-*.md` 등을 수동 승인 케이스 MA6 로 추가) 이 PR 의 `docs/product/test-session-platform.md` 가 MA6 에 닿는다. 구 판정기가 붙인 head 7f3a951 의 자동 success 는 무효로 보고 update-branch 로 새 head 3d7164f 를 만들어 판정기를 새로 돌렸다(현재 review/manual-approval 부재 = 사람 승인 대기). **리뷰는 review.manualApproval(sha=3d7164f50ce069c4291ea8df9b1727689520fbe7, context=review/manual-approval)을 남겨야 하고, executor 는 사람이 그 status 를 붙이기 전엔 머지하지 않는다.**\n\n### 순서 (직렬)\n1. PR 신선도·전체 diff 11파일 확인 (head 마다 재확인).\n2. head CI 완료 판독 — ci-success 가 머지 게이트.\n3. 사람 승인 status 확인 후 머지.\n4. main 에서 지문·허용목록 양방향 대조·원장 확인.\n\n### 단계별 검증 방법\n1. `gh pr view 327 -R dlddu/pocket-aide --json headRefOid,state,mergeable` → OPEN/MERGEABLE. `gh pr diff 327 -R dlddu/pocket-aide --name-only` → 정확히 다음 11개, 워크플로 없음:\n   - `.github/actions/start-test-backend/action.yml`\n   - `.github/actions/start-test-backend/session_platform_stub.py`\n   - `docs/comment-policy/ledger.md`\n   - `docs/e2e-mocking-policy.md`\n   - `docs/product/test-session-platform.md`\n   - `ios/PocketAide/Sessions/SessionDetailView.swift`\n   - `ios/PocketAideTests/SessionsCreateUITests.swift`\n   - `ios/PocketAideTests/SessionsDeleteUITests.swift`\n   - `ios/PocketAideTests/SessionsPlatformUnreachableUITests.swift`\n   - `ios/PocketAideTests/SessionsTabUITests.swift`\n   - `ios/PocketAideTests/SessionsUITestSupport.swift`\n2. `gh pr checks 327 -R dlddu/pocket-aide` → ci-success·comment-policy ledger·judge·Android instrumented test success, iOS 계열 skipped(정상). Sessions* 실행 로그는 기대하지 않는다.\n3. `gh api repos/dlddu/pocket-aide/commits/<head>/statuses` 에 `review/manual-approval` success(사람이 붙인 것)가 있을 때만 `gh pr merge 327 --squash`. 없거나 head 가 바뀌었으면 머지 금지·대기.\n4. main 체크아웃 후 versionScript 실행. 기대: 지문 표면이 79a097a 이후 변하지 않았으면 `sites=41 files=24 / b9a883fc3d6eee6fef67ec9b8b5aa7eda010613fb90706c952218af44ddd05d8`; 변했다면 그 시점 main 지문 +1/+1. `python3 scripts/comment-policy/check_ledger.py` rc=0. 허용목록 파일 집합 == 코드 실측, BF-5 해소 표·BF-6 열림(2027-01-20 미래).\n\n### 주의사항\n- ci-success 가 success 가 아니거나 사람 승인 status 가 없으면 머지하지 않는다. 임의 Swift 수정 금지(원인 기록만).\n- iOS CI 가 꺼져 있어 Sessions* 테스트는 실행되지 않는다 — 실패 증거가 없는 것을 통과 증거로 쓰지 말고, 검증 기록에 「iOS 실행 미관측」이라고 적는다.\n- 스텁은 EXT 등재 상태이며 새 모킹 지점을 늘리지 않는다. MA1~MA5 미접촉, MA6 접촉(사람 승인 필요).\n- 계획 단계에서는 머지하지 않는다.\n\n### 롤백\n머지 커밋 revert 한 번(강제 push 금지): `git checkout main && git pull --rebase origin main && git revert --no-edit <머지커밋> && git push origin HEAD:main`. 이후 check_ledger.py rc=0, 지문이 머지 직전 값으로 복귀, 원장이 BF-5 열림으로 복귀했는지 확인. (revert PR 도 MA6 에 닿을 수 있다.)\n\n### 범위 밖(후속)\n- BF-6(시나리오 7~10·13·14 단정, turn 마커·게이트 오프 흉내): 이 모델이 후속 해소.\n- iOS Sessions* 실행 관측(시나리오 1 의 2·4·11·12단계): iOS CI 재활성화 후 — 재감지가 잇는다.\n- 실환경 대체 갈래(전용 테스트 세션 플랫폼): 마련되면 스텁 3행과 함께 지움.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261026-0001",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/327",
+          "preparedAt": "2026-11-04T12:30:00Z",
+          "notes": "기존 PR #327 을 이어 쓴다(새 PR 없음). main(79a097a)을 update-branch 로 병합해 새 head 3d7164f50ce069c4291ea8df9b1727689520fbe7(강제 push 없음). 이유: #365(MA6)로 docs/product/test-session-platform.md 가 수동 승인 케이스에 닿게 돼 구 head 의 자동 review/manual-approval success 가 낡았다 — 새 head 에는 해당 status 가 없다(사람 승인 대기). 새 head CI 는 진행 중이었다(제출 시점). PR 전체 diff 11파일, 워크플로 없음, MERGEABLE. iOS 계열은 ci.yml `ios_tests: false &&`(#345)로 skipped. 머지하지 않았다."
         }
       }
     ]
