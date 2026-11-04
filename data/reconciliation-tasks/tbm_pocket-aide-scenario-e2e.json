@@ -11189,7 +11189,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T23:33:56Z",
     "trigger": {
       "source": "version_change",
@@ -11213,6 +11213,45 @@
     "assessment": {
       "reason": "작업 필요. 직전 슬라이스(#386 approval-gate #11)가 정상 반영돼 등재·집계는 정합하지만 1:1 대상 76 중 공백 48이 남았다(규칙 1/7). 롤아웃·재동기화로 자동 해소될 성질이 아니고 공백은 이 모델 소관 인프라/파일 작업이라 유예 없이 planner에 넘긴다. 슬라이스 → 재감지 → 후속 task가 정상 루프다.",
       "assessedAt": "2026-11-04T23:34:23Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "gap(1:1 대상 76 중 공백 48) 가운데 선행 인프라가 「없음」이고 기존 하네스(BackendApi.todos/todo·openMore·todos.*.row/summary testTag)만으로 닫히는 todo #1(영역 분리)만 이번 슬라이스로 닫는다: iOS TodoAreaSeparationUITests 단언을 TodoAreaSeparationTest.kt 로 이식하고 「## e2e 매핑」을 같은 PR 에서 갱신한다(PersonalTodoTest 패턴 재사용, 한 행만으로 flake 위험 최소). 완료 기준(범위): PR #388 이 main 에 머지되고 CI 에서 TodoAreaSeparationTest 가 통과하며 매칭 29·공백 47·매칭 단위 파일 31 로 불변식 (94−13−5)=29+47 이 성립한다. 범위 밖: 나머지 공백 47행(재감지가 새 task 로 잇는다). 제품 코드 무변경, 사람 소유 결정 없음, 수동 승인 케이스 비해당(judge.py rc=0).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #388 의 CI(android-instrumented-test, ci-success)가 완료·성공인지 확인하고 TodoAreaSeparationTest 통과를 로그로 확인한다. 실패하면 같은 브랜치에서 고친다.",
+              "expectedOutcome": "head sha 필수 체크 모두 success, 신규 테스트 통과"
+            },
+            {
+              "seq": 2,
+              "action": "main 과 충돌(특히 doc-tracker/2026-11.md 집계)이 있으면 풀고 집계를 실측 기준으로 재계산한다.",
+              "expectedOutcome": "PR mergeable, 집계가 머지 시점 main 실측과 일치"
+            },
+            {
+              "seq": 3,
+              "action": "PR #388 을 squash 머지한다(--match-head-commit).",
+              "expectedOutcome": "main 에 TodoAreaSeparationTest.kt 와 tracker 갱신 착지"
+            },
+            {
+              "seq": 4,
+              "action": "main 에서 선언 줄 수 = 최상위 *Test.kt 수를 확인하고 tracker 집계를 실측과 대조한다.",
+              "expectedOutcome": "선언이 test-todo.md#시나리오 1 이고 불변식 성립"
+            }
+          ],
+          "plannedAt": "2026-11-04T23:50:00Z",
+          "executionGuide": "## 순서\n1. PR #388 CI(ci-success, android instrumented test) 확인 — 이후 단계의 전제(병렬 불가).\n2. main 과 충돌(특히 doc-tracker/2026-11.md 집계 숫자)이 있으면 풀고 집계를 실측 기준으로 재계산.\n3. squash 머지(--match-head-commit). 4. main 에서 선언·집계 검증.\n열린 다른 PR 이 tracker 집계를 먼저 바꾸면 나중에 머지하는 쪽이 매칭·공백·파일 수를 재계산한다.\n\n## 검증 방법\n- `gh pr checks 388 --repo dlddu/pocket-aide` 필수 체크 success, 로그에서 `TodoAreaSeparationTest` 통과 확인. in_progress 는 성공이 아니다.\n- main: `grep -H '^// 검증 시나리오:' android/app/src/androidTest/java/com/dlddu/pocketaide/e2e/*Test.kt` 줄 수 = 최상위 *Test.kt 수(31), 신규 선언 `test-todo.md#시나리오 1`.\n- tracker 집계: 매칭 29·공백 47·비-시나리오 2·고아 0, (94−13−5)=76=29+47, 파일 31=29+2+0. 공백 표에 todo #1 행 없음, 매핑 표에 있음.\n- 범위 밖(후속): 공백 47행(approval-gate #5·#12·#15·#18~21, affirmations #5, github-monitor 7, routines 7, scratchpad 4, session-platform 14, todo #2~5·#8~10).\n\n## 주의사항\n- 제품 코드 무변경, 롤백은 PR revert 한 번. CI 전용 ephemeral 백엔드만 사용, 데이터·트래픽 영향 없음.\n- 안드로이드 계측 테스트는 로컬 실행 불가 — CI 가 첫 실행이다. 실패하면 로그를 읽어 같은 브랜치에서 고친다(testTag `more.Work`·`todos.work.summary` 형식 `N OPEN · M DONE`[+DEADLINE], 개인은 `N개 남음 · M개 완료`). 슬라이스 밖 기존 테스트 flake(ApprovalPushTest, AffirmationEditTest)는 같은 sha 재실행으로 가른다.\n- 새 head sha 에 review/manual-approval 이 필요한지 머지 전 확인(현재 변경 경로는 판정기상 미접촉)."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0005-todo-1",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/388",
+          "preparedAt": "2026-11-04T23:50:00Z",
+          "notes": "테스트 1개 신설(TodoAreaSeparationTest.kt)+tracker 갱신, 제품 코드 무변경. 로컬 check_ledger.py rc=0, judge.py 미접촉(rc=0), 선언 31줄=최상위 *Test.kt 31개. 계측 테스트는 로컬 실행 불가 — CI 결과는 미확인이며 실행 단계가 확인한다."
+        }
+      }
+    ]
   }
 ]
