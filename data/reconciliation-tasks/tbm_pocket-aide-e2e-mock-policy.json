@@ -1387,7 +1387,7 @@
   {
     "id": "rct_20261026-0001",
     "toBeModelId": "tbm_pocket-aide-e2e-mock-policy",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-10-26T19:59:01Z",
       "source": "version_change",
@@ -1940,6 +1940,44 @@
           "reviewedAt": "2026-11-04T13:00:00Z",
           "reason": "PR #327(head 3d7164f5)은 열려 있고 diff 11파일이 계획과 일치하며 위험도(low)·롤백(revert)은 타당하다. 그러나 신선도 확인에서 필수 체크 ci-success가 failure이고 'Android instrumented test (emulator)'도 failure다(comment-policy ledger·judge·Detect changes는 success, iOS 계열은 ci.yml #345로 skipped). 사람 승인 context review/manual-approval은 현재 head에 없고, main이 79a097a→feaae4dd로 이동해 베이스도 낡았다. CI 실패 상태에서는 실행을 허가할 수 없다.",
           "comment": "1) PR #327 head 3d7164f5의 ci-success·Android instrumented test(emulator) 실패 원인을 확인한다 — 이 PR(iOS 스텁·문서·SessionDetailView.swift 변경)이 원인인지 main 자체의 불안정/인프라 flake인지 구분해 기록하고, flake면 해당 job 재실행으로 success를 확인, PR 원인이면 PR에서 고친다(SessionDetailView.swift의 Android 무관 여부 포함). 2) main(feaae4dd)을 update-branch로 다시 병합해 충돌·베이스 이동을 해소하고 새 head에서 ci-success success를 확인한다. 3) 새 head 기준으로 review/manual-approval 필요 여부(MA6 접촉)를 재확인하고, 필요하면 재검토 때 manualApproval(sha=새 head)로 기록되도록 실행 지침의 head SHA를 최신으로 갱신한다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재계획(직전 시도 review_rejected: head 3d7164f 에서 ci-success·Android instrumented test failure, review/manual-approval 부재, main 이동). 접근·범위·위험도(low)·단계는 직전 계획과 같다(PR #327 이어 씀). 달라진 점: (1) 실패 원인을 규명했다 — Android instrumented test(run 41828066284) 실패는 PR 코드가 아니라 러너 인프라 flake다: `sdkmanager --install 'system-images;android-34;google_apis;x86_64'` 가 'Error on ZipFile unknown archive' 로 실패해 에뮬레이터가 뜨지 않았고(adb: connection refused) 테스트는 실행조차 되지 않았다. 같은 베이스 main(79a097a)·최신 main(feaae4dd)의 CI 는 success. 그래서 PR 수정 없이 failed job 만 재실행했다(attempt 2, 2026-11-04T13:1xZ, 제출 시점 in_progress). (2) update-branch 는 하지 않았다 — PR 은 BLOCKED 이지만 BEHIND 가 아니라 베이스 이동이 머지를 막지 않고, 병합 커밋을 또 올리면 CI·판정기가 재시작되고 head 가 바뀐다. main 이동분(feaae4dd)이 PR 파일과 충돌하는지는 실행 직전 mergeable 로 재확인한다. (3) MA6 접촉은 그대로다 — head 3d7164f 에 review/manual-approval 이 없는 것이 정상이며 리뷰가 review.manualApproval(sha=3d7164f50ce069c4291ea8df9b1727689520fbe7, context=review/manual-approval)로 남겨야 한다. 범위: 직전 계획과 동일(BF-5 해소 머지 + 지문/원장 1:1; iOS 실행 관측·BF-6·실환경 대체는 범위 밖).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #327 이 OPEN·MERGEABLE 이고 head 가 3d7164f(이후 커밋이 올라왔다면 그 head)인지 확인한다. `gh pr diff 327 -R dlddu/pocket-aide --name-only` 가 PR 전체 diff 기준 아래 11파일과 정확히 일치하고 `.github/workflows/` 가 없는지 확인한다: .github/actions/start-test-backend/action.yml · .github/actions/start-test-backend/session_platform_stub.py · docs/comment-policy/ledger.md · docs/e2e-mocking-policy.md · docs/product/test-session-platform.md · ios/PocketAide/Sessions/SessionDetailView.swift · ios/PocketAideTests/SessionsCreateUITests.swift · ios/PocketAideTests/SessionsDeleteUITests.swift · ios/PocketAideTests/SessionsPlatformUnreachableUITests.swift · ios/PocketAideTests/SessionsTabUITests.swift · ios/PocketAideTests/SessionsUITestSupport.swift. main(79a097a) 병합분(docs/review-policy.md·scripts/review-policy/judge.py·docs/runbook-*)은 PR diff 에 나타나지 않아야 한다. review/manual-approval 은 MA6(docs/product/test-session-platform.md) 때문에 사람이 붙이기 전엔 head 에 없는 것이 정상이다.",
+              "expectedOutcome": "PR 전체 diff 11파일·워크플로 없음, head 일치, review/manual-approval 은 사람 승인 전까지 부재."
+            },
+            {
+              "seq": 2,
+              "action": "head 의 CI 완료를 기다려 ci-success·comment-policy ledger·judge·Android instrumented test·Detect changes·journey-mockup 이 success 인지 확인한다. iOS build + test·iOS test backend binaries 는 ci.yml 의 `ios_tests: false &&`(#345) 때문에 skipped 가 정상이며 실패 사유가 아니다(ci-success 게이트가 skipped 를 허용하는지는 head 의 ci-success 결과 자체로 판정). 실패 job 이 PR 과 무관한 인프라성이면 해당 job 만 재실행(최대 2회).",
+              "expectedOutcome": "ci-success success, 나머지 열거한 체크 success, iOS 계열은 skipped."
+            },
+            {
+              "seq": 3,
+              "action": "review/manual-approval 이 head 에 사람 손으로 success 가 붙은 것(리뷰가 review.manualApproval 로 남긴 sha·context)을 확인한 뒤에만 PR #327 을 머지한다. status 가 없거나 head sha 가 바뀌었으면 머지하지 않고 대기한다.",
+              "expectedOutcome": "사람 승인 status 확인 후 머지 → PR state MERGED."
+            },
+            {
+              "seq": 4,
+              "action": "main HEAD 를 체크아웃해 모델 asIs.versionScript 를 실행하고 허용목록(docs/e2e-mocking-policy.md)과 코드 실측을 양방향 대조(고아 0·미등재 0, mock-exception 카테고리 일치)한다. `python3 scripts/comment-policy/check_ledger.py` rc=0 을 확인하고, 원장에서 BF-5 가 해소 표로 이동했고 BF-6 이 열린 행(재검토 2027-01-20)으로 남았는지 읽는다.",
+              "expectedOutcome": "main 이 79a097a 이후 지문 표면에서 변하지 않았다면 sites=41 files=24 / b9a883fc3d6eee6fef67ec9b8b5aa7eda010613fb90706c952218af44ddd05d8; 움직였다면 그 시점 main 대비 정확히 +1 site/+1 file(session_platform_stub.py). 허용목록==코드 실측, BF-5 닫힘·BF-6 열림."
+            }
+          ],
+          "plannedAt": "2026-11-04T13:25:00Z",
+          "executionGuide": "## 이번 재계획에서 달라진 점 (직전 review_rejected 사유 반영)\n- 거부 사유 ① ci-success·Android instrumented 실패: 로그상 원인은 `sdkmanager` system image 설치 실패(ZipFile unknown archive) → 에뮬레이터 미기동 → 테스트 미실행. PR 변경과 무관한 러너 flake. failed job 재실행(run 41828066284 attempt 2)을 걸어 두었다. 실행자는 head 3d7164f 의 ci-success 가 **success** 인지 먼저 읽는다. 아직 failure 면 같은 원인인지 로그로 확인하고 failed job 만 재실행(최대 2회), 에뮬레이터 부팅 이후의 실제 테스트 실패라면 머지하지 말고 원인(SessionDetailView.swift 무관 여부 포함)을 기록하고 실패로 닫는다.\n- 거부 사유 ② 베이스 이동(79a097a→feaae4dd): update-branch 하지 않는다(BEHIND 아님, head 가 바뀌면 CI 재시작). 실행 시점 `mergeable`/`mergeStateStatus` 가 CONFLICTING/DIRTY 이거나 head 가 바뀌었으면 머지하지 말고 중단·기록.\n- 거부 사유 ③ manual-approval: MA6 접촉이므로 head 에 status 가 없는 것이 정상. 리뷰가 review.manualApproval(sha=3d7164f50ce069c4291ea8df9b1727689520fbe7, context=review/manual-approval)을 남기고, 사람이 그 status 를 붙이기 전엔 머지하지 않는다.\n\n---\n\n(이하 직전 지침 — 순서·검증·롤백·범위 밖은 그대로)\n\n### 순서 (직렬)\n1. PR 신선도·전체 diff 11파일 확인 (head 마다 재확인).\n2. head CI 완료 판독 — ci-success 가 머지 게이트.\n3. 사람 승인 status 확인 후 머지.\n4. main 에서 지문·허용목록 양방향 대조·원장 확인.\n\n### 단계별 검증 방법\n1. `gh pr view 327 -R dlddu/pocket-aide --json headRefOid,state,mergeable` → OPEN/MERGEABLE. `gh pr diff 327 -R dlddu/pocket-aide --name-only` → 정확히 다음 11개, 워크플로 없음:\n   - `.github/actions/start-test-backend/action.yml`\n   - `.github/actions/start-test-backend/session_platform_stub.py`\n   - `docs/comment-policy/ledger.md`\n   - `docs/e2e-mocking-policy.md`\n   - `docs/product/test-session-platform.md`\n   - `ios/PocketAide/Sessions/SessionDetailView.swift`\n   - `ios/PocketAideTests/SessionsCreateUITests.swift`\n   - `ios/PocketAideTests/SessionsDeleteUITests.swift`\n   - `ios/PocketAideTests/SessionsPlatformUnreachableUITests.swift`\n   - `ios/PocketAideTests/SessionsTabUITests.swift`\n   - `ios/PocketAideTests/SessionsUITestSupport.swift`\n2. `gh pr checks 327 -R dlddu/pocket-aide` → ci-success·comment-policy ledger·judge·Android instrumented test success, iOS 계열 skipped(정상). Sessions* 실행 로그는 기대하지 않는다.\n3. `gh api repos/dlddu/pocket-aide/commits/<head>/statuses` 에 `review/manual-approval` success(사람이 붙인 것)가 있을 때만 `gh pr merge 327 --squash`. 없거나 head 가 바뀌었으면 머지 금지·대기.\n4. main 체크아웃 후 versionScript 실행. 기대: 지문 표면이 79a097a 이후 변하지 않았으면 `sites=41 files=24 / b9a883fc3d6eee6fef67ec9b8b5aa7eda010613fb90706c952218af44ddd05d8`; 변했다면 그 시점 main 지문 +1/+1. `python3 scripts/comment-policy/check_ledger.py` rc=0. 허용목록 파일 집합 == 코드 실측, BF-5 해소 표·BF-6 열림(2027-01-20 미래).\n\n### 주의사항\n- ci-success 가 success 가 아니거나 사람 승인 status 가 없으면 머지하지 않는다. 임의 Swift 수정 금지(원인 기록만).\n- iOS CI 가 꺼져 있어 Sessions* 테스트는 실행되지 않는다 — 실패 증거가 없는 것을 통과 증거로 쓰지 말고, 검증 기록에 「iOS 실행 미관측」이라고 적는다.\n- 스텁은 EXT 등재 상태이며 새 모킹 지점을 늘리지 않는다. MA1~MA5 미접촉, MA6 접촉(사람 승인 필요).\n- 계획 단계에서는 머지하지 않는다.\n\n### 롤백\n머지 커밋 revert 한 번(강제 push 금지): `git checkout main && git pull --rebase origin main && git revert --no-edit <머지커밋> && git push origin HEAD:main`. 이후 check_ledger.py rc=0, 지문이 머지 직전 값으로 복귀, 원장이 BF-5 열림으로 복귀했는지 확인. (revert PR 도 MA6 에 닿을 수 있다.)\n\n### 범위 밖(후속)\n- BF-6(시나리오 7~10·13·14 단정, turn 마커·게이트 오프 흉내): 이 모델이 후속 해소.\n- iOS Sessions* 실행 관측(시나리오 1 의 2·4·11·12단계): iOS CI 재활성화 후 — 재감지가 잇는다.\n- 실환경 대체 갈래(전용 테스트 세션 플랫폼): 마련되면 스텁 3행과 함께 지움.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261026-0001",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/327",
+          "preparedAt": "2026-11-04T13:25:00Z",
+          "notes": "기존 PR #327 을 이어 쓴다(새 PR·새 커밋 없음, head 3d7164f50ce069c4291ea8df9b1727689520fbe7 유지). 실제 준비 동작은 Android instrumented test run 41828066284 의 failed job 재실행 하나뿐(코드 변경 없음). 관측: PR OPEN·MERGEABLE·BLOCKED(필수 ci-success 실패 때문), 전체 diff 11파일·워크플로 없음, comment-policy ledger·judge·Detect changes·journey-mockup success, iOS 계열 skipped(#345). main=feaae4dd(CI success). 제출 시점 재실행은 in_progress라 결과 미확정. 머지하지 않았다."
         }
       }
     ]
