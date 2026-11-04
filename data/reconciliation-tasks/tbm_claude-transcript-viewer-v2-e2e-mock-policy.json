@@ -144,7 +144,7 @@
   },
   {
     "toBeModelId": "tbm_claude-transcript-viewer-v2-e2e-mock-policy",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T18:08:07Z",
     "trigger": {
       "source": "version_change",
@@ -168,6 +168,45 @@
     "assessment": {
       "reason": "불변식 1은 정합(등재 3 == 코드 3)이나 불변식 2에서 원장 BL1이 선행 없음=착수 가능 행이다. 판정 규칙상 이것 하나로 action_required이고, 정의가 이 모델 task의 착수를 요구한다. 자동 해소 요소 없음(스펙·하네스 변경이 있어야만 해소; 재검토 시점 2027-01-15까지 기다릴 사유 아님). 작업: LC-AC5/BL1을 실스토리지(MinIO/LocalStack)에서 DeleteObject만 거부하는 별도 백엔드 인스턴스로 E2E화하고, 해소되면 원장 행 제거(감소 시 반영 확인, B3). 모킹 신설 금지.",
       "assessedAt": "2026-11-04T18:08:30Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "BL1(LC-AC5 시나리오 1-B)을 실환경 대체로 해소한다: MinIO에 s3:DeleteObject만 거부하는 사용자를 만들고, 그 자격증명으로 띄운 별도 실 백엔드 인스턴스에서 삭제를 실제 AccessDenied로 실패시킨 뒤, 같은 SQLite를 정상 인스턴스로 띄워 재시도 안전성을 E2E로 검증한다. 모킹 신설 없음(대안인 page.route/데이터 모킹은 정책상 불허). 범위(완료 기준): 원장 BL1 행 제거 + 신규 스펙이 CI e2e-tests(MinIO) 잡에서 통과 + test-lifecycle 1-B가 E2E 검증으로 갱신. 범위 밖: 스윕 도중 부분 삭제 변형(backend/s3_test.go가 계속 보강), LocalStack(kind) 잡(IAM 정책 미강제라 skip), doc-tracker의 LC-AC5 예외 정리(scenario-e2e 모델 소관, 재감지로 이어짐). 사람 소유 결정 없음. PR이 test-lifecycle 문서(MA1)를 건드려 대상 레포 수동 승인 대상이다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #104 확인: CI e2e-tests 잡의 'Create delete-denied storage user' 스텝(chainguard minio-client로 정책 생성·사용자 추가·정책 부착)과 Run E2E tests env의 DELETE_DENIED_* 추가",
+              "expectedOutcome": "스텝 성공, 이후 mc 없이도 스펙이 자격증명을 환경변수로 받음"
+            },
+            {
+              "seq": 2,
+              "action": "PR의 CI(e2e-tests, kind-e2e-tests, unit-tests 등) 전체 결과 확인",
+              "expectedOutcome": "e2e-tests에서 'Retry-Safe Delete under S3 DeleteObject failure' 통과(skip 아님), kind-e2e-tests에서는 skip, 나머지 스펙 회귀 없음"
+            },
+            {
+              "seq": 3,
+              "action": "대상 레포 수동 승인(review/manual-approval) 후 PR 머지",
+              "expectedOutcome": "main에 반영, docs/e2e-mocking-policy.md 원장에 행 0건, test-lifecycle 1-B가 E2E 검증으로 기술됨"
+            },
+            {
+              "seq": 4,
+              "action": "머지 뒤 to-be(policy blob)·as-is(모킹 지문) 재측정",
+              "expectedOutcome": "as-is 지문 55c8684e… 불변(신규 코드에 지문 패턴 없음), 원장 BL1 소멸로 불변식 2 충족(착수 가능 행 0, B3 감소 예고 반영 확인)"
+            }
+          ],
+          "plannedAt": "2026-11-04T18:20:00Z",
+          "executionGuide": "## 순서\n1. (1→2→3→4 직렬) PR #104는 이미 push됨. CI 통과 확인 → 수동 승인 → 머지 → 재측정. 병렬 불가(머지 전 검증이 선행).\n\n## 검증 방법\n- CI e2e-tests 잡 로그에서 `Retry-Safe Delete under S3 DeleteObject failure ... should keep the session resolvable after a failed delete and finish it on retry`가 passed(skipped가 아님)인지 확인. 서버 로그에 `DeleteObject ... AccessDenied`가 찍히는 것이 정상.\n- kind-e2e-tests 잡에서는 이 스펙이 skipped여도 정상(DELETE_DENIED_* 미설정, LocalStack은 IAM 정책 미강제).\n- 머지 후 docs/e2e-mocking-policy.md: 원장 표에 행 없음, 허용목록 3행 불변 → 불변식 1·2 모두 gap 0. 코드의 모킹 지점 지문(sites=10, files=3)이 변하지 않았는지 확인(신규 환경변수는 DELETE_DENIED_*라 `E2E_*` 패턴에 걸리지 않게 일부러 정함).\n- 로컬 사전 검증 결과: MinIO 컨테이너 + 빌드한 backend/server로 신규 스펙 통과, 정책 사용자의 DeleteObject는 Access Denied, Put/List는 허용.\n\n## 주의사항\n- PR은 docs/transcript-viewer-test-lifecycle.md(MA1)를 변경하므로 판정기가 review/manual-approval을 붙이지 않는다 → 리뷰 단계가 review.manualApproval을 남기고 사람이 승인해야 머지된다. 사람이 거부하면 review_rejected + review.comment가 재계획 입력.\n- .github/workflows/test.yml 변경은 push에 workflows 권한 토큰이 필요하다(이번에 그 권한으로 push함). 머지 시 별도 권한 이슈는 없음.\n- MinIO 이미지가 정책 강제를 하지 않는 버전으로 바뀌면 retry 스펙의 첫 단언(삭제 500)에서 실패한다 → 그 경우 원인은 정책 생성 스텝 로그 확인.\n- 롤백: PR 머지 revert 한 번으로 원복(데이터·프로덕션 영향 없음, 테스트·CI·문서만 변경). 되돌리면 BL1 행을 원장에 복원해야 한다(B3).\n- 범위 밖(후속): doc-tracker의 LC-AC5 예외 목록/시나리오 1 예외 행 정리(scenario-e2e 모델), 부분 삭제 변형의 E2E화는 필요 시 별도 슬라이스."
+        },
+        "preparation": {
+          "repository": "dlddu/claude-transcript-viewer-v2",
+          "branch": "reconcile/rct_20261104-0002",
+          "pullRequestUrl": "https://github.com/dlddu/claude-transcript-viewer-v2/pull/104",
+          "preparedAt": "2026-11-04T18:20:00Z",
+          "notes": "실환경 대체 구현을 PR로 스테이징(머지 안 함). 로컬 MinIO에서 신규 스펙 통과 확인. test-lifecycle 문서 변경으로 수동 승인 대상."
+        }
+      }
+    ]
   }
 ]
