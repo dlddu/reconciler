@@ -20723,6 +20723,40 @@
     "assessment": {
       "assessedAt": "2026-11-04T17:01:52Z",
       "reason": "판정: action_required — 정합 상태에 미달하고 남은 gap을 맡은 열린 형제 task가 없다.\n\n근거: 게이트 rc=0이지만 미판정 66행(줄 주석 17·docstring 40·줄 끝 9)이 남아 「유지는 기록으로 끝난다」 기준(유지 사유가 passes/에 적혀야 판정 완료)을 채우지 못한다. 형제 확인(같은 모델 파일 기준): 미종결 task 없음 — rct_20261104-0001은 #313 병합으로 succeeded, 0002는 no_action_needed(그 gap의 소유자가 0001이었으나 이제 종료). 따라서 이 gap의 소유자가 없고 자동 해소 가능성도 없다(주석 판정은 사람이 아닌 슬라이스 작업으로만 진척). 적용 기준: definition 정합 상태·「판정 슬라이스」(400줄 예산).\n\n반대 방향 근거: 게이트 R1~R15 통과·unclassified=0·정책 README 불변·진척(미판정 85→66행) 모두 유효하나 어느 것도 남은 66행을 없애지 않는다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "필요성 판정 아홉 번째 슬라이스(주석 218줄, 400줄 예산 안): 소유자·열린 PR 없는 미판정 줄 주석 16행(tests/integration 공용 모듈·시나리오 묶음 15행 + notify-unregistered-variant.yaml 행)을 필요성 시험으로 판정해 한 PR(dlddu/homelab-k3s-mcp#314)로 묶는다 — 열린 PR이 0건이라 겹침이 없고, 남은 17행 중 .github/workflows/ci.yml(92줄)만 App에 workflows 권한이 없어 뺀다. 완료 기준(범위): 이 16행이 판정 축 `완료`이고 제거·유지 사유가 passes/2026-11-04-necessity-slice-rct-20261104-0003.md 에 기록되며 게이트 R1~R15·D1~D4 가 통과하면 성공(주석 2934→2900줄, 완료 82→98행, 미판정 17→1행). 범위 밖(후속): ci.yml 행(사람 PR 또는 workflows 권한 경로 필요)·docstring 40행·줄 끝 9행. 주석·문서 전용이라 PR revert 로 되돌린다. 사람 소유 결정은 없고 수동 승인 케이스(MA1~MA4) 경로를 건드리지 않는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 reconcile/rct_20261104-0003 에서 16행 218줄을 판정해 코드 재진술·구획선·경위·문서 지목 34줄을 제거·개작한다(11개 파일).",
+              "expectedOutcome": "줄 주석 2934→2900, 비주석 diff 0, py_compile 통과"
+            },
+            {
+              "seq": 2,
+              "action": "ledger.md 16행의 줄 수·지문·판정 축(`완료`)·결과 칸을 갱신하고 passes/2026-11-04-necessity-slice-rct-20261104-0003.md 에 제거·유지 사유를 기록, doc-tracker 허브 집계를 144/144 로 맞춘다.",
+              "expectedOutcome": "check_comment_policy.py R1~R15 OK(완료 98행), check_doc_inventory.py D1~D4 OK(144/144), check_mock_policy.py OK"
+            },
+            {
+              "seq": 3,
+              "action": "PR 을 연다(머지는 executor 몫).",
+              "expectedOutcome": "PR #314 열림, CI 초록"
+            }
+          ],
+          "plannedAt": "2026-11-04T17:45:00Z",
+          "executionGuide": "## 순서\n1. PR(dlddu/homelab-k3s-mcp#314) head `cc0cba3` 과 `ci passed` 확인(fmt+vet 잡의 check_comment_policy.py·check_doc_inventory.py, go test, integration tests). 실패 잡이 일시 오류이면 그 잡만 재실행한다(`resource_generic_sc2` 목록 비교가 `ag-ac1-workload` 동시 생성과 경쟁하는 flake 가 전에 관측됐다 — 다른 실패는 flake 로 보지 않는다).\n2. main 이 움직였는지 mergeable 로 본다. 다른 PR 이 `docs/comment-policy/ledger.md`·`docs/doc-tracker/2026-09.md` 를 함께 만지면 충돌할 수 있다. 같은 행을 main 이 먼저 판정했으면 main 쪽을 두고 이 PR 에서 그 행을 뺀다(범위 축소 허용, 재판정·확장 불허). 줄 수·지문 실측 갱신과 허브 집계 실측 맞춤은 허용. 이후 `env -i python3 scripts/check_comment_policy.py`·`python3 scripts/check_doc_inventory.py` 재통과를 확인하고 새 CI 가 초록인 head 에서만 머지한다. 완료 행이 1행 이상 남으면 성공 기준을 만족한다.\n3. 대상 레포 required status 는 `ci passed` 와 `review/manual-approval` 이다. 이 PR 은 수동 승인 케이스(MA1~MA4)에 닿지 않으므로 판정기가 `review/manual-approval` 을 자동으로 붙인다. 붙지 않았으면 머지하지 말고 사유를 보고한다.\n4. squash 머지(`--match-head-commit` 로 head 고정). 머지 후 main 에서 게이트 재실행.\n\n## 검증\n- `env -i python3 scripts/check_comment_policy.py` → R1~R15 위반 없음, 판정 대상 2900줄, 필요성 판정 완료 98행 2808줄, 미판정 1행(ci.yml). main 이 움직였으면 실측값.\n- `python3 scripts/check_doc_inventory.py` → D1~D4 OK(144/144; main 이동 시 실측값). `python3 scripts/check_mock_policy.py` OK.\n- PR diff 에 비주석 변경 없음(변경 15파일: ledger·passes·doc-tracker·주석 12파일). passes 파일이 제거·유지 사유를 담음.\n- 수렴 판정은 이 범위 기준: 16행이 `완료` 이고 passes 파일이 사유를 담으면 성공. 전체 to-be(미판정 0)는 아직 아니며 지문 해시 이동은 정상.\n\n## 범위 밖(후속)\n`.github/workflows/ci.yml`(App 에 workflows 권한 없음 — 사람 PR 이나 권한 있는 경로 필요), docstring 40행·줄 끝 9행 표면.\n\n## 주의\n- 되돌릴 수 없는 지점 없음(주석·문서만). 롤백 = PR revert.\n- 이 PR 은 `.github/` 를 건드리지 않는다.\n- 승인~머지 간격이 길수록 ledger 충돌 가능성이 커진다. 머지 직전에 mergeable 과 head 를 재확인한다."
+        },
+        "preparation": {
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20261104-0003",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/314",
+          "preparedAt": "2026-11-04T17:45:00Z",
+          "notes": "main b100e89 위에서 작성. 로컬에서 check_comment_policy.py R1~R15·check_doc_inventory.py D1~D4(144/144)·check_mock_policy.py·py_compile 통과. head cc0cba3. CI 결과는 아직 확인하지 않았다. 머지하지 않음."
+        }
+      }
+    ]
   }
 ]
