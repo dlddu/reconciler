@@ -2112,7 +2112,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-e2e-mock-policy",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T15:33:14Z",
     "trigger": {
       "source": "version_change",
@@ -2184,6 +2184,44 @@
           "reviewedAt": "2026-11-04T16:50:00Z",
           "reason": "PR #375(open, head a1d27a2, base main 불변, 충돌 없음, 변경은 UITest 3개+헬퍼+원장 문서뿐으로 범위는 정합)이나 검증 불가능하다. main의 ci.yml에서 ios_tests가 `false && (...)`로 비활성이라 PR의 `iOS build + test`가 skipped이며, 새 Sessions*UITests는 어디서도 실행되지 않은 채 ci-success만 통과한다(계획의 완료 기준 'ios-test에서 통과'를 충족할 수 없음). 또한 비필수 체크 `comment-policy ledger`가 exit 1로 실패했고 계획은 이를 다루지 않았다. 테스트는 로컬 미실행이라 접근성 식별자 오류 가능성이 그대로 남는다.",
           "comment": "1) 완료 기준을 실행 가능한 것으로 바꿀 것: ci.yml의 ios_tests 비활성(`false &&`)으로 UITest가 CI에서 돌지 않는다 — 활성화 여부는 이 task 범위 밖일 수 있으니, (a) 이 PR에서만 실행할 수 있는 검증 경로(workflow_dispatch 등)를 executionGuide에 명시하거나 (b) 미실행 UITest를 추가해도 gap이 좁혀졌다고 볼 수 있는 근거를 계획에 쓰고 원장 BF-6 서술이 '단정한다'고 주장하는 문구를 그 사실에 맞게 조정할 것. 2) `comment-policy ledger` 실패 원인(job 126705999612 로그)을 확인해 PR에서 고치거나 무관함을 계획에 명시할 것. 3) 롤백(revert)은 적절하니 유지."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "BF-6 1차 슬라이스(재계획): 새 모킹 지점 없이 BF-5 스텁 위에 시나리오 7(1·2)·8(3)·9(가)·10·13 을 단정하는 Sessions*UITests 를 작성하고 원장 BF-6 행을 남은 경로로 좁힌다. 직전 거부 반영 — ios_tests 가 ci.yml 에서 비활성이라 UITest 는 CI 에서 실행될 수 없으므로 완료 기준을 「테스트 작성 + comment-policy ledger 통과 + 지문·허용목록 1:1 유지 + 원장 서술을 CI 미실행 사실에 맞춤」으로 바꾸고, 실행 검증은 로컬 시뮬레이터/ios_tests 재활성 후속으로 명시한다(CI 활성화는 범위 밖). ledger 실패는 새 주석 3줄 제거로 해소. 범위 밖: 시나리오 7 의 3·4단계, 8 의 1·2단계, 9(나), 14. 사람 소유 결정 없음, 테스트·문서만 변경.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #375 에서 새 주석 3줄(Prompt 테스트 본문 1줄, Support 헬퍼 doc 2줄) 제거",
+              "expectedOutcome": "check_ledger.py 통과(ledger.md 변경 불필요), comment-policy ledger 잡 success"
+            },
+            {
+              "seq": 2,
+              "action": "docs/e2e-mocking-policy.md BF-6 행의 「단정한다」를 「작성했다 — ios_tests 비활성으로 CI 미실행, 실행 검증은 로컬/재활성 후」로 정정",
+              "expectedOutcome": "원장이 검증되지 않은 사실을 주장하지 않음, B2 세 칸 유지, 지문 불변"
+            },
+            {
+              "seq": 3,
+              "action": "PR 본문 검증 절을 새 완료 기준으로 교체",
+              "expectedOutcome": "검토자가 CI 미실행 사실과 대체 검증 경로를 본문에서 확인"
+            },
+            {
+              "seq": 4,
+              "action": "머지 전 judge·ledger·ci-success 확인 후 머지(executor)",
+              "expectedOutcome": "필수 체크 success, revert 로 되돌리기 가능"
+            }
+          ],
+          "plannedAt": "2026-11-04T17:20:00Z",
+          "executionGuide": "## 실행 순서\n1. PR https://github.com/dlddu/pocket-aide/pull/375 (head 7486d13) 의 `comment-policy ledger`·`judge`·`ci-success` 가 success 인지 확인. 변경은 UITest 3개+헬퍼+원장 문서뿐이다. 단계 간 의존 없음.\n2. 통과 시 머지(되돌리기: revert 커밋 — 테스트·문서만 바뀌므로 제품 영향 없음).\n\n## 검증 방법\n- 완료 기준은 「UITest 가 ios-test 에서 통과」가 아니다: `ci.yml` 의 `ios_tests` 가 `false &&` 로 비활성이라(workflow_dispatch 포함, `ios-test.yml` 은 workflow_call 전용) 어떤 CI 경로로도 UITest 를 돌릴 수 없고 `iOS build + test` 는 skipped 다. 활성화는 CI 비용 결정이라 이 task 범위 밖이다.\n- 검증 가능한 기준: (a) `python3 scripts/comment-policy/check_ledger.py` 통과(CI `comment-policy ledger` success), (b) 모델 as-is 지문 `sites=41 files=24` / `b9a883fc…` 불변(새 모킹 지점·`mock-exception` 토큰 없음), (c) 허용목록 파일 집합 == 코드 파일 집합, (d) 원장 BF-6 행이 「단정한다」가 아니라 「작성했으나 CI 미실행(ios_tests 비활성)」으로 서술되고 행은 열린 채 선행 「없음」·재검토 2027-01-20 유지.\n- 판정 해석: 이 슬라이스는 gap 중 「단정하는 XCUITest 가 없다」를 코드 존재 수준에서 닫고, 「실행 검증」은 BF-6 서술에 명시적 잔여로 남긴다.\n\n## 주의\n- 새 UITest 는 어디서도 실행되지 않았다. 접근성 식별자·문구는 `SessionDetailView` 에서 따왔으나 오류 가능성이 남는다. 실행 검증은 사람이 로컬 시뮬레이터에서(`xcodebuild test -only-testing:PocketAideUITests/Sessions*`) 하거나 `ios_tests` 재활성 때 CI 에서 한다. 실패 시 테스트만 고치고 스텁·제품 코드는 건드리지 않는다.\n- 시나리오 10 의 `sleep(10)` 은 「1분 대기」의 축약이다.\n- `.github/` 는 건드리지 않았다.\n\n## 범위 밖(후속, 재감지가 새 task 로 이음)\n응답 진행 단계·1 MiB 붙여넣기(7 의 3·4단계), 백그라운드 왕복(8 의 1·2단계), 아카이브 게이트 오프 503(9 의 (나)), turn 마커(14) — 스텁 확장(EXT) 필요. 새 UITest 의 CI 실행(`ios_tests` 재활성)도 사람 결정 후속.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0001-sessions-uitests",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/375",
+          "preparedAt": "2026-11-04T17:20:00Z",
+          "notes": "기존 PR #375 에 수정 커밋 7486d13 을 푸시해 재사용(새 PR 없음). comment-policy ledger·judge success 확인. 테스트·문서만 변경, 제품 코드·스텁·.github 불변. UITest 는 CI/로컬 모두 미실행."
         }
       }
     ]
