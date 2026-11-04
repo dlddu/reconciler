@@ -10260,7 +10260,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T12:40:21Z",
     "trigger": {
       "detectedAt": "2026-11-04T12:40:21Z",
@@ -10370,6 +10370,44 @@
           "reviewedAt": "2026-11-04T16:45:00Z",
           "reason": "PR #373(열림·mergeable, 3파일 +174/-7, 범위는 gap에 부합, head 78d62ab)의 필수 체크 ci-success 가 아직 없고 'Android instrumented test (emulator)' 가 in_progress 라 CI 통과를 확인할 수 없다. 이번 계획의 핵심 수정(RotatingAffirmationTest reenter)이 실제로 통과하는지 미검증이라 승인 전제(CI 통과)를 충족하지 못한다. review/manual-approval 은 해당 sha 에 success 라 사람 승인 요구는 해당 없음. 다른 체크(build+test, comment-policy, judge)는 success.",
           "comment": "PR #373 head 78d62ab 의 'Android instrumented test (emulator)' 와 ci-success 가 완료·success 로 확인된 뒤 재준비할 것. 통과하면 preparation.notes 에 CI 결과(run 링크, 두 테스트 통과)를 기록하고 executionGuide step 1 을 확인 완료로 반영해 재제출. 실패하면(예: AffirmationEditTest flake 재발) 원인 수정 후 새 head 의 CI 통과를 확인하고 manual-approval 이 새 sha 에 붙었는지 함께 기록할 것."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "재계획(review_rejected, 사유: 직전 검토 시점에 head 78d62ab 의 CI 가 in_progress 라 통과 미확인). 범위·접근은 직전과 동일(affirmations #4·#6 이식, PR #373, 제품 코드 무변경)이며 코드 수정은 없다. 그 사이 CI 가 완료되어 head 78d62ab 에서 'Android instrumented test (emulator)'·'Android build + test'·ci-success·comment-policy·judge·review/manual-approval 이 모두 success 이고 PR 은 MERGEABLE 이다(run 41859200852·41859193436). 완료 기준(범위): PR #373 머지, 두 테스트 CI 통과, 매칭 23·공백 53·매칭 단위 파일 25. 범위 밖: affirmations #5 및 나머지 공백 52행. 사람 소유 결정 없음, 수동 승인 케이스 비해당.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #373 head 78d62ab 의 CI 가 이미 success 임을 확인했다(run 41859200852). 머지 직전 head sha 가 그대로이고 필수 체크·review/manual-approval 이 여전히 success 인지 재확인한다. head 가 바뀌었으면 새 sha 의 CI 완료를 기다린다.",
+              "expectedOutcome": "head sha 의 필수 체크가 모두 success, ScratchpadToAffirmationTest·RotatingAffirmationTest 통과"
+            },
+            {
+              "seq": 2,
+              "action": "main 과 충돌(특히 doc-tracker/2026-11.md 집계 숫자)이 있으면 rebase/merge 로 풀고 집계를 실측 기준으로 재계산한다.",
+              "expectedOutcome": "PR 이 mergeable, 집계가 머지 시점 main 의 실측과 일치"
+            },
+            {
+              "seq": 3,
+              "action": "PR #373 을 squash 머지한다.",
+              "expectedOutcome": "main 에 두 *Test.kt 와 tracker 갱신이 착지"
+            },
+            {
+              "seq": 4,
+              "action": "main 에서 grep -H '^// 검증 시나리오:' 로 선언 줄 수 = 최상위 *Test.kt 수를 확인하고 tracker 집계(매칭·공백·파일)가 실측과 맞는지 대조한다.",
+              "expectedOutcome": "두 파일 선언이 test-affirmations.md#시나리오 4·6 이고 불변식 성립"
+            }
+          ],
+          "plannedAt": "2026-11-04T16:50:00Z",
+          "executionGuide": "## 순서\n1. PR #373 CI 확인 (병렬 불가 — 이후 단계의 전제).\n2. 충돌 해소(필요 시) → 3. squash 머지 → 4. main 검증.\nrct_20261028-0006 의 PR #338 도 tracker 를 고치므로 어느 쪽이 먼저든 뒤에 머지하는 쪽이 집계(매칭·공백·파일 수)를 재계산한다.\n\n## 검증 방법\n- CI: `gh pr checks 373 --repo dlddu/pocket-aide` 필수 체크 success, android-instrumented-test 로그에서 `RotatingAffirmationTest`·`ScratchpadToAffirmationTest` 통과.\n- main: `grep -H '^// 검증 시나리오:' android/app/src/androidTest/java/com/dlddu/pocketaide/e2e/*Test.kt` 줄 수 = 최상위 *Test.kt 수, 두 파일 선언이 `test-affirmations.md#시나리오 4`·`#시나리오 6`.\n- tracker 「집계 (실측)」 매칭 23·공백 53·비-시나리오 2, 공백 표에 affirmations #4·#6 행이 없고 매핑 표에 있음. 모델 to-be versionScript 의 reg 해시가 바뀌어 있음.\n- 범위 밖(후속): affirmations #5, approval-gate 12(또는 #338 착지 후 11), github-monitor 7, routines 7, scratchpad 4, session-platform 14, todo 8.\n\n## 주의사항\n- 제품 코드 무변경이라 롤백은 PR revert 한 번. 데이터·트래픽 영향 없음(CI 백엔드 전용).\n- RotatingAffirmationTest 는 시작 때 사용자의 다짐을 모두 지운다(iOS 와 동일) — CI 전용 ephemeral 백엔드에서만 돈다.\n- 계측 테스트가 흔들리면(15초 waitUntil 타임아웃) 같은 sha 재실행과 실패 테스트 변화를 보고 flake 인지 입력 불안정인지 가른 뒤 고친다. comment-policy ledger 가 새 주석에 실패하면 주석을 제거한다.\n- CI 미완료(in_progress)는 성공이 아니다 — 완료 후에만 머지.\n\n## 재계획 보강\n- 직전 실패 원인: RotatingAffirmationTest.reenter 가 빈 목록에서 `affirmations.list.header` 를 대기(헤더는 items 가 있을 때만 그려짐). 수정 완료·push 됨(78d62ab) — 실행자는 CI 결과만 확인하면 된다.\n- 새 sha 에는 review/manual-approval status 가 자동 판정으로 다시 붙는지 `gh pr view 373` 로 확인한다.\n- AffirmationEditTest 단독 실패는 이번 PR 과 무관한 flake 후보다: 재실행(`gh run rerun --failed`)으로 통과하면 머지 가능, 반복되면 범위 밖 수정으로 별도 처리한다.\n\n## 재계획 보강 2\n- CI 확인 완료: head 78d62ab 에서 instrumented test (emulator)·ci-success 포함 모든 체크 success, MERGEABLE, review/manual-approval success (2026-11-04T16:50Z 관측). 실행자는 머지 직전에 head sha 불변과 체크 상태만 재확인하고 step 2~4 로 진행한다.\n- 직전 거부는 CI 미완료 때문이었고 코드 결함이 아니었다."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0001-affirmations-4-6",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/373",
+          "preparedAt": "2026-11-04T16:50:00Z",
+          "notes": "head 78d62ab: Android instrumented test (emulator)·Android build + test·ci-success·comment-policy ledger·judge·review/manual-approval 모두 success, PR MERGEABLE (run 41859200852, 41859193436). 코드 변경 없음(직전 수정 78d62ab 유지), 제품 코드 무변경."
         }
       }
     ]
