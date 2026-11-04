@@ -17985,6 +17985,50 @@
     "assessment": {
       "assessedAt": "2026-11-04T17:28:01Z",
       "reason": "자동 해소되지 않는 잔여 gap: 구조·수치 표 _structure-map.md 가 iOS 기준이라 to-be 4 판정이 Android 구현에 대해 불가능하고(1065행), _copy-map.md 의 남은 카피 불일치 행(구현/목업 대기)도 수렴 작업이 필요하다. #377 이 일으킨 새 불일치는 없으며 직전 task 의 후속분 이어가기. _structure-map 은 규모가 크므로 슬라이스 분할을 권장하고, 카피 잔여 행 정리는 별도 슬라이스로 다룬다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "gap (b) 구조·수치 표 `_structure-map.md` 가 iOS 기준이라 안드로이드 구현을 판정하지 못하는 문제를 닫는 첫 슬라이스: 표가 7개 화면 1,817행으로 커서 한 번에 검토·검산하기 어려우므로, 기계 검산이 가장 선명한 `screen-affirmations-priority-edit` 한 화면(시트 — 표 E 26·M 107·S 13행)만 `PriorityEditSheet.kt`+공용 컴포넌트 기준으로 다시 세우고 검산 스크립트를 Kotlin 상수 해석·`GeneratedPalettes.kt` 대조로 교체한다. 나머지 여섯 화면의 iOS 표는 안드로이드를 판정하지 못하므로 걷어낸다(git 이력에 남음). 위치는 기존대로 docs/mockups 문서라 android/·목업·tokens 는 바꾸지 않고(as-is 불변) 대조 결과만 기록한다. **완료 기준**: 머지된 main 에서 검산 `ok`, 표에 해당 화면 E/M/S 행이 있고 `.swift` 참조 0, android/·res·screen-*.html·tokens.md 무변경. **범위 밖**: 나머지 여섯 화면 재작성, `_deviations.md` S2~S9 의 iOS 근거 갱신, 드러난 불일치 2건(시트 그림자 없음 · 생성 필드 minLines 2 vs rows 3) 수렴, `_copy-map.md` 잔여 카피 행, 모델 as-is 지문 좁히기. 불일치가 드러나는 것은 실패가 아니라 남은 drift 기록이다. 카피 잔여 행 정리는 별도 슬라이스로 둔다(assessment 권고).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "pocket-aide main 에서 브랜치 `reconcile/rct_20261104-0003` 생성, `_structure-map.md` 를 우선순위 시트 한 화면 안드로이드 기준으로 재작성(표 E·M·S + Kotlin 검산 블록), `_impl-map.md` 안내문·`_deviations.md` S1 인용·README 설명 갱신",
+              "expectedOutcome": "docs/mockups 4파일 변경, 검산 ok"
+            },
+            {
+              "seq": 2,
+              "action": "로컬 검산 + 음성 프로브(상수 값 변경·새 상수 추가)",
+              "expectedOutcome": "ok / 각각 구현 인용·정방향 누락 검출"
+            },
+            {
+              "seq": 3,
+              "action": "커밋·push·PR 생성(App 토큰 명의), 필수 status 확인",
+              "expectedOutcome": "PR open, changed_files=4, review/manual-approval success"
+            },
+            {
+              "seq": 4,
+              "action": "(실행 단계) 머지 전 재확인·검산 후 squash 머지",
+              "expectedOutcome": "merged, 머지 전 head 불변"
+            },
+            {
+              "seq": 5,
+              "action": "(실행 단계) main 에서 검산·무변경 보증 재측정",
+              "expectedOutcome": "완료 기준 1~4 성립"
+            }
+          ],
+          "plannedAt": "2026-11-04T18:05:00Z",
+          "executionGuide": "# 실행 지침 — rct_20261104-0003 · tbm_pocket-aide-mockup-render\n\nPR: https://github.com/dlddu/pocket-aide/pull/379 (head `dad3fee1773f72001dcaf8c308898775ee7f19d6`, branch `reconcile/rct_20261104-0003`)\n\n## 1. 순서와 이유 (직렬)\n1. **PR 상태 재확인** — `gh pr view 379 --repo dlddu/pocket-aide --json state,headRefOid,changedFiles,mergeStateStatus,statusCheckRollup` → OPEN · head `dad3fee…` · changedFiles 4 · 필수 status(`ci-success`, 있다면 `review/manual-approval`) success. head 가 다르거나 파일이 4개가 아니면 멈추고 계획으로 되돌린다. 준비 시점에는 `review/manual-approval`=success(자동 — `docs/mockups/` 는 수동 승인 케이스 MA1~MA6 미접촉), `judge`·`Detect changes`·`comment-policy ledger` success, iOS/Android/backend 잡 skipped, `Journey mockup / journey-mockup` 은 진행 중이었다 — 머지 전에 모두 끝나 있어야 한다.\n2. **머지 전 검산(읽기 전용)** — PR head 체크아웃 루트에서 `awk '/^```bash$/{f=1;next}/^```$/{f=0}f' docs/mockups/_structure-map.md > /tmp/chk.sh && bash /tmp/chk.sh` → 출력 `ok` 한 줄. `ok` 아니면 머지 금지.\n3. **main 이 앞서 갔는지** — `android/` 의 `PriorityEditSheet.kt`·`Sheet.kt`·`Card.kt`·`FilterPills.kt`·`AreaLabel.kt`·`DesignTokens.kt`·`GeneratedPalettes.kt` 나 `screen-affirmations-priority-edit.html`·`_deviations.md`·`_impl-map.md` 를 건드린 커밋이 PR 이후 main 에 있으면 head 에 main 을 반영(merge)하고 2 를 다시 돌린다. 검산이 인용 불일치를 내면 표가 낡은 것이므로 머지하지 말고 계획으로 되돌린다.\n4. **squash 머지** — 변경은 docs/mockups 4파일뿐이라 revert 한 커밋으로 되돌릴 수 있다.\n5. **머지 후 재측정** — main 에서 검산 `ok`, `git diff --stat <머지 전 main>..origin/main` 이 docs/mockups 4파일뿐인지, to-be/as-is 지문 확인.\n6. **기록** — execution·verification 기록 후 종료.\n\n## 2. 완료 기준 (이 범위로 succeeded/failed 판정)\n머지된 main 에서:\n1. `_structure-map.md` 「검산」 블록 출력이 정확히 `ok`.\n2. `_structure-map.md` 에 `.swift`·`SwiftUI`·`xcassets` 참조 0건 — `grep -nE 'swift|Swift|xcassets' docs/mockups/_structure-map.md` 가 머리말의 옛 판 안내 외에 없을 것(안내문의 「iOS」 단어는 제외).\n3. 표에 `screen-affirmations-priority-edit` E 26 · M 107 · S 13행, 집계 `불일치` M 1 · S 1.\n4. `android/`·`res`·`tokens.md`·`screen-*.html` 무변경 → as-is 버전 `ui:3d8fa467… res:ee98cbb8…` 불변(머지 직전 main 에 다른 PR 이 이미 바꾼 경우는 그 차이를 제외), to-be `docs/mockups` 트리 해시만 변경·`docs/design-system` 불변.\n\n## 3. 검증 방법\n| 단계 | 방법 | 기대값 |\n|---|---|---|\n| 1 | 위 `gh pr view` | OPEN · head `dad3fee…` · 필수 status success |\n| 2 | 검산 블록 | `ok` |\n| 4 | `gh pr merge 379 --repo dlddu/pocket-aide --squash --delete-branch` | merged |\n| 5 | main 에서 검산 + `git rev-parse origin/main:docs/mockups origin/main:docs/design-system` + as-is versionScript | `ok` · design-system `627683f…` 불변 · as-is 불변 |\n\n## 4. 주의사항\n- 되돌릴 수 없는 지점 없음(문서만). 롤백: 머지 커밋 revert.\n- PR 에 커밋을 얹지 말 것(CI 는 head sha 에 묶임). 3 의 main 반영만 예외.\n- 머지는 to-be 지문을 움직여 재감지가 새 task 를 연다 — 정상(후속 슬라이스). `불일치`로 드러난 두 건(시트 그림자 없음, 생성 필드 `minLines=2` vs `rows=3`)은 이번에 고치지 않고 verification 에 목록으로 남긴다.\n\n## 5. 범위 밖 (후속 — 재감지 뒤 다음 task 입력)\n- `_structure-map.md` 나머지 여섯 화면(`screen-routines`·`screen-affirmations`·`screen-scratchpad`·`screen-todo-personal`·`screen-todo-work`·`screen-approval`) 안드로이드 기준 재작성 — 화면별 슬라이스.\n- `_deviations.md` S2~S9 의 iOS 근거 갱신(S2 는 안드로이드에서는 「그림자 없음」으로 성격이 바뀐다).\n- 우선순위 시트의 `불일치` 2건 수렴(구현을 목업에 맞추거나 허용 등재) 및 `_copy-map.md` 잔여 카피 행.\n- 모델 as-is 지문 좁히기(control plane).\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0003",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/379",
+          "preparedAt": "2026-11-04T18:05:00Z",
+          "notes": "PR 명의: App 토큰. head dad3fee1773f72001dcaf8c308898775ee7f19d6, changed_files=4(docs/mockups: _structure-map 재작성·_impl-map 안내문·_deviations S1 인용·README 1구). 로컬 검산 ok + 음성 프로브 2종 검출. 판정기(scripts/review-policy/judge.py) 케이스 MA1~MA6 미접촉, review/manual-approval=success(자동). 준비 시점 status: judge·Detect changes·comment-policy ledger success, 빌드/테스트 잡 skipped, `Journey mockup / journey-mockup` 진행 중(실행 전 재확인). 머지는 executor 몫."
+        }
+      }
+    ]
   }
 ]
