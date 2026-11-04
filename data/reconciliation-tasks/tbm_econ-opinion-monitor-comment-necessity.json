@@ -17138,7 +17138,7 @@
   {
     "id": "rct_20261104-0004",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T21:25:27Z",
     "trigger": {
       "source": "version_change",
@@ -17161,6 +17161,40 @@
     "assessment": {
       "reason": "action_required — 미판정 5행·189줄이 남아 있고 이 모델에 열린 형제 task가 없다(직전 rct_20261104-0003 은 succeeded).\n\n근거 1: 게이트 실측상 미판정 L 4행/154줄 + D 1행/35줄. 189줄은 판정 슬라이스 예산(400줄) 안이라 한 덩어리로 처리 가능하다. 대상 파일: handlers.go, aggregate.py(L·D), tests/test_aggregate.py, web/src/screens/Trend.tsx.\n근거 2: 대상 레포 열린 PR #287·#280·#220 중 이 원장 행들을 판정하는 PR은 없다(#287은 AC3.4 코드 슬라이스 — aggregate.py 주석을 다시 건드릴 수 있으니 계획 시 충돌 여부 확인).\n근거 3: 판정은 필요성 시험을 적용한 판정 패스 PR(제거 + 유지 사유 + 원장 '완료')로만 닫히며 시간이 지나도 줄지 않으므로 재확인 유예 사유가 없다.\n반대 방향 확인: E 표면·기준·범위는 불변, 불변식은 통과, 나머지 원장 행은 전부 완료다.",
       "assessedAt": "2026-11-04T21:25:54Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "열린 PR과 파일이 겹치지 않는 미판정 2행(handlers.go L 95줄 · Trend.tsx L 37줄, 모두 #292 증분)만 이번 판정 슬라이스로 잡아 필요성 시험을 적용하고, 주석 변경 없이 passes 파일(유지 사유)과 원장 판정 칸 '완료'로 닫는다(제거 0). 완료 기준: 두 행 완료·게이트 통과. 범위 밖: aggregate.py L(14)·D(35)·test_aggregate.py(8) 3행 — PR #287이 같은 파일의 주석을 다시 바꾸므로 지금 판정하면 낡아 후속(재감지)으로 남긴다. 예산(400줄)보다 작게 끝내는 사유는 이 파일 겹침이다. 가역성: 문서 PR 하나라 revert로 되돌린다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #287·#294 등 열린 PR의 변경 파일이 handlers.go·Trend.tsx와 겹치지 않는지 재확인",
+              "expectedOutcome": "겹침 없음(#294는 contributions.go)"
+            },
+            {
+              "seq": 2,
+              "action": "PR 머지(승인 후)",
+              "expectedOutcome": "main에 passes 파일과 원장 두 행 완료가 반영됨"
+            },
+            {
+              "seq": 3,
+              "action": "머지 후 main에서 python3 scripts/check-comment-ledger.py 실행",
+              "expectedOutcome": "불변식 통과, 미판정 L 2행/22줄 · D 1행/35줄(=aggregate.py·test_aggregate.py)"
+            }
+          ],
+          "plannedAt": "2026-11-04T22:00:00Z",
+          "executionGuide": "## 순서\n1. 대상 PR(preparation.pullRequestUrl)의 CI(원장 게이트 포함)가 green인지 확인 후 머지한다. 단일 단계라 병렬 개념 없음.\n2. 머지 직전 main이 앞서 갔으면 리베이스 후 ledger.md 두 행(handlers.go, Trend.tsx)만 충돌 가능 — 다른 PR이 같은 행을 고쳤다면 줄 수·지문을 실측으로 갱신하고 판정은 증분만큼 `—`로 되돌린다.\n\n## 검증\n- `python3 scripts/check-comment-ledger.py` → 불변식 통과, L 판정 완료 행 189·1835줄 / 미판정 2행·22줄, D 미판정 1행·35줄, E 미판정 0.\n- 이 task의 범위는 handlers.go·Trend.tsx 2행이다. 모델 지문(주석 줄 지문)은 이 PR이 주석을 건드리지 않으므로 불변이어야 한다.\n\n## 범위 밖(후속)\n- aggregate.py L 14줄·D 35줄, tests/test_aggregate.py L 8줄 — PR #287 머지 후 재감지가 새 task로 잇는다. #287 머지 전에 이 3행은 판정하지 않는다.\n\n## 주의\n- 주석을 한 줄도 바꾸지 않는 문서 PR이라 불가역 지점 없음. 문제 시 revert.\n- 머지 후 to-be(docs/comment-policy tree)가 바뀌어 재감지가 돈다 — 정상."
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261104-0004-unit-switch-pass",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/295",
+          "preparedAt": "2026-11-04T22:00:00Z",
+          "notes": "passes/2026-11-04-unit-switch-increment-pass.md 신설 + ledger.md 2행 판정 완료. 로컬에서 게이트 통과 확인."
+        }
+      }
+    ]
   }
 ]
