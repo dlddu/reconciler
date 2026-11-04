@@ -10104,7 +10104,7 @@
   {
     "id": "rct_20261104-0002",
     "toBeModelId": "tbm_pocket-aide-docs-impl",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-11-04T11:20:46Z",
       "source": "version_change",
@@ -10221,6 +10221,49 @@
           "reviewedAt": "2026-11-04T17:50:00Z",
           "reason": "PR #370(head 946cbc9)은 열려 있고 백엔드 unit·integration·data-model·ledger·judge는 success이나, required check인 ci-success가 여전히 failure다(Android instrumented test (emulator) 실패 — 4개 head에서 매번 다른 원인). 또 main보다 2커밋 뒤처졌고 mergeable은 미확정(unknown)이다. 계획 범위·롤백·마이그레이션 위험 통제는 적절하나 직전 거부의 ②(ci-success success 확보)가 해소되지 않아 머지 불가한 준비물이라 승인하지 않는다.",
           "comment": "① head의 ci-success를 success로 만들 수 있는 경로가 계획에 없다 — 에이전트에 Actions rerun 권한이 없어 빈 커밋 재트리거만 반복했고 실패 원인이 매번 달라 flake 확정도 못 했다. Android emulator job의 실패 로그를 읽어(공개 로그/체크 요약) PR과 무관함을 근거로 확정하거나, 필요한 경우 ci-success 대상 경로 조건(Detect changes) 때문에 android job이 돌지 않는 방법이 있는지 확인해 plan.steps에 구체 조치(재실행 요청 주체·시점 포함)로 쓸 것. 재실행이 사람 몫이면 그 재실행이 끝나 head ci-success가 success인 것을 확인한 뒤에 planned로 올릴 것. ② main(현재 2커밋 앞섬)을 다시 merge해 mergeable=MERGEABLE을 확정하고 새 head를 preparation.notes에 기록. ③ 판정기 MA1 수동 승인은 유지되며 CI가 green이면 승인 단계에서 review.manualApproval로 처리된다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "[3차 재계획 — 직전 거부 ①ci-success ②mergeable 반영] 접근·범위(완료 기준)·범위 밖은 직전 계획과 같다: PRD-1 AI 채팅 백엔드 1차(AC1·AC4), PR #370 이 main 에 착지하면 성공. 직전 거부가 지적한 「ci-success 를 success 로 만드는 경로 부재」는 이번에 해소했다 — main 을 다시 merge 해 새 head `d7a504d` 를 만들고 CI 를 기다려 확인했으며, ci-success 와 Android emulator job 포함 전 check 가 success 다. 이전 실패는 PR 과 무관한 emulator 인프라 flake 로 판단한다(PR 은 backend·docs 만 변경, 같은 시간대 다른 reconcile 브랜치도 함께 실패 후 통과, 이후 main push 도 success). 위험도 medium 유지, MA1 수동 승인 필요.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #370 브랜치에 main(`212c854`)을 merge 해 push 한다(head `d7a504d`) — 충돌 없음.",
+              "expectedOutcome": "로컬 go vet·go test ./...·datamodelcheck·check_ledger.py 통과(확인 완료)."
+            },
+            {
+              "seq": 2,
+              "action": "새 head 의 ci-success 가 success 인지 확인한다.",
+              "expectedOutcome": "ci-success success, Android emulator job 포함 전 check success(확인 완료)."
+            },
+            {
+              "seq": 3,
+              "action": "머지 직전 main 이 더 전진했으면(현재 1커밋 앞섬, ledger.md 접촉) 다시 merge 하고 3종 검사와 ci-success 를 재확인한다.",
+              "expectedOutcome": "mergeable=MERGEABLE, ci-success success."
+            },
+            {
+              "seq": 4,
+              "action": "판정기 확인 후 사람 승인(review/manual-approval)이 head 에 붙은 뒤 squash merge 한다.",
+              "expectedOutcome": "`MA1 backend/migrations/0019_chat.*` 출력·종료 1 → 승인 후 main 착지, 착지 커밋 ci-success success."
+            },
+            {
+              "seq": 5,
+              "action": "배포 후 /healthz OK, 인증 요청으로 POST /api/chat/sessions 201, 키 미설정 시 메시지 경로 503 을 확인한다.",
+              "expectedOutcome": "마이그레이션 0019 적용 후 기동, 세션 생성 가능, 메시지 경로만 503."
+            }
+          ],
+          "plannedAt": "2026-11-04T18:20:00Z",
+          "executionGuide": "# 실행 지침 — rct_20261104-0002 · PRD-1 AI 채팅 백엔드 1차 (AC1·AC4)\n\n## 0. 전제\n- 대상: `dlddu/pocket-aide` PR **#370** — https://github.com/dlddu/pocket-aide/pull/370 · 브랜치 `reconcile/rct_20261104-0002-chat-backend` · head `d7a504d`. 변경은 backend(마이그레이션 0019·chat 저장소·핸들러·main 배선)와 docs/data-model·docs/comment-policy/ledger.md·런북이다.\n- `backend/migrations/` 접촉으로 판정기가 **MA1** 을 낸다 → `review/manual-approval` 이 자동으로 붙지 않는다. 사람이 head 에 그 status 를 붙이기 전에는 머지하지 않는다(review.manualApproval 규약).\n\n## 1. 순서\n0. **(3차 계획 갱신)** PR #370 은 main(`212c854`)을 다시 merge(head `d7a504d`)해 충돌 없이 합쳐졌고, 로컬 `go vet`·`go test ./...`·`datamodelcheck`·`check_ledger.py` 통과, head 의 `ci-success` **success**(Android emulator job 포함 전부 success — 이전 4개 head 의 emulator 실패는 같은 시간대 다른 PR 브랜치도 함께 실패했다가 이후 통과한 인프라 flake 로 확정)다. main 이 그 뒤 1커밋(`0875eed`, 메일 코드·`docs/comment-policy/ledger.md`)을 더 얹었다 — 머지 직전 `compare`/mergeable 을 확인하고, ledger.md 충돌이면 양쪽 행을 보존해 다시 merge 한 뒤 3종 검사를 재실행한다. 새 push 로 ci-success 가 다시 돌면 success 를 확인한다.\n1. head 의 `ci-success` success + `review/manual-approval` success(사람 부착) 둘 다 확인. 하나라도 없으면 머지하지 않고 대기. 판정기 `git diff --name-only origin/main HEAD | python3 scripts/review-policy/judge.py` 는 `MA1 backend/migrations/0019_chat.*`·종료 1(수동 승인 필요).\n2. squash merge. 3. 배포 후 실측(아래).\n\n## 2. 검증\n- main: `git show origin/main:backend/migrations/0019_chat.up.sql` 존재, `ls backend/migrations | grep -c 0018` ≥ 1.\n- 코드: `grep -n 'api/chat/sessions' backend/cmd/server/main.go` 4줄.\n- CI: 착지 커밋 `ci-success` success (data-model check, comment-policy ledger, backend unit/integration 포함).\n- 문서 집계 불변: `grep -h '^### AC' docs/product/prd-*.md | wc -l`=102, `ls docs/product/test-*.md | wc -l`=8, `grep -h '^### 시나리오' docs/product/test-*.md | wc -l`=94.\n- 배포 후(가능한 경우): 파드 로그에 마이그레이션 오류 없이 기동, `/healthz` 200. 인증 토큰이 필요한 호출은 e2e/수동 환경이 없으면 코드·CI 근거로 갈음하고 그 사실을 verification 에 적는다. `OPENROUTER_API_KEY` 가 클러스터에 아직 없는 것이 정상이다(키 주입은 범위 밖) — 이때 메시지 경로는 503.\n\n## 3. 범위 밖(후속 — 재감지가 새 task 로 잇는다)\n안드로이드 채팅 화면/세션 목록 · 음성 모드(PRD-1 AC2·3·5)와 STT 엔진(PRD-7) · 세션 삭제 · 키 주입(flux-cd-apps, 사람) · 키보드/위치/메일 형제 task 의 몫 · 나머지 미구현 AC.\n\n## 4. 주의·롤백\n- 새 테이블·새 경로만 추가하고 기존 경로를 바꾸지 않는다. 불가역 지점: 마이그레이션 적용(테이블 생성) — 롤백은 PR revert + `0019_chat.down.sql` 수동 적용(데이터는 채팅 기록뿐).\n- LLM 비용: 키를 주입하기 전에는 호출이 일어나지 않는다. 키 주입 시 `CHAT_MODEL` 로 모델을 정한다.\n- 알려진 한계: llm.Client 의 HTTP 타임아웃 60초가 스트림 전체에 걸린다(긴 답변은 잘리고 `event: error`), 사용자 메시지는 16KiB 상한, LLM 문맥은 최근 50개 메시지."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0002-chat-backend",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/370",
+          "preparedAt": "2026-11-04T18:20:00Z",
+          "notes": "직전 거부 반영. ① main(212c854)을 merge — 충돌 없음, 새 head d7a504d. 로컬 go vet·go test ./...·datamodelcheck 종료 0·check_ledger.py 종료 0. ② head d7a504d 의 ci-success success(Backend unit+lint·integration·Docker build·data-model check·ledger·judge·journey-mockup·Android emulator 전부 success). 이전 emulator 실패는 인프라 flake 로 판단(PR 은 android/ 무변경, 같은 시간대 타 브랜치도 실패 후 통과). ③ 판정기: MA1 backend/migrations/0019_chat.* 종료 1 — 수동 승인 필요 유지. 주의: main 이 이후 1커밋(0875eed, mail·ledger.md) 앞서 mergeable 미확정(unknown) — 머지 직전 재확인."
         }
       }
     ]
