@@ -2713,7 +2713,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T15:53:19Z",
     "trigger": {
       "detectedAt": "2026-11-04T15:53:19Z",
@@ -2736,6 +2736,45 @@
     "assessment": {
       "reason": "작업 필요(action_required) — 원장 미판정 L 102줄·E 1줄(주로 #366 메일 API 신규 파일, 그 밖에 iOS Sessions BF-5 7줄)이 필요성 시험을 받지 않았다. 같은 모델에 열린 형제 task가 없고(직전 task 전부 종료), 자동 해소될 변화가 아니라 판정 pass가 필요하다. 이동·범위 확인은 check_ledger.py 미판정 행 기준.",
       "assessedAt": "2026-11-04T15:53:40Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "원장 미판정 중 메일 API(#366) 신규 파일 L 95줄·E 1줄과 SessionDetailView L 3줄(총 L 98줄·E 1줄)에 필요성 시험을 적용하는 판정 패스를 대상 레포 PR로 스테이징한다(주석 전용 변경 — 가역). 완료 기준: 이 범위의 원장 행이 '완료'가 되고 check_ledger.py rc=0, 사유는 passes 파일에 기록. 범위 밖: ios/PocketAideTests/Sessions*UITests.swift 4줄(파일이 겹치는 열린 PR #375가 있어 정의의 '겹치는 열린 PR' 사유로 제외) — 재감지가 새 task로 잇는다. 사람 소유 결정 없음.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #376 diff 검토: 제거 18줄(코드·문서·주석 재진술·장식)이 정책 판정 규칙에 맞는지, 유지 80줄+E 1줄의 사유가 passes/2026-11-04-mail-api-sessions-detail.md에 적혔는지 확인",
+              "expectedOutcome": "제거는 doc 수준(exported 첫 문장)·계약·플랫폼 함정을 건드리지 않고, 비주석 변경이 없다"
+            },
+            {
+              "seq": 2,
+              "action": "PR의 CI(comment-policy ledger 잡, go test)와 로컬 검증 결과 확인: python3 scripts/comment-policy/check_ledger.py",
+              "expectedOutcome": "rc=0, L 미판정 4(Sessions UITests) · E 미판정 0"
+            },
+            {
+              "seq": 3,
+              "action": "PR 머지 (executor)",
+              "expectedOutcome": "main에 판정 반영, 모델 to-be 트리 해시·as-is 지문 변경"
+            },
+            {
+              "seq": 4,
+              "action": "머지 후 as-is versionScript 재실행 및 check_ledger.py 실행으로 범위 수렴 검증",
+              "expectedOutcome": "범위 내 행 전부 완료, 잔여 gap은 Sessions UITests 4줄뿐"
+            }
+          ],
+          "plannedAt": "2026-11-04T16:30:00Z",
+          "executionGuide": "## 순서\n1. 단계 1→2→3→4 순차(머지 전 검증이 선행 조건).\n\n## 검증\n- PR #376 head에서 `python3 scripts/comment-policy/check_ledger.py` rc=0, 출력 `L: ... 완료 809 · 미판정 4`, `E: ... 미판정 0`.\n- `go test ./internal/mail/` ok. diff에 비주석 변경이 없어야 한다(주석·docs/comment-policy만).\n- 머지 후 main에서 같은 게이트가 rc=0이고, 모델 as-is 지문이 `b48ae2cea9fe…`(PR 기준)과 일치.\n- 완료 기준은 이 PR의 범위(메일 L 95·E 1, SessionDetailView 3)가 '완료'가 된 것. 범위 밖(후속): `ios/PocketAideTests/Sessions{PlatformUnreachable,Tab}UITests.swift`·`SessionsUITestSupport.swift` L 4줄 — PR #375 머지 후 재감지가 새 task로 잇는다.\n\n## 주의\n- main이 그 사이 움직였으면(#370이 ledger.md를 건드림, #375가 머지 등) ledger.md 충돌/지문 불일치가 날 수 있다 — 충돌은 행 단위이므로 PR 브랜치를 rebase하고 `check_ledger.py --rows`로 행 줄 수·지문을 다시 맞춘다.\n- 주석 전용이라 불가역 지점 없음. 롤백은 PR revert."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0002-mail-comments",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/376",
+          "preparedAt": "2026-11-04T16:30:00Z",
+          "notes": "기준 커밋 a0381a8. 제거 18줄·유지 80줄(+E 1줄), 게이트 rc=0, go test ./internal/mail ok. 수동 승인 정책 해당 경로는 docs/comment-policy·주석뿐."
+        }
+      }
+    ]
   }
 ]
