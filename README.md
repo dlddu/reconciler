@@ -35,7 +35,7 @@ data/                               # 운영 데이터 (스킬이 런타임에 �
     <toBeModelId>.json
 docs/                               # GitHub Pages 원본 폴더 (main /docs)
   index.html                        # data/·templates/ 브라우징용 정적 웹페이지 (데이터는 raw에서 읽음)
-  .nojekyll                         # Pages 브랜치 배포가 Jekyll을 타지 않게
+  .nojekyll                         # 브랜치 배포로 되돌릴 때 Jekyll을 타지 않게(Actions 배포에서는 쓰지 않음)
 tests/                              # docs/index.html 동작 테스트 (node --test), 워크플로 선정 스크립트 테스트 (python3 -m unittest)
 .github/workflows/                  # 단계 스킬별 workflow_dispatch 워크플로
 .github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py / select_plan_target.py / select_review_target.py /
@@ -498,10 +498,10 @@ Pages에 올라가지 않는다. 대신 raw CDN 캐시 때문에 데이터가 �
   새로고침하면 보던 모델이 아니라 기본 선택(목록의 첫 모델)으로 연다. 딥링크로 들어온 뒤
   다른 모델을 고르면 주소의 딥링크도 지워진다.
 
-- **GitHub Pages 활성화**: 저장소 Settings → Pages → Build and deployment → *Deploy from a branch* →
-  `main` / `/docs`. 배포 후 `https://<owner>.github.io/<repo>/`.
-  - 확인 중(2026-11-04): 브랜치 배포는 원본 폴더 밖만 바뀐 push(봇의 `data/` 커밋)에도 「pages build and deployment」를
-    도는지. 돈다면 Source를 *GitHub Actions*로 바꾸고 `docs/`가 바뀔 때만 배포하는 워크플로를 둔다.
+- **GitHub Pages 활성화**: 저장소 Settings → Pages → Build and deployment → Source를 *GitHub Actions*로 둔다.
+  `.github/workflows/pages.yml`이 main에서 `docs/`(또는 그 워크플로)가 바뀔 때만 `docs/`를 배포한다(수동 실행도
+  가능). 배포 후 `https://<owner>.github.io/<repo>/`. *Deploy from a branch*는 원본 폴더와 상관없이 main push마다
+  빌드한다 — `/docs` 원본에서도 `data/`만 바꾼 push(2026-11-04 `766bd87`)에 빌드가 돌았다.
 - **로컬 확인**: 레포 루트에서 `python3 -m http.server` 실행 후 `http://localhost:8000/docs/` 접속.
   `file://`로 직접 열면 브라우저 보안정책상 `data/`를 못 읽으니 서버로 열 것.
 - **테스트**: `node --test "tests/*.test.mjs"` — 각 테스트는 `index.html`에서 해당

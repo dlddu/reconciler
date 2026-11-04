@@ -1,0 +1,55 @@
+# 데이터 브라우저(index.html) 배포 — README 「데이터 브라우저」.
+#
+# 페이지는 data/·templates/를 raw.githubusercontent.com의 main에서 읽으므로 Pages에는 docs/만 올린다.
+# 봇의 데이터 커밋(시간당 수십 개)마다 Pages를 다시 배포하지 않고, docs/가 바뀔 때만 배포한다.
+# 「Deploy from a branch」는 원본 폴더와 상관없이 main push마다 빌드한다 — 루트 원본일 때 2026-11-03 하루 134회,
+# /docs 원본으로 바꾼 뒤에도 data/만 바꾼 push(2026-11-04 766bd87)에 빌드가 돌았다.
+#
+# 필요한 설정: Settings → Pages → Build and deployment → Source: GitHub Actions
+name: "Pages"
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/**
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 배포가 겹치면 뒤의 것만 남긴다(진행 중인 배포는 끝까지 둔다).
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy docs/
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: docs
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
