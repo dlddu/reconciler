@@ -7776,7 +7776,7 @@
   {
     "id": "rct_20261104-0003",
     "toBeModelId": "tbm_econ-opinion-monitor-mockup-render",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-11-04T18:17:51Z",
       "source": "version_change",
@@ -7833,6 +7833,39 @@
           "reviewedAt": "2026-11-04T18:50:00Z",
           "reason": "계획 자체(막대·빈 칸 표시 구현 + 잔여 3행 트래커 등재, low 위험, revert 롤백)는 gap에 비례하고 검증·롤백도 명시돼 있다. 그러나 신선도 확인에서 PR #291이 열려 있으나 mergeable=false(dirty)이고 main(91611170)과 diverged(1 ahead/1 behind)이다. 계획이 우려했던 PR #289가 2026-11-04T18:27:59Z에 먼저 머지돼 충돌했고, 지금 머지할 수 없다. review/manual-approval status는 head 72a2ffb3에 success이나 충돌 해소 후 head가 바뀌면 무효다. 이 토큰 범위로는 CI check-runs를 조회할 수 없었으나 충돌 하나로 거부 사유가 충족된다.",
           "comment": "PR #291 브랜치(reconcile/rct_20261104-0003)를 최신 main(91611170, #289 반영)으로 rebase해 충돌을 해소할 것 — 충돌은 트래커 docs/econ-opinion-monitor-design-tracker.md의 「구현 수렴 대기」 구간 인접 행일 가능성이 크므로 행 순서만 맞춰 재배치하고, 3행 등재가 #289가 추가한 행과 중복되지 않는지 확인. 해소 후 새 head로 vitest·tsc·check-mockup-render/journey-mockup/comment-ledger를 다시 돌리고 preparation.notes의 head sha를 갱신. 새 head에는 review/manual-approval status가 다시 필요하다. 계획 내용 자체는 바꿀 필요 없다."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "(재계획 — 직전 시도 review_rejected: PR #291 이 먼저 머지된 #289 와 트래커 인접 행에서 충돌) 계획 내용은 그대로 유지한다. 목업=SSOT 원칙대로 gap 슬라이스 1 만 구현: 서빙 응답 raw_count 로 그리는 기사 건수 막대(tr-bars)와 빈 칸 ○·언급 없음·안내(tr-gap-note)를 Trend.tsx 에 구현하고, API 가 받치지 못하거나 도착 화면이 없는 나머지 3덩어리(집계 단위 라디오 · 정규화 전/후·tr-flag·tr-diff-note · 고른 칸 카드·진입)는 트래커 「등재된 편차」 구현 수렴 대기 3행으로 등재한다. 완료 기준=막대·빈 칸 표시 착지 + 잔여 3행 등재(#289 가 더한 dash 2행과 중복 없음); 범위 밖=잔여 3덩어리 구현. 코드 revert 로 가역.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #291 의 head·CI(checks·docs-mockup-render·docs-journey-mockup)와 review/manual-approval status 를 확인하고 머지한다. 같은 표를 건드리는 열린 PR #289 가 먼저 머지됐다면 충돌 여부를 확인한다.",
+              "expectedOutcome": "main 에 Trend.tsx 막대·빈 칸 표시, tokens.css 3 규칙, 테스트 2건, 트래커 3행이 반영된다."
+            },
+            {
+              "seq": 2,
+              "action": "머지 후 main 에서 web vitest·tsc 와 check-mockup-render.py, check-journey-mockup.py, check-comment-ledger.py 를 실행한다.",
+              "expectedOutcome": "전건 통과(rc=0), 주석 줄 수 변화 없음."
+            },
+            {
+              "seq": 3,
+              "action": "Trend.tsx 와 트래커에서 완료 기준(data-role tr-bars·tr-gap-note·tr-gap 존재, 트래커 trend 구현 수렴 대기 3행)을 확인한다.",
+              "expectedOutcome": "막대·빈 칸 표시 구현 확인, 잔여 3행이 구현 수렴 대기로 존재."
+            }
+          ],
+          "plannedAt": "2026-11-04T18:58:00Z",
+          "executionGuide": "## 순서\n1. PR #291(dlddu/economic-opinion-trend-monitor) head 가 재계획 시점 rebase head(cb26d020)에서 바뀌지 않았는지, CI 와 `review/manual-approval` status 를 확인한다.\n2. 머지한다. 단일 단계, 병렬 불가. #289 는 이미 머지됐고 충돌은 rebase 로 해소했다(dash 2행 뒤에 trend 3행). 머지 직전 main 이 또 움직였으면 mergeable 을 다시 확인한다.\n3. 머지 후 main 에서 검증한다.\n\n## 검증\n- `cd web && npx tsc --noEmit && npx vitest run` 통과(재계획 rebase 후 173).\n- `python3 scripts/check-mockup-render.py`, `python3 scripts/check-journey-mockup.py`, `python3 scripts/check-comment-ledger.py .` rc=0.\n- 완료 기준: `Trend.tsx` 에 `data-role=\"tr-bars\"` 막대(선택 대상 칸별 raw_count)·`tr-gap-note`·기준선 ○(`tr-gap`) 이 있고, 트래커에 `trend` 구현 수렴 대기 3행(집계 단위 / 정규화 전후·원시 비율 / 고른 칸 카드)이 있다.\n- 범위 밖(후속): tr-unit 라디오(?unit= 계약), tr-norm·tr-flag 전환·tr-diff-note(칸 전체 건수 계약), tr-cell-box·진입 링크(도착 화면). 재감지가 후속 task 로 잇는다.\n\n## 주의\n- 코드·문서 전용, 계약·저장 형식 변경 없음. 주석 줄 수 변화 0 이라 주석 원장 불변. 수동 승인 케이스 비해당 예상 — status 가 붙지 않으면 리뷰가 manualApproval 로 처리.\n- 롤백: PR 머지 커밋 revert 한 번. 불가역 지점 없음."
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261104-0003",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/291",
+          "preparedAt": "2026-11-04T18:58:00Z",
+          "notes": "리뷰 거부 사유(충돌) 반영: 브랜치를 main 91611170(#289 반영)에 rebase, 트래커 충돌은 dash 2행 유지 + trend 3행 추가로 해소(중복 없음). force-with-lease push, 새 head cb26d020. rebase 후 vitest 173·tsc·check-mockup-render·check-journey-mockup·check-comment-ledger 모두 rc=0. PR mergeable=true, 새 head 에 review/manual-approval=success 확인."
         }
       }
     ]
