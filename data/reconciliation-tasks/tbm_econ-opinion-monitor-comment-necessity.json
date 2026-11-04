@@ -17248,7 +17248,7 @@
   {
     "id": "rct_20261104-0005",
     "toBeModelId": "tbm_econ-opinion-monitor-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T23:34:31Z",
     "trigger": {
       "source": "version_change",
@@ -17271,6 +17271,40 @@
     "assessment": {
       "assessedAt": "2026-11-04T23:41:00Z",
       "reason": "action_required — 미판정 4행·90줄(contributions.go, aggregate.py L·D, tests/test_aggregate.py)이 남아 있고 이 모델에 열린 형제 task가 없다(직전 rct_20261104-0004 succeeded; 이 task 외 비종료 task 0건).\n\n근거 1: 판정은 필요성 시험을 적용한 판정 패스 PR(제거 + 유지 사유 + 원장 '완료')로만 닫히고 시간이 지나도 줄지 않아 재확인 유예 사유가 없다. 90줄은 슬라이스 예산(400줄) 안이라 한 덩어리로 처리 가능하다.\n근거 2: 대상 레포 main에 이 행들을 판정하는 머지된 변경이 없고, 원격 reconcile/* 브랜치는 모두 과거 task의 것이다. 열린 PR 목록은 인증 제약으로 직접 확인하지 못했으니 계획 단계에서 aggregate.py를 건드리는 열린 PR과 충돌하는지 확인할 것.\n반대 방향 확인: E 표면·기준·범위는 불변, 불변식은 통과, 나머지 원장 행은 전부 완료다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "원장 미판정 4행·90줄(contributions.go L, aggregate.py L·D, tests/test_aggregate.py L) 전부를 한 판정 패스 PR 하나로 닫는다 — 필요성 시험 적용, 유지 사유를 passes 파일에 기록, 중복 주석 1줄(composeSources doc의 Gold 행 없는 수집처=0, contributionSource doc 사본) 제거, 원장 4행 '완료'. 완료 기준: 4행 전부 완료 + check-comment-ledger.py 불변식 통과(미판정 0). 범위 밖 없음 — #294·#287이 이미 머지돼 파일이 안정적이고 열린 PR #280(Fairness)·#220(docs)은 이 파일들과 겹치지 않아 쪼갤 이유가 없다(90줄은 예산 400줄 안). 가역성: 주석·문서만 바꾸는 PR 하나라 revert로 되돌린다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "열린 PR(#280, #220 등)이 contributions.go·aggregate.py·test_aggregate.py·ledger.md 해당 행과 겹치지 않는지 머지 직전 재확인",
+              "expectedOutcome": "겹침 없음"
+            },
+            {
+              "seq": 2,
+              "action": "PR #296 CI(원장 게이트 포함) green 확인 후 머지(head 고정)",
+              "expectedOutcome": "main에 passes 파일, 제거 1줄, 원장 4행 완료가 반영됨"
+            },
+            {
+              "seq": 3,
+              "action": "머지 후 main에서 python3 scripts/check-comment-ledger.py 실행",
+              "expectedOutcome": "불변식 통과, L 191행·1869줄 / D 45행·511줄 / E 22행·44줄 전부 판정 완료, 미판정 0"
+            }
+          ],
+          "plannedAt": "2026-11-04T23:55:00Z",
+          "executionGuide": "## 순서\n1. PR #296의 CI(ci/comment-ledger 포함)가 green이고 review/manual-approval 상태가 충족됐는지 확인한 뒤 머지한다. 단일 단계라 병렬 개념 없음.\n2. 머지 직전 main이 앞서 갔으면 리베이스한다. ledger.md의 4행(contributions.go, aggregate.py L·D, test_aggregate.py)이나 contributions.go 주석을 다른 PR이 바꿨다면 줄 수·지문을 실측으로 갱신하고, 늘어난 주석분은 판정을 `—`로 되돌린다.\n\n## 검증\n- `python3 scripts/check-comment-ledger.py` → 불변식 통과, 표면 L 판정 완료 191행·1869줄, D 45행·511줄, E 22행·44줄, 미판정 0.\n- 모델 지문(주석 줄 지문)은 contributions.go 1줄 제거로 lines=1869(직전 1870)가 된다. 다른 줄 수는 불변이어야 한다.\n- 이 task의 완료 기준은 위 4행의 `완료` 전환과 게이트 통과다.\n\n## 범위 밖(후속)\n없음. 머지 후 to-be 트리가 바뀌므로 재감지가 돌며, 그때 새 증분이 생기면 새 task가 잇는다.\n\n## 주의\n- 코드 변경은 없고 주석 1줄 제거와 문서뿐이라 불가역 지점 없음. 문제 시 PR revert.\n- 머지 후 to-be와 as-is 지문이 함께 바뀌어 재감지가 도는 것은 정상."
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261104-0005-contributions-aggregate-pass",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/296",
+          "preparedAt": "2026-11-04T23:55:00Z",
+          "notes": "passes/2026-11-04-contributions-aggregate-increment-pass.md 신설 + ledger.md 4행 완료 + contributions.go composeSources doc 중복 1줄 제거(줄 수 30→29, 지문 1c324be34525). 로컬에서 check-comment-ledger.py 불변식 통과 확인."
+        }
+      }
+    ]
   }
 ]
