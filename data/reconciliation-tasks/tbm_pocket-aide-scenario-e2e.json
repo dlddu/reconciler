@@ -10712,7 +10712,7 @@
   {
     "id": "rct_20261104-0003",
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-11-04T19:17:51Z",
       "source": "version_change",
@@ -10827,6 +10827,49 @@
               "detail": "PR 미머지, 계획 범위 미달성. 제품 코드·main 무변경"
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "직전 시도(failed)가 계획 범위 자체를 달성하지 못했으므로 같은 범위(approval-gate #8 카운트다운·#10 선착 결정 E2E 이식, 매칭 27·공백 49·매칭 단위 파일 29)를 유지하고 실패 원인만 고친다. 원인: 신규 ApprovalCountdownTest 가 카운트다운 감소를 Thread.sleep 기반 E2e.eventually 로 기다렸는데, 앱의 rememberNowMillis 틱(produceState+delay)은 compose 테스트 MainTestClock 위에서 돌아 테스트 스레드가 waitUntil/waitForIdle 로 시계를 펌프할 때만 진행된다 — 그래서 00:45 에서 멈춘 채 실패했다. 수정(커밋 3c20ad9): 해당 단언을 compose.waitUntil(10_000) 으로 바꿔 시계가 흐르게 한다(같은 PR #382·같은 브랜치, 테스트 1줄 변경, 제품 코드 무변경). 대안(앱 틱 주입, 시계 수동 advance)은 제품 코드 변경 또는 과한 결합이라 기각. 범위 밖: 나머지 공백 49행(재감지가 새 task 로 잇는다), 슬라이스 밖 기존 AffirmationEditTest 의 15s 타임아웃(flake 의심, 이 task 의 범위·원인이 아니다). 사람 소유 결정 없음.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #382 의 새 head(3c20ad9) 에서 review/manual-approval 이 새로 success 로 붙었는지, 필수 체크(android-instrumented-test, ci-success)가 완료·성공인지 확인한다. ApprovalCountdownTest·ApprovalFirstDecisionWinsTest 통과를 로그로 확인한다.",
+              "expectedOutcome": "head 3c20ad9 의 필수 체크 success, 두 테스트 통과"
+            },
+            {
+              "seq": 2,
+              "action": "실패가 슬라이스 밖 기존 테스트(AffirmationEditTest 등)뿐이면 같은 sha 로 실패 job 만 재실행해 flake 여부를 가른다. 신규 두 테스트가 다시 실패하면 로그를 읽어 같은 브랜치에서 고친다(새 sha 의 manual-approval 재확인).",
+              "expectedOutcome": "필수 체크 전부 success"
+            },
+            {
+              "seq": 3,
+              "action": "main 과 충돌(특히 doc-tracker/2026-11.md 집계 숫자, 열린 PR #362)이 있으면 풀고 집계를 실측 기준으로 재계산한다.",
+              "expectedOutcome": "mergeable, 집계가 머지 시점 main 실측과 일치"
+            },
+            {
+              "seq": 4,
+              "action": "PR #382 를 squash 머지한다(--match-head-commit 으로 검증된 sha 지정).",
+              "expectedOutcome": "main 에 두 *Test.kt 와 tracker 갱신 착지"
+            },
+            {
+              "seq": 5,
+              "action": "main 에서 grep -H '^// 검증 시나리오:' 선언 줄 수 = 최상위 *Test.kt 수(29)를 확인하고 tracker 집계(매칭 27·공백 49·비-시나리오 2)를 대조한다.",
+              "expectedOutcome": "두 파일 선언이 test-approval-gate.md#시나리오 8·10, 불변식 (94−13−5)=27+49 성립"
+            }
+          ],
+          "plannedAt": "2026-11-04T21:05:00Z",
+          "executionGuide": "## 순서\n1. head 3c20ad9 CI·manual-approval 확인 (이후 단계의 전제, 병렬 불가).\n2. 실패가 슬라이스 밖이면 flake 판별 재실행; 신규 테스트 실패면 수정.\n3. 충돌 해결·집계 재계산 → 4. squash 머지(--match-head-commit) → 5. main 검증.\n\n## 직전 실패와 이번 수정\n- 직전: 'The time left should go down second by second (from 00:45)'. 원인은 E2e.eventually(Thread.sleep) 가 compose 테스트 시계를 펌프하지 않아 앱의 1초 틱(delay)이 진행되지 않은 것. 수정은 compose.waitUntil(10_000) { textOf(countdown) < first } (문자열 사전순 비교는 1시간 미만 구간에서 유효). 이후 만료 대기(waitForText status '만료', 60s)는 원래 waitUntil 이라 영향 없음.\n- 같은 실행의 AffirmationEditTest.editChangesOnlyTheTargetAndCancelChangesNothing ComposeTimeoutException(15s)은 슬라이스 밖. 재실행으로 flake 판별하고, 반복 실패하면 이 task 범위 밖 회귀로 보고해 별도 처리(실패 원인이 신규 테스트와 무관함을 로그로 확인).\n\n## 검증 방법\n- `gh pr checks 382 --repo dlddu/pocket-aide`: ci-success·Android instrumented test success, review/manual-approval=success(head 3c20ad9 기준). in_progress 는 성공이 아니다.\n- 로그에서 ApprovalCountdownTest·ApprovalFirstDecisionWinsTest 통과 확인.\n- main: 선언 줄 수 = 최상위 *Test.kt 수(29); tracker 집계 매칭 27·공백 49·비-시나리오 2; 공백 표에 approval-gate #8·#10 없음, 매핑 표에 있음.\n- 범위 밖(후속): approval-gate 나머지 공백 8행, affirmations #5, github-monitor 7, routines 7, scratchpad 4, session-platform 14, todo 8.\n\n## 주의사항\n- 제품 코드 무변경, 롤백은 PR revert 한 번. CI 전용 ephemeral 백엔드만 사용, 데이터·트래픽 영향 없음.\n- #8 은 45초 만료를 실제로 기다린다(최대 60초). 타임아웃이면 같은 sha 재실행으로 flake 판별.\n- #10 은 거절 확정 시 notice 「이미 처리된 요청입니다 — 승인됨」 단언; 실패하면 앱이 아니라 단언 문구부터 확인.\n- 테스트 수정으로 새 sha 가 생기면 judge 가 manual-approval 을 다시 판정한다(수동 승인 케이스 미접촉이어야 자동 success)."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0003-approval-gate-8-10",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/382",
+          "preparedAt": "2026-11-04T21:05:00Z",
+          "notes": "기존 PR #382 브랜치에 수정 커밋 3c20ad9 푸시(ApprovalCountdownTest.kt 감소 단언을 compose.waitUntil 로 교체, 1 insertion/4 deletions). 안드로이드 계측 테스트는 로컬 실행 불가 — 새 head 의 CI 결과·manual-approval 판정은 푸시 직후라 미확인이며 실행 단계가 확인한다."
         }
       }
     ]
