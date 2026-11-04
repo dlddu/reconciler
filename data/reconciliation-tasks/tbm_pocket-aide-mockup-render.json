@@ -18248,7 +18248,7 @@
   {
     "id": "rct_20261104-0005",
     "toBeModelId": "tbm_pocket-aide-mockup-render",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T19:28:52Z",
     "trigger": {
       "source": "version_change",
@@ -18267,6 +18267,45 @@
     "assessment": {
       "assessedAt": "2026-11-04T19:29:21Z",
       "reason": "차이가 문서 확장에 그치지 않고 정의 기준(구조·수치 대조 완비, 불일치 수렴)을 여전히 어기는 잔여 gap이 명확하다. 롤아웃·일시적 alert처럼 자동 해소될 성격이 아니고, 슬라이스→재감지→후속 task 루프의 정상 진행이므로 지금 작업 필요: 다음 슬라이스(남은 화면의 구조·수치 표 신설 또는 다짐 탭/우선순위 시트 불일치 수렴 중 하나)를 planner가 범위를 정해 진행."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "gap (a) 중 구조·수치 표 `_structure-map.md` 의 세 번째 화면 슬라이스: 앞선 rct_20261104-0003/0004 가 우선순위 시트·다짐 탭을 안드로이드 기준으로 세웠고 남은 다섯 화면은 판정 불능이다. 여러 화면을 한 PR 에 담으면 검토·롤백이 어려우므로, 단일 화면 파일(`ScratchpadScreen.kt`)+공용 컴포넌트로 닫히는 `screen-scratchpad` 한 화면만 같은 방식으로 세운다. 표는 구현을 목업(SSOT)과 대조해 판정을 세우는 수단이며 android/·screen-*.html·tokens.md 는 바꾸지 않는다(문서만 변경, 가역: 머지 커밋 revert). **완료 기준**: ① 머지된 main 에서 `_structure-map.md` 검산 블록 출력이 `ok` 한 줄, ② 표에 `screen-scratchpad` 표 E 37행·표 M·표 S 와 집계가 있고 기존 두 화면 표도 검산 통과, ③ android/·res·screen-*.html·tokens.md·docs/design-system 무변경(as-is 지문 불변, to-be 는 docs/mockups 해시만 변경). 이 화면에서 드러난 불일치(표 M 불일치 24·목업 대기 1, 표 S 불일치 2·목업 대기 1)는 실패가 아니라 남은 drift 기록이다. **범위 밖(후속)**: 나머지 네 화면(routines·todo-personal·todo-work·approval) 표, 우선순위 시트·다짐 탭·임시공간 불일치의 구현/목업 수렴, `_copy-map.md` 잔여 카피 행(drift 3), `_deviations.md` S2~S9 iOS 근거 문구 갱신(drift 5), 모델 as-is 지문 좁히기.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #383 이 열려 있고 head 가 24495eb 인지, 변경 파일이 docs/mockups/_structure-map.md·_impl-map.md 2개뿐인지 확인한다(base 이동 시 충돌 여부 포함).",
+              "expectedOutcome": "open·mergeable, android/·screen-*.html·tokens.md 변경 0건."
+            },
+            {
+              "seq": 2,
+              "action": "PR 의 required check(ci-success, review/manual-approval)가 모두 success 인지 확인한 뒤 PR #383 을 머지한다.",
+              "expectedOutcome": "main 에 머지 커밋 생성."
+            },
+            {
+              "seq": 3,
+              "action": "머지된 main 에서 레포 루트 기준 `_structure-map.md` 검산 블록을 실행한다.",
+              "expectedOutcome": "출력이 `ok` 한 줄."
+            },
+            {
+              "seq": 4,
+              "action": "행 수와 무변경 범위를 확인한다: 임시공간 표 E 37행·표 M·표 S 행 수와 집계, `git diff <머지 전 main>..main -- android docs/design-system docs/mockups/screen-*.html` 빈 출력, as-is versionScript 재실행 값 불변.",
+              "expectedOutcome": "구현·토큰·목업 HTML 무변경, as-is 지문 ui:3d8fa467… res:ee98cbb… 불변."
+            }
+          ],
+          "executionGuide": "## 순서\n1→2→3→4 순차(머지 전 확인이 머지·검증의 전제). 병렬 불가.\n\n## 실행\n1. `gh pr view 383 -R dlddu/pocket-aide` — state OPEN, headRefOid `24495eb0cd9335dcb259b380418690b0cc13585d`, 변경 파일 `docs/mockups/_structure-map.md`·`docs/mockups/_impl-map.md` 2개. head 가 다르면 의도치 않은 푸시이므로 머지하지 말고 중단·보고.\n2. head 의 status/check 확인: `review/manual-approval` success(판정기가 MA1~MA6 미접촉으로 자동 success), `ci-success` 등 required 가 success 이고 진행 중인 것이 없을 때만 머지. 사람 승인 status 가 필요한 상태면 머지하지 않는다. 직전 슬라이스에서 merge commit 이 거부됐으므로 squash(`--match-head-commit` 고정)를 쓴다.\n3. 머지 후 main 체크아웃에서 `_structure-map.md` 의 `## 검산` 코드 블록을 레포 루트에서 실행 → `ok`.\n4. 완료 기준 ③ 확인(위 diff 명령, as-is/to-be versionScript 재실행).\n\n## 검증(계획 범위 기준)\n완료 기준 ①~③ 이 모두 성립하면 succeeded. 임시공간 불일치 행(표 M 24·표 S 2)과 목업 대기가 남아 있는 것은 범위 밖 drift 이므로 실패 사유가 아니다. 검산이 `ok` 가 아니면 failed(머지된 내용이 PR head 와 같은지 `git diff 24495eb..main -- docs/mockups/_structure-map.md docs/mockups/_impl-map.md` 로 먼저 확인).\n\n## 범위 밖(후속, 재감지 입력)\n- `_structure-map.md` 나머지 네 화면(routines·todo-personal·todo-work·approval)\n- 불일치 수렴: 임시공간(`.stamp` 모노스페이스·자간, 음성 부가 줄·인식 메모·분류 링크 부재, 분류 이동 칩 구성 4 vs 3, 빈/로딩/오류 프레임 여백, 출처 점·라벨 색 S5 미커버), 우선순위 시트 2건, 다짐 탭 12건\n- `_copy-map.md` 잔여 카피 불일치 행(drift 3), `_deviations.md` S2~S9(특히 S5) iOS 근거 문구 갱신(drift 5), 모델 as-is 지문 좁히기\n\n## 주의\n- 문서만 바꾸므로 런타임·데이터 영향 없음, 불가역 지점 없음. 롤백은 머지 커밋 revert 한 건.\n- 검산은 필요조건(인용 존재·환산·산술 정합)이다.\n- 머지 직후 base 가 이동해 충돌하면 임의 해결하지 말고 보고(재계획).",
+          "plannedAt": "2026-11-04T20:30:00Z"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0005",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/383",
+          "preparedAt": "2026-11-04T20:30:00Z",
+          "notes": "head 24495eb0cd9335dcb259b380418690b0cc13585d, docs/mockups 2파일(_structure-map 임시공간 표 E37/M/S + 검산 SCREENS 확장·집계, _impl-map 안내문). 로컬 검산 ok, 음성 프로브 5종 검출·원복. 판정기 MA1~MA6 미접촉이라 review/manual-approval 자동 success 예상 — CI 진행 여부는 실행 전 재확인. 머지는 executor 몫."
+        }
+      }
+    ]
   }
 ]
