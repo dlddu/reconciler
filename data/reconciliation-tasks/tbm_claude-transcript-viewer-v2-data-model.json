@@ -26,6 +26,40 @@
     "assessment": {
       "reason": "action_required — to-be 데이터 모델 문서와 그 판정 수단(체커)이 아직 존재하지 않아 불변식 1~3과 체커 계약 C1~C9이 미충족 상태다.\n\n근거: 대상 `dlddu/claude-transcript-viewer-v2`@main HEAD 59fdc33에서 `docs/data-model/`가 없어 to-be 버전이 `absent`이고 `erd.md`·`README.md`(형태 정의·`data-model-scope` 블록)·`fullscan-criteria.md`가 모두 부재다. as-is는 스키마가 `backend/store.go` `Store.migrate`의 인라인 `const schema` DDL 1개에만 있고(마이그레이션 디렉터리 부재), 쿼리 지점은 `backend/store.go`에만 7개다. 판정 절차 1의 `cd backend && go run ./cmd/datamodelcheck --json`은 `stat .../backend/cmd/datamodelcheck: directory not found`로 종료 코드 1(체커 계약 종료 코드 0/1/2가 아님)이었고 `backend/cmd` 디렉터리 자체가 없다. CI 워크플로 4개(test.yml·comment-ledger.yml·docker-publish.yml·review-policy.yml)에 체커 잡이 없어 C9 대체 판정도 불가능하다.\n\n적용 기준: definition 「판정 규칙」(불변식 1~3 또는 C1~C9 중 하나라도 위반이면 action_required)·「판정 절차」3(체커 부재 자체가 gap)·「판정 슬라이스」(1) 진입 전. 같은 모델 파일 `data/reconciliation-tasks/tbm_claude-transcript-viewer-v2-data-model.json`에는 이 task 외 다른 task가 없어 gap을 맡은 열린 형제 task가 없다.\n\n반대 방향 근거: 정의가 예시한 코드 지점은 그대로 존재한다 — PRAGMA 루프와 `const schema` DDL은 범위 축소 없이 `backend/store.go` 안에 있고, definition 자체가 슬라이스 (1)에서 마이그레이션 진입점을 도입하도록 설계해 두었다. 점유 시점과 현재 관측값이 동일해 새 회귀가 아닌 초기 격차이며, 대상 레포에 이 모델 범위의 진행 중인 PR·브랜치(열린 PR #104·#98, 브랜치 4개)가 없어 자동 해소 대기 대상도 아니다.",
       "assessedAt": "2026-11-04T22:20:32Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "판정 슬라이스 (1)만 계획한다 — README·data-model-scope 블록·fullscan-criteria.md(빈 표)·체커 골격(backend/cmd/datamodelcheck)·ERD(불변식 1) + 마이그레이션 진입점(backend/migrations, Store.migrate가 같은 적용기를 호출, 이력은 PRAGMA user_version)을 대상 레포 PR 하나로 도입한다. 이유: definition이 슬라이스 1에 진입점 도입을 지정했고, 이것 없이는 C3를 지킬 수 없다. 완료 기준: 체커가 불변식 1 위반 0을 보고하고(불변식 2·3은 unimplemented로 종료 코드 1), 세 versionScript 성분이 absent를 벗어난다. 범위 밖: 쿼리 패턴 카탈로그·수동 형태(슬라이스 2), 지원 칸·미사용 인덱스·인덱스 마이그레이션(슬라이스 3), 체커 CI 잡(C9 — 워크플로 권한 없음). 사람 소유 결정은 없다(풀스캔 기준은 빈 표). store.go 변경이 MA3에 걸려 사람 승인 경로로 간다(정상).",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #109 검토·승인: store.go가 MA3에 걸리므로 사람이 review/manual-approval status를 붙인다",
+              "expectedOutcome": "PR head sha에 review/manual-approval=success"
+            },
+            {
+              "seq": 2,
+              "action": "CI(Test, Comment ledger) green 확인 후 PR #109 머지",
+              "expectedOutcome": "main에 backend/migrations·cmd/datamodelcheck·docs/data-model 반영"
+            },
+            {
+              "seq": 3,
+              "action": "main에서 cd backend && go run ./cmd/datamodelcheck --json 실행 및 versionScript 두 개 재실행",
+              "expectedOutcome": "invariant 1 위반 0, 불변식 2·3 unimplemented만(exit 1); to-be/as-is 세 성분이 absent 아님"
+            }
+          ],
+          "plannedAt": "2026-11-04T22:37:33Z",
+          "executionGuide": "## 순서\n1. (사람) PR #109 검토 — `backend/store.go`가 MA3에 걸려 `review/manual-approval` status가 자동으로 붙지 않는다. 리뷰가 `review.manualApproval`을 남기고, 사람이 승인 status를 붙인 뒤에만 실행한다.\n2. PR #109 CI(Test·Comment ledger) green 확인 후 머지(squash). 순서 의존 없음 — 단계 1개짜리 PR.\n3. 머지 후 main 체크아웃에서 검증.\n\n## 검증 방법\n- `cd backend && go vet ./... && go test ./...` 통과 (CI와 동일).\n- `cd backend && go run ./cmd/datamodelcheck --json` → `Violations`에 invariant 1 항목 0개, 불변식 2·3 `unimplemented` 2개만, 종료 코드 1.\n- `python3 scripts/comment-policy/ledger_gate.py` 통과.\n- versionScript 재실행: to-be `absent` → 트리 해시, as-is `schema/queries/checker` 세 성분 모두 `absent`가 아닌 값.\n- 운영 영향: 배포 후 파드 부팅 로그에 `migrate schema` 오류 없음. EFS의 기존 DB는 `user_version=0` → `0001`(IF NOT EXISTS) 무해 적용 → 1.\n\n## 주의 / 롤백\n- 되돌릴 수 없는 지점 없음. 롤백 = PR revert(옛 코드는 user_version을 무시, 테이블 동일).\n- 단일 writer(maxSurge=0) 가정 유지. 피크 회피 불필요(스키마 변화 없음).\n- CI 체커 잡(C9)은 워크플로 권한 부재로 이 PR에 없다.\n\n## 범위 밖(후속)\n- 슬라이스 2: 쿼리 패턴 카탈로그·수동 형태(OpenStore PRAGMA 루프 처리 포함), 체커 불변식 2 구현.\n- 슬라이스 3: 지원 칸·미사용 인덱스, 체커 불변식 3(EXPLAIN QUERY PLAN), 필요 시 인덱스 마이그레이션.\n- 체커 CI 잡(C9, report 모드) — 워크플로 권한이 있는 쪽에서.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/claude-transcript-viewer-v2",
+          "branch": "reconcile/rct_20261104-0001-data-model-slice1",
+          "pullRequestUrl": "https://github.com/dlddu/claude-transcript-viewer-v2/pull/109",
+          "preparedAt": "2026-11-04T22:37:33Z",
+          "notes": "로컬에서 go vet/test, ledger_gate, judge.py(MA3만 접촉), 체커 음성 테스트, versionScript 실행 확인. CI 잡은 워크플로 권한 부재로 제외."
+        }
+      }
+    ]
   }
 ]
