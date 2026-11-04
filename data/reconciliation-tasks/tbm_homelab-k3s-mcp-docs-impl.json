@@ -13775,7 +13775,7 @@
   {
     "id": "rct_20261104-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "assessing",
+    "status": "no_action_needed",
     "trigger": {
       "detectedAt": "2026-11-04T01:17:33Z",
       "source": "version_change",
@@ -13794,6 +13794,11 @@
       "toBe": "관측 2026-11-04T01:20Z · docs 트리 `90bc14ec` (직전 관측 `1dba3ad6`).\n문서 변경 4파일: `docs/prd-platform-auth-safety.md` 비기능 요구사항 2줄(AC 수 10건은 변경 전후 동일 — 운영 배포가 GitHub Actions OIDC 규칙 두 값을 ExternalSecret 이 만드는 ConfigMap `homelab-k3s-mcp-github-oidc` 에서 `envFrom`(`optional: true`)으로 받음, Secret 이 아니라 ConfigMap) · `docs/doc-tracker/2026-09.md` 허브 도달 가능 문서 139/139→140/140(정책 91→92) · `docs/comment-policy/passes/2026-11-03-necessity-slice-rct-20261101-0001.md` 신설(26줄) · `docs/comment-policy/ledger.md` 필요성 판정 14행 갱신.\n실측 집계: AC 헤더 117(`grep -rhoE '^### AC[0-9]+:' docs/prd-*.md`) = tracker 레지스트리 AC 열 합계 117 = tracker 「AC 117개(가치 연결 117/미연결 0)」 · PRD 21 · 테스트 문서 21 · 가치 6(V1~V6) · 등록 도구 29 — 모두 tracker 「현재 상태 요약」과 일치.\n문서 게이트: `scripts/check_doc_inventory.py` RC=0(마크다운 140 = 가치 1 + PRD 21 + 테스트 21 + 상태 추적 5 + 정책 92 · 허브 140/140 · 끊긴 링크 0) · `tests/integration/check_ac_mapping.py` RC=0(시나리오 122 · 예외 3 · 구현 대기 2 · 1:1 대상 117 · 매칭 109 · 분할 대기 0 · 공백 8).",
       "gap": "남은 drift 없음. 구현 쪽 변화는 internal/ 주석 7줄뿐(동작 변경 0줄 · main.go 무변경 · 도구 표면 29종 무변경)이고, 문서 쪽 변화는 ① `prd-platform-auth-safety` 의 OIDC 규칙 값 전달 방식(Secret→ConfigMap) ② tracker 허브 집계 139→140 ③ 주석 필요성 판정 문서 신설·ledger 갱신인데, ①은 같은 PR 의 `k8s/deployment.yaml` 과 실제 클러스터 envFrom 이 같은 ConfigMap 배달로 실측 확인됐다. definition 의 drift 기준 1~4(미구현 AC · 구현↔문서 불일치 · 문서 없는 구현 · tracker 불일치) 중 해당하는 것이 없고, 이번 트리거(version_change)는 관측 대상만 좁혔으며 새로운 격차를 만들지 않았다.",
       "summarizedAt": "2026-11-04T01:22:28Z"
-    }
+    },
+    "assessment": {
+      "reason": "판정: 남은 drift gap이 없어 대응 작업 불필요(no_action_needed).\n\n근거: 직전 관측 HEAD `459459d`(#304) 이후 2커밋(#305 `43491af` · #308 `aa8e01b`)이 있고 asIs `internal:8f8b6e5a… main.go:c6749d73…` · toBe docs `90bc14ec` 는 점유 시점 currentVersion과 일치(stateSummary 참조). internal/ diff 4파일 7줄은 전부 주석이고 `main.go` · MCP 도구 표면 29종(`toolslist.go` 29 = `EXPECTED_TOOLS` 29)은 무변경이다. 문서 변화는 `prd-platform-auth-safety` 의 OIDC 규칙 값 전달 방식(Secret→ConfigMap) 한 항 · tracker 허브 집계 139→140 · 주석 필요성 판정 문서 신설 · ledger 갱신뿐이다. tracker 집계는 실측과 일치한다(PRD 21 · 테스트 21 · AC 헤더 117 = 레지스트리 AC 합계 117 · 도구 29 · 허브 140/140). 실측 명령: `check_doc_inventory.py` RC=0(140/140) · `check_ac_mapping.py` RC=0(시나리오 122 · 매칭 109) · `go build ./...` RC=0 · `go test ./...` 16패키지 전건 ok. 클러스터 실측(k3s MCP): Deployment `homelab-k3s-mcp` 1/1 ready · image `aa8e01b`(=HEAD) · envFrom 의 `homelab-k3s-mcp-github-oidc` 가 configMapRef 로 반영되어 PRD 의 새 배달 방식과 일치한다.\n\n적용 기준: drift 1(미구현 AC — 레지스트리 21행 전부 ✅ 완전 · AC 117 전량 구현) · 2(구현↔문서 불일치 — 도구 29 = 문서 29, 동작 변경 0줄, 자격증명 취급 변경은 문서·매니페스트·운영 3면 일치) · 3(문서 없는 구현 — 신설 도구 0종) · 4(tracker 불일치 — 집계가 실측과 일치). 방향 규칙상 「의도된 동작 변경 → 문서를 코드에 맞춤」 경로로 처리됐다(#305 가 매니페스트·문서를 함께 갱신). 같은 모델 파일의 열린 형제 task 는 0건.\n\n반대 방향 근거: ① `check_ac_mapping` 의 🚧 공백 8 · ⏳ 구현 대기 2 · 🚫 예외 3 은 AC↔e2e 1:1 축이라 definition 이 자매 모델 `tbm_homelab-k3s-mcp-scenario-e2e` 소관으로 명시한 축이다. ② tracker 「수용된 위험」 의 `dear_baby_reset_user` 게이트 밖 예외 1종은 PRD·tracker 에 등록된 수용 결정이며 문서↔구현이 일치한다. ③ tracker 산문 절의 괄호 숫자(17개 PRD · 95개 AC)는 직전 관측 `459459d` 와 바이트 동일하게 낡아 있고 이번 변화가 만들지 않았으며 집계 자체는 정확하다 — docs 내부 계층 정합성은 이 모델의 주 판정 대상이 아니다. ④ 주석 필요성 판정 문서·ledger 는 자매 모델 `tbm_homelab-k3s-mcp-comment-necessity` 소관이다.",
+      "assessedAt": "2026-11-04T01:23:06Z"
+    },
+    "updatedAt": "2026-11-04T01:23:06Z"
   }
 ]
