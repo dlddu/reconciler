@@ -9303,7 +9303,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-docs-impl",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T17:07:15Z",
     "trigger": {
       "source": "version_change",
@@ -9327,7 +9327,46 @@
     "assessment": {
       "reason": "직전 슬라이스(#300, PRD-12 AC11)로 gap은 줄었으나 PRD-1·6·7·9 전체, PRD-4 음성 경로, PRD-8 위젯 AC1·3·8·11 등 미구현 AC가 남아 정의 판정 기준 1·2의 유의미한 drift가 지속된다. 롤아웃 진행 같은 자동 해소 경로가 없고 열린 task도 없으므로 재확인 유예 없이 즉시 계획 단계로 넘긴다(슬라이스 → 재감지 → 후속 task 흐름). 우선순위 판단은 planner 몫.",
       "assessedAt": "2026-10-28T17:07:52Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "PRD-8 AC3·AC11(메일 연동 — 결정 사항이 이미 PRD 에 확정돼 사람 결정 없이 구현 가능)의 백엔드 1차 슬라이스를 만든다: IMAP 앱 비밀번호의 AES-256-GCM 봉인 보관(mail_accounts, 마이그레이션 0018), 읽기 전용(BODY.PEEK) 미확인 메일 조회, 계정 연결·재연결·해제 API, MAIL_ENCRYPTION_KEY 없으면 /api/mail/* 만 503. 선택 근거: 남은 gap 중(PRD-1·6·7·9 30 AC, PRD-4 음성, PRD-8 AC3·AC11) 설계 결정이 모두 확정된 것은 메일뿐이고, 백엔드를 먼저 닫아야 앱·위젯 슬라이스가 그 위에 쌓인다. 범위(완료 기준): PR 이 main 에 착지하고 정적·CI 검증과 배포 후 정상 기동이 확인되면 이 task 는 성공이다. 범위 밖: 안드로이드 메일 화면·위젯 메일 영역, flux-cd-apps 키 주입(사람 작업), docs/product·tracker 갱신, 그 밖의 잔여 미구현 AC 전부 — 재감지가 새 task 로 잇는다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #366(dlddu/pocket-aide, head f872178)의 CI 와 review/manual-approval 상태를 확인한다. 마이그레이션 변경이라 MA1 에 닿아 사람 승인 status 가 head 에 success 로 붙어야 한다.",
+              "expectedOutcome": "CI success, review/manual-approval=success(사람 승인)."
+            },
+            {
+              "seq": 2,
+              "action": "승인 확인 후 PR #366 을 squash 머지한다.",
+              "expectedOutcome": "main 에 mail 패키지·마이그레이션 0018·/api/mail 배선이 착지하고 배포 파이프라인이 돈다."
+            },
+            {
+              "seq": 3,
+              "action": "main 에서 go test ./internal/mail ./internal/handlers, datamodelcheck(종료 코드 0), check_ledger.py 를 확인한다(또는 머지 커밋 CI 로 갈음).",
+              "expectedOutcome": "모두 통과."
+            },
+            {
+              "seq": 4,
+              "action": "배포 후 /healthz 와 부팅 로그(mail: disabled)를 확인한다.",
+              "expectedOutcome": "서버 정상 기동, 마이그레이션 0018 적용, 키 미주입이므로 /api/mail/* 는 503."
+            }
+          ],
+          "plannedAt": "2026-11-04T10:50:00Z",
+          "executionGuide": "## 실행 순서\n1. **사전 확인(머지 전)** — PR #366 head `f872178` 의 CI(`backend-unit-test`, `data-model check (gate)`, `comment-policy`)가 success 인지 본다. head 가 바뀌었으면 새 head 의 CI·`review/manual-approval` 을 다시 본다.\n2. **사람 승인 확인** — 이 PR 은 `backend/migrations/` 변경이라 MA1 에 닿는다. 리뷰가 `review.manualApproval` 을 남기므로, 대상 레포 `review/manual-approval` status 가 PR head sha 에 success 로 붙은 것이 확인될 때만 머지한다(미승인이면 집지 않는다).\n3. **머지** — squash 머지. 머지로 배포 파이프라인(`pin` 잡 → deploy 브랜치)이 돌고 서버 부팅 때 마이그레이션 0018 이 운영 SQLite 에 적용된다.\n4. 단계 2→3 은 직렬이다(승인 전 머지 불가). 병렬 가능한 단계는 없다.\n\n## 검증 방법 (계획 범위 = 백엔드 1차 슬라이스)\n- main 에 `backend/internal/mail/`·`backend/migrations/0018_mail_accounts.*.sql`·`handlers/mail.go` 가 있고 `cmd/server/main.go` 가 `/api/mail/*` 를 배선한다(`git show main:<path>`).\n- main 에서 `cd backend && go test ./internal/mail ./internal/handlers && go run ./cmd/datamodelcheck`(종료 코드 0) 와 `python3 scripts/comment-policy/check_ledger.py` 통과(또는 머지 커밋의 CI success).\n- 배포 후: 서버가 정상 기동(`/healthz` 200)하고 부팅 로그에 `mail: disabled (MAIL_ENCRYPTION_KEY not set)` 가 보인다(키는 이 슬라이스에서 주입하지 않는다). 인증 토큰으로 `GET /api/mail/accounts` 가 503 이면 의도된 기본 동작이다.\n- 완료 기준: PR 이 main 에 착지했고 위 정적·CI 검증이 통과했으며 배포 후 서버가 정상 기동한다. 기능 활성화(키 주입)·앱 UI 는 완료 기준이 아니다.\n\n## 범위 밖 (후속 — 재감지 후 다음 계획의 입력)\n- 안드로이드 메일 화면(PRD-8 AC11)과 위젯 메일 영역(AC3, AC1·AC8 부분 구현 해소), 계정 필터 기기 저장.\n- 운영 배선: `dlddu/flux-cd-apps` `apps/pocket-aide/external-secret.yaml` 에 `MAIL_ENCRYPTION_KEY`(+선택 `MAIL_ENCRYPTION_KEY_VERSION`) 추가와 AWS SSM 파라미터 생성 — 사람 작업.\n- 그 외 잔여 gap: PRD-1·6·7·9 미구현 AC 30개, PRD-4 AC1·AC2(음성), PRD-8 AC4 위치 결정 충돌(rct_20261102-0002).\n- `docs/product` 문서·doc-tracker 의 구현 상태 칸 갱신(앱까지 닫힌 뒤; MA6 영역이라 사람 승인 대상).\n\n## 주의사항\n- **불가역 지점**: 머지 후 운영 DB 에 `mail_accounts` 테이블이 생긴다. 롤백은 `0018 down`(`DROP TABLE`)을 새 마이그레이션이 아니라 revert PR 로 처리해야 하며, 이미 적용된 마이그레이션을 수정하지 않는다. 키가 주입되기 전에는 테이블이 비어 있어 데이터 손실 위험이 없다.\n- **트래픽/데이터 영향**: 키 미주입 상태에서는 `/api/mail/*` 만 503 이고 기존 API 에 영향 없다. 새 의존성 `github.com/emersion/go-imap/v2`(beta)가 `go.mod` 에 들어온다.\n- **실패 시**: 배포 후 기동 실패(마이그레이션 오류 등)면 PR 을 revert 하고 이 task 를 `failed` 로 닫아 재계획한다. 회피 가능한 사전 조건 — 피크 시간대 회피는 불필요(개인용 서버).\n- 비밀번호·키 값을 로그·응답·PR 에 남기지 않는다(응답 JSON 은 비밀번호 필드를 담지 않음을 핸들러 테스트가 확인).\n- 계획 시점의 stateSummary 는 iOS 시절(10-28) 관측이라 현재(안드로이드 전환 후)와 맞지 않는다. 이 시도는 2026-11-04 main(`79a097a`)을 직접 실측해 슬라이스를 골랐다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261028-0002",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/366",
+          "preparedAt": "2026-11-04T10:50:00Z",
+          "notes": "PR 은 머지하지 않았다. base 쪽 판정기(scripts/review-policy/judge.py)에 이 PR 의 변경 경로 전체(17개)를 넣어 실측: MA1 만 접촉(backend/migrations/0018_mail_accounts.{up,down}.sql), 나머지 MA2~MA6 비접촉 → 판정기가 review/manual-approval 을 붙이지 않고 리뷰가 review.manualApproval 을 남겨 사람 승인 뒤에만 실행된다. 로컬 검증: go vet/go test ./... 전체 통과, datamodelcheck 종료 코드 0, check_ledger.py 통과. 이전 시도에서 같은 브랜치명으로 닫힌 PR #333 이 있으나 별개이며 이번 PR 은 새로 열었다."
+        }
+      }
+    ]
   },
   {
     "toBeModelId": "tbm_pocket-aide-docs-impl",
