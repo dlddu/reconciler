@@ -1,7 +1,7 @@
 [
   {
     "toBeModelId": "tbm_claude-transcript-viewer-v2-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T14:56:53Z",
     "trigger": {
       "detectedAt": "2026-11-04T14:56:53Z",
@@ -24,6 +24,40 @@
     "assessment": {
       "assessedAt": "2026-11-04T14:57:10Z",
       "reason": "정책 디렉터리·원장 게이트가 없고 약 2,600줄 규모 주석이 미판정이라 지금 대응이 필요하다. 일시적·자동 해소 가능한 차이가 아니며(정책 파일은 사람이 만들어야 생김) 정의가 첫 task의 범위로 (1) docs/comment-policy와 원장 게이트 신설 (2) 400줄 슬라이스 단위 판정을 명시했다. planner가 슬라이스 크기(400줄)로 좁혀 계획할 것."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "정책 디렉터리(docs/comment-policy/{README,ledger,passes})와 원장 게이트(extract.sh·ledger_gate.py·comment-ledger.yml)를 신설하고, 첫 판정 슬라이스로 frontend 유틸·훅·타입·일부 컴포넌트의 줄머리 주석 394줄(+줄 끝 3건)을 판정해 358줄을 제거·36줄을 사유와 함께 유지한다. 완료 기준: 게이트 통과, 해당 행 판정 `완료`, to-be가 absent가 아님. 범위 밖(후속): 원장의 나머지 `—` 행(줄머리 2,204줄·줄 끝 16건) — 재감지가 새 task로 잇는다. 슬라이스를 frontend로 고른 이유: 파일이 열린 PR #102(test.yml·e2e)와 겹치지 않고, 수동 승인 케이스 MA2·MA3 경로(judge.py·review-policy.yml·store/s3/seed)를 피해 사람 승인 없이 흐르며, 거의 전부 코드 재진술(Arrange/Act/Assert 등)이라 판정이 기계적이다. 400줄 예산 안(394줄)이고 더 작은 이유는 다음 덩어리가 e2e 대형 파일들이라 예산을 넘기 때문이다. 정책 디렉터리·게이트는 사람 소유 결정이 아니라 모델 definition이 지시한 구조라 제안 PR 절차 대상이 아니다. 변경은 주석 삭제와 JSDoc 요약 6줄뿐이라 가역(revert).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #103 머지 전 CI 확인: Unit Tests·Type check·Comment ledger gate(신설) 통과, review/manual-approval 자동 success.",
+              "expectedOutcome": "모든 체크 통과, 코드 변경 없음으로 테스트 결과 불변."
+            },
+            {
+              "seq": 2,
+              "action": "PR #103 머지(squash).",
+              "expectedOutcome": "main에 docs/comment-policy/, scripts/comment-policy/, comment-ledger.yml 존재."
+            },
+            {
+              "seq": 3,
+              "action": "머지 후 to-be 버전(HEAD:docs/comment-policy tree hash)과 as-is 지문을 재측정하고 python3 scripts/comment-policy/ledger_gate.py를 main에서 실행.",
+              "expectedOutcome": "to-be가 absent가 아닌 hash, as-is 지문이 2,239/2,240줄 기준으로 변경, 게이트 통과, L 완료 10행·36줄."
+            }
+          ],
+          "plannedAt": "2026-11-04T16:20:00Z",
+          "executionGuide": "## 순서\n1. (직렬) PR https://github.com/dlddu/claude-transcript-viewer-v2/pull/103 의 체크 확인 → 머지. 단계 병렬 불가.\n2. 머지 후 main 체크아웃에서 검증.\n\n## 검증 방법\n- CI: Unit Tests, Type check, `Comment ledger gate`가 success. `review/manual-approval`은 판정기가 자동 success(변경 경로 22개가 MA1~MA3 미접촉 — base judge.py로 확인함).\n- 머지 후: `python3 scripts/comment-policy/ledger_gate.py` 종료 코드 0, 출력 `L: 행 80 (판정 완료 10) · 줄 2240 (판정 완료 36, 미판정 2204)`(다른 PR이 먼저 머지됐다면 수치는 달라질 수 있으나 판정 완료 10행은 유지).\n- `git rev-parse HEAD:docs/comment-policy`가 hash를 반환(to-be absent 해소).\n- 이 task의 범위(완료 기준)는 위 슬라이스다. 모델 전체 정합(사유 없는 주석 0)은 범위 밖이며 재감지가 새 task를 연다.\n\n## 범위 밖(후속)\n- 원장 `—` 행 전부: e2e/tests(약 1,100줄), backend(s3.go·store.go·seed.go는 수동 승인 MA3 경로, 테스트 파일), k8s·scripts·.github, frontend 나머지 컴포넌트 테스트.\n- 줄 끝 주석 16건(9파일).\n\n## 주의사항\n- 열린 PR #102(e2e 모킹 정책)가 test.yml·e2e/tests/**·support/session-list.ts 주석을 건드린다. 둘 중 나중에 머지되는 쪽은 rebase 후 `ledger_gate.py` 출력대로 해당 행(줄 수·지문)을 갱신해야 게이트가 통과한다. 게이트는 필수 status가 아니라 머지를 막지는 않지만 main에서 실패로 남는다.\n- 이 PR은 `.github/workflows/comment-ledger.yml`을 추가한다(기존 워크플로 수정 없음).\n- 롤백: 코드 변경이 없으므로 PR revert로 완전 복구된다. 되돌릴 수 없는 지점 없음, 트래픽·데이터 영향 없음.\n- 머지는 GitHub App 토큰이 PR 머지 권한(pull_requests: write, contents: write)을 가진 상태에서 한다."
+        },
+        "preparation": {
+          "repository": "dlddu/claude-transcript-viewer-v2",
+          "branch": "reconcile/rct_20261104-0001-comment-necessity",
+          "pullRequestUrl": "https://github.com/dlddu/claude-transcript-viewer-v2/pull/103",
+          "preparedAt": "2026-11-04T16:20:00Z",
+          "notes": "브랜치명에 접미사를 붙였다 — 같은 이름 reconcile/rct_20261104-0001 은 다른 모델의 열린 PR #102 가 쓴다. 워크플로 파일 추가에 workflows:write 토큰이 필요해 해당 권한으로 push했다."
+        }
+      }
+    ]
   }
 ]
