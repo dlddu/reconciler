@@ -13864,7 +13864,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-10-28T23:57:31Z",
     "trigger": {
       "detectedAt": "2026-10-28T23:57:31Z",
@@ -13969,6 +13969,39 @@
               "log": "머지 전이라 검증 대상 없음"
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "직전과 같은 범위(sentiment 기여 뉴스 링크 + fairness 구간 파라미터, 계약 무변경)를 유지하되, 실패 원인이던 주석 원장(R7) 불일치를 같은 PR 브랜치에서 원장 행 실측 갱신으로 고쳐 CI 를 통과시킨다. 코드 변경은 없고 원장 한 행만 바꾸므로 가역(revert) 이다. 범위 밖은 직전 계획과 동일(원인 줄·compare·fairness/trace 저신뢰·reprocess).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #282 브랜치의 원장 Fairness.tsx 행을 실측(31줄·지문 b6a1232aa371·판정 —)으로 갱신하고 check-comment-ledger.py 통과 확인",
+              "expectedOutcome": "ci / comment-ledger·build 성공, required success (완료: head 5792132)"
+            },
+            {
+              "seq": 2,
+              "action": "PR #282 가 required·review/manual-approval success + CLEAN 인지 재확인 후 squash 머지",
+              "expectedOutcome": "PR MERGED"
+            },
+            {
+              "seq": 3,
+              "action": "배포 반영 후 /sentiment→/fairness 구간 링크와 /api/fairness 구간 파라미터, tracker·원장 갱신 검증",
+              "expectedOutcome": "링크가 같은 구간(basis.time_bucket)으로 열리고 go·web as-is 지문이 바뀜"
+            }
+          ],
+          "plannedAt": "2026-11-04T10:10:00Z",
+          "executionGuide": "## 실행 지침 (rct_20261028-0009, 재시도)\n\n**범위**: 직전 시도와 동일 — sentiment 「막대로 고른 구간의 기여 뉴스 링크」 1건(계약 변경 없음). 범위 밖(후속): 미분석 `원인 줄`, compare 대상 국가 select·표기 통합 안내, fairness/trace 저신뢰 분리 표기·소멸 배너 판정으로, reprocess 전후 추이 카드·`gap-go`. 재감지가 새 task를 열 수 있다.\n\n**직전 실패 원인과 조치**: PR #282 의 필수 CI(`required`)가 `ci / comment-ledger`·`ci / build`(Lint) 실패로 막혔다 — `web/src/screens/Fairness.tsx` 에 주석 1줄을 더해 `docs/comment-policy/ledger.md:208` 의 줄 수(30→31)·지문이 어긋남(R7). 원장 행을 실측값(31줄, 지문 `b6a1232aa371`)으로 고치고 판정 칸을 `—`(증분 미판정)로 되돌려 PR 브랜치에 커밋(5792132). `scripts/check-comment-ledger.py` 로컬 통과, CI 전 항목 SUCCESS·mergeStateStatus CLEAN 확인.\n\n### 순서\n1. PR https://github.com/dlddu/economic-opinion-trend-monitor/pull/282 head 가 5792132(이후 커밋이 있으면 CI 재확인) 이고 `required`·`review/manual-approval` 가 둘 다 success, mergeable 인지 확인. 이 PR 은 MA1~MA6 경로(contracts·go/gen·생성 모델·배치 생산자·servingindex·정책/판정기)를 건드리지 않는다.\n2. 머지(squash). 단일 PR 이라 순서 의존 없음.\n3. 배포 반영 대기 후 검증.\n\n### 검증\n- 머지 후 as-is 지문의 go·web 트리 해시가 바뀐다.\n- 화면: `/sentiment` 막대 선택 → `이 구간의 기여 뉴스 · 원문 보기 →` 링크 → `/fairness?axis=..&unit=..&time_bucket=..` 가 같은 구간으로 열린다. `GET /api/fairness?axis=KR&unit=hour&time_bucket=<b>` 응답 basis.time_bucket == <b>.\n- design-tracker 해당 행이 해소 이력으로 이동, 원장 Fairness.tsx 행이 31줄·`—`.\n- 수렴 판정은 위 범위 기준.\n\n### 주의\n- 되돌릴 수 없는 지점 없음. 롤백: PR revert. 기본 동작(쿼리 없음 → 최신 구간) 유지.\n- 머지 직전 main 이 앞서가 base 가 바뀌면 CI·원장 지문을 다시 확인한다(원장 충돌 시 PR 브랜치에서 실측값으로 재계산, 코드는 수정하지 않는다).\n- 요청 구간이 Gold 에 없으면 fairness 가 빈 행을 내려준다 — 기존 빈 상태 표기에 의존."
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261028-0009",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/282",
+          "preparedAt": "2026-11-04T10:10:00Z",
+          "notes": "기존 PR #282 브랜치에 원장 수정 커밋 5792132 추가(새 PR 아님). CI 전부 SUCCESS, mergeStateStatus CLEAN, review/manual-approval success. 원장·tracker 는 MA 케이스 비해당."
         }
       }
     ]
