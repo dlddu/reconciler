@@ -2,7 +2,7 @@
   {
     "id": "rct_20261104-0001",
     "toBeModelId": "tbm_claude-transcript-viewer-v2-data-model",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-11-04T22:18:44Z",
       "source": "version_change",
@@ -22,7 +22,7 @@
       "gap": "to-be 문서(ERD·쿼리 패턴 카탈로그·풀스캔 기준)와 to-be 판정 수단(체커 `backend/cmd/datamodelcheck`)이 모두 부재해 불변식 1~3과 체커 계약 C1~C9이 하나도 성립하지 않는다(판정 절차 3 — 체커 부재 자체가 gap). 점유 시점 관측값과 현재 관측값이 동일(to-be `absent`, as-is 세 성분 전부 `absent`)해 이번 version_change 트리거가 만든 새 변화가 아니라, 판정 슬라이스 (1)(README·블록·체커 골격 + ERD + 마이그레이션 진입점) 진입 전의 초기 격차가 그대로 남아 있는 상태다.",
       "summarizedAt": "2026-11-04T22:20:21Z"
     },
-    "updatedAt": "2026-11-04T23:47:19Z",
+    "updatedAt": "2026-11-04T23:49:12Z",
     "assessment": {
       "reason": "action_required — to-be 데이터 모델 문서와 그 판정 수단(체커)이 아직 존재하지 않아 불변식 1~3과 체커 계약 C1~C9이 미충족 상태다.\n\n근거: 대상 `dlddu/claude-transcript-viewer-v2`@main HEAD 59fdc33에서 `docs/data-model/`가 없어 to-be 버전이 `absent`이고 `erd.md`·`README.md`(형태 정의·`data-model-scope` 블록)·`fullscan-criteria.md`가 모두 부재다. as-is는 스키마가 `backend/store.go` `Store.migrate`의 인라인 `const schema` DDL 1개에만 있고(마이그레이션 디렉터리 부재), 쿼리 지점은 `backend/store.go`에만 7개다. 판정 절차 1의 `cd backend && go run ./cmd/datamodelcheck --json`은 `stat .../backend/cmd/datamodelcheck: directory not found`로 종료 코드 1(체커 계약 종료 코드 0/1/2가 아님)이었고 `backend/cmd` 디렉터리 자체가 없다. CI 워크플로 4개(test.yml·comment-ledger.yml·docker-publish.yml·review-policy.yml)에 체커 잡이 없어 C9 대체 판정도 불가능하다.\n\n적용 기준: definition 「판정 규칙」(불변식 1~3 또는 C1~C9 중 하나라도 위반이면 action_required)·「판정 절차」3(체커 부재 자체가 gap)·「판정 슬라이스」(1) 진입 전. 같은 모델 파일 `data/reconciliation-tasks/tbm_claude-transcript-viewer-v2-data-model.json`에는 이 task 외 다른 task가 없어 gap을 맡은 열린 형제 task가 없다.\n\n반대 방향 근거: 정의가 예시한 코드 지점은 그대로 존재한다 — PRAGMA 루프와 `const schema` DDL은 범위 축소 없이 `backend/store.go` 안에 있고, definition 자체가 슬라이스 (1)에서 마이그레이션 진입점을 도입하도록 설계해 두었다. 점유 시점과 현재 관측값이 동일해 새 회귀가 아닌 초기 격차이며, 대상 레포에 이 모델 범위의 진행 중인 PR·브랜치(열린 PR #104·#98, 브랜치 4개)가 없어 자동 해소 대기 대상도 아니다.",
       "assessedAt": "2026-11-04T22:20:32Z"
@@ -104,6 +104,39 @@
               "detail": "충돌로 머지 불가; main=1422bc4, 계획 범위 미달성"
             }
           ]
+        }
+      },
+      {
+        "reason": "failed",
+        "plan": {
+          "summary": "직전 시도(PR #109 머지 충돌로 실패)의 슬라이스 (1) 범위를 그대로 재시도한다 — PR #109 브랜치를 현재 main(1422bc4) 위로 리베이스해 충돌을 해소(충돌은 docs/comment-policy/ledger.md 한 파일, main 판정 행 유지 + migrations.go 행 추가)하고 같은 PR로 다시 사람 승인·머지를 받는다. 이유: 코드·문서 내용은 승인된 계획과 동일하고 충돌만 문제라 새 PR보다 기존 PR 갱신이 이력상 단순하다. 범위(완료 기준): 체커가 불변식 1 위반 0(불변식 2·3은 unimplemented, 종료 코드 1)을 보고하고 versionScript 세 성분이 absent를 벗어난다. 범위 밖: 쿼리 패턴 카탈로그·수동 형태(슬라이스 2), 지원 칸·미사용 인덱스(슬라이스 3), 체커 CI 잡(C9). 사람 소유 결정은 없다. #108로 MA3에 backend/migrations/가 추가돼 PR 전체가 사람 승인 경로(MA3)로 간다 — 리베이스로 head가 바뀌어 이전 승인은 무효이며 새 head에 대한 승인이 필요하다.",
+          "riskLevel": "medium",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "리뷰가 새 head(be51e8b)에 대해 review.manualApproval을 남기고, 사람이 review/manual-approval status를 붙인다(MA3: backend/store.go, backend/migrations/*)",
+              "expectedOutcome": "PR #109 head be51e8b에 review/manual-approval=success"
+            },
+            {
+              "seq": 2,
+              "action": "CI(Test, Comment ledger 등) green 확인 후 PR #109 머지(squash). base가 또 이동해 충돌하면 머지하지 말고 실패로 보고",
+              "expectedOutcome": "main에 backend/migrations·cmd/datamodelcheck·docs/data-model 반영"
+            },
+            {
+              "seq": 3,
+              "action": "main에서 cd backend && go run ./cmd/datamodelcheck --json 실행 및 versionScript 두 개 재실행",
+              "expectedOutcome": "invariant 1 위반 0, 불변식 2·3 unimplemented만(exit 1); to-be/as-is 세 성분이 absent 아님"
+            }
+          ],
+          "plannedAt": "2026-11-04T23:49:12Z",
+          "executionGuide": "## 순서\n1. (사람) PR #109 새 head `be51e8b4f60c` 검토 — MA3(`backend/store.go`, `backend/migrations/*`)라 `review/manual-approval`이 자동으로 붙지 않는다. 승인 sha는 반드시 현재 head와 일치해야 한다(직전 승인 sha 37bbd7f는 무효).\n2. CI green 확인 후 squash 머지. 머지 시점 head가 승인 sha와 다르면 머지하지 않는다. 충돌(mergeable_state=dirty)이면 실행자가 리베이스하지 말고 failed로 보고 → 재계획.\n3. 머지 후 main 체크아웃에서 검증.\n\n## 검증 방법\n- `cd backend && go vet ./... && go test ./...` 통과(플래너가 리베이스 후 로컬 통과 확인).\n- `python3 scripts/comment-policy/ledger_gate.py` 통과.\n- `cd backend && go run ./cmd/datamodelcheck --json` → invariant 1 위반 0, 불변식 2·3 `unimplemented` 2개만, 종료 코드 1.\n- versionScript 재실행: to-be `absent` → 트리 해시, as-is `schema/queries/checker` 세 성분 모두 `absent` 아님.\n- 배포 후 파드 부팅 로그에 `migrate schema` 오류 없음(기존 DB `user_version` 0→1, `IF NOT EXISTS`로 무해).\n\n## 주의 / 롤백\n- 불가역 지점 없음. 롤백 = PR revert(옛 코드는 user_version 무시, 테이블 동일).\n- 단일 writer(maxSurge=0) 가정 유지.\n- main이 자주 이동 중(comment-policy PR 연속)이라 승인 대기 중 다시 충돌할 수 있다 — 그 경우 failed → 재계획.\n\n## 범위 밖(후속)\n- 슬라이스 2: 쿼리 패턴 카탈로그·수동 형태(OpenStore PRAGMA 루프 처리), 체커 불변식 2.\n- 슬라이스 3: 지원 칸·미사용 인덱스, 불변식 3(EXPLAIN QUERY PLAN), 필요 시 인덱스 마이그레이션.\n- 체커 CI 잡(C9, report 모드) — 워크플로 권한이 있는 쪽에서.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/claude-transcript-viewer-v2",
+          "branch": "reconcile/rct_20261104-0001-data-model-slice1",
+          "pullRequestUrl": "https://github.com/dlddu/claude-transcript-viewer-v2/pull/109",
+          "preparedAt": "2026-11-04T23:49:12Z",
+          "notes": "기존 PR #109 브랜치를 main 1422bc4 위로 리베이스(force-with-lease) → head be51e8b. 충돌은 ledger.md 한 파일만. 로컬에서 go vet/test, ledger_gate 통과, judge.py로 MA3 확인(store.go·migrations/*). PR 본문에 재계획 안내 추가. mergeable_state=blocked(승인 status 대기)."
         }
       }
     ]
