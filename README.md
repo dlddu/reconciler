@@ -146,7 +146,7 @@ unfinished`)로 돌린다. 시각이 지나면 다음 감지 실행이 「재확
 
 | 워크플로 | 트리거 | 하는 일 |
 | --- | --- | --- |
-| `reconciler-work-planner.yml` (운영 계획) | 수동 | 러너가 계획 대상 한 건을 **점유**(`claim_plan_target.py`)한 뒤 plugin-marketplace의 고정 스킬(`plugins/reconciler-data-plane`의 `reconciler-work-planner`)로 계획·준비(대상 레포 PR)·실행 지침을 쓴다. 결과 점검기(`check_planner_result.py`)로 계약을 확인하고 `work-planner-result` 아티팩트를 남긴다. 대상이 없으면 MCP·mcode를 띄우지 않는다. |
+| `reconciler-work-planner.yml` (운영 계획) | 수동, 주기(k3s CronWorkflow가 대상이 있을 때만 dispatch) | 러너가 계획 대상 한 건을 **점유**(`claim_plan_target.py`)한 뒤 plugin-marketplace의 고정 스킬(`plugins/reconciler-data-plane`의 `reconciler-work-planner`)로 계획·준비(대상 레포 PR)·실행 지침을 쓴다. 결과 점검기(`check_planner_result.py`)로 계약을 확인하고 `work-planner-result` 아티팩트를 남긴다. 대상이 없으면 MCP·mcode를 띄우지 않는다. |
 | `reconciler-work-planner-skill-build.yml` (스킬 빌드) | 수동만 | generate(`.github/minimax/work-planner-brief.md`만 주고 mcode가 레포를 읽어 `SKILL.md`를 쓴다 — 기존 스킬 본문은 주지 않는다) → validate(`validate_generated_skill.py --profile work-planner`) → test(생성본을 운영 계획과 같은 흐름으로 **샌드박스** 위에서 실행 — 점유·계획 커밋은 샌드박스 원격, 대상 레포 브랜치·PR은 GitHub 대역에만 생긴다. 점검기는 대역 기록으로 머지 시도 0건·PR 1개·preparation과 일치·기본 브랜치 직접 push 0건을 본다. 입력 `target_id`로 지목). 아티팩트 `work-planner-skill` · `work-planner-validation` · `work-planner-test-result`. 통과한 생성본을 plugin-marketplace에 PR로 올리면 운영 계획이 그 스킬을 쓴다. |
 
 - **러너 점유**: 계획 대상(`action_required`·`review_rejected`·`failed`, 모델 켜짐) 한 건을 골라 status가 그대로인지
@@ -162,6 +162,12 @@ unfinished`)로 돌린다. 시각이 지나면 다음 감지 실행이 「재확
   대상 레포 PR의 내용(계획과 diff가 맞는지, 관련 없는 변경이 섞였는지)은 리뷰 단계가 본다.
 - **서버 OIDC 규칙**: `reconciler-work-planner.yml` 규칙에 `github_app_installation_token`(대상 레포 contents·pull_requests
   쓰기, plugin-marketplace 읽기)이 있어야 하고 `resource_list`·`resource_get`·`api_resources`·`ping`을 권장한다.
+- **주기 실행**: flux-cd-apps의 CronWorkflow(`apps/reconciler-trigger`의 `reconciler-work-planner-hourly`, 매시 47분 UTC —
+  감지 :17 실행이 끝난 뒤)가 reconciler main의 `select_plan_target.py`를 읽기 전용으로 돌려 계획할 대상이 있을 때만 이
+  워크플로를 `source=k3s-cron`으로 dispatch 한다(실행 제목 「Reconciler · Work Planner (k3s-cron)」). 대상이 없으면 Actions를
+  쓰지 않는다. `circuit-breaker` job이 그 실행이 `FAILURE_THRESHOLD`(3)번 연속 실패하면 이 워크플로를 끄고 PocketAide로
+  알린다(알림은 이 워크플로 OIDC 규칙에 `pocket_aide_notification_send`가 있어야 간다). 주기를 멈추려면 그 CronWorkflow를
+  suspend 한다.
 
 ## 리뷰 스킬 MiniMax 파이프라인
 

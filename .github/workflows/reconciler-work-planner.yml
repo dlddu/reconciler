@@ -17,10 +17,20 @@
 #     resource_list, resource_get, api_resources, ping(권장)
 #   plugin-marketplace의 plugins/reconciler-data-plane에 MiniMax 계획 스킬(skills/reconciler-work-planner)이 있어야 한다.
 name: "Reconciler · Work Planner"
+# 주기 실행(source=k3s-cron)은 제목으로 구분한다 — 아래 circuit-breaker가 이 제목으로 그 실행만 골라 센다.
+run-name: ${{ inputs.source == 'k3s-cron' && 'Reconciler · Work Planner (k3s-cron)' || 'Reconciler · Work Planner' }}
 
 on:
+  # ── 주기 실행 ─────────────────────────────────────────────────────────────────────────────
+  # 주기는 flux-cd-apps의 CronWorkflow(apps/reconciler-trigger)가 쥐고, 계획할 대상이 있을 때만(같은 select_plan_target.py로
+  # 사전 확인) 이 워크플로를 source=k3s-cron으로 dispatch 한다 — 감지와 같은 구성(README 「계획 스킬 MiniMax 파이프라인」).
+  # 아래 circuit-breaker job이 주기 실행의 연속 실패를 세어 이 워크플로를 스스로 끈다.
   workflow_dispatch:
     inputs:
+      source:
+        description: "실행 출처. k3s CronWorkflow는 'k3s-cron'을 넘긴다(circuit-breaker가 이 실행만 센다). 사람이 돌릴 땐 비워 둔다"
+        required: false
+        default: ""
       target_id:
         description: "계획할 대상 지목(rct_... task · tbm_... 모델 · tbm_.../rct_... — rct id가 여러 모델에 겹치면 마지막 형식). 비우면 자동 선정"
         required: false
@@ -324,3 +334,79 @@ jobs:
           path: ${{ runner.temp }}/out
           if-no-files-found: warn
           retention-days: 14
+
+  # ── 연속 실패 시 자동 비활성화 (주기 실행과 함께 켬) ──────────────────────────────────────────
+  # GitHub는 실패 횟수로 워크플로를 끄지 않는다. 그래서 주기 실행(source=k3s-cron)이 실패하면 이 job이 최근 주기
+  # 실행을 세어, FAILURE_THRESHOLD번 연속 실패면 이 워크플로를 끄고(gh workflow disable) PocketAide로 알린다.
+  #   - 실패로 세는 것: 결론이 failure인 주기 실행(MCP 연결·MiniMax 오류·점유 오류·결과 점검 실패).
+  #     대상 없음·점유 경쟁 패배는 성공으로 끝나므로 세지 않는다.
+  #   - 주기 실행은 run-name 「Reconciler · Work Planner (k3s-cron)」으로 고른다. 사람의 수동 실행(source 비움)은
+  #     세지도, 연속을 끊지도 않는다. 주기 실행 중간에 성공이나 취소가 한 번이라도 있으면 거기서 끊긴다.
+  #   - 다시 켜기: Actions 화면의 Enable workflow 또는 `gh workflow enable reconciler-work-planner.yml`.
+  #   - 알림은 homelab-k3s-mcp OIDC 규칙의 이 워크플로 규칙에 있는 pocket_aide_notification_send로 보낸다(그 규칙에
+  #     도구가 없으면 경고만 남는다). 알림이 실패해도 비활성화는 이미 끝난 뒤다.
+  #
+  circuit-breaker:
+    name: Disable after repeated scheduled failures
+    needs: [plan]
+    if: failure() && inputs.source == 'k3s-cron'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write   # 워크플로 비활성화
+      id-token: write  # PocketAide 알림(homelab-k3s-mcp OIDC)
+    env:
+      FAILURE_THRESHOLD: "3"
+      WORKFLOW_FILE: reconciler-work-planner.yml
+    steps:
+      - name: Count consecutive scheduled failures
+        id: count
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PERIODIC_TITLE: "Reconciler · Work Planner (k3s-cron)"
+        run: |
+          # 이 실행은 아직 진행 중이라 목록에 없다 → 1부터 세고, 완료된 이전 주기 실행을 최신순으로 이어서 센다.
+          gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$WORKFLOW_FILE/runs?event=workflow_dispatch&status=completed&per_page=50" \
+            --jq '.workflow_runs[] | select(.display_title == env.PERIODIC_TITLE) | .conclusion' > previous.txt
+          n=1
+          while read -r conclusion; do
+            [ "$conclusion" = failure ] || break
+            n=$((n + 1))
+          done < previous.txt
+          echo "consecutive=$n" >> "$GITHUB_OUTPUT"
+          echo "연속 주기 실행 실패: $n / $FAILURE_THRESHOLD"
+
+      - name: Disable workflow
+        id: disable
+        if: fromJSON(steps.count.outputs.consecutive) >= fromJSON(env.FAILURE_THRESHOLD)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow disable "$WORKFLOW_FILE" -R "$GITHUB_REPOSITORY"
+          echo "### 🚫 ${{ steps.count.outputs.consecutive }}회 연속 주기 실행 실패 — 워크플로 비활성화" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Checkout harness
+        if: steps.disable.outcome == 'success'
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          sparse-checkout: .github
+
+      - name: Notify PocketAide
+        if: steps.disable.outcome == 'success'
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COUNT: ${{ steps.count.outputs.consecutive }}
+        run: |
+          nohup python3 .github/scripts/mcp_oidc_proxy.py --upstream "$MCP_URL" --audience "$MCP_AUDIENCE" \
+            --port "$MCP_PROXY_PORT" > proxy.log 2>&1 &
+          for _ in $(seq 1 30); do grep -q listening proxy.log && break; sleep 1; done
+          args=$(python3 - <<'PY'
+          import json, os
+          body = "주기 실행 %s회 연속 실패로 워크플로를 껐습니다. 마지막 실패: %s" % (os.environ["COUNT"], os.environ["RUN_URL"])
+          print(json.dumps({"title": "reconciler work-planner 자동 비활성화", "body": body,
+                            "requester": "reconciler-work-planner 워크플로 circuit-breaker"}, ensure_ascii=False))
+          PY
+          )
+          python3 .github/scripts/mcp_call.py --url "http://127.0.0.1:$MCP_PROXY_PORT/mcp" \
+            call pocket_aide_notification_send --args "$args" || echo "::warning::PocketAide 알림 실패(비활성화는 완료)"
