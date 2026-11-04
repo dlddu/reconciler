@@ -547,7 +547,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-pr-manual-approval",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-03T10:43:07Z",
     "trigger": {
       "source": "version_change",
@@ -571,7 +571,46 @@
     "assessment": {
       "assessedAt": "2026-11-03T10:45:01Z",
       "reason": "surface 변화 자체는 정책이 제외·트립와이어로 정합하게 흡수했으나, 신설 트립와이어 1개(두 번째 DB 연결 감시)가 grep -E에서 \\|를 써 구조적으로 발화하지 않는다. 문서의 한 줄 수정(\\| → |)이면 닫히지만 docs/review-policy.md는 MA4 대상이라 사람 승인 PR이 필요하다 — 지금 대응할 가치가 있다고 판정."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "범위: docs/review-policy.md 의도적 제외 표 db.go/telemetry 행의 재개 조건 grep -E에서 \\\\| → | 한 글자 수정으로 죽은 트립와이어(O3)를 되살린다. 완료 기준=수정 명령이 현재 db.go 1파일을 반환하고 향후 2파일이면 발화 가능. 범위 밖: 케이스·판정기·ruleset 변경 없음. 정책 문서는 사람 소유(MA4)라 제안 PR로 올려 수동 승인을 받는다. 대안(트립와이어 삭제)은 감시를 잃어 배제.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "pocket-aide에 브랜치 reconcile/rct_20261103-0001 생성, review-policy.md 72행의 `\\\\|`를 `|`로 수정",
+              "expectedOutcome": "diff 1줄"
+            },
+            {
+              "seq": 2,
+              "action": "제안 PR 생성(MA4라 수동 승인 대상)",
+              "expectedOutcome": "PR #367 open, 판정기가 review/manual-approval 미부여"
+            },
+            {
+              "seq": 3,
+              "action": "사람 승인 status 확인 후 PR 머지",
+              "expectedOutcome": "main의 정책 문서 갱신"
+            },
+            {
+              "seq": 4,
+              "action": "수정된 git grep 명령을 main에서 실행",
+              "expectedOutcome": "db.go 1파일"
+            }
+          ],
+          "plannedAt": "2026-11-04T11:50:00Z",
+          "executionGuide": "## 순서\n1. 단계 1~2는 이미 PR #367에 반영됨(문서 1줄). 단계 3 이후는 executor 몫.\n2. 순서 의존: 머지(3) 전에 사람 승인 status 필요, 검증(4)은 머지 후.\n\n## 사람 승인\ndocs/review-policy.md는 MA4(정책 자신) 케이스라 판정기가 review/manual-approval을 붙이지 않는다. 리뷰가 review.manualApproval(sha·context)을 남기고, 사람이 PR head에 수동 status를 붙인 뒤에만 머지한다.\n\n## 검증\n- 머지 후 pocket-aide main에서 `git grep -lE 'sql\\.Open\\(\"sqlite\"|telemetry\\.OpenDB\\(' -- backend ':!*_test.go' ':!backend/cmd/datamodelcheck'` 가 backend/internal/db/db.go 1파일을 반환하고, 문서 행에 `\\|` 가 남아있지 않음.\n- 재감지: to-be 버전(blob)이 바뀌고 review:ok, as-is 지문 불변(surface hit 집합 불변).\n\n## 주의\n- 되돌릴 수 없는 지점 없음(문서 1줄, revert 가능). 롤백: PR revert.\n- 거부 시 review.comment를 읽고 재계획.\n\n## 범위 밖(후속)\n없음. 나머지 불변식(R1~R6, O1, O2, O4, O5)은 정합."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261103-0001",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/367",
+          "preparedAt": "2026-11-04T11:50:00Z",
+          "notes": "제안 PR. docs/review-policy.md는 MA4(scripts/review-policy/judge.py의 MA4 경로 목록에 포함)라 사람 수동 승인 필요."
+        }
+      }
+    ]
   },
   {
     "toBeModelId": "tbm_pocket-aide-pr-manual-approval",
