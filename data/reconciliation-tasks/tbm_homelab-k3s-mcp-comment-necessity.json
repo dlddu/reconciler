@@ -21119,7 +21119,7 @@
   {
     "id": "rct_20261104-0006",
     "toBeModelId": "tbm_homelab-k3s-mcp-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T23:35:00Z",
     "trigger": {
       "detectedAt": "2026-11-04T23:35:00Z",
@@ -21141,6 +21141,40 @@
       "toBe": "## to-be — `docs/comment-policy` tree `4b930afd…` (직전 `23ef4587…`)\n\n- PR #316(rct_20261104-0005, 열한 번째 판정 슬라이스)이 ledger.md를 갱신하고 `passes/2026-11-04-necessity-slice-rct-20261104-0005.md`를 추가. 정책 본문(필요성 시험·유지 대상)은 불변, 판정 이력만 늘었다.",
       "gap": "버전 변화 자체는 직전 슬라이스(#316)의 정상 병합이라 새 drift가 아니다. 그러나 정의의 정합 조건(필요 사유 없는 주석 0)은 아직 미충족이다 — 미판정 docstring 11행·줄 끝 9행(및 편집 불가인 ci.yml 1행)이 필요성 시험을 받지 않았다.",
       "summarizedAt": "2026-11-04T23:40:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "필요성 판정 열두 번째 슬라이스(docstring 표면 7행, 원장 기준 391줄, 400줄 예산 안): 줄 주석 표면은 ci.yml 한 행(App 에 workflows 권한 없음)만 남아 뺐고, 열린 PR 이 0건이라 겹침이 없어 미판정 docstring 11행 중 _helpers.py 묶음·approval_gate_sc3·approval_gate_sc5/_injector·approval_gate_sc6 묶음·github_commit_status_sc3 묶음·session_create_sc1 묶음·pocket_aide_notification_send_sc3 7행을 필요성 시험으로 판정해 한 PR(dlddu/homelab-k3s-mcp#317)로 묶는다(남은 4행 333줄은 다음 슬라이스 하나에 들어간다). 완료 기준(범위): 이 7행이 docstring 표 판정 축 `완료`이고 제거·유지 사유가 passes/2026-11-04-necessity-slice-rct-20261104-0006.md 에 기록되며 게이트 R1~R15·D1~D4 가 통과하면 성공(docstring 1376→1321줄, 완료 30→37행, 미판정 11→4행). 범위 밖(후속): ci.yml 행·나머지 docstring 4행·줄 끝 9행. 주석·문서 전용(docstring 을 벗긴 AST 동일)이라 PR revert 로 되돌린다. 사람 소유 결정은 없고 수동 승인 케이스(MA1~MA4) 경로를 건드리지 않는다(판정기로 확인).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "브랜치 reconcile/rct_20261104-0006 에서 7행 391줄을 판정해 이름 재진술·문서 재진술·상호 참조·경위 55줄을 제거·개작한다(14개 .py 파일, docstring 만).",
+              "expectedOutcome": "docstring 1376→1321, 비주석 diff 0(AST 동일), py_compile 통과"
+            },
+            {
+              "seq": 2,
+              "action": "ledger.md docstring 표 7행의 줄 수·지문·판정 축(`완료`)·결과 칸을 갱신하고(이전 패스 링크 보존) passes/2026-11-04-necessity-slice-rct-20261104-0006.md 에 제거·유지 사유를 기록, doc-tracker 허브 집계를 147/147 로 맞춘다.",
+              "expectedOutcome": "check_comment_policy.py R1~R15 OK(docstring 완료 37행), check_doc_inventory.py D1~D4 OK(147/147), check_mock_policy.py OK"
+            },
+            {
+              "seq": 3,
+              "action": "PR 을 연다(머지는 executor 몫).",
+              "expectedOutcome": "PR #317 열림, fmt+vet·judge·review/manual-approval 초록, integration tests 진행"
+            }
+          ],
+          "plannedAt": "2026-11-05T00:05:00Z",
+          "executionGuide": "## 순서\n1. PR(dlddu/homelab-k3s-mcp#317) head `0b195b8` 의 `ci passed` 가 success 인지 확인한다(fmt+vet 잡의 check_comment_policy.py·check_doc_inventory.py, integration tests). integration tests 가 `resource_generic_sc2` 목록 비교(`ag-ac1-workload` 동시 생성과 경쟁하는 기지의 flake)로만 실패하면 그 잡만 재실행한다 — 다른 실패는 flake 로 보지 않는다.\n2. main 이 움직였는지 mergeable 로 본다. 다른 PR 이 `docs/comment-policy/ledger.md`·`docs/doc-tracker/2026-09.md` 또는 이 PR 이 만진 `tests/integration/*.py` 를 함께 만지면 충돌할 수 있다. 같은 행을 main 이 먼저 판정했으면 main 쪽을 두고 이 PR 에서 그 행을 뺀다(범위 축소 허용, 재판정·확장 불허). 새 주석이 들어와 행의 줄 수·지문이 어긋나면 그 행만 `—` 로 되돌리고 실측으로 갱신한다. 허브 집계(147/147) 실측 맞춤은 허용. 이후 `env -i python3 scripts/check_comment_policy.py`·`python3 scripts/check_doc_inventory.py` 재통과를 확인하고 새 CI 가 초록인 head 에서만 머지한다. 완료 행이 1행 이상 남으면 성공 기준을 만족한다.\n3. 대상 레포 required status 는 `ci passed` 와 `review/manual-approval` 이다. 이 PR 의 변경 경로 17개는 base 판정기(`scripts/review-policy/judge.py`)로 MA1~MA4 에 닿지 않음을 확인했고(「수동 승인 케이스 미접촉」) 판정기가 `review/manual-approval` 을 자동으로 붙인다(head 에서 pass 확인). 붙지 않았으면 머지하지 말고 사유를 보고한다.\n4. squash 머지(`--match-head-commit` 로 head 고정). 머지 후 main 에서 게이트 재실행.\n\n## 검증\n- `env -i python3 scripts/check_comment_policy.py` → R1~R15 위반 없음, 줄 주석 2900줄·완료 98행 불변, docstring 표면 1376 → 1321줄, 판정 완료 37행 988줄, 미판정 4행. main 이 움직였으면 실측값.\n- `python3 scripts/check_doc_inventory.py` → D1~D4 OK(147/147; main 이동 시 실측값). `python3 scripts/check_mock_policy.py` OK.\n- PR diff 에 비주석 변경 없음: 변경된 14개 `.py` 파일 모두에서 docstring 을 벗긴 AST 가 부모와 동일하다. 변경 17파일(ledger·passes·doc-tracker·`.py` 14).\n- 수렴 판정은 이 범위 기준: 7행이 docstring 표 `완료` 이고 passes 파일이 제거·유지 사유를 담으면 성공. 전체 to-be(미판정 0)는 아직 아니며 지문 해시 이동은 정상(as-is 지문의 `docstring=` 이 1568 → 1513 근처로 움직이고 `lines=` 2900 은 불변이어야 한다).\n\n## 범위 밖(후속)\n`.github/workflows/ci.yml`(App 에 workflows 권한 없음 — 사람 PR 이나 권한 있는 경로 필요), docstring 4행(`aws_config_get_sc1` 묶음·`opensearch_document_delete_sc1` 묶음·`run_all.py` 묶음·`session_list_sc1` 묶음, 333줄), 줄 끝 9행 표면.\n\n## 주의\n- 되돌릴 수 없는 지점 없음(주석·문서만, 런타임 코드 불변). 롤백 = PR revert.\n- 이 PR 은 `.github/` 를 건드리지 않는다. 게이트 스크립트는 수정하지 않았다.\n- 승인~머지 간격이 길수록 ledger 충돌 가능성이 커진다. 머지 직전에 mergeable 과 head 를 재확인한다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20261104-0006",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/317",
+          "preparedAt": "2026-11-05T00:05:00Z",
+          "notes": "main 03ae764 위에서 작성. 로컬에서 check_comment_policy.py R1~R15·check_doc_inventory.py D1~D4(147/147)·check_mock_policy.py·py_compile 통과, 14개 .py 의 docstring 제외 AST 동일, judge.py 로 MA1~MA4 미접촉 확인(17 경로). head 0b195b8. 머지하지 않음. PR 생성 직후 fmt+vet·judge·review/manual-approval 은 pass, integration tests 는 진행 중."
+        }
+      }
+    ]
   }
 ]
