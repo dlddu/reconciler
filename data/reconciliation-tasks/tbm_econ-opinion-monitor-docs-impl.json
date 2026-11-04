@@ -14417,7 +14417,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-docs-impl",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T19:09:19Z",
     "trigger": {
       "detectedAt": "2026-11-04T19:09:19Z",
@@ -14468,6 +14468,39 @@
           "reviewedAt": "2026-11-04T19:55:00Z",
           "reason": "PR #292(head 7859d30)는 열려 있고 충돌·베이스 이동 없음, 변경 범위(handlers·Trend·tokens·트래커)도 gap과 일치하며 가역적이다. 그러나 필수 CI 중 `ci / build`와 `ci / comment-ledger`가 failure이고 e2e·docs/flow는 진행 중이어서 준비물이 유효하다고 볼 수 없다. 로컬 통과(preparation.notes)만으로는 실행 허가 근거가 부족하다.",
           "comment": "PR #292 head 7859d30에서 `ci / build`와 `ci / comment-ledger`가 실패함 — 두 잡의 로그를 확인해 원인을 고치고(go test/vitest/tsc 외 빌드 단계 또는 comment-ledger 규칙 위반 추정) 푸시한 뒤 CI 전체(e2e·docs/flow 포함)가 green인 상태에서 재제출. executionGuide 1단계에 'CI 전체 green' 기준을 명시하고, 새 head SHA 기준으로 재확인 필요."
+        }
+      },
+      {
+        "reason": "review_rejected",
+        "plan": {
+          "summary": "(재계획) 직전 거부(PR #292 의 ci / build·comment-ledger 실패)를 반영: 실패 원인은 주석 원장(docs/comment-policy/ledger.md)의 handlers.go·Trend.tsx 행 줄 수·지문이 PR 의 주석 변경과 어긋난 것이라, 정책(주석을 들이는 PR 은 행을 재측정하고 판정 칸을 —로)대로 원장 두 행만 고쳐 head 9b51d6f 에 푸시했고 CI 전체가 green 이다. 범위는 이전과 같다: JRN-subject-trend 의 집계 단위 라디오(tr-unit)+재집계 로딩(tr-reloading) 슬라이스 2(/api/trend?unit= + Trend 라디오 + 트래커 행 해소). 정규화 전/후·고른 칸 카드는 범위 밖. 증분 주석 판정은 원장 —(미판정)로 후속 몫.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #292 의 현재 head SHA(9b51d6f 이후)에서 required 를 포함한 CI 전체(ci/build·comment-ledger·e2e, docs/flow, render, image)가 success 인지 확인; diff 에 ledger.md 두 행 외 추가 변경이 없는지 확인",
+              "expectedOutcome": "전체 check success, required success"
+            },
+            {
+              "seq": 2,
+              "action": "PR #292 squash 머지 (head 가 바뀌었으면 새 SHA 기준 CI 재확인 후)",
+              "expectedOutcome": "main 에 슬라이스 2 착지"
+            },
+            {
+              "seq": 3,
+              "action": "/api/trend?unit= 응답과 Trend 화면 tr-unit/tr-reloading 확인",
+              "expectedOutcome": "unit 별 basis.bucket_unit 일치, 폴백 동작, 트래커 행 해소"
+            }
+          ],
+          "plannedAt": "2026-11-04T20:10:00Z",
+          "executionGuide": "## 실행 지침\n**순서**: (1) PR #292 **CI 전체 green**(required·ci/build·ci/comment-ledger·ci/e2e·docs/flow 포함, 현재 head 9b51d6f 기준 확인됨; head 가 바뀌면 새 SHA 로 재확인) 및 diff 확인 → (2) 머지(squash) → (3) 검증. 단계 간 의존이라 직렬.\n\n**검증**\n- 머지 후 `GET /api/trend?axis=KR&unit=day` 의 `basis.bucket_unit == \"day\"`, 잘못된 값/없는 단위는 가장 잘게 쪼갠 단위로 폴백.\n- `/trend` 화면에 `[data-role=tr-unit]` 라디오(시간·일·주)가 있고 선택 시 `?unit=` 로 재요청, 재요청 중 `tr-reloading` 이 `tr-plot` 을 대체.\n- 디자인 트래커에서 `tr-unit`/`tr-reloading` 행이 「해소된 등재」로 이동했는지.\n- 완료 기준은 이 슬라이스 범위(단위 전환)만이다.\n\n**범위 밖(후속)**: `tr-norm`·`tr-flag`·`tr-diff-note`(칸별 전체 건수 계약 선행), `tr-cell-box`·`tr-cell-entries`(원시 비율·도착 화면 선행), 목업 기본 단위 day 와 서빙 기본(가장 잘게) 차이.\n\n**주의**: 가역(PR 되돌리기). 기본 응답(unit 미지정)은 불변. 이 task는 detector가 stateSummary/assessment를 남기지 않고 넘어와 planner가 트리거 diff(#291)와 디자인 트래커 「구현 수렴 대기」 행에서 gap을 직접 도출했다.\n\n**재계획 메모**: 직전 거부 사유(ci/build·comment-ledger 실패)는 원장 R7 불변식(handlers.go 93→95, Trend.tsx 41→37 줄 수·지문) 위반이었다. 원장 두 행을 실측값으로 재측정하고 판정 칸을 —로 되돌려 해소(커밋 9b51d6f). 머지 시 새 푸시로 head 가 바뀌지 않았는지 확인할 것."
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261104-0003-tbm-econ-docs-impl",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/292",
+          "preparedAt": "2026-11-04T20:10:00Z",
+          "notes": "기존 PR #292 재사용. head 9b51d6f 에서 주석 원장 두 행 재측정 커밋 추가, make lint-comment-ledger 로컬 통과, CI 전체(required 포함) success. review/manual-approval status 는 판정기가 붙이지 않은 상태(리뷰가 판단)."
         }
       }
     ]
