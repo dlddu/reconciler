@@ -802,7 +802,7 @@
   {
     "id": "rct_20261104-0001",
     "toBeModelId": "tbm_session-platform-mockup-render",
-    "status": "planning",
+    "status": "planned",
     "trigger": {
       "detectedAt": "2026-11-04T15:17:39Z",
       "source": "version_change",
@@ -818,10 +818,49 @@
       "gap": "definition 3(카피 일치)이 아직 성립하지 않는다 — 목업의 사용자 가시 문장이 대응 구현에 그대로 없는 곳이 최소 5군데 있다. 이번 창(#191)이 만든 격차는 아니다: as-is 세 트리는 무변경이고, to-be 변화는 README 색인 신설뿐이며 목업 HTML 7종은 바이트 동일하다. 하지만 결론은 현재 상태로 내린다 — 그 격차는 #177(2026-11-01)이 목업 히어로만 고치고 구현을 함께 고치지 않아 만든 것이고, 같은 모델 파일에 이 격차를 맡은 열린 형제 task는 0건이다.",
       "summarizedAt": "2026-11-04T15:24:00Z"
     },
-    "updatedAt": "2026-11-04T16:15:49Z",
+    "updatedAt": "2026-11-04T16:17:00Z",
     "assessment": {
       "reason": "**작업 필요(action_required).** 기준에 해당하는 카피 격차가 남아 있고, 그 격차를 맡은 열린 형제 task가 없다.\n\n**근거.** 재계산 버전은 as-is `screens:19853b27… app:aab1aed4… design:ae86eb76…`(11-01 baseline과 동일), to-be `9ba8a658…`(점유 currentVersion과 동일). 확정된 대조 차이 4쌍 — ① Sessions 히어로: 목업 `index.html:381` \"Idle sessions **freeze to an archive** and hand their compute back.\" vs 구현 `Sessions.tsx:94-95` \"Idle sessions **preserve their state** and hand their compute back.\"(#177이 목업만 고쳐 만든 차이) ② `agent-workspace.html:417` \"streams one claude -p response\" vs `Workspace.tsx:703` \"runs claude -p once in the session pod\" ③ `gated-workspace.html:452` \"anything that leaves the pod waits for your approval\" vs `Workspace.tsx:699` \"outbound calls wait for your approval\" ④ `new-session.html:456·508·514` 3문장 vs `NewSession.tsx:382` \"Workload type is fixed for the lifetime of this session.\"(목업은 \"Workload type **and model** are fixed … of **the** session\" + 후속 2문장). ⑤ `repo-access.html`의 \"2 pending / 4 allowed / owner/repo · contents: read\" 등 대조 미완료 목록. 같은 모델 파일의 다른 11건은 모두 닫혔다(succeeded 2 · no_action_needed 7 · cancelled 2) — 열린 형제 0건.\n\n**적용 기준.** definition drift 3(카피 불일치 — \"어느 방향이든 텍스트 차집합이 존재함\")과 to-be 3(양방향 일치). 목업이 SSOT이므로 \"구현을 목업에 맞춘다\"가 기본 방향이다. ①~④는 패널 차이가 아니라 화면 히어로·입력 placeholder 등 화면 최상위 문자열이라 「패널 구조 차집합」 원장(15건) 범위 밖이고 정본 이탈 원장 사본도 아니다.\n\n**반대 방향 근거.** definition 2(토큰)는 위반이 아니다 — 목업 7종이 정본 값을 인라인하고 값 불일치 0건(repo-access.html의 21개 부분집합은 그 화면이 쓰는 토큰만 복제). 1(매핑)도 위반이 아니다 — 새 「화면 식별자 규약」 9행 표가 실제와 어긋나지 않고, 구현 13개 ↔ 목업 7종의 양방향 집합 동등성은 대상 게이트 R1-R5로 확인됐다(구현 없음 0종). 4(패널 층위)는 쌍 4개·차집합 15/15로 기등, 5는 이탈이 원장에 상한과 함께 등재(미해소 27/27).",
       "assessedAt": "2026-11-04T15:26:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "구현을 목업(카피 SSOT)에 맞춰 확정된 격차 ①Sessions 히어로 ③gated placeholder ④NewSession 상단 desc·shell 안내 4개 문장을 문자열 교체로 닫는다(PR 1건, 가역). 범위 밖: claude-code placeholder(README에 의도적 차이 기록, 결정 필요), 에이전트 분기 안내·guarantee 문단, repo-access 카피 대조 — 잔여는 재감지가 새 task로 잇는다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "Sessions.tsx 히어로 문구를 'Idle sessions freeze to an archive and hand their compute back.'로 교체",
+              "expectedOutcome": "index.html:381과 문장 일치"
+            },
+            {
+              "seq": 2,
+              "action": "Workspace.tsx gated placeholder를 'send a prompt — anything that leaves the pod waits for your approval'로 교체",
+              "expectedOutcome": "gated-workspace.html:452와 일치"
+            },
+            {
+              "seq": 3,
+              "action": "NewSession.tsx 상단 desc와 shell 분기 안내문을 new-session.html:456·508 문장으로 교체",
+              "expectedOutcome": "해당 문장 일치"
+            },
+            {
+              "seq": 4,
+              "action": "check-render-fidelity.py와 CI로 검증 후 PR #197 머지",
+              "expectedOutcome": "rc=0, CI 통과, main 반영"
+            }
+          ],
+          "plannedAt": "2026-11-04T16:17:00Z",
+          "executionGuide": "## 순서\n1. PR #197(dlddu/session-platform) 확인 — 변경 파일은 `web/src/screens/{Sessions,Workspace,NewSession}.tsx` 문자열 4곳뿐. 순서 의존 없음(단일 PR).\n2. 대상 레포 CI/리뷰 정책 판정이 통과인지 확인(변경 경로는 `docs/review-policy.md` 수동 승인 케이스 MA1~MA5에 해당하지 않음) 후 머지.\n3. 머지 후 main에서 검증.\n\n## 검증 (이 시도 범위 기준)\n- `python3 scripts/check-render-fidelity.py` rc=0, R1-R10 OK.\n- grep: `Idle sessions` 구현 문구가 `freeze to` / `an archive`, gated placeholder가 `anything that leaves the pod waits for your approval`, NewSession desc·shell 안내가 목업 문장과 일치.\n- `web/e2e/journeys/j6-model-selection.spec.ts:103`은 에이전트 분기 문자열이라 영향 없음(변경 안 함) — e2e/타입체크가 통과하는지 CI로 확인.\n- 재감지 시 as-is 버전의 screens 트리만 바뀌고 to-be는 그대로여야 한다.\n\n## 범위\n완료 기준: 위 4개 구현 문장이 목업과 일치. 범위 밖(후속, 재감지가 새 task로 이을 것): (a) claude-code placeholder \"streams one claude -p response\" vs 구현 — README에 의도적 기존 차이로 기록돼 있어 어느 쪽이 사실인지 결정 필요, (b) NewSession 에이전트/gated/minimax 분기 안내문 및 `.guarantee` 문단(구조 추가), (c) repo-access.html 카피 대조.\n\n## 주의 / 롤백\n- 문자열만 바뀌며 데이터·불가역 영향 없음. 롤백은 PR revert.\n- 기대하지 않은 e2e 문구 매칭 실패 시 해당 테스트의 기대 문자열 확인 후 revert 또는 정정.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20261104-0001-mockup-copy-sync",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/197",
+          "preparedAt": "2026-11-04T16:17:00Z",
+          "notes": "web/src 문자열 4곳(3파일). check-render-fidelity rc=0 확인. 열린 형제 PR 중 같은 gap을 다루는 것 없음."
+        }
+      }
+    ]
   }
 ]
