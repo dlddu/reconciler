@@ -23,7 +23,8 @@ GitHub 대역(github_stub.py)이 받게 한다. 스킬은 평소처럼 도구를
 
 오프라인 샌드박스 모드(`--sandbox-admin` + `--offline`, 실제 MCP·OIDC 없음 — 실행 빌드의 격리 무대): 프록시가 MCP 서버
 자체가 되어 initialize·tools/list에 직접 답하고, GitHub 도구 두 개(대역으로)와 `ping`만 노출한다. 실제 MCP로는 아무것도
-보내지 않는다.
+보내지 않는다. `--offline-tools`로 노출할 도구를 그중 일부로 줄일 수 있다 — 운영 워크플로의 OIDC 규칙이 주지 않는 도구
+(예: 실행 단계의 `github_commit_status_create`)를 시험에서도 보이지 않게 해, 시험이 운영의 도구 구성을 따르게 한다.
 """
 
 from __future__ import annotations
@@ -218,6 +219,18 @@ def offline_answer(msg: dict, sandbox: "SandboxPolicy", tools: list[dict]) -> di
     return {"error": {"code": -32601, "message": f"method not found: {method}"}}
 
 
+def offline_tools(spec: str) -> list[dict]:
+    """`--offline-tools` 값(쉼표 구분)을 노출할 도구 정의로. 비우면 전부, 모르는 이름이면 ValueError."""
+    names = [n.strip() for n in (spec or "").split(",") if n.strip()]
+    if not names:
+        return list(OFFLINE_TOOLS)
+    known = {t["name"] for t in OFFLINE_TOOLS}
+    unknown = [n for n in names if n not in known]
+    if unknown:
+        raise ValueError(f"--offline-tools에 모르는 도구: {', '.join(unknown)} (가능: {', '.join(sorted(known))})")
+    return [t for t in OFFLINE_TOOLS if t["name"] in names]
+
+
 def make_offline_handler(sandbox: "SandboxPolicy", tools: list[dict] | None = None, log=print):
     tools = tools or OFFLINE_TOOLS
 
@@ -377,6 +390,9 @@ def main(argv: list[str] | None = None) -> int:
                         help="샌드박스 모드: GitHub 대역(github_stub.py)의 관리 URL(예: http://127.0.0.1:8766)")
     parser.add_argument("--sandbox-allow-tools", default="",
                         help="샌드박스 모드에서 실제 MCP로 보낼 도구(쉼표 구분). 나머지는 막는다")
+    parser.add_argument("--offline-tools", default="",
+                        help="오프라인 모드에서 노출할 도구(쉼표 구분, "
+                             + ", ".join(t["name"] for t in OFFLINE_TOOLS) + " 중). 비우면 전부")
     args = parser.parse_args(argv)
     sandbox = None
     if args.sandbox_admin:
@@ -385,9 +401,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.offline:
         if sandbox is None:
             parser.error("--offline에는 --sandbox-admin이 필요하다")
-        server = ThreadingHTTPServer(("127.0.0.1", args.port), make_offline_handler(sandbox))
+        try:
+            tools = offline_tools(args.offline_tools)
+        except ValueError as exc:
+            parser.error(str(exc))
+        server = ThreadingHTTPServer(("127.0.0.1", args.port), make_offline_handler(sandbox, tools))
         print(f"mcp-oidc-proxy: listening on http://127.0.0.1:{args.port}/mcp (offline sandbox: github -> "
-              f"{args.sandbox_admin}, tools {[t['name'] for t in OFFLINE_TOOLS]})", flush=True)
+              f"{args.sandbox_admin}, tools {[t['name'] for t in tools]})", flush=True)
         try:
             server.serve_forever()
         except KeyboardInterrupt:

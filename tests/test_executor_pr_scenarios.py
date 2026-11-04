@@ -284,6 +284,26 @@ class OfflineMcpTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             proxy.main(["--offline"])
 
+    def test_offline_tool_subset_hides_status_tool(self):
+        # 운영 실행 규칙처럼 status 도구를 빼면 목록에도 없고, 불러도 대역에 닿지 않는다(리허설).
+        policy = proxy.SandboxPolicy(f"http://127.0.0.1:{self.admin.server_address[1]}", set())
+        server = serve(proxy.make_offline_handler(policy, proxy.offline_tools("github_app_installation_token,ping"),
+                                                  log=lambda *a, **k: None))
+        try:
+            client = mcp_call.McpClient(f"http://127.0.0.1:{server.server_address[1]}/mcp")
+            client.initialize()
+            self.assertEqual(sorted(t["name"] for t in client.list_tools()), ["github_app_installation_token", "ping"])
+            with self.assertRaises(mcp_call.McpError):
+                client.call_tool("github_commit_status_create",
+                                 {"repository": "o/r", "sha": "a" * 40, "state": "success", "context": "ci"})
+            self.assertFalse([c for c in self.calls if c[0] == "/_sandbox/statuses"])
+        finally:
+            server.shutdown()
+            server.server_close()
+        with self.assertRaises(ValueError):
+            proxy.offline_tools("resource_patch")
+        self.assertEqual(len(proxy.offline_tools("")), 3)
+
 
 class GithubLogMergeModeTest(unittest.TestCase):
     def merge(self, refused=False, number=fx.PR_NUMBER):

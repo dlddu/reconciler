@@ -20,7 +20,9 @@
 가짜 CI: 대역 PR은 진짜 GitHub가 모르니 Actions CI가 돌지 않는다. 그래서 대역이 만든 PR의 head 커밋마다
 **합성 체크 런**을 붙인다 — 이름은 실제 ruleset의 필수 체크(예: `ci-success`), 없으면 `ci`. 사람 승인용 status
 (`--human-status-prefixes`, 기본 `review/`)는 절대 합성하지 않는다(승인 게이트가 무력해진다). 출력·앱 이름에 합성임을
-밝히고 기록(`op: ci.synthetic`, 결론 포함)에 남긴다. 실제 PR에는 붙이지 않는다(진짜 CI가 읽기 중계로 보인다).
+밝히고 기록(`op: ci.synthetic`, 결론 포함)에 남긴다. 실제 PR의 실제 head에는 붙이지 않는다(진짜 CI가 읽기 중계로 보인다).
+다만 실제 PR에 **대역에서 새 head를 push**하면(예: 실행 단계가 실행 지침대로 rebase해 PR 브랜치를 갱신) 그 head에는 진짜 CI가
+돌지 않으므로 대역 PR과 같이 합성 CI를 붙인다 — 실제 운영이라면 그 head에 진짜 CI가 돌았을 것이다.
 결론은 `--synthetic-ci`로 고른다: success(기본) · failure(매 head 실패 — 고칠 수 없는 CI 실패) · fail-first(PR의 첫
 head만 실패, 이후 push는 성공 — 고칠 수 있는 CI 실패) · off(붙이지 않음, `--no-synthetic-ci`와 같다).
 실패 런만은 합성임을 드러내지 않는다 — 출력·앱이 실제 Actions 실패처럼 보인다. "합성이라 무시해도 된다"는 판단을
@@ -363,7 +365,8 @@ def refresh_pr(state: State, repo: str, pr: dict) -> None:
         tree = state.repos.merge_tree(repo, pr["base"]["sha"], pr["head"]["sha"])
         pr["mergeable"] = tree is not None
         pr["mergeable_state"] = "clean" if tree is not None else "dirty"
-        if pr.get("origin") == "sandbox":  # 실제 PR에는 진짜 CI가 있다 — 대역 PR에만
+        # 실제 PR의 실제 head에는 진짜 CI가 있다 — 대역 PR과, 실제 PR에 대역에서 push한 새 head에만 붙인다.
+        if pr.get("origin") == "sandbox" or pr["head"]["sha"] != pr.get("real_head_sha", pr["head"]["sha"]):
             state.ensure_synthetic_ci(repo, pr["head"]["sha"], pr["base"]["ref"], pr["number"])
 
 
@@ -515,7 +518,7 @@ class Api:
               "updated_at": real.get("updated_at"), "user": real.get("user"), "labels": real.get("labels") or [],
               "head": {"ref": real["head"]["ref"], "sha": real["head"]["sha"]},
               "base": {"ref": real["base"]["ref"], "sha": real["base"]["sha"]},
-              "origin": "real"}
+              "origin": "real", "real_head_sha": real["head"]["sha"]}
         # 실제 PR head가 미러의 브랜치에 없으면(삭제됨) refs/pull/N/head를 쓴다.
         if not self.s.repos.branch_sha(repo, pr["head"]["ref"]):
             sha = self.s.repos.rev(repo, f"refs/pull/{number}/head")
@@ -865,8 +868,25 @@ class Api:
         pr = self.s.get_pr(repo, int(kw["number"]))
         if pr is None:
             status, data, headers = self.passthrough(f"/repos/{repo}/pulls/{kw['number']}", accept, repo)
-            return status, data, "pulls.get", repo, {"passthrough": True}
+            if status == 200 and not self.real_pr_moved(repo, data):
+                return status, data, "pulls.get", repo, {"passthrough": True}
+            if status != 200:
+                return status, data, "pulls.get", repo, {"passthrough": True}
+            # 대역에서 PR 브랜치에 push했다 — 실제 PR을 등록해 대역의 head(와 그 합성 CI)로 보여 준다.
+            pr = self.pr_or_real(repo, int(kw["number"]))
         return 200, pr_public(self.s, repo, pr), "pulls.get", repo, None
+
+    def real_pr_moved(self, repo: str, data) -> bool:
+        """실제 PR 응답의 head 브랜치가 대역 미러에서 다른 커밋을 가리키나(대역에서 push됨)."""
+        try:
+            real = json.loads(data) if isinstance(data, (bytes, str)) else data
+            ref, sha = real["head"]["ref"], real["head"]["sha"]
+        except (ValueError, KeyError, TypeError):
+            return False
+        if real.get("state") != "open":
+            return False
+        mirrored = self.s.repos.branch_sha(repo, ref)
+        return bool(mirrored) and mirrored != sha
 
     def update_pr(self, repo: str, number: int, b: dict) -> tuple[dict, dict]:
         pr = self.pr_or_real(repo, number)

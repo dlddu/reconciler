@@ -40,7 +40,7 @@ tests/                              # docs/index.html 동작 테스트 (node --t
 .github/workflows/                  # 단계 스킬별 workflow_dispatch 워크플로
 .github/scripts/                    # 워크플로 보조 스크립트 (select_drift_target.py / select_plan_target.py / select_review_target.py /
                                     #   select_execute_target.py: 감지·계획·리뷰·실행 대상 선정,
-                                    #   claim_drift_target.py / claim_plan_target.py / claim_review_target.py: 선정 + 점유(compare-and-set 커밋) — MiniMax 감지·계획·리뷰,
+                                    #   claim_drift_target.py / claim_plan_target.py / claim_review_target.py / claim_execute_target.py: 선정 + 점유(compare-and-set 커밋) — MiniMax 감지·계획·리뷰·실행,
                                     #   mcp_oidc_proxy.py·mcp_call.py: homelab-k3s-mcp OIDC 연결(샌드박스 모드: GitHub 도구를 대역으로),
                                     #   github_stub.py·github_sandbox.py·github_log.py: 스킬 빌드 test의 GitHub 샌드박스(대역·준비·기록 판정),
                                     #   validate_generated_skill.py(--profile drift-detector|work-planner|work-review|work-executor): 생성 스킬 정적 검증,
@@ -221,9 +221,27 @@ task 레코드(점유 직전)를 샌드박스에만 되돌려 놓는다(`replay_
 
 ## 실행 스킬 MiniMax 파이프라인
 
-`reconciler-work-executor-skill-build.yml`(수동만)이 실행 단계 스킬을 MiniMax Code로 **생성 → 검증 → 테스트**한다.
-통과한 생성본(`work-executor-skill` 아티팩트의 `skill/`)을 plugin-marketplace의 `plugins/reconciler-data-plane`에 PR로 올리는
-흐름은 감지 스킬과 같다.
+실행도 MiniMax Code(`mcode exec`)로 돈다. 워크플로는 둘이다 — 감지와 같이 **스킬 생성은 자동화 대상이 아니다.**
+
+| 워크플로 | 트리거 | 하는 일 |
+| --- | --- | --- |
+| `reconciler-work-executor.yml` (운영 실행) | 수동 | homelab-k3s-mcp를 붙여 대상 레포 read 토큰을 받은 뒤, 러너(`claim_execute_target.py`)가 진입 게이트를 확인하고 `approved → executing`으로 **점유**한다. 그다음 plugin-marketplace의 고정 스킬을 mcode 로컬 플러그인으로 설치해 그 task 한 건을 실행·검증하고, `check_executor_result.py`(`--require-pushed --transcript`)로 계약을 점검한다. 아티팩트 `work-executor-result`. 실제 대상 레포·클러스터에 변경을 가한다. |
+| `reconciler-work-executor-skill-build.yml` (스킬 빌드) | 수동만 | 아래 generate → validate → test → report. 통과한 생성본(`work-executor-skill` 아티팩트의 `skill/`)을 plugin-marketplace의 `plugins/reconciler-data-plane`에 PR로 올리면 운영 실행이 그 스킬을 쓴다(`plugin_ref`로 브랜치·SHA 지정 가능). |
+
+**운영 실행의 점유**(`claim_execute_target.py`): `select_execute_target.py`와 같은 게이트로 executable `approved` 한 건을 고르고
+(plan·`preparedAt`, `review.manualApproval`이면 PR open·head == `sha`·`context` 최신 status success, 확인 못 하면 승인 안 됨),
+**점유 직전에 status와 게이트를 다시 본다** — 선정 뒤 PR에 새 커밋이 올라와 사람 승인이 무효가 됐으면 점유하지 않고 다음 후보로 간다.
+커밋은 status만 바꾼 `execute(<tbm>/<rct>): claim`(Claude Code 실행 스킬의 점유와 같은 형태라 두 경로가 같은 CAS로 경쟁한다).
+MCP 연결을 점유보다 먼저 하므로 MCP가 안 붙으면 아무것도 점유하지 않는다. mcode가 재시도 가능한 오류(제공자 upstream 500 등)로 끊기면
+`run_mcode.sh`가 같은 세션을 이어서 한 번 더 돌린다(재시도 프롬프트 `work-executor-resume-prompt.md` — 현재 상태부터 다시 확인). 점유 뒤
+실패했는데 task가 실행 기록 없이 `executing`으로 남았으면(설치 실패, 또는 스킬이 아무것도 기록하기 전에 끊김) `--release`가 `approved`로
+되돌린다 — 마지막 attempt에 `execution`이 생긴 뒤에는 되돌리지 않는다(이미 반영된 것을 모르는 채 다시 실행하게 된다).
+
+**운영 실행의 MCP 규칙**: 서버 `MCP_GITHUB_OIDC_RULES`에 `reconciler-work-executor.yml` 규칙이 있어야 한다 — `github_app_installation_token`
+(상한: 대상 레포 contents·pull_requests write와 statuses·checks·actions read, plugin-marketplace read, reconciler 제외), 계획이 쓰는
+k8s 도구, `ping`. `github_commit_status_create`는 주지 않는다(무인 단계는 사람 승인 status를 만들지 않는다).
+
+스킬 빌드의 job:
 
 | job | 하는 일 | 아티팩트 |
 | --- | --- | --- |
@@ -253,11 +271,20 @@ GitHub 샌드박스를 올려 두어, 스킬이 GitHub로 무엇을 보내든 �
   (`succeeded`|`failed`|`cancelled`), execution·verification 일관성(passed ⇔ succeeded, plan에 없는 stepSeq 없음), push 여부, 그리고
   시나리오 기대값(대상 main 내용·refs 불변·이력 재작성 없음·`asIsVersionAfter`).
 
+**리허설 — 운영 실행을 실제 task로 끝까지, 바꾸는 것 없이**: 스킬 빌드를 `rehearse_target`(실제 approved task 지목)으로
+돌리면 생성·검증·test 대신 `rehearse` job만 돈다. 운영 실행 워크플로와 같은 러너(`claim_execute_target.py` — 실제 데이터,
+실제 GitHub 읽기로 게이트 확인)·같은 스킬(`skill_run_id` 빌드 생성본, 기본은 plugin-marketplace 0.7.0에 올린 run)·같은 실행
+프롬프트·같은 점검(`check_executor_result.py --require-pushed --transcript`)에, 대역 기록 판정(`github_log.py --stage execute
+--approved-pr`)을 더한다. 바뀌는 곳만 다르다: reconciler 기록은 러너 안의 샌드박스 원격, 대상 레포는 GitHub 샌드박스(미러 +
+실제 PR을 읽어 와 대역 안에서 머지 — 필수 체크·사람 승인 status는 실제 값을 읽어 판정, 대역에서 PR 브랜치에 새로 push한 head는 합성
+CI), MCP는 오프라인 샌드박스(`offline-tools`로 운영 실행 규칙처럼 `github_app_installation_token`·`ping`만 — 토큰은 대역 것,
+`github_commit_status_create`·k8s 도구는 없음). 실제 GitHub 읽기는 워크플로 토큰으로 한다(대상 레포가 공개이고, 이 워크플로에는
+homelab-k3s-mcp OIDC 규칙이 없다). 이 job은 `contents: read`라 GitHub에 push할 수 없다.
+
 **스킬에 남는 계약**(브리프의 핵심 규칙): 넘겨받은 task가 `executing`인지 확인 → 마지막 attempt의 `plan.steps`를 `executionGuide`대로
 실행해 `execution` 기록(`execute(<tbm>/<rct>): run`) → `verifying` → `asIsVersionAfter`·`checks` 기록 후 `succeeded`|`failed`
 (`… : verify`), 전제 붕괴면 `cancelled`|`failed` → 커밋마다 `pull --rebase` 후 push. 대상 선정·진입 게이트(사람 승인 확인 포함)·점유는
-러너가 한다 — 운영 실행 워크플로(`reconciler-work-executor.yml`)에 감지의 `claim_drift_target.py`에 해당하는 점유 스크립트를 붙이는
-것은 다음 단계다.
+러너(`claim_execute_target.py`)가 한다.
 
 ## GitHub 샌드박스 (스킬 빌드 test)
 
@@ -294,7 +321,9 @@ GitHub 샌드박스를 올려 두어, 스킬이 GitHub로 무엇을 보내든 �
   성공한 합성 체크 런을 붙인다 — 이름은 실제 ruleset의 필수 체크(예: `ci-success`), 필수 체크가 없으면 `ci`. 스킬이 보는 CI 결과(REST
   check-runs, `gh pr checks`·`statusCheckRollup`)와 대역의 머지 게이트가 이것으로 충족된다. **사람 승인 status(`review/` 접두어)는 절대
   합성하지 않는다** — 사람 승인 게이트는 샌드박스에서도 실제처럼 막힌다. 합성 런은 앱 `reconciler-sandbox`, 제목 "synthetic success — CI was
-  not run"으로 표시되고 기록(`op: ci.synthetic`)·요약에 남는다. 실제 PR(읽기 중계)에는 붙이지 않는다.
+  not run"으로 표시되고 기록(`op: ci.synthetic`)·요약에 남는다. 실제 PR(읽기 중계)의 실제 head에는 붙이지 않는다 — 다만 실제 PR에
+  **대역에서 새 head를 push**하면(실행 지침대로 rebase해 PR 브랜치를 갱신하는 경우 등) 그 head에는 진짜 CI가 돌지 않으므로 대역 PR과 같이
+  합성 CI를 붙이고, 그 PR 조회도 대역의 head로 답한다.
   결론은 액션 입력 `synthetic-ci`로 고른다 — `success`(기본) · `failure`(매 head 실패: 고칠 수 없는 CI 실패 경로) ·
   `fail-first`(PR의 첫 head만 실패, 이후 push는 성공: 고칠 수 있는 실패) · `off`. 계획 스킬 빌드는 입력 `synthetic_ci`로 넘긴다.
   실패 런만은 합성임을 드러내지 않는다 — 앱 `github-actions`, 제목 「<체크> failed」, 요약 「Process completed with exit code 1.」로

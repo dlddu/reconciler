@@ -26,6 +26,15 @@
 #             ci-success는 대역의 합성 CI, 사람 승인 status는 리뷰 시점 head에만 있다.
 #   report    세 단계 결과를 한 보고서(work-executor-build-report 아티팩트)로 묶는다.
 #
+#   rehearse  (rehearse_target을 주면 위 네 job 대신 이것만) 운영 실행을 **실제 approved task 한 건으로 끝까지** 돌리되,
+#             아무것도 실제로 바꾸지 않는다 — 운영 러너(claim_execute_target.py)가 실제 데이터·실제 GitHub 읽기로 게이트를
+#             확인해 점유하고, 운영 스킬(skill_run_id 빌드의 생성본 = plugin-marketplace에 올린 것)을 운영 실행 프롬프트로
+#             돌린 뒤 운영 점검(check_executor_result.py --require-pushed --transcript)과 대역 기록 판정(github_log execute)을 한다.
+#             reconciler 기록은 러너 안의 샌드박스 원격에만 가고, 대상 레포는 GitHub 샌드박스(미러 + 실제 PR 읽어 오기)
+#             안에서 머지된다 — 머지 조건(필수 체크·사람 승인 status)은 실제 GitHub의 값을 읽어 판정한다(대상 레포가 공개라
+#             워크플로 토큰으로 읽는다). MCP는 오프라인 샌드박스라 GitHub 토큰은 대역 것이고 k8s 도구는 없다 — 클러스터 확인이
+#             필요한 계획은 그 단계가 실패로 기록된다. 아티팩트 work-executor-rehearsal.
+#
 # 필요한 설정
 #   environment llm-minimax의 secret MINIMAX_SUBSCRIPTION_KEY   MiniMax Token Plan subscription key (sk-cp-...)
 #                                      레포 secret에는 두지 않는다 — README 「모델 키 격리」
@@ -39,6 +48,14 @@ on:
         description: "mcode 모델 override(<provider>/<model>, 예: minimax/MiniMax-M3). 비우면 CLI 기본값"
         required: false
         default: ""
+      rehearse_target:
+        description: "리허설: 실제 approved task 지목(<tbm>/<rct> 등). 주면 생성·검증·test 대신 운영 실행을 샌드박스에서 끝까지 돈다"
+        required: false
+        default: ""
+      skill_run_id:
+        description: "리허설에 쓸 생성본의 빌드 run id(work-executor-skill 아티팩트). 기본 = plugin-marketplace 0.7.0에 올린 것"
+        required: false
+        default: "40878881948"
 
 # concurrency 그룹을 두지 않는다 — 빌드는 레포에 쓰지 않고(contents: read) 결과는 실행별 아티팩트라
 # 병렬로 돌아도 서로 겹치지 않는다.
@@ -54,6 +71,7 @@ env:
 jobs:
   generate:
     name: Generate skill (MiniMax Code)
+    if: inputs.rehearse_target == ''
     runs-on: ubuntu-latest
     environment: llm-minimax # 모델 키는 이 environment에만 있다(README 「모델 키 격리」)
     timeout-minutes: 30
@@ -412,7 +430,7 @@ jobs:
   report:
     name: Build report
     needs: [generate, validate, test]
-    if: always()
+    if: always() && inputs.rehearse_target == ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -453,5 +471,241 @@ jobs:
         with:
           name: work-executor-build-report
           path: ${{ runner.temp }}/report
+          if-no-files-found: warn
+          retention-days: 14
+
+  # ── 리허설: 운영 실행을 실제 task로 끝까지, 실제로는 아무것도 바꾸지 않고 ─────────────────────────────
+  rehearse:
+    name: Rehearse production execution (sandbox)
+    if: inputs.rehearse_target != ''
+    runs-on: ubuntu-latest
+    environment: llm-minimax # 모델 키는 이 environment에만 있다(README 「모델 키 격리」)
+    timeout-minutes: 90
+    permissions:
+      contents: read # GitHub에는 push할 수 없다 — 점유·실행 기록은 샌드박스 원격으로만 간다
+      actions: read # 다른 빌드 run의 생성본 아티팩트 내려받기
+      pull-requests: read # 게이트·대역의 실제 PR 읽기(공개 레포)
+      statuses: read
+      checks: read
+    env:
+      MCP_PROXY_PORT: "8765"
+    steps:
+      - name: Checkout harness
+        uses: actions/checkout@v4
+        with:
+          path: harness
+          persist-credentials: false
+
+      # 운영 데이터는 기본 브랜치가 진실이다 — 운영 실행과 같은 시점의 데이터로 점유한다.
+      - name: Checkout reconciler (default branch)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: ws/reconciler
+          fetch-depth: 50
+          persist-credentials: false
+
+      - name: Prepare workspace
+        run: |
+          OUT="$RUNNER_TEMP/out"; echo "OUT=$OUT" >> "$GITHUB_ENV"
+          mkdir -p "$OUT/logs"
+          git -C ws/reconciler config user.name "reconciler-bot"
+          git -C ws/reconciler config user.email "reconciler@dlddu.dev"
+          git config --global user.name "reconciler-bot"
+          git config --global user.email "reconciler@dlddu.dev"
+          pip install --quiet --disable-pip-version-check jsonschema
+
+      # 샌드박스 원격: origin(fetch·push 모두)을 러너 로컬 bare 레포로 바꾼다. 점유·실행 기록 커밋은 GitHub에 닿지 않는다.
+      - name: Isolate reconciler into sandbox remote
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          sandbox="$RUNNER_TEMP/sandbox-origin.git"
+          git init -q --bare "$sandbox"
+          git -C "$sandbox" config receive.shallowUpdate true
+          git -C ws/reconciler push -q "$sandbox" "HEAD:refs/heads/$DEFAULT_BRANCH"
+          git -C ws/reconciler remote set-url origin "$sandbox"
+          git -C ws/reconciler remote set-url --push origin "$sandbox"
+          git -C ws/reconciler fetch -q origin "$DEFAULT_BRANCH"
+          git -C ws/reconciler branch -q --set-upstream-to="origin/$DEFAULT_BRANCH" "$DEFAULT_BRANCH"
+          if git -C ws/reconciler remote -v | grep -Eq '://|@'; then
+            echo "::error::샌드박스 격리 실패 — 원격 URL이 남아 있음"; exit 1
+          fi
+          echo "SANDBOX=$sandbox" >> "$GITHUB_ENV"
+          echo "SANDBOX_BASE=$(git -C ws/reconciler rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      # 실제 GitHub 읽기(게이트의 PR·status, 미러, 대역의 실제 PR·체크·ruleset 읽기 중계)는 워크플로 토큰으로 한다 —
+      # 대상 레포가 공개라 읽기에 App 토큰이 필요 없고, 이 워크플로에는 homelab-k3s-mcp OIDC 규칙이 없다(오프라인 MCP를 쓴다).
+      # 러너 전용 — 에이전트 환경에서는 뺀다(Run skill의 env -u).
+      - name: Source read token (workflow token)
+        env:
+          TOKEN: ${{ github.token }}
+        run: echo "SOURCE_GITHUB_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      # 운영 스킬: plugin-marketplace(private)에 올린 생성본과 같은 빌드 산출물을 내려받는다(이 job의 상한에는 marketplace가 없다).
+      # 운영처럼 워크스페이스 밖(플러그인 설치 위치에 해당)에 둔다. GitHub 샌드박스가 api.github.com을 대역으로 돌리기 전에 받는다.
+      - name: Download production skill
+        uses: actions/download-artifact@v4
+        with:
+          name: work-executor-skill
+          run-id: ${{ inputs.skill_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/skill-artifact
+
+      - name: Install production skill
+        run: |
+          dir="$RUNNER_TEMP/plugins/reconciler-data-plane/skills/$SKILL_NAME"
+          mkdir -p "$dir"
+          cp -R "$RUNNER_TEMP/skill-artifact/skill/." "$dir/"
+          test -f "$dir/SKILL.md" || { echo "::error::run ${{ inputs.skill_run_id }} 아티팩트에 SKILL.md가 없음"; exit 1; }
+          (cd "$dir" && find . -type f | sort | xargs sha256sum) | tee "$OUT/skill-sha256.txt"
+          echo "SKILL_DIR=$dir" >> "$GITHUB_ENV"
+
+      # 운영 러너 그대로: 실제 데이터·실제 GitHub 읽기로 게이트를 확인하고 approved → executing을 (샌드박스 원격에) push.
+      - name: Claim target (sandbox)
+        id: claim
+        env:
+          INPUT_TARGET_ID: ${{ inputs.rehearse_target }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          python3 harness/.github/scripts/claim_execute_target.py --repo ws/reconciler --branch "$DEFAULT_BRANCH" \
+            --target "$INPUT_TARGET_ID" --summary-file "$OUT/logs/claim.md"
+
+      - name: Repositories to mirror
+        id: mirror
+        if: steps.claim.outputs.claimed == 'true'
+        env:
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+        run: |
+          repos=$(python3 harness/.github/scripts/github_sandbox.py repos-for-model ws/reconciler "$MODEL_ID")
+          echo "repos=$repos" >> "$GITHUB_OUTPUT"
+          echo "대상 레포: ${repos:-<없음>}"
+
+      # npm·node 내려받기가 대역에 걸리지 않게 샌드박스를 올리기 전에 설치한다.
+      - name: Set up MiniMax Code
+        if: steps.claim.outputs.claimed == 'true'
+        uses: ./harness/.github/actions/setup-mcode
+        with:
+          subscription-key: ${{ secrets.MINIMAX_SUBSCRIPTION_KEY }}
+          version: ${{ env.MCODE_VERSION }}
+          region: ${{ vars.MINIMAX_REGION || 'en' }}
+
+      - name: GitHub sandbox up
+        id: sandbox
+        if: steps.claim.outputs.claimed == 'true'
+        uses: ./harness/.github/actions/github-sandbox
+        with:
+          mode: up
+          repos: ${{ steps.mirror.outputs.repos }}
+          reconciler-bare: ${{ env.SANDBOX }}
+          reconciler-repo: ${{ github.repository }}
+          mcp-port: ${{ env.MCP_PROXY_PORT }}
+          mcp-offline: "true"
+          # 운영 실행 규칙처럼 사람 승인 status 도구는 주지 않는다(README 「실행 전 사람 승인」).
+          offline-tools: github_app_installation_token,ping
+
+      # 운영 실행 워크플로의 Run skill과 같은 프롬프트·ENV_NOTE·인자. 스킬은 리허설인지 모른다.
+      - name: Run skill
+        id: run
+        if: steps.claim.outputs.claimed == 'true'
+        env:
+          MODEL: ${{ inputs.minimax_model }}
+          TASK_ID: ${{ steps.claim.outputs.task_id }}
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+          CLAIM_COMMIT: ${{ steps.claim.outputs.claim_commit }}
+          ENV_NOTE: "MCP 서버 `k3s`가 연결돼 있다. 대상 레포는 task의 preparation(repository·pullRequestUrl)이 가리키는 GitHub 레포다."
+        run: |
+          test "$(git -C ws/reconciler rev-parse HEAD)" = "$CLAIM_COMMIT"
+          echo "base=$CLAIM_COMMIT" >> "$GITHUB_OUTPUT"
+          printf '{"mcpServers":{"k3s":{"type":"http","url":"%s"}}}\n' "$MCP_LOCAL_URL" > ws/.mcp.json
+          sed -e "s#{{SKILL_DIR}}#$SKILL_DIR#g" -e "s#{{REPO_DIR}}#./reconciler#g" \
+              -e "s#{{TASK_ID}}#$TASK_ID#g" -e "s#{{MODEL_ID}}#$MODEL_ID#g" \
+              -e "s#{{CLAIM_COMMIT}}#$CLAIM_COMMIT#g" -e "s#{{ENV_NOTE}}#$ENV_NOTE#g" \
+              harness/.github/minimax/work-executor-run-prompt.md > "$OUT/logs/prompt.md"
+          sed -e "s#{{TASK_ID}}#$TASK_ID#g" -e "s#{{MODEL_ID}}#$MODEL_ID#g" -e "s#{{CLAIM_COMMIT}}#$CLAIM_COMMIT#g" \
+              harness/.github/minimax/work-executor-resume-prompt.md > "$OUT/logs/resume-prompt.md"
+          # 재시도 가능한 오류(제공자 upstream 500 등)로 끊기면 같은 세션을 이어서 한 번 더 — run_mcode.sh 머리말.
+          MCODE_UNSET="ACTIONS_ID_TOKEN_REQUEST_TOKEN ACTIONS_ID_TOKEN_REQUEST_URL ACTIONS_RUNTIME_TOKEN SOURCE_GITHUB_TOKEN GITHUB_TOKEN GH_TOKEN" \
+            harness/.github/scripts/run_mcode.sh "$OUT/logs/prompt.md" "$OUT/logs/resume-prompt.md" "$OUT/logs" \
+            "$GITHUB_WORKSPACE/ws" 4200
+
+      - name: GitHub sandbox down
+        if: always() && steps.sandbox.outcome != 'skipped'
+        uses: ./harness/.github/actions/github-sandbox
+        with:
+          mode: down
+          out-dir: ${{ runner.temp }}/out/github-sandbox
+
+      # 운영 점검 그대로(샌드박스 원격에 push됐는지 포함) + 대역 기록으로 GitHub에 실제로 보낸 것을 판정한다.
+      - name: Check result
+        if: steps.run.outcome != 'skipped' && steps.run.outputs.base != ''
+        env:
+          TASK_ID: ${{ steps.claim.outputs.task_id }}
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+          CLAIM_MESSAGE: ${{ steps.claim.outputs.claim_message }}
+          PR_URL: ${{ steps.claim.outputs.pull_request_url }}
+          BASE: ${{ steps.run.outputs.base }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set +e
+          python3 harness/.github/scripts/check_executor_result.py --repo ws/reconciler --base "$BASE" \
+            --model-id "$MODEL_ID" --task-id "$TASK_ID" --claim-subject "$CLAIM_MESSAGE" \
+            --require-pushed --transcript "$OUT/logs/transcript.jsonl" --transcript "$OUT/logs/transcript-attempt1.jsonl" \
+            --report "$OUT/check-report.md" --json "$OUT/check-report.json" --patch "$OUT/result.patch"
+          code=$?
+          gh_args=("$OUT/github-sandbox/requests.jsonl" --stage execute --report "$OUT/github-report.md")
+          [ -n "$PR_URL" ] && gh_args+=(--approved-pr "$PR_URL")
+          python3 harness/.github/scripts/github_log.py "${gh_args[@]}"
+          gcode=$?
+          set -e
+          cp "ws/reconciler/data/reconciliation-tasks/$MODEL_ID.json" "$OUT/task-file-after.json" || true
+          git -C "$SANDBOX" log --format='%h %s' "$SANDBOX_BASE..$DEFAULT_BRANCH" > "$OUT/sandbox-pushed.log" || true
+          echo "샌드박스 원격에 push된 커밋:"; cat "$OUT/sandbox-pushed.log"
+          [ "$code" -eq 0 ] && [ "$gcode" -eq 0 ]
+
+      - name: Summary
+        if: always()
+        env:
+          TARGET: ${{ inputs.rehearse_target }}
+          CLAIMED: ${{ steps.claim.outputs.claimed }}
+          TASK_ID: ${{ steps.claim.outputs.task_id }}
+          MODEL_ID: ${{ steps.claim.outputs.model_id }}
+          PR_URL: ${{ steps.claim.outputs.pull_request_url }}
+          RUN_EXIT: ${{ steps.run.outputs.exit_code }}
+          ATTEMPTS: ${{ steps.run.outputs.attempts }}
+          SKILL_RUN: ${{ inputs.skill_run_id }}
+        run: |
+          {
+            echo "### Rehearse — 운영 실행을 샌드박스에서 끝까지"
+            echo "- 지목: \`$TARGET\` · 점유: ${CLAIMED:-false} · task: ${MODEL_ID:+$MODEL_ID/}${TASK_ID:-<none>}${PR_URL:+ · $PR_URL}"
+            echo "- 스킬: 빌드 run $SKILL_RUN 생성본 · MCP: 오프라인 샌드박스(github_app_installation_token·ping만 — 토큰은 대역 것, status 도구·k8s 도구 없음)"
+            echo "- mcode ${MCODE_INSTALLED_VERSION:-<미설치>} · exit: ${RUN_EXIT:-n/a} · 시도 ${ATTEMPTS:-n/a}회"
+            if [ -s "$OUT/logs/transcript.jsonl" ]; then
+              python3 harness/.github/scripts/mcode_transcript.py summary "$OUT/logs/transcript.jsonl"
+            fi
+            echo
+            cat "$OUT/logs/claim.md" 2>/dev/null || true
+            echo
+            cat "$OUT/check-report.md" 2>/dev/null || true
+            echo
+            cat "$OUT/github-report.md" 2>/dev/null || true
+            echo
+            cat "$OUT/github-sandbox/summary.md" 2>/dev/null || true
+            if [ -s "$OUT/logs/final-message.md" ]; then
+              echo; echo "<details><summary>mcode 최종 보고</summary>"; echo
+              head -c 6000 "$OUT/logs/final-message.md"; echo; echo "</details>"
+            fi
+          } | tee "$OUT/rehearsal-summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Redact secrets
+        if: always()
+        run: python3 harness/.github/scripts/redact_secrets.py "$RUNNER_TEMP/out" --extra-env SOURCE_GITHUB_TOKEN
+
+      - name: Upload rehearsal artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-executor-rehearsal
+          path: ${{ runner.temp }}/out
           if-no-files-found: warn
           retention-days: 14

@@ -482,6 +482,18 @@ class PassthroughTest(StubFixture):
         self.assertEqual(self.call("GET", f"/repos/dlddu/demo/commits/{'f' * 40}/check-runs", tok)[1]["check_runs"], [])
         self.assertFalse([e for e in self.entries() if e["op"] == "ci.synthetic"])
 
+    def test_head_pushed_to_real_pr_in_sandbox_gets_synthetic_ci(self):
+        tok = self.mint(["demo"], {"contents": "write", "pull_requests": "write", "checks": "read"})
+        result, work, _ = self.push_branch(tok, "real-branch")  # 실제 PR #7의 head 브랜치를 대역에서 갱신
+        self.assertEqual(result.returncode, 0, result.stderr)
+        pushed = git("rev-parse", "HEAD", cwd=work).stdout.strip()
+        status, pr = self.call("GET", "/repos/dlddu/demo/pulls/7", tok)
+        self.assertEqual((status, pr["head"]["sha"]), (200, pushed))  # 실제 head(fff…)가 아니라 대역 head
+        runs = self.call("GET", f"/repos/dlddu/demo/commits/{pushed}/check-runs", tok)[1]["check_runs"]
+        self.assertEqual([(r["name"], r["conclusion"]) for r in runs], [("ci", "success")])
+        self.assertTrue([e for e in self.entries() if e["op"] == "ci.synthetic" and e["detail"]["sha"] == pushed])
+        self.assertEqual(self.call("GET", f"/repos/dlddu/demo/commits/{'f' * 40}/check-runs", tok)[1]["check_runs"], [])
+
     def test_closing_a_real_pr_stays_local(self):
         tok = self.mint(["demo"])
         status, pr = self.call("PATCH", "/repos/dlddu/demo/pulls/7", tok, {"state": "closed"})

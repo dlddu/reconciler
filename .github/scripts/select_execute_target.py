@@ -355,7 +355,9 @@ def resolve_explicit(target: str, tasks: list[tuple[str, dict]]) -> list[tuple[s
     return hits
 
 
-def select_target(repo: Path, gh: GitHub, explicit: str | None = None) -> Selection:
+def select_target(repo: Path, gh: GitHub, explicit: str | None = None,
+                  exclude: frozenset = frozenset()) -> Selection:
+    """exclude(`model/task`)는 점유 경쟁에서 진 것 — claim_execute_target.py가 다음 후보를 고를 때 건너뛴다."""
     tasks = load_tasks(repo)
     models = load_models(repo)
     sel = Selection()
@@ -375,6 +377,7 @@ def select_target(repo: Path, gh: GitHub, explicit: str | None = None) -> Select
             if st in OTHER_STAGE_OWNER:
                 sel.other_stages[st] = sel.other_stages.get(st, 0) + 1
 
+    candidates = [(m, t) for m, t in candidates if f"{m}/{t.get('id')}" not in exclude]
     for i, (model_id, task) in enumerate(candidates):
         ref = f"{model_id}/{task.get('id')}"
         if not is_enabled(models.get(model_id)):

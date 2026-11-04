@@ -271,6 +271,28 @@ class ExecutorFixtureCheckTest(unittest.TestCase):
         self.assertIn("verification", patch.read_text())
         self.assertIn("✅ 통과", report.read_text())
 
+    def test_transcript_forbidden_calls(self):
+        def transcript(calls):
+            path = self.tmp / "t.jsonl"
+            path.write_text("\n".join(json.dumps({"type": "item.completed", "item": {
+                "id": f"c{i}", "type": "tool_call", "toolCall": c}}) for i, c in enumerate(calls)) + "\n")
+            return path
+
+        ok = transcript([{"name": "read", "input": {"path": "SKILL.md"},
+                          "output": "github_commit_status_create는 호출하지 않는다; git push --force 금지"},
+                         {"name": "bash", "input": {"command": "gh pr merge 7 --squash --match-head-commit abc"}}])
+        res = cer.Result()
+        cer.check_transcript(ok, res)
+        self.assertEqual(res.errors, [])
+        bad = transcript([{"name": "mcp__k3s__github_commit_status_create", "input": {"state": "success"}},
+                          {"name": "bash", "input": {"command": "gh pr merge 7 --squash --admin"}},
+                          {"name": "bash", "input": {"command": "git push --force-with-lease origin main"}}])
+        res = cer.Result()
+        cer.check_transcript([ok, self.tmp / "missing.jsonl", bad], res)  # 재시도 전 시도까지 함께, 없는 파일은 건너뜀
+        joined = "\n".join(res.errors)
+        for label in ("사람 승인 status", "관리자 우회 머지", "강제 push"):
+            self.assertIn(label, joined)
+
 
 if __name__ == "__main__":
     unittest.main()

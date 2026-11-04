@@ -46,6 +46,11 @@ inputs:
   mcp-offline:
     description: (up) 실제 MCP 없이 오프라인 샌드박스 MCP(GitHub 토큰·status 도구 + ping)를 mcp-port에 띄운다 — OIDC 없는 job용
     default: "false"
+  offline-tools:
+    description: >-
+      (up, mcp-offline) 오프라인 MCP가 노출할 도구(쉼표 구분 — github_app_installation_token·github_commit_status_create·ping 중).
+      비우면 전부. 운영 OIDC 규칙이 주지 않는 도구는 빼서 시험이 운영의 도구 구성을 따르게 한다
+    default: ""
   allow-tools:
     description: (up) 샌드박스에서도 실제 MCP로 보낼 도구(쉼표 구분, 관측용 읽기 도구만). 나머지는 막는다
     default: ping
@@ -82,6 +87,7 @@ runs:
         ADMIN_PORT: ${{ inputs.admin-port }}
         SYNTHETIC_CI: ${{ inputs.synthetic-ci }}
         MCP_OFFLINE: ${{ inputs.mcp-offline }}
+        OFFLINE_TOOLS: ${{ inputs.offline-tools }}
       run: |
         set -euo pipefail
         mkdir -p "$ROOT"
@@ -109,7 +115,7 @@ runs:
         #    오프라인이면 실제 MCP 없이 프록시가 MCP 서버 자체가 된다.
         if [ "$MCP_OFFLINE" = "true" ]; then
           nohup python3 "$H/.github/scripts/mcp_oidc_proxy.py" --offline --port "$PORT" \
-            --sandbox-admin "http://127.0.0.1:$ADMIN_PORT" > "$ROOT/mcp-proxy.log" 2>&1 &
+            --sandbox-admin "http://127.0.0.1:$ADMIN_PORT" --offline-tools "$OFFLINE_TOOLS" > "$ROOT/mcp-proxy.log" 2>&1 &
           for _ in $(seq 1 30); do
             grep -q listening "$ROOT/mcp-proxy.log" && break
             if ! kill -0 $! 2>/dev/null; then cat "$ROOT/mcp-proxy.log"; echo "::error::오프라인 MCP 기동 실패"; exit 1; fi
