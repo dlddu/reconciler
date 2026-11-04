@@ -12781,7 +12781,48 @@
       "reason": "판정: 남은 gap이 있고 그 gap을 맡은 열린 형제 task가 없어 action_required다.\n근거: 재계산 asIs(`backend:b3f5b5c…`·`frontend:8719310…`)·toBe(`8ae69fff…`)가 점유 trigger와 동일해 현재 상태가 확정된다. 코드 관측에서 AC 미귀속 여정 의무 3건이 구현 0이다 — G2는 `backend/src/access_request.rs`가 요청 접수(AC4.10)만 하고 `owned_analysis` 34곳 전부가 소유자 필터라 타 사용자 열람 경로가 없고, G3는 `frontend/src/FeatureDependencies.tsx`의 `CATEGORY_LABELS` 7종이 기술 용어라 `docs/mockups/JRN-understand-feature.html`의 자연어 라벨과 어긋나며, G4는 `backend/src/doc_edit.rs:300-306`의 `decide`가 `owned_analysis`로 소유자만 검증해 제안자≠승인자가 성립하지 않는다. `docs/doc-tracker/2026-09.md` 「사용자 여정 전용 의무 (AC 미귀속)」 표도 G2·G3·G4를 「구현 0」으로 미결 등재한다.\n적용 기준: definition의 「사용자 여정의 판정 무게」(대응 AC가 없는 여정 단계라도 여정이 기술한 시스템 동작이 구현에 없으면 drift)·drift 판정 기준 4(미구현 여정 동작). `docs/user-journey/JRN-understand-feature.md`의 `STP-open-shared`·`STP-check-scope`·`STP-flag-ambiguity`와 §4 분기표에 「범위 밖」·「백로그 후보」·「제품 외부」·「(가정)」 표기가 없어 면제 요건에 해당하지 않고 §5는 측정 지표뿐이라 지표 면제에도 걸리지 않는다.\n형제 확인: 같은 모델 파일(`data/reconciliation-tasks/tbm_feature-doc-docs-impl.json`)의 다른 138건은 `no_action_needed`·`succeeded`·`cancelled`로 종결 상태여서 열린 형제 task가 없다.\n반대 방향 근거(definition 규칙과 충돌하지 않음): 이번 창(#239·#240·#241)은 계측 래퍼와 heartbeat 60초 캐시뿐이라 사용자 대면 동작을 늘리지 않고, 그 heartbeat 동작은 `docs/prd/04-platform.md` AC4.1 검증 방법에 60초 캐시 문장으로 이미 서술되어 코드와 문서가 어긋나지 않는다. tracker의 AC 27/27·테스트 커버 27/27·e2e 구현 대기 0건은 AC 축 충족을 뒷받침한다. 다만 이 근거는 AC 축만 뒷받침할 뿐 여정 전용 의무 3건의 구현 0을 해소하지 않으므로 판정을 뒤집지 않는다.",
       "assessedAt": "2026-11-02T06:56:05Z"
     },
-    "updatedAt": "2026-11-04T03:43:48Z"
+    "updatedAt": "2026-11-04T03:43:48Z",
+    "attempts": [
+      {
+        "plan": {
+          "summary": "**접근과 이유** — 이 gap(G2·G3·G4)은 전부 「사람이 소유한 결정」에 막혀 있다. `docs/doc-tracker/2026-09.md` 「사용자 여정 전용 의무 (AC 미귀속) — 2026-09-28 실측」의 벽 칸이 G2를 「제품 결정이 선결 + 새 테이블(D1)」, G3·G4를 「G2의 귀결」로 적고, 같은 절 머리말이 「새 테이블(D1 ⇒ 사람 승인) 또는 AC가 침묵하는 제품 결정」은 「무인 슬라이스가 스스로 치울 수 없다」고 명시한다. 코드 관측도 그 벽을 확인한다 — 사용자 대면 읽기 31곳 전부가 `owned_analysis`(WHERE id = ? AND user_id = ?)를 지나 타 사용자 열람 경로가 0이고, `backend/src/access_request.rs`는 요청 접수(AC4.10)만 하며 `0016_access_requests.sql`에는 허용을 적을 상태 열이 없다. PRD AC4.10은 「허용 여부는 소유자가 AC4.1의 저장소 선택 범위로 정한다」고 넘기지만 AC4.1의 범위는 『App이 읽을 저장소』지 타 사용자 열람이 아니라 「접수와 열람 사이 한 칸」이 AC 양쪽에 비어 있다. 따라서 **결정을 스스로 내리지 않고**, 결정해야 할 것을 한 문장으로 좁히고 대안 세 개(A 비공개 유지 / B 분석 단위 공유 / C 저장소 단위 공유)를 트레이드오프와 함께 제시해 선택지를 남긴다. 지금 하는 이유: G3·G4가 G2의 귀결이므로 G2의 결정이 서기 전에는 뒤 두 건의 구현 화면 자체가 선지 않는다.\n\n**이 시도의 범위** — 바꾼다: `dlddu/feature-doc`의 `docs/doc-tracker/2026-09.md` 1파일만. G2·G3·G4 행의 벽 칸에 「결정 제안이 사람 채택을 기다리는 중」을 명시하고, 「G2 교차 사용자 열람 정책 — 결정 제안(사람 승인 대기 · 2026-11-04)」 절을 신설해 결정 1문장·대안 A/B/C와 트레이드오프·권고(B)와 그 이유·채택 시 착지 범위·범위 밖을 적는다. 바꾸지 않는다: `backend/`·`frontend/` 코드(0바이트), `backend/migrations/**`(0건 — D1 미발화), AC·테스트 문서·e2e spec, 목업 HTML, 여정 문서. 또한 **G2 정책 자체는 채택하지 않는다** — 사람이 고르는 대안으로 남긴다.\n\n**완료 기준** — main 반영 후 참이어야 하는 값: ① `docs/doc-tracker/2026-09.md`에 「G2 교차 사용자 열람 정책 — 결정 제안(사람 승인 대기 · 2026-11-04)」 절이 존재하고, ② 그 파일의 G2·G3·G4 행 벽 칸 세 곳에 「사람 채택 대기」가 명시되어 있으며, ③ `git diff --stat main..head`가 `docs/doc-tracker/2026-09.md | 41 +++...--` 1파일 +38/-3이고 `backend/`·`frontend/` 트리 해시가 `backend:b3f5b5ca300755f96f6e2b314285e7efe6453ba7` / `frontend:87193102543b9f615a868a356d5aa4c37d3d8fa2`로 **불변**이며, ④ `scripts/check-comment-ledger.py`·`tools/check-journey-mockup.py`·`tools/check-mockup-render.py`·`tools/check-data-model.py` 4종이 머지된 main에서 전부 rc=0이다. 주의: 이 완료 기준은 **gap을 닫는 것이 아니다** — gap(G2·G3·G4)은 이 시도 뒤에도 열려 있고 「결정이 사람에게 요청된 상태」로 바뀔 뿐이다. gap 자체가 닫히는 조건은 §범위 밖의 후속 task다.\n\n**범위 밖** — ① G2 공유 정책의 실제 채택(사람 결정 대기 — 대안 B가 권고되지만 자동화는 대신 결정하지 않는다). ② 그 채택 뒤의 실제 구현: `backend/migrations/**` 마이그레이션(허용 상태를 적을 자리), `owned_analysis` 31곳의 소유자 필터 완화, 소유자 허용·거부 화면, P2 화면(`JRN-understand-feature` 5화면), PRD `AC4.7` 격리 문구 갱신과 새 AC 신설, G3의 5분류 자연어 라벨, G4의 P1 검토 표시. ③ 이 축의 기계 가드 신설(여정 서술 ↔ 구현을 보는 규칙은 이 레포에 없다 — 트래커 말미가 적고 있다). 이유: ②는 사람 결정이 선결돼야 착지할 수 있고, ③은 「어느 서술이 의무인지의 경계」 자체가 제품 결정이다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #244의 base(main)·head(2dc61594523119eb65fba94c23f2733e9090d97f)·병합 가능 여부와 리뷰 상태를 확인한다.",
+              "expectedOutcome": "PR #244 head SHA가 2dc61594523119eb65fba94c23f2733e9090d97f와 일치하고 state=OPEN이며 diff가 docs/doc-tracker/2026-09.md 1파일뿐이다."
+            },
+            {
+              "seq": 2,
+              "action": "PR #244를 main에 머지한다(merge — squash/rebase 금지, 강제 push 금지).",
+              "expectedOutcome": "main의 HEAD가 PR #244의 head 커밋을 포함하고, merge commit message에 PR 번호 244가 남는다."
+            },
+            {
+              "seq": 3,
+              "action": "머지된 main을 체크아웃한 뒤 로컬 게이트 4종을 실제로 돌려 출력을 캡처한다.",
+              "expectedOutcome": "scripts/check-comment-ledger.py · tools/check-journey-mockup.py · tools/check-mockup-render.py · tools/check-data-model.py 4개가 모두 종료코드 0으로 끝나고 각각 '통과'/'정합 (exit 0)' 문구를 출력한다."
+            },
+            {
+              "seq": 4,
+              "action": "머지된 main에서 as-is/to-be 버전을 재계산한다.",
+              "expectedOutcome": "as-is가 backend:b3f5b5ca300755f96f6e2b314285e7efe6453ba7 frontend:87193102543b9f615a868a356d5aa4c37d3d8fa2로 이전 관측값과 동일(코드 무변경)하고, to-be(docs 트리 해시)는 3ec3462c9a497ad1ee89077be0b460e8f622c0af와 달라진다."
+            },
+            {
+              "seq": 5,
+              "action": "머지된 main의 docs/doc-tracker/2026-09.md에서 제안 절의 존재와 G2·G3·G4 벽 칸 3곳의 「사람 채택 대기」 명시를 확인한다.",
+              "expectedOutcome": "「G2 교차 사용자 열람 정책 — 결정 제안(사람 승인 대기 · 2026-11-04)」 헤더가 1건 존재하고, 벽 칸 3곳 각각에 '사람 채택 대기' 또는 '사람 채택을 기다리는 동안에도 선결' 문구가 들어 있다."
+            },
+            {
+              "seq": 6,
+              "action": "reconciler에서 이 task의 attempts(plan·preparation·executionGuide)를 기록하고 status를 planned로 넘긴 뒤 push한다.",
+              "expectedOutcome": "data/reconciliation-tasks/tbm_feature-doc-docs-impl.json의 attempts 1건이 준비·지침까지 채워졌고 status=planned이며 task_record.py validate가 OK를 출력한다."
+            }
+          ],
+          "plannedAt": "2026-11-04T03:50:47Z"
+        }
+      }
+    ]
   },
   {
     "id": "rct_20261104-0001",
