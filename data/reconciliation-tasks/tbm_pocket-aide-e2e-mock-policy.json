@@ -2710,6 +2710,45 @@
     "assessment": {
       "assessedAt": "2026-11-04T21:59:15Z",
       "reason": "판정: 조치 필요(action_required). 이 창의 변화(#385)는 정합하게 처리됐다 — 1 MiB 초과 붙여넣기 단정이 BF-6 서술과 코드(SessionsOversizePromptUITests)에 반영됐고 불변식 1(24==24)·B1·B2·B4·재검토 도과·B3 위반은 0이다. 그러나 BF-6이 선행 '없음'(착수 가능)으로 열려 있고 정의 판정 규칙은 착수 가능 행 ≥ 1이면 action_required로 규정한다. 남은 일은 Sessions*UITests 전체의 실행 검증(로컬 시뮬레이터 실행 또는 ios_tests 재활성)뿐이며 CI 정책 영향이 크므로 planner/review가 실현 가능한 범위를 판단할 것. 자동 해소될 성격이 아니라 유예하지 않는다. 열린 형제 task 없음(rct_20261104-0003 succeeded), 소관은 이 모델. 재검토 시점 2027-01-20, 잔여 열린 행 1건."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "BF-6(착수 가능 행)의 4차 슬라이스: 남은 일인 Sessions*UITests 실행 검증을, #345 소유자 결정(PR/push iOS 테스트 off)을 건드리지 않고 ci.yml 의 workflow_dispatch 입력 ios_verify(기본 false)로 on-demand 실행할 수 있게 열고 그 경로로 1회 실행해 결과를 얻는다. 대안: ios_tests 상시 재활성(소유자의 비용 결정을 뒤집음, 제외), 입력 없는 dispatch(이미지 푸시·TestFlight·Android 배포 부작용, 제외), 로컬 시뮬레이터(러너에 macOS 없음). 완료 기준 = ios_verify 변경이 main에 있고, 그 경로로 iOS 스위트를 돌려 Sessions*UITests 클래스별 결과를 확보했으며 BF-6 행이 갱신됨; 범위 밖 = 실패한 테스트의 수정. PR 1개라 revert 1회로 가역.",
+          "riskLevel": "low",
+          "plannedAt": "2026-11-04T22:20:00Z",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "ci.yml 에 workflow_dispatch 입력 ios_verify(boolean, 기본 false) 추가, ios_tests 출력을 dispatch&&ios_verify 로, 계획 스텝은 ios_verify 시 image=false·배포 플래그 미설정",
+              "expectedOutcome": "PR/push 동작 불변, 입력 없는 수동 실행 불변, ios_verify=true 실행만 ios-test 를 돌리고 배포 계열은 skipped"
+            },
+            {
+              "seq": 2,
+              "action": "docs/e2e-mocking-policy.md BF-6 행을 수동 실행 경로 기준으로 갱신(세 칸 유지)",
+              "expectedOutcome": "행이 B2 기계 판독 가능, 소관 칸 없음, check_ledger.py 통과"
+            },
+            {
+              "seq": 3,
+              "action": "PR 브랜치에서 ci.yml 을 ios_verify=true 로 dispatch 해 Sessions*UITests 결과 수집",
+              "expectedOutcome": "ios-test 3 샤드 완료, Sessions 클래스별 통과/실패 확보, 배포 잡 skipped"
+            },
+            {
+              "seq": 4,
+              "action": "CI green 확인 후 squash 머지, versionScript 재계산, BF-6 행에 실행 결과 반영",
+              "expectedOutcome": "as-is 지문 불변, to-be blob 변경, 허용목록↔코드 24==24"
+            }
+          ],
+          "executionGuide": "## 순서\n1. (사전) PR https://github.com/dlddu/pocket-aide/pull/387 (head 919a652)에서 `ci-success`·`comment-policy ledger`가 success인지 확인한다. 실패하면 머지하지 않는다(우회 금지). ci.yml 변경이라 `workflows` 권한 토큰이 필요하고, 변경 경로가 review-policy MA1~MA6에 닿지 않아 `review/manual-approval`은 불필요 예상이다.\n2. 머지 전 이 브랜치에서 실행 검증: `gh workflow run ci.yml --ref reconcile/rct_20261104-0004-bf6-ios-verify-dispatch -f ios_verify=true` (REST: POST /repos/dlddu/pocket-aide/actions/workflows/ci.yml/dispatches, inputs.ios_verify=\"true\"; actions:write 필요). 실행이 `ios-test`(3 샤드)까지 도는지, `backend-docker-push`·`testflight-upload`·`android-distribute`가 skipped인지 확인한다. 배포 계열이 도는 기색이면 즉시 취소(cancel)한다.\n3. 샤드 결과에서 `Sessions*UITests`(SessionsPromptUITests·SessionsArchiveRestoreUITests·SessionsTerminalUITests·SessionsResponsePhaseUITests·SessionsArchiveDisabledUITests·SessionsTurnMarkersUITests·SessionsOversizePromptUITests 등)의 통과/실패를 클래스별로 기록한다(잡 로그 또는 xcresult 아티팩트).\n4. 모든 필수 체크가 green이면 squash 머지(ci.yml 입력 추가는 기본 동작을 바꾸지 않으므로 Sessions 실패 여부와 독립). 머지 후 versionScript 두 개를 재계산한다.\n\n## 검증 방법\n- 완료 기준(범위): (a) `ios_verify` 입력으로 `ci.yml`을 수동 실행할 수 있는 변경이 main에 있고 (b) 그 경로로 iOS UI 스위트를 실제로 1회 돌려 `Sessions*UITests` 클래스별 결과를 확보했으며 (c) BF-6 행이 그 결과에 맞게 갱신(통과면 해소 절로 이동은 별도 슬라이스)됨.\n- 불변식 1: as-is 지문 `sites=41 files=24` / `b9a883fc…05d8`가 머지 전후 동일(새 모킹 토큰·주석 없음). 허용목록 24 == 코드 24.\n- 불변식 2: BF-6 행이 세 칸(등재(EXT)·없음·2027-01-20)을 유지하고 소관 칸이 없다. 행이 사라지지 않았다(B3).\n- `check_ledger.py` rc=0(계획 시 로컬 확인 완료, ci.yml에 비면제 주석 추가 금지).\n\n## 주의사항\n- PR/push에서는 ios_tests가 계속 꺼져 있다(#345 소유자 결정 유지). 입력 없는 수동 실행 동작은 불변.\n- dispatch 실행은 macOS 슬롯 3개를 ~40분 점유한다. 한 번만 돌린다. 스위트가 #345 이후 한 번도 돌지 않았으므로 Sessions 외 클래스의 실패가 섞일 수 있다 — 범위 판정은 Sessions*UITests 기준.\n- Sessions 클래스가 실패하면 task의 완료 기준(b)은 '결과 확보'이므로 달성으로 보고 실패 내역을 BF-6 행과 검증 기록에 남긴다. 수정은 후속 슬라이스(BF-6에 남음, 소관은 이 모델).\n- 롤백: PR revert 1회.\n\n## 범위 밖(후속)\n- Sessions*UITests 실패 수정 · BF-6 해소 절 이동(전체 통과 시) — 재감지가 새 task로 잇는다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0004-bf6-ios-verify-dispatch",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/387",
+          "preparedAt": "2026-11-04T22:20:00Z",
+          "notes": "ci.yml 변경이라 push 에 workflows:write 토큰 필요(발급 가능 확인). 로컬 check_ledger.py rc=0(ci.yml 비면제 주석을 넣으면 ledger 가 깨져 제거함), YAML 파싱 OK. 열린 직후라 CI 결과 미확인 — 머지 전 ci-success 확인 필요. dispatch 실행은 executor 단계(actions:write 필요)."
+        }
+      }
+    ]
   }
 ]
