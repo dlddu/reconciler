@@ -2,7 +2,7 @@
   {
     "id": "rct_20261104-0001",
     "toBeModelId": "tbm_kubernetes-dashboard-comment-necessity",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T22:26:46Z",
     "trigger": {
       "source": "version_change",
@@ -25,6 +25,45 @@
     "assessment": {
       "reason": "to-be(docs/comment-policy)가 absent이고 as-is 주석 12,264줄/249파일이 한 번도 필요성 판정을 받지 않았다. 자동 해소될 성격이 아니며 정책 디렉터리·원장·게이트 신설과 슬라이스 단위 판정(400줄/task)이 필요해 planner에 넘긴다.",
       "assessedAt": "2026-11-04T22:27:05Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "정책 디렉터리(docs/comment-policy/README·ledger·passes)와 원장 게이트(scripts/comment-policy)를 신설하고, 파일 겹침·권한 제약이 없는 첫 슬라이스(빌드 설정 5개 + e2e spec 9개, 주석 399줄)를 판정해 20줄만 유지한다. 이번 시도의 완료 기준은 (1) 정책 디렉터리·원장·게이트 존재 및 gate 통과 (2) 슬라이스 행 8개 판정 완료이며, CI 워크플로 파일(권한 밖)·argo-submit(PR #218 겹침)·나머지 235개 L 행·E 표면은 범위 밖이다. 추가로 주석 제거로 사람 결정이 필요하지 않음을 판정기로 확인(수동 승인 미접촉).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포에 브랜치를 만들고 docs/comment-policy/ 신설(README·ledger·passes)",
+              "expectedOutcome": "정책·원장·첫 패스 상세 파일 존재"
+            },
+            {
+              "seq": 2,
+              "action": "scripts/comment-policy/measure.sh·gate.py 추가",
+              "expectedOutcome": "gate.py가 원장 불변식 통과, 집계 출력"
+            },
+            {
+              "seq": 3,
+              "action": "슬라이스 14개 파일에서 필요 사유 없는 주석 제거(유지 20줄)",
+              "expectedOutcome": "제거 줄은 주석·빈 줄뿐, 유지 사유가 passes에 기록"
+            },
+            {
+              "seq": 4,
+              "action": "PR 생성 후 executor가 CI green 확인·머지",
+              "expectedOutcome": "main에 docs/comment-policy 존재, as-is 줄 수 12264→11886"
+            }
+          ],
+          "executionGuide": "## 실행 지침 (executor)\n\n**대상 PR**: https://github.com/dlddu/kubernetes-dashboard/pull/224 (브랜치 `reconcile/rct_20261104-0001-comment-policy`). 머지는 executor 몫이다.\n\n### 순서\n1. 머지 전 확인: PR이 `review/manual-approval`을 요구하지 않는지(판정기: 케이스 MA1·MA2 미접촉, 19경로 확인됨), 열린 PR #218과 파일 겹침이 없는지(`e2e/argo-submit.spec.ts`는 이 PR에서 제외). 기본 브랜치가 앞서 있으면 rebase 충돌이 주석 줄뿐인지 본다.\n2. PR의 CI(`ci.yaml`)가 green인지 확인 → 머지(squash).\n3. 머지 뒤 검증.\n\n### 검증 방법\n- 대상 레포 main에서 `python3 scripts/comment-policy/gate.py` 종료 코드 0, 출력 `L: 행 243 (완료 8, 미판정 235)`.\n- to-be: `git rev-parse HEAD:docs/comment-policy` 가 `absent`가 아닌 해시.\n- as-is: 모델 versionScript 재실행 → `lines=11886 files=242`(PR 직전 12264/249), `unclassified=0`, `unparsed=0`. 지문은 바뀐다(정상).\n- 이 task의 완료 기준은 계획 summary의 범위(정책 디렉터리·게이트 신설 + 첫 슬라이스 판정)다. 모델 전체 정합(미판정 행 0)은 범위 밖이며 재감지가 새 task로 잇는다.\n\n### 주의\n- 되돌리기: 주석만 지우는 변경이라 revert 한 번으로 복원된다. 런타임 코드 영향 없음.\n- 머지 직전 e2e/`frontend` 빌드가 주석 제거로 깨질 일은 없지만, CI가 red면 머지하지 않는다.\n- 범위 밖(후속): `.github/workflows/ci.yaml`·`e2e.yaml` 주석 17줄과 CI에 게이트 단계 추가(`workflows` 권한 필요 — 사람 손); `e2e/argo-submit.spec.ts`(PR #218 머지 뒤); 나머지 235개 L 행·44개 E 행.\n",
+          "plannedAt": "2026-11-04T23:20:00Z"
+        },
+        "preparation": {
+          "repository": "dlddu/kubernetes-dashboard",
+          "branch": "reconcile/rct_20261104-0001-comment-policy",
+          "pullRequestUrl": "https://github.com/dlddu/kubernetes-dashboard/pull/224",
+          "preparedAt": "2026-11-04T23:20:00Z",
+          "notes": "gate.py 로컬 통과, judge.py 수동 승인 케이스 미접촉(19경로). ci.yaml 게이트 단계는 workflows 권한 없어 포함하지 않음."
+        }
+      }
+    ]
   }
 ]
