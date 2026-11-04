@@ -10585,7 +10585,7 @@
   {
     "id": "rct_20261104-0002",
     "toBeModelId": "tbm_pocket-aide-scenario-e2e",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T16:47:07Z",
     "trigger": {
       "source": "version_change",
@@ -10608,6 +10608,45 @@
     "assessment": {
       "reason": "작업 필요. 1:1 공백 53건(1:1 대상 76 − 매칭 파일 23)이 규칙 1 위반으로 남아 있고, 다수 행의 선행 인프라가 「없음」이라 지금 전용 E2E 파일을 신설할 수 있다. 롤아웃·재동기화 같은 자동 해소 성질이 아니라 유예하지 않는다(recheckAfter 없음). 고아·중복·집계 불일치는 0이라 이번 슬라이스는 공백 축소(안드로이드 파일 신설 + 선언·매핑 표·집계 갱신)에 집중하면 된다. 직전 rct_20261104-0001의 후속 슬라이스이며, 같은 모델의 열린 task는 없었다.",
       "assessedAt": "2026-11-04T16:47:42Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "gap(1:1 대상 76 중 공백 53) 가운데 선행 인프라가 「없음」이고 전부 HTTP 응답·기존 하네스(BackendApi·ApprovalCaller·AppAccount.switchUser)로 관찰되는 approval-gate #3(호출자 거부)·#4(키 소유자 격리)만 이번 슬라이스로 닫는다: iOS ApprovalCallerRejectionUITests·ApprovalOwnershipUITests 단언을 ApprovalCallerRejectionTest.kt·ApprovalOwnershipTest.kt 로 이식하고 「## e2e 매핑」을 같은 PR 에서 갱신한다. affirmations #5 는 300회 난수 표본이라 flake 위험이 커 미루고, 인프라 없이 닫히는 가장 결정적인 두 행을 골랐다(직전 시도의 CI 실패 교훈 반영, 대량 이식 기각). 완료 기준(범위): PR #378 이 main 에 머지되고 CI 에서 두 테스트가 통과하며 매칭 25·공백 51·매칭 단위 파일 27 로 불변식 (94−13−5)=25+51 이 성립한다. 범위 밖: 나머지 공백 51행(재감지가 새 task 로 잇는다). 제품 코드 무변경(테스트 하네스만 사용), 사람 소유 결정 없음, 수동 승인 케이스 비해당(머지 전 sha 확인).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #378 의 CI(android-instrumented-test, ci-success)가 완료·성공인지 확인하고 두 테스트 통과를 로그로 확인한다. 실패하면 로그를 읽어 같은 브랜치에서 고친다.",
+              "expectedOutcome": "head sha 의 필수 체크가 모두 success, ApprovalCallerRejectionTest·ApprovalOwnershipTest 통과"
+            },
+            {
+              "seq": 2,
+              "action": "main 과 충돌(특히 doc-tracker/2026-11.md 집계 숫자)이 있으면 풀고 집계를 실측 기준으로 재계산한다.",
+              "expectedOutcome": "PR 이 mergeable, 집계가 머지 시점 main 의 실측과 일치"
+            },
+            {
+              "seq": 3,
+              "action": "PR #378 을 squash 머지한다.",
+              "expectedOutcome": "main 에 두 *Test.kt 와 tracker 갱신이 착지"
+            },
+            {
+              "seq": 4,
+              "action": "main 에서 grep -H '^// 검증 시나리오:' 로 선언 줄 수 = 최상위 *Test.kt 수를 확인하고 tracker 집계가 실측과 맞는지 대조한다.",
+              "expectedOutcome": "두 파일 선언이 test-approval-gate.md#시나리오 3·4 이고 불변식 성립"
+            }
+          ],
+          "plannedAt": "2026-11-04T17:05:00Z",
+          "executionGuide": "## 순서\n1. PR #378 CI 확인 (병렬 불가 — 이후 단계의 전제).\n2. main 과 충돌(doc-tracker/2026-11.md 집계 숫자)이 있으면 풀고 집계를 실측으로 재계산 → 3. squash 머지 → 4. main 검증.\n열린 PR 중 tracker 집계를 건드리는 것이 있으면 나중에 머지하는 쪽이 매칭·공백·파일 수를 재계산한다.\n\n## 검증 방법\n- CI: `gh pr checks 378 --repo dlddu/pocket-aide` 필수 체크(ci-success, android instrumented test) success. 로그에서 `ApprovalCallerRejectionTest`·`ApprovalOwnershipTest` 통과 확인. 미완료(in_progress)는 성공이 아니다.\n- main: `grep -H '^// 검증 시나리오:' android/app/src/androidTest/java/com/dlddu/pocketaide/e2e/*Test.kt` 줄 수 = 최상위 *Test.kt 수(27), 두 파일 선언이 `test-approval-gate.md#시나리오 3`·`#시나리오 4`.\n- tracker 「집계 (실측)」 매칭 25·공백 51·비-시나리오 2, 공백 표에 approval-gate #3·#4 행이 없고 매핑 표에 있음.\n- 범위 밖(후속): approval-gate 나머지 공백 10행, affirmations #5, github-monitor 7, routines 7, scratchpad 4, session-platform 14, todo 8.\n\n## 주의사항\n- 제품 코드 무변경, 롤백은 PR revert 한 번. CI 전용 ephemeral 백엔드만 쓰며 데이터·트래픽 영향 없음.\n- #4 는 사용자 전환(AppAccount.switchUser/restoreDefaultUser)을 쓴다 — 실패하면 로그인 세션 잔류가 뒤 테스트에 번질 수 있으니 실패 시 이 테스트부터 의심한다. 15초 waitUntil 타임아웃이면 같은 sha 재실행으로 flake 여부를 가른 뒤 고친다.\n- 새 PR head sha 에 review/manual-approval 이 필요한지(대상 레포 정책) 머지 전 확인한다.\n- comment-policy ledger 가 새 주석에 실패하면 주석을 제거한다(로컬 check_ledger.py rc=0)."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0002-approval-gate-3-4",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/378",
+          "preparedAt": "2026-11-04T17:10:00Z",
+          "notes": "테스트 2개 신설(ApprovalCallerRejectionTest.kt·ApprovalOwnershipTest.kt)+tracker 갱신, 제품 코드 무변경. 로컬 check_ledger.py rc=0, 선언 27줄=최상위 *Test.kt 27개. 안드로이드 계측 테스트는 로컬 실행 불가 — PR 생성 직후라 CI 결과는 미확인이며 실행 단계가 확인한다."
+        }
+      }
+    ]
   }
 ]
