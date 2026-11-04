@@ -15059,7 +15059,46 @@
     "assessment": {
       "reason": "조치 필요(`action_required`) — 이번 창(#305)이 만든 drift는 없으나 **현재 상태**에 definition 규칙 1·5·7 기준 gap이 남고, 그중 `test-approval-gate.md#시나리오 12` gap을 맡은 열린 형제 task가 없다.\n\n근거 ①(변경 창은 무해): `c4b6bcdf…`→`67a67fde…` 는 #305(`43491af`)가 만든 것이고 `tests/` 유일한 변경은 kind 픽스처 `tests/k8s/kind/commit-status-variant.yaml` +5/−1(매칭 단위 아님)이다. to-be 는 `sc:c083… reg:e429…` 로 불변(#308 의 tracker 2줄은 등재 섹션 밖). 기계적 규칙 1~3·집계 불변식(122−3−2−8=109)·대상 레포 게이트 `check_ac_mapping.py` rc=0 은 stateSummary 참조.\n\n근거 ②(남은 gap ② — 규칙 1·7, 이 task의 몫): 🚧 행 `test-approval-gate.md#시나리오 12` 의 재검토 시점은 「사건: dlddu/pocket-aide#319 main 머지」이고 그 사건은 발생했다 — `ci.yml` 핀 `POCKET_AIDE_SHA=ea32e4182f8b` 가 곧 그 main 머지 커밋(pocket-aide `ea32e41` = #319)이고 행 스스로 「핀이 main 머지 커밋으로 고정돼 이제 쓸 수 있다」고 적었다. 기록 프록시 `pocket-aide-trace` 는 이미 존재(`tests/k8s/kind/pocket-aide-fixture.yaml`, `approval_gate_sc2.py` 사용)하는데 전용 `approval_gate_sc12.py` 는 0개다 — 규칙 1의 누락이고 규칙 7(테스트 인프라·저작 소관)이 이 모델의 몫이다.\n\n근거 ③(형제 task 중복 없음): 같은 모델 파일 162건 중 미종결은 이 task와 `rct_20261101-0001`(status `planned`)뿐이다. 그 형제 task의 계획은 gap ①(⏳ pocket-aide#3 저작·✅, #5 → 🚧)만 닫고 gap ②는 「범위 밖 … 재감지가 새 task 로 잇는다」고 명시해 제외한다 — gap ②의 열린 소유자가 없다. gap ①(⏳ pocket-aide#3·#5 의 규칙 6 등재 자격 소실 → 규칙 5 집계 불일치)은 그 형제 task가 맡고 있으므로 중복 판정의 근거가 아니다.\n\n적용 기준: 정의 판정 표 — `action_required` 는 「gap이 남아 있고, 그 gap을 맡은 열린 형제 task가 없다」일 때.\n\n반대 방향 근거(규칙과 충돌하지 않는 것): ① #305 의 Secret→ConfigMap 분리는 CI 배선 변경일 뿐 매칭 단위·시나리오 선언을 건드리지 않는다(체커의 러너 배차·케이스 미호출 검사 통과). ② 나머지 공백 7행(platform-auth-safety#9~#11·session-read#2·session-write#2·#4 의 2026-12-20, drop-token-issue#4 의 2027-01-30)은 재검토 시점이 미래라 부채로 남는다. ③ pocket-aide#5 의 ⏳ 등재는 현재 핀에서 400(`DisallowUnknownFields`)이라 운영상 성립하나 자격 소실 처리는 gap ① 슬라이스(핀 갱신)에서 한다. ④ 🚫 예외 3건·비-시나리오 파일 2건 등재는 규칙 3·4에 맞고 고아 등재는 없다.",
       "assessedAt": "2026-11-03T18:38:00Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "gap ② 만 슬라이스로 닫는다: 🚧 공백 `test-approval-gate.md#시나리오 12` 는 재검토 사건(pocket-aide#319 main 머지, 핀 ea32e41)이 이미 발생했고 하네스(approval-variant·기록 프록시)도 갖춰져 남은 것이 저작뿐이므로 전용 approval_gate_sc12.py 를 저작하고 등재(레지스트리 ✅ · 공백 행 제거 · 집계/상한 8→7)를 같은 PR 에서 정리한다(인프라·제품 코드 무변경, 가장 가역적인 경로 — PR 하나). 완료 기준: sc12 CI 통과 · 공백 7(상한 7) · 매칭 파일 110(자매 PR #306 선머지 시 그 위 상대값). 범위 밖: gap ①(pocket-aide#3·#5 — 형제 task rct_20261101-0001/PR #306)과 나머지 공백 행. 사람 소유 결정은 없다(docs/test-*.md 의 자동화 필드·tracker 갱신뿐이며 MA1 수동 승인 게이트는 대상 레포 프로세스가 처리).",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "approval_gate_sc12.py 저작: 헤더 세션의 승인 호출(create 본문 키 여섯·PocketAide 레코드 session_id/reason·승인 로그 줄), reason 누락/빈값/공백/숫자 -32602 거부(승인 요청 0), Secret 읽기만 reason 필수, 129자 헤더 버림",
+              "expectedOutcome": "approval-variant 그룹에서 sc12 통과"
+            },
+            {
+              "seq": 2,
+              "action": "test-approval-gate.md 시나리오 12 자동화 필드의 (미작성) 제거, doc-tracker 레지스트리 ✅ · 공백 행 제거 · 집계/상한 8→7 · 변경 이력",
+              "expectedOutcome": "check_ac_mapping rc=0 (규칙 6·7·8)"
+            },
+            {
+              "seq": 3,
+              "action": "comment-policy 원장 docstring 표에 sc12 행(판정 축 —) 등재",
+              "expectedOutcome": "check_comment_policy rc=0 → fmt + vet 통과"
+            },
+            {
+              "seq": 4,
+              "action": "PR CI 확인 후(수동 승인 필요 시 사람 승인 뒤) 머지",
+              "expectedOutcome": "main 에서 sc12 통과, 공백 -1 · 매칭 파일 +1"
+            }
+          ],
+          "plannedAt": "2026-11-04T12:45:00Z",
+          "executionGuide": "## 실행 순서\n1. PR https://github.com/dlddu/homelab-k3s-mcp/pull/312 (head 4b15040)의 CI(`fmt + vet` 게이트 4종 · `integration tests`의 approval-variant 그룹 `approval_gate_sc12.py`)가 green 인지 확인한다 — 계획 시점에 `ci passed` 포함 전부 success. 단일 PR이라 병렬 없음.\n2. 자매 PR #306(rct_20261101-0001, 같은 doc-tracker 집계 수정)이 먼저 머지됐으면 main 을 이 브랜치에 rebase 해 집계를 다시 맞춘다: 구현 대기 2→0, 공백 8→9(sc3 닫힘·sc5 이관 반영) 위에서 sc12 로 공백 -1, 매칭 파일 +1 (예상: 구현 대기 0 · 공백 8 · 전용 111 · 상한 8). `python3 tests/integration/check_ac_mapping.py` rc=0 으로 확인하고 푸시 뒤 CI 재확인.\n3. `docs/test-*.md` 변경이라 대상 레포 수동 승인 케이스 MA1 에 닿는다. 판정기가 `review/manual-approval` 을 붙이지 않으므로 리뷰가 `review.manualApproval` 로 남긴 대로 사람이 head 커밋에 status 를 붙인 뒤에만 머지한다.\n4. squash 머지.\n\n## 검증 방법 (계획 범위 기준)\n- 머지 후 main 에서 `python3 tests/integration/check_ac_mapping.py` rc=0, `test-approval-gate.md#시나리오 12` 가 ✅ 전용 파일이고 🚧 공백 표에서 빠져 있다. 집계(자매 PR 머지 여부에 따라): 단독이면 시나리오 122 · 예외 3 · 구현 대기 2 · 공백 7(상한 7) · 매칭 파일 110.\n- main CI `approval_gate_sc12.py` 통과 ('ok: test-approval-gate.md#시나리오 12').\n- 재감지 시 to-be(registry 섹션)·as-is(tests/ 트리)가 바뀌고 시나리오 12 gap 이 사라진다.\n\n## 주의사항\n- 되돌릴 수 없는 지점 없음: 테스트·문서만 추가, 제품 코드·픽스처·ci.yml 무변경. 실패 시 PR revert.\n- sc12 는 `ReasonedSession._session`(안쪽 세션)으로 reason 누락 호출을 만든다. 공유 헬퍼 변경 시 같이 확인.\n- 로그 단언은 slog 출력 형식(text/JSON)을 모두 허용하도록 느슨하게 썼다.\n- 머지 직전 main 대비로 집계 숫자를 다시 읽을 것(자매 PR 이 분 단위로 머지되는 레포).\n\n## 범위 밖(후속)\n- 자매 task rct_20261101-0001 의 gap ①(pocket-aide#3 · #5 등재 자격) — PR #306.\n- 시나리오 5 전용 e2e 등 나머지 🚧 공백 행."
+        },
+        "preparation": {
+          "repository": "dlddu/homelab-k3s-mcp",
+          "branch": "reconcile/rct_20261103-0001",
+          "pullRequestUrl": "https://github.com/dlddu/homelab-k3s-mcp/pull/312",
+          "preparedAt": "2026-11-04T12:45:00Z",
+          "notes": "head 4b15040 에서 ci passed · fmt+vet · integration tests(sc12 포함) 전부 success. 첫 푸시에서 comment-policy R8(docstring 원장 행 없음)로 실패해 원장 행을 더했다. docs/test-*.md 변경이라 MA1 수동 승인 대상. 자매 PR #306 과 doc-tracker 집계 충돌 가능 — 선머지 시 rebase."
+        }
+      }
+    ]
   },
   {
     "toBeModelId": "tbm_homelab-k3s-mcp-scenario-e2e",
