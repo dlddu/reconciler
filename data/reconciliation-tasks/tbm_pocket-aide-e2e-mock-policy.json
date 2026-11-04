@@ -2112,7 +2112,7 @@
   },
   {
     "toBeModelId": "tbm_pocket-aide-e2e-mock-policy",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T15:33:14Z",
     "trigger": {
       "source": "version_change",
@@ -2136,6 +2136,50 @@
     "assessment": {
       "assessedAt": "2026-11-04T15:34:12Z",
       "reason": "판정: 조치 필요(`action_required`). 이 창의 변화(#327)는 정합하게 처리됐다 — BF-5 해소가 허용목록 3행·주석·스텁 코드로 실제 반영돼 불변식 1(파일 집합 24==24)이 유지되고 B1·B2·B4·재검토 도과·B3 위반은 0이다. 그러나 원장에 열린 행 BF-6이 선행 「없음」(착수 가능)으로 남아 있고, 정의의 판정 규칙은 착수 가능 행 ≥ 1이면 `action_required`로 규정한다. BF-6은 BF-5 스텁이 이미 서빙하는 `write`·`read`·`snapshot`·`switch` 경로를 단정하는 `Sessions*UITests`(시나리오 7·8·9(가)·10·13)가 없는 상태이고 스텁이 못 만드는 turn 마커·게이트 오프 응답은 스텁 확장이 필요하다. 열린 형제 task는 없다(`rct_20261026-0001`은 `succeeded`) — 소관은 이 모델이므로 중복 착수 우려 없이 planner가 집을 수 있다. 재검토 시점 2027-01-20(가장 이른 기준선), 잔여 열린 행 1건."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "BF-6 1차 슬라이스: 새 모킹 지점 없이 BF-5 스텁 위에 시나리오 7(1·2)·8(3)·9(가)·10·13 을 단정하는 Sessions*UITests 를 더하고 원장 BF-6 행을 남은 경로로 좁힌다. 완료 기준 = 위 시나리오의 UITest 가 ios-test 에서 통과하고 지문·허용목록 1:1 이 유지되는 것. 범위 밖: 시나리오 7 의 3·4단계, 8 의 1·2단계, 9(나), 14(스텁 확장 필요) — 스텁 확장은 별도 슬라이스. 사람 소유 결정 없음, 테스트·문서만 변경.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "SessionsUITestSupport 에 시드(write)·snapshot·상태 조회 헬퍼 추가",
+              "expectedOutcome": "기존 Sessions 테스트 영향 없이 컴파일"
+            },
+            {
+              "seq": 2,
+              "action": "SessionsPromptUITests 추가 (시나리오 7 1·2단계, 8 3단계)",
+              "expectedOutcome": "빈 상태 문구 → 전송 후 출력에 프롬프트 표시·입력 비움 → 재진입해도 중복 없음"
+            },
+            {
+              "seq": 3,
+              "action": "SessionsArchiveRestoreUITests 추가 (시나리오 9 가, 10)",
+              "expectedOutcome": "아카이브 패널·복원 버튼, 열어 두기만으론 복원 안 됨, 복원 후 이전 출력+후속 프롬프트 이어붙음"
+            },
+            {
+              "seq": 4,
+              "action": "SessionsTerminalUITests 추가 (시나리오 13)",
+              "expectedOutcome": "「명령 입력」 자리표시, 응답 단계 없음, 출력에 제어 문자 없음"
+            },
+            {
+              "seq": 5,
+              "action": "docs/e2e-mocking-policy.md 원장 BF-6 행을 남은 경로로 좁힘",
+              "expectedOutcome": "B2 세 칸 유지, 지문 불변"
+            }
+          ],
+          "plannedAt": "2026-11-04T16:20:00Z",
+          "executionGuide": "## 실행 순서\n1. PR https://github.com/dlddu/pocket-aide/pull/375 의 ios-test 잡 결과 확인(새 `Sessions*UITests` 3개 클래스 + 기존 Sessions 테스트). 단계 간 의존 없음, 병렬 가능.\n2. 통과 시 머지(되돌리기: revert 커밋 — 테스트·문서만 바뀌므로 제품 영향 없음).\n\n## 검증 방법\n- ios-test 에서 `SessionsPromptUITests`·`SessionsArchiveRestoreUITests`(2 케이스)·`SessionsTerminalUITests` 통과.\n- 머지 후 모델 as-is 지문 `sites=41 files=24` / `b9a883fc…` 불변(새 모킹 지점·`mock-exception` 토큰 추가 없음).\n- 허용목록 파일 집합 == 코드 파일 집합 유지, 원장 BF-6 행이 남은 경로만 가리키는지 확인(행은 열린 채, 선행 「없음」, 재검토 2027-01-20).\n\n## 주의\n- 새 UITest 는 로컬 시뮬레이터에서 실행해 보지 못했다(계획 단계는 정적 작성). 접근성 식별자·문구는 `SessionDetailView` 에서 따왔으나 CI 에서 흔들리면 식별자/대기 시간을 고친다. 실패 시 테스트만 고치고 스텁·제품 코드는 건드리지 않는다.\n- 시나리오 10 의 `sleep(10)` 은 「1분 대기」의 축약이다(상세가 상태를 깨우지 않는지 확인 목적).\n\n## 범위 밖(후속, 재감지가 새 task 로 이음)\n응답 진행 단계 문구·1 MiB 붙여넣기(시나리오 7 의 3·4단계), 백그라운드 왕복(8 의 1·2단계), 아카이브 게이트 오프 503(9 의 (나)), turn 마커(14) — 스텁에 지연 출력/turn 마커/게이트 오프 모드(EXT) 확장이 필요하다. BF-6 은 이 항목들로 좁혀져 열린 채 남는다."
+        },
+        "preparation": {
+          "repository": "dlddu/pocket-aide",
+          "branch": "reconcile/rct_20261104-0001-sessions-uitests",
+          "pullRequestUrl": "https://github.com/dlddu/pocket-aide/pull/375",
+          "preparedAt": "2026-11-04T16:20:00Z",
+          "notes": "테스트·문서만 변경, 제품 코드·스텁 불변. 로컬 시뮬레이터 미실행(CI 로 검증)."
+        }
+      }
+    ]
   }
 ]
