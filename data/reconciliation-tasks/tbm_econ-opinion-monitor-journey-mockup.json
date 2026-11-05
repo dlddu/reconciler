@@ -4366,7 +4366,7 @@
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-journey-mockup",
-    "status": "planning",
+    "status": "planned",
     "createdAt": "2026-11-04T19:48:19Z",
     "trigger": {
       "source": "version_change",
@@ -4390,7 +4390,51 @@
     "assessment": {
       "assessedAt": "2026-11-04T19:48:54Z",
       "reason": "규칙 1 위반이 4개 여정(JRN-subject-sentiment·JRN-subject-articles·JRN-source-share·JRN-axis-share)에 남아 있고 예외 등재가 0건이라 목표(여정↔mockup 전단사)가 닫히지 않았다. 롤아웃 중인 자동 해소 변화가 아니라 한 번에 한 여정씩 페이지를 착지시키는 진행형 슬라이스 작업이므로 재확인 유예가 아니라 작업 필요로 판정한다. 직전 슬라이스(JRN-subject-trend)는 정상 착지했으므로 다음 슬라이스는 남은 4개 중 하나(예: JRN-subject-sentiment)부터, 폐기 4개 페이지·문서 철거는 해당 여정 페이지 착지 PR에서 함께 다루도록 트래커가 정한 순서를 따른다."
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "남은 미이관 현행 여정 4개 중 단계가 4개로 가장 작고 이미 착지한 JRN-subject-share·JRN-subject-trend 가 분기로 직접 가리키는 JRN-subject-sentiment 여정 페이지 1개를 슬라이스 3으로 착지시킨다 — 「여정 1개 = PR 1개」 선례(#286, #290)를 따르며 문서·정적 HTML 변경이라 revert 로 완전 롤백된다. 완료 기준(이 task의 성공): ① docs/mockups/JRN-subject-sentiment.html 이 규칙 5(a)~(i)를 충족(data-journey=JRN-subject-sentiment, data-step 4개가 여정 문서 STP 4개와 양방향 일치, data-screen/data-state 인벤토리와 mockup 인덱스 일치) ② scripts/journey-scenarios/JRN-subject-sentiment.js 추가, check-journey-mockup.py PASS(규칙 1 미충족 상한 4→3, 여정 페이지 9→10) + check-journey-flow.js PASS ③ 인덱스·허브·설계 트래커·주석 원장 동기화. 범위 밖(후속, 재감지가 새 task로 연다): JRN-subject-articles·source-share·axis-share 3개 페이지, 폐기 4개 여정의 문서·페이지·네비 삭제, 구현(web/, go/) 변경. [준비 중 확정] 같은 화면 구조 동일 규칙 때문에 폐기 예정 JRN-sentiment-shift 에 숨김 요소를 더했고, 게이트 요구로 기존 페이지 5곳의 진입 링크를 새 페이지 앵커로 전환했다. 게이트 스크립트는 수정하지 않았다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "대상 레포 main 에서 브랜치 reconcile/rct_20261104-0003-subject-sentiment-page 를 만들고 기준 게이트(check-journey-mockup.py·check-journey-flow.js)가 PASS 인 현재 상태를 실측한다.",
+              "expectedOutcome": "기준선 PASS(여정 13·페이지 9·미이관 4/4)."
+            },
+            {
+              "seq": 2,
+              "action": "docs/mockups/JRN-subject-sentiment.html 신설: 4단계를 .jstep/.screen[data-screen=sentiment] 로 그리고 대상 선택·출처 조건 토글·정규화 전/후 라디오·단위 라디오 등 실제 폼 요소와 화면 안 행동으로 전진시키며, 미분석 임계 경고·표본 부족·빈·로딩 상태와 여정 문서 §4 분기 5건을 포함한다.",
+              "expectedOutcome": "file:// 로 열리고 #STP-* 딥링크로 각 단계에 진입한다."
+            },
+            {
+              "seq": 3,
+              "action": "scripts/journey-scenarios/JRN-subject-sentiment.js 를 추가해 단계별 행동·입력·상태 도달·분기를 DOM 하네스가 굴리게 한다.",
+              "expectedOutcome": "check-journey-flow.js 가 여정 페이지 10개 모두 0 failed."
+            },
+            {
+              "seq": 4,
+              "action": "mockup 인덱스(매핑·화면/상태 인벤토리·의도적 제외, 상한 4→3), docs/index.html 행, 설계 트래커 숫자, 주석 원장 행을 갱신하고 기존 페이지의 진입 링크를 새 페이지 앵커로 전환한다.",
+              "expectedOutcome": "인덱스·허브·트래커 숫자가 실측과 일치, ci/comment-ledger 통과."
+            },
+            {
+              "seq": 5,
+              "action": "check-journey-mockup.py·check-journey-flow.js·check-mockup-render.py·check-comment-ledger.py 를 로컬 실행하고 PR 을 연다(머지하지 않음). 본문에 task id·gap·계획·검증 방법·범위 밖을 적는다.",
+              "expectedOutcome": "게이트 PASS, PR URL 확보, PR CI 전부 success."
+            }
+          ],
+          "plannedAt": "2026-11-05T00:10:00Z",
+          "executionGuide": "## 실행 지침 (rct_20261104-0003 슬라이스 3 — JRN-subject-sentiment)\n\n**PR**: https://github.com/dlddu/economic-opinion-trend-monitor/pull/298 (head 56dcffae5597da881ed27d5979cb860df2998cc8, 브랜치 `reconcile/rct_20261104-0003-subject-sentiment-page`, 분기 base b345df2 / main 은 aba0dd4 로 이동(원장 전용 커밋 #296, 충돌 없음))\n\n### 순서\n1. 사전 확인: PR #298 head sha 가 56dcffa 에서 바뀌지 않았는지, CI 필수 체크(changes·ci/comment-ledger·ci/scenario-mapping·docs/structure·docs/flow·render·required·review/manual-approval)가 success 인지 확인한다. 바뀌었으면 변경분을 재검토한다.\n2. 충돌 확인: main 이 움직였으므로(#296) mergeable 을 확인한다. 열린 #280(설계 트래커)·#220 과 파일이 겹치면 먼저 머지되는 쪽 기준으로 사소한 rebase 가 필요할 수 있다. rebase 하면 게이트를 다시 돌린다.\n3. 수동 승인: `review/manual-approval` 이 success(\"수동 승인 케이스에 닿지 않음\")임을 확인했다. 리뷰가 base 판정기로 재확인한다.\n4. squash 머지(문서·정적 HTML·검증 스크립트 변경, revert 로 롤백 가능). 단일 단계.\n\n### 검증 (4-4, 이 범위 기준)\n머지된 main 에서:\n- `python3 scripts/check-journey-mockup.py .` → PASS, 여정 13 · 여정 페이지 10 · 미이관 3(상한 3) · 규칙 5 미충족 0(상한 0) (링크 742 근방).\n- `npm install --no-save jsdom@29 && node scripts/check-journey-flow.js .` → 여정 페이지 10개 · 0 failed (1843 passed 근방, 약 4분 소요 — 백그라운드 실행).\n- `python3 scripts/check-mockup-render.py`, `python3 scripts/check-comment-ledger.py` 통과.\n- `docs/mockups/JRN-subject-sentiment.html` 의 `data-journey=\"JRN-subject-sentiment\"` 1개, `data-step` 4개가 여정 문서 STP 4개(`STP-open-subject-sentiment`·`STP-sentiment-unanalyzed`·`STP-sentiment-timeline`·`STP-sentiment-raw`)와 양방향 일치.\n- 인덱스 「규칙 1 미충족 여정 상한」 3, 허브 `docs/index.html` 에 JRN-subject-sentiment 여정 페이지 링크 존재.\n성공 기준 = 완료 기준 ①~③ 충족. 이 task 는 슬라이스 3 이므로 모델 전체 수렴이 아니라 이 범위로 succeeded 를 판정한다.\n\n### 범위 밖 (후속 — 재감지가 새 task 로 연다)\n- 미이관 3개 여정 페이지: JRN-subject-articles · JRN-source-share · JRN-axis-share (각 착지 때 해당 분기 링크를 reader 링크에서 파일 앵커로 전환; subject-sentiment 의 `JRN-subject-articles` 분기 2건은 현재 reader 링크).\n- 폐기 4개 여정(daily-scan·spike-verification·axis-contrast·sentiment-shift)의 문서·페이지·좌측 네비 삭제 — 마지막 페이지 착지 PR 에서. 이번 PR 이 sentiment-shift 에 더한 숨김 요소도 그때 사라진다. 좌측 네비 `sentiment` 는 아직 JRN-sentiment-shift.html 을 가리킨다.\n- 구현(web/, go/) 변경 및 설계 트래커 「구현 수렴 대기」 행 신설(subject select·출처 조건 토글·정규화 전/후 라디오·단위 라디오·표본 부족/차이 안내가 구현에 아직 없음 — 인덱스 인벤토리에 기록됨, 후속).\n\n### 주의사항\n- 되돌릴 수 없는 지점 없음. 실패 시 revert PR 로 롤백한다.\n- 이번 PR 은 share·trend·daily-scan·axis-contrast·spike-verification·sentiment-shift 6개 페이지의 JRN-subject-sentiment 진입 링크를 reader 링크에서 파일 앵커로 바꿨다.\n- 원장(`docs/comment-policy/ledger.md`)의 신규 시나리오 js 행은 `—`(미판정)이며 #290 선례와 같다.\n- 브라우저 실물 확인은 하지 않았다(jsdom 하네스만).\n- 머지 전 head sha 가 56dcffa 인지 확인하고, 아니면 리뷰를 다시 받는다.\n"
+        },
+        "preparation": {
+          "repository": "dlddu/economic-opinion-trend-monitor",
+          "branch": "reconcile/rct_20261104-0003-subject-sentiment-page",
+          "pullRequestUrl": "https://github.com/dlddu/economic-opinion-trend-monitor/pull/298",
+          "preparedAt": "2026-11-05T00:10:00Z",
+          "notes": "head 56dcffae5597da881ed27d5979cb860df2998cc8 (분기 base b345df2, main 은 원장 전용 커밋 #296 으로 aba0dd4 — 충돌 없음, MERGEABLE). 로컬 게이트: check-journey-mockup PASS(여정 13·페이지 10·미이관 3/3·규칙5 미충족 0), check-journey-flow PASS(1843 passed, 0 failed), check-mockup-render·check-comment-ledger 통과. PR CI 필수 체크 전부 success, review/manual-approval success(수동 승인 케이스에 닿지 않음). 브라우저 실물 확인은 안 함(jsdom만)."
+        }
+      }
+    ]
   },
   {
     "toBeModelId": "tbm_econ-opinion-monitor-journey-mockup",
