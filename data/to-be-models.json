@@ -1809,8 +1809,8 @@
         "code": "#!/usr/bin/env bash\n# to-be = 목업(시각 SSOT). docs/mockups(정적 HTML — 빌드 산출물 없음) + docs/design-system(토큰) 트리 해시 조합.\n# 런타임이 dataSource.repository(dlddu/pocket-aide)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nm=\"$(git rev-parse \"HEAD:docs/mockups\")\"\nd=\"$(git rev-parse \"HEAD:docs/design-system\")\"\nprintf 'mockups:%s design-system:%s\\n' \"$m\" \"$d\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "mockups:717c6b337943aefb7d2702dbd1ef46c777c2de2c design-system:627683f26f996795fa7c58fd3d79793fdea8a202",
-      "lastObservedAt": "2026-11-06T11:17:50Z"
+      "lastObservedVersion": "mockups:6bc95d89ebf4053ba1ae5222a3b992e58f06edbc design-system:941f1a681df7b2cedd31f20c067cb3391e97ab99",
+      "lastObservedAt": "2026-11-06T20:18:19Z"
     },
     "asIs": {
       "dataSource": {
@@ -1824,8 +1824,8 @@
         "code": "#!/usr/bin/env bash\n# as-is = 실제 구현의 렌더링 소스(2026-11-02 iOS SwiftUI 에서 안드로이드 Compose 로 전환).\n# = android/app/src/main/java/com/dlddu/pocketaide 아래 비렌더링 패키지(api·auth·push)를 뺀 소스의\n#   \"주석을 걷어낸 내용\" 지문 + android/app/src/main/res 트리 해시.\n# 주석(// · /* */ · KDoc, 중첩 포함)과 빈 줄·줄 앞뒤 공백은 해시 전에 지운다 — 주석만 바뀐 커밋이 감지를 깨우지\n# 않게(2026-11-02 worker 주석 한 줄 삭제로 빈 task 가 열린 뒤 개정). 코드·문자열(카피)·파일 추가·삭제·이름\n# 변경은 그대로 값을 바꾼다. 문자열 템플릿 안의 따옴표는 근사로 따라간다(결정적이며, 놓쳐도 민감도만 조금 준다).\n# 런타임이 dataSource.repository(dlddu/pocket-aide)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nexport LC_ALL=C\nP='android/app/src/main/java/com/dlddu/pocketaide'\nSTRIP_PY=$(cat <<'PY'\nimport hashlib, os, re, sys\nP = os.environ[\"P\"]\nSKIP = tuple(f\"{P}/{d}/\" for d in (\"api\", \"auth\", \"push\"))\nCHAR = re.compile(r\"'(?:\\\\.|[^'\\\\\\n]){1,6}'\")\n\ndef strip(src):\n    out = []; i = 0; n = len(src)\n    while i < n:\n        two = src[i:i + 2]\n        if two == \"//\":\n            j = src.find(\"\\n\", i); i = n if j < 0 else j; continue\n        if two == \"/*\":\n            depth = 1; i += 2\n            while i < n and depth:\n                if src[i:i + 2] == \"/*\": depth += 1; i += 2\n                elif src[i:i + 2] == \"*/\": depth -= 1; i += 2\n                else: i += 1\n            continue\n        if src[i:i + 3] == '\"\"\"':\n            j = src.find('\"\"\"', i + 3); j = n if j < 0 else j + 3\n            out.append(src[i:j]); i = j; continue\n        c = src[i]\n        if c == '\"':\n            j = i + 1\n            while j < n and src[j] not in '\"\\n':\n                j += 2 if src[j] == \"\\\\\" else 1\n            j = min(j + 1, n); out.append(src[i:j]); i = j; continue\n        if c == \"'\":\n            m = CHAR.match(src, i)\n            if m: out.append(m.group(0)); i = m.end(); continue\n        out.append(c); i += 1\n    return \"\\n\".join(s for s in (line.strip() for line in \"\".join(out).splitlines()) if s)\n\nh = hashlib.sha256()\npaths = sorted(p for p in sys.stdin.read().split(\"\\0\") if p and not p.startswith(SKIP))\nfor p in paths:\n    with open(p, encoding=\"utf-8\", errors=\"surrogateescape\") as fh:\n        src = fh.read()\n    body = strip(src) if p.endswith((\".kt\", \".kts\")) else src\n    h.update(p.encode() + b\"\\0\" + body.encode(\"utf-8\", \"surrogateescape\") + b\"\\0\")\nprint(h.hexdigest()[:40])\nPY\n)\nu=\"$(git ls-files -z -- \"$P\" | P=\"$P\" python3 -c \"$STRIP_PY\")\"\nr=\"$(git rev-parse \"HEAD:android/app/src/main/res\")\"\nprintf 'ui:%s res:%s\\n' \"$u\" \"$r\"\n",
         "timeoutSeconds": 60
       },
-      "lastObservedVersion": "ui:9172f3ec4c619db4818c516e63961a50926fafda res:ee98cbb87ceed92fe790ced39479d4442c13a60f",
-      "lastObservedAt": "2026-11-06T11:17:50Z"
+      "lastObservedVersion": "ui:c03e4c178b43dadd3175566cf4c5e448aa84e131 res:ee98cbb87ceed92fe790ced39479d4442c13a60f",
+      "lastObservedAt": "2026-11-06T20:18:19Z"
     }
   },
   {
