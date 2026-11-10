@@ -13981,7 +13981,7 @@
   {
     "id": "rct_20261110-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "assessing",
+    "status": "action_required",
     "trigger": {
       "detectedAt": "2026-11-10T00:18:33Z",
       "source": "version_change",
@@ -14000,6 +14000,11 @@
       "toBe": "관측 2026-11-10T00:24Z · to-be 버전 = `docs/` 트리 `fecac6b42…` — `recompute_version.py` 재계산값이 점유 currentVersion과 동일.\n· PRD 21 · 테스트 문서 21 · 가치 6 · **AC 120**(`### ACn:` 헤더 실측).\n· `docs/prd-session-create.md`에 AC7 신설(AC 119→120) — 도구는 응답을 약 20초(`WithSessionCreateWait`, 기본 20초)까지만 붙잡고, 그 안에 제어면이 답하면 AC1 결과를, 답이 없으면 `isError=false`·`pending:true`·`state:\"starting\"` 세션(이름·`workloadType`)과 `session_list`에서 같은 이름을 확인하라는 `message`를 돌려준다. 제어면 생성 요청은 호출자의 연결과 분리되어(요청 값·테넌트 신원 유지) 제어면이 답할 때까지 이어지고, 늦게 끝난 결과는 `session_create finished after the tool answered`로 로그된다. AC1 본문도 AC7로 넘어가는 문장으로 개정됐다.\n· `docs/test-session-create.md` 시나리오 7 신설(시나리오 전집 124→125) · 자동화 필드는 Go 단위 3종을 실재 이름으로 열거(통합 e2e는 「미작성」 표기).\n· tracker는 최신 월 파일 `docs/doc-tracker/2026-09.md`(레거시 `docs/doc-tracker.md` 대신 월 폴더 규약 — `index.md`가 아니라 `YYYY-MM.md`, `<!-- registry: … -->` 표식 존재). 이번 커밋이 갱신한 것은 시나리오 집계(전집 124→125 · 1:1 대상 121→122 · 공백 10→11 · 공백 등재 상한 10→11)·레지스트리 행·🚧 공백 등재 1건이다.\n· 게이트 — `scripts/check_doc_inventory.py` RC=0(문서 146 · 허브 146/146 · 끊진 링크 0) · `tests/integration/check_ac_mapping.py` RC=0(시나리오 전집 125 · 예외 3 · 구현 대기 0 · 1:1 대상 122 · 전용 파일 111 · 분할 대기 0 · 공백 11).",
       "gap": "`docs/doc-tracker/2026-09.md`의 「현재 상태 요약」은 `Acceptance Criteria: 119개(가치 연결됨 119/미연결 0)`·`테스트 문서: 21개(AC 커버됨 119/미커버 0)`로, 매트릭스의 `| session_create | V5, V3 | 6 | test-session-create |` 행은 6으로 남아 있는데 실측은 AC 120개·session_create 7개다 — definition 기준 4(tracker 집계 불일치)에 해당하고, 이번 커밋이 AC7을 PRD에 추가하며 시나리오 집계만 갱신하고 이 숫자 셋을 남긴 것이 만들었다. AC7 자체는 구현·단위 테스트·운영 배포까지 착지했고 이번 변화에서 생긴 미구현 AC·구현↔문서 불일치·문서 없는 구현은 없다.",
       "summarizedAt": "2026-11-10T00:24:00Z"
-    }
+    },
+    "assessment": {
+      "reason": "작업 필요(action_required) — definition 기준 4(tracker 불일치) gap이 이번 커밋으로 새로 생겼고, 이를 맡은 열린 형제 task가 없다.\n\n근거: 변화 구간은 커밋 `4e64eea`(#322, prd-session-create AC7) 하나다. 이 커밋은 `docs/prd-session-create.md`에 AC7을 신설해 실측 AC를 119→120으로 늘렸고 `docs/doc-tracker/2026-09.md`의 시나리오 집계(124→125·121→122·10→11)·레지스트리·🚧 공백 등재만 갱신했다. 그러나 tracker의 「현재 상태 요약」은 `Acceptance Criteria: 119개(가치 연결됨 119/미연결 0)`·`테스트 문서: 21개(AC 커버됨 119/미커버 0)`로, 매트릭스의 `| session_create | V5, V3 | 6 |` 행도 6으로 남았다 — 실측(`### ACn:` 헤더 120 · prd-session-create.md 7)과 어긋난다. 직전 관측(rct_20261107-0002) 시점엔 AC 119·session_create 6으로 일치했으니 이번 커밋이 만든 새 어긋남이다.\n\n적용 기준: ④ tracker 불일치. 「현재 상태 요약」·매트릭스가 기준 1·4의 판정 절이고(선례 rct_20260921-0015), 기준 4는 살아 있는 집계가 현재 실제와 어긋나면 선다(선례 rct_20260915-0009 — 산문 낡은 개수와 달리 살아 있는 집계 필드). 나머지 기준은 이번 변화에서 위반이 없다: ① 미구현 AC 0 — AC7은 `internal/mcp/mcp.go`에 20초 상한·`context.WithoutCancel` 분리·`pending`/`starting` 응답으로 구현됐고 테스트 문서가 열거한 Go 단위 3종이 `internal/server/session_create_wait_test.go`에 실존하며 `go build ./...` RC=0·`go test ./...` 17패키지 ok다. 나머지 119 AC는 as-is diff가 session_create 3파일뿐이라 그대로다. ② AC7 계약 불일치 0(구현·도구 설명·테스트 문서가 상한 20초·pending·`session_list` 안내로 일치). ③ 문서 없는 구현 0(도구 29종 = EXPECTED_TOOLS 29 집합 동일).\n\n반대 방향 근거: ① `session_create`의 `plugins` 스키마 불일치(advertised `maxItems:16`·`uniqueItems`·`items.pattern` 미집행)는 그대로지만 같은 모델 파일의 열린 형제 `rct_20261107-0002`(action_required)가 맡고 있어 판정을 바꾸지 않는다. ② `test-session-create.md#시나리오 7`의 통합 e2e 공백(🚧 11·재검토 2026-12-20)은 AC↔e2e 1:1 축의 자매 모델 소관이고 AC7 구현은 착지돼 있다. ③ 운영 이미지가 HEAD `4e64eead`와 같고 1/1 ready·Available=True라 롤아웃 대기가 아니다. ④ tracker 「자동화 커버리지」의 dated 산문 낡은 개수(「session_create·session_delete 전 AC(각 4 — 2026-10-16)」)는 이번 커밋이 만들지 않았다.",
+      "assessedAt": "2026-11-10T00:26:00Z"
+    },
+    "updatedAt": "2026-11-10T00:26:00Z"
   }
 ]
