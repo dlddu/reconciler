@@ -14010,7 +14010,7 @@
   {
     "id": "rct_20261111-0001",
     "toBeModelId": "tbm_homelab-k3s-mcp-docs-impl",
-    "status": "assessing",
+    "status": "action_required",
     "trigger": {
       "detectedAt": "2026-11-11T12:18:42Z",
       "source": "version_change",
@@ -14029,6 +14029,11 @@
       "toBe": "관측 2026-11-11T12:30Z · to-be 버전 `460886519a0e77b66892f15c3700f2dc2db1386a`(trigger currentVersion과 일치).\n\n**`docs/prd-session-create.md` AC7이 2026-11-11에 확장됨** — `pendingCreates`에 실리는 값: 「이름·`workloadType`·`startedAt`과 상태」 — 제어면 미응답 시 `starting`, 생성 시 `created`와 세션 `id`, 실패 시 `failed`와 제어면의 오류. 종료 항목은 약 15분 뒤 사라지고 재시작하면 잊힌다. 확인 시한은 약 6분(제어면 파드 대기 5분 + 여유).\n\n**`docs/prd-session-list.md`** — session_list이 `pendingCreates`를 함께 싣는다(계약은 `prd-session-create` AC7).\n\n**`docs/test-session-create.md` 시나리오 7** — (e) 단계(pendingCreates 상태 확인)와 Go 단위 2종(`TestSessionListReportsHowAPendingCreateEnded` · `TestSessionListOmitsPendingCreatesWhenNoneWerePending`) 추가.\n\n**`internal/mcp/toolslist.go`의 session_list description**도 같은 값들만 열거 — 「each such create's name, workloadType, startedAt and state — 'starting' … 'created' with the session id, or 'failed' with the control plane's error」.\n\n**계층 실측** — AC 헤더 120(이번 커밋 신설 0) · PRD 21 · 테스트 문서 21 · 가치 6.",
       "gap": "① 이번 커밋(#324)이 `session_list`에 `pendingCreates`를 새로 노출하며, 문서 세 곳(prd-session-create AC7 · prd-session-list · toolslist description)은 그 값을 `name·workloadType·startedAt·state`(+`created` 시 id, `failed` 시 error) 4~6필드로 열거하는데 구현은 종료 항목에 `finishedAt`를 더 실린다 — `finishedAt` 문자열은 대상 레포 전체에서 Go 코드에만 존재하고 docs/ 146개 문서에 0건이라 definition 기준 ③(문서 없는 구현)에 걸린다. ② 같은 커밋은 AC 신설 0·도구 신설 0이라 기준 ①(미구현 AC)은 늘지 않고, tracker 집계 불일치(AC 119 vs 실측 120 · session_create 행 6 vs 7)와 plugins 인자 스키마 미집행은 이번 커밋이 만든 게 아니라 이미 열린 형제 task가 맡고 있다. ③ 이번 커밋은 그 자체로 auto-resolve될 수 없다(운영 이미지가 HEAD `3a50700`로 이미 반영돼 자동 해소 대기가 아니다).",
       "summarizedAt": "2026-11-11T12:30:00Z"
-    }
+    },
+    "assessment": {
+      "reason": "작업 필요(action_required) — 이번 커밋이 만든 definition 기준 ②·③ gap이 하나 남았고, 이를 맡은 열린 형제 task가 없다.\n\n**근거**: 변화 구간은 커밋 `3a50700`(#324) 하나다. 이 커밋이 `session_list`에 `pendingCreates`를 새로 노출하며 `internal/mcp/session_create_tracker.go`(신규)가 종료 항목에 `finishedAt`을 실린다(stateSummary의 실측 페이로드 — created → {name, workloadType, startedAt, state, id, finishedAt}). 그런데 그 계약을 못박은 문서 세 곳(prd-session-create AC7 · prd-session-list.md · toolslist.go의 session_list description)은 값을 이름·workloadType·startedAt·state(+id/error) 4~6개로만 열거하는데 `finishedAt`은 어디에도 없다 — 대상 레포 전체에서 Go 코드 3곳 외 0건이다. 같은 AC7이 못박지 않은 것이 하나 더 있다: 미응답 항목은 `trackedCreateAbandon`(1시간) 뒤 조용히 사라지는데 문서는 「끝난 항목은 약 15분 뒤 사라지고」만 적고 있다. 둘 다 AC7 한 절의 문면 보강으로 닫힌다.\n\n**적용 기준**: ②(PRD가 계약으로 못박은 값과 코드가 다르다) + ③(코드에만 있는 사용자 대면 동작). 선례 rct_20260918-0004가 PRD 본문에 없던 응답 필드를 planner 슬라이스로 보낸 것과 같은 종류다.\n\n**반대 방향 근거**: 문서가 못박은 값(4~6필드·state 3값·15분 소멸·재시작 시 소실·확인 시한 6분)은 구현과 모두 일치하고, ①은 늘지 않았다(AC 신설 0 — 120 유지) ④도 체커와 tracker 집계가 일치한다(125/3/0/122/111/0/11). plugins 스키마 미집행은 rct_20261107-0002가, tracker AC 수 불일치(119 vs 실측 120 · session_create 행 6 vs 7)는 rct_20261110-0001이 이미 맡고 있어 중복 개설하지 않는다. 게이트 6종은 전부 rc=0이고 운영 이미지도 HEAD `3a50700`이라 자동 해소 대기가 아니다.",
+      "assessedAt": "2026-11-11T12:34:00Z"
+    },
+    "updatedAt": "2026-11-11T12:34:00Z"
   }
 ]
