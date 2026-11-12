@@ -7473,7 +7473,7 @@
   {
     "id": "rct_20261112-0001",
     "toBeModelId": "tbm_session-platform-docs-impl",
-    "status": "assessing",
+    "status": "action_required",
     "trigger": {
       "detectedAt": "2026-11-12T01:18:26Z",
       "source": "version_change",
@@ -7492,6 +7492,10 @@
       "toBe": "2026-11-12T01:22Z 관측 · 러너 계약으로 재계산한 to-be docs 해시 c5ddce42 = 점유 트리거와 일치 · AC-E7 개정(구독 = 플랫폼 Secret의 oauth-token, 인증 풀·대화형 로그인 없음)·agent-auth-pool.md에서 claude-code 풀 삭제·test/claude-code-workload.md 시나리오 10과 test/e2e.md 예외 행 개정·doc-tracker/2026-11.md에 2026-11-12 변경 이력 행 추가 · tracker 집계 규칙 스크립트로 독립 재계산한 값 PRD 15 · AC 72 · 테스트 문서 14 · 커버 65/72 · 미커버 AC-A4+AC-G1~AC-G6 (cd09201과 동일한 값) · AC-E6의 플랫폼 Secret 키 나열은 claude-code-workload.md 117행에 auth-token·k3s-mcp-token 두 개 그대로 · check-scenario-mapping.sh PASS(시나리오 76개 = 매칭 5 + 예외 11 + 유예 60)",
       "gap": "AC-E6이 규정한 플랫폼 Secret claude-code-credentials의 키 집합이 이번 변경으로 늘어난 필수 키 oauth-token을 담지 않고(117행은 auth-token·k3s-mcp-token 두 개), 같은 AC의 「주 컨테이너에는 실제 공급자 자격 증명을 주입하지 않고」와 달리 구현은 그 Secret의 oauth-token을 주 컨테이너 env로 주입한다. 직전 cd09201의 AC-E6 문장과 구현을 대조하면 이번 창(#228)이 만든 불일치다. 남은 트래커 집계 불일치(월파일 AC 70·커버 64/70, index.md AC 67/67·커버 61/67, doc-structure-state.md)와 AC-G1~G6 테스트 문서 부재는 이번 창이 만들지 않았다.",
       "summarizedAt": "2026-11-12T01:22:27Z"
+    },
+    "assessment": {
+      "reason": "action_required — 이번 창(#228)이 만든 AC-E6↔구현의 자격 증명 배치 불일치를 맡은 열린 형제 task가 없다.\n\n근거: 러너 계약(새 클론·허용목록 env)으로 재측정한 버전이 점유 트리거와 일치한다(as-is control-plane:647973c9·data-plane:88a8bc27·web:04fee5f1, to-be docs c5ddce42, 대상 HEAD 03378c0). 변경 창은 cd09201→03378c0 커밋 1건(#228, 24 files +227/-936)이고, AC-E7이 「구독 = 플랫폼 Secret의 oauth-token, 인증 풀 없음」으로 개정됐다. 구현도 그 개정에 맞춰 내려앉았다 — AuthPoolFor에서 claude-code를 빼고, 구독 모드 주 컨테이너에 claude-code-credentials/oauth-token을 CLAUDE_CODE_OAUTH_TOKEN 필수 secretKeyRef로 넣고, 게이트웨이 모드의 credential-proxy sidecar는 그대로 두었다(client_orchestrator.go buildPod). 그런데 그 Secret의 키 집합과 주입 위치를 규정한 AC-E6(claude-code-workload.md 116~117행)은 이번 창에서 손대지 않았다. 117행은 플랫폼 Secret의 키를 auth-token·k3s-mcp-token 두 개로 열거하고 「주 컨테이너에는 실제 공급자 자격 증명을 주입하지 않고」라고 적는데, oauth-token은 그 Secret의 필수 세 번째 키가 되었고 실제 공급자 자격 증명이 주 컨테이너 env로 주입된다. 직전 cd09201의 AC-E6 문장은 그대로였고 그때 그 Secret에는 두 키만 있었고 주 컨테이너의 공급자 자격 증명은 풀 슬롯 파일(.credentials.json)에서 왔으므로, 이 불일치는 이번 창이 새로 만든 것이다.\n\n적용 기준: drift 판정 기준 2(구현된 동작이 대응 AC와 어긋나면 drift) · to-be 조건 1(각 AC가 구현·검증과 함께 정합할 것) · to-be 조건 4(코드의 계약이 문서에 표현되고 맞을 것).\n\n반대 방향 근거: AC-E7 자체는 미구현 AC가 아니다 — 개정된 AC-E7의 pod spec·거부 규칙·redaction 요구가 구현과 테스트 문서(시나리오 10)·e2e 예외 행에 함께 반영됐고 build와 단위·통합 테스트가 통과했다(data-plane ok, control-plane ok, SubscriptionPodShape·GatewayPodUnchanged PASS). 이번 창은 AC·시나리오 수를 바꾸지 않았다(독립 재계산이 cd09201과 같은 AC 72·커버 65/72·미커버 7)라서 트래커 집계 불일치와 AC-G1~G6 미검증은 이번 창이 만든 것이 아니며, 그 잔여 gap은 rct_20261105-0001·rct_20261109-0001·rct_20261110-0001·rct_20261111-0001이 이미 맡고 있다. AC-E6의 이 자격 증명 배치 gap은 그 넷 중 아무도 맡지 않는다.",
+      "assessedAt": "2026-11-12T01:22:27Z"
     }
   }
 ]
