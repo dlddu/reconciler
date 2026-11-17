@@ -4,7 +4,8 @@
 # 스킬 생성은 자동화 대상이 아니다: 지침이나 계약을 바꿀 때 사람이 수동으로 돌리고, 통과한 생성본
 # (work-planner-skill 아티팩트)을 plugin-marketplace의 plugins/reconciler-data-plane 에 PR로 올린다.
 #
-#   generate  간결한 지침(.github/minimax/work-planner-brief.md)만 주고 mcode가 레포를 직접 읽어 SKILL.md를 작성한다.
+#   generate  간결한 지침 — 메인(.github/minimax/work-planner-brief.md, 핵심 규칙) + 서브(work-planner-brief-sub.md,
+#             품질 보조 규칙)를 이어 한 프롬프트로 — 만 주고 mcode가 레포를 직접 읽어 SKILL.md를 작성한다.
 #             기존 스킬 본문은 모델에 노출하지 않는다(plugin-marketplace를 체크아웃하지 않고 MCP도 붙이지 않는다).
 #   validate  생성물 정적 검증(--profile work-planner: 형식 · 계획 단계 계약 커버리지 · 금지 패턴 · 보조 스크립트 문법).
 #   test      생성본을 운영 계획(reconciler-work-planner.yml)과 같은 흐름(러너 점유 → 스킬 계획 → 결과 점검)으로
@@ -91,9 +92,14 @@ jobs:
           MODEL: ${{ inputs.minimax_model }}
         run: |
           out="$RUNNER_TEMP/out"; mkdir -p "$out/logs" "$GITHUB_WORKSPACE/ws/$SKILL_REL"
-          test -f harness/.github/minimax/work-planner-brief.md || { echo "::error::지침 파일 없음: work-planner-brief.md"; exit 1; }
-          sed -e "s#{{SKILL_DIR}}#$SKILL_REL#g" -e "s#{{REPO_DIR}}#./reconciler#g" \
-            harness/.github/minimax/work-planner-brief.md > "$out/logs/prompt.md"
+          for f in work-planner-brief.md work-planner-brief-sub.md; do
+            test -f "harness/.github/minimax/$f" || { echo "::error::지침 파일 없음: $f"; exit 1; }
+          done
+          {
+            cat harness/.github/minimax/work-planner-brief.md
+            printf '\n\n---\n\n'
+            cat harness/.github/minimax/work-planner-brief-sub.md
+          } | sed -e "s#{{SKILL_DIR}}#$SKILL_REL#g" -e "s#{{REPO_DIR}}#./reconciler#g" > "$out/logs/prompt.md"
           echo "brief: $(wc -c < "$out/logs/prompt.md") bytes"
           args=(exec --input - --cwd "$GITHUB_WORKSPACE/ws" --permission full
                 --output-format stream-json --timeout 25m
