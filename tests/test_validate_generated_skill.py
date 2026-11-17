@@ -136,6 +136,9 @@ PLANNER_BODY = """
 4. 커밋 `plan(<tbm>/<rct>): draft plan` … `planned`로 전이. 스키마는 절대 수정하지 않는다.
 5. `git pull --rebase` 후 push. 대상 레포 PR은 머지하지 않는다.
 6. 대상 레포는 `github_app_installation_token`으로 접근한다.
+7. summary에 gap 대조표를 넣는다 — gap 항목과 정의가 이 task에 지정한 의무를 한 행씩, 닫는 seq 또는 범위 밖 사유와 이어받는 주체.
+8. 완료 기준은 범위 밖 항목이 포함된 상태를 주장하지 않는다.
+9. 근거는 정의 원문과 계획 단계 규칙을 구분해 인용한다.
 """
 
 
@@ -176,6 +179,20 @@ class PlannerProfileTest(unittest.TestCase):
         self.assertTrue(any("PR 머지" in e for e in rep.errors))
         rep = self.check(extra={"scripts/x.sh": "gh pr merge 1\n"})
         self.assertTrue(any("PR 머지" in e for e in rep.errors))
+
+    def test_scope_coverage_contract_is_required(self):
+        rep = self.check(PLANNER_BODY.replace("gap 대조표", "범위 정리").replace("이어받는 주체", "남김"))
+        joined = "\n".join(rep.errors)
+        self.assertIn("gap 대조표", joined)
+        self.assertIn("이어받는 주체", joined)
+
+    def test_redetection_promise_is_forbidden(self):
+        # 실제 사고(2026-11-04 시범 3회차)를 낸 생성본의 문장.
+        rep = self.check(PLANNER_BODY + "\n5. **범위 밖 잔여** — 이번 슬라이스가 닫지 않은 축과, 뒤의 재감지가 새 task로 잇는다는 사실.\n")
+        self.assertTrue(any("재감지" in e for e in rep.errors))
+        # 금지로 서술한 줄은 통과한다.
+        rep = self.check(PLANNER_BODY + "\n- 「뒤의 재감지가 이어받는다」는 기대는 이어받는 주체로 적지 않는다.\n")
+        self.assertFalse(any("재감지" in e for e in rep.errors))
 
 
 
