@@ -69,6 +69,9 @@ PLANNER_REQUIRED = [
     ("push 전 최신화(pull --rebase)", [r"pull\s+--rebase"]),
     ("스키마 검증", [r"jsonschema", r"\bvalidat"]),
     ("점유된 task 입력(task_id)", [r"\btask_id\b"]),
+    # 범위 축소 방지 — gap 항목·정의가 지정한 의무를 하나씩 닫음/범위 밖으로 대조하고, 범위 밖에는 이어받는 주체를 단다.
+    ("gap 대조표", [r"대조\s*표"]),
+    ("범위 밖 항목의 이어받는 주체", [r"이어받는\s*주체", r"이어받을\s*주체"]),
 ]
 
 PLANNER_RECOMMENDED = [
@@ -78,6 +81,9 @@ PLANNER_RECOMMENDED = [
     RECOMMENDED[3],  # k3s MCP 도구
     ("롤백 절차", [r"롤백|rollback|되돌"]),
     ("머지 금지(실행은 executor 몫)", [r"머지[^\n]{0,40}(않|금지|말)", r"merge[^\n]{0,40}(not|never)"]),
+    ("정의가 지정한 의무 대조", [r"정의[^\n]{0,30}(지정|맡긴)[^\n]{0,20}의무"]),
+    ("완료 기준이 범위 밖을 주장하지 않음", [r"완료\s*기준[^\n]{0,80}범위\s*밖", r"범위\s*밖[^\n]{0,80}완료\s*기준"]),
+    ("근거 출처 구분(정의 원문 vs 스킬 규칙)", [r"계획\s*단계\s*규칙", r"스킬[^\n]{0,20}규칙[^\n]{0,40}정의"]),
 ]
 
 REVIEW_REQUIRED = [
@@ -184,7 +190,9 @@ EXECUTOR_FORBIDDEN = [
 PROFILES = {
     "drift-detector": ("reconciler-drift-detector", REQUIRED, RECOMMENDED, []),
     "work-planner": ("reconciler-work-planner", PLANNER_REQUIRED, PLANNER_RECOMMENDED,
-                     [("PR 머지(계획 단계 금지)", r"gh\s+pr\s+merge|/pulls/[^\s/]+/merge\b")]),
+                     [("PR 머지(계획 단계 금지)", r"gh\s+pr\s+merge|/pulls/[^\s/]+/merge\b"),
+                      # 재감지는 버전이 바뀔 때만 돌고 남은 항목을 잡는다는 보장이 없다 — 범위 밖의 이어받는 주체로 약속하지 않는다.
+                      ("재감지가 범위 밖을 잇는다는 약속", r"재감지[^\n]{0,30}(잇는다|이어받는다|이어\s*간다)")]),
     "work-review": ("reconciler-work-review", REVIEW_REQUIRED, REVIEW_RECOMMENDED, REVIEW_FORBIDDEN),
     "work-executor": ("reconciler-work-executor", EXECUTOR_REQUIRED, EXECUTOR_RECOMMENDED, EXECUTOR_FORBIDDEN),
 }
