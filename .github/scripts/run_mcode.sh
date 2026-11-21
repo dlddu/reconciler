@@ -9,7 +9,7 @@
 #   - 1·2차 합계가 budget(기본 4200초 = 70분)을 넘지 않게 2차 --timeout을 남은 예산으로 준다. 남은 예산이 300초
 #     미만이면 재시도하지 않는다.
 #   - 대화 기록: <out-dir>/transcript.jsonl(마지막 시도), 1차는 transcript-attempt1.jsonl로 옮긴다.
-#   - 환경: MODEL(선택, --model), MCODE_UNSET(공백 구분 — mcode 환경에서 뺄 변수).
+#   - 환경: MODEL(선택, --model), EFFORT(선택, --effort — none이면 넘기지 않는다), MCODE_UNSET(공백 구분 — mcode 환경에서 뺄 변수).
 #   - GITHUB_OUTPUT이 있으면 exit_code·attempts를 쓴다. 종료 코드는 항상 0(결과 점검이 판정한다).
 set -uo pipefail
 
@@ -19,6 +19,7 @@ mkdir -p "$out"
 base_args=(exec --input - --cwd "$cwd" --permission full --output-format stream-json
            --output-last-message "$out/final-message.md" --diagnostics-dir "$out/diagnostics")
 [ -n "${MODEL:-}" ] && base_args+=(--model "$MODEL")
+[ -n "${EFFORT:-}" ] && [ "$EFFORT" != none ] && base_args+=(--effort "$EFFORT")
 unset_args=()
 for v in ${MCODE_UNSET:-}; do unset_args+=(-u "$v"); done
 

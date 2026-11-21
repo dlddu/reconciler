@@ -48,6 +48,10 @@ on:
         description: "mcode 모델 override(<provider>/<model>, 예: minimax/MiniMax-M3). 비우면 CLI 기본값"
         required: false
         default: ""
+      minimax_effort:
+        description: "mcode 추론 effort(--effort). 비우면 max, 'none'이면 넘기지 않는다(모델 기본값 — effort를 지원하지 않는 모델용)"
+        required: false
+        default: "max"
       rehearse_target:
         description: "리허설: 실제 approved task 지목(<tbm>/<rct> 등). 주면 생성·검증·test 대신 운영 실행을 샌드박스에서 끝까지 돈다"
         required: false
@@ -102,6 +106,7 @@ jobs:
         id: gen
         env:
           MODEL: ${{ inputs.minimax_model }}
+          EFFORT: ${{ inputs.minimax_effort || 'max' }}
         run: |
           out="$RUNNER_TEMP/out"; mkdir -p "$out/logs" "$GITHUB_WORKSPACE/ws/$SKILL_REL"
           for f in work-executor-brief.md work-executor-brief-sub.md; do
@@ -118,6 +123,7 @@ jobs:
                 --output-last-message "$out/logs/final-message.md"
                 --diagnostics-dir "$out/logs/diagnostics")
           [ -n "$MODEL" ] && args+=(--model "$MODEL")
+          [ -n "$EFFORT" ] && [ "$EFFORT" != none ] && args+=(--effort "$EFFORT")
           set +e
           env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL \
             mcode "${args[@]}" < "$out/logs/prompt.md" > "$out/logs/transcript.jsonl" 2> "$out/logs/stderr.log"
@@ -283,6 +289,7 @@ jobs:
         id: run
         env:
           MODEL: ${{ inputs.minimax_model }}
+          EFFORT: ${{ inputs.minimax_effort || 'max' }}
           WS: ${{ steps.fx.outputs.ws_dir }}
           REPO: ${{ steps.fx.outputs.repo_dir }}
           TARGET: ${{ steps.fx.outputs.target_git_dir }}
@@ -300,6 +307,7 @@ jobs:
                 --output-last-message "$OUT/logs/final-message.md"
                 --diagnostics-dir "$OUT/logs/diagnostics")
           [ -n "$MODEL" ] && args+=(--model "$MODEL")
+          [ -n "$EFFORT" ] && [ "$EFFORT" != none ] && args+=(--effort "$EFFORT")
           refs() { git --git-dir "$TARGET" for-each-ref --format='%(refname) %(objectname)'; }
           pre_refs=$(refs)
           for attempt in 1 2; do
@@ -610,6 +618,7 @@ jobs:
         if: steps.claim.outputs.claimed == 'true'
         env:
           MODEL: ${{ inputs.minimax_model }}
+          EFFORT: ${{ inputs.minimax_effort || 'max' }}
           TASK_ID: ${{ steps.claim.outputs.task_id }}
           MODEL_ID: ${{ steps.claim.outputs.model_id }}
           CLAIM_COMMIT: ${{ steps.claim.outputs.claim_commit }}

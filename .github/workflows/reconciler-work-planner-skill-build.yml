@@ -38,6 +38,10 @@ on:
         description: "mcode 모델 override(<provider>/<model>, 예: minimax/MiniMax-M3). 비우면 CLI 기본값"
         required: false
         default: ""
+      minimax_effort:
+        description: "mcode 추론 effort(--effort). 비우면 max, 'none'이면 넘기지 않는다(모델 기본값 — effort를 지원하지 않는 모델용)"
+        required: false
+        default: "max"
       synthetic_ci:
         description: "test 대역 PR의 합성 CI 결론 — success(기본) · failure(매 head 실패: 고칠 수 없는 CI 실패 경로) · fail-first(첫 head만 실패) · off"
         required: false
@@ -90,6 +94,7 @@ jobs:
         id: gen
         env:
           MODEL: ${{ inputs.minimax_model }}
+          EFFORT: ${{ inputs.minimax_effort || 'max' }}
         run: |
           out="$RUNNER_TEMP/out"; mkdir -p "$out/logs" "$GITHUB_WORKSPACE/ws/$SKILL_REL"
           for f in work-planner-brief.md work-planner-brief-sub.md; do
@@ -106,6 +111,7 @@ jobs:
                 --output-last-message "$out/logs/final-message.md"
                 --diagnostics-dir "$out/logs/diagnostics")
           [ -n "$MODEL" ] && args+=(--model "$MODEL")
+          [ -n "$EFFORT" ] && [ "$EFFORT" != none ] && args+=(--effort "$EFFORT")
           set +e
           env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL \
             mcode "${args[@]}" < "$out/logs/prompt.md" > "$out/logs/transcript.jsonl" 2> "$out/logs/stderr.log"
@@ -340,6 +346,7 @@ jobs:
         if: steps.claim.outputs.claimed == 'true'
         env:
           MODEL: ${{ inputs.minimax_model }}
+          EFFORT: ${{ inputs.minimax_effort || 'max' }}
           TASK_ID: ${{ steps.claim.outputs.task_id }}
           MODEL_ID: ${{ steps.claim.outputs.model_id }}
           FROM_STATUS: ${{ steps.claim.outputs.from_status }}
@@ -357,6 +364,7 @@ jobs:
                 --output-last-message "$OUT/logs/final-message.md"
                 --diagnostics-dir "$OUT/logs/diagnostics")
           [ -n "$MODEL" ] && args+=(--model "$MODEL")
+          [ -n "$EFFORT" ] && [ "$EFFORT" != none ] && args+=(--effort "$EFFORT")
           set +e
           env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL -u SOURCE_GITHUB_TOKEN \
             mcode "${args[@]}" < "$OUT/logs/prompt.md" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"

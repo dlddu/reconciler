@@ -38,6 +38,10 @@ on:
         description: "mcode 모델 override(<provider>/<model>, 예: minimax/MiniMax-M3). 비우면 CLI 기본값"
         required: false
         default: ""
+      minimax_effort:
+        description: "mcode 추론 effort(--effort). 비우면 max, 'none'이면 넘기지 않는다(모델 기본값 — effort를 지원하지 않는 모델용)"
+        required: false
+        default: "max"
 
 # concurrency 그룹을 두지 않는다 — 어느 job도 GitHub에 쓰지 않고(test는 샌드박스) 결과는 실행별 아티팩트다.
 
@@ -85,6 +89,7 @@ jobs:
         id: gen
         env:
           MODEL: ${{ inputs.minimax_model }}
+          EFFORT: ${{ inputs.minimax_effort || 'max' }}
         run: |
           out="$RUNNER_TEMP/out"; mkdir -p "$out/logs" "$GITHUB_WORKSPACE/ws/$SKILL_REL"
           for f in drift-detector-brief.md drift-detector-brief-sub.md; do
@@ -101,6 +106,7 @@ jobs:
                 --output-last-message "$out/logs/final-message.md"
                 --diagnostics-dir "$out/logs/diagnostics")
           [ -n "$MODEL" ] && args+=(--model "$MODEL")
+          [ -n "$EFFORT" ] && [ "$EFFORT" != none ] && args+=(--effort "$EFFORT")
           set +e
           env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL \
             mcode "${args[@]}" < "$out/logs/prompt.md" > "$out/logs/transcript.jsonl" 2> "$out/logs/stderr.log"
@@ -333,6 +339,7 @@ jobs:
         if: steps.claim.outputs.claimed == 'true'
         env:
           MODEL: ${{ inputs.minimax_model }}
+          EFFORT: ${{ inputs.minimax_effort || 'max' }}
           TASK_ID: ${{ steps.claim.outputs.task_id }}
           MODEL_ID: ${{ steps.claim.outputs.model_id }}
           CLAIM_REASON: ${{ steps.claim.outputs.claim_reason }}
@@ -349,6 +356,7 @@ jobs:
                 --output-last-message "$OUT/logs/final-message.md"
                 --diagnostics-dir "$OUT/logs/diagnostics")
           [ -n "$MODEL" ] && args+=(--model "$MODEL")
+          [ -n "$EFFORT" ] && [ "$EFFORT" != none ] && args+=(--effort "$EFFORT")
           set +e
           env -u ACTIONS_ID_TOKEN_REQUEST_TOKEN -u ACTIONS_ID_TOKEN_REQUEST_URL -u SOURCE_GITHUB_TOKEN \
             mcode "${args[@]}" < "$OUT/logs/prompt.md" > "$OUT/logs/transcript.jsonl" 2> "$OUT/logs/stderr.log"

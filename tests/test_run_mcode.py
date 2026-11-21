@@ -71,6 +71,22 @@ class RunMcodeTest(unittest.TestCase):
         self.assertEqual(outputs, {"exit_code": "4", "attempts": "2"})
         self.assertFalse((self.fake_dir / "args-3").exists())
 
+    def test_effort_is_passed_on_every_attempt(self):
+        self.env["EFFORT"] = "max"
+        self.run_script(["retryable", "ok"])
+        self.assertIn("--effort max", (self.fake_dir / "args-1").read_text())
+        self.assertIn("--effort max", (self.fake_dir / "args-2").read_text())
+
+    def test_effort_none_or_unset_is_not_passed(self):
+        for value in ("none", None):
+            with self.subTest(effort=value):
+                self.env.pop("EFFORT", None)
+                if value:
+                    self.env["EFFORT"] = value
+                (self.fake_dir / "count").unlink(missing_ok=True)
+                self.run_script(["ok"])
+                self.assertNotIn("--effort", (self.fake_dir / "args-1").read_text())
+
     def test_unset_env_is_removed_from_mcode(self):
         (self.fake_dir / "plan").write_text("ok\n")
         probe = self.tmp / "bin" / "mcode"
