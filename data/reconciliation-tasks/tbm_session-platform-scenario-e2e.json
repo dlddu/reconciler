@@ -5819,7 +5819,7 @@
   {
     "id": "rct_20261121-0001",
     "toBeModelId": "tbm_session-platform-scenario-e2e",
-    "status": "assessing",
+    "status": "action_required",
     "trigger": {
       "detectedAt": "2026-11-21T12:17:57Z",
       "source": "version_change",
@@ -5834,6 +5834,10 @@
       "toBe": "## to-be — 정의 규칙 1~6이 요구하는 상태\n\n- **규칙 1** 예외·유예 어디에도 등재되지 않은 모든 시나리오가 매칭 단위 파일 정확히 1개 → 현 상태 공백 0, 중복 0\n- **규칙 2** 매칭 단위 파일은 실재 시나리오 정확히 1개만 선언. 뒤집어서 매칭 단위 밖 파일의 선언은 유예 표 `현행 대체 검증`과 같은 쌍이어야 하고, **선언과 등재 중 한쪽만 낡는 것을 막기 위해 둘을 대조한다**\n- **규칙 3** 비-시나리오 파일은 허용 유형이어도 등재 SSOT에 올려야 함 → `smoke.spec.ts` 등재됨\n- **규칙 4** 예외(영구 면제)는 **원리적으로** 곤란한 시나리오만. 「**'지금은 둘 수 없다'는 예외 사유가 아니다** — 그것은 규칙 5다」\n- **규칙 5** 유예(임시 보류)의 `현행 대체 검증`은 그 시나리오의 검증이 **실제로 돌고 있는 자리**를 가리켜야 한다(그 행이 drift가 아닌 근거이므로). 4칸(사유·현행 대체 검증·소관·해제 조건)\n- **규칙 6** (시나리오−예외−유예)=(매칭 파일 수) → 현 상태 86−13−67=6=매칭 파일\n- **추적 방식** as-is = `web/e2e` 하위 트리 해시 + `control-plane/test/` 최상위 `e2e_*_test.go` blob 집합 지문. 후자는 매칭 단위가 아니지만 **예외·유예 행의 대체 검증을 이루므로 그 증감이 판정에 영향을 준다**",
       "gap": "이번 창(2026-11-21, `docs/test/codex-task-workload.md` 1줄)이 `codex-task-workload.md#시나리오 4`의 기대 결과에 「고르지 않은 세션의 주 컨테이너는 그 변수를 `codex-task-config`의 선택 키 `reasoning-effort`에서 받는다」는 새 갈래를 붙였지만, 그 시나리오를 비-drift로 붙드는 유예 행의 `현행 대체 검증`(`control-plane/test/e2e_codex_task_4_effort_test.go`)은 byte 그대로이고 새 갈래를 검증하지 않는다(테스트 1개, `valueFrom`/`configMapKeyRef` 언급 0건) — 새 갈래를 단언하는 것은 `control-plane/test/auth_pool_orchestrator_test.go`의 `TestCodexTask_DefaultEffortFromConfigMap`이다. as-is 지문(api `4c2f6cd3…`)이 2026-11-15부터 불변이라 대체 검증 파일은 창 이후 갱신되지 않았고, 규칙 2의 선언↔등재 대조와 규칙 5의 유예 행 전제가 깨졌다. 구조 불변식(규칙 1·3·6·집계 86/13/67/6/0·공백 0·게이트 rc=0)과 다른 잔여 gap은 이 창이 만들지 않았다.",
       "summarizedAt": "2026-11-21T12:24:43Z"
+    },
+    "assessment": {
+      "reason": "조치 필요(action_required) — 이번 창이 만든 새 gap 1건이 있고, 이를 맡은 열린 형제 task가 없다.\n\n근거(관측): 재계산 버전은 점유 currentVersion과 바이트 동일(to-be `c2775eac…` / as-is `api:4c2f6cd3… web:e6689727…`, HEAD `e4f79a4`=#263). to-be 트리 변화는 `docs/test/codex-task-workload.md` 1줄뿐이고 그 줄은 `codex-task-workload.md#시나리오 4` 기대 결과에 「고르지 않은 세션의 주 컨테이너는 그 변수를 `codex-task-config`의 선택 키 `reasoning-effort`에서 받는다」를 추가한다. 그 시나리오를 비-drift로 붙드는 유예 행은 현행 대체 검증 = `control-plane/test/e2e_codex_task_4_effort_test.go`, 근거 = 「그 Go 파일이 지금 이 시나리오를 온전히 검증한다」인데, 그 파일은 테스트 함수 1개(`TestCodexTask4_EffortIsFixedAtCreateAndReachesThePod`)와 `CODEX_REASONING_EFFORT=high` 단언만 가질 뿐 `valueFrom`·`configMapKeyRef`·`codex-task-config` 언급이 0건이다. 새 갈래를 단언하는 곳은 `control-plane/test/auth_pool_orchestrator_test.go:120 TestCodexTask_DefaultEffortFromConfigMap`다. as-is 지문 api `4c2f6cd3…`는 2026-11-15 관측값과 동일해 대체 검증 파일이 창 이후 갱신되지 않았음이 지문으로 확인된다.\n\n적용 기준: 정의 규칙 2의 「선언과 등재 중 한쪽만 낡는 것을 막기 위해 둘을 대조한다」, 규칙 5의 유예 행 전제(현행 대체 검증은 그 시나리오의 검증이 실제로 돌고 있는 자리를 가리켜야 drift가 아니다), 그리고 정의의 추적 방식 「as-is … `e2e_*_test.go` blob 집합 지문 … 예외·유예 행의 대체 검증을 이루므로 그 증감이 판정에 영향을 준다」.\n\n반대 방향(정의와 충돌하지 않음): 구조 불변식은 모두 충족이다 — 시나리오 86·매핑 6·예외 13·유예 67·비-시나리오 1, 공백 0, 예외∩유예 0, (86−13−67)=6=매칭 파일, 규칙 2 역조항 41쌍 ↔ 유예 표 일치, 레포 게이트 rc=0. 11-13 이후 바뀐 e2e Go 파일은 `e2e_e2_prompt_invocation_test.go` 1개(문구만)이고 `web/e2e`는 무변경이라 다른 유예 행은 낡지 않았다. 잔여 gap 2건은 열린 형제 task가 이미 맡고 있다 — `rct_20261106-0001`은 예외 표 2행(`lifecycle.md#시나리오 1`·`approval-gate.md#시나리오 5`)의 규칙 4 등재 위반, `rct_20261113-0002`는 `claude-code-workload.md#시나리오 7`/`e2e_e6_credential_placement_test.go`의 현행 대체 검증 낡음이며, 이번 gap의 대상(`codex-task-workload.md#시나리오 4`·`e2e_codex_task_4_effort_test.go`)은 어느 쪽 task의 기록에도 없다.",
+      "assessedAt": "2026-11-21T12:24:53Z"
     }
   }
 ]
