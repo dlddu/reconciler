@@ -214,6 +214,7 @@ REVIEW_BODY = """
 5. `data/reconciliation-tasks/<model>.json` 커밋 `review(<tbm>/<rct>): approved` → `git pull --rebase` 후 push.
 6. 판정 후 lock을 놓는다 — reviewing으로 남기지 않는다. PR을 머지하지 않는다. 스키마는 수정하지 않는다.
 7. `reason`은 2~4문장으로 쓴다.
+9. 계획이 범위 밖으로 둔 항목마다 사유와 이어받는 주체가 성립하는지 확인한다 — (다)는 정의 원문에서 인용 문장을 직접 찾는다.
 """
 
 
@@ -258,6 +259,14 @@ class ValidateWorkReviewProfileTest(unittest.TestCase):
         joined = "\n".join(rep.warnings)
         self.assertIn("스스로 붙이지 않음", joined)
         self.assertIn("실행하지 않음", joined)
+
+    def test_out_of_scope_check_is_required(self):
+        # 2026-11-24 시범(run 45515581135): 리뷰가 「같은 모델의 다음 attempt」로 미룬 범위를 그대로 승인했다.
+        rep = self.write(body=REVIEW_BODY.replace("범위 밖으로 둔 항목마다 사유와 이어받는 주체가 성립하는지 확인한다", "계획을 읽는다"))
+        self.assertTrue(any("이어받는 주체" in e for e in rep.errors))
+        rep = self.write(body=REVIEW_BODY.replace("정의 원문에서 인용 문장을 직접 찾는다", "인용을 본다"))
+        self.assertEqual(rep.errors, [])
+        self.assertTrue(any("정의 원문" in w for w in rep.warnings))
 
     def test_target_repo_writes_are_forbidden(self):
         bad = REVIEW_BODY + "\n```\ngh pr merge 7 --squash\n```\n"

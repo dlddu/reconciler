@@ -138,6 +138,15 @@ class CheckReviewResultTest(unittest.TestCase):
         call["item"]["toolCall"] = {"name": "Bash", "arguments": {"command": "gh api repos/o/r/pulls/3"}}
         path.write_text(json.dumps(call) + "\n")
         self.assertEqual(self.check(transcript=path).errors, [])
+        # 거부 comment 초안에 계획의 머지 명령을 인용한 글쓰기는 실행이 아니다.
+        quote = "기대: `gh api -X POST repos/o/r/pulls/3/merge` / 실측: 머지 API는 `-X PUT` 이다"
+        call["item"]["toolCall"] = {"name": "write", "input": {"path": "/tmp/comment.txt", "content": quote}}
+        path.write_text(json.dumps(call) + "\n")
+        self.assertEqual(self.check(transcript=path).errors, [])
+        # 같은 내용을 스크립트로 쓰면 계속 잡는다(나중에 실행된다).
+        call["item"]["toolCall"] = {"name": "write", "input": {"path": "/tmp/merge.sh", "content": "gh pr merge 3 --squash"}}
+        path.write_text(json.dumps(call) + "\n")
+        self.assertTrue(any("PR 머지" in e for e in self.check(transcript=path).errors))
 
     def test_main_writes_task_and_report(self):
         self.repo.commit({MID: [judged("approved", APPROVE)]}, f"review({MID}/{TID}): approved")

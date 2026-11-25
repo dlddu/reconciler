@@ -61,6 +61,20 @@ def call_text(call: dict) -> str:
     return json.dumps({k: v for k, v in call.items() if k not in OUTPUT_KEYS}, ensure_ascii=False)
 
 
+# 파일 쓰기 도구로 글(거부 comment·reason 초안 등)을 쓰는 것은 실행이 아니다 — 계획의 머지 명령을 인용한 거부 사유가
+# 「PR 머지」로 잡혔다(2026-11-25 skill-build run 45522275155 replay). 스크립트(.sh·.py 등)는 나중에 실행되므로 계속 본다.
+FILE_WRITE_TOOLS = {"write", "edit", "multiedit"}
+PROSE_SUFFIXES = (".txt", ".md", ".json")
+
+
+def is_prose_write(call: dict) -> bool:
+    if str(call.get("name", "")).lower() not in FILE_WRITE_TOOLS:
+        return False
+    args = call.get("input") or call.get("arguments") or {}
+    path = str(args.get("path") or args.get("file_path") or "") if isinstance(args, dict) else ""
+    return path.lower().endswith(PROSE_SUFFIXES)
+
+
 def check(repo: Path, base: str, model_id: str, task_id: str, claim_subject: str | None = None,
           expect: list[str] | None = None, transcript: Path | None = None) -> cdr.Result:
     res = cdr.Result()
@@ -193,6 +207,8 @@ def check(repo: Path, base: str, model_id: str, task_id: str, claim_subject: str
 
             hits = []
             for call in mt.tool_calls(str(transcript)).values():
+                if is_prose_write(call):
+                    continue
                 text = call_text(call)
                 hits += [label for label, pat in TARGET_WRITES if re.search(pat, text)]
             if hits:
