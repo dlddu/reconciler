@@ -233,6 +233,32 @@
     "assessment": {
       "reason": "action_required — 슬라이스 (1)만 반영된 현재 상태에서 definition의 불변식 2·3 gap이 남아 있고, 이를 맡은 열린 형제 task가 없다.\n\n근거: 대상 `dlddu/claude-transcript-viewer-v2`@main HEAD 97bba54에서 `docs/data-model/`가 README.md·erd.md·fullscan-criteria.md 3개뿐이고 `query-patterns.md`가 없다(패턴 0·수동 형태 0·풀스캔 허용 0·미사용 인덱스 0). `cd backend && go run ./cmd/datamodelcheck --json`은 종료 코드 1, engine `modernc.org/sqlite v1.34.4`, tables 1, 지점 후보 6건(모두 backend/store.go — L51 PRAGMA 루프·L80·L106·L122·L147·L177), 위반 2건(invariant 2 `unimplemented`: 6 site candidate(s) have no catalog check yet / invariant 3 `unimplemented`: query-plan comparison), invariant 1 위반 0건. C9도 미충족이다 — README 「체커」 절이 「CI: 아직 연결하지 않았다」고 적고 `.github/workflows` 4개에 체커 잡이 없다. 점유 시점과 현재 버전이 동일해(as-is schema=7ae84170…·queries=bb9a8f7d…·checker=83b9df42…, to-be 1669f8c9…) 이번 trigger가 만든 새 변화는 없고, 이는 슬라이스 (1) 머지(PR #109) 이후의 잔여 격차다.\n\n적용 기준: definition 「판정 규칙」(불변식 1~3 또는 C1~C9 중 하나라도 위반이면 action_required)·「판정 절차」2(종료 코드 1이면 리포트의 위반 항목이 gap)·「판정 슬라이스」((1)→(2)→(3) 순서를 바꾸지 않고 PR 머지 후 다음 감지가 남은 슬라이스를 이어받음). 같은 모델 파일 `data/reconciliation-tasks/tbm_claude-transcript-viewer-v2-data-model.json`의 다른 task는 rct_20261104-0001(status `succeeded`) 하나뿐이므로 gap을 맡은 열린 형제 task가 없다.\n\n반대 방향 근거: 슬라이스 (1) 산출물은 실재와 정합이다 — 불변식 1 위반 0건, ERD의 transcript_sessions 3컬럼이 빈 DB 카탈로그와 같고, 마이그레이션 진입점(`migrations.Apply`를 `Store.migrate`와 체커가 공용) 덕분에 C3가 가능해졌다. 체커는 README 블록의 scope만 읽고 site ERE 6줄을 빠짐없이 후보로 보고한다. 불변식 2·3은 카탈로그가 생겨야 판정 대상이 존재하므로 현재는 엔진 판정 대상이 없다. 대상 레포의 열린 PR 3건(#111·#110·#98)에는 이 모델 범위의 진행 중인 작업이 없어 자동 해소 대기 대상도 아니다.",
       "assessedAt": "2026-11-05T01:21:42Z"
-    }
+    },
+    "attempts": [
+      {
+        "plan": {
+          "summary": "슬라이스 (2)(카탈로그와 수동 형태, 불변식 2)만 닫는다. 범위 밖은 불변식 3(슬라이스 3, 사유 (다))과 C9 체커 CI 잡(사유 (라))이다.\n\n**접근과 그 이유.** definition 「판정 슬라이스」가 (1) README·블록·체커 골격·ERD → (2) 카탈로그와 수동 형태 → (3) 지원 칸·미사용 인덱스와 필요한 인덱스 마이그레이션 순서로 정했고, 슬라이스 (1)은 main에 반영돼 있다(PR #109 머지 `97bba54`). 남은 첫 슬라이스인 (2)만 이번 시도에서 닫는다 — 불변식 3은 불변식 2의 카탈로그를 전제하므로 순서를 바꾸지 않는다. 기준선 관측(2026-11-25, main `06f77a0`): 체커 종료 코드 1, 위반 2건(invariant 2·3 `unimplemented`), 지점 후보 6개(모두 `backend/store.go` — PRAGMA 루프 1 + 제품 쿼리 5), `docs/data-model/query-patterns.md` 부재(패턴 0·수동 형태 0·미사용 인덱스 0). 같은 모델 파일의 다른 task는 `rct_20261104-0001`(succeeded) 하나뿐이라 이 gap을 맡은 열린 형제 task가 없고, 대상 레포의 열린 PR(#113·#111·#98)도 이 모델 범위(카탈로그·체커)를 건드리지 않는다. 이번 PR은 운영 코드(`backend/store.go`)·마이그레이션·설정·CI 워크플로를 건드리지 않아 수동 승인 케이스(MA1·MA2·MA3)에 걸리지 않는다.\n\n**이 시도의 범위와 완료 기준.** 대상 레포 `dlddu/claude-transcript-viewer-v2` PR 하나로 (1) 체커에 불변식 2를 구현하고(형태 계산 + 카탈로그 양방향 대조 + 수동 형태 지점 집합 대조), (2) `docs/data-model/query-patterns.md`를 패턴 5행·수동 형태 1행·미사용 인덱스 0행으로 만들고, (3) README에 이 레포 고유 정규화(연결 설정 PRAGMA = 형태가 없는 지점)를 적는다. 완료 기준은 머지·반영 후에 참이 된다 — main에 `docs/data-model/query-patterns.md`가 있고 패턴 5행(Q-01~Q-05)·수동 형태 1행(`backend/store.go::OpenStore`)·미사용 인덱스 0행이며, main에서 체커가 불변식 2 위반 0건을 보고한다(종료 코드는 여전히 1이다 — 불변식 3은 슬라이스 3의 몫이므로 이번 완료 기준에 넣지 않는다). to-be 버전(문서 트리 해시)은 `1669f8c906f30efaf82323bb34b90425d95fc3ce`에서 다른 값으로 바뀌고, as-is 버전은 checker 성분만 바뀌며 schema·queries 성분은 유지된다.\n\n**범위 밖.**\n- 불변식 3 — 지원 칸 5칸의 엔진 플랜 판정, 미사용 인덱스 자동 대조, 필요한 인덱스 마이그레이션(C5). 사유 (다). 이어받는 주체: 감지 단계(다음 task) — definition 「판정 슬라이스」 \"PR이 머지되면 버전이 바뀌어 다음 감지가 남은 슬라이스를 이어받는다\".\n- C9 체커 CI 잡 — `.github/workflows/test.yml`의 backend 잡 옆(report 모드). 사유 (라). 선행 조건: reconciler GitHub App 설치 토큰에 `workflows` 권한이 있어야 한다 — MCP `github_app_installation_token`의 workflows 권한 요청이 토큰 scope 불일치(\"the request fits none of this caller's token scopes\")로 거부됐다. 풀 주체: reconciler GitHub App 설치 권한 담당 운영자.\n\n**gap 대조표**\n\n| 항목 | 출처 | 처리 | 근거 |\n|---|---|---|---|\n| 패턴 카탈로그 5행(Q-01~Q-05) | `stateSummary.gap` (\"`docs/data-model/query-patterns.md`가 없어 카탈로그 행 0개\") | 닫음 — steps[].seq 2 | definition 「판정 슬라이스」 (2) 카탈로그와 수동 형태(불변식 2) |\n| 수동 형태 1행(`backend/store.go::OpenStore` — 연결 설정 PRAGMA 루프) | `stateSummary.gap` (패턴 0·수동 형태 0) | 닫음 — steps[].seq 2 | definition 「불변식 2」 \"정적으로 형태를 뽑을 수 없는 지점은 「수동 형태」 표에 등재한다. 체커의 추출 불가 지점 집합 == 수동 형태 표의 지점 집합.\" |\n| 체커의 불변식 2 미구현(`unimplemented` 위반, 종료 코드 1) | `assessment.reason` (\"체커는 불변식 2·3을 `unimplemented` 위반으로 보고해 종료 코드가 1\") | 닫음 — steps[].seq 1 | definition 「판정 절차」 1·2, 「체커 계약」 C2·C4·C6·C7·C8 |\n| `OpenStore` PRAGMA 루프의 처리 결정 | definition 「범위 밖 / 비고」 (\"`OpenStore`의 PRAGMA 루프 … 그 처리(README 「형태 정의」의 레포 고유 정규화로 충분한가, 템플릿 개정이 필요한가)는 첫 task가 정한다\") | 닫음 — steps[].seq 1, 2, 3 | definition 「범위 밖 / 비고」 — README 「형태 정의」의 레포 고유 정규화로 정한다. 템플릿 「형태」의 연산 목록과 「대상 레포 배치」의 표 형식은 바꾸지 않는다(템플릿 개정 아님) |\n| 지원 칸 5칸의 엔진 판정 + 미사용 인덱스 자동 대조 + 필요한 인덱스 마이그레이션(불변식 3·C5) | `stateSummary.gap` (\"슬라이스 (3)(지원 칸·미사용 인덱스)은 남아 있다\") | 범위 밖 (다) — 이어받는 주체: 감지 단계(다음 task) | definition 「판정 슬라이스」 (1)→(2)→(3) — \"PR이 머지되면 버전이 바뀌어 다음 감지가 남은 슬라이스를 이어받는다\" |\n| C9 체커 CI 잡 | `assessment.reason` (\"C9도 미충족이다 — README 「체커」 절 「CI: 아직 연결하지 않았다」, 워크플로 4개에 체커 잡이 없다\") | 범위 밖 (라) — 이어받는 주체: reconciler GitHub App 설치 권한 담당 운영자 | 대상 레포 밖 선행 조건 — GitHub App 설치 토큰의 권한 목록에 `workflows` 가 없어 `.github/workflows/test.yml` 변경이 불가능하다 |\n\n**계획 단계 규칙.** 지원 칸은 불변식 3이 채운다 — 이번 PR의 카탈로그는 모든 패턴 행의 지원 칸을 `미판정(불변식 3)`로 둔다. 실행자가 이 칸을 채우려고 카탈로그를 고치는 것은 범위 밖이다.",
+          "riskLevel": "low",
+          "steps": [
+            {
+              "seq": 1,
+              "action": "PR #114의 head `eddaf04`에서 CI(Test·Comment ledger) green과 mergeable 상태를 확인한다. `review/manual-approval`은 판정기(`scripts/review-policy/judge.py`)가 MA1·MA2·MA3 미접촉을 확인해 자동으로 붙는다 — 사람이 붙일 필요가 없다",
+              "expectedOutcome": "PR #114 head `eddaf04e7043f481a500e470f49ae11b7da74c7a`의 모든 status check가 success이고 `review/manual-approval=success`이며 `mergeable=clean`"
+            },
+            {
+              "seq": 2,
+              "action": "PR #114를 squash 머지한다. base가 이동해 `mergeable_state=dirty`가 되면 리베이스하지 않고 failed로 보고한다",
+              "expectedOutcome": "main HEAD가 `docs/data-model/query-patterns.md`를 포함한 커밋을 포함하고, main의 `git rev-parse HEAD:docs/data-model`가 `1669f8c906f30efaf82323bb34b90425d95fc3ce`와 다르다"
+            },
+            {
+              "seq": 3,
+              "action": "main 체크아웃에서 `cd backend && go run ./cmd/datamodelcheck --json`을 돌리고 as-is versionScript를 재실행한다",
+              "expectedOutcome": "체커 종료 코드 1, 위반 1건이 `[invariant 3] unimplemented: query-plan comparison`뿐이고 불변식 2 위반은 0건, `patterns=5 manual_forms=1 sites=6 tables=1`; as-is 버전은 `schema=7ae84170d786431da0eaad51b7225dfd4cc012ff`(불변)·`queries=bb9a8f7d87ff463e`(불변)·`checker=3f5c2bdcbfc8f06445b12ef671bed6b465c52ca4`(변경)"
+            }
+          ],
+          "plannedAt": "2026-11-25T12:12:00Z"
+        }
+      }
+    ]
   }
 ]
