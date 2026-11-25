@@ -84,6 +84,8 @@ PLANNER_RECOMMENDED = [
     ("정의가 지정한 의무 대조", [r"정의[^\n]{0,30}(지정|맡긴)[^\n]{0,20}의무"]),
     ("완료 기준이 범위 밖을 주장하지 않음", [r"완료\s*기준[^\n]{0,80}범위\s*밖", r"범위\s*밖[^\n]{0,80}완료\s*기준"]),
     ("근거 출처 구분(정의 원문 vs 스킬 규칙)", [r"계획\s*단계\s*규칙", r"스킬[^\n]{0,20}규칙[^\n]{0,40}정의"]),
+    # (마) 계획 단계의 분할 — 남은 몫은 감지 단계가 현재 상태를 다시 판정해 새 task로 잇는다.
+    ("(마) 분할의 이어받는 주체는 감지 단계", [r"감지\s*단계[^\n]{0,80}(잇|이어받)", r"(잇|이어받)[^\n]{0,80}감지\s*단계"]),
 ]
 
 REVIEW_REQUIRED = [
@@ -193,9 +195,7 @@ EXECUTOR_FORBIDDEN = [
 PROFILES = {
     "drift-detector": ("reconciler-drift-detector", REQUIRED, RECOMMENDED, []),
     "work-planner": ("reconciler-work-planner", PLANNER_REQUIRED, PLANNER_RECOMMENDED,
-                     [("PR 머지(계획 단계 금지)", r"gh\s+pr\s+merge|/pulls/[^\s/]+/merge\b"),
-                      # 재감지는 버전이 바뀔 때만 돌고 남은 항목을 잡는다는 보장이 없다 — 범위 밖의 이어받는 주체로 약속하지 않는다.
-                      ("재감지가 범위 밖을 잇는다는 약속", r"재감지[^\n]{0,30}(잇는다|이어받는다|이어\s*간다)")]),
+                     [("PR 머지(계획 단계 금지)", r"gh\s+pr\s+merge|/pulls/[^\s/]+/merge\b")]),
     "work-review": ("reconciler-work-review", REVIEW_REQUIRED, REVIEW_RECOMMENDED, REVIEW_FORBIDDEN),
     "work-executor": ("reconciler-work-executor", EXECUTOR_REQUIRED, EXECUTOR_RECOMMENDED, EXECUTOR_FORBIDDEN),
 }
