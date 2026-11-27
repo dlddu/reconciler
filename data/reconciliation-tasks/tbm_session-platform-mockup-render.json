@@ -1481,7 +1481,7 @@
       "reason": "**작업 필요(action_required).** 이번 창이 만든 codex-task 에이전트 화면과 추론 수준 칸의 목업 누락이 남아 있고 그 gap을 맡은 열린 형제 task가 없다.\n\n**근거.** ① 구현 `web/src/screens/Workspace.tsx`는 codex-task를 codex 계열로 그린다(codex placeholder 'runs one Codex turn in the session pod', codex-task 전용 로그인 안내 'If this session's login slot is empty, …'). 목업 `docs/mockups/agent-workspace.html`에는 codex-task 분기가 없다 — INPUT_PH(:527)에 없어 populate가 INPUT_PH_DEFAULT(:422) 'send a prompt — streams one claude -p response'로 떨어지고, ws-codex-hint(:655)·isCodex(:657)·paintContext(:710)가 모두 'codex-chat' 전용이라 로그인 안내와 codex 자격 증명 문구가 빠진다. `docs/mockups/index.html`의 WS_PAGE(:437)·typeTag(:447)에도 codex-task가 없어 codex-task 세션이 workspace.html로 링크되고 shell 태그로 보인다(구현 SessionCard는 '◇ codex-task', sessionRoutes는 /agent/{id}). ② 목업 README는 이번 창 갱신에서 agent-workspace.html이 codex-chat·codex-task를 다룬다고 적고 '로그인 안내 한 줄은 codex-chat·codex-task 둘 다 받습니다'고 명시하는데 HTML은 codex-chat만 처리한다. ③ 추론 수준은 목업이 .seg 세그먼트 버튼 행(11.5px mono·padding 7px 11px·radius 9px)인데 구현은 네이티브 select(.field select·width 100%·40px·radius 10px·13px mono)에 목업에 없는 힌트 'CLI default leaves the effort to the agent and its model.'를 붙인다. ④ 게이트 check-render-fidelity.py는 rc=0이지만 파일 단위 매핑 집합과 패널 <h4> 층위까지만 재므로 위를 잡지 못한다.\n\n**적용 기준.** definition 1(매핑 공백)·3(카피)·4(구조·수치)·5(미문서화 이탈). 목업이 시각 SSOT이므로 기본 방향은 구현을 목업에 맞추는 것이고, 어느 쪽을 고칠지는 planner의 판단이다.\n\n**반대 방향 근거.** new-session.html은 이번 창에 정합하다(codex-chat·codex-task 카드 설명문·IMMUTABLE_NOTE 2문장·'· effort=' 프로비저닝 표시가 구현과 문자 그대로 일치). 2(토큰)는 위반이 아니다(web/src/design 무변경 2eba65b68 · 정본 토큰 24 유지). 워크로드 카드 아이콘(rct_20261105-0001 · 신규 codex-task 카드도 같은 SVG↔글리프 차이)과 'Refresh plugin skills' CTA(rct_20261106-0001 · 'refresh' 0건)는 열린 형제 task 소관이라 여기서 걷지 않는다. Workload 패널의 신규 'Reasoning effort' 행은 목업 README가 '패널 내부의 카피·수치는 아직 대조하지 않습니다'로 유예한 범위라 위반으로 세지 않았다.",
       "assessedAt": "2026-11-07T16:24:20Z"
     },
-    "updatedAt": "2026-11-27T10:17:14Z",
+    "updatedAt": "2026-11-27T10:17:17Z",
     "attempts": [
       {
         "plan": {
@@ -1510,6 +1510,13 @@
             }
           ],
           "plannedAt": "2026-11-27T10:17:14Z"
+        },
+        "preparation": {
+          "repository": "dlddu/session-platform",
+          "branch": "reconcile/rct_20261107-0001-codex-task-mockup-sync",
+          "pullRequestUrl": "https://github.com/dlddu/session-platform/pull/281",
+          "preparedAt": "2026-11-27T10:17:14Z",
+          "notes": "이번 push 델타 — 새 커밋 4개(전부 이번 시도): 7107124 agent-workspace 목업에 codex-task 갈래 · 86e214e index 목업의 라우팅·타입 태그에 codex-task · 5835433 추론 수준 칸을 네이티브 select + 힌트로 · 632a4f3 README 「마지막 갱신」 1줄. PR 전체(base..head) — base `main`@cc83623 → head 632a4f3e655f902a564f331e163b1f5d955ea7d7, 변경 파일 4개(docs/mockups/README.md · docs/mockups/agent-workspace.html · docs/mockups/index.html · docs/mockups/new-session.html), diff 통계 `4 files changed, 39 insertions(+), 13 deletions(-)`. PR head에서 실제로 돌린 검증과 출력 — `python3 scripts/check-render-fidelity.py` rc=0 (`R1-R5  화면 매핑 OK — 구현 파일 14개 · mockup 7종 (구현 없음 0종, 구현 신호 0 hit 확인)` / `R6-R7  정본 이탈 원장 OK — HEX 14건 / INLINE 14건 / rgba 31건, EXC 마커 0건` / `R8     패널 구조 OK — 쌍 4개, 차집합 15건` / `R9     상한 OK — 미해소 27/27 · 패널 차집합 15/15` / `R10    토큰 복제 원장 OK — 복제 파일 18개(DUP 17 · IND 1), 정본 토큰 24개, 유지비 7~18곳`), `python3 scripts/check-fidelity-allowlist.py` rc=0 (`OK: e2e 충실도 허용목록 ↔ 코드 seam 1:1`), 목업 3개 인라인 스크립트 `node --check` 통과. `tools/journey-prototype.test.mjs`는 로컬에 Playwright 브라우저 바이너리가 없어 실행하지 못했다 — CI의 journey 잡이 대신 돈다. 수동 승인(MA1~MA5) 대상 경로 변경 없음 — 사람의 승인 status 불필요. 열린 형제 PR #277(rct_20261106-0001)이 같은 `docs/mockups/agent-workspace.html`·`docs/mockups/README.md`를 건드리므로 상수명을 `CODEX_TYPES`가 아닌 `CODEX_WORKLOAD_TYPES`로 골라 재선언 SyntaxError를 피했고, 그 PR과 함께 머질 때 충돌이 날 수 있다."
         }
       }
     ]
