@@ -142,6 +142,8 @@ PLANNER_BODY = """
 10. (마) 계획 단계의 분할 — 남은 몫은 감지 단계가 새 task로 잇는다.
 11. (나) 사람 결정 대기는 이번 시도가 연 `제안:` PR 링크로만 적는다 — 결정 주체 이름만 적지 않는다.
 12. 수동 승인 대상이라는 것은 범위 밖 사유((라))가 아니다 — 그 파일도 이번 범위에 넣는다.
+13. 마지막 자체 점검은 planned 전이 전에 끝낸다.
+14. planned 뒤에는 task도 PR도 다시 쓰지 않는다 — 자기 오타라도 예외 없이 보고만 한다.
 """
 
 
@@ -195,6 +197,13 @@ class PlannerProfileTest(unittest.TestCase):
         self.assertTrue(any("제안 PR" in e for e in rep.errors))
         rep = self.check(PLANNER_BODY + "\n| (나) 사람 결정 대기 | 사람이 소유한 결정이 필요 | `제안:` PR 링크 또는 결정 주체 |\n")
         self.assertTrue(any("결정 주체" in e for e in rep.errors))
+
+    def test_self_check_before_planned(self):
+        # 2026-11-27 run 45929848187: planned 뒤 정정 커밋 2개(lock 위반).
+        rep = self.check(PLANNER_BODY.replace("13. 마지막 자체 점검은 planned 전이 전에 끝낸다.\n", ""))
+        self.assertTrue(any("자체 점검" in e for e in rep.errors))
+        rep = self.check(PLANNER_BODY.replace("14. planned 뒤에는 task도 PR도 다시 쓰지 않는다 — 자기 오타라도 예외 없이 보고만 한다.\n", ""))
+        self.assertTrue(any("재쓰기" in e for e in rep.errors))
 
     def test_manual_approval_is_not_out_of_scope(self):
         # 2026-11-26 skill-build run 45788496490: MA3 파일을 「(라) — 저장소 소유자」로 뺐다.
