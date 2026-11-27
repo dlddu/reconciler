@@ -2628,5 +2628,47 @@
       "lastObservedVersion": "09449cdaae3b3820841574b7497a5eccc12685de8547105c901ae3164e8d33d7",
       "lastObservedAt": "2026-11-04T23:54:34Z"
     }
+  },
+  {
+    "id": "tbm_explain-loop-docs-impl",
+    "metadata": {
+      "name": "explain-loop 제품 문서 ↔ 구현 정합성",
+      "description": "dlddu/explain-loop에서 docs/(제품 문서)와 `main.go`·`internal/`(구현) 사이의 정합성을 추적한다. to-be는 `docs/explain-loop-prd-*.md`의 모든 PRD의 AC가 모두 구현·검증되고 계약이 문서와 일치하며 문서 없는 구현이 없는 상태. 부분 구현인 현 상태는 as-is일 뿐 목표가 아니다.",
+      "tags": [
+        "explain-loop",
+        "docs",
+        "implementation",
+        "consistency",
+        "go",
+        "mcp"
+      ],
+      "createdAt": "2026-11-27T06:41:41Z"
+    },
+    "definition": "# explain-loop 제품 문서 ↔ 구현 정합성\n\n## 목표\n`dlddu/explain-loop` 레포(설명 행위에 쓰는 패턴을 관리하고, 설명마다 어떤 패턴을 왜 골랐는지와 상대가 얼마나 이해했는지를 기록해 다음 설명에 반영하는 MCP 도구 서버 — Go `net/http` 서버가 `POST /mcp`(Streamable HTTP, JSON-RPC)로 도구를 노출하고 운영 볼륨 `/data`에 기록을 둔다)에서 **실제 구현(`main.go` — 서버 진입점(`LISTEN_ADDR`, graceful shutdown) · `internal/` — `server`(라우트 `GET /`·`/healthz`·`/readyz`·`POST /mcp`, 요청 로깅) · `mcp`(JSON-RPC 디스패치: `initialize`·`ping`·`tools/list`·`tools/call`, 도구 레지스트리) · `version`(서비스 이름·버전))** 이 **제품 문서(`docs/`)** 가 기술하는 의도된 동작을 **전부 실현·검증하고 서로 어긋나지 않는** 상태로 수렴시킨다.\n\n## 무엇이 \"맞는 상태\"인가 (to-be)\n- **의도된 동작의 단일 소스(SSOT)** 는 `docs/` 다: 가치 `V<N>`(`explain-loop-values.md`, 제품 소유자 dlddu) → PRD `PRD-<N>`(`explain-loop-prd-<기능>.md`) → AC `AC<PRD 번호>.<n>`(각 PRD의 `### AC<x>.<y>:` 헤딩, 예: `AC1.3`) → 테스트 문서(`explain-loop-test-<기능>.md`, 테스트 `T<N>`·시나리오 `### T<N>-S<M>:` 헤딩과 `검증 AC` 필드). 부속: 문서 체계 상태 `explain-loop-doc-tracker/`(월별 `YYYY-MM.md` + `index.md`). 사용자 여정·목업·디자인 시스템·엔지니어링 노트·glossary 문서는 등록 시점에 없다.\n- **to-be(목표 상태)** 는 다음이 모두 성립하는 상태다:\n  1. `docs/explain-loop-prd-*.md`의 모든 PRD의 **모든 AC가 구현**되어 있고, 각 AC가 대응 테스트 문서가 기술하는 대로 검증 가능하다.\n  2. 코드에 존재하는 모든 사용자 대면 동작이 문서에 표현되어 있다(문서 없는 구현 없음). 명시적 예외: ① `GET /`·`/healthz`·`/readyz`는 `deploy/base/deployment.yaml`의 probe와 e2e 스모크가 소비하는 운영 계약이고, ② `initialize`·`ping`·알림(202)·batch 거부 같은 MCP/JSON-RPC 프로토콜 기본 동작은 제품 기능이 아니라 전송 계약이며, ③ `/mcp`의 인증(OAuth Bearer 검증)은 공개 노출을 위한 배포 전제다 — 셋 다 docs 범위 밖이다. 단 인증이 사용자에게 보이는 흐름(연결 시 로그인 등)을 만들면 그 흐름은 문서에 표현한다.\n  3. `docs/explain-loop-doc-tracker/` 최신 월 파일의 상태 집계가 1~2의 실제 상태와 일치한다.\n- **부분 구현은 as-is다, to-be가 아니다.** to-be를 현 구현 수준으로 낮춰 잡지 않는다. AC·PRD가 추가·삭제되면 to-be 버전이 바뀌어 재평가가 트리거되고, 새 AC도 확정 PRD에 속하는 순간 자동으로 판정 대상이 된다.\n\n## drift 판정 기준\nas-is(구현)가 to-be(문서 전체)에 미달하거나 어긋나면 drift다:\n1. **미구현 AC**: 문서에 있으나 구현되지 않은 AC는 to-be 미달 gap이며 **drift다**. 백로그로 치부해 이 루프 밖으로 빼지 않는다. (무엇을 먼저 구현할지의 우선순위 판단은 각 task의 계획 단계 몫이다.)\n2. **구현 ↔ 문서 불일치**: 구현된 동작이 대응 AC·테스트 문서와 어긋나면 drift.\n3. **문서 없는 구현**: 코드에 존재하는 사용자 대면 동작이 문서에 없으면 drift(명시된 예외 제외).\n4. **tracker 불일치**: `docs/explain-loop-doc-tracker/` 최신 월 파일의 집계·상태가 실제와 어긋나면 drift.\n\n각 task는 직전 관측 대비 \"gap이 줄었는가 / 새 어긋남·문서 없는 구현이 생겼는가 / 문서 변경으로 to-be가 달라졌는가\"를 평가하되, 남은 gap 전체(미구현 AC 목록 포함)를 상태 요약에 유지한다.\n\n## 충돌 시 기본 방향\n문서가 스펙(SSOT)이다. 구현이 어떤 AC와 어긋나거나 미달이면 **원칙적으로 코드를 문서에 맞춘다**(미구현 AC → 구현을 추가한다). 단, 그 어긋남이 **의도된 동작 변경**이면 문서(PRD/AC/테스트 등 + tracker)를 갱신해 코드에 맞춘다. 어느 쪽인지는 각 task에서 판단(planner)한다.\n\n## 추적 방식 (요약)\n- **to-be** = github `dlddu/explain-loop` `docs/` 트리에서 다른 모델의 정책 문서(`review-policy.md`·`e2e-mocking-policy.md`·`comment-policy/`)를 뺀 blob 목록의 sha256(제품 문서만 바뀌면 이 값만 변함).\n- **as-is** = github `dlddu/explain-loop` `main.go`(blob) · `internal/` 해시 조합(구현 코드만 바뀌면 이 값만 변함).\n- 어느 한쪽 버전이 바뀌면 task가 생성되어 to-be 대비 as-is의 gap 전체(미구현 AC 포함)를 재검증한다.\n\n## 범위 밖 / 비고\n- `.github/`(PR 게이트·테스트·이미지 발행 워크플로) · `deploy/`(kustomize base·prod·e2e overlay) · `e2e/`(자매 모델 `tbm_explain-loop-scenario-e2e`·`tbm_explain-loop-e2e-mock-policy`의 as-is, 등록 시점 미생성) · `Dockerfile`·`.dockerignore` · `go.mod` · `README.md`는 \"구현 동작\"이 아니라 운영/검증/빌드 인프라이므로 as-is 버전 범위에서 제외한다.\n- **테스트 시나리오 ↔ E2E 1:1 매칭은 별도 모델 `tbm_explain-loop-scenario-e2e`가 담당**한다. 이 모델은 테스트 커버리지가 아니라 문서 ↔ 구현의 일치를 본다. 다만 **scenario-e2e가 \"구현 대기\"로 등재해 넘긴 시나리오의 기능 구현은 이 모델의 몫**이다 — 그 시나리오가 검증하는 AC는 여기서 판정 기준 1(미구현 AC)로 다룬다. scenario-e2e 루프는 E2E를 쓰려고 제품 코드를 만들지 않으므로, 미구현 해소를 두 루프가 중복 수행하지 않는다.\n- docs 내부 계층 정합성(가치 정렬, AC↔테스트 커버리지, tracker 집계 산출)은 문서 체계 자체의 관심사로, 이 모델의 주 판정 대상이 아니다(task 수행 중 발견되면 함께 보고할 수 있다).\n- E2E의 모킹(`docs/e2e-mocking-policy.md` ↔ `e2e/`)은 `tbm_explain-loop-e2e-mock-policy`가, PR 수동 승인 정책(`docs/review-policy.md` ↔ 판정기·워크플로)은 `tbm_explain-loop-pr-manual-approval`이, 주석 정책(`docs/comment-policy/`)은 `tbm_explain-loop-comment-necessity`가 담당한다. 세 정책 문서는 `docs/` 안에 있지만 to-be 스크립트가 빼므로 이 모델을 움직이지 않는다 — **템플릿과의 차이**: 제품 문서가 `docs/` 바로 아래에 있어 템플릿의 단일 `rev-parse` 대신 제외형 blob 목록을 쓴다. 제품 문서를 `docs/product/`로 옮기면 템플릿 형태(단일 `rev-parse`)로 되돌린다.\n- 수동 승인 정책이 제품 문서(가치·PRD·테스트) 변경을 사람 승인 대상으로 두면, 「충돌 시 기본 방향」에서 문서를 코드에 맞추는 쪽으로 닫는 PR은 수동 승인을 거친다(정상 경로). 우회하지 않는다.\n- **보안 전제(이 레포 고유)**: `/mcp`는 공개 주소(`explain-loop.${PUBLIC_DOMAIN}`, websecure)로 노출된다. 그래서 **인증(OAuth Bearer 검증 — homelab-k3s-mcp와 같은 Authelia OIDC 방식)이 main에 들어오기 전에는 패턴·요청·컨텍스트·점수를 읽거나 쓰는 도구를 노출하는 구현을 착지시키지 않는다.** 미구현 AC를 구현하는 첫 슬라이스가 도구를 노출해야 하면, 그 슬라이스의 선행으로 인증을 먼저 넣는다(인증은 위 명시적 예외 ③이라 문서 없는 구현으로 세지 않는다). Authelia 클라이언트 등록은 flux-cd-apps와 SSM(`/flux-cd/authelia/substitutions`)을 건드리므로 사람 손이 필요할 수 있다.\n- **저장 방식 미정(등록 시점)**: 운영 볼륨 `/data`(efs RWX 1Gi, 단일 writer — Deployment `strategy: Recreate`)만 정해져 있고 파일(JSON 등)인지 SQLite인지는 README 「아직 정하지 않은 것」에 남아 있다. 저장 방식을 정하는 것은 사람의 결정이므로 첫 구현 슬라이스가 그 결정을 요구하면 계획에 결정 요청으로 올린다. SQL DB로 정해지면 `tbm_explain-loop-data-model` 등록을 검토한다(등록 시점에는 DB가 없어 등록하지 않았다).\n- **사용자 여정·목업·디자인 시스템·엔지니어링 노트가 없다**(등록 시점). 그래서 템플릿의 「사용자 여정의 판정 무게」 절과 미구현 여정 동작·UI 일치·ENG 노트 항목을 두지 않았고, 구현 의무는 AC만 만든다. 그런 문서가 생기면 템플릿 해당 블록을 들이는 모델 개정 대상이다. UI가 없는 MCP 서버라 `tbm_explain-loop-mockup-render`·`tbm_explain-loop-journey-mockup`은 등록하지 않았다.\n- 등록 시점 구현은 최소 골격(도구 0개)이다 — PRD-1~4의 모든 AC가 미구현 gap이다.\n- 노이즈: to-be가 제품 문서 전체라 `explain-loop-doc-tracker/`의 월 파일(다른 모델의 등재 섹션·변경 이력) 갱신도 재검증을 트리거한다(무해 — task가 변화 없음으로 닫는다). as-is 트리에는 `internal/**/*_test.go` 단위 테스트도 들어가 그 변경도 재검증을 트리거한다(무해).\n",
+    "toBe": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/explain-loop",
+        "ref": "main",
+        "subPath": "docs"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# to-be = 제품 문서. docs/ 트리에서 다른 모델이 소유한 정책 문서(review-policy.md · e2e-mocking-policy.md · comment-policy/)를\n# 뺀 blob 목록의 sha256 → docs 밖(코드 등)과 그 정책 문서들의 변경은 무시된다. 새 제품 문서는 자동으로 포함된다.\n# docs/ 가 사라지면 rev-parse 가 실패해 스크립트가 죽는다(조용한 상수 금지).\n# 런타임이 dataSource.repository(dlddu/explain-loop)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nexport LC_ALL=C\ngit rev-parse \"HEAD:docs\" >/dev/null\ngit ls-tree -r HEAD -- docs | grep -vE '[[:blank:]]docs/(review-policy\\.md|e2e-mocking-policy\\.md|comment-policy/)' | sha256sum | cut -d' ' -f1\n",
+        "timeoutSeconds": 60
+      }
+    },
+    "asIs": {
+      "dataSource": {
+        "type": "github",
+        "repository": "dlddu/explain-loop",
+        "ref": "main"
+      },
+      "versionScript": {
+        "runtime": "bash",
+        "code": "#!/usr/bin/env bash\n# as-is = 실제 구현. main.go(blob) + internal/ 하위 트리 해시 조합.\n# → 이 경로들 밖 변경(.github/·deploy/·e2e/·Dockerfile·.dockerignore·go.mod·README.md·docs/ 등)은 무시된다.\n# 경로별 rev-parse 만 쓴다 — 경로가 사라지면 rev-parse 가 실패해 스크립트가 죽는다(조용한 상수 금지).\n# 런타임이 dataSource.repository(dlddu/explain-loop)@ref(main)를 체크아웃한 상태를 가정한다.\nset -euo pipefail\nm=\"$(git rev-parse \"HEAD:main.go\")\"\ni=\"$(git rev-parse \"HEAD:internal\")\"\nprintf 'main.go:%s internal:%s\\n' \"$m\" \"$i\"\n",
+        "timeoutSeconds": 60
+      }
+    }
   }
 ]
