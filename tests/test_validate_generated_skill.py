@@ -140,6 +140,8 @@ PLANNER_BODY = """
 8. 완료 기준은 범위 밖 항목이 포함된 상태를 주장하지 않는다.
 9. 근거는 정의 원문과 계획 단계 규칙을 구분해 인용한다.
 10. (마) 계획 단계의 분할 — 남은 몫은 감지 단계가 새 task로 잇는다.
+11. (나) 사람 결정 대기는 이번 시도가 연 `제안:` PR 링크로만 적는다 — 결정 주체 이름만 적지 않는다.
+12. 수동 승인 대상이라는 것은 범위 밖 사유((라))가 아니다 — 그 파일도 이번 범위에 넣는다.
 """
 
 
@@ -187,6 +189,18 @@ class PlannerProfileTest(unittest.TestCase):
         self.assertIn("gap 대조표", joined)
         self.assertIn("이어받는 주체", joined)
 
+    def test_human_decision_needs_proposal_pr(self):
+        # 2026-11-25 run 45639391601: 0.16.0 생성본의 사유 표가 (나)를 「제안 PR 링크 또는 결정 주체」로 옮겼다.
+        rep = self.check(PLANNER_BODY.replace("(나) 사람 결정 대기는 이번 시도가 연 `제안:` PR 링크로만 적는다", "(나) 사람 결정 대기는 결정 주체를 적는다"))
+        self.assertTrue(any("제안 PR" in e for e in rep.errors))
+        rep = self.check(PLANNER_BODY + "\n| (나) 사람 결정 대기 | 사람이 소유한 결정이 필요 | `제안:` PR 링크 또는 결정 주체 |\n")
+        self.assertTrue(any("결정 주체" in e for e in rep.errors))
+
+    def test_manual_approval_is_not_out_of_scope(self):
+        # 2026-11-26 skill-build run 45788496490: MA3 파일을 「(라) — 저장소 소유자」로 뺐다.
+        rep = self.check(PLANNER_BODY.replace("12. 수동 승인 대상이라는 것은 범위 밖 사유((라))가 아니다 — 그 파일도 이번 범위에 넣는다.\n", ""))
+        self.assertTrue(any("수동 승인" in e for e in rep.errors))
+
     def test_detection_stage_successor_is_allowed(self):
         # 2026-11-25부터 (마) 계획 단계의 분할이 허용된다 — 남은 몫은 감지 단계가 잇는다.
         rep = self.check(PLANNER_BODY + "\n5. **범위 밖 잔여** — 이번 슬라이스가 닫지 않은 축과, 뒤의 재감지가 새 task로 잇는다는 사실.\n")
@@ -216,6 +230,8 @@ REVIEW_BODY = """
 6. 판정 후 lock을 놓는다 — reviewing으로 남기지 않는다. PR을 머지하지 않는다. 스키마는 수정하지 않는다.
 7. `reason`은 2~4문장으로 쓴다.
 9. 계획이 범위 밖으로 둔 항목마다 사유와 이어받는 주체가 성립하는지 확인한다 — (다)는 정의 원문에서 인용 문장을 직접 찾는다.
+10. (나)는 대상 레포에 열린 `제안:` PR이 있어야 성립한다. (나)는 예외라 (마)로 바꿔 읽지 않고 거부한다.
+11. 수동 승인 대상이라는 것은 범위 밖 사유((라))가 아니다 — 그 사유로 뺀 행은 거부한다.
 """
 
 
@@ -260,6 +276,17 @@ class ValidateWorkReviewProfileTest(unittest.TestCase):
         joined = "\n".join(rep.warnings)
         self.assertIn("스스로 붙이지 않음", joined)
         self.assertIn("실행하지 않음", joined)
+
+    def test_human_decision_check_is_required(self):
+        rep = self.write(body=REVIEW_BODY.replace("(나)는 대상 레포에 열린 `제안:` PR이 있어야 성립한다.", "(나)는 근거를 본다."))
+        self.assertTrue(any("제안 PR" in e for e in rep.errors))
+        rep = self.write(body=REVIEW_BODY.replace("(나)는 예외라 (마)로 바꿔 읽지 않고 거부한다.", ""))
+        self.assertEqual(rep.errors, [])
+        self.assertTrue(any("예외" in w for w in rep.warnings))
+
+    def test_review_rejects_manual_approval_exclusion(self):
+        rep = self.write(body=REVIEW_BODY.replace("11. 수동 승인 대상이라는 것은 범위 밖 사유((라))가 아니다 — 그 사유로 뺀 행은 거부한다.\n", ""))
+        self.assertTrue(any("수동 승인" in e for e in rep.errors))
 
     def test_out_of_scope_check_is_required(self):
         # 2026-11-24 시범(run 45515581135): 리뷰가 「같은 모델의 다음 attempt」로 미룬 범위를 그대로 승인했다.
