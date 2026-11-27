@@ -144,6 +144,8 @@ PLANNER_BODY = """
 12. 수동 승인 대상이라는 것은 범위 밖 사유((라))가 아니다 — 그 파일도 이번 범위에 넣는다.
 13. 마지막 자체 점검은 planned 전이 전에 끝낸다.
 14. planned 뒤에는 task도 PR도 다시 쓰지 않는다 — 자기 오타라도 예외 없이 보고만 한다.
+15. (다)는 정의 슬라이스 규칙을 크기·순서까지 그대로 따른다 — 예산만큼 채워 가져간다.
+16. 이번 트리거가 만든 차이만이라는 것은 범위를 줄이는 사유가 아니다.
 """
 
 
@@ -198,6 +200,16 @@ class PlannerProfileTest(unittest.TestCase):
         rep = self.check(PLANNER_BODY + "\n| (나) 사람 결정 대기 | 사람이 소유한 결정이 필요 | `제안:` PR 링크 또는 결정 주체 |\n")
         self.assertTrue(any("결정 주체" in e for e in rep.errors))
 
+    def test_definition_slice_size_is_binding(self):
+        # 2026-11-27 run 45951784530: 정의의 400줄 슬라이스를 「트리거 차이만」 47줄로 줄였다.
+        rep = self.check(PLANNER_BODY.replace("15. (다)는 정의 슬라이스 규칙을 크기·순서까지 그대로 따른다 — 예산만큼 채워 가져간다.\n", ""))
+        self.assertTrue(any("크기까지" in e for e in rep.errors))
+        rep = self.check(PLANNER_BODY.replace("16. 이번 트리거가 만든 차이만이라는 것은 범위를 줄이는 사유가 아니다.\n", ""))
+        self.assertTrue(any("트리거" in e for e in rep.errors))
+        # 0.18.0 생성본 267행 예시 — 정의 지정 의무를 (마)로.
+        rep = self.check(PLANNER_BODY + "\n| 정의가 이 task에 맡긴 의무 | 정의 「개정 메모」 절 | 범위 밖 (마) — 이어받는 주체: 감지 단계 | 원문 인용 |\n")
+        self.assertTrue(any("(마)로 미루는 예시" in e for e in rep.errors))
+
     def test_self_check_before_planned(self):
         # 2026-11-27 run 45929848187: planned 뒤 정정 커밋 2개(lock 위반).
         rep = self.check(PLANNER_BODY.replace("13. 마지막 자체 점검은 planned 전이 전에 끝낸다.\n", ""))
@@ -241,6 +253,7 @@ REVIEW_BODY = """
 9. 계획이 범위 밖으로 둔 항목마다 사유와 이어받는 주체가 성립하는지 확인한다 — (다)는 정의 원문에서 인용 문장을 직접 찾는다.
 10. (나)는 대상 레포에 열린 `제안:` PR이 있어야 성립한다. (나)는 예외라 (마)로 바꿔 읽지 않고 거부한다.
 11. 수동 승인 대상이라는 것은 범위 밖 사유((라))가 아니다 — 그 사유로 뺀 행은 거부한다.
+12. (다)는 인용만이 아니라 정의가 정한 크기·예산을 계획이 실제로 채웠는지 실측한다.
 """
 
 
@@ -292,6 +305,10 @@ class ValidateWorkReviewProfileTest(unittest.TestCase):
         rep = self.write(body=REVIEW_BODY.replace("(나)는 예외라 (마)로 바꿔 읽지 않고 거부한다.", ""))
         self.assertEqual(rep.errors, [])
         self.assertTrue(any("예외" in w for w in rep.warnings))
+
+    def test_review_checks_definition_slice_size(self):
+        rep = self.write(body=REVIEW_BODY.replace("12. (다)는 인용만이 아니라 정의가 정한 크기·예산을 계획이 실제로 채웠는지 실측한다.\n", ""))
+        self.assertTrue(any("(다) 크기" in e for e in rep.errors))
 
     def test_review_rejects_manual_approval_exclusion(self):
         rep = self.write(body=REVIEW_BODY.replace("11. 수동 승인 대상이라는 것은 범위 밖 사유((라))가 아니다 — 그 사유로 뺀 행은 거부한다.\n", ""))
