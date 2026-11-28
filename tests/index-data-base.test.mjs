@@ -25,6 +25,15 @@ test("GitHub Pages reads data from raw main of the same repo", () => {
   );
 });
 
+test("the user site's custom domain (dlddu.dev/<repo>/) also reads raw main", () => {
+  assert.equal(
+    dataBase({ hostname: "dlddu.dev", pathname: "/reconciler/" }),
+    "https://raw.githubusercontent.com/dlddu/reconciler/main/",
+  );
+  assert.equal(dataBase({ hostname: "dlddu.dev", pathname: "/" }), "");
+  assert.equal(dataBase({ hostname: "example.dev", pathname: "/reconciler/" }), "");
+});
+
 test("a local server at the repo root reads data/ one level above docs/", () => {
   assert.equal(dataBase({ hostname: "localhost", pathname: "/docs/" }), "../");
   assert.equal(dataBase({ hostname: "127.0.0.1", pathname: "/docs/index.html" }), "../");

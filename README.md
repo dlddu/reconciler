@@ -449,7 +449,7 @@ SSOT이고, 새 대상 등록 시엔 슬롯(레포·경로·AC 체계 등)만 �
 `docs/index.html`은 의존성 없는 단일 파일 정적 페이지로, `data/`의 ToBeModel과
 모델별 ReconciliationTask, 그리고 `templates/`의 모델 템플릿을 읽어 목록·상세로
 보여준다. `to-be-models.json`을 불러온 뒤 각 모델 id로
-`reconciliation-tasks/<id>.json`을 fetch한다. GitHub Pages(`<owner>.github.io/<repo>/`)에서는
+`reconciliation-tasks/<id>.json`을 fetch한다. GitHub Pages(`<owner>.github.io/<repo>/`, 사용자 사이트 커스텀 도메인 `dlddu.dev/<repo>/` 포함)에서는
 이 파일들을 `https://raw.githubusercontent.com/<owner>/<repo>/main/`에서 읽고(공개 레포라 인증 불필요),
 로컬 서버에서 `docs/`로 열면 한 단계 위(`../`)에서 읽는다(`dataBase()`). Pages 원본은 `docs/` 폴더라 데이터는
 Pages에 올라가지 않는다. 대신 raw CDN 캐시 때문에 데이터가 최대 5분 늦게 보일 수 있다. 마크다운 정의 렌더링(표 포함), 상태 배지, 마지막 조치 시각, 검색,
